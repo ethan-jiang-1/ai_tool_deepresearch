@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "DEEP_RESEARCH_RUN_ROOT=\"/absolute/path/to/RUN_DIR\" node \"/absolute/path/to/RUN_DIR/_framework/cli_tools/stop_guard/claude-stop-guard.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}

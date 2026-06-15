@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 800 280" xmlns="http://www.w3.org/2000/svg" style="font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;">
+  <defs>
+    <marker id="bArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#FF6F00"/></marker>
+  </defs>
+
+  <!-- PROFILE -->
+  <rect x="20" y="20" width="140" height="120" rx="8" fill="#FFF3E0" stroke="#FF9800" stroke-width="2"/>
+  <text x="90" y="48" text-anchor="middle" font-size="13" font-weight="bold" fill="#E65100">PROFILE</text>
+  <line x1="30" y1="56" x2="150" y2="56" stroke="#FFB74D" stroke-width="0.6"/>
+  <text x="90" y="74" text-anchor="middle" font-size="10" fill="#BF360C">你的意图</text>
+  <text x="90" y="90" text-anchor="middle" font-size="10" fill="#BF360C">选了什么模式</text>
+  <text x="90" y="106" text-anchor="middle" font-size="10" fill="#BF360C">必须回答什么</text>
+  <text x="90" y="122" text-anchor="middle" font-size="10" fill="#BF360C">HITL1/HITL2 决策记录</text>
+  <text x="90" y="150" text-anchor="middle" font-size="8" fill="#E65100" font-weight="bold">┃ 唯一权威来源</text>
+
+  <!-- Arrow P->Plan -->
+  <line x1="160" y1="55" x2="230" y2="55" stroke="#FF6F00" stroke-width="2" marker-end="url(#bArrow)"/>
+  <text x="195" y="48" text-anchor="middle" font-size="8" fill="#BF360C">驱动</text>
+
+  <!-- PLAN -->
+  <rect x="235" y="20" width="140" height="120" rx="8" fill="#E3F2FD" stroke="#1E88E5" stroke-width="2"/>
+  <text x="305" y="48" text-anchor="middle" font-size="13" font-weight="bold" fill="#0D47A1">PLAN</text>
+  <line x1="245" y1="56" x2="375" y2="56" stroke="#64B5F6" stroke-width="0.6"/>
+  <text x="305" y="74" text-anchor="middle" font-size="10" fill="#1565C0">有哪些主题</text>
+  <text x="305" y="90" text-anchor="middle" font-size="10" fill="#1565C0">每一关要多少证据</text>
+  <text x="305" y="106" text-anchor="middle" font-size="10" fill="#1565C0">每个主题目标是什么</text>
+  <text x="305" y="122" text-anchor="middle" font-size="10" fill="#1565C0">命令路径怎么找</text>
+  <text x="305" y="150" text-anchor="middle" font-size="8" fill="#0D47A1" font-weight="bold">┃ 蓝图，不存状态</text>
+
+  <!-- Arrow P->S -->
+  <line x1="375" y1="55" x2="445" y2="55" stroke="#FF6F00" stroke-width="2" marker-end="url(#bArrow)"/>
+  <text x="410" y="48" text-anchor="middle" font-size="8" fill="#BF360C">对照</text>
+
+  <!-- STATUS -->
+  <rect x="450" y="20" width="140" height="120" rx="8" fill="#E8F5E9" stroke="#43A047" stroke-width="2"/>
+  <text x="520" y="48" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B5E20">STATUS</text>
+  <line x1="460" y1="56" x2="590" y2="56" stroke="#81C784" stroke-width="0.6"/>
+  <text x="520" y="74" text-anchor="middle" font-size="10" fill="#2E7D32">现在在哪个 Wave</text>
+  <text x="520" y="90" text-anchor="middle" font-size="10" fill="#2E7D32">过了哪几关</text>
+  <text x="520" y="106" text-anchor="middle" font-size="10" fill="#2E7D32">还缺什么</text>
+  <text x="520" y="122" text-anchor="middle" font-size="10" fill="#2E7D32">证据清单和缺口</text>
+  <text x="520" y="150" text-anchor="middle" font-size="8" fill="#1B5E20" font-weight="bold">┃ 运行时的"真相"</text>
+
+  <!-- Arrow S->Q -->
+  <line x1="590" y1="55" x2="640" y2="55" stroke="#FF6F00" stroke-width="2" marker-end="url(#bArrow)"/>
+  <text x="615" y="48" text-anchor="middle" font-size="8" fill="#BF360C">缺啥补啥</text>
+
+  <!-- QUEUE -->
+  <rect x="645" y="20" width="140" height="120" rx="8" fill="#F3E5F5" stroke="#8E24AA" stroke-width="2"/>
+  <text x="715" y="48" text-anchor="middle" font-size="13" font-weight="bold" fill="#4A148C">QUEUE</text>
+  <line x1="655" y1="56" x2="785" y2="56" stroke="#CE93D8" stroke-width="0.6"/>
+  <text x="715" y="74" text-anchor="middle" font-size="10" fill="#6A1B9A">5 槽执行窗口</text>
+  <text x="715" y="90" text-anchor="middle" font-size="10" fill="#6A1B9A">每步具体干什么</text>
+  <text x="715" y="106" text-anchor="middle" font-size="10" fill="#6A1B9A">中止/继续授权</text>
+  <text x="715" y="122" text-anchor="middle" font-size="10" fill="#6A1B9A">后备任务池</text>
+  <text x="715" y="150" text-anchor="middle" font-size="8" fill="#4A148C" font-weight="bold">┃ 执行动作的来源</text>
+
+  <!-- TRACE at bottom -->
+  <rect x="235" y="170" width="335" height="50" rx="8" fill="#FFEBEE" stroke="#E53935" stroke-width="1.5"/>
+  <text x="402" y="196" text-anchor="middle" font-size="13" font-weight="bold" fill="#B71C1C">TRACE · 诊断日志（只追加，不修改）</text>
+  <text x="402" y="212" text-anchor="middle" font-size="9" fill="#C62828">记录方向转变、假设反转、关卡过渡 —— 不是流水账</text>
+
+  <!-- Bottom flow -->
+  <rect x="20" y="240" width="760" height="30" rx="6" fill="#ECEFF1" stroke="#CFD8DC" stroke-width="1"/>
+  <text x="400" y="259" text-anchor="middle" font-size="11" fill="#546E7A">
+    PROFILE → PLAN → STATUS → QUEUE → 执行写入本地文件 → 同步 STATUS/QUEUE → 循环
+  </text>
+</svg>

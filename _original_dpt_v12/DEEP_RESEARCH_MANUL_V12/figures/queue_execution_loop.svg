@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 600 540" xmlns="http://www.w3.org/2000/svg" style="font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;">
+  <defs>
+    <marker id="lArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#455A64"/></marker>
+  </defs>
+
+  <!-- Step 1 -->
+  <rect x="175" y="10" width="250" height="44" rx="8" fill="#263238"/>
+  <text x="300" y="29" text-anchor="middle" font-size="13" font-weight="bold" fill="white">① 从磁盘重读五份控制文件</text>
+  <text x="300" y="46" text-anchor="middle" font-size="9" fill="#B0BEC5">聊天记忆不算数，以文件为准</text>
+  <line x1="300" y1="54" x2="300" y2="68" stroke="#455A64" stroke-width="2" marker-end="url(#lArrow)"/>
+
+  <!-- Step 2 -->
+  <rect x="175" y="72" width="250" height="38" rx="8" fill="#FFF3E0" stroke="#FF9800" stroke-width="1.2"/>
+  <text x="300" y="88" text-anchor="middle" font-size="12" font-weight="bold" fill="#E65100">② 检查前置收据</text>
+  <text x="300" y="102" text-anchor="middle" font-size="9" fill="#BF360C">当前任务需要的前置条件都满足了吗？</text>
+  <line x1="300" y1="110" x2="300" y2="124" stroke="#455A64" stroke-width="2" marker-end="url(#lArrow)"/>
+
+  <!-- Branch: missing receipt -->
+  <rect x="30" y="128" width="140" height="30" rx="5" fill="#FFEBEE" stroke="#E53935" stroke-width="0.8"/>
+  <text x="100" y="147" text-anchor="middle" font-size="9" fill="#C62828">缺收据 → 插入修复任务</text>
+  <line x1="300" y1="128" x2="100" y2="128" stroke="#E53935" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#lArrow)"/>
+
+  <!-- Step 3 -->
+  <rect x="175" y="128" width="250" height="38" rx="8" fill="#E3F2FD" stroke="#1E88E5" stroke-width="1.2"/>
+  <text x="300" y="144" text-anchor="middle" font-size="12" font-weight="bold" fill="#0D47A1">③ 执行 slot_1_current</text>
+  <text x="300" y="158" text-anchor="middle" font-size="9" fill="#1565C0">只执行当前槽，不并发</text>
+  <line x1="300" y1="166" x2="300" y2="180" stroke="#455A64" stroke-width="2" marker-end="url(#lArrow)"/>
+
+  <!-- Step 4 -->
+  <rect x="175" y="184" width="250" height="38" rx="8" fill="#E8F5E9" stroke="#43A047" stroke-width="1.2"/>
+  <text x="300" y="200" text-anchor="middle" font-size="12" font-weight="bold" fill="#1B5E20">④ 写文件 + 同步 STATUS/QUEUE</text>
+  <text x="300" y="214" text-anchor="middle" font-size="9" fill="#2E7D32">写入声明的文件，更新状态</text>
+  <line x1="300" y1="222" x2="300" y2="236" stroke="#455A64" stroke-width="2" marker-end="url(#lArrow)"/>
+
+  <!-- Step 5 -->
+  <rect x="175" y="240" width="250" height="38" rx="8" fill="#F3E5F5" stroke="#8E24AA" stroke-width="1.2"/>
+  <text x="300" y="256" text-anchor="middle" font-size="12" font-weight="bold" fill="#4A148C">⑤ 验证结果 + 完成收据</text>
+  <text x="300" y="270" text-anchor="middle" font-size="9" fill="#6A1B9A">写了吗？写对了吗？收据留下没？</text>
+  <line x1="300" y1="278" x2="300" y2="292" stroke="#455A64" stroke-width="2" marker-end="url(#lArrow)"/>
+
+  <!-- Step 6 -->
+  <rect x="175" y="296" width="250" height="38" rx="8" fill="#ECEFF1" stroke="#78909C" stroke-width="1.2"/>
+  <text x="300" y="312" text-anchor="middle" font-size="12" font-weight="bold" fill="#37474F">⑥ 队列前移 + 补充新任务</text>
+  <text x="300" y="326" text-anchor="middle" font-size="9" fill="#546E7A">slot_2 → slot_1，从后备池补充 slot_5</text>
+  <line x1="300" y1="334" x2="300" y2="348" stroke="#455A64" stroke-width="2" marker-end="url(#lArrow)"/>
+
+  <!-- Step 7 -->
+  <rect x="175" y="352" width="250" height="38" rx="8" fill="#FFEBEE" stroke="#E53935" stroke-width="1.5"/>
+  <text x="300" y="368" text-anchor="middle" font-size="12" font-weight="bold" fill="#B71C1C">⑦ 响应前闸门（Pre-Response Gate）</text>
+  <text x="300" y="382" text-anchor="middle" font-size="9" fill="#C62828">我可以跟用户说话了吗？</text>
+
+  <!-- Branch from step 7 -->
+  <line x1="300" y1="390" x2="300" y2="410" stroke="#455A64" stroke-width="2"/>
+  <line x1="175" y1="410" x2="425" y2="410" stroke="#455A64" stroke-width="2"/>
+  <line x1="175" y1="410" x2="175" y2="420" stroke="#455A64" stroke-width="2" marker-end="url(#lArrow)"/>
+  <line x1="425" y1="410" x2="425" y2="420" stroke="#455A64" stroke-width="2" marker-end="url(#lArrow)"/>
+
+  <!-- Not authorized -->
+  <rect x="45" y="424" width="180" height="36" rx="5" fill="#FFCDD2" stroke="#E53935" stroke-width="1"/>
+  <text x="135" y="440" text-anchor="middle" font-size="9" font-weight="bold" fill="#C62828">未授权：继续执行，禁止跟用户说话</text>
+  <text x="135" y="454" text-anchor="middle" font-size="8" fill="#D32F2F">跳回 ①</text>
+
+  <!-- Authorized -->
+  <rect x="375" y="424" width="180" height="36" rx="5" fill="#C8E6C9" stroke="#43A047" stroke-width="1"/>
+  <text x="465" y="440" text-anchor="middle" font-size="9" font-weight="bold" fill="#1B5E20">已授权：可以跟用户说话了</text>
+  <text x="465" y="454" text-anchor="middle" font-size="8" fill="#2E7D32">最终交付 / 阻塞 / 队列已空</text>
+
+  <!-- Auth states label -->
+  <rect x="175" y="475" width="250" height="24" rx="4" fill="#ECEFF1" stroke="#B0BEC5" stroke-width="0.8"/>
+  <text x="300" y="491" text-anchor="middle" font-size="9" fill="#546E7A">允许停下的三种情况：最终交付 · 决策阻塞 · 队列清空无法补充</text>
+</svg>
