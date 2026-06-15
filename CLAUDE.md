@@ -17,13 +17,18 @@ These are archives. Do not read them proactively. The source of truth for what w
 
 ## Tech Stack
 
-- **Runtime:** Node.js ≥20, TypeScript strict mode
-- **Package manager:** pnpm (monorepo)
-- **Schema/Validation:** Zod (runtime validation + static type inference)
-- **State machines:** XState (gate progression, HITL flow, queue lifecycle)
-- **CLI:** Commander.js + Ink (React-based terminal UI)
-- **Markdown I/O:** unified/remark (AST-level parse/write, V12 format compatible)
-- **Testing:** Vitest
+- **Runtime:** Node.js ≥20, TypeScript (strict mode)
+- **Package manager:** npm (workspaces, comes with Node.js)
+- **批准的 npm 依赖（仅 2 个，不可新增）：**
+  - `zod` — Schema 定义与运行时校验（替代手写 validate*()）
+  - `yaml` — YAML 文件解析与序列化（`profile.yaml`、`deep-research.yaml`）
+- **其余全部使用 Node.js 内置模块：**
+  - `node:util.parseArgs()` — CLI 参数解析（不用 Commander.js）
+  - `node:fs/promises` — 文件读写
+  - `node:test` + `node:assert` — 测试（不用 Vitest）
+  - `node:path` — 路径处理
+- **Markdown frontmatter（plan.md）：** 正则提取 `---` 块 → `JSON.parse()`（不用 gray-matter）
+- **终端输出：** `console.log`（不用 chalk）
 
 ## OpenSpec workflow
 

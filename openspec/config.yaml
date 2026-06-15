@@ -1,0 +1,113 @@
+schema: spec-driven
+
+context: |
+  Deep Research Tool — 将宽泛研究问题转化为证据支撑、多波次、带门控的研究报告。
+
+  项目定位:
+  这是一个 agentic framework。目录即约定，不依赖额外配置文件。
+  Agent (LLM) 是执行者 (搜索、阅读、写作、综合、决策)，
+  Engine (JavaScript) 是校验者 (Schema 验证、Gate 审计、Receipt 检查)，
+  Markdown/JSON/YAML 文件是持久化状态。
+
+  核心原则:
+  - Engine (JavaScript) 强制执行规则 (schemas, state machines, receipts)
+  - Agent (LLM) 生产内容 (搜索、阅读、写作、综合)
+  - 不要回到 V12 的 agent 自治理模式
+
+  迭代习惯:
+  AI Coding 容易堆叠代码。不能只往上摞——要时不时停下来思考结构的合理性，
+  该重构就重构，该清理就清理，让结构适应新要求同时兼顾老的东西。
+  定期打扫卫生是好习惯，在设计和上下文里多琢磨。
+
+  LLM-JS 协作原则 (Check & Inspect):
+  长程 Agent 任务中 LLM 易受噪声干扰产生幻觉。
+  采用 C (Check 硬性验证) + I (Inspect 审视诊断) 双保险:
+  - Check: JavaScript/Zod 在写入前校验 Schema、不变量、Receipt — 不通过则拒绝写入
+  - Inspect: CLI 诊断工具事后审视 Gate 审计、交叉引用、证据质量 — 发现问题反馈给 LLM 反思纠正
+  LLM 负责信息加工 (搜索、阅读、写作、综合)，JS 负责质量保证 (校验、诊断、反馈)。
+  验证失败 → 反馈 → 反思 → 纠正，不静默通过。
+
+  测试策略:
+  实验 (experiments/) 与回归测试 (tests/) 物理分离。
+  - experiments/: 原型实验, 理想化思想验证, 完成后冻结, 不随生产代码变化而 break
+  - tests/unit/: 纯代码单元测试, 零 I/O, node:test + node:assert
+  - tests/integration/: JS+MD 交互集成测试, 真实文件 I/O, 临时目录隔离
+  - tests/fixtures/: 最小 DPT_FRAMEWORK/ 测试框架, 可被所有集成测试复用
+  - 端到端测试暂无自动化方案, 由 Claude session 手动验证
+
+  根目录约定 (Framework ↔ Bundle 同级, 不拷贝):
+  experiments/                — 原型实验 (理想化, 冻结)
+  tests/                      — 回归测试 (随代码演进)
+  DPT_FRAMEWORK/              — 框架目录 (共享, 只读, 唯一一份)
+    _lab/                     — 实验与原型代码 (内部/临时用)
+    cli/                      — JS 程序, Agent 用 node 调用 (如 check.mjs, inspect.mjs, check-req-ids.mjs)
+    command_playbook/         — 一次性命令, Agent 读的 Markdown (如 instantiate-run-bundle.md)
+    rb_templates/             — Runtime Bundle 骨架文件
+    schema/                   — 权威规范 (Zod types, contracts, invariants)
+    workflows/                — 持续运行的 agentic 流程 (execution, queue loop, HITL)
+    AGENT_GUIDE.md            — Agent 守则
+    COMMANDS.md               — 命令索引
+    req-registry.yaml         — Requirement ID 登记处
+  dpt_rb_{name}/              — Runtime Bundle (可多个, 数据隔离, 通过 ../DPT_FRAMEWORK/ 引用)
+    _cache/                   — 源获取暂存
+    artifacts/                — 衍生合成 (wave1/ + wave2/ + README.md)
+    final/                    — 最终报告
+    original_topic/           — 原始大话题材料 (可选)
+    reference/                — 本地证据
+    seed_topics/              — 种子话题文件
+    START_FROM_HERE.md        — 启动入口 (Agent 首先读这个)
+    rb_plan.md                — 话题设计 (Markdown + JSON frontmatter)
+    rb_profile.yaml           — 用户意图 (YAML)
+    rb_queue.json             — 执行队列 (JSON)
+    rb_status.json            — 运行时状态 (JSON)
+    rb_trace.jsonl            — 诊断日志 (JSON Lines, 追加式)
+
+  目录聚焦 (DPT_FRAMEWORK 内部, C&I 分工):
+  - schema/             — Check: Zod 类型定义, 写入时校验
+  - cli/                — Check + Inspect: JS 程序, Agent 用 node 调用
+  - workflows/          — 执行骨架: 持续运行的 agentic 流程
+  - command_playbook/   — Agent 读的 Markdown 命令 (一次性)
+  - rb_templates/       — Runtime Bundle 骨架文件
+
+  技术栈:
+  Node.js ≥20, 纯 JavaScript (ESM, .mjs)。不使用 TypeScript。
+  仅 2 个批准的 npm 依赖 (不可新增): zod (schema 校验), yaml (YAML 文件解析)。
+  其余全部 Node.js 内置: node:util.parseArgs, node:fs/promises, node:test + node:assert, node:path。
+  状态机: 显式转换表 (Map/object), 不用 XState。
+  Markdown frontmatter: 正则提取 + JSON.parse(), 不用 gray-matter。
+
+  命名规范:
+  - 枚举 snake_case, 用户界面中文, 内部字段名/路径英文
+  - Capability 前缀: cmd-* = Agent 读的 Markdown 命令 playbook; cli-* = JS 脚本
+
+  需求追踪 (Requirement Traceability):
+  所有 capability 可追踪，不分前缀。这是强制性纪律。
+  - req-registry.yaml: DPT_FRAMEWORK/req-registry.yaml, 唯一 ID 登记处 (只增不删, 分配前先查)
+  - check-req-ids.mjs: DPT_FRAMEWORK/cli/check-req-ids.mjs, 扫描 spec/ 检查重复和未注册
+  - 每个 capability 分配 3 字母缩写 (首单词前 2 + 次单词首字母), 如 schema-core → SCO
+  - 每个 requirement 分配全局唯一 ID: `{PREFIX}-{NNN}`, 如 SCO-001
+  - spec 文件列出其拥有的 requirement ID 和 invariant ID
+  - 代码实现处用 `// @impl <REQ-ID>` 注释标注
+  - Markdown 文件用 frontmatter `req: <REQ-ID>` 标注
+  - task 描述中引用实现的 requirement ID
+  - 形成 spec → code → test 可追踪链条
+
+rules:
+  proposal:
+    - 用中文写 proposal，明确这个 change 产出什么、不产出什么
+    - 引用 V12 原始需求时注明来源文件
+  design:
+    - 数据结构用 Zod schema 定义（`.refine()` 做跨字段校验）
+    - 状态机用显式转换表 (Map/object)，不允许隐藏在 prose 里
+    - 跨文件引用必须明确 Source of Record
+    - 只用批准的依赖: zod, yaml。其余一律 Node.js 标准库
+  tasks:
+    - 每个 task 有明确 done condition，可独立验证
+    - 按依赖排序，优先搭骨架再填功能
+    - 单个 task 不超过 2 小时
+    - Task 描述中引用它实现的 requirement ID (如 "实现 SCO-001: CurrentGate enum")
+  specs:
+    - Capability 用 kebab-case 命名，目录名即分类
+    - Spec 文件是 Zod schema 的人类可读投影
+    - 列出该 capability 涉及的 requirement ID 和 invariant ID
+    - 实现代码中用 `// @impl <REQ-ID>` 标注, MD 文件用 frontmatter `req:` 标注
