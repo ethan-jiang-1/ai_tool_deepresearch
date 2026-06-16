@@ -1,0 +1,7 @@
+# Requirement ID Registry — 只增不删
+# 分配新 ID 前先查这里，确保不重复
+
+SCO-001: schema-core — Six domain enums
+SCO-002: schema-core — Six Zod contracts
+SCO-003: schema-core — Gate transition table
+SCO-004: schema-core — Direct node import (no compilation)
