@@ -1,4 +1,5 @@
 # Integration Tests
+> req: INT-001
 
 JS+MD 交互回归测试。真实文件 I/O，临时目录隔离，测试后自动清理。
 

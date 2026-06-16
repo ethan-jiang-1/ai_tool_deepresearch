@@ -15,3 +15,5 @@ CMI-003: cmd-bundle-instantiation — JS helper inspect.mjs (structure check)
 CMI-004: cmd-bundle-instantiation — Template files (rb_templates/)
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry
+TEF-001: test-fixtures — Fixture framework for integration tests
+INT-001: integration-tests — check.mjs + inspect.mjs integration tests

@@ -1,9 +1,8 @@
-# Test Fixtures
+# test-fixtures Specification
 
-最小 DPT_FRAMEWORK/ 测试框架，可被所有集成测试复用。
-
-## ADDED Requirements
-
+## Purpose
+TBD - created by archiving change test-infra. Update Purpose after archive.
+## Requirements
 ### Requirement: Fixtures provide a complete mini DPT_FRAMEWORK/
 The `tests/fixtures/DPT_FRAMEWORK/` SHALL contain schema files (.mjs), rb_templates, and cli scripts sufficient to run `check.mjs` and `inspect.mjs`. Schemas SHALL be symlinked or copied from DPT_FRAMEWORK/schema/ (no compilation).
 
@@ -21,3 +20,4 @@ Fixture files SHALL be committed to git. They SHALL be regenerated (re-copied) w
 #### Scenario: Fixture regeneration
 - **WHEN** a new enum value is added to DPT_FRAMEWORK/schema/enums.mjs
 - **THEN** tests/fixtures/DPT_FRAMEWORK/schema/enums.mjs is regenerated (re-copied) before tests run
+
