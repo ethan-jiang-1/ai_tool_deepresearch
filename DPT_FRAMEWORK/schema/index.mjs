@@ -6,6 +6,10 @@ export {
   RunState,
   ResearchProfile,
   GateResult,
+  HumanCheckpointStatus,
+  AnswerabilityClass,
+  HITL2UserDecision,
+  FinalReportView,
 } from './enums.mjs';
 
 export { StatusSchema } from './contracts/status.mjs';

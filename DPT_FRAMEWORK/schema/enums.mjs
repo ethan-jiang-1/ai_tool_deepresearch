@@ -1,4 +1,4 @@
-// @impl SCO-001: Six domain enums
+// @impl SCO-001, SCO-005, SCO-006, SCO-007: 10 domain enums
 import { z } from 'zod';
 
 export const CurrentGate = z.enum([
@@ -28,3 +28,37 @@ export const ResearchProfile = z.enum([
 ]);
 
 export const GateResult = z.enum(['pass', 'fail']);
+
+// @impl SCO-005~007: HITL enums
+export const HumanCheckpointStatus = z.enum([
+  'not_started',
+  'pending_user',
+  'recorded',
+  'blocked',
+  'not_applicable',
+]);
+
+export const AnswerabilityClass = z.enum([
+  'not_assessed',
+  'ready_substantive',
+  'ready_insufficient_judgment',
+  'blocked_repair_required',
+]);
+
+export const HITL2UserDecision = z.enum([
+  'not_started',
+  'proceed_to_readiness',
+  'request_view_revision',
+  'repair_and_rerun',
+  'stop_blocked',
+]);
+
+export const FinalReportView = z.enum([
+  'not_started',
+  'profile_default',
+  'executive_brief',
+  'evidence_map',
+  'claim_judgment',
+  'technical_deep_dive',
+  'custom',
+]);

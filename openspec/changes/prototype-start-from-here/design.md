@@ -132,7 +132,7 @@ console.log('Inspect: directory structure complete');
 
 ### 6. CONTROL_FILE_SCHEMAS
 
-```typescript
+```javascript
 const CONTROL_FILE_SCHEMAS = new Map([
   ['rb_status.json',  { schema: StatusSchema,  parse: JSON.parse }],
   ['rb_queue.json',   { schema: QueueSchema,   parse: JSON.parse }],
@@ -168,7 +168,7 @@ const CONTROL_FILE_SCHEMAS = new Map([
 
 ### 8. 多 Bundle 隔离
 
-```typescript
+```javascript
 const bundleA = await loadBundle('dpt_rb_ai-safety');
 const bundleB = await loadBundle('dpt_rb_supply-chain');
 // 各自独立，共享同一份 ../DPT_FRAMEWORK/

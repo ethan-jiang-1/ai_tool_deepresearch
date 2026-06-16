@@ -1,12 +1,7 @@
-# schema-core Specification
+# schema-core Specification (Delta)
 
-> req: SCO-001, SCO-002, SCO-003, SCO-004, SCO-005, SCO-006, SCO-007, SCO-008
-> inv: INV-SOR-001
+## MODIFIED Requirements
 
-## Purpose
-Deep Research 的类型地基。定义所有领域枚举 (10 个) 和契约 (6 个)，以及 Gate 状态机转换表。纯 JavaScript (.mjs)，零编译，node 直接 import。
-
-## Requirements
 ### Requirement: Six domain enums defined as Zod schemas
 The schema SHALL define 10 Zod enums: the original 6 (CurrentGate, StopAuthorizationState, QueueHealth, RunState, ResearchProfile, GateResult) plus 4 HITL enums (HumanCheckpointStatus, AnswerabilityClass, HITL2UserDecision, FinalReportView). Each SHALL use `z.enum()` with the exact value set from V12 CONSTANTS.md.
 
@@ -40,36 +35,3 @@ The ProfileSchema SHALL replace hardcoded `z.literal('recorded')` and `z.literal
 #### Scenario: ProfileSchema rejects invalid hitl2 status
 - **WHEN** hitl2 status is `'invalid'`
 - **THEN** it returns `{ success: false }`
-
-### Requirement: Gate transition table covers all states
-The GateTransitionTable SHALL define transitions for all 8 GateMachineState values: instantiation_complete, setup_ready, wave0_complete, wave1_complete, wave2_complete, hitl2_pending_user, readiness_passed, blocked_terminal. Terminal states (readiness_passed, blocked_terminal) SHALL have empty transition arrays.
-
-#### Scenario: Every non-terminal state has at least one transition
-- **WHEN** the GateTransitionTable is validated
-- **THEN** the 6 non-terminal states each have ≥ 1 transition entry
-
-#### Scenario: PASS events follow correct gate order
-- **WHEN** PASS_SETUP fires from instantiation_complete
-- **THEN** next state is setup_ready
-- **WHEN** PASS_WAVE0 fires from setup_ready
-- **THEN** next state is wave0_complete
-
-#### Scenario: REOPEN returns to correct prior gate
-- **WHEN** REOPEN fires from wave0_complete
-- **THEN** next state is setup_ready
-- **WHEN** REOPEN fires from wave1_complete
-- **THEN** next state is wave0_complete
-
-#### Scenario: HITL2 user actions route correctly
-- **WHEN** USER_PROCEED fires from hitl2_pending_user
-- **THEN** next state is readiness_passed
-- **WHEN** USER_REPAIR fires from hitl2_pending_user
-- **THEN** next state is wave1_complete
-
-### Requirement: Schema is directly importable by node
-All schema files SHALL be valid JavaScript (.mjs) that `node` can import directly without compilation.
-
-#### Scenario: node imports schema
-- **WHEN** `node -e "import('./DPT_FRAMEWORK/schema/index.mjs')"` is run
-- **THEN** it succeeds without errors
-

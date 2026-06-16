@@ -81,21 +81,21 @@ context: |
   - Capability 前缀: cmd-* = Agent 读的 Markdown 命令 playbook; cli-* = JS 脚本
 
   需求追踪 (Requirement Traceability):
-  所有 capability 可追踪，不分前缀。这是强制性纪律。
-  - req-registry.yaml: DPT_FRAMEWORK/req-registry.yaml, 唯一 ID 登记处 (只增不删, 分配前先查)
-  - check-req-ids.mjs: DPT_FRAMEWORK/cli/check-req-ids.mjs, 扫描 spec/ 检查重复和未注册
+  所有 capability 可追踪，不分前缀。强制性纪律，不可跳过。
+  - 唯一登记处: DPT_FRAMEWORK/req-registry.yaml (只增不删，分配前先查)
+  - 合规检查: DPT_FRAMEWORK/cli/check-req-ids.mjs (扫描 spec/ 检查重复和未注册)
   - 每个 capability 分配 3 字母缩写 (首单词前 2 + 次单词首字母), 如 schema-core → SCO
   - 每个 requirement 分配全局唯一 ID: `{PREFIX}-{NNN}`, 如 SCO-001
-  - spec 文件列出其拥有的 requirement ID 和 invariant ID
-  - 代码实现处用 `// @impl <REQ-ID>` 注释标注
-  - Markdown 文件用 frontmatter `req: <REQ-ID>` 标注
-  - task 描述中引用实现的 requirement ID
-  - 形成 spec → code → test 可追踪链条
+  - spec 文件开头标注: `> req: XXX-001, XXX-002` (与 registry 一致)
+  - 代码实现: `// @impl SCO-001, SCO-002` 注释
+  - task 描述: 引用 requirement ID (如 "实现 SCO-001: CurrentGate enum")
+  - 每次 change 完成前必须更新 registry 并运行 check-req-ids.mjs
 
 rules:
   proposal:
     - 用中文写 proposal，明确这个 change 产出什么、不产出什么
     - 引用 V12 原始需求时注明来源文件
+    - 为新 capability 分配 3 字母缩写并提前登记到 req-registry.yaml
   design:
     - 数据结构用 Zod schema 定义（`.refine()` 做跨字段校验）
     - 状态机用显式转换表 (Map/object)，不允许隐藏在 prose 里

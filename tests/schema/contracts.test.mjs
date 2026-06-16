@@ -31,12 +31,24 @@ describe('QueueSchema', () => {
 });
 
 describe('ProfileSchema', () => {
-  const valid = { plan_basename: 'test', research_profile: 'quick_factual', root_must_answer_set: [], human_decision_checkpoints: { hitl1: { status: 'recorded' }, hitl2: { status: 'not_started' } } };
+  const valid = {
+    plan_basename: 'test',
+    research_profile: 'quick_factual',
+    root_must_answer_set: [],
+    human_decision_checkpoints: {
+      hitl1: { status: 'recorded' },
+      hitl2: { status: 'not_started', answerability_class: 'not_assessed', user_decision: 'not_started', final_report_view: 'not_started' },
+    },
+  };
   it('accepts valid skeleton', () => {
     assert.ok(ProfileSchema.safeParse(valid).success);
   });
   it('rejects invalid research_profile', () => {
     assert.ok(!ProfileSchema.safeParse({ ...valid, research_profile: 'invalid' }).success);
+  });
+  it('rejects invalid hitl2 status', () => {
+    const bad = { ...valid, human_decision_checkpoints: { ...valid.human_decision_checkpoints, hitl2: { ...valid.human_decision_checkpoints.hitl2, status: 'invalid' } } };
+    assert.ok(!ProfileSchema.safeParse(bad).success);
   });
 });
 

@@ -4,6 +4,8 @@ import assert from 'node:assert';
 import {
   CurrentGate, StopAuthorizationState, QueueHealth,
   RunState, ResearchProfile, GateResult,
+  HumanCheckpointStatus, AnswerabilityClass,
+  HITL2UserDecision, FinalReportView,
 } from '../../DPT_FRAMEWORK/schema/index.mjs';
 
 describe('CurrentGate', () => {
@@ -70,5 +72,49 @@ describe('GateResult', () => {
   });
   it('rejects invalid value', () => {
     assert.ok(!GateResult.safeParse('invalid').success);
+  });
+});
+
+describe('HumanCheckpointStatus', () => {
+  it('accepts all 5 valid values', () => {
+    for (const v of ['not_started', 'pending_user', 'recorded', 'blocked', 'not_applicable']) {
+      assert.ok(HumanCheckpointStatus.safeParse(v).success, `${v} should be valid`);
+    }
+  });
+  it('rejects invalid value', () => {
+    assert.ok(!HumanCheckpointStatus.safeParse('invalid').success);
+  });
+});
+
+describe('AnswerabilityClass', () => {
+  it('accepts all 4 valid values', () => {
+    for (const v of ['not_assessed', 'ready_substantive', 'ready_insufficient_judgment', 'blocked_repair_required']) {
+      assert.ok(AnswerabilityClass.safeParse(v).success, `${v} should be valid`);
+    }
+  });
+  it('rejects invalid value', () => {
+    assert.ok(!AnswerabilityClass.safeParse('invalid').success);
+  });
+});
+
+describe('HITL2UserDecision', () => {
+  it('accepts all 5 valid values', () => {
+    for (const v of ['not_started', 'proceed_to_readiness', 'request_view_revision', 'repair_and_rerun', 'stop_blocked']) {
+      assert.ok(HITL2UserDecision.safeParse(v).success, `${v} should be valid`);
+    }
+  });
+  it('rejects invalid value', () => {
+    assert.ok(!HITL2UserDecision.safeParse('invalid').success);
+  });
+});
+
+describe('FinalReportView', () => {
+  it('accepts all 7 valid values', () => {
+    for (const v of ['not_started', 'profile_default', 'executive_brief', 'evidence_map', 'claim_judgment', 'technical_deep_dive', 'custom']) {
+      assert.ok(FinalReportView.safeParse(v).success, `${v} should be valid`);
+    }
+  });
+  it('rejects invalid value', () => {
+    assert.ok(!FinalReportView.safeParse('invalid').success);
   });
 });
