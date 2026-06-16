@@ -9,3 +9,9 @@ SCO-005: schema-core-hitl — HumanCheckpointStatus enum
 SCO-006: schema-core-hitl — AnswerabilityClass enum
 SCO-007: schema-core-hitl — HITL2UserDecision + FinalReportView enums
 SCO-008: schema-core-hitl — ProfileSchema hitl1/hitl2 field update
+CMI-001: cmd-bundle-instantiation — Command playbook for bundle production
+CMI-002: cmd-bundle-instantiation — JS helper check.mjs (Zod validation)
+CMI-003: cmd-bundle-instantiation — JS helper inspect.mjs (structure check)
+CMI-004: cmd-bundle-instantiation — Template files (rb_templates/)
+BUI-001: bundle-data-isolation — Multi-bundle coexistence
+BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry

@@ -1,9 +1,8 @@
-# Data Isolation
+# bundle-data-isolation Specification
 
-多个 bundle 并行运行，各自的控制文件和 seed_topics 数据互不污染。
-
-## ADDED Requirements
-
+## Purpose
+TBD - created by archiving change prototype-start-from-here. Update Purpose after archive.
+## Requirements
 ### Requirement: Multiple bundles can coexist at project root
 Two bundles (`dpt_rb_{name}`) SHALL be loadable simultaneously, with each returning its own independent state.
 
@@ -21,3 +20,4 @@ Every bundle SHALL own its own `reference/` and `artifacts/` directories, never 
 #### Scenario: Bundle A references don't appear in Bundle B
 - **WHEN** a reference file is written to `dpt_rb_a/reference/`
 - **THEN** `dpt_rb_b/reference/` remains empty
+

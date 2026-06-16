@@ -1,5 +1,7 @@
 # Bundle Instantiation
 
+> req: CMI-001, CMI-002, CMI-003, CMI-004
+
 Agent 读取 `DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md` 命令 playbook，按步骤生产 `dpt_rb_{name}/`。JS helper (check.mjs + inspect.mjs) 做质量保障。
 
 ## ADDED Requirements
@@ -36,7 +38,7 @@ The `DPT_FRAMEWORK/rb_templates/` directory SHALL contain template files with `{
 
 #### Scenario: Template for rb_profile.yaml
 - **WHEN** `DPT_FRAMEWORK/rb_templates/rb_profile.yaml.tmpl` is read
-- **THEN** it contains valid YAML with `plan_basename: {{name}}`, `research_profile: not_selected`, empty `root_must_answer_set: []`, and `human_decision_checkpoints` with both HITL1 and HITL2 set to `status: not_started`
+- **THEN** it contains valid YAML with `plan_basename: {{name}}`, `research_profile: not_selected`, empty `root_must_answer_set: []`, and `human_decision_checkpoints` with hitl1 `status: not_started` and hitl2 `status: not_started, answerability_class: not_assessed, user_decision: not_started, final_report_view: not_started` (matching ProfileSchema post schema-core-hitl)
 
 #### Scenario: Template for rb_trace.jsonl
 - **WHEN** `DPT_FRAMEWORK/rb_templates/rb_trace.jsonl` is read

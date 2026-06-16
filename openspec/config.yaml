@@ -95,7 +95,7 @@ rules:
   proposal:
     - 用中文写 proposal，明确这个 change 产出什么、不产出什么
     - 引用 V12 原始需求时注明来源文件
-    - 为新 capability 分配 3 字母缩写并提前登记到 req-registry.yaml
+    - 为新 capability 分配 3 字母缩写并提前登记到 req-registry.yaml (先查历史，避免冲突，别随意发挥)
   design:
     - 数据结构用 Zod schema 定义（`.refine()` 做跨字段校验）
     - 状态机用显式转换表 (Map/object)，不允许隐藏在 prose 里

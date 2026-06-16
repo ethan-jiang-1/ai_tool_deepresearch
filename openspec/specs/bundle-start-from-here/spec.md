@@ -1,9 +1,8 @@
-# Boot Entry
+# bundle-start-from-here Specification
 
-Bundle 根目录下的 `START_FROM_HERE.md`，Agent 进入 bundle 后首先读取的文件。
-
-## ADDED Requirements
-
+## Purpose
+TBD - created by archiving change prototype-start-from-here. Update Purpose after archive.
+## Requirements
 ### Requirement: START_FROM_HERE.md is the first file an agent reads
 The boot entry SHALL provide: framework location (`../DPT_FRAMEWORK/`), control file list with `rb_` prefixed names, data directory map, and stop authorization rules.
 
@@ -21,3 +20,4 @@ The boot entry SHALL provide: framework location (`../DPT_FRAMEWORK/`), control 
 #### Scenario: Agent follows stop authorization from boot entry
 - **WHEN** an agent considers stopping mid-wave
 - **THEN** `START_FROM_HERE.md` tells it to continue unless one of three authorized states is reached
+

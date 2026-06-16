@@ -22,6 +22,7 @@ export const QueueHealth = z.enum(['ready', 'thin', 'blocked', 'closed']);
 export const RunState = z.enum(['not_started', 'in_progress', 'blocked', 'completed']);
 
 export const ResearchProfile = z.enum([
+  'not_selected',
   'quick_factual',
   'exploratory_map',
   'claim_verification',

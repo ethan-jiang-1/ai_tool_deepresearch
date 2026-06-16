@@ -78,18 +78,42 @@ Agent 打开 `DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md`，照做
 ```javascript
 // DPT_FRAMEWORK/cli/check.mjs
 // 用法: node check.mjs <bundleDir>
-//
-// 逐个文件读取 → Zod safeParse → 输出 PASS 或 FAIL + 错误详情
-//
 // 退出码 0 = PASS, 1 = FAIL
 
-import { CONTROL_FILE_SCHEMAS } from '../schema/index.mjs';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { parse as parseYaml } from 'yaml';
+import {
+  StatusSchema, QueueSchema, ProfileSchema,
+  PlanSchema, TraceSchema,
+} from '../schema/index.mjs';
+
+function parseMdFrontmatter(raw) {
+  const m = raw.match(/^---\n([\s\S]*?)\n---/);
+  return m ? JSON.parse(m[1]) : {};
+}
+
+function parseJsonl(raw) {
+  if (raw.trim() === '') return [];
+  return raw.trim().split('\n').map(JSON.parse);
+}
+
+const CONTROL_FILE_SCHEMAS = new Map([
+  ['rb_status.json',  { schema: StatusSchema,  parse: JSON.parse }],
+  ['rb_queue.json',   { schema: QueueSchema,   parse: JSON.parse }],
+  ['rb_profile.yaml', { schema: ProfileSchema, parse: parseYaml }],
+  ['rb_plan.md',      { schema: PlanSchema,    parse: parseMdFrontmatter }],
+  ['rb_trace.jsonl',  { schema: TraceSchema,   parse: parseJsonl }],
+]);
 
 const bundleDir = process.argv[2];
-let passed = 0, failed = 0;
+if (!bundleDir) { console.error('Usage: node check.mjs <bundleDir>'); process.exit(1); }
 
+let passed = 0, failed = 0;
 for (const [file, spec] of CONTROL_FILE_SCHEMAS) {
-  const raw = fs.readFileSync(path.join(bundleDir, file), 'utf-8');
+  const filePath = join(bundleDir, file);
+  if (!existsSync(filePath)) { console.log(`  ✗ ${file}: missing`); failed++; continue; }
+  const raw = readFileSync(filePath, 'utf-8');
   const parsed = spec.parse(raw);
   const result = spec.schema.safeParse(parsed);
   if (result.success) {
@@ -109,10 +133,10 @@ process.exit(failed > 0 ? 1 : 0);
 ```javascript
 // DPT_FRAMEWORK/cli/inspect.mjs
 // 用法: node inspect.mjs <bundleDir>
-//
-// 检查目录结构完整性 → 输出 PASS 或 FAIL + 缺失项
-//
 // 退出码 0 = PASS, 1 = FAIL
+
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 const REQUIRED = [
   'START_FROM_HERE.md', 'rb_plan.md', 'rb_profile.yaml',
@@ -122,7 +146,9 @@ const REQUIRED = [
 ];
 
 const bundleDir = process.argv[2];
-const missing = REQUIRED.filter(f => !fs.existsSync(path.join(bundleDir, f)));
+if (!bundleDir) { console.error('Usage: node inspect.mjs <bundleDir>'); process.exit(1); }
+
+const missing = REQUIRED.filter(f => !existsSync(join(bundleDir, f)));
 if (missing.length > 0) {
   console.log(`Inspect: missing ${missing.join(', ')}`);
   process.exit(1);

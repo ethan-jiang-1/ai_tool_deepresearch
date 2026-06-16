@@ -1,0 +1,19 @@
+# Start from here — {{name}}
+
+本目录是一个 Deep Research Runtime Bundle。
+框架位于 `../DPT_FRAMEWORK/` (共享, 只读, 不修改)。
+
+## 控制文件
+- rb_plan.md       — 话题设计 (Markdown + JSON frontmatter)
+- rb_profile.yaml  — 用户意图 (YAML)
+- rb_status.json   — 运行时状态 (JSON)
+- rb_queue.json    — 执行队列 (JSON)
+- rb_trace.jsonl   — 诊断日志 (JSON Lines, 追加式)
+
+## 数据目录
+- seed_topics/  reference/  artifacts/  _cache/  final/
+
+## 规则
+- 不要修改 ../DPT_FRAMEWORK/ 中的任何文件
+- 停止授权: 仅 final_delivery / decision_blocker / empty_queue_after_refill
+- Gate 过渡前 reload 所有控制文件
