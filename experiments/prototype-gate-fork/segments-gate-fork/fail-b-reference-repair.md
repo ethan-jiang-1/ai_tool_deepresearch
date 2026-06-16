@@ -11,5 +11,5 @@
 
 ```js
 // trace 记录 fail_b 分支执行
-traceEntry('segment_load', { key: 'fail_b_reference_repair', branch: 'fail_b' });
+traceEntry('segment_load', { source: 'gf-segment/fail-b-reference-repair', key: 'fail_b_reference_repair', branch: 'fail_b' });
 ```

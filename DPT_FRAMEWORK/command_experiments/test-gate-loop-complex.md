@@ -4,7 +4,7 @@
 
 ```bash
 B="dpt_rb_test_gl_complex"
-echo "\x1b[36m═══ Complex: 全功能 ═══\x1b[0m"
+echo $'\x1b[36m═══ Complex: 全功能 ═══\x1b[0m'
 mkdir -p $B/{seed_topics,reference,artifacts/wave1,artifacts/wave2,_cache,final}
 for f in DPT_FRAMEWORK/rb_templates/*.tmpl; do name=$(basename "$f" .tmpl); sed "s/{{name}}/gl_complex/g" "$f" > "$B/$name"; done
 cp DPT_FRAMEWORK/rb_templates/rb_trace.jsonl $B/
@@ -13,7 +13,7 @@ cp DPT_FRAMEWORK/rb_templates/rb_trace.jsonl $B/
 cat > $B/t.mjs << 'JS'
 import { setTraceFile, traceInit } from '../experiments/prototype-gate-loop/trace.mjs';
 setTraceFile('dpt_rb_test_gl_complex/_trace_gl_complex.jsonl');
-traceInit('complex');
+traceInit('gl-playbook/complex', { source: 'gl-playbook/complex' });
 JS
 node $B/t.mjs > /dev/null 2>&1
 node DPT_FRAMEWORK/cli/check.mjs $B > /dev/null 2>&1
@@ -23,22 +23,25 @@ cat > $B/t.mjs << 'JS'
 import { setTraceFile, traceEntry } from '../experiments/prototype-gate-loop/trace.mjs';
 setTraceFile('dpt_rb_test_gl_complex/_trace_gl_complex.jsonl');
 import { evaluate, repairLoop, executeMDAndRun, checkAndReflect, WorkflowState } from '../experiments/prototype-gate-loop/gate-loop.mjs';
-traceEntry('verify',{step:'gate_pass',p:evaluate({current_gate:'x',ref_count:5,ref_floor:5})==='pass'});
+
+const SRC = 'gl-playbook/complex';
+
+traceEntry('verify', { source: SRC, step:'gate_pass', p:evaluate({current_gate:'x',ref_count:5,ref_floor:5})==='pass' });
 const r=repairLoop({current_gate:'x',ref_count:2,ref_floor:5});
-traceEntry('verify',{step:'gate_repair',p:r.outcome==='pass',its:r.iterations});
+traceEntry('verify', { source: SRC, step:'gate_repair', p:r.outcome==='pass', its:r.iterations });
 for(const k of['wave0_search','wave0_audit','wave1_evidence','repair_references']){
   const s=executeMDAndRun(k,{current_gate:'x',ref_count:3});s.step.execute({current_gate:'x',ref_count:3});
-  traceEntry('seg',{caller:'complex',key:k});
+  traceEntry('seg', { source: SRC, caller:'complex', key:k });
 }
 const bad=checkAndReflect({current_gate:'x',ref_count:'bad',ref_floor:5},WorkflowState);
-traceEntry('verify',{step:'ci_fail',p:!bad.passed});
+traceEntry('verify', { source: SRC, step:'ci_fail', p:!bad.passed });
 const good=checkAndReflect({current_gate:'x',ref_count:5,ref_floor:5},WorkflowState);
-traceEntry('verify',{step:'ci_pass',p:good.passed});
+traceEntry('verify', { source: SRC, step:'ci_pass', p:good.passed });
 JS
 node $B/t.mjs > /dev/null 2>&1 && sleep 2
 
 # Step 3: trace verification
-echo "\x1b[36m═══ Complex trace ═══\x1b[0m"
+echo $'\x1b[36m═══ Complex trace ═══\x1b[0m'
 cat > $B/t.mjs << 'ENDJS'
 import { readFileSync } from 'node:fs';
 import { setTraceFile, getTraceFile, traceCleanup } from '../experiments/prototype-gate-loop/trace.mjs';
@@ -51,5 +54,5 @@ traceCleanup();
 ENDJS
 node $B/t.mjs
 rm -rf $B
-echo "\x1b[32mComplex done.\x1b[0m"
+echo $'\x1b[32mComplex done.\x1b[0m'
 ```

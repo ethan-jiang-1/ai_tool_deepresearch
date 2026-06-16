@@ -1,6 +1,7 @@
 // trace.mjs — 实验痕迹系统
 // 全局声明活跃 trace 文件: setTraceFile('dpt_rb_test_gate_loop/_trace_gate_loop.jsonl')
 // 所有 trace*() 函数自动写往该文件
+// source 参数由调用方显式传递，不做全局推断
 
 import { appendFileSync, readFileSync, existsSync, unlinkSync } from 'node:fs';
 
@@ -14,13 +15,14 @@ export function getTraceFile() {
   return TRACE_FILE;
 }
 
-export function traceInit(label) {
+export function traceInit(label, detail = {}) {
   if (!TRACE_FILE) throw new Error('traceInit: call setTraceFile() first');
   if (existsSync(TRACE_FILE)) unlinkSync(TRACE_FILE);
   const entry = JSON.stringify({
     ts: new Date().toISOString(),
     event: 'run_start',
     label,
+    ...detail,
   });
   appendFileSync(TRACE_FILE, entry + '\n');
 }
@@ -33,9 +35,10 @@ export function traceEntry(event, detail = {}) {
     ...detail,
   });
   appendFileSync(TRACE_FILE, entry + '\n');
-  // Also echo to console for live view
-  const G = '\x1b[32m', B = '\x1b[0m';
-  console.log(`${G}[trace]${B} ${event}:`, JSON.stringify(detail));
+  // Echo to console — source must be in detail
+  const G = '\x1b[32m', Y = '\x1b[33m', B = '\x1b[0m';
+  const src = detail.source || '?';
+  console.log(`${G}[trace]${B} ${Y}${src}${B} ${event}:`, JSON.stringify(detail));
 }
 
 export function traceSummary() {

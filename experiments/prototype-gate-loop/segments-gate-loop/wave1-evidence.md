@@ -5,7 +5,7 @@
 > 我的职责: 为每个 topic 收集独立证据
 
 ```js
-traceEntry('md_exec', { segment: 'wave1-evidence', status: 'loaded' });
+traceEntry('md_exec', { source: 'gl-segment/wave1-evidence', segment: 'wave1-evidence', status: 'loaded' });
 ```
 
 ## 执行结果

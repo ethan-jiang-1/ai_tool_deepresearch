@@ -11,5 +11,5 @@
 
 ```js
 // trace 记录 fail_a 分支执行
-traceEntry('segment_load', { key: 'fail_a_topic_repair', branch: 'fail_a' });
+traceEntry('segment_load', { source: 'gf-segment/fail-a-topic-repair', key: 'fail_a_topic_repair', branch: 'fail_a' });
 ```

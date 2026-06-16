@@ -11,5 +11,5 @@
 
 ```js
 // trace 记录 shared repair 执行
-traceEntry('segment_load', { key: 'shared_repair', role: 'converge_point' });
+traceEntry('segment_load', { source: 'gf-segment/shared-repair', key: 'shared_repair', role: 'converge_point' });
 ```

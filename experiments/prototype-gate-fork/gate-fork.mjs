@@ -1,4 +1,4 @@
-// @impl GAF-001, COS-001, FOR-001
+// @impl GAF-001, COS-001, FOR-001, CHI-002
 // prototype-gate-fork: Gate fork routing (1→N) + Conditional branches + Converge repair
 
 import { z } from 'zod';
@@ -165,13 +165,13 @@ export const segmentRegistry = new Map([
   ['pass_next_wave', new Step('pass_next_wave', (s) => {
     console.log('  🚀 Pass branch: 前进到下一 wave...');
     console.log(`  gate: ${s.current_gate} → wave_next`);
-    traceEntry('segment_exec', { key: 'pass_next_wave', branch: 'pass', before: s.current_gate, after: 'wave_next' });
+    traceEntry('segment_exec', { source: 'gf-segment/pass-next-wave', key: 'pass_next_wave', branch: 'pass', before: s.current_gate, after: 'wave_next' });
     return { ...s, current_gate: 'wave_next' };
   })],
   ['fail_a_topic_repair', new Step('fail_a_topic_repair', (s) => {
     console.log('  🔧 Fail-A: 话题分解修复...');
     console.log(`  topicReadiness: ${s.topicReadiness} → ready`);
-    traceEntry('segment_exec', { key: 'fail_a_topic_repair', branch: 'fail_a', before: s.topicReadiness, after: 'ready' });
+    traceEntry('segment_exec', { source: 'gf-segment/fail-a-topic-repair', key: 'fail_a_topic_repair', branch: 'fail_a', before: s.topicReadiness, after: 'ready' });
     return { ...s, topicReadiness: 'ready', topicRepairAttempted: true };
   })],
   ['fail_b_reference_repair', new Step('fail_b_reference_repair', (s) => {
@@ -179,14 +179,14 @@ export const segmentRegistry = new Map([
     const after = before + 1;
     console.log('  📚 Fail-B: 补充参考...');
     console.log(`  ref_count: ${before} → ${after}`);
-    traceEntry('segment_exec', { key: 'fail_b_reference_repair', branch: 'fail_b', before, after });
+    traceEntry('segment_exec', { source: 'gf-segment/fail-b-reference-repair', key: 'fail_b_reference_repair', branch: 'fail_b', before, after });
     return { ...s, ref_count: after };
   })],
   ['shared_repair', sharedRepairStep],
   ['blocked_escalate', new Step('blocked_escalate', (s) => {
     console.log('  🛑 Blocked: 人工阻塞，停止执行...');
     console.log(`  gate: ${s.current_gate} → blocked_hitl`);
-    traceEntry('segment_exec', { key: 'blocked_escalate', branch: 'blocked', before: s.current_gate, after: 'blocked_hitl' });
+    traceEntry('segment_exec', { source: 'gf-segment/blocked-escalate', key: 'blocked_escalate', branch: 'blocked', before: s.current_gate, after: 'blocked_hitl' });
     return { ...s, current_gate: 'blocked_hitl' };
   })],
 ]);
@@ -219,7 +219,60 @@ export function executeMDAndRun(key, state) {
 }
 
 // ============================================================
-// Section 5: Loop + Fork Composition
+// Section 5: C&I Feedback Loop (CHI-002, fork variant)
+// ============================================================
+
+/**
+ * Check state with Zod safeParse. On failure, generate structured diagnostics.
+ * Returns { passed, errors?, diagnostics? }
+ *
+ * Fork variant: validates topicReadiness in addition to gate-loop fields.
+ */
+export function checkAndReflect(state, schema = WorkflowState) {
+  const result = schema.safeParse(state);
+  if (result.success) {
+    return { passed: true };
+  }
+  const diagnostics = inspectFailure(result.error);
+  return { passed: false, errors: result.error, diagnostics };
+}
+
+/**
+ * Convert ZodError into structured diagnostics.
+ * Each diagnostic: { field, issue, fix } — actionable by repair agents.
+ */
+export function inspectFailure(zodError) {
+  return zodError.issues.map((issue) => {
+    const field = issue.path.join('.');
+    const received = JSON.stringify(issue.received);
+    const expected = issue.expected ? JSON.stringify(issue.expected) : 'valid value';
+
+    let fix;
+    switch (issue.code) {
+      case 'invalid_type':
+        fix = `Set ${field} to type ${expected} (received ${received})`;
+        break;
+      case 'invalid_enum_value':
+        fix = `Set ${field} to one of: ${expected} (received ${received})`;
+        break;
+      case 'too_small':
+        fix = `Increase ${field} to minimum ${issue.minimum}`;
+        break;
+      default:
+        fix = `Fix ${field}: ${issue.message}`;
+    }
+
+    return {
+      field,
+      issue: issue.message,
+      code: issue.code,
+      fix,
+    };
+  });
+}
+
+// ============================================================
+// Section 6: Loop + Fork Composition
 // ============================================================
 
 /**

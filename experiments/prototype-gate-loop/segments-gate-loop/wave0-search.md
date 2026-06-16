@@ -5,7 +5,7 @@
 > 我的职责: 搜索共享基础证据 (official + academic)
 
 ```js
-traceEntry('md_exec', { segment: 'wave0-search', status: 'loaded' });
+traceEntry('md_exec', { source: 'gl-segment/wave0-search', segment: 'wave0-search', status: 'loaded' });
 ```
 
 ## 执行结果

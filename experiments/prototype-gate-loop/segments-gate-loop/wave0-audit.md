@@ -5,7 +5,7 @@
 > 我的职责: 检查共享参考是否达到 floor 要求
 
 ```js
-traceEntry('md_exec', { segment: 'wave0-audit', status: 'loaded' });
+traceEntry('md_exec', { source: 'gl-segment/wave0-audit', segment: 'wave0-audit', status: 'loaded' });
 ```
 
 ## 执行结果

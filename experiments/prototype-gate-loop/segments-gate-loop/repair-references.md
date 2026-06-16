@@ -5,7 +5,7 @@
 > 我的职责: 每次补齐 2 条本地参考文件
 
 ```js
-traceEntry('md_exec', { segment: 'repair-references', status: 'loaded', ref_before: state.ref_count });
+traceEntry('md_exec', { source: 'gl-segment/repair-references', segment: 'repair-references', status: 'loaded', ref_before: state.ref_count });
 ```
 
 ## 执行结果

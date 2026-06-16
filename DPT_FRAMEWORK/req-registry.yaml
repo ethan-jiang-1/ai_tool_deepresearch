@@ -25,3 +25,5 @@ GAF-001: gate-fork-router — Gate multi-branch routing (1→N)
 COS-001: conditional-segments — Independent branch execution
 FOR-001: fork-repair-converge — Multi-fail shared repair
 AGT-001: agent-testing — Agent-assisted test playbook for gate-loop
+AGT-002: agent-testing — Agent-assisted test playbook for gate-fork (3 levels: simple/medium/complex)
+CHI-002: check-inspect-feedback — C&I feedback loop for fork variant (topicReadiness validation)

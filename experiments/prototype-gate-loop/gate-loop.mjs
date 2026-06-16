@@ -100,20 +100,20 @@ export const segmentRegistry = new Map([
     console.log('  🔍 开始搜索 official + academic 来源...');
     console.log('  结果: 3 official + 2 academic = 5 条共享参考');
     console.log('  gate: setup_ready → wave0_complete');
-    traceEntry('segment_exec', { key: 'wave0_search', before: 'setup_ready', after: 'wave0_complete' });
+    traceEntry('segment_exec', { source: 'gl-segment/wave0-search', key: 'wave0_search', before: 'setup_ready', after: 'wave0_complete' });
     return { ...s, current_gate: 'wave0_complete' };
   })],
   ['wave0_audit', new Step('wave0_audit', (s) => {
     console.log('  📋 审计共享参考...');
     console.log('  floor=5, 实际=5 → PASS');
-    traceEntry('segment_exec', { key: 'wave0_audit', before: 'wave0_complete', after: 'wave0_complete' });
+    traceEntry('segment_exec', { source: 'gl-segment/wave0-audit', key: 'wave0_audit', before: 'wave0_complete', after: 'wave0_complete' });
     return { ...s, current_gate: 'wave0_complete' };
   })],
   ['wave1_evidence', new Step('wave1_evidence', (s) => {
     console.log('  🔬 深挖独立证据...');
     console.log('  Topic 01: 4 条, Topic 02: 3 条, 独立率 70%');
     console.log('  gate: wave0_complete → wave1_complete');
-    traceEntry('segment_exec', { key: 'wave1_evidence', before: 'wave0_complete', after: 'wave1_complete' });
+    traceEntry('segment_exec', { source: 'gl-segment/wave1-evidence', key: 'wave1_evidence', before: 'wave0_complete', after: 'wave1_complete' });
     return { ...s, current_gate: 'wave1_complete' };
   })],
   ['repair_references', new Step('repair_references', (s) => {
@@ -121,7 +121,7 @@ export const segmentRegistry = new Map([
     const after = before + 2;
     console.log('  🔧 补充参考...');
     console.log('  ref_count: ' + before + ' → ' + after);
-    traceEntry('segment_exec', { key: 'repair_references', before, after });
+    traceEntry('segment_exec', { source: 'gl-segment/repair-references', key: 'repair_references', before, after });
     return { ...s, ref_count: after };
   })],
 ]);
