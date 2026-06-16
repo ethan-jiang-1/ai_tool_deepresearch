@@ -8,8 +8,9 @@ Deep Research 是一个长程 agentic 任务，核心执行模型是 **Gate 条�
 - **新建** Repair loop：修好状态 → 重回 Gate → 重新判决，验证 loopback 模式
 - **新建** 动态段加载：Gate 通过后动态决定下一个 workflow 段（不预编译整个 DAG）
 - **新建** C&I 反馈环：Check 失败 → Inspect 诊断 → 反馈 → 纠正
+- **新建** Agent 辅助测试 playbook：`command_experiments/test-gate-loop-{simple,medium,complex}.md`，3 级复杂度，独立 trace
+- **更新** config.yaml：新增 `command_experiments/` 目录 + Agent 辅助测试策略
 - 纯 JavaScript (Node.js)，仅用批准的 zod 依赖
-- **不要求**生产级质量、完整测试覆盖、业务逻辑
 
 ## Capabilities
 
@@ -19,6 +20,7 @@ Deep Research 是一个长程 agentic 任务，核心执行模型是 **Gate 条�
 - `repair-loop`: Repair 段 → 修好后重回 Gate 重判，含 max_iterations 防无限循环
 - `dynamic-segment-loading`: Gate 通过后动态解析下一 workflow 段，Late binding 模式
 - `check-inspect-feedback`: Check 硬性验证 + Inspect 诊断 + 反馈 → 纠正闭环
+- `agent-testing`: Agent 辅助测试 playbook 示范，逐步执行无需理解原理
 
 ### Modified Capabilities
 
@@ -26,6 +28,7 @@ Deep Research 是一个长程 agentic 任务，核心执行模型是 **Gate 条�
 
 ## Impact
 
-- 实验代码放在 `experiments/prototype-gate-loop/` 目录，不污染 DPT_FRAMEWORK/
+- 实验代码放在 `experiments/prototype-gate-loop/` 目录
+- `DPT_FRAMEWORK/command_experiments/` 新增 Agent 辅助测试目录
+- config.yaml 新增 `command_experiments/` 目录
 - 成功的模式和代码提取为 engine 包的参考实现
-- 验证的技术决策写入后续 engine 相关 change 的 design.md

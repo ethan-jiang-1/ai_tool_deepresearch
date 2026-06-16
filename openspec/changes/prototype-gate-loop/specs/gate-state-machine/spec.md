@@ -1,4 +1,5 @@
 # Gate State Machine
+> req: GAS-001
 
 JavaScript 实现 Gate 条件路由。Gate 检查状态，返回 pass/fail/needs_repair，路由到不同 workflow 段。
 

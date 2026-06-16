@@ -17,3 +17,11 @@ BUI-001: bundle-data-isolation — Multi-bundle coexistence
 BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry
 TEF-001: test-fixtures — Fixture framework for integration tests
 INT-001: integration-tests — check.mjs + inspect.mjs integration tests
+GAS-001: gate-state-machine — Gate condition router (pass/fail/needs_repair)
+REL-001: repair-loop — Repair segment + loopback to Gate
+DYS-001: dynamic-segment-loading — Late binding segment registry
+CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
+GAF-001: gate-fork-router — Gate multi-branch routing (1→N)
+COS-001: conditional-segments — Independent branch execution
+FOR-001: fork-repair-converge — Multi-fail shared repair
+AGT-001: agent-testing — Agent-assisted test playbook for gate-loop

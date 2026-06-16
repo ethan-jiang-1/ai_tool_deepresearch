@@ -1,4 +1,5 @@
 # Repair Loop
+> req: REL-001
 
 Gate 失败 → Repair 段修复状态 → 重回 Gate 重判。含防无限循环机制。
 

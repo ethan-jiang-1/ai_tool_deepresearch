@@ -26,7 +26,7 @@
 
 ### 1. Guard-based 多路路由
 
-```typescript
+```javascript
 type Branch = 'pass' | 'fail_a' | 'fail_b' | 'blocked';
 
 function gateForkRouter(state: WorkflowState): Step {
@@ -39,7 +39,7 @@ function gateForkRouter(state: WorkflowState): Step {
 
 ### 2. 分支独立执行
 
-```typescript
+```javascript
 const branches = new Map<Branch, Step>([
   ['pass',    nextWaveStep],
   ['fail_a',  repairTopicStep],
@@ -52,7 +52,7 @@ const branches = new Map<Branch, Step>([
 
 ### 3. 共享 Repair 汇聚
 
-```typescript
+```javascript
 function convergeRepair(branch: Branch, state: WorkflowState): WorkflowState {
   // 多条 fail 路径汇聚到一个 shared repair segment
   const repair = sharedRepairFor(branch);

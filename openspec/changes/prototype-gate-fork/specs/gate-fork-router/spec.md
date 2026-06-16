@@ -1,4 +1,5 @@
 # Gate Fork Router
+> req: GAF-001
 
 Gate 检查状态值后分叉到 3+ 个不同 workflow 段。
 

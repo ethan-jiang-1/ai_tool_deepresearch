@@ -2,6 +2,8 @@
 // Usage: node check.mjs <bundleDir>
 // Exit: 0 = PASS, 1 = FAIL
 
+const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
+
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
@@ -46,10 +48,10 @@ for (const [file, spec] of CONTROL_FILE_SCHEMAS) {
   const parsed = spec.parse(raw);
   const result = spec.schema.safeParse(parsed);
   if (result.success) {
-    console.log(`  ✓ ${file}`);
+    console.log(`  ${G}✓${B} ${file}`);
     passed++;
   } else {
-    console.log(`  ✗ ${file}: ${result.error.issues.map(i => i.message).join(', ')}`);
+    console.log(`  ${R}✗${B} ${file}: ${result.error.issues.map(i => i.message).join(', ')}`);
     failed++;
   }
 }

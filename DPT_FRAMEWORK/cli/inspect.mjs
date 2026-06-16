@@ -2,6 +2,8 @@
 // Usage: node inspect.mjs <bundleDir>
 // Exit: 0 = PASS, 1 = FAIL
 
+const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
+
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -20,7 +22,7 @@ if (!bundleDir) {
 
 const missing = REQUIRED.filter(f => !existsSync(join(bundleDir, f)));
 if (missing.length > 0) {
-  console.log(`Inspect: missing ${missing.join(', ')}`);
+  console.log(`${R}Inspect: missing ${missing.join(', ')}${B}`);
   process.exit(1);
 }
-console.log('Inspect: directory structure complete');
+console.log(`${G}Inspect: directory structure complete${B}`);

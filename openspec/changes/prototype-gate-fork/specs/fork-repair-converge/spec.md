@@ -1,4 +1,5 @@
 # Fork Repair Converge
+> req: FOR-001
 
 多个 fail 分支汇聚到共享 repair，修好后重回 Gate 重判。
 

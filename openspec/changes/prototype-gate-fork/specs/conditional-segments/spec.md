@@ -1,4 +1,5 @@
 # Conditional Segments
+> req: COS-001
 
 每个分支独立执行不同逻辑。分支间互不干扰。
 

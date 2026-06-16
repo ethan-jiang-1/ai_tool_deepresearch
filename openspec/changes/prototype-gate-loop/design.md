@@ -24,15 +24,15 @@ Deep Research 的执行模型需要 **Gate 条件路由 + Repair loop + 动态�
 
 **决策：** Gate 状态机用显式 Map/Object 转换表，不引入 XState 或任何 workflow engine。
 
-```typescript
-type GateResult = 'pass' | 'fail' | 'needs_repair';
+```javascript
+const GateResult = { PASS: "pass", FAIL: "fail", NEEDS_REPAIR: "needs_repair" };
 
 const transitions = new Map<GateResult, Step>([
   ['pass', nextSegment],
   ['fail', repairSegment],
 ]);
 
-function gateRouter(state: WorkflowState): Step {
+function gateRouter(state) {
   const result = gate.evaluate(state);
   return transitions.get(result) ?? escalateStep;
 }
@@ -48,8 +48,8 @@ Gate → fail → Repair → Gate → pass → next segment
               └── loopback ────────┘
 ```
 
-```typescript
-function repairLoop(state: WorkflowState, maxIterations = 3): WorkflowState {
+```javascript
+function repairLoop(state, maxIterations = 3) {
   for (let i = 0; i < maxIterations; i++) {
     const result = gate.evaluate(state);
     if (result === 'pass') return advanceSegment(state);
@@ -64,22 +64,45 @@ function repairLoop(state: WorkflowState, maxIterations = 3): WorkflowState {
 
 ### 3. 动态段加载 — Late Binding
 
-```typescript
-const segmentRegistry = new Map<string, Step>([
-  ['wave0_search',     wave0SearchStep],
-  ['wave0_audit',      wave0AuditStep],
-  ['wave1_evidence',   wave1EvidenceStep],
-  ['repair_references', repairReferencesStep],
+```javascript
+const segmentRegistry = new Map([
+  ['wave0_search', new Step('wave0_search', (s) => {
+    console.log('  🔍 开始搜索 official + academic 来源...');
+    console.log('  结果: 3 official + 2 academic = 5 条共享参考');
+    console.log('  gate: setup_ready → wave0_complete');
+    return { ...s, current_gate: 'wave0_complete' };
+  })],
+  ['wave0_audit', new Step('wave0_audit', (s) => {
+    console.log('  📋 审计共享参考, floor=5 实际=5 → PASS');
+    return { ...s, current_gate: 'wave0_complete' };
+  })],
+  ['wave1_evidence', new Step('wave1_evidence', (s) => {
+    console.log('  🔬 深挖独立证据, Topic 01:4条 02:3条 独立率70%');
+    return { ...s, current_gate: 'wave1_complete' };
+  })],
+  ['repair_references', new Step('repair_references', (s) => {
+    const before = s.ref_count, after = before + 2;
+    console.log('  🔧 补充参考: ' + before + ' → ' + after);
+    return { ...s, ref_count: after };
+  })],
 ]);
 
-function loadNextSegment(gateOutput: string): Step {
-  const step = segmentRegistry.get(gateOutput);
-  if (!step) throw new Error(`Unknown segment: ${gateOutput}`);
+function loadNextSegment(key) {
+  const step = segmentRegistry.get(key);
+  if (!step) throw new Error(`Unknown segment: ${key}`);
   return step;
+}
+
+// MD 说话 → Segment 做事
+function executeMDAndRun(key) {
+  const step = loadNextSegment(key);
+  const mdPath = `experiments/prototype-gate-loop/segments-gate-loop/${key.replace(/_/g, '-')}.md`;
+  const md = readFileSync(mdPath, 'utf-8');
+  return { step, md };
 }
 ```
 
-**理由：** Gate 输出一个字符串 key，registry 按 key 解析。删掉/重命名 step 不影响正在执行的其他 step。跟 Temporal `DynamicWorkflow` 和 LangGraph `add_conditional_edges` 一致。
+**理由：** Gate 输出 key → registry 解析 → 加载 MD 展示内容 → execute 执行并输出状态变化。MD 名与 key 对应 (snake_case → kebab-case)。段库在 `segments-gate-loop/`，专属 gate-loop 实验。
 
 ### 4. C&I 反馈环
 
@@ -87,8 +110,8 @@ function loadNextSegment(gateOutput: string): Step {
 Check (Zod) → fail → Inspect (诊断) → 反馈 → Repair → 重回 Check
 ```
 
-```typescript
-function checkAndReflect(state: WorkflowState, schema: ZodSchema): WorkflowState {
+```javascript
+function checkAndReflect(state, schema) {
   const result = schema.safeParse(state);
   if (result.success) return state;
   
@@ -98,6 +121,37 @@ function checkAndReflect(state: WorkflowState, schema: ZodSchema): WorkflowState
   return repaired;
 }
 ```
+
+### 5. 实验痕迹系统 (trace.mjs)
+
+`trace.mjs` 提供全局声明式痕迹记录。每个测试脚本调用 `setTraceFile()` 声明当前活跃文件，后续所有 `traceEntry()` 自动写往该文件。每个 `node` 进程需独立声明。Segments 通过 `traceEntry()` 自动留痕，无需知道文件名。
+
+```javascript
+// trace.mjs API
+setTraceFile('dpt_rb_test_gl_simple/_trace_gl_simple.jsonl'); // 全局声明
+traceInit('label');       // 初始化 (创建或覆盖)
+traceEntry('event', {});  // 追加事件
+traceSummary();           // 汇总输出
+traceCleanup();           // 删除痕迹文件
+```
+
+测试 playbook 按复杂度分 3 级，各用独立 bundle 和 trace:
+- simple: `dpt_rb_test_gl_simple/` → `_trace_gl_simple.jsonl`
+- medium: `dpt_rb_test_gl_medium/` → `_trace_gl_medium.jsonl`
+- complex: `dpt_rb_test_gl_complex/` → `_trace_gl_complex.jsonl`
+
+### 6. ANSI 颜色 (无需 npm 依赖)
+
+所有 CLI 输出使用 ANSI escape codes:
+```javascript
+const G = '\x1b[32m'; // 绿色 PASS
+const R = '\x1b[31m'; // 红色 FAIL
+const Y = '\x1b[33m'; // 黄色 warn
+const C = '\x1b[36m'; // 青色 header
+const B = '\x1b[0m';  // 重置
+```
+
+已应用: check.mjs, inspect.mjs, 3 级 test playbook (simple/medium/complex)。
 
 ## Risks / Trade-offs
 

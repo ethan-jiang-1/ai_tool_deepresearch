@@ -33,7 +33,7 @@ context: |
   - tests/unit/: 纯代码单元测试, 零 I/O, node:test + node:assert
   - tests/integration/: JS+MD 交互集成测试, 真实文件 I/O, 临时目录隔离
   - tests/fixtures/: 最小 DPT_FRAMEWORK/ 测试框架, 可被所有集成测试复用
-  - 端到端测试暂无自动化方案, 由 Claude session 手动验证
+  - Agent 辅助测试: command_experiments/ 下逐步执行 playbook, 无需理解原理, 示范 AI 辅助测试
 
   根目录约定 (Framework ↔ Bundle 同级, 不拷贝):
   experiments/                — 原型实验 (理想化, 冻结)
@@ -42,6 +42,7 @@ context: |
     _lab/                     — 实验与原型代码 (内部/临时用)
     cli/                      — JS 程序, Agent 用 node 调用 (如 check.mjs, inspect.mjs, check-req-ids.mjs)
     command_playbook/         — 一次性命令, Agent 读的 Markdown (如 instantiate-run-bundle.md)
+    command_experiments/      — Agent 辅助的半自动测试 playbook
     rb_templates/             — Runtime Bundle 骨架文件
     schema/                   — 权威规范 (Zod types, contracts, invariants)
     workflows/                — 持续运行的 agentic 流程 (execution, queue loop, HITL)
@@ -79,6 +80,7 @@ context: |
   命名规范:
   - 枚举 snake_case, 用户界面中文, 内部字段名/路径英文
   - Capability 前缀: cmd-* = Agent 读的 Markdown 命令 playbook; cli-* = JS 脚本
+  - 测试 Bundle: dpt_rb_test_* = 自动化测试用, .gitignore 忽略, 测试结束清理
 
   需求追踪 (Requirement Traceability):
   所有 capability 可追踪，不分前缀。强制性纪律，不可跳过。

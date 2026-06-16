@@ -5,13 +5,13 @@
 ```
 schema-core ✅ (archived)
     │
-    ├── schema-core-hitl ◄ 当前
+    ├── schema-core-hitl ✅ (archived)
     │
-    ├── prototype-start-from-here
+    ├── prototype-start-from-here ✅ (archived)
     │       │
-    │       └── test-infra
+    │       └── test-infra ✅ (archived)
     │
-    ├── prototype-gate-loop
+    ├── prototype-gate-loop ◄ 当前
     │
     └── prototype-gate-fork
 ```
@@ -21,8 +21,8 @@ schema-core ✅ (archived)
 | Change | Tasks | 状态 |
 |--------|-------|------|
 | schema-core | 20 | ✅ archived |
-| schema-core-hitl | 11 | 🔵 in-progress |
-| prototype-start-from-here | 22 | ⬜ pending |
-| test-infra | 10 | ⬜ pending |
-| prototype-gate-loop | 18 | ⬜ pending |
+| schema-core-hitl | 11 | ✅ archived |
+| prototype-start-from-here | 22 | ✅ archived |
+| test-infra | 10 | ✅ archived |
+| prototype-gate-loop | 19 | 🔵 in-progress |
 | prototype-gate-fork | 14 | ⬜ pending |

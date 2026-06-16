@@ -1,4 +1,5 @@
 # Check & Inspect Feedback Loop
+> req: CHI-001
 
 Check 硬性验证 + Inspect 诊断 + 反馈 → 纠正闭环。LLM-JS C&I 协作原则的实现。
 
