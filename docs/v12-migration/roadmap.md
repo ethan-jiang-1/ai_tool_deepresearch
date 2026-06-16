@@ -3,17 +3,17 @@
 ## 依赖顺序
 
 ```
-schema-core ✅ (archived)
+schema-core ✅
     │
-    ├── schema-core-hitl ✅ (archived)
+    ├── schema-core-hitl ✅
     │
-    ├── prototype-start-from-here ✅ (archived)
+    ├── prototype-start-from-here ✅
     │       │
-    │       └── test-infra ✅ (archived)
+    │       └── test-infra ✅
     │
-    ├── prototype-gate-loop ◄ 当前
+    ├── prototype-gate-loop ✅
     │
-    └── prototype-gate-fork
+    └── prototype-gate-fork ✅
 ```
 
 ## 进度
@@ -24,5 +24,10 @@ schema-core ✅ (archived)
 | schema-core-hitl | 11 | ✅ archived |
 | prototype-start-from-here | 22 | ✅ archived |
 | test-infra | 10 | ✅ archived |
-| prototype-gate-loop | 19 | 🔵 in-progress |
-| prototype-gate-fork | 14 | ⬜ pending |
+| prototype-gate-loop | 22 | ✅ done |
+| prototype-gate-fork | 14 | ✅ done |
+
+## 下一步（见 docs/architect/）
+
+- `todo-prototype-subagent` — 跨 Agent subagent 编排
+- `todo-loop-engineering-queue` — 迭代推理队列引擎
