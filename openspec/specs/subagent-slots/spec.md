@@ -2,9 +2,11 @@
 
 > req: SUS-001
 
+## Purpose
+
 Slot lifecycle and file contract for native LLM subagent work. A slot is declared by the Engine, executed through Parent Relay, and collected by the Engine after validation.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Slot lifecycle with four states
 The system SHALL track each subagent slot through `_status.json` with states `pending`, `running`, `done`, and `failed`. Status transitions SHALL be validated by an explicit transition table: `pending -> running|failed`, `running -> done|failed`, and terminal states `done` and `failed` SHALL NOT transition to a different state. Rewriting the same status SHALL be idempotent.

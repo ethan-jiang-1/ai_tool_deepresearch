@@ -1,9 +1,11 @@
 # Gate Fork Router
 > req: GAF-001
 
+## Purpose
+
 Gate 检查状态值后分叉到 4 个不同 workflow 段。使用显式 Map 转换表，按优先级路由。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Gate evaluates state and returns a branch identifier
 The Gate SHALL inspect workflow state across multiple dimensions and return exactly one Branch identifier. Evaluation SHALL follow a fixed priority order to ensure deterministic routing when multiple conditions overlap.

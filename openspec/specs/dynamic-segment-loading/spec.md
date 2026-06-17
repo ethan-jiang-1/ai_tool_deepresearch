@@ -1,9 +1,11 @@
 # Dynamic Segment Loading
 > req: DYS-001
 
+## Purpose
+
 Gate 通过后动态解析下一个 workflow 段。不预编译整个 DAG，支持 Late binding。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Segments are resolved from a registry at runtime
 The workflow SHALL resolve the next segment from a runtime registry using the gate output as a key, not from a precompiled DAG.

@@ -1,7 +1,8 @@
 # cmd-bundle-instantiation Specification
+> req: CMI-001, CMI-002, CMI-003, CMI-004
 
 ## Purpose
-TBD - created by archiving change prototype-start-from-here. Update Purpose after archive.
+Bundle 实例化命令 playbook、rb_templates 模板文件、check.mjs/inspect.mjs 校验脚本的契约。
 ## Requirements
 ### Requirement: Command playbook guides agent to produce a complete bundle
 The `command_playbook/instantiate-run-bundle.md` playbook SHALL instruct the agent to create `dpt_rb_{name}/` at project root, containing `START_FROM_HERE.md`, five `rb_*` control files, `seed_topics/`, `reference/`, `artifacts/`, `_cache/`, `final/`.

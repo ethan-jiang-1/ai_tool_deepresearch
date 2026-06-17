@@ -1,9 +1,11 @@
 # Gate State Machine
 > req: GAS-001
 
+## Purpose
+
 JavaScript 实现 Gate 条件路由。Gate 检查状态，返回 pass/fail/needs_repair，路由到不同 workflow 段。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Gate evaluates state and returns a routing decision
 The Gate SHALL inspect the current workflow state and return exactly one of `pass`, `fail`, or `needs_repair`.

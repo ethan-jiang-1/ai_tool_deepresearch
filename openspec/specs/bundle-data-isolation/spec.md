@@ -1,7 +1,8 @@
 # bundle-data-isolation Specification
+> req: BUI-001
 
 ## Purpose
-TBD - created by archiving change prototype-start-from-here. Update Purpose after archive.
+多个 Runtime Bundle 在项目根同级共存,数据互相隔离、互不污染。
 ## Requirements
 ### Requirement: Multiple bundles can coexist at project root
 Two bundles (`dpt_rb_{name}`) SHALL be loadable simultaneously, with each returning its own independent state.

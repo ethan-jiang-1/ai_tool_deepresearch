@@ -1,7 +1,8 @@
 # test-fixtures Specification
+> req: TEF-001
 
 ## Purpose
-TBD - created by archiving change test-infra. Update Purpose after archive.
+最小化 DPT_FRAMEWORK/ 测试夹具 (schema/rb_templates/cli), 供集成测试在不依赖真实框架目录的情况下运行 check.mjs/inspect.mjs。
 ## Requirements
 ### Requirement: Fixtures provide a complete mini DPT_FRAMEWORK/
 The `tests/fixtures/DPT_FRAMEWORK/` SHALL contain schema files (.mjs), rb_templates, and cli scripts sufficient to run `check.mjs` and `inspect.mjs`. Schemas SHALL be symlinked or copied from DPT_FRAMEWORK/schema/ (no compilation).

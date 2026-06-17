@@ -1,7 +1,8 @@
 # integration-tests Specification
+> req: INT-001
 
 ## Purpose
-TBD - created by archiving change test-infra. Update Purpose after archive.
+check.mjs / inspect.mjs 的集成测试: 真实文件 I/O、临时目录隔离、有效/无效 bundle 双向断言。
 ## Requirements
 ### Requirement: check.mjs integration test covers valid and invalid bundles
 The integration test SHALL create a valid bundle in a temp directory, run `node check.mjs`, and assert exit code 0. It SHALL also create an invalid bundle and assert exit code 1.

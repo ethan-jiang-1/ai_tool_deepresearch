@@ -1,7 +1,8 @@
 # bundle-start-from-here Specification
+> req: BUS-001
 
 ## Purpose
-TBD - created by archiving change prototype-start-from-here. Update Purpose after archive.
+Bundle 启动入口 START_FROM_HERE.md: 告知 Agent 框架位置、控制文件清单、数据目录映射与停止授权规则。
 ## Requirements
 ### Requirement: START_FROM_HERE.md is the first file an agent reads
 The boot entry SHALL provide: framework location (`../DPT_FRAMEWORK/`), control file list with `rb_` prefixed names, data directory map, and stop authorization rules.

@@ -1,9 +1,11 @@
 # Repair Loop
 > req: REL-001
 
+## Purpose
+
 Gate 失败 → Repair 段修复状态 → 重回 Gate 重判。含防无限循环机制。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Repair segment modifies state and loops back to gate
 After repair execution, the workflow SHALL re-enter the gate for re-evaluation with the repaired state.

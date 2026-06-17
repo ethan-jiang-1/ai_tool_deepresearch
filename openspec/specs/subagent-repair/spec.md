@@ -2,9 +2,11 @@
 
 > req: SUR-001
 
+## Purpose
+
 Subagent failure handling preserves Engine authority. Failed slots may inform repair routing, but subagents never mutate WorkflowState, pass gates, repair queues, or authorize stopping.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: All-slots-failed triggers Engine repair
 When `subagent_all_failed` is `true` after merge, the pipeline SHALL route the state through Engine-owned `convergeRepair(state)`. The repair path SHALL include stall detection via state hashing and SHALL respect `maxIterations` (default 3).

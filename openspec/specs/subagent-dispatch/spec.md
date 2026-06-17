@@ -2,9 +2,11 @@
 
 > req: SUD-001
 
+## Purpose
+
 Gate pass declares bounded slots for native LLM subagents. Dispatch is Engine-owned: it writes the wave manifest, slot task, and result schema. The parent agent later maps each slot to the active Codex / Claude Code runtime.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Gate pass declares real subagent slots
 When `evaluateBranch` returns `pass`, the system SHALL dispatch subagent slots according to the Engine-owned `dispatchMap`. Each slot SHALL include a stable `roleAgentKey`, deterministic `slotIndex`, bounded `taskDescription`, and paths for `task.md` and `result.schema.json`.

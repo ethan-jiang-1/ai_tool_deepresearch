@@ -2,9 +2,11 @@
 
 > req: SUC-001
 
+## Purpose
+
 Engine collection reads Parent Relay outputs from each slot. `result.json` is the primary machine-readable contract. `result.md` is optional and human-readable only.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Collect validated result.json from all slots
 The system SHALL read each declared slot's `_status.json` and `result.json` to produce a `SlotResult`. Collection SHALL attempt all declared slots regardless of individual slot status. A slot with missing or schema-invalid `result.json` SHALL be collected as failed.

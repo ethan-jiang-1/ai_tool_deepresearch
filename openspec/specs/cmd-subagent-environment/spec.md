@@ -2,9 +2,11 @@
 
 > req: CSE-001
 
+## Purpose
+
 The real subagent path requires project-level agent definitions before the native Codex / Claude Code experiments run. A DPT command playbook prepares those definitions without running the experiments.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Command playbook prepares real subagent environment
 The `DPT_FRAMEWORK/command_playbook/setup-real-subagents.md` playbook SHALL instruct an agent to create or update project-local Codex and Claude Code role-agent definitions for the DPT real subagent taxonomy.

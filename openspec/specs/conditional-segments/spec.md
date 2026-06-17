@@ -1,9 +1,11 @@
 # Conditional Segments
 > req: COS-001
 
+## Purpose
+
 每个分支独立执行不同逻辑。分支间互不干扰。每分支可独立测试。包含动态段加载能力。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Each branch segment has independent execution logic
 Each branch SHALL implement its own `Step.execute()` with distinct behavior and side effects.

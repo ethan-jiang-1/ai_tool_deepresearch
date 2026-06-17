@@ -136,8 +136,14 @@ rules:
     - 按依赖排序，优先搭骨架再填功能
     - 单个 task 不超过 2 小时
     - Task 描述中引用它实现的 requirement ID (如 "实现 SCO-001: CurrentGate enum")
+    - 每个 change 的 tasks 必含两条收尾检查 task, 归档前硬性 done condition:
+        1. 运行 `node DPT_FRAMEWORK/cli/check-req-ids.mjs` 必须 PASS (0 duplicate / 0 orphan / 0 unregistered)
+        2. 运行 `node DPT_FRAMEWORK/cli/check-spec-format.mjs` 必须 PASS (0 deltaHeaderInProd / 0 missingPurpose / 0 missingRequirements / 0 missingReqHeader)
+      把"打扫卫生"固化进每个 change 生命周期, 防止 requirement ID 堆叠/漏标/被覆盖, 以及 delta 格式污染生产 spec 而无人发现
   specs:
     - Capability 用 kebab-case 命名，目录名即分类
     - Spec 文件是 Zod schema 的人类可读投影
+    - 生产 spec (openspec/specs/) 格式: `## Purpose` + `## Requirements`。禁止 delta 头 (`## ADDED|MODIFIED|REMOVED|RENAMED Requirements`)，这些只在 openspec/changes/ 下合法
+    - 每个 spec 文件必须有 `> req: XXX-001` frontmatter 行标注涉及的 requirement ID
     - 列出该 capability 涉及的 requirement ID 和 invariant ID
     - 实现代码中用 `// @impl <REQ-ID>` 标注, MD 文件用 frontmatter `req:` 标注

@@ -1,9 +1,11 @@
 # Fork Repair Converge
 > req: FOR-001
 
+## Purpose
+
 多个 fail 分支汇聚到共享 repair，修好后重回 Gate 重判。含 stall 检测、maxIterations 保护、terminal 分支立即退出。maxIterations 耗尽后返回最终 branch 名（非哨兵值）。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Multiple fail branches can converge to a shared repair segment
 When any fail branch executes, the state SHALL be routable to a shared repair segment. The shared repair SHALL handle all failure types (reference shortage, topic readiness) in a single pass.
