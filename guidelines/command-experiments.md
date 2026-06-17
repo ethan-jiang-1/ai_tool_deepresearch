@@ -28,7 +28,7 @@ siblings:
 
 `command_experiments/` 是 agentic mechanism 的 staging 级端到端实验层。每个实验用 Agent 可读的 Markdown playbook 驱动真实 disposable bundle、真实 prototype Engine、真实文件写入和真实 trace 裁决。
 
-实验的价值不是“脚本打印 passed”，而是证明一个机制能在接近真实 run bundle 的环境里形成可追溯反馈闭环。
+实验的价值不是“脚本打印 passed”，而是证明一个机制能在接近真实 run bundle 的环境里形成可追溯反馈闭环：Markdown 驱动 LLM 行动，JS/CLI 执行反馈动作，输出回到 conversation context，LLM 再据此继续、修复、阻塞或裁决。
 
 ---
 
@@ -41,6 +41,7 @@ siblings:
 - MUST run `validate-bundle.mjs` and `inspect-bundle.mjs` before mechanism execution.
 - MUST import and exercise the prototype Engine instead of reimplementing the mechanism in the playbook.
 - MUST use real Agent/subagent execution when the mechanism depends on Agent behavior.
+- MUST let Engine/CLI output return to the LLM as actionable context.
 - MUST make the final verdict come from trace JSONL.
 - MUST clean up the disposable bundle at the end of the playbook.
 
@@ -136,8 +137,9 @@ Every playbook follows this shape:
 1. 创建 disposable bundle `[MAIN/SHELL]`
 2. 执行核心机制 `[MAIN/SHELL]`
 3. 如需要，启动真实 subagent `[MAIN->SUBAGENT]`
-4. 从 trace JSONL 裁决 `[MAIN/SHELL]`
-5. 清理 disposable bundle `[MAIN/SHELL]`
+4. 读取 JS/CLI 输出和 trace JSONL，形成可行动反馈 `[MAIN/SHELL]`
+5. LLM 根据反馈继续、修复、阻塞或裁决 `[MAIN]`
+6. 清理 disposable bundle `[MAIN/SHELL]`
 
 ## Step 1: 创建 disposable bundle
 ...
@@ -203,6 +205,16 @@ Keep inline scripts thin:
 Complex logic belongs in `experiments/prototype-<component>/<component>.mjs`, not in Markdown shell blocks.
 
 New experiment verdict checks use `event === "check"` with a boolean `passed` field. Older `verify` events are migration residue only; do not use them for new or updated playbooks.
+
+Use JS/CLI feedback actions consistently when a playbook needs machine feedback beyond raw trace verdict:
+
+- `check` answers whether a specific condition passed.
+- `inspect` explains missing files, malformed state, inconsistent counters, or other diagnosis.
+- `advice` gives the next recommended action when a deterministic system can point the Agent in a better direction.
+
+For current command experiments, only `check` is the normative trace verdict event. `inspect` and `advice` are feedback actions for LLM context unless a future accepted spec defines them as trace events or CLI commands. Do not confuse the feedback action `inspect` with the existing `inspect-bundle.mjs` validation CLI.
+
+The output of those steps should be useful when it returns to the conversation; do not bury the only actionable detail inside an unparsed wall of console text.
 
 ---
 

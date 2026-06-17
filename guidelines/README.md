@@ -40,7 +40,8 @@ When a guideline conflicts with accepted specs or executable schema, fix the gui
 - MUST treat this directory as guidance, not spec authority.
 - MUST keep every guideline aligned with `AGENTS.md`, `openspec/config.yaml`, accepted specs, and executable schema.
 - MUST distinguish current runtime facts from draft mechanism proposals.
-- MUST preserve the core split: Agent produces content, Engine enforces deterministic contracts, Markdown bridges the two.
+- MUST preserve the core split: Agent supplies judgment and content, Engine enforces deterministic contracts, Markdown is the LLM-facing operating/control surface.
+- MUST keep check / inspect / advice feedback visible to the next conversation turn when CLI/Engine output is part of the loop.
 - MUST use `MUST` / `MUST NOT` language when a rule is safety-critical for Agent behavior.
 
 ### MUST NOT
@@ -98,11 +99,14 @@ Each file has frontmatter declaring its role, scope, authority level, and siblin
 | Term | Meaning |
 |------|---------|
 | Agent | LLM actor that reads Markdown/state and performs content work. |
-| Engine | JavaScript code that enforces deterministic contracts. |
-| CLI | Executable JS surface used for validation, inspection, or future scheduling. |
+| Engine | JavaScript code that enforces deterministic contracts and returns structured feedback. |
+| CLI | Executable JS surface used for validation, inspection, deterministic checks, feedback, or future scheduling. |
 | ds | Future Engine-side Dispatch Scheduler; a CLI/checkpoint, not an Agent, daemon, or content judge. |
-| Markdown | Agent-readable interface; not a substitute for machine verification. |
-| Markdown Projection | Agent-readable Markdown rendered from structured state; interface, not authority. |
+| Markdown | LLM-facing operating/control surface; it drives LLM work and receives Engine/CLI feedback, but is not machine verification. |
+| Markdown Projection | Agent-readable Markdown rendered from structured state; operating surface, not authority. |
+| Check | JS/CLI feedback action: deterministic pass/fail for a specific condition. |
+| Inspect | JS/CLI feedback action: diagnosis of missing, inconsistent, or malformed state. |
+| Advice | JS/CLI feedback action: directional guidance that helps the Agent choose the next repair or continuation step. |
 | Receipt | Durable local evidence that a task or boundary really happened. |
 | Trace | Append-only JSONL diagnostic memory from real execution. |
 | Gate | Explicit lifecycle boundary that passes only through accepted checks. |

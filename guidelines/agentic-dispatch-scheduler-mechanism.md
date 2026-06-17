@@ -80,7 +80,7 @@ V12 tried to encode queue management, receipts, hooks, gate transitions, refill,
 - Gate transitions depended on Agent self-discipline.
 - Runtime data, mechanism rules, and user-facing instructions blurred together.
 
-The rewrite direction is to keep Markdown as the agent-readable task surface, while moving deterministic queue and gate mechanics into JS.
+The rewrite direction is to keep Markdown as the LLM-facing operating/control surface, while moving deterministic queue and gate mechanics into JS. Markdown still drives the LLM's work; it just must not be the machine authority for queue, gate, receipt, or trace state.
 
 ---
 
@@ -88,16 +88,19 @@ The rewrite direction is to keep Markdown as the agent-readable task surface, wh
 
 `ds` should become a small Engine-side CLI scheduler that the Agent calls between task cards.
 
-The Agent-facing bridge remains Markdown. `ds` should render the next task card/window as Markdown because that is the format the Agent loop can reliably read and follow. That Markdown is an interface projection from structured state, not the queue authority itself.
+The LLM-facing operating/control surface remains Markdown. `ds` should render the next task card/window as Markdown because that is the format the Agent loop can reliably read and follow. That Markdown is an interface projection from structured state, not the queue authority itself.
+
+This draft inherits the project charter split: LLM owns judgment, ds owns deterministic scheduling checks, and Markdown carries the next instruction plus feedback back into the conversation.
 
 ```
-Agent reads current task card
+Agent reads current Markdown task card
 -> Agent executes and writes declared outputs
 -> Agent calls ds CLI
 -> ds reloads bundle state from disk
 -> ds checks receipts and gate boundaries
 -> ds updates queue/status/trace
--> Agent reads the next task card
+-> ds performs check / inspect / advice feedback actions and returns output to conversation context
+-> Agent reads the next Markdown task card
 ```
 
 The important constraint: **ds is not a daemon**. It does not watch the Agent. Each invocation is stateless except for files in the run bundle.
@@ -150,6 +153,8 @@ Future commands:
 
 The exact path may become bundle-local if framework snapshotting is reintroduced. Until specified, use `DPT_FRAMEWORK/cli/...` as the rewrite convention.
 
+The final command names are not accepted yet. Whatever CLI shape OpenSpec chooses, ds should still be able to perform three feedback actions: Check for pass/fail facts, Inspect for diagnosis, and Advice for the next recommended action.
+
 ---
 
 ## Task Card Contract
@@ -193,6 +198,14 @@ Key distinction:
 
 - `ds` verifies deterministic facts: file exists, schema parses, count meets floor, status value matches.
 - Agent verifies judgment facts: source relevance, evidence quality, marketing risk, synthesis usefulness.
+
+When ds returns feedback, use the same action split as the project charter:
+
+- Check: pass/fail for a concrete deterministic condition.
+- Inspect: diagnosis of the current bundle state.
+- Advice: next-step guidance generated from deterministic state, such as repair, continue, block, or ask for human input.
+
+All three are LLM-facing context. They help the next Markdown turn be more precise, but they do not turn ds into a content judge.
 
 ---
 
@@ -326,7 +339,7 @@ Purpose: make “loop completed” separate from “claim is trustworthy.”
 | Trace as diagnostic memory | Do not have Agent hand-write gate trace |
 | Maker != Checker | Do not let producer be sole verifier |
 
-The lesson is not “write less Markdown.” The lesson is “Markdown should guide the Agent; JS should own deterministic control.”
+The lesson is not “write less Markdown.” The lesson is “Markdown should control the LLM-facing conversation; JS should own deterministic control.”
 
 ---
 

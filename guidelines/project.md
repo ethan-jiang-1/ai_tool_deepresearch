@@ -22,20 +22,20 @@ siblings:
 
 ---
 
-**你是在设计一个 LLM 能理解、能执行、能根据反馈自我纠正的系统。不是在写一个确定性的程序。**
+**你是在设计一个以 LLM 为能力源、以 Markdown 为对话控制面、以 JS/CLI 为确定性反馈层的系统。不是在写一个单纯的确定性程序。**
 
 本项目的目标是 Deep Research Tool rewrite：一个 agentic framework，用于产出证据支撑、多 wave、多 gate 的深度研究报告。
 
 核心分工固定不变：
 
 ```
-Agent (LLM)      -> 搜索、阅读、提取证据、写作、综合、做内容判断
-Engine (JS/CLI)  -> 校验 schema、执行状态机、检查 receipt、写 trace、拒绝非法状态
-Markdown         -> Agent 可读的任务/流程界面，连接 Agent 和 Engine
+Agent (LLM)      -> 搜索、阅读、提取证据、写作、综合、做内容判断，并读取反馈继续
+Engine (JS/CLI)  -> 校验 schema、执行状态机、检查 receipt、写 trace，输出 check / inspect / advice 风格反馈
+Markdown         -> LLM-facing 操作/控制面：任务、流程、约束、反馈都在这里被读写
 JSON/YAML/JSONL  -> 持久化状态、队列、profile、trace
 ```
 
-**Engine enforces rules. Agent produces content. Markdown bridges them.**
+**LLM supplies judgment. Engine enforces deterministic contracts. Markdown controls the LLM-facing conversation, and JS/CLI feedback returns to the next turn.**
 
 ---
 
@@ -45,7 +45,9 @@ JSON/YAML/JSONL  -> 持久化状态、队列、profile、trace
 
 - MUST treat JS/CLI/schema/trace as the trust root for deterministic state.
 - MUST use accepted OpenSpec specs for capability behavior.
-- MUST keep Markdown as Agent-readable guidance or task surface, not as the sole verifier for state transitions.
+- MUST keep Markdown as the primary LLM-facing operating/control surface, not as the sole verifier for state transitions.
+- MUST read JS/CLI feedback back into the conversation context before the next Markdown-driven action.
+- MUST treat check / inspect / advice outputs as structured JS/CLI feedback, not as chat noise.
 - MUST make evidence, receipts, and trace entries come from real execution.
 - MUST keep runtime bundle state in the bundle, not in chat memory.
 - MUST keep `guidelines/` aligned with current repository structure and accepted specs.
@@ -79,20 +81,61 @@ JSON/YAML/JSONL  -> 持久化状态、队列、profile、trace
 
 ## Operating Model
 
-### MD 是 Agent Interface
+### LLM 是能力源
 
-Markdown 负责让 Agent 看懂“要做什么、为什么做、做完怎么验证”。它可以承载 workflow step、任务卡、playbook 和机制说明，但不应该承担不可错的状态机或 receipt 判定。
+最终的理解、判断、写作、取舍、修复和综合能力仍然在 LLM Agent 处。这个项目不是用 JS/CLI 取代 LLM 智力，而是用 Markdown + JS/CLI 反馈动作 + 持久化状态，把 LLM 的能力稳定激发出来，并把它容易发糊的地方约束住。
+
+三个不变量必须同时成立：
+
+1. LLM owns judgment: 语义判断、研究取舍、综合表达在 LLM。
+2. Engine owns deterministic truth: schema、状态、receipt、trace 裁决在 JS/CLI/Engine。
+3. Markdown owns the conversation surface: 任务、约束、上下文、反馈通过 Markdown 进入 LLM，但 Markdown 不拥有机器权威。
+
+| Surface | Owns | Does Not Own |
+|---------|------|--------------|
+| LLM Agent | 语义理解、内容判断、证据取舍、研究策略、综合写作、根据反馈修复 | 确定性状态权威、receipt 权威、schema 真相 |
+| Markdown | conversation-native 操作/控制面：给 LLM 任务、约束、上下文、反馈和下一步行动入口 | 机器可验证真相、queue/gate/receipt 权威 |
+| JS/CLI/Engine | 传统程序层：精确解析、校验、状态转换、receipt 检查、trace 写入，并执行 Check/Inspect/Advice 反馈动作 | 语义理解、内容判断、研究综合、最终表达 |
+| JSON/YAML/JSONL | 持久化状态、证据、receipt、trace，让上下文可重载 | Agent 的语义推理 |
+
+JS/CLI/Engine 可以支持三类反馈动作：
+
+| Action | What It Returns To LLM | Boundary |
+|--------|------------------------|----------|
+| Check | 针对具体条件给出过/不过，让 LLM 知道结果是否站得住 | 不做内容判断或研究综合 |
+| Inspect | 把缺什么、错在哪、哪里不一致讲清楚，让 LLM 能反向修复 | 不自动替 LLM 完成修复 |
+| Advice | 基于确定性状态给出下一步方向，让 LLM 少走偏 | 不替 LLM 做最终判断 |
+
+这里的“治理”不是让 Markdown 自己裁决，也不是让 Engine 变成研究者。治理的意思是：把任务、约束、证据和机器反馈持续放回 LLM 可读的 conversation context，让 LLM 在更准的上下文里发挥能力。
+
+### Markdown 是 LLM Control Surface
+
+Markdown 负责让 Agent 看懂“要做什么、为什么做、做完怎么验证”，并承接 JS/CLI 返回的 check / inspect / advice 风格信息块。它可以承载 workflow step、任务卡、playbook 和机制说明，但不应该承担不可错的状态机或 receipt 判定。
+
+Markdown 不是被动桥梁。它是 LLM Agent 在 conversation 里接收任务、理解约束、读取反馈、继续行动的主要操作面。因为 Agent 靠多轮对话运转，JS/CLI 的输出只有回到 conversation context，才会变成下一步行动的一部分。
 
 ### JS/CLI 是 Trust Root
 
-JS/CLI 负责 Agent 不可靠的部分：结构化解析、schema 校验、gate 状态转换、receipt 检查、trace 写入。Agent 可以出错；JS/CLI 的反馈不能造假。
+JS/CLI 负责 Agent 不可靠的部分：结构化解析、schema 校验、gate 状态转换、receipt 检查、trace 写入，以及把结果重新吐回 conversation context。它提供精确反馈，不替代 LLM 的语义判断。Agent 可以出错；JS/CLI 的反馈不能造假。
+
+### Feedback Loop
+
+JS/CLI 可以执行三类反馈动作，动作输出都会回到下一轮 Markdown 行动里：
+
+- Check: 对一个具体条件给出过/不过的判定。
+- Inspect: 对缺什么、错在哪、哪里不一致给出诊断。
+- Advice: 对下一步怎么走给出方向性建议。
+
+这些反馈不是独立报告，而是下一轮 Agent 读取后继续行动的上下文。
+
+Check / Inspect / Advice 是 JS/CLI/Engine 的反馈动作类型，不一定是已接受的 CLI 命令名或 trace event 名。当前 command experiment 的规范性 trace verdict event 是 `check`。
 
 ### PDCA 是默认循环
 
 ```
 Plan  -> Agent 读 MD/状态，决定下一步
 Do    -> Agent 或 subagent 执行内容工作
-Check -> JS/CLI 校验结果，写 trace/receipt
+Check -> JS/CLI 执行校验、诊断、建议等反馈动作，并写 trace/receipt
 Act   -> Agent 读反馈，继续、修复、降级或阻塞
 ```
 
@@ -106,7 +149,7 @@ Act   -> Agent 读反馈，继续、修复、降级或阻塞
 
 | 层 | 可以发生什么 | 处理方式 |
 |----|--------------|----------|
-| Layer 1: Agent/MD | 理解偏差、搜索噪声、输出格式错误、subagent 失败 | 由 Check/Inspect 反馈，Agent 修复或重跑 |
+| Layer 1: Agent/MD | 理解偏差、搜索噪声、输出格式错误、subagent 失败 | 由 JS/CLI 的 Check/Inspect/Advice 动作输出反馈，Agent 修复或重跑 |
 | Layer 2: Engine/CLI/Trace | schema、状态机、receipt、trace、bundle 合法性 | 绝不能假通过；失败要显式暴露 |
 
 绝对不接受：
