@@ -71,7 +71,7 @@ Act     → MD（LLM 拿到反馈，决定：通过 → 下一步 / 有问题 �
 `command_experiments/` 下的每个实验验证**一个具体机制**，不是一个宏大流程。
 
 ```
-workflow-load   → 验证：manifest 不预读，advance 时才动态加载依赖
+workflow-next   → 验证：manifest 不预读，advance 时才动态加载依赖
 gate-loop       → 验证：fail 后能 repair 并回到 gate 重评
 gate-fork       → 验证：1→N 分支路由 + converge repair
 subagent        → 验证：真实 LLM subagent dispatch → collect → merge
@@ -87,7 +87,7 @@ subagent        → 验证：真实 LLM subagent dispatch → collect → merge
 小实验（command_experiments）
     │  验证一个具体机制
     │  在真实的 run bundle 环境里跑
-    │  用真实的 LLM、真实的 MD segment、真实的 trace
+    │  用真实的 LLM、真实的 MD node、真实的 trace
     │
     ▼ 做通了 ✓
     │
@@ -116,13 +116,35 @@ subagent        → 验证：真实 LLM subagent dispatch → collect → merge
 
 **正确的 staging 测试：**
 - Subagent 实验？**用真实的 Agent 工具启动真实的 LLM subagent。** 让它真的去搜索、真的去读网页、真的写 `runtime-receipt.jsonl`。
-- Workflow-load 实验？**让 Engine 真的去读 bundle 里的 segment MD**，resolve 真实依赖，执行真实代码块。`file_read` receipt 必须对应一次真实的 `readFileSync`。
+- Workflow-next 实验？**让 Engine 真的去读 bundle 里的 node MD**，resolve 真实依赖，执行真实代码块。`file_read` receipt 必须对应一次真实的 `readFileSync`。
 - **Trace 的每一行都必须来自真实执行。** 不是 `writeFileSync` 写进去的假数据。
 - **Bundle 必须通过 validate + inspect。** 真实环境的前提是环境本身合法。
 
 **判断标准只有一个：这个 trace event 是真实发生过，还是你的脚本产生的？**
 
 如果是后者——删掉重来。
+
+### Trace 是锤子的印记，不是你事后写的总结
+
+这是理解"为什么不能 mock"的更深一层。
+
+Trace 不是测试报告。Trace 是**真正做事的那个人，在做事的过程中，一锤一锤砸下去的印记**。Engine 读了一个文件 → `file_read`。vm 执行了一段代码 → `file_executed`。这些不是"测试断言"，这些是**操作本身的副产物**。
+
+**Log 让你意识到你不能欺骗。** 当你必须产出一条真实的 log，而这条 log 只能由真正执行了那个操作的人写出来——你就被 log 约束了。你不能假装读过文件，因为 `readFileSync` 没调用就是没有 `file_read`。你不能假装执行过代码块，因为 vm sandbox 没跑就是没有 `file_executed`。**Trace 是锤子的内容，不是你对锤子的描述。**
+
+这就是 DevOps 的核心：**可观测性来自真实执行的不可伪造的副产物。** CI pipeline 的 log 不是人写的，是每个 step 的 stdout/stderr。同样，这里的 trace 不是测试脚本写的，是 Engine 在执行过程中留下的。如果 Engine 自己不写 trace 到磁盘（就像 workflow-next 目前只写 `runtime.receipts` 内存数组），那就是设计缺口——锤子砸了，但印记没留下。
+
+**为什么要跑在接近真实的环境？** 因为这个 staging 环境（`dpt_rb_test_*` bundle + 真实文件系统 + 真实 Engine 调用）确保 trace 的每一行都来自真实的系统调用。这不是模拟——这是在 staging 上跑端到端实验。传统程序在 staging 上跑集成测试；智能体工程在 staging 上跑端到端实验。原理一样：**环境越真实，log 越不可伪造，结论越可靠。**
+
+```
+Mock 路径（禁止）:
+  脚本 → 手写假数据 → console.log "passed" → 锤子没砸过，什么都没发生
+
+真实路径:
+  Engine → readFileSync → receipt → trace JSONL → 锤子砸了，印记在磁盘上
+```
+
+**Trace 文件是 DevOps 的证据链。** 没有 trace，你不知道发生了什么。Trace 造假，你以为什么都发生了，其实什么都没发生。
 
 ### 智能体工程 vs 传统软件工程
 
@@ -151,7 +173,7 @@ subagent        → 验证：真实 LLM subagent dispatch → collect → merge
 
 每个实验创建一个 disposable 的 `dpt_rb_test_<name>/` bundle，按 `instantiate-run-bundle` playbook 完整创建（6 控制文件 + 6 数据目录），validate + inspect 通过之后才开始实验。
 
-这是 staging 级别的端到端测试——实验环境越逼近真实 run bundle，发现的 bug 越有价值。实验需要的 segment MD 也放在 bundle 内部（如 `exp/segments/`）。
+这是 staging 级别的端到端测试——实验环境越逼近真实 run bundle，发现的 bug 越有价值。实验需要的 node MD 也放在 bundle 内部（如 `exp/nodes/`）。
 
 **原则 3: Trace 是唯一的裁决依据**
 
@@ -177,16 +199,16 @@ repo root/
 │       ├── EXPERIMENT.md                # 研究目的、假设、结论
 │       ├── <name>.mjs                   # 引擎代码
 │       ├── trace.mjs                    # trace 系统（每个 prototype 一份）
-│       └── segments-<name>/             # （可选）segment MD 文件
+│       └── nodes-<name>/                # （可选）node MD 文件
 │
 └── _backlog/
     └── todo-prototype-<name>.md         # 设计文档、TODO
 ```
 
 **命名规则：**
-- experiment name：kebab-case，描述实验对象（`workflow-load`、`subagent`、`gate-loop`）
+- experiment name：kebab-case，描述实验对象（`workflow-next`、`subagent`、`gate-loop`）
 - bundle name：`dpt_rb_test_<short>_<tier>/`，如 `dpt_rb_test_wl_simple/`
-- short code：2-3 字母缩写（`wl`=workflow-load, `gs`=subagent(generic search), `gl`=gate-loop, `gf`=gate-fork）
+- short code：2-3 字母缩写（`wl`=workflow-next, `gs`=subagent(generic search), `gl`=gate-loop, `gf`=gate-fork）
 - trace file：`_trace_<short>_<tier>.jsonl`，放在 bundle 根目录
 
 ---
@@ -200,7 +222,7 @@ Step 1: 创建 Run Bundle
    ├── mkdir 6 个数据目录
    ├── 从 rb_templates/ 生成 5 个控制文件（sed {{name}}）
    ├── cp rb_trace.jsonl（空文件）
-   ├── cp segment MD 到 bundle 内（如 exp/segments/）
+   ├── cp node MD 到 bundle 内（如 exp/nodes/）
    └── 跑 validate-bundle.mjs + inspect-bundle.mjs
 
 Step 2: 准备实验环境
@@ -227,11 +249,59 @@ Step 5: 清理
 
 ### 文件头
 
+每个 playbook **必须从 YAML frontmatter 开始**，第一行就是 `---`。Frontmatter 只放机器和 Agent 路由需要的硬事实；不要把实验解释、测试思路、教学性说明放进去。
+
 ```markdown
-# test-<experiment>-<tier>
+---
+schema: command-experiment/v1
+experiment: <experiment-name>
+case: <simple|medium|complex|identity|...>
+case_goal: "<一句话说明这个 case 到底验证什么>"
+runner: coding-agent
+agent_mode: native-subagent  # 仅 subagent 实验需要
+execution: real-bundle
+evidence: filesystem-and-trace
+bundle: dpt_rb_test_<short>_<case>
+trace: dpt_rb_test_<short>_<case>/_trace_<short>_<case>.jsonl
+verdict: trace-jsonl
+---
 
-一句话说清验证什么。Bundle: `dpt_rb_test_xx_<tier>/`, trace: `_trace_xx_<tier>.jsonl`。
+## Execution Contract
 
+由 coding agent 在真实 `dpt_rb_test_*` bundle 中执行；如 playbook 包含 subagent phase，必须启动真实 native subagent。实验结果必须来自实际文件写入、Engine/Agent 调用和 trace event；允许通过文件系统读取中间产物；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
+
+# test-<experiment>-<case>
+
+一句话说清验证什么，不重复 frontmatter 里的 bundle/trace。
+```
+
+Frontmatter key 约定：
+
+- `schema`: 固定 `command-experiment/v1`
+- `experiment`: 实验族名，使用目录名，如 `workflow-next`、`gate-loop`、`gate-fork`、`subagent`
+- `case`: case id，通常是 `simple`、`medium`、`complex`，也可以是 `identity` 这类具体 case
+- `case_goal`: 一句话说明这个 case 到底验证什么；这里承载“名字后面跟上想测啥”
+- `runner`: 固定 `coding-agent`，表示 playbook 由 coding agent 按步骤执行，不是 `node --test`
+- `agent_mode`: 仅 subagent 实验使用，固定 `native-subagent`
+- `execution`: 固定 `real-bundle`，表示必须在真实 `dpt_rb_test_*` bundle 中执行
+- `evidence`: 固定 `filesystem-and-trace`，表示允许用文件系统传递/读取中间产物，但证据必须落到 trace
+- `bundle`: disposable run bundle 目录名，不带尾部 `/`
+- `trace`: 裁决 trace JSONL 路径，写完整相对路径
+- `verdict`: 固定 `trace-jsonl`
+
+`Execution Contract` 必须紧跟 frontmatter，放在标题之前。它是给 LLM 的运行边界，不是测试思路，措辞要短、硬、不可绕：
+
+- 必须在真实 `dpt_rb_test_*` bundle 中执行
+- subagent phase 必须启动真实 native subagent
+- 可以通过文件系统读取中间产物
+- 禁止 mock 返回、手写假 result、伪造 trace
+- 禁止用 console output 代替 trace 裁决
+
+不要再写 `## 测试思路`。如果需要说明路线，用 `## Expected Runtime Path` 写步骤；如果需要解释背景，放到 prototype 的 `EXPERIMENT.md`。
+
+### 文件头之后
+
+```markdown
 ## Task Size [MAIN]  （仅 subagent 类实验需要）
 
 选择 fast/normal 的规则。
@@ -260,8 +330,9 @@ Step 5: 清理
 
 - Shell code block 中**不写复杂逻辑**——复杂逻辑放在 JS engine 里，shell 只负责创建文件 + `node` 调用
 - inline `.mjs` 文件 import 路径相对于 bundle 位置：`'../experiments/prototype-<name>/<module>.mjs'`
-- `SEGMENTS_DIR` 等 env var 指向 bundle 内部路径：`"$B/exp/segments"`
+- `NODES_DIR` 等 env var 指向 bundle 内部路径：`"$B/exp/nodes"`
 - subagent 实验的 `node` 输出需要 `| grep -v "^\[trace\]"` 过滤 trace echo
+- **中间步骤静默，只暴露质量门和裁决。** engine 执行步骤用 `> /dev/null 2>&1` 吞掉输出——这些输出对 coding agent 没有信息量。只让 validate/inspect/verify 的输出可见。Coding agent 看三步即可：bundle 合法 → 执行完成（exit 0）→ 裁决 PASS/FAIL
 
 ---
 
@@ -316,7 +387,7 @@ traceCleanup()           // 删除 trace 文件
 1. **禁止 mock LLM。** 这是第一条禁令。不用 JS 模拟 LLM 的行为、不手写假 result.json、不用 console.log 假装跑通。见上方"不能造假"。
 2. **不要在 bundle 外面做实验。** 没有 `dpt_rb_test_*` 的实验不是实验——是临时脚本。实验是 staging，构造真实环境实打实测。
 3. **不要跳过 validate + inspect。** 这两个质量门是 bundle 合法性的唯一证据。实验的前提是 bundle 合法。
-3. **不要把 segment MD 放在 repo root 或 prototype 目录。** 放在 bundle 内的 `exp/segments/`。
+3. **不要把 node MD 放在 repo root 或 prototype 目录。** 放在 bundle 内的 `exp/nodes/`。
 4. **不要用 console.log 做裁决。** 裁决只能从 trace JSONL 来。
 5. **不要在 MD playbook 里写复杂 JS 逻辑。** MD 里的 JS 只做三件事：import、调用 engine API、trace 结果。复杂逻辑下沉到 engine `.mjs`。
 6. **不要让 JS 决定实验流程。** JS 不知道"现在是 Phase 2"——MD 知道。MD 是 controller。
@@ -332,8 +403,8 @@ traceCleanup()           // 删除 trace 文件
 - [ ] `DPT_FRAMEWORK/command_experiments/<name>/` 创建
 - [ ] `test-simple.md` 写好了：创建 bundle → validate+inspect → 执行 → verify → 清理
 - [ ] `test-medium.md` 和 `test-complex.md` 写好了
-- [ ] segment MD（如有）放在 bundle 内的 `exp/segments/`，从 playbook 的 Step 1 拷贝
-- [ ] 所有 `SEGMENTS_DIR` 或类似路径指向 bundle 内部
+- [ ] node MD（如有）放在 bundle 内的 `exp/nodes/`，从 playbook 的 Step 1 拷贝
+- [ ] 所有 `NODES_DIR` 或类似路径指向 bundle 内部
 - [ ] 裁决只从 trace JSONL 来，不靠 console output
 - [ ] 端到端跑过：`test-simple.md` 的每个 step 都能复制到 shell 执行并通过
 - [ ] `_backlog/todo-prototype-<name>.md` 记录了设计决策和 TODO
