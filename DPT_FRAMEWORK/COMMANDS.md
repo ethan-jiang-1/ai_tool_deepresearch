@@ -15,5 +15,5 @@ Deep Research Framework 命令索引。
 ## 质量检查
 | 工具 | 文件 | 说明 |
 |------|------|------|
-| check.mjs | cli/check.mjs | Zod 校验所有控制文件 |
-| inspect.mjs | cli/inspect.mjs | 目录结构完整性 |
+| validate-bundle.mjs | cli/validate-bundle.mjs | Zod 校验 bundle 控制文件 |
+| inspect-bundle.mjs | cli/inspect-bundle.mjs | bundle 目录结构完整性 |

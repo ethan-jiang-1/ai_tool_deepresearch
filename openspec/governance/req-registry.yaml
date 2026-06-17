@@ -28,8 +28,8 @@ BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry
 CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
 CHI-002: check-inspect-feedback — C&I feedback loop for fork variant (topicReadiness validation)
 CMI-001: cmd-bundle-instantiation — Command playbook for bundle production
-CMI-002: cmd-bundle-instantiation — JS helper check.mjs (Zod validation)
-CMI-003: cmd-bundle-instantiation — JS helper inspect.mjs (structure check)
+CMI-002: cmd-bundle-instantiation — JS helper validate-bundle.mjs (Zod validation)
+CMI-003: cmd-bundle-instantiation — JS helper inspect-bundle.mjs (structure check)
 CMI-004: cmd-bundle-instantiation — Template files (rb_templates/)
 COS-001: conditional-segments — Independent branch execution
 CSE-001: cmd-subagent-environment — Command playbook for project-level real subagent setup
@@ -37,7 +37,7 @@ DYS-001: dynamic-segment-loading — Late binding segment registry
 FOR-001: fork-repair-converge — Multi-fail shared repair
 GAF-001: gate-fork-router — Gate multi-branch routing (1→N)
 GAS-001: gate-state-machine — Gate condition router (pass/fail/needs_repair)
-INT-001: integration-tests — check.mjs + inspect.mjs integration tests
+INT-001: integration-tests — validate-bundle.mjs + inspect-bundle.mjs integration tests
 REL-001: repair-loop — Repair segment + loopback to Gate
 SCO-001: schema-core — Six domain enums
 SCO-002: schema-core — Six Zod contracts

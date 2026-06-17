@@ -1,13 +1,13 @@
-// @impl INT-001: inspect.mjs integration test
+// @impl INT-001: inspect-bundle.mjs integration test
 import { describe, it, before, after } from 'node:test';
 import { spawnSync } from 'node:child_process';
 import { writeFileSync, mkdtempSync, mkdirSync, cpSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const FIXTURE = join(process.cwd(), 'tests/fixtures/DPT_FRAMEWORK');
-const INSPECT = join(FIXTURE, 'cli/inspect.mjs');
+const INSPECT = join(FIXTURE, 'cli/inspect-bundle.mjs');
 
-describe('inspect.mjs integration', () => {
+describe('inspect-bundle.mjs integration', () => {
   let tmpDir;
 
   before(() => {

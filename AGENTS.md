@@ -14,7 +14,7 @@ Core split: the LLM Agent searches, reads, writes evidence, and synthesizes. The
 - Active changes: `openspec/changes/`
 - Accepted specs: `openspec/specs/`
 - Requirement registry and checks: `openspec/governance/`
-- Framework code/playbooks: `DPT_FRAMEWORK/`
+- Framework code/playbooks: `DPT_FRAMEWORK/` (`validate-bundle.mjs`, `inspect-bundle.mjs`)
 - Prototypes: `experiments/`
 - Tests: `tests/`
 
@@ -31,4 +31,3 @@ Core split: the LLM Agent searches, reads, writes evidence, and synthesizes. The
 - `/opsx:explore`
 - `/opsx:apply`
 - `/opsx:archive`
-

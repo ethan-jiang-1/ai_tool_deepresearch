@@ -2,7 +2,7 @@
 > req: CMI-001, CMI-002, CMI-003, CMI-004
 
 ## Purpose
-Bundle 实例化命令 playbook、rb_templates 模板文件、check.mjs/inspect.mjs 校验脚本的契约。
+Bundle 实例化命令 playbook、rb_templates 模板文件、validate-bundle.mjs/inspect-bundle.mjs 校验脚本的契约。
 ## Requirements
 ### Requirement: Command playbook guides agent to produce a complete bundle
 The `command_playbook/instantiate-run-bundle.md` playbook SHALL instruct the agent to create `dpt_rb_{name}/` at project root, containing `START_FROM_HERE.md`, five `rb_*` control files, `seed_topics/`, `reference/`, `artifacts/`, `_cache/`, `final/`.
@@ -42,21 +42,21 @@ The `DPT_FRAMEWORK/rb_templates/` directory SHALL contain template files with `{
 - **WHEN** `DPT_FRAMEWORK/rb_templates/rb_trace.jsonl` is read
 - **THEN** it is an empty file (0 bytes)
 
-### Requirement: JS helper check.mjs validates all control files
-The `DPT_FRAMEWORK/cli/check.mjs` script SHALL read each control file, validate against its Zod schema, and exit with code 0 (PASS) or 1 (FAIL). The agent SHALL call it via `node DPT_FRAMEWORK/cli/check.mjs <bundleDir>`.
+### Requirement: JS helper validate-bundle.mjs validates all control files
+The `DPT_FRAMEWORK/cli/validate-bundle.mjs` script SHALL read each control file, validate against its Zod schema, and exit with code 0 (PASS) or 1 (FAIL). The agent SHALL call it via `node DPT_FRAMEWORK/cli/validate-bundle.mjs <bundleDir>`.
 
-#### Scenario: check.mjs passes on valid bundle
-- **WHEN** `node check.mjs dpt_rb_ai-safety/` is called and all files are valid
+#### Scenario: validate-bundle.mjs passes on valid bundle
+- **WHEN** `node DPT_FRAMEWORK/cli/validate-bundle.mjs dpt_rb_ai-safety/` is called and all files are valid
 - **THEN** exit code is 0 and output lists each file with ✓
 
-#### Scenario: check.mjs fails on invalid bundle
+#### Scenario: validate-bundle.mjs fails on invalid bundle
 - **WHEN** `rb_status.json` contains `current_gate: "invalid_value"`
 - **THEN** exit code is 1 and output shows ✗ with the Zod error detail
 
-### Requirement: JS helper inspect.mjs validates directory structure
-The `DPT_FRAMEWORK/cli/inspect.mjs` script SHALL check all required files and directories exist, and exit with code 0 (PASS) or 1 (FAIL). The agent SHALL call it via `node DPT_FRAMEWORK/cli/inspect.mjs <bundleDir>`.
+### Requirement: JS helper inspect-bundle.mjs validates directory structure
+The `DPT_FRAMEWORK/cli/inspect-bundle.mjs` script SHALL check all required files and directories exist, and exit with code 0 (PASS) or 1 (FAIL). The agent SHALL call it via `node DPT_FRAMEWORK/cli/inspect-bundle.mjs <bundleDir>`.
 
-#### Scenario: inspect.mjs catches missing directory
+#### Scenario: inspect-bundle.mjs catches missing directory
 - **WHEN** `final/` directory was not created
 - **THEN** exit code is 1 and output lists `missing: final/`
 
@@ -66,4 +66,3 @@ The production process SHALL NOT copy any framework files into the bundle.
 #### Scenario: No _framework/ in bundle
 - **WHEN** bundle is instantiated
 - **THEN** no `_framework/` directory exists inside the bundle
-

@@ -1,5 +1,5 @@
-// @impl CMI-002: check.mjs — Zod validation for bundle control files
-// Usage: node check.mjs <bundleDir>
+// @impl CMI-002: validate-bundle.mjs — Zod validation for bundle control files
+// Usage: node validate-bundle.mjs <bundleDir>
 // Exit: 0 = PASS, 1 = FAIL
 
 const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
@@ -32,7 +32,7 @@ const CONTROL_FILE_SCHEMAS = new Map([
 
 const bundleDir = process.argv[2];
 if (!bundleDir) {
-  console.error('Usage: node check.mjs <bundleDir>');
+  console.error('Usage: node validate-bundle.mjs <bundleDir>');
   process.exit(1);
 }
 
@@ -55,5 +55,5 @@ for (const [file, spec] of CONTROL_FILE_SCHEMAS) {
     failed++;
   }
 }
-console.log(`Check: ${passed} passed, ${failed} failed`);
+console.log(`Validate: ${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

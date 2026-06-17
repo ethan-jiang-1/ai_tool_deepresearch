@@ -12,5 +12,5 @@ Deep Research Framework (DPT_FRAMEWORK) 的操作守则。
 - 不要修改 `../DPT_FRAMEWORK/` 中的文件
 
 ## 质量保障
-- `node DPT_FRAMEWORK/cli/check.mjs <bundleDir>` — Zod 校验
-- `node DPT_FRAMEWORK/cli/inspect.mjs <bundleDir>` — 结构检查
+- `node DPT_FRAMEWORK/cli/validate-bundle.mjs <bundleDir>` — bundle 控制文件 Zod 校验
+- `node DPT_FRAMEWORK/cli/inspect-bundle.mjs <bundleDir>` — bundle 目录结构检查

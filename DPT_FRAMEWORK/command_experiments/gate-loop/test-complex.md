@@ -16,7 +16,7 @@ setTraceFile('dpt_rb_test_gl_complex/_trace_gl_complex.jsonl');
 traceInit('gl-playbook/complex', { source: 'gl-playbook/complex' });
 JS
 node $B/t.mjs > /dev/null 2>&1
-node DPT_FRAMEWORK/cli/check.mjs $B > /dev/null 2>&1
+node DPT_FRAMEWORK/cli/validate-bundle.mjs $B > /dev/null 2>&1
 
 # Step 2: Gate + Repair + 4 segments + C&I
 cat > $B/t.mjs << 'JS'

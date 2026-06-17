@@ -16,6 +16,15 @@ The system SHALL parse a leading JSON frontmatter block delimited by `---` and r
 - **WHEN** a Markdown file has no leading frontmatter block
 - **THEN** `parseFrontmatter(md)` returns `requires: []`
 
+#### Scenario: Malformed JSON frontmatter prevents execution
+- **WHEN** a Markdown file starts with a `---` delimited block
+- **AND** the block content is not valid JSON
+- **THEN** `parseFrontmatter(md)` throws a parse error
+- **AND** `advanceWorkflow(state, runtime)` returns status `error`
+- **AND** the error message contains the file reference and indicates JSON parse failure
+- **AND** `runtime.cursor` is unchanged
+- **AND** no file in that advance plan executes
+
 ### Requirement: Dependencies execute before requester
 The system SHALL execute required Markdown files before executing the Markdown file that requested them.
 

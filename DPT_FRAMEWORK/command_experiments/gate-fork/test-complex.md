@@ -16,7 +16,7 @@ setTraceFile('dpt_rb_test_gf_complex/_trace_gf_complex.jsonl');
 traceInit('gf-playbook/complex', { source: 'gf-playbook/complex' });
 JS
 node $B/t.mjs > /dev/null 2>&1
-node DPT_FRAMEWORK/cli/check.mjs $B > /dev/null 2>&1
+node DPT_FRAMEWORK/cli/validate-bundle.mjs $B > /dev/null 2>&1
 
 # Step 2: Fork + Converge + 4 segments + C&I
 cat > $B/t.mjs << 'JS'

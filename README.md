@@ -8,7 +8,7 @@ Spec-driven rewrite of a Deep Research Tool: broad question in, evidence-backed 
 - Current active work: `openspec/changes/`
 - Accepted requirements/specs: `openspec/specs/`
 - Requirement tracking checks: `openspec/governance/`
-- Runtime framework and agent playbooks: `DPT_FRAMEWORK/`
+- Runtime framework and agent playbooks: `DPT_FRAMEWORK/` (`validate-bundle.mjs`, `inspect-bundle.mjs`)
 - Frozen prototypes: `experiments/`
 - Regression tests: `tests/`
 
@@ -19,5 +19,3 @@ Spec-driven rewrite of a Deep Research Tool: broad question in, evidence-backed 
 - Everything else uses Node built-ins.
 - Tests use `node:test` + `node:assert`.
 - `_original_*` directories are archives; read them only when explicitly requested.
-
-

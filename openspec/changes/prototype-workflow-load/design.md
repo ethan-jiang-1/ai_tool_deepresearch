@@ -227,10 +227,42 @@ plan: shared.md, a.md, b.md, entry.md
 
 - 拓扑排序：适合全图已知场景，但本实验强调 just-in-time 从当前 step 读依赖闭包
 
+### Decision 7: JS 代码块用正则提取 + `node:vm` 执行；state 为显式 schema
+
+**选择：** `executeMarkdownFile(fileRef, state, runtime)` 的实现分两步：
+
+1. **提取：** 用正则 `` /```(?:js|javascript)\n([\s\S]*?)```/ `` 从 MD 正文中提取第一个 JS 代码块。如果没有代码块，该文件等价于 no-op（不抛错，记录 `no_code_block` receipt）。
+2. **执行：** 用 `node:vm.Script` + `vm.createContext()` 沙箱执行，注入 `state` 和 `console`（`console.log` 转发到 trace event）。禁止 `require`/`import`/`process`/`fs`——prototype MD 代码块只能做纯数据变换。
+
+`state` 对象有显式 Zod schema，初始化后流入每次 advance：
+
+```javascript
+const WorkflowState = z.object({
+  executionOrder: z.array(z.string()).default([]),
+  counters: z.record(z.string(), z.number()).default({}),
+  data: z.record(z.string(), z.unknown()).default({}),
+});
+```
+
+其中：
+- `executionOrder`：记录已执行 fileRef 的顺序，用于测试断言
+- `counters`：MD code block 可 `state.counters.xxx++` 来验证执行/重复执行次数
+- `data`：通用 payload，MD code block 可写入任意 key，但 prototype 仅用于调试观察
+
+`createInitialState()` 返回 `WorkflowState.parse({})`。
+
+**理由：** `node:vm` 比 `eval` 安全且可审计——能显式控制沙箱内可用的 binding。state schema 让所有 MD code block 共享一套可预期的副作用面，测试断言的依据不再散落在各个 code block 的 prose 里。
+
+**替代方案（未采用）：**
+
+- `eval()`：最简单但无隔离，code block 可访问文件系统和模块——对 prototype 过于宽松
+- 支持多个 code block 顺序执行：引入执行顺序语义，prototype 阶段每个 MD 一个 code block 已足够观察
+- state 用任意 object 不校验：测试会依赖隐式 key 约定，容易写错字段名而不报错
+
 ## Risks / Trade-offs
 
 - **[Risk] 依赖 MD 可执行会让 state mutation 难推理** → **Mitigation**: EXPERIMENT.md 必须记录这个语义是否清楚；测试用 executionOrder 和 counters 显式观察副作用
 - **[Risk] 内容缓存但执行重跑可能与直觉冲突** → **Mitigation**: receipt 同时记录 `cache_hit` 和 `file_executed`，让两者区别可见
 - **[Risk] prototype 被误认为生产 loader** → **Mitigation**: 只放 `experiments/prototype-workflow-load/`，proposal/design 明确这是摸索型实验
 - **[Risk] 不接 gate/fork 导致集成价值不明显** → **Mitigation**: 保持实验独立，EXPERIMENT.md 只总结可迁移模式；是否集成留给后续 change
-- **[Risk] JS code block 执行自由度过大** → **Mitigation**: prototype 只执行受控测试 MD；生产化是否允许 MD 携带代码另行设计
+- **[Risk] JS code block 执行自由度过大** → **Mitigation**: Decision 7 采用 `node:vm` 沙箱执行，显式控制可访问 binding（仅 `state` + `console`），禁止文件系统/模块访问；生产化是否允许 MD 携带代码另行设计

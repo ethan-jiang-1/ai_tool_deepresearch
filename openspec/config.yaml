@@ -102,7 +102,7 @@ context: |
     docs/                       — 架构文档 (architect/) 与 V12 迁移记录 (v12-migration/)
     DPT_FRAMEWORK/              — 框架目录 (共享, 只读, 唯一一份)
       AGENT_GUIDE.md            — Agent 守则
-      cli/                      — JS 程序, Agent 用 node 调用 (check.mjs, inspect.mjs)
+      cli/                      — JS 程序, Agent 用 node 调用 (validate-bundle.mjs, inspect-bundle.mjs)
       COMMANDS.md               — 命令索引
       command_experiments/      — Agent 测试 playbook (按组件分子目录, 见实验体系)
       command_playbook/         — 一次性命令, Agent 读的 Markdown (如 instantiate-run-bundle.md)

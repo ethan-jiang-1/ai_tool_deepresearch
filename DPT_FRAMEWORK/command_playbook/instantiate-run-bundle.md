@@ -27,15 +27,15 @@ mkdir -p dpt_rb_<name>/{seed_topics,reference,artifacts/wave1,artifacts/wave2,_c
 - `rb_queue.json.tmpl` → `dpt_rb_<name>/rb_queue.json`
 - `rb_trace.jsonl` → `dpt_rb_<name>/rb_trace.jsonl` (copy as-is, empty)
 
-### 4. 质量检查 — Check
+### 4. 质量检查 — Validate bundle
 ```bash
-node DPT_FRAMEWORK/cli/check.mjs dpt_rb_<name>/
+node DPT_FRAMEWORK/cli/validate-bundle.mjs dpt_rb_<name>/
 ```
 退出码 0 = PASS。非 0 = FAIL，删除 bundle 目录 (`rm -rf dpt_rb_<name>/`)，报告错误。
 
-### 5. 质量检查 — Inspect
+### 5. 质量检查 — Inspect bundle
 ```bash
-node DPT_FRAMEWORK/cli/inspect.mjs dpt_rb_<name>/
+node DPT_FRAMEWORK/cli/inspect-bundle.mjs dpt_rb_<name>/
 ```
 退出码 0 = PASS。非 0 = FAIL，删除 bundle 目录，报告缺失项。
 
@@ -44,6 +44,6 @@ node DPT_FRAMEWORK/cli/inspect.mjs dpt_rb_<name>/
 Bundle dpt_rb_<name>/ created.
   ✓ 6 control files (plan, profile, status, queue, trace, START_FROM_HERE)
   ✓ 6 data directories (seed_topics, reference, artifacts, _cache, final)
-  Check: all files passed Zod validation
-  Inspect: directory structure complete
+  Validate: all files passed Zod validation
+  Inspect bundle: directory structure complete
 ```

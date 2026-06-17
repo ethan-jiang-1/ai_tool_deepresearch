@@ -1,5 +1,5 @@
-// @impl CMI-003: inspect.mjs — Directory structure validation
-// Usage: node inspect.mjs <bundleDir>
+// @impl CMI-003: inspect-bundle.mjs — Directory structure validation
+// Usage: node inspect-bundle.mjs <bundleDir>
 // Exit: 0 = PASS, 1 = FAIL
 
 const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
@@ -16,13 +16,13 @@ const REQUIRED = [
 
 const bundleDir = process.argv[2];
 if (!bundleDir) {
-  console.error('Usage: node inspect.mjs <bundleDir>');
+  console.error('Usage: node inspect-bundle.mjs <bundleDir>');
   process.exit(1);
 }
 
 const missing = REQUIRED.filter(f => !existsSync(join(bundleDir, f)));
 if (missing.length > 0) {
-  console.log(`${R}Inspect: missing ${missing.join(', ')}${B}`);
+  console.log(`${R}Inspect bundle: missing ${missing.join(', ')}${B}`);
   process.exit(1);
 }
-console.log(`${G}Inspect: directory structure complete${B}`);
+console.log(`${G}Inspect bundle: directory structure complete${B}`);
