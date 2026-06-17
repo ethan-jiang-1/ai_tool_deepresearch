@@ -22,7 +22,7 @@
 AGT-001: agent-testing — Agent-assisted test playbook for gate-loop
 AGT-002: "agent-testing — Agent-assisted test playbook for gate-fork (3 levels: simple/medium/complex)"
 AGT-003: "agent-testing — Agent-assisted test playbook for subagent (3 levels: simple/medium/complex)"
-AGT-004: "agent-testing — Agent-assisted test playbook for workflow-next (3 levels: simple/medium/complex)"
+AGT-004: "agent-testing — Agent-assisted test playbook for workflow-next (3 levels: simple/medium/complex) [DEPRECATED]"
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry
 CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
@@ -54,10 +54,10 @@ SUR-001: subagent-repair — All-slots-failed repair routing and partial-failure
 SUS-001: subagent-slots — Subagent slot lifecycle state machine and wave-scoped paths
 SEG-001: seg2node — Global rename segments to nodes across code, paths, env vars, and capability names
 TEF-001: test-fixtures — Fixture framework for integration tests
-WDM-001: workflow-dynamic-md-load — Single-entry just-in-time Markdown closure loading and execution
-WLO-001: workflow-next-observability — Runtime receipts and trace events for workflow-next single-entry loader experiments
-WMD-001: workflow-md-dependencies — Markdown frontmatter requires dependency closure resolution
+WDM-001: workflow-dynamic-md-load — Single-entry just-in-time Markdown closure loading and execution [DEPRECATED]
+WLO-001: workflow-next-observability — Runtime receipts and trace events for workflow-next single-entry loader experiments [DEPRECATED]
+WMD-001: workflow-md-dependencies — Markdown frontmatter requires dependency closure resolution [DEPRECATED]
 WFS-001: workflow-fsm-definition — FSM definition file loading, validation, and structure
 WFS-002: workflow-fsm-transition — Transition function injection into VM sandbox and FSM lookup resolution
 WFS-003: workflow-fsm-runtime — runFSM top-level loop with advance/retry/complete/halt outcomes
-WML-001: workflow-manifest-loading — Workflow-next runtime initializes without manifest/cursor or preloading Markdown
+WML-001: workflow-manifest-loading — Workflow-next runtime initializes without manifest/cursor or preloading Markdown [DEPRECATED]
