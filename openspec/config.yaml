@@ -4,94 +4,122 @@ context: |
   Deep Research Tool — 将宽泛研究问题转化为证据支撑、多波次、带门控的研究报告。
 
   项目定位:
-  这是一个 agentic framework。目录即约定，不依赖额外配置文件。
-  Agent (LLM) 是执行者 (搜索、阅读、写作、综合、决策)，
-  Engine (JavaScript) 是校验者 (Schema 验证、Gate 审计、Receipt 检查)，
-  Markdown/JSON/YAML 文件是持久化状态。
+    这是一个 agentic framework。目录即约定，不依赖额外配置文件。
+    Agent (LLM) 是执行者 (搜索、阅读、写作、综合、决策)，
+    Engine (JavaScript) 是校验者 (Schema 验证、Gate 审计、Receipt 检查)，
+    Markdown/JSON/YAML 文件是持久化状态。
 
   核心原则:
-  - Engine (JavaScript) 强制执行规则 (schemas, state machines, receipts)
-  - Agent (LLM) 生产内容 (搜索、阅读、写作、综合)
-  - 不要回到 V12 的 agent 自治理模式
-
-  迭代习惯:
-  AI Coding 容易堆叠代码。不能只往上摞——要时不时停下来思考结构的合理性，
-  该重构就重构，该清理就清理，让结构适应新要求同时兼顾老的东西。
-  定期打扫卫生是好习惯，在设计和上下文里多琢磨。
-
-  LLM-JS 协作原则 (Check & Inspect):
-  长程 Agent 任务中 LLM 易受噪声干扰产生幻觉。
-  采用 C (Check 硬性验证) + I (Inspect 审视诊断) 双保险:
-  - Check: JavaScript/Zod 在写入前校验 Schema、不变量、Receipt — 不通过则拒绝写入
-  - Inspect: CLI 诊断工具事后审视 Gate 审计、交叉引用、证据质量 — 发现问题反馈给 LLM 反思纠正
-  LLM 负责信息加工 (搜索、阅读、写作、综合)，JS 负责质量保证 (校验、诊断、反馈)。
-  验证失败 → 反馈 → 反思 → 纠正，不静默通过。
-
-  测试策略:
-  实验 (experiments/) 与回归测试 (tests/) 物理分离。
-  - experiments/: 原型实验, 理想化思想验证, 完成后冻结, 不随生产代码变化而 break
-  - tests/unit/: 纯代码单元测试, 零 I/O, node:test + node:assert
-  - tests/integration/: JS+MD 交互集成测试, 真实文件 I/O, 临时目录隔离
-  - tests/fixtures/: 最小 DPT_FRAMEWORK/ 测试框架, 可被所有集成测试复用
-  - Agent 辅助测试: command_experiments/ 下逐步执行 playbook, 无需理解原理, 示范 AI 辅助测试
-
-  根目录约定 (Framework ↔ Bundle 同级, 不拷贝):
-  experiments/                — 原型实验 (理想化, 冻结)
-  tests/                      — 回归测试 (随代码演进)
-  DPT_FRAMEWORK/              — 框架目录 (共享, 只读, 唯一一份)
-    _lab/                     — 实验与原型代码 (内部/临时用)
-    cli/                      — JS 程序, Agent 用 node 调用 (如 check.mjs, inspect.mjs, check-req-ids.mjs)
-    command_playbook/         — 一次性命令, Agent 读的 Markdown (如 instantiate-run-bundle.md)
-    command_experiments/      — Agent 辅助的半自动测试 playbook
-    rb_templates/             — Runtime Bundle 骨架文件
-    schema/                   — 权威规范 (Zod types, contracts, invariants)
-    workflows/                — 持续运行的 agentic 流程 (execution, queue loop, HITL)
-    AGENT_GUIDE.md            — Agent 守则
-    COMMANDS.md               — 命令索引
-    req-registry.yaml         — Requirement ID 登记处
-  dpt_rb_{name}/              — Runtime Bundle (可多个, 数据隔离, 通过 ../DPT_FRAMEWORK/ 引用)
-    _cache/                   — 源获取暂存
-    artifacts/                — 衍生合成 (wave1/ + wave2/ + README.md)
-    final/                    — 最终报告
-    original_topic/           — 原始大话题材料 (可选)
-    reference/                — 本地证据
-    seed_topics/              — 种子话题文件
-    START_FROM_HERE.md        — 启动入口 (Agent 首先读这个)
-    rb_plan.md                — 话题设计 (Markdown + JSON frontmatter)
-    rb_profile.yaml           — 用户意图 (YAML)
-    rb_queue.json             — 执行队列 (JSON)
-    rb_status.json            — 运行时状态 (JSON)
-    rb_trace.jsonl            — 诊断日志 (JSON Lines, 追加式)
-
-  目录聚焦 (DPT_FRAMEWORK 内部, C&I 分工):
-  - schema/             — Check: Zod 类型定义, 写入时校验
-  - cli/                — Check + Inspect: JS 程序, Agent 用 node 调用
-  - workflows/          — 执行骨架: 持续运行的 agentic 流程
-  - command_playbook/   — Agent 读的 Markdown 命令 (一次性)
-  - rb_templates/       — Runtime Bundle 骨架文件
+    - Engine (JavaScript) 强制执行规则 (schemas, state machines, receipts)
+    - Agent (LLM) 生产内容 (搜索、阅读、写作、综合)
+    - 绝不回到 V12 的 agent 自治理模式
 
   技术栈:
-  Node.js ≥20, 纯 JavaScript (ESM, .mjs)。不使用 TypeScript。
-  仅 2 个批准的 npm 依赖 (不可新增): zod (schema 校验), yaml (YAML 文件解析)。
-  其余全部 Node.js 内置: node:util.parseArgs, node:fs/promises, node:test + node:assert, node:path。
-  状态机: 显式转换表 (Map/object), 不用 XState。
-  Markdown frontmatter: 正则提取 + JSON.parse(), 不用 gray-matter。
+    Node.js ≥20, 纯 JavaScript (ESM, .mjs)。不使用 TypeScript。
+    仅 2 个批准的 npm 依赖 (不可新增): zod (schema 校验), yaml (YAML 文件解析)。
+    其余全部 Node.js 内置: node:util.parseArgs, node:fs/promises, node:test + node:assert, node:path。
+    状态机: 显式转换表 (Map/object), 不用 XState。
+    Markdown frontmatter: 正则提取 + JSON.parse(), 不用 gray-matter。
+
+  LLM-JS 协作原则 (Check & Inspect):
+    长程 Agent 任务中 LLM 易受噪声干扰产生幻觉。
+    采用 C (Check 硬性验证) + I (Inspect 审视诊断) 双保险:
+    - Check: JavaScript/Zod 在写入前校验 Schema、不变量、Receipt — 不通过则拒绝写入
+    - Inspect: CLI 诊断工具事后审视 Gate 审计、交叉引用、证据质量 — 发现问题反馈给 LLM 反思纠正
+    LLM 负责信息加工，JS 负责质量保证。验证失败 → 反馈 → 反思 → 纠正，不静默通过。
+
+  迭代习惯:
+    AI Coding 容易堆叠代码。不能只往上摞——要时不时停下来思考结构的合理性，
+    该重构就重构，该清理就清理，让结构适应新要求同时兼顾老的东西。
+    定期打扫卫生是好习惯，在设计和上下文里多琢磨。
 
   命名规范:
-  - 枚举 snake_case, 用户界面中文, 内部字段名/路径英文
-  - Capability 前缀: cmd-* = Agent 读的 Markdown 命令 playbook; cli-* = JS 脚本
-  - 测试 Bundle: dpt_rb_test_* = 自动化测试用, .gitignore 忽略, 测试结束清理
+    - 枚举 snake_case, 用户界面中文, 内部字段名/路径英文
+    - Capability 前缀: cmd-* = Agent 读的 Markdown 命令 playbook; cli-* = JS 脚本
+    - 测试 Bundle: dpt_rb_test_{prefix}_{level}/ — 自动化测试用, .gitignore 忽略, 测试结束清理
 
   需求追踪 (Requirement Traceability):
-  所有 capability 可追踪，不分前缀。强制性纪律，不可跳过。
-  - 唯一登记处: DPT_FRAMEWORK/req-registry.yaml (只增不删，分配前先查)
-  - 合规检查: DPT_FRAMEWORK/cli/check-req-ids.mjs (扫描 spec/ 检查重复和未注册)
-  - 每个 capability 分配 3 字母缩写 (首单词前 2 + 次单词首字母), 如 schema-core → SCO
-  - 每个 requirement 分配全局唯一 ID: `{PREFIX}-{NNN}`, 如 SCO-001
-  - spec 文件开头标注: `> req: XXX-001, XXX-002` (与 registry 一致)
-  - 代码实现: `// @impl SCO-001, SCO-002` 注释
-  - task 描述: 引用 requirement ID (如 "实现 SCO-001: CurrentGate enum")
-  - 每次 change 完成前必须更新 registry 并运行 check-req-ids.mjs
+    所有 capability 可追踪，强制性纪律，不可跳过。
+    - 唯一登记处: DPT_FRAMEWORK/req-registry.yaml (只增不删，分配前先查)
+    - 合规检查: DPT_FRAMEWORK/cli/check-req-ids.mjs (扫描 spec/ 检查重复和未注册)
+    - 每个 capability 分配 3 字母缩写 (首单词前 2 + 次单词首字母), 如 schema-core → SCO
+    - 每个 requirement 分配全局唯一 ID: `{PREFIX}-{NNN}`, 如 SCO-001
+    - spec 文件开头标注: `> req: XXX-001, XXX-002`
+    - 代码实现: `// @impl SCO-001, SCO-002` 注释
+    - task 描述: 引用 requirement ID (如 "实现 SCO-001: CurrentGate enum")
+    - 每次 change 完成前必须更新 registry 并运行 check-req-ids.mjs
+
+  测试策略:
+    - tests/schema/:    纯代码单元测试, 零 I/O, node:test + node:assert
+    - tests/integration/: JS+MD 交互集成测试, 真实文件 I/O, 临时目录隔离
+    - tests/fixtures/:  最小 DPT_FRAMEWORK/ 测试框架 (symlink 到 cli/, rb_templates/, schema/)
+
+  实验体系 (Experiments):
+    实验分两层，物理分离、命名对齐，每个 prototype-{name} 通过 AGT-xxx 关联:
+      1. experiments/                        — 原型代码（纯 JS，完成后冻结）
+      2. DPT_FRAMEWORK/command_experiments/  — Agent 辅助测试 playbook（验证原型行为）
+
+    原型代码层 — experiments/:
+      目录命名: prototype-{component-name}/（如 prototype-gate-loop, prototype-gate-fork）
+      标准结构:
+        - EXPERIMENT.md              # 实验说明、测试结论、与相关实验的关系
+        - package.json               # { "type": "module" }
+        - {component}.mjs            # 核心实现（标注 @impl <REQ-ID>）
+        - {component}.test.mjs       # node:test 单元测试
+        - trace.mjs                  # trace 工具 (setTraceFile/getTraceFile/traceEntry/traceCleanup)
+        - segments-{component}/      # 分段 Markdown 文件（Agent 可读的步骤 + JS 代码块）
+      核心约定:
+        - 每个原型独立，不互相 import（验证独立性，避免耦合）
+        - 完成后冻结，不随生产代码变化而 break
+        - 命名对齐以便未来提取共享库（如 evaluate ↔ evaluateBranch, repairLoop ↔ convergeRepair）
+        - trace source 前缀按组件区分：gate-loop → gl-, gate-fork → gf-, subagent → gs-
+
+    Agent 测试 playbook 层 — command_experiments/:
+      组织: 按组件分子目录，禁止 flat 堆文件
+        command_experiments/
+          {component}/               # 如 gate-loop/, gate-fork/, subagent/
+            test-simple.md           # 简单场景（核心路径，~4-6 trace events）
+            test-medium.md           # 中等场景（分支+修复，~9-10 trace events）
+            test-complex.md          # 复杂场景（全流程+C&I，~17-18 trace events）
+      核心约定:
+        - 每个 playbook 创建独立 bundle 和独立 trace 文件，互不污染
+        - 子目录内文件名简化为 test-{complexity}.md（无需重复组件名前缀）
+        - playbook 是 Agent 可读的 Markdown，包含 bash + JS 代码块
+        - 3 级复杂度定义:
+          · simple:  核心路径验证，Gate + 1 segment
+          · medium:  分支 + 修复/汇聚，2+ segments
+          · complex: 完整端到端，含 C&I 反馈环、所有分支、pipeline
+        - OpenSpec task 中引用完整路径（如 command_experiments/subagent/test-simple.md）
+
+  根目录约定 (Framework ↔ Bundle 同级, 不拷贝):
+    openspec/                   — 项目治理 (changes/, specs/, config.yaml)
+    experiments/                — 原型实验 (理想化, 冻结, 见实验体系)
+    tests/                      — 回归测试 (随代码演进)
+    docs/                       — 架构文档 (architect/) 与 V12 迁移记录 (v12-migration/)
+    DPT_FRAMEWORK/              — 框架目录 (共享, 只读, 唯一一份)
+      cli/                      — JS 程序, Agent 用 node 调用 (check.mjs, inspect.mjs, check-req-ids.mjs)
+      command_playbook/         — 一次性命令, Agent 读的 Markdown (如 instantiate-run-bundle.md)
+      command_experiments/      — Agent 测试 playbook (按组件分子目录, 见实验体系)
+      rb_templates/             — Runtime Bundle 骨架文件 (6 个 .tmpl)
+      schema/                   — Zod 类型 + contracts (Check 层)
+                                   enums.mjs, index.mjs, contracts/{gate,plan,profile,queue,status,trace}.mjs
+      workflows/                — 持续运行的 agentic 流程 (execution, queue loop, HITL)
+      AGENT_GUIDE.md            — Agent 守则
+      COMMANDS.md               — 命令索引
+      req-registry.yaml         — Requirement ID 登记处
+    dpt_rb_{name}/              — Runtime Bundle (可多个, 数据隔离, 通过 ../DPT_FRAMEWORK/ 引用)
+      _cache/                   — 源获取暂存
+      artifacts/                — 衍生合成 (wave1/ + wave2/ + README.md)
+      final/                    — 最终报告
+      original_topic/           — 原始大话题材料 (可选)
+      reference/                — 本地证据
+      seed_topics/              — 种子话题文件
+      START_FROM_HERE.md        — 启动入口 (Agent 首先读这个)
+      rb_plan.md                — 话题设计 (Markdown + JSON frontmatter)
+      rb_profile.yaml           — 用户意图 (YAML)
+      rb_queue.json             — 执行队列 (JSON)
+      rb_status.json            — 运行时状态 (JSON)
+      rb_trace.jsonl            — 诊断日志 (JSON Lines, 追加式)
 
 rules:
   proposal:

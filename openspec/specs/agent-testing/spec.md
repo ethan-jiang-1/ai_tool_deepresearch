@@ -10,15 +10,15 @@ Agent 辅助的半自动测试。3 级 playbook (simple/medium/complex)，独立
 The test playbooks SHALL be at three complexity levels: simple (Gate + 1 segment), medium (Gate + Repair + 2 segments), complex (full end-to-end). Each SHALL use its own bundle directory (`dpt_rb_test_gl_<level>/`) and trace file (`_trace_gl_<level>.jsonl`) for complete isolation.
 
 #### Scenario: Simple test runs independently
-- **WHEN** a tester runs `command_experiments/test-gate-loop-simple.md`
+- **WHEN** a tester runs `command_experiments/gate-loop/test-simple.md`
 - **THEN** it creates `dpt_rb_test_gl_simple/`, writes `_trace_gl_simple.jsonl`, and verifies PASS (4 events)
 
 #### Scenario: Medium test runs independently
-- **WHEN** a tester runs `command_experiments/test-gate-loop-medium.md`
+- **WHEN** a tester runs `command_experiments/gate-loop/test-medium.md`
 - **THEN** it uses `dpt_rb_test_gl_medium/` and `_trace_gl_medium.jsonl`, isolated from simple
 
 #### Scenario: Complex test runs independently
-- **WHEN** a tester runs `command_experiments/test-gate-loop-complex.md`
+- **WHEN** a tester runs `command_experiments/gate-loop/test-complex.md`
 - **THEN** it includes Check, Gate, Repair, 4 segments, C&I — all in separate bundle and trace
 
 ### Requirement: Trace system supports named trace files

@@ -43,13 +43,13 @@
 
 ## Agent Test Playbooks (AGT-002)
 
-3 级 playbook 位于 `DPT_FRAMEWORK/command_experiments/`:
+3 级 playbook 位于 `DPT_FRAMEWORK/command_experiments/gate-fork/`:
 
 | Level  | File                             | Bundle                | Events |
 |--------|----------------------------------|-----------------------|--------|
-| Simple | test-gate-fork-simple.md         | dpt_rb_test_gf_simple | 4      |
-| Medium | test-gate-fork-medium.md         | dpt_rb_test_gf_medium | 9      |
-| Complex| test-gate-fork-complex.md        | dpt_rb_test_gf_complex| 17     |
+| Simple | gate-fork/test-simple.md         | dpt_rb_test_gf_simple | 4      |
+| Medium | gate-fork/test-medium.md         | dpt_rb_test_gf_medium | 9      |
+| Complex| gate-fork/test-complex.md        | dpt_rb_test_gf_complex| 17     |
 
 与 gate-loop playbook 的差异:
 - 使用 `evaluateBranch` / `forkRouter` / `convergeRepair` 替代 gate-loop API

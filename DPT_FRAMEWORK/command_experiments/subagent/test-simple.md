@@ -1,0 +1,180 @@
+# test-subagent-simple
+One real LLM subagent through Parent Relay. Bundle: `dpt_rb_test_gs_simple/`, trace: `_trace_gs_simple.jsonl`.
+
+## Task Size [MAIN]
+
+**选择 `research_question` 和任务规模；只把展开后的具体任务写入 slot task。**
+
+- 默认 `fast`，除非用户明确要求更深入。
+- **normal** 信号："认真做", "完整跑", "fully", "thorough", "deep", "慢慢来", "真实能力"。
+- **fast** 信号："跑一下", "试试", "quick", "test"，或没有强信号。
+- 不确定时用 `fast`；用户可以重新跑 `normal`。
+
+## Expected Runtime Path
+
+1. Engine dispatch 一个 slot：`source_intake`，role `dpt-source-intake`。`[MAIN/SHELL]`
+2. Parent 记录 native-agent request metadata。`[MAIN/SHELL]`
+3. Parent 通过 `Agent tool` 启动并等待一个 native LLM subagent。`[MAIN->SUBAGENT]`
+4. Subagent 读取含具体任务的 `task.md` 和 `result.schema.json`，写自己的 `runtime-receipt.jsonl`，再返回 `strict JSON`。`[SUBAGENT]`
+5. Parent 导入 receipt，校验 JSON，写 durable slot files。`[MAIN/SHELL]`
+6. Engine collect、merge、audit runtime-agent trace events。`[MAIN/SHELL]`
+
+## Phase 1: Prepare Bundle And Dispatch [MAIN/SHELL]
+
+```bash
+B="dpt_rb_test_gs_simple"
+rm -rf "$B"
+mkdir -p "$B"/{seed_topics,reference,artifacts/wave1,artifacts/wave2,_cache,final}
+for f in DPT_FRAMEWORK/rb_templates/*.tmpl; do name=$(basename "$f" .tmpl); sed "s/{{name}}/gs_simple/g" "$f" > "$B/$name"; done
+cp DPT_FRAMEWORK/rb_templates/rb_trace.jsonl "$B/"
+
+cat > "$B/dispatch.mjs" << 'JS'
+import { writeFileSync } from 'node:fs';
+import { setTraceFile, traceInit } from '../experiments/prototype-subagent/trace.mjs';
+import { subagentDispatch } from '../experiments/prototype-subagent/subagent.mjs';
+
+setTraceFile('dpt_rb_test_gs_simple/_trace_gs_simple.jsonl');
+traceInit('gs-playbook/simple', { source: 'gs-playbook/simple' });
+
+const researchQuestion = 'What is Google Scholar, and what kind of scholarly literature does it help users search?';
+// MAIN: choose task size here. Subagent sees only the expanded taskDescription.
+const taskSize = 'fast';
+const taskPolicy = {
+  fast: {
+    taskDescription: `research_question="${researchQuestion}". Find ONE official or primary candidate source quickly. Brief search only. Target 2 minutes. Return bounded JSON only.`,
+    timeoutMs: 120000,
+  }, normal: {
+    taskDescription: `research_question="${researchQuestion}". Find TWO official or primary candidate sources. Do a more careful search. Target 10 minutes. Return bounded JSON only.`,
+    timeoutMs: 600000,
+  },
+};
+const policy = taskPolicy[taskSize];
+if (!policy) throw new Error(`Unknown taskSize: ${taskSize}`);
+
+const dispatchMap = new Map([['pass', [{
+  key: 'source_intake',
+  slotIndex: 0,
+  roleAgentKey: 'dpt-source-intake',
+  taskDescription: policy.taskDescription,
+  timeoutMs: policy.timeoutMs
+}]]]);
+
+const slots = subagentDispatch(
+  { current_gate: 'wave0_complete', ref_count: 5, ref_floor: 5, topicReadiness: 'ready' },
+  'dpt_rb_test_gs_simple',
+  dispatchMap
+);
+writeFileSync('dpt_rb_test_gs_simple/_slots.json', JSON.stringify(slots, null, 2));
+console.log(`Dispatch OK: ${slots.length} slot -> ${slots[0].roleAgentKey} (taskSize=${taskSize})`);
+console.log(`Slot task: dpt_rb_test_gs_simple/${slots[0].taskPath}`);
+JS
+node "$B/dispatch.mjs" 2>&1 | grep -v "^\[trace\]"
+```
+
+## Phase 2: Native Subagent Run
+
+### 2a: 记录 request metadata [MAIN/SHELL]
+
+```bash
+cat > "$B/native-agent-request.mjs" << 'JS'
+import { readFileSync } from 'node:fs';
+import { setTraceFile } from '../experiments/prototype-subagent/trace.mjs';
+import { recordAgentSpawnRequested } from '../experiments/prototype-subagent/subagent.mjs';
+
+setTraceFile('dpt_rb_test_gs_simple/_trace_gs_simple.jsonl');
+const [slot] = JSON.parse(readFileSync('dpt_rb_test_gs_simple/_slots.json', 'utf-8'));
+const platform = process.env.DPT_AGENT_PLATFORM || 'claude-code';
+const runtimeMode = process.env.DPT_AGENT_RUNTIME_MODE || 'project-agent';
+const prompt = recordAgentSpawnRequested(slot, 'dpt_rb_test_gs_simple', { platform, runtimeMode, parentRuntimeAgentId: process.env.DPT_PARENT_RUNTIME_AGENT_ID });
+console.log(prompt);
+JS
+node "$B/native-agent-request.mjs" 2>&1 | grep -v "^\[trace\]"
+```
+
+### 2b: 启动并等待 native subagent [MAIN->SUBAGENT]
+
+> 只在这里调用 `Agent tool` 并等待；禁止用 shell script / OS subprocess 模拟 subagent。
+
+用 `Agent tool` 启动 project agent `dpt-source-intake`，使用 2a 打印的 prompt；等待返回后记录 `agentId` 和 `strict JSON`。
+
+Subagent must:
+- Read `dpt_rb_test_gs_simple/_subagents/wave_01/slot_00/task.md` and follow the concrete task there
+- Read `dpt_rb_test_gs_simple/_subagents/wave_01/slot_00/result.schema.json`
+- Write `dpt_rb_test_gs_simple/_subagents/wave_01/slot_00/runtime-receipt.jsonl` from inside the subagent context:
+  - first JSONL line before task work: `{"event":"agent_runtime_started","slotKey":"source_intake","roleAgentKey":"dpt-source-intake","receiptNonce":"<NONCE_FROM_2A>"}`
+  - second JSONL line immediately before returning: `{"event":"agent_result_ready","slotKey":"source_intake","roleAgentKey":"dpt-source-intake","receiptNonce":"<NONCE_FROM_2A>"}`
+- Return `strict JSON` matching the schema; no markdown fences, no prose outside JSON.
+
+### 2c: 导入 subagent runtime receipt [MAIN/SHELL]
+
+把 `<AGENT_ID>` 替换成 2b 的实际 `agentId`。
+
+```bash
+cat > "$B/import-receipt.mjs" << 'JS'
+import { readFileSync } from 'node:fs';
+import { setTraceFile } from '../experiments/prototype-subagent/trace.mjs';
+import { importRuntimeReceipt } from '../experiments/prototype-subagent/subagent.mjs';
+
+setTraceFile('dpt_rb_test_gs_simple/_trace_gs_simple.jsonl');
+const [slot] = JSON.parse(readFileSync('dpt_rb_test_gs_simple/_slots.json', 'utf-8'));
+const imported = importRuntimeReceipt(slot, 'dpt_rb_test_gs_simple', { platform: 'claude-code', runtimeMode: 'project-agent', runtimeAgentId: process.env.DPT_RUNTIME_AGENT_ID });
+console.log('receipt imported: ' + imported.agent.runtimeAgentId);
+JS
+DPT_RUNTIME_AGENT_ID="<AGENT_ID>" node "$B/import-receipt.mjs"
+```
+
+### 2d: 写 subagent result [MAIN]
+
+从 2b 的 subagent 输出中提取 `strict JSON`，写入 `dpt_rb_test_gs_simple/relay-source-intake.json`。
+
+### 2e: 校验 result 并写 durable files [MAIN/SHELL]
+
+```bash
+cat > "$B/parent-relay.mjs" << 'JS'
+import { readFileSync } from 'node:fs';
+import { setTraceFile } from '../experiments/prototype-subagent/trace.mjs';
+import { parentRelayWriteResult } from '../experiments/prototype-subagent/subagent.mjs';
+
+setTraceFile('dpt_rb_test_gs_simple/_trace_gs_simple.jsonl');
+const [slot] = JSON.parse(readFileSync('dpt_rb_test_gs_simple/_slots.json', 'utf-8'));
+const result = JSON.parse(readFileSync('dpt_rb_test_gs_simple/relay-source-intake.json', 'utf-8'));
+const relay = parentRelayWriteResult(slot, 'dpt_rb_test_gs_simple', result, { platform: 'claude-code', runtimeMode: 'project-agent', parentRuntimeAgentId: process.env.DPT_PARENT_RUNTIME_AGENT_ID });
+console.log('Relay ' + (relay.ok ? 'OK' : 'FAILED') + ': ' + slot.key);
+if (!relay.ok) console.log(relay.result.notes.join('; '));
+JS
+node "$B/parent-relay.mjs" 2>&1 | grep -v "^\[trace\]"
+```
+
+## Phase 3: Collect, Merge, Audit [MAIN/SHELL]
+
+```bash
+cat > "$B/collect.mjs" << 'JS'
+import { readFileSync } from 'node:fs';
+import { setTraceFile } from '../experiments/prototype-subagent/trace.mjs';
+import { collectAndMergeSubagentWave, forkRouter } from '../experiments/prototype-subagent/subagent.mjs';
+
+setTraceFile('dpt_rb_test_gs_simple/_trace_gs_simple.jsonl');
+const slots = JSON.parse(readFileSync('dpt_rb_test_gs_simple/_slots.json', 'utf-8'));
+const state = { current_gate: 'wave0_complete', ref_count: 5, ref_floor: 5, topicReadiness: 'ready' };
+const merged = collectAndMergeSubagentWave(state, slots, 'dpt_rb_test_gs_simple');
+console.log(`ref_count=${merged.finalState.ref_count} all_failed=${merged.finalState.subagent_all_failed} branch=${forkRouter(merged.finalState).branch}`);
+JS
+node "$B/collect.mjs" 2>&1 | grep -v "^\[trace\]"
+
+cat > "$B/audit.mjs" << 'JS'
+import { readFileSync } from 'node:fs';
+const events = readFileSync('dpt_rb_test_gs_simple/_trace_gs_simple.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
+const required = ['agent_spawn_requested', 'agent_runtime_started', 'agent_result_ready', 'agent_result_received', 'result_schema_validated', 'collect_result', 'merge_complete'];
+const pass = required.every(name => events.some(e => e.event === name));
+console.log(pass ? 'SIMPLE PASS' : 'SIMPLE FAIL');
+if (!pass) console.log('missing:', required.filter(name => !events.some(e => e.event === name)).join(', '));
+JS
+node "$B/audit.mjs"
+```
+
+## Cleanup [MAIN/SHELL]
+
+```bash
+rm -rf dpt_rb_test_gs_simple
+echo "cleaned: gs_simple"
+```
