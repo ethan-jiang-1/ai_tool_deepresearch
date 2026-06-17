@@ -7,14 +7,14 @@ runner: coding-agent
 agent_mode: native-subagent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_rb_test_gs_medium
-trace: dpt_rb_test_gs_medium/_trace_gs_medium.jsonl
+bundle: dpt_disp_gs_medium
+trace: dpt_disp_gs_medium/_trace_gs_medium.jsonl
 verdict: trace-jsonl
 ---
 
 ## Execution Contract
 
-由 coding agent 在真实 `dpt_rb_test_*` bundle 中执行；如 playbook 包含 subagent phase，必须启动真实 native subagent。实验结果必须来自实际文件写入、Engine/Agent 调用和 trace event；允许通过文件系统读取中间产物；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
+由 coding agent 在真实 `dpt_disp_*` disposable bundle 中执行；如 playbook 包含 subagent phase，必须启动真实 native subagent。实验结果必须来自实际文件写入、Engine/Agent 调用和 trace event；允许通过文件系统读取中间产物；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
 
 # test-subagent-medium
 
@@ -32,22 +32,18 @@ verdict: trace-jsonl
 ## Phase 1: Prepare Bundle And Dispatch [MAIN/SHELL]
 
 ```bash
-B="dpt_rb_test_gs_medium"
-rm -rf "$B"
-mkdir -p "$B"/{seed_topics,reference,artifacts/wave1,artifacts/wave2,_cache,final}
-for f in DPT_FRAMEWORK/rb_templates/*.tmpl; do name=$(basename "$f" .tmpl); sed "s/{{name}}/gs_medium/g" "$f" > "$B/$name"; done
-cp DPT_FRAMEWORK/rb_templates/rb_trace.jsonl "$B/"
+B=$(node DPT_FRAMEWORK/command_experiments/scripts/new-disposable-bundle.mjs gs_medium --force)
 
 # 质量检查
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B/"
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B/"
+node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
+node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 
 cat > "$B/dispatch.mjs" << 'JS'
 import { writeFileSync } from 'node:fs';
 import { setTraceFile, traceInit } from '../experiments/prototype-subagent/trace.mjs';
 import { subagentDispatch } from '../experiments/prototype-subagent/subagent.mjs';
 
-setTraceFile('dpt_rb_test_gs_medium/_trace_gs_medium.jsonl');
+setTraceFile('dpt_disp_gs_medium/_trace_gs_medium.jsonl');
 traceInit('gs-playbook/medium', { source: 'gs-playbook/medium' });
 
 const researchQuestion = 'What is Google Scholar, and what kind of scholarly literature does it help users search?';
@@ -88,12 +84,12 @@ const dispatchMap = new Map([['pass', [
 
 const slots = subagentDispatch(
   { current_gate: 'wave0_complete', ref_count: 5, ref_floor: 5, topicReadiness: 'ready' },
-  'dpt_rb_test_gs_medium',
+  'dpt_disp_gs_medium',
   dispatchMap
 );
-writeFileSync('dpt_rb_test_gs_medium/_slots.json', JSON.stringify(slots, null, 2));
+writeFileSync('dpt_disp_gs_medium/_slots.json', JSON.stringify(slots, null, 2));
 console.log(`Dispatch OK: ${slots.length} slots (taskSize=${taskSize})`);
-for (const slot of slots) console.log(`Slot task: dpt_rb_test_gs_medium/${slot.taskPath}`);
+for (const slot of slots) console.log(`Slot task: dpt_disp_gs_medium/${slot.taskPath}`);
 JS
 node "$B/dispatch.mjs" 2>&1 | grep -v "^\[trace\]"
 ```
@@ -117,12 +113,12 @@ import { readFileSync } from 'node:fs';
 import { setTraceFile } from '../experiments/prototype-subagent/trace.mjs';
 import { recordAgentSpawnRequested } from '../experiments/prototype-subagent/subagent.mjs';
 
-setTraceFile('dpt_rb_test_gs_medium/_trace_gs_medium.jsonl');
-const slots = JSON.parse(readFileSync('dpt_rb_test_gs_medium/_slots.json', 'utf-8'));
+setTraceFile('dpt_disp_gs_medium/_trace_gs_medium.jsonl');
+const slots = JSON.parse(readFileSync('dpt_disp_gs_medium/_slots.json', 'utf-8'));
 const platform = process.env.DPT_AGENT_PLATFORM || 'claude-code';
 const runtimeMode = process.env.DPT_AGENT_RUNTIME_MODE || 'project-agent';
 for (const slot of slots) {
-  const prompt = recordAgentSpawnRequested(slot, 'dpt_rb_test_gs_medium', { platform, runtimeMode, parentRuntimeAgentId: process.env.DPT_PARENT_RUNTIME_AGENT_ID });
+  const prompt = recordAgentSpawnRequested(slot, 'dpt_disp_gs_medium', { platform, runtimeMode, parentRuntimeAgentId: process.env.DPT_PARENT_RUNTIME_AGENT_ID });
   console.log('--- SPAWN PROMPT for ' + slot.key + ' ---');
   console.log(prompt);
 }
@@ -135,16 +131,16 @@ node "$B/native-agent-request.mjs" 2>&1 | grep -v "^\[trace\]"
 Use the `Agent tool` for both subagents (may be in parallel — concurrency cap is 3).
 
 - **Slot 0** (`source_intake`): project agent `dpt-source-intake`
-  - Read `dpt_rb_test_gs_medium/_subagents/wave_01/slot_00/task.md`
-  - Read `dpt_rb_test_gs_medium/_subagents/wave_01/slot_00/result.schema.json`
-  - Write `dpt_rb_test_gs_medium/_subagents/wave_01/slot_00/runtime-receipt.jsonl`
+  - Read `dpt_disp_gs_medium/_subagents/wave_01/slot_00/task.md`
+  - Read `dpt_disp_gs_medium/_subagents/wave_01/slot_00/result.schema.json`
+  - Write `dpt_disp_gs_medium/_subagents/wave_01/slot_00/runtime-receipt.jsonl`
   - Follow the concrete task in its `task.md`.
   - Return strict JSON.
 
 - **Slot 1** (`source_diagnostic`): project agent `dpt-source-diagnostic`
-  - Read `dpt_rb_test_gs_medium/_subagents/wave_01/slot_01/task.md`
-  - Read `dpt_rb_test_gs_medium/_subagents/wave_01/slot_01/result.schema.json`
-  - Write `dpt_rb_test_gs_medium/_subagents/wave_01/slot_01/runtime-receipt.jsonl`
+  - Read `dpt_disp_gs_medium/_subagents/wave_01/slot_01/task.md`
+  - Read `dpt_disp_gs_medium/_subagents/wave_01/slot_01/result.schema.json`
+  - Write `dpt_disp_gs_medium/_subagents/wave_01/slot_01/runtime-receipt.jsonl`
   - Follow the concrete task in its `task.md`.
   - Return strict JSON.
 
@@ -161,11 +157,11 @@ cat > "$B/import-receipts.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { setTraceFile } from '../experiments/prototype-subagent/trace.mjs';
 import { importRuntimeReceipt } from '../experiments/prototype-subagent/subagent.mjs';
-setTraceFile('dpt_rb_test_gs_medium/_trace_gs_medium.jsonl');
-const slots = JSON.parse(readFileSync('dpt_rb_test_gs_medium/_slots.json', 'utf-8'));
+setTraceFile('dpt_disp_gs_medium/_trace_gs_medium.jsonl');
+const slots = JSON.parse(readFileSync('dpt_disp_gs_medium/_slots.json', 'utf-8'));
 for (const [i, slot] of slots.entries()) {
   const agentId = process.env['DPT_RUNTIME_AGENT_ID_' + i];
-  const imported = importRuntimeReceipt(slot, 'dpt_rb_test_gs_medium', { platform: 'claude-code', runtimeMode: 'project-agent', runtimeAgentId: agentId });
+  const imported = importRuntimeReceipt(slot, 'dpt_disp_gs_medium', { platform: 'claude-code', runtimeMode: 'project-agent', runtimeAgentId: agentId });
   console.log('receipt imported slot ' + i + ': ' + imported.agent.runtimeAgentId);
 }
 JS
@@ -176,8 +172,8 @@ DPT_RUNTIME_AGENT_ID_0="<AGENT_ID_0>" DPT_RUNTIME_AGENT_ID_1="<AGENT_ID_1>" node
 
 Extract strict JSON from each subagent output in 2b and write to the relay files:
 
-- Slot 0 → `dpt_rb_test_gs_medium/relay-source-intake.json`
-- Slot 1 → `dpt_rb_test_gs_medium/relay-source-diagnostic.json`
+- Slot 0 → `dpt_disp_gs_medium/relay-source-intake.json`
+- Slot 1 → `dpt_disp_gs_medium/relay-source-diagnostic.json`
 
 Each file must contain a JSON object matching the slot's `result.schema.json`.
 
@@ -189,12 +185,12 @@ import { readFileSync } from 'node:fs';
 import { setTraceFile } from '../experiments/prototype-subagent/trace.mjs';
 import { parentRelayWriteResult } from '../experiments/prototype-subagent/subagent.mjs';
 
-setTraceFile('dpt_rb_test_gs_medium/_trace_gs_medium.jsonl');
-const slots = JSON.parse(readFileSync('dpt_rb_test_gs_medium/_slots.json', 'utf-8'));
+setTraceFile('dpt_disp_gs_medium/_trace_gs_medium.jsonl');
+const slots = JSON.parse(readFileSync('dpt_disp_gs_medium/_slots.json', 'utf-8'));
 const files = ['relay-source-intake.json', 'relay-source-diagnostic.json'];
 for (const [i, slot] of slots.entries()) {
-  const result = JSON.parse(readFileSync('dpt_rb_test_gs_medium/' + files[i], 'utf-8'));
-  const relay = parentRelayWriteResult(slot, 'dpt_rb_test_gs_medium', result, { platform: 'claude-code', runtimeMode: 'project-agent', parentRuntimeAgentId: process.env.DPT_PARENT_RUNTIME_AGENT_ID });
+  const result = JSON.parse(readFileSync('dpt_disp_gs_medium/' + files[i], 'utf-8'));
+  const relay = parentRelayWriteResult(slot, 'dpt_disp_gs_medium', result, { platform: 'claude-code', runtimeMode: 'project-agent', parentRuntimeAgentId: process.env.DPT_PARENT_RUNTIME_AGENT_ID });
   console.log('Relay ' + (relay.ok ? 'OK' : 'FAILED') + ': ' + slot.key);
   if (!relay.ok) console.log(relay.result.notes.join('; '));
 }
@@ -209,16 +205,16 @@ cat > "$B/collect.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { setTraceFile } from '../experiments/prototype-subagent/trace.mjs';
 import { collectAndMergeSubagentWave } from '../experiments/prototype-subagent/subagent.mjs';
-setTraceFile('dpt_rb_test_gs_medium/_trace_gs_medium.jsonl');
-const slots = JSON.parse(readFileSync('dpt_rb_test_gs_medium/_slots.json', 'utf-8'));
-const merged = collectAndMergeSubagentWave({ current_gate:'wave0_complete', ref_count:5, ref_floor:5, topicReadiness:'ready' }, slots, 'dpt_rb_test_gs_medium');
+setTraceFile('dpt_disp_gs_medium/_trace_gs_medium.jsonl');
+const slots = JSON.parse(readFileSync('dpt_disp_gs_medium/_slots.json', 'utf-8'));
+const merged = collectAndMergeSubagentWave({ current_gate:'wave0_complete', ref_count:5, ref_floor:5, topicReadiness:'ready' }, slots, 'dpt_disp_gs_medium');
 console.log(`done=${merged.results.filter(r=>r.status==='done').length} failed=${merged.results.filter(r=>r.status==='failed').length} all_failed=${merged.finalState.subagent_all_failed}`);
 JS
 node "$B/collect.mjs" 2>&1 | grep -v "^\[trace\]"
 
 cat > "$B/audit.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
-const events = readFileSync('dpt_rb_test_gs_medium/_trace_gs_medium.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
+const events = readFileSync('dpt_disp_gs_medium/_trace_gs_medium.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
 const count = name => events.filter(e => e.event === name).length;
 const pass = count('agent_spawn_requested') === 2 && count('agent_runtime_started') === 2 && count('agent_result_ready') === 2 && count('agent_result_received') === 2 && count('result_schema_validated') === 2 && count('collect_result') === 2 && count('merge_complete') === 1;
 console.log(pass ? 'MEDIUM PASS' : 'MEDIUM FAIL');
@@ -230,6 +226,6 @@ node "$B/audit.mjs"
 ## Cleanup [MAIN/SHELL]
 
 ```bash
-rm -rf dpt_rb_test_gs_medium
+rm -rf dpt_disp_gs_medium
 echo "cleaned: gs_medium"
 ```

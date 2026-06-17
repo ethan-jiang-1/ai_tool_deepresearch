@@ -84,14 +84,14 @@ import {
 const SRC = 'gf-playbook/complex';
 
 // Fork routing: all 4 branches
-traceEntry('verify', { source: SRC, step:'fork_pass', p:evaluateBranch({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'ready'})==='pass' });
-traceEntry('verify', { source: SRC, step:'fork_fail_a', p:evaluateBranch({current_gate:'x',ref_count:2,ref_floor:5,topicReadiness:'ready'})==='fail_a' });
-traceEntry('verify', { source: SRC, step:'fork_fail_b', p:evaluateBranch({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'not_ready'})==='fail_b' });
-traceEntry('verify', { source: SRC, step:'fork_blocked', p:evaluateBranch({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'blocked'})==='blocked' });
+traceEntry('check', { source: SRC, step:'fork_pass', passed:evaluateBranch({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'ready'})==='pass' });
+traceEntry('check', { source: SRC, step:'fork_fail_a', passed:evaluateBranch({current_gate:'x',ref_count:2,ref_floor:5,topicReadiness:'ready'})==='fail_a' });
+traceEntry('check', { source: SRC, step:'fork_fail_b', passed:evaluateBranch({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'not_ready'})==='fail_b' });
+traceEntry('check', { source: SRC, step:'fork_blocked', passed:evaluateBranch({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'blocked'})==='blocked' });
 
 // Converge repair: multi-issue (low ref + not_ready) → engine repair step → pass
 const r = convergeRepair({current_gate:'x',ref_count:1,ref_floor:5,topicReadiness:'not_ready'});
-traceEntry('verify', { source: SRC, step:'converge_multi', p:r.outcome==='pass', its:r.iterations });
+traceEntry('check', { source: SRC, step:'converge_multi', passed:r.outcome==='pass', its:r.iterations });
 
 // 4 dynamic node MD files → MD code block execution + branch step execution
 for (const k of ['pass_next_wave', 'fail_a_topic_repair', 'fail_b_reference_repair', 'shared_repair']) {
@@ -101,22 +101,22 @@ for (const k of ['pass_next_wave', 'fail_a_topic_repair', 'fail_b_reference_repa
 
 // Pipeline: fork → converge → re-fork → pass (full composition)
 const pipeline = runForkPipeline({current_gate:'x',ref_count:2,ref_floor:5,topicReadiness:'ready'});
-traceEntry('verify', { source: SRC, step:'pipeline_pass', p:pipeline.finalState.current_gate==='wave_next' });
+traceEntry('check', { source: SRC, step:'pipeline_pass', passed:pipeline.finalState.current_gate==='wave_next' });
 
 // C&I: Zod rejects bad ref_count
 const bad = checkAndReflect({current_gate:'x',ref_count:'bad',ref_floor:5,topicReadiness:'ready'}, WorkflowState);
-traceEntry('verify', { source: SRC, step:'ci_fail', p:!bad.passed });
+traceEntry('check', { source: SRC, step:'ci_fail', passed:!bad.passed });
 
 // C&I: Zod accepts valid state
 const good = checkAndReflect({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'ready'}, WorkflowState);
-traceEntry('verify', { source: SRC, step:'ci_pass', p:good.passed });
+traceEntry('check', { source: SRC, step:'ci_pass', passed:good.passed });
 
 // C&I: Zod rejects invalid topicReadiness
 const badTopic = checkAndReflect({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'invalid'}, WorkflowState);
-traceEntry('verify', { source: SRC, step:'ci_topic_fail', p:!badTopic.passed });
+traceEntry('check', { source: SRC, step:'ci_topic_fail', passed:!badTopic.passed });
 JS
 
-experiments/prototype-gate-fork/nodes-gate-fork="$B/exp/nodes" node "$B/t.mjs" > /dev/null 2>&1
+NODES_DIR="$B/exp/nodes" node "$B/t.mjs" > /dev/null 2>&1
 ```
 
 → 预期：4 分支正确，converge 修复通过，4 个 bundle 内 node MD + pipeline 完成，C&I 三次反馈正确。
@@ -135,7 +135,7 @@ import { setTraceFile, getTraceFile, traceCleanup } from '../experiments/prototy
 
 setTraceFile('dpt_disp_gf_complex/_trace_gf_complex.jsonl');
 const e = JSON.parse('[' + readFileSync(getTraceFile(), 'utf-8').trim().split('\n').join(',') + ']');
-const v = e.filter(x => x.event === 'verify');
+const v = e.filter(x => x.event === 'check');
 const s = e.filter(x => x.event === 'node_exec');
 const l = e.filter(x => x.event === 'md:executed');
 console.log('v:' + v.length + ' node_exec:' + s.length + ' md:executed:' + l.length + ' tot:' + e.length);

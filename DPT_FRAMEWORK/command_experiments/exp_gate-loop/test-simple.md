@@ -57,14 +57,14 @@ const SRCgl = 'gl-playbook/simple';
 traceInit('gl-playbook/simple', { source: SRCgl });
 
 // Gate evaluation: ref_count=5 >= ref_floor=5 → pass
-traceEntry('verify', { source: SRCgl, step:'gate', p:evaluate({current_gate:'x',ref_count:5,ref_floor:5})==='pass' });
+traceEntry('check', { source: SRCgl, step:'gate', passed:evaluate({current_gate:'x',ref_count:5,ref_floor:5})==='pass' });
 
 // Engine routes to wave0_search node, executes its code block
 const r = executeMDAndRun('wave0_search', {current_gate:'x',ref_count:3});
 r.step.execute({current_gate:'x',ref_count:3});
 JS
 
-experiments/prototype-gate-loop/nodes-gate-loop="$B/exp/nodes" node "$B/t.mjs" > /dev/null 2>&1
+NODES_DIR="$B/exp/nodes" node "$B/t.mjs" > /dev/null 2>&1
 ```
 
 → 预期：gate 评估 pass，node 加载，代码块执行成功。
@@ -83,10 +83,10 @@ import { setTraceFile, getTraceFile, traceCleanup } from '../experiments/prototy
 
 setTraceFile('dpt_disp_gl_simple/_trace_gl_simple.jsonl');
 const e = JSON.parse('[' + readFileSync(getTraceFile(), 'utf-8').trim().split('\n').join(',') + ']');
-const v = e.filter(x => x.event === 'verify').length;
+const v = e.filter(x => x.event === 'check').length;
 const s = e.filter(x => x.event === 'node_exec').length;
 const m = e.filter(x => x.event === 'md:executed').length;
-console.log('verify:' + v + ' node_exec:' + s + ' md:executed:' + m + ' tot:' + e.length);
+console.log('check:' + v + ' node_exec:' + s + ' md:executed:' + m + ' tot:' + e.length);
 
 const pass = v >= 1 && s >= 1 && m >= 1;
 console.log(pass ? '\x1b[32mSIMPLE PASS\x1b[0m' : '\x1b[31mSIMPLE FAIL\x1b[0m');
@@ -98,7 +98,7 @@ JS
 node "$B/t.mjs"
 ```
 
-→ 预期：`verify >= 1, node_exec >= 1, md_exec >= 1`，SIMPLE PASS。
+→ 预期：`check >= 1, node_exec >= 1, md_exec >= 1`，SIMPLE PASS。
 
 ---
 

@@ -59,11 +59,11 @@ const SRCgl = 'gl-playbook/medium';
 traceInit('gl-playbook/medium', { source: SRCgl });
 
 // Gate evaluation: normal pass
-traceEntry('verify', { source: SRCgl, step:'gate_pass', p:evaluate({current_gate:'x',ref_count:5,ref_floor:5})==='pass' });
+traceEntry('check', { source: SRCgl, step:'gate_pass', passed:evaluate({current_gate:'x',ref_count:5,ref_floor:5})==='pass' });
 
 // Repair loop: ref_count=2 < ref_floor=5 → fail → repair → retry → pass
 const r = repairLoop({current_gate:'x',ref_count:2,ref_floor:5});
-traceEntry('verify', { source: SRCgl, step:'gate_repair', p:r.outcome==='pass', its:r.iterations });
+traceEntry('check', { source: SRCgl, step:'gate_repair', passed:r.outcome==='pass', its:r.iterations });
 
 // Load and execute 2 nodes
 for (const k of ['wave0_search', 'repair_references']) {
@@ -72,7 +72,7 @@ for (const k of ['wave0_search', 'repair_references']) {
 }
 JS
 
-experiments/prototype-gate-loop/nodes-gate-loop="$B/exp/nodes" node "$B/t.mjs" > /dev/null 2>&1
+NODES_DIR="$B/exp/nodes" node "$B/t.mjs" > /dev/null 2>&1
 ```
 
 → 预期：gate pass，repair loop 修复后 pass，2 个 node 加载执行。
@@ -91,7 +91,7 @@ import { setTraceFile, getTraceFile, traceCleanup } from '../experiments/prototy
 
 setTraceFile('dpt_disp_gl_medium/_trace_gl_medium.jsonl');
 const e = JSON.parse('[' + readFileSync(getTraceFile(), 'utf-8').trim().split('\n').join(',') + ']');
-const v = e.filter(x => x.event === 'verify');
+const v = e.filter(x => x.event === 'check');
 const s = e.filter(x => x.event === 'node_exec');
 const m = e.filter(x => x.event === 'md:executed');
 console.log('v:' + v.length + ' node_exec:' + s.length + ' md:executed:' + m.length + ' tot:' + e.length);

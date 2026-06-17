@@ -160,7 +160,8 @@ rules:
     - 按依赖排序，优先搭骨架再填功能
     - 单个 task 不超过 2 小时
     - Task 描述中引用它实现的 requirement ID (如 "实现 SCO-001: CurrentGate enum")
-    - 每个 change 的 tasks 必含两条收尾检查 task, 归档前硬性 done condition:
+    - |
+      每个 change 的 tasks 必含两条收尾检查 task, 归档前硬性 done condition:
         1. 运行 `node openspec/governance/check-project-reqs.mjs` 必须 PASS
            (0 duplicate / 0 orphan / 0 unregistered / 0 reusedRetired)
         2. 运行 `node openspec/governance/check-project-specs.mjs` 必须 PASS

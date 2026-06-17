@@ -61,17 +61,17 @@ const SRC = 'gf-playbook/simple';
 traceInit('gf-playbook/simple', { source: SRC });
 
 // Fork routing: high ref + ready → pass
-traceEntry('verify', { source: SRC, step:'gate_pass', p:evaluateBranch({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'ready'})==='pass' });
+traceEntry('check', { source: SRC, step:'gate_pass', passed:evaluateBranch({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'ready'})==='pass' });
 
 // Fork routing: low ref + ready → fail_a
-traceEntry('verify', { source: SRC, step:'gate_fail_a', p:evaluateBranch({current_gate:'x',ref_count:2,ref_floor:5,topicReadiness:'ready'})==='fail_a' });
+traceEntry('check', { source: SRC, step:'gate_fail_a', passed:evaluateBranch({current_gate:'x',ref_count:2,ref_floor:5,topicReadiness:'ready'})==='fail_a' });
 
 // Engine routes to pass branch node MD, executes MD code block, then runs the branch step
 const r = executeMDAndRun('pass_next_wave', {current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'ready'});
 r.step.execute({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'ready'});
 JS
 
-experiments/prototype-gate-fork/nodes-gate-fork="$B/exp/nodes" node "$B/t.mjs" > /dev/null 2>&1
+NODES_DIR="$B/exp/nodes" node "$B/t.mjs" > /dev/null 2>&1
 ```
 
 → 预期：两个分支评估正确，bundle 内 node MD 被加载，代码块和 branch step 都执行。
@@ -90,10 +90,10 @@ import { setTraceFile, getTraceFile, traceCleanup } from '../experiments/prototy
 
 setTraceFile('dpt_disp_gf_simple/_trace_gf_simple.jsonl');
 const e = JSON.parse('[' + readFileSync(getTraceFile(), 'utf-8').trim().split('\n').join(',') + ']');
-const v = e.filter(x => x.event === 'verify').length;
+const v = e.filter(x => x.event === 'check').length;
 const s = e.filter(x => x.event === 'node_exec').length;
 const l = e.filter(x => x.event === 'md:executed').length;
-console.log('verify:' + v + ' node_exec:' + s + ' md:executed:' + l + ' tot:' + e.length);
+console.log('check:' + v + ' node_exec:' + s + ' md:executed:' + l + ' tot:' + e.length);
 
 const pass = v >= 2 && s >= 1 && l >= 1;
 console.log(pass ? '\x1b[32mSIMPLE PASS\x1b[0m' : '\x1b[31mSIMPLE FAIL\x1b[0m');
@@ -105,7 +105,7 @@ JS
 node "$B/t.mjs"
 ```
 
-→ 预期：`verify >= 2, node_exec >= 1, node_load >= 1`，SIMPLE PASS。
+→ 预期：`check >= 2, node_exec >= 1, node_load >= 1`，SIMPLE PASS。
 
 ---
 

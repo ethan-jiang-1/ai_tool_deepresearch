@@ -79,11 +79,11 @@ import { evaluate, repairLoop, executeMDAndRun, checkAndReflect, WorkflowState }
 const SRC = 'gl-playbook/complex';
 
 // Gate evaluation: pass
-traceEntry('verify', { source: SRC, step:'gate_pass', p:evaluate({current_gate:'x',ref_count:5,ref_floor:5})==='pass' });
+traceEntry('check', { source: SRC, step:'gate_pass', passed:evaluate({current_gate:'x',ref_count:5,ref_floor:5})==='pass' });
 
 // Repair loop: low ref_count triggers repair, should recover
 const r = repairLoop({current_gate:'x',ref_count:2,ref_floor:5});
-traceEntry('verify', { source: SRC, step:'gate_repair', p:r.outcome==='pass', its:r.iterations });
+traceEntry('check', { source: SRC, step:'gate_repair', passed:r.outcome==='pass', its:r.iterations });
 
 // 4 nodes — Engine routes to each, reads bundle-local MD, and executes code blocks
 for (const k of ['wave0_search', 'wave0_audit', 'wave1_evidence', 'repair_references']) {
@@ -93,14 +93,14 @@ for (const k of ['wave0_search', 'wave0_audit', 'wave1_evidence', 'repair_refere
 
 // C&I feedback: Zod rejects bad state (ref_count is string, not number)
 const bad = checkAndReflect({current_gate:'x',ref_count:'bad',ref_floor:5}, WorkflowState);
-traceEntry('verify', { source: SRC, step:'ci_fail', p:!bad.passed });
+traceEntry('check', { source: SRC, step:'ci_fail', passed:!bad.passed });
 
 // C&I feedback: Zod accepts valid state
 const good = checkAndReflect({current_gate:'x',ref_count:5,ref_floor:5}, WorkflowState);
-traceEntry('verify', { source: SRC, step:'ci_pass', p:good.passed });
+traceEntry('check', { source: SRC, step:'ci_pass', passed:good.passed });
 JS
 
-experiments/prototype-gate-loop/nodes-gate-loop="$B/exp/nodes" node "$B/t.mjs" > /dev/null 2>&1
+NODES_DIR="$B/exp/nodes" node "$B/t.mjs" > /dev/null 2>&1
 ```
 
 → 预期：gate pass，repair 后 pass，4 node 执行，C&I 一 fail 一 pass。
@@ -119,7 +119,7 @@ import { setTraceFile, getTraceFile, traceCleanup } from '../experiments/prototy
 
 setTraceFile('dpt_disp_gl_complex/_trace_gl_complex.jsonl');
 const e = JSON.parse('[' + readFileSync(getTraceFile(), 'utf-8').trim().split('\n').join(',') + ']');
-const v = e.filter(x => x.event === 'verify');
+const v = e.filter(x => x.event === 'check');
 const s = e.filter(x => x.event === 'node_exec');
 const m = e.filter(x => x.event === 'md:executed');
 console.log('v:' + v.length + ' node_exec:' + s.length + ' md:executed:' + m.length + ' tot:' + e.length);

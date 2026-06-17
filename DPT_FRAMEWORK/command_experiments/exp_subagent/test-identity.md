@@ -7,14 +7,14 @@ runner: coding-agent
 agent_mode: native-subagent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_rb_test_gs_identity
-trace: dpt_rb_test_gs_identity/_trace_gs_identity.jsonl
+bundle: dpt_disp_gs_identity
+trace: dpt_disp_gs_identity/_trace_gs_identity.jsonl
 verdict: trace-jsonl
 ---
 
 ## Execution Contract
 
-由 coding agent 在真实 `dpt_rb_test_*` bundle 中执行；如 playbook 包含 subagent phase，必须启动真实 native subagent。实验结果必须来自实际文件写入、Engine/Agent 调用和 trace event；允许通过文件系统读取中间产物；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
+由 coding agent 在真实 `dpt_disp_*` disposable bundle 中执行；如 playbook 包含 subagent phase，必须启动真实 native subagent。实验结果必须来自实际文件写入、Engine/Agent 调用和 trace event；允许通过文件系统读取中间产物；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
 
 # test-subagent-identity
 
@@ -41,22 +41,18 @@ verdict: trace-jsonl
 ## Phase 1: Prepare Bundle And Dispatch [MAIN/SHELL]
 
 ```bash
-B="dpt_rb_test_gs_identity"
-rm -rf "$B"
-mkdir -p "$B"/{seed_topics,reference,artifacts/wave1,artifacts/wave2,_cache,final}
-for f in DPT_FRAMEWORK/rb_templates/*.tmpl; do name=$(basename "$f" .tmpl); sed "s/{{name}}/gs_identity/g" "$f" > "$B/$name"; done
-cp DPT_FRAMEWORK/rb_templates/rb_trace.jsonl "$B/"
+B=$(node DPT_FRAMEWORK/command_experiments/scripts/new-disposable-bundle.mjs gs_identity --force)
 
 # 质量检查
-node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B/"
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B/"
+node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
+node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 
 cat > "$B/dispatch.mjs" << 'JS'
 import { writeFileSync } from 'node:fs';
 import { setTraceFile, traceInit } from '../experiments/prototype-subagent/trace.mjs';
 import { subagentDispatch } from '../experiments/prototype-subagent/subagent.mjs';
 
-setTraceFile('dpt_rb_test_gs_identity/_trace_gs_identity.jsonl');
+setTraceFile('dpt_disp_gs_identity/_trace_gs_identity.jsonl');
 traceInit('gs-playbook/identity', { source: 'gs-playbook/identity' });
 
 // MAIN: choose task size here. Subagents see only expanded taskDescription.
@@ -102,12 +98,12 @@ const dispatchMap = new Map([['pass', [
 
 const slots = subagentDispatch(
   { current_gate: 'wave0_complete', ref_count: 5, ref_floor: 5, topicReadiness: 'ready' },
-  'dpt_rb_test_gs_identity',
+  'dpt_disp_gs_identity',
   dispatchMap
 );
-writeFileSync('dpt_rb_test_gs_identity/_slots.json', JSON.stringify(slots, null, 2));
+writeFileSync('dpt_disp_gs_identity/_slots.json', JSON.stringify(slots, null, 2));
 console.log('Dispatch OK: ' + slots.length + ' slots, all ' + slots[0].roleAgentKey + ' (taskSize=' + taskSize + ')');
-for (const slot of slots) console.log('Slot task: dpt_rb_test_gs_identity/' + slot.taskPath);
+for (const slot of slots) console.log('Slot task: dpt_disp_gs_identity/' + slot.taskPath);
 JS
 node "$B/dispatch.mjs" 2>&1 | grep -v "^\[trace\]"
 ```
@@ -130,12 +126,12 @@ import { readFileSync } from 'node:fs';
 import { setTraceFile } from '../experiments/prototype-subagent/trace.mjs';
 import { recordAgentSpawnRequested } from '../experiments/prototype-subagent/subagent.mjs';
 
-setTraceFile('dpt_rb_test_gs_identity/_trace_gs_identity.jsonl');
-const slots = JSON.parse(readFileSync('dpt_rb_test_gs_identity/_slots.json', 'utf-8'));
+setTraceFile('dpt_disp_gs_identity/_trace_gs_identity.jsonl');
+const slots = JSON.parse(readFileSync('dpt_disp_gs_identity/_slots.json', 'utf-8'));
 const platform = process.env.DPT_AGENT_PLATFORM || 'claude-code';
 const runtimeMode = process.env.DPT_AGENT_RUNTIME_MODE || 'project-agent';
 for (const slot of slots) {
-  const prompt = recordAgentSpawnRequested(slot, 'dpt_rb_test_gs_identity', { platform, runtimeMode, parentRuntimeAgentId: process.env.DPT_PARENT_RUNTIME_AGENT_ID });
+  const prompt = recordAgentSpawnRequested(slot, 'dpt_disp_gs_identity', { platform, runtimeMode, parentRuntimeAgentId: process.env.DPT_PARENT_RUNTIME_AGENT_ID });
   console.log('--- SPAWN PROMPT for ' + slot.key + ' ---');
   console.log(prompt);
 }
@@ -173,11 +169,11 @@ cat > "$B/import-receipts.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { setTraceFile } from '../experiments/prototype-subagent/trace.mjs';
 import { importRuntimeReceipt } from '../experiments/prototype-subagent/subagent.mjs';
-setTraceFile('dpt_rb_test_gs_identity/_trace_gs_identity.jsonl');
-const slots = JSON.parse(readFileSync('dpt_rb_test_gs_identity/_slots.json', 'utf-8'));
+setTraceFile('dpt_disp_gs_identity/_trace_gs_identity.jsonl');
+const slots = JSON.parse(readFileSync('dpt_disp_gs_identity/_slots.json', 'utf-8'));
 for (const [i, slot] of slots.entries()) {
   const agentId = process.env['DPT_RUNTIME_AGENT_ID_' + i];
-  const imported = importRuntimeReceipt(slot, 'dpt_rb_test_gs_identity', { platform: 'claude-code', runtimeMode: 'project-agent', runtimeAgentId: agentId });
+  const imported = importRuntimeReceipt(slot, 'dpt_disp_gs_identity', { platform: 'claude-code', runtimeMode: 'project-agent', runtimeAgentId: agentId });
   console.log('receipt imported slot ' + i + ' (' + slot.key + '): ' + imported.agent.runtimeAgentId);
 }
 JS
@@ -188,9 +184,9 @@ DPT_RUNTIME_AGENT_ID_0="<AGENT_ID_0>" DPT_RUNTIME_AGENT_ID_1="<AGENT_ID_1>" DPT_
 
 Extract strict JSON from each subagent output and write to the relay files:
 
-- Slot 0 → `dpt_rb_test_gs_identity/relay-apple-research.json`
-- Slot 1 → `dpt_rb_test_gs_identity/relay-toyota-research.json`
-- Slot 2 → `dpt_rb_test_gs_identity/relay-nestle-research.json`
+- Slot 0 → `dpt_disp_gs_identity/relay-apple-research.json`
+- Slot 1 → `dpt_disp_gs_identity/relay-toyota-research.json`
+- Slot 2 → `dpt_disp_gs_identity/relay-nestle-research.json`
 
 ### 2e: Validate results and write durable files [MAIN/SHELL]
 
@@ -200,12 +196,12 @@ import { readFileSync } from 'node:fs';
 import { setTraceFile } from '../experiments/prototype-subagent/trace.mjs';
 import { parentRelayWriteResult } from '../experiments/prototype-subagent/subagent.mjs';
 
-setTraceFile('dpt_rb_test_gs_identity/_trace_gs_identity.jsonl');
-const slots = JSON.parse(readFileSync('dpt_rb_test_gs_identity/_slots.json', 'utf-8'));
+setTraceFile('dpt_disp_gs_identity/_trace_gs_identity.jsonl');
+const slots = JSON.parse(readFileSync('dpt_disp_gs_identity/_slots.json', 'utf-8'));
 const files = ['relay-apple-research.json', 'relay-toyota-research.json', 'relay-nestle-research.json'];
 for (const [i, slot] of slots.entries()) {
-  const result = JSON.parse(readFileSync('dpt_rb_test_gs_identity/' + files[i], 'utf-8'));
-  const relay = parentRelayWriteResult(slot, 'dpt_rb_test_gs_identity', result, { platform: 'claude-code', runtimeMode: 'project-agent', parentRuntimeAgentId: process.env.DPT_PARENT_RUNTIME_AGENT_ID });
+  const result = JSON.parse(readFileSync('dpt_disp_gs_identity/' + files[i], 'utf-8'));
+  const relay = parentRelayWriteResult(slot, 'dpt_disp_gs_identity', result, { platform: 'claude-code', runtimeMode: 'project-agent', parentRuntimeAgentId: process.env.DPT_PARENT_RUNTIME_AGENT_ID });
   console.log('Relay ' + (relay.ok ? 'OK' : 'FAILED') + ': ' + slot.key + ' status=' + relay.result.status);
   if (!relay.ok) console.log(relay.result.notes.join('; '));
 }
@@ -220,16 +216,16 @@ cat > "$B/collect.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { setTraceFile } from '../experiments/prototype-subagent/trace.mjs';
 import { collectAndMergeSubagentWave } from '../experiments/prototype-subagent/subagent.mjs';
-setTraceFile('dpt_rb_test_gs_identity/_trace_gs_identity.jsonl');
-const slots = JSON.parse(readFileSync('dpt_rb_test_gs_identity/_slots.json', 'utf-8'));
-const merged = collectAndMergeSubagentWave({ current_gate:'wave0_complete', ref_count:5, ref_floor:5, topicReadiness:'ready' }, slots, 'dpt_rb_test_gs_identity');
+setTraceFile('dpt_disp_gs_identity/_trace_gs_identity.jsonl');
+const slots = JSON.parse(readFileSync('dpt_disp_gs_identity/_slots.json', 'utf-8'));
+const merged = collectAndMergeSubagentWave({ current_gate:'wave0_complete', ref_count:5, ref_floor:5, topicReadiness:'ready' }, slots, 'dpt_disp_gs_identity');
 console.log('done=' + merged.results.filter(r=>r.status==='done').length + ' failed=' + merged.results.filter(r=>r.status==='failed').length + ' all_failed=' + merged.finalState.subagent_all_failed);
 JS
 node "$B/collect.mjs" 2>&1 | grep -v "^\[trace\]"
 
 cat > "$B/audit.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
-const events = readFileSync('dpt_rb_test_gs_identity/_trace_gs_identity.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
+const events = readFileSync('dpt_disp_gs_identity/_trace_gs_identity.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
 const count = name => events.filter(e => e.event === name).length;
 
 // Basic counts
@@ -276,6 +272,6 @@ node "$B/audit.mjs"
 ## Cleanup [MAIN/SHELL]
 
 ```bash
-rm -rf dpt_rb_test_gs_identity
+rm -rf dpt_disp_gs_identity
 echo "cleaned: gs_identity"
 ```

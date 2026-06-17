@@ -60,13 +60,13 @@ const SRC = 'gf-playbook/medium';
 traceInit('gf-playbook/medium', { source: SRC });
 
 // Fork routing: 3 branches
-traceEntry('verify', { source: SRC, step:'fork_pass', p:evaluateBranch({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'ready'})==='pass' });
-traceEntry('verify', { source: SRC, step:'fork_fail_a', p:evaluateBranch({current_gate:'x',ref_count:2,ref_floor:5,topicReadiness:'ready'})==='fail_a' });
-traceEntry('verify', { source: SRC, step:'fork_fail_b', p:evaluateBranch({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'not_ready'})==='fail_b' });
+traceEntry('check', { source: SRC, step:'fork_pass', passed:evaluateBranch({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'ready'})==='pass' });
+traceEntry('check', { source: SRC, step:'fork_fail_a', passed:evaluateBranch({current_gate:'x',ref_count:2,ref_floor:5,topicReadiness:'ready'})==='fail_a' });
+traceEntry('check', { source: SRC, step:'fork_fail_b', passed:evaluateBranch({current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'not_ready'})==='fail_b' });
 
 // Converge repair: fail_a state → engine repair step → pass
 const r = convergeRepair({current_gate:'x',ref_count:2,ref_floor:5,topicReadiness:'ready'});
-traceEntry('verify', { source: SRC, step:'converge_repair', p:r.outcome==='pass', its:r.iterations });
+traceEntry('check', { source: SRC, step:'converge_repair', passed:r.outcome==='pass', its:r.iterations });
 
 // Pass branch node MD
 const s = executeMDAndRun('pass_next_wave', {current_gate:'x',ref_count:5,ref_floor:5,topicReadiness:'ready'});
@@ -77,7 +77,7 @@ const s2 = executeMDAndRun('fail_a_topic_repair', {current_gate:'x',ref_count:2,
 s2.step.execute({current_gate:'x',ref_count:2,ref_floor:5,topicReadiness:'ready'});
 JS
 
-experiments/prototype-gate-fork/nodes-gate-fork="$B/exp/nodes" node "$B/t.mjs" > /dev/null 2>&1
+NODES_DIR="$B/exp/nodes" node "$B/t.mjs" > /dev/null 2>&1
 ```
 
 → 预期：3 分支路由正确，converge 修复后 pass，2 个 bundle 内 node MD 加载并执行。
@@ -96,7 +96,7 @@ import { setTraceFile, getTraceFile, traceCleanup } from '../experiments/prototy
 
 setTraceFile('dpt_disp_gf_medium/_trace_gf_medium.jsonl');
 const e = JSON.parse('[' + readFileSync(getTraceFile(), 'utf-8').trim().split('\n').join(',') + ']');
-const v = e.filter(x => x.event === 'verify');
+const v = e.filter(x => x.event === 'check');
 const s = e.filter(x => x.event === 'node_exec');
 const l = e.filter(x => x.event === 'md:executed');
 console.log('v:' + v.length + ' node_exec:' + s.length + ' md:executed:' + l.length + ' tot:' + e.length);
