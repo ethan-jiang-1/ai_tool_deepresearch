@@ -45,6 +45,7 @@ context: |
     - 每个 capability 分配 3 字母缩写 (首单词前 2 + 次单词首字母), 如 schema-core → SCO
     - 每个 requirement 分配全局唯一 ID: `{PREFIX}-{NNN}`, 如 SCO-001
     - spec 文件开头标注: `> req: XXX-001, XXX-002`
+    - Requirement 标题只写稳定语义名，不写 requirement ID；不要写成 `### Requirement: Foo (SCO-001)`
     - 代码实现: `// @impl SCO-001, SCO-002` 注释
     - task 描述: 引用 requirement ID (如 "实现 SCO-001: CurrentGate enum")
     - 每次 change 完成前必须更新 registry 并运行 openspec/governance/check-project-reqs.mjs
@@ -151,15 +152,15 @@ rules:
     - 引用 V12 原始需求时注明来源文件
     - 为新 capability 分配 3 字母缩写并提前登记到 openspec/governance/req-registry.yaml (先查历史，避免冲突，别随意发挥)
   design:
-    - 数据结构用 Zod schema 定义（`.refine()` 做跨字段校验）
+    - "数据结构用 Zod schema 定义（`.refine()` 做跨字段校验）"
     - 状态机用显式转换表 (Map/object)，不允许隐藏在 prose 里
     - 跨文件引用必须明确 Source of Record
-    - 只用批准的依赖: zod, yaml。其余一律 Node.js 标准库
+    - "只用批准的依赖: zod, yaml。其余一律 Node.js 标准库"
   tasks:
     - 每个 task 有明确 done condition，可独立验证
     - 按依赖排序，优先搭骨架再填功能
     - 单个 task 不超过 2 小时
-    - Task 描述中引用它实现的 requirement ID (如 "实现 SCO-001: CurrentGate enum")
+    - "Task 描述中引用它实现的 requirement ID (如 \"实现 SCO-001: CurrentGate enum\")"
     - |
       每个 change 的 tasks 必含两条收尾检查 task, 归档前硬性 done condition:
         1. 运行 `node openspec/governance/check-project-reqs.mjs` 必须 PASS
@@ -171,12 +172,20 @@ rules:
   specs:
     - Capability 用 kebab-case 命名，目录名即分类
     - Spec 文件是 Zod schema 的人类可读投影
-    - OpenSpec main spec (`openspec/specs/<capability>/spec.md`):
+    - |
+      OpenSpec main spec (`openspec/specs/<capability>/spec.md`):
       必须有 `## Purpose` + `## Requirements`。
       Delta 头 (`## ADDED|MODIFIED|REMOVED|RENAMED Requirements`) 只在
       `openspec/changes/<name>/specs/<capability>/spec.md` 合法 ——
       由 `openspec/governance/check-project-specs.mjs` 强制执行。
-    - 每个 main spec 文件必须有 `> req: XXX-001` 行标注涉及的 requirement ID
+    - |
+      每个 main spec 文件必须有 `> req: XXX-001` 行标注涉及的 requirement ID
       (项目级追踪约定, 非 OpenSpec 原生字段)
+    - |
+      Requirement 标题必须是稳定语义锚点，不得包含 registry ID、括号 ID 或编号前缀。
+      正确: `### Requirement: Structured queue state validates task cards`
+      错误: `### Requirement: Structured queue state validates task cards (AGQ-001)`
+      Requirement ID 只放在 `> req:` 头、`openspec/governance/req-registry.yaml`、
+      tasks 的 `@impl <REQ-ID>`、代码注释 `// @impl <REQ-ID>` 或 MD frontmatter `req:`。
     - 列出该 capability 涉及的 requirement ID 和 invariant ID
     - 实现代码中用 `// @impl <REQ-ID>` 标注, MD 文件用 frontmatter `req:` 标注
