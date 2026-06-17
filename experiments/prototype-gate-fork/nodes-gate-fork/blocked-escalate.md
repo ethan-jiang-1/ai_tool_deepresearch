@@ -8,5 +8,5 @@
 
 ```js
 // trace 记录 blocked 分支执行
-traceEntry('segment_load', { source: 'gf-segment/blocked-escalate', key: 'blocked_escalate', branch: 'blocked' });
+traceEntry('md:executed', { source: 'gf-node/blocked-escalate', key: 'blocked_escalate', branch: 'blocked' });
 ```

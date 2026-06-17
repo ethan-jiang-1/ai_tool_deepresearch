@@ -53,12 +53,12 @@ export function traceSummary() {
   for (const e of events) {
     const icon = e.event === 'run_start' ? '▶' :
                  e.event === 'check' ? (e.passed ? '✅' : '❌') :
-                 e.event === 'segment_load' ? '📄' :
-                 e.event === 'segment_exec' ? '🔧' :
+                 e.event === 'node_load' || e.event === 'segment_load' ? '📄' :
+                 e.event === 'node_exec' || e.event === 'segment_exec' ? '🔧' :
                  e.event === 'verify' ? (e.passed ? '🟢' : '🔴') : '•';
     const s = e.event === 'check' || e.event === 'verify'
       ? `${icon} ${e.file || e.step}: ${e.passed ? 'PASS' : 'FAIL'}`
-      : e.event === 'segment_exec'
+      : (e.event === 'node_exec' || e.event === 'segment_exec')
         ? `${icon} ${e.key}: ${e.before} → ${e.after}`
         : `${icon} ${e.event}: ${e.label || ''}`;
 

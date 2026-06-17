@@ -8,5 +8,5 @@ Gate 审计通过。所有条件满足，前进到下一个 research wave。
 
 ```js
 // trace 记录 pass 分支执行
-traceEntry('segment_load', { source: 'gf-segment/pass-next-wave', key: 'pass_next_wave', branch: 'pass' });
+traceEntry('md:executed', { source: 'gf-node/pass-next-wave', key: 'pass_next_wave', branch: 'pass' });
 ```

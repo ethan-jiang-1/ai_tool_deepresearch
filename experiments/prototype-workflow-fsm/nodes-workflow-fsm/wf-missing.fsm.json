@@ -1,8 +1,8 @@
 {
   "name": "wf-missing",
-  "initial": "missing-entry.md",
+  "initial": "missing.entry.md",
   "states": {
-    "missing-entry.md": {
+    "missing.entry.md": {
       "on": {
         "success": null
       }

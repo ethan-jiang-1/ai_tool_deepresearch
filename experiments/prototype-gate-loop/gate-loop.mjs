@@ -89,31 +89,31 @@ export function repairLoop(state, maxIterations = 3) {
 }
 
 // ============================================================
-// Section 3: Dynamic Segment Loading (DYS-001)
+// Section 3: Dynamic Node Loading (DYS-001)
 // ============================================================
 
 import { traceEntry } from './trace.mjs';
 // 痕迹文件由测试脚本声明: setTraceFile('dpt_rb_test_gate_loop/_trace_xxx.jsonl')
 
-export const segmentRegistry = new Map([
+export const nodeRegistry = new Map([
   ['wave0_search', new Step('wave0_search', (s) => {
     console.log('  🔍 开始搜索 official + academic 来源...');
     console.log('  结果: 3 official + 2 academic = 5 条共享参考');
     console.log('  gate: setup_ready → wave0_complete');
-    traceEntry('segment_exec', { source: 'gl-segment/wave0-search', key: 'wave0_search', before: 'setup_ready', after: 'wave0_complete' });
+    traceEntry('node_exec', { source: 'gl-node/wave0-search', key: 'wave0_search', before: 'setup_ready', after: 'wave0_complete' });
     return { ...s, current_gate: 'wave0_complete' };
   })],
   ['wave0_audit', new Step('wave0_audit', (s) => {
     console.log('  📋 审计共享参考...');
     console.log('  floor=5, 实际=5 → PASS');
-    traceEntry('segment_exec', { source: 'gl-segment/wave0-audit', key: 'wave0_audit', before: 'wave0_complete', after: 'wave0_complete' });
+    traceEntry('node_exec', { source: 'gl-node/wave0-audit', key: 'wave0_audit', before: 'wave0_complete', after: 'wave0_complete' });
     return { ...s, current_gate: 'wave0_complete' };
   })],
   ['wave1_evidence', new Step('wave1_evidence', (s) => {
     console.log('  🔬 深挖独立证据...');
     console.log('  Topic 01: 4 条, Topic 02: 3 条, 独立率 70%');
     console.log('  gate: wave0_complete → wave1_complete');
-    traceEntry('segment_exec', { source: 'gl-segment/wave1-evidence', key: 'wave1_evidence', before: 'wave0_complete', after: 'wave1_complete' });
+    traceEntry('node_exec', { source: 'gl-node/wave1-evidence', key: 'wave1_evidence', before: 'wave0_complete', after: 'wave1_complete' });
     return { ...s, current_gate: 'wave1_complete' };
   })],
   ['repair_references', new Step('repair_references', (s) => {
@@ -121,37 +121,42 @@ export const segmentRegistry = new Map([
     const after = before + 2;
     console.log('  🔧 补充参考...');
     console.log('  ref_count: ' + before + ' → ' + after);
-    traceEntry('segment_exec', { source: 'gl-segment/repair-references', key: 'repair_references', before, after });
+    traceEntry('node_exec', { source: 'gl-node/repair-references', key: 'repair_references', before, after });
     return { ...s, ref_count: after };
   })],
 ]);
 
-export function loadNextSegment(key) {
-  const step = segmentRegistry.get(key);
-  if (!step) throw new Error(`Unknown segment: ${key}`);
+export function loadNextNode(key) {
+  const step = nodeRegistry.get(key);
+  if (!step) throw new Error(`Unknown node: ${key}`);
   return step;
 }
 
+const CODE_BLOCK_RE = /```(?:js|javascript)\s*\n([\s\S]*?)```/;
+
 /**
- * 执行 MD 中嵌入的 JS 代码块。MD 可以 import trace.mjs 并调用 traceEntry()。
+ * 执行 MD 中嵌入的 JS 代码块。traceEntry 同步注入，MD 直接调用。
  */
 export function runMDCode(mdContent, state) {
-  const match = mdContent.match(/```js\n([\s\S]*?)```/);
+  const match = mdContent.match(CODE_BLOCK_RE);
   if (!match) return;
   const code = match[1];
-  // 注入 trace 函数到全局作用域，MD 代码块可以直接调用
+  // traceEntry already imported at module level — pass it directly, synchronously
   const fn = new Function('state', 'traceEntry', code);
-  // 动态 import traceEntry 供 MD 使用
-  import('./trace.mjs').then(m => fn(state, m.traceEntry));
+  fn(state, traceEntry);
 }
 
 /**
- * 动态加载 MD 并执行。MD 说话 → segment 做事。
+ * 动态加载 MD 并执行。MD 说话 → node 做事。
  */
 import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const NODES_DIR = process.env.NODES_DIR || join(__dirname, 'nodes-gate-loop');
 export function executeMDAndRun(key, state) {
-  const step = loadNextSegment(key);
-  const mdPath = `experiments/prototype-gate-loop/segments-gate-loop/${key.replace(/_/g, '-')}.md`;
+  const step = loadNextNode(key);
+  const mdPath = join(NODES_DIR, `${key.replace(/_/g, '-')}.md`);
   const md = readFileSync(mdPath, 'utf-8');
   // MD 自己跑它的 JS 代码
   runMDCode(md, state);

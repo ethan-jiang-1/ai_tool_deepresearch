@@ -1,8 +1,8 @@
 {
   "name": "wf-halt",
-  "initial": "halt-node.md",
+  "initial": "halt.entry.md",
   "states": {
-    "halt-node.md": {
+    "halt.entry.md": {
       "on": {
         "success": null
       }

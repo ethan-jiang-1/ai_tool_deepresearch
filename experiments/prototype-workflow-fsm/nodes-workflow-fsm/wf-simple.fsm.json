@@ -1,23 +1,23 @@
 {
   "name": "wf-simple",
-  "initial": "wave-entry.md",
+  "initial": "wave.entry.md",
   "states": {
-    "wave-entry.md": {
+    "wave.entry.md": {
       "on": {
-        "success": "wave-audit.md",
-        "error": "wave-entry.md"
+        "success": "wave-audit.entry.md",
+        "error": "wave.entry.md"
       }
     },
-    "wave-audit.md": {
+    "wave-audit.entry.md": {
       "on": {
-        "success": "wave-final.md",
-        "error": "wave-audit.md"
+        "success": "wave-final.entry.md",
+        "error": "wave-audit.entry.md"
       }
     },
-    "wave-final.md": {
+    "wave-final.entry.md": {
       "on": {
         "success": null,
-        "error": "wave-final.md"
+        "error": "wave-final.entry.md"
       }
     }
   }

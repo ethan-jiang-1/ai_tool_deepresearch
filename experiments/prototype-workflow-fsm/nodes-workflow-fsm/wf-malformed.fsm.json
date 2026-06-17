@@ -1,8 +1,8 @@
 {
   "name": "wf-malformed",
-  "initial": "malformed-entry.md",
+  "initial": "malformed.entry.md",
   "states": {
-    "malformed-entry.md": {
+    "malformed.entry.md": {
       "on": {
         "success": null
       }

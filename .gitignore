@@ -52,9 +52,9 @@ dmypy.json
 .env.*.local
 
 # ===== Deep Research =====
-dpt_rb_test*/
-dpt_rb_test*/
-dpt_rb_temp*/
+dpt_disp_*/
+dpt_disp_*/
+dpt_disp_temp*/
 
 # ===== Claude Code =====
 .claude/settings.local.json

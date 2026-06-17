@@ -1,11 +1,11 @@
 # Wave 1: 逐题证据深挖
 > 状态: 已加载 ✅
 > 📊 痕迹: 执行时自动记录到当前活跃痕迹文件 (setTraceFile) (caller + callee 双保险)
-> 我是 Wave 1 的入口段！
+> 我是 Wave 1 的入口节点！
 > 我的职责: 为每个 topic 收集独立证据
 
 ```js
-traceEntry('md_exec', { source: 'gl-segment/wave1-evidence', segment: 'wave1-evidence', status: 'loaded' });
+traceEntry('md:executed', { source: 'gl-node/wave1-evidence', node: 'wave1-evidence', status: 'loaded' });
 ```
 
 ## 执行结果

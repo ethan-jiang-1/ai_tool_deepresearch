@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import {
   evaluate, gateRouter, repairLoop,
-  loadNextSegment, checkAndReflect,
+  loadNextNode, checkAndReflect,
   WorkflowState,
 } from './gate-loop.mjs';
 
@@ -48,14 +48,14 @@ describe('Repair loop (REL-001)', () => {
   });
 });
 
-describe('Dynamic segment loading (DYS-001)', () => {
-  it('loads known segment', () => {
-    const step = loadNextSegment('wave0_search');
+describe('Dynamic node loading (DYS-001)', () => {
+  it('loads known node', () => {
+    const step = loadNextNode('wave0_search');
     assert.equal(step.name, 'wave0_search');
     assert.equal(typeof step.execute, 'function');
   });
   it('throws on unknown key', () => {
-    assert.throws(() => loadNextSegment('nonexistent'), /Unknown segment/);
+    assert.throws(() => loadNextNode('nonexistent'), /Unknown node/);
   });
 });
 

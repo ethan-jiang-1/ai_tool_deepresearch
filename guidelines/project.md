@@ -171,8 +171,8 @@ OpenSpec（spec + change）
 
 1. 先读这份 `project.md`
 2. 再读 `guidelines/command-experiments.md`
-3. 看一个实验 playbook（比如 `DPT_FRAMEWORK/command_experiments/workflow-load/test-simple.md`）理解 MD 怎么驱动实验
-4. 看对应的 JS engine（`experiments/prototype-workflow-load/`）理解 Engine 怎么做校验
+3. 看一个实验 playbook（比如 `DPT_FRAMEWORK/command_experiments/exp_workflow-next/test-simple.md`）理解 MD 怎么驱动实验
+4. 看对应的 JS engine（`experiments/prototype-workflow-next/`）理解 Engine 怎么做校验
 5. 跑一遍实验，读 trace 输出
 
 记住：放下传统程序思维。你面对的是一套 LLM 能读、能执行、能根据反馈自我纠正的系统。代码不是真理——MD + trace + LLM 的反馈闭环才是。

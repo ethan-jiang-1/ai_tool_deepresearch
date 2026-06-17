@@ -1,13 +1,13 @@
 {
   "name": "wf-cache",
-  "initial": "repeat-step1.md",
+  "initial": "repeat-1.entry.md",
   "states": {
-    "repeat-step1.md": {
+    "repeat-1.entry.md": {
       "on": {
-        "success": "repeat-step2.md"
+        "success": "repeat-2.entry.md"
       }
     },
-    "repeat-step2.md": {
+    "repeat-2.entry.md": {
       "on": {
         "success": null
       }

@@ -5,7 +5,7 @@ import {
   evaluateBranch, forkRouter, convergeRepair,
   passStep, failAStep, failBStep, blockedStep,
   sharedRepairStep,
-  loadNextSegment, runForkPipeline,
+  loadNextNode, runForkPipeline,
   checkAndReflect, inspectFailure,
   WorkflowState,
 } from './gate-fork.mjs';
@@ -61,7 +61,7 @@ describe('Gate fork router (GAF-001)', () => {
   });
 });
 
-describe('Conditional segments (COS-001)', () => {
+describe('Conditional nodes (COS-001)', () => {
   it('pass branch advances to next wave', () => {
     const state = { current_gate: 'wave0_complete', ref_count: 5, ref_floor: 5, topicReadiness: 'ready' };
     const result = passStep.execute(state);
@@ -209,15 +209,15 @@ describe('Loop + Fork composition', () => {
   });
 });
 
-describe('Dynamic segment loading (fork variant)', () => {
-  it('loads known segment from segmentRegistry', () => {
-    const step = loadNextSegment('pass_next_wave');
+describe('Dynamic node loading (fork variant)', () => {
+  it('loads known node from nodeRegistry', () => {
+    const step = loadNextNode('pass_next_wave');
     assert.equal(step.name, 'pass_next_wave');
     assert.equal(typeof step.execute, 'function');
   });
 
-  it('throws on unknown segment key', () => {
-    assert.throws(() => loadNextSegment('nonexistent_fork_segment'), /Unknown segment/);
+  it('throws on unknown node key', () => {
+    assert.throws(() => loadNextNode('nonexistent_fork_node'), /Unknown node/);
   });
 });
 
@@ -306,8 +306,8 @@ describe('E2E: full fork pipeline with C&I', () => {
     const ci = checkAndReflect(repaired.state);
     assert.equal(ci.passed, true);
 
-    // Step 4: Dynamic segment load for next wave
-    const step = loadNextSegment('pass_next_wave');
+    // Step 4: Dynamic node load for next wave
+    const step = loadNextNode('pass_next_wave');
     assert.equal(step.name, 'pass_next_wave');
     const advanced = step.execute(repaired.state);
     assert.equal(advanced.current_gate, 'wave_next');

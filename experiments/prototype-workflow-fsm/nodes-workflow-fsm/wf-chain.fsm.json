@@ -1,8 +1,8 @@
 {
   "name": "wf-chain",
-  "initial": "chain-entry.md",
+  "initial": "chain.entry.md",
   "states": {
-    "chain-entry.md": {
+    "chain.entry.md": {
       "on": {
         "success": null
       }

@@ -2,7 +2,7 @@
 
 > 汇聚点: fail_a ∪ fail_b → shared_repair
 
-多 fail 分支汇聚到此共享修复段。同时处理两类问题：
+多 fail 分支汇聚到此共享修复节点。同时处理两类问题：
 
 1. **参考不足** (fail_a): ref_count += 2, 上限 ref_floor
 2. **话题未就绪** (fail_b): topicReadiness = 'ready'
@@ -11,5 +11,5 @@
 
 ```js
 // trace 记录 shared repair 执行
-traceEntry('segment_load', { source: 'gf-segment/shared-repair', key: 'shared_repair', role: 'converge_point' });
+traceEntry('md:executed', { source: 'gf-node/shared-repair', key: 'shared_repair', role: 'converge_point' });
 ```

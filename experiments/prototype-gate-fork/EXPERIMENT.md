@@ -6,7 +6,7 @@
   - 优先级: fail_b (topic) 高于 fail_a (reference)
   - blocked 最高优先，即使同时满足 fail_a/fail_b
 
-- Step 2: Conditional segments (COS-001) PASS (7 passed, 0 failed)
+- Step 2: Conditional nodes (COS-001) PASS (7 passed, 0 failed)
   - 4 个 Step 各自执行独立逻辑
   - pass → wave_next, fail_a → topic repair, fail_b → ref repair, blocked → HITL
   - sharedRepairStep 直接测试：同时修复 ref + topic；blocked 不变
@@ -25,8 +25,8 @@
   - blocked 链路: fork → blocked → halt (无 repair)
   - pass 链路: fork → pass → advance (无 repair)
 
-- Step 5: Dynamic segment loading       PASS (2 passed, 0 failed)
-  - 已知 segment 加载正确
+- Step 5: Dynamic node loading       PASS (2 passed, 0 failed)
+  - 已知 node 加载正确
   - 未知 key 抛错
 
 - Step 6: C&I feedback loop (CHI-002)   PASS (6 passed, 0 failed)
@@ -43,7 +43,7 @@
 
 ## Agent Test Playbooks (AGT-002)
 
-3 级 playbook 位于 `DPT_FRAMEWORK/command_experiments/gate-fork/`:
+3 级 playbook 位于 `DPT_FRAMEWORK/command_experiments/exp_gate-fork/`:
 
 | Level  | File                             | Bundle                | Events |
 |--------|----------------------------------|-----------------------|--------|
@@ -69,4 +69,4 @@
 
 5. **与 gate-loop 的差异**：`convergeRepair` 在 maxIterations 耗尽后返回具体 branch 名（如 `"fail_a"`），而非 gate-loop 的 `"escalated"` 哨兵值。这个选择保持了 fork 路由的语义透明——调用方可以看到"卡在哪个分支上"。
 
-6. **命名对齐**：两个实验使用一致的 API 命名约定 (evaluate/evaluateBranch, router/forkRouter, repairLoop/convergeRepair, segmentRegistry/loadNextSegment)，便于将来抽象到共用库。
+6. **命名对齐**：两个实验使用一致的 API 命名约定 (evaluate/evaluateBranch, router/forkRouter, repairLoop/convergeRepair, nodeRegistry/loadNextNode)，便于将来抽象到共用库。

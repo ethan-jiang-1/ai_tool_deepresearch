@@ -36,7 +36,7 @@ context: |
   命名规范:
     - 枚举 snake_case, 用户界面中文, 内部字段名/路径英文
     - Capability 前缀: cmd-* = Agent 读的 Markdown 命令 playbook; cli-* = JS 脚本
-    - 测试 Bundle: dpt_rb_test_{prefix}_{level}/ — 自动化测试用, .gitignore 忽略, 测试结束清理
+    - Disposable Bundle: dpt_disp_{prefix}_{name}/ — 实验用临时 bundle, .gitignore 忽略, 测试结束清理
 
   需求追踪 (Requirement Traceability):
     所有 capability 可追踪，强制性纪律，不可跳过。
@@ -62,41 +62,53 @@ context: |
     - tests/fixtures/:  最小 DPT_FRAMEWORK/ 测试框架 (symlink 到 cli/, rb_templates/, schema/)
 
   实验体系 (Experiments):
-    实验分两层，物理分离、命名对齐，每个 prototype-{name} 通过 AGT-xxx 关联:
-      1. experiments/                        — 原型代码（纯 JS，完成后冻结）
-      2. DPT_FRAMEWORK/command_experiments/  — Agent 辅助测试 playbook（验证原型行为）
+    实验分两层，但关系不是对等——playbook 是驱动层，prototype 是支持环境:
 
-    原型代码层 — experiments/:
-      目录命名: prototype-{component-name}/（如 prototype-gate-loop, prototype-gate-fork）
+      驱动层 — command_experiments/exp_{name}/
+        Agent 可读的 Markdown playbook，定义实验要做什么。
+        Agent 逐 step 执行：创建 disposable bundle → import 原型 Engine → 执行操作 → 从 trace 裁决。
+        这是实验的"入口"——Agent 从这里开始，trace 在这里结束。
+
+      支持环境 — experiments/prototype-{name}/
+        原型 JS engine + trace 系统 + node MD，为 playbook 提供可 import 的 staging 运行时。
+        playbook 不 mock——它 import 真实 engine，在真实 disposable bundle 上端到端执行。
+        原型完成后冻结，不随生产代码变化。
+
+      两者通过 AGT-xxx requirement 关联，命名对齐（gate-loop ↔ prototype-gate-loop）。
+
+    驱动层详细约定 — command_experiments/:
+      目录结构:
+        command_experiments/
+          scripts/
+            new-disposable-bundle.mjs          # 创建 disposable bundle 的共享工具
+          exp_{component}/                     # 每个实验一个子目录
+            test-simple.md                     # 简单场景（核心路径）
+            test-medium.md                     # 中等场景（分支 + 修复）
+            test-complex.md                    # 复杂场景（全流程 + C&I）
+      核心约定:
+        - 每个 playbook 创建独立 disposable bundle（dpt_disp_*），互不污染
+        - playbook 是 Agent 可读的 Markdown，包含 bash + JS 代码块
+        - Step 1 统一用 new-disposable-bundle.mjs 创建 bundle，绝不手动 mkdir/sed
+        - 裁决只从 trace JSONL 来，不靠 console output
+        - trace event 命名: Engine 事件不带前缀（load_start, file_read, node_exec），
+          node MD 自写事件统一用 md: 前缀（md:executed）
+        - 3 级复杂度: simple（核心路径）, medium（分支+修复）, complex（全流程+错误路径）
+
+    支持环境详细约定 — experiments/:
+      目录命名: prototype-{component-name}/（如 prototype-gate-loop）
       标准结构:
-        - EXPERIMENT.md              # 实验说明、测试结论、与相关实验的关系
+        - EXPERIMENT.md              # 实验目的、假设、结论
         - package.json               # { "type": "module" }
         - {component}.mjs            # 核心实现（标注 @impl <REQ-ID>）
         - {component}.test.mjs       # node:test 单元测试
-        - trace.mjs                  # trace 工具 (setTraceFile/getTraceFile/traceEntry/traceCleanup)
-        - segments-{component}/      # 分段 Markdown 文件（Agent 可读的步骤 + JS 代码块）
+        - trace.mjs                  # trace 工具（API: setTraceFile/getTraceFile/traceEntry/traceCleanup）
+        - nodes-{component}/         # node MD（*.entry.md = 入口, *.dep.md = 依赖）
       核心约定:
-        - 每个原型独立，不互相 import（验证独立性，避免耦合）
-        - 完成后冻结，不随生产代码变化而 break
-        - 命名对齐以便未来提取共享库（如 evaluate ↔ evaluateBranch, repairLoop ↔ convergeRepair）
-        - trace source 前缀按组件区分：gate-loop → gl-, gate-fork → gf-, subagent → gs-
-
-    Agent 测试 playbook 层 — command_experiments/:
-      组织: 按组件分子目录，禁止 flat 堆文件
-        command_experiments/
-          {component}/               # 如 gate-loop/, gate-fork/, subagent/
-            test-simple.md           # 简单场景（核心路径，~4-6 trace events）
-            test-medium.md           # 中等场景（分支+修复，~9-10 trace events）
-            test-complex.md          # 复杂场景（全流程+C&I，~17-18 trace events）
-      核心约定:
-        - 每个 playbook 创建独立 bundle 和独立 trace 文件，互不污染
-        - 子目录内文件名简化为 test-{complexity}.md（无需重复组件名前缀）
-        - playbook 是 Agent 可读的 Markdown，包含 bash + JS 代码块
-        - 3 级复杂度定义:
-          · simple:  核心路径验证，Gate + 1 segment
-          · medium:  分支 + 修复/汇聚，2+ segments
-          · complex: 完整端到端，含 C&I 反馈环、所有分支、pipeline
-        - OpenSpec task 中引用完整路径（如 command_experiments/subagent/test-simple.md）
+        - 每个原型自包含，不互相 import（验证独立性）
+        - Engine 操作自动写 trace 到磁盘（emit 模式），不依赖调用方手动桥接
+        - node MD 代码块通过 sandbox 注入的 traceEntry 自写 trace
+        - trace source 前缀按组件区分: wl-(workflow-next), gl-(gate-loop), gf-(gate-fork), gs-(subagent)
+        - 完成后冻结，不随生产代码变化
 
   根目录约定 (Framework ↔ Bundle 同级, 不拷贝):
     docs/                       — 架构文档 (architect/) 与 V12 迁移记录 (v12-migration/)
@@ -104,9 +116,11 @@ context: |
       AGENT_GUIDE.md            — Agent 守则
       cli/                      — JS 程序, Agent 用 node 调用 (validate-bundle.mjs, inspect-bundle.mjs)
       COMMANDS.md               — 命令索引
-      command_experiments/      — Agent 测试 playbook (按组件分子目录, 见实验体系)
+      command_experiments/      — Agent 测试 playbook + 共享脚本 (见实验体系)
+        scripts/
+          new-disposable-bundle.mjs  # disposable bundle 创建工具
+        exp_{component}/            # 各实验 playbook
       command_playbook/         — 一次性命令, Agent 读的 Markdown (如 instantiate-run-bundle.md)
-      rb_templates/             — Runtime Bundle 骨架文件 (6 个 .tmpl)
       schema/                   — Zod 类型 + contracts (Check 层)
                                    enums.mjs, index.mjs, contracts/{gate,plan,profile,queue,status,trace}.mjs
       workflows/                — 持续运行的 agentic 流程 (execution, queue loop, HITL)

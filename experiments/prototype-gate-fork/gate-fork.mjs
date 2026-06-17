@@ -117,6 +117,7 @@ export const sharedRepairStep = new Step('shared_repair', (s) => {
   if (repaired.topicReadiness !== 'ready' && repaired.topicReadiness !== 'blocked') {
     repaired.topicReadiness = 'ready';
   }
+  traceEntry('node_exec', { source: 'gf-node/shared-repair', key: 'shared_repair', branch: 'converge', before: s.ref_count, after: repaired.ref_count });
   return repaired;
 });
 
@@ -156,22 +157,27 @@ export function convergeRepair(state, maxIterations = 3) {
 }
 
 // ============================================================
-// Section 4: Dynamic Segment Loading (DYS-001 pattern, fork variant)
+// Section 4: Dynamic Node Loading (DYS-001 pattern, fork variant)
 // ============================================================
 
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { traceEntry } from './trace.mjs';
 
-export const segmentRegistry = new Map([
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+export const nodeRegistry = new Map([
   ['pass_next_wave', new Step('pass_next_wave', (s) => {
     console.log('  🚀 Pass branch: 前进到下一 wave...');
     console.log(`  gate: ${s.current_gate} → wave_next`);
-    traceEntry('segment_exec', { source: 'gf-segment/pass-next-wave', key: 'pass_next_wave', branch: 'pass', before: s.current_gate, after: 'wave_next' });
+    traceEntry('node_exec', { source: 'gf-node/pass-next-wave', key: 'pass_next_wave', branch: 'pass', before: s.current_gate, after: 'wave_next' });
     return { ...s, current_gate: 'wave_next' };
   })],
   ['fail_a_topic_repair', new Step('fail_a_topic_repair', (s) => {
     console.log('  🔧 Fail-A: 话题分解修复...');
     console.log(`  topicReadiness: ${s.topicReadiness} → ready`);
-    traceEntry('segment_exec', { source: 'gf-segment/fail-a-topic-repair', key: 'fail_a_topic_repair', branch: 'fail_a', before: s.topicReadiness, after: 'ready' });
+    traceEntry('node_exec', { source: 'gf-node/fail-a-topic-repair', key: 'fail_a_topic_repair', branch: 'fail_a', before: s.topicReadiness, after: 'ready' });
     return { ...s, topicReadiness: 'ready', topicRepairAttempted: true };
   })],
   ['fail_b_reference_repair', new Step('fail_b_reference_repair', (s) => {
@@ -179,40 +185,42 @@ export const segmentRegistry = new Map([
     const after = before + 1;
     console.log('  📚 Fail-B: 补充参考...');
     console.log(`  ref_count: ${before} → ${after}`);
-    traceEntry('segment_exec', { source: 'gf-segment/fail-b-reference-repair', key: 'fail_b_reference_repair', branch: 'fail_b', before, after });
+    traceEntry('node_exec', { source: 'gf-node/fail-b-reference-repair', key: 'fail_b_reference_repair', branch: 'fail_b', before, after });
     return { ...s, ref_count: after };
   })],
   ['shared_repair', sharedRepairStep],
   ['blocked_escalate', new Step('blocked_escalate', (s) => {
     console.log('  🛑 Blocked: 人工阻塞，停止执行...');
     console.log(`  gate: ${s.current_gate} → blocked_hitl`);
-    traceEntry('segment_exec', { source: 'gf-segment/blocked-escalate', key: 'blocked_escalate', branch: 'blocked', before: s.current_gate, after: 'blocked_hitl' });
+    traceEntry('node_exec', { source: 'gf-node/blocked-escalate', key: 'blocked_escalate', branch: 'blocked', before: s.current_gate, after: 'blocked_hitl' });
     return { ...s, current_gate: 'blocked_hitl' };
   })],
 ]);
 
-export function loadNextSegment(key) {
-  const step = segmentRegistry.get(key);
-  if (!step) throw new Error(`Unknown segment: ${key}`);
+export function loadNextNode(key) {
+  const step = nodeRegistry.get(key);
+  if (!step) throw new Error(`Unknown node: ${key}`);
   return step;
 }
 
-/**
- * Read and display MD content for a segment, then run embedded JS trace code.
- */
-import { readFileSync } from 'node:fs';
+const CODE_BLOCK_RE = /```(?:js|javascript)\s*\n([\s\S]*?)```/;
 
+/**
+ * Read and display MD content for a node, then run embedded JS trace code.
+ * traceEntry already imported at module level — synchronous, no sleep needed.
+ */
 export function runMDCode(mdContent, state) {
-  const match = mdContent.match(/```js\n([\s\S]*?)```/);
+  const match = mdContent.match(CODE_BLOCK_RE);
   if (!match) return;
   const code = match[1];
   const fn = new Function('state', 'traceEntry', code);
-  import('./trace.mjs').then(m => fn(state, m.traceEntry));
+  fn(state, traceEntry);
 }
 
 export function executeMDAndRun(key, state) {
-  const step = loadNextSegment(key);
-  const mdPath = `experiments/prototype-gate-fork/segments-gate-fork/${key.replace(/_/g, '-')}.md`;
+  const step = loadNextNode(key);
+  const NODES_DIR = process.env.NODES_DIR || join(__dirname, 'nodes-gate-fork');
+  const mdPath = join(NODES_DIR, `${key.replace(/_/g, '-')}.md`);
   const md = readFileSync(mdPath, 'utf-8');
   runMDCode(md, state);
   return { step, md };
@@ -282,7 +290,7 @@ export function inspectFailure(zodError) {
  *   1. forkRouter(state) determines the branch
  *   2. If fail_a or fail_b → convergeRepair (internal repair loopback)
  *   3. After repair, re-enter forkRouter
- *   4. On pass, load next segment dynamically
+ *   4. On pass, load next node dynamically
  *
  * @returns {{ finalState, trace: Array<{phase, branch?, outcome?}> }}
  */

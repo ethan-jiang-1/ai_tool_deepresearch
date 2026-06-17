@@ -11,15 +11,15 @@ Agent 辅助的半自动测试体系。每个 prototype-{component} 通过 `DPT_
 gate-loop 的 Agent 辅助测试 playbook SHALL 为三级: simple (Gate + 1 segment)、medium (Gate + Repair + 2 segments)、complex (完整端到端)。每级 SHALL 使用独立 bundle 目录 (`dpt_rb_test_gl_<level>/`) 和独立 trace 文件 (`_trace_gl_<level>.jsonl`) 实现完全隔离。
 
 #### Scenario: Simple test runs independently
-- **WHEN** 测试者运行 `command_experiments/gate-loop/test-simple.md`
+- **WHEN** 测试者运行 `command_experiments/exp_gate-loop/test-simple.md`
 - **THEN** 创建 `dpt_rb_test_gl_simple/`, 写入 `_trace_gl_simple.jsonl`, 验证 PASS (~4 events)
 
 #### Scenario: Medium test runs independently
-- **WHEN** 测试者运行 `command_experiments/gate-loop/test-medium.md`
+- **WHEN** 测试者运行 `command_experiments/exp_gate-loop/test-medium.md`
 - **THEN** 使用 `dpt_rb_test_gl_medium/` 和 `_trace_gl_medium.jsonl`, 与 simple 隔离
 
 #### Scenario: Complex test runs independently
-- **WHEN** 测试者运行 `command_experiments/gate-loop/test-complex.md`
+- **WHEN** 测试者运行 `command_experiments/exp_gate-loop/test-complex.md`
 - **THEN** 含 Check, Gate, Repair, 4 segments, C&I, 全在独立 bundle 和 trace
 
 ### Requirement: Trace 系统支持命名 trace 文件 (AGT-001)
@@ -33,30 +33,30 @@ gate-loop 的 Agent 辅助测试 playbook SHALL 为三级: simple (Gate + 1 segm
 gate-fork 的 Agent 辅助测试 playbook SHALL 为三级 (simple/medium/complex), 每级使用独立 bundle (`dpt_rb_test_gf_<level>/`) 和独立 trace (`_trace_gf_<level>.jsonl`)。SHALL 复用 gate-loop 的 trace.mjs API (setTraceFile/traceEntry/traceCleanup), trace source 前缀为 `gf-`。
 
 #### Scenario: Simple gate-fork test 验证单分支路由
-- **WHEN** 测试者运行 `command_experiments/gate-fork/test-simple.md`
+- **WHEN** 测试者运行 `command_experiments/exp_gate-fork/test-simple.md`
 - **THEN** 创建 `dpt_rb_test_gf_simple/`, 写入 `_trace_gf_simple.jsonl`, 验证 Gate 单分支路由 PASS (~4 events)
 
 #### Scenario: Medium gate-fork test 验证分叉 + 汇聚修复
-- **WHEN** 测试者运行 `command_experiments/gate-fork/test-medium.md`
+- **WHEN** 测试者运行 `command_experiments/exp_gate-fork/test-medium.md`
 - **THEN** 使用 `dpt_rb_test_gf_medium/` 和 `_trace_gf_medium.jsonl`, 验证 Fork 多路分发 + Converge 共享修复, 与 simple 隔离 (~9 events)
 
 #### Scenario: Complex gate-fork test 覆盖完整 pipeline + C&I
-- **WHEN** 测试者运行 `command_experiments/gate-fork/test-complex.md`
+- **WHEN** 测试者运行 `command_experiments/exp_gate-fork/test-complex.md`
 - **THEN** 使用 `dpt_rb_test_gf_complex/`, 验证 Fork → Converge → C&I 反馈 → 动态加载全流程 (~17 events)
 
 ### Requirement: Three-level real subagent test playbooks
-The real subagent test playbooks SHALL be the existing `DPT_FRAMEWORK/command_experiments/subagent/test-simple.md`, `test-medium.md`, and `test-complex.md` files. Each SHALL use its own bundle directory and trace file for isolation. Each SHALL use native Codex / Claude Code subagent runtime where available.
+The real subagent test playbooks SHALL be the existing `DPT_FRAMEWORK/command_experiments/exp_subagent/test-simple.md`, `test-medium.md`, and `test-complex.md` files. Each SHALL use its own bundle directory and trace file for isolation. Each SHALL use native Codex / Claude Code subagent runtime where available.
 
 #### Scenario: Simple real subagent test runs one intake agent
-- **WHEN** a tester runs `command_experiments/subagent/test-simple.md`
+- **WHEN** a tester runs `command_experiments/exp_subagent/test-simple.md`
 - **THEN** it dispatches one `dpt-source-intake` slot, spawns one native LLM subagent, validates `result.json`, collects the result, and verifies PASS
 
 #### Scenario: Medium real subagent test runs intake and diagnostic agents
-- **WHEN** a tester runs `command_experiments/subagent/test-medium.md`
+- **WHEN** a tester runs `command_experiments/exp_subagent/test-medium.md`
 - **THEN** it dispatches `dpt-source-intake` and `dpt-source-diagnostic`, spawns both before collect, validates both results or records failure, and verifies partial-failure tolerance
 
 #### Scenario: Complex real subagent test covers parallel completion and partial failure
-- **WHEN** a tester runs `command_experiments/subagent/test-complex.md`
+- **WHEN** a tester runs `command_experiments/exp_subagent/test-complex.md`
 - **THEN** it dispatches intake, verifier, and extractor slots, runs up to 3 native subagents concurrently, handles one failed or invalid result, merges successful slots, and re-enters gate evaluation
 
 ### Requirement: Runtime-agent trace events prove real execution path

@@ -1,11 +1,11 @@
 # Wave 0: 共享基础搜索
 > 状态: 已加载 ✅
 > 📊 痕迹: 执行时自动记录到当前活跃痕迹文件 (setTraceFile) (caller + callee 双保险)
-> 我是由 Gate 动态加载的第一个 workflow 段！
+> 我是由 Gate 动态加载的第一个 workflow 节点！
 > 我的职责: 搜索共享基础证据 (official + academic)
 
 ```js
-traceEntry('md_exec', { source: 'gl-segment/wave0-search', segment: 'wave0-search', status: 'loaded' });
+traceEntry('md:executed', { source: 'gl-node/wave0-search', node: 'wave0-search', status: 'loaded' });
 ```
 
 ## 执行结果
