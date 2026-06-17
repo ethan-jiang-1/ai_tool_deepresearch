@@ -1,0 +1,24 @@
+{
+  "name": "wf-simple",
+  "initial": "wave-entry.md",
+  "states": {
+    "wave-entry.md": {
+      "on": {
+        "success": "wave-audit.md",
+        "error": "wave-entry.md"
+      }
+    },
+    "wave-audit.md": {
+      "on": {
+        "success": "wave-final.md",
+        "error": "wave-audit.md"
+      }
+    },
+    "wave-final.md": {
+      "on": {
+        "success": null,
+        "error": "wave-final.md"
+      }
+    }
+  }
+}

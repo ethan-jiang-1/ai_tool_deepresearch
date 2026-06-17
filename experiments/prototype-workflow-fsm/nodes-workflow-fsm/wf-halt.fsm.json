@@ -1,0 +1,11 @@
+{
+  "name": "wf-halt",
+  "initial": "halt-node.md",
+  "states": {
+    "halt-node.md": {
+      "on": {
+        "success": null
+      }
+    }
+  }
+}

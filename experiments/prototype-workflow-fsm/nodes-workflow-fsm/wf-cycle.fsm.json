@@ -1,0 +1,11 @@
+{
+  "name": "wf-cycle",
+  "initial": "cycle-a.md",
+  "states": {
+    "cycle-a.md": {
+      "on": {
+        "success": null
+      }
+    }
+  }
+}

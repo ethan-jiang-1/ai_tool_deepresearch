@@ -10,7 +10,7 @@
 Entry point requiring both diamond-a.md and diamond-b.md, which both require diamond-shared.md.
 
 ## Role in Experiment
-验证菱形依赖去重：shared.md 在同一次 advance 中只进入 plan 一次，只执行一次。
+验证菱形依赖去重：shared.md 在同一次 load graph 中只进入 plan 一次，只执行一次。
 
 ```js
 state.executionOrder.push('diamond-entry.md');

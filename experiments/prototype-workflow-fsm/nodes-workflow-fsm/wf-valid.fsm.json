@@ -1,0 +1,11 @@
+{
+  "name": "wf-valid",
+  "initial": "wave-entry.md",
+  "states": {
+    "wave-entry.md": {
+      "on": {
+        "success": null
+      }
+    }
+  }
+}

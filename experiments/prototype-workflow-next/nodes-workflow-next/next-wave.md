@@ -5,12 +5,12 @@
 }
 ---
 
-# Next Wave (simple step, no dependencies)
+# Next Wave (self-contained entry, no dependencies)
 
-Third and final workflow step.
+Independent entry kept as an additional self-contained fixture.
 
 ## Role in Experiment
-验证 workflow complete — cursor 到末尾后返回 complete 且无新 read/execute。
+验证 self-contained MD 可作为显式 entry 单独加载执行。
 
 ```js
 state.executionOrder.push('next-wave.md');

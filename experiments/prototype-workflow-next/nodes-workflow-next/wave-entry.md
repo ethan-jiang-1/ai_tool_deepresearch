@@ -10,7 +10,7 @@
 This is the first step in the workflow. It has no dependencies, so advancing to this step should load and execute only this file.
 
 ## Role in Experiment
-验证 simple step dynamic load：advance 时只加载当前 step，不预读其他 step。
+验证 self-contained entry dynamic load：调用 `loadNextMarkdown('wave-entry.md')` 时才加载当前 entry，不预读其他 MD。
 
 ```js
 state.executionOrder.push('wave-entry.md');

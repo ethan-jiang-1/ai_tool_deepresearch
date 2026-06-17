@@ -1,0 +1,17 @@
+{
+  "name": "wf-retry",
+  "initial": "retry-node.md",
+  "states": {
+    "retry-node.md": {
+      "on": {
+        "success": "retry-next.md",
+        "error": "retry-node.md"
+      }
+    },
+    "retry-next.md": {
+      "on": {
+        "success": null
+      }
+    }
+  }
+}
