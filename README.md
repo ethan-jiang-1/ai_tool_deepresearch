@@ -4,6 +4,8 @@ Spec-driven rewrite of a Deep Research Tool: broad question in, evidence-backed 
 
 ## Start Here
 
+- **⚠️ This is an agent engineering project, not a traditional program.** Read `guidelines/project.md` first.
+- Project philosophy, error tolerance, experiment rules: `guidelines/`
 - Project rules and architecture context: `openspec/config.yaml`
 - Current active work: `openspec/changes/`
 - Accepted requirements/specs: `openspec/specs/`

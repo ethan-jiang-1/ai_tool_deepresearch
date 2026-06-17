@@ -17,7 +17,7 @@ import { z } from 'zod';
 
 // ─── Paths ────────────────────────────────────────────────────────────
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SEGMENTS_DIR = join(__dirname, 'segments-workflow-load');
+const SEGMENTS_DIR = process.env.SEGMENTS_DIR || join(__dirname, 'segments-workflow-load');
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────
 
