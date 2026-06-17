@@ -1,56 +1,34 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+Codex notes for this repo. Keep this file short; detailed rules live in OpenSpec.
 
-## Project: Deep Research Tool (Spec Coding Rewrite)
+## Project
 
-We are rebuilding a deep research system — turning a broad research question into an evidence-backed, multi-wave, gated research report. The original V12 system was "vibe coded" (Markdown-governed, agent-self-enforced) and became unmaintainable. This rewrite uses **spec-driven development** with **pure Node.js/TypeScript**.
+Deep Research Tool rewrite: an agentic framework for evidence-backed, multi-wave, gated research reports.
 
-**Core principle:** The Engine enforces rules (schemas, state machines, receipts). The LLM Agent produces content (searches, reads, writes evidence, synthesizes). Never again should an agent self-police gate passage, queue integrity, or stop authorization.
+Core split: the LLM Agent searches, reads, writes evidence, and synthesizes. The JavaScript Engine enforces schemas, gates, state transitions, receipts, and checks. Do not return to agent-self-policed V12 behavior.
 
-## Reference material (`_` directories — DO NOT READ unless explicitly asked)
+## Where To Look
 
-- `_original_dpt_v12/` — Original V12 template (Markdown-governed deep research). Read only when comparing against old behavior.
-- `_original_dpt_requirement/` — Recovered requirements analysis in 9 files (00–08). `08-redesign-recommendations.md` is the target architecture.
+- Project rules/context: `openspec/config.yaml`
+- Active changes: `openspec/changes/`
+- Accepted specs: `openspec/specs/`
+- Requirement registry and checks: `openspec/governance/`
+- Framework code/playbooks: `DPT_FRAMEWORK/`
+- Prototypes: `experiments/`
+- Tests: `tests/`
 
-These are archives. Do not read them proactively. The source of truth for what we're building is in the OpenSpec changes and specs.
+## Hard Rules
 
-## Tech Stack
+- Do not read `_original_*` archives unless explicitly asked.
+- Use Node.js >=20, pure JavaScript ESM (`.mjs`). No TypeScript.
+- Do not add dependencies. Approved npm deps only: `zod`, `yaml`; otherwise use Node built-ins.
+- Use `node:test` + `node:assert` for tests.
 
-- **Runtime:** Node.js ≥20, TypeScript (strict mode)
-- **Package manager:** npm (workspaces, comes with Node.js)
-- **批准的 npm 依赖（仅 2 个，不可新增）：**
-  - `zod` — Schema 定义与运行时校验（替代手写 validate*()）
-  - `yaml` — YAML 文件解析与序列化（`profile.yaml`、`deep-research.yaml`）
-- **其余全部使用 Node.js 内置模块：**
-  - `node:util.parseArgs()` — CLI 参数解析（不用 Commander.js）
-  - `node:fs/promises` — 文件读写
-  - `node:test` + `node:assert` — 测试（不用 Vitest）
-  - `node:path` — 路径处理
-- **Markdown frontmatter（plan.md）：** 正则提取 `---` 块 → `JSON.parse()`（不用 gray-matter）
-- **终端输出：** `console.log`（不用 chalk）
+## OpenSpec Commands
 
-## OpenSpec workflow
+- `/opsx:propose "idea"`
+- `/opsx:explore`
+- `/opsx:apply`
+- `/opsx:archive`
 
-This project uses OpenSpec for spec-driven development:
-
-- `/opsx:propose "idea"` — Create a new change proposal with design, specs, and tasks
-- `/opsx:apply` — Implement tasks from the current change
-- `/opsx:archive` — Archive a completed change
-- `/opsx:explore` — Enter explore mode to think through problems before coding
-
-Changes live in `openspec/changes/<name>/`. Specs live in `openspec/specs/<capability>/`.
-
-## Codex-local OpenSpec install
-
-OpenSpec Codex commands must be project-local. Do **not** run bare `openspec init --tools codex .`, because it writes slash prompts to global `~/.codex/prompts/`.
-
-Use this project-local form instead:
-
-```bash
-CODEX_HOME="$PWD/.codex" openspec init --tools codex .
-```
-
-Expected project files:
-- `.codex/prompts/opsx-{propose,explore,apply,archive}.md`
-- `.codex/skills/openspec-{propose,explore,apply,archive}-change/SKILL.md`

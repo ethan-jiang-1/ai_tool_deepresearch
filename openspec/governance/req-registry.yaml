@@ -1,0 +1,59 @@
+# Requirement ID Registry
+#
+# 规则:
+#   1. 只增不删 — 已分配的 ID 永不复用，废弃的在描述末尾追加 [DEPRECATED]
+#   2. 分配前先查 — 在此文件中搜索确认 ID 未被占用
+#   3. 格式:  PREFIX-NNN: <capability-name> — <description>
+#      - key 是全局唯一 ID，格式 [A-Z]{3}-\d{3}
+#      - value 的 <capability-name> 用 kebab-case
+#   4. 引号:  YAML 值不需要引号，除非值内包含 ": "（冒号+空格）
+#      例:  AGT-001: agent-testing — simple description        （无需引号）
+#           AGT-002: "agent-testing — 含 colon: 需引号包裹"     （需双引号）
+#      切勿用单引号——YAML 单引号内无法转义，双引号用 \" 即可。
+#   5. check-project-reqs.mjs 扫描本文件做一致性校验
+#
+# 三态:
+#   alive   — ID 出现在 openspec/specs/ 某个 main spec 的 > req: 行
+#   pending — ID 出现在 openspec/changes/<active>/specs/ 的 delta spec 中
+#   retired — 本行末尾标了 [DEPRECATED]，ID 占位永不复用
+#
+# 缩写规则: 首单词前 2 字母 + 次单词首字母，如 schema-core → SCO
+
+AGT-001: agent-testing — Agent-assisted test playbook for gate-loop
+AGT-002: "agent-testing — Agent-assisted test playbook for gate-fork (3 levels: simple/medium/complex)"
+AGT-003: "agent-testing — Agent-assisted test playbook for subagent (3 levels: simple/medium/complex)"
+AGT-004: "agent-testing — Agent-assisted test playbook for workflow-load (3 levels: simple/medium/complex)"
+BUI-001: bundle-data-isolation — Multi-bundle coexistence
+BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry
+CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
+CHI-002: check-inspect-feedback — C&I feedback loop for fork variant (topicReadiness validation)
+CMI-001: cmd-bundle-instantiation — Command playbook for bundle production
+CMI-002: cmd-bundle-instantiation — JS helper check.mjs (Zod validation)
+CMI-003: cmd-bundle-instantiation — JS helper inspect.mjs (structure check)
+CMI-004: cmd-bundle-instantiation — Template files (rb_templates/)
+COS-001: conditional-segments — Independent branch execution
+CSE-001: cmd-subagent-environment — Command playbook for project-level real subagent setup
+DYS-001: dynamic-segment-loading — Late binding segment registry
+FOR-001: fork-repair-converge — Multi-fail shared repair
+GAF-001: gate-fork-router — Gate multi-branch routing (1→N)
+GAS-001: gate-state-machine — Gate condition router (pass/fail/needs_repair)
+INT-001: integration-tests — check.mjs + inspect.mjs integration tests
+REL-001: repair-loop — Repair segment + loopback to Gate
+SCO-001: schema-core — Six domain enums
+SCO-002: schema-core — Six Zod contracts
+SCO-003: schema-core — Gate transition table
+SCO-004: schema-core — Direct node import (no compilation)
+SCO-005: schema-core-hitl — HumanCheckpointStatus enum
+SCO-006: schema-core-hitl — AnswerabilityClass enum
+SCO-007: schema-core-hitl — HITL2UserDecision + FinalReportView enums
+SCO-008: schema-core-hitl — ProfileSchema hitl1/hitl2 field update
+SOR-001: schema-core — Source-of-record invariant marker for schema-core specs
+SUC-001: subagent-collect — Collect slot result envelopes and merge evidence into workflow state
+SUD-001: subagent-dispatch — Gate pass dispatches subagent slots into wave-scoped file system protocol
+SUR-001: subagent-repair — All-slots-failed repair routing and partial-failure tolerance
+SUS-001: subagent-slots — Subagent slot lifecycle state machine and wave-scoped paths
+TEF-001: test-fixtures — Fixture framework for integration tests
+WDM-001: workflow-dynamic-md-load — Cursor-driven just-in-time Markdown loading and execution
+WLO-001: workflow-load-observability — Runtime receipts and trace events for workflow load experiments
+WMD-001: workflow-md-dependencies — Markdown frontmatter requires dependency closure resolution
+WML-001: workflow-manifest-loading — Workflow manifest defines ordered MD steps without preloading step Markdown

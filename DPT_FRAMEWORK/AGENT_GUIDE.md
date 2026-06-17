@@ -14,4 +14,3 @@ Deep Research Framework (DPT_FRAMEWORK) 的操作守则。
 ## 质量保障
 - `node DPT_FRAMEWORK/cli/check.mjs <bundleDir>` — Zod 校验
 - `node DPT_FRAMEWORK/cli/inspect.mjs <bundleDir>` — 结构检查
-- `node DPT_FRAMEWORK/cli/check-req-ids.mjs` — Requirement ID 合规

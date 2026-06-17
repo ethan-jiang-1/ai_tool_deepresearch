@@ -74,7 +74,7 @@
 ## 9. 文档、结论和需求追踪
 
 - [ ] 9.1 写 `EXPERIMENT.md`：记录实验目的、运行结果、动态加载观察、cache/execute 语义、未解决问题 — @impl WLO-001
-- [ ] 9.2 更新 `DPT_FRAMEWORK/req-registry.yaml`：注册 WML-001, WDM-001, WMD-001, WLO-001, AGT-004
+- [ ] 9.2 更新 `openspec/governance/req-registry.yaml`：注册 WML-001, WDM-001, WMD-001, WLO-001, AGT-004
 - [ ] 9.3 运行 `node --test experiments/prototype-workflow-load/workflow-load.test.mjs`
-- [ ] 9.4 运行 `node DPT_FRAMEWORK/cli/check-req-ids.mjs`，确保 req ID 无重复/未注册
+- [ ] 9.4 运行 `node openspec/governance/check-project-reqs.mjs`，确保项目级 req ID 无重复/未注册/orphan
 - [ ] 9.5 运行 `openspec status --change prototype-workflow-load`，确认 proposal/design/specs/tasks 完整

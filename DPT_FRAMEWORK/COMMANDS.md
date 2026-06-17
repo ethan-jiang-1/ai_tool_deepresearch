@@ -17,4 +17,3 @@ Deep Research Framework 命令索引。
 |------|------|------|
 | check.mjs | cli/check.mjs | Zod 校验所有控制文件 |
 | inspect.mjs | cli/inspect.mjs | 目录结构完整性 |
-| check-req-ids.mjs | cli/check-req-ids.mjs | Requirement ID 合规扫描 |
