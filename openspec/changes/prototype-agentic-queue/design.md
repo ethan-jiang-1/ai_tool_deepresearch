@@ -2,221 +2,153 @@
 
 ## Context
 
-当前生产 `DPT_FRAMEWORK/schema/contracts/queue.mjs` 只有 `queue_health`、`stop_authorization_state`、五个 null slot 和 `refill_pool: unknown[]`。这能让 bundle 通过最小校验，但还不是 deep research 需要的 queue engine。
+当前 rewrite 的 queue 只有生产 bundle 最小占位 schema。V12 则有成熟但过载的 Markdown queue：work unit 信息丰富、active window 清楚、preemption/promotion 经验可用，但所有机器规则都压在 Markdown 里，导致 Agent 自治理、hook 散落、receipt 解释困难。
 
-V12 的 queue 资料提供了重要反例：
-
-- `_original_dpt_v12/DEEP_RESEARCH_TEMPLATE_V12/specs/QUEUE_CONTRACT.md` 定义了 work unit、producer rule、receipt grammar 和 critical checkpoint receipts。
-- `_original_dpt_v12/DEEP_RESEARCH_TEMPLATE_V12/flows/queue-agentic-flow.md` 定义了 reload → preflight → execute → verify → refill/promote → pre-response gate 的固定循环。
-- `_original_dpt_v12/DEEP_RESEARCH_TEMPLATE_V12/output_templates/QUEUE.md` 把 active queue、stop authorization、source intake、preemption、refill pool、candidate templates 都塞进运行时 Markdown。
-- `_original_dpt_v12/DEEP_RESEARCH_TEMPLATE_V12/command_playbooks/check-queue-receipts.md` 提供了 fail-closed receipt checker 思路。
-
-要保留的是 task card 自包含性、receipt fail-closed、producer rule lineage、projection、Maker != Checker 和 trace memory。要丢掉的是 Markdown queue 作为机器权威、hook/gate/receipt 规则散落多处、Agent 自己裁决 queue/gate/stop 状态。
+这个 prototype 要验证的不是“研究 loop 做得更深”，而是“Q 怎么由 JS 管起来”。LLM/Agent 继续做语义判断和内容工作；Queue Manager 只负责结构化调度、receipt 检查、promotion/preemption、trace 和 Markdown 投影。
 
 ## Goals / Non-Goals
 
 Goals:
 
-- 用 prototype 验证结构化 `AgenticQueueState`，而不是扩写生产 `rb_queue.json`。
-- 明确 producer、verifier、repair、synthesizer 四类 slot role。
-- 让 Engine 验证 deterministic receipt、推进 slot lifecycle、生成 repair/retry、检查 stop condition、写 trace/ledger。
-- 让 Agent-readable Markdown projection 只作为结构化 queue 的视图，不作为 Source of Record。
-- 用 simple/medium/complex command experiment 在真实 disposable bundle 上证明机制闭环。
+- 定义 `QueueState` / `QueueItem` 的 prototype-local Zod schema。
+- 实现 API-first Queue Manager：`enqueue`、`claimCurrent`、`completeCurrent`、`failCurrent`、`preempt`、`promote`、`refill`、`checkReceipts`、`renderProjection`、`inspectQueue`。
+- 保留 V12 的 5-slot rolling active window 和 refill pool，但 JSON/JS 是 authority。
+- 给 Agent/MD 一个薄 CLI 表面，验证 JS feedback 能回到 conversation context。
+- 用 trace `check` events 裁决 command experiments。
 
 Non-goals:
 
-- 不实现生产 `DPT_FRAMEWORK/cli/ds.mjs`。
-- 不修改现有 production `QueueSchema` 的 nullable slot 合同。
-- 不迁移 V12 的巨型 `QUEUE.md`。
-- 不让 Engine 判断来源质量、claim 真伪、综合质量或最终报告表达。
-- 不引入 daemon、后台 watcher、数据库、TypeScript 或新 npm dependency。
-- 不要求 prototype 使用真实多模型 verifier；role boundary 先由不同 role/instruction 和独立 result contract 表达。
+- 不修改 production `DPT_FRAMEWORK/schema/contracts/queue.mjs`。
+- 不实现生产 `ds.mjs`。
+- 不做 source quality、claim truth、research synthesis 判断。
+- 不实现完整 V12 receipt DSL；prototype 只支持最小 deterministic subset。
+- 不让 Markdown projection 反向更新 queue state。
 
 ## Decisions
 
-### 1. Prototype-local schema, production queue 不动
+### 1. QueueItem 固定合同 + payload 扩展
 
-`experiments/prototype-agentic-queue/agentic-queue.mjs` 定义自己的 Zod schema：
-
-```js
-AgenticQueueState = {
-  queueId,
-  waveIndex,
-  iteration,
-  maxIterations,
-  status,
-  slots,
-  activeSlotKey,
-  stopCondition,
-  projectionPath,
-  ledgerPath,
-}
-```
-
-理由：当前 production schema 是已接受的最小 bundle contract。直接升级 `rb_queue.json` 会扩大 blast radius，把 prototype 变成迁移 change。先在 `experiments/` 验证 engine shape，后续再决定如何进入 `DPT_FRAMEWORK/schema/` 和 CLI。
-
-Alternatives considered:
-
-- 直接修改 `DPT_FRAMEWORK/schema/contracts/queue.mjs`：太早，容易把实验字段变成生产承诺。
-- 继续用 Markdown queue：会复活 V12 的自治理问题。
-
-### 2. Slot role 是 queue engine 的一等字段
-
-Slot schema 包含：
+固定字段：
 
 ```js
 {
-  key,
-  role: "producer" | "verifier" | "repair" | "synthesizer",
-  status: "pending" | "ready" | "running" | "done" | "failed" | "blocked" | "skipped",
-  dependsOn,
-  verifies,
-  repairs,
-  retryOf,
-  artifactPath,
-  resultPath,
-  requiredReceipts,
-  completionReceipt,
-  verdict,
-  retryCount,
-  maxRetries,
-  priority,
+  work_id,
+  title,
+  target,
+  action,
+  producer_rule,
+  lineage,
+  priority_class,
+  required_receipts,
+  done_condition,
+  verification,
+  writes_to,
+  status_sync,
+  completion_receipt,
+  failure_route,
+  status,
+  preempted_from_slot,
+  restore_priority,
+  created_at,
+  updated_at,
+  payload
 }
 ```
 
-Producer 产出内容或 evidence artifact；verifier 只验证另一个 slot 的 result/artifact 并写 verdict；repair 由 Engine 根据 failed verifier 生成；synthesizer 只在 stop condition 允许时合并通过项。
+`payload` 是任意 JSON object，承载具体任务类型的可变信息。Queue Manager 不解释 `payload` 的内容，只校验它是 JSON object。
 
-理由：`producer 永远不验证自己的产出` 是 queue 和普通 task list 的分界。role 进入 schema 后，Engine 可以拒绝 self-verification、错误依赖和非法 lifecycle。
+### 2. 5-slot active window 是调度视图
 
-### 3. Lifecycle 用显式转换表
+State shape：
 
-状态转换用 Map/object：
-
-```text
-pending -> ready | blocked
-ready -> running
-running -> done | failed | blocked
-failed -> ready (only retry/repair-created path)
-done/blocked/skipped -> terminal
+```js
+{
+  queue_id,
+  queue_health,
+  stop_authorization_state,
+  active_window: {
+    slot_1_current,
+    slot_2_next,
+    slot_3_pending,
+    slot_4_pending,
+    slot_5_tail
+  },
+  refill_pool,
+  projection_path,
+  trace_path
+}
 ```
 
-Engine API 示例：
+Only `slot_1_current` is executable. Slot 2-5 and refill pool are previews/candidates only.
 
-- `loadQueue(path)`
-- `validateQueue(state)`
-- `selectReadySlot(state)`
-- `startSlot(state, key)`
-- `completeSlot(state, key, result)`
-- `verifyReceipts(state, key)`
-- `advanceQueue(state)`
-- `spawnRepairSlot(state, failedVerifierKey)`
-- `evaluateStopCondition(state)`
-- `renderProjection(state, bundleDir)`
+### 3. API owns queue mutation
 
-理由：状态机必须可读、可测、可拒绝非法跳转。不能把“下一步怎么走”藏在 prose 或 Agent 判断里。
+Core API:
 
-### 4. Receipt grammar 先做最小可测子集
+- `loadQueue(bundleDir)` reads `rb_queue.agq.json` when present, else creates prototype state.
+- `validateQueue(queue)` runs Zod and cross-field checks.
+- `enqueue(queue, item, { mode })` fills first open slot or pool.
+- `claimCurrent(queue, { actor })` returns `slot_1_current` only, marks it `running`.
+- `completeCurrent(queue, result, bundleDir)` checks completion receipt, records trace, promotes/refills.
+- `failCurrent(queue, failure, bundleDir)` creates repair candidate and promotes/refills.
+- `preempt(queue, item, { reason, unsafeCurrent })` inserts urgent work into pending slots by default.
+- `promote(queue)` shifts slot 2→1, 3→2, 4→3, 5→4.
+- `refill(queue)` fills tail from highest priority ready pool candidate.
+- `checkReceipts(queue, item, bundleDir)` fail-closes deterministic receipts.
+- `renderProjection(queue, bundleDir)` writes Markdown from JSON state.
+- `inspectQueue(queue, bundleDir)` returns check/inspect/advice feedback.
 
-Prototype 支持 deterministic receipt：
+### 4. Thin CLI wraps the same API
+
+CLI commands:
+
+- `check <bundle>`
+- `enqueue <bundle> --task <task.json>`
+- `claim <bundle> --actor <main-agent|sub-agent>`
+- `complete <bundle> --result <result.json>`
+- `fail <bundle> --failure <failure.json>`
+- `preempt <bundle> --task <task.json> --reason <reason> [--unsafe-current]`
+- `render <bundle>`
+
+The CLI reads/writes `rb_queue.agq.json` so the prototype does not change production `rb_queue.json`.
+
+### 5. Preemption is conservative
+
+Default preemption inserts urgent work into earliest pending slot, usually `slot_2_next`. It shifts lower-priority pending work toward tail. If the window is full, displaced `slot_5_tail` moves to the top of `refill_pool` with `preempted_from_slot=slot_5_tail` and `restore_priority=next_tail_opening`.
+
+`slot_1_current` is not interrupted unless `unsafeCurrent=true`. That flag is reserved for known-bad current work, illegal gate crossing, or work that would waste effort against a known blocker.
+
+### 6. Receipt subset is deliberately small
+
+Supported prefixes:
 
 - `file:<path>`
 - `json:<path>`
-- `ledger:<slotKey>:<action>`
-- `slot:<slotKey>=<status>`
-- `verdict:<slotKey>=pass|fail|needs_rework`
+- `queue:<field>=<value>`
+- `slot:<slotName>=<status>`
+- `trace:<event>`
+- `none`
 
-未知 prefix fail-closed。多 receipt 用数组，不复刻 V12 的分号和 `A or B` grammar。
-
-理由：V12 receipt grammar 很完整但复杂，prototype 目标是证明 Engine-owned preflight/closeout，不是一次实现全 receipt DSL。
-
-### 5. Ledger 与 trace 分工
-
-`rb_trace.jsonl` 或 prototype trace 记录 engine events 和 `check` verdict：
-
-- `queue_loaded`
-- `slot_selected`
-- `slot_started`
-- `receipt_checked`
-- `slot_completed`
-- `verdict_recorded`
-- `repair_spawned`
-- `projection_rendered`
-- `stop_condition_checked`
-- `check`
-
-`rb_ledger.jsonl` 或 prototype ledger 记录 evidence lifecycle：
-
-- `produced`
-- `verified`
-- `rejected`
-- `repaired`
-- `synthesized`
-
-Ledger entry 必须带 `slotKey`、`role`、`action`、`artifactPath/resultPath`、`sourceTag` 和 timestamp。`[PRODUCED]` 不等于 `[VERIFIED]`；`[INFERRED]` 不能自动满足 verifier receipt。
-
-理由：trace 是 engine diagnostics，ledger 是 evidence provenance。两者混在一起会让“循环跑完”和“内容可信”再次混淆。
-
-### 6. Projection 是可再生视图
-
-`renderProjection()` 从 state 生成 Markdown task card/window，写入 bundle 下的 projection path，例如 `_cache/agentic-queue/current-task.md`。Projection 含当前 slot 的 role、action、required receipts、expected writes 和 failure route。
-
-Projection 不可作为 mutation input；Engine 下次仍从 JSON state 和 ledger/trace 文件读取事实。
-
-理由：Markdown 是 LLM-facing control surface，但机器 authority 必须留在 JSON/JSONL。
-
-### 7. Command experiment 三层验证
-
-Playbook 目录：
-
-```text
-DPT_FRAMEWORK/command_experiments/exp_agentic-queue/
-  test-simple.md
-  test-medium.md
-  test-complex.md
-```
-
-Prototype 目录：
-
-```text
-experiments/prototype-agentic-queue/
-  EXPERIMENT.md
-  package.json
-  agentic-queue.mjs
-  agentic-queue.test.mjs
-  trace.mjs
-  nodes-agentic-queue/
-```
-
-Case shape:
-
-- simple：producer → verifier pass → synthesizer → stop condition met。
-- medium：producer → verifier fail → repair slot → verifier pass → complete。
-- complex：missing receipt / invalid dependency / max iteration 或 stalled，Engine 不推进并写 repair/advice/check failure。
-
-理由：queue 是 loop mechanism，必须在 real disposable bundle 中验证真实文件写入、真实 receipt 检查和 trace verdict，不能只跑 unit test。
+Unknown prefix fails closed. Agent-judgment checks stay in `verification.agent`; Queue Manager only checks deterministic facts.
 
 ## Risks / Trade-offs
 
-- [Risk] Prototype schema 和未来生产 schema 发生偏差。→ Mitigation: `EXPERIMENT.md` 明确哪些字段是 candidate contract，哪些只是 fixture；归档前再决定是否提 production change。
-- [Risk] 同一模型不同 instruction 不能完全证明 Maker != Checker。→ Mitigation: prototype 只证明 role separation 和 self-verification rejection；真实多模型路由留给后续 runtime adapter change。
-- [Risk] Ledger 变成另一份不受控状态。→ Mitigation: ledger 只 append evidence lifecycle，不决定 queue transition；transition 仍由 queue state + receipt checker 裁决。
-- [Risk] command experiment 里写 fixture result 被误认为 mock。→ Mitigation: 只允许 playbook/driver 通过 prototype API 执行 declared slot completion；trace 必须显示 Engine 校验 receipt 和 ledger 后才通过，不允许手写 trace/result 冒充执行。
-- [Risk] stop condition 太简单。→ Mitigation: v1 只支持 `all_required_verified`、`max_iterations` 和 `stalled`，复杂 coverage predicate 作为 open question。
+- [Risk] Prototype queue state diverges from future production schema. → Mitigation: store in `rb_queue.agq.json` and document candidate contract in `EXPERIMENT.md`.
+- [Risk] Thin CLI starts to look like accepted production `ds.mjs`. → Mitigation: keep it under `experiments/prototype-agentic-queue/` and call it prototype-only.
+- [Risk] Payload flexibility lets bad task shapes through. → Mitigation: fixed core fields remain strict; component-specific payload validation is future capability work.
+- [Risk] Receipt subset misses V12 named branches. → Mitigation: command experiments prove fail-closed mechanics; full receipt grammar can be a later production change.
 
 ## Migration Plan
 
-1. 实现 prototype-local schema 和 Engine API。
-2. 用 node:test 覆盖 schema、lifecycle、receipt、projection、ledger、repair、stop condition。
-3. 增加 command experiment playbooks，通过 real `dpt_disp_*` bundle 和 trace JSONL 裁决。
-4. 更新 `EXPERIMENT.md` 记录结论和生产化建议。
-5. 归档后再评估是否提出生产 `agentic-dispatch-scheduler` / `queue-engine` change，把可行字段迁入 `DPT_FRAMEWORK/schema/` 和 CLI。
-
-Rollback: 删除 active change 和 prototype/experiment 新文件即可；生产 runtime schema 不受影响。
+1. Rewrite OpenSpec artifacts to Queue Manager API-first.
+2. Implement prototype-local schema/API/CLI.
+3. Add unit tests for queue mechanics.
+4. Add command experiments using real disposable bundles.
+5. Record results in `EXPERIMENT.md`.
+6. Leave production `rb_queue.json` unchanged.
 
 ## Open Questions
 
-- `agentic-queue` 与未来 `ds.mjs` 是同一个 capability，还是 queue engine 被 ds 调用？
-- `rb_ledger.jsonl` 应进入 queue v1，还是独立 claim/evidence provenance capability？
-- 复杂 stop condition 是否需要 predicate DSL，还是保持枚举 + Engine 内建检查？
-- Repair slot 是修改原 producer artifact，还是始终写新 artifact 并以 lineage 连接？
-- Agent-readable projection 最终应是独立 Markdown 文件，还是嵌入 `START_FROM_HERE.md` / next-task surface？
+- Future production surface: should this become `DPT_FRAMEWORK/cli/ds.mjs`, `queue.mjs`, or a lower-level library used by ds?
+- Should `rb_queue.agq.json` become `rb_queue.json` in a later migration, or remain a staging artifact until ds is accepted?
+- Which V12 named branch receipts deserve first-class production support?

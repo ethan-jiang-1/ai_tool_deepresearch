@@ -24,10 +24,10 @@ AGT-002: "agent-testing — Agent-assisted test playbook for gate-fork (3 levels
 AGT-003: "agent-testing — Agent-assisted test playbook for subagent (3 levels: simple/medium/complex)"
 AGT-004: "agent-testing — Agent-assisted test playbook for workflow-next (3 levels: simple/medium/complex) [DEPRECATED]"
 AGQ-001: agentic-queue — Structured machine queue state and task card schema
-AGQ-002: agentic-queue — Role-based producer/verifier/repair/synthesizer slot lifecycle
-AGQ-003: agentic-queue — Engine-owned iterative loop, stop condition, and retry guard
-AGQ-004: agentic-queue — Receipt-checked promotion, repair, and Agent-readable projection
-AGQ-005: agentic-queue — Evidence ledger and trace feedback for produced, verified, rejected, and repaired work
+AGQ-002: agentic-queue — Queue Manager enqueue, claim, complete, fail, promote, and refill operations
+AGQ-003: agentic-queue — Conservative urgent preemption without hidden current-slot execution
+AGQ-004: agentic-queue — Fail-closed deterministic receipts and structured check/inspect/advice feedback
+AGQ-005: agentic-queue — Markdown projection generated from JSON queue state without mutation authority
 AGQ-006: agentic-queue — Command experiment playbooks for simple, medium, and complex agentic queue cases
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry

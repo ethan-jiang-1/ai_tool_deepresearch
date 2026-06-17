@@ -4,101 +4,84 @@
 
 ## ADDED Requirements
 
-### Requirement: Structured queue state validates task cards
-The prototype SHALL define a Zod-validated `AgenticQueueState` with queue identity, wave index, iteration counters, max iteration guard, queue status, slots, active slot key, stop condition, projection path, and ledger path. Every slot SHALL be a structured task card with stable key, role, status, dependency fields, receipt fields, artifact/result paths, retry fields, and priority.
+### Requirement: Queue state and item schema are structured
+The prototype SHALL define Zod-validated `QueueState` and `QueueItem` schemas. `QueueState` SHALL contain a five-slot active window, a refill pool, queue health, stop authorization state, trace path, and projection path. `QueueItem` SHALL contain fixed executable work fields plus a flexible JSON `payload`.
 
-#### Scenario: Valid queue state passes schema
-- **WHEN** `AgenticQueueState.safeParse()` receives a queue with one producer, one verifier depending on the producer, one synthesizer depending on the verifier, and a supported stop condition
-- **THEN** validation succeeds
+#### Scenario: Valid queue item passes schema
+- **WHEN** a queue item has all fixed core fields and `payload` is an object
+- **THEN** `QueueItemSchema.safeParse()` succeeds
 
-#### Scenario: Unknown slot role is rejected
-- **WHEN** a slot role is not `producer`, `verifier`, `repair`, or `synthesizer`
-- **THEN** validation fails before the Engine runs the queue
-
-#### Scenario: Verifier cannot verify itself
-- **WHEN** a verifier slot has `verifies` equal to its own `key`
+#### Scenario: Missing core field is rejected
+- **WHEN** a queue item is missing `producer_rule`, `required_receipts`, or `completion_receipt`
 - **THEN** validation fails
 
-### Requirement: Role slot lifecycle is Engine-owned
-The prototype SHALL track slot lifecycle through an explicit transition table. Legal statuses SHALL include `pending`, `ready`, `running`, `done`, `failed`, `blocked`, and `skipped`. The Engine SHALL reject lifecycle transitions that are not present in the transition table.
+### Requirement: Queue Manager exposes enqueue, claim, complete, and fail operations
+The prototype SHALL expose JS APIs for `enqueue`, `claimCurrent`, `completeCurrent`, and `failCurrent`. `enqueue` SHALL fill open active slots before using `refill_pool`. `claimCurrent` SHALL only expose `slot_1_current`. `completeCurrent` SHALL verify completion receipts before promotion. `failCurrent` SHALL record failure and create repair/refill work instead of authorizing chat progress.
 
-#### Scenario: Producer moves through ready running done
-- **WHEN** a pending producer's dependencies and required receipts are satisfied
-- **THEN** the Engine may transition it from `pending` to `ready`, then `running`, then `done`
+#### Scenario: Enqueue fills active window before refill pool
+- **WHEN** six valid items are enqueued into an empty queue
+- **THEN** five items occupy active window slots and the sixth is stored in `refill_pool`
 
-#### Scenario: Terminal done state rejects rollback
-- **WHEN** a slot status is `done`
-- **THEN** a later transition to `running` or `failed` is rejected
+#### Scenario: Claim returns current slot only
+- **WHEN** `claimCurrent(queue, { actor })` is called
+- **THEN** it returns `slot_1_current` and does not expose pending slots as executable work
 
-#### Scenario: Verifier waits for producer completion
-- **WHEN** a verifier depends on a producer that is not `done`
-- **THEN** the verifier remains `pending` or `blocked` and is not selected as active work
+#### Scenario: Complete promotes next work
+- **WHEN** `completeCurrent()` succeeds for `slot_1_current`
+- **THEN** slot 2 promotes to slot 1 and the tail refills from the highest-priority pool item when available
 
-### Requirement: Iterative loop enforces stop conditions and retry guards
-The prototype SHALL implement an Engine-owned iteration loop that selects ready work, verifies receipts, records completion, evaluates verifier verdicts, spawns repair work when needed, and checks stop conditions. The loop SHALL respect `maxIterations` and SHALL detect stalled state by state hashing or equivalent deterministic comparison.
+#### Scenario: Failure creates repair work
+- **WHEN** `failCurrent()` is called with a structured failure
+- **THEN** the queue records failure trace data and adds concrete repair work to the active window or refill pool
 
-#### Scenario: All required work verified completes the queue
-- **WHEN** all required producer outputs have passing verifier verdicts and the synthesizer completes
-- **THEN** `evaluateStopCondition()` returns a completed outcome
+### Requirement: Preemption inserts urgent work without hidden execution
+The prototype SHALL expose `preempt(queue, item, { reason, unsafeCurrent })`. By default, preemption SHALL insert urgent work into the earliest pending slot and SHALL NOT interrupt `slot_1_current`. When the active window is full, displaced `slot_5_tail` SHALL move to the top of `refill_pool` with restore metadata. Replacing `slot_1_current` SHALL require `unsafeCurrent=true`.
 
-#### Scenario: Failed verifier spawns repair before completion
-- **WHEN** a verifier returns `fail` or `needs_rework` for a producer
-- **THEN** the Engine creates or activates a repair slot before the queue can complete
+#### Scenario: Preempt inserts into pending slot
+- **WHEN** urgent work preempts a queue with current and pending work
+- **THEN** the urgent item is inserted into the earliest pending slot and current work remains unchanged
 
-#### Scenario: Max iterations escalates instead of looping forever
-- **WHEN** the queue cannot satisfy its stop condition within `maxIterations`
-- **THEN** the Engine returns an escalated or blocked outcome and writes a trace event
+#### Scenario: Full window displacement is preserved
+- **WHEN** urgent work preempts a full active window
+- **THEN** the previous `slot_5_tail` appears in `refill_pool` with `preempted_from_slot=slot_5_tail` and `restore_priority=next_tail_opening`
 
-#### Scenario: Stalled state is detected
-- **WHEN** a repair iteration produces no deterministic state change
-- **THEN** the Engine returns a stalled outcome instead of continuing indefinitely
+#### Scenario: Current slot replacement requires unsafe flag
+- **WHEN** `preempt()` is asked to replace current work without `unsafeCurrent=true`
+- **THEN** it rejects the operation
 
-### Requirement: Receipt-checked promotion and projection are fail-closed
-The prototype SHALL check deterministic receipts before slot execution and before slot closeout. Supported receipt prefixes SHALL include `file:`, `json:`, `ledger:`, `slot:`, and `verdict:`. Unknown receipt prefixes SHALL be invalid. The prototype SHALL render an Agent-readable Markdown projection from structured state, and that projection SHALL NOT be accepted as machine state authority.
+### Requirement: Receipts fail closed and feedback is structured
+The prototype SHALL check deterministic receipts through `checkReceipts()` and `inspectQueue()`. Supported receipt prefixes SHALL include `file:`, `json:`, `queue:`, `slot:`, `trace:`, and `none`. Unknown prefixes SHALL fail closed. Feedback SHALL be returned as check/inspect/advice-style structured data.
 
-#### Scenario: Missing required receipt blocks execution
-- **WHEN** `slot_1_current` has a required `file:<path>` receipt and the file does not exist
-- **THEN** the Engine does not start the slot and records a repair or blocked outcome
+#### Scenario: Unknown receipt prefix fails
+- **WHEN** a queue item contains `chat:trust_me` as a receipt
+- **THEN** receipt validation fails and reports the unsupported prefix
 
-#### Scenario: Unknown receipt prefix fails closed
-- **WHEN** a receipt begins with an unsupported prefix such as `chat:`
-- **THEN** receipt validation fails
+#### Scenario: Missing completion receipt blocks promotion
+- **WHEN** `completeCurrent()` is called but the item completion receipt is missing
+- **THEN** the current item is not promoted and feedback explains the missing receipt
 
-#### Scenario: Projection renders current task without mutating queue authority
-- **WHEN** `renderProjection(state, bundleDir)` is called
-- **THEN** it writes a Markdown task card that describes the current slot
-- **AND** subsequent Engine decisions still read JSON state and JSONL ledger/trace rather than treating the Markdown projection as authoritative
+### Requirement: Projection is generated from queue JSON
+The prototype SHALL render an Agent-readable Markdown task card/window from JSON queue state. The projection SHALL describe current work, pending previews, receipts, writes, and failure route. The projection SHALL NOT be a mutation input or machine authority.
 
-### Requirement: Ledger and trace record produced, verified, rejected, repaired, and synthesized work
-The prototype SHALL write Engine trace JSONL for queue events and `check` verdicts. It SHALL write ledger JSONL entries for evidence lifecycle actions including `produced`, `verified`, `rejected`, `repaired`, and `synthesized`. Ledger entries SHALL include slot key, role, action, source tag, artifact or result path, timestamp, and lineage where applicable.
+#### Scenario: Render projection writes Markdown
+- **WHEN** `renderProjection(queue, bundleDir)` is called
+- **THEN** a Markdown projection file is written at the queue projection path
 
-#### Scenario: Producer completion writes produced ledger entry
-- **WHEN** a producer slot completes with a valid artifact path
-- **THEN** the ledger includes an entry with action `produced` and source tag `[PRODUCED]`
+#### Scenario: Projection drift cannot mutate state
+- **WHEN** the projection file is edited manually
+- **THEN** Queue Manager decisions still use JSON queue state and ignore projection content as authority
 
-#### Scenario: Verifier pass writes verified ledger entry
-- **WHEN** a verifier records verdict `pass`
-- **THEN** the ledger includes action `verified` and source tag `[VERIFIED]`
+### Requirement: Command experiments prove queue manager mechanics
+The prototype SHALL include simple, medium, and complex command experiment playbooks. Each playbook SHALL create a real disposable bundle, validate and inspect it, exercise the prototype JS API or CLI, derive verdict from trace JSONL `check` events, and clean up on success.
 
-#### Scenario: Verifier failure writes rejected ledger entry
-- **WHEN** a verifier records verdict `fail` or `needs_rework`
-- **THEN** the ledger includes action `rejected` and source tag `[REJECTED]`
+#### Scenario: Simple playbook proves enqueue claim complete promotion
+- **WHEN** `test-simple.md` is executed
+- **THEN** it proves enqueue, claim, complete, promotion, projection, and trace verdict
 
-#### Scenario: Trace check events decide command experiment verdict
-- **WHEN** a command experiment reads the trace JSONL
-- **THEN** only `event === "check"` entries with `passed === true` count as successful verdict evidence
+#### Scenario: Medium playbook proves preemption and restore
+- **WHEN** `test-medium.md` is executed
+- **THEN** it proves full-window preemption, displaced tail restore metadata, refill, and trace verdict
 
-### Requirement: Command experiments prove simple, medium, and complex queue behavior
-The prototype SHALL include Agent-readable command experiment playbooks under `DPT_FRAMEWORK/command_experiments/exp_agentic-queue/`. Each playbook SHALL create a real `dpt_disp_*` disposable bundle with the shared helper, run `validate-bundle.mjs` and `inspect-bundle.mjs`, import the prototype Engine, execute the queue mechanism, derive final verdict from trace JSONL `check` events, and clean up the bundle after success.
-
-#### Scenario: Simple playbook proves pass path
-- **WHEN** `test-simple.md` is executed by an agent
-- **THEN** it proves producer completion, verifier pass, synthesizer completion, stop condition completion, and trace verdict PASS
-
-#### Scenario: Medium playbook proves repair path
-- **WHEN** `test-medium.md` is executed by an agent
-- **THEN** it proves verifier failure, Engine-created repair, re-verification pass, ledger repair lineage, and trace verdict PASS
-
-#### Scenario: Complex playbook proves blocked or escalated path
-- **WHEN** `test-complex.md` is executed by an agent
-- **THEN** it proves at least one fail-closed condition such as missing receipt, invalid dependency, stalled state, or max iteration escalation without fake trace or hand-written pass evidence
+#### Scenario: Complex playbook proves fail-closed behavior
+- **WHEN** `test-complex.md` is executed
+- **THEN** it proves invalid task rejection, missing receipt blocking, unsafe-current guard, and empty queue after refill/blocker handling without fake pass evidence
