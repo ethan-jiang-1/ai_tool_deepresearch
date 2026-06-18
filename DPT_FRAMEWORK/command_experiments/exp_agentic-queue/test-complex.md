@@ -23,12 +23,14 @@ req: AGQ-006
 ## Expected Runtime Path
 
 1. 创建 disposable bundle，validate + inspect
-2. invalid task schema 被拒绝
-3. missing receipt 阻止 complete/promotion
-4. unsafe-current guard 阻止替换 current，显式 unsafe 才允许
-5. failCurrent 产生 repair work
-6. 空队列 claim 返回 blocker/empty feedback
-7. 从 trace JSONL 裁决并清理
+2. 六段 MD-controlled 脚本，每个错误路径独立验证：
+   - 2.1 Invalid task：schema 拒绝缺少 `producer_rule` 的 task
+   - 2.2 Missing receipt：`file:missing.txt` 不存在 → complete 被阻止，promotion 不执行
+   - 2.3 Unsafe-current guard：`replaceCurrent=true` 但无 `unsafeCurrent` → throw
+   - 2.4 Unsafe-current explicit：`unsafeCurrent=true` → preempt 替换 slot_1，旧 current 入 pool
+   - 2.5 Failure repair：`failCurrent` 产生 `repair-*` work 并 preempt 到 slot_2_next
+   - 2.6 Empty queue：空队列 claim 返回 `blocked` + `empty_queue_after_refill`
+3. 从 trace JSONL 裁决并清理
 
 ---
 
@@ -44,24 +46,17 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 
 ---
 
-## Step 2: Error Paths
+## Step 2.1: Invalid Task — schema 拒绝非法 task
+
+构造缺少 `producer_rule` 的 task，`QueueItemSchema.safeParse` 应返回 `success: false`。纯 schema 层校验，无需队列持久化。
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
 B="dpt_disp_agq_complex"
 
-cat > "$B/t.mjs" << 'JS'
+cat > "$B/invalid.mjs" << 'JS'
 import { setTraceFile, traceInit, traceEntry } from '../experiments/prototype-agentic-queue/trace.mjs';
-import {
-  QueueItemSchema,
-  createEmptyQueue,
-  enqueue,
-  claimCurrent,
-  completeCurrent,
-  failCurrent,
-  preempt,
-  makeQueueItem,
-} from '../experiments/prototype-agentic-queue/agentic-queue.mjs';
+import { QueueItemSchema, makeQueueItem } from '../experiments/prototype-agentic-queue/agentic-queue.mjs';
 
 setTraceFile('dpt_disp_agq_complex/_trace_agq_cli.jsonl');
 traceInit('agq-playbook/complex', { source: 'agq-playbook/complex' });
@@ -73,6 +68,34 @@ traceEntry('check', {
   step: 'invalid_task_rejected',
   passed: QueueItemSchema.safeParse(invalid).success === false,
 });
+JS
+
+node "$B/invalid.mjs"
+```
+
+→ 预期：`QueueItemSchema.safeParse` 返回 `success: false`，`invalid_task_rejected` check 通过。
+
+---
+
+## Step 2.2: Missing Receipt — 缺文件阻止 complete
+
+入队 `complex-1`（completion_receipt=`file:missing.txt`，文件不存在）和 `complex-2`。尝试 `completeCurrent` 应被 receipt 校验阻止，`slot_1_current` 保持 `complex-1`。
+
+```bash
+ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
+B="dpt_disp_agq_complex"
+
+cat > "$B/missing_receipt.mjs" << 'JS'
+import { setTraceFile, traceEntry } from '../experiments/prototype-agentic-queue/trace.mjs';
+import {
+  createEmptyQueue,
+  enqueue,
+  completeCurrent,
+  saveQueue,
+  makeQueueItem,
+} from '../experiments/prototype-agentic-queue/agentic-queue.mjs';
+
+setTraceFile('dpt_disp_agq_complex/_trace_agq_cli.jsonl');
 
 let queue = createEmptyQueue('agq-complex');
 queue = enqueue(queue, makeQueueItem({
@@ -81,13 +104,38 @@ queue = enqueue(queue, makeQueueItem({
   completion_receipt: 'file:missing.txt',
 }));
 queue = enqueue(queue, makeQueueItem({ work_id: 'complex-2', title: 'Next task' }));
+saveQueue('dpt_disp_agq_complex', queue);
+
 const blocked = completeCurrent(queue, { work_id: 'complex-1' }, 'dpt_disp_agq_complex');
 traceEntry('check', {
   source: 'agq-playbook/complex',
   step: 'missing_receipt_blocks',
   passed: blocked.feedback.passed === false && blocked.queue.active_window.slot_1_current.work_id === 'complex-1',
 });
+JS
 
+node "$B/missing_receipt.mjs"
+```
+
+→ 预期：receipt 校验失败，`feedback.passed === false`，`slot_1_current` 仍为 `complex-1`（未 promotion）。
+
+---
+
+## Step 2.3: Unsafe-Current Guard — 无显式标志则 throw
+
+加载队列，尝试 `preempt` 带 `replaceCurrent=true` 但不带 `unsafeCurrent=true` —— 应抛出异常，queue 状态不变。
+
+```bash
+ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
+B="dpt_disp_agq_complex"
+
+cat > "$B/guard.mjs" << 'JS'
+import { setTraceFile, traceEntry } from '../experiments/prototype-agentic-queue/trace.mjs';
+import { loadQueue, preempt, makeQueueItem } from '../experiments/prototype-agentic-queue/agentic-queue.mjs';
+
+setTraceFile('dpt_disp_agq_complex/_trace_agq_cli.jsonl');
+
+let queue = loadQueue('dpt_disp_agq_complex');
 let guardWorked = false;
 try {
   preempt(queue, makeQueueItem({ work_id: 'complex-urgent' }), { reason: 'known_bad_current', replaceCurrent: true });
@@ -99,29 +147,106 @@ traceEntry('check', {
   step: 'unsafe_current_guard',
   passed: guardWorked,
 });
+JS
 
+node "$B/guard.mjs"
+```
+
+→ 预期：`preempt` 抛出异常被 catch，`unsafe_current_guard` check 通过。
+
+---
+
+## Step 2.4: Unsafe-Current Explicit — 显式标志允许替换 slot_1
+
+加载队列，带 `unsafeCurrent=true` + `replaceCurrent=true` 执行 preempt。`complex-urgent` 替换 `slot_1_current`，原 `complex-1` 进入 `refill_pool` 并带 restore metadata。
+
+```bash
+ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
+B="dpt_disp_agq_complex"
+
+cat > "$B/unsafe.mjs" << 'JS'
+import { setTraceFile, traceEntry } from '../experiments/prototype-agentic-queue/trace.mjs';
+import { loadQueue, preempt, saveQueue, makeQueueItem } from '../experiments/prototype-agentic-queue/agentic-queue.mjs';
+
+setTraceFile('dpt_disp_agq_complex/_trace_agq_cli.jsonl');
+
+let queue = loadQueue('dpt_disp_agq_complex');
 const unsafe = preempt(queue, makeQueueItem({ work_id: 'complex-urgent' }), {
   reason: 'known_bad_current',
   replaceCurrent: true,
   unsafeCurrent: true,
 });
+saveQueue('dpt_disp_agq_complex', unsafe);
+
 traceEntry('check', {
   source: 'agq-playbook/complex',
   step: 'unsafe_current_explicit',
   passed: unsafe.active_window.slot_1_current.work_id === 'complex-urgent'
     && unsafe.refill_pool.some((item) => item.work_id === 'complex-1'),
 });
+JS
+
+node "$B/unsafe.mjs"
+```
+
+→ 预期：`slot_1_current` = `complex-urgent`，`complex-1` 在 pool 中携带 `preempted_from_slot: slot_1_current`。
+
+---
+
+## Step 2.5: Failure Repair — failCurrent 产生 repair work
+
+创建新队列，入队 `complex-fail` + `complex-after-fail`。`failCurrent` 完成后：`complex-after-fail` promotion 到 `slot_1_current`，`repair-*` work 自动 preempt 到 `slot_2_next`。
+
+```bash
+ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
+B="dpt_disp_agq_complex"
+
+cat > "$B/failure.mjs" << 'JS'
+import { setTraceFile, traceEntry } from '../experiments/prototype-agentic-queue/trace.mjs';
+import {
+  createEmptyQueue,
+  enqueue,
+  failCurrent,
+  saveQueue,
+  makeQueueItem,
+} from '../experiments/prototype-agentic-queue/agentic-queue.mjs';
+
+setTraceFile('dpt_disp_agq_complex/_trace_agq_cli.jsonl');
 
 let repairQueue = createEmptyQueue('agq-complex-repair');
 repairQueue = enqueue(repairQueue, makeQueueItem({ work_id: 'complex-fail' }));
 repairQueue = enqueue(repairQueue, makeQueueItem({ work_id: 'complex-after-fail' }));
 repairQueue = failCurrent(repairQueue, { work_id: 'complex-fail', reason: 'deterministic receipt failed' }, 'dpt_disp_agq_complex');
+saveQueue('dpt_disp_agq_complex', repairQueue);
+
 traceEntry('check', {
   source: 'agq-playbook/complex',
   step: 'failure_creates_repair',
   passed: repairQueue.active_window.slot_1_current.work_id === 'complex-after-fail'
     && repairQueue.active_window.slot_2_next.work_id.startsWith('repair-complex-fail-'),
 });
+JS
+
+node "$B/failure.mjs"
+```
+
+→ 预期：`slot_1_current` = `complex-after-fail`，`slot_2_next` 以 `repair-complex-fail-` 开头。
+
+---
+
+## Step 2.6: Empty Queue — 空队列返回 blocker
+
+对空队列调用 `claimCurrent`，应返回 `item === null`，`queue_health === 'blocked'`，`stop_authorization_state === 'empty_queue_after_refill'`。
+
+```bash
+ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
+B="dpt_disp_agq_complex"
+
+cat > "$B/empty.mjs" << 'JS'
+import { setTraceFile, traceEntry } from '../experiments/prototype-agentic-queue/trace.mjs';
+import { createEmptyQueue, claimCurrent } from '../experiments/prototype-agentic-queue/agentic-queue.mjs';
+
+setTraceFile('dpt_disp_agq_complex/_trace_agq_cli.jsonl');
 
 const emptyClaim = claimCurrent(createEmptyQueue('agq-complex-empty'), { actor: 'main-agent' });
 traceEntry('check', {
@@ -133,10 +258,10 @@ traceEntry('check', {
 });
 JS
 
-node "$B/t.mjs"
+node "$B/empty.mjs"
 ```
 
-→ 预期：所有错误路径都有结构化 check，失败不会被 chat progress 吞掉。
+→ 预期：`item === null`，queue_health `blocked`，stop_authorization `empty_queue_after_refill`。
 
 ---
 
@@ -153,7 +278,7 @@ import { setTraceFile, getTraceFile, traceCleanup } from '../experiments/prototy
 setTraceFile('dpt_disp_agq_complex/_trace_agq_cli.jsonl');
 const events = readFileSync(getTraceFile(), 'utf-8').trim().split('\n').map(JSON.parse);
 const checks = events.filter((event) => event.event === 'check' && event.source === 'agq-playbook/complex');
-const pass = checks.length >= 7 && checks.every((event) => event.passed === true);
+const pass = checks.length >= 6 && checks.every((event) => event.passed === true);
 console.log('checks:' + checks.length + ' total:' + events.length);
 console.log(pass ? 'COMPLEX PASS' : 'COMPLEX FAIL');
 if (!pass) process.exit(1);

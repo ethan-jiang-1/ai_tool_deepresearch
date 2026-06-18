@@ -14,7 +14,7 @@ defers_to:
   - openspec/specs/
   - DPT_FRAMEWORK/schema/
 siblings:
-  - guidelines/project.md
+  - guidelines/project-charter.md
   - guidelines/command-experiments.md
 ---
 
@@ -22,13 +22,15 @@ siblings:
 
 > 状态: 设计草案 | 创建: 2026-06-17 | 运行时状态: 未实现，不是当前系统事实
 
-`ds` means Dispatch Scheduler. It is an Engine-side CLI/checkpoint for task dispatch, deterministic receipt checks, gate-boundary checks, queue/status updates, and task projection rendering. It is not an Agent, subagent, daemon, content evaluator, research worker, or synthesis owner.
+`ds` means Dispatch Scheduler. It is an Engine-side checkpoint CLI for task dispatch decisions, deterministic receipt checks, gate-boundary checks, queue/status updates, and task projection rendering. It is not an Agent, subagent, daemon, workflow controller, content evaluator, research worker, or synthesis owner.
 
 ---
 
 ## How To Read This Draft
 
 This document is a mechanism proposal. It captures the intended direction for a future Engine-side dispatch scheduler, but it does not define current runtime behavior until an OpenSpec change accepts it and implementation lands in `DPT_FRAMEWORK/`.
+
+This draft must respect OpenSpec discipline. Any ds scope, schema, CLI command, receipt grammar, trace event, gate rule, or queue behavior must go through proposal/spec/tasks before implementation; this file can only guide that proposal.
 
 Current facts to preserve while reading:
 
@@ -45,14 +47,18 @@ Promotion rule: when any ds surface becomes accepted, move the normative require
 
 ---
 
-## Draft Charter
+## Draft Design Constraints
+
+These constraints guide future ds proposals. They do not become runtime requirements until accepted in OpenSpec and implemented in `DPT_FRAMEWORK/`.
 
 ### MUST
 
 - MUST treat this file as design input until OpenSpec accepts a ds capability.
+- MUST route ds behavior changes through OpenSpec proposal/spec/tasks before implementation.
 - MUST keep machine queue authority in structured state, not in hand-edited Markdown.
 - MUST keep ds as a CLI-style checkpoint between Agent turns, not as an imagined daemon controlling the Agent loop.
-- MUST limit ds to Engine-side dispatch scheduling: next-task selection, deterministic receipt checks, gate-boundary checks, structured state updates, and task projection rendering.
+- MUST keep Agent Flow controlled by Markdown task cards; ds only checks, updates state, and renders the next card.
+- MUST limit ds to Engine-side dispatch checkpoints: next-task selection, deterministic receipt checks, gate-boundary checks, structured state updates, and task projection rendering.
 - MUST separate deterministic checks (`ds`) from judgment work (`main-agent`).
 - MUST protect main-Agent context by routing noisy search/fetch work to bounded subagent tasks.
 - MUST write gate transitions and receipt outcomes as real trace events.
@@ -61,6 +67,8 @@ Promotion rule: when any ds surface becomes accepted, move the normative require
 
 - MUST NOT treat `ds.mjs`, `rb_ledger.jsonl`, or queue Markdown projection as implemented runtime surfaces today.
 - MUST NOT use this draft to bypass current `rb_queue.json` schema limits.
+- MUST NOT implement ds behavior directly from this draft without an accepted OpenSpec change.
+- MUST NOT turn ds into a workflow controller that runs the LLM-facing multi-stage process.
 - MUST NOT give ds content-judgment authority, research execution responsibility, or synthesis ownership.
 - MUST NOT let subagents pass gates, mutate queues, count evidence, or authorize final output.
 - MUST NOT spread hook, gate, or preemption rules across multiple Markdown authorities again.
@@ -80,17 +88,17 @@ V12 tried to encode queue management, receipts, hooks, gate transitions, refill,
 - Gate transitions depended on Agent self-discipline.
 - Runtime data, mechanism rules, and user-facing instructions blurred together.
 
-The rewrite direction is to keep Markdown as the LLM-facing operating/control surface, while moving deterministic queue and gate mechanics into JS. Markdown still drives the LLM's work; it just must not be the machine authority for queue, gate, receipt, or trace state.
+The rewrite direction is to keep Markdown as the LLM-facing Agent Flow controller, while moving deterministic queue and gate checkpoints into JS. Markdown still drives the LLM's staged work; it just must not be the machine authority for queue, gate, receipt, or trace state.
 
 ---
 
 ## Design Goal
 
-`ds` should become a small Engine-side CLI scheduler that the Agent calls between task cards.
+`ds` should become a small Engine-side checkpoint that the Agent calls between Markdown task cards.
 
-The LLM-facing operating/control surface remains Markdown. `ds` should render the next task card/window as Markdown because that is the format the Agent loop can reliably read and follow. That Markdown is an interface projection from structured state, not the queue authority itself.
+The LLM-facing Agent Flow controller remains Markdown. `ds` should validate the previous step, update structured state, and render the next task card/window as Markdown because that is the format the Agent loop can reliably read and follow. That Markdown is an interface projection from structured state, not the queue authority itself.
 
-This draft inherits the project charter split: LLM owns judgment, ds owns deterministic scheduling checks, and Markdown carries the next instruction plus feedback back into the conversation.
+This draft inherits the project charter split: LLM owns judgment, Markdown controls Agent Flow, and ds owns deterministic scheduling checkpoints between Markdown-controlled turns.
 
 ```
 Agent reads current Markdown task card
@@ -120,7 +128,7 @@ The important constraint: **ds is not a daemon**. It does not watch the Agent. E
 - bypass OpenSpec, Zod schemas, or existing validate/inspect discipline;
 - make current `rb_queue.json` structured-task behavior exist before implementation.
 
-These non-goals are as important as the positive design. They keep ds from becoming V12 queue self-governance in a new shape.
+These non-goals are as important as the positive design. They keep ds from becoming either V12 queue self-governance or a JS workflow controller in a new shape.
 
 ---
 
@@ -339,7 +347,7 @@ Purpose: make “loop completed” separate from “claim is trustworthy.”
 | Trace as diagnostic memory | Do not have Agent hand-write gate trace |
 | Maker != Checker | Do not let producer be sole verifier |
 
-The lesson is not “write less Markdown.” The lesson is “Markdown should control the LLM-facing conversation; JS should own deterministic control.”
+The lesson is not “write less Markdown.” The lesson is “Markdown should control Agent Flow; JS should own deterministic checkpoints.”
 
 ---
 
@@ -356,14 +364,16 @@ Before implementation, OpenSpec should settle:
 
 ---
 
-## Draft Exit Criteria
+## Draft Promotion Checklist
 
-Before this draft can be treated as implemented guidance, all of these must be true:
+Before any ds surface can be treated as current guidance, all of these must be true:
 
-- An accepted OpenSpec capability defines ds scope, CLI commands, queue/task schema, receipt grammar, and trace events.
-- `DPT_FRAMEWORK/schema/` and `DPT_FRAMEWORK/cli/` contain the executable contracts.
-- `guidelines/README.md` marks implemented ds surfaces as Current.
-- This draft no longer contains normative rules that conflict with accepted specs or executable schema.
+- [ ] An accepted OpenSpec capability defines ds scope, CLI commands, queue/task schema, receipt grammar, and trace events.
+- [ ] `DPT_FRAMEWORK/schema/` contains the executable schema contracts.
+- [ ] `DPT_FRAMEWORK/cli/` contains the implemented CLI/checkpoint behavior.
+- [ ] Tests or command experiments prove the behavior against a real `dpt_disp_*` or `dpt_rb_*` bundle.
+- [ ] `guidelines/README.md` marks implemented ds surfaces as Current.
+- [ ] This draft removes or downgrades any proposal text that now conflicts with accepted specs or executable schema.
 
 ---
 
@@ -386,7 +396,7 @@ The prototype must follow `guidelines/command-experiments.md`.
 ## Related Guidance
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
-- [Project Guidelines](project.md) — repo-wide charter and authority map.
+- [Project Charter](project-charter.md) — repo-wide charter and authority map.
 - [Command Experiments](command-experiments.md) — operational rules for any ds prototype experiment.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
 - [Accepted specs](../openspec/specs/) — accepted capability requirements; ds must be proposed here before implementation.

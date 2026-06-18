@@ -14,7 +14,7 @@ defers_to:
   - DPT_FRAMEWORK/cli/validate-bundle.mjs
   - DPT_FRAMEWORK/cli/inspect-bundle.mjs
 siblings:
-  - guidelines/project.md
+  - guidelines/project-charter.md
   - guidelines/agentic-dispatch-scheduler-mechanism.md
 ---
 
@@ -26,9 +26,11 @@ siblings:
 
 ## Purpose
 
-`command_experiments/` 是 agentic mechanism 的 staging 级端到端实验层。每个实验用 Agent 可读的 Markdown playbook 驱动真实 disposable bundle、真实 prototype Engine、真实文件写入和真实 trace 裁决。
+`command_experiments/` 是 agentic mechanism 的 staging 级端到端实验层。每个实验用 Agent 可读的 Markdown playbook 编排 Agent Flow，驱动真实 disposable bundle、真实 prototype Engine、真实文件写入和真实 trace 裁决。
 
-实验的价值不是“脚本打印 passed”，而是证明一个机制能在接近真实 run bundle 的环境里形成可追溯反馈闭环：Markdown 驱动 LLM 行动，JS/CLI 执行反馈动作，输出回到 conversation context，LLM 再据此继续、修复、阻塞或裁决。
+实验的价值不是“脚本打印 passed”，也不是把多阶段流程藏进 JS controller。它要证明一个机制能在接近真实 run bundle 的环境里形成可追溯反馈闭环：Markdown 驱动 LLM 行动，JS/CLI 只在关键节点执行 deterministic driver/checkpoint/feedback，输出回到 conversation context，LLM 再据此继续、修复、阻塞或裁决。
+
+Command experiments are evidence for the OpenSpec process, not a shortcut around it. If an experiment changes accepted behavior, schema, state transitions, receipt rules, trace verdicts, or CLI contracts, create or update the OpenSpec proposal/spec/tasks first, then implement and validate the experiment.
 
 ---
 
@@ -36,11 +38,14 @@ siblings:
 
 ### MUST
 
+- MUST follow `openspec/config.yaml` and the relevant OpenSpec change before changing accepted behavior.
 - MUST use a real `dpt_disp_*` disposable bundle.
 - MUST create bundles with `DPT_FRAMEWORK/command_experiments/scripts/new-disposable-bundle.mjs`.
 - MUST run `validate-bundle.mjs` and `inspect-bundle.mjs` before mechanism execution.
 - MUST import and exercise the prototype Engine instead of reimplementing the mechanism in the playbook.
 - MUST use real Agent/subagent execution when the mechanism depends on Agent behavior.
+- MUST keep stage sequence, Agent handoff, and native subagent semantics in the Markdown playbook.
+- MUST keep inline `.mjs` code as a thin deterministic driver/checkpoint.
 - MUST let Engine/CLI output return to the LLM as actionable context.
 - MUST make the final verdict come from trace JSONL.
 - MUST clean up the disposable bundle at the end of the playbook.
@@ -48,11 +53,14 @@ siblings:
 ### MUST NOT
 
 - MUST NOT mock LLM/subagent work.
+- MUST NOT use a passing experiment as permission to bypass OpenSpec acceptance.
 - MUST NOT hand-write fake `result.json`, runtime receipt, trace event, or completion receipt.
 - MUST NOT use `console.log` as pass/fail authority.
 - MUST NOT manually create new experiment bundles with `mkdir`, `sed {{name}}`, or direct `rb_templates` copying.
 - MUST NOT read node MD from the prototype directory at runtime when the experiment contract says nodes live inside the bundle.
 - MUST NOT patch a failed receipt by hand to make the verdict pass.
+- MUST NOT hide a multi-stage Agent Flow inside an inline `.mjs` controller.
+- MUST NOT replace Agent Flow with a JS controller just because that is easier to test.
 - MUST NOT leave a successful experiment bundle behind.
 
 判断标准：**这个事件是真实发生的，还是脚本/人写出来假装发生的？**
@@ -201,6 +209,7 @@ Keep inline scripts thin:
 - Call the mechanism under test.
 - Append `check` events to trace.
 - Avoid implementing the mechanism inside the playbook.
+- Avoid orchestrating multi-stage Agent Flow inside the inline script.
 
 Complex logic belongs in `experiments/prototype-<component>/<component>.mjs`, not in Markdown shell blocks.
 
@@ -215,6 +224,8 @@ Use JS/CLI feedback actions consistently when a playbook needs machine feedback 
 For current command experiments, only `check` is the normative trace verdict event. `inspect` and `advice` are feedback actions for LLM context unless a future accepted spec defines them as trace events or CLI commands. Do not confuse the feedback action `inspect` with the existing `inspect-bundle.mjs` validation CLI.
 
 The output of those steps should be useful when it returns to the conversation; do not bury the only actionable detail inside an unparsed wall of console text.
+
+If a playbook needs to restate project-wide layer boundaries, link to `guidelines/project-charter.md` instead of redefining them locally. This keeps experiment instructions focused on execution and prevents drift.
 
 ---
 
@@ -304,6 +315,8 @@ Each case should answer one question. If a case tries to prove several unrelated
 
 - New playbook manually creates bundles instead of using `new-disposable-bundle.mjs`.
 - Playbook code implements the mechanism instead of importing the prototype Engine.
+- Inline `.mjs` becomes the multi-stage Agent Flow controller instead of a thin deterministic driver.
+- Stage sequence, Agent handoff, or native subagent semantics are hidden inside JS instead of remaining visible in Markdown.
 - A test passes from hard-coded expected output rather than runtime evidence.
 - `console.log` is treated as the verdict.
 - Node MD is read from the prototype directory at runtime instead of copied into `dpt_disp_*/exp/nodes/`.
@@ -319,6 +332,8 @@ Each case should answer one question. If a case tries to prove several unrelated
 - [ ] `EXPERIMENT.md` states the mechanism, hypothesis, and result.
 - [ ] `test-simple.md`, `test-medium.md`, and `test-complex.md` exist when the mechanism is broad enough to need all three tiers.
 - [ ] Frontmatter names `dpt_disp_*` bundle and trace paths.
+- [ ] The playbook keeps stage sequence and Agent handoff visible in Markdown.
+- [ ] Inline `.mjs` is only a thin deterministic driver/checkpoint.
 - [ ] Step 1 uses `new-disposable-bundle.mjs`.
 - [ ] Bundle passes validate + inspect before mechanism execution.
 - [ ] Trace JSONL is the final verdict.
@@ -329,7 +344,7 @@ Each case should answer one question. If a case tries to prove several unrelated
 ## Related Guidance
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
-- [Project Guidelines](project.md) — repo-wide charter and authority map.
+- [Project Charter](project-charter.md) — repo-wide charter and authority map.
 - [Engine-Side Dispatch Scheduler](agentic-dispatch-scheduler-mechanism.md) — future ds mechanism draft; use this experiment guideline for any ds prototype.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
 - [Agent Testing spec](../openspec/specs/agent-testing/spec.md) — accepted requirements for agent-assisted experiment playbooks.

@@ -23,8 +23,12 @@ req: AGQ-006
 ## Expected Runtime Path
 
 1. 创建 disposable bundle，validate + inspect
-2. 通过真实 Queue Manager API enqueue 三个任务、claim 当前任务、完成当前任务
-3. 生成 projection，从 trace JSONL 裁决
+2. 四段 MD-controlled 脚本：
+   - 2.1 Enqueue：初始化队列并入队三个任务，持久化 `rb_queue.agq.json`
+   - 2.2 Claim：加载队列，claim `slot_1_current`，验证只有 `simple-1` 可被 claim
+   - 2.3 Complete：完成 `simple-1`，receipt 校验，内部 promote + refill + renderProjection
+   - 2.4 Verify：验证 `simple-2` 已 promotion 到 `slot_1_current`，projection 文件存在
+3. 从 trace JSONL 裁决
 4. 清理
 
 ---
@@ -41,21 +45,21 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 
 ---
 
-## Step 2: Enqueue → Claim → Complete → Projection
+## Step 2.1: Enqueue — 初始化队列并入队三个任务
+
+创建空队列，按序入队 `simple-1`、`simple-2`、`simple-3`，写入 receipt 文件，持久化到 `rb_queue.agq.json`。
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
 B="dpt_disp_agq_simple"
 
-cat > "$B/t.mjs" << 'JS'
+cat > "$B/enqueue.mjs" << 'JS'
 import { writeFileSync } from 'node:fs';
-import { setTraceFile, traceInit, traceEntry } from '../experiments/prototype-agentic-queue/trace.mjs';
+import { setTraceFile, traceInit } from '../experiments/prototype-agentic-queue/trace.mjs';
 import {
   createEmptyQueue,
   enqueue,
-  claimCurrent,
-  completeCurrent,
-  renderProjection,
+  saveQueue,
   makeQueueItem,
 } from '../experiments/prototype-agentic-queue/agentic-queue.mjs';
 
@@ -67,28 +71,121 @@ let queue = createEmptyQueue('agq-simple');
 queue = enqueue(queue, makeQueueItem({ work_id: 'simple-1', title: 'Task 1', completion_receipt: 'json:done-1.json' }));
 queue = enqueue(queue, makeQueueItem({ work_id: 'simple-2', title: 'Task 2' }));
 queue = enqueue(queue, makeQueueItem({ work_id: 'simple-3', title: 'Task 3' }));
+saveQueue('dpt_disp_agq_simple', queue);
+JS
 
+node "$B/enqueue.mjs"
+```
+
+→ 预期：3 个 `queue_enqueue` trace event，`rb_queue.agq.json` 写入 bundle，`slot_1_current`=`simple-1`，`slot_2_next`=`simple-2`，`slot_3_pending`=`simple-3`，`slot_4`/`slot_5` 为空。
+
+---
+
+## Step 2.2: Claim — 认领当前任务
+
+从持久化队列加载，claim `slot_1_current`。验证只有 `simple-1` 可被 claim，且 `simple-2` 状态仍为 `queued`（不可越级 claim）。
+
+```bash
+ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
+B="dpt_disp_agq_simple"
+
+cat > "$B/claim.mjs" << 'JS'
+import { setTraceFile, traceEntry } from '../experiments/prototype-agentic-queue/trace.mjs';
+import {
+  loadQueue,
+  claimCurrent,
+  saveQueue,
+} from '../experiments/prototype-agentic-queue/agentic-queue.mjs';
+
+setTraceFile('dpt_disp_agq_simple/_trace_agq_cli.jsonl');
+
+let queue = loadQueue('dpt_disp_agq_simple');
 const claim = claimCurrent(queue, { actor: 'main-agent' });
+saveQueue('dpt_disp_agq_simple', claim.queue);
+
 traceEntry('check', {
   source: 'agq-playbook/simple',
   step: 'claim_current_only',
   passed: claim.item.work_id === 'simple-1' && claim.queue.active_window.slot_2_next.status === 'queued',
 });
+JS
 
-const completed = completeCurrent(claim.queue, { work_id: 'simple-1', receipt: 'json:done-1.json' }, 'dpt_disp_agq_simple');
-queue = completed.queue;
-renderProjection(queue, 'dpt_disp_agq_simple');
+node "$B/claim.mjs"
+```
+
+→ 预期：`claim.item.work_id === 'simple-1'`，`slot_2_next` 状态仍为 `queued`，`queue_claimed` trace event 已写入。
+
+---
+
+## Step 2.3: Complete — 完成当前任务 + receipt 校验
+
+完成 `simple-1`，校验 `json:done-1.json` receipt。`completeCurrent` 内部执行 promote → refill → renderProjection。
+
+```bash
+ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
+B="dpt_disp_agq_simple"
+
+cat > "$B/complete.mjs" << 'JS'
+import { setTraceFile, traceEntry } from '../experiments/prototype-agentic-queue/trace.mjs';
+import {
+  loadQueue,
+  completeCurrent,
+  saveQueue,
+} from '../experiments/prototype-agentic-queue/agentic-queue.mjs';
+
+setTraceFile('dpt_disp_agq_simple/_trace_agq_cli.jsonl');
+
+let queue = loadQueue('dpt_disp_agq_simple');
+const completed = completeCurrent(queue, { work_id: 'simple-1', receipt: 'json:done-1.json' }, 'dpt_disp_agq_simple');
+saveQueue('dpt_disp_agq_simple', completed.queue);
+
 traceEntry('check', {
   source: 'agq-playbook/simple',
-  step: 'promote_projection',
-  passed: completed.feedback.passed === true && queue.active_window.slot_1_current.work_id === 'simple-2',
+  step: 'completion_feedback',
+  passed: completed.feedback.passed === true,
 });
 JS
 
-node "$B/t.mjs"
+node "$B/complete.mjs"
 ```
 
-→ 预期：current only claim 成立，complete 后 `simple-2` promotion 到 `slot_1_current`，projection 写入 `_cache/agentic-queue/current-task.md`。
+→ 预期：receipt 校验通过，`queue_completed` + `queue_promoted` trace event，projection 已渲染到 `_cache/agentic-queue/current-task.md`。
+
+---
+
+## Step 2.4: Verify — 验证 promotion 与最终队列状态
+
+加载完成后的队列，验证 `simple-2` 已 promotion 到 `slot_1_current`，projection 文件存在且内容正确。
+
+```bash
+ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
+B="dpt_disp_agq_simple"
+
+cat > "$B/verify.mjs" << 'JS'
+import { existsSync, readFileSync } from 'node:fs';
+import { setTraceFile, traceEntry } from '../experiments/prototype-agentic-queue/trace.mjs';
+import { loadQueue } from '../experiments/prototype-agentic-queue/agentic-queue.mjs';
+
+setTraceFile('dpt_disp_agq_simple/_trace_agq_cli.jsonl');
+
+const queue = loadQueue('dpt_disp_agq_simple');
+const projectionPath = 'dpt_disp_agq_simple/_cache/agentic-queue/current-task.md';
+const projectionExists = existsSync(projectionPath);
+const projectionContent = projectionExists ? readFileSync(projectionPath, 'utf-8') : '';
+
+traceEntry('check', {
+  source: 'agq-playbook/simple',
+  step: 'promote_projection',
+  passed: queue.active_window.slot_1_current.work_id === 'simple-2'
+    && projectionExists
+    && projectionContent.includes('simple-2'),
+});
+JS
+
+node "$B/verify.mjs"
+```
+
+→ 预期：`slot_1_current.work_id === 'simple-2'`，projection 文件存在且包含 `simple-2`。
 
 ---
 

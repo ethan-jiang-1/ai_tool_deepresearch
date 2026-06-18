@@ -12,7 +12,7 @@ defers_to:
   - openspec/config.yaml
   - openspec/specs/
 siblings:
-  - guidelines/project.md
+  - guidelines/project-charter.md
   - guidelines/command-experiments.md
   - guidelines/agentic-dispatch-scheduler-mechanism.md
 ---
@@ -25,7 +25,7 @@ siblings:
 
 Read in this order:
 
-1. `project.md` — stable project principles, authority boundaries, current repository shape.
+1. `project-charter.md` — stable project principles, authority boundaries, current repository shape.
 2. `command-experiments.md` — operational rules for writing and running `DPT_FRAMEWORK/command_experiments/exp_*` playbooks.
 3. `agentic-dispatch-scheduler-mechanism.md` — draft design for a future Engine-side dispatch scheduler; not current runtime truth.
 
@@ -40,8 +40,9 @@ When a guideline conflicts with accepted specs or executable schema, fix the gui
 - MUST treat this directory as guidance, not spec authority.
 - MUST keep every guideline aligned with `AGENTS.md`, `openspec/config.yaml`, accepted specs, and executable schema.
 - MUST distinguish current runtime facts from draft mechanism proposals.
-- MUST preserve the core split: Agent supplies judgment and content, Engine enforces deterministic contracts, Markdown is the LLM-facing operating/control surface.
+- MUST preserve the core split: Agent supplies judgment and content, Markdown controls Agent Flow, Engine enforces deterministic checkpoints.
 - MUST keep check / inspect / advice feedback visible to the next conversation turn when CLI/Engine output is part of the loop.
+- MUST keep JS/CLI as the checkpoint/feedback layer, not the LLM-facing workflow controller.
 - MUST use `MUST` / `MUST NOT` language when a rule is safety-critical for Agent behavior.
 
 ### MUST NOT
@@ -56,17 +57,28 @@ When a guideline conflicts with accepted specs or executable schema, fix the gui
 
 | If you are... | Read / update | Do not do |
 |---------------|---------------|-----------|
-| Starting repo work | `project.md`, then relevant specs | Start from a draft mechanism document |
+| Starting repo work | `project-charter.md`, then relevant specs | Start from a draft mechanism document |
 | Writing an experiment playbook | `command-experiments.md` | Invent bundle setup or verdict rules locally |
 | Changing accepted behavior | OpenSpec proposal/spec/tasks | Patch only `guidelines/` |
 | Designing future ds behavior | `agentic-dispatch-scheduler-mechanism.md` | Treat ds as implemented or Agent-owned |
-| Unsure which layer owns a rule | `project.md` Authority Map | Resolve conflict by chat memory |
+| Unsure which layer owns a rule | `project-charter.md` Authority Map | Resolve conflict by chat memory |
+
+## Change Routing
+
+| Change target | Primary path | Guidance update |
+|---------------|--------------|-----------------|
+| Project principle, layer boundary, or reading route | `guidelines/project-charter.md` or this index | Keep it short; do not add runtime behavior |
+| Accepted capability behavior | OpenSpec change under `openspec/changes/`, then `openspec/specs/` | Link or summarize only after acceptance |
+| Schema, state machine, receipt, gate, or trace contract | `DPT_FRAMEWORK/schema/`, `DPT_FRAMEWORK/cli/`, `tests/` via OpenSpec | Do not define it only in prose |
+| Command experiment execution pattern | `command-experiments.md` plus `agent-testing` spec when normative | Avoid local one-off verdict rules |
+| Future ds design | `agentic-dispatch-scheduler-mechanism.md` | Keep proposed surfaces marked Proposed until implemented |
+| Current runtime/run state | The relevant `dpt_rb_*` or `dpt_disp_*` bundle | Reload files; do not rely on chat memory |
 
 ## Guidance Map
 
 | File | Reader | Purpose | Not For | Defers To |
 |------|--------|---------|---------|-----------|
-| `project.md` | Any Agent or maintainer | Repo-wide charter, authority order, hard boundaries | Detailed capability behavior | `AGENTS.md`, `openspec/config.yaml`, `openspec/specs/` |
+| `project-charter.md` | Any Agent or maintainer | Repo-wide charter, authority order, hard boundaries | Detailed capability behavior | `AGENTS.md`, `openspec/config.yaml`, `openspec/specs/` |
 | `command-experiments.md` | Experiment author/executor | How to prove mechanisms with real bundles and trace verdicts | General project philosophy | `agent-testing` specs, validate/inspect CLIs |
 | `agentic-dispatch-scheduler-mechanism.md` | Designer of future ds capability | Draft Engine-side scheduler model and open questions | Current runtime behavior | Future OpenSpec change and schema |
 
@@ -88,7 +100,7 @@ When a proposed surface becomes accepted, update this table in the same change t
 
 These files are one guidance suite:
 
-- `project.md` defines the repo-wide charter: what must always be true.
+- `project-charter.md` defines the repo-wide charter: what must always be true.
 - `command-experiments.md` defines the experiment charter: how mechanisms are proven.
 - `agentic-dispatch-scheduler-mechanism.md` defines a draft mechanism: what Engine-side ds might become, not what exists today.
 
@@ -99,10 +111,10 @@ Each file has frontmatter declaring its role, scope, authority level, and siblin
 | Term | Meaning |
 |------|---------|
 | Agent | LLM actor that reads Markdown/state and performs content work. |
-| Engine | JavaScript code that enforces deterministic contracts and returns structured feedback. |
-| CLI | Executable JS surface used for validation, inspection, deterministic checks, feedback, or future scheduling. |
+| Engine | JavaScript code that enforces deterministic checkpoints and returns structured feedback; not the Agent Flow controller. |
+| CLI | Executable JS surface used for validation, inspection, deterministic checks, feedback, or future scheduling; not the LLM-facing workflow controller. |
 | ds | Future Engine-side Dispatch Scheduler; a CLI/checkpoint, not an Agent, daemon, or content judge. |
-| Markdown | LLM-facing operating/control surface; it drives LLM work and receives Engine/CLI feedback, but is not machine verification. |
+| Markdown | LLM-facing Agent Flow controller/control surface; it drives staged LLM work and receives Engine/CLI feedback, but is not machine verification. |
 | Markdown Projection | Agent-readable Markdown rendered from structured state; operating surface, not authority. |
 | Check | JS/CLI feedback action: deterministic pass/fail for a specific condition. |
 | Inspect | JS/CLI feedback action: diagnosis of missing, inconsistent, or malformed state. |

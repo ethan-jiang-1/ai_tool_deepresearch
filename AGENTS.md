@@ -10,7 +10,9 @@ Core split: the LLM Agent searches, reads, writes evidence, and synthesizes. The
 
 ## Before Anything Else
 
-**This is not a traditional program.** Read `guidelines/project.md` — it explains the project's nature, principles, and why mock/make-believe testing has no place here.
+**This is not a traditional program.** Read `guidelines/project-charter.md` — it explains the project's nature, principles, and why mock/make-believe testing has no place here.
+
+Use `guidelines/` when the right direction, layer boundary, or experiment path is unclear. Start with `guidelines/project-charter.md`.
 
 ## Where To Look
 

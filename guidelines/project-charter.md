@@ -1,7 +1,7 @@
 ---
-guideline_id: project
+guideline_id: project-charter
 suite: deep-research-guidelines
-title: Project Guidelines
+title: Project Charter
 status: effective
 created: 2026-06-17
 role: repo-wide charter and entrypoint
@@ -16,26 +16,28 @@ siblings:
   - guidelines/agentic-dispatch-scheduler-mechanism.md
 ---
 
-# Project Guidelines
+# Project Charter
 
 > 状态: 生效 | 创建: 2026-06-17 | 用途: 项目入口指导
 
 ---
 
-**你是在设计一个以 LLM 为能力源、以 Markdown 为对话控制面、以 JS/CLI 为确定性反馈层的系统。不是在写一个单纯的确定性程序。**
+**你是在设计一个以 LLM 为能力源、以 Markdown 为 Agent Flow 控制面、以 JS/CLI 为确定性 checkpoint/反馈层的系统。不是在写一个单纯的确定性程序。**
 
 本项目的目标是 Deep Research Tool rewrite：一个 agentic framework，用于产出证据支撑、多 wave、多 gate 的深度研究报告。
+
+本项目的开发模式是 spec-driven development。所有能力、行为、schema、状态机、gate、receipt、trace 相关迭代都必须严格遵循 OpenSpec：先 proposal/spec/tasks，再实现、验证、归档。`guidelines/` 只能解释和指路，不能绕过 OpenSpec 直接定义新行为。
 
 核心分工固定不变：
 
 ```
 Agent (LLM)      -> 搜索、阅读、提取证据、写作、综合、做内容判断，并读取反馈继续
 Engine (JS/CLI)  -> 校验 schema、执行状态机、检查 receipt、写 trace，输出 check / inspect / advice 风格反馈
-Markdown         -> LLM-facing 操作/控制面：任务、流程、约束、反馈都在这里被读写
+Markdown         -> LLM-facing Agent Flow controller：任务、流程、约束、反馈都在这里被读写
 JSON/YAML/JSONL  -> 持久化状态、队列、profile、trace
 ```
 
-**LLM supplies judgment. Engine enforces deterministic contracts. Markdown controls the LLM-facing conversation, and JS/CLI feedback returns to the next turn.**
+**Markdown controls Agent Flow; JS/CLI controls deterministic checkpoints. LLM supplies judgment. Engine enforces deterministic contracts.**
 
 ---
 
@@ -44,8 +46,10 @@ JSON/YAML/JSONL  -> 持久化状态、队列、profile、trace
 ### MUST
 
 - MUST treat JS/CLI/schema/trace as the trust root for deterministic state.
+- MUST follow `openspec/config.yaml` and the OpenSpec change lifecycle for project evolution.
 - MUST use accepted OpenSpec specs for capability behavior.
-- MUST keep Markdown as the primary LLM-facing operating/control surface, not as the sole verifier for state transitions.
+- MUST keep Markdown as the primary LLM-facing operating/control surface, not as a machine verifier or authority for state transitions.
+- MUST keep multi-stage agentic flow in Markdown, playbooks, or task cards by default.
 - MUST read JS/CLI feedback back into the conversation context before the next Markdown-driven action.
 - MUST treat check / inspect / advice outputs as structured JS/CLI feedback, not as chat noise.
 - MUST make evidence, receipts, and trace entries come from real execution.
@@ -57,6 +61,8 @@ JSON/YAML/JSONL  -> 持久化状态、队列、profile、trace
 - MUST NOT return to V12-style Agent self-governance for queue, gate, hook, or receipt authority.
 - MUST NOT use guidance prose to override schema, CLI output, accepted specs, or runtime state.
 - MUST NOT invent implementation behavior in this file without an OpenSpec change.
+- MUST NOT move LLM-facing multi-stage flow into JS just because JS is easier to test or feels like a controller.
+- MUST NOT let JS/CLI orchestrate search, judgment, writing, repair, synthesis, or native subagent semantics as a substitute for Agent Flow.
 - MUST NOT fake trace, result files, receipts, subagent output, or bundle validation.
 - MUST NOT treat progress summaries, console output, or chat confidence as evidence.
 - MUST NOT read `_original_*` archives unless the user explicitly asks for historical analysis.
@@ -77,6 +83,19 @@ JSON/YAML/JSONL  -> 持久化状态、队列、profile、trace
 
 `guidelines/` 的作用是降低理解成本，不做新的 Source of Record。需要新增或改变系统行为时，走 OpenSpec change，再落到 `DPT_FRAMEWORK/` 或 `experiments/`。
 
+### Quick Router
+
+When deciding where something belongs, route by authority:
+
+| If the work is about... | Put it in / trust |
+|-------------------------|-------------------|
+| User-facing task flow, stage instructions, handoff, or feedback context | Markdown playbooks / task cards |
+| Semantic judgment, evidence choice, synthesis, or repair reasoning | LLM Agent |
+| Schema, state transition, gate, receipt, trace, or deterministic verdict | JS/CLI/Engine + accepted specs |
+| Current run state, queue contents, profile, evidence files, or trace history | The active `dpt_rb_*` or `dpt_disp_*` bundle |
+| New or changed accepted behavior | OpenSpec change before implementation |
+| Future mechanism direction | `guidelines/` as design guidance only |
+
 ---
 
 ## Operating Model
@@ -85,17 +104,18 @@ JSON/YAML/JSONL  -> 持久化状态、队列、profile、trace
 
 最终的理解、判断、写作、取舍、修复和综合能力仍然在 LLM Agent 处。这个项目不是用 JS/CLI 取代 LLM 智力，而是用 Markdown + JS/CLI 反馈动作 + 持久化状态，把 LLM 的能力稳定激发出来，并把它容易发糊的地方约束住。
 
-三个不变量必须同时成立：
+四个不变量必须同时成立：
 
 1. LLM owns judgment: 语义判断、研究取舍、综合表达在 LLM。
-2. Engine owns deterministic truth: schema、状态、receipt、trace 裁决在 JS/CLI/Engine。
-3. Markdown owns the conversation surface: 任务、约束、上下文、反馈通过 Markdown 进入 LLM，但 Markdown 不拥有机器权威。
+2. Markdown controls Agent Flow: 多阶段任务、handoff、上下文和反馈入口由 Markdown/playbook/task card 驱动。
+3. Engine owns deterministic checkpoints: schema、状态、receipt、trace 裁决在 JS/CLI/Engine。
+4. Markdown does not own machine authority: queue/gate/receipt 的机器真相仍在结构化状态和 Engine。
 
 | Surface | Owns | Does Not Own |
 |---------|------|--------------|
 | LLM Agent | 语义理解、内容判断、证据取舍、研究策略、综合写作、根据反馈修复 | 确定性状态权威、receipt 权威、schema 真相 |
-| Markdown | conversation-native 操作/控制面：给 LLM 任务、约束、上下文、反馈和下一步行动入口 | 机器可验证真相、queue/gate/receipt 权威 |
-| JS/CLI/Engine | 传统程序层：精确解析、校验、状态转换、receipt 检查、trace 写入，并执行 Check/Inspect/Advice 反馈动作 | 语义理解、内容判断、研究综合、最终表达 |
+| Markdown | conversation-native Agent Flow controller：给 LLM 任务、阶段、约束、上下文、反馈和下一步行动入口 | 机器可验证真相、queue/gate/receipt 权威 |
+| JS/CLI/Engine | 传统程序层：精确解析、校验、状态转换、receipt 检查、trace 写入，并执行 Check/Inspect/Advice 反馈动作 | 多阶段 Agent Flow 编排、语义理解、内容判断、研究综合、最终表达 |
 | JSON/YAML/JSONL | 持久化状态、证据、receipt、trace，让上下文可重载 | Agent 的语义推理 |
 
 JS/CLI/Engine 可以支持三类反馈动作：
@@ -107,6 +127,14 @@ JS/CLI/Engine 可以支持三类反馈动作：
 | Advice | 基于确定性状态给出下一步方向，让 LLM 少走偏 | 不替 LLM 做最终判断 |
 
 这里的“治理”不是让 Markdown 自己裁决，也不是让 Engine 变成研究者。治理的意思是：把任务、约束、证据和机器反馈持续放回 LLM 可读的 conversation context，让 LLM 在更准的上下文里发挥能力。
+
+### MD 控 Agent Flow，JS 控关键节点
+
+Agentic workflow 的主角是 Markdown + LLM。多阶段流程应该表现为 Agent 可读的 Markdown：当前阶段、目标、输入、允许动作、handoff、反馈、下一步都进入 conversation，让 LLM 在真实上下文里继续工作。
+
+JS/CLI 只在关键节点介入：创建/校验结构、检查 receipt、判断 gate、写 trace、返回 check / inspect / advice 风格反馈。JS 可以做精确 controller，但它控制的是 deterministic checkpoint，不是整条 Agent Flow。
+
+如果一个多阶段过程被藏进 JS controller，LLM 只是在运行脚本，那它就退化成 scripted workflow，而不是 agentic workflow。除非 accepted spec 明确要求，默认不要把 Agent Flow 搬进 JS。
 
 ### Markdown 是 LLM Control Surface
 
@@ -174,6 +202,8 @@ If you are about to do one of these, stop and switch to the required path:
 | Treat `console.log` output as pass/fail proof | Read the trace JSONL or CLI exit result |
 | Use chat memory as run state | Reload bundle control files from disk |
 | Add behavior only in guidance prose | Create or update an OpenSpec change/spec |
+| Put multi-stage Agent Flow into a JS controller because it is easier to test | Keep the flow in Markdown/playbooks/task cards; use JS only for deterministic checkpoints |
+| Need to decide where a rule belongs | Use the Quick Router and Authority Map before editing |
 | Copy V12 paths or queue rules into rewrite docs | Check current `openspec/config.yaml` and `DPT_FRAMEWORK/` first |
 | Read `_original_*` for inspiration | Confirm the user explicitly asked for historical analysis |
 | Let Markdown decide a deterministic transition | Move the rule into schema/CLI/Engine design |
@@ -215,6 +245,8 @@ final/
 
 ## Development Flow
 
+All capability or behavior changes follow OpenSpec discipline:
+
 ```
 Explore / design
   -> OpenSpec proposal/spec/tasks
@@ -243,7 +275,7 @@ Explore / design
 
 新 Agent 或新维护者按这个顺序读：
 
-1. `guidelines/project.md`：稳定原则和权威边界。
+1. `guidelines/project-charter.md`：稳定原则和权威边界。
 2. `openspec/config.yaml`：项目级 spec-driven 纪律。
 3. `guidelines/command-experiments.md`：如何写和运行实验 playbook。
 4. 相关 `openspec/specs/<capability>/spec.md`：具体 capability 的需求。
@@ -262,6 +294,9 @@ Before changing any file in `guidelines/`, check:
 - Does this describe current repo structure accurately?
 - Does this present future design as current runtime truth?
 - Does this reintroduce V12 Agent self-governance for queue/gate/hook/receipt?
+- Does this accidentally make JS/CLI the Agent Flow controller instead of a checkpoint/feedback layer?
+- Does this keep multi-stage LLM-facing flow visible in Markdown/playbooks/task cards?
+- Does this duplicate a definition that should instead live in `README.md` glossary or this project charter?
 - Does this add enough `MUST` / `MUST NOT` clarity for an Agent to act safely?
 - Should this be an OpenSpec change instead of guidance prose?
 
