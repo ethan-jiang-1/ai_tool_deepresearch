@@ -32,7 +32,25 @@ This document is a mechanism proposal. It captures the intended direction for a 
 
 This draft must respect OpenSpec discipline. Any ds scope, schema, CLI command, receipt grammar, trace event, gate rule, or queue behavior must go through proposal/spec/tasks before implementation; this file can only guide that proposal.
 
-Current facts to preserve while reading:
+All sections marked Proposed, Target, or Non-normative sketch are design aids only. They are not accepted schemas, enums, CLI contracts, state machines, or runtime surfaces.
+
+## File Position
+
+This file can decide:
+
+- Design direction and vocabulary for a future Engine-side Dispatch Scheduler proposal.
+- Problems to preserve from earlier prototypes and failure modes to avoid.
+- Open questions and promotion criteria that a future OpenSpec change should settle.
+
+This file cannot decide:
+
+- Current runtime behavior, queue schema, receipt grammar, CLI commands, trace event contracts, or accepted ds requirements.
+- That `ds.mjs`, `rb_ledger.jsonl`, queue Markdown projection, or structured task-card fields exist today.
+- Implementation permission. A future ds implementation still needs OpenSpec proposal/spec/tasks, executable schema/contracts, tests or command experiments, and `guidelines/README.md` status updates.
+
+---
+
+Current inputs this draft assumes, using the project surfaces described in `project-charter.md`:
 
 - Production bundles are `dpt_rb_<name>/`.
 - Disposable experiment bundles are `dpt_disp_<name>/`.
@@ -41,9 +59,9 @@ Current facts to preserve while reading:
 - Current `rb_queue.json` schema still has nullable slot fields and no full task-card schema.
 - `ds.mjs`, `rb_ledger.jsonl`, and rendered queue Markdown are proposed future surfaces.
 
-Do not treat this draft as permission to hand-edit runtime queues, bypass existing CLIs, or introduce V12-style Markdown self-governance.
+Do not treat this draft as permission to hand-edit runtime queues, bypass existing CLIs, or introduce Markdown/Agent self-governance where prose becomes the authority for queue, gate, receipt, hook, or trace state.
 
-Promotion rule: when any ds surface becomes accepted, move the normative requirement into `openspec/specs/`, implement or update the executable contract under `DPT_FRAMEWORK/`, and update `guidelines/README.md` Current vs Proposed. This draft should then retain only rationale and non-normative design notes for that accepted surface.
+Promotion rule: when any ds surface becomes accepted, move the normative requirement into `openspec/specs/`, implement or update the executable contract under `DPT_FRAMEWORK/`, and update `guidelines/README.md` Current / Target / Proposed. This draft should then retain only rationale and non-normative design notes for that accepted surface.
 
 ---
 
@@ -73,7 +91,7 @@ These constraints guide future ds proposals. They do not become runtime requirem
 - MUST NOT let subagents pass gates, mutate queues, count evidence, or authorize final output.
 - MUST NOT spread hook, gate, or preemption rules across multiple Markdown authorities again.
 - MUST NOT allow pending slots or refill candidates to execute hidden background work.
-- MUST NOT revive V12’s 72KB Markdown queue as the Source of Record.
+- MUST NOT revive a large hand-maintained Markdown queue as the Source of Record.
 
 ---
 
@@ -81,7 +99,7 @@ These constraints guide future ds proposals. They do not become runtime requirem
 
 Coding agents run as a dialogue loop: read one instruction, act, answer, wait for the next instruction. We cannot put the agent inside a JS daemon. We can only decide what instruction the agent receives next.
 
-V12 tried to encode queue management, receipts, hooks, gate transitions, refill, preemption, and stop authorization inside large Markdown files. That failed for maintainability because:
+An earlier agentic prototype built without enough SDD/OpenSpec discipline encoded queue management, receipts, hooks, gate transitions, refill, preemption, and stop authorization inside large Markdown files. Its high-level structure was directionally useful, but it became hard to reason about, test, and maintain because:
 
 - Queue state had no single manager.
 - Hook rules were repeated across multiple Markdown authorities.
@@ -128,11 +146,13 @@ The important constraint: **ds is not a daemon**. It does not watch the Agent. E
 - bypass OpenSpec, Zod schemas, or existing validate/inspect discipline;
 - make current `rb_queue.json` structured-task behavior exist before implementation.
 
-These non-goals are as important as the positive design. They keep ds from becoming either V12 queue self-governance or a JS workflow controller in a new shape.
+These non-goals are as important as the positive design. They keep ds from becoming either Markdown queue self-governance or a JS workflow controller in a new shape.
 
 ---
 
 ## Proposed Runtime Surfaces
+
+Non-normative sketch.
 
 | Surface | Status | Purpose |
 |---------|--------|---------|
@@ -151,6 +171,8 @@ The machine Source of Record should be JSON/YAML/JSONL. Markdown projection shou
 
 ## Proposed CLI Shape
 
+Non-normative sketch.
+
 Future commands:
 
 | Command | Mutates state | Purpose |
@@ -166,6 +188,8 @@ The final command names are not accepted yet. Whatever CLI shape OpenSpec choose
 ---
 
 ## Task Card Contract
+
+Non-normative sketch.
 
 A task card is one agent-turn worth of work. It must be self-contained enough that an Agent can execute it without relying on chat memory.
 
@@ -219,6 +243,8 @@ All three are LLM-facing context. They help the next Markdown turn be more preci
 
 ## Target Separation
 
+Non-normative sketch.
+
 | Target | Owns | Context posture |
 |--------|------|-----------------|
 | `main-agent` | Fan-in review, evidence judgment, seed/topic updates, synthesis, gate reasoning | High signal, protected context |
@@ -229,6 +255,8 @@ No subagent owns gate passage, queue mutation, evidence counting, or final synth
 ---
 
 ## Queue Model
+
+Non-normative sketch.
 
 The proposed queue has two layers:
 
@@ -260,7 +288,9 @@ Preemption should not interrupt `slot_1_current` unless continuing it would writ
 
 ## Producer Rules
 
-The V12 producer-rule idea is worth preserving because it makes task lineage auditable. Proposed legal values:
+Non-normative sketch.
+
+The earlier prototype's producer-rule idea is worth preserving because it makes task lineage auditable. Proposed legal values:
 
 - `initial_window_render`
 - `setup_repair`
@@ -283,7 +313,9 @@ OpenSpec should decide the final enum before implementation.
 
 ## Gate Hooks
 
-Gate hooks should be centralized in ds, not spread across Markdown files.
+Non-normative sketch.
+
+Future ds proposals should centralize gate hooks in ds, not spread them across Markdown files.
 
 Proposed behavior:
 
@@ -306,7 +338,9 @@ Trace event requirements for gate transitions should stay strict:
 
 ## Stop Authorization
 
-`ds` should preserve the current project rule: middle-run progress is not a valid stop.
+Non-normative sketch.
+
+A future ds capability should preserve the current project rule: middle-run progress is not a valid stop.
 
 Allowed stop states:
 
@@ -322,6 +356,8 @@ Default state is `unauthorized_continue_required`: Agent must continue to the ne
 
 ## Claim Ledger
 
+Non-normative sketch.
+
 `rb_ledger.jsonl` is a proposed future surface for claim provenance. It is not implemented today.
 
 Potential source tags:
@@ -336,7 +372,9 @@ Purpose: make “loop completed” separate from “claim is trustworthy.”
 
 ---
 
-## What To Preserve From V12
+## What To Preserve From Earlier Prototypes
+
+Earlier prototypes were not worthless; they exposed useful workflow patterns. The failure mode was letting those patterns live as Agent-policed Markdown authority instead of moving deterministic contracts into OpenSpec, schema, CLI, and trace.
 
 | Preserve | Move / discard |
 |----------|----------------|
@@ -397,6 +435,6 @@ The prototype must follow `guidelines/command-experiments.md`.
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
-- [Command Experiments](command-experiments.md) — operational rules for any ds prototype experiment.
+- [Command Experiments](command-experiments.md) — target guidance for durable command experiment shape and boundaries.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
 - [Accepted specs](../openspec/specs/) — accepted capability requirements; ds must be proposed here before implementation.
