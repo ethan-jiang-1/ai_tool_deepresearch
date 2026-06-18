@@ -102,13 +102,14 @@ This directory cannot decide:
 |---------|--------|-----------|-----------|
 | `dpt_rb_*` runtime contexts | Current convention | Yes | Runtime state |
 | `dpt_disp_*` disposable experiment contexts | Current convention | Yes | Runtime state |
-| `DPT_FRAMEWORK/command_experiments/exp_*` playbooks | Current / target surface | Existing playbooks now; target conventions via active change | Agent-readable experiment playbooks |
-| `experiments/shared/new-disposable-bundle.mjs` | Target after `dedup-experiments-framework` | Only if the active change or implementation provides it | Shared experiment setup helper |
-| `DPT_FRAMEWORK/trace/trace.mjs` | Target after `dedup-experiments-framework` | Only if the active change or implementation provides it | Unified trace writer |
-| `check` trace verdict events | Target command-experiment convention | For new/updated verdicts when supported | Trace-backed verdict convention |
+| `experiments_playbook/exp_*` playbooks | Current | Yes — 6 experiment families, 20 playbooks | Agent-readable experiment playbooks |
+| `DPT_FRAMEWORK/engine/` | Current | Yes — 6 engines (queue-manager, gate-loop, gate-fork, subagent-relay, workflow-chain, workflow-fsm) | Production engine code |
+| `DPT_FRAMEWORK/engine/trace.mjs` | Current | Yes — unified trace writer, `createTrace` factory | Trace writer for all engines and playbooks |
+| `experiments/shared/new-disposable-bundle.mjs` | Current | Yes | Shared experiment disposable-bundle setup |
+| `check` trace verdict events | Current | Used by all 20 playbooks | Trace-backed verdict convention |
 | `DPT_FRAMEWORK/cli/ds.mjs` | Proposed | No runtime use; design input only | Future OpenSpec + implementation required |
 | `rb_ledger.jsonl` | Proposed | No runtime use; design input only | Future OpenSpec + implementation required |
-| Queue Markdown projection | Proposed | No runtime use; design input only | Future interface projection, not queue authority |
+| Queue Markdown projection | Current | Yes — `queue-manager.mjs` render() writes `_cache/agentic-queue/current-task.md` | Queue state projection, not queue authority |
 
 Current rows can be used as runtime facts only after reloading the active runtime context. Target rows can be used only when the active OpenSpec change or implementation provides the named surface. Proposed rows are design input only.
 

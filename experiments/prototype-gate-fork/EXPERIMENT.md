@@ -43,7 +43,7 @@
 
 ## Agent Test Playbooks (AGT-002)
 
-3 级 playbook 位于 `DPT_FRAMEWORK/command_experiments/exp_gate-fork/`:
+3 级 playbook 位于 `experiments_playbook/exp_gate-fork/`:
 
 | Level  | File                             | Bundle                | Events |
 |--------|----------------------------------|-----------------------|--------|

@@ -28,6 +28,12 @@ context: |
     - Inspect: CLI 诊断工具事后审视 Gate 审计、交叉引用、证据质量 — 发现问题反馈给 LLM 反思纠正
     LLM 负责信息加工，JS 负责质量保证。验证失败 → 反馈 → 反思 → 纠正，不静默通过。
 
+    JS/MD 边界判断:
+      遇到"这段逻辑该放 JS 还是 MD"拿不准时，读 guidelines/command-experiments.md
+      的 "Framework Code Rules" 节。速判口诀：需要智力做决策的（策略、修复方案、
+      调度规则、分支动作）→ MD/Agent；确定性可验证的（loop、schema 校验、hash、
+      状态转换）→ JS/Engine。Engine 提供注入点（函数参数），MD/Agent 提供实际逻辑。
+
   迭代习惯:
     AI Coding 容易堆叠代码。不能只往上摞——要时不时停下来思考结构的合理性，
     该重构就重构，该清理就清理，让结构适应新要求同时兼顾老的东西。
@@ -57,15 +63,38 @@ context: |
     - check-project-specs.mjs  — main spec 结构检查（deltaHeaderInMain / missingPurpose / missingRequirements / missingReqHeader）
     每次 change 归档前两个 check 脚本都必须 PASS，详见下方 rules.tasks。
 
-  测试策略:
-    - tests/schema/:    纯代码单元测试, 零 I/O, node:test + node:assert
-    - tests/integration/: JS+MD 交互集成测试, 真实文件 I/O, 临时目录隔离
-    - tests/fixtures/:  最小 DPT_FRAMEWORK/ 测试框架 (symlink 到 cli/, rb_templates/, schema/)
+  测试分层:
+    项目有三层测试，按环境和目的区分:
+
+    第一层 — tests/（回归测试）:
+      root `tests/` 是项目级回归测试，跑在 `node:test` 下，每次改动后验证无退化。
+      `DPT_FRAMEWORK/` 是可发行框架，内部不放测试文件（保持干净可打包）。
+      测试目录映射框架目录: tests/engine/ ↔ DPT_FRAMEWORK/engine/。
+
+      包含两类:
+        - 单元测试（unit test）: 纯代码，零 I/O。tests/schema/, tests/engine/*.test.mjs, tests/engine/*.test.mjs
+        - 集成测试（integration test）: JS+MD 交互，真实文件 I/O，临时目录隔离。tests/integration/
+
+      工具: node:test + node:assert。跑: `node --test tests/engine/ tests/engine/`
+
+    第二层 — experiments_playbook/（受控环境端到端测试）:
+      experiments_playbook/exp_{name}/ 下的 Markdown playbook 是 Agent 驱动的受控端到端。
+      Agent 逐 step 执行：创建 disposable bundle → import 真实 framework engine →
+      执行操作 → 从 trace JSONL 裁决。不 mock——import 真实 engine，在真实 bundle 上
+      端到端执行。这是项目当前最接近"生产环境"的测试。
+
+      工具: coding agent + disposable bundle + trace verdict。验证: playbook PASS/FAIL。
+
+    第三层 — 真实环境端到端:
+      在生产 run bundle（dpt_rb_*）上由真实 Agent/subagent 执行的端到端测试。
+      因环境复杂度和成本暂时搁置，未纳入当前测试策略。待前两层稳定后再规划。
+
+    tests/fixtures/: 最小测试框架（symlink 到 DPT_FRAMEWORK/），为 tests/ 提供 fixture。
 
   实验体系 (Experiments):
     实验分两层，但关系不是对等——playbook 是驱动层，prototype 是支持环境:
 
-      驱动层 — command_experiments/exp_{name}/
+      驱动层 — experiments_playbook/exp_{name}/
         Agent 可读的 Markdown playbook，定义实验要做什么。
         Agent 逐 step 执行：创建 disposable bundle → import 原型 Engine → 执行操作 → 从 trace 裁决。
         这是实验的"入口"——Agent 从这里开始，trace 在这里结束。
@@ -77,11 +106,9 @@ context: |
 
       两者通过 AGT-xxx requirement 关联，命名对齐（gate-loop ↔ prototype-gate-loop）。
 
-    驱动层详细约定 — command_experiments/:
+    驱动层详细约定 — experiments_playbook/:
       目录结构:
-        command_experiments/
-          scripts/
-            new-disposable-bundle.mjs          # 创建 disposable bundle 的共享工具
+        experiments_playbook/
           exp_{component}/                     # 每个实验一个子目录
             test-simple.md                     # 简单场景（核心路径）
             test-medium.md                     # 中等场景（分支 + 修复）
@@ -99,16 +126,9 @@ context: |
       目录命名: prototype-{component-name}/（如 prototype-gate-loop）
       标准结构:
         - EXPERIMENT.md              # 实验目的、假设、结论
-        - package.json               # { "type": "module" }
-        - {component}.mjs            # 核心实现（标注 @impl <REQ-ID>）
-        - {component}.test.mjs       # node:test 单元测试
-        - trace.mjs                  # trace 工具（API: setTraceFile/getTraceFile/traceEntry/traceCleanup）
-        - nodes-{component}/         # node MD（*.entry.md = 入口, *.dep.md = 依赖）
+        - nodes-{component}/         # node MD（*.entry.md = 入口, *.dep.md = 依赖, *.fsm.json = FSM 定义）
       核心约定:
-        - 每个原型自包含，不互相 import（验证独立性）
-        - Engine 操作自动写 trace 到磁盘（emit 模式），不依赖调用方手动桥接
-        - node MD 代码块通过 sandbox 注入的 traceEntry 自写 trace
-        - trace source 前缀按组件区分: wl-(workflow-next), gl-(gate-loop), gf-(gate-fork), gs-(subagent)
+        - 原型仅保留 fixture + 笔记；engine、trace、CLI 代码已搬至 DPT_FRAMEWORK/
         - 完成后冻结，不随生产代码变化
 
   根目录约定 (Framework ↔ Bundle 同级, 不拷贝):
@@ -117,14 +137,15 @@ context: |
       AGENT_GUIDE.md            — Agent 守则
       cli/                      — JS 程序, Agent 用 node 调用 (validate-bundle.mjs, inspect-bundle.mjs)
       COMMANDS.md               — 命令索引
-      command_experiments/      — Agent 测试 playbook + 共享脚本 (见实验体系)
-        scripts/
-          new-disposable-bundle.mjs  # disposable bundle 创建工具
-        exp_{component}/            # 各实验 playbook
       command_playbook/         — 一次性命令, Agent 读的 Markdown (如 instantiate-run-bundle.md)
       schema/                   — Zod 类型 + contracts (Check 层)
                                    enums.mjs, index.mjs, contracts/{gate,plan,profile,queue,status,trace}.mjs
       workflows/                — 持续运行的 agentic 流程 (execution, queue loop, HITL)
+    experiments_playbook/        — Agent 测试 playbook (见实验体系)
+      exp_{component}/            # 每个机制一个子目录
+        test-simple.md            # 简单场景（核心路径）
+        test-medium.md            # 中等场景（分支 + 修复）
+        test-complex.md           # 复杂场景（全流程 + C&I）
     dpt_rb_{name}/              — Runtime Bundle (可多个, 数据隔离, 通过 ../DPT_FRAMEWORK/ 引用)
       _cache/                   — 源获取暂存
       artifacts/                — 衍生合成 (wave1/ + wave2/ + README.md)

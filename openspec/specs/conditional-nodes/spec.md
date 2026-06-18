@@ -1,13 +1,13 @@
-# Conditional Segments
+# Conditional Nodes
 > req: COS-001
 
 ## Purpose
 
-每个分支独立执行不同逻辑。分支间互不干扰。每分支可独立测试。包含动态段加载能力。
+每个分支独立执行不同逻辑。分支间互不干扰。每分支可独立测试。包含动态节点加载能力。
 
 ## Requirements
 
-### Requirement: Each branch segment has independent execution logic
+### Requirement: Each branch node has independent execution logic
 Each branch SHALL implement its own `Step.execute()` with distinct behavior and side effects.
 
 #### Scenario: Pass branch advances to next wave
@@ -26,27 +26,27 @@ Each branch SHALL implement its own `Step.execute()` with distinct behavior and 
 - **WHEN** `blocked` branch executes
 - **THEN** state sets `current_gate` to `'blocked_hitl'`
 
-#### Scenario: Shared repair segment handles both failure types
-- **WHEN** `shared_repair` segment executes
+#### Scenario: Shared repair node handles both failure types
+- **WHEN** `shared_repair` node executes
 - **AND** state has `ref_count < ref_floor`, `shared_repair` increases `ref_count` by 2 (capped at `ref_floor`)
 - **AND** state has `topicReadiness === 'not_ready'`, `shared_repair` sets `topicReadiness` to `'ready'`
 - **AND** state has `topicReadiness === 'blocked'`, `shared_repair` does NOT change it (blocked = human required)
 - **THEN** a single repair pass can fix both reference and topic issues simultaneously
 
 ### Requirement: Branches are independently testable
-Each branch segment SHALL be testable in isolation with mock state input.
+Each branch node SHALL be testable in isolation with mock state input.
 
 #### Scenario: Test a single branch without loading full workflow
 - **WHEN** a test creates mock state and calls `failAStep.execute(mockState)`
 - **THEN** the branch executes correctly without depending on other branches or the full router
 
-### Requirement: Segments are dynamically loadable from a runtime registry
-A `segmentRegistry` SHALL allow loading workflow segments by key at runtime, using the same pattern as gate-loop's dynamic segment loading.
+### Requirement: Nodes are dynamically loadable from a runtime registry
+A `forkMap` (in `subagent-relay.mjs`) SHALL allow resolving workflow nodes by branch key at runtime, using the same pattern as gate-loop's dynamic node loading. The `forkRouter()` function performs the key-to-Step resolution.
 
-#### Scenario: Known segment key resolves to Step
-- **WHEN** `loadNextSegment('pass_next_wave')` is called
-- **THEN** it returns the Step instance with `name: 'pass_next_wave'` and an executable `execute` function
+#### Scenario: Known node key resolves to Step
+- **WHEN** `forkRouter(state)` is called for a `pass` branch
+- **THEN** it returns `{ branch, step }` with the branch identifier and the resolved Step instance
 
-#### Scenario: Unknown segment key throws
-- **WHEN** `loadNextSegment('nonexistent_fork_segment')` is called
-- **THEN** an error is thrown with the message containing the unknown segment key
+#### Scenario: Unknown node key throws
+- **WHEN** an unrecognized branch identifier is encountered
+- **THEN** an error is thrown with the message containing the unknown branch key

@@ -3,96 +3,76 @@
 
 ## Purpose
 
-FSM 运行时：节点加载、依赖解析、VM 沙箱执行、runFSM 循环、Machine 声明式 API。是 workflow-fsm 的核心执行引擎。
+FSM 运行时核心：`Machine` 类提供声明式状态机实例，`resolveTransition` 做纯查表路由，`createMachine` 工厂从 `.fsm.json` 文件创建实例。workflow-fsm.mjs 是一个纯 FSM transition table resolver（241 行，5 个 export），不包含 VM 沙箱、MD 执行或依赖解析——这些属于 `workflow-chain.mjs` 的职责。
 
 ## Requirements
 
-### Requirement: loadAndExecuteNode SHALL load dependencies and execute a node atomically
+### Requirement: Machine SHALL hold current state and advance via transition table lookup
 
-The system SHALL provide a `loadAndExecuteNode(nodeRef, state, runtime)` function that serves as the single entry point for loading and executing an FSM node. It SHALL resolve the node's dependency closure via `resolveDependencyClosure()`, execute all dependency MD files first in dependency-priority order, then execute the target node. Only the target node's `transition()` result SHALL be captured and returned; dependency nodes' transition calls SHALL be silently ignored. On success it SHALL return `{ state, status }` where status is the execution status string from the target node's `transition()` call. On dependency resolution or execution failure it SHALL return `{ state, status: null, error }`.
+The `Machine` class SHALL maintain a `current` property tracking the active node name. `advance(status)` SHALL call `resolveTransition()` to look up the next node from the FSM transition table and update `current`. On unmatched status it SHALL throw.
 
-#### Scenario: Target node's transition status is captured
+#### Scenario: Machine advances to next node on valid transition
 
-- **WHEN** `loadAndExecuteNode('entry.md', state, runtime)` is called and `entry.md`'s code block calls `transition('entry.md', 'success')`
-- **THEN** the return value SHALL be `{ state: <new state>, status: 'success' }`
+- **WHEN** `machine.advance('success')` is called and the FSM maps current node + 'success' → 'next_node.md'
+- **THEN** `machine.current` SHALL be updated to `'next_node.md'`
 
-#### Scenario: Dependency transition calls are ignored
+#### Scenario: Machine halts on unmatched status
 
-- **WHEN** `entry.md` requires `context.md`, and `context.md`'s code block calls `transition('context.md', 'success')`
-- **THEN** `context.md`'s transition SHALL be silently discarded, and only `entry.md`'s transition status SHALL be returned
+- **WHEN** `machine.advance('unknown_status')` is called and the FSM has no entry for current node + that status
+- **THEN** the Machine SHALL throw an error
 
-#### Scenario: Dependency resolution failure returns error
+### Requirement: resolveTransition SHALL perform pure table lookup
 
-- **WHEN** `loadAndExecuteNode('entry.md', state, runtime)` is called and `entry.md` requires a nonexistent file
-- **THEN** the return value SHALL be `{ state, status: null, error: '<descriptive error>' }`
+`resolveTransition(fsm, currentNode, status)` SHALL return the next node name by exact lookup in the FSM transition table. It SHALL NOT execute any code, read MD files, or mutate state. It is a pure function.
 
-#### Scenario: Receipts record node lifecycle
+#### Scenario: Exact match returns next node
 
-- **WHEN** `loadAndExecuteNode` is called
-- **THEN** a `node_start` receipt SHALL be written before dependency resolution, a `dependency_resolved` receipt after plan generation, and a `node_complete` receipt after execution with the reported status
+- **WHEN** `resolveTransition(fsm, 'entry.md', 'success')` is called and the table has `["entry.md", "success"] → "wave0.md"`
+- **THEN** it returns `'wave0.md'`
 
-### Requirement: runFSM SHALL execute the complete workflow from initial state
+#### Scenario: No match returns null
 
-The system SHALL provide a `runFSM(fsm, state, runtime, maxIterations = 100)` function that executes the workflow from `fsm.initial` through a loop of node execution and transition resolution until a terminal condition is reached. An optional `maxIterations` parameter SHALL guard against infinite self-loop cycles, defaulting to 100.
+- **WHEN** no transition is defined for the given node + status pair
+- **THEN** `resolveTransition()` returns `null`
 
-#### Scenario: Simple linear chain completes successfully
+### Requirement: FSMDefinition SHALL validate the FSM JSON schema
 
-- **WHEN** a 3-node linear FSM (A→B→C→null) is run via `runFSM()`
-- **THEN** all three nodes SHALL be executed in order and the outcome SHALL be `complete`
+`FSMDefinition` is a Zod schema that validates `.fsm.json` files. It SHALL require `initial` (string), `nodes` (array of node name strings), and `transitions` (array of `[from, status, to]` tuples).
 
-#### Scenario: Self-loop retry on error then success
+#### Scenario: Valid FSM JSON passes validation
 
-- **WHEN** an FSM node has `"error": "<self>"` and returns `error` on the first execution but `success` on retry
-- **THEN** the node SHALL execute twice, and the workflow SHALL advance to the next node after the successful retry
+- **WHEN** a `.fsm.json` file has valid `initial`, `nodes`, and `transitions` fields
+- **THEN** `FSMDefinition.safeParse()` succeeds
 
-#### Scenario: Halt on unmatched status
+#### Scenario: Invalid FSM JSON is rejected
 
-- **WHEN** a node calls `transition(currentNode, status)` with a status not defined in the FSM for that node
-- **THEN** `runFSM()` SHALL return `{ outcome: 'halted', reason: '...' }`
+- **WHEN** a `.fsm.json` file is missing `initial` or has malformed transitions
+- **THEN** `FSMDefinition.safeParse()` fails with a Zod error
 
-#### Scenario: Halt when maxIterations exceeded
+### Requirement: loadFSM SHALL read and validate an FSM definition from disk
 
-- **WHEN** a node's self-loop causes the iteration count to reach `maxIterations`
-- **THEN** `runFSM()` SHALL return `{ outcome: 'halted', reason: '<exceeded message>', iterations: <maxIterations> }`
+`loadFSM(fsmPath)` SHALL read a `.fsm.json` file, parse it, validate against `FSMDefinition`, and return the validated definition. On parse or validation failure it SHALL throw.
 
-### Requirement: runtime.currentState SHALL track the current FSM state
+#### Scenario: Valid FSM file loads successfully
 
-The runtime object SHALL maintain a `currentState` field that starts at `fsm.initial` and is updated on each successful advance.
+- **WHEN** `loadFSM('path/to/definition.fsm.json')` is called on a valid file
+- **THEN** it returns the validated FSM definition object
 
-#### Scenario: currentState advances after successful transition
+#### Scenario: Invalid FSM file throws
 
-- **WHEN** node A completes with `success` and FSM maps to node B
-- **THEN** `runtime.currentState` SHALL be updated to `'B.md'`
+- **WHEN** the file content fails `FSMDefinition` validation
+- **THEN** `loadFSM()` throws an error with the validation details
 
-#### Scenario: currentState unchanged after error with retry
+### Requirement: createMachine SHALL be the declarative factory for Machine instances
 
-- **WHEN** node A completes with `error` and FSM maps back to node A
-- **THEN** `runtime.currentState` SHALL remain `'A.md'`
+`createMachine(fsmPathOrDef, trace?)` SHALL accept either a path string (delegating to `loadFSM`) or a pre-loaded FSM definition. An optional `trace` instance (from `DPT_FRAMEWORK/engine/trace.mjs`) MAY be stored for lifecycle event logging. It SHALL return a `Machine` instance with `current` set to `fsm.initial`.
 
-### Requirement: Node execution SHALL resolve dependencies before executing the node
+#### Scenario: createMachine from path
 
-Before executing a node's code block, the system SHALL resolve its dependency closure via `resolveDependencyClosure()` and execute all dependency MD files first, in dependency-priority order. This behavior SHALL be identical to workflow-next.
+- **WHEN** `createMachine('path/to/definition.fsm.json')` is called
+- **THEN** it returns a Machine with `current === fsm.initial`
 
-#### Scenario: Dependencies execute before the requested node
+#### Scenario: createMachine with trace instance
 
-- **WHEN** node `entry.md` requires `context.md` which requires `policy.md`
-- **THEN** execution order SHALL be `policy.md, context.md, entry.md`
-
-#### Scenario: Missing dependency halts the workflow
-
-- **WHEN** a node requires a dependency that does not exist on disk
-- **THEN** the system SHALL return an error and `runFSM()` SHALL halt
-
-#### Scenario: Circular dependency halts the workflow
-
-- **WHEN** node A requires B and B requires A
-- **THEN** the system SHALL detect the cycle and `runFSM()` SHALL halt
-
-### Requirement: Content cache and execution SHALL be separated
-
-The system SHALL cache MD content and frontmatter on first read (recording `file_read` receipt) and return cached content on subsequent reads (recording `cache_hit` receipt). However, each reference to a node SHALL trigger a fresh execution of its code block (recording a new `file_executed` receipt).
-
-#### Scenario: Second reference to same MD hits cache but re-executes
-
-- **WHEN** node A depends on `shared.md` and node B also depends on `shared.md` in the same or subsequent advance
-- **THEN** the first reference SHALL produce `file_read` + `file_executed` for `shared.md`, and the second reference SHALL produce `cache_hit` + `file_executed` for `shared.md`
+- **WHEN** `createMachine(fsmPath, trace)` is called with a trace from `createTrace()`
+- **THEN** the Machine stores the trace and MAY emit lifecycle events through it

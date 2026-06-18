@@ -42,9 +42,9 @@ CSE-001: cmd-subagent-environment — Command playbook for project-level real su
 DYS-001: dynamic-node-loading — Late binding node registry
 FOR-001: fork-repair-converge — Multi-fail shared repair
 GAF-001: gate-fork-router — Gate multi-branch routing (1→N)
-GAS-001: gate-state-machine — Gate condition router (pass/fail/needs_repair)
+GAS-001: gate-state-machine — Gate condition router (pass/fail)
 INT-001: integration-tests — validate-bundle.mjs + inspect-bundle.mjs integration tests
-REL-001: repair-loop — Repair segment + loopback to Gate
+REL-001: repair-loop — Repair node + loopback to Gate (convergeRepair in subagent-relay.mjs)
 SCO-001: schema-core — Six domain enums
 SCO-002: schema-core — Six Zod contracts
 SCO-003: schema-core — Gate transition table
@@ -64,6 +64,15 @@ WDM-001: workflow-dynamic-md-load — Single-entry just-in-time Markdown closure
 WLO-001: workflow-next-observability — Runtime receipts and trace events for workflow-next single-entry loader experiments [DEPRECATED]
 WMD-001: workflow-md-dependencies — Markdown frontmatter requires dependency closure resolution [DEPRECATED]
 WFS-001: workflow-fsm-definition — FSM definition file loading, validation, and structure
-WFS-002: workflow-fsm-transition — Transition function injection into VM sandbox and FSM lookup resolution
-WFS-003: workflow-fsm-runtime — runFSM top-level loop with advance/retry/complete/halt outcomes
+WFS-002: workflow-fsm-transition — Pure transition table lookup (resolveTransition) with Machine.advance()
+WFS-003: workflow-fsm-runtime — Machine class with advance(), createMachine factory, FSMDefinition schema
 WML-001: workflow-manifest-loading — Workflow-next runtime initializes without manifest/cursor or preloading Markdown [DEPRECATED]
+
+# dedup-experiments-framework (delta specs merged to openspec/specs/)
+FRE-001: framework-engine — DPT_FRAMEWORK/engine/ as canonical directory for 7 production engine modules
+FRE-002: framework-engine — workflow-fsm standalone pure FSM transition resolver (5 exports, 241 lines, zero engine imports)
+TRW-001: trace-writer — Unified append-only JSONL trace writer with createTrace factory (3 variants)
+TRW-002: trace-writer — Trace output validates against TraceEntrySchema contract
+EXS-001: experiment-shared-infra — experiments/shared/ directory for experiment-scoped shared infrastructure
+EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_FRAMEWORK/command_experiments/scripts/ to experiments/shared/"
+SCO-009: schema-core — QueueWorkUnitSchema upgrade for rb_queue.json (5 slots nullable, refill_pool typed)

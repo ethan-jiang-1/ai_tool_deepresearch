@@ -66,11 +66,18 @@ describe('TraceSchema', () => {
   it('accepts empty array', () => {
     assert.ok(TraceSchema.safeParse([]).success);
   });
-  it('accepts valid entry', () => {
-    const entry = { timestamp: '2026-01-01', gate_transition: 'wave0_complete', evidence_bundle: 'test', queue_consequence: 'promote', status_pointer_sync: 'ok' };
+  it('accepts valid trace entry', () => {
+    const entry = { ts: '2026-01-01T00:00:00.000Z', event: 'run_start', label: 'test', source: 'test' };
     assert.ok(TraceSchema.safeParse([entry]).success);
   });
-  it('rejects invalid entry', () => {
-    assert.ok(!TraceSchema.safeParse([{ timestamp: 'x' }]).success);
+  it('accepts entry with extra detail fields', () => {
+    const entry = { ts: '2026-01-01T00:00:00.000Z', event: 'check', source: 'engine', passed: true, detail: 'ok' };
+    assert.ok(TraceSchema.safeParse([entry]).success);
+  });
+  it('rejects entry missing ts', () => {
+    assert.ok(!TraceSchema.safeParse([{ event: 'run_start' }]).success);
+  });
+  it('rejects entry missing event', () => {
+    assert.ok(!TraceSchema.safeParse([{ ts: '2026-01-01T00:00:00.000Z' }]).success);
   });
 });

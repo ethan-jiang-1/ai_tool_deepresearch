@@ -5,7 +5,7 @@ title: Command Experiments Guideline
 status: target
 created: 2026-06-17
 role: target guidance for durable command experiment shape and boundaries
-scope: DPT_FRAMEWORK/command_experiments/*, experiments
+scope: experiments_playbook/*, experiments
 authority: guidance-target
 defers_to:
   - AGENTS.md
@@ -18,22 +18,22 @@ activation:
   after_change: openspec/changes/dedup-experiments-framework
   requires:
     - DPT_FRAMEWORK/engine/
-    - DPT_FRAMEWORK/trace/ 
+    - DPT_FRAMEWORK/engine/ 
     - experiments/shared/ 
 siblings:
   - guidelines/project-charter.md
   - guidelines/agentic-dispatch-scheduler-mechanism.md
 ---
 
-# Guideline: command_experiments Target Guidance
+# Guideline: command_experiments Current Guidance
 
-> 状态: 目标指导 | 创建: 2026-06-17 | 激活条件: `openspec/changes/dedup-experiments-framework` apply + validate | 适用于: `DPT_FRAMEWORK/command_experiments/exp_*`
+> 状态: 生效 | 创建: 2026-06-17 | 已激活: `openspec/changes/dedup-experiments-framework` Phase 1-10 landed | 适用于: `experiments_playbook/exp_*`
 
 ---
 
 ## Purpose
 
-`command_experiments/` 是 agentic mechanism 的 staging 级端到端实验层。每个实验用 Agent 可读的 Markdown playbook 编排 Agent Flow，驱动真实 disposable bundle、真实 framework code、真实文件写入和真实 trace 裁决。
+`experiments_playbook/` 是 agentic mechanism 的 staging 级端到端实验层。每个实验用 Agent 可读的 Markdown playbook 编排 Agent Flow，驱动真实 disposable bundle、真实 framework code、真实文件写入和真实 trace 裁决。
 
 实验的价值不是“脚本打印 passed”，也不是把多阶段流程藏进 JS controller。它要证明一个机制能在接近真实 run bundle 的环境里形成可追溯反馈闭环：Markdown 驱动 LLM 行动，JS/CLI 只在关键节点执行 deterministic driver/checkpoint/feedback，输出回到 conversation context，LLM 再据此继续、修复、阻塞或裁决。
 
@@ -41,7 +41,7 @@ This guideline is for any command experiment that proves an agentic mechanism, n
 
 Command experiments are evidence for the OpenSpec process, not a shortcut around it. If an experiment changes accepted behavior, schema, state transitions, receipt rules, trace verdicts, or CLI contracts, create or update the OpenSpec proposal/spec/tasks first, then implement and validate the experiment.
 
-This file is the target guidance for command experiments after `dedup-experiments-framework` lands. Do not dilute it to match the pre-dedup prototype-local engine layout. If the repository does not match this file yet, finish the OpenSpec change that makes it match.
+This file is the authoritative guidance for command experiments. Engines live under `DPT_FRAMEWORK/`, playbooks under `experiments_playbook/`, shared experiment tools under `experiments/shared/`, and prototype fixtures under `experiments/prototype-*/`. The pre-dedup prototype-local engine layout is retired.
 
 This file intentionally does not enumerate every future experiment family. A new command experiment belongs here when it has the same shape: it stages an Agent-facing mechanism in a real bundle, uses deterministic framework checkpoints for facts the Agent must not self-police, and produces evidence that can be replayed through filesystem state plus trace.
 
@@ -53,7 +53,7 @@ This file can decide:
 
 - The command experiment quality bar: real runtime context, real Agent work when required, canonical framework code, trace-backed verdict, and cleanup.
 - The stable experiment ownership split between framework code, experiment playbooks, shared setup, and prototype fixtures.
-- Target conventions for durable command experiments after the active deduplication change lands.
+- Target conventions for durable command experiments under the current framework layout.
 
 This file cannot decide:
 
@@ -65,25 +65,13 @@ This file cannot decide:
 
 ## Current Use
 
-This file has two layers:
-
-- Stable core: applies now. Do not mock Agent work, hand-write fake receipts or trace, use console output as verdict, hide Agent Flow inside JS, or treat prototype code as production authority.
-- Target surface: applies when `openspec/changes/dedup-experiments-framework` has landed and the required paths in frontmatter exist. Until then, use it as the migration target, not as proof that those paths are current.
-
-When current repository layout conflicts with this target guidance, do not weaken the guideline to match the old layout. Either finish the active change, or follow the existing playbook exactly while preserving the stable core: real bundle, real framework/prototype execution as currently wired, trace-backed verdict, and cleanup.
+This guideline is fully active. The target surfaces it describes — framework engines under `DPT_FRAMEWORK/`, playbooks under `experiments_playbook/`, shared experiment tools under `experiments/shared/`, and a unified trace writer — exist and are current. The stable core rules always apply: do not mock Agent work, hand-write fake receipts or trace, use console output as verdict, hide Agent Flow inside JS, or treat prototype code as production authority.
 
 ---
 
 ## Post-Activation Cleanup
 
-When `dedup-experiments-framework` lands and validates:
-
-- Update `guidelines/README.md` Current / Target / Proposed so landed surfaces are marked Current.
-- Keep this file's stable core, but remove or revise migration language that only applied before activation.
-- Re-check every target path named in frontmatter against the accepted specs and actual `DPT_FRAMEWORK/` / `experiments/` layout.
-- Downgrade or remove any target convention that conflicts with the accepted specs or executable implementation.
-
-Do this cleanup in the same change that makes the target surfaces current. Do not leave stale Target wording behind after the implementation exists.
+This section records that activation cleanup happened. When a future change makes target surfaces current, do the same: update `guidelines/README.md` statuses, remove migration language that only applied before activation, re-check target paths, and resolve any conflicts with accepted specs or implementation. The `dedup-experiments-framework` change completed this cleanup — see that change's tasks.md for the detailed checklist.
 
 ---
 
@@ -138,7 +126,7 @@ Use this guideline for a future experiment when all of these are true:
 - The Agent must read machine feedback and continue, repair, block, or judge.
 - The final claim can be audited from runtime files and trace JSONL.
 
-If those conditions do not hold, route the work to unit tests, framework integration tests, or a separate OpenSpec change instead of forcing it into `command_experiments/`.
+If those conditions do not hold, route the work to unit tests, framework integration tests, or a separate OpenSpec change instead of forcing it into `experiments_playbook/`.
 
 ---
 
@@ -153,7 +141,7 @@ The safety rules below always apply. Any rule that names a target path or helper
 - MUST create disposable runtime contexts through approved shared experiment infrastructure; the target default is `experiments/shared/new-disposable-bundle.mjs`.
 - MUST run `validate-bundle.mjs` and `inspect-bundle.mjs` before mechanism execution.
 - MUST import and exercise framework APIs from their canonical `DPT_FRAMEWORK/` location instead of reimplementing the mechanism in the playbook.
-- MUST use `DPT_FRAMEWORK/trace/trace.mjs` as the single trace writer.
+- MUST use `DPT_FRAMEWORK/engine/trace.mjs` as the single trace writer.
 - MUST use real Agent or native subagent execution when the mechanism depends on Agent behavior.
 - MUST keep stage sequence, Agent handoff, and any native subagent semantics visible in the Markdown playbook.
 - MUST keep inline `.mjs` code, when present, as a thin deterministic driver/checkpoint.
@@ -186,7 +174,7 @@ Command experiments use four ownership layers. The exact mechanism names vary; t
 | Layer | Owns | Does not own |
 |-------|------|--------------|
 | `DPT_FRAMEWORK/` | Reusable framework code: deterministic engines, CLIs, schemas, trace writer, command playbooks | Experiment-only setup data or mechanism-specific fixtures |
-| `DPT_FRAMEWORK/command_experiments/exp_<mechanism>/` | Agent-readable playbooks that stage real end-to-end mechanism experiments | Core mechanism implementation |
+| `experiments_playbook/exp_<mechanism>/` | Agent-readable playbooks that stage real end-to-end mechanism experiments | Core mechanism implementation |
 | `experiments/shared/` | Experiment-only shared setup utilities, such as disposable bundle creation | Production runtime behavior |
 | `experiments/prototype-<mechanism>/` | Experiment-specific fixtures and notes, such as `EXPERIMENT.md`, case data, and mechanism-specific fixture files | Production engine code, trace writer code, CLI contracts, reusable schemas |
 
@@ -194,7 +182,7 @@ Command experiments use four ownership layers. The exact mechanism names vary; t
 
 Naming:
 
-- Experiment directory: `DPT_FRAMEWORK/command_experiments/exp_<mechanism>/`
+- Experiment directory: `experiments_playbook/exp_<mechanism>/`
 - Prototype directory, when used: `experiments/prototype-<mechanism>/`
 - Case playbook: `test-<case>.md`, where case names are chosen to prove one mechanism question at a time.
 - Disposable bundle: `dpt_disp_<short>_<case>/`
@@ -304,7 +292,7 @@ Each execution step should normally contain:
 Keep inline scripts thin:
 
 - Import framework APIs from their canonical `DPT_FRAMEWORK/` location, or call an accepted CLI.
-- Set trace file through `DPT_FRAMEWORK/trace/trace.mjs`.
+- Set trace file through `DPT_FRAMEWORK/engine/trace.mjs`.
 - Call the mechanism under test.
 - Append `check` events to trace.
 - Avoid implementing the mechanism inside the playbook.
@@ -372,10 +360,11 @@ Rules:
 - Framework modules MAY import from each other when dependencies exist. Do not embed a copy of another framework module's code; use direct imports.
 - Validate state with Zod where schemas exist.
 - Throw on invalid state; do not silently repair in Engine code unless that repair is the mechanism under test.
-- `trace.mjs` lives at `DPT_FRAMEWORK/trace/trace.mjs` as a single unified trace writer. Prototypes do not keep per-prototype trace copies.
+- `trace.mjs` lives at `DPT_FRAMEWORK/engine/trace.mjs` as a single unified trace writer. Prototypes do not keep per-prototype trace copies.
 - Follow the Import Boundary above; relative paths depend on where the inline driver file is written and executed.
+- **Engine provides the deterministic loop; MD/Agent provides the intelligent strategy.** When a mechanism needs a decision—how to repair, what to dispatch, which branch action to take—Engine exports an injection point (function parameter, factory argument) and MD/Agent supplies the actual logic. Engine never hardcodes a repair strategy, dispatch rule, or branch action. Example: `convergeRepair(state, { repairStep })` — Engine owns the loop (iterate, check stall, enforce maxIterations, detect terminal branches); the `repairStep` function is written by MD/Agent because "how to repair" is an intelligent decision.
 
-Trace writer rule: use the unified `DPT_FRAMEWORK/trace/trace.mjs` writer, and choose the import path from the Import Boundary above. The exact API is defined by the trace-writer spec; do not recreate trace helpers inside playbooks or prototype fixtures.
+Trace writer rule: use the unified `DPT_FRAMEWORK/engine/trace.mjs` writer, and choose the import path from the Import Boundary above. The exact API is defined by the trace-writer spec; do not recreate trace helpers inside playbooks or prototype fixtures.
 
 ---
 
@@ -416,9 +405,9 @@ Names such as `simple`, `medium`, `complex`, and `identity` are acceptable when 
 
 ## New Experiment Checklist
 
-- [ ] `DPT_FRAMEWORK/command_experiments/exp_<mechanism>/` exists.
+- [ ] `experiments_playbook/exp_<mechanism>/` exists.
 - [ ] Reusable framework code exists under `DPT_FRAMEWORK/` for the mechanism under test.
-- [ ] `DPT_FRAMEWORK/trace/trace.mjs` is the single trace writer used by the playbook and engine.
+- [ ] `DPT_FRAMEWORK/engine/trace.mjs` is the single trace writer used by the playbook and engine.
 - [ ] Any `experiments/prototype-<mechanism>/` content is fixture-only.
 - [ ] The experiment note, usually `EXPERIMENT.md`, states the mechanism, hypothesis, and result.
 - [ ] Case playbooks cover the mechanism's needed proof roles, and each case answers one question.

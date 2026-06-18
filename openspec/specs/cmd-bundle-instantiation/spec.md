@@ -5,10 +5,10 @@
 Bundle 实例化命令 playbook、rb_templates 模板文件、validate-bundle.mjs/inspect-bundle.mjs 校验脚本的契约。
 ## Requirements
 ### Requirement: Command playbook guides agent to produce a complete bundle
-The `command_playbook/instantiate-run-bundle.md` playbook SHALL instruct the agent to create `dpt_rb_{name}/` at project root, containing `START_FROM_HERE.md`, five `rb_*` control files, `seed_topics/`, `reference/`, `artifacts/`, `_cache/`, `final/`.
+The `DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md` playbook SHALL instruct the agent to create `dpt_rb_{name}/` at project root, containing `START_FROM_HERE.md`, five `rb_*` control files, `seed_topics/`, `reference/`, `artifacts/`, `_cache/`, `final/`.
 
 #### Scenario: Agent follows playbook for fresh bundle
-- **WHEN** Agent reads `command_playbook/instantiate-run-bundle.md` and is given name "ai-safety"
+- **WHEN** Agent reads `DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md` and is given name "ai-safety"
 - **THEN** Agent creates `dpt_rb_ai-safety/` as a peer of `DPT_FRAMEWORK/` with all required files and directories
 
 #### Scenario: Bundle name collision

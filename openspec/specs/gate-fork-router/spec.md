@@ -3,7 +3,7 @@
 
 ## Purpose
 
-Gate 检查状态值后分叉到 4 个不同 workflow 段。使用显式 Map 转换表，按优先级路由。
+Gate 检查状态值后分叉到 4 个不同 workflow 节点。使用显式 Map 转换表，按优先级路由。
 
 ## Requirements
 
@@ -32,12 +32,12 @@ The Gate SHALL inspect workflow state across multiple dimensions and return exac
 - **AND** Gate does NOT return `fail_a`
 
 ### Requirement: Branch router uses explicit Map
-The branch router SHALL use an explicit `Map<Branch, Step>` to resolve branch identifiers to workflow segments. Adding a new branch SHALL require zero code changes to the router function.
+The branch router (`forkRouter()` in `subagent-relay.mjs`) SHALL use an explicit `Map<Branch, Step>` to resolve branch identifiers to workflow nodes. Adding a new branch SHALL require zero code changes to the router function.
 
 #### Scenario: New branch added without changing router logic
 - **WHEN** a new branch `fail_c` is added to the Branch enum and forkMap
 - **THEN** the `forkRouter()` function needs zero code changes
 
 #### Scenario: Router returns routing decision for caller inspection
-- **WHEN** `forkRouter(state)` is called
+- **WHEN** `forkRouter(state)` is called (in `subagent-relay.mjs`)
 - **THEN** it returns `{ branch, step }` — the branch identifier used AND the resolved Step, allowing callers to inspect the routing decision

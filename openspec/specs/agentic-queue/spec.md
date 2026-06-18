@@ -24,7 +24,7 @@ The Queue Manager SHALL define Zod-validated `QueueState` and `QueueItem` schema
 
 ### Requirement: Queue Manager exposes enqueue, claim, complete, and fail operations
 
-The Queue Manager SHALL expose JS APIs for `enqueue`, `claimCurrent`, `completeCurrent`, and `failCurrent`. `enqueue` SHALL fill open active slots before using `refill_pool`. `claimCurrent` SHALL only expose `slot_1_current`. `completeCurrent` SHALL verify completion receipts before promotion. `failCurrent` SHALL record failure and create repair/refill work instead of authorizing chat progress.
+The Queue Manager SHALL expose JS APIs for `enqueue`, `claim`, `complete`, and `fail`. `enqueue` SHALL fill open active slots before using `refill_pool`. `claim` SHALL only expose `slot_1_current`. `complete` SHALL verify completion receipts before promotion. `fail` SHALL record failure and create repair/refill work instead of authorizing chat progress.
 
 #### Scenario: Enqueue fills active window before refill pool
 
@@ -33,17 +33,17 @@ The Queue Manager SHALL expose JS APIs for `enqueue`, `claimCurrent`, `completeC
 
 #### Scenario: Claim returns current slot only
 
-- **WHEN** `claimCurrent(queue, { actor })` is called
+- **WHEN** `claim(queue, { actor })` is called
 - **THEN** it returns `slot_1_current` and does not expose pending slots as executable work
 
 #### Scenario: Complete promotes next work
 
-- **WHEN** `completeCurrent()` succeeds for `slot_1_current`
+- **WHEN** `complete()` succeeds for `slot_1_current`
 - **THEN** slot 2 promotes to slot 1 and the tail refills from the highest-priority pool item when available
 
 #### Scenario: Failure creates repair work
 
-- **WHEN** `failCurrent()` is called with a structured failure
+- **WHEN** `fail()` is called with a structured failure
 - **THEN** the queue records failure trace data and adds concrete repair work to the active window or refill pool
 
 ### Requirement: Preemption inserts urgent work without hidden execution
@@ -67,7 +67,7 @@ The Queue Manager SHALL expose `preempt(queue, item, { reason, unsafeCurrent })`
 
 ### Requirement: Receipts fail closed and feedback is structured
 
-The Queue Manager SHALL check deterministic receipts through `checkReceipts()` and `inspectQueue()`. Supported receipt prefixes SHALL include `file:`, `json:`, `queue:`, `slot:`, `trace:`, and `none`. Unknown prefixes SHALL fail closed. Feedback SHALL be returned as check/inspect/advice-style structured data.
+The Queue Manager SHALL check deterministic receipts through `checkReceipts()` and `inspect()`. Supported receipt prefixes SHALL include `file:`, `json:`, `queue:`, `slot:`, `trace:`, and `none`. Unknown prefixes SHALL fail closed. Feedback SHALL be returned as check/inspect/advice-style structured data.
 
 #### Scenario: Unknown receipt prefix fails
 
@@ -76,16 +76,16 @@ The Queue Manager SHALL check deterministic receipts through `checkReceipts()` a
 
 #### Scenario: Missing completion receipt blocks promotion
 
-- **WHEN** `completeCurrent()` is called but the item completion receipt is missing
+- **WHEN** `complete()` is called but the item completion receipt is missing
 - **THEN** the current item is not promoted and feedback explains the missing receipt
 
 ### Requirement: Projection is generated from queue JSON
 
-The Queue Manager SHALL render an Agent-readable Markdown task card/window from JSON queue state. The projection SHALL describe current work, pending previews, receipts, writes, and failure route. The projection SHALL NOT be a mutation input or machine authority.
+The Queue Manager SHALL render an Agent-readable Markdown task card/window from JSON queue state via `render()`. The projection SHALL describe current work, pending previews, receipts, writes, and failure route. The projection SHALL NOT be a mutation input or machine authority.
 
 #### Scenario: Render projection writes Markdown
 
-- **WHEN** `renderProjection(queue, bundleDir)` is called
+- **WHEN** `render(queue, bundleDir)` is called
 - **THEN** a Markdown projection file is written at the queue projection path
 
 #### Scenario: Projection drift cannot mutate state
@@ -95,7 +95,7 @@ The Queue Manager SHALL render an Agent-readable Markdown task card/window from 
 
 ### Requirement: Command experiments prove queue manager mechanics
 
-The Queue Manager prototype SHALL include simple, medium, and complex command experiment playbooks. Each playbook SHALL create a real disposable bundle, validate and inspect it, exercise the prototype JS API or CLI, derive verdict from trace JSONL `check` events, and clean up on success.
+The Queue Manager engine SHALL include simple, medium, and complex experiment playbooks under `experiments_playbook/exp_agentic-queue/`. Each playbook SHALL create a real disposable bundle, validate and inspect it, exercise the engine JS API or CLI, derive verdict from trace JSONL `check` events, and clean up on success.
 
 #### Scenario: Simple playbook proves enqueue claim complete promotion
 

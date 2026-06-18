@@ -11,8 +11,28 @@ Spec-driven rewrite of a Deep Research Tool: broad question in, evidence-backed 
 - Accepted requirements/specs: `openspec/specs/`
 - Requirement tracking checks: `openspec/governance/`
 - Runtime framework and agent playbooks: `DPT_FRAMEWORK/` (`validate-bundle.mjs`, `inspect-bundle.mjs`)
-- Frozen prototypes: `experiments/`
-- Regression tests: `tests/`
+- Frozen prototypes and experiment fixtures: `experiments/`
+
+## Directory Map
+
+| Directory | What it is |
+|-----------|------------|
+| `DPT_FRAMEWORK/` | 可发行框架：engine、schema、CLI、trace writer、command playbook。不放测试 |
+| `DPT_FRAMEWORK/engine/` | 生产级确定性 engine（queue-manager, gate-loop, gate-fork, ...） |
+| `experiments_playbook/exp_*/` | Agent 驱动的受控端到端 playbook |
+| `experiments/shared/` | 实验共享工具（如 `new-disposable-bundle.mjs`），不进生产 |
+| `experiments/prototype-*/` | 已冻结原型：仅 fixture + 笔记，不含 engine/trace/CLI 代码 |
+| `tests/` | 回归测试：单元测试 + 集成测试，`node:test` + `node:assert` |
+| `openspec/` | Spec-driven development：specs、changes、governance、config |
+| `guidelines/` | 项目原则、层级边界、实验规范、机制草案 |
+
+## Test Layering
+
+| 层 | 位置 | 性质 |
+|---|------|------|
+| 回归测试 | `tests/` | 单元测试（零 I/O）+ 集成测试（真实文件 I/O），跑在 `node:test` 下 |
+| 受控端到端 | `experiments_playbook/exp_*/` | Agent 驱动 playbook，真实 disposable bundle，trace 裁决 |
+| 真实环境端到端 | — | 生产 `dpt_rb_*` 上真实 Agent/subagent 执行，暂时搁置 |
 
 ## Rules In One Screen
 

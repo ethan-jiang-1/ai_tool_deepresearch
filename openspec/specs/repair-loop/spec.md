@@ -3,23 +3,23 @@
 
 ## Purpose
 
-Gate 失败 → Repair 段修复状态 → 重回 Gate 重判。含防无限循环机制。
+Gate 失败 → Repair 节点修复状态 → 重回 Gate 重判。含防无限循环机制。Repair loop 逻辑实现在 `subagent-relay.mjs` 的 `convergeRepair()` 中；`gate-loop.mjs` 和 `gate-fork.mjs` 是单一函数导出（`checkGate` / `forkGate`），不包含 repair loop。
 
 ## Requirements
 
-### Requirement: Repair segment modifies state and loops back to gate
-After repair execution, the workflow SHALL re-enter the gate for re-evaluation with the repaired state.
+### Requirement: Repair node modifies state and loops back to gate
+After repair execution (via `convergeRepair()` in `subagent-relay.mjs`), the workflow SHALL re-enter the gate for re-evaluation with the repaired state.
 
 #### Scenario: Repair fixes the issue on first attempt
-- **WHEN** gate fails due to missing references, repair segment adds references, and state is updated
+- **WHEN** gate fails due to missing references, repair node adds references, and state is updated
 - **THEN** gate re-evaluates and returns `pass`
 
 #### Scenario: Repair returns to gate
-- **WHEN** repair segment completes
+- **WHEN** repair node completes
 - **THEN** the next action is always gate re-evaluation, never direct advancement
 
 ### Requirement: Max iterations prevents infinite repair loops
-The repair loop SHALL enforce a `maxIterations` limit (default 3) and SHALL detect when state stops changing (state hash unchanged across iterations).
+`convergeRepair()` SHALL enforce a `maxIterations` limit (default 3) and SHALL detect when state stops changing (state hash unchanged across iterations).
 
 #### Scenario: Max iterations exhausted
 - **WHEN** repair has been attempted `maxIterations` times and gate still does not pass

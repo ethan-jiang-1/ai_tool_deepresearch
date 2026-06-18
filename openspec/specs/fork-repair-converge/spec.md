@@ -7,12 +7,12 @@
 
 ## Requirements
 
-### Requirement: Multiple fail branches can converge to a shared repair segment
-When any fail branch executes, the state SHALL be routable to a shared repair segment. The shared repair SHALL handle all failure types (reference shortage, topic readiness) in a single pass.
+### Requirement: Multiple fail branches can converge to a shared repair node
+When any fail branch executes, the state SHALL be routable to a shared repair node. The shared repair SHALL handle all failure types (reference shortage, topic readiness) in a single pass.
 
 #### Scenario: Two fail branches share one repair
 - **WHEN** both `fail_a` and `fail_b` route to `sharedRepairStep`
-- **THEN** the repair segment handles both failure types, inspecting state to determine what to fix
+- **THEN** the repair node handles both failure types, inspecting state to determine what to fix
 
 #### Scenario: Shared repair fixes both reference and topic issues in one iteration
 - **WHEN** state has both `ref_count < ref_floor` AND `topicReadiness === 'not_ready'`
@@ -33,7 +33,7 @@ After repair completes, the state SHALL re-enter the gate. The gate MAY route to
 - **NOTE:** 当前 `sharedRepairStep` 是单调修复（同时修 ref 和 topic），此场景在当前实现中不可达。保留此 scenario 作为架构能力的声明——`convergeRepair` 的合约允许重新路由到不同分支。
 
 ### Requirement: convergeRepair guards against infinite loops
-The converge repair loop SHALL enforce a `maxIterations` limit (default 3). It SHALL detect stall (state hash unchanged across iterations). It SHALL exit immediately for terminal branches (`pass`, `blocked`). When maxIterations is exhausted, it SHALL return the actual final branch name (e.g., `"fail_a"`) — NOT a generic sentinel — so callers can inspect which branch the state is stuck on.
+`convergeRepair()` (in `subagent-relay.mjs`) SHALL enforce a `maxIterations` limit (default 3). It SHALL detect stall (state hash unchanged across iterations). It SHALL exit immediately for terminal branches (`pass`, `blocked`). When maxIterations is exhausted, it SHALL return the actual final branch name (e.g., `"fail_a"`) — NOT a generic sentinel — so callers can inspect which branch the state is stuck on.
 
 #### Scenario: Max iterations exhausted
 - **WHEN** repair has been attempted `maxIterations` times and state still evaluates to a fail branch (`fail_a` or `fail_b`)

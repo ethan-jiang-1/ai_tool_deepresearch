@@ -17,7 +17,7 @@ This command prepares the agent harness only. It does not run subagent experimen
 - Create `.claude/agents/` and `.codex/agents/` if missing.
 - Only overwrite files that contain the marker `DPT managed: real-subagent`.
 - If a target file exists without that marker, stop and report the collision. Do not overwrite user-managed agent definitions.
-- Do not edit `DPT_FRAMEWORK/command_experiments/exp_subagent/`.
+- Do not edit `experiments_playbook/exp_subagent/`.
 - Do not edit `experiments/prototype-subagent/`.
 - Do not run any real subagent playbook.
 

@@ -233,9 +233,9 @@ The project charter should not become a directory manifest. Treat these paths as
 | Surface | Current location | Stable role |
 |---------|------------------|-------------|
 | OpenSpec governance | `openspec/` | proposal/spec/tasks lifecycle, accepted requirements, governance checks |
-| Framework implementation | `DPT_FRAMEWORK/` | schemas, CLIs, deterministic engines, trace utilities, reusable playbooks |
+| Framework implementation | `DPT_FRAMEWORK/` | schemas, CLIs, deterministic engines, trace utilities — framework code only, no tests |
 | Agent-facing guidance | `guidelines/` | principles, reading routes, mechanism guidance, quality bars |
-| Experiments and fixtures | `experiments/` and `DPT_FRAMEWORK/command_experiments/` | prototype fixtures, shared experiment setup, command experiment playbooks |
+| Experiments and fixtures | `experiments/` and `experiments_playbook/` | prototype fixtures, shared experiment setup, command experiment playbooks |
 | Regression checks | `tests/` | executable tests for accepted behavior |
 | Runtime contexts | currently `dpt_rb_*` and `dpt_disp_*` | active run/experiment state, evidence, receipts, trace, artifacts |
 
@@ -278,6 +278,7 @@ Explore / design
 5. 修改 framework implementation 必须由 OpenSpec change、accepted spec 或明确任务覆盖。
 6. 裁决只从真实文件、schema 校验、receipt、trace JSONL 或 accepted verdict source 来。
 7. 不读 `_original_*` 归档，除非用户明确要求分析历史版本。
+8. `DPT_FRAMEWORK/` 是纯框架目录，可发行。不放测试文件、实验 fixture、实验 playbook。测试统一在 root `tests/`。
 
 ---
 

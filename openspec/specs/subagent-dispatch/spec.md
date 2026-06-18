@@ -36,14 +36,14 @@ The dispatch SHALL write `dispatch.json` under `_subagents/wave_NN/`. Each slot 
 - **AND** `task.md` does not include raw WorkflowState, gate internals, repair queue contents, or unrelated slot output
 
 ### Requirement: V1 dispatch enforces concurrency cap
-The v1 dispatch contract SHALL allow at most 3 active subagent slots in a wave. A dispatch configuration that would require more than 3 concurrent native subagents SHALL be rejected or split by a later design.
+The v1 dispatch contract SHALL allow at most 4 active subagent slots in a wave (matching `MAX_CONCURRENT_SUBAGENTS = 4` in `subagent-relay.mjs`). A dispatch configuration that would require more than 4 concurrent native subagents SHALL be rejected.
 
-#### Scenario: Three slots are accepted
-- **WHEN** dispatchMap maps a pass branch to 3 slots
+#### Scenario: Four slots are accepted
+- **WHEN** dispatchMap maps a pass branch to 4 slots
 - **THEN** dispatch succeeds
 
-#### Scenario: Four slots are rejected
-- **WHEN** dispatchMap maps a pass branch to 4 slots under v1
+#### Scenario: Five slots are rejected
+- **WHEN** dispatchMap maps a pass branch to 5 slots under v1
 - **THEN** dispatch fails before spawning any runtime subagent
 
 ### Requirement: Dispatch manifest is schema-validated

@@ -20,9 +20,9 @@ It does not implement a fake subagent executor.
 
 The real playbooks are:
 
-- `DPT_FRAMEWORK/command_experiments/exp_subagent/test-simple.md`
-- `DPT_FRAMEWORK/command_experiments/exp_subagent/test-medium.md`
-- `DPT_FRAMEWORK/command_experiments/exp_subagent/test-complex.md`
+- `experiments_playbook/exp_subagent/test-simple.md`
+- `experiments_playbook/exp_subagent/test-medium.md`
+- `experiments_playbook/exp_subagent/test-complex.md`
 
 They require the parent coding agent to spawn native LLM subagents and relay strict JSON results into the slot files.
 
