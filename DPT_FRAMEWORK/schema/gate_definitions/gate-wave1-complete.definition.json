@@ -1,0 +1,13 @@
+{
+  "gate": "wave1_complete",
+  "description": "Verify Wave1 produced topic-scoped skeleton artifact(s) with placeholder boundary marker. Foundation phase does not check subagent coverage or full deepening.",
+  "rules": [
+    {
+      "id": "placeholder_rule",
+      "check": "placeholder",
+      "target": "placeholder",
+      "threshold": null,
+      "failure_message": "Not yet implemented."
+    }
+  ]
+}

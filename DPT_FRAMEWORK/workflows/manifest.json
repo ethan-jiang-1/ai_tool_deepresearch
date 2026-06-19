@@ -1,0 +1,20 @@
+{
+  "phases": [
+    { "key": "instantiation", "node": "phases/phase-instantiation.md", "gate": "instantiation_complete", "next": "hitl1" },
+    { "key": "hitl1",          "node": "phases/phase-hitl1.md",          "gate": "hitl1_recorded",          "next": "setup" },
+    { "key": "setup",          "node": "phases/phase-setup.md",          "gate": "setup_ready",             "next": "wave0" },
+    { "key": "wave0",          "node": "phases/phase-wave0.md",          "gate": "wave0_complete",          "next": "wave1" },
+    { "key": "wave1",          "node": "phases/phase-wave1.md",          "gate": "wave1_complete",          "next": "wave2" },
+    { "key": "wave2",          "node": "phases/phase-wave2.md",          "gate": "wave2_complete",          "next": "hitl2" },
+    { "key": "hitl2",          "node": "phases/phase-hitl2.md",          "gate": "hitl2_recorded",          "next": "readiness" },
+    { "key": "readiness",      "node": "phases/phase-readiness.md",      "gate": "readiness_passed",        "next": "final" },
+    { "key": "final",          "node": "phases/phase-final.md",          "gate": null,                      "next": null }
+  ],
+  "shared": [
+    "shared/shared-profile.md",
+    "shared/shared-gate-rules.md",
+    "shared/shared-schemas.md",
+    "shared/shared-repair-guidance.md",
+    "shared/shared-anti-cheating-rules.md"
+  ]
+}

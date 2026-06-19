@@ -1,0 +1,13 @@
+{
+  "gate": "setup_ready",
+  "description": "Verify the instantiated bundle has structural consistency: canonical control files reachable, scaffold present, HITL1 recorded, no premature wave completion claims.",
+  "rules": [
+    {
+      "id": "placeholder_rule",
+      "check": "placeholder",
+      "target": "placeholder",
+      "threshold": null,
+      "failure_message": "Not yet implemented."
+    }
+  ]
+}

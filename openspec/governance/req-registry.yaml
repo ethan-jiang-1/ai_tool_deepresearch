@@ -90,3 +90,12 @@ WDC-005: workflow-directory-contract — Test and experiment boundary (tests/ fo
 WDC-006: workflow-directory-contract — Naming conventions for workflow foundation artifacts (phase-*.md, shared-*.md, gate-*.definition.json, check-gate-*.mjs, dpt_rb_*, exp_*)
 WDC-007: workflow-directory-contract — Anti-mixing rules (what must not go where, including command_playbook/ boundary)
 WDC-008: workflow-directory-contract — Single canonical workflow package (v1 single workflow, one framework serves multiple bundles)
+WNC-001: workflow-node-contract — Phase node metadata contract (node_type, id, phase, gate, next, stop, requires, suggested_context, subagent)
+WNC-002: workflow-node-contract — Shared node metadata contract (node_type, id, shared_scope, authority, requires, suggested_context)
+WNC-003: workflow-node-contract — Phase manifest structure (9-phase array, 5 shared entries, lifecycle navigation authority)
+WNC-004: "workflow-node-contract — Phase node body structure (9 required sections — goal, inputs, actions, artifacts, gate cmd, on pass, on fail, stop, anti-cheating)"
+WNC-005: "workflow-node-contract — Final node terminal semantics (gate=none, next=none, user feedback via HITL2 repair/rerun)"
+WNC-006: workflow-node-contract — Skeleton completeness criteria (parseable frontmatter, executable CLI, valid JSON)
+GSK-001: gate-skeleton — Gate definition JSON skeleton structure (gate, description, rules[] with id/check/target/threshold/failure_message)
+GSK-002: "gate-skeleton — Gate CLI skeleton shape (parseArgs, --bundle required, check/inspect/advice JSON output, exit codes)"
+GSK-003: gate-skeleton — One gate per CLI (8 independent CLI wrappers, no generic runner with subcommand)

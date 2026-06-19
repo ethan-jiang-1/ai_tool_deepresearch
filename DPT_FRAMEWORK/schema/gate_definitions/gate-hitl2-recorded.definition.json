@@ -1,0 +1,13 @@
+{
+  "gate": "hitl2_recorded",
+  "description": "Verify HITL2 decision brief exists and user structured decision has been recorded to rb_profile.yaml with required fields filled.",
+  "rules": [
+    {
+      "id": "placeholder_rule",
+      "check": "placeholder",
+      "target": "placeholder",
+      "threshold": null,
+      "failure_message": "Not yet implemented."
+    }
+  ]
+}

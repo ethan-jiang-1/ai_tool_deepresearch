@@ -1,0 +1,13 @@
+{
+  "gate": "instantiation_complete",
+  "description": "Verify a valid dpt_rb_* run bundle has been instantiated with canonical control files, initial topic data, and reference/artifact scaffold.",
+  "rules": [
+    {
+      "id": "placeholder_rule",
+      "check": "placeholder",
+      "target": "placeholder",
+      "threshold": null,
+      "failure_message": "Not yet implemented."
+    }
+  ]
+}

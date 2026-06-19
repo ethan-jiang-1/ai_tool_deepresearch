@@ -1,0 +1,13 @@
+{
+  "gate": "wave0_complete",
+  "description": "Verify Wave0 produced minimum shared foundation evidence: reference artifacts exist, metadata parseable, count meets foundation floor, trace evidence present.",
+  "rules": [
+    {
+      "id": "placeholder_rule",
+      "check": "placeholder",
+      "target": "placeholder",
+      "threshold": null,
+      "failure_message": "Not yet implemented."
+    }
+  ]
+}

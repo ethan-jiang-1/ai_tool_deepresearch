@@ -1,0 +1,13 @@
+{
+  "gate": "readiness_passed",
+  "description": "Verify final delivery preconditions: all required artifacts reachable, all 8 non-terminal gates passed with auditable evidence, profile/status/queue/trace consistent.",
+  "rules": [
+    {
+      "id": "placeholder_rule",
+      "check": "placeholder",
+      "target": "placeholder",
+      "threshold": null,
+      "failure_message": "Not yet implemented."
+    }
+  ]
+}

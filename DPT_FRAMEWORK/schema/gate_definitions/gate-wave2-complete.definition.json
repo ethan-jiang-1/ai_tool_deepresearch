@@ -1,0 +1,13 @@
+{
+  "gate": "wave2_complete",
+  "description": "Verify Wave2 produced minimum cross-topic synthesis artifact that references verified Wave0/Wave1 artifacts.",
+  "rules": [
+    {
+      "id": "placeholder_rule",
+      "check": "placeholder",
+      "target": "placeholder",
+      "threshold": null,
+      "failure_message": "Not yet implemented."
+    }
+  ]
+}

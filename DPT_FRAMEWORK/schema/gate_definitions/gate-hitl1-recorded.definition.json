@@ -1,0 +1,13 @@
+{
+  "gate": "hitl1_recorded",
+  "description": "Verify HITL1 user input has been recorded to rb_profile.yaml with required fields filled and HITL1 status marker written.",
+  "rules": [
+    {
+      "id": "placeholder_rule",
+      "check": "placeholder",
+      "target": "placeholder",
+      "threshold": null,
+      "failure_message": "Not yet implemented."
+    }
+  ]
+}
