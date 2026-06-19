@@ -203,6 +203,53 @@ Gate CLI commands MUST NOT infer active run state from chat memory or write resu
 
 ---
 
+## Agent–Engine Communication
+
+这些规则约束 Markdown/Agent 和 JS/CLI/Engine 之间的信息流向。核心原则：**MD 控制流程，JS 控制校验节点；JS 不知道全局路由，MD 不越权做确定性裁决。**
+
+### MD 是 Controller
+
+Markdown（playbook、task card、node）是 Agent Flow 的编织者。它告诉 Agent 该做什么，读取 JS/CLI 的反馈，根据反馈决定下一步行动（advance、repair、escalate、block）。JS/CLI 只在关键节点执行确定性检查并返回结构化反馈；它不编排多阶段流程，不替 Agent 做判断。
+
+- **MUST**：多阶段 Agent Flow 保持在 Markdown/playbook 中，JS/CLI 只做确定性 checkpoint。
+- **MUST NOT**：将 Agent Flow 藏入 JS controller。JS 控制的是校验节点，不是整条流程。
+
+### 禁止环境变量传递配置
+
+Coding Agent 环境中每个 tool call 是独立 shell 进程，环境变量不跨 call。所有配置必须显式传递，不留隐式状态通道。
+
+- **MUST**：通过 CLI flag、函数参数、runtime 属性传递配置（如 `nodesDir`、`--bundle`、`--next`）。
+- **MUST NOT**：使用 `process.env` 在 component 间传递配置或状态。Shell 的 `export FOO=bar && node script.mjs` 模式在 Agent 工具调用边界不可用。
+- 显式替代方案：
+  - `process.env.NODES_DIR` → `createWorkflowRuntime(source, nodesDir)` 参数
+  - `DPT_NON_INTERACTIVE=1` → `--non-interactive` CLI flag
+  - Shell env → `node script.mjs <arg1> <arg2>` CLI 参数
+
+### Gate 不知道路由
+
+Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结构化结果。它不知道当前 phase 在 lifecycle 中的位置，不知道下一个 phase 是谁，不知道全局流程。
+
+- Gate CLI 输出 SHALL 包含：`check`（passed/failed）、`inspect`（诊断：缺什么、哪里不一致）、`advice`（修复方向）。
+- 路由信息（`next`）由 Controller（Playbook/manifest）通过显式 CLI flag（`--next`）传入 gate。Gate 在响应中 echo 该值——它不是 gate 的知识，它是 Controller 传给 gate 又收回的确认。
+- **MUST NOT**：让 gate CLI 自行推断或决定下一步 phase。
+
+### Trace 是真相，Log 是解释
+
+两套互补记录，边界不可模糊：
+
+| 维度 | Trace (`rb_trace.jsonl`) | Log (`_logs/run.log`) |
+|------|--------------------------|------------------------|
+| 角色 | 权威审计 trail | 人类可读诊断 |
+| 格式 | 结构化 JSONL（machine-verifiable） | 自由文本行 |
+| 裁决 | 是——最终 pass/fail 从这里判 | 否——只辅助理解 |
+| 内容 | 完整 gate 响应（check + inspect + advice） | 引擎事件、进度、细节 |
+
+- **MUST**：实验/playbook 的最终裁决从 trace JSONL 来，不从 console output 或 log 来。
+- **MUST**：trace check event 记录 gate 的完整回答（passed + next + inspect + advice），不止 passed/failed。
+- **MUST NOT**：用 `console.log` 替代 trace 做 pass/fail 裁决。
+
+---
+
 ## MUST
 
 - MUST treat `DPT_FRAMEWORK/` as read-only during run execution.
