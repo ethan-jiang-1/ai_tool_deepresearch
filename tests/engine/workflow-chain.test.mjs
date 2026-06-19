@@ -22,7 +22,7 @@ const {
   readMarkdownFile,
   resolveDependencyClosure,
   createState,
-  executeMarkdownFile,
+  loadMarkdownFile,
   executeLoadPlan,
   assessNode,
 } = await import('../../DPT_FRAMEWORK/engine/workflow-chain.mjs');
@@ -62,7 +62,7 @@ describe('single-entry dynamic load (WDM-001)', () => {
     assert.equal(result.status, 'loaded');
     assert.deepStrictEqual(result.plan, ['wave.entry.md']);
     assert.ok(result.state.executionOrder.includes('wave.entry.md'));
-    assert.equal(result.state.counters.wave, 1);
+    assert.equal(result.state.counters['wave.entry.md'], 1);
     assert.ok(runtime.contentCache.has('wave.entry.md'));
     assert.equal(runtime.contentCache.has('audit.md'), false);
   });
@@ -109,7 +109,7 @@ describe('dependency closure (WMD-001)', () => {
       'diamond.entry.md',
     ]);
     assert.equal(result.plan.filter((f) => f === 'diamond-shared.dep.md').length, 1);
-    assert.equal(result.state.counters.diamondShared, 1);
+    assert.equal(result.state.counters['diamond-shared.dep.md'], 1);
   });
 
   it('preserves requires declaration order for same-level dependencies', () => {
@@ -146,12 +146,12 @@ describe('content cache vs execution (WDM-001, WLO-001)', () => {
       (r) => r.type === 'cache_hit' && r.fileRef === 'shared-lib.dep.md',
     );
     const executions = runtime.receipts.filter(
-      (r) => r.type === 'file_executed' && r.fileRef === 'shared-lib.dep.md',
+      (r) => r.type === 'file_loaded' && r.fileRef === 'shared-lib.dep.md',
     );
 
     assert.ok(cacheHits.length >= 1);
     assert.equal(executions.length, 2);
-    assert.equal(second.state.counters.sharedLib, 2);
+    assert.equal(second.state.counters['shared-lib.dep.md'], 2);
   });
 });
 
@@ -165,7 +165,7 @@ describe('error handling (WMD-001, WLO-001)', () => {
     assert.ok(result.error.includes('nonexistent-file.md'));
     assert.ok(result.error.includes('missing.entry.md'));
     assert.deepStrictEqual(result.state, state);
-    assert.equal(runtime.receipts.filter((r) => r.type === 'file_executed').length, 0);
+    assert.equal(runtime.receipts.filter((r) => r.type === 'file_loaded').length, 0);
     assert.equal(runtime.executionLog.length, 0);
   });
 
@@ -176,7 +176,7 @@ describe('error handling (WMD-001, WLO-001)', () => {
     assert.equal(result.status, 'error');
     assert.ok(result.error.includes('cycle-a.entry.md'));
     assert.ok(result.error.includes('cycle-b.dep.md'));
-    assert.equal(runtime.receipts.filter((r) => r.type === 'file_executed').length, 0);
+    assert.equal(runtime.receipts.filter((r) => r.type === 'file_loaded').length, 0);
   });
 
   it('malformed frontmatter returns error and executes no files', () => {
@@ -186,7 +186,7 @@ describe('error handling (WMD-001, WLO-001)', () => {
     assert.equal(result.status, 'error');
     assert.ok(result.error.includes('Malformed JSON'));
     assert.ok(result.error.includes('malformed.entry.md'));
-    assert.equal(runtime.receipts.filter((r) => r.type === 'file_executed').length, 0);
+    assert.equal(runtime.receipts.filter((r) => r.type === 'file_loaded').length, 0);
   });
 
   it('schema-invalid frontmatter returns error and executes no files', () => {
@@ -196,7 +196,7 @@ describe('error handling (WMD-001, WLO-001)', () => {
     assert.equal(result.status, 'error');
     assert.ok(result.error.includes('Invalid frontmatter schema'));
     assert.ok(result.error.includes('bad-schema.entry.md'));
-    assert.equal(runtime.receipts.filter((r) => r.type === 'file_executed').length, 0);
+    assert.equal(runtime.receipts.filter((r) => r.type === 'file_loaded').length, 0);
   });
 
   it('a later valid load can succeed after an error on the same runtime', () => {
@@ -207,7 +207,7 @@ describe('error handling (WMD-001, WLO-001)', () => {
     const recovered = assessNode('wave.entry.md', createState(), runtime);
     assert.equal(recovered.status, 'loaded');
     assert.deepStrictEqual(recovered.plan, ['wave.entry.md']);
-    assert.equal(recovered.state.counters.wave, 1);
+    assert.equal(recovered.state.counters['wave.entry.md'], 1);
   });
 });
 
@@ -221,7 +221,7 @@ describe('observability receipts (WLO-001)', () => {
     assert.ok(receiptTypes.includes('load_start'));
     assert.ok(receiptTypes.includes('file_read'));
     assert.ok(receiptTypes.includes('dependency_resolved'));
-    assert.ok(receiptTypes.includes('file_executed'));
+    assert.ok(receiptTypes.includes('file_loaded'));
     assert.ok(receiptTypes.includes('load_complete'));
   });
 
@@ -271,17 +271,21 @@ describe('frontmatter parsing', () => {
   });
 });
 
-describe('no-code-block execution', () => {
-  it('produces no_code_block receipt and still completes load', () => {
+describe('MD without code block loads normally', () => {
+  it('loads an MD node with no code block — this is the expected case', () => {
     const runtime = createWorkflowRuntime();
     const result = assessNode('noop.entry.md', createState(), runtime);
 
     assert.equal(result.status, 'loaded');
     assert.deepStrictEqual(result.plan, ['noop.entry.md']);
-    const receipts = runtime.receipts.filter(
-      (r) => r.type === 'no_code_block' && r.fileRef === 'noop.entry.md',
+    // No code block is normal — Engine emits file_loaded, not no_code_block
+    const loadedReceipts = runtime.receipts.filter(
+      (r) => r.type === 'file_loaded' && r.fileRef === 'noop.entry.md',
     );
-    assert.equal(receipts.length, 1);
+    assert.equal(loadedReceipts.length, 1);
+    // executionOrder and counters are written by the Engine on load
+    assert.ok(result.state.executionOrder.includes('noop.entry.md'));
+    assert.equal(result.state.counters['noop.entry.md'], 1);
   });
 });
 
@@ -308,12 +312,67 @@ describe('low-level execution helpers', () => {
     ]);
   });
 
-  it('executeMarkdownFile requires prior content cache', () => {
+  it('loadMarkdownFile requires prior content cache', () => {
     const runtime = createWorkflowRuntime();
     assert.throws(
-      () => executeMarkdownFile('wave.entry.md', createState(), runtime),
+      () => loadMarkdownFile('wave.entry.md', runtime),
       /not in content cache/,
     );
+  });
+});
+
+describe('loadMarkdownFile returns entry, not executed code', () => {
+  it('returns parsed entry ({ md, frontmatter }) without executing code blocks', () => {
+    const runtime = createWorkflowRuntime();
+    // Set up cache by reading a file first
+    const entry = readMarkdownFile('wave.entry.md', runtime);
+    const result = loadMarkdownFile('wave.entry.md', runtime);
+
+    // Returns the entry itself (md + frontmatter), not state
+    assert.equal(result, entry);
+    assert.ok(typeof result.md === 'string');
+    assert.ok(result.md.length > 0);
+    assert.ok(Array.isArray(result.frontmatter.requires));
+    // Emits file_loaded, not file_executed or no_code_block
+    const loadedEvts = runtime.receipts.filter((r) => r.type === 'file_loaded');
+    assert.equal(loadedEvts.length, 1);
+    const executedEvts = runtime.receipts.filter((r) => r.type === 'file_executed');
+    assert.equal(executedEvts.length, 0);
+  });
+});
+
+describe('executeLoadPlan writes state.executionOrder and state.counters', () => {
+  it('Engine writes executionOrder and counters per loaded fileRef', () => {
+    const runtime = createWorkflowRuntime();
+    const plan = resolveDependencyClosure('chain.entry.md', runtime);
+    const state = executeLoadPlan(plan, createState(), runtime);
+
+    // executionOrder mirrors plan order (Engine-driven, not VM-driven)
+    assert.deepStrictEqual(state.executionOrder, [
+      'chain-policy.dep.md',
+      'chain-context.dep.md',
+      'chain.entry.md',
+    ]);
+    // counters use fileRef as key (Engine-driven)
+    assert.equal(state.counters['chain-policy.dep.md'], 1);
+    assert.equal(state.counters['chain-context.dep.md'], 1);
+    assert.equal(state.counters['chain.entry.md'], 1);
+  });
+
+  it('increments counters when same fileRef loaded multiple times', () => {
+    const runtime = createWorkflowRuntime();
+    // Load shared-lib twice via two different entry points
+    readMarkdownFile('repeat-1.entry.md', runtime);
+    readMarkdownFile('repeat-2.entry.md', runtime);
+    readMarkdownFile('shared-lib.dep.md', runtime);
+
+    const plan1 = resolveDependencyClosure('repeat-1.entry.md', runtime);
+    let state = executeLoadPlan(plan1, createState(), runtime);
+    assert.equal(state.counters['shared-lib.dep.md'], 1);
+
+    const plan2 = resolveDependencyClosure('repeat-2.entry.md', runtime);
+    state = executeLoadPlan(plan2, state, runtime);
+    assert.equal(state.counters['shared-lib.dep.md'], 2);
   });
 });
 

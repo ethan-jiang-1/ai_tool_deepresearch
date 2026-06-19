@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: workflow-chain
 case: medium
 weight: light
-case_goal: "验证 single-entry loader 的 dependency-first 执行，以及跨显式 load 调用的内容缓存与重新执行。"
+case_goal: "验证 single-entry loader 的 dependency-first 加载，以及跨显式 load 调用的内容缓存与重新加载。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -18,7 +18,7 @@ verdict: trace-jsonl
 
 # test-workflow-chain-medium
 
-验证 `assessNode(entry)` 解析 entry closure，按依赖优先顺序执行，并在同一 runtime 中对已读依赖产生 cache_hit 但仍重新执行。
+验证 `assessNode(entry)` 解析 entry closure，按依赖优先顺序加载，并在同一 runtime 中对已读依赖产生 cache_hit 但仍重新 load。
 
 ## Step 1: 创建真正的 DPT run bundle
 
@@ -66,7 +66,7 @@ NODES_DIR="$B/exp/nodes" node $B/check_chain.mjs
 
 → 预期：3 个 check 全 passed。
 
-## Step 3: 验证 cache hit + 重新执行
+## Step 3: 验证 cache hit + 重新加载
 
 repeat-1.entry.md 和 repeat-2.entry.md 都依赖 shared-lib.dep.md。
 
@@ -91,7 +91,7 @@ state = r2.state;
 
 const reads = runtime.receipts.filter(r => r.type === 'file_read' && r.fileRef === 'shared-lib.dep.md');
 const hits = runtime.receipts.filter(r => r.type === 'cache_hit' && r.fileRef === 'shared-lib.dep.md');
-const execs = runtime.receipts.filter(r => r.type === 'file_executed' && r.fileRef === 'shared-lib.dep.md');
+const loads = runtime.receipts.filter(r => r.type === 'file_loaded' && r.fileRef === 'shared-lib.dep.md');
 
 trace.traceEntry('check', { source: SRC, step: 'cache:first_read_once',
   passed: reads.length === 1,
@@ -101,9 +101,9 @@ trace.traceEntry('check', { source: SRC, step: 'cache:second_cache_hit',
   passed: hits.length >= 1,
   detail: `shared-lib cache_hit count = ${hits.length}` });
 
-trace.traceEntry('check', { source: SRC, step: 'cache:executed_twice',
-  passed: execs.length === 2 && state.counters.sharedLib === 2,
-  detail: `shared-lib execs=${execs.length}, counter=${state.counters.sharedLib}` });
+trace.traceEntry('check', { source: SRC, step: 'cache:loaded_twice',
+  passed: loads.length === 2 && state.counters['shared-lib.dep.md'] === 2,
+  detail: `shared-lib loads=${loads.length}, counter=${state.counters['shared-lib.dep.md']}` });
 
 trace.traceEntry('check', { source: SRC, step: 'cache:both_entries_loaded',
   passed: r1.status === 'loaded' && r2.status === 'loaded',
@@ -113,7 +113,7 @@ JS
 NODES_DIR="$B/exp/nodes" node $B/check_cache.mjs
 ```
 
-→ 预期：shared-lib 被读一次、执行两次。4 个 check 全 passed。
+→ 预期：shared-lib 被读一次、加载两次。4 个 check 全 passed。
 
 ## Step 4: 从 trace 做最终裁决
 

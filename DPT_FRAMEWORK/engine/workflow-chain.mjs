@@ -1,15 +1,16 @@
-// workflow-chain.mjs — Resolve and assess a Markdown node via frontmatter `requires`
+// workflow-chain.mjs — Resolve and load a Markdown node via frontmatter `requires`
 // @impl WML-001..WLO-001, FRE-001
 // Canonical engine location: DPT_FRAMEWORK/engine/workflow-chain.mjs
 //
 // ## Role
-// A passive engine called by the MD controller. Given a single .md node, the
-// engine resolves its frontmatter `requires` dependency chain (DAG), executes
-// each node's fenced JS code block in a vm sandbox, threads workflow state, and
-// returns the result. The MD controller reads the result and decides what to do
-// next — the engine never drives the loop.
+// A passive engine called by the Agent. Given a single .md node, the engine
+// resolves its frontmatter `requires` dependency chain (DAG), loads each node's
+// MD content from cache, writes load state (executionOrder, counters), and
+// returns the result. MD content is Agent-readable — the Engine does NOT
+// execute code blocks. The Agent reads the result and decides what to do next —
+// the engine never drives the loop.
 //
-// ## Quick Start (MD Controller)
+// ## Quick Start (Agent Controller)
 //
 //   import { createTrace } from './trace.mjs';
 //   import { createWorkflowRuntime, createState, assessNode }
@@ -22,7 +23,7 @@
 //   const result = assessNode('entry.md', state, runtime, trace);
 //   // trace is optional — omit to skip trace writes (receipts still recorded)
 //   // → { state, status: 'loaded'|'error', runtime, plan }
-//   // MD controller reads result and decides next action.
+//   // Agent reads result and decides next action.
 //
 // ## Pipeline
 // ```
@@ -36,8 +37,8 @@
 //         │           └─ parseFrontmatter(md)  → { requires: string[] }
 //         │
 //         ├─ executeLoadPlan(plan, state, runtime)
-//         │     └─ executeMarkdownFile(fileRef, state, runtime) × N
-//         │           └─ vm.Script(code).runInContext({ state, traceEntry, console })
+//         │     └─ loadMarkdownFile(fileRef, runtime) × N
+//         │           └─ verify in cache → emit file_loaded → return entry
 //         │
 //         └─ return { state, status, runtime, plan }
 // ```
@@ -45,9 +46,9 @@
 // ## Trace
 // Stateless — trace is an optional trailing parameter on assessNode() (and the
 // framework functions it calls). Callers create a trace via `createTrace(path)`
-// from `./trace.mjs` and pass it to assessNode(). If omitted, `emit()` and
-// sandbox `traceEntry` silently no-op. No module-level state — every call can
-// use its own trace instance.
+// from `./trace.mjs` and pass it to assessNode(). If omitted, `emit()`
+// silently no-ops. No module-level state — every call can use its own trace
+// instance.
 //
 // ## On-disk paths
 // Engine resolves files from `NODES_DIR` (env var). Default:
@@ -58,14 +59,13 @@
 // ## Exports
 //   Controller API:   createWorkflowRuntime, createState, assessNode
 //   Framework API:    readMarkdownFile, resolveDependencyClosure,
-//                     executeMarkdownFile, executeLoadPlan
+//                     loadMarkdownFile, executeLoadPlan
 //   Utilities:        nodePath, parseFrontmatter
 //   Schemas:          NodeFrontmatter, WorkflowState
 
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import vm from 'node:vm';
 import { z } from 'zod';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -293,89 +293,59 @@ export function createState() {
   return WorkflowState.parse({});
 }
 
-const CODE_BLOCK_RE = /```(?:js|javascript)\s*\n([\s\S]*?)```/;
-
 /**
- * Execute the fenced JS code block in a cached Markdown file.
+ * Load a cached Markdown file and return its parsed content.
  *
- * The code runs in a vm sandbox with access to:
- *   - `state`   — the current workflow state (mutated in place)
- *   - `traceEntry(event, detail)` — write a trace event
- *   - `console` — silent (playbooks inspect receipts/trace instead)
+ * MD content is Agent-readable — the Engine does NOT execute any code blocks.
+ * This function verifies the fileRef is in contentCache and returns the entry
+ * ({ md, frontmatter }) for the Agent to read and decide on actions.
  *
- * After execution, the state is validated against WorkflowState.
+ * Emits 'file_loaded' to trace and runtime.executionLog.
  *
  * @param {string} fileRef - filename (must already be in runtime.contentCache)
- * @param {object} state - current workflow state (parsed WorkflowState)
  * @param {object} runtime - from createWorkflowRuntime()
- * @param {object} [trace] - optional trace instance; threaded to sandbox traceEntry
- * @returns {object} validated WorkflowState after execution
- * @throws {Error} if fileRef not cached, vm execution fails, or state invalid
+ * @param {object} [trace] - optional trace instance
+ * @returns {{ md: string, frontmatter: { requires: string[] } }} the cached entry
+ * @throws {Error} if fileRef not cached
  *
  * @impl WDM-001, WLO-001
  */
-export function executeMarkdownFile(fileRef, state, runtime, trace = null) {
+export function loadMarkdownFile(fileRef, runtime, trace = null) {
   const entry = runtime.contentCache.get(fileRef);
   if (!entry) {
-    throw new Error(`executeMarkdownFile: ${fileRef} not in content cache; call readMarkdownFile first`);
+    throw new Error(`loadMarkdownFile: ${fileRef} not in content cache; call readMarkdownFile first`);
   }
 
-  const match = entry.md.match(CODE_BLOCK_RE);
-  if (!match) {
-    emit(runtime, trace, 'no_code_block', { fileRef, ts: new Date().toISOString() });
-    runtime.executionLog.push({ fileRef, event: 'no_code_block' });
-    return state;
-  }
+  emit(runtime, trace, 'file_loaded', { fileRef, ts: new Date().toISOString() });
+  runtime.executionLog.push({ fileRef, event: 'file_loaded' });
 
-  const sandboxTraceEntry = (event, detail) => {
-    if (trace) trace.traceEntry(event, detail);
-  };
-
-  const sandbox = {
-    state,
-    traceEntry: sandboxTraceEntry,
-    console: {
-      log: () => {
-        // Code blocks are silent; playbooks inspect receipts/trace.
-      },
-    },
-  };
-
-  try {
-    new vm.Script(match[1]).runInContext(vm.createContext(sandbox), {
-      timeout: 5000,
-    });
-  } catch (err) {
-    throw new Error(`Execution error in ${fileRef}: ${err.message}`);
-  }
-
-  const validated = WorkflowState.parse(sandbox.state);
-  emit(runtime, trace, 'file_executed', { fileRef, ts: new Date().toISOString() });
-  runtime.executionLog.push({ fileRef, event: 'file_executed' });
-
-  return validated;
+  return entry;
 }
 
 /**
- * Execute a dependency-closure plan sequentially, threading state.
+ * Execute a dependency-closure plan sequentially, writing load state.
  *
- * Each fileRef in the plan is loaded from cache and executed; state
- * flows from one to the next.
+ * Each fileRef in the plan is loaded from cache via loadMarkdownFile.
+ * The Engine writes `state.executionOrder` (push fileRef) and
+ * `state.counters[fileRef]` (increment per-fileRef count) on each
+ * successful load. MD content is returned for the Agent to read — the
+ * Engine does NOT execute any code blocks.
  *
  * @param {string[]} plan - ordered fileRefs (from resolveDependencyClosure)
- * @param {object} state - initial WorkflowState
+ * @param {object} state - initial WorkflowState (mutated in place)
  * @param {object} runtime - from createWorkflowRuntime()
- * @param {object} [trace] - optional trace instance; threaded to executeMarkdownFile
- * @returns {object} final WorkflowState after all nodes execute
+ * @param {object} [trace] - optional trace instance; threaded to loadMarkdownFile
+ * @returns {object} final WorkflowState after all nodes loaded
  *
  * @impl WDM-001, WLO-001
  */
 export function executeLoadPlan(plan, state, runtime, trace = null) {
-  let currentState = state;
   for (const fileRef of plan) {
-    currentState = executeMarkdownFile(fileRef, currentState, runtime, trace);
+    loadMarkdownFile(fileRef, runtime, trace);
+    state.executionOrder.push(fileRef);
+    state.counters[fileRef] = (state.counters[fileRef] || 0) + 1;
   }
-  return currentState;
+  return state;
 }
 
 // ============================================================
@@ -383,16 +353,16 @@ export function executeLoadPlan(plan, state, runtime, trace = null) {
 // ============================================================
 
 /**
- * Assess a Markdown node: resolve its dependency chain, execute every node's
- * code block in DAG order, thread workflow state, and return the result.
+ * Assess a Markdown node: resolve its dependency chain, load every node's
+ * MD content in DAG order, write load state, and return the result.
  *
  * This is the main entry point for MD controllers. A single call:
  *   1. Resolves the full dependency closure (DAG order)
- *   2. Executes every node's code block in order
+ *   2. Loads every node's MD content in order (no code execution)
  *   3. Returns the final state, status, and the plan that ran
  *
- * The engine is **passive** — it assesses the given node and returns. The MD
- * controller reads the result and decides what to do next. The engine does not
+ * The engine is **passive** — it assesses the given node and returns. The Agent
+ * reads the returned MD content and decides what to do next. The engine does not
  * loop, advance, or drive multi-step Agent Flow.
  *
  * Emits 'load_start', 'dependency_resolved', and either 'load_complete'

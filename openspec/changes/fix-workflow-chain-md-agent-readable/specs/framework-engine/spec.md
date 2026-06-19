@@ -1,12 +1,7 @@
-# Framework Engine
-
+# Framework Engine — Delta Spec
 > req: FRE-001, FRE-002
 
-## Purpose
-
-Define the canonical location, import contract, and dependency rules for production engine modules under `DPT_FRAMEWORK/engine/`. These engines are the single source of truth for deterministic queue, gate, loader, FSM, and subagent relay mechanisms — shared by both production run bundles and experiment playbooks.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Engine code canonical location
 
@@ -22,9 +17,7 @@ Seven production engine modules SHALL reside at `DPT_FRAMEWORK/engine/` as their
 | Workflow FSM | `DPT_FRAMEWORK/engine/workflow-fsm.mjs` |
 | Trace Writer | `DPT_FRAMEWORK/engine/trace.mjs` |
 
-No engine module SHALL exist as a copy in `experiments/prototype-*/`. Experiment playbooks and production run bundles SHALL import engines from their canonical paths.
-
-Workflow Chain is an MD loader + dependency resolver: it parses frontmatter, resolves dependency closures, reads and caches MD files, and returns results for the Agent to read. It SHALL NOT execute JS code blocks from MD nodes — MD content is Agent-readable, not engine-executable. Workflow FSM is a standalone pure FSM transition resolver.
+Workflow Chain is an MD loader + dependency resolver: it parses frontmatter, resolves dependency closures, reads and caches MD files, and returns results for the Agent to read. It SHALL NOT execute JS code blocks from MD nodes — MD content is Agent-readable, not engine-executable. Workflow FSM is a standalone pure FSM transition resolver. No engine module SHALL exist as a copy in `experiments/prototype-*/`. Experiment playbooks and production run bundles SHALL import engines from their canonical paths.
 
 #### Scenario: Experiment playbook imports engine from framework
 
@@ -54,7 +47,6 @@ Engine modules that depend on another engine's functionality SHALL import it dir
 
 - **WHEN** `workflow-fsm.mjs` performs FSM transition resolution
 - **THEN** it SHALL use its own implementation (imports only `node:fs` and `zod`)
-- **AND** it SHALL NOT import loader functions from `workflow-chain.mjs`
 
 #### Scenario: Subagent relay is self-contained for fork/repair
 

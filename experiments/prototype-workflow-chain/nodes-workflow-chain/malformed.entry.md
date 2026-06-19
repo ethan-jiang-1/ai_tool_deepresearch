@@ -10,9 +10,4 @@
 This file has a frontmatter block with invalid JSON (no quotes around keys).
 
 ## Role in Experiment
-验证 malformed JSON frontmatter 导致 load 返回 error，且不执行任何文件。
-
-```js
-// This should never execute due to malformed frontmatter
-state.executionOrder.push('malformed.entry.md');
-```
+验证 malformed JSON frontmatter 导致 load 返回 error，且不加载任何文件。

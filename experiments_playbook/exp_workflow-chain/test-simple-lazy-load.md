@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: workflow-chain
 case: simple
 weight: light
-case_goal: "验证 single-entry loader 在调用前不预读 MD，调用 assessNode 后才加载并执行自包含 entry。"
+case_goal: "验证 single-entry loader 在调用前不预读 MD，调用 assessNode 后才加载自包含 entry。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -88,25 +88,25 @@ trace.traceEntry('check', { source: SRC, step: 'load:plan_entry_only',
   passed: JSON.stringify(result.plan) === JSON.stringify(['wave.entry.md']),
   detail: `plan = ${JSON.stringify(result.plan)}` });
 
-trace.traceEntry('check', { source: SRC, step: 'load:entry_executed',
-  passed: result.state.executionOrder.includes('wave.entry.md') && result.state.counters.wave === 1,
-  detail: `executionOrder=${JSON.stringify(result.state.executionOrder)}, wave=${result.state.counters.wave}` });
+trace.traceEntry('check', { source: SRC, step: 'load:entry_loaded',
+  passed: result.state.executionOrder.includes('wave.entry.md') && result.state.counters['wave.entry.md'] === 1,
+  detail: `executionOrder=${JSON.stringify(result.state.executionOrder)}, wave.entry.md=${result.state.counters['wave.entry.md']}` });
 
 trace.traceEntry('check', { source: SRC, step: 'load:no_unrelated_read',
   passed: !runtime.contentCache.has('audit.md'),
   detail: `cache keys = ${JSON.stringify([...runtime.contentCache.keys()])}` });
 
 trace.traceEntry('check', { source: SRC, step: 'load:receipts_present',
-  passed: ['load_start', 'file_read', 'dependency_resolved', 'file_executed', 'load_complete'].every(t => runtime.receipts.some(r => r.type === t)),
+  passed: ['load_start', 'file_read', 'dependency_resolved', 'file_loaded', 'load_complete'].every(t => runtime.receipts.some(r => r.type === t)),
   detail: `receipt types = ${runtime.receipts.map(r => r.type).join(', ')}` });
 
-// Node writes its own trace directly; verify from trace file, not receipts
+// Engine writes file_loaded to trace; verify from trace file, not just receipts
 import { readFileSync } from 'node:fs';
 
 const traceEvents = readFileSync(trace.traceFilePath(), 'utf-8').trim().split('\n').map(JSON.parse);
-trace.traceEntry('check', { source: SRC, step: 'load:node_self_traced',
-  passed: traceEvents.some(e => e.event === 'md:executed' && e.node === 'wave.entry.md'),
-  detail: `node_executed in trace = ${traceEvents.some(e => e.event === 'md:executed')}` });
+trace.traceEntry('check', { source: SRC, step: 'load:file_loaded_in_trace',
+  passed: traceEvents.some(e => e.event === 'file_loaded' && e.fileRef === 'wave.entry.md'),
+  detail: `file_loaded in trace = ${traceEvents.some(e => e.event === 'file_loaded')}` });
 JS
 
 NODES_DIR="$B/exp/nodes" node $B/check_load.mjs

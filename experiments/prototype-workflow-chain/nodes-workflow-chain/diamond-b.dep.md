@@ -10,9 +10,4 @@
 Branch B, also requires shared.md.
 
 ## Role in Experiment
-验证菱形依赖的另一条分支；shared 不应被执行两次。
-
-```js
-state.executionOrder.push('diamond-b.dep.md');
-state.counters.diamondB = (state.counters.diamondB || 0) + 1;
-```
+验证菱形依赖的另一条分支；shared 不应被加载两次。

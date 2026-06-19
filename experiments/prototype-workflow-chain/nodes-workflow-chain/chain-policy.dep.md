@@ -10,10 +10,4 @@
 Leaf node in the chain dependency. No dependencies of its own.
 
 ## Role in Experiment
-验证 chain 中最深依赖最先执行。
-
-```js
-state.executionOrder.push('chain-policy.dep.md');
-state.counters.chainPolicy = (state.counters.chainPolicy || 0) + 1;
-traceEntry('md:executed', { node: 'chain-policy.dep.md' });
-```
+验证 chain 中最深依赖最先加载。

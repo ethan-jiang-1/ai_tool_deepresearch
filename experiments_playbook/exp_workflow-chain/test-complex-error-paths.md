@@ -55,7 +55,7 @@ function checkErrorCase(label, entry, predicate) {
   const result = assessNode(entry, createState(), runtime, trace);
 
   const newReceipts = runtime.receipts.slice(before);
-  const newExecs = newReceipts.filter(r => r.type === 'file_executed');
+  const newLoads = newReceipts.filter(r => r.type === 'file_loaded');
 
   trace.traceEntry('check', { source: SRC, step: `${label}:status_error`,
     passed: result.status === 'error',
@@ -65,9 +65,9 @@ function checkErrorCase(label, entry, predicate) {
     passed: Boolean(result.error && predicate(result.error)),
     detail: `error = ${result.error}` });
 
-  trace.traceEntry('check', { source: SRC, step: `${label}:no_execution`,
-    passed: newExecs.length === 0,
-    detail: `file_executed in case = ${newExecs.length}` });
+  trace.traceEntry('check', { source: SRC, step: `${label}:no_load`,
+    passed: newLoads.length === 0,
+    detail: `file_loaded in case = ${newLoads.length}` });
 
   return result;
 }
@@ -88,9 +88,9 @@ trace.traceEntry('check', { source: SRC, step: 'recovery:status_loaded',
   passed: recovered.status === 'loaded',
   detail: `status = ${recovered.status}` });
 
-trace.traceEntry('check', { source: SRC, step: 'recovery:entry_executed',
-  passed: recovered.state.executionOrder.includes('wave.entry.md') && recovered.state.counters.wave === 1,
-  detail: `executionOrder=${JSON.stringify(recovered.state.executionOrder)}, wave=${recovered.state.counters.wave}` });
+trace.traceEntry('check', { source: SRC, step: 'recovery:entry_loaded',
+  passed: recovered.state.executionOrder.includes('wave.entry.md') && recovered.state.counters['wave.entry.md'] === 1,
+  detail: `executionOrder=${JSON.stringify(recovered.state.executionOrder)}, wave.entry.md=${recovered.state.counters['wave.entry.md']}` });
 
 trace.traceEntry('check', { source: SRC, step: 'recovery:same_runtime_reused',
   passed: runtime.receipts.some(r => r.type === 'load_error') && runtime.receipts.some(r => r.type === 'load_complete'),
