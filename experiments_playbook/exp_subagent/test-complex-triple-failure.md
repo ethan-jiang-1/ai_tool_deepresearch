@@ -2,13 +2,14 @@
 schema: command-experiment/v1
 experiment: subagent
 case: complex
+weight: heavy
 case_goal: "验证三个真实 native subagent、多个角色和 partial failure tolerance 的 Parent Relay 路径。"
 runner: coding-agent
 agent_mode: native-subagent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_gs_complex
-trace: dpt_disp_gs_complex/_trace_subagent.jsonl
+trace: dpt_disp_gs_complex/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -217,12 +218,12 @@ node "$B/collect.mjs" 2>&1 | grep -v "^\[trace\]"
 
 cat > "$B/audit.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
-const events = readFileSync('dpt_disp_gs_complex/_trace_subagent.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
+const events = readFileSync('dpt_disp_gs_complex/_trace.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
 const count = name => events.filter(e => e.event === name).length;
 const collects = events.filter(e => e.event === 'collect_result');
 const merge = events.find(e => e.event === 'merge_complete');
 const pass = count('agent_spawn_requested') === 3 && count('agent_runtime_started') === 3 && count('agent_result_ready') === 3 && count('agent_result_received') === 3 && count('result_schema_validated') === 3 && collects.length === 3 && merge && merge.doneCount === 2 && merge.failedCount === 1 && merge.allFailed === false;
-console.log(pass ? 'COMPLEX PASS' : 'COMPLEX FAIL');
+console.log(pass ? '\x1b[32mCOMPLEX PASS\x1b[0m' : '\x1b[31mCOMPLEX FAIL\x1b[0m');
 if (!pass) process.exit(1);
 JS
 node "$B/audit.mjs"
@@ -231,6 +232,6 @@ node "$B/audit.mjs"
 ## Cleanup [MAIN/SHELL]
 
 ```bash
-rm -rf dpt_disp_gs_complex
+rm -rf dpt_disp_gs_*
 echo "cleaned: gs_complex"
 ```

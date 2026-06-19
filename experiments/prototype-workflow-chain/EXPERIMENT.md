@@ -1,4 +1,4 @@
-# Experiment: prototype-workflow-next
+# Experiment: prototype-workflow-chain
 
 ## 实验目的
 
@@ -54,7 +54,7 @@ const result = loadNextMarkdown('chain-entry.md', state, runtime);
 ### 单元测试
 
 ```bash
-node --test experiments/prototype-workflow-next/workflow-next.test.mjs
+node --test experiments/prototype-workflow-chain/workflow-chain.test.mjs
 ```
 
 覆盖场景：
@@ -81,13 +81,13 @@ node --test experiments/prototype-workflow-next/workflow-next.test.mjs
 
 ### 观察 1: single-entry 比 manifest/cursor 更符合 loader 边界
 
-`workflow-next` 不再决定“下一个是谁”。上游已经做出决策，loader 只负责：
+`workflow-chain` 不再决定“下一个是谁”。上游已经做出决策，loader 只负责：
 
 ```
 entry fileRef -> dependency closure -> dependency-first execution -> receipts
 ```
 
-这让 `workflow-next` 和 `workflow-fsm` 的边界清楚：FSM 负责控制流，workflow-next 负责单个 MD closure 的完整性。
+这让 `workflow-chain` 和 `workflow-fsm` 的边界清楚：FSM 负责控制流，workflow-chain 负责单个 MD closure 的完整性。
 
 ### 观察 2: 依赖也执行，才能验证“MD 活起来”
 

@@ -2,12 +2,13 @@
 schema: command-experiment/v1
 experiment: gate-fork
 case: complex
+weight: light
 case_goal: "验证 forkGate 全组合：规则优先级、四种返回、MD PDCA 双路径（branch 执行 / repair）。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_gf_complex
-trace: dpt_disp_gf_complex/_trace_gf_complex.jsonl
+trace: dpt_disp_gf_complex/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -51,7 +52,7 @@ B="dpt_disp_gf_complex"
 
 cat > "$B/t.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gf_complex/_trace_gf_complex.jsonl');
+const trace = createTrace('dpt_disp_gf_complex/_trace.jsonl');
 trace.traceInit('gf-playbook/complex', { source: 'gf-playbook/complex' });
 JS
 node "$B/t.mjs" > /dev/null 2>&1
@@ -67,7 +68,7 @@ B="dpt_disp_gf_complex"
 
 cat > "$B/t.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gf_complex/_trace_gf_complex.jsonl');
+const trace = createTrace('dpt_disp_gf_complex/_trace.jsonl');
 import { forkGate } from '../DPT_FRAMEWORK/engine/gate-fork.mjs';
 
 const SRC = 'gf-playbook/complex';
@@ -127,7 +128,7 @@ B="dpt_disp_gf_complex"
 
 cat > "$B/t.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gf_complex/_trace_gf_complex.jsonl');
+const trace = createTrace('dpt_disp_gf_complex/_trace.jsonl');
 import { z } from 'zod';
 import { forkGate } from '../DPT_FRAMEWORK/engine/gate-fork.mjs';
 
@@ -205,7 +206,7 @@ B="dpt_disp_gf_complex"
 cat > "$B/t.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gf_complex/_trace_gf_complex.jsonl');
+const trace = createTrace('dpt_disp_gf_complex/_trace.jsonl');
 const raw = readFileSync(trace.traceFilePath(), 'utf-8').trim();
 const events = JSON.parse('[' + raw.split('\n').join(',') + ']');
 const checks = events.filter(x => x.event === 'check');
@@ -227,6 +228,6 @@ node "$B/t.mjs"
 ## Step 6: 清理
 
 ```bash
-rm -rf $(node experiments/shared/new-disposable-bundle.mjs gf_complex)
+rm -rf dpt_disp_gf_*
 echo "✓ Cleaned up."
 ```

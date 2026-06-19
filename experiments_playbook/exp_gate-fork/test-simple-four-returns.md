@@ -2,12 +2,13 @@
 schema: command-experiment/v1
 experiment: gate-fork
 case: simple
+weight: light
 case_goal: "验证 forkGate 单次 checkpoint：pass、branch matched、no-branch、schema fail 四种返回。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_gf_simple
-trace: dpt_disp_gf_simple/_trace_gf_simple.jsonl
+trace: dpt_disp_gf_simple/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -49,7 +50,7 @@ B="dpt_disp_gf_simple"
 
 cat > "$B/t.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gf_simple/_trace_gf_simple.jsonl');
+const trace = createTrace('dpt_disp_gf_simple/_trace.jsonl');
 trace.traceInit('gf-playbook/simple', { source: 'gf-playbook/simple' });
 JS
 node "$B/t.mjs" > /dev/null 2>&1
@@ -65,7 +66,7 @@ B="dpt_disp_gf_simple"
 
 cat > "$B/t.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gf_simple/_trace_gf_simple.jsonl');
+const trace = createTrace('dpt_disp_gf_simple/_trace.jsonl');
 import { z } from 'zod';
 import { forkGate } from '../DPT_FRAMEWORK/engine/gate-fork.mjs';
 
@@ -167,7 +168,7 @@ B="dpt_disp_gf_simple"
 cat > "$B/t.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gf_simple/_trace_gf_simple.jsonl');
+const trace = createTrace('dpt_disp_gf_simple/_trace.jsonl');
 const raw = readFileSync(trace.traceFilePath(), 'utf-8').trim();
 const events = JSON.parse('[' + raw.split('\n').join(',') + ']');
 const checks = events.filter(x => x.event === 'check');
@@ -189,6 +190,6 @@ node "$B/t.mjs"
 ## Step 5: 清理
 
 ```bash
-rm -rf $(node experiments/shared/new-disposable-bundle.mjs gf_simple)
+rm -rf dpt_disp_gf_*
 echo "✓ Cleaned up."
 ```

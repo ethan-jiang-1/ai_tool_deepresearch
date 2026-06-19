@@ -1,13 +1,14 @@
 ---
 schema: command-experiment/v1
-experiment: workflow-next
+experiment: workflow-chain
 case: medium
+weight: light
 case_goal: "验证 single-entry loader 的 dependency-first 执行，以及跨显式 load 调用的内容缓存与重新执行。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_wl_medium
-trace: dpt_disp_wl_medium/_trace_wl_medium.jsonl
+bundle: dpt_disp_wc_medium
+trace: dpt_disp_wc_medium/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -15,14 +16,14 @@ verdict: trace-jsonl
 
 由 coding agent 在真实 `dpt_disp_*` bundle 中执行。实验结果必须来自实际文件写入、Engine 调用和 trace event；允许通过文件系统读取中间产物；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
 
-# test-workflow-next-medium
+# test-workflow-chain-medium
 
 验证 `assessNode(entry)` 解析 entry closure，按依赖优先顺序执行，并在同一 runtime 中对已读依赖产生 cache_hit 但仍重新执行。
 
 ## Step 1: 创建真正的 DPT run bundle
 
 ```bash
-B=$(node experiments/shared/new-disposable-bundle.mjs wl_medium --nodes=experiments/prototype-workflow-next/nodes-workflow-next --force)
+B=$(node experiments/shared/new-disposable-bundle.mjs wc_medium --nodes=experiments/prototype-workflow-chain/nodes-workflow-chain --force)
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
 node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 ```
@@ -33,13 +34,13 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_wl_medium"
+B="dpt_disp_wc_medium"
 
 cat > $B/check_chain.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
-const trace = createTrace('dpt_disp_wl_medium/_trace_wl_medium.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_wc_medium/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wl-medium';
 trace.traceInit('wl-medium single-entry test', { source: SRC });
 
@@ -71,13 +72,13 @@ repeat-1.entry.md 和 repeat-2.entry.md 都依赖 shared-lib.dep.md。
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_wl_medium"
+B="dpt_disp_wc_medium"
 
 cat > $B/check_cache.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
-const trace = createTrace('dpt_disp_wl_medium/_trace_wl_medium.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_wc_medium/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wl-medium';
 
 const runtime = createWorkflowRuntime();
@@ -118,13 +119,13 @@ NODES_DIR="$B/exp/nodes" node $B/check_cache.mjs
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_wl_medium"
+B="dpt_disp_wc_medium"
 
 cat > $B/verify.mjs << 'JS2'
 import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 
-const trace = createTrace('dpt_disp_wl_medium/_trace_wl_medium.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_wc_medium/_trace.jsonl', { consoleEcho: false });
 
 const lines = readFileSync(trace.traceFilePath(), 'utf-8').trim().split('\n');
 const events = lines.map(JSON.parse);
@@ -134,11 +135,11 @@ const failed = checks.filter(e => !e.passed);
 
 console.log(`Result: ${checks.length} checks, ${passed.length} passed, ${failed.length} failed (${events.length} total events)`);
 if (failed.length > 0) {
-  for (const c of failed) console.log(`  FAIL ${c.step}: ${c.detail}`);
+  for (const c of failed) console.log(`\x1b[31m  FAIL ${c.step}: ${c.detail}\x1b[0m`);
   process.exit(1);
 }
-for (const c of passed) console.log(`  PASS ${c.step}`);
-console.log('ALL CHECKS PASSED');
+for (const c of passed) console.log(`\x1b[32m  PASS ${c.step}\x1b[0m`);
+console.log('\x1b[32mALL CHECKS PASSED\x1b[0m');
 
 trace.traceCleanup();
 JS2
@@ -151,5 +152,5 @@ node $B/verify.mjs
 ## Step 5: 清理
 
 ```bash
-rm -rf $(node experiments/shared/new-disposable-bundle.mjs wl_medium)
+rm -rf dpt_disp_wc_*
 ```

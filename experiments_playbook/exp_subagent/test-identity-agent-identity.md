@@ -2,13 +2,14 @@
 schema: command-experiment/v1
 experiment: subagent
 case: identity
+weight: heavy
 case_goal: "验证同一 subagent 模板在三个不同任务中产生不同 agentId、搜索路径和来源证据。"
 runner: coding-agent
 agent_mode: native-subagent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_gs_identity
-trace: dpt_disp_gs_identity/_trace_subagent.jsonl
+trace: dpt_disp_gs_identity/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -214,7 +215,7 @@ node "$B/collect.mjs" 2>&1 | grep -v "^\[trace\]"
 
 cat > "$B/audit.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
-const events = readFileSync('dpt_disp_gs_identity/_trace_subagent.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
+const events = readFileSync('dpt_disp_gs_identity/_trace.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
 const count = name => events.filter(e => e.event === name).length;
 
 // Basic counts
@@ -247,7 +248,7 @@ console.log('Unique slot keys: ' + uniqueKeys.size + ' / ' + resultEvents.length
 // Final verdict
 const pass = basic && allUnique && allDifferent && uniqueKeys.size === 3;
 console.log('');
-console.log(pass ? 'IDENTITY PASS ✅' : 'IDENTITY FAIL ❌');
+console.log(pass ? '\x1b[32mIDENTITY PASS\x1b[0m' : '\x1b[31mIDENTITY FAIL\x1b[0m');
 if (!pass) {
   if (!basic) console.log('FAIL: trace event counts wrong');
   if (!allUnique) console.log('FAIL: duplicate agent IDs');
@@ -261,6 +262,6 @@ node "$B/audit.mjs"
 ## Cleanup [MAIN/SHELL]
 
 ```bash
-rm -rf dpt_disp_gs_identity
+rm -rf dpt_disp_gs_*
 echo "cleaned: gs_identity"
 ```

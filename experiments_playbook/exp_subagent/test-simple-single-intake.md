@@ -2,13 +2,14 @@
 schema: command-experiment/v1
 experiment: subagent
 case: simple
+weight: heavy
 case_goal: "验证一个真实 native subagent 通过 Parent Relay 完成 dispatch、spawn、collect、merge 和 audit。"
 runner: coding-agent
 agent_mode: native-subagent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_gs_simple
-trace: dpt_disp_gs_simple/_trace_subagent.jsonl
+trace: dpt_disp_gs_simple/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -171,10 +172,10 @@ node "$B/collect.mjs" 2>&1 | grep -v "^\[trace\]"
 
 cat > "$B/audit.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
-const events = readFileSync('dpt_disp_gs_simple/_trace_subagent.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
+const events = readFileSync('dpt_disp_gs_simple/_trace.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
 const required = ['agent_spawn_requested', 'agent_runtime_started', 'agent_result_ready', 'agent_result_received', 'result_schema_validated', 'collect_result', 'merge_complete'];
 const pass = required.every(name => events.some(e => e.event === name));
-console.log(pass ? 'SIMPLE PASS' : 'SIMPLE FAIL');
+console.log(pass ? '\x1b[32mSIMPLE PASS\x1b[0m' : '\x1b[31mSIMPLE FAIL\x1b[0m');
 if (!pass) console.log('missing:', required.filter(name => !events.some(e => e.event === name)).join(', '));
 if (!pass) process.exit(1);
 JS
@@ -184,6 +185,6 @@ node "$B/audit.mjs"
 ## Cleanup [MAIN/SHELL]
 
 ```bash
-rm -rf dpt_disp_gs_simple
+rm -rf dpt_disp_gs_*
 echo "cleaned: gs_simple"
 ```

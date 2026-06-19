@@ -184,9 +184,10 @@ Naming:
 
 - Experiment directory: `experiments_playbook/exp_<mechanism>/`
 - Prototype directory, when used: `experiments/prototype-<mechanism>/`
-- Case playbook: `test-<case>.md`, where case names are chosen to prove one mechanism question at a time.
-- Disposable bundle: `dpt_disp_<short>_<case>/`
-- Trace file: `dpt_disp_<short>_<case>/_trace_<short>_<case>.jsonl`
+- Case playbook: `test-<complexity>-<what-it-tests>.md`, where complexity is `simple|medium|complex|identity` and the suffix names what the case actually proves (e.g. `test-simple-four-returns.md`). Suffix SHOULD be short kebab-case, 2-4 words.
+- Disposable bundle: `dpt_disp_<short>_<case>_*/` (random hex suffix appended for collision avoidance)
+- Trace file: `_trace.jsonl` (unified name across all playbooks; bundle directory provides isolation)
+- Runner entry: `experiments_playbook/RUN.md` (contains playbook manifest + execution instructions)
 - Fixture files copied into bundle: paths defined by the playbook and relevant spec.
 
 These names are target conventions, not the mechanism taxonomy. Future mechanisms may add case names, fixture types, helper inputs, or optional prototype-free organization when an OpenSpec change or playbook explains why; they must not change the ownership split above.
@@ -216,13 +217,14 @@ Every playbook starts with YAML frontmatter. It contains routing facts only, not
 schema: command-experiment/v1
 experiment: <mechanism>
 case: <case-name>
+weight: light | heavy               # light = pure JS E2E, heavy = real subagent spawn
 case_goal: "<one sentence: what this case proves>"
 runner: coding-agent
 agent_mode: <mode-if-agent-dependent>  # omit or set only when real Agent/subagent execution is required
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_<short>_<case>
-trace: dpt_disp_<short>_<case>/_trace_<short>_<case>.jsonl
+bundle: dpt_disp_<short>_<case>_*    # random hex suffix appended at creation time
+trace: dpt_disp_<short>_<case>_*/_trace.jsonl   # unified trace name across all playbooks
 verdict: trace-jsonl
 ---
 ```
@@ -346,6 +348,8 @@ Minimum verdict script behavior:
 - `process.exit(1)` if no checks exist or any check failed.
 
 Console output explains the verdict; trace data decides it.
+
+The verdict `console.log` SHALL use ANSI color: `\x1b[32m` (green) for PASS, `\x1b[31m` (red) for FAIL, followed by `\x1b[0m` (reset). When written inside `<< 'JS'` heredoc blocks, use single backslash `\x1b` — `\\x1b` (double backslash) produces literal text, not the ESC character.
 
 ---
 

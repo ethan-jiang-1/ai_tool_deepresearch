@@ -2,13 +2,14 @@
 schema: command-experiment/v1
 experiment: subagent
 case: medium
+weight: heavy
 case_goal: "验证两个真实 native subagent 的并行 spawn request 语义和 collect 前 trace 证据。"
 runner: coding-agent
 agent_mode: native-subagent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_gs_medium
-trace: dpt_disp_gs_medium/_trace_subagent.jsonl
+trace: dpt_disp_gs_medium/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -203,10 +204,10 @@ node "$B/collect.mjs" 2>&1 | grep -v "^\[trace\]"
 
 cat > "$B/audit.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
-const events = readFileSync('dpt_disp_gs_medium/_trace_subagent.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
+const events = readFileSync('dpt_disp_gs_medium/_trace.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
 const count = name => events.filter(e => e.event === name).length;
 const pass = count('agent_spawn_requested') === 2 && count('agent_runtime_started') === 2 && count('agent_result_ready') === 2 && count('agent_result_received') === 2 && count('result_schema_validated') === 2 && count('collect_result') === 2 && count('merge_complete') === 1;
-console.log(pass ? 'MEDIUM PASS' : 'MEDIUM FAIL');
+console.log(pass ? '\x1b[32mMEDIUM PASS\x1b[0m' : '\x1b[31mMEDIUM FAIL\x1b[0m');
 if (!pass) process.exit(1);
 JS
 node "$B/audit.mjs"
@@ -215,6 +216,6 @@ node "$B/audit.mjs"
 ## Cleanup [MAIN/SHELL]
 
 ```bash
-rm -rf dpt_disp_gs_medium
+rm -rf dpt_disp_gs_*
 echo "cleaned: gs_medium"
 ```

@@ -51,7 +51,7 @@
 //
 // ## On-disk paths
 // Engine resolves files from `NODES_DIR` (env var). Default:
-//   join(__dirname, 'nodes-workflow-next')
+//   join(__dirname, 'nodes-workflow-chain')
 // Callers should set NODES_DIR explicitly — the default only works when the
 // engine and nodes dir are co-located.
 //
@@ -69,7 +69,7 @@ import vm from 'node:vm';
 import { z } from 'zod';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const NODES_DIR = process.env.NODES_DIR || join(__dirname, 'nodes-workflow-next');
+const NODES_DIR = process.env.NODES_DIR || join(__dirname, 'nodes-workflow-chain');
 
 // ============================================================
 // Internal: emit helpers
@@ -140,7 +140,7 @@ export function createWorkflowRuntime(source = 'engine') {
  */
 export function nodePath(fileRef) {
   if (fileRef.includes('..') || fileRef.startsWith('/') || basename(fileRef) !== fileRef) {
-    throw new Error(`Invalid fileRef "${fileRef}": must be a plain filename within nodes-workflow-next/`);
+    throw new Error(`Invalid fileRef "${fileRef}": must be a plain filename within nodes-workflow-chain/`);
   }
   return join(NODES_DIR, fileRef);
 }

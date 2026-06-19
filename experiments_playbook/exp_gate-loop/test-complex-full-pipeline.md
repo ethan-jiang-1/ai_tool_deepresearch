@@ -2,12 +2,13 @@
 schema: command-experiment/v1
 experiment: gate-loop
 case: complex
+weight: light
 case_goal: "验证 checkGate 全组合：多规则优先级、schema/check/blocked 三种 fail、MD PDCA 回路。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_gl_complex
-trace: dpt_disp_gl_complex/_trace_gl_complex.jsonl
+trace: dpt_disp_gl_complex/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -51,7 +52,7 @@ B="dpt_disp_gl_complex"
 
 cat > "$B/t.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gl_complex/_trace_gl_complex.jsonl');
+const trace = createTrace('dpt_disp_gl_complex/_trace.jsonl');
 trace.traceInit('gl-playbook/complex', { source: 'gl-playbook/complex' });
 JS
 node "$B/t.mjs" > /dev/null 2>&1
@@ -67,7 +68,7 @@ B="dpt_disp_gl_complex"
 
 cat > "$B/t.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gl_complex/_trace_gl_complex.jsonl');
+const trace = createTrace('dpt_disp_gl_complex/_trace.jsonl');
 import { z } from 'zod';
 import { checkGate } from '../DPT_FRAMEWORK/engine/gate-loop.mjs';
 
@@ -169,7 +170,7 @@ B="dpt_disp_gl_complex"
 cat > "$B/t.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gl_complex/_trace_gl_complex.jsonl');
+const trace = createTrace('dpt_disp_gl_complex/_trace.jsonl');
 const raw = readFileSync(trace.traceFilePath(), 'utf-8').trim();
 const events = JSON.parse('[' + raw.split('\n').join(',') + ']');
 const checks = events.filter(x => x.event === 'check');
@@ -191,6 +192,6 @@ node "$B/t.mjs"
 ## Step 5: 清理
 
 ```bash
-rm -rf $(node experiments/shared/new-disposable-bundle.mjs gl_complex)
+rm -rf dpt_disp_gl_*
 echo "✓ Cleaned up."
 ```

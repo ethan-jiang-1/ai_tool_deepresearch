@@ -2,12 +2,13 @@
 schema: command-experiment/v1
 experiment: workflow-fsm
 case: medium
+weight: light
 case_goal: "验证 retry 自环（error → 自环, success → advance）和 halt（undefined status）。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_wfsm_medium
-trace: dpt_disp_wfsm_medium/_trace_wfsm_medium.jsonl
+trace: dpt_disp_wfsm_medium/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -53,7 +54,7 @@ B="dpt_disp_wfsm_medium"
 cat > $B/run_retry.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
-const trace = createTrace('dpt_disp_wfsm_medium/_trace_wfsm_medium.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_wfsm_medium/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wfsm-medium'; trace.traceInit('wfsm-medium: retry step-by-step', { source: SRC });
 const NODES_DIR = process.env.NODES_DIR;
 const m = createMachine(`${NODES_DIR}/wf-retry.fsm.json`, trace);
@@ -95,7 +96,7 @@ B="dpt_disp_wfsm_medium"
 cat > $B/run_halt.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
-const trace = createTrace('dpt_disp_wfsm_medium/_trace_wfsm_medium.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_wfsm_medium/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wfsm-medium'; const NODES_DIR = process.env.NODES_DIR;
 const m = createMachine(`${NODES_DIR}/wf-halt.fsm.json`, trace);
 
@@ -119,7 +120,7 @@ B="dpt_disp_wfsm_medium"
 
 node -e "
 const fs = require('fs');
-const lines = fs.readFileSync('$B/_trace_wfsm_medium.jsonl','utf-8').trim().split('\n');
+const lines = fs.readFileSync('$B/_trace.jsonl','utf-8').trim().split('\n');
 const events = lines.map(JSON.parse);
 const checks = events.filter(e => e.event === 'check');
 const p = checks.filter(e => e.passed).length;
@@ -128,7 +129,7 @@ const retryTrans = events.filter(e => e.event === 'transition' && e.currentNode 
 console.log('checks: ' + checks.length + ' p=' + p + ' f=' + f + ' retry_transitions=' + retryTrans.length + ' tot=' + events.length);
 console.log('  retry statuses: ' + JSON.stringify(retryTrans.map(e => e.status)));
 const pass = p === 8 && f === 0 && retryTrans[0].status === 'error' && retryTrans[1].status === 'success';
-console.log(pass ? '\\x1b[32mMEDIUM PASS\\x1b[0m' : '\\x1b[31mMEDIUM FAIL\\x1b[0m');
+console.log(pass ? '\x1b[32mMEDIUM PASS\x1b[0m' : '\x1b[31mMEDIUM FAIL\x1b[0m');
 if (!pass) process.exit(1);
 "
 ```
@@ -138,5 +139,5 @@ if (!pass) process.exit(1);
 ## Step 5: 清理
 
 ```bash
-rm -rf $(node experiments/shared/new-disposable-bundle.mjs wfsm_medium)
+rm -rf dpt_disp_wfsm_*
 ```

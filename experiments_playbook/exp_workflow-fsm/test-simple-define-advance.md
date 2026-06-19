@@ -2,12 +2,13 @@
 schema: command-experiment/v1
 experiment: workflow-fsm
 case: simple
+weight: light
 case_goal: "FSM Define→Advance→Verify：加载定义，逐步 advance(status)，每步从 trace 核实当前节点和转移"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_wfsm_simple
-trace: dpt_disp_wfsm_simple/_trace_wfsm_simple.jsonl
+trace: dpt_disp_wfsm_simple/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -49,7 +50,7 @@ B="dpt_disp_wfsm_simple"
 cat > $B/define.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
-const trace = createTrace('dpt_disp_wfsm_simple/_trace_wfsm_simple.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_wfsm_simple/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wfsm-simple'; trace.traceInit('wfsm-simple: define→advance→verify', { source: SRC });
 const NODES_DIR = process.env.NODES_DIR;
 const m = createMachine(`${NODES_DIR}/wf-simple.fsm.json`, trace);
@@ -71,7 +72,7 @@ B="dpt_disp_wfsm_simple"
 cat > $B/advance1.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
-const trace = createTrace('dpt_disp_wfsm_simple/_trace_wfsm_simple.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_wfsm_simple/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wfsm-simple'; const NODES_DIR = process.env.NODES_DIR;
 const m = createMachine(`${NODES_DIR}/wf-simple.fsm.json`, trace);
 trace.traceEntry('check', { source: SRC, step: 'advance1:before',
@@ -94,7 +95,7 @@ B="dpt_disp_wfsm_simple"
 cat > $B/advance2.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
-const trace = createTrace('dpt_disp_wfsm_simple/_trace_wfsm_simple.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_wfsm_simple/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wfsm-simple'; const NODES_DIR = process.env.NODES_DIR;
 const m = createMachine(`${NODES_DIR}/wf-simple.fsm.json`, trace);
 m.advance('success'); m.advance('success');
@@ -117,7 +118,7 @@ B="dpt_disp_wfsm_simple"
 cat > $B/advance3.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
-const trace = createTrace('dpt_disp_wfsm_simple/_trace_wfsm_simple.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_wfsm_simple/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wfsm-simple'; const NODES_DIR = process.env.NODES_DIR;
 const m = createMachine(`${NODES_DIR}/wf-simple.fsm.json`, trace);
 m.advance('success'); m.advance('success'); m.advance('success');
@@ -140,7 +141,7 @@ B="dpt_disp_wfsm_simple"
 
 node -e "
 const fs = require('fs');
-const lines = fs.readFileSync('$B/_trace_wfsm_simple.jsonl','utf-8').trim().split('\n');
+const lines = fs.readFileSync('$B/_trace.jsonl','utf-8').trim().split('\n');
 const events = lines.map(JSON.parse);
 const checks = events.filter(e => e.event === 'check');
 const p = checks.filter(e => e.passed).length;
@@ -148,7 +149,7 @@ const f = checks.filter(e => !e.passed).length;
 const transitions = events.filter(e => e.event === 'transition');
 console.log('checks: ' + checks.length + ' p=' + p + ' f=' + f + ' transitions=' + transitions.length + ' tot=' + events.length);
 const pass = p === 10 && f === 0 && transitions.length === 6;
-console.log(pass ? '\\x1b[32mSIMPLE PASS\\x1b[0m' : '\\x1b[31mSIMPLE FAIL\\x1b[0m');
+console.log(pass ? '\x1b[32mSIMPLE PASS\x1b[0m' : '\x1b[31mSIMPLE FAIL\x1b[0m');
 if (!pass) process.exit(1);
 "
 ```
@@ -158,5 +159,5 @@ if (!pass) process.exit(1);
 ## Step 7: 清理
 
 ```bash
-rm -rf $(node experiments/shared/new-disposable-bundle.mjs wfsm_simple)
+rm -rf dpt_disp_wfsm_*
 ```

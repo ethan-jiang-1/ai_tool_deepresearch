@@ -11,6 +11,7 @@
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, existsSync, cpSync, rmSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { randomInt } from 'node:crypto';
 import {
   StatusSchema,
   QueueSchema,
@@ -32,7 +33,7 @@ const force = args.includes('--force');
 
 if (!bundleName) {
   console.error('Usage: node new-bundle.mjs <bundleName> [--nodes <dir>] [--force]');
-  console.error('  Example: node new-bundle.mjs wl_simple --nodes=experiments/prototype-workflow-next/nodes-workflow-next --force');
+  console.error('  Example: node new-bundle.mjs wc_simple --nodes=experiments/prototype-workflow-chain/nodes-workflow-chain --force');
   process.exit(1);
 }
 
@@ -45,7 +46,9 @@ try {
   process.exit(1);
 }
 
-const bundleDir = join(repoRoot, `dpt_disp_${bundleName}`);
+// Append random hex digit to prevent same-case collision on re-run
+const hexSuffix = randomInt(0, 16).toString(16);
+const bundleDir = join(repoRoot, `dpt_disp_${bundleName}_${hexSuffix}`);
 
 if (existsSync(bundleDir)) {
   if (force) {

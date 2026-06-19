@@ -2,12 +2,13 @@
 schema: command-experiment/v1
 experiment: gate-loop
 case: medium
+weight: light
 case_goal: "验证 MD PDCA 回路：checkGate fail → MD 读 say/errors 修复 → retry checkGate → pass。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_gl_medium
-trace: dpt_disp_gl_medium/_trace_gl_medium.jsonl
+trace: dpt_disp_gl_medium/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -51,7 +52,7 @@ B="dpt_disp_gl_medium"
 
 cat > "$B/t.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gl_medium/_trace_gl_medium.jsonl');
+const trace = createTrace('dpt_disp_gl_medium/_trace.jsonl');
 trace.traceInit('gl-playbook/medium', { source: 'gl-playbook/medium' });
 JS
 node "$B/t.mjs" > /dev/null 2>&1
@@ -67,7 +68,7 @@ B="dpt_disp_gl_medium"
 
 cat > "$B/t.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gl_medium/_trace_gl_medium.jsonl');
+const trace = createTrace('dpt_disp_gl_medium/_trace.jsonl');
 import { z } from 'zod';
 import { checkGate } from '../DPT_FRAMEWORK/engine/gate-loop.mjs';
 
@@ -159,7 +160,7 @@ B="dpt_disp_gl_medium"
 cat > "$B/t.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gl_medium/_trace_gl_medium.jsonl');
+const trace = createTrace('dpt_disp_gl_medium/_trace.jsonl');
 const raw = readFileSync(trace.traceFilePath(), 'utf-8').trim();
 const events = JSON.parse('[' + raw.split('\n').join(',') + ']');
 const checks = events.filter(x => x.event === 'check');
@@ -181,6 +182,6 @@ node "$B/t.mjs"
 ## Step 5: 清理
 
 ```bash
-rm -rf $(node experiments/shared/new-disposable-bundle.mjs gl_medium)
+rm -rf dpt_disp_gl_*
 echo "✓ Cleaned up."
 ```

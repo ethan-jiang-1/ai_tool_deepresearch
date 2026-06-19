@@ -22,7 +22,11 @@
 AGT-001: agent-testing — Agent-assisted test playbook for gate-loop
 AGT-002: "agent-testing — Agent-assisted test playbook for gate-fork (3 levels: simple/medium/complex)"
 AGT-003: "agent-testing — Agent-assisted test playbook for subagent (3 levels: simple/medium/complex)"
-AGT-004: "agent-testing — Agent-assisted test playbook for workflow-next (3 levels: simple/medium/complex) [DEPRECATED]"
+AGT-004: "agent-testing — Agent-assisted test playbook for workflow-chain (3 levels: simple/medium/complex) [DEPRECATED]"
+AGT-005: agent-testing — Playbook frontmatter weight field (light|heavy) for execution cost distinction
+AGT-006: agent-testing — Disposable bundle names include random hex suffix to prevent same-case collision
+AGT-007: "agent-testing — Unified trace file naming to _trace.jsonl across all playbooks"
+AGT-008: agent-testing — Verdict console.log uses ANSI color (green PASS, red FAIL)
 AGQ-001: agentic-queue — Structured machine queue state and task card schema
 AGQ-002: agentic-queue — Queue Manager enqueue, claim, complete, fail, promote, and refill operations
 AGQ-003: agentic-queue — Conservative urgent preemption without hidden current-slot execution
@@ -61,7 +65,7 @@ SUS-001: subagent-slots — Subagent slot lifecycle state machine and wave-scope
 SEG-001: seg2node — Global rename segments to nodes across code, paths, env vars, and capability names
 TEF-001: test-fixtures — Fixture framework for integration tests
 WDM-001: workflow-dynamic-md-load — Single-entry just-in-time Markdown closure loading and execution [DEPRECATED]
-WLO-001: workflow-next-observability — Runtime receipts and trace events for workflow-next single-entry loader experiments [DEPRECATED]
+WLO-001: workflow-chain-observability — Runtime receipts and trace events for workflow-chain single-entry loader experiments [DEPRECATED]
 WMD-001: workflow-md-dependencies — Markdown frontmatter requires dependency closure resolution [DEPRECATED]
 WFS-001: workflow-fsm-definition — FSM definition file loading, validation, and structure
 WFS-002: workflow-fsm-transition — Pure transition table lookup (resolveTransition) with Machine.advance()
@@ -76,3 +80,5 @@ TRW-002: trace-writer — Trace output validates against TraceEntrySchema contra
 EXS-001: experiment-shared-infra — experiments/shared/ directory for experiment-scoped shared infrastructure
 EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_FRAMEWORK/command_experiments/scripts/ to experiments/shared/"
 SCO-009: schema-core — QueueWorkUnitSchema upgrade for rb_queue.json (5 slots nullable, refill_pool typed)
+PLR-001: playbook-runner — RUN.md as unified runner entry with playbook manifest and execution instructions
+PLR-003: playbook-runner — Runner execution contract and summary report

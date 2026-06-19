@@ -2,12 +2,13 @@
 schema: command-experiment/v1
 experiment: agentic-queue
 case: complex
+weight: light
 case_goal: "验证 invalid task、missing receipt、unsafe-current guard、failure repair 和 empty queue blocker。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_agq_complex
-trace: dpt_disp_agq_complex/_trace_agq_cli.jsonl
+trace: dpt_disp_agq_complex/_trace.jsonl
 verdict: trace-jsonl
 req: AGQ-006
 ---
@@ -61,7 +62,7 @@ import {
   makeItem,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_complex/_trace_agq_cli.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_agq_complex/_trace.jsonl', { consoleEcho: false });
 trace.traceInit('agq-playbook/complex', { source: 'agq-playbook/complex' });
 
 const invalid = makeItem({ work_id: 'complex-invalid' });
@@ -98,7 +99,7 @@ import {
   makeItem,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_complex/_trace_agq_cli.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_agq_complex/_trace.jsonl', { consoleEcho: false });
 
 let queue = createQueue('agq-complex');
 queue = enqueue(queue, makeItem({
@@ -140,7 +141,7 @@ import {
   makeItem,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_complex/_trace_agq_cli.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_agq_complex/_trace.jsonl', { consoleEcho: false });
 
 let queue = loadQueue('dpt_disp_agq_complex');
 let guardWorked = false;
@@ -180,7 +181,7 @@ import {
   makeItem,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_complex/_trace_agq_cli.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_agq_complex/_trace.jsonl', { consoleEcho: false });
 
 let queue = loadQueue('dpt_disp_agq_complex');
 const unsafe = preempt(queue, makeItem({ work_id: 'complex-urgent' }), {
@@ -223,7 +224,7 @@ import {
   makeItem,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_complex/_trace_agq_cli.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_agq_complex/_trace.jsonl', { consoleEcho: false });
 
 let repairQueue = createQueue('agq-complex-repair');
 repairQueue = enqueue(repairQueue, makeItem({ work_id: 'complex-fail' }));
@@ -261,7 +262,7 @@ import {
   claim,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_complex/_trace_agq_cli.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_agq_complex/_trace.jsonl', { consoleEcho: false });
 
 const emptyClaim = claim(createQueue('agq-complex-empty'), { actor: 'main-agent' });
 trace.traceEntry('check', {
@@ -290,12 +291,12 @@ cat > "$B/verdict.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 
-const trace = createTrace('dpt_disp_agq_complex/_trace_agq_cli.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_agq_complex/_trace.jsonl', { consoleEcho: false });
 const events = readFileSync(trace.traceFilePath(), 'utf-8').trim().split('\n').map(JSON.parse);
 const checks = events.filter((event) => event.event === 'check' && event.source === 'agq-playbook/complex');
 const pass = checks.length >= 6 && checks.every((event) => event.passed === true);
 console.log('checks:' + checks.length + ' total:' + events.length);
-console.log(pass ? 'COMPLEX PASS' : 'COMPLEX FAIL');
+console.log(pass ? '\x1b[32mCOMPLEX PASS\x1b[0m' : '\x1b[31mCOMPLEX FAIL\x1b[0m');
 if (!pass) process.exit(1);
 trace.traceCleanup();
 JS
@@ -310,6 +311,6 @@ node "$B/verdict.mjs"
 ## Step 4: 清理
 
 ```bash
-rm -rf "$(node experiments/shared/new-disposable-bundle.mjs agq_complex)"
+rm -rf dpt_disp_agq_*
 echo "Cleaned up."
 ```

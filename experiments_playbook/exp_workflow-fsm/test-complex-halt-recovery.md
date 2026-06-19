@@ -2,12 +2,13 @@
 schema: command-experiment/v1
 experiment: workflow-fsm
 case: complex
+weight: light
 case_goal: "验证 FSM transition 级 halt 场景：undefined status、unknown node，以及 halt 后的 recovery。错误不污染 Engine，可恢复运行合法 FSM。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_wfsm_complex
-trace: dpt_disp_wfsm_complex/_trace_wfsm_complex.jsonl
+trace: dpt_disp_wfsm_complex/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -53,7 +54,7 @@ B="dpt_disp_wfsm_complex"
 cat > $B/run.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine, resolveTransition } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
-const trace = createTrace('dpt_disp_wfsm_complex/_trace_wfsm_complex.jsonl', { consoleEcho: false });
+const trace = createTrace('dpt_disp_wfsm_complex/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wfsm-complex'; trace.traceInit('wfsm-complex: halt + recovery', { source: SRC });
 const NODES_DIR = process.env.NODES_DIR;
 
@@ -108,7 +109,7 @@ B="dpt_disp_wfsm_complex"
 
 node -e "
 const fs = require('fs');
-const lines = fs.readFileSync('$B/_trace_wfsm_complex.jsonl','utf-8').trim().split('\n');
+const lines = fs.readFileSync('$B/_trace.jsonl','utf-8').trim().split('\n');
 const events = lines.map(JSON.parse);
 const checks = events.filter(e => e.event === 'check');
 const p = checks.filter(e => e.passed).length;
@@ -116,7 +117,7 @@ const f = checks.filter(e => !e.passed).length;
 const transitions = events.filter(e => e.event === 'transition');
 console.log('checks: ' + checks.length + ' p=' + p + ' f=' + f + ' transitions=' + transitions.length + ' tot=' + events.length);
 const pass = p === 7 && f === 0 && transitions.length === 5;
-console.log(pass ? '\\x1b[32mCOMPLEX PASS\\x1b[0m' : '\\x1b[31mCOMPLEX FAIL\\x1b[0m');
+console.log(pass ? '\x1b[32mCOMPLEX PASS\x1b[0m' : '\x1b[31mCOMPLEX FAIL\x1b[0m');
 if (!pass) process.exit(1);
 "
 ```
@@ -126,5 +127,5 @@ if (!pass) process.exit(1);
 ## Step 4: 清理
 
 ```bash
-rm -rf $(node experiments/shared/new-disposable-bundle.mjs wfsm_complex)
+rm -rf dpt_disp_wfsm_*
 ```

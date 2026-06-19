@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // NODES_DIR must be set before the engine module loads — it's evaluated at import time.
-process.env.NODES_DIR = join(__dirname, '../../experiments/prototype-workflow-next/nodes-workflow-next');
+process.env.NODES_DIR = join(__dirname, '../../experiments/prototype-workflow-chain/nodes-workflow-chain');
 
 const {
   NodeFrontmatter,
