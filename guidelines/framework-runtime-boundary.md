@@ -232,9 +232,11 @@ Gate CLI commands MUST NOT infer active run state from chat memory or write resu
 | Agent-facing lifecycle node target | `DPT_FRAMEWORK/workflows/nodes/phases/` |
 | Agent-facing shared workflow context target | `DPT_FRAMEWORK/workflows/nodes/shared/` |
 | Workflow manifest target | `DPT_FRAMEWORK/workflows/manifest.json` |
+| Operator/Agent command instructions | `DPT_FRAMEWORK/command_playbook/` |
 | Gate definition schema target | `DPT_FRAMEWORK/schema/contracts/gate-definition.mjs` |
 | Gate rule definition target | `DPT_FRAMEWORK/schema/gate_definitions/gate-*.definition.json` |
 | Gate evaluator/loader code target | `DPT_FRAMEWORK/engine/gates/` |
+| Gate shared helper code target | `DPT_FRAMEWORK/engine/helpers/` |
 | Gate CLI wrapper target | `DPT_FRAMEWORK/cli/gates/check-gate-*.mjs` |
 | Bundle initial template | `DPT_FRAMEWORK/rb_templates/` |
 | Current run profile / HITL data | `dpt_rb_*/rb_profile.yaml` |

@@ -82,3 +82,11 @@ EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_F
 SCO-009: schema-core — QueueWorkUnitSchema upgrade for rb_queue.json (5 slots nullable, refill_pool typed)
 PLR-001: playbook-runner — RUN.md as unified runner entry with playbook manifest and execution instructions
 PLR-003: playbook-runner — Runner execution contract and summary report
+WDC-001: workflow-directory-contract — Read-only framework assets boundary (DPT_FRAMEWORK/ = read-only, dpt_rb_*/ = mutable runtime truth)
+WDC-002: workflow-directory-contract — Workflow node directory structure (phases/ and shared/ under workflows/nodes/)
+WDC-003: workflow-directory-contract — Gate artifacts location and shape (gate definitions, CLI, engine, helpers, schema contract)
+WDC-004: workflow-directory-contract — Runtime bundle canonical structure (rb_plan.md, rb_profile.yaml, rb_status.json, rb_queue.json, rb_trace.jsonl, seed_topics/, reference/, artifacts/, final/, _cache/)
+WDC-005: workflow-directory-contract — Test and experiment boundary (tests/ for regression, experiments_playbook/ for Agent-driven E2E)
+WDC-006: workflow-directory-contract — Naming conventions for workflow foundation artifacts (phase-*.md, shared-*.md, gate-*.definition.json, check-gate-*.mjs, dpt_rb_*, exp_*)
+WDC-007: workflow-directory-contract — Anti-mixing rules (what must not go where, including command_playbook/ boundary)
+WDC-008: workflow-directory-contract — Single canonical workflow package (v1 single workflow, one framework serves multiple bundles)
