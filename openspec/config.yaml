@@ -133,32 +133,11 @@ context: |
 
   根目录约定 (Framework ↔ Bundle 同级, 不拷贝):
     docs/                       — 架构文档 (architect/) 与 V12 迁移记录 (v12-migration/)
-    DPT_FRAMEWORK/              — 框架目录 (共享, 只读, 唯一一份)
-      AGENT_GUIDE.md            — Agent 守则
-      cli/                      — JS 程序, Agent 用 node 调用 (validate-bundle.mjs, inspect-bundle.mjs)
-      COMMANDS.md               — 命令索引
-      command_playbook/         — 一次性命令, Agent 读的 Markdown (如 instantiate-run-bundle.md)
-      schema/                   — Zod 类型 + contracts (Check 层)
-                                   enums.mjs, index.mjs, contracts/{gate,plan,profile,queue,status,trace}.mjs
-      workflows/                — 持续运行的 agentic 流程 (execution, queue loop, HITL)
     experiments_playbook/        — Agent 测试 playbook (见实验体系)
       exp_{component}/            # 每个机制一个子目录
         test-simple.md            # 简单场景（核心路径）
         test-medium.md            # 中等场景（分支 + 修复）
         test-complex.md           # 复杂场景（全流程 + C&I）
-    dpt_rb_{name}/              — Runtime Bundle (可多个, 数据隔离, 通过 ../DPT_FRAMEWORK/ 引用)
-      _cache/                   — 源获取暂存
-      artifacts/                — 衍生合成 (wave1/ + wave2/ + README.md)
-      final/                    — 最终报告
-      original_topic/           — 原始大话题材料 (可选)
-      rb_plan.md                — 话题设计 (Markdown + JSON frontmatter)
-      rb_profile.yaml           — 用户意图 (YAML)
-      rb_queue.json             — 执行队列 (JSON)
-      rb_status.json            — 运行时状态 (JSON)
-      rb_trace.jsonl            — 诊断日志 (JSON Lines, 追加式)
-      reference/                — 本地证据
-      seed_topics/              — 种子话题文件
-      START_FROM_HERE.md        — 启动入口 (Agent 首先读这个)
     experiments/                — 原型实验 (理想化, 冻结, 见实验体系)
     openspec/                   — OpenSpec spec-driven development
       changes/                  — change proposals (deltas) + archive
@@ -166,6 +145,31 @@ context: |
       governance/               — 项目级治理扩展（非 OpenSpec 原生），详见 context「治理工具」节
       specs/                    — main specs（capability requirements, source of truth）
     tests/                      — 回归测试 (随代码演进)
+
+    Framework — 唯一共享框架目录:
+      DPT_FRAMEWORK/              — reusable framework assets；运行时只读，不保存 run state
+        README.md                 — framework runtime guide
+        COMMANDS.md               — 命令索引
+        cli/                      — 当前 framework-level CLI，如 instantiate/validate/inspect/operate queue
+        command_playbook/         — Agent/operator 可读命令说明
+        engine/                   — deterministic engine code 与 trace utility
+        schema/                   — Zod enums、index、contracts/{gate,plan,profile,queue,status,trace}.mjs
+        rb_templates/             — 实例化 run bundle 的初始模板
+        workflows/                — workflow-foundation target；v1 单主 workflow，不是多 workflow namespace
+
+    Bundle — 可多个、彼此隔离的运行时目录:
+      dpt_rb_{name}/              — production Runtime Bundle，通过 ../DPT_FRAMEWORK/ 引用同一套 framework
+        START_FROM_HERE.md        — 启动入口
+        rb_plan.md                — 话题设计 (Markdown + JSON frontmatter)
+        rb_profile.yaml           — 用户意图 / HITL profile
+        rb_status.json            — phase/gate 状态摘要
+        rb_queue.json             — 执行队列
+        rb_trace.jsonl            — append-only 诊断日志
+        seed_topics/              — 种子话题文件
+        reference/                — 本地证据
+        artifacts/                — 阶段产物，如 wave1/、wave2/
+        final/                    — 最终报告
+        _cache/                   — 可重建缓存/projection，不是 authority
 
 rules:
   proposal:

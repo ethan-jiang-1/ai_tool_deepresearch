@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // @impl CMI-004: instantiate-run-bundle.mjs — Create a production DPT run bundle at repo root
-// Usage: node instantiate-run-bundle.mjs <name> [--force]
+// Usage: node instantiate-run-bundle.mjs <name>
 // Creates dpt_rb_<name>/ from DPT_FRAMEWORK/rb_templates/.
 // Prints absolute bundle path to stdout for shell consumption.
 // Exit: 0 = created, 1 = FAIL
@@ -22,11 +22,16 @@ const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
 
 const args = process.argv.slice(2);
 const bundleName = args[0];
-const force = args.includes('--force');
+const forceRequested = args.includes('--force');
 
 if (!bundleName) {
-  console.error('Usage: node instantiate-run-bundle.mjs <name> [--force]');
+  console.error('Usage: node instantiate-run-bundle.mjs <name>');
   console.error('  Creates dpt_rb_<name>/ at repo root from DPT_FRAMEWORK/rb_templates/');
+  process.exit(1);
+}
+
+if (forceRequested) {
+  console.error(`${R}Error: production bundle overwrite is not allowed. Choose a new bundle name.${B}`);
   process.exit(1);
 }
 
@@ -43,12 +48,8 @@ const bundleDir = join(repoRoot, `dpt_rb_${bundleName}`);
 
 // Handle existing
 if (existsSync(bundleDir)) {
-  if (force) {
-    rmSync(bundleDir, { recursive: true, force: true });
-  } else {
-    console.error(`${R}Error: ${bundleDir} already exists. Use --force to overwrite.${B}`);
-    process.exit(1);
-  }
+  console.error(`${R}Error: ${bundleDir} already exists. Production bundles are never overwritten; choose a new bundle name.${B}`);
+  process.exit(1);
 }
 
 // ── Create directory structure ──

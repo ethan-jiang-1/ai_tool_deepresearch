@@ -15,6 +15,7 @@ defers_to:
   - DPT_FRAMEWORK/schema/
 siblings:
   - guidelines/project-charter.md
+  - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
 ---
 

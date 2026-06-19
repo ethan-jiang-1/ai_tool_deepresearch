@@ -13,6 +13,7 @@ defers_to:
   - openspec/specs/
 siblings:
   - guidelines/project-charter.md
+  - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-dispatch-scheduler-mechanism.md
 ---
@@ -26,8 +27,9 @@ siblings:
 Read in this order:
 
 1. `project-charter.md` — stable project principles, authority boundaries, and current project surfaces.
-2. `command-experiments.md` — target guidance for durable command experiment shape and boundaries.
-3. `agentic-dispatch-scheduler-mechanism.md` — draft design for a future Engine-side dispatch scheduler; not current runtime truth.
+2. `framework-runtime-boundary.md` — directory and authority boundary between read-only framework assets and mutable runtime bundles.
+3. `command-experiments.md` — target guidance for durable command experiment shape and boundaries.
+4. `agentic-dispatch-scheduler-mechanism.md` — draft design for a future Engine-side dispatch scheduler; not current runtime truth.
 
 Detailed requirements live in `openspec/specs/`. Project-level OpenSpec rules live in `openspec/config.yaml`.
 
@@ -72,6 +74,7 @@ This directory cannot decide:
 | If you are... | Read / update | Do not do |
 |---------------|---------------|-----------|
 | Starting repo work | `project-charter.md`, then relevant specs | Start from a draft mechanism document |
+| Unsure whether something belongs in `DPT_FRAMEWORK/` or a bundle | `framework-runtime-boundary.md` | Decide by file extension or chat habit |
 | Writing or revising a command experiment playbook | `command-experiments.md` and the relevant accepted spec or active OpenSpec change | Invent setup or verdict authority locally |
 | Changing accepted behavior | OpenSpec proposal/spec/tasks | Patch only `guidelines/` |
 | Designing future ds behavior | `agentic-dispatch-scheduler-mechanism.md` | Treat ds as implemented or Agent-owned |
@@ -82,6 +85,7 @@ This directory cannot decide:
 | Change target | Primary path | Guidance update |
 |---------------|--------------|-----------------|
 | Project principle, layer boundary, or reading route | `guidelines/project-charter.md` or this index | Keep it short; do not add runtime behavior |
+| Framework-vs-runtime directory boundary | `guidelines/framework-runtime-boundary.md` | Do not encode concrete schema fields there |
 | Accepted capability behavior | OpenSpec change under `openspec/changes/`, then `openspec/specs/` | Link or summarize only after acceptance |
 | Schema, state machine, receipt, gate, or trace contract | `DPT_FRAMEWORK/`, `tests/`, and accepted specs via OpenSpec | Do not define it only in prose |
 | Command experiment execution pattern | `command-experiments.md` plus `agent-testing` spec or active experiment-framework change when normative | Avoid local one-off verdict rules |
@@ -93,6 +97,7 @@ This directory cannot decide:
 | File | Reader | Purpose | Not For | Defers To |
 |------|--------|---------|---------|-----------|
 | `project-charter.md` | Any Agent or maintainer | Repo-wide charter, authority order, hard boundaries | Detailed capability behavior | `AGENTS.md`, `openspec/config.yaml`, `openspec/specs/` |
+| `framework-runtime-boundary.md` | Any Agent or maintainer touching framework/run files | Directory and authority boundary for read-only framework assets vs mutable runtime bundles | Concrete schema fields, CLI flags, or current run truth | `AGENTS.md`, `openspec/config.yaml`, `openspec/specs/`, `DPT_FRAMEWORK/schema/` |
 | `command-experiments.md` | Experiment author/executor | How to prove mechanisms with real runtime contexts and trace-backed verdicts | General project philosophy or concrete capability behavior | `agent-testing` specs, active experiment-framework change, accepted specs |
 | `agentic-dispatch-scheduler-mechanism.md` | Designer of future ds capability | Draft Engine-side scheduler model and open questions | Current runtime behavior | Future OpenSpec change and framework contracts |
 
@@ -105,8 +110,12 @@ This directory cannot decide:
 | `experiments_playbook/exp_*` playbooks | Current | Yes — 6 experiment families, 20 playbooks | Agent-readable experiment playbooks |
 | `DPT_FRAMEWORK/engine/` | Current | Yes — 6 engines (queue-manager, gate-loop, gate-fork, subagent-relay, workflow-chain, workflow-fsm) | Production engine code |
 | `DPT_FRAMEWORK/engine/trace.mjs` | Current | Yes — unified trace writer, `createTrace` factory | Trace writer for all engines and playbooks |
+| `DPT_FRAMEWORK/` as read-only framework assets | Current convention | Yes | Framework code, definitions, templates, and Agent-facing instructions; not run state |
 | `experiments/shared/new-disposable-bundle.mjs` | Current | Yes | Shared experiment disposable-bundle setup |
 | `check` trace verdict events | Current | Used by all 20 playbooks | Trace-backed verdict convention |
+| `DPT_FRAMEWORK/workflows/manifest.json` + `workflows/nodes/` | Target | No | Single canonical workflow package for workflow-foundation; not a multi-workflow namespace |
+| `DPT_FRAMEWORK/schema/gate_definitions/` | Target | No | Future read-only gate definition JSON |
+| `DPT_FRAMEWORK/engine/gates/` and `DPT_FRAMEWORK/cli/gates/` | Target | No | Future gate loader/evaluator and one-gate-per-CLI wrappers |
 | `DPT_FRAMEWORK/cli/ds.mjs` | Proposed | No runtime use; design input only | Future OpenSpec + implementation required |
 | `rb_ledger.jsonl` | Proposed | No runtime use; design input only | Future OpenSpec + implementation required |
 | Queue Markdown projection | Current | Yes — `queue-manager.mjs` render() writes `_cache/agentic-queue/current-task.md` | Queue state projection, not queue authority |
@@ -120,6 +129,7 @@ When a target or proposed surface becomes accepted/current, update this table in
 These files are one guidance suite:
 
 - `project-charter.md` defines the repo-wide charter: what must always be true.
+- `framework-runtime-boundary.md` defines the framework/runtime boundary: where read-only definitions and mutable run truth belong.
 - `command-experiments.md` defines the experiment charter: how mechanisms are proven.
 - `agentic-dispatch-scheduler-mechanism.md` defines a draft mechanism: what Engine-side ds might become, not what exists today.
 
@@ -141,6 +151,7 @@ Each file has frontmatter declaring its role, scope, authority level, and siblin
 | Receipt | Durable local evidence that a task or boundary really happened. |
 | Trace | Append-only JSONL diagnostic memory from real execution. |
 | Gate | Deterministic lifecycle boundary that passes only through accepted checks. |
+| Gate Definition | Read-only framework-side rule definition that says what a gate checks; not a run result. |
 | Runtime context | Run or disposable experiment directory containing current control files, evidence, receipts, trace, and artifacts. |
 | Bundle | Current project convention for a runtime context, such as `dpt_rb_*` or `dpt_disp_*`. |
 | Prototype | Experiment-specific fixtures, notes, or proof scaffold; not the production Engine source. |

@@ -1,7 +1,7 @@
 # Start from here — {{name}}
 
 本目录是一个 Deep Research Runtime Bundle。
-框架位于 `../DPT_FRAMEWORK/` (共享, 只读, 不修改)。
+框架位于 `../DPT_FRAMEWORK/`（共享 reusable framework assets，运行时只读）。
 
 ## 控制文件
 - rb_plan.md       — 话题设计 (Markdown + JSON frontmatter)
@@ -14,6 +14,7 @@
 - seed_topics/  reference/  artifacts/  _cache/  final/
 
 ## 规则
-- 不要修改 ../DPT_FRAMEWORK/ 中的任何文件
+- 当前 run 的 truth 只来自本 bundle 的控制文件、数据目录和 trace。
+- 不要把 HITL answer、gate result、repair state、trace、artifact 或 final output 写回 `../DPT_FRAMEWORK/`。
 - 停止授权: 仅 final_delivery / decision_blocker / empty_queue_after_refill
 - Gate 过渡前 reload 所有控制文件

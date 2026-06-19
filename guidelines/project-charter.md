@@ -12,6 +12,7 @@ defers_to:
   - openspec/config.yaml
   - openspec/specs/
 siblings:
+  - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-dispatch-scheduler-mechanism.md
 ---
@@ -70,6 +71,9 @@ This file cannot decide:
 - MUST treat check / inspect / advice outputs as structured JS/CLI feedback, not as chat noise.
 - MUST make evidence, receipts, and trace entries come from real execution.
 - MUST keep runtime state in the active runtime context, not in chat memory.
+- MUST treat `DPT_FRAMEWORK/` as reusable framework assets, not as a per-run workspace.
+- MUST keep per-run state, HITL answers, gate attempts, trace, artifacts, and final output inside the active `dpt_rb_*` or `dpt_disp_*` context.
+- MUST pass the active bundle path explicitly to framework commands that operate on a run.
 - MUST keep `guidelines/` aligned with accepted specs and clearly separate stable principles from current repository conventions.
 
 ### MUST NOT
@@ -81,6 +85,8 @@ This file cannot decide:
 - MUST NOT let JS/CLI orchestrate search, judgment, writing, repair, synthesis, or native subagent semantics as a substitute for Agent Flow.
 - MUST NOT fake trace, result files, receipts, subagent output, or runtime validation.
 - MUST NOT treat progress summaries, console output, or chat confidence as evidence.
+- MUST NOT write runtime state, gate results, HITL answers, repair attempts, artifacts, or final output into `DPT_FRAMEWORK/`.
+- MUST NOT treat `DPT_FRAMEWORK/schema/`, `DPT_FRAMEWORK/workflows/`, `DPT_FRAMEWORK/engine/`, or `DPT_FRAMEWORK/cli/` as active bundle storage.
 - MUST NOT read `_original_*` archives unless the user explicitly asks for historical analysis.
 
 ---
@@ -111,6 +117,26 @@ When deciding where something belongs, route by authority:
 | Current run state, queue contents, profile, evidence files, or trace history | The active runtime context, currently a `dpt_rb_*` or `dpt_disp_*` bundle |
 | New or changed accepted behavior | OpenSpec change before implementation |
 | Future mechanism direction | `guidelines/` as design guidance only |
+
+---
+
+## Framework Runtime Boundary
+
+`DPT_FRAMEWORK/` 是 framework，不是 run bundle。它可以包含 workflow nodes、schema contracts、gate definitions、engine code、CLI wrappers、bundle templates 和 command playbooks；它不保存某一次 run 的结果。
+
+同一套 `DPT_FRAMEWORK/` 必须能够服务多个 active runtime context。当前约定中，production run 使用 `dpt_rb_*`，disposable experiment 使用 `dpt_disp_*`。这些 runtime context 承载当前 truth：profile、HITL answer、queue/status、gate attempt、trace、repair state、reference、artifact 和 final output。
+
+当前 v1 只有一个 canonical Deep Research workflow package；这不限制 run bundle 数量。一套 framework 必须能服务多个互相隔离的 `dpt_rb_*`。
+
+关键边界：
+
+- 当 gate definitions 实现后，`DPT_FRAMEWORK/schema/gate_definitions/` 里的 JSON 是 read-only gate definition，不是 run data，也不是 pass/fail 结果。
+- `DPT_FRAMEWORK/schema/contracts/` 定义 executable contract，不保存当前 run 的状态。
+- `DPT_FRAMEWORK/engine/` 和 `DPT_FRAMEWORK/cli/` 执行 deterministic checkpoint，不拥有研究判断，也不把结果写回 framework。
+- `DPT_FRAMEWORK/rb_templates/` 只放会被实例化到 bundle 的初始模板，不放某个 run 的运行产物。
+- `rb_status.json`、`rb_profile.yaml`、`rb_trace.jsonl` 等 active bundle 文件才是当前 run 的 runtime truth。
+
+如果不确定某个文件应该放在 framework 还是 bundle，先读 `guidelines/framework-runtime-boundary.md`。本 Charter 固定 authority boundary；具体目录路由由该 guideline、accepted specs 和 executable framework contracts 进一步细化。
 
 ---
 
@@ -233,7 +259,7 @@ The project charter should not become a directory manifest. Treat these paths as
 | Surface | Current location | Stable role |
 |---------|------------------|-------------|
 | OpenSpec governance | `openspec/` | proposal/spec/tasks lifecycle, accepted requirements, governance checks |
-| Framework implementation | `DPT_FRAMEWORK/` | schemas, CLIs, deterministic engines, trace utilities — framework code only, no tests |
+| Framework implementation | `DPT_FRAMEWORK/` | reusable framework assets: workflow nodes, schemas, gate definitions, CLIs, deterministic engines, trace utilities, templates, command playbooks — no tests and no runtime state |
 | Agent-facing guidance | `guidelines/` | principles, reading routes, mechanism guidance, quality bars |
 | Experiments and fixtures | `experiments/` and `experiments_playbook/` | prototype fixtures, shared experiment setup, command experiment playbooks |
 | Regression checks | `tests/` | executable tests for accepted behavior |
@@ -278,7 +304,8 @@ Explore / design
 5. 修改 framework implementation 必须由 OpenSpec change、accepted spec 或明确任务覆盖。
 6. 裁决只从真实文件、schema 校验、receipt、trace JSONL 或 accepted verdict source 来。
 7. 不读 `_original_*` 归档，除非用户明确要求分析历史版本。
-8. `DPT_FRAMEWORK/` 是纯框架目录，可发行。不放测试文件、实验 fixture、实验 playbook。测试统一在 root `tests/`。
+8. `DPT_FRAMEWORK/` 是纯框架目录，可发行，运行时视为 read-only framework assets。不放测试文件、实验 fixture、实验 playbook，也不放 per-run runtime state。测试统一在 root `tests/`。
+9. `dpt_rb_*` 和 `dpt_disp_*` 是 mutable runtime context；HITL、gate attempt、trace、repair、artifact、final output 等运行时事实必须写在 active bundle。
 
 ---
 
@@ -316,6 +343,7 @@ Before changing any file in `guidelines/`, check:
 ## Related Guidance
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
+- [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for read-only framework assets versus mutable runtime bundles.
 - [Command Experiments](command-experiments.md) — target guidance for durable command experiment shape and boundaries.
 - [Engine-Side Dispatch Scheduler](agentic-dispatch-scheduler-mechanism.md) — future ds mechanism draft, not runtime truth.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.

@@ -17,7 +17,7 @@ Agent 命令：从 DPT_FRAMEWORK 生产一个新的 Runtime Bundle。
 ```bash
 B=$(node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs <name>)
 ```
-若目录已存在，报错退出。如需覆盖，加 `--force`。
+若目录已存在，报错退出。Production run bundle 不允许覆盖；换一个新的 bundle 名称。
 
 ### 3. 报告
 ```bash
