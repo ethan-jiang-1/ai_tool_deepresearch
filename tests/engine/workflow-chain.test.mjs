@@ -10,8 +10,8 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// NODES_DIR must be set before the engine module loads — it's evaluated at import time.
-process.env.NODES_DIR = join(__dirname, '../../experiments/prototype-workflow-chain/nodes-workflow-chain');
+// nodesDir passed explicitly to createWorkflowRuntime — no env var needed.
+const TEST_NODES_DIR = join(__dirname, '../../experiments/prototype-workflow-chain/nodes-workflow-chain');
 
 const {
   NodeFrontmatter,
@@ -39,7 +39,7 @@ after(() => {
 
 describe('runtime initialization (WML-001)', () => {
   it('creates an empty chain-load runtime', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
 
     assert.ok(runtime.contentCache instanceof Map);
     assert.equal(runtime.contentCache.size, 0);
@@ -52,7 +52,7 @@ describe('runtime initialization (WML-001)', () => {
 
 describe('single-entry dynamic load (WDM-001)', () => {
   it('loads and executes a self-contained entry only when requested', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const state = createState();
 
     assert.equal(runtime.contentCache.size, 0);
@@ -68,7 +68,7 @@ describe('single-entry dynamic load (WDM-001)', () => {
   });
 
   it('can load multiple chosen entries without cursor semantics', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     let state = createState();
 
     const first = assessNode('wave.entry.md', state, runtime);
@@ -85,7 +85,7 @@ describe('single-entry dynamic load (WDM-001)', () => {
 
 describe('dependency closure (WMD-001)', () => {
   it('executes chain dependencies before the entry', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const result = assessNode('chain.entry.md', createState(), runtime);
 
     assert.equal(result.status, 'loaded');
@@ -98,7 +98,7 @@ describe('dependency closure (WMD-001)', () => {
   });
 
   it('deduplicates diamond dependencies once per load graph', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const result = assessNode('diamond.entry.md', createState(), runtime);
 
     assert.equal(result.status, 'loaded');
@@ -113,7 +113,7 @@ describe('dependency closure (WMD-001)', () => {
   });
 
   it('preserves requires declaration order for same-level dependencies', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const plan = resolveDependencyClosure('diamond.entry.md', runtime);
 
     const aIdx = plan.indexOf('diamond-a.dep.md');
@@ -127,7 +127,7 @@ describe('dependency closure (WMD-001)', () => {
 
 describe('content cache vs execution (WDM-001, WLO-001)', () => {
   it('cache hits reused content but does not cache execution', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     let state = createState();
 
     const first = assessNode('repeat-1.entry.md', state, runtime);
@@ -157,7 +157,7 @@ describe('content cache vs execution (WDM-001, WLO-001)', () => {
 
 describe('error handling (WMD-001, WLO-001)', () => {
   it('missing dependency returns error and executes no files', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const state = createState();
     const result = assessNode('missing.entry.md', state, runtime);
 
@@ -170,7 +170,7 @@ describe('error handling (WMD-001, WLO-001)', () => {
   });
 
   it('cycle dependency returns error with cycle path and executes no files', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const result = assessNode('cycle-a.entry.md', createState(), runtime);
 
     assert.equal(result.status, 'error');
@@ -180,17 +180,18 @@ describe('error handling (WMD-001, WLO-001)', () => {
   });
 
   it('malformed frontmatter returns error and executes no files', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const result = assessNode('malformed.entry.md', createState(), runtime);
 
     assert.equal(result.status, 'error');
-    assert.ok(result.error.includes('Malformed JSON'));
+    // YAML fallback parses the content, but schema rejects 'requires' as string
+    assert.ok(result.error.includes('Invalid frontmatter schema'));
     assert.ok(result.error.includes('malformed.entry.md'));
     assert.equal(runtime.receipts.filter((r) => r.type === 'file_loaded').length, 0);
   });
 
   it('schema-invalid frontmatter returns error and executes no files', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const result = assessNode('bad-schema.entry.md', createState(), runtime);
 
     assert.equal(result.status, 'error');
@@ -200,7 +201,7 @@ describe('error handling (WMD-001, WLO-001)', () => {
   });
 
   it('a later valid load can succeed after an error on the same runtime', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const failed = assessNode('missing.entry.md', createState(), runtime);
     assert.equal(failed.status, 'error');
 
@@ -213,7 +214,7 @@ describe('error handling (WMD-001, WLO-001)', () => {
 
 describe('observability receipts (WLO-001)', () => {
   it('successful load records major loader phases', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const result = assessNode('wave.entry.md', createState(), runtime);
 
     assert.equal(result.status, 'loaded');
@@ -226,7 +227,7 @@ describe('observability receipts (WLO-001)', () => {
   });
 
   it('failed load records load_error', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const result = assessNode('missing.entry.md', createState(), runtime);
 
     assert.equal(result.status, 'error');
@@ -251,8 +252,10 @@ describe('frontmatter parsing', () => {
     assert.deepStrictEqual(parseFrontmatter(md).requires, []);
   });
 
-  it('throws on malformed JSON', () => {
-    assert.throws(() => parseFrontmatter('---\n{ bad json }\n---\n'), /Malformed JSON/);
+  it('gracefully handles non-JSON frontmatter via YAML fallback', () => {
+    // { bad json } is not valid JSON, but YAML subset parser handles it gracefully
+    // (line has no colon, skipped → empty object → requires defaults to [])
+    assert.deepStrictEqual(parseFrontmatter('---\n{ bad json }\n---\n').requires, []);
   });
 
   it('throws on valid JSON with wrong schema (requires not array)', () => {
@@ -273,7 +276,7 @@ describe('frontmatter parsing', () => {
 
 describe('MD without code block loads normally', () => {
   it('loads an MD node with no code block — this is the expected case', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const result = assessNode('noop.entry.md', createState(), runtime);
 
     assert.equal(result.status, 'loaded');
@@ -291,7 +294,7 @@ describe('MD without code block loads normally', () => {
 
 describe('low-level execution helpers', () => {
   it('readMarkdownFile caches parsed Markdown content', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const first = readMarkdownFile('wave.entry.md', runtime);
     const second = readMarkdownFile('wave.entry.md', runtime);
 
@@ -301,7 +304,7 @@ describe('low-level execution helpers', () => {
   });
 
   it('executeLoadPlan executes an already resolved plan', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const plan = resolveDependencyClosure('chain.entry.md', runtime);
     const state = executeLoadPlan(plan, createState(), runtime);
 
@@ -313,7 +316,7 @@ describe('low-level execution helpers', () => {
   });
 
   it('loadMarkdownFile requires prior content cache', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     assert.throws(
       () => loadMarkdownFile('wave.entry.md', runtime),
       /not in content cache/,
@@ -323,7 +326,7 @@ describe('low-level execution helpers', () => {
 
 describe('loadMarkdownFile returns entry, not executed code', () => {
   it('returns parsed entry ({ md, frontmatter }) without executing code blocks', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     // Set up cache by reading a file first
     const entry = readMarkdownFile('wave.entry.md', runtime);
     const result = loadMarkdownFile('wave.entry.md', runtime);
@@ -343,7 +346,7 @@ describe('loadMarkdownFile returns entry, not executed code', () => {
 
 describe('executeLoadPlan writes state.executionOrder and state.counters', () => {
   it('Engine writes executionOrder and counters per loaded fileRef', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     const plan = resolveDependencyClosure('chain.entry.md', runtime);
     const state = executeLoadPlan(plan, createState(), runtime);
 
@@ -360,7 +363,7 @@ describe('executeLoadPlan writes state.executionOrder and state.counters', () =>
   });
 
   it('increments counters when same fileRef loaded multiple times', () => {
-    const runtime = createWorkflowRuntime();
+    const runtime = createWorkflowRuntime('test', TEST_NODES_DIR);
     // Load shared-lib twice via two different entry points
     readMarkdownFile('repeat-1.entry.md', runtime);
     readMarkdownFile('repeat-2.entry.md', runtime);
@@ -378,14 +381,15 @@ describe('executeLoadPlan writes state.executionOrder and state.counters', () =>
 
 describe('nodePath', () => {
   it('rejects path traversal', () => {
-    assert.throws(() => nodePath('../outside.md'), /Invalid fileRef/);
+    assert.throws(() => nodePath('../outside.md', TEST_NODES_DIR), /Invalid fileRef/);
   });
 
   it('rejects absolute path', () => {
-    assert.throws(() => nodePath('/etc/passwd'), /Invalid fileRef/);
+    assert.throws(() => nodePath('/etc/passwd', TEST_NODES_DIR), /Invalid fileRef/);
   });
 
-  it('rejects nested relative paths', () => {
-    assert.throws(() => nodePath('nested/file.md'), /Invalid fileRef/);
+  it('allows subdirectory paths under nodes dir (WNC-006)', () => {
+    assert.ok(nodePath('phases/phase-wave0.md', TEST_NODES_DIR).endsWith('phases/phase-wave0.md'));
+    assert.ok(nodePath('shared/shared-profile.md', TEST_NODES_DIR).endsWith('shared/shared-profile.md'));
   });
 });

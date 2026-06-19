@@ -528,7 +528,7 @@ const slotTransitions = new Map([
 ]);
 
 function extractParentRuntimeId(metadata = {}) {
-  return metadata.parentRuntimeAgentId || process.env.DPT_PARENT_RUNTIME_AGENT_ID || undefined;
+  return metadata.parentRuntimeAgentId || undefined;
 }
 
 /**

@@ -51,10 +51,9 @@
 // instance.
 //
 // ## On-disk paths
-// Engine resolves files from `NODES_DIR` (env var). Default:
-//   join(__dirname, 'nodes-workflow-chain')
-// Callers should set NODES_DIR explicitly — the default only works when the
-// engine and nodes dir are co-located.
+// Engine resolves node files from `runtime.nodesDir`, set at runtime creation.
+// Callers pass `nodesDir` to createWorkflowRuntime() explicitly — no env var.
+// Default: join(__dirname, 'nodes-workflow-chain')
 //
 // ## Exports
 //   Controller API:   createWorkflowRuntime, createState, assessNode
@@ -64,12 +63,12 @@
 //   Schemas:          NodeFrontmatter, WorkflowState
 
 import { existsSync, readFileSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const NODES_DIR = process.env.NODES_DIR || join(__dirname, 'nodes-workflow-chain');
+const DEFAULT_NODES_DIR = join(__dirname, 'nodes-workflow-chain');
 
 // ============================================================
 // Internal: emit helpers
@@ -114,12 +113,13 @@ export const WorkflowState = z.object({
  *
  * @impl WML-001, WLO-001
  */
-export function createWorkflowRuntime(source = 'engine') {
+export function createWorkflowRuntime(source = 'engine', nodesDir = DEFAULT_NODES_DIR) {
   return {
     contentCache: new Map(),
     executionLog: [],
     receipts: [],
     source,
+    nodesDir,
   };
 }
 
@@ -138,11 +138,12 @@ export function createWorkflowRuntime(source = 'engine') {
  *
  * @impl WDM-001
  */
-export function nodePath(fileRef) {
-  if (fileRef.includes('..') || fileRef.startsWith('/') || basename(fileRef) !== fileRef) {
-    throw new Error(`Invalid fileRef "${fileRef}": must be a plain filename within nodes-workflow-chain/`);
+export function nodePath(fileRef, nodesDir) {
+  if (fileRef.includes('..') || fileRef.startsWith('/')) {
+    throw new Error(`Invalid fileRef "${fileRef}": traversal not allowed`);
   }
-  return join(NODES_DIR, fileRef);
+  // fileRef can now be 'phases/phase-wave0.md' or 'shared/shared-profile.md'
+  return join(nodesDir, fileRef);
 }
 
 const FRONTMATTER_RE = /^---\s*\n([\s\S]*?)---\s*\n/;
@@ -164,11 +165,19 @@ export function parseFrontmatter(md) {
     return { requires: [] };
   }
 
+  const raw = match[1];
+
+  // Try JSON first (backward compatible)
   let parsed;
   try {
-    parsed = JSON.parse(match[1]);
-  } catch (err) {
-    throw new Error(`Malformed JSON frontmatter: ${err.message}`);
+    parsed = JSON.parse(raw);
+  } catch {
+    // Fallback: YAML subset line-by-line parser
+    try {
+      parsed = parseYAMLSubset(raw);
+    } catch (err) {
+      throw new Error(`Malformed frontmatter (not valid JSON or YAML subset): ${err.message}`);
+    }
   }
 
   try {
@@ -176,6 +185,106 @@ export function parseFrontmatter(md) {
   } catch (err) {
     throw new Error(`Invalid frontmatter schema: ${err.message}`);
   }
+}
+
+/**
+ * Parse a YAML subset: key: value per line, block sequences (- item), inline
+ * arrays as [a, b], quoted strings. Enough for our node frontmatter.
+ * Throws on unsupported syntax.
+ * @param {string} text
+ * @returns {object}
+ */
+function parseYAMLSubset(text) {
+  const result = {};
+  const lines = text.split('\n');
+  let i = 0;
+
+  while (i < lines.length) {
+    const trimmed = lines[i].trim();
+
+    // Skip empty lines and comments
+    if (!trimmed || trimmed.startsWith('#')) {
+      i++;
+      continue;
+    }
+
+    // Block sequence item (continuation of previous key's array)
+    if (trimmed.startsWith('- ')) {
+      i++;
+      continue; // handled by parent key
+    }
+
+    const colonIdx = trimmed.indexOf(':');
+    if (colonIdx === -1) {
+      i++;
+      continue;
+    }
+
+    const key = trimmed.slice(0, colonIdx).trim();
+    const rawValue = trimmed.slice(colonIdx + 1).trim();
+
+    if (!key) { i++; continue; }
+
+    if (rawValue === '' || rawValue === 'null') {
+      // Check for block sequence on following lines
+      const seqItems = [];
+      let j = i + 1;
+      while (j < lines.length) {
+        const nextLine = lines[j];
+        const nextTrimmed = nextLine.trim();
+        if (nextTrimmed.startsWith('- ')) {
+          const item = nextTrimmed.slice(2).trim();
+          // Strip surrounding quotes
+          if ((item.startsWith('"') && item.endsWith('"')) || (item.startsWith("'") && item.endsWith("'"))) {
+            seqItems.push(item.slice(1, -1));
+          } else {
+            seqItems.push(item);
+          }
+          j++;
+        } else if (!nextTrimmed || nextTrimmed.startsWith('#')) {
+          j++; // skip blank/comment lines between items
+        } else {
+          break; // next key or non-sequence line
+        }
+      }
+      if (seqItems.length > 0) {
+        result[key] = seqItems;
+        i = j;
+        continue;
+      }
+      result[key] = null;
+    } else if (rawValue.startsWith('[') && rawValue.endsWith(']')) {
+      // Inline array: [a, b, c]
+      const inner = rawValue.slice(1, -1);
+      if (inner.trim() === '') {
+        result[key] = [];
+      } else {
+        result[key] = inner.split(',').map(s => {
+          const v = s.trim();
+          if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+            return v.slice(1, -1);
+          }
+          return v;
+        });
+      }
+    } else if ((rawValue.startsWith('"') && rawValue.endsWith('"')) ||
+               (rawValue.startsWith("'") && rawValue.endsWith("'"))) {
+      result[key] = rawValue.slice(1, -1);
+    } else {
+      // Plain value — try to parse as boolean / number, otherwise string
+      const lower = rawValue.toLowerCase();
+      if (lower === 'true') result[key] = true;
+      else if (lower === 'false') result[key] = false;
+      else if (lower === 'yes') result[key] = 'yes'; // keep as string — fight YAML 1.1 bool
+      else if (lower === 'no') result[key] = 'no';
+      else if (!isNaN(rawValue) && rawValue !== '') result[key] = Number(rawValue);
+      else result[key] = rawValue;
+    }
+
+    i++;
+  }
+
+  return result;
 }
 
 // ============================================================
@@ -195,15 +304,20 @@ export function parseFrontmatter(md) {
  *
  * @impl WDM-001, WLO-001
  */
-export function readMarkdownFile(fileRef, runtime, trace = null) {
-  if (runtime.contentCache.has(fileRef)) {
-    emit(runtime, trace, 'cache_hit', { fileRef, ts: new Date().toISOString() });
-    return runtime.contentCache.get(fileRef);
+export function readMarkdownFile(fileRef, runtime, trace = null, logger = null) {
+  // Auto-append .md if no extension (requires field uses bare IDs)
+  const resolvedRef = fileRef.endsWith('.md') ? fileRef : `${fileRef}.md`;
+
+  if (runtime.contentCache.has(resolvedRef)) {
+    if (logger) logger.debug(`cache hit: ${resolvedRef}`);
+    emit(runtime, trace, 'cache_hit', { fileRef: resolvedRef, ts: new Date().toISOString() });
+    return runtime.contentCache.get(resolvedRef);
   }
 
-  const filePath = nodePath(fileRef);
+  if (logger) logger.debug(`reading: ${resolvedRef}`);
+  const filePath = nodePath(resolvedRef, runtime.nodesDir);
   if (!existsSync(filePath)) {
-    throw new Error(`File not found: ${fileRef} (resolved to ${filePath})`);
+    throw new Error(`File not found: ${resolvedRef} (resolved to ${filePath})`);
   }
 
   const md = readFileSync(filePath, 'utf-8');
@@ -211,13 +325,13 @@ export function readMarkdownFile(fileRef, runtime, trace = null) {
   try {
     frontmatter = parseFrontmatter(md);
   } catch (err) {
-    throw new Error(`${err.message} in ${fileRef}`);
+    throw new Error(`${err.message} in ${resolvedRef}`);
   }
 
   const entry = { md, frontmatter };
-  runtime.contentCache.set(fileRef, entry);
+  runtime.contentCache.set(resolvedRef, entry);
 
-  emit(runtime, trace, 'file_read', { fileRef, ts: new Date().toISOString() });
+  emit(runtime, trace, 'file_read', { fileRef: resolvedRef, ts: new Date().toISOString() });
 
   return entry;
 }
@@ -236,41 +350,47 @@ export function readMarkdownFile(fileRef, runtime, trace = null) {
  *
  * @impl WMD-001
  */
-export function resolveDependencyClosure(fileRef, runtime, trace = null) {
-  return _resolveDeps(fileRef, runtime, trace, [], new Set(), '<entry>');
+export function resolveDependencyClosure(fileRef, runtime, trace = null, logger = null) {
+  const ref = fileRef.endsWith('.md') ? fileRef : `${fileRef}.md`;
+  const plan = _resolveDeps(ref, runtime, trace, logger, [], new Set(), '<entry>');
+  if (logger) logger.info(`resolved ${plan.length} dependencies for ${ref}`, { plan });
+  return plan;
 }
 
-function _resolveDeps(fileRef, runtime, trace, visiting, visited, requester) {
-  if (visiting.includes(fileRef)) {
-    const cycleStart = visiting.indexOf(fileRef);
-    const cyclePath = [...visiting.slice(cycleStart), fileRef].join(' -> ');
+function _resolveDeps(fileRef, runtime, trace, logger, visiting, visited, requester) {
+  // Normalize: auto-append .md if bare ID (requires field convention)
+  const ref = fileRef.endsWith('.md') ? fileRef : `${fileRef}.md`;
+
+  if (visiting.includes(ref)) {
+    const cycleStart = visiting.indexOf(ref);
+    const cyclePath = [...visiting.slice(cycleStart), ref].join(' -> ');
     throw new Error(`Dependency cycle detected: ${cyclePath}`);
   }
 
-  if (visited.has(fileRef)) {
+  if (visited.has(ref)) {
     return [];
   }
 
-  visiting.push(fileRef);
+  visiting.push(ref);
 
   let entry;
   try {
-    entry = readMarkdownFile(fileRef, runtime, trace);
+    entry = readMarkdownFile(ref, runtime, trace, logger);
   } catch (err) {
     if (err.message.startsWith('File not found:')) {
-      throw new Error(`Missing dependency: ${fileRef} requested by ${requester}`);
+      throw new Error(`Missing dependency: ${ref} requested by ${requester}`);
     }
     throw err;
   }
 
   const plan = [];
   for (const dep of entry.frontmatter.requires) {
-    plan.push(..._resolveDeps(dep, runtime, trace, visiting, visited, fileRef));
+    plan.push(..._resolveDeps(dep, runtime, trace, logger, visiting, visited, ref));
   }
 
   visiting.pop();
-  visited.add(fileRef);
-  plan.push(fileRef);
+  visited.add(ref);
+  plan.push(ref);
 
   return plan;
 }
@@ -310,12 +430,13 @@ export function createState() {
  *
  * @impl WDM-001, WLO-001
  */
-export function loadMarkdownFile(fileRef, runtime, trace = null) {
+export function loadMarkdownFile(fileRef, runtime, trace = null, logger = null) {
   const entry = runtime.contentCache.get(fileRef);
   if (!entry) {
     throw new Error(`loadMarkdownFile: ${fileRef} not in content cache; call readMarkdownFile first`);
   }
 
+  if (logger) logger.debug(`loaded: ${fileRef}`);
   emit(runtime, trace, 'file_loaded', { fileRef, ts: new Date().toISOString() });
   runtime.executionLog.push({ fileRef, event: 'file_loaded' });
 
@@ -339,9 +460,10 @@ export function loadMarkdownFile(fileRef, runtime, trace = null) {
  *
  * @impl WDM-001, WLO-001
  */
-export function executeLoadPlan(plan, state, runtime, trace = null) {
+export function executeLoadPlan(plan, state, runtime, trace = null, logger = null) {
+  if (logger) logger.info(`executing load plan: ${plan.length} nodes`, { plan });
   for (const fileRef of plan) {
-    loadMarkdownFile(fileRef, runtime, trace);
+    loadMarkdownFile(fileRef, runtime, trace, logger);
     state.executionOrder.push(fileRef);
     state.counters[fileRef] = (state.counters[fileRef] || 0) + 1;
   }
@@ -376,25 +498,30 @@ export function executeLoadPlan(plan, state, runtime, trace = null) {
  *
  * @impl WML-001, WDM-001, WMD-001, WLO-001
  */
-export function assessNode(fileRef, state, runtime, trace = null) {
-  emit(runtime, trace, 'load_start', { entry: fileRef, ts: new Date().toISOString() });
+export function assessNode(fileRef, state, runtime, trace = null, logger = null) {
+  const ref = fileRef.endsWith('.md') ? fileRef : `${fileRef}.md`;
+  if (logger) logger.info(`assessing entry: ${ref}`);
+  emit(runtime, trace, 'load_start', { entry: ref, ts: new Date().toISOString() });
 
   let plan;
   try {
-    plan = resolveDependencyClosure(fileRef, runtime, trace);
+    plan = resolveDependencyClosure(ref, runtime, trace, logger);
   } catch (err) {
-    emit(runtime, trace, 'load_error', { entry: fileRef, error: err.message, ts: new Date().toISOString() });
+    if (logger) logger.error(`load failed: ${ref}`, { error: err.message });
+    emit(runtime, trace, 'load_error', { entry: ref, error: err.message, ts: new Date().toISOString() });
     return { state, status: 'error', runtime, error: err.message };
   }
 
-  emit(runtime, trace, 'dependency_resolved', { entry: fileRef, plan, ts: new Date().toISOString() });
+  emit(runtime, trace, 'dependency_resolved', { entry: ref, plan, ts: new Date().toISOString() });
 
   try {
-    const nextState = executeLoadPlan(plan, state, runtime, trace);
-    emit(runtime, trace, 'load_complete', { entry: fileRef, plan, ts: new Date().toISOString() });
+    const nextState = executeLoadPlan(plan, state, runtime, trace, logger);
+    if (logger) logger.info(`load complete: ${ref}`, { plan: plan.length, order: state.executionOrder });
+    emit(runtime, trace, 'load_complete', { entry: ref, plan, ts: new Date().toISOString() });
     return { state: nextState, status: 'loaded', runtime, plan };
   } catch (err) {
-    emit(runtime, trace, 'load_error', { entry: fileRef, error: err.message, ts: new Date().toISOString() });
+    if (logger) logger.error(`load failed: ${ref}`, { error: err.message });
+    emit(runtime, trace, 'load_error', { entry: ref, error: err.message, ts: new Date().toISOString() });
     return { state, status: 'error', runtime, error: err.message };
   }
 }

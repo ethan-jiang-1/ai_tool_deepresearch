@@ -56,7 +56,7 @@ import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine, resolveTransition } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
 const trace = createTrace('dpt_disp_wfsm_complex/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wfsm-complex'; trace.traceInit('wfsm-complex: halt + recovery', { source: SRC });
-const NODES_DIR = process.env.NODES_DIR;
+const NODES_DIR = process.argv[2];
 
 // ── halt: undefined status ──
 {
@@ -97,7 +97,7 @@ const NODES_DIR = process.env.NODES_DIR;
     detail: `outcome=${m.outcome}` });
 }
 JS
-NODES_DIR="$B/exp/nodes" node $B/run.mjs > /dev/null 2>&1
+node $B/run.mjs $B/exp/nodes > /dev/null 2>&1
 ```
 
 → 预期：7 checks 全 passed。halt 分别正确停止，recovery 正常走完。

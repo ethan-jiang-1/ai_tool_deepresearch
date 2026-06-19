@@ -31,15 +31,17 @@
 | 13 | `exp_agentic-queue/test-simple-minimal-path.md` | enqueue → claim → complete → promote 最小路径 |
 | 14 | `exp_agentic-queue/test-medium-urgent-preemption.md` | 满 active window + urgent preemption |
 | 15 | `exp_agentic-queue/test-complex-failure-repair.md` | invalid task, missing receipt, failure repair |
+| 16 | `exp_wff_validation/test-simple-happy-path.md` | wff walker 9 phase/8 gate 全部 pass + trace↔log 交叉验证 |
+| 17 | `exp_wff_validation/test-medium-fail-repair.md` | wff walker gate fail → repair → rerun → pass 闭环 |
 
 ### Heavy（真实 subagent spawn，subagent 机制变更时跑）
 
 | # | Playbook | 验证什么 |
 |---|----------|---------|
-| 16 | `exp_subagent/test-simple-single-intake.md` | 单个 source_intake subagent |
-| 17 | `exp_subagent/test-medium-dual-parallel.md` | intake + diagnostic 并行两个 |
-| 18 | `exp_subagent/test-complex-triple-failure.md` | 三个 subagent 并发 + partial failure |
-| 19 | `exp_subagent/test-identity-agent-identity.md` | runtime-agent identity 和 trace event |
+| 18 | `exp_subagent/test-simple-single-intake.md` | 单个 source_intake subagent |
+| 19 | `exp_subagent/test-medium-dual-parallel.md` | intake + diagnostic 并行两个 |
+| 20 | `exp_subagent/test-complex-triple-failure.md` | 三个 subagent 并发 + partial failure |
+| 21 | `exp_subagent/test-identity-agent-identity.md` | runtime-agent identity 和 trace event |
 
 ## 怎么执行
 

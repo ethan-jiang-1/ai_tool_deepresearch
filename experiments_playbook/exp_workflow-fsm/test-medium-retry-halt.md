@@ -56,7 +56,7 @@ import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
 const trace = createTrace('dpt_disp_wfsm_medium/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wfsm-medium'; trace.traceInit('wfsm-medium: retry step-by-step', { source: SRC });
-const NODES_DIR = process.env.NODES_DIR;
+const NODES_DIR = process.argv[2];
 const m = createMachine(`${NODES_DIR}/wf-retry.fsm.json`, trace);
 
 // Define
@@ -83,7 +83,7 @@ trace.traceEntry('check', { source: SRC, step: 'step3:complete',
   passed: m.isComplete && m.iterations === 3,
   detail: `outcome=${m.outcome}` });
 JS
-NODES_DIR="$B/exp/nodes" node $B/run_retry.mjs > /dev/null 2>&1
+node $B/run_retry.mjs $B/exp/nodes > /dev/null 2>&1
 ```
 
 → 预期：error 自环 → success advance → complete。trace 里 retry-node transition 顺序为 error → success。
@@ -97,7 +97,7 @@ cat > $B/run_halt.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
 const trace = createTrace('dpt_disp_wfsm_medium/_trace.jsonl', { consoleEcho: false });
-const SRC = 'wfsm-medium'; const NODES_DIR = process.env.NODES_DIR;
+const SRC = 'wfsm-medium'; const NODES_DIR = process.argv[2];
 const m = createMachine(`${NODES_DIR}/wf-halt.fsm.json`, trace);
 
 // undefined_status → halt
@@ -108,7 +108,7 @@ trace.traceEntry('check', { source: SRC, step: 'halt:isHalted',
 trace.traceEntry('check', { source: SRC, step: 'halt:iterations',
   passed: m.iterations === 1 });
 JS
-NODES_DIR="$B/exp/nodes" node $B/run_halt.mjs > /dev/null 2>&1
+node $B/run_halt.mjs $B/exp/nodes > /dev/null 2>&1
 ```
 
 → 预期：isHalted，haltReason 含 'undefined_status'。

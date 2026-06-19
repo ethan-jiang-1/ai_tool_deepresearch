@@ -99,3 +99,13 @@ WNC-006: workflow-node-contract — Skeleton completeness criteria (parseable fr
 GSK-001: gate-skeleton — Gate definition JSON skeleton structure (gate, description, rules[] with id/check/target/threshold/failure_message)
 GSK-002: "gate-skeleton — Gate CLI skeleton shape (parseArgs, --bundle required, check/inspect/advice JSON output, exit codes)"
 GSK-003: gate-skeleton — One gate per CLI (8 independent CLI wrappers, no generic runner with subcommand)
+
+# wff-skeleton-validation
+LOG-001: logger — Logger default zero-config usage (createLogger() → console only, 4 levels, ISO 8601 timestamps)
+LOG-002: "logger — Logger file output via option (createLogger({ file }) → console + file append, auto mkdir)"
+LOG-003: logger — Logger injection pattern in engine (logger = null trailing parameter, silent no-op)
+LFW-001: lifecycle-walker — Walker reads manifest and walks lifecycle (--bundle required, --manifest optional, 9 phases)
+LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass (max 3 retries, escalation on exceeded limit)
+LFW-003: "lifecycle-walker — Walker logs progress via logger (createLogger({ file: '<bundle>/_logs/run.log' }))"
+LFW-004: lifecycle-walker — Walker requires --bundle flag (exit(2) on missing)
+GSK-004: gate-skeleton — Gate CLI evaluates rules from definition (load definition JSON, iterate rules, file_exists check, check/inspect/advice feedback)

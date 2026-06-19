@@ -52,14 +52,14 @@ import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
 const trace = createTrace('dpt_disp_wfsm_simple/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wfsm-simple'; trace.traceInit('wfsm-simple: define→advance→verify', { source: SRC });
-const NODES_DIR = process.env.NODES_DIR;
+const NODES_DIR = process.argv[2];
 const m = createMachine(`${NODES_DIR}/wf-simple.fsm.json`, trace);
 trace.traceEntry('check', { source: SRC, step: 'define:name', passed: m.fsm.name === 'wf-simple' });
 trace.traceEntry('check', { source: SRC, step: 'define:initial', passed: m.current === 'wave.entry.md',
   detail: `current = ${m.current}` });
 trace.traceEntry('check', { source: SRC, step: 'define:can_advance', passed: m.canAdvance && !m.isComplete });
 JS
-NODES_DIR="$B/exp/nodes" node $B/define.mjs > /dev/null 2>&1
+node $B/define.mjs $B/exp/nodes > /dev/null 2>&1
 ```
 
 → 预期：fsm.name = wf-simple，current = wave.entry.md，canAdvance。
@@ -73,7 +73,7 @@ cat > $B/advance1.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
 const trace = createTrace('dpt_disp_wfsm_simple/_trace.jsonl', { consoleEcho: false });
-const SRC = 'wfsm-simple'; const NODES_DIR = process.env.NODES_DIR;
+const SRC = 'wfsm-simple'; const NODES_DIR = process.argv[2];
 const m = createMachine(`${NODES_DIR}/wf-simple.fsm.json`, trace);
 trace.traceEntry('check', { source: SRC, step: 'advance1:before',
   passed: m.current === 'wave.entry.md', detail: `当前: ${m.current}` });
@@ -82,7 +82,7 @@ trace.traceEntry('check', { source: SRC, step: 'advance1:after',
   passed: m.current === 'wave-audit.entry.md', detail: `推进到: ${m.current}` });
 trace.traceEntry('check', { source: SRC, step: 'advance1:iterations', passed: m.iterations === 1 });
 JS
-NODES_DIR="$B/exp/nodes" node $B/advance1.mjs > /dev/null 2>&1
+node $B/advance1.mjs $B/exp/nodes > /dev/null 2>&1
 ```
 
 → 预期：wave.entry → wave-audit。trace 有 1 条 transition。
@@ -96,14 +96,14 @@ cat > $B/advance2.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
 const trace = createTrace('dpt_disp_wfsm_simple/_trace.jsonl', { consoleEcho: false });
-const SRC = 'wfsm-simple'; const NODES_DIR = process.env.NODES_DIR;
+const SRC = 'wfsm-simple'; const NODES_DIR = process.argv[2];
 const m = createMachine(`${NODES_DIR}/wf-simple.fsm.json`, trace);
 m.advance('success'); m.advance('success');
 trace.traceEntry('check', { source: SRC, step: 'advance2:after',
   passed: m.current === 'wave-final.entry.md', detail: `推进到: ${m.current}` });
 trace.traceEntry('check', { source: SRC, step: 'advance2:iterations', passed: m.iterations === 2 });
 JS
-NODES_DIR="$B/exp/nodes" node $B/advance2.mjs > /dev/null 2>&1
+node $B/advance2.mjs $B/exp/nodes > /dev/null 2>&1
 ```
 
 → 预期：wave-final。累计 2 条 transition。
@@ -119,7 +119,7 @@ cat > $B/advance3.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
 const trace = createTrace('dpt_disp_wfsm_simple/_trace.jsonl', { consoleEcho: false });
-const SRC = 'wfsm-simple'; const NODES_DIR = process.env.NODES_DIR;
+const SRC = 'wfsm-simple'; const NODES_DIR = process.argv[2];
 const m = createMachine(`${NODES_DIR}/wf-simple.fsm.json`, trace);
 m.advance('success'); m.advance('success'); m.advance('success');
 trace.traceEntry('check', { source: SRC, step: 'advance3:complete',
@@ -127,7 +127,7 @@ trace.traceEntry('check', { source: SRC, step: 'advance3:complete',
 trace.traceEntry('check', { source: SRC, step: 'advance3:noop',
   passed: m.advance('success') === 'complete', detail: 'complete 后 advance = no-op' });
 JS
-NODES_DIR="$B/exp/nodes" node $B/advance3.mjs > /dev/null 2>&1
+node $B/advance3.mjs $B/exp/nodes > /dev/null 2>&1
 ```
 
 → 预期：isComplete，advance() 返回 'complete'。

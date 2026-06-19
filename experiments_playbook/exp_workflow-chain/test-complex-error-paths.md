@@ -44,7 +44,7 @@ const trace = createTrace('dpt_disp_wc_complex/_trace.jsonl', { consoleEcho: fal
 const SRC = 'wl-complex';
 trace.traceInit('wl-complex single-entry test', { source: SRC });
 
-const runtime = createWorkflowRuntime();
+const runtime = createWorkflowRuntime('test', process.argv[2]);
 
 function receiptCursor() {
   return runtime.receipts.length;
@@ -97,8 +97,7 @@ trace.traceEntry('check', { source: SRC, step: 'recovery:same_runtime_reused',
   detail: `receipt types=${runtime.receipts.map(r => r.type).join(', ')}` });
 JS
 
-NODES_DIR="$B/exp/nodes" node $B/check_errors_and_recovery.mjs
-```
+node $B/check_errors_and_recovery.mjs $B/exp/nodes```
 
 → 预期：12 个 check 全 passed。
 
@@ -131,8 +130,7 @@ console.log('\x1b[32mALL CHECKS PASSED\x1b[0m');
 trace.traceCleanup();
 JS2
 
-node $B/verify.mjs
-```
+node $B/verify.mjs $B/exp/nodes```
 
 → 预期：`12 checks, 12 passed, 0 failed`。
 

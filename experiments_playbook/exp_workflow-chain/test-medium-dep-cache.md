@@ -44,7 +44,7 @@ const trace = createTrace('dpt_disp_wc_medium/_trace.jsonl', { consoleEcho: fals
 const SRC = 'wl-medium';
 trace.traceInit('wl-medium single-entry test', { source: SRC });
 
-const runtime = createWorkflowRuntime();
+const runtime = createWorkflowRuntime('test', process.argv[2]);
 const result = assessNode('chain.entry.md', createState(), runtime, trace);
 
 trace.traceEntry('check', { source: SRC, step: 'chain:status_loaded',
@@ -61,8 +61,7 @@ trace.traceEntry('check', { source: SRC, step: 'chain:execution_dependency_first
   detail: `order = ${JSON.stringify(order)}` });
 JS
 
-NODES_DIR="$B/exp/nodes" node $B/check_chain.mjs
-```
+node $B/check_chain.mjs $B/exp/nodes```
 
 → 预期：3 个 check 全 passed。
 
@@ -81,7 +80,7 @@ import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK
 const trace = createTrace('dpt_disp_wc_medium/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wl-medium';
 
-const runtime = createWorkflowRuntime();
+const runtime = createWorkflowRuntime('test', process.argv[2]);
 let state = createState();
 
 const r1 = assessNode('repeat-1.entry.md', state, runtime, trace);
@@ -110,8 +109,7 @@ trace.traceEntry('check', { source: SRC, step: 'cache:both_entries_loaded',
   detail: `statuses=${r1.status},${r2.status}` });
 JS
 
-NODES_DIR="$B/exp/nodes" node $B/check_cache.mjs
-```
+node $B/check_cache.mjs $B/exp/nodes```
 
 → 预期：shared-lib 被读一次、加载两次。4 个 check 全 passed。
 
@@ -144,8 +142,7 @@ console.log('\x1b[32mALL CHECKS PASSED\x1b[0m');
 trace.traceCleanup();
 JS2
 
-node $B/verify.mjs
-```
+node $B/verify.mjs $B/exp/nodes```
 
 → 预期：`7 checks, 7 passed, 0 failed`。
 

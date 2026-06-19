@@ -4,6 +4,7 @@ import { parseArgs } from 'node:util';
 const { values } = parseArgs({
   options: {
     bundle: { type: 'string' },
+    next: { type: 'string' },
   },
 });
 
@@ -13,9 +14,9 @@ if (!values.bundle) {
 }
 
 const result = {
-  check: { passed: true, gate: 'wave2_complete' },
+  check: { passed: true, gate: 'wave2-complete', next: values.next || null },
   inspect: [],
-  advice: []
+  advice: [],
 };
 
 console.log(JSON.stringify(result, null, 2));

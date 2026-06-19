@@ -44,7 +44,7 @@ const trace = createTrace('dpt_disp_wc_simple/_trace.jsonl', { consoleEcho: fals
 const SRC = 'wl-simple';
 trace.traceInit('wl-simple single-entry test (real bundle)', { source: SRC });
 
-const runtime = createWorkflowRuntime();
+const runtime = createWorkflowRuntime('test', process.argv[2]);
 
 trace.traceEntry('check', { source: SRC, step: 'init:cache_empty',
   passed: runtime.contentCache.size === 0,
@@ -59,8 +59,7 @@ trace.traceEntry('check', { source: SRC, step: 'init:no_file_read',
   detail: 'no file_read receipt before explicit load' });
 JS
 
-NODES_DIR="$B/exp/nodes" node $B/check_init.mjs
-```
+node $B/check_init.mjs $B/exp/nodes```
 
 → 预期：3 个 check 全部 `passed: true`。
 
@@ -77,7 +76,7 @@ import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK
 const trace = createTrace('dpt_disp_wc_simple/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wl-simple';
 
-const runtime = createWorkflowRuntime();
+const runtime = createWorkflowRuntime('test', process.argv[2]);
 const result = assessNode('wave.entry.md', createState(), runtime, trace);
 
 trace.traceEntry('check', { source: SRC, step: 'load:status_loaded',
@@ -109,8 +108,7 @@ trace.traceEntry('check', { source: SRC, step: 'load:file_loaded_in_trace',
   detail: `file_loaded in trace = ${traceEvents.some(e => e.event === 'file_loaded')}` });
 JS
 
-NODES_DIR="$B/exp/nodes" node $B/check_load.mjs
-```
+node $B/check_load.mjs $B/exp/nodes```
 
 → 预期：6 个 check 全部 passed，trace 包含 loader phase events + node self-trace。
 
@@ -143,8 +141,7 @@ console.log('\x1b[32mALL CHECKS PASSED\x1b[0m');
 trace.traceCleanup();
 JS2
 
-node $B/verify.mjs
-```
+node $B/verify.mjs $B/exp/nodes```
 
 → 预期：`9 checks, 9 passed, 0 failed`。
 

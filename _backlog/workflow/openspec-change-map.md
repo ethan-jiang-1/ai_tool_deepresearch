@@ -67,14 +67,16 @@ layer: pre-openspec-requirements
 ## 5. 最终 Change 列表和顺序
 
 ```
-wff_directory-contract
+wff_directory-contract     ✅ done — 目录治理
       ↓
-wff_contract-skeleton
+wff_contract-skeleton      ✅ done — 31 个骨架文件
       ↓
-wff_skeleton-validation
+wff_skeleton-validation    ← 当前 — logger + engine 兼容 + lifecycle walker
       ↓
 wff_content-setup ──→ wff_content-waves ──→ wff_content-delivery
 ```
+
+Change 3 的 scope 在原 plan 基础上扩展了三层基础设施（logger、workflow-chain 兼容、lifecycle walker），确保在 `wff_content-*` 填真实逻辑之前，lifecycle shell 已经被端到端验证可跑通。
 
 ---
 
@@ -194,45 +196,74 @@ DPT_FRAMEWORK/cli/gates/
 
 ### Change 3: `wff_skeleton-validation`
 
-**来源**：`breakdown/02-phase-b-minimum-real-bundle-run.md`
+**来源**：`breakdown/02-phase-b-minimum-real-bundle-run.md` + 新增 infrastructure 需求
 
-**目的**：用真实 `dpt_rb_*` run bundle 证明 Phase A 产出的 lifecycle skeleton 不是纸面结构。通过 `experiments_playbook/exp_workflow-foundation/` 的 playbook 证明 instantiation → final 的最小路径可被 bundle files、gate CLI output 和 trace 审计。
+**目的**：在 `wff_content-*` 上真实逻辑之前，建立运行时基础设施（logger）和 lifecycle 通路示范（walker），端到端证明 skeleton loop 可以跑通。Trace 记大事件（gate attempt/pass/fail/phase transition），Logger 记诊断细节（加载进度、CLI 输出、错误）。两者独立、互补。
 
-**产出物**：
-- `experiments_playbook/exp_workflow-foundation/` 下的 playbook（test-simple、test-medium、test-complex）
-- 可能需要的 disposable test bundle
+**产出物（三层）**：
+
+Layer 1 — 基础设施：
+- `DPT_FRAMEWORK/engine/logger.mjs` — 极简结构化 logger
+  - **默认形式**：`createLogger()` → console only，零配置，所有人都这样用
+  - **高级形式**：`createLogger({ file: 'dpt_rb_x/_cache/run.log' })` → console + 文件双写
+  - 四个 level：`debug`/`info`/`warn`/`error`，默认 `info`
+  - 零依赖（`node:fs` + `node:path`），API 与 `trace.mjs` 对称
+- Logger 注入到所有重要 engine 节点（`logger = null` silent no-op）：
+
+  注入点                            | 时机               | 内容
+  ----------------------------------|-------------------|------
+  `assessNode()`                    | 入口/出口          | "loading entry node", "load complete/failed"
+  `readMarkdownFile()`              | 首次读取           | "reading file: phases/phase-wave0.md"
+  `resolveDependencyClosure()`      | 解析完成           | "resolved N dependencies for entry"
+  `loadMarkdownFile()`              | cache hit / 加载    | "cache hit", "file loaded"
+  `walk-lifecycle.mjs`              | phase 进出          | "entering phase: wave0", "gate passed"
+  `walk-lifecycle.mjs`              | gate spawn          | "running gate CLI", "gate returned: pass/fail"
+  `walk-lifecycle.mjs`              | retry / escalation  | "retry 2/3", "escalation: max retries exceeded"
+
+Layer 2 — Engine 兼容：
+- 修复 `DPT_FRAMEWORK/engine/workflow-chain.mjs`：
+  - `nodePath()` 允许 `phases/` `shared/` 子目录（当前只接受 flat filename）
+  - `parseFrontmatter()` 兼容 YAML 子集（当前只接受 JSON）
+  - 所有公共函数注入 `logger` optional parameter（与 `trace` 同样的注入模式）：
+    `assessNode(fileRef, state, runtime, trace, logger)`、`readMarkdownFile(fileRef, runtime, trace, logger)` 等
+
+Layer 3 — Lifecycle 通路示范：
+- `DPT_FRAMEWORK/cli/walk-lifecycle.mjs` — 读 manifest.json，逐 phase 加载 node，spawn gate CLI，写 trace + log，打印 summary
+- 至少实现 **一个** gate 的最小真实 logic（如 `instantiation_complete` 检查 control files 存在），其余 7 个保持 placeholder pass
+- Walker 通过故意缺文件 → gate fail → repair → rerun → pass 证明 bounded repair loop 闭环
 
 **范围（owns）**：
-- 通过真实 instantiation path 创建 `dpt_rb_*`
-- 写入 canonical control files（`rb_plan.md`、`rb_profile.yaml`、`rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`）
-- 每个 phase 至少产生一个真实 runtime artifact
-- 每个 non-terminal phase 通过对应 gate
+- Logger 基础设施（与 trace 互补）
+- `workflow-chain.mjs` 的 node 加载兼容
+- Lifecycle walker 的通路逻辑（manifest → load → gate → advance → repeat）
+- 通过真实 instantiation + walk 证明 skeleton 结构正确
+- Gate CLI invocation chain 验证（spawn → JSON parse → exit code → trace entry）
 - 至少一个 gate failure 走完整闭环：fail → inspect/advice → repair → rerun → pass
 - Retry limit = 3（可配置），超限 escalation/block
-- Transient blocker 进入 waiting/transient state，恢复后继续
-- Pass/fail claim 必须能从 bundle files + CLI output + trace 追溯
+- Trace 和 log 的双轨审计
 
 **范围外（does not own）**：
-- 完整资料搜集质量
-- 多 subagent 并发
-- 长时间真实联网 research
+- 完整资料搜集质量、多 subagent 并发、长时间真实联网 research
+- 其余 7 个 gate 的完整 evaluation logic（保持 placeholder pass）
+- Node body 完整内容
 - 最终报告的正式产品形态
 
-**验收**（A02-1 到 A02-8）：
-- Bundle 通过真实 instantiation path 创建
-- 不依赖 chat memory 作为 state
-- Gate pass claim 可从 CLI output + runtime files 复查
-- 至少一次真实 gate failure + repair loop
-- 无伪造 evidence/receipt/trace
+**验收**：
+- `node walk-lifecycle.mjs --bundle dpt_rb_demo` 跑通 instantiation → final
+- Logger 输出每一步进展
+- `rb_trace.jsonl` 中每条 gate attempt 可审计
+- traceSummary 8/8 gate pass
+- 至少触发一次 gate fail → repair → rerun → pass
+- `check-project-reqs.mjs` + `check-project-specs.mjs` PASS
 
 **关键引用**：
 - `workflow-foundation-requirements.md` §§ 4.5, 9, 10, 11, 12
-- `guidelines/command-experiments.md`
-- `DPT_FRAMEWORK/rb_templates/`
+- `DPT_FRAMEWORK/engine/trace.mjs`
+- `DPT_FRAMEWORK/engine/workflow-chain.mjs`
+- `DPT_FRAMEWORK/engine/gate-loop.mjs`
 - `DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs`
 - `DPT_FRAMEWORK/cli/validate-bundle.mjs`
 - `DPT_FRAMEWORK/cli/inspect-bundle.mjs`
-- `DPT_FRAMEWORK/engine/trace.mjs`
 
 ---
 
