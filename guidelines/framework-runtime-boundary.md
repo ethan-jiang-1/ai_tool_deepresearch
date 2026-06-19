@@ -214,24 +214,32 @@ Markdown（playbook、task card、node）是 Agent Flow 的编织者。它告诉
 - **MUST**：多阶段 Agent Flow 保持在 Markdown/playbook 中，JS/CLI 只做确定性 checkpoint。
 - **MUST NOT**：将 Agent Flow 藏入 JS controller。JS 控制的是校验节点，不是整条流程。
 
-### 禁止环境变量传递配置
+### ⚡ 铁律：禁止环境变量传递配置
 
-Coding Agent 环境中每个 tool call 是独立 shell 进程，环境变量不跨 call。所有配置必须显式传递，不留隐式状态通道。
+**这是硬性约束，没有例外。** Coding Agent 环境中每个 tool call 是独立 shell 进程——`export FOO=bar` 在 call A 中设置，call B 完全看不到。任何依赖 `process.env` 在 component 间传递配置的做法在 Coding Agent 下都是死路。
 
-- **MUST**：通过 CLI flag、函数参数、runtime 属性传递配置（如 `nodesDir`、`--bundle`、`--next`）。
-- **MUST NOT**：使用 `process.env` 在 component 间传递配置或状态。Shell 的 `export FOO=bar && node script.mjs` 模式在 Agent 工具调用边界不可用。
-- 显式替代方案：
+- **MUST**：所有配置通过 CLI flag、函数参数、runtime 属性显式传递。
+- **MUST NOT**：在任何 `.mjs`、`.js`、playbook inline script 中使用 `process.env` 读取配置或状态。
+- 常见错误模式及替代方案：
   - `process.env.NODES_DIR` → `createWorkflowRuntime(source, nodesDir)` 参数
-  - `DPT_NON_INTERACTIVE=1` → `--non-interactive` CLI flag
-  - Shell env → `node script.mjs <arg1> <arg2>` CLI 参数
+  - `export DPT_NON_INTERACTIVE=1` → `--non-interactive` CLI flag
+  - `NODES_DIR=$B/exp/nodes node script.mjs` → `node script.mjs $B/exp/nodes`（CLI arg）
 
-### Gate 不知道路由
+### Gate 通过 Transition Table 查询下一步
 
-Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结构化结果。它不知道当前 phase 在 lifecycle 中的位置，不知道下一个 phase 是谁，不知道全局流程。
+Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结构化结果。它不知道全局流程，不持有路由逻辑。
 
-- Gate CLI 输出 SHALL 包含：`check`（passed/failed）、`inspect`（诊断：缺什么、哪里不一致）、`advice`（修复方向）。
-- 路由信息（`next`）由 Controller（Playbook/manifest）通过显式 CLI flag（`--next`）传入 gate。Gate 在响应中 echo 该值——它不是 gate 的知识，它是 Controller 传给 gate 又收回的确认。
-- **MUST NOT**：让 gate CLI 自行推断或决定下一步 phase。
+但 Gate 知道**问谁**：它调用统一接口 `askNext(gate, state)`，由底下的 **Transition Table**——无论是静态映射表还是未来的 FSM graph——回答下一个 Node 去哪。Gate 不认识底下那层是什么，只认接口。
+
+这层封装：
+
+- **MD Controller 不再背路由**——Playbook 不需要手动查 manifest、拼 `--next` flag、喂给 gate。Gate 自己问 transition table，回答直接带回 `check.next`。Playbook 读这个值加载下一 node。
+- **Transition table 只管 Node 间的转移**——给定 (gate, state)，回答 next_node。其他一概不管。
+- **"不知道"是合法回答**——transition table 返回 `null` 时，Gate 诚实告诉 MD controller。Controller 决定怎么办。
+
+- Gate CLI 输出 SHALL 包含：`check`（passed/failed + next）、`inspect`（诊断）、`advice`（修复方向）。
+- `next` SHALL 来自 `askNext(gate, state)` 查询，NOT 来自 CLI flag 或 manifest 字段。
+- **MUST NOT**：让 Playbook 手动查表拼参数传给 gate。Transition 查询是 Gate 的内部调用。
 
 ### Trace 是真相，Log 是解释
 

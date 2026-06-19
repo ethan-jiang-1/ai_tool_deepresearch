@@ -1,5 +1,5 @@
 {
-  "gate": "wave0_complete",
+  "gate": "wave0-complete",
   "description": "Verify Wave0 produced minimum shared foundation evidence: reference artifacts exist, metadata parseable, count meets foundation floor, trace evidence present.",
   "rules": [
     {

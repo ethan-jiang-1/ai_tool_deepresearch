@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const { values } = parseArgs({
   options: {
     bundle: { type: 'string' },
-    next: { type: 'string' },
+    transitions: { type: 'string' },
   },
 });
 
@@ -13,8 +17,14 @@ if (!values.bundle) {
   process.exit(2);
 }
 
+const { askNext } = await import('../../engine/ask-next.mjs');
+const transitionsPath = values.transitions
+  || join(__dirname, '..', '..', 'workflows', 'transitions.chain.json');
+
+const next = askNext(transitionsPath, 'readiness-passed', 'passed');
+
 const result = {
-  check: { passed: true, gate: 'readiness-passed', next: values.next || null },
+  check: { passed: true, gate: 'readiness-passed', next },
   inspect: [],
   advice: [],
 };

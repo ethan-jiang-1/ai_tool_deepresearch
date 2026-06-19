@@ -1,5 +1,5 @@
 {
-  "gate": "hitl1_recorded",
+  "gate": "hitl1-recorded",
   "description": "Verify HITL1 user input has been recorded to rb_profile.yaml with required fields filled and HITL1 status marker written.",
   "rules": [
     {

@@ -2,8 +2,7 @@
 node_type: phase
 id: phase-hitl2
 phase: hitl2
-gate: hitl2_recorded
-next: readiness
+gate: hitl2-recorded
 stop: "yes"
 requires:
   - shared/shared-profile

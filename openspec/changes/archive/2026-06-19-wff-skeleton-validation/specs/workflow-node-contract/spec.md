@@ -16,7 +16,7 @@
 #### Scenario: Workflow-chain loads phase node from subdirectory
 
 - **WHEN** `assessNode('phases/phase-wave0.md', state, runtime)` 被调用
-- **THEN** `nodePath()` SHALL 解析到 `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md`（当 `NODES_DIR` 指向正确路径时）
+- **THEN** `nodePath()` SHALL 解析到 `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md`（`nodesDir` 通过 `createWorkflowRuntime` 显式传入）
 - **AND** `parseFrontmatter()` SHALL 正确提取 `node_type: phase`、`gate: wave0_complete` 等字段
 
 #### Scenario: Skeleton is parseable not functional (unchanged)

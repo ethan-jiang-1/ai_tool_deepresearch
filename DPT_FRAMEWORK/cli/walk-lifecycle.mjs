@@ -107,7 +107,8 @@ for (const phase of manifest.phases) {
     const gateCli = join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'gates', `check-gate-${phase.gate}.mjs`);
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      const { stdout, stderr, status } = spawnSync('node', [gateCli, '--bundle', bundlePath], {
+      const transitionsPath = join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows', 'transitions.chain.json');
+      const { stdout, stderr, status } = spawnSync('node', [gateCli, '--bundle', bundlePath, '--transitions', transitionsPath], {
         encoding: 'utf-8',
         timeout: 30_000,
       });

@@ -50,12 +50,12 @@ log.info('phase entered', { phase: 'wave0' });
 **决策**：修改 `nodePath()` 的验证逻辑，允许 `phases/` 和 `shared/` 前缀：
 
 ```javascript
-export function nodePath(fileRef) {
+export function nodePath(fileRef, nodesDir) {
   if (fileRef.includes('..') || fileRef.startsWith('/')) {
     throw new Error(`Invalid fileRef "${fileRef}"`);
   }
   // fileRef can now be 'phases/phase-wave0.md' or 'shared/shared-profile.md'
-  return join(NODES_DIR, fileRef);
+  return join(nodesDir, fileRef);
 }
 ```
 
@@ -127,7 +127,7 @@ print traceSummary()
 
 使用 `node:child_process.spawnSync` 调用 gate CLI——简单、可靠、不需要管理子进程生命周期。
 
-Walker 在调用 workflow-chain 前 SHALL 设置 `process.env.NODES_DIR` 指向 `DPT_FRAMEWORK/workflows/nodes/`，确保 `assessNode('phases/phase-wave0.md')` 能正确解析到子目录下的 node 文件。
+Walker spawn gate CLI 时传 `--transitions` flag 指向 Transition Table。Gate 内部调 `askNext()` 查表获取 `next_node`——Walker 从 Gate 响应的 `check.next` 读路由，不再依赖 manifest `next` 字段或 `--next` flag。路由权威在 `transitions.chain.json`。
 
 **理由**：Walker 不是 Agent——它是确定性验证工具。它证明 manifest → load → gate → advance 的链可以走通。Agent 以后会读 node body 并做 decision，但 walker 只验证机械通路。
 
@@ -150,6 +150,8 @@ Gate evaluator：读取 `gate-instantiation-complete.definition.json`，遍历 r
 Walker 演示 fail → repair loop：第一次调用时不创建 `rb_plan.md` → gate fail → log 显示 inspect/advice → walker "修复"（创建文件）→ rerun gate → pass。
 
 **理由**：一个 gate 的真实逻辑足够证明 check/inspect/advice feedback loop。其余 7 个 gate 保持 placeholder——content changes 会按照同样的 pattern 实现。
+
+> **\[wff-state-chain 更新\]** Gate CLI 的路由方式已演进：`--next` flag 被 `--transitions` + `askNext()` 取代。Gate 不再接收 `--next`，改为自己查 Transition Table 获取 next_node。路由权威从 manifest `next` 字段移到 `transitions.chain.json`。
 
 ### D8: Retry 和 Escalation
 
@@ -182,7 +184,7 @@ Gate CLI 仍从 `DPT_FRAMEWORK/cli/gates/` spawn——gate 是被测 framework �
 
 两个 playbook 都是 **light**（纯 JS E2E，不 spawn Agent）。Walker 是确定性 CLI，不存在 Agent 决策回路——不符合 command-experiments 的 Applicability Test 中 "Agent-facing mechanism" 条件。当前阶段 proof 目标是：manifest → load → gate → trace + log → advance 的机械通路可重复、可回归。
 
-**HITL 非交互 bypass**：当前 HITL gate（`hitl1_recorded`、`hitl2_recorded`）是 placeholder，直接 return pass——实验无阻塞。未来真实 HITL gate 实现时，gate CLI 检查 `process.env.DPT_NON_INTERACTIVE`，为 `'1'` 时自动通过。Experiment playbook Step 1 export 该 env var。不改 walker loop 结构，不引入 `--no-stop` flag。
+**HITL 非交互 bypass**：当前 HITL gate（`hitl1_recorded`、`hitl2_recorded`）是 placeholder，直接 return pass——实验无阻塞。未来真实 HITL gate 实现时，gate CLI 通过 `--non-interactive` flag 自动通过（不读 env var）。Experiment playbook 传 `--non-interactive` 即可。
 
 **理由**：`command-experiments.md` 要求 experiment 可重复、可回归。Frozen fixtures 确保 Change 3 的 experiment 不会因后续 change 修改 node 而退化。配对命名使 prototype 和 playbook 的对应关系一目了然，且为后续 wff changes 建立 convention。
 

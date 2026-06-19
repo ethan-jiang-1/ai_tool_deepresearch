@@ -1,5 +1,5 @@
 {
-  "gate": "hitl2_recorded",
+  "gate": "hitl2-recorded",
   "description": "Verify HITL2 decision brief exists and user structured decision has been recorded to rb_profile.yaml with required fields filled.",
   "rules": [
     {

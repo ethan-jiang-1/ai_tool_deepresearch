@@ -65,7 +65,7 @@ const NODES_DIR = process.argv[2];
     passed: m.current === 'halt.entry.md', detail: `当前: ${m.current}` });
   m.advance('undefined_status');
   trace.traceEntry('check', { source: SRC, step: 'halt:outcome',
-    passed: m.isHalted && m.haltReason.includes('No transition defined'),
+    passed: m.isHalted && m.haltReason.includes('No transition for'),
     detail: `reason=${m.haltReason}` });
   trace.traceEntry('check', { source: SRC, step: 'halt:iterations_1', passed: m.iterations === 1 });
 }
@@ -75,7 +75,7 @@ const NODES_DIR = process.argv[2];
   const fsm = { name: 'bad', initial: 'real.md', states: { 'real.md': { on: { success: null } } } };
   const result = resolveTransition(fsm, 'nonexistent.md', 'success');
   trace.traceEntry('check', { source: SRC, step: 'unknown_node:halt',
-    passed: result.action === 'halt' && result.reason.includes('nonexistent.md') });
+    passed: !result.found && result.next === null });
 }
 
 // ── halt: unknown status on wf-halt ──

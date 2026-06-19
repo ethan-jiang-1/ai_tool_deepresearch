@@ -2,8 +2,7 @@
 node_type: phase
 id: phase-wave2
 phase: wave2
-gate: wave2_complete
-next: hitl2
+gate: wave2-complete
 stop: "no"
 requires: []
 suggested_context:

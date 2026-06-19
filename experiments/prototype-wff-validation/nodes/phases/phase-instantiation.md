@@ -2,8 +2,7 @@
 node_type: phase
 id: phase-instantiation
 phase: instantiation
-gate: instantiation_complete
-next: hitl1
+gate: instantiation-complete
 stop: "no"
 requires: []
 suggested_context: []

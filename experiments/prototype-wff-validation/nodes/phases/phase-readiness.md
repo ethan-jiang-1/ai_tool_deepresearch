@@ -2,8 +2,7 @@
 node_type: phase
 id: phase-readiness
 phase: readiness
-gate: readiness_passed
-next: final
+gate: readiness-passed
 stop: "no"
 requires: []
 suggested_context:

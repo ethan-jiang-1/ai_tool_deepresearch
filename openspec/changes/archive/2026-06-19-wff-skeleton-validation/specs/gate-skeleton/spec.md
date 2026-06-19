@@ -61,3 +61,5 @@ Gate definition JSON SHALL 不编码只有 Agent 能做的 semantic research jud
 
 - **WHEN** `check-gate-instantiation-complete.mjs --bundle dpt_rb_test` 被调用且所有 required files 存在
 - **THEN** output SHALL 为 `check.passed: true`，`inspect` 和 `advice` SHALL 为空数组
+
+> **\[wff-state-chain 更新\]** Gate CLI 的路由查询已演进：`--next` flag 被移除，改为 `--transitions <path>` flag + 内部调用 `askNext()`。Gate 通过 Transition Table 获取 `next_node` 而非从 CLI flag。Output 的 `check.next` 现在来自 `askNext()`，不再是 CLI flag echo。

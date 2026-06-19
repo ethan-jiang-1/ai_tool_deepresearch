@@ -2,8 +2,7 @@
 node_type: phase
 id: phase-wave1
 phase: wave1
-gate: wave1_complete
-next: wave2
+gate: wave1-complete
 stop: "no"
 subagent: true
 requires:

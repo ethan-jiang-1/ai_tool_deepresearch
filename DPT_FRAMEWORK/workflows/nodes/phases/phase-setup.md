@@ -2,8 +2,7 @@
 node_type: phase
 id: phase-setup
 phase: setup
-gate: setup_ready
-next: wave0
+gate: setup-ready
 stop: "no"
 requires:
   - shared/shared-profile

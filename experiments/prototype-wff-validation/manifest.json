@@ -1,14 +1,14 @@
 {
   "phases": [
-    { "key": "instantiation", "node": "phases/phase-instantiation.md", "gate": "instantiation-complete", "next": "phases/phase-hitl1.md" },
-    { "key": "hitl1",          "node": "phases/phase-hitl1.md",          "gate": "hitl1-recorded",          "next": "phases/phase-setup.md" },
-    { "key": "setup",          "node": "phases/phase-setup.md",          "gate": "setup-ready",             "next": "phases/phase-wave0.md" },
-    { "key": "wave0",          "node": "phases/phase-wave0.md",          "gate": "wave0-complete",          "next": "phases/phase-wave1.md" },
-    { "key": "wave1",          "node": "phases/phase-wave1.md",          "gate": "wave1-complete",          "next": "phases/phase-wave2.md" },
-    { "key": "wave2",          "node": "phases/phase-wave2.md",          "gate": "wave2-complete",          "next": "phases/phase-hitl2.md" },
-    { "key": "hitl2",          "node": "phases/phase-hitl2.md",          "gate": "hitl2-recorded",          "next": "phases/phase-readiness.md" },
-    { "key": "readiness",      "node": "phases/phase-readiness.md",      "gate": "readiness-passed",        "next": "phases/phase-final.md" },
-    { "key": "final",          "node": "phases/phase-final.md",          "gate": null,                      "next": null }
+    { "key": "instantiation", "node": "phases/phase-instantiation.md", "gate": "instantiation-complete" },
+    { "key": "hitl1",          "node": "phases/phase-hitl1.md",          "gate": "hitl1-recorded" },
+    { "key": "setup",          "node": "phases/phase-setup.md",          "gate": "setup-ready" },
+    { "key": "wave0",          "node": "phases/phase-wave0.md",          "gate": "wave0-complete" },
+    { "key": "wave1",          "node": "phases/phase-wave1.md",          "gate": "wave1-complete" },
+    { "key": "wave2",          "node": "phases/phase-wave2.md",          "gate": "wave2-complete" },
+    { "key": "hitl2",          "node": "phases/phase-hitl2.md",          "gate": "hitl2-recorded" },
+    { "key": "readiness",      "node": "phases/phase-readiness.md",      "gate": "readiness-passed" },
+    { "key": "final",          "node": "phases/phase-final.md",          "gate": null }
   ],
   "shared": [
     "shared/shared-profile.md",

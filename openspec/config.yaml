@@ -12,7 +12,12 @@ context: |
   核心原则:
     - Engine (JavaScript) 强制执行规则 (schemas, state machines, receipts)
     - Agent (LLM) 生产内容 (搜索、阅读、写作、综合)
-    - 绝不回到 V12 的 agent 自治理模式
+    - Markdown 控制 Agent Flow，JS/CLI 控制确定性 checkpoint
+    - JS/CLI 的输出 (check/inspect/advice) 必须回到 conversation context，让 MD 读后继续行动
+    - JS/CLI 不编排多阶段流程、不做语义判断、不替 Agent 选修复策略
+    - Gate 不持有路由——Transition table 负责 Node 间转移，Gate 只问不猜
+    - 绝对禁止用环境变量传递配置——Coding Agent 每个 tool call 是独立 shell，
+      process.env 不跨 call。所有配置必须显式：CLI flag、函数参数、runtime 属性
 
   技术栈:
     Node.js ≥20, 纯 JavaScript (ESM, .mjs)。不使用 TypeScript。
@@ -29,10 +34,13 @@ context: |
     LLM 负责信息加工，JS 负责质量保证。验证失败 → 反馈 → 反思 → 纠正，不静默通过。
 
     JS/MD 边界判断:
-      遇到"这段逻辑该放 JS 还是 MD"拿不准时，读 guidelines/command-experiments.md
-      的 "Framework Code Rules" 节。速判口诀：需要智力做决策的（策略、修复方案、
-      调度规则、分支动作）→ MD/Agent；确定性可验证的（loop、schema 校验、hash、
-      状态转换）→ JS/Engine。Engine 提供注入点（函数参数），MD/Agent 提供实际逻辑。
+      遇到"这段逻辑该放 JS 还是 MD"拿不准时，读 guidelines/project-charter.md 的
+      "Operating Model" 节和 guidelines/framework-runtime-boundary.md 的
+      "Agent-Engine Communication" 节。速判口诀：
+        MD/Agent 侧：多阶段流程编排、修复策略选择、语义判断、branch 路由决策
+        JS/Engine 侧：schema 校验、状态转移查询 (askNext)、receipt 检查、trace 写入
+      Engine 提供注入点（函数参数），MD/Agent 提供实际逻辑。
+      Engine 永远不替 Agent 做决策——它只回答 "为什么没过"、"缺什么"、"下一步是谁"。
 
   迭代习惯:
     AI Coding 容易堆叠代码。不能只往上摞——要时不时停下来思考结构的合理性，

@@ -2,8 +2,7 @@
 node_type: phase
 id: phase-final
 phase: final
-gate: none
-next: none
+gate: null
 stop: "no"
 requires: []
 suggested_context:

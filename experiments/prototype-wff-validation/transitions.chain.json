@@ -1,0 +1,10 @@
+{
+  "instantiation-complete": { "passed": "phases/phase-hitl1.md" },
+  "hitl1-recorded":        { "passed": "phases/phase-setup.md" },
+  "setup-ready":           { "passed": "phases/phase-wave0.md" },
+  "wave0-complete":        { "passed": "phases/phase-wave1.md" },
+  "wave1-complete":        { "passed": "phases/phase-wave2.md" },
+  "wave2-complete":        { "passed": "phases/phase-hitl2.md" },
+  "hitl2-recorded":        { "passed": "phases/phase-readiness.md" },
+  "readiness-passed":      { "passed": "phases/phase-final.md" }
+}

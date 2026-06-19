@@ -13,7 +13,7 @@
 每个 phase SHALL：
 1. `trace.traceEntry('phase_enter', { phase: key })`
 2. 通过 `workflow-chain` 加载对应的 phase node frontmatter
-3. 如果 `gate` 不为 null：spawn `check-gate-<name>.mjs --bundle <path>`，解析 stdout JSON，`trace.traceEntry('check', result.check)`
+3. 如果 `gate` 不为 null：spawn `check-gate-<name>.mjs --bundle <path> --transitions <path>`，解析 stdout JSON，`trace.traceEntry('check', result.check)`
 4. 如果 gate pass：advance 到 `next` phase
 5. 如果 gate fail：进入 repair/retry loop，max 3 retries
 

@@ -109,3 +109,9 @@ LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass 
 LFW-003: "lifecycle-walker — Walker logs progress via logger (createLogger({ file: '<bundle>/_logs/run.log' }))"
 LFW-004: lifecycle-walker — Walker requires --bundle flag (exit(2) on missing)
 GSK-004: gate-skeleton — Gate CLI evaluates rules from definition (load definition JSON, iterate rules, file_exists check, check/inspect/advice feedback)
+
+# wff-state-chain
+TRT-001: transition-table — File naming convention transitions.chain.json / transitions.fsm.json
+TRT-002: transition-table — transitions.chain.json structure (gate→state→next_node static map)
+TRT-003: transition-table — transition-chain.mjs engine (loadChain, resolveTransition, createChain; mirrors FSM)
+TRT-004: transition-table — ask-next.mjs unified dispatch (askNext dispatches to chain or FSM by file suffix)

@@ -98,9 +98,9 @@ import { readFileSync } from 'node:fs';
 import { recordAgentSpawnRequested } from '../DPT_FRAMEWORK/engine/subagent-relay.mjs';
 
 const [slot] = JSON.parse(readFileSync('dpt_disp_gs_simple/_slots.json', 'utf-8'));
-const platform = process.env.DPT_AGENT_PLATFORM || 'claude-code';
-const runtimeMode = process.env.DPT_AGENT_RUNTIME_MODE || 'project-agent';
-const prompt = recordAgentSpawnRequested(slot, 'dpt_disp_gs_simple', { platform, runtimeMode, parentRuntimeAgentId: process.env.DPT_PARENT_RUNTIME_AGENT_ID });
+const platform = 'claude-code';
+const runtimeMode = 'project-agent';
+const prompt = recordAgentSpawnRequested(slot, 'dpt_disp_gs_simple', { platform, runtimeMode, parentRuntimeAgentId: undefined });
 console.log(prompt);
 JS
 node "$B/native-agent-request.mjs" 2>&1 | grep -v "^\[trace\]"
@@ -130,7 +130,7 @@ import { readFileSync } from 'node:fs';
 import { ingestAgentReceipt } from '../DPT_FRAMEWORK/engine/subagent-relay.mjs';
 
 const [slot] = JSON.parse(readFileSync('dpt_disp_gs_simple/_slots.json', 'utf-8'));
-const imported = ingestAgentReceipt(slot, 'dpt_disp_gs_simple', { platform: 'claude-code', runtimeMode: 'project-agent', runtimeAgentId: process.env.DPT_RUNTIME_AGENT_ID });
+const imported = ingestAgentReceipt(slot, 'dpt_disp_gs_simple', { platform: 'claude-code', runtimeMode: 'project-agent', runtimeAgentId: 'test-runtime-agent' });
 console.log('receipt imported: ' + imported.agent.runtimeAgentId);
 JS
 DPT_RUNTIME_AGENT_ID="<AGENT_ID>" node "$B/import-receipt.mjs"
@@ -149,7 +149,7 @@ import { commitSlotResult } from '../DPT_FRAMEWORK/engine/subagent-relay.mjs';
 
 const [slot] = JSON.parse(readFileSync('dpt_disp_gs_simple/_slots.json', 'utf-8'));
 const result = JSON.parse(readFileSync('dpt_disp_gs_simple/relay-source-intake.json', 'utf-8'));
-const relay = commitSlotResult(slot, 'dpt_disp_gs_simple', result, { platform: 'claude-code', runtimeMode: 'project-agent', parentRuntimeAgentId: process.env.DPT_PARENT_RUNTIME_AGENT_ID });
+const relay = commitSlotResult(slot, 'dpt_disp_gs_simple', result, { platform: 'claude-code', runtimeMode: 'project-agent', parentRuntimeAgentId: undefined });
 console.log('Relay ' + (relay.ok ? 'OK' : 'FAILED') + ': ' + slot.key);
 if (!relay.ok) console.log(relay.result.notes.join('; '));
 JS

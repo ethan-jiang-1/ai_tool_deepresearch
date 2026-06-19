@@ -63,25 +63,26 @@ describe('2. Transition Resolution (WFS-002)', () => {
 
   it('2.1 advance: returns next node', () => {
     const result = resolveTransition(fsm, 'wave.entry.md', 'success');
-    assert.equal(result.action, 'advance');
+    assert.equal(result.found, true);
     assert.equal(result.next, 'wave-audit.entry.md');
   });
 
   it('2.2 complete: null target', () => {
     const result = resolveTransition(fsm, 'wave-final.entry.md', 'success');
-    assert.equal(result.action, 'complete');
+    assert.equal(result.found, true);
+    assert.equal(result.next, null);
   });
 
   it('2.3 halt: unknown status', () => {
     const result = resolveTransition(fsm, 'wave.entry.md', 'unknown_status');
-    assert.equal(result.action, 'halt');
-    assert.ok(result.reason.includes('unknown_status') || result.reason.includes('No transition'));
+    assert.equal(result.found, false);
+    assert.equal(result.next, null);
   });
 
   it('2.4 halt: unknown node', () => {
     const result = resolveTransition(fsm, 'nonexistent.md', 'success');
-    assert.equal(result.action, 'halt');
-    assert.ok(result.reason.includes('nonexistent.md'));
+    assert.equal(result.found, false);
+    assert.equal(result.next, null);
   });
 });
 
@@ -175,7 +176,7 @@ describe('4. Machine — Retry (WFS-002)', () => {
   it('4.3 lastTransition tracks the most recent result', () => {
     const m = createMachine(join(NOD, 'wf-retry.fsm.json'));
     m.advance('error');
-    assert.equal(m.lastTransition.action, 'advance');
+    assert.equal(m.lastTransition.found, true);
     assert.equal(m.lastTransition.next, 'retry-node.entry.md');
   });
 });

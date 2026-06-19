@@ -1,5 +1,5 @@
 {
-  "gate": "wave2_complete",
+  "gate": "wave2-complete",
   "description": "Verify Wave2 produced minimum cross-topic synthesis artifact that references verified Wave0/Wave1 artifacts.",
   "rules": [
     {

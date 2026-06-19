@@ -2,8 +2,7 @@
 node_type: phase
 id: phase-wave0
 phase: wave0
-gate: wave0_complete
-next: wave1
+gate: wave0-complete
 stop: "no"
 requires:
   - shared/shared-anti-cheating-rules

@@ -1,5 +1,5 @@
 {
-  "gate": "instantiation_complete",
+  "gate": "instantiation-complete",
   "description": "Verify a valid dpt_rb_* run bundle has been instantiated with canonical control files.",
   "rules": [
     {
