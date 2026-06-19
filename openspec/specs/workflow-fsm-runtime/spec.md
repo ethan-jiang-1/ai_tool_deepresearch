@@ -3,7 +3,7 @@
 
 ## Purpose
 
-FSM 运行时核心：`Machine` 类提供声明式状态机实例，`resolveTransition` 做纯查表路由，`createMachine` 工厂从 `.fsm.json` 文件创建实例。workflow-fsm.mjs 是一个纯 FSM transition table resolver（241 行，5 个 export），不包含 VM 沙箱、MD 执行或依赖解析——这些属于 `workflow-chain.mjs` 的职责。
+FSM 运行时核心：`Machine` 类提供声明式状态机实例，`resolveTransition` 做纯查表路由，`createMachine` 工厂从 `.fsm.json` 文件创建实例。workflow-fsm.mjs 是一个纯 FSM transition table resolver（241 行，5 个 export），不包含 VM 沙箱或 MD 代码执行。依赖解析和 MD 加载见 `workflow-chain.mjs`。
 
 ## Requirements
 
