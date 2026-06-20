@@ -4,7 +4,7 @@
 
 FSM 运行时核心：`Machine` 类提供声明式状态机实例，`createMachine` 工厂从已验证的 FSM 定义或 `.fsm.json` 文件创建实例。`workflow-fsm.mjs` 只负责确定性状态推进，不负责 schema 载入、VM sandbox 或 MD 执行。`loadFSM` 属于 `workflow-fsm-definition`，`resolveTransition` 属于 `workflow-fsm-transition`.
 
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Machine SHALL hold current state and advance via transition table lookup
 

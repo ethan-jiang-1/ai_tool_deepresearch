@@ -47,6 +47,8 @@
 - **WHEN** CLI 调用详细 router 后 `routing.kind` 为 `no_transition`、`invalid_input` 或 `config_error`
 - **THEN** process exit code MUST 为 2
 
+## ADDED Requirements
+
 ### Requirement: Gate CLI evaluates rules from definition
 
 每个 gate CLI SHALL 加载 gate definition JSON，遍历 rules，并在 `currentNodeRef` 与 gate 绑定校验通过后执行 deterministic check。规则执行结果 SHALL 决定 `passed` 或 `failed`，并且该 outcome SHALL 被送入详细 router 生成 `routing` 与 `check.next`。

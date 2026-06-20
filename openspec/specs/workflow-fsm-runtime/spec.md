@@ -3,12 +3,10 @@
 ## Purpose
 
 FSM 运行时核心：`Machine` 类提供声明式状态机实例，`resolveTransition` 做纯查表路由，`createMachine` 工厂从 `.fsm.json` 文件创建实例。`workflow-fsm.mjs` 只负责确定性状态推进，不负责 VM sandbox 或 MD 执行。
-
 ## Requirements
-
 ### Requirement: Machine SHALL hold current state and advance via transition table lookup
 
-The `Machine` class SHALL maintain a `current` property tracking the active node name. `advance(status)` SHALL call `resolveTransition()` to look up the next node from the FSM transition table and update `current` only when a non-null next node is found. On unmatched status it SHALL halt instead of throwing.
+The `Machine` class SHALL maintain a `current` property tracking the active node file reference. `advance(outcome)` SHALL call `resolveTransition()` to look up the next node from the FSM transition table and update `current` only when a non-null next node is found. On unmatched outcome it SHALL halt instead of throwing.
 
 The Machine SHALL expose:
 
@@ -21,19 +19,19 @@ The Machine SHALL expose:
 
 #### Scenario: Machine advances to next node on valid transition
 
-- **WHEN** `machine.advance('success')` is called and the FSM maps current node + `success` to `'next_node.md'`
+- **WHEN** `machine.advance('passed')` is called and the FSM maps current node + `passed` to `'next_node.md'`
 - **THEN** `machine.current` SHALL be updated to `'next_node.md'`
 - **AND** `machine.advance()` SHALL return `'running'`
 
 #### Scenario: Machine completes on terminal transition
 
-- **WHEN** `machine.advance('success')` is called and the FSM maps current node + `success` to `null`
+- **WHEN** `machine.advance('passed')` is called and the FSM maps current node + `passed` to `null`
 - **THEN** `machine.outcome` SHALL become `'complete'`
 - **AND** `machine.isComplete` SHALL be `true`
 
-#### Scenario: Machine halts on unmatched status
+#### Scenario: Machine halts on unmatched outcome
 
-- **WHEN** `machine.advance('unknown_status')` is called and the FSM has no entry for current node + that status
+- **WHEN** `machine.advance('failed')` is called and the FSM has no entry for current node + that outcome
 - **THEN** the Machine SHALL set `outcome` to `'halted'`
 - **AND** set `haltReason` to a descriptive message
 
@@ -86,7 +84,7 @@ The Machine SHALL expose:
 
 ### Requirement: createMachine SHALL be the declarative factory for Machine instances
 
-`createMachine(fsmPathOrDef, trace?)` SHALL accept either a path string (delegating to `loadFSM`) or a pre-loaded FSM definition. An optional `trace` instance MAY be stored for lifecycle event logging. It SHALL return a `Machine` instance with `current` set to `fsm.initial`.
+`createMachine(fsmPathOrDef, trace?)` SHALL accept either a path string (delegating to `loadFSM` from `workflow-fsm-definition`) or a pre-loaded validated FSM definition. An optional `trace` instance MAY be stored for lifecycle event logging. It SHALL return a `Machine` instance with `current` set to `fsm.initial`.
 
 #### Scenario: createMachine from path
 
@@ -97,3 +95,4 @@ The Machine SHALL expose:
 
 - **WHEN** `createMachine(fsmPath, trace)` is called with a trace from `createTrace()`
 - **THEN** the Machine stores the trace and MAY emit lifecycle events through it
+

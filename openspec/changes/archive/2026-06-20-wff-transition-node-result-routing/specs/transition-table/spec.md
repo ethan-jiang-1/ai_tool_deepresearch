@@ -123,6 +123,8 @@ The detailed router result SHALL be preserved by consumers that need diagnostics
 - **WHEN** `resolveNodeTransitionDetailed('transitions.yaml', 'phases/phase-wave0.md', 'passed', context)` is called
 - **THEN** the result SHALL have `kind: 'config_error'`
 
+## MODIFIED Requirements
+
 ### Requirement: Detailed node-result router dispatches by file suffix
 
 `resolveNodeTransitionDetailed(path, currentNodeRef, outcome, context)` SHALL route by `path` suffix:

@@ -4,7 +4,12 @@
 
 FSM transition layer。这里定义 node-keyed `.fsm.json` 的纯查表路由，以及低层 FSM tracker 的当前语义。FSM definition loading and validation is Source of Record in `workflow-fsm-definition`; this layer consumes validated definitions and does not redefine schema or file loading.
 
-## Requirements
+## RENAMED Requirements
+
+- FROM: `### Requirement: resolveTransition SHALL return `{ next, found }``
+- TO: `### Requirement: Node-keyed FSM transition lookup`
+
+## MODIFIED Requirements
 
 ### Requirement: Node-keyed FSM transition lookup
 
