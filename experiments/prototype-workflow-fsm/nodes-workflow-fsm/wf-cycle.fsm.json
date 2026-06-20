@@ -4,7 +4,7 @@
   "states": {
     "cycle-a.entry.md": {
       "on": {
-        "success": null
+        "passed": null
       }
     }
   }

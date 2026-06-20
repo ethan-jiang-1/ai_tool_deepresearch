@@ -1,0 +1,46 @@
+> req: DYS-001, WNC-007
+
+## Purpose
+
+Engine 按显式 fileRef 加载 Agent-readable Markdown node closure，并将解析后的 node data 留在 runtime cache 中供下游验证。它不预编译整个 DAG，不从 registry 返回 executable Step，也不拥有 Agent Flow。
+
+## MODIFIED Requirements
+
+### Requirement: Nodes are resolved by explicit file reference at runtime
+
+The workflow loader SHALL resolve a Markdown node from an explicit node file reference and a configured node directory supplied by runtime state, function parameter, or CLI argument. It SHALL NOT require a process environment variable and SHALL NOT resolve to executable Step instances.
+
+The loader SHALL parse frontmatter, preserve all frontmatter keys, resolve the dependency closure declared by `requires`, and keep each loaded file as `{ fileRef, md, frontmatter }` in runtime cache for later inspection. `assessNode()` SHALL return the ordered dependency `plan` alongside the usual runtime result for the Agent to read.
+
+#### Scenario: Agent requests a known node file
+
+- **WHEN** `assessNode('phases/phase-wave0.md', state, runtime)` is called with `runtime.nodesDir` pointing at the workflow node directory
+- **THEN** the loader resolves that file under `runtime.nodesDir`
+- **AND** it returns the ordered dependency `plan`
+- **AND** runtime cache retains parsed entries for each loaded file
+
+#### Scenario: Unknown node file
+
+- **WHEN** `assessNode(fileRef, state, runtime)` is called and `fileRef` does not exist under `runtime.nodesDir`
+- **THEN** the loader throws an error naming the missing file reference
+
+### Requirement: Node file reference maps to Agent-readable Markdown
+
+The runtime SHALL resolve a node file reference to a corresponding Markdown file under the configured node directory. `assessNode()` is the entry point that loads a node: it resolves the dependency closure, parses frontmatter from each Markdown file, preserves the full frontmatter object, and returns `{ state, status, runtime, plan }`. Each loaded file SHALL remain available in runtime cache as `{ fileRef, md, frontmatter }` for the Agent and consistency validator to read. The Engine SHALL NOT execute any code blocks in the Markdown; the Markdown body is Agent-readable content only.
+
+#### Scenario: Engine loads and returns MD for Agent to read
+
+- **WHEN** `assessNode(fileRef, state, runtime)` is called with a node file reference
+- **THEN** it reads the corresponding Markdown file resolved relative to `runtime.nodesDir`
+- **AND** it parses frontmatter, resolves dependencies, and returns `{ state, status, runtime, plan }`
+- **AND** it SHALL NOT execute any JS code blocks found in the Markdown content
+
+#### Scenario: Frontmatter metadata is preserved
+
+- **WHEN** a node Markdown file contains additional frontmatter keys
+- **THEN** the returned `frontmatter` object SHALL retain those keys
+
+#### Scenario: MD without code blocks is normal
+
+- **WHEN** a node Markdown file contains no fenced JS code block
+- **THEN** the Engine loads and returns the Markdown normally without error

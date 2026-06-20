@@ -113,9 +113,10 @@ This directory cannot decide:
 | `DPT_FRAMEWORK/` as read-only framework assets | Current convention | Yes | Framework code, definitions, templates, and Agent-facing instructions; not run state |
 | `experiments/shared/new-disposable-bundle.mjs` | Current | Yes | Shared experiment disposable-bundle setup |
 | `check` trace verdict events | Current | Used by all 20 playbooks | Trace-backed verdict convention |
-| `DPT_FRAMEWORK/workflows/manifest.json` + `workflows/nodes/` | Target | No | Single canonical workflow package for workflow-foundation; not a multi-workflow namespace |
-| `DPT_FRAMEWORK/schema/gate_definitions/` | Target | No | Future read-only gate definition JSON |
-| `DPT_FRAMEWORK/engine/gates/` and `DPT_FRAMEWORK/cli/gates/` | Target | No | Future gate loader/evaluator and one-gate-per-CLI wrappers |
+| `DPT_FRAMEWORK/workflows/manifest.json` + `workflows/nodes/` | Current | Yes | Single canonical workflow package for workflow-foundation; not a multi-workflow namespace |
+| `DPT_FRAMEWORK/schema/gate_definitions/` | Current | Yes | Read-only gate definition JSON; skeleton/content completeness is owned by accepted specs |
+| `DPT_FRAMEWORK/cli/gates/` | Current | Yes | Accepted one-gate-per-CLI skeleton wrappers |
+| `DPT_FRAMEWORK/engine/gates/` | Target | No | Future gate loader/evaluator implementation; directory exists but has no loader/evaluator yet |
 | `DPT_FRAMEWORK/cli/ds.mjs` | Proposed | No runtime use; design input only | Future OpenSpec + implementation required |
 | `rb_ledger.jsonl` | Proposed | No runtime use; design input only | Future OpenSpec + implementation required |
 | Queue Markdown projection | Current | Yes — `queue-manager.mjs` render() writes `_cache/agentic-queue/current-task.md` | Queue state projection, not queue authority |

@@ -35,7 +35,7 @@ suggested_context: []
 ## 5. Gate Command
 
 ```bash
-node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle <path>
+node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle <path> --current-node phases/phase-instantiation.md
 ```
 
 ## 6. On Gate Pass

@@ -4,13 +4,13 @@
   "states": {
     "retry-node.entry.md": {
       "on": {
-        "success": "retry-next.entry.md",
-        "error": "retry-node.entry.md"
+        "passed": "retry-next.entry.md",
+        "failed": "retry-node.entry.md"
       }
     },
     "retry-next.entry.md": {
       "on": {
-        "success": null
+        "passed": null
       }
     }
   }

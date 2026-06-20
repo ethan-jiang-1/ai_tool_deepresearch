@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定义 Transition table 层——Node 间状态转移的单一事实来源。当前用静态映射表（`.chain.json`），未来可换 FSM graph（`.fsm.json`）。`ask-next.mjs` 是统一查询入口——Gate 只认接口，不认底下是什么。
+定义 Transition table 层的当前 Source of Record。`.chain.json` 和 `.fsm.json` 都是可查询的 transition tables，`ask-next.mjs` 根据后缀分发到对应 loader。Engine 只负责确定性查表，不负责 Agent Flow 编排。
 
 ## Requirements
 
@@ -28,30 +28,47 @@ Transition table 文件 SHALL 命名为 `transitions.<impl>.json`。`<impl>` SHA
 
 - **WHEN** `resolveTransition(chain, 'instantiation-complete', 'passed')` 被调用
 - **THEN** 返回 `{ next: 'phases/phase-hitl1.md', found: true }`
-- **AND** `next` SHALL 是完整相对 node 文件路径（含 `phases/` 或 `shared/` 前缀 + `.md` 后缀），MD controller 可直接传给 `assessNode(next, ...)`，无需拼接或查表
 
 #### Scenario: Unknown state returns null
 
 - **WHEN** `resolveTransition(chain, 'instantiation-complete', 'blocked')` 被调用且 chain 中无 `blocked` entry
 - **THEN** 返回 `{ next: null, found: false }`
 
-### Requirement: transition-chain.mjs provides chain engine
+### Requirement: transition-chain.mjs provides chain tracker
 
-`transition-chain.mjs` SHALL 提供与 `workflow-fsm.mjs` 对等的接口：
+`transition-chain.mjs` SHALL 提供以下接口：
 
-- `ChainDefinition` — Zod schema（验证 `{ [gate]: { [state]: next_node } }` 结构）
+- `ChainDefinition` — Zod schema，验证 `{ [gate]: { [state]: next_node } }` 结构
 - `loadChain(path)` — 读取并验证 `.chain.json` 文件
 - `resolveTransition(chain, gate, state)` — 纯函数，返回 `{ next, found }`
-- `createChain(path, trace?)` — factory，返回带有 `advance(state)`、`current`、`isComplete` 等属性的对象
+- `createChain(pathOrDef, trace?)` — factory，返回 `Chain` tracker
 
-#### Scenario: createChain loads and advances
+`Chain` tracker SHALL 具有以下属性和方法：
 
-- **WHEN** `const c = createChain('transitions.chain.json', trace); c.advance('passed')`
-- **THEN** `c.current` SHALL 更新为 next_node，trace SHALL 记录 transition receipt
+- `current` — 最近一次查询的 gate
+- `next` — 最近一次查询得到的 next_node
+- `outcome` — `running` 或 `complete`
+- `isComplete` — `outcome === 'complete'`
+- `receipts` — transition receipt 数组
+- `iterations` — 已查询次数
+- `askNext(gate, state)` — 查询 transition，记录 receipt，并更新 tracker 状态
+
+#### Scenario: createChain records queries
+
+- **WHEN** `const c = createChain('transitions.chain.json', trace); c.askNext('gate-a', 'passed')`
+- **THEN** `c.current` SHALL 更新为 `gate-a`
+- **AND** `c.next` SHALL 更新为查询结果
+- **AND** `c.receipts` SHALL 追加一条 transition receipt
+
+#### Scenario: createChain marks terminal results complete
+
+- **WHEN** `c.askNext('gate-final', 'passed')` returns `next: null`
+- **THEN** `c.isComplete` SHALL 为 `true`
 
 ### Requirement: ask-next.mjs dispatches by file suffix
 
 `askNext(path, gate, state)` SHALL 根据 `path` 文件后缀选择 loader：
+
 - `.chain.json` → `loadChain()` + `resolveTransition()`
 - `.fsm.json` → `loadFSM()` + `resolveTransition()`
 

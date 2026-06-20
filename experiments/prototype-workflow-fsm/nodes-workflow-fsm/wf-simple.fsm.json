@@ -4,20 +4,20 @@
   "states": {
     "wave.entry.md": {
       "on": {
-        "success": "wave-audit.entry.md",
-        "error": "wave.entry.md"
+        "passed": "wave-audit.entry.md",
+        "failed": "wave.entry.md"
       }
     },
     "wave-audit.entry.md": {
       "on": {
-        "success": "wave-final.entry.md",
-        "error": "wave-audit.entry.md"
+        "passed": "wave-final.entry.md",
+        "failed": "wave-audit.entry.md"
       }
     },
     "wave-final.entry.md": {
       "on": {
-        "success": null,
-        "error": "wave-final.entry.md"
+        "passed": null,
+        "failed": "wave-final.entry.md"
       }
     }
   }

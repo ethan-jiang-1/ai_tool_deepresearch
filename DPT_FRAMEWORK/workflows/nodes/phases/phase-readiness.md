@@ -37,7 +37,7 @@ Final 交付前运行最后一个 deterministic checkpoint：验证所有 requir
 ## 5. Gate Command
 
 ```bash
-node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle <path>
+node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle <path> --current-node phases/phase-readiness.md
 ```
 
 ## 6. On Gate Pass

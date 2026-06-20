@@ -1,33 +1,40 @@
 #!/usr/bin/env node
-import { parseArgs } from 'node:util';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+// check-gate-wave1-complete.mjs — evaluates gate-wave1-complete
+// @impl GSK-001, GSK-002, GSK-004
+// Usage: node check-gate-wave1-complete.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import {
+  parseGateCliArgs,
+  validateNodeGateBinding,
+  resolveRouting,
+  buildGateResult,
+  emitGateResult,
+} from '../../engine/helpers/gate-helpers.mjs';
 
-const { values } = parseArgs({
-  options: {
-    bundle: { type: 'string' },
-    transitions: { type: 'string' },
-  },
-});
+const args = parseGateCliArgs();
+const GATE_KEY = 'wave1-complete';
 
-if (!values.bundle) {
-  console.error('Error: --bundle <path> is required');
-  process.exit(2);
+// Validate node/gate binding
+const bindingError = validateNodeGateBinding(args.currentNode, GATE_KEY);
+if (bindingError) {
+  const result = {
+    check: { passed: false, gate: GATE_KEY, currentNodeRef: args.currentNode, next: null },
+    routing: { kind: 'invalid_input', next: null, detail: bindingError },
+    inspect: [bindingError],
+    advice: ['Verify --current-node matches the phase for this gate.'],
+  };
+  emitGateResult(result);
 }
 
-const { askNext } = await import('../../engine/ask-next.mjs');
-const transitionsPath = values.transitions
-  || join(__dirname, '..', '..', 'workflows', 'transitions.chain.json');
+const routing = resolveRouting(args.transitions, args.currentNode, 'passed');
 
-const next = askNext(transitionsPath, 'wave1-complete', 'passed');
-
-const result = {
-  check: { passed: true, gate: 'wave1-complete', next },
+const result = buildGateResult({
+  passed: true,
+  gate: GATE_KEY,
+  currentNodeRef: args.currentNode,
+  routing,
   inspect: [],
   advice: [],
-};
+});
 
-console.log(JSON.stringify(result, null, 2));
-process.exit(result.check.passed ? 0 : 1);
+emitGateResult(result);

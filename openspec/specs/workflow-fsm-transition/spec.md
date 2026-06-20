@@ -1,59 +1,86 @@
-# Workflow FSM Transition
 > req: WFS-002
 
 ## Purpose
 
-FSM 转移机制。MD 节点代码块通过 `transition()` 上报执行结果，Engine 通过 `resolveTransition()` 查 FSM 表裁决下一步：advance / complete / halt。
+FSM transition layer。这里定义 `.fsm.json` 的加载、纯查表路由，以及低层 `FSM` tracker 的当前语义。它不负责 VM sandbox 注入，也不负责 Agent Flow 编排。
 
 ## Requirements
 
-### Requirement: transition() SHALL be injectable into VM sandbox
+### Requirement: FSM definition SHALL be loadable and validatable
 
-The system SHALL inject a `transition(currentNode, status)` function into the `node:vm` sandbox used to execute MD code blocks. This function SHALL accept a node name and an execution status string, perform an FSM lookup, write a receipt, and return the transition result.
+The system SHALL load a `.fsm.json` file that defines the workflow's states and transitions. The file SHALL contain a `name`, an `initial` state, and a `states` map where each key is a node name and each value specifies transition targets keyed by execution status string. The `initial` node SHALL exist in the `states` map. Transition targets SHALL be either a node name (string) or `null` (terminal state).
 
-#### Scenario: transition function is callable from MD code block
+#### Scenario: Valid FSM definition loads successfully
 
-- **WHEN** an MD code block calls `transition('wave-entry.md', 'success')`
-- **THEN** the function SHALL execute without throwing and return a result object
+- **WHEN** a valid `.fsm.json` is loaded via `loadFSM(path)`
+- **THEN** the system returns a validated FSM definition object with `name`, `initial`, and `states`
 
-#### Scenario: transition writes a receipt
+#### Scenario: Missing initial state in states map is rejected
 
-- **WHEN** `transition(currentNode, status)` is called
-- **THEN** a `transition` type receipt SHALL be appended to `runtime.receipts` containing `currentNode` and `status`
+- **WHEN** a `.fsm.json` specifies an `initial` node that does not exist as a key in `states`
+- **THEN** the system SHALL throw a validation error
 
-### Requirement: resolveTransition SHALL determine the next action from FSM
+#### Scenario: Null transition target marks terminal state
 
-The system SHALL look up the FSM's `states[currentNode].on[status]` to determine the next action:
+- **WHEN** a state's `on.<status>` value is `null`
+- **THEN** the system SHALL interpret this as a terminal transition
 
-- If the target is a string node name, return `{ action: 'advance', next: '<target>' }`
-- If the target is `null`, return `{ action: 'complete' }`
-- If the currentNode or status has no matching entry, return `{ action: 'halt', reason: '...' }`
+### Requirement: resolveTransition SHALL return `{ next, found }`
+
+The system SHALL look up `states[currentNode].on[status]` and return `{ next, found }`.
+
+- If the target is a string node name, return `{ next: '<target>', found: true }`
+- If the target is `null`, return `{ next: null, found: true }`
+- If the currentNode or status has no matching entry, return `{ next: null, found: false }`
 
 #### Scenario: Advance to next node on matching transition
 
 - **WHEN** FSM defines `"wave-entry.md": { "on": { "success": "wave-audit.md" } }` and `resolveTransition(fsm, 'wave-entry.md', 'success')` is called
-- **THEN** the result SHALL be `{ action: 'advance', next: 'wave-audit.md' }`
+- **THEN** the result SHALL be `{ next: 'wave-audit.md', found: true }`
 
 #### Scenario: Complete on null target
 
 - **WHEN** FSM defines `"wave-final.md": { "on": { "success": null } }` and `resolveTransition(fsm, 'wave-final.md', 'success')` is called
-- **THEN** the result SHALL be `{ action: 'complete' }`
+- **THEN** the result SHALL be `{ next: null, found: true }`
 
 #### Scenario: Halt on unknown status
 
 - **WHEN** FSM defines `"wave-entry.md": { "on": { "success": "wave-audit.md" } }` and `resolveTransition(fsm, 'wave-entry.md', 'unknown_status')` is called
-- **THEN** the result SHALL be `{ action: 'halt', reason: '<descriptive message>' }`
+- **THEN** the result SHALL be `{ next: null, found: false }`
 
 #### Scenario: Halt on unknown node
 
 - **WHEN** `resolveTransition(fsm, 'nonexistent.md', 'success')` is called and `nonexistent.md` is not in FSM states
-- **THEN** the result SHALL be `{ action: 'halt', reason: '<descriptive message>' }`
+- **THEN** the result SHALL be `{ next: null, found: false }`
 
-### Requirement: transition result SHALL be accessible to the Engine after VM execution
+### Requirement: createFSM SHALL provide a low-level transition tracker
 
-After the VM code block completes, the Engine SHALL be able to read the transition result (currentNode, status, action, next) to drive the workflow loop.
+`createFSM(fsmPathOrDef, trace?)` SHALL accept either a path string (delegating to `loadFSM`) or a pre-loaded FSM definition. It SHALL return an `FSM` tracker with:
 
-#### Scenario: Engine reads transition result after code block execution
+- `current` set to `fsm.initial`
+- `next` tracking the most recent resolved next node
+- `outcome` starting at `running`
+- `receipts` and `iterations`
+- `isComplete`
+- `askNext(state)` to resolve the current node + status and record a transition receipt
 
-- **WHEN** a code block calls `transition('node.md', 'success')` and the VM exits
-- **THEN** the Engine SHALL read `{ currentNode: 'node.md', status: 'success', action: 'advance', next: '...' }` from the sandbox
+`askNext(state)` SHALL:
+- update `current` when the result has a non-null `next`
+- set `outcome` to `complete` when `next === null`
+- set `outcome` to `halted` when `found === false`
+
+#### Scenario: Tracker advances through valid transitions
+
+- **WHEN** `const f = createFSM(fsmDef); f.askNext('success')`
+- **THEN** `f.current` SHALL update to the next node
+- **AND** `f.receipts` SHALL append a transition receipt
+
+#### Scenario: Tracker becomes complete on terminal transition
+
+- **WHEN** `askNext(state)` resolves to `{ next: null, found: true }`
+- **THEN** `outcome` SHALL become `complete`
+
+#### Scenario: Tracker halts on unmatched transition
+
+- **WHEN** `askNext(state)` resolves to `{ next: null, found: false }`
+- **THEN** `outcome` SHALL become `halted`

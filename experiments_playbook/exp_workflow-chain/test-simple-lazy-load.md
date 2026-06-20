@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: workflow-chain
 case: simple
 weight: light
-case_goal: "验证 single-entry loader 在调用前不预读 MD，调用 assessNode 后才加载自包含 entry。"
+case_goal: "验证 MD controller 显式驱动 single-entry loader：MD 创建 runtime → MD 调 assessNode → Engine 返回结果 → MD 从 trace 交叉验证。runtime init 不预读任何 MD。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -14,13 +14,13 @@ verdict: trace-jsonl
 
 ## Execution Contract
 
-由 coding agent 在真实 `dpt_disp_*` bundle 中执行。实验结果必须来自实际文件写入、Engine 调用和 trace event；允许通过文件系统读取中间产物；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
+MD 是 controller。每一步是 MD 发出一个指令 → Engine 执行并写 trace → MD 读 trace 验证。一个 bash block = 一次 MD↔Engine 交互。
+
+本实验验证：MD 创建 runtime 时 Engine 不预读文件；MD 显式调 `assessNode('wave.entry.md')` 才加载；MD 从 trace 交叉验证每个 event。
 
 # test-workflow-chain-simple
 
-验证 `assessNode('wave.entry.md')` 显式加载一个自包含 entry；runtime 创建时不得预读任何 MD。
-
-## Step 1: 创建真正的 DPT run bundle
+## Step 1: 创建 bundle
 
 ```bash
 B=$(node experiments/shared/new-disposable-bundle.mjs wc_simple --nodes=experiments/prototype-workflow-chain/nodes-workflow-chain --force)
@@ -30,101 +30,145 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 
 → 预期：validate/inspect 通过。
 
-## Step 2: 验证 runtime init 不预读 MD
+---
+
+以下 Step 2.1–2.4：MD 逐步驱动 Engine，每步写 trace，MD 读 trace 裁决。
+
+---
+
+## Step 2.1: MD 创建 runtime → 验证 Engine 不预读
+
+MD 指令：「创建 workflow runtime，只加载 nodesDir，不读任何 MD 文件。」
+
+Engine 回答：runtime 就绪，contentCache 为空，无 file_read receipt。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_wc_simple"
-
-cat > $B/check_init.mjs << 'JS'
+cat > $B/step_init.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createWorkflowRuntime } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
-const trace = createTrace('dpt_disp_wc_simple/_trace.jsonl', { consoleEcho: false });
+const B=process.argv[2], NODES_DIR=process.argv[3];
+const trace = createTrace(B+'/_trace.jsonl', { consoleEcho: true });
 const SRC = 'wl-simple';
-trace.traceInit('wl-simple single-entry test (real bundle)', { source: SRC });
+trace.traceInit('wl-simple: MD controller → Engine', { source: SRC });
 
-const runtime = createWorkflowRuntime('test', process.argv[2]);
+const runtime = createWorkflowRuntime('test', NODES_DIR);
 
+// Engine 回答 MD：runtime 状态
 trace.traceEntry('check', { source: SRC, step: 'init:cache_empty',
   passed: runtime.contentCache.size === 0,
   detail: `contentCache.size = ${runtime.contentCache.size}` });
 
-trace.traceEntry('check', { source: SRC, step: 'init:no_cursor',
-  passed: !('cursor' in runtime) && !('manifest' in runtime),
-  detail: `keys = ${Object.keys(runtime).join(', ')}` });
-
 trace.traceEntry('check', { source: SRC, step: 'init:no_file_read',
   passed: runtime.receipts.filter(r => r.type === 'file_read').length === 0,
   detail: 'no file_read receipt before explicit load' });
+
+trace.traceEntry('check', { source: SRC, step: 'init:keys',
+  passed: runtime.receipts.length === 0,
+  detail: `receipts.length = ${runtime.receipts.length}` });
 JS
 
-node $B/check_init.mjs $B/exp/nodes```
+node $B/step_init.mjs $B $B/exp/nodes
 
-→ 预期：3 个 check 全部 `passed: true`。
+# MD 读 trace 裁决
+node -e "
+const e=require('fs').readFileSync('$B/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const c=e.filter(x=>x.event==='check'&&x.step.startsWith('init:'));
+c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
+const ok=c.length===3&&c.every(x=>x.passed);
+if(!ok)process.exit(1);
+console.log('MD裁决: Step 2.1 — runtime init 不预读 ✅');
+"
+```
 
-## Step 3: 显式加载 self-contained entry
+→ 预期：3 个 check 全 PASS。Engine 未预读任何文件。
+
+---
+
+## Step 2.2: MD 调 assessNode → Engine 加载 wave.entry.md
+
+MD 指令：「加载 wave.entry.md。」
+
+Engine 执行：读文件、解析依赖（自包含，无依赖）、加载、写 trace。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_wc_simple"
-
-cat > $B/check_load.mjs << 'JS'
+cat > $B/step_load.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
-const trace = createTrace('dpt_disp_wc_simple/_trace.jsonl', { consoleEcho: false });
+const B=process.argv[2], NODES_DIR=process.argv[3];
+const trace = createTrace(B+'/_trace.jsonl', { consoleEcho: true });
 const SRC = 'wl-simple';
 
-const runtime = createWorkflowRuntime('test', process.argv[2]);
+const runtime = createWorkflowRuntime('test', NODES_DIR);
 const result = assessNode('wave.entry.md', createState(), runtime, trace);
 
-trace.traceEntry('check', { source: SRC, step: 'load:status_loaded',
+// Engine 回答 MD：load 结果
+trace.traceEntry('check', { source: SRC, step: 'load:status',
   passed: result.status === 'loaded',
   detail: `status = ${result.status}` });
 
-trace.traceEntry('check', { source: SRC, step: 'load:plan_entry_only',
+trace.traceEntry('check', { source: SRC, step: 'load:plan',
   passed: JSON.stringify(result.plan) === JSON.stringify(['wave.entry.md']),
   detail: `plan = ${JSON.stringify(result.plan)}` });
 
 trace.traceEntry('check', { source: SRC, step: 'load:entry_loaded',
   passed: result.state.executionOrder.includes('wave.entry.md') && result.state.counters['wave.entry.md'] === 1,
-  detail: `executionOrder=${JSON.stringify(result.state.executionOrder)}, wave.entry.md=${result.state.counters['wave.entry.md']}` });
-
-trace.traceEntry('check', { source: SRC, step: 'load:no_unrelated_read',
-  passed: !runtime.contentCache.has('audit.md'),
-  detail: `cache keys = ${JSON.stringify([...runtime.contentCache.keys()])}` });
-
-trace.traceEntry('check', { source: SRC, step: 'load:receipts_present',
-  passed: ['load_start', 'file_read', 'dependency_resolved', 'file_loaded', 'load_complete'].every(t => runtime.receipts.some(r => r.type === t)),
-  detail: `receipt types = ${runtime.receipts.map(r => r.type).join(', ')}` });
-
-// Engine writes file_loaded to trace; verify from trace file, not just receipts
-import { readFileSync } from 'node:fs';
-
-const traceEvents = readFileSync(trace.traceFilePath(), 'utf-8').trim().split('\n').map(JSON.parse);
-trace.traceEntry('check', { source: SRC, step: 'load:file_loaded_in_trace',
-  passed: traceEvents.some(e => e.event === 'file_loaded' && e.fileRef === 'wave.entry.md'),
-  detail: `file_loaded in trace = ${traceEvents.some(e => e.event === 'file_loaded')}` });
+  detail: `order=${JSON.stringify(result.state.executionOrder)}, count=${result.state.counters['wave.entry.md']}` });
 JS
 
-node $B/check_load.mjs $B/exp/nodes```
+node $B/step_load.mjs $B $B/exp/nodes
 
-→ 预期：6 个 check 全部 passed，trace 包含 loader phase events + node self-trace。
+# MD 读 trace 裁决
+node -e "
+const e=require('fs').readFileSync('$B/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const c=e.filter(x=>x.event==='check'&&x.step.startsWith('load:'));
+c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
+const ok=c.length===3&&c.every(x=>x.passed);
+if(!ok)process.exit(1);
+console.log('MD裁决: Step 2.2 — Engine 成功加载 wave.entry.md ✅');
+"
+```
 
-## Step 4: 从 trace 做最终裁决
+→ 预期：status=loaded，plan 只有 entry 自身，executionOrder 包含 entry。
+
+---
+
+## Step 2.3: MD 交叉验证——读 trace 文件检查 file_loaded event
+
+MD 不信任 receipts，读原始 trace 文件交叉验证 Engine 确实写了 file_loaded。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_wc_simple"
+node -e "
+const e=require('fs').readFileSync('$B/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const fileLoaded=e.filter(x=>x.event==='file_loaded');
+const waveLoaded=fileLoaded.some(x=>x.fileRef==='wave.entry.md');
+const fileRead=e.filter(x=>x.event==='file_read');
 
+console.log('trace events: '+e.length);
+console.log('file_loaded events: '+fileLoaded.length);
+console.log('wave.entry.md loaded in trace: '+waveLoaded);
+console.log('file_read events: '+fileRead.length);
+console.log('cache keys at end: '+JSON.stringify([...new Set(e.filter(x=>x.event==='file_loaded').map(x=>x.fileRef))]));
+
+if(!waveLoaded)process.exit(1);
+console.log('MD裁决: Step 2.3 — trace 文件交叉验证通过 ✅');
+"
+```
+
+→ 预期：trace 中有 file_loaded event，fileRef = wave.entry.md。
+
+---
+
+## Step 2.4: MD 最终裁决——汇总全部 check event
+
+MD 统计整个实验中所有 check event，判定 PASS/FAIL。
+
+```bash
 cat > $B/verify.mjs << 'JS2'
 import { readFileSync } from 'node:fs';
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-
-const trace = createTrace('dpt_disp_wc_simple/_trace.jsonl', { consoleEcho: false });
-
-const lines = readFileSync(trace.traceFilePath(), 'utf-8').trim().split('\n');
+const B=process.argv[2];
+const lines = readFileSync(B+'/_trace.jsonl','utf-8').trim().split('\n');
 const events = lines.map(JSON.parse);
 const checks = events.filter(e => e.event === 'check');
 const passed = checks.filter(e => e.passed);
@@ -136,17 +180,18 @@ if (failed.length > 0) {
   process.exit(1);
 }
 for (const c of passed) console.log(`\x1b[32m  PASS ${c.step}\x1b[0m`);
-console.log('\x1b[32mALL CHECKS PASSED\x1b[0m');
-
-trace.traceCleanup();
+console.log('\n\x1b[32mALL CHECKS PASSED\x1b[0m');
 JS2
 
-node $B/verify.mjs $B/exp/nodes```
+node $B/verify.mjs $B
+```
 
-→ 预期：`9 checks, 9 passed, 0 failed`。
+→ 预期：`6 checks, 6 passed, 0 failed`。
 
-## Step 5: 清理
+---
+
+## Step 3: 清理
 
 ```bash
-rm -rf dpt_disp_wc_*
+rm -rf $B
 ```

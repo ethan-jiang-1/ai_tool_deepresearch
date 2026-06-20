@@ -55,6 +55,9 @@ dmypy.json
 dpt_disp_*/
 dpt_disp_*/
 dpt_disp_temp*/
+dpt_val_*/
+dpt_rb_*/
+tests/.test-tmp/
 
 # ===== Claude Code =====
 .claude/settings.local.json

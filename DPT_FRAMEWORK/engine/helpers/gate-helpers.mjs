@@ -1,5 +1,200 @@
-// Shared validation helpers for gate-loop and gate-fork engines.
-// Internal — not part of the public engine API.
+// gate-helpers.mjs — Shared gate CLI utilities and validation helpers
+// @impl GSK-001, GSK-002, GSK-004
+// Canonical engine location: DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs
+//
+// ## Role
+// Shared helpers for gate CLI wrappers and gate-loop/gate-fork engines.
+// Provides:
+//   - parseGateCliArgs()          — parse --bundle, --current-node, --transitions
+//   - loadGateDefinition()        — load gate definition JSON
+//   - loadManifest()              — load workflow manifest
+//   - validateNodeGateBinding()   — check current-node ↔ gate binding
+//   - resolveRouting()            — call detailed router
+//   - buildGateResult()           — construct standard { check, routing, inspect, advice }
+//   - emitGateResult()            — write JSON to stdout and exit with correct code
+//   - validateState()             — throw if state is not a plain object
+//   - validateRules()             — throw if any rule is invalid
+//   - zodErrors()                 — map ZodError issues to plain diagnostics
+
+import { parseArgs } from 'node:util';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { resolveNodeTransitionDetailed } from '../ask-next.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Gate CLI Shared Utilities
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── CLI Argument Parsing ──────────────────────────────────────────────────
+
+/**
+ * Parse standard gate CLI arguments.
+ *
+ * @returns {{ bundle: string, currentNode: string, transitions: string }}
+ */
+export function parseGateCliArgs() {
+  const { values } = parseArgs({
+    options: {
+      bundle: { type: 'string' },
+      'current-node': { type: 'string' },
+      transitions: { type: 'string' },
+    },
+  });
+
+  if (!values.bundle) {
+    console.error('Error: --bundle <path> is required');
+    process.exit(2);
+  }
+
+  if (!values['current-node']) {
+    console.error('Error: --current-node <fileRef> is required');
+    process.exit(2);
+  }
+
+  const transitionsPath = values.transitions
+    || join(__dirname, '..', '..', 'workflows', 'transitions.chain.json');
+
+  return {
+    bundle: values.bundle,
+    currentNode: values['current-node'],
+    transitions: transitionsPath,
+  };
+}
+
+// ─── Gate Definition Loading ───────────────────────────────────────────────
+
+/**
+ * Load a gate definition JSON file.
+ *
+ * @param {string} gateKey — e.g. 'wave0-complete'
+ * @returns {{ gate: string, rules: Array }}
+ */
+export function loadGateDefinition(gateKey) {
+  const defPath = join(__dirname, '..', '..', 'schema', 'gate_definitions', `gate-${gateKey}.definition.json`);
+  const raw = readFileSync(defPath, 'utf-8');
+  return JSON.parse(raw);
+}
+
+/**
+ * Load the workflow manifest.
+ *
+ * @returns {{ phases: Array, shared: Array }}
+ */
+export function loadManifest() {
+  const manifestPath = join(__dirname, '..', '..', 'workflows', 'manifest.json');
+  const raw = readFileSync(manifestPath, 'utf-8');
+  return JSON.parse(raw);
+}
+
+// ─── Binding Validation ────────────────────────────────────────────────────
+
+/**
+ * Validate that the current-node fileRef is bound to the expected gate
+ * according to the workflow manifest.
+ *
+ * Returns null on success, or an error message string on mismatch.
+ *
+ * @param {string} currentNodeRef — e.g. 'phases/phase-wave0.md'
+ * @param {string} gateKey — e.g. 'wave0-complete'
+ * @returns {string|null} error message or null if valid
+ *
+ * @impl GSK-004
+ */
+export function validateNodeGateBinding(currentNodeRef, gateKey) {
+  const manifest = loadManifest();
+  const phase = manifest.phases.find(p => p.node === currentNodeRef);
+
+  if (!phase) {
+    return `current-node "${currentNodeRef}" not found in manifest phases`;
+  }
+
+  if (phase.gate !== gateKey) {
+    return `Gate binding mismatch: current-node "${currentNodeRef}" expects gate "${phase.gate}" but CLI is for gate "${gateKey}"`;
+  }
+
+  return null;
+}
+
+// ─── Routing Integration ───────────────────────────────────────────────────
+
+/**
+ * Call the detailed router and return the routing result.
+ *
+ * @param {string} transitionsPath
+ * @param {string} currentNodeRef
+ * @param {string} outcome — 'passed' or 'failed'
+ * @param {object} [context] — caller-owned routing context
+ * @returns {{ kind: string, next: string|null, detail?: string }}
+ */
+export function resolveRouting(transitionsPath, currentNodeRef, outcome, context = {}) {
+  return resolveNodeTransitionDetailed(transitionsPath, currentNodeRef, outcome, context);
+}
+
+// ─── Result Construction ───────────────────────────────────────────────────
+
+/**
+ * Build the standard gate result object.
+ *
+ * @param {object} opts
+ * @param {boolean} opts.passed — whether the gate check passed
+ * @param {string} opts.gate — gate key
+ * @param {string} opts.currentNodeRef — canonical node fileRef
+ * @param {object} opts.routing — detailed router result
+ * @param {string[]} [opts.inspect] — diagnostic messages
+ * @param {string[]} [opts.advice] — guidance messages
+ * @param {object} [opts.extraCheck] — extra fields to merge into check
+ * @returns {{ check: object, routing: object, inspect: string[], advice: string[] }}
+ *
+ * @impl GSK-002
+ */
+export function buildGateResult({ passed, gate, currentNodeRef, routing, inspect = [], advice = [], extraCheck = {} }) {
+  const checkNext = routing.kind === 'next' ? routing.next : null;
+
+  return {
+    check: {
+      passed,
+      gate,
+      currentNodeRef,
+      next: checkNext,
+      ...extraCheck,
+    },
+    routing,
+    inspect,
+    advice,
+  };
+}
+
+// ─── Output and Exit ───────────────────────────────────────────────────────
+
+/**
+ * Emit the gate result as JSON to stdout and exit with the correct code.
+ *
+ * Exit code rules (GSK-002):
+ *   passed=true  → exit(0)
+ *   passed=false → exit(1)
+ *   routing.kind is no_transition | invalid_input | config_error → exit(2)
+ *
+ * @param {object} result — from buildGateResult()
+ *
+ * @impl GSK-002
+ */
+export function emitGateResult(result) {
+  console.log(JSON.stringify(result, null, 2));
+
+  const routingErrorKinds = ['no_transition', 'invalid_input', 'config_error'];
+  if (routingErrorKinds.includes(result.routing.kind)) {
+    process.exit(2);
+  }
+
+  process.exit(result.check.passed ? 0 : 1);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Gate Engine Validation Helpers (gate-loop / gate-fork)
+// ═══════════════════════════════════════════════════════════════════════════
 
 /**
  * Throw if state is not a plain object.

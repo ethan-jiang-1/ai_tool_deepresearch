@@ -14,7 +14,7 @@ verdict: trace-jsonl
 
 ## Execution Contract
 
-Gate CLI 调 `askNext()` 查 Transition Table。`failed` 状态在表中无匹配 → `next=null`。Playbook 读 inspect/advice 修复后 rerun——Gate 以 `passed` 状态重新查表 → Transition Table 回答 next。
+Gate CLI 调 `resolveNodeTransitionDetailed()` 查 Transition Table。`failed` outcome 在表中无匹配 → `routing.kind: 'no_transition'`, `next=null`。Playbook 读 inspect/advice 修复后 rerun——Gate 以 `passed` outcome 重新查表 → Transition Table 回答 next。
 
 ## Step 1: 创建 bundle + 展示 Transition Table
 
@@ -23,7 +23,7 @@ B=$(node experiments/shared/new-disposable-bundle.mjs wff_val_repair --force)
 echo "Bundle: $B"
 echo ""
 echo "=== Transition Table ==="
-cat experiments/prototype-wff-validation/transitions.chain.json
+cat DPT_FRAMEWORK/workflows/transitions.chain.json
 ```
 
 → 所有 gate 只有 `passed` 状态有 next。`failed` 无匹配 → `null`。
@@ -47,15 +47,15 @@ const{existsSync,writeFileSync}=await import('node:fs');
 const B=process.argv[2];
 const log=createLogger({file:B+'/_logs/run.log'});
 const trace=createTrace(B+'/rb_trace.jsonl',{consoleEcho:true});
-const gate='instantiation-complete',transitions='experiments/prototype-wff-validation/transitions.chain.json';
+const gate='instantiation-complete',transitions='DPT_FRAMEWORK/workflows/transitions.chain.json';
 
-const r=assessNode('phases/phase-instantiation.md',createState(),createWorkflowRuntime('engine','experiments/prototype-wff-validation/nodes'),trace,log);
+const r=assessNode('phases/phase-instantiation.md',createState(),createWorkflowRuntime('engine','DPT_FRAMEWORK/workflows/nodes'),trace,log);
 if(r.status!=='loaded')process.exit(1);
 console.log('JS回答: node loaded — phases/phase-instantiation.md');
 log.info('node loaded');
 
 for(let i=0;i<5;i++){
-  const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs','--bundle',B,'--transitions',transitions],{encoding:'utf-8'});
+  const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs','--bundle',B,'--current-node','phases/phase-instantiation.md','--transitions',transitions],{encoding:'utf-8'});
   const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
   const icon=gr.check.passed?'PASS':'FAIL';
   console.log('attempt '+(i+1)+': '+icon+' next='+gr.check.next+' inspect='+JSON.stringify(gr.inspect));
@@ -96,9 +96,9 @@ for node_gate in \
 const{createTrace}=await import('../DPT_FRAMEWORK/engine/trace.mjs');const{createLogger}=await import('../DPT_FRAMEWORK/engine/logger.mjs');const{createWorkflowRuntime,createState,assessNode}=await import('../DPT_FRAMEWORK/engine/workflow-chain.mjs');const{spawnSync}=await import('node:child_process');
 const B=process.argv[2],node=process.argv[3],gate=process.argv[4];
 const log=createLogger({file:B+'/_logs/run.log'});const trace=createTrace(B+'/rb_trace.jsonl',{consoleEcho:true});
-const r=assessNode(node,createState(),createWorkflowRuntime('engine','experiments/prototype-wff-validation/nodes'),trace,log);
+const r=assessNode(node,createState(),createWorkflowRuntime('engine','DPT_FRAMEWORK/workflows/nodes'),trace,log);
 if(r.status!=='loaded')process.exit(1);
-const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs','--bundle',B,'--transitions','experiments/prototype-wff-validation/transitions.chain.json'],{encoding:'utf-8'});
+const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs','--bundle',B,'--current-node',node,'--transitions','DPT_FRAMEWORK/workflows/transitions.chain.json'],{encoding:'utf-8'});
 const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
 log.info('gate '+gr.check.gate+' → '+(gr.check.passed?'PASS':'FAIL')+' next='+gr.check.next);
 if(!gr.check.passed||!gr.check.next)process.exit(1);
@@ -109,7 +109,7 @@ echo "final (no gate)"
 cat > $B/s.mjs << 'JS2'
 const{createTrace}=await import('../DPT_FRAMEWORK/engine/trace.mjs');const{createLogger}=await import('../DPT_FRAMEWORK/engine/logger.mjs');const{createWorkflowRuntime,createState,assessNode}=await import('../DPT_FRAMEWORK/engine/workflow-chain.mjs');
 const B=process.argv[2];const log=createLogger({file:B+'/_logs/run.log'});const trace=createTrace(B+'/rb_trace.jsonl',{consoleEcho:true});
-const r=assessNode('phases/phase-final.md',createState(),createWorkflowRuntime('engine','experiments/prototype-wff-validation/nodes'),trace,log);
+const r=assessNode('phases/phase-final.md',createState(),createWorkflowRuntime('engine','DPT_FRAMEWORK/workflows/nodes'),trace,log);
 if(r.status!=='loaded')process.exit(1);
 JS2
 node $B/s.mjs $B

@@ -38,7 +38,7 @@ dpt_disp_*/    = mutable disposable experiment state/data/evidence/results
 
 同一套 `DPT_FRAMEWORK/` 可以服务多个 run bundle。运行中发生的用户输入、gate attempt、pass/fail、repair、waiting/block、trace、artifact 和 final output 都必须写入 active runtime context，不能写回 framework。
 
-当前 v1 只有一个 canonical Deep Research workflow package，因此 workflow-foundation target 使用 `DPT_FRAMEWORK/workflows/manifest.json` 和 `DPT_FRAMEWORK/workflows/nodes/`，不使用 `workflows/<workflow-name>/` namespace。这不限制 run bundle 数量；同一套 framework 仍必须支持多个互相隔离的 `dpt_rb_*`。
+当前 v1 只有一个 canonical Deep Research workflow package，因此 workflow-foundation 路由使用 `DPT_FRAMEWORK/workflows/manifest.json` 和 `DPT_FRAMEWORK/workflows/nodes/`，不使用 `workflows/<workflow-name>/` namespace。这不限制 run bundle 数量；同一套 framework 仍必须支持多个互相隔离的 `dpt_rb_*`。
 
 ---
 
@@ -79,7 +79,7 @@ DPT_FRAMEWORK/
   command_playbook/
 ```
 
-Workflow-foundation target routing:
+Workflow-foundation route map:
 
 ```text
 DPT_FRAMEWORK/
@@ -113,11 +113,11 @@ DPT_FRAMEWORK/
   command_playbook/
 ```
 
-`DPT_FRAMEWORK/workflows/` is the target Agent-facing workflow surface: manifest and Markdown nodes.
+`DPT_FRAMEWORK/workflows/` is the current Agent-facing workflow surface: manifest and Markdown nodes.
 
 `DPT_FRAMEWORK/schema/contracts/` contains executable schema contracts.
 
-`DPT_FRAMEWORK/schema/gate_definitions/` is the target location for read-only gate definition JSON. These files define what each gate checks; they are not run data and must not store pass/fail status.
+`DPT_FRAMEWORK/schema/gate_definitions/` is the current location for read-only gate definition JSON. These files define what each gate checks; they are not run data and must not store pass/fail status.
 
 `DPT_FRAMEWORK/engine/` contains deterministic engine code.
 
@@ -225,21 +225,23 @@ Markdown（playbook、task card、node）是 Agent Flow 的编织者。它告诉
   - `export DPT_NON_INTERACTIVE=1` → `--non-interactive` CLI flag
   - `NODES_DIR=$B/exp/nodes node script.mjs` → `node script.mjs $B/exp/nodes`（CLI arg）
 
-### Gate 通过 Transition Table 查询下一步
+### Gate 通过 Node-Result Transition Router 查询下一步
 
 Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结构化结果。它不知道全局流程，不持有路由逻辑。
 
-但 Gate 知道**问谁**：它调用统一接口 `askNext(gate, state)`，由底下的 **Transition Table**——无论是静态映射表还是未来的 FSM graph——回答下一个 Node 去哪。Gate 不认识底下那层是什么，只认接口。
+但 Gate 知道**问谁**：它调用详细路由接口 `resolveNodeTransitionDetailed(transitionsPath, currentNodeRef, outcome)`，由底下的 **Transition Table**——无论是静态 chain 映射表还是 FSM graph——回答下一个 Node 去哪。Gate 不认识底下那层是什么，只认接口。
 
 这层封装：
 
-- **MD Controller 不再背路由**——Playbook 不需要手动查 manifest、拼 `--next` flag、喂给 gate。Gate 自己问 transition table，回答直接带回 `check.next`。Playbook 读这个值加载下一 node。
-- **Transition table 只管 Node 间的转移**——给定 (gate, state)，回答 next_node。其他一概不管。
-- **"不知道"是合法回答**——transition table 返回 `null` 时，Gate 诚实告诉 MD controller。Controller 决定怎么办。
+- **MD Controller 不再背路由**——Playbook 不需要手动查 manifest、拼 `--next` flag、喂给 gate。Gate 自己以 `--current-node` 驱动，问 transition table，回答直接带回 `check.next` 和详细 `routing`。Playbook 读这个值加载下一 node。
+- **Transition table 只管 Node 间的转移**——给定 (currentNodeRef, outcome)，回答 routing result (next / terminal / no_transition / invalid_input / config_error)。其他一概不管。
+- **"不知道"是合法回答**——transition table 返回 `no_transition` 时，Gate 诚实告诉 MD controller。Controller 决定怎么办。
+- **Routing identity 是 node fileRef**——例如 `phases/phase-wave0.md`，而不是 gate key、phase key 或 frontmatter `id`。
 
-- Gate CLI 输出 SHALL 包含：`check`（passed/failed + next）、`inspect`（诊断）、`advice`（修复方向）。
-- `next` SHALL 来自 `askNext(gate, state)` 查询，NOT 来自 CLI flag 或 manifest 字段。
+- Gate CLI 输出 SHALL 包含：`check`（passed/failed + currentNodeRef + next）、`routing`（详细路由结果）、`inspect`（诊断）、`advice`（修复方向）。
+- `next` SHALL 来自 `resolveNodeTransitionDetailed(currentNodeRef, outcome)` 查询，NOT 来自 CLI flag 或 manifest 字段。
 - **MUST NOT**：让 Playbook 手动查表拼参数传给 gate。Transition 查询是 Gate 的内部调用。
+- `--current-node` 是必选 flag；`askNext(path, gate, state)` 已退役。
 
 ### Trace 是真相，Log 是解释
 

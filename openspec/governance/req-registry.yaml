@@ -41,14 +41,14 @@ CMI-001: cmd-bundle-instantiation — Command playbook for bundle production
 CMI-002: cmd-bundle-instantiation — JS helper validate-bundle.mjs (Zod validation)
 CMI-003: cmd-bundle-instantiation — JS helper inspect-bundle.mjs (structure check)
 CMI-004: cmd-bundle-instantiation — Template files (rb_templates/)
-COS-001: conditional-nodes — Independent branch execution
+COS-001: conditional-nodes — Deterministic branch checkpoint transforms
 CSE-001: cmd-subagent-environment — Command playbook for project-level real subagent setup
-DYS-001: dynamic-node-loading — Late binding node registry
-FOR-001: fork-repair-converge — Multi-fail shared repair
-GAF-001: gate-fork-router — Gate multi-branch routing (1→N)
-GAS-001: gate-state-machine — Gate condition router (pass/fail)
+DYS-001: dynamic-node-loading — Explicit fileRef Markdown closure loading with cached parsed node data
+FOR-001: fork-repair-converge — Multi-fail shared repair checkpoint convergence
+GAF-001: gate-fork-router — Gate branch classification and explicit resolver
+GAS-001: gate-state-machine — Gate checkpoint feedback and transition lookup
 INT-001: integration-tests — validate-bundle.mjs + inspect-bundle.mjs integration tests
-REL-001: repair-loop — Repair node + loopback to Gate (convergeRepair in subagent-relay.mjs)
+REL-001: repair-loop — Repair checkpoint loopback and deterministic termination
 SCO-001: schema-core — Six domain enums
 SCO-002: schema-core — Six Zod contracts
 SCO-003: schema-core — Gate transition table
@@ -62,14 +62,14 @@ SUC-001: subagent-collect — Collect slot result envelopes and merge evidence i
 SUD-001: subagent-dispatch — Gate pass dispatches subagent slots into wave-scoped file system protocol
 SUR-001: subagent-repair — All-slots-failed repair routing and partial-failure tolerance
 SUS-001: subagent-slots — Subagent slot lifecycle state machine and wave-scoped paths
-SEG-001: seg2node — Global rename segments to nodes across code, paths, env vars, and capability names
+SEG-001: seg2node — Global rename segments to nodes with explicit node directory configuration
 TEF-001: test-fixtures — Fixture framework for integration tests
 WDM-001: workflow-dynamic-md-load — Single-entry just-in-time Markdown closure loading and execution [DEPRECATED]
 WLO-001: workflow-chain-observability — Runtime receipts and trace events for workflow-chain single-entry loader experiments [DEPRECATED]
 WMD-001: workflow-md-dependencies — Markdown frontmatter requires dependency closure resolution [DEPRECATED]
-WFS-001: workflow-fsm-definition — FSM definition file loading, validation, and structure
-WFS-002: workflow-fsm-transition — Pure transition table lookup (resolveTransition) with Machine.advance()
-WFS-003: workflow-fsm-runtime — Machine class with advance(), createMachine factory, FSMDefinition schema
+WFS-001: workflow-fsm-definition — FSM definition file loading, validation, and node-keyed structure
+WFS-002: workflow-fsm-transition — Pure node-keyed transition lookup (resolveTransition) plus low-level FSM tracker
+WFS-003: workflow-fsm-runtime — Machine class with advance(), createMachine factory, runtime halt/completion state
 WML-001: workflow-manifest-loading — Workflow-next runtime initializes without manifest/cursor or preloading Markdown [DEPRECATED]
 
 # dedup-experiments-framework (delta specs merged to openspec/specs/)
@@ -90,28 +90,30 @@ WDC-005: workflow-directory-contract — Test and experiment boundary (tests/ fo
 WDC-006: workflow-directory-contract — Naming conventions for workflow foundation artifacts (phase-*.md, shared-*.md, gate-*.definition.json, check-gate-*.mjs, dpt_rb_*, exp_*)
 WDC-007: workflow-directory-contract — Anti-mixing rules (what must not go where, including command_playbook/ boundary)
 WDC-008: workflow-directory-contract — Single canonical workflow package (v1 single workflow, one framework serves multiple bundles)
-WNC-001: workflow-node-contract — Phase node metadata contract (node_type, id, phase, gate, next, stop, requires, suggested_context, subagent)
+WNC-001: workflow-node-contract — Phase node metadata contract (node_type, id, phase, gate, stop, requires, suggested_context, subagent; no next authority)
 WNC-002: workflow-node-contract — Shared node metadata contract (node_type, id, shared_scope, authority, requires, suggested_context)
-WNC-003: workflow-node-contract — Phase manifest structure (9-phase array, 5 shared entries, lifecycle navigation authority)
+WNC-003: workflow-node-contract — Phase manifest structure (9-phase array, 5 shared entries, lifecycle inventory/index; transition table owns next-node lookup)
 WNC-004: "workflow-node-contract — Phase node body structure (9 required sections — goal, inputs, actions, artifacts, gate cmd, on pass, on fail, stop, anti-cheating)"
-WNC-005: "workflow-node-contract — Final node terminal semantics (gate=none, next=none, user feedback via HITL2 repair/rerun)"
+WNC-005: "workflow-node-contract — Final node terminal semantics (gate=none, no outgoing gate or next authority, user feedback via HITL2 repair/rerun)"
 WNC-006: workflow-node-contract — Skeleton completeness criteria (parseable frontmatter, executable CLI, valid JSON)
+WNC-007: workflow-node-contract — Workflow package consistency validation across manifest, frontmatter, gate definitions, transition tables, and loader runtime cache / dependency plan
 GSK-001: gate-skeleton — Gate definition JSON skeleton structure (gate, description, rules[] with id/check/target/threshold/failure_message)
-GSK-002: "gate-skeleton — Gate CLI skeleton shape (parseArgs, --bundle required, check/inspect/advice JSON output, exit codes)"
+GSK-002: "gate-skeleton — Gate CLI skeleton shape (parseArgs, --bundle/--current-node required, check/inspect/advice JSON output, exit codes)"
 GSK-003: gate-skeleton — One gate per CLI (8 independent CLI wrappers, no generic runner with subcommand)
 
 # wff-skeleton-validation
 LOG-001: logger — Logger default zero-config usage (createLogger() → console only, 4 levels, ISO 8601 timestamps)
 LOG-002: "logger — Logger file output via option (createLogger({ file }) → console + file append, auto mkdir)"
 LOG-003: logger — Logger injection pattern in engine (logger = null trailing parameter, silent no-op)
-LFW-001: lifecycle-walker — Walker reads manifest and walks lifecycle (--bundle required, --manifest optional, 9 phases)
-LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass (max 3 retries, escalation on exceeded limit)
-LFW-003: "lifecycle-walker — Walker logs progress via logger (createLogger({ file: '<bundle>/_logs/run.log' }))"
-LFW-004: lifecycle-walker — Walker requires --bundle flag (exit(2) on missing)
-GSK-004: gate-skeleton — Gate CLI evaluates rules from definition (load definition JSON, iterate rules, file_exists check, check/inspect/advice feedback)
+LFW-001: lifecycle-walker — Walker reads manifest and walks lifecycle (--bundle required, --manifest optional, 9 phases) [DEPRECATED]
+LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass (max 3 retries, escalation on exceeded limit) [DEPRECATED]
+LFW-003: "lifecycle-walker — Walker logs progress via logger (createLogger({ file: '<bundle>/_logs/run.log' })) [DEPRECATED]"
+LFW-004: lifecycle-walker — Walker requires --bundle flag (exit(2) on missing) [DEPRECATED]
+GSK-004: gate-skeleton — Gate CLI evaluates rules from definition and emits detailed routing diagnostics (load definition JSON, iterate rules, file_exists check, check/inspect/advice feedback)
 
 # wff-state-chain
 TRT-001: transition-table — File naming convention transitions.chain.json / transitions.fsm.json
 TRT-002: transition-table — transitions.chain.json structure (gate→state→next_node static map)
 TRT-003: transition-table — transition-chain.mjs engine (loadChain, resolveTransition, createChain; mirrors FSM)
 TRT-004: transition-table — ask-next.mjs unified dispatch (askNext dispatches to chain or FSM by file suffix)
+TRT-005: transition-table — Detailed node-result router contract and node-keyed backend dispatch

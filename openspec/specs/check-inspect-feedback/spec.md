@@ -26,7 +26,7 @@ When Check fails, the Inspect step SHALL generate a structured diagnostic report
 - **THEN** Inspect produces a diagnostic: `{ field: "producer_rule", issue: "required field missing", fix: "add producer_rule value" }`
 
 ### Requirement: Feedback drives reflection and correction
-The diagnostic from Inspect SHALL be returned to the repair node (or LLM) as structured feedback. After correction, the state SHALL re-enter Check.
+The diagnostic from Inspect SHALL be returned to the repair checkpoint or LLM as structured feedback. After correction, the state SHALL re-enter Check.
 
 #### Scenario: Feedback loop corrects and passes
 - **WHEN** Check fails, Inspect generates diagnostic, and repair uses it to fix state

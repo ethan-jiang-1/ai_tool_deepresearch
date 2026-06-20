@@ -8,7 +8,7 @@
 //
 // The engine does exactly two things:
 //   1. resolveTransition(fsm, node, status) — pure function (re-exported)
-//   2. Machine.advance(status) — update current node based on transition result
+//   2. Machine.advance(outcome) — update current node based on transition result
 //
 // ## Quick Start (MD Controller)
 //
@@ -20,7 +20,7 @@
 //
 //   m.current;     // 'wave.entry.md'
 //   m.canAdvance;  // true
-//   m.advance('success');
+//   m.advance('passed');
 //   m.current;     // 'wave-audit.entry.md'
 //   m.isComplete;  // true
 //   m.receipts;    // audit trail of all transitions
@@ -46,7 +46,7 @@ export { FSMDefinition, loadFSM, resolveTransition };
  * Machine — a stateful FSM tracker.
  *
  * The MD controller runs each node. When the node reports a transition
- * status, the controller feeds it to advance(). The engine consults the
+ * outcome, the controller feeds it to advance(). The engine consults the
  * FSM table and updates its internal state accordingly.
  *
  * @impl WFS-003
@@ -75,21 +75,24 @@ export class Machine {
   get isHalted() { return this._outcome === 'halted'; }
 
   /**
-   * Feed a transition status and advance the machine.
+   * Feed a transition outcome and advance the machine.
+   *
+   * @param {string} outcome — public outcome: 'passed' or 'failed'
+   * @returns {string} machine outcome: 'running', 'complete', or 'halted'
    */
-  advance(status) {
+  advance(outcome) {
     if (!this.canAdvance) return this._outcome;
 
     const currentNode = this._current;
     this._iterations++;
 
-    const result = resolveTransition(this._fsm, currentNode, status);
+    const result = resolveTransition(this._fsm, currentNode, outcome);
     this._lastTransition = result;
 
     const receipt = {
       type: 'transition',
       currentNode,
-      status,
+      outcome,
       next: result.next,
       found: result.found,
       ts: new Date().toISOString(),
@@ -101,7 +104,7 @@ export class Machine {
 
     if (!result.found) {
       this._outcome = 'halted';
-      this._haltReason = `No transition for "${currentNode}" with status "${status}"`;
+      this._haltReason = `No transition for "${currentNode}" with outcome "${outcome}"`;
     } else if (result.next === null) {
       this._outcome = 'complete';
     } else {

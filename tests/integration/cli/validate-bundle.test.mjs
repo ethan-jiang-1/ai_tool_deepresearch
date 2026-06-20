@@ -1,8 +1,9 @@
 // @impl INT-001: validate-bundle.mjs integration test
 import { describe, it, before, after } from 'node:test';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, mkdtempSync, writeFileSync, mkdirSync, cpSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
+import { createTempDir, cleanupAll } from '../../helpers/test-tmp.mjs';
 
 const FIXTURE = join(process.cwd(), 'tests/fixtures/DPT_FRAMEWORK');
 const VALIDATE = join(FIXTURE, 'cli/validate-bundle.mjs');
@@ -11,13 +12,11 @@ describe('validate-bundle.mjs integration', () => {
   let tmpDir;
 
   before(() => {
-    tmpDir = mkdtempSync('dpt_rb_test_');
+    tmpDir = createTempDir('validate-bundle');
     cpSync(FIXTURE, join(tmpDir, 'DPT_FRAMEWORK'), { recursive: true });
   });
 
-  after(() => {
-    rmSync(tmpDir, { recursive: true, force: true });
-  });
+  after(cleanupAll);
 
   it('passes on valid bundle', () => {
     const bundleDir = join(tmpDir, 'dpt_rb_valid');

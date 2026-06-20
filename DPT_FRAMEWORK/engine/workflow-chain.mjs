@@ -1,5 +1,5 @@
 // workflow-chain.mjs — Resolve and load a Markdown node via frontmatter `requires`
-// @impl WML-001..WLO-001, FRE-001
+// @impl WML-001..WLO-001, FRE-001, DYS-001
 // Canonical engine location: DPT_FRAMEWORK/engine/workflow-chain.mjs
 //
 // ## Role
@@ -128,7 +128,7 @@ export function createWorkflowRuntime(source = 'engine', nodesDir = DEFAULT_NODE
 // ============================================================
 
 /**
- * Resolve a plain filename to an absolute path inside NODES_DIR.
+ * Resolve a file reference to an absolute path inside the configured nodesDir.
  *
  * Rejects traversal attempts (.., absolute paths, subdirectories).
  *
@@ -152,12 +152,16 @@ const FRONTMATTER_RE = /^---\s*\n([\s\S]*?)---\s*\n/;
  * Extract and validate YAML-ish JSON frontmatter from a Markdown string.
  *
  * Returns `{ requires: [] }` for Markdown without frontmatter.
+ * ALL frontmatter keys are preserved in the returned object — the
+ * NodeFrontmatter schema is used for validation only, and additional
+ * keys pass through for downstream consumers (diagnostics, consistency
+ * validation, etc.).
  *
  * @param {string} md - raw Markdown content
- * @returns {{ requires: string[] }} parsed and validated frontmatter
+ * @returns {object} full parsed frontmatter (all keys preserved)
  * @throws {Error} if frontmatter JSON is malformed or fails NodeFrontmatter schema
  *
- * @impl WMD-001
+ * @impl WMD-001, DYS-001
  */
 export function parseFrontmatter(md) {
   const match = md.match(FRONTMATTER_RE);
@@ -180,11 +184,15 @@ export function parseFrontmatter(md) {
     }
   }
 
+  // Validate required fields via schema
   try {
-    return NodeFrontmatter.parse(parsed);
+    NodeFrontmatter.parse(parsed);
   } catch (err) {
     throw new Error(`Invalid frontmatter schema: ${err.message}`);
   }
+
+  // Preserve ALL keys (DYS-001)
+  return { requires: parsed.requires || [], ...parsed };
 }
 
 /**
@@ -297,12 +305,15 @@ function parseYAMLSubset(text) {
  * Cache hits emit 'cache_hit'; first reads emit 'file_read'.
  * Both go to runtime.receipts and trace (if injected).
  *
- * @param {string} fileRef - plain filename within NODES_DIR
+ * Cache entries are `{ fileRef, md, frontmatter }` — the full
+ * frontmatter object is preserved for downstream consumers.
+ *
+ * @param {string} fileRef - file reference within runtime.nodesDir
  * @param {object} runtime - from createWorkflowRuntime()
- * @returns {{ md: string, frontmatter: { requires: string[] } }}
+ * @returns {{ fileRef: string, md: string, frontmatter: object }}
  * @throws {Error} if file not found or frontmatter invalid
  *
- * @impl WDM-001, WLO-001
+ * @impl WDM-001, WLO-001, DYS-001
  */
 export function readMarkdownFile(fileRef, runtime, trace = null, logger = null) {
   // Auto-append .md if no extension (requires field uses bare IDs)
@@ -328,7 +339,7 @@ export function readMarkdownFile(fileRef, runtime, trace = null, logger = null) 
     throw new Error(`${err.message} in ${resolvedRef}`);
   }
 
-  const entry = { md, frontmatter };
+  const entry = { fileRef: resolvedRef, md, frontmatter };
   runtime.contentCache.set(resolvedRef, entry);
 
   emit(runtime, trace, 'file_read', { fileRef: resolvedRef, ts: new Date().toISOString() });

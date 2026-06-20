@@ -88,6 +88,6 @@ function uniqueName(label) {
 function trackBundle(name) {
   const dir = join(REPO_ROOT, `dpt_rb_${name}`);
   createdBundleDirs.add(dir);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true }); // clean any leftover from previous aborted run
   return dir;
 }

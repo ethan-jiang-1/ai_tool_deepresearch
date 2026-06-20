@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: workflow-fsm
 case: simple
 weight: light
-case_goal: "FSM Define→Advance→Verify：加载定义，逐步 advance(status)，每步从 trace 核实当前节点和转移"
+case_goal: "FSM Define→Advance→Verify：加载定义，逐步 advance(outcome)，每步从 trace 核实当前节点和转移"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -23,12 +23,12 @@ verdict: trace-jsonl
 ```
 wf-simple.fsm.json:
   initial → wave.entry.md
-  wave.entry.md      success → wave-audit.entry.md
-  wave-audit.entry.md success → wave-final.entry.md
-  wave-final.entry.md success → null (complete)
+  wave.entry.md      passed → wave-audit.entry.md
+  wave-audit.entry.md passed → wave-final.entry.md
+  wave-final.entry.md passed → null (complete)
 ```
 
-3 节点线性链。MD controller 运行每个 node，将 node 报告的 status 喂给 `advance()`，Engine 查 FSM 表裁决。
+3 节点线性链。MD controller 运行每个 node，将 node 报告的 outcome 喂给 `advance()`，Engine 查 FSM 表裁决。
 
 ## Step 1: 创建 disposable bundle
 
@@ -45,21 +45,19 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 FSM 加载后 `Machine.current = wave.entry.md`，`canAdvance = true`。
 
 ```bash
-B="dpt_disp_wfsm_simple"
-
 cat > $B/define.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
-const trace = createTrace('dpt_disp_wfsm_simple/_trace.jsonl', { consoleEcho: false });
+const B=process.argv[2], NODES_DIR=process.argv[3];
+const trace = createTrace(B+'/_trace.jsonl', { consoleEcho: false });
 const SRC = 'wfsm-simple'; trace.traceInit('wfsm-simple: define→advance→verify', { source: SRC });
-const NODES_DIR = process.argv[2];
 const m = createMachine(`${NODES_DIR}/wf-simple.fsm.json`, trace);
 trace.traceEntry('check', { source: SRC, step: 'define:name', passed: m.fsm.name === 'wf-simple' });
 trace.traceEntry('check', { source: SRC, step: 'define:initial', passed: m.current === 'wave.entry.md',
   detail: `current = ${m.current}` });
 trace.traceEntry('check', { source: SRC, step: 'define:can_advance', passed: m.canAdvance && !m.isComplete });
 JS
-node $B/define.mjs $B/exp/nodes > /dev/null 2>&1
+node $B/define.mjs $B $B/exp/nodes > /dev/null 2>&1
 ```
 
 → 预期：fsm.name = wf-simple，current = wave.entry.md，canAdvance。
@@ -67,22 +65,21 @@ node $B/define.mjs $B/exp/nodes > /dev/null 2>&1
 ## Step 3: Advance 1 — wave.entry →(success)→ wave-audit
 
 ```bash
-B="dpt_disp_wfsm_simple"
-
 cat > $B/advance1.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
-const trace = createTrace('dpt_disp_wfsm_simple/_trace.jsonl', { consoleEcho: false });
-const SRC = 'wfsm-simple'; const NODES_DIR = process.argv[2];
+const B=process.argv[2], NODES_DIR=process.argv[3];
+const trace = createTrace(B+'/_trace.jsonl', { consoleEcho: false });
+const SRC = 'wfsm-simple';
 const m = createMachine(`${NODES_DIR}/wf-simple.fsm.json`, trace);
 trace.traceEntry('check', { source: SRC, step: 'advance1:before',
   passed: m.current === 'wave.entry.md', detail: `当前: ${m.current}` });
-m.advance('success');
+m.advance('passed');
 trace.traceEntry('check', { source: SRC, step: 'advance1:after',
   passed: m.current === 'wave-audit.entry.md', detail: `推进到: ${m.current}` });
 trace.traceEntry('check', { source: SRC, step: 'advance1:iterations', passed: m.iterations === 1 });
 JS
-node $B/advance1.mjs $B/exp/nodes > /dev/null 2>&1
+node $B/advance1.mjs $B $B/exp/nodes > /dev/null 2>&1
 ```
 
 → 预期：wave.entry → wave-audit。trace 有 1 条 transition。
@@ -90,20 +87,19 @@ node $B/advance1.mjs $B/exp/nodes > /dev/null 2>&1
 ## Step 4: Advance 2 — 连续两步到 wave-final
 
 ```bash
-B="dpt_disp_wfsm_simple"
-
 cat > $B/advance2.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
-const trace = createTrace('dpt_disp_wfsm_simple/_trace.jsonl', { consoleEcho: false });
-const SRC = 'wfsm-simple'; const NODES_DIR = process.argv[2];
+const B=process.argv[2], NODES_DIR=process.argv[3];
+const trace = createTrace(B+'/_trace.jsonl', { consoleEcho: false });
+const SRC = 'wfsm-simple';
 const m = createMachine(`${NODES_DIR}/wf-simple.fsm.json`, trace);
-m.advance('success'); m.advance('success');
+m.advance('passed'); m.advance('passed');
 trace.traceEntry('check', { source: SRC, step: 'advance2:after',
   passed: m.current === 'wave-final.entry.md', detail: `推进到: ${m.current}` });
 trace.traceEntry('check', { source: SRC, step: 'advance2:iterations', passed: m.iterations === 2 });
 JS
-node $B/advance2.mjs $B/exp/nodes > /dev/null 2>&1
+node $B/advance2.mjs $B $B/exp/nodes > /dev/null 2>&1
 ```
 
 → 预期：wave-final。累计 2 条 transition。
@@ -113,21 +109,20 @@ node $B/advance2.mjs $B/exp/nodes > /dev/null 2>&1
 三步到底。complete 后再 advance() 是 no-op。
 
 ```bash
-B="dpt_disp_wfsm_simple"
-
 cat > $B/advance3.mjs << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createMachine } from '../DPT_FRAMEWORK/engine/workflow-fsm.mjs';
-const trace = createTrace('dpt_disp_wfsm_simple/_trace.jsonl', { consoleEcho: false });
-const SRC = 'wfsm-simple'; const NODES_DIR = process.argv[2];
+const B=process.argv[2], NODES_DIR=process.argv[3];
+const trace = createTrace(B+'/_trace.jsonl', { consoleEcho: false });
+const SRC = 'wfsm-simple';
 const m = createMachine(`${NODES_DIR}/wf-simple.fsm.json`, trace);
-m.advance('success'); m.advance('success'); m.advance('success');
+m.advance('passed'); m.advance('passed'); m.advance('passed');
 trace.traceEntry('check', { source: SRC, step: 'advance3:complete',
   passed: m.isComplete && m.iterations === 3, detail: `outcome=${m.outcome}` });
 trace.traceEntry('check', { source: SRC, step: 'advance3:noop',
-  passed: m.advance('success') === 'complete', detail: 'complete 后 advance = no-op' });
+  passed: m.advance('passed') === 'complete', detail: 'complete 后 advance = no-op' });
 JS
-node $B/advance3.mjs $B/exp/nodes > /dev/null 2>&1
+node $B/advance3.mjs $B $B/exp/nodes > /dev/null 2>&1
 ```
 
 → 预期：isComplete，advance() 返回 'complete'。
@@ -137,8 +132,6 @@ node $B/advance3.mjs $B/exp/nodes > /dev/null 2>&1
 每步独立创建 Machine → 累计 1+2+3 = 6 次 transition。
 
 ```bash
-B="dpt_disp_wfsm_simple"
-
 node -e "
 const fs = require('fs');
 const lines = fs.readFileSync('$B/_trace.jsonl','utf-8').trim().split('\n');

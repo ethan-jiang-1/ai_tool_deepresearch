@@ -35,7 +35,7 @@ suggested_context: []
 ## 5. Gate Command
 
 ```bash
-node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle <path>
+node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle <path> --current-node phases/phase-hitl1.md
 ```
 
 ## 6. On Gate Pass

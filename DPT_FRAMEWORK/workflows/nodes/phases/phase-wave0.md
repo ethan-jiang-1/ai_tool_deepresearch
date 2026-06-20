@@ -38,7 +38,7 @@ suggested_context:
 ## 5. Gate Command
 
 ```bash
-node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path>
+node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --current-node phases/phase-wave0.md
 ```
 
 ## 6. On Gate Pass

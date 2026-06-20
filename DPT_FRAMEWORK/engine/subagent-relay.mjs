@@ -207,6 +207,9 @@ class ForkStep {
   }
 }
 
+// Historical implementation name: a ForkStep is a deterministic checkpoint
+// transform record here, not an Agent-facing workflow node.
+
 /**
  * Classify workflow state into a branch: 'pass', 'fail_a', 'fail_b', or 'blocked'.
  *
@@ -240,11 +243,11 @@ const forkMap = new Map([
 ]);
 
 /**
- * Classify state and resolve the corresponding ForkStep.
+ * Classify state and resolve the corresponding deterministic checkpoint transform.
  *
  * @param {object} state - workflow state
  * @returns {{ branch: string, step: ForkStep }}
- * @throws {Error} if no fork step is registered for the classified branch
+ * @throws {Error} if no branch transform is registered for the classified branch
  */
 export function forkRouter(state) {
   const branch = classifyBranch(state);
@@ -254,7 +257,7 @@ export function forkRouter(state) {
 }
 
 
-// Branch steps are instantiated per fork map entry.
+// Branch transforms are instantiated per fork map entry.
 // Internal — consumers use forkRouter() to resolve branches.
 
 const dispatchMap = new Map([

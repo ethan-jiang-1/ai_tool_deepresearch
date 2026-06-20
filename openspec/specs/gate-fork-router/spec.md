@@ -3,7 +3,7 @@
 
 ## Purpose
 
-Gate 检查状态值后分叉到 4 个不同 workflow 节点。使用显式 Map 转换表，按优先级路由。
+Gate 检查状态值后返回确定性 branch identifier。Branch resolver 使用显式 Map 把 branch 映射到 deterministic handler / transform record；它不加载 Agent-facing workflow node。
 
 ## Requirements
 
@@ -31,13 +31,14 @@ The Gate SHALL inspect workflow state across multiple dimensions and return exac
 - **THEN** Gate returns `fail_b` (topic readiness has higher priority than reference count)
 - **AND** Gate does NOT return `fail_a`
 
-### Requirement: Branch router uses explicit Map
-The branch router (`forkRouter()` in `subagent-relay.mjs`) SHALL use an explicit `Map<Branch, Step>` to resolve branch identifiers to workflow nodes. Adding a new branch SHALL require zero code changes to the router function.
+### Requirement: Branch resolver uses explicit Map
+The branch resolver (`forkRouter()` in `subagent-relay.mjs`) SHALL use an explicit map from Branch identifier to deterministic branch handler or transform record. Adding a new branch SHALL require updating the branch enum/map data but SHALL NOT require embedding Agent-facing workflow node loading or Markdown execution into the resolver.
 
-#### Scenario: New branch added without changing router logic
+#### Scenario: New branch added without changing resolver control flow
 - **WHEN** a new branch `fail_c` is added to the Branch enum and forkMap
-- **THEN** the `forkRouter()` function needs zero code changes
+- **THEN** the `forkRouter()` control flow needs zero code changes beyond registering the branch handler or transform record
 
-#### Scenario: Router returns routing decision for caller inspection
-- **WHEN** `forkRouter(state)` is called (in `subagent-relay.mjs`)
-- **THEN** it returns `{ branch, step }` — the branch identifier used AND the resolved Step, allowing callers to inspect the routing decision
+#### Scenario: Resolver returns branch decision for caller inspection
+- **WHEN** `forkRouter(state)` is called in `subagent-relay.mjs`
+- **THEN** it returns the branch identifier and resolved deterministic handler or transform record
+- **AND** the resolved value SHALL NOT be interpreted as an Agent-facing workflow node body

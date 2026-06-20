@@ -3,50 +3,63 @@
 
 ## Purpose
 
-每个分支独立执行不同逻辑。分支间互不干扰。每分支可独立测试。包含动态节点加载能力。
+Branch capability 表达 deterministic branch classification、state transform 和 repair checkpoint。它不是 Agent-facing workflow node execution；多阶段 Agent Flow 仍由 Markdown/Agent 承接。
 
 ## Requirements
 
-### Requirement: Each branch node has independent execution logic
-Each branch SHALL implement its own `Step.execute()` with distinct behavior and side effects.
+### Requirement: Branch checkpoints apply deterministic state transforms
 
-#### Scenario: Pass branch advances to next wave
-- **WHEN** `pass` branch executes
-- **THEN** state advances `current_gate` to `'wave_next'`
+Each branch checkpoint SHALL represent a deterministic state transform or feedback outcome. Branch logic MAY update structured state fields needed for checkpoint repair or dispatch, but SHALL NOT execute Agent-facing workflow node bodies or own multi-stage Agent Flow.
+
+Current `ForkStep` / `sharedRepairStep` names in `subagent-relay.mjs` are accepted implementation names for this deterministic checkpoint layer. They SHALL NOT be interpreted as workflow node bodies, Markdown node execution, or semantic repair strategy authority.
+
+#### Scenario: Pass branch records next gate state
+
+- **WHEN** `pass` branch transform is applied
+- **THEN** state records the deterministic transition marker required by the branch contract, such as `current_gate: 'wave_next'`
 
 #### Scenario: Fail-A branch records topic repair attempt
-- **WHEN** `fail_a` branch executes
+
+- **WHEN** `fail_a` branch transform is applied
 - **THEN** state records `topicRepairAttempted: true` without changing `ref_count`
 
-#### Scenario: Fail-B branch supplements one reference
-- **WHEN** `fail_b` branch executes
+#### Scenario: Fail-B branch supplements one reference count
+
+- **WHEN** `fail_b` branch transform is applied
 - **THEN** state increments `ref_count` by 1 without changing `topicReadiness`
 
-#### Scenario: Blocked branch halts to HITL
-- **WHEN** `blocked` branch executes
-- **THEN** state sets `current_gate` to `'blocked_hitl'`
+#### Scenario: Blocked branch records HITL boundary
 
-#### Scenario: Shared repair node handles both failure types
-- **WHEN** `shared_repair` node executes
-- **AND** state has `ref_count < ref_floor`, `shared_repair` increases `ref_count` by 2 (capped at `ref_floor`)
-- **AND** state has `topicReadiness === 'not_ready'`, `shared_repair` sets `topicReadiness` to `'ready'`
-- **AND** state has `topicReadiness === 'blocked'`, `shared_repair` does NOT change it (blocked = human required)
-- **THEN** a single repair pass can fix both reference and topic issues simultaneously
+- **WHEN** `blocked` branch transform is applied
+- **THEN** state records the blocked/HITL marker required by the branch contract, such as `current_gate: 'blocked_hitl'`
 
-### Requirement: Branches are independently testable
-Each branch node SHALL be testable in isolation with mock state input.
+#### Scenario: Shared repair transform handles both failure types
 
-#### Scenario: Test a single branch without loading full workflow
-- **WHEN** a test creates mock state and calls `failAStep.execute(mockState)`
-- **THEN** the branch executes correctly without depending on other branches or the full router
+- **WHEN** shared repair transform is applied
+- **AND** state has `ref_count < ref_floor`
+- **THEN** shared repair increases `ref_count` toward `ref_floor`
+- **AND** when state has `topicReadiness === 'not_ready'`, shared repair sets `topicReadiness` to `'ready'`
+- **AND** when state has `topicReadiness === 'blocked'`, shared repair does not override the human-required boundary
 
-### Requirement: Nodes are dynamically loadable from a runtime registry
-A `forkMap` (in `subagent-relay.mjs`) SHALL allow resolving workflow nodes by branch key at runtime, using the same pattern as gate-loop's dynamic node loading. The `forkRouter()` function performs the key-to-Step resolution.
+### Requirement: Branch transforms are independently testable
 
-#### Scenario: Known node key resolves to Step
+Each branch transform SHALL be testable in isolation with structured state input. Tests SHALL verify deterministic state changes without requiring Agent Flow execution or Markdown node execution.
+
+#### Scenario: Test a single branch transform without loading full workflow
+
+- **WHEN** a test invokes the fail-A branch transform with valid structured state
+- **THEN** the transform returns the expected updated state without depending on a full workflow runner
+
+### Requirement: Branch keys resolve through an explicit map
+
+A branch map in the deterministic Engine layer SHALL allow resolving branch identifiers to branch handlers or transform records at runtime. The resolver SHALL expose the branch identifier and resolved handler for inspection. The handler is a checkpoint transform, not an Agent-facing workflow node body.
+
+#### Scenario: Known branch key resolves to handler
+
 - **WHEN** `forkRouter(state)` is called for a `pass` branch
-- **THEN** it returns `{ branch, step }` with the branch identifier and the resolved Step instance
+- **THEN** it returns the branch identifier and resolved handler or transform record
 
-#### Scenario: Unknown node key throws
+#### Scenario: Unknown branch key throws
+
 - **WHEN** an unrecognized branch identifier is encountered
 - **THEN** an error is thrown with the message containing the unknown branch key

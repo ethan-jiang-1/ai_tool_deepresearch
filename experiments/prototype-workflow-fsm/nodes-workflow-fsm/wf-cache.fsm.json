@@ -4,12 +4,12 @@
   "states": {
     "repeat-1.entry.md": {
       "on": {
-        "success": "repeat-2.entry.md"
+        "passed": "repeat-2.entry.md"
       }
     },
     "repeat-2.entry.md": {
       "on": {
-        "success": null
+        "passed": null
       }
     }
   }

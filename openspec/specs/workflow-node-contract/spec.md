@@ -2,21 +2,20 @@
 
 ## Purpose
 
-定义 Workflow Foundation 的 node metadata contract、phase manifest 和 14 个骨架文件的产出要求。使 Agent 能通过 frontmatter 和 manifest 确定当前 phase、下一个 phase、该跑哪个 gate，无需从散落 prose 或 chat memory 推断。
+定义 Workflow Foundation 的 node metadata contract、phase manifest 和 14 个骨架文件的产出要求。使 Agent 能通过 frontmatter 和 manifest 识别当前 phase、gate、phase inventory 和 shared nodes，无需从散落 prose 或 chat memory 推断。
 
 ## Requirements
 
 ### Requirement: Phase node metadata contract
 
-所有 phase node SHALL 包含以下 frontmatter 字段，字段值 MUST 与 `manifest.json` 中的对应 entry 一致：
+所有 phase node SHALL 包含以下 frontmatter 字段，字段值 MUST 与 `manifest.json` 中的对应 entry 一致。`gate` 使用 hyphen 形式；phase frontmatter SHALL NOT 声明 `next`。`manifest.json` 的 `phases` 数组只表示 Agent-readable lifecycle inventory/order，不是 runtime next-node authority。
 
 | Field | Required | Meaning |
 |-------|----------|---------|
 | `node_type` | yes | `"phase"` |
 | `id` | yes | Stable identifier，与文件名语义一致（如 `phase-wave0`） |
 | `phase` | yes | 当前 phase key（如 `wave0`） |
-| `gate` | yes | Phase work 后要运行的 gate key；final 为 `none` |
-| `next` | yes | Gate pass 后的 next phase key；final 为 `none` |
+| `gate` | yes | Phase work 后要运行的 gate key；`final` 为 `null` |
 | `stop` | yes | `"yes"` 或 `"no"` |
 | `requires` | yes | Mandatory shared Markdown dependency 的 id 数组；无则为 `[]` |
 | `suggested_context` | yes | Optional reference 的 id 数组；无则为 `[]` |
@@ -27,12 +26,14 @@
 #### Scenario: Agent reads phase node metadata
 
 - **WHEN** agent 加载 `phase-wave0.md`
-- **THEN** agent MUST 能从 frontmatter 确定当前 phase 是 `wave0`、gate 是 `wave0_complete`、next 是 `wave1`、stop 是 `no`
+- **THEN** agent MUST 能从 frontmatter 确定当前 phase 是 `wave0`、gate 是 `wave0-complete`、stop 是 `no`
 
 #### Scenario: Phase node metadata matches manifest
 
-- **WHEN** `phase-wave0.md` 的 frontmatter 声明 `next: wave1`
-- **THEN** `manifest.json` 中 phase `wave0` 的 `next` MUST 也是 `wave1`
+- **WHEN** `phase-wave0.md` 的 frontmatter 声明 `gate: wave0-complete`
+- **THEN** `manifest.json` 中 phase `wave0` 的 `gate` MUST 也是 `wave0-complete`
+- **AND** 该 phase 的位置 MUST 可由 `phases` 数组顺序识别，NOT 由 `next` 字段决定
+- **AND** runtime next-node lookup MUST NOT be inferred from phase frontmatter
 
 ### Requirement: Shared node metadata contract
 
@@ -61,22 +62,32 @@ Shared node SHALL NOT 声明 `phase`、`gate`、`next` 或 `stop` 字段。
 
 ### Requirement: Phase manifest structure
 
-`DPT_FRAMEWORK/workflows/manifest.json` SHALL 定义完整的 lifecycle navigation：
+`DPT_FRAMEWORK/workflows/manifest.json` SHALL 定义完整的 lifecycle inventory/index：
 
-- `phases` 数组 MUST 包含 9 个元素，按 `instantiation → hitl1 → setup → wave0 → wave1 → wave2 → hitl2 → readiness → final` 顺序
-- 每个 phase entry MUST 包含 `key`、`node`（相对 manifest 的路径）、`gate`、`next` 字段
-- `final` phase 的 `gate` 和 `next` MUST 为 `null`
+- `phases` 数组 MUST 包含 9 个元素，按 `instantiation → hitl1 → setup → wave0 → wave1 → wave2 → hitl2 → readiness → final` 顺序排列
+- 每个 phase entry MUST 包含 `key`、`node`（相对 manifest 的路径）、`gate` 字段
+- `next` 不是 manifest contract 的一部分；phase 顺序仅作为 Agent-readable inventory/index，由数组位置表示
+- Runtime next-node lookup MUST come from gate CLI `check.next`, sourced from the transition table / `askNext()` contract
+- `final` phase 的 `gate` MUST 为 `null`
 - `shared` 数组 MUST 列出所有 shared node 的相对路径
 
-#### Scenario: Manifest is the navigation authority
+#### Scenario: Manifest is the lifecycle inventory
 
-- **WHEN** loader 需要确定 phase `wave0` 之后的下一个 phase
-- **THEN** loader MUST 从 `manifest.json` 中读取 `phases` 数组的 `next` 字段，NOT 从 node frontmatter 推断
+- **WHEN** loader or Agent 需要识别已知 phase、展示 lifecycle order、或校验 phase metadata
+- **THEN** it MUST read the `phases` array as the lifecycle inventory/index
+- **AND** it MUST NOT infer runtime next-node transition from the `phases` array, node frontmatter, or a manifest `next` field
+
+#### Scenario: Transition table owns next-node lookup
+
+- **WHEN** gate `wave0-complete` passes and the gate response contains `check.next`
+- **THEN** that next node reference MUST come from transition table lookup through the accepted `askNext()` contract
+- **AND** Markdown/Agent MAY load the returned node reference after reading the gate feedback
 
 #### Scenario: Final phase is terminal
 
 - **WHEN** loader 读取 `final` phase entry
-- **THEN** `gate` MUST 为 `null`，`next` MUST 为 `null`
+- **THEN** `gate` MUST 为 `null`
+- **AND** `final` MUST 是当前 delivery pass 的 terminal phase
 
 ### Requirement: Phase node body structure
 
@@ -101,21 +112,22 @@ Body SHALL NOT 重复整个 lifecycle 或在 prose 里复制 gate rules。Gate d
 
 ### Requirement: Final node terminal semantics
 
-`phase-final.md` SHALL 声明 `gate: none`、`next: none`。它是当前 delivery pass 的 terminal node，SHALL NOT 拥有 outgoing gate 或 normal next phase。
+`phase-final.md` SHALL 声明 `gate: null`。它是当前 delivery pass 的 terminal node，SHALL NOT 拥有 outgoing gate 或 normal next phase。
 
 用户 final 后反馈 SHALL NOT 通过 final node 的隐藏循环处理。反馈路径由 HITL2 repair/rerun 承载（属于后续 content change 的职责）。
 
 #### Scenario: Final node is terminal
 
 - **WHEN** loader 读取 `phase-final.md` 的 metadata 或 `manifest.json` 中 final 的 entry
-- **THEN** `gate` MUST 为 `null`/`none`，`next` MUST 为 `null`/`none`
+- **THEN** `gate` MUST 为 `null`
+- **AND** 该 node MUST NOT 声明 `next` 作为权威字段
 
 ### Requirement: Skeleton completeness criteria
 
 骨架阶段不要求 body 有完整内容。每个 skeleton file SHALL 满足：
 
 - Frontmatter 可被正则提取并 JSON.parse
-- Agent 能从 frontmatter 确定 `node_type`、`id`、gate/next/stop（phase 适用）或 shared_scope/authority（shared 适用）
+- Agent 能从 frontmatter 确定 `node_type`、`id`、gate/stop（phase 适用）或 shared_scope/authority（shared 适用）
 - CLI skeleton 可被 `node` 执行且返回合法 JSON
 - Gate definition JSON 可被 `JSON.parse` 且包含 `gate`、`description`、`rules` 字段
 

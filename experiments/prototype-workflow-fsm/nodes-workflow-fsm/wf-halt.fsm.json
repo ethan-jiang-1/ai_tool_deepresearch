@@ -4,7 +4,7 @@
   "states": {
     "halt.entry.md": {
       "on": {
-        "success": null
+        "passed": null
       }
     }
   }

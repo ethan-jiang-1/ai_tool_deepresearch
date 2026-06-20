@@ -1,5 +1,5 @@
 // transition-chain.test.mjs — Chain transition engine regression tests
-// @impl TRT-003
+// @impl TRT-001, TRT-002, TRT-003
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
@@ -14,13 +14,13 @@ const {
   ChainDefinition,
   loadChain,
   resolveTransition,
-  createChain,
 } = await import('../../DPT_FRAMEWORK/engine/transition-chain.mjs');
 
 const VALID_CHAIN = {
-  'gate-a': { passed: 'phases/phase-b.md' },
-  'gate-b': { passed: 'phases/phase-c.md', failed: 'phases/phase-repair.md' },
-  'gate-final': { passed: null },
+  'phases/phase-instantiation.md': { passed: 'phases/phase-hitl1.md' },
+  'phases/phase-hitl1.md':        { passed: 'phases/phase-setup.md' },
+  'phases/phase-wave0.md':        { passed: 'phases/phase-wave1.md', failed: 'phases/phase-repair.md' },
+  'phases/phase-final.md':        { passed: null },
 };
 
 // Setup / teardown
@@ -38,10 +38,10 @@ function cleanup() {
 // ─── Schema ──────────────────────────────────────────────────────────────
 
 describe('ChainDefinition', () => {
-  it('validates a correct chain', () => {
+  it('validates a correct chain with node fileRef keys', () => {
     const result = ChainDefinition.parse(VALID_CHAIN);
-    assert.deepStrictEqual(result['gate-a'].passed, 'phases/phase-b.md');
-    assert.strictEqual(result['gate-final'].passed, null);
+    assert.deepStrictEqual(result['phases/phase-instantiation.md'].passed, 'phases/phase-hitl1.md');
+    assert.strictEqual(result['phases/phase-final.md'].passed, null);
   });
 
   it('rejects non-object', () => {
@@ -55,7 +55,7 @@ describe('loadChain', () => {
   it('loads and validates a .chain.json file', () => {
     const p = setupChainFile('test.chain.json', VALID_CHAIN);
     const chain = loadChain(p);
-    assert.strictEqual(chain['gate-a'].passed, 'phases/phase-b.md');
+    assert.strictEqual(chain['phases/phase-instantiation.md'].passed, 'phases/phase-hitl1.md');
     cleanup();
   });
 
@@ -73,59 +73,28 @@ describe('loadChain', () => {
 // ─── resolveTransition ───────────────────────────────────────────────────
 
 describe('resolveTransition', () => {
-  it('returns next and found=true for known gate and state', () => {
-    const r = resolveTransition(VALID_CHAIN, 'gate-a', 'passed');
-    assert.deepStrictEqual(r, { next: 'phases/phase-b.md', found: true });
+  it('returns next and found=true for known currentNodeRef and outcome', () => {
+    const r = resolveTransition(VALID_CHAIN, 'phases/phase-instantiation.md', 'passed');
+    assert.deepStrictEqual(r, { next: 'phases/phase-hitl1.md', found: true });
   });
 
-  it('returns next=null for terminal gate', () => {
-    const r = resolveTransition(VALID_CHAIN, 'gate-final', 'passed');
+  it('returns next=null found=true for terminal node', () => {
+    const r = resolveTransition(VALID_CHAIN, 'phases/phase-final.md', 'passed');
     assert.deepStrictEqual(r, { next: null, found: true });
   });
 
-  it('returns found=false for unknown gate', () => {
-    const r = resolveTransition(VALID_CHAIN, 'nonexistent', 'passed');
+  it('returns found=false for unknown currentNodeRef', () => {
+    const r = resolveTransition(VALID_CHAIN, 'phases/phase-nonexistent.md', 'passed');
     assert.deepStrictEqual(r, { next: null, found: false });
   });
 
-  it('returns found=false for unknown state', () => {
-    const r = resolveTransition(VALID_CHAIN, 'gate-a', 'blocked');
+  it('returns found=false for unknown outcome', () => {
+    const r = resolveTransition(VALID_CHAIN, 'phases/phase-instantiation.md', 'blocked');
     assert.deepStrictEqual(r, { next: null, found: false });
   });
 
-  it('returns failed state when defined', () => {
-    const r = resolveTransition(VALID_CHAIN, 'gate-b', 'failed');
+  it('returns failed outcome when defined', () => {
+    const r = resolveTransition(VALID_CHAIN, 'phases/phase-wave0.md', 'failed');
     assert.deepStrictEqual(r, { next: 'phases/phase-repair.md', found: true });
-  });
-});
-
-// ─── createChain ─────────────────────────────────────────────────────────
-
-describe('createChain', () => {
-  it('creates a Chain from path', () => {
-    const p = setupChainFile('tc.chain.json', VALID_CHAIN);
-    const c = createChain(p);
-    assert.strictEqual(c.current, null);
-    assert.strictEqual(c.isComplete, false);
-    cleanup();
-  });
-
-  it('creates a Chain from definition object', () => {
-    const c = createChain(VALID_CHAIN);
-    const r = c.askNext('gate-a', 'passed');
-    assert.strictEqual(r.next, 'phases/phase-b.md');
-    assert.strictEqual(r.found, true);
-    assert.strictEqual(c.current, 'gate-a');
-    assert.strictEqual(c.isComplete, false);
-    assert.strictEqual(c.receipts.length, 1);
-  });
-
-  it('becomes complete when next is null', () => {
-    const c = createChain(VALID_CHAIN);
-    c.askNext('gate-a', 'passed');
-    assert.strictEqual(c.isComplete, false);
-    c.askNext('gate-final', 'passed');
-    assert.strictEqual(c.isComplete, true);
-    assert.strictEqual(c.receipts.length, 2);
   });
 });

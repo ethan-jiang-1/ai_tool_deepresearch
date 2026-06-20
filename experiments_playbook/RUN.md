@@ -33,15 +33,16 @@
 | 15 | `exp_agentic-queue/test-complex-failure-repair.md` | invalid task, missing receipt, failure repair |
 | 16 | `exp_wff_validation/test-simple-happy-path.md` | wff walker 9 phase/8 gate 全部 pass + trace↔log 交叉验证 |
 | 17 | `exp_wff_validation/test-medium-fail-repair.md` | wff walker gate fail → repair → rerun → pass 闭环 |
+| 18 | `exp_wff_validation/test-complex-routing-contract.md` | current-node 绑定 + next / terminal / no_transition / config_error routing contract |
 
 ### Heavy（真实 subagent spawn，subagent 机制变更时跑）
 
 | # | Playbook | 验证什么 |
 |---|----------|---------|
-| 18 | `exp_subagent/test-simple-single-intake.md` | 单个 source_intake subagent |
-| 19 | `exp_subagent/test-medium-dual-parallel.md` | intake + diagnostic 并行两个 |
-| 20 | `exp_subagent/test-complex-triple-failure.md` | 三个 subagent 并发 + partial failure |
-| 21 | `exp_subagent/test-identity-agent-identity.md` | runtime-agent identity 和 trace event |
+| 19 | `exp_subagent/test-simple-single-intake.md` | 单个 source_intake subagent |
+| 20 | `exp_subagent/test-medium-dual-parallel.md` | intake + diagnostic 并行两个 |
+| 21 | `exp_subagent/test-complex-triple-failure.md` | 三个 subagent 并发 + partial failure |
+| 22 | `exp_subagent/test-identity-agent-identity.md` | runtime-agent identity 和 trace event |
 
 ## 怎么执行
 

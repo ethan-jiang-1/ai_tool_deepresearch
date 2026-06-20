@@ -1,0 +1,39 @@
+## RENAMED Requirements
+
+- FROM: `### Requirement: Repair node modifies state and loops back to gate`
+- TO: `### Requirement: Repair checkpoint updates state and loops back to gate`
+
+- FROM: `### Requirement: Max iterations prevents infinite repair loops`
+- TO: `### Requirement: Repair checkpoint loop terminates deterministically`
+
+## MODIFIED Requirements
+
+### Requirement: Repair checkpoint updates state and loops back to gate
+
+After repair checkpoint execution via `convergeRepair()` in `subagent-relay.mjs`, the workflow state SHALL re-enter the gate for deterministic re-evaluation. The repair checkpoint MAY apply the currently accepted deterministic state transform, but it SHALL NOT execute an Agent-facing workflow node body or own semantic repair strategy.
+
+#### Scenario: Repair checkpoint fixes the issue on first attempt
+
+- **WHEN** gate fails due to missing references
+- **AND** repair checkpoint updates structured state so references meet the required floor
+- **THEN** gate re-evaluates and returns `pass`
+
+#### Scenario: Repair checkpoint returns to gate
+
+- **WHEN** repair checkpoint completes
+- **THEN** the next deterministic checkpoint is gate re-evaluation
+- **AND** the workflow SHALL NOT directly advance past the gate without re-evaluation
+
+### Requirement: Repair checkpoint loop terminates deterministically
+
+`convergeRepair()` SHALL enforce a `maxIterations` limit (default 3) and SHALL detect when state stops changing by comparing state hashes across iterations. The loop SHALL terminate with an explicit outcome rather than hiding another repair attempt or relying on chat/prose escalation.
+
+#### Scenario: Max iterations exhausted
+
+- **WHEN** repair has been attempted `maxIterations` times and gate still does not pass
+- **THEN** `convergeRepair()` returns an explicit non-pass outcome for caller inspection instead of attempting another repair
+
+#### Scenario: State unchanged across iterations
+
+- **WHEN** repair produces the same state hash as a previous iteration
+- **THEN** `convergeRepair()` returns an explicit stalled outcome and terminates early
