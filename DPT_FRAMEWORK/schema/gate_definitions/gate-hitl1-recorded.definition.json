@@ -1,13 +1,47 @@
 {
   "gate": "hitl1-recorded",
-  "description": "Verify HITL1 user input has been recorded to rb_profile.yaml with required fields filled and HITL1 status marker written.",
+  "description": "Verify HITL1 user input has been recorded to rb_profile.yaml: research_profile selected, root_must_answer_set non-empty, hitl1 status marker written.",
   "rules": [
     {
-      "id": "placeholder_rule",
-      "check": "placeholder",
-      "target": "placeholder",
-      "threshold": null,
-      "failure_message": "Not yet implemented."
+      "id": "profile_exists",
+      "check": "file_exists",
+      "target": "rb_profile.yaml",
+      "failure_message": "rb_profile.yaml does not exist. The bundle may not have been instantiated."
+    },
+    {
+      "id": "profile_schema_valid",
+      "check": "schema_valid",
+      "target": "rb_profile.yaml",
+      "schema": "ProfileSchema",
+      "failure_message": "rb_profile.yaml exists but fails ProfileSchema validation. Check inspect output for specific field errors."
+    },
+    {
+      "id": "research_profile_not_default",
+      "check": "field_value",
+      "target": "rb_profile.yaml#/research_profile",
+      "operator": "not_equal",
+      "value": "not_selected",
+      "failure_message": "research_profile is still 'not_selected'. The user must choose a research profile (quick_factual, exploratory_map, or claim_verification) during HITL1."
+    },
+    {
+      "id": "must_answer_non_empty",
+      "check": "field_non_empty",
+      "target": "rb_profile.yaml#/root_must_answer_set",
+      "failure_message": "root_must_answer_set is empty. The user must specify at least one must-answer question during HITL1."
+    },
+    {
+      "id": "hitl1_status_recorded",
+      "check": "field_value",
+      "target": "rb_profile.yaml#/human_decision_checkpoints/hitl1/status",
+      "operator": "equal",
+      "value": "recorded",
+      "failure_message": "hitl1.status is not 'recorded'. After collecting user answers, set status to 'recorded'."
+    },
+    {
+      "id": "hitl1_recorded_at_non_empty",
+      "check": "field_non_empty",
+      "target": "rb_profile.yaml#/human_decision_checkpoints/hitl1/recorded_at",
+      "failure_message": "hitl1.recorded_at is missing or empty. Write the ISO 8601 timestamp when HITL1 was recorded."
     }
   ]
 }

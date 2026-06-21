@@ -1,24 +1,31 @@
 #!/usr/bin/env node
-// check-gate-hitl1-recorded.mjs — evaluates gate-hitl1-recorded
-// @impl GSK-001, GSK-002, GSK-004
+// check-gate-hitl1-recorded.mjs — evaluates gate-hitl1-recorded rules
+// @impl GSK-001, GSK-002, GSK-004, PRG-005, PRG-007
 // Usage: node check-gate-hitl1-recorded.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
+import { existsSync, readFileSync, appendFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parse as parseYaml } from 'yaml';
 import {
   parseGateCliArgs,
+  loadGateDefinition,
   validateNodeGateBinding,
   resolveRouting,
   buildGateResult,
   emitGateResult,
 } from '../../engine/helpers/gate-helpers.mjs';
+import { ProfileSchema } from '../../schema/index.mjs';
 
 const args = parseGateCliArgs();
-const GATE_KEY = 'hitl1-recorded';
+
+// Load gate definition
+const definition = loadGateDefinition('hitl1-recorded');
 
 // Validate node/gate binding
-const bindingError = validateNodeGateBinding(args.currentNode, GATE_KEY);
+const bindingError = validateNodeGateBinding(args.currentNode, definition.gate);
 if (bindingError) {
   const result = {
-    check: { passed: false, gate: GATE_KEY, currentNodeRef: args.currentNode, next: null },
+    check: { passed: false, gate: definition.gate, currentNodeRef: args.currentNode, next: null },
     routing: { kind: 'invalid_input', next: null, detail: bindingError },
     inspect: [bindingError],
     advice: ['Verify --current-node matches the phase for this gate.'],
@@ -26,15 +33,135 @@ if (bindingError) {
   emitGateResult(result);
 }
 
-const routing = resolveRouting(args.transitions, args.currentNode, 'passed');
+const bundlePath = args.bundle;
+const inspect = [];
+const advice = [];
+let allPassed = true;
+
+// Helper: read and parse rb_profile.yaml (cached for this gate run)
+let _profileCache = null;
+function getProfile() {
+  if (_profileCache) return _profileCache;
+  const profilePath = join(bundlePath, 'rb_profile.yaml');
+  if (!existsSync(profilePath)) return null;
+  _profileCache = parseYaml(readFileSync(profilePath, 'utf-8'));
+  return _profileCache;
+}
+
+// Helper: resolve JSON/YAML path like "human_decision_checkpoints/hitl1/status"
+function resolvePath(obj, pathStr) {
+  return pathStr.split('/').reduce((o, k) => o?.[k], obj);
+}
+
+for (const rule of definition.rules) {
+  if (rule.check === 'placeholder') continue;
+
+  let rulePassed = true;
+  let ruleDetail = null;
+
+  try {
+    if (rule.check === 'file_exists') {
+      const targetPath = join(bundlePath, rule.target);
+      if (!existsSync(targetPath)) {
+        rulePassed = false;
+        ruleDetail = `Missing file: ${rule.target}`;
+      }
+    } else if (rule.check === 'schema_valid') {
+      const [file, schemaName] = [rule.target, rule.schema];
+      if (file === 'rb_profile.yaml' && schemaName === 'ProfileSchema') {
+        const profile = getProfile();
+        if (!profile) {
+          rulePassed = false;
+          ruleDetail = 'rb_profile.yaml not found for schema validation';
+        } else {
+          const parsed = ProfileSchema.safeParse(profile);
+          if (!parsed.success) {
+            rulePassed = false;
+            const issues = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
+            ruleDetail = `ProfileSchema validation failed: ${issues}`;
+          }
+        }
+      } else {
+        ruleDetail = `Unknown schema target: ${file}/${schemaName} — skipped`;
+      }
+    } else if (rule.check === 'field_non_empty') {
+      // rule.target format: "rb_profile.yaml#/path/to/field"
+      const [, jsonPath] = rule.target.split('#/');
+      const profile = getProfile();
+      if (!profile) {
+        rulePassed = false;
+        ruleDetail = 'rb_profile.yaml not found';
+      } else {
+        const value = resolvePath(profile, jsonPath);
+        if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
+          rulePassed = false;
+          ruleDetail = `${rule.target} is empty or missing`;
+        }
+      }
+    } else if (rule.check === 'field_value') {
+      const [, jsonPath] = rule.target.split('#/');
+      const profile = getProfile();
+      if (!profile) {
+        rulePassed = false;
+        ruleDetail = 'rb_profile.yaml not found';
+      } else {
+        const value = resolvePath(profile, jsonPath);
+        if (rule.operator === 'equal') {
+          if (value !== rule.value) {
+            rulePassed = false;
+            ruleDetail = `${rule.target}: expected "${rule.value}", got "${value}"`;
+          }
+        } else if (rule.operator === 'not_equal') {
+          if (value === rule.value) {
+            rulePassed = false;
+            ruleDetail = `${rule.target} is still "${rule.value}" (should not be)`;
+          }
+        }
+      }
+    } else {
+      ruleDetail = `Unknown check type: ${rule.check} — skipped`;
+    }
+  } catch (err) {
+    rulePassed = false;
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    ruleDetail = `Error evaluating rule ${rule.id}: ${safeMsg}`;
+  }
+
+  if (!rulePassed) {
+    allPassed = false;
+    inspect.push(ruleDetail);
+    advice.push(rule.failure_message);
+  }
+}
+
+const outcome = allPassed ? 'passed' : 'failed';
+const routing = resolveRouting(args.transitions, args.currentNode, outcome);
 
 const result = buildGateResult({
-  passed: true,
-  gate: GATE_KEY,
+  passed: allPassed,
+  gate: definition.gate,
   currentNodeRef: args.currentNode,
   routing,
-  inspect: [],
-  advice: [],
+  inspect,
+  advice,
 });
+
+// Append runtime audit entry to rb_trace.jsonl (PRG-007)
+try {
+  const tracePath = join(bundlePath, 'rb_trace.jsonl');
+  const traceEntry = JSON.stringify({
+    ts: new Date().toISOString(),
+    event: 'gate_attempt',
+    gate: definition.gate,
+    passed: allPassed,
+    currentNodeRef: args.currentNode,
+    next: result.check.next,
+    inspect_count: inspect.length,
+    advice_count: advice.length,
+  });
+  appendFileSync(tracePath, traceEntry + '\n');
+} catch {
+  // Trace write failure must not affect gate output
+}
 
 emitGateResult(result);

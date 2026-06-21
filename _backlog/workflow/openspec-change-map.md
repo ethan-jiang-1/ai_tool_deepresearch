@@ -59,7 +59,7 @@ layer: pre-openspec-requirements
 | 00 | 独立 | 全域治理，与任何实现 change 不在同一层次 |
 | 01 | 独立 | 一次性创建全部 ~31 个骨架文件，是所有 content change 的共同前提 |
 | 02 | 独立 | 01 的 QA 闭环——review 关注"骨架能不能跑通"，与 01 的"骨架结构对不对"不同 |
-| 03 + 04 | 合并为 `wff_content-setup` | 都在 research 开始前；04 强依赖 03（shared nodes 没建好，HITL1/setup 无 shared context）；合在一起是 pre-research 的完整交付 |
+| 03 + 04 | 合并为 `wff_pre-research`（原名 `wff_content-setup`） | 都在 research 开始前；04 强依赖 03（shared nodes 没建好，HITL1/setup 无 shared context）；合在一起是 pre-research 的完整交付 |
 | 05 + 07 | 合并为 `wff_content-waves` | 07 只做 Wave1 boundary 标记（~1 文件），独立成 change 太薄；"实现 Wave1 placeholder + 标注 deferred capability"是一件事 |
 | 06 | 独立 | Research 和 delivery 是不同 lifecycle segment，review 关注点不同；与 05 合计 ~16 文件偏大 |
 | 90 | 不进入 OpenSpec | Meta checklist，reviewer 工具 |
@@ -267,7 +267,7 @@ Layer 3 — Lifecycle 通路示范：
 
 ---
 
-### Change 4: `wff_content-setup`
+### Change 4: `wff_pre-research`（原名 `wff_content-setup`）
 
 **来源**：`breakdown/03-phase-c1-shared-and-instantiation.md` + `breakdown/04-phase-c2-hitl-and-setup.md`
 
@@ -501,3 +501,59 @@ Final:
 
 1. 运行 `node openspec/governance/check-project-reqs.mjs` 必须 PASS
 2. 运行 `node openspec/governance/check-project-specs.mjs` 必须 PASS
+
+---
+
+## 附录 A：实际落地 vs 原计划
+
+> 计划不如变化快。原 plan 拟定了 6 个 change，但在落地过程中，lifecycle 需要的基础设施比预期多。下面记录实际顺序和与原 plan 的对应关系。
+
+### 实际 Change 序列
+
+```
+wff_directory-contract          ✅ 已归档 — Change 1（按 plan）
+        ↓
+wff_contract-skeleton           ✅ 已归档 — Change 2（按 plan）
+        ↓
+wff_skeleton-validation         ✅ 已归档 — Change 3（原 plan + 扩展：logger、engine 兼容、lifecycle walker）
+        ↓
+wff_state-chain                 ✅ 已归档 — 【新增】 transition table + askNext + chain/FSM 双引擎
+        ↓                        Gate 需要知道 "pass 之后去哪个 node"，这个 query 机制原 plan 没单独列
+wff_transition-node-result-routing ✅ 已归档 — 【新增】 gate 统一输出 shape：check/routing/inspect/advice
+        ↓                        原 plan 以为 gate CLI 输出 shape 在 Change 2 一次定好，实际推敲了 3 轮
+wff_pre-research                ← 当前 Change 4（原 plan 的 wff_content-setup，改名）
+        ↓                        合并了 breakdown/03（shared + instantiation）+ 04（HITL1 + setup）
+        ↓                        新增：topic rewrite（HITL1 内）、7 个 light playbook、fault-tolerance 验证
+wff_content-waves               ← 未开始（原 plan Change 5）
+        ↓
+wff_content-delivery            ← 未开始（原 plan Change 6）
+```
+
+### 差异对照
+
+| 原 plan | 实际 | 说明 |
+|---------|------|------|
+| 6 个 change | 8 个 change（2 新增） | `wff_state-chain` 和 `wff_transition-node-result-routing` 是从 `wff_skeleton-validation` 里拆出来的独立工程 |
+| Change 3 只做 logger + walker | 实际拆成 3 个 change：skeleton-validation → state-chain → transition-routing | 原 plan 低估了 gate routing 机制的复杂度 |
+| Change 4 叫 `wff_content-setup` | 改名为 `wff_pre-research` | 原名太模糊，"content setup" 听起来像只填 skeleton；pre-research 清楚表达 instantiation → HITL1 → setup 的范围 |
+| Change 4 只填内容 | 实际新增了 topic rewrite、7 个 playbook、fault-tolerance 验证 | HITL1 里用户可能只说一句话，Agent 必须展开成 structured original topic——这是 query rewrite，原 plan 未覆盖 |
+| gate key 命名 | 全文统一 kebab-case | 原 skeleton 用了 underscore（`instantiation_complete`），实际落地发现 gate definition JSON 和 manifest 已经 kebab，统一到 kebab |
+
+### 为什么 wff_pre-research 改名
+
+原名 `wff_content-setup` 的问题：
+- "content setup" = 听起来像只是把 5 个 shared node + 3 个 phase node 填满文字
+- 实际做的事远超 "填内容"：gate definition 从 placeholder 升级为完整 rule set（16+6+18 条）、gate CLI 从 hardcoded pass 升级为 8 种 check type、HITL1 加入 topic rewrite、7 个 playbook 证明 PDCA 闭环
+- `wff_pre-research` 准确表达范围：wave0 之前的所有工作，从用户开口到 `setup-ready` gate pass
+
+### 正在进行的 wff_pre-research 当前状态
+
+- Shared nodes (5)：✅ 全部填充
+- Gate definitions (3)：✅ 完整 rule set
+- Gate CLIs (3)：✅ 8 种 check type 实现，`rb_trace.jsonl` 写入
+- Phase nodes (3)：✅ 9-section body，含 payload checklist + anti-cheating
+- Regression tests (3 files, 19 cases)：✅ 全 pass
+- Light playbooks (7)：✅ 全 pass
+- Heavy playbook (1)：✅ auto mode 6 vectors 全正确
+- HITL1 topic rewrite：⏳ 待追加
+- Requirement registry：✅ 123 IDs, 0 orphan

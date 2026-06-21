@@ -63,6 +63,12 @@ SUD-001: subagent-dispatch — Gate pass dispatches subagent slots into wave-sco
 SUR-001: subagent-repair — All-slots-failed repair routing and partial-failure tolerance
 SUS-001: subagent-slots — Subagent slot lifecycle state machine and wave-scoped paths
 SEG-001: seg2node — Global rename segments to nodes with explicit node directory configuration
+SHC-001: shared-node-content — Shared profile content completeness (plan_basename, research_profile, root_must_answer_set, hitl1.*, hitl2.*, authority boundary)
+SHC-002: "shared-node-content — Shared gate rules content as generated summary (8 gates, purpose+check+direction+repair, authority: generated-summary)"
+SHC-003: shared-node-content — Shared schemas content matches current executable surface (profile/status/queue/plan/trace/gate, rb_trace vs _trace distinction)
+SHC-004: shared-node-content — Shared repair guidance content (fail→inspect→repair→rerun, retry limit 3, escalation, check type repair directions)
+SHC-005: shared-node-content — Shared anti-cheating rules content (≥6 prohibitions with correct alternatives)
+SHC-006: shared-node-content — Shared node authority boundary enforcement (no phase/gate/next/stop frontmatter, no hidden phase language)
 TEF-001: test-fixtures — Fixture framework for integration tests
 WDM-001: workflow-dynamic-md-load — Single-entry just-in-time Markdown closure loading and execution [DEPRECATED]
 WLO-001: workflow-chain-observability — Runtime receipts and trace events for workflow-chain single-entry loader experiments [DEPRECATED]
@@ -82,6 +88,31 @@ EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_F
 SCO-009: schema-core — QueueWorkUnitSchema upgrade for rb_queue.json (5 slots nullable, refill_pool typed)
 PLR-001: playbook-runner — RUN.md as unified runner entry with playbook manifest and execution instructions
 PLR-003: playbook-runner — Runner execution contract and summary report
+PRE-001: pre-research-experiments — Workflow-foundation happy-path pre-research playbook (simple, light, fixed HITL payload, 3 gates pass)
+PRE-002: pre-research-experiments — Workflow-foundation repair-loop playbook (medium, light, gate fail→inspect/advice→repair→rerun→pass)
+PRE-003: pre-research-experiments — Workflow-foundation review-surface playbook (complex, light, fixed AI interpretation sample + review checklist)
+PRE-004: pre-research-experiments — Complex review-surface stays light by using fixed interpretation sample (no live AI generation required)
+PRE-005: pre-research-experiments — Workflow-foundation manual HITL review playbook (heavy, human-interactive, payload checklist)
+PRE-006: pre-research-experiments — Heavy means human-interactive/manual for HITL review (not subagent-dependent)
+PRE-007: pre-research-experiments — Experiment review surface remains Markdown-first (case goal, payload, review points, inspect/advice guidance in MD)
+PRG-001: "pre-research-gate-implementation — Instantiation complete gate rule set (~11 rules: dir_exists, file_exists, pattern_match, status_value)"
+PRG-002: "pre-research-gate-implementation — HITL1 recorded gate rule set (~6 rules: file_exists, schema_valid, field_non_empty, field_value)"
+PRG-003: "pre-research-gate-implementation — Setup ready gate rule set (~7 rules: file_exists, schema_valid, dir_exists, field_value, status_value, cross_field)"
+PRG-004: pre-research-gate-implementation — Gate CLI evaluates instantiation rules from definition (dir_exists, pattern_match, status_value support)
+PRG-005: pre-research-gate-implementation — Gate CLI evaluates HITL1 rules from definition (from hardcoded pass to definition-driven)
+PRG-006: pre-research-gate-implementation — Gate CLI evaluates setup rules from definition (from hardcoded pass to definition-driven; cross_field for basename)
+PRG-007: pre-research-gate-implementation — Gate CLIs append runtime audit entry to active bundle rb_trace.jsonl
+PRG-008: pre-research-gate-implementation — Runtime audit trace (rb_trace.jsonl) and experiment verdict trace (_trace.jsonl) remain distinct
+PRP-001: pre-research-phase-content — Phase instantiation body completeness (9-section body, real CLI shape, scope boundary)
+PRP-002: "pre-research-phase-content — Phase HITL1 body completeness and stop semantics (stop: yes, payload checklist, writes to profile)"
+PRP-003: "pre-research-phase-content — Phase setup body completeness and stop semantics (stop: no, structural consistency, not readiness)"
+PRP-004: "pre-research-phase-content — Instantiation scope boundary enforcement (allowed: name+instantiate+check; forbidden: HITL/evidence/synthesis)"
+PRP-005: pre-research-phase-content — HITL1 body exposes concrete payload checklist (4 fields minimum)
+PRP-006: pre-research-phase-content — Setup body distinguishes production vs disposable naming contracts
+PRP-007: pre-research-phase-content — Anti-cheating rules in phase bodies (≥2 phase-specific bans + reference shared-anti-cheating-rules.md)
+PRP-008: pre-research-phase-content — HITL1 writes to bundle not status tree (rb_profile.yaml, not rb_status.json#/phases/hitl1/*)
+PRP-009: pre-research-phase-content — Setup stop semantics enforcement (auto-advance on pass, escalate on persistent failure)
+PRP-010: pre-research-phase-content — Invalid bundle name remains fail-stop (no rename, no patch; re-instantiate with legal name)
 WDC-001: workflow-directory-contract — Read-only framework assets boundary (DPT_FRAMEWORK/ = read-only, dpt_rb_*/ = mutable runtime truth)
 WDC-002: workflow-directory-contract — Workflow node directory structure (phases/ and shared/ under workflows/nodes/)
 WDC-003: workflow-directory-contract — Gate artifacts location and shape (gate definitions, CLI, engine, helpers, schema contract)
@@ -109,7 +140,7 @@ LFW-001: lifecycle-walker — Walker reads manifest and walks lifecycle (--bundl
 LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass (max 3 retries, escalation on exceeded limit) [DEPRECATED]
 LFW-003: "lifecycle-walker — Walker logs progress via logger (createLogger({ file: '<bundle>/_logs/run.log' })) [DEPRECATED]"
 LFW-004: lifecycle-walker — Walker requires --bundle flag (exit(2) on missing) [DEPRECATED]
-GSK-004: gate-skeleton — Gate CLI evaluates rules from definition and emits detailed routing diagnostics (load definition JSON, iterate rules, file_exists check, check/inspect/advice feedback)
+GSK-004: "gate-skeleton — Gate CLI evaluates rules from definition and emits detailed routing diagnostics (load definition JSON, iterate all rule types, check/inspect/advice feedback; extended from 1 to 3 pre-research gate CLIs: instantiation-complete from partial, hitl1-recorded + setup-ready from placeholder)"
 
 # wff-state-chain
 TRT-001: transition-table — File naming convention transitions.chain.json / transitions.fsm.json

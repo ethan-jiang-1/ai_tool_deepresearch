@@ -11,13 +11,20 @@ suggested_context: []
 
 ## Purpose
 
-向 Agent 解释 8 个 gate 的用途和大致检查方向。此 node 是 generated-summary——由 Gate definition JSON 和 gate definition tooling 生成或随 gate 规则升级同步更新。
+向 Agent 解释 8 个 gate 的用途和大致检查方向。此 node 是 **generated-summary**——由 Gate definition JSON 和 gate CLI 输出衍生，不替代它们作为 deterministic rule authority。
 
-## What This Covers
+## Gate Overview
 
-- 每个 gate 保护什么（instantiation_complete、hitl1_recorded、setup_ready、wave0_complete、wave1_complete、wave2_complete、hitl2_recorded、readiness_passed）
-- 每个 gate 的大致检查方向（文件存在性、字段合法性、计数、状态、trace）
-- gate failure 后的 repair posture
+| Gate | 保护什么 | 检查方向 | Repair Posture |
+|------|---------|---------|----------------|
+| `instantiation-complete` | Bundle 已按 contract 创建，control files 和 scaffold dirs 齐全，命名合法 | 文件存在性、目录存在性、命名 pattern、status 字段值 | 补建缺失文件/目录；非法名→重新 instantiate |
+| `hitl1-recorded` | 用户已通过 HITL1 做出 research profile / must-answer 决策，且回答已持久化到 `rb_profile.yaml` | profile YAML 可解析、schema 校验、字段非空/非默认、HITL1 marker 已写入 | 补充缺失字段、修正默认值、确保用户回答写入 bundle |
+| `setup-ready` | Bundle 在进入 wave0 前具备 structural consistency：control files 完整可解析、scaffold 存在、HITL1 已记录、basename 跨文件一致 | 文件存在性、schema 校验（4 schemas）、目录存在性、字段值、status 值、cross-field 一致性 | 补建缺失 scaffold；修正 schema 违规；修正 basename 不一致 |
+| `wave0-complete` | Wave0（search + initial evidence）完成且结果已持久化 | 文件/目录存在性、artifact count、trace event 存在性 | 补充缺失 wave 产物、重新运行未完成步骤 |
+| `wave1-complete` | Wave1（deep read + evidence extraction）完成 | 类似 wave0，侧重 evidence artifact | 补充缺失 evidence |
+| `wave2-complete` | Wave2（synthesis + cross-verification）完成 | 类似 wave0/wave1，侧重 synthesis artifact | 补充 synthesis artifact |
+| `hitl2-recorded` | 用户已通过 HITL2 做出 final report view / proceed/repair 决策 | profile HITL2 字段、status marker | 补充 HITL2 字段 |
+| `readiness-passed` | 最终报告就绪，所有前序 gate 通过 | 综合检查 | 修复前序 gate 的残留问题 |
 
 ## Authority Boundary
 
@@ -26,5 +33,5 @@ suggested_context: []
 - Gate rule authority 在 `DPT_FRAMEWORK/schema/gate_definitions/gate-*.definition.json`
 - Gate verdict authority 在 gate CLI output（`check-gate-*.mjs --bundle <path>`）
 - Gate runtime history 在 `dpt_rb_*/rb_trace.jsonl` 和 `dpt_rb_*/rb_status.json`
-- 如果此 shared prose 和 JSON/CLI/trace 冲突，以 JSON/CLI/trace 为准
-- 此 node 不应长期人工维护——应随 Gate definition JSON 升级同步更新
+- **如果此 shared prose 与 JSON/CLI/trace 冲突，以 JSON/CLI/trace 为准**
+- 此 node 应随 Gate definition JSON 升级同步更新

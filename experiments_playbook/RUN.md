@@ -10,7 +10,7 @@
 
 ## 跑哪些
 
-**默认只跑 light。** heavy 只在用户明确要求时跑。如果你不确定，问。
+**默认只跑 light。** heavy 需要真实 subagent spawn（跑得慢），只在用户明确要求时跑。**human 不能自动跑**——必须人类介入。如果你不确定跑哪些，问。
 
 ### Light（纯 JS E2E，改完代码就该跑）
 
@@ -34,15 +34,34 @@
 | 16 | `exp_wff_validation/test-simple-happy-path.md` | wff walker 9 phase/8 gate 全部 pass + trace↔log 交叉验证 |
 | 17 | `exp_wff_validation/test-medium-fail-repair.md` | wff walker gate fail → repair → rerun → pass 闭环 |
 | 18 | `exp_wff_validation/test-complex-routing-contract.md` | current-node 绑定 + next / terminal / no_transition / config_error routing contract |
+| 19 | `exp_workflow-foundation/test-simple-pre-research-happy-path.md` | fixed HITL payload → instantiation/hitl1/setup 三个 gate pass |
+| 20 | `exp_workflow-foundation/test-medium-pre-research-repair-loop.md` | gate fail → inspect/advice → repair → rerun → pass |
+| 21 | `exp_workflow-foundation/test-medium-pre-research-fault-tolerance.md` | bad JSON / multi-rule fail / missing bundle — gate 不崩溃 |
+| 22 | `exp_workflow-foundation/test-complex-pre-research-review-surface.md` | HITL 问题面 + AI interpretation sample + human review checklist |
+| 23 | `exp_workflow-foundation/test-light-hitl1-quick-factual.md` | research_profile: quick_factual — gate pass |
+| 24 | `exp_workflow-foundation/test-light-hitl1-exploratory-map.md` | research_profile: exploratory_map — gate pass |
+| 25 | `exp_workflow-foundation/test-light-hitl1-claim-verification.md` | research_profile: claim_verification — gate pass |
+| 26 | `exp_workflow-foundation/test-light-hitl1-topic-rewrite-vague.md` | 一句话 → topic rewrite → original topic + seed topics（引用 phase-hitl1.md §3a） |
+| 27 | `exp_workflow-foundation/test-light-hitl1-topic-rewrite-detailed.md` | 详细 brief → 轻量整理，不越界 rewrite（⚠️ 模拟 Agent 输出） |
+| 28 | `exp_workflow-foundation/test-light-instantiation-production-path.md` | production 路径 `instantiate-run-bundle.mjs` → gate pass |
 
-### Heavy（真实 subagent spawn，subagent 机制变更时跑）
+### Heavy（真实 subagent spawn，自动化可跑）
 
 | # | Playbook | 验证什么 |
 |---|----------|---------|
-| 19 | `exp_subagent/test-simple-single-intake.md` | 单个 source_intake subagent |
-| 20 | `exp_subagent/test-medium-dual-parallel.md` | intake + diagnostic 并行两个 |
-| 21 | `exp_subagent/test-complex-triple-failure.md` | 三个 subagent 并发 + partial failure |
-| 22 | `exp_subagent/test-identity-agent-identity.md` | runtime-agent identity 和 trace event |
+| 29 | `exp_workflow-foundation/test-heavy-hitl1-manual-review.md` | HITL1 payload 枚举（auto mode 6 vectors） |
+| 31 | `exp_subagent/test-heavy-subagent-single-intake.md` | 单个 source_intake subagent |
+| 32 | `exp_subagent/test-heavy-subagent-dual-parallel.md` | intake + diagnostic 并行两个 |
+| 33 | `exp_subagent/test-heavy-subagent-triple-failure.md` | 三个 subagent 并发 + partial failure |
+| 34 | `exp_subagent/test-heavy-subagent-identity.md` | runtime-agent identity 和 trace event |
+
+### Human（需人类交互/判断，不能自动化，必须手动跑）
+
+> ⚠️ **Human playbook 不会自动通过。** 必须由人类阅读 playbook 中的 review checklist、做出判断、手动确认。gate pass 不代表 human pass。
+
+| # | Playbook | 验证什么 | 人类做什么 |
+|---|----------|---------|-----------|
+| 30 | `exp_workflow-foundation/test-human-hitl1-topic-rewrite-agent.md` | Agent 读 phase-hitl1.md §3a → 执行 topic rewrite | 审查 Agent 的 rewrite 质量：original topic 是否合理？seed topics 是否贴切？ |
 
 ## 怎么执行
 

@@ -1,13 +1,131 @@
 {
   "gate": "setup-ready",
-  "description": "Verify the instantiated bundle has structural consistency: canonical control files reachable, scaffold present, HITL1 recorded, no premature wave completion claims.",
+  "description": "Verify the instantiated bundle has structural consistency: canonical control files exist and parse, scaffold directories exist, HITL1 is recorded, status fields point to setup→wave0, and bundle basename agrees with plan/profile basename. setup-ready is NOT readiness-passed — it only checks structure, not research quality.",
   "rules": [
     {
-      "id": "placeholder_rule",
-      "check": "placeholder",
-      "target": "placeholder",
-      "threshold": null,
-      "failure_message": "Not yet implemented."
+      "id": "rb_plan_exists",
+      "check": "file_exists",
+      "target": "rb_plan.md",
+      "failure_message": "Missing control file: rb_plan.md."
+    },
+    {
+      "id": "rb_profile_exists",
+      "check": "file_exists",
+      "target": "rb_profile.yaml",
+      "failure_message": "Missing control file: rb_profile.yaml."
+    },
+    {
+      "id": "rb_status_exists",
+      "check": "file_exists",
+      "target": "rb_status.json",
+      "failure_message": "Missing control file: rb_status.json."
+    },
+    {
+      "id": "rb_queue_exists",
+      "check": "file_exists",
+      "target": "rb_queue.json",
+      "failure_message": "Missing control file: rb_queue.json."
+    },
+    {
+      "id": "rb_trace_exists",
+      "check": "file_exists",
+      "target": "rb_trace.jsonl",
+      "failure_message": "Missing control file: rb_trace.jsonl."
+    },
+    {
+      "id": "seed_topics_exists",
+      "check": "dir_exists",
+      "target": "seed_topics",
+      "failure_message": "Missing scaffold directory: seed_topics/."
+    },
+    {
+      "id": "reference_exists",
+      "check": "dir_exists",
+      "target": "reference",
+      "failure_message": "Missing scaffold directory: reference/."
+    },
+    {
+      "id": "artifacts_exists",
+      "check": "dir_exists",
+      "target": "artifacts",
+      "failure_message": "Missing scaffold directory: artifacts/."
+    },
+    {
+      "id": "cache_exists",
+      "check": "dir_exists",
+      "target": "_cache",
+      "failure_message": "Missing scaffold directory: _cache/."
+    },
+    {
+      "id": "final_exists",
+      "check": "dir_exists",
+      "target": "final",
+      "failure_message": "Missing scaffold directory: final/."
+    },
+    {
+      "id": "plan_schema_valid",
+      "check": "schema_valid",
+      "target": "rb_plan.md",
+      "schema": "PlanSchema",
+      "failure_message": "rb_plan.md fails PlanSchema validation."
+    },
+    {
+      "id": "profile_schema_valid",
+      "check": "schema_valid",
+      "target": "rb_profile.yaml",
+      "schema": "ProfileSchema",
+      "failure_message": "rb_profile.yaml fails ProfileSchema validation."
+    },
+    {
+      "id": "status_schema_valid",
+      "check": "schema_valid",
+      "target": "rb_status.json",
+      "schema": "StatusSchema",
+      "failure_message": "rb_status.json fails StatusSchema validation."
+    },
+    {
+      "id": "queue_schema_valid",
+      "check": "schema_valid",
+      "target": "rb_queue.json",
+      "schema": "QueueSchema",
+      "failure_message": "rb_queue.json fails QueueSchema validation."
+    },
+    {
+      "id": "hitl1_marker_recorded",
+      "check": "field_value",
+      "target": "rb_profile.yaml#/human_decision_checkpoints/hitl1/status",
+      "operator": "equal",
+      "value": "recorded",
+      "failure_message": "HITL1 has not been recorded. Complete the HITL1 phase before proceeding to wave0."
+    },
+    {
+      "id": "status_current_gate",
+      "check": "status_value",
+      "target": "rb_status.json#/current_gate",
+      "expected": "setup_ready",
+      "failure_message": "rb_status.json current_gate must be 'setup_ready'. Status may have drifted — restore the correct gate value."
+    },
+    {
+      "id": "status_next_gate",
+      "check": "status_value",
+      "target": "rb_status.json#/next_gate",
+      "expected": "wave0_complete",
+      "failure_message": "rb_status.json next_gate must be 'wave0_complete'. Status may have drifted — restore the correct value."
+    },
+    {
+      "id": "basename_consistency",
+      "check": "cross_field",
+      "fields": [
+        { "source": "bundle_dir_basename", "transform": "normalize_bundle_basename" },
+        { "source": "rb_plan.md#/plan_basename" },
+        { "source": "rb_profile.yaml#/plan_basename" }
+      ],
+      "normalization": {
+        "dpt_rb_<name>": "<name>",
+        "dpt_disp_<name>_<hex>": "<name> (hex = one or more [0-9a-f])"
+      },
+      "comparison": "byte-for-byte",
+      "failure_message": "Basename mismatch: bundle directory basename (normalized), rb_plan.md plan_basename, and rb_profile.yaml plan_basename must be byte-for-byte equal. No case folding, slug rewriting, or whitespace trimming allowed. If bundle dir has an illegal name (fails normalization), re-instantiate with a legal name — do not rename or patch files."
     }
   ]
 }

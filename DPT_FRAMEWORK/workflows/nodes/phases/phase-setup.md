@@ -14,27 +14,32 @@ suggested_context:
 
 ## 1. Stage Goal
 
-验证已实例化 bundle 的 structural consistency——确认 canonical control files 可解析、scaffold 存在、HITL1 已记录——使 bundle 具备进入 Wave0 的条件。
+验证已实例化 bundle 的 structural consistency — 确认 canonical control files 可解析、scaffold 存在、HITL1 已记录、basename 跨文件一致 — 使 bundle 具备进入 wave0 的条件。
+
+**`setup-ready` 不是 `readiness-passed`。** 此 phase 只检查结构一致性，不做研究质量、evidence coverage、synthesis adequacy 判断。
 
 ## 2. Required Inputs
 
-- 已实例化的 `dpt_rb_*` run bundle（含 HITL1 写入的 `rb_profile.yaml`）
-- `shared-profile.md`
+- 已实例化的 run bundle（含 HITL1 写入的 `rb_profile.yaml`）
+- `shared-profile.md`（字段 reference）
+- `shared-schemas.md`（schema 和 trace 区分说明）
 
 ## 3. Allowed Actions
 
-- 检查 control files（`rb_plan.md`、`rb_profile.yaml`、`rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`）存在且可解析
-- 检查 directory scaffold（`seed_topics/`、`reference/`、`artifacts/`、`final/`）存在
-- 检查 HITL1 profile data 已记录
-- 检查 plan/profile/status 的基本一致性
-- 检查没有提前写入 wave complete 状态
+- 检查 control files 存在且可解析：
+  - `rb_plan.md` → `PlanSchema`
+  - `rb_profile.yaml` → `ProfileSchema`
+  - `rb_status.json` → `StatusSchema`
+  - `rb_queue.json` → `QueueSchema`
+  - `rb_trace.jsonl`（存在即可，不要求非空）
+- 检查 directory scaffold 存在：`seed_topics/`、`reference/`、`artifacts/`、`final/`、`_cache/`
+- 检查 HITL1 marker 已写入 profile：`human_decision_checkpoints.hitl1.status == recorded`
+- 检查 `rb_status.json` 仍然是 `current_gate: setup_ready` / `next_gate: wave0_complete`（无 status drift）
+- 按 normalization 规则检查 bundle dir basename、`rb_plan.md` frontmatter `plan_basename`、`rb_profile.yaml` `plan_basename` 三者一致
 
 ## 4. Expected Artifacts
 
-- 所有 control files 存在且可解析
-- Directory scaffold 完整
-- `rb_profile.yaml` 中 HITL1 fields 非空
-- 无提前的 wave completion claim
+一致的 pre-wave0 bundle surface：所有 control files 存在且可解析、scaffold 完整、HITL1 已记录、basename 一致、无 status drift。
 
 ## 5. Gate Command
 
@@ -44,18 +49,31 @@ node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle <path> --curren
 
 ## 6. On Gate Pass
 
-Advance to `wave0`：加载 `phase-wave0.md`。
+读取 `check.next`。Advance to `wave0`：加载 `phase-wave0.md`。
 
 ## 7. On Gate Fail
 
-读取 CLI `inspect` / `advice`，修复缺失或不一致的 control files / scaffold / HITL1 记录，rerun same gate。
+读取 CLI `inspect` / `advice`，修复后 rerun same gate。常见 fail 原因及修复方向：
+
+| Fail | 修复 |
+|------|------|
+| 缺失 control file | 检查文件是否被误删，按 template 重建 |
+| Schema 校验失败 | 读取 inspect 中的 Zod error detail，修正对应字段 |
+| 缺失 scaffold dir | `mkdir` 创建对应目录 |
+| HITL1 marker 未记录 | 回到 HITL1 phase 完成用户输入收集 |
+| Status drift | 将 `current_gate`/`next_gate` 恢复为 `setup_ready`/`wave0_complete` |
+| Basename 不一致 | 以 `plan_basename` in plan + profile 为准；若 bundle dir 命名非法→fail-stop 重新 instantiate |
+
+**Persistent failure：** 若 setup gate 连续 3 次修复无进展，记录 escalation 到 `rb_status.json`（`state: blocked`）和 `rb_trace.jsonl`，不能冒充 `setup-ready` 已通过。
 
 ## 8. Stop Behavior
 
-`stop: no` — Agent 自主验证。若遇到权限/工具/结构性 blocker 无法修复，记录 escalation 到 state/trace。
+`stop: no` — Agent 自主验证。若遇到权限/工具/结构性 blocker 无法修复，记录 escalation。
 
-## 9. Anti-cheating Rules
+## 9. Anti-Cheating Rules
 
-- MUST NOT 替 Agent 做 research
-- MUST NOT 把 setup pass 当成 readiness pass
-- 结构验证只检查存在性和可解析性，不做语义 quality judgment
+- **禁止把 setup pass 当 readiness pass**：`setup-ready` 只确认结构一致性，不意味研究质量过关
+- **禁止手动修改 control files 冒充 ready**：gate fail 必须通过真实 repair → rerun 解决
+- **禁止跳过 setup gate 直接进入 wave0**：必须 `setup-ready` gate pass 后才能推进
+- **禁止在 setup 阶段做 research**：setup 是结构检查，不做搜索/阅读/evidence 工作
+- 参见 `shared-anti-cheating-rules.md` 的通用禁令
