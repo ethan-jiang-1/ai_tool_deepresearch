@@ -1,13 +1,78 @@
 {
   "gate": "wave1-complete",
-  "description": "Verify Wave1 produced topic-scoped skeleton artifact(s) with placeholder boundary marker. Foundation phase does not check subagent coverage or full deepening.",
+  "description": "Verify Wave1 produced topic-scoped skeleton artifacts: wave1 directory exists, per-topic skeleton files exist, each skeleton contains the foundation-placeholder marker, no false completion claims present, trace evidence present, status values point to wave1→wave2.",
   "rules": [
     {
-      "id": "placeholder_rule",
-      "check": "placeholder",
-      "target": "placeholder",
-      "threshold": null,
-      "failure_message": "Not yet implemented."
+      "id": "wave1_dir_exists",
+      "check": "dir_exists",
+      "target": "artifacts/wave1",
+      "failure_message": "Missing directory: artifacts/wave1/. Create the directory and add per-topic skeleton files."
+    },
+    {
+      "id": "per_topic_skeleton_exists",
+      "check": "file_exists",
+      "target": "artifacts/wave1/{topic}/skeleton.md",
+      "failure_message": "Missing skeleton file: artifacts/wave1/{topic}/skeleton.md. Write a topic-scoped skeleton for each topic in the topic_registry."
+    },
+    {
+      "id": "placeholder_marker_present",
+      "check": "pattern_match",
+      "target": "artifacts/wave1/{topic}/skeleton.md",
+      "pattern": "capability:\\s*foundation-placeholder",
+      "negate": false,
+      "failure_message": "Missing required marker 'capability: foundation-placeholder' in skeleton file. Each skeleton must explicitly declare this marker to indicate it is foundation placeholder content, not full subagent research."
+    },
+    {
+      "id": "no_false_full_subagent_claim",
+      "check": "pattern_match",
+      "target": "artifacts/wave1/{topic}/skeleton.md",
+      "pattern": "full subagent coverage completed",
+      "negate": true,
+      "failure_message": "False completion claim detected: 'full subagent coverage completed'. Foundation phase does not do subagent dispatch — remove this claim."
+    },
+    {
+      "id": "no_false_deepening_claim",
+      "check": "pattern_match",
+      "target": "artifacts/wave1/{topic}/skeleton.md",
+      "pattern": "deepening done",
+      "negate": true,
+      "failure_message": "False completion claim detected: 'deepening done'. Foundation phase only produces placeholder skeletons — remove this claim."
+    },
+    {
+      "id": "no_false_intake_claim",
+      "check": "pattern_match",
+      "target": "artifacts/wave1/{topic}/skeleton.md",
+      "pattern": "candidate intake completed",
+      "negate": true,
+      "failure_message": "False completion claim detected: 'candidate intake completed'. Candidate intake is a future expansion track — remove this claim."
+    },
+    {
+      "id": "no_false_fanin_claim",
+      "check": "pattern_match",
+      "target": "artifacts/wave1/{topic}/skeleton.md",
+      "pattern": "fan-in review completed",
+      "negate": true,
+      "failure_message": "False completion claim detected: 'fan-in review completed'. Fan-in review is a future expansion track — remove this claim."
+    },
+    {
+      "id": "trace_wave1_completion",
+      "check": "trace_event_present",
+      "target": "wave1_completion",
+      "failure_message": "Missing trace event: wave1_completion. The phase body requires recording this event in rb_trace.jsonl before running the gate."
+    },
+    {
+      "id": "status_current_gate",
+      "check": "status_value",
+      "target": "rb_status.json#/current_gate",
+      "expected": "wave1_complete",
+      "failure_message": "rb_status.json current_gate must be 'wave1_complete'. Status may have drifted — restore the correct gate value."
+    },
+    {
+      "id": "status_next_gate",
+      "check": "status_value",
+      "target": "rb_status.json#/next_gate",
+      "expected": "wave2_complete",
+      "failure_message": "rb_status.json next_gate must be 'wave2_complete'. Status may have drifted — restore the correct value."
     }
   ]
 }

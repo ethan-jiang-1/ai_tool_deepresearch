@@ -4,6 +4,7 @@ import { z } from 'zod';
 export const CurrentGate = z.enum([
   'instantiation_complete',
   'setup_ready',
+  'seed_topics_ready',
   'wave0_complete',
   'wave1_complete',
   'wave2_complete',

@@ -17,7 +17,7 @@
 //   - zodErrors()                 — map ZodError issues to plain diagnostics
 
 import { parseArgs } from 'node:util';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveNodeTransitionDetailed } from '../ask-next.mjs';
@@ -190,6 +190,30 @@ export function emitGateResult(result) {
   }
 
   process.exit(result.check.passed ? 0 : 1);
+}
+
+// ─── Trace Reading ─────────────────────────────────────────────────────────
+
+/**
+ * Read trace events from rb_trace.jsonl, optionally filtered by event name.
+ * Wave and seed-topics gate CLIs are the first to read rb_trace.jsonl
+ * (pre-research gates only wrote to it). This shared reader avoids
+ * duplicating JSONL parsing across 4 CLIs (3 wave + 1 seed-topics).
+ *
+ * @param {string} bundlePath — path to the active runtime context
+ * @param {string|null} eventName — if provided, only return events matching this name
+ * @returns {object[]}
+ */
+export function readTraceEvents(bundlePath, eventName = null) {
+  const tracePath = join(bundlePath, 'rb_trace.jsonl');
+  if (!existsSync(tracePath)) return [];
+  const raw = readFileSync(tracePath, 'utf-8').trim();
+  if (!raw) return [];
+  const events = raw.split('\n').map(line => {
+    try { return JSON.parse(line); } catch { return null; }
+  }).filter(Boolean);
+  if (eventName) return events.filter(e => e.event === eventName);
+  return events;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -1,13 +1,58 @@
 {
   "gate": "wave0-complete",
-  "description": "Verify Wave0 produced minimum shared foundation evidence: reference artifacts exist, metadata parseable, count meets foundation floor, trace evidence present.",
+  "description": "Verify Wave0 produced minimum shared foundation evidence: reference index exists, per-topic reference metadata files exist and pass ReferenceMetadata schema validation, metadata count meets foundation floor per topic, trace evidence present, status values point to wave0→wave1.",
   "rules": [
     {
-      "id": "placeholder_rule",
-      "check": "placeholder",
-      "target": "placeholder",
-      "threshold": null,
-      "failure_message": "Not yet implemented."
+      "id": "reference_index_exists",
+      "check": "file_exists",
+      "target": "reference/index.md",
+      "failure_message": "Missing file: reference/index.md. Write an index summarizing the foundation reference collection for each topic."
+    },
+    {
+      "id": "reference_dir_exists",
+      "check": "dir_exists",
+      "target": "reference",
+      "failure_message": "Missing directory: reference/. Create the directory and add per-topic reference metadata."
+    },
+    {
+      "id": "per_topic_source_yaml_exists",
+      "check": "file_exists",
+      "target": "reference/{topic}/source.yaml",
+      "failure_message": "Missing per-topic reference metadata: reference/{topic}/source.yaml. Search and collect at least foundation floor count of references for each topic in the topic_registry."
+    },
+    {
+      "id": "per_topic_reference_schema_valid",
+      "check": "schema_valid",
+      "target": "reference/{topic}/source.yaml",
+      "schema": "ReferenceMetadataArraySchema",
+      "failure_message": "Reference metadata in reference/{topic}/source.yaml fails schema validation. Each entry must have url, title, retrieved_date (YYYY-MM-DD), and topic_tag."
+    },
+    {
+      "id": "per_topic_count_floor",
+      "check": "count_floor",
+      "target": "reference/{topic}/source.yaml",
+      "threshold": 1,
+      "failure_message": "Topic {topic} has fewer than 1 reference metadata entries. Collect at least the foundation floor count for each topic."
+    },
+    {
+      "id": "trace_wave0_completion",
+      "check": "trace_event_present",
+      "target": "wave0_completion",
+      "failure_message": "Missing trace event: wave0_completion. The phase body requires recording this event in rb_trace.jsonl before running the gate."
+    },
+    {
+      "id": "status_current_gate",
+      "check": "status_value",
+      "target": "rb_status.json#/current_gate",
+      "expected": "wave0_complete",
+      "failure_message": "rb_status.json current_gate must be 'wave0_complete'. Status may have drifted — restore the correct gate value."
+    },
+    {
+      "id": "status_next_gate",
+      "check": "status_value",
+      "target": "rb_status.json#/next_gate",
+      "expected": "wave1_complete",
+      "failure_message": "rb_status.json next_gate must be 'wave1_complete'. Status may have drifted — restore the correct value."
     }
   ]
 }

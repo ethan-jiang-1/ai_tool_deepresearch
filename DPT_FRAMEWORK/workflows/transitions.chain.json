@@ -1,7 +1,8 @@
 {
   "phases/phase-instantiation.md": { "passed": "phases/phase-hitl1.md" },
   "phases/phase-hitl1.md":        { "passed": "phases/phase-setup.md" },
-  "phases/phase-setup.md":        { "passed": "phases/phase-wave0.md" },
+  "phases/phase-setup.md":        { "passed": "phases/phase-seed-topics.md" },
+  "phases/phase-seed-topics.md": { "passed": "phases/phase-wave0.md" },
   "phases/phase-wave0.md":        { "passed": "phases/phase-wave1.md" },
   "phases/phase-wave1.md":        { "passed": "phases/phase-wave2.md" },
   "phases/phase-wave2.md":        { "passed": "phases/phase-hitl2.md" },

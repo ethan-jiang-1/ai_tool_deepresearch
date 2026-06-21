@@ -3,6 +3,7 @@
     { "key": "instantiation", "node": "phases/phase-instantiation.md", "gate": "instantiation-complete" },
     { "key": "hitl1",          "node": "phases/phase-hitl1.md",          "gate": "hitl1-recorded" },
     { "key": "setup",          "node": "phases/phase-setup.md",          "gate": "setup-ready" },
+    { "key": "seed-topics",    "node": "phases/phase-seed-topics.md",    "gate": "seed-topics-ready" },
     { "key": "wave0",          "node": "phases/phase-wave0.md",          "gate": "wave0-complete" },
     { "key": "wave1",          "node": "phases/phase-wave1.md",          "gate": "wave1-complete" },
     { "key": "wave2",          "node": "phases/phase-wave2.md",          "gate": "wave2-complete" },

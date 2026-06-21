@@ -170,7 +170,7 @@ describe('Retired askNext API', () => {
 // ─── Integration: real framework chain file ──────────────────────────────
 
 describe('resolveNodeTransitionDetailed with real transitions.chain.json', () => {
-  it('resolves all 8 lifecycle transitions', () => {
+  it('resolves all 9 lifecycle transitions', () => {
     const real = join(__dirname, '../../DPT_FRAMEWORK/workflows/transitions.chain.json');
 
     const r1 = resolveNodeTransitionDetailed(real, 'phases/phase-instantiation.md', 'passed');
@@ -183,7 +183,11 @@ describe('resolveNodeTransitionDetailed with real transitions.chain.json', () =>
 
     const r3 = resolveNodeTransitionDetailed(real, 'phases/phase-setup.md', 'passed');
     assert.strictEqual(r3.kind, 'next');
-    assert.strictEqual(r3.next, 'phases/phase-wave0.md');
+    assert.strictEqual(r3.next, 'phases/phase-seed-topics.md');
+
+    const r3b = resolveNodeTransitionDetailed(real, 'phases/phase-seed-topics.md', 'passed');
+    assert.strictEqual(r3b.kind, 'next');
+    assert.strictEqual(r3b.next, 'phases/phase-wave0.md');
 
     const r4 = resolveNodeTransitionDetailed(real, 'phases/phase-wave0.md', 'passed');
     assert.strictEqual(r4.kind, 'next');

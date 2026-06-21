@@ -1,13 +1,48 @@
 {
   "gate": "wave2-complete",
-  "description": "Verify Wave2 produced minimum cross-topic synthesis artifact that references verified Wave0/Wave1 artifacts.",
+  "description": "Verify Wave2 produced a cross-topic synthesis artifact: synthesis file exists and is non-empty, contains at least one Markdown link referencing a Wave0 or Wave1 artifact, at least one reference target actually exists in the bundle, trace evidence present, status values point to wave2→hitl2.",
   "rules": [
     {
-      "id": "placeholder_rule",
-      "check": "placeholder",
-      "target": "placeholder",
-      "threshold": null,
-      "failure_message": "Not yet implemented."
+      "id": "synthesis_exists",
+      "check": "file_exists",
+      "target": "artifacts/wave2/synthesis.md",
+      "failure_message": "Missing file: artifacts/wave2/synthesis.md. Derive a cross-topic synthesis from verified Wave0 and Wave1 artifacts."
+    },
+    {
+      "id": "synthesis_non_empty",
+      "check": "field_non_empty",
+      "target": "artifacts/wave2/synthesis.md",
+      "failure_message": "artifacts/wave2/synthesis.md is empty. Write a cross-topic synthesis that references Wave0 and Wave1 artifacts."
+    },
+    {
+      "id": "cross_artifact_references",
+      "check": "cross_field",
+      "mode": "markdown_link_resolution",
+      "target": "artifacts/wave2/synthesis.md",
+      "link_pattern": "\\[([^\\]]+)\\]\\(([^)]+\\.md)\\)",
+      "resolve_relative_to": "artifacts/wave2",
+      "min_valid_refs": 1,
+      "failure_message": "No valid artifact references found in synthesis. Add at least one Markdown link (e.g. [label](../wave1/topic-a/skeleton.md)) that points to an existing Wave0 or Wave1 artifact file in the bundle."
+    },
+    {
+      "id": "trace_wave2_completion",
+      "check": "trace_event_present",
+      "target": "wave2_completion",
+      "failure_message": "Missing trace event: wave2_completion. The phase body requires recording this event in rb_trace.jsonl before running the gate."
+    },
+    {
+      "id": "status_current_gate",
+      "check": "status_value",
+      "target": "rb_status.json#/current_gate",
+      "expected": "wave2_complete",
+      "failure_message": "rb_status.json current_gate must be 'wave2_complete'. Status may have drifted — restore the correct gate value."
+    },
+    {
+      "id": "status_next_gate",
+      "check": "status_value",
+      "target": "rb_status.json#/next_gate",
+      "expected": "hitl2_complete",
+      "failure_message": "rb_status.json next_gate must be 'hitl2_complete'. Status may have drifted — restore the correct value."
     }
   ]
 }

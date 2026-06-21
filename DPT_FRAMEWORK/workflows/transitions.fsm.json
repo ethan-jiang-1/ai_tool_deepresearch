@@ -4,7 +4,8 @@
   "states": {
     "phases/phase-instantiation.md": { "on": { "passed": "phases/phase-hitl1.md" } },
     "phases/phase-hitl1.md":        { "on": { "passed": "phases/phase-setup.md" } },
-    "phases/phase-setup.md":        { "on": { "passed": "phases/phase-wave0.md" } },
+    "phases/phase-setup.md":        { "on": { "passed": "phases/phase-seed-topics.md" } },
+    "phases/phase-seed-topics.md": { "on": { "passed": "phases/phase-wave0.md" } },
     "phases/phase-wave0.md":        { "on": { "passed": "phases/phase-wave1.md" } },
     "phases/phase-wave1.md":        { "on": { "passed": "phases/phase-wave2.md" } },
     "phases/phase-wave2.md":        { "on": { "passed": "phases/phase-hitl2.md" } },

@@ -49,6 +49,20 @@ suggested_context: []
 - **`_trace.jsonl`**（experiment verdict trace）：位于 disposable experiment bundle 根目录，由 playbook thin driver 通过 `DPT_FRAMEWORK/engine/trace.mjs` 的 `createTrace()` 写入 `check` event。**这是 command experiment 的 verdict evidence surface，不作为 production runtime truth。**
 - **区分**：gate CLI 只写 `rb_trace.jsonl`；`_trace.jsonl` 只能由 experiment driver 创建。
 
+### `contracts/reference.mjs` → `reference/<topic>/source.yaml`
+
+- **Schema**：`ReferenceMetadataSchema`（单条）、`ReferenceMetadataArraySchema`（YAML 数组）
+- **字段**：`url`（string, 必填）、`title`（string, 必填）、`retrieved_date`（YYYY-MM-DD string, 必填）、`topic_tag`（string, 必填）、`notes`（string, 可选）
+- **格式**：YAML array，每项为一条 reference metadata
+- **位置**：`DPT_FRAMEWORK/schema/contracts/reference.mjs`
+
+### Wave Artifact 目录结构
+
+- **`reference/<topic>/source.yaml`**：Wave0 per-topic reference metadata（YAML array，每项满足 `ReferenceMetadataSchema`）。Foundation floor：每个 topic ≥ 1 条 metadata。
+- **`reference/index.md`**：Wave0 foundation reference 索引（Agent 可读摘要，列出每个 topic 收集的 reference）。
+- **`artifacts/wave1/<topic>/skeleton.md`**：Wave1 topic-scoped placeholder skeleton（Markdown，显式标记 `capability: foundation-placeholder`）。Skeleton 包含已知前提、关键维度、open questions，用 Markdown link 引用 Wave0 reference。
+- **`artifacts/wave2/synthesis.md`**：Wave2 cross-topic synthesis（Markdown，用 `[label](relative/path.md)` 格式引用 Wave0/Wave1 artifact）。引用路径相对于 `artifacts/wave2/`：如 `../wave1/<topic>/skeleton.md` 指向 Wave1 skeleton，`../../reference/<topic>/source.yaml` 指向 Wave0 metadata。
+
 ### Gate Contract
 
 - **Gate definition JSON**：`DPT_FRAMEWORK/schema/gate_definitions/gate-*.definition.json` — read-only deterministic rule definition
