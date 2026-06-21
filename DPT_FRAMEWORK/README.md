@@ -4,7 +4,7 @@ Deep Research Framework (`DPT_FRAMEWORK/`) 的运行时入口说明。
 
 ## 第一条
 
-打开 `COMMANDS.md` 找到你要做的事。不要凭记忆工作。
+**想做什么事？打开 `COMMANDS.md` 找到对应的命令。** 不要凭记忆工作。
 
 运行具体 bundle 时，先打开 active bundle 里的 `START_FROM_HERE.md` 和控制文件。
 
