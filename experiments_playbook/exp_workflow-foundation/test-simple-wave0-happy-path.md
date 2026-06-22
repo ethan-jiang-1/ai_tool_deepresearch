@@ -131,7 +131,7 @@ find $B/reference -type f | sort
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md)
 echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'all 3 topics with schema-valid metadata pass'})})"
 ```
 
@@ -147,7 +147,7 @@ find $B/reference -type f
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md || true)
 echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'missing topic-a source.yaml should fail with inspect pointing to topic-a'})})"
 ```
 
@@ -174,7 +174,7 @@ head -10 $B/rb_plan.md
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md || true)
 echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'empty registry should fail with inspect pointing to registry (not disk scan)'})})"
 ```
 
@@ -216,7 +216,7 @@ cat $B/reference/topic-a/source.yaml
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md || true)
 echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'count_floor pass but schema_valid fail = gate fail (AND interaction)'})})"
 ```
 
@@ -266,7 +266,7 @@ ls -la $B/reference/
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md || true)
 echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'topic-c missing reference should be detected via {topic} expansion'})})"
 ```
 

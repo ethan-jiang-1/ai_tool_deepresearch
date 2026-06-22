@@ -127,7 +127,7 @@ grep -E 'research_profile|root_must_answer|plan_basename|status:|recorded_at' $B
 ```bash
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
 echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
   m.recordCheck('$B/_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, detail: 'review surface: AI interpretation sample payload' });

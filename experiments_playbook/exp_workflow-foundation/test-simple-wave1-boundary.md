@@ -134,7 +134,7 @@ head -5 $B/artifacts/wave1/topic-a/skeleton.md
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B --current-node phases/phase-wave1.md)
 echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,detail:'skeleton with placeholder marker passes'})})"
 ```
 
@@ -159,7 +159,7 @@ cat $B/artifacts/wave1/topic-a/skeleton.md
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B --current-node phases/phase-wave1.md || true)
 echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,expected:false,detail:'missing placeholder marker should fail'})})"
 ```
 
@@ -186,7 +186,7 @@ cat $B/artifacts/wave1/topic-a/skeleton.md
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B --current-node phases/phase-wave1.md || true)
 echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,expected:false,detail:'false completion claim should fail'})})"
 ```
 

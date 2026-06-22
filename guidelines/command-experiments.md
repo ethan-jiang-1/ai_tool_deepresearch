@@ -18,7 +18,7 @@ siblings:
 
 # Guideline: command_experiments Current Guidance
 
-> 状态: 生效 | 创建: 2026-06-17 | 激活变更: `openspec/changes/archive/2026-06-19-dedup-experiments-framework` | 适用于: `experiments_playbook/exp_*`
+> 状态: 生效 | 创建: 2026-06-17 | 适用于: `experiments_playbook/exp_*`
 
 ---
 
@@ -44,25 +44,13 @@ This file can decide:
 
 - The command experiment quality bar: real runtime context, real Agent work when required, canonical framework code, trace-backed verdict, and cleanup.
 - The stable experiment ownership split between framework code, experiment playbooks, shared setup, and prototype fixtures.
-- Target conventions for durable command experiments under the current framework layout.
+- Current conventions for durable command experiments under the current framework layout.
 
 This file cannot decide:
 
 - Accepted capability behavior, concrete schema fields, CLI flags, trace event semantics, or framework API signatures.
-- That a target path or helper exists in the current repository before the activating change has landed and validated.
+- That a path, helper, or convention labeled here as future or target exists today — only the accepted spec plus framework implementation can affirm that.
 - That a command experiment passing is enough to bypass OpenSpec acceptance for behavior changes.
-
----
-
-## Current Use
-
-This guideline is fully active. The target surfaces it describes — framework engines under `DPT_FRAMEWORK/`, playbooks under `experiments_playbook/`, shared experiment tools under `experiments/shared/`, and a unified trace writer — exist and are current. The stable core rules always apply: do not mock Agent work, hand-write fake receipts or trace, use console output as verdict, hide Agent Flow inside JS, or treat prototype code as production authority.
-
----
-
-## Post-Activation Cleanup
-
-This section records that activation cleanup happened. When a future change makes target surfaces current, do the same: update `guidelines/README.md` statuses, remove migration language that only applied before activation, re-check target paths, and resolve any conflicts with accepted specs or implementation. The `dedup-experiments-framework` change completed this cleanup — see that change's tasks.md for the detailed checklist.
 
 ---
 
@@ -83,7 +71,7 @@ If a needed detail is not stable across mechanisms, do not promote it into this 
 
 ## Stable Core And Variable Surface
 
-Do not confuse this guideline's stable core with its target conventions.
+Do not confuse this guideline's stable core with its current conventions.
 
 Stable core:
 
@@ -121,18 +109,26 @@ If those conditions do not hold, route the work to unit tests, framework integra
 
 ---
 
+## Quality Gate
+
+A playbook is not complete until a coding agent has executed it from a clean repo, step by step, and the verdict shows PASS. Committed-but-never-run is not done. The act of running IS the quality gate — most of the Runner-Emergent Principles below were discovered by running playbooks that had been written but never executed.
+
+This applies regardless of how confident the author is in the logic. Mechanism-under-test failures, stale state from earlier steps, gate output format drift, and shell-escaping bugs all surface only at execution time.
+
+---
+
 ## Experiment Charter
 
-The safety rules below always apply. Any rule that names a target path or helper is subject to `Current Use`: use that path only after the active change or accepted implementation provides it.
+The safety rules below always apply. Concrete path or helper names refer to the current framework layout; when those surfaces move, update the accepted spec and this guideline together.
 
 ### MUST
 
 - MUST follow `openspec/config.yaml` and the relevant OpenSpec change before changing accepted behavior.
-- MUST use a real disposable experiment runtime context; the target project convention is a `dpt_disp_*` bundle.
-- MUST create disposable runtime contexts through approved shared experiment infrastructure; the target default is `experiments/shared/new-disposable-bundle.mjs`.
+- MUST use a real disposable experiment runtime context; the current project convention is a `dpt_disp_*` bundle.
+- MUST create disposable runtime contexts through approved shared experiment infrastructure; the current default is `experiments/shared/new-disposable-bundle.mjs`.
 - MUST run `validate-bundle.mjs` and `inspect-bundle.mjs` before mechanism execution.
 - MUST import and exercise framework APIs from their canonical `DPT_FRAMEWORK/` location instead of reimplementing the mechanism in the playbook.
-- MUST use `DPT_FRAMEWORK/engine/trace.mjs` as the single trace writer.
+- MUST write every trace event in the canonical format owned by the accepted trace-writer contract; do not run a parallel trace format.
 - MUST use real Agent or native subagent execution when the mechanism depends on Agent behavior.
 - MUST keep stage sequence, Agent handoff, and any native subagent semantics visible in the Markdown playbook.
 - MUST keep inline `.mjs` code, when present, as a thin deterministic driver/checkpoint.
@@ -183,7 +179,7 @@ Naming:
 - Runner entry: `experiments_playbook/RUN.md` (contains playbook manifest + execution instructions)
 - Fixture files copied into bundle: paths defined by the playbook and relevant spec.
 
-These names are target conventions, not the mechanism taxonomy. Future mechanisms may add case names, fixture types, helper inputs, or optional prototype-free organization when an OpenSpec change or playbook explains why; they must not change the ownership split above.
+These names are current conventions, not the mechanism taxonomy. Future mechanisms may add case names, fixture types, helper inputs, or optional prototype-free organization when an OpenSpec change or playbook explains why; they must not change the ownership split above.
 
 ## Import Boundary
 
@@ -203,7 +199,7 @@ Stable import rules:
 
 ## Playbook Frontmatter
 
-Every playbook starts with YAML frontmatter. It contains routing facts only, not explanation. The fields below are the target baseline; accepted specs may add mechanism-specific routing fields.
+Every playbook starts with YAML frontmatter. It carries routing facts only, not explanation. Field definitions are owned by the accepted agent-testing spec — not by this guidance. Today only `weight` is spec-owned (AGT-005); the other fields below are the current de-facto shape shared across playbooks, kept here so authors can recognize the pattern. Treat them as convention, not as a contract this file defines.
 
 ```markdown
 ---
@@ -270,7 +266,7 @@ Step names can vary, but the lifecycle cannot.
 
 Use approved shared experiment infrastructure. Do not hand-roll `mkdir`, `sed {{name}}`, or manual `rb_templates` copying in new experiments.
 
-The current target default is `experiments/shared/new-disposable-bundle.mjs`, invoked with a mechanism-specific bundle suffix and only the fixture inputs the case actually needs. If a future experiment needs different setup, that setup must still be shared, explicit, covered by OpenSpec when it changes framework behavior, and produce a normal disposable runtime context that passes `validate-bundle.mjs` and `inspect-bundle.mjs` before mechanism execution starts.
+The current default is `experiments/shared/new-disposable-bundle.mjs`, invoked with a mechanism-specific bundle suffix and only the fixture inputs the case actually needs. If a future experiment needs different setup, that setup must still be shared, explicit, covered by OpenSpec when it changes framework behavior, and produce a normal disposable runtime context that passes `validate-bundle.mjs` and `inspect-bundle.mjs` before mechanism execution starts.
 
 Shared setup owns the exact runtime skeleton. The playbook owns only the case identity, fixture selection, and follow-up validation calls.
 
@@ -287,7 +283,7 @@ Each execution step should normally contain:
 Keep inline scripts thin:
 
 - Import framework APIs from their canonical `DPT_FRAMEWORK/` location, or call an accepted CLI.
-- Set trace file through `DPT_FRAMEWORK/engine/trace.mjs`.
+- Write trace events in the canonical format (see Trace Verdict and the accepted trace-writer contract).
 - Call the mechanism under test.
 - Append `check` events to trace.
 - Avoid implementing the mechanism inside the playbook.
@@ -355,7 +351,7 @@ Minimum verdict script behavior:
 
 Console output explains the verdict; trace data decides it.
 
-The verdict `console.log` SHALL use ANSI color: `\x1b[32m` (green) for PASS, `\x1b[31m` (red) for FAIL, followed by `\x1b[0m` (reset). When written inside `<< 'JS'` heredoc blocks, use single backslash `\x1b` — `\\x1b` (double backslash) produces literal text, not the ESC character.
+Console output may use color for readability, but coloring is a presentation detail owned by the verdict helper or spec — it is not part of the trace contract.
 
 ---
 
@@ -370,11 +366,11 @@ Rules:
 - Framework modules MAY import from each other when dependencies exist. Do not embed a copy of another framework module's code; use direct imports.
 - Validate state with Zod where schemas exist.
 - Throw on invalid state; do not silently repair in Engine code unless that repair is the mechanism under test.
-- `trace.mjs` lives at `DPT_FRAMEWORK/engine/trace.mjs` as a single unified trace writer. Prototypes do not keep per-prototype trace copies.
+- Trace events follow a single canonical format owned by the accepted trace-writer contract. Prototypes do not keep a parallel trace writer.
 - Follow the Import Boundary above; relative paths depend on where the inline driver file is written and executed.
-- **Engine provides the deterministic loop; MD/Agent provides the intelligent strategy.** When a mechanism needs a decision—how to repair, what to dispatch, which branch action to take—Engine exports an injection point (function parameter, factory argument) and MD/Agent supplies the actual logic. Engine never hardcodes a repair strategy, dispatch rule, or branch action. Example: `convergeRepair(state, { repairStep })` — Engine owns the loop (iterate, check stall, enforce maxIterations, detect terminal branches); the `repairStep` function is written by MD/Agent because "how to repair" is an intelligent decision.
+- **Engine provides the deterministic loop; MD/Agent provides the intelligent strategy.** When a mechanism needs a decision — how to repair, what to dispatch, which branch to take — Engine exposes an injection point (a function parameter or factory argument) and the Agent/MD supplies the actual logic. Engine owns the loop mechanics: iterate, detect stall, enforce a max-iterations bound, recognize terminal branches. The *strategy* inside each step — what counts as a repair, which branch to choose — is an intelligent decision owned by the Agent/MD. Engine must not hardcode a repair strategy, dispatch rule, or branch action.
 
-Trace writer rule: use the unified `DPT_FRAMEWORK/engine/trace.mjs` writer, and choose the import path from the Import Boundary above. The exact API is defined by the trace-writer spec; do not recreate trace helpers inside playbooks or prototype fixtures.
+Trace writer rule: every trace event must conform to the canonical format defined by the accepted trace-writer contract. Whether a playbook writes events through the framework writer or a shared helper, the format must match — do not invent a parallel trace format, and do not recreate trace helpers inside playbooks or prototype fixtures.
 
 ---
 
@@ -418,9 +414,11 @@ Names such as `simple`, `medium`, `complex`, and `identity` are acceptable when 
 
 These principles were discovered by executing playbooks and fixing the failures, not designed upfront. They apply to every playbook in `experiments_playbook/`. Violating any of them produced at least one real failure during runner execution.
 
+**Scope**: This section governs *playbook authoring shape* — how to call the gate, how to record results, how to declare expectations. It does not define gate JSON schema, trace event schema, or CLI flag contracts. Those belong to `guidelines/framework-runtime-boundary.md` and the relevant accepted spec or framework implementation.
+
 ### 1. Gate output is structured feedback for the MD controller
 
-The gate CLI is an Engine-layer deterministic checkpoint. Its primary output is structured JSON on stdout — not the shell exit code. The JSON contains four fields the MD controller (LLM) uses to decide the next action:
+The gate CLI is an Engine-layer deterministic checkpoint. Its primary output is structured JSON on stdout — not the shell exit code. The current gate CLIs emit JSON with four fields the MD controller (LLM) uses to decide the next action. The exact JSON shape is owned by the accepted gate CLI spec and may evolve; the principle is what matters here:
 
 | Field | Role | Used by |
 |-------|------|---------|
@@ -432,13 +430,15 @@ The gate CLI is an Engine-layer deterministic checkpoint. Its primary output is 
 The exit code is a shell-level mirror of `check.passed` — it carries far less information than the JSON. Playbooks MUST capture the JSON as the primary artifact and treat the exit code as secondary:
 
 ```bash
-# JSON is the contract. || true tells shell "I have the JSON, ignore the exit code."
-GATE_OUTPUT=$(node gate-cli.mjs ... || true)
-
-# Extract structured facts from the JSON — this is what the MD controller reads
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
-NEXT=$(echo "$GATE_OUTPUT"   | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.next)})")
+# Capture the full gate JSON on stdout. Do NOT let a nonzero exit code stop the
+# shell before you see the JSON — guard the call (e.g. `|| true`) and parse the
+# JSON as the contract. Extract check.passed / check.next from that JSON.
+#
+# Caution: stdout may exceed the pipe buffer when inspect/advice arrays grow.
+# Read stdout to EOF before parsing; a single chunk read can truncate the JSON.
 ```
+
+> The exact parsing mechanism is the playbook's own concern. What matters is that the full JSON is captured and parsed before any field is read.
 
 Do not chain gate calls with `&&`. The `|| true` is not a workaround for misbehavior — it reflects the architectural fact that the JSON on stdout IS the output. The exit code is a convenience for `if` statements, not the contract.
 
@@ -446,26 +446,23 @@ Gate CLI implementations MUST keep inspect/advice strings valid as JSON values (
 
 ### 2. Never hardcode gate results
 
-`recordCheck` MUST use the gate's actual `check.passed` value, extracted from its JSON output. Hardcoding `passed: false` or `passed: true` creates a false trace — the trace no longer proves the gate returned what the playbook claims it did.
+The check event written to trace MUST use the gate's actual `check.passed` value, extracted from its JSON output. Hardcoding `passed: false` or `passed: true` creates a false trace — the trace no longer proves the gate returned what the playbook claims it did.
 
 ```bash
-# Extract the real result
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
-
-# Use it — never hardcode
-m.recordCheck(tracePath, { gate: 'setup-ready', passed: $PASSED, ... })
+# Extract check.passed from the gate JSON, then write a check event to trace
+# carrying that real value. NEVER write a hardcoded passed:true/false literal.
+#   gate: <name>,  passed: <real check.passed>,  detail: <why>
 ```
 
 The trace is evidence. Hardcoded evidence is fake evidence.
 
 ### 3. Boundary tests must declare their expectations
 
-`recordCheck` defaults `expected` to `true`. A gate rejection (`passed: false`) is a failure in happy-path semantics but the CORRECT behavior in a boundary test. Boundary test steps MUST set `expected: false`:
+A check event's `expected` defaults to `true`. A gate rejection (`passed: false`) is a failure in happy-path semantics but the CORRECT behavior in a boundary test. Boundary test steps MUST set `expected: false`:
 
 ```js
 // Boundary — gate should reject this input, and that rejection is correct
-m.recordCheck(tracePath, { gate: 'wave0-complete', passed: false, expected: false,
-  detail: 'empty registry should fail' })
+//   gate: <name>,  passed: false,  expected: false,  detail: <why rejection is correct>
 ```
 
 The verdict function compares `passed !== expected`. A boundary rejection counts as passed when `expected: false`.
@@ -484,17 +481,13 @@ A step that assumes clean bundle state MUST create that state itself. Files writ
 
 ```bash
 # Before testing {topic} expansion: remove ALL per-topic files, then recreate
-rm -f $B/reference/*/source.yaml
-cat > $B/reference/topic-a/source.yaml << 'EOF'
+rm -f "$B"/reference/*/source.yaml
+cat > "$B"/reference/topic-a/source.yaml << 'EOF'
 ...
 EOF
 ```
 
 Do not "notice topic-c still has a file from Step 2 and skip deleting it because it's convenient." Delete it. Then the test condition is explicit and auditable.
-
-### 6. Written ≠ done
-
-A playbook is not complete until a coding agent has executed it from a clean repo, step by step, and the verdict shows PASS. Every pattern in this section was discovered by running playbooks that had been committed but never executed. The act of running IS the quality gate.
 
 ---
 
@@ -504,25 +497,39 @@ These principles are not exhaustive. When a new experiment family exposes a new 
 
 ## New Experiment Checklist
 
+**Setup & layout**
+
 - [ ] `experiments_playbook/exp_<mechanism>/` exists.
 - [ ] Reusable framework code exists under `DPT_FRAMEWORK/` for the mechanism under test.
-- [ ] `DPT_FRAMEWORK/engine/trace.mjs` is the single trace writer used by the playbook and engine.
+- [ ] Trace events written by the playbook and engine match the canonical trace-writer format.
 - [ ] Any `experiments/prototype-<mechanism>/` content is fixture-only.
 - [ ] The experiment note, usually `EXPERIMENT.md`, states the mechanism, hypothesis, and result.
+
+**Mechanism & playbook shape**
+
 - [ ] Case playbooks cover the mechanism's needed proof roles, and each case answers one question.
 - [ ] Frontmatter names the disposable runtime context and trace paths.
 - [ ] The playbook keeps stage sequence and Agent handoff visible in Markdown.
 - [ ] Any inline `.mjs` is only a thin deterministic driver/checkpoint.
 - [ ] Runtime context setup uses approved shared experiment infrastructure.
 - [ ] Disposable runtime context passes validate + inspect before mechanism execution.
-- [ ] Gate CLI calls use `|| true` defense (Principle 1).
-- [ ] `recordCheck` extracts `passed` from real gate JSON — no hardcoded values (Principle 2).
-- [ ] Boundary steps set `expected: false` in `recordCheck` (Principle 3).
+
+**Runner principles**
+
+- [ ] Gate CLI calls use `|| true` defense and stream-accumulate stdout (Principle 1).
+- [ ] Check events extract `passed` from real gate JSON — no hardcoded values (Principle 2).
+- [ ] Boundary steps set `expected: false` on their check events (Principle 3).
 - [ ] Verdict mode matches experiment shape: `all` for happy-path/boundary, `last` for repair-loop (Principle 4).
 - [ ] Steps that depend on clean state explicitly clean up inherited artifacts (Principle 5).
+
+**Verdict & cleanup**
+
 - [ ] Trace JSONL is the final verdict.
 - [ ] Cleanup removes the disposable runtime context.
-- [ ] Playbook has been executed end-to-end by a coding agent and verdict shows PASS (Principle 6).
+
+**Quality Gate**
+
+- [ ] Playbook has been executed end-to-end by a coding agent and verdict shows PASS (see Quality Gate).
 
 ---
 
@@ -532,4 +539,4 @@ These principles are not exhaustive. When a new experiment family exposes a new 
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
 - [Engine-Side Dispatch Scheduler](agentic-dispatch-scheduler-mechanism.md) — future ds mechanism draft; use this experiment guideline for any ds prototype.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
-- [Agent Testing spec](../openspec/specs/agent-testing/spec.md) — accepted requirements for agent-assisted experiment playbooks.
+- Accepted specs under `openspec/specs/` — capability requirements, including agent-assisted experiment playbooks.

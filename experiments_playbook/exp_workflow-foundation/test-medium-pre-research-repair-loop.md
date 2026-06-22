@@ -77,7 +77,7 @@ echo "$GATE_OUTPUT"
 trace 记录这个 fail：
 
 ```bash
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
   m.recordCheck('$B/_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, expected: false, detail: 'default profile — simulating unanswered HITL1' });
@@ -125,7 +125,7 @@ echo "$GATE_OUTPUT"
 `check.passed` — 预期 `true`。Agent 的修复生效了。
 
 ```bash
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
   m.recordCheck('$B/_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, detail: 'repaired profile — HITL1 recorded' });

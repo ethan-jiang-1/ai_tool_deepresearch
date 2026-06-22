@@ -91,7 +91,7 @@ grep -E 'research_profile|root_must_answer|status:|recorded_at' $B/rb_profile.ya
 ```bash
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle $B --current-node phases/phase-instantiation.md || true)
 echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
   m.recordCheck('$B/_trace.jsonl', { gate: 'instantiation-complete', passed: $PASSED, detail: 'happy path bundle validation' });
@@ -111,7 +111,7 @@ gate 返回的 JSON 关键字段：
 ```bash
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md || true)
 echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
   m.recordCheck('$B/_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, detail: 'fixed HITL1 payload validation' });
@@ -130,7 +130,7 @@ gate 返回的 JSON 关键字段：
 ```bash
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
   m.recordCheck('$B/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED, detail: 'pre-wave0 structural consistency' });

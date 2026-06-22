@@ -44,16 +44,20 @@
 | 26 | `exp_workflow-foundation/test-light-hitl1-topic-rewrite-vague.md` | 一句话 → topic rewrite → original topic + seed topics（引用 phase-hitl1.md §3a） |
 | 27 | `exp_workflow-foundation/test-light-hitl1-topic-rewrite-detailed.md` | 详细 brief → 轻量整理，不越界 rewrite（⚠️ 模拟 Agent 输出） |
 | 28 | `exp_workflow-foundation/test-light-instantiation-production-path.md` | production 路径 `instantiate-run-bundle.mjs` → gate pass |
+| 29 | `exp_workflow-foundation/test-simple-waves-full-chain.md` | seed-topics→wave0→wave1→wave2 全链路 4 gate 顺序 pass |
+| 30 | `exp_workflow-foundation/test-medium-wave-repair-loop.md` | wave2 gate fail→repair→pass PDCA 回路 |
+| 31 | `exp_workflow-foundation/test-medium-wave-fault-tolerance.md` | malformed YAML / partial dead links / status drift — gate 容错 |
+| 32 | `exp_workflow-foundation/test-complex-wave-review-surface.md` | 3-topic Wave0→Wave2 review surface + human checklist |
 
 ### Heavy（真实 subagent spawn，自动化可跑）
 
 | # | Playbook | 验证什么 |
 |---|----------|---------|
-| 29 | `exp_workflow-foundation/test-heavy-hitl1-manual-review.md` | HITL1 payload 枚举（auto mode 6 vectors） |
-| 31 | `exp_subagent/test-heavy-subagent-single-intake.md` | 单个 source_intake subagent |
-| 32 | `exp_subagent/test-heavy-subagent-dual-parallel.md` | intake + diagnostic 并行两个 |
-| 33 | `exp_subagent/test-heavy-subagent-triple-failure.md` | 三个 subagent 并发 + partial failure |
-| 34 | `exp_subagent/test-heavy-subagent-identity.md` | runtime-agent identity 和 trace event |
+| 33 | `exp_workflow-foundation/test-heavy-hitl1-manual-review.md` | HITL1 payload 枚举（auto mode 6 vectors） |
+| 34 | `exp_subagent/test-heavy-subagent-single-intake.md` | 单个 source_intake subagent |
+| 35 | `exp_subagent/test-heavy-subagent-dual-parallel.md` | intake + diagnostic 并行两个 |
+| 36 | `exp_subagent/test-heavy-subagent-triple-failure.md` | 三个 subagent 并发 + partial failure |
+| 37 | `exp_subagent/test-heavy-subagent-identity.md` | runtime-agent identity 和 trace event |
 
 ### Human（需人类交互/判断，不能自动化，必须手动跑）
 
@@ -62,7 +66,7 @@
 
 | # | Playbook | 验证什么 | 人类做什么 |
 |---|----------|---------|-----------|
-| 30 | `exph_workflow-foundation/test-human-hitl1-topic-rewrite-agent.md` | Agent 读 phase-hitl1.md §3a → 执行 topic rewrite | 审查 Agent 的 rewrite 质量：original topic 是否合理？seed topics 是否贴切？ |
+| 38 | `exph_workflow-foundation/test-human-hitl1-topic-rewrite-agent.md` | Agent 读 phase-hitl1.md §3a → 执行 topic rewrite | 审查 Agent 的 rewrite 质量：original topic 是否合理？seed topics 是否贴切？ |
 
 ## 怎么执行
 

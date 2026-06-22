@@ -73,7 +73,7 @@ B=$(ls -d dpt_rb_wff_prod_* | head -1)
 
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle $B --current-node phases/phase-instantiation.md)
 echo "$GATE" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('next:',j.check.next)})"
-PASSED=$(echo "$GATE" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE" | node experiments/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'instantiation-complete',passed:$PASSED,detail:'production path: instantiate-run-bundle.mjs'})})"
 ```
 

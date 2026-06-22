@@ -96,7 +96,7 @@ B=$(ls -d dpt_disp_wff_rwa_* | head -1)
 
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
 echo "$GATE"
-PASSED=$(echo "$GATE" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE" | node experiments/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'real Agent rewrite per phase-hitl1.md 3a'})})"
 ```
 

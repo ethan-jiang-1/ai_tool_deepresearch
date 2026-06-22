@@ -67,7 +67,7 @@ echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d)
 - `inspect` — 指向 parse 失败
 
 ```bash
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
   m.recordCheck('$B/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED, expected: false, detail: 'case1: gate survived bad JSON, returned clear inspect' });
@@ -102,7 +102,7 @@ echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d)
 **Agent 读到了什么：** gate 返回 fail + `inspect` 含两条诊断（一条指向缺失 `rb_plan.md`，一条指向缺失 `final/`）+ `advice` 含两条修复建议。
 
 ```bash
-PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED=$(echo "$GATE_OUTPUT" | node experiments/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
   m.recordCheck('$B/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED, expected: false, detail: 'case2 attempt 1: multi-rule fail (missing rb_plan.md + final/)' });
@@ -159,7 +159,7 @@ echo "$GATE_OUTPUT2" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d
 **Agent 修好了。** gate pass。
 
 ```bash
-PASSED2=$(echo "$GATE_OUTPUT2" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+PASSED2=$(echo "$GATE_OUTPUT2" | node experiments/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
   m.recordCheck('$B/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED2, detail: 'case2 attempt 2: repaired (recreated rb_plan.md + final/)' });
