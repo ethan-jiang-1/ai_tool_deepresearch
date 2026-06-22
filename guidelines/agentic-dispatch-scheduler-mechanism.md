@@ -11,8 +11,6 @@ runtime_truth: false
 defers_to:
   - AGENTS.md
   - openspec/config.yaml
-  - openspec/specs/
-  - DPT_FRAMEWORK/schema/
 siblings:
   - guidelines/project-charter.md
   - guidelines/framework-runtime-boundary.md
@@ -24,6 +22,18 @@ siblings:
 > 状态: 设计草案 | 创建: 2026-06-17 | 运行时状态: 未实现，不是当前系统事实
 
 `ds` means Dispatch Scheduler. It is an Engine-side checkpoint CLI for task dispatch decisions, deterministic receipt checks, gate-boundary checks, queue/status updates, and task projection rendering. It is not an Agent, subagent, daemon, workflow controller, content evaluator, research worker, or synthesis owner.
+
+---
+
+## Core Design Intent
+
+This mechanism is fundamentally about one thing: **充分利用 Agentic Loop，让 Coding Agent 尽量静默地自主执行 long-horizon task。**
+
+The hard part of working with a Coding Agent is not task complexity — it is that the Agent frequently stops mid-task to "report": narrate progress, surface a partial result, or ask whether to continue. Every such pause fragments context, wastes a turn, and breaks the flow of long-horizon work. The goal is the opposite: the Agent should run through a meaningful unit of work to completion, *then* report — not pause every few steps to check in.
+
+`ds` is the design mechanism intended to make this possible. A self-contained task card gives the Agent a clear target, done-condition, and receipt to produce. The Engine-side checkpoint validates completed work, advances state, and renders the next card — so the Agent keeps moving through the queue in one continuous run instead of stopping to ask "what's next?" The less the Agent has to stop and ask, the more of the long-horizon task gets done inside the loop.
+
+**This is not implemented. It is thinking and design.** No autonomous-execution behavior described here exists in the current system. This document captures the direction and the problem it should solve — nothing more. Everything below is a non-normative sketch until an OpenSpec change accepts it.
 
 ---
 
@@ -98,7 +108,7 @@ These constraints guide future ds proposals. They do not become runtime requirem
 
 ## Problem
 
-Coding agents run as a dialogue loop: read one instruction, act, answer, wait for the next instruction. We cannot put the agent inside a JS daemon. We can only decide what instruction the agent receives next.
+Coding agents run as a dialogue loop: read one instruction, act, answer, wait for the next instruction. The default behavior is to stop and "report" after each small step — which is exactly what destroys long-horizon flow. We cannot put the agent inside a JS daemon, and we should not want to. What we *can* do is control what instruction the Agent receives next, and design that instruction so the Agent keeps running instead of pausing.
 
 An earlier agentic prototype built without enough SDD/OpenSpec discipline encoded queue management, receipts, hooks, gate transitions, refill, preemption, and stop authorization inside large Markdown files. Its high-level structure was directionally useful, but it became hard to reason about, test, and maintain because:
 

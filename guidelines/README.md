@@ -10,7 +10,6 @@ authority: guidance
 defers_to:
   - AGENTS.md
   - openspec/config.yaml
-  - openspec/specs/
 siblings:
   - guidelines/project-charter.md
   - guidelines/framework-runtime-boundary.md
@@ -22,13 +21,15 @@ siblings:
 
 > 状态: 生效 | 创建: 2026-06-17
 
-`guidelines/` is the human/Agent guidance layer. It explains how to think and work in this repo, but it is not the spec authority.
+`guidelines/` is the charter layer for this repo. It explains how to think and work here, but it is not the spec authority.
+
+Authority flows only from upstream: `AGENTS.md` and `openspec/config.yaml`. A guideline's `defers_to` names upstream authority only — never a specific downstream spec, module, or path. Its `scope` names the space it governs, and may name concrete directories like `experiments_playbook/*` because that is where this guidance must be followed. Pointing at `openspec/specs/` as a whole ("accepted behavior lives there") is fine; naming a specific downstream spec as a dependency is not.
 
 Read in this order:
 
 1. `project-charter.md` — stable project principles, authority boundaries, and current project surfaces.
 2. `framework-runtime-boundary.md` — directory and authority boundary between read-only framework assets and mutable runtime bundles.
-3. `command-experiments.md` — target guidance for durable command experiment shape and boundaries.
+3. `command-experiments.md` — guidance for durable command experiment shape and boundaries.
 4. `agentic-dispatch-scheduler-mechanism.md` — draft design for a future Engine-side dispatch scheduler; not current runtime truth.
 
 Detailed requirements live in `openspec/specs/`. Project-level OpenSpec rules live in `openspec/config.yaml`.
@@ -67,6 +68,7 @@ This directory cannot decide:
 - MUST NOT let Markdown become the Source of Record for deterministic queue, gate, receipt, or trace authority.
 - MUST NOT describe future surfaces as implemented runtime facts.
 - MUST NOT duplicate detailed requirements already owned by `openspec/specs/`.
+- MUST NOT list a downstream spec, framework module, or bundle path under `defers_to`; guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`). `scope` may name concrete directories — that is the space this guidance governs, not a dependency.
 - MUST NOT revive Agent self-governance for deterministic runtime authority under new names.
 
 ## Decision Routes
@@ -88,18 +90,20 @@ This directory cannot decide:
 | Framework-vs-runtime directory boundary | `guidelines/framework-runtime-boundary.md` | Do not encode concrete schema fields there |
 | Accepted capability behavior | OpenSpec change under `openspec/changes/`, then `openspec/specs/` | Link or summarize only after acceptance |
 | Schema, state machine, receipt, gate, or trace contract | `DPT_FRAMEWORK/`, `tests/`, and accepted specs via OpenSpec | Do not define it only in prose |
-| Command experiment execution pattern | `command-experiments.md` plus `agent-testing` spec or active experiment-framework change when normative | Avoid local one-off verdict rules |
+| Command experiment execution pattern | `command-experiments.md` plus the relevant accepted spec or active change when normative | Avoid local one-off verdict rules |
 | Future ds design | `agentic-dispatch-scheduler-mechanism.md` | Keep proposed surfaces marked Proposed until implemented |
 | Current runtime/run state | The active runtime context, currently `dpt_rb_*` or `dpt_disp_*` | Reload files; do not rely on chat memory |
 
 ## Guidance Map
 
-| File | Reader | Purpose | Not For | Defers To |
-|------|--------|---------|---------|-----------|
-| `project-charter.md` | Any Agent or maintainer | Repo-wide charter, authority order, hard boundaries | Detailed capability behavior | `AGENTS.md`, `openspec/config.yaml`, `openspec/specs/` |
-| `framework-runtime-boundary.md` | Any Agent or maintainer touching framework/run files | Directory and authority boundary for read-only framework assets vs mutable runtime bundles | Concrete schema fields, CLI flags, or current run truth | `AGENTS.md`, `openspec/config.yaml`, `openspec/specs/`, `DPT_FRAMEWORK/schema/` |
-| `command-experiments.md` | Experiment author/executor | How to prove mechanisms with real runtime contexts and trace-backed verdicts | General project philosophy or concrete capability behavior | `agent-testing` specs, active experiment-framework change, accepted specs |
-| `agentic-dispatch-scheduler-mechanism.md` | Designer of future ds capability | Draft Engine-side scheduler model and open questions | Current runtime behavior | Future OpenSpec change and framework contracts |
+Guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`); none depend on a specific downstream spec or implementation, so this index carries no per-file dependency column.
+
+| File | Reader | Purpose | Not For |
+|------|--------|---------|---------|
+| `project-charter.md` | Any Agent or maintainer | Repo-wide charter, authority order, hard boundaries | Detailed capability behavior |
+| `framework-runtime-boundary.md` | Any Agent or maintainer touching framework/run files | Directory and authority boundary for read-only framework assets vs mutable runtime bundles | Concrete schema fields, CLI flags, or current run truth |
+| `command-experiments.md` | Experiment author/executor | How to prove mechanisms with real runtime contexts and trace-backed verdicts | General project philosophy or concrete capability behavior |
+| `agentic-dispatch-scheduler-mechanism.md` | Designer of future ds capability | Draft Engine-side scheduler model and open questions | Current runtime behavior |
 
 ## Current / Target / Proposed
 

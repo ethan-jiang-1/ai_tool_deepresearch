@@ -10,8 +10,6 @@ authority: guidance
 defers_to:
   - AGENTS.md
   - openspec/config.yaml
-  - openspec/specs/
-  - DPT_FRAMEWORK/schema/
 siblings:
   - guidelines/project-charter.md
   - guidelines/command-experiments.md

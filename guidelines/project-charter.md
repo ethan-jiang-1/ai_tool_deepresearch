@@ -10,7 +10,6 @@ authority: guidance
 defers_to:
   - AGENTS.md
   - openspec/config.yaml
-  - openspec/specs/
 siblings:
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
