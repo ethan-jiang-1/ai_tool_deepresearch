@@ -43,7 +43,18 @@ Body SHALL 包含 Authority Boundary section，明确说明 schema authority 在
 
 ### Requirement: Shared gate rules content as generated summary
 
-`shared-gate-rules.md` SHALL 为 Agent 提供 8 个 gate 的用途和大致检查方向摘要。内容 SHALL 标注 `authority: generated-summary`，并声明 gate definition JSON 和 gate CLI output 才是 deterministic rule authority。
+`shared-gate-rules.md` SHALL 为 Agent 提供 9 个 gate 的用途和大致检查方向摘要。内容 SHALL 标注 `authority: generated-summary`，并声明 gate definition JSON 和 gate CLI output 才是 deterministic rule authority。
+
+当前覆盖的 9 个 gate 为：
+- `instantiation-complete`：bundle 创建和 scaffold 完整性
+- `hitl1-recorded`：HITL1 写入 profile 的 completeness
+- `setup-ready`：pre-wave0 structural consistency
+- `seed-topics-ready`：seed topic 物化的结构、数量和 slug 一致性
+- `wave0-complete`：foundation reference collection 的 completeness
+- `wave1-complete`：topic-scoped skeleton artifact 的 placeholder boundary
+- `wave2-complete`：cross-topic synthesis 的 artifact reference chain
+- `hitl2-recorded`：HITL2 delivery 决策记录
+- `readiness-passed`：delivery 前的最终 deterministic precheck
 
 对每个 gate，内容 SHALL 包含：
 - 该 gate 保护什么（一句话）
@@ -60,7 +71,7 @@ Shared gate summary SHALL NOT 复制完整 rule-by-rule 列表。
 
 ### Requirement: Shared schemas content matches current executable surface
 
-`shared-schemas.md` SHALL 为 Agent 提供 workflow foundation 相关 schema surface 的摘要，包括 profile、status、queue、plan、trace 和 gate/transition contract。
+`shared-schemas.md` SHALL 为 Agent 提供 workflow foundation 相关 schema surface 的摘要，包括 profile、status、queue、plan、trace、gate/transition contract、ReferenceMetadata schema 以及 wave artifact 目录结构。
 
 内容 SHALL：
 - 指向每个 contract 的当前位置（`DPT_FRAMEWORK/schema/contracts/`）
@@ -69,6 +80,11 @@ Shared gate summary SHALL NOT 复制完整 rule-by-rule 列表。
 - 区分 runtime audit trace `rb_trace.jsonl` 与 command experiment verdict trace `_trace.jsonl`
 - 说明 gate definition JSON lives under `DPT_FRAMEWORK/schema/gate_definitions/`
 - 说明 transition / gate state contract lives in `DPT_FRAMEWORK/schema/contracts/gate.mjs`
+- 摘要 ReferenceMetadata schema（`DPT_FRAMEWORK/schema/contracts/reference.mjs`）：每条 reference 必填 `url`、`title`、`retrieved_date`、`topic_tag`
+- 摘要 wave artifact 目录结构：
+  - `reference/<topic>/source.yaml` → Wave0 per-topic reference metadata（YAML array，每项满足 ReferenceMetadata schema）
+  - `artifacts/wave1/<topic>/skeleton.md` → Wave1 topic-scoped placeholder skeleton（标记 `capability: foundation-placeholder`）
+  - `artifacts/wave2/synthesis.md` → Wave2 cross-topic synthesis（引用用 Markdown link `[label](relative/path.md)` 格式）
 
 Shared schemas SHALL NOT 复制完整 Zod schema 定义。
 
@@ -84,6 +100,12 @@ Shared schemas SHALL NOT 复制完整 Zod schema 定义。
 - **THEN** `shared-schemas.md` SHALL explain that `rb_trace.jsonl` is active bundle runtime audit
 - **AND** SHALL explain that `_trace.jsonl` is command experiment verdict evidence
 - **AND** SHALL NOT treat `_trace.jsonl` as production runtime truth
+
+#### Scenario: Agent understands wave artifact directory and schema
+
+- **WHEN** Agent 需要理解 wave artifacts 应放在哪些目录、metadata 用什么格式
+- **THEN** `shared-schemas.md` SHALL 摘要 `reference/`、`artifacts/wave1/`、`artifacts/wave2/` 的用途、schema 和引用格式
+- **AND** body SHALL 指向完整 contract 文件位置
 
 ### Requirement: Shared repair guidance content
 

@@ -77,6 +77,7 @@ wff_content-setup ──→ wff_content-waves ──→ wff_content-delivery
 ```
 
 Change 3 的 scope 在原 plan 基础上扩展了三层基础设施（logger、workflow-chain 兼容、lifecycle walker），确保在 `wff_content-*` 填真实逻辑之前，lifecycle shell 已经被端到端验证可跑通。
+> 注：实际落地后 `wff_content-setup` 改名为 `wff_pre-research`，`wff_content-waves` 对应 `wff-research-waves` change，`wff_content-delivery` 即下一个 change。实际状态以附录 A 为准。
 
 ---
 
@@ -521,12 +522,14 @@ wff_state-chain                 ✅ 已归档 — 【新增】 transition table 
         ↓                        Gate 需要知道 "pass 之后去哪个 node"，这个 query 机制原 plan 没单独列
 wff_transition-node-result-routing ✅ 已归档 — 【新增】 gate 统一输出 shape：check/routing/inspect/advice
         ↓                        原 plan 以为 gate CLI 输出 shape 在 Change 2 一次定好，实际推敲了 3 轮
-wff_pre-research                ← 当前 Change 4（原 plan 的 wff_content-setup，改名）
+wff_pre-research                ✅ 已归档 — Change 4（原 plan 的 wff_content-setup，改名）
         ↓                        合并了 breakdown/03（shared + instantiation）+ 04（HITL1 + setup）
         ↓                        新增：topic rewrite（HITL1 内）、7 个 light playbook、fault-tolerance 验证
-wff_content-waves               ← 未开始（原 plan Change 5）
-        ↓
-wff_content-delivery            ← 未开始（原 plan Change 6）
+wff-research-waves              ✅ 即将归档 — Change 5（含 seed-topic 物化阶段）
+        ↓                        task 0.4 同步了 transitions.fsm.json——FSM 表最后一次更新
+wff_content-delivery            ← 下一个 Change 6
+  ├─ Phase 0：FSM 引擎清理（wff-research-waves 归档后开工）
+  └─ Phase 1+：填 HITL2 / readiness / final（原 Change 6 内容）
 ```
 
 ### 差异对照
@@ -538,6 +541,11 @@ wff_content-delivery            ← 未开始（原 plan Change 6）
 | Change 4 叫 `wff_content-setup` | 改名为 `wff_pre-research` | 原名太模糊，"content setup" 听起来像只填 skeleton；pre-research 清楚表达 instantiation → HITL1 → setup 的范围 |
 | Change 4 只填内容 | 实际新增了 topic rewrite、7 个 playbook、fault-tolerance 验证 | HITL1 里用户可能只说一句话，Agent 必须展开成 structured original topic——这是 query rewrite，原 plan 未覆盖 |
 | gate key 命名 | 全文统一 kebab-case | 原 skeleton 用了 underscore（`instantiation_complete`），实际落地发现 gate definition JSON 和 manifest 已经 kebab，统一到 kebab |
+| 无 FSM 清理计划 | FSM 清理折进 Change 6 的 Phase 0 | lifecycle 从未实际查询 `.fsm.json`，FSM 是死代码。`wff-research-waves`（Change 5）已完成无法塞入，折进紧邻的下一个 change 避免 +1 change 且免命名 |
+
+### 为什么 FSM 清理不能进 Change 5
+
+`wff-research-waves`（Change 5）已全部完成——所有 task 勾选、3 个 review gate 全 PASS、governance 双 check PASS，处于归档门口。task 0.4 刚刚同步了 `transitions.fsm.json`。往一个已完成的 change 里塞删除 scope 会：否定刚做完的 0.4、改动已过 review 的 scope。因此 FSM 清理推迟到 Change 6 的 Phase 0——在 `wff-research-waves` 归档后、`wff_content-delivery` 填内容之前，作为 cleanup pass。这同时满足「降噪发生在后续内容工作开始前」和「不多开 change」两个目标。
 
 ### 为什么 wff_pre-research 改名
 
@@ -546,14 +554,33 @@ wff_content-delivery            ← 未开始（原 plan Change 6）
 - 实际做的事远超 "填内容"：gate definition 从 placeholder 升级为完整 rule set（16+6+18 条）、gate CLI 从 hardcoded pass 升级为 8 种 check type、HITL1 加入 topic rewrite、7 个 playbook 证明 PDCA 闭环
 - `wff_pre-research` 准确表达范围：wave0 之前的所有工作，从用户开口到 `setup-ready` gate pass
 
-### 正在进行的 wff_pre-research 当前状态
+### 归档状态
 
-- Shared nodes (5)：✅ 全部填充
-- Gate definitions (3)：✅ 完整 rule set
-- Gate CLIs (3)：✅ 8 种 check type 实现，`rb_trace.jsonl` 写入
-- Phase nodes (3)：✅ 9-section body，含 payload checklist + anti-cheating
-- Regression tests (3 files, 19 cases)：✅ 全 pass
-- Light playbooks (7)：✅ 全 pass
-- Heavy playbook (1)：✅ auto mode 6 vectors 全正确
-- HITL1 topic rewrite：⏳ 待追加
-- Requirement registry：✅ 123 IDs, 0 orphan
+- **wff_pre-research**（Change 4）：✅ 已归档。123 IDs registered, 0 orphan。
+- **wff-research-waves**（Change 5）：✅ 即将归档。所有 task 完成（含 seed-topic 物化阶段扩展），3 个 review gate PASS，governance 双 check PASS（152 registered / 174 occurrences / 37 main spec files）。task 0.4 同步了 `transitions.fsm.json`——这是 FSM 表的最后一次更新。
+- **下一个：wff_content-delivery**（Change 6）：Phase 0 = FSM 引擎清理（前置：`wff-research-waves` 归档），Phase 1+ = 填 HITL2 / readiness / final。
+
+### Change 6 Phase 0：FSM 引擎清理
+
+> **前提**：`wff-research-waves`（Change 5）已归档——active changes 中零 `.fsm.json` 引用后开工。
+
+**意图**：lifecycle 从未实际查询 `.fsm.json`（gate CLI 默认值硬编码为 `transitions.chain.json`，无一处用 FSM）。FSM 引擎是死代码，保留它制造双引擎噪声，迷惑 AI coding agent。在 content-delivery 填内容前彻底移除，纯机械删除，无设计决策。
+
+**删除文件**：
+
+- `DPT_FRAMEWORK/engine/transition-fsm.mjs`、`engine/workflow-fsm.mjs`
+- `DPT_FRAMEWORK/workflows/transitions.fsm.json`
+- `openspec/specs/workflow-fsm-definition/`、`workflow-fsm-runtime/`、`workflow-fsm-transition/`（3 个 spec 目录）
+- `tests/engine/transition-fsm.test.mjs`、`tests/engine/workflow-fsm.test.mjs`
+- `experiments/prototype-workflow-fsm/`、`experiments_playbook/exp_workflow-fsm/`
+
+**修改文件**：
+
+- `engine/ask-next.mjs`：移除 `.fsm.json` 分支、`loadFSM` import、FSM 注释；suffix dispatch 收敛为单 chain 路径
+- `engine/consistency-validator.mjs`：移除 FSM 校验块、`loadFSM` import、`transitionsFsmPath` opt
+- `openspec/specs/transition-table/spec.md`：移除 FSM backend 描述，只保留 chain
+- `tests/engine/ask-next.test.mjs`：移除 8 个 FSM case
+- `guidelines/README.md`：engine 计数 6→5，去掉 workflow-fsm
+- `openspec/config.yaml`：注释去掉 `.fsm.json`
+
+**不变**：`transitions.chain.json` 结构、gate CLI、chain 引擎——lifecycle 路由行为零变化。不删 `engine/workflow-chain.mjs`（节点加载层，名字含 "chain" 但不是 transition engine，保留）。
