@@ -81,11 +81,11 @@ wff_pre-research                ✅ 已归档 — shared + instantiation + HITL1
       ↓
 wff-research-waves              ✅ 已归档 — seed-topics + wave0/1/2 + gate + playbook（原 wff_content-waves）
       ↓
-wff_content-delivery            ⬜ 未开始 — Phase 0: FSM 清理 + Phase 1+: HITL2 / readiness / final
+wff_content-delivery            ✅ 已归档 — Phase 0: FSM 清理 + Phase 1+: HITL2 / readiness / final
 ```
 
 Change 3 的 scope 在原 plan 基础上扩展了三层基础设施（logger、workflow-chain 兼容、lifecycle walker），确保在 `wff_content-*` 填真实逻辑之前，lifecycle shell 已经被端到端验证可跑通。
-> 注：实际落地后 `wff_content-setup` 改名为 `wff_pre-research`，`wff_content-waves` 对应 `wff-research-waves` change，`wff_content-delivery` 即下一个 change。实际状态以附录 A 为准。
+> 注：实际落地后 `wff_content-setup` 改名为 `wff_pre-research`，`wff_content-waves` 对应 `wff-research-waves` change，`wff_content-delivery` 即最后一个 change，已完成归档。全部 8 个 change 完成。
 
 ---
 
@@ -427,7 +427,7 @@ Wave1 future boundary（来自 07）:
 
 ---
 
-### Change 6: `wff_content-delivery` — ⬜ 未开始（含 Phase 0: FSM 引擎清理）
+### Change 6: `wff_content-delivery` — ✅ 已归档（含 Phase 0: FSM 引擎清理）
 
 **来源**：`breakdown/06-phase-c4-hitl2-readiness-final.md`
 
@@ -535,7 +535,7 @@ wff_pre-research                ✅ 已归档 — Change 4（原 plan 的 wff_co
         ↓                        新增：topic rewrite（HITL1 内）、7 个 light playbook、fault-tolerance 验证
 wff-research-waves              ✅ 已归档 — Change 5（含 seed-topic 物化阶段）
         ↓                        task 0.4 同步了 transitions.fsm.json——FSM 表最后一次更新
-wff_content-delivery            ← 下一个 Change 6
+wff_content-delivery            ✅ 已归档 — 最后一个 Change 6
   ├─ Phase 0：FSM 引擎清理（wff-research-waves 归档后开工）
   └─ Phase 1+：填 HITL2 / readiness / final（原 Change 6 内容）
 ```
@@ -549,7 +549,7 @@ wff_content-delivery            ← 下一个 Change 6
 | Change 4 叫 `wff_content-setup` | 改名为 `wff_pre-research` | 原名太模糊，"content setup" 听起来像只填 skeleton；pre-research 清楚表达 instantiation → HITL1 → setup 的范围 |
 | Change 4 只填内容 | 实际新增了 topic rewrite、7 个 playbook、fault-tolerance 验证 | HITL1 里用户可能只说一句话，Agent 必须展开成 structured original topic——这是 query rewrite，原 plan 未覆盖 |
 | gate key 命名 | 全文统一 kebab-case | 原 skeleton 用了 underscore（`instantiation_complete`），实际落地发现 gate definition JSON 和 manifest 已经 kebab，统一到 kebab |
-| 无 FSM 清理计划 | FSM 清理折进 Change 6 的 Phase 0 | lifecycle 从未实际查询 `.fsm.json`，FSM 是死代码。`wff-research-waves`（Change 5）已完成无法塞入，折进紧邻的下一个 change 避免 +1 change 且免命名 |
+| 无 FSM 清理计划 | 已完成——FSM 引擎已移除，所有 `.fsm.json` 和 FSM 引擎文件已删除。 | |
 
 ### 为什么 FSM 清理不能进 Change 5
 
@@ -566,9 +566,9 @@ wff_content-delivery            ← 下一个 Change 6
 
 - **wff_pre-research**（Change 4）：✅ 已归档。123 IDs registered, 0 orphan。
 - **wff-research-waves**（Change 5）：✅ 已归档（2026-06-22）。所有 task 完成（含 seed-topic 物化阶段扩展），3 个 review gate PASS，governance 双 check PASS（152 registered / 174 occurrences / 37 main spec files）。task 0.4 同步了 `transitions.fsm.json`——这是 FSM 表的最后一次更新。
-- **下一个：wff_content-delivery**（Change 6）：⬜ 未开始，是当前唯一活跃工作。Phase 0 = FSM 引擎清理（前置 `wff-research-waves` 归档 **已满足**），Phase 1+ = 填 HITL2 / readiness / final。
+- **wff_content-delivery**（Change 6）：✅ 已归档（2026-06-22）。Phase 0 FSM 引擎清理完成（transition-fsm.mjs/workflow-fsm.mjs/所有 .fsm.json/FSM 测试/FSM prototype 已删除），Phase 1+ HITL2/readiness/final 内容+gate+playbook 完成，34/34 light playbook PASS。Workflow Foundation 所有 8 个 change 全部完成。
 
-### Change 6 Phase 0：FSM 引擎清理
+### Change 6 Phase 0：FSM 引擎清理 ✅ 已执行
 
 > **前提**：`wff-research-waves`（Change 5）已于 2026-06-22 归档——active changes 中零 `.fsm.json` 引用，前置条件已满足，可随时开工。
 
