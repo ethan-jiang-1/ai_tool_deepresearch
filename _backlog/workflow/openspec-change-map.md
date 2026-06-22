@@ -67,13 +67,21 @@ layer: pre-openspec-requirements
 ## 5. 最终 Change 列表和顺序
 
 ```
-wff_directory-contract     ✅ done — 目录治理
+wff_directory-contract          ✅ 已归档 — 目录治理
       ↓
-wff_contract-skeleton      ✅ done — 31 个骨架文件
+wff_contract-skeleton           ✅ 已归档 — 31 个骨架文件
       ↓
-wff_skeleton-validation    ← 当前 — logger + engine 兼容 + lifecycle walker
+wff_skeleton-validation         ✅ 已归档 — logger + engine 兼容 + lifecycle walker
       ↓
-wff_content-setup ──→ wff_content-waves ──→ wff_content-delivery
+wff_state-chain                 ✅ 已归档 — 【新增】transition table + askNext + chain/FSM 双引擎
+      ↓
+wff_transition-node-result-routing ✅ 已归档 — 【新增】gate 统一输出 shape
+      ↓
+wff_pre-research                ✅ 已归档 — shared + instantiation + HITL1 + setup（原 wff_content-setup）
+      ↓
+wff-research-waves              ✅ 已归档 — seed-topics + wave0/1/2 + gate + playbook（原 wff_content-waves）
+      ↓
+wff_content-delivery            ⬜ 未开始 — Phase 0: FSM 清理 + Phase 1+: HITL2 / readiness / final
 ```
 
 Change 3 的 scope 在原 plan 基础上扩展了三层基础设施（logger、workflow-chain 兼容、lifecycle walker），确保在 `wff_content-*` 填真实逻辑之前，lifecycle shell 已经被端到端验证可跑通。
@@ -81,7 +89,7 @@ Change 3 的 scope 在原 plan 基础上扩展了三层基础设施（logger、w
 
 ---
 
-### Change 1: `wff_directory-contract`
+### Change 1: `wff_directory-contract` — ✅ 已归档
 
 **来源**：`breakdown/00-directory-contract.md`
 
@@ -114,7 +122,7 @@ Change 3 的 scope 在原 plan 基础上扩展了三层基础设施（logger、w
 
 ---
 
-### Change 2: `wff_contract-skeleton`
+### Change 2: `wff_contract-skeleton` — ✅ 已归档
 
 **来源**：`breakdown/01-phase-a-workflow-contract-skeleton.md`
 
@@ -195,7 +203,7 @@ DPT_FRAMEWORK/cli/gates/
 
 ---
 
-### Change 3: `wff_skeleton-validation`
+### Change 3: `wff_skeleton-validation` — ✅ 已归档
 
 **来源**：`breakdown/02-phase-b-minimum-real-bundle-run.md` + 新增 infrastructure 需求
 
@@ -268,7 +276,7 @@ Layer 3 — Lifecycle 通路示范：
 
 ---
 
-### Change 4: `wff_pre-research`（原名 `wff_content-setup`）
+### Change 4: `wff_pre-research`（原名 `wff_content-setup`） — ✅ 已归档
 
 **来源**：`breakdown/03-phase-c1-shared-and-instantiation.md` + `breakdown/04-phase-c2-hitl-and-setup.md`
 
@@ -348,7 +356,7 @@ Setup:
 
 ---
 
-### Change 5: `wff_content-waves`
+### Change 5: `wff_content-waves`（实际 change 名 `wff-research-waves`，含 seed-topic 物化） — ✅ 已归档
 
 **来源**：`breakdown/05-phase-c3-wave0-wave1-wave2.md` + `breakdown/07-phase-d-wave1-subagent-boundary.md`
 
@@ -419,7 +427,7 @@ Wave1 future boundary（来自 07）:
 
 ---
 
-### Change 6: `wff_content-delivery`
+### Change 6: `wff_content-delivery` — ⬜ 未开始（含 Phase 0: FSM 引擎清理）
 
 **来源**：`breakdown/06-phase-c4-hitl2-readiness-final.md`
 
@@ -525,7 +533,7 @@ wff_transition-node-result-routing ✅ 已归档 — 【新增】 gate 统一输
 wff_pre-research                ✅ 已归档 — Change 4（原 plan 的 wff_content-setup，改名）
         ↓                        合并了 breakdown/03（shared + instantiation）+ 04（HITL1 + setup）
         ↓                        新增：topic rewrite（HITL1 内）、7 个 light playbook、fault-tolerance 验证
-wff-research-waves              ✅ 即将归档 — Change 5（含 seed-topic 物化阶段）
+wff-research-waves              ✅ 已归档 — Change 5（含 seed-topic 物化阶段）
         ↓                        task 0.4 同步了 transitions.fsm.json——FSM 表最后一次更新
 wff_content-delivery            ← 下一个 Change 6
   ├─ Phase 0：FSM 引擎清理（wff-research-waves 归档后开工）
@@ -557,12 +565,12 @@ wff_content-delivery            ← 下一个 Change 6
 ### 归档状态
 
 - **wff_pre-research**（Change 4）：✅ 已归档。123 IDs registered, 0 orphan。
-- **wff-research-waves**（Change 5）：✅ 即将归档。所有 task 完成（含 seed-topic 物化阶段扩展），3 个 review gate PASS，governance 双 check PASS（152 registered / 174 occurrences / 37 main spec files）。task 0.4 同步了 `transitions.fsm.json`——这是 FSM 表的最后一次更新。
-- **下一个：wff_content-delivery**（Change 6）：Phase 0 = FSM 引擎清理（前置：`wff-research-waves` 归档），Phase 1+ = 填 HITL2 / readiness / final。
+- **wff-research-waves**（Change 5）：✅ 已归档（2026-06-22）。所有 task 完成（含 seed-topic 物化阶段扩展），3 个 review gate PASS，governance 双 check PASS（152 registered / 174 occurrences / 37 main spec files）。task 0.4 同步了 `transitions.fsm.json`——这是 FSM 表的最后一次更新。
+- **下一个：wff_content-delivery**（Change 6）：⬜ 未开始，是当前唯一活跃工作。Phase 0 = FSM 引擎清理（前置 `wff-research-waves` 归档 **已满足**），Phase 1+ = 填 HITL2 / readiness / final。
 
 ### Change 6 Phase 0：FSM 引擎清理
 
-> **前提**：`wff-research-waves`（Change 5）已归档——active changes 中零 `.fsm.json` 引用后开工。
+> **前提**：`wff-research-waves`（Change 5）已于 2026-06-22 归档——active changes 中零 `.fsm.json` 引用，前置条件已满足，可随时开工。
 
 **意图**：lifecycle 从未实际查询 `.fsm.json`（gate CLI 默认值硬编码为 `transitions.chain.json`，无一处用 FSM）。FSM 引擎是死代码，保留它制造双引擎噪声，迷惑 AI coding agent。在 content-delivery 填内容前彻底移除，纯机械删除，无设计决策。
 
