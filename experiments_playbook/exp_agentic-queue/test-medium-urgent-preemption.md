@@ -50,8 +50,6 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 入队 6 个任务：前 5 个填满 `slot_1` ~ `slot_5`，第 6 个进入 `refill_pool`。持久化到 `rb_queue.agq.json`。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_medium"
 
 cat > "$B/enqueue.mjs" << 'JS'
 import { writeFileSync } from 'node:fs';
@@ -63,10 +61,13 @@ import {
   makeItem,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_medium/_trace.jsonl', { consoleEcho: false });
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 trace.traceInit('agq-playbook/medium', { source: 'agq-playbook/medium' });
 
-writeFileSync('dpt_disp_agq_medium/done-1.json', '{"ok":true}\n');
+writeFileSync(__dirname + '/'done-1.json', '{"ok":true}\n');
 let queue = createQueue('agq-medium');
 for (let i = 1; i <= 6; i++) {
   queue = enqueue(queue, makeItem({
@@ -75,7 +76,7 @@ for (let i = 1; i <= 6; i++) {
     completion_receipt: i === 1 ? 'json:done-1.json' : 'none',
   }));
 }
-saveQueue('dpt_disp_agq_medium', queue);
+saveQueue(__dirname, queue);
 
 trace.traceEntry('check', {
   source: 'agq-playbook/medium',
@@ -96,8 +97,6 @@ node "$B/enqueue.mjs"
 加载队列，urgent 任务 preempt 到 `slot_2_next`（不打断 `slot_1_current`）。原 `slot_5_tail`（`medium-5`）被挤出到 `refill_pool`，携带 `preempted_from_slot` + `restore_priority` metadata。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_medium"
 
 cat > "$B/preempt.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
@@ -108,15 +107,15 @@ import {
   makeItem,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_medium/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 
-let queue = loadQueue('dpt_disp_agq_medium');
+let queue = loadQueue(__dirname);
 queue = preempt(queue, makeItem({
   work_id: 'medium-urgent',
   title: 'Urgent repair',
   priority_class: 'P1_state_or_gate_repair',
 }), { reason: 'urgent_gate_repair' });
-saveQueue('dpt_disp_agq_medium', queue);
+saveQueue(__dirname, queue);
 
 trace.traceEntry('check', {
   source: 'agq-playbook/medium',
@@ -141,8 +140,6 @@ node "$B/preempt.mjs"
 完成 `medium-1`，校验 `json:done-1.json` receipt。`complete` 内部执行 promote → refill（`medium-5` 从 pool 恢复到 `slot_5_tail`）→ render。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_medium"
 
 cat > "$B/complete.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
@@ -152,11 +149,11 @@ import {
   saveQueue,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_medium/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 
-let queue = loadQueue('dpt_disp_agq_medium');
-const completed = complete(queue, { work_id: 'medium-1', receipt: 'json:done-1.json' }, 'dpt_disp_agq_medium');
-saveQueue('dpt_disp_agq_medium', completed.queue);
+let queue = loadQueue(__dirname);
+const completed = complete(queue, { work_id: 'medium-1', receipt: 'json:done-1.json' }, __dirname);
+saveQueue(__dirname, completed.queue);
 
 trace.traceEntry('check', {
   source: 'agq-playbook/medium',
@@ -177,18 +174,16 @@ node "$B/complete.mjs"
 加载完成后的队列，验证 `medium-urgent` 已 promotion 到 `slot_1_current`，`medium-5` 从 pool 恢复到 `slot_5_tail`，projection 文件存在。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_medium"
 
 cat > "$B/verify.mjs" << 'JS'
 import { existsSync, readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { loadQueue } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_medium/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 
-const queue = loadQueue('dpt_disp_agq_medium');
-const projectionPath = 'dpt_disp_agq_medium/_cache/agentic-queue/current-task.md';
+const queue = loadQueue(__dirname);
+const projectionPath = __dirname + '/_cache/agentic-queue/current-task.md';
 const projectionExists = existsSync(projectionPath);
 const projectionContent = projectionExists ? readFileSync(projectionPath, 'utf-8') : '';
 
@@ -213,14 +208,12 @@ node "$B/verify.mjs"
 ## Step 3: 从 Trace 裁决
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_medium"
 
 cat > "$B/verdict.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 
-const trace = createTrace('dpt_disp_agq_medium/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 const events = readFileSync(trace.traceFilePath(), 'utf-8').trim().split('\n').map(JSON.parse);
 const checks = events.filter((event) => event.event === 'check');
 const pass = checks.length >= 4 && checks.every((event) => event.passed === true);

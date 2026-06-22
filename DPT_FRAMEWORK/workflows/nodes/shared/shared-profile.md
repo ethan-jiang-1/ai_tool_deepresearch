@@ -57,24 +57,59 @@ suggested_context:
 
 ### `human_decision_checkpoints.hitl2.status`
 
-- **类型**：enum，同 HITL1 status 值集
-- **填写时机**：HITL2 phase（本 change 范围外）
-- **当前 bundle 默认值**：`not_started`
+- **类型**：enum，同 HITL1 status 值集（`not_started`、`pending_user`、`recorded`、`blocked`、`not_applicable`）
+- **填写时机**：HITL2 phase，用户完成 structured final review decision 后 Agent 写入 `recorded`
+- **默认值**（bundle 创建时）：`not_started`
+- **gate 行为**：`hitl2-recorded` gate 检查此字段 == `recorded`
+
+### `human_decision_checkpoints.hitl2.user_decision`
+
+- **类型**：enum，值为 `proceed_to_readiness`、`request_view_revision`、`repair`、`rerun`、`stop_blocked`
+- **填写时机**：HITL2 phase，用户从 5 个 structured decision 中选择后 Agent 写入
+- **默认值**（bundle 创建时）：`""`（空字符串）
+- **含义**：
+  - `proceed_to_readiness`：用户确认研究完整，进入 readiness 确定性检查
+  - `request_view_revision`：用户要求修改某个 wave 的 view（Agent 读取 rationale 决定回到哪个 phase）
+  - `repair`：当前 run 有需要修复的问题，Agent 就地修复后 rerun 当前 gate，不重启 lifecycle
+  - `rerun`：用户想调整方向/补充内容/改模式，Agent 从 `seed-topics` 重新跑，profile 已有新反馈
+  - `stop_blocked`：用户判定研究阻塞，终止 lifecycle
+- **gate 行为**：`hitl2-recorded` gate 检查此字段非空且在合法枚举中
+
+### `human_decision_checkpoints.hitl2.rationale`
+
+- **类型**：`string`（自由文本）
+- **填写时机**：HITL2 phase，与 user_decision 同时写入
+- **含义**：用户 decision 的理由或补充说明
+- **gate 行为**：不强制检查（optional field），但建议填写以帮助 Agent 理解后续修复方向
+
+### `human_decision_checkpoints.hitl2.recorded_at`
+
+- **类型**：`string`（ISO 8601 timestamp）
+- **填写时机**：HITL2 phase，与 `status: recorded` 同时写入
+- **gate 行为**：不强制检查（optional field），但建议填写作为审计记录
 
 ### `human_decision_checkpoints.hitl2.answerability_class`
 
 - **类型**：enum，值为 `not_assessed`、`ready_substantive`、`ready_insufficient_judgment`、`blocked_repair_required`
-- **填写时机**：HITL2 phase（本 change 范围外）
-
-### `human_decision_checkpoints.hitl2.user_decision`
-
-- **类型**：enum，值为 `not_started`、`proceed_to_readiness`、`request_view_revision`、`repair_and_rerun`、`stop_blocked`
-- **填写时机**：HITL2 phase（本 change 范围外）
+- **填写时机**：HITL2 phase，用户评估当前研究产出的 answerability 后写入
+- **含义**：
+  - `ready_substantive`：研究产出足以支撑实质性回答
+  - `ready_insufficient_judgment`：研究产出存在但判断依据不足
+  - `blocked_repair_required`：必须修复才能继续
+- **gate 行为**：不强制检查（Agent advisory field），但影响 `user_decision` 的选择合理性
 
 ### `human_decision_checkpoints.hitl2.final_report_view`
 
-- **类型**：enum，值为 `not_started`、`profile_default`、`executive_brief`、`evidence_map`、`claim_judgment`、`technical_deep_dive`、`custom`
-- **填写时机**：HITL2 phase（本 change 范围外）
+- **类型**：enum，值为 `profile_default`、`executive_brief`、`evidence_map`、`claim_judgment`、`technical_deep_dive`、`custom`
+- **填写时机**：HITL2 phase，用户选择期望的 final report 视角
+- **含义**：控制 `phase-final.md` 中 Agent 生成 final report 的格式和侧重点
+- **gate 行为**：不强制检查，但 final phase 读此字段决定报告结构
+
+### `human_decision_checkpoints.hitl2.custom_slug`
+
+- **类型**：`string`，optional
+- **填写时机**：HITL2 phase，仅当 `final_report_view == custom` 时填写
+- **含义**：用户自定义的报告视角标识符
 
 ## Authority Boundary
 

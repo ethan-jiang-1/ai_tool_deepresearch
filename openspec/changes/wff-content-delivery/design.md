@@ -76,9 +76,13 @@ HITL2 有四个 user_decision：
 
 按已有命名惯例（snake_case）插入到正确位置：`hitl1_recorded` 在 `instantiation_complete` 和 `setup_ready` 之间，`hitl2_recorded` 在 `wave2_complete` 和 `readiness_passed` 之间，`none` 在末尾。
 
+**命名对齐**：现存的 `gate-wave2-complete.definition.json` 的 `status_next_gate` 规则 expected 值为 `hitl2_complete`（既有笔误），与本 change 引入的 `hitl2_recorded` 冲突。二者指同一生命周期位置，必须统一为 `hitl2_recorded`。本 change 在升级 hitl2 gate 的同时，修正 wave2 definition 的这条 expected 值，确保 `CurrentGate` enum 自洽。
+
 ### D8: FSM spec 删除策略
 
 3 个 FSM spec 目录（`workflow-fsm-definition`、`workflow-fsm-runtime`、`workflow-fsm-transition`）整体删除。对应的 registry entry（WFS-001/002/003）标记为 retired。`framework-engine` 的 FRE-002 同样 retire。
+
+**引擎计数口径**：删除两个 FSM engine 后，spec 口径（含 Trace Writer）从 7→6，README 口径（不含 trace，trace 单列在下一行）从 6→5。两者都对，口径不同。本 change 内统一按 spec 口径表述 engine 计数（7→6），`guidelines/README.md` 的更新按其自身口径（6→5）。
 
 ## Risks / Trade-offs
 
@@ -88,6 +92,10 @@ HITL2 有四个 user_decision：
 - **R06-4: Final 从 chat memory 生成** → Phase body Section 9 要求从 verified bundle state 生成。Final 无 gate，由 MD instruction 约束。
 - **Enum gap** → `hitl1_recorded`/`hitl2_recorded` 加入 `CurrentGate` enum，确保 Zod schema 不 reject。
 - **FSM 删除遗漏** → Phase 0 验收用 `git grep` 扫描，确认零引用后再进入 Phase 1+。
+- **引擎计数口径混淆** → spec（含 Trace Writer）从 7→6，README（不含 trace）从 6→5。framework-engine delta 使用 spec 口径（Six engine modules），README 更新使用自身口径（5）。design D8 已点明差异。
+- **status_value 体系既存漂移** → 现存 gate definition 的 `status_value` 规则已有漂移（如 `gate-instantiation-complete` 的 `next_gate` 跳过 hitl1/setup/seed-topics 直指 `wave0_complete`）。本 change 不修复既存漂移，但新加的 hitl2/readiness status 检查建立在该松耦合之上。wave2 definition 的 `hitl2_complete`→`hitl2_recorded` 修正是唯一在本 change 内做的 status naming 联动，因为它会直接导致 enum 自相矛盾。
+- **Readiness 审计断链** → readiness gate 审计「≥8 个 gate_attempt(passed:true)」依赖前 8 个 gate CLI 都在末尾 append `gate_attempt` trace。当前 hitl2 CLI 是 hardcoded pass 且不写 trace。CDG-003/CDG-004 spec 已明确要求新 hitl2/readiness CLI 末尾 append `gate_attempt`（参照 wave2 模式），否则 readiness 审计数不到 8。
+- **final_delivery trace 无确定性写入者** → final 是 `gate: none` 的 terminal node，没有 CLI 写 trace，而 charter 禁止手写 trace。CDP-003 的 `final_delivery` trace event 软化为「`final/` 目录下存在至少一份报告文件即证明 delivery」。未来如需确定性 delivery trace，另开 change 引入轻量 trace-append 机制。
 
 ## Open Questions
 

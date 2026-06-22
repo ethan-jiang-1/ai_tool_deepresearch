@@ -1,3 +1,5 @@
+> req: CDE-001, CDE-002, CDE-003, CDE-004, CDE-005
+
 ## ADDED Requirements
 
 ### Requirement: HITL2 decision recorded playbook
@@ -42,15 +44,15 @@ The playbook SHALL use a disposable bundle (`dpt_disp_*`), import real framework
 ### Requirement: Readiness gate precheck playbook
 
 An experiment playbook SHALL exist at `experiments_playbook/exp_workflow-foundation/test-medium-readiness-precheck.md` that verifies readiness gate boundary behavior:
-- Happy path: complete bundle with all artifacts, 8 gate_attempt(passed=true) in trace, valid YAML, valid JSONL → gate pass
+- Happy path: complete bundle with all artifacts, all prior gate gate_attempt(passed=true) in trace, valid YAML, valid JSONL → gate pass
 - Missing artifact → gate fail
-- Fewer than 8 passed gates in trace → gate fail
+- Missing prior gate passes in trace → gate fail (CLI reports which specific gates)
 - Unparseable YAML profile → gate fail
 - Corrupt JSONL trace → gate fail
 
 #### Scenario: Happy path all conditions met
 
-- **WHEN** the playbook pre-seeds a bundle with all required artifacts, 8 gate_attempt events with passed=true, valid profile YAML, and valid trace JSONL
+- **WHEN** the playbook pre-seeds a bundle with all required artifacts, all prior-gate gate_attempt events with passed=true, valid profile YAML, and valid trace JSONL
 - **AND** runs `check-gate-readiness-passed.mjs`
 - **THEN** the gate SHALL pass
 - **AND** the verdict SHALL be PASS
@@ -62,12 +64,12 @@ An experiment playbook SHALL exist at `experiments_playbook/exp_workflow-foundat
 - **THEN** the gate SHALL fail (exit code 1)
 - **AND** the inspect output SHALL reference the missing artifact
 
-#### Scenario: Insufficient gate passes fails gate
+#### Scenario: Missing prior gate passes fails gate
 
-- **WHEN** the playbook modifies trace to have only 5 gate_attempt events with passed=true
+- **WHEN** the playbook modifies trace to have gate_attempt(passed=true) for only a subset of prior gates (e.g., 5 of the 8 expected)
 - **AND** runs the gate CLI
 - **THEN** the gate SHALL fail (exit code 1)
-- **AND** the inspect output SHALL indicate actual count < threshold (8)
+- **AND** the inspect output SHALL name which specific prior gate(s) are missing from the trace
 
 #### Scenario: Unparseable YAML fails gate
 

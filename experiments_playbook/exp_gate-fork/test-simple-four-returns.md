@@ -45,12 +45,12 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 ## Step 2: 初始化 Trace
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_gf_simple"
-
 cat > "$B/t.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gf_simple/_trace.jsonl');
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const trace = createTrace(__dirname + '/_trace.jsonl');
 trace.traceInit('gf-playbook/simple', { source: 'gf-playbook/simple' });
 JS
 node "$B/t.mjs" > /dev/null 2>&1
@@ -61,12 +61,12 @@ node "$B/t.mjs" > /dev/null 2>&1
 ## Step 3: forkGate 四种返回
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_gf_simple"
-
 cat > "$B/t.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gf_simple/_trace.jsonl');
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const trace = createTrace(__dirname + '/_trace.jsonl');
 import { z } from 'zod';
 import { forkGate } from '../DPT_FRAMEWORK/engine/gate-fork.mjs';
 
@@ -162,13 +162,13 @@ node "$B/t.mjs" > /dev/null 2>&1
 ## Step 4: 从 Trace 裁决
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_gf_simple"
-
 cat > "$B/t.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-const trace = createTrace('dpt_disp_gf_simple/_trace.jsonl');
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const trace = createTrace(__dirname + '/_trace.jsonl');
 const raw = readFileSync(trace.traceFilePath(), 'utf-8').trim();
 const events = JSON.parse('[' + raw.split('\n').join(',') + ']');
 const checks = events.filter(x => x.event === 'check');

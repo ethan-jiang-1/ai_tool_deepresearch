@@ -52,8 +52,6 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 构造缺少 `producer_rule` 的 task，`QueueItemSchema.safeParse` 应返回 `success: false`。纯 schema 层校验，无需队列持久化。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_complex"
 
 cat > "$B/invalid.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
@@ -62,7 +60,10 @@ import {
   makeItem,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_complex/_trace.jsonl', { consoleEcho: false });
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 trace.traceInit('agq-playbook/complex', { source: 'agq-playbook/complex' });
 
 const invalid = makeItem({ work_id: 'complex-invalid' });
@@ -86,8 +87,6 @@ node "$B/invalid.mjs"
 入队 `complex-1`（completion_receipt=`file:missing.txt`，文件不存在）和 `complex-2`。尝试 `complete` 应被 receipt 校验阻止，`slot_1_current` 保持 `complex-1`。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_complex"
 
 cat > "$B/missing_receipt.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
@@ -99,7 +98,7 @@ import {
   makeItem,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_complex/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 
 let queue = createQueue('agq-complex');
 queue = enqueue(queue, makeItem({
@@ -108,9 +107,9 @@ queue = enqueue(queue, makeItem({
   completion_receipt: 'file:missing.txt',
 }));
 queue = enqueue(queue, makeItem({ work_id: 'complex-2', title: 'Next task' }));
-saveQueue('dpt_disp_agq_complex', queue);
+saveQueue(__dirname, queue);
 
-const blocked = complete(queue, { work_id: 'complex-1' }, 'dpt_disp_agq_complex');
+const blocked = complete(queue, { work_id: 'complex-1' }, __dirname);
 trace.traceEntry('check', {
   source: 'agq-playbook/complex',
   step: 'missing_receipt_blocks',
@@ -130,8 +129,6 @@ node "$B/missing_receipt.mjs"
 加载队列，尝试 `preempt` 带 `replaceCurrent=true` 但不带 `unsafeCurrent=true` —— 应抛出异常，queue 状态不变。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_complex"
 
 cat > "$B/guard.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
@@ -141,9 +138,9 @@ import {
   makeItem,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_complex/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 
-let queue = loadQueue('dpt_disp_agq_complex');
+let queue = loadQueue(__dirname);
 let guardWorked = false;
 try {
   preempt(queue, makeItem({ work_id: 'complex-urgent' }), { reason: 'known_bad_current', replaceCurrent: true });
@@ -169,8 +166,6 @@ node "$B/guard.mjs"
 加载队列，带 `unsafeCurrent=true` + `replaceCurrent=true` 执行 preempt。`complex-urgent` 替换 `slot_1_current`，原 `complex-1` 进入 `refill_pool` 并带 restore metadata。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_complex"
 
 cat > "$B/unsafe.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
@@ -181,15 +176,15 @@ import {
   makeItem,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_complex/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 
-let queue = loadQueue('dpt_disp_agq_complex');
+let queue = loadQueue(__dirname);
 const unsafe = preempt(queue, makeItem({ work_id: 'complex-urgent' }), {
   reason: 'known_bad_current',
   replaceCurrent: true,
   unsafeCurrent: true,
 });
-saveQueue('dpt_disp_agq_complex', unsafe);
+saveQueue(__dirname, unsafe);
 
 trace.traceEntry('check', {
   source: 'agq-playbook/complex',
@@ -211,8 +206,6 @@ node "$B/unsafe.mjs"
 创建新队列，入队 `complex-fail` + `complex-after-fail`。`fail` 完成后：`complex-after-fail` promotion 到 `slot_1_current`，`repair-*` work 自动 preempt 到 `slot_2_next`。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_complex"
 
 cat > "$B/failure.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
@@ -224,13 +217,13 @@ import {
   makeItem,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_complex/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 
 let repairQueue = createQueue('agq-complex-repair');
 repairQueue = enqueue(repairQueue, makeItem({ work_id: 'complex-fail' }));
 repairQueue = enqueue(repairQueue, makeItem({ work_id: 'complex-after-fail' }));
 repairQueue = fail(repairQueue, { work_id: 'complex-fail', reason: 'deterministic receipt failed' }, 'dpt_disp_agq_complex');
-saveQueue('dpt_disp_agq_complex', repairQueue);
+saveQueue(__dirname, repairQueue);
 
 trace.traceEntry('check', {
   source: 'agq-playbook/complex',
@@ -252,8 +245,6 @@ node "$B/failure.mjs"
 对空队列调用 `claim`，应返回 `item === null`，`queue_health === 'blocked'`，`stop_authorization_state === 'empty_queue_after_refill'`。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_complex"
 
 cat > "$B/empty.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
@@ -262,7 +253,7 @@ import {
   claim,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_complex/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 
 const emptyClaim = claim(createQueue('agq-complex-empty'), { actor: 'main-agent' });
 trace.traceEntry('check', {
@@ -284,14 +275,12 @@ node "$B/empty.mjs"
 ## Step 3: 从 Trace 裁决
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_complex"
 
 cat > "$B/verdict.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 
-const trace = createTrace('dpt_disp_agq_complex/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 const events = readFileSync(trace.traceFilePath(), 'utf-8').trim().split('\n').map(JSON.parse);
 const checks = events.filter((event) => event.event === 'check' && event.source === 'agq-playbook/complex');
 const pass = checks.length >= 6 && checks.every((event) => event.passed === true);

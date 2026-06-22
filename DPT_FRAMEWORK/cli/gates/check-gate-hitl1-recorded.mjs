@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import {
   parseGateCliArgs,
-  loadGateDefinition,
+  tryLoadGateDefinition,
   validateNodeGateBinding,
   resolveRouting,
   buildGateResult,
@@ -17,9 +17,11 @@ import {
 import { ProfileSchema } from '../../schema/index.mjs';
 
 const args = parseGateCliArgs();
+if (args.error) { emitGateResult(args.error); }
 
 // Load gate definition
-const definition = loadGateDefinition('hitl1-recorded');
+const { definition, error: defError } = tryLoadGateDefinition('hitl1-recorded', args.currentNode || null);
+if (defError) { emitGateResult(defError); }
 
 // Validate node/gate binding
 const bindingError = validateNodeGateBinding(args.currentNode, definition.gate);
@@ -82,7 +84,7 @@ for (const rule of definition.rules) {
           }
         }
       } else {
-        ruleDetail = `Unknown schema target: ${file}/${schemaName} — skipped`;
+        ruleDetail = `Unknown schema target: ${file}/${schemaName} — must fail (check type not implemented)`;
       }
     } else if (rule.check === 'field_non_empty') {
       // rule.target format: "rb_profile.yaml#/path/to/field"
@@ -119,7 +121,8 @@ for (const rule of definition.rules) {
         }
       }
     } else {
-      ruleDetail = `Unknown check type: ${rule.check} — skipped`;
+      rulePassed = false;
+      ruleDetail = `Unknown check type: ${rule.check} — must fail (check type not implemented)`;
     }
   } catch (err) {
     rulePassed = false;

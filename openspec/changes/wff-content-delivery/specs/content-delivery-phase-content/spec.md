@@ -1,3 +1,5 @@
+> req: CDP-001, CDP-002, CDP-003
+
 ## ADDED Requirements
 
 ### Requirement: Phase HITL2 body completeness
@@ -67,7 +69,7 @@ After gate pass, the Agent SHALL read `user_decision` from `rb_profile.yaml` and
 
 The phase SHALL execute a deterministic precheck before final delivery:
 - Verify required artifacts are reachable and parseable
-- Verify all 8 prior non-terminal gate passage statuses are auditable from trace evidence (the 9th non-terminal gate is readiness-passed itself; the 8 prior gates are: instantiation-complete, hitl1-recorded, setup-ready, seed-topics-ready, wave0-complete, wave1-complete, wave2-complete, hitl2-recorded)
+- Verify all prior non-terminal gate passage statuses are auditable from trace evidence (the CLI derives the expected prior gate set at runtime from `manifest.json` topology — all phases before readiness with `gate != null`; readiness-passed itself is not counted)
 - Verify profile/status/queue/trace cross-file consistency
 - Verify final delivery input comes from verified bundle state
 
@@ -88,7 +90,7 @@ The phase SHALL NOT judge semantic quality or writing quality. It SHALL only per
 #### Scenario: Readiness gate audit
 
 - **WHEN** Agent executes the readiness phase
-- **THEN** Agent SHALL verify all 8 prior non-terminal gate passage statuses are auditable
+- **THEN** Agent SHALL verify all prior non-terminal gate passage statuses are auditable (derived from manifest topology, not a hardcoded count)
 - **AND** evidence SHALL come from `rb_trace.jsonl` gate_attempt events with `passed: true`
 
 #### Scenario: Readiness cross-file consistency
@@ -111,6 +113,8 @@ The phase SHALL generate final report artifact(s) from verified bundle state. Th
 
 Post-final user feedback SHALL enter through HITL2 repair/rerun: feedback written to `rb_profile.yaml` under HITL2/user feedback location, then routed back to the affected phase or repair path. Final SHALL NOT contain hidden next, hidden gate, or implicit loop.
 
+Delivery completion SHALL be evidenced by the existence of at least one report file under the `final/` directory. Because `phase-final.md` is a terminal node with `gate: none`, there is no gate CLI to write a `final_delivery` trace event, and the charter prohibits hand-writing trace events. Therefore the delivery fact is proven by file existence, not by a trace event.
+
 #### Scenario: Final frontmatter contract
 
 - **WHEN** `phase-final.md` is loaded
@@ -122,7 +126,6 @@ Post-final user feedback SHALL enter through HITL2 repair/rerun: feedback writte
 - **WHEN** Agent executes the final phase
 - **THEN** Agent SHALL generate at least 1 final report artifact in the `final/` directory
 - **AND** report content SHALL be sourced from verified bundle state (wave artifacts, profile, status)
-- **AND** Agent SHALL record a `final_delivery` trace event
 
 #### Scenario: Final terminal semantics
 

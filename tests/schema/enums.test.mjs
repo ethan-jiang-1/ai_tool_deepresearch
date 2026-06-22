@@ -99,7 +99,7 @@ describe('AnswerabilityClass', () => {
 
 describe('HITL2UserDecision', () => {
   it('accepts all 5 valid values', () => {
-    for (const v of ['not_started', 'proceed_to_readiness', 'request_view_revision', 'repair_and_rerun', 'stop_blocked']) {
+    for (const v of ['not_started', 'proceed_to_readiness', 'request_view_revision', 'repair', 'rerun', 'stop_blocked']) {
       assert.ok(HITL2UserDecision.safeParse(v).success, `${v} should be valid`);
     }
   });

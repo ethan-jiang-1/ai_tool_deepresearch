@@ -3,12 +3,15 @@ import { z } from 'zod';
 
 export const CurrentGate = z.enum([
   'instantiation_complete',
+  'hitl1_recorded',
   'setup_ready',
   'seed_topics_ready',
   'wave0_complete',
   'wave1_complete',
   'wave2_complete',
+  'hitl2_recorded',
   'readiness_passed',
+  'none',
 ]);
 
 export const StopAuthorizationState = z.enum([
@@ -51,7 +54,8 @@ export const HITL2UserDecision = z.enum([
   'not_started',
   'proceed_to_readiness',
   'request_view_revision',
-  'repair_and_rerun',
+  'repair',
+  'rerun',
   'stop_blocked',
 ]);
 

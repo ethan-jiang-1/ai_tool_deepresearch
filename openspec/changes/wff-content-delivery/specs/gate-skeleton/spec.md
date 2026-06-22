@@ -13,7 +13,7 @@ The CLI SHALL:
 6. Output JSON to stdout with shape `{ check, routing, inspect, advice }`
 7. Exit 0 on gate pass, exit 1 on gate fail, exit 2 on routing contract errors
 
-`check.next` SHALL mirror `routing.next` when `routing.kind === 'next'`, and SHALL be `null` for all other routing kinds (`terminal`, `no_transition`, `invalid_input`, `config_error`). Supported check types include: `file_exists`, `yaml_parse`, `jsonl_parse`, `field_non_empty`, `field_value`, `trace_event_present`, `trace_has_events`, `status_value`, `dir_non_empty`, `count_min`, `placeholder`.
+`check.next` SHALL mirror `routing.next` when `routing.kind === 'next'`, and SHALL be `null` for all other routing kinds (`terminal`, `no_transition`, `invalid_input`, `config_error`). The union of supported check types across all 9 gate CLIs includes: `file_exists`, `yaml_parse`, `jsonl_parse`, `field_non_empty`, `field_value`, `trace_event_present`, `trace_has_events`, `status_value`, `dir_non_empty`, `count_min`, `placeholder`. Check type dispatch is implemented within each gate CLI's rule iteration loop — there is no unified rule evaluator in `gate-helpers.mjs`. Each CLI implements only the check types its rule set requires. Common helpers are extracted to `gate-helpers.mjs` only when ≥2 CLIs share the same check type (YAGNI).
 
 All 9 gate CLIs use the shared `gate-helpers.mjs` module (`parseGateCliArgs`, `validateNodeGateBinding`, `resolveRouting`, `buildGateResult`, `emitGateResult`).
 

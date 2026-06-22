@@ -7,7 +7,7 @@ import { existsSync, readFileSync, appendFileSync } from 'node:fs';
 import { join, resolve as resolvePath } from 'node:path';
 import {
   parseGateCliArgs,
-  loadGateDefinition,
+  tryLoadGateDefinition,
   validateNodeGateBinding,
   resolveRouting,
   buildGateResult,
@@ -16,9 +16,11 @@ import {
 } from '../../engine/helpers/gate-helpers.mjs';
 
 const args = parseGateCliArgs();
+if (args.error) { emitGateResult(args.error); }
 
 // Load gate definition
-const definition = loadGateDefinition('wave2-complete');
+const { definition, error: defError } = tryLoadGateDefinition('wave2-complete', args.currentNode || null);
+if (defError) { emitGateResult(defError); }
 
 // Validate node/gate binding
 const bindingError = validateNodeGateBinding(args.currentNode, definition.gate);
@@ -158,7 +160,8 @@ for (const rule of definition.rules) {
         ruleDetail = `Trace event "${rule.target}" not found in rb_trace.jsonl`;
       }
     } else {
-      ruleDetail = `Unknown check type: ${rule.check} (mode: ${rule.mode || 'n/a'}) — skipped`;
+      rulePassed = false;
+      ruleDetail = `Unknown check type: ${rule.check} (mode: ${rule.mode || 'n/a'}) — must fail (check type not implemented)`;
     }
   } catch (err) {
     rulePassed = false;

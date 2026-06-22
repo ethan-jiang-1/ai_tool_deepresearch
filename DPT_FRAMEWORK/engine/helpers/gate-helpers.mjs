@@ -33,7 +33,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 /**
  * Parse standard gate CLI arguments.
  *
- * @returns {{ bundle: string, currentNode: string, transitions: string }}
+ * On success returns `{ bundle, currentNode, transitions, error: null }`.
+ * On failure (missing required args) returns `{ error }` with a structured
+ * error ready to emit as JSON. Never calls process.exit() — the caller
+ * decides how to emit the error.
+ *
+ * @returns {{ bundle?: string, currentNode?: string, transitions?: string, error?: { check: object, routing: object, inspect: string[], advice: string[] } | null }}
  */
 export function parseGateCliArgs() {
   const { values } = parseArgs({
@@ -45,13 +50,25 @@ export function parseGateCliArgs() {
   });
 
   if (!values.bundle) {
-    console.error('Error: --bundle <path> is required');
-    process.exit(2);
+    return {
+      error: {
+        check: { passed: false, gate: '(unknown)', currentNodeRef: null, next: null },
+        routing: { kind: 'invalid_input', next: null, detail: 'Missing required argument: --bundle <path>' },
+        inspect: ['Missing required argument: --bundle <path>'],
+        advice: ['Provide --bundle <path> pointing to an active run or disposable bundle.'],
+      },
+    };
   }
 
   if (!values['current-node']) {
-    console.error('Error: --current-node <fileRef> is required');
-    process.exit(2);
+    return {
+      error: {
+        check: { passed: false, gate: '(unknown)', currentNodeRef: null, next: null },
+        routing: { kind: 'invalid_input', next: null, detail: 'Missing required argument: --current-node <fileRef>' },
+        inspect: ['Missing required argument: --current-node <fileRef>'],
+        advice: ['Provide --current-node <fileRef> (e.g. phases/phase-wave0.md).'],
+      },
+    };
   }
 
   const transitionsPath = values.transitions
@@ -61,6 +78,7 @@ export function parseGateCliArgs() {
     bundle: values.bundle,
     currentNode: values['current-node'],
     transitions: transitionsPath,
+    error: null,
   };
 }
 
@@ -76,6 +94,34 @@ export function loadGateDefinition(gateKey) {
   const defPath = join(__dirname, '..', '..', 'schema', 'gate_definitions', `gate-${gateKey}.definition.json`);
   const raw = readFileSync(defPath, 'utf-8');
   return JSON.parse(raw);
+}
+
+/**
+ * Safe wrapper around loadGateDefinition — never throws.
+ * Returns `{ definition, error }` where one is always null.
+ * On success, error is null and definition is the parsed gate definition.
+ * On failure, definition is null and error is a valid gate result object ready to emit.
+ *
+ * @param {string} gateKey — e.g. 'wave0-complete'
+ * @param {string|null} currentNodeRef — for the error result's check.currentNodeRef
+ * @returns {{ definition?: object|null, error?: object|null }}
+ */
+export function tryLoadGateDefinition(gateKey, currentNodeRef = null) {
+  try {
+    const definition = loadGateDefinition(gateKey);
+    return { definition, error: null };
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    return {
+      definition: null,
+      error: {
+        check: { passed: false, gate: gateKey, currentNodeRef, next: null },
+        routing: { kind: 'config_error', next: null, detail: `Cannot load gate definition: ${safeMsg}` },
+        inspect: [`Gate definition '${gateKey}' is missing or unparseable: ${safeMsg}`],
+        advice: [`Verify gate-${gateKey}.definition.json exists and is valid JSON.`],
+      },
+    };
+  }
 }
 
 /**

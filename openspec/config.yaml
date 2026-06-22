@@ -134,7 +134,7 @@ context: |
       目录命名: prototype-{component-name}/（如 prototype-gate-loop）
       标准结构:
         - EXPERIMENT.md              # 实验目的、假设、结论
-        - nodes-{component}/         # node MD（*.entry.md = 入口, *.dep.md = 依赖, *.fsm.json = FSM 定义）
+        - nodes-{component}/         # node MD（*.entry.md = 入口, *.dep.md = 依赖）
       核心约定:
         - 原型仅保留 fixture + 笔记；engine、trace、CLI 代码已搬至 DPT_FRAMEWORK/
         - 完成后冻结，不随生产代码变化

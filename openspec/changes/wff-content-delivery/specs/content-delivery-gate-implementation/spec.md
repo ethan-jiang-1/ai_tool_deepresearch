@@ -1,3 +1,5 @@
+> req: CDG-001, CDG-002, CDG-003, CDG-004
+
 ## ADDED Requirements
 
 ### Requirement: HITL2 recorded gate rule set
@@ -47,7 +49,7 @@ Each rule SHALL have a `failure_message` providing concrete repair direction.
 
 `gate-readiness-passed.definition.json` SHALL define a complete rule set replacing the placeholder. The gate SHALL verify:
 - Required artifact directories/files exist: `seed_topics/`, `reference/index.md`, `artifacts/wave2/synthesis.md`, `artifacts/hitl2/decision-brief.md`
-- At least 8 `gate_attempt` events with `passed: true` exist in `rb_trace.jsonl` (the 8 prior gates that must pass before readiness; readiness-passed is the 9th non-terminal gate and is not counted against itself)
+- Every prior gate that precedes readiness in the manifest topology has at least one `gate_attempt` event with `passed: true` in `rb_trace.jsonl` (the CLI derives the expected prior gate set from `manifest.json` at runtime — no hardcoded threshold)
 - `rb_profile.yaml` is parseable as valid YAML
 - `rb_trace.jsonl` is readable (every line is valid JSON)
 - `rb_status.json` `current_gate` equals `readiness_passed` and `next_gate` equals `none`
@@ -67,11 +69,12 @@ The gate SHALL NOT evaluate content quality, writing quality, argument strength,
 - **AND** any required artifact (seed_topics/, reference/index.md, artifacts/wave2/synthesis.md, artifacts/hitl2/decision-brief.md) is missing
 - **THEN** the gate SHALL return fail with a message identifying the missing artifact
 
-#### Scenario: Eight gates passed audit
+#### Scenario: All prior gates passed audit
 
-- **WHEN** the gate executes the `all_eight_gates_passed` rule
-- **AND** `rb_trace.jsonl` contains fewer than 8 `gate_attempt` events with `passed: true`
-- **THEN** the rule SHALL return fail with a message indicating the actual count vs expected count
+- **WHEN** the gate executes the `all_prior_gates_passed` rule (check type: `trace_has_all_gates`)
+- **AND** the CLI derives the expected prior gate set from `manifest.json` (all phases before readiness with `gate != null`)
+- **AND** `rb_trace.jsonl` is missing a `gate_attempt(passed: true)` event for one or more of those prior gates
+- **THEN** the rule SHALL return fail with a message naming which specific gate(s) are missing from the trace
 
 #### Scenario: Profile YAML parseability check
 
@@ -92,6 +95,14 @@ The gate SHALL NOT evaluate content quality, writing quality, argument strength,
 The CLI SHALL accept `--bundle <path>` and `--current-node <path>` flags. It SHALL load the gate definition, validate node-gate binding, iterate rules, execute deterministic checks, resolve routing via `resolveNodeTransitionDetailed`, and emit the result as JSON to stdout.
 
 Exit code SHALL be 0 on pass, 1 on fail, 2 on routing contract error.
+
+The CLI SHALL append a `gate_attempt` trace event to `rb_trace.jsonl` after completing all checks (on both pass and fail), following the same append pattern as the wave0/1/2 gate CLIs. This trace event is required because the readiness gate audits prior gate pass count via `gate_attempt` events — if the HITL2 CLI does not write this event, the readiness gate's ≥8 passed gates audit can never reach 8.
+
+#### Scenario: CLI writes gate_attempt trace event
+
+- **WHEN** `check-gate-hitl2-recorded.mjs` completes with any result (pass or fail)
+- **THEN** it SHALL append a `gate_attempt` event to `rb_trace.jsonl` with `gate`, `passed`, `currentNodeRef`, and `next` fields
+- **AND** this event SHALL be readable by the readiness gate's `trace_has_all_gates` check
 
 #### Scenario: CLI evaluates definition rules
 
@@ -116,7 +127,14 @@ Exit code SHALL be 0 on pass, 1 on fail, 2 on routing contract error.
 
 `check-gate-readiness-passed.mjs` SHALL use the standard `gate-helpers.mjs` pipeline and evaluate rules from the loaded definition JSON. It SHALL NOT hardcode `passed: true`.
 
-The CLI SHALL accept `--bundle <path>` and `--current-node <path>` flags. It SHALL support the `trace_has_events` check type: filter `rb_trace.jsonl` events by `type` field, match on additional fields, and compare count against a `threshold`.
+The CLI SHALL accept `--bundle <path>` and `--current-node <path>` flags. It SHALL support the `trace_has_all_gates` check type: derive the expected prior gate set from `manifest.json` topology (all phases before the current node with `gate != null`), then verify each expected gate has at least one `gate_attempt(passed: true)` event in `rb_trace.jsonl`. Missing gates SHALL be reported by name in inspect.
+
+The CLI SHALL append a `gate_attempt` trace event to `rb_trace.jsonl` after completing all checks (on both pass and fail), following the same append pattern as the wave0/1/2 gate CLIs and the HITL2 CLI.
+
+#### Scenario: CLI writes gate_attempt trace event
+
+- **WHEN** `check-gate-readiness-passed.mjs` completes with any result (pass or fail)
+- **THEN** it SHALL append a `gate_attempt` event to `rb_trace.jsonl` with `gate`, `passed`, `currentNodeRef`, and `next` fields
 
 #### Scenario: CLI evaluates definition rules
 
@@ -125,11 +143,13 @@ The CLI SHALL accept `--bundle <path>` and `--current-node <path>` flags. It SHA
 - **AND** it SHALL iterate all rules and execute checks
 - **AND** it SHALL NOT return hardcoded `passed: true`
 
-#### Scenario: CLI supports trace_has_events check type
+#### Scenario: CLI supports trace_has_all_gates check type
 
-- **WHEN** a rule has `check: "trace_has_events"` with `target: "gate_attempt"`, `match: { "passed": true }`, `threshold: 8`
-- **THEN** the CLI SHALL read `rb_trace.jsonl` and count `gate_attempt` events with `passed: true`
-- **AND** if count < threshold, the rule SHALL report fail with actual count vs threshold
+- **WHEN** a rule has `check: "trace_has_all_gates"` with `target: "gate_attempt"` and `match: { "passed": true }`
+- **THEN** the CLI SHALL read `manifest.json` to derive the set of prior gates (all phases before the current node with `gate != null`)
+- **AND** the CLI SHALL read `rb_trace.jsonl` and collect all `gate_attempt` events matching the rule's target and match criteria
+- **AND** if expected prior gate count is N, the rule SHALL pass only when all N gates are found with `passed: true`
+- **AND** if any prior gate is missing, the inspect output SHALL name which specific gate(s)
 
 #### Scenario: CLI supports jsonl_parse check type
 

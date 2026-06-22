@@ -36,13 +36,13 @@ Workflow Foundation 序列已通过 7 个 change 完成了从 directory contract
 - `gate-skeleton`: GSK-002/003/004 扩展到覆盖全部 9 个 gate CLI（+hitl2-recorded, +readiness-passed）。GSK-002 补充新 check type（yaml_parse、jsonl_parse、trace_has_events）并明确 `check.next` 的 terminal 行为。
 - `shared-node-content`: SHC-001 补充 HITL2 decision 字段文档；SHC-002/003/005 补充 readiness/final 相关引用。
 - `transition-table`: 移除 FSM backend 描述（Phase 0），验证 hitl2→readiness→final 已在 chain 中。
-- `framework-engine`: 移除 workflow-fsm 和 transition-fsm 引擎条目；FRE-002 retire；引擎计数 7→5。
+- `framework-engine`: 移除 workflow-fsm 和 transition-fsm 引擎条目；FRE-002 retire；引擎计数 7→6（spec 口径含 Trace Writer；README 口径 6→5 不含 trace）。
 - `seed-topic-materialization`: 移除 `.fsm.json` 引用（Phase 0）。
 
 ## Impact
 
 - **删除**: 10 个 FSM 文件/目录（2 engine、1 transition table、3 spec 目录、2 测试、2 实验目录）
 - **新建**: 3 个 delta spec 目录、2 个 gate definition 规则、2 个 gate CLI 实现、3 个实验 playbook、集成测试
-- **修改**: `DPT_FRAMEWORK/engine/ask-next.mjs`、`consistency-validator.mjs`、`cli/validate-workflow-package.mjs`、`schema/enums.mjs`、3 个 phase node、2 个 shared node、5 个已有 spec、`guidelines/README.md`、`openspec/config.yaml`、`experiments_playbook/RUN.md`
+- **修改**: `DPT_FRAMEWORK/engine/ask-next.mjs`、`consistency-validator.mjs`、`cli/validate-workflow-package.mjs`、`schema/enums.mjs`、3 个 phase node、2 个 shared node、5 个已有 spec、`guidelines/README.md`、`openspec/config.yaml`、`experiments_playbook/RUN.md`、`gate-wave2-complete.definition.json`（status_next_gate 命名联动）
 - **依赖**: 无新增 npm 依赖。Phase 0 删除的 `transition-fsm.mjs` 的 import 者仅 `ask-next.mjs` 和 `consistency-validator.mjs`，删除后无级联影响。
 - **生命周期路由**: 零变化——gate CLI 全部默认 `transitions.chain.json`，chain 中 hitl2→readiness→final 已存在。

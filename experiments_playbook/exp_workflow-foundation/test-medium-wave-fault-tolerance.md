@@ -126,7 +126,7 @@ cat > $B2/rb_status.json << 'EOF'
   "current_mode": "execution",
   "state": "in_progress",
   "current_gate": "wave2_complete",
-  "next_gate": "hitl2_complete"
+  "next_gate": "hitl2_recorded"
 }
 EOF
 
@@ -229,7 +229,7 @@ cat > $B3/rb_status.json << 'EOF'
   "current_mode": "execution",
   "state": "in_progress",
   "current_gate": "wave1_complete",
-  "next_gate": "hitl2_complete"
+  "next_gate": "hitl2_recorded"
 }
 EOF
 

@@ -11,7 +11,7 @@ suggested_context: []
 
 ## Purpose
 
-向 Agent 解释 9 个 gate 的用途和大致检查方向。此 node 是 **generated-summary**——由 Gate definition JSON 和 gate CLI 输出衍生，不替代它们作为 deterministic rule authority。
+向 Agent 解释所有 gate 的用途和大致检查方向。此 node 是 **generated-summary**——由 Gate definition JSON 和 gate CLI 输出衍生，不替代它们作为 deterministic rule authority。Gate 数量和规则随生命周期拓扑变化，以此 node 表格和 definition JSON 为准。
 
 ## Gate Overview
 
@@ -24,8 +24,8 @@ suggested_context: []
 | `wave0-complete` | Wave0 foundation shared reference 已收集：每个 topic 至少 foundation floor 数量的 reference metadata，且通过 schema 校验 | 文件存在性（`reference/index.md`、`reference/{topic}/source.yaml`）、`schema_valid`（ReferenceMetadata schema）、`count_floor`（≥1 per topic）、`trace_event_present`（`wave0_completion`）、status 值 | 补充缺失 reference、修正 schema violation（url/title/date/topic_tag） |
 | `wave1-complete` | Wave1 topic-scoped skeleton 已写入，标记 foundation placeholder boundary，无 false completion claim | 文件存在性（`artifacts/wave1/{topic}/skeleton.md`）、`pattern_match`（placeholder marker 存在 + false claim 排除）、`trace_event_present`（`wave1_completion`）、status 值 | 补充缺失 skeleton、加回 placeholder marker、移除 false completion claim |
 | `wave2-complete` | Wave2 cross-topic synthesis 已派生，Markdown link 引用链可验证 | 文件存在性（`artifacts/wave2/synthesis.md`）、`field_non_empty`、`cross_field`（`markdown_link_resolution` 模式：解析 Markdown links → 验证目标存在）、`trace_event_present`（`wave2_completion`）、status 值 | 补充 synthesis 内容、追加 artifact 引用 link、修正失效引用路径 |
-| `hitl2-recorded` | 用户已通过 HITL2 做出 final report view / proceed/repair 决策 | profile HITL2 字段、status marker | 补充 HITL2 字段 |
-| `readiness-passed` | 最终报告就绪，所有前序 gate 通过 | 综合检查 | 修复前序 gate 的残留问题 |
+| `hitl2-recorded` | 用户已通过 HITL2 做出 final review decision，decision brief 已产出且 decision 已持久化到 profile | 文件存在性（`artifacts/hitl2/decision-brief.md`）、`field_non_empty`（decision brief 内容）、`yaml_parse`（`rb_profile.yaml` 可解析）、`field_value`（`hitl2.status == recorded`、`user_decision` 非空且在合法枚举中）、`trace_event_present`（`hitl2_recorded`）、status 值 | 补充 decision brief、修正缺失字段、选择合法 user_decision 值、确保 trace event 已记录 |
+| `readiness-passed` | 最终交付前确定性 precheck：所有 required artifacts 可达、所有 prior gate pass 可审计（从 manifest 推导期望 gate 集合）、profile/trace 无结构性矛盾 | `dir_non_empty`（`seed_topics/`）、`file_exists`（`reference/index.md`、`artifacts/wave2/synthesis.md`、`artifacts/hitl2/decision-brief.md`）、`trace_has_all_gates`（从 manifest 拓扑推导 prior gate 集合，逐个核对 trace）、`yaml_parse`（profile）、`jsonl_parse`（trace）、status 值。**不做任何 content quality 判断** | 补产缺失 artifact、修复 YAML/JSONL 解析错误、确认所有 prior gate 已 pass、修正 status drift。不修复"写得不够好" |
 
 ## Authority Boundary
 

@@ -51,8 +51,6 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 创建空队列，按序入队 `simple-1`、`simple-2`、`simple-3`，写入 receipt 文件，持久化到 `rb_queue.agq.json`。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_simple"
 
 cat > "$B/enqueue.mjs" << 'JS'
 import { writeFileSync } from 'node:fs';
@@ -64,15 +62,18 @@ import {
   makeItem,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_simple/_trace.jsonl', { consoleEcho: false });
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 trace.traceInit('agq-playbook/simple', { source: 'agq-playbook/simple' });
 
-writeFileSync('dpt_disp_agq_simple/done-1.json', '{"ok":true}\n');
+writeFileSync(__dirname + '/'done-1.json', '{"ok":true}\n');
 let queue = createQueue('agq-simple');
 queue = enqueue(queue, makeItem({ work_id: 'simple-1', title: 'Task 1', completion_receipt: 'json:done-1.json' }));
 queue = enqueue(queue, makeItem({ work_id: 'simple-2', title: 'Task 2' }));
 queue = enqueue(queue, makeItem({ work_id: 'simple-3', title: 'Task 3' }));
-saveQueue('dpt_disp_agq_simple', queue);
+saveQueue(__dirname, queue);
 JS
 
 node "$B/enqueue.mjs"
@@ -87,8 +88,6 @@ node "$B/enqueue.mjs"
 从持久化队列加载，claim `slot_1_current`。验证只有 `simple-1` 可被 claim，且 `simple-2` 状态仍为 `queued`（不可越级 claim）。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_simple"
 
 cat > "$B/claim.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
@@ -98,11 +97,11 @@ import {
   saveQueue,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_simple/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 
-let queue = loadQueue('dpt_disp_agq_simple');
+let queue = loadQueue(__dirname);
 const result = claim(queue, { actor: 'main-agent' });
-saveQueue('dpt_disp_agq_simple', result.queue);
+saveQueue(__dirname, result.queue);
 
 trace.traceEntry('check', {
   source: 'agq-playbook/simple',
@@ -123,8 +122,6 @@ node "$B/claim.mjs"
 完成 `simple-1`，校验 `json:done-1.json` receipt。`complete` 内部执行 promote → refill → render。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_simple"
 
 cat > "$B/complete.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
@@ -134,11 +131,11 @@ import {
   saveQueue,
 } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_simple/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 
-let queue = loadQueue('dpt_disp_agq_simple');
-const completed = complete(queue, { work_id: 'simple-1', receipt: 'json:done-1.json' }, 'dpt_disp_agq_simple');
-saveQueue('dpt_disp_agq_simple', completed.queue);
+let queue = loadQueue(__dirname);
+const completed = complete(queue, { work_id: 'simple-1', receipt: 'json:done-1.json' }, __dirname);
+saveQueue(__dirname, completed.queue);
 
 trace.traceEntry('check', {
   source: 'agq-playbook/simple',
@@ -159,18 +156,16 @@ node "$B/complete.mjs"
 加载完成后的队列，验证 `simple-2` 已 promotion 到 `slot_1_current`，projection 文件存在且内容正确。
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_simple"
 
 cat > "$B/verify.mjs" << 'JS'
 import { existsSync, readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { loadQueue } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const trace = createTrace('dpt_disp_agq_simple/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 
-const queue = loadQueue('dpt_disp_agq_simple');
-const projectionPath = 'dpt_disp_agq_simple/_cache/agentic-queue/current-task.md';
+const queue = loadQueue(__dirname);
+const projectionPath = __dirname + '/_cache/agentic-queue/current-task.md';
 const projectionExists = existsSync(projectionPath);
 const projectionContent = projectionExists ? readFileSync(projectionPath, 'utf-8') : '';
 
@@ -193,14 +188,12 @@ node "$B/verify.mjs"
 ## Step 3: 从 Trace 裁决
 
 ```bash
-ROOT="$(git rev-parse --show-toplevel)" && cd "$ROOT"
-B="dpt_disp_agq_simple"
 
 cat > "$B/verdict.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 
-const trace = createTrace('dpt_disp_agq_simple/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 const events = readFileSync(trace.traceFilePath(), 'utf-8').trim().split('\n').map(JSON.parse);
 const checks = events.filter((event) => event.event === 'check');
 const pass = checks.length >= 3 && checks.every((event) => event.passed === true);

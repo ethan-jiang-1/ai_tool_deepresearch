@@ -24,7 +24,7 @@ function createBundle(name) {
 
   const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf-8'));
   status.current_gate = 'wave2_complete';
-  status.next_gate = 'hitl2_complete';
+  status.next_gate = 'hitl2_recorded';
   writeFileSync(join(dir, 'rb_status.json'), JSON.stringify(status));
 
   // Create reference target files (Wave0 artifacts)

@@ -22,42 +22,44 @@
 | 4 | `exp_gate-loop/test-simple-three-returns.md` | Gate 单次 checkpoint 三种返回 |
 | 5 | `exp_gate-loop/test-medium-repair-loop.md` | MD PDCA 修复回路 |
 | 6 | `exp_gate-loop/test-complex-full-pipeline.md` | 完整端到端 |
-| 7 | `exp_workflow-fsm/test-simple-define-advance.md` | FSM Define→Advance→Verify |
-| 8 | `exp_workflow-fsm/test-medium-retry-halt.md` | FSM retry 自环 + halt |
-| 9 | `exp_workflow-fsm/test-complex-halt-recovery.md` | FSM halt 恢复 |
-| 10 | `exp_workflow-chain/test-simple-lazy-load.md` | Lazy loader 不预读 MD |
-| 11 | `exp_workflow-chain/test-medium-dep-cache.md` | 依赖去重 + cache hit |
-| 12 | `exp_workflow-chain/test-complex-error-paths.md` | 错误路径 + 恢复 |
-| 13 | `exp_agentic-queue/test-simple-minimal-path.md` | enqueue → claim → complete → promote 最小路径 |
-| 14 | `exp_agentic-queue/test-medium-urgent-preemption.md` | 满 active window + urgent preemption |
-| 15 | `exp_agentic-queue/test-complex-failure-repair.md` | invalid task, missing receipt, failure repair |
-| 16 | `exp_wff_validation/test-simple-happy-path.md` | wff walker 9 phase/8 gate 全部 pass + trace↔log 交叉验证 |
-| 17 | `exp_wff_validation/test-medium-fail-repair.md` | wff walker gate fail → repair → rerun → pass 闭环 |
-| 18 | `exp_wff_validation/test-complex-routing-contract.md` | current-node 绑定 + next / terminal / no_transition / config_error routing contract |
-| 19 | `exp_workflow-foundation/test-simple-pre-research-happy-path.md` | fixed HITL payload → instantiation/hitl1/setup 三个 gate pass |
-| 20 | `exp_workflow-foundation/test-medium-pre-research-repair-loop.md` | gate fail → inspect/advice → repair → rerun → pass |
-| 21 | `exp_workflow-foundation/test-medium-pre-research-fault-tolerance.md` | bad JSON / multi-rule fail / missing bundle — gate 不崩溃 |
-| 22 | `exp_workflow-foundation/test-complex-pre-research-review-surface.md` | HITL 问题面 + AI interpretation sample + human review checklist |
-| 23 | `exp_workflow-foundation/test-light-hitl1-quick-factual.md` | research_profile: quick_factual — gate pass |
-| 24 | `exp_workflow-foundation/test-light-hitl1-exploratory-map.md` | research_profile: exploratory_map — gate pass |
-| 25 | `exp_workflow-foundation/test-light-hitl1-claim-verification.md` | research_profile: claim_verification — gate pass |
-| 26 | `exp_workflow-foundation/test-light-hitl1-topic-rewrite-vague.md` | 一句话 → topic rewrite → original topic + seed topics（引用 phase-hitl1.md §3a） |
-| 27 | `exp_workflow-foundation/test-light-hitl1-topic-rewrite-detailed.md` | 详细 brief → 轻量整理，不越界 rewrite（⚠️ 模拟 Agent 输出） |
-| 28 | `exp_workflow-foundation/test-light-instantiation-production-path.md` | production 路径 `instantiate-run-bundle.mjs` → gate pass |
-| 29 | `exp_workflow-foundation/test-simple-waves-full-chain.md` | seed-topics→wave0→wave1→wave2 全链路 4 gate 顺序 pass |
-| 30 | `exp_workflow-foundation/test-medium-wave-repair-loop.md` | wave2 gate fail→repair→pass PDCA 回路 |
-| 31 | `exp_workflow-foundation/test-medium-wave-fault-tolerance.md` | malformed YAML / partial dead links / status drift — gate 容错 |
-| 32 | `exp_workflow-foundation/test-complex-wave-review-surface.md` | 3-topic Wave0→Wave2 review surface + human checklist |
+| 7 | `exp_workflow-chain/test-simple-lazy-load.md` | Lazy loader 不预读 MD |
+| 8 | `exp_workflow-chain/test-medium-dep-cache.md` | 依赖去重 + cache hit |
+| 9 | `exp_workflow-chain/test-complex-error-paths.md` | 错误路径 + 恢复 |
+| 10 | `exp_agentic-queue/test-simple-minimal-path.md` | enqueue → claim → complete → promote 最小路径 |
+| 11 | `exp_agentic-queue/test-medium-urgent-preemption.md` | 满 active window + urgent preemption |
+| 12 | `exp_agentic-queue/test-complex-failure-repair.md` | invalid task, missing receipt, failure repair |
+| 13 | `exp_wff_validation/test-simple-happy-path.md` | wff walker 9 phase/8 gate 全部 pass + trace↔log 交叉验证 |
+| 14 | `exp_wff_validation/test-medium-fail-repair.md` | wff walker gate fail → repair → rerun → pass 闭环 |
+| 15 | `exp_wff_validation/test-complex-routing-contract.md` | current-node 绑定 + next / terminal / no_transition / config_error routing contract |
+| 16 | `exp_workflow-foundation/test-simple-pre-research-happy-path.md` | fixed HITL payload → instantiation/hitl1/setup 三个 gate pass |
+| 17 | `exp_workflow-foundation/test-medium-pre-research-repair-loop.md` | gate fail → inspect/advice → repair → rerun → pass |
+| 18 | `exp_workflow-foundation/test-medium-pre-research-fault-tolerance.md` | bad JSON / multi-rule fail / missing bundle — gate 不崩溃 |
+| 19 | `exp_workflow-foundation/test-complex-pre-research-review-surface.md` | HITL 问题面 + AI interpretation sample + human review checklist |
+| 20 | `exp_workflow-foundation/test-light-hitl1-quick-factual.md` | research_profile: quick_factual — gate pass |
+| 21 | `exp_workflow-foundation/test-light-hitl1-exploratory-map.md` | research_profile: exploratory_map — gate pass |
+| 22 | `exp_workflow-foundation/test-light-hitl1-claim-verification.md` | research_profile: claim_verification — gate pass |
+| 23 | `exp_workflow-foundation/test-light-hitl1-topic-rewrite-vague.md` | 一句话 → topic rewrite → original topic + seed topics（引用 phase-hitl1.md §3a） |
+| 24 | `exp_workflow-foundation/test-light-hitl1-topic-rewrite-detailed.md` | 详细 brief → 轻量整理，不越界 rewrite（⚠️ 模拟 Agent 输出） |
+| 25 | `exp_workflow-foundation/test-light-instantiation-production-path.md` | production 路径 `instantiate-run-bundle.mjs` → gate pass |
+| 26 | `exp_workflow-foundation/test-simple-waves-full-chain.md` | seed-topics→wave0→wave1→wave2 全链路 4 gate 顺序 pass |
+| 27 | `exp_workflow-foundation/test-medium-wave-repair-loop.md` | wave2 gate fail→repair→pass PDCA 回路 |
+| 28 | `exp_workflow-foundation/test-medium-wave-fault-tolerance.md` | malformed YAML / partial dead links / status drift — gate 容错 |
+| 29 | `exp_workflow-foundation/test-complex-wave-review-surface.md` | 3-topic Wave0→Wave2 review surface + human checklist |
+| 30 | `exp_workflow-foundation/test-simple-hitl2-decision-recorded.md` | HITL2 gate：decision brief + user_decision + trace → pass；缺失/空/非法 → fail |
+| 31 | `exp_workflow-foundation/test-medium-readiness-precheck.md` | readiness gate：manifest 拓扑推导 prior gate 集合 + artifact/parsability 审计 |
+| 32 | `exp_workflow-foundation/test-simple-delivery-full-chain.md` | hitl2→readiness→final 完整 delivery 链 + final terminal semantics |
+| 33 | `exp_workflow-foundation/test-simple-hitl2-rerun-branch.md` | HITL2 rerun：gate pass 但 chain 不编码 rerun 分支（Agent 层 routing） |
+| 34 | `exp_workflow-foundation/test-medium-delivery-repair-loop.md` | HITL2 + readiness PDCA repair 回路：fail→inspect→repair→rerun→pass |
 
 ### Heavy（真实 subagent spawn，自动化可跑）
 
 | # | Playbook | 验证什么 |
 |---|----------|---------|
-| 33 | `exp_workflow-foundation/test-heavy-hitl1-manual-review.md` | HITL1 payload 枚举（auto mode 6 vectors） |
-| 34 | `exp_subagent/test-heavy-subagent-single-intake.md` | 单个 source_intake subagent |
-| 35 | `exp_subagent/test-heavy-subagent-dual-parallel.md` | intake + diagnostic 并行两个 |
-| 36 | `exp_subagent/test-heavy-subagent-triple-failure.md` | 三个 subagent 并发 + partial failure |
-| 37 | `exp_subagent/test-heavy-subagent-identity.md` | runtime-agent identity 和 trace event |
+| 35 | `exp_workflow-foundation/test-heavy-hitl1-manual-review.md` | HITL1 payload 枚举（auto mode 6 vectors） |
+| 36 | `exp_subagent/test-heavy-subagent-single-intake.md` | 单个 source_intake subagent |
+| 37 | `exp_subagent/test-heavy-subagent-dual-parallel.md` | intake + diagnostic 并行两个 |
+| 38 | `exp_subagent/test-heavy-subagent-triple-failure.md` | 三个 subagent 并发 + partial failure |
+| 39 | `exp_subagent/test-heavy-subagent-identity.md` | runtime-agent identity 和 trace event |
 
 ### Human（需人类交互/判断，不能自动化，必须手动跑）
 
@@ -66,7 +68,7 @@
 
 | # | Playbook | 验证什么 | 人类做什么 |
 |---|----------|---------|-----------|
-| 38 | `exph_workflow-foundation/test-human-hitl1-topic-rewrite-agent.md` | Agent 读 phase-hitl1.md §3a → 执行 topic rewrite | 审查 Agent 的 rewrite 质量：original topic 是否合理？seed topics 是否贴切？ |
+| 40 | `exph_workflow-foundation/test-human-hitl1-topic-rewrite-agent.md` | Agent 读 phase-hitl1.md §3a → 执行 topic rewrite | 审查 Agent 的 rewrite 质量：original topic 是否合理？seed topics 是否贴切？ |
 
 ## 怎么执行
 

@@ -92,7 +92,7 @@ Agent，按 `phase-hitl1.md` §3b 的要求：
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_rwa_* | head -1)
+B=$(cat /tmp/pb_bundle)
 
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
 echo "$GATE"
@@ -114,7 +114,7 @@ node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_rwa_* | head -1)
+B=$(cat /tmp/pb_bundle)
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_trace.jsonl')})"
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
 ```

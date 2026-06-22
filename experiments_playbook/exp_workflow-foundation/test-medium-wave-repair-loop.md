@@ -56,7 +56,7 @@ cat > $B/rb_status.json << 'EOF'
   "current_mode": "execution",
   "state": "in_progress",
   "current_gate": "wave2_complete",
-  "next_gate": "hitl2_complete"
+  "next_gate": "hitl2_recorded"
 }
 EOF
 
@@ -91,7 +91,7 @@ echo "=== Pre-seeded artifact targets ==="
 find $B/reference $B/artifacts -type f 2>/dev/null
 ```
 
-预期：bundle 创建，status 指向 `wave2_complete`→`hitl2_complete`，Wave0/Wave1 目标文件就绪。
+预期：bundle 创建，status 指向 `wave2_complete`→`hitl2_recorded`，Wave0/Wave1 目标文件就绪。
 
 ## Step 2: 写 synthesis 含 NO valid Markdown links → gate FAIL
 

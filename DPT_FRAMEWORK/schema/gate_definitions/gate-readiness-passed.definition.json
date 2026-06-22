@@ -1,13 +1,63 @@
 {
   "gate": "readiness-passed",
-  "description": "Verify final delivery preconditions: all required artifacts reachable, all 8 non-terminal gates passed with auditable evidence, profile/status/queue/trace consistent.",
+  "description": "Verify final delivery preconditions: all required artifacts reachable, all prior gates have gate_attempt(passed=true) in trace, profile YAML and trace JSONL parseable, status values point to readiness→none.",
   "rules": [
     {
-      "id": "placeholder_rule",
-      "check": "placeholder",
-      "target": "placeholder",
-      "threshold": null,
-      "failure_message": "Not yet implemented."
+      "id": "seed_topics_non_empty",
+      "check": "dir_non_empty",
+      "target": "seed_topics",
+      "failure_message": "seed_topics/ directory is missing or empty. Seed topic materialization must have completed before readiness."
+    },
+    {
+      "id": "reference_index_exists",
+      "check": "file_exists",
+      "target": "reference/index.md",
+      "failure_message": "Missing file: reference/index.md. Wave0 evidence indexing must have completed before readiness."
+    },
+    {
+      "id": "wave2_synthesis_exists",
+      "check": "file_exists",
+      "target": "artifacts/wave2/synthesis.md",
+      "failure_message": "Missing file: artifacts/wave2/synthesis.md. Wave2 cross-topic synthesis must have completed before readiness."
+    },
+    {
+      "id": "hitl2_decision_brief_exists",
+      "check": "file_exists",
+      "target": "artifacts/hitl2/decision-brief.md",
+      "failure_message": "Missing file: artifacts/hitl2/decision-brief.md. HITL2 final review must have completed before readiness."
+    },
+    {
+      "id": "all_prior_gates_passed",
+      "check": "trace_has_all_gates",
+      "target": "gate_attempt",
+      "match": { "passed": true },
+      "failure_message": "Not all prior gates have a gate_attempt(passed=true) in rb_trace.jsonl. Each non-terminal gate before readiness must have passed at least once. Check inspect output for the specific missing gate(s)."
+    },
+    {
+      "id": "profile_yaml_parseable",
+      "check": "yaml_parse",
+      "target": "rb_profile.yaml",
+      "failure_message": "rb_profile.yaml is missing or contains invalid YAML. Fix YAML syntax errors."
+    },
+    {
+      "id": "trace_jsonl_parseable",
+      "check": "jsonl_parse",
+      "target": "rb_trace.jsonl",
+      "failure_message": "rb_trace.jsonl is missing or contains unparseable lines. Every line in rb_trace.jsonl must be valid JSON. Remove or fix any non-JSON lines."
+    },
+    {
+      "id": "status_current_gate",
+      "check": "status_value",
+      "target": "rb_status.json#/current_gate",
+      "expected": "readiness_passed",
+      "failure_message": "rb_status.json current_gate must be 'readiness_passed'. Status may have drifted — restore the correct gate value."
+    },
+    {
+      "id": "status_next_gate",
+      "check": "status_value",
+      "target": "rb_status.json#/next_gate",
+      "expected": "none",
+      "failure_message": "rb_status.json next_gate must be 'none' (final is a terminal node with no outgoing gate). Status may have drifted — restore the correct value."
     }
   ]
 }

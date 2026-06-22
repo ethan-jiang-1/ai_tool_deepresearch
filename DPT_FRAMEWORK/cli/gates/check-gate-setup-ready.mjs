@@ -8,7 +8,7 @@ import { join, basename } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import {
   parseGateCliArgs,
-  loadGateDefinition,
+  tryLoadGateDefinition,
   validateNodeGateBinding,
   resolveRouting,
   buildGateResult,
@@ -22,9 +22,11 @@ import {
 } from '../../schema/index.mjs';
 
 const args = parseGateCliArgs();
+if (args.error) { emitGateResult(args.error); }
 
 // Load gate definition
-const definition = loadGateDefinition('setup-ready');
+const { definition, error: defError } = tryLoadGateDefinition('setup-ready', args.currentNode || null);
+if (defError) { emitGateResult(defError); }
 
 // Validate node/gate binding
 const bindingError = validateNodeGateBinding(args.currentNode, definition.gate);
@@ -133,7 +135,7 @@ for (const rule of definition.rules) {
           parsed = QueueSchema.safeParse(queue);
         }
       } else {
-        ruleDetail = `Unknown schema target: ${target}/${schemaName} — skipped`;
+        ruleDetail = `Unknown schema target: ${target}/${schemaName} — must fail (check type not implemented)`;
       }
       if (parsed && !parsed.success) {
         rulePassed = false;
@@ -194,7 +196,8 @@ for (const rule of definition.rules) {
         }
       }
     } else {
-      ruleDetail = `Unknown check type: ${rule.check} — skipped`;
+      rulePassed = false;
+      ruleDetail = `Unknown check type: ${rule.check} — must fail (check type not implemented)`;
     }
   } catch (err) {
     rulePassed = false;

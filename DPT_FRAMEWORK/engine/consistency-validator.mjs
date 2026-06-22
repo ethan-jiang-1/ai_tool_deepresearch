@@ -14,7 +14,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadChain } from './transition-chain.mjs';
-import { loadFSM } from './transition-fsm.mjs';
 import { parseFrontmatter } from './workflow-chain.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -26,7 +25,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
  * @param {string} [opts.workflowsDir] — path to workflows/ directory (default: DPT_FRAMEWORK/workflows/)
  * @param {string} [opts.gateDefsDir] — path to gate definitions directory (default: DPT_FRAMEWORK/schema/gate_definitions/)
  * @param {string} [opts.transitionsChainPath] — path to transitions.chain.json (optional)
- * @param {string} [opts.transitionsFsmPath] — path to transitions.fsm.json (optional)
  * @returns {{ passed: boolean, issues: Array<{ class: string, detail: string, file?: string }> }}
  *
  * @impl WNC-007
@@ -35,7 +33,6 @@ export function validateWorkflowPackage(opts = {}) {
   const workflowsDir = opts.workflowsDir || join(__dirname, '..', 'workflows');
   const gateDefsDir = opts.gateDefsDir || join(__dirname, '..', 'schema', 'gate_definitions');
   const chainPath = opts.transitionsChainPath || join(workflowsDir, 'transitions.chain.json');
-  const fsmPath = opts.transitionsFsmPath || join(workflowsDir, 'transitions.fsm.json');
 
   const issues = [];
 
@@ -198,42 +195,6 @@ export function validateWorkflowPackage(opts = {}) {
         class: 'transition_chain_invalid',
         detail: `Cannot validate chain transitions: ${err.message}`,
         file: chainPath,
-      });
-    }
-  }
-
-  // FSM table
-  if (existsSync(fsmPath)) {
-    try {
-      const fsm = loadFSM(fsmPath);
-      for (const [stateKey, stateDef] of Object.entries(fsm.states)) {
-        const statePath = join(nodesDir, stateKey);
-        if (!existsSync(statePath)) {
-          issues.push({
-            class: 'fsm_transition_missing_node',
-            detail: `FSM state references missing node: "${stateKey}"`,
-            file: fsmPath,
-          });
-        }
-
-        for (const [outcome, target] of Object.entries(stateDef.on)) {
-          if (target !== null) {
-            const targetPath = join(nodesDir, target);
-            if (!existsSync(targetPath)) {
-              issues.push({
-                class: 'fsm_transition_missing_target',
-                detail: `FSM transition "${stateKey}" + "${outcome}" → "${target}" references missing target node`,
-                file: fsmPath,
-              });
-            }
-          }
-        }
-      }
-    } catch (err) {
-      issues.push({
-        class: 'fsm_transition_invalid',
-        detail: `Cannot validate FSM transitions: ${err.message}`,
-        file: fsmPath,
       });
     }
   }

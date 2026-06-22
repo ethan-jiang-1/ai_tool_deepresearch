@@ -2,7 +2,7 @@
 // validate-workflow-package.mjs — Workflow package consistency validation CLI
 // @impl WNC-007
 // Usage: node validate-workflow-package.mjs [--workflows-dir <path>] [--gate-defs-dir <path>]
-//                                         [--transitions-chain <path>] [--transitions-fsm <path>]
+//                                         [--transitions-chain <path>]
 //
 // Exit codes:
 //   0 — package is consistent (all checks pass)
@@ -17,7 +17,6 @@ const { values } = parseArgs({
     'workflows-dir': { type: 'string' },
     'gate-defs-dir': { type: 'string' },
     'transitions-chain': { type: 'string' },
-    'transitions-fsm': { type: 'string' },
   },
 });
 
@@ -25,7 +24,6 @@ const report = validateWorkflowPackage({
   workflowsDir: values['workflows-dir'],
   gateDefsDir: values['gate-defs-dir'],
   transitionsChainPath: values['transitions-chain'],
-  transitionsFsmPath: values['transitions-fsm'],
 });
 
 // Machine-readable report

@@ -6,39 +6,48 @@ gate: null
 stop: "no"
 requires: []
 suggested_context:
-  - shared-schemas
+  - shared/shared-schemas
+  - shared/shared-anti-cheating-rules
 ---
 
 # Phase: Final — Delivery
 
-> **Terminal Node**: 这是当前 delivery pass 的 terminal node。没有 outgoing gate，也没有 normal next phase。
+> **Terminal Node**: 这是当前 delivery pass 的 terminal node。`gate: null`，`next: null`。`transitions.chain.json` 不包含 `phases/phase-final.md` 的条目。没有 outgoing gate，没有 hidden loop。
 
 ## 1. Stage Goal
 
-从已验证 bundle state 生成 final report artifact(s)。Final 是 delivery 动作，不是 gate checkpoint。
+从 verified bundle state 生成 final report artifact(s)。Final 是 delivery 动作——把已验证的研究产出打包为可交付的报告——不是 gate checkpoint，也不是下一阶段的输入。
+
+Delivery completion 的 evidence 是 `final/` 目录下存在至少一份报告文件。Final 是 terminal node（`gate: none`），没有 gate CLI 写 `final_delivery` trace event——delivery 事实由文件存在证明，不由 trace event 证明。
 
 ## 2. Required Inputs
 
 - Readiness gate passed 的 active `dpt_rb_*` run bundle
-- 所有 verified wave artifacts
-- `rb_profile.yaml`（用户 profile 和 HITL2 decision）
-- `rb_status.json`
+- All verified wave artifacts（Wave0 reference、Wave1 skeleton、Wave2 synthesis）
+- `rb_profile.yaml`（用户 profile、HITL1/HITL2 decision、final_report_view 偏好）
+- `rb_status.json`（确认 readiness passed）
+- `rb_trace.jsonl`（完整 trace 记录）
 
 ## 3. Allowed Actions
 
-- 从 verified bundle state 生成 final report artifact(s) 到 `final/`
-- 记录 delivery evidence 到 trace
-- 更新 `rb_status.json`
+- 读取所有 verified bundle state：wave artifacts、profile、status、trace
+- 根据用户 `final_report_view` 偏好（来自 `rb_profile.yaml` HITL2 字段）组织报告结构和侧重点
+- 从 verified bundle state 生成至少 1 份 final report artifact 到 `final/` 目录
+- 报告格式自由（Markdown、研究摘要、executive brief 等），内容必须引用 bundle 中真实存在的 source artifact
+- Report 中的声明使用标准 Markdown link `[label](relative/path.md)` 引用来源
+- 更新 `rb_status.json`：`current_gate: none` / `next_gate: null`
+- 记录 final 完成信息到 `rb_trace.jsonl`（使用 Agent 侧 event，如 `md:final_delivery`）
 
 ## 4. Expected Artifacts
 
-- `final/` 下至少 1 个 final report artifact
-- Trace 中有 delivery evidence
-- Report content 来自 verified bundle state
+- `final/` 目录下至少 1 份报告文件（如 `final/report.md`、`final/executive-summary.md` 等）
+- Report content 来自 verified bundle state（wave artifacts、profile、status），不来自 chat memory
+- `rb_status.json` 中 `current_gate: none` / `next_gate: null`
+- `final/` 目录存在即证明 delivery 完成
 
 ## 5. Gate Command
 
-无——final 是 terminal node，没有 outgoing gate。
+无——final 是 terminal node（`gate: null`）。`transitions.chain.json` 不包含 `phases/phase-final.md` 的条目。没有 gate CLI 可运行。
 
 ## 6. On Gate Pass
 
@@ -46,14 +55,19 @@ N/A — final 无 outgoing gate。
 
 ## 7. On Gate Fail
 
-N/A。
+N/A — final 无 gate，fail 场景由 Agent 自主判断是否需要回到 HITL2 repair/rerun。
 
 ## 8. Stop Behavior
 
 `stop: no` — Agent 自主完成 final delivery。
 
-## 9. Anti-cheating Rules
+Post-delivery 用户反馈入口：用户反馈写入 `rb_profile.yaml` 的 HITL2/user feedback 字段，通过 HITL2 `rerun` 从 `seed-topics` 重新跑。Final node 自身不处理 post-delivery 修改。
 
-- Final report MUST 从 verified bundle state 生成，不能重新凭 chat memory 生成
-- MUST NOT 暗藏 hidden next、hidden gate 或隐式循环
-- 用户 final 后反馈 MUST NOT 通过 final node 处理——走 HITL2 repair/rerun（`phase-hitl2.md`）
+## 9. Anti-Cheating Rules
+
+- **Final report MUST 从 verified bundle state 生成**——不能重新凭 chat memory 生成、凭 LLM 内部知识编造内容
+- **MUST NOT 暗藏 hidden next、hidden gate 或隐式循环**——final 是 terminal node，无 outgoing transition
+- **MUST NOT 在 `final/` 为空时声称 delivery 完成**——至少 1 份报告文件必须真实存在
+- **用户 final 后反馈 MUST NOT 通过 final node 处理**——走 HITL2 repair/rerun（`phase-hitl2.md` §7）
+- **MUST NOT 写 `final_delivery` trace event 并声称它来自 gate CLI**——final 无 gate CLI，charter 禁止手写 trace event。delivery 由 `final/` 文件存在证明
+- 参见 `shared-anti-cheating-rules.md` 的通用禁令

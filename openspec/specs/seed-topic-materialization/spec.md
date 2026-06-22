@@ -99,7 +99,6 @@ CLI SHALL 延续 double trace 约定：gate attempt 写入 `rb_trace.jsonl`。
 Workflow registration surface SHALL 同步插入 seed-topics 阶段，保持 transition 一致性：
 - `DPT_FRAMEWORK/workflows/manifest.json`：phases 数组在 setup 与 wave0 之间插入 `{ "key": "seed-topics", "node": "phases/phase-seed-topics.md", "gate": "seed-topics-ready" }`
 - `DPT_FRAMEWORK/workflows/transitions.chain.json`：`phase-setup.md` 的 `passed` 改指向 `phase-seed-topics.md`；新增 `phase-seed-topics.md` → `passed` → `phase-wave0.md`
-- `DPT_FRAMEWORK/workflows/transitions.fsm.json`：同步上述 state 转移
 - `DPT_FRAMEWORK/schema/enums.mjs` 的 `CurrentGate`：新增 `seed_topics_ready`（位于 `setup_ready` 与 `wave0_complete` 之间）
 
 `rb_status.json` 模板（`rb_templates/`）的 `current_gate`/`next_gate` 初始值 SHALL 反映新阶段，或由 setup gate pass 后更新为 `seed_topics_ready` / `wave0_complete`。

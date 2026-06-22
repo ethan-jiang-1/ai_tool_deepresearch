@@ -57,9 +57,6 @@ function scaffold(opts = {}) {
   if (opts.chain !== undefined) {
     writeFileSync(join(wd, 'transitions.chain.json'), JSON.stringify(opts.chain));
   }
-  if (opts.fsm !== undefined) {
-    writeFileSync(join(wd, 'transitions.fsm.json'), JSON.stringify(opts.fsm));
-  }
 
   return { wd, nd, gd };
 }
@@ -92,14 +89,6 @@ describe('ValidateWorkflowPackage — happy path', () => {
       },
       chain: {
         'phases/phase-setup.md': { passed: 'phases/phase-final.md' },
-      },
-      fsm: {
-        name: 'test',
-        initial: 'phases/phase-setup.md',
-        states: {
-          'phases/phase-setup.md': { on: { passed: 'phases/phase-final.md' } },
-          'phases/phase-final.md': { on: { passed: null } },
-        },
       },
     });
 
@@ -390,62 +379,7 @@ describe('ValidateWorkflowPackage — transition table checks', () => {
     cleanup();
   });
 
-  it('reports FSM missing node and missing target', () => {
-    scaffold({
-      manifest: {
-        phases: [
-          { key: 'setup', node: 'phases/phase-setup.md', gate: 'setup-ready' },
-        ],
-        shared: [],
-      },
-      nodes: {
-        'phases/phase-setup.md': { node_type: 'phase', id: 'phase-setup', phase: 'setup', gate: 'setup-ready', stop: 'no', requires: [], suggested_context: [] },
-      },
-      fsm: {
-        name: 'test',
-        initial: 'phases/phase-setup.md',
-        states: {
-          'phases/phase-ghost.md': { on: { passed: 'phases/phase-also-ghost.md' } },
-          'phases/phase-setup.md':   { on: { passed: 'phases/phase-ghost-target.md' } },
-        },
-      },
-    });
-
-    const report = validateWorkflowPackage({
-      workflowsDir: join(TMP, 'workflows'),
-      gateDefsDir: join(TMP, 'gate_defs'),
-    });
-
-    assert.strictEqual(report.passed, false);
-    const nodeIssue = report.issues.find(i => i.class === 'fsm_transition_missing_node');
-    assert.ok(nodeIssue, 'Expected fsm_transition_missing_node issue');
-    assert.ok(nodeIssue.detail.includes('phase-ghost.md'));
-
-    const targetIssues = report.issues.filter(i => i.class === 'fsm_transition_missing_target');
-    assert.ok(targetIssues.length >= 2, `Expected at least 2 fsm_transition_missing_target issues, got ${targetIssues.length}`);
-    const ghostTargetIssue = targetIssues.find(i => i.detail.includes('phase-ghost-target.md'));
-    assert.ok(ghostTargetIssue, 'Expected fsm_transition_missing_target for phase-ghost-target.md');
-    cleanup();
-  });
-
-  it('reports when FSM JSON is unreadable', () => {
-    const wd = join(TMP, 'workflows');
-    mkdirSync(wd, { recursive: true });
-    writeFileSync(join(wd, 'manifest.json'), JSON.stringify({ phases: [], shared: [] }));
-    writeFileSync(join(wd, 'transitions.fsm.json'), 'not valid fsm json {{{');
-
-    const report = validateWorkflowPackage({
-      workflowsDir: wd,
-      gateDefsDir: join(TMP, 'gate_defs'),
-    });
-
-    assert.strictEqual(report.passed, false);
-    const issue = report.issues.find(i => i.class === 'fsm_transition_invalid');
-    assert.ok(issue, 'Expected fsm_transition_invalid issue');
-    cleanup();
-  });
-
-  it('skips chain/FSM checks when tables do not exist', () => {
+  it('skips chain checks when table does not exist', () => {
     scaffold({
       manifest: {
         phases: [

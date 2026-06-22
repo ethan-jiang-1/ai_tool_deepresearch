@@ -100,7 +100,7 @@ import { writeFileSync } from 'node:fs';
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/_trace.jsonl', { consoleEcho: true });
 const SRC = 'wl-medium';
-trace.traceInit('wl-medium: MD session', { source: SRC });
+	// traceInit already called in Step 2.1 — do not re-init (would unlink prior check events)
 
 const runtime = createWorkflowRuntime('test', NODES_DIR);
 const r1 = assessNode('repeat-1.entry.md', createState(), runtime, trace);

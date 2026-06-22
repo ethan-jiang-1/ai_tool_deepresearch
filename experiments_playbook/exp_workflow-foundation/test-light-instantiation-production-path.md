@@ -60,7 +60,7 @@ Production 路径特点：
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_rb_wff_prod_* | head -1)
+B=$(cat /tmp/pb_bundle)
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
 node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 ```
@@ -69,7 +69,7 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_rb_wff_prod_* | head -1)
+B=$(cat /tmp/pb_bundle)
 
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle $B --current-node phases/phase-instantiation.md)
 echo "$GATE" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('next:',j.check.next)})"
@@ -81,7 +81,7 @@ node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_rb_wff_prod_* | head -1)
+B=$(cat /tmp/pb_bundle)
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_trace.jsonl')})"
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
 ```

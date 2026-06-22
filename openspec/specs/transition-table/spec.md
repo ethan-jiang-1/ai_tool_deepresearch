@@ -2,21 +2,16 @@
 
 ## Purpose
 
-定义 Transition table 层的当前 Source of Record。`.chain.json` 和 `.fsm.json` 都是可查询的 transition tables，`ask-next.mjs` 根据后缀分发到对应 loader。Engine 只负责确定性查表，不负责 Agent Flow 编排。
+定义 Transition table 层的当前 Source of Record。`.chain.json` 是可查询的 transition table，`ask-next.mjs` 根据后缀分发到对应 loader。Engine 只负责确定性查表，不负责 Agent Flow 编排。
 ## Requirements
 ### Requirement: Transition table file naming convention
 
-Transition table 文件 SHALL 命名为 `transitions.<impl>.json`。`<impl>` SHALL 为 `chain`（静态映射表）或 `fsm`（FSM 状态转移图）。
+Transition table 文件 SHALL 命名为 `transitions.<impl>.json`。`<impl>` SHALL 为 `chain`（静态映射表）。
 
 #### Scenario: Chain format recognized by suffix
 
 - **WHEN** `askNext('.../transitions.chain.json', 'gate-x', 'passed')` 被调用
 - **THEN** SHALL 使用 chain loader（`loadChain`）加载文件并查询
-
-#### Scenario: FSM format recognized by suffix
-
-- **WHEN** `askNext('.../transitions.fsm.json', 'gate-x', 'passed')` 被调用
-- **THEN** SHALL 使用 FSM loader（`loadFSM`）加载文件并查询
 
 ### Requirement: transitions.chain.json structure
 
@@ -37,19 +32,13 @@ Transition table 文件 SHALL 命名为 `transitions.<impl>.json`。`<impl>` SHA
 `resolveNodeTransitionDetailed(path, currentNodeRef, outcome, context)` SHALL route by `path` suffix:
 
 - `.chain.json` -> `loadChain()` + `resolveTransition()`
-- `.fsm.json` -> `loadFSM()` + `resolveTransition()`
 
-The detailed router SHALL NOT accept gate-key routing as a public contract and SHALL NOT expose the retired `askNext(path, gate, state)` API.
+Unknown suffixes SHALL return `kind: 'config_error'`. The detailed router SHALL NOT accept gate-key routing as a public contract and SHALL NOT expose the retired `askNext(path, gate, state)` API.
 
 #### Scenario: Chain suffix uses chain backend
 
 - **WHEN** `resolveNodeTransitionDetailed('transitions.chain.json', 'phases/phase-wave0.md', 'passed', context)` is called
 - **THEN** the chain backend SHALL produce the detailed routing result
-
-#### Scenario: FSM suffix uses FSM backend
-
-- **WHEN** `resolveNodeTransitionDetailed('transitions.fsm.json', 'phases/phase-wave0.md', 'passed', context)` is called
-- **THEN** the FSM backend SHALL produce the detailed routing result
 
 #### Scenario: Retired askNext contract is absent
 
@@ -132,7 +121,7 @@ The detailed router result SHALL be preserved by consumers that need diagnostics
 
 #### Scenario: Terminal lookup returns terminal
 
-- **WHEN** `resolveNodeTransitionDetailed('transitions.fsm.json', 'phases/phase-final.md', 'passed', context)` is called and the table maps that branch to `null`
+- **WHEN** `resolveNodeTransitionDetailed('transitions.chain.json', 'phases/phase-final.md', 'passed', context)` is called and the table maps that branch to `null`
 - **THEN** the result SHALL have `kind: 'terminal'`
 
 #### Scenario: Missing branch returns no_transition

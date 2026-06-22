@@ -40,7 +40,7 @@ suggested_context:
 - Synthesis 包含至少 1 个 Markdown link，指向 `reference/` 或 `artifacts/wave1/` 下的文件
 - 至少 1 条引用目标在 bundle 中真实存在（gate 通过 `cross_field` Markdown link 解析验证）
 - `rb_trace.jsonl` 中有 `wave2_completion` event
-- `rb_status.json` 中 `current_gate: wave2_complete` / `next_gate: hitl2_complete`
+- `rb_status.json` 中 `current_gate: wave2_complete` / `next_gate: hitl2_recorded`
 
 ## 5. Gate Command
 
@@ -63,7 +63,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle <path> --cur
 | 所有 link target 不存在 | 检查引用路径是否正确，确认目标 artifact 存在 |
 | 部分 link target 不存在 | gate 仍可 pass（≥1 有效引用即可），但 advice 会列出失效路径供修复 |
 | `trace_event_present` fail | 确认已记录 `wave2_completion` trace event |
-| status drift | 恢复 `current_gate`/`next_gate` 为 `wave2_complete`/`hitl2_complete` |
+| status drift | 恢复 `current_gate`/`next_gate` 为 `wave2_complete`/`hitl2_recorded` |
 
 **Persistent failure：** 若 wave2 gate 连续 3 次修复无进展，记录 escalation。
 

@@ -1,6 +1,6 @@
 {
   "gate": "wave2-complete",
-  "description": "Verify Wave2 produced a cross-topic synthesis artifact: synthesis file exists and is non-empty, contains at least one Markdown link referencing a Wave0 or Wave1 artifact, at least one reference target actually exists in the bundle, trace evidence present, status values point to wave2→hitl2.",
+  "description": "Verify Wave2 produced a cross-topic synthesis artifact: synthesis file exists and is non-empty, contains at least one Markdown link referencing a Wave0 or Wave1 artifact, at least one reference target actually exists in the bundle, trace evidence present, status values point to wave2→hitl2_recorded.",
   "rules": [
     {
       "id": "synthesis_exists",
@@ -41,8 +41,8 @@
       "id": "status_next_gate",
       "check": "status_value",
       "target": "rb_status.json#/next_gate",
-      "expected": "hitl2_complete",
-      "failure_message": "rb_status.json next_gate must be 'hitl2_complete'. Status may have drifted — restore the correct value."
+      "expected": "hitl2_recorded",
+      "failure_message": "rb_status.json next_gate must be 'hitl2_recorded'. Status may have drifted — restore the correct value."
     }
   ]
 }

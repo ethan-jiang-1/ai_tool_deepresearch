@@ -34,6 +34,112 @@ cat DPT_FRAMEWORK/workflows/transitions.chain.json
 
 ---
 
+## Step 1.5: 预填 bundle 内容（所有 gate 需要的 artifact + trace + status）
+
+gate 检查的是真实文件。必须先写入 HITL1 payload、topic registry、wave artifacts、trace events、status 等。
+
+```bash
+# --- HITL1 profile ---
+cat > $B/rb_profile.yaml << 'EOF'
+plan_basename: wff_val_happy
+research_profile: quick_factual
+root_must_answer_set:
+  - "What is the current state of AI safety research?"
+human_decision_checkpoints:
+  hitl1:
+    status: recorded
+    recorded_at: "2026-06-21T00:00:00.000Z"
+    research_profile_selection: quick_factual
+  hitl2:
+    status: recorded
+    answerability_class: ready_substantive
+    user_decision: proceed_to_readiness
+    final_report_view: profile_default
+    recorded_at: "2026-06-21T01:00:00.000Z"
+EOF
+
+# --- Plan with topic_registry ---
+cat > $B/rb_plan.md << 'EOF'
+---
+{"plan_basename":"wff_val_happy","derived_topic_count":1,"topic_registry":[{"id":"topic-a","slug":"topic-a","title":"AI Safety"}]}
+---
+# Research Plan
+EOF
+
+# --- Seed topics ---
+mkdir -p $B/seed_topics
+cat > $B/seed_topics/topic-a.md << 'EOF'
+---
+slug: topic-a
+title: AI Safety Research
+---
+# Topic: AI Safety
+EOF
+
+# --- Wave0: reference ---
+mkdir -p $B/reference/topic-a
+cat > $B/reference/index.md << 'EOF'
+# Reference Index
+- [AI Safety](topic-a/source.yaml)
+EOF
+cat > $B/reference/topic-a/source.yaml << 'EOF'
+- url: "https://example.com/ai-safety"
+  title: "AI Safety Overview"
+  retrieved_date: "2026-06-15"
+  topic_tag: "topic-a"
+EOF
+
+# --- Wave1: skeleton ---
+mkdir -p $B/artifacts/wave1/topic-a
+cat > $B/artifacts/wave1/topic-a/skeleton.md << 'EOF'
+---
+capability: foundation-placeholder
+---
+# Skeleton: AI Safety
+
+This is a foundation-placeholder skeleton for topic-a.
+EOF
+
+# --- Wave2: synthesis ---
+mkdir -p $B/artifacts/wave2
+cat > $B/artifacts/wave2/synthesis.md << 'EOF'
+# Cross-Topic Synthesis
+
+Key findings from the research waves.
+See [topic-a skeleton](../wave1/topic-a/skeleton.md) for details.
+EOF
+
+# --- HITL2: decision brief ---
+mkdir -p $B/artifacts/hitl2
+cat > $B/artifacts/hitl2/decision-brief.md << 'EOF'
+# Final Review Decision Brief
+
+Research is complete. All waves passed.
+Proceed to readiness and final delivery.
+EOF
+
+# --- rb_status: start execution mode ---
+cat > $B/rb_status.json << 'EOF'
+{"current_mode":"execution","state":"in_progress","current_gate":"instantiation_complete","next_gate":"hitl1_recorded"}
+EOF
+
+# --- Phase completion trace events ---
+for phase in instantiation hitl1 setup wave0 wave1 wave2 hitl2; do
+  echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",\"event\":\"${phase}_completion\",\"phase\":\"$phase\"}" >> $B/rb_trace.jsonl
+done
+
+'	# hitl2-recorded gate checks for this specific event name'
+'	echo "{"ts":"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)","event":"hitl2_recorded","phase":"hitl2"}" >> $B/rb_trace.jsonl'
+'	# --- Gate attempt events (readiness gate audits these) ---'
+'	for g in instantiation-complete hitl1-recorded setup-ready seed-topics-ready wave0-complete wave1-complete wave2-complete hitl2-recorded; do'
+'	  echo "{"ts":"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)","event":"gate_attempt","gate":"$g","passed":true}" >> $B/rb_trace.jsonl'
+'	done'
+echo "=== Pre-seed complete ==="
+```
+
+---
+
+
 ## Step 2: instantiation
 
 ```bash
@@ -55,6 +161,7 @@ log.info('gate '+gr.check.gate+' → '+(gr.check.passed?'PASS':'FAIL')+' next='+
 console.log('JS回答: gate — passed='+gr.check.passed+' next='+gr.check.next);
 if(!gr.check.passed){console.log('FAIL: expected PASS');process.exit(1);}
 JS
+echo '{"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"wave0_complete"}' > $B/rb_status.json
 node $B/step.mjs $B "phases/phase-instantiation.md" "instantiation-complete"
 ```
 
@@ -75,6 +182,7 @@ const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs
 const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
 if(!gr.check.passed||!gr.check.next)process.exit(1);
 JS
+echo '{"current_mode":"execution","state":"in_progress","current_gate":"hitl1_recorded","next_gate":"setup_ready"}' > $B/rb_status.json
 node $B/step.mjs $B "phases/phase-hitl1.md" "hitl1-recorded"
 ```
 
@@ -93,6 +201,7 @@ const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs
 const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
 if(!gr.check.passed||!gr.check.next)process.exit(1);
 JS
+echo '{"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"wave0_complete"}' > $B/rb_status.json
 node $B/step.mjs $B "phases/phase-setup.md" "setup-ready"
 ```
 
@@ -110,6 +219,7 @@ const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs
 const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
 if(!gr.check.passed||!gr.check.next)process.exit(1);
 JS
+echo '{"current_mode":"execution","state":"in_progress","current_gate":"wave0_complete","next_gate":"wave1_complete"}' > $B/rb_status.json
 node $B/step.mjs $B "phases/phase-wave0.md" "wave0-complete"
 ```
 
@@ -127,6 +237,7 @@ const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs
 const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
 if(!gr.check.passed||!gr.check.next)process.exit(1);
 JS
+echo '{"current_mode":"execution","state":"in_progress","current_gate":"wave1_complete","next_gate":"wave2_complete"}' > $B/rb_status.json
 node $B/step.mjs $B "phases/phase-wave1.md" "wave1-complete"
 ```
 
@@ -144,6 +255,7 @@ const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs
 const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
 if(!gr.check.passed||!gr.check.next)process.exit(1);
 JS
+echo '{"current_mode":"execution","state":"in_progress","current_gate":"wave2_complete","next_gate":"hitl2_recorded"}' > $B/rb_status.json
 node $B/step.mjs $B "phases/phase-wave2.md" "wave2-complete"
 ```
 
@@ -161,6 +273,7 @@ const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs
 const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
 if(!gr.check.passed||!gr.check.next)process.exit(1);
 JS
+echo '{"current_mode":"execution","state":"in_progress","current_gate":"hitl2_recorded","next_gate":"readiness_passed"}' > $B/rb_status.json
 node $B/step.mjs $B "phases/phase-hitl2.md" "hitl2-recorded"
 ```
 
@@ -178,6 +291,7 @@ const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs
 const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
 if(!gr.check.passed||!gr.check.next)process.exit(1);
 JS
+echo '{"current_mode":"execution","state":"in_progress","current_gate":"readiness_passed","next_gate":"none"}' > $B/rb_status.json
 node $B/step.mjs $B "phases/phase-readiness.md" "readiness-passed"
 ```
 

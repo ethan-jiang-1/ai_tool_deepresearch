@@ -8,7 +8,7 @@ import { join, basename, extname } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import {
   parseGateCliArgs,
-  loadGateDefinition,
+  tryLoadGateDefinition,
   validateNodeGateBinding,
   resolveRouting,
   buildGateResult,
@@ -17,9 +17,11 @@ import {
 } from '../../engine/helpers/gate-helpers.mjs';
 
 const args = parseGateCliArgs();
+if (args.error) { emitGateResult(args.error); }
 
 // Load gate definition
-const definition = loadGateDefinition('seed-topics-ready');
+const { definition, error: defError } = tryLoadGateDefinition('seed-topics-ready', args.currentNode || null);
+if (defError) { emitGateResult(defError); }
 
 // Validate node/gate binding
 const bindingError = validateNodeGateBinding(args.currentNode, definition.gate);
@@ -193,7 +195,8 @@ for (const rule of definition.rules) {
     } else if (rule.check === 'placeholder') {
       continue;
     } else {
-      ruleDetail = `Unknown check type: ${rule.check} (mode: ${rule.mode || 'n/a'}) — skipped`;
+      rulePassed = false;
+      ruleDetail = `Unknown check type: ${rule.check} (mode: ${rule.mode || 'n/a'}) — must fail (check type not implemented)`;
     }
   } catch (err) {
     rulePassed = false;

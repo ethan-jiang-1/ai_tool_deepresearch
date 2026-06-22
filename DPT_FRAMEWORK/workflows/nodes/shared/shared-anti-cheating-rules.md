@@ -43,7 +43,23 @@ suggested_context: []
 
 **正确替代**：HITL1 回答必须来自用户。不要编造 `research_profile`、`root_must_answer_set` 等内容来让 gate pass。
 
-### 8. 禁止把 setup pass 当成 readiness pass
+### 8. 禁止在 final phase 从 chat memory 生成报告
+
+**正确替代**：final report MUST 从 verified bundle state 生成——读取 Wave0/1/2 artifacts、`rb_profile.yaml`、`rb_status.json`、`rb_trace.jsonl` 等持久化文件。不能重新凭聊天记忆或 LLM 内部知识编造内容。报告中的声明必须引用 bundle 中真实存在的 source artifact。
+
+### 9. 禁止在 final phase 暗藏 hidden next、hidden gate 或隐式循环
+
+**正确替代**：final 是 terminal node（`gate: null`，`transitions.chain.json` 无 final 条目）。Post-delivery 用户反馈走 HITL2 `rerun` 路径——Agent 从 `seed-topics` 重新跑，profile 已有新反馈。不能在 final node 里塞 hidden loop 让 Agent 原地转圈。
+
+### 10. 禁止 readiness gate 做语义质量判断
+
+**正确替代**：readiness gate 的 rule set 仅限于 deterministic structural check——`file_exists`、`dir_non_empty`、`yaml_parse`、`jsonl_parse`、`trace_has_events`、`status_value`。不能因为"synthesis 写得不够好"、"evidence 不够强"、"argument 不够严密"而 fail readiness。这些语义质量判断属于 HITL2 人类审查范畴。
+
+### 11. 禁止 Agent 替用户填写 HITL2 decision
+
+**正确替代**：`user_decision` 和 `rationale` 必须来自真实用户输入。Agent 可以产出 decision brief 帮助用户做决策，但不能在用户未回答时填入 placeholder decision（如选 `proceed_to_readiness` 作为默认值）。
+
+### 12. 禁止把 setup pass 当成 readiness pass
 
 **正确替代**：`setup-ready` gate pass 只确认 structural consistency（文件存在、schema 合法、basename 一致）。它不意味着研究质量过关或可以交付最终报告。`readiness-passed` 是另一个 gate，在 wave0/1/2 + HITL2 之后。
 

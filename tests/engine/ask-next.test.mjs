@@ -26,22 +26,11 @@ const CHAIN_DATA_INVALID_NEXT = {
   'phases/phase-wave0.md': { passed: '../bad.md' },
 };
 
-const FSM_DATA = {
-  name: 'test-fsm',
-  initial: 'phases/phase-a.md',
-  states: {
-    'phases/phase-a.md': { on: { passed: 'phases/phase-b.md' } },
-    'phases/phase-b.md': { on: { passed: 'phases/phase-c.md', failed: 'phases/phase-repair.md' } },
-    'phases/phase-c.md': { on: { passed: null } },
-  },
-};
-
 before(() => {
   if (!existsSync(TMP)) mkdirSync(TMP, { recursive: true });
   writeFileSync(join(TMP, 'transitions.chain.json'), JSON.stringify(CHAIN_DATA));
   writeFileSync(join(TMP, 'transitions.backslash-next.chain.json'), JSON.stringify(CHAIN_DATA_BACKSLASH_NEXT));
   writeFileSync(join(TMP, 'transitions.invalid-next.chain.json'), JSON.stringify(CHAIN_DATA_INVALID_NEXT));
-  writeFileSync(join(TMP, 'transitions.fsm.json'), JSON.stringify(FSM_DATA));
 });
 
 after(() => {
@@ -69,11 +58,6 @@ describe('resolveNodeTransitionDetailed — next result', () => {
     assert.strictEqual(r.next, 'phases/phase-wave1.md');
   });
 
-  it('fsm: returns kind=next with next node', () => {
-    const r = resolveNodeTransitionDetailed(join(TMP, 'transitions.fsm.json'), 'phases/phase-a.md', 'passed');
-    assert.strictEqual(r.kind, 'next');
-    assert.strictEqual(r.next, 'phases/phase-b.md');
-  });
 });
 
 describe('resolveNodeTransitionDetailed — terminal result', () => {
@@ -83,11 +67,6 @@ describe('resolveNodeTransitionDetailed — terminal result', () => {
     assert.strictEqual(r.next, null);
   });
 
-  it('fsm: returns kind=terminal when next is null', () => {
-    const r = resolveNodeTransitionDetailed(join(TMP, 'transitions.fsm.json'), 'phases/phase-c.md', 'passed');
-    assert.strictEqual(r.kind, 'terminal');
-    assert.strictEqual(r.next, null);
-  });
 });
 
 describe('resolveNodeTransitionDetailed — no_transition result', () => {
@@ -103,11 +82,6 @@ describe('resolveNodeTransitionDetailed — no_transition result', () => {
     assert.strictEqual(r.next, null);
   });
 
-  it('fsm: returns kind=no_transition for unknown node', () => {
-    const r = resolveNodeTransitionDetailed(join(TMP, 'transitions.fsm.json'), 'phases/ghost.md', 'passed');
-    assert.strictEqual(r.kind, 'no_transition');
-    assert.strictEqual(r.next, null);
-  });
 });
 
 describe('resolveNodeTransitionDetailed — invalid_input result', () => {

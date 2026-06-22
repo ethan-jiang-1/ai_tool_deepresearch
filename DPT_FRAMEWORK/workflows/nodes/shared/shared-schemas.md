@@ -56,6 +56,14 @@ suggested_context: []
 - **格式**：YAML array，每项为一条 reference metadata
 - **位置**：`DPT_FRAMEWORK/schema/contracts/reference.mjs`
 
+### `final/` — Terminal Delivery Directory
+
+- **位置**：active bundle 根目录下的 `final/` 目录
+- **角色**：final 是 terminal node（`gate: null`），没有 gate CLI 检查此目录。delivery 完成由 `final/` 目录下存在至少一份报告文件来证明
+- **内容**：Agent 从 verified bundle state 生成的 final report artifact(s)，格式自由（Markdown、executive summary 等）
+- **注意**：`final/` 目录在 bundle instantiation 时已创建（scaffold），但内容是 final phase 才产生。空目录不代表 delivery 完成
+- **Post-delivery 反馈**：走 HITL2 `rerun` 路径，不通过 final node
+
 ### Wave Artifact 目录结构
 
 - **`reference/<topic>/source.yaml`**：Wave0 per-topic reference metadata（YAML array，每项满足 `ReferenceMetadataSchema`）。Foundation floor：每个 topic ≥ 1 条 metadata。

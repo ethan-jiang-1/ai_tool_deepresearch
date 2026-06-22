@@ -111,7 +111,7 @@ Gate SHALL NOT 检查 skeleton 内容的研究质量或完整性。
 - 至少 1 条引用目标在 bundle 中真实存在（`cross_field` check type，`mode: "markdown_link_resolution"`：解析 Markdown links → 验证目标文件存在；≥1 有效引用时 pass）
 - trace 中有 `wave2_completion` event
 - `rb_status.json#/current_gate == wave2_complete`
-- `rb_status.json#/next_gate == hitl2_complete`
+- `rb_status.json#/next_gate == hitl2_recorded`
 
 Gate SHALL NOT 判断 synthesis 是否有洞察或引用是否充分。引用格式 SHALL 使用标准 Markdown link `[label](relative/path.md)`，`cross_field` check 将 path 解析为相对于 `artifacts/wave2/` 的路径。
 

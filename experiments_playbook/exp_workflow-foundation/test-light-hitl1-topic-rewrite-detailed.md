@@ -49,6 +49,7 @@ verdict: trace-jsonl
 REPO_ROOT=$(pwd)
 B=$(node experiments/shared/new-disposable-bundle.mjs wff_rwd --force)
 echo "Bundle: $B"
+echo "$B" > /tmp/pb_bundle
 ```
 
 ## Step 2: Agent 读 `phase-hitl1.md` §3a — 判断输入
@@ -76,7 +77,7 @@ Agent 的轻量整理：
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_rwd_* | head -1)
+B=$(cat /tmp/pb_bundle)
 
 cat > $B/rb_plan.md << 'PLANEOF'
 ---
@@ -116,7 +117,7 @@ grep -c 'Agent 未添加' $B/rb_plan.md
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_rwd_* | head -1)
+B=$(cat /tmp/pb_bundle)
 
 cat > $B/rb_profile.yaml << 'EOF'
 plan_basename: wff_rwd
@@ -141,7 +142,7 @@ echo "HITL1 profile written per §3b"
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_rwd_* | head -1)
+B=$(cat /tmp/pb_bundle)
 
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
 echo "$GATE" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed)})"

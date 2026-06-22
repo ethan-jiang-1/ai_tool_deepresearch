@@ -47,6 +47,7 @@ verdict: trace-jsonl
 REPO_ROOT=$(pwd)
 B=$(node experiments/shared/new-disposable-bundle.mjs wff_manual --force)
 echo "Bundle: $B"
+echo "$B" > /tmp/pb_bundle
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B 2>&1 | tail -1
 ```
 
@@ -60,7 +61,7 @@ node DPT_FRAMEWORK/cli/validate-bundle.mjs $B 2>&1 | tail -1
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_manual_* | head -1)
+B=$(cat /tmp/pb_bundle)
 cat > $B/rb_profile.yaml << 'EOF'
 plan_basename: wff_manual
 research_profile: quick_factual
@@ -87,7 +88,7 @@ node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_manual_* | head -1)
+B=$(cat /tmp/pb_bundle)
 cat > $B/rb_profile.yaml << 'EOF'
 plan_basename: wff_manual
 research_profile: exploratory_map
@@ -115,7 +116,7 @@ node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_manual_* | head -1)
+B=$(cat /tmp/pb_bundle)
 cat > $B/rb_profile.yaml << 'EOF'
 plan_basename: wff_manual
 research_profile: claim_verification
@@ -141,7 +142,7 @@ node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_manual_* | head -1)
+B=$(cat /tmp/pb_bundle)
 cat > $B/rb_profile.yaml << 'EOF'
 plan_basename: wff_manual
 research_profile: not_selected
@@ -169,7 +170,7 @@ node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_manual_* | head -1)
+B=$(cat /tmp/pb_bundle)
 cat > $B/rb_profile.yaml << 'EOF'
 plan_basename: wff_manual
 research_profile: quick_factual
@@ -194,7 +195,7 @@ node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_manual_* | head -1)
+B=$(cat /tmp/pb_bundle)
 cat > $B/rb_profile.yaml << 'EOF'
 plan_basename: wff_manual
 research_profile: quick_factual
@@ -221,7 +222,7 @@ node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_manual_* | head -1)
+B=$(cat /tmp/pb_bundle)
 
 echo "=== Trace evidence ==="
 cat $B/_trace.jsonl | while read line; do
@@ -253,7 +254,7 @@ process.stdin.on('data', d => {
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_manual_* | head -1)
+B=$(cat /tmp/pb_bundle)
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
   m.cleanup('$B');

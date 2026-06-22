@@ -50,6 +50,7 @@ verdict: trace-jsonl
 REPO_ROOT=$(pwd)
 B=$(node experiments/shared/new-disposable-bundle.mjs wff_rw --force)
 echo "Bundle: $B"
+echo "$B" > /tmp/pb_bundle
 ```
 
 ## Step 2: Agent 读 `phase-hitl1.md` §3a — 判断输入
@@ -72,7 +73,7 @@ echo "Bundle: $B"
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_rw_* | head -1)
+B=$(cat /tmp/pb_bundle)
 
 # Step 1+2: Expand and write to rb_plan.md body + frontmatter topic_registry
 cat > $B/rb_plan.md << 'PLANEOF'
@@ -127,7 +128,7 @@ grep -c '关键维度' $B/rb_plan.md && echo "body has structured sections"
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_rw_* | head -1)
+B=$(cat /tmp/pb_bundle)
 
 cat > $B/rb_profile.yaml << 'EOF'
 plan_basename: wff_rw
@@ -156,7 +157,7 @@ grep -E 'research_profile|root_must_answer|status:' $B/rb_profile.yaml | head -5
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_rw_* | head -1)
+B=$(cat /tmp/pb_bundle)
 
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
 echo "$GATE" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('next:',j.check.next)})"
@@ -168,7 +169,7 @@ node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_wff_rw_* | head -1)
+B=$(cat /tmp/pb_bundle)
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_trace.jsonl')})"
 node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
 ```

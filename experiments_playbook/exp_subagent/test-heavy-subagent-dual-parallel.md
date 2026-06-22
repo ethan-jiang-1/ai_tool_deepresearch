@@ -85,7 +85,7 @@ const slots = stageSubagentSlots(
   'dpt_disp_gs_medium',
   dispatchMap
 );
-writeFileSync('dpt_disp_gs_medium/_slots.json', JSON.stringify(slots, null, 2));
+writeFileSync(__dirname + '/_slots.json', JSON.stringify(slots, null, 2));
 console.log(`Dispatch OK: ${slots.length} slots (taskSize=${taskSize})`);
 for (const slot of slots) console.log(`Slot task: dpt_disp_gs_medium/${slot.taskPath}`);
 JS
@@ -110,11 +110,11 @@ cat > "$B/native-agent-request.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { recordAgentSpawnRequested } from '../DPT_FRAMEWORK/engine/subagent-relay.mjs';
 
-const slots = JSON.parse(readFileSync('dpt_disp_gs_medium/_slots.json', 'utf-8'));
+const slots = JSON.parse(readFileSync(__dirname + '/_slots.json', 'utf-8'));
 const platform = 'claude-code';
 const runtimeMode = 'project-agent';
 for (const slot of slots) {
-  const prompt = recordAgentSpawnRequested(slot, 'dpt_disp_gs_medium', { platform, runtimeMode, parentRuntimeAgentId: undefined });
+  const prompt = recordAgentSpawnRequested(slot, __dirname, { platform, runtimeMode, parentRuntimeAgentId: undefined });
   console.log('--- SPAWN PROMPT for ' + slot.key + ' ---');
   console.log(prompt);
 }
@@ -152,10 +152,10 @@ plus `agent_result_ready` into the central trace.
 cat > "$B/import-receipts.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { ingestAgentReceipt } from '../DPT_FRAMEWORK/engine/subagent-relay.mjs';
-const slots = JSON.parse(readFileSync('dpt_disp_gs_medium/_slots.json', 'utf-8'));
+const slots = JSON.parse(readFileSync(__dirname + '/_slots.json', 'utf-8'));
 for (const [i, slot] of slots.entries()) {
   const agentId = 'test-agent-' + i;
-  const imported = ingestAgentReceipt(slot, 'dpt_disp_gs_medium', { platform: 'claude-code', runtimeMode: 'project-agent', runtimeAgentId: agentId });
+  const imported = ingestAgentReceipt(slot, __dirname, { platform: 'claude-code', runtimeMode: 'project-agent', runtimeAgentId: agentId });
   console.log('receipt imported slot ' + i + ': ' + imported.agent.runtimeAgentId);
 }
 JS
@@ -178,11 +178,11 @@ cat > "$B/parent-relay.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { commitSlotResult } from '../DPT_FRAMEWORK/engine/subagent-relay.mjs';
 
-const slots = JSON.parse(readFileSync('dpt_disp_gs_medium/_slots.json', 'utf-8'));
+const slots = JSON.parse(readFileSync(__dirname + '/_slots.json', 'utf-8'));
 const files = ['relay-source-intake.json', 'relay-source-diagnostic.json'];
 for (const [i, slot] of slots.entries()) {
-  const result = JSON.parse(readFileSync('dpt_disp_gs_medium/' + files[i], 'utf-8'));
-  const relay = commitSlotResult(slot, 'dpt_disp_gs_medium', result, { platform: 'claude-code', runtimeMode: 'project-agent', parentRuntimeAgentId: undefined });
+  const result = JSON.parse(readFileSync(__dirname + '/'' + files[i], 'utf-8'));
+  const relay = commitSlotResult(slot, __dirname, result, { platform: 'claude-code', runtimeMode: 'project-agent', parentRuntimeAgentId: undefined });
   console.log('Relay ' + (relay.ok ? 'OK' : 'FAILED') + ': ' + slot.key);
   if (!relay.ok) console.log(relay.result.notes.join('; '));
 }
@@ -196,15 +196,15 @@ node "$B/parent-relay.mjs" 2>&1 | grep -v "^\[trace\]"
 cat > "$B/collect.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { collectAndMergeSubagentResults } from '../DPT_FRAMEWORK/engine/subagent-relay.mjs';
-const slots = JSON.parse(readFileSync('dpt_disp_gs_medium/_slots.json', 'utf-8'));
-const merged = collectAndMergeSubagentResults({ current_gate:'wave0_complete', ref_count:5, ref_floor:5, topicReadiness:'ready' }, slots, 'dpt_disp_gs_medium');
+const slots = JSON.parse(readFileSync(__dirname + '/_slots.json', 'utf-8'));
+const merged = collectAndMergeSubagentResults({ current_gate:'wave0_complete', ref_count:5, ref_floor:5, topicReadiness:'ready' }, slots, __dirname);
 console.log(`done=${merged.results.filter(r=>r.status==='done').length} failed=${merged.results.filter(r=>r.status==='failed').length} all_failed=${merged.finalState.subagent_all_failed}`);
 JS
 node "$B/collect.mjs" 2>&1 | grep -v "^\[trace\]"
 
 cat > "$B/audit.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
-const events = readFileSync('dpt_disp_gs_medium/_trace.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
+const events = readFileSync(__dirname + '/_trace.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
 const count = name => events.filter(e => e.event === name).length;
 const pass = count('agent_spawn_requested') === 2 && count('agent_runtime_started') === 2 && count('agent_result_ready') === 2 && count('agent_result_received') === 2 && count('result_schema_validated') === 2 && count('collect_result') === 2 && count('merge_complete') === 1;
 console.log(pass ? '\x1b[32mMEDIUM PASS\x1b[0m' : '\x1b[31mMEDIUM FAIL\x1b[0m');

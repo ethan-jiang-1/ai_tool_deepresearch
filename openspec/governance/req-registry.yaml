@@ -73,14 +73,14 @@ TEF-001: test-fixtures — Fixture framework for integration tests
 WDM-001: workflow-dynamic-md-load — Single-entry just-in-time Markdown closure loading and execution [DEPRECATED]
 WLO-001: workflow-chain-observability — Runtime receipts and trace events for workflow-chain single-entry loader experiments [DEPRECATED]
 WMD-001: workflow-md-dependencies — Markdown frontmatter requires dependency closure resolution [DEPRECATED]
-WFS-001: workflow-fsm-definition — FSM definition file loading, validation, and node-keyed structure
-WFS-002: workflow-fsm-transition — Pure node-keyed transition lookup (resolveTransition) plus low-level FSM tracker
-WFS-003: workflow-fsm-runtime — Machine class with advance(), createMachine factory, runtime halt/completion state
+WFS-001: workflow-fsm-definition — FSM definition file loading, validation, and node-keyed structure [DEPRECATED]
+WFS-002: workflow-fsm-transition — Pure node-keyed transition lookup (resolveTransition) plus low-level FSM tracker [DEPRECATED]
+WFS-003: workflow-fsm-runtime — Machine class with advance(), createMachine factory, runtime halt/completion state [DEPRECATED]
 WML-001: workflow-manifest-loading — Workflow-next runtime initializes without manifest/cursor or preloading Markdown [DEPRECATED]
 
 # dedup-experiments-framework (delta specs merged to openspec/specs/)
 FRE-001: framework-engine — DPT_FRAMEWORK/engine/ as canonical directory for 7 production engine modules
-FRE-002: framework-engine — workflow-fsm standalone pure FSM transition resolver (5 exports, 241 lines, zero engine imports)
+FRE-002: framework-engine — workflow-fsm standalone pure FSM transition resolver (5 exports, 241 lines, zero engine imports) [DEPRECATED]
 TRW-001: trace-writer — Unified append-only JSONL trace writer with createTrace factory (3 variants)
 TRW-002: trace-writer — Trace output validates against TraceEntrySchema contract
 EXS-001: experiment-shared-infra — experiments/shared/ directory for experiment-scoped shared infrastructure
@@ -178,7 +178,7 @@ LFW-001: lifecycle-walker — Walker reads manifest and walks lifecycle (--bundl
 LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass (max 3 retries, escalation on exceeded limit) [DEPRECATED]
 LFW-003: "lifecycle-walker — Walker logs progress via logger (createLogger({ file: '<bundle>/_logs/run.log' })) [DEPRECATED]"
 LFW-004: lifecycle-walker — Walker requires --bundle flag (exit(2) on missing) [DEPRECATED]
-GSK-004: "gate-skeleton — Gate CLI evaluates rules from definition and emits detailed routing diagnostics (load definition JSON, iterate all rule types, check/inspect/advice feedback; 7 gate CLIs: 3 pre-research + 1 seed-topics + 3 wave gate CLIs; new check types: count_floor, dir_non_empty, cross_field slug_consistency, cross_field markdown_link_resolution)"
+GSK-004: "gate-skeleton — Gate CLI evaluates rules from definition and emits detailed routing diagnostics (load definition JSON, iterate all rule types, check/inspect/advice feedback; 9 gate CLIs: 3 pre-research + 1 seed-topics + 3 wave + 2 delivery; new check types: count_floor, dir_non_empty, cross_field slug_consistency, cross_field markdown_link_resolution, yaml_parse, jsonl_parse, trace_has_all_gates)"
 
 # wff-state-chain
 TRT-001: transition-table — File naming convention transitions.chain.json / transitions.fsm.json
@@ -186,3 +186,21 @@ TRT-002: transition-table — transitions.chain.json structure (gate→state→n
 TRT-003: transition-table — transition-chain.mjs engine (loadChain, resolveTransition, createChain; mirrors FSM)
 TRT-004: transition-table — ask-next.mjs unified dispatch (askNext dispatches to chain or FSM by file suffix)
 TRT-005: transition-table — Detailed node-result router contract and node-keyed backend dispatch
+
+# wff-content-delivery — phase content
+CDP-001: content-delivery-phase-content — phase-hitl2.md 9-section body (decision brief, structured user decision, stop=yes, anti-cheating)
+CDP-002: content-delivery-phase-content — phase-readiness.md 9-section body (deterministic precheck, all-prior-gate audit from manifest topology, anti-cheating)
+CDP-003: content-delivery-phase-content — phase-final.md 9-section body (terminal node gate=none, final report from verified bundle state, anti-cheating)
+
+# wff-content-delivery — gate implementation
+CDG-001: content-delivery-gate-implementation — gate-hitl2-recorded rule set (decision brief, yaml_parse, field_value enum, trace_event_present, status_value)
+CDG-002: "content-delivery-gate-implementation — gate-readiness-passed rule set (dir_non_empty, file_exists x4, trace_has_all_gates, yaml_parse, jsonl_parse, status_value)"
+CDG-003: content-delivery-gate-implementation — check-gate-hitl2-recorded CLI (gate-helpers pipeline, yaml_parse, field_non_empty, field_value, gate_attempt trace)
+CDG-004: "content-delivery-gate-implementation — check-gate-readiness-passed CLI (gate-helpers pipeline, trace_has_all_gates from manifest topology, jsonl_parse, gate_attempt trace)"
+
+# wff-content-delivery — experiments
+CDE-001: content-delivery-experiments — Playbook test-simple-hitl2-decision-recorded (happy pass + missing brief + missing decision + invalid enum)
+CDE-002: content-delivery-experiments — Playbook test-medium-readiness-precheck (happy pass + missing artifact + missing prior gates + bad YAML + corrupt JSONL)
+CDE-003: content-delivery-experiments — Playbook test-simple-delivery-full-chain (hitl2→readiness→final sequential + terminal semantics)
+CDE-004: content-delivery-experiments — Playbook test-simple-hitl2-rerun-branch (rerun gate pass, chain only has passed, Agent-level routing)
+CDE-005: content-delivery-experiments — Playbook test-medium-delivery-repair-loop (HITL2 + readiness PDCA repair cycles)

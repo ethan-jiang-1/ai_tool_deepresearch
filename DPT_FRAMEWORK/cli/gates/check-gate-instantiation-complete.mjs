@@ -7,7 +7,7 @@ import { existsSync, statSync, readFileSync, appendFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import {
   parseGateCliArgs,
-  loadGateDefinition,
+  tryLoadGateDefinition,
   validateNodeGateBinding,
   resolveRouting,
   buildGateResult,
@@ -15,9 +15,11 @@ import {
 } from '../../engine/helpers/gate-helpers.mjs';
 
 const args = parseGateCliArgs();
+if (args.error) { emitGateResult(args.error); }
 
 // Load gate definition
-const definition = loadGateDefinition('instantiation-complete');
+const { definition, error: defError } = tryLoadGateDefinition('instantiation-complete', args.currentNode || null);
+if (defError) { emitGateResult(defError); }
 
 // Validate node/gate binding
 const bindingError = validateNodeGateBinding(args.currentNode, definition.gate);
@@ -79,7 +81,8 @@ for (const rule of definition.rules) {
       }
     } else {
       // Unknown check type — skip with warning, don't fail
-      ruleDetail = `Unknown check type: ${rule.check} — skipped`;
+      rulePassed = false;
+      ruleDetail = `Unknown check type: ${rule.check} — must fail (check type not implemented)`;
     }
   } catch (err) {
     rulePassed = false;

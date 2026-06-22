@@ -58,7 +58,7 @@ cat > $B/rb_status.json << 'EOF'
   "current_mode": "execution",
   "state": "in_progress",
   "current_gate": "wave2_complete",
-  "next_gate": "hitl2_complete"
+  "next_gate": "hitl2_recorded"
 }
 EOF
 
@@ -368,7 +368,7 @@ node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>
 ### Gate-Detectable Issues (for cross-check)
 
 - [ ] Are all 12 Markdown link targets confirmed to exist in the bundle?
-- [ ] Does `rb_status.json` show `current_gate: wave2_complete` and `next_gate: hitl2_complete`?
+- [ ] Does `rb_status.json` show `current_gate: wave2_complete` and `next_gate: hitl2_recorded`?
 
 ---
 

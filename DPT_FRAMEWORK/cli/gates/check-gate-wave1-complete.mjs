@@ -7,7 +7,7 @@ import { existsSync, statSync, readFileSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   parseGateCliArgs,
-  loadGateDefinition,
+  tryLoadGateDefinition,
   validateNodeGateBinding,
   resolveRouting,
   buildGateResult,
@@ -16,9 +16,11 @@ import {
 } from '../../engine/helpers/gate-helpers.mjs';
 
 const args = parseGateCliArgs();
+if (args.error) { emitGateResult(args.error); }
 
 // Load gate definition
-const definition = loadGateDefinition('wave1-complete');
+const { definition, error: defError } = tryLoadGateDefinition('wave1-complete', args.currentNode || null);
+if (defError) { emitGateResult(defError); }
 
 // Validate node/gate binding
 const bindingError = validateNodeGateBinding(args.currentNode, definition.gate);
@@ -151,7 +153,7 @@ for (const rule of definition.rules) {
           // Legacy: match against bundle directory basename
           content = join(bundlePath, '..'); // Actually need the basename
           // Not applicable in wave1 — skip with warning
-          ruleDetail = `pattern_match with target="basename" not supported in wave1 gate — skipped`;
+          ruleDetail = `pattern_match with target="basename" not supported in wave1 gate — must fail (check type not implemented)`;
         } else {
           // File content mode: target is a file path (relative to bundle root)
           const filePath = join(bundlePath, resolvedTarget);
@@ -208,7 +210,8 @@ for (const rule of definition.rules) {
           ruleDetail = `Trace event "${rule.target}" not found in rb_trace.jsonl`;
         }
       } else {
-        ruleDetail = `Unknown check type: ${rule.check} — skipped`;
+        rulePassed = false;
+      ruleDetail = `Unknown check type: ${rule.check} — must fail (check type not implemented)`;
       }
     } catch (err) {
       rulePassed = false;

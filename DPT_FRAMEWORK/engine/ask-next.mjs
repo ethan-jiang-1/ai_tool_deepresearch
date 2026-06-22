@@ -5,7 +5,6 @@
 // ## Role
 // Single entry point for detailed transition queries. Dispatches by file suffix:
 //   .chain.json → transition-chain.mjs (loadChain + resolveTransition)
-//   .fsm.json   → transition-fsm.mjs (loadFSM + resolveTransition)
 //
 // Returns a discriminated result that classifies routing into exactly one of:
 //   next, terminal, no_transition, invalid_input, config_error
@@ -23,7 +22,6 @@
 //   // → { kind: 'next', next: 'phases/phase-wave1.md' }
 
 import { loadChain, resolveTransition as resolveChain } from './transition-chain.mjs';
-import { loadFSM, resolveTransition as resolveFSM } from './transition-fsm.mjs';
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
@@ -157,14 +155,8 @@ export function resolveNodeTransitionDetailed(transitionsPath, currentNodeRef, o
       return routedResult(r, 'chain', currentRef.ref, outcome);
     }
 
-    if (path.endsWith('.fsm.json')) {
-      const fsm = loadFSM(path);
-      const r = resolveFSM(fsm, currentRef.ref, outcome);
-      return routedResult(r, 'FSM', currentRef.ref, outcome);
-    }
-
     return result('config_error', null,
-      `Unknown transition format: ${path} (expected .chain.json or .fsm.json)`);
+      `Unknown transition format: ${path} (expected .chain.json)`);
   } catch (err) {
     // Load/parse errors are config errors
     if (err.code === 'ENOENT') {

@@ -1,14 +1,14 @@
 # Framework Engine
 
-> req: FRE-001, FRE-002
+> req: FRE-001
 
 ## Purpose
 
-Define the canonical location, import contract, and dependency rules for production engine modules under `DPT_FRAMEWORK/engine/`. These engines are the single source of truth for deterministic queue, gate, loader, FSM, and subagent relay mechanisms — shared by both production run bundles and experiment playbooks.
+Define the canonical location and import contract for production engine modules under `DPT_FRAMEWORK/engine/`. These engines are the single source of truth for deterministic queue, gate, loader, and subagent relay mechanisms — shared by both production run bundles and experiment playbooks.
 ## Requirements
 ### Requirement: Engine code canonical location
 
-Seven production engine modules SHALL reside at `DPT_FRAMEWORK/engine/` as their single canonical location:
+Six production engine modules SHALL reside at `DPT_FRAMEWORK/engine/` as their single canonical location:
 
 | Module | Canonical Path |
 |--------|---------------|
@@ -17,12 +17,11 @@ Seven production engine modules SHALL reside at `DPT_FRAMEWORK/engine/` as their
 | Gate Fork | `DPT_FRAMEWORK/engine/gate-fork.mjs` |
 | Subagent Relay | `DPT_FRAMEWORK/engine/subagent-relay.mjs` |
 | Workflow Chain | `DPT_FRAMEWORK/engine/workflow-chain.mjs` |
-| Workflow FSM | `DPT_FRAMEWORK/engine/workflow-fsm.mjs` |
 | Trace Writer | `DPT_FRAMEWORK/engine/trace.mjs` |
 
 No engine module SHALL exist as a copy in `experiments/prototype-*/`. Experiment playbooks and production run bundles SHALL import engines from their canonical paths.
 
-Workflow Chain is an MD loader + dependency resolver: it parses frontmatter, resolves dependency closures, reads and caches MD files, and returns results for the Agent to read. It SHALL NOT execute JS code blocks from MD nodes — MD content is Agent-readable, not engine-executable. Workflow FSM is a standalone pure FSM transition resolver.
+Workflow Chain is an MD loader + dependency resolver: it parses frontmatter, resolves dependency closures, reads and caches MD files, and returns results for the Agent to read. It SHALL NOT execute JS code blocks from MD nodes — MD content is Agent-readable, not engine-executable.
 
 #### Scenario: Experiment playbook imports engine from framework
 
@@ -39,24 +38,4 @@ Workflow Chain is an MD loader + dependency resolver: it parses frontmatter, res
 - **WHEN** the change is complete
 - **THEN** no `experiments/prototype-*/` directory SHALL contain an engine `.mjs` file that duplicates a module in `DPT_FRAMEWORK/engine/`
 
-### Requirement: Engine inter-dependency via import
-
-Engine modules that depend on another engine's functionality SHALL import it directly rather than embedding a copy of the code. `queue-manager.mjs` and `subagent-relay.mjs` both import `createTrace` from `trace.mjs`. `transition-chain.mjs` and `transition-fsm.mjs` provide transition-table helpers used by routing. `workflow-fsm.mjs` is the stateful FSM runtime wrapper; it imports pure resolution from `transition-fsm.mjs` and owns `Machine` / `createMachine`. `gate-loop.mjs` and `gate-fork.mjs` are single-function exports with no engine imports. `workflow-chain.mjs` is an MD loader + dependency resolver with no engine imports and no VM sandbox execution.
-
-#### Scenario: Queue manager and subagent relay import trace
-
-- **WHEN** `queue-manager.mjs` or `subagent-relay.mjs` needs trace writing
-- **THEN** it SHALL `import { createTrace } from './trace.mjs'`
-
-#### Scenario: Workflow FSM delegates pure resolution
-
-- **WHEN** `workflow-fsm.mjs` performs FSM transition resolution
-- **THEN** it SHALL import pure resolution from `transition-fsm.mjs`
-- **AND** it SHALL NOT import loader functions from `workflow-chain.mjs`
-
-#### Scenario: Subagent relay is self-contained for fork/repair
-
-- **WHEN** `subagent-relay.mjs` performs fork routing, dispatch, collect, merge, or repair
-- **THEN** it SHALL use its own domain-specific implementation
-- **AND** it SHALL NOT import fork/repair functions from `gate-fork.mjs`
 

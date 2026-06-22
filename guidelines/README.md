@@ -112,7 +112,7 @@ Guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`
 | `dpt_rb_*` runtime contexts | Current convention | Yes | Runtime state |
 | `dpt_disp_*` disposable experiment contexts | Current convention | Yes | Runtime state |
 | `experiments_playbook/exp_*` playbooks | Current | Yes — 6 experiment families, 20 playbooks | Agent-readable experiment playbooks |
-| `DPT_FRAMEWORK/engine/` | Current | Yes — 6 engines (queue-manager, gate-loop, gate-fork, subagent-relay, workflow-chain, workflow-fsm) | Production engine code |
+| `DPT_FRAMEWORK/engine/` | Current | Yes — 5 engines (queue-manager, gate-loop, gate-fork, subagent-relay, workflow-chain) | Production engine code |
 | `DPT_FRAMEWORK/engine/trace.mjs` | Current | Yes — unified trace writer, `createTrace` factory | Trace writer for all engines and playbooks |
 | `DPT_FRAMEWORK/` as read-only framework assets | Current convention | Yes | Framework code, definitions, templates, and Agent-facing instructions; not run state |
 | `experiments/shared/new-disposable-bundle.mjs` | Current | Yes | Shared experiment disposable-bundle setup |

@@ -103,7 +103,7 @@ emit('next:routing', res.data.routing?.kind === 'next' && res.data.check?.next =
   `routing=${res.data.routing?.kind}, next=${res.data.check?.next}`, { routing: res.data.routing?.kind, next: res.data.check?.next });
 
 res = decode(runGate(realTransitions, wrongNode));
-emit('binding:status', res.status === 2 && res.data.check?.passed === false,
+emit('binding:status', res.status === 1 && res.data.check?.passed === false,
   `exit=${res.status}`, { routing: res.data.routing?.kind, next: res.data.check?.next });
 emit('binding:routing', res.data.routing?.kind === 'invalid_input' && res.data.check?.next === null,
   `routing=${res.data.routing?.kind}, next=${res.data.check?.next}`, { routing: res.data.routing?.kind, next: res.data.check?.next });
@@ -113,7 +113,7 @@ emit('binding:diagnostics', Array.isArray(res.data.inspect) && Array.isArray(res
 rmSync(join(B, 'rb_plan.md'), { force: true });
 rmSync(join(B, 'rb_status.json'), { force: true });
 res = decode(runGate(realTransitions, instantiationNode));
-emit('no_transition:status', res.status === 2 && res.data.check?.passed === false,
+emit('no_transition:status', res.status === 1 && res.data.check?.passed === false,
   `exit=${res.status}`, { routing: res.data.routing?.kind, next: res.data.check?.next });
 emit('no_transition:routing', res.data.routing?.kind === 'no_transition' && res.data.check?.next === null,
   `routing=${res.data.routing?.kind}, next=${res.data.check?.next}`, { routing: res.data.routing?.kind, next: res.data.check?.next });

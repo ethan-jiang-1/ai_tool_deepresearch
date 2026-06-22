@@ -66,8 +66,8 @@ for(let i=0;i<5;i++){
   }
   console.log('Playbook: gate FAIL, next=null → 读 inspect → 修复');
   for(const item of gr.inspect){
-    const m=item.match(/^Missing control file: (.+)$/);
-    if(m){const f=B+'/'+m[1];if(!existsSync(f)){writeFileSync(f,m[1].endsWith('.json')?'{}':'# '+m[1]+'\n');console.log('  修复: created '+m[1]);log.info('repair: '+m[1]);}}
+    const m=item.match(/^Missing file: (.+)$/);
+    if(m){const f=B+'/'+m[1];if(!existsSync(f)){writeFileSync(f,m[1]==='rb_status.json'?'{"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"wave0_complete"}':(m[1]==='rb_plan.md'?'---\nplan_basename: wff_val_repair\n---\n# Repair plan\n':'# '+m[1]+'\n'));console.log('  修复: created '+m[1]);log.info('repair: '+m[1]);}}
   }
 }
 console.log('FAIL: exceeded max');process.exit(1);
