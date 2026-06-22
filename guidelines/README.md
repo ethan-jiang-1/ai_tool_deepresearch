@@ -91,6 +91,7 @@ This directory cannot decide:
 | Accepted capability behavior | OpenSpec change under `openspec/changes/`, then `openspec/specs/` | Link or summarize only after acceptance |
 | Schema, state machine, receipt, gate, or trace contract | `DPT_FRAMEWORK/`, `tests/`, and accepted specs via OpenSpec | Do not define it only in prose |
 | Command experiment execution pattern | `command-experiments.md` plus the relevant accepted spec or active change when normative | Avoid local one-off verdict rules |
+| Agentic workflow loop (who drives, routes, validates) | `guidelines/agentic-workflow-mechanism.md` | Read before modifying transition, gate, or node-loading behavior |
 | Future ds design | `agentic-dispatch-scheduler-mechanism.md` | Keep proposed surfaces marked Proposed until implemented |
 | Current runtime/run state | The active runtime context, currently `dpt_rb_*` or `dpt_disp_*` | Reload files; do not rely on chat memory |
 
@@ -103,6 +104,7 @@ Guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`
 | `project-charter.md` | Any Agent or maintainer | Repo-wide charter, authority order, hard boundaries | Detailed capability behavior |
 | `framework-runtime-boundary.md` | Any Agent or maintainer touching framework/run files | Directory and authority boundary for read-only framework assets vs mutable runtime bundles | Concrete schema fields, CLI flags, or current run truth |
 | `command-experiments.md` | Experiment author/executor | How to prove mechanisms with real runtime contexts and trace-backed verdicts | General project philosophy or concrete capability behavior |
+| `agentic-workflow-mechanism.md` | Any Agent executing or modifying workflow logic | How the agentic loop works: MD controls, chain routes, JS validates, Agent drives | Alternative transition backends, non-chain routing, JS-driven loops |
 | `agentic-dispatch-scheduler-mechanism.md` | Designer of future ds capability | Draft Engine-side scheduler model and open questions | Current runtime behavior |
 
 ## Current / Target / Proposed
