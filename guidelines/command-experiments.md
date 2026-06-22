@@ -2,24 +2,14 @@
 guideline_id: command-experiments
 suite: deep-research-guidelines
 title: Command Experiments Guideline
-status: target
+status: effective
 created: 2026-06-17
-role: target guidance for durable command experiment shape and boundaries
+role: guidance for durable command experiment shape and boundaries
 scope: experiments_playbook/*, experiments
-authority: guidance-target
+authority: guidance
 defers_to:
   - AGENTS.md
   - openspec/config.yaml
-  - openspec/specs/agent-testing/spec.md
-  - openspec/changes/dedup-experiments-framework/specs/framework-engine/spec.md
-  - openspec/changes/dedup-experiments-framework/specs/trace-writer/spec.md
-  - openspec/changes/dedup-experiments-framework/specs/experiment-shared-infra/spec.md
-activation:
-  after_change: openspec/changes/dedup-experiments-framework
-  requires:
-    - DPT_FRAMEWORK/engine/
-    - DPT_FRAMEWORK/engine/ 
-    - experiments/shared/ 
 siblings:
   - guidelines/project-charter.md
   - guidelines/framework-runtime-boundary.md
@@ -28,7 +18,7 @@ siblings:
 
 # Guideline: command_experiments Current Guidance
 
-> 状态: 生效 | 创建: 2026-06-17 | 已激活: `openspec/changes/dedup-experiments-framework` Phase 1-10 landed | 适用于: `experiments_playbook/exp_*`
+> 状态: 生效 | 创建: 2026-06-17 | 激活变更: `openspec/changes/archive/2026-06-19-dedup-experiments-framework` | 适用于: `experiments_playbook/exp_*`
 
 ---
 
@@ -175,7 +165,8 @@ Command experiments use four ownership layers. The exact mechanism names vary; t
 | Layer | Owns | Does not own |
 |-------|------|--------------|
 | `DPT_FRAMEWORK/` | Reusable framework code: deterministic engines, CLIs, schemas, trace writer, command playbooks | Experiment-only setup data or mechanism-specific fixtures |
-| `experiments_playbook/exp_<mechanism>/` | Agent-readable playbooks that stage real end-to-end mechanism experiments | Core mechanism implementation |
+| `experiments_playbook/exp_<mechanism>/` | Agent-readable playbooks that stage real end-to-end mechanism experiments — **auto-runnable** by runner | Core mechanism implementation |
+| `experiments_playbook/exph_<mechanism>/` | Same ownership as `exp_`: Agent-readable playbooks. Difference: mechanism under test requires human intervention — **not auto-runnable**. Runner skips these. | Core mechanism implementation |
 | `experiments/shared/` | Experiment-only shared setup utilities, such as disposable bundle creation | Production runtime behavior |
 | `experiments/prototype-<mechanism>/` | Experiment-specific fixtures and notes, such as `EXPERIMENT.md`, case data, and mechanism-specific fixture files | Production engine code, trace writer code, CLI contracts, reusable schemas |
 
@@ -184,6 +175,7 @@ Command experiments use four ownership layers. The exact mechanism names vary; t
 Naming:
 
 - Experiment directory: `experiments_playbook/exp_<mechanism>/`
+- Human-in-the-loop variant: `experiments_playbook/exph_<mechanism>/` (`exph_` = exp + human). Pairs with `exp_`. For playbooks whose mechanism under test currently requires human judgment (e.g., verifying Agent topic-rewrite quality). These are a **temporary backlog** — the goal is to move them back to `exp_` once automation matures. They do not block the automation pipeline; the runner skips `exph_` directories.
 - Prototype directory, when used: `experiments/prototype-<mechanism>/`
 - Case playbook: `test-<complexity>-<what-it-tests>.md`, where complexity is `simple|medium|complex|identity` and the suffix names what the case actually proves (e.g. `test-simple-four-returns.md`). Suffix SHOULD be short kebab-case, 2-4 words.
 - Disposable bundle: `dpt_disp_<short>_<case>_*/` (random hex suffix appended for collision avoidance)
@@ -303,7 +295,7 @@ Keep inline scripts thin:
 
 Complex deterministic logic belongs in the canonical framework module or CLI defined by the relevant spec, not in Markdown shell blocks. Experiment playbooks import or invoke framework code from its canonical `DPT_FRAMEWORK/` location.
 
-New experiment verdict checks use `event === "check"` with a boolean `passed` field. Older `verify` events are migration residue only; do not use them for new or updated playbooks.
+New experiment verdict checks SHOULD use `event === "check"` with a boolean `passed` field. `verify` is an older event name still accepted by the trace reader as an alias; do not introduce new `verify` events in new or updated playbooks.
 
 Use JS/CLI feedback actions consistently when a playbook needs machine feedback beyond raw trace verdict:
 
@@ -331,6 +323,19 @@ If a case depends on real Agent or native subagent behavior:
 - Let the parent Agent collect, merge, or judge only after runtime evidence exists.
 
 Do not satisfy an Agent-dependent experiment by writing the expected child output from the parent context.
+
+When the Agent's judgment *is* the mechanism under test and no mature automation exists to verify it, the experiment lives in `exph_<mechanism>/` (see Naming conventions above). A human reviewer reads the playbook's review checklist and judges the Agent's output quality — the gate only checks structure, not semantic correctness.
+
+### Human-in-the-Loop Playbooks (`exph_`)
+
+Some experiments currently require human intervention to complete — for example, HITL1 topic rewrite exercises a real LLM Agent's ability to read `phase-hitl1.md` §3a and produce a structured original topic with seed topics, but there is no programmatic way to judge whether the rewrite is *good*. These playbooks live in `exph_<mechanism>/` (`exph_` = exp + human), paired with their auto-runnable `exp_<mechanism>/` counterparts.
+
+**This is a temporary state, not a permanent architecture.**
+
+- `exph_` is a "known-not-yet-automated" backlog, not "forever manual"
+- Every `exph_` playbook targets eventual migration to `exp_` once automation matures
+- Does not block progress — automated experiments keep running, manual ones wait for capability
+- The runner skips `exph_` directories by default
 
 ---
 
@@ -405,6 +410,95 @@ Names such as `simple`, `medium`, `complex`, and `identity` are acceptable when 
 - A disposable bundle is left behind after a successful case.
 - Current known experiment families are treated as the full universe of future command experiments.
 - Case labels such as `simple`/`medium`/`complex` are treated as mandatory even when a mechanism needs a different proof shape.
+- Treating `exph_` playbooks as auto-runnable — they require human intervention by design. Runner must skip `exph_` directories.
+
+---
+
+## Runner-Emergent Principles
+
+These principles were discovered by executing playbooks and fixing the failures, not designed upfront. They apply to every playbook in `experiments_playbook/`. Violating any of them produced at least one real failure during runner execution.
+
+### 1. Gate output is structured feedback for the MD controller
+
+The gate CLI is an Engine-layer deterministic checkpoint. Its primary output is structured JSON on stdout — not the shell exit code. The JSON contains four fields the MD controller (LLM) uses to decide the next action:
+
+| Field | Role | Used by |
+|-------|------|---------|
+| `check.passed` | Did the gate pass? | verdict |
+| `check.next` | Where does the walker go if passed? | routing |
+| `inspect[]` | What specifically is wrong? (diagnosis) | LLM reads → decides repair |
+| `advice[]` | How should the Agent fix it? (guidance) | LLM reads → executes repair |
+
+The exit code is a shell-level mirror of `check.passed` — it carries far less information than the JSON. Playbooks MUST capture the JSON as the primary artifact and treat the exit code as secondary:
+
+```bash
+# JSON is the contract. || true tells shell "I have the JSON, ignore the exit code."
+GATE_OUTPUT=$(node gate-cli.mjs ... || true)
+
+# Extract structured facts from the JSON — this is what the MD controller reads
+PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+NEXT=$(echo "$GATE_OUTPUT"   | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.next)})")
+```
+
+Do not chain gate calls with `&&`. The `|| true` is not a workaround for misbehavior — it reflects the architectural fact that the JSON on stdout IS the output. The exit code is a convenience for `if` statements, not the contract.
+
+Gate CLI implementations MUST keep inspect/advice strings valid as JSON values (no raw regex backslash escapes, no unescaped control characters). If the JSON is unparseable, the MD controller is blind.
+
+### 2. Never hardcode gate results
+
+`recordCheck` MUST use the gate's actual `check.passed` value, extracted from its JSON output. Hardcoding `passed: false` or `passed: true` creates a false trace — the trace no longer proves the gate returned what the playbook claims it did.
+
+```bash
+# Extract the real result
+PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
+
+# Use it — never hardcode
+m.recordCheck(tracePath, { gate: 'setup-ready', passed: $PASSED, ... })
+```
+
+The trace is evidence. Hardcoded evidence is fake evidence.
+
+### 3. Boundary tests must declare their expectations
+
+`recordCheck` defaults `expected` to `true`. A gate rejection (`passed: false`) is a failure in happy-path semantics but the CORRECT behavior in a boundary test. Boundary test steps MUST set `expected: false`:
+
+```js
+// Boundary — gate should reject this input, and that rejection is correct
+m.recordCheck(tracePath, { gate: 'wave0-complete', passed: false, expected: false,
+  detail: 'empty registry should fail' })
+```
+
+The verdict function compares `passed !== expected`. A boundary rejection counts as passed when `expected: false`.
+
+### 4. Verdict mode matches experiment shape
+
+| Experiment shape | Verdict mode | Why |
+|-----------------|-------------|-----|
+| Happy-path (every step should pass) | `all` | Any failure is real |
+| Boundary (gate SHOULD reject some steps) | `all` + `expected: false` | Each check matched to its expectation |
+| Repair-loop (fail → repair → pass) | `last` | Only the final state per gate matters |
+
+### 5. Step state is explicit, not inherited
+
+A step that assumes clean bundle state MUST create that state itself. Files written in Step 2 survive until explicitly deleted. A step that fails because of stale state from an earlier step is a playbook bug.
+
+```bash
+# Before testing {topic} expansion: remove ALL per-topic files, then recreate
+rm -f $B/reference/*/source.yaml
+cat > $B/reference/topic-a/source.yaml << 'EOF'
+...
+EOF
+```
+
+Do not "notice topic-c still has a file from Step 2 and skip deleting it because it's convenient." Delete it. Then the test condition is explicit and auditable.
+
+### 6. Written ≠ done
+
+A playbook is not complete until a coding agent has executed it from a clean repo, step by step, and the verdict shows PASS. Every pattern in this section was discovered by running playbooks that had been committed but never executed. The act of running IS the quality gate.
+
+---
+
+These principles are not exhaustive. When a new experiment family exposes a new failure mode, capture the principle here and apply it backward to existing playbooks.
 
 ---
 
@@ -421,8 +515,14 @@ Names such as `simple`, `medium`, `complex`, and `identity` are acceptable when 
 - [ ] Any inline `.mjs` is only a thin deterministic driver/checkpoint.
 - [ ] Runtime context setup uses approved shared experiment infrastructure.
 - [ ] Disposable runtime context passes validate + inspect before mechanism execution.
+- [ ] Gate CLI calls use `|| true` defense (Principle 1).
+- [ ] `recordCheck` extracts `passed` from real gate JSON — no hardcoded values (Principle 2).
+- [ ] Boundary steps set `expected: false` in `recordCheck` (Principle 3).
+- [ ] Verdict mode matches experiment shape: `all` for happy-path/boundary, `last` for repair-loop (Principle 4).
+- [ ] Steps that depend on clean state explicitly clean up inherited artifacts (Principle 5).
 - [ ] Trace JSONL is the final verdict.
 - [ ] Cleanup removes the disposable runtime context.
+- [ ] Playbook has been executed end-to-end by a coding agent and verdict shows PASS (Principle 6).
 
 ---
 

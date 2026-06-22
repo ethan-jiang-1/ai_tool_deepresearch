@@ -89,7 +89,7 @@ grep -E 'research_profile|root_must_answer|status:|recorded_at' $B/rb_profile.ya
 验证 bundle 创建完整：所有 control files 和 scaffold dirs 存在，bundle name 合法，status 值正确。
 
 ```bash
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle $B --current-node phases/phase-instantiation.md)
+GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle $B --current-node phases/phase-instantiation.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
 node -e "
@@ -109,7 +109,7 @@ gate 返回的 JSON 关键字段：
 验证 HITL1 回答已记录到 profile：schema 合法、research_profile 不是 not_selected、must-answer 非空、HITL1 marker 已写入。
 
 ```bash
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
+GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
 node -e "
@@ -128,7 +128,7 @@ gate 返回的 JSON 关键字段：
 验证 bundle 在进入 wave0 前的 structural consistency：control files 可解析、scaffold 存在、HITL1 已记录、basename 一致。
 
 ```bash
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md)
+GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
 node -e "

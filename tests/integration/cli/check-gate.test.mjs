@@ -94,13 +94,13 @@ describe('Gate CLI integration', () => {
         }
       });
 
-      it('exit code: 0=passed, 1=failed, 2=routing error', () => {
+      it('exit code: 0=passed, 1=failed, 2=routing error (no_transition is NOT a routing error — it falls through to passed/failed check)', () => {
         const r = spawnSync('node', [
           gateScript, '--bundle', tmpDir, '--current-node', expectedNode,
         ], { encoding: 'utf-8', timeout: 10000 });
 
         const out = JSON.parse(r.stdout);
-        const routingErrors = ['no_transition', 'invalid_input', 'config_error'];
+        const routingErrors = ['invalid_input', 'config_error'];
 
         if (routingErrors.includes(out.routing.kind)) {
           assert.strictEqual(r.status, 2,

@@ -61,7 +61,7 @@ grep -E 'research_profile|root_must_answer|status' $B/rb_profile.yaml
 这个 gate 检查 profile 是否已填写。当前 profile 全为默认值，应该 fail。
 
 ```bash
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
+GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md || true)
 echo "$GATE_OUTPUT"
 ```
 
@@ -77,9 +77,10 @@ echo "$GATE_OUTPUT"
 trace 记录这个 fail：
 
 ```bash
+PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_trace.jsonl', { gate: 'hitl1-recorded', passed: false, detail: 'default profile — simulating unanswered HITL1' });
+  m.recordCheck('$B/_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, expected: false, detail: 'default profile — simulating unanswered HITL1' });
 });
 "
 ```
@@ -117,16 +118,17 @@ grep 'research_profile' $B/rb_profile.yaml
 ## Step 5: Rerun same gate — 预期 PASS
 
 ```bash
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
+GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md || true)
 echo "$GATE_OUTPUT"
 ```
 
 `check.passed` — 预期 `true`。Agent 的修复生效了。
 
 ```bash
+PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_trace.jsonl', { gate: 'hitl1-recorded', passed: true, detail: 'repaired profile — HITL1 recorded' });
+  m.recordCheck('$B/_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, detail: 'repaired profile — HITL1 recorded' });
 });
 "
 ```

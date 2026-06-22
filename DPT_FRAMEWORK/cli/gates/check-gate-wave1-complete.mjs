@@ -172,14 +172,18 @@ for (const rule of definition.rules) {
             // negate=true: find pattern → FAIL, not found → PASS
             if (matched) {
               rulePassed = false;
-              ruleDetail = `Forbidden pattern "${rule.pattern}" found in ${resolvedTarget}`;
+              // Use failure_message (clean prose) instead of raw regex pattern to
+              // avoid backslash-escaping issues in JSON output (e.g. \s, \d).
+              const cleanDesc = (rule.failure_message || rule.pattern).replace(/\{topic\}/g, tgt.topic || '{topic}');
+              ruleDetail = `Forbidden content in ${resolvedTarget}: ${cleanDesc}`;
               if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
             }
           } else {
             // negate=false: find pattern → PASS, not found → FAIL
             if (!matched) {
               rulePassed = false;
-              ruleDetail = `Required pattern "${rule.pattern}" not found in ${resolvedTarget}`;
+              const cleanDesc = (rule.failure_message || rule.pattern).replace(/\{topic\}/g, tgt.topic || '{topic}');
+              ruleDetail = `Required marker not found in ${resolvedTarget}: ${cleanDesc}`;
               if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
             }
           }

@@ -20,28 +20,34 @@ const B = '\x1b[0m';
  * DPT_FRAMEWORK/engine/trace.mjs traceEntry() output.
  *
  * @param {string} tracePath - path to _trace.jsonl
- * @param {{ gate: string, passed: boolean, detail?: string }} checkEvent
+ * @param {{ gate: string, passed: boolean, expected?: boolean, detail?: string }} checkEvent
+ *   expected defaults to true. Set expected: false for boundary tests where the gate
+ *   is supposed to reject bad input (passed: false is the correct behavior).
  */
 export function recordCheck(tracePath, checkEvent) {
+  const expected = checkEvent.expected !== undefined ? checkEvent.expected : true;
   const entry = JSON.stringify({
     ts: new Date().toISOString(),
     event: 'check',
     source: 'playbook',
     gate: checkEvent.gate,
     passed: checkEvent.passed,
+    expected,
     detail: checkEvent.detail || '',
   });
   appendFileSync(tracePath, entry + '\n');
 }
 
 /**
- * Parse _trace.jsonl, count check events, exit(1) if any failed or none found.
+ * Parse _trace.jsonl, count check events, exit(1) if any unexpected failure found.
  * Console output uses ANSI color: green PASS, red FAIL.
+ *
+ * A check is a "failure" when passed !== expected (expected defaults to true).
+ * Boundary tests set expected: false on checks where the gate is supposed to reject
+ * bad input — those don't count as failures.
+ *
  * @param {string} tracePath - path to _trace.jsonl
- */
-/**
- * @param {string} tracePath
- * @param {'all'|'last'} [mode='all'] — 'all': any fail = FAIL; 'last': only last check per gate matters
+ * @param {'all'|'last'} [mode='all'] — 'all': any unexpected fail = FAIL; 'last': only last check per gate matters
  */
 export function verdict(tracePath, mode = 'all') {
   if (!existsSync(tracePath)) {
@@ -59,25 +65,31 @@ export function verdict(tracePath, mode = 'all') {
     process.exit(1);
   }
 
+  // expected defaults to true for backward compat
+  for (const c of allChecks) {
+    if (c.expected === undefined) c.expected = true;
+  }
+
   let failChecks;
   if (mode === 'last') {
     // Only the last check per gate matters (for repair-loop playbooks)
     const lastPerGate = new Map();
     for (const c of allChecks) lastPerGate.set(c.gate || '', c);
-    failChecks = [...lastPerGate.values()].filter(c => c.passed !== true);
+    failChecks = [...lastPerGate.values()].filter(c => c.passed !== c.expected);
   } else {
-    failChecks = allChecks.filter(c => c.passed !== true);
+    failChecks = allChecks.filter(c => c.passed !== c.expected);
   }
 
-  const passed = allChecks.filter(c => c.passed === true).length;
-  const failed = allChecks.filter(c => c.passed !== true).length;
+  const passed = allChecks.filter(c => c.passed === c.expected).length;
+  const failed = allChecks.filter(c => c.passed !== c.expected).length;
 
   console.log(`Checks: ${passed} passed, ${failed} failed (${allChecks.length} total, verdict mode: ${mode})`);
 
   if (failChecks.length > 0) {
     console.log(`${R}FAIL${B}`);
     for (const c of failChecks) {
-      console.log(`  [FAIL] gate=${c.gate} detail=${c.detail || ''}`);
+      const expectTag = c.expected === false ? ' [expected:false]' : '';
+      console.log(`  [FAIL] gate=${c.gate} detail=${c.detail || ''}${expectTag}`);
     }
     process.exit(1);
   }

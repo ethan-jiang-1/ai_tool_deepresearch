@@ -141,23 +141,23 @@ Section 2 (Gate Definitions)    │
 
 > 依赖：Section 5（测试 PASS 后注册 requirement IDs）。**进入前先过 ⏸️ REVIEW #1**——实现没稳定就注册 ID，等于把未验证的契约刻进 registry。
 
-- [ ] **6.1** 注册 RWP-001 ~ RWP-007 到 `openspec/governance/req-registry.yaml`
+- [x] **6.1*** 注册 RWP-001 ~ RWP-007 到 `openspec/governance/req-registry.yaml`
   - verify: `research-wave-phase-content` capability 有 7 个 IDs，无冲突
 
-- [ ] **6.0** 注册 STM-001 ~ STM-005 到 `openspec/governance/req-registry.yaml`（capability: `seed-topic-materialization`）
+- [x] **6.0*** 注册 STM-001 ~ STM-005 到 `openspec/governance/req-registry.yaml`（capability: `seed-topic-materialization`）
   - verify: STM 前缀无冲突（已确认 registry 无 STM 记录）；`seed-topic-materialization` capability 有 5 个 IDs（STM-001 phase node / STM-002 gate definition / STM-003 gate CLI / STM-004 workflow registration / STM-005 boundary playbook）
 
-- [ ] **6.2** 注册 RWG-001 ~ RWG-008 到 `openspec/governance/req-registry.yaml`
+- [x] **6.2*** 注册 RWG-001 ~ RWG-008 到 `openspec/governance/req-registry.yaml`
   - verify: `research-wave-gate-implementation` capability 有 8 个 IDs
 
-- [ ] **6.3** 注册 RWE-001 ~ RWE-009 到 `openspec/governance/req-registry.yaml`
+- [x] **6.3*** 注册 RWE-001 ~ RWE-009 到 `openspec/governance/req-registry.yaml`
   - verify: `research-wave-experiments` capability 有 9 个 IDs，无冲突
   - **注意**：RWE-008（Wave1 boundary 横切约束）和 RWE-009（cross-artifact reference 独立验证）是跨 playbook 的约束条件，不是独立 playbook——9 个 ID 中只有 7 个对应 playbook 文件（RWE-001~007）。注册时在描述末尾标注 `— cross-cutting constraint, no standalone playbook` 避免混淆
 
-- [ ] **6.4** 更新 GSK-004 registry 描述：覆盖范围从 "extended from 1 to 3 pre-research gate CLIs" 改为 7 个（3 pre-research + 1 seed-topics + 3 wave gate CLIs），注明新增 `count_floor` check type 与 `cross_field` 的 Markdown link 用法
+- [x] **6.4*** 更新 GSK-004 registry 描述：覆盖范围从 "extended from 1 to 3 pre-research gate CLIs" 改为 7 个（3 pre-research + 1 seed-topics + 3 wave gate CLIs），注明新增 `count_floor` check type 与 `cross_field` 的 Markdown link 用法
   - verify: GSK-004 描述与 gate-skeleton delta spec 一致；消除 registry 描述（仍写 3）与实现（7）的隐性不一致
 
-- [ ] **6.5** 运行 `node openspec/governance/check-project-reqs.mjs` PASS（0 duplicate / 0 orphan / 0 unregistered / 0 reusedRetired）
+- [x] **6.5*** 运行 `node openspec/governance/check-project-reqs.mjs` PASS（0 duplicate / 0 orphan / 0 unregistered / 0 reusedRetired）
   - verify: exit code 0
 
 ---
@@ -181,28 +181,46 @@ Section 2 (Gate Definitions)    │
 >
 > 这道关过不了，下面的 7.0-7.7 不该开写。
 
-- [ ] **7.0** `test-simple-seed-topics-boundary.md`（STM-005）— light playbook：pre-seeded post-setup bundle（含 topic_registry）→ 物化全部 seed_topics（gate pass）→ 清空 seed_topics → gate fail（inspect 指向空目录）→ 物化部分 topic（slug 缺失）→ gate fail（cross_field slug_consistency 报缺失）→ 多余文件 → gate fail（报多余）。Body 显式列出 slug 一致性 DO/DON'T
+---
+### Group 1 — 单 gate 验证（从简到繁，逐个验证每个 gate 独立行为）
+
+- [x] **7.0*** `test-simple-seed-topics-boundary.md`（STM-005）— light playbook：pre-seeded post-setup bundle（含 topic_registry）→ 物化全部 seed_topics（gate pass）→ 清空 seed_topics → gate fail（inspect 指向空目录）→ 物化部分 topic（slug 缺失）→ gate fail（cross_field slug_consistency 报缺失）→ 多余文件 → gate fail（报多余）。Body 显式列出 slug 一致性 DO/DON'T
   - verify: playbook PASS；trace 记录 4 条 `check` event（1 pass + 3 fail）；`dir_non_empty` 和 `slug_consistency` 行为可见
 
-- [ ] **7.1** `test-simple-wave0-happy-path.md`（RWE-001）— light playbook：创建 disposable bundle → 写入 fixed seed topics → 写 schema-valid reference metadata → 运行 wave0-complete gate（pass）→ 移除一个 topic 的 metadata → 验证 gate fail（inspect 指向缺失 topic）→ 清空 topic_registry → 验证 gate fail（inspect 指向空 registry，证明 topic 集合 source of truth = registry 而非磁盘扫描）→ 再写数量达标但 schema 不合格的 reference → 验证 gate fail（count_floor pass 但 schema_valid fail，AND 交互）→ 再写 registry 3 topic 但漏 1 个 reference 目录 → 验证 gate fail（`{topic}` 展开后精确指出缺失）→ verdict from trace
-  - verify: playbook PASS；trace 记录 5 条 `check` event（1 pass + 4 fail）；空 registry 场景 gate 返回 `passed: false` 且不 crash；count_floor/schema_valid AND 交互分支可见；`{topic}` 展开机制可见
-
-- [ ] **7.2** `test-simple-wave1-boundary.md`（RWE-002, RWE-008）— light playbook：pre-seeded reference → 写 skeleton + `capability: foundation-placeholder` → gate pass → 写 unmarked skeleton → gate fail → 写含 false claim 的 skeleton → gate fail。Body 显式列出 DO/DON'T
+- [x] **7.2*** `test-simple-wave1-boundary.md`（RWE-002, RWE-008）— light playbook：pre-seeded reference → 写 skeleton + `capability: foundation-placeholder` → gate pass → 写 unmarked skeleton → gate fail → 写含 false claim 的 skeleton → gate fail。Body 显式列出 DO/DON'T
   - verify: playbook PASS；trace 记录 3 条 `check` event（1 pass + 2 fail）；reviewer 能在 Markdown 中看到 boundary
 
-- [ ] **7.3** `test-simple-wave2-synthesis.md`（RWE-003, RWE-009）— light playbook：pre-seeded Wave0/Wave1 → 写 synthesis 含 valid Markdown links → gate pass → 写无 link synthesis → gate fail → 写有 links 但 target 都缺失 → gate fail
+- [x] **7.3*** `test-simple-wave2-synthesis.md`（RWE-003, RWE-009）— light playbook：pre-seeded Wave0/Wave1 → 写 synthesis 含 valid Markdown links → gate pass → 写无 link synthesis → gate fail → 写有 links 但 target 都缺失 → gate fail
   - verify: playbook PASS；trace 包含 3 条 `check` event（1 pass + 2 fail）；`cross_field` 行为可见
 
-- [ ] **7.4** `test-simple-waves-full-chain.md`（RWE-004）— light playbook：pre-seeded post-setup bundle → **物化 seed_topics（gate seed-topics pass）** → 写 Wave0 reference → gate wave0 pass → 写 Wave1 skeletons → gate wave1 pass → 写 Wave2 synthesis → gate wave2 pass。证明 seed-topics → wave0→1→2 全链路可顺序串联
-  - verify: trace 记录 4 条 `check` event 全部 pass（seed-topics + 3 wave）；verdict PASS
+- [x] **7.1*** `test-simple-wave0-happy-path.md`（RWE-001）— light playbook：创建 disposable bundle → 写入 fixed seed topics → 写 schema-valid reference metadata → 运行 wave0-complete gate（pass）→ 移除一个 topic 的 metadata → 验证 gate fail（inspect 指向缺失 topic）→ 清空 topic_registry → 验证 gate fail（inspect 指向空 registry，证明 topic 集合 source of truth = registry 而非磁盘扫描）→ 再写数量达标但 schema 不合格的 reference → 验证 gate fail（count_floor pass 但 schema_valid fail，AND 交互）→ 再写 registry 3 topic 但漏 1 个 reference 目录 → 验证 gate fail（`{topic}` 展开后精确指出缺失）→ verdict from trace
+  - verify: playbook PASS；trace 记录 5 条 `check` event（1 pass + 4 fail）；空 registry 场景 gate 返回 `passed: false` 且不 crash；count_floor/schema_valid AND 交互分支可见；`{topic}` 展开机制可见
+
+---
+### ⏸️ PAUSE — 手工验证 Group 1
+
+> **停下来。** 运行上面 4 个 playbook，确认每个 gate 的行为在真实 bundle 中正确：
+> - 7.0 seed-topics：`dir_non_empty` 和 `slug_consistency` 检测到空目录/缺 slug/多余 slug？
+> - 7.2 wave1：`pattern_match` 检测到 placeholder marker 缺失？false completion claim 被 `negate:true` 拦下？
+> - 7.3 wave2：`cross_field(markdown_link_resolution)` 解析 Markdown link → 验证目标存在 → 死链接被检测？
+> - 7.1 wave0：`count_floor` + `schema_valid` AND 交互正确？空 registry 场景 gate 返回 `passed:false` 不 crash？`{topic}` 展开精确指出缺失 topic？
+> - 每个 playbook 的 `_trace.jsonl` 中 `check` event 数量是否与预期一致？
+>
+> **Group 1 4 个 playbook 全部 PASS 后再开写 Group 2。**
+
+---
+### Group 2 — 多 gate 串联 + 横切（建在 Group 1 验证通过的基础上）
 
 - [ ] **7.5** `test-medium-wave-repair-loop.md`（RWE-005）— light repair-loop playbook：选择 Wave2 gate（引用链最容易演示 fail→fix→pass）。synthesis 初始无有效 links → gate fail → read inspect/advice → 追加 links → rerun → pass。展示 repair 前后 diff
   - verify: trace 同时记录 failed 和 passed `check` events；fails 数量 < 初始 rules fail 数量；final verdict PASS
-  - **已知覆盖缺口**：Wave0 和 Wave1 的 repair 路径仅由集成测试（Section 5）覆盖，没有独立 playbook。Wave2 repair 演示的是"结构修复"（追加 Markdown link）——闭环证据不覆盖 Agent 读 inspect/advice 后做"内容修复"（如搜索补充 reference、修改 skeleton 正文）的场景。此缺口在 review-surface playbook（RWE-007）中靠 human review checklist 弥补
+  - **已知覆盖缺口**：Wave0 和 Wave1 的 repair 路径仅由集成测试（Section 5）覆盖，没有独立 playbook。
 
 - [ ] **7.6** `test-medium-wave-fault-tolerance.md`（RWE-006）— light fault-tolerance playbook：覆盖 malformed YAML（parse error → schema_valid fail）、missing artifact reference target（cross_field individual fail but other ref valid → overall pass）、status drift（wrong current_gate → status_value fail）。不修正错误，只证明 gate 检测到
   - verify: 所有畸形场景 gate 都返回 actionable inspect/advice（不 crash、不 silent pass）；trace 记录各 fail event
-  - **已知未覆盖的更底层结构损伤场景**（保持 playbook light，不在此 change 补）：corrupted `rb_trace.jsonl`（无法 parse 的 JSONL 行）、`--bundle` 指向不存在的目录、`rb_plan.md` YAML frontmatter 无法 parse（topic_registry 读不出）。这些场景靠 gate CLI 的 `parseGateCliArgs` / `readFileSync` 自然 throw + Node exit(1)，但未被实验显式验证
+  - **已知未覆盖的更底层结构损伤场景**：corrupted `rb_trace.jsonl`、`--bundle` 指向不存在的目录、`rb_plan.md` YAML frontmatter 无法 parse
+
+- [ ] **7.4** `test-simple-waves-full-chain.md`（RWE-004）— light playbook：pre-seeded post-setup bundle → **物化 seed_topics（gate seed-topics pass）** → 写 Wave0 reference → gate wave0 pass → 写 Wave1 skeletons → gate wave1 pass → 写 Wave2 synthesis → gate wave2 pass。证明 seed-topics → wave0→1→2 全链路可顺序串联
+  - verify: trace 记录 4 条 `check` event 全部 pass（seed-topics + 3 wave）；verdict PASS
 
 - [ ] **7.7** `test-complex-wave-review-surface.md`（RWE-007）— light playbook：pre-seeded 完整 Wave0/Wave1 → 写入 fixed synthesis（不依赖 live AI）→ gate wave2 pass。Markdown body 显式展示 Wave0 reference metadata（url/title/retrieved_date/topic_tag 摊开成表，供人审 reference 是否真实，对应 charter 的 no-make-believe 原则）、synthesis 全文、引用链表格、review checklist
   - verify: reviewer 不读 JS 即可在 MD 中看到 Wave0 reference 真实内容（url/title 摊开）、synthesis 全文和引用链；不依赖 live AI generation

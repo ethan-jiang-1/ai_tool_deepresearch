@@ -175,7 +175,7 @@ export function buildGateResult({ passed, gate, currentNodeRef, routing, inspect
  * Exit code rules (GSK-002):
  *   passed=true  → exit(0)
  *   passed=false → exit(1)
- *   routing.kind is no_transition | invalid_input | config_error → exit(2)
+ *   routing.kind is invalid_input | config_error → exit(2)
  *
  * @param {object} result — from buildGateResult()
  *
@@ -184,7 +184,10 @@ export function buildGateResult({ passed, gate, currentNodeRef, routing, inspect
 export function emitGateResult(result) {
   console.log(JSON.stringify(result, null, 2));
 
-  const routingErrorKinds = ['no_transition', 'invalid_input', 'config_error'];
+  // no_transition is a normal runtime outcome (chain table intentionally sparse),
+  // NOT a configuration error. Only invalid_input and config_error signal real
+  // misconfiguration warranting exit code 2.
+  const routingErrorKinds = ['invalid_input', 'config_error'];
   if (routingErrorKinds.includes(result.routing.kind)) {
     process.exit(2);
   }

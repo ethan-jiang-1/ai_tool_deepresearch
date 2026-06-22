@@ -54,22 +54,23 @@ echo "=== Corrupted ===" && cat $B/rb_status.json
 运行 setup-ready gate：
 
 ```bash
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md)
+GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 EXIT=$?
 echo "Exit: $EXIT"
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('is JSON: true');console.log('passed:',j.check.passed);console.log('inspect count:',j.inspect.length);console.log('inspect[0]:',j.inspect[0])})"
 ```
 
 **Agent 读这个 output：**
-- `exit code` — 1 或 2（不是 crash/128+）
+- `exit code` — 1（不 crash）
 - stdout — 合法 JSON ✓
 - `passed` — `false`
 - `inspect` — 指向 parse 失败
 
 ```bash
+PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_trace.jsonl', { gate: 'setup-ready', passed: false, detail: 'case1: gate survived bad JSON, returned clear inspect' });
+  m.recordCheck('$B/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED, expected: false, detail: 'case1: gate survived bad JSON, returned clear inspect' });
 });
 "
 ```
@@ -94,16 +95,17 @@ rm $B/rb_plan.md
 rm -rf $B/final
 echo "=== Removed: rb_plan.md + final/ ==="
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md)
+GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('inspect count:',j.inspect.length);console.log('advice count:',j.advice.length);j.inspect.forEach((x,i)=>console.log('  inspect['+i+']:',x));j.advice.forEach((x,i)=>console.log('  advice['+i+']:',x))})"
 ```
 
 **Agent 读到了什么：** gate 返回 fail + `inspect` 含两条诊断（一条指向缺失 `rb_plan.md`，一条指向缺失 `final/`）+ `advice` 含两条修复建议。
 
 ```bash
+PASSED=$(echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_trace.jsonl', { gate: 'setup-ready', passed: false, detail: 'case2 attempt 1: multi-rule fail (missing rb_plan.md + final/)' });
+  m.recordCheck('$B/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED, expected: false, detail: 'case2 attempt 1: multi-rule fail (missing rb_plan.md + final/)' });
 });
 "
 ```
@@ -150,16 +152,17 @@ grep -E 'research_profile|status:|plan_basename' $B/rb_profile.yaml | head -4
 **Rerun same gate：**
 
 ```bash
-GATE_OUTPUT2=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md)
+GATE_OUTPUT2=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 echo "$GATE_OUTPUT2" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('next:',j.check.next)})"
 ```
 
 **Agent 修好了。** gate pass。
 
 ```bash
+PASSED2=$(echo "$GATE_OUTPUT2" | node -e "process.stdin.on('data',d=>{console.log(JSON.parse(d).check.passed)})")
 node -e "
 import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_trace.jsonl', { gate: 'setup-ready', passed: true, detail: 'case2 attempt 2: repaired (recreated rb_plan.md + final/)' });
+  m.recordCheck('$B/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED2, detail: 'case2 attempt 2: repaired (recreated rb_plan.md + final/)' });
 });
 "
 ```
@@ -171,7 +174,7 @@ import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m => {
 **模拟场景：** Agent 传了一个不存在的 `--bundle` 路径。
 
 ```bash
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle /tmp/nonexistent_bundle_xyz --current-node phases/phase-instantiation.md)
+GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle /tmp/nonexistent_bundle_xyz --current-node phases/phase-instantiation.md || true)
 EXIT=$?
 echo "Exit: $EXIT"
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('is JSON: true');console.log('passed:',j.check.passed)})"

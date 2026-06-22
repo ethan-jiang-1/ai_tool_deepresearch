@@ -10,7 +10,7 @@
 
 ## 跑哪些
 
-**默认只跑 light。** heavy 需要真实 subagent spawn（跑得慢），只在用户明确要求时跑。**human 不能自动跑**——必须人类介入。如果你不确定跑哪些，问。
+**默认只跑 light。** heavy 需要真实 subagent spawn（跑得慢），只在用户明确要求时跑。**human 不能自动跑**——必须人类介入。**`exph_` 目录不跑**——那些需要人类介入，runner 自动跳过。如果你不确定跑哪些，问。
 
 ### Light（纯 JS E2E，改完代码就该跑）
 
@@ -58,10 +58,11 @@
 ### Human（需人类交互/判断，不能自动化，必须手动跑）
 
 > ⚠️ **Human playbook 不会自动通过。** 必须由人类阅读 playbook 中的 review checklist、做出判断、手动确认。gate pass 不代表 human pass。
+> Human playbooks live in `exph_workflow-foundation/`（`exph_` = exp + human）。
 
 | # | Playbook | 验证什么 | 人类做什么 |
 |---|----------|---------|-----------|
-| 30 | `exp_workflow-foundation/test-human-hitl1-topic-rewrite-agent.md` | Agent 读 phase-hitl1.md §3a → 执行 topic rewrite | 审查 Agent 的 rewrite 质量：original topic 是否合理？seed topics 是否贴切？ |
+| 30 | `exph_workflow-foundation/test-human-hitl1-topic-rewrite-agent.md` | Agent 读 phase-hitl1.md §3a → 执行 topic rewrite | 审查 Agent 的 rewrite 质量：original topic 是否合理？seed topics 是否贴切？ |
 
 ## 怎么执行
 

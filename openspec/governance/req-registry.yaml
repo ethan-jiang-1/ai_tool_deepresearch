@@ -64,8 +64,8 @@ SUR-001: subagent-repair — All-slots-failed repair routing and partial-failure
 SUS-001: subagent-slots — Subagent slot lifecycle state machine and wave-scoped paths
 SEG-001: seg2node — Global rename segments to nodes with explicit node directory configuration
 SHC-001: shared-node-content — Shared profile content completeness (plan_basename, research_profile, root_must_answer_set, hitl1.*, hitl2.*, authority boundary)
-SHC-002: "shared-node-content — Shared gate rules content as generated summary (8 gates, purpose+check+direction+repair, authority: generated-summary)"
-SHC-003: shared-node-content — Shared schemas content matches current executable surface (profile/status/queue/plan/trace/gate, rb_trace vs _trace distinction)
+SHC-002: "shared-node-content — Shared gate rules content as generated summary (9 gates, purpose+check+direction+repair, authority: generated-summary)"
+SHC-003: "shared-node-content — Shared schemas content matches current executable surface (profile/status/queue/plan/trace/gate, ReferenceMetadata schema, wave artifact directory structure, rb_trace vs _trace distinction)"
 SHC-004: shared-node-content — Shared repair guidance content (fail→inspect→repair→rerun, retry limit 3, escalation, check type repair directions)
 SHC-005: shared-node-content — Shared anti-cheating rules content (≥6 prohibitions with correct alternatives)
 SHC-006: shared-node-content — Shared node authority boundary enforcement (no phase/gate/next/stop frontmatter, no hidden phase language)
@@ -113,6 +113,44 @@ PRP-007: pre-research-phase-content — Anti-cheating rules in phase bodies (≥
 PRP-008: pre-research-phase-content — HITL1 writes to bundle not status tree (rb_profile.yaml, not rb_status.json#/phases/hitl1/*)
 PRP-009: pre-research-phase-content — Setup stop semantics enforcement (auto-advance on pass, escalate on persistent failure)
 PRP-010: pre-research-phase-content — Invalid bundle name remains fail-stop (no rename, no patch; re-instantiate with legal name)
+
+# wff-research-waves / research-wave-phase-content
+RWP-001: research-wave-phase-content — Wave0 phase body completeness (9-section, foundation shared reference collection, ReferenceMetadata schema)
+RWP-002: "research-wave-phase-content — Wave1 phase body completeness with subagent boundary (9-section + Future Expansion Guidance, subagent:true as future marker)"
+RWP-003: research-wave-phase-content — Wave2 phase body completeness (9-section, cross-topic synthesis with Markdown link artifact references)
+RWP-004: research-wave-phase-content — Wave1 foundation placeholder boundary enforcement (5 prohibited completion claims, marker required)
+RWP-005: research-wave-phase-content — Wave1 future expansion tracks documentation (6 tracks, read-only, not gate pass conditions)
+RWP-006: research-wave-phase-content — Wave2 synthesis artifact references verified artifacts via Markdown links
+RWP-007: research-wave-phase-content — Anti-cheating rules in wave phase bodies (≥2 phase-specific bans each)
+
+# wff-research-waves / research-wave-gate-implementation
+RWG-001: research-wave-gate-implementation — Wave0 complete gate rule set (file_exists, dir_exists, schema_valid ReferenceMetadata, count_floor, trace_event_present, status_value)
+RWG-002: "research-wave-gate-implementation — Wave1 complete gate rule set (file_exists, dir_exists, pattern_match placeholder marker + negate false-claim detection, trace_event_present, status_value)"
+RWG-003: "research-wave-gate-implementation — Wave2 complete gate rule set (file_exists, field_non_empty, cross_field markdown_link_resolution, trace_event_present, status_value)"
+RWG-004: research-wave-gate-implementation — Wave0 gate CLI evaluates rules from definition (file_exists, dir_exists, schema_valid, count_floor, trace_event_present, status_value)
+RWG-005: research-wave-gate-implementation — Wave1 gate CLI evaluates rules from definition (file_exists, dir_exists, pattern_match with negate, trace_event_present, status_value)
+RWG-006: "research-wave-gate-implementation — Wave2 gate CLI evaluates rules from definition (file_exists, field_non_empty, cross_field markdown_link_resolution, trace_event_present, status_value)"
+RWG-007: research-wave-gate-implementation — Wave gate CLIs follow established double trace convention (rb_trace.jsonl runtime audit + _trace.jsonl experiment verdict)
+RWG-008: research-wave-gate-implementation — Wave2 gate cross_field verifies Markdown link artifact references
+
+# wff-research-waves / research-wave-experiments
+RWE-001: "research-wave-experiments — Wave0 happy-path + fail playbook (5 trace events: 1 pass + 4 fail, covers count_floor ⊕ schema_valid AND interaction, empty registry, {topic} expansion)"
+RWE-002: research-wave-experiments — Wave1 boundary enforcement playbook (placeholder marker + false completion claim detection, DO/DON'T list)
+RWE-003: research-wave-experiments — Wave2 synthesis playbook (Markdown link reference chain verification, no-link + dead-link fail cases)
+RWE-004: research-wave-experiments — Full-chain waves sequential playbook (seed-topics→wave0→wave1→wave2, 4 trace events all pass)
+RWE-005: research-wave-experiments — Wave repair-loop playbook (Wave2 gate fail→inspect/advice→repair→rerun→pass, before/after diff)
+RWE-006: "research-wave-experiments — Wave fault-tolerance playbook (malformed YAML, missing reference targets, status drift, no silent pass)"
+RWE-007: "research-wave-experiments — Wave review-surface playbook (Wave0 reference metadata table, synthesis full text, reference chain table, human review checklist)"
+RWE-008: "research-wave-experiments — Wave1 placeholder not mistaken for full subagent research — cross-cutting constraint, no standalone playbook"
+RWE-009: "research-wave-experiments — Cross-artifact reference verification in wave2 synthesis — cross-cutting constraint, no standalone playbook"
+
+# wff-research-waves / seed-topic-materialization
+STM-001: seed-topic-materialization — Seed topic materialization phase node (9-section body, forces topic_registry→seed_topics/ materialization, seed_topics_completion trace event)
+STM-002: "seed-topic-materialization — Seed topics ready gate rule set (dir_non_empty, cross_field slug_consistency, field_non_empty title, trace_event_present, status_value)"
+STM-003: seed-topic-materialization — Seed topics gate CLI implementation (definition-driven, dir_non_empty evaluator, cross_field slug_consistency evaluator, double trace)
+STM-004: seed-topic-materialization — Workflow registration of seed-topics phase (manifest, transitions.chain, transitions.fsm, enums.mjs CurrentGate)
+STM-005: seed-topic-materialization — Seed topics boundary enforcement playbook (materialize all→pass, empty dir→fail, slug missing/extra→fail)
+
 WDC-001: workflow-directory-contract — Read-only framework assets boundary (DPT_FRAMEWORK/ = read-only, dpt_rb_*/ = mutable runtime truth)
 WDC-002: workflow-directory-contract — Workflow node directory structure (phases/ and shared/ under workflows/nodes/)
 WDC-003: workflow-directory-contract — Gate artifacts location and shape (gate definitions, CLI, engine, helpers, schema contract)
@@ -140,7 +178,7 @@ LFW-001: lifecycle-walker — Walker reads manifest and walks lifecycle (--bundl
 LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass (max 3 retries, escalation on exceeded limit) [DEPRECATED]
 LFW-003: "lifecycle-walker — Walker logs progress via logger (createLogger({ file: '<bundle>/_logs/run.log' })) [DEPRECATED]"
 LFW-004: lifecycle-walker — Walker requires --bundle flag (exit(2) on missing) [DEPRECATED]
-GSK-004: "gate-skeleton — Gate CLI evaluates rules from definition and emits detailed routing diagnostics (load definition JSON, iterate all rule types, check/inspect/advice feedback; extended from 1 to 3 pre-research gate CLIs: instantiation-complete from partial, hitl1-recorded + setup-ready from placeholder)"
+GSK-004: "gate-skeleton — Gate CLI evaluates rules from definition and emits detailed routing diagnostics (load definition JSON, iterate all rule types, check/inspect/advice feedback; 7 gate CLIs: 3 pre-research + 1 seed-topics + 3 wave gate CLIs; new check types: count_floor, dir_non_empty, cross_field slug_consistency, cross_field markdown_link_resolution)"
 
 # wff-state-chain
 TRT-001: transition-table — File naming convention transitions.chain.json / transitions.fsm.json
