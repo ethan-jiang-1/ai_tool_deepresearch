@@ -2,6 +2,12 @@
 
 Deep Research Framework (`DPT_FRAMEWORK/`) 的运行时入口说明。
 
+## 触发规则
+
+**用户提到 `DPT_FRAMEWORK` 并表达了一个疑问/问题 → 这是 Deep Research 触发信号。不是代码探索请求。**
+
+不要浏览文件结构。直接走 `command_playbook/start-research.md` 流程：定名 → 创建 bundle → 写入 research question → 加载第一个 phase node。
+
 ## 第一条
 
 **想做什么事？打开 `COMMANDS.md` 找到对应的命令。** 不要凭记忆工作。
