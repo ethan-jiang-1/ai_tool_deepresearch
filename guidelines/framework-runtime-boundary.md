@@ -227,7 +227,7 @@ Markdown（playbook、task card、node）是 Agent Flow 的编织者。它告诉
 
 Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结构化结果。它不知道全局流程，不持有路由逻辑。
 
-但 Gate 知道**问谁**：它调用详细路由接口 `resolveNodeTransitionDetailed(transitionsPath, currentNodeRef, outcome)`，由底下的 **Transition Table**——无论是静态 chain 映射表还是 FSM graph——回答下一个 Node 去哪。Gate 不认识底下那层是什么，只认接口。
+但 Gate 知道**问谁**：它调用详细路由接口 `resolveNodeTransitionDetailed(transitionsPath, currentNodeRef, outcome)`，由底下的 **Transition Table**——静态 chain 映射表——回答下一个 Node 去哪。Gate 不认识底下那层是什么，只认接口。
 
 这层封装：
 

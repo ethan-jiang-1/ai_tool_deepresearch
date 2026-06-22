@@ -19,6 +19,7 @@
 #
 # 缩写规则: 首单词前 2 字母 + 次单词首字母，如 schema-core → SCO
 
+# agent-testing
 AGT-001: agent-testing — Agent-assisted test playbook for gate-loop
 AGT-002: "agent-testing — Agent-assisted test playbook for gate-fork (3 levels: simple/medium/complex)"
 AGT-003: "agent-testing — Agent-assisted test playbook for subagent (3 levels: simple/medium/complex)"
@@ -27,28 +28,52 @@ AGT-005: agent-testing — Playbook frontmatter weight field (light|heavy) for e
 AGT-006: agent-testing — Disposable bundle names include random hex suffix to prevent same-case collision
 AGT-007: "agent-testing — Unified trace file naming to _trace.jsonl across all playbooks"
 AGT-008: agent-testing — Verdict console.log uses ANSI color (green PASS, red FAIL)
+
+# agentic-queue
 AGQ-001: agentic-queue — Structured machine queue state and task card schema
 AGQ-002: agentic-queue — Queue Manager enqueue, claim, complete, fail, promote, and refill operations
 AGQ-003: agentic-queue — Conservative urgent preemption without hidden current-slot execution
 AGQ-004: agentic-queue — Fail-closed deterministic receipts and structured check/inspect/advice feedback
 AGQ-005: agentic-queue — Markdown projection generated from JSON queue state without mutation authority
 AGQ-006: agentic-queue — Command experiment playbooks for simple, medium, and complex agentic queue cases
+# bundle-infrastructure
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry
-CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
-CHI-002: check-inspect-feedback — C&I feedback loop for fork variant (topicReadiness validation)
+
+# cmd-bundle-instantiation
 CMI-001: cmd-bundle-instantiation — Command playbook for bundle production
 CMI-002: cmd-bundle-instantiation — JS helper validate-bundle.mjs (Zod validation)
 CMI-003: cmd-bundle-instantiation — JS helper inspect-bundle.mjs (structure check)
 CMI-004: cmd-bundle-instantiation — Template files (rb_templates/)
+
+# check-inspect-feedback
+CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
+CHI-002: check-inspect-feedback — C&I feedback loop for fork variant (topicReadiness validation)
+
+# conditional-nodes
 COS-001: conditional-nodes — Deterministic branch checkpoint transforms
+
+# cmd-subagent-environment
 CSE-001: cmd-subagent-environment — Command playbook for project-level real subagent setup
+
+# dynamic-node-loading
 DYS-001: dynamic-node-loading — Explicit fileRef Markdown closure loading with cached parsed node data
+
+# fork-repair-converge
 FOR-001: fork-repair-converge — Multi-fail shared repair checkpoint convergence
+
+# gate-fork-router
 GAF-001: gate-fork-router — Gate branch classification and explicit resolver
+
+# gate-state-machine
 GAS-001: gate-state-machine — Gate checkpoint feedback and transition lookup
+
+# integration-tests
 INT-001: integration-tests — validate-bundle.mjs + inspect-bundle.mjs integration tests
+
+# repair-loop
 REL-001: repair-loop — Repair checkpoint loopback and deterministic termination
+# schema-core
 SCO-001: schema-core — Six domain enums
 SCO-002: schema-core — Six Zod contracts
 SCO-003: schema-core — Gate transition table
@@ -58,18 +83,28 @@ SCO-006: schema-core-hitl — AnswerabilityClass enum
 SCO-007: schema-core-hitl — HITL2UserDecision + FinalReportView enums
 SCO-008: schema-core-hitl — ProfileSchema hitl1/hitl2 field update
 SOR-001: schema-core — Source-of-record invariant marker for schema-core specs
+
+# subagent-system
 SUC-001: subagent-collect — Collect slot result envelopes and merge evidence into workflow state
 SUD-001: subagent-dispatch — Gate pass dispatches subagent slots into wave-scoped file system protocol
 SUR-001: subagent-repair — All-slots-failed repair routing and partial-failure tolerance
 SUS-001: subagent-slots — Subagent slot lifecycle state machine and wave-scoped paths
+
+# seg2node
 SEG-001: seg2node — Global rename segments to nodes with explicit node directory configuration
+
+# shared-node-content
 SHC-001: shared-node-content — Shared profile content completeness (plan_basename, research_profile, root_must_answer_set, hitl1.*, hitl2.*, authority boundary)
 SHC-002: "shared-node-content — Shared gate rules content as generated summary (9 gates, purpose+check+direction+repair, authority: generated-summary)"
 SHC-003: "shared-node-content — Shared schemas content matches current executable surface (profile/status/queue/plan/trace/gate, ReferenceMetadata schema, wave artifact directory structure, rb_trace vs _trace distinction)"
 SHC-004: shared-node-content — Shared repair guidance content (fail→inspect→repair→rerun, retry limit 3, escalation, check type repair directions)
 SHC-005: shared-node-content — Shared anti-cheating rules content (≥6 prohibitions with correct alternatives)
 SHC-006: shared-node-content — Shared node authority boundary enforcement (no phase/gate/next/stop frontmatter, no hidden phase language)
+
+# test-fixtures
 TEF-001: test-fixtures — Fixture framework for integration tests
+
+# deprecated — workflow prototypes
 WDM-001: workflow-dynamic-md-load — Single-entry just-in-time Markdown closure loading and execution [DEPRECATED]
 WLO-001: workflow-chain-observability — Runtime receipts and trace events for workflow-chain single-entry loader experiments [DEPRECATED]
 WMD-001: workflow-md-dependencies — Markdown frontmatter requires dependency closure resolution [DEPRECATED]
@@ -79,7 +114,7 @@ WFS-003: workflow-fsm-runtime — Machine class with advance(), createMachine fa
 WML-001: workflow-manifest-loading — Workflow-next runtime initializes without manifest/cursor or preloading Markdown [DEPRECATED]
 
 # dedup-experiments-framework (delta specs merged to openspec/specs/)
-FRE-001: framework-engine — DPT_FRAMEWORK/engine/ as canonical directory for 7 production engine modules
+FRE-001: framework-engine — DPT_FRAMEWORK/engine/ as canonical directory for 6 production engine modules
 FRE-002: framework-engine — workflow-fsm standalone pure FSM transition resolver (5 exports, 241 lines, zero engine imports) [DEPRECATED]
 TRW-001: trace-writer — Unified append-only JSONL trace writer with createTrace factory (3 variants)
 TRW-002: trace-writer — Trace output validates against TraceEntrySchema contract
@@ -148,9 +183,10 @@ RWE-009: "research-wave-experiments — Cross-artifact reference verification in
 STM-001: seed-topic-materialization — Seed topic materialization phase node (9-section body, forces topic_registry→seed_topics/ materialization, seed_topics_completion trace event)
 STM-002: "seed-topic-materialization — Seed topics ready gate rule set (dir_non_empty, cross_field slug_consistency, field_non_empty title, trace_event_present, status_value)"
 STM-003: seed-topic-materialization — Seed topics gate CLI implementation (definition-driven, dir_non_empty evaluator, cross_field slug_consistency evaluator, double trace)
-STM-004: seed-topic-materialization — Workflow registration of seed-topics phase (manifest, transitions.chain, transitions.fsm, enums.mjs CurrentGate)
+STM-004: seed-topic-materialization — Workflow registration of seed-topics phase (manifest, transitions.chain, enums.mjs CurrentGate)
 STM-005: seed-topic-materialization — Seed topics boundary enforcement playbook (materialize all→pass, empty dir→fail, slug missing/extra→fail)
 
+# workflow-foundation — contracts
 WDC-001: workflow-directory-contract — Read-only framework assets boundary (DPT_FRAMEWORK/ = read-only, dpt_rb_*/ = mutable runtime truth)
 WDC-002: workflow-directory-contract — Workflow node directory structure (phases/ and shared/ under workflows/nodes/)
 WDC-003: workflow-directory-contract — Gate artifacts location and shape (gate definitions, CLI, engine, helpers, schema contract)
@@ -181,10 +217,10 @@ LFW-004: lifecycle-walker — Walker requires --bundle flag (exit(2) on missing)
 GSK-004: "gate-skeleton — Gate CLI evaluates rules from definition and emits detailed routing diagnostics (load definition JSON, iterate all rule types, check/inspect/advice feedback; 9 gate CLIs: 3 pre-research + 1 seed-topics + 3 wave + 2 delivery; new check types: count_floor, dir_non_empty, cross_field slug_consistency, cross_field markdown_link_resolution, yaml_parse, jsonl_parse, trace_has_all_gates)"
 
 # wff-state-chain
-TRT-001: transition-table — File naming convention transitions.chain.json / transitions.fsm.json
+TRT-001: transition-table — File naming convention transitions.chain.json
 TRT-002: transition-table — transitions.chain.json structure (gate→state→next_node static map)
-TRT-003: transition-table — transition-chain.mjs engine (loadChain, resolveTransition, createChain; mirrors FSM)
-TRT-004: transition-table — ask-next.mjs unified dispatch (askNext dispatches to chain or FSM by file suffix)
+TRT-003: transition-table — transition-chain.mjs engine (loadChain, resolveTransition, createChain)
+TRT-004: transition-table — ask-next.mjs unified dispatch (askNext dispatches to chain by file suffix)
 TRT-005: transition-table — Detailed node-result router contract and node-keyed backend dispatch
 
 # wff-content-delivery — phase content
