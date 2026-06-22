@@ -15,6 +15,7 @@ siblings:
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-dispatch-scheduler-mechanism.md
+  - guidelines/agentic-workflow-mechanism.md
 ---
 
 # Guidelines Index
@@ -29,8 +30,9 @@ Read in this order:
 
 1. `project-charter.md` — stable project principles, authority boundaries, and current project surfaces.
 2. `framework-runtime-boundary.md` — directory and authority boundary between read-only framework assets and mutable runtime bundles.
-3. `command-experiments.md` — guidance for durable command experiment shape and boundaries.
-4. `agentic-dispatch-scheduler-mechanism.md` — draft design for a future Engine-side dispatch scheduler; not current runtime truth.
+3. `agentic-workflow-mechanism.md` — normative description of the Agent-driven workflow loop: who drives, who routes, who validates.
+4. `command-experiments.md` — guidance for durable command experiment shape and boundaries.
+5. `agentic-dispatch-scheduler-mechanism.md` — draft design for a future Engine-side dispatch scheduler; not current runtime truth.
 
 Detailed requirements live in `openspec/specs/`. Project-level OpenSpec rules live in `openspec/config.yaml`.
 
@@ -79,6 +81,7 @@ This directory cannot decide:
 | Unsure whether something belongs in `DPT_FRAMEWORK/` or a bundle | `framework-runtime-boundary.md` | Decide by file extension or chat habit |
 | Writing or revising a command experiment playbook | `command-experiments.md` and the relevant accepted spec or active OpenSpec change | Invent setup or verdict authority locally |
 | Changing accepted behavior | OpenSpec proposal/spec/tasks | Patch only `guidelines/` |
+| Modifying transition, gate, or node-loading logic | `agentic-workflow-mechanism.md` and `openspec/specs/transition-table/spec.md` | Add a second transition backend or JS-driven loop |
 | Designing future ds behavior | `agentic-dispatch-scheduler-mechanism.md` | Treat ds as implemented or Agent-owned |
 | Unsure which layer owns a rule | `project-charter.md` Authority Map | Resolve conflict by chat memory |
 
@@ -138,6 +141,7 @@ These files are one guidance suite:
 - `project-charter.md` defines the repo-wide charter: what must always be true.
 - `framework-runtime-boundary.md` defines the framework/runtime boundary: where read-only definitions and mutable run truth belong.
 - `command-experiments.md` defines the experiment charter: how mechanisms are proven.
+- `agentic-workflow-mechanism.md` defines the runtime loop: how MD, chain, and Engine cooperate during workflow execution.
 - `agentic-dispatch-scheduler-mechanism.md` defines a draft mechanism: what Engine-side ds might become, not what exists today.
 
 Each file has frontmatter declaring its role, scope, authority level, and sibling guidance files.

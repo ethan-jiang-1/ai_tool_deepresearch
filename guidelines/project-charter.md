@@ -14,6 +14,7 @@ siblings:
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-dispatch-scheduler-mechanism.md
+  - guidelines/agentic-workflow-mechanism.md
 ---
 
 # Project Charter
@@ -314,9 +315,10 @@ Explore / design
 
 1. `guidelines/project-charter.md`：稳定原则和权威边界。
 2. `openspec/config.yaml`：项目级 spec-driven 纪律。
-3. `guidelines/command-experiments.md`：如何写和运行实验 playbook。
-4. 相关 `openspec/specs/<capability>/spec.md`：具体 capability 的需求。
-5. 对应 framework、experiment 或 runtime context 文件。
+3. `guidelines/agentic-workflow-mechanism.md`：Agent 驱动的 workflow 循环机制——谁驱动、谁路由、谁验证。
+4. `guidelines/command-experiments.md`：如何写和运行实验 playbook。
+5. 相关 `openspec/specs/<capability>/spec.md`：具体 capability 的需求。
+6. 对应 framework、experiment 或 runtime context 文件。
 
 机制草案，例如 `guidelines/agentic-dispatch-scheduler-mechanism.md`，只能作为设计输入；未进入 OpenSpec 和实现前，不是运行时事实。
 
@@ -344,6 +346,7 @@ Before changing any file in `guidelines/`, check:
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for read-only framework assets versus mutable runtime bundles.
 - [Command Experiments](command-experiments.md) — target guidance for durable command experiment shape and boundaries.
+- [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — normative description of the Agent-driven workflow loop.
 - [Engine-Side Dispatch Scheduler](agentic-dispatch-scheduler-mechanism.md) — future ds mechanism draft, not runtime truth.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
 - [Accepted specs](../openspec/specs/) — accepted capability requirements.

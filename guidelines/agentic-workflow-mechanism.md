@@ -5,7 +5,7 @@ title: Agentic Workflow Mechanism
 status: effective
 created: 2026-06-23
 role: normative mechanism description of the Agent-driven dynamic-loading workflow loop
-scope: all Agent-driven workflow execution across DPT_FRAMEWORK/ and dpt_rb_*/
+scope: all Agent-driven workflow execution across DPT_FRAMEWORK/, dpt_rb_*/, and dpt_disp_*/
 authority: guidance
 defers_to:
   - AGENTS.md
@@ -111,7 +111,7 @@ chain 是**被查询**的——Agent 通过 `resolveNodeTransitionDetailed()` �
 Engine 层（gate CLI、ask-next.mjs、transition-chain.mjs、trace.mjs、workflow-chain.mjs）只做确定性工作：校验、查表、写审计记录。
 
 - **MUST**：gate CLI 接收 `--bundle` 和 `--current-node`，内部调用 chain 查路由，输出 `check.next`。
-- **MUST**：`resolveNodeTransitionDetailed()` 是唯一的路由查询入口。按文件后缀分发，当前只接受 `.chain.json`。
+- **MUST**：路由查询入口在 Engine 内部——MD/Agent 不自己查路由。当前实现（`resolveNodeTransitionDetailed()`）按 transition file 后缀分发（`.chain.json`），但具体函数名与后缀调度规则归 accepted spec，不是本文件的 normative 契约。
 - **MUST**：trace 写入 `rb_trace.jsonl`，append-only，是 pass/fail 的权威审计 trail。
 - **MUST NOT**：Engine 不编排多阶段流程，不自主加载下一个 node，不选修复策略，不做语义判断。
 
@@ -124,10 +124,10 @@ Engine 层（gate CLI、ask-next.mjs、transition-chain.mjs、trace.mjs、workfl
 Node 按需加载，不预加载。
 
 - **MUST**：Agent 只在拿到 `check.next` 后才加载下一个 node。不存在「先把所有 node 读进内存」的步骤。
-- **MUST**：`workflow-chain.mjs` 的 `contentCache` 是运行时缓存（避免重复读磁盘），不是预加载机制。
+- **MUST**：Engine 的运行时按需读缓存（避免重复读磁盘）只是缓存，不是预加载机制。
 - **MUST NOT**：manifest 不是执行顺序的权威——chain 才是。manifest 列出所有 node，chain 定义它们之间的转移。
 
-`transitions.chain.json` 里的 10 个 node（instantiation → hitl1 → setup → seed-topics → wave0 → wave1 → wave2 → hitl2 → readiness → final）在 Agent 走到之前不会被加载。chain 只是地图，不是行程单。
+当前 workflow 的 `transitions.chain.json` 里列出的 node（instantiation → hitl1 → setup → seed-topics → wave0 → wave1 → wave2 → hitl2 → readiness → final）在 Agent 走到之前不会被加载。chain 只是地图，不是行程单。
 
 ---
 
@@ -135,11 +135,13 @@ Node 按需加载，不预加载。
 
 - MUST treat MD phase nodes as the controller for each workflow step.
 - MUST treat `transitions.chain.json` as the single source of truth for node-to-node routing.
-- MUST route through `resolveNodeTransitionDetailed()` — no hardcoded next, no manifest-based next inference.
+- MUST route through the Engine's accepted transition lookup — no hardcoded next, no manifest-based next inference.
 - MUST keep the Agent as the runtime driver: read MD → execute → gate → chain lookup → load next MD.
 - MUST keep JS Engine stateless and passive: validate, look up, write trace — never drive the loop.
 - MUST encode only `passed` edges in chain. Fail/repair/rerun paths belong to Agent judgment.
-- MUST load nodes on demand via `assessNode()`, driven by `check.next`.
+- MUST load nodes on demand, driven by `check.next` — never preload the whole graph.
+
+Concrete function and file names referenced above (e.g. the current `resolveNodeTransitionDetailed()` entry point and `assessNode()` node loader) are descriptive anchors for the current implementation, not part of this normative contract. They may be renamed, wrapped, or relocated by an accepted OpenSpec change; the principles above must hold either way. For the authoritative function contract, file naming, and backend dispatch rules, see `openspec/specs/transition-table/spec.md` and `openspec/specs/framework-engine/spec.md`.
 
 ## MUST NOT
 

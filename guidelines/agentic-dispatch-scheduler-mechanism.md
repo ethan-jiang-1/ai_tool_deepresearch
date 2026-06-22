@@ -15,6 +15,7 @@ siblings:
   - guidelines/project-charter.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
+  - guidelines/agentic-workflow-mechanism.md
 ---
 
 # Engine-Side Dispatch Scheduler (ds) Mechanism
@@ -447,5 +448,6 @@ The prototype must follow `guidelines/command-experiments.md`.
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
 - [Command Experiments](command-experiments.md) — target guidance for durable command experiment shape and boundaries.
+- [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — normative description of the current Agent-driven workflow loop; ds would extend this runtime foundation, not replace it.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
 - [Accepted specs](../openspec/specs/) — accepted capability requirements; ds must be proposed here before implementation.

@@ -14,6 +14,7 @@ siblings:
   - guidelines/project-charter.md
   - guidelines/command-experiments.md
   - guidelines/agentic-dispatch-scheduler-mechanism.md
+  - guidelines/agentic-workflow-mechanism.md
 ---
 
 # Framework Runtime Boundary
@@ -208,6 +209,8 @@ Gate CLI commands MUST NOT infer active run state from chat memory or write resu
 ### MD 是 Controller
 
 Markdown（playbook、task card、node）是 Agent Flow 的编织者。它告诉 Agent 该做什么，读取 JS/CLI 的反馈，根据反馈决定下一步行动（advance、repair、escalate、block）。JS/CLI 只在关键节点执行确定性检查并返回结构化反馈；它不编排多阶段流程，不替 Agent 做判断。
+
+完整的运行时循环机制（谁驱动、谁路由、谁验证、三层架构）见 `guidelines/agentic-workflow-mechanism.md`。
 
 - **MUST**：多阶段 Agent Flow 保持在 Markdown/playbook 中，JS/CLI 只做确定性 checkpoint。
 - **MUST NOT**：将 Agent Flow 藏入 JS controller。JS 控制的是校验节点，不是整条流程。
