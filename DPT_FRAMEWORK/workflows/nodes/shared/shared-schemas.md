@@ -19,7 +19,7 @@ suggested_context: []
 
 - **Schema**：`PlanSchema`
 - **字段**：`plan_basename`（string）、`derived_topic_count`（number）、`topic_registry`（array）
-- **格式**：Markdown with JSON frontmatter
+- **格式**：Markdown with YAML frontmatter (FRE-003)
 - **位置**：`DPT_FRAMEWORK/schema/contracts/plan.mjs`
 
 ### `contracts/profile.mjs` → `rb_profile.yaml`

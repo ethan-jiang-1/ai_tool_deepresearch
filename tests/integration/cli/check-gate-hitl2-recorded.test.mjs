@@ -11,7 +11,7 @@ const NEW_BUNDLE = join(REPO_ROOT, 'experiments/shared/new-disposable-bundle.mjs
 const createdDirs = [];
 
 function track(dir) { createdDirs.push(dir); return dir; }
-function unique(prefix) { return `h2_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
+function unique(prefix) { return `rt_h2_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
 
 function runGate(bundlePath) {
   return spawnSync('node', [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-hitl2.md'], { encoding: 'utf-8', timeout: 10000 });

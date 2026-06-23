@@ -15,7 +15,7 @@ Agentic Queue engine (`queue-manager.mjs`, 619行) + CLI (`operate-queue.mjs`, 7
 - 验证 Path A 的可行性：两个上下游 phase 共用 queue 模式，打通"topic 定义 → source evidence"链路
 
 **Non-Goals:**
-- 不写新 JS 代码
+- 不新建独立 JS 文件或模块（gate-helpers.mjs 新增共享函数、已有 gate CLI 的小范围修改属于已有基础设施的职责扩展，不在此列）
 - 不实现 stop authorization 强制执行（Path B）
 - 不改 wave1/wave2（留给后续 change）
 - 不建 medium/complex experiment playbook（留给后续 change）
@@ -35,7 +35,7 @@ Agentic Queue engine (`queue-manager.mjs`, 619行) + CLI (`operate-queue.mjs`, 7
 
 **替代方案**: JS helper `deriveWave0Tasks(topicRegistry)`。
 
-**理由**: Path A 的承诺是零新 JS 代码。模板化生成虽然依赖 Agent 自律（Agent 可能填错字段），但 wave0 topic 数量通常 ≤10，Agent 按模板填写的出错率低。Phase 1 试点后如果发现 Agent 频繁填错，Change 2 再加 JS helper 也不迟。
+**理由**: Path A 的核心承诺是不新建独立 JS 模块（deriveTasks helper、新 CLI 等），不是零 JS 改动——gate-helpers.mjs 作为已有基础设施的职责扩展、各 gate CLI 的小范围修改均在范围内。模板化生成虽然依赖 Agent 自律（Agent 可能填错字段），但 wave0 topic 数量通常 ≤10，Agent 按模板填写的出错率低。Phase 1 试点后如果发现 Agent 频繁填错，Change 2 再加 JS helper 也不迟。
 
 ### D2: 灌料粒度 — 一个 topic 一个 task
 
@@ -72,10 +72,48 @@ Agentic Queue engine (`queue-manager.mjs`, 619行) + CLI (`operate-queue.mjs`, 7
 
 **理由**: "步步为营"原则要求每个 change 自验证。如果 phase-wave0.md 的 queue 指令有问题（CLI flag 路径错误、灌料步骤 Agent 执行不起来），要到 Change 3 才发现代价太大。结构 regression test 保证 MD contract 未退化；simple playbook 在 disposable bundle 上跑通最小闭环——灌料→claim→execute→complete→gate pass——作为 Change 1 的 done-condition。Change 3 保留 medium/complex playbook + 上下文可持续性测量。
 
+实验目录使用 `exp_agentic-queue-loop/`（而非扩展现有 `exp_agentic-queue/`）以区分两类实验：`exp_agentic-queue/` 验证 JS engine 原语（queue-manager 的 enqueue/claim/complete 机制），`exp_agentic-queue-loop/` 验证 phase MD 驱动的端到端闭环（灌料→执行循环→gate pass）。
+
+### D7: Markdown frontmatter 统一为 YAML 1.2
+
+**选择**: 所有 Markdown frontmatter 统一使用 YAML 1.2 格式，解析统一使用 gate-helpers.mjs 的 `parseMdFrontmatter()` 共享函数（内部调用 `parseYaml()` from `yaml` package）。
+
+**理由**:
+- **消除格式分歧**：当前 phase/shared nodes 用 YAML（`parseFrontmatter()` in `workflow-chain.mjs`），但 `rb_plan.md` 和 `seed_topics/*.md` 的 frontmatter 被各 gate CLI 用 `JSON.parse(m[1])` 解析，只接受 JSON。seed topic 文件模板被迫写 JSON，但 phase body 模板本身是 YAML——同一项目两种格式，Agent 和开发者都困惑
+- **YAML 1.2 是 JSON 的超集**：`parseYaml('{"slug":"x"}')` 与 `JSON.parse('{"slug":"x"}')` 返回相同对象。改用 `parseYaml()` 完全向后兼容——现有 JSON frontmatter 无需迁移
+- **消除代码重复**：6 个文件中各写一遍同样的 5 行正则+解析逻辑，改为 gate-helpers.mjs 一个共享函数
+- **防回归**：新增测试扫描 gate CLI / validate / instantiate 源文件，发现 `JSON.parse` 用于 frontmatter 上下文直接 fail——用自动化替代人记规矩
+
+**替代方案**: 全部改用 JSON。但 phase/shared nodes 的 YAML frontmatter（`requires`/`suggested_context` 列表、多行值）用 JSON 可读性显著下降，且 `workflow-chain.mjs` 已支持 YAML。
+
+**gate-helpers.mjs 新增函数：**
+- `parseMdFrontmatter(rawString)` → 返回解析后的 frontmatter 对象（内部：正则匹配 `---` 块 + `parseYaml()`）
+- `readBundlePlan(bundlePath)` → 读 `rb_plan.md`，调 `parseMdFrontmatter()`，返回 plan 对象
+
+**影响范围：**
+- 4 个 gate CLI: `check-gate-seed-topics-ready.mjs`, `check-gate-setup-ready.mjs`, `check-gate-wave0-complete.mjs`, `check-gate-wave1-complete.mjs` — 删手写 `getPlan()`，换 `readBundlePlan()`
+- `check-gate-seed-topics-ready.mjs` 的 `getDiskSlugs()` — 换 `parseMdFrontmatter()`
+- `validate-bundle.mjs` — 删本地 `parseMdFrontmatter()`，import gate-helpers 版本
+- `instantiate-run-bundle.mjs` — 同
+- `phase-seed-topics.md` 模板 — 恢复 YAML 格式
+
+### D8: Seed topic 文件两段结构 — 初始化区 + 轮次追加区
+
+**选择**: Seed topic 文件分上下两段。上半段（初始化区）在 seed-topics phase 写入，含 YAML frontmatter + V12 对齐的正文 sections（主题定位 / must_answer / 初始假设缺口张力 / why now / 研究边界 / 证据锚点 / 交付价值 / 下游位置）。下半段（轮次追加区）为预埋占位，用显式的 `═══ 研究轮次追加区 ═══` 标题 + 回填责任表标记，wave0/wave1/wave2 完成后各自回填对应内容。
+
+**理由**: V12 的 seed topic 是持续生长的研究日志——不是一次性写入的搜索参数文件。每轮 research 都在同一个文件里追加证据、理解、判断和待验证问题。预埋结构让后续 wave 一眼看到回填责任，避免 Agent 各 phase 各自写独立的中间文件导致信息散落。
+
+**替代方案**: 不预埋，让每个 wave 自己写独立 artifact（wave0 source.yaml 已独立，wave1 skeleton 已独立，wave2 synthesis 已独立）。但这样做丢失了"不断收集信息的框架"——同 topic 的信息跨 phase 散落，wave2 synthesis 时需要读取 3-4 个不同文件才能做综合判断。
+
+**影响范围**:
+- `phase-seed-topics.md` §3.1 模板 — 初始化区所有 sections 必须写入，轮次追加区留空
+- `seed-topics-ready` gate — 不检查轮次追加区内容（留空是合法状态）
+- 后续 phase MD（wave0/wave1/wave2）需要在完成后指示 Agent 回到 seed topic 文件追加对应内容
+
 ## Risks / Trade-offs
 
 - **[Agent 填错 task card 字段]** → 概率低（模板明确、字段少、topic ≤10）；发生时 queue-manager 的 Zod validation 会在 enqueue 时拒绝，inspect 反馈让 Agent 修正
 - **[Agent 跳过 queue loop 直接跑 gate]** → Path A 下无法强制执行，依赖 MD 指令的清晰度和 Agent 自律。Path B 的 stop authorization 强制执行会解决
 - **[Claim 后 crash，task 停在 running]** → 当前无 stale claim 检测（已知 gap，见 landing analysis §7.4）。本 change 的两个 playbook 不包含 crash→stale running 场景——这一验证显式留给后续 change。wave0 试点中若自然遇到此现象，记录 trace 现象即可，不要求本 change 解决。
 - **[灌料手写 enqueue CLI 太繁琐]** → 如果试点发现 topic 多、Agent 出错率高，后续 change 加 JS helper `deriveTasks`
-- **[D5 上下文释放假设未经验证]** → "main-agent 只读投影 → 上下文不膨胀"是 D5 的核心假设，当前无实测数据支持。本 change 的实验不测量上下文 token 曲线——上下文可持续性的正式测量按 §7.3 实验协议留给后续 change（`wfq-queue-loop-experiments`）。试点中 Agent 应自觉遵守"只读投影、不读回完整搜索结果"的约束，但这是 Agent 自律范畴（Path A 的固有限制）。
+- **[D5 上下文释放假设未经验证]** → "main-agent 只读投影 → 上下文不膨胀"是 D5 的核心假设，当前无实测数据支持。本 change 的实验不测量上下文 token 曲线——上下文可持续性的正式测量按 §7.3 实验协议留给后续 change（`wfq-queue-loop-experiments`）。试点中 Agent 应自觉遵守"只读投影、不读回完整搜索结果"的约束，但这是 Agent 自律范畴（Path A 的固有限制）。**注意：当前无任何信号（无指标、无警告、无 gate fail）能在 Agent 违反此约束时发出告警**——这是 Path A 的已知盲区，需在后续 change 中通过上下文测量来闭合。

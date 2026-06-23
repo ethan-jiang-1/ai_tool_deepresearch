@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-gate-seed-topics-ready.mjs — evaluates gate-seed-topics-ready rules
-// @impl GSK-001, GSK-002, GSK-004, STM-003, PRG-007
+// @impl GSK-001, GSK-002, GSK-004, STM-003, PRG-007, FRE-003
 // Usage: node check-gate-seed-topics-ready.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import { existsSync, statSync, readFileSync, readdirSync, appendFileSync } from 'node:fs';
@@ -14,6 +14,8 @@ import {
   buildGateResult,
   emitGateResult,
   readTraceEvents,
+  readBundlePlan,
+  parseMdFrontmatter,
 } from '../../engine/helpers/gate-helpers.mjs';
 
 const args = parseGateCliArgs();
@@ -44,16 +46,7 @@ let allPassed = true;
 let _planCache = null;
 function getPlan() {
   if (_planCache) return _planCache;
-  const p = join(bundlePath, 'rb_plan.md');
-  if (!existsSync(p)) return null;
-  const raw = readFileSync(p, 'utf-8');
-  const m = raw.match(/^---\n([\s\S]*?\n)---/);
-  if (!m) return null;
-  try {
-    _planCache = JSON.parse(m[1]);
-  } catch {
-    return null;
-  }
+  _planCache = readBundlePlan(bundlePath);
   return _planCache;
 }
 
@@ -80,14 +73,11 @@ function getDiskSlugs() {
     const stem = basename(f, '.md');
     let frontmatterSlug = null;
     let frontmatterTitle = null;
-    const m = raw.match(/^---\n([\s\S]*?\n)---/);
-    if (m) {
-      try {
-        const fm = JSON.parse(m[1]);
-        frontmatterSlug = fm.slug || null;
-        frontmatterTitle = fm.title || null;
-      } catch { /* frontmatter unparseable */ }
-    }
+    try {
+      const fm = parseMdFrontmatter(raw);
+      frontmatterSlug = fm.slug || null;
+      frontmatterTitle = fm.title || null;
+    } catch { /* frontmatter unparseable */ }
     return { slug: frontmatterSlug, title: frontmatterTitle, filenameStem: stem, filePath: f };
   });
 }

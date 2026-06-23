@@ -11,7 +11,7 @@ const NEW_BUNDLE = join(REPO_ROOT, 'experiments/shared/new-disposable-bundle.mjs
 const createdDirs = [];
 
 function track(dir) { createdDirs.push(dir); return dir; }
-function unique(prefix) { return `int_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
+function unique(prefix) { return `rt_int_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
 
 function runGate(bundlePath) {
   return spawnSync('node', [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-setup.md'], { encoding: 'utf-8', timeout: 10000 });
@@ -57,7 +57,7 @@ describe('check-gate-setup-ready', () => {
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     setupValidBundle(bundleDir);
-    // The new-disposable-bundle.mjs creates dpt_disp_<name>_<hex>
+    // The new-disposable-bundle.mjs creates dpt_disp_rt_<name>_<hex>
     // and sets plan_basename to <name> in both rb_plan.md and rb_profile.yaml
     // Write profile with correct plan_basename matching the logical name
     writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', `plan_basename: ${name}`));

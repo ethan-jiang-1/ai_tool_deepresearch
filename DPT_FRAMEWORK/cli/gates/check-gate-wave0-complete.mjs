@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-gate-wave0-complete.mjs — evaluates gate-wave0-complete rules
-// @impl GSK-001, GSK-002, GSK-004, RWG-004, RWG-007
+// @impl GSK-001, GSK-002, GSK-004, RWG-004, RWG-007, FRE-003
 // Usage: node check-gate-wave0-complete.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import { existsSync, statSync, readFileSync, appendFileSync } from 'node:fs';
@@ -14,6 +14,7 @@ import {
   buildGateResult,
   emitGateResult,
   readTraceEvents,
+  readBundlePlan,
 } from '../../engine/helpers/gate-helpers.mjs';
 import {
   ReferenceMetadataArraySchema,
@@ -47,12 +48,7 @@ let allPassed = true;
 let _planCache = null;
 function getPlan() {
   if (_planCache) return _planCache;
-  const p = join(bundlePath, 'rb_plan.md');
-  if (!existsSync(p)) return null;
-  const raw = readFileSync(p, 'utf-8');
-  const m = raw.match(/^---\n([\s\S]*?\n)---/);
-  if (!m) return null;
-  try { _planCache = JSON.parse(m[1]); } catch { return null; }
+  _planCache = readBundlePlan(bundlePath);
   return _planCache;
 }
 

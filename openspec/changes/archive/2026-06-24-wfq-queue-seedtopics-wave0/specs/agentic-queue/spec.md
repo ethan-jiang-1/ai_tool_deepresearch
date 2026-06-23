@@ -10,18 +10,20 @@ A task card with `producer_rule: source_intake_fan_in` SHALL have the following 
 
 | Field | Required | Default / Derived From |
 |-------|----------|------------------------|
-| `work_id` | yes | `"wave0-source-{topic.key}"` |
-| `title` | yes | `"Source intake: {topic.label}"` |
-| `action` | yes | 自然语言描述：搜索 topic、找到可信来源、获取页面、提取 url/title/retrieved_date/topic_tag、写入 `reference/{topic.key}/source.yaml`（满足 ReferenceMetadata schema） |
+| `work_id` | yes | `"wave0-source-{topic.slug}"` |
+| `title` | yes | `"Source intake: {topic.title}"` |
+| `action` | yes | 自然语言描述：搜索 topic、找到可信来源、获取页面、提取 url/title/retrieved_date/topic_tag、写入 `reference/{topic.slug}/source.yaml`（满足 ReferenceMetadata schema） |
 | `target` | yes | `"sub-agent"` |
 | `producer_rule` | yes | `"source_intake_fan_in"` |
 | `priority_class` | yes | `"P5_new_reference_intake"` |
-| `required_receipts` | yes | `["file:reference/{topic.key}/source.yaml"]` |
-| `done_condition` | yes | `"reference/{topic.key}/source.yaml` 存在且通过 `ReferenceMetadata` schema 校验" |
+| `required_receipts` | yes | `["file:reference/{topic.slug}/source.yaml"]` |
+| `done_condition` | yes | `"reference/{topic.slug}/source.yaml` 存在且通过 `ReferenceMetadata` schema 校验" |
 | `verification.engine` | yes | `["receipt_check"]` |
-| `writes_to` | yes | `["reference/{topic.key}/source.yaml", "_cache/search-results/"]` |
+| `writes_to` | yes | `["reference/{topic.slug}/source.yaml", "_cache/search-results/"]` |
 
-The task card SHALL target `sub-agent` — the sub-agent executes the search and bounded output, the main-agent reads the render projection (`_cache/agentic-queue/current-task.md`) to confirm done-condition without pulling full search results into conversation context.
+The task card template in `phase-wave0.md` §3.1 SHALL set `target` to `sub-agent` — the Zod schema enforces `target` is a valid enum value (`main-agent` | `sub-agent` | `engine`), and the phase MD template further constrains this producer_rule to `sub-agent`. The sub-agent executes the search and bounded output; the main-agent reads the render projection (`_cache/agentic-queue/current-task.md`) to confirm done-condition without pulling full search results into conversation context.
+
+**Enforcement boundary:** The `target` field value is JS-enforced (Zod enum). The mapping `producer_rule: source_intake_fan_in → target: sub-agent` is an MD-template-level constraint (Path A) — the queue manager accepts any valid `target` value regardless of producer_rule. If the Agent deviates from the template and sets `target: main-agent`, the task card will still pass Zod validation.
 
 Filling (灌料) for wave0 SHALL follow this pattern: the Agent reads `rb_plan.md` frontmatter `topic_registry` and generates one task card per topic, using `operate-queue enqueue` CLI with the fields above. All task cards SHALL be enqueued at once (one-shot fill) before entering the queue-driven execution loop.
 
@@ -29,21 +31,23 @@ Filling (灌料) for wave0 SHALL follow this pattern: the Agent reads `rb_plan.m
 
 - **WHEN** `topic_registry` contains 3 topics
 - **THEN** Agent SHALL generate 3 task cards, each with `producer_rule: source_intake_fan_in`
-- **AND** each task card's `work_id` SHALL contain the topic key
-- **AND** each task card's `required_receipts` SHALL reference `reference/{topic.key}/source.yaml`
+- **AND** each task card's `work_id` SHALL contain the topic slug
+- **AND** each task card's `required_receipts` SHALL reference `reference/{topic.slug}/source.yaml`
 
 #### Scenario: Task card targets sub-agent
 
 - **WHEN** a `source_intake_fan_in` task card is claimed
 - **THEN** the task SHALL be executed by a sub-agent (target: sub-agent)
 - **AND** search/retrieval results SHALL be written to `_cache/search-results/`
-- **AND** structured metadata SHALL be written to `reference/{topic.key}/source.yaml`
+- **AND** structured metadata SHALL be written to `reference/{topic.slug}/source.yaml`
 
 #### Scenario: Main-agent reads render projection only
 
 - **WHEN** sub-agent completes a source-intake task and writes result
 - **THEN** main-agent SHALL read `_cache/agentic-queue/current-task.md` projection to confirm done-condition
 - **AND** main-agent SHALL NOT read full search results back into conversation context
+
+> **Enforcement gap (Path A limitation):** This constraint is MD-instruction-level only. Under Path A, there is no JS-enforced mechanism to detect or prevent the main-agent from reading full search results back. No metric, warning, or gate failure signals a violation. Formal verification of this constraint is deferred to Path B (stop authorization enforcement) or a future context-sustainability measurement change. Design decision D5 and the Risks section of design.md document this as a known blind spot.
 
 ### Requirement: Wave0 queue-loop simple playbook
 
@@ -59,12 +63,12 @@ The playbook SHALL use a disposable bundle (`dpt_disp_*`), import real framework
 
 #### Scenario: Real search — full queue-loop from filling to gate pass
 
-- **WHEN** the playbook pre-seeds a post-seed-topics bundle with 1 topic in `topic_registry`（topic key 和 label 指向一个具体、可搜索的真实话题——如 "Claude Code CLI tool Anthropic"）
+- **WHEN** the playbook pre-seeds a post-seed-topics bundle with 1 topic in `topic_registry`（topic slug 和 label 指向一个具体、可搜索的真实话题——如 "Claude Code CLI tool Anthropic"）
 - **AND** Agent loads `phase-wave0.md` and executes §3.1 灌料：创建 task card JSON → `operate-queue enqueue`
 - **THEN** 1 task card SHALL be enqueued with `producer_rule: source_intake_fan_in`, `target: sub-agent`, `priority_class: P5_new_reference_intake`
 - **AND** Agent SHALL `operate-queue claim --actor main-agent` → 获取 task card
 - **AND** Agent SHALL 执行 sub-agent search：使用 **真实 WebSearch + WebFetch** 工具搜索该 topic 的 foundation reference，找到至少 1 条可信来源
-- **AND** sub-agent SHALL 产出 `reference/<topic>/source.yaml`，每项 reference 的 `url` 指向真实可访问页面、`title` 反映实际页面标题、`retrieved_date` 为 YYYY-MM-DD、`topic_tag` 匹配 topic key
+- **AND** sub-agent SHALL 产出 `reference/<topic>/source.yaml`，每项 reference 的 `url` 指向真实可访问页面、`title` 反映实际页面标题、`retrieved_date` 为 YYYY-MM-DD、`topic_tag` 匹配 topic slug
 - **AND** search/retrieval 中间结果 SHALL 写入 `_cache/search-results/`
 - **AND** Agent SHALL 创建 result JSON → `operate-queue complete --result <result.json>` → receipt check PASS
 - **AND** Agent SHALL 读 `_cache/agentic-queue/current-task.md` 投影确认 done-condition
@@ -99,16 +103,20 @@ A task card with `producer_rule: seed_topic_materialize` SHALL have the followin
 
 | Field | Required | Default / Derived From |
 |-------|----------|------------------------|
-| `work_id` | yes | `"seed-topic-{topic.key}"` |
-| `title` | yes | `"Materialize seed topic: {topic.label}"` |
+| `work_id` | yes | `"seed-topic-{topic.slug}"` |
+| `title` | yes | `"Materialize seed topic: {topic.title}"` |
 | `target` | yes | `"main-agent"` |
-| `action` | yes | 自然语言描述：从 topic_registry 和 rb_profile.yaml 提取信息，按 seed topic 文件结构创建 `seed_topics/{topic.key}.md`（含 must_answer/hypothesis/scope/search_guardrails/evidence_route） |
+| `action` | yes | 自然语言描述：从 topic_registry 和 rb_profile.yaml 提取信息，按 seed topic 文件结构创建 `seed_topics/{topic.slug}.md`（YAML frontmatter 含 must_answer/hypothesis/scope/search_guardrails/evidence_route） |
 | `producer_rule` | yes | `"seed_topic_materialize"` |
 | `priority_class` | yes | `"P3_current_gate_gap"` |
-| `required_receipts` | yes | `["file:seed_topics/{topic.key}.md"]` |
-| `done_condition` | yes | `seed_topics/{topic.key}.md` 存在，frontmatter 含 id/slug/title（均非空），slug 与文件名 stem 一致，正文含研究骨架 + 原始语境约束 block |
+| `required_receipts` | yes | `["file:seed_topics/{topic.slug}.md"]` |
+| `done_condition` | yes | `seed_topics/{topic.slug}.md` 存在，YAML frontmatter 含 id/slug/title（均非空），slug 与文件名 stem 一致，正文含研究骨架 + 原始语境约束 block |
+| `writes_to` | yes | `["seed_topics/{topic.slug}.md"]` |
+| `payload` | yes | `{ topic_slug: "<slug>", topic_title: "<title>" }` — 用于 Agent 在 execute 阶段定位 registry 条目和生成文件 |
 
-Seed topic materialization uses `target: main-agent` because it involves structured writing from existing registry data — no external web search is required. The main-agent reads `topic_registry` and `rb_profile.yaml`, fills in the seed topic template, and writes the file.
+Seed topic materialization uses `target: main-agent` because it involves structured writing from existing registry data — no external web search is required. The main-agent reads `topic_registry` and `rb_profile.yaml`, fills in the YAML-frontmatter seed topic template, and writes the file.
+
+**Enforcement boundary:** The `target` field value is JS-enforced (Zod enum `main-agent` | `sub-agent` | `engine`). The mapping `producer_rule: seed_topic_materialize → target: main-agent` is an MD-template-level constraint (Path A) — the queue manager accepts any valid `target` value regardless of producer_rule.
 
 #### Scenario: Task card for seed topic materialization
 
@@ -138,7 +146,7 @@ The playbook SHALL use local fixture data for topic_registry entries (pre-writte
 
 #### Scenario: Full seed-topics queue-loop
 
-- **WHEN** the playbook pre-seeds a post-setup bundle with 3 topics in `topic_registry`（含 topic label, description 等足够信息）
+- **WHEN** the playbook pre-seeds a post-setup bundle with 3 topics in `topic_registry`（含 topic title, description 等足够信息）
 - **AND** Agent loads `phase-seed-topics.md` and executes §3.1 灌料
 - **THEN** 3 task cards SHALL be enqueued
 - **AND** Agent SHALL claim → execute → complete each task

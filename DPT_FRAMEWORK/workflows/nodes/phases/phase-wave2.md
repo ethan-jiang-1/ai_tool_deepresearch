@@ -34,6 +34,15 @@ suggested_context:
 - 更新 `rb_status.json`（推进 `current_gate` / `next_gate`）与 `rb_trace.jsonl`
 - 在 `rb_trace.jsonl` 中记录 `wave2_completion` trace event
 
+### 3a. Seed Topic 回填（Queue-Driven，趁 synthesis 还 fresh）
+
+Synthesis 完成后、gate 前，**立刻**通过 queue 回填 seed topic 文件，闭合研究日志。不等 HITL2——synthesis 的判断趁热写进 seed topic。
+
+1. 为 topic_registry 中的每个 topic 灌入一个 backfill task card（`producer_rule: seed_topic_backfill`，`target: main-agent`，`priority_class: P4_backfill`）
+2. Task `action`：「`grep -n '__BACKFILL_WAVE2_JUDGMENT__' seed_topics/{topic.slug}.md` 定位 token → 基于刚写好的 `artifacts/wave2/synthesis.md` 提取该 topic 的跨 topic 判断 → **替换 token 行**为最终判断（综合全部轮次证据）。`grep -n '__BACKFILL_PENDING_QUESTIONS__'` 定位 token → 更新问题状态标签（已解答→`[部分解答]`，残留→`[开放]`）→ **替换 token 行**」
+3. 执行 claim→execute→complete 循环直至 queue 空
+4. 回填完成后才进入 §5 Gate
+
 ## 4. Expected Artifacts
 
 - `artifacts/wave2/synthesis.md`（非空）

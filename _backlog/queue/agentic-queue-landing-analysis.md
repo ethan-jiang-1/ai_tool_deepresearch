@@ -56,7 +56,8 @@
 | **receipt** | task 完成后须满足的确定性条件（如 "file:reference/<topic>/source.yaml"）。`checkReceipts()` 支持 6 种前缀 (file/json/queue/slot/trace/none)，fail-closed。 |
 | **task card** | 队列里一个任务单元。包含 work_id、action、target (main-agent/sub-agent)、required_receipts、done_condition、verification 等。 |
 | **bundle** | 一次 run 的 runtime context。Production run = `dpt_rb_<name>/`，disposable experiment = `dpt_disp_<name>/`。包含 rb_status.json、rb_trace.jsonl、rb_queue.agq.json 等。 |
-| **灌料 / filling** | phase 开始时往队列里灌入 task card 的过程。当前是纯手动（Agent 手写 task.json 再 enqueue）。 |
+| **灌料 / filling** | phase 开始时往队列里灌入 task card 的过程。当前是 Agent 根据 MD 模板手写 task.json 再 enqueue。 |
+| **回填 / backfill** | task 或 wave 完成后，将产出（ref 摘要、机制理解、判断）写回 seed_topics/{slug}.md 的 `__BACKFILL_*__` token 位置。**灌料是往 queue 里填任务，回填是往 seed topic 文件里填结果——两者方向相反，不可混用。** |
 | **stop authorization** | "Agent 现在能不能停"的判定。`stop_authorization_state` 有四个值：`unauthorized_continue_required`（默认）、`final_delivery`、`decision_blocker`、`empty_queue_after_refill`。 |
 | **V12** | 这个项目的前一个版本原型，存放在 `_original_dpt_v12/`（尤其 `DEEP_RESEARCH_TEMPLATE_V12/flows/queue-agentic-flow.md` 是 V12 的 queue loop 定义）。它把 queue 管理全做在手写 Markdown 里，失败教训详见 §1。注意：按 AGENTS.md 规矩，`_original_*` 归档不读除非用户明确要求分析历史版本。 |
 
@@ -70,7 +71,7 @@
 | `DPT_FRAMEWORK/cli/operate-queue.mjs` (102 行) | §2.2 的 CLI 子命令表 | 通读全文，确认 7 个子命令 + CLI flags |
 | `openspec/specs/agentic-queue/spec.md` + `openspec/governance/req-registry.yaml` | §2.3 的 spec 状态 | 确认 AGQ-001~006 全部 accepted |
 | `experiments_playbook/exp_agentic-queue/` | §2.4 的 playbook 表 | 确认 3 个 playbook 文件存在 |
-| `DPT_FRAMEWORK/workflows/nodes/phases/phase-*.md` | §3、§5.5 的 phase 判定 | grep 确认**没有任何 phase node MD 引用 operate-queue**；读了 phase-wave0.md / phase-wave1.md 全文 |
+| `DPT_FRAMEWORK/workflows/nodes/phases/phase-*.md` | §3、§5.5 的 phase 判定 | 通读全文——seed-topics 和 wave0 **已引用 operate-queue**（queue-driven 三阶段），wave1 仍为自由文本，wave2 为合成指令 |
 | `DPT_FRAMEWORK/workflows/transitions.chain.json` | §5.1、§5.3 规则 4 | 确认只有 `passed` 边，无 fail/repair 分支 |
 | `guidelines/agentic-workflow-mechanism.md` (effective) | §5.1 的外层 loop 描述 | 通读全文——这是已生效的 loop 机制规约 |
 | `guidelines/project-charter.md` (effective) | §5.3 规则 3 的 MUST NOT 第一条、§7.2 的 stop authorization 讨论 | 通读全文——这是 repo-wide charter |
@@ -118,6 +119,8 @@ V12 的 `queue-agentic-flow.md` (~400 行 Markdown) 定义了完整的 queue-dri
 
 核心教训跟 project charter 一致：**Markdown controls Agent Flow; JS owns deterministic checkpoints.**
 
+> **V12 不只是教训。** V12 在 evidence 质量模型（30+字段的 tier/trust/commercial_intent/cross_verification）、不确定性管理（四区 question ledger + Emergent Question Protocol）、source-intake cache boundary（staging→review→promote）、Anti-Stall Budget 等方面有深度设计，我们的 foundation 阶段尚未覆盖。详见 §6.2c——这些不是 V12 的问题，是 V12 的优势，应该在后续 change 中继承。
+
 ---
 
 ## 2. 当前已落地了什么
@@ -155,7 +158,7 @@ V12 的 `queue-agentic-flow.md` (~400 行 Markdown) 定义了完整的 queue-dri
 - Queue state schema, enqueue/claim/complete/fail/preempt/receipt/render 都有规约
 - 3 个 experiment playbook 已通过
 
-### 2.4 实验验证 — `experiments_playbook/exp_agentic-queue/`
+### 2.4 实验验证 — `experiments_playbook/exp_agentic-queue/`（底层 engine）
 
 | Playbook | 验证内容 | 状态 |
 |----------|---------|------|
@@ -163,15 +166,33 @@ V12 的 `queue-agentic-flow.md` (~400 行 Markdown) 定义了完整的 queue-dri
 | `test-medium-urgent-preemption.md` | full-window preemption, displaced tail, restore, refill | ✅ |
 | `test-complex-failure-repair.md` | invalid task rejection, missing receipt blocking, unsafe-current guard, empty queue handling | ✅ |
 
+### 2.5 实验验证 — `experiments_playbook/exp_agentic-queue-loop/`（phase 级 queue-loop 集成）
+
+| Playbook | 验证内容 | 状态 |
+|----------|---------|------|
+| `test-simple-seedtopics-queue-loop.md` | seed topics queue-driven 物化：enqueue→claim→main-agent 执行→complete→gate pass | ✅ |
+| `test-heavy-wave0-happy-path.md` | seed_topics→wave0 queue-loop→真实 WebSearch+WebFetch→backfill→gate pass 全链路 | ✅ |
+| `test-heavy-wave0-gate-fail-repair.md` | gate fail（count_floor 检测缺失 source.yaml）→repair→gate pass，trace 含 fail+pass 两条 gate_attempt | ✅ |
+
+### 2.6 已接入 queue 的 phase node MD
+
+| Phase | Queue-driven？ | 三阶段模板 | Backfill | Target | 状态 |
+|-------|---------------|-----------|----------|--------|------|
+| `phase-seed-topics.md` | ✅ | §3.1 灌料 + §3.2 执行循环 + §3.3 收尾+gate | `__BACKFILL_*__` tokens（预埋，由后续 wave 回填） | main-agent | ✅ 已落地 |
+| `phase-wave0.md` | ✅ | §3.1 灌料 + §3.2 执行循环（含 step 5 inline backfill）+ §3.3 收尾+gate | 每个 topic complete 后立刻替换 `__BACKFILL_WAVE0_EVIDENCE__` | main-agent（⚠️ task card 写 `target: sub-agent` 但实际执行时 main-agent 自己做了 WebSearch+WebFetch——从未真正 spawn sub-agent） | ✅ 已落地 |
+
 ---
 
 ## 3. 还缺什么
 
 | 缺的 | 当前状态 | 差距 |
 |------|---------|------|
-| queue 接入 workflow loop | queue engine 存在但 phase node MD 没有引用它 | 需要在 phase body 里加入 queue-driven 工作模式 |
+| ~~queue 接入 workflow loop~~ | ✅ **已完成**：seed-topics + wave0 两个 phase 已实现 queue-driven 三阶段（灌料→执行循环→收尾+gate），含 task card JSON 模板、inline backfill、3 个 playbook 验证 | — |
 | "stop authorization" 强制执行 | stop_authorization_state 字段存在但 Agent 停不停靠自觉 | Engine 侧强制执行（让 gate CLI 或 complete() 读取并顶回非法停机）；MD 指令不够——见 §7.2 |
-| producer rules enum 标准化 | priority_class 字段存在，部分 producer_rule 值在 makeRepairItem 里用了 | 需要 OpenSpec 定义最终 enum |
+| producer rules enum 标准化 | 三个新的 producer_rule 值已投入使用（`seed_topic_materialize`、`source_intake_fan_in`、`backfill_wave0_evidence`）。AGQ-007~010 已在 OpenSpec 注册（`req-registry.yaml`）但 enum 尚未收敛为单一 `ProducerRule` zod type | 后续 change 中逐步收敛 |
+| ~~灌料机制~~ | ✅ **已落地**：两个 phase 都有 task card JSON 模板，Agent 从 topic_registry 派生 task 并 enqueue | minor：批量 enqueue 仍是手写模板+CLI，未做 JS helper（`deriveTasks`） |
+| ~~上下文隔离~~ | ⚠️ **MD 约定但未强制执行**：phase-wave0.md 要求 sub-agent 输出写入 `_cache/wave0/search-results/`、main-agent 只读投影。但实际执行时 main-agent 自己做了 WebSearch（噪声直接进主上下文），没有真正 spawn sub-agent 来隔离。上下文隔离靠 Agent 自律，不是 engine 强制。 | 需要真正走 sub-agent dispatch——见新增 gap「sub-agent dispatch 未实现」 |
+| wave1 queue 接入 + sub-agent dispatch | phase-wave1.md 目前仍是自由文本，wave1 的 topic-specific deepening 未实现。`target: sub-agent` 只是 advisory text——wave0 的 WebSearch 实际是 main-agent 自己做的，噪声进主上下文。`subagent-relay.mjs`（1066 行）完全闲置。 | **Change 2**：wave1 queue-driven 实现 + `target` → `targets`（wave0&1 一起切 sub-agent dispatch） |
 | gate + queue 联合操作 | Gate CLI 和 Queue CLI 是分开的 | 不是必须——Agent 可以自己协调，先跑 gate 再跑 queue |
 
 **以下不是当前优先级：**
@@ -180,9 +201,9 @@ V12 的 `queue-agentic-flow.md` (~400 行 Markdown) 定义了完整的 queue-dri
 
 ---
 
-## 4. 真正的 gap：queue 没有接入 workflow loop
+## 4. 当前真实 gap：sub-agent dispatch 未实现 + wave1 未 queue-driven
 
-**queue engine 本身已经很强了，但它没有被 workflow 使用。**
+**queue 已接入 seed-topics 和 wave0 两个 phase**（§2.6），但有两个 gap 阻止它覆盖全部研究 phase：
 
 当前 workflow loop：
 ```
@@ -215,10 +236,11 @@ agent loop 不是一个循环，是**两层嵌套**：
   读 MD node → 执行 → 跑 gate → chain 查 next → 加载下一个 MD node → 循环
   权威 = gate + transitions.chain.json
 
-  └ 内层（phase 内，待落地）：
+  └ 内层（phase 内，已部分落地 — seed-topics + wave0）：
       claim → 执行 task → complete (receipt check + promote + refill)
       → 读下一个 task card → claim → 执行 → complete → ... → queue 空
       权威 = rb_queue.agq.json + queue-manager.mjs
+      ⚠️ sub-agent dispatch 未实现（main-agent 自己做搜索），待 Change 2
 ```
 
 **外层不进 Q。** 外层解决的是"做完这个 phase，下一个 phase 是谁"——一个确定性的、单步的、静态路由。内层解决的是"一个 phase 里有十几个子任务，怎么一个个做完不停下来问"。
@@ -256,6 +278,13 @@ agent loop 不是一个循环，是**两层嵌套**：
 
 **规则 4：不能回退 phase。** chain 只有 `passed` 边（`transitions.chain.json` 现状）。后面 phase 发现前面 phase 的 gap → escalate（`rb_status.json` → blocked），而不是 Q 往回捅一个 task。这条专门防 V12 那种"什么都能塞进队列、队列还能跨边界"的糊。
 
+**设计原则（从 project charter 继承）：**
+
+- **Queue 不驱动 Agent** — Agent 驱动自己，queue 只是它的 todo list
+- **Queue 不代替 Agent 做判断** — receipt check 是确定性的，内容判断归 Agent
+- **Markdown projection 是视图不是权威** — `rb_queue.agq.json` 是 Source of Record
+- **fail-closed** — receipt 缺失时阻塞
+
 ### 5.4 scenario 全过一遍——证明每条只有一个答案
 
 | # | 场景 | 谁验证？ | 走 Q？ | repair 归谁 |
@@ -280,8 +309,9 @@ agent loop 不是一个循环，是**两层嵌套**：
 | instantiation | bundle 结构 gate | 否（单步） |
 | HITL1 / HITL2 | 人工 checkpoint | 否（等人） |
 | setup | profile/status gate | 否（单步） |
-| seed-topics | seed gate + 多 topic | **可能**（若 topic 多） |
-| wave0 / wave1 / wave2 | phase gate + 多 topic × 多子任务 | **是**（Q 发挥价值的地方） |
+| seed-topics | seed gate + 多 topic | **是**（已 queue-driven） |
+| wave0 / wave1 | phase gate + 多 topic × 多子任务 | **是**（Q 发挥价值的地方） |
+| wave2 | phase gate + synthesis + 多 topic backfill | **是**（synthesis 本体 1 task + backfill N tasks） |
 | readiness | readiness gate | 否（单步） |
 | final | final gate | 否（单步） |
 
@@ -291,52 +321,30 @@ phase MD 自己决定开不开 Q——这是 controller 的权利。
 
 ## 6. 落地建议
 
-### 6.1 两条路
+### 6.1 已选的路径：MD 驱动集成（Path A）+ 必要时改 schema（Path B 元素）
 
-**A. 最小路径：只改 phase node MD，不写新代码**
+Change 1（seed-topics+wave0）走了纯 Path A——只改 MD，零新 JS 代码。Change 2（wave1+sub-agent dispatch）需要走混合路径——`target`→`targets` 是 breaking schema change，必须改 schema+engine+MD+playbook（~12 文件），但核心仍以 MD 驱动为主（`subagent-relay.mjs` 不改，Agent 工具本身支持 spawn sub-agent）。
 
-修改 phase node MD body（seed-topics/wave0/wave1 最适合——"一个 topic 一个 task"的独立子任务模式），把 "Allowed Actions" 从自由文本改成 queue-driven 模式：
-```markdown
-## 3. Allowed Actions
-1. 加载 queue: `node DPT_FRAMEWORK/cli/operate-queue.mjs claim <bundle>`
-2. 执行 task card 描述的 action
-3. 完成: `node DPT_FRAMEWORK/cli/operate-queue.mjs complete <bundle> --result result.json`
-4. 重复 1-3 直到 queue 空
-5. 跑 gate CLI 推进到下一 phase
-```
+**我们不追求纯 Path A 或纯 Path B——每 change 按实际需要选择深度。** 原则是：能不改 JS engine 就先用 MD 驱动（快速验证形状），需要 engine 强制执行时才改 JS（不为了"完整"提前过度工程化）。stop authorization 强制执行（§7.2）和 error recovery（§7.4）是长期需要 engine 侧解决的，但不阻塞当前 change 推进。
 
-优点：零新代码，立即可用。
+### 6.2 推进顺序
 
-**局限（必须同时看清楚）：**
+### 6.2a OpenSpec 落地：4 个 Changes（wfq-*），步步为营
 
-- Path A 解决的是 **visibility**——MD 告诉 Agent "你应该这样走 queue loop"。但它不解决 **enforcement**——Agent 仍然可以自己决定"我觉得差不多了，跳过 loop 直接跑 gate"。这正是 §7.2 指出的 charter 张力：放在 MD 里的步骤是 Agent 自律（只是换了份 MD），不是 Engine 强制执行。
-- 因此 Path A 是**必要的第一步**（让 Agent 知道 queue 的存在和用法），但不是**充分的最后一步**（让 Engine 在非法停机时顶回）。两者互补，不是替代。
-- 短期实用判断：MD 指令 + Agent 自觉在大多数情况下**能工作**——Agent 没有理由故意跳过 queue loop。但长期必须补上 Path B 的 JS-level stop authorization 强制检查。
+以上 Phase 1-4 映射为 4 个 OpenSpec changes，按依赖顺序推进。命名前缀 `wfq-*`（workflow queue），区别于已完成并归档的 `wff-*`（workflow foundation，搭 skeleton）。
 
-**B. 完整路径：producer rules 标准化 + experiments + enforcement**
-
-在 A 的基础上（Path A → Path B）：
-- Producer rules enum 随各 change 逐步标准化（AGQ-007~012）
-- 每个 change 自带 experiment playbook（"步步为营"原则——§6.2a）
-- stop authorization 强制执行（§7.2）——Path B 的核心：让 engine 在非法停机时顶回，完成 charter 的 Engine 强制执行闭环
-
-### 6.2 建议推进顺序
-
-> 本节原始的 Phase 1-4 设想已被以下 §6.2a 的 3 个 OpenSpec changes 具体化并替代。保留此节标题作为历史标记，不做内容同步。
-
-### 6.2a OpenSpec 落地：3 个 Changes（wfq-*），步步为营
-
-以上 Phase 1-4 映射为 3 个 OpenSpec changes，按依赖顺序推进。命名前缀 `wfq-*`（workflow queue），区别于已完成并归档的 `wff-*`（workflow foundation，搭 skeleton）。
-
-**核心原则：每个 change 自带验证，实验不集中到最后一个 change。** 每一步都有回归测试（防退化）+ experiment playbook（证闭环），Change 3 的价值从"第一次验证"变为"跨 wave 整合验证 + 长程指标测量"。
+**核心原则：每个 change 自带验证，实验不集中到最后一个 change。** 每一步都有回归测试（防退化）+ experiment playbook（证闭环）。
 
 | # | Change | 队列？ | 范围 | 测试 | 实验 | 新代码 | 状态 |
 |---|--------|--------|------|------|------|--------|------|
-| 1 | `wfq-queue-seedtopics-wave0` | ✅ | phase-seed-topics.md §2-§3 重写（V12 内容对齐） + phase-wave0.md §2-§3 重写 + AGQ-007~010（2 producer_rule + 2 playbook）| 2 个 phase body 结构 regression | seed-topics simple + wave0 simple（真搜索）| 零（Path A） | **proposed**（MD 已落盘，待 test+playbook） |
-| 2 | `wfq-queue-wave1` | ✅ | phase-wave1.md §3 重写 + producer_rule `skeleton_placeholder_write`（AGQ-011）+ playbook（AGQ-012）| phase body 结构 regression | wave1 queue-loop simple | 零（Path A，直接复用 seed-topics 模板） | 待 Change 1 完成后启动 |
-| 3 | `wfq-lifecycle-delivery` | ❌ | wave2 + readiness + final phase MD 生产级内容 + full-chain 实验（seed-topics→wave0→wave1→wave2→readiness）+ 上下文可持续性测量 | — | full-chain + medium repair + 上下文采样 | 实验协议（playbook MD） | 待 Change 2 完成后启动 |
+| 1 | `wfq-queue-seedtopics-wave0` | ✅ | seed-topics + wave0 完整 queue-driven 三阶段（task card JSON 模板 + inline backfill + `__BACKFILL_*__` token 系统）+ wave1 foundation 内容（backfill + anti-cheating + future tracks）已就绪 + 3 playbook（1 light + 2 heavy）+ RUN.md 更新 + 全量 504 regression PASS | 2 个 MD structure regression + 2 个 phase-specific regression | ✅ 3 playbook 全部通过 | 零（Path A） | **✅ 已落地** |
+| 2 | `wfq-wave1-intake-subagent` | ✅（wave1） | **Wave1 queue-driven 实现**：phase-wave1.md §3 完整 queue-driven 三阶段（灌料→执行循环→收尾+gate），复用 seed-topics + wave0 模板。**+ `target` → `targets` retrofit wave0&1**：schema+engine+phase MD+playbook，wave0 和 wave1 的 web search 一起切到真正的 sub-agent dispatch。新增 `shared-subagent-protocol.md`，上下文隔离从 MD 约定升级为 engine 强制 | queue schema + engine regression + phase-wave1 structure regression | wave1 queue-loop + wave0 happy-path 重跑（验证 sub-agent dispatch）| **有**（`target`→`targets` 是 breaking schema change，需改 schema+engine+MD+playbook ~12 文件） | **⏳ 待启动** |
+| 3 | `wfq-wave2-synthesis` | ✅ | **Wave2 cross-topic synthesis + iterative gap-fill loop**：phase-wave2.md §3 生产级 queue-driven 内容——1 个 synthesis task card（灌料→claim→main-agent 执行 synthesis→complete）+ N 个 per-topic backfill task card（claim→execute→complete 循环，替换 `__BACKFILL_WAVE2_JUDGMENT__` + `__BACKFILL_PENDING_QUESTIONS__`）。**关键设计：合成→发现缺口→spawn sub-agent 补搜→回写 synthesis→再合成**（V12 纯本地做 synthesis 的教训）。Queue 在 N=1 时仍然有价值——receipt 检查、done-condition 强制、trace 记录、repair 自动生成 | wave2 gate regression + synthesis link validation | wave2 synthesis + gap-fill loop playbook | 零（Path A） | **⏳ 待启动** |
+| 4 | `wfq-delivery` | ❌ | readiness + final phase MD 生产级内容 + HITL2 decision brief + full-chain 纵贯实验（seed-topics→wave0→wave1→wave2→readiness）+ 上下文可持续性测量 | readiness gate regression | full-chain + repair loop | 实验协议（playbook MD） | 待 Change 3 完成后启动 |
 
-**Change 2/3 的 V12 依据：** V12 的 execution-flow.md 定义了统一的 Wave Internal Loop Pattern——Wave 0/1/2 共用同一个 queue-driven 循环形状（queue slot work → fan-in/promotion → gate audit → repair/refill → closeout）。Wave1 在 V12 中是 topic-specific 证据搜索 + fan-in steering + artifact production，在我们 foundation 阶段做 skeleton placeholder writing。Change 3 对应 V12 的 Wave 2 + Readiness + Final Delivery——这些不接入 queue（Wave2 单 synthesis、Readiness 单 gate、Final 终端），但需要全生命周期纵贯验证。
+**为什么 wave1 + sub-agent 合并为一个 change：** wave1 是 topic-specific deepening——和 wave0 一样需要 WebSearch+WebFetch，一样需要 sub-agent dispatch 来隔离噪声。如果把 wave1 实现和 sub-agent retrofit 拆成两个 change，先做 wave1（main-agent 搜）再做 sub-agent（切 sub-agent）——和 wave0 一样，wave1 也要经历一次"先用 main-agent 跑通再用 sub-agent 重跑"的 migration。不如一个 change 里 wave1 从第一天就用 `targets` + sub-agent dispatch，wave0 顺便 retrofit。`target` → `targets` 是 breaking schema change，wave0 和 wave1 的 task card JSON 一起改，只改一次。
+
+**为什么 wave2 单独拆出来：** V12 把 synthesis 放在本地做——只基于已有 artifact 综合。但真实深度研究里，synthesis 过程中才会发现缺了什么：某个 topic 的证据不够、某个 claim 没验证、某个维度没覆盖。这时候需要回头搜、补证据、再合成。这是一个 **synthesize → find gaps → search → re-synthesize** 的迭代 loop，不是一次性 linear pass。Wave2 单独成 change 给这个 loop 留足设计空间，不和 delivery 的 readiness/final 混在一起。
 
 ### 6.2b V12 对照与可复用模式
 
@@ -375,15 +383,17 @@ phase 内有 N 个独立子任务（一个 topic 一个 task）？
 
 **已确认的 phase 分类（含 V12 对照）：**
 
-| Phase | V12 Queue 用法 | 我们 N 个子任务？ | Queue？ | Target | Change |
-|-------|---------------|-----------------|---------|--------|--------|
-| seed-topics | setup-time decomposition repair work | ✅ N topics → N files | ✅ | main-agent | Change 1 |
-| wave0 | Wave 0 loop: shared reference + topic-start readiness | ✅ N topics → N files | ✅ | sub-agent | Change 1 |
-| wave1 | Wave 1 loop: topic refs + fan-in steering + seed backfill + evidence-summary + question-list | ✅ N topics → N files | ✅ | main-agent | Change 2 |
-| wave2 | Wave 2 loop: synthesis + matrix + conflict + HITL2 prep | ❌ 1 synthesis | ❌ | — | Change 3 |
-| readiness | hook_readiness_closeout_to_final_delivery (queue-visible in V12, gate in ours) | ❌ 单检查 | ❌ | — | Change 3 |
+| Phase | V12 Queue 用法 | 我们 N 个子任务？ | Queue？ | Needs Web？ | Targets | 现状 | Change |
+|-------|---------------|-----------------|---------|-------------|---------|------|--------|
+| seed-topics | setup-time decomposition repair work | ✅ N topics → N files | ✅ | ❌（纯写文件） | `{controller: main-agent}` — 无 delegates，不搜索 | ✅ 已落地 | Change 1 |
+| wave0 | Wave 0 loop: shared reference + topic-start readiness | ✅ N topics → N files | ✅ | ✅（WebSearch+WebFetch） | `{controller: main-agent, delegates: {to: sub-agent, role_key: dpt-source-intake}}` | ⚠️ task card 写 `target: sub-agent` 但从未真正 spawn | Change 1 → Change 2 修 |
+| wave1 | Wave 1 loop: topic refs + fan-in steering + seed backfill | ✅ N topics → N files | ✅ | ✅（topic-specific deepening 需要 WebSearch+WebFetch） | `{controller: main-agent, delegates: {to: sub-agent, role_key: dpt-evidence-extractor}}` — 从 Day 1 就用 sub-agent dispatch | ⏳ 待启动 | Change 2 |
+| wave2 | Wave 2 loop: synthesis + matrix + conflict + HITL2 prep | ✅ synthesis 本体（1 task）+ backfill（N topics → N tasks） | ✅（synthesis 本体 1 task + backfill N tasks 都走 queue——N=1 时 queue 仍提供 receipt、done-condition、trace、repair） | ✅（合成→发现缺口→spawn sub-agent 补搜→回写 synthesis→再合成） | `{controller: main-agent}` — synthesis 本体 main-agent 执行，gap-fill 直接 spawn sub-agent，backfill 走 queue loop | ⏳ 待启动 | Change 3 |
+| readiness | hook_readiness_closeout_to_final_delivery | ❌ 单检查 | ❌ | ❌ | — | ⏳ 待启动 | Change 4 |
 
-**关键差异：** V12 用 Boundary Hook (queue work) 做 phase 过渡 → 我们用 gate + chain (deterministic lookup)。V12 的 hook 本身是个可失败、可 repair 的 queue 任务 → 我们的 gate fail → repair → rerun 在 phase MD §7 里处理，更干净。Wave2 的"不接 queue"不是因为 V12 没用 queue（V12 用了），而是因为我们只有 1 个 synthesis 任务——没有 N 个独立子任务可拆——claim→complete 一次就完了，queue 的循环价值不成立。
+**Target → Targets：** 上表中的 `Targets` 列是**目标 schema**（待 Change 2 实现），不是当前状态。当前 `target` 是单个 enum（`main-agent` / `sub-agent` / `engine`），不反映"main-agent 管任务、sub-agent 做脏活"的两层模型。`needs_web` 是判断是否需要 `delegates` 的关键维度——需要真实 WebSearch/WebFetch 的 phase（wave0、wave1）必须走 sub-agent dispatch；不需要的（seed-topics 纯写文件、readiness 单检查）main-agent 自己执行。Wave2 的 synthesis 本体不需要 web search（综合已有证据），但 gap-fill 补搜需要直接 spawn sub-agent（不通过 queue 的 delegates——因为是顺序依赖的判断链）。
+
+**关键差异：** V12 用 Boundary Hook (queue work) 做 phase 过渡 → 我们用 gate + chain (deterministic lookup)。V12 的 hook 本身是个可失败、可 repair 的 queue 任务 → 我们的 gate fail → repair → rerun 在 phase MD §7 里处理，更干净。Wave2 的 synthesis 本体是 1 个 task，不是 N 个可并行的独立子任务——但 queue 在 N=1 时仍提供 receipt 检查、done-condition 强制、trace 记录和 repair 自动生成。Synthesis 后的 per-topic backfill 走 queue loop（`__BACKFILL_WAVE2_JUDGMENT__` + `__BACKFILL_PENDING_QUESTIONS__`——N topics → N backfill tasks，queue 的并行价值额外成立）。
 
 **3-stage MD 模板（已落地，可直接复用）：**
 
@@ -394,17 +404,21 @@ phase 内有 N 个独立子任务（一个 topic 一个 task）？
   §3.3 收尾与 Gate            → 检查产出 → 跑 gate CLI → pass/fail
 ```
 
-**对 Change 2（wave1）的影响：** wave1 的 queue 接入可以直接复用 seed-topics 的模板——target=main-agent、从已有 artifact 提取信息、写 topic-scoped 文件。Producer_rule 用 `skeleton_placeholder_write`（待 Change 2 定义）。wave1 的特殊性在于它目前有 `subagent: true` frontmatter marker（future expansion），但 foundation 阶段做的是单 Agent 写入，queue 接入不受影响。
+**对 Change 3（wave2）的影响：** wave2 synthesis 本体 1 task + backfill N tasks 都走 queue。Synthesis task 是 main-agent 执行的单任务（N=1，queue 仍提供 receipt、done-condition、trace、repair）；backfill 是 N topic → N task 的 queue loop（替换 `__BACKFILL_WAVE2_JUDGMENT__` + `__BACKFILL_PENDING_QUESTIONS__`）。Synthesis 过程中的 gap-fill 补搜不走 queue（顺序依赖的判断链），直接 spawn sub-agent。
 
-**对 Change 3（跨 wave 实验）的影响：** Change 1 确立的"一个 change 两个上下游 phase"模式意味着 Change 3 的 full-chain playbook 应覆盖 seed-topics→wave0→wave1 三连——每个 phase 的 queue-loop 独立完成后，验证跨 phase artifact 传递的一致性（seed_topics/ → reference/ → artifacts/wave1/）。
+**对 Change 4（delivery）的影响：** Change 1-3 覆盖了 seed-topics→wave0→wave1→wave2，Change 4 full-chain playbook 应纵贯这四连——每个有 queue 的 phase 独立完成 queue-loop 后，验证跨 phase artifact 传递的一致性（seed_topics/ → reference/ → artifacts/wave1/ → artifacts/wave2/）。
 
-### 6.3 设计约束（从 project charter 继承，不变）
+### 6.2c V12 遗产：不应丢失的设计维度
 
-- **Queue 不驱动 Agent** — Agent 驱动自己，queue 只是它的 todo list
-- **Queue 不代替 Agent 做判断** — receipt check 是确定性的，内容判断归 Agent
-- **Markdown projection 是视图不是权威** — `rb_queue.agq.json` 是 Source of Record
-- **Queue + chain 分工** — queue 管 phase 内部子任务，chain 管 phase 间路由
-- **fail-closed** — receipt 缺失时阻塞
+新架构（engine-managed queue、gate CLI 确定性、chain routing）比 V12 更强大，但 V12 有几个维度我们当前的 foundation 阶段尚未覆盖：
+
+**Evidence 质量模型（待 Change 3/4 引入）：** V12 的 reference metadata 有 30+ 字段——`tier`（1-4）、`trust_level`（official/academic/practitioner/community）、`commercial_intent`（none/mild/strong）、`marketing_risk`（low/medium/high）、`cross_verification_required`、`web_substance`、`evidence_role` 等。当前我们的 `ReferenceMetadata` schema 只有 `url/title/retrieved_date/topic_tag` 四字段——足够 foundation 阶段用，但完全不够做 quality filtering。V12 的 Webpage Material Diagnostic Gate（`web_substance=thin` 或 `none` 不计入 floor、`marketing_risk=high` 不能做 neutral factual evidence 未经独立验证）是关键的 anti-noise 机制。应在 Change 3（wave2 synthesis）或 Change 4（delivery readiness）中考虑扩展 reference schema。
+
+**不确定性管理（待 Change 3 设计）：** V12 的 wave1 为每个 topic 维护四区 question ledger（Investigation Targets → Question Reconciliation → Emergent Question Protocol → Exploration/Exploitation Decision），系统性地追踪不确定性——新概念、矛盾、缺失信息、噪音模式——防止过早声称收敛。我们的 wave1 foundation 阶段只写 skeleton placeholder，但 V12 的 question-ledger 结构是 future deepening 的关键设计，应在 Change 3（wave2 synthesis）中考虑引入——synthesis 的质量依赖 wave1 对不确定性的系统追踪。
+
+**Source-intake cache boundary（待 Change 2 考虑）：** V12 要求 sub-agent 输出先写入 `_cache/intake/`（staging），main-agent 审查（candidate cards quality check、topic alignment、trust/tier、webpage diagnostics）后才 promote 到 `REFERENCE_DIR/`。我们当前的 wave0 设计是 sub-agent 直接写 `reference/{topic}/source.yaml`——少了一层 main-agent review gate。Change 2（sub-agent dispatch）应考虑引入 V12 的 staging→review→promote 模式，防止未经审查的搜索结果直接进入 evidence surface。
+
+**Anti-Stall Budget（长期考虑）：** V12 限制 max 3 degraded P0/P1 limitations、max 20% active must-answer claims 依赖 degraded evidence。超过预算 → repair 或 recorded blocker。我们的 stop authorization 机制在"该不该停"上比 V12 更强（engine 侧裁决），但没有"证据质量退化到不可接受"的量化边界。这不是 foundation 阶段的优先级，但 wave2 synthesis 做 claim verification 时可能需要。
 
 ---
 
@@ -412,52 +426,15 @@ phase 内有 N 个独立子任务（一个 topic 一个 task）？
 
 上面三条落地路径（§6）的判断方向是对的，但 §5 的定调把曾被一带而过的问题**降格成了派生约束**——它们不再是并列的大问号，而是"在两层-loop 定调下还必须解决的具体项"。任何一条没解决，loop 还是转不起来；但它们的解法现在都被 §5 的规则框住了。以下 §7.1–§7.3 是原"三个曾被一带而过的问题"，§7.4–§7.5 是在两层-loop 分析中暴露出来的、同样必须解决的额外约束。
 
-### 7.1 灌料（filling）——phase 进入时由 MD 派生 task
+### 7.1 灌料（filling）——已落地：MD 模板 + Agent 批量生成
 
-**现状：** `createQueue()` 建出的是全空 5-slot 队列；`claim()` 在 slot_1 为空时直接返回 `item: null`，并把队列标成 `thin` 或 `blocked`。`enqueue` 是纯手动操作——Agent 得手写一个 `task.json` 再跑 CLI 才能往里放一条。
+**已落地方案：** `phase-seed-topics.md` 和 `phase-wave0.md` 的 §3.1 提供了完整的 task card JSON 模板——Agent 读取 `topic_registry`，为每个 topic 替换模板变量（`{topic.slug}`、`{topic.title}`），写入 `/tmp/wfq-task-{slug}.json`，然后 `operate-queue enqueue`。Change 1 的 3 个 playbook 验证了这个方案可行——Agent 能可靠地从 topic_registry 派生 task card 并批量 enqueue。
 
-**为什么这是最弱环节：** queue 不灌料就什么也不干。如果 Agent 要为 wave0 的每一条 source 手写一个完整 task card（work_id / target / action / producer_rule / lineage / required_receipts / done_condition / verification / writes_to …），那比现在的自由文本 "Allowed Actions" 还累——"持续执行的压力"根本起不来，loop 在第一步就断了。
+**当前局限：**
 
-**待解的方向（不是结论，是必须回答的问题）：**
-
-- **谁来生成 task？** enqueue 需要变得便宜、最好是半自动的。候选：phase 启动时由 main-agent 根据 rb_plan/topic_registry 批量生成结构化 task（一个 topic / 一条 source 一个 task），而不是逐条手写。
-- **task 粒度多大？** 太细（每条 source 一个 task）灌料成本高；太粗（整个 wave 一个 task）等于退化回现在的自由文本，queue 失去意义。需要找到"一个 claim→complete 能在一两轮内完成"的粒度。
-- **能不能由确定性逻辑生成骨架 task？** 比如 wave0 的 task 可以从 topic_registry 直接派生（每个 topic 生成一个 source-intake task），producer_rule = `source_intake_fan_in`。这种结构性灌料适合放进 JS，而不是靠 Agent 每次手写。
-
-**灌料设计草图（供 Phase 1 试点参考，不是最终 spec）：**
-
-以 wave0 为例，从 topic_registry 到 task card 的映射：
-
-```
-topic_registry 条目                     task card 字段
-─────────────────────────────────       ─────────────────
-topic.key                               work_id: "wave0-source-{topic.key}"
-topic.label                             title: "Source intake: {topic.label}"
-topic.description                       action: 含 topic.key + topic.description 的自然语言
-(fixed)                                 target: "sub-agent"
-(fixed)                                 producer_rule: "source_intake_fan_in"
-(fixed)                                 priority_class: 1
-topic + phase schema                     required_receipts: ["file:reference/{topic.key}/source.yaml",
-                                                            "json:reference/{topic.key}/source.yaml:ReferenceMetadata"]
-(fixed)                                 done_condition: "topic 的 source.yaml 存在且通过 schema 校验"
-(fixed)                                 verification.engine: ["receipt_check"]
-(fixed)                                 writes_to: ["reference/{topic.key}/source.yaml", "_cache/search-results/"]
-```
-
-**关键设计抉择（Phase 1 试点必须试出来的）：**
-
-1. **派生逻辑放在哪？** 两个候选：
-   - **JS helper**：在 queue-manager 侧加一个 `deriveWave0Tasks(topicRegistry)`，由 MD 指令 "run derive then enqueue all"。好处是确定性、可测试；代价是新代码。
-   - **Agent 模板化生成**：MD 给 Agent 一个 task card 模板，Agent 根据 topic_registry 批量 fill in（每个 topic 一条 enqueue CLI）。好处是零新 JS 代码；代价是 Agent 可能填错字段。
-
-2. **一次性灌还是渐进灌？**
-   - **一次性灌满**（Path A 最简）：phase 开始时把所有 topic 的 task 全部 enqueue。适合 topic 数量 ≤10 的场景。
-   - **分批灌**：先灌 5 个填满 active window，Agent 跑完一批再灌下一批。适合 topic 数量 >10 或搜索 token 预算有限时。
-   - Phase 1 试点建议从一次性灌满开始——wave0 的 topic 数量通常可控。
-
-3. **灌料时机**：在 phase node MD 的 "Allowed Actions" 第 1 步明确写"如果 queue 为空，从 topic_registry 生成 task card 并 enqueue"——让 Agent 在 phase 启动时就有灌料意识。
-
-> 这一节升级自原"开放问题 #2"——它不是可以晚点再想的问题，而是 loop 能不能启动的前提。
+- **仍是手写模板+CLI，未做 JS helper**：Agent 每次都要手写 task JSON 文件再跑 CLI。topic 数量多时（>10），这比 MD 模板描述的"批量 enqueue"累。JS helper（如 `deriveWave0Tasks(topicRegistry)`）可以自动从 registry 派生 task card，但目前优先级不高——因为 wave0 的 topic 数量通常可控（≤5）。
+- **task 粒度已稳定**："一个 topic 一个 task"（wave0 source intake、seed-topics 物化、wave1 deepening），不更细（每条 source 一个 task 太碎）、不更粗（整个 wave 一个 task 退化回自由文本）。
+- **灌料时机**：phase MD §3.1 明确写"如果 queue 为空"时灌料——Agent 进入 phase 时第一件事就是检查 queue 状态并灌料。
 
 ### 7.2 stop authorization——把已算出的结论接到能强制执行
 
@@ -477,21 +454,21 @@ topic + phase schema                     required_receipts: ["file:reference/{to
 
 - sub-agent（target: sub-agent）跑检索/抓取，bounded 输出写进 `_cache`，main-agent 只读投影——这是否足够把"噪音"挡在主上下文之外？原分析的 Target Separation 表暗示了这条，但从没说清 queue 循环里上下文是怎么流进流出的。
 - `complete()` 之后 main-agent 应该读什么、丢弃什么？如果它每轮都把完整 result 读回，就没有释放。需要定义"completion 后 main-agent 的最小读入"——理想是只读 projection 的 done/done-condition，细节留在 `_cache`。
-- 一次 wave 跑完几十个 task，上下文曲线长什么样？这是 §6 Phase 3 实验必须测量的东西，而不是默认它会 work。
+- 一次 wave 跑完几十个 task，上下文曲线长什么样？这是 Change 4（`wfq-delivery`）full-chain 实验必须测量的东西，而不是默认它会 work。
 
 > project charter 反复强调"真实执行的副产物，还是事后编出来的"。上下文可持续性同样如此：它能不能撑住，必须靠真实 trace + 上下文采样验证，不能靠"queue 设计上就该撑得住"的推理。
 
-**实验协议草案（供 Phase 3 使用）：**
+**实验协议草案（供 Change 4 full-chain 实验使用）：**
 
 | 维度 | 内容 |
 |------|------|
 | **测量指标** | 每轮 claim→complete 后的 Agent 上下文 token 估算（输入 + 输出）、有效信息密度（新 evidence 量 / 上下文总量）、上下文增长率（本轮 vs 上轮） |
 | **对比基线** | 同一 wave 跑两次——一次 queue-driven（claim→execute→complete 循环），一次自由文本（传统 Agent 对话模式） |
-| **判定标准** | 上下文增长率 < 线性（即每轮新增上下文递减而不是恒定或递增）、有效信息密度在前 5 轮后不低于 0.3（此阈值为草案占位，Phase 3 实施前需通过实验校准） |
+| **判定标准** | 上下文增长率 < 线性（即每轮新增上下文递减而不是恒定或递增）、有效信息密度在前 5 轮后不低于 0.3（此阈值为草案占位，Change 4 实施前需通过 OpenSpec proposal 校准） |
 | **具体实验** | wave0 跑 10 个 topic，使用 target: sub-agent 执行搜索、bounded 输出写 `_cache`、main-agent 只读 render projection——采样每轮 complete 后的上下文快照 |
 | **关键要排除的** | main-agent 在 complete 后把完整 result 读回对话——这是上下文膨胀的主要来源，必须靠 sub-agent + _cache 隔离 |
 
-> 这个实验协议是草案——Phase 3 实施前需要通过 OpenSpec proposal 确定最终度量、阈值和 playbook 形态。
+> 这个实验协议是草案——Change 4 实施前需要通过 OpenSpec proposal 确定最终度量、阈值和 playbook 形态。
 
 ### 7.4 error recovery——stale claim 与 crash 恢复
 
@@ -516,39 +493,40 @@ topic + phase schema                     required_receipts: ["file:reference/{to
 
 > 这个问题在 Path A（纯 MD 驱动）下无法解决——它需要 engine 侧的 claim() + loadQueue() 改动。建议作为 Path B 的一部分，优先级在 stop authorization 强制执行之后。
 
-### 7.5 target separation——main-agent vs sub-agent 的划分原则
+### 7.5 targets 模型——何时需要 delegates（旧名 target separation）
 
-**为什么这值得独立一节。** §7.3（上下文可持续性）的可行性严重依赖 target separation：sub-agent 跑重 I/O 工作、bounded 输出写 `_cache`、main-agent 只读投影。但 §0.3 术语表只给了定义，没有给划分原则。如果 task card 的 `target` 字段写错——该给 sub-agent 的给了 main-agent——上下文就膨胀；该给 main-agent 的给了 sub-agent——sub-agent 没有足够上下文做判断。
+**为什么这值得独立一节。** §7.3（上下文可持续性）的可行性严重依赖正确的 sub-agent 委托：sub-agent 跑重 I/O 工作、bounded 输出写 `_cache`、main-agent 只读投影。当前 `target` 是单个 enum（`main-agent` / `sub-agent` / `engine`），但 Change 2 将改为 `targets: {controller: 'main-agent', delegates?: {to: 'sub-agent', role_key, noise_boundary}}`——核心问题从"二选一"变成"是否需要 delegates"。
 
-**划分原则（从 queue loop 的上下文压力推导，不是笼统的"搜索 vs 综合"）：**
+**判断标准——task 是否需要 `delegates`：**
 
-| 判定维度 | target: main-agent | target: sub-agent |
-|---------|-------------------|-------------------|
-| **I/O 密度** | 低——读已有 artifact、做判断 | 高——外部搜索、抓取、大面积阅读 |
-| **上下文依赖** | 需要全文 context（plan、profile、其他 topic 结果）来综合判断 | 只需要 task card 里的 bounded 上下文（topic key、搜索 query、schema） |
+| 判定维度 | 不需要 delegates（main-agent 自己执行） | 需要 delegates（委托 sub-agent） |
+|---------|--------------------------------------|----------------------------------|
+| **I/O 密度** | 低——读已有 artifact、做判断 | 高——外部 WebSearch、WebFetch、大面积阅读 |
+| **上下文依赖** | 需要全文 context（plan、profile、其他 topic 结果）来综合判断 | 只需要 task card 里的 bounded 上下文（topic slug、search_guardrails、schema） |
 | **产出类型** | 综合判断、内容质量裁决、cross-topic 关联 | 结构化 data（source metadata、evidence particle、skeleton YAML） |
-| **确定性程度** | 高判断成分——需要 trade-off 和 judgment | 高执行成分——搜索→筛选→结构化写入 |
-| **上下文释放** | 产出留在对话中供下一轮决策 | 产出写 `_cache`，main-agent 只读 render projection |
+| **上下文释放** | 产出留在对话中供下一轮决策 | 产出写 `_cache/.../search-results/`，main-agent 只读 render projection 确认 done-condition |
 
-**wave-level 建议（供 MD controller 在写 phase body 时参考）：**
+**phase 级 delegates 判断：**
 
-| Wave | 典型 sub-agent task | 典型 main-agent task |
-|------|-------------------|-------------------|
-| wave0 | 搜索一个 topic 的 source，写 `source.yaml` | 审核 source 质量，决定是否需要补充 |
-| wave1 | 为一个 topic 提取 evidence particle，写 `evidence/` | 审核 particle 质量，判断 coverage 是否足够 |
-| wave2 | （较少——wave2 主要是综合） | Cross-topic synthesis、claim verification、矛盾裁决 |
+| Phase | Needs delegates？ | 原因 |
+|-------|------------------|------|
+| seed-topics | ❌ | 纯写文件——从 topic_registry 提取信息写入 seed_topics/{slug}.md，不搜索 |
+| wave0 | ✅ | WebSearch+WebFetch——需要 `dpt-source-intake` role sub-agent |
+| wave1 | ✅ | topic-specific deepening 需要 WebSearch+WebFetch——需要 `dpt-evidence-extractor` role sub-agent |
+| wave2 | ❌ synthesis 本体 | 综合已有证据——不需要外部搜索。但 gap-fill 补搜直接 spawn sub-agent（不通过 queue delegates——顺序依赖的判断链） |
+| readiness | ❌ | 单步 deterministic 检查——gate CLI 执行 |
 
-**MD controller 的职责：** 每个 phase node MD 在 "Allowed Actions" 里必须明确——当前 phase 的 task 默认 target 是什么、哪些例外情况需要 main-agent 亲自做。这是 controller 的权利和职责，不是 engine 能自动判断的。
+**MD controller 的职责：** 每个 phase node MD 在 task card JSON 模板里必须明确——当前 phase 的 task 是否需要 `delegates`。这是 controller 的权利和职责，不是 engine 能自动判断的。
 
-> 这个划分不是硬编码在 engine 里的——它是对 MD controller 的指导，帮助 phase node 作者在写 body 时做出不自毁上下文的选择。
+> 这个划分不是硬编码在 engine 里的——它是对 MD controller 的指导，帮助 phase node 作者在写 body 时做出不自毁上下文的选择。Change 2 实现后，`targets.delegates` 的存在与否由 phase MD 的 task card 模板决定。
 
 ---
 
 ## 8. 开放问题
 
-1. **灌料的具体 MD 形态？** §7.1 定了"phase 进入时由 MD 派生 task"，但 wave0 的 phase body 具体怎么写灌料步骤（一个 topic 一个 task？一条 source 一个 task？producer_rule 用哪个？）还没落定，要靠 Phase 1 试点试出来。
+1. **灌料的下一步——JS helper？** 当前 MD 模板 + 手动 enqueue 在 topic ≤5 时够用。是否需要在 engine 侧加 `deriveTasks(topicRegistry)` 自动批量生成 task card？JS helper 的好处是确定性和可测试，代价是新代码。目前优先级低——seed-topics 和 wave0 的 topic 数量可控——但不排除在 future change 里做。
 
-2. **producer rules enum 什么时候标准化？** Phase 2 顺带做（小 OpenSpec change）。
+2. **producer rules enum 什么时候标准化？** 后续 change 中逐步收敛——每次引入新 producer_rule 时在对应 OpenSpec change 中注册。
 
 3. **scenario 6 重灌 Q 的触发条件？** Q 空 + gate fail 时，gate-repair 决定"重灌 Q"的具体信号是什么——是 inspect 直接指出哪个 topic 缺了，还是靠 Agent 判断？这影响 gate-repair 和 Q 的接口怎么定。
 
@@ -558,17 +536,20 @@ topic + phase schema                     required_receipts: ["file:reference/{to
 
 ## 9. 结论
 
-Agentic Queue 的 JS 底盘已经 solid——engine (619 行) + CLI (102 行) + spec (AGQ-001~006) + 3 个 playbook 全部通过。
+Agentic Queue 的 JS 底盘已经 solid——engine (619 行) + CLI (102 行) + spec (AGQ-001~006) + 6 个 playbook（3 engine-level + 3 phase-level）全部通过。
 
-**唯一缺的，是让 workflow 用它。**
+**两个 phase 已接入 queue：seed-topics + wave0。** Change 1（`wfq-queue-seedtopics-wave0`）已落地，scope 比原计划扩大：
+- seed-topics：两区结构（初始化区 + `__BACKFILL_*__` token 回填区）+ queue-driven 物化
+- wave0：queue-driven source intake + inline backfill（§3.2 step 5）+ sub-agent 上下文隔离（`_cache/wave0/search-results/`）
+- 3 个 playbook（1 light + 2 heavy）+ 全量 504 regression PASS
 
-最小的下一步：更新 `phase-wave0.md` 的 body，把 wave0 的 source intake 变成 queue-driven 模式。不写新代码，只改 MD。验证可行后推广到 wave1/wave2。
+**下一步：Change 2 — `wfq-wave1-intake-subagent`。**Wave1 queue-driven 实现 + `target` → `targets`，wave0 和 wave1 的 web search 一起切到真正的 sub-agent dispatch。然后 Change 3 — `wfq-wave2-synthesis`：cross-topic synthesis + iterative gap-fill loop。最后 Change 4 — `wfq-delivery`：readiness + final + full-chain 纵贯验证。
 
 ---
 
-## Appendix A: queue-driven phase-wave0.md 示例
+## Appendix A: queue-driven phase-wave0.md 示例（历史——Phase 1 已完成，实际实现已偏离此模板）
 
-> 这不是最终 spec——这是供 Phase 1 试点使用的**示例模板**，展示 Path A 的改动范围。实际形态由 Phase 1 试点后的 feedback 决定。
+> ⚠️ 这是 Change 1 启动前的草案模板。Phase 1 已完成——实际 `phase-wave0.md` 的 §3 实现比此模板更完整（含 inline backfill step 5、`_cache/wave0/search-results/` 上下文隔离、tool degradation chain 等）。保留此附录仅作设计演变参考，不作为当前真相。
 
 以下仅展示 `phase-wave0.md` 需要改动的 §3（Allowed Actions）部分。其余 §1/§2/§4–§9 不变（§5 gate command 不变，§7 gate fail 处理不变，§8 stop behavior 不变）。
 
@@ -641,8 +622,4 @@ Agentic Queue 的 JS 底盘已经 solid——engine (619 行) + CLI (102 行) + 
 5. 如果 gate fail → 按 §7 On Gate Fail 处理
 ```
 
-**关于这个示例的说明：**
-
-- 灌料步骤（§3.1）目前是**手写 enqueue CLI**——每个 topic 一条命令。如果 topic 数量多，这比现在的自由文本繁琐。这正是 §7.1 灌料设计的核心张力——Phase 1 试点需要验证 Agent 能否可靠地批量生成这些 enqueue 命令。
-- 如果 Phase 1 发现手写 enqueue 太贵，Phase 2 应该加一个 JS helper（`deriveWave0Tasks`）在 engine 侧自动从 topic_registry 派生 task card，MD 只写 "run deriveWave0Tasks then enqueue all"。
-- complete 步骤的 `--result` flag 目前只是一个路径——实际 `complete()` 如何知道产出了什么文件，取决于 Phase 1 试点时 queue-manager 的具体 API 形态。
+**关于这个示例的说明：** 此附录是 Change 1 启动前的草案。实际实现已偏离：task card 使用完整 JSON 文件（`--task /tmp/wfq-task-{slug}.json`）而非 CLI flags；complete 的 result 是 JSON 文件（`--result /tmp/wfq-result-{work_id}.json`）包含 work_id/receipt/summary/writes；backfill 已改为 inline step 5 而非 §3.3 的 queue-driven batch。

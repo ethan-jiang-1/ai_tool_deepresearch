@@ -20,6 +20,7 @@ import { parseArgs } from 'node:util';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parse as parseYaml } from 'yaml';
 import { resolveNodeTransitionDetailed } from '../ask-next.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -263,6 +264,41 @@ export function readTraceEvents(bundlePath, eventName = null) {
   }).filter(Boolean);
   if (eventName) return events.filter(e => e.event === eventName);
   return events;
+}
+
+// ─── Markdown Frontmatter Parsing ──────────────────────────────────────────
+
+/**
+ * Parse YAML frontmatter from a Markdown string.
+ *
+ * Extracts the frontmatter block between `---` delimiters and parses it with
+ * `parseYaml()`. YAML 1.2 is a strict superset of JSON, so JSON frontmatter
+ * is parsed identically — backward compatible with existing `JSON.parse()` usage.
+ *
+ * @param {string} rawString — raw Markdown content
+ * @returns {object} parsed frontmatter object, or `{}` if no frontmatter block found
+ * @throws {Error} if frontmatter YAML syntax is invalid
+ *
+ * @impl FRE-003
+ */
+export function parseMdFrontmatter(rawString) {
+  const m = rawString.match(/^---\n([\s\S]*?)\n---/);
+  if (!m) return {};
+  return parseYaml(m[1]);
+}
+
+/**
+ * Read and parse the frontmatter of rb_plan.md in a bundle directory.
+ *
+ * @param {string} bundlePath — path to the bundle directory
+ * @returns {object|null} parsed plan frontmatter object, or null if file is missing
+ * @impl FRE-003
+ */
+export function readBundlePlan(bundlePath) {
+  const planPath = join(bundlePath, 'rb_plan.md');
+  if (!existsSync(planPath)) return null;
+  const raw = readFileSync(planPath, 'utf-8');
+  return parseMdFrontmatter(raw);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

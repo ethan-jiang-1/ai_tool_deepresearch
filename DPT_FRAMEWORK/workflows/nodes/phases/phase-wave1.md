@@ -47,7 +47,20 @@ suggested_context:
 - 更新 `rb_status.json`（推进 `current_gate` / `next_gate`）与 `rb_trace.jsonl`
 - 在 `rb_trace.jsonl` 中记录 `wave1_completion` trace event
 
-### 3c. Foundation Placeholder Boundary
+### 3c. Seed Topic 即时回填（Per-Topic，不可跳过）
+
+**每写完一个 topic 的 skeleton.md，立刻回填该 topic 的 seed 文件，再写下一个。不等 wave1 全部做完。**
+
+执行顺序：topic_registry[0] → 写入 skeleton → **立刻回填 seed topic** → topic_registry[1] → 写入 skeleton → **立刻回填 seed topic** → … → 全部完成 → gate。
+
+每次回填动作：
+1. `grep -n '__BACKFILL_WAVE1_MECHANISMS__' seed_topics/{topic.slug}.md` 定位 token → 从刚写完的 `artifacts/wave1/{topic.slug}/skeleton.md` 中提取至少 1 条关键机制理解（编号列表）→ **替换 token 行**
+2. `grep -n '__BACKFILL_WAVE1_TRENDS__'` 定位 token → 追加趋势和难点（区分「趋势」和「难点」标签）→ **替换 token 行**
+3. `grep -n '__BACKFILL_PENDING_QUESTIONS__'` 定位 token → 更新该 topic 问题的状态标签（`[开放]` / `[部分解答]` / `[涌现]`）→ **替换 token 行**
+
+**为什么不等 wave1 结束：** wave1 可能要处理 10+ 个 topic，每个 skeleton 写完后 Agent 对该 topic 的理解最 fresh。等到全部写完再回填，第一个 topic 的细节已丢失。
+
+### 3d. Foundation Placeholder Boundary
 
 **禁止声称的内容**（这些是 future expansion 的范围，foundation 阶段不应出现）：
 - "full subagent coverage completed"
@@ -110,7 +123,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle <path> --cur
 
 ### Expansion Tracks
 
-1. **topic-specific deepening**：对每个 topic 的 open questions 做定向 deep research，产出 topic 级 evidence 报告
+1. **topic-specific deepening**：对每个 topic 的 open questions 做定向 deep research，产出 topic 级 evidence 报告。可能多轮迭代——每轮搜索/抓取的中间产物写入 `_cache/wave1/round-{N}/search-results/`（N 从 1 开始递增），每轮结束后回填 seed topic 对应 section。**工具降级链：** WebFetch blocked → `curl -L <url>` → `python3 -c "import urllib.request..."` → `node -e "fetch(...)"`，不允许因上层工具 blocked 就放弃抓取，更不允许拿搜索摘要当网页内容凑合。
 2. **subagent dispatch**：启动独立 subagent，按 topic 分配 deepening 任务，每个 subagent 产出自己的 `result.md` + `receipt.md`
 3. **candidate intake**：从 deepening 产出中提取 candidate evidence particle，按 schema 入库
 4. **repair/backfill**：对 gate fail 的 topic 做定向补充，按 inspect/advice 逐项修复

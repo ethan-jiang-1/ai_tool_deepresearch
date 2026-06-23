@@ -36,6 +36,10 @@ AGQ-003: agentic-queue — Conservative urgent preemption without hidden current
 AGQ-004: agentic-queue — Fail-closed deterministic receipts and structured check/inspect/advice feedback
 AGQ-005: agentic-queue — Markdown projection generated from JSON queue state without mutation authority
 AGQ-006: agentic-queue — Command experiment playbooks for simple, medium, and complex agentic queue cases
+AGQ-007: agentic-queue — Producer rule source_intake_fan_in for wave0 source intake task cards
+AGQ-008: agentic-queue — Wave0 queue-loop simple playbook (real search + gate fail + repair scenarios)
+AGQ-009: agentic-queue — Producer rule seed_topic_materialize for seed-topics materialization task cards
+AGQ-010: agentic-queue — Seed-topics queue-loop simple playbook (3-topic happy path, V12 field verification)
 # bundle-infrastructure
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry
@@ -116,6 +120,7 @@ WML-001: workflow-manifest-loading — Workflow-next runtime initializes without
 # dedup-experiments-framework (delta specs merged to openspec/specs/)
 FRE-001: framework-engine — DPT_FRAMEWORK/engine/ as canonical directory for 6 production engine modules
 FRE-002: framework-engine — workflow-fsm standalone pure FSM transition resolver (5 exports, 241 lines, zero engine imports) [DEPRECATED]
+FRE-003: framework-engine — Gate helpers shared parseMdFrontmatter and readBundlePlan for YAML 1.2 frontmatter parsing
 TRW-001: trace-writer — Unified append-only JSONL trace writer with createTrace factory (3 variants)
 TRW-002: trace-writer — Trace output validates against TraceEntrySchema contract
 EXS-001: experiment-shared-infra — experiments/shared/ directory for experiment-scoped shared infrastructure

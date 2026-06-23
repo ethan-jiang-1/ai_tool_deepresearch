@@ -15,6 +15,7 @@ siblings:
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-queue-mechanism.md
+  - guidelines/subagent-boundary.md
 ---
 
 # Agentic Workflow Mechanism
@@ -160,6 +161,7 @@ Concrete function and file names referenced above (e.g. the current `resolveNode
 - **project-charter.md** 定义 Agent/Engine/Markdown 的 authority split。本文件描述这个 split 在 workflow 执行中的具体机制。
 - **framework-runtime-boundary.md** 定义 framework assets vs runtime bundles 的目录边界。本文件假设这个边界已成立，在这个边界之上描述运行时循环。
 - **agentic-queue-mechanism.md** 是 Agentic Queue 的设计草案。其 queue engine（`queue-manager.mjs` + `operate-queue.mjs`，AGQ-001~006）已实现；loop engineering（把 queue 接入本文件描述的循环）待落地。本文件描述的循环是 AGQ 所依赖的当前运行时基础。
+- **subagent-boundary.md**（draft）定义 sub-agent 的使用边界：什么时候工作进 sub-agent、什么时候 main-agent 自己做。本文件描述的外层 loop（gate → chain → next phase）是 sub-agent 执行的上层容器——sub-agent 在单个 phase 内部被 dispatch，不跨 phase。三层模型（Chain → Queue → Relay）的完整描述见 subagent-boundary。
 
 ---
 

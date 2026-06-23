@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-gate-setup-ready.mjs — evaluates gate-setup-ready rules
-// @impl GSK-001, GSK-002, GSK-004, PRG-006, PRG-007
+// @impl GSK-001, GSK-002, GSK-004, PRG-006, PRG-007, FRE-003
 // Usage: node check-gate-setup-ready.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import { existsSync, statSync, readFileSync, appendFileSync } from 'node:fs';
@@ -13,6 +13,7 @@ import {
   resolveRouting,
   buildGateResult,
   emitGateResult,
+  readBundlePlan,
 } from '../../engine/helpers/gate-helpers.mjs';
 import {
   ProfileSchema,
@@ -67,12 +68,7 @@ function getStatus() {
 let _planCache = null;
 function getPlan() {
   if (_planCache) return _planCache;
-  const p = join(bundlePath, 'rb_plan.md');
-  if (!existsSync(p)) return null;
-  const raw = readFileSync(p, 'utf-8');
-  const m = raw.match(/^---\n([\s\S]*?)\n---/);
-  if (!m) return null;
-  _planCache = JSON.parse(m[1]);
+  _planCache = readBundlePlan(bundlePath);
   return _planCache;
 }
 

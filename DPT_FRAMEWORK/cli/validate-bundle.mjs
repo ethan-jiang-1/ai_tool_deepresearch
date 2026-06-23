@@ -1,4 +1,4 @@
-// @impl CMI-002: validate-bundle.mjs — Zod validation for bundle control files
+// @impl CMI-002, FRE-003: validate-bundle.mjs — Zod validation for bundle control files
 // Usage: node validate-bundle.mjs <bundleDir>
 // Exit: 0 = PASS, 1 = FAIL
 
@@ -11,11 +11,7 @@ import {
   StatusSchema, QueueSchema, ProfileSchema,
   PlanSchema, TraceSchema,
 } from '../schema/index.mjs';
-
-function parseMdFrontmatter(raw) {
-  const m = raw.match(/^---\n([\s\S]*?)\n---/);
-  return m ? JSON.parse(m[1]) : {};
-}
+import { parseMdFrontmatter } from '../engine/helpers/gate-helpers.mjs';
 
 function parseJsonl(raw) {
   if (raw.trim() === '') return [];

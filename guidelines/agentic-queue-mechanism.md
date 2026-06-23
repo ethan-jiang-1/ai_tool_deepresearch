@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: Agentic Queue Mechanism
 status: effective
 created: 2026-06-17
-revised: 2026-06-23
+revised: 2026-06-24
 role: architectural constitution for queue-driven phase execution
 scope: Agentic Queue (AGQ) — queue engine operations and loop-engineering architectural principles
 authority: guidance
@@ -16,30 +16,31 @@ siblings:
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-workflow-mechanism.md
+  - guidelines/subagent-boundary.md
 ---
 
 # Agentic Queue Mechanism
 
-> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-06-23 | 适用: 所有 queue-driven phase 执行的设计与实现
+> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-06-24 | 适用: 所有 queue-driven phase 执行的设计与实现
 
 Agentic Queue (AGQ) 是 Engine-side 的任务队列系统：Agent 从队列领取任务、执行、完成、领下一个——在 phase 内部形成自主静默的执行循环。
 
 > ## Implementation Status
 >
-> **这份 guideline 描述的内容有两层：架构原则已定调，但大部分行为尚未实现。读之前先看清楚：**
+> **这份 guideline 描述的内容有两层：架构原则已定调，queue engine 与 seed-topics/wave0 集成已实现，但部分行为尚未实现。读之前先看清楚：**
 >
 > | 内容 | 状态 | 说明 |
 > |------|------|------|
 > | Queue engine (`queue-manager.mjs`, `operate-queue.mjs`) | **✅ 已实现** | enqueue / claim / complete / fail / preempt / render / checkReceipts，AGQ-001~006 accepted，3 个 playbook 验证通过 |
 > | Queue 数据结构 (`rb_queue.agq.json`, 5-slot window + refill pool) | **✅ 已实现** | Zod-validated QueueItemSchema，`_cache/agentic-queue/current-task.md` projection |
-> | 两层嵌套 loop 架构 | **📐 定调** | 外层 (gate+chain) vs 内层 (queue) 的边界划分已在本文件 §3–§5 定调，但 workflow phase 实际调用 queue 的行为**尚未实现** |
-> | Phase node MD 驱动 queue loop | **❌ 未实现** | 没有一个 phase node MD 引用 `operate-queue`。Path A（改 MD）和 Path B（改 MD + engine）的具体实施路径见 landing analysis §6 |
+> | 两层嵌套 loop 架构 | **📐 定调** | 外层 (gate+chain) vs 内层 (queue) 的边界划分已在本文件 §3–§5 定调。内层 loop 的 workflow 集成已部分落地（见下两行） |
+> | Phase node MD 驱动 queue loop | **✅ 部分实现** | `phase-seed-topics.md` + `phase-wave0.md` 已接入 queue-driven 三阶段（灌料→执行循环→收尾+gate），3 个 phase-level playbook 验证通过（AGQ-007~010 已归档入 main spec）。wave1/wave2/readiness 尚未接入，待 Change 2+ |
 > | Stop authorization 强制执行 | **❌ 未实现** | Engine 已计算 `stop_authorization_state`，但无任何东西读取它来阻止 Agent 停机。§7.2 |
-> | 灌料机制（filling） | **❌ 未实现** | Queue 启动时为空，task card 生成当前是纯手动。§7.1 |
+> | 灌料机制（filling） | **✅ 已实现** | 两个已接入 phase 都有 task card JSON 模板——Agent 从 `topic_registry` 派生 task card → 写 JSON → `operate-queue enqueue --task`。仍为手写模板+CLI，未做 JS helper（§7.1） |
 > | Error recovery（stale claim / crash） | **❌ 未实现** | `claim()` 不检测 stale running 状态。§7.4 |
 > | Context sustainability 验证 | **❌ 未验证** | Sub-agent + render projection 隔离能否控制上下文增长——未经过实验测量。§7.3 |
 >
-> **这份文件是指导（guidance），不是运行时事实。** 它告诉你架构怎么设计、边界在哪里、规则是什么——但大部分规则对应的代码还没写。实现前必须先走 OpenSpec proposal → spec → tasks。
+> **这份文件是指导（guidance），不是运行时事实。** 它告诉你架构怎么设计、边界在哪里、规则是什么。queue engine 已实现，seed-topics + wave0 的 queue 集成已落地（AGQ-007~010），但 stop authorization 强制执行、error recovery、context sustainability 验证仍未实现。新的 queue 集成（wave1+）实现前必须先走 OpenSpec proposal → spec → tasks。
 
 ---
 
@@ -49,7 +50,7 @@ The hard part of working with a Coding Agent is not task complexity — it is th
 
 The Agentic Queue is the mechanism that makes this possible. A self-contained task card gives the Agent a clear target, done-condition, and receipt to produce. The Engine-side checkpoint validates completed work, advances state, and renders the next card — so the Agent keeps moving through the queue in one continuous run instead of stopping to ask "what's next?"
 
-This file establishes the architectural constitution for queue-driven phase execution: the two-loop model (§3), the dispatch rule (§4), structural constraints (§5), task card principles (§6), and derived constraints that must be solved for loop engineering to work (§7). The queue engine is implemented; the loop engineering that wires it into workflow phases is settled architectural direction — implementation requires OpenSpec change.
+This file establishes the architectural constitution for queue-driven phase execution: the two-loop model (§3), the dispatch rule (§4), structural constraints (§5), task card principles (§6), and derived constraints that must be solved for loop engineering to work (§7). The queue engine and seed-topics/wave0 queue integration are implemented; remaining loop engineering (wave1+ queue wiring, engine-enforced stop authorization) is settled architectural direction — implementation requires OpenSpec change.
 
 This file inherits the project charter split: **LLM owns judgment, Markdown controls Agent Flow, Engine owns deterministic checkpoints.** The queue is an Engine-side tool; it does not drive the Agent, replace content judgment, or control phase-to-phase routing.
 
@@ -199,6 +200,8 @@ Which tasks go to `main-agent` vs `sub-agent` is a context-management decision, 
 
 The MD controller owns the `target` field assignment per task. The engine does not auto-assign. Sub-agents never pass gates, mutate queues, count evidence, or authorize output.
 
+> **See also:** [Sub-Agent Boundary](subagent-boundary.md) — the authoritative guideline for *when and why* work goes to sub-agents. This section describes the queue's target field mechanics; that guideline defines the architectural principle (noise isolation, bounded context, structured output) and the three-layer model (Chain → Queue → Relay) that frames how sub-agent dispatch fits into the larger execution loop.
+
 ---
 
 ## 7. Derived Constraints
@@ -222,6 +225,8 @@ The gap: **nothing reads this field to prevent the Agent from stopping.** The en
 The claim that queue-driven execution prevents context explosion rests on an unverified assumption: that completing a task via sub-agent + render projection actually releases context rather than accumulating it. If the main-agent reads full sub-agent results back into the conversation after every `complete()`, the queue has not reduced context pressure — it has only traded "frequent interruption" for "continuous accumulation."
 
 The intended mechanism is sub-agent isolation (heavy I/O writes to `_cache`, main-agent reads only the render projection's done-condition). Whether this keeps context growth sub-linear is unknown and must be experimentally validated — not assumed from queue design.
+
+> **See also:** [Sub-Agent Boundary](subagent-boundary.md) §原则一（噪声隔离）和 §原则三（不给全貌只给结论）——定义了 sub-agent 如何通过 bounded context + structured output 在机制上保护主 Agent 上下文。Context sustainability 的验证是 queue loop 能否长程运行的关键实验，但噪声隔离本身是已定调的结构性原则。
 
 ### 7.4 Error Recovery: Stale Claims and Crash Resilience
 
@@ -268,7 +273,7 @@ These are engine-side requirements — they cannot be solved by MD instructions 
 - MUST route new AGQ behavior through OpenSpec proposal/spec/tasks before implementation.
 - MUST NOT implement loop-engineering behavior directly from this guideline without an accepted OpenSpec change.
 - MUST treat the queue engine (AGQ-001~006) as implemented runtime truth.
-- MUST treat loop-engineering integration (phase node MD consuming the queue, engine-enforced stop authorization) as settled architectural direction pending OpenSpec — not as currently implemented.
+- MUST treat loop-engineering integration as settled architectural direction: queue engine + seed-topics/wave0 queue integration are implemented runtime truth (AGQ-001~010); remaining integration (wave1+ queue wiring, engine-enforced stop authorization) is pending OpenSpec — not as currently implemented.
 
 ---
 
@@ -288,6 +293,7 @@ General rule: when this guideline conflicts with an accepted spec or executable 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — normative description of the outer loop this inner loop nests inside.
+- [Sub-Agent Boundary](subagent-boundary.md) — architectural principle for when and why work goes to sub-agents; defines the three-layer model (Chain → Queue → Relay) and noise-isolation strategy that queue-driven execution depends on.
 - [Command Experiments](command-experiments.md) — how to prove mechanisms with real runtime contexts.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
 - [Accepted specs](../openspec/specs/) — accepted capability requirements.

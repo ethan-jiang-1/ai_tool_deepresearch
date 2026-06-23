@@ -16,6 +16,7 @@ siblings:
   - guidelines/command-experiments.md
   - guidelines/agentic-queue-mechanism.md
   - guidelines/agentic-workflow-mechanism.md
+  - guidelines/subagent-boundary.md
 ---
 
 # Guidelines Index
@@ -33,6 +34,7 @@ Read in this order:
 3. `agentic-workflow-mechanism.md` — normative description of the Agent-driven workflow loop: who drives, who routes, who validates.
 4. `command-experiments.md` — guidance for durable command experiment shape and boundaries.
 5. `agentic-queue-mechanism.md` — architectural constitution for queue-driven phase execution: two nested loops, dispatch rule, structural constraints, and derived constraints. Queue engine (AGQ-001~006) is runtime; loop-engineering direction is settled, implementation pending OpenSpec.
+6. `subagent-boundary.md` (draft) — architectural principle: when and why work goes into sub-agents. Noise isolation is the highest priority; web search must go through sub-agents. Anything outside the main agent flow that is hard to control is a sub-agent candidate. Parallel dispatch integration with the queue's serial claim model is unsettled (Change 2 will resolve this).
 
 Detailed requirements live in `openspec/specs/`. Project-level OpenSpec rules live in `openspec/config.yaml`.
 
@@ -83,6 +85,7 @@ This directory cannot decide:
 | Changing accepted behavior | OpenSpec proposal/spec/tasks | Patch only `guidelines/` |
 | Modifying transition, gate, or node-loading logic | `agentic-workflow-mechanism.md` and `openspec/specs/transition-table/spec.md` | Add a second transition backend or JS-driven loop |
 | Designing or implementing Agentic Queue behavior | `agentic-queue-mechanism.md` and `openspec/specs/agentic-queue/spec.md` | Implement loop engineering without OpenSpec change |
+| Deciding whether work should go to a sub-agent | `subagent-boundary.md` | Let main-agent do WebSearch/WebFetch directly |
 | Unsure which layer owns a rule | `project-charter.md` Authority Map | Resolve conflict by chat memory |
 
 ## Change Routing

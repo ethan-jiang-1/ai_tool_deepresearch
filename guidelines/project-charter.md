@@ -15,6 +15,7 @@ siblings:
   - guidelines/command-experiments.md
   - guidelines/agentic-queue-mechanism.md
   - guidelines/agentic-workflow-mechanism.md
+  - guidelines/subagent-boundary.md
 ---
 
 # Project Charter

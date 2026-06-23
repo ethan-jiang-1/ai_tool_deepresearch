@@ -2,6 +2,8 @@
 
 ## MODIFIED Requirements
 
+> **What changed from main spec (RWP-001):** (1) §2 Required Inputs upstream gate flipped from `setup-ready` to `seed-topics-ready` — this is the critical correctness fix; (2) §3 Allowed Actions restructured from free-text to queue-driven three-stage mode with explicit `operate-queue` CLI integration and sub-agent WebSearch/WebFetch execution; (3) context isolation constraint added (main-agent只读投影).
+
 ### Requirement: Wave0 phase body completeness
 
 `phase-wave0.md` SHALL 包含完整的 9-section body，引导 Agent 产出 foundation shared reference evidence。§3 Allowed Actions SHALL 采用 queue-driven 三阶段模式。
@@ -68,9 +70,3 @@ Section 内容要求：
 - **AND** Agent SHALL NOT 跳过 task 或无故中间停机
 - **AND** 当 claim 返回 `item: null` 时循环终止
 
-#### Scenario: Sub-agent executes source-intake search
-
-- **WHEN** task card 的 `target` 为 `sub-agent`
-- **THEN** 搜索和抓取 SHALL 由 sub-agent 执行
-- **AND** bounded 输出 SHALL 写入 `_cache/search-results/`
-- **AND** main-agent SHALL 在 complete 后只读 render projection 确认 done-condition

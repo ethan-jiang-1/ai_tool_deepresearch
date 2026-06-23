@@ -34,36 +34,38 @@ Wave0 使用 Agentic Queue 驱动 source intake。所有搜索/fetch 工作走 t
 
 ### 3.1 灌料 (Filling) — 首次进入 wave0
 
-如果 queue 为空（`operate-queue check <bundle>` 返回 `item: null` 或 queue_health 为空）：
+如果 queue 为空（`operate-queue check <bundle>` 返回 `queue_health: "thin"` 或 `active_window` 为空，无待执行 task）：
 
 1. 读取 `rb_plan.md` frontmatter 的 `topic_registry`，确定 topic 集合
 2. 为每个 topic 生成一个 task card JSON 文件，然后 enqueue：
 
-**Task card JSON 模板（写入临时文件如 `/tmp/wfq-task-{topic.key}.json`）：**
+**Task card JSON 模板（写入临时文件如 `/tmp/wfq-task-{topic.slug}.json`）：**
+
+> **模板变量来源**：`topic_registry` 数组中的每个条目含 `id`、`slug`、`title` 三个字段（PlanSchema）。模板中 `{topic.slug}` 取 `slug` 字段值，`{topic.title}` 取 `title` 字段值。搜索关键词从 `topic.title` 和同 topic 的 seed topic 文件（`seed_topics/{slug}.md`）中的 `search_guardrails.required_terms` 派生。
 
 ```json
 {
-  "work_id": "wave0-source-{topic.key}",
-  "title": "Source intake: {topic.label}",
+  "work_id": "wave0-source-{topic.slug}",
+  "title": "Source intake: {topic.title}",
   "target": "sub-agent",
-  "action": "搜索 [{topic.label}] 的 foundation reference。从 topic.description 派生搜索关键词。使用 WebSearch 找到至少 1 条可信来源，使用 WebFetch 获取每个来源的页面内容。提取并写入 reference/{topic.key}/source.yaml（YAML 数组，每条含 url, title, retrieved_date(YYYY-MM-DD), topic_tag(\"{topic.key}\"), notes(可选)）。搜索过程和中间结果写入 _cache/search-results/ 目录。",
+  "action": "搜索 [{topic.title}] 的 foundation reference。从 topic.title 和 seed_topics/{topic.slug}.md 的 search_guardrails 派生搜索关键词。使用 WebSearch 找到至少 1 条可信来源，使用 WebFetch 获取每个来源的页面内容。提取并写入 reference/{topic.slug}/source.yaml（YAML 数组，每条含 url, title, retrieved_date(YYYY-MM-DD), topic_tag(\"{topic.slug}\"), notes(可选)）。搜索过程和中间结果写入 _cache/search-results/ 目录。",
   "producer_rule": "source_intake_fan_in",
-  "lineage": {"topic_key": "{topic.key}", "phase": "wave0"},
+  "lineage": {"topic_slug": "{topic.slug}", "phase": "wave0"},
   "priority_class": "P5_new_reference_intake",
-  "required_receipts": ["file:reference/{topic.key}/source.yaml"],
-  "done_condition": "reference/{topic.key}/source.yaml 存在，通过 ReferenceMetadata schema 校验（url 非空、title 非空、retrieved_date 为 YYYY-MM-DD、topic_tag 匹配 {topic.key}），且至少含 1 条 reference",
+  "required_receipts": ["file:reference/{topic.slug}/source.yaml"],
+  "done_condition": "reference/{topic.slug}/source.yaml 存在，通过 ReferenceMetadata schema 校验（url 非空、title 非空、retrieved_date 为 YYYY-MM-DD、topic_tag 匹配 {topic.slug}），且至少含 1 条 reference",
   "verification": {"engine": ["receipt_check"], "agent": ["url_accessible", "title_matches_page"]},
-  "writes_to": ["reference/{topic.key}/source.yaml", "_cache/search-results/"],
+  "writes_to": ["reference/{topic.slug}/source.yaml", "_cache/search-results/"],
   "status_sync": ["wave0_intake"],
-  "completion_receipt": "file:reference/{topic.key}/source.yaml",
+  "completion_receipt": "file:reference/{topic.slug}/source.yaml",
   "failure_route": "queue_repair",
-  "payload": {"topic_key": "{topic.key}", "topic_label": "{topic.label}"}
+  "payload": {"topic_slug": "{topic.slug}", "topic_title": "{topic.title}"}
 }
 ```
 
 3. Enqueue 每个 task card：
 ```bash
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue <bundle> --task /tmp/wfq-task-{topic.key}.json
+node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue <bundle> --task /tmp/wfq-task-{topic.slug}.json
 ```
 
 4. 全部 topic 灌入后，验证：
@@ -90,7 +92,7 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 │  │     a. 启动 sub-agent，传入 task.action 指令 + 当前 bundle 路径  ││
 │  │     b. sub-agent 使用 WebSearch → WebFetch → 提取 metadata       ││
 │  │     c. sub-agent 写入 reference/<topic>/source.yaml              ││
-│  │     d. sub-agent 搜索中间结果写入 _cache/search-results/         ││
+│  │     d. sub-agent 搜索中间结果写入 _cache/wave0/search-results/   ││
 │  │     e. sub-agent 返回后，main-agent **不读回完整搜索结果**        ││
 │  │        —只读 §3.2.1 投影确认 done-condition                      ││
 │  └─────────────────────────────────────────────────────────────────┘│
@@ -113,7 +115,16 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 │  ┌─ 4. 读投影 ─────────────────────────────────────────────────────┐│
 │  │   cat <bundle>/_cache/agentic-queue/current-task.md              ││
 │  │   → 确认 done-condition 已满足                                    ││
-│  │   → 回到 step 1（claim 下一个 task）                              ││
+│  └─────────────────────────────────────────────────────────────────┘│
+│                              │                                       │
+│                              ▼                                       │
+│  ┌─ 5. 回填 seed topic（趁热，不可跳过）─────────────────────────────┐│
+│  │   complete 成功后，立刻回填 seed_topics/{topic.slug}.md：          ││
+│  │     a. grep -n '__BACKFILL_WAVE0_EVIDENCE__' 定位 token 行        ││
+│  │     b. 读取 reference/{topic.slug}/source.yaml                    ││
+│  │     c. 替换 token 行为 ref 摘要（url/title/tier/trust/key data）   ││
+│  │   → 替换 token，不追加——确保内容填入正确位置                       ││
+│  │   → 回到 step 1（claim 下一个 task）                               ││
 │  └─────────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -122,8 +133,10 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 
 - **不跳过 task**：只要 claim 返回了 task card（`item` 非 null），就必须执行并 complete，不得无故跳过
 - **不伪造产出**：每条 reference 必须来自 WebSearch + WebFetch 获取的真实页面。url 必须指向真实可访问页面，title 反映实际页面标题，retrieved_date 为真实检索日期
+- **工具降级链**：sub-agent 抓取网页内容时，如果 WebFetch 被安全策略阻止，**必须降级**——`curl -L <url>` → `python3 -c "import urllib.request..."` → `node -e "fetch(...)"`。不允许因为上层工具 blocked 就放弃抓取，更不允许拿搜索摘要当网页内容凑合。只有所有降级手段都失败才能报告"无法获取内容"
 - **complete 阻塞**：如果 complete 时 receipt check 失败（source.yaml 不存在或 schema 不对），engine 自动生成 repair task（`producer_rule: queue_repair`），Agent 必须修复而不是跳过。修复后重新 claim
-- **上下文管理**：sub-agent 执行搜索/抓取，bounded 输出写入 `_cache/search-results/`。main-agent 在 complete 后只读 `_cache/agentic-queue/current-task.md` 投影确认 done-condition，**不把完整搜索结果读回对话** — 这是防止 wave0 上下文膨胀的关键约束
+- **上下文管理**：sub-agent 执行搜索/抓取，bounded 输出写入 `_cache/wave0/search-results/`。main-agent 在 complete 后只读 `_cache/agentic-queue/current-task.md` 投影确认 done-condition，**不把完整搜索结果读回对话** — 这是防止 wave0 上下文膨胀的关键约束
+- **即时回填 seed topic（不可跳过）**：每个 topic 的 complete 成功后，**在 claim 下一个 task 之前**，必须立刻回填 `seed_topics/{topic.slug}.md`：`grep -n '__BACKFILL_WAVE0_EVIDENCE__'` 定位 token → **替换 token 行**为 ref 摘要列表（`- **ref-XX-NN**: ...`）。趁 sub-agent 搜索结果还 fresh 就写，不等 wave0 结束
 
 ### 3.3 Queue 空后 — 收尾与 Gate
 
@@ -135,8 +148,8 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 ```bash
 node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --current-node phases/phase-wave0.md
 ```
-4. gate pass → 读取 `check.next` → 加载 `phase-wave1.md`
-5. gate fail → 按 §7 On Gate Fail 处理
+5. gate pass → 读取 `check.next` → 加载 `phase-wave1.md`
+6. gate fail → 按 §7 On Gate Fail 处理
 
 ## 4. Expected Artifacts
 

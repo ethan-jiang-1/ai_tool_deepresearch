@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @impl CMI-004: instantiate-run-bundle.mjs — Create a production DPT run bundle at repo root
+// @impl CMI-004, FRE-003: instantiate-run-bundle.mjs — Create a production DPT run bundle at repo root
 // Usage: node instantiate-run-bundle.mjs <name>
 // Creates dpt_rb_<name>/ from DPT_FRAMEWORK/rb_templates/.
 // Prints absolute bundle path to stdout for shell consumption.
@@ -15,6 +15,7 @@ import {
   ProfileSchema,
   PlanSchema,
 } from '../schema/index.mjs';
+import { parseMdFrontmatter } from '../engine/helpers/gate-helpers.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = join(__dirname, '..', 'rb_templates');
@@ -91,9 +92,8 @@ for (const t of templates) {
       const { parse: parseYaml } = await import('yaml');
       parsed = parseYaml(content);
     } else if (t.dest.endsWith('.md')) {
-      // Plan is markdown with JSON frontmatter
-      const m = content.match(/^---\n([\s\S]*?)\n---/);
-      parsed = m ? JSON.parse(m[1]) : {};
+      // Plan is markdown with YAML frontmatter (FRE-003)
+      parsed = parseMdFrontmatter(content);
     }
 
     const result = t.schema.safeParse(parsed);
