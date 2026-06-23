@@ -340,25 +340,57 @@ Phase 4: 后续增强（可选）
   └→ operate-queue 扩展子命令（如果需要 gate+queue 联合操作）
 ```
 
-### 6.2a OpenSpec 落地：3 个 Changes（wfq-*）
+### 6.2a OpenSpec 落地：3 个 Changes（wfq-*），步步为营
 
-以上 Phase 1-4 映射为 3 个 OpenSpec changes，按依赖顺序推进。命名前缀 `wfq-`（workflow queue），区别于已完成并归档的 `wff-*`（workflow foundation，搭 skeleton）。
+以上 Phase 1-4 映射为 3 个 OpenSpec changes，按依赖顺序推进。命名前缀 `wfq-*`（workflow queue），区别于已完成并归档的 `wff-*`（workflow foundation，搭 skeleton）。
 
-| # | Change | 原 Phase | 范围 | 新代码 | 状态 |
-|---|--------|---------|------|--------|------|
-| 1 | `wfq-queue-loop-wave0` | Phase 1 | phase-wave0.md §3 重写 + AGQ-007 producer_rule `source_intake_fan_in` | 零（Path A） | **proposed** |
-| 2 | `wfq-queue-loop-waves` | Phase 2 | phase-wave1.md §3 重写 + producer rules enum 标准化（AGQ-008~010）; wave2 不需要 queue（单一大任务）| 可能加 JS helper `deriveWave0Tasks`（视 Change 1 反馈） | 待 Change 1 完成后启动 |
-| 3 | `wfq-queue-loop-experiments` | Phase 3 | `experiments_playbook/exp_agentic-queue-loop/` 建 playbook + 按 §7.3 实验协议测量上下文可持续性 | 实验协议（playbook MD） | 待 Change 2 完成后启动 |
+**核心原则：每个 change 自带验证，实验不集中到最后一个 change。** 每一步都有回归测试（防退化）+ experiment playbook（证闭环），Change 3 的价值从"第一次验证"变为"跨 wave 整合验证 + 长程指标测量"。
 
-**暂不纳入独立 change、但需在后续评估的项目：**
+| # | Change | 原 Phase | 范围 | 测试 | 实验 | 新代码 | 状态 |
+|---|--------|---------|------|------|------|--------|------|
+| 1 | `wfq-queue-seedtopics-wave0` | Phase 1+ | phase-seed-topics.md §2-§3 重写（V12 内容对齐） + phase-wave0.md §2-§3 重写 + AGQ-007~010（2 个 producer_rule + 2 个 playbook）| 2 个 phase body 结构 regression | seed-topics queue-loop simple + wave0 queue-loop simple（真搜索）| 零（Path A） | **proposed**（MD 已落盘，待实现 regression test + playbook） |
+| 2 | `wfq-queue-loop-waves` | Phase 2 | phase-wave1.md §3 重写 + producer rules enum 标准化（AGQ-011~013）; wave2 不需要 queue | phase body 结构 regression | wave1 queue-loop simple | 可能加 JS helper（视 Change 1 反馈） | 待 Change 1 完成后启动 |
+| 3 | `wfq-queue-loop-experiments` | Phase 3 | 跨 wave 整合验证 + 上下文可持续性测量（按 §7.3 实验协议） | — | full-chain seed-topics→wave0→wave1 + medium failure/repair + 上下文采样 | 实验协议（playbook MD） | 待 Change 2 完成后启动 |
 
-- stop authorization 强制执行（§7.2）— engine 侧改动，需等 Path A 验证"MD 指令是否足够"后再决定
-- stale claim 检测 + crash 恢复（§7.4）— engine 侧改动
-- `rb_ledger.jsonl` — claim provenance 账本，v1 不需要
+**AGQ ID 分配调整：** Change 1 占用 AGQ-007~010（source_intake_fan_in, wave0 playbook, seed_topic_materialize, seed-topics playbook）。Change 2 的 producer rules enum 用 AGQ-011~013。
 
-**wave2 为什么不需要 queue：**
+### 6.2b 对后续 Phase 的启发 — 可复用模式已确立
 
-Wave0 和 wave1 各拆为 N 个独立子任务（一个 topic 一个 task），适合 queue 的 claim→execute→complete 循环。Wave2 只有一个子任务——从已验证的 wave0/wave1 artifact 派生一份 cross-topic synthesis。没有"多个独立子任务"可拆，queue 在这里帮不上忙，保持自由文本模式。
+seed-topics + wave0 的 queue 接入完成后，一套可复用的设计模式已经浮现：
+
+**"一个 topic 一个 task"的适用性判断：**
+
+```
+phase 内有 N 个独立子任务（一个 topic 一个 task）？
+  ├── YES → queue 适用，使用 3-stage MD 模板
+  │         差别只在 target:
+  │           target=main-agent → 结构化写入（从 registry 提取）
+  │           target=sub-agent  → 外部搜索/检索（WebSearch+WebFetch）
+  │
+  └── NO  → queue 不适用，保持自由文本
+```
+
+**已确认的 phase 分类：**
+
+| Phase | N 个子任务？ | Queue？ | Target | 理由 |
+|-------|-------------|---------|--------|------|
+| seed-topics | ✅ N topics → N files | ✅ | main-agent | 从 topic_registry 提取信息写 MD |
+| wave0 | ✅ N topics → N files | ✅ | sub-agent | 每个 topic 需要 WebSearch+WebFetch |
+| wave1 | ✅ N topics → N files | ✅（Change 2） | main-agent | 从 wave0 artifact 提取信息写 skeleton — 和 seed-topics 同模式 |
+| wave2 | ❌ 1 个 synthesis | ❌ | — | 单一 cross-topic 任务，拆不成独立子任务 |
+
+**3-stage MD 模板（已落地，可直接复用）：**
+
+```
+§3 Allowed Actions — Queue-Driven 三阶段
+  §3.1 灌料 (Filling)        → 完整 task card JSON 模板 + enqueue CLI
+  §3.2 Queue-Driven 执行循环   → ASCII 流程图 + claim→execute→complete→投影
+  §3.3 收尾与 Gate            → 检查产出 → 跑 gate CLI → pass/fail
+```
+
+**对 Change 2（wave1）的影响：** wave1 的 queue 接入可以直接复用 seed-topics 的模板——target=main-agent、从已有 artifact 提取信息、写 topic-scoped 文件。Producer_rule 用 `skeleton_placeholder_write`（待 Change 2 定义）。wave1 的特殊性在于它目前有 `subagent: true` frontmatter marker（future expansion），但 foundation 阶段做的是单 Agent 写入，queue 接入不受影响。
+
+**对 Change 3（跨 wave 实验）的影响：** Change 1 确立的"一个 change 两个上下游 phase"模式意味着 Change 3 的 full-chain playbook 应覆盖 seed-topics→wave0→wave1 三连——每个 phase 的 queue-loop 独立完成后，验证跨 phase artifact 传递的一致性（seed_topics/ → reference/ → artifacts/wave1/）。
 
 ### 6.3 设计约束（从 project charter 继承，不变）
 
