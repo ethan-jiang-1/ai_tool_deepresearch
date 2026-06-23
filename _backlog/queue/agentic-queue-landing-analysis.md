@@ -340,6 +340,26 @@ Phase 4: 后续增强（可选）
   └→ operate-queue 扩展子命令（如果需要 gate+queue 联合操作）
 ```
 
+### 6.2a OpenSpec 落地：3 个 Changes（wfq-*）
+
+以上 Phase 1-4 映射为 3 个 OpenSpec changes，按依赖顺序推进。命名前缀 `wfq-`（workflow queue），区别于已完成并归档的 `wff-*`（workflow foundation，搭 skeleton）。
+
+| # | Change | 原 Phase | 范围 | 新代码 | 状态 |
+|---|--------|---------|------|--------|------|
+| 1 | `wfq-queue-loop-wave0` | Phase 1 | phase-wave0.md §3 重写 + AGQ-007 producer_rule `source_intake_fan_in` | 零（Path A） | **proposed** |
+| 2 | `wfq-queue-loop-waves` | Phase 2 | phase-wave1.md §3 重写 + producer rules enum 标准化（AGQ-008~010）; wave2 不需要 queue（单一大任务）| 可能加 JS helper `deriveWave0Tasks`（视 Change 1 反馈） | 待 Change 1 完成后启动 |
+| 3 | `wfq-queue-loop-experiments` | Phase 3 | `experiments_playbook/exp_agentic-queue-loop/` 建 playbook + 按 §7.3 实验协议测量上下文可持续性 | 实验协议（playbook MD） | 待 Change 2 完成后启动 |
+
+**暂不纳入独立 change、但需在后续评估的项目：**
+
+- stop authorization 强制执行（§7.2）— engine 侧改动，需等 Path A 验证"MD 指令是否足够"后再决定
+- stale claim 检测 + crash 恢复（§7.4）— engine 侧改动
+- `rb_ledger.jsonl` — claim provenance 账本，v1 不需要
+
+**wave2 为什么不需要 queue：**
+
+Wave0 和 wave1 各拆为 N 个独立子任务（一个 topic 一个 task），适合 queue 的 claim→execute→complete 循环。Wave2 只有一个子任务——从已验证的 wave0/wave1 artifact 派生一份 cross-topic synthesis。没有"多个独立子任务"可拆，queue 在这里帮不上忙，保持自由文本模式。
+
 ### 6.3 设计约束（从 project charter 继承，不变）
 
 - **Queue 不驱动 Agent** — Agent 驱动自己，queue 只是它的 todo list
