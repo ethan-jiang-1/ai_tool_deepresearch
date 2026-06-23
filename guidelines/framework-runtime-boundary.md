@@ -13,7 +13,7 @@ defers_to:
 siblings:
   - guidelines/project-charter.md
   - guidelines/command-experiments.md
-  - guidelines/agentic-dispatch-scheduler-mechanism.md
+  - guidelines/agentic-queue-mechanism.md
   - guidelines/agentic-workflow-mechanism.md
 ---
 

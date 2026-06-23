@@ -14,7 +14,7 @@ siblings:
   - guidelines/project-charter.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
-  - guidelines/agentic-dispatch-scheduler-mechanism.md
+  - guidelines/agentic-queue-mechanism.md
   - guidelines/agentic-workflow-mechanism.md
 ---
 
@@ -32,7 +32,7 @@ Read in this order:
 2. `framework-runtime-boundary.md` — directory and authority boundary between read-only framework assets and mutable runtime bundles.
 3. `agentic-workflow-mechanism.md` — normative description of the Agent-driven workflow loop: who drives, who routes, who validates.
 4. `command-experiments.md` — guidance for durable command experiment shape and boundaries.
-5. `agentic-dispatch-scheduler-mechanism.md` — draft design for a future Engine-side dispatch scheduler; not current runtime truth.
+5. `agentic-queue-mechanism.md` — architectural constitution for queue-driven phase execution: two nested loops, dispatch rule, structural constraints, and derived constraints. Queue engine (AGQ-001~006) is runtime; loop-engineering direction is settled, implementation pending OpenSpec.
 
 Detailed requirements live in `openspec/specs/`. Project-level OpenSpec rules live in `openspec/config.yaml`.
 
@@ -82,7 +82,7 @@ This directory cannot decide:
 | Writing or revising a command experiment playbook | `command-experiments.md` and the relevant accepted spec or active OpenSpec change | Invent setup or verdict authority locally |
 | Changing accepted behavior | OpenSpec proposal/spec/tasks | Patch only `guidelines/` |
 | Modifying transition, gate, or node-loading logic | `agentic-workflow-mechanism.md` and `openspec/specs/transition-table/spec.md` | Add a second transition backend or JS-driven loop |
-| Designing future ds behavior | `agentic-dispatch-scheduler-mechanism.md` | Treat ds as implemented or Agent-owned |
+| Designing or implementing Agentic Queue behavior | `agentic-queue-mechanism.md` and `openspec/specs/agentic-queue/spec.md` | Implement loop engineering without OpenSpec change |
 | Unsure which layer owns a rule | `project-charter.md` Authority Map | Resolve conflict by chat memory |
 
 ## Change Routing
@@ -95,7 +95,7 @@ This directory cannot decide:
 | Schema, state machine, receipt, gate, or trace contract | `DPT_FRAMEWORK/`, `tests/`, and accepted specs via OpenSpec | Do not define it only in prose |
 | Command experiment execution pattern | `command-experiments.md` plus the relevant accepted spec or active change when normative | Avoid local one-off verdict rules |
 | Agentic workflow loop (who drives, routes, validates) | `guidelines/agentic-workflow-mechanism.md` | Read before modifying transition, gate, or node-loading behavior |
-| Future ds design | `agentic-dispatch-scheduler-mechanism.md` | Keep proposed surfaces marked Proposed until implemented |
+| Agentic Queue loop engineering | `agentic-queue-mechanism.md` | Follow architectural constitution; route new implementation through OpenSpec |
 | Current runtime/run state | The active runtime context, currently `dpt_rb_*` or `dpt_disp_*` | Reload files; do not rely on chat memory |
 
 ## Guidance Map
@@ -108,7 +108,7 @@ Guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`
 | `framework-runtime-boundary.md` | Any Agent or maintainer touching framework/run files | Directory and authority boundary for read-only framework assets vs mutable runtime bundles | Concrete schema fields, CLI flags, or current run truth |
 | `command-experiments.md` | Experiment author/executor | How to prove mechanisms with real runtime contexts and trace-backed verdicts | General project philosophy or concrete capability behavior |
 | `agentic-workflow-mechanism.md` | Any Agent executing or modifying workflow logic | How the agentic loop works: MD controls, chain routes, JS validates, Agent drives | Alternative transition backends, non-chain routing, JS-driven loops |
-| `agentic-dispatch-scheduler-mechanism.md` | Designer of future ds capability | Draft Engine-side scheduler model and open questions | Current runtime behavior |
+| `agentic-queue-mechanism.md` | Designer or implementer of Agentic Queue behavior | Architectural constitution for queue-driven phase execution: two nested loops, dispatch rule, structural constraints | Current runtime behavior |
 
 ## Current / Target / Proposed
 
@@ -126,7 +126,7 @@ Guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`
 | `DPT_FRAMEWORK/schema/gate_definitions/` | Current | Yes | Read-only gate definition JSON; skeleton/content completeness is owned by accepted specs |
 | `DPT_FRAMEWORK/cli/gates/` | Current | Yes | Accepted one-gate-per-CLI skeleton wrappers |
 | `DPT_FRAMEWORK/engine/gates/` | Target | No | Future gate loader/evaluator implementation; directory exists but has no loader/evaluator yet |
-| `DPT_FRAMEWORK/cli/ds.mjs` | Proposed | No runtime use; design input only | Future OpenSpec + implementation required |
+| `DPT_FRAMEWORK/cli/operate-queue.mjs` | Current | Yes — Agentic Queue CLI (check/enqueue/claim/complete/fail/preempt/render) | Queue operations and task dispatch |
 | `rb_ledger.jsonl` | Proposed | No runtime use; design input only | Future OpenSpec + implementation required |
 | Queue Markdown projection | Current | Yes — `queue-manager.mjs` render() writes `_cache/agentic-queue/current-task.md` | Queue state projection, not queue authority |
 
@@ -142,7 +142,7 @@ These files are one guidance suite:
 - `framework-runtime-boundary.md` defines the framework/runtime boundary: where read-only definitions and mutable run truth belong.
 - `command-experiments.md` defines the experiment charter: how mechanisms are proven.
 - `agentic-workflow-mechanism.md` defines the runtime loop: how MD, chain, and Engine cooperate during workflow execution.
-- `agentic-dispatch-scheduler-mechanism.md` defines a draft mechanism: what Engine-side ds might become, not what exists today.
+- `agentic-queue-mechanism.md` defines the architectural constitution for queue-driven phase execution: the queue engine (AGQ-001~006) is implemented runtime; the loop-engineering architecture (two nested loops, dispatch rule, structural constraints) is settled direction; implementation is pending OpenSpec.
 
 Each file has frontmatter declaring its role, scope, authority level, and sibling guidance files.
 
@@ -153,7 +153,7 @@ Each file has frontmatter declaring its role, scope, authority level, and siblin
 | Agent | LLM actor that reads Markdown/state and performs content work. |
 | Engine | JavaScript code that enforces deterministic checkpoints and returns structured feedback; not the Agent Flow controller. |
 | CLI | Executable JS surface used for validation, inspection, deterministic checks, feedback, or future scheduling; not the LLM-facing workflow controller. |
-| ds | Future Engine-side Dispatch Scheduler; a CLI/checkpoint, not an Agent, daemon, or content judge. |
+| AGQ | Agentic Queue — the queue engine (`queue-manager.mjs` + `operate-queue.mjs`, AGQ-001~006) that drives task dispatch inside a workflow phase. Implemented as CLI/checkpoints, not an Agent, daemon, or content judge. |
 | Markdown | LLM-facing Agent Flow controller/control surface; it drives staged LLM work and receives Engine/CLI feedback, but is not machine verification. |
 | Markdown Projection | Agent-readable Markdown rendered from structured state; operating surface, not authority. |
 | Check | JS/CLI feedback action: deterministic pass/fail for a specific condition. |

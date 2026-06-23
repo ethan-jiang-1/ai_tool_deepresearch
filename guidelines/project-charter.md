@@ -13,7 +13,7 @@ defers_to:
 siblings:
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
-  - guidelines/agentic-dispatch-scheduler-mechanism.md
+  - guidelines/agentic-queue-mechanism.md
   - guidelines/agentic-workflow-mechanism.md
 ---
 
@@ -320,7 +320,7 @@ Explore / design
 5. 相关 `openspec/specs/<capability>/spec.md`：具体 capability 的需求。
 6. 对应 framework、experiment 或 runtime context 文件。
 
-机制草案，例如 `guidelines/agentic-dispatch-scheduler-mechanism.md`，只能作为设计输入；未进入 OpenSpec 和实现前，不是运行时事实。
+机制草案，例如 `guidelines/agentic-queue-mechanism.md`，只能作为设计输入；未进入 OpenSpec 和实现前，不是运行时事实。
 
 ---
 
@@ -347,6 +347,6 @@ Before changing any file in `guidelines/`, check:
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for read-only framework assets versus mutable runtime bundles.
 - [Command Experiments](command-experiments.md) — target guidance for durable command experiment shape and boundaries.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — normative description of the Agent-driven workflow loop.
-- [Engine-Side Dispatch Scheduler](agentic-dispatch-scheduler-mechanism.md) — future ds mechanism draft, not runtime truth.
+- [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Agentic Queue loop engineering draft, not runtime truth.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
 - [Accepted specs](../openspec/specs/) — accepted capability requirements.

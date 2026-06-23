@@ -13,7 +13,7 @@ defers_to:
 siblings:
   - guidelines/project-charter.md
   - guidelines/framework-runtime-boundary.md
-  - guidelines/agentic-dispatch-scheduler-mechanism.md
+  - guidelines/agentic-queue-mechanism.md
   - guidelines/agentic-workflow-mechanism.md
 ---
 
@@ -538,7 +538,7 @@ These principles are not exhaustive. When a new experiment family exposes a new 
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
-- [Engine-Side Dispatch Scheduler](agentic-dispatch-scheduler-mechanism.md) — future ds mechanism draft; use this experiment guideline for any ds prototype.
+- [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Agentic Queue loop engineering draft; use this experiment guideline for any AGQ prototype.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — normative description of the Agent-driven workflow loop that experiments exercise.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for framework assets versus runtime bundles.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
