@@ -295,7 +295,7 @@ phase MD 自己决定开不开 Q——这是 controller 的权利。
 
 **A. 最小路径：只改 phase node MD，不写新代码**
 
-修改 phase node MD body（wave0/wave1/wave2 最适合），把 "Allowed Actions" 从自由文本改成 queue-driven 模式：
+修改 phase node MD body（seed-topics/wave0/wave1 最适合——"一个 topic 一个 task"的独立子任务模式），把 "Allowed Actions" 从自由文本改成 queue-driven 模式：
 ```markdown
 ## 3. Allowed Actions
 1. 加载 queue: `node DPT_FRAMEWORK/cli/operate-queue.mjs claim <bundle>`
@@ -313,32 +313,16 @@ phase MD 自己决定开不开 Q——这是 controller 的权利。
 - 因此 Path A 是**必要的第一步**（让 Agent 知道 queue 的存在和用法），但不是**充分的最后一步**（让 Engine 在非法停机时顶回）。两者互补，不是替代。
 - 短期实用判断：MD 指令 + Agent 自觉在大多数情况下**能工作**——Agent 没有理由故意跳过 queue loop。但长期必须补上 Path B 的 JS-level stop authorization 强制检查。
 
-**B. 完整路径：phase node MD 接入 + producer rules 标准化 + experiments**
+**B. 完整路径：producer rules 标准化 + experiments + enforcement**
 
-在 A 的基础上：
-- OpenSpec 定义 producer rules enum（少量新增 AGQ 条目）
-- 建 `experiments_playbook/exp_agentic-queue-loop/` 验证 queue-driven phase 闭环
-- 可选：如果 `complete` 后立即跑 gate 太繁琐，可以写一个薄 wrapper 把 complete + gate check 合成一步（但这不是必须的——Agent 能跑两步）
+在 A 的基础上（Path A → Path B）：
+- Producer rules enum 随各 change 逐步标准化（AGQ-007~012）
+- 每个 change 自带 experiment playbook（"步步为营"原则——§6.2a）
+- stop authorization 强制执行（§7.2）——Path B 的核心：让 engine 在非法停机时顶回，完成 charter 的 Engine 强制执行闭环
 
 ### 6.2 建议推进顺序
 
-```
-Phase 1: wave0 试点
-  └→ 更新 phase-wave0.md 的 body，加入 queue-driven 工作模式
-  └→ 验证: 走一次 wave0，Agent 在 queue 驱动下完成 source intake
-
-Phase 2: wave1/wave2 推广
-  └→ 更新 phase-wave1.md, phase-wave2.md
-  └→ producer rules enum 标准化（OpenSpec change）
-
-Phase 3: experiments
-  └→ exp_agentic-queue-loop/ 建 playbook
-  └→ 验证循环闭环: task → complete → 下一个 task → queue 空 → gate 过
-
-Phase 4: 后续增强（可选）
-  └→ rb_ledger.jsonl（如果需要 claim provenance）
-  └→ operate-queue 扩展子命令（如果需要 gate+queue 联合操作）
-```
+> 本节原始的 Phase 1-4 设想已被以下 §6.2a 的 3 个 OpenSpec changes 具体化并替代。保留此节标题作为历史标记，不做内容同步。
 
 ### 6.2a OpenSpec 落地：3 个 Changes（wfq-*），步步为营
 
