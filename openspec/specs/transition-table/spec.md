@@ -1,4 +1,6 @@
-> req: TRT-001, TRT-002, TRT-003, TRT-004, TRT-005
+# Transition Table
+
+> req: TRT-001, TRT-002, TRT-003, TRT-005
 
 ## Purpose
 
@@ -59,37 +61,6 @@ Unknown suffixes SHALL return `kind: 'config_error'`. The detailed router SHALL 
 
 - **WHEN** `resolveNodeTransitionDetailed('transitions.chain.json', 'wave0-complete', 'passed', context)` is called
 - **THEN** the result SHALL have `kind: 'invalid_input'`
-
-### Requirement: transition-chain.mjs provides node-keyed chain lookup
-
-`transition-chain.mjs` SHALL 提供以下接口：
-
-- `ChainDefinition` — Zod schema，验证 `{ [gate]: { [state]: next_node } }` 结构
-- `loadChain(path)` — 读取并验证 `.chain.json` 文件
-- `resolveTransition(chain, gate, state)` — 纯函数，返回 `{ next, found }`
-- `createChain(pathOrDef, trace?)` — factory，返回 `Chain` tracker
-
-`Chain` tracker SHALL 具有以下属性和方法：
-
-- `current` — 最近一次查询的 gate
-- `next` — 最近一次查询得到的 next_node
-- `outcome` — `running` 或 `complete`
-- `isComplete` — `outcome === 'complete'`
-- `receipts` — transition receipt 数组
-- `iterations` — 已查询次数
-- `askNext(gate, state)` — 查询 transition，记录 receipt，并更新 tracker 状态
-
-#### Scenario: createChain records queries
-
-- **WHEN** `const c = createChain('transitions.chain.json', trace); c.askNext('gate-a', 'passed')`
-- **THEN** `c.current` SHALL 更新为 `gate-a`
-- **AND** `c.next` SHALL 更新为查询结果
-- **AND** `c.receipts` SHALL 追加一条 transition receipt
-
-#### Scenario: createChain marks terminal results complete
-
-- **WHEN** `c.askNext('gate-final', 'passed')` returns `next: null`
-- **THEN** `c.isComplete` SHALL 为 `true`
 
 ### Requirement: Detailed node-result router contract
 

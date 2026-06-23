@@ -220,7 +220,7 @@ GSK-004: "gate-skeleton — Gate CLI evaluates rules from definition and emits d
 TRT-001: transition-table — File naming convention transitions.chain.json
 TRT-002: transition-table — transitions.chain.json structure (gate→state→next_node static map)
 TRT-003: transition-table — transition-chain.mjs engine (loadChain, resolveTransition, createChain)
-TRT-004: transition-table — ask-next.mjs unified dispatch (askNext dispatches to chain by file suffix)
+TRT-004: transition-table — ask-next.mjs unified dispatch (askNext dispatches to chain by file suffix) [DEPRECATED]
 TRT-005: transition-table — Detailed node-result router contract and node-keyed backend dispatch
 
 # wff-content-delivery — phase content

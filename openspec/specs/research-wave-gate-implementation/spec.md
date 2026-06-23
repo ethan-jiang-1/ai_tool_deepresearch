@@ -1,3 +1,5 @@
+# Research Wave Gate Implementation
+
 > req: RWG-001, RWG-002, RWG-003, RWG-004, RWG-005, RWG-006, RWG-007, RWG-008
 
 ## Purpose

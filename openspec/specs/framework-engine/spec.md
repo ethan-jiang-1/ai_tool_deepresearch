@@ -33,9 +33,18 @@ Workflow Chain is an MD loader + dependency resolver: it parses frontmatter, res
 - **WHEN** a production run bundle script calls an engine function
 - **THEN** the import statement SHALL reference `../DPT_FRAMEWORK/engine/<module>.mjs` (same relative path)
 
+#### Scenario: No FSM engine modules
+
+- **WHEN** listing `DPT_FRAMEWORK/engine/`
+- **THEN** `workflow-fsm.mjs` SHALL NOT exist
+- **AND** `transition-fsm.mjs` SHALL NOT exist
+
+#### Scenario: Integrity via validate-workflow-package
+
+- **WHEN** `DPT_FRAMEWORK/cli/validate-workflow-package.mjs` runs
+- **THEN** it SHALL validate the workflow package without requiring a `.fsm.json` file
+
 #### Scenario: No engine copy remains in experiments
 
 - **WHEN** the change is complete
 - **THEN** no `experiments/prototype-*/` directory SHALL contain an engine `.mjs` file that duplicates a module in `DPT_FRAMEWORK/engine/`
-
-

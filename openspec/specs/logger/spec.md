@@ -1,3 +1,5 @@
+# Logger
+
 > req: LOG-001, LOG-002, LOG-003
 
 ## Purpose

@@ -1,3 +1,5 @@
+# Shared Node Content
+
 > req: SHC-001, SHC-002, SHC-003, SHC-004, SHC-005, SHC-006
 
 ## Purpose
@@ -16,10 +18,16 @@
 - `root_must_answer_set`：字符串数组，记录用户明确要求必须回答的核心问题
 - `human_decision_checkpoints.hitl1.status`
 - `human_decision_checkpoints.hitl1.recorded_at`
-- `human_decision_checkpoints.hitl2.status`
-- `human_decision_checkpoints.hitl2.answerability_class`
-- `human_decision_checkpoints.hitl2.user_decision`
-- `human_decision_checkpoints.hitl2.final_report_view`
+- `human_decision_checkpoints.hitl1.topic_rewrite`
+- `human_decision_checkpoints.hitl1.user_intent_summary`
+- `human_decision_checkpoints.hitl1.research_profile`
+- `human_decision_checkpoints.hitl1.root_must_answer_set`
+- `human_decision_checkpoints.hitl2.status`：one of `not_started`, `pending_user`, `recorded`, `blocked`
+- `human_decision_checkpoints.hitl2.answerability_class`：one of `not_assessed`, `ready_substantive`, `ready_insufficient_judgment`, `blocked_repair_required`
+- `human_decision_checkpoints.hitl2.user_decision`：one of `not_started`, `proceed_to_readiness`, `request_view_revision`, `repair_and_rerun`, `stop_blocked`
+- `human_decision_checkpoints.hitl2.final_report_view`：one of `not_started`, `profile_default`, `executive_brief`, `evidence_map`, `claim_judgment`, `technical_deep_dive`, `custom`
+- `human_decision_checkpoints.hitl2.custom_slug`：optional custom report name
+- `human_decision_checkpoints.hitl2.user_feedback`
 
 Body SHALL 包含 Authority Boundary section，明确说明 schema authority 在 `DPT_FRAMEWORK/schema/contracts/profile.mjs`，runtime truth 在 active bundle 的 `rb_profile.yaml`。
 
@@ -85,6 +93,8 @@ Shared gate summary SHALL NOT 复制完整 rule-by-rule 列表。
   - `reference/<topic>/source.yaml` → Wave0 per-topic reference metadata（YAML array，每项满足 ReferenceMetadata schema）
   - `artifacts/wave1/<topic>/skeleton.md` → Wave1 topic-scoped placeholder skeleton（标记 `capability: foundation-placeholder`）
   - `artifacts/wave2/synthesis.md` → Wave2 cross-topic synthesis（引用用 Markdown link `[label](relative/path.md)` 格式）
+- 摘要 final report artifact 目录：
+  - `final/` → 终端交付输出目录，每次 delivery pass 生成一次。与 wave-level artifact 目录（`reference/`, `artifacts/wave1/`, `artifacts/wave2/`）不同——`final/` 是 terminal delivery output，不是中间产出
 
 Shared schemas SHALL NOT 复制完整 Zod schema 定义。
 
@@ -142,6 +152,10 @@ Repair guidance SHALL NOT 变成某个具体 gate 的隐藏脚本。
 - 禁止把 chat memory 当 runtime state
 - 禁止在 instantiation / setup 阶段声称 evidence coverage 或 synthesis quality
 - 禁止在 `stop: yes` 节点未等用户输入就继续
+- 禁止在 HITL2 阶段伪造用户 decision 或绕过用户输入
+- 禁止在 readiness 阶段评判语义质量或写作质量
+- 禁止从 chat memory 生成 final report——必须 sourced from verified bundle state
+- 禁止在 final phase 实现 hidden loop 用于 post-delivery rework
 
 #### Scenario: Agent reads anti-cheating rules before phase execution
 

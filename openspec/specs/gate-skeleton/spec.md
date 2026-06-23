@@ -1,8 +1,10 @@
+# Gate Skeleton
+
 > req: GSK-001, GSK-002, GSK-003, GSK-004
 
 ## Purpose
 
-定义 Workflow Foundation 的 8 个 Gate definition JSON 骨架和 8 个 Gate CLI 骨架的产出要求。建立 gate 文件的统一 shape - definition 和 CLI 的正确结构 - 使后续 content change 只需要在已有文件里增加 rules 和实现逻辑，不再争论文件形态。
+定义 Workflow Foundation 的 9 个 Gate definition JSON 骨架和 9 个 Gate CLI 骨架的产出要求。建立 gate 文件的统一 shape - definition 和 CLI 的正确结构 - 使后续 content change 只需要在已有文件里增加 rules 和实现逻辑，不再争论文件形态。
 ## Requirements
 ### Requirement: Gate definition JSON skeleton structure
 
@@ -19,7 +21,7 @@
 | Field | Required | Meaning |
 |-------|----------|---------|
 | `id` | yes | 稳定 rule identifier（如 `wave0_artifact_index`） |
-| `check` | yes | Check type；合法值包括 `file_exists`、`schema_valid`、`count_floor`、`status_value`、`trace_event_present`、`placeholder` |
+| `check` | yes | Check type；合法值包括 `file_exists`、`yaml_parse`、`jsonl_parse`、`field_non_empty`、`field_value`、`trace_event_present`、`trace_has_events`、`status_value`、`dir_non_empty`、`count_min`、`placeholder` |
 | `target` | yes | 被检查的 file/state path、field、glob 或 trace query |
 | `threshold` | no | Count 或 ratio 的 comparison value；不适用时为 `null` |
 | `failure_message` | yes | 指向 Agent 的 repair guidance |
@@ -79,12 +81,13 @@ Gate definition JSON SHALL 不编码只有 Agent 能做的 semantic research jud
 
 ### Requirement: One gate per CLI
 
-每个 gate SHALL 对应一个独立的 CLI wrapper 文件。8 个 CLI SHALL 为：
+每个 gate SHALL 对应一个独立的 CLI wrapper 文件。9 个 CLI SHALL 为：
 
 ```
 check-gate-instantiation-complete.mjs
 check-gate-hitl1-recorded.mjs
 check-gate-setup-ready.mjs
+check-gate-seed-topics-ready.mjs
 check-gate-wave0-complete.mjs
 check-gate-wave1-complete.mjs
 check-gate-wave2-complete.mjs
@@ -103,7 +106,7 @@ CLI SHALL NOT 通过统一入口加 subcommand 区分 gate。内部 shared helpe
 
 每个 gate CLI SHALL 加载 gate definition JSON，遍历 rules，并在 `currentNodeRef` 与 gate 绑定校验通过后执行 deterministic check。规则执行结果 SHALL 决定 `passed` 或 `failed`，并且该 outcome SHALL 被送入详细 router 生成 `routing` 与 `check.next`。
 
-当前 GSK-004 的覆盖范围包括 7 个已实现的 gate CLI：
+当前 GSK-004 的覆盖范围包括 9 个已实现的 gate CLI：
 - `check-gate-instantiation-complete.mjs`：完整 rule set（~11 条），支持 `dir_exists`、`pattern_match`、`status_value` check type
 - `check-gate-hitl1-recorded.mjs`：definition-driven rule evaluation（~6 条），支持 `field_non_empty`、`field_value` check type
 - `check-gate-setup-ready.mjs`：definition-driven rule evaluation（~7 条），支持 `cross_field` check type
