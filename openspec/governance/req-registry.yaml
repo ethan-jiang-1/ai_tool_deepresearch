@@ -40,6 +40,10 @@ AGQ-007: agentic-queue — Producer rule source_intake_fan_in for wave0 source i
 AGQ-008: agentic-queue — Wave0 queue-loop simple playbook (real search + gate fail + repair scenarios)
 AGQ-009: agentic-queue — Producer rule seed_topic_materialize for seed-topics materialization task cards
 AGQ-010: agentic-queue — Seed-topics queue-loop simple playbook (3-topic happy path, V12 field verification)
+AGQ-011: agentic-queue — QueueItemSchema targets field (TargetSpec) replaces single enum target
+AGQ-012: agentic-queue — TargetSpec schema (controller enum, optional delegates with to/role_key/timeout_ms)
+AGQ-013: agentic-queue — Producer rule topic_deepening for wave1 deepening task cards
+AGQ-014: agentic-queue — Claim advice returns delegates_required and delegates_config for relay dispatch
 # bundle-infrastructure
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry
@@ -93,6 +97,18 @@ SUC-001: subagent-collect — Collect slot result envelopes and merge evidence i
 SUD-001: subagent-dispatch — Gate pass dispatches subagent slots into wave-scoped file system protocol
 SUR-001: subagent-repair — All-slots-failed repair routing and partial-failure tolerance
 SUS-001: subagent-slots — Subagent slot lifecycle state machine and wave-scoped paths
+SUD-002: subagent-dispatch — Queue task card targets.delegates triggers relay-based dynamic dispatch (task to SlotConfig mapping)
+SUD-003: subagent-dispatch — Batch sub-agent protocol defines collect-as-return loop with replacement dispatch
+SUC-002: subagent-collect — Per-slot collect during batch sub-agent execution (ingestAgentReceipt + commitSlotResult)
+# wave1-intake
+WAI-001: wave1-intake — Wave1 phase uses queue-driven three-stage execution for topic-specific deepening
+WAI-002: wave1-intake — Wave1 deepening task card targets sub-agent via targets.delegates (dpt-evidence-extractor)
+WAI-003: wave1-intake — Sub-agent tool degradation chain with honest failure recording
+WAI-004: wave1-intake — Inline per-topic backfill after each deepening task completion
+WAI-005: wave1-intake — Wave1 gate checks deepening artifacts and backfill token replacement
+WAI-006: wave1-intake — Wave1 queue-loop playbooks verify deepening end-to-end
+WAI-007: wave1-intake — Wave1 batch parallel sub-agent execution protocol via relay
+
 
 # seg2node
 SEG-001: seg2node — Global rename segments to nodes with explicit node directory configuration

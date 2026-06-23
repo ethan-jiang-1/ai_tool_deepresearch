@@ -46,7 +46,7 @@ Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task�
 {
   "work_id": "seed-topic-{topic.slug}",
   "title": "Materialize seed topic: {topic.title}",
-  "target": "main-agent",
+  "targets": { "controller": "main-agent" },
   "action": "将 topic_registry 中的 [{topic.slug}]（标题：{topic.title}）物化为 seed_topics/{topic.slug}.md。该文件必须是 search-relevant decision document——能告诉后续 wave0 source intake 搜索什么、怎么搜、避免什么。具体要求见本 phase body §3.1 的 Seed Topic 文件结构。从 rb_plan.md topic_registry 和 rb_profile.yaml 中提取该 topic 的 must_answer、hypothesis、scope、search_guardrails、evidence_route 等信息填入。",
   "producer_rule": "seed_topic_materialize",
   "lineage": {"topic_slug": "{topic.slug}", "phase": "seed-topics"},
@@ -194,7 +194,7 @@ __BACKFILL_PENDING_QUESTIONS__
 │                              │                                       │
 │                              ▼                                       │
 │  ┌─ 2. execute ────────────────────────────────────────────────────┐│
-│  │   target = main-agent（seed topic 物化不涉及搜索，main-agent     ││
+│  │   targets.controller = main-agent（seed topic 物化不涉及搜索，main-agent     ││
 │  │   直接从 topic_registry + profile 提取信息写入）                 ││
 │  │   a. 读取 task.payload.topic_slug                                 ││
 │  │   b. 从 rb_plan.md topic_registry 获取该 topic 的完整定义        ││

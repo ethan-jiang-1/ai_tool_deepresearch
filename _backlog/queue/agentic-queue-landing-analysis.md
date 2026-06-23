@@ -166,20 +166,29 @@ V12 的 `queue-agentic-flow.md` (~400 行 Markdown) 定义了完整的 queue-dri
 | `test-medium-urgent-preemption.md` | full-window preemption, displaced tail, restore, refill | ✅ |
 | `test-complex-failure-repair.md` | invalid task rejection, missing receipt blocking, unsafe-current guard, empty queue handling | ✅ |
 
-### 2.5 实验验证 — `experiments_playbook/exp_agentic-queue-loop/`（phase 级 queue-loop 集成）
+### 2.5 实验验证 — `experiments_playbook/exp_wfn_*/`（phase 级 queue-loop 集成，按 phase 分目录）
+
+**目录结构已重组：** `exp_agentic-queue-loop/` → `exp_wfn_seedtopic/` + `exp_wfn_wave0/` + `exp_wfn_wave1/`
 
 | Playbook | 验证内容 | 状态 |
 |----------|---------|------|
-| `test-simple-seedtopics-queue-loop.md` | seed topics queue-driven 物化：enqueue→claim→main-agent 执行→complete→gate pass | ✅ |
-| `test-heavy-wave0-happy-path.md` | seed_topics→wave0 queue-loop→真实 WebSearch+WebFetch→backfill→gate pass 全链路 | ✅ |
-| `test-heavy-wave0-gate-fail-repair.md` | gate fail（count_floor 检测缺失 source.yaml）→repair→gate pass，trace 含 fail+pass 两条 gate_attempt | ✅ |
+| `exp_wfn_seedtopic/test-simple-seedtopics-queue-loop.md` | seed topics queue-driven 物化：enqueue→claim→main-agent 执行→complete→gate pass | ✅ |
+| `exp_wfn_wave0/test-heavy-wave0-happy-path.md` | seed_topics→wave0 queue-loop→dpt-source-intake sub-agent 真实搜索→backfill→gate pass 全链路 | ✅ retrofitted（target→targets） |
+| `exp_wfn_wave0/test-heavy-wave0-gate-fail-repair.md` | gate fail（count_floor 检测缺失 source.yaml）→repair→gate pass，trace 含 fail+pass 两条 gate_attempt | ✅ retrofitted |
+| `exp_wfn_wave1/test-heavy-wave1-batch-subagent.md` | 2-topic wave1 deepening：enqueue→relay 并行 spawn dpt-evidence-extractor→collect-as-return→backfill→gate pass | ✅ 新 |
+| `exp_wfn_wave1/test-heavy-wave1-gate-fail-repair.md` | gate fail（缺失 evidence-summary + question-list）→repair→gate pass，trace 含 2 条 gate_attempt | ✅ 新 |
+| `exp_wfn_wave1/test-heavy-wave1-subagent-failure.md` | WebFetch blocked→完整降级链（WebFetch→curl→node→python3）→partial evidence 不编造→gate 仍 pass | ✅ 新 |
 
-### 2.6 已接入 queue 的 phase node MD
+### 2.6 已接入 queue 的 phase node MD（sub-agent 拆分后的结构）
 
-| Phase | Queue-driven？ | 三阶段模板 | Backfill | Target | 状态 |
-|-------|---------------|-----------|----------|--------|------|
-| `phase-seed-topics.md` | ✅ | §3.1 灌料 + §3.2 执行循环 + §3.3 收尾+gate | `__BACKFILL_*__` tokens（预埋，由后续 wave 回填） | main-agent | ✅ 已落地 |
-| `phase-wave0.md` | ✅ | §3.1 灌料 + §3.2 执行循环（含 step 5 inline backfill）+ §3.3 收尾+gate | 每个 topic complete 后立刻替换 `__BACKFILL_WAVE0_EVIDENCE__` | main-agent（⚠️ task card 写 `target: sub-agent` 但实际执行时 main-agent 自己做了 WebSearch+WebFetch——从未真正 spawn sub-agent） | ✅ 已落地 |
+每个使用 sub-agent 的 phase 拆成 main-agent 和 sub-agent 两个文件：`phase-{wave}.md` + `phase-{wave}-subagent.md`。共享 relay 基础设施在 `shared-subagent-protocol.md`。
+
+| Phase | Queue-driven？ | Sub-agent role | 产出 | Backfill tokens | 状态 |
+|-------|---------------|----------------|------|-----------------|------|
+| `phase-seed-topics.md` | ✅ | 无（main-agent 直接写） | `seed_topics/{slug}.md` | 无（预埋 token 由后续 wave 回填） | ✅ |
+| `phase-wave0.md` + `phase-wave0-subagent.md` | ✅ | `dpt-source-intake` | `reference/{slug}/source.yaml` | `__BACKFILL_WAVE0_EVIDENCE__` | ✅ |
+| `phase-wave1.md` + `phase-wave1-subagent.md` | ✅ | `dpt-evidence-extractor` | `evidence-summary.md` + `question-list.md`（paired） | `__BACKFILL_WAVE1_MECHANISMS__`、`__BACKFILL_WAVE1_TRENDS__`、`__BACKFILL_PENDING_QUESTIONS__` | ✅ |
+| `phase-wave2.md` + `phase-wave2-subagent.md` | 🔮 待设计 | `dpt-synthesis-reviewer`（暂定） | `synthesis.md`（暂定） | `__BACKFILL_WAVE2_JUDGMENT__` | 🔮 |
 
 ---
 
@@ -192,7 +201,8 @@ V12 的 `queue-agentic-flow.md` (~400 行 Markdown) 定义了完整的 queue-dri
 | producer rules enum 标准化 | 三个新的 producer_rule 值已投入使用（`seed_topic_materialize`、`source_intake_fan_in`、`backfill_wave0_evidence`）。AGQ-007~010 已在 OpenSpec 注册（`req-registry.yaml`）但 enum 尚未收敛为单一 `ProducerRule` zod type | 后续 change 中逐步收敛 |
 | ~~灌料机制~~ | ✅ **已落地**：两个 phase 都有 task card JSON 模板，Agent 从 topic_registry 派生 task 并 enqueue | minor：批量 enqueue 仍是手写模板+CLI，未做 JS helper（`deriveTasks`） |
 | ~~上下文隔离~~ | ⚠️ **MD 约定但未强制执行**：phase-wave0.md 要求 sub-agent 输出写入 `_cache/wave0/search-results/`、main-agent 只读投影。但实际执行时 main-agent 自己做了 WebSearch（噪声直接进主上下文），没有真正 spawn sub-agent 来隔离。上下文隔离靠 Agent 自律，不是 engine 强制。 | 需要真正走 sub-agent dispatch——见新增 gap「sub-agent dispatch 未实现」 |
-| wave1 queue 接入 + sub-agent dispatch | phase-wave1.md 目前仍是自由文本，wave1 的 topic-specific deepening 未实现。`target: sub-agent` 只是 advisory text——wave0 的 WebSearch 实际是 main-agent 自己做的，噪声进主上下文。`subagent-relay.mjs`（1066 行）完全闲置。 | **Change 2**：wave1 queue-driven 实现 + `target` → `targets`（wave0&1 一起切 sub-agent dispatch） |
+| ~~wave1 queue 接入 + sub-agent dispatch~~ | ✅ **已完成**：wave1 完整重写为 queue-driven 三阶段 + relay 批量 sub-agent 并行执行。`target` → `targets` 一次性 breaking change，wave0/wave1 全部适配。每个 phase 的 main-agent 和 sub-agent 指令拆成独立文件（`phase-{wave}.md` + `phase-{wave}-subagent.md`）。shared 文件只保留 relay 基础设施 | — |
+| **wave2 queue 接入 + sub-agent dispatch** | 🔮 phase-wave2.md 目前是 foundation placeholder，wave2 的 cross-topic synthesis + gap-fill 未实现 | **Change 3**（待设计）。详细分析见 §4.1 |
 | gate + queue 联合操作 | Gate CLI 和 Queue CLI 是分开的 | 不是必须——Agent 可以自己协调，先跑 gate 再跑 queue |
 
 **以下不是当前优先级：**
@@ -201,18 +211,46 @@ V12 的 `queue-agentic-flow.md` (~400 行 Markdown) 定义了完整的 queue-dri
 
 ---
 
-## 4. 当前真实 gap：sub-agent dispatch 未实现 + wave1 未 queue-driven
+## 4. wave2 sub-agent dispatch：待设计方向
 
-**queue 已接入 seed-topics 和 wave0 两个 phase**（§2.6），但有两个 gap 阻止它覆盖全部研究 phase：
+### 4.1 wave2 跟 wave0/wave1 的本质差异
 
-当前 workflow loop：
-```
-Agent → assessNode(phase MD) → 读 body → 执行 → gate CLI → chain 回答 next → 循环
-```
+wave0 和 wave1 都是 **per-topic fan-out** 模式：
 
-queue 能提供的增强：
-```
-Agent → assessNode(phase MD) → 读 body → loadQueue()
+| | wave0 | wave1 |
+|---|-------|-------|
+| sub-agent role | `dpt-source-intake` | `dpt-evidence-extractor` |
+| 搜索模式 | 每个 topic 独立搜 foundation reference | 每个 topic 独立做 deepening |
+| 产出 | 每 topic 一个 `source.yaml` | 每 topic 两个文件：`evidence-summary.md` + `question-list.md` |
+| 并发 | 多个 sub-agent 并行，互不依赖 | 同左 |
+| backfill | 1 个 token（`__BACKFILL_WAVE0_EVIDENCE__`） | 3 个 token（mechanisms, trends, questions） |
+
+但 wave2 的核心任务可能是 **cross-topic synthesis**——不是"每个 topic 再搜一轮"，而是"把 wave0 + wave1 的所有 topic 的 evidence 拉通看，找出跨 topic 的 pattern、矛盾、gap，产出一个综合判断"。
+
+这意味着 wave2 sub-agent 的输入不再是"一个 seed topic 的 search_guardrails"，而是"所有 topic 的 evidence-summary + question-list"。这跟 wave0/wave1 有本质不同：
+
+- **fan-in vs fan-out**：wave0/wave1 是 fan-out（并行搜多个 topic），wave2 可能需要 fan-in（多个 topic 产出汇聚到一个 synthesis agent）
+- **search vs review**：wave0/wave1 的核心动作是 WebSearch+WebFetch，wave2 的核心动作可能是 read+compare+synthesize，search 只是 gap-fill 的辅助手段
+- **bounded context 更大**：sub-agent 需要看到多个 topic 的产出才能做综合——relay slot 的 bounded context 模型可能需要放宽
+
+### 4.2 待讨论的开放问题
+
+1. **wave2 应该是 synthesis reviewer 还是 gap-fill hunter 还是两个都有？**  
+   - synthesis reviewer：读所有 topic 的 evidence-summary + question-list，产出跨 topic 综合判断（contradictions, patterns, confidence levels），main-agent 回填 `__BACKFILL_WAVE2_JUDGMENT__`
+   - gap-fill hunter：从所有 topic 的 question-list 中识别"missing_information_gap"信号，定向搜索填补
+   - 可能两个都需要是一个 phase 内的两个 task 类型，也可能合成一个 role
+
+2. **是否需要新的 DPT role？** wave0 用 `dpt-source-intake`，wave1 用 `dpt-evidence-extractor`，现有的 `dpt-synthesis-reviewer` 和 `dpt-topic-scout` 哪个适合 wave2？
+
+3. **是否需要改变 relay 的 bounded context 模型？** 如果 synthesis 需要读多个 topic 的产出，sub-agent 可能需要比"一个 slot 的 task.md + result.schema.json"更多的上下文。这可能意味着 synthesis 更适合由 main-agent 自己做，sub-agent 只做 gap-fill search
+
+4. **并发策略是否需要不同？** wave0/wave1 的 MAX_CONCURRENT_SUBAGENTS=4（per-topic parallel），wave2 synthesis 可能是单 agent（串行综合）或 `max_concurrent_override=-1`（全量 gap-fill 并行）
+
+### 4.3 参考 V12
+
+V12 wave2 的 Future Expansion 提到了"cross-topic synthesis"和"fan-in review"但未具体设计。wave1 的四节 question-list（Targets → Reconciliation → Emergence → Decision）天然为 wave2 提供了"每个 topic 还有什么 unresolved"的输入——wave2 synthesis agent 可以从所有 topic 的 question-list 中提取跨 topic pattern。
+
+**待切磋。** 上述方向需要在 Change 3 设计阶段深入讨论后确定。
       → claim task → 执行 task → complete task (receipt check + promote + render)
       → 读下一个 task card → claim → 执行 → complete → ...
       → queue 空 + gate 过 → chain 回答 next phase → 循环

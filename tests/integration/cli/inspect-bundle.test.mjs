@@ -3,7 +3,7 @@ import { describe, it, before, after } from 'node:test';
 import { spawnSync } from 'node:child_process';
 import { writeFileSync, mkdirSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
-import { createTempDir, cleanupAll } from '../../helpers/test-tmp.mjs';
+import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
 const FIXTURE = join(process.cwd(), 'tests/fixtures/DPT_FRAMEWORK');
 const INSPECT = join(FIXTURE, 'cli/inspect-bundle.mjs');

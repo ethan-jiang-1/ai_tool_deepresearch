@@ -6,7 +6,7 @@ import assert from 'node:assert';
 import { spawnSync } from 'node:child_process';
 import { cpSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { createTempDir, cleanupAll } from '../../helpers/test-tmp.mjs';
+import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
 const FIXTURE_FW = join(process.cwd(), 'DPT_FRAMEWORK');
 

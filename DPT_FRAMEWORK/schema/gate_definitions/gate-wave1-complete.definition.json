@@ -1,58 +1,72 @@
 {
   "gate": "wave1-complete",
-  "description": "Verify Wave1 produced topic-scoped skeleton artifacts: wave1 directory exists, per-topic skeleton files exist, each skeleton contains the foundation-placeholder marker, no false completion claims present, trace evidence present, status values point to wave1→wave2.",
+  "description": "Verify Wave1 produced paired deepening artifacts per topic: evidence-summary.md (source URLs, key findings, open questions with canonical labels) and question-list.md (four-section exploration ledger). Also checks __BACKFILL_WAVE1_*__ token replacement, trace, and status.",
   "rules": [
     {
       "id": "wave1_dir_exists",
       "check": "dir_exists",
       "target": "artifacts/wave1",
-      "failure_message": "Missing directory: artifacts/wave1/. Create the directory and add per-topic skeleton files."
+      "failure_message": "Missing directory: artifacts/wave1/. Create the directory and add per-topic evidence-summary.md files."
     },
     {
-      "id": "per_topic_skeleton_exists",
+      "id": "per_topic_evidence_summary_exists",
       "check": "file_exists",
-      "target": "artifacts/wave1/{topic}/skeleton.md",
-      "failure_message": "Missing skeleton file: artifacts/wave1/{topic}/skeleton.md. Write a topic-scoped skeleton for each topic in the topic_registry."
+      "target": "artifacts/wave1/{topic}/evidence-summary.md",
+      "failure_message": "Missing evidence-summary file: artifacts/wave1/{topic}/evidence-summary.md. Run the deepening task for this topic via the queue-driven batch protocol."
     },
     {
-      "id": "placeholder_marker_present",
+      "id": "per_topic_question_list_exists",
+      "check": "file_exists",
+      "target": "artifacts/wave1/{topic}/question-list.md",
+      "failure_message": "Missing question-list file: artifacts/wave1/{topic}/question-list.md. Every topic must have a paired question-list.md alongside evidence-summary.md. See phase-wave1.md §3.2.1 for the four-section template."
+    },
+    {
+      "id": "question_list_has_four_sections",
       "check": "pattern_match",
-      "target": "artifacts/wave1/{topic}/skeleton.md",
-      "pattern": "capability:\\s*foundation-placeholder",
+      "target": "artifacts/wave1/{topic}/question-list.md",
+      "pattern": "## Topic Investigation Targets[\\s\\S]*## Question Reconciliation[\\s\\S]*## Emergent Question Protocol[\\s\\S]*## Exploration\\s*/\\s*Exploitation Decision",
       "negate": false,
-      "failure_message": "Missing required marker 'capability: foundation-placeholder' in skeleton file. Each skeleton must explicitly declare this marker to indicate it is foundation placeholder content, not full subagent research."
+      "failure_message": "question-list.md for {topic} must contain all four sections in order: Topic Investigation Targets, Question Reconciliation, Emergent Question Protocol, Exploration / Exploitation Decision."
     },
     {
-      "id": "no_false_full_subagent_claim",
+      "id": "source_url_present",
       "check": "pattern_match",
-      "target": "artifacts/wave1/{topic}/skeleton.md",
-      "pattern": "full subagent coverage completed",
-      "negate": true,
-      "failure_message": "False completion claim detected: 'full subagent coverage completed'. Foundation phase does not do subagent dispatch — remove this claim."
+      "target": "artifacts/wave1/{topic}/evidence-summary.md",
+      "pattern": "\\[.+\\]\\(https?://[^)]+\\)",
+      "negate": false,
+      "failure_message": "evidence-summary.md for {topic} must contain at least 1 source URL in Markdown link format (e.g. [Title](https://...)). Sub-agent must do real WebSearch+WebFetch — fabricated summaries are forbidden."
     },
     {
-      "id": "no_false_deepening_claim",
+      "id": "key_findings_non_empty",
       "check": "pattern_match",
-      "target": "artifacts/wave1/{topic}/skeleton.md",
-      "pattern": "deepening done",
-      "negate": true,
-      "failure_message": "False completion claim detected: 'deepening done'. Foundation phase only produces placeholder skeletons — remove this claim."
+      "target": "artifacts/wave1/{topic}/evidence-summary.md",
+      "pattern": "## Key Findings\\s*\\n\\s*(\\*\\*|[1-9]\\.)",
+      "negate": false,
+      "failure_message": "evidence-summary.md for {topic} must have a non-empty ## Key Findings section with at least 1 numbered finding."
     },
     {
-      "id": "no_false_intake_claim",
+      "id": "no_stale_mechanisms_token",
       "check": "pattern_match",
-      "target": "artifacts/wave1/{topic}/skeleton.md",
-      "pattern": "candidate intake completed",
+      "target": "seed_topics/{topic}.md",
+      "pattern": "__BACKFILL_WAVE1_MECHANISMS__",
       "negate": true,
-      "failure_message": "False completion claim detected: 'candidate intake completed'. Candidate intake is a future expansion track — remove this claim."
+      "failure_message": "Stale backfill token __BACKFILL_WAVE1_MECHANISMS__ found in seed_topics/{topic}.md. Replace the token with actual mechanism findings from the evidence-summary."
     },
     {
-      "id": "no_false_fanin_claim",
+      "id": "no_stale_trends_token",
       "check": "pattern_match",
-      "target": "artifacts/wave1/{topic}/skeleton.md",
-      "pattern": "fan-in review completed",
+      "target": "seed_topics/{topic}.md",
+      "pattern": "__BACKFILL_WAVE1_TRENDS__",
       "negate": true,
-      "failure_message": "False completion claim detected: 'fan-in review completed'. Fan-in review is a future expansion track — remove this claim."
+      "failure_message": "Stale backfill token __BACKFILL_WAVE1_TRENDS__ found in seed_topics/{topic}.md. Replace the token with actual trends and pain points from the evidence-summary."
+    },
+    {
+      "id": "no_stale_pending_questions_token",
+      "check": "pattern_match",
+      "target": "seed_topics/{topic}.md",
+      "pattern": "__BACKFILL_PENDING_QUESTIONS__",
+      "negate": true,
+      "failure_message": "Stale backfill token __BACKFILL_PENDING_QUESTIONS__ found in seed_topics/{topic}.md. Replace the token with updated question status tags from the evidence-summary."
     },
     {
       "id": "trace_wave1_completion",

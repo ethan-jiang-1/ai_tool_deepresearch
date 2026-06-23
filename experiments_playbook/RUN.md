@@ -28,7 +28,7 @@
 | 10 | `exp_agentic-queue/test-simple-minimal-path.md` | enqueue → claim → complete → promote 最小路径 |
 | 11 | `exp_agentic-queue/test-medium-urgent-preemption.md` | 满 active window + urgent preemption |
 | 12 | `exp_agentic-queue/test-complex-failure-repair.md` | invalid task, missing receipt, failure repair |
-| 13 | `exp_agentic-queue-loop/test-simple-seedtopics-queue-loop.md` | seed topics queue-driven 物化：enqueue→claim→main-agent 执行→complete→gate pass |
+| 13 | `exp_wfn_seedtopic/test-simple-seedtopics-queue-loop.md` | seed topics queue-driven 物化：enqueue→claim→main-agent 执行→complete→gate pass |
 | 14 | `exp_wff_validation/test-simple-happy-path.md` | wff walker 9 phase/8 gate 全部 pass + trace↔log 交叉验证 |
 | 15 | `exp_wff_validation/test-medium-fail-repair.md` | wff walker gate fail → repair → rerun → pass 闭环 |
 | 16 | `exp_wff_validation/test-complex-routing-contract.md` | current-node 绑定 + next / terminal / no_transition / config_error routing contract |
@@ -61,8 +61,11 @@
 | 38 | `exp_subagent/test-heavy-subagent-dual-parallel.md` | intake + diagnostic 并行两个 |
 | 39 | `exp_subagent/test-heavy-subagent-triple-failure.md` | 三个 subagent 并发 + partial failure |
 | 40 | `exp_subagent/test-heavy-subagent-identity.md` | runtime-agent identity 和 trace event |
-| 41 | `exp_agentic-queue-loop/test-heavy-wave0-happy-path.md` | seed_topics→wave0 queue-loop→sub-agent 真实搜索→backfill→gate pass 全链路 |
-| 42 | `exp_agentic-queue-loop/test-heavy-wave0-gate-fail-repair.md` | gate fail（count_floor 检测缺失 source.yaml）→repair→gate pass，trace 含 fail+pass 两条 gate_attempt |
+| 41 | `exp_wfn_wave0/test-heavy-wave0-happy-path.md` | seed_topics→wave0 queue-loop→sub-agent 真实搜索→backfill→gate pass 全链路 |
+| 42 | `exp_wfn_wave0/test-heavy-wave0-gate-fail-repair.md` | gate fail（count_floor 检测缺失 source.yaml）→repair→gate pass，trace 含 fail+pass 两条 gate_attempt |
+| 43 | `exp_wfn_wave1/test-heavy-wave1-batch-subagent.md` | 2-topic wave1 deepening 批量 sub-agent 并行：enqueue→relay spawn→collect-as-return→backfill→gate pass |
+| 44 | `exp_wfn_wave1/test-heavy-wave1-gate-fail-repair.md` | gate fail（缺失 evidence-summary）→repair→gate pass，trace 含 2 条 gate_attempt |
+| 45 | `exp_wfn_wave1/test-heavy-wave1-subagent-failure.md` | WebFetch blocked→完整抓取链（curl→node→python3）→partial evidence 不编造→gate 仍 pass |
 
 ### Human（需人类交互/判断，不能自动化，必须手动跑）
 
@@ -71,7 +74,7 @@
 
 | # | Playbook | 验证什么 | 人类做什么 |
 |---|----------|---------|-----------|
-| 43 | `exph_workflow-foundation/test-human-hitl1-topic-rewrite-agent.md` | Agent 读 phase-hitl1.md §3a → 执行 topic rewrite | 审查 Agent 的 rewrite 质量：original topic 是否合理？seed topics 是否贴切？ |
+| 46 | `exph_workflow-foundation/test-human-hitl1-topic-rewrite-agent.md` | Agent 读 phase-hitl1.md §3a → 执行 topic rewrite | 审查 Agent 的 rewrite 质量：original topic 是否合理？seed topics 是否贴切？ |
 
 ## 怎么执行
 
@@ -125,5 +128,5 @@ Heavy: not run (use --heavy to run)
 
 ## 开始前检查
 
-1. 本文件的清单是否和 `experiments_playbook/exp_*/test-*.md` 实际文件一致？不一致就先更新本文件。
+1. 本文件的清单是否和 `experiments_playbook/exp_*/**/test-*.md` 实际文件一致？不一致就先更新本文件。
 2. 是否有残留的 `dpt_disp_*` 目录？有就先 `rm -rf dpt_disp_*` 清理。

@@ -4,7 +4,15 @@ import { QueueHealth, StopAuthorizationState } from '../enums.mjs';
 
 // ─── Queue-specific enums ────────────────────────────────────────────────
 
-const Target = z.enum(['main-agent', 'sub-agent', 'engine']);
+const TargetSpecSchema = z.object({
+  controller: z.enum(['main-agent', 'engine']),
+  delegates: z.object({
+    to: z.literal('sub-agent'),
+    role_key: z.string().min(1),
+    timeout_ms: z.number().int().positive().default(600000),
+  }).optional(),
+});
+
 const ItemStatus = z.enum(['queued', 'running', 'done', 'failed', 'blocked']);
 const PriorityClass = z.enum([
   'P0_preempted_restore',
@@ -31,7 +39,7 @@ const JsonObject = z.record(z.string(), z.unknown());
 export const QueueWorkUnitSchema = z.object({
   work_id: z.string().min(1),
   title: z.string().min(1),
-  target: Target,
+  targets: TargetSpecSchema,
   action: z.string().min(1),
   producer_rule: z.string().min(1),
   lineage: JsonObject,
@@ -57,6 +65,8 @@ export const QueueWorkUnitSchema = z.object({
 // ─── QueueSchema ─────────────────────────────────────────────────────────
 
 const QueueSlot = QueueWorkUnitSchema.nullable();
+
+export { TargetSpecSchema };
 
 /** @impl SCO-002, SCO-009 */
 export const QueueSchema = z.object({

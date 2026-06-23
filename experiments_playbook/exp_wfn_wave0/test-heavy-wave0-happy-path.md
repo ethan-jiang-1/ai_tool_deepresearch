@@ -64,7 +64,7 @@ cat > $B/rb_status.json << 'EOF'
 }
 EOF
 
-mkdir -p $B/reference/claude-code-cli-tool $B/_cache/search-results $B/seed_topics
+mkdir -p $B/reference/claude-code-cli-tool $B/seed_topics
 ```
 
 ### Materialize seed topic
@@ -160,15 +160,15 @@ cat > /tmp/wfq-task-claude-code-cli-tool.json << 'EOF'
 {
   "work_id": "wave0-source-claude-code-cli-tool",
   "title": "Source intake: Claude Code CLI 工具",
-  "target": "sub-agent",
-  "action": "搜索 Claude Code CLI 的 foundation reference。从 seed_topics/claude-code-cli-tool.md 的 search_guardrails 派生搜索关键词。使用 WebSearch + WebFetch 获取真实来源。写入 reference/claude-code-cli-tool/source.yaml（YAML 数组，每条含 url/title/retrieved_date/topic_tag）。中间结果写入 _cache/search-results/。",
+  "targets": { "controller": "main-agent", "delegates": { "to": "sub-agent", "role_key": "dpt-source-intake", "timeout_ms": 600000 } },
+  "action": "搜索 Claude Code CLI 的 foundation reference。从 seed_topics/claude-code-cli-tool.md 的 search_guardrails 派生搜索关键词。使用 WebSearch + WebFetch 获取真实来源。写入 reference/claude-code-cli-tool/source.yaml（YAML 数组，每条含 url/title/retrieved_date/topic_tag）。搜索过程和中间结果写入 relay slot 目录（_cache/wave0/slot_MM/），sub-agent 只写自己的 slot 目录，main-agent 通过 relay 收集结果。",
   "producer_rule": "source_intake_fan_in",
   "lineage": {"topic_slug": "claude-code-cli-tool", "phase": "wave0"},
   "priority_class": "P5_new_reference_intake",
   "required_receipts": ["file:reference/claude-code-cli-tool/source.yaml"],
   "done_condition": "source.yaml 存在且通过 schema 校验，至少含 1 条 reference",
   "verification": {"engine": ["receipt_check"], "agent": ["url_accessible", "title_matches_page"]},
-  "writes_to": ["reference/claude-code-cli-tool/source.yaml", "_cache/search-results/"],
+  "writes_to": ["reference/claude-code-cli-tool/source.yaml"],
   "status_sync": ["wave0_intake"],
   "completion_receipt": "file:reference/claude-code-cli-tool/source.yaml",
   "failure_route": "queue_repair",
@@ -184,21 +184,23 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task /tmp/wfq-task-claude-
 ```bash
 # Claim
 CLAIM=$(node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent)
-echo "$CLAIM" | node -e "const d=require('fs').readFileSync('/dev/stdin','utf-8');const j=JSON.parse(d);console.log('claimed:', j.item.work_id, 'target:', j.item.target)"
-# 预期: claimed: wave0-source-claude-code-cli-tool target: sub-agent
+echo "$CLAIM" | node -e "const d=require('fs').readFileSync('/dev/stdin','utf-8');const j=JSON.parse(d);console.log('claimed:', j.item.work_id, 'targets.controller:', j.item.targets.controller, 'delegates:', j.item.targets.delegates?.role_key, 'advice.delegates_required:', j.advice?.delegates_required)"
+# 预期: claimed: wave0-source-claude-code-cli-tool targets.controller: main-agent delegates: dpt-source-intake advice.delegates_required: true
 ```
 
-Agent 启动 sub-agent 执行真实搜索：
+Agent 通过 `shared-subagent-protocol.md` §3 批量并行协议启动 sub-agent：
+- Sub-agent 收到 relay slot 的 `task.md` + `result.schema.json`（bounded 上下文）
 - 使用 WebSearch 搜索 "Claude Code CLI tool Anthropic features capabilities"
 - 使用 curl/WebFetch 获取至少 1 条可信来源的完整页面
 - 提取 url/title/retrieved_date/topic_tag 写入 source.yaml
-- 搜索中间结果写入 _cache/search-results/
-- main-agent 只读投影确认 done-condition，不读回完整搜索结果
+- 搜索中间结果写入 relay slot 目录 `_cache/wave0/slot_MM/`
+- 返回结构化 JSON 给 main-agent → main-agent 调用 `ingestAgentReceipt` + `commitSlotResult` 验证
+- Main-agent 只读 result.json，不读 sub-agent 原始搜索 trail
 
 ```bash
 # Sub-agent 产出验证
 echo "=== source.yaml ===" && cat $B/reference/claude-code-cli-tool/source.yaml
-echo "=== search-results ===" && ls $B/_cache/search-results/
+echo "=== relay slot dirs ===" && ls $B/_subagents/ 2>/dev/null || echo "(slots managed by relay)"
 ```
 
 ### Step 3 — Complete
@@ -210,7 +212,7 @@ cat > /tmp/wfq-result-wave0-source-claude-code-cli-tool.json << 'EOF'
   "status": "done",
   "receipt": "file:reference/claude-code-cli-tool/source.yaml",
   "summary": "source intake complete: N real references from WebSearch + WebFetch",
-  "writes": ["reference/claude-code-cli-tool/source.yaml", "_cache/search-results/"]
+  "writes": ["reference/claude-code-cli-tool/source.yaml"]
 }
 EOF
 
@@ -232,7 +234,7 @@ cat > /tmp/wfq-backfill-claude-code-cli-tool.json << 'EOF'
 {
   "work_id": "backfill-wave0-claude-code-cli-tool",
   "title": "Backfill wave0 evidence to seed topic: Claude Code CLI 工具",
-  "target": "main-agent",
+  "targets": { "controller": "main-agent" },
   "action": "读取 reference/claude-code-cli-tool/source.yaml，回填到 seed_topics/claude-code-cli-tool.md 的 ## 本轮新增证据，替换 __BACKFILL_WAVE0_EVIDENCE__。",
   "producer_rule": "backfill_wave0_evidence",
   "lineage": {"topic_slug": "claude-code-cli-tool", "phase": "wave0", "trigger": "wave0_complete"},
@@ -324,8 +326,10 @@ grep -c 'gate_attempt' $B/rb_trace.jsonl
 echo "=== V8: backfill done ==="
 grep -q '__BACKFILL_WAVE0_EVIDENCE__' $B/seed_topics/claude-code-cli-tool.md && echo "V8 FAIL" || echo "V8 PASS"
 
-echo "=== V9: search-results populated ==="
-ls $B/_cache/search-results/
+echo "=== V9: relay slot directories populated ==="
+find $B/_subagents -type d 2>/dev/null | head -10
+echo "=== V9b: cache dirs ==="
+find $B/_cache -type d 2>/dev/null | head -10
 ```
 
 全部 V1-V9 应 PASS。

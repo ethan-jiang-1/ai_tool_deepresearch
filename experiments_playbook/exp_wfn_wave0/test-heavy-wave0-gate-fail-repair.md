@@ -62,7 +62,7 @@ research_profile: { depth: foundation, scope: "gate fail + repair test" }
 PROFEOF
 
 mkdir -p $B2/reference/topic-x $B2/reference/topic-y $B2/reference/topic-z
-mkdir -p $B2/_cache/search-results $B2/seed_topics
+mkdir -p $B2/seed_topics
 ```
 
 ### Step A2: 物化 3 个 seed topic 文件
@@ -180,7 +180,7 @@ node -e "import('$REPO_ROOT/experiments/shared/wff-playbook-utils.mjs').then(m=>
 ```bash
 echo "=== Trace gate_attempt events ==="
 grep 'gate_attempt' $B2/rb_trace.jsonl | while read line; do
-  echo "$line" | python3 -m json.tool --compact 2>/dev/null || echo "$line"
+  echo "$line" | node -e "process.stdin.on('data',d=>{try{console.log(JSON.stringify(JSON.parse(d),null,2))}catch{console.log(d.toString().trim())}})"
 done
 
 GATE_ATTEMPTS=$(grep -c 'gate_attempt' $B2/rb_trace.jsonl)

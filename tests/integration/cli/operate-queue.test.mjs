@@ -6,7 +6,7 @@ import assert from 'node:assert';
 import { spawnSync } from 'node:child_process';
 import { writeFileSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
-import { createTempDir, cleanupAll } from '../../helpers/test-tmp.mjs';
+import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
 const FIXTURE_FW = join(process.cwd(), 'DPT_FRAMEWORK');
 const CLI = join(FIXTURE_FW, 'cli', 'operate-queue.mjs');
@@ -15,7 +15,7 @@ function makeTask(overrides = {}) {
   return {
     work_id: 'task-001',
     title: 'Execute wave0',
-    target: 'main-agent',
+    targets: { controller: 'main-agent' },
     action: 'run_phase',
     producer_rule: 'phase_queue_producer',
     lineage: {},

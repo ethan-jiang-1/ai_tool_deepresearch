@@ -61,13 +61,25 @@ When a wave1 deepening task is dispatched via relay, the sub-agent SHALL receive
 - **THEN** `artifacts/wave1/{topic}/evidence-summary.md` SHALL exist
 - **AND** it SHALL contain at least 1 source URL with title
 - **AND** it SHALL contain key findings section
-- **AND** it SHALL contain open questions section
+- **AND** it SHALL contain open questions section with canonical status labels: each question prefixed with exactly `[开放]`, `[部分解答]`, or `[涌现]` — arbitrary topic-descriptor labels (e.g. `[Bridge gap]`, `[Interpretability reliability]`) are NOT permitted
+- **AND** each key finding SHALL use `**机制理解**:` or `**趋势观察**:` as its bold prefix
+
+#### Scenario: Sub-agent produces question-list.md
+
+- **WHEN** sub-agent completes search and extraction
+- **THEN** `artifacts/wave1/{topic}/question-list.md` SHALL exist alongside evidence-summary.md
+- **AND** it SHALL contain four sections in order: Topic Investigation Targets, Question Reconciliation, Emergent Question Protocol, Exploration/Exploitation Decision
+- **AND** Topic Investigation Targets SHALL be a table with at least target_id, target_question, origin, status, backing_refs, next_action columns
+- **AND** Question Reconciliation SHALL use canonical markers: `[已解决]`, `[部分进展]`, `[仍开放]`, `[需内部数据]`
+- **AND** Emergent Question Protocol SHALL record results of all four checks: new_concept, contradiction, missing_information_gap, noise_pattern — each SHALL be stated as `checked; {result}; trigger_refs={path or none}` even when the result is `none`
+- **AND** Exploration/Exploitation Decision SHALL record decision (one of the 9 canonical V12 values; single-pass mode SHALL use `continue`), trigger_refs, unresolved_questions, queue_consequence, and next_action
 
 #### Scenario: Tool degradation chain on WebFetch failure
 
-- **WHEN** WebFetch is blocked or fails for a source URL
-- **THEN** sub-agent SHALL attempt `curl -L <url>` as fallback
-- **AND** if curl fails, SHALL attempt `python3 -c "import urllib.request..."` as second fallback
+- **WHEN** the agent's primary page-fetching tool (e.g. WebFetch) is blocked or fails for a source URL
+- **THEN** sub-agent SHALL attempt `curl -L <url>` as first fallback
+- **AND** if curl fails, SHALL attempt `node -e "fetch(...)"` as second fallback
+- **AND** if node fetch fails, SHALL attempt `python3 -c "import urllib.request..."` as last resort
 - **AND** if all fallbacks fail, SHALL record the failure in evidence-summary.md and proceed with remaining sources
 - **AND** SHALL NOT fabricate page content from search snippets
 
@@ -81,7 +93,7 @@ After each wave1 deepening task is completed, the main-agent SHALL immediately b
 - **THEN** main-agent SHALL backfill `seed_topics/{slug}.md` BEFORE claiming the next task
 - **AND** `__BACKFILL_WAVE1_MECHANISMS__` token SHALL be replaced with at least 1 key mechanism finding
 - **AND** `__BACKFILL_WAVE1_TRENDS__` token SHALL be replaced with trends and难点 observations
-- **AND** `__BACKFILL_PENDING_QUESTIONS__` token SHALL be updated with current question status
+- **AND** `__BACKFILL_PENDING_QUESTIONS__` token SHALL be updated with question status tags EXACTLY matching the canonical set: `[开放]`, `[部分解答]`, `[涌现]` — NOT arbitrary topic-descriptor labels
 
 #### Scenario: Backfill order preserves freshness
 
@@ -106,6 +118,18 @@ The `check-gate-wave1-complete.mjs` gate SHALL verify that every topic in `topic
 - **THEN** gate SHALL fail (exit code 1)
 - **AND** inspect SHALL reference the missing topic by slug
 
+#### Scenario: Gate fails when question-list.md is missing
+
+- **WHEN** a topic has evidence-summary.md but no question-list.md
+- **THEN** gate SHALL fail
+- **AND** inspect SHALL reference the missing question-list.md by topic slug
+
+#### Scenario: Gate fails when question-list.md lacks four-section structure
+
+- **WHEN** a topic's question-list.md exists but is missing one of the four required sections
+- **THEN** gate SHALL fail
+- **AND** inspect SHALL name the missing section
+
 #### Scenario: Gate fails when backfill tokens are stale
 
 - **WHEN** any `seed_topics/*.md` still contains `__BACKFILL_WAVE1_MECHANISMS__` literal token
@@ -114,7 +138,7 @@ The `check-gate-wave1-complete.mjs` gate SHALL verify that every topic in `topic
 
 ### Requirement: Wave1 queue-loop playbook verifies deepening end-to-end
 
-An experiment playbook SHALL exist at `experiments_playbook/exp_agentic-queue-loop/` that verifies the wave1 queue-driven deepening loop end-to-end. The playbook SHALL use a disposable bundle pre-seeded with post-wave0 state (reference/ files and seed_topics/ with `__BACKFILL_WAVE1_*__` tokens), create deepening task cards via the §3.1 template, execute the claim→sub-agent-search→complete→backfill loop, and verify gate pass.
+An experiment playbook SHALL exist at `experiments_playbook/exp_wfn_wave1/` that verifies the wave1 queue-driven deepening loop end-to-end. The playbook SHALL use a disposable bundle pre-seeded with post-wave0 state (reference/ files and seed_topics/ with `__BACKFILL_WAVE1_*__` tokens), create deepening task cards via the §3.1 template, execute the claim→sub-agent-search→complete→backfill loop, and verify gate pass.
 
 #### Scenario: Simple playbook — 2-topic happy path with real search
 
@@ -135,8 +159,8 @@ An experiment playbook SHALL exist at `experiments_playbook/exp_agentic-queue-lo
 
 #### Scenario: Complex playbook — sub-agent failure + degradation
 
-- **WHEN** a sub-agent's WebFetch is blocked for all sources on a topic
-- **AND** the tool degradation chain is exercised (WebFetch → curl → python3)
+- **WHEN** a sub-agent's page-fetching tool is blocked for all sources on a topic
+- **AND** the tool degradation chain is exercised (primary fetch tool → curl → node → python3)
 - **THEN** the task SHALL be completed with a partial evidence-summary (recording the source access failures)
 - **AND** gate SHALL still pass (partial evidence is acceptable; fabrication is not)
 - **AND** seed topic backfill SHALL note the access limitation

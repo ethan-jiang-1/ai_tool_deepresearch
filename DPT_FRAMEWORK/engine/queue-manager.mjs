@@ -303,7 +303,7 @@ function makeRepairItem(failure) {
   const ts = now();
   return QueueItemSchema.parse({
     work_id: `repair-${failure.work_id}-${Date.now()}`, title: `Repair ${failure.work_id}`,
-    target: 'main-agent', action: `Repair failed queue work: ${failure.reason}`,
+    targets: { controller: 'main-agent' }, action: `Repair failed queue work: ${failure.reason}`,
     producer_rule: 'failed_receipt_repair', lineage: { failed_work_id: failure.work_id, reason: failure.reason },
     priority_class: 'P1_state_or_gate_repair', required_receipts: ['none'],
     done_condition: 'Repair work records a corrected artifact or a concrete blocker.',
@@ -418,8 +418,15 @@ export function claim(queue, { actor = 'main-agent' } = {}) {
   item.status = 'running';
   item.updated_at = now();
   q.active_window.slot_1_current = item;
+
+  // Build delegates advice from targets field
+  const delegates = item.targets?.delegates;
+  const advice = delegates
+    ? { delegates_required: true, delegates_config: { role_key: delegates.role_key, timeout_ms: delegates.timeout_ms ?? 600000 } }
+    : { delegates_required: false };
+
   traceEntry('check', { source: 'agq-claim', step: 'claim', passed: true, work_id: item.work_id });
-  return { queue: validateQueue(touchQueue(q)), item };
+  return { queue: validateQueue(touchQueue(q)), item, advice };
 }
 
 /**
@@ -576,7 +583,7 @@ export function render(queue, bundleDir = process.cwd()) {
     const item = q.active_window[slot];
     lines.push(`### ${slot}`);
     if (!item) { lines.push('- empty: `true`', ''); continue; }
-    lines.push(`- work_id: \`${item.work_id}\``, `- title: ${item.title}`, `- target: \`${item.target}\``, `- status: \`${item.status}\``, `- action: ${item.action}`, `- required_receipts: ${item.required_receipts.map(r => `\`${r}\``).join(', ') || '`none`'}`, `- completion_receipt: \`${item.completion_receipt}\``, `- writes_to: ${item.writes_to.map(r => `\`${r}\``).join(', ') || '`none`'}`, `- failure_route: ${item.failure_route}`, '');
+    lines.push(`- work_id: \`${item.work_id}\``, `- title: ${item.title}`, `- targets: \`controller=${item.targets?.controller || 'unknown'}${item.targets?.delegates ? `, delegates.to=${item.targets.delegates.to}, delegates.role_key=${item.targets.delegates.role_key}` : ''}\``, `- status: \`${item.status}\``, `- action: ${item.action}`, `- required_receipts: ${item.required_receipts.map(r => `\`${r}\``).join(', ') || '`none`'}`, `- completion_receipt: \`${item.completion_receipt}\``, `- writes_to: ${item.writes_to.map(r => `\`${r}\``).join(', ') || '`none`'}`, `- failure_route: ${item.failure_route}`, '');
   }
   lines.push('## Refill Pool', '');
   for (const item of q.refill_pool) lines.push(`- \`${item.work_id}\` ${item.title} (${item.priority_class}, restore=${item.restore_priority})`);
@@ -597,7 +604,7 @@ export function makeItem(overrides = {}) {
   return QueueItemSchema.parse({
     work_id: overrides.work_id || `work-${Date.now()}`,
     title: overrides.title || 'Queue work',
-    target: overrides.target || 'main-agent',
+    targets: overrides.targets || { controller: 'main-agent' },
     action: overrides.action || 'Perform queue work',
     producer_rule: overrides.producer_rule || 'manual_enqueue',
     lineage: overrides.lineage || { trigger: 'test' },

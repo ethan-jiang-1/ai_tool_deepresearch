@@ -6,7 +6,7 @@ import assert from 'node:assert';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createTempDir, cleanupAll } from '../../helpers/test-tmp.mjs';
+import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
 const CLI = join(process.cwd(), 'DPT_FRAMEWORK', 'cli', 'validate-workflow-package.mjs');
 

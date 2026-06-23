@@ -33,6 +33,6 @@ Wave1 现在是 foundation placeholder——只写 skeleton、标记 `capability
 - **Phase MD**: `phase-wave1.md`（完整重写 §3，引用 shared protocol + 参数表）、`phase-wave0.md`（§3  retrofit，引用 shared protocol + 参数表）、`phase-seed-topics.md`（task card 模板 `target` → `targets`，不涉及 sub-agent）
 - **Shared MD**: 新增 `shared-subagent-protocol.md`（通信契约、目录结构、批量并行执行协议、并发控制、参数化接口、Forbidden Authority）
 - **Gate**: `check-gate-wave1-complete.mjs`（产出路径 + backfill token 检查）
-- **Playbook**: 新增 `experiments_playbook/exp_agentic-queue-loop/` 下 3 个 wave1 batch-subagent playbook + 重跑 wave0 happy-path（验证 relay 并行 dispatch）
+- **Playbook**: 新增 `experiments_playbook/exp_wfn_wave1/` 下 3 个 wave1 batch-subagent playbook + 重跑 wave0 happy-path 于 `experiments_playbook/exp_wfn_wave0/`（验证 relay 并行 dispatch）
 - **Registry**: `req-registry.yaml` 新增 AGQ-011~014、WAI-001~007、SUD-003
 - **Tests**: `tests/engine/queue-manager.test.mjs` 新增 targets schema 测试

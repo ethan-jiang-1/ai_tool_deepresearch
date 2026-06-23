@@ -1,10 +1,10 @@
-// test-tmp.mjs — Shared temp-dir helper for integration tests
+// temp-dirs.mjs — Shared temp-dir helper for integration tests
 //
 // Every integration test that needs temp directories MUST use this helper.
 // All temp dirs live under tests/.test-tmp/ — never in the repo root.
 //
 // Usage:
-//   import { createTempDir, cleanupAll } from '../../helpers/test-tmp.mjs';
+//   import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 //   const dir = createTempDir('my-test');  // → tests/.test-tmp/my-test-<random>/
 
 import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';

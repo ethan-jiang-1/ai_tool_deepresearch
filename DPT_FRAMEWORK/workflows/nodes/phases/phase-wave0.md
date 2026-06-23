@@ -9,6 +9,8 @@ requires:
   - shared/shared-schemas
 suggested_context:
   - shared/shared-anti-cheating-rules
+  - shared/shared-subagent-protocol
+  - phases/phase-wave0-subagent
 ---
 
 # Phase: Wave0 — Foundation Shared Reference
@@ -26,7 +28,9 @@ suggested_context:
 - `shared-profile.md`（research profile 和 root must-answer set）
 - `shared-schemas.md`（ReferenceMetadata schema 字段定义和 wave artifact 目录结构）
 - `DPT_FRAMEWORK/cli/operate-queue.mjs`（Agentic Queue CLI — 灌料、claim、complete 的入口）
-- 运行 Agent 有 WebSearch 和 WebFetch 工具可用
+- `DPT_FRAMEWORK/engine/subagent-relay.mjs`（Subagent Relay Engine — slot 生命周期管理）
+- `shared-subagent-protocol.md`（relay slot 通信契约、目录结构、并发控制、Forbidden Authority、抓取链）
+- 运行 Agent 有页面搜索工具（如 Claude Code `WebSearch` 或 Codex `web_search`）。页面内容抓取：如有内置工具（Claude Code `WebFetch`）则使用，否则走 `shared-subagent-protocol.md` 抓取链
 
 ## 3. Allowed Actions — Queue-Driven 三阶段
 
@@ -47,15 +51,15 @@ Wave0 使用 Agentic Queue 驱动 source intake。所有搜索/fetch 工作走 t
 {
   "work_id": "wave0-source-{topic.slug}",
   "title": "Source intake: {topic.title}",
-  "target": "sub-agent",
-  "action": "搜索 [{topic.title}] 的 foundation reference。从 topic.title 和 seed_topics/{topic.slug}.md 的 search_guardrails 派生搜索关键词。使用 WebSearch 找到至少 1 条可信来源，使用 WebFetch 获取每个来源的页面内容。提取并写入 reference/{topic.slug}/source.yaml（YAML 数组，每条含 url, title, retrieved_date(YYYY-MM-DD), topic_tag(\"{topic.slug}\"), notes(可选)）。搜索过程和中间结果写入 _cache/search-results/ 目录。",
+  "targets": { "controller": "main-agent", "delegates": { "to": "sub-agent", "role_key": "dpt-source-intake", "timeout_ms": 600000 } },
+  "action": "搜索 [{topic.title}] 的 foundation reference。从 topic.title 和 seed_topics/{topic.slug}.md 的 search_guardrails 派生搜索关键词。使用 WebSearch 找到至少 1 条可信来源，使用 WebFetch 获取每个来源的页面内容。如果 WebFetch 被阻止，必须走降级链：curl -L → node fetch → python3 urllib，全部失败才可报告 inaccessible。提取并写入 reference/{topic.slug}/source.yaml（YAML 数组，每条含 url, title, retrieved_date(YYYY-MM-DD), topic_tag(\"{topic.slug}\"), notes(可选)）。搜索中间结果写入你的 slot 对应的缓存目录——不要写入共享目录。",
   "producer_rule": "source_intake_fan_in",
   "lineage": {"topic_slug": "{topic.slug}", "phase": "wave0"},
   "priority_class": "P5_new_reference_intake",
   "required_receipts": ["file:reference/{topic.slug}/source.yaml"],
   "done_condition": "reference/{topic.slug}/source.yaml 存在，通过 ReferenceMetadata schema 校验（url 非空、title 非空、retrieved_date 为 YYYY-MM-DD、topic_tag 匹配 {topic.slug}），且至少含 1 条 reference",
   "verification": {"engine": ["receipt_check"], "agent": ["url_accessible", "title_matches_page"]},
-  "writes_to": ["reference/{topic.slug}/source.yaml", "_cache/search-results/"],
+  "writes_to": ["reference/{topic.slug}/source.yaml"],
   "status_sync": ["wave0_intake"],
   "completion_receipt": "file:reference/{topic.slug}/source.yaml",
   "failure_route": "queue_repair",
@@ -74,77 +78,39 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 ```
 确认 `queue_health: "ready"` 且 active_window 已填充。
 
-### 3.2 Queue-Driven 执行循环
+### 3.2 Batch Parallel Execution — 引用 Shared Subagent Protocol
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     QUEUE-DRIVEN EXECUTION LOOP                      │
-│                                                                      │
-│  ┌─ 1. claim ──────────────────────────────────────────────────────┐│
-│  │   operate-queue claim <bundle> --actor main-agent               ││
-│  │   → stdout JSON: { item: {...task card...}, ... }                ││
-│  │   → item 为 null → queue 空 → 跳到 §3.3                          ││
-│  └─────────────────────────────────────────────────────────────────┘│
-│                              │                                       │
-│                              ▼                                       │
-│  ┌─ 2. execute ────────────────────────────────────────────────────┐│
-│  │   target = sub-agent:                                            ││
-│  │     a. 启动 sub-agent，传入 task.action 指令 + 当前 bundle 路径  ││
-│  │     b. sub-agent 使用 WebSearch → WebFetch → 提取 metadata       ││
-│  │     c. sub-agent 写入 reference/<topic>/source.yaml              ││
-│  │     d. sub-agent 搜索中间结果写入 _cache/wave0/search-results/   ││
-│  │     e. sub-agent 返回后，main-agent **不读回完整搜索结果**        ││
-│  │        —只读 §3.2.1 投影确认 done-condition                      ││
-│  └─────────────────────────────────────────────────────────────────┘│
-│                              │                                       │
-│                              ▼                                       │
-│  ┌─ 3. complete ───────────────────────────────────────────────────┐│
-│  │   a. 创建 result JSON → /tmp/wfq-result-{work_id}.json:         ││
-│  │      { "work_id": "...", "receipt": "file:reference/.../...yaml"││
-│  │        "summary": "source intake complete for topic X",          ││
-│  │        "writes": ["reference/.../source.yaml"] }                 ││
-│  │   b. 运行:                                                       ││
-│  │      operate-queue complete <bundle> --result <result.json>      ││
-│  │   → receipt check PASS → promote → refill → render               ││
-│  │   → receipt check FAIL → engine 自动生成 repair task             ││
-│  │       → 读 CLI 输出的 inspect/advice                              ││
-│  │       → 修复产出（补写文件、修 schema）→ 回到 step 1 (claim)     ││
-│  └─────────────────────────────────────────────────────────────────┘│
-│                              │                                       │
-│                              ▼                                       │
-│  ┌─ 4. 读投影 ─────────────────────────────────────────────────────┐│
-│  │   cat <bundle>/_cache/agentic-queue/current-task.md              ││
-│  │   → 确认 done-condition 已满足                                    ││
-│  └─────────────────────────────────────────────────────────────────┘│
-│                              │                                       │
-│                              ▼                                       │
-│  ┌─ 5. 回填 seed topic（趁热，不可跳过）─────────────────────────────┐│
-│  │   complete 成功后，立刻回填 seed_topics/{topic.slug}.md：          ││
-│  │     a. grep -n '__BACKFILL_WAVE0_EVIDENCE__' 定位 token 行        ││
-│  │     b. 读取 reference/{topic.slug}/source.yaml                    ││
-│  │     c. 替换 token 行为 ref 摘要（url/title/tier/trust/key data）   ││
-│  │   → 替换 token，不追加——确保内容填入正确位置                       ││
-│  │   → 回到 step 1（claim 下一个 task）                               ││
-│  └─────────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────────┘
-```
+Wave0 的 claim→execute→complete 使用 relay 批量并行执行（灌料→stage→并行 spawn→collect-as-return→backfill→补位→merge→gate）。Sub-agent 的具体搜索和产出指令见 `phase-wave0-subagent.md`（via `suggested_context`）。Relay 基础设施（slot 契约、目录结构、并发控制、禁区清单）见 `shared-subagent-protocol.md`。
 
-**执行约束：**
+**Wave0 参数表**：
+
+| 参数 | 值 |
+|------|-----|
+| `role_key` | `dpt-source-intake` |
+| `artifact_template` | `reference/{topic.slug}/source.yaml` |
+| `artifact_schema` | `ReferenceMetadata` |
+| `backfill_tokens` | `["__BACKFILL_WAVE0_EVIDENCE__"]` |
+| `per_topic_backfill` | `true` |
+| `search_focus` | foundation reference |
+| `timeout_ms` | `600000` |
+
+**执行约束**（wave0 特有，叠加 `shared-subagent-protocol.md` Forbidden Authority）：
 
 - **不跳过 task**：只要 claim 返回了 task card（`item` 非 null），就必须执行并 complete，不得无故跳过
 - **不伪造产出**：每条 reference 必须来自 WebSearch + WebFetch 获取的真实页面。url 必须指向真实可访问页面，title 反映实际页面标题，retrieved_date 为真实检索日期
-- **工具降级链**：sub-agent 抓取网页内容时，如果 WebFetch 被安全策略阻止，**必须降级**——`curl -L <url>` → `python3 -c "import urllib.request..."` → `node -e "fetch(...)"`。不允许因为上层工具 blocked 就放弃抓取，更不允许拿搜索摘要当网页内容凑合。只有所有降级手段都失败才能报告"无法获取内容"
+- **网页内容抓取**：sub-agent 必须获取来源页面的真实内容。详见 `shared-subagent-protocol.md` Page Content Fetching Chain。摘要：内置工具（如 `WebFetch`）优先，用户显式开启浏览器也可用；没有则从 `curl` 开始 → `node -e "fetch(...)"` → `python3 -c "import urllib.request..."`（最后兜底）。不允许因缺工具或工具 blocked 就拿搜索摘要凑合。所有手段都失败才能报告"无法获取内容"
 - **complete 阻塞**：如果 complete 时 receipt check 失败（source.yaml 不存在或 schema 不对），engine 自动生成 repair task（`producer_rule: queue_repair`），Agent 必须修复而不是跳过。修复后重新 claim
-- **上下文管理**：sub-agent 执行搜索/抓取，bounded 输出写入 `_cache/wave0/search-results/`。main-agent 在 complete 后只读 `_cache/agentic-queue/current-task.md` 投影确认 done-condition，**不把完整搜索结果读回对话** — 这是防止 wave0 上下文膨胀的关键约束
+- **上下文隔离**：上下文隔离由 relay slot 契约在机制上强制（见 `shared-subagent-protocol.md` Communication Contract）。sub-agent 只收到 bounded 上下文（task.md + result.schema.json），返回的 JSON 被 `result.schema.json` 约束形状——大段搜索 trail 不在 schema 允许的字段里。main-agent 通过 `commitSlotResult()` 收集验证后的 `result.json`，**不读 sub-agent 的原始搜索输出**。如需抽查，去 `_cache/waveN/slot_MM/`（非 authority），但默认不读
 - **即时回填 seed topic（不可跳过）**：每个 topic 的 complete 成功后，**在 claim 下一个 task 之前**，必须立刻回填 `seed_topics/{topic.slug}.md`：`grep -n '__BACKFILL_WAVE0_EVIDENCE__'` 定位 token → **替换 token 行**为 ref 摘要列表（`- **ref-XX-NN**: ...`）。趁 sub-agent 搜索结果还 fresh 就写，不等 wave0 结束
 
 ### 3.3 Queue 空后 — 收尾与 Gate
 
 当 claim 返回 `item: null`（queue 空）时：
 
-1. 检查 `reference/index.md` 是否已更新（列出所有 topic 的 reference 摘要）
-2. 如果 index 缺失或未更新 → 手动写入（这是单步收尾动作，不重新灌 Q）
-3. 跑 gate：
+1. `collectAndMergeSubagentResults(state, slots, baseDir)` — collect 所有 slot 结果，merge evidence counts 到 WorkflowState
+2. 检查 `reference/index.md` 是否已更新（列出所有 topic 的 reference 摘要）
+3. 如果 index 缺失或未更新 → 手动写入（这是单步收尾动作，不重新灌 Q）
+4. 跑 gate：
 ```bash
 node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --current-node phases/phase-wave0.md
 ```
