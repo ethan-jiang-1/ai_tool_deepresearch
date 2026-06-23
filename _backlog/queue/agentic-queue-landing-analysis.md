@@ -346,19 +346,38 @@ Phase 4: 后续增强（可选）
 
 **核心原则：每个 change 自带验证，实验不集中到最后一个 change。** 每一步都有回归测试（防退化）+ experiment playbook（证闭环），Change 3 的价值从"第一次验证"变为"跨 wave 整合验证 + 长程指标测量"。
 
-| # | Change | 原 Phase | 范围 | 测试 | 实验 | 新代码 | 状态 |
-|---|--------|---------|------|------|------|--------|------|
-| 1 | `wfq-queue-seedtopics-wave0` | Phase 1+ | phase-seed-topics.md §2-§3 重写（V12 内容对齐） + phase-wave0.md §2-§3 重写 + AGQ-007~010（2 个 producer_rule + 2 个 playbook）| 2 个 phase body 结构 regression | seed-topics queue-loop simple + wave0 queue-loop simple（真搜索）| 零（Path A） | **proposed**（MD 已落盘，待实现 regression test + playbook） |
-| 2 | `wfq-queue-loop-waves` | Phase 2 | phase-wave1.md §3 重写 + producer rules enum 标准化（AGQ-011~013）; wave2 不需要 queue | phase body 结构 regression | wave1 queue-loop simple | 可能加 JS helper（视 Change 1 反馈） | 待 Change 1 完成后启动 |
-| 3 | `wfq-queue-loop-experiments` | Phase 3 | 跨 wave 整合验证 + 上下文可持续性测量（按 §7.3 实验协议） | — | full-chain seed-topics→wave0→wave1 + medium failure/repair + 上下文采样 | 实验协议（playbook MD） | 待 Change 2 完成后启动 |
+| # | Change | 队列？ | 范围 | 测试 | 实验 | 新代码 | 状态 |
+|---|--------|--------|------|------|------|--------|------|
+| 1 | `wfq-queue-seedtopics-wave0` | ✅ | phase-seed-topics.md §2-§3 重写（V12 内容对齐） + phase-wave0.md §2-§3 重写 + AGQ-007~010（2 producer_rule + 2 playbook）| 2 个 phase body 结构 regression | seed-topics simple + wave0 simple（真搜索）| 零（Path A） | **proposed**（MD 已落盘，待 test+playbook） |
+| 2 | `wfq-queue-wave1` | ✅ | phase-wave1.md §3 重写 + producer_rule `skeleton_placeholder_write`（AGQ-011）+ playbook（AGQ-012）| phase body 结构 regression | wave1 queue-loop simple | 零（Path A，直接复用 seed-topics 模板） | 待 Change 1 完成后启动 |
+| 3 | `wfq-lifecycle-delivery` | ❌ | wave2 + readiness + final phase MD 生产级内容 + full-chain 实验（seed-topics→wave0→wave1→wave2→readiness）+ 上下文可持续性测量 | — | full-chain + medium repair + 上下文采样 | 实验协议（playbook MD） | 待 Change 2 完成后启动 |
 
-**AGQ ID 分配调整：** Change 1 占用 AGQ-007~010（source_intake_fan_in, wave0 playbook, seed_topic_materialize, seed-topics playbook）。Change 2 的 producer rules enum 用 AGQ-011~013。
+**Change 2/3 的 V12 依据：** V12 的 execution-flow.md 定义了统一的 Wave Internal Loop Pattern——Wave 0/1/2 共用同一个 queue-driven 循环形状（queue slot work → fan-in/promotion → gate audit → repair/refill → closeout）。Wave1 在 V12 中是 topic-specific 证据搜索 + fan-in steering + artifact production，在我们 foundation 阶段做 skeleton placeholder writing。Change 3 对应 V12 的 Wave 2 + Readiness + Final Delivery——这些不接入 queue（Wave2 单 synthesis、Readiness 单 gate、Final 终端），但需要全生命周期纵贯验证。
 
-### 6.2b 对后续 Phase 的启发 — 可复用模式已确立
+### 6.2b V12 对照与可复用模式
 
-seed-topics + wave0 的 queue 接入完成后，一套可复用的设计模式已经浮现：
+**V12 的 Queue 使用全景（对照 `_original_dpt_v12/DEEP_RESEARCH_TEMPLATE_V12/flows/execution-flow.md` 和 `queue-agentic-flow.md`）：**
 
-**"一个 topic 一个 task"的适用性判断：**
+V12 把 queue 用在了整个生命周期的每一层：
+
+```
+V12 Wave Internal Loop Pattern（所有 wave 共用）:
+─────────────────────────────────────────────────────
+wave starts → Queue slot work → fan-in/promotion →
+verify receipts → gate audit →
+  fail? → same-wave repair/refill → (回 Queue slot work)
+  pass? → closeout → trace checkpoint → boundary hook
+
+  Wave 0: shared foundation references + topic-start readiness
+  Wave 1: topic-specific refs + fan-in steering + seed backfill 
+          + evidence-summary.md + question-list.md
+  Wave 2: synthesis + Cross-Topic Conclusion Matrix + 
+          conflict handling + HITL2 prep
+```
+
+V12 用 **Boundary Hooks**（也是 queue-visible work）做 phase 间过渡。我们新的 gate → chain 机制替代了这部分——phase 间路由变成确定性查表（更干净）。但 **Wave Internal Loop** 的模式完全吻合：V12 的 `slot work → verify → gate audit → repair → closeout` 映射到我们的 `§3.1 灌料 → §3.2 claim→execute→complete → §3.3 收尾+gate`。
+
+**新机制下的"一个 topic 一个 task"适用性判断：**
 
 ```
 phase 内有 N 个独立子任务（一个 topic 一个 task）？
@@ -370,14 +389,17 @@ phase 内有 N 个独立子任务（一个 topic 一个 task）？
   └── NO  → queue 不适用，保持自由文本
 ```
 
-**已确认的 phase 分类：**
+**已确认的 phase 分类（含 V12 对照）：**
 
-| Phase | N 个子任务？ | Queue？ | Target | 理由 |
-|-------|-------------|---------|--------|------|
-| seed-topics | ✅ N topics → N files | ✅ | main-agent | 从 topic_registry 提取信息写 MD |
-| wave0 | ✅ N topics → N files | ✅ | sub-agent | 每个 topic 需要 WebSearch+WebFetch |
-| wave1 | ✅ N topics → N files | ✅（Change 2） | main-agent | 从 wave0 artifact 提取信息写 skeleton — 和 seed-topics 同模式 |
-| wave2 | ❌ 1 个 synthesis | ❌ | — | 单一 cross-topic 任务，拆不成独立子任务 |
+| Phase | V12 Queue 用法 | 我们 N 个子任务？ | Queue？ | Target | Change |
+|-------|---------------|-----------------|---------|--------|--------|
+| seed-topics | setup-time decomposition repair work | ✅ N topics → N files | ✅ | main-agent | Change 1 |
+| wave0 | Wave 0 loop: shared reference + topic-start readiness | ✅ N topics → N files | ✅ | sub-agent | Change 1 |
+| wave1 | Wave 1 loop: topic refs + fan-in steering + seed backfill + evidence-summary + question-list | ✅ N topics → N files | ✅ | main-agent | Change 2 |
+| wave2 | Wave 2 loop: synthesis + matrix + conflict + HITL2 prep | ❌ 1 synthesis | ❌ | — | Change 3 |
+| readiness | hook_readiness_closeout_to_final_delivery (queue-visible in V12, gate in ours) | ❌ 单检查 | ❌ | — | Change 3 |
+
+**关键差异：** V12 用 Boundary Hook (queue work) 做 phase 过渡 → 我们用 gate + chain (deterministic lookup)。V12 的 hook 本身是个可失败、可 repair 的 queue 任务 → 我们的 gate fail → repair → rerun 在 phase MD §7 里处理，更干净。Wave2 的"不接 queue"不是因为 V12 没用 queue（V12 用了），而是因为我们只有 1 个 synthesis 任务——没有 N 个独立子任务可拆——claim→complete 一次就完了，queue 的循环价值不成立。
 
 **3-stage MD 模板（已落地，可直接复用）：**
 
