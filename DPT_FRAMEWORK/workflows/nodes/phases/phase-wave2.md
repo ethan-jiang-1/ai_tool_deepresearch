@@ -112,6 +112,9 @@ Claim → execute synthesis with embedded finding triage + targeted search loop 
     — sub-agent 不做 cross-topic synthesis judgment
     — 每轮最多 spawn max_gapfill_subagents_per_round（默认 3）个 sub-agent
     → ingestion receipt → 更新 finding-index.yaml 的 receipt_refs + status
+    → 如果 sub-agent 返回了有价值的跨 topic source：
+        main-agent 将其 promote 到 reference/00_shared/source.yaml
+        （topic_tag=shared，notes 注明 finding_id + source_layer: wave2_cross_topic）
 
  7. 跑 JS feedback check（L1）
     检查：receipt refs 存在（exploit/explore_search 必须有 receipt）、
@@ -225,6 +228,7 @@ Ledger 记录 reasoning，index 记录 lifecycle state。JS 不判断 reasoning 
 - `artifacts/wave2/synthesis.md`（narrative projection，非空、含 Markdown links 引用 Wave0/Wave1 artifact、含至少 1 个 wave1 evidence-summary 或 question-list 引用、含 W2F-xxx finding id 引用）
 - `artifacts/wave2/cross-topic-ledger.md`（Agent-readable dynamic ledger，含 6 个固定 section：Cross-Topic Scan Matrix / Wave1 Legacy Questions / Cross-Topic Resolutions / Emergent Cross-Topic Questions / Exploration Decisions / HITL2 Handoff）
 - `artifacts/wave2/finding-index.yaml`（JS-readable shadow index，每 finding 含 11 个 required field：id/type/status/decision/affected_topics/origin_refs/trigger_refs/search_required/subagent_receipt_refs/appears_in_synthesis/hitl2_handoff，top-level 含 scan 对象）
+- `reference/00_shared/source.yaml`（可选——当 `dpt-topic-scout` 搜到跨 topic evidence 且 `affected_topics` ≥ 2 时，main-agent ingestion 后 promote 到共享 reference。`topic_tag` 填 `shared`，`notes` 中注明 `finding_id` 和 `source_layer: wave2_cross_topic`）
 - 所有 seed topic 文件中 `__BACKFILL_WAVE2_JUDGMENT__` 和 `__BACKFILL_PENDING_QUESTIONS__` token 已被替换（替换内容从 ledger/index 投影，保留 source_layer/finding id/decision/status）
 - `rb_trace.jsonl` 中有 `wave2_completion` event
 - `rb_status.json` 中 `current_gate: wave2_complete` / `next_gate: hitl2_recorded`

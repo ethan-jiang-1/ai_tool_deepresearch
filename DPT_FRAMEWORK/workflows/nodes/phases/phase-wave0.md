@@ -119,13 +119,14 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --cur
 
 ## 4. Expected Artifacts
 
-- `reference/index.md`（非空，摘要每个 topic 的 reference）
+- `reference/index.md`（非空，摘要每个 topic 和 shared 目录的 reference）
 - `reference/<topic>/source.yaml`（对于 topic_registry 中的每个 topic，至少 foundation floor 数量的 reference metadata 条目，每条满足以下 contract）：
   - `url`：string，非空
   - `title`：string，非空
   - `retrieved_date`：string，YYYY-MM-DD 格式
   - `topic_tag`：string，非空，匹配 registry 中的 topic key
   - `notes`：string，可选
+- `reference/00_shared/source.yaml`（可选——共享 foundation reference：行业全景、方法论文献、跨 topic 对比数据等不属于单个 topic 的 reference。格式同 per-topic source.yaml，`topic_tag` 填 `shared`）
 - `rb_trace.jsonl` 中有 `wave0_completion` event
 - `rb_status.json` 中 `current_gate: wave0_complete` / `next_gate: wave1_complete`
 

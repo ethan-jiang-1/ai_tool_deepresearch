@@ -61,8 +61,9 @@ suggested_context: []
 
 Foundation reference data，由 Wave0 初始填充（`source.yaml` + `index.md`）。后续 wave 可继续向 `reference/` 追加新的 reference entry，也可通过 seed topic backfill 间接关联。
 
-- **`reference/<topic>/source.yaml`**：Per-topic reference metadata（YAML array，每项满足 `ReferenceMetadataSchema`）。字段：`url` / `title` / `retrieved_date` / `topic_tag` / `notes`（详见上方 `contracts/reference.mjs`）。Foundation floor：每个 topic ≥ 1 条 metadata。
-- **`reference/index.md`**：Foundation reference 索引（Agent 可读摘要，列出每个 topic 收集的 reference）。
+- **`reference/<topic>/source.yaml`**：Per-topic reference metadata（YAML array，每项满足 `ReferenceMetadataSchema`）。字段：`url` / `title` / `retrieved_date` / `topic_tag` / `notes`（详见上方 `contracts/reference.mjs`）。Foundation floor：每个 topic ≥ 1 条 metadata。`<topic>` 来自 `topic_registry` 的 slug（`{index}_` 编号前缀：`01_`、`02_`、…）。
+- **`reference/00_shared/`**：Shared/cross-cutting reference 目录（可选）。存放不属于单个 topic 的 foundation reference——行业全景、方法论文献、跨 topic 对比数据等。Wave0 创建共享 foundation reference，后续 wave（尤其 Wave2 cross-topic search）可继续追加。编号 `00_` 与 topic slug 的 1-based 编号（`01_`、`02_`、…）一致：`00_` = 第零号 = shared layer。
+- **`reference/index.md`**：Foundation reference 索引（Agent 可读摘要，列出每个 topic 和 shared 目录的 reference）。
 
 ## Seed Topics
 

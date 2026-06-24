@@ -76,16 +76,16 @@
 
 ## 6. Playbook 实验验证
 
-- [ ] 6.1 新建 `experiments_playbook/exp_wfn_wave2/test-simple-wave2-synthesis-happy-path.md` — @impl WTS-001, WTS-004, WTS-007
+- [x] 6.1 新建 `experiments_playbook/exp_wfn_wave2/test-simple-wave2-synthesis-happy-path.md` — @impl WTS-001, WTS-004, WTS-007
   - 2-topic happy path：pre-seeded wave0 source.yaml + wave1 evidence-summary.md/question-list.md → wave2 queue-driven synthesis → gate pass
   - 验证：三件套 artifact 均存在、synthesis.md 含 Markdown links + W2F-xxx finding id、ledger 含 6 section、index parseable、backfill token 已替换、trace 有 wave2_completion
-- [ ] 6.2 新建 `experiments_playbook/exp_wfn_wave2/test-medium-wave2-finding-triage-search.md` — @impl WTS-002, WTS-003, WTS-008
+- [x] 6.2 新建 `experiments_playbook/exp_wfn_wave2/test-medium-wave2-finding-triage-search.md` — @impl WTS-002, WTS-003, WTS-008
   - 2-topic with legacy question + emergent question：pre-seeded evidence 中有意设置 legacy unresolved question 和 cross-topic emergent question → synthesis 正确分类为 legacy_question/resolution/emergent_question → resolution 不 spawn sub-agent → exploit_search spawn sub-agent 并留下 receipt → gate pass
   - 验证：finding type/decision 正确、resolution 无 receipt、search finding 有 receipt、无 orphan finding
-- [ ] 6.3 新建 `experiments_playbook/exp_wfn_wave2/test-medium-wave2-gate-fail-repair.md` — @impl RWG-003, RWG-010
-  - gate fail（ledger 缺失 section + backfill token 未替换 + 缺 wave1 evidence 引用）→ inspect/advice → repair → gate pass
+- [x] 6.3 新建 `experiments_playbook/exp_wfn_wave2/test-medium-wave2-gate-fail-repair.md` — @impl RWG-003, RWG-010
+  - gate fail（ledger 缺失 section + backfill token 未替换）→ inspect/advice → repair → gate pass
   - 验证：trace 含 2 条 gate_attempt（fail + pass）
-- [ ] 6.4 更新 `experiments_playbook/RUN.md` 的 playbook manifest — 新增 exp_wfn_wave2 条目
+- [x] 6.4 更新 `experiments_playbook/RUN.md` 的 playbook manifest — 新增 exp_wfn_wave2 条目
 
 ## 7. Registry 与治理检查
 

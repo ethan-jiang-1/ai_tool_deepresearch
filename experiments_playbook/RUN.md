@@ -66,6 +66,10 @@
 | 43 | `exp_wfn_wave1/test-heavy-wave1-batch-subagent.md` | 2-topic wave1 deepening 批量 sub-agent 并行：enqueue→relay spawn→collect-as-return→backfill→gate pass |
 | 44 | `exp_wfn_wave1/test-heavy-wave1-gate-fail-repair.md` | gate fail（缺失 evidence-summary）→repair→gate pass，trace 含 2 条 gate_attempt |
 | 45 | `exp_wfn_wave1/test-heavy-wave1-subagent-failure.md` | WebFetch blocked→完整抓取链（curl→node→python3）→partial evidence 不编造→gate 仍 pass |
+| 46 | `exp_wfn_wave2/test-simple-wave2-synthesis-happy-path.md` | post-wave1→wave2 queue-driven synthesis→三件套 artifact→backfill→gate pass 全链路 |
+| 47 | `exp_wfn_wave2/test-medium-wave2-finding-triage-search.md` | finding taxonomy 三类区分（legacy/resolution/emergent）+ 六 decision + resolution 不 spawn sub-agent + search 有 receipt + 无 orphan |
+| 48 | `exp_wfn_wave2/test-medium-wave2-gate-fail-repair.md` | gate fail（ledger 缺 section + backfill token 残留）→inspect/advice→repair→gate pass，trace 含 fail+pass 两条 gate_attempt |
+| 49 | `exp_wfn_wave2/test-heavy-wave2-subagent-search.md` | emergent question→explore_search→spawn dpt-topic-scout 真实搜索→ingest receipt→index 更新→re-synthesize→00_shared promote→gate pass |
 
 ### Human（需人类交互/判断，不能自动化，必须手动跑）
 
