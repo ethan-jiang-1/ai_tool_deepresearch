@@ -44,6 +44,8 @@ AGQ-011: agentic-queue — QueueItemSchema targets field (TargetSpec) replaces s
 AGQ-012: agentic-queue — TargetSpec schema (controller enum, optional delegates with to/role_key/timeout_ms)
 AGQ-013: agentic-queue — Producer rule topic_deepening for wave1 deepening task cards
 AGQ-014: agentic-queue — Claim advice returns delegates_required and delegates_config for relay dispatch
+AGQ-015: agentic-queue — Producer rule cross_topic_synthesis for wave2 synthesis task cards
+AGQ-016: agentic-queue — Producer rule seed_topic_backfill_wave2 for wave2 backfill task cards
 # bundle-infrastructure
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry
@@ -108,6 +110,14 @@ WAI-004: wave1-intake — Inline per-topic backfill after each deepening task co
 WAI-005: wave1-intake — Wave1 gate checks deepening artifacts and backfill token replacement
 WAI-006: wave1-intake — Wave1 queue-loop playbooks verify deepening end-to-end
 WAI-007: wave1-intake — Wave1 batch parallel sub-agent execution protocol via relay
+
+# wave2-synthesis
+WTS-001: wave2-synthesis — Wave2 phase queue-driven three-stage execution
+WTS-002: wave2-synthesis — Gap-fill sub-agent dispatch for targeted evidence search
+WTS-003: wave2-synthesis — Iterative gap-fill loop with convergence criteria
+WTS-004: wave2-synthesis — Cross-topic synthesis artifact with verified references
+WTS-005: wave2-synthesis — Per-topic backfill via queue task cards
+WTS-006: wave2-synthesis — Wave2 sub-agent behavior specification
 
 
 # seg2node
@@ -188,6 +198,7 @@ RWG-005: research-wave-gate-implementation — Wave1 gate CLI evaluates rules fr
 RWG-006: "research-wave-gate-implementation — Wave2 gate CLI evaluates rules from definition (file_exists, field_non_empty, cross_field markdown_link_resolution, trace_event_present, status_value)"
 RWG-007: research-wave-gate-implementation — Wave gate CLIs follow established double trace convention (rb_trace.jsonl runtime audit + _trace.jsonl experiment verdict)
 RWG-008: research-wave-gate-implementation — Wave2 gate cross_field verifies Markdown link artifact references
+RWG-009: research-wave-gate-implementation — Wave2 gate CLI supports pattern_match check type with negate and topic expansion
 
 # wff-research-waves / research-wave-experiments
 RWE-001: "research-wave-experiments — Wave0 happy-path + fail playbook (5 trace events: 1 pass + 4 fail, covers count_floor ⊕ schema_valid AND interaction, empty registry, {topic} expansion)"
