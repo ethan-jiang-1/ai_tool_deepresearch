@@ -4,9 +4,9 @@
 
 ## Purpose
 
-定义在 setup 与 wave0 之间插入的 **seed topic 物化阶段**（`phase-seed-topics.md` + `seed-topics-ready` gate）。此阶段强制 Agent 把 `rb_plan.md` frontmatter 中的 `topic_registry` 物化为 `seed_topics/` 目录下的独立文件，并用 deterministic 规则检查结构合法性与数量 floor。
+定义在 setup 与 wave0 之间插入的 **seed topic 物化阶段**（`phase-seed-topics.md` + `seed-topics-ready` gate）。此阶段强制 Phase Agent 把 `rb_plan.md` frontmatter 中的 `topic_registry` 物化为 `seed_topics/` 目录下的独立文件，并用 deterministic 规则检查结构合法性与数量 floor。
 
-**存在的理由**：`wff-pre-research` 的 HITL1 只把 seed topics 写进 `rb_plan.md` 的 `topic_registry` frontmatter，从不物化到 `seed_topics/` 目录。`setup-ready` gate 只检查 `seed_topics/` 目录存在（空目录也 pass），导致 Agent 可带着空 `seed_topics/` 进入 Wave0 研究。虽然 `wff-research-waves` 的 `wave0-complete` gate 已设计"topic_registry 为空时 fail"的防线，但该防线位置过晚（在 Wave0），且只检查 registry 非空，不检查物化一致性或数量 floor。本阶段把这道防线前移并加固为独立确定性 gate。
+**存在的理由**：`wff-pre-research` 的 HITL1 只把 seed topics 写进 `rb_plan.md` 的 `topic_registry` frontmatter，从不物化到 `seed_topics/` 目录。`setup-ready` gate 只检查 `seed_topics/` 目录存在（空目录也 pass），导致 Phase Agent 可带着空 `seed_topics/` 进入 Wave0 研究。虽然 `wff-research-waves` 的 `wave0-complete` gate 已设计"topic_registry 为空时 fail"的防线，但该防线位置过晚（在 Wave0），且只检查 registry 非空，不检查物化一致性或数量 floor。本阶段把这道防线前移并加固为独立确定性 gate。
 
 Gate 只做 deterministic 结构/数量/一致性检查；seed topic 的语义质量（topic 是否"好"、是否与研究问题对齐）由人类在 HITL1（`stop: yes`）审查，本阶段不新增 stop 点。
 
@@ -22,13 +22,13 @@ Allowed Actions SHALL 覆盖三阶段：
 
 **§3.1 灌料 (Filling)** — 首次进入，如果 queue 为空：
 - 读取 `rb_plan.md` frontmatter 的 `topic_registry`
-- 为每个 topic 创建 task card JSON（含 work_id, title, target: main-agent, producer_rule: seed_topic_materialize, priority_class: P3_current_gate_gap, required_receipts, done_condition 等完整 QueueItemSchema 字段）
+- 为每个 topic 创建 task card JSON（含 work_id, title, `targets: { controller: "main-agent" }`, producer_rule: seed_topic_materialize, priority_class: P3_current_gate_gap, required_receipts, done_condition 等完整 QueueItemSchema 字段；`main-agent` 是当前 queue schema wire value）
 - 使用 `operate-queue enqueue <bundle> --task <task.json>` 逐个灌入
 - 灌料完毕后跑 `operate-queue check <bundle>` 确认 active_window 已填充
 
 **§3.2 Queue-driven 执行循环**：
-- `operate-queue claim <bundle> --actor main-agent` → 获取 task card → item 为 null 则跳到 §3.3
-- 执行：main-agent 从 task.payload.topic_slug 定位 topic_registry 条目 + rb_profile.yaml → 按 Seed Topic 文件结构创建 `seed_topics/<slug>.md`
+- `operate-queue claim <bundle> --actor main-agent` → 获取 task card → item 为 null 则跳到 §3.3（`main-agent` 是当前 CLI actor wire value）
+- 执行：Phase Agent 从 task.payload.topic_slug 定位 topic_registry 条目 + rb_profile.yaml → 按 Seed Topic 文件结构创建 `seed_topics/<slug>.md`
 - `operate-queue complete <bundle> --result <result.json>` → receipt check → promote/repair
 - 读投影 → 回到 claim
 
@@ -56,20 +56,20 @@ Allowed Actions SHALL 覆盖三阶段：
 | 字段组 | 验证者 | 方式 |
 |--------|--------|------|
 | id, slug, title, 文件名一致性 | gate（STM-002） | deterministic: dir_non_empty, field_non_empty, cross_field(slug_consistency) |
-| must_answer, hypothesis, search_guardrails, evidence_route | experiment playbook（seed-topics queue-loop playbook §5a.4） | Agent 执行 playbook step 时检查文件内容 |
+| must_answer, hypothesis, search_guardrails, evidence_route | experiment playbook（seed-topics queue-loop playbook §5a.4） | Agent actor 执行 playbook step 时检查文件内容 |
 | 字段语义质量（是否足够驱动定向搜索） | HITL1（stop: yes） | 人类审查 topic_registry 和 seed topic 产出 |
 
 这不是 gate 的缺陷——gap annotation 是 seed-topics 的核心机制（缺失信息标注比编造更有价值），而 gate 的定位是结构+数量+一致性检查。此不对称是**有意设计**，但必须在 spec 中显式声明。
 
-#### Scenario: Agent executes seed-topics via queue-driven loop
+#### Scenario: Phase Agent executes seed-topics via queue-driven loop
 
-- **WHEN** Agent 加载 `phase-seed-topics.md`
-- **THEN** §3 body SHALL 引导 Agent 进入 queue-driven 三阶段：灌料 → 执行循环 → 收尾+gate
+- **WHEN** Phase Agent 加载 `phase-seed-topics.md`
+- **THEN** §3 body SHALL 引导 Phase Agent 进入 queue-driven 三阶段：灌料 → 执行循环 → 收尾+gate
 - **AND** body SHALL NOT 使用自由文本 "Allowed Actions" 模式
 
 #### Scenario: Seed topic file is a search-relevant decision document
 
-- **WHEN** Agent 物化一个 seed topic
+- **WHEN** Phase Agent 物化一个 seed topic
 - **THEN** 产出文件 SHALL 包含 frontmatter 的 must_answer, hypothesis, search_guardrails, evidence_route 字段
 - **AND** 正文 SHALL 包含原始语境约束 block
 - **AND** 文件 SHALL NOT 是仅有 id/slug/title + 笼统三段式正文的"chapter label"
@@ -85,8 +85,8 @@ Allowed Actions SHALL 覆盖三阶段：
 #### Scenario: Missing upstream info recorded as gap
 
 - **WHEN** topic_registry 或 rb_profile.yaml 未提供足够的 hypothesis 或 search_guardrails 信息
-- **THEN** Agent SHALL 标注为显式 gap（如 `hypothesis: "pending — ..."`）
-- **AND** Agent SHALL NOT 编造信息以通过 gate
+- **THEN** Phase Agent SHALL 标注为显式 gap（如 `hypothesis: "pending — ..."`）
+- **AND** Phase Agent SHALL NOT 编造信息以通过 gate
 - **AND** gate SHALL still pass（gap 本身是有效信息——告诉 wave0 该 topic 搜索范围较宽）
 ### Requirement: Seed topics ready gate rule set
 

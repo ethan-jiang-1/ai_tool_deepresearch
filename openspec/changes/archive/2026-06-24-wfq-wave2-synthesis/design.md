@@ -11,7 +11,7 @@ wave2 与 wave0/wave1 有本质差异：
 | 模式 | fan-out（每 topic 并行搜） | fan-out（每 topic 并行 deepening） | fan-in（多 topic 汇聚综合） |
 | 核心动作 | WebSearch + WebFetch | WebSearch + WebFetch + 提取 | Read + Compare + Synthesize |
 | sub-agent | dpt-source-intake | dpt-evidence-extractor | dpt-topic-scout（仅 gap-fill） |
-| 并发 | 多 sub-agent 并行 | 多 sub-agent 并行 | 单 main-agent synthesis + 按需 spawn sub-agent |
+| 并发 | 多 sub-agent 并行 | 多 sub-agent 并行 | 单 Phase Agent synthesis + 按需 spawn sub-agent |
 | queue 价值 | N topic → N task（并行） | N topic → N task（并行） | 1 synthesis task + N backfill task（file receipt + trace + repair；内容完整性由 gate 验证） |
 
 ## Goals / Non-Goals
@@ -19,7 +19,7 @@ wave2 与 wave0/wave1 有本质差异：
 **Goals:**
 - 重写 `phase-wave2.md` §3：从自由文本升级为 queue-driven 三阶段（灌料→执行循环→收尾+gate）
 - 新增 `phase-wave2-subagent.md`：gap-fill sub-agent 行为指令（role: `dpt-topic-scout`）
-- 1 个 synthesis task card（main-agent 执行）+ N 个 per-topic backfill task card（main-agent 执行）
+- 1 个 synthesis task card（Phase Agent 执行；当前 Queue schema wire value 为 `targets.controller: "main-agent"`）+ N 个 per-topic backfill task card（Phase Agent 执行）
 - Wave2 artifact 从单一 synthesis.md 升级为三件套：synthesis.md + cross-topic-ledger.md + finding-index.yaml
 - Finding taxonomy（三类 finding + 六种 decision）替代统一 "gap" 概念
 - Cross-topic scan matrix 作为过程证据面
@@ -43,10 +43,10 @@ wave2 与 wave0/wave1 有本质差异：
 
 ### D1: Synthesis 本体走 queue，gap-fill 不走 queue
 
-**选择：** Synthesis 本体是 1 个 queue task card（`targets: {controller: main-agent}`，`producer_rule: cross_topic_synthesis`）。Gap-fill 补搜不走 queue delegates——main-agent 在 synthesis 过程中发现缺口后，直接 spawn sub-agent（`dpt-topic-scout`），结果回写 synthesis。
+**选择：** Synthesis 本体是 1 个 queue task card（`targets: {controller: main-agent}`，`producer_rule: cross_topic_synthesis`；`main-agent` 是当前 schema wire value）。Gap-fill 补搜不走 queue delegates——Phase Agent 在 synthesis 过程中发现缺口后，直接 spawn sub-agent（`dpt-topic-scout`），结果回写 synthesis。
 
 **原因：**
-- Synthesis 是 main-agent 的核心判断工作（读多个 topic 的 evidence-summary + question-list → 跨 topic 综合）——不能委托给 sub-agent
+- Synthesis 是 Phase Agent 的核心判断工作（读多个 topic 的 evidence-summary + question-list → 跨 topic 综合）——不能委托给 sub-agent
 - Queue 在 N=1 时仍提供关键价值：`file:` receipt 检查（synthesis.md 存在）、done-condition pressure、trace 记录、repair 自动生成；非空、Markdown link 和 backfill token absence 由 wave2 gate 验证
 - Gap-fill 是顺序依赖的判断链：先 synthesis 产出 gap list，再定向补搜——gap 是什么在 synthesis 完成前不知道，无法在灌料时预生成 task card
 - Gap-fill sub-agent 仍遵循 relay slot 契约（`_subagents/wave_02/slot_MM/` 目录、task.md + result.schema.json、runtime-receipt），但不通过 queue 的 `targets.delegates` 机制
@@ -59,8 +59,8 @@ wave2 与 wave0/wave1 有本质差异：
 
 | Task | 数量 | producer_rule | target | 执行者 |
 |------|------|---------------|--------|--------|
-| Synthesis 本体 | 1 | `cross_topic_synthesis` | `{controller: main-agent}` | main-agent |
-| Per-topic backfill | N（= topic_registry 大小） | `seed_topic_backfill_wave2` | `{controller: main-agent}` | main-agent |
+| Synthesis 本体 | 1 | `cross_topic_synthesis` | `{controller: main-agent}` | Phase Agent (`main-agent` wire value) |
+| Per-topic backfill | N（= topic_registry 大小） | `seed_topic_backfill_wave2` | `{controller: main-agent}` | Phase Agent (`main-agent` wire value) |
 
 **执行顺序：** Synthesis 本体先执行（`P2_close_open_loop` 优先级）→ synthesis 完成 + gap-fill loop 收敛 → per-topic backfill 执行（`P4_progressive_artifact_or_seed_backfill` 优先级）。这确保了 backfill 写回 seed topic 时 synthesis 已经是 gap-filled 的最终版本。
 
@@ -70,7 +70,7 @@ wave2 与 wave0/wave1 有本质差异：
 - 可以利用 queue 的 promote + refill 自动流转
 - Trace 中每条 backfill 有独立记录
 
-**Task card JSON 中的 `{topic.slug}` 替换责任：** 灌料时 Agent 为每个 topic 独立创建 task card JSON 文件——`{topic.slug}` 等模板变量在写入 JSON 文件时由 Agent 替换为具体值。Queue receipt engine 只做 literal string matching（`file:seed_topics/{topic}.md` 中的 `{topic}` 不会展开），因此 task card 在 enqueue 前必须是 fully resolved 的。这与 Change 1/2 的灌料方式一致。
+**Task card JSON 中的 `{topic.slug}` 替换责任：** 灌料时 Phase Agent 为每个 topic 独立创建 task card JSON 文件——`{topic.slug}` 等模板变量在写入 JSON 文件时由 Phase Agent 替换为具体值。Queue receipt engine 只做 literal string matching（`file:seed_topics/{topic}.md` 中的 `{topic}` 不会展开），因此 task card 在 enqueue 前必须是 fully resolved 的。这与 Change 1/2 的灌料方式一致。
 
 ### D3: Finding triage + targeted search loop（替代原 gap-fill loop）
 
@@ -177,7 +177,7 @@ wave2 与 wave0/wave1 有本质差异：
 - 搜索关键词/方向（从 gap 描述派生）
 - 目标 schema（简洁 JSON：found_evidence, source_urls, fills_gap, confidence）
 
-**Gap-fill sub-agent 的输出：** 结构化 JSON → main-agent 读后更新 synthesis.md 对应段落。
+**Gap-fill sub-agent 的输出：** 结构化 JSON → Phase Agent 读后更新 synthesis.md 对应段落。
 
 ### D5: Backfill token 系统扩展
 
@@ -233,7 +233,7 @@ wave2 与 wave0/wave1 有本质差异：
 - Queue engine 已完整——enqueue/claim/complete/fail/preempt/render 全部可用
 - Sub-agent relay 已完整——slot 目录创建、receipt 验证、collect 流水线全部可用
 - Gate CLI infrastructure（`gate-helpers.mjs`）已支持 `cross_field`（含 markdown_link_resolution）
-- Wave2 的特殊性（fan-in synthesis + 顺序依赖 finding triage）是 Agent flow 层面的——不需要新 engine 机制，只需要正确的 MD 指令 + gate CLI 补上已存在于 wave1 的 `pattern_match` check type
+- Wave2 的特殊性（fan-in synthesis + 顺序依赖 finding triage）是 Phase Agent flow 层面的——不需要新 engine 机制，只需要正确的 MD 指令 + gate CLI 补上已存在于 wave1 的 `pattern_match` check type
 
 ### D8: Wave2 三件套 artifact group
 
@@ -254,7 +254,7 @@ artifacts/wave2/
 | `cross-topic-ledger.md` | Agent-readable source of truth；动态增长文件，每轮 synthesis/triage/exploration 后追加/更新 finding 状态 | 不给 JS 做结构化解析（那是 index 的职责） |
 | `finding-index.yaml` | JS-readable structured shadow；每个 finding 有 id/type/status/decision/refs；让 JS engine 能做确定性反馈 | 不承载长篇 reasoning（那是 ledger 的职责）；不替代 ledger |
 
-**原因：** Wave1 的 paired artifacts（evidence-summary.md + question-list.md）证明：Agent 的行为需要显形为可检查的 artifact surface。单一 `synthesis.md` 让 JS 最多检查 "文件存在、非空、有链接"，无法验证 cross-topic scan 是否发生、finding 是否被分类和决策、search 是否有 receipt。三件套让 JS feedback 面从 3-4 条检查扩展到 ~15 条 deterministic 检查。
+**原因：** Wave1 的 paired artifacts（evidence-summary.md + question-list.md）证明：Phase Agent 的行为需要显形为可检查的 artifact surface。单一 `synthesis.md` 让 JS 最多检查 "文件存在、非空、有链接"，无法验证 cross-topic scan 是否发生、finding 是否被分类和决策、search 是否有 receipt。三件套让 JS feedback 面从 3-4 条检查扩展到 ~15 条 deterministic 检查。
 
 **对标 Wave1：** Wave1 不是只产出一篇 summary——它有 paired artifacts（evidence-summary + question-list）。Wave2 也需要同样的 "行为显形"，不同点是 Wave2 是 fan-in/cross-topic，不是 per-topic fan-out，所以它是 artifact group 而不是每个 topic 两个文件。
 
@@ -301,7 +301,7 @@ Ledger 记录 reasoning，index 记录 lifecycle state。JS 不判断 reasoning 
 | P02 | topic-a + topic-c | shared_pattern, contradiction, resolution_opportunity, emergent_question | none | Checked; no material cross-topic relation found |
 ```
 
-**原因：** 这不是要求 Agent 做机械笛卡尔积，而是给 JS 和人类一个反馈面：如果 Wave2 声称做了 cross-topic synthesis，却没有 scan surface，就很容易滑回自由总结。`pair_count_checked` vs `pair_count_expected` 的差距也是 JS feedback 的检查点。
+**原因：** 这不是要求 Phase Agent 做机械笛卡尔积，而是给 JS 和人类一个反馈面：如果 Wave2 声称做了 cross-topic synthesis，却没有 scan surface，就很容易滑回自由总结。`pair_count_checked` vs `pair_count_expected` 的差距也是 JS feedback 的检查点。
 
 ### D11: JS feedback rails——三层反馈 + 语义边界节奏
 
@@ -311,7 +311,7 @@ Ledger 记录 reasoning，index 记录 lifecycle state。JS 不判断 reasoning 
 
 | Level | 何时 | 成本 | 目的 |
 |---|---|---|---|
-| L0 local parse/shape | Agent 写完稳定 YAML/ledger 块后 | 便宜 | 抓 malformed YAML、缺 fixed section、broken 引用 |
+| L0 local parse/shape | Phase Agent 写完稳定 YAML/ledger 块后 | 便宜 | 抓 malformed YAML、缺 fixed section、broken 引用 |
 | L1 lifecycle consistency | 语义边界后：scan 完成、decision 分配完、sub-agent result ingest 完、projection 完 | 中等 | 抓 decision/receipt/handoff/projection 断链 |
 | L2 phase gate | Wave2 artifact/backfill 完成、queue 清空后一次 | 最高权威 | 决定 Wave2 能否推进到 HITL2 |
 
@@ -349,7 +349,7 @@ JS 不裁决 research quality；JS 裁决"有没有可审计的过程形状"。�
 | L1 | 同一 finding/状态边界最多 2 次修复尝试 → 超过则 escalate：finding 改为 `defer_hitl2` 或 `record_only`，附清晰原因 |
 | L2 | 使用现有 phase gate repair discipline：persistent failure 应 escalate 而非静默降级 |
 
-**原因：** 防止 feedback thrash——Agent 反复修同一个 finding 却修不好，会卡住 Wave2。Escalation 保持诚实：一个无法被修到 coherent 的 finding，应该变成显式的 unresolved/handoff 对象，而不是无限阻塞。
+**原因：** 防止 feedback thrash——Phase Agent 反复修同一个 finding 却修不好，会卡住 Wave2。Escalation 保持诚实：一个无法被修到 coherent 的 finding，应该变成显式的 unresolved/handoff 对象，而不是无限阻塞。
 
 ### D13: Backfill as projection（不是归属地转移）
 
@@ -378,9 +378,9 @@ Backfill token `__BACKFILL_WAVE2_JUDGMENT__` 和 `__BACKFILL_PENDING_QUESTIONS__
 ## Risks / Trade-offs
 
 - **[Finding triage 不收敛] Synthesis 可能每轮都发现新 finding，超过 max_gapfill_iterations** → 强制收敛并记录 unresolved findings 到 ledger 的 HITL2 Handoff section。这不影响 gate pass——gate 不评估研究完整性，但要求 unresolved finding 显式沉淀（不能静默消失）。
-- **[Main-agent 上下文压力] Synthesis 需要读多个 topic 的 evidence-summary + question-list，上下文可能很大** → 每个 topic 的 evidence-summary 是 bounded 结构化文档（wave1 sub-agent 输出已被 schema 约束形状），不是完整搜索 trail。Topic 数量在 foundation 阶段 ≤5，可管理。上下文可持续性测量留给 Change 4 full-chain 实验。
+- **[Phase Agent 上下文压力] Synthesis 需要读多个 topic 的 evidence-summary + question-list，上下文可能很大** → 每个 topic 的 evidence-summary 是 bounded 结构化文档（wave1 sub-agent 输出已被 schema 约束形状），不是完整搜索 trail。Topic 数量在 foundation 阶段 ≤5，可管理。上下文可持续性测量留给 Change 4 full-chain 实验。
 - **[dpt-topic-scout 首次在 workflow 中使用] role 已注册但无 phase 使用经验** → Gap-fill 任务是窄、定向搜索（比 wave0 的 broad source intake 更简单），playbook 先验证 1 个 finding 的最短路径。
 - **[Backfill 失败不阻塞 synthesis gate pass？] 当前 gate-wave2-complete 不检查 backfill token** → 新增 backfill token 规则后，backfill 未完成会 block gate。这是期望行为——确保 seed topic 闭合。
-- **[三件套 artifact 增加了 Agent 的写入负担] 从 1 个文件到 3 个文件** → ledger 是 Agent 自己在 synthesis 过程中的 working memory（天然产出，不是额外负担）；index 是 ledger 的结构化影子（main-agent 写完 ledger 后顺手写 index，字段固定）。Wave1 已经有 paired artifacts 的先例——Agent 可以做到。
-- **[Feedback thrash] L1 检查可能让 Agent 反复修同一个 finding 修不好** → D12 failure budget：同一 finding/边界最多 2 次尝试后 escalate 到 defer_hitl2/record_only。Gate 不要求所有 finding 完美——只要求 lifecycle 不断链。
+- **[三件套 artifact 增加了 Phase Agent 的写入负担] 从 1 个文件到 3 个文件** → ledger 是 Phase Agent 自己在 synthesis 过程中的 working memory（天然产出，不是额外负担）；index 是 ledger 的结构化影子（Phase Agent 写完 ledger 后顺手写 index，字段固定）。Wave1 已经有 paired artifacts 的先例——Agent actor 可以做到。
+- **[Feedback thrash] L1 检查可能让 Phase Agent 反复修同一个 finding 修不好** → D12 failure budget：同一 finding/边界最多 2 次尝试后 escalate 到 defer_hitl2/record_only。Gate 不要求所有 finding 完美——只要求 lifecycle 不断链。
 - **[Scan matrix 在 topic_count > 5 时的可行性] 笛卡尔积不可行** → 不做机械全覆盖。topic_count > 5 时，先按 shared dimension 聚类，再扫描每个 cluster 内的最相关 pair/group。JS 不强制 pair_count，只检查 scan accounting 是否存在。

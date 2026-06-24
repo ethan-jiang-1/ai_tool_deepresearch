@@ -46,15 +46,15 @@ Deep Research Framework (`DPT_FRAMEWORK/`) 的运行时入口说明。
 - `rb_templates/`：实例化 run bundle 时 materialize 的初始模板。
 - `command_playbook/`：Agent/operator 可读命令说明。
 
-## Workflow Foundation 目标 surface
+## Workflow Foundation / runtime surface
 
-这些 surface 是 workflow-foundation 的目标结构，当前不要当作已实现目录或当前 CLI contract：
+这些 surface 是当前 workflow-foundation 运行时结构；具体行为仍以已存在的 CLI/schema/engine contract 为准：
 
 - `workflows/manifest.json` 和 `workflows/nodes/`：v1 只有一个 canonical Deep Research workflow，不使用 `workflows/<workflow-name>/` namespace。
-- `schema/contracts/gate-definition.mjs`：未来 gate definition JSON 的 executable schema。
-- `schema/gate_definitions/`：未来 read-only gate definition JSON，不保存 pass/fail。
-- `engine/gates/`：未来 gate definition loader/evaluator。
-- `cli/gates/`：未来 one gate per external CLI wrapper。Gate 命令必须显式接收 active bundle path；具体 flag 由实现 contract 决定。
+- `schema/gate_definitions/`：read-only gate definition JSON，不保存 pass/fail。
+- `schema/contracts/gate.mjs`：当前 gate transition-table contract；不是 gate definition JSON 的 Zod schema。
+- `engine/gates/`：per-gate engine modules 的目标位置；当前共享 helper 位于 `engine/helpers/gate-helpers.mjs`。
+- `cli/gates/`：one gate per external CLI wrapper。Gate 命令必须显式接收 active bundle path；具体 flag 由实现 contract 决定。
 
 ## Run Bundle 外形
 

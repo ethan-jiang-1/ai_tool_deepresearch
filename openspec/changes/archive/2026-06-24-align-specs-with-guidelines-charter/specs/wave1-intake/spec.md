@@ -1,0 +1,98 @@
+# wave1-intake
+
+> req: WAI-001, WAI-002, WAI-003, WAI-004
+
+## MODIFIED Requirements
+
+### Requirement: Wave1 phase uses queue-driven three-stage execution
+
+The wave1 phase node (`phase-wave1.md`) SHALL use the queue-driven three-stage template: §3.1 灌料 (filling — generate one deepening task card per topic from `topic_registry`), §3.2 执行循环 (claim → Sub-agent execute → complete → inline backfill → repeat until queue empty), §3.3 收尾与 gate (verify artifacts → run gate CLI → pass/fail).
+
+#### Scenario: Phase node loads queue on entry
+
+- **WHEN** Phase Agent loads `phase-wave1.md` for the first time in a run
+- **THEN** Phase Agent SHALL run `operate-queue check <bundle>` to determine queue health
+- **AND** if queue is empty, proceed to §3.1 灌料
+
+#### Scenario: Phase node directs agent to follow three stages
+
+- **WHEN** Phase Agent reads `phase-wave1.md` §3
+- **THEN** §3 SHALL contain §3.1 (灌料), §3.2 (执行循环), and §3.3 (收尾与 gate) as distinct sections
+- **AND** §3.2 SHALL include the ASCII flowchart of claim→execute→complete→投影→loop
+
+### Requirement: Wave1 deepening task card targets sub-agent via targets.delegates
+
+Each wave1 deepening task card SHALL use `targets: { controller: "main-agent", delegates: { to: "sub-agent", role_key: "dpt-evidence-extractor", timeout_ms: 600000 } }`. The `main-agent` and `sub-agent` strings are current schema wire values: conceptually this is Phase Agent workflow authority with delegated Sub-agent execution. The `producer_rule` SHALL be `topic_deepening`. The `action` SHALL describe: search the topic with keywords derived from `seed_topics/{slug}.md` search_guardrails and open questions, fetch at least 1 credible source, extract evidence, write `artifacts/wave1/{topic}/evidence-summary.md`. Directory isolation is managed by `subagent-relay.mjs` slot directories (`_subagents/wave_NN/slot_MM/`), not by a `noise_boundary` path.
+
+#### Scenario: Task card has targets with delegates
+
+- **WHEN** a wave1 deepening task card is created from the §3.1 template
+- **THEN** `targets.controller` SHALL be `"main-agent"`
+- **AND** `targets.delegates.to` SHALL be `"sub-agent"`
+- **AND** `targets.delegates.role_key` SHALL be `"dpt-evidence-extractor"`
+- **AND** `targets.delegates.timeout_ms` SHALL be `600000`
+
+#### Scenario: Task card producer_rule is topic_deepening
+
+- **WHEN** a wave1 deepening task card is enqueued
+- **THEN** `producer_rule` SHALL be `"topic_deepening"`
+- **AND** `priority_class` SHALL be `"P4_progressive_artifact_or_seed_backfill"`
+- **AND** `required_receipts` SHALL include `"file:artifacts/wave1/{topic.slug}/evidence-summary.md"`
+
+### Requirement: Sub-agent executes deepening search and writes bounded output
+
+When a wave1 deepening task is dispatched via relay, the Sub-agent SHALL receive only its slot's `task.md` and `result.schema.json`. The Sub-agent SHALL use WebSearch and WebFetch to find topic-specific evidence, SHALL write intermediate search results within its own slot directory (`_subagents/wave_NN/slot_MM/`), SHALL write `runtime-receipt.jsonl` to its slot, and SHALL return strict JSON matching `result.schema.json`. The returned JSON SHALL include `summary`, `evidenceCount`, `references` (with title/url/quote/relevance), `confidence`, and `notes`. The evidence-summary artifact (`artifacts/wave1/{topic}/evidence-summary.md`) SHALL be produced by the Phase Agent from the collected result, or by the Sub-agent directly into the artifact path if the slot task description instructs it.
+
+#### Scenario: Sub-agent writes to own slot directory only
+
+- **WHEN** Sub-agent executes a wave1 deepening search via relay
+- **THEN** Sub-agent SHALL write only to its assigned slot directory (`_subagents/wave_NN/slot_MM/`)
+- **AND** Sub-agent SHALL write `runtime-receipt.jsonl` (two JSONL events: `agent_runtime_started` + `agent_result_ready`)
+- **AND** Sub-agent SHALL return JSON matching `result.schema.json` to the Phase Agent
+- **AND** the Phase Agent's context SHALL NOT contain the Sub-agent's raw search trail
+
+#### Scenario: Sub-agent produces evidence-summary.md
+
+- **WHEN** Sub-agent completes search and extraction
+- **THEN** `artifacts/wave1/{topic}/evidence-summary.md` SHALL exist
+- **AND** it SHALL contain at least 1 source URL with title
+- **AND** it SHALL contain key findings section
+- **AND** it SHALL contain open questions section with canonical status labels: each question prefixed with exactly `[开放]`, `[部分解答]`, or `[涌现]` — arbitrary topic-descriptor labels (e.g. `[Bridge gap]`, `[Interpretability reliability]`) are NOT permitted
+- **AND** each key finding SHALL use `**机制理解**:` or `**趋势观察**:` as its bold prefix
+
+#### Scenario: Sub-agent produces question-list.md
+
+- **WHEN** Sub-agent completes search and extraction
+- **THEN** `artifacts/wave1/{topic}/question-list.md` SHALL exist alongside evidence-summary.md
+- **AND** it SHALL contain four sections in order: Topic Investigation Targets, Question Reconciliation, Emergent Question Protocol, Exploration/Exploitation Decision
+- **AND** Topic Investigation Targets SHALL be a table with at least target_id, target_question, origin, status, backing_refs, next_action columns
+- **AND** Question Reconciliation SHALL use canonical markers: `[已解决]`, `[部分进展]`, `[仍开放]`, `[需内部数据]`
+- **AND** Emergent Question Protocol SHALL record results of all four checks: new_concept, contradiction, missing_information_gap, noise_pattern — each SHALL be stated as `checked; {result}; trigger_refs={path or none}` even when the result is `none`
+- **AND** Exploration/Exploitation Decision SHALL record decision (one of the 9 canonical V12 values; single-pass mode SHALL use `continue`), trigger_refs, unresolved_questions, queue_consequence, and next_action
+
+#### Scenario: Tool degradation chain on WebFetch failure
+
+- **WHEN** the Sub-agent's primary page-fetching tool (e.g. WebFetch) is blocked or fails for a source URL
+- **THEN** Sub-agent SHALL attempt `curl -L <url>` as first fallback
+- **AND** if curl fails, SHALL attempt `node -e "fetch(...)"` as second fallback
+- **AND** if node fetch fails, SHALL attempt `python3 -c "import urllib.request..."` as last resort
+- **AND** if all fallbacks fail, SHALL record the failure in evidence-summary.md and proceed with remaining sources
+- **AND** SHALL NOT fabricate page content from search snippets
+
+### Requirement: Inline backfill after each task completion
+
+After each wave1 deepening task is completed, the Phase Agent SHALL immediately backfill the corresponding `seed_topics/{topic.slug}.md` before claiming the next task. The backfill SHALL replace `__BACKFILL_WAVE1_MECHANISMS__` with key mechanism findings from `evidence-summary.md`, replace `__BACKFILL_WAVE1_TRENDS__` with trends and难点, and update `__BACKFILL_PENDING_QUESTIONS__` with question status tags (`[开放]` / `[部分解答]` / `[涌现]`).
+
+#### Scenario: Backfill happens per-topic, immediately after complete
+
+- **WHEN** a wave1 deepening task for topic `{slug}` is completed
+- **THEN** Phase Agent SHALL backfill `seed_topics/{slug}.md` BEFORE claiming the next task
+- **AND** `__BACKFILL_WAVE1_MECHANISMS__` token SHALL be replaced with at least 1 key mechanism finding
+- **AND** `__BACKFILL_WAVE1_TRENDS__` token SHALL be replaced with trends and难点 observations
+- **AND** `__BACKFILL_PENDING_QUESTIONS__` token SHALL be updated with question status tags EXACTLY matching the canonical set: `[开放]`, `[部分解答]`, `[涌现]` — NOT arbitrary topic-descriptor labels
+
+#### Scenario: Backfill order preserves freshness
+
+- **WHEN** topic_registry has 5 topics
+- **THEN** execution order SHALL be: claim topic[0] → execute → complete → backfill topic[0] → claim topic[1] → ...
+- **AND** each topic's evidence-summary is backfilled while the Phase Agent's understanding of that topic is still fresh

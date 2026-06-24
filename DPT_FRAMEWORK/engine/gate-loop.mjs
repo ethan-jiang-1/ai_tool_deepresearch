@@ -1,5 +1,5 @@
 // @impl FRE-001: Canonical engine location DPT_FRAMEWORK/engine/gate-loop.mjs
-// Thin deterministic gate checkpoint for MD Controller.
+// Thin deterministic gate checkpoint for the Markdown control surface.
 //
 // ## Role
 // Engine checks whether state passes a gate. It evaluates rules in order,

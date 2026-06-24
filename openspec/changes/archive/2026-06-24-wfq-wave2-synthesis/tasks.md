@@ -1,4 +1,4 @@
-## 1. Phase MD — wave2 main-agent (核心交付物)
+## 1. Phase MD — wave2 Phase Agent (核心交付物)
 
 - [x] 1.1 重写 `phase-wave2.md` §3 为 queue-driven 三阶段 — @impl WTS-001, WTS-007, RWP-003
   - §3.1 灌料：1 synthesis task card JSON 模板（`producer_rule: cross_topic_synthesis`，`required_receipts` 覆盖三件套）+ N backfill task card JSON 模板（`producer_rule: seed_topic_backfill_wave2`）+ enqueue 指令
@@ -20,8 +20,8 @@
 
 - [x] 2.1 新建 `phase-wave2-subagent.md` — @impl WTS-006, RWP-008
   - Role: `dpt-topic-scout`，targeted finding search（仅对 `decision=exploit_search|explore_search` 的 finding 执行）
-  - §1 Stage Goal：定向搜索填补 specific finding，不替代 main-agent 做 cross-topic judgment
-  - §2 Required Inputs：finding description + search keywords + output schema（从 main-agent 传入）
+  - §1 Stage Goal：定向搜索填补 specific finding，不替代 Phase Agent 做 cross-topic judgment
+  - §2 Required Inputs：finding description + search keywords + output schema（从 Phase Agent 传入）
   - §3 Allowed Actions：WebSearch + WebFetch → 提取 evidence → 返回结构化 JSON
   - §4 Expected Artifacts：structured JSON（found_evidence, source_urls, fills_gap, confidence）
   - §5 无需 gate（sub-agent 不跑 gate）
@@ -112,7 +112,7 @@
 - [x] 8.1 phase-wave2.md §3.2 添加 JS feedback checkpoint 调用描述 — @impl WTS-007, RWG-010
   - 描述 L0 check 触发时机（ledger/index 初建后）和检查内容（文件存在、section 完整、YAML parse、finding 字段完整、scan 存在）
   - 描述 L1 check 触发时机（finding triage 后 / sub-agent spawn 前 / receipt ingest 后 / synthesis projection 后 / backfill projection 后）
-  - 描述 check/inspect/advice 反馈格式和 Agent 修复流程
+  - 描述 check/inspect/advice 反馈格式和 Phase Agent 修复流程
   - 描述 failure budget：L0 立即修复、L1 最多 2 次后 escalate、L2 不降级
 - [x] 8.2 phase-wave2.md §3.2 添加 finding lifecycle 流程描述 — @impl WTS-008
   - 描述 candidate → classified → decision_made → searched/not_searched → projected → backfilled 生命周期

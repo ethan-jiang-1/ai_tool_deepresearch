@@ -994,7 +994,7 @@ export function inspectFailure(zodError) {
  * stageSubagentSlots (pass). Run this at the start of a subagent phase.
  *
  * On 'pass' branch: stages slots and returns awaitingAgent=true to signal
- * the MD controller to launch native subagents.
+ * the Phase Agent to launch native subagents through the Markdown control surface.
  *
  * On non-pass branches: runs convergeRepair and returns the repaired state
  * with an empty slots array.

@@ -47,7 +47,7 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 
 ## Step 2.1: Enqueue — 满窗入队 6 任务
 
-入队 6 个任务：前 5 个填满 `slot_1` ~ `slot_5`，第 6 个进入 `refill_pool`。持久化到 `rb_queue.agq.json`。
+入队 6 个任务：前 5 个填满 `slot_1` ~ `slot_5`，第 6 个进入 `refill_pool`。持久化到 `rb_queue.json`。
 
 ```bash
 

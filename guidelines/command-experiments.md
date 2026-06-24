@@ -13,8 +13,10 @@ defers_to:
 siblings:
   - guidelines/project-charter.md
   - guidelines/framework-runtime-boundary.md
+  - guidelines/agentic-execution-model.md
   - guidelines/agentic-queue-mechanism.md
   - guidelines/agentic-workflow-mechanism.md
+  - guidelines/agentic-subagent-mechanism.md
 ---
 
 # Guideline: command_experiments Current Guidance
@@ -130,7 +132,7 @@ The safety rules below always apply. Concrete path or helper names refer to the 
 - MUST run `validate-bundle.mjs` and `inspect-bundle.mjs` before mechanism execution.
 - MUST import and exercise framework APIs from their canonical `DPT_FRAMEWORK/` location instead of reimplementing the mechanism in the playbook.
 - MUST write every trace event in the canonical format owned by the accepted trace-writer contract; do not run a parallel trace format.
-- MUST use real Agent or native subagent execution when the mechanism depends on Agent behavior.
+- MUST use real Agent actor or native subagent execution when the mechanism depends on Agent actor behavior.
 - MUST keep stage sequence, Agent handoff, and any native subagent semantics visible in the Markdown playbook.
 - MUST keep inline `.mjs` code, when present, as a thin deterministic driver/checkpoint.
 - MUST let Engine/CLI output return to the LLM as actionable context.
@@ -317,7 +319,7 @@ If a case depends on real Agent or native subagent behavior:
 - Create runtime work items through the framework mechanism under test.
 - Start real Agent/subagent execution through the available Agent tool when the mechanism requires it.
 - Require each Agent actor to write its own runtime evidence, such as a receipt, result file, or trace event defined by the relevant spec.
-- Let the parent Agent collect, merge, or judge only after runtime evidence exists.
+- Let the Phase Agent collect, merge, or judge only after runtime evidence exists.
 
 Do not satisfy an Agent-dependent experiment by writing the expected child output from the parent context.
 
@@ -417,9 +419,9 @@ These principles were discovered by executing playbooks and fixing the failures,
 
 **Scope**: This section governs *playbook authoring shape* — how to call the gate, how to record results, how to declare expectations. It does not define gate JSON schema, trace event schema, or CLI flag contracts. Those belong to `guidelines/framework-runtime-boundary.md` and the relevant accepted spec or framework implementation.
 
-### 1. Gate output is structured feedback for the MD controller
+### 1. Gate output is structured feedback for the Phase Agent in MD controller mode
 
-The gate CLI is an Engine-layer deterministic checkpoint. Its primary output is structured JSON on stdout — not the shell exit code. The current gate CLIs emit JSON with four fields the MD controller (LLM) uses to decide the next action. The exact JSON shape is owned by the accepted gate CLI spec and may evolve; the principle is what matters here:
+The gate CLI is an Engine-layer deterministic checkpoint. Its primary output is structured JSON on stdout — not the shell exit code. The current gate CLIs emit JSON with four fields the Phase Agent uses in MD controller mode to decide the next action. The exact JSON shape is owned by the accepted gate CLI spec and may evolve; the principle is what matters here:
 
 | Field | Role | Used by |
 |-------|------|---------|
@@ -443,7 +445,7 @@ The exit code is a shell-level mirror of `check.passed` — it carries far less 
 
 Do not chain gate calls with `&&`. The `|| true` is not a workaround for misbehavior — it reflects the architectural fact that the JSON on stdout IS the output. The exit code is a convenience for `if` statements, not the contract.
 
-Gate CLI implementations MUST keep inspect/advice strings valid as JSON values (no raw regex backslash escapes, no unescaped control characters). If the JSON is unparseable, the MD controller is blind.
+Gate CLI implementations MUST keep inspect/advice strings valid as JSON values (no raw regex backslash escapes, no unescaped control characters). If the JSON is unparseable, the Phase Agent's MD controller mode is blind.
 
 ### 2. Never hardcode gate results
 
@@ -538,8 +540,10 @@ These principles are not exhaustive. When a new experiment family exposes a new 
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
-- [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Agentic Queue loop engineering draft; use this experiment guideline for any AGQ prototype.
-- [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — normative description of the Agent-driven workflow loop that experiments exercise.
+- [Agentic Queue Mechanism](agentic-queue-mechanism.md) — architectural constitution for queue-driven phase execution; queue engine (AGQ-001~006) implemented runtime, seed-topics/wave0/wave1/wave2 integrations accepted/current, remaining loop-engineering gaps pending OpenSpec.
+- [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon.
+- [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — Tier 1 (Chain): phase-to-phase routing.
+- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — architectural constitution for sub-agent dispatch; defines Tier 3 (Relay) within the three-tier execution model.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for framework assets versus runtime bundles.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
 - Accepted specs under `openspec/specs/` — capability requirements, including agent-assisted experiment playbooks.

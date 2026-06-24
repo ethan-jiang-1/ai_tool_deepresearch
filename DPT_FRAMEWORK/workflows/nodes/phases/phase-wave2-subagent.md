@@ -13,11 +13,11 @@ suggested_context: []
 
 ## 1. Stage Goal
 
-定向搜索填补 main-agent 在 synthesis 过程中发现的 specific finding（仅对 `decision=exploit_search` 或 `decision=explore_search` 的 finding 执行）。**不替代 main-agent 做 cross-topic synthesis judgment。**
+定向搜索填补 Phase Agent 在 synthesis 过程中发现的 specific finding（仅对 `decision=exploit_search` 或 `decision=explore_search` 的 finding 执行）。**不替代 Phase Agent 做 cross-topic synthesis judgment。**
 
 ## 2. Required Inputs
 
-Main-agent 在 spawn 时传入：
+Phase Agent 在 spawn 时传入：
 - **Finding description**：具体 finding 描述（这个 finding 是什么、为什么需要搜索）
 - **Search keywords / direction**：从 finding 描述派生的搜索关键词
 - **Target output schema**：结构化 JSON schema（见 §4）
@@ -55,14 +55,14 @@ Structured JSON result written to slot directory:
 
 ## 5. 无需 Gate
 
-Sub-agent 不跑 gate。Result quality 由 main-agent 在 ingestion 时判断。
+Sub-agent 不跑 gate。Result quality 由 Phase Agent 在 ingestion 时判断。
 
 ## 6. Relay Slot 契约
 
 遵循 `shared-subagent-protocol.md` 的 relay slot 通信契约：
 - Slot 目录：`_subagents/wave_02/slot_MM/`
 - Cache 目录：`_cache/wave2/slot_MM/`
-- Main-agent 写入 `task.md`（含 finding description + keywords + schema）
+- Phase Agent 写入 `task.md`（含 finding description + keywords + schema）
 - Sub-agent 读取 `task.md` → 执行 → 写入 result JSON
 - Relay engine 写入 `runtime-receipt.jsonl`
 
@@ -71,9 +71,9 @@ Sub-agent 不跑 gate。Result quality 由 main-agent 在 ingestion 时判断。
 - **禁止写 WorkflowState**（`rb_status.json`、`rb_plan.md`、`rb_profile.yaml`）
 - **禁止修改 queue**（不 enqueue/claim/complete/fail/preempt）
 - **禁止 pass/fail gate**
-- **禁止做 cross-topic synthesis judgment**（那是 main-agent 的工作）
+- **禁止做 cross-topic synthesis judgment**（那是 Phase Agent 的工作）
 - **禁止把 emergent question 归属到某个 topic**
-- **禁止更新 ledger/index 的最终状态**（main-agent 在 ingestion 时更新）
+- **禁止更新 ledger/index 的最终状态**（Phase Agent 在 ingestion 时更新）
 - **禁止编造 source 或 evidence**
 - **禁止不经过搜索直接返回 "fills_gap: false"**
 

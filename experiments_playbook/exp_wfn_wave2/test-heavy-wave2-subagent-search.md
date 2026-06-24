@@ -255,9 +255,9 @@ node -e "const y=require('yaml'),f=require('fs');const i=y.parse(f.readFileSync(
 
 ## Phase 4: Spawn Sub-Agent —— 真实搜索
 
-Main-agent 为 W2F-001 准备 relay slot 和 task.md。然后 **真正 spawn dpt-topic-scout sub-agent**——不是写假文件，是真的用 WebSearch + WebFetch 去搜。Sub-agent 返回后写 runtime-receipt 证明自己跑了。
+Phase Agent 为 W2F-001 准备 relay slot 和 task.md。然后 **真正 spawn dpt-topic-scout sub-agent**——不是写假文件，是真的用 WebSearch + WebFetch 去搜。Sub-agent 返回后写 runtime-receipt 证明自己跑了。
 
-### Step 4a: Main-agent 准备 slot + task.md
+### Step 4a: Phase Agent 准备 slot + task.md
 
 ```bash
 mkdir -p $B/_subagents/wave_02/slot_01 $B/_cache/wave2/slot_01
@@ -279,16 +279,16 @@ W2F-001: Claude Code vs GitHub Copilot Agent Mode — 2026 性能对比
 ## Instructions
 1. 用上面的 keywords 做 WebSearch
 2. 从搜索结果中提取与 finding 相关的证据
-3. 返回结构化 JSON——不要写长篇分析（那是 main-agent 的活）
+3. 返回结构化 JSON——不要写长篇分析（那是 Phase Agent 的活）
 4. 只搜、只提取，不做 cross-topic synthesis judgment
 TASKEOF
 
 echo "task.md written to _subagents/wave_02/slot_01/task.md"
 ```
 
-### Step 4b: Spawn dpt-topic-scout sub-agent（真正 spawn，不是 main-agent 自己搜）
+### Step 4b: Spawn dpt-topic-scout sub-agent（真正 spawn，不是 Phase Agent 自己搜）
 
-> **coding-agent runner 指令**: 用 Agent tool spawn `dpt-topic-scout` sub-agent。Sub-agent 读 task.md → WebSearch → WebFetch → 写 result.json + runtime-receipt.jsonl。Main-agent 不参与搜索，只验证产出。
+> **coding-agent runner 指令**: 用 Agent tool spawn `dpt-topic-scout` sub-agent。Sub-agent 读 task.md → WebSearch → WebFetch → 写 result.json + runtime-receipt.jsonl。Phase Agent 不参与搜索，只验证产出。
 
 **Sub-agent 的 prompt 必须包含**:
 - 读 `$B/_subagents/wave_02/slot_01/task.md`
@@ -314,9 +314,9 @@ echo "Verify: result.json has found_evidence? $(node -e "try{const r=JSON.parse(
 echo "Verify: result.json source_urls are real URLs? $(node -e "try{const r=JSON.parse(require('fs').readFileSync('$B/_subagents/wave_02/slot_01/result.json','utf-8'));console.log(r.source_urls?.every(u=>u.startsWith('http'))?'YES':'NO')}catch(e){console.log('INVALID JSON')}")"
 ```
 
-## Phase 5: Ingestion —— Main-agent 更新 index
+## Phase 5: Ingestion —— Phase Agent 更新 index
 
-Sub-agent 返回后，main-agent 读取 result.json → 更新 index receipt_refs + status。
+Sub-agent 返回后，Phase Agent 读取 result.json → 更新 index receipt_refs + status。
 
 ```bash
 # BEFORE
@@ -325,7 +325,7 @@ echo "  BEFORE ingestion"
 echo "═══════════════════════════════════════════"
 node -e "const y=require('yaml'),f=require('fs');const i=y.parse(f.readFileSync('$B/artifacts/wave2/finding-index.yaml','utf-8'));const r=i.findings.find(f=>f.id==='W2F-001');console.log('receipt_refs:',JSON.stringify(r.subagent_receipt_refs));console.log('status:',r.status);console.log('appears_in_synthesis:',r.appears_in_synthesis)"
 
-# Main-agent: update index
+# Phase Agent: update index
 node -e "
 const y=require('yaml'),f=require('fs');
 const i=y.parse(f.readFileSync('$B/artifacts/wave2/finding-index.yaml','utf-8'));
@@ -346,7 +346,7 @@ node -e "const y=require('yaml'),f=require('fs');const i=y.parse(f.readFileSync(
 
 ## Phase 6: Re-Synthesize —— Synthesis v2 写入搜索结果
 
-Main-agent 把 sub-agent 结果写入 ledger + 重写 synthesis，然后 promote 跨 topic source 到 00_shared。
+Phase Agent 把 sub-agent 结果写入 ledger + 重写 synthesis，然后 promote 跨 topic source 到 00_shared。
 
 ```bash
 # 追加 search results 到 ledger

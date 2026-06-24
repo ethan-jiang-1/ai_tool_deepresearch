@@ -9,16 +9,16 @@ requires:
 suggested_context: []
 ---
 
-# Wave1 Sub-Agent: Topic-Specific Deepening
+# Wave1 Sub-agent: Topic-Specific Deepening
 
 **Role:** `dpt-evidence-extractor`
-**Phase:** wave1 (loaded by main-agent as `suggested_context` of `phase-wave1.md`)
+**Phase:** wave1 (loaded by Phase Agent as `suggested_context` of `phase-wave1.md`)
 
 ## Purpose
 
-Define what the wave1 sub-agent searches for, produces, and must never do. Main-agent reads this file to construct the sub-agent's bounded task (`task.md`). Sub-agent receives only its relay slot files — it does not see this node.
+Define what the wave1 Sub-agent searches for, produces, and must never do. Phase Agent reads this file to construct the Sub-agent's bounded task (`task.md`). Sub-agent receives only its relay slot files — it does not see this node.
 
-The shared relay contract (`shared-subagent-protocol.md`) defines the communication mechanism. This file defines **what the sub-agent does within that contract** for wave1 topic-specific deepening.
+The shared relay contract (`shared-subagent-protocol.md`) defines the communication mechanism. This file defines **what the Sub-agent does within that contract** for wave1 topic-specific deepening.
 
 ## 1. Search Focus — Topic-Specific Deep Evidence
 
@@ -136,17 +136,17 @@ last_updated: YYYY-MM-DD
 - `[已解决]` = question resolved by this round's evidence
 - `[部分进展]` = partial progress made
 - `[仍开放]` = no material progress
-- `[需内部数据]` = requires data the sub-agent cannot access
+- `[需内部数据]` = requires data the Sub-agent cannot access
 
 **Note:** Question Reconciliation (§2) uses `[已解决]`/`[部分进展]`/`[仍开放]`/`[需内部数据]` to mark what CHANGED. Evidence-summary Open Questions uses `[开放]`/`[部分解答]`/`[涌现]` to mark CURRENT state. These are different label sets for different purposes — do not mix them.
 
 ## 3. Execution Within Relay Slot
 
-The sub-agent operates within a relay-assigned slot directory (`_subagents/wave_NN/slot_MM/`). It receives two files:
+The Sub-agent operates within a relay-assigned slot directory (`_subagents/wave_NN/slot_MM/`). It receives two files:
 - `task.md` — the natural-language task (from the queue task card's `action` field)
 - `result.schema.json` — the JSON schema the return value must satisfy
 
-**What the sub-agent does:**
+**What the Sub-agent does:**
 1. Write `agent_runtime_started` event to `runtime-receipt.jsonl` (BEFORE doing any work)
 2. Read `task.md` to understand the topic and deepening parameters
 3. Use WebSearch to find topic-specific deep evidence (derive keywords from seed topic)
@@ -155,13 +155,13 @@ The sub-agent operates within a relay-assigned slot directory (`_subagents/wave_
 6. Write `evidence-summary.md` with canonical labels
 7. Write `question-list.md` with complete four-section structure
 8. Write `agent_result_ready` event to `runtime-receipt.jsonl` (IMMEDIATELY before returning)
-9. Return JSON matching `result.schema.json` to the main-agent
+9. Return JSON matching `result.schema.json` to the Phase Agent
 
 **Intermediate products:** Raw WebSearch output, fetched page content, extraction drafts go to `_cache/waveN/slot_MM/` — these are non-authority, reconstructable.
 
 ## 4. Page Content Fetching
 
-See `shared-subagent-protocol.md` for the full chain. The sub-agent MUST exhaust all tiers before recording an access failure.
+See `shared-subagent-protocol.md` for the full chain. The Sub-agent MUST exhaust all tiers before recording an access failure.
 
 ## 5. Anti-Cheating Rules (Wave1-Specific)
 
@@ -173,14 +173,14 @@ See `shared-subagent-protocol.md` for the full chain. The sub-agent MUST exhaust
 - **No claiming comprehensive coverage:** Wave1 is single-pass deepening, not exhaustive research
 - **Must self-prove:** `runtime-receipt.jsonl` must contain both events
 
-See `shared-subagent-protocol.md` Forbidden Authority section for universal sub-agent prohibitions.
+See `shared-subagent-protocol.md` Forbidden Authority section for universal Sub-agent prohibitions.
 
-## 6. Relationship to Main-Agent
+## 6. Relationship to Phase Agent
 
-**Main-agent (phase-wave1.md) does:**
+**Phase Agent (phase-wave1.md) does:**
 - Enqueue deepening task cards
 - Read queue → map to SlotConfig → stage slots via relay
-- Spawn sub-agent
+- Spawn Sub-agent
 - Collect via `ingestAgentReceipt()` + `commitSlotResult()`
 - Verify both artifacts (evidence-summary.md + question-list.md) against `done_condition`
 - Complete queue task
@@ -189,7 +189,7 @@ See `shared-subagent-protocol.md` Forbidden Authority section for universal sub-
 
 **Sub-agent (this file) does:**
 - Search + fetch + extract + write TWO artifacts (evidence-summary.md + question-list.md)
-- Return bounded JSON to main-agent
+- Return bounded JSON to Phase Agent
 - Stay within relay slot directory
 
-The sub-agent NEVER sees the WorkflowState, gate, queue, other topics, or the main-agent's backfill work.
+The Sub-agent NEVER sees the WorkflowState, gate, queue, other topics, or the Phase Agent's backfill work.

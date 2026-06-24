@@ -1,5 +1,5 @@
 // @impl FRE-001: Canonical engine location DPT_FRAMEWORK/engine/gate-fork.mjs
-// Thin deterministic fork checkpoint for MD Controller.
+// Thin deterministic fork checkpoint for the Markdown control surface.
 //
 // ## Role
 // Engine evaluates state against rules, then returns which branch MD

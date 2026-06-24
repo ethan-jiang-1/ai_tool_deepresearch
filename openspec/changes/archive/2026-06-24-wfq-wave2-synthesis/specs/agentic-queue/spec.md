@@ -6,10 +6,10 @@
 
 ### Requirement: Producer rule cross_topic_synthesis for wave2 synthesis task cards
 
-The Queue Manager SHALL accept `producer_rule: cross_topic_synthesis` on task cards. This producer_rule identifies the wave2 cross-topic synthesis task — a single main-agent-executed task that reads all topic evidence-summary and question-list artifacts, produces a three-artifact group (`synthesis.md`, `cross-topic-ledger.md`, `finding-index.yaml`), and contains an embedded iterative finding triage + targeted search loop.
+The Queue Manager SHALL accept `producer_rule: cross_topic_synthesis` on task cards. This producer_rule identifies the wave2 cross-topic synthesis task — a single Phase Agent-executed task that reads all topic evidence-summary and question-list artifacts, produces a three-artifact group (`synthesis.md`, `cross-topic-ledger.md`, `finding-index.yaml`), and contains an embedded iterative finding triage + targeted search loop.
 
 Task cards with `producer_rule: cross_topic_synthesis` SHALL:
-- Use `targets: {controller: main-agent}` (no delegates — synthesis is main-agent judgment work)
+- Use `targets: {controller: main-agent}` (no delegates — synthesis is Phase Agent judgment work; `main-agent` is the current wire value)
 - Have `priority_class: P2_close_open_loop` (current QueueWorkUnitSchema enum value for close-open-loop work)
 - Have `required_receipts: ["file:artifacts/wave2/synthesis.md", "file:artifacts/wave2/cross-topic-ledger.md", "file:artifacts/wave2/finding-index.yaml"]`; structure, content, and reference requirements SHALL be verified by the wave2 gate, not by queue receipts
 - Have `done_condition` requiring synthesis completion, finding triage loop convergence, and all three artifacts produced
@@ -28,10 +28,10 @@ Task cards with `producer_rule: cross_topic_synthesis` SHALL:
 
 ### Requirement: Producer rule seed_topic_backfill_wave2 for wave2 per-topic backfill task cards
 
-The Queue Manager SHALL accept `producer_rule: seed_topic_backfill_wave2` on task cards. This producer_rule identifies wave2 per-topic backfill tasks — main-agent-executed tasks that replace `__BACKFILL_WAVE2_JUDGMENT__` and `__BACKFILL_PENDING_QUESTIONS__` tokens in seed topic files with content projected from the Wave2 ledger/index（not directly from synthesis.md narrative）.
+The Queue Manager SHALL accept `producer_rule: seed_topic_backfill_wave2` on task cards. This producer_rule identifies wave2 per-topic backfill tasks — Phase Agent-executed tasks that replace `__BACKFILL_WAVE2_JUDGMENT__` and `__BACKFILL_PENDING_QUESTIONS__` tokens in seed topic files with content projected from the Wave2 ledger/index（not directly from synthesis.md narrative）.
 
 Task cards with `producer_rule: seed_topic_backfill_wave2` SHALL:
-- Use `targets: {controller: main-agent}` (no delegates — backfill is file editing)
+- Use `targets: {controller: main-agent}` (no delegates — backfill is Phase Agent file editing; `main-agent` is the current wire value)
 - Have `priority_class: P4_progressive_artifact_or_seed_backfill` (current QueueWorkUnitSchema enum value for progressive artifact/backfill work)
 - Have `required_receipts` limited to current queue-engine supported prefixes (for example `file:seed_topics/{topic}.md`)
 - Have `done_condition` requiring both tokens are replaced with content projected from ledger/index, preserving `source_layer: wave2_cross_topic`, finding id, decision, and status

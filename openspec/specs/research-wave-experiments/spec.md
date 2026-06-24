@@ -167,7 +167,7 @@
 
 ### Requirement: Wave1 placeholder not mistaken for full subagent research (RWE-008, 横切约束)
 
-**本 requirement 是横切约束，不产生独立 playbook。** 它约束所有 Wave1 相关 playbook 的 Markdown body 必须显式说明 foundation placeholder boundary，确保 human reviewer 能区分 foundation skeleton 和 future full subagent research。
+**本 requirement 是横切约束，不产生独立 playbook。** 所有 Wave1 相关 playbook 的 Markdown body SHALL 显式说明 foundation placeholder boundary，确保 human reviewer 能区分 foundation skeleton 和 future full subagent research。
 
 #### Scenario: Reviewer can distinguish foundation from full research
 

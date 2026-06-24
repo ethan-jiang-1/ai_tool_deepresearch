@@ -25,7 +25,7 @@ req: AGQ-010
 
 1. 创建 disposable bundle + pre-seed topic_registry（3 topics）+ rb_profile.yaml
 2. Agent 加载 `phase-seed-topics.md`，执行 §3.1 灌料：为每个 topic 生成 task card JSON → `operate-queue enqueue` ×3
-3. Agent 执行 §3.2 执行循环：`operate-queue claim` → execute（main-agent 写入 seed topic 文件）→ `operate-queue complete` ×3
+3. Agent 执行 §3.2 执行循环：`operate-queue claim` → execute（Phase Agent 写入 seed topic 文件；`main-agent` 仅是 CLI actor wire value）→ `operate-queue complete` ×3
 4. Agent 执行 §3.3 收尾：`check-gate-seed-topics-ready.mjs` → gate pass
 5. 命名约定验证（见下方 Checklist）
 6. 从 `_trace.jsonl` 裁决
@@ -144,7 +144,7 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task /tmp/wfq-seed-03-deep
 node DPT_FRAMEWORK/cli/operate-queue.mjs check $B
 ```
 
-预期：`queue_health: "ready"`，active_window 中有 3 个 task card，各含 `producer_rule: seed_topic_materialize`、`target: main-agent`、`priority_class: P3_current_gate_gap`。
+预期：`queue_health: "ready"`，active_window 中有 3 个 task card，各含 `producer_rule: seed_topic_materialize`、`targets.controller: "main-agent"`（当前 queue schema wire value）、`priority_class: P3_current_gate_gap`。
 
 ---
 

@@ -28,7 +28,7 @@
 | 10 | `exp_agentic-queue/test-simple-minimal-path.md` | enqueue → claim → complete → promote 最小路径 |
 | 11 | `exp_agentic-queue/test-medium-urgent-preemption.md` | 满 active window + urgent preemption |
 | 12 | `exp_agentic-queue/test-complex-failure-repair.md` | invalid task, missing receipt, failure repair |
-| 13 | `exp_wfn_seedtopic/test-simple-seedtopics-queue-loop.md` | seed topics queue-driven 物化：enqueue→claim→main-agent 执行→complete→gate pass |
+| 13 | `exp_wfn_seedtopic/test-simple-seedtopics-queue-loop.md` | seed topics queue-driven 物化：enqueue→claim→Phase Agent 执行（`main-agent` wire value）→complete→gate pass |
 | 14 | `exp_wff_validation/test-simple-happy-path.md` | wff walker 9 phase/8 gate 全部 pass + trace↔log 交叉验证 |
 | 15 | `exp_wff_validation/test-medium-fail-repair.md` | wff walker gate fail → repair → rerun → pass 闭环 |
 | 16 | `exp_wff_validation/test-complex-routing-contract.md` | current-node 绑定 + next / terminal / no_transition / config_error routing contract |

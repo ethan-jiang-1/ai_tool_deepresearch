@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: workflow-chain
 case: medium
 weight: light
-case_goal: "验证 MD controller 驱动 dependency-first 加载与跨 load 调用的 cache 行为：MD 加载 chain.entry → Engine 先加载依赖；MD 在同一 runtime 内依次加载 repeat-1 和 repeat-2 → Engine 首次 file_read shared-lib，第二次 cache_hit + 重新 load。"
+case_goal: "验证 MD controller mode 驱动 dependency-first 加载与跨 load 调用的 cache 行为：Markdown control surface 加载 chain.entry → Engine 先加载依赖；同一 runtime 内依次加载 repeat-1 和 repeat-2 → Engine 首次 file_read shared-lib，第二次 cache_hit + 重新 load。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -14,7 +14,7 @@ verdict: trace-jsonl
 
 ## Execution Contract
 
-MD 是 controller。每一步 MD 发出指令 → Engine 执行并写 trace → MD 读 trace 验证。
+Markdown control surface 承载步骤指令。每一步由 Phase Agent 读取 MD 指令 → Engine 执行并写 trace → Phase Agent 读 trace 验证。
 
 本实验验证：dependency-first 加载顺序、同一 runtime 内跨 load 调用的 file_read 去重（cache_hit）和重新 file_loaded。
 
@@ -46,7 +46,7 @@ import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/_trace.jsonl', { consoleEcho: true });
 const SRC = 'wl-medium';
-trace.traceInit('wl-medium: MD controller → Engine', { source: SRC });
+trace.traceInit('wl-medium: MD controller mode → Engine', { source: SRC });
 
 const runtime = createWorkflowRuntime('test', NODES_DIR);
 const result = assessNode('chain.entry.md', createState(), runtime, trace);
@@ -89,7 +89,7 @@ MD 指令：「创建 runtime session。加载 repeat-1.entry.md。」
 
 repeat-1 依赖 shared-lib.dep.md。Engine 首次碰到 shared-lib → file_read → 写入 contentCache。
 
-**关键**：MD 把 session 状态（contentCache keys、state）序列化成 JSON 写入 `_session.json`——这是 MD controller 的核心能力：跨 step 持久化 runtime 状态。
+**关键**：Phase Agent 通过 Markdown control surface 把 session 状态（contentCache keys、state）序列化成 JSON 写入 `_session.json`——这是 MD controller mode 的核心能力：跨 step 持久化 runtime 状态。
 
 ```bash
 cat > $B/s2_session_start.mjs << 'JS'

@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: workflow-chain
 case: simple
 weight: light
-case_goal: "验证 MD controller 显式驱动 single-entry loader：MD 创建 runtime → MD 调 assessNode → Engine 返回结果 → MD 从 trace 交叉验证。runtime init 不预读任何 MD。"
+case_goal: "验证 MD controller mode 显式驱动 single-entry loader：Markdown control surface 创建 runtime → Phase Agent 调 assessNode → Engine 返回结果 → Phase Agent 从 trace 交叉验证。runtime init 不预读任何 MD。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -14,7 +14,7 @@ verdict: trace-jsonl
 
 ## Execution Contract
 
-MD 是 controller。每一步是 MD 发出一个指令 → Engine 执行并写 trace → MD 读 trace 验证。一个 bash block = 一次 MD↔Engine 交互。
+Markdown control surface 承载步骤指令。每一步是 Phase Agent 读取 MD 指令 → Engine 执行并写 trace → Phase Agent 读 trace 验证。一个 bash block = 一次 MD↔Engine 交互。
 
 本实验验证：MD 创建 runtime 时 Engine 不预读文件；MD 显式调 `assessNode('wave.entry.md')` 才加载；MD 从 trace 交叉验证每个 event。
 
@@ -50,7 +50,7 @@ import { createWorkflowRuntime } from '../DPT_FRAMEWORK/engine/workflow-chain.mj
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/_trace.jsonl', { consoleEcho: true });
 const SRC = 'wl-simple';
-trace.traceInit('wl-simple: MD controller → Engine', { source: SRC });
+trace.traceInit('wl-simple: MD controller mode → Engine', { source: SRC });
 
 const runtime = createWorkflowRuntime('test', NODES_DIR);
 

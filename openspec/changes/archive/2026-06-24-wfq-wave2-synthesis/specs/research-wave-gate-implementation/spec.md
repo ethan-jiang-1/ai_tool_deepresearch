@@ -13,7 +13,6 @@
 - **`artifacts/wave2/cross-topic-ledger.md` 存在且非空**（`file_exists` + `field_non_empty`）
 - **`artifacts/wave2/cross-topic-ledger.md` 含 6 个固定 section 标题**（`pattern_match`：验证 "Cross-Topic Scan Matrix" / "Wave1 Legacy Questions" / "Cross-Topic Resolutions" / "Emergent Cross-Topic Questions" / "Exploration Decisions" / "HITL2 Handoff" 各至少出现一次）
 - **`artifacts/wave2/finding-index.yaml` 存在且可 parse**（`yaml_parse`）
-- **`artifacts/wave2/finding-index.yaml` 含 required top-level keys**（`version`, `source_layer`, `ledger`, `synthesis`, `scan`, `findings`）
 - synthesis 中包含至少 1 个 Markdown link（`[text](path)` 格式），指向 `reference/`、`artifacts/wave1/` 下的文件，且至少 1 条指向 wave1 的 `evidence-summary.md` 或 `question-list.md`（`cross_field` check type，`mode: "markdown_link_resolution"`）
 - **synthesis 中包含至少 1 个 finding id 引用**（`pattern_match`：正则匹配 `W2F-\d{3}`，至少 1 处匹配即 pass——narrative 必须引用至少 1 个 finding id）
 - 至少 1 条引用目标在 bundle 中真实存在（`cross_field` — ≥1 有效引用时 pass，0 时 fail）
@@ -126,12 +125,12 @@ Wave2 SHALL have phase-internal JS feedback checks that are distinct in timing, 
 
 | Surface | Timing | Authority |
 |---|---|---|
-| Phase-internal feedback check | During Wave2, at semantic boundaries（after ledger/index creation, finding triage, before sub-agent spawn, after receipt ingest, after synthesis projection, after backfill projection） | Advisory checkpoint: returns `{ check, inspect, advice }` for Agent repair |
+| Phase-internal feedback check | During Wave2, at semantic boundaries（after ledger/index creation, finding triage, before sub-agent spawn, after receipt ingest, after synthesis projection, after backfill projection） | Advisory checkpoint: returns `{ check, inspect, advice }` for Phase Agent repair |
 | `wave2-complete` gate | End of Wave2, before chain transition to HITL2 | Phase boundary: `pass/fail` controls whether workflow can advance |
 
 Phase-internal feedback SHALL:
-- Be invoked by the main-agent calling the checker CLI
-- Return `{ check, inspect, advice }` for the Agent to read and act on
+- Be invoked by the Phase Agent calling the checker CLI
+- Return `{ check, inspect, advice }` for the Phase Agent to read and act on
 - Use L0 checks（file existence, YAML parse, fixed section presence）for immediate structure feedback
 - Use L1 checks（finding field completeness, decision/receipt consistency, handoff coverage）for lifecycle consistency feedback
 - NOT block phase advancement（only L2 gate has that authority）
@@ -141,14 +140,14 @@ The same check rule that serves as phase-internal advice MAY later be promoted t
 
 #### Scenario: Phase-internal feedback returns advice, not pass/fail
 
-- **WHEN** Agent runs phase-internal checker after ledger/index creation
+- **WHEN** Phase Agent runs phase-internal checker after ledger/index creation
 - **THEN** checker SHALL return structured `{ check, inspect, advice }` output
-- **AND** Agent SHALL read the output and decide repair actions
+- **AND** Phase Agent SHALL read the output and decide repair actions
 - **AND** phase-internal feedback SHALL NOT block the synthesis task from continuing
 
 #### Scenario: Gate check controls phase transition
 
-- **WHEN** Agent runs `check-gate-wave2-complete.mjs` at phase end
+- **WHEN** Phase Agent runs `check-gate-wave2-complete.mjs` at phase end
 - **THEN** gate SHALL return `{ passed, say, inspect, advice }` with routing to `hitl2` or repair
 - **AND** `passed: false` SHALL block chain advancement
-- **AND** Agent SHALL repair and rerun gate until pass
+- **AND** Phase Agent SHALL repair and rerun gate until pass

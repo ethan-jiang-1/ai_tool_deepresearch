@@ -49,11 +49,11 @@ This prototype keeps the useful shape but moves authority to JS/JSON:
 - `renderProjection(queue, bundleDir)`
 - `inspectQueue(queue, bundleDir)`
 
-## Prototype State File
+## Historical Prototype State File
 
-The prototype writes `rb_queue.agq.json`. This is deliberately separate from
-production `rb_queue.json` so the experiment does not change the accepted runtime
-bundle queue contract.
+This retired prototype used a prototype-only queue state filename. That filename
+is historical noise, not current guidance. Production and current experiments use
+the canonical runtime queue file `rb_queue.json`.
 
 ## Command Experiment Cases
 
@@ -75,7 +75,7 @@ Record actual command results here after running the playbooks:
 
 ## Not Productionized
 
-- `rb_queue.agq.json` name and shape.
+- Historical prototype-only queue filename and shape.
 - Receipt grammar beyond the deterministic subset.
 - Component-specific `payload` schemas.
 - Production dispatcher command name, such as future `ds.mjs`.

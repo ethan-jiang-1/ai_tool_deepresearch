@@ -238,7 +238,7 @@ Agent 为每个 claimed task 启动 `dpt-evidence-extractor` sub-agent：
 - 使用 WebSearch 搜索 topic-specific 深度证据
 - 使用 WebFetch 获取页面内容（如 blocked，走 shared protocol §6.3 抓取链）
 - 写入 `artifacts/wave1/{topic}/evidence-summary.md`
-- 返回结构化 JSON → main-agent 通过 `commitSlotResult()` 验证
+- 返回结构化 JSON → Phase Agent 通过 `commitSlotResult()` 验证
 
 ```bash
 # Verify sub-agent outputs

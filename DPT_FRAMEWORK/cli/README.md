@@ -49,7 +49,7 @@ cli/
 
 ## Output Contract — CLI 不能返回无意义输出
 
-CLI 是 Agent 的眼睛。如果 CLI 崩了、返回空 JSON、或 inspect 为空，Agent（MD controller）会不知所措——它不知道该修什么、该往哪走。**容错可以，但不能丢失可操作性。**
+CLI 是 Agent actor 的眼睛。如果 CLI 崩了、返回空 JSON、或 inspect 为空，Phase Agent 通过 Markdown control surface 执行时会不知所措——它不知道该修什么、该往哪走。**容错可以，但不能丢失可操作性。**
 
 **MUST（硬性约束）：**
 

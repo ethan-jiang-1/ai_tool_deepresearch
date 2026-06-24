@@ -52,9 +52,11 @@ Gate definition JSON files SHALL 放置在 `DPT_FRAMEWORK/schema/gate_definition
 
 Gate CLI SHALL 放置在 `DPT_FRAMEWORK/cli/gates/`，命名 `check-gate-<gate-name-kebab>.mjs`。每个 gate 对应一个外部 CLI wrapper。CLI SHALL 显式接收 active bundle path（`--bundle` 或等价 flag），不能假设当前工作目录即为目标 bundle。
 
-Gate engine（loader、evaluator）SHALL 放置在 `DPT_FRAMEWORK/engine/gates/`。共享 helper SHALL 放置在 `DPT_FRAMEWORK/engine/helpers/`。
+Gate engine（loader、evaluator）SHALL 放置在 `DPT_FRAMEWORK/engine/gates/` when a per-gate engine module exists。共享 helper SHALL 放置在 `DPT_FRAMEWORK/engine/helpers/`。
 
-Gate definition 的 Zod schema contract SHALL 放置在 `DPT_FRAMEWORK/schema/contracts/gate-definition.mjs`。该文件校验 gate definition JSON 的结构，不保存规则实例或 gate result。
+Current gate transition-table contract SHALL be represented by `DPT_FRAMEWORK/schema/contracts/gate.mjs`. Gate definition JSON files remain read-only rule sources under `DPT_FRAMEWORK/schema/gate_definitions/` and are loaded by the gate helper / per-gate CLI pipeline; no `gate-definition.mjs` executable contract is part of the current accepted runtime surface.
+
+> Apply note: this retires stale accepted prose about a non-existent `gate-definition.mjs` Zod contract. It is not a rename from a gate-definition schema to `gate.mjs`; `gate.mjs` is the current transition-table contract, while gate definition rule data remains JSON under `schema/gate_definitions/`.
 
 #### Scenario: Gate definition is framework asset not bundle copy
 

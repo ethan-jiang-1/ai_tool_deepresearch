@@ -29,7 +29,7 @@ suggested_context:
 
 ## 3. Allowed Actions — Queue-Driven 三阶段
 
-Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task，由 main-agent 直接执行（无外部 search，从 topic_registry 的结构化定义写为文件）。seed topic 文件 **不是笼统的标签**——它必须是能驱动后续 search 的决策级文件（对齐 V12 decompose-seed-topics 标准）。
+Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task，由 Phase Agent 直接执行（当前 wire value 为 `main-agent`；无外部 search，从 topic_registry 的结构化定义写为文件）。seed topic 文件 **不是笼统的标签**——它必须是能驱动后续 search 的决策级文件（对齐 V12 decompose-seed-topics 标准）。
 
 ### 3.1 灌料 (Filling) — 首次进入 seed-topics
 
@@ -194,8 +194,8 @@ __BACKFILL_PENDING_QUESTIONS__
 │                              │                                       │
 │                              ▼                                       │
 │  ┌─ 2. execute ────────────────────────────────────────────────────┐│
-│  │   targets.controller = main-agent（seed topic 物化不涉及搜索，main-agent     ││
-│  │   直接从 topic_registry + profile 提取信息写入）                 ││
+│  │   targets.controller = main-agent（当前 wire value；seed topic     ││
+│  │   物化不涉及搜索，Phase Agent 直接从 topic_registry + profile 写入）││
 │  │   a. 读取 task.payload.topic_slug                                 ││
 │  │   b. 从 rb_plan.md topic_registry 获取该 topic 的完整定义        ││
 │  │   c. 从 rb_profile.yaml 获取 root_must_answer_set,               ││

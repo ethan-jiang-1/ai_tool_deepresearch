@@ -230,7 +230,7 @@ pre-research gate CLIs SHALL 继续通过 stdout 返回标准 JSON gate result�
 
 ### Requirement: Runtime audit trace and experiment verdict trace remain distinct
 
-`rb_trace.jsonl` 是 runtime audit surface；`_trace.jsonl` 是 command experiment verdict surface。两者都必须来自真实执行，但 authority 不同：
+`rb_trace.jsonl` SHALL remain the runtime audit surface；`_trace.jsonl` SHALL remain the command experiment verdict surface。两者都必须来自真实执行，但 authority 不同：
 - `rb_trace.jsonl` 记录真实 gate attempt / runtime audit
 - `_trace.jsonl` 记录 experiment verdict 所需的 `check` events
 

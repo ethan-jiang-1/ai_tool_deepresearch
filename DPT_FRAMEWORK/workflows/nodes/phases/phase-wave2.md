@@ -42,14 +42,14 @@ Wave2 是最后一个 research phase——产出不是 final report，而是经�
 1. 读取 `rb_plan.md` frontmatter 的 `topic_registry`
 2. 创建 **1 个 synthesis task card JSON**：
    - `work_id: wave2-synthesis`
-   - `targets: {controller: main-agent}`
+   - `targets: { controller: "main-agent" }`（当前 queue schema wire value；概念角色是 Phase Agent）
    - `producer_rule: cross_topic_synthesis`
    - `priority_class: P2_close_open_loop`
    - `required_receipts: ["file:artifacts/wave2/synthesis.md", "file:artifacts/wave2/cross-topic-ledger.md", "file:artifacts/wave2/finding-index.yaml"]`
    - `action`：描述完整的 synthesis + finding triage + targeted search loop 流程（见 §3.2）
 3. 为 **每个 topic** 创建 **1 个 backfill task card JSON**：
    - `work_id: wave2-backfill-{slug}`
-   - `targets: {controller: main-agent}`
+   - `targets: { controller: "main-agent" }`（当前 queue schema wire value；概念角色是 Phase Agent）
    - `producer_rule: seed_topic_backfill_wave2`
    - `priority_class: P4_progressive_artifact_or_seed_backfill`
    - `required_receipts: ["file:seed_topics/{topic.slug}.md"]`
@@ -105,15 +105,15 @@ Claim → execute synthesis with embedded finding triage + targeted search loop 
     → fail: 读取 inspect/advice → 修复 ledger/index → rerun（L0 立即修）
     → pass: 继续
 
- 6. 仅对 decision=exploit_search|explore_search 的 finding spawn sub-agent
-    — spawn dpt-topic-scout sub-agent（直接 spawn，不走 queue delegates）
-    — sub-agent 读取 phase-wave2-subagent.md
-    — sub-agent 只做 WebSearch + WebFetch → 返回结构化 JSON
-    — sub-agent 不做 cross-topic synthesis judgment
-    — 每轮最多 spawn max_gapfill_subagents_per_round（默认 3）个 sub-agent
+ 6. 仅对 decision=exploit_search|explore_search 的 finding spawn Sub-agent
+    — spawn dpt-topic-scout Sub-agent（直接 spawn，不走 queue delegates）
+    — Sub-agent 读取 phase-wave2-subagent.md
+    — Sub-agent 只做 WebSearch + WebFetch → 返回结构化 JSON
+    — Sub-agent 不做 cross-topic synthesis judgment
+    — 每轮最多 spawn max_gapfill_subagents_per_round（默认 3）个 Sub-agent
     → ingestion receipt → 更新 finding-index.yaml 的 receipt_refs + status
-    → 如果 sub-agent 返回了有价值的跨 topic source：
-        main-agent 将其 promote 到 reference/00_shared/source.yaml
+    → 如果 Sub-agent 返回了有价值的跨 topic source：
+        Phase Agent 将其 promote 到 reference/00_shared/source.yaml
         （topic_tag=shared，notes 注明 finding_id + source_layer: wave2_cross_topic）
 
  7. 跑 JS feedback check（L1）
@@ -186,7 +186,7 @@ Feedback 分三层，按语义边界触发（不每次编辑都跑，不只在�
 |-------|---------|---------|---------|
 | L0 | ledger/index 初建后 | 文件存在、ledger 固定 section、YAML parse、finding 字段完整、scan matrix 存在 | 立即修复并 rerun |
 | L1 | finding triage 后 | type/decision/status/refs 完整、resolution.search_required=false、emergent 至少 2 topic | 最多 2 次修复后 escalate |
-| L1 | sub-agent spawn 前 | 只有 exploit_search/explore_search 才 spawn；defer/internal-data 不 spawn | 立即修复 |
+| L1 | Sub-agent spawn 前 | 只有 exploit_search/explore_search 才 spawn；defer/internal-data 不 spawn | 立即修复 |
 | L1 | receipt ingest 后 | receipt refs 存在、status 已更新、失败如实记录 | 最多 2 次修复后 escalate |
 | L1 | synthesis projection 后 | narrative 引用 W2F-xxx、无 unknown id、无 orphan | 最多 2 次修复后 escalate |
 | L1 | backfill projection 后 | backfill 引用有效 finding id、保留 source_layer | 最多 2 次修复后 escalate |
@@ -221,14 +221,14 @@ Ledger 记录 reasoning，index 记录 lifecycle state。JS 不判断 reasoning 
 | P02 | topic-a + topic-c | shared_pattern, contradiction, resolution_opportunity, emergent_question | none | Checked; no material cross-topic relation found |
 ```
 
-这**不是**要求 Agent 做机械笛卡尔积表演，而是给 JS 和人类一个反馈面：如果 Wave2 声称做了 cross-topic synthesis，却没有 scan surface，就很容易滑回自由总结。
+这**不是**要求 Phase Agent 做机械笛卡尔积表演，而是给 JS 和人类一个反馈面：如果 Wave2 声称做了 cross-topic synthesis，却没有 scan surface，就很容易滑回自由总结。
 
 ## 4. Expected Artifacts
 
 - `artifacts/wave2/synthesis.md`（narrative projection，非空、含 Markdown links 引用 Wave0/Wave1 artifact、含至少 1 个 wave1 evidence-summary 或 question-list 引用、含 W2F-xxx finding id 引用）
 - `artifacts/wave2/cross-topic-ledger.md`（Agent-readable dynamic ledger，含 6 个固定 section：Cross-Topic Scan Matrix / Wave1 Legacy Questions / Cross-Topic Resolutions / Emergent Cross-Topic Questions / Exploration Decisions / HITL2 Handoff）
 - `artifacts/wave2/finding-index.yaml`（JS-readable shadow index，每 finding 含 11 个 required field：id/type/status/decision/affected_topics/origin_refs/trigger_refs/search_required/subagent_receipt_refs/appears_in_synthesis/hitl2_handoff，top-level 含 scan 对象）
-- `reference/00_shared/source.yaml`（可选——当 `dpt-topic-scout` 搜到跨 topic evidence 且 `affected_topics` ≥ 2 时，main-agent ingestion 后 promote 到共享 reference。`topic_tag` 填 `shared`，`notes` 中注明 `finding_id` 和 `source_layer: wave2_cross_topic`）
+- `reference/00_shared/source.yaml`（可选——当 `dpt-topic-scout` 搜到跨 topic evidence 且 `affected_topics` ≥ 2 时，Phase Agent ingestion 后 promote 到共享 reference。`topic_tag` 填 `shared`，`notes` 中注明 `finding_id` 和 `source_layer: wave2_cross_topic`）
 - 所有 seed topic 文件中 `__BACKFILL_WAVE2_JUDGMENT__` 和 `__BACKFILL_PENDING_QUESTIONS__` token 已被替换（替换内容从 ledger/index 投影，保留 source_layer/finding id/decision/status）
 - `rb_trace.jsonl` 中有 `wave2_completion` event
 - `rb_status.json` 中 `current_gate: wave2_complete` / `next_gate: hitl2_recorded`
@@ -265,18 +265,18 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle <path> --cur
 
 ## 8. Stop Behavior
 
-`stop: no` — Agent 自主执行 synthesis + finding triage + search。Wave2 不做 stop-and-wait 人类审查（HITL2 是独立的审查阶段）。
+`stop: no` — Phase Agent 自主执行 synthesis + finding triage + search。Wave2 不做 stop-and-wait 人类审查（HITL2 是独立的审查阶段）。
 
 ## 9. Anti-Cheating Rules
 
 - **禁止只有 `synthesis.md` 而没有 ledger/index 就声称完成 Wave2 emergence handling**
 - **禁止把所有 finding 都叫 gap**（必须区分为 wave1_legacy_question / cross_topic_resolution / cross_topic_emergent_question）
-- **禁止对 `cross_topic_resolution` spawn sub-agent 搜索**（resolution 是 existing evidence integration，不是 gap）
+- **禁止对 `cross_topic_resolution` spawn Sub-agent 搜索**（resolution 是 existing evidence integration，不是 gap）
 - **禁止把 `cross_topic_emergent_question` 埋进某个 topic 的 pending questions 而不标注 `source_layer: wave2_cross_topic`**
 - **禁止 `decision=explore_search` 或 `decision=exploit_search` 但没有 relay/runtime receipt**
 - **禁止达到 max iteration 后静默丢弃 unresolved finding**（必须进入 HITL2 handoff 或 record_only）
 - **禁止 `synthesis.md` 写出没有 finding id（W2F-xxx）支撑的关键 cross-topic claim**
-- **禁止让 sub-agent 做 cross-topic judgment**（sub-agent 只返回 bounded search/extraction result）
+- **禁止让 Sub-agent 做 cross-topic judgment**（Sub-agent 只返回 bounded search/extraction result）
 - **禁止 backfill 内容不从 ledger/index 投影**（直接从 synthesis.md narrative 摘抄或丢失 source_layer/finding id）
 - **禁止跳过 finding triage loop 直接 complete synthesis task**
 - **禁止凭空总结**（不引用任何 Wave0/Wave1 artifact）

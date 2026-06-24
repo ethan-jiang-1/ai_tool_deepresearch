@@ -10,9 +10,9 @@ import assert from 'node:assert/strict';
 import {
   QueueItemSchema, QUEUE,
   createQueue, enqueue, claim, complete, fail,
-  preempt, checkReceipts, render, loadQueue, makeItem,
+  preempt, checkReceipts, render, loadQueue, saveQueue, makeItem,
 } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { TargetSpecSchema } from '../../DPT_FRAMEWORK/schema/contracts/queue.mjs';
+import { QueueSchema, TargetSpecSchema } from '../../DPT_FRAMEWORK/schema/contracts/queue.mjs';
 
 function tempBundle() {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'agq-'));
@@ -327,9 +327,33 @@ describe('Receipts, projection, and CLI (AGQ-004, AGQ-005, AGQ-006)', () => {
       execFileSync(process.execPath, [cli, 'check', dir], { stdio: 'pipe' });
 
       const saved = JSON.parse(readFileSync(path.join(dir, QUEUE.FILE), 'utf-8'));
-      assert.equal(saved.active_window.slot_1_current.work_id, 'work-2');
-      assert.equal(saved.active_window.slot_2_next.work_id, 'work-urgent');
-      assert.match(readFileSync(path.join(dir, saved.projection_path), 'utf-8'), /work-urgent/);
+      assert.equal(QUEUE.FILE, 'rb_queue.json');
+      assert.equal(QueueSchema.safeParse(saved).success, true);
+      assert.equal(saved.slot_1_current.work_id, 'work-2');
+      assert.equal(saved.slot_2_next.work_id, 'work-urgent');
+      assert.match(readFileSync(path.join(dir, QUEUE.PROJECTION), 'utf-8'), /work-urgent/);
+      assert.match(readFileSync(path.join(dir, QUEUE.PROJECTION), 'utf-8'), /Generated from `rb_queue\.json`/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('saveQueue persists the canonical rb_queue.json shape and loadQueue restores engine shape', () => {
+    const dir = tempBundle();
+    try {
+      let queue = createQueue('canonical-file-test');
+      queue = enqueue(queue, item(1));
+
+      const savedQueue = saveQueue(dir, queue);
+      const persisted = JSON.parse(readFileSync(path.join(dir, 'rb_queue.json'), 'utf-8'));
+      assert.equal(savedQueue.active_window.slot_1_current.work_id, 'work-1');
+      assert.equal(QueueSchema.safeParse(persisted).success, true);
+      assert.equal(persisted.slot_1_current.work_id, 'work-1');
+      assert.equal(Object.hasOwn(persisted, 'active_window'), false);
+
+      const loaded = loadQueue(dir);
+      assert.equal(loaded.active_window.slot_1_current.work_id, 'work-1');
+      assert.equal(loaded.projection_path, QUEUE.PROJECTION);
     } finally {
       cleanup(dir);
     }

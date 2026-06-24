@@ -19,7 +19,7 @@ req: WTS-001, WTS-004, WTS-007
 
 # test-wave2-happy-path
 
-完整顺利路径：post-wave1 bundle → wave2 enqueue（1 synthesis + N backfill）→ claim → main-agent 执行 finding triage（scan matrix → classify → decision → 写三件套）→ complete → backfill → gate pass → verify。
+完整顺利路径：post-wave1 bundle → wave2 enqueue（1 synthesis + N backfill）→ claim → Phase Agent 执行 finding triage（scan matrix → classify → decision → 写三件套；`main-agent` 仅是 CLI actor wire value）→ complete → backfill → gate pass → verify。
 
 ## Phase 1: 创建 post-wave1 bundle
 

@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: workflow-chain
 case: complex
 weight: light
-case_goal: "验证 MD controller 处理三种错误路径（缺失依赖、循环依赖、malformed frontmatter）并恢复：每种错误 MD 独立发起 load → Engine 返回 error 且不加载文件 → MD 确认后继续下一个 → 最终 MD 加载合法 entry 成功。证明错误不污染 Engine。"
+case_goal: "验证 MD controller mode 处理三种错误路径（缺失依赖、循环依赖、malformed frontmatter）并恢复：每种错误由 Markdown control surface 独立发起 load → Engine 返回 error 且不加载文件 → Phase Agent 确认后继续下一个 → 最终加载合法 entry 成功。证明错误不污染 Engine。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -14,7 +14,7 @@ verdict: trace-jsonl
 
 ## Execution Contract
 
-MD 是 controller。每一步 MD 发起一个 load 指令 → Engine 执行并写 trace → MD 读 trace 裁决 → MD 决定下一步。
+Markdown control surface 承载 load 指令。每一步 Phase Agent 读取 MD 指令 → Engine 执行并写 trace → Phase Agent 读 trace 裁决并决定下一步。
 
 三个错误场景各自独立——MD 每次创建新 runtime、发一个 load、检查错误、记录结论。最后 MD 验证 Engine 仍可正常加载合法 entry。
 

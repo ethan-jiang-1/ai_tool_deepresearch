@@ -489,7 +489,7 @@ export function executeLoadPlan(plan, state, runtime, trace = null, logger = nul
  * Assess a Markdown node: resolve its dependency chain, load every node's
  * MD content in DAG order, write load state, and return the result.
  *
- * This is the main entry point for MD controllers. A single call:
+ * This is the main entry point for Phase Agents loading the Markdown control surface. A single call:
  *   1. Resolves the full dependency closure (DAG order)
  *   2. Loads every node's MD content in order (no code execution)
  *   3. Returns the final state, status, and the plan that ran

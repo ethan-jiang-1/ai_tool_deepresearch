@@ -161,7 +161,7 @@ cat > /tmp/wfq-task-claude-code-cli-tool.json << 'EOF'
   "work_id": "wave0-source-claude-code-cli-tool",
   "title": "Source intake: Claude Code CLI 工具",
   "targets": { "controller": "main-agent", "delegates": { "to": "sub-agent", "role_key": "dpt-source-intake", "timeout_ms": 600000 } },
-  "action": "搜索 Claude Code CLI 的 foundation reference。从 seed_topics/claude-code-cli-tool.md 的 search_guardrails 派生搜索关键词。使用 WebSearch + WebFetch 获取真实来源。写入 reference/claude-code-cli-tool/source.yaml（YAML 数组，每条含 url/title/retrieved_date/topic_tag）。搜索过程和中间结果写入 relay slot 目录（_cache/wave0/slot_MM/），sub-agent 只写自己的 slot 目录，main-agent 通过 relay 收集结果。",
+  "action": "搜索 Claude Code CLI 的 foundation reference。从 seed_topics/claude-code-cli-tool.md 的 search_guardrails 派生搜索关键词。使用 WebSearch + WebFetch 获取真实来源。写入 reference/claude-code-cli-tool/source.yaml（YAML 数组，每条含 url/title/retrieved_date/topic_tag）。搜索过程和中间结果写入 relay slot 目录（_cache/wave0/slot_MM/），sub-agent 只写自己的 slot 目录，Phase Agent 通过 relay 收集结果。",
   "producer_rule": "source_intake_fan_in",
   "lineage": {"topic_slug": "claude-code-cli-tool", "phase": "wave0"},
   "priority_class": "P5_new_reference_intake",
@@ -194,8 +194,8 @@ Agent 通过 `shared-subagent-protocol.md` §3 批量并行协议启动 sub-agen
 - 使用 curl/WebFetch 获取至少 1 条可信来源的完整页面
 - 提取 url/title/retrieved_date/topic_tag 写入 source.yaml
 - 搜索中间结果写入 relay slot 目录 `_cache/wave0/slot_MM/`
-- 返回结构化 JSON 给 main-agent → main-agent 调用 `ingestAgentReceipt` + `commitSlotResult` 验证
-- Main-agent 只读 result.json，不读 sub-agent 原始搜索 trail
+- 返回结构化 JSON 给 Phase Agent → Phase Agent 调用 `ingestAgentReceipt` + `commitSlotResult` 验证
+- Phase Agent 只读 result.json，不读 sub-agent 原始搜索 trail
 
 ```bash
 # Sub-agent 产出验证

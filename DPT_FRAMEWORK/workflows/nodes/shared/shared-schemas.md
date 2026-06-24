@@ -127,7 +127,7 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 | `affected_topics` | array | ≥2 for `cross_topic_emergent_question` |
 | `origin_refs` | array | Legacy question 来源；emergent 可为空但必须显式 `[]` |
 | `trigger_refs` | array | 触发 finding 的 evidence/question refs |
-| `search_required` | boolean | 是否需要 sub-agent search |
+| `search_required` | boolean | 是否需要 Sub-agent search |
 | `subagent_receipt_refs` | array | 搜索发生时的 relay/runtime receipt refs |
 | `appears_in_synthesis` | boolean | 是否已进入 narrative projection |
 | `hitl2_handoff` | boolean | 是否进入 HITL2 handoff |
@@ -142,7 +142,7 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 | **status** | `resolved` / `partial` / `open` / `deferred` |
 | **decision** | `use_existing_evidence` / `exploit_search` / `explore_search` / `defer_hitl2` / `requires_internal_data` / `record_only` |
 
-### Wave2 Sub-Agent Cache/Slot 路径
+### Wave2 Sub-agent Cache/Slot 路径
 
 - `_cache/wave2/slot_MM/` — 中间产物
 - `_subagents/wave_02/slot_MM/` — slot 目录 + runtime receipt
@@ -162,19 +162,19 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 
 - **`final/`**：Terminal delivery 目录（`gate: null`，无 gate CLI 检查）。Agent 从 verified bundle state 生成 final report artifact(s)，格式自由。Delivery 完成由 `final/` 下存在至少一份报告文件来证明。空目录不代表 delivery 完成。Post-delivery 反馈走 HITL2 `rerun` 路径。
 
-### Sub-Agent Protocol Nodes
+### Sub-agent Protocol Nodes
 
-每个使用 sub-agent 的 phase 有独立的 sub-agent 指令文件（main-agent 通过 `suggested_context` 加载）。共享 relay 基础设施由 `shared-subagent-protocol.md` 定义。
+每个使用 Sub-agent 的 phase 有独立的 Sub-agent 指令文件（Phase Agent 通过 `suggested_context` 加载）。共享 relay 基础设施由 `shared-subagent-protocol.md` 定义。
 
-- **`phases/phase-wave0-subagent.md`** — Wave0 sub-agent（role: `dpt-source-intake`）：foundation reference 搜索和 `source.yaml` 写入
-- **`phases/phase-wave1-subagent.md`** — Wave1 sub-agent（role: `dpt-evidence-extractor`）：topic-specific deepening、`evidence-summary.md` + `question-list.md` 成对产出
-- **`phases/phase-wave2-subagent.md`** — Wave2 sub-agent（role: `dpt-topic-scout`）：targeted gap-fill search，仅在 main-agent 对 finding 做 `decision=exploit_search|explore_search` 时 spawn。输入：finding description + keywords + output schema。输出：structured JSON（found_evidence, source_urls, fills_gap, confidence）
+- **`phases/phase-wave0-subagent.md`** — Wave0 Sub-agent（role: `dpt-source-intake`）：foundation reference 搜索和 `source.yaml` 写入
+- **`phases/phase-wave1-subagent.md`** — Wave1 Sub-agent（role: `dpt-evidence-extractor`）：topic-specific deepening、`evidence-summary.md` + `question-list.md` 成对产出
+- **`phases/phase-wave2-subagent.md`** — Wave2 Sub-agent（role: `dpt-topic-scout`）：targeted gap-fill search，仅在 Phase Agent 对 finding 做 `decision=exploit_search|explore_search` 时 spawn。输入：finding description + keywords + output schema。输出：structured JSON（found_evidence, source_urls, fills_gap, confidence）
 - **`shared/shared-subagent-protocol.md`** — 共享 relay 基础设施：slot 契约、目录 authority boundary、并发控制、禁区清单、页面抓取链
 
 ### Gate Contract
 
 - **Gate definition JSON**：`DPT_FRAMEWORK/schema/gate_definitions/gate-*.definition.json` — read-only deterministic rule definition
-- **Gate definition schema**：`DPT_FRAMEWORK/schema/contracts/gate.mjs` — `GATE_MACHINE_STATES`、`GATE_TRANSITIONS`、transition validation
+- **Gate transition-table contract**：`DPT_FRAMEWORK/schema/contracts/gate.mjs` — `GATE_MACHINE_STATES`、`GATE_TRANSITIONS`、transition validation
 - **Gate CLI**：`DPT_FRAMEWORK/cli/gates/check-gate-*.mjs` — 每个 gate 一个独立 CLI wrapper
 - **Gate helpers**：`DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs` — shared parse/load/validate/route/build/emit
 

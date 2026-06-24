@@ -6,9 +6,9 @@ Wave2 是最后一个尚未接入 queue 的 research phase。Wave0（source inta
 
 - 重写 `phase-wave2.md` §3：从自由文本升级为 queue-driven 三阶段（灌料→执行循环→收尾+gate）
 - 新增 `phase-wave2-subagent.md`：gap-fill 补搜 sub-agent 的行为指令（role: `dpt-topic-scout`，定向搜索填补 synthesis 发现的缺口）
-- **Synthesis 本体 1 个 task card**（`targets: {controller: main-agent}`，main-agent 执行综合判断）——queue 在 N=1 时仍提供 `file:` receipt 检查、done-condition pressure、trace 记录、repair 自动生成
-- **Per-topic backfill N 个 task card**（`targets: {controller: main-agent}`，替换 `__BACKFILL_WAVE2_JUDGMENT__` + `__BACKFILL_PENDING_QUESTIONS__` token）
-- **Gap-fill 补搜**不走 queue delegates（顺序依赖的判断链——先 synthesis 产出 gap list，再定向补搜），由 main-agent 直接 spawn sub-agent（`dpt-topic-scout`），搜索结果回写 synthesis
+- **Synthesis 本体 1 个 task card**（`targets: {controller: main-agent}`，Phase Agent 执行综合判断；`main-agent` 为当前 Queue schema wire value）——queue 在 N=1 时仍提供 `file:` receipt 检查、done-condition pressure、trace 记录、repair 自动生成
+- **Per-topic backfill N 个 task card**（`targets: {controller: main-agent}`，Phase Agent 执行 token 替换；`main-agent` 为当前 Queue schema wire value）
+- **Gap-fill 补搜**不走 queue delegates（顺序依赖的判断链——先 synthesis 产出 gap list，再定向补搜），由 Phase Agent 直接 spawn sub-agent（`dpt-topic-scout`），搜索结果回写 synthesis
 - **迭代 loop**：synthesis → 识别缺口 → spawn sub-agent 补搜 → 回写 synthesis → 直到无新缺口或达到迭代上限
 - 新增 producer_rule `cross_topic_synthesis`（synthesis 本体 task，`priority_class: P2_close_open_loop`）+ `seed_topic_backfill_wave2`（per-topic backfill task，`priority_class: P4_progressive_artifact_or_seed_backfill`）
 - Wave2 gate 适配：新增 3 个 `pattern_match` 规则（两个 backfill token 替换 `negate:true` 分别覆盖 `__BACKFILL_WAVE2_JUDGMENT__` 和 `__BACKFILL_PENDING_QUESTIONS__` + wave1 evidence 引用检查）
@@ -26,7 +26,7 @@ Wave2 是最后一个尚未接入 queue 的 research phase。Wave0（source inta
 
 ### New Capabilities
 
-- `wave2-synthesis`: Wave2 cross-topic synthesis via queue-driven iterative finding triage + targeted search loop。1 个 synthesis task card（main-agent 执行）+ N 个 per-topic backfill task card（从 ledger/index 投影，替换 `__BACKFILL_WAVE2_JUDGMENT__` + `__BACKFILL_PENDING_QUESTIONS__`）。
+- `wave2-synthesis`: Wave2 cross-topic synthesis via queue-driven iterative finding triage + targeted search loop。1 个 synthesis task card（Phase Agent 执行；当前 wire value 为 `targets.controller: "main-agent"`）+ N 个 per-topic backfill task card（从 ledger/index 投影，替换 `__BACKFILL_WAVE2_JUDGMENT__` + `__BACKFILL_PENDING_QUESTIONS__`）。
 
   **三件套 artifact group**：`synthesis.md`（narrative projection，人类阅读）+ `cross-topic-ledger.md`（Agent-readable dynamic ledger，6 个固定 section：Scan Matrix / Legacy Questions / Resolutions / Emergent Questions / Exploration Decisions / HITL2 Handoff）+ `finding-index.yaml`（JS-readable shadow index，11 个 required field per finding）。
 
@@ -40,7 +40,7 @@ Wave2 是最后一个尚未接入 queue 的 research phase。Wave0（source inta
 
 - `research-wave-phase-content`: RWP-003（wave2 phase body）从 foundation placeholder 升级为 queue-driven iterative synthesis——§3 改为三阶段模式，§3a backfill 改为 queue-driven，新增 finding triage + targeted search loop 指令。**Expected Artifacts 从单一 synthesis.md 扩展为三件套**（synthesis.md + cross-topic-ledger.md + finding-index.yaml），ledger 有 6 个固定 section，index 每 finding 有 11 个 required field。RWP-006（synthesis link 引用）扩展——除 Wave0/Wave1 artifact 外，narrative 需引用 finding id（W2F-xxx），gate 检查 ledger/index 存在性和完整性。
 - `agentic-queue`: 新增 producer_rule `cross_topic_synthesis`（synthesis 本体 task）和 `seed_topic_backfill_wave2`（wave2 per-topic backfill task）。Synthesis task receipt 从单文件扩展到三件套。
-- `research-wave-gate-implementation`: RWG-003（wave2 gate rule set）扩展——新增 backfill token 替换验证、wave1 evidence 引用完整性检查、**三件套 artifact 存在性检查**（ledger 文件存在 + section pattern + index YAML parse）。**新增 phase-internal feedback checkpoint 概念**（区别于 phase boundary gate），L0/L1 反馈用于 Agent 修复，L2 gate 用于 phase transition 裁决。
+- `research-wave-gate-implementation`: RWG-003（wave2 gate rule set）扩展——新增 backfill token 替换验证、wave1 evidence 引用完整性检查、**三件套 artifact 存在性检查**（ledger 文件存在 + section pattern + index YAML parse）。**新增 phase-internal feedback checkpoint 概念**（区别于 phase boundary gate），L0/L1 反馈用于 Phase Agent 修复，L2 gate 用于 phase transition 裁决。
 
 ## Impact
 

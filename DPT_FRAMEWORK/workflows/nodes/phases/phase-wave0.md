@@ -28,13 +28,13 @@ suggested_context:
 - `shared-profile.md`（research profile 和 root must-answer set）
 - `shared-schemas.md`（ReferenceMetadata schema 字段定义和 wave artifact 目录结构）
 - `DPT_FRAMEWORK/cli/operate-queue.mjs`（Agentic Queue CLI — 灌料、claim、complete 的入口）
-- `DPT_FRAMEWORK/engine/subagent-relay.mjs`（Subagent Relay Engine — slot 生命周期管理）
+- `DPT_FRAMEWORK/engine/subagent-relay.mjs`（Sub-agent Relay Engine — slot 生命周期管理）
 - `shared-subagent-protocol.md`（relay slot 通信契约、目录结构、并发控制、Forbidden Authority、抓取链）
-- 运行 Agent 有页面搜索工具（如 Claude Code `WebSearch` 或 Codex `web_search`）。页面内容抓取：如有内置工具（Claude Code `WebFetch`）则使用，否则走 `shared-subagent-protocol.md` 抓取链
+- 运行 Phase Agent 有页面搜索工具（如 Claude Code `WebSearch` 或 Codex `web_search`）。页面内容抓取：如有内置工具（Claude Code `WebFetch`）则使用，否则走 `shared-subagent-protocol.md` 抓取链
 
 ## 3. Allowed Actions — Queue-Driven 三阶段
 
-Wave0 使用 Agentic Queue 驱动 source intake。所有搜索/fetch 工作走 task card → claim → execute(sub-agent) → complete 循环。
+Wave0 使用 Agentic Queue 驱动 source intake。所有搜索/fetch 工作走 task card → claim → execute(Sub-agent) → complete 循环。
 
 ### 3.1 灌料 (Filling) — 首次进入 wave0
 
@@ -78,7 +78,7 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 ```
 确认 `queue_health: "ready"` 且 active_window 已填充。
 
-### 3.2 Batch Parallel Execution — 引用 Shared Subagent Protocol
+### 3.2 Batch Parallel Execution — 引用 Shared Sub-agent Protocol
 
 Wave0 的 claim→execute→complete 使用 relay 批量并行执行（灌料→stage→并行 spawn→collect-as-return→backfill→补位→merge→gate）。Sub-agent 的具体搜索和产出指令见 `phase-wave0-subagent.md`（via `suggested_context`）。Relay 基础设施（slot 契约、目录结构、并发控制、禁区清单）见 `shared-subagent-protocol.md`。
 
@@ -98,10 +98,10 @@ Wave0 的 claim→execute→complete 使用 relay 批量并行执行（灌料→
 
 - **不跳过 task**：只要 claim 返回了 task card（`item` 非 null），就必须执行并 complete，不得无故跳过
 - **不伪造产出**：每条 reference 必须来自 WebSearch + WebFetch 获取的真实页面。url 必须指向真实可访问页面，title 反映实际页面标题，retrieved_date 为真实检索日期
-- **网页内容抓取**：sub-agent 必须获取来源页面的真实内容。详见 `shared-subagent-protocol.md` Page Content Fetching Chain。摘要：内置工具（如 `WebFetch`）优先，用户显式开启浏览器也可用；没有则从 `curl` 开始 → `node -e "fetch(...)"` → `python3 -c "import urllib.request..."`（最后兜底）。不允许因缺工具或工具 blocked 就拿搜索摘要凑合。所有手段都失败才能报告"无法获取内容"
-- **complete 阻塞**：如果 complete 时 receipt check 失败（source.yaml 不存在或 schema 不对），engine 自动生成 repair task（`producer_rule: queue_repair`），Agent 必须修复而不是跳过。修复后重新 claim
-- **上下文隔离**：上下文隔离由 relay slot 契约在机制上强制（见 `shared-subagent-protocol.md` Communication Contract）。sub-agent 只收到 bounded 上下文（task.md + result.schema.json），返回的 JSON 被 `result.schema.json` 约束形状——大段搜索 trail 不在 schema 允许的字段里。main-agent 通过 `commitSlotResult()` 收集验证后的 `result.json`，**不读 sub-agent 的原始搜索输出**。如需抽查，去 `_cache/waveN/slot_MM/`（非 authority），但默认不读
-- **即时回填 seed topic（不可跳过）**：每个 topic 的 complete 成功后，**在 claim 下一个 task 之前**，必须立刻回填 `seed_topics/{topic.slug}.md`：`grep -n '__BACKFILL_WAVE0_EVIDENCE__'` 定位 token → **替换 token 行**为 ref 摘要列表（`- **ref-XX-NN**: ...`）。趁 sub-agent 搜索结果还 fresh 就写，不等 wave0 结束
+- **网页内容抓取**：Sub-agent 必须获取来源页面的真实内容。详见 `shared-subagent-protocol.md` Page Content Fetching Chain。摘要：内置工具（如 `WebFetch`）优先，用户显式开启浏览器也可用；没有则从 `curl` 开始 → `node -e "fetch(...)"` → `python3 -c "import urllib.request..."`（最后兜底）。不允许因缺工具或工具 blocked 就拿搜索摘要凑合。所有手段都失败才能报告"无法获取内容"
+- **complete 阻塞**：如果 complete 时 receipt check 失败（source.yaml 不存在或 schema 不对），engine 自动生成 repair task（`producer_rule: queue_repair`），Phase Agent 必须修复而不是跳过。修复后重新 claim
+- **上下文隔离**：上下文隔离由 relay slot 契约在机制上强制（见 `shared-subagent-protocol.md` Communication Contract）。Sub-agent 只收到 bounded 上下文（task.md + result.schema.json），返回的 JSON 被 `result.schema.json` 约束形状——大段搜索 trail 不在 schema 允许的字段里。Phase Agent 通过 `commitSlotResult()` 收集验证后的 `result.json`，**不读 Sub-agent 的原始搜索输出**。如需抽查，去 `_cache/waveN/slot_MM/`（非 authority），但默认不读
+- **即时回填 seed topic（不可跳过）**：每个 topic 的 complete 成功后，**在 claim 下一个 task 之前**，必须立刻回填 `seed_topics/{topic.slug}.md`：`grep -n '__BACKFILL_WAVE0_EVIDENCE__'` 定位 token → **替换 token 行**为 ref 摘要列表（`- **ref-XX-NN**: ...`）。趁 Sub-agent 搜索结果还 fresh 就写，不等 wave0 结束
 
 ### 3.3 Queue 空后 — 收尾与 Gate
 
@@ -158,7 +158,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --cur
 
 ## 8. Stop Behavior
 
-`stop: no` — Agent 自主搜集 foundation reference。若 registry 为空，报告并停止，不编造假 reference。
+`stop: no` — Phase Agent 自主搜集 foundation reference。若 registry 为空，报告并停止，不编造假 reference。
 
 ## 9. Anti-Cheating Rules
 

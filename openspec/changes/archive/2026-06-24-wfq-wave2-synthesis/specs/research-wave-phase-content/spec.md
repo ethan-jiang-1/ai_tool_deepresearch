@@ -6,7 +6,7 @@
 
 ### Requirement: Wave2 phase body completeness
 
-`phase-wave2.md` SHALL 包含完整的 9-section body，引导 Agent 通过 queue-driven 三阶段执行 cross-topic synthesis with iterative finding triage + targeted search loop。
+`phase-wave2.md` SHALL 包含完整的 9-section body，引导 Phase Agent 通过 queue-driven 三阶段执行 cross-topic synthesis with iterative finding triage + targeted search loop。
 
 Section 内容要求：
 - **Stage Goal**: 从所有 topic 的 wave1 evidence-summary 和 question-list 派生 cross-topic synthesis，通过 finding taxonomy（三类 finding + 六种 decision）+ targeted search loop 发现和填补证据缺口，最终从 ledger/index 投影回填 seed topic 文件。Wave2 是最后一个 research phase——产出不是 final report，而是经过 triage + search 的综合判断供 HITL2 人类审查
@@ -52,34 +52,34 @@ Section 内容要求：
 - **Gate Command**: `node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle <path> --current-node phases/phase-wave2.md`
 - **On Gate Pass**: 读取 `check.next`，advance to `hitl2`
 - **On Gate Fail**: 读取 `inspect` / `advice`，修复缺失的三件套 artifact、补写 ledger section、修正 index YAML、补写 Markdown link + finding id 引用、替换残留 token 或补写 trace 后 rerun
-- **Stop Behavior**: `stop: no` — Agent 自主执行 synthesis + finding triage + search，不做 stop-and-wait
+- **Stop Behavior**: `stop: no` — Phase Agent 自主执行 synthesis + finding triage + search，不做 stop-and-wait
 - **Anti-Cheating Rules**: 见下方 §9 完整列表（≥10 条 phase-specific 禁令，涵盖三件套、finding taxonomy、decision/receipt/orphan/backfill 规则）
 
-#### Scenario: Agent executes wave2 phase via queue-driven loop
+#### Scenario: Phase Agent executes wave2 phase via queue-driven loop
 
-- **WHEN** Agent 加载 `phase-wave2.md`
-- **THEN** §3 body SHALL 引导 Agent 进入 queue-driven 三阶段：灌料 → synthesis with finding triage + search → backfill → 收尾+gate
+- **WHEN** Phase Agent 加载 `phase-wave2.md`
+- **THEN** §3 body SHALL 引导 Phase Agent 进入 queue-driven 三阶段：灌料 → synthesis with finding triage + search → backfill → 收尾+gate
 - **AND** body SHALL 明确要求使用 `operate-queue` CLI 进行 claim/complete 循环
 - **AND** body SHALL NOT 使用自由文本 "Allowed Actions" 模式
 
 #### Scenario: Finding triage loop iterates within synthesis task
 
 - **WHEN** synthesis task 执行中
-- **THEN** Agent SHALL build scan matrix → classify findings into ledger/index → make decisions → JS feedback check → spawn sub-agents only for exploit/explore_search → JS feedback check → project synthesis → JS feedback check → backfill
+- **THEN** Phase Agent SHALL build scan matrix → classify findings into ledger/index → make decisions → JS feedback check → spawn sub-agents only for exploit/explore_search → JS feedback check → project synthesis → JS feedback check → backfill
 - **AND** loop SHALL terminate on convergence or max iterations
 - **AND** synthesis task SHALL NOT be completed until finding triage loop terminates
 
 #### Scenario: Backfill tasks execute after synthesis convergence
 
 - **WHEN** synthesis task complete 且 finding triage loop 已终止
-- **THEN** Agent SHALL claim backfill tasks sequentially
+- **THEN** Phase Agent SHALL claim backfill tasks sequentially
 - **AND** each backfill SHALL replace `__BACKFILL_WAVE2_JUDGMENT__` and `__BACKFILL_PENDING_QUESTIONS__` tokens
 - **AND** backfill content SHALL be projected from ledger/index, not directly from narrative
 - **AND** backfill SHALL preserve `source_layer: wave2_cross_topic`, finding id, decision, and status
 
 #### Scenario: Wave2 produces three artifacts, not one
 
-- **WHEN** Agent completes wave2 synthesis phase
+- **WHEN** Phase Agent completes wave2 synthesis phase
 - **THEN** `synthesis.md`, `cross-topic-ledger.md`, and `finding-index.yaml` SHALL all exist under `artifacts/wave2/`
 - **AND** ledger SHALL contain all 6 fixed sections with non-empty content
 - **AND** index SHALL parse as valid YAML with at minimum `version`, `source_layer`, `ledger`, `synthesis`, `scan`, and `findings` top-level keys
@@ -87,7 +87,7 @@ Section 内容要求：
 
 ### Requirement: Wave2 synthesis artifact references verified artifacts
 
-`phase-wave2.md` body SHALL 指示 Agent 在 synthesis 中使用 Markdown link `[label](relative/path.md)` 引用经过 `wave1-complete` 验证的 artifacts。引用 SHALL 使用相对于 `artifacts/wave2/` 的路径（如 `../wave1/<topic>/evidence-summary.md` 指向 Wave1 evidence、`../wave1/<topic>/question-list.md` 指向 Wave1 questions）。
+`phase-wave2.md` body SHALL 指示 Phase Agent 在 synthesis 中使用 Markdown link `[label](relative/path.md)` 引用经过 `wave1-complete` 验证的 artifacts。引用 SHALL 使用相对于 `artifacts/wave2/` 的路径（如 `../wave1/<topic>/evidence-summary.md` 指向 Wave1 evidence、`../wave1/<topic>/question-list.md` 指向 Wave1 questions）。
 
 Synthesis narrative SHALL 至少引用 1 个 wave1 `evidence-summary.md` 或 `question-list.md`，并 SHALL 引用 finding id（W2F-xxx）以保持从 narrative 到 ledger/index 的可追溯性。Synthesis MAY 同时引用 wave0 `source.yaml`，但不强制。
 
@@ -99,7 +99,7 @@ Synthesis narrative SHALL 至少引用 1 个 wave1 `evidence-summary.md` 或 `qu
 
 #### Scenario: Synthesis references both wave0 and wave1 artifacts
 
-- **WHEN** Agent writes synthesis.md
+- **WHEN** Phase Agent writes synthesis.md
 - **THEN** synthesis MAY contain links to both `../../reference/<topic>/source.yaml` and `../wave1/<topic>/evidence-summary.md`
 - **AND** at least 1 link SHALL point to a wave1 artifact
 
@@ -124,7 +124,7 @@ Wave2 phase-specific 禁令 SHALL 至少包含：
 
 #### Scenario: Wave2 phase has phase-specific anti-cheating rules
 
-- **WHEN** Agent 读取 wave2 的 Anti-Cheating Rules section
+- **WHEN** Phase Agent 读取 wave2 的 Anti-Cheating Rules section
 - **THEN** section SHALL 至少列出 10 条 phase-specific 禁令
 - **AND** 每条禁令 SHALL 指向正确替代动作
 
@@ -132,13 +132,11 @@ Wave2 phase-specific 禁令 SHALL 至少包含：
 
 ### Requirement: Wave2 gap-fill sub-agent phase file
 
-> req: RWP-008
-
 `phase-wave2-subagent.md` SHALL 定义 gap-fill sub-agent (`dpt-topic-scout`) 的完整行为指令，遵循 relay slot 通信契约（`shared-subagent-protocol.md`）。
 
 Sub-agent phase file SHALL 包含：
 - **Role**: `dpt-topic-scout` — targeted gap-fill search
-- **Receives**: Bounded gap description + search keywords + target output schema from main-agent
+- **Receives**: Bounded gap description + search keywords + target output schema from Phase Agent
 - **Produces**: Structured JSON matching result schema (found_evidence, source_urls, fills_gap, confidence)
 - **Writes**: Intermediate products to `_cache/wave2/slot_MM/`, runtime receipt to slot directory
 - **Forbidden**: Writing to WorkflowState, modifying queue, passing/failing gate, making cross-topic claims

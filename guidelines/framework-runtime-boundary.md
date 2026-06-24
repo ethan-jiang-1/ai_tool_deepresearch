@@ -13,8 +13,10 @@ defers_to:
 siblings:
   - guidelines/project-charter.md
   - guidelines/command-experiments.md
+  - guidelines/agentic-execution-model.md
   - guidelines/agentic-queue-mechanism.md
   - guidelines/agentic-workflow-mechanism.md
+  - guidelines/agentic-subagent-mechanism.md
 ---
 
 # Framework Runtime Boundary
@@ -90,7 +92,7 @@ DPT_FRAMEWORK/
 
   schema/
     contracts/
-      gate-definition.mjs
+      gate.mjs
     gate_definitions/
       gate-*.definition.json
 
@@ -166,7 +168,7 @@ Runtime ownership:
 | `rb_plan.md` | This run's plan and topic registry. |
 | `rb_profile.yaml` | HITL1/HITL2 user input, research profile, decisions, and configurable retry/profile data. |
 | `rb_status.json` | Current workflow/phase/gate status summary for this run. |
-| `rb_queue.json` | Runtime queue state for this run. |
+| `rb_queue.json` | Runtime queue state for this run; canonical queue authority validated by setup and bundle gates. |
 | `rb_trace.jsonl` | Append-only event history and audit trail for this run. |
 | `seed_topics/` | Initial topic / seed-topic instance data. |
 | `reference/` | Reference artifacts and metadata for this run. |
@@ -184,7 +186,7 @@ Gate files have three different meanings and must not be mixed:
 
 | Concern | Location | Mutability | Meaning |
 |---------|----------|------------|---------|
-| Gate definition schema target | `DPT_FRAMEWORK/schema/contracts/gate-definition.mjs` | read-only | Defines the shape of gate definition JSON. |
+| Gate transition-table contract | `DPT_FRAMEWORK/schema/contracts/gate.mjs` | read-only | Defines gate machine states, events, transitions, and transition validation. |
 | Gate definition target | `DPT_FRAMEWORK/schema/gate_definitions/gate-*.definition.json` | read-only | Defines what a gate checks. |
 | Gate engine target | `DPT_FRAMEWORK/engine/gates/` | read-only | Loads/evaluates definitions against a bundle. |
 | Gate CLI wrapper target | `DPT_FRAMEWORK/cli/gates/check-gate-*.mjs` | read-only | Runs one gate against an explicit bundle. |
@@ -210,7 +212,9 @@ Gate CLI commands MUST NOT infer active run state from chat memory or write resu
 
 Markdown（playbook、task card、node）是 Agent Flow 的编织者。它告诉 Agent 该做什么，读取 JS/CLI 的反馈，根据反馈决定下一步行动（advance、repair、escalate、block）。JS/CLI 只在关键节点执行确定性检查并返回结构化反馈；它不编排多阶段流程，不替 Agent 做判断。
 
-完整的运行时循环机制（谁驱动、谁路由、谁验证、三层架构）见 `guidelines/agentic-workflow-mechanism.md`。
+术语上，这里的 "controller" 指 **Markdown control surface / controller role**：Markdown 承载流程、约束和反馈入口。它不是一个 Agent 身份；执行 phase-level Markdown、调用 Engine 并做运行时判断的是 **Phase Agent**，其使用的模式在术语正典中称为 **MD controller mode**。
+
+完整的运行时循环机制（谁驱动、谁路由、谁验证、三层权威架构）见 `guidelines/agentic-workflow-mechanism.md`。
 
 - **MUST**：多阶段 Agent Flow 保持在 Markdown/playbook 中，JS/CLI 只做确定性 checkpoint。
 - **MUST NOT**：将 Agent Flow 藏入 JS controller。JS 控制的是校验节点，不是整条流程。
@@ -234,9 +238,9 @@ Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结�
 
 这层封装：
 
-- **MD Controller 不再背路由**——Playbook 不需要手动查 manifest、拼 `--next` flag、喂给 gate。Gate 自己以 `--current-node` 驱动，问 transition table，回答直接带回 `check.next` 和详细 `routing`。Playbook 读这个值加载下一 node。
+- **Phase Agent 不再背路由**——Playbook 不需要手动查 manifest、拼 `--next` flag、喂给 gate。Gate 自己以 `--current-node` 驱动，问 transition table，回答直接带回 `check.next` 和详细 `routing`。Playbook 读这个值加载下一 node。
 - **Transition table 只管 Node 间的转移**——给定 (currentNodeRef, outcome)，回答 routing result (next / terminal / no_transition / invalid_input / config_error)。其他一概不管。
-- **"不知道"是合法回答**——transition table 返回 `no_transition` 时，Gate 诚实告诉 MD controller。Controller 决定怎么办。
+- **"不知道"是合法回答**——transition table 返回 `no_transition` 时，Gate 诚实告诉 Phase Agent。Phase Agent 决定怎么办。
 - **Routing identity 是 node fileRef**——例如 `phases/phase-wave0.md`，而不是 gate key、phase key 或 frontmatter `id`。
 
 - Gate CLI 输出 SHALL 包含：`check`（passed/failed + currentNodeRef + next）、`routing`（详细路由结果）、`inspect`（诊断）、`advice`（修复方向）。
@@ -291,7 +295,7 @@ Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结�
 | Agent-facing shared workflow context target | `DPT_FRAMEWORK/workflows/nodes/shared/` |
 | Workflow manifest target | `DPT_FRAMEWORK/workflows/manifest.json` |
 | Operator/Agent command instructions | `DPT_FRAMEWORK/command_playbook/` |
-| Gate definition schema target | `DPT_FRAMEWORK/schema/contracts/gate-definition.mjs` |
+| Gate transition-table contract target | `DPT_FRAMEWORK/schema/contracts/gate.mjs` |
 | Gate rule definition target | `DPT_FRAMEWORK/schema/gate_definitions/gate-*.definition.json` |
 | Gate evaluator/loader code target | `DPT_FRAMEWORK/engine/gates/` |
 | Gate shared helper code target | `DPT_FRAMEWORK/engine/helpers/` |
@@ -302,3 +306,15 @@ Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结�
 | Current run trace/audit history | `dpt_rb_*/rb_trace.jsonl` |
 | Current run artifacts | `dpt_rb_*/artifacts/` or `dpt_rb_*/final/` |
 | Rebuildable projection/cache | `dpt_rb_*/_cache/` |
+
+---
+
+## Related Guidance
+
+- [Guidelines Index](README.md) — guidance suite index and reading order.
+- [Project Charter](project-charter.md) — repo-wide charter and authority map.
+- [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; defines the three-tier execution system.
+- [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — outer loop (Chain) that phase routing depends on.
+- [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Tier 2 (Queue) for within-phase task execution.
+- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — Tier 3 (Relay) for within-task sub-agent dispatch.
+- [Command Experiments](command-experiments.md) — how to prove mechanisms with real runtime contexts.

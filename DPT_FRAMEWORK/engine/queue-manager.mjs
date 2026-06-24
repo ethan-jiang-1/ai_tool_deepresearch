@@ -18,7 +18,7 @@
 // Only slot_1 may have status 'running'. Pending slots and pool items
 // are preview-only and must be 'queued'.
 //
-// ## Lifecycle (MD Controller reads and acts on each step)
+// ## Lifecycle (Phase Agent reads and acts on each step)
 // ```
 // createQueue(id)         → fresh empty queue
 //   ↓
@@ -75,7 +75,7 @@ function traceEntry(event, detail) {
 // Internal: constants, schemas, helpers
 // ============================================================
 
-import { QueueWorkUnitSchema } from '../schema/contracts/queue.mjs';
+import { QueueSchema, QueueWorkUnitSchema } from '../schema/contracts/queue.mjs';
 
 // Backward-compatible alias — the authoritative definition lives in
 // schema/contracts/queue.mjs as QueueWorkUnitSchema.
@@ -83,7 +83,7 @@ export const QueueItemSchema = QueueWorkUnitSchema;
 
 /** Contract file names. Use these instead of hardcoding paths. */
 export const QUEUE = {
-  FILE:       'rb_queue.agq.json',
+  FILE:       'rb_queue.json',
   PROJECTION: '_cache/agentic-queue/current-task.md',
   TRACE:      '_trace_agq_cli.jsonl',
 };
@@ -157,6 +157,36 @@ function bundlePath(bundleDir, relativePath) {
 }
 
 function queuePath(bundleDir) { return path.join(bundleDir, QUEUE.FILE); }
+
+function queueStateFromFile(raw, { queueId = 'agentic-queue' } = {}) {
+  const parsed = QueueSchema.parse(raw);
+  const ts = now();
+  return validateQueue({
+    queue_id: queueId,
+    queue_health: parsed.queue_health,
+    stop_authorization_state: parsed.stop_authorization_state,
+    active_window: Object.fromEntries(SLOT_NAMES.map((slot) => [slot, parsed[slot] ?? null])),
+    refill_pool: parsed.refill_pool,
+    projection_path: QUEUE.PROJECTION,
+    trace_path: QUEUE.TRACE,
+    created_at: ts,
+    updated_at: ts,
+  });
+}
+
+function canonicalQueueFileShape(queue) {
+  const q = validateQueue(queue);
+  return QueueSchema.parse({
+    queue_health: q.queue_health,
+    stop_authorization_state: q.stop_authorization_state,
+    slot_1_current: q.active_window.slot_1_current,
+    slot_2_next: q.active_window.slot_2_next,
+    slot_3_pending: q.active_window.slot_3_pending,
+    slot_4_pending: q.active_window.slot_4_pending,
+    slot_5_tail: q.active_window.slot_5_tail,
+    refill_pool: q.refill_pool,
+  });
+}
 
 // ============================================================
 // Internal: validation
@@ -338,7 +368,7 @@ export function createQueue(queueId = 'agentic-queue') {
 
 /**
  * Load queue from a bundle directory. Auto-creates an empty queue if the
- * file doesn't exist yet.
+ * file doesn't exist yet. `rb_queue.json` is the only queue state file.
  *
  * @param {string} bundleDir — path to the DPT run bundle
  * @returns {object} QueueState — parsed and validated
@@ -351,7 +381,7 @@ export function loadQueue(bundleDir) {
     traceEntry('queue_loaded', { source: 'agq-load', existed: false, queue_id: queue.queue_id });
     return queue;
   }
-  const queue = QueueStateSchema.parse(JSON.parse(readFileSync(file, 'utf-8')));
+  const queue = queueStateFromFile(JSON.parse(readFileSync(file, 'utf-8')), { queueId: path.basename(bundleDir) });
   traceEntry('queue_loaded', { source: 'agq-load', existed: true, queue_id: queue.queue_id });
   return queue;
 }
@@ -366,8 +396,9 @@ export function loadQueue(bundleDir) {
 export function saveQueue(bundleDir, queue) {
   ensureTrace(bundleDir);
   const parsed = validateQueue(queue);
+  const persisted = canonicalQueueFileShape(parsed);
   mkdirSync(bundleDir, { recursive: true });
-  writeFileSync(queuePath(bundleDir), `${JSON.stringify(parsed, null, 2)}\n`);
+  writeFileSync(queuePath(bundleDir), `${JSON.stringify(persisted, null, 2)}\n`);
   traceEntry('check', { source: 'agq-save', step: 'save', passed: true, queue_id: parsed.queue_id });
   return parsed;
 }
@@ -578,7 +609,7 @@ export function render(queue, bundleDir = process.cwd()) {
   const q = validateQueue(queue);
   const outputPath = bundlePath(bundleDir, q.projection_path);
   mkdirSync(path.dirname(outputPath), { recursive: true });
-  const lines = ['# Agentic Queue Projection', '', '> Generated from `rb_queue.agq.json`. Do not edit this projection as queue authority.', '', `- queue_id: \`${q.queue_id}\``, `- queue_health: \`${q.queue_health}\``, `- stop_authorization_state: \`${q.stop_authorization_state}\``, '', '## Active Window', ''];
+  const lines = ['# Agentic Queue Projection', '', '> Generated from `rb_queue.json`. Do not edit this projection as queue authority.', '', `- queue_id: \`${q.queue_id}\``, `- queue_health: \`${q.queue_health}\``, `- stop_authorization_state: \`${q.stop_authorization_state}\``, '', '## Active Window', ''];
   for (const slot of SLOT_NAMES) {
     const item = q.active_window[slot];
     lines.push(`### ${slot}`);

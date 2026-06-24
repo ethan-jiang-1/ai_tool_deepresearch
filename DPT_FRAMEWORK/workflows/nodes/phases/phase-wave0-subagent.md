@@ -9,16 +9,16 @@ requires:
 suggested_context: []
 ---
 
-# Wave0 Sub-Agent: Foundation Reference Intake
+# Wave0 Sub-agent: Foundation Reference Intake
 
 **Role:** `dpt-source-intake`
-**Phase:** wave0 (loaded by main-agent as `suggested_context` of `phase-wave0.md`)
+**Phase:** wave0 (loaded by Phase Agent as `suggested_context` of `phase-wave0.md`)
 
 ## Purpose
 
-Define what the wave0 sub-agent searches for, produces, and must never do. Main-agent reads this file to construct the sub-agent's bounded task (`task.md`). Sub-agent receives only its relay slot files — it does not see this node.
+Define what the wave0 Sub-agent searches for, produces, and must never do. Phase Agent reads this file to construct the Sub-agent's bounded task (`task.md`). Sub-agent receives only its relay slot files — it does not see this node.
 
-The shared relay contract (`shared-subagent-protocol.md`) defines the communication mechanism (slot files, runtime-receipt.jsonl, result.schema.json). This file defines **what the sub-agent does within that contract**.
+The shared relay contract (`shared-subagent-protocol.md`) defines the communication mechanism (slot files, runtime-receipt.jsonl, result.schema.json). This file defines **what the Sub-agent does within that contract**.
 
 ## 1. Search Focus — Foundation Reference
 
@@ -40,7 +40,7 @@ Wave0 does **foundation reference collection** — not deep research, not claim 
 
 ## 2. Artifact — `reference/{topic.slug}/source.yaml`
 
-The sub-agent writes ONE file per topic:
+The Sub-agent writes ONE file per topic:
 
 ```yaml
 - url: "https://..."
@@ -50,7 +50,7 @@ The sub-agent writes ONE file per topic:
   notes: "Brief note about what this source provides (optional)"
 ```
 
-**Schema:** `ReferenceMetadata` (defined in `shared-schemas.md`; Zod contract at `DPT_FRAMEWORK/schema/contracts/reference.mjs`). The sub-agent writes valid YAML; the main-agent validates it via receipt check (`complete()` → `checkReceipts()` → `file:` prefix). `commitSlotResult()` validates the sub-agent's returned JSON against the slot's `result.schema.json` (SlotResult schema), not against `ReferenceMetadata`.
+**Schema:** `ReferenceMetadata` (defined in `shared-schemas.md`; Zod contract at `DPT_FRAMEWORK/schema/contracts/reference.mjs`). The Sub-agent writes valid YAML; the Phase Agent validates it via receipt check (`complete()` → `checkReceipts()` → `file:` prefix). `commitSlotResult()` validates the Sub-agent's returned JSON against the slot's `result.schema.json` (SlotResult schema), not against `ReferenceMetadata`.
 
 **Requirements:**
 - `url` — non-empty, points to a real accessible page
@@ -61,11 +61,11 @@ The sub-agent writes ONE file per topic:
 
 ## 3. Execution Within Relay Slot
 
-The sub-agent operates within a relay-assigned slot directory (`_subagents/wave_NN/slot_MM/`). It receives two files:
+The Sub-agent operates within a relay-assigned slot directory (`_subagents/wave_NN/slot_MM/`). It receives two files:
 - `task.md` — the natural-language task (from the queue task card's `action` field)
 - `result.schema.json` — the JSON schema the return value must satisfy
 
-**What the sub-agent does:**
+**What the Sub-agent does:**
 1. Write `agent_runtime_started` event to `runtime-receipt.jsonl` (BEFORE doing any work)
 2. Read `task.md` to understand the topic and search parameters
 3. Use WebSearch to find relevant sources (respect search_guardrails from seed topic)
@@ -73,7 +73,7 @@ The sub-agent operates within a relay-assigned slot directory (`_subagents/wave_
 5. Extract structured metadata: url, title, retrieval date, topic tag, optional notes
 6. Write `reference/{topic.slug}/source.yaml`
 7. Write `agent_result_ready` event to `runtime-receipt.jsonl` (IMMEDIATELY before returning)
-8. Return JSON matching `result.schema.json` to the main-agent
+8. Return JSON matching `result.schema.json` to the Phase Agent
 
 **Intermediate products:** Raw WebSearch output, fetched page content, extraction drafts go to `_cache/waveN/slot_MM/` — these are non-authority, reconstructable.
 
@@ -88,20 +88,20 @@ See `shared-subagent-protocol.md` for the full chain. Summary for wave0:
 ## 5. Anti-Cheating Rules (Wave0-Specific)
 
 - **No fabricated URLs or titles:** Every reference must come from real WebSearch + page-fetching
-- **No search-snippet-as-content:** The sub-agent must attempt actual page-fetching. Search result snippets are not a substitute for page content
+- **No search-snippet-as-content:** The Sub-agent must attempt actual page-fetching. Search result snippets are not a substitute for page content
 - **No skipping the degradation chain:** Must try ALL tiers before recording an access failure
 - **No cross-topic synthesis:** Wave0 collects references — it does not compare topics, draw conclusions, or make judgments
 - **No claiming completeness:** "Foundation reference" does not mean "comprehensive coverage"
 - **Must self-prove:** `runtime-receipt.jsonl` must contain both `agent_runtime_started` and `agent_result_ready` events
 
-See `shared-subagent-protocol.md` Forbidden Authority section for universal sub-agent prohibitions (no WorkflowState mutation, no gate pass/fail, no queue modification, no stop authorization).
+See `shared-subagent-protocol.md` Forbidden Authority section for universal Sub-agent prohibitions (no WorkflowState mutation, no gate pass/fail, no queue modification, no stop authorization).
 
-## 6. Relationship to Main-Agent
+## 6. Relationship to Phase Agent
 
-**Main-agent (phase-wave0.md) does:**
+**Phase Agent (phase-wave0.md) does:**
 - Enqueue task cards
 - Read queue → map to SlotConfig → stage slots via relay
-- Spawn sub-agent
+- Spawn Sub-agent
 - Collect via `ingestAgentReceipt()` + `commitSlotResult()`
 - Verify artifact against `done_condition`
 - Complete queue task
@@ -110,7 +110,7 @@ See `shared-subagent-protocol.md` Forbidden Authority section for universal sub-
 
 **Sub-agent (this file) does:**
 - Search + fetch + extract + write artifact
-- Return bounded JSON to main-agent
+- Return bounded JSON to Phase Agent
 - Stay within relay slot directory
 
-The sub-agent NEVER sees the WorkflowState, gate, queue, other topics, or the main-agent's backfill work.
+The Sub-agent NEVER sees the WorkflowState, gate, queue, other topics, or the Phase Agent's backfill work.

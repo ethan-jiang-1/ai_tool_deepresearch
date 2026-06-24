@@ -61,7 +61,7 @@ The ProfileSchema SHALL replace hardcoded `z.literal('recorded')` and `z.literal
 
 #### Scenario: QueueWorkUnitSchema validates a complete task card
 
-- **WHEN** a queue item with all required fields (`work_id`, `title`, `target`, `action`, `producer_rule`, `required_receipts`, `completion_receipt`, `status`) is validated
+- **WHEN** a queue item with all required fields (`work_id`, `title`, `targets`, `action`, `producer_rule`, `required_receipts`, `completion_receipt`, `status`) is validated
 - **THEN** it SHALL pass Zod validation
 
 #### Scenario: QueueWorkUnitSchema rejects missing required fields
@@ -105,4 +105,3 @@ All schema files SHALL be valid JavaScript (.mjs) that `node` can import directl
 #### Scenario: node imports schema
 - **WHEN** `node -e "import('./DPT_FRAMEWORK/schema/index.mjs')"` is run
 - **THEN** it succeeds without errors
-

@@ -10,71 +10,71 @@ Define wave2 cross-topic synthesis via queue-driven iterative finding triage + t
 
 ### Requirement: Wave2 phase uses queue-driven three-stage execution
 
-`phase-wave2.md` SHALL guide the Agent through queue-driven three-stage execution: filling (灌料), execution loop, and closeout+gate.
+`phase-wave2.md` SHALL guide the Phase Agent through queue-driven three-stage execution: filling (灌料), execution loop, and closeout+gate.
 
 §3 Allowed Actions SHALL be structured as:
 - **§3.1 Filling**: On first entry (queue empty), create 1 synthesis task card + N per-topic backfill task cards, enqueue all
 - **§3.2 Execution Loop**: Claim → execute → complete cycle. Synthesis task executes first (with embedded finding triage + targeted search loop), then backfill tasks
 - **§3.3 Closeout + Gate**: Verify all artifacts, run gate CLI, pass → chain to next phase
 
-The synthesis task card SHALL use `targets: {controller: main-agent}` and `producer_rule: cross_topic_synthesis`. Backfill task cards SHALL use `targets: {controller: main-agent}` and `producer_rule: seed_topic_backfill_wave2`.
+The synthesis task card SHALL use `targets: {controller: main-agent}` and `producer_rule: cross_topic_synthesis`. Backfill task cards SHALL use `targets: {controller: main-agent}` and `producer_rule: seed_topic_backfill_wave2`. Here `main-agent` is the current Queue schema wire value for Phase Agent execution, not the conceptual actor term.
 
-#### Scenario: Agent enters wave2 with empty queue
+#### Scenario: Phase Agent enters wave2 with empty queue
 
-- **WHEN** Agent loads `phase-wave2.md` and queue is empty
-- **THEN** Agent SHALL create 1 synthesis task card + N backfill task cards (one per topic in topic_registry)
-- **AND** Agent SHALL enqueue all task cards before beginning execution
+- **WHEN** Phase Agent loads `phase-wave2.md` and queue is empty
+- **THEN** Phase Agent SHALL create 1 synthesis task card + N backfill task cards (one per topic in topic_registry)
+- **AND** Phase Agent SHALL enqueue all task cards before beginning execution
 
 #### Scenario: Synthesis task executes with finding triage loop
 
-- **WHEN** Agent claims the synthesis task card
-- **THEN** Agent SHALL read all topic evidence-summary and question-list from wave1 artifacts
-- **AND** Agent SHALL build cross-topic scan matrix and inventory findings into ledger/index
-- **AND** Agent SHALL classify each finding and assign exploration/exploitation decision
-- **AND** Agent SHALL spawn gap-fill sub-agents only for findings with decision exploit_search/explore_search
-- **AND** Agent SHALL iterate until no new findings or max iteration reached
-- **AND** Agent SHALL write synthesis.md as narrative projection referencing W2F-xxx finding ids
-- **AND** Agent SHALL complete the synthesis task with `file:` receipt verification for `artifacts/wave2/synthesis.md`, `artifacts/wave2/cross-topic-ledger.md`, and `artifacts/wave2/finding-index.yaml`
+- **WHEN** Phase Agent claims the synthesis task card
+- **THEN** Phase Agent SHALL read all topic evidence-summary and question-list from wave1 artifacts
+- **AND** Phase Agent SHALL build cross-topic scan matrix and inventory findings into ledger/index
+- **AND** Phase Agent SHALL classify each finding and assign exploration/exploitation decision
+- **AND** Phase Agent SHALL spawn gap-fill sub-agents only for findings with decision exploit_search/explore_search
+- **AND** Phase Agent SHALL iterate until no new findings or max iteration reached
+- **AND** Phase Agent SHALL write synthesis.md as narrative projection referencing W2F-xxx finding ids
+- **AND** Phase Agent SHALL complete the synthesis task with `file:` receipt verification for `artifacts/wave2/synthesis.md`, `artifacts/wave2/cross-topic-ledger.md`, and `artifacts/wave2/finding-index.yaml`
 
 #### Scenario: Backfill tasks execute after synthesis completes
 
 - **WHEN** synthesis task is complete and finding triage loop has converged
-- **THEN** Agent SHALL claim backfill tasks in order
-- **AND** for each backfill task, Agent SHALL replace `__BACKFILL_WAVE2_JUDGMENT__` and `__BACKFILL_PENDING_QUESTIONS__` tokens in the corresponding seed topic file
-- **AND** Agent SHALL complete each backfill task after replacing the token line; deterministic token absence is verified by the wave2 gate
+- **THEN** Phase Agent SHALL claim backfill tasks in order
+- **AND** for each backfill task, Phase Agent SHALL replace `__BACKFILL_WAVE2_JUDGMENT__` and `__BACKFILL_PENDING_QUESTIONS__` tokens in the corresponding seed topic file
+- **AND** Phase Agent SHALL complete each backfill task after replacing the token line; deterministic token absence is verified by the wave2 gate
 
 ### Requirement: Gap-fill sub-agent dispatch for targeted evidence search
 
-During synthesis, after the main-agent has classified a finding and assigned decision `exploit_search` or `explore_search`, the main-agent SHALL directly spawn a sub-agent with role `dpt-topic-scout` to perform targeted search. The main-agent SHALL NOT spawn sub-agents for findings with decision `use_existing_evidence`, `defer_hitl2`, `requires_internal_data`, or `record_only`.
+During synthesis, after the Phase Agent has classified a finding and assigned decision `exploit_search` or `explore_search`, the Phase Agent SHALL directly spawn a sub-agent with role `dpt-topic-scout` to perform targeted search. The Phase Agent SHALL NOT spawn sub-agents for findings with decision `use_existing_evidence`, `defer_hitl2`, `requires_internal_data`, or `record_only`.
 
 The gap-fill sub-agent SHALL:
 - Receive a bounded task description with the specific finding to search for
 - Use WebSearch + WebFetch to find targeted evidence
 - Return structured JSON result (found_evidence, source_urls, fills_gap, confidence)
 - NOT write to WorkflowState, queue, or gate artifacts
-- NOT make cross-topic synthesis judgments（that is main-agent work）
+- NOT make cross-topic synthesis judgments（that is Phase Agent work）
 - Follow the relay slot directory structure (`_subagents/wave_02/slot_MM/`)
 
 Gap-fill dispatch SHALL NOT go through queue delegates — findings are identified sequentially during synthesis and cannot be pre-enumerated at filling time.
 
-#### Scenario: Main-agent identifies gap and spawns sub-agent
+#### Scenario: Phase Agent identifies gap and spawns sub-agent
 
-- **WHEN** during synthesis, main-agent finds that a cross-topic claim lacks independent verification
-- **THEN** main-agent SHALL spawn a `dpt-topic-scout` sub-agent with a bounded task description targeting that specific gap
+- **WHEN** during synthesis, Phase Agent finds that a cross-topic claim lacks independent verification
+- **THEN** Phase Agent SHALL spawn a `dpt-topic-scout` sub-agent with a bounded task description targeting that specific gap
 - **AND** sub-agent SHALL search and return structured evidence
-- **AND** main-agent SHALL incorporate verified findings into synthesis.md
+- **AND** Phase Agent SHALL incorporate verified findings into synthesis.md
 
 #### Scenario: No gaps found — synthesis converges in one round
 
-- **WHEN** main-agent drafts synthesis.md and identifies no evidence gaps
-- **THEN** main-agent SHALL complete synthesis without spawning any gap-fill sub-agents
+- **WHEN** Phase Agent drafts synthesis.md and identifies no evidence gaps
+- **THEN** Phase Agent SHALL complete synthesis without spawning any gap-fill sub-agents
 - **AND** synthesis.md SHALL be the final version
 
 #### Scenario: Gap-fill sub-agent returns no useful evidence
 
 - **WHEN** gap-fill sub-agent searches but finds no verifiable evidence for the gap
 - **THEN** sub-agent SHALL record the search attempt and honest failure
-- **AND** main-agent SHALL note the unresolved gap in synthesis.md under "Unresolved Cross-Topic Questions"
+- **AND** Phase Agent SHALL note the unresolved gap in synthesis.md under "Unresolved Cross-Topic Questions"
 
 ### Requirement: Iterative finding triage + targeted search loop with convergence criteria
 
@@ -152,14 +152,14 @@ Synthesis SHALL NOT claim to be a complete research conclusion (HITL2 and readin
 
 #### Scenario: Three artifacts exist and are structurally complete
 
-- **WHEN** Agent completes the synthesis task
+- **WHEN** Phase Agent completes the synthesis task
 - **THEN** `synthesis.md`, `cross-topic-ledger.md`, and `finding-index.yaml` SHALL all exist and be non-empty
 - **AND** `cross-topic-ledger.md` SHALL contain all 6 fixed sections
 - **AND** `finding-index.yaml` SHALL parse as valid YAML with top-level keys `version`, `source_layer`, `ledger`, `synthesis`, `scan`, `findings`
 
 #### Scenario: Synthesis narrative references finding ids
 
-- **WHEN** Agent writes `synthesis.md`
+- **WHEN** Phase Agent writes `synthesis.md`
 - **THEN** narrative SHALL reference finding ids (W2F-xxx) for key cross-topic claims
 - **AND** at least 1 Markdown link SHALL reference a wave1 `evidence-summary.md` or `question-list.md`
 
@@ -172,14 +172,14 @@ Synthesis SHALL NOT claim to be a complete research conclusion (HITL2 and readin
 
 #### Scenario: Ledger scan matrix records checked pairs
 
-- **WHEN** Agent scans cross-topic relationships
+- **WHEN** Phase Agent scans cross-topic relationships
 - **THEN** ledger scan matrix SHALL record which topic pairs were checked
 - **AND** each row SHALL list checked dimensions (shared_pattern, contradiction, resolution_opportunity, emergent_question) and resulting finding_ids (or "none")
 - **AND** scan matrix SHALL exist even when no findings emerged from a pair
 
 ### Requirement: Per-topic backfill via queue task cards
 
-After synthesis completes, the Agent SHALL execute per-topic backfill task cards to replace backfill tokens in seed topic files.
+After synthesis completes, the Phase Agent SHALL execute per-topic backfill task cards to replace backfill tokens in seed topic files.
 
 Each backfill task card SHALL:
 - Target one topic from `topic_registry`
@@ -192,16 +192,16 @@ Backfill execution SHALL use the standard claim→execute→complete queue loop.
 
 #### Scenario: Backfill replaces judgment token
 
-- **WHEN** Agent executes backfill task for topic X
-- **THEN** Agent SHALL grep for `__BACKFILL_WAVE2_JUDGMENT__` in `seed_topics/X.md`
-- **AND** Agent SHALL replace the token line with cross-topic judgment paragraphs relevant to topic X
+- **WHEN** Phase Agent executes backfill task for topic X
+- **THEN** Phase Agent SHALL grep for `__BACKFILL_WAVE2_JUDGMENT__` in `seed_topics/X.md`
+- **AND** Phase Agent SHALL replace the token line with cross-topic judgment paragraphs relevant to topic X
 - **AND** the replacement content SHALL be projected from Wave2 ledger/index（filtering findings where `affected_topics` includes topic X）, NOT directly excerpted from synthesis.md narrative
 
 #### Scenario: Backfill updates question status tokens
 
-- **WHEN** Agent executes backfill task for topic X
-- **THEN** Agent SHALL grep for `__BACKFILL_PENDING_QUESTIONS__` in `seed_topics/X.md`
-- **AND** Agent SHALL update question status labels based on finding status/decision in Wave2 ledger/index
+- **WHEN** Phase Agent executes backfill task for topic X
+- **THEN** Phase Agent SHALL grep for `__BACKFILL_PENDING_QUESTIONS__` in `seed_topics/X.md`
+- **AND** Phase Agent SHALL update question status labels based on finding status/decision in Wave2 ledger/index
 - **AND** partially answered questions SHALL be labeled `[部分解答]`
 - **AND** still-open questions SHALL remain `[开放]`
 - **AND** new cross-topic emergent questions SHALL be labeled `[涌现]` with `source_layer: wave2_cross_topic`
@@ -211,7 +211,7 @@ Backfill execution SHALL use the standard claim→execute→complete queue loop.
 `phase-wave2-subagent.md` SHALL define the behavior contract for gap-fill sub-agents (`dpt-topic-scout` role).
 
 The sub-agent instructions SHALL specify:
-- **Receives**: Bounded gap description + search keywords + target output schema from main-agent
+- **Receives**: Bounded gap description + search keywords + target output schema from Phase Agent
 - **Produces**: Structured JSON with found_evidence, source_urls, fills_gap (boolean), confidence (low/medium/high)
 - **Writes**: Intermediate products to `_cache/wave2/slot_MM/`, runtime receipt to slot directory
 - **Must NOT**: Write to WorkflowState, modify queue, pass/fail gate, make cross-topic claims (works on ONE gap)
@@ -219,7 +219,7 @@ The sub-agent instructions SHALL specify:
 
 #### Scenario: Sub-agent receives bounded gap-fill task
 
-- **WHEN** main-agent spawns a gap-fill sub-agent
+- **WHEN** Phase Agent spawns a gap-fill sub-agent
 - **THEN** sub-agent SHALL receive only the gap description, search keywords, and output schema
 - **AND** sub-agent SHALL NOT receive WorkflowState, queue content, or other topic results
 
@@ -236,7 +236,7 @@ Wave2 SHALL produce a three-artifact group as defined in WTS-004（synthesis.md 
 The artifact contents and structure are specified in WTS-004（three artifacts and their roles）、WTS-008（finding fields, enum values）、and WTS-009（scan matrix）. This requirement defines the JS feedback integration on top of those artifacts.
 
 JS feedback SHALL operate at three levels:
-- **L0** (local parse/shape): After Agent writes stable YAML/ledger chunks — catch malformed YAML, missing fixed sections, broken links
+- **L0** (local parse/shape): After Phase Agent writes stable YAML/ledger chunks — catch malformed YAML, missing fixed sections, broken links
 - **L1** (lifecycle consistency): After semantic boundaries — catch decision/receipt/handoff/projection consistency (see WTS-008 consistency rules)
 - **L2** (phase gate): Once, after all artifacts complete and queue is drained — decide whether Wave2 can advance to HITL2
 
@@ -244,9 +244,9 @@ JS feedback SHALL return `{ check, inspect, advice }` format. JS SHALL NOT judge
 
 #### Scenario: Three artifacts pass L0 check after initial creation
 
-- **WHEN** Agent writes initial ledger and index
+- **WHEN** Phase Agent writes initial ledger and index
 - **THEN** JS L0 check SHALL verify: all three files exist and are non-empty, ledger has 6 fixed sections, index parses as valid YAML, index findings have all 11 required fields
-- **AND** if L0 fails, Agent SHALL repair immediately and rerun
+- **AND** if L0 fails, Phase Agent SHALL repair immediately and rerun
 
 #### Scenario: L1 check catches decision/receipt inconsistency
 
@@ -260,10 +260,10 @@ JS feedback SHALL return `{ check, inspect, advice }` format. JS SHALL NOT judge
 - **THEN** L1 check SHALL flag it as orphan finding
 - **AND** `advice` SHALL suggest projecting to synthesis, adding to HITL2 Handoff, or marking `decision=record_only`
 
-#### Scenario: Agent escalates after 2 failed L1 repair attempts
+#### Scenario: Phase Agent escalates after 2 failed L1 repair attempts
 
 - **WHEN** the same finding fails L1 check 3 times (2 repair attempts exhausted)
-- **THEN** Agent SHALL escalate: change finding decision to `defer_hitl2` or `record_only` with reason recorded in ledger
+- **THEN** Phase Agent SHALL escalate: change finding decision to `defer_hitl2` or `record_only` with reason recorded in ledger
 - **AND** this SHALL NOT block synthesis completion
 
 ### Requirement: Finding taxonomy with explicit types, decisions, and consistency rules

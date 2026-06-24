@@ -25,7 +25,7 @@ req: AGQ-006
 
 1. 创建 disposable bundle，validate + inspect
 2. 四段 MD-controlled 脚本：
-   - 2.1 Enqueue：初始化队列并入队三个任务，持久化 `rb_queue.agq.json`
+   - 2.1 Enqueue：初始化队列并入队三个任务，持久化 `rb_queue.json`
    - 2.2 Claim：加载队列，claim `slot_1_current`，验证只有 `simple-1` 可被 claim
    - 2.3 Complete：完成 `simple-1`，receipt 校验，内部 promote + refill + render
    - 2.4 Verify：验证 `simple-2` 已 promotion 到 `slot_1_current`，projection 文件存在
@@ -48,7 +48,7 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 
 ## Step 2.1: Enqueue — 初始化队列并入队三个任务
 
-创建空队列，按序入队 `simple-1`、`simple-2`、`simple-3`，写入 receipt 文件，持久化到 `rb_queue.agq.json`。
+创建空队列，按序入队 `simple-1`、`simple-2`、`simple-3`，写入 receipt 文件，持久化到 `rb_queue.json`。
 
 ```bash
 
@@ -68,7 +68,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
 trace.traceInit('agq-playbook/simple', { source: 'agq-playbook/simple' });
 
-writeFileSync(__dirname + '/'done-1.json', '{"ok":true}\n');
+writeFileSync(__dirname + '/done-1.json', '{"ok":true}\n');
 let queue = createQueue('agq-simple');
 queue = enqueue(queue, makeItem({ work_id: 'simple-1', title: 'Task 1', completion_receipt: 'json:done-1.json' }));
 queue = enqueue(queue, makeItem({ work_id: 'simple-2', title: 'Task 2' }));
@@ -79,7 +79,7 @@ JS
 node "$B/enqueue.mjs"
 ```
 
-→ 预期：3 个 `queue_enqueue` trace event，`rb_queue.agq.json` 写入 bundle，`slot_1_current`=`simple-1`，`slot_2_next`=`simple-2`，`slot_3_pending`=`simple-3`，`slot_4`/`slot_5` 为空。
+→ 预期：3 个 `queue_enqueue` trace event，`rb_queue.json` 写入 bundle，`slot_1_current`=`simple-1`，`slot_2_next`=`simple-2`，`slot_3_pending`=`simple-3`，`slot_4`/`slot_5` 为空。
 
 ---
 

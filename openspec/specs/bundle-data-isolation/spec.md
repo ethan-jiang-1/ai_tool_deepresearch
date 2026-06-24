@@ -2,7 +2,7 @@
 > req: BUI-001
 
 ## Purpose
-多个 Runtime Bundle 在项目根同级共存,数据互相隔离、互不污染。
+多个 Runtime Bundle SHALL 能在项目根同级共存，同时保持控制文件、运行数据、reference、artifacts 和 trace 互相隔离、互不污染。
 ## Requirements
 ### Requirement: Multiple bundles can coexist at project root
 Two bundles (`dpt_rb_{name}`) SHALL coexist at project root, each with its own independent file set and state.
@@ -21,4 +21,3 @@ Every bundle SHALL own its own `reference/` and `artifacts/` directories, never 
 #### Scenario: Bundle A references don't appear in Bundle B
 - **WHEN** a reference file is written to `dpt_rb_a/reference/`
 - **THEN** `dpt_rb_b/reference/` remains empty
-
