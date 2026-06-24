@@ -1,18 +1,58 @@
 {
   "gate": "wave2-complete",
-  "description": "Verify Wave2 produced a cross-topic synthesis artifact: synthesis file exists and is non-empty, contains at least one Markdown link referencing a Wave0 or Wave1 artifact, at least one reference target actually exists in the bundle, trace evidence present, status values point to wave2→hitl2_recorded.",
+  "description": "Verify Wave2 produced the three-artifact group: synthesis.md (narrative projection with W2F-xxx references), cross-topic-ledger.md (6 fixed sections), finding-index.yaml (parseable YAML with required fields). Also verify Markdown link cross-references exist and resolve, backfill tokens are replaced, trace and status are present.",
   "rules": [
     {
       "id": "synthesis_exists",
       "check": "file_exists",
       "target": "artifacts/wave2/synthesis.md",
-      "failure_message": "Missing file: artifacts/wave2/synthesis.md. Derive a cross-topic synthesis from verified Wave0 and Wave1 artifacts."
+      "failure_message": "Missing file: artifacts/wave2/synthesis.md. Write a cross-topic narrative projection referencing Wave0/Wave1 artifacts and W2F-xxx finding ids."
     },
     {
       "id": "synthesis_non_empty",
       "check": "field_non_empty",
       "target": "artifacts/wave2/synthesis.md",
       "failure_message": "artifacts/wave2/synthesis.md is empty. Write a cross-topic synthesis that references Wave0 and Wave1 artifacts."
+    },
+    {
+      "id": "ledger_exists",
+      "check": "file_exists",
+      "target": "artifacts/wave2/cross-topic-ledger.md",
+      "failure_message": "Missing file: artifacts/wave2/cross-topic-ledger.md. Build the cross-topic ledger with scan matrix, legacy questions, resolutions, emergent questions, exploration decisions, and HITL2 handoff."
+    },
+    {
+      "id": "ledger_non_empty",
+      "check": "field_non_empty",
+      "target": "artifacts/wave2/cross-topic-ledger.md",
+      "failure_message": "artifacts/wave2/cross-topic-ledger.md is empty. Populate all 6 fixed sections with finding data."
+    },
+    {
+      "id": "ledger_fixed_sections",
+      "check": "pattern_match",
+      "target": "artifacts/wave2/cross-topic-ledger.md",
+      "pattern": "## Cross-Topic Scan Matrix[\\s\\S]*## Wave1 Legacy Questions[\\s\\S]*## Cross-Topic Resolutions[\\s\\S]*## Emergent Cross-Topic Questions[\\s\\S]*## Exploration Decisions[\\s\\S]*## HITL2 Handoff",
+      "negate": false,
+      "failure_message": "cross-topic-ledger.md is missing one or more required section headings. Ensure all 6 sections (Cross-Topic Scan Matrix, Wave1 Legacy Questions, Cross-Topic Resolutions, Emergent Cross-Topic Questions, Exploration Decisions, HITL2 Handoff) are present."
+    },
+    {
+      "id": "index_exists",
+      "check": "file_exists",
+      "target": "artifacts/wave2/finding-index.yaml",
+      "failure_message": "Missing file: artifacts/wave2/finding-index.yaml. Write the JS-readable shadow index with 11 required fields per finding."
+    },
+    {
+      "id": "index_yaml_parse",
+      "check": "yaml_parse",
+      "target": "artifacts/wave2/finding-index.yaml",
+      "failure_message": "finding-index.yaml is not valid YAML. Fix syntax errors."
+    },
+    {
+      "id": "synthesis_finding_id_ref",
+      "check": "pattern_match",
+      "target": "artifacts/wave2/synthesis.md",
+      "pattern": "W2F-\\d{3}",
+      "negate": false,
+      "failure_message": "synthesis.md contains no W2F-xxx finding id reference. Add finding id references to link narrative claims back to the ledger/index."
     },
     {
       "id": "cross_artifact_references",
@@ -22,7 +62,31 @@
       "link_pattern": "\\[([^\\]]+)\\]\\(([^)]+\\.md)\\)",
       "resolve_relative_to": "artifacts/wave2",
       "min_valid_refs": 1,
-      "failure_message": "No valid artifact references found in synthesis. Add at least one Markdown link (e.g. [label](../wave1/topic-a/skeleton.md)) that points to an existing Wave0 or Wave1 artifact file in the bundle."
+      "failure_message": "No valid artifact references found in synthesis. Add at least one Markdown link (e.g. [label](../wave1/topic-a/evidence-summary.md)) that points to an existing Wave0 or Wave1 artifact file in the bundle."
+    },
+    {
+      "id": "wave1_evidence_ref",
+      "check": "pattern_match",
+      "target": "artifacts/wave2/synthesis.md",
+      "pattern": "\\[.*\\]\\(\\.\\./wave1/.*/(evidence-summary|question-list)\\.md\\)",
+      "negate": false,
+      "failure_message": "synthesis.md contains no reference to wave1 evidence-summary.md or question-list.md. Add at least one Markdown link to a wave1 deepening artifact."
+    },
+    {
+      "id": "backfill_judgment_token_absent",
+      "check": "pattern_match",
+      "target": "seed_topics/{topic}.md",
+      "pattern": "__BACKFILL_WAVE2_JUDGMENT__",
+      "negate": true,
+      "failure_message": "Unreplaced __BACKFILL_WAVE2_JUDGMENT__ token found in seed topic file. Execute backfill task: project cross-topic judgments from ledger/index."
+    },
+    {
+      "id": "backfill_questions_token_absent",
+      "check": "pattern_match",
+      "target": "seed_topics/{topic}.md",
+      "pattern": "__BACKFILL_PENDING_QUESTIONS__",
+      "negate": true,
+      "failure_message": "Unreplaced __BACKFILL_PENDING_QUESTIONS__ token found in seed topic file. Execute backfill task: update question status labels from ledger/index."
     },
     {
       "id": "trace_wave2_completion",

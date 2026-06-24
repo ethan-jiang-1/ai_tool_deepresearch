@@ -35,12 +35,28 @@ function createBundle(name) {
   topic_tag: "topic-a"
 `);
 
-  // Create Wave1 skeleton target files
+  // Create Wave1 evidence-summary and question-list target files
   mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-a'), { recursive: true });
-  writeFileSync(join(dir, 'artifacts/wave1/topic-a/skeleton.md'), '# Topic A Skeleton\n\ncapability: foundation-placeholder\n');
+  writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), '# Topic A Evidence Summary\n\n## Source URLs\n\n- [Source A](https://example.com/a)\n\n## Key Findings\n\n1. **机制理解**: Finding A\n\n## Open Questions\n\n1. [开放] Question 1\n');
+  writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), '# Topic A Question List\n\n## Topic Investigation Targets\n\n## Question Reconciliation\n\n## Emergent Question Protocol\n\n## Exploration / Exploitation Decision\n');
 
   // Create wave2 directory
   mkdirSync(join(dir, 'artifacts', 'wave2'), { recursive: true });
+
+  // Create seed_topics with backfill tokens pre-embedded
+  mkdirSync(join(dir, 'seed_topics'), { recursive: true });
+  writeFileSync(join(dir, 'seed_topics/topic-a.md'), `# Topic A\n\n## Wave2 Judgment\n__BACKFILL_WAVE2_JUDGMENT__\n\n## Pending Questions\n__BACKFILL_PENDING_QUESTIONS__\n`);
+
+  // Create rb_plan.md with topic_registry (needed for {topic} expansion)
+  writeFileSync(join(dir, 'rb_plan.md'), `---
+plan_basename: test
+derived_topic_count: 1
+topic_registry:
+  - slug: topic-a
+    label: Topic A
+---
+# Plan
+`);
 
   return dir;
 }
@@ -49,7 +65,7 @@ const SYNTHESIS_WITH_VALID_LINKS = `# Cross-Topic Synthesis
 
 ## Pattern: AI Safety Across Topics
 
-Based on the [Topic A skeleton](../wave1/topic-a/skeleton.md), the key open question is how to measure alignment.
+W2F-001: Based on the [Topic A evidence](../wave1/topic-a/evidence-summary.md), the key open question is how to measure alignment.
 
 The [reference metadata](../../reference/topic-a/source.yaml) provides background on AI safety approaches.
 `;
@@ -58,7 +74,7 @@ const SYNTHESIS_NO_LINKS = `# Cross-Topic Synthesis
 
 ## Pattern: AI Safety Across Topics
 
-Based on the Topic A skeleton, the key open question is how to measure alignment. No explicit links here.
+W2F-001: Based on the Topic A evidence, the key open question is how to measure alignment. No explicit links here.
 `;
 
 const SYNTHESIS_DEAD_LINKS = `# Cross-Topic Synthesis
@@ -68,16 +84,77 @@ See [nonexistent file](../wave1/topic-a/nope.md) and also [another dead link](..
 
 const SYNTHESIS_MIXED_LINKS = `# Cross-Topic Synthesis
 
-One valid: [Topic A skeleton](../wave1/topic-a/skeleton.md)
+W2F-001: One valid: [Topic A evidence](../wave1/topic-a/evidence-summary.md)
 One dead: [missing file](../wave1/topic-a/nope.md)
 `;
+
+// Helper to create minimal passing ledger and index
+function createMinLedger(dir) {
+  writeFileSync(join(dir, 'artifacts/wave2/cross-topic-ledger.md'), `# Cross-Topic Ledger
+
+## Cross-Topic Scan Matrix
+
+| pair_id | topics | checked_dimensions | finding_ids | notes |
+| P01 | topic-a + topic-a | shared_pattern | none | Minimal |
+
+## Wave1 Legacy Questions
+
+None imported.
+
+## Cross-Topic Resolutions
+
+None found.
+
+## Emergent Cross-Topic Questions
+
+None found.
+
+## Exploration Decisions
+
+None needed.
+
+## HITL2 Handoff
+
+None.
+`);
+}
+
+function createMinIndex(dir) {
+  writeFileSync(join(dir, 'artifacts/wave2/finding-index.yaml'), `version: "0.1"
+source_layer: wave2_cross_topic
+ledger: artifacts/wave2/cross-topic-ledger.md
+synthesis: artifacts/wave2/synthesis.md
+scan:
+  topic_count: 1
+  pair_count_expected: 0
+  pair_count_checked: 0
+findings: []
+`);
+}
+
+function createMinBackfill(dir) {
+  // Replace backfill tokens to make backfill checks pass
+  writeFileSync(join(dir, 'seed_topics/topic-a.md'), `# Topic A
+
+## Wave2 Judgment
+Cross-topic judgment from wave2 ledger/index projection.
+
+## Pending Questions
+- [开放] Question 1 (no cross-topic findings)
+`);
+}
 
 describe('check-gate-wave2-complete', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
 
-  it('1. happy path: synthesis with valid Markdown links passes', () => {
+  // ── Existing tests (updated for three-artifact expectations) ──────────
+
+  it('1. happy path: all three artifacts present, valid links, backfill clean → pass', () => {
     const dir = createBundle(unique('happy'));
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    createMinIndex(dir);
+    createMinBackfill(dir);
     writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -86,6 +163,9 @@ describe('check-gate-wave2-complete', () => {
 
   it('2. fails when synthesis.md is missing', () => {
     const dir = createBundle(unique('nofile'));
+    createMinLedger(dir);
+    createMinIndex(dir);
+    createMinBackfill(dir);
     writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -96,6 +176,9 @@ describe('check-gate-wave2-complete', () => {
   it('3. fails when synthesis is empty', () => {
     const dir = createBundle(unique('empty'));
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), '---\n---\n');
+    createMinLedger(dir);
+    createMinIndex(dir);
+    createMinBackfill(dir);
     writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -106,6 +189,9 @@ describe('check-gate-wave2-complete', () => {
   it('4. fails when synthesis has no Markdown links', () => {
     const dir = createBundle(unique('nolinks'));
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_NO_LINKS);
+    createMinLedger(dir);
+    createMinIndex(dir);
+    createMinBackfill(dir);
     writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -116,6 +202,9 @@ describe('check-gate-wave2-complete', () => {
   it('5. fails when all link targets are missing', () => {
     const dir = createBundle(unique('dead'));
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_DEAD_LINKS);
+    createMinLedger(dir);
+    createMinIndex(dir);
+    createMinBackfill(dir);
     writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -126,6 +215,9 @@ describe('check-gate-wave2-complete', () => {
   it('6. passes when at least one link target is valid (mixed valid/dead links)', () => {
     const dir = createBundle(unique('mixed'));
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_MIXED_LINKS);
+    createMinLedger(dir);
+    createMinIndex(dir);
+    createMinBackfill(dir);
     writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -136,6 +228,9 @@ describe('check-gate-wave2-complete', () => {
   it('7. fails on status drift', () => {
     const dir = createBundle(unique('drift'));
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    createMinIndex(dir);
+    createMinBackfill(dir);
     writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
     const statusPath = join(dir, 'rb_status.json');
     const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
@@ -145,5 +240,45 @@ describe('check-gate-wave2-complete', () => {
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('next_gate')), `Expected status drift fail: ${JSON.stringify(output.inspect)}`);
+  });
+
+  // ── New tests: three-artifact gate rules ──────────────────────────────
+
+  it('8. fails when ledger is missing', () => {
+    const dir = createBundle(unique('noledger'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinIndex(dir);
+    createMinBackfill(dir);
+    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('ledger')), `Expected missing ledger fail: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('9. fails when finding-index.yaml is unparseable', () => {
+    const dir = createBundle(unique('badindex'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    writeFileSync(join(dir, 'artifacts/wave2/finding-index.yaml'), '{ this is not valid YAML: [[[');
+    createMinBackfill(dir);
+    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('YAML') || m.includes('parse')), `Expected YAML parse fail: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('10. fails when backfill token is residual', () => {
+    const dir = createBundle(unique('token'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    createMinIndex(dir);
+    // Don't call createMinBackfill — leave token unreplaced
+    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('BACKFILL') || m.includes('Forbidden')), `Expected backfill token fail: ${JSON.stringify(output.inspect)}`);
   });
 });

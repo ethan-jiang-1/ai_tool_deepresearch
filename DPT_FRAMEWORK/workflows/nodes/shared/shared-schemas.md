@@ -57,21 +57,109 @@ suggested_context: []
 - **格式**：YAML array，每项为一条 reference metadata
 - **位置**：`DPT_FRAMEWORK/schema/contracts/reference.mjs`
 
-### `final/` — Terminal Delivery Directory
+## Reference Layer
 
-- **位置**：active bundle 根目录下的 `final/` 目录
-- **角色**：final 是 terminal node（`gate: null`），没有 gate CLI 检查此目录。delivery 完成由 `final/` 目录下存在至少一份报告文件来证明
-- **内容**：Agent 从 verified bundle state 生成的 final report artifact(s)，格式自由（Markdown、executive summary 等）
-- **注意**：`final/` 目录在 bundle instantiation 时已创建（scaffold），但内容是 final phase 才产生。空目录不代表 delivery 完成
-- **Post-delivery 反馈**：走 HITL2 `rerun` 路径，不通过 final node
+Foundation reference data，由 Wave0 初始填充（`source.yaml` + `index.md`）。后续 wave 可继续向 `reference/` 追加新的 reference entry，也可通过 seed topic backfill 间接关联。
 
-### Wave Artifact 目录结构
+- **`reference/<topic>/source.yaml`**：Per-topic reference metadata（YAML array，每项满足 `ReferenceMetadataSchema`）。字段：`url` / `title` / `retrieved_date` / `topic_tag` / `notes`（详见上方 `contracts/reference.mjs`）。Foundation floor：每个 topic ≥ 1 条 metadata。
+- **`reference/index.md`**：Foundation reference 索引（Agent 可读摘要，列出每个 topic 收集的 reference）。
 
-- **`reference/<topic>/source.yaml`**：Wave0 per-topic reference metadata（YAML array，每项满足 `ReferenceMetadataSchema`）。Foundation floor：每个 topic ≥ 1 条 metadata。
-- **`reference/index.md`**：Wave0 foundation reference 索引（Agent 可读摘要，列出每个 topic 收集的 reference）。
-- **`artifacts/wave1/<topic>/evidence-summary.md`**：Wave1 per-topic evidence summary（Markdown）。含 `## Source URLs`（Markdown link + retrieved date）、`## Key Findings`（编号条目，每条的 bold prefix 必须是 `**机制理解**:` 或 `**趋势观察**:`）、`## Open Questions`（编号条目，每条的状态标签必须是 `[开放]`、`[部分解答]` 或 `[涌现]`——不允许 topic-descriptor 标签如 `[Bridge gap]`）。**Schema:** 目前为模板级约束（无独立 Zod contract，不同于 wave0 的 `ReferenceMetadataSchema`）；structure 由 phase-wave1-subagent.md §2.1 定义，gate 通过 pattern_match 规则验证。
-- **`artifacts/wave1/<topic>/question-list.md`**：Wave1 per-topic exploration ledger（Markdown，四节结构，顺序固定）。§1 Topic Investigation Targets（表：target_id/question/origin/status/backing_refs/next_action）。§2 Question Reconciliation（用 `[已解决]`、`[部分进展]`、`[仍开放]`、`[需内部数据]` 标记每个 prior question 的状态变化）。§3 Emergent Question Protocol（4 项检查结果：new_concept / contradiction / missing_information_gap / noise_pattern，每项 checked + trigger_refs）。§4 Exploration / Exploitation Decision（decision + trigger_refs + unresolved_questions + queue_consequence + next_action；单轮 deepening 模式下 decision 固定为 `continue`）。详见 `phase-wave1-subagent.md` §2.2 和 `phase-wave1.md` §3.2.1。
-- **`artifacts/wave2/synthesis.md`**：Wave2 cross-topic synthesis（Markdown，用 `[label](relative/path.md)` 格式引用 Wave0/Wave1 artifact）。引用路径相对于 `artifacts/wave2/`：如 `../wave1/<topic>/evidence-summary.md` 指向 Wave1 evidence summary，`../../reference/<topic>/source.yaml` 指向 Wave0 metadata。
+## Seed Topics
+
+`seed_topics/` 位于 bundle root，与 `reference/`、`artifacts/` 同级。每个 topic 一个 `.md` 文件，内含 `__BACKFILL_*__` token，由各 wave 在完成时替换。
+
+| Token | 替换阶段 | 替换内容 |
+|-------|---------|---------|
+| `__BACKFILL_WAVE0_EVIDENCE__` | Wave0 complete 后 | source intake 产出的 reference 摘要列表 |
+| `__BACKFILL_WAVE1_MECHANISMS__` | Wave1 complete 前 | evidence-summary 提取的机制理解 |
+| `__BACKFILL_WAVE1_TRENDS__` | Wave1 complete 前 | evidence-summary 提取的趋势与难点 |
+| `__BACKFILL_WAVE2_JUDGMENT__` | Wave2 complete 前 | 从 ledger/index 投影的跨 topic 判断 |
+| `__BACKFILL_PENDING_QUESTIONS__` | Wave1→Wave2 两阶段 | Wave1 写入初始问题状态，Wave2 从 ledger/index 投影更新 |
+
+Gate 通过 `pattern_match`（`negate: true`）验证 `__BACKFILL_WAVE*_*__` token 已被替换。`__BACKFILL_PENDING_QUESTIONS__` 的检查在 wave1-complete gate 和 wave2-complete gate 中均执行。
+
+## Artifacts — Wave1 (Per-Topic Deepening)
+
+Wave1 为每个 topic 产出 paired artifacts。Gate 通过 `pattern_match` 规则验证 structure（section 标题、source URL、key finding pattern、backfill token absence）。
+
+- **`artifacts/wave1/<topic>/evidence-summary.md`**：Per-topic evidence summary（Markdown）。§Source URLs（Markdown link + retrieved date）、§Key Findings（编号条目，bold prefix 必须是 `**机制理解**:` 或 `**趋势观察**:`）、§Open Questions（编号条目，状态标签必须是 `[开放]` / `[部分解答]` / `[涌现]`——不允许 topic-descriptor 标签如 `[Bridge gap]`）。**Schema**：模板级约束（无独立 Zod contract）；structure 由 `phase-wave1-subagent.md` §2.1 定义。
+- **`artifacts/wave1/<topic>/question-list.md`**：Per-topic exploration ledger（Markdown，四节结构，顺序固定）。§1 Topic Investigation Targets（表：target_id / question / origin / status / backing_refs / next_action）。§2 Question Reconciliation（用 `[已解决]` / `[部分进展]` / `[仍开放]` / `[需内部数据]` 标记状态变化）。§3 Emergent Question Protocol（4 项检查：new_concept / contradiction / missing_information_gap / noise_pattern，每项 checked + trigger_refs）。§4 Exploration / Exploitation Decision（decision + trigger_refs + unresolved_questions + queue_consequence + next_action）。详见 `phase-wave1-subagent.md` §2.2 和 `phase-wave1.md` §3.2.1。
+
+## Artifacts — Wave2 (Cross-Topic Synthesis)
+
+Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wave2 所需的全部 artifact 信息。
+
+### synthesis.md — Narrative Projection
+
+- **角色**：面向人类阅读的 cross-topic narrative，不作为动态 finding source of truth
+- **格式**：Markdown，用 `[label](relative/path.md)` 引用 Wave0/Wave1 artifact
+- **引用路径**：相对于 `artifacts/wave2/`（`../wave1/<topic>/evidence-summary.md` 指向 Wave1、`../../reference/<topic>/source.yaml` 指向 Wave0）
+- **必须包含**：至少 1 个 wave1 evidence-summary 或 question-list 引用、W2F-xxx finding id 引用、Unresolved Cross-Topic Questions section
+- **不得包含**：完整 scan matrix（那是 ledger 的职责）、作为 backfill 的 sole source（那是 ledger/index 的职责）
+
+### cross-topic-ledger.md — Dynamic Ledger
+
+- **角色**：Agent-readable source of truth，动态增长（每轮追加/更新，不是最后写一次）
+- **格式**：Markdown，6 个固定 section，按顺序：
+  1. **Cross-Topic Scan Matrix** — 记录 topic pair 检查情况（pair_id / topics / checked_dimensions / finding_ids / notes）
+  2. **Wave1 Legacy Questions** — 从 Wave1 question-list 汇入未完全解决的问题
+  3. **Cross-Topic Resolutions** — 用其他 topic evidence 回答 legacy question（不搜索）
+  4. **Emergent Cross-Topic Questions** — Wave1 不存在、Wave2 拉通后首次出现的问题
+  5. **Exploration Decisions** — 每个 finding 的 action decision
+  6. **HITL2 Handoff** — 需人类判断/内部数据/超出 budget 的 finding
+- **Checked dimensions**：`shared_pattern` / `contradiction` / `resolution_opportunity` / `emergent_question`
+
+### finding-index.yaml — JS-Readable Shadow Index
+
+- **角色**：Ledger 的结构化影子，让 JS engine 能做确定性反馈（不承载长篇 reasoning）
+- **格式**：YAML
+- **Top-level keys**：`version`（"0.1"）/ `source_layer`（"wave2_cross_topic"）/ `ledger` / `synthesis` / `scan` / `findings`
+- **`scan` object**：`topic_count` / `pair_count_expected` / `pair_count_checked`
+- **Per-finding required fields（11 个）**：
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | W2F-xxx |
+| `type` | enum | `wave1_legacy_question` / `cross_topic_resolution` / `cross_topic_emergent_question` |
+| `status` | enum | `resolved` / `partial` / `open` / `deferred` |
+| `decision` | enum | `use_existing_evidence` / `exploit_search` / `explore_search` / `defer_hitl2` / `requires_internal_data` / `record_only` |
+| `affected_topics` | array | ≥2 for `cross_topic_emergent_question` |
+| `origin_refs` | array | Legacy question 来源；emergent 可为空但必须显式 `[]` |
+| `trigger_refs` | array | 触发 finding 的 evidence/question refs |
+| `search_required` | boolean | 是否需要 sub-agent search |
+| `subagent_receipt_refs` | array | 搜索发生时的 relay/runtime receipt refs |
+| `appears_in_synthesis` | boolean | 是否已进入 narrative projection |
+| `hitl2_handoff` | boolean | 是否进入 HITL2 handoff |
+
+- **Optional v1 extension fields**：`backfill_topics` / `synthesis_refs` / `handoff_refs` / `last_checked_at` / `repair_attempts`
+
+### Finding Type / Status / Decision Enum 速查
+
+| Enum | Values |
+|------|--------|
+| **type** | `wave1_legacy_question` / `cross_topic_resolution` / `cross_topic_emergent_question` |
+| **status** | `resolved` / `partial` / `open` / `deferred` |
+| **decision** | `use_existing_evidence` / `exploit_search` / `explore_search` / `defer_hitl2` / `requires_internal_data` / `record_only` |
+
+### Wave2 Sub-Agent Cache/Slot 路径
+
+- `_cache/wave2/slot_MM/` — 中间产物
+- `_subagents/wave_02/slot_MM/` — slot 目录 + runtime receipt
+
+## Artifacts — HITL2
+
+- **`artifacts/hitl2/decision-brief.md`**：HITL2 人类决策摘要。HITL2 是独立的 human-review phase——Agent 不自主推进。HITL2 gate（`gate-hitl2-recorded`）验证 decision-brief 存在 + non-empty + `rb_profile.yaml` 的 `hitl2.status` / `hitl2.user_decision` 字段已填写。
+
+## Non-Authority Directories
+
+以下目录以 `_` 前缀命名，gate 不检查其内容。它们是运行时暂存区，不属于 authority artifact surface：
+
+- **`_cache/`**：Sub-agent 中间产物（搜索结果缓存、抓取页面、提取笔记）。Wave0→`_cache/wave0/slot_MM/`，Wave1→`_cache/wave1/slot_MM/`，Wave2→`_cache/wave2/slot_MM/`。
+- **`_subagents/`**：Sub-agent relay slot 目录，由 `subagent-relay.mjs` 自动管理。每个 slot 含 `task.md` / `result.schema.json` / `runtime-receipt.jsonl` / `result.json`。Wave0→`wave_00/`，Wave1→`wave_01/`，Wave2→`wave_02/`。
+
+## Final Delivery
+
+- **`final/`**：Terminal delivery 目录（`gate: null`，无 gate CLI 检查）。Agent 从 verified bundle state 生成 final report artifact(s)，格式自由。Delivery 完成由 `final/` 下存在至少一份报告文件来证明。空目录不代表 delivery 完成。Post-delivery 反馈走 HITL2 `rerun` 路径。
 
 ### Sub-Agent Protocol Nodes
 
@@ -79,6 +167,7 @@ suggested_context: []
 
 - **`phases/phase-wave0-subagent.md`** — Wave0 sub-agent（role: `dpt-source-intake`）：foundation reference 搜索和 `source.yaml` 写入
 - **`phases/phase-wave1-subagent.md`** — Wave1 sub-agent（role: `dpt-evidence-extractor`）：topic-specific deepening、`evidence-summary.md` + `question-list.md` 成对产出
+- **`phases/phase-wave2-subagent.md`** — Wave2 sub-agent（role: `dpt-topic-scout`）：targeted gap-fill search，仅在 main-agent 对 finding 做 `decision=exploit_search|explore_search` 时 spawn。输入：finding description + keywords + output schema。输出：structured JSON（found_evidence, source_urls, fills_gap, confidence）
 - **`shared/shared-subagent-protocol.md`** — 共享 relay 基础设施：slot 契约、目录 authority boundary、并发控制、禁区清单、页面抓取链
 
 ### Gate Contract

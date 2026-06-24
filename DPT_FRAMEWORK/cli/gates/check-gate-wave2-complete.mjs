@@ -3,8 +3,9 @@
 // @impl GSK-001, GSK-002, GSK-004, RWG-006, RWG-007, RWG-008
 // Usage: node check-gate-wave2-complete.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
-import { existsSync, readFileSync, appendFileSync } from 'node:fs';
-import { join, resolve as resolvePath } from 'node:path';
+import { existsSync, readFileSync, appendFileSync, statSync } from 'node:fs';
+import { join, resolve as resolvePath, basename } from 'node:path';
+import { parse as parseYaml } from 'yaml';
 import {
   parseGateCliArgs,
   tryLoadGateDefinition,
@@ -49,6 +50,43 @@ function getStatus() {
   return _statusCache;
 }
 
+let _planCache = null;
+function getPlan() {
+  if (_planCache) return _planCache;
+  const p = join(bundlePath, 'rb_plan.md');
+  if (!existsSync(p)) return null;
+  const raw = readFileSync(p, 'utf-8');
+  const fmMatch = raw.match(/^---\n([\s\S]*?)\n---/);
+  if (!fmMatch) return null;
+  try {
+    _planCache = parseYaml(fmMatch[1]);
+  } catch {
+    _planCache = null;
+  }
+  return _planCache;
+}
+
+/**
+ * Get topic keys from topic_registry. Returns [] if registry is empty or missing.
+ */
+function getTopicKeys() {
+  const plan = getPlan();
+  if (!plan || !Array.isArray(plan.topic_registry) || plan.topic_registry.length === 0) return [];
+  return plan.topic_registry.map(t => t.slug);
+}
+
+/**
+ * Expand {topic} placeholder in target string.
+ */
+function expandTopicTarget(target) {
+  const topics = getTopicKeys();
+  if (target.includes('{topic}')) {
+    if (topics.length === 0) return [];
+    return topics.map(t => ({ topic: t, resolved: target.replace(/\{topic\}/g, t) }));
+  }
+  return [{ topic: null, resolved: target }];
+}
+
 /**
  * Parse Markdown links from content.
  * Returns array of { label, path } objects for all [label](path) matches.
@@ -74,105 +112,156 @@ function resolveLinkTarget(linkPath, baseDir) {
 for (const rule of definition.rules) {
   if (rule.check === 'placeholder') continue;
 
-  let rulePassed = true;
-  let ruleDetail = null;
+  // Expand {topic} placeholder in target string (for file_exists, pattern_match, etc.)
+  const targets = expandTopicTarget(rule.target);
 
-  try {
-    if (rule.check === 'file_exists') {
-      const targetPath = join(bundlePath, rule.target);
-      if (!existsSync(targetPath)) {
-        rulePassed = false;
-        ruleDetail = `Missing file: ${rule.target}`;
-      }
-    } else if (rule.check === 'field_non_empty') {
-      // Read the file and check it's non-empty
-      const filePath = join(bundlePath, rule.target);
-      if (!existsSync(filePath)) {
-        rulePassed = false;
-        ruleDetail = `File not found: ${rule.target}`;
-      } else {
-        const content = readFileSync(filePath, 'utf-8').trim();
-        // Strip YAML frontmatter if present (handles both empty and populated frontmatter)
-        const bodyContent = content.replace(/^---[\s\S]*?---\n?/, '').trim();
-        if (bodyContent.length === 0) {
-          rulePassed = false;
-          ruleDetail = `${rule.target} is empty (no content after frontmatter)`;
-        }
-      }
-    } else if (rule.check === 'cross_field' && rule.mode === 'markdown_link_resolution') {
-      const synthesisPath = join(bundlePath, rule.target);
-      if (!existsSync(synthesisPath)) {
-        rulePassed = false;
-        ruleDetail = `Synthesis file not found: ${rule.target}`;
-      } else {
-        const content = readFileSync(synthesisPath, 'utf-8');
-        const links = extractMarkdownLinks(content);
-        const mdLinks = links.filter(l => l.path.endsWith('.md'));
-
-        if (mdLinks.length === 0) {
-          rulePassed = false;
-          ruleDetail = `No Markdown links to .md artifacts found in ${rule.target}`;
-        } else {
-          // Resolve each link relative to the synthesis directory
-          const synthesisDir = join(bundlePath, rule.resolve_relative_to || 'artifacts/wave2');
-          const validLinks = [];
-          const deadLinks = [];
-
-          for (const link of mdLinks) {
-            const resolved = resolveLinkTarget(link.path, synthesisDir);
-            if (existsSync(resolved)) {
-              validLinks.push(link.path);
-            } else {
-              deadLinks.push(link.path);
-            }
-          }
-
-          const minValid = rule.min_valid_refs || 1;
-          if (validLinks.length >= minValid) {
-            // Rule passes, but list dead links in advice if any
-            if (deadLinks.length > 0) {
-              ruleDetail = null; // pass
-              advice.push(`Note: ${deadLinks.length} dead link(s) found but ${validLinks.length} valid — gate passes. Dead links: ${deadLinks.join(', ')}`);
-            }
-          } else {
-            rulePassed = false;
-            ruleDetail = `Only ${validLinks.length} valid artifact reference(s) found (need ≥${minValid}). Dead links: ${deadLinks.join(', ')}`;
-          }
-        }
-      }
-    } else if (rule.check === 'status_value') {
-      const [file, jsonPath] = rule.target.split('#/');
-      const status = getStatus();
-      if (!status) {
-        rulePassed = false;
-        ruleDetail = 'rb_status.json not found';
-      } else {
-        const value = jsonPath.split('/').reduce((obj, key) => obj?.[key], status);
-        if (value !== rule.expected) {
-          rulePassed = false;
-          ruleDetail = `${rule.target}: expected "${rule.expected}", got "${value}"`;
-        }
-      }
-    } else if (rule.check === 'trace_event_present') {
-      const events = readTraceEvents(bundlePath, rule.target);
-      if (events.length === 0) {
-        rulePassed = false;
-        ruleDetail = `Trace event "${rule.target}" not found in rb_trace.jsonl`;
-      }
-    } else {
-      rulePassed = false;
-      ruleDetail = `Unknown check type: ${rule.check} (mode: ${rule.mode || 'n/a'}) — must fail (check type not implemented)`;
-    }
-  } catch (err) {
-    rulePassed = false;
-    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
-    ruleDetail = `Error evaluating rule ${rule.id}: ${safeMsg}`;
+  if (targets.length === 0) {
+    allPassed = false;
+    inspect.push(`Empty topic_registry: cannot expand "{topic}" placeholder in rule ${rule.id}.`);
+    advice.push(rule.failure_message);
+    continue;
   }
 
-  if (!rulePassed) {
-    allPassed = false;
-    inspect.push(ruleDetail);
-    advice.push(rule.failure_message);
+  for (const tgt of targets) {
+    const resolvedTarget = tgt.resolved;
+    let rulePassed = true;
+    let ruleDetail = null;
+
+    try {
+      if (rule.check === 'file_exists') {
+        const targetPath = join(bundlePath, resolvedTarget);
+        if (!existsSync(targetPath)) {
+          rulePassed = false;
+          ruleDetail = `Missing file: ${resolvedTarget}`;
+          if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
+        }
+      } else if (rule.check === 'field_non_empty') {
+        const filePath = join(bundlePath, resolvedTarget);
+        if (!existsSync(filePath)) {
+          rulePassed = false;
+          ruleDetail = `File not found: ${resolvedTarget}`;
+          if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
+        } else {
+          const content = readFileSync(filePath, 'utf-8').trim();
+          const bodyContent = content.replace(/^---[\s\S]*?---\n?/, '').trim();
+          if (bodyContent.length === 0) {
+            rulePassed = false;
+            ruleDetail = `${resolvedTarget} is empty (no content after frontmatter)`;
+            if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
+          }
+        }
+      } else if (rule.check === 'pattern_match') {
+        const filePath = join(bundlePath, resolvedTarget);
+        if (!existsSync(filePath)) {
+          rulePassed = false;
+          ruleDetail = `Cannot read file for pattern_match: ${resolvedTarget}`;
+          if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
+        } else {
+          const content = readFileSync(filePath, 'utf-8');
+          const re = new RegExp(rule.pattern, 'i');
+          const matched = re.test(content);
+
+          if (rule.negate) {
+            if (matched) {
+              rulePassed = false;
+              const cleanDesc = (rule.failure_message || rule.pattern).replace(/\{topic\}/g, tgt.topic || '{topic}');
+              ruleDetail = `Forbidden content in ${resolvedTarget}: ${cleanDesc}`;
+              if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
+            }
+          } else {
+            if (!matched) {
+              rulePassed = false;
+              const cleanDesc = (rule.failure_message || rule.pattern).replace(/\{topic\}/g, tgt.topic || '{topic}');
+              ruleDetail = `Required marker not found in ${resolvedTarget}: ${cleanDesc}`;
+              if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
+            }
+          }
+        }
+      } else if (rule.check === 'yaml_parse') {
+        const filePath = join(bundlePath, resolvedTarget);
+        if (!existsSync(filePath)) {
+          rulePassed = false;
+          ruleDetail = `File not found: ${resolvedTarget}`;
+        } else {
+          try {
+            parseYaml(readFileSync(filePath, 'utf-8'));
+          } catch (err) {
+            rulePassed = false;
+            ruleDetail = `YAML parse error in ${resolvedTarget}: ${err.message}`;
+          }
+        }
+      } else if (rule.check === 'cross_field' && rule.mode === 'markdown_link_resolution') {
+        const synthesisPath = join(bundlePath, resolvedTarget);
+        if (!existsSync(synthesisPath)) {
+          rulePassed = false;
+          ruleDetail = `Synthesis file not found: ${resolvedTarget}`;
+        } else {
+          const content = readFileSync(synthesisPath, 'utf-8');
+          const links = extractMarkdownLinks(content);
+          const mdLinks = links.filter(l => l.path.endsWith('.md'));
+
+          if (mdLinks.length === 0) {
+            rulePassed = false;
+            ruleDetail = `No Markdown links to .md artifacts found in ${resolvedTarget}`;
+          } else {
+            const synthesisDir = join(bundlePath, rule.resolve_relative_to || 'artifacts/wave2');
+            const validLinks = [];
+            const deadLinks = [];
+
+            for (const link of mdLinks) {
+              const resolved = resolveLinkTarget(link.path, synthesisDir);
+              if (existsSync(resolved)) {
+                validLinks.push(link.path);
+              } else {
+                deadLinks.push(link.path);
+              }
+            }
+
+            const minValid = rule.min_valid_refs || 1;
+            if (validLinks.length >= minValid) {
+              if (deadLinks.length > 0) {
+                advice.push(`Note: ${deadLinks.length} dead link(s) found but ${validLinks.length} valid — gate passes. Dead links: ${deadLinks.join(', ')}`);
+              }
+            } else {
+              rulePassed = false;
+              ruleDetail = `Only ${validLinks.length} valid artifact reference(s) found (need ≥${minValid}). Dead links: ${deadLinks.join(', ')}`;
+            }
+          }
+        }
+      } else if (rule.check === 'status_value') {
+        const [file, jsonPath] = rule.target.split('#/');
+        const status = getStatus();
+        if (!status) {
+          rulePassed = false;
+          ruleDetail = 'rb_status.json not found';
+        } else {
+          const value = jsonPath.split('/').reduce((obj, key) => obj?.[key], status);
+          if (value !== rule.expected) {
+            rulePassed = false;
+            ruleDetail = `${rule.target}: expected "${rule.expected}", got "${value}"`;
+          }
+        }
+      } else if (rule.check === 'trace_event_present') {
+        const events = readTraceEvents(bundlePath, rule.target);
+        if (events.length === 0) {
+          rulePassed = false;
+          ruleDetail = `Trace event "${rule.target}" not found in rb_trace.jsonl`;
+        }
+      } else {
+        rulePassed = false;
+        ruleDetail = `Unknown check type: ${rule.check} (mode: ${rule.mode || 'n/a'}) — must fail (check type not implemented)`;
+      }
+    } catch (err) {
+      rulePassed = false;
+      const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+      ruleDetail = `Error evaluating rule ${rule.id}: ${safeMsg}`;
+    }
+
+    if (!rulePassed) {
+      allPassed = false;
+      inspect.push(ruleDetail);
+      advice.push(rule.failure_message);
+    }
   }
 }
 

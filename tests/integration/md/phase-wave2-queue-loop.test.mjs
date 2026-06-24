@@ -1,0 +1,147 @@
+// phase-wave2-queue-loop.test.mjs — structural checks for phase-wave2.md
+// @impl WTS-001, WTS-007
+//
+// Verifies:
+//   - Frontmatter has max_gapfill_iterations and max_gapfill_subagents_per_round
+//   - §3 has three-stage structure (§3.1 Filling, §3.2 Execution Loop, §3.3 Closeout+Gate)
+//   - §3.1 contains synthesis task card template with producer_rule cross_topic_synthesis
+//     and required_receipts covering three artifacts
+//   - §3.1 contains backfill task card template with producer_rule seed_topic_backfill_wave2
+//   - Task card priority_class values are from QueueWorkUnitSchema enums
+//   - Task card required_receipts use only queue-engine-supported prefixes
+//   - §3.2 contains finding triage loop protocol (classify → decision → spawn → JS feedback)
+
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  checkFrontmatterParsable,
+  checkNodeIdentity,
+  checkStopDeclared,
+  checkGateDefinitionExists,
+  checkGateInTransitionTable,
+  checkReferencesExist,
+  checkNextPhaseExists,
+  checkSections,
+} from '../../helpers/md-phase-checks.mjs';
+
+const PHASE_MD = path.resolve(import.meta.dirname, '../../../DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md');
+const body = readFileSync(PHASE_MD, 'utf-8');
+
+// ── frontmatter ──────────────────────────────────────────────────────
+
+describe('frontmatter — parseable, identity, gate, stop, params', () => {
+  const result = checkFrontmatterParsable(body, 'phase-wave2');
+  const parsed = result.ok ? result.parsed : null;
+
+  it('frontmatter is legal YAML', () => {
+    assert.ok(result.ok, result.detail);
+  });
+
+  it('node_type=phase, id=phase-wave2, gate=wave2-complete declared', () => {
+    const issues = [
+      ...checkNodeIdentity(parsed, { node_type: 'phase', id: 'phase-wave2', gate: 'wave2-complete' }),
+      ...checkStopDeclared(parsed),
+    ];
+    assert.deepEqual(issues, [], issues.join('; '));
+  });
+
+  it('gate definition file exists', () => {
+    const r = checkGateDefinitionExists(parsed);
+    assert.ok(r.ok, r.detail);
+  });
+
+  it('gate is in transition table', () => {
+    const r = checkGateInTransitionTable(parsed);
+    assert.ok(r.ok, r.detail);
+  });
+
+  it('requires + suggested_context files exist', () => {
+    const issues = checkReferencesExist(parsed);
+    assert.deepEqual(issues, [], issues.join('; '));
+  });
+
+  it('has max_gapfill_iterations param (default 2)', () => {
+    assert.ok(parsed, 'frontmatter not parsed');
+    assert.ok(typeof parsed.max_gapfill_iterations === 'number',
+      `max_gapfill_iterations should be a number, got ${typeof parsed.max_gapfill_iterations}`);
+  });
+
+  it('has max_gapfill_subagents_per_round param (default 3)', () => {
+    assert.ok(parsed, 'frontmatter not parsed');
+    assert.ok(typeof parsed.max_gapfill_subagents_per_round === 'number',
+      `max_gapfill_subagents_per_round should be a number, got ${typeof parsed.max_gapfill_subagents_per_round}`);
+  });
+});
+
+// ── §3 three-stage structure ─────────────────────────────────────────
+
+describe('§3 Allowed Actions — three-stage queue-driven structure', () => {
+  it('has §3.1 (Filling) section', () => {
+    assert.ok(body.includes('§3.1') || body.includes('3.1'), 'missing §3.1 Filling section');
+  });
+
+  it('has §3.2 (Execution Loop) section', () => {
+    assert.ok(body.includes('§3.2') || body.includes('3.2'), 'missing §3.2 Execution Loop section');
+  });
+
+  it('has §3.3 (Closeout + Gate) section', () => {
+    assert.ok(body.includes('§3.3') || body.includes('3.3'), 'missing §3.3 Closeout+Gate section');
+  });
+
+  it('§3.1 references producer_rule cross_topic_synthesis', () => {
+    assert.ok(body.includes('cross_topic_synthesis'), 'missing cross_topic_synthesis producer_rule');
+  });
+
+  it('§3.1 references producer_rule seed_topic_backfill_wave2', () => {
+    assert.ok(body.includes('seed_topic_backfill_wave2'), 'missing seed_topic_backfill_wave2 producer_rule');
+  });
+
+  it('synthesis task card required_receipts covers three artifacts', () => {
+    assert.ok(body.includes('synthesis.md') && body.includes('cross-topic-ledger.md') && body.includes('finding-index.yaml'),
+      'missing three-artifact references in required_receipts');
+  });
+
+  it('priority_class values are valid QueueWorkUnitSchema enums', () => {
+    // P2_close_open_loop and P4_progressive_artifact_or_seed_backfill
+    assert.ok(body.includes('P2_close_open_loop'), 'missing P2_close_open_loop');
+    assert.ok(body.includes('P4_progressive_artifact_or_seed_backfill'), 'missing P4_progressive_artifact_or_seed_backfill');
+  });
+
+  it('required_receipts use file: prefix (engine-supported)', () => {
+    const fileReceipts = body.match(/file:/g);
+    assert.ok(fileReceipts && fileReceipts.length >= 4, 'expected at least 4 file: receipt references');
+  });
+
+  it('§3.2 contains finding triage loop protocol', () => {
+    assert.ok(body.includes('finding triage') || body.includes('Finding Triage'),
+      'missing finding triage loop protocol');
+  });
+
+  it('§3.2 references JS feedback checkpoints (L0/L1)', () => {
+    assert.ok(body.includes('L0') && body.includes('L1'), 'missing L0/L1 feedback checkpoint references');
+  });
+
+  it('§3.2 references convergence criteria', () => {
+    assert.ok(body.includes('收敛') || body.includes('convergence') || body.includes('converge'),
+      'missing convergence criteria');
+  });
+
+  it('§3.2 references dpt-topic-scout sub-agent spawn', () => {
+    assert.ok(body.includes('dpt-topic-scout'), 'missing dpt-topic-scout sub-agent reference');
+  });
+});
+
+// ── §9 Anti-Cheating Rules ───────────────────────────────────────────
+
+describe('Anti-Cheating Rules', () => {
+  it('has at least 10 anti-cheating rules', () => {
+    const antiSection = body.indexOf('Anti-Cheating');
+    assert.ok(antiSection > 0, 'missing Anti-Cheating Rules section');
+    const sectionBody = body.slice(antiSection);
+    const rules = sectionBody.match(/禁止/g);
+    assert.ok(rules && rules.length >= 10,
+      `expected at least 10 anti-cheating rules, found ${rules ? rules.length : 0}`);
+  });
+});
