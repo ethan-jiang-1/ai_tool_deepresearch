@@ -267,6 +267,7 @@ TRT-002: transition-table — transitions.chain.json structure (gate→state→n
 TRT-003: transition-table — transition-chain.mjs engine (loadChain, resolveTransition, createChain)
 TRT-004: transition-table — ask-next.mjs unified dispatch (askNext dispatches to chain by file suffix) [DEPRECATED]
 TRT-005: transition-table — Detailed node-result router contract and node-keyed backend dispatch
+TRT-006: transition-table — Chain table includes rerun node and HITL2 rerun exit (HITL2 rerun→phase-rerun.md, phase-rerun passed→phase-seed-topics.md, preserve HITL2 passed→readiness)
 
 # wff-content-delivery — phase content
 CDP-001: content-delivery-phase-content — phase-hitl2.md 9-section body (decision brief, structured user decision, stop=yes, anti-cheating)
@@ -285,3 +286,36 @@ CDE-002: content-delivery-experiments — Playbook test-medium-readiness-prechec
 CDE-003: content-delivery-experiments — Playbook test-simple-delivery-full-chain (hitl2→readiness→final sequential + terminal semantics)
 CDE-004: content-delivery-experiments — Playbook test-simple-hitl2-rerun-branch (rerun gate pass, chain only has passed, Agent-level routing)
 CDE-005: content-delivery-experiments — Playbook test-medium-delivery-repair-loop (HITL2 + readiness PDCA repair cycles)
+
+# reference-flat-format
+REF-001: reference-flat-format — Flat reference directory with three-level naming prefixes (00-shared-/00-cross-/0N-)
+REF-002: reference-flat-format — Rich MD reference file template (metadata block + Key Facts + Core Content + Relevance + Quotable Terms + Risks)
+REF-003: reference-flat-format — _INDEX.md as canonical reference inventory with source_layer column
+REF-004: reference-flat-format — README.md as human navigation for reference directory
+REF-005: reference-flat-format — Phase nodes enforce reference file naming convention
+
+# wave0-artifacts-directory
+WAD-001: wave0-artifacts-directory — Bundle structure includes artifacts/wave0/ directory
+WAD-002: wave0-artifacts-directory — Wave0 thin YAML source lists use ReferenceMetadata schema
+WAD-003: wave0-artifacts-directory — instantiate-run-bundle.mjs creates artifacts/wave0/ directory
+
+# research-wave-phase-content (delta)
+RWP-009: research-wave-phase-content — Wave0 phase produces 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
+RWP-010: research-wave-phase-content — Wave1 phase produces reference/0N-*.md rich MD per topic
+RWP-011: research-wave-phase-content — Wave2 phase produces 00-cross-*.md (optional), synthesis stays in artifacts/wave2/
+
+# research-wave-gate-implementation (delta)
+RWG-011: research-wave-gate-implementation — Wave0 gate checks for 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
+RWG-012: research-wave-gate-implementation — Wave1 gate checks for reference/0N-*.md per topic
+RWG-013: research-wave-gate-implementation — Wave2 gate removes reference/00_shared/ checks, 00-cross-* is optional
+
+# workflow-directory-contract (delta)
+WDC-009: workflow-directory-contract — Bundle canonical structure includes artifacts/wave0/ and flat reference/
+WDC-010: workflow-directory-contract — Manifest includes rerun phase entry (phases array gets rerun→phases/phase-rerun.md gate rerun-ready; manifest is inventory not routing table)
+
+# bundle-start-from-here (delta)
+BUS-002: bundle-start-from-here — START_FROM_HERE.md documents flat reference/ and artifacts/wave0/
+
+# schema-core (delta)
+SCO-010: schema-core — _INDEX.md light validation (header completeness + at least 1 row)
+SCO-011: schema-core — Rerun tracking field rerun_count in HITL2 profile (optional non-negative integer, default 0; direction hints go in seed_topics not profile)
