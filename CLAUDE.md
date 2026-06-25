@@ -22,7 +22,7 @@ Use `guidelines/` when the right direction, layer boundary, or experiment path i
 - Accepted specs: `openspec/specs/`
 - Requirement registry and checks: `openspec/governance/`
 - Framework code/playbooks: `DPT_FRAMEWORK/` (`validate-bundle.mjs`, `inspect-bundle.mjs`)
-- Prototypes: `experiments/`
+- Prototypes: `experiments_env/`
 - Regression tests (unit + integration): `tests/`
 - Controlled E2E tests: `experiments_playbook/exp_*/` (Agent-driven playbooks on real disposable bundles)
 - Real-environment E2E: deferred

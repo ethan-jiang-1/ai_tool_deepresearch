@@ -122,7 +122,7 @@ weight 字段 SHALL 在 frontmatter 中紧接 `case` 字段之后。未显式指
 
 ### Requirement: Disposable bundle names include random suffix (AGT-006)
 
-`experiments/shared/new-disposable-bundle.mjs` 在生成 disposable bundle 目录名时 SHALL 在 case 名后追加一位随机 hex 字符（`0-9a-f`）。例如 `dpt_disp_agq_simple` → `dpt_disp_agq_simple_a`。以此防止同 case 在同一 session 内重复跑或并发跑时的目录冲突。
+`experiments_env/shared/new-disposable-bundle.mjs` 在生成 disposable bundle 目录名时 SHALL 在 case 名后追加一位随机 hex 字符（`0-9a-f`）。例如 `dpt_disp_agq_simple` → `dpt_disp_agq_simple_a`。以此防止同 case 在同一 session 内重复跑或并发跑时的目录冲突。
 
 所有 playbook 的 cleanup step SHALL 使用确定性清除方式，不依赖重新调用 `new-disposable-bundle.mjs` 获取目录名：
 - 优先使用 `$B` 变量（playbook Step 1 保存的 bundle 路径）

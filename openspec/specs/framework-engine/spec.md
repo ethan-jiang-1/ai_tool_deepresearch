@@ -19,7 +19,7 @@ Six production engine modules SHALL reside at `DPT_FRAMEWORK/engine/` as their s
 | Workflow Chain | `DPT_FRAMEWORK/engine/workflow-chain.mjs` |
 | Trace Writer | `DPT_FRAMEWORK/engine/trace.mjs` |
 
-No engine module SHALL exist as a copy in `experiments/prototype-*/`. Experiment playbooks and production run bundles SHALL import engines from their canonical paths.
+No engine module SHALL exist as a copy in `experiments_env/prototype-*/`. Experiment playbooks and production run bundles SHALL import engines from their canonical paths.
 
 Workflow Chain is an MD loader + dependency resolver: it parses frontmatter, resolves dependency closures, reads and caches MD files, and returns results for the Agent to read. It SHALL NOT execute JS code blocks from MD nodes — MD content is Agent-readable, not engine-executable.
 
@@ -47,7 +47,7 @@ Workflow Chain is an MD loader + dependency resolver: it parses frontmatter, res
 #### Scenario: No engine copy remains in experiments
 
 - **WHEN** the change is complete
-- **THEN** no `experiments/prototype-*/` directory SHALL contain an engine `.mjs` file that duplicates a module in `DPT_FRAMEWORK/engine/`
+- **THEN** no `experiments_env/prototype-*/` directory SHALL contain an engine `.mjs` file that duplicates a module in `DPT_FRAMEWORK/engine/`
 
 ### Requirement: Gate helpers provide shared frontmatter parsing
 

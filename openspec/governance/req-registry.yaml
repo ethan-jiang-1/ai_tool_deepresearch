@@ -152,8 +152,8 @@ FRE-002: framework-engine — workflow-fsm standalone pure FSM transition resolv
 FRE-003: framework-engine — Gate helpers shared parseMdFrontmatter and readBundlePlan for YAML 1.2 frontmatter parsing
 TRW-001: trace-writer — Unified append-only JSONL trace writer with createTrace factory (3 variants)
 TRW-002: trace-writer — Trace output validates against TraceEntrySchema contract
-EXS-001: experiment-shared-infra — experiments/shared/ directory for experiment-scoped shared infrastructure
-EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_FRAMEWORK/command_experiments/scripts/ to experiments/shared/"
+EXS-001: experiment-shared-infra — experiments_env/shared/ directory for experiment-scoped shared infrastructure
+EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_FRAMEWORK/command_experiments_env/scripts/ to experiments_env/shared/"
 SCO-009: schema-core — QueueWorkUnitSchema upgrade for rb_queue.json (5 slots nullable, refill_pool typed)
 PLR-001: playbook-runner — RUN.md as unified runner entry with playbook manifest and execution instructions
 PLR-003: playbook-runner — Runner execution contract and summary report

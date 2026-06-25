@@ -128,7 +128,7 @@ Guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`
 | `DPT_FRAMEWORK/engine/` | Current | Yes — 5 engines (queue-manager, gate-loop, gate-fork, subagent-relay, workflow-chain) | Production engine code |
 | `DPT_FRAMEWORK/engine/trace.mjs` | Current | Yes — unified trace writer, `createTrace` factory | Trace writer for all engines and playbooks |
 | `DPT_FRAMEWORK/` as read-only framework assets | Current convention | Yes | Framework code, definitions, templates, and Agent-facing instructions; not run state |
-| `experiments/shared/new-disposable-bundle.mjs` | Current | Yes | Shared experiment disposable-bundle setup |
+| `experiments_env/shared/new-disposable-bundle.mjs` | Current | Yes | Shared experiment disposable-bundle setup |
 | `check` trace verdict events | Current | Used by command experiment playbooks; see `experiments_playbook/RUN.md` for inventory | Trace-backed verdict convention |
 | `DPT_FRAMEWORK/workflows/manifest.json` + `workflows/nodes/` | Current | Yes | Single canonical workflow package for workflow-foundation; not a multi-workflow namespace |
 | `DPT_FRAMEWORK/schema/gate_definitions/` | Current | Yes | Read-only gate definition JSON; skeleton/content completeness is owned by accepted specs |

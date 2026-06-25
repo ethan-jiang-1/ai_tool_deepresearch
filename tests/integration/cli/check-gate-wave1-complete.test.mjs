@@ -7,7 +7,7 @@ import { join } from 'node:path';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs');
-const NEW_BUNDLE = join(REPO_ROOT, 'experiments/shared/new-disposable-bundle.mjs');
+const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const createdDirs = [];
 
 function track(dir) { createdDirs.push(dir); return dir; }

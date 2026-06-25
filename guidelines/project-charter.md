@@ -263,7 +263,7 @@ The project charter should not become a directory manifest. Treat these paths as
 | OpenSpec governance | `openspec/` | proposal/spec/tasks lifecycle, accepted requirements, governance checks |
 | Framework implementation | `DPT_FRAMEWORK/` | reusable framework assets: workflow nodes, schemas, gate definitions, CLIs, deterministic engines, trace utilities, templates, command playbooks — no tests and no runtime state |
 | Agent-facing guidance | `guidelines/` | principles, reading routes, mechanism guidance, quality bars |
-| Experiments and fixtures | `experiments/` and `experiments_playbook/` | prototype fixtures, shared experiment setup, command experiment playbooks |
+| Experiments and fixtures | `experiments_env/` and `experiments_playbook/` | prototype fixtures, shared experiment setup, command experiment playbooks |
 | Regression checks | `tests/` | executable tests for accepted behavior |
 | Runtime contexts | currently `dpt_rb_*` and `dpt_disp_*` | active run/experiment state, evidence, receipts, trace, artifacts |
 

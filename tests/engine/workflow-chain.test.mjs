@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // nodesDir passed explicitly to createWorkflowRuntime — no env var needed.
-const TEST_NODES_DIR = join(__dirname, '../../experiments/prototype-workflow-chain/nodes-workflow-chain');
+const TEST_NODES_DIR = join(__dirname, '../../experiments_env/prototype-workflow-chain/nodes-workflow-chain');
 
 const {
   NodeFrontmatter,

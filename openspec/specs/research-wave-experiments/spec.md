@@ -15,7 +15,7 @@
 `experiments_playbook/exp_workflow-foundation/test-simple-wave0-happy-path.md` SHALL 提供 light playbook，验证 Wave0 的 foundation reference collection 路径（包含 pass 和 fail 两个分支）。
 
 该 playbook SHALL：
-- 通过 `experiments/shared/new-disposable-bundle.mjs` 创建 disposable bundle
+- 通过 `experiments_env/shared/new-disposable-bundle.mjs` 创建 disposable bundle
 - 前置运行 validate-bundle 和 inspect-bundle
 - 写入 fixed seed topics 到 `rb_plan.md` 的 topic registry
 - 通过薄 driver 写 schema-valid reference metadata 到 `reference/<topic>/source.yaml`，更新 `reference/index.md`

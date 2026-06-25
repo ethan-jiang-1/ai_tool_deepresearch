@@ -444,7 +444,7 @@ export function claim(queue, { actor = 'main-agent' } = {}) {
     q.queue_health = q.refill_pool.length > 0 ? 'thin' : 'blocked';
     q.stop_authorization_state = q.refill_pool.length > 0 ? 'unauthorized_continue_required' : 'empty_queue_after_refill';
     traceEntry('check', { source: 'agq-claim', step: 'claim', passed: false, reason: 'empty' });
-    return { queue: validateQueue(touchQueue(q)), item: null };
+    return { queue: validateQueue(touchQueue(q)), item: null, queue_health: q.queue_health, stop_authorization_state: q.stop_authorization_state };
   }
   item.status = 'running';
   item.updated_at = now();

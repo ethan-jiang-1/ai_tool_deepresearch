@@ -13,7 +13,7 @@
 `experiments_playbook/exp_workflow-foundation/test-simple-pre-research-happy-path.md` SHALL 提供 fixed-answer 的 light playbook。
 
 该 playbook SHALL：
-- 通过 `experiments/shared/new-disposable-bundle.mjs` 创建真实 `dpt_disp_*` bundle
+- 通过 `experiments_env/shared/new-disposable-bundle.mjs` 创建真实 `dpt_disp_*` bundle
 - 在 mechanism execution 前运行 `DPT_FRAMEWORK/cli/validate-bundle.mjs` 和 `DPT_FRAMEWORK/cli/inspect-bundle.mjs`
 - 依次验证 `instantiation -> HITL1 -> setup`
 - 在 Markdown 中显式展示 fixed HITL1 payload 和写入后的 profile surface
@@ -129,7 +129,7 @@ thin driver MAY 负责 deterministic execution，但 SHALL NOT 取代 Markdown �
 
 该 playbook SHALL：
 - 使用一句话作为原始输入（如 "帮我研究一下 AI 安全"）
-- 通过 `experiments/shared/new-disposable-bundle.mjs` 创建 disposable bundle
+- 通过 `experiments_env/shared/new-disposable-bundle.mjs` 创建 disposable bundle
 - 将 Agent 展开的 structured original topic 写入 `rb_plan.md` 正文
 - 从 original topic 推导 seed topics → 写入 `rb_plan.md` frontmatter 的 `topic_registry`
 - 展示原始输入 vs original topic vs seed topics 的对比

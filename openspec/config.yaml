@@ -107,7 +107,7 @@ context: |
         Agent 逐 step 执行：创建 disposable bundle → import 原型 Engine → 执行操作 → 从 trace 裁决。
         这是实验的"入口"——Agent 从这里开始，trace 在这里结束。
 
-      支持环境 — experiments/prototype-{name}/
+      支持环境 — experiments_env/prototype-{name}/
         原型 JS engine + trace 系统 + node MD，为 playbook 提供可 import 的 staging 运行时。
         playbook 不 mock——它 import 真实 engine，在真实 disposable bundle 上端到端执行。
         原型完成后冻结，不随生产代码变化。
@@ -130,7 +130,7 @@ context: |
           node MD 自写事件统一用 md: 前缀（md:executed）
         - 3 级复杂度: simple（核心路径）, medium（分支+修复）, complex（全流程+错误路径）
 
-    支持环境详细约定 — experiments/:
+    支持环境详细约定 — experiments_env/:
       目录命名: prototype-{component-name}/（如 prototype-gate-loop）
       标准结构:
         - EXPERIMENT.md              # 实验目的、假设、结论
@@ -146,7 +146,7 @@ context: |
         test-simple.md            # 简单场景（核心路径）
         test-medium.md            # 中等场景（分支 + 修复）
         test-complex.md           # 复杂场景（全流程 + C&I）
-    experiments/                — 原型实验 (理想化, 冻结, 见实验体系)
+    experiments_env/                — 原型实验 (理想化, 冻结, 见实验体系)
     openspec/                   — OpenSpec spec-driven development
       changes/                  — change proposals (deltas) + archive
       config.yaml               — OpenSpec 配置文件（本文件）

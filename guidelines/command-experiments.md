@@ -21,7 +21,7 @@ siblings:
 
 # Guideline: command_experiments Current Guidance
 
-> 状态: 生效 | 创建: 2026-06-17 | 适用于: `experiments_playbook/exp_*`
+> 状态: 生效 | 创建: 2026-06-17 | 适用于: `experiments_playbook/exp_*`, `experiments_playbook/exph_*`
 
 ---
 
@@ -35,7 +35,7 @@ This guideline is for any command experiment that proves an agentic mechanism, n
 
 Command experiments are evidence for the OpenSpec process, not a shortcut around it. If an experiment changes accepted behavior, schema, state transitions, receipt rules, trace verdicts, or CLI contracts, create or update the OpenSpec proposal/spec/tasks first, then implement and validate the experiment.
 
-This file is the authoritative guidance for command experiments. Engines live under `DPT_FRAMEWORK/`, playbooks under `experiments_playbook/`, shared experiment tools under `experiments/shared/`, and prototype fixtures under `experiments/prototype-*/`. The pre-dedup prototype-local engine layout is retired.
+This file is the authoritative guidance for command experiments. Engines live under `DPT_FRAMEWORK/`, playbooks under `experiments_playbook/`, shared experiment tools under `experiments_env/shared/`, and prototype fixtures under `experiments_env/prototype-*/`. The pre-dedup prototype-local engine layout is retired.
 
 This file intentionally does not enumerate every future experiment family. A new command experiment belongs here when it has the same shape: it stages an Agent-facing mechanism in a real bundle, uses deterministic framework checkpoints for facts the Agent must not self-police, and produces evidence that can be replayed through filesystem state plus trace.
 
@@ -82,8 +82,9 @@ Stable core:
 - Real disposable runtime context, not isolated scratch files that skip bundle state.
 - Canonical framework code for deterministic behavior, not playbook-local reimplementation.
 - Markdown-visible Agent Flow, with JS/CLI limited to deterministic checkpoints and feedback.
+- Coding agent execution of the Markdown playbook as the action surface; the playbook is not an explanatory note that can be mentally translated into a different script.
 - Machine feedback returning to the LLM before the next Agent action.
-- Final claim backed by runtime files, receipts where applicable, and trace.
+- Final claim backed by runtime files, receipts where applicable, trace, and an explicit PASS/FAIL report.
 - OpenSpec discipline before behavior, schema, state, CLI, or trace contract changes.
 
 Variable surface:
@@ -128,29 +129,36 @@ The safety rules below always apply. Concrete path or helper names refer to the 
 
 - MUST follow `openspec/config.yaml` and the relevant OpenSpec change before changing accepted behavior.
 - MUST use a real disposable experiment runtime context; the current project convention is a `dpt_disp_*` bundle.
-- MUST create disposable runtime contexts through approved shared experiment infrastructure; the current default is `experiments/shared/new-disposable-bundle.mjs`.
+- MUST create disposable runtime contexts through approved shared experiment infrastructure; the current default is `experiments_env/shared/new-disposable-bundle.mjs`.
 - MUST run `validate-bundle.mjs` and `inspect-bundle.mjs` before mechanism execution.
 - MUST import and exercise framework APIs from their canonical `DPT_FRAMEWORK/` location instead of reimplementing the mechanism in the playbook.
 - MUST write every trace event in the canonical format owned by the accepted trace-writer contract; do not run a parallel trace format.
 - MUST use real Agent actor or native subagent execution when the mechanism depends on Agent actor behavior.
+- MUST treat the Markdown playbook as executable instructions for the coding agent runner: run it step by step, in order, inside the real runtime context.
 - MUST keep stage sequence, Agent handoff, and any native subagent semantics visible in the Markdown playbook.
 - MUST keep inline `.mjs` code, when present, as a thin deterministic driver/checkpoint.
 - MUST let Engine/CLI output return to the LLM as actionable context.
+- MUST design case-specific runtime assertions from the case goal: which trace events, receipts, files, state, content markers, queue status, or artifacts prove the run did the intended thing.
+- MUST record critical runtime artifact assertions as trace `check` events so the final verdict includes them.
 - MUST make the final verdict come from trace JSONL.
+- MUST end every playbook with a reportable PASS/FAIL verdict that a higher-level runner can aggregate.
 - MUST clean up the disposable runtime context at the end of the playbook.
 
 ### MUST NOT
 
 - MUST NOT mock LLM/subagent work.
+- MUST NOT use bash/JS to prewrite Agent-produced content as evidence that an Agent can produce that content.
 - MUST NOT use a passing experiment as permission to bypass OpenSpec acceptance.
 - MUST NOT hand-write fake `result.json`, runtime receipt, trace event, or completion receipt.
 - MUST NOT use `console.log` as pass/fail authority.
 - MUST NOT bypass approved bundle creation with ad hoc `mkdir`, `sed {{name}}`, or direct `rb_templates` copying.
-- MUST NOT import production engine or trace code from `experiments/prototype-*`.
+- MUST NOT import production engine or trace code from `experiments_env/prototype-*`.
 - MUST NOT read source fixtures from the prototype directory at runtime when the experiment contract says runtime inputs live inside the bundle.
 - MUST NOT patch a failed receipt by hand to make the verdict pass.
 - MUST NOT hide a multi-stage Agent Flow inside an inline `.mjs` controller.
 - MUST NOT replace Agent Flow with a JS controller just because that is easier to test.
+- MUST NOT leave important runtime file/content verification as console-only `PASS`/`FAIL` text if that verification is part of the case's pass condition.
+- MUST NOT let an outer runner combine multiple playbooks, rewrite their steps into an "equivalent" script, skip slow Agent work, or infer success by reading instead of running.
 - MUST NOT leave a successful experiment bundle behind.
 
 判断标准：**这个事件是真实发生的，还是脚本/人写出来假装发生的？**
@@ -166,17 +174,21 @@ Command experiments use four ownership layers. The exact mechanism names vary; t
 | `DPT_FRAMEWORK/` | Reusable framework code: deterministic engines, CLIs, schemas, trace writer, command playbooks | Experiment-only setup data or mechanism-specific fixtures |
 | `experiments_playbook/exp_<mechanism>/` | Agent-readable playbooks that stage real end-to-end mechanism experiments — **auto-runnable** by runner | Core mechanism implementation |
 | `experiments_playbook/exph_<mechanism>/` | Same ownership as `exp_`: Agent-readable playbooks. Difference: mechanism under test requires human intervention — **not auto-runnable**. Runner skips these. | Core mechanism implementation |
-| `experiments/shared/` | Experiment-only shared setup utilities, such as disposable bundle creation | Production runtime behavior |
-| `experiments/prototype-<mechanism>/` | Experiment-specific fixtures and notes, such as `EXPERIMENT.md`, case data, and mechanism-specific fixture files | Production engine code, trace writer code, CLI contracts, reusable schemas |
+| `experiments_env/shared/` | Experiment-only shared setup utilities, such as disposable bundle creation | Production runtime behavior |
+| `experiments_env/prototype-<mechanism>/` | Experiment-specific fixtures and notes, such as `EXPERIMENT.md`, case data, and mechanism-specific fixture files | Production engine code, trace writer code, CLI contracts, reusable schemas |
 
-`experiments/prototype-*` is not a production code location. It does not own engine logic, trace writer logic, CLI contracts, or reusable schema.
+`experiments_env/prototype-*` is not a production code location. It does not own engine logic, trace writer logic, CLI contracts, or reusable schema.
 
 Naming:
 
 - Experiment directory: `experiments_playbook/exp_<mechanism>/`
 - Human-in-the-loop variant: `experiments_playbook/exph_<mechanism>/` (`exph_` = exp + human). Pairs with `exp_`. For playbooks whose mechanism under test currently requires human judgment (e.g., verifying Agent topic-rewrite quality). These are a **temporary backlog** — the goal is to move them back to `exp_` once automation matures. They do not block the automation pipeline; the runner skips `exph_` directories.
-- Prototype directory, when used: `experiments/prototype-<mechanism>/`
-- Case playbook: `test-<complexity>-<what-it-tests>.md`, where complexity is `simple|medium|complex|identity` and the suffix names what the case actually proves (e.g. `test-simple-four-returns.md`). Suffix SHOULD be short kebab-case, 2-4 words.
+- Prototype directory, when used: `experiments_env/prototype-<mechanism>/`
+- Case playbook, new/updated target: `case-<XX>-<cost>-<what-it-proves>.md`, where `XX` is the case ID — a two- or three-digit Arabic numeral. The leading digit(s) name the case group; the final digit names the case's order within that group. Two-digit IDs (`MN`) serve groups 1–9 (e.g. `11` = group 1 case 1, `29` = group 2 case 9, `41` = group 4 case 1). Three-digit IDs (`MMN`) serve groups 10+ (e.g. `101` = group 10 case 1, `121` = group 12 case 1, `211` = group 21 case 1). `MM` is the group number; `N` is the case within that group. `cost` is `light|standard|heavy` (for example, `case-11-light-four-returns.md`, `case-121-standard-wave0-happy.md`, `case-211-heavy-wave0-happy-path.md`). The suffix names what the case actually proves and SHOULD be short kebab-case, 2-4 words.
+- **9NN exception band (three-digit, group numbering rule does not apply):** cases whose mechanism under test involves human judgment use the `9NN` band, split by who plays the human — `901–949` = real human (runner skips, manual only); `950–999` = AI simulates the human (auto-runnable). Both halves live under `exph_*/` co-located as `+50` pairs (e.g. `901` ↔ `951`); the runner decides skip-vs-auto by number band, not by the `exph_` prefix. 950–999 verdicts must be tagged `source: ai-judge` in trace — they are not human verdicts. See `experiments_playbook/README.md` § 编号约定 for the authoritative wording.
+- Cost label: `light` means cheap JS/CLI/gate/filesystem execution; `standard` means normal real-bundle multi-step execution such as repair loops or artifact checks; `heavy` means expensive execution with real Agent/subagent, WebSearch/WebFetch, long chains, or other external/slow work.
+- Filename `cost` is an authoring and runner-cost label. Frontmatter `weight` remains owned by the accepted agent-testing spec; until that spec grows a `standard` value, use `weight: light` for `light` and `standard` cases, and `weight: heavy` for `heavy` cases. This is a temporary compatibility mapping; if the accepted spec adds `standard`, update the runner-facing frontmatter convention and this guideline together.
+- Case playbook, legacy/current files: `test-<complexity>-<what-it-tests>.md` remains recognized for existing playbooks, but new designs should avoid `test-` so command experiments do not read like regression tests.
 - Disposable bundle: `dpt_disp_<short>_<case>_*/` (random hex suffix appended for collision avoidance)
 - Trace file: `_trace.jsonl` (unified name across all playbooks; bundle directory provides isolation)
 - Runner entry: `experiments_playbook/RUN.md` (contains playbook manifest + execution instructions)
@@ -186,7 +198,7 @@ These names are current conventions, not the mechanism taxonomy. Future mechanis
 
 ## Import Boundary
 
-Use canonical framework paths for production code. Do not import engine, trace, schema, or CLI logic from `experiments/prototype-*`.
+Use canonical framework paths for production code. Do not import engine, trace, schema, or CLI logic from `experiments_env/prototype-*`.
 
 Import paths are a boundary check, not a memorized table. The exact relative path depends on where the `.mjs` file is written and executed. If an import path is inconvenient, move the driver or use the accepted CLI; do not create a local copy of framework code to make the path easier.
 
@@ -209,7 +221,7 @@ Every playbook starts with YAML frontmatter. It carries routing facts only, not 
 schema: command-experiment/v1
 experiment: <mechanism>
 case: <case-name>
-weight: light | heavy               # light = pure JS E2E, heavy = real subagent spawn
+weight: light | heavy               # spec-owned runner class; filename cost `standard` currently maps to weight: light
 case_goal: "<one sentence: what this case proves>"
 runner: coding-agent
 agent_mode: <mode-if-agent-dependent>  # omit or set only when real Agent/subagent execution is required
@@ -229,10 +241,12 @@ Immediately after frontmatter, include a short execution contract:
 由 coding agent 在真实 disposable experiment bundle 中执行。实验结果必须来自实际文件写入、Engine/Agent 调用和 trace event；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
 ```
 
+If a playbook uses seeded fixtures or prefilled runtime content, the execution contract must say what those fixtures prove and what they do not prove. A fixture may support a schema, gate, CLI, or structural test; it must not be described as proof that an Agent can make the same semantic judgment or write the same artifact.
+
 Then use a title:
 
 ```markdown
-# test-<mechanism>-<case>
+# case-<MN>-<cost>-<what-it-proves>
 ```
 
 ---
@@ -249,7 +263,10 @@ Every playbook follows this shape:
 3. 如需要，启动真实 Agent/subagent 工作 `[MAIN->AGENT]`
 4. 读取 JS/CLI 输出和 trace JSONL，形成可行动反馈 `[MAIN/SHELL]`
 5. LLM 根据反馈继续、修复、阻塞或裁决 `[MAIN]`
-6. 清理 disposable bundle `[MAIN/SHELL]`
+6. 验证 case-specific runtime evidence，并把关键检查写入 trace `[MAIN/SHELL]`
+7. 输出 PASS/FAIL verdict/report `[MAIN/SHELL]`
+8. 结果解读：说明每个 check 证明了什么，PASS/FAIL 意味着什么 `[MAIN/SHELL]`
+9. 清理 disposable bundle（PASS 才清理，FAIL 保留现场供排查）`[MAIN/SHELL]`
 
 ## Step 1: 创建 disposable runtime context
 ...
@@ -263,13 +280,15 @@ Every playbook follows this shape:
 
 Step names can vary, but the lifecycle cannot.
 
+Every playbook should also make its evidence target explicit: after the run, what must be different in the disposable bundle for the case goal to be true? Depending on the mechanism, the answer may be trace events, receipts, generated files, removed placeholders, status transitions, queue contents, artifact schemas, content markers, or cross-file consistency. If a runtime fact is part of the pass condition, record it as a trace `check`; do not leave it only as a printed diagnostic.
+
 ---
 
 ## Runtime Context Creation
 
 Use approved shared experiment infrastructure. Do not hand-roll `mkdir`, `sed {{name}}`, or manual `rb_templates` copying in new experiments.
 
-The current default is `experiments/shared/new-disposable-bundle.mjs`, invoked with a mechanism-specific bundle suffix and only the fixture inputs the case actually needs. If a future experiment needs different setup, that setup must still be shared, explicit, covered by OpenSpec when it changes framework behavior, and produce a normal disposable runtime context that passes `validate-bundle.mjs` and `inspect-bundle.mjs` before mechanism execution starts.
+The current default is `experiments_env/shared/new-disposable-bundle.mjs`, invoked with a mechanism-specific bundle suffix and only the fixture inputs the case actually needs. If a future experiment needs different setup, that setup must still be shared, explicit, covered by OpenSpec when it changes framework behavior, and produce a normal disposable runtime context that passes `validate-bundle.mjs` and `inspect-bundle.mjs` before mechanism execution starts.
 
 Shared setup owns the exact runtime skeleton. The playbook owns only the case identity, fixture selection, and follow-up validation calls.
 
@@ -314,6 +333,7 @@ If a playbook needs to restate project-wide layer boundaries, link to `guideline
 
 If a case depends on real Agent or native subagent behavior:
 
+- Make the case goal say that Agent behavior is under test.
 - Declare that dependency in frontmatter or the execution contract.
 - Keep the Agent-visible routing, handoff, and expected evidence in Markdown.
 - Create runtime work items through the framework mechanism under test.
@@ -321,7 +341,9 @@ If a case depends on real Agent or native subagent behavior:
 - Require each Agent actor to write its own runtime evidence, such as a receipt, result file, or trace event defined by the relevant spec.
 - Let the Phase Agent collect, merge, or judge only after runtime evidence exists.
 
-Do not satisfy an Agent-dependent experiment by writing the expected child output from the parent context.
+Do not satisfy an Agent-dependent experiment by writing the expected child output from the parent context. A parent shell block may stage inputs, call deterministic CLIs, import receipts, or run artifact checks, but it must not prewrite the semantic output that the Agent actor is supposed to produce.
+
+If a playbook intentionally uses a fixed payload or prefilled artifact, scope the case to the deterministic surface it actually tests, such as "gate accepts this valid payload" or "CLI rejects this malformed state." It must not claim to test the Agent's ability to infer, rewrite, search, repair, synthesize, or judge unless a real Agent performed that work during the run.
 
 When the Agent's judgment *is* the mechanism under test and no mature automation exists to verify it, the experiment lives in `exph_<mechanism>/` (see Naming conventions above). A human reviewer reads the playbook's review checklist and judges the Agent's output quality — the gate only checks structure, not semantic correctness.
 
@@ -335,32 +357,42 @@ Some experiments currently require human intervention to complete — for exampl
 - Every `exph_` playbook targets eventual migration to `exp_` once automation matures
 - Does not block progress — automated experiments keep running, manual ones wait for capability
 - The runner skips `exph_` directories by default
+- Each `exph_` playbook must identify the human judgment point, why deterministic automation cannot yet replace it, and why gate pass alone is not a human pass
+- Each `exph_` playbook should name the automation condition that would let it move back to `exp_`, such as a reliable programmatic reviewer, Agent-run receipt, or accepted semantic check
 
 ---
 
 ## Trace Verdict
 
-The verdict step reads trace JSONL and exits nonzero on failed checks.
+The verdict step reads trace JSONL and exits nonzero on failed checks. It also prints a compact PASS/FAIL report that a higher-level runner can aggregate.
+
+Trace remains the authority for verdict truth, but trace does not have to stand alone as the only evidence. Runtime artifact assertions should be converted into trace `check` events before the verdict step. Examples include "file exists," "placeholder marker is gone," "receipt has the expected nonce," "queue is empty," "status advanced," "artifact parses," or "frontmatter slug matches filename." Console output may show those facts for humans, but if the fact decides pass/fail, it must be represented in trace.
 
 Minimum verdict script behavior:
 
 - Parse every JSONL line.
 - Filter `event === "check"`.
 - Require at least one `check` event.
-- Count passed checks where `passed === true`.
-- Count failed checks where `passed !== true`.
-- Print a compact summary for humans.
+- Treat missing `expected` as `true`.
+- Count matched checks where `passed === expected`.
+- Count failed checks where `passed !== expected`.
+- Print a compact summary for humans, including the playbook path or case identifier.
+- Print an explicit `PASS` or `FAIL`.
+- Include a short failed-check reason when failing.
+- May include a one-line description of what the case proved when passing.
 - `process.exit(1)` if no checks exist or any check failed.
 
 Console output explains the verdict; trace data decides it.
 
 Console output may use color for readability, but coloring is a presentation detail owned by the verdict helper or spec — it is not part of the trace contract.
 
+An outer runner may aggregate many playbook reports, but it must not replace the playbook's own verdict. The runner's summary is a roll-up of individual real runs, not a shortcut around them.
+
 ---
 
 ## Framework Code Rules
 
-Reusable deterministic mechanism code lives under `DPT_FRAMEWORK/` and is imported by both experiment playbooks and production run bundles. Engine modules normally live under `DPT_FRAMEWORK/engine/`; CLIs, schemas, and trace utilities stay under their existing framework directories. The `experiments/prototype-<mechanism>/` directory is thin: it holds experiment-specific fixtures and notes only.
+Reusable deterministic mechanism code lives under `DPT_FRAMEWORK/` and is imported by both experiment playbooks and production run bundles. Engine modules normally live under `DPT_FRAMEWORK/engine/`; CLIs, schemas, and trace utilities stay under their existing framework directories. The `experiments_env/prototype-<mechanism>/` directory is thin: it holds experiment-specific fixtures and notes only.
 
 Rules:
 
@@ -398,15 +430,19 @@ Names such as `simple`, `medium`, `complex`, and `identity` are acceptable when 
 
 - New playbook manually creates disposable runtime contexts instead of using approved shared setup infrastructure.
 - Playbook code implements the mechanism instead of importing framework code from `DPT_FRAMEWORK/`.
-- Playbook imports engine or trace code from `experiments/prototype-*`.
+- Playbook imports engine or trace code from `experiments_env/prototype-*`.
 - A prototype directory keeps production engine, trace writer, CLI, or reusable schema logic.
 - Inline `.mjs` becomes the multi-stage Agent Flow controller instead of a thin deterministic driver.
 - Stage sequence, Agent handoff, or native subagent semantics are hidden inside JS instead of remaining visible in Markdown.
+- Bash/JS prewrites the output that a real Agent is supposed to infer, write, search, repair, synthesize, or judge, while the case still claims to test Agent ability.
+- A fixture-backed structural/gate test is described as if it proved Agent semantic behavior.
 - A test passes from hard-coded expected output rather than runtime evidence.
 - `console.log` is treated as the verdict.
+- Runtime artifact checks print `V1 PASS`/`V2 FAIL` but never become trace `check` events, so the final verdict can pass while those checks failed.
 - Source fixtures are read directly from the prototype directory at runtime instead of being staged into the disposable bundle when the experiment contract requires staged runtime inputs.
 - A failed receipt is patched by hand instead of producing a repair path or explicit failure.
 - A disposable bundle is left behind after a successful case.
+- A higher-level runner rewrites, batches, or compresses playbook steps instead of faithfully executing the Markdown one playbook at a time.
 - Current known experiment families are treated as the full universe of future command experiments.
 - Case labels such as `simple`/`medium`/`complex` are treated as mandatory even when a mechanism needs a different proof shape.
 - Treating `exph_` playbooks as auto-runnable — they require human intervention by design. Runner must skip `exph_` directories.
@@ -492,30 +528,61 @@ EOF
 
 Do not "notice topic-c still has a file from Step 2 and skip deleting it because it's convenient." Delete it. Then the test condition is explicit and auditable.
 
+### 6. Runtime artifact checks are verdict checks
+
+Many command experiments need evidence beyond "the expected trace events happened." If the case goal depends on generated files, missing files, content markers, receipt contents, queue state, or cross-artifact consistency, those checks MUST be recorded as trace `check` events before the final verdict.
+
+```bash
+# Good shape: calculate the real runtime fact, then record it as a check
+#   markerGone=<actual boolean from grep/test/parser>
+#   recordCheck(trace, { gate: 'artifact-content', passed: markerGone, detail: 'backfill marker removed' })
+```
+
+It is fine to print `V1 PASS` or a table for humans, but printed verification is not enough. If the final verdict ignores the runtime fact, the experiment can report PASS while the case goal failed.
+
+### 7. Outer runners aggregate; they do not reinterpret
+
+A runner may execute many playbooks and produce a summary such as `N/N PASS`. It MUST still run each playbook faithfully, step by step, using the Markdown instructions and the playbook's own verdict. It MUST NOT merge playbooks into one driver, rewrite commands into a different "equivalent" implementation, skip slow Agent/subagent steps, or decide a verdict by reading the playbook.
+
+The higher-level report is bookkeeping over real playbook verdicts. It is not a separate source of truth.
+
 ---
 
 These principles are not exhaustive. When a new experiment family exposes a new failure mode, capture the principle here and apply it backward to existing playbooks.
 
 ---
 
-## New Experiment Checklist
+## Experiment Design Criteria
+
+Use the checklist below as the design criteria for command experiments. After a playbook is designed, reviewers can ask whether these criteria are fully satisfied. If yes, the design is reasonable enough to implement and run; if not, revise the playbook before treating it as a valid experiment design.
+
+These criteria judge the experiment design shape, not whether a future execution will pass. Execution still has to happen from a clean repo and produce a PASS verdict before the playbook is complete.
+
+### Design Criteria Checklist
 
 **Setup & layout**
 
 - [ ] `experiments_playbook/exp_<mechanism>/` exists.
 - [ ] Reusable framework code exists under `DPT_FRAMEWORK/` for the mechanism under test.
 - [ ] Trace events written by the playbook and engine match the canonical trace-writer format.
-- [ ] Any `experiments/prototype-<mechanism>/` content is fixture-only.
+- [ ] Any `experiments_env/prototype-<mechanism>/` content is fixture-only.
 - [ ] The experiment note, usually `EXPERIMENT.md`, states the mechanism, hypothesis, and result.
 
 **Mechanism & playbook shape**
 
 - [ ] Case playbooks cover the mechanism's needed proof roles, and each case answers one question.
+- [ ] The experiment note, manifest, or playbook explains the case groups used by the leading digit(s) in `case-<XX>-...`.
+- [ ] New or renamed case playbooks use `case-<XX>-<cost>-<what-it-proves>.md`; `XX` is a two- or three-digit Arabic numeral: `MN` (two-digit) for groups 1–9, `MMN` (three-digit) for groups 10+; the leading digit(s) identify the group, the final digit `N` gives stable order inside that group; `cost` is `light|standard|heavy`; the suffix names the proof target.
+- [ ] For new or renamed playbooks, frontmatter `case` matches the filename stem unless an accepted spec says otherwise.
+- [ ] Filename `cost` matches frontmatter `weight`: `light` and `standard` use `weight: light`; `heavy` uses `weight: heavy`.
+- [ ] If the case uses fixed fixtures or prefilled runtime content, its contract states that it tests a deterministic surface, not Agent semantic ability.
+- [ ] If the case goal depends on Agent judgment, writing, search, repair, synthesis, or subagent behavior, real Agent/subagent execution is part of the steps.
 - [ ] Frontmatter names the disposable runtime context and trace paths.
 - [ ] The playbook keeps stage sequence and Agent handoff visible in Markdown.
 - [ ] Any inline `.mjs` is only a thin deterministic driver/checkpoint.
 - [ ] Runtime context setup uses approved shared experiment infrastructure.
 - [ ] Disposable runtime context passes validate + inspect before mechanism execution.
+- [ ] The playbook states the runtime facts that should change by the end of the run.
 
 **Runner principles**
 
@@ -524,15 +591,27 @@ These principles are not exhaustive. When a new experiment family exposes a new 
 - [ ] Boundary steps set `expected: false` on their check events (Principle 3).
 - [ ] Verdict mode matches experiment shape: `all` for happy-path/boundary, `last` for repair-loop (Principle 4).
 - [ ] Steps that depend on clean state explicitly clean up inherited artifacts (Principle 5).
+- [ ] Runtime artifact checks that affect pass/fail are recorded as trace `check` events (Principle 6).
+- [ ] Higher-level runners can aggregate the playbook's verdict without rewriting or compressing the playbook (Principle 7).
 
 **Verdict & cleanup**
 
-- [ ] Trace JSONL is the final verdict.
-- [ ] Cleanup removes the disposable runtime context.
+- [ ] Trace JSONL is the final verdict, including critical runtime artifact assertions.
+- [ ] The verdict/report prints explicit PASS or FAIL, includes the playbook or case identifier, includes a compact failure reason on FAIL, and may include a one-line proof description on PASS.
+- [ ] The playbook includes a result interpretation section (e.g., `## Step N: 结果解读`) that explains what each check event proved and what PASS/FAIL means for the mechanism under test.
+- [ ] Cleanup is conditional: executed only on PASS. When FAIL, the disposable bundle is preserved for diagnosis. The cleanup step must explicitly state this rule (e.g., "PASS 才执行。FAIL 时保留 bundle 现场供排查").
 
-**Quality Gate**
+**Human-in-the-loop**
+
+- [ ] Any `exph_` playbook explains the human judgment point, why automation is not mature yet, and why gate pass is not human pass.
+- [ ] Any `exph_` playbook states the future automation condition for migration back to `exp_`.
+
+## Completion Criteria
+
+These criteria are not required for design approval. They apply when deciding whether an implemented playbook is complete.
 
 - [ ] Playbook has been executed end-to-end by a coding agent and verdict shows PASS (see Quality Gate).
+- [ ] Successful execution includes cleanup; PASS 时清除 disposable bundle，FAIL 时保留现场。A leftover bundle after a PASS run means the playbook is not complete.
 
 ---
 
