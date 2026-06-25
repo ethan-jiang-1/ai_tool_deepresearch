@@ -83,6 +83,13 @@ INT-001: integration-tests — validate-bundle.mjs + inspect-bundle.mjs integrat
 
 # repair-loop
 REL-001: repair-loop — Repair checkpoint loopback and deterministic termination
+
+# rerun-incremental-node
+REI-001: rerun-incremental-node — Phase-rerun node frontmatter and identity (node_type:phase, phase:rerun, gate:rerun-ready, stop:no)
+REI-002: rerun-incremental-node — ProfileSchema rerun_count field (non-negative integer, default 0, optional)
+REI-003: "rerun-incremental-node — Gate-rerun-ready checks rerun state legality (4 rules: rationale, count<3, structure, status)"
+REI-004: rerun-incremental-node — Chain routes HITL2 rerun as deterministic outcome (passed→readiness, rerun→rerun-node)
+REI-005: rerun-incremental-node — Rerun loop protection with max iterations (rerun_count<3, terminal fail on exhaustion)
 # schema-core
 SCO-001: schema-core — Six domain enums
 SCO-002: schema-core — Six Zod contracts
@@ -252,6 +259,7 @@ LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass 
 LFW-003: "lifecycle-walker — Walker logs progress via logger (createLogger({ file: '<bundle>/_logs/run.log' })) [DEPRECATED]"
 LFW-004: lifecycle-walker — Walker requires --bundle flag (exit(2) on missing) [DEPRECATED]
 GSK-004: "gate-skeleton — Gate CLI evaluates rules from definition and emits detailed routing diagnostics (load definition JSON, iterate all rule types, check/inspect/advice feedback; 9 gate CLIs: 3 pre-research + 1 seed-topics + 3 wave + 2 delivery; new check types: count_floor, dir_non_empty, cross_field slug_consistency, cross_field markdown_link_resolution, yaml_parse, jsonl_parse, trace_has_all_gates)"
+GSK-005: gate-skeleton — Shared gate attempt audit helper writeGateAttempt(bundlePath, result) writes to logger + trace, eliminates duplicated inline trace code across gate CLIs
 
 # wff-state-chain
 TRT-001: transition-table — File naming convention transitions.chain.json

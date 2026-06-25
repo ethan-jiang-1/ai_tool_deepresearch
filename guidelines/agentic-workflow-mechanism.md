@@ -106,7 +106,7 @@ Agent 驱动的 workflow 不是 JS engine 跑循环。它是一个 **Phase Agent
 
 `DPT_FRAMEWORK/workflows/transitions.chain.json` 是唯一的路由数据源。它是一个纯静态映射：给定当前 node fileRef 和 gate outcome，返回下一个 node fileRef。
 
-- **MUST**：chain 只编码 `passed` 边（deterministic normal-next）。fail/repair/rerun 分支归 Phase Agent 判断，不进入 chain。
+- **MUST**：chain 编码**确定性出口**（outcome 有固定、上下文无关的 next-node 目标，如 `passed` 和 `rerun`）。不确定 branch（`request_view_revision`、`repair`、`stop_blocked`）归 Agent 判断，不进入 chain。
 - **MUST**：chain 的 key 和 value 都是 node fileRef（如 `phases/phase-wave0.md`），不是 gate key 或 phase key。
 - **MUST NOT**：chain 不持有状态、不计数、不追踪 cursor、不编码条件分支。它回答查询，仅此而已。
 
@@ -144,7 +144,7 @@ Node 按需加载，不预加载。
 - MUST route through the Engine's accepted transition lookup — no hardcoded next, no manifest-based next inference.
 - MUST keep the Phase Agent as the runtime driver: read phase MD → execute → gate → chain lookup → load next phase MD.
 - MUST keep JS Engine stateless and passive: validate, look up, write trace — never drive the loop.
-- MUST encode only `passed` edges in chain. Fail/repair/rerun paths belong to Phase Agent judgment.
+- MUST encode deterministic outcomes in chain. A deterministic outcome is one with a fixed, context-independent next-node target. Currently: `passed` (all phases) and `rerun` (HITL2). Indeterminate branches (`request_view_revision`, `repair`, `stop_blocked`) whose target depends on Agent runtime judgment SHALL NOT have chain entries — they return `no_transition`.
 - MUST load nodes on demand, driven by `check.next` — never preload the whole graph.
 
 Concrete function and file names referenced above (e.g. the current `resolveNodeTransitionDetailed()` entry point and `assessNode()` node loader) are descriptive anchors for the current implementation, not part of this normative contract. They may be renamed, wrapped, or relocated by an accepted OpenSpec change; the principles above must hold either way. For the authoritative function contract, file naming, and backend dispatch rules, see `openspec/specs/transition-table/spec.md` and `openspec/specs/framework-engine/spec.md`.
@@ -152,7 +152,7 @@ Concrete function and file names referenced above (e.g. the current `resolveNode
 ## MUST NOT
 
 - MUST NOT implement a JS walker, cursor, or loop that drives node-to-node progression.
-- MUST NOT encode repair, fail, or branch logic into `transitions.chain.json`.
+- MUST NOT encode indeterminate branch logic into `transitions.chain.json`. Outcomes whose target depends on Agent judgment of runtime state (`request_view_revision`, `repair`, `stop_blocked`) SHALL NOT have chain entries.
 - MUST NOT preload all nodes at startup.
 - MUST NOT let MD node or Phase Agent bypass gate verification to declare next node.
 - MUST NOT let JS Engine decide which node to load next or when to advance.
@@ -167,7 +167,11 @@ These are not architectural rules — they are implementation properties that mu
 
 ### Chain Completeness
 
-`transitions.chain.json` must contain a valid `passed` edge for every phase-to-phase transition the workflow needs. A missing edge produces `no_transition` from the chain lookup — the Phase Agent receives no next node and the loop stalls. The chain is a static file; it cannot recover from missing entries at runtime. Every new phase added to the workflow MUST include its chain entries before the phase can be reached through the normal loop.
+`transitions.chain.json` must contain valid edges for every **deterministic** phase-to-phase transition the workflow needs. A deterministic transition is one whose outcome has a fixed, context-independent next-node target. Currently: `passed` (all phases — gate-determined normal next) and `rerun` (HITL2 — user-chosen incremental rerun path). A missing edge for a deterministic outcome produces `no_transition` from the chain lookup — the Phase Agent receives no next node and the loop stalls. The chain is a static file; it cannot recover from missing entries at runtime.
+
+Indeterminate branches — outcomes whose targets depend on Agent judgment of runtime state — are intentionally absent from chain. These include `request_view_revision` (Agent decides which phase to return to), `repair` (Agent stays in HITL2 to fix issues), and `stop_blocked` (terminal, no next). Chain correctly returns `no_transition` for these.
+
+Every new phase added to the workflow MUST include its deterministic chain entries before the phase can be reached through the normal loop.
 
 ### Dynamic Loading Integrity
 

@@ -49,7 +49,7 @@ suggested_context: []
 
 ### 9. 禁止在 final phase 暗藏 hidden next、hidden gate 或隐式循环
 
-**正确替代**：final 是 terminal node（`gate: null`，`transitions.chain.json` 无 final 条目）。Post-delivery 用户反馈走 HITL2 `rerun` 路径——Agent 从 `seed-topics` 重新跑，profile 已有新反馈。不能在 final node 里塞 hidden loop 让 Agent 原地转圈。
+**正确替代**：final 是 terminal node（`gate: null`，`transitions.chain.json` 无 final 条目）。Post-delivery 用户反馈走 HITL2 `rerun` 路径——Agent 用 `rerun` outcome 查 chain → 进入 `phase-rerun.md`（对比 rationale 与 seed_topics 现状、产出 topic 调整方案、gate pass）→ chain 路由进 `seed-topics` → wave0 → wave1 → wave2 增量链。不能在 final node 里塞 hidden loop 让 Agent 原地转圈。
 
 ### 10. 禁止 readiness gate 做语义质量判断
 
@@ -62,6 +62,17 @@ suggested_context: []
 ### 12. 禁止把 setup pass 当成 readiness pass
 
 **正确替代**：`setup-ready` gate pass 只确认 structural consistency（文件存在、schema 合法、basename 一致）。它不意味着研究质量过关或可以交付最终报告。`readiness-passed` 是另一个 gate，在 wave0/1/2 + HITL2 之后。
+
+### 13. 确定性出口原则 — 跨 phase 路由编码标准
+
+**原则**：某 outcome 是否应进 `transitions.chain.json` 的判断标准：该 outcome 是否有固定、上下文无关的 next-node 目标。
+
+- **有固定目标 → 确定性出口，进 chain**：outcome 有唯一、不依赖 Agent 判断的 next-node。Agent 只需选择 outcome 字符串，chain 返回确定的 target fileRef。当前确定性出口：`passed`（所有 phase — gate 确定 normal next）、`rerun`（HITL2 — 用户明确选择增量重跑）。
+- **目标依赖 Agent 判断 → 不确定 branch，归 Agent**：outcome 的 target 取决于 Agent 对运行时状态的分析（哪个 phase 需要修改、修改什么、能不能直接修）。chain 返回 `no_transition`。当前不确定 branch：`request_view_revision`、`repair`、`stop_blocked`。
+
+**此原则不绑定具体 decision 名称**，可跨 phase 复用。新增确定性出口时——例如 future phase 产生新的确定性 outcome——按此标准判断是否编码进 chain。
+
+**正确替代**：在 phase MD 和 chain 设计时，对每个 outcome 问："next-node 是否固定且上下文无关？"是 → 进 chain。否 → 归 Agent。
 
 ## Authority Boundary
 

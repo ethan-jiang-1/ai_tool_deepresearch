@@ -267,6 +267,33 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle <path> --cur
 
 `stop: no` — Phase Agent 自主执行 synthesis + finding triage + search。Wave2 不做 stop-and-wait 人类审查（HITL2 是独立的审查阶段）。
 
+## Rerun-Aware Behavior
+
+> 当 rerun 路径被触发，Phase Agent MUST 按增量模式执行 synthesis——已有 synthesis 保留为 baseline，新增/变更 topic 的 synthesis 作为 delta section 追加。
+
+### 检测
+
+读 `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count`。若 `rerun_count > 0`，当前为 rerun 轮次。
+
+### Merge 策略
+
+- **已有 synthesis 保留为 baseline**：前一（或首次）轮次的 `synthesis.md`、`cross-topic-ledger.md`、`finding-index.yaml` 全部保留。不作为本轮 synthesis 覆盖的目标——它们反映的是之前轮次 cross-topic synthesis 的结论。
+- **Delta section 追加**：本轮 rerun 的新 synthesis（针对新增/变更 topic 的 cross-topic 分析）作为 delta section 追加到 `synthesis.md` 末尾：
+  ```markdown
+  ## Delta Synthesis (Rerun N)
+  <本轮 rerun 的新 cross-topic 发现，仅覆盖新增和变更的 topic>
+  ```
+
+  `cross-topic-ledger.md` 中的新 findings 也以 delta section 追加（`## Delta Findings (Rerun N)`），不覆盖已有 finding。`finding-index.yaml` 中的新 finding 以 `rerun_N` 前缀标记 finding id（如 `W2F-R2-001`）。
+- **冲突处理**：若新 synthesis 的结论与旧 synthesis 的结论矛盾（如旧 synthesis 说 "topic-A 和 topic-B 无关联"，但新 evidence 显示两者有关联），MUST NOT 静默覆盖旧结论。取而代之：
+  1. 在 delta section 中标注冲突：`**冲突**: 本轮 evidence 显示 X，与 baseline synthesis (Rerun N-1) 的结论 "Y" 矛盾`
+  2. 在 ledger 中记录为 cross-topic emergent question（`type: cross_topic_emergent_question`）
+  3. 在 `finding-index.yaml` 中标记 `decision: defer_hitl2`——交由 HITL2 人类裁决
+
+### 非增量路径的重构风险
+
+若 rerun rationale 要求根本性重构（如改变 `research_profile` 从 `quick_factual` 到 `claim_verification`），这可能不适合 delta 合并模式。Agent MUST 在 `phase-rerun.md` 的分析阶段标记此情况——告知用户 delta 合并的局限性，建议考虑开新 Deep Research 而非增量 rerun。
+
 ## 9. Anti-Cheating Rules
 
 - **禁止只有 `synthesis.md` 而没有 ledger/index 就声称完成 Wave2 emergence handling**

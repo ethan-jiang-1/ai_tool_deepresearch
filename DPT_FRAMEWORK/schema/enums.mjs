@@ -10,6 +10,7 @@ export const CurrentGate = z.enum([
   'wave1_complete',
   'wave2_complete',
   'hitl2_recorded',
+  'rerun_ready',
   'readiness_passed',
   'none',
 ]);

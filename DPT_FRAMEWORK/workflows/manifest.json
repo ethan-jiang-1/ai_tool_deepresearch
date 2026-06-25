@@ -9,6 +9,7 @@
     { "key": "wave2",          "node": "phases/phase-wave2.md",          "gate": "wave2-complete" },
     { "key": "hitl2",          "node": "phases/phase-hitl2.md",          "gate": "hitl2-recorded" },
     { "key": "readiness",      "node": "phases/phase-readiness.md",      "gate": "readiness-passed" },
+    { "key": "rerun",         "node": "phases/phase-rerun.md",         "gate": "rerun-ready" },
     { "key": "final",          "node": "phases/phase-final.md",          "gate": null }
   ],
   "shared": [

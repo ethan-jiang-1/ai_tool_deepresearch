@@ -6,6 +6,7 @@
   "phases/phase-wave0.md":        { "passed": "phases/phase-wave1.md" },
   "phases/phase-wave1.md":        { "passed": "phases/phase-wave2.md" },
   "phases/phase-wave2.md":        { "passed": "phases/phase-hitl2.md" },
-  "phases/phase-hitl2.md":        { "passed": "phases/phase-readiness.md" },
+  "phases/phase-hitl2.md":        { "passed": "phases/phase-readiness.md", "rerun": "phases/phase-rerun.md" },
+  "phases/phase-rerun.md":       { "passed": "phases/phase-seed-topics.md" },
   "phases/phase-readiness.md":    { "passed": "phases/phase-final.md" }
 }

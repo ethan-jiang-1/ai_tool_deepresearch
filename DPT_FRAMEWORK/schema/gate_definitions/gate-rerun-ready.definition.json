@@ -1,0 +1,33 @@
+{
+  "gate": "rerun-ready",
+  "description": "Verify the bundle is in a legal state for incremental rerun: rationale present, rerun count within limit, bundle structure intact, status consistent.",
+  "rules": [
+    {
+      "id": "rerun_rationale_present",
+      "check": "field_non_empty",
+      "target": "rb_profile.yaml#/human_decision_checkpoints/hitl2/rationale",
+      "failure_message": "HITL2 rationale is empty or missing. The user must provide a rationale explaining what they want to change in the rerun. Return to HITL2 to collect rationale before rerunning."
+    },
+    {
+      "id": "rerun_count_valid",
+      "check": "rerun_count_limit",
+      "target": "rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count",
+      "operator": "less_than",
+      "value": 3,
+      "failure_message": "rerun_count has reached the maximum of 3 rerun cycles. The rerun path is blocked. Suggest the user accept current results or start a new Deep Research."
+    },
+    {
+      "id": "bundle_structure_valid",
+      "check": "structural",
+      "targets": ["seed_topics", "reference"],
+      "failure_message": "Required bundle directories are missing. seed_topics/ and reference/ must exist. Verify bundle integrity before rerunning."
+    },
+    {
+      "id": "status_consistent",
+      "check": "status_value",
+      "target": "rb_status.json#/current_gate",
+      "expected": "rerun_ready",
+      "failure_message": "rb_status.json current_gate must be 'rerun_ready'. Update rb_status.json to reflect the rerun phase: current_gate='rerun_ready', next_gate='seed_topics_ready'."
+    }
+  ]
+}

@@ -17,7 +17,7 @@
 //   - zodErrors()                 — map ZodError issues to plain diagnostics
 
 import { parseArgs } from 'node:util';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, appendFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseYaml } from 'yaml';
@@ -240,6 +240,71 @@ export function emitGateResult(result) {
   }
 
   process.exit(result.check.passed ? 0 : 1);
+}
+
+// ─── Audit Infrastructure (Logger + Trace) ──────────────────────────────────
+
+/**
+ * Write a gate attempt to both audit destinations: logger and trace.
+ *
+ * Logger (`_logs/run.log`): general-purpose diagnostic log recording all gate
+ * attempts (passed/failed) with gate name, currentNodeRef, next, and
+ * inspect/advice summary. Writes file-only (no console output) to keep stdout
+ * clean for automated parsers.
+ *
+ * Trace (`rb_trace.jsonl`): structured `gate_attempt` JSONL event for
+ * automated testing verdicts. Format matches the existing `gate_attempt`
+ * event.
+ *
+ * Write failures are silently caught — they MUST NOT affect gate output or
+ * exit code.
+ *
+ * @param {string} bundlePath — path to the active runtime context
+ * @param {object} result — gate result from buildGateResult()
+ * @returns {void}
+ *
+ * @impl GSK-005
+ */
+export function writeGateAttempt(bundlePath, result) {
+  try {
+    const { check, routing, inspect, advice } = result;
+    const ts = new Date().toISOString();
+
+    // 1. Logger — file-only diagnostic detail (no console to keep stdout clean for gate JSON)
+    try {
+      const logDir = join(bundlePath, '_logs');
+      mkdirSync(logDir, { recursive: true });
+      const logPath = join(logDir, 'run.log');
+      const level = check.passed ? 'INFO' : 'WARN';
+      const detail = JSON.stringify(check.passed
+        ? { currentNodeRef: check.currentNodeRef, next: check.next, inspect_count: inspect.length, advice_count: advice.length }
+        : { currentNodeRef: check.currentNodeRef, next: check.next, routing_kind: routing.kind, inspect: inspect.slice(0, 5), advice: advice.slice(0, 3) }
+      );
+      appendFileSync(logPath, `[${ts}] ${level} gate:${check.gate} ${check.passed ? 'PASS' : 'FAIL'} ${detail}\n`);
+    } catch {
+      // Log write failure silently ignored
+    }
+
+    // 2. Trace — structured evidence for automated verdicts
+    try {
+      const tracePath = join(bundlePath, 'rb_trace.jsonl');
+      const traceEntry = JSON.stringify({
+        ts,
+        event: 'gate_attempt',
+        gate: check.gate,
+        passed: check.passed,
+        currentNodeRef: check.currentNodeRef,
+        next: check.next,
+        inspect_count: inspect.length,
+        advice_count: advice.length,
+      });
+      appendFileSync(tracePath, traceEntry + '\n');
+    } catch {
+      // Trace write failure silently ignored
+    }
+  } catch {
+    // Audit write failure must not affect gate output
+  }
 }
 
 // ─── Trace Reading ─────────────────────────────────────────────────────────

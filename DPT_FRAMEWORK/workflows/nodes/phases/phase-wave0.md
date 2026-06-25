@@ -160,6 +160,27 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --cur
 
 `stop: no` — Phase Agent 自主搜集 foundation reference。若 registry 为空，报告并停止，不编造假 reference。
 
+## Rerun-Aware Behavior
+
+> 当 rerun 路径被触发（`phase-rerun` gate pass → chain → seed-topics → wave0），Phase Agent MUST 按增量模式执行 reference collection。
+
+### 检测
+
+读 `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count`。若 `rerun_count > 0`，当前为 rerun 轮次。同时读取各 topic 的 `seed_topics/{slug}.md` 中的 `## 本轮重跑方向` section。
+
+### 增量行为
+
+| 场景 | 行为 |
+|------|------|
+| **已有 topic，无 `## 本轮重跑方向` section** | Reference 全部保留。若该 topic 的 `reference/{slug}/source.yaml` 已有 foundation floor 数量的 reference，不再为此 topic 创建 task card（跳过）。若不足 floor，只为不足的部分搜索。 |
+| **已有 topic，有 `action: supplement`** | 保留已有 reference。task card 的 action 中追加 `new_search_dimensions` 中指定的新搜索角度。已有维度的 reference 全部保留——不做去重或覆盖。 |
+| **新增 topic（`action: add`）** | 全量搜索——与首次 wave0 一致。创建 standard task card。 |
+| **移除 topic（`action: remove`）** | 该 topic 的 reference 保留在 `reference/{slug}/` 中，但不再为该 topic 创建 task card。如需标记，在 `reference/index.md` 中注明 deprecated。 |
+
+### 灌料约束
+
+在 enqueue 每个 topic 的 task card 前，Agent MUST 检查 `seed_topics/{slug}.md` 的 `## 本轮重跑方向` section。若 `action: supplement`，task card 的 action 字段中需明确追加搜索维度。若 `action: remove`，跳过该 topic（不创建 task card）。
+
 ## 9. Anti-Cheating Rules
 
 - **禁止使用 fake URL 或伪造 source metadata**：每条 reference 必须来自真实搜索/阅读，url 必须指向真实可访问的页面

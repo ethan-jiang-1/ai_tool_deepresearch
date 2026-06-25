@@ -48,7 +48,7 @@ HITL2 是 delivery 前最后一次人类审查——用户在此决定是否 pro
 | `proceed_to_readiness` | chain | 正常进 readiness。Agent 跟随 chain routing。 |
 | `request_view_revision` | Agent | Agent 读 profile，决定回到哪个 phase 修改 view。 |
 | `repair` | Agent | 当前 run 有需要修复的问题。Agent 读 rationale 修复后 rerun 当前 gate，不重启 lifecycle。 |
-| `rerun` | Agent | 用户想调整方向/补充内容/改模式。Agent 从 `seed-topics` 重新跑，profile 已有新反馈。 |
+| `rerun` | chain | 用户想调整方向/补充内容/改模式。Agent 用 `rerun` outcome 查 chain → 进入 `phase-rerun.md`。 |
 | `stop_blocked` | Agent | lifecycle 终止，记录原因到 profile。 |
 
 `proceed_to_readiness` 以外 decision **不编码进 transition chain**——chain 只管 `proceed_to_readiness` 的 normal next。branch 路由归 Agent decision authority。
@@ -77,10 +77,10 @@ Gate pass 后，Agent 读取 `rb_profile.yaml#/human_decision_checkpoints/hitl2/
 - `proceed_to_readiness` → 跟随 chain routing 进 `phase-readiness.md`
 - `request_view_revision` → Agent 读取 rationale，决定回到哪个 phase 修改 view（不 restart）
 - `repair` → Agent 就地修复当前问题后 rerun HITL2 gate，不重启 lifecycle
-- `rerun` → Agent 从 `phase-seed-topics.md` 重新跑，profile 已有用户新反馈
+- `rerun` → Agent 用 `rerun` outcome 查 chain → chain 返回 `phases/phase-rerun.md` → 加载 phase-rerun node
 - `stop_blocked` → lifecycle 终止，记录原因
 
-**Chain routing 对 HITL2 只有一条 entry**：`phase-hitl2.md` → `passed` → `phase-readiness.md`。`proceed_to_readiness` 以外的 user_decision 是 Agent 层 routing——chain 不做 branch。
+**Chain routing 对 HITL2 有两条 entry**：`phase-hitl2.md` → `passed` → `phase-readiness.md`（正常交付）和 `phase-hitl2.md` → `rerun` → `phase-rerun.md`（增量重跑）。`proceed_to_readiness` 和 `rerun` 均为确定性出口——有固定、上下文无关的 next-node 目标。`request_view_revision`/`repair`/`stop_blocked` 不进入 chain——其目标依赖 Agent 判断运行时状态。
 
 ## 7. On Gate Fail
 
@@ -103,7 +103,8 @@ Gate pass 后，Agent 读取 `rb_profile.yaml#/human_decision_checkpoints/hitl2/
 
 - **用户 decision MUST 写入 `rb_profile.yaml`**，不能只停留在 chat memory
 - **MUST NOT 在用户未回答时填写 placeholder decision**——`user_decision` 必须来自真实用户输入
-- **MUST NOT 将 branch routing 编码进 transition chain**——`proceed_to_readiness` 是 chain 唯一的 normal next，其余 3 个 decision 归 Agent
-- **MUST NOT 在 `user_decision: rerun` 时仍然 advance 到 readiness**——Agent 必须回到 `seed-topics` 重新跑
+- **MUST NOT 将不确定 branch 的路由编码进 transition chain**——确定性出口（有固定、上下文无关的 next-node 目标）SHALL 进 chain。当前确定性出口：`passed`、`rerun`。不确定 branch：`request_view_revision`、`repair`、`stop_blocked`（目标依赖 Agent 判断运行时状态）——归 Agent
+- **MUST NOT 在 `user_decision: rerun` 时仍然 advance 到 readiness**——Agent MUST 用 `rerun` outcome 查 chain，进入 `phase-rerun.md`
+- **HITL2 phase 写 `human_decision_checkpoints/hitl2` 时 MUST preserve 已有的 `rerun_count` 值**——MUST NOT 重置或删除。`rerun_count` 由 `phase-rerun.md` 管理递增，HITL2 只能读取不能修改
 - **用户 final 后反馈 MUST 通过 HITL2 repair/rerun 承载**，MUST NOT 通过 final node hidden loop
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令

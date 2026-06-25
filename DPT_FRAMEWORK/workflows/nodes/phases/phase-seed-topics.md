@@ -281,6 +281,26 @@ node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle <path> --
 
 `stop: no` — Agent 自主物化。若 registry 为空（topic 集合未建立），报告并停止物化，不编造 topic。
 
+## Rerun-Aware Behavior
+
+> 本 phase 被 `phase-rerun.md` gate pass 后 chain 直接路由进入（`rerun → seed-topics`）。当 `rerun_count > 0` 时，Agent MUST 按增量模式执行，而非从零重新发现 topic。
+
+### 检测
+
+读 `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count`。若 `rerun_count > 0`（或缺失/0），当前为 rerun 轮次。
+
+### 增量行为
+
+- **保留已有 topic**：`seed_topics/` 中已有的 topic 文件全部保留——不删除、不重建。已有 topic 若有 `## 本轮重跑方向` section，按其中的 `action` 调整后续 wave0 行为。
+- **新增 topic**：若 `## 本轮重跑方向` section 指示 `action: add` 的新 topic，Agent MUST 为其创建 seed topic 文件（格式同首次 seed-topics）。新 topic 的 `## 本轮重跑方向` section 已在 phase-rerun 中写入。
+- **移除 topic**：若 `action: remove`，该 topic 的 seed_topic 文件保留，但 Agent MUST NOT 为其创建 wave0 task card（不在 registry 中移除，但标记为 deprecated 不搜）。
+- **补充 topic**：若 `action: supplement`，已有 topic 文件不变，但 wave0 灌料时需读其 `## 本轮重跑方向` section 中的 `new_search_dimensions` 作为追加搜索角度。
+- **无变更 topic**：若 topic 文件无 `## 本轮重跑方向` section 或 section 已处理完毕，按正常模式处理。
+
+### 灌料时读方向 hints
+
+在 enqueue 每个 topic 的 task card 前，Agent MUST 读取对应 `seed_topics/{slug}.md`——若存在 `## 本轮重跑方向` section 且 `action: supplement`，task card 的 action 字段中需包含 `new_search_dimensions` 作为追加搜索关键词。若 `action: add`（新 topic），全量搜索——与首次 wave0 一致。
+
 ## 9. Anti-Cheating Rules
 
 - **禁止物化空目录就声称完成**：每个 registry topic 必须有对应文件

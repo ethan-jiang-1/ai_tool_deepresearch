@@ -25,7 +25,7 @@ import { loadChain, resolveTransition as resolveChain } from './transition-chain
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
-const VALID_OUTCOMES = ['passed', 'failed'];
+const VALID_OUTCOMES = ['passed', 'failed', 'rerun'];
 
 // ─── Input Validation ─────────────────────────────────────────────────────
 
@@ -124,7 +124,7 @@ function routedResult(transition, tableLabel, currentNodeRef, outcome) {
  *
  * @param {string} transitionsPath — path to transitions.<impl>.json file
  * @param {string} currentNodeRef — canonical node fileRef (e.g. 'phases/phase-wave0.md')
- * @param {string} outcome — public outcome vocabulary: 'passed' or 'failed'
+ * @param {string} outcome — public outcome vocabulary: 'passed', 'failed', or 'rerun'
  * @param {object} [context] — caller-owned plain object with optional routing hints
  * @returns {{ kind: string, next: string|null, detail?: string }}
  *
@@ -141,7 +141,7 @@ export function resolveNodeTransitionDetailed(transitionsPath, currentNodeRef, o
 
   if (!VALID_OUTCOMES.includes(outcome)) {
     return result('invalid_input', null,
-      `outcome must be 'passed' or 'failed', got: ${JSON.stringify(outcome)}`);
+      `outcome must be 'passed', 'failed', or 'rerun', got: ${JSON.stringify(outcome)}`);
   }
 
   // ── Suffix dispatch ────────────────────────────────────────────────

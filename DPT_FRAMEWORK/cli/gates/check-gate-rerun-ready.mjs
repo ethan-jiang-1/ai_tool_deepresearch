@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// check-gate-hitl2-recorded.mjs — evaluates gate-hitl2-recorded rules
-// @impl GSK-001, GSK-002, GSK-004, CDG-003
-// Usage: node check-gate-hitl2-recorded.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
+// check-gate-rerun-ready.mjs — evaluates gate-rerun-ready rules
+// @impl REI-003
+// Usage: node check-gate-rerun-ready.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -13,7 +13,6 @@ import {
   resolveRouting,
   buildGateResult,
   emitGateResult,
-  readTraceEvents,
   writeGateAttempt,
 } from '../../engine/helpers/gate-helpers.mjs';
 
@@ -21,7 +20,7 @@ const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error); }
 
 // Load gate definition
-const { definition, error: defError } = tryLoadGateDefinition('hitl2-recorded', args.currentNode || null);
+const { definition, error: defError } = tryLoadGateDefinition('rerun-ready', args.currentNode || null);
 if (defError) { emitGateResult(defError); }
 
 // Validate node/gate binding
@@ -66,7 +65,7 @@ function getProfile() {
   return _profileCache;
 }
 
-// Helper: resolve JSON/YAML path like "human_decision_checkpoints/hitl2/status"
+// Helper: resolve JSON/YAML path like "human_decision_checkpoints/hitl2/rationale"
 function resolvePath(obj, pathStr) {
   return pathStr.split('/').reduce((o, k) => o?.[k], obj);
 }
@@ -79,88 +78,45 @@ for (const rule of definition.rules) {
   let ruleDetail = null;
 
   try {
-    if (rule.check === 'file_exists') {
-      const targetPath = join(bundlePath, rule.target);
-      if (!existsSync(targetPath)) {
-        rulePassed = false;
-        ruleDetail = `Missing file: ${rule.target}`;
-      }
-    } else if (rule.check === 'yaml_parse') {
+    if (rule.check === 'field_non_empty') {
+      const [, jsonPath] = rule.target.split('#/');
       const profile = getProfile();
-      if (_profileParseFailed) {
+      if (_profileParseFailed || profile === null) {
         rulePassed = false;
-        // Re-parse to get the error message
-        const profilePath = join(bundlePath, 'rb_profile.yaml');
-        try {
-          parseYaml(readFileSync(profilePath, 'utf-8'));
-        } catch (err) {
-          ruleDetail = `YAML parse error in rb_profile.yaml: ${err.message}`;
-        }
-      } else if (profile === null) {
-        rulePassed = false;
-        ruleDetail = 'rb_profile.yaml not found';
-      }
-    } else if (rule.check === 'field_non_empty') {
-      const target = rule.target;
-      if (target.endsWith('.md') || target.startsWith('artifacts/')) {
-        // File content check (decision brief)
-        const filePath = join(bundlePath, target);
-        if (!existsSync(filePath)) {
-          rulePassed = false;
-          ruleDetail = `File not found: ${target}`;
-        } else {
-          const content = readFileSync(filePath, 'utf-8').trim();
-          const bodyContent = content.replace(/^---[\s\S]*?---\n?/, '').trim();
-          if (bodyContent.length === 0) {
-            rulePassed = false;
-            ruleDetail = `${target} is empty (no content after frontmatter)`;
-          }
-        }
+        ruleDetail = `Cannot check ${rule.target}: rb_profile.yaml not found or unparseable`;
       } else {
-        // YAML field path check
-        const [, jsonPath] = target.split('#/');
-        const profile = getProfile();
-        if (_profileParseFailed || profile === null) {
+        const value = resolvePath(profile, jsonPath);
+        if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
           rulePassed = false;
-          ruleDetail = `Cannot check ${target}: rb_profile.yaml not found or unparseable`;
-        } else {
-          const value = resolvePath(profile, jsonPath);
-          if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
-            rulePassed = false;
-            ruleDetail = `${target} is empty or missing`;
-          }
+          ruleDetail = `${rule.target} is empty or missing`;
         }
       }
-    } else if (rule.check === 'field_value') {
+    } else if (rule.check === 'rerun_count_limit') {
       const [, jsonPath] = rule.target.split('#/');
       const profile = getProfile();
       if (profile === null) {
-        rulePassed = false;
-        ruleDetail = 'rb_profile.yaml not found or unparseable';
+        // No profile → count treated as 0 → pass
+        rulePassed = true;
       } else {
         const value = resolvePath(profile, jsonPath);
-        if (rule.operator === 'equal') {
-          if (value !== rule.value) {
-            rulePassed = false;
-            ruleDetail = `${rule.target}: expected "${rule.value}", got "${JSON.stringify(value)}"`;
-          }
-        } else if (rule.operator === 'not_equal') {
-          if (value === rule.value) {
-            rulePassed = false;
-            ruleDetail = `${rule.target} is still "${rule.value}" (should not be)`;
-          }
-        } else if (rule.operator === 'in') {
-          if (!rule.value.includes(value)) {
-            rulePassed = false;
-            ruleDetail = `${rule.target}: value "${value}" is not in accepted set: [${rule.value.join(', ')}]`;
-          }
+        const count = value ?? 0;
+        const max = rule.value;
+        if (typeof count === 'number' && count >= max) {
+          rulePassed = false;
+          ruleDetail = `${rule.target}: rerun_count is ${count}, must be < ${max}`;
         }
       }
-    } else if (rule.check === 'trace_event_present') {
-      const events = readTraceEvents(bundlePath, rule.target);
-      if (events.length === 0) {
-        rulePassed = false;
-        ruleDetail = `Trace event "${rule.target}" not found in rb_trace.jsonl`;
+    } else if (rule.check === 'structural') {
+      for (const target of rule.targets) {
+        const targetPath = join(bundlePath, target);
+        if (!existsSync(targetPath)) {
+          rulePassed = false;
+          if (ruleDetail) {
+            ruleDetail += `; Missing directory: ${target}/`;
+          } else {
+            ruleDetail = `Missing directory: ${target}/`;
+          }
+        }
       }
     } else if (rule.check === 'status_value') {
       const [file, jsonPath] = rule.target.split('#/');

@@ -17,6 +17,8 @@ export const ProfileSchema = z.object({
       user_decision: HITL2UserDecision,
       final_report_view: FinalReportView,
       custom_slug: z.string().optional(),
+      rerun_count: z.number().int().min(0).default(0).optional(),
+      rationale: z.string().optional(),
     }),
   }),
 });

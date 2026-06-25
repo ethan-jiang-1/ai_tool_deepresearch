@@ -239,6 +239,27 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle <path> --cur
 
 `stop: no` — Phase Agent 自主执行 deepening 循环。每个 topic 的 deepening 和 backfill 不需要停下来等待用户审批。
 
+## Rerun-Aware Behavior
+
+> 当 rerun 路径被触发，Phase Agent MUST 按增量模式执行 deepening——已有维度的 deepening 结果保留，仅对新角度做 deepening。
+
+### 检测
+
+读 `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count`。若 `rerun_count > 0`，当前为 rerun 轮次。同时读取各 topic 的 `seed_topics/{slug}.md` 中的 `## 本轮重跑方向` section。
+
+### 增量行为
+
+| 场景 | 行为 |
+|------|------|
+| **已有 topic，无变更** | 已完成的 deepening（`evidence-summary.md` + `question-list.md`）保留。跳过该 topic 的 deepening task card（不重复执行）。 |
+| **已有 topic，有 `action: supplement`** | 保留已有 `evidence-summary.md` 和 `question-list.md`。只为 `new_search_dimensions` 中新增的角度做 deepening——创建 task card，action 聚焦新维度而非全量重搜。已有维度的 key findings 保留，新增 findings 以 "Rerun Supplement" 标记追加。`question-list.md` 的 Emergent Question Protocol 基于新 evidence 更新。 |
+| **新增 topic（`action: add`）** | 全量 deepening——与首次 wave1 一致。创建 standard task card。 |
+| **移除 topic（`action: remove`）** | 已有 `evidence-summary.md` 和 `question-list.md` 保留，不再为该 topic 创建 deepening task card。 |
+
+### Backfill 约束
+
+回填 seed topic 时，对于 `action: supplement` 的 topic：`__BACKFILL_WAVE1_MECHANISMS__` 和 `__BACKFILL_WAVE1_TRENDS__` token 行需同时保留已有内容和新增内容，用 `**(Rerun N 追加)**` 标记新增部分以便区分。`__BACKFILL_PENDING_QUESTIONS__` token 行更新时，已解答的问题标记为 `[部分解答]`，新增的 emergent question 标记为 `[涌现]` 并注明 `source_layer: rerun_N`。
+
 ## 9. Anti-Cheating Rules
 
 - **禁止伪造 source URL 或 key findings**：每条 evidence 必须来自真实搜索/阅读，Sub-agent 必须写出真实的 WebSearch 和 WebFetch 结果
