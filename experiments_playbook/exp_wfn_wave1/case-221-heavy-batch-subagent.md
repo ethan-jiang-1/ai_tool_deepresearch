@@ -261,6 +261,63 @@ echo "=== relay slots ===" && find $B/_subagents -type f 2>/dev/null | sort
 
 预期：每个 topic 的 `evidence-summary.md` 含至少 1 条 source URL + key findings section。`_subagents/` 下有 runtime-receipt.jsonl。
 
+### 写入 question-list.md（gate 要求每 topic 有 4-section question-list）
+
+```bash
+# 01_ai-safety question-list
+cat > $B/artifacts/wave1/01_ai-safety/question-list.md << 'QLISTEOF'
+# AI Safety Question List
+
+## Topic Investigation Targets
+| target_id | question | origin | status | backing_refs | next_action |
+| t1-q1 | AI safety 主要方法有效性验证 | must_answer | [仍开放] | evidence-summary | deepen |
+| t1-q2 | alignment 技术的最新进展 | must_answer | [仍开放] | evidence-summary | cross-topic align |
+
+## Question Reconciliation
+- t1-q1: [仍开放] — 需要更多 deployment evidence
+- t1-q2: [仍开放] — 单 topic 视角有限
+
+## Emergent Question Protocol
+- new_concept: checked (safety-by-design 范式), trigger_refs: evidence-summary
+- contradiction: not_triggered
+- missing_information_gap: not_triggered
+- noise_pattern: not_triggered
+
+## Exploration / Exploitation Decision
+- decision: continue
+- unresolved_questions: [t1-q1, t1-q2]
+QLISTEOF
+
+# 02_ai-regulation question-list
+cat > $B/artifacts/wave1/02_ai-regulation/question-list.md << 'QLISTEOF'
+# AI Regulation Question List
+
+## Topic Investigation Targets
+| target_id | question | origin | status | backing_refs | next_action |
+| t2-q1 | EU AI Act 具体执行进展 | must_answer | [仍开放] | evidence-summary | deepen |
+| t2-q2 | 开源模型豁免边界 | must_answer | [仍开放] | evidence-summary | cross-topic align |
+
+## Question Reconciliation
+- t2-q1: [仍开放] — 需要 policy implementation evidence
+- t2-q2: [仍开放] — 豁免条件不明确
+
+## Emergent Question Protocol
+- new_concept: checked (高风险场景转向), trigger_refs: evidence-summary
+- contradiction: not_triggered
+- missing_information_gap: not_triggered
+- noise_pattern: not_triggered
+
+## Exploration / Exploitation Decision
+- decision: continue
+- unresolved_questions: [t2-q1, t2-q2]
+QLISTEOF
+
+echo "=== question-list.md files created ==="
+for t in 01_ai-safety 02_ai-regulation; do
+  echo "$t:" && head -3 $B/artifacts/wave1/$t/question-list.md
+done
+```
+
 ## Phase 4: Complete + Backfill
 
 ```bash
@@ -270,18 +327,21 @@ cat > /tmp/wfq-result-01_ai-safety.json << 'EOF'
   "work_id": "wave1-deepen-01_ai-safety",
   "status": "done",
   "receipt": "file:artifacts/wave1/01_ai-safety/evidence-summary.md",
-  "summary": "deepening complete: AI Safety evidence extracted",
-  "writes": ["artifacts/wave1/01_ai-safety/evidence-summary.md"]
+  "summary": "deepening complete: AI Safety evidence extracted + question-list written",
+  "writes": ["artifacts/wave1/01_ai-safety/evidence-summary.md", "artifacts/wave1/01_ai-safety/question-list.md"]
 }
 EOF
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result /tmp/wfq-result-01_ai-safety.json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')); console.log('complete#1 passed:', d.feedback.passed)"
 
 # Backfill seed topic 01_ai-safety（替换 __BACKFILL_WAVE1_MECHANISMS__ 等）
-# Agent 从 evidence-summary 提取内容 → grep token → 替换
+sed -i '' 's/__BACKFILL_WAVE1_MECHANISMS__/1. AI safety 关注 alignment、robustness、interpretability 三大方向（来源：evidence-summary Key Findings）。/' $B/seed_topics/01_ai-safety.md
+sed -i '' 's/__BACKFILL_WAVE1_TRENDS__/- 2025-2026 年行业从 "capability first" 转向 "safety-by-design"（来源：evidence-summary 趋势观察）。/' $B/seed_topics/01_ai-safety.md
+sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/[仍开放] t1-q1: safety 机制部署证据不足 | [部分解答] t1-q2: 开源 vs 闭源安全策略差异 | [仍开放] t1-q3: alignment 技术验证/' $B/seed_topics/01_ai-safety.md
 
 echo "=== Backfill check: 01_ai-safety ==="
 grep -q '__BACKFILL_WAVE1_MECHANISMS__' $B/seed_topics/01_ai-safety.md && echo "STALE: mechanisms token" || echo "OK: mechanisms"
 grep -q '__BACKFILL_WAVE1_TRENDS__' $B/seed_topics/01_ai-safety.md && echo "STALE: trends token" || echo "OK: trends"
+grep -q '__BACKFILL_PENDING_QUESTIONS__' $B/seed_topics/01_ai-safety.md && echo "STALE: pending questions token" || echo "OK: pending questions"
 
 # Complete task 2
 cat > /tmp/wfq-result-02_ai-regulation.json << 'EOF'
@@ -289,17 +349,21 @@ cat > /tmp/wfq-result-02_ai-regulation.json << 'EOF'
   "work_id": "wave1-deepen-02_ai-regulation",
   "status": "done",
   "receipt": "file:artifacts/wave1/02_ai-regulation/evidence-summary.md",
-  "summary": "deepening complete: AI Regulation evidence extracted",
-  "writes": ["artifacts/wave1/02_ai-regulation/evidence-summary.md"]
+  "summary": "deepening complete: AI Regulation evidence extracted + question-list written",
+  "writes": ["artifacts/wave1/02_ai-regulation/evidence-summary.md", "artifacts/wave1/02_ai-regulation/question-list.md"]
 }
 EOF
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result /tmp/wfq-result-02_ai-regulation.json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')); console.log('complete#2 passed:', d.feedback.passed)"
 
 # Backfill seed topic 02_ai-regulation
+sed -i '' 's/__BACKFILL_WAVE1_MECHANISMS__/1. EU AI Act 和 US Executive Order 形成两大监管框架（来源：evidence-summary Key Findings）。/' $B/seed_topics/02_ai-regulation.md
+sed -i '' 's/__BACKFILL_WAVE1_TRENDS__/- 监管重心从 "模型规模" 转向 "高风险应用场景"（来源：evidence-summary 趋势观察）。/' $B/seed_topics/02_ai-regulation.md
+sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/[仍开放] t2-q1: 开源模型豁免边界模糊 | [仍开放] t2-q2: EU AI Act 执行时间线和合规要求/' $B/seed_topics/02_ai-regulation.md
 
 echo "=== Backfill check: 02_ai-regulation ==="
 grep -q '__BACKFILL_WAVE1_MECHANISMS__' $B/seed_topics/02_ai-regulation.md && echo "STALE: mechanisms token" || echo "OK: mechanisms"
 grep -q '__BACKFILL_WAVE1_TRENDS__' $B/seed_topics/02_ai-regulation.md && echo "STALE: trends token" || echo "OK: trends"
+grep -q '__BACKFILL_PENDING_QUESTIONS__' $B/seed_topics/02_ai-regulation.md && echo "STALE: pending questions token" || echo "OK: pending questions"
 
 # Queue should be empty
 node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')); console.log('queue:', d.item ? 'non-empty' : 'empty (expected)')"
@@ -324,8 +388,10 @@ if (d.inspect?.length) { console.log('inspect:', d.inspect); }
 
 # Verify outputs
 echo "=== V1: evidence-summary files exist ==="
-test -s $B/artifacts/wave1/01_ai-safety/evidence-summary.md && echo "  01 ✓" || echo "  01 ✗"
-test -s $B/artifacts/wave1/02_ai-regulation/evidence-summary.md && echo "  02 ✓" || echo "  02 ✗"
+test -s $B/artifacts/wave1/01_ai-safety/evidence-summary.md && echo "  01 evidence-summary ✓" || echo "  01 evidence-summary ✗"
+test -s $B/artifacts/wave1/02_ai-regulation/evidence-summary.md && echo "  02 evidence-summary ✓" || echo "  02 evidence-summary ✗"
+test -s $B/artifacts/wave1/01_ai-safety/question-list.md && echo "  01 question-list ✓" || echo "  01 question-list ✗"
+test -s $B/artifacts/wave1/02_ai-regulation/question-list.md && echo "  02 question-list ✓" || echo "  02 question-list ✗"
 
 echo "=== V2: source URLs present ==="
 grep -c 'http' $B/artifacts/wave1/01_ai-safety/evidence-summary.md

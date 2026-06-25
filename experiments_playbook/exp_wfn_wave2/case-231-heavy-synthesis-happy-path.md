@@ -431,8 +431,9 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result /tmp/wfq-result-sy
 CLAIM1=$(node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent)
 echo "$CLAIM1" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')); console.log('backfill claim#1:', d.item.work_id)"
 
-# Agent: grep → replace __BACKFILL_WAVE2_JUDGMENT__ with projection from ledger/index
-# Agent: grep → replace __BACKFILL_PENDING_QUESTIONS__ with updated status labels
+# Replace backfill tokens in seed topics before completing queue tasks
+sed -i '' 's/__BACKFILL_WAVE2_JUDGMENT__/W2F-001 cross_topic_resolution: regulation evidence（EU AI Act 开源豁免条款）部分回答 AI Safety 开源策略问题——安全策略差异可能源于合规要求而非技术选择。W2F-002 cross_topic_emergent_question: safety-by-design 范式比 regulation 框架早 1-2 年，存在 regulatory lag（record_only）。/' $B/seed_topics/01_ai-safety.md
+sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/[部分解答] t1-q2: 开源 vs 闭源安全策略差异（W2F-001） | [仍开放] t1-q1: safety 部署证据 | [仍开放] W2F-002: regulatory lag/' $B/seed_topics/01_ai-safety.md
 
 cat > /tmp/wfq-result-backfill-01.json << 'EOF'
 {
@@ -448,6 +449,9 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result /tmp/wfq-result-ba
 # Topic 02_ai-regulation
 CLAIM2=$(node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent)
 echo "$CLAIM2" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')); console.log('backfill claim#2:', d.item.work_id)"
+
+sed -i '' 's/__BACKFILL_WAVE2_JUDGMENT__/W2F-001 cross_topic_resolution: EU AI Act 开源豁免条款被用作 AI Safety 开源策略的 regulatory perspective——安全策略差异可能源于合规要求。W2F-002 cross_topic_emergent_question: regulatory lag（record_only）。/' $B/seed_topics/02_ai-regulation.md
+sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/[仍开放] t2-q1: 开源模型豁免边界模糊 | [部分解答] cross-topic: W2F-001 用 regulation evidence 部分回答 safety 策略问题/' $B/seed_topics/02_ai-regulation.md
 
 cat > /tmp/wfq-result-backfill-02.json << 'EOF'
 {

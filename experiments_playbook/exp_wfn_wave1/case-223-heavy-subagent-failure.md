@@ -186,6 +186,33 @@ find $B3/_subagents -name "runtime-receipt.jsonl" -exec cat {} \;
 - Key Findings section 不要编造内容——可写 "Insufficient accessible evidence to draw conclusions"
 - `runtime-receipt.jsonl` 含 `agent_runtime_started` + `agent_result_ready`
 
+### Also write question-list.md (gate requires 4-section question-list)
+
+```bash
+cat > $B3/artifacts/wave1/hard-target/question-list.md << 'QLISTEOF'
+# Hard Target Question List
+
+## Topic Investigation Targets
+| target_id | question | origin | status | backing_refs | next_action |
+| th-q1 | anti-bot bypass 技术现状 | emergent | [仍开放] | evidence-summary | deepen |
+
+## Question Reconciliation
+- th-q1: [仍开放] — access limitation prevented deep investigation
+
+## Emergent Question Protocol
+- new_concept: not_triggered
+- contradiction: not_triggered
+- missing_information_gap: checked (anti-bot bypass mechanism), trigger_refs: th-q1
+- noise_pattern: not_triggered
+
+## Exploration / Exploitation Decision
+- decision: continue
+- unresolved_questions: [th-q1]
+QLISTEOF
+
+echo "=== question-list hard-target ===" && head -3 $B3/artifacts/wave1/hard-target/question-list.md
+```
+
 ## Phase 4: Complete + Backfill + Gate
 
 ```bash
@@ -196,16 +223,17 @@ cat > /tmp/wfq-result-hard-target.json << 'EOF'
   "status": "done",
   "receipt": "file:artifacts/wave1/hard-target/evidence-summary.md",
   "summary": "deepening attempted: all sources blocked by anti-bot, partial evidence recorded, no fabrication",
-  "writes": ["artifacts/wave1/hard-target/evidence-summary.md"]
+  "writes": ["artifacts/wave1/hard-target/evidence-summary.md", "artifacts/wave1/hard-target/question-list.md"]
 }
 EOF
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B3 --result /tmp/wfq-result-hard-target.json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')); console.log('complete:', d.feedback.passed)"
 
 # Backfill — 特殊处理：evidence 不足时 backfill 应标注 access limitation
 echo "=== Backfill hard-target ==="
-# Agent: 替换 __BACKFILL_WAVE1_MECHANISMS__ → "Access limited: sources blocked by anti-bot protection..."
-#       替换 __BACKFILL_WAVE1_TRENDS__ → "Unable to identify trends due to access limitations..."
-#       替换 __BACKFILL_PENDING_QUESTIONS__ → "[开放] 需要 browser-based 或手工访问重新搜集..."
+sed -i '' 's/__BACKFILL_WAVE0_EVIDENCE__/- **ref-th-01**: [Search results for bot protection](https://dev.to/search?q=cloudflare+bot+protection) — retrieved 2026-06-23, access limitation noted/' $B3/seed_topics/hard-target.md
+sed -i '' 's/__BACKFILL_WAVE1_MECHANISMS__/Access limited: sources blocked by anti-bot protection. Unable to extract mechanisms from target pages. Degradation chain (WebFetch→curl→node→python3) exhausted./' $B3/seed_topics/hard-target.md
+sed -i '' 's/__BACKFILL_WAVE1_TRENDS__/Unable to identify trends due to access limitations on all target sources./' $B3/seed_topics/hard-target.md
+sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/[开放] th-q1: 需要 browser-based 或手工访问重新搜集 anti-bot bypass 数据/' $B3/seed_topics/hard-target.md
 
 # Run gate
 echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave1_completion"}' >> $B3/rb_trace.jsonl
@@ -224,8 +252,9 @@ if (d.inspect?.length) { console.log('inspect:', d.inspect); }
 ## Phase 5: 关键验证
 
 ```bash
-echo "=== V1: evidence-summary 存在（即使 partial） ==="
-test -s $B3/artifacts/wave1/hard-target/evidence-summary.md && echo "V1 PASS" || echo "V1 FAIL"
+echo "=== V1: evidence-summary + question-list 存在（即使 partial） ==="
+test -s $B3/artifacts/wave1/hard-target/evidence-summary.md && echo "V1a evidence-summary PASS" || echo "V1a FAIL"
+test -s $B3/artifacts/wave1/hard-target/question-list.md && echo "V1b question-list PASS" || echo "V1b FAIL"
 
 echo "=== V2: 不包含编造内容 ==="
 # 不应该出现「完整页面内容」「详细机制分析」等超出实际抓取能力的声称

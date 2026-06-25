@@ -94,6 +94,27 @@ cat > $B2/artifacts/wave1/topic-x/evidence-summary.md << 'EOF'
 1. [部分解答] Topic X 的后续研究方向？
 EOF
 
+cat > $B2/artifacts/wave1/topic-x/question-list.md << 'QLISTEOF'
+# Topic X Question List
+
+## Topic Investigation Targets
+| target_id | question | origin | status | backing_refs | next_action |
+| tx-q1 | Topic X 后续研究方向 | must_answer | [部分解答] | evidence-summary | deepen |
+
+## Question Reconciliation
+- tx-q1: [部分解答] — 已有初步发现，需进一步验证
+
+## Emergent Question Protocol
+- new_concept: not_triggered
+- contradiction: not_triggered
+- missing_information_gap: not_triggered
+- noise_pattern: not_triggered
+
+## Exploration / Exploitation Decision
+- decision: continue
+- unresolved_questions: [tx-q1]
+QLISTEOF
+
 cat > $B2/seed_topics/topic-x.md << 'SEEDEOF'
 ---
 id: "tx"
@@ -223,6 +244,30 @@ Agent 启动 `dpt-evidence-extractor` sub-agent 为 topic-y 做 deepening：
 # Verify repair output
 echo "=== evidence-summary: topic-y ===" && cat $B2/artifacts/wave1/topic-y/evidence-summary.md
 
+# Also write question-list.md for topic-y (gate requires 4-section question-list)
+cat > $B2/artifacts/wave1/topic-y/question-list.md << 'QLISTEOF'
+# Topic Y Question List
+
+## Topic Investigation Targets
+| target_id | question | origin | status | backing_refs | next_action |
+| ty-q1 | Topic Y deepening question | must_answer | [仍开放] | evidence-summary | deepen |
+
+## Question Reconciliation
+- ty-q1: [仍开放] — 新生成的 deepening 问题
+
+## Emergent Question Protocol
+- new_concept: not_triggered
+- contradiction: not_triggered
+- missing_information_gap: not_triggered
+- noise_pattern: not_triggered
+
+## Exploration / Exploitation Decision
+- decision: continue
+- unresolved_questions: [ty-q1]
+QLISTEOF
+
+echo "=== question-list topic-y ===" && head -3 $B2/artifacts/wave1/topic-y/question-list.md
+
 # Complete
 cat > /tmp/wfq-result-topic-y.json << 'EOF'
 {
@@ -230,15 +275,17 @@ cat > /tmp/wfq-result-topic-y.json << 'EOF'
   "status": "done",
   "receipt": "file:artifacts/wave1/topic-y/evidence-summary.md",
   "summary": "repair deepening complete for topic-y",
-  "writes": ["artifacts/wave1/topic-y/evidence-summary.md"]
+  "writes": ["artifacts/wave1/topic-y/evidence-summary.md", "artifacts/wave1/topic-y/question-list.md"]
 }
 EOF
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B2 --result /tmp/wfq-result-topic-y.json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')); console.log('repair complete:', d.feedback.passed)"
 
 # Backfill seed topic topic-y（替换 3 个 __BACKFILL_WAVE1_*__ token）
+sed -i '' 's/__BACKFILL_WAVE1_MECHANISMS__/1. Topic Y mechanism from repair deepening（来源：evidence-summary Key Findings）./' $B2/seed_topics/topic-y.md
+sed -i '' 's/__BACKFILL_WAVE1_TRENDS__/- Trend observed during repair deepening./' $B2/seed_topics/topic-y.md
+sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/[仍开放] ty-q1: Topic Y deepening question/' $B2/seed_topics/topic-y.md
+
 echo "=== Backfill topic-y ==="
-grep -q '__BACKFILL_WAVE1_MECHANISMS__' $B2/seed_topics/topic-y.md && echo "BEFORE: stale tokens present" || echo "BEFORE: clean"
-# Agent 替换 token
 grep -q '__BACKFILL_WAVE1_MECHANISMS__' $B2/seed_topics/topic-y.md && echo "AFTER FAIL: token not replaced" || echo "AFTER: token replaced"
 ```
 

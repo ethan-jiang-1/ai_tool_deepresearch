@@ -379,7 +379,10 @@ cat > /tmp/wfq-result-syn.json << 'EOF'
 EOF
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result /tmp/wfq-result-syn.json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));console.log('complete:',d.feedback.passed)"
 
-# Backfill
+# Backfill — sed replace tokens before completing queue tasks
+sed -i '' 's/__BACKFILL_WAVE2_JUDGMENT__/W2F-001 cross_topic_resolution: Copilot ~200ms baseline 部分回答了 Claude Code 性能问题（use_existing_evidence）。W2F-002 cross_topic_emergent_question: sub-agent 调度策略差异是 emergent pattern（record_only）。W2F-003 wave1_legacy_question: Claude Code 动态工作流性能数据需要定向 search（exploit_search）。/' $B/seed_topics/01_claude-code.md
+sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/[部分解答] t1-q1: 动态工作流性能——Copilot ~200ms baseline via cross-topic（W2F-001） | [仍开放] W2F-003: Claude Code 性能数据需要定向搜索/' $B/seed_topics/01_claude-code.md
+
 for slug in "01_claude-code" "02_agentic-tools"; do
   node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent > /dev/null
   cat > /tmp/bf-$slug.json << EOF
@@ -387,6 +390,9 @@ for slug in "01_claude-code" "02_agentic-tools"; do
 EOF
   node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result /tmp/bf-$slug.json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));console.log('backfill $slug:',d.feedback.passed)"
 done
+
+sed -i '' 's/__BACKFILL_WAVE2_JUDGMENT__/W2F-001 cross_topic_resolution: Agentic Tools evidence（Copilot 200ms）被用于回答 Claude Code 性能问题（use_existing_evidence）。W2F-002 cross_topic_emergent_question: sub-agent 调度策略差异（record_only）。/' $B/seed_topics/02_agentic-tools.md
+sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/[部分解答] t2-q1: Copilot vs Claude Code 对比——Copilot ~200ms 基线可用（W2F-001） | [仍开放] W2F-002: 调度策略差异/' $B/seed_topics/02_agentic-tools.md
 
 # Gate
 echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave2_completion"}' >> $B/rb_trace.jsonl

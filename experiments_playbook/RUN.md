@@ -38,6 +38,14 @@
 | G4 agentic-queue | case-41 | `exp_agentic-queue/case-41-light-minimal-path.md` | enqueue → claim → complete → promote 最小路径 |
 | G10 pre-research | case-106 | `exp_wff_topic-rewrite/case-106-light-hitl1-topic-rewrite-vague.md` | 一句话 → topic rewrite → original topic + seed topics（引用 phase-hitl1.md §3a） |
 | G10 pre-research | case-107 | `exp_wff_topic-rewrite/case-107-light-hitl1-topic-rewrite-detailed.md` | 详细 brief → 轻量整理，不越界 rewrite（⚠️ 模拟 Agent 输出） |
+| G14 hitl2-branch | case-140 | `exp_wff_hitl2-branch/case-140-light-hitl2-decision-capture.md` | HITL2 decision capture：Agent 捕获 user_decision + rationale，chain 路由到正确节点。Trace 证明两个节点都经过 |
+| G14 hitl2-branch | case-141 | `exp_wff_hitl2-branch/case-141-light-rerun-full-path.md` | HITL2 rerun 全路径：decision=rerun→chain→phase-rerun→rerun-ready gate pass→seed-topics |
+| G14 hitl2-branch | case-142 | `exp_wff_hitl2-branch/case-142-light-readiness-full-path.md` | HITL2 readiness 全路径：decision=proceed_to_readiness→chain→readiness→readiness gate pass |
+| G24 wfn-rerun | case-301 | `exp_wfn_rerun/case-301-light-chain-dual-exit.md` | HITL2 chain 编码双出口：passed→readiness AND rerun→phase-rerun。indeterminate→invalid_input |
+| G24 wfn-rerun | case-302 | `exp_wfn_rerun/case-302-light-rerun-node-happy-path.md` | 预填充 rerun bundle 通过 rerun-ready gate→chain→seed-topics |
+| G24 wfn-rerun | case-303 | `exp_wfn_rerun/case-303-light-normal-path-unchanged.md` | 回归：证明正常路径 proceed_to_readiness→readiness 在 chain dual-exit 后不变 |
+| G24 wfn-rerun | case-304 | `exp_wfn_rerun/case-304-light-gate-fail-max-count.md` | 边界：rerun_count=3→gate fail+no_transition |
+| G24 wfn-rerun | case-305 | `exp_wfn_rerun/case-305-light-indeterminate-no-transition.md` | 边界：indeterminate outcomes→invalid_input |
 
 ### Standard（真实 bundle 多步骤，无外部调用）
 
@@ -76,6 +84,7 @@
 | G13 delivery | case-133 | `exp_wff_delivery/case-133-standard-hitl2-rerun.md` | HITL2 rerun：gate pass 但 chain 不编码 rerun 分支（Agent 层 routing） |
 | G13 delivery | case-134 | `exp_wff_delivery/case-134-standard-delivery-repair.md` | HITL2 + readiness PDCA repair 回路：fail→inspect→repair→rerun→pass |
 | G13 delivery | case-135 | `exp_wff_delivery/case-135-standard-readiness-precheck.md` | readiness gate：manifest 拓扑推导 prior gate 集合 + artifact/parsability 审计 |
+| G24 wfn-rerun | case-306 | `exp_wfn_rerun/case-306-standard-two-round-delta.md` | Agent-driven：两轮 rerun，验证 rerun_count 递增和 direction section 更新（⚠️ verdict 来自文件系统检查，非 gate） |
 
 ### Heavy（真实外部调用：WebSearch/WebFetch/subagent spawn，自动化可跑）
 
