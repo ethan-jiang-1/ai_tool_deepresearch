@@ -2,9 +2,17 @@
 
 Deep Research Framework (`DPT_FRAMEWORK/`) 的运行时入口说明。
 
-## 触发规则
+> **最快触发**：把本目录下的 `RUN.md` 拖进对话——文件内容会直接进上下文，触发本框架，绕开"要不要进目录"的判断。
 
-**用户提到 `DPT_FRAMEWORK` 并表达了一个疑问/问题 → 这是 Deep Research 触发信号。不是代码探索请求。**
+## 触发规则（最高优先）
+
+**用户有研究意图 → 触发本框架。** 这是 Deep Research 触发信号，不是代码探索请求。触发信号包括但不限于：
+
+- 用户提到 `DPT_FRAMEWORK`——**哪怕只是贴出本目录的路径**——并带一个问题；
+- 用户说"研究/调研/deep research/research report/帮我查…/…是什么"等研究意图；
+- 任何"我要就某个话题得到一份有来源、可核查的研究报告"的需求。
+
+**本框架就是项目的 Deep Research 引擎。** 用户要研究就用它跑，**不要**回退到任何内置 "deep research" skill 或通用 workflow——那些是替代品，本框架才是主体。
 
 不要浏览文件结构。直接走 `command_playbook/start-research.md` 流程：定名 → 创建 bundle → 写入 research question → 加载第一个 phase node。
 
