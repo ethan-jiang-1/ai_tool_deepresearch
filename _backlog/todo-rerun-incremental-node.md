@@ -1,8 +1,8 @@
 # TODO: rerun-incremental-node
 
-> 状态: 待设计 | 优先级: 中 | 创建: 2026-06-24 | 更新: 2026-06-25
+> 状态: 设计定调，准备 propose | 优先级: 中→高（当前优先） | 创建: 2026-06-24 | 更新: 2026-06-25
 >
-> 阻塞条件: 设计问题 §4（chain 关系）和 §2（增量语义边界）必须先解
+> 阻塞条件: ✅ §4（chain 关系）和 §2（增量语义边界）已解（2026-06-25 讨论）
 
 ## Why
 
@@ -11,46 +11,130 @@ HITL2 `user_decision: rerun` 现在是"Agent 读 profile，自己从 seed-topics
 1. **没有"增量"语义**——rerun 现在等于从 seed-topics 全量重做，不保留 wave0 reference、不区分"只重跑受影响的 wave"。用户调整方向后往往只想改一部分，而不是把三波全推翻。
 2. **rerun-prep 逻辑散落**——"该更新什么、该作废什么、回到哪个 wave"现在是 Agent 临时判断，没有单一归属。违反 SOLID（没有单一职责 owner）和 SSOT（rerun 到底动哪些 state 没有一处定义）。
 
-## Idea：一个专职的 rerun Node
-
-HITL2 决定 `rerun` 后，**先进一个新 node（暂称 `phase-rerun` / rerun-orchestrator）**，再回到 wave 链。
-
-这个 node 的**单一职责**：把"rerun decision + 用户反馈"翻译成对 bundle state 的具体调整（更新什么、保留什么、作废什么），然后把控制权交回 `wave0`，按 `wave0 → wave1 → wave2` 一路**增量**跑下来。
+## 架构（2026-06-25 讨论定调）
 
 ```
-HITL2 (user_decision: rerun)
-        │
-        ▼
-  phase-rerun node   ← 单一职责：rerun-prep
-   • 读 rerun 反馈 + rationale
-   • 决定更新什么（profile / plan / 哪些 topic）
-   • 决定保留什么 / 作废什么（增量语义的源头）
-   • 把 bundle 调整到"可从 wave0 增量重跑"的状态
-        │
-        ▼
-   wave0 → wave1 → wave2 → ...（增量重跑）
+                        manifest.json (inventory — 所有 phase 注册)
+    ┌──────────────────────────────────────────────────────────────────┐
+    │ instantiation → hitl1 → setup → seed-topics → wave0 → wave1 →   │
+    │ wave2 → hitl2 → [rerun] → readiness → final                     │
+    │                   ↑                                             │
+    │            不在正常 forward path，但是 manifest 的一员             │
+    └──────────────────────────────────────────────────────────────────┘
+
+                        transitions.chain.json
+    ┌──────────────────────────────────────────────────────────────────┐
+    │ ... existing entries unchanged ...                               │
+    │ "phase-hitl2.md":     { "passed": "phase-readiness.md" }   ← 不变 │
+    │ "phase-rerun.md":     { "passed": "phase-seed-topics.md" } ← 新增 │
+    │ ... readiness/final unchanged ...                                │
+    └──────────────────────────────────────────────────────────────────┘
+
+                        Agent 路由（不进 chain）
+    ┌──────────────────────────────────────────────────────────────────┐
+    │ hitl2 gate pass → 读 user_decision                               │
+    │   ├── proceed_to_readiness → chain: hitl2 → readiness            │
+    │   ├── request_view_revision → Agent 选 phase，改 view（不 restart）│
+    │   ├── repair → Agent 修，rerun hitl2 gate                        │
+    │   ├── rerun → Agent 进 phase-rerun → chain: rerun → seed-topics  │
+    │   │                                        → wave0 → wave1 →     │
+    │   │                                        wave2 → hitl2          │
+    │   └── stop_blocked → 终止                                        │
+    └──────────────────────────────────────────────────────────────────┘
+
+                        phase-rerun.md（薄层）
+    ┌──────────────────────────────────────────────────────────────────┐
+    │ 输入: rb_profile.yaml (user_decision=rerun, rationale)            │
+    │                                ㇑                                │
+    │ Agent:                                                           │
+    │   1. 读 rationale → 理解 rerun 目标                               │
+    │   2. 更新 profile: rerun_count++, 记录 rerun_feedback             │
+    │   3. 更新 rb_status.json（current_gate 等）                       │
+    │   4. 可选: 标记哪些 topic/artifact 受 rerun 影响（给下游 phase 用） │
+    │                                ㇑                                │
+    │ Gate (rerun-ready):                                              │
+    │   - rationale 非空                                               │
+    │   - rerun_count < max (3)                                        │
+    │   - bundle 结构合法                                               │
+    │   - status 一致                                                  │
+    │                                ㇑                                │
+    │ 输出: bundle 处于"可从 seed-topics 增量重跑"的状态                  │
+    │       chain 接管: rerun → seed-topics → wave0 → wave1 → wave2     │
+    └──────────────────────────────────────────────────────────────────┘
+
+                        下游 phase 的 rerun 感知（通过 profile）
+    ┌──────────────────────────────────────────────────────────────────┐
+    │ seed-topics:                                                     │
+    │   读到 rerun_count > 0 → 调整 topic（非从零发现）                   │
+    │   - 保留原有 topic，按 rationale 调整深度/方向                      │
+    │   - 添加新 topic（如果 rationale 要求）                            │
+    │   - 移除被否定 topic（如果 rationale 明确排除）                     │
+    │                                                                  │
+    │ wave0:                                                           │
+    │   读调整后的 topic 集合 → 已有 reference 保留，只搜索新增/变更部分    │
+    │                                                                  │
+    │ wave1:                                                           │
+    │   读调整后的 topic + 增量 reference → 补充 deepening，不重做已有     │
+    │                                                                  │
+    │ wave2:                                                           │
+    │   读增量 findings → 补充 synthesis，merge 而非 replace              │
+    └──────────────────────────────────────────────────────────────────┘
 ```
 
-**为什么是 node 而不是 Agent 临时判断：**
-- **SOLID**：rerun-prep 有单一 owner，不和 wave0 的 source intake、wave1 的 deepening 职责混在一起。
-- **SSOT**：一个 node 定义"rerun 到底动哪些 state"，而不是散在 `phase-hitl2.md` 的 prose + Agent 脑补 + 各 wave 的隐式假设里。
-- **可测**：node 可挂自己的 gate（deterministic check：rerun 调整是否合法、是否真的进入了增量态），而不是黑盒 Agent 决策。
-- **逻辑干净**：HITL2 只管"记录用户 decision"，rerun node 管"把 decision 落成可执行的增量重跑准备"，wave 链管"重跑"。三者分离。
+**关键洞察**：rerun node 是薄层——它不集中决策"保留/清除什么"。那条逻辑分布在各个 phase 的 rerun-aware 行为里，通过 `rb_profile.yaml` 中的 `rerun_count`、`rerun_feedback`、`rationale` 传递上下文。如果用户觉得全错了→开新的 Deep Research，不在这里死磕。
 
-## 关键设计问题（parked，待 `opsx:explore` 再解）
+## 关键设计问题（2026-06-25 讨论已解）
 
-1. **rerun 目标怎么表达**——rerun node 从哪读"回到 wave0 / 哪些 topic 要改"？新增 profile 字段（如 `hitl2.rerun_target` / `rerun_feedback`），还是复用 `rationale`？
-2. **增量语义的边界**——"增量"具体保留什么？候选：保留 wave0 reference、只重跑 wave1/2；或按 topic 粒度保留；或清空 seed topic 的 backfill token 让各 wave 重填。**这是整个 idea 的核心未决点。**
-3. **rerun node 的 gate 检查什么**——它是 deterministic check（"调整后 bundle 合法、确实进入增量态"）还是只做 state mutation？它自己有没有 `stop`？
-4. **和 chain 的关系（必须先回答）**——chain 至今**刻意不编码 rerun 分支**（见下方 Prior Art）：rerun 是 Agent-level authority。引入 rerun node 是否意味着要加一条显式 rerun edge？还是 rerun node 仍由 Agent 层路由进入、chain 保持只编码 `passed`？
+### §2: 增量语义边界 ✅ RESOLVED
 
-   **关键约束**：`phase-hitl2.md` §9 Anti-Cheating Rules（line 106）明确写 **"MUST NOT 将 branch routing 编码进 transition chain"**（只有 `proceed_to_readiness` 是 chain 的 normal next，其余 decision 归 Agent）。这个规则直接约束任何向 chain 加 rerun edge 的设计。
+**决定：Agent 自主判断，delta/incremental 补充模式。各 phase 通过读 profile 中的 rerun 上下文自然以"补充"模式运行。**
 
-   **建议方向**：rerun node 不加 chain edge。Agent 在 HITL2 读到 `rerun` decision 后路由进 rerun node（不通过 chain），rerun node 完成后 chain 照常路由到 wave0。`phase-hitl2.md:77-83` 的当前行为（"Agent 从 phase-seed-topics.md 重新跑"）改为 "Agent 进入 phase-rerun.md"。
+核心哲学：
+- Rerun = delta，增量补充。不是全量重做。
+- 默认保留已有的 reference/ 和 artifacts/，Agent 在 rationale 指导下判断哪些需要补充、哪些需要作废。
+- 每个 phase（seed-topics, wave0, wave1, wave2）通过读 `rb_profile.yaml` 中的 `rerun_count`、`rerun_feedback` 感知这是 rerun，自然地以 supplement（而非 replace）模式运行。
+- **rerun node 本身是薄层**——只做 profile 更新和上下文设置。真正的"增量"行为分布在 seed-topics（调整 topic）、wave0（补充 references）、wave1（补充 deepening）、wave2（补充 synthesis）各层。
+- **如果全错了，用户开新的 Deep Research**。不要在这里死磕。Rerun 不承载"全量 restart"的语义。
 
-5. **多轮 rerun / rerun 计数**——rerun 不是一次性的，要不要追踪 rerun 次数、防止无限 rerun 循环？
+### §4: chain 关系 ✅ RESOLVED
 
-   **可参考**：`subagent-relay.mjs:929` 的 `convergeRepair` 已有 `maxIterations=3` + stall detection by state hash comparison。rerun 可以用相同模式：限制 N 轮 rerun，连续 rerun 无变化 → escalate 到 HITL2。
+**决定：`rerun → passed → seed-topics`（走 B，经过 seed-topics）。**
+
+理由（用户反馈）：
+- Rerun 总是要调整 seed topic（数量、深度、方向），seed-topics 是重新锚定的自然位置。
+- 即使 topic 本身对，用户可能想调整深度/力度——这也是 seed-topics 的职责。
+- Rerun node 的 `passed → seed-topics` 是它自己的 normal forward edge，**不违反 anti-cheating rule**——anti-cheating rule 禁止的是在 HITL2 的 chain entry 里编码 `rerun` 分支。Rerun node 作为独立 node，它的 forward transition 是正常 chain 语义。
+
+HITL2 的 chain entry **不变**：`phase-hitl2.md → passed → phase-readiness.md`（只有一条 `passed` 边）。
+Agent 在 HITL2 gate pass 后读到 `user_decision: rerun` → 路由进 phase-rerun.md（Agent 层路由，不进 chain）→ rerun gate pass → chain 接管：`rerun → seed-topics → wave0 → wave1 → wave2 → hitl2`。
+
+### §1: rerun 目标怎么表达 ✅ RESOLVED
+
+**决定：先复用 `rationale`，不新增结构化字段。**
+
+- `rationale` 已是自由文本，Agent 在 rerun node 和各 phase 中读取它来理解 rerun 目标。
+- 不新增 `rerun_target` 结构化字段——避免过度设计。如果后续发现 Agent 提取不稳定，再考虑。
+- 新增的 profile 字段仅限于机械追踪：`rerun_count`（计数）、`rerun_feedback`（可选，Agent 从 rationale 提炼的结构化摘要）。
+
+### §3: rerun node 的 gate ✅ RESOLVED
+
+**决定：有 gate，确定性检查。`stop: "no"`（不等用户，用户已在 HITL2 给了反馈）。**
+
+Gate rule set：
+| Rule | Type | What |
+|------|------|------|
+| `rerun_rationale_present` | field_value | `hitl2.rationale` 非空 |
+| `rerun_count_valid` | field_value | `rerun_count < max_reruns`（默认 3） |
+| `bundle_structure_valid` | structural | wave0/seed-topics 需要的目录和文件存在 |
+| `status_consistent` | field_value | `rb_status.json` 反映 rerun 状态 |
+
+### §5: 多轮 rerun ✅ RESOLVED
+
+**决定：复用 `convergeRepair` 模式。**
+- `maxIterations=3`
+- Stall detection: `serializeState()` → JSON.stringify → Set.has()
+- 3 轮后 → 正常 chain 走到 HITL2，用户可以选择 `stop_blocked` 或其他 decision
+- 新增 profile 字段：`hitl2.rerun_count`（integer，默认 0，每次 rerun +1）
 
 ## Prior Art（已验证，更新于 2026-06-25）
 
@@ -64,10 +148,17 @@ HITL2 (user_decision: rerun)
 
 ## 下一步
 
-1. `/opsx:explore rerun-incremental-node` — 先解 §4（chain 关系——建议方向：Agent 路由，不加 chain edge）和 §2（增量语义边界），这两个定了才写得动 proposal
-2. `/opsx:propose rerun-incremental-node` — 出 design + specs + tasks
-3. 按决定更新：
-   - `phase-hitl2.md`（§6 "rerun" 行为改为 "Agent 进入 phase-rerun.md"）
-   - 新增 `phase-rerun.md` node + gate definition
-   - 可能更新 `manifest.json`（加 phase-rerun 条目）
-   - **不更新 `transitions.chain.json`**（不加 rerun edge，服从 anti-cheating rule）
+1. ~~`/opsx:explore rerun-incremental-node`~~ ✅ 已完成（2026-06-25 讨论，5 个设计问题全解）
+2. `/opsx:propose rerun-incremental-node` — 出 proposal + design + specs + tasks
+3. 实施：
+   - **新增 `phase-rerun.md`** — phase node（薄层：读 rationale、更新 profile、设 rerun 上下文）
+   - **新增 gate definition + CLI** — `gate-rerun-ready`（4 rules: rationale 非空、rerun_count < max、bundle 结构合法、status 一致）
+   - **`manifest.json`** — 加 rerun phase 条目
+   - **`transitions.chain.json`** — 加 `phase-rerun.md → passed → phase-seed-topics.md`
+   - **`phase-hitl2.md`** §6 — `rerun` 行为从"Agent 从 seed-topics 重新跑"改为"Agent 进入 phase-rerun.md"
+   - **`shared-profile.md`** — 文档化新字段：`rerun_count`、`rerun_feedback`
+   - **`enums.mjs`** — 可能新增 `RerunScope` enum（如果需要）
+   - **各 wave phase MD** — 加 rerun-aware 行为指引（读 `rerun_count > 0` → supplement 模式）
+   - **不更新 `transitions.chain.json` 的 hitl2 entry**（服从 anti-cheating rule）
+4. 回归测试：`tests/engine/` 下新增 transition chain 测试（验证 rerun → seed-topics edge）
+5. Playbook 实验：更新 `case-133-standard-hitl2-rerun.md` 语义 or 新增 case 验证 rerun node 行为

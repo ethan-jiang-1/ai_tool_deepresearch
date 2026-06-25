@@ -59,7 +59,7 @@ _backlog/
 | 2 | `todo-evidence-quality.md` | **高** | 逐条证据质量评估——不够格就**放弃**（discard，不是 repair） | evidence-extraction（流水线上游） |
 | 3 | `todo-explore-exploit.md` | **高** | 搜索收敛检测与方向决策（wave 级） | subagent ✅, gate-fork ✅, evidence-quality 集成 |
 | 4 | `todo-final-output-eval.md` | **中** | 最终产物整体评估——不够格就自动 rerun（不等用户） | evidence-quality + explore-exploit 信号 |
-| 5 | `todo-rerun-incremental-node.md` | **中** | HITL2 增量重跑节点 | chain 设计问题待解 |
+| 5 | `todo-rerun-incremental-node.md` | **中→高（当前优先）** | HITL2 增量重跑节点——架构骨架，先走 | chain 设计问题待解（§2 §4） |
 | 6 | `todo-hooks-deferral.md` | **延后** | V12 的 6 个 Boundary Hook | evidence 管理器就位 |
 
 ### 🔮 分析文档中标记但未建 TODO 的待办
@@ -100,36 +100,73 @@ schema-core → prototype-start-from-here → gate-loop/gate-fork → workflows/
 ```
 当前 gate/queue/evidence 引擎尚未全部就位。
 
-## 推荐执行顺序
+## 推荐执行顺序（2026-06-25 决策）
+
+**决定：rerun-incremental-node 先走。理由：架构骨架优先。**
 
 ```
-Phase 1 (当前)       Phase 2            Phase 3            Phase 4          延后
-┌──────────────┐    ┌──────────────┐    ┌───────────────┐   ┌──────────────┐   ┌──────────┐
-│ evidence-    │───▶│ evidence-    │───▶│ explore-      │──▶│ final-output │   │ hooks    │
-│ extraction   │    │ quality      │    │ exploit       │   │ eval         │   │          │
-│ (证据提取)    │    │ (逐条质量评估) │    │ (收敛检测)     │   │ (产物自评)    │   │          │
-│              │    │              │    │               │   │              │   │          │
-│ 下一步:       │    │ 前提:         │    │ 前提:          │   │ 前提:         │   │ 前提:     │
-│ opsx:explore │    │ extraction   │    │ extraction    │   │ 前3个DONE    │   │ evidence  │
-│              │    │ DONE         │    │ + quality     │   │              │   │ 管理器     │
-└──────────────┘    └──────────────┘    └───────────────┘   └──────────────┘   └──────────┘
+Phase 1 (当前)            并行 explore           Phase 2              Phase 3           延后
+┌──────────────────┐    ┌──────────────┐    ┌───────────────┐    ┌───────────────┐   ┌──────────┐
+│ rerun-           │    │ evidence-    │    │ evidence-     │    │ explore-      │   │ hooks    │
+│ incremental-node │    │ extraction   │    │ quality       │    │ exploit       │   │          │
+│ (增量重跑节点)     │    │ (opsx:explore│    │ (逐条质量评估)   │    │ (收敛检测)     │   │          │
+│                  │    │  只设计)      │    │               │    │               │   │          │
+│ 为什么先做:        │    │              │    │               │    │               │   │          │
+│ • 架构骨架——      │    │ 不抢跑道，     │    │               │    │               │   │          │
+│   rerun 语义     │    │ 纯设计输出     │    │               │    │               │   │          │
+│   影响 workflow  │    │              │    │               │    │               │   │          │
+│   拓扑           │    │              │    │               │    │               │   │          │
+│ • 已"熟了"——     │    │              │    │               │    │               │   │          │
+│   实验存在,       │    │              │    │               │    │               │   │          │
+│   约束清晰,       │    │              │    │               │    │               │   │          │
+│   现成模式可复用   │    │              │    │               │    │               │   │          │
+│ • unlock         │    │              │    │               │    │               │   │          │
+│   final-output-  │    │              │    │               │    │               │   │          │
+│   eval 的集成点   │    │              │    │ 前提:          │   │ 前提:          │   │          │
+│                  │    │              │    │ extraction    │   │ extraction    │   │          │
+│                  │    │              │    │ + quality     │   │ + quality     │   │          │
+│                  │    │              │    │               │   │               │   │          │
+│ 下一步:           │    │              │    │               │   │               │   │          │
+│ opsx:explore →   │    │              │    │               │   │               │   │          │
+│ opsx:propose →   │    │              │    │               │   │               │   │          │
+│ 改 manifest.json │    │              │    │               │   │               │   │          │
+│ + phase-hitl2.md │    │              │    │               │   │               │   │          │
+│ + phase-rerun.md │    │              │    │               │   │               │   │          │
+│ + gate def       │    │              │    │               │   │               │   │          │
+│                  │    │              │    │               │   │               │   │          │
+│ 🔺 不从 chain    │    │              │    │               │   │               │   │          │
+│   加边（服从      │    │              │    │               │   │               │   │          │
+│   anti-cheating  │    │              │    │               │   │               │   │          │
+│   rule）          │    │              │    │               │   │               │   │          │
+└──────────────────┘    └──────────────┘    └───────────────┘    └───────────────┘   └──────────┘
 
-                    ┌──────────────────┐
-                    │ rerun-           │  ← 先解 chain 设计问题
-                    │ incremental-node │    (_trainsistion/ review)
-                    │ (中优先级)        │
-                    └──────────────────┘
+                              ┌──────────────────┐
+                              │ final-output     │  前提: rerun node + 前 3 个 DONE
+                              │ eval             │
+                              │ (产出自评→自动rerun)│
+                              └──────────────────┘
 ```
 
-**Phase 1 为什么是 evidence-extraction**：
-1. 两个直接依赖（`prototype-subagent`、`prototype-gate-fork`）都 DONE 且归档
-2. 它是流水线头——没有 enriched reference，quality 没东西可评
-3. 它解决最基础的信任问题：`ref_count` 不再由 Agent 随口说
+### 为什么 rerun-incremental-node 先走
+
+| 维度 | 判断 |
+|------|------|
+| **架构层级** | 涉及 workflow **拓扑变更**（加 phase node、决定 chain 是否参与、与 HITL2 交互模式）。骨架错了后面全要改。 |
+| **成熟度** | 已停放一个月（6/24→6/25）。Prior Art 验证通过（实验证明确认 chain 不参与 rerun）。5 个设计问题明确框架，硬核是 §2（增量语义边界）和 §4（chain 关系），其余有现成答案。 |
+| **约束清晰** | anti-cheating rule 明确禁止 chain edge。`request_view_revision` 已实现作为对照边界。`convergeRepair` 的 maxIterations=3 + stall detection 直接可复用。 |
+| **Unlock 效应** | final-output-eval 的 auto_rerun 路径写着"进入 rerun node"——先有 concrete target，不做 hypothetical design。 |
+| **Scope 可控** | 改 3 个文件（manifest.json + phase-hitl2.md + 新增 phase-rerun.md + gate definition），不动 chain。 |
+
+### 为什么 evidence-extraction 并行 explore 而不是等
+
+- evidence-extraction 的 scope 更广（CandidateCard 设计、cache staging 升级、`countReferences()` Engine 函数），更多开放问题
+- 先做 `opsx:explore`（纯设计，不写代码），等 rerun node proposal 出来后再 propose——**避免两个 change 同时活跃互相踩文件**
+- 不耽误 rerun node 的实现进度
 
 ## 快速查阅指南
 
 ### 想看"现在该做什么"
-→ 本文的"推荐执行顺序"
+→ 本文的"推荐执行顺序"——**当前：rerun-incremental-node 先走，evidence-extraction 并行 explore**
 
 ### 想看历史决策
 → `_v12-migration/decisions.md`（7 个架构决策）

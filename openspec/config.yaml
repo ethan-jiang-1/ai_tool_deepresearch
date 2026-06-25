@@ -118,17 +118,13 @@ context: |
       目录结构:
         experiments_playbook/
           exp_{component}/                     # 每个实验一个子目录
-            test-simple.md                     # 简单场景（核心路径）
-            test-medium.md                     # 中等场景（分支 + 修复）
-            test-complex.md                    # 复杂场景（全流程 + C&I）
+      命名与格式详见 `guidelines/command-experiments.md`（playbook 形状、case 命名、
+      cost label、frontmatter、Execution Contract、Principles 1-7、Design Criteria Checklist）。
       核心约定:
         - 每个 playbook 创建独立 disposable bundle（dpt_disp_*），互不污染
         - playbook 是 Agent 可读的 Markdown，包含 bash + JS 代码块
         - Step 1 统一用 new-disposable-bundle.mjs 创建 bundle，绝不手动 mkdir/sed
         - 裁决只从 trace JSONL 来，不靠 console output
-        - trace event 命名: Engine 事件不带前缀（load_start, file_read, node_exec），
-          node MD 自写事件统一用 md: 前缀（md:executed）
-        - 3 级复杂度: simple（核心路径）, medium（分支+修复）, complex（全流程+错误路径）
 
     支持环境详细约定 — experiments_env/:
       目录命名: prototype-{component-name}/（如 prototype-gate-loop）
@@ -142,10 +138,7 @@ context: |
   根目录约定 (Framework ↔ Bundle 同级, 不拷贝):
     docs/                       — 架构文档 (architect/) 与 V12 迁移记录 (v12-migration/)
     experiments_playbook/        — Agent 测试 playbook (见实验体系)
-      exp_{component}/            # 每个机制一个子目录
-        test-simple.md            # 简单场景（核心路径）
-        test-medium.md            # 中等场景（分支 + 修复）
-        test-complex.md           # 复杂场景（全流程 + C&I）
+      exp_{component}/            # 每个机制一个子目录；命名与格式详见 guidelines/command-experiments.md
     experiments_env/                — 原型实验 (理想化, 冻结, 见实验体系)
     openspec/                   — OpenSpec spec-driven development
       changes/                  — change proposals (deltas) + archive
