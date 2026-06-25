@@ -10,13 +10,16 @@ _backlog/
 ├── README.md                          # 本文件
 │
 ├── DONE-* ×10                         # 已完成/已归档的分析与决策记录
-├── todo-* ×6                          # 待设计/待实现的 TODO
+├── todo-* ×9                          # 待设计/待实现的 TODO
 │   ├── todo-evidence-extraction.md     #   证据提取（来源→结构化 reference，含干货）
 │   ├── todo-evidence-quality.md        #   证据质量评估——不够格就放弃
 │   ├── todo-explore-exploit.md         #   搜索收敛检测与方向决策
 │   ├── todo-final-output-eval.md       #   最终产物评估——不够格就自动 rerun
-│   ├── todo-rerun-incremental-node.md   #   HITL2 增量重跑节点
-│   └── todo-hooks-deferral.md          #   6 个 Boundary Hook（延后）
+│   ├── todo-rerun-incremental-node.md   #   HITL2 增量重跑节点（已进实施）
+│   ├── todo-hooks-deferral.md          #   6 个 Boundary Hook（延后）
+│   ├── todo-phase-recover.md           #   模型失焦的状态恢复——兜底（低，parked）
+│   ├── todo-context-reground.md        #   长上下文定期重锚——预防（低，parked）
+│   └── todo-system-logging.md          #   系统日志/可观测性（中，半建成待激活）
 │
 ├── _guideline/                        # 术语对齐审计（研究阶段）
 │   └── terminology-gap-audit.md       #   ~253 处术语 gap，94% 是 "Main Agent"→"MD controller"
@@ -59,8 +62,11 @@ _backlog/
 | 2 | `todo-evidence-quality.md` | **高** | 逐条证据质量评估——不够格就**放弃**（discard，不是 repair） | evidence-extraction（流水线上游） |
 | 3 | `todo-explore-exploit.md` | **高** | 搜索收敛检测与方向决策（wave 级） | subagent ✅, gate-fork ✅, evidence-quality 集成 |
 | 4 | `todo-final-output-eval.md` | **中** | 最终产物整体评估——不够格就自动 rerun（不等用户） | evidence-quality + explore-exploit 信号 |
-| 5 | `todo-rerun-incremental-node.md` | **中→高（当前优先）** | HITL2 增量重跑节点——架构骨架，先走 | chain 设计问题待解（§2 §4） |
+| 5 | `todo-rerun-incremental-node.md` | **中→高（当前优先）** | HITL2 增量重跑节点——架构骨架，先走 | ✅ 设计已解（§2/§4），已进实施 |
 | 6 | `todo-hooks-deferral.md` | **延后** | V12 的 6 个 Boundary Hook | evidence 管理器就位 |
+| 7 | `todo-phase-recover.md` | **低（parked）** | 模型失焦时从 ground truth 重新定位并复活当前 phase（兜底层） | 无硬阻塞；与 context-reground 真相源对齐 |
+| 8 | `todo-context-reground.md` | **低（parked）** | 长上下文定期 reload 工程总图+root question，对抗 lost-in-the-middle（预防层） | 无硬阻塞；增强 tail anchoring，不取代 |
+| 9 | `todo-system-logging.md` | **中** | 系统日志/可观测性——统一 4 sink、激活死 logger、补 spec 要求却没写的事件、加 runId+读回工具 | 无硬阻塞；launch/排障前抬起。Phase 1 是纯激活死代码 |
 
 ### 🔮 分析文档中标记但未建 TODO 的待办
 
@@ -99,6 +105,24 @@ _backlog/
 schema-core → prototype-start-from-here → gate-loop/gate-fork → workflows/hooks
 ```
 当前 gate/queue/evidence 引擎尚未全部就位。
+
+### 健壮性 / 元机制（正交于核心流水线，可长期 park）
+
+三个新 TODO（#7-9）都针对"模型在长程运行中跑糊涂 / 无法事后排查"，与核心 evidence 流水线**正交**，互不阻塞：
+
+```
+   todo-system-logging（地基）          ← recover/reground 都把 rb_trace.jsonl + control
+        │                                  files 当 ground truth；日志不可信就没真相源
+        │                                  （且半已建成：logger.mjs 死代码、traceInit/
+        │                                   traceSummary 从不调用、repair 事件 spec 违规）
+        ▼
+   todo-context-reground（预防）  ──减少失焦频率──▶  todo-phase-recover（兜底）
+   周期性 reload 工程总图+root Q                      失焦时从 ground truth 重定位
+   对抗 lost-in-the-middle；增强 §6 tail              +复活当前 phase，不继续幻觉
+```
+
+- **reground（预防）vs recover（兜底）互补**：reground 让模型别晕，recover 让模型晕了能救回来。两者共享同一 ground-truth 基座（`rb_status.json` + `rb_profile.yaml` + `rb_plan.md` + 工程总图），设计时真相源要对齐。
+- **system-logging 是地基**：recover 直接读 `rb_trace.jsonl` 重建当前 phase，三个 TODO 共享同一 control files。日志做不对，前两者没有真相源。三者中优先级最高（launch/排障前抬起）。
 
 ## 推荐执行顺序（2026-06-25 决策）
 
@@ -162,6 +186,10 @@ Phase 1 (当前)            并行 explore           Phase 2              Phase 
 - evidence-extraction 的 scope 更广（CandidateCard 设计、cache staging 升级、`countReferences()` Engine 函数），更多开放问题
 - 先做 `opsx:explore`（纯设计，不写代码），等 rerun node proposal 出来后再 propose——**避免两个 change 同时活跃互相踩文件**
 - 不耽误 rerun node 的实现进度
+
+### 三个 parked TODO（健壮性/元机制，低优先级）
+
+`todo-phase-recover` / `todo-context-reground` / `todo-system-logging`（#7-9）**不参与上述执行顺序**——它们正交于核心流水线，当前先记录、不抢跑道。详见上方"健壮性 / 元机制"小节。其中 **`todo-system-logging` 优先级最高**（launch/排障前抬起，且半已建成、拾起来成本低），另两者（recover / reground）低优先级 long park。
 
 ## 快速查阅指南
 
