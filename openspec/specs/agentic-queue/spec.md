@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Define the JS-owned Agentic Queue Manager: a structured, Zod-validated queue system with a five-slot active window, refill pool, deterministic receipts, and Markdown projection. The Queue Manager owns all queue mutation; the Agent actor does semantic work but does not self-govern queue state. This capability replaces the V12 Markdown-governed queue pattern with machine-enforced scheduling, receipt checking, promotion, preemption, and trace.
+Define the JS-owned Agentic Queue Manager: a structured, Zod-validated queue system with a five-slot active window, refill pool, deterministic receipts, and Markdown projection. The Queue Manager owns all queue mutation; the Agent actor does semantic work but does not self-govern queue state. This capability provides machine-enforced scheduling, receipt checking, promotion, preemption, and trace.
 
 ## Requirements
 
@@ -151,7 +151,7 @@ An experiment playbook SHALL exist at `experiments_playbook/exp_wfn_seedtopic/te
 The playbook SHALL verify:
 - Bundle pre-seeded with `topic_registry` (3 topics + sufficient detail for seed topic fields) and `rb_profile.yaml`
 - Phase Agent loads `phase-seed-topics.md`, executes §3.1 灌料 (enqueue 3 task cards), §3.2 执行循环 (claim → execute → complete × 3), §3.3 收尾 (run gate)
-- Each produced `seed_topics/<slug>.md` contains V12-aligned frontmatter (must_answer, hypothesis, etc.) and 原始语境约束 block
+- Each produced `seed_topics/<slug>.md` contains required frontmatter fields (must_answer, hypothesis, etc.) and 原始语境约束 block
 - Gate pass confirms bidirectional slug consistency
 - Missing upstream info annotated as gap (not fabricated)
 
@@ -164,7 +164,7 @@ The playbook SHALL use local fixture data for topic_registry entries (pre-writte
 - **THEN** 3 task cards SHALL be enqueued
 - **AND** Phase Agent SHALL claim → execute → complete each task
 - **AND** after 3 tasks, queue SHALL be empty
-- **AND** each `seed_topics/<slug>.md` SHALL contain complete V12-aligned fields
+- **AND** each `seed_topics/<slug>.md` SHALL contain complete required fields
 - **AND** gate SHALL pass
 - **AND** verdict SHALL be PASS
 
@@ -280,7 +280,7 @@ Seed topic materialization uses `targets: { controller: "main-agent" }` because 
 - **AND** each task card's `targets.controller` SHALL be `"main-agent"`
 - **AND** each task card's `priority_class` SHALL be `P3_current_gate_gap`
 
-#### Scenario: Seed topic file contains V12-aligned fields
+#### Scenario: Seed topic file contains required fields
 
 - **WHEN** a `seed_topic_materialize` task is executed
 - **THEN** the produced `seed_topics/<slug>.md` SHALL contain frontmatter fields: id, slug, title, must_answer, hypothesis, in_scope, out_of_scope, search_guardrails, evidence_route

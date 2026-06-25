@@ -34,14 +34,6 @@ verdict: trace-jsonl
 
 证明：seed-topics-ready gate 的 `dir_non_empty` 能检测空目录，`cross_field(slug_consistency)` 能双向检测 slug 缺失和多余。裁决从 trace，不靠 console 或感觉。
 
-### Slug 一致性 DO/DON'T
-
-| DO | DON'T |
-|----|-------|
-| 磁盘 slug 集合 = registry slug 集合（双向一致） | 多一个文件或少一个 topic |
-| frontmatter `slug` == 文件名 stem | `slug` 写 `"topic-a"` 但文件名叫 `wrong-name.md` |
-| frontmatter `title` 非空 | 空 title 冒充完成 |
-
 ---
 
 ## Step 1: 创建 disposable bundle + 写入 topic_registry
@@ -53,23 +45,27 @@ echo "Bundle: $B"
 
 # Validate initial structure
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 
-# Write topic_registry into rb_plan.md frontmatter (3 topics)
-PLAN_PATH=$B/rb_plan.md
-echo '---
-{
-  "plan_basename": "stm_boundary",
-  "derived_topic_count": 3,
-  "topic_registry": [
-    { "id": "t1", "slug": "topic-a", "title": "Topic A" },
-    { "id": "t2", "slug": "topic-b", "title": "Topic B" },
-    { "id": "t3", "slug": "topic-c", "title": "Topic C" }
-  ]
-}
----' > $PLAN_PATH
+# Write topic_registry into rb_plan.md frontmatter (3 topics, YAML format)
+cat > $B/rb_plan.md << 'EOF'
+---
+plan_basename: stm_boundary
+derived_topic_count: 3
+topic_registry:
+  - id: t1
+    slug: topic-a
+    title: Topic A
+  - id: t2
+    slug: topic-b
+    title: Topic B
+  - id: t3
+    slug: topic-c
+    title: Topic C
+---
+# stm_boundary Plan
+EOF
 
-# Set status to seed-topics (simulating setup gate already passed)
+# Set status to seed-topics
 cat > $B/rb_status.json << 'EOF'
 {
   "current_mode": "execution",
@@ -80,7 +76,7 @@ cat > $B/rb_status.json << 'EOF'
 EOF
 
 echo "=== Plan ==="
-head -12 $PLAN_PATH
+head -12 $B/rb_plan.md
 echo "=== Status ==="
 cat $B/rb_status.json
 ```
@@ -96,7 +92,9 @@ mkdir -p $B/seed_topics
 
 cat > $B/seed_topics/topic-a.md << 'EOF'
 ---
-{"id": "t1", "slug": "topic-a", "title": "Topic A"}
+id: t1
+slug: topic-a
+title: Topic A
 ---
 
 # Topic A
@@ -114,7 +112,9 @@ EOF
 
 cat > $B/seed_topics/topic-b.md << 'EOF'
 ---
-{"id": "t2", "slug": "topic-b", "title": "Topic B"}
+id: t2
+slug: topic-b
+title: Topic B
 ---
 
 # Topic B
@@ -131,7 +131,9 @@ EOF
 
 cat > $B/seed_topics/topic-c.md << 'EOF'
 ---
-{"id": "t3", "slug": "topic-c", "title": "Topic C"}
+id: t3
+slug: topic-c
+title: Topic C
 ---
 
 # Topic C
@@ -184,7 +186,9 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ```bash
 cat > $B/seed_topics/topic-a.md << 'EOF'
 ---
-{"id": "t1", "slug": "topic-a", "title": "Topic A"}
+id: t1
+slug: topic-a
+title: Topic A
 ---
 
 # Topic A
@@ -192,7 +196,9 @@ EOF
 
 cat > $B/seed_topics/topic-c.md << 'EOF'
 ---
-{"id": "t3", "slug": "topic-c", "title": "Topic C"}
+id: t3
+slug: topic-c
+title: Topic C
 ---
 
 # Topic C
@@ -216,7 +222,9 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ```bash
 cat > $B/seed_topics/topic-b.md << 'EOF'
 ---
-{"id": "t2", "slug": "topic-b", "title": "Topic B"}
+id: t2
+slug: topic-b
+title: Topic B
 ---
 
 # Topic B
@@ -224,7 +232,9 @@ EOF
 
 cat > $B/seed_topics/extra-topic.md << 'EOF'
 ---
-{"id": "tx", "slug": "extra-topic", "title": "Extra Topic"}
+id: tx
+slug: extra-topic
+title: Extra Topic
 ---
 
 # Extra Topic (not in registry)

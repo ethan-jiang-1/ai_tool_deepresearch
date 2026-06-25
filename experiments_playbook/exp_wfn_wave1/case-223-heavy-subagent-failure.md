@@ -112,7 +112,7 @@ cat > $B3/reference/hard-target/source.yaml << 'REFEOF'
   notes: "This URL is a search results page — WebFetch likely returns search snippets, not full articles. Sub-agent must navigate to actual article pages or use degradation chain."
 REFEOF
 
-cat > $B3/reference/index.md << 'EOF'
+cat > $B3/reference/_INDEX.md << 'EOF'
 # Reference Index
 - hard-target: 1 reference (search results page — intentionally hard to fetch)
 EOF

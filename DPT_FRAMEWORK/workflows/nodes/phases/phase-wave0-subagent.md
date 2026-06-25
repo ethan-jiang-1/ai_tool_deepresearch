@@ -38,7 +38,7 @@ Wave0 does **foundation reference collection** — not deep research, not claim 
 
 **Minimum output:** At least 1 reference per topic that passes `ReferenceMetadata` schema validation.
 
-## 2. Artifact — `reference/{topic.slug}/source.yaml`
+## 2. Artifact — `artifacts/wave0/{topic.slug}/source.yaml`
 
 The Sub-agent writes ONE file per topic:
 
@@ -71,7 +71,7 @@ The Sub-agent operates within a relay-assigned slot directory (`_subagents/wave_
 3. Use WebSearch to find relevant sources (respect search_guardrails from seed topic)
 4. Use page-fetching to get page content (see §4 degradation chain)
 5. Extract structured metadata: url, title, retrieval date, topic tag, optional notes
-6. Write `reference/{topic.slug}/source.yaml`
+6. Write `artifacts/wave0/{topic.slug}/source.yaml`
 7. Write `agent_result_ready` event to `runtime-receipt.jsonl` (IMMEDIATELY before returning)
 8. Return JSON matching `result.schema.json` to the Phase Agent
 

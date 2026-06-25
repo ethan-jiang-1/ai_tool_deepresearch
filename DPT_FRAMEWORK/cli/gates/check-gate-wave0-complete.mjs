@@ -3,8 +3,8 @@
 // @impl GSK-001, GSK-002, GSK-004, RWG-004, RWG-007, FRE-003
 // Usage: node check-gate-wave0-complete.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
-import { existsSync, statSync, readFileSync, appendFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, statSync, readFileSync, readdirSync, appendFileSync } from 'node:fs';
+import { join, dirname, basename } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import {
   parseGateCliArgs,
@@ -148,13 +148,30 @@ for (const rule of definition.rules) {
           }
         }
       } else if (rule.check === 'count_floor') {
-        const filePath = join(bundlePath, resolvedTarget);
-        const arr = readYamlArray(filePath);
-        const count = arr ? arr.length : 0;
-        if (count < rule.threshold) {
-          rulePassed = false;
-          ruleDetail = `Count floor not met for ${resolvedTarget}: ${count} entries (threshold: ${rule.threshold})`;
-          if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+        let count = 0;
+        if (resolvedTarget.includes('*')) {
+          // Glob mode: count files matching wildcard pattern
+          const targetDir = join(bundlePath, dirname(resolvedTarget));
+          const pattern = basename(resolvedTarget);
+          if (existsSync(targetDir) && statSync(targetDir).isDirectory()) {
+            const regex = new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '[^/]*') + '$');
+            count = readdirSync(targetDir).filter(f => regex.test(f)).length;
+          }
+          if (count < rule.threshold) {
+            rulePassed = false;
+            ruleDetail = `Count floor not met for ${resolvedTarget}: ${count} files (threshold: ${rule.threshold})`;
+            if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+          }
+        } else {
+          // YAML mode: count array entries
+          const filePath = join(bundlePath, resolvedTarget);
+          const arr = readYamlArray(filePath);
+          count = arr ? arr.length : 0;
+          if (count < rule.threshold) {
+            rulePassed = false;
+            ruleDetail = `Count floor not met for ${resolvedTarget}: ${count} entries (threshold: ${rule.threshold})`;
+            if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+          }
         }
       } else if (rule.check === 'status_value') {
         const [file, jsonPath] = rule.target.split('#/');

@@ -19,7 +19,7 @@ suggested_context:
 
 对 topic_registry 中的每个 topic 做定向 deep research，产出 `artifacts/wave1/{topic}/evidence-summary.md` 和 `artifacts/wave1/{topic}/question-list.md`（paired artifacts per topic）。使用 Agentic Queue 驱动的批量 Sub-agent 并行执行——每个 topic 一个 deepening task card，Sub-agent（role: `dpt-evidence-extractor`）通过 `subagent-relay.mjs` 的 slot 契约执行 WebSearch+WebFetch，Phase Agent 通过 relay validation pipeline 收集结果，每完成一个 topic 立刻回填 seed topic 的 backfill token。
 
-**Wave1 取代 V12 的 foundation-placeholder skeleton**——产出不再是 `capability: foundation-placeholder` skeleton，而是包含真实 search 结果的 evidence summary。
+**Wave1 产出不再是 foundation-placeholder skeleton**——产出是包含真实 search 结果的 evidence summary + question-list。
 
 ## 2. Required Inputs
 
@@ -138,7 +138,7 @@ Wave1 的 claim→execute→complete 使用 relay 批量并行执行（灌料→
 
 **question-list.md 文件结构（每个 `artifacts/wave1/{topic.slug}/question-list.md` 必须满足）：**
 
-> **设计说明**：question-list.md 是 V12 四节探索账本（exploration ledger），与 evidence-summary.md 成对产出。当前 wave1 为单轮 deepening（single-pass），question-list.md 作为 reflection artifact 记录本轮 evidence 对问题状态的影响。多轮迭代（full explore/exploit loop with 9 decision states）是 future expansion track。
+> **设计说明**：question-list.md 是四节探索账本（exploration ledger），与 evidence-summary.md 成对产出。当前 wave1 为单轮 deepening（single-pass），question-list.md 作为 reflection artifact 记录本轮 evidence 对问题状态的影响。多轮迭代（full explore/exploit loop with 9 decision states）是 future expansion track。
 
 ```markdown
 # Question List - Topic: {topic.title}

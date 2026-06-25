@@ -1,6 +1,6 @@
 {
   "gate": "wave1-complete",
-  "description": "Verify Wave1 produced paired deepening artifacts per topic: evidence-summary.md (source URLs, key findings, open questions with canonical labels) and question-list.md (four-section exploration ledger). Also checks __BACKFILL_WAVE1_*__ token replacement, trace, and status.",
+  "description": "Verify Wave1 produced deepening artifacts per topic: evidence-summary.md, question-list.md, reference/0N-*.md rich MD reference files per topic, backfill token replacement, trace, and status.",
   "rules": [
     {
       "id": "wave1_dir_exists",
@@ -18,7 +18,14 @@
       "id": "per_topic_question_list_exists",
       "check": "file_exists",
       "target": "artifacts/wave1/{topic}/question-list.md",
-      "failure_message": "Missing question-list file: artifacts/wave1/{topic}/question-list.md. Every topic must have a paired question-list.md alongside evidence-summary.md. See phase-wave1.md §3.2.1 for the four-section template."
+      "failure_message": "Missing question-list file: artifacts/wave1/{topic}/question-list.md. Every topic must have a paired question-list.md alongside evidence-summary.md."
+    },
+    {
+      "id": "per_topic_ref_md_count_floor",
+      "check": "count_floor",
+      "target": "reference/*{topic}-*.md",
+      "threshold": 1,
+      "failure_message": "Topic {topic} has fewer than 1 reference/*{topic}-*.md rich MD file. Create at least one topic-prefixed reference file per shared-reference-template.md."
     },
     {
       "id": "question_list_has_four_sections",
@@ -34,7 +41,7 @@
       "target": "artifacts/wave1/{topic}/evidence-summary.md",
       "pattern": "\\[.+\\]\\(https?://[^)]+\\)",
       "negate": false,
-      "failure_message": "evidence-summary.md for {topic} must contain at least 1 source URL in Markdown link format (e.g. [Title](https://...)). Sub-agent must do real WebSearch+WebFetch — fabricated summaries are forbidden."
+      "failure_message": "evidence-summary.md for {topic} must contain at least 1 source URL in Markdown link format. Sub-agent must do real WebSearch+WebFetch."
     },
     {
       "id": "key_findings_non_empty",
@@ -50,7 +57,7 @@
       "target": "seed_topics/{topic}.md",
       "pattern": "__BACKFILL_WAVE1_MECHANISMS__",
       "negate": true,
-      "failure_message": "Stale backfill token __BACKFILL_WAVE1_MECHANISMS__ found in seed_topics/{topic}.md. Replace the token with actual mechanism findings from the evidence-summary."
+      "failure_message": "Stale backfill token __BACKFILL_WAVE1_MECHANISMS__ found in seed_topics/{topic}.md. Replace the token with actual mechanism findings."
     },
     {
       "id": "no_stale_trends_token",
@@ -58,7 +65,7 @@
       "target": "seed_topics/{topic}.md",
       "pattern": "__BACKFILL_WAVE1_TRENDS__",
       "negate": true,
-      "failure_message": "Stale backfill token __BACKFILL_WAVE1_TRENDS__ found in seed_topics/{topic}.md. Replace the token with actual trends and pain points from the evidence-summary."
+      "failure_message": "Stale backfill token __BACKFILL_WAVE1_TRENDS__ found in seed_topics/{topic}.md. Replace the token with actual trends."
     },
     {
       "id": "no_stale_pending_questions_token",
@@ -66,7 +73,7 @@
       "target": "seed_topics/{topic}.md",
       "pattern": "__BACKFILL_PENDING_QUESTIONS__",
       "negate": true,
-      "failure_message": "Stale backfill token __BACKFILL_PENDING_QUESTIONS__ found in seed_topics/{topic}.md. Replace the token with updated question status tags from the evidence-summary."
+      "failure_message": "Stale backfill token __BACKFILL_PENDING_QUESTIONS__ found in seed_topics/{topic}.md. Replace with updated question status tags."
     },
     {
       "id": "trace_wave1_completion",

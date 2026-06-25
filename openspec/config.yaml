@@ -136,7 +136,7 @@ context: |
         - 完成后冻结，不随生产代码变化
 
   根目录约定 (Framework ↔ Bundle 同级, 不拷贝):
-    docs/                       — 架构文档 (architect/) 与 V12 迁移记录 (v12-migration/)
+    docs/                       — 架构文档 (architect/)
     experiments_playbook/        — Agent 测试 playbook (见实验体系)
       exp_{component}/            # 每个机制一个子目录；命名与格式详见 guidelines/command-experiments.md
     experiments_env/                — 原型实验 (理想化, 冻结, 见实验体系)
@@ -175,7 +175,7 @@ context: |
 rules:
   proposal:
     - 用中文写 proposal，明确这个 change 产出什么、不产出什么
-    - 引用 V12 原始需求时注明来源文件
+    - 引用原始需求时注明来源文件
     - 为新 capability 分配 3 字母缩写并提前登记到 openspec/governance/req-registry.yaml (先查历史，避免冲突，别随意发挥)
   design:
     - "数据结构用 Zod schema 定义（`.refine()` 做跨字段校验）"

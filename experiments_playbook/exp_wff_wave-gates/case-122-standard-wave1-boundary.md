@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: wff-wave-gates
 case: case-122-standard-wave1-boundary
 weight: light
-case_goal: "Prove that wave1-complete gate correctly detects missing placeholder marker and false completion claims; foundation placeholder boundary is deterministically enforced."
+case_goal: "Prove that wave1-complete gate correctly enforces evidence-summary.md existence, question-list.md 4-section structure, and reference/{topic}-*.md count_floor."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -20,10 +20,10 @@ verdict: trace-jsonl
 
 ## Expected Runtime Path
 
-1. 创建 disposable bundle + pre-seed Wave0 reference + 设置 wave1-ready status
-2. 写含 `capability: foundation-placeholder` 的 skeleton → gate pass
-3. 写 unmarked skeleton（缺 marker）→ gate fail
-4. 写含 "full subagent coverage completed" 的 skeleton → gate fail
+1. 创建 disposable bundle + pre-seed Wave0 artifacts + 设置 wave1-ready status
+2. 写完整合法 wave1 产出 → gate pass
+3. 移除 evidence-summary.md → gate fail
+4. 写残缺 question-list.md（缺 section）→ gate fail
 5. 从 `_trace.jsonl` 裁决（预期 3 条 check：1 pass + 2 fail）
 6. Cleanup
 
@@ -31,21 +31,11 @@ verdict: trace-jsonl
 
 ## Case Goal
 
-证明：wave1-complete gate 通过 `pattern_match` 检测 skeleton artifact 是否标记了 `capability: foundation-placeholder`，并通过 `negate:true` 的 `pattern_match` 排除 false completion claim。
-
-### Foundation 阶段 DO/DON'T
-
-| DO（允许） | DON'T（禁止，会被 gate fail） |
-|-----------|---------------------------|
-| 写入 topic-scoped skeleton artifact | 声称 "full subagent coverage completed" |
-| 显式标注 `capability: foundation-placeholder` | 声称 "deepening done" |
-| 引用 Wave0 reference | 声称 "candidate intake completed" |
-| 列出已知前提/open questions | 声称 "fan-in review completed" |
-| `subagent: true` 只是 future marker | 移除或弱化 placeholder marker |
+证明：wave1-complete gate 正确检测缺失 evidence-summary、question-list 结构不完整等边界条件。
 
 ---
 
-## Step 1: 创建 bundle + pre-seed Wave0 reference + 设置 wave1 status
+## Step 1: 创建 bundle + pre-seed Wave0 + 设置 wave1 status
 
 ```bash
 REPO_ROOT=$(pwd)
@@ -58,14 +48,14 @@ node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
 # Write topic_registry (1 topic)
 cat > $B/rb_plan.md << 'EOF'
 ---
-{
-  "plan_basename": "w1_boundary",
-  "derived_topic_count": 1,
-  "topic_registry": [
-    { "id": "t1", "slug": "topic-a", "title": "Topic A" }
-  ]
-}
+plan_basename: w1_boundary
+derived_topic_count: 1
+topic_registry:
+  - id: t1
+    slug: topic-a
+    title: Topic A
 ---
+# w1_boundary Plan
 EOF
 
 # Set status to wave1
@@ -78,135 +68,199 @@ cat > $B/rb_status.json << 'EOF'
 }
 EOF
 
-# Pre-seed Wave1 directory
-mkdir -p $B/artifacts/wave1/topic-a
-
-# Pre-seed evidence-summary + question-list（wave1-complete gate 要求两者共存）
-cat > $B/artifacts/wave1/topic-a/evidence-summary.md << 'EOF'
-## Key Findings
-1. AI safety is an active research area [Source](https://example.com/ai-safety)
-EOF
-cat > $B/artifacts/wave1/topic-a/question-list.md << 'EOF'
-## Topic Investigation Targets
-1. What is AI safety?
-## Question Reconciliation
-N/A
-## Emergent Question Protocol
-N/A
-## Exploration / Exploitation Decision
-Proceed
-EOF
-
-# Pre-seed reference directory (Wave0 output, needed for realism)
-mkdir -p $B/reference/topic-a
-cat > $B/reference/topic-a/source.yaml << 'EOF'
+# Pre-seed Wave0 artifacts (required for realistic state)
+mkdir -p $B/artifacts/wave0/topic-a
+cat > $B/artifacts/wave0/topic-a/source.yaml << 'EOF'
 - url: "https://example.com/ai-safety"
   title: "Understanding AI Safety"
   retrieved_date: "2026-06-15"
   topic_tag: "topic-a"
 EOF
 
+# Pre-seed reference/ with 00-shared-*.md + _INDEX.md + README.md
+cat > $B/reference/00-shared-foundation.md << 'EOF'
+# AI Safety Foundation
+- source_url: https://example.com/ai-safety
+- acceptance_status: accepted
+- source_type: secondary
+- tier: Tier 2
+- evidence_role: foundation
+- trust_level: practitioner
+- why_it_matters: Foundation for topic-a deepening.
+- accessed_at: 2026-06-15
+- related_topic: topic-a
+
+## Key Facts
+- AI safety research is active.
+
+## Core Content Capture
+Foundation overview of AI safety.
+
+## Relevance To This Research
+Basis for topic-a investigation.
+
+## Quotable Terms / Concepts
+- "AI alignment"
+
+## Risks And Limitations
+- Single source.
+EOF
+
+cat > $B/reference/_INDEX.md << 'EOF'
+# Reference Index
+| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 00-shared-foundation.md | secondary | practitioner | Tier 2 | topic-a | wave0_foundation | accepted | 2026-06-15 |
+EOF
+
+cat > $B/reference/README.md << 'EOF'
+# Reference Evidence
+Flat reference directory.
+EOF
+
+# Pre-seed seed_topics (needed for backfill token checks)
+mkdir -p $B/seed_topics
+cat > $B/seed_topics/topic-a.md << 'EOF'
+---
+id: t1
+slug: topic-a
+title: Topic A
+---
+# Topic A
+
+## Key Dimensions
+- Technical alignment
+
+## Known Premises
+- AI safety is important.
+
+## Open Questions
+- How to measure alignment?
+EOF
+
+# Pre-seed Wave1 directory
+mkdir -p $B/artifacts/wave1/topic-a
+
 echo "=== Status ==="
 cat $B/rb_status.json
 echo "=== Registry ==="
-head -12 $B/rb_plan.md
+head -10 $B/rb_plan.md
 ```
 
 预期：bundle 创建，status 指向 `wave1_complete`→`wave2_complete`，registry 含 topic-a。
 
-## Step 2: 写含 placeholder marker 的 skeleton → gate pass
+## Step 2: 写完整合法 wave1 产出 → gate pass
 
 ```bash
-cat > $B/artifacts/wave1/topic-a/skeleton.md << 'ENDOFSKEL'
----
-slug: topic-a
-title: Topic A Skeleton
-capability: foundation-placeholder
----
+# evidence-summary with key findings + URL
+cat > $B/artifacts/wave1/topic-a/evidence-summary.md << 'EOF'
+## Key Findings
+1. AI safety is an active research area [Source](https://example.com/ai-safety)
+2. Multiple alignment approaches are being explored.
+EOF
 
-# Topic A: Foundation Skeleton
+# question-list with all 4 sections
+cat > $B/artifacts/wave1/topic-a/question-list.md << 'EOF'
+## Topic Investigation Targets
+1. What is the current state of AI safety research?
 
-## Known Premises
-- AI safety is an active research area.
-- Foundation reference provides background on key approaches.
+## Question Reconciliation
+Resolved Q1 with evidence from Wave0.
 
-## Key Dimensions
-- Technical alignment
-- Policy governance
+## Emergent Question Protocol
+None at this time.
 
-## Open Questions
-- How to measure alignment progress?
-- What governance frameworks are emerging?
+## Exploration / Exploitation Decision
+Proceed to Wave2 with current evidence.
+EOF
 
-## References
-- [Understanding AI Safety](../../reference/topic-a/source.yaml)
-ENDOFSKEL
+# reference/{topic}-*.md rich MD file (count_floor requirement)
+cat > $B/reference/topic-a-deepening-source.md << 'EOF'
+# Deepening Source for Topic A
+- source_url: https://example.com/deepening
+- acceptance_status: accepted
+- source_type: primary
+- tier: Tier 2
+- evidence_role: primary_topic_reference
+- trust_level: academic
+- why_it_matters: Provides empirical evidence for topic-a.
+- accessed_at: 2026-06-26
+- related_topic: topic-a
+
+## Key Facts
+- Empirical study shows alignment progress.
+
+## Core Content Capture
+This study provides data on alignment technique effectiveness.
+
+## Relevance To This Research
+Directly supports topic-a investigation targets.
+
+## Quotable Terms / Concepts
+- "Alignment techniques show 40% improvement"
+
+## Risks And Limitations
+- Single study, limited sample size.
+EOF
 
 # Record trace event
 echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave1_completion"}' >> $B/rb_trace.jsonl
 
-echo "=== Skeleton ==="
-head -5 $B/artifacts/wave1/topic-a/skeleton.md
+echo "=== Wave1 artifacts ==="
+find $B/artifacts/wave1 $B/reference -type f | sort
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B --current-node phases/phase-wave1.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,detail:'skeleton with placeholder marker passes'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,detail:'full valid wave1 artifacts pass'})})"
 ```
 
 预期：`check.passed: true`。
 
-## Step 3: 写 unmarked skeleton（缺 marker）→ gate fail
+## Step 3: 移除 evidence-summary → gate fail
 
 ```bash
-cat > $B/artifacts/wave1/topic-a/skeleton.md << 'ENDOFSKEL'
----
-slug: topic-a
-title: Topic A Skeleton
----
+rm $B/artifacts/wave1/topic-a/evidence-summary.md
 
-# Topic A
-
-Some content without the required placeholder marker.
-ENDOFSKEL
-
-echo "=== Skeleton (no marker) ==="
-cat $B/artifacts/wave1/topic-a/skeleton.md
+echo "=== After removing evidence-summary ==="
+ls $B/artifacts/wave1/topic-a/
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B --current-node phases/phase-wave1.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,expected:false,detail:'missing placeholder marker should fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,expected:false,detail:'missing evidence-summary should fail'})})"
 ```
 
-预期：`check.passed: false`，`inspect` 指出缺失 `capability: foundation-placeholder`。
+预期：`check.passed: false`，`inspect` 指出缺失 `evidence-summary.md`。
 
-## Step 4: 写含 false completion claim 的 skeleton → gate fail
+## Step 4: 恢复 evidence-summary 但写残缺 question-list → gate fail
 
 ```bash
-cat > $B/artifacts/wave1/topic-a/skeleton.md << 'ENDOFSKEL'
----
-slug: topic-a
-title: Topic A
-capability: foundation-placeholder
----
+# Restore evidence-summary
+cat > $B/artifacts/wave1/topic-a/evidence-summary.md << 'EOF'
+## Key Findings
+1. AI safety is an active research area [Source](https://example.com/ai-safety)
+EOF
 
-# Topic A
+# Write question-list with missing sections (only 2 of 4 required)
+cat > $B/artifacts/wave1/topic-a/question-list.md << 'EOF'
+## Topic Investigation Targets
+1. What is AI safety?
 
-full subagent coverage completed. All topics have been fully researched.
-deepening done. No further work needed.
-ENDOFSKEL
+## Emergent Question Protocol
+None.
+EOF
 
-echo "=== Skeleton (with false claims) ==="
-cat $B/artifacts/wave1/topic-a/skeleton.md
+echo "=== Incomplete question-list ==="
+cat $B/artifacts/wave1/topic-a/question-list.md
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B --current-node phases/phase-wave1.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,expected:false,detail:'false completion claim should fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,expected:false,detail:'incomplete question-list sections should fail'})})"
 ```
 
-预期：`check.passed: false`，`inspect` 指出 forbidden pattern "full subagent coverage completed" 和 "deepening done"。
+预期：`check.passed: false`，`inspect` 指出 question-list 缺少必需 section。
 
 ## Step 5: 从 trace 裁决
 
@@ -220,9 +274,9 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ## Step 6: 结果解读
 
 > 3 个 check（1 pass + 2 fail），验证 wave1 gate 边界：
->   [PASS] 有 foundation-placeholder marker → gate pass
->   [FAIL ✅] 缺 marker → gate fail
->   [FAIL ✅] false completion claim → gate fail
+>   [PASS] 所有产出完整 → gate pass
+>   [FAIL ✅] 缺 evidence-summary → gate fail
+>   [FAIL ✅] question-list 缺必需 section → gate fail
 >   2 个 FAIL 都是正确的边界拒绝。
 
 ## Step 7: Cleanup

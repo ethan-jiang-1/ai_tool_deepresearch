@@ -54,7 +54,7 @@ if (existsSync(bundleDir)) {
 }
 
 // ── Create directory structure ──
-const dirs = ['seed_topics', 'reference', 'artifacts/wave1', 'artifacts/wave2', '_cache', 'final'];
+const dirs = ['seed_topics', 'reference', 'artifacts/wave0', 'artifacts/wave1', 'artifacts/wave2', '_cache', 'final'];
 for (const d of dirs) {
   mkdirSync(join(bundleDir, d), { recursive: true });
 }
@@ -67,6 +67,11 @@ const templates = [
   { tmpl: 'rb_plan.md.tmpl',         dest: 'rb_plan.md',         parse: null,                      schema: PlanSchema },
   { tmpl: 'rb_trace.jsonl',          dest: 'rb_trace.jsonl',     parse: null,                      schema: null },
   { tmpl: 'START_FROM_HERE.md.tmpl', dest: 'START_FROM_HERE.md', parse: null,                      schema: null },
+  // Reference scaffolds — required by inspect-bundle; populated by the Agent across waves 0/1/2.
+  { tmpl: 'reference/_INDEX.md.tmpl', dest: 'reference/_INDEX.md', parse: null,                     schema: null },
+  { tmpl: 'reference/README.md.tmpl', dest: 'reference/README.md', parse: null,                     schema: null },
+  // Artifacts scaffold — documents wave output structure for AI/coding agents.
+  { tmpl: 'artifacts/README.md.tmpl', dest: 'artifacts/README.md', parse: null,                     schema: null },
 ];
 
 for (const t of templates) {
@@ -129,7 +134,8 @@ try {
 // ── Report ──
 console.error(`${G}Bundle ${bundleDir} created.${B}`);
 console.error('  ✓ 6 control files (plan, profile, status, queue, trace, START_FROM_HERE)');
-console.error('  ✓ 6 data directories (seed_topics, reference, artifacts, _cache, final)');
+console.error('  ✓ 7 data directories (seed_topics, reference, artifacts/wave0-2, _cache, final)');
+console.error('  ✓ 3 scaffolds (reference/_INDEX.md, reference/README.md, artifacts/README.md)');
 console.error('  ✓ All files passed Zod validation');
 console.error('  ✓ validate-bundle + inspect-bundle passed');
 

@@ -77,7 +77,7 @@ for(let i=0;i<5;i++){
   console.log('Playbook: gate FAIL, next=null → 读 inspect → 修复');
   for(const item of gr.inspect){
     const m=item.match(/^Missing file: (.+)$/);
-    if(m){const f=B+'/'+m[1];if(!existsSync(f)){writeFileSync(f,m[1]==='rb_status.json'?'{"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"wave0_complete"}':(m[1]==='rb_plan.md'?'---\nplan_basename: wff_val_repair\n---\n# Repair plan\n':'# '+m[1]+'\n'));console.log('  修复: created '+m[1]);log.info('repair: '+m[1]);}}
+    if(m){const f=B+'/'+m[1];if(!existsSync(f)){writeFileSync(f,m[1]==='rb_status.json'?'{"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"seed_topics_ready"}':(m[1]==='rb_plan.md'?'---\nplan_basename: wff_val_repair\n---\n# Repair plan\n':'# '+m[1]+'\n'));console.log('  修复: created '+m[1]);log.info('repair: '+m[1]);}}
   }
 }
 console.log('FAIL: exceeded max');process.exit(1);
@@ -170,24 +170,46 @@ mkdir -p $B/artifacts/hitl2
 echo "# Decision Brief" > $B/artifacts/hitl2/decision-brief.md
 
 # --- Seed topics + reference（wave0 + readiness gate 需要）---
-mkdir -p $B/seed_topics $B/reference/topic-a
+mkdir -p $B/seed_topics $B/artifacts/wave0/topic-a
 echo "# Topic" > $B/seed_topics/topic-a.md
-cat > $B/reference/index.md << 'EOF'
+cat > $B/reference/_INDEX.md << 'EOF'
 # Index
 - [Topic](topic-a/source.yaml)
 EOF
-cat > $B/reference/topic-a/source.yaml << 'EOF'
+cat > $B/artifacts/wave0/topic-a/source.yaml << 'EOF'
 - url: "https://example.com"
   title: "Test"
   retrieved_date: "2026-06-15"
   topic_tag: "topic-a"
 EOF
 
+# --- Additional reference files (wave0/wave1/readiness gates need these) ---
+cat > $B/reference/README.md << 'EOF'
+# Reference Directory
+Flat reference directory for the case-52 research run.
+EOF
+cat > $B/reference/00-shared-foundation.md << 'EOF'
+# Shared Foundation Reference
+Baseline reference material for all topics.
+EOF
+cat > $B/reference/topic-a-foundation.md << 'EOF'
+# Topic A — Foundation Reference
+Source: [Test](https://example.com)
+EOF
+
+# --- Update rb_plan.md with topic_registry (seed-topics-ready gate needs this) ---
+cat > $B/rb_plan.md << 'PLANEOF'
+---
+{"plan_basename":"wff_val_repair","derived_topic_count":1,"topic_registry":[{"id":"topic-a","slug":"topic-a","title":"AI Safety"}]}
+---
+# Research Plan: wff_val_repair
+PLANEOF
+
 # --- Phase completion trace events（后续 gate 检查 prior gate 时需要）---
-for phase in seed_topics wave0 wave1 wave2 hitl2; do
+for phase in instantiation hitl1 setup seed_topics wave0 wave1 wave2 hitl2; do
   echo "{\"event\":\"${phase}_completion\",\"phase\":\"$phase\"}" >> $B/rb_trace.jsonl
 done
-for g in seed-topics-ready wave0-complete wave1-complete wave2-complete hitl2-recorded; do
+for g in instantiation-complete hitl1-recorded setup-ready seed-topics-ready wave0-complete wave1-complete wave2-complete hitl2-recorded; do
   echo "{\"event\":\"gate_attempt\",\"gate\":\"$g\",\"passed\":true}" >> $B/rb_trace.jsonl
 done
 

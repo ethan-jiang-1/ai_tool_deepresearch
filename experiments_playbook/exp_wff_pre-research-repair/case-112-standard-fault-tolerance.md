@@ -147,6 +147,11 @@ PROFEOF
 echo "=== Repaired ==="
 ls $B/rb_plan.md && ls -d $B/final
 grep -E 'research_profile|status:|plan_basename' $B/rb_profile.yaml | head -4
+
+# Update status for setup-ready gate (expects next_gate=seed_topics_ready)
+cat > $B/rb_status.json << 'STATUSEOF'
+{"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"seed_topics_ready"}
+STATUSEOF
 ```
 
 **Rerun same gate：**

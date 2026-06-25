@@ -35,7 +35,7 @@ Allowed Actions SHALL 覆盖三阶段：
 **§3.3 收尾与 gate**：
 - 跑 `check-gate-seed-topics-ready.mjs` → pass/fail 按 §6/§7 处理
 
-**Seed Topic 文件内容（对齐 V12 decompose-seed-topics 标准）：**
+**Seed Topic 文件内容：**
 
 每个 `seed_topics/<slug>.md` SHALL 分两段结构：
 
@@ -51,7 +51,7 @@ Allowed Actions SHALL 覆盖三阶段：
 
 若上游（topic_registry / rb_profile.yaml）未提供足够信息填充初始化区字段，SHALL 标注为显式 gap（如 `hypothesis: "pending — HITL1 未提供足够约束"`），不得编造。
 
-**Enforcement boundary（强制执行边界）：** 当前 `seed-topics-ready` gate（STM-002）只检查文件存在、title 非空、slug 一致性、trace event、status——不校验 must_answer/hypothesis/search_guardrails/evidence_route 字段的存在性或内容。原因是 gap annotation 机制允许这些字段标为 "pending"（合法），gate 无法区分"未填"和"标 gap"。因此这些 V12 对齐字段的验证分层如下：
+**Enforcement boundary（强制执行边界）：** 当前 `seed-topics-ready` gate（STM-002）只检查文件存在、title 非空、slug 一致性、trace event、status——不校验 must_answer/hypothesis/search_guardrails/evidence_route 字段的存在性或内容。原因是 gap annotation 机制允许这些字段标为 "pending"（合法），gate 无法区分"未填"和"标 gap"。因此这些字段的验证分层如下：
 
 | 字段组 | 验证者 | 方式 |
 |--------|--------|------|

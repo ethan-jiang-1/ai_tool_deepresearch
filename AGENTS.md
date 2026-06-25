@@ -6,7 +6,7 @@ Codex notes for this repo. Keep this file short; detailed rules live in OpenSpec
 
 Deep Research Tool rewrite: an agentic framework for evidence-backed, multi-wave, gated research reports.
 
-Core split: the LLM Agent searches, reads, writes evidence, and synthesizes. The JavaScript Engine enforces schemas, gates, state transitions, receipts, and checks. Do not return to agent-self-policed V12 behavior.
+Core split: the LLM Agent searches, reads, writes evidence, and synthesizes. The JavaScript Engine enforces schemas, gates, state transitions, receipts, and checks.
 
 ## Before Anything Else
 

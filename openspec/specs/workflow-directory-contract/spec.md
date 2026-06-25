@@ -4,7 +4,7 @@
 
 ## Purpose
 
-定义 Workflow Foundation 所有 artifact 的目录归属、命名约定和禁止混放规则。为后续 wff change（contract skeleton、content migration 等）提供无歧义的文件落点，消除 V12 时代需求/runtime/实验/CLI/schema 混放的问题。
+定义 Workflow Foundation 所有 artifact 的目录归属、命名约定和禁止混放规则。为后续 wff change（contract skeleton、content migration 等）提供无歧义的文件落点，消除需求/runtime/实验/CLI/schema 混放的问题。
 
 ## Requirements
 

@@ -3,8 +3,8 @@
 // @impl GSK-001, GSK-002, GSK-004, RWG-005, RWG-007, FRE-003
 // Usage: node check-gate-wave1-complete.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
-import { existsSync, statSync, readFileSync, appendFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, statSync, readFileSync, readdirSync, appendFileSync } from 'node:fs';
+import { join, dirname, basename } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import {
   parseGateCliArgs,
@@ -65,6 +65,20 @@ function getTopicKeys() {
   const plan = getPlan();
   if (!plan || !Array.isArray(plan.topic_registry) || plan.topic_registry.length === 0) return [];
   return plan.topic_registry.map(t => t.slug);
+}
+
+/**
+ * Read YAML array from a file. Returns parsed array or null if file missing/unparseable.
+ */
+function readYamlArray(filePath) {
+  if (!existsSync(filePath)) return null;
+  const raw = readFileSync(filePath, 'utf-8');
+  try {
+    const parsed = parseYaml(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -205,6 +219,32 @@ for (const rule of definition.rules) {
         if (events.length === 0) {
           rulePassed = false;
           ruleDetail = `Trace event "${rule.target}" not found in rb_trace.jsonl`;
+        }
+      } else if (rule.check === 'count_floor') {
+        let count = 0;
+        if (resolvedTarget.includes('*')) {
+          // Glob mode: count files matching wildcard pattern
+          const targetDir = join(bundlePath, dirname(resolvedTarget));
+          const pattern = basename(resolvedTarget);
+          if (existsSync(targetDir) && statSync(targetDir).isDirectory()) {
+            const regex = new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '[^/]*') + '$');
+            count = readdirSync(targetDir).filter(f => regex.test(f)).length;
+          }
+          if (count < rule.threshold) {
+            rulePassed = false;
+            ruleDetail = `Count floor not met for ${resolvedTarget}: ${count} files (threshold: ${rule.threshold})`;
+            if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
+          }
+        } else {
+          // YAML mode: count array entries
+          const filePath = join(bundlePath, resolvedTarget);
+          const arr = readYamlArray(filePath);
+          count = arr ? arr.length : 0;
+          if (count < rule.threshold) {
+            rulePassed = false;
+            ruleDetail = `Count floor not met for ${resolvedTarget}: ${count} entries (threshold: ${rule.threshold})`;
+            if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
+          }
         }
       } else {
         rulePassed = false;

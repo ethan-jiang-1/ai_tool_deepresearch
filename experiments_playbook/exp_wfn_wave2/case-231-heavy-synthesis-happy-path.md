@@ -72,27 +72,27 @@ cat > $B/rb_status.json << 'EOF'
 EOF
 
 # Create post-wave1 directory structure
-mkdir -p $B/reference/01_ai-safety $B/reference/02_ai-regulation
+mkdir -p $B/artifacts/wave0/01_ai-safety $B/artifacts/wave0/02_ai-regulation
 mkdir -p $B/artifacts/wave1/01_ai-safety $B/artifacts/wave1/02_ai-regulation
 mkdir -p $B/artifacts/wave2
 mkdir -p $B/seed_topics
 
 # Write post-wave0 reference files
-cat > $B/reference/01_ai-safety/source.yaml << 'REFEOF'
+cat > $B/artifacts/wave0/01_ai-safety/source.yaml << 'REFEOF'
 - url: "https://example.com/ai-safety-2026"
   title: "AI Safety Research 2026"
   retrieved_date: "2026-06-20"
   topic_tag: "01_ai-safety"
 REFEOF
 
-cat > $B/reference/02_ai-regulation/source.yaml << 'REFEOF'
+cat > $B/artifacts/wave0/02_ai-regulation/source.yaml << 'REFEOF'
 - url: "https://example.com/ai-regulation-2026"
   title: "AI Regulation Overview 2026"
   retrieved_date: "2026-06-20"
   topic_tag: "02_ai-regulation"
 REFEOF
 
-cat > $B/reference/index.md << 'EOF'
+cat > $B/reference/_INDEX.md << 'EOF'
 # Reference Index
 - 01_ai-safety: 1 foundation reference
 - 02_ai-regulation: 1 foundation reference

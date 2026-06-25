@@ -10,14 +10,9 @@ This prototype proves queue mechanics, deterministic receipts, Markdown projecti
 and trace verdicts. It does not prove research quality, source quality, claim truth,
 or a production dispatcher surface.
 
-## V12 Lesson
+## Design
 
-V12 had useful queue shape: rich work units, a five-slot rolling active window,
-refill candidates, promotion, preemption, and receipt language. The failure mode was
-authority placement. Markdown carried machine rules and Agent self-governed queue
-state, so promotion, closeout, and receipt interpretation were easy to drift.
-
-This prototype keeps the useful shape but moves authority to JS/JSON:
+This prototype keeps the useful queue shape but moves authority to JS/JSON:
 
 - JSON queue state is the source of record.
 - JS APIs mutate queue state.

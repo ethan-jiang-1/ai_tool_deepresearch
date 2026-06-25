@@ -11,8 +11,8 @@
     {
       "id": "reference_index_exists",
       "check": "file_exists",
-      "target": "reference/index.md",
-      "failure_message": "Missing file: reference/index.md. Wave0 evidence indexing must have completed before readiness."
+      "target": "reference/_INDEX.md",
+      "failure_message": "Missing file: reference/_INDEX.md. Wave0 evidence indexing must have completed before readiness."
     },
     {
       "id": "wave2_synthesis_exists",

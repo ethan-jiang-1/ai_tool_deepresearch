@@ -41,7 +41,7 @@ Wave1 does **single-pass topic deepening** — not comprehensive research, not m
 
 ## 2. Artifacts — Paired Files Per Topic
 
-Wave1 produces TWO paired artifacts per topic (V12 convention):
+Wave1 produces TWO paired artifacts per topic:
 
 | File | Role |
 |------|------|

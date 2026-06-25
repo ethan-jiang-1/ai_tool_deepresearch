@@ -169,7 +169,7 @@ done
 mkdir -p $B/artifacts/wave2 $B/artifacts/hitl2
 echo '# Synthesis' > $B/artifacts/wave2/synthesis.md
 echo '# Decision Brief' > $B/artifacts/hitl2/decision-brief.md
-echo '# Reference Index' > $B/reference/index.md
+echo '# Reference Index' > $B/reference/_INDEX.md
 
 cat > $B/rb_status.json << 'EOF'
 { "current_mode": "execution", "state": "in_progress", "current_gate": "readiness_passed", "next_gate": "none" }

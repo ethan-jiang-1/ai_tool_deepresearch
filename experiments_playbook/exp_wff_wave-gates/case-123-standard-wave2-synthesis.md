@@ -48,6 +48,19 @@ echo "Bundle: $B"
 # Validate
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
 
+# Write topic_registry
+cat > $B/rb_plan.md << 'EOF'
+---
+plan_basename: w2_synth
+derived_topic_count: 1
+topic_registry:
+  - id: t1
+    slug: topic-a
+    title: Topic A
+---
+# w2_synth Plan
+EOF
+
 # Set status to wave2
 cat > $B/rb_status.json << 'EOF'
 {
@@ -58,16 +71,16 @@ cat > $B/rb_status.json << 'EOF'
 }
 EOF
 
-# Pre-seed Wave0 reference target (for valid links)
-mkdir -p $B/reference/topic-a
-cat > $B/reference/topic-a/source.yaml << 'EOF'
+# Pre-seed Wave0 thin YAML (in artifacts/wave0/)
+mkdir -p $B/artifacts/wave0/topic-a
+cat > $B/artifacts/wave0/topic-a/source.yaml << 'EOF'
 - url: "https://example.com/ai-safety"
   title: "Understanding AI Safety"
   retrieved_date: "2026-06-15"
   topic_tag: "topic-a"
 EOF
 
-# Pre-seed Wave1 skeleton target (for valid links)
+# Pre-seed Wave1 artifacts
 mkdir -p $B/artifacts/wave1/topic-a
 cat > $B/artifacts/wave1/topic-a/skeleton.md << 'EOF'
 ---
@@ -81,11 +94,23 @@ capability: foundation-placeholder
 ## Open Questions
 - How to measure alignment?
 EOF
+cat > $B/artifacts/wave1/topic-a/evidence-summary.md << 'EOF'
+## Key Findings
+1. AI safety is an active field [Source](https://example.com/ai-safety)
+EOF
+cat > $B/artifacts/wave1/topic-a/question-list.md << 'EOF'
+## Topic Investigation Targets
+1. What is AI safety?
+## Question Reconciliation
+N/A
+## Emergent Question Protocol
+N/A
+## Exploration / Exploitation Decision
+Proceed
+EOF
 
-# Create Wave2 directory
+# Create Wave2 directory + ledger + finding-index
 mkdir -p $B/artifacts/wave2
-
-# Pre-seed cross-topic-ledger.md + finding-index.yaml（wave2-complete gate 要求两者共存）
 cat > $B/artifacts/wave2/cross-topic-ledger.md << 'EOF'
 ## Cross-Topic Scan Matrix
 | Topic | Status | Key Finding |
@@ -108,30 +133,30 @@ cat > $B/artifacts/wave2/finding-index.yaml << 'EOF'
   category: legacy
   statement: "AI safety research is active"
   sources:
-    - "../reference/topic-a/source.yaml"
+    - "../wave0/topic-a/source.yaml"
   confidence: medium
   decision: resolve_in_synthesis
 EOF
 
-# Pre-seed wave1 evidence-summary + question-list（synthesis link 目标）
-mkdir -p $B/artifacts/wave1/topic-a
-cat > $B/artifacts/wave1/topic-a/evidence-summary.md << 'EOF'
-## Key Findings
-1. AI safety is an active field [Source](https://example.com/ai-safety)
-EOF
-cat > $B/artifacts/wave1/topic-a/question-list.md << 'EOF'
-## Topic Investigation Targets
-1. What is AI safety?
-## Question Reconciliation
-N/A
-## Emergent Question Protocol
-N/A
-## Exploration / Exploitation Decision
-Proceed
+# Pre-seed seed_topics for backfill token checks
+mkdir -p $B/seed_topics
+cat > $B/seed_topics/topic-a.md << 'EOF'
+---
+id: t1
+slug: topic-a
+title: Topic A
+---
+# Topic A
+## Key Dimensions
+- test
+## Known Premises
+- test
+## Open Questions
+- test
 EOF
 
 echo "=== Artifact targets for cross-reference ==="
-find $B/reference $B/artifacts -type f 2>/dev/null
+find $B/artifacts -type f 2>/dev/null
 ```
 
 预期：bundle 创建，status 指向 `wave2_complete`→`hitl2_recorded`，Wave0/Wave1 目标文件存在。
@@ -152,7 +177,7 @@ Based on the [Topic A skeleton](../wave1/topic-a/skeleton.md) and
 [evidence summary](../wave1/topic-a/evidence-summary.md), the key open question
 is how to measure alignment.
 
-The [reference metadata](../../reference/topic-a/source.yaml) from Wave0 provides
+The [reference metadata](../wave0/topic-a/source.yaml) from Wave0 provides
 background on AI safety approaches.
 ENDOFSYN
 
@@ -216,7 +241,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 ## Step 5: Thin driver 独立验证 cross-artifact references（RWE-009）
 
-gate CLI 的 `cross_field` rule 判定引用链；thin driver 做独立验证并写入 `cross_field_check` event。
+gate CLI 的 `cross_field` rule 判定引用链；thin driver 做独立验证。
 
 ```bash
 node --input-type=module -e "
@@ -226,8 +251,6 @@ import { join } from 'node:path';
 const B = '$B';
 const synPath = join(B, 'artifacts/wave2/synthesis.md');
 
-// Step 2 already wrote a valid synthesis with valid links, so re-read its content
-// For this verification we read the current file state
 const content = readFileSync(synPath, 'utf-8');
 const links = [...content.matchAll(/\[([^\]]+)\]\(([^)]+\.md)\)/g)];
 
@@ -251,10 +274,6 @@ for (const m of links) {
 
 console.log('Valid:', valid.length, 'Dead:', dead.length);
 
-// Write cross_field_check event.
-// The driver independently verifies the same file the gate just evaluated.
-// expected matches passed: the driver is an observation, not a test — it "passes"
-// when its observation is correct (valid links match reality), which is always true.
 const driverPassed = valid.length > 0;
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
   m.recordCheck('$B/_trace.jsonl', {
@@ -270,8 +289,6 @@ import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
 预期：driver 独立验证结果与 gate CLI 的 `cross_field` rule 一致。
 
 ## Step 6: 从 trace 裁决
-
-预期 3 条 `check` event：1 pass（Step 2）+ 2 fail（Step 3, 4）。Step 5 的 `cross_field_check` 不算在 gate verdict 里。
 
 ```bash
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_trace.jsonl')})"

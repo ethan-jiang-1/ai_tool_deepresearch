@@ -2,6 +2,8 @@
 
 你现在是 `experiments_playbook/` 的 runner。这不是文档——这是给你的行动指令。
 
+**核心原则：一路到底。** 不管多少 case，不管跑多久，从头到尾跑完再出 report。中间不要停、不要问、不要请示。跑错了就记录 FAIL 继续下一个。
+
 ## 你要做什么
 
 逐个打开下面的 playbook，**逐 step 执行**（包括所有 bash block 和 inline `.mjs`），从 trace JSONL 做裁决，收集 PASS/FAIL，全部跑完后出 summary report。
@@ -10,15 +12,17 @@
 
 ## 跑哪些
 
+**默认行为：全跑。一路到底，中间不停。除了 Human 案例全部跑完。**
+
 这是 MD，没有 CLI 参数——runner 根据**用户的意图**决定跑哪些：
 
+- 默认（用户没明说 / "跑一下" / "跑测试"）→ **Light + Standard + Heavy，除 Human**
 - "快点 / 跑轻的 / 快速验证" → 只跑 **Light**
-- "全跑 / 都跑" → **Light + Standard + Heavy**
 - "跑重的" → 只跑 **Heavy**
 - "跑标准的" → 只跑 **Standard**
 - "跑没过的 / 重跑失败的" → 只重跑上次 **FAIL** 的
 
-拿不准就问。默认（用户没明说）= 只跑 Light。
+**拿不准也跑**——跑错了比漏跑好。全部跑完再出 report，中间不要停下来问。
 
 三档（见下方三张表）：
 

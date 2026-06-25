@@ -289,8 +289,8 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result /tmp/wfq-result-ba
 ## Phase 4: Gate + Verify
 
 ```bash
-# Write reference/index.md
-cat > $B/reference/index.md << 'EOF'
+# Write reference/_INDEX.md
+cat > $B/reference/_INDEX.md << 'EOF'
 # Reference Index
 
 ## claude-code-cli-tool

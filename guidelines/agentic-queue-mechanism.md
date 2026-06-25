@@ -108,7 +108,7 @@ The inner loop solves "within this phase, how do I execute a dozen sub-tasks wit
 
 ### 3.3 Why Two Loops, Not One
 
-V12's core mistake was conflating these two concerns into a single giant queue that tried to manage both phase transitions and within-phase task execution. The result: a 400-line hand-written Markdown file that blurred boundary hooks, gate transitions, and task dispatch into one unmaintainable surface.
+The core mistake in earlier designs was conflating these two concerns into a single giant queue that tried to manage both phase transitions and within-phase task execution. The result: a 400-line hand-written Markdown file that blurred boundary hooks, gate transitions, and task dispatch into one unmaintainable surface.
 
 The lesson: **phase-to-phase routing is deterministic single-step (gate + static chain). Within-phase execution is dynamic multi-task (queue).** Different verifiers, different authorities. Conflating them creates the exact failure mode the project charter prohibits.
 
@@ -174,7 +174,7 @@ Exactly one contact point between the two: **Q empty + gate fail** (the queue is
 
 ### 5.4 Rule 4: No Phase Rollback
 
-`transitions.chain.json` contains only `passed` edges. No fail edges, no repair edges, no backward edges. A later phase cannot push a task backward into an earlier phase through Q. Backward gaps discovered later escalate via `rb_status.json` → `blocked`, not via Q. This prevents V12's pathology of "stuff anything into the queue and the queue crosses any boundary."
+`transitions.chain.json` contains only `passed` edges. No fail edges, no repair edges, no backward edges. A later phase cannot push a task backward into an earlier phase through Q. Backward gaps discovered later escalate via `rb_status.json` → `blocked`, not via Q. This prevents the pathology of "stuff anything into the queue and the queue crosses any boundary."
 
 ---
 

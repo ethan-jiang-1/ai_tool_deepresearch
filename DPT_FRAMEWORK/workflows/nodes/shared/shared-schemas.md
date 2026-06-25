@@ -50,20 +50,25 @@ suggested_context: []
 - **`_trace_subagent.jsonl`**（subagent relay trace）：位于 active bundle 根目录，由 `subagent-relay.mjs` 的 `ensureTrace()` 自动创建，记录 slot 生命周期事件（`slot_create`、`agent_spawn_requested`、`agent_runtime_started`、`agent_result_ready`、`result_schema_validated`、`merge_complete` 等）。用于 relay pipeline 调试和 trace 对账。
 - **区分**：gate CLI 只写 `rb_trace.jsonl`；`_trace.jsonl` 只能由 experiment driver 创建；`_trace_subagent.jsonl` 由 relay engine 自动管理。
 
-### `contracts/reference.mjs` → `reference/<topic>/source.yaml`
+### `contracts/reference.mjs` → `artifacts/wave0/<topic>/source.yaml`
 
 - **Schema**：`ReferenceMetadataSchema`（单条）、`ReferenceMetadataArraySchema`（YAML 数组）
 - **字段**：`url`（string, 必填）、`title`（string, 必填）、`retrieved_date`（YYYY-MM-DD string, 必填）、`topic_tag`（string, 必填）、`notes`（string, 可选）
 - **格式**：YAML array，每项为一条 reference metadata
 - **位置**：`DPT_FRAMEWORK/schema/contracts/reference.mjs`
+- **新增**：`validateIndexMD(content)` — _INDEX.md Markdown table 结构校验（8 列表头 + ≥1 行数据）
 
 ## Reference Layer
 
-Foundation reference data，由 Wave0 初始填充（`source.yaml` + `index.md`）。后续 wave 可继续向 `reference/` 追加新的 reference entry，也可通过 seed topic backfill 间接关联。
+Reference evidence 存放在平铺的 `reference/` 目录下（无子目录）。每个 source 一个 rich MD 文件，格式见 `shared-reference-template.md`。
 
-- **`reference/<topic>/source.yaml`**：Per-topic reference metadata（YAML array，每项满足 `ReferenceMetadataSchema`）。字段：`url` / `title` / `retrieved_date` / `topic_tag` / `notes`（详见上方 `contracts/reference.mjs`）。Foundation floor：每个 topic ≥ 1 条 metadata。`<topic>` 来自 `topic_registry` 的 slug（`{index}_` 编号前缀：`01_`、`02_`、…）。
-- **`reference/00_shared/`**：Shared/cross-cutting reference 目录（可选）。存放不属于单个 topic 的 foundation reference——行业全景、方法论文献、跨 topic 对比数据等。Wave0 创建共享 foundation reference，后续 wave（尤其 Wave2 cross-topic search）可继续追加。编号 `00_` 与 topic slug 的 1-based 编号（`01_`、`02_`、…）一致：`00_` = 第零号 = shared layer。
-- **`reference/index.md`**：Foundation reference 索引（Agent 可读摘要，列出每个 topic 和 shared 目录的 reference）。
+- **`reference/00-shared-<slug>.md`**：Wave 0 产出。共享基础 reference（rich MD），覆盖 ≥2 个 topic 的跨领域知识。每个文件含 metadata block（9 必填字段）+ 5 个标准 section。Foundation floor：≥ 1 个。
+- **`reference/0N-<slug>.md`**：Wave 1 产出。Topic 专属 reference（rich MD），N = topic_registry 中的 topic 序号（如 `03-block-goose.md`）。每个文件含 metadata block + 5 个 section。Per topic ≥ 1 个。
+- **`reference/00-cross-<slug>.md`**：Wave 2 产出（可选）。跨 topic 发现的新共享 reference（rich MD），cross-topic scan 时涌现。非 gate pass 硬条件。
+- **`reference/_INDEX.md`**：Canonical reference inventory table。8 列：`ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed`。每个 wave 完成时更新。`source_layer` 取值：`wave0_foundation` / `wave1_topic` / `wave2_cross`。
+- **`reference/README.md`**：人类导航——命名约定、`_INDEX.md` 指向、模板格式简述。
+- **`artifacts/wave0/<topic>/source.yaml`**：Thin YAML source 列表。Per topic，每条满足 `ReferenceMetadataSchema`（url/title/retrieved_date/topic_tag/notes）。来自 `topic_registry` 的 slug。Foundation floor：每个 topic ≥ 1 条。
+- **不再存在**：`reference/<topic>/` 嵌套子目录、`reference/00_shared/` 目录、`reference/<topic>/source.yaml`（thin YAML 迁至 `artifacts/wave0/`）。
 
 ## Seed Topics
 

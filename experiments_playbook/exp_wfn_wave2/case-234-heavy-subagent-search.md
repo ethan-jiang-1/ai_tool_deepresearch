@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: wfn-wave2
 case: case-234-heavy-subagent-search
 weight: heavy
-case_goal: "验证 Wave2 gap-fill loop：synthesis v1 发现跨 topic emergent question → index 标记 explore_search(receipt_refs=[]) → spawn dpt-topic-scout → receipt 产生 → index 更新 → synthesis v2 写入搜索结果 → 00_shared promote → gate pass"
+case_goal: "验证 Wave2 gap-fill loop：synthesis v1 发现跨 topic emergent question → index 标记 explore_search(receipt_refs=[]) → spawn dpt-topic-scout → receipt 产生 → index 更新 → synthesis v2 写入搜索结果 → 00-cross promote → gate pass"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -15,7 +15,7 @@ req: WTS-002, WTS-003, WTS-006
 
 ## Execution Contract
 
-本 playbook 验证 gap-fill loop 的核心路径。关键：**展示 BEFORE/AFTER 对比**——synthesis v1 缺什么 → sub-agent 搜到什么 → synthesis v2 补上了什么 → 00_shared 落到了哪里。每一步的状态变化必须肉眼可见。
+本 playbook 验证 gap-fill loop 的核心路径。关键：**展示 BEFORE/AFTER 对比**——synthesis v1 缺什么 → sub-agent 搜到什么 → synthesis v2 补上了什么 → 00-cross 落到了哪里。每一步的状态变化必须肉眼可见。
 
 # case-234-heavy-subagent-search
 
@@ -30,8 +30,8 @@ req: WTS-002, WTS-003, WTS-006
 2. Synthesis v1: explore_search, receipt_refs=[] [MAIN]
 3. Spawn dpt-topic-scout sub-agent 真实搜索 [MAIN→SUBAGENT]
 4. Index 更新 (receipt_refs []→populated) → re-synthesize v2 [MAIN/SHELL]
-5. 00_shared promote → gate pass [MAIN/SHELL]
-6. V1-V6 验证: receipt, index mutation, 00_shared, synthesis v2, gate
+5. 00-cross promote → gate pass [MAIN/SHELL]
+6. V1-V6 验证: receipt, index mutation, 00-cross, synthesis v2, gate
 
 ## Phase 1: 创建 post-wave1 bundle
 
@@ -67,23 +67,23 @@ cat > $B/rb_status.json << 'EOF'
 {"current_mode":"execution","state":"in_progress","current_gate":"wave2_complete","next_gate":"hitl2_recorded"}
 EOF
 
-mkdir -p $B/reference/01_claude-code $B/reference/02_agentic-tools
+mkdir -p $B/artifacts/wave0/01_claude-code $B/artifacts/wave0/02_agentic-tools
 mkdir -p $B/artifacts/wave1/01_claude-code $B/artifacts/wave1/02_agentic-tools
 mkdir -p $B/artifacts/wave2 $B/seed_topics
 
-cat > $B/reference/01_claude-code/source.yaml << 'REFEOF'
+cat > $B/artifacts/wave0/01_claude-code/source.yaml << 'REFEOF'
 - url: "https://docs.anthropic.com/en/docs/claude-code/overview"
   title: "Claude Code Overview — Anthropic Official"
   retrieved_date: "2026-06-20"
   topic_tag: "01_claude-code"
 REFEOF
-cat > $B/reference/02_agentic-tools/source.yaml << 'REFEOF'
+cat > $B/artifacts/wave0/02_agentic-tools/source.yaml << 'REFEOF'
 - url: "https://github.com/features/copilot"
   title: "GitHub Copilot — Official Documentation"
   retrieved_date: "2026-06-20"
   topic_tag: "02_agentic-tools"
 REFEOF
-cat > $B/reference/index.md << 'EOF'
+cat > $B/reference/_INDEX.md << 'EOF'
 # Reference Index
 - 01_claude-code: 1 ref | - 02_agentic-tools: 1 ref
 EOF
@@ -374,7 +374,7 @@ node -e "const y=require('yaml'),f=require('fs');const i=y.parse(f.readFileSync(
 
 ## Phase 6: Re-Synthesize —— Synthesis v2 写入搜索结果
 
-Phase Agent 把 sub-agent 结果写入 ledger + 重写 synthesis，然后 promote 跨 topic source 到 00_shared。
+Phase Agent 把 sub-agent 结果写入 ledger + 重写 synthesis，然后 promote 跨 topic source 到 00-cross。
 
 ```bash
 # 追加 search results 到 ledger
@@ -411,9 +411,8 @@ W2F-001: [Claude Code Q-list](../wave1/01_claude-code/question-list.md) 和 [Cop
 - W2F-001: partial — more comprehensive benchmark 需要内部测试 (HITL2)
 SYNTHESISEOF
 
-# Promote 跨 topic source 到 00_shared
-mkdir -p $B/reference/00_shared
-cat > $B/reference/00_shared/source.yaml << 'SHAREDEOF'
+# Promote 跨 topic source — new convention: 00-cross-*.md in flat reference/
+cat > $B/reference/00-cross-scout-discovery.md << 'SHAREDEOF'
 - url: "https://techcrunch.com/2026/05/15/anthropic-claude-code-dynamic-workflow/"
   title: "Claude Code Dynamic Workflow — TechCrunch"
   retrieved_date: "2026-06-24"
@@ -433,7 +432,7 @@ echo ""
 echo "  synthesis v1: \"待搜索...\""
 echo "  sub-agent:    → found: 2 sources, fills_gap=true"
 echo "  synthesis v2: \"explore_search 结果：Claude Code 1-5 sub-agents...\""
-echo "  00_shared:    reference/00_shared/source.yaml (2 entries, source_layer=wave2_cross_topic)"
+echo "  00-cross:    reference/00-cross-scout-discovery.md (2 entries, source_layer=wave2_cross_topic)"
 echo ""
 
 # Show the diff between v1 and v2
@@ -446,7 +445,7 @@ echo "v2 新增: 'explore_search 结果' + TechCrunch/InfoWorld URLs + latency �
 
 ```bash
 cat > /tmp/wfq-r-syn.json << 'EOF'
-{"work_id":"wave2-synthesis","status":"done","receipt":"file:artifacts/wave2/synthesis.md","summary":"W2F-001 explore_search→dpt-topic-scout→2 sources→synthesis v2→00_shared","writes":["artifacts/wave2/synthesis.md","artifacts/wave2/cross-topic-ledger.md","artifacts/wave2/finding-index.yaml"]}
+{"work_id":"wave2-synthesis","status":"done","receipt":"file:artifacts/wave2/synthesis.md","summary":"W2F-001 explore_search→dpt-topic-scout→2 sources→synthesis v2→00-cross","writes":["artifacts/wave2/synthesis.md","artifacts/wave2/cross-topic-ledger.md","artifacts/wave2/finding-index.yaml"]}
 EOF
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result /tmp/wfq-r-syn.json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));console.log('complete:',d.feedback.passed)"
 
@@ -484,9 +483,9 @@ echo "V2: index receipt_refs changed from [] → [receipt_path]"
 node -e "const y=require('yaml'),f=require('fs');const i=y.parse(f.readFileSync('$B/artifacts/wave2/finding-index.yaml','utf-8'));const r=i.findings.find(f=>f.id==='W2F-001');const ok=r.subagent_receipt_refs.length>0;console.log('  → '+(ok?'PASS':'FAIL')+': receipt_refs='+JSON.stringify(r.subagent_receipt_refs))"
 echo ""
 
-echo "V3: 00_shared/source.yaml created with wave2_cross_topic source_layer"
-test -f $B/reference/00_shared/source.yaml && echo "  → PASS: 00_shared exists" || echo "  → FAIL"
-grep -q 'wave2_cross_topic' $B/reference/00_shared/source.yaml && echo "  → PASS: source_layer preserved" || echo "  → FAIL: source_layer missing"
+echo "V3: 00-cross-scout-discovery.md created with wave2_cross_topic source_layer"
+test -f $B/reference/00-cross-scout-discovery.md && echo "  → PASS: 00-cross exists" || echo "  → FAIL"
+grep -q 'wave2_cross_topic' $B/reference/00-cross-scout-discovery.md && echo "  → PASS: source_layer preserved" || echo "  → FAIL: source_layer missing"
 echo ""
 
 echo "V4: synthesis v2 contains search results (not just '待搜索')"
@@ -508,7 +507,7 @@ echo "  sub-agent:     slot wave_02/slot_01, fills_gap=true, 2 sources"
 echo "  index BEFORE:  receipt_refs=[], status=open"
 echo "  index AFTER:   receipt_refs=[runtime-receipt.jsonl], status=partial"
 echo "  synthesis v2:  'explore_search 结果：...' — search results integrated"
-echo "  00_shared:     reference/00_shared/source.yaml (source_layer=wave2_cross_topic)"
+echo "  00-cross:     reference/00-cross-scout-discovery.md (source_layer=wave2_cross_topic)"
 echo "  gate:          PASS → hitl2"
 echo ""
 echo "Bundle: $B  (KEPT)"
@@ -517,7 +516,7 @@ echo "Bundle: $B  (KEPT)"
 ## Final Verdict
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'sub-agent search: v1待搜索→spawn→receipt→v2写结果→00_shared→gate pass'})})" 2>/dev/null
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'sub-agent search: v1待搜索→spawn→receipt→v2写结果→00-cross→gate pass'})})" 2>/dev/null
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_trace.jsonl')})" 2>/dev/null
 ```
 
@@ -527,7 +526,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 > 验证 wave2 gap-fill loop：
 >   synthesis v1: receipt_refs=[] → dpt-topic-scout 真实搜索
 >   → index receipt_refs []→populated → synthesis v2 写入搜索结果
->   → 00_shared/source.yaml promote → gate pass。
+>   → 00-cross-scout-discovery.md promote → gate pass。
 >   V1-V6 全部通过。
 
 ## Step 10: Cleanup

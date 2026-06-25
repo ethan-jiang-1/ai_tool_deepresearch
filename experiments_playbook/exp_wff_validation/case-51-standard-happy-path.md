@@ -87,12 +87,26 @@ title: AI Safety Research
 EOF
 
 # --- Wave0: reference ---
-mkdir -p $B/reference/topic-a
-cat > $B/reference/index.md << 'EOF'
+mkdir -p $B/artifacts/wave0/topic-a
+cat > $B/reference/_INDEX.md << 'EOF'
 # Reference Index
 - [AI Safety](topic-a/source.yaml)
 EOF
-cat > $B/reference/topic-a/source.yaml << 'EOF'
+# Per-topic reference file (wave1 gate count_floor expects reference/*topic-a-*.md)
+cat > $B/reference/topic-a-foundation.md << 'EOF'
+# Topic A — Foundation Reference
+Source: [AI Safety Overview](https://example.com/ai-safety)
+EOF
+# README + 00-shared (wave0 gate requires both)
+cat > $B/reference/README.md << 'EOF'
+# Reference Directory
+Flat reference directory for the case-51 research run.
+EOF
+cat > $B/reference/00-shared-foundation.md << 'EOF'
+# Shared Foundation Reference
+Baseline reference material for all topics.
+EOF
+cat > $B/artifacts/wave0/topic-a/source.yaml << 'EOF'
 - url: "https://example.com/ai-safety"
   title: "AI Safety Overview"
   retrieved_date: "2026-06-15"
@@ -113,7 +127,7 @@ EOF
 # --- Wave1: evidence-summary + question-list ---
 cat > $B/artifacts/wave1/topic-a/evidence-summary.md << 'EOF'
 ## Key Findings
-1. AI safety research is an active and growing field [AI Safety Overview](../reference/topic-a/source.yaml)
+1. AI safety research is an active and growing field [AI Safety Overview](https://example.com/ai-safety)
 EOF
 
 cat > $B/artifacts/wave1/topic-a/question-list.md << 'EOF'
@@ -163,7 +177,7 @@ cat > $B/artifacts/wave2/finding-index.yaml << 'EOF'
   category: legacy
   statement: "AI safety spans technical, policy, and societal dimensions"
   sources:
-    - "../reference/topic-a/source.yaml"
+    - "../artifacts/wave0/topic-a/source.yaml"
   confidence: medium
   decision: resolve_in_synthesis
 EOF
@@ -260,7 +274,7 @@ const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs
 const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
 if(!gr.check.passed||!gr.check.next)process.exit(1);
 JS
-echo '{"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"wave0_complete"}' > $B/rb_status.json
+echo '{"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"seed_topics_ready"}' > $B/rb_status.json
 node $B/step.mjs $B "phases/phase-setup.md" "setup-ready"
 ```
 

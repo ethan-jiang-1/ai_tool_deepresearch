@@ -1,38 +1,51 @@
 {
   "gate": "wave0-complete",
-  "description": "Verify Wave0 produced minimum shared foundation evidence: reference index exists, per-topic reference metadata files exist and pass ReferenceMetadata schema validation, metadata count meets foundation floor per topic, trace evidence present, status values point to wave0→wave1.",
+  "description": "Verify Wave0 produced shared foundation evidence: _INDEX.md and README.md exist, 00-shared-*.md reference files exist (count_floor >=1), per-topic thin YAML exists in artifacts/wave0/ and passes ReferenceMetadata schema validation, trace evidence present, status values point to wave0→wave1.",
   "rules": [
     {
-      "id": "reference_index_exists",
+      "id": "reference_index_md_exists",
       "check": "file_exists",
-      "target": "reference/index.md",
-      "failure_message": "Missing file: reference/index.md. Write an index summarizing the foundation reference collection for each topic."
+      "target": "reference/_INDEX.md",
+      "failure_message": "Missing file: reference/_INDEX.md. Write a canonical Markdown table inventory of all reference files with columns: ref_file, source_type, trust_level, tier, related_topic, source_layer, acceptance_status, date_landed."
+    },
+    {
+      "id": "reference_readme_exists",
+      "check": "file_exists",
+      "target": "reference/README.md",
+      "failure_message": "Missing file: reference/README.md. Write a brief human-readable overview of the flat reference directory convention."
     },
     {
       "id": "reference_dir_exists",
       "check": "dir_exists",
       "target": "reference",
-      "failure_message": "Missing directory: reference/. Create the directory and add per-topic reference metadata."
+      "failure_message": "Missing directory: reference/. Create the directory and populate with 00-shared-*.md reference files."
+    },
+    {
+      "id": "shared_ref_count_floor",
+      "check": "count_floor",
+      "target": "reference/00-shared-*.md",
+      "threshold": 1,
+      "failure_message": "Fewer than 1 00-shared-*.md reference file in reference/. Create at least one shared foundation reference file per shared-reference-template.md."
     },
     {
       "id": "per_topic_source_yaml_exists",
       "check": "file_exists",
-      "target": "reference/{topic}/source.yaml",
-      "failure_message": "Missing per-topic reference metadata: reference/{topic}/source.yaml. Search and collect at least foundation floor count of references for each topic in the topic_registry."
+      "target": "artifacts/wave0/{topic}/source.yaml",
+      "failure_message": "Missing per-topic thin YAML: artifacts/wave0/{topic}/source.yaml. Search and collect at least foundation floor count of references for each topic in the topic_registry."
     },
     {
       "id": "per_topic_reference_schema_valid",
       "check": "schema_valid",
-      "target": "reference/{topic}/source.yaml",
+      "target": "artifacts/wave0/{topic}/source.yaml",
       "schema": "ReferenceMetadataArraySchema",
-      "failure_message": "Reference metadata in reference/{topic}/source.yaml fails schema validation. Each entry must have url, title, retrieved_date (YYYY-MM-DD), and topic_tag."
+      "failure_message": "Reference metadata in artifacts/wave0/{topic}/source.yaml fails schema validation. Each entry must have url, title, retrieved_date (YYYY-MM-DD), and topic_tag."
     },
     {
       "id": "per_topic_count_floor",
       "check": "count_floor",
-      "target": "reference/{topic}/source.yaml",
+      "target": "artifacts/wave0/{topic}/source.yaml",
       "threshold": 1,
-      "failure_message": "Topic {topic} has fewer than 1 reference metadata entries. Collect at least the foundation floor count for each topic."
+      "failure_message": "Topic {topic} has fewer than 1 reference metadata entries in artifacts/wave0/{topic}/source.yaml. Collect at least the foundation floor count for each topic."
     },
     {
       "id": "trace_wave0_completion",

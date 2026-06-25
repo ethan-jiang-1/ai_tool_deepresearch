@@ -136,12 +136,12 @@ title: Test Topic
 # Test Topic
 EOF
 
-mkdir -p $B/reference/topic-a
-cat > $B/reference/index.md << 'EOF'
+mkdir -p $B/artifacts/wave0/topic-a
+cat > $B/reference/_INDEX.md << 'EOF'
 # Reference Index
 - [Topic A](topic-a/source.yaml)
 EOF
-cat > $B/reference/topic-a/source.yaml << 'EOF'
+cat > $B/artifacts/wave0/topic-a/source.yaml << 'EOF'
 - url: "https://example.com/test"
   title: "Test Reference"
   retrieved_date: "2026-06-15"

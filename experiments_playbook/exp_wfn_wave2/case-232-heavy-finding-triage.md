@@ -63,20 +63,20 @@ cat > $B/rb_status.json << 'EOF'
 {"current_mode":"execution","state":"in_progress","current_gate":"wave2_complete","next_gate":"hitl2_recorded"}
 EOF
 
-mkdir -p $B/reference/01_claude-code $B/reference/02_agentic-tools
+mkdir -p $B/artifacts/wave0/01_claude-code $B/artifacts/wave0/02_agentic-tools
 mkdir -p $B/artifacts/wave1/01_claude-code $B/artifacts/wave1/02_agentic-tools
 mkdir -p $B/artifacts/wave2
 mkdir -p $B/seed_topics
 
 # Reference files
-cat > $B/reference/01_claude-code/source.yaml << 'REFEOF'
+cat > $B/artifacts/wave0/01_claude-code/source.yaml << 'REFEOF'
 - url: "https://example.com/claude-code-overview"
   title: "Claude Code Overview"
   retrieved_date: "2026-06-20"
   topic_tag: "01_claude-code"
 REFEOF
 
-cat > $B/reference/02_agentic-tools/source.yaml << 'REFEOF'
+cat > $B/artifacts/wave0/02_agentic-tools/source.yaml << 'REFEOF'
 - url: "https://example.com/agentic-tools-comparison"
   title: "Agentic Coding Tools Comparison 2026"
   retrieved_date: "2026-06-20"
@@ -87,7 +87,7 @@ cat > $B/reference/02_agentic-tools/source.yaml << 'REFEOF'
   topic_tag: "02_agentic-tools"
 REFEOF
 
-cat > $B/reference/index.md << 'EOF'
+cat > $B/reference/_INDEX.md << 'EOF'
 # Reference Index
 - 01_claude-code: 1 reference
 - 02_agentic-tools: 2 references (含 claude-code-vs-copilot 对比)

@@ -128,6 +128,11 @@ gate 返回的 JSON 关键字段：
 验证 bundle 在进入 wave0 前的 structural consistency：control files 可解析、scaffold 存在、HITL1 已记录、basename 一致。
 
 ```bash
+# setup-ready gate expects current_gate=setup_ready, next_gate=seed_topics_ready
+cat > $B/rb_status.json << 'EOF'
+{"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"seed_topics_ready"}
+EOF
+
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)

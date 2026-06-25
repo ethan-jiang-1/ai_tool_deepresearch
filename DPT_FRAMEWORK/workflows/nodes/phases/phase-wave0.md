@@ -17,7 +17,7 @@ suggested_context:
 
 ## 1. Stage Goal
 
-搜集少量真实的 shared reference evidence，为 topic_registry 中的每个 topic 创建结构化 YAML metadata（url/title/retrieved_date/topic_tag），写入 `reference/<topic>/source.yaml`，更新 `reference/index.md`。
+搜集少量真实的 shared reference evidence，为 topic_registry 中的每个 topic 创建结构化 YAML metadata（url/title/retrieved_date/topic_tag），写入 `artifacts/wave0/<topic>/source.yaml`，更新 `reference/_INDEX.md`。
 
 **Wave0 是 foundation evidence collection，不是 comprehensive research。** 每个 topic 只需要至少 foundation floor 数量的 reference。目标不是 coverage completeness，而是为 Wave1 的 topic-scoped skeleton 和 Wave2 的 cross-topic synthesis 提供可信的 evidence 基座。
 
@@ -52,16 +52,16 @@ Wave0 使用 Agentic Queue 驱动 source intake。所有搜索/fetch 工作走 t
   "work_id": "wave0-source-{topic.slug}",
   "title": "Source intake: {topic.title}",
   "targets": { "controller": "main-agent", "delegates": { "to": "sub-agent", "role_key": "dpt-source-intake", "timeout_ms": 600000 } },
-  "action": "搜索 [{topic.title}] 的 foundation reference。从 topic.title 和 seed_topics/{topic.slug}.md 的 search_guardrails 派生搜索关键词。使用 WebSearch 找到至少 1 条可信来源，使用 WebFetch 获取每个来源的页面内容。如果 WebFetch 被阻止，必须走降级链：curl -L → node fetch → python3 urllib，全部失败才可报告 inaccessible。提取并写入 reference/{topic.slug}/source.yaml（YAML 数组，每条含 url, title, retrieved_date(YYYY-MM-DD), topic_tag(\"{topic.slug}\"), notes(可选)）。搜索中间结果写入你的 slot 对应的缓存目录——不要写入共享目录。",
+  "action": "搜索 [{topic.title}] 的 foundation reference。从 topic.title 和 seed_topics/{topic.slug}.md 的 search_guardrails 派生搜索关键词。使用 WebSearch 找到至少 1 条可信来源，使用 WebFetch 获取每个来源的页面内容。如果 WebFetch 被阻止，必须走降级链：curl -L → node fetch → python3 urllib，全部失败才可报告 inaccessible。提取并写入 artifacts/wave0/{topic.slug}/source.yaml（YAML 数组，每条含 url, title, retrieved_date(YYYY-MM-DD), topic_tag(\"{topic.slug}\"), notes(可选)）。搜索中间结果写入你的 slot 对应的缓存目录——不要写入共享目录。",
   "producer_rule": "source_intake_fan_in",
   "lineage": {"topic_slug": "{topic.slug}", "phase": "wave0"},
   "priority_class": "P5_new_reference_intake",
-  "required_receipts": ["file:reference/{topic.slug}/source.yaml"],
-  "done_condition": "reference/{topic.slug}/source.yaml 存在，通过 ReferenceMetadata schema 校验（url 非空、title 非空、retrieved_date 为 YYYY-MM-DD、topic_tag 匹配 {topic.slug}），且至少含 1 条 reference",
+  "required_receipts": ["file:artifacts/wave0/{topic.slug}/source.yaml"],
+  "done_condition": "artifacts/wave0/{topic.slug}/source.yaml 存在，通过 ReferenceMetadata schema 校验（url 非空、title 非空、retrieved_date 为 YYYY-MM-DD、topic_tag 匹配 {topic.slug}），且至少含 1 条 reference",
   "verification": {"engine": ["receipt_check"], "agent": ["url_accessible", "title_matches_page"]},
-  "writes_to": ["reference/{topic.slug}/source.yaml"],
+  "writes_to": ["artifacts/wave0/{topic.slug}/source.yaml"],
   "status_sync": ["wave0_intake"],
-  "completion_receipt": "file:reference/{topic.slug}/source.yaml",
+  "completion_receipt": "file:artifacts/wave0/{topic.slug}/source.yaml",
   "failure_route": "queue_repair",
   "payload": {"topic_slug": "{topic.slug}", "topic_title": "{topic.title}"}
 }
@@ -87,7 +87,7 @@ Wave0 的 claim→execute→complete 使用 relay 批量并行执行（灌料→
 | 参数 | 值 |
 |------|-----|
 | `role_key` | `dpt-source-intake` |
-| `artifact_template` | `reference/{topic.slug}/source.yaml` |
+| `artifact_template` | `artifacts/wave0/{topic.slug}/source.yaml` |
 | `artifact_schema` | `ReferenceMetadata` |
 | `backfill_tokens` | `["__BACKFILL_WAVE0_EVIDENCE__"]` |
 | `per_topic_backfill` | `true` |
@@ -108,7 +108,7 @@ Wave0 的 claim→execute→complete 使用 relay 批量并行执行（灌料→
 当 claim 返回 `item: null`（queue 空）时：
 
 1. `collectAndMergeSubagentResults(state, slots, baseDir)` — collect 所有 slot 结果，merge evidence counts 到 WorkflowState
-2. 检查 `reference/index.md` 是否已更新（列出所有 topic 的 reference 摘要）
+2. 检查 `reference/_INDEX.md` 是否已更新（列出所有 topic 的 reference 摘要）
 3. 如果 index 缺失或未更新 → 手动写入（这是单步收尾动作，不重新灌 Q）
 4. 跑 gate：
 ```bash
@@ -119,14 +119,14 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --cur
 
 ## 4. Expected Artifacts
 
-- `reference/index.md`（非空，摘要每个 topic 和 shared 目录的 reference）
-- `reference/<topic>/source.yaml`（对于 topic_registry 中的每个 topic，至少 foundation floor 数量的 reference metadata 条目，每条满足以下 contract）：
+- `reference/_INDEX.md`（非空，摘要每个 topic 和 shared 目录的 reference）
+- `artifacts/wave0/<topic>/source.yaml`（对于 topic_registry 中的每个 topic，至少 foundation floor 数量的 reference metadata 条目，每条满足以下 contract）：
   - `url`：string，非空
   - `title`：string，非空
   - `retrieved_date`：string，YYYY-MM-DD 格式
   - `topic_tag`：string，非空，匹配 registry 中的 topic key
   - `notes`：string，可选
-- `reference/00_shared/source.yaml`（可选——共享 foundation reference：行业全景、方法论文献、跨 topic 对比数据等不属于单个 topic 的 reference。格式同 per-topic source.yaml，`topic_tag` 填 `shared`）
+- `reference/00-shared-<slug>.md（rich MD，格式见 shared-reference-template.md）`（可选——共享 foundation reference：行业全景、方法论文献、跨 topic 对比数据等不属于单个 topic 的 reference。格式同 per-topic source.yaml，`topic_tag` 填 `shared`）
 - `rb_trace.jsonl` 中有 `wave0_completion` event
 - `rb_status.json` 中 `current_gate: wave0_complete` / `next_gate: wave1_complete`
 
@@ -146,8 +146,8 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --cur
 
 | Fail | 修复 |
 |------|------|
-| `reference/index.md` 缺失或为空 | 写入 index 摘要 |
-| `reference/<topic>/source.yaml` 缺失 | 为该 topic 搜索并写入 reference metadata |
+| `reference/_INDEX.md` 缺失或为空 | 写入 index 摘要 |
+| `artifacts/wave0/<topic>/source.yaml` 缺失 | 为该 topic 搜索并写入 reference metadata |
 | schema violation（缺少 url/title 等必填字段） | 补充缺失字段 |
 | `count_floor` fail（某 topic reference 数量 < 1） | 为该 topic 搜集更多 reference |
 | registry 为空 | 回到 HITL1 补充 topic_registry |
@@ -172,10 +172,10 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --cur
 
 | 场景 | 行为 |
 |------|------|
-| **已有 topic，无 `## 本轮重跑方向` section** | Reference 全部保留。若该 topic 的 `reference/{slug}/source.yaml` 已有 foundation floor 数量的 reference，不再为此 topic 创建 task card（跳过）。若不足 floor，只为不足的部分搜索。 |
+| **已有 topic，无 `## 本轮重跑方向` section** | Reference 全部保留。若该 topic 的 `artifacts/wave0/{slug}/source.yaml` 已有 foundation floor 数量的 reference，不再为此 topic 创建 task card（跳过）。若不足 floor，只为不足的部分搜索。 |
 | **已有 topic，有 `action: supplement`** | 保留已有 reference。task card 的 action 中追加 `new_search_dimensions` 中指定的新搜索角度。已有维度的 reference 全部保留——不做去重或覆盖。 |
 | **新增 topic（`action: add`）** | 全量搜索——与首次 wave0 一致。创建 standard task card。 |
-| **移除 topic（`action: remove`）** | 该 topic 的 reference 保留在 `reference/{slug}/` 中，但不再为该 topic 创建 task card。如需标记，在 `reference/index.md` 中注明 deprecated。 |
+| **移除 topic（`action: remove`）** | 该 topic 的 reference 保留在 `reference/{slug}/` 中，但不再为该 topic 创建 task card。如需标记，在 `reference/_INDEX.md` 中注明 deprecated。 |
 
 ### 灌料约束
 

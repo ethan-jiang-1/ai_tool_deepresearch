@@ -72,7 +72,7 @@ When a wave1 deepening task is dispatched via relay, the Sub-agent SHALL receive
 - **AND** Topic Investigation Targets SHALL be a table with at least target_id, target_question, origin, status, backing_refs, next_action columns
 - **AND** Question Reconciliation SHALL use canonical markers: `[已解决]`, `[部分进展]`, `[仍开放]`, `[需内部数据]`
 - **AND** Emergent Question Protocol SHALL record results of all four checks: new_concept, contradiction, missing_information_gap, noise_pattern — each SHALL be stated as `checked; {result}; trigger_refs={path or none}` even when the result is `none`
-- **AND** Exploration/Exploitation Decision SHALL record decision (one of the 9 canonical V12 values; single-pass mode SHALL use `continue`), trigger_refs, unresolved_questions, queue_consequence, and next_action
+- **AND** Exploration/Exploitation Decision SHALL record decision (single-pass mode SHALL use `continue`), trigger_refs, unresolved_questions, queue_consequence, and next_action
 
 #### Scenario: Tool degradation chain on WebFetch failure
 

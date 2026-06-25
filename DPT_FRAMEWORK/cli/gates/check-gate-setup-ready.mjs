@@ -82,8 +82,9 @@ function normalizeBundleBasename(dirName) {
   const prodMatch = dirName.match(/^dpt_rb_(.+)$/);
   if (prodMatch) return prodMatch[1];
   // Disposable: dpt_disp_<name>_<hex> → <name>
+  // Strip optional case-NNN_ prefix (test infrastructure, not part of research basename)
   const dispMatch = dirName.match(/^dpt_disp_(.+)_[0-9a-f]+$/);
-  if (dispMatch) return dispMatch[1];
+  if (dispMatch) return dispMatch[1].replace(/^case-\d+_/, '');
   return null; // illegal name
 }
 

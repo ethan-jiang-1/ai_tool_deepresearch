@@ -32,15 +32,11 @@ verdict: trace-jsonl
 
 ## Case Goal
 
-证明 PDCA 修复回路：wave2-complete gate 因缺少有效引用而 fail → Agent 读 inspect/advice → 精准修复（添加指向真实文件的 Markdown links）→ rerun → pass。trace 中同时有 failed 和 passed 的 check event，`verdict('last')` 确认最后一次 pass。
-
-选择 Wave2 gate 演示是因为引用链（Markdown link → 目标文件存在性）最容易演示 fail→fix→pass：只需改变 link target 路径即可在 fail 和 pass 之间切换，不需要修改 schema 或 trace。
+证明 PDCA 修复回路：wave2-complete gate 因缺少有效引用而 fail → Agent 读 inspect/advice → 精准修复（添加指向真实文件的 Markdown links）→ rerun → pass。
 
 ---
 
-## Step 1: 创建 bundle + pre-seed Wave0/Wave1 targets + 设置 wave2 status
-
-先建好引用目标——这样 repair 时只需在 synthesis 中添加正确的 link 路径就能 pass。
+## Step 1: 创建 bundle + pre-seed 所有依赖 + 设置 wave2 status
 
 ```bash
 REPO_ROOT=$(pwd)
@@ -49,6 +45,19 @@ echo "Bundle: $B"
 
 # Validate
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
+
+# Write rb_plan with topic_registry
+cat > $B/rb_plan.md << 'EOF'
+---
+plan_basename: w2_repair
+derived_topic_count: 1
+topic_registry:
+  - id: t1
+    slug: topic-a
+    title: Topic A
+---
+# w2_repair Plan
+EOF
 
 # Set status to wave2
 cat > $B/rb_status.json << 'EOF'
@@ -60,46 +69,99 @@ cat > $B/rb_status.json << 'EOF'
 }
 EOF
 
-# Pre-seed Wave0 reference target
-mkdir -p $B/reference/topic-a
-cat > $B/reference/topic-a/source.yaml << 'EOF'
+# Pre-seed Wave0 artifacts
+mkdir -p $B/artifacts/wave0/topic-a
+cat > $B/artifacts/wave0/topic-a/source.yaml << 'EOF'
 - url: "https://example.com/ai-safety"
   title: "Understanding AI Safety"
   retrieved_date: "2026-06-15"
   topic_tag: "topic-a"
 EOF
 
-# Pre-seed Wave1 skeleton target
+# Pre-seed Wave1 artifacts (targets for valid Markdown links)
 mkdir -p $B/artifacts/wave1/topic-a
 cat > $B/artifacts/wave1/topic-a/skeleton.md << 'EOF'
 ---
 slug: topic-a
 title: Topic A Skeleton
-capability: foundation-placeholder
 ---
 
 # Topic A: Foundation Skeleton
-
 ## Open Questions
 - How to measure alignment progress?
 EOF
+cat > $B/artifacts/wave1/topic-a/evidence-summary.md << 'EOF'
+## Key Findings
+1. AI safety requires multi-stakeholder coordination [Source](https://example.com/ai-safety)
+EOF
+cat > $B/artifacts/wave1/topic-a/question-list.md << 'EOF'
+## Topic Investigation Targets
+1. How to measure alignment?
+## Question Reconciliation
+N/A
+## Emergent Question Protocol
+N/A
+## Exploration / Exploitation Decision
+Proceed
+EOF
 
-# Create Wave2 directory
+# Pre-seed seed_topics
+mkdir -p $B/seed_topics
+cat > $B/seed_topics/topic-a.md << 'EOF'
+---
+id: t1
+slug: topic-a
+title: Topic A
+---
+# Topic A
+## Key Dimensions
+- test
+## Known Premises
+- test
+## Open Questions
+- test
+EOF
+
+# Pre-seed ledger + finding-index (needed by wave2 gate)
 mkdir -p $B/artifacts/wave2
+cat > $B/artifacts/wave2/cross-topic-ledger.md << 'EOF'
+## Cross-Topic Scan Matrix
+| Dim | Status |
+|-----|--------|
+| alignment | active |
+## Wave1 Legacy Questions
+- How to measure alignment?
+## Cross-Topic Resolutions
+None
+## Emergent Cross-Topic Questions
+None
+## Exploration Decisions
+Proceed
+## HITL2 Handoff
+Pending
+EOF
+cat > $B/artifacts/wave2/finding-index.yaml << 'EOF'
+- finding_id: W2F-001
+  category: legacy
+  statement: "test"
+  sources: []
+  confidence: medium
+  decision: resolve_in_synthesis
+EOF
 
 echo "=== Pre-seeded artifact targets ==="
-find $B/reference $B/artifacts -type f 2>/dev/null
+find $B/artifacts -type f 2>/dev/null
 ```
 
-预期：bundle 创建，status 指向 `wave2_complete`→`hitl2_recorded`，Wave0/Wave1 目标文件就绪。
+预期：bundle 创建，status 指向 `wave2_complete`→`hitl2_recorded`，所有依赖就绪。
 
 ## Step 2: 写 synthesis 含 NO valid Markdown links → gate FAIL
-
-synthesis 文件存在且有正文内容，但其中的 Markdown links 全部指向不存在的文件。
 
 ```bash
 cat > $B/artifacts/wave2/synthesis.md << 'ENDOFSYN'
 # Cross-Topic Synthesis
+
+W2F-001: AI safety requires multi-stakeholder coordination.
 
 ## Pattern: AI Safety Across Topics
 
@@ -113,7 +175,6 @@ ENDOFSYN
 echo "=== Synthesis (all dead links) ==="
 cat $B/artifacts/wave2/synthesis.md
 
-# Record trace event (needed by trace_event_present rule, even for fail case)
 echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave2_completion"}' >> $B/rb_trace.jsonl
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md || true)
@@ -122,15 +183,9 @@ PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs che
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:false,detail:'attempt 1: all dead links, cross_field fail'})})"
 ```
 
-预期：`check.passed: false`。inspect 列出 3 条死链接（`nope.md`, `also_missing.md`, `ghost.md`）。advice 建议添加指向已存在 Wave0/Wave1 artifact 的有效 Markdown link。
+预期：`check.passed: false`。inspect 列出死链接。
 
 ## Step 3: 展示 gate JSON output — Agent 读 inspect/advice
-
-Agent 现在读这个 JSON output：
-
-- `check.passed` — 预期 `false`
-- `inspect` 数组 — 应包含指向 `cross_artifact_references` rule fail 的诊断，列出所有解析到的 Markdown links 及其解析状态（dead/valid）
-- `advice` 数组 — 应包含 `failure_message`："No valid artifact references found in synthesis. Add at least one Markdown link..."
 
 ```bash
 echo "=== Inspect ==="
@@ -143,8 +198,6 @@ echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d)
 
 ## Step 4: 修复 synthesis — 添加 valid Markdown links
 
-Agent 读到了 inspect/advice。现在修复：将 dead links 替换为指向真实文件的 valid links。
-
 ```bash
 echo "=== Before repair ==="
 cat $B/artifacts/wave2/synthesis.md
@@ -152,16 +205,18 @@ cat $B/artifacts/wave2/synthesis.md
 cat > $B/artifacts/wave2/synthesis.md << 'ENDOFSYN'
 # Cross-Topic Synthesis
 
+W2F-001: AI safety requires multi-stakeholder coordination.
+
 ## Pattern: AI Safety Across Topics
 
 Based on the [Topic A skeleton](../wave1/topic-a/skeleton.md), the key
 finding is that AI safety requires multi-stakeholder coordination.
-The skeleton's open question "How to measure alignment progress?"
-points to a critical gap in current research.
 
-The [reference metadata](../../reference/topic-a/source.yaml) from Wave0
-provides background on AI safety approaches, confirming that alignment
-measurement is an active but unresolved area.
+The [source YAML](../wave0/topic-a/source.yaml) from Wave0 confirms
+that alignment measurement is an active but unresolved area.
+
+The [evidence summary](../wave1/topic-a/evidence-summary.md) supports
+this with finding 1.
 ENDOFSYN
 
 echo ""
@@ -169,27 +224,19 @@ echo "=== After repair ==="
 cat $B/artifacts/wave2/synthesis.md
 ```
 
-**展示 repair diff：**
-- Dead links removed：`nope.md`, `also_missing.md`, `ghost.md`
-- Valid links added：`../wave1/topic-a/skeleton.md`（→ 真实存在）, `../../reference/topic-a/source.yaml`（→ 真实存在）
-- 正文内容保留并增强
-
 ## Step 5: Rerun gate — 预期 PASS
 
 ```bash
-GATE_OUTPUT2=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md || true)
+GATE_OUTPUT2=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE_OUTPUT2"
 PASSED2=$(echo "$GATE_OUTPUT2" | node experiments_env/shared/extract-field.mjs check.passed)
-NEXT=$(echo "$GATE_OUTPUT2" | node experiments_env/shared/extract-field.mjs check.next)
-echo "gate: wave2-complete (attempt 2) | passed: $PASSED2 | next: $NEXT"
+echo "gate: wave2-complete (attempt 2) | passed: $PASSED2"
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED2,detail:'attempt 2: repaired — valid links added, gate pass'})})"
 ```
 
-预期：`check.passed: true`，`check.next: phases/phase-hitl2.md`。Agent 的修复生效了。
+预期：`check.passed: true`。
 
 ## Step 6: 从 trace 裁决（mode: last）
-
-Trace 中应有 2 个 `check` event：第一个 `passed: false`（attempt 1），第二个 `passed: true`（attempt 2）。使用 `verdict('last')` —— 每个 gate 只取最后一条 check event 裁决。
 
 ```bash
 echo "=== Trace evidence ==="

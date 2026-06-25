@@ -50,7 +50,7 @@ Research produced strong evidence across 3 topics. All open questions addressed.
 Proceed to final delivery.
 EOF
 echo '# Synthesis' > $B/artifacts/wave2/synthesis.md
-echo '# Reference Index' > $B/reference/index.md
+echo '# Reference Index' > $B/reference/_INDEX.md
 cat > $B/seed_topics/01_test.md << 'EOF'
 ---
 id: "topic-01"

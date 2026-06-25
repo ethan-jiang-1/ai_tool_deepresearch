@@ -70,11 +70,11 @@ human_decision_checkpoints:
 PROFEOF
 
 mkdir -p $B2/artifacts/wave1/topic-x $B2/artifacts/wave1/topic-y
-mkdir -p $B2/reference/topic-x $B2/reference/topic-y
+mkdir -p $B2/artifacts/wave0/topic-x $B2/artifacts/wave0/topic-y
 mkdir -p $B2/seed_topics
 
 # topic-x: complete — has reference + evidence-summary
-cat > $B2/reference/topic-x/source.yaml << 'REFEOF'
+cat > $B2/artifacts/wave0/topic-x/source.yaml << 'REFEOF'
 - url: "https://example.com/topic-x-ref"
   title: "Topic X Reference"
   retrieved_date: "2026-06-23"
@@ -133,7 +133,7 @@ title: "Topic X"
 SEEDEOF
 
 # topic-y: gap — source.yaml exists but NO evidence-summary
-cat > $B2/reference/topic-y/source.yaml << 'REFEOF'
+cat > $B2/artifacts/wave0/topic-y/source.yaml << 'REFEOF'
 - url: "https://example.com/topic-y-ref"
   title: "Topic Y Reference"
   retrieved_date: "2026-06-23"
@@ -159,7 +159,7 @@ __BACKFILL_WAVE1_TRENDS__
 __BACKFILL_PENDING_QUESTIONS__
 SEEDEOF
 
-cat > $B2/reference/index.md << 'EOF'
+cat > $B2/reference/_INDEX.md << 'EOF'
 # Reference Index
 - topic-x: 1 reference
 - topic-y: 1 reference

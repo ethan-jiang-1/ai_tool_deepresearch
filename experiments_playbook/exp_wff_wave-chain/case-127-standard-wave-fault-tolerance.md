@@ -22,10 +22,10 @@ verdict: trace-jsonl
 
 三个独立 case，各用独立 disposable bundle。不修复错误，只证明 gate 检测正确、不崩溃、返回清晰 inspect/advice。
 
-1. **Case 1**: Malformed YAML（`source.yaml` 语法错误）→ wave0-complete gate 的 `schema_valid` fail，inspect 指向 parse error
-2. **Case 2**: Partial dead links（synthesis 含 1 valid + 2 dead links）→ wave2-complete gate pass（`min_valid_refs=1` 满足），但 inspect 报告 2 条 dead links
-3. **Case 3**: Status drift（`current_gate` 值错误）→ wave2-complete gate fail，inspect 指向 status mismatch
-4. 从各 bundle 的 `_trace.jsonl` 分别裁决
+1. **Case 1**: Malformed YAML → wave0-complete gate 的 `schema_valid` fail，inspect 指向 parse error
+2. **Case 2**: Partial dead links → wave2-complete gate pass（`min_valid_refs=1` 满足），但 inspect 报告 dead links
+3. **Case 3**: Status drift → wave2-complete gate fail，inspect 指向 status mismatch
+4. 从各 bundle trace 分别裁决
 5. Cleanup all bundles
 
 ---
@@ -35,15 +35,11 @@ verdict: trace-jsonl
 证明 gate CLI 的容错性：
 - **不崩溃**：malformed YAML 不导致 gate crash，仍返回合法 JSON
 - **不 silent pass**：status drift 被精确检测并 fail
-- **inspect 完整**：partial dead links 场景 gate 整体 pass，但 inspect 仍列出 dead links 供 Agent 审查
-
-已知未覆盖的更底层结构损伤（corrupted `rb_trace.jsonl`、bundle 目录不存在、`rb_plan.md` frontmatter 无法 parse）已在 pre-research fault-tolerance playbook 中覆盖，不重复。
+- **inspect 完整**：partial dead links 场景 gate 整体 pass，但 inspect 仍列出 dead links
 
 ---
 
 ## Case 1: Malformed YAML → wave0-complete gate fail（schema_valid）
-
-模拟场景：Agent 错误编辑了 `source.yaml`，写入无法 parse 的 YAML。
 
 ```bash
 REPO_ROOT=$(pwd)
@@ -51,37 +47,64 @@ REPO_ROOT=$(pwd)
 B1=$(node experiments_env/shared/new-disposable-bundle.mjs wf_fault1 --case case-127 --force)
 echo "Case 1 Bundle: $B1"
 
-# Write 1-topic registry
+# Write 1-topic registry (YAML frontmatter)
 cat > $B1/rb_plan.md << 'EOF'
 ---
-{
-  "plan_basename": "wf_fault1",
-  "derived_topic_count": 1,
-  "topic_registry": [
-    { "id": "t1", "slug": "topic-a", "title": "Topic A" }
-  ]
-}
+plan_basename: wf_fault1
+derived_topic_count: 1
+topic_registry:
+  - id: t1
+    slug: topic-a
+    title: Topic A
 ---
+# Plan
 EOF
 
 # Set wave0 status
 cat > $B1/rb_status.json << 'EOF'
-{
-  "current_mode": "execution",
-  "state": "in_progress",
-  "current_gate": "wave0_complete",
-  "next_gate": "wave1_complete"
-}
+{"current_mode":"execution","state":"in_progress","current_gate":"wave0_complete","next_gate":"wave1_complete"}
 EOF
 
-# Create reference directory with malformed YAML
-mkdir -p $B1/reference/topic-a
-cat > $B1/reference/index.md << 'EOF'
+# Create minimal valid reference artifacts (so only the malformed YAML fails)
+cat > $B1/reference/_INDEX.md << 'EOF'
 # Reference Index
+| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 00-shared-test.md | secondary | practitioner | Tier 2 | topic-a | wave0_foundation | accepted | 2026-06-15 |
 EOF
 
-# Intentionally malformed YAML (unclosed bracket on url field)
-cat > $B1/reference/topic-a/source.yaml << 'EOF'
+cat > $B1/reference/README.md << 'EOF'
+# Reference Evidence
+Flat reference directory.
+EOF
+
+cat > $B1/reference/00-shared-test.md << 'EOF'
+# Test
+- source_url: https://example.com/ok
+- acceptance_status: accepted
+- source_type: secondary
+- tier: Tier 2
+- evidence_role: foundation
+- trust_level: practitioner
+- why_it_matters: test
+- accessed_at: 2026-06-15
+- related_topic: topic-a
+
+## Key Facts
+- test
+## Core Content Capture
+test
+## Relevance To This Research
+test
+## Quotable Terms / Concepts
+- test
+## Risks And Limitations
+- test
+EOF
+
+# Intentionally malformed YAML (unclosed bracket)
+mkdir -p $B1/artifacts/wave0/topic-a
+cat > $B1/artifacts/wave0/topic-a/source.yaml << 'EOF'
 - url: "https://example.com/ok"
   title: "Valid Entry"
   retrieved_date: "2026-06-15"
@@ -91,9 +114,8 @@ cat > $B1/reference/topic-a/source.yaml << 'EOF'
 EOF
 
 echo "=== Malformed YAML ==="
-cat $B1/reference/topic-a/source.yaml
+cat $B1/artifacts/wave0/topic-a/source.yaml
 
-# Record trace event
 echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave0_completion"}' >> $B1/rb_trace.jsonl
 
 echo ""
@@ -101,7 +123,6 @@ echo "=== Running wave0-complete gate ==="
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B1 --current-node phases/phase-wave0.md || true)
 echo "$GATE_OUTPUT"
 
-# Verify: gate survived (produced valid JSON)
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('is JSON: true');console.log('passed:',j.check.passed);console.log('inspect count:',j.inspect.length);j.inspect.forEach((x,i)=>console.log('  inspect['+i+']:',x))})"
 
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -114,25 +135,31 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 ## Case 2: Partial dead links → wave2-complete gate pass（cross_field 含 dead link 报告）
 
-模拟场景：synthesis 有 1 条 valid link + 2 条 dead links。`min_valid_refs=1` 满足，gate 整体 pass。但 inspect 应列出死链接，供 Agent 审查。
-
 ```bash
 B2=$(node experiments_env/shared/new-disposable-bundle.mjs wf_fault2 --case case-127 --force)
 echo "Case 2 Bundle: $B2"
 
-# Set wave2 status
-cat > $B2/rb_status.json << 'EOF'
-{
-  "current_mode": "execution",
-  "state": "in_progress",
-  "current_gate": "wave2_complete",
-  "next_gate": "hitl2_recorded"
-}
+# Write topic_registry
+cat > $B2/rb_plan.md << 'EOF'
+---
+plan_basename: wf_fault2
+derived_topic_count: 1
+topic_registry:
+  - id: t1
+    slug: topic-a
+    title: Topic A
+---
+# Plan
 EOF
 
-# Pre-seed valid targets
-mkdir -p $B2/reference/topic-a
-cat > $B2/reference/topic-a/source.yaml << 'EOF'
+# Set wave2 status
+cat > $B2/rb_status.json << 'EOF'
+{"current_mode":"execution","state":"in_progress","current_gate":"wave2_complete","next_gate":"hitl2_recorded"}
+EOF
+
+# Pre-seed all required artifacts
+mkdir -p $B2/artifacts/wave0/topic-a
+cat > $B2/artifacts/wave0/topic-a/source.yaml << 'EOF'
 - url: "https://example.com/ai-safety"
   title: "Understanding AI Safety"
   retrieved_date: "2026-06-15"
@@ -141,40 +168,83 @@ EOF
 
 mkdir -p $B2/artifacts/wave1/topic-a
 cat > $B2/artifacts/wave1/topic-a/skeleton.md << 'EOF'
----
-slug: topic-a
-title: Topic A Skeleton
-capability: foundation-placeholder
----
-
-# Topic A: Foundation Skeleton
-
+# Topic A Skeleton
 ## Open Questions
 - How to measure alignment?
 EOF
+cat > $B2/artifacts/wave1/topic-a/evidence-summary.md << 'EOF'
+## Key Findings
+1. AI safety requires coordination [Source](https://example.com/ai-safety)
+EOF
+cat > $B2/artifacts/wave1/topic-a/question-list.md << 'EOF'
+## Topic Investigation Targets
+1. How to measure?
+## Question Reconciliation
+N/A
+## Emergent Question Protocol
+N/A
+## Exploration / Exploitation Decision
+Proceed
+EOF
+
+mkdir -p $B2/seed_topics
+cat > $B2/seed_topics/topic-a.md << 'EOF'
+---
+id: t1
+slug: topic-a
+title: Topic A
+---
+# Topic A
+## Key Dimensions
+- test
+## Known Premises
+- test
+## Open Questions
+- test
+EOF
 
 mkdir -p $B2/artifacts/wave2
+cat > $B2/artifacts/wave2/cross-topic-ledger.md << 'EOF'
+## Cross-Topic Scan Matrix
+| Dim | Status |
+## Wave1 Legacy Questions
+- Q1
+## Cross-Topic Resolutions
+None
+## Emergent Cross-Topic Questions
+None
+## Exploration Decisions
+Proceed
+## HITL2 Handoff
+Done
+EOF
+cat > $B2/artifacts/wave2/finding-index.yaml << 'EOF'
+- finding_id: W2F-001
+  category: legacy
+  statement: "test"
+  sources: []
+  confidence: medium
+  decision: resolve_in_synthesis
+EOF
 
 # Write synthesis: 1 valid link + 2 dead links
 cat > $B2/artifacts/wave2/synthesis.md << 'ENDOFSYN'
 # Cross-Topic Synthesis
 
+W2F-001: Alignment measurement is an open challenge.
+
 ## Pattern: AI Safety
 
-Based on the [valid skeleton reference](../wave1/topic-a/skeleton.md),
+Based on the [valid skeleton reference](../wave1/topic-a/skeleton.md) and
+[evidence summary](../wave1/topic-a/evidence-summary.md),
 the key finding is that alignment measurement is an open challenge.
 
 Additional context from [dead link A](../wave1/topic-a/nope.md) and
 [dead link B](../wave1/topic-b/missing.md) would strengthen this analysis.
 ENDOFSYN
 
-echo "=== Synthesis (1 valid + 2 dead links) ==="
-cat $B2/artifacts/wave2/synthesis.md
-
-# Record trace event
 echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave2_completion"}' >> $B2/rb_trace.jsonl
 
-echo ""
 echo "=== Running wave2-complete gate ==="
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B2 --current-node phases/phase-wave2.md || true)
 echo "$GATE_OUTPUT"
@@ -182,64 +252,111 @@ echo "$GATE_OUTPUT"
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('inspect count:',j.inspect.length);j.inspect.forEach((x,i)=>console.log('  inspect['+i+']:',x))})"
 
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B2/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:true,detail:'case2: gate pass (min_valid_refs=1 met) but inspect reports 2 dead links'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B2/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:true,detail:'case2: gate pass (min_valid_refs=1 met) but inspect reports dead links'})})"
 ```
 
-预期：`check.passed: true`（1 valid link ≥ min_valid_refs）。inspect 列出 2 条 dead links（`nope.md`, `missing.md`），供 Agent 审查但不阻止 gate pass。
+预期：`check.passed: true`（1 valid link ≥ min_valid_refs）。inspect 列出 2 条 dead links。
 
 ---
 
 ## Case 3: Status drift → wave2-complete gate fail（status_value mismatch）
 
-模拟场景：Agent 忘记更新 `rb_status.json`，`current_gate` 还停留在上一个 phase 的值。
-
 ```bash
 B3=$(node experiments_env/shared/new-disposable-bundle.mjs wf_fault3 --case case-127 --force)
 echo "Case 3 Bundle: $B3"
 
-# Pre-seed everything correctly for wave2...
-mkdir -p $B3/reference/topic-a
-cat > $B3/reference/topic-a/source.yaml << 'EOF'
+# Write topic_registry
+cat > $B3/rb_plan.md << 'EOF'
+---
+plan_basename: wf_fault3
+derived_topic_count: 1
+topic_registry:
+  - id: t1
+    slug: topic-a
+    title: Topic A
+---
+# Plan
+EOF
+
+# Pre-seed all artifacts correctly
+mkdir -p $B3/artifacts/wave0/topic-a $B3/artifacts/wave1/topic-a $B3/artifacts/wave2 $B3/seed_topics
+
+cat > $B3/artifacts/wave0/topic-a/source.yaml << 'EOF'
 - url: "https://example.com/ai-safety"
   title: "Understanding AI Safety"
   retrieved_date: "2026-06-15"
   topic_tag: "topic-a"
 EOF
 
-mkdir -p $B3/artifacts/wave1/topic-a
-cat > $B3/artifacts/wave1/topic-a/skeleton.md << 'EOF'
----
-slug: topic-a
-title: Topic A Skeleton
-capability: foundation-placeholder
----
-# Skeleton
+cat > $B3/artifacts/wave1/topic-a/evidence-summary.md << 'EOF'
+## Key Findings
+1. Test [Source](https://example.com/test)
+EOF
+cat > $B3/artifacts/wave1/topic-a/question-list.md << 'EOF'
+## Topic Investigation Targets
+1. Test?
+## Question Reconciliation
+N/A
+## Emergent Question Protocol
+N/A
+## Exploration / Exploitation Decision
+Proceed
 EOF
 
-mkdir -p $B3/artifacts/wave2
+cat > $B3/seed_topics/topic-a.md << 'EOF'
+---
+id: t1
+slug: topic-a
+title: Topic A
+---
+# Topic A
+## Key Dimensions
+- test
+## Known Premises
+- test
+## Open Questions
+- test
+EOF
+
 cat > $B3/artifacts/wave2/synthesis.md << 'ENDOFSYN'
 # Synthesis
-
-See [skeleton](../wave1/topic-a/skeleton.md) for details.
+W2F-001: Test finding.
+See [evidence](../wave1/topic-a/evidence-summary.md) for details.
 ENDOFSYN
 
-# BUT set current_gate to wrong value (wave1_complete instead of wave2_complete)
-cat > $B3/rb_status.json << 'EOF'
-{
-  "current_mode": "execution",
-  "state": "in_progress",
-  "current_gate": "wave1_complete",
-  "next_gate": "hitl2_recorded"
-}
+cat > $B3/artifacts/wave2/cross-topic-ledger.md << 'EOF'
+## Cross-Topic Scan Matrix
+| Dim | Status |
+## Wave1 Legacy Questions
+- Q1
+## Cross-Topic Resolutions
+None
+## Emergent Cross-Topic Questions
+None
+## Exploration Decisions
+Proceed
+## HITL2 Handoff
+Done
+EOF
+cat > $B3/artifacts/wave2/finding-index.yaml << 'EOF'
+- finding_id: W2F-001
+  category: legacy
+  statement: "test"
+  sources: []
+  confidence: medium
+  decision: resolve_in_synthesis
 EOF
 
-echo "=== Status (drifted: current_gate=wave1_complete, should be wave2_complete) ==="
+# BUT set current_gate to wrong value
+cat > $B3/rb_status.json << 'EOF'
+{"current_mode":"execution","state":"in_progress","current_gate":"wave1_complete","next_gate":"hitl2_recorded"}
+EOF
+
+echo "=== Status (drifted) ==="
 cat $B3/rb_status.json
 
-# Record trace event
 echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave2_completion"}' >> $B3/rb_trace.jsonl
 
-echo ""
 echo "=== Running wave2-complete gate ==="
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B3 --current-node phases/phase-wave2.md || true)
 echo "$GATE_OUTPUT"
@@ -247,10 +364,10 @@ echo "$GATE_OUTPUT"
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('inspect count:',j.inspect.length);j.inspect.forEach((x,i)=>console.log('  inspect['+i+']:',x))})"
 
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B3/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:false,detail:'case3: status drift detected — current_gate is wave1_complete, expected wave2_complete'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B3/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:false,detail:'case3: status drift detected'})})"
 ```
 
-预期：`check.passed: false`。inspect 指向 `status_value` rule fail：`current_gate` 期望 `wave2_complete`，实际为 `wave1_complete`。
+预期：`check.passed: false`。inspect 指向 `status_value` rule fail。
 
 ---
 
@@ -280,11 +397,8 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 ## Step 6: Cleanup all bundles
 
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
 ```bash
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B1')})"
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B2')})"
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B3')})"
-rm -rf dpt_disp_case-127_wf_fault_* 2>/dev/null
 ```

@@ -39,7 +39,7 @@ AGQ-006: agentic-queue — Command experiment playbooks for simple, medium, and 
 AGQ-007: agentic-queue — Producer rule source_intake_fan_in for wave0 source intake task cards
 AGQ-008: agentic-queue — Wave0 queue-loop simple playbook (real search + gate fail + repair scenarios)
 AGQ-009: agentic-queue — Producer rule seed_topic_materialize for seed-topics materialization task cards
-AGQ-010: agentic-queue — Seed-topics queue-loop simple playbook (3-topic happy path, V12 field verification)
+AGQ-010: agentic-queue — Seed-topics queue-loop simple playbook (3-topic happy path, required field verification)
 AGQ-011: agentic-queue — QueueItemSchema targets field (TargetSpec) replaces single enum target
 AGQ-012: agentic-queue — TargetSpec schema (controller enum, optional delegates with to/role_key/timeout_ms)
 AGQ-013: agentic-queue — Producer rule topic_deepening for wave1 deepening task cards
@@ -312,6 +312,11 @@ RWG-013: research-wave-gate-implementation — Wave2 gate removes reference/00_s
 # workflow-directory-contract (delta)
 WDC-009: workflow-directory-contract — Bundle canonical structure includes artifacts/wave0/ and flat reference/
 WDC-010: workflow-directory-contract — Manifest includes rerun phase entry (phases array gets rerun→phases/phase-rerun.md gate rerun-ready; manifest is inventory not routing table)
+
+# cli-inspect-output-conventions
+IOC-001: cli-inspect-output-conventions — inspect-wave0-output.mjs (flat dir, naming, metadata, sections, _INDEX.md, README.md, thin YAML)
+IOC-002: cli-inspect-output-conventions — inspect-wave1-output.mjs (0N-*.md per topic, metadata/sections, evidence-summary, question-list, _INDEX.md wave1 entries)
+IOC-003: cli-inspect-output-conventions — inspect-wave2-output.mjs (no 00_shared/, 00-cross-* format, artifacts/wave2/ triple, no backfill tokens)
 
 # bundle-start-from-here (delta)
 BUS-002: bundle-start-from-here — START_FROM_HERE.md documents flat reference/ and artifacts/wave0/

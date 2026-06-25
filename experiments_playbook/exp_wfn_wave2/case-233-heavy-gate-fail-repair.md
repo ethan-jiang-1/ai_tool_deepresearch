@@ -62,19 +62,19 @@ cat > $B/rb_status.json << 'EOF'
 {"current_mode":"execution","state":"in_progress","current_gate":"wave2_complete","next_gate":"hitl2_recorded"}
 EOF
 
-mkdir -p $B/reference/01_test-topic
+mkdir -p $B/artifacts/wave0/01_test-topic
 mkdir -p $B/artifacts/wave1/01_test-topic $B/artifacts/wave2
 mkdir -p $B/seed_topics
 
 # Minimal post-wave1 data
-cat > $B/reference/01_test-topic/source.yaml << 'REFEOF'
+cat > $B/artifacts/wave0/01_test-topic/source.yaml << 'REFEOF'
 - url: "https://example.com/test"
   title: "Test Reference"
   retrieved_date: "2026-06-20"
   topic_tag: "01_test-topic"
 REFEOF
 
-cat > $B/reference/index.md << 'EOF'
+cat > $B/reference/_INDEX.md << 'EOF'
 # Reference Index
 - 01_test-topic: 1 reference
 EOF

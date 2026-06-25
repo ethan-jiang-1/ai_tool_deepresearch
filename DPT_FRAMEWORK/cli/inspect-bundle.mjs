@@ -10,7 +10,8 @@ import { join } from 'node:path';
 const REQUIRED = [
   'START_FROM_HERE.md', 'rb_plan.md', 'rb_profile.yaml',
   'rb_status.json', 'rb_queue.json', 'rb_trace.jsonl',
-  'seed_topics/', 'reference/', 'artifacts/wave1/', 'artifacts/wave2/',
+  'seed_topics/', 'reference/_INDEX.md', 'reference/README.md',
+  'artifacts/wave0/', 'artifacts/wave1/', 'artifacts/wave2/',
   '_cache/', 'final/',
 ];
 

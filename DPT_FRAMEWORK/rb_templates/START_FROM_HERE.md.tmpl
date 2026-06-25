@@ -11,7 +11,20 @@
 - rb_trace.jsonl   — 诊断日志 (JSON Lines, 追加式)
 
 ## 数据目录
-- seed_topics/  reference/  artifacts/  _cache/  final/
+
+- **seed_topics/** — 种子话题文件（01_<slug>.md ... 0N_<slug>.md）
+- **reference/** — 扁平 evidence 目录（无子目录）
+  - `00-shared-<slug>.md` — Wave 0 共享基础 reference（rich MD，一个 source 一个文件）
+  - `0N-<slug>.md` — Wave 1 topic 专属 reference（N = topic_registry 序号）
+  - `00-cross-<slug>.md` — Wave 2 跨 topic 发现 reference（可选）
+  - `_INDEX.md` — Canonical reference inventory table（8 列：ref_file, source_type, trust_level, tier, related_topic, source_layer, acceptance_status, date_landed）
+  - `README.md` — 人类导航
+- **artifacts/** — 阶段产物，按 wave 组织
+  - `wave0/<topic>/source.yaml` — thin YAML source 列表
+  - `wave1/<topic>/` — evidence-summary.md + question-list.md
+  - `wave2/` — synthesis.md + cross-topic-ledger.md + finding-index.yaml
+- **_cache/** — 可重建缓存，不是 authority
+- **final/** — 最终报告
 
 ## 规则
 - 当前 run 的 truth 只来自本 bundle 的控制文件、数据目录和 trace。

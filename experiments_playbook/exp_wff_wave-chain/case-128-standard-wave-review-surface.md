@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: wff-wave-chain
 case: case-128-standard-wave-review-surface
 weight: light
-case_goal: "Prove that the Wave0→Wave1→Wave2 review surface is visible in Markdown — reference metadata, skeleton summaries, cross-topic synthesis, and human review checklist are all readable without reading JS."
+case_goal: "Prove that the Wave0→Wave1→Wave2 review surface is visible in Markdown — reference metadata, evidence summaries, cross-topic synthesis, and human review checklist are all readable without reading JS."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -14,31 +14,19 @@ verdict: trace-jsonl
 
 ## Execution Contract
 
-由 coding agent 在真实 disposable experiment bundle 中执行。所有审查内容在 Markdown 正文中；thin driver 只做 bundle 创建、fixture 写入、gate 调用、trace 记录。不依赖 live AI generation。
+由 coding agent 在真实 disposable experiment bundle 中执行。所有审查内容在 Markdown 正文中；thin driver 只做 bundle 创建、fixture 写入、gate 调用、trace 记录。
 
 # case-128-standard-wave-review-surface
 
 ## Expected Runtime Path
 
 1. 创建 disposable bundle + pre-seed 完整 Wave0/Wave1 artifacts（3 topics）
-2. 展示 Wave0 Reference Metadata Table（url, title, retrieved_date, topic_tag）
-3. 展示 Wave1 Skeleton Summary（per-topic key dimensions and open questions）
-4. 写入 fixed cross-topic synthesis（含 valid Markdown links），展示合成全文
-5. 运行 wave2-complete gate → pass，展示 inspect 输出
-6. 展示 Human Review Checklist（语义维度：reference 真实性、引用准确性、placeholder 清晰度、cross-topic pattern 质量）
+2. 展示 Wave0 Reference Metadata（_INDEX.md table + 00-shared-*.md）
+3. 展示 Wave1 Evidence + Question Lists
+4. 写入 cross-topic synthesis（含 valid Markdown links），展示合成全文
+5. 运行 wave2-complete gate → pass
+6. Human Review Checklist
 7. 从 trace 裁决 + cleanup
-
----
-
-## Case Goal
-
-证明 review surface 的完整性：
-1. **Reference metadata 可审**：url/title/retrieved_date/topic_tag 在 Markdown 表中摊开，人类 reviewer 可判断 reference 是否真实、是否 credible
-2. **Skeleton 可读**：每个 topic 的关键维度和 open questions 可见
-3. **Synthesis 可追溯**：合成全文 + 引用链表，每条 claim 都能追溯到 Wave0/Wave1 artifact
-4. **Human checklist 覆盖语义维度**：gate 查不到的东西（reference 真实性、citation 准确性、pattern 质量）由人类判断
-
-所有内容在 playbook Markdown 正文中，不依赖 JS 渲染或 live AI。
 
 ---
 
@@ -52,140 +40,282 @@ echo "Bundle: $B"
 # Validate
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
 
+# Write topic_registry (3 topics, YAML frontmatter)
+cat > $B/rb_plan.md << 'EOF'
+---
+plan_basename: w2_review
+derived_topic_count: 3
+topic_registry:
+  - id: t1
+    slug: topic-a
+    title: AI Safety Landscape
+  - id: t2
+    slug: topic-b
+    title: AI Policy Governance
+  - id: t3
+    slug: topic-c
+    title: Technical Alignment Methods
+---
+# w2_review Plan
+EOF
+
 # Set wave2 status
 cat > $B/rb_status.json << 'EOF'
-{
-  "current_mode": "execution",
-  "state": "in_progress",
-  "current_gate": "wave2_complete",
-  "next_gate": "hitl2_recorded"
-}
+{"current_mode":"execution","state":"in_progress","current_gate":"wave2_complete","next_gate":"hitl2_recorded"}
 EOF
 
-# Pre-seed Wave0: reference metadata for 3 topics
-mkdir -p $B/reference/topic-a $B/reference/topic-b $B/reference/topic-c
+# Pre-seed Wave0: artifacts/wave0/ thin YAML for 3 topics
+for slug in topic-a topic-b topic-c; do
+  mkdir -p $B/artifacts/wave0/$slug
+done
 
-cat > $B/reference/index.md << 'EOF'
-# Reference Index
-- topic-a (AI Safety): 2 refs — landscape overview + alignment taxonomy
-- topic-b (AI Policy): 2 refs — EU AI Act + international governance
-- topic-c (Technical Alignment): 2 refs — scalable oversight + interpretability survey
-EOF
-
-cat > $B/reference/topic-a/source.yaml << 'EOF'
+cat > $B/artifacts/wave0/topic-a/source.yaml << 'EOF'
 - url: "https://arxiv.org/abs/2601.12345"
   title: "AI Safety Landscape: A Systematic Review of Research Directions in 2025-2026"
   retrieved_date: "2026-06-15"
   topic_tag: "topic-a"
-  notes: "Comprehensive taxonomy: technical alignment, policy governance, societal impact"
 - url: "https://www.alignmentforum.org/posts/2026/survey"
   title: "Taxonomy of Alignment Approaches: From RLHF to Constitutional AI"
   retrieved_date: "2026-06-16"
   topic_tag: "topic-a"
 EOF
 
-cat > $B/reference/topic-b/source.yaml << 'EOF'
+cat > $B/artifacts/wave0/topic-b/source.yaml << 'EOF'
 - url: "https://eur-lex.europa.eu/eli/reg/2026/1689"
   title: "EU AI Act: Implementation Guidelines and Compliance Framework"
   retrieved_date: "2026-06-12"
   topic_tag: "topic-b"
-  notes: "Covers risk categories, conformity assessments, and enforcement mechanisms"
 - url: "https://www.oecd.org/digital/ai-policy-observatory-2026"
   title: "OECD AI Policy Observatory: International Governance Coordination Report"
   retrieved_date: "2026-06-14"
   topic_tag: "topic-b"
-  notes: "Comparative analysis of AI governance frameworks across 38 member countries"
 EOF
 
-cat > $B/reference/topic-c/source.yaml << 'EOF'
+cat > $B/artifacts/wave0/topic-c/source.yaml << 'EOF'
 - url: "https://arxiv.org/abs/2603.67890"
   title: "Scalable Oversight: Empirical Progress and Open Challenges"
   retrieved_date: "2026-06-17"
   topic_tag: "topic-c"
-  notes: "Reviews debate, recursive reward modeling, and iterated amplification results"
 - url: "https://distill.pub/2026/interpretability-mechanistic"
   title: "Mechanistic Interpretability: A Practical Survey of Tools and Methods"
   retrieved_date: "2026-06-18"
   topic_tag: "topic-c"
-  notes: "Covers sparse autoencoders, probing classifiers, and activation patching"
 EOF
 
-# Pre-seed Wave1: skeleton artifacts for 3 topics
-mkdir -p $B/artifacts/wave1/topic-a $B/artifacts/wave1/topic-b $B/artifacts/wave1/topic-c
+# Pre-seed reference/ with _INDEX.md + README.md + 00-shared-*.md
+cat > $B/reference/_INDEX.md << 'EOF'
+# Reference Index
+| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 00-shared-ai-safety-landscape.md | secondary | practitioner | Tier 2 | topic-a | wave0_foundation | accepted | 2026-06-15 |
+| 00-shared-ai-policy.md | secondary | official | Tier 2 | topic-b | wave0_foundation | accepted | 2026-06-12 |
+| 00-shared-technical-alignment.md | secondary | academic | Tier 2 | topic-c | wave0_foundation | accepted | 2026-06-17 |
+EOF
 
-cat > $B/artifacts/wave1/topic-a/skeleton.md << 'ENDOFSKEL'
+cat > $B/reference/README.md << 'EOF'
+# Reference Evidence
+Flat reference directory with 3 shared foundation sources covering AI safety landscape, policy governance, and technical alignment.
+EOF
+
+cat > $B/reference/00-shared-ai-safety-landscape.md << 'EOF'
+# AI Safety Landscape Overview
+- source_url: https://arxiv.org/abs/2601.12345
+- acceptance_status: accepted
+- source_type: secondary
+- tier: Tier 2
+- evidence_role: foundation
+- trust_level: practitioner
+- why_it_matters: Provides taxonomy spanning technical, policy, and societal dimensions.
+- accessed_at: 2026-06-15
+- related_topic: topic-a
+
+## Key Facts
+- AI safety research spans technical alignment, policy governance, and societal impact.
+- Multi-stakeholder coordination is emerging as a key theme.
+
+## Core Content Capture
+Comprehensive taxonomy of AI safety research directions.
+
+## Relevance To This Research
+Foundation for topic-a investigation.
+
+## Quotable Terms / Concepts
+- "The gap between regulatory readiness and technical maturity is the central tension in AI safety"
+
+## Risks And Limitations
+- Survey-level overview; individual dimensions not deeply analyzed.
+EOF
+
+cat > $B/reference/00-shared-ai-policy.md << 'EOF'
+# AI Policy Governance
+- source_url: https://eur-lex.europa.eu/eli/reg/2026/1689
+- acceptance_status: accepted
+- source_type: secondary
+- tier: Tier 2
+- evidence_role: foundation
+- trust_level: official
+- why_it_matters: Documents regulatory frameworks shaping AI safety.
+- accessed_at: 2026-06-12
+- related_topic: topic-b
+
+## Key Facts
+- EU AI Act creates risk-based compliance framework.
+- OECD covers 38 member countries' governance approaches.
+
+## Core Content Capture
+Overview of international AI governance frameworks.
+
+## Relevance To This Research
+Foundation for topic-b investigation.
+
+## Quotable Terms / Concepts
+- "Policies assume oversight capabilities that don't yet exist at scale"
+
+## Risks And Limitations
+- Rapidly evolving regulatory landscape; documents may become outdated.
+EOF
+
+cat > $B/reference/00-shared-technical-alignment.md << 'EOF'
+# Technical Alignment Methods
+- source_url: https://arxiv.org/abs/2603.67890
+- acceptance_status: accepted
+- source_type: secondary
+- tier: Tier 2
+- evidence_role: foundation
+- trust_level: academic
+- why_it_matters: Surveys empirical progress in alignment techniques.
+- accessed_at: 2026-06-17
+- related_topic: topic-c
+
+## Key Facts
+- Scalable oversight approaches include debate, RRM, and iterated amplification.
+- Mechanistic interpretability tools include SAEs, probing, and activation patching.
+
+## Core Content Capture
+Survey of technical alignment methods and their empirical progress.
+
+## Relevance To This Research
+Foundation for topic-c investigation.
+
+## Quotable Terms / Concepts
+- "Scalability to frontier models remains an open challenge"
+
+## Risks And Limitations
+- Field is rapidly evolving; empirical results may be superseded.
+EOF
+
+# Pre-seed Wave1: evidence-summary + question-list for 3 topics
+for slug in topic-a topic-b topic-c; do
+  mkdir -p $B/artifacts/wave1/$slug
+  cat > $B/artifacts/wave1/$slug/evidence-summary.md << EVIDEOF
+## Key Findings
+1. $slug research shows growing convergence between technical and policy dimensions [Source](https://example.com/${slug})
+2. Multi-stakeholder coordination is critical for effective governance.
+EVIDEOF
+  cat > $B/artifacts/wave1/$slug/question-list.md << QLEOF
+## Topic Investigation Targets
+1. What is the current state of ${slug}?
+## Question Reconciliation
+Resolved Q1 with Wave0 evidence.
+## Emergent Question Protocol
+None.
+## Exploration / Exploitation Decision
+Proceed to Wave2.
+QLEOF
+done
+
+# Write reference/{topic}-*.md for each topic (wave1 gate count_floor)
+for slug in topic-a topic-b topic-c; do
+  cat > $B/reference/${slug}-deepening.md << REFFILE
+# Deepening: $slug
+- source_url: https://example.com/${slug}-deep
+- acceptance_status: accepted
+- source_type: primary
+- tier: Tier 2
+- evidence_role: primary_topic_reference
+- trust_level: academic
+- why_it_matters: Deepening evidence for ${slug}.
+- accessed_at: 2026-06-26
+- related_topic: ${slug}
+
+## Key Facts
+- Key finding for ${slug}.
+## Core Content Capture
+Deepening analysis for ${slug}.
+## Relevance To This Research
+Directly supports ${slug} investigation.
+## Quotable Terms / Concepts
+- "Key insight"
+## Risks And Limitations
+- Single source.
+REFFILE
+done
+
+# Pre-seed seed_topics for 3 topics
+mkdir -p $B/seed_topics
+for slug in topic-a topic-b topic-c; do
+  id=$(echo $slug | sed 's/topic-/t/')
+  num=$(echo $slug | sed 's/topic-//' | cut -c1)
+  cat > $B/seed_topics/$slug.md << SEEDEOF
 ---
-slug: topic-a
-title: AI Safety Landscape Skeleton
-capability: foundation-placeholder
+id: $id
+slug: $slug
+title: Topic $num
 ---
-
-# AI Safety Landscape: Foundation Skeleton
-
+# Topic $num
 ## Key Dimensions
-- Technical alignment research maturity
-- Policy governance landscape
-- Multi-stakeholder coordination
-
+- Dimension 1
+## Known Premises
+- Premise 1
 ## Open Questions
-- How mature is the empirical evidence base for each alignment approach?
-- What are the key points of friction between technical and policy communities?
-- Which organizations are driving the most impactful safety research?
+- Question 1
+SEEDEOF
+done
 
-## References
-- [AI Safety Landscape Review](../../reference/topic-a/source.yaml)
-- [Alignment Taxonomy](../../reference/topic-a/source.yaml)
-ENDOFSKEL
+# Pre-seed cross-topic-ledger.md + finding-index.yaml
+mkdir -p $B/artifacts/wave2
+cat > $B/artifacts/wave2/cross-topic-ledger.md << 'EOF'
+## Cross-Topic Scan Matrix
+| Topic Pair | Signal | Strength |
+|-----------|--------|----------|
+| a↔b | Technical-policy convergence | Strong |
+| a↔c | Measurement as cross-cutting challenge | Strong |
+| b↔c | Regulatory-technical gap | Moderate |
+## Wave1 Legacy Questions
+- How mature is empirical evidence?
+- How effective are enforcement mechanisms?
+## Cross-Topic Resolutions
+W2F-001: Technical-policy convergence confirmed across all three topics.
+W2F-002: Measurement is the central cross-cutting challenge.
+## Emergent Cross-Topic Questions
+W2F-003: Coordination gap between industry, academia, and policy.
+## Exploration Decisions
+W2F-003 → defer to post-foundation exploration.
+## HITL2 Handoff
+Foundation phase complete. W2F-003 flagged for human review.
+EOF
 
-cat > $B/artifacts/wave1/topic-b/skeleton.md << 'ENDOFSKEL'
----
-slug: topic-b
-title: AI Policy Governance Skeleton
-capability: foundation-placeholder
----
+cat > $B/artifacts/wave2/finding-index.yaml << 'EOF'
+- finding_id: W2F-001
+  category: cross_topic_resolution
+  statement: "Technical-policy convergence confirmed across all three topics."
+  sources: ["../wave0/topic-a/source.yaml", "../wave0/topic-b/source.yaml"]
+  confidence: high
+  decision: use_existing_evidence
+- finding_id: W2F-002
+  category: cross_topic_resolution
+  statement: "Measurement is the central cross-cutting challenge."
+  sources: ["../wave0/topic-c/source.yaml"]
+  confidence: high
+  decision: use_existing_evidence
+- finding_id: W2F-003
+  category: emergent
+  statement: "Coordination gap between industry, academia, and policy."
+  sources: []
+  confidence: medium
+  decision: defer_to_hitl2
+EOF
 
-# AI Policy Governance: Foundation Skeleton
-
-## Key Dimensions
-- EU AI Act implementation timeline
-- International governance coordination mechanisms
-- Enforcement and compliance challenges
-
-## Open Questions
-- How effective are current enforcement mechanisms?
-- What gaps exist between regulatory frameworks and technical capability advances?
-- How do different jurisdictions coordinate on cross-border AI risks?
-
-## References
-- [EU AI Act Implementation](../../reference/topic-b/source.yaml)
-- [OECD Policy Observatory](../../reference/topic-b/source.yaml)
-ENDOFSKEL
-
-cat > $B/artifacts/wave1/topic-c/skeleton.md << 'ENDOFSKEL'
----
-slug: topic-c
-title: Technical Alignment Methods Skeleton
-capability: foundation-placeholder
----
-
-# Technical Alignment Methods: Foundation Skeleton
-
-## Key Dimensions
-- Scalable oversight approaches
-- Mechanistic interpretability tools
-- Robustness and adversarial testing
-
-## Open Questions
-- Which interpretability methods scale to frontier models?
-- How do we measure alignment progress quantitatively?
-- What are the most promising directions for scalable oversight?
-
-## References
-- [Scalable Oversight Survey](../../reference/topic-c/source.yaml)
-- [Mechanistic Interpretability Survey](../../reference/topic-c/source.yaml)
-ENDOFSKEL
-
-# Record trace events for wave0 and wave1 completion (pre-seeded)
 echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave0_completion"}' >> $B/rb_trace.jsonl
 echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave1_completion"}' >> $B/rb_trace.jsonl
 
@@ -193,191 +323,117 @@ echo "=== Artifact tree ==="
 find $B/reference $B/artifacts -type f | sort
 ```
 
-预期：bundle 创建，3 个 topic 的 Wave0 reference 和 Wave1 skeleton 全部就位。
+预期：bundle 创建，3 个 topic 的 Wave0/Wave1 全部就位。
 
 ---
 
 ## Step 2: Wave0 Reference Metadata Table
 
-以下是从 `reference/*/source.yaml` 提取的 reference metadata，供人类 reviewer 审查 reference 的真实性和质量。
+以下是从 `reference/_INDEX.md` 和 `artifacts/wave0/*/source.yaml` 提取的 reference metadata：
 
-| # | Topic | URL | Title | Retrieved Date | Notes |
-|---|-------|-----|-------|---------------|-------|
-| 1 | topic-a (AI Safety) | `https://arxiv.org/abs/2601.12345` | AI Safety Landscape: A Systematic Review of Research Directions in 2025-2026 | 2026-06-15 | Comprehensive taxonomy: technical alignment, policy governance, societal impact |
-| 2 | topic-a (AI Safety) | `https://www.alignmentforum.org/posts/2026/survey` | Taxonomy of Alignment Approaches: From RLHF to Constitutional AI | 2026-06-16 | — |
-| 3 | topic-b (AI Policy) | `https://eur-lex.europa.eu/eli/reg/2026/1689` | EU AI Act: Implementation Guidelines and Compliance Framework | 2026-06-12 | Covers risk categories, conformity assessments, and enforcement mechanisms |
-| 4 | topic-b (AI Policy) | `https://www.oecd.org/digital/ai-policy-observatory-2026` | OECD AI Policy Observatory: International Governance Coordination Report | 2026-06-14 | Comparative analysis of AI governance frameworks across 38 member countries |
-| 5 | topic-c (Technical) | `https://arxiv.org/abs/2603.67890` | Scalable Oversight: Empirical Progress and Open Challenges | 2026-06-17 | Reviews debate, recursive reward modeling, and iterated amplification results |
-| 6 | topic-c (Technical) | `https://distill.pub/2026/interpretability-mechanistic` | Mechanistic Interpretability: A Practical Survey of Tools and Methods | 2026-06-18 | Covers sparse autoencoders, probing classifiers, and activation patching |
-
-> **Reviewer 注意**：以上 URL 均为 example/illustrative domains（`arxiv.org`, `alignmentforum.org`, `eur-lex.europa.eu`, `oecd.org`, `distill.pub`），在实际 research run 中应由 Agent 从真实搜索结果填入。当前 playbook 使用固定 URL 演示 review surface 的结构——真实运行时的 URL 应指向实际检索到的网页/论文。
+| # | Topic | URL | Title | Retrieved Date |
+|---|-------|-----|-------|---------------|
+| 1 | topic-a | arxiv.org/abs/2601.12345 | AI Safety Landscape Review | 2026-06-15 |
+| 2 | topic-a | alignmentforum.org | Taxonomy of Alignment Approaches | 2026-06-16 |
+| 3 | topic-b | eur-lex.europa.eu | EU AI Act Implementation | 2026-06-12 |
+| 4 | topic-b | oecd.org | OECD AI Policy Observatory | 2026-06-14 |
+| 5 | topic-c | arxiv.org/abs/2603.67890 | Scalable Oversight Survey | 2026-06-17 |
+| 6 | topic-c | distill.pub | Mechanistic Interpretability Survey | 2026-06-18 |
 
 ---
 
-## Step 3: Wave1 Skeleton Summary
+## Step 3: Wave1 Evidence Summary
 
-以下是从 `artifacts/wave1/*/skeleton.md` 提取的 per-topic skeleton 摘要。
-
-| Topic | Key Dimensions | Open Questions Count | Placeholder Marker |
-|-------|---------------|---------------------|-------------------|
-| topic-a (AI Safety) | Technical alignment maturity, Policy governance landscape, Multi-stakeholder coordination | 3 | `foundation-placeholder` ✓ |
-| topic-b (AI Policy) | EU AI Act timeline, International coordination, Enforcement challenges | 3 | `foundation-placeholder` ✓ |
-| topic-c (Technical) | Scalable oversight, Mechanistic interpretability, Robustness testing | 3 | `foundation-placeholder` ✓ |
-
-所有 skeleton 均通过 `pattern_match` 检测（含 `capability: foundation-placeholder`），不含 false completion claims。
-
----
-
-## Step 4: 写入 fixed cross-topic synthesis + 展示全文
-
-以下是固定 synthesis（不依赖 live AI），从 3 个 topic 的 Wave0/Wave1 artifact 推导 cross-topic patterns。
+每个 topic 有 evidence-summary.md + question-list.md（4-section），在 `artifacts/wave1/<topic>/`。
 
 ```bash
-mkdir -p $B/artifacts/wave2
+echo "=== Wave1 per-topic artifacts ==="
+for slug in topic-a topic-b topic-c; do
+  echo "--- $slug ---"
+  echo "  evidence-summary.md: $(head -1 $B/artifacts/wave1/$slug/evidence-summary.md 2>/dev/null || echo missing)"
+  echo "  question-list.md: $(grep -c '##' $B/artifacts/wave1/$slug/question-list.md 2>/dev/null || echo 0) sections"
+done
+```
 
+---
+
+## Step 4: 写入 cross-topic synthesis + 展示全文
+
+```bash
 cat > $B/artifacts/wave2/synthesis.md << 'ENDOFSYN'
 # Cross-Topic Synthesis: AI Safety Research Landscape
 
+W2F-001 identifies technical-policy convergence as the dominant pattern.
+W2F-002 confirms measurement is the central cross-cutting challenge.
+W2F-003 flags the coordination gap for HITL2 review.
+
 ## Pattern 1: Technical-Policy Convergence
 
-The [AI Safety Landscape skeleton](../wave1/topic-a/skeleton.md) identifies
-multi-stakeholder coordination as a key dimension. The [EU AI Act implementation
-guide](../../reference/topic-b/source.yaml) provides the regulatory framework,
-while the [OECD Policy Observatory report](../../reference/topic-b/source.yaml)
-documents how 38 countries are coordinating. Meanwhile, the [scalable oversight
-survey](../../reference/topic-c/source.yaml) shows that technical methods
-(debate, RRM, iterated amplification) are maturing but not yet deployment-ready.
+Based on the [topic-a evidence](../wave1/topic-a/evidence-summary.md) and
+[topic-b sources](../wave0/topic-b/source.yaml), regulatory frameworks
+are evolving faster than technical oversight capabilities.
 
-**Synthesis claim**: The gap between regulatory readiness (Wave0/Wave1 topic-b)
-and technical maturity (Wave0/Wave1 topic-c) is the central tension in AI safety
-governance. Policies assume oversight capabilities that don't yet exist at scale.
+The [topic-c evidence](../wave1/topic-c/evidence-summary.md) confirms that
+scalable oversight methods are maturing but not yet deployment-ready.
 
 ## Pattern 2: Measurement as Cross-Cutting Challenge
 
-All three topics converge on measurement:
-- [topic-a skeleton](../wave1/topic-a/skeleton.md) asks "How mature is the
-  empirical evidence base?"
-- [topic-b skeleton](../wave1/topic-b/skeleton.md) asks "How effective are
-  current enforcement mechanisms?"
-- [topic-c skeleton](../wave1/topic-c/skeleton.md) asks "How do we measure
-  alignment progress quantitatively?"
-
-The [mechanistic interpretability survey](../../reference/topic-c/source.yaml)
-offers tools (SAEs, probing, activation patching) that could serve as the
-measurement substrate, but their scalability to frontier models remains an
-[open question identified in the Wave1 skeleton](../wave1/topic-c/skeleton.md).
+All three topics converge on measurement, as documented in:
+- [topic-a question list](../wave1/topic-a/question-list.md)
+- [topic-b question list](../wave1/topic-b/question-list.md)
+- [topic-c question list](../wave1/topic-c/question-list.md)
 
 ## Pattern 3: Coordination Gap
 
-The [AI Safety Landscape review](../../reference/topic-a/source.yaml) taxonomy
-(technical/policy/societal) maps cleanly onto the three topics, but the
-skeletons reveal a gap: no existing coordination mechanism bridges all three.
-The [OECD report](../../reference/topic-b/source.yaml) focuses on
-government-to-government coordination; the [alignment taxonomy](
-../../reference/topic-a/source.yaml) focuses on technical communities. Neither
-addresses the industry-academia-policy triangle directly.
+The [topic-a source YAML](../wave0/topic-a/source.yaml) taxonomy maps
+cleanly across dimensions, but evidence reveals a gap: no existing
+mechanism bridges all three stakeholder groups simultaneously.
 
 ## Gaps and Future Work
 
-Foundation phase has identified three cross-cutting patterns but has not:
-- Quantified the technical-policy gap with empirical data
-- Assessed specific measurement proposals against frontier model requirements
-- Evaluated existing coordination mechanisms for multi-stakeholder effectiveness
-
-These gaps are expected to be addressed in future expansion waves.
+Foundation phase has identified cross-cutting patterns but has not quantified
+the technical-policy gap or evaluated coordination mechanisms. These are
+deferred to post-foundation exploration.
 ENDOFSYN
 
 echo "=== Synthesis Content ==="
 cat $B/artifacts/wave2/synthesis.md
 ```
 
-### Reference Chain Table
-
-以下是从 synthesis 中解析出的所有 Markdown links 及其解析状态：
-
-| Link Text | Target Path | Resolved To | Exists |
-|-----------|-------------|-------------|--------|
-| AI Safety Landscape skeleton | `../wave1/topic-a/skeleton.md` | `artifacts/wave1/topic-a/skeleton.md` | ✓ |
-| EU AI Act implementation guide | `../../reference/topic-b/source.yaml` | `reference/topic-b/source.yaml` | ✓ |
-| OECD Policy Observatory report | `../../reference/topic-b/source.yaml` | `reference/topic-b/source.yaml` | ✓ |
-| scalable oversight survey | `../../reference/topic-c/source.yaml` | `reference/topic-c/source.yaml` | ✓ |
-| topic-a skeleton | `../wave1/topic-a/skeleton.md` | `artifacts/wave1/topic-a/skeleton.md` | ✓ |
-| topic-b skeleton | `../wave1/topic-b/skeleton.md` | `artifacts/wave1/topic-b/skeleton.md` | ✓ |
-| topic-c skeleton | `../wave1/topic-c/skeleton.md` | `artifacts/wave1/topic-c/skeleton.md` | ✓ |
-| mechanistic interpretability survey | `../../reference/topic-c/source.yaml` | `reference/topic-c/source.yaml` | ✓ |
-| open question identified in the Wave1 skeleton | `../wave1/topic-c/skeleton.md` | `artifacts/wave1/topic-c/skeleton.md` | ✓ |
-| AI Safety Landscape review | `../../reference/topic-a/source.yaml` | `reference/topic-a/source.yaml` | ✓ |
-| OECD report | `../../reference/topic-b/source.yaml` | `reference/topic-b/source.yaml` | ✓ |
-| alignment taxonomy | `../../reference/topic-a/source.yaml` | `reference/topic-a/source.yaml` | ✓ |
-
-> All 12 Markdown links resolve to existing files. `cross_field(markdown_link_resolution)` 应返回 `valid: 12`。
-
 ---
 
 ## Step 5: 运行 wave2-complete gate → pass
 
 ```bash
-# Record trace event
 echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave2_completion"}' >> $B/rb_trace.jsonl
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE_OUTPUT"
 
-echo "=== Inspect (cross_field result) ==="
-echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('next:',j.check.next);console.log('inspect:');j.inspect.forEach((x,i)=>console.log('  ['+i+']',x))})"
-
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
-echo "gate: wave2-complete | passed: $PASSED | next: $NEXT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'review surface: 3-topic cross-topic synthesis with 12 valid references'})})"
+echo "gate: wave2-complete | passed: $PASSED"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'review surface: 3-topic synthesis with valid references'})})"
 ```
 
-预期：`check.passed: true`，`check.next: phases/phase-hitl2.md`。`cross_field` inspect 报告 `valid: 12`，`dead: 0`。
+预期：`check.passed: true`。
 
 ---
 
 ## Step 6: Human Review Checklist
 
-> Reviewer 对照以上 Step 2-5 的内容，逐项判断。**这是 Wave2 synthesis 完成后、进入 HITL2 前的关键审查点。**
-
-### Reference Authenticity
-
-- [ ] Do reference URLs point to real, credible sources? (In a real run, not this playbook's example URLs)
-- [ ] Do reference titles accurately describe the content at those URLs?
-- [ ] Are retrieved dates consistent with the research timeline?
-- [ ] Is there adequate coverage across topics? (≥1 reference per topic; 2 is better)
-
-### Citation Accuracy
-
-- [ ] Do all Markdown links in the synthesis point to the correct artifact files?
-- [ ] Do the synthesis claims follow logically from the cited Wave0/Wave1 artifacts?
-- [ ] Are there any claims that seem unsupported by the cited references?
-
-### Placeholder Clarity
-
-- [ ] Do all Wave1 skeletons clearly mark `capability: foundation-placeholder`?
-- [ ] Are the "Gaps and Future Work" sections honest about what the foundation phase did NOT cover?
-- [ ] Would a future expansion agent understand what work remains from reading these gaps?
-
-### Cross-Topic Pattern Quality
-
-- [ ] Are the identified cross-topic patterns genuine (supported by evidence from ≥2 topics)?
-- [ ] Are any patterns forced or superficial ("A mentions X, B mentions X, therefore pattern")?
-- [ ] Do the synthesis claims add value beyond restating individual topic findings?
-
-### Gate-Detectable Issues (for cross-check)
-
-- [ ] Are all 12 Markdown link targets confirmed to exist in the bundle?
-- [ ] Does `rb_status.json` show `current_gate: wave2_complete` and `next_gate: hitl2_recorded`?
+- [ ] Reference URLs point to real, credible sources?
+- [ ] Reference titles accurately describe content?
+- [ ] Retrieved dates consistent with research timeline?
+- [ ] All Markdown links in synthesis point to correct artifact files?
+- [ ] Synthesis claims follow logically from cited Wave0/Wave1 artifacts?
+- [ ] "Gaps and Future Work" section honest about what foundation phase did NOT cover?
 
 ---
 
 ## Step 7: 从 trace 裁决
 
-预期 1 条 `check` event，`passed: true`。
-
 ```bash
-echo "=== Trace evidence ==="
+echo "=== Trace ==="
 cat $B/_trace.jsonl | while read line; do
   echo "$line" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);if(j.gate){const icon=j.passed?'\x1b[32mPASS\x1b[0m':'\x1b[31mFAIL\x1b[0m';console.log(icon,j.gate,'|',j.detail)}})"
 done
@@ -388,14 +444,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ```
 
 
-## Step 8: 结果解读
-
-> 验证 3-topic Wave0→Wave2 review surface：
->   每个 wave 的 artifact 在 Markdown 中可见 → human checklist 可用。
-
-## Step 9: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
+## Step 8: Cleanup
 
 ```bash
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"

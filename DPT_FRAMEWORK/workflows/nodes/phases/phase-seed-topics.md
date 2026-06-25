@@ -15,7 +15,7 @@ suggested_context:
 
 ## 1. Stage Goal
 
-把 `rb_plan.md` frontmatter 的 `topic_registry` 物化为 `seed_topics/` 目录下的独立文件——每个 topic 一个 `{slug}.md`（`slug` 即 registry 中的 `slug` 字段值，已由 HITL1 编入 `{index}_` 编号前缀），含 YAML frontmatter（id/slug/title + V12 字段）和正文研究骨架。带序号前缀确保目录列表按 registry 顺序排列、方便跨 topic 引用。为 Wave0 的 reference collection 提供可追溯的 topic 入口。
+把 `rb_plan.md` frontmatter 的 `topic_registry` 物化为 `seed_topics/` 目录下的独立文件——每个 topic 一个 `{slug}.md`（文件名 = `topic.slug` + `.md`）。`id` 字段承载数字编号（如 `t1`、`01`），`slug` 为描述性短名（如 `official-stance`、`ai-safety`），两者分工：id 用于编号和排序，slug 用于人读和跨 wave 引用。每个文件含 YAML frontmatter（id/slug/title + must_answer/hypothesis/search_guardrails/evidence_route 等必需字段）和正文研究骨架。为 Wave0 的 reference collection 提供可追溯的 topic 入口。
 
 **`seed-topics-ready` 是结构+数量+一致性 gate，不是 topic 语义质量 gate。** 语义质量（topic 是否覆盖关键维度、是否与 research question 对齐）由 HITL1 阶段人类审查（`stop: yes`）负责。
 
@@ -29,7 +29,7 @@ suggested_context:
 
 ## 3. Allowed Actions — Queue-Driven 三阶段
 
-Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task，由 Phase Agent 直接执行（当前 wire value 为 `main-agent`；无外部 search，从 topic_registry 的结构化定义写为文件）。seed topic 文件 **不是笼统的标签**——它必须是能驱动后续 search 的决策级文件（对齐 V12 decompose-seed-topics 标准）。
+Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task，由 Phase Agent 直接执行（当前 wire value 为 `main-agent`；无外部 search，从 topic_registry 的结构化定义写为文件）。seed topic 文件 **不是笼统的标签**——它必须是能驱动后续 search 的决策级文件。
 
 ### 3.1 灌料 (Filling) — 首次进入 seed-topics
 
@@ -38,7 +38,7 @@ Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task�
 1. 读取 `rb_plan.md` frontmatter 的 `topic_registry`，确定 topic 集合及其数组顺序
 2. 为每个 topic 生成一个 task card JSON 文件，然后 enqueue：
 
-> **注意**：`topic.slug` 已含 `{index}_` 编号前缀（由 HITL1 在生成 topic_registry 时编入），文件名直接使用 `{topic.slug}.md`，不需二次拼接 index。
+> **注意**：文件名直接使用 `{topic.slug}.md`（`slug` 为描述性短名，不含编号前缀——编号由 `id` 字段承载）。不需二次拼接 index。
 
 **Task card JSON 模板（写入临时文件如 `/tmp/wfq-seed-{topic.slug}.json`）：**
 
@@ -72,9 +72,9 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue <bundle> --task /tmp/wfq-seed-{
 node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 ```
 
-**Seed Topic 文件结构（每个 `seed_topics/{slug}.md` 必须满足，slug 已含 index 前缀）：**
+**Seed Topic 文件结构（每个 `seed_topics/{slug}.md` 必须满足）：**
 
-文件名格式：`{slug}.md`，其中 `slug` 为 registry 中该 topic 的 `slug` 字段值。`slug` 必须已包含 `{index}_` 编号前缀（由 HITL1 在生成 topic_registry 时编入——`index` 为 1-based 位置，补零到 2 位：`01_`、`02_`、…）。文件名与 registry slug 直接对应，不做二次拼接。
+文件名格式：`{slug}.md`，其中 `slug` 为 registry 中该 topic 的 `slug` 字段值（描述性短名，如 `official-stance`）。文件名与 registry slug 直接对应，gate 校验 `filename_stem == registry_slug == frontmatter_slug`（三重一致）。编号由 `id` 字段承载（如 `t1`），不编入 slug。
 
 **frontmatter 使用 YAML 格式**（gate 通过 `parseMdFrontmatter()` 内部调 `parseYaml()` 解析，YAML 1.2 是 JSON 的超集——JSON frontmatter 同样合法）。frontmatter `slug` 必须与文件名 stem 完全一致（byte-for-byte）。
 

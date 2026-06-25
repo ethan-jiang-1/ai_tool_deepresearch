@@ -67,7 +67,7 @@ root_must_answer_set: ["验证 gate fail 检测 + repair 闭环"]
 research_profile: { depth: foundation, scope: "gate fail + repair test" }
 PROFEOF
 
-mkdir -p $B2/reference/topic-x $B2/reference/topic-y $B2/reference/topic-z
+mkdir -p $B2/artifacts/wave0/topic-x $B2/artifacts/wave0/topic-y $B2/artifacts/wave0/topic-z
 mkdir -p $B2/seed_topics
 ```
 
@@ -87,7 +87,7 @@ echo "seed_topics:" && ls $B2/seed_topics/
 
 ```bash
 # topic-x source.yaml (fixture)
-cat > $B2/reference/topic-x/source.yaml << 'EOF'
+cat > $B2/artifacts/wave0/topic-x/source.yaml << 'EOF'
 - url: "https://example.com/topic-x-ref-1"
   title: "Reference for Topic X"
   retrieved_date: "2026-06-23"
@@ -95,7 +95,7 @@ cat > $B2/reference/topic-x/source.yaml << 'EOF'
 EOF
 
 # topic-y source.yaml (fixture)
-cat > $B2/reference/topic-y/source.yaml << 'EOF'
+cat > $B2/artifacts/wave0/topic-y/source.yaml << 'EOF'
 - url: "https://example.com/topic-y-ref-1"
   title: "Reference for Topic Y"
   retrieved_date: "2026-06-23"
@@ -112,7 +112,7 @@ find $B2/reference -type f | sort
 ### Step A4: Gate — 预期 fail
 
 ```bash
-cat > $B2/reference/index.md << 'EOF'
+cat > $B2/reference/_INDEX.md << 'EOF'
 # Reference Index
 - topic-x: 1 reference
 - topic-y: 1 reference
@@ -136,7 +136,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 预期：
 - `check.passed: false`
-- inspect 含 3 条：`Missing file: reference/topic-z/source.yaml`、`Cannot read or parse YAML array from reference/topic-z/source.yaml`、`Count floor not met for reference/topic-z/source.yaml: 0 entries (threshold: 1)`
+- inspect 含 3 条：`Missing file: artifacts/wave0/topic-z/source.yaml`、`Cannot read or parse YAML array from artifacts/wave0/topic-z/source.yaml`、`Count floor not met for artifacts/wave0/topic-z/source.yaml: 0 entries (threshold: 1)`
 - routing.kind: `no_transition`
 
 ---
@@ -147,14 +147,14 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 ```bash
 # Continue from same bundle ($B2)
-cat > $B2/reference/topic-z/source.yaml << 'EOF'
+cat > $B2/artifacts/wave0/topic-z/source.yaml << 'EOF'
 - url: "https://example.com/topic-z-ref-1"
   title: "Reference for Topic Z (repaired)"
   retrieved_date: "2026-06-23"
   topic_tag: "topic-z"
 EOF
 
-cat > $B2/reference/index.md << 'EOF'
+cat > $B2/reference/_INDEX.md << 'EOF'
 # Reference Index
 - topic-x: 1 reference
 - topic-y: 1 reference
