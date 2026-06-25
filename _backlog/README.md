@@ -10,12 +10,13 @@ _backlog/
 ├── README.md                          # 本文件
 │
 ├── DONE-* ×10                         # 已完成/已归档的分析与决策记录
-├── todo-* ×9                          # 待设计/待实现的 TODO
+├── todo-* ×10                         # 待设计/待实现的 TODO
 │   ├── todo-evidence-extraction.md     #   证据提取（来源→结构化 reference，含干货）
 │   ├── todo-evidence-quality.md        #   证据质量评估——不够格就放弃
 │   ├── todo-explore-exploit.md         #   搜索收敛检测与方向决策
 │   ├── todo-final-output-eval.md       #   最终产物评估——不够格就自动 rerun
 │   ├── todo-rerun-incremental-node.md   #   HITL2 增量重跑节点（已进实施）
+│   ├── todo-plan-hostfile-sections.md  #   rb_plan.md 内部 Section 化 — Host File 设计（不改名）
 │   ├── todo-hooks-deferral.md          #   6 个 Boundary Hook（延后）
 │   ├── todo-phase-recover.md           #   模型失焦的状态恢复——兜底（低，parked）
 │   ├── todo-context-reground.md        #   长上下文定期重锚——预防（低，parked）
@@ -67,6 +68,7 @@ _backlog/
 | 7 | `todo-phase-recover.md` | **低（parked）** | 模型失焦时从 ground truth 重新定位并复活当前 phase（兜底层） | 无硬阻塞；与 context-reground 真相源对齐 |
 | 8 | `todo-context-reground.md` | **低（parked）** | 长上下文定期 reload 工程总图+root question，对抗 lost-in-the-middle（预防层） | 无硬阻塞；增强 tail anchoring，不取代 |
 | 9 | `todo-system-logging.md` | **中** | 系统日志/可观测性——统一 4 sink、激活死 logger、补 spec 要求却没写的事件、加 runId+读回工具 | 无硬阻塞；launch/排障前抬起。Phase 1 是纯激活死代码 |
+| 10 | `todo-plan-hostfile-sections.md` | **中** | `rb_plan.md` 内部 Section 化——不改文件名，用 `## Goal`/`## Constraints`/`## Progress`/`## Decisions` 把 plan 做成 host file。~15 文件改动（vs rename 的 ~80） | 不阻塞当前 change；结构定下来后越早做越省事 |
 
 ### 🔮 分析文档中标记但未建 TODO 的待办
 
