@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-132_h2_dec_*
-trace: dpt_disp_case-132_h2_dec_*/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-132_h2_dec_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -25,7 +25,7 @@ verdict: trace-jsonl
 3. 删除 decision brief → gate fail（inspect 指向缺失文件）
 4. 恢复 brief，删除 user_decision → gate fail（inspect 指向缺失字段）
 5. 填入非法 user_decision → gate fail（inspect 列出合法值）
-6. 从 `_logs/_logs/_trace.jsonl` 裁决（预期 1 pass + 3 fail）
+6. 从 `_logs/_trace.jsonl` 裁决（预期 1 pass + 3 fail）
 7. Cleanup
 
 ---
@@ -104,7 +104,7 @@ GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundl
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: hitl2-recorded | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'happy path — valid decision brief + profile + trace'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'happy path — valid decision brief + profile + trace'})})"
 ```
 
 预期：`check.passed: true`，`check.next: phases/phase-readiness.md`。
@@ -121,7 +121,7 @@ PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs che
 INSPECT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs inspect.0)
 echo "gate: hitl2-recorded | passed: $PASSED"
 echo "inspect: $INSPECT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'missing decision brief — expected fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'missing decision brief — expected fail'})})"
 ```
 
 预期：`check.passed: false`，inspect 指向缺失的 `decision-brief.md`。
@@ -155,7 +155,7 @@ PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs che
 INSPECT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs inspect.0)
 echo "gate: hitl2-recorded | passed: $PASSED"
 echo "inspect: $INSPECT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'empty user_decision — expected fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'empty user_decision — expected fail'})})"
 ```
 
 预期：`check.passed: false`，inspect 指向空 user_decision。
@@ -181,16 +181,16 @@ PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs che
 INSPECT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs inspect.0)
 echo "gate: hitl2-recorded | passed: $PASSED"
 echo "inspect: $INSPECT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'invalid enum — expected fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'invalid enum — expected fail'})})"
 ```
 
 预期：`check.passed: false`，inspect 列出合法枚举值。
 
-## Step 6: Verdict from `_logs/_logs/_trace.jsonl`
+## Step 6: Verdict from `_logs/_trace.jsonl`
 
 ```bash
 echo "=== Verdict ==="
-cat $B/_logs/_logs/_trace.jsonl | node -e "
+cat $B/_logs/_trace.jsonl | node -e "
 const fs = require('fs');
 const lines = fs.readFileSync(0, 'utf-8').trim().split('\n').filter(l => l);
 const checks = lines.map(l => JSON.parse(l)).filter(e => e.event === 'check');

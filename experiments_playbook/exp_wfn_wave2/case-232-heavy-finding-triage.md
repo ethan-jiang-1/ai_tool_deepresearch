@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-232_agql_w2_triage_
-trace: dpt_disp_case-232_agql_w2_triage_*/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-232_agql_w2_triage_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 req: WTS-002, WTS-003, WTS-008
 ---
@@ -413,13 +413,13 @@ node -e "const y=require('yaml'),f=require('fs');const i=y.parse(f.readFileSync(
 echo "=== Verify V4: 3 findings total ==="
 node -e "const y=require('yaml'),f=require('fs');const i=y.parse(f.readFileSync('$B/artifacts/wave2/finding-index.yaml','utf-8'));console.log(i.findings.length===3?'V4 PASS: 3 findings':'V4 FAIL: '+i.findings.length+' findings')"
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'finding triage: 1 resolution + 1 emergent + 1 exploit_search, no orphan'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'finding triage: 1 resolution + 1 emergent + 1 exploit_search, no orphan'})})"
 ```
 
 ## Final Verdict
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
 ```
 
 

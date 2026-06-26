@@ -9,7 +9,7 @@ agent_mode: native-subagent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-63_gs_identity
-trace: dpt_disp_case-63_gs_identity/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-63_gs_identity/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -232,7 +232,7 @@ import { readFileSync } from 'node:fs';
 
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
-const events = readFileSync(__dirname + '/_logs/_logs/_trace.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
+const events = readFileSync(__dirname + '/_logs/_trace.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
 const count = name => events.filter(e => e.event === name).length;
 
 // Basic counts

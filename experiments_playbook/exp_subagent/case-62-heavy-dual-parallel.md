@@ -9,7 +9,7 @@ agent_mode: native-subagent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-62_gs_medium
-trace: dpt_disp_case-62_gs_medium/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-62_gs_medium/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -231,7 +231,7 @@ import { readFileSync } from 'node:fs';
 
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
-const events = readFileSync(__dirname + '/_logs/_logs/_trace.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
+const events = readFileSync(__dirname + '/_logs/_trace.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
 const count = name => events.filter(e => e.event === name).length;
 const pass = count('agent_spawn_requested') === 2 && count('agent_runtime_started') === 2 && count('agent_result_ready') === 2 && count('agent_result_received') === 2 && count('result_schema_validated') === 2 && count('collect_result') === 2 && count('merge_complete') === 1;
 console.log(pass ? '\x1b[32mMEDIUM PASS\x1b[0m' : '\x1b[31mMEDIUM FAIL\x1b[0m');

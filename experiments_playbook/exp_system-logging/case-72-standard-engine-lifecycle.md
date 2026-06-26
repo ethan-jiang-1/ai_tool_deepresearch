@@ -9,7 +9,7 @@ agent_mode: native-subagent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_log_engine
-trace: dpt_disp_log_engine/_logs/_logs/_trace.jsonl
+trace: dpt_disp_log_engine/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 

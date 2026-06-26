@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-42_agq_medium
-trace: dpt_disp_case-42_agq_medium/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-42_agq_medium/_logs/_trace.jsonl
 verdict: trace-jsonl
 req: AGQ-006
 ---
@@ -63,7 +63,7 @@ import {
 
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_logs/_trace.jsonl', { consoleEcho: false });
 trace.traceInit('agq-playbook/medium', { source: 'agq-playbook/medium' });
 
 writeFileSync(__dirname + '/'done-1.json', '{"ok":true}\n');
@@ -109,7 +109,7 @@ import {
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_logs/_trace.jsonl', { consoleEcho: false });
 
 let queue = loadQueue(__dirname);
 queue = preempt(queue, makeItem({
@@ -154,7 +154,7 @@ import {
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_logs/_trace.jsonl', { consoleEcho: false });
 
 let queue = loadQueue(__dirname);
 const completed = complete(queue, { work_id: 'medium-1', receipt: 'json:done-1.json' }, __dirname);
@@ -188,7 +188,7 @@ import { loadQueue } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_logs/_trace.jsonl', { consoleEcho: false });
 
 const queue = loadQueue(__dirname);
 const projectionPath = __dirname + '/_cache/agentic-queue/current-task.md';
@@ -224,7 +224,7 @@ import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_logs/_trace.jsonl', { consoleEcho: false });
 const events = readFileSync(trace.traceFilePath(), 'utf-8').trim().split('\n').map(JSON.parse);
 const checks = events.filter((event) => event.event === 'check');
 const pass = checks.length >= 4 && checks.every((event) => event.passed === true);

@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-306_tworound_*
-trace: dpt_disp_case-306_tworound_*/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-306_tworound_*/_logs/_trace.jsonl
 verdict: filesystem
 agent_dependency: "This case depends on Agent writing ## 本轮重跑方向 sections and incrementing rerun_count. Verdict via filesystem checks (YAML + grep) — not gate-verifiable."
 ---
@@ -102,7 +102,7 @@ C=$(node -e "const fs=require('fs');const y=require('yaml');const p=y.parse(fs.r
 grep -q "action.*add" $B/seed_topics/03_economic.md || R1_OK=false
 grep -q "## 本轮重跑方向" $B/seed_topics/01_regulation.md || R1_OK=false
 echo "Round1: count=$C ok=$R1_OK"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'round1-delta',passed:$R1_OK,detail:'rerun_count=1 + direction hints'})})" $R1_OK
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'round1-delta',passed:$R1_OK,detail:'rerun_count=1 + direction hints'})})" $R1_OK
 ```
 
 ## Step 3: Round 2 — Agent updates rationale + direction
@@ -134,13 +134,13 @@ grep -q "exploratory_map" $B/seed_topics/01_regulation.md || R2_OK=false
 grep -q "## 本轮重跑方向" $B/seed_topics/02_industry.md || R2_OK=false
 [ -f $B/seed_topics/03_economic.md ] || R2_OK=false
 echo "Round2: count=$C ok=$R2_OK"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'round2-delta',passed:$R2_OK,detail:'rerun_count=2 + direction updated'})})" $R2_OK
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'round2-delta',passed:$R2_OK,detail:'rerun_count=2 + direction updated'})})" $R2_OK
 ```
 
 ## Step 4: Verdict
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/_logs/_logs/_trace.jsonl'))"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/_logs/_trace.jsonl'))"
 rm -rf $B
 ```
 

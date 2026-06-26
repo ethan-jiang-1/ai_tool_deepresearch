@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-122_w1_boundary_*
-trace: dpt_disp_case-122_w1_boundary_*/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-122_w1_boundary_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -24,7 +24,7 @@ verdict: trace-jsonl
 2. 写完整合法 wave1 产出 → gate pass
 3. 移除 evidence-summary.md → gate fail
 4. 写残缺 question-list.md（缺 section）→ gate fail
-5. 从 `_logs/_logs/_trace.jsonl` 裁决（预期 3 条 check：1 pass + 2 fail）
+5. 从 `_logs/_trace.jsonl` 裁决（预期 3 条 check：1 pass + 2 fail）
 6. Cleanup
 
 ---
@@ -212,7 +212,7 @@ find $B/artifacts/wave1 $B/reference -type f | sort
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B --current-node phases/phase-wave1.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,detail:'full valid wave1 artifacts pass'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,detail:'full valid wave1 artifacts pass'})})"
 ```
 
 预期：`check.passed: true`。
@@ -228,7 +228,7 @@ ls $B/artifacts/wave1/topic-a/
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B --current-node phases/phase-wave1.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,expected:false,detail:'missing evidence-summary should fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,expected:false,detail:'missing evidence-summary should fail'})})"
 ```
 
 预期：`check.passed: false`，`inspect` 指出缺失 `evidence-summary.md`。
@@ -257,7 +257,7 @@ cat $B/artifacts/wave1/topic-a/question-list.md
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B --current-node phases/phase-wave1.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,expected:false,detail:'incomplete question-list sections should fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,expected:false,detail:'incomplete question-list sections should fail'})})"
 ```
 
 预期：`check.passed: false`，`inspect` 指出 question-list 缺少必需 section。
@@ -267,7 +267,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 预期 3 条 `check` event：1 pass（Step 2）+ 2 fail（Step 3, 4）。
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
 ```
 
 

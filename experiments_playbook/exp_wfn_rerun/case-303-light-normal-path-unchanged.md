@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-303_normal_*
-trace: dpt_disp_case-303_normal_*/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-303_normal_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -58,20 +58,20 @@ PASSED=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.passed
 NEXT=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.next)
 echo "hitl2 passed=$PASSED next=$NEXT"
 OK=false; [ "$PASSED" = "true" ] && [ "$NEXT" = "phases/phase-readiness.md" ] && OK=true
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'hitl2-normal-path',passed:$OK,detail:'normal path → readiness'})})" $OK
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl2-normal-path',passed:$OK,detail:'normal path → readiness'})})" $OK
 
 PR=$(node -e "import('$REPO_ROOT/DPT_FRAMEWORK/engine/ask-next.mjs').then(async m=>{const r=m.resolveNodeTransitionDetailed('$REPO_ROOT/DPT_FRAMEWORK/workflows/transitions.chain.json','phases/phase-hitl2.md','passed');console.log(JSON.stringify(r));})" 2>/dev/null)
 PK=$(echo "$PR" | node experiments_env/shared/extract-field.mjs kind)
 PN=$(echo "$PR" | node experiments_env/shared/extract-field.mjs next)
 echo "chain passed → kind=$PK next=$PN"
 OK=false; [ "$PK" = "next" ] && [ "$PN" = "phases/phase-readiness.md" ] && OK=true
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'chain-passed-unchanged',passed:$OK,detail:'passed → readiness'})})" $OK
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'chain-passed-unchanged',passed:$OK,detail:'passed → readiness'})})" $OK
 ```
 
 ## Step 3: Verdict
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/_logs/_logs/_trace.jsonl'))"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/_logs/_trace.jsonl'))"
 rm -rf $B
 ```
 

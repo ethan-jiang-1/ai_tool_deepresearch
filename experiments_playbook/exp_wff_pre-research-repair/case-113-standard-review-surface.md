@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-113_wff_review_*
-trace: dpt_disp_case-113_wff_review_*/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-113_wff_review_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -130,7 +130,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_logs/_logs/_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, detail: 'review surface: AI interpretation sample payload' });
+  m.recordCheck('$B/_logs/_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, detail: 'review surface: AI interpretation sample payload' });
 });
 "
 ```
@@ -140,7 +140,7 @@ import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
 ```bash
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.verdict('$B/_logs/_logs/_trace.jsonl');
+  m.verdict('$B/_logs/_trace.jsonl');
 });
 "
 ```

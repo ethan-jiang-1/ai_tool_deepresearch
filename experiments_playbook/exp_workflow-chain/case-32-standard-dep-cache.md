@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-32_wc_medium
-trace: dpt_disp_case-32_wc_medium/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-32_wc_medium/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -79,7 +79,7 @@ node $B/step_chain.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('chain:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
@@ -144,7 +144,7 @@ node $B/s2_session_start.mjs $B $B/exp/nodes
 
 # MD 读 trace + 检查 session 文件
 node -e "
-const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('s2:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===2&&c.every(x=>x.passed);
@@ -226,7 +226,7 @@ node $B/s3_session_resume.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('s3:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 // 验证 cache_hit event 确实写入了 trace

@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-23_gl_complex
-trace: dpt_disp_case-23_gl_complex/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-23_gl_complex/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -52,7 +52,7 @@ cat > "$B/t.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl');
+const trace = createTrace(__dirname + '/_logs/_trace.jsonl');
 trace.traceInit('gl-playbook/complex', { source: 'gl-playbook/complex' });
 JS
 node "$B/t.mjs" > /dev/null 2>&1
@@ -71,7 +71,7 @@ import { z } from 'zod';
 import { checkGate } from '../DPT_FRAMEWORK/engine/gate-loop.mjs';
 
 const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl');
+const trace = createTrace(__dirname + '/_logs/_trace.jsonl');
 
 const SRC = 'gl-playbook/complex';
 
@@ -171,7 +171,7 @@ import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl');
+const trace = createTrace(__dirname + '/_logs/_trace.jsonl');
 const raw = readFileSync(trace.traceFilePath(), 'utf-8').trim();
 const events = JSON.parse('[' + raw.split('\n').join(',') + ']');
 const checks = events.filter(x => x.event === 'check');

@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-31_wc_simple
-trace: dpt_disp_case-31_wc_simple/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-31_wc_simple/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -81,7 +81,7 @@ node $B/step_init.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('init:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
@@ -130,7 +130,7 @@ node $B/step_load.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('load:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
@@ -149,7 +149,7 @@ MD 不信任 receipts，读原始 trace 文件交叉验证 Engine 确实写了 f
 
 ```bash
 node -e "
-const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const fileLoaded=e.filter(x=>x.event==='file_loaded');
 const waveLoaded=fileLoaded.some(x=>x.fileRef==='wave.entry.md');
 const fileRead=e.filter(x=>x.event==='file_read');

@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-106_plan_gate_*
-trace: dpt_disp_case-106_plan_gate_*/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-106_plan_gate_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -26,7 +26,7 @@ verdict: trace-jsonl
 2. 设置 gate 前置条件（hitl1 recorded, status correct）→ gate FAIL（placeholder 残留）
 3. 替换 required-fill markers → gate PASS + Progress checkbox 翻转
 4. 验证 intentionally-allowed markers 不会导致 FAIL
-5. 从 `_logs/_logs/_trace.jsonl` 裁决
+5. 从 `_logs/_trace.jsonl` 裁决
 6. Cleanup
 
 ---
@@ -121,7 +121,7 @@ grep "(待填充" $B/rb_plan.md | head -3
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'setup-ready',passed:$PASSED,expected:false,detail:'required-fill markers still present — gate should FAIL'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'setup-ready',passed:$PASSED,expected:false,detail:'required-fill markers still present — gate should FAIL'})})"
 ```
 
 预期：`check.passed: false`，`inspect` 包含 `plan_body_no_unfilled_marker` 或 "Forbidden pattern in rb_plan.md"。
@@ -227,7 +227,7 @@ grep "(待填充" $B/rb_plan.md && echo "STILL PRESENT — should be gone" || ec
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'setup-ready',passed:$PASSED,expected:true,detail:'markers replaced, intentionally-allowed markers kept — gate should PASS'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'setup-ready',passed:$PASSED,expected:true,detail:'markers replaced, intentionally-allowed markers kept — gate should PASS'})})"
 ```
 
 预期：`check.passed: true`，In/Out/待定 结构保留、Constraints 5 类结构保留，intentionally-allowed markers（`(待 HITL1 填充 — …)`、`(由 Engine — …)`、`(待 HITL2 确认 — …)`）全部保留且不触发 gate FAIL，required-fill markers 全部替换。
@@ -258,7 +258,7 @@ else
   echo "FAIL: setup-ready checkbox NOT flipped — line: $SETUP_LINE"
 fi
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'artifact-content',passed:$PROGRESS_OK,detail:'Progress setup-ready checkbox flipped to [x] with ISO8601 timestamp'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'artifact-content',passed:$PROGRESS_OK,detail:'Progress setup-ready checkbox flipped to [x] with ISO8601 timestamp'})})"
 ```
 
 预期：`- [x] setup-ready (2026-06-26T…)` 行存在。
@@ -271,7 +271,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 REPO_ROOT=$(pwd)
 B=$(ls -d dpt_disp_case-106_plan_gate_* | tail -1)
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
 ```
 
 ## Step 6: 结果解读

@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-134_dlv_repair_*
-trace: dpt_disp_case-134_dlv_repair_*/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-134_dlv_repair_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -24,7 +24,7 @@ verdict: trace-jsonl
 2. **HITL2 repair cycle**: gate fail (missing brief) → read inspect → Agent creates brief → rerun → gate pass
 3. 推进到 readiness 状态（补齐所有 readiness artifacts）
 4. **Readiness repair cycle**: gate fail (missing synthesis) → read inspect → Agent creates synthesis → rerun → gate pass
-5. 从 `_logs/_logs/_trace.jsonl` 裁决（预期 2 个 cycle 各有 1 fail + 1 pass = 4 checks）
+5. 从 `_logs/_trace.jsonl` 裁决（预期 2 个 cycle 各有 1 fail + 1 pass = 4 checks）
 6. Cleanup
 
 ---
@@ -88,7 +88,7 @@ GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundl
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: hitl2-recorded | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'attempt 1 — missing brief, expected fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'attempt 1 — missing brief, expected fail'})})"
 
 # Read inspect output → Agent creates the missing file
 INSPECT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs inspect.0)
@@ -119,7 +119,7 @@ GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundl
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: hitl2-recorded | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'attempt 2 — brief created, expected pass'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'attempt 2 — brief created, expected pass'})})"
 ```
 
 预期：第一次 `passed: false`，inspect 指向缺失 brief。第二次 `passed: true`。
@@ -177,7 +177,7 @@ GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bun
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: readiness-passed | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'attempt 1 — missing synthesis, expected fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'attempt 1 — missing synthesis, expected fail'})})"
 
 # Read inspect → Agent creates synthesis
 INSPECT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs inspect.0)
@@ -201,16 +201,16 @@ GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bun
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: readiness-passed | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'attempt 2 — synthesis created, expected pass'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'attempt 2 — synthesis created, expected pass'})})"
 ```
 
 预期：第一次 `passed: false`，inspect 指向缺失 synthesis。第二次 `passed: true`。
 
-## Step 5: Verdict from `_logs/_logs/_trace.jsonl`
+## Step 5: Verdict from `_logs/_trace.jsonl`
 
 ```bash
 echo "=== Verdict ==="
-cat $B/_logs/_logs/_trace.jsonl | node -e "
+cat $B/_logs/_trace.jsonl | node -e "
 const fs = require('fs');
 const lines = fs.readFileSync(0, 'utf-8').trim().split('\n').filter(l => l);
 const checks = lines.map(l => JSON.parse(l)).filter(e => e.event === 'check');

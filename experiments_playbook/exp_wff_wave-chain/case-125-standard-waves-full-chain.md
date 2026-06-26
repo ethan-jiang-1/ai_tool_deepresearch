@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-125_wf_chain_*
-trace: dpt_disp_case-125_wf_chain_*/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-125_wf_chain_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -25,7 +25,7 @@ verdict: trace-jsonl
 3. 推进到 wave0 status + 写 reference artifacts → gate wave0-complete pass
 4. 推进到 wave1 status + 写 deepening artifacts → gate wave1-complete pass
 5. 推进到 wave2 status + 写 synthesis artifacts → gate wave2-complete pass
-6. 从 `_logs/_logs/_trace.jsonl` 裁决（预期 4 条 check 全部 pass）
+6. 从 `_logs/_trace.jsonl` 裁决（预期 4 条 check 全部 pass）
 7. Cleanup
 
 ---
@@ -116,7 +116,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "gate: seed-topics-ready | passed: $PASSED | next: $NEXT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'seed topics materialized — advancing to wave0'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'seed topics materialized — advancing to wave0'})})"
 ```
 
 预期：`check.passed: true`，`check.next: phases/phase-wave0.md`。
@@ -207,7 +207,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "gate: wave0-complete | passed: $PASSED | next: $NEXT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'reference metadata collected — advancing to wave1'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'reference metadata collected — advancing to wave1'})})"
 ```
 
 预期：`check.passed: true`，`check.next: phases/phase-wave1.md`。
@@ -293,7 +293,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "gate: wave1-complete | passed: $PASSED | next: $NEXT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,detail:'deepening artifacts complete — advancing to wave2'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave1-complete',passed:$PASSED,detail:'deepening artifacts complete — advancing to wave2'})})"
 ```
 
 预期：`check.passed: true`，`check.next: phases/phase-wave2.md`。
@@ -395,7 +395,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "gate: wave2-complete | passed: $PASSED | next: $NEXT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'cross-topic synthesis complete — advancing to hitl2'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'cross-topic synthesis complete — advancing to hitl2'})})"
 ```
 
 预期：`check.passed: true`，`check.next: phases/phase-hitl2.md`。全链路 4 gate 全部 pass。
@@ -406,13 +406,13 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 ```bash
 echo "=== Trace events ==="
-cat $B/_logs/_logs/_trace.jsonl | while read line; do
+cat $B/_logs/_trace.jsonl | while read line; do
   echo "$line" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);const icon=j.passed?'\x1b[32mPASS\x1b[0m':'\x1b[31mFAIL\x1b[0m';console.log(icon,j.gate,'|',j.detail)})"
 done
 
 echo ""
 echo "=== Verdict ==="
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
 ```
 
 

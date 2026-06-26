@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-52_wff_val_repair
-trace: dpt_disp_case-52_wff_val_repair/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-52_wff_val_repair/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 

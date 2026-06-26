@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-11_gf_simple
-trace: dpt_disp_case-11_gf_simple/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-11_gf_simple/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -49,7 +49,7 @@ cat > "$B/t.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl');
+const trace = createTrace(__dirname + '/_logs/_trace.jsonl');
 trace.traceInit('gf-playbook/simple', { source: 'gf-playbook/simple' });
 JS
 node "$B/t.mjs" > /dev/null 2>&1
@@ -67,7 +67,7 @@ import { z } from 'zod';
 import { forkGate } from '../DPT_FRAMEWORK/engine/gate-fork.mjs';
 
 const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl');
+const trace = createTrace(__dirname + '/_logs/_trace.jsonl');
 
 const SRC = 'gf-playbook/simple';
 
@@ -166,7 +166,7 @@ import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl');
+const trace = createTrace(__dirname + '/_logs/_trace.jsonl');
 const raw = readFileSync(trace.traceFilePath(), 'utf-8').trim();
 const events = JSON.parse('[' + raw.split('\n').join(',') + ']');
 const checks = events.filter(x => x.event === 'check');

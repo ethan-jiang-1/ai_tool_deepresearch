@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-133_h2_rerun_*
-trace: dpt_disp_case-133_h2_rerun_*/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-133_h2_rerun_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -25,7 +25,7 @@ verdict: trace-jsonl
 3. Verify routing still returns `next: phases/phase-readiness.md`（chain 只管 normal next）
 4. Verify chain 只有 `passed: phases/phase-readiness.md` 一条 entry
 5. Verify profile 中 user_decision 为 rerun（Agent 应据此 restart）
-6. 从 `_logs/_logs/_trace.jsonl` 裁决
+6. 从 `_logs/_trace.jsonl` 裁决
 7. Cleanup
 
 ---
@@ -101,7 +101,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "gate: hitl2-recorded | passed: $PASSED | next: $NEXT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'rerun — gate passes but Agent should restart'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'rerun — gate passes but Agent should restart'})})"
 ```
 
 预期：`check.passed: true`（所有 rule 满足），`check.next: phases/phase-readiness.md`（chain 返回 normal next）。
@@ -147,11 +147,11 @@ else
 fi
 ```
 
-## Step 4: Verdict from `_logs/_logs/_trace.jsonl`
+## Step 4: Verdict from `_logs/_trace.jsonl`
 
 ```bash
 echo "=== Verdict ==="
-cat $B/_logs/_logs/_trace.jsonl | node -e "
+cat $B/_logs/_trace.jsonl | node -e "
 const fs = require('fs');
 const lines = fs.readFileSync(0, 'utf-8').trim().split('\n').filter(l => l);
 const checks = lines.map(l => JSON.parse(l)).filter(e => e.event === 'check');

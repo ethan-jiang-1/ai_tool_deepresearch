@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_224_iw_*
-trace: dpt_disp_224_iw_*/_logs/_logs/_trace.jsonl
+trace: dpt_disp_224_iw_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -129,7 +129,7 @@ import { writeFileSync, unlinkSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const B = process.argv[2];
-const t = B + '/_logs/_logs/_trace.jsonl';
+const t = B + '/_logs/_trace.jsonl';
 const ref = join(B, 'reference');
 
 const { recordCheck, verdict } = await import('./experiments_env/shared/wff-playbook-utils.mjs');

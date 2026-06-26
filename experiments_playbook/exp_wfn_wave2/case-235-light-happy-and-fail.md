@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_235_iw_*
-trace: dpt_disp_235_iw_*/_logs/_logs/_trace.jsonl
+trace: dpt_disp_235_iw_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -151,7 +151,7 @@ import { mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const B = process.argv[2];
-const t = B + '/_logs/_logs/_trace.jsonl';
+const t = B + '/_logs/_trace.jsonl';
 const w2 = join(B, 'artifacts', 'wave2');
 const ref = join(B, 'reference');
 const seed = join(B, 'seed_topics');

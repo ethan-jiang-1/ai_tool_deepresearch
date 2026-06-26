@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-121_w0_happy_*
-trace: dpt_disp_case-121_w0_happy_*/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-121_w0_happy_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -26,7 +26,7 @@ verdict: trace-jsonl
 4. 清空 topic_registry → gate fail（inspect 指向空 registry，证明 source of truth = registry）
 5. 恢复 registry 但写数量达标 schema 不合格的 reference → gate fail（count_floor pass 但 schema_valid fail → AND 交互）
 6. 恢复 registry 含 3 topics 但漏 1 个 artifacts/wave0 目录 → gate fail（{topic} 展开精确指出缺失）
-7. 从 `_logs/_logs/_trace.jsonl` 裁决（预期 5 条 check：1 pass + 4 fail）
+7. 从 `_logs/_trace.jsonl` 裁决（预期 5 条 check：1 pass + 4 fail）
 8. Cleanup
 
 ---
@@ -172,7 +172,7 @@ find $B/reference $B/artifacts -type f | sort
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'all 3 topics with schema-valid metadata pass'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'all 3 topics with schema-valid metadata pass'})})"
 ```
 
 预期：`check.passed: true`。
@@ -188,7 +188,7 @@ find $B/artifacts/wave0 -type f
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'missing topic-a source.yaml should fail with inspect pointing to topic-a'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'missing topic-a source.yaml should fail with inspect pointing to topic-a'})})"
 ```
 
 预期：`check.passed: false`，`inspect` 指向缺失 `artifacts/wave0/topic-a/source.yaml`。
@@ -214,7 +214,7 @@ head -10 $B/rb_plan.md
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'empty registry should fail with inspect pointing to registry (not disk scan)'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'empty registry should fail with inspect pointing to registry (not disk scan)'})})"
 ```
 
 预期：`check.passed: false`，`inspect` 指向空 registry（不是扫描磁盘），gate 不 crash。
@@ -256,7 +256,7 @@ cat $B/artifacts/wave0/topic-a/source.yaml
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'count_floor pass but schema_valid fail = gate fail (AND interaction)'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'count_floor pass but schema_valid fail = gate fail (AND interaction)'})})"
 ```
 
 预期：`check.passed: false`。`count_floor` rule 看到 2 条 entries → pass。`schema_valid` rule 检测到第二条 entry 的 url 为空 → fail。Gate 整体 fail（AND）。
@@ -310,7 +310,7 @@ ls -la $B/artifacts/wave0/
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'topic-c missing reference should be detected via {topic} expansion'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'topic-c missing reference should be detected via {topic} expansion'})})"
 ```
 
 预期：`check.passed: false`，`inspect` 精确指出 `artifacts/wave0/topic-c/source.yaml` 缺失（不是笼统地"某 topic 缺 reference"）。
@@ -320,7 +320,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 预期 5 条 `check` event：1 pass（Step 2）+ 4 fail（Steps 3, 4, 5, 6）。
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
 ```
 
 ## Step 8: 结果解读

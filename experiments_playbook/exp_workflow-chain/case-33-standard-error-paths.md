@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-33_wc_complex
-trace: dpt_disp_case-33_wc_complex/_logs/_logs/_trace.jsonl
+trace: dpt_disp_case-33_wc_complex/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -80,7 +80,7 @@ node $B/step_missing.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('missing:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
@@ -130,7 +130,7 @@ node $B/step_cycle.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('cycle:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
@@ -180,7 +180,7 @@ node $B/step_malformed.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('malformed:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
@@ -222,7 +222,7 @@ node $B/step_recovery.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('recovery:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===2&&c.every(x=>x.passed);
