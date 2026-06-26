@@ -1,6 +1,6 @@
 # schema-core Specification
 
-> req: SCO-001, SCO-002, SCO-003, SCO-004, SCO-005, SCO-006, SCO-007, SCO-008, SCO-009, SCO-011
+> req: SCO-001, SCO-002, SCO-003, SCO-004, SCO-005, SCO-006, SCO-007, SCO-008, SCO-009, SCO-010, SCO-011
 > inv: INV-SOR-001
 
 ## Purpose

@@ -324,3 +324,11 @@ BUS-002: bundle-start-from-here — START_FROM_HERE.md documents flat reference/
 # schema-core (delta)
 SCO-010: schema-core — _INDEX.md light validation (header completeness + at least 1 row)
 SCO-011: schema-core — Rerun tracking field rerun_count in HITL2 profile (optional non-negative integer, default 0; direction hints go in seed_topics not profile)
+
+# plan-hostfile-sections
+PHS-001: plan-hostfile-sections — rb_plan.md frontmatter uses YAML format (plan_basename / derived_topic_count / topic_registry)
+PHS-002: plan-hostfile-sections — rb_plan.md body has structured sections: ## Goal (### Purpose / ### Research Questions / ### Scope) as north-star anchor
+PHS-003: plan-hostfile-sections — ## Topic Registry body section as human-readable table with Status column
+PHS-004: plan-hostfile-sections — ## Constraints / ## Progress / ## Decisions sections reserved for future use
+PHS-005: plan-hostfile-sections — setup-ready gate checks plan body non-empty and no placeholder tokens (待填充 / 尚无话题)
+PHS-006: plan-hostfile-sections — Disposable bundle path (new-disposable-bundle.mjs) unaffected; gate body checks pass for disposable bundles
