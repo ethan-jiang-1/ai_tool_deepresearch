@@ -17,7 +17,7 @@
 - **补全 `gate-hitl1-recorded.definition.json`**: 新增 `status_current_gate` 和 `status_next_gate` 规则
 
 ### 提供运行期状态/留痕写入工具（Bug #2）
-- **新增 `advance-status.mjs` CLI**: Agent 调用它以 `transitions.chain.json` 为真相源自动推进 `rb_status.json` 的 `current_gate`/`next_gate`，无需手填
+- **新增 `advance-status.mjs` CLI**: Agent 调用它以 `transitions.chain.json` 为真相源自动推进 `rb_status.json` 的 `current_gate`/`next_gate`，无需手填。终端 gate（readiness_passed）的 `next_gate` 写字符串 `"none"`。
 - **扩展 `log-event.mjs` CLI**: 新增 `--event` 参数，有 `--event` 时写 `rb_trace.jsonl`（带 `event` 字段供 `trace_event_present` 匹配）；无 `--event` 时维持现状写 `run.log`
 
 ### 退役旧抽象 + 修正相关工件
@@ -41,12 +41,12 @@
 
 - **新 CLI**: `DPT_FRAMEWORK/cli/advance-status.mjs`（新增）、`DPT_FRAMEWORK/cli/log-event.mjs`（扩展 `--event`）
 - **Template**: `DPT_FRAMEWORK/rb_templates/rb_status.json.tmpl`（line 6）
-- **Gate definitions**: `gate-instantiation-complete.definition.json`（line 102-103）、`gate-hitl1-recorded.definition.json`（新增 2 规则）
-- **Phase docs**: `phase-setup.md`（line 37, 64）
+- **Gate definitions**: `gate-instantiation-complete.definition.json`（line 102-103）、`gate-hitl1-recorded.definition.json`（新增 2 规则）、`gate-rerun-ready.definition.json`（补 `status_next_gate`）
+- **Phase docs**: `phase-setup.md`（line 37, 52, 64）、`phase-seed-topics.md`、`phase-wave0.md`、`phase-wave1.md`、`phase-wave2.md`、`phase-hitl2.md`、`phase-readiness.md`、`phase-rerun.md`（8 个 phase body 加 `advance-status` + `log-event --event` 指令）
 - **Schema contracts**: `gate.mjs`（deprecation banner）、`md-phase-checks.mjs`（truth source 切换）
 - **Test helpers**: `experiments_env/shared/new-disposable-bundle.mjs`（line 95）
 - **Test fixtures**: `tests/schema/contracts/status.test.mjs`（line 6）、`tests/integration/cli/check-gate-setup-ready.test.mjs`（line 57,80）、`tests/integration/cli/validate-bundle.test.mjs`（line 35）
 - **New test**: `tests/integration/cli/gate-chain-consistency.test.mjs`
-- **Live specs**: `openspec/specs/cmd-bundle-instantiation/spec.md`、`pre-research-gate-implementation/spec.md`、`pre-research-phase-content/spec.md`、`seed-topic-materialization/spec.md`
+- **Live specs**: `openspec/specs/cmd-bundle-instantiation/spec.md`、`pre-research-gate-implementation/spec.md`、`pre-research-phase-content/spec.md`、`seed-topic-materialization/spec.md`、`schema-core/spec.md`
 - **Playbooks**: `experiments_playbook/exp_wff_validation/case-51-standard-happy-path.md`、`experiments_playbook/exp_wff_wave-chain/case-125-standard-waves-full-chain.md`
 - **Breaking changes**: 无。现有 bundle 如果 `rb_status.json` 的 `next_gate` 仍是旧值 `wave0_complete`，修复后的 instantiation gate 会正确 reject 并给出清晰的 fix 指引——这是期望行为。

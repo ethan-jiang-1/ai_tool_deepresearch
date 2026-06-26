@@ -90,10 +90,12 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to <gate>
 - `--to <gate>`: 目标 gate 的 snake_case 枚举值（如 `seed_topics_ready`）。CLI 以 `transitions.chain.json` 为真相源自动计算对应的 `next_gate`。
 - 算法：通过 `manifest.json` 桥接 gate 值 → node fileRef → 查 `chain.json[node][passed]` → 得到 next node fileRef → 通过 manifest 桥接回 gate 枚举值 → 写 `next_gate`。
 - 同时把 `current_gate` 设为 `--to` 的值。
-- 同时写一条 `phase_transition` trace 事件到 `rb_trace.jsonl`（`event: "phase_transition"`，detail 含 `from`/`to`/`next`），供 audit。
+- 同时写一条 `phase_transition` trace 事件到 `rb_trace.jsonl`（字段: `ts`, `bundle`, `event: "phase_transition"`, `from`, `to`, `next`），与 `log-event --event` 输出的 trace 格式保持 `bundle` 字段一致（`readBundleName` 从 `rb_status.json` 读取 bundle 名）。
 - 未知 gate 或 chain lookup 失败 → 打印 JSON error 到 stdout，exit 1。成功 → 打印 `{ status: "ok", current_gate, next_gate }` 到 stdout，exit 0。
 
 **原因**: 让 CLI 而非 Agent 做 chain 查表——单一真相源，消除手填漂移风险。Agent 只需知道「我要推进到哪个 gate」，不需要知道「下一站是什么」。
+
+**终端 gate 特殊处理**: manifest.json 中 `final` phase 的 `gate: null`，manifest 正向/反向映射均不包含它。`advance-status --to readiness_passed` 计算 `next_gate` 时，`chain["phases/phase-readiness.md"]["passed"]` 返回 `"phases/phase-final.md"`，反向查 manifest 得到 `undefined`。此时 SHALL 写 `next_gate: "none"`（字符串，与 `CurrentGate` 枚举的 `"none"` 值和 `gate-readiness-passed.definition.json` 的 expected 值一致），而非 JavaScript `null`。
 
 ### D6: `log-event` CLI 扩展——向后兼容的 `--event` 参数
 
