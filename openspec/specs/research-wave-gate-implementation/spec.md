@@ -70,36 +70,42 @@ Topic 集合的 source of truth SHALL 为 `rb_plan.md` frontmatter 的 `topic_re
 
 规则 SHALL 覆盖：
 - `artifacts/wave1/` 目录存在且非空
-- 每个 topic 至少 1 个 `artifacts/wave1/<topic>/skeleton.md` 文件存在
-- 每个 skeleton artifact 非空且显式标记 `capability: foundation-placeholder`（`field_value` 或 `pattern_match` check type）
-- skeleton artifact 中无 false completion claim（`pattern_match` check type，`negate: true`：pattern 找到时 fail，未找到时 pass。排除 "full subagent coverage completed"、"deepening done"、"candidate intake completed"、"fan-in review completed" 等字样）
+- 每个 topic 至少 1 个 `artifacts/wave1/<topic>/evidence-summary.md` 文件存在（`file_exists`）
+- 每个 topic 至少 1 个 `artifacts/wave1/<topic>/question-list.md` 文件存在（`file_exists`）
+- `per_topic_ref_md_count_floor` rule（`check: count_floor`，`threshold: 1`）的 target glob SHALL 为 `reference/*{topic}*.md`——`{topic}` 展开为 topic.slug（含 `NN_` 前缀），glob `*{topic}*` 匹配任何包含该 slug 的 `.md` 文件名（含 `{slug}-<qualifier>.md` 和裸 `{slug}.md` 两种形态）
+- evidence-summary 含至少 1 条 source URL（`pattern_match`）、key findings section 非空（`pattern_match`）
+- question-list 含四节结构（`pattern_match`：Topic Investigation Targets、Question Reconciliation、Emergent Question Protocol、Exploration/Exploitation Decision）
+- 所有 seed topic 文件中无残留 `__BACKFILL_WAVE1_MECHANISMS__`、`__BACKFILL_WAVE1_TRENDS__`、`__BACKFILL_PENDING_QUESTIONS__` token（`pattern_match`，`negate: true`）
 - trace 中有 `wave1_completion` event
 - `rb_status.json#/current_gate == wave1_complete`
 - `rb_status.json#/next_gate == wave2_complete`
 
-Gate SHALL NOT 检查 skeleton 内容的研究质量或完整性。
+#### Scenario: Reference glob matches topic-slug-prefixed files with qualifier
 
-#### Scenario: All Wave1 rules pass
+- **WHEN** topic slug = `01_meal-timing-blood-glucose-insulin`
+- **AND** reference 文件命名为 `01_meal-timing-blood-glucose-insulin-sutton-etrf.md`
+- **THEN** gate glob `reference/*01_meal-timing-blood-glucose-insulin*.md` SHALL match 该文件
+- **AND** `count_floor` rule SHALL count ≥ 1 for this topic → pass
 
-- **WHEN** 每个 topic 都有 skeleton artifact、标记了 `foundation-placeholder`、无 false completion claim、trace 有 `wave1_completion` event
-- **THEN** `check-gate-wave1-complete.mjs` SHALL return `passed: true`
+#### Scenario: Reference glob matches bare slug file without qualifier
 
-#### Scenario: Missing per-topic skeleton fails
+- **WHEN** topic slug = `01_meal-timing-blood-glucose-insulin`
+- **AND** reference 文件命名为 `01_meal-timing-blood-glucose-insulin.md`（无 qualifier，无 trailing `-`）
+- **THEN** gate glob `reference/*01_meal-timing-blood-glucose-insulin*.md` SHALL still match 该文件
+- **AND** `count_floor` rule SHALL count ≥ 1 → pass
 
-- **WHEN** 某个 topic 缺少 `artifacts/wave1/<topic>/skeleton.md`
+#### Scenario: Reference glob does not match files from a different topic
+
+- **WHEN** topic slug = `01_meal-timing-blood-glucose-insulin`
+- **AND** reference 文件命名为 `02_front-vs-back-calorie-loading-weight-jakubowicz-2013.md`（不同 topic 的 slug）
+- **THEN** gate glob SHALL NOT match 该文件
+- **AND** `count_floor` rule SHALL count 0 for the `01_meal-...` topic on this file
+
+#### Scenario: Below reference count floor fails
+
+- **WHEN** 任一 topic 的 `reference/*{topic}*.md` 匹配文件数 < 1
 - **THEN** gate SHALL return `passed: false`
-
-#### Scenario: Missing placeholder marker fails
-
-- **WHEN** skeleton artifact 存在但未标记 `capability: foundation-placeholder`（或等价 marker）
-- **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL 指向缺失 marker
-
-#### Scenario: False completion claim fails
-
-- **WHEN** skeleton artifact 中包含 "full subagent coverage completed"、"deepening done" 或等价 false claim
-- **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL 指出具体违规文本
+- **AND** `inspect` SHALL 列出缺失 reference 的 topic
 
 ### Requirement: Wave2 complete gate rule set
 
@@ -208,26 +214,24 @@ Gate SHALL NOT 判断 synthesis 是否有洞察、finding triage 是否充分、
 
 ### Requirement: Gate CLI evaluates wave1 rules from definition
 
-`check-gate-wave1-complete.mjs` SHALL 从 placeholder pass 升级为 definition-driven rule evaluation。
+`check-gate-wave1-complete.mjs` SHALL 为 definition-driven rule evaluation。
 
 实现 SHALL 支持：
 - `file_exists`
 - `dir_exists`
-- `field_value`
-- `field_non_empty`
-- `pattern_match`（placeholder marker 检测用正向匹配 `negate: false`；false completion claim 检测用反向匹配 `negate: true`，pattern 找到时 fail）
+- `count_floor`（`per_topic_ref_md_count_floor`：统计与 `reference/*{topic}*.md` glob 匹配的文件数，threshold ≥ 1；支持 `{topic}` 占位符展开）
+- `pattern_match`（含 `negate` 字段，用于 evidence-summary source URL 检测、question-list 四节结构检测、backfill token 残留检测）
 - `status_value`
 - `trace_event_present`（target: `wave1_completion`）
 
-实现 SHALL 复用 `gate-helpers.mjs` 的标准 pipeline。
+实现 SHALL 复用 `gate-helpers.mjs` 的标准 pipeline。`{topic}` 占位符展开 SHALL 使用 topic.slug（含 `NN_` 前缀），而非 topic.id。
 
-实现 SHALL 支持 `{topic}` 占位符展开（与 wave0 CLI 一致，design D5）。
+#### Scenario: Wave1 CLI evaluates count_floor with topic.slug expansion
 
-#### Scenario: Wave1 CLI no longer hardcoded pass
-
-- **WHEN** skeleton artifact 缺少 placeholder marker 或包含 false completion claim
-- **THEN** CLI SHALL return `passed: false` with inspect/advice
-- **AND** CLI SHALL NOT return `passed: true` without evaluating all rules
+- **WHEN** topic_registry 含 topic slug = `01_meal-timing-...`
+- **THEN** CLI SHALL 展开 `{topic}` → topic.slug（NOT topic.id）
+- **AND** glob `reference/*01_meal-timing-...*.md` SHALL 匹配该 topic 的所有 reference 文件
+- **AND** SHALL NOT return `passed: true` without evaluating all rules
 
 ### Requirement: Gate CLI evaluates wave2 rules from definition
 

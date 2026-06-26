@@ -63,7 +63,7 @@ suggested_context: []
 Reference evidence 存放在平铺的 `reference/` 目录下（无子目录）。每个 source 一个 rich MD 文件，格式见 `shared-reference-template.md`。
 
 - **`reference/00-shared-<slug>.md`**：Wave 0 产出。共享基础 reference（rich MD），覆盖 ≥2 个 topic 的跨领域知识。每个文件含 metadata block（9 必填字段）+ 5 个标准 section。Foundation floor：≥ 1 个。
-- **`reference/0N-<slug>.md`**：Wave 1 产出。Topic 专属 reference（rich MD），N = topic_registry 中的 topic 序号（如 `03-block-goose.md`）。每个文件含 metadata block + 5 个 section。Per topic ≥ 1 个。
+- **`reference/{topic_slug}-<qualifier>.md`**：Wave 1 产出。Topic 专属 reference（rich MD），`{topic_slug}` 为 topic 的完整 slug（已含 `NN_` 前缀，如 `01_meal-timing-...`），`<qualifier>` 为 source 短标识。每个文件含 metadata block + 5 个 section。Per topic ≥ 1 个。
 - **`reference/00-cross-<slug>.md`**：Wave 2 产出（可选）。跨 topic 发现的新共享 reference（rich MD），cross-topic scan 时涌现。非 gate pass 硬条件。
 - **`reference/_INDEX.md`**：Canonical reference inventory table。8 列：`ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed`。每个 wave 完成时更新。`source_layer` 取值：`wave0_foundation` / `wave1_topic` / `wave2_cross`。
 - **`reference/README.md`**：人类导航——命名约定、`_INDEX.md` 指向、模板格式简述。
@@ -72,7 +72,9 @@ Reference evidence 存放在平铺的 `reference/` 目录下（无子目录）�
 
 ## Seed Topics
 
-`seed_topics/` 位于 bundle root，与 `reference/`、`artifacts/` 同级。每个 topic 一个 `.md` 文件，内含 `__BACKFILL_*__` token，由各 wave 在完成时替换。
+`seed_topics/` 位于 bundle root，与 `reference/`、`artifacts/` 同级。每个 topic 一个 `{slug}.md` 文件，`slug` 含 `NN_` 编号前缀（如 `01_meal-timing-...`），`NN` 取自 `topic_registry` 数组 1-based 位置（两位零填充）。文件内含 `__BACKFILL_*__` token，由各 wave 在完成时替换。
+
+**分隔符有意区分：** seed topic 文件用 `_`（underscore，如 `01_meal-timing-....md`），reference 文件用 `-`（hyphen，如 `00-shared-...`、`01_meal-timing-...-author.md`）。两者是不同的命名空间——seed topic slug 把 `NN_` 作为 slug 的一部分编入，reference 前缀是文件命名约定而非 slug 的一部分。
 
 | Token | 替换阶段 | 替换内容 |
 |-------|---------|---------|

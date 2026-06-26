@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // inspect-wave1-output.mjs — wave 1 structural lint
-// @impl IOC-002
+// @impl IOC-002, REF-001
 // Usage: node inspect-wave1-output.mjs --bundle <path>
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -42,19 +42,6 @@ function parseMetadataBlock(content) {
 const REQUIRED_META = ['source_url','acceptance_status','source_type','tier','evidence_role','trust_level','why_it_matters','accessed_at','related_topic'];
 const REQUIRED_SECTIONS = ['## Key Facts','## Core Content Capture','## Relevance To This Research','## Quotable Terms / Concepts','## Risks And Limitations'];
 
-function numericId(topic) {
-  // Extract numeric prefix: "topic-03" → "03", or from slug "03_china" → "03"
-  if (topic.id) {
-    const m = topic.id.match(/(\d+)$/);
-    if (m) return m[1];
-  }
-  if (topic.slug) {
-    const m = topic.slug.match(/^(\d+)_/);
-    if (m) return m[1];
-  }
-  return null;
-}
-
 // ---- Get topic registry ----
 let registry = [];
 try {
@@ -70,23 +57,17 @@ if (registry.length === 0) {
   const refPath = join(bundlePath, 'reference');
 
   for (const topic of registry) {
-    const numId = numericId(topic);
-    if (!numId) {
-      addIssue(`topic_registry entry '${topic.slug}': cannot extract numeric id`,
-        `Ensure topic.id (e.g., "topic-03") or slug (e.g., "03_slug") has a numeric prefix.`);
-      continue;
-    }
 
-    // 1. Per-topic reference/0N-*.md existence
+    // 1. Per-topic reference/{topic.slug}*.md existence
     inc();
     const allFiles = existsSync(refPath) ? readdirSync(refPath) : [];
-    const topicRefs = allFiles.filter(f => f.startsWith(`${numId}-`) && f.endsWith('.md'));
+    const topicRefs = allFiles.filter(f => f.startsWith(topic.slug) && f.endsWith('.md'));
     if (topicRefs.length === 0) {
-      addIssue(`topic ${numId}: no reference/${numId}-*.md files found`,
-        `Create at least one reference/${numId}-<slug>.md per shared-reference-template.md.`);
+      addIssue(`topic ${topic.slug}: no reference/${topic.slug}*.md files found`,
+        `Create at least one reference/${topic.slug}-<qualifier>.md per shared-reference-template.md.`);
     }
 
-    // 2. Metadata + sections on each 0N-*.md
+    // 2. Metadata + sections on each {topic.slug}*.md
     for (const f of topicRefs) {
       const fp = join(refPath, f);
       const content = readMdFile(fp);

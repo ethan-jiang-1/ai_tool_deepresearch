@@ -49,6 +49,7 @@
 | G22 wfn-wave1 | case-224 | `exp_wfn_wave1/case-224-light-happy-and-fail.md` | Light gate-only 版 wave1 happy + fail path |
 | G23 wfn-wave2 | case-235 | `exp_wfn_wave2/case-235-light-happy-and-fail.md` | Light gate-only 版 wave2 happy + fail path |
 | G20 wfn-seedtopic | case-202 | `exp_wfn_seedtopic/case-202-light-setup-to-seedtopics-transition.md` | setup→seed-topics transition 最小路径 |
+| G20 wfn-seedtopic | case-203 | `exp_wfn_seedtopic/case-203-light-nn-prefix-naming.md` | NN_ 前缀命名约定：registry 1-based 位置推导、gate 三重一致、ls 自然排序、reference {slug}-<qualifier>.md 模式 |
 | G14 hitl2-branch | case-140 | `exp_wff_hitl2-branch/case-140-light-hitl2-decision-capture.md` | HITL2 decision capture：Agent 捕获 user_decision + rationale，chain 路由到正确节点。Trace 证明两个节点都经过 |
 | G14 hitl2-branch | case-141 | `exp_wff_hitl2-branch/case-141-light-rerun-full-path.md` | HITL2 rerun 全路径：decision=rerun→chain→phase-rerun→rerun-ready gate pass→seed-topics |
 | G14 hitl2-branch | case-142 | `exp_wff_hitl2-branch/case-142-light-readiness-full-path.md` | HITL2 readiness 全路径：decision=proceed_to_readiness→chain→readiness→readiness gate pass |

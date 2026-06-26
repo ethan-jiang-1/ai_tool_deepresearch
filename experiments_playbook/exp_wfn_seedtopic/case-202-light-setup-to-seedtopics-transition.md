@@ -36,14 +36,14 @@ echo "Bundle: $B"
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
 
 # topic_registry 由 HITL1 写入，Agent 只读不写。
-# slug 描述性（无 0N_ 前缀），id 承载编号。
+# slug 含 NN_ 前缀（如 01_topic-a），id 承载编号。
 cat > $B/rb_plan.md << 'EOF'
 ---
 plan_basename: case-202_s2s
 derived_topic_count: 1
 topic_registry:
-  - id: t1
-    slug: topic-a
+  - id: "01"
+    slug: 01_topic-a
     title: Topic A
 ---
 # Plan
@@ -100,10 +100,10 @@ EOF
 
 # 物化：文件名 = slug.md，frontmatter slug == 文件名 stem == registry slug
 mkdir -p $B/seed_topics
-cat > $B/seed_topics/topic-a.md << 'EOF'
+cat > $B/seed_topics/01_topic-a.md << 'EOF'
 ---
-id: t1
-slug: topic-a
+id: "01"
+slug: 01_topic-a
 title: Topic A
 ---
 # Topic A

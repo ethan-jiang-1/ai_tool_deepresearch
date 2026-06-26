@@ -1,5 +1,5 @@
 ---
-> 状态: 待修复（设计/UX + 文档自相矛盾）
+> 状态: 已修复（2026-06-26，OpenSpec change `establish-topic-slug-nn-prefix-convention`）
 > 严重度: 🟡 Medium（不阻塞 gate，但严重损害可导航性/可调试性；文档自相矛盾会让实现者猜错）
 > 分类: 命名规范不一致 / 文档漂移（与 bug #1、#2 同根：doc 说一套、gate/实现做另一套）
 > 发现于: 2026-06-26，同一次 research run（bundle: dpt_rb_meal-timing-chrononutrition），seed-topics 物化后用户审 `seed_topics/` 时
@@ -97,3 +97,18 @@
 - 用户审 `seed_topics/` 时发现文件无 `01_`/`02_` 前缀、字母序与 t1–t5 错位，判定为 bug，要求就地挖掘并上报。
 - 挖掘结论：实现（Design A）与 gate 一致且正确；§4 文档错误描述了"slug 已含编号前缀"（应为 Design B），是文档漂移；真实 UX 痛点是顺序不可见。详见 §1–§3。
 - 若项目最终采纳 Design B，本 bundle 的 5 文件 + `rb_plan.md` registry 的 slug 需重命名迁移；若采纳 Design A，仅需修 §4 + 补顺序可见性，本 bundle 无需改动。
+
+---
+
+## Resolution
+
+**决策**: Design B, Option A — `NN_` 前缀进 slug（`slug = "01_meal-timing-..."`），而非作为独立的文件名装饰层。
+
+**修复内容** (OpenSpec change `establish-topic-slug-nn-prefix-convention`):
+- `phase-seed-topics.md` §1/§3.1/§4 统一为"slug 含 `NN_` 前缀"，消除文档内部矛盾
+- `phase-hitl1.md` §3a 新增 slug 命名约定 + YAML 示例
+- `shared-schemas.md` Seed Topics 节明确 `{slug}.md` 含 `NN_` 前缀，标注 `_`（seed topic）vs `-`（reference）分隔符有意区分
+- `NN` 取自 `topic_registry` 数组 1-based 位置（两位零填充），`id` SHOULD 与 NN 一致
+- Gate byte-for-byte 三重一致（`filename_stem == registry_slug == frontmatter_slug`）天然兼容前缀 slug——不需改 gate 代码或定义
+- 实验 playbook case-124/201/202 同步对齐
+- 新建 case-203 实验验证 NN_ 前缀命名约定

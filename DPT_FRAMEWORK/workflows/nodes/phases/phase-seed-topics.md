@@ -15,7 +15,7 @@ suggested_context:
 
 ## 1. Stage Goal
 
-把 `rb_plan.md` frontmatter 的 `topic_registry` 物化为 `seed_topics/` 目录下的独立文件——每个 topic 一个 `{slug}.md`（文件名 = `topic.slug` + `.md`）。`id` 字段承载数字编号（如 `t1`、`01`），`slug` 为描述性短名（如 `official-stance`、`ai-safety`），两者分工：id 用于编号和排序，slug 用于人读和跨 wave 引用。每个文件含 YAML frontmatter（id/slug/title + must_answer/hypothesis/search_guardrails/evidence_route 等必需字段）和正文研究骨架。为 Wave0 的 reference collection 提供可追溯的 topic 入口。
+把 `rb_plan.md` frontmatter 的 `topic_registry` 物化为 `seed_topics/` 目录下的独立文件——每个 topic 一个 `{slug}.md`（文件名 = `topic.slug` + `.md`）。`slug` 为 `NN_` 编号前缀 + 描述性短名的结构化标识符（如 `01_official-stance`、`02_ai-safety`），`NN` 为零填充 1-based 数组序号。`id` 字段 SHOULD 与 NN 一致（如 `"01"`）；gate 不校验 id 格式——这是 convention 层面的统一。slug 同时承担编号、文件系统排序（`ls` 自然按数字序排列）、人读和跨 wave 引用多重职责。每个文件含 YAML frontmatter（id/slug/title + must_answer/hypothesis/search_guardrails/evidence_route 等必需字段）和正文研究骨架。为 Wave0 的 reference collection 提供可追溯的 topic 入口。
 
 **`seed-topics-ready` 是结构+数量+一致性 gate，不是 topic 语义质量 gate。** 语义质量（topic 是否覆盖关键维度、是否与 research question 对齐）由 HITL1 阶段人类审查（`stop: yes`）负责。
 
@@ -38,7 +38,7 @@ Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task�
 1. 读取 `rb_plan.md` frontmatter 的 `topic_registry`，确定 topic 集合及其数组顺序
 2. 为每个 topic 生成一个 task card JSON 文件，然后 enqueue：
 
-> **注意**：文件名直接使用 `{topic.slug}.md`（`slug` 为描述性短名，不含编号前缀——编号由 `id` 字段承载）。不需二次拼接 index。
+> **注意**：文件名直接使用 `{topic.slug}.md`（`slug` 含 `NN_` 编号前缀，如 `01_meal-timing-...`——`NN` 取自 topic_registry 数组 1-based 位置）。不需二次拼接 index。
 
 **Task card JSON 模板（写入临时文件如 `/tmp/wfq-seed-{topic.slug}.json`）：**
 
@@ -74,7 +74,7 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 
 **Seed Topic 文件结构（每个 `seed_topics/{slug}.md` 必须满足）：**
 
-文件名格式：`{slug}.md`，其中 `slug` 为 registry 中该 topic 的 `slug` 字段值（描述性短名，如 `official-stance`）。文件名与 registry slug 直接对应，gate 校验 `filename_stem == registry_slug == frontmatter_slug`（三重一致）。编号由 `id` 字段承载（如 `t1`），不编入 slug。
+文件名格式：`{slug}.md`，其中 `slug` 为 registry 中该 topic 的 `slug` 字段值（含 `NN_` 前缀的描述性短名，如 `01_official-stance`）。`NN` 取自该 topic 在 `topic_registry` 数组中的 1-based 位置（两位零填充）。`id` 字段 SHOULD 与 `NN` 一致（如 `"01"`）。gate 校验 `filename_stem == registry_slug == frontmatter_slug`（三重一致）。
 
 **frontmatter 使用 YAML 格式**（gate 通过 `parseMdFrontmatter()` 内部调 `parseYaml()` 解析，YAML 1.2 是 JSON 的超集——JSON frontmatter 同样合法）。frontmatter `slug` 必须与文件名 stem 完全一致（byte-for-byte）。
 

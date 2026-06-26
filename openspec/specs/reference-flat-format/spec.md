@@ -4,7 +4,7 @@
 
 ## Purpose
 
-定义 `reference/` 目录的扁平化约定：三级命名前缀（`00-shared-` / `00-cross-` / `0N-`）、rich MD 单文件单 source 格式、`_INDEX.md` 作为 canonical inventory、`README.md` 作为人类导航。对标 `deep_research_ai_cases/topics/_reference` 的成熟实践，实现"人类一眼能看明白"的 evidence 目录。
+定义 `reference/` 目录的扁平化约定：三级命名前缀（`00-shared-` / `{topic_slug}-<qualifier>` / `00-cross-`）、rich MD 单文件单 source 格式、`_INDEX.md` 作为 canonical inventory、`README.md` 作为人类导航。对标 `deep_research_ai_cases/topics/_reference` 的成熟实践，实现"人类一眼能看明白"的 evidence 目录。
 
 ## Requirements
 
@@ -13,8 +13,8 @@
 `reference/` SHALL 为扁平目录（无子目录），所有 reference 文件以 `.md` 结尾、平铺在同一层级。文件命名 SHALL 使用三级前缀：
 
 - `00-shared-<slug>.md` — 共享基础 reference，由 wave 0 产出，覆盖 ≥2 个 topic 的跨领域知识
+- `{topic_slug}-<qualifier>.md` — topic 专属 reference，由 wave 1 产出，覆盖单个 topic 的 source。`{topic_slug}` SHALL 为 topic 的完整 slug（含 `NN_` 编号前缀，如 `01_meal-timing-...`），`<qualifier>` SHALL 为该 source 的短标识符（如作者名、机构名、关键词）
 - `00-cross-<slug>.md` — 跨 topic 发现 reference，由 wave 2 产出，在 cross-topic scan 时涌现的新共享 source
-- `0N-<slug>.md`（N 为 1-based topic 序号，与 `rb_plan.md` 的 `topic_registry` 中的 topic id 一致）— topic 专属 reference，由 wave 1 产出，覆盖单个 topic 的 source
 
 `<slug>` SHALL 为 kebab-case 标识符，描述该 source 的核心内容。
 
@@ -24,11 +24,12 @@
 - **THEN** Agent 为每条共享 source 创建 `reference/00-shared-<slug>.md`
 - **AND** 文件名以 `00-shared-` 开头
 
-#### Scenario: Wave 1 produces topic-specific references
+#### Scenario: Wave 1 produces topic-specific references with slug-based prefix
 
-- **WHEN** wave 1 为 topic 03 检索深挖 evidence
-- **THEN** Agent 为每条 topic 专属 source 创建 `reference/03-<slug>.md`
-- **AND** 前缀编号 `03` 与 topic_registry 中该 topic 的 id 一致
+- **WHEN** wave 1 为 topic（slug = `01_meal-timing-blood-glucose-insulin`）检索深挖 evidence
+- **THEN** Agent 为每条 topic 专属 source 创建 `reference/01_meal-timing-blood-glucose-insulin-<qualifier>.md`
+- **AND** 文件名以 topic 的完整 slug 开头，后跟 `-` 和 qualifier
+- **AND** `ls reference/` 下同一 topic 的 reference 文件自然聚拢（共享 `01_meal-timing-...` 前缀）
 
 #### Scenario: Wave 2 produces cross-topic discovery references
 
@@ -142,7 +143,8 @@ Phase node body 中的 Expected Artifacts 和 Allowed Actions 节 SHALL 明确�
 - **WHEN** Agent 读取 `phase-wave0.md` 的 Expected Artifacts 节
 - **THEN** 指令 SHALL 要求创建 `reference/00-shared-<slug>.md`（非 `reference/<topic>/source.yaml`）
 
-#### Scenario: Wave1 phase instructs agent to create topic-prefixed files
+#### Scenario: Wave1 phase instructs agent to create topic-slug-prefixed files
 
 - **WHEN** Agent 读取 `phase-wave1.md` 的 Expected Artifacts 节
-- **THEN** 指令 SHALL 要求创建 `reference/0N-<slug>.md`（按 topic_registry 中的 topic id）
+- **THEN** 指令 SHALL 要求创建 `reference/{topic_slug}-<qualifier>.md`（topic_slug 为含 `NN_` 前缀的完整 slug）
+- **AND** SHALL NOT 要求创建 `reference/0N-<slug>.md`（`0N-` 前缀已被 slug 内置的 `NN_` 取代）

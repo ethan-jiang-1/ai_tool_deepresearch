@@ -52,14 +52,14 @@ cat > $B/rb_plan.md << 'EOF'
 plan_basename: stm_boundary
 derived_topic_count: 3
 topic_registry:
-  - id: t1
-    slug: topic-a
+  - id: "01"
+    slug: 01_topic-a
     title: Topic A
-  - id: t2
-    slug: topic-b
+  - id: "02"
+    slug: 02_topic-b
     title: Topic B
-  - id: t3
-    slug: topic-c
+  - id: "03"
+    slug: 03_topic-c
     title: Topic C
 ---
 # stm_boundary Plan
@@ -90,10 +90,10 @@ cat $B/rb_status.json
 ```bash
 mkdir -p $B/seed_topics
 
-cat > $B/seed_topics/topic-a.md << 'EOF'
+cat > $B/seed_topics/01_topic-a.md << 'EOF'
 ---
-id: t1
-slug: topic-a
+id: "01"
+slug: 01_topic-a
 title: Topic A
 ---
 
@@ -110,10 +110,10 @@ title: Topic A
 - 如何衡量进展？
 EOF
 
-cat > $B/seed_topics/topic-b.md << 'EOF'
+cat > $B/seed_topics/02_topic-b.md << 'EOF'
 ---
-id: t2
-slug: topic-b
+id: "02"
+slug: 02_topic-b
 title: Topic B
 ---
 
@@ -129,10 +129,10 @@ title: Topic B
 - 成本效益如何？
 EOF
 
-cat > $B/seed_topics/topic-c.md << 'EOF'
+cat > $B/seed_topics/03_topic-c.md << 'EOF'
 ---
-id: t3
-slug: topic-c
+id: "03"
+slug: 03_topic-c
 title: Topic C
 ---
 
@@ -184,20 +184,20 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 只恢复 topic-a 和 topic-c，缺 topic-b。
 
 ```bash
-cat > $B/seed_topics/topic-a.md << 'EOF'
+cat > $B/seed_topics/01_topic-a.md << 'EOF'
 ---
-id: t1
-slug: topic-a
+id: "01"
+slug: 01_topic-a
 title: Topic A
 ---
 
 # Topic A
 EOF
 
-cat > $B/seed_topics/topic-c.md << 'EOF'
+cat > $B/seed_topics/03_topic-c.md << 'EOF'
 ---
-id: t3
-slug: topic-c
+id: "03"
+slug: 03_topic-c
 title: Topic C
 ---
 
@@ -220,10 +220,10 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 恢复 topic-b，再额外写入一个不在 registry 中的 `extra-topic.md`。
 
 ```bash
-cat > $B/seed_topics/topic-b.md << 'EOF'
+cat > $B/seed_topics/02_topic-b.md << 'EOF'
 ---
-id: t2
-slug: topic-b
+id: "02"
+slug: 02_topic-b
 title: Topic B
 ---
 

@@ -12,13 +12,18 @@ _backlog/
 ├── README.md                          # 本文件（规矩手册 + 索引）
 │
 ├── done/                              # ✅ 已完成/已归档的分析与决策记录
-│   ├── DONE-*.md ×12                  #   单条已完成的 TODO/分析（10 原有 + rerun + plan-hostfile）
-│   ├── _v12-migration/                #   V12→Agentic DPT 迁移记录（6 个 change 全 DONE）
-│   ├── _workflow/                     #   Workflow Foundation 需求与拆解（8 个 change 全 ARCHIVED）
-│   ├── _original_dpt_requirement/     #   原始需求归档（⚠️ 勿读，除非显式要求）
-│   └── _original_dpt_v12/             #   原始 V12 归档（⚠️ 勿读，除非显式要求）
+│   ├── DONE-*.md ×12                  #   单条已完成的 TODO/分析
+│   ├── _fixed_bugs/                   #   已修复的 Bug 记录（4 个）
+│   ├── _old_topics/                   #   已归档的历史文件夹
+│   │   ├── _v12-migration/            #     V12→Agentic DPT 迁移记录（6 change 全 DONE）
+│   │   ├── _workflow/                 #     Workflow Foundation 需求与拆解（8 change 全 ARCHIVED）
+│   │   ├── _original_dpt_requirement/ #     原始需求归档（⚠️ 勿读，除非显式要求）
+│   │   ├── _original_dpt_v12/         #     原始 V12 归档（⚠️ 勿读，除非显式要求）
+│   │   ├── _guideline/                #     术语对齐审计
+│   │   └── _trainsistion/             #     Transition 层设计分析
 │
 ├── todo-*.md ×9                       # 📋 待设计/待实现的 TODO
+│   ├── todo-wave1-sufficiency-gates.md  #  Wave 1 充分性门槛——从 V12 挖掘的 8 层 gap 分析
 │   ├── todo-evidence-extraction.md    #   证据提取（来源→结构化 reference，含干货）
 │   ├── todo-evidence-quality.md       #   证据质量评估——不够格就放弃
 │   ├── todo-explore-exploit.md        #   搜索收敛检测与方向决策
@@ -28,15 +33,7 @@ _backlog/
 │   ├── todo-context-reground.md       #   长上下文定期重锚——预防（低，parked）
 │   └── todo-coding-agent-setup-ux.md  #   用户手册：怎么配 coding agent 才不卡（Claude Code + Codex）
 │
-├── _guideline/                        # 术语对齐审计（研究阶段，open）
-│   └── terminology-gap-audit.md       #   ~253 处术语 gap，94% 是 "Main Agent"→"MD controller"
-│
-├── _trainsistion/                     # Transition 层设计分析（探索备忘录，open issues）
-│   ├── cc_transition_systemic_analysis.md   # 系统性分析：5 bugs（1 critical FSM dispatch bug）
-│   ├── cx_transition_boundary_review.md     # 边界审查：3 层 transition 的区分
-│   └── review_and_suggestion.md             # 独立审查：统一 API 建议
-│
-└── _bugs/                             # （空，预留）
+└── bugs/                              # （空，预留）
 ```
 
 ---
@@ -96,7 +93,7 @@ git mv todo-<name>.md done/DONE-<name>.md
 
 ### ✅ DONE（已完成/已归档，在 `done/`）
 
-12 个 `DONE-*.md` + `_v12-migration/`（6 change 全 DONE）+ `_workflow/`（8 change 全 ARCHIVED）+ 2 个 `_original_*` 原始归档。
+12 个 `DONE-*.md` + `done/_old_topics/`（含 `_v12-migration`/6 change、`_workflow`/8 change、`_original_dpt_requirement`、`_original_dpt_v12`、`_guideline`、`_trainsistion`）+ `done/_fixed_bugs/`（4 个已修复 bug）。
 
 关键完成项：
 - **prototype loop engineering**：gate-loop、gate-fork、subagent 三个原型全部 DONE，对应的 OpenSpec change 已归档
@@ -111,39 +108,68 @@ git mv todo-<name>.md done/DONE-<name>.md
 
 | # | 文件 | 优先级 | 简述 | 阻塞条件 |
 |---|------|--------|------|----------|
-| 1 | `todo-evidence-extraction.md` | **高（当前优先）** | 来源→结构化 reference（含硬数据/干货，不只是元数据） | prototype-subagent ✅, prototype-gate-fork ✅ |
-| 2 | `todo-evidence-quality.md` | **高** | 逐条证据质量评估——不够格就**放弃**（discard，不是 repair） | evidence-extraction（流水线上游） |
-| 3 | `todo-explore-exploit.md` | **高** | 搜索收敛检测与方向决策（wave 级） | subagent ✅, gate-fork ✅, evidence-quality 集成 |
-| 4 | `todo-final-output-eval.md` | **中** | 最终产物整体评估——不够格就自动 rerun（不等用户） | evidence-quality + explore-exploit 信号；plan-hostfile ✅（提供 Progress 信号） |
-| 5 | `todo-hooks-deferral.md` | **延后** | V12 的 6 个 Boundary Hook | evidence 管理器就位 |
-| 6 | `todo-phase-recover.md` | **低（parked）** | 模型失焦时从 ground truth 重新定位并复活当前 phase（兜底层） | 无硬阻塞；与 context-reground 真相源对齐 |
-| 7 | `todo-context-reground.md` | **低（parked）** | 长上下文定期 reload 工程总图+root question，对抗 lost-in-the-middle（预防层） | 无硬阻塞；plan-hostfile ✅ 提供 `## Goal` 北星 |
-| 8 | `todo-coding-agent-setup-ux.md` | **中（launch 前抬起）** | 用户手册：怎么配 Claude Code/Codex 的 permission/approval 才能让框架 HITL1↔HITL2 自主跑不卡 | 无硬阻塞；真跑一次完整 research 的前置 UX 条件 |
+| 1 | `todo-wave1-sufficiency-gates.md` | **最高（当前优先）** | Wave 1 充分性门槛——从 V12 的完整机制挖掘出 8 层 gap：研究画像 + 动态 floor 公式 + 证据质量阶梯 + Must-Answer 合约 + Topic-Unique 要求 + Stop Conditions + 探索/利用决策验证 + 自主推进阻止。**先定"跑到什么程度算够"的标准，再让 evidence-extraction 等实现去对齐。** | 无硬阻塞——本 TODO 是上游设计约束，不是下游实现 |
+| 2 | `todo-evidence-extraction.md` | **高** | 来源→结构化 reference（含硬数据/干货，不只是元数据） | prototype-subagent ✅, prototype-gate-fork ✅ |
+| 3 | `todo-evidence-quality.md` | **高** | 逐条证据质量评估——不够格就**放弃**（discard，不是 repair） | evidence-extraction（流水线上游） |
+| 4 | `todo-explore-exploit.md` | **高** | 搜索收敛检测与方向决策（wave 级） | subagent ✅, gate-fork ✅, evidence-quality 集成 |
+| 5 | `todo-final-output-eval.md` | **中** | 最终产物整体评估——不够格就自动 rerun（不等用户） | evidence-quality + explore-exploit 信号；plan-hostfile ✅（提供 Progress 信号） |
+| 6 | `todo-hooks-deferral.md` | **延后** | V12 的 6 个 Boundary Hook | evidence 管理器就位 |
+| 7 | `todo-phase-recover.md` | **低（parked）** | 模型失焦时从 ground truth 重新定位并复活当前 phase（兜底层） | 无硬阻塞；与 context-reground 真相源对齐 |
+| 8 | `todo-context-reground.md` | **低（parked）** | 长上下文定期 reload 工程总图+root question，对抗 lost-in-the-middle（预防层） | 无硬阻塞；plan-hostfile ✅ 提供 `## Goal` 北星 |
+| 9 | `todo-coding-agent-setup-ux.md` | **中（launch 前抬起）** | 用户手册：怎么配 Claude Code/Codex 的 permission/approval 才能让框架 HITL1↔HITL2 自主跑不卡 | 无硬阻塞；真跑一次完整 research 的前置 UX 条件 |
 
 ### 🔮 分析文档中标记但未建 TODO 的待办
 
 | 来源 | 内容 | 状态 |
 |------|------|------|
-| `done/DONE-agentic-queue-landing-analysis.md` | wfq-wave1-intake-subagent（Change 2） | 未开始 |
-| 同上 | wfq-wave2-synthesis（Change 3） | 未开始 |
-| 同上 | wfq-delivery（Change 4） | 未开始 |
-| `_guideline/terminology-gap-audit.md` | ~253 处术语 gap 修复 | 无执行计划 |
-| `_trainsistion/` 全部 3 文件 | Transition 层清理（FSM dispatch bug + API 统一） | 发现但未建 change |
+| `done/DONE-agentic-queue-landing-analysis.md` | wfq-wave1-intake-subagent（Change 2） | ✅ OpenSpec 已归档（`2026-06-24-wfq-wave1-intake-subagent`） |
+| 同上 | wfq-wave2-synthesis（Change 3） | ✅ OpenSpec 已归档（`2026-06-24-wfq-wave2-synthesis`） |
+| 同上 | wfq-delivery（Change 4） | ✅ OpenSpec 已归档（`2026-06-23-wff-content-delivery`） |
+| `done/_old_topics/_guideline/terminology-gap-audit.md` | ~253 处术语 gap 修复 | 无执行计划 |
+| `done/_old_topics/_trainsistion/` 全部 3 文件 | Transition 层清理（FSM dispatch bug + API 统一） | 发现但未建 change |
 
 ## 依赖链分析
 
-### 核心流水线：evidence-extraction → evidence-quality → explore-exploit → final-output-eval
+### 核心流水线：wave1-sufficiency-gates（定标准）→ evidence-extraction → evidence-quality → explore-exploit → final-output-eval
+
+**`todo-wave1-sufficiency-gates` 是上游设计约束**——它从 V12 的完整机制挖掘出 8 层 gap（研究画像 + 动态 floor 公式 + 证据质量阶梯 + Must-Answer 合约 + Topic-Unique 要求 + Stop Conditions + 探索/利用决策验证 + 自主推进阻止），定义"跑到什么程度算够"。evidence-extraction/quality/explore-exploit 是实现手段，它们的"做到什么程度"由 sufficiency-gates 定的标准决定。
 
 三个层次，从细到粗：
 
-```
-    evidence-extraction          evidence-quality          explore-exploit        final-output-eval
-    (per-source: 拿)             (per-source: 评)          (wave 级: 够不够)       (run 级: 该不该交付)
-    ┌──────────────────┐       ┌──────────────────┐       ┌──────────────────┐    ┌──────────────────┐
-    │ URL → reference   │       │ 逐条质量评估       │       │ 跨 wave 收敛检测  │    │ 最终产物自评       │
-    │ 含硬数据/干货     │───→│ 不够格就放弃      │───→│ 继续/换向/结束   │───→│ 交付/自动rerun    │
-    │ countReferences() │       │ discard ≠ repair  │       │ dispatch 决策     │    │ (不等用户)        │
-    └──────────────────┘       └──────────────────┘       └──────────────────┘    └──────────────────┘
+```mermaid
+flowchart LR
+    subgraph G1["<b>wave1-sufficiency-gates</b><br/>标准层：多高才算够"]
+        direction TB
+        A1["研究画像+floor公式"]
+        A2["isCountable规则"]
+        A3["Must-Answer合约"]
+        A4["Stop Conditions"]
+    end
+    subgraph G2["<b>evidence-extraction</b><br/>per-source：拿"]
+        direction TB
+        B1["URL → reference"]
+        B2["含硬数据/干货"]
+        B3["countReferences()"]
+    end
+    subgraph G3["<b>evidence-quality</b><br/>per-source：评"]
+        direction TB
+        C1["逐条质量评估"]
+        C2["不够格就放弃"]
+        C3["discard ≠ repair"]
+    end
+    subgraph G4["<b>explore-exploit</b><br/>wave 级：够不够"]
+        direction TB
+        D1["跨 wave 收敛检测"]
+        D2["继续/换向/结束"]
+        D3["dispatch 决策"]
+    end
+    subgraph G5["<b>final-output-eval</b><br/>run 级：该不该交付"]
+        direction TB
+        E1["最终产物自评"]
+        E2["交付/自动rerun"]
+        E3["不等用户"]
+    end
+    G1 --> G2 --> G3 --> G4 --> G5
 ```
 
 **关键洞察**：evidence-extraction 解决根本信任问题——**`ref_count` 变成 Engine 计算的派生值**，不再由 Agent 声明。这直接解锁 evidence-quality（评估 Engine 已计数的 reference），进而解锁 explore-exploit（收敛需要可信的增量统计），最后解锁 final-output-eval（自动 rerun 需要可信的质量信号）。evidence-quality 新增了**放弃**动作——烂材料直接排除，不修。
@@ -160,15 +186,13 @@ schema-core → prototype-start-from-here → gate-loop/gate-fork → workflows/
 
 三个 TODO（#6-8）都针对"模型在长程运行中跑糊涂 / 无法事后排查"，与核心 evidence 流水线**正交**，互不阻塞：
 
-```
-   ~~todo-system-logging（已迁移）~~        → `/openspec/changes/system-logging/`（已实现：统一 gate 写路径、
-        │                                  激活 logger.mjs/traceInit/traceSummary、加 bundle 缝合、
-        │                                  inspect-bundle --summary/--timeline/--log）
-```
-        ▼
-   todo-context-reground（预防）  ──减少失焦频率──▶  todo-phase-recover（兜底）
-   周期性 reload 工程总图+root Q                      失焦时从 ground truth 重定位
-   对抗 lost-in-the-middle；增强 §6 tail              +复活当前 phase，不继续幻觉
+```mermaid
+flowchart TB
+    SL["<del>todo-system-logging（已迁移）</del><br/>→ openspec/changes/system-logging/<br/>已实现：统一 gate 写路径、激活 logger.mjs、<br/>加 bundle 缝合、inspect-bundle --summary/--timeline/--log"]
+    CR["<b>todo-context-reground</b>（预防）<br/>周期性 reload 工程总图+root Q<br/>对抗 lost-in-the-middle；增强 §6 tail"]
+    PR["<b>todo-phase-recover</b>（兜底）<br/>失焦时从 ground truth 重定位<br/>+复活当前 phase，不继续幻觉"]
+    SL --> CR
+    CR -- "减少失焦频率" --> PR
 ```
 
 - **reground（预防）vs recover（兜底）互补**：reground 让模型别晕，recover 让模型晕了能救回来。两者共享同一 ground-truth 基座（`rb_status.json` + `rb_profile.yaml` + `rb_plan.md` + 工程总图），设计时真相源要对齐。**plan-hostfile ✅ 已落地**——reground 现在有了 `## Goal` 北星锚点。
@@ -180,49 +204,47 @@ schema-core → prototype-start-from-here → gate-loop/gate-fork → workflows/
 
 ## 推荐执行顺序（2026-06-26 更新）
 
-**决定：evidence-extraction 现在走。理由：流水线根节点，解锁后续三个。**
+**决定：wave1-sufficiency-gates 现在走。理由：先定"跑到什么程度算够"的标准，再让实现去对齐——否则 evidence-extraction 做了也不知道 floor 该设多少。**
 
+```mermaid
+flowchart LR
+    subgraph P1["<b>Phase 1（当前）</b>"]
+        direction TB
+        W1["<b>wave1-sufficiency-gates</b><br/>定标准：floor公式、isCountable规则、<br/>Must-Answer合约、Stop Conditions<br/><br/>为什么现在走：<br/>• 上游设计约束——不定标准后面<br/>  实现不知道做到什么程度算够<br/>• V12 完整机制已挖掘——8 层 gap 已分析<br/>• 与 extraction 可并行 explore<br/><br/>下一步：opsx:explore → opsx:propose → 实施"]
+    end
+    subgraph P2["<b>Phase 2</b>"]
+        E2["<b>evidence-extraction</b><br/>来源→结构化ref<br/><br/>前提：sufficiency-gates 标准就位"]
+    end
+    subgraph P3["<b>Phase 3</b>"]
+        E3["<b>evidence-quality</b><br/>逐条质量评估<br/><br/>前提：extraction"]
+    end
+    subgraph P4["<b>Phase 4</b>"]
+        E4["<b>explore-exploit</b><br/>收敛检测<br/><br/>前提：extraction + quality"]
+    end
+    subgraph DEFER["<b>延后</b>"]
+        H["hooks"]
+    end
+    subgraph PARALLEL["<b>并行（正交，可随时做）</b>"]
+        CA["<b>coding-agent-setup-ux</b><br/>UX 手册<br/>launch 前抬起"]
+    end
+    subgraph FINAL["<b>最终</b>"]
+        FO["<b>final-output-eval</b><br/>产出自评→自动rerun<br/><br/>前提：前 4 个 DONE<br/>+ plan-hostfile ✅（Progress 信号已就位）"]
+    end
+    P1 --> P2 --> P3 --> P4 --> FINAL
 ```
-Phase 1 (当前)              Phase 2              Phase 3           延后          并行
-┌──────────────────┐    ┌───────────────┐    ┌───────────────┐   ┌──────────┐   ┌──────────────┐
-│ evidence-        │    │ evidence-     │    │ explore-      │   │ hooks    │   │ coding-agent │
-│ extraction       │───→│ quality       │───→│ exploit       │   │          │   │ setup-ux     │
-│ (来源→结构化 ref) │    │ (逐条质量评估) │    │ (收敛检测)     │   │          │   │ (UX 手册)     │
-│                  │    │               │    │               │   │          │   │ 正交，可随时做 │
-│ 为什么现在走:      │    │ 前提:          │    │ 前提:          │   │          │   │              │
-│ • 流水线根节点——  │    │ extraction    │    │ extraction    │   │          │   │ launch 前抬起 │
-│   解锁 quality/  │    │ + quality     │    │ + quality     │   │          │   │              │
-│   explore-exploit│    │               │    │               │   │          │   │              │
-│ • scope 最广——    │    │               │    │               │   │          │   │              │
-│   CandidateCard/ │    │               │    │               │   │          │   │              │
-│   cache staging/ │    │               │    │               │   │          │   │              │
-│   countReferences│    │               │    │               │   │          │   │              │
-│                  │    │               │    │               │   │          │   │              │
-│ 下一步:           │    │               │    │               │   │          │   │              │
-│ opsx:explore →   │    │               │    │               │   │          │   │              │
-│ opsx:propose →   │    │               │    │               │   │          │   │              │
-│ 实施             │    │               │    │               │   │          │   │              │
-└──────────────────┘    └───────────────┘    └───────────────┘   └──────────┘   └──────────────┘
-
-                              ┌──────────────────┐
-                              │ final-output     │  前提: 前 3 个 DONE
-                              │ eval             │  + plan-hostfile ✅（Progress 信号已就位）
-                              │ (产出自评→自动rerun)│
-                              └──────────────────┘
 
 ✅ 已完成（已进 done/）：rerun-incremental-node、plan-hostfile-sections
-   → rerun 解锁 final-output-eval 的 auto_rerun 落点
+   → rerun 解锁 final-output-eval 的 auto_rerun 落点（为什么比 evidence-extraction 先做完：独立于核心流水线，有专项依赖，解锁 downstream 关键前提）
    → plan-hostfile 解锁 context-reground 北星 + final-output-eval 完成度信号
-```
 
-### 为什么 evidence-extraction 现在走
+### 为什么 wave1-sufficiency-gates 现在走
 
 | 维度 | 判断 |
 |------|------|
-| **流水线根节点** | evidence-extraction → quality → explore-exploit → final-output-eval。根节点不动，后面三个都没地基 |
-| **解锁效应** | `ref_count` 变 Engine 派生值 → 直接解锁 quality/explore-exploit/eval 三层 |
-| **成熟度** | prototype-subagent ✅、prototype-gate-fork ✅ 已就位，阻塞已解；但 scope 最广（CandidateCard、cache staging、`countReferences()`），开放问题最多——先 explore 把设计想透 |
-| **下一步** | `opsx:explore evidence-extraction`（纯设计）→ `opsx:propose` → 实施 |
+| **上游设计约束** | sufficiency-gates 定"跑到什么程度算够"的标准。不先定标准，evidence-extraction 做了也不知道 floor 该设多少、isCountable 要判哪些字段、Must-Answer 合约该长什么样 |
+| **V12 已挖掘清楚** | 完整对比了 V12 的 RESEARCH_PROFILES.md、METHODOLOGY.md、GATES.md、QUEUE_CONTRACT.md → 当前框架的 10 个 gate definition JSON，8 层 gap 已经分析清楚，不是凭空设计 |
+| **与 extraction 可并行 explore** | sufficiency-gates 定标准（profile schema + floor 公式 + gate rule 设计），extraction 做实现（enriched reference 格式 + CandidateCard + cache staging）。两件事的 explore 阶段互不阻塞——可以同时 `/opsx:explore` |
+| **下一步** | `opsx:explore wave1-sufficiency-gates`（纯设计，定 profile schema + floor 公式 + gate rule 改造方案）→ `opsx:propose` → 实施 |
 
 ### 三个 parked TODO（健壮性/元机制，低优先级）
 
@@ -231,20 +253,20 @@ Phase 1 (当前)              Phase 2              Phase 3           延后     
 ## 快速查阅指南
 
 ### 想看"现在该做什么"
-→ 本文的"推荐执行顺序"——**当前：evidence-extraction 走**
+→ 本文的"推荐执行顺序"——**当前：wave1-sufficiency-gates 走**
 
 ### 想看 _backlog 的规矩（todo 怎么变 done）
 → 本文的 **"todo → done 的规矩"** 一节
 
 ### 想看历史决策
-→ `done/_v12-migration/decisions.md`（7 个架构决策）
+→ `done/_old_topics/_v12-migration/decisions.md`（7 个架构决策）
 → `done/` 下 12 个 `DONE-*` 文件（按文件名主题查阅）
 
 ### 想看技术深度
 - **queue loop 怎么设计** → `done/DONE-agentic-queue-landing-analysis.md`（59KB，最详细）
-- **transition 层的坑** → `_trainsistion/review_and_suggestion.md`（FSM dispatch bug + API 统一建议）
-- **workflow 怎么拆成 change** → `done/_workflow/openspec-change-map.md`
-- **术语怎么乱** → `_guideline/terminology-gap-audit.md`
+- **transition 层的坑** → `done/_old_topics/_trainsistion/review_and_suggestion.md`（FSM dispatch bug + API 统一建议）
+- **workflow 怎么拆成 change** → `done/_old_topics/_workflow/openspec-change-map.md`
+- **术语怎么乱** → `done/_old_topics/_guideline/terminology-gap-audit.md`
 
 ### 想看具体 TODO 的设计思路
 → 对应的 `todo-*.md` 文件，每个都包含：Why、核心挑战、从 V12 借鉴的模式、实验范围（Goals/Non-Goals）、关键设计问题、实现思路、下一步

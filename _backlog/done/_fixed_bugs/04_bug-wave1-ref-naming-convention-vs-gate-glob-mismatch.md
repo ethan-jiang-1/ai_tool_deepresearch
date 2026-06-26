@@ -55,4 +55,16 @@ P1（真实 run 会稳定复现 gate fail；不阻塞——可用 `0N-<slug>-<qu
 
 ## 状态
 
-已挖到根因并绕过；已继续 phase-wave2。待框架维护者修命名/glob 冲突。
+已修复（2026-06-26，OpenSpec change `establish-topic-slug-nn-prefix-convention`，与 bug #3 合并修复）
+
+---
+
+## Resolution
+
+**修复内容** (与 bug #3 合并修复):
+- Gate glob: `per_topic_ref_md_count_floor` 的 target 从 `reference/*{topic}-*.md` 改为 `reference/*{topic}*.md`（去掉强制 `-`），接受含 qualifier 和不含 qualifier 两种形态
+- Reference 命名约定: `0N-<slug>.md` → `{slug}-<qualifier>.md`（slug 已自带 `NN_`，不需额外 `0N-` 前缀，消除与 gate glob 的互斥）
+- `inspect-wave1-output.mjs`: 删 `numericId()` → 改用 `startsWith(topic.slug)` 直接匹配，适配新命名约定
+- 文档同步: `shared-schemas.md` Reference Layer / `START_FROM_HERE.md.tmpl` / `reference/README.md.tmpl` / `gate-wave1-complete.definition.json` 全部更新
+
+**根因消除**: topic slug 含 `NN_` 前缀后，`{slug}-<qualifier>.md` 命名自然满足 gate glob `*{topic}*`——slug 本身以 `NN_` 开头，文件名以完整 slug 开头，glob 匹配无需额外 `-` 分隔符。

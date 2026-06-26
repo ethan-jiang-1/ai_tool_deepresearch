@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: wfn-seedtopic
 case: case-201-standard-seedtopics-queue-loop
 weight: light
-case_goal: "验证 Agent 加载 phase-seed-topics.md 后能正确执行 queue-driven 三阶段（灌料→执行循环→gate pass），产出文件遵循 {slug}.md 命名（slug 描述性，id 承载编号），frontmatter slug 与文件名 stem 一致（gate 三重一致校验），必需字段齐全，缺失信息标注为 gap。"
+case_goal: "验证 Agent 加载 phase-seed-topics.md 后能正确执行 queue-driven 三阶段（灌料→执行循环→gate pass），产出文件遵循 {slug}.md 命名（slug 含 NN_ 前缀），frontmatter slug 与文件名 stem 一致（gate 三重一致校验），必需字段齐全，缺失信息标注为 gap。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -19,7 +19,7 @@ req: AGQ-010
 
 # case-61-standard-seedtopics-queue-loop
 
-验证 Agent 通过 Agentic Queue 物化 3 个 seed topic 文件，产出文件遵循 `{slug}.md` 命名（slug 描述性，id 承载编号），gate pass 且 trace 可审计。
+验证 Agent 通过 Agentic Queue 物化 3 个 seed topic 文件，产出文件遵循 `{slug}.md` 命名（slug 含 NN_ 前缀），gate pass 且 trace 可审计。
 
 ## Expected Runtime Path
 
@@ -37,7 +37,7 @@ req: AGQ-010
 
 证明三件事：
 1. Agent 能正确执行 queue-driven seed topic 物化闭环（灌料→执行→gate）
-2. 产出文件遵循 `{slug}.md` 命名（slug 描述性，id 承载编号——gate 不强制前缀，只校验三重一致）
+2. 产出文件遵循 `{slug}.md` 命名（slug 含 NN_ 前缀——gate 通过三重一致传递性强制前缀，因为 registry slug 含 NN_）
 3. 每个 seed topic 文件是合格的 search-relevant decision document（含必需字段 + gap 标注机制）
 
 ---
@@ -48,7 +48,7 @@ req: AGQ-010
 
 | # | 检查项 | 判定方式 |
 |---|--------|----------|
-| N1 | `seed_topics/` 下有 3 个文件，文件名 = `{slug}.md`（slug 为描述性短名，如 `claude-code`，不含编号前缀——编号由 `id` 承载） | `ls -1 $B/seed_topics/` |
+| N1 | `seed_topics/` 下有 3 个文件，文件名 = `{slug}.md`（slug 含 NN_ 前缀，如 `01_claude-code-cli-tool`） | `ls -1 $B/seed_topics/` |
 | N2 | 文件名与 registry slug 一一对应（registry 中每个 topic.slug 都有对应的 `{slug}.md`） | 对照 registry 检查 `ls` 输出 |
 | N3 | 每个文件的 frontmatter `slug` 与文件名 stem 完全一致（byte-for-byte），gate 三重一致校验 | `grep 'slug:' $B/seed_topics/*.md` |
 | N4 | frontmatter `id` 与 registry 中的 `id` 一致 | 逐文件对照 |

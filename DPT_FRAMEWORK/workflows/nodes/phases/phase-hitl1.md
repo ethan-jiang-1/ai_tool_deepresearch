@@ -37,6 +37,25 @@ suggested_context: []
 3. 从 original topic 推导初始 seed topics（3-5 个可独立研究的子话题）→ 写入 `rb_plan.md` frontmatter 的 `topic_registry`；**物化动作（创建 `seed_topics/<slug>.md`）已移至下游 `phase-seed-topics`**——HITL1 只写 registry，不创建 seed topic 文件，避免职责重叠
 4. 将 original topic + seed topics + 建议的 `research_profile` 一起展示给用户
 
+**Slug 命名约定：** 每个 topic 的 `slug` 格式为 `NN_<descriptive-name>`，`NN` 为该 topic 在 `topic_registry` 数组中的 1-based 位置（两位零填充），**不是** `id` 字段的值。`id` SHOULD 与 NN 一致（如 `"01"`），gate 不校验 id 格式——这是 convention 层面的统一。
+
+例如，`topic_registry` 中 3 个 topic 的 slug 写法：
+
+```yaml
+topic_registry:
+  - id: "01"
+    slug: "01_meal-timing-blood-glucose-insulin"
+    title: "Meal Timing & Blood Glucose/Insulin"
+  - id: "02"
+    slug: "02_front-vs-back-calorie-loading"
+    title: "Front vs Back Calorie Loading & Weight"
+  - id: "03"
+    slug: "03_late-eating-metabolic-syndrome"
+    title: "Late Eating & Metabolic Syndrome"
+```
+
+`NN` 取自数组位置（第 1 个 topic → `01_`，第 2 个 → `02_`，以此类推），与 `id` 字段值无关。如果 `id` 字段写作 `t1`/`t2`，slug 仍用数组位置 `01_`/`02_`。
+
 **Gate 不判断 rewrite 质量。** `hitl1-recorded` gate 只做 structural 校验（`PlanSchema` 可解析、`topic_registry` 非空）。Original topic 是否合理、seed topics 是否覆盖关键维度——这是人类在 HITL1 审查的事。
 
 ### 3b. HITL1 问题收集

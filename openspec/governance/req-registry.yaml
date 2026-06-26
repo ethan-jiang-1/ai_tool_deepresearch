@@ -236,6 +236,7 @@ STM-002: "seed-topic-materialization — Seed topics ready gate rule set (dir_no
 STM-003: seed-topic-materialization — Seed topics gate CLI implementation (definition-driven, dir_non_empty evaluator, cross_field slug_consistency evaluator, double trace)
 STM-004: seed-topic-materialization — Workflow registration of seed-topics phase (manifest, transitions.chain, enums.mjs CurrentGate)
 STM-005: seed-topic-materialization — Seed topics boundary enforcement playbook (materialize all→pass, empty dir→fail, slug missing/extra→fail)
+STM-006: seed-topic-materialization — Topic slug SHALL include zero-padded NN_ numeric prefix (NN = 1-based array position); gate triple-consistency byte-for-byte check naturally compatible
 
 # workflow-foundation — contracts
 WDC-001: workflow-directory-contract — Read-only framework assets boundary (DPT_FRAMEWORK/ = read-only, dpt_rb_*/ = mutable runtime truth)
@@ -311,7 +312,7 @@ CDE-004: content-delivery-experiments — Playbook test-simple-hitl2-rerun-branc
 CDE-005: content-delivery-experiments — Playbook test-medium-delivery-repair-loop (HITL2 + readiness PDCA repair cycles)
 
 # reference-flat-format
-REF-001: reference-flat-format — Flat reference directory with three-level naming prefixes (00-shared-/00-cross-/0N-)
+REF-001: reference-flat-format — Flat reference directory with three-level naming prefixes (00-shared-/{topic_slug}-<qualifier>/00-cross-)
 REF-002: reference-flat-format — Rich MD reference file template (metadata block + Key Facts + Core Content + Relevance + Quotable Terms + Risks)
 REF-003: reference-flat-format — _INDEX.md as canonical reference inventory with source_layer column
 REF-004: reference-flat-format — README.md as human navigation for reference directory
@@ -324,12 +325,12 @@ WAD-003: wave0-artifacts-directory — instantiate-run-bundle.mjs creates artifa
 
 # research-wave-phase-content (delta)
 RWP-009: research-wave-phase-content — Wave0 phase produces 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
-RWP-010: research-wave-phase-content — Wave1 phase produces reference/0N-*.md rich MD per topic
+RWP-010: research-wave-phase-content — Wave1 phase produces reference/{topic_slug}-<qualifier>.md rich MD per topic
 RWP-011: research-wave-phase-content — Wave2 phase produces 00-cross-*.md (optional), synthesis stays in artifacts/wave2/
 
 # research-wave-gate-implementation (delta)
 RWG-011: research-wave-gate-implementation — Wave0 gate checks for 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
-RWG-012: research-wave-gate-implementation — Wave1 gate checks for reference/0N-*.md per topic
+RWG-012: research-wave-gate-implementation — Wave1 gate checks for reference/*{topic}*.md per topic
 RWG-013: research-wave-gate-implementation — Wave2 gate removes reference/00_shared/ checks, 00-cross-* is optional
 
 # workflow-directory-contract (delta)
@@ -338,7 +339,7 @@ WDC-010: workflow-directory-contract — Manifest includes rerun phase entry (ph
 
 # cli-inspect-output-conventions
 IOC-001: cli-inspect-output-conventions — inspect-wave0-output.mjs (flat dir, naming, metadata, sections, _INDEX.md, README.md, thin YAML)
-IOC-002: cli-inspect-output-conventions — inspect-wave1-output.mjs (0N-*.md per topic, metadata/sections, evidence-summary, question-list, _INDEX.md wave1 entries)
+IOC-002: cli-inspect-output-conventions — inspect-wave1-output.mjs ({topic.slug}*.md per topic, metadata/sections, evidence-summary, question-list, _INDEX.md wave1 entries)
 IOC-003: cli-inspect-output-conventions — inspect-wave2-output.mjs (no 00_shared/, 00-cross-* format, artifacts/wave2/ triple, no backfill tokens)
 
 # bundle-start-from-here (delta)
