@@ -88,6 +88,7 @@ for (const d of dirs) {
 // Better to fail loudly than produce invalid bundles.
 
 const statusDefault = {
+  bundle: strippedName,
   current_mode: 'execution',
   state: 'not_started',
   current_gate: 'setup_ready',

@@ -23,5 +23,5 @@ Group 7 — system-logging:
 
 ## Result
 
-- case-71: pending execution
-- case-72: pending execution
+- case-71: **PASS** (2026-06-26) — 10/10 checks (9 normal + 1 boundary gate). Unified envelope, bundle propagation, timeline stitching across writeGateAttempt + log-event.mjs + logToRun.
+- case-72: **PASS** (2026-06-26) — 6/6 checks. Engine closed-set events in log, QM + SR + gate + Agent interleave, timeline stitches [queue]/[log]/[trace], no unparsed entries.

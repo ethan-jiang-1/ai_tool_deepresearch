@@ -92,4 +92,4 @@
 - [x] 10.3 新建 `case-71-light-unified-envelope.md` — 主 Agent + gate 路径：创建 bundle → 跑 gate → Agent 通过 `log-event.mjs` 写 phase 日志 → `inspect-bundle --timeline` 缝合验证 → trace 裁决 → 清理。**已执行：PASS（10/10 checks）** @impl LOC-001, LOC-002, LOC-009
 - [x] 10.4 新建 `case-72-standard-engine-lifecycle.md` — engine + subagent 路径：创建 bundle → queue-manager enqueue/claim/complete → subagent-relay dispatch → 启动真实 subagent → collect/merge → `inspect-bundle --timeline` 验证 engine log 与 gate log 交织 → trace 裁决 → 清理。**playbook 已就绪，待执行** @impl LOC-006
 - [x] 10.5 执行 case-71 — coding agent 按 playbook 逐步执行。结果：**PASS**（10 checks：9 normal + 1 boundary gate），bundle 已清理
-- [ ] 10.6 执行 case-72 — coding agent 按 playbook 逐步执行（含真实 native subagent），PASS 后清理 disposable bundle
+- [x] 10.6 执行 case-72 — coding agent 按 playbook 逐步执行（含真实 native subagent）。结果：**PASS**（6/6 checks：QM events + SR events + gate/Agent interleave + timeline stitch + no unparsed + repair trace），bundle 已清理
