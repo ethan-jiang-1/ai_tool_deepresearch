@@ -53,8 +53,12 @@ Frontmatter 字段名不变。JSON→YAML——`parseMdFrontmatter()` 基于 `pa
   ### Purpose
   ### Research Questions
   ### Scope
+    **In scope:**        ← required-fill (待填充 — …)
+    **Out of scope:**    ← required-fill (待填充 — …)
+    **待定:**             ← intentionally-allowed (待 HITL2 确认 — …)
 ## Topic Registry        ← Markdown table，intentionally-allowed marker
-## Constraints           ← intentionally-allowed marker (待 HITL1 填充)
+## Constraints           ← 5 类结构化 bullet list，intentionally-allowed markers
+  - 语言 / 时间预算 / 地域 / 方法 / 来源偏好
 ## Progress              ← Engine 写（gate pass 翻转 checkbox）
 ## Decisions             ← intentionally-allowed marker (append-only)
 ```

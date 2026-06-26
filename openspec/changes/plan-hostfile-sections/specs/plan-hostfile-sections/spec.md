@@ -20,7 +20,13 @@ The `rb_plan.md.tmpl` SHALL use YAML frontmatter (instead of JSON) for `plan_bas
 
 ### Requirement: Goal section provides north-star anchor for Agent
 
-The `## Goal` section SHALL contain three sub-sections: `### Purpose` (one-paragraph summary of the research), `### Research Questions` (numbered list of core questions), and `### Scope` (explicit include/exclude boundaries). At minimum, `### Purpose` SHOULD be filled after HITL1 completes (an Agent behavior convention, not gate-enforced). `phase-hitl1.md` instructions SHALL direct the Agent to write here; missing or incomplete sub-sections SHALL NOT block gate passage.
+The `## Goal` section SHALL contain three sub-sections: `### Purpose` (one-paragraph summary of the research), `### Research Questions` (numbered list of core questions), and `### Scope`. The `### Scope` sub-section SHALL be further structured as:
+
+- **In scope:** — what the research covers. Required-fill marker `(待填充 — …)`; Agent MUST replace after HITL1.
+- **Out of scope:** — what is explicitly excluded, preventing Agent over-search. Required-fill marker `(待填充 — …)`; Agent MUST replace after HITL1.
+- **待定:** — gray areas depending on future user input. Intentionally-allowed marker `(待 HITL2 确认 — …)`; gate SHALL NOT flag.
+
+At minimum, `### Purpose` SHOULD be filled after HITL1 completes (an Agent behavior convention, not gate-enforced). `phase-hitl1.md` instructions SHALL direct the Agent to write here; missing or incomplete sub-sections SHALL NOT block gate passage.
 
 **Placeholder marker convention.** Template sections use markers to signal fill status to both Agent and gate. Two marker classes exist:
 
@@ -65,7 +71,19 @@ The `## Topic Registry` section SHALL be a Markdown table with columns: `#`, `Sl
 
 ### Requirement: Constraints and Decisions sections are reserved for future use
 
-The `## Constraints` and `## Decisions` sections SHALL be present in the template. `## Constraints` SHALL use the intentionally-allowed marker `(待 HITL1 填充 — …)` to signal the fill point without blocking the gate. `## Decisions` SHALL be marked as `(append-only — 关键决策记录，最新在上)`. No gate SHALL check their content in Phase 1. They exist to define the extension surface for future phases.
+The `## Constraints` and `## Decisions` sections SHALL be present in the template.
+
+`## Constraints` SHALL be pre-populated with five constraint categories as a bullet list, each using the intentionally-allowed marker `(待 HITL1 填充 — …)` to signal the fill point without blocking the gate:
+
+- **语言** — source language preference (仅中文源/中英混合/不限)
+- **时间预算** — time constraint (default: no hard deadline)
+- **地域** — geographic scope (中国大陆/港澳台/海外)
+- **方法** — default `open` (Agent selects search/synthesis/fetch freely)
+- **来源偏好** — source priority (一手源优先/学术优先/无偏好)
+
+Categories with known defaults (方法) MAY be filled directly; categories needing HITL1 input SHALL use intentionally-allowed markers. No gate SHALL check Constraints content in Phase 1.
+
+`## Decisions` SHALL be marked as `(append-only — 关键决策记录，最新在上)`. No gate SHALL check its content in Phase 1.
 
 #### Scenario: Empty or marker-only sections do not cause gate failure
 
