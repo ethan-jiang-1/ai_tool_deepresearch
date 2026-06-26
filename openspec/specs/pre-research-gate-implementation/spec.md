@@ -1,6 +1,6 @@
 # Pre-Research Gate Implementation
 
-> req: PRG-001, PRG-002, PRG-003, PRG-004, PRG-005, PRG-006, PRG-007, PRG-008
+> req: PRG-001, PRG-002, PRG-003, PRG-004, PRG-005, PRG-006, PRG-007, PRG-008, PRG-009
 
 ## Purpose
 
@@ -239,3 +239,22 @@ pre-research gate CLIs SHALL 继续通过 stdout 返回标准 JSON gate result�
 - **WHEN** 用户在 production run bundle 上直接调用 pre-research gate CLI
 - **THEN** `rb_trace.jsonl` SHALL 获得新的 runtime audit entry
 - **AND** system SHALL NOT 要求存在 `_trace.jsonl` 才能留下 gate audit trail
+
+### Requirement: HITL1 recorded gate status rules
+
+`gate-hitl1-recorded.definition.json` SHALL include `status_current_gate` and `status_next_gate` rules, consistent with every other gate definition in the system.
+
+The `status_current_gate` rule SHALL check `rb_status.json#/current_gate` equals `"hitl1_recorded"`.
+The `status_next_gate` rule SHALL check `rb_status.json#/next_gate` equals `"setup_ready"`.
+
+#### Scenario: HITL1 gate passes with correct status values
+
+- **WHEN** `rb_status.json` has `current_gate: "hitl1_recorded"` and `next_gate: "setup_ready"`
+- **AND** all other HITL1 rules pass (profile recorded, must_answer_set non-empty)
+- **THEN** `check-gate-hitl1-recorded.mjs` SHALL return `passed: true`
+
+#### Scenario: HITL1 gate fails on drifted next_gate
+
+- **WHEN** `rb_status.json` has `next_gate: "wave0_complete"` (old chain value, before advance-status was called)
+- **THEN** gate SHALL return `passed: false`
+- **AND** `inspect` SHALL indicate `next_gate` mismatch with expected value `"setup_ready"`

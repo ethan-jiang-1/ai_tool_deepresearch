@@ -1,6 +1,6 @@
 # Transition Table
 
-> req: TRT-001, TRT-002, TRT-003, TRT-005, TRT-006
+> req: TRT-001, TRT-002, TRT-003, TRT-005, TRT-006, TRT-011, TRT-012
 
 ## Purpose
 
@@ -148,4 +148,36 @@ The chain SHALL continue to use canonical node fileRefs as keys, consistent with
 
 - **WHEN** `resolveNodeTransitionDetailed('transitions.chain.json', 'phases/phase-hitl2.md', 'request_view_revision', context)` is called
 - **THEN** the result SHALL have `kind: 'no_transition'`
+
+### Requirement: Gate FSM contract superseded by chain.json
+
+`schema/contracts/gate.mjs` SHALL be marked as superseded. The `GATE_MACHINE_STATES`, `GATE_EVENT_TYPES`, `GATE_TRANSITIONS`, `validateTransitions`, and `isValidTransition` exports SHALL be retained for backward compatibility, but SHALL carry a banner stating that `transitions.chain.json` is the canonical transition truth source and that this abstract FSM is not used by any runtime path.
+
+The superseded notice SHALL NOT remove or rename any export.
+
+#### Scenario: Superseded banner present
+
+- **WHEN** a developer opens `schema/contracts/gate.mjs`
+- **THEN** the file SHALL begin with a comment explaining the superseded status and pointing to `transitions.chain.json` as the canonical truth source
+
+#### Scenario: Existing exports preserved
+
+- **WHEN** any existing consumer imports from `schema/contracts/gate.mjs` or the `schema/index.mjs` barrel
+- **THEN** all exports SHALL continue to resolve without error
+
+### Requirement: Phase MD test helper validates against chain.json truth source
+
+`tests/helpers/md-phase-checks.mjs` SHALL validate gate membership against `transitions.chain.json` (via `manifest.json` bridge) instead of the superseded `gate.mjs` FSM.
+
+The `checkGateInTransitionTable` function SHALL load `manifest.json` to resolve gate name → node fileRef, then load `transitions.chain.json` to check if the node fileRef exists as a key. Gates with `null` gate in manifest (e.g., `final`) SHALL be excluded from chain membership validation.
+
+#### Scenario: Gate in chain is validated
+
+- **WHEN** `checkGateInTransitionTable` is called with a manifest-listed gate whose corresponding node exists in `transitions.chain.json`
+- **THEN** it SHALL return `{ ok: true }`
+
+#### Scenario: Final phase with null gate is excluded
+
+- **WHEN** `checkNextPhaseExists` is called with the `final` phase (gate is `null` in manifest)
+- **THEN** it SHALL return `[]` (no issues) without attempting chain lookup
 
