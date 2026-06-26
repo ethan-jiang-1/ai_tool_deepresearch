@@ -3,12 +3,25 @@
 本目录是一个 Deep Research Runtime Bundle。
 框架位于 `../DPT_FRAMEWORK/`（共享 reusable framework assets，运行时只读）。
 
+## Active Runtime Coordinates
+
+- repo_command_root: 包含 `DPT_FRAMEWORK/` 和 `dpt_rb_{{name}}/` 的 repo root；通常也是 shell cwd。
+- bundle_root: 本文件所在目录；从 repo root 调用时是 `dpt_rb_{{name}}`，从 bundle 内看是 `.`。
+- bundle_name: `{{name}}`
+- framework_root: `../DPT_FRAMEWORK/`；从 repo root 执行命令时使用 `DPT_FRAMEWORK/...`。
+- 所有 `<bundle>`、bundle-relative path（如 `artifacts/...`、`_cache/...`、`_subagents/...`）都以 `bundle_root` 为根。
+- 不要把 repo cwd 当成 bundle root；每次执行 gate、queue、inspect、log 或 relay 相关命令，都显式传入 active bundle path。
+
 ## 控制文件
 - rb_plan.md       — 话题设计 (Markdown + JSON frontmatter)
 - rb_profile.yaml  — 用户意图 (YAML)
 - rb_status.json   — 运行时状态 (JSON)
 - rb_queue.json    — 执行队列 (JSON)
-- rb_trace.jsonl   — 诊断日志 (JSON Lines, 追加式)
+- rb_trace.jsonl   — runtime audit trace (JSON Lines, append-only)
+
+## 审计与诊断
+- rb_trace.jsonl   — runtime audit trace，pass/fail 和 gate/check evidence 从这里审计
+- _logs/run.log    — diagnostic log（如果存在，用于排障；不是 verdict authority）
 
 ## 数据目录
 
@@ -28,6 +41,7 @@
 
 ## 规则
 - 当前 run 的 truth 只来自本 bundle 的控制文件、数据目录和 trace。
+- 续跑口诀: 先读 `START_FROM_HERE.md`、`rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`；用 repo root 执行框架命令，用 bundle path 定位 runtime truth；`_logs/run.log` 只用于排障，不能靠聊天记忆或 log 推断当前状态。
 - 不要把 HITL answer、gate result、repair state、trace、artifact 或 final output 写回 `../DPT_FRAMEWORK/`。
 - 停止授权: 仅 final_delivery / decision_blocker / empty_queue_after_refill
 - Gate 过渡前 reload 所有控制文件

@@ -29,11 +29,14 @@ Phase Agent and Sub-agent communicate exclusively through relay-managed slot fil
 
 The Sub-agent receives **only** these two files. It does NOT receive: WorkflowState, gate internals, other topic results, queue content, or the full phase node.
 
+The spawn prompt MAY also name the bundle root and runtime log path so the Sub-agent can resolve bundle-relative artifact paths and write diagnostic log lines. This is path context, not workflow authority.
+
 ### 1.2 Files the Sub-agent WRITES
 
 | File | Content |
 |------|---------|
 | `_subagents/wave_NN/slot_MM/runtime-receipt.jsonl` | Two JSONL events: `agent_runtime_started` (on spawn) + `agent_result_ready` (on completion). Each event contains `slotKey`, `roleAgentKey`, `receiptNonce`. |
+| `_logs/run.log` | Optional diagnostic log lines for human debugging. Not verdict authority. |
 | `_cache/waveN/slot_MM/` | Intermediate work products: raw search results, fetched pages, extraction drafts. Reconstructable, non-authority. |
 | Artifact files (e.g. `reference/{topic.slug}/source.yaml`, `artifacts/wave1/{topic.slug}/evidence-summary.md`) | Phase-specific output files written to the bundle's artifact paths. These are the Sub-agent's primary deliverables. |
 

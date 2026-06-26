@@ -159,6 +159,8 @@ FRE-002: framework-engine — workflow-fsm standalone pure FSM transition resolv
 FRE-003: framework-engine — Gate helpers shared parseMdFrontmatter and readBundlePlan for YAML 1.2 frontmatter parsing
 TRW-001: trace-writer — Unified append-only JSONL trace writer with createTrace factory (3 variants)
 TRW-002: trace-writer — Trace output validates against TraceEntrySchema contract
+TRW-003: trace-writer — Trace entries include bundle field for cross-sink correlation
+TRW-004: trace-writer — Run start trace marker (run_start at bundle creation; run_end terminal marker deferred to Phase 2)
 EXS-001: experiment-shared-infra — experiments_env/shared/ directory for experiment-scoped shared infrastructure
 EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_FRAMEWORK/command_experiments_env/scripts/ to experiments_env/shared/"
 SCO-009: schema-core — QueueWorkUnitSchema upgrade for rb_queue.json (5 slots nullable, refill_pool typed)
@@ -254,12 +256,26 @@ GSK-003: gate-skeleton — One gate per CLI (8 independent CLI wrappers, no gene
 LOG-001: logger — Logger default zero-config usage (createLogger() → console only, 4 levels, ISO 8601 timestamps)
 LOG-002: "logger — Logger file output via option (createLogger({ file }) → console + file append, auto mkdir)"
 LOG-003: logger — Logger injection pattern in engine (logger = null trailing parameter, silent no-op)
+LOG-004: logger — Run-scoped logger creation at bundle initialization (logToRun for first line, createRunLogger for engines)
+LOG-005: logger — logToRun(bundlePath, level, msg, detail?) one-shot and createRunLogger(bundlePath) factory, encapsulating _logs/run.log path convention and bundle auto-injection
+
+# logging-conventions
+LOC-001: logging-conventions — Bundle identity is the bundle name (dpt_rb_<name> → bundle=<name>); persisted in rb_status.json at instantiation, injected into all sink entries
+LOC-002: logging-conventions — Single diagnostic log file per bundle (_logs/run.log as chronological diagnostic dump, not verdict source)
+LOC-003: logging-conventions — Log level conventions (DEBUG/INFO/WARN/ERROR with defined usage for .mjs files)
+LOC-004: logging-conventions — Phase node log convention (## Log section in .md phase nodes declaring required log points)
+LOC-005: logging-conventions — Inspect-bundle observable extension (--summary/--timeline/--log flags for post-mortem diagnosis)
+LOC-006: logging-conventions — Logger activation in engines (queue-manager + subagent-relay use createRunLogger at entry)
+LOC-007: logging-conventions — One-shot log API (logToRun(bundlePath, level, msg, detail?) encapsulates path, format, bundle)
+LOC-008: logging-conventions — Run-scoped logger factory (createRunLogger(bundlePath) returns {info,warn,error,debug} bound to _logs/run.log)
+LOC-009: logging-conventions — Agent log CLI (log-event.mjs --bundle --level --msg, bash command for Phase Agent, zero JS knowledge)
+
 LFW-001: lifecycle-walker — Walker reads manifest and walks lifecycle (--bundle required, --manifest optional, 9 phases) [DEPRECATED]
 LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass (max 3 retries, escalation on exceeded limit) [DEPRECATED]
 LFW-003: "lifecycle-walker — Walker logs progress via logger (createLogger({ file: '<bundle>/_logs/run.log' })) [DEPRECATED]"
 LFW-004: lifecycle-walker — Walker requires --bundle flag (exit(2) on missing) [DEPRECATED]
 GSK-004: "gate-skeleton — Gate CLI evaluates rules from definition and emits detailed routing diagnostics (load definition JSON, iterate all rule types, check/inspect/advice feedback; 9 gate CLIs: 3 pre-research + 1 seed-topics + 3 wave + 2 delivery; new check types: count_floor, dir_non_empty, cross_field slug_consistency, cross_field markdown_link_resolution, yaml_parse, jsonl_parse, trace_has_all_gates)"
-GSK-005: gate-skeleton — Shared gate attempt audit helper writeGateAttempt(bundlePath, result) writes to logger + trace, eliminates duplicated inline trace code across gate CLIs
+GSK-005: gate-skeleton — Shared gate attempt audit helper writeGateAttempt(bundlePath, result) writes to logger + trace with bundle; ALL gate CLIs MUST use it, inline appendFileSync to rb_trace.jsonl forbidden
 
 # wff-state-chain
 TRT-001: transition-table — File naming convention transitions.chain.json

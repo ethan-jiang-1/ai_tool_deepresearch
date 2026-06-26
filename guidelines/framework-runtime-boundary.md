@@ -12,6 +12,7 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
+  - guidelines/logging-conventions.md
   - guidelines/command-experiments.md
   - guidelines/agentic-execution-model.md
   - guidelines/agentic-queue-mechanism.md
@@ -263,6 +264,8 @@ Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结�
 - **MUST**：trace check event 记录 gate 的完整回答（passed + next + inspect + advice），不止 passed/failed。
 - **MUST NOT**：用 `console.log` 替代 trace 做 pass/fail 裁决。
 
+Runtime continuity and logging details live in `guidelines/logging-conventions.md`: after context loss, recover from active bundle control files and `rb_trace.jsonl`; use `_logs/run.log` only for diagnosis.
+
 ---
 
 ## MUST
@@ -313,6 +316,7 @@ Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结�
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
+- [Logging Conventions](logging-conventions.md) — runtime continuity, trace/log authority boundaries, and diagnostic log usage.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; defines the three-tier execution system.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — outer loop (Chain) that phase routing depends on.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Tier 2 (Queue) for within-phase task execution.

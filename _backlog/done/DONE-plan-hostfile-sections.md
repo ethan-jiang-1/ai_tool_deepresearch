@@ -1,6 +1,6 @@
 # TODO: rb_plan.md — 从空壳到 Host File
 
-> 状态: 待设计 | 优先级: 中 | 创建: 2026-06-25
+> 状态: 已完成（已移入 done/） | 优先级: 中 | 创建: 2026-06-25 | 更新: 2026-06-26
 >
 > 直接依赖: 无（纯增量，不动现有 schema/CLI/engine）
 > 被依赖: `todo-context-reground`（reground 需要 `## Goal` 作为北星锚点）、`todo-rerun-incremental-node`（rerun delta 需要 `## Decisions` 作为累积容器）、`todo-final-output-eval`（评估需要 `## Progress` 作为完成度信号）
