@@ -49,7 +49,10 @@ Final 交付前运行最后一个 deterministic checkpoint：验证所有 requir
 - `rb_trace.jsonl` 中所有 prior gate 均有 `gate_attempt` 事件 `passed: true`
 - `rb_profile.yaml` 可解析
 - `rb_trace.jsonl` 每行合法 JSON
-- `rb_status.json` 中 `current_gate: readiness_passed` / `next_gate: none`
+- `rb_status.json` 中 `current_gate: readiness_passed` / `next_gate: none`（通过 CLI 推进）：
+  ```bash
+  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to readiness_passed
+  ```
 
 ## 5. Gate Command
 
@@ -59,7 +62,11 @@ node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle <path> --c
 
 ## 6. On Gate Pass
 
-读取 `check.next`（为 `null`，terminal routing）。Advance to `final`：加载 `phase-final.md`。
+读取 `check.next`（terminal routing，`next_gate: "none"`）。调用 `advance-status` 标记终态后加载 final：
+```bash
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to readiness_passed
+```
+然后加载 `phase-final.md`。
 
 Readiness pass 后 `next_gate: none`——final 是 terminal node，无 outgoing gate。
 

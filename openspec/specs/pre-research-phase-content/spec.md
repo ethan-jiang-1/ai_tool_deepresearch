@@ -77,7 +77,7 @@ Section 内容要求：
   - 检查 control files 是否存在且可解析
   - 检查 scaffold dirs 是否存在
   - 检查 HITL1 marker 是否已写入 profile
-  - 检查 `rb_status.json` 仍然是 `current_gate: setup_ready` / `next_gate: wave0_complete`
+  - 检查 `rb_status.json` 仍然是 `current_gate: setup_ready` / `next_gate: seed_topics_ready`
   - 按 accepted normalization 规则检查 bundle dir basename、`rb_plan.md` frontmatter `plan_basename`、`rb_profile.yaml` `plan_basename` 一致
 - **Expected Artifacts**: 一致的 pre-wave0 bundle surface
 - **Gate Command**: `node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle <path> --current-node phases/phase-setup.md`

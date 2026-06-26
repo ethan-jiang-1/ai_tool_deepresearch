@@ -234,7 +234,7 @@ log.info('gate '+gr.check.gate+' → '+(gr.check.passed?'PASS':'FAIL')+' next='+
 console.log('JS回答: gate — passed='+gr.check.passed+' next='+gr.check.next);
 if(!gr.check.passed){console.log('FAIL: expected PASS');process.exit(1);}
 JS
-echo '{"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"wave0_complete"}' > $B/rb_status.json
+echo '{"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"seed_topics_ready"}' > $B/rb_status.json
 node $B/step.mjs $B "phases/phase-instantiation.md" "instantiation-complete"
 ```
 

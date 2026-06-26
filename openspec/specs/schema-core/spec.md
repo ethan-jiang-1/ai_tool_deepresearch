@@ -110,17 +110,21 @@ Rerun direction hints (topic adjustment plan) SHALL be written into `seed_topics
 - **THEN** missing `rerun_count` SHALL default to 0 and validation SHALL pass
 
 ### Requirement: Gate transition table covers all states
-The GateTransitionTable SHALL define transitions for all 8 GateMachineState values: instantiation_complete, setup_ready, wave0_complete, wave1_complete, wave2_complete, hitl2_pending_user, readiness_passed, blocked_terminal. Terminal states (readiness_passed, blocked_terminal) SHALL have empty transition arrays.
+> **@deprecated** — The abstract FSM in `schema/contracts/gate.mjs` (GATE_MACHINE_STATES / GATE_TRANSITIONS) is no longer the canonical transition source. The canonical truth source is `workflows/transitions.chain.json` + `engine/ask-next.mjs` (resolveNodeTransitionDetailed). The GateTransitionTable SHALL be retained for backward compatibility but SHALL NOT be the reference for new features. See: openspec/specs/transition-table/spec.md (TRT-011).
+
+The abstract FSM originally defined transitions for 8 states: instantiation_complete, setup_ready, wave0_complete, wave1_complete, wave2_complete, hitl2_pending_user, readiness_passed, blocked_terminal. The current lifecycle uses 11 gate states (see `CurrentGate` enum in `schema/enums.mjs`).
 
 #### Scenario: Every non-terminal state has at least one transition
-- **WHEN** the GateTransitionTable is validated
-- **THEN** the 6 non-terminal states each have ≥ 1 transition entry
+- **WHEN** the deprecated GateTransitionTable is validated
+- **THEN** non-terminal states each have ≥ 1 transition entry
 
 #### Scenario: PASS events follow correct gate order
+> **@deprecated** — This scenario describes the old abstract FSM (instantiation→setup→wave0, no hitl1/seed-topics). The canonical chain (transitions.chain.json) is: instantiation→hitl1→setup→seed-topics→wave0→wave1→wave2→hitl2→readiness→final.
+
 - **WHEN** PASS_SETUP fires from instantiation_complete
-- **THEN** next state is setup_ready
+- **THEN** next state is setup_ready (old FSM only; canonical chain routes instantiation→hitl1 first)
 - **WHEN** PASS_WAVE0 fires from setup_ready
-- **THEN** next state is wave0_complete
+- **THEN** next state is wave0_complete (old FSM only; canonical chain routes setup→seed-topics first)
 
 #### Scenario: REOPEN returns to correct prior gate
 - **WHEN** REOPEN fires from wave0_complete

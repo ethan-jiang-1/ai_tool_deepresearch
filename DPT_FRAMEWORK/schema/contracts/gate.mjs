@@ -1,4 +1,12 @@
-// @impl SCO-003: GateTransitionTable
+// @deprecated — This abstract FSM is not used by any runtime path.
+// All transition routing goes through transitions.chain.json + resolveNodeTransitionDetailed().
+// The GATE_MACHINE_STATES and GATE_TRANSITIONS tables are stale (missing hitl1_recorded,
+// seed_topics_ready, rerun_ready; using hitl2_pending_user instead of hitl2_recorded;
+// no rerun path). Do not use for new features. The canonical truth source is
+// DPT_FRAMEWORK/workflows/transitions.chain.json.
+// See: _backlog/_trainsistion/cc_transition_systemic_analysis.md §3e, §7
+// See: openspec/changes/fix-transition-next-gate-stale-after-seed-topics (TRT-011)
+// @impl SCO-003: GateTransitionTable (obsolete — SCO-003 describes the old abstract FSM)
 export const GATE_MACHINE_STATES = [
   'instantiation_complete',
   'setup_ready',

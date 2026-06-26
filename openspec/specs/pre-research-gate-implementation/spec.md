@@ -28,7 +28,7 @@
 - `final/`
 - `rb_status.json#/current_mode == execution`
 - `rb_status.json#/current_gate == setup_ready`
-- `rb_status.json#/next_gate == wave0_complete`
+- `rb_status.json#/next_gate == seed_topics_ready`
 
 命名 contract SHALL 明确：
 - production logical name `<name>` 匹配 `[a-z0-9][a-z0-9-]*`
@@ -115,7 +115,7 @@
 - `rb_queue.json` 可解析并通过 `QueueSchema`
 - `rb_profile.yaml#/human_decision_checkpoints/hitl1/status == recorded`
 - `rb_status.json#/current_gate == setup_ready`
-- `rb_status.json#/next_gate == wave0_complete`
+- `rb_status.json#/next_gate == seed_topics_ready`
 - bundle dir basename、`rb_plan.md#/plan_basename`、`rb_profile.yaml#/plan_basename` 归一化后保持一致
 
 Gate SHALL NOT 判断研究质量、evidence coverage 或 synthesis adequacy。

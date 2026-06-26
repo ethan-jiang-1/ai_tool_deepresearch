@@ -49,7 +49,11 @@ node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle <path> --curren
 
 ## 6. On Gate Pass
 
-读取 `check.next`。Advance to `wave0`：加载 `phase-wave0.md`。
+读取 `check.next`。调用 `advance-status` 推进状态：
+```bash
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to seed_topics_ready
+```
+然后加载 `check.next` 指向的 node（应为 `phase-seed-topics.md`）。
 
 ## 7. On Gate Fail
 

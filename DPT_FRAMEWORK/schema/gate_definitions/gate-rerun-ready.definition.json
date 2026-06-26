@@ -27,7 +27,14 @@
       "check": "status_value",
       "target": "rb_status.json#/current_gate",
       "expected": "rerun_ready",
-      "failure_message": "rb_status.json current_gate must be 'rerun_ready'. Update rb_status.json to reflect the rerun phase: current_gate='rerun_ready', next_gate='seed_topics_ready'."
+      "failure_message": "rb_status.json current_gate must be 'rerun_ready'. Use advance-status --to rerun_ready to advance."
+    },
+    {
+      "id": "status_next_gate",
+      "check": "status_value",
+      "target": "rb_status.json#/next_gate",
+      "expected": "seed_topics_ready",
+      "failure_message": "rb_status.json next_gate must be 'seed_topics_ready'. Status may have drifted — use advance-status --to rerun_ready to set the correct value."
     }
   ]
 }

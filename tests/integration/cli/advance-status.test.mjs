@@ -50,7 +50,7 @@ const CHAIN = [
   { from: 'wave2_complete',         next: 'hitl2_recorded' },
   { from: 'hitl2_recorded',         next: 'readiness_passed' },
   { from: 'rerun_ready',            next: 'seed_topics_ready' },
-  { from: 'readiness_passed',       next: null },  // terminal: final has gate=null
+  { from: 'readiness_passed',       next: 'none' },  // terminal: final has gate=null, writes string "none"
 ];
 
 const BUNDLE_NAME = `test-advance-${randomInt(0, 65536).toString(16)}`;
@@ -128,7 +128,7 @@ describe('advance-status CLI', () => {
         assert.ok(t.ts, 'phase_transition must have ts');
         assert.ok(t.from, 'phase_transition must have from');
         assert.ok(t.to, 'phase_transition must have to');
-        assert.equal(t.source, 'advance-status');
+        assert.ok(t.bundle, 'phase_transition must have bundle');
         // from should not equal to; to should match current_gate after advance
         assert.notEqual(t.from, t.to, `from and to should differ: ${t.from} → ${t.to}`);
       }
@@ -149,7 +149,7 @@ describe('advance-status CLI', () => {
     it('writes valid rb_status.json after every advance', () => {
       const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
       assert.ok(status.current_gate, 'current_gate must be set');
-      // next_gate can be null for terminal (readiness_passed → final → gate=null)
+      // next_gate is "none" for terminal (readiness_passed → final → gate=null)
       if (status.current_gate !== 'readiness_passed') {
         assert.ok(status.next_gate, `next_gate must be set for ${status.current_gate}`);
       }

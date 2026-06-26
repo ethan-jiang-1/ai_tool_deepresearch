@@ -32,7 +32,7 @@ describe('validate-bundle.mjs integration', () => {
     mkdirSync(bundleDir, { recursive: true });
     copyTemplates(bundleDir, 'invalid');
     writeFileSync(join(bundleDir, 'rb_trace.jsonl'), '');
-    writeFileSync(join(bundleDir, 'rb_status.json'), JSON.stringify({ current_mode: 'execution', state: 'not_started', current_gate: 'invalid_value', next_gate: 'wave0_complete' }));
+    writeFileSync(join(bundleDir, 'rb_status.json'), JSON.stringify({ current_mode: 'execution', state: 'not_started', current_gate: 'invalid_value', next_gate: 'seed_topics_ready' }));
     const result = spawnSync('node', [VALIDATE, bundleDir], { encoding: 'utf-8', timeout: 5000 });
     if (result.status !== 1) throw new Error(`Expected exit 1, got ${result.status}\n${result.stdout}`);
   });

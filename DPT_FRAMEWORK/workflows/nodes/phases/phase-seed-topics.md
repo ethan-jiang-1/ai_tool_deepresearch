@@ -247,8 +247,14 @@ node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle <path> --
 - `seed_topics/` 目录非空，其中对于 `topic_registry` 中的每个 topic 存在一个 `{slug}.md` 文件（slug 已含编号前缀）
 - 每个文件的 frontmatter `slug` 与文件名 stem 一致，`title` 非空
 - `seed_topics/` 下文件 slug 集合与 `topic_registry` slug 集合双向一致（无缺失、无多余）
-- `rb_trace.jsonl` 中有 `seed_topics_completion` event
-- `rb_status.json` 中 `current_gate: seed_topics_ready` / `next_gate: wave0_complete`
+- `rb_trace.jsonl` 中有 `seed_topics_completion` event（通过 CLI 写入）：
+  ```bash
+  node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --event seed_topics_completion --detail '{"topic_count":<N>}'
+  ```
+- `rb_status.json` 中 `current_gate: seed_topics_ready` / `next_gate: wave0_complete`（通过 CLI 推进）：
+  ```bash
+  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to seed_topics_ready
+  ```
 
 ## 5. Gate Command
 
@@ -258,7 +264,11 @@ node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle <path> --
 
 ## 6. On Gate Pass
 
-读取 `check.next`。Advance to `wave0`：加载 `phase-wave0.md`。
+读取 `check.next`。调用 `advance-status` 推进状态后加载下一 phase：
+```bash
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave0_complete
+```
+然后加载 `check.next` 指向的 node（应为 `phase-wave0.md`）。
 
 ## 7. On Gate Fail
 

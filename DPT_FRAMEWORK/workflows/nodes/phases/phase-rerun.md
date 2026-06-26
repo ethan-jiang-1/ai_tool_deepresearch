@@ -87,9 +87,11 @@ HITL2 `user_decision: rerun` 后，Agent 用 `rerun` outcome 查 chain 进入本
    - 若已有值 → `+1`
    - 写入 `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count`
 
-3. **更新 rb_status.json**：
-   - `current_gate`: `rerun_ready`
-   - `next_gate`: `seed_topics_ready`
+3. **推进 status**（使用 `advance-status` CLI 自动计算 `next_gate`）：
+   ```bash
+   node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to rerun_ready
+   ```
+   （CLI 自动从 chain.json 计算 `next_gate: seed_topics_ready`）
 
 4. **运行 gate CLI**：
 ```bash
@@ -105,8 +107,14 @@ node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle <path> --curren
 
 - 受影响 seed_topic 文件中的 `## 本轮重跑方向` section 已写入/更新
 - `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count` 已递增
-- `rb_status.json` 中 `current_gate: rerun_ready` / `next_gate: seed_topics_ready`
-- `rb_trace.jsonl` 中有 `gate_attempt` event（由 gate CLI 写入）
+- `rb_status.json` 中 `current_gate: rerun_ready` / `next_gate: seed_topics_ready`（通过 CLI 推进）：
+  ```bash
+  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to rerun_ready
+  ```
+- `rb_trace.jsonl` 中有 `gate_attempt` event（由 gate CLI 写入）和 `rerun_ready` event：
+  ```bash
+  node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --event rerun_ready
+  ```
 
 ## 5. Gate Command
 

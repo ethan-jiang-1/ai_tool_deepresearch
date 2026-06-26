@@ -53,8 +53,14 @@ HITL2 是 delivery 前最后一次人类审查——用户在此决定是否 pro
 
 `proceed_to_readiness` 以外 decision **不编码进 transition chain**——chain 只管 `proceed_to_readiness` 的 normal next。branch 路由归 Agent decision authority。
 
-- 更新 `rb_status.json` 中 HITL2 相关状态（`current_gate: hitl2_recorded`）
-- 记录 `hitl2_recorded` trace event 到 `rb_trace.jsonl`
+- 调用 `advance-status` 推进状态：
+  ```bash
+  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
+  ```
+- 记录 `hitl2_recorded` trace event 到 `rb_trace.jsonl`：
+  ```bash
+  node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --event hitl2_recorded
+  ```
 
 ## 4. Expected Artifacts
 

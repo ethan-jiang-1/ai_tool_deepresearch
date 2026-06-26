@@ -63,6 +63,10 @@ CHI-002: check-inspect-feedback — C&I feedback loop for fork variant (topicRea
 # conditional-nodes
 COS-001: conditional-nodes — Deterministic branch checkpoint transforms
 
+# cli-phase-transition
+CPT-001: "cli-phase-transition — Advance status CLI (advance-status.mjs): advance current_gate/next_gate using chain.json as truth source"
+CPT-002: "cli-phase-transition — Log event CLI extension (--event flag): write phase-completion trace events to rb_trace.jsonl"
+
 # cmd-subagent-environment
 CSE-001: cmd-subagent-environment — Command playbook for project-level real subagent setup
 
@@ -181,6 +185,7 @@ PRG-005: pre-research-gate-implementation — Gate CLI evaluates HITL1 rules fro
 PRG-006: pre-research-gate-implementation — Gate CLI evaluates setup rules from definition (from hardcoded pass to definition-driven; cross_field for basename)
 PRG-007: pre-research-gate-implementation — Gate CLIs append runtime audit entry to active bundle rb_trace.jsonl
 PRG-008: pre-research-gate-implementation — Runtime audit trace (rb_trace.jsonl) and experiment verdict trace (_trace.jsonl) remain distinct
+PRG-009: pre-research-gate-implementation — HITL1 recorded gate status rules (status_current_gate and status_next_gate added to gate-hitl1-recorded.definition.json)
 PRP-001: pre-research-phase-content — Phase instantiation body completeness (9-section body, real CLI shape, scope boundary)
 PRP-002: "pre-research-phase-content — Phase HITL1 body completeness and stop semantics (stop: yes, payload checklist, writes to profile)"
 PRP-003: "pre-research-phase-content — Phase setup body completeness and stop semantics (stop: no, structural consistency, not readiness)"
@@ -284,6 +289,8 @@ TRT-003: transition-table — transition-chain.mjs engine (loadChain, resolveTra
 TRT-004: transition-table — ask-next.mjs unified dispatch (askNext dispatches to chain by file suffix) [DEPRECATED]
 TRT-005: transition-table — Detailed node-result router contract and node-keyed backend dispatch
 TRT-006: transition-table — Chain table includes rerun node and HITL2 rerun exit (HITL2 rerun→phase-rerun.md, phase-rerun passed→phase-seed-topics.md, preserve HITL2 passed→readiness)
+TRT-011: transition-table — gate.mjs abstract FSM marked as not-in-use (GATE_MACHINE_STATES/GATE_TRANSITIONS superseded by transitions.chain.json)
+TRT-012: transition-table — Phase MD test helper (md-phase-checks.mjs) validates against chain.json via manifest bridge instead of stale gate.mjs FSM
 
 # wff-content-delivery — phase content
 CDP-001: content-delivery-phase-content — phase-hitl2.md 9-section body (decision brief, structured user decision, stop=yes, anti-cheating)

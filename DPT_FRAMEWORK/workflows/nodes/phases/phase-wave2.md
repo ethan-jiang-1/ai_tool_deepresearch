@@ -230,8 +230,14 @@ Ledger 记录 reasoning，index 记录 lifecycle state。JS 不判断 reasoning 
 - `artifacts/wave2/finding-index.yaml`（JS-readable shadow index，每 finding 含 11 个 required field：id/type/status/decision/affected_topics/origin_refs/trigger_refs/search_required/subagent_receipt_refs/appears_in_synthesis/hitl2_handoff，top-level 含 scan 对象）
 - `reference/00-cross-<slug>.md（rich MD，格式见 shared-reference-template.md）`（可选——当 `dpt-topic-scout` 搜到跨 topic evidence 且 `affected_topics` ≥ 2 时，Phase Agent ingestion 后 promote 到共享 reference。`topic_tag` 填 `shared`，`notes` 中注明 `finding_id` 和 `source_layer: wave2_cross_topic`）
 - 所有 seed topic 文件中 `__BACKFILL_WAVE2_JUDGMENT__` 和 `__BACKFILL_PENDING_QUESTIONS__` token 已被替换（替换内容从 ledger/index 投影，保留 source_layer/finding id/decision/status）
-- `rb_trace.jsonl` 中有 `wave2_completion` event
-- `rb_status.json` 中 `current_gate: wave2_complete` / `next_gate: hitl2_recorded`
+- `rb_trace.jsonl` 中有 `wave2_completion` event（通过 CLI 写入）：
+  ```bash
+  node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --event wave2_completion
+  ```
+- `rb_status.json` 中 `current_gate: wave2_complete` / `next_gate: hitl2_recorded`（通过 CLI 推进）：
+  ```bash
+  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave2_complete
+  ```
 
 ## 5. Gate Command
 
@@ -241,7 +247,11 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle <path> --cur
 
 ## 6. On Gate Pass
 
-读取 `check.next`。Advance to `hitl2`：加载 `phase-hitl2.md`。
+读取 `check.next`。调用 `advance-status` 推进状态后加载下一 phase：
+```bash
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
+```
+然后加载 `check.next` 指向的 node（应为 `phase-hitl2.md`）。
 
 ## 7. On Gate Fail
 

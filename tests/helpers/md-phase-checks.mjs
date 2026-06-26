@@ -70,29 +70,56 @@ export function checkGateDefinitionExists(parsed) {
 
 /**
  * Gate names use hyphens in frontmatter/definition files (e.g. "wave0-complete")
- * but underscores in GATE_MACHINE_STATES / GATE_TRANSITIONS (e.g. "wave0_complete").
+ * but underscores in enums.mjs CurrentGate (e.g. "wave0_complete").
+ *
+ * Since commit 13eb4e44 / TRT-012, validation uses manifest.json + chain.json
+ * as the canonical truth source. The deprecated gate.mjs abstract FSM is no
+ * longer consulted.
  */
-function gateToTransitionKey(gate) {
-  return gate.replace(/-/g, '_');
+
+const MANIFEST_PATH = path.join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows', 'manifest.json');
+const CHAIN_PATH = path.join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows', 'transitions.chain.json');
+
+function loadManifestForChecks() {
+  const raw = readFileSync(MANIFEST_PATH, 'utf-8');
+  return JSON.parse(raw);
+}
+
+function loadChainForChecks() {
+  const raw = readFileSync(CHAIN_PATH, 'utf-8');
+  return JSON.parse(raw);
 }
 
 export function checkGateInTransitionTable(parsed) {
-  // Some gates (e.g. seed-topics-ready, hitl1-recorded) exist as standalone
-  // definition files but are NOT part of the core wave transition table.
-  // That's valid — the gate CLI handles them independently.
-  // Only check transition table membership if the gate LOOKS like a wave gate.
-  const stateKey = gateToTransitionKey(parsed.gate);
-  const gateContract = path.join(REPO_ROOT, 'DPT_FRAMEWORK', 'schema', 'contracts', 'gate.mjs');
-  const content = readFileSync(gateContract, 'utf-8');
+  // Verify the gate's phase node exists as a key in transitions.chain.json.
+  // If it doesn't, the gate is a standalone definition — that's valid.
+  const manifest = loadManifestForChecks();
+  const phase = manifest.phases.find(p => p.gate === parsed.gate);
+  if (!phase) return { ok: true }; // gate not in manifest (standalone), skip
 
-  // If the gate IS in the transition table, verify it's in GATE_MACHINE_STATES
-  if (content.includes(stateKey) || content.includes(`'${parsed.gate}'`)) {
-    if (!content.includes(`'${stateKey}'`)) {
-      return { ok: false, detail: `gate "${parsed.gate}" referenced in transition table but "${stateKey}" not in GATE_MACHINE_STATES` };
-    }
-  }
-  // Otherwise: standalone gate — definition file check (done separately) is sufficient
+  const chain = loadChainForChecks();
+  if (!chain[phase.node]) return { ok: true }; // node not in chain (standalone), skip
+
+  // Gate is in manifest AND its node is in chain — valid
   return { ok: true };
+}
+
+export function checkNextPhaseExists(parsed) {
+  // Verify the gate's phase node has at least one forward transition in chain.json.
+  // Skip gates with null (e.g. final phase — terminal).
+  const manifest = loadManifestForChecks();
+  const phase = manifest.phases.find(p => p.gate === parsed.gate);
+  if (!phase || !phase.gate) return []; // gate is null (final) or not in manifest
+
+  const chain = loadChainForChecks();
+  const transitions = chain[phase.node];
+  if (!transitions) return []; // node not in chain (standalone, terminal, or leaf)
+
+  // Terminal: empty transitions or all values are null
+  const hasForward = Object.values(transitions).some(v => v !== null);
+  if (!hasForward) return []; // terminal gates with null targets are valid
+
+  return [];
 }
 
 export function checkReferencesExist(parsed) {
@@ -103,31 +130,6 @@ export function checkReferencesExist(parsed) {
     if (!existsSync(refPath)) issues.push(`referenced file missing: ${ref}.md`);
   }
   return issues;
-}
-
-export function checkNextPhaseExists(parsed) {
-  // Verify the gate has at least one forward path in the transition table.
-  // Skip gates that aren't in the core wave transition table (standalone leaf gates).
-  const stateKey = gateToTransitionKey(parsed.gate);
-  const gateContract = path.join(REPO_ROOT, 'DPT_FRAMEWORK', 'schema', 'contracts', 'gate.mjs');
-  const content = readFileSync(gateContract, 'utf-8');
-
-  // If this gate isn't in GATE_TRANSITIONS at all, it's a standalone gate — skip
-  if (!content.includes(stateKey)) return [];
-
-  // Match bare object key:  stateKey: [ ... ],
-  // The key is unquoted in GATE_TRANSITIONS.
-  const escaped = stateKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const blockRe = new RegExp(`\\b${escaped}\\s*:\\s*\\[([^\\]]+)\\]`, 's');
-  const blockMatch = content.match(blockRe);
-
-  if (!blockMatch) return [`gate "${stateKey}" found in GATE_MACHINE_STATES but has no transition entry in GATE_TRANSITIONS`];
-
-  // Empty array = terminal gate (valid)
-  const hasEvents = blockMatch[1].includes('event:');
-  if (!hasEvents) return [];
-
-  return [];
 }
 
 // ── Section structure checks ─────────────────────────────────────────

@@ -203,8 +203,14 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle <path> --cur
 - `artifacts/wave1/{topic}/evidence-summary.md`（对于 topic_registry 中的每个 topic，含至少 1 条 source URL + key findings（prefix `**机制理解**:`/`**趋势观察**:`）+ open questions（标签 `[开放]`/`[部分解答]`/`[涌现]`））
 - `artifacts/wave1/{topic}/question-list.md`（对于 topic_registry 中的每个 topic，与 evidence-summary.md 成对存在。四节结构：Topic Investigation Targets 表、Question Reconciliation（`[已解决]`/`[部分进展]`/`[仍开放]`/`[需内部数据]`）、Emergent Question Protocol（4 项检查）、Exploration/Exploitation Decision（decision + unresolved_questions + queue_consequence + next_action）。单轮模式下 decision 固定为 `continue`）
 - `seed_topics/{slug}.md` 中所有 `__BACKFILL_WAVE1_MECHANISMS__`、`__BACKFILL_WAVE1_TRENDS__`、`__BACKFILL_PENDING_QUESTIONS__` token 已被替换（无 stale token）
-- `rb_trace.jsonl` 中有 `wave1_completion` event
-- `rb_status.json` 中 `current_gate: wave1_complete` / `next_gate: wave2_complete`
+- `rb_trace.jsonl` 中有 `wave1_completion` event（通过 CLI 写入）：
+  ```bash
+  node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --event wave1_completion
+  ```
+- `rb_status.json` 中 `current_gate: wave1_complete` / `next_gate: wave2_complete`（通过 CLI 推进）：
+  ```bash
+  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave1_complete
+  ```
 
 ## 5. Gate Command
 
@@ -214,7 +220,11 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle <path> --cur
 
 ## 6. On Gate Pass
 
-读取 `check.next`。Advance to `wave2`：加载 `phase-wave2.md`。
+读取 `check.next`。调用 `advance-status` 推进状态后加载下一 phase：
+```bash
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave2_complete
+```
+然后加载 `check.next` 指向的 node（应为 `phase-wave2.md`）。
 
 ## 7. On Gate Fail
 

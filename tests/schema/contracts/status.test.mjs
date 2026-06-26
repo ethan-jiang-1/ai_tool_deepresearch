@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { StatusSchema } from '../../../DPT_FRAMEWORK/schema/contracts/status.mjs';
 
-const valid = { current_mode: 'execution', state: 'not_started', current_gate: 'setup_ready', next_gate: 'wave0_complete' };
+const valid = { current_mode: 'execution', state: 'not_started', current_gate: 'setup_ready', next_gate: 'seed_topics_ready' };
 
 describe('StatusSchema', () => {
   it('accepts valid status', () => {

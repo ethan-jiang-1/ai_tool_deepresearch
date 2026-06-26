@@ -28,7 +28,7 @@ The `DPT_FRAMEWORK/rb_templates/` directory SHALL contain template files with `{
 
 #### Scenario: Template for rb_status.json
 - **WHEN** `DPT_FRAMEWORK/rb_templates/rb_status.json.tmpl` is read
-- **THEN** it contains valid JSON with `"current_mode": "execution"`, `"state": "not_started"`, `"current_gate": "setup_ready"`, `"next_gate": "wave0_complete"`
+- **THEN** it contains valid JSON with `"current_mode": "execution"`, `"state": "not_started"`, `"current_gate": "setup_ready"`, `"next_gate": "seed_topics_ready"`
 
 #### Scenario: Template for rb_queue.json
 - **WHEN** `DPT_FRAMEWORK/rb_templates/rb_queue.json.tmpl` is read

@@ -115,7 +115,10 @@ if (!nextNode) {
 }
 
 const nextGateKey = nodeToGate.get(nextNode);
-const nextGateEnum = nextGateKey ? gateKeyToEnum(nextGateKey) : null;
+// Terminal: final phase has gate:null in manifest, so nodeToGate lookup returns undefined.
+// Write string "none" (matching CurrentGate enum and gate-readiness-passed expected value),
+// not JavaScript null (which serializes to JSON null ≠ "none").
+const nextGateEnum = nextGateKey ? gateKeyToEnum(nextGateKey) : 'none';
 
 // Update status
 const from = status.current_gate || 'unknown';
@@ -128,11 +131,11 @@ writeFileSync(statusPath, JSON.stringify(status, null, 2) + '\n');
 const tracePath = join(bundlePath, 'rb_trace.jsonl');
 const traceEvent = JSON.stringify({
   ts: new Date().toISOString(),
+  bundle: status.bundle || 'unknown',
   event: 'phase_transition',
   from,
   to: targetGateEnum,
   next: nextGateEnum,
-  source: 'advance-status',
 });
 writeFileSync(tracePath, traceEvent + '\n', { flag: 'a' });
 

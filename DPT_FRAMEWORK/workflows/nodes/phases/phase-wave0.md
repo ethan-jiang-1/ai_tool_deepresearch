@@ -127,8 +127,14 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --cur
   - `topic_tag`：string，非空，匹配 registry 中的 topic key
   - `notes`：string，可选
 - `reference/00-shared-<slug>.md（rich MD，格式见 shared-reference-template.md）`（可选——共享 foundation reference：行业全景、方法论文献、跨 topic 对比数据等不属于单个 topic 的 reference。格式同 per-topic source.yaml，`topic_tag` 填 `shared`）
-- `rb_trace.jsonl` 中有 `wave0_completion` event
-- `rb_status.json` 中 `current_gate: wave0_complete` / `next_gate: wave1_complete`
+- `rb_trace.jsonl` 中有 `wave0_completion` event（通过 CLI 写入）：
+  ```bash
+  node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --event wave0_completion
+  ```
+- `rb_status.json` 中 `current_gate: wave0_complete` / `next_gate: wave1_complete`（通过 CLI 推进）：
+  ```bash
+  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave0_complete
+  ```
 
 ## 5. Gate Command
 
@@ -138,7 +144,11 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --cur
 
 ## 6. On Gate Pass
 
-读取 `check.next`。Advance to `wave1`：加载 `phase-wave1.md`。
+读取 `check.next`。调用 `advance-status` 推进状态后加载下一 phase：
+```bash
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave1_complete
+```
+然后加载 `check.next` 指向的 node（应为 `phase-wave1.md`）。
 
 ## 7. On Gate Fail
 
