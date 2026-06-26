@@ -300,3 +300,12 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle <path> --cur
 | Page content fetching chain | ❌ 未定义 | ✅ 内置工具/浏览器（如有）→ curl → node → python3 |
 | Candidate intake | ❌ 不做 | ❌ 留给后续 |
 | Fan-in review | ❌ 不做 | ❌ 留给后续 |
+
+## Log
+
+记录命令: `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level <LEVEL> --msg "<message>"`
+
+| 时机 | 命令 |
+|------|------|
+| Phase 开始 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:wave1 START"` |
+| Phase 结束 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:wave1 END — <summary>"` |

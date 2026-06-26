@@ -40,4 +40,26 @@ describe('StatusSchema', () => {
   it('accepts blocked state', () => {
     assert.ok(StatusSchema.safeParse({ ...valid, state: 'blocked' }).success);
   });
+
+  // LOC-001: bundle field
+  it('accepts status without bundle (backward compat)', () => {
+    assert.ok(StatusSchema.safeParse(valid).success);
+  });
+
+  it('accepts and preserves bundle field', () => {
+    const result = StatusSchema.safeParse({ ...valid, bundle: 'my-research' });
+    assert.ok(result.success);
+    if (result.success) {
+      assert.strictEqual(result.data.bundle, 'my-research');
+    }
+  });
+
+  it('accepts passthrough extra fields', () => {
+    // Schema uses .passthrough() — extra fields should be preserved
+    const result = StatusSchema.safeParse({ ...valid, bundle: 'x', extra: 'should-survive' });
+    assert.ok(result.success);
+    if (result.success) {
+      assert.strictEqual(result.data.extra, 'should-survive');
+    }
+  });
 });

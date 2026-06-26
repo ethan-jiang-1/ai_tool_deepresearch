@@ -57,18 +57,39 @@ import { createHash } from 'node:crypto';
 // ============================================================
 
 import { createTrace } from './trace.mjs';
-let _trace = null;
+import { createRunLogger, readBundleName } from './logger.mjs';
 
-/** Lazily create trace on first loadQueue call. Consumers never touch this. */
+let _trace = null;
+let _bundleDir = null;
+let _log = null;
+
+/** Lazily create trace + logger on first loadQueue call. Consumers never touch this. */
 function ensureTrace(bundleDir) {
   if (!_trace && bundleDir) {
     _trace = createTrace(path.join(bundleDir, QUEUE.TRACE), { consoleEcho: false });
+    _bundleDir = bundleDir;
+  }
+  if (!_log && bundleDir) {
+    _log = createRunLogger(bundleDir);
+  } else if (_log && _bundleDir !== bundleDir && bundleDir) {
+    // Bundle changed — rebind logger to new bundle's _logs/run.log
+    _log = createRunLogger(bundleDir);
   }
   return _trace;
 }
 
 function traceEntry(event, detail) {
-  if (_trace) _trace.traceEntry(event, detail);
+  if (_trace) {
+    const bundle = _bundleDir ? readBundleName(_bundleDir) : '<unknown>';
+    _trace.traceEntry(event, { bundle, ...detail });
+  }
+}
+
+// ── Logger helpers: log only the closed-set events (LOC-006) ──
+
+/** @param {string} event — must be in LOC-006 closed-set */
+function logEvent(level, event, detail) {
+  if (_log) _log[level](event, detail);
 }
 
 // ============================================================
@@ -269,6 +290,7 @@ function refill(queue) {
       q.active_window[slot] = { ...next, updated_at: now() };
       q.refill_pool = rest;
       traceEntry('queue_refilled', { source: 'agq-refill', slot, work_id: next.work_id });
+      logEvent('info', 'refill', { slot, work_id: next.work_id });
     }
   }
   return validateQueue(touchQueue(syncQueueHealth(q)));
@@ -421,9 +443,11 @@ export function enqueue(queue, item, { mode = 'auto' } = {}) {
   if (slot) {
     q.active_window[slot] = prepared;
     traceEntry('check', { source: 'agq-enqueue', step: 'enqueue', passed: true, work_id: prepared.work_id, slot });
+    logEvent('info', 'enqueue', { work_id: prepared.work_id, slot });
   } else {
     q.refill_pool = sortPool([...q.refill_pool, prepared]);
     traceEntry('check', { source: 'agq-enqueue', step: 'enqueue', passed: true, work_id: prepared.work_id, slot: 'refill_pool' });
+    logEvent('info', 'enqueue', { work_id: prepared.work_id, slot: 'refill_pool' });
   }
   return validateQueue(touchQueue(syncQueueHealth(q)));
 }
@@ -457,6 +481,7 @@ export function claim(queue, { actor = 'main-agent' } = {}) {
     : { delegates_required: false };
 
   traceEntry('check', { source: 'agq-claim', step: 'claim', passed: true, work_id: item.work_id });
+  logEvent('info', 'claim', { work_id: item.work_id, actor });
   return { queue: validateQueue(touchQueue(q)), item, advice };
 }
 
@@ -489,6 +514,7 @@ export function complete(queue, result, bundleDir = process.cwd()) {
   current.updated_at = now();
   traceEntry('queue_completed', { source: 'agq-complete', work_id: current.work_id, summary: parsedResult.summary });
   traceEntry('check', { source: 'agq-complete', step: 'completion_receipt', passed: true, work_id: current.work_id });
+  logEvent('info', 'complete', { work_id: current.work_id, summary: parsedResult.summary });
   q = promote(q);
   q = refill(q);
   render(q, bundleDir);
@@ -515,6 +541,7 @@ export function fail(queue, failure, bundleDir = process.cwd()) {
   current.updated_at = now();
   traceEntry('queue_failed', { source: 'agq-fail', work_id: current.work_id, reason: parsedFailure.reason });
   traceEntry('check', { source: 'agq-fail', step: 'fail', passed: true, work_id: current.work_id, reason: parsedFailure.reason });
+  logEvent('warn', 'fail', { work_id: current.work_id, reason: parsedFailure.reason });
   const repair = withTimestamps(parsedFailure.repair || makeRepairItem(parsedFailure));
   q = promote(q);
   q = q.active_window.slot_1_current
@@ -559,6 +586,7 @@ export function preempt(queue, item, { reason = 'urgent_preemption', unsafeCurre
     }
     traceEntry('queue_preempted', { source: 'agq-preempt', reason, slot: 'slot_1_current', unsafeCurrent: true });
     traceEntry('check', { source: 'agq-preempt', step: 'preempt', passed: true, reason, slot: 'slot_1_current' });
+    logEvent('warn', 'preempt', { reason, slot: 'slot_1_current', unsafeCurrent: true });
     return validateQueue(touchQueue(syncQueueHealth(q)));
   }
 
@@ -574,6 +602,7 @@ export function preempt(queue, item, { reason = 'urgent_preemption', unsafeCurre
   }
   traceEntry('queue_preempted', { source: 'agq-preempt', reason, slot: 'slot_2_next', unsafeCurrent: false });
   traceEntry('check', { source: 'agq-preempt', step: 'preempt', passed: true, reason, slot: 'slot_2_next' });
+  logEvent('warn', 'preempt', { reason, slot: 'slot_2_next' });
   return validateQueue(touchQueue(syncQueueHealth(q)));
 }
 
@@ -609,7 +638,7 @@ export function render(queue, bundleDir = process.cwd()) {
   const q = validateQueue(queue);
   const outputPath = bundlePath(bundleDir, q.projection_path);
   mkdirSync(path.dirname(outputPath), { recursive: true });
-  const lines = ['# Agentic Queue Projection', '', '> Generated from `rb_queue.json`. Do not edit this projection as queue authority.', '', `- queue_id: \`${q.queue_id}\``, `- queue_health: \`${q.queue_health}\``, `- stop_authorization_state: \`${q.stop_authorization_state}\``, '', '## Active Window', ''];
+  const lines = ['# Agentic Queue Projection', '', '> Generated from `rb_queue.json`. Do not edit this projection as queue authority.', `> **Runtime** — bundle: \`${bundleDir}\` | CLI: \`--bundle ${bundleDir}\` | projection ≠ authority`, '', `- queue_id: \`${q.queue_id}\``, `- queue_health: \`${q.queue_health}\``, `- stop_authorization_state: \`${q.stop_authorization_state}\``, '', '## Active Window', ''];
   for (const slot of SLOT_NAMES) {
     const item = q.active_window[slot];
     lines.push(`### ${slot}`);

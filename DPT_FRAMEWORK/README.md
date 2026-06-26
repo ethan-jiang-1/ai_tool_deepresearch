@@ -88,6 +88,9 @@ dpt_rb_<name>/
   rb_queue.json
   rb_trace.jsonl
 
+  _logs/
+    run.log
+
   seed_topics/
   reference/
   artifacts/

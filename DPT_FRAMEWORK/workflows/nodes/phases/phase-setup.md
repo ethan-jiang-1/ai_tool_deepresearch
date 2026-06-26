@@ -77,3 +77,12 @@ node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle <path> --curren
 - **禁止跳过 setup gate 直接进入 wave0**：必须 `setup-ready` gate pass 后才能推进
 - **禁止在 setup 阶段做 research**：setup 是结构检查，不做搜索/阅读/evidence 工作
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
+
+## Log
+
+记录命令: `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level <LEVEL> --msg "<message>"`
+
+| 时机 | 命令 |
+|------|------|
+| Phase 开始 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:setup START"` |
+| Phase 结束 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:setup END — <summary>"` |

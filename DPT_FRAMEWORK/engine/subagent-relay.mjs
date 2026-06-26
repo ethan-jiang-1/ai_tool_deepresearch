@@ -77,23 +77,39 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { createTrace } from './trace.mjs';
+import { createRunLogger, readBundleName } from './logger.mjs';
 
-// Trace auto-inits on first mutation call via ensureTrace(bundleDir).
-// Fixed filename `_trace_subagent.jsonl` within the bundle. consoleEcho: false.
-// Consumers never touch trace setup — no setter, no createTrace import needed.
+// Trace + logger auto-init on first mutation call via ensureTrace(bundleDir).
+// Fixed trace filename `_trace_subagent.jsonl` within the bundle. consoleEcho: false.
+// Consumers never touch trace/log setup — no setter, no createTrace import needed.
 let _trace = null;
 let _traceBundleDir = null;
+let _log = null;
 
 function ensureTrace(bundleDir) {
   if (bundleDir && _traceBundleDir !== bundleDir) {
     _trace = createTrace(path.join(bundleDir, '_trace_subagent.jsonl'), { consoleEcho: false });
     _traceBundleDir = bundleDir;
+    _log = null; // reset on bundle change — logger must track the new bundle
+  }
+  if (!_log && bundleDir) {
+    _log = createRunLogger(bundleDir);
   }
   return _trace;
 }
 
 function traceEntry(event, detail) {
-  if (_trace) _trace.traceEntry(event, detail);
+  if (_trace) {
+    const bundle = _traceBundleDir ? readBundleName(_traceBundleDir) : '<unknown>';
+    _trace.traceEntry(event, { bundle, ...detail });
+  }
+}
+
+// ── Logger helpers: log only the closed-set events (LOC-006) ──
+
+/** @param {string} event — must be in LOC-006 closed-set */
+function logEvent(level, event, detail) {
+  if (_log) _log[level](event, detail);
 }
 
 export const MAX_CONCURRENT_SUBAGENTS = 4;
@@ -478,6 +494,7 @@ function createDispatchManifest(slotConfigs, state, baseDir, waveIndex) {
       slotIndex: config.slotIndex,
       waveIndex,
     });
+    logEvent('info', 'slot_create', { key: config.key, roleAgentKey: config.roleAgentKey, slotIndex: config.slotIndex });
   }
 
   const manifest = {
@@ -496,6 +513,7 @@ function createDispatchManifest(slotConfigs, state, baseDir, waveIndex) {
     slotCount: slots.length,
     slots: slots.map((s) => ({ key: s.key, roleAgentKey: s.roleAgentKey })),
   });
+  logEvent('info', 'dispatch', { waveIndex, slotCount: slots.length });
 
   return slots;
 }
@@ -747,6 +765,7 @@ export function commitSlotResult(slot, baseDir, candidateResult, metadata = {}) 
     roleAgentKey: s.roleAgentKey,
     platform: metadata.platform || 'unknown',
   });
+  logEvent('info', 'result', { key: s.key, roleAgentKey: s.roleAgentKey, platform: metadata.platform || 'unknown' });
 
   const validation = validateSlotResult(s, candidateResult);
   const completedAt = new Date().toISOString();
@@ -860,6 +879,7 @@ export function collectResults(slots, baseDir) {
       status: result.status,
       evidenceCount: result.evidenceCount,
     });
+    logEvent('info', 'collect', { slotKey: result.slotKey, status: result.status, evidenceCount: result.evidenceCount });
     return result;
   });
 }
@@ -886,6 +906,7 @@ export function mergeResults(results, state) {
     subagent_all_failed: allFailed,
   });
 
+  logEvent('info', 'merge', { totalEvidence, doneCount: doneResults.length, failedCount: results.length - doneResults.length });
   traceEntry('merge_complete', {
     source: 'gs-merge',
     totalEvidence,
@@ -1014,6 +1035,8 @@ export function forkAndStageSubagents(state, baseDir, customDispatchMap) {
   if (branch !== 'pass') {
     const repaired = convergeRepair(state);
     phaseLog.push({ phase: 'converge_repair', outcome: repaired.outcome });
+    logEvent('warn', 'repair', { trigger: 'fork_reject', outcome: repaired.outcome, iterations: repaired.iterations });
+    traceEntry('repair', { trigger: 'fork_reject', outcome: repaired.outcome, iterations: repaired.iterations });
     return { finalState: repaired.state, phaseLog, slots: [] };
   }
 
@@ -1056,6 +1079,8 @@ export function collectAndMergeSubagentResults(state, slots, baseDir) {
   if (merged.subagent_all_failed) {
     repaired = convergeRepair(merged);
     phaseLog.push({ phase: 'subagent_repair', outcome: repaired.outcome });
+    logEvent('warn', 'repair', { trigger: 'all_subagents_failed', outcome: repaired.outcome, iterations: repaired.iterations });
+    traceEntry('repair', { trigger: 'all_subagents_failed', outcome: repaired.outcome, iterations: repaired.iterations });
     return { finalState: repaired.state, results, checkResult, forkDecision, repaired, phaseLog };
   }
 

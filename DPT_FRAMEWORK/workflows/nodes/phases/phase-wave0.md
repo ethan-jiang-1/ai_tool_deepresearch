@@ -188,3 +188,12 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --cur
 - **禁止跳过实际搜索直接编造 reference**：reference metadata 必须基于真实内容（title 反映实际页面标题，retrieved_date 是真实检索日期）
 - **禁止在 Wave0 做 synthesis 或 claim verification**：Wave0 只收集 reference metadata，不做跨 topic 综合或结论判断
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
+
+## Log
+
+记录命令: `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level <LEVEL> --msg "<message>"`
+
+| 时机 | 命令 |
+|------|------|
+| Phase 开始 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:wave0 START"` |
+| Phase 结束 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:wave0 END — <summary>"` |

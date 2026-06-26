@@ -108,3 +108,12 @@ Gate pass 后，Agent 读取 `rb_profile.yaml#/human_decision_checkpoints/hitl2/
 - **HITL2 phase 写 `human_decision_checkpoints/hitl2` 时 MUST preserve 已有的 `rerun_count` 值**——MUST NOT 重置或删除。`rerun_count` 由 `phase-rerun.md` 管理递增，HITL2 只能读取不能修改
 - **用户 final 后反馈 MUST 通过 HITL2 repair/rerun 承载**，MUST NOT 通过 final node hidden loop
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
+
+## Log
+
+记录命令: `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level <LEVEL> --msg "<message>"`
+
+| 时机 | 命令 |
+|------|------|
+| Phase 开始 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:hitl2 START"` |
+| Phase 结束 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:hitl2 END — <summary>"` |

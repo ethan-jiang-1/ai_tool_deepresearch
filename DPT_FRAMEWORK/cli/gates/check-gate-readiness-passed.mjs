@@ -3,7 +3,7 @@
 // @impl GSK-001, GSK-002, GSK-004, CDG-004
 // Usage: node check-gate-readiness-passed.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
-import { existsSync, readFileSync, readdirSync, appendFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import {
@@ -14,6 +14,8 @@ import {
   resolveRouting,
   buildGateResult,
   emitGateResult,
+  writeGateAttempt,
+  readTraceEvents,
 } from '../../engine/helpers/gate-helpers.mjs';
 
 const args = parseGateCliArgs();
@@ -48,20 +50,6 @@ function getStatus() {
   if (!existsSync(p)) return null;
   _statusCache = JSON.parse(readFileSync(p, 'utf-8'));
   return _statusCache;
-}
-
-/**
- * Read all trace events from rb_trace.jsonl as parsed objects.
- * Returns empty array if file missing or empty.
- */
-function readAllTraceEvents() {
-  const tracePath = join(bundlePath, 'rb_trace.jsonl');
-  if (!existsSync(tracePath)) return [];
-  const raw = readFileSync(tracePath, 'utf-8').trim();
-  if (!raw) return [];
-  return raw.split('\n').map(line => {
-    try { return JSON.parse(line); } catch { return null; }
-  }).filter(Boolean);
 }
 
 // ── Rule evaluation ──
@@ -103,7 +91,7 @@ for (const rule of definition.rules) {
           .slice(0, currentIdx)
           .filter(p => p.gate !== null)
           .map(p => p.gate);
-        const events = readAllTraceEvents();
+        const events = readTraceEvents(bundlePath);
         // Collect gate names that have at least one gate_attempt(passed=true)
         const passedGateNames = new Set();
         for (const e of events) {
@@ -139,9 +127,7 @@ for (const rule of definition.rules) {
         rulePassed = false;
         ruleDetail = `Missing file: ${rule.target}`;
       } else {
-        const events = readAllTraceEvents();
-        // readAllTraceEvents filters out unparseable lines — check the raw file
-        // for this rule since the rule is specifically about parseability
+        // Validate JSONL parseability directly from raw file
         const raw = readFileSync(jsonlPath, 'utf-8');
         const lines = raw.split('\n').filter(l => l.trim());
         const badLines = [];
@@ -197,22 +183,6 @@ const result = buildGateResult({
   advice,
 });
 
-// Append gate_attempt trace event (required by manifest-derived prior-gate audit)
-try {
-  const tracePath = join(bundlePath, 'rb_trace.jsonl');
-  const traceEntry = JSON.stringify({
-    ts: new Date().toISOString(),
-    event: 'gate_attempt',
-    gate: definition.gate,
-    passed: allPassed,
-    currentNodeRef: args.currentNode,
-    next: result.check.next,
-    inspect_count: inspect.length,
-    advice_count: advice.length,
-  });
-  appendFileSync(tracePath, traceEntry + '\n');
-} catch {
-  // Trace write failure must not affect gate output
-}
+writeGateAttempt(bundlePath, result);
 
 emitGateResult(result);

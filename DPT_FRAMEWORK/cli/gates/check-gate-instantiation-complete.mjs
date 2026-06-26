@@ -3,7 +3,7 @@
 // @impl GSK-001, GSK-002, GSK-004, PRG-004, PRG-007
 // Usage: node check-gate-instantiation-complete.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
-import { existsSync, statSync, readFileSync, appendFileSync } from 'node:fs';
+import { existsSync, statSync, readFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import {
   parseGateCliArgs,
@@ -12,6 +12,7 @@ import {
   resolveRouting,
   buildGateResult,
   emitGateResult,
+  writeGateAttempt,
 } from '../../engine/helpers/gate-helpers.mjs';
 
 const args = parseGateCliArgs();
@@ -109,22 +110,6 @@ const result = buildGateResult({
   advice,
 });
 
-// Append runtime audit entry to rb_trace.jsonl (PRG-007)
-try {
-  const tracePath = join(bundlePath, 'rb_trace.jsonl');
-  const traceEntry = JSON.stringify({
-    ts: new Date().toISOString(),
-    event: 'gate_attempt',
-    gate: definition.gate,
-    passed: allPassed,
-    currentNodeRef: args.currentNode,
-    next: result.check.next,
-    inspect_count: inspect.length,
-    advice_count: advice.length,
-  });
-  appendFileSync(tracePath, traceEntry + '\n');
-} catch {
-  // Trace write failure must not affect gate output
-}
+writeGateAttempt(bundlePath, result);
 
 emitGateResult(result);

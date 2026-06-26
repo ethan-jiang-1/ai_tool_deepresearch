@@ -17,7 +17,7 @@
 //   - zodErrors()                 — map ZodError issues to plain diagnostics
 
 import { parseArgs } from 'node:util';
-import { existsSync, readFileSync, writeFileSync, appendFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseYaml } from 'yaml';
@@ -244,17 +244,18 @@ export function emitGateResult(result) {
 
 // ─── Audit Infrastructure (Logger + Trace) ──────────────────────────────────
 
+import { readBundleName, logToRun } from '../logger.mjs';
+
 /**
  * Write a gate attempt to both audit destinations: logger and trace.
  *
- * Logger (`_logs/run.log`): general-purpose diagnostic log recording all gate
- * attempts (passed/failed) with gate name, currentNodeRef, next, and
- * inspect/advice summary. Writes file-only (no console output) to keep stdout
- * clean for automated parsers.
+ * Logger (`_logs/run.log`): uses logToRun() with unified envelope format
+ * (Design D6.1). msg fixed to 'gate_attempt'; gate-specific info (gate,
+ * passed, currentNodeRef, next, inspect_count, advice_count) enters the
+ * detail JSON. Writes file-only — no console output.
  *
- * Trace (`rb_trace.jsonl`): structured `gate_attempt` JSONL event for
- * automated testing verdicts. Format matches the existing `gate_attempt`
- * event.
+ * Trace (`rb_trace.jsonl`): structured `gate_attempt` JSONL event with
+ * `bundle` field for cross-sink stitching (Design D2).
  *
  * Write failures are silently caught — they MUST NOT affect gate output or
  * exit code.
@@ -263,33 +264,28 @@ export function emitGateResult(result) {
  * @param {object} result — gate result from buildGateResult()
  * @returns {void}
  *
- * @impl GSK-005
+ * @impl GSK-005, LOC-001, LOC-002, TRW-003
  */
 export function writeGateAttempt(bundlePath, result) {
   try {
     const { check, routing, inspect, advice } = result;
-    const ts = new Date().toISOString();
+    const bundle = readBundleName(bundlePath);
 
-    // 1. Logger — file-only diagnostic detail (no console to keep stdout clean for gate JSON)
-    try {
-      const logDir = join(bundlePath, '_logs');
-      mkdirSync(logDir, { recursive: true });
-      const logPath = join(logDir, 'run.log');
-      const level = check.passed ? 'INFO' : 'WARN';
-      const detail = JSON.stringify(check.passed
-        ? { currentNodeRef: check.currentNodeRef, next: check.next, inspect_count: inspect.length, advice_count: advice.length }
-        : { currentNodeRef: check.currentNodeRef, next: check.next, routing_kind: routing.kind, inspect: inspect.slice(0, 5), advice: advice.slice(0, 3) }
-      );
-      appendFileSync(logPath, `[${ts}] ${level} gate:${check.gate} ${check.passed ? 'PASS' : 'FAIL'} ${detail}\n`);
-    } catch {
-      // Log write failure silently ignored
-    }
+    // 1. Logger — via logToRun with unified envelope (Design D6.1)
+    //    msg = 'gate_attempt', gate details → detail JSON
+    const level = check.passed ? 'info' : 'warn';
+    const logDetail = check.passed
+      ? { gate: check.gate, currentNodeRef: check.currentNodeRef, next: check.next, inspect_count: inspect.length, advice_count: advice.length }
+      : { gate: check.gate, currentNodeRef: check.currentNodeRef, next: check.next, routing_kind: routing.kind, inspect: inspect.slice(0, 5), advice: advice.slice(0, 3) };
+    logToRun(bundlePath, level, 'gate_attempt', logDetail);
 
-    // 2. Trace — structured evidence for automated verdicts
+    // 2. Trace — structured evidence with bundle field (Design D2)
     try {
       const tracePath = join(bundlePath, 'rb_trace.jsonl');
+      const ts = new Date().toISOString();
       const traceEntry = JSON.stringify({
         ts,
+        bundle,
         event: 'gate_attempt',
         gate: check.gate,
         passed: check.passed,

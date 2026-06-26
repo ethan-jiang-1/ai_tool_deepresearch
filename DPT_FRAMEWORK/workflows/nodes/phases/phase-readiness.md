@@ -92,3 +92,12 @@ Readiness fail 可能需要回到 earlier phase 修复缺失 artifact。修复�
 - 缺 artifact、缺 trace、缺 gate evidence 时 **MUST fail**
 - YAML/JSONL 不可解析时 **MUST fail**
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
+
+## Log
+
+记录命令: `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level <LEVEL> --msg "<message>"`
+
+| 时机 | 命令 |
+|------|------|
+| Phase 开始 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:readiness START"` |
+| Phase 结束 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:readiness END — <summary>"` |

@@ -64,3 +64,12 @@ node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle <pat
 - **禁止在这个阶段提 HITL 问题**：HITL1 是下一 phase
 - **禁止搜索 / 阅读 / 产出 evidence**：此 phase 不做 research
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
+
+## Log
+
+记录命令: `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level <LEVEL> --msg "<message>"`
+
+| 时机 | 命令 |
+|------|------|
+| Phase 开始 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:instantiation START"` |
+| Phase 结束 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:instantiation END — <summary>"` |

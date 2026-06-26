@@ -71,3 +71,12 @@ Post-delivery 用户反馈入口：用户反馈写入 `rb_profile.yaml` 的 HITL
 - **用户 final 后反馈 MUST NOT 通过 final node 处理**——走 HITL2 repair/rerun（`phase-hitl2.md` §7）
 - **MUST NOT 写 `final_delivery` trace event 并声称它来自 gate CLI**——final 无 gate CLI，charter 禁止手写 trace event。delivery 由 `final/` 文件存在证明
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
+
+## Log
+
+记录命令: `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level <LEVEL> --msg "<message>"`
+
+| 时机 | 命令 |
+|------|------|
+| Phase 开始 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:final START"` |
+| Phase 结束 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:final END — <summary>"` |

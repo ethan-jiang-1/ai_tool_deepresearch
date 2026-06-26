@@ -310,3 +310,12 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle <path> --cur
 - **禁止伪造引用路径**（Markdown link 目标必须是在 bundle 中真实存在的文件）
 - **禁止声称 synthesis 是完整的 research conclusion**（Wave2 是 cross-topic synthesis，不是 final report——HITL2 和 readiness 阶段还会进行人类审查）
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
+
+## Log
+
+记录命令: `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level <LEVEL> --msg "<message>"`
+
+| 时机 | 命令 |
+|------|------|
+| Phase 开始 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:wave2 START"` |
+| Phase 结束 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:wave2 END — <summary>"` |

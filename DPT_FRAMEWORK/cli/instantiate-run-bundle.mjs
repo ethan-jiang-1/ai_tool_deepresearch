@@ -16,6 +16,8 @@ import {
   PlanSchema,
 } from '../schema/index.mjs';
 import { parseMdFrontmatter } from '../engine/helpers/gate-helpers.mjs';
+import { createTrace } from '../engine/trace.mjs';
+import { logToRun } from '../engine/logger.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = join(__dirname, '..', 'rb_templates');
@@ -110,6 +112,13 @@ for (const t of templates) {
     }
   }
 }
+
+// ── Trace init + first log entry ──
+// Write run_start trace event (TRW-004) and first _logs/run.log line (LOG-004).
+// Must happen before validate-bundle so the trace file is populated.
+const trace = createTrace(join(bundleDir, 'rb_trace.jsonl'), { consoleEcho: false });
+trace.traceInit(bundleName, { source: 'instantiate-run-bundle' });
+logToRun(bundleDir, 'info', 'run_start', { source: 'instantiate-run-bundle' });
 
 // ── Validate + inspect ──
 const validatePath = join(__dirname, 'validate-bundle.mjs');

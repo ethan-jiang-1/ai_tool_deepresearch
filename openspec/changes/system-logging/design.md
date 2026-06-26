@@ -290,6 +290,65 @@ inspect-bundle <bundle> --log        # 新增：tail _logs/run.log 内容
 - **[`logger.mjs` 单实例]** `createLogger` 每次调用返回新实例——多进程场景下无共享状态问题。如果同一进程内多次创建指向同一文件，会产生重复 `[ts]` 行但不会冲突。当前架构每个 gate CLI 只创建一次，无此问题。
 - **[traceSummary 内存]** 大 trace 文件全量读入内存 → 当前单次 run 的 trace 条目在数十到数百量级，远不到内存瓶颈。后续可加 streaming parse if needed。
 
+## Experiment Design
+
+### Why experiment over unit tests
+
+单元测试（task 9.x）验证每个写入点的格式正确性——`logToRun()` 产出正确信封、`writeGateAttempt()` 注入 `bundle`、`--timeline` 解析器正确 parse。但证明不了 agent workflow 里真实发生的事：
+
+- 不同进程（gate CLI × N、engine × 2、Agent via CLI）append 同一 `_logs/run.log`，时间戳真的按序排列吗？
+- Agent 真的能从 `## Log` 段复制 bash 命令并执行成功吗？
+- `--timeline` 面对真实交织的 4 个 sink，真的一行 regex 全解析、不 crash 吗？
+- `bundle` 在 run 生命周期中途不会因某处代码绕过 `StatusSchema` 而丢失吗？
+
+These are agentic-mechanism questions, not unit-test questions. Only a command experiment answers them.
+
+### Shape
+
+实验 family：`exp_system-logging`，group 7（不冲突的最小空闲号段）。两个 case：
+
+```
+case-71-light-unified-envelope         ← 主Agent + gate 路径
+  ┌─────────────────────────────────────────────┐
+  │ 写入源：writeGateAttempt (×2+ gate)          │
+  │        logToRun (bundle 创建首条)            │
+  │        log-event.mjs (Agent bash)            │
+  │                                             │
+  │ 验证：统一信封格式 [ISO8601] LEVEL msg        │
+  │       bundle=<name> {opt JSON}               │
+  │       bundle 三源一致                         │
+  │       --timeline 单 regex 全解析              │
+  │       --summary pass/fail 表 + log 行数       │
+  │       --log 完整输出                          │
+  │                                             │
+  │ 不启动 subagent，纯 CLI/JS。weight: light     │
+  └─────────────────────────────────────────────┘
+
+case-72-standard-engine-lifecycle       ← engine + subagent 路径
+  ┌─────────────────────────────────────────────┐
+  │ 写入源：同上 +                                │
+  │        queue-manager (enqueue/claim/complete) │
+  │        subagent-relay (dispatch/collect/merge)│
+  │        subagent-relay repair trigger         │
+  │                                             │
+  │ 验证：engine log 行与 gate/Agent log 行       │
+  │       在同一 _logs/run.log 中按 ts 自然交织   │
+  │       closed-set 事件双写 trace + log         │
+  │       repair 事件进入 rb_trace.jsonl          │
+  │       --timeline 标注 4 个来源 sink           │
+  │                                             │
+  │ 需真实 subagent。weight: heavy                │
+  └─────────────────────────────────────────────┘
+```
+
+两个 case 合在一起覆盖全部 4 个写入源（gate/Agent/queue-manager/subagent-relay），证明统一信封 + bundle 传播 + timeline 缝合的完整闭环。
+
+### Template
+
+最接近的现成模板：`exp_agentic-queue/case-41-light-minimal-path.md`——create bundle → engine API → verify trace → 裁决 → 清理。Logging 实验形状基本一致，加一层 `inspect-bundle --timeline` 和 Agent `log-event.mjs` 调用。
+
+Playbook 遵循 `guidelines/command-experiments.md` 全部 MUST/MUST NOT，包括：真实 disposable bundle、canonical framework import、trace check 事件、trace JSONL 裁决、PASS 后清理。
+
 ## Open Questions
 
 1. **Phase Agent 手动写 log 的可靠性**：Agent 可能忘记写 `## Log` 段要求的日志点。两个低成本的 Phase 1 兜底：(a) `writeGateAttempt()` 已持有 `currentNodeRef`（如 `phases/phase-wave0.md`），可自动 deriving `phase` 字段写入 trace entry——每个 gate_attempt 自带 phase 边界标记，不依赖 Agent 手动 log；(b) runtime coordinates header（D5）让 Agent 每次读 queue projection 时看到 `--bundle` 路径，消除"忘记 bundle 值"这一子风险。follow-up：在 `inspect-bundle --timeline` 增加"缺失 phase START/END"提示（Phase 2），作为遵从度的被动观测，而非 gate 阻断。

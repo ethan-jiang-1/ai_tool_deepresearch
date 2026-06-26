@@ -1,9 +1,19 @@
 // gate-helpers.test.mjs
 // Tests for shared validation helpers used by checkGate and forkGate.
-import { describe, it } from 'node:test';
+import { describe, it, after } from 'node:test';
 import assert from 'node:assert';
 import { z } from 'zod';
-import { validateState, validateRules, zodErrors } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { validateState, validateRules, zodErrors, writeGateAttempt } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const TMP = join(__dirname, '.test-gate-helpers-tmp');
+
+after(() => {
+  if (existsSync(TMP)) rmSync(TMP, { recursive: true, force: true });
+});
 
 const CALLER = 'testFn';
 
@@ -107,5 +117,84 @@ describe('zodErrors', () => {
     assert.equal(errors[0].code, 'invalid_type');
     assert.equal(typeof errors[0].field, 'string');
     assert.equal(typeof errors[0].message, 'string');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// writeGateAttempt — GSK-005, TRW-003
+// ═══════════════════════════════════════════════════════════════════════════
+
+function setupBundle(bundleName) {
+  const bundleDir = join(TMP, `dpt_rb_${bundleName}`);
+  mkdirSync(bundleDir, { recursive: true });
+  writeFileSync(join(bundleDir, 'rb_status.json'), JSON.stringify({ bundle: bundleName }));
+  return bundleDir;
+}
+
+function makeGateResult(passed, gate = 'test-gate') {
+  return {
+    check: { passed, gate, currentNodeRef: 'phases/phase-test.md', next: passed ? 'phases/phase-next.md' : null },
+    routing: { kind: passed ? 'next' : 'retry', next: passed ? 'phases/phase-next.md' : null },
+    inspect: passed ? [] : ['rule 1 failed'],
+    advice: passed ? [] : ['fix rule 1'],
+  };
+}
+
+describe('writeGateAttempt (GSK-005, TRW-003)', () => {
+  it('writes gate_attempt to rb_trace.jsonl with bundle field', () => {
+    const b = setupBundle('test-gate-trace');
+    const result = makeGateResult(true);
+    writeGateAttempt(b, result);
+
+    const tracePath = join(b, 'rb_trace.jsonl');
+    assert.ok(existsSync(tracePath));
+    const content = readFileSync(tracePath, 'utf-8');
+    const entry = JSON.parse(content.trim().split('\n')[0]);
+    assert.strictEqual(entry.event, 'gate_attempt');
+    assert.strictEqual(entry.gate, 'test-gate');
+    assert.strictEqual(entry.passed, true);
+    assert.strictEqual(entry.bundle, 'test-gate-trace');
+  });
+
+  it('writes gate_attempt to _logs/run.log with unified envelope and bundle', () => {
+    const b = setupBundle('test-gate-log');
+    const result = makeGateResult(false);
+    writeGateAttempt(b, result);
+
+    const logPath = join(b, '_logs', 'run.log');
+    assert.ok(existsSync(logPath));
+    const content = readFileSync(logPath, 'utf-8');
+    assert.match(content, /^\[.+\] WARN gate_attempt bundle=test-gate-log/);
+    assert.ok(content.includes('"gate":"test-gate"'));
+  });
+
+  it('PASS gate writes INFO level log', () => {
+    const b = setupBundle('test-gate-pass');
+    writeGateAttempt(b, makeGateResult(true));
+    const content = readFileSync(join(b, '_logs', 'run.log'), 'utf-8');
+    assert.match(content, /INFO gate_attempt/);
+  });
+
+  it('FAIL gate writes WARN level log', () => {
+    const b = setupBundle('test-gate-fail');
+    writeGateAttempt(b, makeGateResult(false));
+    const content = readFileSync(join(b, '_logs', 'run.log'), 'utf-8');
+    assert.match(content, /WARN gate_attempt/);
+  });
+
+  it('never throws when bundle dir does not exist', () => {
+    assert.doesNotThrow(() => writeGateAttempt('/nonexistent/path', makeGateResult(true)));
+  });
+
+  it('bundle matches rb_status.json value', () => {
+    const b = setupBundle('test-gate-match');
+    writeGateAttempt(b, makeGateResult(true));
+
+    const traceContent = readFileSync(join(b, 'rb_trace.jsonl'), 'utf-8');
+    const traceEntry = JSON.parse(traceContent.trim().split('\n')[0]);
+    assert.strictEqual(traceEntry.bundle, 'test-gate-match');
+
+    const logContent = readFileSync(join(b, '_logs', 'run.log'), 'utf-8');
+    assert.ok(logContent.includes('bundle=test-gate-match'));
   });
 });

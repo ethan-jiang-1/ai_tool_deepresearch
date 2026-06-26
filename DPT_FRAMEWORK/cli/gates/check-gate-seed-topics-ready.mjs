@@ -3,7 +3,7 @@
 // @impl GSK-001, GSK-002, GSK-004, STM-003, PRG-007, FRE-003
 // Usage: node check-gate-seed-topics-ready.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
-import { existsSync, statSync, readFileSync, readdirSync, appendFileSync } from 'node:fs';
+import { existsSync, statSync, readFileSync, readdirSync } from 'node:fs';
 import { join, basename, extname } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import {
@@ -13,6 +13,7 @@ import {
   resolveRouting,
   buildGateResult,
   emitGateResult,
+  writeGateAttempt,
   readTraceEvents,
   readBundlePlan,
   parseMdFrontmatter,
@@ -213,22 +214,6 @@ const result = buildGateResult({
   advice,
 });
 
-// Append runtime audit entry to rb_trace.jsonl (PRG-007)
-try {
-  const tracePath = join(bundlePath, 'rb_trace.jsonl');
-  const traceEntry = JSON.stringify({
-    ts: new Date().toISOString(),
-    event: 'gate_attempt',
-    gate: definition.gate,
-    passed: allPassed,
-    currentNodeRef: args.currentNode,
-    next: result.check.next,
-    inspect_count: inspect.length,
-    advice_count: advice.length,
-  });
-  appendFileSync(tracePath, traceEntry + '\n');
-} catch {
-  // Trace write failure must not affect gate output
-}
+writeGateAttempt(bundlePath, result);
 
 emitGateResult(result);

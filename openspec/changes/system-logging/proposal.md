@@ -45,3 +45,5 @@
 - `openspec/specs/trace-writer/spec.md` — 加 TRW-003, TRW-004
 - `openspec/specs/gate-skeleton/spec.md` — 扩展 GSK-005
 - `openspec/governance/req-registry.yaml` — 登记新 requirement ID
+- `experiments_playbook/exp_system-logging/` — **新目录**：command experiment（group 7），2 个 case 验证完整 logging 闭环
+- `experiments_env/prototype-system-logging/` — fixture 目录（如需要）

@@ -93,7 +93,6 @@ export function createLogger(options = {}) {
   const level = options.level || 'info';
   const filePath = options.file || null;
   const bundle = options.bundle || null;
-  const consoleEcho = options.consoleEcho !== undefined ? options.consoleEcho : true;
   const threshold = LEVELS[level] ?? LEVELS.info;
 
   if (filePath) {
@@ -119,31 +118,18 @@ export function createLogger(options = {}) {
     if (LEVELS[lvl] < threshold) return;
     const line = formatMessage(lvl, msg, detail);
 
-    // Console output — use appropriate stream (may be suppressed for CLI use)
-    if (consoleEcho) {
-      if (lvl === 'error') {
-        console.error(line);
-      } else if (lvl === 'warn') {
-        console.warn(line);
-      } else {
-        console.log(line);
-      }
+    // Console output — use appropriate stream
+    if (lvl === 'error') {
+      console.error(line);
+    } else if (lvl === 'warn') {
+      console.warn(line);
+    } else {
+      console.log(line);
     }
 
-    // File output — append (silently recreate dir if missing)
+    // File output — append
     if (filePath) {
-      try {
-        appendFileSync(filePath, line + '\n');
-      } catch {
-        // Directory may have been removed — recreate and retry once
-        try {
-          const dir = path.dirname(filePath);
-          mkdirSync(dir, { recursive: true });
-          appendFileSync(filePath, line + '\n');
-        } catch {
-          // Silently ignored — diagnostics must not block caller
-        }
-      }
+      appendFileSync(filePath, line + '\n');
     }
   }
 
@@ -218,5 +204,5 @@ export function logToRun(bundlePath, level, msg, detail) {
 export function createRunLogger(bundlePath) {
   const bundle = readBundleName(bundlePath);
   const logPath = path.join(bundlePath, '_logs', 'run.log');
-  return createLogger({ file: logPath, bundle, consoleEcho: false });
+  return createLogger({ file: logPath, bundle });
 }
