@@ -170,23 +170,31 @@ CLI SHALL NOT 通过统一入口加 subcommand 区分 gate。内部 shared helpe
 
 `gate-helpers.mjs` SHALL export a `writeGateAttempt(bundlePath, result)` function that writes every gate attempt to two audit destinations:
 
-1. **Logger** (`_logs/run.log`): general-purpose diagnostic log. Records all gate attempts (passed/failed) with gate name, currentNodeRef, next, inspect/advice summary. This is the primary production diagnostic source.
-2. **Trace** (`rb_trace.jsonl`): structured `gate_attempt` JSONL event for automated testing verdicts. Format SHALL match the existing `gate_attempt` event (fields: `ts`, `event`, `gate`, `passed`, `currentNodeRef`, `next`, `inspect_count`, `advice_count`).
+1. **Logger** (`_logs/run.log`): general-purpose diagnostic log. Records all gate attempts (passed/failed) with gate name, currentNodeRef, next, inspect/advice summary, and `bundle`. This is the primary production diagnostic source.
+2. **Trace** (`rb_trace.jsonl`): structured `gate_attempt` JSONL event for automated testing verdicts. Format SHALL include `bundle` alongside existing fields (`ts`, `event`, `gate`, `passed`, `currentNodeRef`, `next`, `inspect_count`, `advice_count`).
 
-Gate CLIs SHALL call `writeGateAttempt()` before `emitGateResult()`. The function SHALL NOT throw — trace/log write failures MUST NOT affect gate output or exit code.
+**ALL gate CLIs** (existing and new) SHALL call `writeGateAttempt()` before `emitGateResult()`. Gate CLIs SHALL NOT inline `appendFileSync` directly to `rb_trace.jsonl` — `writeGateAttempt()` is the sole mechanism for writing gate trace and log entries.
 
-This eliminates the duplicated inline trace-writing code currently copied across all 9 gate CLIs. New gate CLIs SHALL use `writeGateAttempt()` instead of inlining trace writes.
+The function SHALL NOT throw — trace/log write failures MUST NOT affect gate output or exit code.
 
-#### Scenario: Gate pass writes to both destinations
+`writeGateAttempt()` SHALL read `bundle` from `rb_status.json` and include it in both log and trace entries automatically. No gate CLI SHALL need to pass `bundle` explicitly.
+
+#### Scenario: Gate pass writes to both destinations with bundle
 
 - **WHEN** a gate CLI calls `writeGateAttempt(bundlePath, result)` with a passed result
-- **THEN** a `gate_attempt` JSONL event SHALL be appended to `rb_trace.jsonl`
-- **AND** a logger INFO line SHALL be appended to `_logs/run.log`
+- **THEN** a `gate_attempt` JSONL event SHALL be appended to `rb_trace.jsonl` containing `bundle`
+- **AND** a logger INFO line SHALL be appended to `_logs/run.log` containing `bundle`
 
-#### Scenario: Gate fail writes diagnostic detail
+#### Scenario: Gate fail writes diagnostic detail with bundle
 
 - **WHEN** a gate CLI calls `writeGateAttempt(bundlePath, result)` with a failed result
-- **THEN** a logger WARN line SHALL include inspect and advice summaries
+- **THEN** a logger WARN line SHALL include inspect and advice summaries and `bundle`
+
+#### Scenario: Gate CLI MUST NOT inline trace write
+
+- **WHEN** implementing a new gate CLI or modifying an existing one
+- **THEN** the CLI SHALL NOT contain `appendFileSync` calls targeting `rb_trace.jsonl`
+- **AND** SHALL use `writeGateAttempt(bundlePath, result)` as the sole trace/log write mechanism
 
 #### Scenario: Audit write failure does not affect gate result
 
