@@ -28,7 +28,7 @@ verdict: trace-jsonl
 1. Agent 创建 disposable bundle
 2. Agent 加载 `DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl1.md`
 3. Agent 读取用户输入（一句话）
-4. Agent 按 §3a 执行 topic rewrite → 写入 `rb_plan.md`
+4. Agent 按 §3a 执行 topic rewrite → 写入 `rb_plan.md` 的 `## Goal` section
 5. Agent 按 §3b 收集 HITL1 决策 → 写入 `rb_profile.yaml`
 6. Agent 运行 `hitl1-recorded` gate
 7. Human reviewer 审查 Agent 的 rewrite 质量
@@ -73,7 +73,7 @@ echo "Bundle: $B"
 > 特别注意：
 > - "一句话（如 '帮我研究 AI 安全'）→ 执行 topic rewrite"
 > - 步骤 1-4 的具体要求（背景、范围、维度、前提、不确定项）
-> - "写入 rb_plan.md 正文（Markdown body，非 frontmatter）"
+> - "写入 rb_plan.md 的 ## Goal section（含 ### Purpose / ### Research Questions / ### Scope）"
 > - "推导初始 seed topics（3-5 个）→ 写入 topic_registry"
 
 ## Step 3: 用户输入
@@ -84,9 +84,12 @@ Agent，你现在读到了用户输入。按 `phase-hitl1.md` §3a 的要求执�
 
 ## Step 4: Agent 写入 rb_plan.md
 
-Agent，将你的 rewrite 结果写入 `$B/rb_plan.md`：
-- 正文（Markdown body）包含 structured original topic
+Agent，将你的 rewrite 结果写入 `$B/rb_plan.md` 的 `## Goal` section：
+- `### Purpose`：一段话概述研究目标
+- `### Research Questions`：3-5 个核心研究问题
+- `### Scope`：In scope / Out of scope / 待定
 - frontmatter 的 `topic_registry` 包含推导出的 seed topics（3-5 个）
+- body 的 `## Topic Registry` table 与 frontmatter 保持一致
 - `plan_basename` 保持为 `wff_rwa`
 
 > **Agent 执行此步骤后，继续 Step 5。**

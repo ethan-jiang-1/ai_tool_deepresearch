@@ -1,14 +1,14 @@
 ---
 schema: command-experiment/v1
 experiment: wff-topic-rewrite
-case: case-107-light-hitl1-topic-rewrite-detailed
+case: case-182-light-hitl1-topic-rewrite-detailed
 weight: light
 case_goal: "Verify that phase-hitl1.md §3a correctly instructs the Agent to recognize a detailed brief and do only light organization — not heavy rewrite — preserving the user's original scope, terminology, and dimensions."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-107_wff_rwd_*
-trace: dpt_disp_case-107_wff_rwd_*/_trace.jsonl
+bundle: dpt_disp_case-182_wff_rwd_*
+trace: dpt_disp_case-182_wff_rwd_*/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -18,7 +18,7 @@ verdict: trace-jsonl
 
 **⚠️ 模拟声明：** 本 playbook 中 original topic 和 seed topics 的内容由 bash 脚本写入（模拟 Agent 读取 `phase-hitl1.md` §3a 后的输出）。它验证的是：Agent 按 MD 指令产出的格式能被 gate CLI 正确处理。它**不验证** Agent 对详细 brief 的判别能力——那需要真实 Agent 执行（见 `exph_workflow-foundation/case-901-heavy-topic-rewrite-agent.md`，及其 AI 扮演真人对偶 `case-951`）。
 
-# case-107-light-hitl1-topic-rewrite-detailed
+# case-182-light-hitl1-topic-rewrite-detailed
 
 ## Expected Runtime Path
 
@@ -47,7 +47,7 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_rwd --case case-107 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_rwd --case case-182 --force)
 echo "Bundle: $B"
 echo "$B" > /tmp/pb_bundle
 ```

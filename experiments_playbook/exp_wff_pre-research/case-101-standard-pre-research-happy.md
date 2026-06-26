@@ -133,6 +133,70 @@ cat > $B/rb_status.json << 'EOF'
 {"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"seed_topics_ready"}
 EOF
 
+# Write a clean rb_plan.md body — the setup-ready gate checks for required-fill markers.
+# The template from new-disposable-bundle.mjs includes (待填充…) markers that must be replaced.
+cat > $B/rb_plan.md << 'PLANEOF'
+---
+plan_basename: pre_happy
+derived_topic_count: 1
+topic_registry:
+  - id: "topic-01"
+    slug: "ai-safety"
+    title: "AI Safety"
+---
+
+# Deep Research Plan: pre_happy
+
+## Goal
+
+### Purpose
+Investigate the current state of AI safety research, including alignment techniques, regulatory frameworks, and frontier model risks.
+
+### Research Questions
+1. What are the most effective AI alignment techniques?
+
+### Scope
+
+**In scope:**
+AI safety technical and regulatory dimensions.
+
+**Out of scope:**
+Science fiction scenarios, non-technical social impacts.
+
+**待定：**
+(待 HITL2 确认 — whether to expand to military AI safety)
+
+## Topic Registry
+
+| # | Slug | Title | Status |
+|---|------|-------|--------|
+| (由 Engine — 在 seed-topics materialization 后从 frontmatter topic_registry 生成) |
+
+## Constraints
+
+- **语言**：(待 HITL1 填充 — 仅中文源/中英混合/不限)
+- **时间预算**：(待 HITL1 填充 — 默认不设硬 deadline)
+- **地域**：(待 HITL1 填充 — 中国大陆/港澳台/海外)
+- **方法**：open
+- **来源偏好**：(待 HITL1 填充 — 一手源优先/学术优先/无偏好)
+
+## Progress
+
+- [ ] instantiation-complete
+- [ ] hitl1-recorded
+- [ ] setup-ready
+- [ ] seed-topics-ready
+- [ ] wave0-complete
+- [ ] wave1-complete
+- [ ] wave2-complete
+- [ ] hitl2-recorded
+- [ ] rerun-ready
+- [ ] readiness-passed
+
+## Decisions
+(append-only — 关键决策记录，最新在上)
+PLANEOF
+
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)

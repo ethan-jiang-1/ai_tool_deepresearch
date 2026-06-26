@@ -31,19 +31,22 @@ setup-ready 的 strip 实现验证通过后，提取到 gate-helpers，同步更
 
 ## 5. Template — rb_plan.md.tmpl 重写
 
-- [x] 5.1 重写 `DPT_FRAMEWORK/rb_templates/rb_plan.md.tmpl`：YAML frontmatter + 6 section body。`## Goal` 含 `### Purpose`(待填充 — 研究目标和范围) / `### Research Questions`(待填充 — …) / `### Scope`(待填充 — …)。`## Topic Registry` 为 Markdown table 模板（`| # | Slug | Title | Status |`），标注 `(由 Engine …)` intentionally-allowed marker。`## Constraints` 标注 `(待 HITL1 填充 — …)`。`## Progress` 预列所有生命周期 gate 的 checkbox（初始全 `- [ ]`）。`## Decisions` 标注 `(append-only — …)`。@impl PHS-001, PHS-002, PHS-003, PHS-004, PHS-006
+- [x] 5.1 重写 `DPT_FRAMEWORK/rb_templates/rb_plan.md.tmpl`：YAML frontmatter + 5 section body。`## Goal` 含 `### Purpose`(待填充 — 研究目标和范围) / `### Research Questions`(待填充 — …) / `### Scope`(**In scope:** 待填充 / **Out of scope:** 待填充 / **待定：** 待 HITL2 确认)。`## Topic Registry` 为 Markdown table 模板（`| # | Slug | Title | Status |`），标注 `(由 Engine …)` intentionally-allowed marker。`## Constraints` 为 5 类结构化 bullet list（语言/时间预算/地域/方法/来源偏好）。`## Progress` 预列所有生命周期 gate 的 checkbox（初始全 `- [ ]`）。`## Decisions` 标注 `(append-only — …)`。@impl PHS-001, PHS-002, PHS-003, PHS-004, PHS-006
 - [x] 5.2 验证新模板创建的 bundle 的 `rb_plan.md` 通过 `PlanSchema` 校验（`validate-bundle.mjs`）。@impl SCO-002
 
 ## 6. Disposable bundle 生成器 — 走模板
 
 - [x] 6.1 更新 `experiments_env/shared/new-disposable-bundle.mjs`：`rb_plan.md` 从 `DPT_FRAMEWORK/rb_templates/rb_plan.md.tmpl` 生成（替换 `{{name}}`），不再内联 JSON + 1 行 body。生成后跑 `PlanSchema.safeParse()` 验证 frontmatter。@impl PHS-001
-- [x] 6.2 手动验证：`node new-disposable-bundle.mjs test` 生成的 `rb_plan.md` 含 YAML frontmatter + 6 section + required-fill markers；`validate-bundle.mjs` 全部 PASS。
+- [x] 6.2 手动验证：`node new-disposable-bundle.mjs test` 生成的 `rb_plan.md` 含 YAML frontmatter + 5 section + required-fill markers；`validate-bundle.mjs` 全部 PASS。
 
 ## 7. 验证
 
 - [x] 7.1 全量回归测试（`node --test tests/`），fail 数不变或减少（baseline: 9）。
-- [ ] 7.2 抽样 playbook：case-101（hitl1→setup）、case-51（完整 E2E）、case-106（topic rewrite→gate）。注意：disposable bundle 格式变更后，playbook 中如有对 `rb_plan.md` body 格式的断言（如检查特定 header 文本）可能需要同步更新。
-- [x] 7.3 **新增 E2E 验证**：创建 disposable bundle（已通过 hitl1-recorded gate，status.current_gate=`setup_ready`，仅 `rb_plan.md` body 残留 `(待填充 — …)` marker）→ `setup-ready` gate FAIL（trace 有 fail 事件，inspect 指向 `plan_body_no_unfilled_marker`）；Agent 替换 marker 为真实内容后重跑 → gate PASS。这是 placeholder 检测的关键证据路径。@impl PHS-005
+- [x] 7.2 抽样 playbook：case-101（hitl1→setup）、case-51（完整 E2E）、case-106（topic rewrite→gate）。注意：disposable bundle 格式变更后，playbook 中如有对 `rb_plan.md` body 格式的断言（如检查特定 header 文本）可能需要同步更新。
+- [x] 7.3 **更新并重跑 case-106**（commit 0739a13 加了 In/Out/待定 + Constraints 5 类，case-106 需同步）：@impl PHS-002, PHS-004, PHS-005
+    - Step 1：验证 template 生成的 `### Scope` 含 `**In scope:**` / `**Out of scope:**` / `**待定：**` 三子结构，`## Constraints` 含 5 类 bullet（语言/时间预算/地域/方法/来源偏好）。"6 个 section" 改为 "5 个 section"。
+    - Step 3：手写替换 plan body 时**保留** In/Out/待定 结构（填写 In/Out scope 内容、保留 `**待定：**` 的 intentionally-allowed marker），保留 `## Constraints` 5 类结构。验证 intentionally-allowed markers（Constraints 的 `(待 HITL1 填充 — …)` 和 `**待定：**` 的 `(待 HITL2 确认 — …)`）不触发 gate FAIL。
+    - 全部 5 步 PASS（1 fail + 2 pass + Progress 翻转 + trace 裁决 PASS）。
 - [x] 7.4 `check-project-reqs.mjs` + `check-project-specs.mjs` PASS。
 - [x] 7.5 更新 `req-registry.yaml`：注册 RWG-014（research-wave-gate-implementation）、SCO-012（schema-core stripMdFrontmatter）。更新 PHS-006 description：从 "Disposable bundle path unaffected" 改为 "Engine writes ## Progress on gate pass"。修正 PHS-005 description：从 "setup-ready gate checks" 改为 "Gate body content checks (non-empty + no unfilled required-fill markers)"。
 - [x] 7.6 更新 `research-wave-gate-implementation` main spec 的 req line 加 RWG-014；更新 `schema-core` main spec 的 req line 加 SCO-012。

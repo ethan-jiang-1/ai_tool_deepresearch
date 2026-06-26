@@ -31,7 +31,7 @@ verdict: trace-jsonl
 
 1. Agent 创建 disposable bundle
 2. Agent 加载 `phase-hitl1.md`，读 §3a
-3. Agent 读用户输入（一句话）→ 按 §3a 执行 topic rewrite → 写入 `rb_plan.md`
+3. Agent 读用户输入（一句话）→ 按 §3a 执行 topic rewrite → 写入 `rb_plan.md` 的 `## Goal` section
 4. Agent 按 §3b 写入 HITL1 profile（AI 扮演用户的 profile 选择）
 5. Agent 运行 `hitl1-recorded` gate
 6. AI reviewer 按 901 Step 7 的 checklist 审查 rewrite 质量 → 给 verdict（标 `source: ai-judge`）
@@ -66,7 +66,7 @@ echo "$B" > /tmp/pb_bundle
 
 > **Agent，请执行：** 加载 `DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl1.md`。
 >
-> 阅读 §3a "Topic Rewrite（用户输入展开）"。注意：一句话 → 执行 rewrite；步骤 1-4（背景、范围、维度、前提、不确定项）；写入 `rb_plan.md` 正文；推导 seed topics（3-5 个）→ `topic_registry`。
+> 阅读 §3a "Topic Rewrite（用户输入展开）"。注意：一句话 → 执行 rewrite；写入 `rb_plan.md` 的 `## Goal` section（含 `### Purpose` / `### Research Questions` / `### Scope`）；推导 seed topics（3-5 个）→ frontmatter `topic_registry` + body `## Topic Registry` table。
 
 ## Step 3: 用户输入
 
@@ -76,9 +76,12 @@ Agent，按 `phase-hitl1.md` §3a 执行 topic rewrite。
 
 ## Step 4: Agent 写入 rb_plan.md
 
-Agent，将 rewrite 结果写入 `$B/rb_plan.md`：
-- 正文含 structured original topic（背景/范围/维度/前提/不确定项）
+Agent，将 rewrite 结果写入 `$B/rb_plan.md` 的 `## Goal` section：
+- `### Purpose`：一段话概述研究目标
+- `### Research Questions`：3-5 个核心研究问题
+- `### Scope`：In scope / Out of scope / 待定
 - frontmatter `topic_registry` 含 3-5 个 seed topics
+- body 的 `## Topic Registry` table 与 frontmatter 保持一致
 - `plan_basename` 保持 `wff_rwa`
 
 > **Agent 执行此步骤后，继续 Step 5。**

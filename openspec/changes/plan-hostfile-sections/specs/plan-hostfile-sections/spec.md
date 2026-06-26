@@ -6,12 +6,12 @@
 
 The `rb_plan.md` file is the **host file**: the single Markdown artifact an Agent or human reads to get the complete research picture—goal, topics, constraints, progress, and decisions—without consulting conversation history or scattered control files. The host file pattern makes `rb_plan.md` the authoritative narrative surface for the research run, while `rb_status.json` / `rb_queue.json` / `rb_trace.jsonl` remain the machine-authoritative control files. It intentionally overlaps with `rb_profile.yaml` on topic and scope—same research intent, two audiences: Agent reads Markdown prose for task understanding, Engine reads YAML fields for gate validation. They complement without conflict.
 
-The `rb_plan.md.tmpl` SHALL use YAML frontmatter (instead of JSON) for `plan_basename`, `derived_topic_count`, and `topic_registry` fields. The frontmatter field names SHALL remain unchanged from the current PlanSchema definition. The body SHALL contain six Markdown sections in fixed order: `## Goal`, `## Topic Registry`, `## Constraints`, `## Progress`, `## Decisions`.
+The `rb_plan.md.tmpl` SHALL use YAML frontmatter (instead of JSON) for `plan_basename`, `derived_topic_count`, and `topic_registry` fields. The frontmatter field names SHALL remain unchanged from the current PlanSchema definition. The body SHALL contain five Markdown sections in fixed order: `## Goal`, `## Topic Registry`, `## Constraints`, `## Progress`, `## Decisions`.
 
 #### Scenario: Production bundle instantiation with new template
 
 - **WHEN** `instantiate-run-bundle.mjs` creates a new bundle with `{{name}}` substitution
-- **THEN** the resulting `rb_plan.md` SHALL have YAML frontmatter parseable by `parseMdFrontmatter()` and a body containing all six section headers
+- **THEN** the resulting `rb_plan.md` SHALL have YAML frontmatter parseable by `parseMdFrontmatter()` and a body containing all five section headers
 
 #### Scenario: Existing JSON frontmatter remains parseable
 

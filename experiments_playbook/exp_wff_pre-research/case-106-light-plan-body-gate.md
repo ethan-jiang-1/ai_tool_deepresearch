@@ -22,7 +22,7 @@ verdict: trace-jsonl
 
 ## Expected Runtime Path
 
-1. 创建 disposable bundle（新模板：YAML + 6 section + required-fill markers）
+1. 创建 disposable bundle（新模板：YAML + 5 section + required-fill markers + In/Out/待定 子结构）
 2. 设置 gate 前置条件（hitl1 recorded, status correct）→ gate FAIL（placeholder 残留）
 3. 替换 required-fill markers → gate PASS + Progress checkbox 翻转
 4. 验证 intentionally-allowed markers 不会导致 FAIL
@@ -36,9 +36,10 @@ verdict: trace-jsonl
 证明：
 1. `plan_body_no_unfilled_marker` rule 正确检测 required-fill markers `(待填充…)` / `(尚无话题…)` — gate FAIL
 2. 替换 required-fill markers 后 gate PASS
-3. `plan_body_non_empty` rule 对正常的 6-section body 恒 PASS（不误报）
-4. Intentionally-allowed markers `(待 HITL1 填充 — …)` / `(由 Engine — …)` 不会触发 FAIL
+3. `plan_body_non_empty` rule 对正常的 5-section body 恒 PASS（不误报）
+4. Intentionally-allowed markers `(待 HITL1 填充 — …)` / `(由 Engine — …)` / `(待 HITL2 确认 — …)` 不会触发 FAIL
 5. Gate pass 后 `## Progress` section 中 `setup-ready` 行 checkbox 翻转为 `[x]` 并带时间戳
+6. `### Scope` 的 In/Out/待定 三子结构和 `## Constraints` 的 5 类 bullet list 在 plan body 替换后完整保留
 
 ---
 
@@ -58,12 +59,24 @@ grep "^## " $B/rb_plan.md
 echo ""
 echo "=== Required-fill markers present ==="
 grep -c "(待填充" $B/rb_plan.md && echo "OK: required-fill markers found" || echo "MISSING: required-fill markers not found"
+echo "=== Scope substructure (In/Out/待定) ==="
+grep -c '\*\*In scope:\*\*' $B/rb_plan.md && echo "OK: **In scope:** present" || echo "MISSING"
+grep -c '\*\*Out of scope:\*\*' $B/rb_plan.md && echo "OK: **Out of scope:** present" || echo "MISSING"
+grep -c '\*\*待定：\*\*' $B/rb_plan.md && echo "OK: **待定：** present" || echo "MISSING"
+echo ""
+echo "=== Constraints 5-category bullets ==="
+grep -c '\*\*语言\*\*' $B/rb_plan.md && echo "OK: 语言" || echo "MISSING"
+grep -c '\*\*时间预算\*\*' $B/rb_plan.md && echo "OK: 时间预算" || echo "MISSING"
+grep -c '\*\*地域\*\*' $B/rb_plan.md && echo "OK: 地域" || echo "MISSING"
+grep -c '\*\*方法\*\*' $B/rb_plan.md && echo "OK: 方法" || echo "MISSING"
+grep -c '\*\*来源偏好\*\*' $B/rb_plan.md && echo "OK: 来源偏好" || echo "MISSING"
+echo ""
 echo "=== Intentionally-allowed markers present ==="
 grep -c "(待 HITL1 填充" $B/rb_plan.md && echo "OK: intentionally-allowed marker found" || echo "MISSING"
 grep -c "(由 Engine" $B/rb_plan.md && echo "OK: Engine marker found" || echo "MISSING"
 ```
 
-预期：6 个 section 全部存在，至少 3 个 `(待填充` marker（Goal 三个子节），`(待 HITL1 填充…)` 和 `(由 Engine …)` 各存在。
+预期：5 个 `##` section 全部存在，`### Scope` 含 `**In scope:**` / `**Out of scope:**` / `**待定：**` 三个子结构，`## Constraints` 含 5 类 bullet（语言/时间预算/地域/方法/来源偏好），至少 3 个 `(待填充` marker（Goal 子节的 In/Out scope），`(待 HITL1 填充…)` 和 `(由 Engine …)` 各存在。
 
 ## Step 2: 设置 gate 前置条件 → gate FAIL（placeholder 残留）
 
@@ -115,7 +128,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 ## Step 3: 替换 required-fill markers → gate PASS + Progress 翻转
 
-保留 intentionally-allowed markers（`(待 HITL1 填充 — …)` 和 `(由 Engine — …)`），只替换 required-fill markers。
+保留 intentionally-allowed markers（`(待 HITL1 填充 — …)` 和 `(由 Engine — …)`），只替换 required-fill markers。**保留 In/Out/待定 结构和 Constraints 5 类结构**——这是 spec 要求的 section 形态，不能简化为一整段 paragraph。
 
 ```bash
 REPO_ROOT=$(pwd)
@@ -152,7 +165,15 @@ This project investigates China's reaction to the 2026 World Cup across media, p
 3. Did the government issue any policy responses?
 
 ### Scope
-Focus on mainland China. Exclude economic impact analysis and international comparisons.
+
+**In scope:**
+China's media coverage of the 2026 World Cup, public sentiment on Weibo and other platforms, and government policy responses.
+
+**Out of scope:**
+Economic impact analysis and international comparisons. Exit cost/benefit modeling and diplomatic relations.
+
+**待定：**
+(待 HITL2 确认 — whether to expand to Hong Kong and Taiwan media sources)
 
 ## Topic Registry
 
@@ -161,7 +182,12 @@ Focus on mainland China. Exclude economic impact analysis and international comp
 | (由 Engine — 在 seed-topics materialization 后从 frontmatter topic_registry 生成) |
 
 ## Constraints
-(待 HITL1 填充 — 用户指定的时间/预算/地域/方法约束)
+
+- **语言**：(待 HITL1 填充 — 仅中文源/中英混合/不限)
+- **时间预算**：(待 HITL1 填充 — 默认不设硬 deadline)
+- **地域**：(待 HITL1 填充 — 中国大陆/港澳台/海外)
+- **方法**：open — 不预设方法限制，Agent 按需选择 search/synthesis/fetch
+- **来源偏好**：(待 HITL1 填充 — 一手源优先/学术优先/无偏好)
 
 ## Progress
 
@@ -180,10 +206,20 @@ Focus on mainland China. Exclude economic impact analysis and international comp
 (append-only — 关键决策记录，最新在上)
 PLANEOF
 
-# Verify intentionally-allowed markers still present
+# Verify In/Out/待定 structure preserved
+echo "=== Scope substructure preserved ==="
+grep -c '\*\*In scope:\*\*' $B/rb_plan.md && echo "OK: **In scope:** present" || echo "MISSING"
+grep -c '\*\*Out of scope:\*\*' $B/rb_plan.md && echo "OK: **Out of scope:** present" || echo "MISSING"
+grep -c '\*\*待定：\*\*' $B/rb_plan.md && echo "OK: **待定：** present" || echo "MISSING"
+echo ""
+echo "=== Constraints 5-category preserved ==="
+grep -c '\*\*语言\*\*' $B/rb_plan.md && echo "OK: 语言" || echo "MISSING"
+grep -c '\*\*方法\*\*' $B/rb_plan.md && echo "OK: 方法" || echo "MISSING"
+echo ""
 echo "=== Intentionally-allowed markers ==="
 grep -c "(待 HITL1 填充" $B/rb_plan.md && echo "OK: Constraints marker present" || echo "MISSING"
 grep -c "(由 Engine" $B/rb_plan.md && echo "OK: Engine marker present" || echo "MISSING"
+grep -c "(待 HITL2 确认" $B/rb_plan.md && echo "OK: HITL2 deferral marker present" || echo "MISSING"
 echo ""
 echo "=== Required-fill markers gone? ==="
 grep "(待填充" $B/rb_plan.md && echo "STILL PRESENT — should be gone" || echo "OK: all required-fill markers replaced"
@@ -194,7 +230,7 @@ PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs che
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'setup-ready',passed:$PASSED,expected:true,detail:'markers replaced, intentionally-allowed markers kept — gate should PASS'})})"
 ```
 
-预期：`check.passed: true`，intentionally-allowed markers 保留，required-fill markers 全部替换。
+预期：`check.passed: true`，In/Out/待定 结构保留、Constraints 5 类结构保留，intentionally-allowed markers（`(待 HITL1 填充 — …)`、`(由 Engine — …)`、`(待 HITL2 确认 — …)`）全部保留且不触发 gate FAIL，required-fill markers 全部替换。
 
 ## Step 4: 验证 Progress checkbox 翻转
 
@@ -229,7 +265,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 ## Step 5: 从 trace 裁决
 
-预期 3 条 `check` event：1 fail（placeholder 未替换 → 正确拒绝）+ 2 pass（替换后 gate pass + Progress 翻转）。
+预期 3 条 `check` event：1 fail（required-fill marker 残留 → 正确拒绝）+ 2 pass（替换后 gate pass，In/Out/待定 + Constraints 5 类结构保留且 intentionally-allowed markers 不误拦 + Progress 翻转）。
 
 ```bash
 REPO_ROOT=$(pwd)
@@ -242,10 +278,10 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 > 3 个 check（1 fail + 2 pass），验证 setup-ready gate 的 plan body 检查：
 >   [FAIL ✅] required-fill markers `(待填充…)` 未替换 → gate 正确拒绝，`plan_body_no_unfilled_marker` 触发
->   [PASS]   markers 替换、intentionally-allowed markers 保留 → gate 通过
+>   [PASS]   markers 替换、In/Out/待定 结构保留、Constraints 5 类结构保留、intentionally-allowed markers（`(待 HITL1 填充 — …)` / `(由 Engine — …)` / `(待 HITL2 确认 — …)`）全部不触发 FAIL → gate 通过
 >   [PASS]   `## Progress` 中 `setup-ready` checkbox 翻转为 `[x]` 且带时间戳
 >
-> 证明 gate 能区分 required-fill vs intentionally-allowed markers，不会误拦合法延迟标记，
+> 证明 gate 能区分 required-fill vs intentionally-allowed markers，不会误拦合法延迟标记；In/Out/待定 和 Constraints 5 类结构在 plan body 替换后完整保留。
 > 且 Progress 写行为幂等可靠。
 
 ## Step 7: Cleanup

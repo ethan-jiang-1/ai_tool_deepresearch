@@ -20,7 +20,7 @@
 ## Goals / Non-Goals
 
 **Goals:**
-- Template body 从 2 个空占位符变为 6 section 结构
+- Template body 从 2 个空占位符变为 5 section 结构
 - `phase-hitl1.md` 指令明确指定写入 section
 - setup-ready gate 防御：body 非空、required-fill markers 被替换
 - Engine 在 gate pass 时写 `## Progress`（Phase 1 接入 setup-ready，其他 gate 后续 change 接入）
@@ -114,8 +114,8 @@ Template + gate + phase node + start-research.md 一起上。四者互为补充�
 
 - **marker 约定依赖模板纪律** — `plan_body_no_unfilled_marker` 靠"只有 Goal 子节用 required-fill marker"这一约定精准定位。模板变更时若把保留节也改成 `(待填充…)`，gate 会误报。Mitigation：marker 约定已编码进 PHS-002 spec 与 design D2。模板作者须遵守。
 - **marker pattern 只覆盖中文** — 将来新模板引入非中文 marker 需同步更新 gate pattern。当前 required-fill marker 前缀为 `(待填充` 和 `(尚无话题`，regex `\((?:待填充|尚无话题)` 用 prefix match 覆盖 `(待填充 — 任意描述…)` 变体。
-- **`plan_body_non_empty` 近乎空转** — 对任何系统生成的 bundle 恒真（模板有 6 个 section 标题）；只对手工/出 bug 的空 body 有效。保留它是因为代价极低（一行 rule 配置），且捕获的是与 marker 正交的"Agent 完全没写任何东西"模式。
+- **`plan_body_non_empty` 近乎空转** — 对任何系统生成的 bundle 恒真（模板有 5 个 section 标题）；只对手工/出 bug 的空 body 有效。保留它是因为代价极低（一行 rule 配置），且捕获的是与 marker 正交的"Agent 完全没写任何东西"模式。
 - **helper 提取后 wave2/hitl2 行为回归** — `stripMdFrontmatter()` 替换内联代码后，如果正则或 trim 逻辑有细微差异，wave2-complete 和 hitl2-recorded gate 会静默改变行为。Mitigation：提取前先写单元测试锁定当前 behavior，替换后跑相关 gate 的集成测试。同步统一 `pattern_match` 的 strip 行为。
 - **`start-research.md` 与 `phase-hitl1.md` 指令冲突** — `start-research.md` Step 3 指示 Agent append `## Research Question`，`phase-hitl1.md` §3a 指示写入 `## Goal`。如果不更新 `start-research.md`，Agent 会在 `rb_plan.md` 里创建两个 section，内容重复。Mitigation：本 change 同步更新 `start-research.md` Step 3，新增 PHS-002 scenario 覆盖此指令变更。
-- **disposable bundle 分裂** — `new-disposable-bundle.mjs:150` 内联生成 JSON frontmatter + 1 行 body，不走 `rb_plan.md.tmpl`。如果不更新，disposable/experiment bundle 永远是旧格式，`plan_body_no_unfilled_marker` 的 FAIL 路径在 controlled E2E 里永远触发不了。Mitigation：本 change 更新 `new-disposable-bundle.mjs` 从 template 生成 plan body（YAML + 6 section + required-fill markers）。同步新增 E2E case 验证 placeholder FAIL → PASS 路径。
+- **disposable bundle 分裂** — `new-disposable-bundle.mjs:150` 内联生成 JSON frontmatter + 1 行 body，不走 `rb_plan.md.tmpl`。如果不更新，disposable/experiment bundle 永远是旧格式，`plan_body_no_unfilled_marker` 的 FAIL 路径在 controlled E2E 里永远触发不了。Mitigation：本 change 更新 `new-disposable-bundle.mjs` 从 template 生成 plan body（YAML + 5 section + required-fill markers）。同步新增 E2E case 验证 placeholder FAIL → PASS 路径。
 - **gate PASS 不等于 Goal 已填写** — `field_non_empty` 是文件级检查，不是 section 级。Agent 删掉 marker 却啥也没写也能 PASS。这不是缺陷——Phase 1 不做 section 级校验，marker 约定已覆盖约 90% 的"忘了填"——但需在 spec 里明确文档化，防止将来误解。
