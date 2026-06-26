@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_rb_log_startup
-trace: dpt_rb_log_startup/_trace.jsonl
+trace: dpt_rb_log_startup/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -211,7 +211,7 @@ const checks = [
 ];
 
 // Write checks
-const tpath = join(process.argv[2], '_trace.jsonl');
+const tpath = join(process.argv[2], '_logs', '_trace.jsonl');
 for (const c of checks) {
   writeFileSync(tpath, JSON.stringify({ ts: new Date().toISOString(), ...c }) + '\n', { flag: 'a' });
 }

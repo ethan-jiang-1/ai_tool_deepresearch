@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-212_agql_w0_fail_
-trace: dpt_disp_case-212_agql_w0_fail_*/_trace.jsonl
+trace: dpt_disp_case-212_agql_w0_fail_*/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 req: AGQ-008
 ---
@@ -131,7 +131,7 @@ test "$PASSED" = "false" && echo "SCENARIO A PASS: gate correctly failed" || ech
 echo "=== Inspect ==="
 echo "$GATE_OUTPUT" | node -e "const d=require('fs').readFileSync('/dev/stdin','utf-8');const j=JSON.parse(d);j.inspect.forEach(i=>console.log('  -',i))"
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B2/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'A: gate fail — 3 topics, only 2 source.yaml, inspect identifies missing topic-z',expected:false})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B2/_logs/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'A: gate fail — 3 topics, only 2 source.yaml, inspect identifies missing topic-z',expected:false})})"
 ```
 
 预期：
@@ -176,7 +176,7 @@ PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs che
 echo "=== Gate passed? $PASSED (expected: true) ==="
 test "$PASSED" = "true" && echo "SCENARIO B PASS: repair closed the loop" || echo "SCENARIO B FAIL"
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B2/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'B: repair — added missing topic-z source.yaml, rerun gate pass',expected:true})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B2/_logs/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'B: repair — added missing topic-z source.yaml, rerun gate pass',expected:true})})"
 ```
 
 预期：`check.passed: true`，`check.next: phases/phase-wave1.md`。
@@ -204,7 +204,7 @@ test "$GATE_ATTEMPTS" = "2" && echo "TRACE PASS: 2 gate_attempt events (1 fail +
 
 ```bash
 # mode=last: 只看每个 gate 的最后一次 check（B 的 repair 替换 A 的 fail）
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B2/_trace.jsonl','last')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B2/_logs/_logs/_trace.jsonl','last')})"
 ```
 
 预期：PASS（2 checks: 1 expected-false + 1 expected-true，都匹配）。

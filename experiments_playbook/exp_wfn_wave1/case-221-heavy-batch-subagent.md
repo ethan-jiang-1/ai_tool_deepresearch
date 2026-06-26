@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-221_agql_w1_simple_
-trace: dpt_disp_case-221_agql_w1_simple_*/_trace.jsonl
+trace: dpt_disp_case-221_agql_w1_simple_*/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 req: WAI-006
 ---
@@ -415,7 +415,7 @@ done
 ## Final Verdict
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_logs/_trace.jsonl')})"
 ```
 
 预期：PASS。

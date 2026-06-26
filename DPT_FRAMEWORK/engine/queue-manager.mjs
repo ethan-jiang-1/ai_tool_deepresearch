@@ -106,7 +106,7 @@ export const QueueItemSchema = QueueWorkUnitSchema;
 export const QUEUE = {
   FILE:       'rb_queue.json',
   PROJECTION: '_cache/agentic-queue/current-task.md',
-  TRACE:      '_trace_agq_cli.jsonl',
+  TRACE:      '_logs/_trace_agq_cli.jsonl',
 };
 const SLOT_NAMES = ['slot_1_current', 'slot_2_next', 'slot_3_pending', 'slot_4_pending', 'slot_5_tail'];
 const PENDING_SLOTS = SLOT_NAMES.slice(1);

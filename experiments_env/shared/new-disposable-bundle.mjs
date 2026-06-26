@@ -78,7 +78,7 @@ if (existsSync(bundleDir)) {
 }
 
 // ── Create directory structure ──
-const dirs = ['seed_topics', 'reference', 'artifacts/wave1', 'artifacts/wave2', '_cache', 'final'];
+const dirs = ['seed_topics', 'reference', 'artifacts/wave1', 'artifacts/wave2', '_logs', '_cache', 'final'];
 for (const d of dirs) {
   mkdirSync(join(bundleDir, d), { recursive: true });
 }

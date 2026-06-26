@@ -52,7 +52,7 @@
 //
 // ## Trace
 // Auto-inits on first mutation call via ensureTrace(baseDir). Fixed filename
-// `_trace_subagent.jsonl` inside the bundle. consoleEcho: false (file only).
+// `_logs/_trace_subagent.jsonl` inside the bundle. consoleEcho: false (file only).
 // Consumers never touch trace setup — no setter, no createTrace import needed.
 //
 // ## On-disk paths
@@ -80,7 +80,7 @@ import { createTrace } from './trace.mjs';
 import { createRunLogger, readBundleName } from './logger.mjs';
 
 // Trace + logger auto-init on first mutation call via ensureTrace(bundleDir).
-// Fixed trace filename `_trace_subagent.jsonl` within the bundle. consoleEcho: false.
+// Fixed trace filename `_logs/_trace_subagent.jsonl` within the bundle. consoleEcho: false.
 // Consumers never touch trace/log setup — no setter, no createTrace import needed.
 let _trace = null;
 let _traceBundleDir = null;
@@ -88,7 +88,7 @@ let _log = null;
 
 function ensureTrace(bundleDir) {
   if (bundleDir && _traceBundleDir !== bundleDir) {
-    _trace = createTrace(path.join(bundleDir, '_trace_subagent.jsonl'), { consoleEcho: false });
+    _trace = createTrace(path.join(bundleDir, '_logs', '_trace_subagent.jsonl'), { consoleEcho: false });
     _traceBundleDir = bundleDir;
     _log = null; // reset on bundle change — logger must track the new bundle
   }

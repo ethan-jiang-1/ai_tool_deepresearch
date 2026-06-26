@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-32_wc_medium
-trace: dpt_disp_case-32_wc_medium/_trace.jsonl
+trace: dpt_disp_case-32_wc_medium/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -53,7 +53,7 @@ import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
-const trace = createTrace(B+'/_trace.jsonl', { consoleEcho: true });
+const trace = createTrace(B+'/_logs/_trace.jsonl', { consoleEcho: true });
 const SRC = 'wl-medium';
 trace.traceInit('wl-medium: MD controller mode → Engine', { source: SRC });
 
@@ -79,7 +79,7 @@ node $B/step_chain.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('chain:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
@@ -107,7 +107,7 @@ import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK
 import { writeFileSync } from 'node:fs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
-const trace = createTrace(B+'/_trace.jsonl', { consoleEcho: true });
+const trace = createTrace(B+'/_logs/_trace.jsonl', { consoleEcho: true });
 const SRC = 'wl-medium';
 	// traceInit already called in Step 2.1 — do not re-init (would unlink prior check events)
 
@@ -144,7 +144,7 @@ node $B/s2_session_start.mjs $B $B/exp/nodes
 
 # MD 读 trace + 检查 session 文件
 node -e "
-const e=require('fs').readFileSync('$B/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('s2:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===2&&c.every(x=>x.passed);
@@ -176,7 +176,7 @@ import { readFileSync } from 'node:fs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 // 真实 trace — 只记录 Step 2.3 的 load 行为
-const trace = createTrace(B+'/_trace.jsonl', { consoleEcho: true });
+const trace = createTrace(B+'/_logs/_trace.jsonl', { consoleEcho: true });
 const SRC = 'wl-medium';
 
 // MD 读 session
@@ -226,7 +226,7 @@ node $B/s3_session_resume.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('s3:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 // 验证 cache_hit event 确实写入了 trace
@@ -248,7 +248,7 @@ console.log('MD裁决: Step 2.3 — session 恢复 + cache_hit 验证 ✅');
 cat > $B/verify.mjs << 'JS2'
 import { readFileSync } from 'node:fs';
 const B=process.argv[2];
-const lines = readFileSync(B+'/_trace.jsonl','utf-8').trim().split('\n');
+const lines = readFileSync(B+'/_logs/_trace.jsonl','utf-8').trim().split('\n');
 const events = lines.map(JSON.parse);
 const checks = events.filter(e => e.event === 'check');
 const passed = checks.filter(e => e.passed);

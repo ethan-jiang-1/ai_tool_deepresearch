@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-71_log_simple
-trace: dpt_disp_case-71_log_simple/_trace.jsonl
+trace: dpt_disp_case-71_log_simple/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -76,7 +76,7 @@ const checks = [
   { ts: new Date().toISOString(), event: 'check', gate: 'bundle-creation', passed: hasRunStart, expected: false, detail: 'disposable bundle: rb_trace.jsonl has no run_start (expected — only production bundles)' },
   { ts: new Date().toISOString(), event: 'check', gate: 'bundle-creation', passed: logExists, expected: false, detail: 'disposable bundle: _logs/run.log not created yet (expected — created on first log write)' },
 ];
-const tracePath = join(__dirname, '_trace.jsonl');
+const tracePath = join(__dirname, '_logs', '_trace.jsonl');
 for (const c of checks) {
   writeFileSync(tracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 }
@@ -127,7 +127,7 @@ for (const g of gates) {
       expected: g.expectPass,
       detail,
     });
-    writeFileSync(join(__dirname, '_trace.jsonl'), check + '\n', { flag: 'a' });
+    writeFileSync(join(__dirname, '_logs', '_trace.jsonl'), check + '\n', { flag: 'a' });
     console.log(detail);
   } catch (e) {
     // Gate exit 1 on FAIL — still capture the JSON from stdout
@@ -141,7 +141,7 @@ for (const g of gates) {
         expected: g.expectPass,
         detail: `${g.name} gate: ${result.check.passed ? 'PASS' : 'FAIL'}`,
       });
-      writeFileSync(join(__dirname, '_trace.jsonl'), check + '\n', { flag: 'a' });
+      writeFileSync(join(__dirname, '_logs', '_trace.jsonl'), check + '\n', { flag: 'a' });
       console.log(`${g.name} gate: ${result.check.passed ? 'PASS' : 'FAIL'}`);
     } else {
       console.log(`${g.name}: error - ${e.message}`);
@@ -229,7 +229,7 @@ const checks = [
   { event: 'check', gate: 'bundle-consistency', passed: allBundleMatch, expected: true, detail: `All lines bundle=${expectedBundle}` },
 ];
 
-const tracePath = join(__dirname, '_trace.jsonl');
+const tracePath = join(__dirname, '_logs', '_trace.jsonl');
 for (const c of checks) {
   writeFileSync(tracePath, JSON.stringify({ ts: new Date().toISOString(), ...c }) + '\n', { flag: 'a' });
 }
@@ -272,7 +272,7 @@ const checks = [
   { event: 'check', gate: 'trace-bundle-match', passed: allBundleMatch, expected: true, detail: `All bundle fields match rb_status.json: ${expectedBundle}` },
 ];
 
-const expTracePath = join(__dirname, '_trace.jsonl');
+const expTracePath = join(__dirname, '_logs', '_trace.jsonl');
 for (const c of checks) {
   writeFileSync(expTracePath, JSON.stringify({ ts: new Date().toISOString(), ...c }) + '\n', { flag: 'a' });
 }
@@ -315,7 +315,7 @@ const checks = [
   { event: 'check', gate: 'timeline-clean', passed: noUnparsed, expected: true, detail: 'no unparsed entries in timeline' },
 ];
 
-const tracePath = join(__dirname, '_trace.jsonl');
+const tracePath = join(__dirname, '_logs', '_trace.jsonl');
 for (const c of checks) {
   writeFileSync(tracePath, JSON.stringify({ ts: new Date().toISOString(), ...c }) + '\n', { flag: 'a' });
 }
@@ -362,7 +362,7 @@ const checks = [
   { event: 'check', gate: 'summary-nowarning', passed: noWarning, expected: true, detail: 'no warning (log has content)' },
 ];
 
-const tracePath = join(__dirname, '_trace.jsonl');
+const tracePath = join(__dirname, '_logs', '_trace.jsonl');
 for (const c of checks) {
   writeFileSync(tracePath, JSON.stringify({ ts: new Date().toISOString(), ...c }) + '\n', { flag: 'a' });
 }
@@ -387,7 +387,7 @@ import { join } from 'node:path';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const tracePath = join(__dirname, '_trace.jsonl');
+const tracePath = join(__dirname, '_logs', '_trace.jsonl');
 const raw = readFileSync(tracePath, 'utf-8').trim();
 const lines = raw.split('\n').filter(l => l.trim());
 const events = lines.map(l => JSON.parse(l));

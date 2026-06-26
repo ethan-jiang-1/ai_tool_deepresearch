@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-202_s2s_
-trace: dpt_disp_case-202_s2s_*/_trace.jsonl
+trace: dpt_disp_case-202_s2s_*/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -129,7 +129,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "seed-topics-ready: passed=$PASSED next=$NEXT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'setup→seed-topics transition, next=wave0'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'setup→seed-topics transition, next=wave0'})})"
 ```
 
 预期：`passed: true`，`next: phases/phase-wave0.md`。
@@ -137,7 +137,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ## Step 5: 裁决
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_logs/_trace.jsonl')})"
 ```
 
 ## Step 6: 结果解读

@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-223_agql_w1_fail2_
-trace: dpt_disp_case-223_agql_w1_fail2_*/_trace.jsonl
+trace: dpt_disp_case-223_agql_w1_fail2_*/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 req: WAI-003, WAI-006
 ---
@@ -284,7 +284,7 @@ test "$PASSED" = "true" && echo "V6 PASS: gate accepts partial evidence" || echo
 ## Final Verdict
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B3/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B3/_logs/_logs/_trace.jsonl')})"
 ```
 
 预期：PASS。

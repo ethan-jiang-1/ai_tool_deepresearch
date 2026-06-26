@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-31_wc_simple
-trace: dpt_disp_case-31_wc_simple/_trace.jsonl
+trace: dpt_disp_case-31_wc_simple/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -57,7 +57,7 @@ import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createWorkflowRuntime } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
-const trace = createTrace(B+'/_trace.jsonl', { consoleEcho: true });
+const trace = createTrace(B+'/_logs/_trace.jsonl', { consoleEcho: true });
 const SRC = 'wl-simple';
 trace.traceInit('wl-simple: MD controller mode → Engine', { source: SRC });
 
@@ -81,7 +81,7 @@ node $B/step_init.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('init:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
@@ -106,7 +106,7 @@ import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
-const trace = createTrace(B+'/_trace.jsonl', { consoleEcho: true });
+const trace = createTrace(B+'/_logs/_trace.jsonl', { consoleEcho: true });
 const SRC = 'wl-simple';
 
 const runtime = createWorkflowRuntime('test', NODES_DIR);
@@ -130,7 +130,7 @@ node $B/step_load.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('load:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
@@ -149,7 +149,7 @@ MD 不信任 receipts，读原始 trace 文件交叉验证 Engine 确实写了 f
 
 ```bash
 node -e "
-const e=require('fs').readFileSync('$B/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/_logs/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const fileLoaded=e.filter(x=>x.event==='file_loaded');
 const waveLoaded=fileLoaded.some(x=>x.fileRef==='wave.entry.md');
 const fileRead=e.filter(x=>x.event==='file_read');
@@ -177,7 +177,7 @@ MD 统计整个实验中所有 check event，判定 PASS/FAIL。
 cat > $B/verify.mjs << 'JS2'
 import { readFileSync } from 'node:fs';
 const B=process.argv[2];
-const lines = readFileSync(B+'/_trace.jsonl','utf-8').trim().split('\n');
+const lines = readFileSync(B+'/_logs/_trace.jsonl','utf-8').trim().split('\n');
 const events = lines.map(JSON.parse);
 const checks = events.filter(e => e.event === 'check');
 const passed = checks.filter(e => e.passed);

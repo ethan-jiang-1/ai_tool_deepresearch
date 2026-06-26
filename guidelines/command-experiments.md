@@ -190,7 +190,7 @@ Naming:
 - Filename `cost` is an authoring and runner-cost label. Frontmatter `weight` remains owned by the accepted agent-testing spec; until that spec grows a `standard` value, use `weight: light` for `light` and `standard` cases, and `weight: heavy` for `heavy` cases. This is a temporary compatibility mapping; if the accepted spec adds `standard`, update the runner-facing frontmatter convention and this guideline together.
 - Case playbook, legacy/current files: `test-<complexity>-<what-it-tests>.md` remains recognized for existing playbooks, but new designs should avoid `test-` so command experiments do not read like regression tests.
 - Disposable bundle: `dpt_disp_<short>_<case>_*/` (random hex suffix appended for collision avoidance)
-- Trace file: `_trace.jsonl` (unified name across all playbooks; bundle directory provides isolation)
+- Trace file: `_logs/_trace.jsonl` (unified name across all playbooks; bundle directory provides isolation)
 - Runner entry: `experiments_playbook/RUN.md` (contains playbook manifest + execution instructions)
 - Fixture files copied into bundle: paths defined by the playbook and relevant spec.
 
@@ -228,7 +228,7 @@ agent_mode: <mode-if-agent-dependent>  # omit or set only when real Agent/subage
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_<short>_<case>_*    # random hex suffix appended at creation time
-trace: dpt_disp_<short>_<case>_*/_trace.jsonl   # unified trace name across all playbooks
+trace: dpt_disp_<short>_<case>_*/_logs/_trace.jsonl   # unified trace name across all playbooks
 verdict: trace-jsonl
 ---
 ```

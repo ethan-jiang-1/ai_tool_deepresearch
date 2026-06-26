@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-124_stm_boundary_*
-trace: dpt_disp_case-124_stm_boundary_*/_trace.jsonl
+trace: dpt_disp_case-124_stm_boundary_*/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -25,7 +25,7 @@ verdict: trace-jsonl
 3. 清空 seed_topics → gate fail（dir_non_empty）
 4. 物化部分 topic（slug 缺失）→ gate fail（slug_consistency 报缺失）
 5. 写入多余文件 → gate fail（slug_consistency 报多余）
-6. 从 `_trace.jsonl` 裁决（预期 4 条 check：1 pass + 3 fail）
+6. 从 `_logs/_logs/_trace.jsonl` 裁决（预期 4 条 check：1 pass + 3 fail）
 7. Cleanup
 
 ---
@@ -158,7 +158,7 @@ ls -la $B/seed_topics/
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'all 3 topics materialized, slugs consistent'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'all 3 topics materialized, slugs consistent'})})"
 ```
 
 预期：`check.passed: true`，`check.next: phases/phase-wave0.md`。
@@ -174,7 +174,7 @@ ls -la $B/seed_topics/
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'empty dir should fail dir_non_empty',expected:false})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'empty dir should fail dir_non_empty',expected:false})})"
 ```
 
 预期：`check.passed: false`，`inspect` 指向空目录。
@@ -210,7 +210,7 @@ ls -la $B/seed_topics/
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'slug missing: topic-b should be detected',expected:false})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'slug missing: topic-b should be detected',expected:false})})"
 ```
 
 预期：`check.passed: false`，`inspect` 报告缺少 `topic-b`。
@@ -246,7 +246,7 @@ ls -la $B/seed_topics/
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'extra slug: extra-topic should be detected',expected:false})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'extra slug: extra-topic should be detected',expected:false})})"
 ```
 
 预期：`check.passed: false`，`inspect` 报告多余 `extra-topic`。
@@ -256,7 +256,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 预期 4 条 `check` event：1 pass（Step 2）+ 3 fail（Step 3, 4, 5）。
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_logs/_trace.jsonl')})"
 ```
 
 

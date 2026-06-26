@@ -56,7 +56,7 @@ if (existsSync(bundleDir)) {
 }
 
 // ── Create directory structure ──
-const dirs = ['seed_topics', 'reference', 'artifacts/wave0', 'artifacts/wave1', 'artifacts/wave2', '_cache', 'final'];
+const dirs = ['seed_topics', 'reference', 'artifacts/wave0', 'artifacts/wave1', 'artifacts/wave2', '_logs', '_cache', 'final'];
 for (const d of dirs) {
   mkdirSync(join(bundleDir, d), { recursive: true });
 }
@@ -143,7 +143,7 @@ try {
 // ── Report ──
 console.error(`${G}Bundle ${bundleDir} created.${B}`);
 console.error('  ✓ 6 control files (plan, profile, status, queue, trace, START_FROM_HERE)');
-console.error('  ✓ 7 data directories (seed_topics, reference, artifacts/wave0-2, _cache, final)');
+console.error('  ✓ 8 data directories (seed_topics, reference, artifacts/wave0-2, _logs, _cache, final)');
 console.error('  ✓ 3 scaffolds (reference/_INDEX.md, reference/README.md, artifacts/README.md)');
 console.error('  ✓ All files passed Zod validation');
 console.error('  ✓ validate-bundle + inspect-bundle passed');

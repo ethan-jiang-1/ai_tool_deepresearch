@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-201_agql_seed_
-trace: dpt_disp_case-201_agql_seed_*/_trace.jsonl
+trace: dpt_disp_case-201_agql_seed_*/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 req: AGQ-010
 ---
@@ -28,7 +28,7 @@ req: AGQ-010
 3. Agent 执行 §3.2 执行循环：`operate-queue claim` → execute（Phase Agent 写入 seed topic 文件；`main-agent` 仅是 CLI actor wire value）→ `operate-queue complete` ×3
 4. Agent 执行 §3.3 收尾：`check-gate-seed-topics-ready.mjs` → gate pass
 5. 命名约定验证（见下方 Checklist）
-6. 从 `_trace.jsonl` 裁决
+6. 从 `_logs/_logs/_trace.jsonl` 裁决
 7. Cleanup
 
 ---
@@ -267,7 +267,7 @@ echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"seed_topics_completi
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'queue-driven seed topics materialized — 3 files with {slug}.md naming, required fields, gate pass'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'queue-driven seed topics materialized — 3 files with {slug}.md naming, required fields, gate pass'})})"
 ```
 
 预期：`check.passed: true`，`check.next: phases/phase-wave0.md`。
@@ -302,7 +302,7 @@ grep '原始语境约束' $B/seed_topics/01_claude-code-cli-tool.md
 ## Step 7: 从 trace 裁决
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_logs/_trace.jsonl')})"
 ```
 
 预期 verdict：**PASS**。trace 含 `queue_enqueued` ×3、`queue_claimed` ×3、`queue_completed` ×3、`gate_attempt(passed: true)`。

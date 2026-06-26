@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-141_rerunfp_*
-trace: dpt_disp_case-141_rerunfp_*/_trace.jsonl
+trace: dpt_disp_case-141_rerunfp_*/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -105,7 +105,7 @@ echo "chain rerun → kind=$RK next=$RN"
 
 OK=false; [ "$PASSED" = "true" ] && [ "$USER_DECISION" = "rerun" ] && [ "$RK" = "next" ] && [ "$RN" = "phases/phase-rerun.md" ] && OK=true
 [ "$OK" = "true" ] && echo "OK: Agent correctly identified rerun decision, chain routes to phase-rerun.md" || echo "FAIL"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'hitl2-capture-rerun',passed:$OK,detail:'Agent captured rerun + chain → phase-rerun.md'})})" $OK
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'hitl2-capture-rerun',passed:$OK,detail:'Agent captured rerun + chain → phase-rerun.md'})})" $OK
 ```
 
 ## Step 3: Agent enters rerun node → rerun-ready gate → seed-topics
@@ -125,7 +125,7 @@ echo "rerun-ready | passed=$PASSED next=$NEXT"
 
 OK=false; [ "$PASSED" = "true" ] && [ "$NEXT" = "phases/phase-seed-topics.md" ] && OK=true
 [ "$OK" = "true" ] && echo "OK: rerun-ready gate pass → seed-topics ready" || echo "FAIL"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'rerun-ready-gate',passed:$OK,detail:'rerun-ready pass → seed-topics'})})" $OK
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'rerun-ready-gate',passed:$OK,detail:'rerun-ready pass → seed-topics'})})" $OK
 ```
 
 ## Step 4: Evidence — rb_trace.jsonl proves both nodes visited
@@ -151,14 +151,14 @@ process.exit(bothPassed?0:1);
 "
 EVIDENCE_OK=$?
 echo "both nodes visited: $([ $EVIDENCE_OK -eq 0 ] && echo yes || echo no)"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'both-nodes-visited',passed:$([ $EVIDENCE_OK -eq 0 ] && echo true || echo false),detail:'hitl2 + rerun-ready both PASS in rb_trace.jsonl'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'both-nodes-visited',passed:$([ $EVIDENCE_OK -eq 0 ] && echo true || echo false),detail:'hitl2 + rerun-ready both PASS in rb_trace.jsonl'})})"
 ```
 
-## Step 5: Verdict from `_trace.jsonl`
+## Step 5: Verdict from `_logs/_logs/_trace.jsonl`
 
 ```bash
 echo "=== Verdict ==="
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/_trace.jsonl'))"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/_logs/_logs/_trace.jsonl'))"
 ```
 
 ## Step 6: 结果解读

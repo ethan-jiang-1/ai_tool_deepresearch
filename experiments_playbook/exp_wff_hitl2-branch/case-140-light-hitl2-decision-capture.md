@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-140_h2cap_*
-trace: dpt_disp_case-140_h2cap_*/_trace.jsonl
+trace: dpt_disp_case-140_h2cap_*/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -95,7 +95,7 @@ USER_DECISION=$(node -e "const fs=require('fs');const y=require('yaml');const p=
 RATIONALE=$(node -e "const fs=require('fs');const y=require('yaml');const p=y.parse(fs.readFileSync('$B/rb_profile.yaml','utf-8'));console.log(p.human_decision_checkpoints.hitl2.rationale);")
 echo "Agent reads: user_decision=$USER_DECISION rationale=$RATIONALE"
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'hitl2-decision-captured',passed:$PASSED,detail:'Agent captured user_decision=rerun'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'hitl2-decision-captured',passed:$PASSED,detail:'Agent captured user_decision=rerun'})})"
 ```
 
 预期：`user_decision: rerun`，`rationale` 非空。Agent 理解意图：用户要加经济影响分析。
@@ -121,7 +121,7 @@ echo "rerun-ready | passed=$PASSED next=$NEXT"
 
 OK=false; [ "$RK" = "next" ] && [ "$RN" = "phases/phase-rerun.md" ] && [ "$PASSED" = "true" ] && [ "$NEXT" = "phases/phase-seed-topics.md" ] && OK=true
 [ "$OK" = "true" ] && echo "OK: rerun path complete → seed-topics" || echo "FAIL"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'rerun-path',passed:$OK,detail:'HITL2→rerun→rerun-ready→seed-topics'})})" $OK
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'rerun-path',passed:$OK,detail:'HITL2→rerun→rerun-ready→seed-topics'})})" $OK
 ```
 
 ## Step 4: Switch to proceed_to_readiness → readiness path
@@ -182,7 +182,7 @@ echo "readiness-passed | passed=$PASSED next=$NEXT"
 
 OK=false; [ "$PK" = "next" ] && [ "$PN" = "phases/phase-readiness.md" ] && [ "$PASSED" = "true" ] && OK=true
 [ "$OK" = "true" ] && echo "OK: readiness path complete" || echo "FAIL"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'readiness-path',passed:$OK,detail:'HITL2→readiness'})})" $OK
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'readiness-path',passed:$OK,detail:'HITL2→readiness'})})" $OK
 ```
 
 ## Step 5: Evidence — trace shows all three nodes visited
@@ -209,14 +209,14 @@ process.exit(allThree?0:1);
 "
 TRACE_OK=$?
 echo "trace evidence complete: $([ $TRACE_OK -eq 0 ] && echo yes || echo no)"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'trace-evidence',passed:$([ $TRACE_OK -eq 0 ] && echo true || echo false),detail:'rb_trace.jsonl has all 3 gate_attempt events'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'trace-evidence',passed:$([ $TRACE_OK -eq 0 ] && echo true || echo false),detail:'rb_trace.jsonl has all 3 gate_attempt events'})})"
 ```
 
-## Step 6: Verdict from `_trace.jsonl`
+## Step 6: Verdict from `_logs/_logs/_trace.jsonl`
 
 ```bash
 echo "=== Verdict ==="
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/_trace.jsonl'))"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/_logs/_logs/_trace.jsonl'))"
 ```
 
 ## Step 7: 结果解读

@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-233_agql_w2_repair_
-trace: dpt_disp_case-233_agql_w2_repair_*/_trace.jsonl
+trace: dpt_disp_case-233_agql_w2_repair_*/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 req: RWG-003, RWG-010
 ---
@@ -202,7 +202,7 @@ PASSED1=$(echo "$GATE1" | node experiments_env/shared/extract-field.mjs check.pa
 echo "=== Gate#1 PASSED=$PASSED1 (expected: false) ==="
 test "$PASSED1" = "false" && echo "PASS: gate correctly failed" || echo "FAIL: gate should have failed"
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED1,detail:'gate fail: ledger missing HITL2 Handoff section + backfill tokens unreplaced'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED1,detail:'gate fail: ledger missing HITL2 Handoff section + backfill tokens unreplaced'})})"
 ```
 
 预期：gate fail，inspect 列出 ledger section 缺失 + backfill token 残留。
@@ -241,7 +241,7 @@ PASSED2=$(echo "$GATE2" | node experiments_env/shared/extract-field.mjs check.pa
 echo "=== Gate#2 PASSED=$PASSED2 (expected: true) ==="
 test "$PASSED2" = "true" && echo "PASS: gate passed after repair" || echo "FAIL"
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED2,detail:'gate pass: after repair (added HITL2 Handoff section + replaced backfill tokens)'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED2,detail:'gate pass: after repair (added HITL2 Handoff section + replaced backfill tokens)'})})"
 ```
 
 预期：gate pass，`check.next: phases/phase-hitl2.md`。
@@ -272,7 +272,7 @@ grep -r '__BACKFILL_' $B/seed_topics/ && echo "V4 FAIL" || echo "V4 PASS"
 ## Final Verdict
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_logs/_trace.jsonl')})"
 ```
 
 

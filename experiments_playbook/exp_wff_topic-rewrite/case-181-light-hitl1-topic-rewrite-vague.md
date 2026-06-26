@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-181_wff_rw_*
-trace: dpt_disp_case-181_wff_rw_*/_trace.jsonl
+trace: dpt_disp_case-181_wff_rw_*/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -227,7 +227,7 @@ B=$(cat /tmp/pb_bundle)
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
 echo "$GATE" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('next:',j.check.next)})"
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'topic rewrite: vague -> structured per phase-hitl1.md 3a'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'topic rewrite: vague -> structured per phase-hitl1.md 3a'})})"
 ```
 
 ## Step 6: 结果解读
@@ -243,6 +243,6 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ```bash
 REPO_ROOT=$(pwd)
 B=$(cat /tmp/pb_bundle)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_logs/_trace.jsonl')})"
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
 ```

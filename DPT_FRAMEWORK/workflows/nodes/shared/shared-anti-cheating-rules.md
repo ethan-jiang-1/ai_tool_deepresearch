@@ -17,7 +17,7 @@ suggested_context: []
 
 ### 1. 禁止伪造 trace event、receipt、或 gate result
 
-**正确替代**：运行真实的 Engine/Agent 路径来产生这些 artifact。`rb_trace.jsonl` 只能由 gate CLI 的真实执行写入，`_trace.jsonl` 只能由 playbook thin driver 基于真实 CLI result 写入。
+**正确替代**：运行真实的 Engine/Agent 路径来产生这些 artifact。`rb_trace.jsonl` 只能由 gate CLI 的真实执行写入，`_logs/_trace.jsonl` 只能由 playbook thin driver 基于真实 CLI result 写入。
 
 ### 2. 禁止在 gate 未 pass 时修改 control files 冒充 pass
 

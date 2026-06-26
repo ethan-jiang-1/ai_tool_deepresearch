@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-123_w2_synth_*
-trace: dpt_disp_case-123_w2_synth_*/_trace.jsonl
+trace: dpt_disp_case-123_w2_synth_*/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -25,7 +25,7 @@ verdict: trace-jsonl
 3. 写 synthesis 无 Markdown link → gate fail
 4. 写 synthesis 有 links 但所有 target 不存在 → gate fail
 5. Thin driver 独立验证 cross-artifact references（RWE-009 横切约束）
-6. 从 `_trace.jsonl` 裁决（预期 3 条 check：1 pass + 2 fail）
+6. 从 `_logs/_logs/_trace.jsonl` 裁决（预期 3 条 check：1 pass + 2 fail）
 7. Cleanup
 
 ---
@@ -190,7 +190,7 @@ cat $B/artifacts/wave2/synthesis.md
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'synthesis with valid Markdown links passes'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'synthesis with valid Markdown links passes'})})"
 ```
 
 预期：`check.passed: true`。
@@ -213,7 +213,7 @@ cat $B/artifacts/wave2/synthesis.md
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:false,detail:'synthesis without Markdown links should fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:false,detail:'synthesis without Markdown links should fail'})})"
 ```
 
 预期：`check.passed: false`，`inspect` 指出无 Markdown links。
@@ -234,7 +234,7 @@ cat $B/artifacts/wave2/synthesis.md
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:false,detail:'synthesis with all dead links should fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:false,detail:'synthesis with all dead links should fail'})})"
 ```
 
 预期：`check.passed: false`，`inspect` 列出所有死链接。
@@ -276,7 +276,7 @@ console.log('Valid:', valid.length, 'Dead:', dead.length);
 
 const driverPassed = valid.length > 0;
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_trace.jsonl', {
+  m.recordCheck('$B/_logs/_logs/_trace.jsonl', {
     gate: 'wave2-complete-driver',
     passed: driverPassed,
     expected: driverPassed,
@@ -291,7 +291,7 @@ import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
 ## Step 6: 从 trace 裁决
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_logs/_trace.jsonl')})"
 ```
 
 

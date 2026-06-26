@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-53_wff_val_contract
-trace: dpt_disp_case-53_wff_val_contract/_trace.jsonl
+trace: dpt_disp_case-53_wff_val_contract/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -63,7 +63,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const B = process.argv[2];
-const trace = createTrace(join(B, '_trace.jsonl'), { consoleEcho: false });
+const trace = createTrace(join(B, '_logs', '_trace.jsonl'), { consoleEcho: false });
 const SRC = 'wff-validation/complex-routing-contract';
 trace.traceInit('wff-validation: complex routing contract', { source: SRC });
 
@@ -150,7 +150,7 @@ import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 
 const bundle = process.argv[2];
-const trace = createTrace(bundle + '/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(bundle + '/_logs/_logs/_trace.jsonl', { consoleEcho: false });
 const raw = readFileSync(trace.traceFilePath(), 'utf-8').trim();
 const events = raw ? raw.split('\n').map(JSON.parse) : [];
 const checks = events.filter(e => e.event === 'check');

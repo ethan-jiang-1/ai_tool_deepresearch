@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-222_agql_w1_fail_
-trace: dpt_disp_case-222_agql_w1_fail_*/_trace.jsonl
+trace: dpt_disp_case-222_agql_w1_fail_*/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 req: WAI-006
 ---
@@ -326,7 +326,7 @@ test "$GATE_ATTEMPTS" = "2" && echo "TRACE PASS: 2 gate_attempt events (1 fail +
 ## Final Verdict
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B2/_trace.jsonl','last')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B2/_logs/_logs/_trace.jsonl','last')})"
 ```
 
 预期：PASS（2 checks: 1 expected-false + 1 expected-true，都匹配）。

@@ -9,7 +9,7 @@ agent_mode: native-subagent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_log_engine
-trace: dpt_disp_log_engine/_trace.jsonl
+trace: dpt_disp_log_engine/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -225,7 +225,7 @@ const checks = [
   { event: 'check', gate: 'timeline-clean', passed: !tl.includes('[unparsed]'), expected: true, detail: 'no unparsed entries' },
 ];
 
-const tpath = join(B, '_trace.jsonl');
+const tpath = join(B, '_logs', '_trace.jsonl');
 for (const c of checks) writeFileSync(tpath, JSON.stringify({ ts: new Date().toISOString(), ...c }) + '\n', { flag: 'a' });
 
 const failed = checks.filter(c => !c.passed);

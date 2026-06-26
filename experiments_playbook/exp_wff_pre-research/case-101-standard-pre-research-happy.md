@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-101_wff_happy_*
-trace: dpt_disp_case-101_wff_happy_*/_trace.jsonl
+trace: dpt_disp_case-101_wff_happy_*/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -24,7 +24,7 @@ verdict: trace-jsonl
 2. 验证 bundle 结构
 3. 写入 fixed HITL1 payload
 4. 依次运行三个 gate：instantiation-complete → hitl1-recorded → setup-ready
-5. 从 `_trace.jsonl` 裁决
+5. 从 `_logs/_logs/_trace.jsonl` 裁决
 6. Cleanup
 
 ---
@@ -94,7 +94,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_trace.jsonl', { gate: 'instantiation-complete', passed: $PASSED, detail: 'happy path bundle validation' });
+  m.recordCheck('$B/_logs/_logs/_trace.jsonl', { gate: 'instantiation-complete', passed: $PASSED, detail: 'happy path bundle validation' });
 });
 "
 ```
@@ -114,7 +114,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, detail: 'fixed HITL1 payload validation' });
+  m.recordCheck('$B/_logs/_logs/_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, detail: 'fixed HITL1 payload validation' });
 });
 "
 ```
@@ -202,7 +202,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED, detail: 'pre-wave0 structural consistency' });
+  m.recordCheck('$B/_logs/_logs/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED, detail: 'pre-wave0 structural consistency' });
 });
 "
 ```
@@ -218,7 +218,7 @@ gate 返回的 JSON 关键字段：
 ```bash
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.verdict('$B/_trace.jsonl');
+  m.verdict('$B/_logs/_logs/_trace.jsonl');
 });
 "
 ```

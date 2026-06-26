@@ -14,12 +14,12 @@ const R = '\x1b[31m';
 const B = '\x1b[0m';
 
 /**
- * Append a check event to _trace.jsonl using the canonical trace event format.
+ * Append a check event to _logs/_trace.jsonl using the canonical trace event format.
  * Does NOT use createTrace() because traceInit would clear the file — playbooks
  * append incrementally across multiple steps. Format is kept consistent with
  * DPT_FRAMEWORK/engine/trace.mjs traceEntry() output.
  *
- * @param {string} tracePath - path to _trace.jsonl
+ * @param {string} tracePath - path to _logs/_trace.jsonl
  * @param {{ gate: string, passed: boolean, expected?: boolean, detail?: string }} checkEvent
  *   expected defaults to true. Set expected: false for boundary tests where the gate
  *   is supposed to reject bad input (passed: false is the correct behavior).
@@ -39,14 +39,14 @@ export function recordCheck(tracePath, checkEvent) {
 }
 
 /**
- * Parse _trace.jsonl, count check events, exit(1) if any unexpected failure found.
+ * Parse _logs/_trace.jsonl, count check events, exit(1) if any unexpected failure found.
  * Console output uses ANSI color: green PASS, red FAIL.
  *
  * A check is a "failure" when passed !== expected (expected defaults to true).
  * Boundary tests set expected: false on checks where the gate is supposed to reject
  * bad input — those don't count as failures.
  *
- * @param {string} tracePath - path to _trace.jsonl
+ * @param {string} tracePath - path to _logs/_trace.jsonl
  * @param {'all'|'last'} [mode='all'] — 'all': any unexpected fail = FAIL; 'last': only last check per gate matters
  */
 export function verdict(tracePath, mode = 'all') {

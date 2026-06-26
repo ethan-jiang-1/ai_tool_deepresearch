@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-43_agq_complex
-trace: dpt_disp_case-43_agq_complex/_trace.jsonl
+trace: dpt_disp_case-43_agq_complex/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 req: AGQ-006
 ---
@@ -62,7 +62,7 @@ import {
 
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl', { consoleEcho: false });
 trace.traceInit('agq-playbook/complex', { source: 'agq-playbook/complex' });
 
 const invalid = makeItem({ work_id: 'complex-invalid' });
@@ -100,7 +100,7 @@ import {
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl', { consoleEcho: false });
 
 let queue = createQueue('agq-complex');
 queue = enqueue(queue, makeItem({
@@ -143,7 +143,7 @@ import {
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl', { consoleEcho: false });
 
 let queue = loadQueue(__dirname);
 let guardWorked = false;
@@ -184,7 +184,7 @@ import {
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl', { consoleEcho: false });
 
 let queue = loadQueue(__dirname);
 const unsafe = preempt(queue, makeItem({ work_id: 'complex-urgent' }), {
@@ -228,7 +228,7 @@ import {
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl', { consoleEcho: false });
 
 let repairQueue = createQueue('agq-complex-repair');
 repairQueue = enqueue(repairQueue, makeItem({ work_id: 'complex-fail' }));
@@ -267,7 +267,7 @@ import {
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl', { consoleEcho: false });
 
 const emptyClaim = claim(createQueue('agq-complex-empty'), { actor: 'main-agent' });
 trace.traceEntry('check', {
@@ -297,7 +297,7 @@ import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const trace = createTrace(__dirname + '/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/_logs/_logs/_trace.jsonl', { consoleEcho: false });
 const events = readFileSync(trace.traceFilePath(), 'utf-8').trim().split('\n').map(JSON.parse);
 const checks = events.filter((event) => event.event === 'check' && event.source === 'agq-playbook/complex');
 const pass = checks.length >= 6 && checks.every((event) => event.passed === true);

@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-112_wff_fault_*
-trace: dpt_disp_case-112_wff_fault_*/_trace.jsonl
+trace: dpt_disp_case-112_wff_fault_*/_logs/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -70,7 +70,7 @@ echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d)
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED, expected: false, detail: 'case1: gate survived bad JSON, returned clear inspect' });
+  m.recordCheck('$B/_logs/_logs/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED, expected: false, detail: 'case1: gate survived bad JSON, returned clear inspect' });
 });
 "
 ```
@@ -105,7 +105,7 @@ echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d)
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED, expected: false, detail: 'case2 attempt 1: multi-rule fail (missing rb_plan.md + final/)' });
+  m.recordCheck('$B/_logs/_logs/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED, expected: false, detail: 'case2 attempt 1: multi-rule fail (missing rb_plan.md + final/)' });
 });
 "
 ```
@@ -167,7 +167,7 @@ echo "$GATE_OUTPUT2" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d
 PASSED2=$(echo "$GATE_OUTPUT2" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED2, detail: 'case2 attempt 2: repaired (recreated rb_plan.md + final/)' });
+  m.recordCheck('$B/_logs/_logs/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED2, detail: 'case2 attempt 2: repaired (recreated rb_plan.md + final/)' });
 });
 "
 ```
@@ -197,13 +197,13 @@ echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d)
 
 ```bash
 echo "=== Trace evidence ==="
-cat $B/_trace.jsonl | while read line; do echo "$line" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);const icon=j.passed?'\x1b[32m✓\x1b[0m':'\x1b[31m✗\x1b[0m';console.log(icon,j.gate,'|',j.detail)})"; done
+cat $B/_logs/_logs/_trace.jsonl | while read line; do echo "$line" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);const icon=j.passed?'\x1b[32m✓\x1b[0m':'\x1b[31m✗\x1b[0m';console.log(icon,j.gate,'|',j.detail)})"; done
 
 echo ""
 echo "=== Verdict ==="
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.verdict('$B/_trace.jsonl', 'last');
+  m.verdict('$B/_logs/_logs/_trace.jsonl', 'last');
 });
 "
 ```
