@@ -6,7 +6,7 @@
 
 定义三个独立的 wave-specific 结构 lint CLI：`inspect-wave0-output.mjs`、`inspect-wave1-output.mjs`、`inspect-wave2-output.mjs`。每个 CLI 只检查自己 wave 的输出约定，不读 `current_gate`，不继承其他 wave。Agent 在对应 wave 中途跑，拿到 inspect/advice 反馈。不是 gate（不控制 phase 前进，不写 trace，不输出 routing）。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: inspect-wave0-output.mjs structural checks
 

@@ -17,7 +17,7 @@
 //   - zodErrors()                 — map ZodError issues to plain diagnostics
 
 import { parseArgs } from 'node:util';
-import { existsSync, readFileSync, appendFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, appendFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseYaml } from 'yaml';
@@ -307,6 +307,70 @@ export function writeGateAttempt(bundlePath, result) {
   }
 }
 
+// ─── Plan Progress Writer ────────────────────────────────────────────────────
+
+/**
+ * Flip a gate's checkbox in rb_plan.md ## Progress section.
+ *
+ * Reads the plan file, finds the Progress section, and flips the line matching
+ * the given gate from `- [ ]` to `- [x] <gate> (<ISO8601 ts>)`. Idempotent:
+ * if already `- [x]`, updates the timestamp without duplicating. If the gate
+ * is not found in the pre-populated checklist, appends a new checked line.
+ *
+ * Wrapped in try/catch — failure to update Progress MUST NOT affect gate
+ * output or exit code.
+ *
+ * @param {string} bundlePath — path to the active runtime context
+ * @param {string} gateName — e.g. 'setup-ready'
+ * @returns {void}
+ *
+ * @impl PHS-006
+ */
+export function writePlanProgress(bundlePath, gateName) {
+  try {
+    const planPath = join(bundlePath, 'rb_plan.md');
+    if (!existsSync(planPath)) return;
+    const content = readFileSync(planPath, 'utf-8');
+    const ts = new Date().toISOString();
+    const checkedLine = `- [x] ${gateName} (${ts})`;
+    const uncheckedPattern = `- [ ] ${gateName}`;
+    const checkedPattern = `- [x] ${gateName}`;
+
+    // Find the Progress section
+    const progressMatch = content.match(/^## Progress\s*\n/m);
+    if (!progressMatch) return; // No Progress section — nothing to update
+
+    const lines = content.split('\n');
+    let found = false;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes(uncheckedPattern)) {
+        lines[i] = checkedLine;
+        found = true;
+        break;
+      }
+      if (lines[i].includes(checkedPattern)) {
+        // Already checked — update timestamp only
+        lines[i] = checkedLine;
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      // Gate not in pre-populated list — append
+      const progressIdx = lines.findIndex(l => /^## Progress/.test(l));
+      if (progressIdx >= 0) {
+        // Insert after the Progress header
+        lines.splice(progressIdx + 1, 0, checkedLine);
+      }
+    }
+
+    writeFileSync(planPath, lines.join('\n'));
+  } catch {
+    // Progress write failure must not affect gate output
+  }
+}
+
 // ─── Trace Reading ─────────────────────────────────────────────────────────
 
 /**
@@ -350,6 +414,23 @@ export function parseMdFrontmatter(rawString) {
   const m = rawString.match(/^---\n([\s\S]*?)\n---/);
   if (!m) return {};
   return parseYaml(m[1]);
+}
+
+/**
+ * Strip YAML frontmatter from a Markdown string and return the trimmed body.
+ *
+ * Inverse of `parseMdFrontmatter()`: extracts everything after the first `---`
+ * frontmatter block. Only the first `---` pair (anchored to start of string)
+ * is stripped — subsequent `---` in the body are left intact.
+ * If no frontmatter block exists, returns the trimmed input unchanged.
+ *
+ * @param {string} mdContent — raw Markdown content
+ * @returns {string} trimmed body content after frontmatter
+ *
+ * @impl SCO-012
+ */
+export function stripMdFrontmatter(mdContent) {
+  return mdContent.replace(/^---[\s\S]*?---\n?/, '').trim();
 }
 
 /**

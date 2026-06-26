@@ -33,7 +33,7 @@ suggested_context: []
 
 **Topic rewrite 步骤（一句话场景）：**
 1. 将一句话展开为 structured original topic，覆盖：背景（这个领域为什么重要）、研究范围（边界在哪）、关键维度（从哪些角度切入）、已知前提（已有的共识）、不确定项（需要 research 回答的 open questions）
-2. 将 original topic 写入 `rb_plan.md` 正文（Markdown body，非 frontmatter）
+2. 将 original topic 写入 `rb_plan.md` 的 `## Goal` section。至少填写 `### Purpose`（一段话概述研究目标）。`### Research Questions` 和 `### Scope` 按 HITL1 用户提供的信息填写——信息不足时标注 `(待 HITL2 确认)`，不编造。
 3. 从 original topic 推导初始 seed topics（3-5 个可独立研究的子话题）→ 写入 `rb_plan.md` frontmatter 的 `topic_registry`；**物化动作（创建 `seed_topics/<slug>.md`）已移至下游 `phase-seed-topics`**——HITL1 只写 registry，不创建 seed topic 文件，避免职责重叠
 4. 将 original topic + seed topics + 建议的 `research_profile` 一起展示给用户
 

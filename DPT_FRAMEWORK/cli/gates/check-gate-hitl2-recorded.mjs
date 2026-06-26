@@ -15,6 +15,7 @@ import {
   emitGateResult,
   readTraceEvents,
   writeGateAttempt,
+  stripMdFrontmatter,
 } from '../../engine/helpers/gate-helpers.mjs';
 
 const args = parseGateCliArgs();
@@ -109,8 +110,8 @@ for (const rule of definition.rules) {
           rulePassed = false;
           ruleDetail = `File not found: ${target}`;
         } else {
-          const content = readFileSync(filePath, 'utf-8').trim();
-          const bodyContent = content.replace(/^---[\s\S]*?---\n?/, '').trim();
+          const content = readFileSync(filePath, 'utf-8');
+          const bodyContent = stripMdFrontmatter(content);
           if (bodyContent.length === 0) {
             rulePassed = false;
             ruleDetail = `${target} is empty (no content after frontmatter)`;

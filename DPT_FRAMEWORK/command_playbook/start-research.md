@@ -35,13 +35,15 @@ JS 脚本内部已完成：目录创建、模板替换、Zod schema 校验、val
 
 ### 3. 写入 Research Question
 
-把用户的问题追加到 `<bundle>/rb_plan.md` 末尾：
+确保 `## Goal` section 存在（新 bundle 已有）。将用户问题填入 `<bundle>/rb_plan.md` 的 `## Goal > ### Research Questions` 子节：
 
 ```markdown
-## Research Question
+### Research Questions
 
-<用户的问题>
+1. <用户的问题>
 ```
+
+注意：不要创建游离的 `## Research Question` section——所有内容统一放在 `## Goal` 下，避免与后续 HITL1 的 topic rewrite 冲突。
 
 ### 4. 设置 Research Profile（可选）
 

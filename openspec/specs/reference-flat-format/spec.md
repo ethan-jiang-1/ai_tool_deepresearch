@@ -6,7 +6,7 @@
 
 定义 `reference/` 目录的扁平化约定：三级命名前缀（`00-shared-` / `00-cross-` / `0N-`）、rich MD 单文件单 source 格式、`_INDEX.md` 作为 canonical inventory、`README.md` 作为人类导航。对标 `deep_research_ai_cases/topics/_reference` 的成熟实践，实现"人类一眼能看明白"的 evidence 目录。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Flat reference directory with three-level naming prefixes
 

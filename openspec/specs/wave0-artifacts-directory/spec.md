@@ -6,7 +6,7 @@
 
 定义 `artifacts/wave0/` 目录：承载 wave 0 产出的 thin YAML source 列表（原在 `reference/<topic>/source.yaml`），与 `artifacts/wave1/`、`artifacts/wave2/` 并列，保持 artifacts 按 wave 组织的统一结构。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Bundle structure includes artifacts/wave0/ directory
 

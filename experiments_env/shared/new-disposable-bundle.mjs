@@ -9,7 +9,7 @@
 // Exit: 0 = created/reused, 1 = FAIL
 
 import { execSync } from 'node:child_process';
-import { mkdirSync, writeFileSync, existsSync, cpSync, rmSync, readdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, existsSync, cpSync, rmSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomInt } from 'node:crypto';
 import {
@@ -18,6 +18,7 @@ import {
   ProfileSchema,
   PlanSchema,
 } from '../../DPT_FRAMEWORK/schema/index.mjs';
+import { parseMdFrontmatter } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 
 const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
 
@@ -147,7 +148,21 @@ const planDefault = {
 };
 PlanSchema.parse(planDefault);
 const basename = caseId ? strippedName : bundleName;
-const planMd = `---\n${JSON.stringify(planDefault)}\n---\n\n# Deep Research Plan: ${basename}\n`;
+
+// Generate rb_plan.md from template (single source of truth for plan structure).
+// Template placeholders like (待填充…) become the FAIL triggers for setup-ready gate.
+const planTmplPath = join(repoRoot, 'DPT_FRAMEWORK', 'rb_templates', 'rb_plan.md.tmpl');
+const planTmpl = readFileSync(planTmplPath, 'utf-8');
+const planMd = planTmpl.replace(/\{\{name\}\}/g, basename);
+
+// Validate generated plan frontmatter against live PlanSchema
+const planParsed = parseMdFrontmatter(planMd);
+const planValidate = PlanSchema.safeParse(planParsed);
+if (!planValidate.success) {
+  const issues = planValidate.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
+  console.error(`${R}PlanSchema validation failed for generated plan: ${issues}${B}`);
+  process.exit(1);
+}
 writeFileSync(join(bundleDir, 'rb_plan.md'), planMd);
 
 writeFileSync(join(bundleDir, 'START_FROM_HERE.md'), `# Start from here — ${basename}\n\n本目录是一个 Deep Research Runtime Bundle。\n`);

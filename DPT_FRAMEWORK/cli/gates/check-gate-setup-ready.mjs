@@ -14,6 +14,8 @@ import {
   buildGateResult,
   emitGateResult,
   readBundlePlan,
+  stripMdFrontmatter,
+  writePlanProgress,
 } from '../../engine/helpers/gate-helpers.mjs';
 import {
   ProfileSchema,
@@ -151,14 +153,59 @@ for (const rule of definition.rules) {
         }
       }
     } else if (rule.check === 'field_non_empty') {
-      const [, jsonPath] = rule.target.split('#/');
-      const profile = getProfile();
-      if (!profile) { rulePassed = false; ruleDetail = 'rb_profile.yaml not found'; }
-      else {
-        const value = resolvePath(profile, jsonPath);
-        if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
+      const target = rule.target;
+      if (target.includes('#/')) {
+        // YAML field path variant (existing logic)
+        const [, jsonPath] = target.split('#/');
+        const profile = getProfile();
+        if (!profile) { rulePassed = false; ruleDetail = 'rb_profile.yaml not found'; }
+        else {
+          const value = resolvePath(profile, jsonPath);
+          if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
+            rulePassed = false;
+            ruleDetail = `${target} is empty or missing`;
+          }
+        }
+      } else if (target.endsWith('.md')) {
+        // File body variant: strip frontmatter, check remaining content non-empty
+        const filePath = join(bundlePath, target);
+        if (!existsSync(filePath)) {
           rulePassed = false;
-          ruleDetail = `${rule.target} is empty or missing`;
+          ruleDetail = `File not found: ${target}`;
+        } else {
+          const content = readFileSync(filePath, 'utf-8');
+          const bodyContent = stripMdFrontmatter(content);
+          if (bodyContent.length === 0) {
+            rulePassed = false;
+            ruleDetail = `${target} is empty (no content after frontmatter)`;
+          }
+        }
+      } else {
+        // Unknown target format — fail closed
+        rulePassed = false;
+        ruleDetail = `Unknown field_non_empty target: ${target} — must contain '#/' (YAML path) or end with '.md' (file body)`;
+      }
+    } else if (rule.check === 'pattern_match') {
+      const target = rule.target;
+      const filePath = join(bundlePath, target);
+      if (!existsSync(filePath)) {
+        rulePassed = false;
+        ruleDetail = `File not found for pattern_match: ${target}`;
+      } else {
+        const content = readFileSync(filePath, 'utf-8');
+        const bodyContent = stripMdFrontmatter(content);
+        const re = new RegExp(rule.pattern);
+        const matched = re.test(bodyContent);
+        if (rule.negate) {
+          if (matched) {
+            rulePassed = false;
+            ruleDetail = `Forbidden pattern in ${target}: ${rule.failure_message}`;
+          }
+        } else {
+          if (!matched) {
+            rulePassed = false;
+            ruleDetail = `Missing pattern in ${target}: ${rule.failure_message}`;
+          }
         }
       }
     } else if (rule.check === 'status_value') {
@@ -237,6 +284,11 @@ try {
   appendFileSync(tracePath, traceEntry + '\n');
 } catch {
   // Trace write failure must not affect gate output
+}
+
+// Write Progress on gate pass (PHS-006)
+if (allPassed) {
+  writePlanProgress(bundlePath, definition.gate);
 }
 
 emitGateResult(result);

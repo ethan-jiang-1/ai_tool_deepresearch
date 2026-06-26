@@ -126,6 +126,20 @@
       },
       "comparison": "byte-for-byte",
       "failure_message": "Basename mismatch: bundle directory basename (normalized), rb_plan.md plan_basename, and rb_profile.yaml plan_basename must be byte-for-byte equal. No case folding, slug rewriting, or whitespace trimming allowed. If bundle dir has an illegal name (fails normalization), re-instantiate with a legal name — do not rename or patch files."
+    },
+    {
+      "id": "plan_body_non_empty",
+      "check": "field_non_empty",
+      "target": "rb_plan.md",
+      "failure_message": "rb_plan.md body is empty. The plan body must contain at least the filled template sections — Goal Purpose, Research Questions, and Scope must be written before setup-ready gate."
+    },
+    {
+      "id": "plan_body_no_unfilled_marker",
+      "check": "pattern_match",
+      "target": "rb_plan.md",
+      "pattern": "\\((?:待填充|尚无话题)",
+      "negate": true,
+      "failure_message": "rb_plan.md body contains unfilled required-fill markers (待填充… or 尚无话题…). Replace all required-fill markers in ## Goal subsections with real content before proceeding."
     }
   ]
 }
