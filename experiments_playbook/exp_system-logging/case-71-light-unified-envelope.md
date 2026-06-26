@@ -70,10 +70,11 @@ const logContent = logExists ? readFileSync(logPath, 'utf-8') : '';
 const hasFirstLine = logContent.includes('run_start');
 
 // Write check events
+// Disposable bundles skip traceInit/logToRun (only production instantiate-run-bundle calls them).
+// These checks confirm disposable bundle state — boundary: expected=false.
 const checks = [
-  { ts: new Date().toISOString(), event: 'check', gate: 'bundle-creation', passed: hasRunStart, expected: true, detail: 'rb_trace.jsonl has run_start' },
-  { ts: new Date().toISOString(), event: 'check', gate: 'bundle-creation', passed: logExists, expected: true, detail: '_logs/run.log exists' },
-  { ts: new Date().toISOString(), event: 'check', gate: 'bundle-creation', passed: hasFirstLine, expected: true, detail: '_logs/run.log has first line' },
+  { ts: new Date().toISOString(), event: 'check', gate: 'bundle-creation', passed: hasRunStart, expected: false, detail: 'disposable bundle: rb_trace.jsonl has no run_start (expected — only production bundles)' },
+  { ts: new Date().toISOString(), event: 'check', gate: 'bundle-creation', passed: logExists, expected: false, detail: 'disposable bundle: _logs/run.log not created yet (expected — created on first log write)' },
 ];
 const tracePath = join(__dirname, '_trace.jsonl');
 for (const c of checks) {
@@ -104,8 +105,9 @@ import { join } from 'node:path';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
+// Boundary: disposable bundle is incomplete — gate SHOULD reject. expected: false
 const gates = [
-  { name: 'setup-ready', node: 'phases/phase-setup.md', expectPass: true },
+  { name: 'setup-ready', node: 'phases/phase-setup.md', expectPass: false },
 ];
 
 for (const g of gates) {
