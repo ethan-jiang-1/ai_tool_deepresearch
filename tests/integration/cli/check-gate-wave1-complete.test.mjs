@@ -142,6 +142,15 @@ function createBundle(name) {
   mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-a'), { recursive: true });
   mkdirSync(join(dir, 'seed_topics'), { recursive: true });
 
+  // Reference: flat format with topic-prefixed files (required by count_floor)
+  writeFileSync(join(dir, 'reference', '01-topic-a-deepening.md'),
+    '---\nsource_url: https://example.com/deepening-topic-a\nacceptance_status: accepted\n' +
+    'source_type: secondary\ntier: Tier 2\nevidence_role: deepening_reference\n' +
+    'trust_level: practitioner\nwhy_it_matters: Deepening evidence.\n' +
+    'accessed_at: 2026-06-15\nrelated_topic: topic-a\n---\n' +
+    '## Key Facts\n- Finding.\n## Core Content Capture\nContent.\n' +
+    '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- Term.\n## Risks And Limitations\n- None.\n');
+
   return dir;
 }
 

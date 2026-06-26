@@ -39,12 +39,28 @@ function setupValidBundle(bundleDir) {
 describe('check-gate-setup-ready', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
 
+  // Helper: make plan body gate-ready by replacing required-fill markers
+  function fillPlanBody(bundleDir) {
+    const planPath = join(bundleDir, 'rb_plan.md');
+    let content = readFileSync(planPath, 'utf-8');
+    content = content.replace(/\(待填充[^)]*\)/g, '(filled)');
+    content = content.replace(/\(尚无话题[^)]*\)/g, '(filled)');
+    writeFileSync(planPath, content);
+  }
+
   it('passes with a valid bundle (HITL1 recorded, status correct, basename consistent)', () => {
     const name = unique('prod');
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     // Profile must use the same plan_basename as the bundle logical name
     writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', `plan_basename: ${name}`));
+    // Fix next_gate (disposable default is wave0_complete, should be seed_topics_ready)
+    const statusPath = join(bundleDir, 'rb_status.json');
+    const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
+    status.next_gate = 'seed_topics_ready';
+    writeFileSync(statusPath, JSON.stringify(status));
+    // Fill required-fill markers in plan body
+    fillPlanBody(bundleDir);
 
     const result = runGate(bundleDir);
     const output = JSON.parse(result.stdout);
@@ -61,6 +77,13 @@ describe('check-gate-setup-ready', () => {
     // and sets plan_basename to <name> in both rb_plan.md and rb_profile.yaml
     // Write profile with correct plan_basename matching the logical name
     writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', `plan_basename: ${name}`));
+    // Fix next_gate (disposable default is wave0_complete, should be seed_topics_ready)
+    const statusPath = join(bundleDir, 'rb_status.json');
+    const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
+    status.next_gate = 'seed_topics_ready';
+    writeFileSync(statusPath, JSON.stringify(status));
+    // Fill required-fill markers in plan body
+    fillPlanBody(bundleDir);
 
     const result = runGate(bundleDir);
     const output = JSON.parse(result.stdout);

@@ -55,7 +55,7 @@ function createBundle(name) {
 
   // Create all required artifacts
   writeFileSync(join(dir, 'seed_topics/dummy.md'), '---\nslug: dummy\ntitle: Dummy\n---\n# Dummy\n');
-  writeFileSync(join(dir, 'reference/index.md'), '# Reference Index\n\n- [Topic A](topic-a/source.yaml)\n');
+  writeFileSync(join(dir, 'reference/_INDEX.md'), '# Reference Index\n\n| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| 00-shared-dummy.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-06-15 |\n');
   mkdirSync(join(dir, 'artifacts', 'wave2'), { recursive: true });
   writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), '# Synthesis\n\nCross-topic analysis.\n');
   mkdirSync(join(dir, 'artifacts', 'hitl2'), { recursive: true });
@@ -102,13 +102,13 @@ describe('check-gate-readiness-passed', () => {
       `Expected empty seed_topics fail: ${JSON.stringify(output.inspect)}`);
   });
 
-  it('4. fails when reference/index.md is missing', () => {
+  it('4. fails when reference/_INDEX.md is missing', () => {
     const dir = createBundle(unique('noref'));
-    rmSync(join(dir, 'reference/index.md'));
+    rmSync(join(dir, 'reference/_INDEX.md'));
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
-    assert.ok(output.inspect.some(m => m.includes('index.md')),
+    assert.ok(output.inspect.some(m => m.includes('_INDEX.md')),
       `Expected missing index fail: ${JSON.stringify(output.inspect)}`);
   });
 

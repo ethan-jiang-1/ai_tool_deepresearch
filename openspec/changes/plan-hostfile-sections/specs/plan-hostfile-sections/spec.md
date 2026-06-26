@@ -4,7 +4,7 @@
 
 ### Requirement: Plan template uses YAML frontmatter with structured body sections
 
-The `rb_plan.md` file is the **host file**: the single Markdown artifact an Agent or human reads to get the complete research picture—goal, topics, constraints, progress, and decisions—without consulting conversation history or scattered control files. The host file pattern makes `rb_plan.md` the authoritative narrative surface for the research run, while `rb_status.json` / `rb_queue.json` / `rb_trace.jsonl` remain the machine-authoritative control files.
+The `rb_plan.md` file is the **host file**: the single Markdown artifact an Agent or human reads to get the complete research picture—goal, topics, constraints, progress, and decisions—without consulting conversation history or scattered control files. The host file pattern makes `rb_plan.md` the authoritative narrative surface for the research run, while `rb_status.json` / `rb_queue.json` / `rb_trace.jsonl` remain the machine-authoritative control files. It intentionally overlaps with `rb_profile.yaml` on topic and scope—same research intent, two audiences: Agent reads Markdown prose for task understanding, Engine reads YAML fields for gate validation. They complement without conflict.
 
 The `rb_plan.md.tmpl` SHALL use YAML frontmatter (instead of JSON) for `plan_basename`, `derived_topic_count`, and `topic_registry` fields. The frontmatter field names SHALL remain unchanged from the current PlanSchema definition. The body SHALL contain six Markdown sections in fixed order: `## Goal`, `## Topic Registry`, `## Constraints`, `## Progress`, `## Decisions`.
 

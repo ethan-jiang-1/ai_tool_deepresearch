@@ -55,13 +55,27 @@ const SCHEMA_INVALID_REF = `- url: ""
   topic_tag: "topic-a"
 `;
 
-/** Set up happy-path wave0 artifacts. */
+/** Set up happy-path wave0 artifacts (post-redesign: flat reference + artifacts/wave0). */
 function setupHappyPath(dir) {
-  mkdirSync(join(dir, 'reference', 'topic-a'), { recursive: true });
-  mkdirSync(join(dir, 'reference', 'topic-b'), { recursive: true });
-  writeFileSync(join(dir, 'reference/index.md'), '# Reference Index\n\n- topic-a: 1 ref\n- topic-b: 1 ref\n');
-  writeFileSync(join(dir, 'reference/topic-a/source.yaml'), VALID_REF);
-  writeFileSync(join(dir, 'reference/topic-b/source.yaml'), VALID_REF_B);
+  // Flat reference directory
+  writeFileSync(join(dir, 'reference/_INDEX.md'),
+    '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |\n' +
+    '| --- | --- | --- | --- | --- | --- | --- | --- |\n' +
+    '| 00-shared-ai-safety.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-06-15 |\n');
+  writeFileSync(join(dir, 'reference/README.md'), '# Reference Evidence\nFlat reference directory.\n');
+  writeFileSync(join(dir, 'reference/00-shared-ai-safety.md'),
+    '---\nsource_url: https://example.com/ai-safety\nacceptance_status: accepted\n' +
+    'source_type: secondary\ntier: Tier 2\nevidence_role: foundation\ntrust_level: practitioner\n' +
+    'why_it_matters: Foundational overview\naccessed_at: 2026-06-15\nrelated_topic: all\n---\n' +
+    '## Key Facts\n- AI safety is important.\n## Core Content Capture\nOverview.\n' +
+    '## Relevance To This Research\nFoundation.\n## Quotable Terms / Concepts\n- "AI safety"\n## Risks And Limitations\n- High-level.\n');
+
+  // Thin YAML in artifacts/wave0/ per topic
+  mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-a'), { recursive: true });
+  mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-b'), { recursive: true });
+  writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), VALID_REF);
+  writeFileSync(join(dir, 'artifacts/wave0/topic-b/source.yaml'), VALID_REF_B);
+
   // trace event
   writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave0_completion', ts: new Date().toISOString() }) + '\n');
 }
@@ -77,20 +91,20 @@ describe('check-gate-wave0-complete', () => {
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
   });
 
-  it('2. fails when reference/index.md is missing', () => {
+  it('2. fails when reference/_INDEX.md is missing', () => {
     const dir = createBundle(unique('noindex'));
     setupHappyPath(dir);
-    rmSync(join(dir, 'reference/index.md'));
+    rmSync(join(dir, 'reference/_INDEX.md'));
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
-    assert.ok(output.inspect.some(m => m.includes('reference/index.md')), `Expected missing index fail: ${JSON.stringify(output.inspect)}`);
+    assert.ok(output.inspect.some(m => m.includes('reference/_INDEX.md')), `Expected missing index fail: ${JSON.stringify(output.inspect)}`);
   });
 
   it('3. fails when per-topic source.yaml is missing', () => {
     const dir = createBundle(unique('nosource'));
     setupHappyPath(dir);
-    rmSync(join(dir, 'reference/topic-a/source.yaml'));
+    rmSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'));
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -100,7 +114,7 @@ describe('check-gate-wave0-complete', () => {
   it('4. fails on schema violation (empty url)', () => {
     const dir = createBundle(unique('schema'));
     setupHappyPath(dir);
-    writeFileSync(join(dir, 'reference/topic-a/source.yaml'), SCHEMA_INVALID_REF);
+    writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), SCHEMA_INVALID_REF);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -110,7 +124,7 @@ describe('check-gate-wave0-complete', () => {
   it('5. fails when count_floor is below threshold (empty YAML array)', () => {
     const dir = createBundle(unique('floor'));
     setupHappyPath(dir);
-    writeFileSync(join(dir, 'reference/topic-a/source.yaml'), '[]');
+    writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), '[]');
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -121,7 +135,7 @@ describe('check-gate-wave0-complete', () => {
     const dir = createBundle(unique('and'));
     setupHappyPath(dir);
     // Mix: one valid entry + one invalid entry (empty url) = count_floor passes (2 entries) but schema_valid fails
-    writeFileSync(join(dir, 'reference/topic-a/source.yaml'), `- url: "https://example.com/ok"
+    writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `- url: "https://example.com/ok"
   title: "OK"
   retrieved_date: "2026-06-15"
   topic_tag: "topic-a"

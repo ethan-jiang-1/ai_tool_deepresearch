@@ -2,6 +2,21 @@
 
 `rb_plan.md` 的 body 是空壳——`## Purpose (待填充)` + `## Topic Registry (尚无话题)`。Agent 在 HITL1 做 topic rewrite 时不知道该往哪写，自创 `## Original Topic`，template 里的 `## Purpose` 从未被碰过。body 没有 gate 检查。
 
+### Plan vs Profile：双轨互补，不是重叠
+
+`rb_plan.md`（host file）和 `rb_profile.yaml`（machine profile）在主题上存在交集——都涉及"研究什么"和"边界在哪"——但它们是 **同一份意图的两种表示，服务于两个不同的受众**：
+
+| 维度 | `rb_plan.md` body | `rb_profile.yaml` |
+|------|-------------------|-------------------|
+| **受众** | Agent（读 prose 理解任务） | Engine（读 YAML 做 gate 校验） |
+| **格式** | Markdown 叙事，丰富上下文 | YAML 结构化，最小字段集 |
+| **粒度** | essay — 详细的 in/out scope、约束叙事 | check box — `research_profile` enum（3 值）、`root_must_answer_set` 字符串数组 |
+| **谁写** | Agent（HITL1 topic rewrite） | Agent（写 profile 字段）+ Engine（gate 校验） |
+| **谁读** | Agent（reground、sub-agent 部署时读 Goal/Constraints） | Engine（gate 查 `hitl1.status == recorded`、`research_profile != not_selected`） |
+| **drift 方向** | plan 比 profile 更详细（安全的单向 drift） | profile 保持最小化（够 gate 用就行） |
+
+这和 `topic_registry` 的双轨一致：frontmatter 是机器权威版（`id/slug/title`，PlanSchema 校验），body 的 `## Topic Registry` table 是人读版（带 Status 列，Agent 追踪进度用）。冲突时以 frontmatter 为准。**两份数据，两组受众，一个方向**——没有冲突。
+
 ## Goals / Non-Goals
 
 **Goals:**
