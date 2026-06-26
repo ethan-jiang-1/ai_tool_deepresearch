@@ -42,6 +42,20 @@
       "check": "field_non_empty",
       "target": "rb_profile.yaml#/human_decision_checkpoints/hitl1/recorded_at",
       "failure_message": "hitl1.recorded_at is missing or empty. Write the ISO 8601 timestamp when HITL1 was recorded."
+    },
+    {
+      "id": "status_current_gate",
+      "check": "status_value",
+      "target": "rb_status.json#/current_gate",
+      "expected": "hitl1_recorded",
+      "failure_message": "rb_status.json current_gate must be 'hitl1_recorded'. Use advance-status --to hitl1_recorded to advance."
+    },
+    {
+      "id": "status_next_gate",
+      "check": "status_value",
+      "target": "rb_status.json#/next_gate",
+      "expected": "setup_ready",
+      "failure_message": "rb_status.json next_gate must be 'setup_ready'. Use advance-status --to hitl1_recorded to set the correct next_gate."
     }
   ]
 }

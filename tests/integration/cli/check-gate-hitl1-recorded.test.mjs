@@ -45,6 +45,9 @@ describe('check-gate-hitl1-recorded', () => {
     const bundleDir = track(r.stdout.trim());
     writeProfileYaml(bundleDir, VALID_PROFILE);
 
+    // Advance status to hitl1_recorded (gate now checks current_gate/next_gate per PRG-009)
+    spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli/advance-status.mjs'), '--bundle', bundleDir, '--to', 'hitl1_recorded'], { encoding: 'utf-8', timeout: 10000 });
+
     const result = runGate(bundleDir);
     const output = JSON.parse(result.stdout);
 

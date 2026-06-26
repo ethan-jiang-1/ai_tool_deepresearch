@@ -34,7 +34,7 @@ suggested_context:
   - `rb_trace.jsonl`（存在即可，不要求非空）
 - 检查 directory scaffold 存在：`seed_topics/`、`reference/`、`artifacts/`、`final/`、`_cache/`
 - 检查 HITL1 marker 已写入 profile：`human_decision_checkpoints.hitl1.status == recorded`
-- 检查 `rb_status.json` 仍然是 `current_gate: setup_ready` / `next_gate: wave0_complete`（无 status drift）
+- 检查 `rb_status.json` 仍然是 `current_gate: setup_ready` / `next_gate: seed_topics_ready`（无 status drift）
 - 按 normalization 规则检查 bundle dir basename、`rb_plan.md` frontmatter `plan_basename`、`rb_profile.yaml` `plan_basename` 三者一致
 
 ## 4. Expected Artifacts
@@ -61,7 +61,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle <path> --curren
 | Schema 校验失败 | 读取 inspect 中的 Zod error detail，修正对应字段 |
 | 缺失 scaffold dir | `mkdir` 创建对应目录 |
 | HITL1 marker 未记录 | 回到 HITL1 phase 完成用户输入收集 |
-| Status drift | 将 `current_gate`/`next_gate` 恢复为 `setup_ready`/`wave0_complete` |
+| Status drift | 将 `current_gate`/`next_gate` 恢复为 `setup_ready`/`seed_topics_ready` |
 | Basename 不一致 | 以 `plan_basename` in plan + profile 为准；若 bundle dir 命名非法→fail-stop 重新 instantiate |
 
 **Persistent failure：** 若 setup gate 连续 3 次修复无进展，记录 escalation 到 `rb_status.json`（`state: blocked`）和 `rb_trace.jsonl`，不能冒充 `setup-ready` 已通过。

@@ -40,8 +40,15 @@
 | G2 gate-loop | case-21 | `exp_gate-loop/case-21-light-three-returns.md` | Gate 单次 checkpoint 三种返回 |
 | G3 workflow-chain | case-31 | `exp_workflow-chain/case-31-light-lazy-load.md` | Lazy loader 不预读 MD |
 | G4 agentic-queue | case-41 | `exp_agentic-queue/case-41-light-minimal-path.md` | enqueue → claim → complete → promote 最小路径 |
-| G10 pre-research | case-106 | `exp_wff_topic-rewrite/case-106-light-hitl1-topic-rewrite-vague.md` | 一句话 → topic rewrite → original topic + seed topics（引用 phase-hitl1.md §3a） |
-| G10 pre-research | case-107 | `exp_wff_topic-rewrite/case-107-light-hitl1-topic-rewrite-detailed.md` | 详细 brief → 轻量整理，不越界 rewrite（⚠️ 模拟 Agent 输出） |
+| G10 pre-research | case-106 | `exp_wff_pre-research/case-106-light-plan-body-gate.md` | plan_body gate：plan body 存在性校验 + missing→fail + 合法→pass |
+| G10 pre-research | case-181 | `exp_wff_topic-rewrite/case-181-light-hitl1-topic-rewrite-vague.md` | 一句话 → topic rewrite → original topic + seed topics（引用 phase-hitl1.md §3a） |
+| G10 pre-research | case-182 | `exp_wff_topic-rewrite/case-182-light-hitl1-topic-rewrite-detailed.md` | 详细 brief → 轻量整理，不越界 rewrite（⚠️ 模拟 Agent 输出） |
+| G7 system-logging | case-71 | `exp_system-logging/case-71-light-unified-envelope.md` | 统一 log envelope schema：timestamp/level/event/source/context |
+| G7 system-logging | case-73 | `exp_system-logging/case-73-light-startup-log-trail.md` | 启动 log trail：进程启动→config 加载→ready — 至少 3 条 startup 事件 |
+| G21 wfn-wave0 | case-213 | `exp_wfn_wave0/case-213-light-happy-and-fail.md` | Light gate-only 版 wave0 happy + fail path |
+| G22 wfn-wave1 | case-224 | `exp_wfn_wave1/case-224-light-happy-and-fail.md` | Light gate-only 版 wave1 happy + fail path |
+| G23 wfn-wave2 | case-235 | `exp_wfn_wave2/case-235-light-happy-and-fail.md` | Light gate-only 版 wave2 happy + fail path |
+| G20 wfn-seedtopic | case-202 | `exp_wfn_seedtopic/case-202-light-setup-to-seedtopics-transition.md` | setup→seed-topics transition 最小路径 |
 | G14 hitl2-branch | case-140 | `exp_wff_hitl2-branch/case-140-light-hitl2-decision-capture.md` | HITL2 decision capture：Agent 捕获 user_decision + rationale，chain 路由到正确节点。Trace 证明两个节点都经过 |
 | G14 hitl2-branch | case-141 | `exp_wff_hitl2-branch/case-141-light-rerun-full-path.md` | HITL2 rerun 全路径：decision=rerun→chain→phase-rerun→rerun-ready gate pass→seed-topics |
 | G14 hitl2-branch | case-142 | `exp_wff_hitl2-branch/case-142-light-readiness-full-path.md` | HITL2 readiness 全路径：decision=proceed_to_readiness→chain→readiness→readiness gate pass |
@@ -61,6 +68,7 @@
 | G2 gate-loop | case-23 | `exp_gate-loop/case-23-standard-full-pipeline.md` | 完整端到端 |
 | G3 workflow-chain | case-32 | `exp_workflow-chain/case-32-standard-dep-cache.md` | 依赖去重 + cache hit |
 | G3 workflow-chain | case-33 | `exp_workflow-chain/case-33-standard-error-paths.md` | 错误路径 + 恢复 |
+| G7 system-logging | case-72 | `exp_system-logging/case-72-standard-engine-lifecycle.md` | Engine lifecycle log：enqueue/claim/complete/fail 全生命周期事件记录 |
 | G4 agentic-queue | case-42 | `exp_agentic-queue/case-42-standard-urgent-preemption.md` | 满 active window + urgent preemption |
 | G4 agentic-queue | case-43 | `exp_agentic-queue/case-43-standard-failure-repair.md` | invalid task, missing receipt, failure repair |
 | G5 wff-validation | case-51 | `exp_wff_validation/case-51-standard-happy-path.md` | wff walker 9 phase/8 gate 全部 pass + trace↔log 交叉验证 |

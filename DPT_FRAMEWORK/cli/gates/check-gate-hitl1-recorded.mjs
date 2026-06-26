@@ -51,6 +51,16 @@ function getProfile() {
   return _profileCache;
 }
 
+// Helper: read rb_status.json (cached for this gate run)
+let _statusCache = null;
+function getStatus() {
+  if (_statusCache) return _statusCache;
+  const statusPath = join(bundlePath, 'rb_status.json');
+  if (!existsSync(statusPath)) return null;
+  _statusCache = JSON.parse(readFileSync(statusPath, 'utf-8'));
+  return _statusCache;
+}
+
 // Helper: resolve JSON/YAML path like "human_decision_checkpoints/hitl1/status"
 function resolvePath(obj, pathStr) {
   return pathStr.split('/').reduce((o, k) => o?.[k], obj);
@@ -119,6 +129,19 @@ for (const rule of definition.rules) {
             rulePassed = false;
             ruleDetail = `${rule.target} is still "${rule.value}" (should not be)`;
           }
+        }
+      }
+    } else if (rule.check === 'status_value') {
+      const [, jsonPath] = rule.target.split('#/');
+      const status = getStatus();
+      if (!status) {
+        rulePassed = false;
+        ruleDetail = 'rb_status.json not found';
+      } else {
+        const value = jsonPath.split('/').reduce((obj, key) => obj?.[key], status);
+        if (value !== rule.expected) {
+          rulePassed = false;
+          ruleDetail = `${rule.target}: expected "${rule.expected}", got "${value}"`;
         }
       }
     } else {

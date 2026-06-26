@@ -19,6 +19,8 @@ import {
   PlanSchema,
 } from '../../DPT_FRAMEWORK/schema/index.mjs';
 import { parseMdFrontmatter } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { createTrace } from '../../DPT_FRAMEWORK/engine/trace.mjs';
+import { logToRun } from '../../DPT_FRAMEWORK/engine/logger.mjs';
 
 const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
 
@@ -78,7 +80,7 @@ if (existsSync(bundleDir)) {
 }
 
 // ── Create directory structure ──
-const dirs = ['seed_topics', 'reference', 'artifacts/wave1', 'artifacts/wave2', '_logs', '_cache', 'final'];
+const dirs = ['seed_topics', 'reference', 'artifacts/wave0', 'artifacts/wave1', 'artifacts/wave2', '_logs', '_cache', 'final'];
 for (const d of dirs) {
   mkdirSync(join(bundleDir, d), { recursive: true });
 }
@@ -92,7 +94,7 @@ const statusDefault = {
   current_mode: 'execution',
   state: 'not_started',
   current_gate: 'setup_ready',
-  next_gate: 'wave0_complete',
+  next_gate: 'seed_topics_ready',
 };
 StatusSchema.parse(statusDefault);
 writeFileSync(join(bundleDir, 'rb_status.json'), JSON.stringify(statusDefault, null, 2) + '\n');
@@ -166,8 +168,44 @@ if (!planValidate.success) {
 }
 writeFileSync(join(bundleDir, 'rb_plan.md'), planMd);
 
-writeFileSync(join(bundleDir, 'START_FROM_HERE.md'), `# Start from here — ${basename}\n\n本目录是一个 Deep Research Runtime Bundle。\n`);
-writeFileSync(join(bundleDir, 'rb_trace.jsonl'), '');
+// ── Scaffold files (same templates as production) ──
+// These are expected by inspect-bundle and by gates that check for artifact existence.
+const scaffoldTemplates = [
+  { tmpl: 'reference/_INDEX.md.tmpl', dest: 'reference/_INDEX.md' },
+  { tmpl: 'reference/README.md.tmpl', dest: 'reference/README.md' },
+  { tmpl: 'artifacts/README.md.tmpl',    dest: 'artifacts/README.md' },
+];
+for (const s of scaffoldTemplates) {
+  const tmplPath = join(repoRoot, 'DPT_FRAMEWORK', 'rb_templates', s.tmpl);
+  if (existsSync(tmplPath)) {
+    let content = readFileSync(tmplPath, 'utf-8');
+    content = content.replace(/\{\{name\}\}/g, basename);
+    writeFileSync(join(bundleDir, s.dest), content);
+  }
+}
+
+// ── Trace init + first log entry (same as production) ──
+const trace = createTrace(join(bundleDir, 'rb_trace.jsonl'), { consoleEcho: false });
+trace.traceInit(basename, { source: 'new-disposable-bundle' });
+logToRun(bundleDir, 'info', 'run_start', { source: 'new-disposable-bundle' });
+
+writeFileSync(join(bundleDir, 'START_FROM_HERE.md'), `# Start from here — ${basename}\n\n本目录是一个 Deep Research Disposable Experiment Bundle。\n`);
+
+// ── Validate + inspect (same as production) ──
+const validatePath = join(repoRoot, 'DPT_FRAMEWORK', 'cli', 'validate-bundle.mjs');
+const inspectPath = join(repoRoot, 'DPT_FRAMEWORK', 'cli', 'inspect-bundle.mjs');
+try {
+  execSync(`node "${validatePath}" "${bundleDir}"`, { stdio: 'pipe' });
+  process.stderr.write(`${G}✓ validate-bundle passed${B}\n`);
+} catch (e) {
+  process.stderr.write(`${R}⚠ validate-bundle failed (bundle may be incomplete)${B}\n`);
+}
+// inspect-bundle is informational only — don't fail on warnings
+try {
+  execSync(`node "${inspectPath}" "${bundleDir}"`, { stdio: 'pipe' });
+} catch {
+  // inspect-bundle exits 1 on warnings (missing optional files) — that's fine for a fresh disposable
+}
 
 // ── Copy node MD contents (not the directory itself) ──
 if (nodesDir) {

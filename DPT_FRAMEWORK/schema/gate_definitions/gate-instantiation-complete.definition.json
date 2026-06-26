@@ -99,8 +99,8 @@
       "id": "status_next_gate",
       "check": "status_value",
       "target": "rb_status.json#/next_gate",
-      "expected": "wave0_complete",
-      "failure_message": "rb_status.json next_gate must be 'wave0_complete' after instantiation."
+      "expected": "seed_topics_ready",
+      "failure_message": "rb_status.json next_gate must be 'seed_topics_ready' after instantiation."
     }
   ]
 }
