@@ -43,7 +43,7 @@ setup-ready 的 strip 实现验证通过后，提取到 gate-helpers，同步更
 
 - [x] 7.1 全量回归测试（`node --test tests/`），fail 数不变或减少（baseline: 9）。
 - [ ] 7.2 抽样 playbook：case-101（hitl1→setup）、case-51（完整 E2E）、case-106（topic rewrite→gate）。注意：disposable bundle 格式变更后，playbook 中如有对 `rb_plan.md` body 格式的断言（如检查特定 header 文本）可能需要同步更新。
-- [ ] 7.3 **新增 E2E 验证**：创建 disposable bundle（已通过 hitl1-recorded gate，status.current_gate=`setup_ready`，仅 `rb_plan.md` body 残留 `(待填充 — …)` marker）→ `setup-ready` gate FAIL（trace 有 fail 事件，inspect 指向 `plan_body_no_unfilled_marker`）；Agent 替换 marker 为真实内容后重跑 → gate PASS。这是 placeholder 检测的关键证据路径。@impl PHS-005
+- [x] 7.3 **新增 E2E 验证**：创建 disposable bundle（已通过 hitl1-recorded gate，status.current_gate=`setup_ready`，仅 `rb_plan.md` body 残留 `(待填充 — …)` marker）→ `setup-ready` gate FAIL（trace 有 fail 事件，inspect 指向 `plan_body_no_unfilled_marker`）；Agent 替换 marker 为真实内容后重跑 → gate PASS。这是 placeholder 检测的关键证据路径。@impl PHS-005
 - [x] 7.4 `check-project-reqs.mjs` + `check-project-specs.mjs` PASS。
 - [x] 7.5 更新 `req-registry.yaml`：注册 RWG-014（research-wave-gate-implementation）、SCO-012（schema-core stripMdFrontmatter）。更新 PHS-006 description：从 "Disposable bundle path unaffected" 改为 "Engine writes ## Progress on gate pass"。修正 PHS-005 description：从 "setup-ready gate checks" 改为 "Gate body content checks (non-empty + no unfilled required-fill markers)"。
 - [x] 7.6 更新 `research-wave-gate-implementation` main spec 的 req line 加 RWG-014；更新 `schema-core` main spec 的 req line 加 SCO-012。

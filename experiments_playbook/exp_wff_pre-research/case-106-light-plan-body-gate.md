@@ -1,0 +1,260 @@
+---
+schema: command-experiment/v1
+experiment: wff-pre-research
+case: case-106-light-plan-body-gate
+weight: light
+case_goal: "Prove that setup-ready gate validates rb_plan.md body: fails on required-fill markers, passes after markers replaced, intentionally-allowed markers never block, and Progress checkbox flips on pass."
+runner: coding-agent
+execution: real-bundle
+evidence: filesystem-and-trace
+bundle: dpt_disp_case-106_plan_gate_*
+trace: dpt_disp_case-106_plan_gate_*/_trace.jsonl
+verdict: trace-jsonl
+---
+
+## Execution Contract
+
+由 coding agent 在真实 disposable experiment bundle 中执行。实验结果必须来自实际文件写入、gate CLI 调用和 trace event；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
+
+本 case 不依赖 Agent 语义行为——所有步骤均为确定性文件操作 + gate CLI 调用。测试的是 Engine 层的 gate body 检查 + Progress 写行为。
+
+# case-106-light-plan-body-gate
+
+## Expected Runtime Path
+
+1. 创建 disposable bundle（新模板：YAML + 6 section + required-fill markers）
+2. 设置 gate 前置条件（hitl1 recorded, status correct）→ gate FAIL（placeholder 残留）
+3. 替换 required-fill markers → gate PASS + Progress checkbox 翻转
+4. 验证 intentionally-allowed markers 不会导致 FAIL
+5. 从 `_trace.jsonl` 裁决
+6. Cleanup
+
+---
+
+## Case Goal
+
+证明：
+1. `plan_body_no_unfilled_marker` rule 正确检测 required-fill markers `(待填充…)` / `(尚无话题…)` — gate FAIL
+2. 替换 required-fill markers 后 gate PASS
+3. `plan_body_non_empty` rule 对正常的 6-section body 恒 PASS（不误报）
+4. Intentionally-allowed markers `(待 HITL1 填充 — …)` / `(由 Engine — …)` 不会触发 FAIL
+5. Gate pass 后 `## Progress` section 中 `setup-ready` 行 checkbox 翻转为 `[x]` 并带时间戳
+
+---
+
+## Step 1: 创建 disposable bundle + 验证模板结构
+
+```bash
+REPO_ROOT=$(pwd)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs plan_gate --case case-106 --force)
+echo "Bundle: $B"
+
+# Validate
+node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
+
+# Verify template has 6 sections and required-fill markers
+echo "=== Plan body sections ==="
+grep "^## " $B/rb_plan.md
+echo ""
+echo "=== Required-fill markers present ==="
+grep -c "(待填充" $B/rb_plan.md && echo "OK: required-fill markers found" || echo "MISSING: required-fill markers not found"
+echo "=== Intentionally-allowed markers present ==="
+grep -c "(待 HITL1 填充" $B/rb_plan.md && echo "OK: intentionally-allowed marker found" || echo "MISSING"
+grep -c "(由 Engine" $B/rb_plan.md && echo "OK: Engine marker found" || echo "MISSING"
+```
+
+预期：6 个 section 全部存在，至少 3 个 `(待填充` marker（Goal 三个子节），`(待 HITL1 填充…)` 和 `(由 Engine …)` 各存在。
+
+## Step 2: 设置 gate 前置条件 → gate FAIL（placeholder 残留）
+
+setup-ready gate 除了 body 检查外还需：hitl1 recorded、status.current_gate=`setup_ready`、status.next_gate=`seed_topics_ready`、basename 一致性。先修好这些前置，故意留下 placeholder。
+
+```bash
+REPO_ROOT=$(pwd)
+B=$(ls -d dpt_disp_case-106_plan_gate_* | tail -1)
+echo "Bundle: $B"
+
+# Fix HITL1 status: not_started → recorded
+cat > $B/rb_profile.yaml << 'EOF'
+plan_basename: plan_gate
+research_profile: quick_factual
+root_must_answer_set:
+  - "What is the research question?"
+human_decision_checkpoints:
+  hitl1:
+    status: recorded
+    recorded_at: "2026-06-26T00:00:00Z"
+  hitl2:
+    status: not_started
+    answerability_class: not_assessed
+    user_decision: not_started
+    final_report_view: not_started
+EOF
+
+# Fix status: next_gate should be seed_topics_ready
+cat > $B/rb_status.json << 'EOF'
+{
+  "current_mode": "execution",
+  "state": "in_progress",
+  "current_gate": "setup_ready",
+  "next_gate": "seed_topics_ready"
+}
+EOF
+
+# rb_plan.md still has required-fill markers from template → should FAIL
+echo "=== Plan body (markers still present) ==="
+grep "(待填充" $B/rb_plan.md | head -3
+
+GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
+echo "$GATE_OUTPUT"
+PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'setup-ready',passed:$PASSED,expected:false,detail:'required-fill markers still present — gate should FAIL'})})"
+```
+
+预期：`check.passed: false`，`inspect` 包含 `plan_body_no_unfilled_marker` 或 "Forbidden pattern in rb_plan.md"。
+
+## Step 3: 替换 required-fill markers → gate PASS + Progress 翻转
+
+保留 intentionally-allowed markers（`(待 HITL1 填充 — …)` 和 `(由 Engine — …)`），只替换 required-fill markers。
+
+```bash
+REPO_ROOT=$(pwd)
+B=$(ls -d dpt_disp_case-106_plan_gate_* | tail -1)
+echo "Bundle: $B"
+
+# Replace only required-fill markers — keep intentionally-allowed ones intact
+cat > $B/rb_plan.md << 'PLANEOF'
+---
+plan_basename: plan_gate
+derived_topic_count: 3
+topic_registry:
+  - id: "topic-01"
+    slug: "01-media-coverage"
+    title: "Media Coverage"
+  - id: "topic-02"
+    slug: "02-public-sentiment"
+    title: "Public Sentiment"
+  - id: "topic-03"
+    slug: "03-policy-response"
+    title: "Policy Response"
+---
+
+# Deep Research Plan: plan_gate
+
+## Goal
+
+### Purpose
+This project investigates China's reaction to the 2026 World Cup across media, public sentiment, and policy dimensions.
+
+### Research Questions
+1. How did Chinese state media cover the tournament?
+2. What was public sentiment on Weibo and other platforms?
+3. Did the government issue any policy responses?
+
+### Scope
+Focus on mainland China. Exclude economic impact analysis and international comparisons.
+
+## Topic Registry
+
+| # | Slug | Title | Status |
+|---|------|-------|--------|
+| (由 Engine — 在 seed-topics materialization 后从 frontmatter topic_registry 生成) |
+
+## Constraints
+(待 HITL1 填充 — 用户指定的时间/预算/地域/方法约束)
+
+## Progress
+
+- [ ] instantiation-complete
+- [ ] hitl1-recorded
+- [ ] setup-ready
+- [ ] seed-topics-ready
+- [ ] wave0-complete
+- [ ] wave1-complete
+- [ ] wave2-complete
+- [ ] hitl2-recorded
+- [ ] rerun-ready
+- [ ] readiness-passed
+
+## Decisions
+(append-only — 关键决策记录，最新在上)
+PLANEOF
+
+# Verify intentionally-allowed markers still present
+echo "=== Intentionally-allowed markers ==="
+grep -c "(待 HITL1 填充" $B/rb_plan.md && echo "OK: Constraints marker present" || echo "MISSING"
+grep -c "(由 Engine" $B/rb_plan.md && echo "OK: Engine marker present" || echo "MISSING"
+echo ""
+echo "=== Required-fill markers gone? ==="
+grep "(待填充" $B/rb_plan.md && echo "STILL PRESENT — should be gone" || echo "OK: all required-fill markers replaced"
+
+GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
+echo "$GATE_OUTPUT"
+PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'setup-ready',passed:$PASSED,expected:true,detail:'markers replaced, intentionally-allowed markers kept — gate should PASS'})})"
+```
+
+预期：`check.passed: true`，intentionally-allowed markers 保留，required-fill markers 全部替换。
+
+## Step 4: 验证 Progress checkbox 翻转
+
+Gate pass 后 `## Progress` 中 `setup-ready` 行应从 `- [ ]` 翻转为 `- [x]` 且带 ISO8601 时间戳。
+
+```bash
+REPO_ROOT=$(pwd)
+B=$(ls -d dpt_disp_case-106_plan_gate_* | tail -1)
+
+echo "=== Progress section after gate pass ==="
+grep -A1 "^## Progress" $B/rb_plan.md
+grep "setup-ready" $B/rb_plan.md
+
+# Check: setup-ready checkbox is flipped
+SETUP_LINE=$(grep "setup-ready" $B/rb_plan.md)
+PROGRESS_OK=false
+if echo "$SETUP_LINE" | grep -q '\[x\]'; then
+  if echo "$SETUP_LINE" | grep -qE '[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}'; then
+    PROGRESS_OK=true
+    echo "OK: Progress checkbox flipped with timestamp: $SETUP_LINE"
+  else
+    echo "FAIL: checkbox flipped but no timestamp"
+  fi
+else
+  echo "FAIL: setup-ready checkbox NOT flipped — line: $SETUP_LINE"
+fi
+
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_trace.jsonl',{gate:'artifact-content',passed:$PROGRESS_OK,detail:'Progress setup-ready checkbox flipped to [x] with ISO8601 timestamp'})})"
+```
+
+预期：`- [x] setup-ready (2026-06-26T…)` 行存在。
+
+## Step 5: 从 trace 裁决
+
+预期 3 条 `check` event：1 fail（placeholder 未替换 → 正确拒绝）+ 2 pass（替换后 gate pass + Progress 翻转）。
+
+```bash
+REPO_ROOT=$(pwd)
+B=$(ls -d dpt_disp_case-106_plan_gate_* | tail -1)
+
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_trace.jsonl')})"
+```
+
+## Step 6: 结果解读
+
+> 3 个 check（1 fail + 2 pass），验证 setup-ready gate 的 plan body 检查：
+>   [FAIL ✅] required-fill markers `(待填充…)` 未替换 → gate 正确拒绝，`plan_body_no_unfilled_marker` 触发
+>   [PASS]   markers 替换、intentionally-allowed markers 保留 → gate 通过
+>   [PASS]   `## Progress` 中 `setup-ready` checkbox 翻转为 `[x]` 且带时间戳
+>
+> 证明 gate 能区分 required-fill vs intentionally-allowed markers，不会误拦合法延迟标记，
+> 且 Progress 写行为幂等可靠。
+
+## Step 7: Cleanup
+
+> PASS 才执行。FAIL 时保留 bundle 现场供排查。
+
+```bash
+REPO_ROOT=$(pwd)
+B=$(ls -d dpt_disp_case-106_plan_gate_* | tail -1)
+
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
+```
