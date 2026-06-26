@@ -37,7 +37,7 @@
 ## 6. inspect-bundle 可观测性扩展
 
 - [x] 6.1 实现 `--summary` flag — 读取 `rb_trace.jsonl`，调 `traceSummary()`，输出 `{ events, passed, failed }` 表。额外输出 `_logs/run.log` 行数统计（`log: N lines`）；若行数为 0，输出 `[warning]` 提示日志可能静默失败（不改变 exit code）@impl LOC-005, TRW-004
-- [x] 6.2a 实现 `--timeline` sink 读取器 — JSONL sink parser（`rb_trace.jsonl`、`_trace_subagent.jsonl`、`_trace_agq_cli.jsonl`）：逐行 `JSON.parse`，遇 unparseable 行跳过并收集 warning；free-text sink parser（`_logs/run.log`）：regex 解析 D6.1 信封格式 `[ISO8601] LEVEL msg bundle=<name> {optional JSON}`，遇无法解析行原样标注 `[unparsed]` 插入尾部，不 crash @impl LOC-005
+- [x] 6.2a 实现 `--timeline` sink 读取器 — JSONL sink parser（`rb_trace.jsonl`、`_logs/_trace_subagent.jsonl`、`_logs/_trace_agq_cli.jsonl`）：逐行 `JSON.parse`，遇 unparseable 行跳过并收集 warning；free-text sink parser（`_logs/run.log`）：regex 解析 D6.1 信封格式 `[ISO8601] LEVEL msg bundle=<name> {optional JSON}`，遇无法解析行原样标注 `[unparsed]` 插入尾部，不 crash @impl LOC-005
 - [x] 6.2b 实现 `--timeline` merge 引擎 — 从上述 reader 收集所有带 `ts` 的条目，按 `ts` 排序合并输出，每行标注来源 sink（`[trace]`/`[subagent]`/`[queue]`/`[log]`）。依赖：task 1.4（`readBundleName`）、5.1、5.2（engine trace wrapper 注入 bundle）必须先完成——否则 3 个 JSONL sink 无 `bundle` 字段，无法按 bundle 标注 @impl LOC-005
 - [x] 6.3 实现 `--log` flag — 输出 `_logs/run.log` 全部内容 @impl LOC-005
 
@@ -80,12 +80,13 @@
 
 单元测试验证每个写入点的格式正确性，但证明不了 agent workflow 里真正发生的事——不同进程 append 同一文件的时间戳顺序、Agent 从 `## Log` 段复制 bash 命令执行、4 个 sink 真实交织后的 `--timeline` 解析、`bundle` 在 run 生命周期中途不丢失。这些是 agentic-mechanism 问题，只有 command experiment 能回答。
 
-实验 family：`exp_system-logging`，group 7。两个 case：
+实验 family：`exp_system-logging`，group 7。三个 case：
 
 - **case-71**：主 Agent + gate 路径（light）。纯 CLI/JS，不启动 subagent。验证 `writeGateAttempt` + `log-event.mjs` + `logToRun` 三种写入源产生统一信封、`bundle` 一致、`--timeline` 单 regex 全解析。
-- **case-72**：engine + subagent 路径（standard/heavy）。验证 `queue-manager.mjs` 和 `subagent-relay.mjs` 的 logger 激活，closed-set 事件写 log + trace，engine log 行与 gate/Agent log 行在 `_logs/run.log` 中自然交织。
+- **case-72**：engine + subagent 路径（standard/heavy）。验证 `queue-manager.mjs` 和 `subagent-relay.mjs` 的 logger 激活，closed-set 事件写 log + trace，engine log 行与 gate/Agent log 行在 `_logs/run.log` 中自然交织，含真实 native subagent。
+- **case-73**：production bundle 启动链路（light）。验证 `instantiate-run-bundle` → 3 个 gate（instantiation-complete, setup-ready, seed-topics-ready）→ Agent phase START/END 的完整 log trail，`--timeline` 缝合 `[trace]` + `[log]`。
 
-两个 case 合在一起覆盖全部 4 个写入源（gate/Agent/queue-manager/subagent-relay），证明统一信封 + bundle 传播 + timeline 缝合的完整闭环。
+三个 case 合在一起覆盖全部写入源（gate/Agent/queue-manager/subagent-relay/instantiate），证明统一信封 + bundle 传播 + timeline 缝合的完整闭环。实验执行中发现 `_trace*.jsonl` 在根目录违反约定（见 Section 11）。
 
 - [x] 10.1 新建 `experiments_playbook/exp_system-logging/` — 实验目录；含 `EXPERIMENT.md`（mechanism/hypothesis/result）@impl LOC-001..009
 - [x] 10.2 新建 `experiments_env/prototype-system-logging/` — fixture 目录，含 `EXPERIMENT.md`
@@ -93,3 +94,18 @@
 - [x] 10.4 新建 `case-72-standard-engine-lifecycle.md` — engine + subagent 路径：创建 bundle → queue-manager enqueue/claim/complete → subagent-relay dispatch → 启动真实 subagent → collect/merge → `inspect-bundle --timeline` 验证 engine log 与 gate log 交织 → trace 裁决 → 清理。**playbook 已就绪，待执行** @impl LOC-006
 - [x] 10.5 执行 case-71 — coding agent 按 playbook 逐步执行。结果：**PASS**（10 checks：9 normal + 1 boundary gate），bundle 已清理
 - [x] 10.6 执行 case-72 — coding agent 按 playbook 逐步执行（含真实 native subagent）。结果：**PASS**（6/6 checks：QM events + SR events + gate/Agent interleave + timeline stitch + no unparsed + repair trace），bundle 已清理
+- [x] 10.7 执行 case-73 — coding agent 按 playbook 逐步执行（production bundle + 3 gates + Agent phase log）。结果：**PASS**（10/10 checks），bundle 已清理
+
+## 11. Trace File Consolidation into `_logs/`
+
+实验验证后发现 `_trace.jsonl`、`_trace_subagent.jsonl`、`_trace_agq_cli.jsonl` 三个 `_` prefixed 文件放在 bundle 根目录，违反项目约定（`_` prefix 为内部文件，应入 `_` 子目录；只有 `rb_` prefix 权威控制文件放根目录）。全部迁入 `_logs/`，统一内部诊断产物的放置位置。`_logs/` 从 bundle 创建起就存在（`instantiate-run-bundle` 写首条 `run_start` log 时创建）。
+
+- [ ] 11.1 修改 `subagent-relay.mjs` — `ensureTrace()` path 从 `_trace_subagent.jsonl` → `_logs/_trace_subagent.jsonl`；更新注释 @impl LOC-006
+- [ ] 11.2 修改 `queue-manager.mjs` — `QUEUE.TRACE` 常量从 `_trace_agq_cli.jsonl` → `_logs/_trace_agq_cli.jsonl` @impl LOC-006
+- [ ] 11.3 修改 `inspect-bundle.mjs` — `SINK_LABELS` 和 `jsonlSinks` 数组路径更新（`_trace_subagent.jsonl` → `_logs/_trace_subagent.jsonl`、`_trace_agq_cli.jsonl` → `_logs/_trace_agq_cli.jsonl`）@impl LOC-005
+- [ ] 11.4 更新所有 experiment playbook（约 70 个 .md 文件）— 三种模式全面替换：shell 变量 `$B/_trace.jsonl` → `$B/_logs/_trace.jsonl`、inline JS 中 `join(__dirname, '_trace.jsonl')` → `join(__dirname, '_logs', '_trace.jsonl')`、frontmatter `trace:` 字段；额外替换 `case-211` 中的 `$B/_trace_agq_cli.jsonl` → `$B/_logs/_trace_agq_cli.jsonl` @impl LOC-001..009
+- [ ] 11.5 更新相关文档和工具文件 — `wff-playbook-utils.mjs` 注释、`guidelines/command-experiments.md`、`DPT_FRAMEWORK/workflows/nodes/shared/shared-schemas.md`、`DPT_FRAMEWORK/workflows/nodes/shared/shared-anti-cheating-rules.md`、`experiments_playbook/README.md` @impl LOC-001..009
+- [ ] 11.6 更新 change 自身文档 — `design.md`（4-sink 图、OQ#2、实验设计及发现）、specs（`trace-writer`、`logging-conventions`）、`tasks.md`（6.2a、Section 10 描述）中的路径引用同步为 `_logs/_trace*.jsonl` @impl LOC-001..009
+- [ ] 11.7 确保 `_logs/` 在 bundle 创建时即存在 — `instantiate-run-bundle.mjs` 和 `new-disposable-bundle.mjs` 在创建目录结构时显式 `mkdirSync` 创建 `_logs/`（目前 production 靠 `logToRun` 副作用创建，disposable 完全不创建）。`_logs/` 从 bundle 诞生起就是空目录，不需要等到首次 log/trace 写入 @impl LOC-002
+- [ ] 11.8 验证 — 重新执行 case-71/72/73，确认所有 trace 产物出现在 `_logs/` 下、`--timeline` 正常缝合、根目录不再有 `_trace*.jsonl` 文件
+- [ ] 11.9 收尾 — 更新 task 10.4 状态描述（"待执行"→已执行）、补 case-73 创建 task（10.4a）；确认 design.md backlog 节悬空引用已清理

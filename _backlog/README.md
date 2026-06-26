@@ -26,7 +26,6 @@ _backlog/
 │   ├── todo-hooks-deferral.md         #   6 个 Boundary Hook（延后）
 │   ├── todo-phase-recover.md          #   模型失焦的状态恢复——兜底（低，parked）
 │   ├── todo-context-reground.md       #   长上下文定期重锚——预防（低，parked）
-│   ├── todo-system-logging.md         #   系统日志/可观测性（中，半建成待激活）
 │   └── todo-coding-agent-setup-ux.md  #   用户手册：怎么配 coding agent 才不卡（Claude Code + Codex）
 │
 ├── _guideline/                        # 术语对齐审计（研究阶段，open）
@@ -119,8 +118,7 @@ git mv todo-<name>.md done/DONE-<name>.md
 | 5 | `todo-hooks-deferral.md` | **延后** | V12 的 6 个 Boundary Hook | evidence 管理器就位 |
 | 6 | `todo-phase-recover.md` | **低（parked）** | 模型失焦时从 ground truth 重新定位并复活当前 phase（兜底层） | 无硬阻塞；与 context-reground 真相源对齐 |
 | 7 | `todo-context-reground.md` | **低（parked）** | 长上下文定期 reload 工程总图+root question，对抗 lost-in-the-middle（预防层） | 无硬阻塞；plan-hostfile ✅ 提供 `## Goal` 北星 |
-| 8 | `todo-system-logging.md` | **中** | 系统日志/可观测性——统一 4 sink、激活死 logger、补 spec 要求却没写的事件、加 runId+读回工具 | 无硬阻塞；launch/排障前抬起。Phase 1 是纯激活死代码 |
-| 9 | `todo-coding-agent-setup-ux.md` | **中（launch 前抬起）** | 用户手册：怎么配 Claude Code/Codex 的 permission/approval 才能让框架 HITL1↔HITL2 自主跑不卡 | 无硬阻塞；真跑一次完整 research 的前置 UX 条件 |
+| 8 | `todo-coding-agent-setup-ux.md` | **中（launch 前抬起）** | 用户手册：怎么配 Claude Code/Codex 的 permission/approval 才能让框架 HITL1↔HITL2 自主跑不卡 | 无硬阻塞；真跑一次完整 research 的前置 UX 条件 |
 
 ### 🔮 分析文档中标记但未建 TODO 的待办
 
@@ -163,10 +161,10 @@ schema-core → prototype-start-from-here → gate-loop/gate-fork → workflows/
 三个 TODO（#6-8）都针对"模型在长程运行中跑糊涂 / 无法事后排查"，与核心 evidence 流水线**正交**，互不阻塞：
 
 ```
-   todo-system-logging（地基）          ← recover/reground 都把 rb_trace.jsonl + control
-        │                                  files 当 ground truth；日志不可信就没真相源
-        │                                  （且半已建成：logger.mjs 死代码、traceInit/
-        │                                   traceSummary 从不调用、repair 事件 spec 违规）
+   ~~todo-system-logging（已迁移）~~        → `/openspec/changes/system-logging/`（已实现：统一 gate 写路径、
+        │                                  激活 logger.mjs/traceInit/traceSummary、加 bundle 缝合、
+        │                                  inspect-bundle --summary/--timeline/--log）
+```
         ▼
    todo-context-reground（预防）  ──减少失焦频率──▶  todo-phase-recover（兜底）
    周期性 reload 工程总图+root Q                      失焦时从 ground truth 重定位
@@ -228,7 +226,7 @@ Phase 1 (当前)              Phase 2              Phase 3           延后     
 
 ### 三个 parked TODO（健壮性/元机制，低优先级）
 
-`todo-phase-recover` / `todo-context-reground` / `todo-system-logging`（#6-8）**不参与上述执行顺序**——它们正交于核心流水线，当前先记录、不抢跑道。其中 **`todo-system-logging` 优先级最高**（launch/排障前抬起，且半已建成、拾起来成本低），另两者低优先级 long park。
+`todo-phase-recover` / `todo-context-reground`（#6-7）**不参与上述执行顺序**——它们正交于核心流水线，当前先记录、不抢跑道，低优先级 long park。`todo-system-logging` 已迁移至 `/openspec/changes/system-logging/` 并已实现。
 
 ## 快速查阅指南
 

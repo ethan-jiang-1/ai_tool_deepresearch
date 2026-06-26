@@ -4,7 +4,7 @@
 
 这不是 greenfield 设计——基础设施和 charter 哲学（"Trace 是真相，Log 是解释"）都已经在了。问题是半成品没接上。后续所有功能（repair、fork、HITL、evidence pipeline）的排障都依赖日志能读、trace 可信。在这个基础建设补上之前，越往后欠的债越多。
 
-参考来源：`_backlog/todo-system-logging.md`（用户原话："上线后的日志实在太重要了，我们看怎么把这事儿做对"）。
+用户原话："上线后的日志实在太重要了，我们看怎么把这事儿做对"。
 
 ## What Changes
 

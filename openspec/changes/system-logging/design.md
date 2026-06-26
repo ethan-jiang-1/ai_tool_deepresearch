@@ -81,15 +81,15 @@
 - 不做 `traceCleanup()` 生产使用（删 trace 是反审计的，仅测试 teardown 用）
 - 不激活 `workflow-chain.mjs` 的 LOG-003 注入点——节点加载引擎的诊断日志留待后续 change。本 change 的 engine 激活（LOC-006）仅覆盖 `queue-manager.mjs` 与 `subagent-relay.mjs`
 
-**显式延至 Phase 2 的 backlog 条目**（`_backlog/todo-system-logging.md` 要求但本 change 不覆盖——均在 Phase 2 或后续 change 处理）：
-- fork/branch 决策 trace（`classifyBranch`/`forkRouter` 当前零 trace/log；`_backlog` §"Repair loop"）
-- HITL1/HITL2 决策内容审计（选了什么 topics、什么 rationale，当前仅 gate outcome；`_backlog` §"HITL1/HITL2 决策"）
-- 全事件 timing/duration 数据（`started_at`/`ended_at` 成对标记；`_backlog` §"Timing/duration"）
-- error/exception → trace 事件桥接（`_backlog` §"Errors/exceptions"）
-- phase transition `node_exec` 事件激活（`_backlog` §"Phase 转移/lifecycle"）
+**显式延至 Phase 2 的条目**（本 change 不覆盖——均在 Phase 2 或后续 change 处理）：
+- fork/branch 决策 trace（`classifyBranch`/`forkRouter` 当前零 trace/log）
+- HITL1/HITL2 决策内容审计（选了什么 topics、什么 rationale，当前仅 gate outcome）
+- 全事件 timing/duration 数据（`started_at`/`ended_at` 成对标记）
+- error/exception → trace 事件桥接
+- phase transition `node_exec` 事件激活
 - `run_end` 终态 marker（需先有终态 CLI/engine 钩子；design OQ#4）
-- Sink B/C（`_trace_subagent.jsonl`, `_trace_agq_cli.jsonl`）per-event-type Zod schema（design OQ#3）
-- gate-integrity 复核（trace ↔ gate result 一致性，`_backlog` §"读回/可观测性"）
+- Sink B/C（`_logs/_trace_subagent.jsonl`, `_logs/_trace_agq_cli.jsonl`）per-event-type Zod schema（design OQ#3）
+- gate-integrity 复核（trace ↔ gate result 一致性）
 
 ## Core API Design
 
@@ -305,7 +305,7 @@ These are agentic-mechanism questions, not unit-test questions. Only a command e
 
 ### Shape
 
-实验 family：`exp_system-logging`，group 7（不冲突的最小空闲号段）。两个 case：
+实验 family：`exp_system-logging`，group 7（不冲突的最小空闲号段）。三个 case：
 
 ```
 case-71-light-unified-envelope         ← 主Agent + gate 路径
@@ -339,9 +339,32 @@ case-72-standard-engine-lifecycle       ← engine + subagent 路径
   │                                             │
   │ 需真实 subagent。weight: heavy                │
   └─────────────────────────────────────────────┘
+
+case-73-light-startup-log-trail          ← production bundle 启动链路
+  ┌─────────────────────────────────────────────┐
+  │ 写入源：instantiate-run-bundle (logToRun)     │
+  │        gate CLI ×3 (writeGateAttempt)         │
+  │        log-event.mjs (Agent phase log ×6)     │
+  │                                             │
+  │ 验证：run_start → gate_attempt ×3             │
+  │       → phase START/END ×3 pairs              │
+  │       完整启动链路日志                         │
+  │       production bundle (dpt_rb_*, 非disp)    │
+  │       --timeline 缝合 [trace]+[log]           │
+  │                                             │
+  │ 不启动 subagent，纯 CLI/JS。weight: light     │
+  └─────────────────────────────────────────────┘
 ```
 
-两个 case 合在一起覆盖全部 4 个写入源（gate/Agent/queue-manager/subagent-relay），证明统一信封 + bundle 传播 + timeline 缝合的完整闭环。
+三个 case 合在一起覆盖全部写入源（gate/Agent/queue-manager/subagent-relay/instantiate），证明统一信封 + bundle 传播 + timeline 缝合的完整闭环。
+
+### Experimental Findings
+
+实验执行后发现一个设计问题，并排查了一个疑虑：
+
+1. **`_trace*.jsonl` 位置不当（设计问题，已在 Section 11 处理）**：`_trace.jsonl`（实验 verdict）、`_trace_subagent.jsonl`、`_trace_agq_cli.jsonl` 均放在 bundle 根目录，违反项目 `_` prefix 约定（内部/操作文件应入 `_` 子目录，只有 `rb_` prefix 权威控制文件放根目录）。全部迁入 `_logs/`，与 `run.log` 统一管理。`_logs/` 从 bundle 创建起即存在（`instantiate-run-bundle` 写首条 `run_start` log 时 `mkdirSync` 创建）。`inspect-bundle --timeline` 的 4 个 sink 对应更新路径。
+
+2. **Subagent slot 通讯未污染根目录（排查结论，无需处理）**：经验证，subagent relay 引擎的 slot 通讯文件（`task.md`、`result.schema.json`、`runtime-receipt.jsonl` 等）始终在 `_subagents/wave_NN/slot_MM/` 子目录下，从未散落到根目录。根目录中与 subagent 相关的仅有 `_trace_subagent.jsonl`（已在问题 1 中迁入 `_logs/`）。
 
 ### Template
 
@@ -353,7 +376,7 @@ Playbook 遵循 `guidelines/command-experiments.md` 全部 MUST/MUST NOT，包�
 
 1. **Phase Agent 手动写 log 的可靠性**：Agent 可能忘记写 `## Log` 段要求的日志点。两个低成本的 Phase 1 兜底：(a) `writeGateAttempt()` 已持有 `currentNodeRef`（如 `phases/phase-wave0.md`），可自动 deriving `phase` 字段写入 trace entry——每个 gate_attempt 自带 phase 边界标记，不依赖 Agent 手动 log；(b) runtime coordinates header（D5）让 Agent 每次读 queue projection 时看到 `--bundle` 路径，消除"忘记 bundle 值"这一子风险。follow-up：在 `inspect-bundle --timeline` 增加"缺失 phase START/END"提示（Phase 2），作为遵从度的被动观测，而非 gate 阻断。
 
-2. **`_trace_subagent.jsonl` 和 `_trace_agq_cli.jsonl` 是否也合并进 `rb_trace.jsonl`？**→ 暂不合并。三者服务不同域（gate/subagent/queue），物理分离 + bundle 缝合已足够。合并增加 schema 复杂度且打破域边界。
+2. **`_logs/_trace_subagent.jsonl` 和 `_logs/_trace_agq_cli.jsonl` 是否也合并进 `rb_trace.jsonl`？**→ 暂不合并。三者服务不同域（gate/subagent/queue），物理分离 + bundle 缝合已足够。合并增加 schema 复杂度且打破域边界。三者均已迁入 `_logs/` 子目录（`_` prefixed 内部文件遵循项目约定不入根目录）。
 
 3. **是否需要 per-event-type Zod schema for all trace entries？**→ 暂不。audit-critical（gate、repair、HITL、phase transition）在后续 Phase 2 做 schema；诊断性事件宽松。本 change 聚焦 Phase 1 约定激活。
 
