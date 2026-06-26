@@ -1,75 +1,102 @@
 ## Context
 
-`rb_plan.md` 是 bundle 的计划文件，当前的创建路径有三条：
-
-| 路径 | 来源 | Body 写入 |
-|------|------|----------|
-| Production (`instantiate-run-bundle.mjs`) | `rb_plan.md.tmpl` → `{{name}}` 替换 | `## Purpose`（占位符）+ `## Topic Registry`（占位符） |
-| Disposable (`new-disposable-bundle.mjs`) | 代码生成 | `# Deep Research Plan: <name>`（仅标题行） |
-| Agent at HITL1 (`phase-hitl1.md` §3a) | Agent 自由写 | `## Original Topic` / `## Research Question`（header 不在 template 里） |
-
-当前 body 没有任何 gate 检查。Agent 的写入行为无约束——可能忘了写、写错 section、或者没填占位符。
-
-`backlog/todo-plan-hostfile-sections.md` 提出了完整的 host file 设计（5 section + frontmatter YAML），但需要根据最近的实验经验做取舍：**Phase 1 只做 template + gate 防御，不动 Engine、不动 schema、不写 Progress。**
+`rb_plan.md` 的 body 是空壳——`## Purpose (待填充)` + `## Topic Registry (尚无话题)`。Agent 在 HITL1 做 topic rewrite 时不知道该往哪写，自创 `## Original Topic`，template 里的 `## Purpose` 从未被碰过。body 没有 gate 检查。
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Template 重写为可生长的 section 结构，Agent 知道"我该往哪写"
-- Gate 能做最基本的防御：body 非空、占位符被替换
-- 完全向后兼容——现有 bundle、现有 gate、现有 schema 不受影响
-- Frontmatter JSON → YAML，可读性提升，零代码改动
+- Template body 从 2 个空占位符变为 6 section 结构
+- `phase-hitl1.md` 指令明确指定写入 section
+- setup-ready gate 防御：body 非空、required-fill markers 被替换
+- Engine 在 gate pass 时写 `## Progress`（Phase 1 接入 setup-ready，其他 gate 后续 change 接入）
+- Frontmatter JSON → YAML
+- 提取 `stripMdFrontmatter()` 到 gate-helpers，统一所有 gate 的 pattern_match/field_non_empty 行为
+- 更新 `new-disposable-bundle.mjs` 从 template 生成 plan body（单一真相源、E2E 可测 placeholder FAIL 路径）
 
 **Non-Goals:**
-- **不实现 Engine 写 Progress**——那是 Phase 2，需要 `plan-sections.mjs` helper
-- **不激活 Constraints/Decisions section**——Phase 1 只放空占位符
-- **不改 `phase-hitl1.md`**——Agent 看到 `## Goal` 自然知道往哪写（LLM 对 section 名有容错）；将来可精化指令但非 Phase 1 必须
-- **不改 `PlanSchema`**——frontmatter 字段完全保留
-- **不加新的检查类型到 gate engine**——复用已有的 `field_non_empty`（file body 变体）和 `pattern_match`
+- 不激活 Constraints/Decisions section（保留 intentionally-allowed markers 作为空占位符）
+- 不改 `PlanSchema` frontmatter 字段
+- 不在其他 gate CLI 接入 `writePlanProgress()`（仅 setup-ready，其余 follow-up）
+
+> **Scope note（相对 `_backlog/todo-plan-hostfile-sections.md`）：** backlog 把 gate/engine/schema 改动划在 Phase 1 之外（"不动 engine、不动 gate、不动 schema"）。本 change 把 gate（2 条 body 检查 + handler）、schema（PlanSchema YAML 注记 + stripMdFrontmatter）、engine（helper 提取 + wave2/hitl2 重构 + writePlanProgress）全拉进了 Phase 1。理由：① body 检查是 template 的自然配套——template 改写后不检查等于白改；② helper 提取是现成重构机遇；③ Progress 写让 plan file 在长程 Agent 运行中保持"心跳"——防止从上下文淡忘。blast radius 比 backlog 大了，但每项都有独立动机。
 
 ## Decisions
 
-### D1: 检查点选 `setup-ready` 而非 `hitl1-recorded`
+### D1: 检查点选 `setup-ready`
 
-`hitl1-recorded` 只检查 `rb_profile.yaml` 的字段（profile schema、research_profile 非 not_selected、root_must_answer_set 非空）。此时 plan body 可能还是草稿——Agent 正在跟用户交互，body 还没写完。过早检查会 false positive。
+research waves 开始前最后一道结构闸。HITL1 已完成、topic_registry 已填充——此时 body 必须有内容。
 
-`setup-ready` 是 research waves 开始前最后一道结构闸——HITL1 已 recorded、topic_registry 已填充、seed_topics 已 materialize。此时 plan body 必须有内容——Agent 有足够的时间写，而且再不写就没有理由了。
+### D2: 两条 gate rule——最小防御 + marker 约定
 
-`seed-topics-ready` 太晚——topics 已经 materialize 了才发现 plan 是空的，修复代价高。
+模板使用两类 marker 区分"必填"与"延迟填充"：
 
-（来源：agent 3 对比了所有 gate 的生命周期位置和检查类型）
+| Marker class | Examples | Gate 行为 |
+|-------------|----------|----------|
+| Required-fill | `(待填充 — …)`, `(尚无话题 — …)` | FAIL — Agent 必须替换 |
+| Intentionally-allowed | `(待 HITL1 填充 — …)`, `(由 Engine — …)`, `(待 HITL2 确认 — …)` | PASS — 合法延迟 |
 
-### D2: 只加最小防御，不做质量判断
+Gate rules:
 
-两条 rule：
-1. `field_non_empty` — target 是 `rb_plan.md` body（strip frontmatter → check remaining non-empty）。防御"Agent 完全忘了写"
-2. `pattern_match` negate — pattern `/(待填充)|(尚无话题)/`。防御"Agent 没填模板占位符"
+| Rule | Check Type | Target | 防什么 |
+|------|-----------|--------|--------|
+| `plan_body_non_empty` | `field_non_empty` | `rb_plan.md` body | Agent 忘了写（完全空 body） |
+| `plan_body_no_unfilled_marker` | `pattern_match` (negate) | `\((?:待填充\|尚无话题)` | Agent 没替换 required-fill marker |
 
-不做的事：
-- 不检查 goal 内容质量（"Purpose 写得好不好"——那是人的事）
-- 不检查 topic_registry table 格式（Phase 1 body table 非权威——frontmatter 是权威）
-- 不检查 Constraints/Progress/Decisions section（可选，空的允许）
+`field_non_empty` handler 的分支解析顺序：target 含 `#/` → YAML path 变体（现有逻辑）；target 以 `.md` 结尾 → file body 变体（strip frontmatter → check 剩余非空）。不含 `#/` 且不以 `.md` 结尾 → fail closed（报 "unknown field_non_empty target"）。此顺序与 hitl2-recorded gate 一致。
 
-（来源：agent 1 发现 `field_non_empty` file body 变体和 `pattern_match` negate 已在 wave1/wave2/hitl2 gate 中实现，可以直接移植模式）
+### D3: Template — `## Purpose` → `## Goal`，JSON → YAML
 
-### D3: Template 最小改动，保留旧结构
+Frontmatter 字段名不变。JSON→YAML——`parseMdFrontmatter()` 基于 `parseYaml()`，YAML 1.2 是 JSON 超集，parser 代码零改动。
 
-不改 frontmatter 字段名。`plan_basename`、`derived_topic_count`、`topic_registry` 全部保留。
+```
+## Goal                   ← Agent 写（HITL1），required-fill markers
+  ### Purpose
+  ### Research Questions
+  ### Scope
+## Topic Registry        ← Markdown table，intentionally-allowed marker
+## Constraints           ← intentionally-allowed marker (待 HITL1 填充)
+## Progress              ← Engine 写（gate pass 翻转 checkbox）
+## Decisions             ← intentionally-allowed marker (append-only)
+```
 
-JSON → YAML 是纯安全操作——`parseMdFrontmatter()` 用 `parseYaml()`（`yaml` npm 包）实现，YAML 1.2 是 JSON 超集。现成的一行 JSON 照样能 parse。
+### D4: 提取 `stripMdFrontmatter()` 并统一 pattern_match 行为
 
-Body 改动：`## Purpose` 改名为 `## Goal`（加子节 `### Purpose`/`### Research Questions`/`### Scope`），`## Topic Registry` 从文本占位符换成 Markdown table 模板。以下新增：`## Constraints`、`## Progress`、`## Decisions`——全是空占位符。
+`stripMdFrontmatter()` 已在 wave2-complete 和 hitl2-recorded 中重复。setup-ready 是第 3 个 caller。`parseMdFrontmatter()` 已存在——`stripMdFrontmatter()` 是其自然逆操作。
 
-（来源：agent 2 调查了所有 case 文件——没有 case 使用 `## Purpose` header。Agent 实际写的是 `## Original Topic`。改名零影响）
+**一并统一 `pattern_match`：** 当前 wave2 的 `pattern_match` 不对目标文件 strip frontmatter（读原始 `content`），且 flag 用 `'i'`；setup-ready 的 `pattern_match` 会先 strip 再 match，flag 用 `'g'`。借 helper 提取之机统一：所有 gate 的 `pattern_match` 对 `.md` 文件统一先 `stripMdFrontmatter()` 再匹配，去掉无意义的 `'g'` flag（每个 rule 新建 regex 只 `.test()` 一次，`'g'` 的 `lastIndex` 有状态是隐患）。同步更新 wave2-complete。
 
-### D4: `field_non_empty` file body 变体在 gate CLI 中实现，不提取到 gate-helpers
+### D5: 更新 `phase-hitl1.md` §3a 指令
 
-按 framework README 原则：新增 check type 先在需要它的 gate CLI 中实现，>=2 个 CLI 共用时再提取。当前 `field_non_empty` file body 变体存在于 wave2 和 hitl2 两个 gate（代码相同：`content.replace(/^---[\s\S]*?---\n?/, '').trim()`）。加上 setup-ready 就是第 3 个——但实际上这 3 处的用法相同，可以考虑提取。Phase 1 在 `check-gate-setup-ready.mjs` 中直接实现（复用同一行代码），Phase 2 考虑提取到 gate-helpers 作为 `readPlanBody()` 或类似的 helper。
+Agent 不会因为 template 改了 section 名就自动换地方写。指令必须明确。
 
-（来源：agent 1 发现 strip-frontmatter 代码在 wave2 和 hitl2 中重复）
+§3a step 2: "写入 `rb_plan.md` 正文" → "写入 `rb_plan.md` 的 `## Goal` section。至少填写 `### Purpose`（一段话概述研究目标）。`### Research Questions` 和 `### Scope` 按 HITL1 用户提供的信息填写——信息不足时标注 `(待 HITL2 确认)`，不编造。"
 
-## Risks / Trade-offs
+### D6: 一次性实施
 
-- **现有 bundle 的 `rb_plan.md` 没有 `## Goal` section** → 不是问题。Gate 只检查 body 非空+无占位符，不要求特定 section 名。旧 bundle 如果 body 有内容（如 `## Original Topic`），检查通过。
-- **Agent 可能把 goal 写在 `## Original Topic` 下而不是 `## Goal`** → Phase 1 不强制 section 名。如果后续发现 Agent 一直用旧 header，可以在 `phase-hitl1.md` §3a 中加明确指令。当前 LLM 对 section 名有容错——看到 `## Goal` 自然知道这是放 goal 的地方。
-- **YAML frontmatter 特殊字符风险** → topic title 含 `:` 需加引号。YAML 中：`title: "EV: 电池技术"`。低风险——几乎所有 title 都不含 YAML 特殊字符。
+Template + gate + phase node + start-research.md 一起上。四者互为补充。
+
+### D7: gate 的 body 检查是"文件级"非"section 级"
+
+`field_non_empty` 检查的是 `rb_plan.md` 整个 body（strip frontmatter 后）是否有内容——不是 `## Goal` section 是否填写。新 template 的 H1 标题 + section header 本身就构成"非空 body"。实际干活的是 `plan_body_no_unfilled_marker`——它通过 marker 约定间接定位 Goal 子节：只有 Goal 子节用 required-fill marker `(待填充…)`，保留节用 intentionally-allowed marker。这意味着 gate PASS 不等于 Goal 已填写——Agent 把 marker 删了却啥也没写也能 PASS。这是 design intent，不是缺陷——Phase 1 不做 section-level 校验，marker 约定已覆盖 90% 的"忘了填"情况。
+
+### D8: Engine 写 `## Progress` —— 长程 Agent 心跳
+
+长程 Agent 运行中，不改动的文件会从上下文渐渐淡忘。`rb_plan.md` 如果从头到尾不变一字，而 `rb_status.json`/`rb_queue.json`/`rb_trace.jsonl` 持续跳动——Agent 注意力自然流失。Progress 更新是保持 plan file 在上下文窗口中存活的"心跳"。
+
+- `## Progress` 预列所有 gate 的 checkbox（`- [ ] <gate>`），初始全未勾
+- Engine 在 gate pass 后翻转对应行：`- [x] <gate> (<ISO8601 ts>)`
+- 幂等：重跑同一 gate 只更新时间戳、不重复行
+- gate 列表从 template 预填（workflow manifest 的已知生命周期 gate）
+- `writePlanProgress()` 放 `gate-helpers.mjs`，与 `writeGateAttempt()` 同级
+- Phase 1 仅 `check-gate-setup-ready.mjs` 接入；其他 gate 后续 change 逐步接
+- try/catch 包裹，写失败不影响 gate 输出
+
+## Risks
+
+- **marker 约定依赖模板纪律** — `plan_body_no_unfilled_marker` 靠"只有 Goal 子节用 required-fill marker"这一约定精准定位。模板变更时若把保留节也改成 `(待填充…)`，gate 会误报。Mitigation：marker 约定已编码进 PHS-002 spec 与 design D2。模板作者须遵守。
+- **marker pattern 只覆盖中文** — 将来新模板引入非中文 marker 需同步更新 gate pattern。当前 required-fill marker 前缀为 `(待填充` 和 `(尚无话题`，regex `\((?:待填充|尚无话题)` 用 prefix match 覆盖 `(待填充 — 任意描述…)` 变体。
+- **`plan_body_non_empty` 近乎空转** — 对任何系统生成的 bundle 恒真（模板有 6 个 section 标题）；只对手工/出 bug 的空 body 有效。保留它是因为代价极低（一行 rule 配置），且捕获的是与 marker 正交的"Agent 完全没写任何东西"模式。
+- **helper 提取后 wave2/hitl2 行为回归** — `stripMdFrontmatter()` 替换内联代码后，如果正则或 trim 逻辑有细微差异，wave2-complete 和 hitl2-recorded gate 会静默改变行为。Mitigation：提取前先写单元测试锁定当前 behavior，替换后跑相关 gate 的集成测试。同步统一 `pattern_match` 的 strip 行为。
+- **`start-research.md` 与 `phase-hitl1.md` 指令冲突** — `start-research.md` Step 3 指示 Agent append `## Research Question`，`phase-hitl1.md` §3a 指示写入 `## Goal`。如果不更新 `start-research.md`，Agent 会在 `rb_plan.md` 里创建两个 section，内容重复。Mitigation：本 change 同步更新 `start-research.md` Step 3，新增 PHS-002 scenario 覆盖此指令变更。
+- **disposable bundle 分裂** — `new-disposable-bundle.mjs:150` 内联生成 JSON frontmatter + 1 行 body，不走 `rb_plan.md.tmpl`。如果不更新，disposable/experiment bundle 永远是旧格式，`plan_body_no_unfilled_marker` 的 FAIL 路径在 controlled E2E 里永远触发不了。Mitigation：本 change 更新 `new-disposable-bundle.mjs` 从 template 生成 plan body（YAML + 6 section + required-fill markers）。同步新增 E2E case 验证 placeholder FAIL → PASS 路径。
+- **gate PASS 不等于 Goal 已填写** — `field_non_empty` 是文件级检查，不是 section 级。Agent 删掉 marker 却啥也没写也能 PASS。这不是缺陷——Phase 1 不做 section 级校验，marker 约定已覆盖约 90% 的"忘了填"——但需在 spec 里明确文档化，防止将来误解。
