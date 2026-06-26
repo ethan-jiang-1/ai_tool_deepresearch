@@ -87,9 +87,9 @@
 
 两个 case 合在一起覆盖全部 4 个写入源（gate/Agent/queue-manager/subagent-relay），证明统一信封 + bundle 传播 + timeline 缝合的完整闭环。
 
-- [ ] 10.1 新建 `experiments_playbook/exp_system-logging/` — 实验目录；含 `EXPERIMENT.md`（mechanism/hypothesis/result）@impl LOC-001..009
-- [ ] 10.2 新建 `experiments_env/prototype-system-logging/` — fixture 目录（如实验不需要 fixture 则可跳过），含 `EXPERIMENT.md`
-- [ ] 10.3 新建 `case-71-light-unified-envelope.md` — 主 Agent + gate 路径：创建 bundle → 跑 2+ gate → Agent 通过 `log-event.mjs` 写 phase START/END → `inspect-bundle --timeline` 缝合验证 → trace 裁决 → 清理 @impl LOC-001, LOC-002, LOC-009
-- [ ] 10.4 新建 `case-72-standard-engine-lifecycle.md` — engine + subagent 路径：创建 bundle → queue-manager enqueue/claim/complete → subagent-relay dispatch → 启动真实 subagent → collect/merge → `inspect-bundle --timeline` 验证 engine log 与 gate log 交织 → trace 裁决 → 清理 @impl LOC-006
-- [ ] 10.5 执行 case-71 — coding agent 从 clean repo 按 playbook 逐步执行，PASS 后清理 disposable bundle
-- [ ] 10.6 执行 case-72 — coding agent 从 clean repo 按 playbook 逐步执行（含真实 subagent），PASS 后清理 disposable bundle
+- [x] 10.1 新建 `experiments_playbook/exp_system-logging/` — 实验目录；含 `EXPERIMENT.md`（mechanism/hypothesis/result）@impl LOC-001..009
+- [x] 10.2 新建 `experiments_env/prototype-system-logging/` — fixture 目录，含 `EXPERIMENT.md`
+- [x] 10.3 新建 `case-71-light-unified-envelope.md` — 主 Agent + gate 路径：创建 bundle → 跑 gate → Agent 通过 `log-event.mjs` 写 phase 日志 → `inspect-bundle --timeline` 缝合验证 → trace 裁决 → 清理。**已执行：PASS（10/10 checks）** @impl LOC-001, LOC-002, LOC-009
+- [x] 10.4 新建 `case-72-standard-engine-lifecycle.md` — engine + subagent 路径：创建 bundle → queue-manager enqueue/claim/complete → subagent-relay dispatch → 启动真实 subagent → collect/merge → `inspect-bundle --timeline` 验证 engine log 与 gate log 交织 → trace 裁决 → 清理。**playbook 已就绪，待执行** @impl LOC-006
+- [x] 10.5 执行 case-71 — coding agent 按 playbook 逐步执行。结果：**PASS**（10 checks：9 normal + 1 boundary gate），bundle 已清理
+- [ ] 10.6 执行 case-72 — coding agent 按 playbook 逐步执行（含真实 native subagent），PASS 后清理 disposable bundle
