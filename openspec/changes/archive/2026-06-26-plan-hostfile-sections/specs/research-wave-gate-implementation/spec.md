@@ -1,6 +1,6 @@
 > req: RWG-001, RWG-014
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Setup-ready gate validates bundle structural integrity
 

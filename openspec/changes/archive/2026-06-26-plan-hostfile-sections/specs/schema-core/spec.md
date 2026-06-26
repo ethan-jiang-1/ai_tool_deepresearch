@@ -1,6 +1,6 @@
 > req: SCO-002, SCO-012
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: PlanSchema validates frontmatter fields
 
@@ -15,8 +15,6 @@ PlanSchema SHALL validate `plan_basename` (string), `derived_topic_count` (numbe
 
 - **WHEN** `rb_plan.md` frontmatter uses JSON format (from older template or disposable bundle)
 - **THEN** `parseMdFrontmatter()` SHALL still parse it correctly (YAML 1.2 is JSON superset)
-
-## ADDED Requirements
 
 ### Requirement: stripMdFrontmatter extracts body from Markdown
 
