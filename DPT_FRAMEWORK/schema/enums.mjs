@@ -31,6 +31,7 @@ export const ResearchProfile = z.enum([
   'quick_factual',
   'exploratory_map',
   'claim_verification',
+  'debug',
 ]);
 
 export const GateResult = z.enum(['pass', 'fail']);

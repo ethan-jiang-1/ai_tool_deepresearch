@@ -16,6 +16,8 @@ import {
   writeGateAttempt,
   readTraceEvents,
   readBundlePlan,
+  readBundleProfile,
+  resolveThreshold,
 } from '../../engine/helpers/gate-helpers.mjs';
 import {
   ReferenceMetadataArraySchema,
@@ -60,6 +62,13 @@ function getStatus() {
   if (!existsSync(p)) return null;
   _statusCache = JSON.parse(readFileSync(p, 'utf-8'));
   return _statusCache;
+}
+
+let _profileCache = null;
+function getProfile() {
+  if (_profileCache !== null) return _profileCache;
+  _profileCache = readBundleProfile(bundlePath);
+  return _profileCache;
 }
 
 /**
@@ -149,6 +158,7 @@ for (const rule of definition.rules) {
           }
         }
       } else if (rule.check === 'count_floor') {
+        const threshold = resolveThreshold(rule, getProfile());
         let count = 0;
         if (resolvedTarget.includes('*')) {
           // Glob mode: count files matching wildcard pattern
@@ -158,9 +168,9 @@ for (const rule of definition.rules) {
             const regex = new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '[^/]*') + '$');
             count = readdirSync(targetDir).filter(f => regex.test(f)).length;
           }
-          if (count < rule.threshold) {
+          if (count < threshold) {
             rulePassed = false;
-            ruleDetail = `Count floor not met for ${resolvedTarget}: ${count} files (threshold: ${rule.threshold})`;
+            ruleDetail = `Count floor not met for ${resolvedTarget}: ${count} files (threshold: ${threshold})`;
             if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
           }
         } else {
@@ -168,9 +178,9 @@ for (const rule of definition.rules) {
           const filePath = join(bundlePath, resolvedTarget);
           const arr = readYamlArray(filePath);
           count = arr ? arr.length : 0;
-          if (count < rule.threshold) {
+          if (count < threshold) {
             rulePassed = false;
-            ruleDetail = `Count floor not met for ${resolvedTarget}: ${count} entries (threshold: ${rule.threshold})`;
+            ruleDetail = `Count floor not met for ${resolvedTarget}: ${count} entries (threshold: ${threshold})`;
             if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
           }
         }
@@ -192,6 +202,91 @@ for (const rule of definition.rules) {
         if (events.length === 0) {
           rulePassed = false;
           ruleDetail = `Trace event "${rule.target}" not found in rb_trace.jsonl`;
+        }
+      } else if (rule.check === 'pattern_match') {
+        // pattern_match with optional glob support in target path
+        let content;
+        let matchedFiles = [];
+        if (resolvedTarget.includes('*')) {
+          // Glob mode: target contains wildcard — expand to matching files
+          const targetDir = join(bundlePath, dirname(resolvedTarget));
+          const globPattern = basename(resolvedTarget);
+          if (existsSync(targetDir) && statSync(targetDir).isDirectory()) {
+            const regex = new RegExp('^' + globPattern.replace(/\./g, '\\.').replace(/\*/g, '[^/]*') + '$');
+            const files = readdirSync(targetDir).filter(f => regex.test(f));
+            matchedFiles = files.map(f => ({
+              path: join(targetDir, f),
+              relPath: join(dirname(resolvedTarget), f),
+            }));
+          }
+          if (matchedFiles.length === 0) {
+            if (!rule.negate) {
+              rulePassed = false;
+              ruleDetail = `No files matching glob ${resolvedTarget} for pattern_match`;
+              if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+            }
+          }
+        } else {
+          // Single-file mode
+          const filePath = join(bundlePath, resolvedTarget);
+          if (!existsSync(filePath)) {
+            rulePassed = false;
+            ruleDetail = `Cannot read file for pattern_match: ${resolvedTarget}`;
+            if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+          } else {
+            content = readFileSync(filePath, 'utf-8');
+          }
+        }
+
+        if (ruleDetail === null) {
+          const re = new RegExp(rule.pattern, 'i');
+
+          if (matchedFiles.length > 0) {
+            // Glob mode: check each matched file
+            for (const mf of matchedFiles) {
+              let fileContent;
+              try { fileContent = readFileSync(mf.path, 'utf-8'); } catch { continue; }
+              const matched = re.test(fileContent);
+
+              if (rule.negate) {
+                if (matched) {
+                  rulePassed = false;
+                  const cleanDesc = (rule.failure_message || rule.pattern).replace(/\{topic\}/g, exp.topic || '{topic}');
+                  ruleDetail = `Forbidden content in ${mf.relPath}: ${cleanDesc}`;
+                  if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+                  break;
+                }
+              }
+            }
+            if (!rule.negate && rulePassed) {
+              const anyMatched = matchedFiles.some(mf => {
+                try { return re.test(readFileSync(mf.path, 'utf-8')); } catch { return false; }
+              });
+              if (!anyMatched) {
+                rulePassed = false;
+                const cleanDesc = (rule.failure_message || rule.pattern).replace(/\{topic\}/g, exp.topic || '{topic}');
+                ruleDetail = `Required marker not found in any file matching ${resolvedTarget}: ${cleanDesc}`;
+                if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+              }
+            }
+          } else if (content !== undefined) {
+            const matched = re.test(content);
+            if (rule.negate) {
+              if (matched) {
+                rulePassed = false;
+                const cleanDesc = (rule.failure_message || rule.pattern).replace(/\{topic\}/g, exp.topic || '{topic}');
+                ruleDetail = `Forbidden content in ${resolvedTarget}: ${cleanDesc}`;
+                if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+              }
+            } else {
+              if (!matched) {
+                rulePassed = false;
+                const cleanDesc = (rule.failure_message || rule.pattern).replace(/\{topic\}/g, exp.topic || '{topic}');
+                ruleDetail = `Required marker not found in ${resolvedTarget}: ${cleanDesc}`;
+                if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+              }
+            }
+          }
         }
       } else {
         rulePassed = false;

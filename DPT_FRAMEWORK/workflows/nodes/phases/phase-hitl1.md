@@ -66,6 +66,30 @@ topic_registry:
 - 将 `human_decision_checkpoints.hitl1.status` 设为 `recorded`
 - 将 `human_decision_checkpoints.hitl1.recorded_at` 设为当前 ISO 8601 timestamp
 
+### 3c. Research Style Parameters（研究风格参数应用）
+
+用户选择 `research_profile` 后，Agent MUST 运行 **`apply-research-style.mjs` CLI** 将对应研究风格的参数写入 `rb_profile.yaml`。该 CLI 是参数计算的**唯一权威**——Agent 不读 JSON style 文件、不做乘法、不手写参数。
+
+**操作步骤：**
+
+1. **跑 CLI**：
+   ```bash
+   node DPT_FRAMEWORK/cli/apply-research-style.mjs --bundle <path> --style <research_profile>
+   ```
+   例如 `--style claim_verification`。CLI 自动读取 `topic_registry` 长度、计算 topic-count-dependent 值（如 `wave0_shared_ref_total`）、将所有参数写入 `rb_profile.yaml#/research_style_params`、更新 `research_profile` 字段。
+
+2. **验证输出**：读 stdout JSON。确认：
+   - `applied` 匹配用户选择的 profile
+   - `topic_count` 匹配 `rb_plan.md` 中的 topic_registry 长度
+   - `wave0_shared_ref_total` 在合理范围（例如 `claim_verification` 3 个 topic 应为 `12`；若 topic_count=0 则只等于 base 值 `6`——这是合法的，后续 seed-topics 物化后 topic_count 会更新）
+   - exit code = 0（非 0 → 读 stderr → 排查原因 → 重跑）
+
+3. **无需自检参数一致性**：CLI 是 JS 确定性计算——同一个 style JSON + 同一个 topic_count 一定产出相同结果。参数正确性由 CLI 保证，不由 Agent 自检保证。
+
+**风格选项展示**：向用户展示 research profile 选项时，只展示 `user_visible: true` 的风格（`quick_factual`、`exploratory_map`、`claim_verification`）。`debug` 风格 (`user_visible: false`) 不展示——仅用于开发/测试。
+
+**参数不被 gate 二次验证**：`research_style_params` 的正确性依赖 CLI 的确定性计算——HITL1 gate 只验证 `research_profile ≠ not_selected`，不对比 JSON 源文件与 profile 内容是否一致。`apply-research-style.mjs` 是参数 computation 的 trust root，其输出由测试保证正确性。
+
 ## 4. Expected Artifacts
 
 `rb_profile.yaml` 中以下字段已写入：
@@ -77,6 +101,7 @@ topic_registry:
 | `plan_basename` | `rb_profile.yaml#/plan_basename` | 已由 instantiation 写入，确认未被误改 |
 | `research_profile` | `rb_profile.yaml#/research_profile` | ≠ `not_selected`；用户从 `quick_factual`、`exploratory_map`、`claim_verification` 中选择 |
 | `root_must_answer_set` | `rb_profile.yaml#/root_must_answer_set` | 非空字符串数组 |
+| `research_style_params` | `rb_profile.yaml#/research_style_params` | 从 `DPT_FRAMEWORK/schema/research-styles/<profile>.yaml` 逐字段抄入，不得跳过任何字段。Agent 写入后自检一致性（§3c 步骤 3） |
 | `hitl1.status` | `rb_profile.yaml#/human_decision_checkpoints/hitl1/status` | = `recorded` |
 | `hitl1.recorded_at` | `rb_profile.yaml#/human_decision_checkpoints/hitl1/recorded_at` | 非空 ISO 8601 timestamp |
 
@@ -95,6 +120,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle <path> --cur
 读取 CLI 返回的 `inspect` / `advice`，补充缺失字段或修正默认值后 rerun same gate。常见 fail 原因：
 - `research_profile` 仍为 `not_selected` → 确认用户选择后写入
 - `root_must_answer_set` 为空 → 确认用户 must-answer 问题后写入
+- `research_style_params` 缺失或不完整 → 按 §3c 步骤重新从 YAML 抄入
 - `hitl1.status` 不是 `recorded` → 写入 `recorded`
 - `hitl1.recorded_at` 缺失 → 写入当前时间戳
 

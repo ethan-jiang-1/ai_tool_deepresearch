@@ -44,20 +44,22 @@ suggested_context:
 **Task card JSON 模板（写入临时文件如 `/tmp/wfq-wave1-{topic.slug}.json`）：**
 
 > **模板变量来源**：`topic_registry` 数组中的每个条目含 `id`、`slug`、`title` 三个字段。模板中 `{topic.slug}` 取 `slug` 字段值，`{topic.title}` 取 `title` 字段值。搜索关键词从 `seed_topics/{topic.slug}.md` 的 `search_guardrails.required_terms` 和 `## 待验证问题` 中的 open questions 派生。
+>
+> **参考文件产出说明**：Wave1 deepening 需为每个获取的 source 页面产出 `reference/{topic.slug}-<source-slug>.md` 富文本 MD 文件（格式见 `shared-reference-template.md`）。单次 deepening 产出的文件数量依 topic 信息密度而定（通常 1-5 个）。若总数未达到 `rb_profile.yaml#/research_style_params/wave1_per_topic_ref_floor` 的动态阈值，下游由 **§3.3.2 Count-Floor Re-Fill Loop** 通过 supplementary task 补齐——本 task card 不承担达到阈值的责任。
 
 ```json
 {
   "work_id": "wave1-deepen-{topic.slug}",
   "title": "Deepen topic: {topic.title}",
   "targets": { "controller": "main-agent", "delegates": { "to": "sub-agent", "role_key": "dpt-evidence-extractor", "timeout_ms": 600000 } },
-  "action": "对 [{topic.title}] 做 topic-specific 深度搜索。从 seed_topics/{topic.slug}.md 的 search_guardrails 和 open questions 派生搜索关键词。使用 WebSearch 找到至少 1 条可信的 topic-specific 深度证据来源，使用 WebFetch 获取每个来源的页面内容。如果 WebFetch 被阻止，必须走降级链：curl -L → node fetch → python3 urllib，全部失败才可报告 inaccessible。提取关键发现（mechanisms）、趋势（trends）、难点（pain points），以及当前问题的状态更新。写入 artifacts/wave1/{topic.slug}/evidence-summary.md（含 source URL、key findings、open questions 三部分）。搜索中间结果写入你的 slot 对应的缓存目录——不要写入共享目录。",
+  "action": "对 [{topic.title}] 做 topic-specific 深度搜索。从 seed_topics/{topic.slug}.md 的 search_guardrails 和 open questions 派生搜索关键词。使用 WebSearch 找到至少 1 条可信的 topic-specific 深度证据来源，使用 WebFetch 获取每个来源的页面内容。如果 WebFetch 被阻止，必须走降级链：curl -L → node fetch → python3 urllib，全部失败才可报告 inaccessible。提取关键发现（mechanisms）、趋势（trends）、难点（pain points），以及当前问题的状态更新。写入 artifacts/wave1/{topic.slug}/evidence-summary.md（含 source URL、key findings、open questions 三部分）。同时，对于获取到的每个来源页面，写入一个 reference/{topic.slug}-<source-slug>.md 富文本 MD 文件，格式必须严格遵循 shared-reference-template.md：metadata block（含 source_url、acceptance_status、source_type、tier、evidence_role、trust_level、why_it_matters、accessed_at、related_topic 共 9 个必填字段）+ 5 个 ## 标准 section（Key Facts、Core Content Capture、Relevance To This Research、Quotable Terms / Concepts、Risks And Limitations）。<source-slug> 为描述 source 核心内容的 kebab-case 标识符。将原始 WebSearch 结果、抓取页面和 source 元信息写入 `_cache/wave1/primary/{topic.slug}/`：每个 source 在 `sNN_<source-slug>/` 子目录下保存 `websearch.json`（原始搜索结果）、`page.md`（页面内容）、`meta.json`（11 字段：url, title, source_domain, source_name, fetched_at, fetch_method, fetch_chain, content_type, reliability_tier, reliability_basis, whitelist_status）。NN 从 01 开始递增，<source-slug> 与 reference/ 文件名 qualifier 一致。",
   "producer_rule": "topic_deepening",
   "lineage": {"topic_slug": "{topic.slug}", "phase": "wave1"},
   "priority_class": "P4_progressive_artifact_or_seed_backfill",
   "required_receipts": ["file:artifacts/wave1/{topic.slug}/evidence-summary.md", "file:artifacts/wave1/{topic.slug}/question-list.md"],
-  "done_condition": "artifacts/wave1/{topic.slug}/evidence-summary.md 存在（含至少 1 条 source URL 和 key findings section 非空），artifacts/wave1/{topic.slug}/question-list.md 存在（含四节结构：Topic Investigation Targets、Question Reconciliation、Emergent Question Protocol、Exploration/Exploitation Decision）",
-  "verification": {"engine": ["receipt_check"], "agent": ["url_accessible", "key_findings_non_empty", "question_list_four_sections", "open_questions_canonical_labels"]},
-  "writes_to": ["artifacts/wave1/{topic.slug}/evidence-summary.md", "artifacts/wave1/{topic.slug}/question-list.md"],
+  "done_condition": "artifacts/wave1/{topic.slug}/evidence-summary.md 存在（含至少 1 条 source URL 和 key findings section 非空），artifacts/wave1/{topic.slug}/question-list.md 存在（含四节结构：Topic Investigation Targets、Question Reconciliation、Emergent Question Protocol、Exploration/Exploitation Decision），且至少 1 个 reference/{topic.slug}-*.md 文件存在（含完整 9 字段 metadata block 和 5 个 ## section header）",
+  "verification": {"engine": ["receipt_check"], "agent": ["url_accessible", "key_findings_non_empty", "question_list_four_sections", "open_questions_canonical_labels", "reference_metadata_9_fields", "reference_5_sections"]},
+  "writes_to": ["artifacts/wave1/{topic.slug}/evidence-summary.md", "artifacts/wave1/{topic.slug}/question-list.md", "reference/{topic.slug}-<source-slug>.md（每个 source 一个文件）"],
   "status_sync": ["wave1_deepening"],
   "completion_receipt": "file:artifacts/wave1/{topic.slug}/evidence-summary.md",
   "failure_route": "queue_repair",
@@ -191,17 +193,146 @@ last_updated: YYYY-MM-DD
 2. 检查 artifact 完整性：
    - 对于 `topic_registry` 中的每个 topic， `artifacts/wave1/{topic.slug}/evidence-summary.md` 是否存在、含至少 1 条 source URL、key findings section 非空
    - 对于 `topic_registry` 中的每个 topic， `artifacts/wave1/{topic.slug}/question-list.md` 是否存在、含全部四节（Topic Investigation Targets、Question Reconciliation、Emergent Question Protocol、Exploration/Exploitation Decision）
-3. 跑 gate：
+   - 对于 `topic_registry` 中的每个 topic，reference count 是否 ≥ `rb_profile.yaml#/research_style_params/wave1_per_topic_ref_floor`（gate CLI 动态校验）
+3. **Stop Conditions 自检**（见 §3.3.1 — 跑 gate 前必须逐条确认）
+4. 跑 gate（含 **§3.3.2 Count-Floor Re-Fill Loop** —— gate fail 时自动进入自主补充循环）：
 ```bash
 node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle <path> --current-node phases/phase-wave1.md
 ```
-4. gate pass → 读取 `check.next` → 加载 `phase-wave2.md`
-5. gate fail → 按 §7 On Gate Fail 处理
+5. gate pass → 读取 `check.next` → 加载 `phase-wave2.md`
+6. gate fail → 按 §3.3.2 和 §7 处理
+
+#### 3.3.1 Stop Conditions Checklist（跑 Gate 前自检）
+
+Agent MUST 在跑 gate 之前逐条确认以下 stop conditions。这不是 gate rule——gate 不做内容级验证，Agent 自己逐条确认后跑 gate。条件 5 和 6 的行为随 `research_style_params` 变化。
+
+| # | Condition | 确认方式 |
+|---|-----------|---------|
+| 1 | **Core object list stable** — 关键实体、机制、概念在近期搜索轮次中未发生显著变化 | 检查 question-list.md 的 Topic Investigation Targets 表，确认无新增 emergent question 多轮未收敛 |
+| 2 | **Must-answer entries backed** — 每个 `answer_phase=wave1_topic` 的 confirmed must-answer entry 已 answered / partially answered / downgraded / queue-backed（含本地 reference path） | 遍历 root_must_answer_set 中的问题，确认在 evidence-summary.md 或 question-list.md 中有对应引用 |
+| 3 | **Synthesis entries have Wave 2 route** — 每个 `answer_phase=wave2_synthesis` 的 confirmed must-answer entry 保留为 `synthesis_pending` 且有具体的 Wave 2 路线 | 确认 question-list.md Exploration/Exploitation Decision 中有 `queue_consequence: 移交 wave2` |
+| 4 | **Limitation search attempted** — 已为每个 topic 尝试搜索 limitation、dispute、或 failure-mode | 检查 evidence-summary.md 的 Key Findings 中有无 `**趋势观察**:` 或 `**难点**:` 条目（至少 1 条） |
+| 5 | **Counterexample search** — **强制** 当 `research_style_params.counterexample_search: true`；disconfirming evidence 或 failure mode search MUST be attempted | 读 `rb_profile.yaml#/research_style_params/counterexample_search`。若 `true`：question-list.md 的 Emergent Question Protocol 中 `contradiction` 项必须为 `checked` 且有具体内容（不能是 `none`）。若 `false`：跳过此条件 |
+| 6 | **Cross-verification** — **强制** 当 `research_style_params.cross_verification: true`；official/authoritative claims MUST 被 independent sources 交叉验证 | 读 `rb_profile.yaml#/research_style_params/cross_verification`。若 `true`：evidence-summary.md 中至少 1 条 key finding 引用 ≥2 个不同 source URL（交叉验证）。若 `false`：单 source 可接受 |
+| 7 | **Remaining unknowns listed** — 所有已知 gap、open question、unresolvable uncertainty 均显式记录 | 检查 question-list.md 的 Question Reconciliation section 中有 `[仍开放]` 条目和原因说明 |
+
+**Enforcement boundary（本 change）：** 以上 7 条是 Agent discipline——由 phase-wave1.md body 约束，不由 gate rule 验证。条件 5/6 升级为 gate rule 留给 `todo-explore-exploit`；条件 2/3 的 must-answer 验证留给 `todo-evidence-extraction`。本 change 只有 `wave1_per_topic_ref_floor`（条件 2 引用 count 的 floor）通过 gate `count_floor` rule 的 `threshold_source` 做 Gate enforcement。
+
+#### 3.3.2 Count-Floor Re-Fill Loop（reference 数量不足时的自主补充循环）
+
+当 gate 因 `per_topic_ref_md_count_floor` 规则失败时，Phase Agent 进入自主补充循环——读 gate inspect → 识别不足 topic → 创建 supplementary task card → enqueue + drain → rerun gate。此循环完全静默，无需用户介入（`stop: no`）。
+
+**架构依据**：Queue guideline §5.3 Rule 3——Q empty + gate fail → gate is authority，Phase Agent MAY re-fill Q to address specific gaps。Count-floor re-fill 是此规则在 wave1 的具体应用。
+
+**Loop 流程：**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  1. 跑 gate（§3.3 step 4 的 CLI 命令）                    │
+│         │                                               │
+│  ┌──────┼──────────┐                                    │
+│  │      │          │                                    │
+│ pass   fail      fail (other rules)                     │
+│  │   (count_floor)    │                                 │
+│  ▼      │          ▼                                    │
+│ exit    │    按 §7 表逐条修复 → rerun gate               │
+│ loop    │                                               │
+│         ▼                                               │
+│  2. 解析 gate inspect：                                  │
+│     从 "Count floor not met for reference/*...*.md:      │
+│     N files (threshold: T) (topic: <slug>)" 中           │
+│     提取每个不足 topic 的 slug、当前数 N、阈值 T            │
+│     gap = T - N                                          │
+│         │                                               │
+│         ▼                                               │
+│  3. attempt_count ≥ 3? → escalation                      │
+│         │                                               │
+│         ▼                                               │
+│  4. no-progress?（同一 topic 的 count 连续两次未增加）      │
+│     → escalation                                         │
+│         │                                               │
+│         ▼                                               │
+│  5. 为每个不足 topic 创建 supplementary task card          │
+│     （模板见下方）→ 写入临时文件                             │
+│         │                                               │
+│         ▼                                               │
+│  6. 批量 enqueue：                                        │
+│     operate-queue enqueue <bundle>                       │
+│       --task /tmp/wfq-wave1-suppl-{slug}-r{N}.json        │
+│         │                                               │
+│         ▼                                               │
+│  7. Drain queue：claim → Sub-agent execute → complete     │
+│     （relay slot → spawn → collect → 写 reference/*.md）   │
+│         │                                               │
+│         ▼                                               │
+│  8. Rerun gate（回到步骤 1）                               │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Supplementary task card JSON 模板**（写入临时文件如 `/tmp/wfq-wave1-suppl-{topic.slug}-r{attempt}.json`）：
+
+> **模板变量**：`{topic.slug}`、`{topic.title}` 来自 topic_registry。`{target_count}` 为 Phase Agent 从 gate inspect 计算的 gap（阈值 - 当前数）。`{attempt}` 为当前 gate attempt 序号（1-based；首次补充为 attempt 1）。
+
+```json
+{
+  "work_id": "wave1-suppl-{topic.slug}-r{attempt}",
+  "title": "Supplementary reference intake: {topic.title} (attempt {attempt})",
+  "targets": { "controller": "main-agent", "delegates": { "to": "sub-agent", "role_key": "dpt-evidence-extractor", "timeout_ms": 600000 } },
+  "action": "对 [{topic.title}] 做补充 reference 搜集——不重复完整 deepening。目标：找到至少 {target_count} 个尚未在 reference/ 目录中的新增来源。先读 artifacts/wave1/{topic.slug}/evidence-summary.md 的 Source URLs 和现有 reference/{topic.slug}-*.md 文件的 source_url metadata，确认已有哪些来源，避免重复。使用 WebSearch 搜索不同角度的新增来源（不同于已有 URL 的 domain 或视角）。使用 WebFetch 获取每个新增来源的页面内容。如果 WebFetch 被阻止，必须走降级链：curl -L → node fetch → python3 urllib，全部失败才可报告 inaccessible。对每个新增来源，写入一个 reference/{topic.slug}-<source-slug>.md 富文本 MD 文件（按 shared-reference-template.md 完整格式：metadata block 含 9 个必填字段 source_url/acceptance_status/source_type/tier/evidence_role/trust_level/why_it_matters/accessed_at/related_topic + 5 个 ## section: Key Facts/Core Content Capture/Relevance To This Research/Quotable Terms / Concepts/Risks And Limitations）。<source-slug> 为描述 source 核心内容的 kebab-case 标识符。不得修改或覆盖现有 artifacts/wave1/{topic.slug}/evidence-summary.md 或 question-list.md——此 task 只产出 reference/*.md 文件。将原始搜索/抓取内容写入 `_cache/wave1/suppl-r{attempt}/{topic.slug}/`：每个新 source 在 `sNN_<source-slug>/` 下保存 `websearch.json` + `page.md` + `meta.json`（11 字段）。NN 从已有 source 数量+1 开始递增，<source-slug> 与 reference/ 文件名 qualifier 一致。
+
+**关键约束（防止占位符 reference）：**
+- **禁止占位符 URL**：不得创建 source_url 为 https://example.com 或任何等效占位符 URL（如 placeholder.com、fake-url.com 等）的 reference 文件。每个 reference 文件必须来自真实的 WebSearch + WebFetch 获取的页面，source_url 必须指向可访问的真实网页。
+- **最低内容标准**：每个新 reference 文件的 ## Key Facts section 必须包含至少 3 条具体的、可验证的事实陈述——不得使用泛化描述如 "Collected during wave1 deepening phase" 或 "See primary reference files"。
+- **诚实失败**：如果经彻底搜索后（至少 3 个不同搜索角度、多种关键词组合）无法找到新增的合法来源：**不得创建占位符 reference 文件**。改为写入 artifacts/wave1/{topic.slug}/suppl-failure-r{attempt}.md，内容包括：搜索关键词列表、尝试的搜索角度（至少 3 个）、为何未能找到新来源（搜索空间已耗尽 / 所有搜索结果均为已收录来源 / 页面无法访问等具体原因）。Phase Agent 会在 drain 后检查此文件，据此判断是否需要 escalation。",
+  "producer_rule": "topic_deepening",
+  "lineage": {"topic_slug": "{topic.slug}", "phase": "wave1", "trigger": "count_floor_repair", "attempt": {attempt}},
+  "priority_class": "P1_state_or_gate_repair",
+  "required_receipts": [],
+  "done_condition": "至少 1 个新的 reference/{topic.slug}-*.md 文件被写入（含完整 metadata block 9 个必填字段和 5 个 ## section header），且 source_url 不与已有 reference/{topic.slug}-*.md 的 source_url 重复",
+  "verification": {"engine": [], "agent": ["reference_metadata_9_fields", "reference_5_sections", "source_url_not_duplicate", "evidence_summary_not_modified", "question_list_not_modified"]},
+  "writes_to": ["reference/{topic.slug}-<source-slug>.md（每个新增 source 一个文件）"],
+  "status_sync": ["wave1_deepening"],
+  "completion_receipt": null,
+  "failure_route": "queue_repair",
+  "payload": {"topic_slug": "{topic.slug}", "topic_title": "{topic.title}", "target_count": {target_count}, "attempt": {attempt}}
+}
+```
+
+**Supplementary task card 与 primary deepening task card 的关键差异：**
+
+| 维度 | Primary deepening (§3.1) | Supplementary re-fill (§3.3.2) |
+|------|--------------------------|-------------------------------|
+| 产出文件 | evidence-summary.md + question-list.md + reference/*.md | **仅** reference/*.md |
+| `priority_class` | `P4_progressive_artifact_or_seed_backfill` | `P1_state_or_gate_repair` |
+| `required_receipts` | evidence-summary.md + question-list.md | `[]`（reference count 是 gate 职责） |
+| `completion_receipt` | evidence-summary.md 文件路径 | `null`（Phase Agent 通过 gate rerun 验证增量） |
+| 对已有产出的行为 | 初次创建 | 只追加新 reference 文件，禁止修改 evidence-summary 或 question-list |
+| 触发条件 | 首次进入 wave1 | gate `per_topic_ref_md_count_floor` 失败 |
+
+**Drain 注意事项：**
+
+- Supplementary task 的 `required_receipts: []`、`completion_receipt: null`——`operate-queue complete` 的 receipt check 不判定 pass/fail。Phase Agent 在 Sub-agent 返回后**手动验证**：检查 reference/ 目录下新增了匹配 `{topic.slug}` 的文件，且新文件含完整 metadata + 5 sections。若 Sub-agent 未能产出有效 reference 文件 → `operate-queue fail` → engine 自动生成 repair task → Phase Agent 修复或进入下一个 gate attempt。
+- **占位符检测（Post-Drain Placeholder Check）**：drain 完成后、rerun gate 之前，Phase Agent MUST 执行占位符检测。检查本轮新写入的 reference/{topic.slug}-*.md 文件的 source_url metadata：
+  - 若任何新文件的 `source_url` 为 `https://example.com` 或等效占位符 URL（`placeholder.com`、`fake-url.com` 等）→ **立即视为 no-progress**，删除占位符文件（`rm reference/{topic.slug}-ref-*.md` 中 source_url 为占位符的文件），不等满 3 次 attempt，直接 escalation。
+  - 若 Sub-agent 写入了 `artifacts/wave1/{topic.slug}/suppl-failure-r{attempt}.md`（表示搜索空间已耗尽）→ 同样视为 no-progress，立即 escalation。Escalation 时注明 "search space exhausted for topic {topic.slug} after {N} real sources found, supplementary attempt {attempt} produced only failure report"。
+  - 若至少 1 个新 reference 文件有真实 source_url（非占位符）→ 保留有效文件，继续 rerun gate。
+- Supplementary task 的 `action` 以 `{target_count}` 告诉 Sub-agent 目标数量，但 Sub-agent 可能找不到那么多合法来源。这是预期行为——gate rerun 会重新计算 gap，触发下一轮补充。只要产出至少 1 个有效 reference 文件就算 partial success，不要因未达到 `{target_count}` 就 fail the task。
+- 补充循环期间**不重新回填 seed topic**——backfill token 已在首次 deepening 完成后替换完毕。Supplementary task 不产生新的 mechanism/trend/question 内容。
+
+**Loop 终止条件：**
+
+| 条件 | 行为 |
+|------|------|
+| Gate pass（所有 count_floor 规则通过） | 退出 loop，进入 §6 On Gate Pass |
+| 所有 count_floor 已通过，但其他规则仍 fail | 退出 re-fill loop，按 §7 表逐条修复 → rerun gate |
+| `attempt_count ≥ 3` 且 count_floor 仍未通过 | Escalation：`rb_status.json` → `state: "blocked"` + `blocked_reason: "wave1 count_floor not met after 3 attempts"`，记录 escalation trace event |
+| No-progress：连续两次 gate attempt 的 inspect 中同一 topic 的 reference count 未增加；**或**本轮 supplementary round 产出的全部新 reference 文件 source_url 均为占位符 URL（如 `example.com`）；**或** Sub-agent 写入了 `suppl-failure-r{attempt}.md` | Escalation：不等满 3 次，立即记录。占位符：删除占位符文件后 escalation，注明 "search space exhausted for topic {topic.slug} after {N} real sources found, supplementary attempt {attempt} produced only placeholders"。诚实失败：注明 suppl-failure-r{attempt}.md 中的具体原因 |
 
 ## 4. Expected Artifacts
 
 - `artifacts/wave1/{topic}/evidence-summary.md`（对于 topic_registry 中的每个 topic，含至少 1 条 source URL + key findings（prefix `**机制理解**:`/`**趋势观察**:`）+ open questions（标签 `[开放]`/`[部分解答]`/`[涌现]`））
 - `artifacts/wave1/{topic}/question-list.md`（对于 topic_registry 中的每个 topic，与 evidence-summary.md 成对存在。四节结构：Topic Investigation Targets 表、Question Reconciliation（`[已解决]`/`[部分进展]`/`[仍开放]`/`[需内部数据]`）、Emergent Question Protocol（4 项检查）、Exploration/Exploitation Decision（decision + unresolved_questions + queue_consequence + next_action）。单轮模式下 decision 固定为 `continue`）
+- 对于每个 topic，`reference/*{topic}*.md` 的 rich MD 文件数量 ≥ `rb_profile.yaml#/research_style_params/wave1_per_topic_ref_floor`（gate CLI 通过 `threshold_source` 动态校验）
 - `seed_topics/{slug}.md` 中所有 `__BACKFILL_WAVE1_MECHANISMS__`、`__BACKFILL_WAVE1_TRENDS__`、`__BACKFILL_PENDING_QUESTIONS__` token 已被替换（无 stale token）
 - `rb_trace.jsonl` 中有 `wave1_completion` event（通过 CLI 写入）：
   ```bash
@@ -241,9 +372,10 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave2_complete
 | `__BACKFILL_WAVE1_*__` token stale（未替换） | grep 定位 stale token → 从 evidence-summary 提取内容 → 替换 token 行 |
 | `trace_event_present` fail | 确认已记录 `wave1_completion` trace event |
 | status drift | 恢复 `current_gate`/`next_gate` 为 `wave1_complete`/`wave2_complete` |
+| `per_topic_ref_md_count_floor` fail：某 topic 的 `reference/*{topic}*.md` 数量 < `rb_profile.yaml#/research_style_params/wave1_per_topic_ref_floor` 的动态阈值 | **进入 §3.3.2 Count-Floor Re-Fill Loop**：读 gate inspect → 解析不足 topic 和 gap → 创建 supplementary task card（`work_id: wave1-suppl-{topic.slug}-r{N}`，只产出 reference/*.md，不修改 evidence-summary/question-list）→ enqueue + drain → rerun gate。最多 3 次 gate attempt（含初始）。No-progress（同一 topic count 连续两次未增）→ immediate escalation |
 | registry 为空 | 回到 HITL1 补充 topic_registry |
 
-**Persistent failure：** 若 wave1 gate 连续 3 次修复无进展，记录 escalation。
+**Persistent failure：** 若 wave1 gate 连续 3 次修复无进展（含 count_floor re-fill attempt），记录 escalation 到 `rb_status.json`（`state: blocked`，`blocked_reason` 描述具体 fail 原因和 attempt 次数）和 `rb_trace.jsonl`（`gate_attempt` entry with `escalated: true`）。
 
 ## 8. Stop Behavior
 

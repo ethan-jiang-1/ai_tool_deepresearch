@@ -112,7 +112,7 @@ function logEvent(level, event, detail) {
   if (_log) _log[level](event, detail);
 }
 
-export const MAX_CONCURRENT_SUBAGENTS = 4;
+export const MAX_CONCURRENT_SUBAGENTS = 8;
 
 export const Branch = z.enum(['pass', 'fail_a', 'fail_b', 'blocked']);
 export const SlotStatus = z.enum(['pending', 'running', 'done', 'failed']);
@@ -409,6 +409,9 @@ function resultJsonSchemaForSlot(slotConfig) {
 
 function taskMarkdownForSlot(slotConfig) {
   const parsed = SlotConfig.parse(slotConfig);
+  const cacheSection = parsed.cacheDir
+    ? `## Cache Directory\n\nWrite raw intermediate products (search results, fetched pages, extraction notes) to:\n\n\`${parsed.cacheDir}\`\n\nFor each web source found, create a subdirectory \`sNN_{source-slug}/\` containing:\n- \`websearch.json\` — raw WebSearch result\n- \`page.md\` — fetched page content\n- \`meta.json\` — \`{url, title, source_domain, source_name, fetched_at, fetch_method, fetch_chain, content_type, reliability_tier, reliability_basis, whitelist_status}\`\n\n`
+    : '';
   return `# DPT Subagent Task: ${parsed.key}
 
 ## Role
@@ -425,7 +428,7 @@ ${parsed.taskDescription}
 - Read this slot's \`result.schema.json\`.
 - Use only bounded information in this task and sources you inspect yourself.
 
-## Output
+${cacheSection}## Output
 
 Return strict JSON to the parent agent. The JSON must match \`result.schema.json\`.
 
@@ -442,13 +445,14 @@ The parent performs Parent Relay: it validates your JSON and writes \`result.jso
 `;
 }
 
-function buildSpawnPrompt(slot, baseDir, platform = 'codex') {
+function buildSpawnPrompt(slot, baseDir, platform = 'codex', cacheDir = null) {
   const s = SubagentSlot.parse(slot);
+  const cacheLine = cacheDir ? `Cache directory: ${cacheDir}\n` : '';
   return `You are being launched as DPT role ${s.roleAgentKey} for slot ${s.key}.
 
 Platform: ${platform}
 Slot directory: ${path.join(baseDir, path.dirname(s.taskPath))}
-Task file: ${path.join(baseDir, s.taskPath)}
+${cacheLine}Task file: ${path.join(baseDir, s.taskPath)}
 Result schema: ${path.join(baseDir, s.schemaPath)}
 Runtime receipt: ${path.join(baseDir, s.receiptPath)}
 Runtime receipt nonce: ${s.receiptNonce}
@@ -461,7 +465,7 @@ Return strict JSON only. Do not write workflow state. Do not pass gates, repair 
 The parent will validate your JSON and write durable slot files.`;
 }
 
-function createDispatchManifest(slotConfigs, state, baseDir, waveIndex) {
+function createDispatchManifest(slotConfigs, state, baseDir, waveIndex, cacheDirBySlotKey = null) {
   ensureTrace(baseDir);
   const configs = z.array(SlotConfig).parse(slotConfigs);
   if (configs.length > MAX_CONCURRENT_SUBAGENTS) {
@@ -477,10 +481,14 @@ function createDispatchManifest(slotConfigs, state, baseDir, waveIndex) {
     const slot = createSlot(config, waveIndex);
     slots.push(slot);
 
+    // Resolve per-slot cache directory if map provided
+    const perSlotCacheDir = cacheDirBySlotKey?.[config.key] || null;
+    const configWithCache = perSlotCacheDir ? { ...config, cacheDir: perSlotCacheDir } : config;
+
     const slotDir = path.join(baseDir, `_subagents/${waveDir}/${slotDirName(config.slotIndex)}`);
     mkdirSync(slotDir, { recursive: true });
 
-    writeFileSync(path.join(slotDir, 'task.md'), taskMarkdownForSlot(config));
+    writeFileSync(path.join(slotDir, 'task.md'), taskMarkdownForSlot(configWithCache));
     writeFileSync(path.join(slotDir, 'result.schema.json'), JSON.stringify(resultJsonSchemaForSlot(config), null, 2));
     writeFileSync(path.join(slotDir, '_status.json'), JSON.stringify({
       status: 'pending',

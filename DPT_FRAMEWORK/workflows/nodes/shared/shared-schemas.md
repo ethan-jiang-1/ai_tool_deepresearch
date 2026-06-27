@@ -162,7 +162,7 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 
 以下目录以 `_` 前缀命名，gate 不检查其内容。它们是运行时暂存区，不属于 authority artifact surface：
 
-- **`_cache/`**：Sub-agent 中间产物（搜索结果缓存、抓取页面、提取笔记）。Wave0→`_cache/wave0/slot_MM/`，Wave1→`_cache/wave1/slot_MM/`，Wave2→`_cache/wave2/slot_MM/`。
+- **`_cache/`**：Sub-agent 网络原始内容缓存，四级目录 `{wave}/{batch}/{scope}/{source_dir}/`。每个 source 写 `websearch.json` + `page.md` + `meta.json`（11 字段：url, title, source_domain, source_name, fetched_at, fetch_method, fetch_chain, content_type, reliability_tier, reliability_basis, whitelist_status）。Phase Agent spawn 前 `mkdir -p`，通过 spawn prompt 传递绝对路径。Non-authority，wave 完成后可清理对应 wave 子目录。详见 `_cache/README.md`。
 - **`_subagents/`**：Sub-agent relay slot 目录，由 `subagent-relay.mjs` 自动管理。每个 slot 含 `task.md` / `result.schema.json` / `runtime-receipt.jsonl` / `result.json`。Wave0→`wave_00/`，Wave1→`wave_01/`，Wave2→`wave_02/`。
 
 ## Final Delivery

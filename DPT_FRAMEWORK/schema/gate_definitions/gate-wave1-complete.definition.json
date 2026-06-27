@@ -25,7 +25,16 @@
       "check": "count_floor",
       "target": "reference/*{topic}*.md",
       "threshold": 1,
+      "threshold_source": "rb_profile.yaml#/research_style_params/wave1_per_topic_ref_floor",
       "failure_message": "Topic {topic} has fewer than 1 reference/*{topic}*.md rich MD file. Create at least one topic-slug-prefixed reference file per shared-reference-template.md."
+    },
+    {
+      "id": "no_example_com_ref_url",
+      "check": "pattern_match",
+      "target": "reference/{topic}-*.md",
+      "pattern": "source_url:\\s*\"https?://(www\\.)?example\\.com\"",
+      "negate": true,
+      "failure_message": "Reference file for {topic} contains placeholder source_url (example.com). Delete the placeholder file and write a real reference or suppl-failure-r{N}.md instead."
     },
     {
       "id": "question_list_has_four_sections",

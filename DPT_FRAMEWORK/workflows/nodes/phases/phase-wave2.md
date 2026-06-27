@@ -4,8 +4,6 @@ id: phase-wave2
 phase: wave2
 gate: wave2-complete
 stop: "no"
-max_gapfill_iterations: 2
-max_gapfill_subagents_per_round: 3
 requires:
   - shared/shared-schemas
   - shared/shared-subagent-protocol
@@ -61,122 +59,189 @@ Wave2 是最后一个 research phase——产出不是 final report，而是经�
 
 **Phase 1 — Synthesis task**（先执行，`P2_close_open_loop` 优先级）：
 
-Claim → execute synthesis with embedded finding triage + targeted search loop → complete.
+Claim → execute synthesis（cross-topic scan + finding triage + initial search + narrative projection）→ complete.
 
-#### Finding Triage + Targeted Search Loop 协议
+#### Synthesis Task 协议（单轮执行）
 
 ```
  1. 读取所有 topic 的 evidence-summary.md + question-list.md
+    同时读取 `rb_profile.yaml#/research_style_params` 获取 wave2 参数：
+    — wave2_cross_topic_depth（每 topic 至少连几个其他 topic）
+    — wave2_emergent_search_rounds（每 topic 做几轮 emergent search）
+    — p0p1_independent_backing（P0/P1 finding 最少 backing 数）
+    — quality_min_tier / quality_min_substance（backing source 质量底线）
 
  2. 建立 cross-topic scan matrix
     — 记录哪些 topic pair 被检查
     — 检查 shared_pattern / contradiction / resolution_opportunity /
       emergent_question 四个维度
-    — topic_count ≤ 5 时默认检查所有 pair
+    — 每个 topic 至少与 wave2_cross_topic_depth 个其他 topic 建立 connection
     — 即使 pair 无 finding 也记录（finding_ids: "none"）
     → 写入 cross-topic-ledger.md §Cross-Topic Scan Matrix
 
  3. 将 findings 写入 ledger/index
-    — 三类 finding：
-      · wave1_legacy_question（来自 Wave1 question-list [仍开放]/[部分进展]）
-      · cross_topic_resolution（A topic 的问题被 B/C topic evidence 回答）
-      · cross_topic_emergent_question（Wave1 不存在、Wave2 拉通后首次出现）
+    — 三类 finding（不变）
     → 写入 cross-topic-ledger.md（reasoning）
     → 写入 finding-index.yaml（id/type/status/decision/refs 等 11 field）
 
- 4. 对每个 finding 做 exploration/exploitation decision
-    — use_existing_evidence → 用已有 evidence 整合（不搜索）
-    — exploit_search → 窄域定向补搜（legacy question）
-    — explore_search → 有限探索（emergent question）
-    — defer_hitl2 → 进入 HITL2 handoff
-    — requires_internal_data → 进入 HITL2 handoff
-    — record_only → 记录为 open/deferred
+ 4. 对每个 finding 做 exploration/exploitation decision（6 种 decision，不变）
     → 更新 finding-index.yaml 的 decision 和 search_required 字段
 
- 5. 跑 JS feedback check（L0/L1）
-    ```bash
-    node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs \
-      --bundle <path> --current-node phases/phase-wave2.md --feedback-level L0
-    ```
-    L0 检查：三件套文件存在、ledger 含 6 个固定 section、index YAML parse、
-           finding 字段完整（11 required field）、scan matrix 存在
-    L1 检查：resolution.search_required=false、emergent.affected_topics ≥ 2、
-           每个 finding 有 type/decision/status/refs
-    → fail: 读取 inspect/advice → 修复 ledger/index → rerun（L0 立即修）
-    → pass: 继续
-
- 6. 仅对 decision=exploit_search|explore_search 的 finding spawn Sub-agent
-    — spawn dpt-topic-scout Sub-agent（直接 spawn，不走 queue delegates）
-    — Sub-agent 读取 phase-wave2-subagent.md
-    — Sub-agent 只做 WebSearch + WebFetch → 返回结构化 JSON
-    — Sub-agent 不做 cross-topic synthesis judgment
-    — 每轮最多 spawn max_gapfill_subagents_per_round（默认 3）个 Sub-agent
+ 5. 对 decision=exploit_search|explore_search 的 finding spawn Sub-agent
+    — spawn dpt-topic-scout Sub-agent（sub-agent role 不变）
+    — 每 finding 做 1 轮搜索（更多的 emergent search round 由 §3.3.2 Re-Fill Loop 追加）
     → ingestion receipt → 更新 finding-index.yaml 的 receipt_refs + status
-    → 如果 Sub-agent 返回了有价值的跨 topic source：
-        Phase Agent 将其 promote 到 reference/00-cross-<slug>.md（rich MD，格式见 shared-reference-template.md）
-        （topic_tag=shared，notes 注明 finding_id + source_layer: wave2_cross_topic）
+    → 有价值的跨 topic source → promote 到 reference/00-cross-<slug>.md
 
- 7. 跑 JS feedback check（L1）
-    检查：receipt refs 存在（exploit/explore_search 必须有 receipt）、
-          status 已更新、失败/不可访问的搜索如实记录
-    → fail: 修复 receipt/status/decision（L1 同一 finding 最多 2 次尝试）
-    → pass: 继续
+ 6. 跑 JS feedback check（L0/L1）（不变）
 
- 8. 写 synthesis.md 作为 narrative projection
-    — 面向人类阅读的 cross-topic narrative
-    — 组织最终综合判断、关键 patterns、残留问题
-    — 引用 Wave0/Wave1 artifacts（Markdown links）
-    — 引用 W2F-xxx finding id（让 narrative 可追溯回 ledger/index）
-    — 不作为动态 finding source of truth
+ 7. 写 synthesis.md 作为 narrative projection（不变）
 
- 9. 跑 JS feedback check（L1）
-    检查：narrative 引用 W2F-xxx finding id、无 unknown finding id、
-          无 orphan finding（appears_in_synthesis=false AND hitl2_handoff=false）
-    → fail: 补 ledger finding 或降级 claim / 投影到 synthesis 或 HITL2 或
-            mark record_only
-    → pass: 继续
+ 8. 跑 JS feedback check（L1）（不变）
 
-10. 收敛判断
-    — 无新 finding → 收敛
-    — 达 max_gapfill_iterations（默认 2）→ 强制收敛，unresolved finding
-      必须进入 HITL2 Handoff 或 record_only，不能静默消失
-    — 所有剩余 finding 均为 requires_internal_data/defer_hitl2/record_only →
-      收敛
-    → 回到步骤 3 继续迭代，或 complete queue task
+ 9. Complete queue task
+    — 本 task 只做一轮 synthesis + search
+    — 不在此 task 内部循环收敛
+    — quality 达标（cross-topic depth / emergent rounds / backing 质量）
+      由下游 §3.3.2 Quality Re-Fill Loop 通过 Q 自主循环保证
 ```
 
-**Phase 2 — Backfill tasks**（synthesis 完成 + finding triage loop 收敛后执行）：
+**Phase 2 — Backfill tasks**（synthesis task complete 后执行）：
 
-1. Claim backfill task
-2. `grep -n '__BACKFILL_WAVE2_JUDGMENT__' seed_topics/{slug}.md` 定位 token
-3. 从 Wave2 ledger/index 投影 finding（筛选 `affected_topics` 包含该 topic 的 finding）
-4. 替换 `__BACKFILL_WAVE2_JUDGMENT__` token 行为跨 topic 判断（保留 source_layer + finding id）
-5. `grep -n '__BACKFILL_PENDING_QUESTIONS__'` 定位 token
-6. 更新问题状态标签：
-   - `[开放]` → `[部分解答]`（被 cross-topic resolution 或 search 解答）
-   - 保持 `[开放]`（仍无解答）
-   - 新增 cross-topic emergent question 标记为 `[涌现]` 并保留 `source_layer: wave2_cross_topic`
-7. 替换 `__BACKFILL_PENDING_QUESTIONS__` token 行
-8. Complete（queue receipt 只验证 `file:` 前缀；token absence 由 gate 验证）
+（逻辑不变——backfill 从 ledger/index 投影替换 seed topic token）
 
-**行为约束：**
-- Synthesis 本体必须完成 + finding triage loop 收敛后才能开始 backfill
+**行为约束（更新）：**
 - Backfill 必须从 ledger/index 投影，不直接从 synthesis.md narrative 摘抄
 - 每个 backfill 有独立 queue task + file receipt
 - Token 替换的 deterministic 验证在 wave2 gate 中完成
 
-### §3.3 收尾与 Gate
+### §3.3 收尾与 Quality Self-Check
 
 1. 检查三件套 artifact 均存在（synthesis.md + cross-topic-ledger.md + finding-index.yaml）
 2. 检查 ledger 含 6 个固定 section、index 可 parse
 3. 检查所有 backfill token 已被替换
-4. 跑 gate：
+4. **Quality Self-Check**（见 §3.3.1 — 跑 gate 前必须逐条确认 5 个 wave2 参数）
+5. 跑 gate（含 **§3.3.2 Quality Re-Fill Loop** — quality gap 时自动进入自主补充循环）：
    ```bash
    node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs \
      --bundle <path> --current-node phases/phase-wave2.md
    ```
-5. gate pass → 读 `check.next`，advance to `hitl2`
-6. gate fail → 按 §7 On Gate Fail 处理
+6. gate pass → 读 `check.next`，advance to `hitl2`
+7. gate fail → 按 §3.3.2 和 §7 处理
+
+#### §3.3.1 Quality Self-Check（跑 Gate 前逐条确认 wave2 参数达标）
+
+Agent MUST 在跑 gate 之前读 `rb_profile.yaml#/research_style_params`，逐条检查以下 5 个 wave2 参数。这不是 gate rule——gate 不做内容级质量验证。Agent 自己逐条确认后跑 gate。不达标的维度标记为 gap，由 §3.3.2 Quality Re-Fill Loop 通过 Q 自主补充。
+
+| # | Parameter | Check | 确认方式 |
+|---|-----------|-------|---------|
+| 1 | `p0p1_independent_backing` | 每个 P0/P1 finding 的 `backing_refs` 数量 ≥ 阈值 | 遍历 finding-index.yaml 中 status≠deferred 的 finding，检查 backing_refs 数组长度 |
+| 2 | `quality_min_tier` | 每个 backing source 的 tier ≥ 阈值 | 检查 backing ref 指向的 reference/*.md 文件 metadata block 中的 tier 字段 |
+| 3 | `quality_min_substance` | 每个 backing source 的 substance ≥ 阈值 | 同上——检查 reference/*.md 的 metadata block |
+| 4 | `wave2_cross_topic_depth` | 每 topic 在 scan matrix 中至少与 N 个其他 topic 有 connection | 读 cross-topic-ledger.md §Cross-Topic Scan Matrix 表，统计每个 topic 出现的 pair 数。depth=0 → 跳过此条件。depth≥1 → 每个 topic 至少在 N 个 pair 中出现。若某 topic 的 pair 数 < depth → gap |
+| 5 | `wave2_emergent_search_rounds` | 每 topic 至少完成 N 轮 emergent search，每轮不同搜索角度 | 检查 finding-index.yaml 中 type=emergent 的 finding 的 search 执行记录。rounds=0 → 跳过此条件。rounds≥1 → 每 topic 至少有 N 个 type=emergent finding 已完成搜索（status≠pending_search）。若不足 → gap |
+
+**Enforcement boundary:** 以上 5 条是 Agent discipline——由 phase-wave2.md body 约束，不由 gate rule 验证。Gate 做 structural 检查（文件存在、section 完整、YAML parse），不做内容级质量判断。
+
+#### §3.3.2 Quality Re-Fill Loop（quality gap 时的自主补充循环）
+
+当 Quality Self-Check 发现 gap，Phase Agent 进入自主补充循环——创建针对性 supplementary task card → enqueue + drain Q → re-run Quality Self-Check → gate。此循环完全静默（`stop: no`），模式与 wave0 §3.3.1 / wave1 §3.3.2 完全一致。
+
+**Loop 流程：**
+
+```
+Quality Self-Check → all pass? → gate
+         │
+         │ gap found
+         ▼
+  解析 gap type + target + magnitude
+         │
+         ▼
+  attempt_count ≥ 3? → escalation
+         │ no
+         ▼
+  为每种 gap 创建 supplementary task card → enqueue Q
+         │
+         ▼
+  Drain Q（claim → Sub-agent execute → complete）
+         │
+         ▼
+  Re-run Quality Self-Check（回到顶部）
+```
+
+**Loop 终止条件：** 与 wave0/wave1 一致——全部 5 项通过 → gate；attempt ≥3 → escalation；no-progress（连续两次同一维度的 gap 未缩小）→ escalation。
+
+**Supplementary task card 模板：**
+
+三种 gap 对应三种 task card。Phase Agent 根据 Quality Self-Check 的 gap 类型选择对应模板：
+
+**A. Backing gap**（backing 数量不足或质量不达标）— `work_id: wave2-suppl-backing-{finding_id}-r{attempt}`：
+
+```json
+{
+  "work_id": "wave2-suppl-backing-{finding_id}-r{attempt}",
+  "title": "Supplementary backing search: {finding_id}",
+  "targets": { "controller": "main-agent", "delegates": { "to": "sub-agent", "role_key": "dpt-evidence-extractor", "timeout_ms": 600000 } },
+  "action": "为 finding {finding_id}（标题: {finding_title}，类型: {finding_type}）寻找更多/更高质量的 backing source。当前 backing: {current_count} 个，需要至少 {target_count} 个。quality_min_tier={min_tier}，quality_min_substance={min_substance}。先读现有 finding-index.yaml 和 reference/ 中已有的 backing ref，确认已有来源，避免重复。使用 WebSearch 搜索新增来源（不同于已有 URL 的 domain 或视角），WebFetch 获取内容，写入 reference/00-cross-<slug>.md（rich MD，按 shared-reference-template.md 格式：9 字段 metadata block + 5 section）。更新 finding-index.yaml 中该 finding 的 backing_refs 数组。不修改 synthesis.md 或 cross-topic-ledger.md。将原始搜索/抓取内容写入 `_cache/wave2/backing-r{attempt}/{finding_id}/`：每个 source 在 `sNN_<source-slug>/` 下保存 `websearch.json` + `page.md` + `meta.json`（11 字段）。",
+  "producer_rule": "topic_deepening",
+  "lineage": {"finding_id": "{finding_id}", "phase": "wave2", "trigger": "quality_backing_gap", "attempt": {attempt}},
+  "priority_class": "P1_state_or_gate_repair",
+  "required_receipts": [],
+  "done_condition": "至少 1 个新的 reference/00-cross-*.md 文件被写入（含完整 metadata 且 tier≥{min_tier}、substance≥{min_substance}），且 finding-index.yaml 中该 finding 的 backing_refs 已更新",
+  "verification": {"engine": [], "agent": ["source_url_not_duplicate", "tier_meets_min", "substance_meets_min", "backing_refs_updated"]},
+  "writes_to": ["reference/00-cross-<slug>.md", "finding-index.yaml（backing_refs 更新）"],
+  "completion_receipt": null,
+  "failure_route": "queue_repair",
+  "payload": {"finding_id": "{finding_id}", "target_count": {target_count}, "min_tier": "{min_tier}", "min_substance": "{min_substance}", "attempt": {attempt}}
+}
+```
+
+**B. Cross-topic depth gap**（某 topic 的 cross-topic connection 不足）— `work_id: wave2-suppl-cross-{topic.slug}-r{attempt}`：
+
+```json
+{
+  "work_id": "wave2-suppl-cross-{topic.slug}-r{attempt}",
+  "title": "Supplementary cross-topic search: {topic.title}",
+  "targets": { "controller": "main-agent", "delegates": { "to": "sub-agent", "role_key": "dpt-topic-scout", "timeout_ms": 600000 } },
+  "action": "为 topic [{topic.title}] 寻找与至少 {target_count} 个其他 topic 的 cross-topic connection。当前 scan matrix 中此 topic 只连了 {current_count} 个其他 topic，需要 {target_count} 个。先读 cross-topic-ledger.md §Cross-Topic Scan Matrix 和所有 topic 的 evidence-summary.md，确认已有 connection，避免重复。使用 WebSearch 搜索跨 topic 的 evidence——shared pattern、contradiction、resolution opportunity。WebFetch 获取内容，写入 reference/00-cross-<slug>.md。更新 cross-topic-ledger.md 的 Scan Matrix 表（追加新 pair 行）。不修改 synthesis.md。将原始搜索/抓取内容写入 `_cache/wave2/depth-r1/{topic.slug}/`：每个 source 在 `sNN_<source-slug>/` 下保存 `websearch.json` + `page.md` + `meta.json`（11 字段）。",
+  "producer_rule": "topic_deepening",
+  "lineage": {"topic_slug": "{topic.slug}", "phase": "wave2", "trigger": "quality_cross_topic_gap", "attempt": {attempt}},
+  "priority_class": "P1_state_or_gate_repair",
+  "required_receipts": [],
+  "done_condition": "至少 1 个新的 reference/00-cross-*.md 文件被写入，且 cross-topic-ledger.md Scan Matrix 中该 topic 的 pair 数增加",
+  "verification": {"engine": [], "agent": ["source_url_not_duplicate", "scan_matrix_updated", "cross_topic_pair_added"]},
+  "writes_to": ["reference/00-cross-<slug>.md", "cross-topic-ledger.md（Scan Matrix 追加）"],
+  "completion_receipt": null,
+  "failure_route": "queue_repair",
+  "payload": {"topic_slug": "{topic.slug}", "topic_title": "{topic.title}", "current_count": {current_count}, "target_count": {target_count}, "attempt": {attempt}}
+}
+```
+
+**C. Emergent search rounds gap**（某 topic 的 emergent search 轮次不足）— `work_id: wave2-suppl-emergent-{topic.slug}-r{attempt}`：
+
+```json
+{
+  "work_id": "wave2-suppl-emergent-{topic.slug}-r{attempt}",
+  "title": "Supplementary emergent search: {topic.title} (round {round_number})",
+  "targets": { "controller": "main-agent", "delegates": { "to": "sub-agent", "role_key": "dpt-topic-scout", "timeout_ms": 600000 } },
+  "action": "对 topic [{topic.title}] 做第 {round_number} 轮 emergent content search。前几轮的角度: {previous_angles}。本轮必须使用不同的搜索角度（如不同时间窗口、不同方法论视角、不同地域/监管框架、对立/竞争观点）。先读该 topic 的 evidence-summary.md 和 question-list.md，确认已有内容，避免重复。使用 WebSearch + WebFetch 搜索 emergent 内容，写入 reference/00-cross-<slug>.md。若发现新的 cross-topic emergent question，追加到 finding-index.yaml（type=cross_topic_emergent_question）。更新 question-list.md 的 Emergent Question Protocol。不修改 synthesis.md。将原始搜索/抓取内容写入 `_cache/wave2/emergent-r1/{topic.slug}/`：每个 source 在 `sNN_<source-slug>/` 下保存 `websearch.json` + `page.md` + `meta.json`（11 字段）。",
+  "producer_rule": "topic_deepening",
+  "lineage": {"topic_slug": "{topic.slug}", "phase": "wave2", "trigger": "quality_emergent_rounds_gap", "attempt": {attempt}, "round": {round_number}},
+  "priority_class": "P1_state_or_gate_repair",
+  "required_receipts": [],
+  "done_condition": "至少 1 个新的 reference/00-cross-*.md 文件被写入，且 finding-index.yaml 中该 topic 新增了 type=emergent 的 finding（或已有 emergent finding 的 search_required 从 true 变为 false）",
+  "verification": {"engine": [], "agent": ["source_url_not_duplicate", "emergent_finding_added_or_searched", "search_angle_different_from_previous"]},
+  "writes_to": ["reference/00-cross-<slug>.md", "finding-index.yaml（新增/更新 emergent finding）"],
+  "completion_receipt": null,
+  "failure_route": "queue_repair",
+  "payload": {"topic_slug": "{topic.slug}", "topic_title": "{topic.title}", "round_number": {round_number}, "previous_angles": "{previous_angles}", "attempt": {attempt}}
+}
+```
+
+**Drain 注意事项（与 wave0/wave1 一致）：**
+- 三种 supplementary task 的 `required_receipts: []`、`completion_receipt: null`——Phase Agent 在 Sub-agent 返回后手动验证条件
+- 补充循环期间不重新回填 seed topic——backfill 已在 Phase 2 完成
+- loop bounded by 3 attempts + no-progress detection
 
 ### §3.4 JS Feedback Checkpoint 调用参考
 
@@ -270,12 +335,13 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
 | 无 wave1 evidence 引用 | 在 synthesis 中添加对 evidence-summary/question-list 的引用 |
 | `trace_event_present` fail | 确认已记录 `wave2_completion` trace event |
 | status drift | 恢复 `current_gate`/`next_gate` 为 `wave2_complete`/`hitl2_recorded` |
+| Quality gap（backing/cross-topic/emergent 不达标）| **进入 §3.3.2 Quality Re-Fill Loop**：读 Quality Self-Check gap → 创建对应 supplementary task card（backing/cross-topic/emergent）→ enqueue + drain → re-run Quality Self-Check。最多 3 次 gate attempt |
 
-**Persistent failure：** 若 wave2 gate 连续 3 次修复无进展，记录 escalation。
+**Persistent failure：** 若 wave2 gate 连续 3 次修复无进展（含 quality re-fill attempt），记录 escalation 到 `rb_status.json`（`state: blocked`，`blocked_reason` 描述具体 gap 和 attempt 次数）和 `rb_trace.jsonl`。
 
 ## 8. Stop Behavior
 
-`stop: no` — Phase Agent 自主执行 synthesis + finding triage + search。Wave2 不做 stop-and-wait 人类审查（HITL2 是独立的审查阶段）。
+`stop: no` — Phase Agent 自主执行 synthesis + finding triage + Quality Self-Check + re-fill loop。Wave2 不做 stop-and-wait 人类审查（HITL2 是独立的审查阶段）。Quality gap 通过 Q re-fill 静默补足——Phase Agent 不应因 quality 不达标就停下来问用户。
 
 ## Rerun-Aware Behavior
 
@@ -311,7 +377,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
 - **禁止对 `cross_topic_resolution` spawn Sub-agent 搜索**（resolution 是 existing evidence integration，不是 gap）
 - **禁止把 `cross_topic_emergent_question` 埋进某个 topic 的 pending questions 而不标注 `source_layer: wave2_cross_topic`**
 - **禁止 `decision=explore_search` 或 `decision=exploit_search` 但没有 relay/runtime receipt**
-- **禁止达到 max iteration 后静默丢弃 unresolved finding**（必须进入 HITL2 handoff 或 record_only）
+- **禁止达到 3 次 quality re-fill attempt 后静默丢弃 unresolved finding**（必须进入 HITL2 handoff 或 record_only）
 - **禁止 `synthesis.md` 写出没有 finding id（W2F-xxx）支撑的关键 cross-topic claim**
 - **禁止让 Sub-agent 做 cross-topic judgment**（Sub-agent 只返回 bounded search/extraction result）
 - **禁止 backfill 内容不从 ledger/index 投影**（直接从 synthesis.md narrative 摘抄或丢失 source_layer/finding id）

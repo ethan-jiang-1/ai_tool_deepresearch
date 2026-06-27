@@ -88,10 +88,12 @@
 | G12 wave-gates | case-122 | `exp_wff_wave-gates/case-122-standard-wave1-boundary.md` | wave1-complete gate：foundation-placeholder marker + false completion claim |
 | G12 wave-gates | case-123 | `exp_wff_wave-gates/case-123-standard-wave2-synthesis.md` | wave2-complete gate：Markdown link 解析 + dead target + cross-artifact reference（RWE-009） |
 | G12 wave-gates | case-124 | `exp_wff_wave-gates/case-124-standard-seed-topics-boundary.md` | seed-topics-ready gate：空目录/缺失 slug/多余 slug + slug_consistency 双向校验 |
-| G12 wave-gates | case-125 | `exp_wff_wave-chain/case-125-standard-waves-full-chain.md` | seed-topics→wave0→wave1→wave2 全链路 4 gate 顺序 pass |
-| G12 wave-gates | case-126 | `exp_wff_wave-chain/case-126-standard-wave-repair-loop.md` | wave2 gate fail→repair→pass PDCA 回路 |
-| G12 wave-gates | case-127 | `exp_wff_wave-chain/case-127-standard-wave-fault-tolerance.md` | malformed YAML / partial dead links / status drift — gate 容错 |
-| G12 wave-gates | case-128 | `exp_wff_wave-chain/case-128-standard-wave-review-surface.md` | 3-topic Wave0→Wave2 review surface + human checklist |
+| G12 wave-gates | case-125 | `exp_wff_wave-gates/case-125-light-dynamic-threshold.md` | wave0 gate 动态阈值：research_style_params → threshold=12，不达则 reject，达标则 pass |
+| G12 wave-gates | case-126 | `exp_wff_wave-gates/case-126-light-style-switch.md` | style switch：同一批数据 quick_factual pass → claim_verification fail（阈值驱动 gate 行为变化） |
+| G15 wave-chain | case-151 | `exp_wff_wave-chain/case-151-standard-waves-full-chain.md` | seed-topics→wave0→wave1→wave2 全链路 4 gate 顺序 pass |
+| G15 wave-chain | case-152 | `exp_wff_wave-chain/case-152-standard-wave-repair-loop.md` | wave2 gate fail→repair→pass PDCA 回路 |
+| G15 wave-chain | case-153 | `exp_wff_wave-chain/case-153-standard-wave-fault-tolerance.md` | malformed YAML / partial dead links / status drift — gate 容错 |
+| G15 wave-chain | case-154 | `exp_wff_wave-chain/case-154-standard-wave-review-surface.md` | 3-topic Wave0→Wave2 review surface + human checklist |
 | G13 delivery | case-131 | `exp_wff_delivery/case-131-standard-delivery-full-chain.md` | hitl2→readiness→final 完整 delivery 链 + final terminal semantics |
 | G13 delivery | case-132 | `exp_wff_delivery/case-132-standard-hitl2-decision.md` | HITL2 gate：decision brief + user_decision + trace → pass；缺失/空/非法 → fail |
 | G13 delivery | case-133 | `exp_wff_delivery/case-133-standard-hitl2-rerun.md` | HITL2 rerun：gate pass 但 chain 不编码 rerun 分支（Agent 层 routing） |

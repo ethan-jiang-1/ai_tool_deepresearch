@@ -1,14 +1,14 @@
 ---
 schema: command-experiment/v1
 experiment: wff-wave-chain
-case: case-126-standard-wave-repair-loop
+case: case-152-standard-wave-repair-loop
 weight: light
 case_goal: "Prove that when the wave2-complete gate fails (no valid Markdown links), the Agent can read inspect/advice, repair the synthesis by adding valid links, rerun the gate, and pass — with the full PDCA loop visible in trace."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-126_w2_repair_*
-trace: dpt_disp_case-126_w2_repair_*/_logs/_trace.jsonl
+bundle: dpt_disp_case-152_w2_repair_*
+trace: dpt_disp_case-152_w2_repair_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -16,7 +16,7 @@ verdict: trace-jsonl
 
 由 coding agent 在真实 disposable experiment bundle 中执行。实验结果必须来自实际文件写入、gate CLI 调用和 trace event；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
 
-# case-126-standard-wave-repair-loop
+# case-152-standard-wave-repair-loop
 
 ## Expected Runtime Path
 
@@ -40,7 +40,7 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_repair --case case-126 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_repair --case case-152 --force)
 echo "Bundle: $B"
 
 # Validate

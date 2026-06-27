@@ -82,6 +82,20 @@ HITL2 `user_decision: rerun` 后，Agent 用 `rerun` outcome 查 chain 进入本
 
 每个 topic 文件的 `## 本轮重跑方向` section 最多一个——若已存在（上轮 rerun 遗留），用本轮结果**替换**整个 section（不追加）。
 
+1b. **同步 topic_registry**：做完 topic delta 后，更新 `rb_plan.md` frontmatter 的 `topic_registry` 以反映变更后的有效 topic 集合。`wave0_shared_ref_total` 依赖 `topic_count` 计算——topic 变了参数必须重算。
+
+   - `action: add` → 在 `topic_registry` 数组中追加新 topic 条目（`id`/`slug`/`title`），同步更新 `derived_topic_count`
+   - `action: remove` → 从 `topic_registry` 数组中移除对应条目，同步更新 `derived_topic_count`。seed_topic 文件保留但重命名为 `{slug}.md.deprecated`（保留历史记录，避免 seed-topics-ready gate 的 slug_consistency 规则检测到多余 slug）
+
+1c. **重算 research_style_params**：topic_registry 变更后 topic_count 可能变化，必须重算 `wave0_shared_ref_total`（`base + per_topic × topic_count`）。读取当前 `research_profile`，重新运行 apply CLI：
+
+   ```bash
+   RESEARCH_PROFILE=$(node -e "const{parse}=require('yaml');const p=parse(require('fs').readFileSync('<bundle>/rb_profile.yaml','utf-8'));console.log(p.research_profile)")
+   node DPT_FRAMEWORK/cli/apply-research-style.mjs --bundle <path> --style $RESEARCH_PROFILE
+   ```
+   
+   验证 stdout JSON：`applied` 匹配 `research_profile`，`topic_count` 匹配更新后的 `topic_registry.length`，`wave0_shared_ref_total` 为 `base + per_topic × topic_count`。所有参数写入 `rb_profile.yaml#/research_style_params`（覆盖旧值）。
+
 2. **递增 rerun_count**：
    - 若 `rerun_count` 缺失 → 设为 `1`
    - 若已有值 → `+1`
@@ -106,6 +120,8 @@ node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle <path> --curren
 ## 4. Expected Artifacts
 
 - 受影响 seed_topic 文件中的 `## 本轮重跑方向` section 已写入/更新
+- `rb_plan.md` frontmatter `topic_registry` 已同步（add → 追加，remove → 移除），`derived_topic_count` 反映当前条目数
+- `rb_profile.yaml#/research_style_params` 已更新——`wave0_shared_ref_total` 反映当前 `topic_count`（通过 `apply-research-style.mjs` 重算）
 - `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count` 已递增
 - `rb_status.json` 中 `current_gate: rerun_ready` / `next_gate: seed_topics_ready`（通过 CLI 推进）：
   ```bash

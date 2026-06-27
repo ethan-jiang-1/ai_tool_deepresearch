@@ -1,14 +1,14 @@
 ---
 schema: command-experiment/v1
 experiment: wff-wave-chain
-case: case-125-standard-waves-full-chain
+case: case-151-standard-waves-full-chain
 weight: light
 case_goal: "Prove that the full seed-topics→wave0→wave1→wave2 chain can be serialized: 4 gates pass sequentially on a single topic bundle with correct artifacts and status transitions."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-125_wf_chain_*
-trace: dpt_disp_case-125_wf_chain_*/_logs/_trace.jsonl
+bundle: dpt_disp_case-151_wf_chain_*
+trace: dpt_disp_case-151_wf_chain_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -16,7 +16,7 @@ verdict: trace-jsonl
 
 由 coding agent 在真实 disposable experiment bundle 中执行。实验结果必须来自实际文件写入、gate CLI 调用和 trace event；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
 
-# case-125-standard-waves-full-chain
+# case-151-standard-waves-full-chain
 
 ## Expected Runtime Path
 
@@ -40,7 +40,7 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wf_chain --case case-125 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wf_chain --case case-151 --force)
 echo "Bundle: $B"
 
 # Validate initial structure

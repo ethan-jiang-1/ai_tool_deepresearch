@@ -15,6 +15,8 @@ suggested_context: []
 
 定向搜索填补 Phase Agent 在 synthesis 过程中发现的 specific finding（仅对 `decision=exploit_search` 或 `decision=explore_search` 的 finding 执行）。**不替代 Phase Agent 做 cross-topic synthesis judgment。**
 
+**Supplementary tasks（Quality Re-Fill Loop）：** Phase Agent may also spawn this sub-agent for supplementary cross-topic search（`wave2-suppl-cross-{topic}`）or supplementary emergent search（`wave2-suppl-emergent-{topic}`）— same role, same relay contract, focused action per gap type. The sub-agent receives the specific search target via `task.md` and does NOT need to distinguish between primary and supplementary dispatch.
+
 ## 2. Required Inputs
 
 Phase Agent 在 spawn 时传入：
@@ -31,7 +33,7 @@ Phase Agent 在 spawn 时传入：
 - 从抓取内容中提取 relevant evidence
 - 返回结构化 JSON result（见 §4）
 - 写入 runtime receipt（`_subagents/wave_02/slot_MM/runtime-receipt.jsonl`）
-- 中间产物写入 `_cache/wave2/slot_MM/`
+- 中间产物写入 cache 目录（spawn prompt `Cache directory:` + task.md `## Cache Directory`）。路径为 `_cache/wave2/{batch}/{finding_id}/`。每个 source 写 `sNN_{source-slug}/` 含 `websearch.json` + `page.md` + `meta.json`（11 字段）
 
 ## 4. Expected Artifacts
 
@@ -61,7 +63,7 @@ Sub-agent 不跑 gate。Result quality 由 Phase Agent 在 ingestion 时判断�
 
 遵循 `shared-subagent-protocol.md` 的 relay slot 通信契约：
 - Slot 目录：`_subagents/wave_02/slot_MM/`
-- Cache 目录：`_cache/wave2/slot_MM/`
+- Cache 目录：`_cache/wave2/{batch}/{finding_id}/`（Phase Agent spawn 时指定 batch 名和 finding_id）
 - Phase Agent 写入 `task.md`（含 finding description + keywords + schema）
 - Sub-agent 读取 `task.md` → 执行 → 写入 result JSON
 - Relay engine 写入 `runtime-receipt.jsonl`

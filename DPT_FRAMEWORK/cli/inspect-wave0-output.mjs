@@ -31,14 +31,8 @@ function readMdFile(path) {
 }
 
 function parseMetadataBlock(content) {
-  const keys = {};
-  const lines = content.split('\n');
-  for (const line of lines) {
-    if (line.trim().startsWith('## ')) break;
-    const m = line.match(/^-\s+([^:]+):\s*(.*)$/);
-    if (m) keys[m[1].trim()] = m[2];
-  }
-  return keys;
+  // Uses YAML frontmatter parser — reference files use `---\nkey: "value"\n---` format
+  return parseMdFrontmatter(content);
 }
 
 const REQUIRED_META = ['source_url','acceptance_status','source_type','tier','evidence_role','trust_level','why_it_matters','accessed_at','related_topic'];
@@ -84,6 +78,15 @@ for (const f of sharedFiles) {
       addIssue(`reference/${f}: metadata block missing required key '${key}'`,
         `Add '- ${key}: <value>' to the metadata block (before the first ## header).`);
     }
+  }
+
+  // Check for placeholder source_url
+  inc();
+  const srcUrl = (meta.source_url || '').toLowerCase().trim();
+  const placeholderDomains = ['example.com', 'placeholder.com', 'fake-url.com', 'test.com'];
+  if (placeholderDomains.some(d => srcUrl.includes(d))) {
+    addIssue(`reference/${f}: placeholder source_url detected ("${meta.source_url || '(empty)'}") — file does not reference a real web source`,
+      `Delete reference/${f} and either find a real source with WebSearch+WebFetch, or write artifacts/wave0/suppl-failure-r{N}.md documenting why no new sources could be found.`);
   }
 
   inc(); // sections

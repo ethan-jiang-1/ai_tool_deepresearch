@@ -40,10 +40,21 @@ describe('instantiate-run-bundle.mjs integration', () => {
       'artifacts/wave1',
       'artifacts/wave2',
       '_cache',
+      '_cache/README.md',
+      '_logs/README.md',
       'final',
     ]) {
       assert.equal(existsSync(join(dir, entry)), true, `missing ${entry}`);
     }
+    // Verify README content is non-empty
+    const cacheReadme = readFileSync(join(dir, '_cache/README.md'), 'utf-8');
+    assert.ok(cacheReadme.includes('_cache/') && cacheReadme.includes('{wave}/{batch}/{scope}/{source_dir}'),
+      '_cache/README.md should explain the four-level directory structure');
+    assert.ok(cacheReadme.includes('websearch.json') && cacheReadme.includes('page.md') && cacheReadme.includes('meta.json'),
+      '_cache/README.md should document the three-file-per-source convention');
+    const logsReadme = readFileSync(join(dir, '_logs/README.md'), 'utf-8');
+    assert.ok(logsReadme.includes('run.log') && logsReadme.includes('_trace_subagent.jsonl'),
+      '_logs/README.md should explain the log and trace file inventory');
   });
 
   it('fails on name collision without overwriting existing content', () => {

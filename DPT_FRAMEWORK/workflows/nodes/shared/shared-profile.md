@@ -26,13 +26,14 @@ suggested_context:
 
 ### `research_profile`
 
-- **类型**：enum，当前 accepted 值为 `not_selected`、`quick_factual`、`exploratory_map`、`claim_verification`
+- **类型**：enum，当前 accepted 值为 `not_selected`、`quick_factual`、`exploratory_map`、`claim_verification`、`debug`
 - **填写时机**：HITL1 phase，Agent 向用户展示选项后基于用户选择写入
 - **默认值**（bundle 创建时）：`not_selected`
 - **含义**：用户选择的研究深度/广度 profile
   - `quick_factual`：快速事实核查，轻量，单一维度
   - `exploratory_map`：探索性全景 mapping，覆盖面广但深度可控
   - `claim_verification`：对核心主张做 adversarial verification
+  - `debug`：最低阈值，仅用于开发/测试（`user_visible: false`，HITL1 不展示，需手动设置）
 - **gate 行为**：`hitl1-recorded` gate 检查此字段 ≠ `not_selected`
 
 ### `root_must_answer_set`
@@ -42,6 +43,39 @@ suggested_context:
 - **默认值**（bundle 创建时）：`[]`
 - **含义**：用户明确要求必须回答的核心问题列表
 - **gate 行为**：`hitl1-recorded` gate 检查此字段非空
+
+### `research_style_params`
+
+- **类型**：`object`（`ResearchStyleParamsSchema`），optional
+- **填写时机**：HITL1 phase，用户选择 `research_profile` 后 Agent 从 `DPT_FRAMEWORK/schema/research-styles/<profile>.yaml` 逐字段抄入
+- **默认值**（bundle 创建时）：不填充（key 存在但值为空，或 key 不存在）
+- **含义**：当前研究风格的参数集——控制 Gate CLI 的 `count_floor` 动态阈值和 Phase MD 的 stop conditions。下游只读此 section，不读 YAML 源文件（profile 是单点真相）
+- **子字段**：
+  | 字段 | 类型 | 含义 |
+  |------|------|------|
+  | `user_visible` | `boolean` | 此风格是否在 HITL1 展示给用户 |
+  | `wave0_shared_ref_floor` | `positive integer` | Wave0 `count_floor` gate threshold — 全 topic 共享 foundation reference 的最低数量 |
+  | `wave1_per_topic_ref_floor` | `positive integer` | Wave1 `count_floor` gate threshold — 每 topic rich MD reference 的最低数量 |
+  | `topic_unique_ratio` | `number [0,1]` | Topic-unique reference 的最低比例（Agent guidance，非 gate enforced） |
+  | `counterexample_search` | `boolean` | Wave1 Stop Condition 5 是否强制搜索 disconfirming evidence |
+  | `cross_verification` | `boolean` | Wave1 Stop Condition 6 是否强制 cross-check claims |
+  | `p0p1_independent_backing` | `positive integer` | P0/P1 findings 需要的最低独立 backing source 数量（Agent guidance，非 gate enforced） |
+  | `quality_min_tier` | `enum: tier_1..tier_4` | 最低 source quality tier（Agent guidance，非 gate enforced） |
+  | `quality_min_substance` | `enum: substantive/thin/none` | 最低 source substance level（Agent guidance，非 gate enforced） |
+- **gate 行为**：`hitl1-recorded` gate **不检查**此字段——内容正确性依赖 Agent discipline。Wave0/Wave1 gate CLI 通过 `threshold_source` → `resolveThreshold()` 读取 `wave0_shared_ref_floor` / `wave1_per_topic_ref_floor` 做 `count_floor` 动态阈值
+- **示例**：
+  ```yaml
+  research_style_params:
+    user_visible: true
+    wave0_shared_ref_floor: 12
+    wave1_per_topic_ref_floor: 10
+    topic_unique_ratio: 0.5
+    counterexample_search: true
+    cross_verification: true
+    p0p1_independent_backing: 2
+    quality_min_tier: tier_2
+    quality_min_substance: substantive
+  ```
 
 ### `human_decision_checkpoints.hitl1.status`
 

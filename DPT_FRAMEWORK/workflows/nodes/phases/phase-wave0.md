@@ -19,7 +19,7 @@ suggested_context:
 
 搜集少量真实的 shared reference evidence，为 topic_registry 中的每个 topic 创建结构化 YAML metadata（url/title/retrieved_date/topic_tag），写入 `artifacts/wave0/<topic>/source.yaml`，更新 `reference/_INDEX.md`。
 
-**Wave0 是 foundation evidence collection，不是 comprehensive research。** 每个 topic 只需要至少 foundation floor 数量的 reference。目标不是 coverage completeness，而是为 Wave1 的 topic-scoped skeleton 和 Wave2 的 cross-topic synthesis 提供可信的 evidence 基座。
+**Wave0 是 foundation evidence collection，不是 comprehensive research。** 每个 topic 需要至少 foundation floor 数量的 reference——exact 阈值读取 `rb_profile.yaml#/research_style_params/wave0_per_topic_source_floor`（HITL1 选择研究风格后由 Agent 写入）。例如 `claim_verification` 要求 ≥12，`quick_factual` 要求 ≥6，`debug` 要求 ≥1。目标不是 coverage completeness，而是为 Wave1 的 topic-scoped skeleton 和 Wave2 的 cross-topic synthesis 提供可信的 evidence 基座。
 
 ## 2. Required Inputs
 
@@ -46,20 +46,22 @@ Wave0 使用 Agentic Queue 驱动 source intake。所有搜索/fetch 工作走 t
 **Task card JSON 模板（写入临时文件如 `/tmp/wfq-task-{topic.slug}.json`）：**
 
 > **模板变量来源**：`topic_registry` 数组中的每个条目含 `id`、`slug`、`title` 三个字段（PlanSchema）。模板中 `{topic.slug}` 取 `slug` 字段值，`{topic.title}` 取 `title` 字段值。搜索关键词从 `topic.title` 和同 topic 的 seed topic 文件（`seed_topics/{slug}.md`）中的 `search_guardrails.required_terms` 派生。
+>
+> **产出说明**：Wave0 source intake 需为每个 topic 产出 `source.yaml`（thin YAML 数组，每 source 一条 entry），同时为跨 topic 的共享 foundation reference 产出 `reference/00-shared-<slug>.md`（rich MD，格式见 `shared-reference-template.md`）。单次 intake 产出的数量依 topic 信息密度而定。若 `source.yaml` 条目数未达到 `rb_profile.yaml#/research_style_params/wave0_per_topic_source_floor`、或 `00-shared-*.md` 文件数未达到 `rb_profile.yaml#/research_style_params/wave0_shared_ref_total` 的动态阈值，下游由 **§3.3.1 Count-Floor Re-Fill Loop** 通过 supplementary task 补齐——本 task card 不承担达到阈值的责任。
 
 ```json
 {
   "work_id": "wave0-source-{topic.slug}",
   "title": "Source intake: {topic.title}",
   "targets": { "controller": "main-agent", "delegates": { "to": "sub-agent", "role_key": "dpt-source-intake", "timeout_ms": 600000 } },
-  "action": "搜索 [{topic.title}] 的 foundation reference。从 topic.title 和 seed_topics/{topic.slug}.md 的 search_guardrails 派生搜索关键词。使用 WebSearch 找到至少 1 条可信来源，使用 WebFetch 获取每个来源的页面内容。如果 WebFetch 被阻止，必须走降级链：curl -L → node fetch → python3 urllib，全部失败才可报告 inaccessible。提取并写入 artifacts/wave0/{topic.slug}/source.yaml（YAML 数组，每条含 url, title, retrieved_date(YYYY-MM-DD), topic_tag(\"{topic.slug}\"), notes(可选)）。搜索中间结果写入你的 slot 对应的缓存目录——不要写入共享目录。",
+  "action": "搜索 [{topic.title}] 的 foundation reference。从 topic.title 和 seed_topics/{topic.slug}.md 的 search_guardrails 派生搜索关键词。使用 WebSearch 找到至少 1 条可信来源，使用 WebFetch 获取每个来源的页面内容。如果 WebFetch 被阻止，必须走降级链：curl -L → node fetch → python3 urllib，全部失败才可报告 inaccessible。提取并写入 artifacts/wave0/{topic.slug}/source.yaml（YAML 数组，每条含 url, title, retrieved_date(YYYY-MM-DD), topic_tag(\"{topic.slug}\"), notes(可选)）。同时，若发现跨 topic 的共享 foundation reference（行业全景、方法论文献、跨 topic 对比数据等不属于单个 topic 的），写入 reference/00-shared-<slug>.md（rich MD，格式见 shared-reference-template.md：metadata block 9 字段 + 5 个 ## section）。将原始 WebSearch 结果、抓取页面和 source 元信息写入 `_cache/wave0/primary/{topic.slug}/`：每个 source 在 `sNN_<source-slug>/` 子目录下保存 `websearch.json`（原始搜索结果）、`page.md`（页面内容）、`meta.json`（11 字段：url, title, source_domain, source_name, fetched_at, fetch_method, fetch_chain, content_type, reliability_tier, reliability_basis, whitelist_status）。NN 从 01 开始递增，<source-slug> 与 reference/ 文件名 qualifier 一致。",
   "producer_rule": "source_intake_fan_in",
   "lineage": {"topic_slug": "{topic.slug}", "phase": "wave0"},
   "priority_class": "P5_new_reference_intake",
   "required_receipts": ["file:artifacts/wave0/{topic.slug}/source.yaml"],
   "done_condition": "artifacts/wave0/{topic.slug}/source.yaml 存在，通过 ReferenceMetadata schema 校验（url 非空、title 非空、retrieved_date 为 YYYY-MM-DD、topic_tag 匹配 {topic.slug}），且至少含 1 条 reference",
   "verification": {"engine": ["receipt_check"], "agent": ["url_accessible", "title_matches_page"]},
-  "writes_to": ["artifacts/wave0/{topic.slug}/source.yaml"],
+  "writes_to": ["artifacts/wave0/{topic.slug}/source.yaml", "reference/00-shared-<slug>.md（跨 topic 共享 reference，可选）"],
   "status_sync": ["wave0_intake"],
   "completion_receipt": "file:artifacts/wave0/{topic.slug}/source.yaml",
   "failure_route": "queue_repair",
@@ -100,7 +102,7 @@ Wave0 的 claim→execute→complete 使用 relay 批量并行执行（灌料→
 - **不伪造产出**：每条 reference 必须来自 WebSearch + WebFetch 获取的真实页面。url 必须指向真实可访问页面，title 反映实际页面标题，retrieved_date 为真实检索日期
 - **网页内容抓取**：Sub-agent 必须获取来源页面的真实内容。详见 `shared-subagent-protocol.md` Page Content Fetching Chain。摘要：内置工具（如 `WebFetch`）优先，用户显式开启浏览器也可用；没有则从 `curl` 开始 → `node -e "fetch(...)"` → `python3 -c "import urllib.request..."`（最后兜底）。不允许因缺工具或工具 blocked 就拿搜索摘要凑合。所有手段都失败才能报告"无法获取内容"
 - **complete 阻塞**：如果 complete 时 receipt check 失败（source.yaml 不存在或 schema 不对），engine 自动生成 repair task（`producer_rule: queue_repair`），Phase Agent 必须修复而不是跳过。修复后重新 claim
-- **上下文隔离**：上下文隔离由 relay slot 契约在机制上强制（见 `shared-subagent-protocol.md` Communication Contract）。Sub-agent 只收到 bounded 上下文（task.md + result.schema.json），返回的 JSON 被 `result.schema.json` 约束形状——大段搜索 trail 不在 schema 允许的字段里。Phase Agent 通过 `commitSlotResult()` 收集验证后的 `result.json`，**不读 Sub-agent 的原始搜索输出**。如需抽查，去 `_cache/waveN/slot_MM/`（非 authority），但默认不读
+- **上下文隔离**：上下文隔离由 relay slot 契约在机制上强制（见 `shared-subagent-protocol.md` Communication Contract）。Sub-agent 只收到 bounded 上下文（task.md + result.schema.json），返回的 JSON 被 `result.schema.json` 约束形状——大段搜索 trail 不在 schema 允许的字段里。Phase Agent 通过 `commitSlotResult()` 收集验证后的 `result.json`，**不读 Sub-agent 的原始搜索输出**。如需抽查，去 `_cache/wave0/{batch}/{topic_slug}/`（非 authority），但默认不读
 - **即时回填 seed topic（不可跳过）**：每个 topic 的 complete 成功后，**在 claim 下一个 task 之前**，必须立刻回填 `seed_topics/{topic.slug}.md`：`grep -n '__BACKFILL_WAVE0_EVIDENCE__'` 定位 token → **替换 token 行**为 ref 摘要列表（`- **ref-XX-NN**: ...`）。趁 Sub-agent 搜索结果还 fresh 就写，不等 wave0 结束
 
 ### 3.3 Queue 空后 — 收尾与 Gate
@@ -110,17 +112,87 @@ Wave0 的 claim→execute→complete 使用 relay 批量并行执行（灌料→
 1. `collectAndMergeSubagentResults(state, slots, baseDir)` — collect 所有 slot 结果，merge evidence counts 到 WorkflowState
 2. 检查 `reference/_INDEX.md` 是否已更新（列出所有 topic 的 reference 摘要）
 3. 如果 index 缺失或未更新 → 手动写入（这是单步收尾动作，不重新灌 Q）
-4. 跑 gate：
+4. 跑 gate（含 **§3.3.1 Count-Floor Re-Fill Loop** —— gate fail 时自动进入自主补充循环）：
 ```bash
 node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --current-node phases/phase-wave0.md
 ```
 5. gate pass → 读取 `check.next` → 加载 `phase-wave1.md`
-6. gate fail → 按 §7 On Gate Fail 处理
+6. gate fail → 按 §3.3.1 和 §7 处理
+
+#### 3.3.1 Count-Floor Re-Fill Loop（source 数量不足时的自主补充循环）
+
+当 gate 因 `per_topic_count_floor` 或 `shared_ref_count_floor` 规则失败时，Phase Agent 进入自主补充循环——读 gate inspect → 识别不足 topic 或 shared ref gap → 创建 supplementary task card → enqueue + drain → rerun gate。此循环完全静默，无需用户介入（`stop: no`）。
+
+**架构依据**：Queue guideline §5.3 Rule 3——Q empty + gate fail → gate is authority，Phase Agent MAY re-fill Q to address specific gaps。
+
+**Loop 流程：**
+
+1. 跑 gate（§3.3 step 4 的 CLI 命令）
+2. gate pass → 退出 loop
+3. gate fail → 读 CLI 返回的 `inspect` 和 `advice`
+4. 分类 fail：
+   - 若 inspect 中包含 `"Count floor not met"`（`per_topic_count_floor`：某 topic 的 `source.yaml` 条目不足；`shared_ref_count_floor`：`00-shared-*.md` 文件不足）→ 进入补充流程（继续步骤 5）
+   - 若 count_floor 全部通过但其他规则失败 → 跳过补充流程，按 §7 表逐条修复 → rerun gate
+5. 追踪 attempt：从 `rb_trace.jsonl` 中 grep `gate_attempt` 得到 attempt 计数。若 attempt_count ≥ 3 → escalation
+6. No-progress?（连续两次同一 topic/shared 的 count 未增加）→ escalation
+7. 解析不足：
+   - `per_topic_count_floor` fail → 提取 topic slug、当前数 N、阈值 T，gap = T - N
+   - `shared_ref_count_floor` fail → 提取当前数 N、阈值 T，gap = T - N
+8. 创建 supplementary task card（模板见下方）
+9. 批量 enqueue → drain queue（claim → Sub-agent execute → complete）→ rerun gate
+
+**Supplementary task card JSON 模板**（写入临时文件如 `/tmp/wfq-wave0-suppl-{topic.slug}-r{attempt}.json`）：
+
+> **模板变量**：`{topic.slug}`、`{topic.title}` 来自 topic_registry。`{target_count}` 为 Phase Agent 从 gate inspect 计算的 gap（阈值 - 当前数）。`{attempt}` 为当前 gate attempt 序号（1-based）。对于 `shared_ref_count_floor` gap，topic 变量填充为 `shared`。
+
+```json
+{
+  "work_id": "wave0-suppl-{topic.slug}-r{attempt}",
+  "title": "Supplementary source intake: {topic.title} (attempt {attempt})",
+  "targets": { "controller": "main-agent", "delegates": { "to": "sub-agent", "role_key": "dpt-source-intake", "timeout_ms": 600000 } },
+  "action": "对 [{topic.title}] 做补充 source 搜集——不重复完整 foundation intake。目标：找到至少 {target_count} 个尚未在 source.yaml 或 reference/ 目录中的新增来源。先读 artifacts/wave0/{topic.slug}/source.yaml 和现有 reference/00-shared-*.md 的 source_url metadata，确认已有来源，避免重复。使用 WebSearch 搜索不同角度的新增来源（不同于已有 URL 的 domain 或视角）。使用 WebFetch 获取每个新增来源的页面内容。如果 WebFetch 被阻止，必须走降级链：curl -L → node fetch → python3 urllib，全部失败才可报告 inaccessible。对每个新增来源：若为 topic-specific → 追加 entry 到 artifacts/wave0/{topic.slug}/source.yaml（保护已有 entry，只追加不覆盖）。若为跨 topic 共享 foundation reference → 写入 reference/00-shared-<slug>.md（rich MD，按 shared-reference-template.md 完整格式：9 字段 metadata block + 5 个 ## section）。将原始搜索/抓取内容写入 `_cache/wave0/suppl-r{attempt}/{topic.slug}/`：每个新 source 在 `sNN_<source-slug>/` 下保存 `websearch.json` + `page.md` + `meta.json`（11 字段）。NN 从已有 source 数量+1 开始递增，<source-slug> 与 reference/ 文件名 qualifier 一致。
+
+**关键约束（防止占位符 reference）：**
+- **禁止占位符 URL**：不得创建 source_url 为 https://example.com 或任何等效占位符 URL（如 placeholder.com、fake-url.com 等）的 00-shared-*.md 文件。每个 reference 文件必须来自真实的 WebSearch + WebFetch 获取的页面，source_url 必须指向可访问的真实网页。追加到 source.yaml 的 entry 同理——url 字段必须是真实 URL。
+- **最低内容标准**：每个新 00-shared-*.md 文件的 ## Key Facts section 必须包含至少 3 条具体的、可验证的事实陈述——不得使用泛化描述如 "Collected during wave0 intake phase" 或 "See primary reference files"。
+- **诚实失败**：如果经彻底搜索后（至少 3 个不同搜索角度、多种关键词组合）无法找到新增的合法来源：**不得创建占位符 00-shared-*.md 文件**。改为写入 artifacts/wave0/suppl-failure-r{attempt}.md，内容包括：搜索关键词列表、尝试的搜索角度（至少 3 个）、为何未能找到新来源（搜索空间已耗尽 / 所有搜索结果均为已收录来源 / 页面无法访问等具体原因）。Phase Agent 会在 drain 后检查此文件。",
+  "producer_rule": "source_intake_fan_in",
+  "lineage": {"topic_slug": "{topic.slug}", "phase": "wave0", "trigger": "count_floor_repair", "attempt": {attempt}},
+  "priority_class": "P1_state_or_gate_repair",
+  "required_receipts": [],
+  "done_condition": "至少 1 条新 entry 被追加到 source.yaml 或至少 1 个新的 reference/00-shared-*.md 文件被写入——source_url 不与已有 entry/文件重复。已有 entry 不得被删除或修改。",
+  "verification": {"engine": [], "agent": ["url_accessible", "title_matches_page", "source_url_not_duplicate", "existing_entries_preserved"]},
+  "writes_to": ["artifacts/wave0/{topic.slug}/source.yaml（追加，不覆盖）", "reference/00-shared-<slug>.md（新增）"],
+  "status_sync": ["wave0_intake"],
+  "completion_receipt": null,
+  "failure_route": "queue_repair",
+  "payload": {"topic_slug": "{topic.slug}", "topic_title": "{topic.title}", "target_count": {target_count}, "attempt": {attempt}}
+}
+```
+
+**Supplementary task card 与 primary source intake task card 的关键差异：**
+
+| 维度 | Primary intake (§3.1) | Supplementary re-fill (§3.3.1) |
+|------|----------------------|-------------------------------|
+| 产出方式 | 创建 `source.yaml` | **追加**到已有 `source.yaml`（不覆盖已有 entry） |
+| `priority_class` | `P5_new_reference_intake` | `P1_state_or_gate_repair` |
+| `required_receipts` | `source.yaml` 文件 | `[]`（count 是 gate 职责） |
+| `completion_receipt` | `source.yaml` 文件路径 | `null` |
+| 对已有产出的行为 | 初次创建 | 只追加，禁止删除/修改已有 entry |
+| 触发条件 | 首次进入 wave0 | gate `per_topic_count_floor` 或 `shared_ref_count_floor` 失败 |
+
+**Drain 注意事项：**
+
+- Supplementary task 的 `required_receipts: []`、`completion_receipt: null`——Phase Agent 在 Sub-agent 返回后手动验证：检查 `source.yaml` 新增了有效 entry（url 非空、source_url 不重复、已有 entry 未被修改），或 `reference/` 下新增了有效的 `00-shared-*.md` 文件。若无效 → `operate-queue fail`。
+- 补充循环期间**不重新回填 seed topic**——backfill token 已在首次 intake 完成后替换。
+- Sub-agent 可能找不到足够的新来源——gate rerun 会重新计算 gap。只要至少 1 条有效新增就算 partial success。
+
+**Loop 终止条件：**（与 wave1 一致）gate pass → 退出；all count_floor pass but other rules fail → 退出补充 loop，按 §7 修复；attempt ≥3 → escalation；no-progress → escalation。
 
 ## 4. Expected Artifacts
 
 - `reference/_INDEX.md`（非空，摘要每个 topic 和 shared 目录的 reference）
-- `artifacts/wave0/<topic>/source.yaml`（对于 topic_registry 中的每个 topic，至少 foundation floor 数量的 reference metadata 条目，每条满足以下 contract）：
+- `artifacts/wave0/<topic>/source.yaml`（对于 topic_registry 中的每个 topic，至少 `wave0_per_topic_source_floor` 条 reference metadata。exact 数量读取 `rb_profile.yaml#/research_style_params/wave0_per_topic_source_floor`——gate CLI 动态读取此值做 `count_floor` 校验），每条满足以下 contract：
   - `url`：string，非空
   - `title`：string，非空
   - `retrieved_date`：string，YYYY-MM-DD 格式
@@ -159,12 +231,13 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave1_complete
 | `reference/_INDEX.md` 缺失或为空 | 写入 index 摘要 |
 | `artifacts/wave0/<topic>/source.yaml` 缺失 | 为该 topic 搜索并写入 reference metadata |
 | schema violation（缺少 url/title 等必填字段） | 补充缺失字段 |
-| `count_floor` fail（某 topic reference 数量 < 1） | 为该 topic 搜集更多 reference |
+| `per_topic_count_floor` fail：某 topic 的 `source.yaml` 条目数 < 动态阈值 | **进入 §3.3.1 Count-Floor Re-Fill Loop**：读 gate inspect → 解析不足 topic 和 gap → 创建 supplementary task card（`work_id: wave0-suppl-{topic.slug}-r{N}`，追加 source.yaml 条目，不覆盖已有）→ enqueue + drain → rerun gate。最多 3 次 gate attempt |
+| `shared_ref_count_floor` fail：`00-shared-*.md` 文件数 < 动态阈值 | **同上**：进入 §3.3.1 Re-Fill Loop，创建 supplementary task card 搜集跨 topic 共享 foundation reference → 写 `00-shared-*.md` |
 | registry 为空 | 回到 HITL1 补充 topic_registry |
 | `trace_event_present` fail | 确认已记录 `wave0_completion` trace event |
 | status drift | 恢复 `current_gate`/`next_gate` 为 `wave0_complete`/`wave1_complete` |
 
-**Persistent failure：** 若 wave0 gate 连续 3 次修复无进展，记录 escalation 到 `rb_status.json`（`state: blocked`）和 `rb_trace.jsonl`。
+**Persistent failure：** 若 wave0 gate 连续 3 次修复无进展（含 count_floor re-fill attempt），记录 escalation 到 `rb_status.json`（`state: blocked`，`blocked_reason` 描述具体 fail 原因和 attempt 次数）和 `rb_trace.jsonl`。
 
 ## 8. Stop Behavior
 

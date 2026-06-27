@@ -143,10 +143,14 @@ describe('Subagent dispatch (SUD-001)', () => {
   it('rejects dispatch above the v1 concurrency cap', () => {
     const tooMany = new Map([['pass', [
       { key: 'a', slotIndex: 0, roleAgentKey: 'dpt-source-intake', taskDescription: 'a' },
-      { key: 'b', slotIndex: 1, roleAgentKey: 'dpt-source-diagnostic', taskDescription: 'b' },
-      { key: 'c', slotIndex: 2, roleAgentKey: 'dpt-claim-verifier', taskDescription: 'c' },
-      { key: 'd', slotIndex: 3, roleAgentKey: 'dpt-evidence-extractor', taskDescription: 'd' },
-      { key: 'e', slotIndex: 4, roleAgentKey: 'dpt-topic-scout', taskDescription: 'e' },
+      { key: 'b', slotIndex: 1, roleAgentKey: 'dpt-source-intake', taskDescription: 'b' },
+      { key: 'c', slotIndex: 2, roleAgentKey: 'dpt-source-intake', taskDescription: 'c' },
+      { key: 'd', slotIndex: 3, roleAgentKey: 'dpt-source-intake', taskDescription: 'd' },
+      { key: 'e', slotIndex: 4, roleAgentKey: 'dpt-source-intake', taskDescription: 'e' },
+      { key: 'f', slotIndex: 5, roleAgentKey: 'dpt-source-intake', taskDescription: 'f' },
+      { key: 'g', slotIndex: 6, roleAgentKey: 'dpt-source-intake', taskDescription: 'g' },
+      { key: 'h', slotIndex: 7, roleAgentKey: 'dpt-source-intake', taskDescription: 'h' },
+      { key: 'i', slotIndex: 8, roleAgentKey: 'dpt-source-intake', taskDescription: 'i' },
     ]]]);
     assert.throws(() => stageSubagentSlots(baseState(), testDir, tooMany), /concurrency cap exceeded/i);
   });

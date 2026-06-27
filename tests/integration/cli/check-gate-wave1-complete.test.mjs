@@ -241,4 +241,25 @@ describe('check-gate-wave1-complete', () => {
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('wave1_completion')), `Expected missing trace fail: ${JSON.stringify(output.inspect)}`);
   });
+
+  it('8. rejects reference files with placeholder source_url (example.com)', () => {
+    const dir = createBundle(unique('placehold'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave1_completion', ts: new Date().toISOString() }) + '\n');
+    // Write a second reference with placeholder source_url — the first one has a real URL
+    writeFileSync(join(dir, 'reference/topic-a-placeholder.md'),
+      '---\nsource_url: "https://example.com"\nacceptance_status: accepted\n' +
+      'source_type: supplementary\ntier: tier_3\nevidence_role: supporting\n' +
+      'trust_level: medium\nwhy_it_matters: "Supplementary reference"\n' +
+      'accessed_at: "2026-06-27"\nrelated_topic: "topic-a"\n---\n' +
+      '## Key Facts\n- Collected during wave1 deepening.\n## Core Content Capture\nSee primary reference.\n' +
+      '## Relevance To This Research\nSupports topic analysis.\n## Quotable Terms / Concepts\n- None.\n## Risks And Limitations\n- Supplementary source.\n');
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false, `Expected placeholder rejection, got pass. Inspect: ${JSON.stringify(output.inspect)}`);
+    assert.ok(output.inspect.some(m => m.includes('placeholder') || m.includes('example.com')),
+      `Expected inspect to mention placeholder/example.com, got: ${JSON.stringify(output.inspect)}`);
+  });
 });

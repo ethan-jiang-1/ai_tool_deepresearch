@@ -1,14 +1,14 @@
 ---
 schema: command-experiment/v1
 experiment: wff-wave-chain
-case: case-128-standard-wave-review-surface
+case: case-154-standard-wave-review-surface
 weight: light
 case_goal: "Prove that the Wave0→Wave1→Wave2 review surface is visible in Markdown — reference metadata, evidence summaries, cross-topic synthesis, and human review checklist are all readable without reading JS."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-128_w2_review_*
-trace: dpt_disp_case-128_w2_review_*/_logs/_trace.jsonl
+bundle: dpt_disp_case-154_w2_review_*
+trace: dpt_disp_case-154_w2_review_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -16,7 +16,7 @@ verdict: trace-jsonl
 
 由 coding agent 在真实 disposable experiment bundle 中执行。所有审查内容在 Markdown 正文中；thin driver 只做 bundle 创建、fixture 写入、gate 调用、trace 记录。
 
-# case-128-standard-wave-review-surface
+# case-154-standard-wave-review-surface
 
 ## Expected Runtime Path
 
@@ -34,7 +34,7 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_review --case case-128 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_review --case case-154 --force)
 echo "Bundle: $B"
 
 # Validate

@@ -1,0 +1,14 @@
+{
+  "user_visible": true,
+  "wave0_per_topic_source_floor": 6,
+  "wave0_shared_ref": { "base": 3, "per_topic": 1 },
+  "wave1_per_topic_ref_floor": 5,
+  "topic_unique_ratio": 0.3,
+  "counterexample_search": false,
+  "cross_verification": false,
+  "p0p1_independent_backing": 1,
+  "quality_min_tier": "tier_3",
+  "quality_min_substance": "thin",
+  "wave2_cross_topic_depth": 0,
+  "wave2_emergent_search_rounds": 0
+}

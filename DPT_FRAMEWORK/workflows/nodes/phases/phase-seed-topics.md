@@ -303,7 +303,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave0_complete
 
 - **保留已有 topic**：`seed_topics/` 中已有的 topic 文件全部保留——不删除、不重建。已有 topic 若有 `## 本轮重跑方向` section，按其中的 `action` 调整后续 wave0 行为。
 - **新增 topic**：若 `## 本轮重跑方向` section 指示 `action: add` 的新 topic，Agent MUST 为其创建 seed topic 文件（格式同首次 seed-topics）。新 topic 的 `## 本轮重跑方向` section 已在 phase-rerun 中写入。
-- **移除 topic**：若 `action: remove`，该 topic 的 seed_topic 文件保留，但 Agent MUST NOT 为其创建 wave0 task card（不在 registry 中移除，但标记为 deprecated 不搜）。
+- **移除 topic**：若 `action: remove`，topic_registry 已在 phase-rerun 中同步（条目已移除，seed_topic 文件已重命名为 `{slug}.md.deprecated`）。Agent MUST NOT 为其创建 wave0 task card。seed-topics 无需再操作 registry。
 - **补充 topic**：若 `action: supplement`，已有 topic 文件不变，但 wave0 灌料时需读其 `## 本轮重跑方向` section 中的 `new_search_dimensions` 作为追加搜索角度。
 - **无变更 topic**：若 topic 文件无 `## 本轮重跑方向` section 或 section 已处理完毕，按正常模式处理。
 

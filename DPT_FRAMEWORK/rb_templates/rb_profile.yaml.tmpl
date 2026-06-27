@@ -1,6 +1,11 @@
 plan_basename: {{name}}
 research_profile: not_selected
 root_must_answer_set: []
+research_style_params:
+  # Populated by HITL1 Agent after user selects a research profile.
+  # Agent copies all fields verbatim from the corresponding YAML file
+  # under DPT_FRAMEWORK/schema/research-styles/<profile>.yaml.
+  # Leave empty until HITL1 completes.
 human_decision_checkpoints:
   hitl1:
     status: not_started

@@ -62,16 +62,16 @@ describe('frontmatter — parseable, identity, gate, stop, params', () => {
     assert.deepEqual(issues, [], issues.join('; '));
   });
 
-  it('has max_gapfill_iterations param (default 2)', () => {
+  it('no longer has max_gapfill_iterations (replaced by Q re-fill loop)', () => {
     assert.ok(parsed, 'frontmatter not parsed');
-    assert.ok(typeof parsed.max_gapfill_iterations === 'number',
-      `max_gapfill_iterations should be a number, got ${typeof parsed.max_gapfill_iterations}`);
+    assert.strictEqual(parsed.max_gapfill_iterations, undefined,
+      'max_gapfill_iterations should be absent — gap-fill convergence is now handled by §3.3.2 Quality Re-Fill Loop (max 3 attempts + no-progress escalation)');
   });
 
-  it('has max_gapfill_subagents_per_round param (default 3)', () => {
+  it('no longer has max_gapfill_subagents_per_round (replaced by Q re-fill loop)', () => {
     assert.ok(parsed, 'frontmatter not parsed');
-    assert.ok(typeof parsed.max_gapfill_subagents_per_round === 'number',
-      `max_gapfill_subagents_per_round should be a number, got ${typeof parsed.max_gapfill_subagents_per_round}`);
+    assert.strictEqual(parsed.max_gapfill_subagents_per_round, undefined,
+      'max_gapfill_subagents_per_round should be absent — supplementary search is now managed through Queue task cards, not manual spawn limits');
   });
 });
 

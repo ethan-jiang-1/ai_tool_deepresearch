@@ -178,4 +178,27 @@ describe('check-gate-wave0-complete', () => {
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('next_gate')), `Expected status drift fail: ${JSON.stringify(output.inspect)}`);
   });
+
+  it('8. rejects shared reference files with placeholder source_url (example.com)', () => {
+    const dir = createBundle(unique('phshared'));
+    mkdirSync(join(dir, 'artifacts/wave0/topic-a'), { recursive: true });
+    mkdirSync(join(dir, 'artifacts/wave0/topic-b'), { recursive: true });
+    writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'),
+      '- url: "https://arxiv.org/abs/2305.18654"\n  title: "Real reference"\n  retrieved_date: "2026-01-15"\n  topic_tag: "topic-a"\n');
+    writeFileSync(join(dir, 'artifacts/wave0/topic-b/source.yaml'),
+      '- url: "https://example.org/paper"\n  title: "Another real"\n  retrieved_date: "2026-01-15"\n  topic_tag: "topic-b"\n');
+    writeFileSync(join(dir, 'reference/00-shared-placeholder-test.md'),
+      '---\nsource_url: "https://example.com"\nacceptance_status: accepted\n' +
+      'source_type: supplementary\ntier: tier_3\nevidence_role: supporting\n' +
+      'trust_level: medium\nwhy_it_matters: "Count floor fulfillment"\n' +
+      'accessed_at: "2026-06-27"\nrelated_topic: "shared"\n---\n' +
+      '## Key Facts\n- Generic placeholder\n## Core Content Capture\nNo real content.\n' +
+      '## Relevance To This Research\nMinimal.\n## Quotable Terms / Concepts\n- None.\n## Risks And Limitations\n- Placeholder.\n');
+    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave0_completion', ts: new Date().toISOString() }) + '\n');
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false, `Expected placeholder rejection, got pass. Inspect: ${JSON.stringify(output.inspect)}`);
+    assert.ok(output.inspect.some(m => m.includes('placeholder') || m.includes('example.com')),
+      `Expected inspect to mention placeholder/example.com, got: ${JSON.stringify(output.inspect)}`);
+  });
 });

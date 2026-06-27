@@ -25,7 +25,16 @@
       "check": "count_floor",
       "target": "reference/00-shared-*.md",
       "threshold": 1,
+      "threshold_source": "rb_profile.yaml#/research_style_params/wave0_shared_ref_total",
       "failure_message": "Fewer than 1 00-shared-*.md reference file in reference/. Create at least one shared foundation reference file per shared-reference-template.md."
+    },
+    {
+      "id": "no_example_com_shared_ref_url",
+      "check": "pattern_match",
+      "target": "reference/00-shared-*.md",
+      "pattern": "source_url:\\s*\"https?://(www\\.)?example\\.com\"",
+      "negate": true,
+      "failure_message": "A 00-shared-*.md file contains placeholder source_url (example.com). Delete the placeholder file and write a real reference or suppl-failure-r{N}.md instead."
     },
     {
       "id": "per_topic_source_yaml_exists",
@@ -45,6 +54,7 @@
       "check": "count_floor",
       "target": "artifacts/wave0/{topic}/source.yaml",
       "threshold": 1,
+      "threshold_source": "rb_profile.yaml#/research_style_params/wave0_per_topic_source_floor",
       "failure_message": "Topic {topic} has fewer than 1 reference metadata entries in artifacts/wave0/{topic}/source.yaml. Collect at least the foundation floor count for each topic."
     },
     {

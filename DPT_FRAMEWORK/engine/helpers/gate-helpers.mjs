@@ -443,6 +443,92 @@ export function readBundlePlan(bundlePath) {
   return parseMdFrontmatter(raw);
 }
 
+// ─── Profile Reading ─────────────────────────────────────────────────────────
+
+/**
+ * Read and parse rb_profile.yaml in a bundle directory.
+ *
+ * Stateless reader — each call reads from disk. Callers that evaluate
+ * multiple count_floor rules should wrap with a lazy cache (same
+ * pattern as `_planCache` / `_statusCache` in the gate CLIs).
+ *
+ * Cache safety: rb_profile.yaml is immutable after HITL1 — profile is
+ * never rewritten by downstream phases. Rerun paths create a new CLI
+ * process, so in-memory cache lifetime per process is correct.
+ *
+ * @param {string} bundlePath — path to the bundle directory
+ * @returns {object|null} parsed profile object, or null if file is missing
+ */
+export function readBundleProfile(bundlePath) {
+  const profilePath = join(bundlePath, 'rb_profile.yaml');
+  if (!existsSync(profilePath)) return null;
+  const raw = readFileSync(profilePath, 'utf-8');
+  try {
+    const parsed = parseYaml(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve a count_floor threshold from a gate rule + bundle profile.
+ *
+ * If `rule.threshold_source` is set, walks the profile object at the
+ * `#/` path to find the dynamic threshold. Falls back to the rule's
+ * hardcoded `threshold` when:
+ * - `threshold_source` is absent on the rule
+ * - profile is null/undefined (missing rb_profile.yaml)
+ * - path does not resolve to a value in the profile
+ * - resolved value is not a finite positive number (zero, negative, NaN,
+ *   or non-numeric — safety: floor=0 would make any count pass vacuously)
+ *
+ * YAML type coercion: `parseYaml` may parse integer-like values as
+ * number or string depending on YAML quoting (e.g. `12` → number 12,
+ * `"12"` → string "12"). This function coerces via `Number()` so both
+ * forms compare correctly against `rule.threshold` (always a number in
+ * gate definition JSON).
+ *
+ * @param {object} rule — gate definition rule with optional `threshold_source` and required `threshold`
+ * @param {object|null} profile — parsed rb_profile.yaml, or null if missing
+ * @returns {number} the resolved threshold value (always a positive integer)
+ */
+export function resolveThreshold(rule, profile) {
+  // No threshold_source → use hardcoded threshold (backward compat)
+  if (!rule.threshold_source) {
+    return rule.threshold;
+  }
+
+  // No profile → fallback to hardcoded threshold
+  if (!profile || typeof profile !== 'object') {
+    return rule.threshold;
+  }
+
+  try {
+    // Parse path: "rb_profile.yaml#/research_style_params/wave0_shared_ref_floor"
+    const hashIdx = rule.threshold_source.indexOf('#/');
+    if (hashIdx === -1) return rule.threshold;
+
+    const jsonPath = rule.threshold_source.slice(hashIdx + 2); // after "#/"
+    if (!jsonPath) return rule.threshold;
+
+    const value = jsonPath.split('/').reduce((obj, key) => obj?.[key], profile);
+
+    // Coerce: YAML may parse numbers as string or number
+    const num = Number(value);
+    // Safety: never use floor ≤ 0 — a zero threshold would make any
+    // count pass vacuously, masking real gaps
+    if (!Number.isFinite(num) || num <= 0) {
+      return rule.threshold;
+    }
+
+    return num;
+  } catch {
+    return rule.threshold;
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Gate Engine Validation Helpers (gate-loop / gate-fork)
 // ═══════════════════════════════════════════════════════════════════════════

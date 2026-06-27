@@ -157,7 +157,12 @@ The Sub-agent operates within a relay-assigned slot directory (`_subagents/wave_
 8. Write `agent_result_ready` event to `runtime-receipt.jsonl` (IMMEDIATELY before returning)
 9. Return JSON matching `result.schema.json` to the Phase Agent
 
-**Intermediate products:** Raw WebSearch output, fetched page content, extraction drafts go to `_cache/waveN/slot_MM/` — these are non-authority, reconstructable.
+**Intermediate products:** Raw WebSearch output, fetched page content, and source metadata MUST be written to the cache directory from the spawn prompt (`Cache directory:` line) and task.md (`## Cache Directory` section). The path follows `_cache/wave1/{batch}/{topic_slug}/`. For each source, create `sNN_{source-slug}/` with:
+- `websearch.json` — raw WebSearch result
+- `page.md` — fetched page content (WebFetch / curl / node / python3)
+- `meta.json` — `{url, title, source_domain, source_name, fetched_at, fetch_method, fetch_chain, content_type, reliability_tier, reliability_basis, whitelist_status}`
+
+The Phase Agent creates the directory before spawn. `NN` increments from 01 per source. `<source-slug>` matches the qualifier in `reference/` filenames. Cache is non-authority, reconstructable.
 
 ## 4. Page Content Fetching
 
@@ -186,6 +191,7 @@ See `shared-subagent-protocol.md` Forbidden Authority section for universal Sub-
 - Complete queue task
 - Backfill seed topic (3 tokens: `__BACKFILL_WAVE1_MECHANISMS__`, `__BACKFILL_WAVE1_TRENDS__`, `__BACKFILL_PENDING_QUESTIONS__`)
 - Run gate
+- **On count_floor gate fail:** Re-fill queue with supplementary task cards (§3.3.2 of phase-wave1.md) — same sub-agent role (`dpt-evidence-extractor`), same relay contract, focused action: find additional sources only, write `reference/{topic.slug}-*.md` files only, do NOT modify evidence-summary.md or question-list.md
 
 **Sub-agent (this file) does:**
 - Search + fetch + extract + write TWO artifacts (evidence-summary.md + question-list.md)

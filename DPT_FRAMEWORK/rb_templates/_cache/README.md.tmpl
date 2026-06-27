@@ -1,0 +1,49 @@
+# _cache/ — Sub-agent 网络原始内容缓存
+
+> **Non-authority**：本目录下所有内容均可重建、可删除，不作为 gate 判定依据。
+> Wave 完成后可清理对应 wave 子目录以释放空间。
+
+## 目录结构
+
+```
+_cache/{wave}/{batch}/{scope}/{source_dir}/
+```
+
+| 层级 | 说明 | 示例 |
+|------|------|------|
+| `{wave}` | 来源 wave | `wave0`, `wave1`, `wave2` |
+| `{batch}` | 本 wave 内的执行批次 | `primary`（首次队列排空）, `suppl-r1`（补充第1轮）, `suppl-r2`, `synthesis`, `backing-r1`, ... |
+| `{scope}` | 研究范围 | `01_{topic_slug}`（per-topic）, `shared`（跨 topic）, `{finding_id}`（wave2） |
+| `{source_dir}` | 单个网络来源 | `s01_{source-slug}` — source-slug 与 `reference/` 文件名的 qualifier 一致 |
+
+## 每个 source 目录下的文件
+
+| 文件 | 内容 |
+|------|------|
+| `websearch.json` | WebSearch 返回的原始 JSON |
+| `page.md` | WebFetch / curl / node / python3 获取的页面内容 |
+| `meta.json` | 抓取元信息（11 字段，可扩展）：`url`, `title`, `source_domain`, `source_name`, `fetched_at`, `fetch_method`, `fetch_chain`, `content_type`, `reliability_tier`, `reliability_basis`, `whitelist_status` |
+
+## 与 reference/ 的关联
+
+reference/ 中的文件名包含 source-slug：
+
+```
+reference/01_topic-xinhua-box-office.md
+```
+
+对应的原始数据在：
+
+```
+_cache/wave1/primary/01_topic/s01_xinhua-box-office/
+  websearch.json    ← 找到此来源的原始搜索查询
+  page.md           ← 网页原文（抓取时的真实内容）
+  meta.json         ← {url, fetched_at, method}
+```
+
+互查无需猜测。source-slug 保持一致。
+
+---
+
+此文件在 bundle instantiation 时自动创建。
+缓存内容由各 wave 的 Sub-agent 按 Phase Agent 指定的精确路径写入。

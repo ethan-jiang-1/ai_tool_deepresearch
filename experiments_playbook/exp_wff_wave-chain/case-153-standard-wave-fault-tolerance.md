@@ -1,14 +1,14 @@
 ---
 schema: command-experiment/v1
 experiment: wff-wave-chain
-case: case-127-standard-wave-fault-tolerance
+case: case-153-standard-wave-fault-tolerance
 weight: light
 case_goal: "Prove that wave gate CLIs do not crash on malformed YAML, correctly report partial dead links in inspect while passing overall, and detect status drift — all returning clear inspect/advice without silent pass or crash."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-127_wf_fault_*
-trace: dpt_disp_case-127_wf_fault_*/_logs/_trace.jsonl
+bundle: dpt_disp_case-153_wf_fault_*
+trace: dpt_disp_case-153_wf_fault_*/_logs/_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -16,7 +16,7 @@ verdict: trace-jsonl
 
 由 coding agent 在真实 disposable experiment bundle 中执行。实验结果必须来自实际文件写入、gate CLI 调用和 trace event；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
 
-# case-127-standard-wave-fault-tolerance
+# case-153-standard-wave-fault-tolerance
 
 ## Expected Runtime Path
 
@@ -44,7 +44,7 @@ verdict: trace-jsonl
 ```bash
 REPO_ROOT=$(pwd)
 
-B1=$(node experiments_env/shared/new-disposable-bundle.mjs wf_fault1 --case case-127 --force)
+B1=$(node experiments_env/shared/new-disposable-bundle.mjs wf_fault1 --case case-153 --force)
 echo "Case 1 Bundle: $B1"
 
 # Write 1-topic registry (YAML frontmatter)
@@ -136,7 +136,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ## Case 2: Partial dead links → wave2-complete gate pass（cross_field 含 dead link 报告）
 
 ```bash
-B2=$(node experiments_env/shared/new-disposable-bundle.mjs wf_fault2 --case case-127 --force)
+B2=$(node experiments_env/shared/new-disposable-bundle.mjs wf_fault2 --case case-153 --force)
 echo "Case 2 Bundle: $B2"
 
 # Write topic_registry
@@ -262,7 +262,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ## Case 3: Status drift → wave2-complete gate fail（status_value mismatch）
 
 ```bash
-B3=$(node experiments_env/shared/new-disposable-bundle.mjs wf_fault3 --case case-127 --force)
+B3=$(node experiments_env/shared/new-disposable-bundle.mjs wf_fault3 --case case-153 --force)
 echo "Case 3 Bundle: $B3"
 
 # Write topic_registry
