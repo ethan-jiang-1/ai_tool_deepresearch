@@ -1,5 +1,7 @@
 # research-styles Specification
 
+> req: RES-001, RES-002, RES-003, RES-004, RES-005, RES-006
+
 ## Purpose
 
 Define research style profiles that control deep research depth and breadth parameters. Each style is a JSON file consumed by the JS engine. The system applies the selected style via CLI, stores resolved parameters in `rb_profile.yaml`, and enforces numeric thresholds through gate `count_floor` rules with dynamic threshold resolution. Quality parameters are enforced by Agent checklist + Queue re-fill loops.

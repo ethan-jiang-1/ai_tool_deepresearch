@@ -1,5 +1,7 @@
 # cache-raw-web-content Specification
 
+> req: CRC-001, CRC-002, CRC-003, CRC-004
+
 ## Purpose
 
 Define the standardized cache directory structure for raw web content fetched during deep research waves. The cache stores websearch results, fetched pages, and metadata in a consistent four-level hierarchy so that any reference can be traced back to its original raw source data for diagnostic and provenance verification.

@@ -28,7 +28,7 @@
 - **WHEN** 开发者为新 capability 分配缩写前缀
 - **THEN** SHALL 先在 `prefixes:` 块中注册 `NEW: new-capability-name`
 - **AND** 再创建 `openspec/specs/new-capability-name/spec.md`
-- **AND** 再在 registry 中添加 `NEW-001` 等 ID
+- **AND** 再在 registry 中添加对应的新 ID
 - **AND** 注册前 SHALL 搜索现有 `prefixes:` 确认前缀未被占用
 
 #### Scenario: Ambiguous abbreviation resolved by prefixes block
@@ -47,10 +47,10 @@
 - 一个 capability 的所有 ID（包括后续新增的）SHALL 连续排列在同一组头下
 
 #### Scenario: Adding a requirement to an existing capability
-- **WHEN** 开发者在后续 change 中为 `schema-core` 新增 `SCO-013`
-- **THEN** SHALL 将 `SCO-013` 直接插入 `# schema-core` 组的数字序正确位置
+- **WHEN** 开发者在后续 change 中为 `schema-core` 新增一个 ID
+- **THEN** SHALL 将该 ID 直接插入 `# schema-core` 组的数字序正确位置
 - **AND** SHALL NOT 创建新的 `# schema-core (delta)` 组头
-- **AND** SHALL NOT 将 `SCO-013` 附加到文件末尾或其他组下
+- **AND** SHALL NOT 将该 ID 附加到文件末尾或其他组下
 
 #### Scenario: Synthetic group headers are dissolved
 - **WHEN** registry 重组完成
@@ -90,7 +90,7 @@ SHALL 满足：
 - 废弃 capability 组放在文件末尾，在活跃 capability 之后，内部仍按字母序
 
 #### Scenario: Inserting a new ID into an existing group
-- **WHEN** 开发者在 `# schema-core` 组中新增 `SCO-013`
+- **WHEN** 开发者在 `# schema-core` 组中新增一个 ID
 - **THEN** SHALL 按数字序插入到 `SCO-012` 之后
 - **AND** 不因插入位置而改变组内其他 ID 的顺序
 
@@ -112,10 +112,10 @@ Requirement ID SHALL 只增不删，永不复用。废弃的 ID SHALL 保留在�
 SHALL NOT 将废弃 ID 移到单独的 "deprecated" 合成组——废弃是 ID 的状态，不是 ID 的归属。
 
 #### Scenario: Single requirement deprecated within active capability
-- **WHEN** `AGT-004` 被后续 change 废弃
-- **THEN** SHALL 保留在 `# agent-testing` 组内
+- **WHEN** 一个 requirement ID 被后续 change 废弃
+- **THEN** SHALL 保留在原 capability 组内
 - **AND** 值末尾标注 `[DEPRECATED]`
-- **AND** `AGT-004` 的 ID 永不分配给其他 requirement
+- **AND** 该 ID 永不分配给其他 requirement
 
 #### Scenario: Entire capability deprecated
 - **WHEN** `workflow-dynamic-md-load` 的 8 个 ID 全部废弃，spec 目录已删除
@@ -141,7 +141,7 @@ SHALL NOT 将废弃 ID 移到单独的 "deprecated" 合成组——废弃是 ID 
 - **AND** 两者均 PASS 后 SHALL 才能归档
 
 #### Scenario: Check script fails on registry inconsistency
-- **WHEN** 开发者在 delta spec 中引用了 `NEW-001` 但未在 registry 注册
-- **THEN** `check-project-reqs.mjs` SHALL 报告 `unregistered: NEW-001`
+- **WHEN** 开发者在 delta spec 中引用了一个未注册的 ID
+- **THEN** `check-project-reqs.mjs` SHALL 报告 `unregistered: <ID>`
 - **AND** SHALL exit(1)
 - **AND** change SHALL NOT 归档直到注册完成

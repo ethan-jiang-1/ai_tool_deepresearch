@@ -1,5 +1,7 @@
 # plan-hostfile-sections Specification
 
+> req: PHS-001, PHS-002, PHS-003, PHS-004, PHS-005, PHS-006
+
 ## Purpose
 TBD - created by archiving change plan-hostfile-sections. Update Purpose after archive.
 ## Requirements
