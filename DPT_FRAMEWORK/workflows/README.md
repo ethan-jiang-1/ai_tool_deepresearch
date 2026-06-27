@@ -12,7 +12,8 @@ workflows/
   transitions.chain.json     ← 路由表（node → outcome → next_node）
   nodes/
     phases/                  ← phase body MD（Agent 在每个 phase 的行动指令）
-    shared/                  ← shared node MD（跨 phase 的参考文档）
+    shared/                  ← shared node MD（跨 phase 的行为约定和参考文档）
+    brief/                   ← brief MD（HITL 决策点的用户可见文案——Agent 照着念）
 ```
 
 ## manifest.json — Topology Authority
@@ -36,6 +37,8 @@ Chain 只编码 `passed` 分支的 normal next。`failed`、`rerun` 等 branch �
 
 ## nodes/ — Agent Instructions
 
-`phases/` 下的每个 `.md` 是 Agent 在对应 phase 的行动指令。`shared/` 是跨 phase 共享的参考文档（schema 摘要、gate 规则摘要、field 文档等）。
+`phases/` 下的每个 `.md` 是 Agent 在对应 phase 的行动指令。`shared/` 是跨 phase 共享的行为约定和参考文档（规则契约、schema 摘要、gate 规则摘要等）。`brief/` 是 HITL 决策点的用户可见文案——Agent 在 `stop: yes` 阶段按需读取，照着念，不改模板文字。
+
+**三层分工**：`phases/` 管**做**（何时、做什么），`shared/` 管**守规矩**（怎么交互、怎么自律），`brief/` 管**说**（对用户说什么词）。
 
 这些 MD 不是 executable code — 它们是 Agent 读的。Go/No-Go 由 gate CLI（`DPT_FRAMEWORK/cli/gates/`）通过 definition JSON 强制执行。

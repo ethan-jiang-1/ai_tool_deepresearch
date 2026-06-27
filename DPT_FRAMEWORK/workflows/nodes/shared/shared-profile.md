@@ -47,14 +47,15 @@ suggested_context:
 ### `research_style_params`
 
 - **类型**：`object`（`ResearchStyleParamsSchema`），optional
-- **填写时机**：HITL1 phase，用户选择 `research_profile` 后 Agent 从 `DPT_FRAMEWORK/schema/research-styles/<profile>.yaml` 逐字段抄入
+- **填写时机**：HITL1 phase，Agent 运行 `apply-research-style.mjs` CLI 写入（见 phase-hitl1.md §3c）。Agent 不手写参数——CLI 是参数计算的唯一权威
 - **默认值**（bundle 创建时）：不填充（key 存在但值为空，或 key 不存在）
 - **含义**：当前研究风格的参数集——控制 Gate CLI 的 `count_floor` 动态阈值和 Phase MD 的 stop conditions。下游只读此 section，不读 YAML 源文件（profile 是单点真相）
 - **子字段**：
   | 字段 | 类型 | 含义 |
   |------|------|------|
   | `user_visible` | `boolean` | 此风格是否在 HITL1 展示给用户 |
-  | `wave0_shared_ref_floor` | `positive integer` | Wave0 `count_floor` gate threshold — 全 topic 共享 foundation reference 的最低数量 |
+  | `wave0_per_topic_source_floor` | `positive integer` | Wave0 `count_floor` gate threshold — 每 topic foundation reference 的最低数量 |
+  | `wave0_shared_ref_total` | `integer` | Wave0 跨 topic 共享 foundation reference 的全局总量（**computed by `apply-research-style.mjs`** — base + per_topic × topic_count） |
   | `wave1_per_topic_ref_floor` | `positive integer` | Wave1 `count_floor` gate threshold — 每 topic rich MD reference 的最低数量 |
   | `topic_unique_ratio` | `number [0,1]` | Topic-unique reference 的最低比例（Agent guidance，非 gate enforced） |
   | `counterexample_search` | `boolean` | Wave1 Stop Condition 5 是否强制搜索 disconfirming evidence |
@@ -62,12 +63,15 @@ suggested_context:
   | `p0p1_independent_backing` | `positive integer` | P0/P1 findings 需要的最低独立 backing source 数量（Agent guidance，非 gate enforced） |
   | `quality_min_tier` | `enum: tier_1..tier_4` | 最低 source quality tier（Agent guidance，非 gate enforced） |
   | `quality_min_substance` | `enum: substantive/thin/none` | 最低 source substance level（Agent guidance，非 gate enforced） |
-- **gate 行为**：`hitl1-recorded` gate **不检查**此字段——内容正确性依赖 Agent discipline。Wave0/Wave1 gate CLI 通过 `threshold_source` → `resolveThreshold()` 读取 `wave0_shared_ref_floor` / `wave1_per_topic_ref_floor` 做 `count_floor` 动态阈值
+  | `wave2_cross_topic_depth` | `integer` | Wave2 cross-topic scan matrix 中每 topic 至少连接的 topic 数（Agent guidance） |
+  | `wave2_emergent_search_rounds` | `integer` | Wave2 每 topic emergent search 轮数（Agent guidance） |
+- **gate 行为**：`hitl1-recorded` gate **不检查**此字段——内容正确性依赖 Agent discipline。但下游 gate CLI（wave0/wave1）通过 `threshold_source` → `resolveThreshold()` 从此字段读取 `wave0_per_topic_source_floor` / `wave1_per_topic_ref_floor` 做 `count_floor` 动态阈值
 - **示例**：
   ```yaml
   research_style_params:
     user_visible: true
-    wave0_shared_ref_floor: 12
+    wave0_per_topic_source_floor: 12
+    wave0_shared_ref_total: 18
     wave1_per_topic_ref_floor: 10
     topic_unique_ratio: 0.5
     counterexample_search: true
@@ -75,6 +79,8 @@ suggested_context:
     p0p1_independent_backing: 2
     quality_min_tier: tier_2
     quality_min_substance: substantive
+    wave2_cross_topic_depth: 2
+    wave2_emergent_search_rounds: 1
   ```
 
 ### `human_decision_checkpoints.hitl1.status`

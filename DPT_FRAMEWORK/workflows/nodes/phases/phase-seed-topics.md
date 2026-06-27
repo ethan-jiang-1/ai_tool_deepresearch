@@ -29,6 +29,8 @@ suggested_context:
 
 ## 3. Allowed Actions — Queue-Driven 三阶段
 
+> **`gap_queue_backed` 处理**：Agent SHALL 在 seed-topics 阶段读取 `rb_profile.yaml` 的 `root_must_answer_set`，通过文本模式识别标记为 `gap_queue_backed` 的条目（包含 "不确定"/"先帮我拆"/"不知道具体该问什么" 等不确定性语义标记）。对每个 `gap_queue_backed` 条目，Agent SHALL 生成对应的 **question decomposition task card**——将用户的不确定问题拆解为具体的澄清/探索子问题，排入 queue。Agent SHALL NOT 阻塞流程或要求用户澄清——`gap_queue_backed` 是正常的输入状态，不是错误。
+
 Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task，由 Phase Agent 直接执行（当前 wire value 为 `main-agent`；无外部 search，从 topic_registry 的结构化定义写为文件）。seed topic 文件 **不是笼统的标签**——它必须是能驱动后续 search 的决策级文件。
 
 ### 3.1 灌料 (Filling) — 首次进入 seed-topics

@@ -19,6 +19,74 @@
 #
 # 缩写规则: 首单词前 2 字母 + 次单词首字母，如 schema-core → SCO
 
+# ──────────────────────────────────────────────
+# prefixes: 缩写 → kebab-case capability 全称
+# 此映射块是唯一自文档化来源。key 不匹配 [A-Z]{3}-\d{3}，
+# check-project-reqs.mjs 自动忽略。
+# ──────────────────────────────────────────────
+prefixes:
+  AGQ: agentic-queue
+  AGT: agent-testing
+  BUI: bundle-data-isolation
+  BUS: bundle-start-from-here
+  CDE: content-delivery-experiments
+  CDG: content-delivery-gate-implementation
+  CDP: content-delivery-phase-content
+  CHI: check-inspect-feedback
+  CMI: cmd-bundle-instantiation
+  COS: conditional-nodes
+  CPT: cli-phase-transition
+  CRC: cache-raw-web-content
+  CSE: cmd-subagent-environment
+  DYS: dynamic-node-loading
+  EXS: experiment-shared-infra
+  FOR: fork-repair-converge
+  FRE: framework-engine
+  GAF: gate-fork-router
+  GAS: gate-state-machine
+  GSK: gate-skeleton
+  HIU: hitl-ux
+  INT: integration-tests
+  IOC: cli-inspect-output-conventions
+  LFW: lifecycle-walker            # all entries deprecated; no spec directory
+  LOC: logging-conventions
+  LOG: logger
+  PHS: plan-hostfile-sections
+  PLR: playbook-runner
+  PRE: pre-research-experiments
+  PRG: pre-research-gate-implementation
+  PRP: pre-research-phase-content
+  REF: reference-flat-format
+  REI: rerun-incremental-node
+  REL: repair-loop
+  RES: research-styles
+  RET: requirement-traceability
+  RWE: research-wave-experiments
+  RWG: research-wave-gate-implementation
+  RWP: research-wave-phase-content
+  SCO: schema-core
+  SEG: seg2node
+  SHC: shared-node-content
+  SOR: schema-core                 # sub-prefix of SCO
+  STM: seed-topic-materialization
+  SUC: subagent-collect
+  SUD: subagent-dispatch
+  SUR: subagent-repair
+  SUS: subagent-slots
+  SWE: silent-wave-execution
+  TEF: test-fixtures
+  TRT: transition-table
+  TRW: trace-writer
+  WAD: wave0-artifacts-directory
+  WAI: wave1-intake
+  WDC: workflow-directory-contract
+  WDM: workflow-dynamic-md-load    # all entries deprecated; no spec directory
+  WFS: workflow-fsm-definition     # all entries deprecated; no spec directory
+  WLO: workflow-chain-observability # all entries deprecated; no spec directory
+  WML: workflow-manifest-loading   # all entries deprecated; no spec directory
+  WNC: workflow-node-contract
+  WTS: wave2-synthesis
+
 # agent-testing
 AGT-001: agent-testing — Agent-assisted test playbook for gate-loop
 AGT-002: "agent-testing — Agent-assisted test playbook for gate-fork (3 levels: simple/medium/complex)"
@@ -46,8 +114,9 @@ AGQ-013: agentic-queue — Producer rule topic_deepening for wave1 deepening tas
 AGQ-014: agentic-queue — Claim advice returns delegates_required and delegates_config for relay dispatch
 AGQ-015: agentic-queue — Producer rule cross_topic_synthesis for wave2 synthesis task cards
 AGQ-016: agentic-queue — Producer rule seed_topic_backfill_wave2 for wave2 backfill task cards
-# bundle-infrastructure
+# bundle-data-isolation
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
+# workflow-directory-contract (BUS-* absorbed)
 BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry
 
 # cmd-bundle-instantiation
@@ -81,6 +150,14 @@ GAF-001: gate-fork-router — Gate branch classification and explicit resolver
 
 # gate-state-machine
 GAS-001: gate-state-machine — Gate checkpoint feedback and transition lookup
+
+# hitl-ux
+HIU-001: hitl-ux — HITL conversational loop model (entry → in-loop → exit → anti-infinite-loop)
+HIU-002: hitl-ux — HITL1 entry prompt with A/B/C letter menu and must-answer collection
+HIU-003: hitl-ux — HITL2 entry prompt with context narrative and A/B/C/D/E decision menu
+HIU-004: hitl-ux — Chinese-first interaction convention for all user-visible HITL prompts
+HIU-005: hitl-ux — Graceful degradation for uncertain users (gap_queue_backed, intake_status)
+HIU-006: hitl-ux — Anti-infinite-loop two-level nudge strategy (round 3 gentle, round 5+ strong)
 
 # integration-tests
 INT-001: integration-tests — validate-bundle.mjs + inspect-bundle.mjs integration tests
@@ -144,6 +221,9 @@ SHC-003: "shared-node-content — Shared schemas content matches current executa
 SHC-004: shared-node-content — Shared repair guidance content (fail→inspect→repair→rerun, retry limit 3, escalation, check type repair directions)
 SHC-005: shared-node-content — Shared anti-cheating rules content (≥6 prohibitions with correct alternatives)
 SHC-006: shared-node-content — Shared node authority boundary enforcement (no phase/gate/next/stop frontmatter, no hidden phase language)
+
+# silent-wave-execution
+SWE-001: silent-wave-execution — Silent wave execution contract with degradation priority chain and repair escalation override
 
 # test-fixtures
 TEF-001: test-fixtures — Fixture framework for integration tests
@@ -218,6 +298,14 @@ RWG-007: research-wave-gate-implementation — Wave gate CLIs follow established
 RWG-008: research-wave-gate-implementation — Wave2 gate cross_field verifies Markdown link artifact references
 RWG-009: research-wave-gate-implementation — Wave2 gate CLI supports pattern_match check type with negate and topic expansion
 RWG-010: research-wave-gate-implementation — Wave2 phase-internal feedback checks are distinct from phase boundary gate
+
+# requirement-traceability
+RET-001: requirement-traceability — Prefix abbreviation registry as self-documenting source of truth
+RET-002: requirement-traceability — One capability one group header (dissolve synthetic and delta groups)
+RET-003: requirement-traceability — Capability boundary test (4 conditions) prevents scope confusion
+RET-004: requirement-traceability — Alphabetical ordering of groups and numeric ordering within groups
+RET-005: requirement-traceability — Deprecation without deletion (IDs never reused)
+RET-006: requirement-traceability — Check script compliance as hard gate for archive
 
 # wff-research-waves / research-wave-experiments
 RWE-001: "research-wave-experiments — Wave0 happy-path + fail playbook (5 trace events: 1 pass + 4 fail, covers count_floor ⊕ schema_valid AND interaction, empty registry, {topic} expansion)"

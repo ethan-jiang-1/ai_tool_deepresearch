@@ -7,6 +7,7 @@ stop: "no"
 requires:
   - shared/shared-schemas
   - shared/shared-subagent-protocol
+  - shared/shared-silent-execution
 suggested_context:
   - shared/shared-anti-cheating-rules
 ---
@@ -33,6 +34,8 @@ Wave2 是最后一个 research phase——产出不是 final report，而是经�
 - `shared-subagent-protocol.md`（relay slot 通信契约）
 
 ## 3. Allowed Actions
+
+> **search_preference 下游使用**：Agent SHALL 在 wave2 cross-topic synthesis 和 emergent search 期间读取 `rb_profile.yaml` 的 `search_preference` 字段。将用户的自然语言偏好作为跨 topic 分析视角的软约束（如用户关注特定地区、时间段、方法论角度——在 cross-topic scan matrix 和 emergent search 中优先探索这些维度）。`search_preference` 不替代 `research_style_params` 的硬参数，而是在硬参数框架内的分析视角倾斜。
 
 ### §3.1 灌料 (Filling)
 
@@ -342,6 +345,8 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
 ## 8. Stop Behavior
 
 `stop: no` — Phase Agent 自主执行 synthesis + finding triage + Quality Self-Check + re-fill loop。Wave2 不做 stop-and-wait 人类审查（HITL2 是独立的审查阶段）。Quality gap 通过 Q re-fill 静默补足——Phase Agent 不应因 quality 不达标就停下来问用户。
+
+> **静默阶段纪律**：本 phase 在静默自主阶段。`requires` 已加载 `shared-silent-execution.md`。遇错按降级优先级链处理（重试→换源→降级方法→标记 gap），绝不浮出水面向用户报告进度、提问或请求确认。
 
 ## Rerun-Aware Behavior
 

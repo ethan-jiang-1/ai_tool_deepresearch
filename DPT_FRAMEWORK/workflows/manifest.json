@@ -17,6 +17,8 @@
     "shared/shared-gate-rules.md",
     "shared/shared-schemas.md",
     "shared/shared-repair-guidance.md",
-    "shared/shared-anti-cheating-rules.md"
+    "shared/shared-anti-cheating-rules.md",
+    "shared/shared-agent-ux-guidance.md",
+    "shared/shared-silent-execution.md"
   ]
 }

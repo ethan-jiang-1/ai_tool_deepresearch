@@ -1,11 +1,23 @@
 # TODO: evidence-extraction（证据提取——把"干货"从来源抽到 reference）
 
-> 状态: 待设计 | 优先级: 高 | 创建: 2026-06-16 | 更新: 2026-06-25
+> 状态: 部分完成（见下方"已完成部分"） | 优先级: 高 | 创建: 2026-06-16 | 更新: 2026-06-27
 >
 > 曾用名: `todo-prototype-extract.md`（太模糊——不知道到底在 extract 什么。更名为 evidence-extraction，明确是提取证据内容/干货。）
 >
 > 直接依赖: `prototype-subagent` ✅ DONE | `prototype-gate-fork` ✅ DONE
 > 上游 of: `todo-evidence-quality`（extraction 产出 reference，quality 评估每条 reference——不够格就放弃）
+>
+> ## 已完成部分（2026-06-27）
+>
+> Goal 1（扩展 reference 格式，增加 `## Core Content Capture` section）**部分落地**：
+> - ✅ `## Core Content Capture` section 作为 reference template 的 mandatory section 2/5 已存在于 `DPT_FRAMEWORK/workflows/nodes/shared/shared-reference-template.md:48-53`
+> - ✅ `_cache/` 目录四级结构约定已文档化于 `shared-subagent-protocol.md`，三个文件 per source（`websearch.json`/`page.md`/`meta.json`）
+> - ❌ 质量判定字段（`web_substance`/`commercial_intent`/`content_retention`）尚未加入 template
+> - ❌ CandidateCard schema 未实现（零代码引用）
+> - ❌ promote 流程（cache → triage → enriched reference）未实现
+> - ❌ `isCountable(ref)` 未实现
+> - ❌ `countReferences(baseDir)` 未实现
+> - ❌ `ref_count` 仍由 Agent `evidenceCount` 决定，未改为 Engine 计算（`mergeResults()` 仍用旧逻辑）
 
 ## Why（更新于 2026-06-25）
 

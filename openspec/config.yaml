@@ -71,6 +71,13 @@ context: |
     - check-project-specs.mjs  — main spec 结构检查（deltaHeaderInMain / missingPurpose / missingRequirements / missingReqHeader）
     每次 change 归档前两个 check 脚本都必须 PASS，详见下方 rules.tasks。
 
+    Registry 组织约定（强制性，所有 change 遵守）:
+    - `# <capability-name>` 组头与 `openspec/specs/<capability-name>/` 目录一一对应——不存在合成组头（将多个 capability 归入人造标题）
+    - `prefixes:` 映射块是缩写→capability 全称的唯一自文档化来源（位于 req-registry.yaml 头部注释后、第一个 ID 组之前）
+    - ID 按 capability 分组，组按字母序排列，组内 ID 按数字序排列
+    - Delta 段（如 `# schema-core (delta)`）不允许——新增 ID SHALL 直接归入对应 capability 组，不另开 delta 组头
+    - 废弃 ID SHALL 保留在原 capability 组内数字序的正常位置，值末尾标注 `[DEPRECATED]`；整个 capability 废弃时组头标 `— all entries deprecated; no spec directory`，放在文件末尾
+
   测试分层:
     项目有三层测试，按环境和目的区分:
 
@@ -215,3 +222,10 @@ rules:
       tasks 的 `@impl <REQ-ID>`、代码注释 `// @impl <REQ-ID>` 或 MD frontmatter `req:`。
     - 列出该 capability 涉及的 requirement ID 和 invariant ID
     - 实现代码中用 `// @impl <REQ-ID>` 标注, MD 文件用 frontmatter `req:` 标注
+    - |
+      Capability 边界测试（新增 capability 时 SHALL 通过以下检查。满足任一条件则应为独立 capability，建独立 spec）:
+        1. 约束条件不同 — 行为契约的约束条件与其他 capability 正交（如 `hitl-ux` 约束 "用户在场时的对话"，`silent-wave-execution` 约束 "用户缺席时的自律"）
+        2. 独立 requires 链 — 被不同的 phase node 以独立的 `requires` 链加载
+        3. 独立 gate 检查 — 有独立的 gate 检查，或 gate rule 的 target 语义与现有 capability 不重叠
+        4. 不同 Engine 模块 — 涉及不同的 schema contract、CLI、或 trace event 族
+      SHALL NOT 以主题标签（如 "UX 相关"、"性能相关"）作为 capability 边界——主题标签描述关注领域，不描述行为契约的约束条件。

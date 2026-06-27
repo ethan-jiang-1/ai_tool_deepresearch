@@ -6,6 +6,9 @@ gate: hitl1-recorded
 stop: "yes"
 requires:
   - shared/shared-profile
+  - shared/shared-agent-ux-guidance
+suggested_context:
+  - brief/hitl1
 suggested_context: []
 ---
 
@@ -60,11 +63,21 @@ topic_registry:
 
 ### 3b. HITL1 问题收集
 
-- 向用户展示结构化 HITL1 问题面（见下方 checklist）
-- 基于用户回答选择 `research_profile` enum 值
-- 将 `root_must_answer_set` 写入 `rb_profile.yaml`
-- 将 `human_decision_checkpoints.hitl1.status` 设为 `recorded`
-- 将 `human_decision_checkpoints.hitl1.recorded_at` 设为当前 ISO 8601 timestamp
+**Prompt 文本来源**：Agent SHALL 从 `brief/hitl1.md` 读取 HITL1 入口 prompt 精确文本，不动模板文字。
+
+**操作步骤**：
+1. 读取 `brief/hitl1.md` 的「入口 Prompt」节
+2. 填入动态部分：
+   - `{DYNAMIC: topic_rewrite_result}` → 从 §3a topic rewrite 结果提取
+   - `{DYNAMIC: seed_topics_preview}` → 从 `rb_plan.md` topic_registry 生成简短预览
+3. 向用户展示完整的入口 prompt
+4. 遵循 `shared-agent-ux-guidance.md` 的环内行为规则——用户可以直接选字母，也可以问问题、对比选项、表达不确定
+5. 用户显式确认后：
+   - 将 `research_profile` 写入 `rb_profile.yaml`（字母→canonical enum 翻译）
+   - 将 `root_must_answer_set` 写入 `rb_profile.yaml`
+   - 将 `search_preference` 写入 `rb_profile.yaml`（如果用户提供；否则记录 `not_specified_use_profile_defaults`，**不追问**）
+   - 将 `human_decision_checkpoints.hitl1.status` 设为 `recorded`
+   - 将 `human_decision_checkpoints.hitl1.recorded_at` 设为当前 ISO 8601 timestamp
 
 ### 3c. Research Style Parameters（研究风格参数应用）
 
@@ -101,7 +114,7 @@ topic_registry:
 | `plan_basename` | `rb_profile.yaml#/plan_basename` | 已由 instantiation 写入，确认未被误改 |
 | `research_profile` | `rb_profile.yaml#/research_profile` | ≠ `not_selected`；用户从 `quick_factual`、`exploratory_map`、`claim_verification` 中选择 |
 | `root_must_answer_set` | `rb_profile.yaml#/root_must_answer_set` | 非空字符串数组 |
-| `research_style_params` | `rb_profile.yaml#/research_style_params` | 从 `DPT_FRAMEWORK/schema/research-styles/<profile>.yaml` 逐字段抄入，不得跳过任何字段。Agent 写入后自检一致性（§3c 步骤 3） |
+| `research_style_params` | `rb_profile.yaml#/research_style_params` | 由 `apply-research-style.mjs` CLI 写入（见 §3c 步骤 1-3），Agent 不手写参数。CLI 后验证 stdout 中的 `applied`、`topic_count`、`wave0_shared_ref_total` 值 |
 | `hitl1.status` | `rb_profile.yaml#/human_decision_checkpoints/hitl1/status` | = `recorded` |
 | `hitl1.recorded_at` | `rb_profile.yaml#/human_decision_checkpoints/hitl1/recorded_at` | 非空 ISO 8601 timestamp |
 
@@ -113,14 +126,15 @@ node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle <path> --cur
 
 ## 6. On Gate Pass
 
-读取 `check.next`。Advance to `setup`：加载 `phase-setup.md`。
+1. **发送 HITL1 出口语**：从 `brief/hitl1.md` 的「出口语」节读取模板文字，告知用户即将进入静默自主执行阶段（Setup → Seed Topics → Wave 0 → Wave 1 → Wave 2），期间不会浮出水面，可以关闭终端，下次见面是 HITL2
+2. 读取 `check.next`。Advance to `setup`：加载 `phase-setup.md`。
 
 ## 7. On Gate Fail
 
 读取 CLI 返回的 `inspect` / `advice`，补充缺失字段或修正默认值后 rerun same gate。常见 fail 原因：
 - `research_profile` 仍为 `not_selected` → 确认用户选择后写入
 - `root_must_answer_set` 为空 → 确认用户 must-answer 问题后写入
-- `research_style_params` 缺失或不完整 → 按 §3c 步骤重新从 YAML 抄入
+- `research_style_params` 缺失或不完整 → 重新运行 `apply-research-style.mjs` CLI
 - `hitl1.status` 不是 `recorded` → 写入 `recorded`
 - `hitl1.recorded_at` 缺失 → 写入当前时间戳
 

@@ -1,6 +1,8 @@
-# TODO: wave1-sufficiency-gates（研究充分性——三个画像定"跑够了"的标准）
+# DONE: wave1-sufficiency-gates（研究充分性——三个画像定"跑够了"的标准）
 
-> 状态: 待设计 | 优先级: **最高（当前优先）** | 创建: 2026-06-26 | 更新: 2026-06-26
+> 状态: 已完成（已移入 done/） | 创建: 2026-06-26 | 更新: 2026-06-27
+>
+> **完成方式：** OpenSpec change `establish-research-styles`（2026-06-27 归档至 `openspec/changes/archive/2026-06-27-establish-research-styles/`）。5 个 Goals + 4 个设计问题全部实现。4 套 research style JSON（debug/quick_factual/exploratory_map/claim_verification）、`apply-research-style.mjs` CLI、gate `threshold_source` 动态阈值、三个 phase MD 的 re-fill loop、placeholder 三层防线、debug style 隐藏——全部落地。Spec 已同步至 `openspec/specs/research-styles/`。
 >
 > 本 TODO 的核心问题：**研究什么时候算"跑够了"？**
 > V12 用一个非常好的 UX 设计回答这个问题——三个研究画像。当前框架把这三个画像丢了。

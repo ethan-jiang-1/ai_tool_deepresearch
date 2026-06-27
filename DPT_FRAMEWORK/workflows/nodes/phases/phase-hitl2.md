@@ -6,6 +6,9 @@ gate: hitl2-recorded
 stop: "yes"
 requires:
   - shared/shared-profile
+  - shared/shared-agent-ux-guidance
+suggested_context:
+  - brief/hitl2
 suggested_context:
   - shared/shared-gate-rules
   - shared/shared-anti-cheating-rules
@@ -31,9 +34,13 @@ HITL2 是 delivery 前最后一次人类审查——用户在此决定是否 pro
 
 ## 3. Allowed Actions
 
-- 从 Wave0/Wave1/Wave2 artifact 中提取 key findings summary + open questions + recommended actions
-- 产出 decision brief artifact：`artifacts/hitl2/decision-brief.md`
-- 向用户展示 structured final review decision 问题（4 个 user_decision 选项）
+- 从 Wave0/Wave1/Wave2 artifact 中提取**语境叙事**的三个动态填入内容：
+  - 目前证据足够回答的是：概括各 topic evidence-summary 中已确认的关键发现
+  - 仍然不足或需要谨慎的地方是：汇总 question-list 中的 open/gap 问题 + 静默期降级汇总（`shared-silent-execution.md` §2 的 HITL2 汇总）
+  - 如果继续补证据/重跑会优先补：从 gap 和 emergent question 中提取优先级最高的补充方向
+- **展示 prompt 之前先写 durable state**：产出 decision brief artifact（`artifacts/hitl2/decision-brief.md`）+ 将 `hitl2.status` 设为 `pending_user`。此步骤不可跳过——session 断掉后 Agent 恢复时 SHALL 能通过 `hitl2.status = pending_user` 得知用户尚未回复
+- 从 `brief/hitl2.md` 的「入口 Prompt」节读取 HITL2 入口 prompt 精确文本，填入三个动态部分，向用户展示
+- 遵循 `shared-agent-ux-guidance.md` 的环内行为规则——用户可以直接选字母 A/B/C/D/E，也可以问问题、对比选项
 - 将用户 decision 写入 `rb_profile.yaml#/human_decision_checkpoints/hitl2`：
   - `status: recorded`
   - `user_decision`: 见下方枚举
@@ -52,6 +59,18 @@ HITL2 是 delivery 前最后一次人类审查——用户在此决定是否 pro
 | `stop_blocked` | Agent | lifecycle 终止，记录原因到 profile。 |
 
 `proceed_to_readiness` 以外 decision **不编码进 transition chain**——chain 只管 `proceed_to_readiness` 的 normal next。branch 路由归 Agent decision authority。
+
+### 字母→Canonical Enum 映射表
+
+用户 prompt 中括号内的英文是**用户友好描述**（如 "change final report view"），不是 canonical enum 值。Agent SHALL 用以下映射表翻译：
+
+| 字母 | 写入 `rb_profile.yaml` 的 canonical enum 值 |
+|------|------------------------------------------|
+| A | `proceed_to_readiness` |
+| B | `request_view_revision` |
+| C | `rerun` |
+| D | `repair` |
+| E | `stop_blocked` |
 
 - 调用 `advance-status` 推进状态：
   ```bash
@@ -80,7 +99,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle <path> --cur
 
 Gate pass 后，Agent 读取 `rb_profile.yaml#/human_decision_checkpoints/hitl2/user_decision` 决定路由：
 
-- `proceed_to_readiness` → 跟随 chain routing 进 `phase-readiness.md`
+- `proceed_to_readiness` → **发送 HITL2 出口语**（从 `brief/hitl2.md` 的「出口语」节 A 路径读取模板文字，告知用户即将生成最终报告，期间不会浮出水面，完成后交付）→ 跟随 chain routing 进 `phase-readiness.md`
 - `request_view_revision` → Agent 读取 rationale，决定回到哪个 phase 修改 view（不 restart）
 - `repair` → Agent 就地修复当前问题后 rerun HITL2 gate，不重启 lifecycle
 - `rerun` → Agent 用 `rerun` outcome 查 chain → chain 返回 `phases/phase-rerun.md` → 加载 phase-rerun node
@@ -97,7 +116,7 @@ Gate pass 后，Agent 读取 `rb_profile.yaml#/human_decision_checkpoints/hitl2/
 | decision brief 缺失或为空 | 基于 Wave0/1/2 artifact 生成 decision brief |
 | `hitl2.status` ≠ `recorded` | 确保决策已写入 `rb_profile.yaml` 的 hitl2 section |
 | `user_decision` 为空 | 向用户询问并填写 decision |
-| `user_decision` 不在合法枚举中 | 修正为 4 个合法值之一 |
+| `user_decision` 不在合法枚举中 | 修正为 5 个合法值之一 |
 | `trace_event_present` fail | 确认 hitl2_recorded trace event 已写入 |
 | status drift | 恢复 `current_gate`/`next_gate` 为 `hitl2_recorded`/`readiness_passed` |
 

@@ -7,6 +7,7 @@ stop: "no"
 requires:
   - shared/shared-profile
   - shared/shared-schemas
+  - shared/shared-silent-execution
 suggested_context:
   - shared/shared-anti-cheating-rules
   - shared/shared-subagent-protocol
@@ -33,6 +34,8 @@ suggested_context:
 - 运行 Phase Agent 有页面搜索工具（如 Claude Code `WebSearch` 或 Codex `web_search`）。页面内容抓取：如有内置工具（Claude Code `WebFetch`）则使用，否则走 `shared-subagent-protocol.md` 抓取链
 
 ## 3. Allowed Actions — Queue-Driven 三阶段
+
+> **search_preference 下游使用**：Agent SHALL 在 wave0 搜索和 source intake 期间读取 `rb_profile.yaml` 的 `search_preference` 字段。将用户的自然语言偏好作为搜索策略的软约束（如 "优先找中文资料" → 优先搜索中文源；"关注 2024 年后" → 优先检索近期文献）。`search_preference` 不替代 `research_style_params` 的硬参数（如 source quality tier），而是在硬参数框架内的搜索策略倾斜。
 
 Wave0 使用 Agentic Queue 驱动 source intake。所有搜索/fetch 工作走 task card → claim → execute(Sub-agent) → complete 循环。
 
@@ -242,6 +245,8 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave1_complete
 ## 8. Stop Behavior
 
 `stop: no` — Phase Agent 自主搜集 foundation reference。若 registry 为空，报告并停止，不编造假 reference。
+
+> **静默阶段纪律**：本 phase 在静默自主阶段。`requires` 已加载 `shared-silent-execution.md`。遇错按降级优先级链处理（重试→换源→降级方法→标记 gap），绝不浮出水面向用户报告进度、提问或请求确认。
 
 ## Rerun-Aware Behavior
 
