@@ -13,7 +13,6 @@ import {
   resolveRouting,
   buildGateResult,
   emitGateResult,
-  readTraceEvents,
   writeGateAttempt,
   stripMdFrontmatter,
 } from '../../engine/helpers/gate-helpers.mjs';
@@ -156,12 +155,6 @@ for (const rule of definition.rules) {
             ruleDetail = `${rule.target}: value "${value}" is not in accepted set: [${rule.value.join(', ')}]`;
           }
         }
-      }
-    } else if (rule.check === 'trace_event_present') {
-      const events = readTraceEvents(bundlePath, rule.target);
-      if (events.length === 0) {
-        rulePassed = false;
-        ruleDetail = `Trace event "${rule.target}" not found in rb_trace.jsonl`;
       }
     } else if (rule.check === 'status_value') {
       const [file, jsonPath] = rule.target.split('#/');

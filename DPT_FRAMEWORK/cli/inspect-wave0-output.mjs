@@ -6,7 +6,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import { readBundlePlan, parseMdFrontmatter } from '../engine/helpers/gate-helpers.mjs';
+import { readBundlePlan } from '../engine/helpers/gate-helpers.mjs';
 
 const BUNDLE = process.argv[3] || process.argv[2]; // handle --bundle <path> or just <path>
 const bundlePath = BUNDLE;
@@ -31,8 +31,16 @@ function readMdFile(path) {
 }
 
 function parseMetadataBlock(content) {
-  // Uses YAML frontmatter parser — reference files use `---\nkey: "value"\n---` format
-  return parseMdFrontmatter(content);
+  // Parses bullet-list metadata: `- key: value` lines before the first `## ` header.
+  // Format per shared-reference-template.md.
+  const keys = {};
+  const lines = content.split('\n');
+  for (const line of lines) {
+    if (line.trim().startsWith('## ')) break;
+    const m = line.match(/^-\s+([^:]+):\s*(.*)$/);
+    if (m) keys[m[1].trim()] = m[2];
+  }
+  return keys;
 }
 
 const REQUIRED_META = ['source_url','acceptance_status','source_type','tier','evidence_role','trust_level','why_it_matters','accessed_at','related_topic'];

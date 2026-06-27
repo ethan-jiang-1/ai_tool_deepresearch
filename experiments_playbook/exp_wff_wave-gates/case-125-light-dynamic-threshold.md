@@ -135,7 +135,6 @@ for topic in topic-a topic-b topic-c; do
   echo "$topic: $count entries"
 done
 
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave0_completion"}' >> $B/rb_trace.jsonl
 ```
 
 预期：每 topic 12 条 source entry（满足 per_topic_count_floor threshold=12）。

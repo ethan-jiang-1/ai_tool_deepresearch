@@ -462,7 +462,6 @@ sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/- [部分解答] t1-q1: cross-topic 
 sed -i '' 's/__BACKFILL_WAVE2_JUDGMENT__/W2F-001 explore_search: Copilot fixed 3-way has lower latency but less flexibility vs Claude Code dynamic 1-5 scheduling./' $B/seed_topics/02_agentic-tools.md
 sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/- [部分解答] t2-q1: cross-topic explore_search (W2F-001, 2 sources, medium confidence)/' $B/seed_topics/02_agentic-tools.md
 
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave2_completion"}' >> $B/rb_trace.jsonl
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "$GATE_OUTPUT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));console.log('gate:',d.check.passed,'| next:',d.check.next)"

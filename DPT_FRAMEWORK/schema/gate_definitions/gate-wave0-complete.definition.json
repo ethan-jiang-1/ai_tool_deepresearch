@@ -1,6 +1,6 @@
 {
   "gate": "wave0-complete",
-  "description": "Verify Wave0 produced shared foundation evidence: _INDEX.md and README.md exist, 00-shared-*.md reference files exist (count_floor >=1), per-topic thin YAML exists in artifacts/wave0/ and passes ReferenceMetadata schema validation, trace evidence present, status values point to wave0→wave1.",
+  "description": "Verify Wave0 produced shared foundation evidence: _INDEX.md and README.md exist, 00-shared-*.md reference files exist (count_floor >=1), per-topic thin YAML exists in artifacts/wave0/ and passes ReferenceMetadata schema validation, trace evidence present, status values point to wave0\u2192wave1.",
   "rules": [
     {
       "id": "reference_index_md_exists",
@@ -58,24 +58,18 @@
       "failure_message": "Topic {topic} has fewer than 1 reference metadata entries in artifacts/wave0/{topic}/source.yaml. Collect at least the foundation floor count for each topic."
     },
     {
-      "id": "trace_wave0_completion",
-      "check": "trace_event_present",
-      "target": "wave0_completion",
-      "failure_message": "Missing trace event: wave0_completion. The phase body requires recording this event in rb_trace.jsonl before running the gate."
-    },
-    {
       "id": "status_current_gate",
       "check": "status_value",
       "target": "rb_status.json#/current_gate",
       "expected": "wave0_complete",
-      "failure_message": "rb_status.json current_gate must be 'wave0_complete'. Status may have drifted — restore the correct gate value."
+      "failure_message": "rb_status.json current_gate must be 'wave0_complete'. Status may have drifted \u2014 restore the correct gate value."
     },
     {
       "id": "status_next_gate",
       "check": "status_value",
       "target": "rb_status.json#/next_gate",
       "expected": "wave1_complete",
-      "failure_message": "rb_status.json next_gate must be 'wave1_complete'. Status may have drifted — restore the correct value."
+      "failure_message": "rb_status.json next_gate must be 'wave1_complete'. Status may have drifted \u2014 restore the correct value."
     }
   ]
 }

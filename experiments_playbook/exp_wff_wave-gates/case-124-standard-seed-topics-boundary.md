@@ -149,7 +149,6 @@ title: Topic C
 EOF
 
 # Record trace event
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"seed_topics_completion"}' >> $B/rb_trace.jsonl
 
 echo "=== seed_topics/ ==="
 ls -la $B/seed_topics/

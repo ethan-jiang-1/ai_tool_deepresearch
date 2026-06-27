@@ -89,24 +89,18 @@
       "failure_message": "Unreplaced __BACKFILL_PENDING_QUESTIONS__ token found in seed topic file. Execute backfill task: update question status labels from ledger/index."
     },
     {
-      "id": "trace_wave2_completion",
-      "check": "trace_event_present",
-      "target": "wave2_completion",
-      "failure_message": "Missing trace event: wave2_completion. The phase body requires recording this event in rb_trace.jsonl before running the gate."
-    },
-    {
       "id": "status_current_gate",
       "check": "status_value",
       "target": "rb_status.json#/current_gate",
       "expected": "wave2_complete",
-      "failure_message": "rb_status.json current_gate must be 'wave2_complete'. Status may have drifted — restore the correct gate value."
+      "failure_message": "rb_status.json current_gate must be 'wave2_complete'. Status may have drifted \u2014 restore the correct gate value."
     },
     {
       "id": "status_next_gate",
       "check": "status_value",
       "target": "rb_status.json#/next_gate",
       "expected": "hitl2_recorded",
-      "failure_message": "rb_status.json next_gate must be 'hitl2_recorded'. Status may have drifted — restore the correct value."
+      "failure_message": "rb_status.json next_gate must be 'hitl2_recorded'. Status may have drifted \u2014 restore the correct value."
     }
   ]
 }

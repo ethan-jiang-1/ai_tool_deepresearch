@@ -477,7 +477,6 @@ grep -q '__BACKFILL_PENDING_QUESTIONS__' $B/seed_topics/02_ai-regulation.md && e
 
 ```bash
 # Write trace event
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave2_completion"}' >> $B/rb_trace.jsonl
 
 # Run gate
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)

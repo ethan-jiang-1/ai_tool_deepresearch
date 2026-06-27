@@ -297,7 +297,6 @@ cat > $B/reference/_INDEX.md << 'EOF'
 - N foundation references (real WebSearch + WebFetch)
 EOF
 
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave0_completion"}' >> $B/rb_trace.jsonl
 
 # Run gate
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md)

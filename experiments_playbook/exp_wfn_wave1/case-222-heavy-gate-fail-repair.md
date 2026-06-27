@@ -173,7 +173,6 @@ find $B2/artifacts -type f | sort
 ### Step A2: Gate — 预期 fail
 
 ```bash
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave1_completion"}' >> $B2/rb_trace.jsonl
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B2 --current-node phases/phase-wave1.md || true)
 echo "$GATE_OUTPUT"

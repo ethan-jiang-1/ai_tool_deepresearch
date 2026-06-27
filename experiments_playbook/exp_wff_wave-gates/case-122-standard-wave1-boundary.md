@@ -204,7 +204,6 @@ Directly supports topic-a investigation targets.
 EOF
 
 # Record trace event
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave1_completion"}' >> $B/rb_trace.jsonl
 
 echo "=== Wave1 artifacts ==="
 find $B/artifacts/wave1 $B/reference -type f | sort

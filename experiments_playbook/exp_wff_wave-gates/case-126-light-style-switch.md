@@ -142,7 +142,6 @@ done
 echo "=== Shared refs ==="
 ls $B/reference/00-shared-*.md | wc -l
 
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave0_completion"}' >> $B/rb_trace.jsonl
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md)
 echo "$GATE_OUTPUT"

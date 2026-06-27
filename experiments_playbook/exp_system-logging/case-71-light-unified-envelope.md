@@ -70,11 +70,11 @@ const logContent = logExists ? readFileSync(logPath, 'utf-8') : '';
 const hasFirstLine = logContent.includes('run_start');
 
 // Write check events
-// Disposable bundles skip traceInit/logToRun (only production instantiate-run-bundle calls them).
-// These checks confirm disposable bundle state — boundary: expected=false.
+// Disposable bundles now also call traceInit/logToRun (D8 fix).
+// These checks confirm both disposable and production bundles have startup trace+log.
 const checks = [
-  { ts: new Date().toISOString(), event: 'check', gate: 'bundle-creation', passed: hasRunStart, expected: false, detail: 'disposable bundle: rb_trace.jsonl has no run_start (expected — only production bundles)' },
-  { ts: new Date().toISOString(), event: 'check', gate: 'bundle-creation', passed: logExists, expected: false, detail: 'disposable bundle: _logs/run.log not created yet (expected — created on first log write)' },
+  { ts: new Date().toISOString(), event: 'check', gate: 'bundle-creation', passed: hasRunStart, expected: true, detail: 'disposable bundle: rb_trace.jsonl has run_start' },
+  { ts: new Date().toISOString(), event: 'check', gate: 'bundle-creation', passed: logExists, expected: true, detail: 'disposable bundle: _logs/run.log created on bundle init' },
 ];
 const tracePath = join(__dirname, '_logs', '_trace.jsonl');
 for (const c of checks) {

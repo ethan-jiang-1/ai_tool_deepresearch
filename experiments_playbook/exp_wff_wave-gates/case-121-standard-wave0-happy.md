@@ -164,7 +164,6 @@ cat > $B/artifacts/wave0/topic-c/source.yaml << 'EOF'
 EOF
 
 # Record trace event
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave0_completion"}' >> $B/rb_trace.jsonl
 
 echo "=== Reference artifacts ==="
 find $B/reference $B/artifacts -type f | sort

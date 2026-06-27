@@ -261,7 +261,6 @@ done
 
 ```bash
 # Record seed_topics_completion trace event
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"seed_topics_completion"}' >> $B/rb_trace.jsonl
 
 # Run gate
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)

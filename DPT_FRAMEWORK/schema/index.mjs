@@ -18,6 +18,7 @@ export { ProfileSchema, ResearchStyleParamsSchema } from './contracts/profile.mj
 export { PlanSchema } from './contracts/plan.mjs';
 export { ReferenceMetadataSchema, ReferenceMetadataArraySchema, validateIndexMD } from './contracts/reference.mjs';
 export { TraceEntrySchema, TraceSchema } from './contracts/trace.mjs';
+export { PlaybookFrontmatterSchema } from './contracts/playbook.mjs';
 export {
   GATE_MACHINE_STATES,
   GATE_EVENT_TYPES,

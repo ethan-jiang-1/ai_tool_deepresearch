@@ -236,7 +236,6 @@ sed -i '' 's/__BACKFILL_WAVE1_TRENDS__/Unable to identify trends due to access l
 sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/[开放] th-q1: 需要 browser-based 或手工访问重新搜集 anti-bot bypass 数据/' $B3/seed_topics/hard-target.md
 
 # Run gate
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave1_completion"}' >> $B3/rb_trace.jsonl
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B3 --current-node phases/phase-wave1.md)
 echo "$GATE_OUTPUT" | node -e "

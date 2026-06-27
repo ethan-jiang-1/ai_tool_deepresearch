@@ -14,7 +14,6 @@ import {
   buildGateResult,
   emitGateResult,
   writeGateAttempt,
-  readTraceEvents,
   readBundlePlan,
   parseMdFrontmatter,
 } from '../../engine/helpers/gate-helpers.mjs';
@@ -176,12 +175,6 @@ for (const rule of definition.rules) {
           rulePassed = false;
           ruleDetail = `${rule.target}: expected "${rule.expected}", got "${value}"`;
         }
-      }
-    } else if (rule.check === 'trace_event_present') {
-      const events = readTraceEvents(bundlePath, rule.target);
-      if (events.length === 0) {
-        rulePassed = false;
-        ruleDetail = `Trace event "${rule.target}" not found in rb_trace.jsonl`;
       }
     } else if (rule.check === 'placeholder') {
       continue;

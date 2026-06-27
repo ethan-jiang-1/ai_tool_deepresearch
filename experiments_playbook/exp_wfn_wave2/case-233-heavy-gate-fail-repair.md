@@ -177,7 +177,6 @@ scan:
 findings: []
 INDEXEOF
 
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave2_completion"}' >> $B/rb_trace.jsonl
 
 echo "=== Defective wave2 artifacts ready ==="
 echo "Defects:"

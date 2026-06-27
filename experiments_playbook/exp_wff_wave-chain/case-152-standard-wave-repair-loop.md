@@ -175,7 +175,6 @@ ENDOFSYN
 echo "=== Synthesis (all dead links) ==="
 cat $B/artifacts/wave2/synthesis.md
 
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave2_completion"}' >> $B/rb_trace.jsonl
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md || true)
 echo "$GATE_OUTPUT"

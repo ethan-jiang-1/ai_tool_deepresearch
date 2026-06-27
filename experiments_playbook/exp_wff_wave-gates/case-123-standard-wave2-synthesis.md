@@ -182,7 +182,6 @@ background on AI safety approaches.
 ENDOFSYN
 
 # Record trace event
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave2_completion"}' >> $B/rb_trace.jsonl
 
 echo "=== Synthesis (valid links) ==="
 cat $B/artifacts/wave2/synthesis.md

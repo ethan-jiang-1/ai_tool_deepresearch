@@ -224,6 +224,7 @@ grep -E 'research_profile|root_must_answer|status:' $B/rb_profile.yaml | head -5
 REPO_ROOT=$(pwd)
 B=$(cat /tmp/pb_bundle)
 
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle $B --to hitl1_recorded
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
 echo "$GATE" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('next:',j.check.next)})"
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)

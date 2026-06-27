@@ -118,7 +118,6 @@ cat > $B2/reference/_INDEX.md << 'EOF'
 - topic-y: 1 reference
 EOF
 
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave0_completion"}' >> $B2/rb_trace.jsonl
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B2 --current-node phases/phase-wave0.md || true)
 echo "$GATE_OUTPUT"

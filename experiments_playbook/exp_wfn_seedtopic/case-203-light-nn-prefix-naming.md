@@ -255,7 +255,6 @@ __BACKFILL_PENDING_QUESTIONS__
 EOF
 
 # 记录 seed_topics_completion trace event
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle $B --event seed_topics_completion --detail '{"topic_count":4}'
 
 echo "=== seed_topics/ directory ==="
 ls -1 $B/seed_topics/

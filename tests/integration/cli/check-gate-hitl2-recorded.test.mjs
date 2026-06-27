@@ -151,7 +151,7 @@ describe('check-gate-hitl2-recorded', () => {
       `Expected invalid enum fail: ${JSON.stringify(output.inspect)}`);
   });
 
-  it('7. fails when hitl2_recorded trace event is missing', () => {
+  it('7. gate passes without hitl2_recorded trace event (rule removed — redundant with artifact checks)', () => {
     const dir = createBundle(unique('notrace'));
 
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
@@ -160,9 +160,7 @@ describe('check-gate-hitl2-recorded', () => {
 
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
-    assert.equal(output.check.passed, false);
-    assert.ok(output.inspect.some(m => m.includes('hitl2_recorded') || m.includes('Trace event')),
-      `Expected missing trace fail: ${JSON.stringify(output.inspect)}`);
+    assert.equal(output.check.passed, true);
   });
 
   it('8. fails when rb_profile.yaml is unparseable YAML', () => {

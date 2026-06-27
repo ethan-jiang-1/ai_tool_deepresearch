@@ -375,7 +375,6 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent | node -e "
 
 ```bash
 # Write trace event
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave1_completion"}' >> $B/rb_trace.jsonl
 
 # Run gate
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B --current-node phases/phase-wave1.md)

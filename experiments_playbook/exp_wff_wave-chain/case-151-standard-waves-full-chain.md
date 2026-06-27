@@ -106,7 +106,6 @@ title: AI Safety Landscape
 EOF
 
 # Record trace event
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"seed_topics_completion"}' >> $B/rb_trace.jsonl
 
 echo "=== seed_topics/ ==="
 ls -la $B/seed_topics/
@@ -197,7 +196,6 @@ cat > $B/artifacts/wave0/topic-a/source.yaml << 'EOF'
 EOF
 
 # Record trace event
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave0_completion"}' >> $B/rb_trace.jsonl
 
 echo "=== Reference artifacts ==="
 find $B/reference $B/artifacts/wave0 -type f | sort
@@ -283,7 +281,6 @@ Directly supports the key investigation target about alignment-governance conver
 EOF
 
 # Record trace event
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave1_completion"}' >> $B/rb_trace.jsonl
 
 echo "=== Wave1 artifacts ==="
 find $B/artifacts/wave1 $B/reference/topic-a-* -type f | sort
@@ -385,7 +382,6 @@ cat > $B/artifacts/wave2/finding-index.yaml << 'EOF'
 EOF
 
 # Record trace event
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave2_completion"}' >> $B/rb_trace.jsonl
 
 echo "=== Wave2 artifacts ==="
 find $B/artifacts/wave2 -type f | sort

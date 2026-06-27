@@ -510,6 +510,11 @@ export function executeLoadPlan(plan, state, runtime, trace = null, logger = nul
  * @impl WML-001, WDM-001, WMD-001, WLO-001
  */
 export function assessNode(fileRef, state, runtime, trace = null, logger = null) {
+  if (fileRef == null) {
+    if (logger) logger.error('assessNode: null or undefined fileRef');
+    if (trace) emit(runtime, trace, 'load_error', { entry: '(null)', error: 'null or undefined fileRef', ts: new Date().toISOString() });
+    return { state, status: 'error', runtime, error: 'null or undefined fileRef' };
+  }
   const ref = fileRef.endsWith('.md') ? fileRef : `${fileRef}.md`;
   if (logger) logger.info(`assessing entry: ${ref}`);
   emit(runtime, trace, 'load_start', { entry: ref, ts: new Date().toISOString() });

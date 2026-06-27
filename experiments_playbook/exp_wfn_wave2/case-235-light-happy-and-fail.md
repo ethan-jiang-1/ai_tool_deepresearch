@@ -1,6 +1,6 @@
 ---
 schema: command-experiment/v1
-experiment: exp_wfn_wave2
+experiment: wfn-wave2
 case: case-235-light-happy-and-fail
 weight: light
 case_goal: "验证 inspect-wave2-output.mjs：happy path 全部通过，fail path 正确检测 3 类 wave2 结构错误（00_shared/ 子目录、synthesis.md 为空、残留 backfill token）。"

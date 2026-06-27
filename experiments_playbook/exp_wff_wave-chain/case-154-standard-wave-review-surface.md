@@ -316,8 +316,6 @@ cat > $B/artifacts/wave2/finding-index.yaml << 'EOF'
   decision: defer_to_hitl2
 EOF
 
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave0_completion"}' >> $B/rb_trace.jsonl
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave1_completion"}' >> $B/rb_trace.jsonl
 
 echo "=== Artifact tree ==="
 find $B/reference $B/artifacts -type f | sort
@@ -405,7 +403,6 @@ cat $B/artifacts/wave2/synthesis.md
 ## Step 5: 运行 wave2-complete gate → pass
 
 ```bash
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave2_completion"}' >> $B/rb_trace.jsonl
 
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE_OUTPUT"

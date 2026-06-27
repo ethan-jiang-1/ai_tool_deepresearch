@@ -1,6 +1,6 @@
 ---
 schema: command-experiment/v1
-experiment: exp_wfn_wave1
+experiment: wfn-wave1
 case: case-224-light-happy-and-fail
 weight: light
 case_goal: "验证 inspect-wave1-output.mjs：happy path 全部通过，fail path 正确检测 3 类 wave1 结构错误（缺 topic reference 文件、metadata 不完整、_INDEX.md 无 wave1_topic 条目）。"

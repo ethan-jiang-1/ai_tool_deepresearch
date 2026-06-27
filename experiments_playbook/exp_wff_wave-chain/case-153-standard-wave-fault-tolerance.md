@@ -116,7 +116,6 @@ EOF
 echo "=== Malformed YAML ==="
 cat $B1/artifacts/wave0/topic-a/source.yaml
 
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave0_completion"}' >> $B1/rb_trace.jsonl
 
 echo ""
 echo "=== Running wave0-complete gate ==="
@@ -243,7 +242,6 @@ Additional context from [dead link A](../wave1/topic-a/nope.md) and
 [dead link B](../wave1/topic-b/missing.md) would strengthen this analysis.
 ENDOFSYN
 
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave2_completion"}' >> $B2/rb_trace.jsonl
 
 echo "=== Running wave2-complete gate ==="
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B2 --current-node phases/phase-wave2.md || true)
@@ -355,7 +353,6 @@ EOF
 echo "=== Status (drifted) ==="
 cat $B3/rb_status.json
 
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"wave2_completion"}' >> $B3/rb_trace.jsonl
 
 echo "=== Running wave2-complete gate ==="
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B3 --current-node phases/phase-wave2.md || true)
