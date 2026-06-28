@@ -33,7 +33,7 @@ Agentic Subagent (Relay) 是三层执行模型的内层引擎：在一个 queue 
 > |------|------|------|
 > | Relay engine (`subagent-relay.mjs`, 1067 行) | **✅ 已实现** | SUD-001, SUS-001, SUC-001, SUR-001 accepted。stageSubagentSlots / collectResults / mergeResults / forkRouter / convergeRepair 完整 pipeline |
 > | Slot 生命周期 + 目录结构 | **✅ 已实现** | `_subagents/wave_NN/slot_MM/` 目录，`task.md` / `result.schema.json` / `_status.json` / `_agent.json` / `runtime-receipt.jsonl` / `result.json` |
-> | 并发控制 (MAX_CONCURRENT_SUBAGENTS=4) | **✅ 已实现** | 硬编码常量，超过拒绝；`-1` 全量并行哨兵计划但未实现 |
+> | 并发控制 (`MAX_CONCURRENT_SUBAGENTS`) | **✅ 已实现** | 定义见 `subagent-relay.mjs`（当前为 8）；超过拒绝；`-1` 全量并行哨兵计划但未实现 |
 > | 六角色定义 | **✅ 已实现** | `dpt-source-intake`, `dpt-source-diagnostic`, `dpt-claim-verifier`, `dpt-evidence-extractor` (v1) + `dpt-topic-scout`, `dpt-synthesis-reviewer` (v1.5) |
 > | Shared subagent protocol | **✅ 已实现** | 通信合约、目录边界、forbidden authority、page-fetching 降级链 |
 > | Phase subagent MD (wave0/1/2) | **✅ 已实现** | `phase-wave0-subagent.md`, `phase-wave1-subagent.md`, `phase-wave2-subagent.md` |
@@ -252,13 +252,15 @@ _subagents/wave_NN/slot_MM/
 
 ### 6.1 Role-Level Parallelism
 
-Relay 天然支持并行 dispatch：一个 task 内可以同时 spawn 多个不同 role 的 sub-agent。当前 v1 引擎并发上限为 `MAX_CONCURRENT_SUBAGENTS = 4`（硬编码常量，超过会被拒绝）。
+Relay 天然支持并行 dispatch：一个 task 内可以同时 spawn 多个不同 role 的 sub-agent。当前 v1 引擎并发上限由 `subagent-relay.mjs` 中的 `MAX_CONCURRENT_SUBAGENTS` 定义（当前为 8，超过会被拒绝）。
 
 设计计划是支持 `-1` 哨兵值，代表全量并行——所有可能的 sub-agent 同时打开，无并发上限。`-1` 语义尚未实现。
 
 ### 6.2 Task-Level Serialism (Queue Constraint)
 
 虽然单个 task 内的 sub-agent 可以并行，但 task 之间的 complete 仍然是串行的（Queue receipt 需要逐个校验）。这意味着一次只能有一个 task 在"执行中"（`slot_1_current.status = running`），但这个 task 内部的 sub-agent 可以并行跑。这是正确的——receipt 检查的确定性要求 task 级串行。
+
+Queue active window is not the Relay work pool. Relay concurrency happens inside the current Queue task, usually by mapping that task's delegated or batch payload into Relay slots.
 
 ### 6.3 Six Role Agents
 
@@ -335,7 +337,7 @@ An `operate-relay.mjs` CLI (or equivalent) would close this gap, giving the Phas
 
 三层执行模型（§3）描述的是**目标架构**。目前 Queue 和 Relay 是两套各自独立、互不感知的引擎。以下集成问题待解决：
 
-1. **task card → relay slot 映射协议**：当一个 queue task 的 `targets.delegates.to: "sub-agent"` 被执行时，MD 怎么知道该 spawn 哪个 role sub-agent？当前 relay 的 dispatchMap 是固定分支（pass → 4 role slots），需要改成从 task card 的 `producer_rule` 或 `targets.delegates.role_key` 字段派生。
+1. **current task → relay slot 映射协议**：当一个 queue task 的 `targets.delegates.to: "sub-agent"` 被执行时，MD 怎么知道该 spawn 哪个 role sub-agent？集成方向是从当前 task 的 `producer_rule`、`targets.delegates.role_key` 或 batch payload 派生 Relay `SlotConfig`，而不是读取多个 pending Queue slots 当作 Relay pool。
 
 2. **collect → complete 交接协议**：relay `collectResults` 收集完 sub-agent 结果后，谁来写产出文件？谁来调 queue `complete()`？需要一个 bridge：relay collect 后写结构化产出文件，然后 MD 调 queue complete 做 receipt 检查。
 
@@ -377,7 +379,7 @@ An `operate-relay.mjs` CLI (or equivalent) would close this gap, giving the Phas
 
 - **多视角并行判断**：同一个 claim，派 3 个不同 sub-agent 从 correctness/security/reproducibility 三个视角独立评估，Phase Agent 综合投票
 - **对抗性验证**：spawn 一个 sub-agent 专门尝试驳斥 Phase Agent 当前的结论
-- **全量并行 (`-1` 哨兵)**：移除 `MAX_CONCURRENT_SUBAGENTS = 4` 硬上限，让所有 role slot 同时运行
+- **全量并行 (`-1` 哨兵)**：让当前 task 内的所有 role slot 同时运行，绕过 `MAX_CONCURRENT_SUBAGENTS` 上限
 - **Phase-level concurrency override**：允许 phase MD frontmatter 声明自己的并发上限
 
 这些方向尚未纳入当前实现，但 relay 的 `role_key` 参数化、dispatchMap 可扩展、slot 目录结构化已为它们预留了接口。

@@ -6,6 +6,10 @@ import {
   TargetSpecSchema,
   QueueSchema,
 } from '../../../DPT_FRAMEWORK/schema/contracts/queue.mjs';
+import {
+  QUEUE_ACTIVE_WINDOW_SLOTS,
+  SLOT_NAMES,
+} from '../../../DPT_FRAMEWORK/schema/contracts/queue-slots.mjs';
 
 // ═══════════════════════════════════════════════════════════════════
 // TargetSpecSchema
@@ -132,9 +136,20 @@ describe('QueueWorkUnitSchema', () => {
 // QueueSchema (five-slot outer wrapper)
 // ═══════════════════════════════════════════════════════════════════
 
-const validQueue = { queue_health: 'ready', stop_authorization_state: 'unauthorized_continue_required', slot_1_current: null, slot_2_next: null, slot_3_pending: null, slot_4_pending: null, slot_5_tail: null, refill_pool: [] };
+const validQueue = {
+  queue_health: 'ready',
+  stop_authorization_state: 'unauthorized_continue_required',
+  ...Object.fromEntries(SLOT_NAMES.map((slot) => [slot, null])),
+  refill_pool: [],
+};
 
 describe('QueueSchema', () => {
+  it('uses shared Queue slot constants for the five-slot wire shape', () => {
+    assert.equal(QUEUE_ACTIVE_WINDOW_SLOTS, 5);
+    assert.equal(SLOT_NAMES.length, QUEUE_ACTIVE_WINDOW_SLOTS);
+    assert.deepEqual(Object.keys(validQueue).filter((key) => key.startsWith('slot_')), SLOT_NAMES);
+  });
+
   it('accepts valid empty queue', () => {
     assert.ok(QueueSchema.safeParse(validQueue).success);
   });

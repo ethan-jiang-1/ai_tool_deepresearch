@@ -1,6 +1,7 @@
 // @impl SCO-002, SCO-009: QueueSchema + QueueWorkUnitSchema for rb_queue.json
 import { z } from 'zod';
 import { QueueHealth, StopAuthorizationState } from '../enums.mjs';
+import { SLOT_NAMES } from './queue-slots.mjs';
 
 // ─── Queue-specific enums ────────────────────────────────────────────────
 
@@ -72,10 +73,6 @@ export { TargetSpecSchema };
 export const QueueSchema = z.object({
   queue_health: QueueHealth,
   stop_authorization_state: StopAuthorizationState,
-  slot_1_current: QueueSlot,
-  slot_2_next: QueueSlot,
-  slot_3_pending: QueueSlot,
-  slot_4_pending: QueueSlot,
-  slot_5_tail: QueueSlot,
+  ...Object.fromEntries(SLOT_NAMES.map((slot) => [slot, QueueSlot])),
   refill_pool: z.array(QueueWorkUnitSchema),
 });

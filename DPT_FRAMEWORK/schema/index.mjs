@@ -14,6 +14,7 @@ export {
 
 export { StatusSchema } from './contracts/status.mjs';
 export { QueueSchema, QueueWorkUnitSchema } from './contracts/queue.mjs';
+export { QUEUE_ACTIVE_WINDOW_SLOTS, SLOT_NAMES } from './contracts/queue-slots.mjs';
 export { ProfileSchema, ResearchStyleParamsSchema } from './contracts/profile.mjs';
 export { PlanSchema } from './contracts/plan.mjs';
 export { ReferenceMetadataSchema, ReferenceMetadataArraySchema, validateIndexMD } from './contracts/reference.mjs';

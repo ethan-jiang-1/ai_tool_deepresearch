@@ -139,8 +139,8 @@ Defined in `DPT_FRAMEWORK/engine/subagent-relay.mjs` as `MAX_CONCURRENT_SUBAGENT
 
 | Value | Semantics |
 |-------|-----------|
-| Positive (default: 4) | Hard cap — at most this many Sub-agents in flight simultaneously |
-| `-1` | Unlimited — all pending task cards dispatched in a single batch |
+| Positive (engine default) | Hard cap — at most this many Sub-agents in flight simultaneously; current value is defined by `MAX_CONCURRENT_SUBAGENTS` |
+| `-1` | Unlimited — all current-task batch items dispatched in a single batch |
 | `0` | Invalid — treated as 1 |
 
 ### 3.2 Phase Override (aspirational — not yet implemented in engine)
@@ -149,7 +149,7 @@ A phase node MAY override the concurrency cap by declaring `max_concurrent_overr
 
 ### 3.3 Batching
 
-When the queue has more pending task cards than `MAX_CONCURRENT_SUBAGENTS`: first batch stages at most the cap; remaining task cards wait; as slots free up, replacements are spawned. Repeat until queue empty and all Sub-agents terminal.
+Queue active window is not the Relay work pool. Batch parallelism is represented as one current Queue task with a batch payload. When the current task has more batch items than `MAX_CONCURRENT_SUBAGENTS`, first batch stages at most the cap; remaining batch items wait inside the current task payload; as Relay slots free up, replacements are spawned. Repeat until the current task's batch payload is complete and all Sub-agents terminal.
 
 ## 4. Forbidden Authority — Universal Sub-agent Prohibitions
 

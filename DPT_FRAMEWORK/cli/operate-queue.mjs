@@ -7,7 +7,7 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 import {
   claim, complete, enqueue, fail, inspect,
-  loadQueue, preempt, render, saveQueue, QUEUE,
+  loadQueue, pendingCount, preempt, render, saveQueue, QUEUE, SLOT_NAMES,
 } from '../engine/queue-manager.mjs';
 
 function usage() {
@@ -18,6 +18,7 @@ function usage() {
   node DPT_FRAMEWORK/cli/operate-queue.mjs complete <bundle> --result <result.json>
   node DPT_FRAMEWORK/cli/operate-queue.mjs fail <bundle> --failure <failure.json>
   node DPT_FRAMEWORK/cli/operate-queue.mjs preempt <bundle> --task <task.json> --reason <reason> [--unsafe-current]
+  node DPT_FRAMEWORK/cli/operate-queue.mjs count <bundle>
   node DPT_FRAMEWORK/cli/operate-queue.mjs render <bundle>`);
 }
 
@@ -57,6 +58,16 @@ try {
     const feedback = inspect(queue, bundleDir);
     emit(feedback);
     process.exit(feedback.passed ? 0 : 1);
+  }
+
+  if (command === 'count') {
+    const active = SLOT_NAMES.filter((slot) => queue.active_window[slot] !== null).length;
+    emit({
+      pending: pendingCount(queue),
+      active_window: active,
+      refill_pool: queue.refill_pool.length,
+    });
+    process.exit(0);
   }
 
   if (command === 'enqueue') {

@@ -225,11 +225,11 @@ cat $B/_cache/agentic-queue/current-task.md | head -30
 按 `shared-subagent-protocol.md` §3 批量并行协议执行：
 
 ```bash
-# Step 1: Read queue → map to SlotConfig
+# Step 1: Claim current queue task → map its delegated/batch payload to SlotConfig
 # Step 2: stageSubagentSlots(state, bundleDir, dispatchMap)
-# Step 3: 并行 spawn 最多 MAX_CONCURRENT_SUBAGENTS(4) 个 sub-agent
+# Step 3: 并行 spawn 最多 MAX_CONCURRENT_SUBAGENTS 个 sub-agent（定义见 subagent-relay.mjs）
 # Step 4: collect-as-return — 任意 sub-agent 返回立刻:
-#   → ingestAgentReceipt(slot) → commitSlotResult(slot, result) → verify artifact → complete queue task → backfill
+#   → ingestAgentReceipt(slot) → commitSlotResult(slot, result) → verify artifact → complete current queue task when batch receipts are satisfied → backfill
 
 # Claim 2 tasks sequentially (queue auto-promotes)
 CLAIM1=$(node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent)

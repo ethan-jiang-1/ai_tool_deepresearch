@@ -203,6 +203,8 @@ Which tasks use direct Phase Agent execution vs delegated Sub-agent execution is
 
 The Phase Agent owns the task `targets` / delegation assignment while operating through Markdown control surfaces. The engine does not auto-assign. Sub-agents never pass gates, mutate queues, count evidence, or authorize output.
 
+Queue active window is not the Relay work pool. Queue remains task-level serial: only `slot_1_current` is executable. If a task needs batch parallelism, represent that batch inside the current task payload and let Relay fan out sub-agent slots inside that task.
+
 > **See also:** [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — the authoritative guideline for *when and why* work goes to sub-agents. This section describes the queue's `targets` field mechanics; that guideline defines the architectural principle (noise isolation, bounded context, structured output) and the three-tier execution model (Chain → Queue → Relay) that frames how sub-agent dispatch fits into the larger execution loop.
 
 ---
@@ -286,7 +288,7 @@ These are engine-side requirements — they cannot be solved by MD instructions 
 
 - **`project-charter.md`** defines the four-layer split (Agent/Markdown/Engine/JSON). This guideline operates entirely within that split: the queue is an Engine-side tool; Markdown controls whether and how the Phase Agent uses it.
 - **`agentic-workflow-mechanism.md`** defines the outer loop (MD → execute → gate → chain → next). This guideline's inner loop nests inside that outer loop. The two are complementary, not competing.
-- **`agentic-subagent-mechanism.md`** defines Tier 3 (Relay): sub-agent dispatch within a single queue task. Queue and Relay are connected by the Phase Agent as bridge; the Queue × Relay integration is a derived constraint pending OpenSpec.
+- **`agentic-subagent-mechanism.md`** defines Tier 3 (Relay): sub-agent dispatch within a single queue task. Queue and Relay are connected by the Phase Agent as bridge; Relay fan-out happens inside the current Queue task, not across pending Queue slots.
 - **`openspec/specs/agentic-queue/spec.md`** defines accepted engine requirements (AGQ-001~006). This guideline describes architectural principles; the spec defines implementable behavior. When they conflict, the spec wins.
 - **`_backlog/queue/agentic-queue-landing-analysis.md`** is the detailed application analysis from which this guideline extracts its constitutional principles. The landing analysis contains scenario enumeration (8 scenarios), current-state inventory, implementation strategy (Path A/B, phased rollout), and concrete templates. When this guideline is silent on an application detail, consult the landing analysis. When they conflict on a principle, this guideline is authority — it is the extracted constitution. The landing analysis remains in `_backlog/` as a historical analysis document; it is not a guideline, not a spec, and not runtime truth.
 

@@ -8,14 +8,15 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  QueueItemSchema, QUEUE,
+  QueueItemSchema, QUEUE, QUEUE_ACTIVE_WINDOW_SLOTS, SLOT_NAMES,
   createQueue, enqueue, claim, complete, fail,
   preempt, checkReceipts, render, loadQueue, saveQueue, makeItem,
+  pendingCount,
 } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
 import { QueueSchema, TargetSpecSchema } from '../../DPT_FRAMEWORK/schema/contracts/queue.mjs';
 import {
-  stageSubagentSlots, commitSlotResult, writeSlotStatus,
-  createSlot, SlotResult,
+  stageSubagentSlots, commitSlotResult, writeSlotStatus, ingestAgentReceipt,
+  createSlot, SlotResult, MAX_CONCURRENT_SUBAGENTS,
 } from '../../DPT_FRAMEWORK/engine/subagent-relay.mjs';
 
 function tempBundle() {
@@ -55,6 +56,29 @@ describe('Queue schema (AGQ-001)', () => {
   it('rejects non-object payload', () => {
     const parsed = QueueItemSchema.safeParse({ ...item(1), payload: 'bad' });
     assert.equal(parsed.success, false);
+  });
+});
+
+describe('Queue active-window constants (AGQ-019)', () => {
+  it('defines the five-slot Queue wire shape independently of Relay concurrency', () => {
+    assert.equal(QUEUE_ACTIVE_WINDOW_SLOTS, 5);
+    assert.deepEqual(SLOT_NAMES, [
+      'slot_1_current',
+      'slot_2_next',
+      'slot_3_pending',
+      'slot_4_pending',
+      'slot_5_tail',
+    ]);
+  });
+
+  it('Queue active-window slot count is NOT derived from Relay sub-agent concurrency cap', () => {
+    // The core architectural invariant: Queue is not the Relay work pool.
+    // Without this assertion, a future developer could set both constants equal
+    // and no test would fail — the decoupling would be silently lost.
+    assert.notEqual(QUEUE_ACTIVE_WINDOW_SLOTS, MAX_CONCURRENT_SUBAGENTS,
+      'Queue slot count must be independent of Relay concurrency cap');
+    assert.equal(QUEUE_ACTIVE_WINDOW_SLOTS, 5);
+    assert.equal(MAX_CONCURRENT_SUBAGENTS, 8);
   });
 });
 
@@ -172,12 +196,10 @@ describe('Claim advice with targets.delegates (AGQ-014)', () => {
 });
 
 describe('Enqueue and claim (AGQ-002)', () => {
-  const SLOTS = ['slot_1_current','slot_2_next','slot_3_pending','slot_4_pending','slot_5_tail'];
-
   it('fills five active slots before using refill_pool', () => {
     let queue = createQueue('enqueue-test');
     for (let i = 1; i <= 6; i++) queue = enqueue(queue, item(i));
-    assert.deepEqual(SLOTS.map((slot) => queue.active_window[slot]?.work_id), [
+    assert.deepEqual(SLOT_NAMES.map((slot) => queue.active_window[slot]?.work_id), [
       'work-1',
       'work-2',
       'work-3',
@@ -197,6 +219,48 @@ describe('Enqueue and claim (AGQ-002)', () => {
     assert.equal(result.queue.active_window.slot_1_current.status, 'running');
     assert.equal(result.queue.active_window.slot_2_next.status, 'queued');
     assert.equal(Object.hasOwn(result.item, 'slot_2_next'), false);
+  });
+});
+
+describe('Queue pending count (AGQ-020)', () => {
+  it('returns zero for an empty queue', () => {
+    assert.equal(pendingCount(createQueue('empty-count-test')), 0);
+  });
+
+  it('counts non-null active-window slots and refill_pool items', () => {
+    let queue = createQueue('pending-count-test');
+    for (let i = 1; i <= SLOT_NAMES.length + 2; i++) queue = enqueue(queue, item(i));
+    assert.equal(pendingCount(queue), SLOT_NAMES.length + 2);
+    assert.equal(SLOT_NAMES.filter((slot) => queue.active_window[slot] !== null).length, SLOT_NAMES.length);
+    assert.equal(queue.refill_pool.length, 2);
+  });
+
+  it('counts mixed active-window and refill_pool depth after manual null slots', () => {
+    let queue = createQueue('mixed-count-test');
+    queue = enqueue(queue, item(1));
+    queue = enqueue(queue, item(2));
+    queue.refill_pool.push(item(3), item(4), item(5));
+    queue.active_window.slot_2_next = null;
+    assert.equal(pendingCount(queue), 4);
+  });
+
+  it('pendingCount does NOT include staged relay sub-agent slots', () => {
+    // Spec: "The count SHALL NOT include Relay sub-agent slots."
+    // Relay slots live under _subagents/ on disk; they are not Queue tasks.
+    const dir = tempBundle();
+    try {
+      let queue = createQueue('subagent-exclusion');
+      queue = enqueue(queue, item(1));
+      assert.equal(pendingCount(queue), 1);
+
+      const slots = stageSubagentSlots(baseState(), dir);
+      assert.ok(slots.length > 0, 'expected at least one relay slot from pass-branch dispatch');
+
+      assert.equal(pendingCount(queue), 1,
+        'pendingCount must not include relay sub-agent slots staged on disk');
+    } finally {
+      cleanup(dir);
+    }
   });
 });
 
@@ -607,6 +671,79 @@ describe('Delegated queue completion (Stage 2)', () => {
       }, dir);
       assert.equal(result.feedback.passed, false);
       assert.ok(result.feedback.advice.includes('runtime receipt'));
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('full pipeline: enqueue delegated → claim → relay → complete → ledger (AGQ-019, AGQ-020)', () => {
+    // This is the only test that proves Queue and Relay compose correctly
+    // in the real execution path. Every other test exercises one system in isolation.
+    const dir = tempBundle();
+    try {
+      // 1. Build queue with a delegated task
+      let queue = createQueue('pipeline');
+      const workItem = makeItem({
+        work_id: 'work-pipe',
+        title: 'Pipeline task',
+        targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake' } },
+        completion_receipt: 'none',
+      });
+      queue = enqueue(queue, workItem);
+
+      // 2. Claim — verify delegates advice
+      const { queue: q2, item, advice } = claim(queue, { actor: 'main-agent' });
+      assert.ok(item);
+      assert.equal(advice.delegates_required, true);
+      assert.equal(advice.delegates_config.role_key, 'dpt-source-intake');
+
+      // 3. Stage relay slots (what the Phase Agent does after seeing delegates_required)
+      const state = baseState();
+      const slots = stageSubagentSlots(state, dir);
+      assert.ok(slots.length > 0, 'expected at least one relay slot');
+
+      // 4. Execute relay pipeline for first slot
+      writeRuntimeReceipt(dir, slots[0]);
+      ingestAgentReceipt(slots[0], dir, { runtimeAgentId: 'pipeline-agent' });
+      writeSlotStatus(slots[0], 'running', dir);
+
+      // Need output file + cache for commitSlotResult
+      const refDir = path.join(dir, 'reference');
+      mkdirSync(refDir, { recursive: true });
+      writeFileSync(path.join(refDir, 'source.md'), '# Pipeline output\n');
+      const cacheLeaf = path.join(dir, '_cache', 'wave0', 'pipeline', 's01');
+      mkdirSync(cacheLeaf, { recursive: true });
+      writeFileSync(path.join(cacheLeaf, 'websearch.json'), '[]');
+      writeFileSync(path.join(cacheLeaf, 'page.md'), '# Page');
+      writeFileSync(path.join(cacheLeaf, 'meta.json'), '{"url":"https://example.com/p"}');
+
+      const relay = commitSlotResult(slots[0], dir, {
+        slotKey: slots[0].key, roleAgentKey: slots[0].roleAgentKey, status: 'done',
+        summary: 'Pipeline done', evidenceCount: 1,
+        references: [{ title: 'T', url: 'https://example.com/p', quote: 'q', relevance: 'r' }],
+        confidence: 0.9, notes: [],
+        output_files: [{ path: 'reference/source.md', role: 'reference', source_url: 'https://example.com/p' }],
+        cache_trails: ['_cache/wave0/pipeline/s01/'],
+      }, { platform: 'pipeline-test', runtimeAgentId: 'pipeline-agent' });
+      assert.equal(relay.ok, true);
+
+      // 5. Complete queue task with slot_result_ref
+      const result = complete(q2, {
+        work_id: 'work-pipe',
+        receipt: 'none',
+        summary: 'Pipeline complete',
+        slot_result_ref: slots[0].resultPath,
+      }, dir);
+      assert.equal(result.feedback.passed, true,
+        `Pipeline complete should pass, got: ${result.feedback.advice}`);
+
+      // 6. Ledger must exist
+      const ledgerPath = path.join(dir, 'rb_output_declarations.jsonl');
+      assert.ok(existsSync(ledgerPath), 'ledger should be appended');
+
+      // 7. Promote should have happened (current slot cleared after completion)
+      assert.equal(result.queue.active_window.slot_1_current, null,
+        'promote should clear slot_1 after completing the only queued item');
     } finally {
       cleanup(dir);
     }

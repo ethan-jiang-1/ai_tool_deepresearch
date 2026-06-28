@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { writeFileSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
+import { SLOT_NAMES } from '../../../DPT_FRAMEWORK/schema/contracts/queue-slots.mjs';
 
 const FIXTURE_FW = join(process.cwd(), 'DPT_FRAMEWORK');
 const CLI = join(FIXTURE_FW, 'cli', 'operate-queue.mjs');
@@ -37,11 +38,7 @@ function makeEmptyQueue() {
   return {
     queue_health: 'ready',
     stop_authorization_state: 'unauthorized_continue_required',
-    slot_1_current: null,
-    slot_2_next: null,
-    slot_3_pending: null,
-    slot_4_pending: null,
-    slot_5_tail: null,
+    ...Object.fromEntries(SLOT_NAMES.map((slot) => [slot, null])),
     refill_pool: [],
   };
 }
@@ -78,10 +75,35 @@ describe('operate-queue.mjs integration', () => {
     const q = out.queue || out; // enqueue returns { ok, queue }
     const aw = q.active_window || q;
 
-    const totalItems = (aw.slot_1_current ? 1 : 0) + (aw.slot_2_next ? 1 : 0)
-      + (aw.slot_3_pending ? 1 : 0) + (aw.slot_4_pending ? 1 : 0)
-      + (aw.slot_5_tail ? 1 : 0) + (q.refill_pool || []).length;
+    const totalItems = SLOT_NAMES.filter((slot) => aw[slot]).length + (q.refill_pool || []).length;
     assert.ok(totalItems >= 1, `Expected at least 1 queued item, got ${totalItems}`);
+  });
+
+  it('count — reports pending Queue task depth computed from fixture, not magic numbers', () => {
+    const countDir = createTempDir('operate-queue-count');
+    const testQueue = {
+      ...makeEmptyQueue(),
+      slot_1_current: makeTask({ work_id: 'task-count-001' }),
+      slot_3_pending: makeTask({ work_id: 'task-count-002' }),
+      refill_pool: [makeTask({ work_id: 'task-count-003' })],
+    };
+    writeFileSync(join(countDir, 'rb_queue.json'), JSON.stringify(testQueue, null, 2));
+    writeFileSync(join(countDir, 'START_FROM_HERE.md'), '# Count\n');
+    cpSync(FIXTURE_FW, join(countDir, 'DPT_FRAMEWORK'), { recursive: true });
+
+    const r = spawnSync('node', [CLI, 'count', countDir], { encoding: 'utf-8', timeout: 5000 });
+    assert.strictEqual(r.status, 0, `Expected exit 0, got ${r.status}. stderr: ${r.stderr?.slice(0, 500)}`);
+    const out = JSON.parse(r.stdout);
+
+    // Compute expectations from fixture data, not hardcoded magic numbers.
+    // If SLOT_NAMES changes, the test remains correct because it derives expectations from configuration.
+    const activeSlots = SLOT_NAMES.filter(s => testQueue[s] !== null).length;
+    const poolLen = testQueue.refill_pool.length;
+    assert.deepStrictEqual(out, {
+      pending: activeSlots + poolLen,
+      active_window: activeSlots,
+      refill_pool: poolLen,
+    });
   });
 
   it('render — displays queue in human-readable format', () => {

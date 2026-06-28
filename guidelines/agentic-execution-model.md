@@ -121,9 +121,10 @@ Chain 不知道 Queue 的存在。Queue 不知道 Relay 的存在。Relay 不知
 |------|---------|------|
 | Tier 1 — Chain | 单步串行 | 一次只在一个 phase，gate 必须逐个验证 |
 | Tier 2 — Queue | task 级串行 | receipt 必须逐个校验后才能推进 |
-| Tier 3 — Relay | role 级并行（≤4） | 一个 task 内的多个 sub-agent 可同时运行 |
+| Tier 3 — Relay | role 级并行（由 `MAX_CONCURRENT_SUBAGENTS` 限制） | 一个 task 内的多个 sub-agent 可同时运行 |
 
 三层各有各的并发粒度，互不干涉。
+Queue active window is not the Relay work pool. Relay concurrency happens inside the current Queue task.
 
 ---
 
@@ -234,7 +235,7 @@ Chain 不知道 Queue 的存在。Queue 不知道 Relay 的存在。Relay 不知
 ```
 
 **关键交接点（只有三个）**：
-- **Queue → Relay**：task.targets.delegates.to == "sub-agent" → Phase Agent 决定进 Relay
+- **Queue → Relay**：current task 的 `targets.delegates.to == "sub-agent"` 或 batch payload → Phase Agent 决定进 Relay；pending Queue slots 不作为 Relay pool
 - **Relay → Queue**：result.json → Phase Agent 写 artifact → complete(receipt)
 - **Queue → Chain**：queue 空 → Phase Agent 跑 gate → chain 返回 next
 

@@ -2,7 +2,7 @@
 // Canonical engine location: DPT_FRAMEWORK/engine/queue-manager.mjs
 //
 // ## Role
-// JS-owned Queue Manager over a 5-slot active window + refill pool.
+// JS-owned Queue Manager over a Queue active window + refill pool.
 // MD/Agent owns the work content. Engine owns deterministic state
 // transitions, receipt checking, and queue health.
 //
@@ -17,6 +17,9 @@
 // ```
 // Only slot_1 may have status 'running'. Pending slots and pool items
 // are preview-only and must be 'queued'.
+//
+// Queue active window is not the Relay work pool. Relay concurrency happens
+// inside the current Queue task and is owned by subagent-relay.mjs.
 //
 // ## Lifecycle (Phase Agent reads and acts on each step)
 // ```
@@ -44,7 +47,8 @@
 // ## Exports
 //   createQueue, loadQueue, saveQueue
 //   enqueue, claim, complete, fail, preempt
-//   inspect, render, makeItem
+//   inspect, render, makeItem, pendingCount
+//   QUEUE_ACTIVE_WINDOW_SLOTS, SLOT_NAMES
 //   QueueItemSchema, QUEUE, OutputDeclarationLedgerRecord, LEDGER_FILE
 
 import { z } from 'zod';
@@ -98,6 +102,13 @@ function logEvent(level, event, detail) {
 // ============================================================
 
 import { QueueSchema, QueueWorkUnitSchema } from '../schema/contracts/queue.mjs';
+import {
+  QUEUE_ACTIVE_WINDOW_SLOTS,
+  SLOT_NAMES,
+  PENDING_SLOT_NAMES,
+} from '../schema/contracts/queue-slots.mjs';
+
+export { QUEUE_ACTIVE_WINDOW_SLOTS, SLOT_NAMES };
 
 // Backward-compatible alias — the authoritative definition lives in
 // schema/contracts/queue.mjs as QueueWorkUnitSchema.
@@ -109,17 +120,12 @@ export const QUEUE = {
   PROJECTION: '_cache/agentic-queue/current-task.md',
   TRACE:      'rb_trace.jsonl',
 };
-const SLOT_NAMES = ['slot_1_current', 'slot_2_next', 'slot_3_pending', 'slot_4_pending', 'slot_5_tail'];
-const PENDING_SLOTS = SLOT_NAMES.slice(1);
 
 const QueueHealth = z.enum(['ready', 'thin', 'blocked', 'closed']);
 const StopAuthorizationState = z.enum(['unauthorized_continue_required', 'final_delivery', 'decision_blocker', 'empty_queue_after_refill']);
 
 const QueueSlot = QueueWorkUnitSchema.nullable();
-const ActiveWindowSchema = z.object({
-  slot_1_current: QueueSlot, slot_2_next: QueueSlot,
-  slot_3_pending: QueueSlot, slot_4_pending: QueueSlot, slot_5_tail: QueueSlot,
-});
+const ActiveWindowSchema = z.object(Object.fromEntries(SLOT_NAMES.map((slot) => [slot, QueueSlot])));
 
 const QueueStateSchema = z.object({
   queue_id: z.string().min(1),
@@ -202,11 +208,7 @@ function canonicalQueueFileShape(queue) {
   return QueueSchema.parse({
     queue_health: q.queue_health,
     stop_authorization_state: q.stop_authorization_state,
-    slot_1_current: q.active_window.slot_1_current,
-    slot_2_next: q.active_window.slot_2_next,
-    slot_3_pending: q.active_window.slot_3_pending,
-    slot_4_pending: q.active_window.slot_4_pending,
-    slot_5_tail: q.active_window.slot_5_tail,
+    ...Object.fromEntries(SLOT_NAMES.map((slot) => [slot, q.active_window[slot]])),
     refill_pool: q.refill_pool,
   });
 }
@@ -226,7 +228,7 @@ function validateQueue(queue) {
   if (new Set(ids).size !== ids.length) {
     throw new Error('Queue work_id values must be unique across active window and refill_pool');
   }
-  for (const slot of PENDING_SLOTS) {
+  for (const slot of PENDING_SLOT_NAMES) {
     const item = parsed.active_window[slot];
     if (item?.status === 'running') throw new Error(`Only slot_1_current may be running; ${slot} is preview-only`);
   }
@@ -274,11 +276,10 @@ function advice(kind, message) {
 
 function promote(queue) {
   const q = clone(validateQueue(queue));
-  q.active_window.slot_1_current = q.active_window.slot_2_next;
-  q.active_window.slot_2_next = q.active_window.slot_3_pending;
-  q.active_window.slot_3_pending = q.active_window.slot_4_pending;
-  q.active_window.slot_4_pending = q.active_window.slot_5_tail;
-  q.active_window.slot_5_tail = null;
+  for (let i = 0; i < SLOT_NAMES.length - 1; i++) {
+    q.active_window[SLOT_NAMES[i]] = q.active_window[SLOT_NAMES[i + 1]];
+  }
+  q.active_window[SLOT_NAMES.at(-1)] = null;
   traceEntry('queue_promoted', { source: 'agq-promote' });
   return validateQueue(touchQueue(syncQueueHealth(q)));
 }
@@ -515,7 +516,7 @@ function makeRepairItem(failure) {
 // ============================================================
 
 /**
- * Create a fresh empty queue with all 5 slots null and empty refill pool.
+ * Create a fresh empty queue with all Queue active-window slots null and empty refill pool.
  *
  * @param {string} [queueId='agentic-queue'] — your label for this queue instance
  * @returns {object} QueueState — validated, immutable-shaped queue object
@@ -721,7 +722,7 @@ export function fail(queue, failure, bundleDir = process.cwd()) {
  *
  * Two modes:
  * - Default: inserts into slot_2_next, shifts everything right.
- *   Displaced slot_5_tail goes to refill pool.
+ *   Displaced tail slot goes to refill pool.
  * - `replaceCurrent: true` + `unsafeCurrent: true`: replaces slot_1_current.
  *   Old current goes to refill pool as preempted.
  *   Without `unsafeCurrent: true`, this throws.
@@ -756,13 +757,15 @@ export function preempt(queue, item, { reason = 'urgent_preemption', unsafeCurre
 
   const old = {};
   for (const slot of SLOT_NAMES) old[slot] = q.active_window[slot];
-  const displacedTail = old.slot_5_tail;
-  q.active_window.slot_2_next = urgent;
-  q.active_window.slot_3_pending = old.slot_2_next;
-  q.active_window.slot_4_pending = old.slot_3_pending;
-  q.active_window.slot_5_tail = old.slot_4_pending;
+  const insertIndex = 1;
+  const tailSlot = SLOT_NAMES.at(-1);
+  const displacedTail = old[tailSlot];
+  q.active_window[SLOT_NAMES[insertIndex]] = urgent;
+  for (let i = insertIndex + 1; i < SLOT_NAMES.length; i++) {
+    q.active_window[SLOT_NAMES[i]] = old[SLOT_NAMES[i - 1]];
+  }
   if (displacedTail) {
-    q.refill_pool = sortPool([{ ...displacedTail, status: 'queued', preempted_from_slot: 'slot_5_tail', restore_priority: 'next_tail_opening', updated_at: now() }, ...q.refill_pool]);
+    q.refill_pool = sortPool([{ ...displacedTail, status: 'queued', preempted_from_slot: tailSlot, restore_priority: 'next_tail_opening', updated_at: now() }, ...q.refill_pool]);
   }
   traceEntry('queue_preempted', { source: 'agq-preempt', reason, slot: 'slot_2_next', unsafeCurrent: false });
   traceEntry('check', { source: 'agq-preempt', step: 'preempt', passed: true, reason, slot: 'slot_2_next' });
@@ -789,6 +792,12 @@ export function inspect(queue, bundleDir = process.cwd()) {
   }
   return issues.length === 0 ? check(true, 'Queue is executable')
     : { passed: false, check: false, inspect: issues, advice: 'Refill queue, add missing receipts, or record a blocker.' };
+}
+
+export function pendingCount(queue) {
+  const q = validateQueue(queue);
+  const active = SLOT_NAMES.filter((slot) => q.active_window[slot] !== null).length;
+  return active + q.refill_pool.length;
 }
 
 /**
