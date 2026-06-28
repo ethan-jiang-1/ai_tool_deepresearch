@@ -18,6 +18,7 @@ import {
   stageSubagentSlots, commitSlotResult, writeSlotStatus, ingestAgentReceipt,
   createSlot, SlotResult, MAX_CONCURRENT_SUBAGENTS,
 } from '../../DPT_FRAMEWORK/engine/subagent-relay.mjs';
+import { checkContentDedup } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 
 function tempBundle() {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'agq-'));
@@ -744,6 +745,144 @@ describe('Delegated queue completion (Stage 2)', () => {
       // 7. Promote should have happened (current slot cleared after completion)
       assert.equal(result.queue.active_window.slot_1_current, null,
         'promote should clear slot_1 after completing the only queued item');
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('batch: 2-slot parallel relay → single complete → ledger (AGQ-019)', () => {
+    // Proves N>1 slots work: one delegated Queue task fans out to 2 Relay slots,
+    // both commit independently, complete() succeeds with either slot_result_ref.
+    const dir = tempBundle();
+    try {
+      let queue = createQueue('batch-2slot');
+      const workItem = makeItem({
+        work_id: 'work-batch',
+        title: 'Batch task',
+        targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake' } },
+        completion_receipt: 'none',
+      });
+      queue = enqueue(queue, workItem);
+      const { queue: q2, advice } = claim(queue, { actor: 'main-agent' });
+      assert.equal(advice.delegates_required, true);
+
+      // Stage 2 slots (pass-branch dispatch gives 4, take first 2)
+      const allSlots = stageSubagentSlots(baseState(), dir);
+      assert.ok(allSlots.length >= 2, 'need at least 2 relay slots');
+      const slots = allSlots.slice(0, 2);
+
+      // Commit both slots in parallel (sequentially in test, logically parallel)
+      for (let i = 0; i < 2; i++) {
+        const slot = slots[i];
+        writeRuntimeReceipt(dir, slot);
+        ingestAgentReceipt(slot, dir, { runtimeAgentId: `batch-agent-${i}` });
+        writeSlotStatus(slot, 'running', dir);
+
+        const outDir = path.join(dir, 'reference', `batch-${i}`);
+        mkdirSync(outDir, { recursive: true });
+        writeFileSync(path.join(outDir, 'source.md'), `# Batch ${i} output\n`);
+
+        const cacheLeaf = path.join(dir, '_cache', 'wave0', `batch-${i}`, 's01');
+        mkdirSync(cacheLeaf, { recursive: true });
+        writeFileSync(path.join(cacheLeaf, 'websearch.json'), '[]');
+        writeFileSync(path.join(cacheLeaf, 'page.md'), '# Page');
+        writeFileSync(path.join(cacheLeaf, 'meta.json'), `{"url":"https://example.com/batch-${i}"}`);
+
+        const relay = commitSlotResult(slot, dir, {
+          slotKey: slot.key, roleAgentKey: slot.roleAgentKey, status: 'done',
+          summary: `Batch slot ${i} done`, evidenceCount: 1,
+          references: [{ title: `T${i}`, url: `https://example.com/batch-${i}`, quote: 'q', relevance: 'r' }],
+          confidence: 0.9, notes: [],
+          output_files: [{ path: `reference/batch-${i}/source.md`, role: 'reference', source_url: `https://example.com/batch-${i}` }],
+          cache_trails: [`_cache/wave0/batch-${i}/s01/`],
+        }, { platform: 'batch-test', runtimeAgentId: `batch-agent-${i}` });
+        assert.equal(relay.ok, true, `slot ${i} commit should pass`);
+      }
+
+      // Both slots' result.json must exist on disk
+      for (const slot of slots) {
+        assert.ok(existsSync(path.join(dir, slot.resultPath)), `slot ${slot.key} result.json must exist`);
+      }
+
+      // Complete with first slot's result_ref
+      const result = complete(q2, {
+        work_id: 'work-batch',
+        receipt: 'none',
+        summary: 'Batch complete',
+        slot_result_ref: slots[0].resultPath,
+      }, dir);
+      assert.equal(result.feedback.passed, true,
+        `Batch complete should pass, got: ${result.feedback.advice}`);
+
+      // Ledger exists and references the slot
+      const ledgerPath = path.join(dir, 'rb_output_declarations.jsonl');
+      assert.ok(existsSync(ledgerPath), 'ledger should be appended');
+      const ledger = JSON.parse(readFileSync(ledgerPath, 'utf-8'));
+      assert.equal(ledger.work_id, 'work-batch');
+      assert.equal(ledger.slot_result_ref, slots[0].resultPath);
+      assert.equal(ledger.output_files.length, 1);
+
+      // Promote should have cleared the current slot
+      assert.equal(result.queue.active_window.slot_1_current, null);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('pipeline → gate: ledger produced by complete() is consumable by checkContentDedup', () => {
+    // Proves the output declaration ledger written by the Queue↔Relay pipeline
+    // is parseable and valid for the gate's content_dedup check.
+    const dir = tempBundle();
+    try {
+      let queue = createQueue('pipe-gate');
+      const workItem = makeItem({
+        work_id: 'work-pg',
+        title: 'Pipeline→Gate',
+        targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake' } },
+        completion_receipt: 'none',
+      });
+      queue = enqueue(queue, workItem);
+      const { queue: q2 } = claim(queue, { actor: 'main-agent' });
+      const slots = stageSubagentSlots(baseState(), dir);
+      const slot = slots[0];
+
+      writeRuntimeReceipt(dir, slot);
+      ingestAgentReceipt(slot, dir, { runtimeAgentId: 'pg-agent' });
+      writeSlotStatus(slot, 'running', dir);
+
+      mkdirSync(path.join(dir, 'reference'), { recursive: true });
+      writeFileSync(path.join(dir, 'reference', 'pg-source.md'), '# Pipeline→Gate ref\n\nSource URL: https://real-source.example.com/pg\n');
+
+      const cacheLeaf = path.join(dir, '_cache', 'wave0', 'pg', 's01');
+      mkdirSync(cacheLeaf, { recursive: true });
+      writeFileSync(path.join(cacheLeaf, 'websearch.json'), '[]');
+      writeFileSync(path.join(cacheLeaf, 'page.md'), '# Page');
+      writeFileSync(path.join(cacheLeaf, 'meta.json'), '{"url":"https://real-source.example.com/pg"}');
+
+      const relay = commitSlotResult(slot, dir, {
+        slotKey: slot.key, roleAgentKey: slot.roleAgentKey, status: 'done',
+        summary: 'PG done', evidenceCount: 1,
+        references: [{ title: 'PG', url: 'https://real-source.example.com/pg', quote: 'q', relevance: 'r' }],
+        confidence: 0.9, notes: [],
+        output_files: [{ path: 'reference/pg-source.md', role: 'reference', source_url: 'https://real-source.example.com/pg' }],
+        cache_trails: ['_cache/wave0/pg/s01/'],
+      }, { platform: 'pg-test', runtimeAgentId: 'pg-agent' });
+      assert.equal(relay.ok, true);
+
+      const result = complete(q2, {
+        work_id: 'work-pg',
+        receipt: 'none',
+        summary: 'PG complete',
+        slot_result_ref: slot.resultPath,
+      }, dir);
+      assert.equal(result.feedback.passed, true);
+
+      // Gate's content_dedup must consume the pipeline-produced ledger
+      const dedupResult = checkContentDedup(dir, {
+        jaccard: 0.8, url_dedup: true, homepage_detect: false, self_ref_detect: false,
+      });
+      assert.equal(dedupResult.passed, true,
+        `content_dedup should pass on pipeline ledger, got: ${dedupResult.inspect.join('; ')}`);
     } finally {
       cleanup(dir);
     }
