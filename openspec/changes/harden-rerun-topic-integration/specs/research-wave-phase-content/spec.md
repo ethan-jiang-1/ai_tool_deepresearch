@@ -1,0 +1,31 @@
+# Research Wave Phase Content (delta)
+
+> req: RWP-012
+
+## ADDED Requirements
+
+### Requirement: Wave2 rerun full re-synthesis on topic addition
+
+`phase-wave2.md` Rerun-Aware Behavior section SHALL 包含场景表，区分 `action: add`（全量重合成）和 `action: supplement`（delta/append）。
+
+`action: add` 行为 SHALL 与 wave0（`phase-wave0.md` L266）和 wave1（`phase-wave1.md` L404）的 `action: add` 语义对齐：全量执行，与首次运行一致。
+
+`action: add` 时：
+- Phase Agent SHALL 重读所有 topic（包括新增 topic）的 evidence-summary.md
+- Phase Agent SHALL 重建 cross-topic scan matrix 覆盖全部 topic pair
+- Phase Agent SHALL 从 scratch 生成 synthesis.md、cross-topic-ledger.md、finding-index.yaml
+- 旧 synthesis 可保留为备份（`*.prev-rerun-N.md`），但不作为 baseline
+
+`action: supplement` 时保持当前 delta/append 行为（`phase-wave2.md` L351-376 现有文本）。
+
+#### Scenario: Wave2 rerun action:add triggers full synthesis
+
+- **WHEN** seed topic 文件含 `action: add`（新 topic）
+- **THEN** Phase Agent SHALL 全量重合成，不追加 delta section
+- **AND** synthesis.md SHALL NOT 含 `## Delta Synthesis (Rerun N)` header
+
+#### Scenario: Wave2 rerun action:supplement keeps delta mode
+
+- **WHEN** seed topic 文件含 `action: supplement`
+- **THEN** Phase Agent SHALL 保留已有 synthesis 为 baseline
+- **AND** 新增分析 SHALL 以 `## Delta Synthesis (Rerun N)` header 追加
