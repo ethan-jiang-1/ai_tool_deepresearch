@@ -40,6 +40,7 @@ prefixes:
   CRC: cache-raw-web-content
   CSE: cmd-subagent-environment
   DYS: dynamic-node-loading
+  EXO: experiment-observability
   EXS: experiment-shared-infra
   EXR: experiment-ref-integrity
   FOR: fork-repair-converge
@@ -152,6 +153,14 @@ CSE-001: cmd-subagent-environment — Command playbook for project-level real su
 
 # dynamic-node-loading
 DYS-001: dynamic-node-loading — Explicit fileRef Markdown closure loading with cached parsed node data
+
+# experiment-observability
+EXO-001: experiment-observability — Stable post-run bundle health report contract
+EXO-002: experiment-observability — Profile-driven Light Standard Heavy health checks
+EXO-003: experiment-observability — Gate monitor wrapper preserves gate exit status and diagnostics
+EXO-004: experiment-observability — Non-verdict diagnostic trace events for observability
+EXO-005: experiment-observability — Ledger-driven Heavy provenance inspection
+EXO-006: experiment-observability — Runner health report protocol
 
 # fork-repair-converge
 FOR-001: fork-repair-converge — Multi-fail shared repair checkpoint convergence
