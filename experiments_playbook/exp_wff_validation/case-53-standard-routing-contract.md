@@ -74,6 +74,8 @@ const wrongNode = 'phases/phase-wave0.md';
 const originalPlan = readFileSync(join(B, 'rb_plan.md'), 'utf-8');
 const originalStatus = readFileSync(join(B, 'rb_status.json'), 'utf-8');
 
+// EXO-003 exception: gate invoked via spawnSync() in inline JS — bash wrapper not applicable.
+// Gate diagnostics captured via writeGateAttempt() trace events and _logs/run.log.
 function runGate(transitionsPath, currentNodeRef) {
   return spawnSync('node', [
     'DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs',
@@ -177,6 +179,17 @@ node "$B/verify.mjs" "$B"
 >   [terminal] synthetic terminal table → check.next=null, routing.kind="terminal"
 >   [recovery] 恢复正常 transitions → routing.kind="next"
 >   全部 expected:true → 5/5 PASS 即通过。
+
+
+## Step HH: Post-Execution Health
+
+Standard profile — gate diagnostics, timeline consistency.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 5: Cleanup
 

@@ -92,11 +92,11 @@ cat > "$B/result-nd.json" << 'JSON'
 JSON
 set +e
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result-nd.json"
-status=$?
+sts=$?
 set -e
-if [ "$status" -eq 0 ]; then echo "EXPECTED PASS"; else echo "UNEXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" non-delegated-complete "$status" 0
-[ "$status" -eq 0 ]
+if [ "$sts" -eq 0 ]; then echo "EXPECTED PASS"; else echo "UNEXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" non-delegated-complete "$sts" 0
+[ "$sts" -eq 0 ]
 ```
 
 → 预期：`EXPECTED PASS`。non-delegated 不需要 slot_result_ref。
@@ -119,10 +119,10 @@ cat > "$B/result-del-no-ref.json" << 'JSON'
 JSON
 set +e
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result-del-no-ref.json"
-status=$?
+sts=$?
 set -e
-if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT (no ref)"; fi
-node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" delegated-no-ref "$status" 1
+if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT (no ref)"; fi
+node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" delegated-no-ref "$sts" 1
 
 # Fresh queue for the positive delegated scenario.
 rm -f "$B/rb_queue.json"
@@ -138,11 +138,11 @@ cat > "$B/result-del-ok.json" << 'JSON'
 JSON
 set +e
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result-del-ok.json"
-status=$?
+sts=$?
 set -e
-if [ "$status" -eq 0 ]; then echo "EXPECTED PASS (with provenance)"; else echo "UNEXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" delegated-with-provenance "$status" 0
-[ "$status" -eq 0 ]
+if [ "$sts" -eq 0 ]; then echo "EXPECTED PASS (with provenance)"; else echo "UNEXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" delegated-with-provenance "$sts" 0
+[ "$sts" -eq 0 ]
 ```
 
 → 预期：`EXPECTED REJECT (no ref)` 然后 `EXPECTED PASS (with provenance)`。
@@ -208,10 +208,10 @@ cat > "$B/result-del-ledger-only.json" << 'JSON'
 JSON
 set +e
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result-del-ledger-only.json"
-status=$?
+sts=$?
 set -e
-if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT (ledger-only is not provenance)"; fi
-node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" ledger-only-not-provenance "$status" 1
+if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT (ledger-only is not provenance)"; fi
+node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" ledger-only-not-provenance "$sts" 1
 ```
 
 → 预期：`ENGINE LEDGER EXISTS`，然后 `EXPECTED REJECT (ledger-only is not provenance)`。
@@ -261,7 +261,17 @@ node "$B/verdict.mjs" $B
 
 ---
 
-## Step 7: PASS-only 清理
+## Step 7: 结果解读
+
+> 5 个 check，验证 Queue 边界合约四个场景：
+>   [non-delegated-complete] non-delegated complete() 不要求 slot_result_ref → EXPECTED PASS
+>   [delegated-no-ref] delegated 缺 slot_result_ref → EXPECTED REJECT
+>   [delegated-with-provenance] delegated 带 slot_result_ref + writes → EXPECTED PASS
+>   [schema-controller-boundary] controller:"sub-agent" 被 TargetSpecSchema 拒绝；controller:"main-agent"/"engine" + delegates 通过
+>   [ledger-only-not-provenance] 已有 rb_output_declarations.jsonl 不能替代当前 delegated complete 的 provenance → EXPECTED REJECT
+>   全部 expected outcome 匹配 → 5/5 PASS。
+
+## Step 8: PASS-only 清理
 
 ```bash
 if node -e "const fs=require('fs'); const p=process.argv[1] + '/case-404-verdict.json'; process.exit(JSON.parse(fs.readFileSync(p, 'utf8')).ok ? 0 : 1)" "$B"; then

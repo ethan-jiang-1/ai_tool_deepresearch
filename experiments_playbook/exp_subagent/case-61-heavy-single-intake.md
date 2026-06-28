@@ -230,6 +230,17 @@ node "$B/audit.mjs"
 >   dispatch → spawn → 搜索 → receipt → collect → merge → audit。
 >   trace 含 agent_spawn_requested, runtime_started, result_ready, result_received, schema_validated, collect_result, merge_complete。
 
+
+## Step HH: Post-Execution Health
+
+Heavy profile — gate diagnostics, timeline consistency, ledger, receipts, cache trails, dedup evidence.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile heavy
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
+
 ## Step 5: Cleanup [MAIN/SHELL]
 
 > PASS 才执行。FAIL 时保留 bundle 现场供排查。

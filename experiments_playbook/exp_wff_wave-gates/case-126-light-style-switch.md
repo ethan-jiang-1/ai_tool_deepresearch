@@ -143,7 +143,7 @@ echo "=== Shared refs ==="
 ls $B/reference/00-shared-*.md | wc -l
 
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "PASSED=$PASSED"
@@ -192,7 +192,7 @@ cat $B/rb_profile.yaml
 echo "=== Shared refs (still 6, but threshold now 12) ==="
 ls $B/reference/00-shared-*.md | wc -l
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md || true)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "PASSED=$PASSED"
@@ -218,6 +218,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 > claim_verification（threshold=12）：6 < 12 → gate 拒绝
 >
 > 数据没变，style 变了 → 阈值变了 → gate 结果变了。证明 gate 行为由 `research_style_params` 驱动，不是换了个常量。
+
+
+## Step HH: Post-Execution Health
+
+Standard profile — gate diagnostics, timeline consistency.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile light
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 6: Cleanup
 

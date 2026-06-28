@@ -119,7 +119,7 @@ cat $B1/artifacts/wave0/topic-a/source.yaml
 
 echo ""
 echo "=== Running wave0-complete gate ==="
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B1 --current-node phases/phase-wave0.md || true)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B1 --current-node phases/phase-wave0.md || true)
 echo "$GATE_OUTPUT"
 
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('is JSON: true');console.log('passed:',j.check.passed);console.log('inspect count:',j.inspect.length);j.inspect.forEach((x,i)=>console.log('  inspect['+i+']:',x))})"
@@ -244,7 +244,7 @@ ENDOFSYN
 
 
 echo "=== Running wave2-complete gate ==="
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B2 --current-node phases/phase-wave2.md || true)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B2 --current-node phases/phase-wave2.md || true)
 echo "$GATE_OUTPUT"
 
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('inspect count:',j.inspect.length);j.inspect.forEach((x,i)=>console.log('  inspect['+i+']:',x))})"
@@ -355,7 +355,7 @@ cat $B3/rb_status.json
 
 
 echo "=== Running wave2-complete gate ==="
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B3 --current-node phases/phase-wave2.md || true)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B3 --current-node phases/phase-wave2.md || true)
 echo "$GATE_OUTPUT"
 
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('inspect count:',j.inspect.length);j.inspect.forEach((x,i)=>console.log('  inspect['+i+']:',x))})"
@@ -391,6 +391,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 >   partial dead links → gate 正确报告
 >   status drift → gate 正确检测
 >   全部边界场景 gate 不崩溃。
+
+
+## Step HH: Post-Execution Health
+
+Standard profile — gate diagnostics, timeline consistency.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 6: Cleanup all bundles
 

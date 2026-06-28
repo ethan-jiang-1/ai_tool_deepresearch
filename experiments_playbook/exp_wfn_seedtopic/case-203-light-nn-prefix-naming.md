@@ -281,7 +281,7 @@ ls -1 $B/seed_topics/
 REPO_ROOT=$(pwd)
 B=$(echo dpt_disp_case-203_nn_name_*)
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)
 echo "$GATE_OUTPUT"
 
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -527,7 +527,7 @@ echo "=== Boundary test: create a file whose stem does not match frontmatter slu
 cp "$B/seed_topics/04_stress-modulation-and-resilience.md" \
    "$B/seed_topics/04_wrong-name.md"
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md || true)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md || true)
 echo "$GATE_OUTPUT"
 
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -594,6 +594,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 > **边界测试：**
 > - gate 正确 reject 文件名 stem 与 frontmatter slug 不一致的文件（`04_wrong-name.md` stem ≠ `04_stress-modulation-and-resilience` slug）
 > - 证明 gate 的 `per_file_slug_stem_consistency` rule 是真实 enforcement，不是被动接受
+
+
+## Step HH: Post-Execution Health
+
+Standard profile — gate diagnostics, timeline consistency.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile light
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 9: Cleanup
 

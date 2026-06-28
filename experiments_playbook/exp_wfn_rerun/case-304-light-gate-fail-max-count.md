@@ -56,7 +56,7 @@ EOF
 ## Step 2: gate fail
 
 ```bash
-GO=$(node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle $B --current-node phases/phase-rerun.md)
+GO=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate rerun-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle $B --current-node phases/phase-rerun.md)
 PASSED=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "rerun-ready passed=$PASSED (expected: false)"
 OK=false; [ "$PASSED" = "false" ] && OK=true

@@ -299,7 +299,7 @@ EOF
 
 
 # Run gate
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "=== PASSED=$PASSED (expected: true) ==="
@@ -357,6 +357,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 > 验证完整 wave0 链路：
 >   sub-agent 真实搜索 → 写入 source.yaml → backfill 替换 __BACKFILL_WAVE0_EVIDENCE__ → gate pass。
 >   需要 sub-agent receipt 存在、source.yaml 存在、backfill token 消失、gate check.passed=true。
+
+
+## Step HH: Post-Execution Health
+
+Heavy profile — gate diagnostics, timeline consistency, ledger, receipts, cache trails, dedup evidence.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile heavy
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 6: Cleanup
 

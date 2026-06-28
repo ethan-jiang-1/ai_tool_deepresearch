@@ -115,7 +115,7 @@ grep gate_attempt $B/rb_trace.jsonl | grep -o '"gate":"[^"]*"' | sort | uniq
 ## Step 2: Happy path — all conditions met → gate pass
 
 ```bash
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: readiness-passed | passed: $PASSED"
@@ -130,7 +130,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 # Remove one artifact
 rm $B/artifacts/wave2/synthesis.md
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: readiness-passed | passed: $PASSED"
@@ -154,7 +154,7 @@ for g in instantiation-complete hitl1-recorded setup-ready seed-topics-ready wav
   echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",\"event\":\"gate_attempt\",\"gate\":\"$g\",\"passed\":true}" >> $B/rb_trace.jsonl
 done
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: readiness-passed | passed: $PASSED"
@@ -177,7 +177,7 @@ done
 # Corrupt rb_profile.yaml
 echo 'key: [bad: > yaml: {{{' > $B/rb_profile.yaml
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: readiness-passed | passed: $PASSED"
@@ -203,7 +203,7 @@ EOF
 echo 'this is not valid json' >> $B/rb_trace.jsonl
 echo 'neither is this {{{' >> $B/rb_trace.jsonl
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: readiness-passed | passed: $PASSED"
@@ -238,6 +238,17 @@ if (pass >= 1 && fail >= 4) {
 
 > 验证 readiness gate：
 >   manifest 拓扑推导 prior gate 集合 + artifact/parsability 审计 → gate pass。
+
+
+## Step HH: Post-Execution Health
+
+Standard profile — gate diagnostics, timeline consistency.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 9: Cleanup
 

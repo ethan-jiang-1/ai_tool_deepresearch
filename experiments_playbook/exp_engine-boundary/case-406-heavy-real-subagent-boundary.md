@@ -182,6 +182,8 @@ writeFileSync(path.join(B, 'complete-result.json'), JSON.stringify({
 execFileSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-queue.mjs', 'complete', B, '--result', path.join(B, 'complete-result.json')], { cwd: REPO, stdio: 'pipe' });
 record(existsSync(path.join(B, 'rb_output_declarations.jsonl')), 'delegated complete appended Engine ledger');
 
+// EXO-003 exception: gate invoked via execFileSync() in inline JS — bash wrapper not applicable.
+// Gate diagnostics captured via writeGateAttempt() trace events and _logs/run.log.
 const gateRaw = execFileSync(process.execPath, ['DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs', '--bundle', B, '--current-node', 'phases/phase-wave0.md'], { cwd: REPO, encoding: 'utf-8', stdio: 'pipe' });
 writeFileSync(path.join(B, 'gate-wave0.json'), gateRaw);
 const gate = JSON.parse(gateRaw);
@@ -192,12 +194,12 @@ JS
 
 set +e
 node "$B/complete-real-path.mjs" "$B"
-status=$?
+sts=$?
 set -e
-if [ "$status" -eq 2 ]; then
+if [ "$sts" -eq 2 ]; then
   echo "CASE-406 NOT RUN; bundle preserved: $B"
-elif [ "$status" -ne 0 ]; then
-  exit "$status"
+elif [ "$sts" -ne 0 ]; then
+  exit "$sts"
 fi
 ```
 
@@ -239,12 +241,12 @@ if (!ok) process.exit(1);
 JS
 set +e
 node "$B/verdict.mjs" "$B"
-status=$?
+sts=$?
 set -e
-if [ "$status" -eq 2 ]; then
+if [ "$sts" -eq 2 ]; then
   echo "CASE-406 NOT RUN recorded; bundle preserved: $B"
-elif [ "$status" -ne 0 ]; then
-  exit "$status"
+elif [ "$sts" -ne 0 ]; then
+  exit "$sts"
 fi
 ```
 

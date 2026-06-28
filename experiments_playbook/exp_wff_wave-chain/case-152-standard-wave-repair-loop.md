@@ -176,7 +176,7 @@ echo "=== Synthesis (all dead links) ==="
 cat $B/artifacts/wave2/synthesis.md
 
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md || true)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:false,detail:'attempt 1: all dead links, cross_field fail'})})"
@@ -226,7 +226,7 @@ cat $B/artifacts/wave2/synthesis.md
 ## Step 5: Rerun gate — 预期 PASS
 
 ```bash
-GATE_OUTPUT2=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
+GATE_OUTPUT2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE_OUTPUT2"
 PASSED2=$(echo "$GATE_OUTPUT2" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: wave2-complete (attempt 2) | passed: $PASSED2"
@@ -254,6 +254,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 > 验证 wave gate PDCA 回路：
 >   gate fail → read inspect/advice → repair → rerun → gate pass。
 >   trace 含 fail+pass 两条 gate_attempt。
+
+
+## Step HH: Post-Execution Health
+
+Standard profile — gate diagnostics, timeline consistency.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 8: Cleanup
 

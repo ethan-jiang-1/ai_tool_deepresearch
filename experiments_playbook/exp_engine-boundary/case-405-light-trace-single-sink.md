@@ -185,6 +185,14 @@ node "$B/verdict.mjs" "$B"
 
 ---
 
+## Step 3: 结果解读
+
+> 验证 trace 单 sink 原则：
+>   [single sink] bundle 根只有 `rb_trace.jsonl` 一个 trace 文件 — 无旧版 `_trace_*.jsonl`、`trace.jsonl` 等遗留 sink
+>   [unified path] 所有 engine（queue、gate、relay）和 playbook inline script 写入同一 `rb_trace.jsonl`
+>   [disposable bundle] `dpt_disp_*` 遵循与 production `dpt_rb_*` 相同的 trace 路径约定
+>   证明 AGT-007 (unified trace file naming) 在 disposable experiment 环境下生效。
+
 ## Step 4: PASS-only 清理
 
 ```bash

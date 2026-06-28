@@ -92,7 +92,7 @@ echo "=== Status ===" && cat $B/rb_status.json
 ```bash
 echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"gate_attempt","gate":"setup-ready","passed":true}' >> $B/rb_trace.jsonl
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
@@ -136,7 +136,7 @@ echo "=== seed_topics/ ===" && ls -la $B/seed_topics/
 ## Step 4: Seed-topics-ready gate → pass
 
 ```bash
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
@@ -159,6 +159,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 >   Agent 自主推进 status（gate 只读不写）：`setup_ready` → `seed_topics_ready`（next_gate 推到 `wave0_complete`）。
 >   seed-topics-ready gate 校验 slug 三重一致（registry slug == 文件名 stem == frontmatter slug）→ pass。
 >   gate.next = phases/phase-wave0.md，闭环指向 wave0。
+
+
+## Step HH: Post-Execution Health
+
+Standard profile — gate diagnostics, timeline consistency.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile light
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 7: Cleanup
 

@@ -83,7 +83,7 @@ echo "=== Bundle ready ==="
 cat > $B/rb_status.json << 'EOF'
 { "current_mode": "execution", "state": "in_progress", "current_gate": "hitl2_recorded", "next_gate": "readiness_passed" }
 EOF
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "hitl2-recorded | passed: $PASSED"
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'hitl2 gate — rerun decision'})})"
@@ -107,7 +107,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 cat > $B/rb_status.json << 'EOF'
 { "current_mode": "execution", "state": "in_progress", "current_gate": "rerun_ready", "next_gate": "seed_topics_ready" }
 EOF
-GO=$(node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle $B --current-node phases/phase-rerun.md)
+GO=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate rerun-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle $B --current-node phases/phase-rerun.md)
 PASSED=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.next)
 echo "rerun-ready | passed=$PASSED next=$NEXT"
@@ -127,6 +127,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 > 验证 rerun node 的 happy path 完整链路：
 >   hitl2 gate pass → chain `rerun` → phase-rerun.md → rerun-ready gate pass → chain → seed-topics
+
+
+## Step HH: Post-Execution Health
+
+Standard profile — gate diagnostics, timeline consistency.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile light
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 7: Cleanup
 

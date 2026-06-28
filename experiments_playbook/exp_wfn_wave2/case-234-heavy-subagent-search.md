@@ -462,7 +462,7 @@ sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/- [部分解答] t1-q1: cross-topic 
 sed -i '' 's/__BACKFILL_WAVE2_JUDGMENT__/W2F-001 explore_search: Copilot fixed 3-way has lower latency but less flexibility vs Claude Code dynamic 1-5 scheduling./' $B/seed_topics/02_agentic-tools.md
 sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/- [部分解答] t2-q1: cross-topic explore_search (W2F-001, 2 sources, medium confidence)/' $B/seed_topics/02_agentic-tools.md
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "$GATE_OUTPUT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));console.log('gate:',d.check.passed,'| next:',d.check.next)"
 ```
@@ -527,6 +527,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 >   → index receipt_refs []→populated → synthesis v2 写入搜索结果
 >   → 00-cross-scout-discovery.md promote → gate pass。
 >   V1-V6 全部通过。
+
+
+## Step HH: Post-Execution Health
+
+Heavy profile — gate diagnostics, timeline consistency, ledger, receipts, cache trails, dedup evidence.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile heavy
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 10: Cleanup
 

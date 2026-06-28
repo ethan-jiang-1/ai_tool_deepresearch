@@ -144,6 +144,6 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 rm -rf $B
 ```
 
-## 结果解读
+## Step 7: 结果解读
 
 > 验证两轮 rerun delta：`rerun_count` 0→1→2 递增，Round 1 写 direction hints（含新增 topic），Round 2 更新 topic-01 为 supplement + depth 升级，未变更 topic 的 section 保留不覆盖。

@@ -240,6 +240,8 @@ function completeThroughQueue(name, refs) {
 }
 
 function runGate() {
+  // EXO-003 exception: gate invoked via runNode() in inline JS — bash wrapper not applicable.
+  // Gate diagnostics captured via writeGateAttempt() trace events and _logs/run.log.
   try {
     const raw = runNode(['DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs', '--bundle', B, '--current-node', 'phases/phase-wave0.md']);
     return JSON.parse(raw);
@@ -336,6 +338,18 @@ node "$B/verdict.mjs" "$B"
 → 预期：`CASE-403 PASS`。
 
 ---
+
+## Step 3: 结果解读
+
+> 验证 content_dedup gate 只从 `rb_output_declarations.jsonl` 读取输入，不扫描目录：
+>   [ledger-generated] gate 从 declaration ledger 获取 reference 列表
+>   [URL dup] 相同 URL → gate fail（URL dedup 检测）
+>   [Jaccard clone] 高相似度 Key Facts → gate fail（Jaccard ≥ 0.8）
+>   [homepage] root-domain-only URL → gate fail（homepage detect）
+>   [self-ref] Key Facts 描述自身 → gate fail（self-referential detect）
+>   [clean pass] 不重叠 URL + 不相似 Key Facts → gate pass
+>   [orphan fails] 无 ledger → gate fail（不扫描 reference/ 目录）
+>   证明 gate content_dedup 的输入 source of truth = Engine ledger，不是文件系统扫描。
 
 ## Step 4: PASS-only 清理
 

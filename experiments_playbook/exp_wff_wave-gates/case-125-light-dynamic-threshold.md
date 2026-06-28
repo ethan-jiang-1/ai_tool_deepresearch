@@ -152,7 +152,7 @@ done
 echo "=== Shared refs (only 2 of 12 needed) ==="
 ls $B/reference/00-shared-*.md
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md || true)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "PASSED=$PASSED"
@@ -183,7 +183,7 @@ done
 echo "=== Shared refs (now 12) ==="
 ls $B/reference/00-shared-*.md | wc -l
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "PASSED=$PASSED"
@@ -209,6 +209,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 > 第二次：补到 12 个 ref → gate 放行，路由到 phase-wave1。
 >
 > 两次 gate 行为都正确。证明 `threshold_source` 生效——gate 从 `rb_profile.yaml#/research_style_params/wave0_shared_ref_total` 读取动态阈值。
+
+
+## Step HH: Post-Execution Health
+
+Standard profile — gate diagnostics, timeline consistency.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile light
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 7: Cleanup
 

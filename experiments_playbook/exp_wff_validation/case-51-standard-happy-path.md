@@ -26,7 +26,8 @@ Playbook 是 workflow controller。**Transition Table**（`transitions.chain.jso
 | **Agent actor** | 无（fixture-backed） |
 | **External calls** | 无 |
 | **Verdict source** | `rb_trace.jsonl` `check` events |
-| **不证明** | Agent 搜索/写作/判断/修复能力 — 仅证明 Transition Table + Gate + Trace 结构 |`
+| **不证明** | Agent 搜索/写作/判断/修复能力 — 仅证明 Transition Table + Gate + Trace 结构 |
+| **EXO-003 exception** | gate 由 inline JS walker 通过 `spawnSync()` 调用 — bash wrapper 不适用；gate 诊断由 `writeGateAttempt()` trace event 和 `_logs/run.log` 捕获 |`
 
 # case-51-standard-happy-path
 
@@ -420,6 +421,17 @@ node $B/verify.mjs $B
 > ≥8 个 check，验证 Transition Table 驱动的 9 phase/8 gate 全部 pass：
 >   每个 gate 的 check.passed=true 且 check.next 指向下一 phase。
 >   Transition Table 是路由的单一事实来源。
+
+
+## Step HH: Post-Execution Health
+
+Standard profile — gate diagnostics, timeline consistency.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 13: Cleanup
 

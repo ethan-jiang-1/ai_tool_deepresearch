@@ -479,7 +479,7 @@ grep -q '__BACKFILL_PENDING_QUESTIONS__' $B/seed_topics/02_ai-regulation.md && e
 # Write trace event
 
 # Run gate
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE_OUTPUT" | node -e "
 const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));
 console.log('check.passed:', d.check.passed);
@@ -545,6 +545,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 >   synthesis v1 → 3 件套 artifact (synthesis/ledger/index)
 >   → 6 ledger sections, W2F refs, wave1 evidence links
 >   → backfill tokens 替换 → gate pass。
+
+
+## Step HH: Post-Execution Health
+
+Heavy profile — gate diagnostics, timeline consistency, ledger, receipts, cache trails, dedup evidence.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile heavy
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 7: Cleanup
 

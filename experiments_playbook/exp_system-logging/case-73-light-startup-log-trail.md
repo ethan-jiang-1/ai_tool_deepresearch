@@ -74,7 +74,7 @@ cat "$B/_logs/run.log"
 ```bash
 B= # populated from Step 1
 
-node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs \
+node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate instantiation-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs \
   --bundle "$B" --current-node "phases/phase-instantiation.md" 2>&1 || true
 
 echo "gate instantiation-complete: done"
@@ -89,7 +89,7 @@ echo "gate instantiation-complete: done"
 ```bash
 B= # populated from Step 1
 
-node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs \
+node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs \
   --bundle "$B" --current-node "phases/phase-setup.md" 2>&1 || true
 
 echo "gate setup-ready: done"
@@ -104,7 +104,7 @@ echo "gate setup-ready: done"
 ```bash
 B= # populated from Step 1
 
-node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs \
+node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs \
   --bundle "$B" --current-node "phases/phase-seed-topics.md" 2>&1 || true
 
 echo "gate seed-topics-ready: done"

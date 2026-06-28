@@ -54,7 +54,7 @@ echo "=== Corrupted ===" && cat $B/rb_status.json
 运行 setup-ready gate：
 
 ```bash
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 EXIT=$?
 echo "Exit: $EXIT"
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('is JSON: true');console.log('passed:',j.check.passed);console.log('inspect count:',j.inspect.length);console.log('inspect[0]:',j.inspect[0])})"
@@ -95,7 +95,7 @@ rm $B/rb_plan.md
 rm -rf $B/final
 echo "=== Removed: rb_plan.md + final/ ==="
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('inspect count:',j.inspect.length);console.log('advice count:',j.advice.length);j.inspect.forEach((x,i)=>console.log('  inspect['+i+']:',x));j.advice.forEach((x,i)=>console.log('  advice['+i+']:',x))})"
 ```
 
@@ -157,7 +157,7 @@ STATUSEOF
 **Rerun same gate：**
 
 ```bash
-GATE_OUTPUT2=$(node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
+GATE_OUTPUT2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
 echo "$GATE_OUTPUT2" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('next:',j.check.next)})"
 ```
 
@@ -179,7 +179,7 @@ import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
 **模拟场景：** Agent 传了一个不存在的 `--bundle` 路径。
 
 ```bash
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle /tmp/nonexistent_bundle_xyz --current-node phases/phase-instantiation.md || true)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate instantiation-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle /tmp/nonexistent_bundle_xyz --current-node phases/phase-instantiation.md || true)
 EXIT=$?
 echo "Exit: $EXIT"
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('is JSON: true');console.log('passed:',j.check.passed)})"
@@ -211,7 +211,7 @@ import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
 > Case 3 不写入 trace（bundle 不存在），只验证 gate 不崩溃。
 
 
-## 结果解读
+## Step 7: 结果解读
 
 > 验证 gate CLI 容错：
 >   bad JSON → gate 不崩溃，返回 clear inspect/advice

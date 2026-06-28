@@ -164,10 +164,10 @@ cat > "$B/ra.json" << 'JSON'
 JSON
 set +e
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/ra.json"
-status=$?
+sts=$?
 set -e
-if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" "A: no slot_result_ref" "$status" 1
+if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" "A: no slot_result_ref" "$sts" 1
 ```
 
 → 预期：`EXPECTED REJECT`。
@@ -185,10 +185,10 @@ cat > "$B/rb.json" << 'JSON'
 JSON
 set +e
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rb.json"
-status=$?
+sts=$?
 set -e
-if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" "B: no receipt" "$status" 1
+if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" "B: no receipt" "$sts" 1
 ```
 
 → 预期：`EXPECTED REJECT`。
@@ -206,10 +206,10 @@ cat > "$B/rc.json" << 'JSON'
 JSON
 set +e
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rc.json"
-status=$?
+sts=$?
 set -e
-if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" "C: writes without output_files declaration" "$status" 1
+if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" "C: writes without output_files declaration" "$sts" 1
 ```
 
 → 预期：`EXPECTED REJECT`。
@@ -227,10 +227,10 @@ cat > "$B/rd.json" << 'JSON'
 JSON
 set +e
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rd.json"
-status=$?
+sts=$?
 set -e
-if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" "D: missing output file" "$status" 1
+if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" "D: missing output file" "$sts" 1
 ```
 
 → 预期：`EXPECTED REJECT`。
@@ -248,10 +248,10 @@ cat > "$B/re.json" << 'JSON'
 JSON
 set +e
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/re.json"
-status=$?
+sts=$?
 set -e
-if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" "E: incomplete cache" "$status" 1
+if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" "E: incomplete cache" "$sts" 1
 ```
 
 → 预期：`EXPECTED REJECT`。
@@ -269,10 +269,10 @@ cat > "$B/rf.json" << 'JSON'
 JSON
 set +e
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rf.json"
-status=$?
+sts=$?
 set -e
-if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" "F: nonce mismatch" "$status" 1
+if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" "F: nonce mismatch" "$sts" 1
 ```
 
 → 预期：`EXPECTED REJECT`。
@@ -323,6 +323,17 @@ node "$B/verdict.mjs" $B
 → 预期：`CASE-402 PASS`，≥6 个真实 reject 事件。
 
 ---
+
+## Step 8: 结果解读
+
+> 6 个场景 A-F，验证 delegated complete() 拒绝所有缺失 provenance 的情况：
+>   [A] 缺 slot_result_ref → complete 拒绝（no provenance anchor）
+>   [B] 缺 receipt → complete 拒绝（receipt verification fails）
+>   [C] writes 无 output_files 声明 → complete 拒绝（declaration contract violated）
+>   [D] 声明的 output file 不存在 → complete 拒绝（declaration-file mismatch）
+>   [E] 缺 cache leaf（websearch.json/page.md/meta.json）→ complete 拒绝（incomplete cache trail）
+>   [F] nonce mismatch → complete 拒绝（receipt integrity violation）
+>   全部 6 个 reject 都是 expected:true — 正确拒绝等于正确行为。
 
 ## Step 9: PASS-only 清理
 

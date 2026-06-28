@@ -377,7 +377,7 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent | node -e "
 # Write trace event
 
 # Run gate
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B --current-node phases/phase-wave1.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave1-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B --current-node phases/phase-wave1.md)
 echo "$GATE_OUTPUT" | node -e "
 const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));
 console.log('check.passed:', d.check.passed);
@@ -426,6 +426,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 >   2 个 sub-agent 并行搜索 → 各写 evidence-summary.md + question-list.md
 >   → backfill 替换 6 个 token → gate pass。
 >   需要 2 个 evidence-summary 存在、0 stale token、gate check.passed=true。
+
+
+## Step HH: Post-Execution Health
+
+Heavy profile — gate diagnostics, timeline consistency, ledger, receipts, cache trails, dedup evidence.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile heavy
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 7: Cleanup
 

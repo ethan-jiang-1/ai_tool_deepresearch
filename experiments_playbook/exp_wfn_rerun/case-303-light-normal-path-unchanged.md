@@ -53,7 +53,7 @@ echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",\"event\":\"hitl2_recorded\
 ## Step 2: hitl2 gate + chain query
 
 ```bash
-GO=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
+GO=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
 PASSED=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.next)
 echo "hitl2 passed=$PASSED next=$NEXT"

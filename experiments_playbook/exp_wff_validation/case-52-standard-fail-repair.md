@@ -65,6 +65,8 @@ console.log('JS回答: node loaded — phases/phase-instantiation.md');
 log.info('node loaded');
 
 for(let i=0;i<5;i++){
+  // EXO-003 exception: gate invoked via spawnSync() in inline JS — bash wrapper not applicable.
+  // Gate diagnostics captured via writeGateAttempt() trace events and _logs/run.log.
   const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs','--bundle',B,'--current-node','phases/phase-instantiation.md','--transitions',transitions],{encoding:'utf-8'});
   const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
   const icon=gr.check.passed?'PASS':'FAIL';
@@ -275,6 +277,17 @@ node $B/verify.mjs $B
 >   attempt 2: gate fail（第二个 rule 也 fail）
 >   attempt 3: gate pass, next=phases/phase-hitl1.md（修复后 Transition Table 回答 next）
 >   后续 phase 全部 pass。最后 check.passed=true 即通过。
+
+
+## Step HH: Post-Execution Health
+
+Standard profile — gate diagnostics, timeline consistency.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 13: Cleanup
 

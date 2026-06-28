@@ -192,7 +192,7 @@ B= # populated from Step 1
 
 node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --level info --msg "phase:wave0 START — engine test"
 node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --level info --msg "phase:wave0 END — gate PASS"
-node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle "$B" --current-node "phases/phase-setup.md" 2>&1 || true
+node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle "$B" --current-node "phases/phase-setup.md" 2>&1 || true
 
 echo "Agent + gate entries added"
 ```

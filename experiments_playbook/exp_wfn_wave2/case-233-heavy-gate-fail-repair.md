@@ -188,7 +188,7 @@ echo "  3. backfill token __BACKFILL_PENDING_QUESTIONS__ still present in seed t
 ## Phase 2: First Gate Run — Expected FAIL
 
 ```bash
-GATE1=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
+GATE1=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE1" | node -e "
 const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));
 console.log('Gate#1 passed:', d.check.passed);
@@ -229,7 +229,7 @@ echo "Backfill token check:" && grep -q '__BACKFILL_' $B/seed_topics/01_test-top
 ## Phase 4: Second Gate Run — Expected PASS
 
 ```bash
-GATE2=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
+GATE2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE2" | node -e "
 const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));
 console.log('Gate#2 passed:', d.check.passed);
@@ -281,6 +281,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 >   Scenario A: ledger 缺 HITL2 Handoff section + stale backfill tokens → gate fail
 >   Scenario B: append section → sed 替换 tokens → gate pass
 >   trace 含 2 条 gate_attempt (1 fail + 1 pass) → PASS。
+
+
+## Step HH: Post-Execution Health
+
+Heavy profile — gate diagnostics, timeline consistency, ledger, receipts, cache trails, dedup evidence.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile heavy
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 7: Cleanup
 

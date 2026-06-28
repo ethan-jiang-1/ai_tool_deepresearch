@@ -86,7 +86,7 @@ echo "=== Bundle ready, user_decision: rerun ==="
 cat > $B/rb_status.json << 'EOF'
 { "current_mode": "execution", "state": "in_progress", "current_gate": "hitl2_recorded", "next_gate": "readiness_passed" }
 EOF
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "hitl2-recorded | passed=$PASSED"
 
@@ -114,7 +114,7 @@ cat > $B/rb_status.json << 'EOF'
 { "current_mode": "execution", "state": "in_progress", "current_gate": "rerun_ready", "next_gate": "seed_topics_ready" }
 EOF
 
-GO=$(node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle $B --current-node phases/phase-rerun.md)
+GO=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate rerun-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle $B --current-node phases/phase-rerun.md)
 PASSED=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.next)
 echo "rerun-ready | passed=$PASSED next=$NEXT"
@@ -150,7 +150,7 @@ cat > $B/rb_status.json << 'EOF'
 EOF
 
 # hitl2 gate pass again
-GO=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
+GO=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
 PASSED=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "hitl2-recorded (retry) | passed=$PASSED"
 
@@ -175,7 +175,7 @@ cat > $B/rb_status.json << 'EOF'
 { "current_mode": "execution", "state": "in_progress", "current_gate": "readiness_passed", "next_gate": "none" }
 EOF
 
-GO=$(node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
+GO=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
 PASSED=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.next)
 echo "readiness-passed | passed=$PASSED next=$NEXT"
@@ -226,6 +226,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 >   - Agent 读取 user_decision=proceed_to_readiness → chain `passed` → readiness gate pass
 >   - `rb_trace.jsonl` 中同时有 hitl2-recorded、rerun-ready、readiness-passed 三个 gate_attempt
 >   证明 bundle 在三种 node 上都停留过，Agent 按意图正确路由。
+
+
+## Step HH: Post-Execution Health
+
+Standard profile — gate diagnostics, timeline consistency.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile light
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 8: Cleanup
 

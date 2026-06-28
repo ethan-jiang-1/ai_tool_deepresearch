@@ -147,11 +147,11 @@ cat > "$B/result.json" << 'JSON'
 JSON
 set +e
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result.json"
-status=$?
+sts=$?
 set -e
-if [ "$status" -eq 0 ]; then echo "EXPECTED PASS"; else echo "UNEXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" delegated-complete "$status" 0
-[ "$status" -eq 0 ]
+if [ "$sts" -eq 0 ]; then echo "EXPECTED PASS"; else echo "UNEXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" delegated-complete "$sts" 0
+[ "$sts" -eq 0 ]
 ```
 
 → 预期：`EXPECTED PASS`。
@@ -176,10 +176,10 @@ if (!ok) process.exit(1);
 JS
 set +e
 node "$B/check-ledger.mjs" $B
-status=$?
+sts=$?
 set -e
-node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" ledger-shape "$status" 0
-[ "$status" -eq 0 ]
+node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" ledger-shape "$sts" 0
+[ "$sts" -eq 0 ]
 ```
 
 → 预期：`LEDGER PASS`。
@@ -191,10 +191,10 @@ node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.sl
 ```bash
 set +e
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
-status=$?
+sts=$?
 set -e
-node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" validate-bundle "$status" 0
-[ "$status" -eq 0 ]
+node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" validate-bundle "$sts" 0
+[ "$sts" -eq 0 ]
 ```
 
 → 预期：`rb_output_declarations.jsonl ✓`。
@@ -205,7 +205,7 @@ node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.sl
 
 ```bash
 set +e
-node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/gate-wave0.json" 2>&1
+node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/gate-wave0.json" 2>&1
 gate_status=$?
 set -e
 node - "$B" "$gate_status" <<'JS'

@@ -395,7 +395,7 @@ sed -i '' 's/__BACKFILL_WAVE2_JUDGMENT__/W2F-001 cross_topic_resolution: Agentic
 sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/[部分解答] t2-q1: Copilot vs Claude Code 对比——Copilot ~200ms 基线可用（W2F-001） | [仍开放] W2F-002: 调度策略差异/' $B/seed_topics/02_agentic-tools.md
 
 # Gate
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE_OUTPUT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));console.log('gate passed:',d.check.passed)"
 
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -429,6 +429,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 >   W2F-002 (emergent): search_required=false, record_only
 >   W2F-003 (legacy+search): search_required=true, has receipt_ref
 >   3 findings, 0 orphan → gate pass。
+
+
+## Step HH: Post-Execution Health
+
+Heavy profile — gate diagnostics, timeline consistency, ledger, receipts, cache trails, dedup evidence.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile heavy
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 6: Cleanup
 

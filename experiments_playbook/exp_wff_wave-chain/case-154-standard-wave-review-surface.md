@@ -404,7 +404,7 @@ cat $B/artifacts/wave2/synthesis.md
 
 ```bash
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE_OUTPUT"
 
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -441,7 +441,28 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ```
 
 
-## Step 8: Cleanup
+
+## Step 8: 结果解读
+
+> 1 个 check（wave2-complete pass）+ Human Review Checklist，验证 review surface：
+>   [PASS] 3-topic 完整 Wave0 metadata（_INDEX.md table + 00-shared-*.md ×3）
+>   [PASS] 3-topic 完整 Wave1 evidence（evidence-summary + 4-section question-list ×3）
+>   [PASS] cross-topic synthesis 含 valid Markdown links 到 Wave1 artifacts
+>   [PASS] cross-topic-ledger.md 六 section + finding-index.yaml 三 finding
+>   [PASS] Human Review Checklist 6 项：URL 可信度、标题准确性、日期一致性、link 指向、claim 依据、gap 诚实度
+>   Wave0→Wave1→Wave2 的 review surface 在 Markdown 中完全可读，不需要读 JS。
+
+## Step HH: Post-Execution Health
+
+Standard profile — gate diagnostics, timeline consistency.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
+
+## Step 9: Cleanup
 
 ```bash
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"

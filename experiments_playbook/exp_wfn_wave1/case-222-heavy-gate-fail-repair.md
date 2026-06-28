@@ -174,7 +174,7 @@ find $B2/artifacts -type f | sort
 
 ```bash
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B2 --current-node phases/phase-wave1.md || true)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave1-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B2 --current-node phases/phase-wave1.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')); console.log(d.check.passed)")
 
@@ -291,7 +291,7 @@ grep -q '__BACKFILL_WAVE1_MECHANISMS__' $B2/seed_topics/topic-y.md && echo "AFTE
 ### Step B2: Rerun gate — 预期 pass
 
 ```bash
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B2 --current-node phases/phase-wave1.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave1-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B2 --current-node phases/phase-wave1.md)
 echo "$GATE_OUTPUT" | node -e "
 const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));
 console.log('check.passed:', d.check.passed);

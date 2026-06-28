@@ -237,7 +237,7 @@ sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/[开放] th-q1: 需要 browser-based
 
 # Run gate
 
-GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B3 --current-node phases/phase-wave1.md)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave1-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B3 --current-node phases/phase-wave1.md)
 echo "$GATE_OUTPUT" | node -e "
 const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));
 console.log('check.passed:', d.check.passed);
@@ -296,6 +296,17 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 >   → 记录 access failure → 写入 partial evidence-summary（无编造内容）
 >   → gate 仍 pass（partial evidence 合法）。
 >   V1-V6 全部通过。
+
+
+## Step HH: Post-Execution Health
+
+Heavy profile — gate diagnostics, timeline consistency, ledger, receipts, cache trails, dedup evidence.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile heavy
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 7: Cleanup
 

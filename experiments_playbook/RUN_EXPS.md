@@ -158,8 +158,13 @@
 2. **Step 1: 创建 bundle** — 执行第一个 bash block，`$B` 是 `new-disposable-bundle.mjs` 的输出。把 `$B` 的值保存下来（后续 step 要用）
 3. **后续 Step** — 执行每个 bash block，**忠实跑原 MD/代码**。inline JS 原样使用，只替换其中的硬编码 `dpt_disp_case-XX_xxx` 路径为实际 bundle 路径（因为随机后缀）。除此之外一行不改
 4. **Verdict** — 执行 verdict step，记录 `\x1b[32mPASS\x1b[0m` 或 `\x1b[31mFAIL\x1b[0m`
-5. **Cleanup** — 执行清理 step
-6. **下一个** — 回到步骤 1，跑清单里的下一个 playbook
+5. **Post-Execution Health** — verdict 后、cleanup 前，运行健康检查：
+   - Standard playbook：`node experiments_env/shared/verify-bundle-health.mjs --bundle <B> --profile standard`
+   - Heavy playbook：`node experiments_env/shared/verify-bundle-health.mjs --bundle <B> --profile heavy`
+   - Light playbook：`node experiments_env/shared/verify-bundle-health.mjs --bundle <B> --profile light`
+   - 记录 health status（CLEAN / ISSUES）
+6. **Cleanup** — 执行清理 step。**PASS + CLEAN 才清理；FAIL 或 HEALTH ISSUES 必须保留 bundle 现场。**
+7. **下一个** — 回到步骤 1，跑清单里的下一个 playbook
 
 **禁止的做法：**
 - ❌ 把多个 playbook 的 JS 拼到一个文件里批量跑
@@ -172,6 +177,12 @@
 - 记录下来，**继续下一个**，不要停
 - 跑完之后再看哪些要修
 
+## Cleanup 政策
+
+- **PASS + CLEAN** → 可以清理 disposable bundle
+- **FAIL 或 HEALTH ISSUES** → 保留 bundle 现场（bundle_preserved: true），供故障分析
+- 不得在不确定的情况下清理 bundle；宁可多留一个目录，不能丢掉诊断证据
+
 ## Report 格式
 
 跑完后输出：
@@ -179,13 +190,18 @@
 ```
 ## Playbook Run Report
 
-Light: N/N PASS (X FAIL)
-Standard: N/N PASS (X FAIL)
-Heavy: N/N PASS (X FAIL)
+Light: N/N PASS, N HEALTH ISSUES (X FAIL)
+Standard: N/N PASS, N HEALTH ISSUES (X FAIL)
+Heavy: N/N PASS, N HEALTH ISSUES (X FAIL)
 
 ### FAIL
-- exp_xxx/case-XX-...md — <failure reason from trace>
+- exp_xxx/case-XX-...md — verdict: FAIL — <failure reason from trace>
+
+### HEALTH ISSUES
+- exp_xxx/case-XX-...md — verdict: PASS, health: ISSUES — <health issue summary>
 ```
+
+每 case 记录 `verdict`（PASS/FAIL）、`health`（CLEAN/ISSUES）、可选 `not_run_reason`、`bundle_preserved`。
 
 用绿色 `\x1b[32m` 标 PASS、红色 `\x1b[31m` 标 FAIL。
 

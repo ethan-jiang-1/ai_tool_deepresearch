@@ -78,7 +78,7 @@ human_decision_checkpoints:
     user_decision: not_started
     final_report_view: not_started
 EOF
-GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
+GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "quick_factual: passed=$PASSED (expect: true)"
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'vectorA: quick_factual (expect: pass)'})})"
@@ -106,7 +106,7 @@ human_decision_checkpoints:
     user_decision: not_started
     final_report_view: not_started
 EOF
-GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
+GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "exploratory_map: passed=$PASSED (expect: true)"
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'vectorB: exploratory_map (expect: pass)'})})"
@@ -132,7 +132,7 @@ human_decision_checkpoints:
     user_decision: not_started
     final_report_view: not_started
 EOF
-GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
+GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "claim_verification: passed=$PASSED (expect: true)"
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'vectorC: claim_verification (expect: pass)'})})"
@@ -158,7 +158,7 @@ human_decision_checkpoints:
     user_decision: not_started
     final_report_view: not_started
 EOF
-GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
+GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "not_selected: passed=$PASSED (expect: false)"
 INSPECT=$(echo "$GATE" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log(j.inspect.filter(x=>x.includes('not_selected')).length>0)})")
@@ -185,7 +185,7 @@ human_decision_checkpoints:
     user_decision: not_started
     final_report_view: not_started
 EOF
-GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
+GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "empty must_answer: passed=$PASSED (expect: false)"
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,expected:false,detail:'vectorE: empty must_answer (expect: fail)'})})"
@@ -210,7 +210,7 @@ human_decision_checkpoints:
     user_decision: not_started
     final_report_view: not_started
 EOF
-GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
+GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "hitl1 not recorded: passed=$PASSED (expect: false)"
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,expected:false,detail:'vectorF: hitl1 not recorded (expect: fail)'})})"
@@ -257,6 +257,17 @@ process.stdin.on('data', d => {
 >   Vector A-C (quick_factual/exploratory_map/claim_verification): expected pass → gate pass
 >   Vector D-F (not_selected/empty must_answer/missing status): expected fail → gate fail
 >   6/6 全部按预期，通过。
+
+
+## Step HH: Post-Execution Health
+
+Heavy profile — gate diagnostics, timeline consistency, ledger, receipts, cache trails, dedup evidence.
+
+```bash
+node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile heavy
+```
+
+> 健康检查不改变 verdict。health status 由 runner report 记录。
 
 ## Step 5: Cleanup
 

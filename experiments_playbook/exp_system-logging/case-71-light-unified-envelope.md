@@ -111,7 +111,7 @@ const gates = [
 ];
 
 for (const g of gates) {
-  const cmd = `node DPT_FRAMEWORK/cli/gates/check-gate-${g.name}.mjs --bundle "${__dirname}" --current-node "${g.node}"`;
+  const cmd = `node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate ${g.name} -- node DPT_FRAMEWORK/cli/gates/check-gate-${g.name}.mjs --bundle "${__dirname}" --current-node "${g.node}"`;
   try {
     const stdout = execSync(cmd, { encoding: 'utf-8', stdio: 'pipe' });
     const result = JSON.parse(stdout);
