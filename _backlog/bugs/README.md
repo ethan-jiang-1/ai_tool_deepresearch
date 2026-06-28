@@ -1,16 +1,7 @@
-# Bugs
+# Active Bugs
 
-提交新 bug report 之前，先读 `_backlog/done/_fixed_bugs/README.md` 的 "Next available bug ID" 行确定下一个编号。
+| ID | Date | Title | File |
+|----|------|-------|------|
+| BUG-007 | 2026-06-29 | Rerun 增量 topic 产出空壳——gate 通过但语义未集成 | [BUG-007-rerun-incremental-topic.md](./BUG-007-rerun-incremental-topic.md) |
 
-文件命名格式：
-
-```
-BUG-NNN-<short-slug>.md
-```
-
-编号规则：
-- 三位数字，按时间顺序递增
-- 读取 `_backlog/done/_fixed_bugs/README.md` 获取当前最大编号
-- 新 bug = max + 1
-
-**当前下一个可用编号：参见 `../done/_fixed_bugs/README.md`**
+**Next available bug ID: BUG-008**

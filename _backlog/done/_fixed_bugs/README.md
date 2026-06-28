@@ -11,4 +11,4 @@
 | BUG-005 | 2026-06-27 | Fake reference files bypass gate content_dedup |
 | BUG-006 | 2026-06-28 | Task card controller field allows bypassing subagent dispatch |
 
-**Next available bug ID: BUG-007**
+**Next available bug ID: BUG-008**
