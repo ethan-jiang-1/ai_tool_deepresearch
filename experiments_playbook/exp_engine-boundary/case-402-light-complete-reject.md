@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: engine-boundary
 case: case-402-light-complete-reject
 weight: light
-case_goal: "验证 delegated complete() 拒绝所有缺少 provenance 的场景：缺 slot_result_ref、缺 receipt、缺 output_files、缺 cache file、nonce mismatch。"
+case_goal: "验证 delegated complete() 拒绝所有缺少 provenance 的场景：缺 slot_result_ref、缺 receipt、writes 无 output_files 声明、缺 cache file、nonce mismatch。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -38,7 +38,7 @@ echo "Bundle: $B"
 
 # Base queue setup
 cat > "$B/rb_status.json" << 'JSON'
-{"current_gate":"wave0_complete","next_gate":"wave1_complete","current_mode":"execution","state":"running"}
+{"current_gate":"wave0_complete","next_gate":"wave1_complete","current_mode":"execution","state":"in_progress"}
 JSON
 cat > "$B/rb_plan.md" << 'MD'
 ---
@@ -145,6 +145,7 @@ writeFileSync(path.join(B, 'rb_trace.jsonl'), JSON.stringify({ ts: new Date().to
 console.log('fixtures ready');
 JS
 node "$B/setup.mjs" $B
+: > "$B/outcomes.jsonl"
 ```
 
 → 预期：`fixtures ready`。
@@ -161,7 +162,12 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
 cat > "$B/ra.json" << 'JSON'
 {"work_id":"work-del","receipt":"none"}
 JSON
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/ra.json" && echo "UNEXPECTED PASS" || echo "EXPECTED REJECT"
+set +e
+node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/ra.json"
+status=$?
+set -e
+if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" "A: no slot_result_ref" "$status" 1
 ```
 
 → 预期：`EXPECTED REJECT`。
@@ -171,32 +177,39 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/ra.json" && ec
 ## Step 3: 场景 B — 缺 runtime receipt
 
 ```bash
-cat > "$B/fail.json" << 'JSON'
-{"work_id":"work-del","reason":"advance"}
-JSON
-node DPT_FRAMEWORK/cli/operate-queue.mjs fail $B --failure "$B/fail.json"
+rm -f "$B/rb_queue.json"
 node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task "$B/task.json"
 node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
 cat > "$B/rb.json" << 'JSON'
 {"work_id":"work-del","receipt":"none","slot_result_ref":"_subagents/wave_01/slot_00/result.json"}
 JSON
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rb.json" && echo "UNEXPECTED PASS" || echo "EXPECTED REJECT"
+set +e
+node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rb.json"
+status=$?
+set -e
+if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" "B: no receipt" "$status" 1
 ```
 
 → 预期：`EXPECTED REJECT`。
 
 ---
 
-## Step 4: 场景 C — 缺 output_files[] / cache_trails[]
+## Step 4: 场景 C — writes 无 output_files 声明
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-queue.mjs fail $B --failure "$B/fail.json"
+rm -f "$B/rb_queue.json"
 node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task "$B/task.json"
 node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
 cat > "$B/rc.json" << 'JSON'
-{"work_id":"work-del","receipt":"none","slot_result_ref":"_subagents/wave_01/slot_04/result.json"}
+{"work_id":"work-del","receipt":"none","writes":["reference/a.md"],"slot_result_ref":"_subagents/wave_01/slot_04/result.json"}
 JSON
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rc.json" && echo "UNEXPECTED PASS" || echo "EXPECTED REJECT"
+set +e
+node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rc.json"
+status=$?
+set -e
+if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" "C: writes without output_files declaration" "$status" 1
 ```
 
 → 预期：`EXPECTED REJECT`。
@@ -206,13 +219,18 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rc.json" && ec
 ## Step 5: 场景 D — 声明文件不存在
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-queue.mjs fail $B --failure "$B/fail.json"
+rm -f "$B/rb_queue.json"
 node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task "$B/task.json"
 node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
 cat > "$B/rd.json" << 'JSON'
 {"work_id":"work-del","receipt":"none","slot_result_ref":"_subagents/wave_01/slot_01/result.json"}
 JSON
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rd.json" && echo "UNEXPECTED PASS" || echo "EXPECTED REJECT"
+set +e
+node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rd.json"
+status=$?
+set -e
+if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" "D: missing output file" "$status" 1
 ```
 
 → 预期：`EXPECTED REJECT`。
@@ -222,13 +240,18 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rd.json" && ec
 ## Step 6: 场景 E — cache leaf 缺文件
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-queue.mjs fail $B --failure "$B/fail.json"
+rm -f "$B/rb_queue.json"
 node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task "$B/task.json"
 node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
 cat > "$B/re.json" << 'JSON'
 {"work_id":"work-del","receipt":"none","slot_result_ref":"_subagents/wave_01/slot_02/result.json"}
 JSON
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/re.json" && echo "UNEXPECTED PASS" || echo "EXPECTED REJECT"
+set +e
+node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/re.json"
+status=$?
+set -e
+if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" "E: incomplete cache" "$status" 1
 ```
 
 → 预期：`EXPECTED REJECT`。
@@ -238,13 +261,18 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/re.json" && ec
 ## Step 7: 场景 F — nonce mismatch
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-queue.mjs fail $B --failure "$B/fail.json"
+rm -f "$B/rb_queue.json"
 node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task "$B/task.json"
 node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
 cat > "$B/rf.json" << 'JSON'
 {"work_id":"work-del","receipt":"none","slot_result_ref":"_subagents/wave_01/slot_03/result.json"}
 JSON
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rf.json" && echo "UNEXPECTED PASS" || echo "EXPECTED REJECT"
+set +e
+node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rf.json"
+status=$?
+set -e
+if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" "F: nonce mismatch" "$status" 1
 ```
 
 → 预期：`EXPECTED REJECT`。
@@ -257,46 +285,49 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rf.json" && ec
 
 ```bash
 cat > "$B/verdict.mjs" << 'JS'
-import { appendFileSync, readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 const B = process.argv[2];
 const tp = path.join(B, 'rb_trace.jsonl');
 
-// Write check events for each scenario outcome
-const scenarios = [
-  { label: 'A: no slot_result_ref',   passed: false, expected: false, detail: 'delegated complete rejected missing ref' },
-  { label: 'B: no receipt',           passed: false, expected: false, detail: 'delegated complete rejected missing receipt' },
-  { label: 'C: no declaration',       passed: false, expected: false, detail: 'delegated complete rejected missing output_files/cache_trails' },
-  { label: 'D: missing output file',  passed: false, expected: false, detail: 'delegated complete rejected missing declared file' },
-  { label: 'E: incomplete cache',     passed: false, expected: false, detail: 'delegated complete rejected incomplete cache leaf' },
-  { label: 'F: nonce mismatch',       passed: false, expected: false, detail: 'delegated complete rejected nonce mismatch' },
-];
-for (const s of scenarios) {
+const outcomes = readFileSync(path.join(B, 'outcomes.jsonl'), 'utf-8')
+  .trim()
+  .split('\n')
+  .filter(Boolean)
+  .map(JSON.parse);
+for (const s of outcomes) {
+  const rejected = s.status !== 0;
   appendFileSync(tp, JSON.stringify({
     ts: new Date().toISOString(), event: 'check', source: 'case-402',
-    gate: 'complete-reject', passed: s.passed, expected: s.expected, detail: s.detail,
+    gate: 'complete-reject',
+    passed: rejected,
+    expected: true,
+    detail: `${s.label} rejected by delegated complete`,
+    command_status: s.status,
+    expected_status: s.expected,
   }) + '\n');
 }
 
-// Verdict
 const events = readFileSync(tp, 'utf-8').trim().split('\n').map(JSON.parse);
-const checks = events.filter(e => e.event === 'check');
-const ok = checks.filter(c => c.passed === (c.expected !== false)).length === checks.length;
-console.log(`checks: ${checks.length}, matched: ${checks.filter(c => c.passed === (c.expected !== false)).length}`);
+const checks = events.filter(e => e.event === 'check' && e.source === 'case-402');
+const matched = checks.filter(c => c.passed === (c.expected !== false)).length;
+const ok = outcomes.length === 6 && matched === checks.length && checks.length >= 6;
+writeFileSync(path.join(B, 'case-402-verdict.json'), JSON.stringify({ ok, checks: checks.length, matched, outcomes: outcomes.length }, null, 2));
+console.log(`checks: ${checks.length}, matched: ${matched}, outcomes: ${outcomes.length}`);
 console.log(ok ? '\x1b[32mCASE-402 PASS\x1b[0m' : '\x1b[31mCASE-402 FAIL\x1b[0m');
 if (!ok) process.exit(1);
 JS
 node "$B/verdict.mjs" $B
 ```
 
-→ 预期：`CASE-402 PASS`，≥6 个 reject 事件。
+→ 预期：`CASE-402 PASS`，≥6 个真实 reject 事件。
 
 ---
 
 ## Step 9: PASS-only 清理
 
 ```bash
-if node "$B/verdict.mjs" "$B"; then
+if node -e "const fs=require('fs'); const p=process.argv[1] + '/case-402-verdict.json'; process.exit(JSON.parse(fs.readFileSync(p, 'utf8')).ok ? 0 : 1)" "$B"; then
   rm -rf "$B"
   echo "✓ Cleaned up after PASS."
 else

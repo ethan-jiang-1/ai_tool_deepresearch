@@ -38,7 +38,7 @@ echo "Bundle: $B"
 
 # Setup
 cat > "$B/rb_status.json" << 'JSON'
-{"current_gate":"wave0_complete","next_gate":"wave1_complete","current_mode":"execution","state":"running"}
+{"current_gate":"wave0_complete","next_gate":"wave1_complete","current_mode":"execution","state":"in_progress"}
 JSON
 cat > "$B/rb_plan.md" << 'MD'
 ---
@@ -72,6 +72,7 @@ echo '{"url":"https://example.com/article"}' > "$B/_cache/wave0/primary/01_test/
 cat > "$B/_subagents/wave_01/slot_00/result.json" << 'JSON'
 {"slotKey":"intake","roleAgentKey":"dpt-source-intake","status":"done","summary":"","evidenceCount":1,"references":[{"title":"T","url":"https://example.com/article","quote":"","relevance":""}],"confidence":0.5,"notes":[],"output_files":[{"path":"reference/r204.md","role":"reference","source_url":"https://example.com/article"}],"cache_trails":["_cache/wave0/primary/01_test/s01_leaf/"]}
 JSON
+: > "$B/outcomes.jsonl"
 ```
 
 ---
@@ -89,7 +90,13 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
 cat > "$B/result-nd.json" << 'JSON'
 {"work_id":"work-nd","receipt":"none","summary":"done"}
 JSON
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result-nd.json" && echo "EXPECTED PASS" || echo "UNEXPECTED REJECT"
+set +e
+node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result-nd.json"
+status=$?
+set -e
+if [ "$status" -eq 0 ]; then echo "EXPECTED PASS"; else echo "UNEXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" non-delegated-complete "$status" 0
+[ "$status" -eq 0 ]
 ```
 
 → 预期：`EXPECTED PASS`。non-delegated 不需要 slot_result_ref。
@@ -110,14 +117,15 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
 cat > "$B/result-del-no-ref.json" << 'JSON'
 {"work_id":"work-del","receipt":"none"}
 JSON
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result-del-no-ref.json" && echo "UNEXPECTED PASS" || echo "EXPECTED REJECT (no ref)"
+set +e
+node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result-del-no-ref.json"
+status=$?
+set -e
+if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT (no ref)"; fi
+node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" delegated-no-ref "$status" 1
 
-# Fail and re-claim
-cat > "$B/fail.json" << 'JSON'
-{"work_id":"work-del","reason":"test"}
-JSON
-node DPT_FRAMEWORK/cli/operate-queue.mjs fail $B --failure "$B/fail.json"
-
+# Fresh queue for the positive delegated scenario.
+rm -f "$B/rb_queue.json"
 cat > "$B/task-del2.json" << 'JSON'
 {"work_id":"work-del2","title":"Delegated2","targets":{"controller":"main-agent","delegates":{"to":"sub-agent","role_key":"dpt-source-intake"}},"action":"test","producer_rule":"test","lineage":{},"priority_class":"P5_new_reference_intake","required_receipts":["none"],"done_condition":"test","verification":{"engine":[],"agent":[]},"writes_to":["reference/r204.md"],"status_sync":[],"completion_receipt":"none","failure_route":"test","payload":{}}
 JSON
@@ -128,7 +136,13 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
 cat > "$B/result-del-ok.json" << 'JSON'
 {"work_id":"work-del2","receipt":"none","writes":["reference/r204.md"],"slot_result_ref":"_subagents/wave_01/slot_00/result.json"}
 JSON
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result-del-ok.json" && echo "EXPECTED PASS (with provenance)" || echo "UNEXPECTED REJECT"
+set +e
+node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result-del-ok.json"
+status=$?
+set -e
+if [ "$status" -eq 0 ]; then echo "EXPECTED PASS (with provenance)"; else echo "UNEXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" delegated-with-provenance "$status" 0
+[ "$status" -eq 0 ]
 ```
 
 → 预期：`EXPECTED REJECT (no ref)` 然后 `EXPECTED PASS (with provenance)`。
@@ -139,7 +153,10 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result-del-ok.
 
 ```bash
 cat > "$B/test-schema.mjs" << 'JS'
-import { TargetSpecSchema } from '../DPT_FRAMEWORK/schema/contracts/queue.mjs';
+import { appendFileSync } from 'node:fs';
+import path from 'node:path';
+const B = process.argv[2];
+const { TargetSpecSchema } = await import(path.resolve('DPT_FRAMEWORK/schema/contracts/queue.mjs'));
 
 // controller: "sub-agent" must be rejected
 const r1 = TargetSpecSchema.safeParse({ controller: 'sub-agent' });
@@ -158,10 +175,19 @@ const r4 = TargetSpecSchema.safeParse({ controller: 'engine' });
 console.log('engine passes:', r4.success);
 
 const allOk = !r1.success && r2.success && r3.success && r4.success;
+appendFileSync(path.join(B, 'outcomes.jsonl'), JSON.stringify({
+  label: 'schema-controller-boundary',
+  status: allOk ? 0 : 1,
+  expected: 0,
+  controller_sub_agent_rejected: !r1.success,
+  delegated_passes: r2.success,
+  non_delegated_passes: r3.success,
+  engine_passes: r4.success,
+}) + '\n');
 console.log(allOk ? '\x1b[32mSCHEMA PASS\x1b[0m' : '\x1b[31mSCHEMA FAIL\x1b[0m');
 process.exit(allOk ? 0 : 1);
 JS
-node "$B/test-schema.mjs"
+node "$B/test-schema.mjs" "$B"
 ```
 
 → 预期：`SCHEMA PASS`。
@@ -180,7 +206,12 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
 cat > "$B/result-del-ledger-only.json" << 'JSON'
 {"work_id":"work-del3","receipt":"none"}
 JSON
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result-del-ledger-only.json" && echo "UNEXPECTED PASS" || echo "EXPECTED REJECT (ledger-only is not provenance)"
+set +e
+node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result-del-ledger-only.json"
+status=$?
+set -e
+if [ "$status" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT (ledger-only is not provenance)"; fi
+node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" ledger-only-not-provenance "$status" 1
 ```
 
 → 预期：`ENGINE LEDGER EXISTS`，然后 `EXPECTED REJECT (ledger-only is not provenance)`。
@@ -191,32 +222,35 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result-del-led
 
 ```bash
 cat > "$B/verdict.mjs" << 'JS'
-import { appendFileSync, readFileSync, existsSync } from 'node:fs';
+import { appendFileSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 const B = process.argv[2];
 const tp = path.join(B, 'rb_trace.jsonl');
 if (!existsSync(tp)) { console.log('FAIL: trace missing'); process.exit(1); }
-const events = readFileSync(tp, 'utf-8').trim().split('\n').map(JSON.parse);
 
-const chkData = [
-  { passed: true,  expected: true,  detail: 'non-delegated complete succeeds without provenance' },
-  { passed: false, expected: false, detail: 'delegated complete rejects missing slot_result_ref' },
-  { passed: true,  expected: true,  detail: 'delegated complete succeeds with provenance and appends ledger' },
-  { passed: false, expected: false, detail: 'controller:sub-agent rejected by schema' },
-  { passed: false, expected: false, detail: 'existing ledger cannot replace relay provenance for current delegated complete' },
-];
-for (const c of chkData) {
+const outcomes = readFileSync(path.join(B, 'outcomes.jsonl'), 'utf-8')
+  .trim()
+  .split('\n')
+  .filter(Boolean)
+  .map(JSON.parse);
+for (const c of outcomes) {
   appendFileSync(tp, JSON.stringify({
     ts: new Date().toISOString(), event: 'check', source: 'case-404',
-    gate: 'queue-boundary', passed: c.passed, expected: c.expected, detail: c.detail,
+    gate: 'queue-boundary',
+    passed: c.status === c.expected,
+    expected: true,
+    detail: `${c.label} matched expected command/schema outcome`,
+    command_status: c.status,
+    expected_status: c.expected,
   }) + '\n');
 }
 
 const events2 = readFileSync(tp, 'utf-8').trim().split('\n').map(JSON.parse);
-const checks2 = events2.filter(e => e.event === 'check');
+const checks2 = events2.filter(e => e.event === 'check' && e.source === 'case-404');
 const matched = checks2.filter(c => c.passed === (c.expected !== false)).length;
 console.log('checks: ' + checks2.length + ', matched: ' + matched);
-const ok = matched === checks2.length;
+const ok = outcomes.length === 5 && matched === checks2.length && checks2.length >= 5;
+writeFileSync(path.join(B, 'case-404-verdict.json'), JSON.stringify({ ok, checks: checks2.length, matched, outcomes: outcomes.length }, null, 2));
 console.log(ok ? '\x1b[32mCASE-404 PASS\x1b[0m' : '\x1b[31mCASE-404 FAIL\x1b[0m');
 if (!ok) process.exit(1);
 JS
@@ -230,7 +264,7 @@ node "$B/verdict.mjs" $B
 ## Step 7: PASS-only 清理
 
 ```bash
-if node "$B/verdict.mjs" "$B"; then
+if node -e "const fs=require('fs'); const p=process.argv[1] + '/case-404-verdict.json'; process.exit(JSON.parse(fs.readFileSync(p, 'utf8')).ok ? 0 : 1)" "$B"; then
   rm -rf "$B"
   echo "✓ Cleaned up after PASS."
 else

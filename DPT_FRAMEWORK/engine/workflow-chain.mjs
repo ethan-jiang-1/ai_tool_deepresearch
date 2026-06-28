@@ -18,7 +18,7 @@
 //
 //   const runtime = createWorkflowRuntime();
 //   const state   = createState();
-//   const trace   = createTrace('path/to/_trace.jsonl', { consoleEcho: false });
+//   const trace   = createTrace('path/to/rb_trace.jsonl', { consoleEcho: false });
 //
 //   const result = assessNode('entry.md', state, runtime, trace);
 //   // trace is optional — omit to skip trace writes (receipts still recorded)
@@ -38,7 +38,7 @@
 //         │
 //         ├─ executeLoadPlan(plan, state, runtime)
 //         │     └─ loadMarkdownFile(fileRef, runtime) × N
-//         │           └─ verify in cache → emit file_loaded → return entry
+//         │           └─ confirm cache hit → emit file_loaded → return entry
 //         │
 //         └─ return { state, status, runtime, plan }
 // ```

@@ -91,7 +91,7 @@ function resetBase() {
     current_gate: 'wave0_complete',
     next_gate: 'wave1_complete',
     current_mode: 'execution',
-    state: 'running',
+    state: 'in_progress',
   }) + '\n');
   writeFileSync(p('rb_profile.yaml'), 'research_style_params:\n  wave0_shared_ref_total: 1\n  wave0_per_topic_source_floor: 1\n');
   writeFileSync(p('rb_plan.md'), `---
@@ -177,6 +177,7 @@ function commitFixtureSlot(name, refs) {
     taskDescription: `case403 ${name}`,
   }, 1);
   mkdirSync(p(path.dirname(slot.resultPath)), { recursive: true });
+  relay.writeSlotStatus(slot, 'running', B);
   writeFileSync(p(slot.receiptPath), [
     JSON.stringify({ event: 'agent_runtime_started', slotKey: slot.key, roleAgentKey: slot.roleAgentKey, receiptNonce: slot.receiptNonce }),
     JSON.stringify({ event: 'agent_result_ready', slotKey: slot.key, roleAgentKey: slot.roleAgentKey, receiptNonce: slot.receiptNonce }),
@@ -232,6 +233,10 @@ function completeThroughQueue(name, refs) {
   }));
   runNode(['DPT_FRAMEWORK/cli/operate-queue.mjs', 'complete', B, '--result', resultPath]);
   if (!existsSync(p('rb_output_declarations.jsonl'))) throw new Error(`ledger missing after ${name}`);
+  const traceEvents = readFileSync(p('rb_trace.jsonl'), 'utf-8').trim().split('\n').filter(Boolean).map(JSON.parse);
+  const ledgerOk = traceEvents.some((e) => e.event === 'ledger_appended' && e.work_id === workId);
+  const completeOk = traceEvents.some((e) => e.event === 'queue_completed' && e.work_id === workId);
+  record(`engine-path-${name}`, ledgerOk && completeOk, `${name}: commitSlotResult plus delegated complete produced Engine ledger and queue completion`);
 }
 
 function runGate() {

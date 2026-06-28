@@ -71,21 +71,21 @@ writeFileSync(path.join(B, `${slotDir}/result.json`), JSON.stringify({
   slotKey: 'source_intake', roleAgentKey: 'dpt-source-intake', status: 'done',
   summary: 'Completed source intake', evidenceCount: 2,
   references: [
-    { title: 'AI Safety Overview', url: 'https://example.com/ai-safety', quote: 'AI safety is critical.', relevance: 'foundational' },
-    { title: 'EV Market 2024', url: 'https://example.com/ev-market', quote: 'EV sales surpassed 10M.', relevance: 'market data' },
+    { title: 'AI Safety Overview', url: 'https://fixture-source.test/ai-safety', quote: 'AI safety is critical.', relevance: 'foundational' },
+    { title: 'EV Market 2024', url: 'https://fixture-source.test/ev-market', quote: 'EV sales surpassed 10M.', relevance: 'market data' },
   ],
   confidence: 0.9, notes: [],
   output_files: [
-    { path: 'reference/ai-safety.md', role: 'reference', source_url: 'https://example.com/ai-safety' },
-    { path: 'reference/ev-market.md', role: 'reference', source_url: 'https://example.com/ev-market' },
+    { path: 'reference/00-shared-ai-safety.md', role: 'reference', source_url: 'https://fixture-source.test/ai-safety' },
+    { path: 'reference/ev-market.md', role: 'reference', source_url: 'https://fixture-source.test/ev-market' },
   ],
   cache_trails: ['_cache/wave0/primary/01_intake/s01_ai_safety/', '_cache/wave0/primary/01_intake/s02_ev_market/'],
 }, null, 2));
 
 // Output files
 mkdirSync(path.join(B, 'reference'), { recursive: true });
-writeFileSync(path.join(B, 'reference/ai-safety.md'), '---\nsource_url: https://example.com/ai-safety\n---\n## Key Facts\nAI safety research focuses on alignment and robustness against adversarial attacks.\n## Core Content Capture\nOverview of AI safety field.\n');
-writeFileSync(path.join(B, 'reference/ev-market.md'), '---\nsource_url: https://example.com/ev-market\n---\n## Key Facts\n2024 年全球新能源汽车销量突破 1000 万辆，中国市场占比超 60%，比亚迪市场份额领先。\n## Core Content Capture\nEV market analysis.\n');
+writeFileSync(path.join(B, 'reference/00-shared-ai-safety.md'), '---\nsource_url: https://fixture-source.test/ai-safety\n---\n## Key Facts\nAI safety research focuses on alignment and robustness against adversarial attacks.\n## Core Content Capture\nOverview of AI safety field.\n');
+writeFileSync(path.join(B, 'reference/ev-market.md'), '---\nsource_url: https://fixture-source.test/ev-market\n---\n## Key Facts\n2024 年全球新能源汽车销量突破 1000 万辆，中国市场占比超 60%，比亚迪市场份额领先。\n## Core Content Capture\nEV market analysis.\n');
 
 // Cache leaves with 3 files each
 for (const [i, leaf] of ['s01_ai_safety', 's02_ev_market'].entries()) {
@@ -97,10 +97,10 @@ for (const [i, leaf] of ['s01_ai_safety', 's02_ev_market'].entries()) {
 }
 
 // Gate prerequisites
-writeFileSync(path.join(B, 'reference/_INDEX.md'), '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| ai-safety.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-06-15 |\n| ev-market.md | primary | expert | Tier 1 | topic-a | wave0_foundation | accepted | 2026-06-15 |\n');
+writeFileSync(path.join(B, 'reference/_INDEX.md'), '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| 00-shared-ai-safety.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-06-15 |\n| ev-market.md | primary | expert | Tier 1 | topic-a | wave0_foundation | accepted | 2026-06-15 |\n');
 writeFileSync(path.join(B, 'reference/README.md'), '# Reference Evidence\n');
 mkdirSync(path.join(B, 'artifacts/wave0/topic-a'), { recursive: true });
-writeFileSync(path.join(B, 'artifacts/wave0/topic-a/source.yaml'), '- url: "https://example.com/ev-market"\n  title: "EV Market 2024"\n  retrieved_date: "2026-06-15"\n  topic_tag: "topic-a"\n');
+writeFileSync(path.join(B, 'artifacts/wave0/topic-a/source.yaml'), '- url: "https://fixture-source.test/ev-market"\n  title: "EV Market 2024"\n  retrieved_date: "2026-06-15"\n  topic_tag: "topic-a"\n');
 
 // Trace init
 writeFileSync(path.join(B, 'rb_trace.jsonl'), JSON.stringify({ ts: new Date().toISOString(), event: 'run_start', source: 'trace', label: 'case-401' }) + '\n');
@@ -108,6 +108,7 @@ writeFileSync(path.join(B, 'rb_trace.jsonl'), JSON.stringify({ ts: new Date().to
 console.log('fixtures ready');
 JS
 node "$B/setup.mjs" $B
+: > "$B/outcomes.jsonl"
 ```
 
 → 预期：`fixtures ready`。
@@ -119,7 +120,7 @@ node "$B/setup.mjs" $B
 ```bash
 # Queue setup
 cat > "$B/rb_status.json" << 'JSON'
-{"current_gate":"wave0_complete","next_gate":"wave1_complete","current_mode":"execution","state":"running"}
+{"current_gate":"wave0_complete","next_gate":"wave1_complete","current_mode":"execution","state":"in_progress"}
 JSON
 
 cat > "$B/rb_plan.md" << 'MD'
@@ -135,29 +136,25 @@ MD
 
 # Enqueue delegated task
 cat > "$B/task.json" << 'JSON'
-{"work_id":"wave0-source-topic-a","title":"Source intake","targets":{"controller":"main-agent","delegates":{"to":"sub-agent","role_key":"dpt-source-intake","timeout_ms":600000}},"action":"Search and collect references. Return output_files[] and cache_trails[] in result.","producer_rule":"source_intake_fan_in","lineage":{"topic_slug":"topic-a"},"priority_class":"P5_new_reference_intake","required_receipts":["none"],"done_condition":"Files exist.","verification":{"engine":[],"agent":[]},"writes_to":["reference/ai-safety.md","reference/ev-market.md"],"status_sync":[],"completion_receipt":"none","failure_route":"queue repair work","payload":{}}
+{"work_id":"wave0-source-topic-a","title":"Source intake","targets":{"controller":"main-agent","delegates":{"to":"sub-agent","role_key":"dpt-source-intake","timeout_ms":600000}},"action":"Search and collect references. Return output_files[] and cache_trails[] in result.","producer_rule":"source_intake_fan_in","lineage":{"topic_slug":"topic-a"},"priority_class":"P5_new_reference_intake","required_receipts":["none"],"done_condition":"Files exist.","verification":{"engine":[],"agent":[]},"writes_to":["reference/00-shared-ai-safety.md","reference/ev-market.md"],"status_sync":[],"completion_receipt":"none","failure_route":"queue repair work","payload":{}}
 JSON
 
 node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task "$B/task.json"
 node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
 
 cat > "$B/result.json" << 'JSON'
-{"work_id":"wave0-source-topic-a","receipt":"none","summary":"Completed","writes":["reference/ai-safety.md","reference/ev-market.md"],"slot_result_ref":"_subagents/wave_01/slot_00/result.json"}
+{"work_id":"wave0-source-topic-a","receipt":"none","summary":"Completed","writes":["reference/00-shared-ai-safety.md","reference/ev-market.md"],"slot_result_ref":"_subagents/wave_01/slot_00/result.json"}
 JSON
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result.json" && echo "EXPECTED PASS" || echo "UNEXPECTED REJECT"
+set +e
+node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result.json"
+status=$?
+set -e
+if [ "$status" -eq 0 ]; then echo "EXPECTED PASS"; else echo "UNEXPECTED REJECT"; fi
+node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" delegated-complete "$status" 0
+[ "$status" -eq 0 ]
 ```
 
 → 预期：`EXPECTED PASS`。
-
-```bash
-# Record trace check for complete step
-python3 -c "
-import json
-f = open('$B/rb_trace.jsonl', 'a')
-f.write(json.dumps({'ts':'$(date -u +%Y-%m-%dT%H:%M:%S.000Z)','event':'check','source':'case-401','gate':'delegated-complete','passed':True,'expected':True,'detail':'delegated complete succeeded with ledger'}) + '\n')
-f.close()
-"
-```
 
 ---
 
@@ -177,7 +174,12 @@ const ok = r.work_id === 'wave0-source-topic-a' && r.output_files.length === 2 &
 console.log(ok ? '\x1b[32mLEDGER PASS\x1b[0m' : '\x1b[31mLEDGER FAIL\x1b[0m');
 if (!ok) process.exit(1);
 JS
+set +e
 node "$B/check-ledger.mjs" $B
+status=$?
+set -e
+node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" ledger-shape "$status" 0
+[ "$status" -eq 0 ]
 ```
 
 → 预期：`LEDGER PASS`。
@@ -187,7 +189,12 @@ node "$B/check-ledger.mjs" $B
 ## Step 5: 场景 B — validate-bundle
 
 ```bash
+set +e
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
+status=$?
+set -e
+node -e "const fs=require('fs'); const [B,label,status,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(status),expected:Number(expected)}) + '\n');" "$B" validate-bundle "$status" 0
+[ "$status" -eq 0 ]
 ```
 
 → 预期：`rb_output_declarations.jsonl ✓`。
@@ -197,7 +204,36 @@ node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
 ## Step 6: 场景 C — Gate wave0-complete（content_dedup 从 ledger 读取）
 
 ```bash
-node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md 2>&1 | python3 -c "import sys,json; d=json.load(sys.stdin); ok=d['check']['passed']; print('\x1b[32mGATE PASS\x1b[0m' if ok else '\x1b[31mGATE FAIL\x1b[0m: '+str(d.get('inspect',[]))); sys.exit(0 if ok else 1)"
+set +e
+node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/gate-wave0.json" 2>&1
+gate_status=$?
+set -e
+node - "$B" "$gate_status" <<'JS'
+const fs = require('fs');
+const path = require('path');
+const [B, gateStatusRaw] = process.argv.slice(2);
+const gateStatus = Number(gateStatusRaw);
+let gatePassed = false;
+let inspect = [];
+try {
+  const d = JSON.parse(fs.readFileSync(path.join(B, 'gate-wave0.json'), 'utf-8'));
+  gatePassed = d?.check?.passed === true;
+  inspect = d?.inspect ?? [];
+} catch (err) {
+  inspect = [`gate output was not JSON: ${err.message}`];
+}
+const status = gateStatus === 0 && gatePassed ? 0 : 1;
+fs.appendFileSync(path.join(B, 'outcomes.jsonl'), JSON.stringify({
+  label: 'gate-wave0-content-dedup',
+  status,
+  expected: 0,
+  cli_status: gateStatus,
+  gate_passed: gatePassed,
+  inspect,
+}) + '\n');
+console.log(status === 0 ? '\x1b[32mGATE PASS\x1b[0m' : '\x1b[31mGATE FAIL\x1b[0m: ' + JSON.stringify(inspect));
+process.exit(status);
+JS
 ```
 
 → 预期：`GATE PASS`。
@@ -209,30 +245,32 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --curre
 每个场景的结果写入标准 `event: 'check'` trace event。
 
 ```bash
-# Record check events for each verified step
 cat > "$B/record.mjs" << 'JS'
-import { appendFileSync, existsSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 const B = process.argv[2];
 const tp = path.join(B, 'rb_trace.jsonl');
-function check(passed, detail) {
+function check(passed, detail, extra = {}) {
   appendFileSync(tp, JSON.stringify({
     ts: new Date().toISOString(), event: 'check', source: 'case-401',
-    gate: 'full-boundary', passed, expected: true, detail,
+    gate: 'full-boundary', passed, expected: true, detail, ...extra,
   }) + '\n');
 }
-// Verify each success condition from previous steps
+const outcomes = readFileSync(path.join(B, 'outcomes.jsonl'), 'utf-8')
+  .trim()
+  .split('\n')
+  .filter(Boolean)
+  .map(JSON.parse);
+for (const o of outcomes) {
+  check(o.status === o.expected, `${o.label} matched expected command outcome`, o);
+}
+const events = readFileSync(tp, 'utf-8').trim().split('\n').map(JSON.parse);
 check(existsSync(path.join(B, 'rb_output_declarations.jsonl')), 'ledger file exists');
-// Gate passed (check from gate JSON capture in Step 6)
-const gateOk = process.env.GATE_OK === '1';
-check(gateOk, 'gate content_dedup passed with clean declarations');
-// Queue completed
-const events = require('fs').readFileSync(tp, 'utf-8').trim().split('\n').map(JSON.parse);
-check(events.some(e => e.event === 'queue_completed'), 'queue complete event in trace');
-check(events.some(e => e.event === 'ledger_appended'), 'ledger appended event in trace');
+check(events.some(e => e.event === 'queue_completed' && e.work_id === 'wave0-source-topic-a'), 'queue complete event in trace');
+check(events.some(e => e.event === 'ledger_appended' && e.work_id === 'wave0-source-topic-a'), 'ledger appended event in trace');
 check(events.some(e => e.event === 'run_start'), 'run_start event in trace');
 JS
-GATE_OK=1 node "$B/record.mjs" $B
+node "$B/record.mjs" $B
 ```
 
 ---

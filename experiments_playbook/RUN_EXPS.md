@@ -59,7 +59,7 @@
 | G24 wfn-rerun | case-304 | `exp_wfn_rerun/case-304-light-gate-fail-max-count.md` | 边界：rerun_count=3→gate fail+no_transition |
 | G24 wfn-rerun | case-305 | `exp_wfn_rerun/case-305-light-indeterminate-no-transition.md` | 边界：indeterminate outcomes→invalid_input |
 | G25 engine-boundary | case-401 | `exp_engine-boundary/case-401-light-full-boundary.md` | Agent↔Engine 边界正向全链路：delegated complete → ledger → gate → trace |
-| G25 engine-boundary | case-402 | `exp_engine-boundary/case-402-light-complete-reject.md` | delegated complete() reject 场景：缺 ref/receipt/files/cache/nonce mismatch |
+| G25 engine-boundary | case-402 | `exp_engine-boundary/case-402-light-complete-reject.md` | delegated complete() reject 场景：缺 ref/receipt、writes 无 declaration、缺文件/缺 cache、nonce mismatch |
 | G25 engine-boundary | case-403 | `exp_engine-boundary/case-403-light-gate-content-dedup.md` | content_dedup gate：ledger-generated 输入；URL dup/Jaccard/homepage/self-ref fail；clean pass；orphan cannot help |
 | G25 engine-boundary | case-405 | `exp_engine-boundary/case-405-light-trace-single-sink.md` | trace 单 sink：只存在 bundle 根 rb_trace.jsonl |
 
@@ -125,7 +125,7 @@
 | G6 subagent | case-63 | `exp_subagent/case-63-heavy-identity.md` | runtime-agent identity 和 trace event |
 | G6 subagent | case-64 | `exp_subagent/case-64-heavy-triple-failure.md` | 三个 subagent 并发 + partial failure |
 | G15 ai-judge | case-951 | `exph_workflow-foundation/case-951-heavy-topic-rewrite-ai-judge.md` | AI 扮演真人 dual of 901：真 Agent rewrite + AI reviewer verdict（source: ai-judge，非真人）；9NN +50 对偶 |
-| G25 engine-boundary | case-406 | `exp_engine-boundary/case-406-heavy-real-subagent-boundary.md` | 真实 Sub-agent/WebSearch/WebFetch：output declaration → delegated complete → ledger → content_dedup |
+| G25 engine-boundary | case-406 | `exp_engine-boundary/case-406-heavy-real-subagent-boundary.md` | 真实 Sub-agent/WebSearch/WebFetch：output declaration → delegated complete → ledger → content_dedup；无 real-agent surface 时记录 NOT RUN，不算 PASS |
 
 ### Human（需人类交互/判断，不能自动化，必须手动跑）
 

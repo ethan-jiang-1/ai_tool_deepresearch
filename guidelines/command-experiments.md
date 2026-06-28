@@ -226,10 +226,10 @@ Naming:
 - Case playbook, new/updated target: `case-<XX>-<cost>-<what-it-proves>.md`, where `XX` is the case ID — a two- or three-digit Arabic numeral. The leading digit(s) name the case group; the final digit names the case's order within that group. Two-digit IDs (`MN`) serve groups 1–9 (e.g. `11` = group 1 case 1, `29` = group 2 case 9, `41` = group 4 case 1). Three-digit IDs (`MMN`) serve groups 10+ (e.g. `101` = group 10 case 1, `121` = group 12 case 1, `211` = group 21 case 1). `MM` is the group number; `N` is the case within that group. `cost` is `light|standard|heavy` (for example, `case-11-light-four-returns.md`, `case-121-standard-wave0-happy.md`, `case-211-heavy-wave0-happy-path.md`). The suffix names what the case actually proves and SHOULD be short kebab-case, 2-4 words.
 - **9NN exception band (three-digit, group numbering rule does not apply):** cases whose mechanism under test involves human judgment use the `9NN` band, split by who plays the human — `901–949` = real human (runner skips, manual only); `950–999` = AI simulates the human (auto-runnable). Both halves live under `exph_*/` co-located as `+50` pairs (e.g. `901` ↔ `951`); the runner decides skip-vs-auto by number band, not by the `exph_` prefix. 950–999 verdicts must be tagged `source: ai-judge` in trace — they are not human verdicts. See `experiments_playbook/README.md` § 编号约定 for the authoritative wording.
 - Cost label: `light` means cheap JS/CLI/gate/filesystem execution; `standard` means normal real-bundle multi-step execution such as repair loops or artifact checks; `heavy` means expensive execution with real Agent/subagent, WebSearch/WebFetch, long chains, or other external/slow work.
-- Filename `cost` is an authoring and runner-cost label. Frontmatter `weight` remains owned by the accepted agent-testing spec; until that spec grows a `standard` value, use `weight: light` for `light` and `standard` cases, and `weight: heavy` for `heavy` cases. This is a temporary compatibility mapping; if the accepted spec adds `standard`, update the runner-facing frontmatter convention and this guideline together.
-- Case playbook, legacy/current files: `test-<complexity>-<what-it-tests>.md` remains recognized for existing playbooks, but new designs should avoid `test-` so command experiments do not read like regression tests.
+- Filename `cost` is an authoring and runner-cost label. Frontmatter `weight` remains owned by the accepted agent-testing spec; until that spec grows a `standard` value, use `weight: light` for `light` and `standard` cases, and `weight: heavy` for `heavy` cases. If the accepted spec adds `standard`, update the runner-facing frontmatter convention and this guideline together.
+- Existing `test-<complexity>-<what-it-tests>.md` playbooks may remain where already present, but new designs should use `case-<id>-<cost>-<what-it-proves>.md` so command experiments do not read like regression tests.
 - Disposable bundle: `dpt_disp_<short>_<case>_*/` (random hex suffix appended for collision avoidance)
-- Trace file: `rb_trace.jsonl` at the bundle root. Legacy playbooks may still mention older `_logs/` trace files, but new or updated playbooks use the root trace as the verdict source.
+- Trace file: `rb_trace.jsonl` at the bundle root. New and updated playbooks use the root trace as the verdict source.
 - Runner entry: `experiments_playbook/RUN.md` (contains playbook manifest + execution instructions)
 - Fixture files copied into bundle: paths defined by the playbook and relevant spec.
 
@@ -352,7 +352,7 @@ Keep inline scripts thin:
 
 Complex deterministic logic belongs in the canonical framework module or CLI defined by the relevant spec, not in Markdown shell blocks. Experiment playbooks import or invoke framework code from its canonical `DPT_FRAMEWORK/` location.
 
-New experiment verdict checks MUST use `event === "check"` with a boolean `passed` field. `verify` is an older event name still accepted by the trace reader as an alias; do not introduce new `verify` events in new or updated playbooks.
+Experiment verdict checks MUST use `event === "check"` with a boolean `passed` field.
 
 Use JS/CLI feedback actions consistently when a playbook needs machine feedback beyond raw trace verdict:
 
@@ -545,7 +545,7 @@ This also means Sub-agent naming decisions (e.g. `source-slug`) are recorded in 
 
 Agent-owned output directories are not anonymous scratch space. If a file looks like an Agent-produced reference, artifact, cache trail, receipt, or summary but is absent from the accepted output declaration, it is orphan output. Orphan output MUST NOT contribute to pass conditions. When detected, it MUST fail the relevant check, produce inspect/advice explaining the contamination, or be explicitly reported as ignored with the reason it cannot affect the verdict.
 
-This matters because stale files and hand-placed fixtures can otherwise make a controlled experiment pass for reasons production would not trust. A playbook may intentionally stage orphan files only when the case is explicitly testing orphan rejection or legacy compatibility, and the verdict must make that purpose clear.
+This matters because stale files and hand-placed fixtures can otherwise make a controlled experiment pass for reasons production would not trust. A playbook may intentionally stage orphan files only when the case is explicitly testing orphan rejection or backward-compatibility behavior, and the verdict must make that purpose clear.
 
 ### Relationship to Other Sections
 

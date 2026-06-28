@@ -23,7 +23,6 @@ const DEFAULT_ICONS = {
   segment_load: '📄',
   node_exec: '🔧',
   segment_exec: '🔧',
-  verify: '🟢',
 };
 
 const ANSI = {
@@ -92,7 +91,7 @@ export function createTrace(filePath, options = {}) {
         const icon = icons[e.event] || '•';
 
         let s;
-        if (e.event === 'check' || e.event === 'verify') {
+        if (e.event === 'check') {
           const statusIcon = e.passed ? icons.check || '✅' : (icons.check ? '❌' : '❌');
           s = `${statusIcon} ${e.file || e.step || e.event}: ${e.passed ? 'PASS' : 'FAIL'}`;
         } else if (e.event === 'node_exec' || e.event === 'segment_exec') {
@@ -104,7 +103,7 @@ export function createTrace(filePath, options = {}) {
         if (e.event === 'load_error') {
           failed++;
           console.log(R + s + B, e.error || '');
-        } else if (e.event === 'check' || e.event === 'verify') {
+        } else if (e.event === 'check') {
           if (e.passed) passed++; else failed++;
           console.log(e.passed ? G + s + B : R + s + B);
         } else {
@@ -116,7 +115,7 @@ export function createTrace(filePath, options = {}) {
       console.log(`${G}PASS: ${passed}${B}  ${R}FAIL: ${failed}${B}`);
     }
 
-    const checks = events.filter((e) => e.event === 'check' || e.event === 'verify');
+    const checks = events.filter((e) => e.event === 'check');
     return {
       events,
       passed: checks.filter((e) => e.passed === true).length,

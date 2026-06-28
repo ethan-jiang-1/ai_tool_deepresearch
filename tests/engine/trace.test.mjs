@@ -85,6 +85,13 @@ describe('createTrace — silent (consoleEcho: false)', () => {
     assert.equal(s.passed, 0);
     assert.equal(s.failed, 1);
   });
+
+  it('traceSummary ignores non-check events for verdict counts', () => {
+    trace.traceEntry('note', { source: 'silent', passed: true });
+    const s = trace.traceSummary();
+    assert.equal(s.passed, 0);
+    assert.equal(s.failed, 1);
+  });
 });
 
 describe('createTrace — custom icons', () => {

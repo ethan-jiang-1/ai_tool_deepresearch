@@ -311,14 +311,14 @@ Goal: execute the Stage 6-approved cleanup and experiment additions with narrow 
 
 Scope guard for the future implementer: Stage 7 may edit the non-change files named in each task, but only after 6.3 review passes. This review-adjustment pass edits only `openspec/changes/harden-agent-engine-boundary/`. Stage 7 supersedes any stale Stage 5 readiness language for apply/archive decisions, but must not rewrite completed Stage 1-6 history or broaden into unrelated refactors, renames, taxonomy cleanup, or opportunistic docs churn.
 
-- [ ] 7.1 Implement the approved trace/term cleanup surface from Stage 6 only in these files: `guidelines/command-experiments.md`, `openspec/specs/agent-testing/spec.md`, `DPT_FRAMEWORK/engine/trace.mjs`, `tests/fixtures/DPT_FRAMEWORK/engine/trace.mjs`, `tests/engine/trace.test.mjs`, `DPT_FRAMEWORK/engine/workflow-chain.mjs`, `DPT_FRAMEWORK/workflows/nodes/shared/shared-schemas.md`, and `experiments_env/shared/wff-playbook-utils.mjs`. Remove current-contract drift for trace path/verdict terminology only; do not rename unrelated business taxonomy, broad deprecation notes, or historical narrative that is not part of the current contract.
-- [ ] 7.2 Tighten `experiments_playbook/exp_engine-boundary/case-401-light-full-boundary.md`, `case-402-light-complete-reject.md`, and `case-404-standard-queue-boundary.md` without changing their proof intent: fix stale case labels and case-ID drift inherited from Stage 5; convert every verdict-affecting command result, file assertion, queue outcome, and schema outcome into `rb_trace.jsonl` `check` events; and keep cleanup PASS-only so FAIL preserves the bundle.
-- [ ] 7.3 Tighten `experiments_playbook/exp_engine-boundary/case-403-light-gate-content-dedup.md` so every non-missing-ledger scenario proves the production downstream path: fixture SlotResult -> `commitSlotResult()` -> delegated `operate-queue complete` -> Engine-appended ledger -> real gate. Do not hand-write ledger rows for those scenarios. Orphan reference must be unable to help pass because declaration/ledger input is insufficient.
-- [ ] 7.4 Add `experiments_playbook/exp_engine-boundary/case-405-light-trace-single-sink.md`: trigger current trace writing through current framework/playbook trace APIs, verify bundle-root `rb_trace.jsonl`, and fail if any non-canonical trace JSONL exists in the disposable bundle.
-- [ ] 7.5 Add `experiments_playbook/exp_engine-boundary/case-406-heavy-real-subagent-boundary.md`: real Sub-agent/WebSearch/WebFetch path produces declaration, cache trail, committed result, delegated completion, ledger, and gate pass; if the real-agent surface is unavailable, record the not-run reason, exact unavailable surface, and Reality Distance Ledger risk without marking the case as passed.
-- [ ] 7.6 Update `experiments_playbook/RUN_EXPS.md` after case-405 and case-406 exist so engine-boundary lists case-401 through case-406 consistently and does not list missing playbooks; update playbook validation expectations only if the validator fails on the new playbooks.
-- [ ] 7.7 Run static cleanup checks with precise old-trace patterns and scoped old-term checks that do not match valid `rb_trace.jsonl`, unrelated business taxonomy, historical checked task text, or this change's own review history. Include a scoped check that no current trace reader, playbook verdict helper, or updated playbook still treats legacy `verify` events as verdict truth.
-- [ ] 7.8 Run final verification: `openspec validate harden-agent-engine-boundary --strict`, governance checks, `node --test tests/`, `node DPT_FRAMEWORK/cli/validate-playbook.mjs experiments_playbook/exp_engine-boundary`, `node DPT_FRAMEWORK/cli/validate-phase-templates.mjs`, and case-401 through case-405 execution; case-406 must either pass through the real-agent path or have an explicit not-run record. Do not mark the change apply-ready until these results are recorded.
+- [x] 7.1 Implement the approved trace/term cleanup surface from Stage 6 only in these files: `guidelines/command-experiments.md`, `openspec/specs/agent-testing/spec.md`, `DPT_FRAMEWORK/engine/trace.mjs`, `tests/fixtures/DPT_FRAMEWORK/engine/trace.mjs`, `tests/engine/trace.test.mjs`, `DPT_FRAMEWORK/engine/workflow-chain.mjs`, `DPT_FRAMEWORK/workflows/nodes/shared/shared-schemas.md`, and `experiments_env/shared/wff-playbook-utils.mjs`. Remove current-contract drift for trace path/verdict terminology only; do not rename unrelated business taxonomy, broad deprecation notes, or historical narrative that is not part of the current contract.
+- [x] 7.2 Tighten `experiments_playbook/exp_engine-boundary/case-401-light-full-boundary.md`, `case-402-light-complete-reject.md`, and `case-404-standard-queue-boundary.md` without changing their proof intent: fix stale case labels and case-ID drift inherited from Stage 5; convert every verdict-affecting command result, file assertion, queue outcome, and schema outcome into `rb_trace.jsonl` `check` events; and keep cleanup PASS-only so FAIL preserves the bundle.
+- [x] 7.3 Tighten `experiments_playbook/exp_engine-boundary/case-403-light-gate-content-dedup.md` so every non-missing-ledger scenario proves the production downstream path: fixture SlotResult -> `commitSlotResult()` -> delegated `operate-queue complete` -> Engine-appended ledger -> real gate. Do not hand-write ledger rows for those scenarios. Orphan reference must be unable to help pass because declaration/ledger input is insufficient.
+- [x] 7.4 Add `experiments_playbook/exp_engine-boundary/case-405-light-trace-single-sink.md`: trigger current trace writing through current framework/playbook trace APIs, verify bundle-root `rb_trace.jsonl`, and fail if any non-canonical trace JSONL exists in the disposable bundle.
+- [x] 7.5 Add `experiments_playbook/exp_engine-boundary/case-406-heavy-real-subagent-boundary.md`: real Sub-agent/WebSearch/WebFetch path produces declaration, cache trail, committed result, delegated completion, ledger, and gate pass; if the real-agent surface is unavailable, record the not-run reason, exact unavailable surface, and Reality Distance Ledger risk without marking the case as passed.
+- [x] 7.6 Update `experiments_playbook/RUN_EXPS.md` after case-405 and case-406 exist so engine-boundary lists case-401 through case-406 consistently and does not list missing playbooks; update playbook validation expectations only if the validator fails on the new playbooks.
+- [x] 7.7 Run static cleanup checks with precise old-trace patterns and scoped old-term checks that do not match valid `rb_trace.jsonl`, unrelated business taxonomy, historical checked task text, or this change's own review history. Include a scoped check that no current trace reader, playbook verdict helper, or updated playbook still treats legacy `verify` events as verdict truth.
+- [x] 7.8 Run final verification: `openspec validate harden-agent-engine-boundary --strict`, governance checks, `node --test tests/`, `node DPT_FRAMEWORK/cli/validate-playbook.mjs experiments_playbook/exp_engine-boundary`, `node DPT_FRAMEWORK/cli/validate-phase-templates.mjs`, and case-401 through case-405 execution; case-406 must either pass through the real-agent path or have an explicit not-run record. Do not mark the change apply-ready until these results are recorded.
 
 ### Stage 7 Local Verification
 
@@ -346,6 +346,18 @@ Required commands/test files:
 - `rg '\b(legacy/current files|temporary compatibility|older event|legacy compatibility)\b' DPT_FRAMEWORK experiments_env experiments_playbook openspec/specs tests guidelines openspec/changes/harden-agent-engine-boundary/proposal.md openspec/changes/harden-agent-engine-boundary/design.md openspec/changes/harden-agent-engine-boundary/specs`
 - `rg '\bverify\b|event\s*===\s*["'\'']verify["'\'']|event:\s*["'\'']verify["'\'']' DPT_FRAMEWORK/engine/trace.mjs tests/fixtures/DPT_FRAMEWORK/engine/trace.mjs tests/engine/trace.test.mjs experiments_env/shared/wff-playbook-utils.mjs experiments_playbook/exp_engine-boundary`
 
+Recorded Stage 7 final verification:
+
+- `openspec validate harden-agent-engine-boundary --strict` exits 0.
+- `node openspec/governance/check-project-specs.mjs` exits 0.
+- `node openspec/governance/check-project-reqs.mjs` exits 0.
+- `node --test tests/` exits 0 with 800 tests passing.
+- `node DPT_FRAMEWORK/cli/validate-playbook.mjs experiments_playbook/exp_engine-boundary` exits 0 for case-401 through case-406.
+- `node DPT_FRAMEWORK/cli/validate-phase-templates.mjs DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md` exits 0.
+- Stage 7 static cleanup `rg` checks return no matches for old trace sinks, old compatibility wording, or legacy `verify` verdict handling in scoped current-contract surfaces.
+- case-401 through case-405 execute from their playbooks and report PASS.
+- case-406 records explicit NOT RUN in `dpt_disp_case-406_eb_real_0/case-406-not-run.json` because no real `dpt-source-intake` Agent-tool result was produced in this runner; this is not marked PASS.
+
 Pass/fail criteria:
 
 - PASS only if old trace sinks are absent from current contracts, code, tests, guidelines, accepted specs, and updated playbooks.
@@ -358,3 +370,23 @@ Pass/fail criteria:
 Exit criteria:
 
 - The change can be considered apply-ready only after Stage 7 tasks and verification pass.
+
+### Post-Stage 7 Follow-up Disposition
+
+Review suggestion: add Stage 8/9 for cross-playbook health monitoring after Light/Standard/Heavy execution.
+
+Disposition: accept the problem statement as valid, but do not add Stage 8/9 to this change. This change is now apply-complete for the G25 Agent↔Engine boundary scope. The proposed work expands into repo-wide experiment observability across Light, Standard, and Heavy playbooks, so it should be a separate OpenSpec change rather than reopening this one.
+
+Accepted follow-up goals for a future change:
+
+- Add a reusable bundle health inspector that reports trace event counts, gate attempts, old trace sink residue, bundle validation, timeline stitching, and Heavy-only provenance signals such as ledger records, runtime receipts, cache leaf completeness, and `content_dedup` status.
+- Preserve gate `inspect[]` / `advice[]` diagnostics so failed playbook runs explain why they failed without requiring manual reruns.
+- Add runner/report guidance so post-execution health is visible beside PASS/FAIL.
+- Add Heavy-specific provenance checks for real Sub-agent output declaration, runtime receipt, cache trail, Engine ledger, and gate input behavior.
+
+Implementation cautions for that future change:
+
+- Do not pipe gate output in a way that hides the original gate CLI exit status.
+- Do not append diagnostic `check` events that accidentally change existing verdict semantics; use a diagnostic event type or a clearly scoped `source`/`expected` convention that existing verdicts account for.
+- Do not bulk-edit all Standard/Heavy playbooks without first landing the shared monitoring scripts and validating the runner contract on a small representative set.
+- Keep the Stage 8/9 idea out of this change's apply-ready bar; case-406's explicit NOT RUN record remains sufficient for this change because the real-agent surface was unavailable in this runner.

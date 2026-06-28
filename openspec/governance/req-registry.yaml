@@ -266,12 +266,12 @@ TRW-004: trace-writer — Run start trace marker (run_start at bundle creation; 
 TRW-005: trace-writer — Single rb_trace.jsonl trace sink for queue, relay, gate, and playbook verdict events
 EXS-001: experiment-shared-infra — experiments_env/shared/ directory for experiment-scoped shared infrastructure
 EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_FRAMEWORK/command_experiments_env/scripts/ to experiments_env/shared/"
-EXR-001: experiment-ref-integrity — case-16 verifies delegated complete boundary failures and success
-EXR-002: experiment-ref-integrity — case-17 verifies gate content_dedup via declaration ledger
-EXR-003: experiment-ref-integrity — case-12 verifies wave0 real Sub-agent intake with declaration ledger
-EXR-004: experiment-ref-integrity — case-13 verifies wave0 count floor fail-to-repair loop
-EXR-005: experiment-ref-integrity — case-14 verifies wave1 real Sub-agent deepening with declaration ledger
-EXR-006: experiment-ref-integrity — case-15 verifies wave0-to-wave1 pipeline with continuous declarations
+EXR-001: experiment-ref-integrity — case-401 verifies positive Agent-Engine boundary path
+EXR-002: experiment-ref-integrity — case-402 verifies delegated complete rejection matrix
+EXR-003: experiment-ref-integrity — case-403 verifies content_dedup via Engine-generated ledger
+EXR-004: experiment-ref-integrity — case-404 verifies queue boundary contract
+EXR-005: experiment-ref-integrity — case-405 verifies rb_trace.jsonl is the only trace sink
+EXR-006: experiment-ref-integrity — case-406 verifies real Sub-agent boundary path
 SCO-009: schema-core — QueueWorkUnitSchema upgrade for rb_queue.json (5 slots nullable, refill_pool typed)
 PLR-001: playbook-runner — RUN.md as unified runner entry with playbook manifest and execution instructions
 PLR-003: playbook-runner — Runner execution contract and summary report
