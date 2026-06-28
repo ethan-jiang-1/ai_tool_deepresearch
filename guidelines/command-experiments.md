@@ -99,6 +99,44 @@ When extending command experiments, preserve the stable core and let the variabl
 
 ---
 
+## Experiment-Production Convergence Contract
+
+A controlled experiment is valuable only when its distance from production is explicit, bounded, and forced to converge at executable contract boundaries. The experiment may be smaller than production; it must not be a different mechanism with similar prose.
+
+Core rule: **converge at the earliest executable boundary production uses.** If production reaches a fact through `commitSlotResult()`, `complete()`, a gate CLI, a trace writer, an accepted schema validator, or an Agent output declaration, the experiment must reach that fact through the same boundary unless the case explicitly says it is testing a lower-level deterministic helper.
+
+MUST:
+
+- MUST route fixture data through the same schema, CLI, Engine API, trace writer, or declaration contract that production uses after the fixture point.
+- MUST keep the post-boundary path identical: after the fixture or Agent result is accepted, downstream receipt checks, gates, and trace verdict use the same code path as production.
+- MUST describe every production distance in the playbook contract or result interpretation: real runtime facts, fixture facts, actor substitutes, human/AI judge points, external-call substitutes, and what the case does not prove.
+- MUST tag actor substitutes in trace or report context when they affect verdict meaning, such as `source: ai-judge`, fixture-backed structural checks, or human review.
+- MUST treat light/standard fixture cases as Engine evidence only unless a real Agent actor performed the semantic work.
+
+MUST NOT:
+
+- MUST NOT read a playbook, infer its intent, and replace its steps with an "equivalent" script.
+- MUST NOT use a lower-level helper call to bypass the production CLI/API path when the case claims production-path evidence.
+- MUST NOT claim that a fixture-backed case proves Agent search, judgment, writing, repair, synthesis, or routing ability.
+- MUST NOT let a passing controlled experiment erase an undeclared production distance. If the experiment is narrower than production, record the gap and add a heavier case when the mechanism depends on that gap.
+
+### Reality Distance Ledger
+
+Each non-trivial playbook MUST include a compact ledger of production distance when it uses fixtures, actor substitutes, human/AI judges, external-call substitutes, or a narrowed production claim. If none of those distances exist, the playbook may state `none` explicitly.
+
+| Distance Type | What To Declare |
+|---------------|-----------------|
+| Runtime context | disposable bundle shape and which framework commands initialize it |
+| Framework path | exact production CLI/API/schema/trace boundary exercised |
+| Fixture input | what was prefilled and what deterministic surface it tests |
+| Agent actor | whether real Agent/sub-agent work happened, and which role |
+| External calls | whether WebSearch/WebFetch or other slow integrations were real, skipped, or simulated |
+| Verdict source | trace checks, gate JSON, schema result, human review, or AI judge tag |
+
+This ledger is not bureaucracy. It prevents the controlled environment from drifting into a parallel reality where experiments pass because they avoided the production failure mode.
+
+---
+
 ## Applicability Test
 
 Use this guideline for a future experiment when all of these are true:
@@ -142,14 +180,15 @@ The safety rules below always apply. Concrete path or helper names refer to the 
 - MUST record critical runtime artifact assertions as trace `check` events so the final verdict includes them.
 - MUST make the final verdict come from trace JSONL.
 - MUST end every playbook with a reportable PASS/FAIL verdict that a higher-level runner can aggregate.
-- MUST clean up the disposable runtime context at the end of the playbook.
+- MUST include conditional cleanup for the disposable runtime context: PASS cleans up the bundle; FAIL preserves the bundle for diagnosis.
 
 ### MUST NOT
 
 - MUST NOT mock LLM/subagent work.
 - MUST NOT use bash/JS to prewrite Agent-produced content as evidence that an Agent can produce that content.
 - MUST NOT use a passing experiment as permission to bypass OpenSpec acceptance.
-- MUST NOT hand-write fake `result.json`, runtime receipt, trace event, or completion receipt.
+- MUST NOT present a hand-written `result.json` fixture as real Agent output; fixture result JSON must be explicitly labeled Engine-layer evidence and routed through the same contract path.
+- MUST NOT hand-write fake runtime receipts, trace events, or completion receipts.
 - MUST NOT use `console.log` as pass/fail authority.
 - MUST NOT bypass approved bundle creation with ad hoc `mkdir`, `sed {{name}}`, or direct `rb_templates` copying.
 - MUST NOT import production engine or trace code from `experiments_env/prototype-*`.
@@ -173,7 +212,7 @@ Command experiments use four ownership layers. The exact mechanism names vary; t
 |-------|------|--------------|
 | `DPT_FRAMEWORK/` | Reusable framework code: deterministic engines, CLIs, schemas, trace writer, command playbooks | Experiment-only setup data or mechanism-specific fixtures |
 | `experiments_playbook/exp_<mechanism>/` | Agent-readable playbooks that stage real end-to-end mechanism experiments — **auto-runnable** by runner | Core mechanism implementation |
-| `experiments_playbook/exph_<mechanism>/` | Same ownership as `exp_`: Agent-readable playbooks. Difference: mechanism under test requires human intervention — **not auto-runnable**. Runner skips these. | Core mechanism implementation |
+| `experiments_playbook/exph_<mechanism>/` | Same ownership as `exp_`: Agent-readable playbooks for mechanisms with human-judgment surfaces. Runner behavior is decided by the 9NN case band: real-human cases are manual; AI-judge duals may be auto-runnable. | Core mechanism implementation |
 | `experiments_env/shared/` | Experiment-only shared setup utilities, such as disposable bundle creation | Production runtime behavior |
 | `experiments_env/prototype-<mechanism>/` | Experiment-specific fixtures and notes, such as `EXPERIMENT.md`, case data, and mechanism-specific fixture files | Production engine code, trace writer code, CLI contracts, reusable schemas |
 
@@ -182,7 +221,7 @@ Command experiments use four ownership layers. The exact mechanism names vary; t
 Naming:
 
 - Experiment directory: `experiments_playbook/exp_<mechanism>/`
-- Human-in-the-loop variant: `experiments_playbook/exph_<mechanism>/` (`exph_` = exp + human). Pairs with `exp_`. For playbooks whose mechanism under test currently requires human judgment (e.g., verifying Agent topic-rewrite quality). These are a **temporary backlog** — the goal is to move them back to `exp_` once automation matures. They do not block the automation pipeline; the runner skips `exph_` directories.
+- Human-in-the-loop variant: `experiments_playbook/exph_<mechanism>/` (`exph_` = exp + human). Pairs with `exp_`. For playbooks whose mechanism under test currently requires human judgment (e.g., verifying Agent topic-rewrite quality). These are a **known-not-yet-automated mirror** of the same mechanism content and proof intent. They do not block the automation pipeline: the runner skips real-human 901-949 cases, while AI-judge 950-999 duals may run automatically when tagged as such.
 - Prototype directory, when used: `experiments_env/prototype-<mechanism>/`
 - Case playbook, new/updated target: `case-<XX>-<cost>-<what-it-proves>.md`, where `XX` is the case ID — a two- or three-digit Arabic numeral. The leading digit(s) name the case group; the final digit names the case's order within that group. Two-digit IDs (`MN`) serve groups 1–9 (e.g. `11` = group 1 case 1, `29` = group 2 case 9, `41` = group 4 case 1). Three-digit IDs (`MMN`) serve groups 10+ (e.g. `101` = group 10 case 1, `121` = group 12 case 1, `211` = group 21 case 1). `MM` is the group number; `N` is the case within that group. `cost` is `light|standard|heavy` (for example, `case-11-light-four-returns.md`, `case-121-standard-wave0-happy.md`, `case-211-heavy-wave0-happy-path.md`). The suffix names what the case actually proves and SHOULD be short kebab-case, 2-4 words.
 - **9NN exception band (three-digit, group numbering rule does not apply):** cases whose mechanism under test involves human judgment use the `9NN` band, split by who plays the human — `901–949` = real human (runner skips, manual only); `950–999` = AI simulates the human (auto-runnable). Both halves live under `exph_*/` co-located as `+50` pairs (e.g. `901` ↔ `951`); the runner decides skip-vs-auto by number band, not by the `exph_` prefix. 950–999 verdicts must be tagged `source: ai-judge` in trace — they are not human verdicts. See `experiments_playbook/README.md` § 编号约定 for the authoritative wording.
@@ -190,7 +229,7 @@ Naming:
 - Filename `cost` is an authoring and runner-cost label. Frontmatter `weight` remains owned by the accepted agent-testing spec; until that spec grows a `standard` value, use `weight: light` for `light` and `standard` cases, and `weight: heavy` for `heavy` cases. This is a temporary compatibility mapping; if the accepted spec adds `standard`, update the runner-facing frontmatter convention and this guideline together.
 - Case playbook, legacy/current files: `test-<complexity>-<what-it-tests>.md` remains recognized for existing playbooks, but new designs should avoid `test-` so command experiments do not read like regression tests.
 - Disposable bundle: `dpt_disp_<short>_<case>_*/` (random hex suffix appended for collision avoidance)
-- Trace file: `_logs/_trace.jsonl` (unified name across all playbooks; bundle directory provides isolation)
+- Trace file: `rb_trace.jsonl` at the bundle root. Legacy playbooks may still mention older `_logs/` trace files, but new or updated playbooks use the root trace as the verdict source.
 - Runner entry: `experiments_playbook/RUN.md` (contains playbook manifest + execution instructions)
 - Fixture files copied into bundle: paths defined by the playbook and relevant spec.
 
@@ -228,7 +267,7 @@ agent_mode: <mode-if-agent-dependent>  # omit or set only when real Agent/subage
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_<short>_<case>_*    # random hex suffix appended at creation time
-trace: dpt_disp_<short>_<case>_*/_logs/_trace.jsonl   # unified trace name across all playbooks
+trace: dpt_disp_<short>_<case>_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 ```
@@ -313,7 +352,7 @@ Keep inline scripts thin:
 
 Complex deterministic logic belongs in the canonical framework module or CLI defined by the relevant spec, not in Markdown shell blocks. Experiment playbooks import or invoke framework code from its canonical `DPT_FRAMEWORK/` location.
 
-New experiment verdict checks SHOULD use `event === "check"` with a boolean `passed` field. `verify` is an older event name still accepted by the trace reader as an alias; do not introduce new `verify` events in new or updated playbooks.
+New experiment verdict checks MUST use `event === "check"` with a boolean `passed` field. `verify` is an older event name still accepted by the trace reader as an alias; do not introduce new `verify` events in new or updated playbooks.
 
 Use JS/CLI feedback actions consistently when a playbook needs machine feedback beyond raw trace verdict:
 
@@ -329,6 +368,26 @@ If a playbook needs to restate project-wide layer boundaries, link to `guideline
 
 ---
 
+## Markdown Control-Flow Testability
+
+Markdown owns Agent Flow. JS must not execute Markdown as a hidden workflow engine, and it must not replace Agent judgment. But every verdict-affecting control-flow claim in a command experiment MUST have a JS-inspectable projection so a reviewer or future checker can audit the shape without mentally reinterpreting the playbook.
+
+This projection is structural, not semantic. It answers: what steps exist, who acts, which deterministic boundary is called, what runtime fact should change, and which trace/check proves it.
+
+New or updated playbooks MUST make these facts parseable for every verdict-affecting step:
+
+- Stable step headings such as `## Step N: ...`.
+- Actor tags or clear step labels, using the existing style such as `[MAIN/SHELL]`, `[MAIN]`, `[MAIN->AGENT]`, `[HUMAN]`, `[VERDICT]`, or `[CLEANUP]`.
+- A step kind that is obvious from the heading or first paragraph: setup, engine checkpoint, Agent work, gate, trace check, verdict, cleanup, or interpretation.
+- One expected runtime fact per step when the step affects the verdict.
+- A trace `check`, gate JSON result, schema validation result, declared output, runtime file, or human/AI judge tag for every claim that contributes to PASS/FAIL.
+
+Future JS tooling may project this structure into an `inspect-playbook-flow.mjs` style report. Such a tool may statically check step order, actor tags, import boundary, fixture declarations, verdict presence, cleanup rule, trace path, and anti-patterns such as console-only verdicts, prototype engine imports, shallow `passed:true` checks, and skipped Agent-dependent work. It must still treat Markdown as the Agent-facing controller and must not become a replacement runner unless an accepted spec defines that behavior.
+
+The same principle applies to phase Markdown. Contract-critical task card templates, output declarations, and controller/delegation examples should be placed in parseable fenced blocks or stable marked sections so a JS validator can check the deterministic skeleton while leaving semantic instructions in Markdown.
+
+---
+
 ## Agent-Dependent Experiments
 
 If a case depends on real Agent or native subagent behavior:
@@ -341,24 +400,28 @@ If a case depends on real Agent or native subagent behavior:
 - Require each Agent actor to write its own runtime evidence, such as a receipt, result file, or trace event defined by the relevant spec.
 - Let the Phase Agent collect, merge, or judge only after runtime evidence exists.
 
+An Agent-dependent mechanism is not complete on light/fixture evidence alone. Light and standard cases can prove Engine surfaces, boundary rejection, schema behavior, and repair plumbing. If production relies on Agent search, judgment, writing, synthesis, or subagent dispatch, at least one Agent-layer case must exercise that actor path before the experiment family can claim the production mechanism is covered.
+
 Do not satisfy an Agent-dependent experiment by writing the expected child output from the parent context. A parent shell block may stage inputs, call deterministic CLIs, import receipts, or run artifact checks, but it must not prewrite the semantic output that the Agent actor is supposed to produce.
 
 If a playbook intentionally uses a fixed payload or prefilled artifact, scope the case to the deterministic surface it actually tests, such as "gate accepts this valid payload" or "CLI rejects this malformed state." It must not claim to test the Agent's ability to infer, rewrite, search, repair, synthesize, or judge unless a real Agent performed that work during the run.
 
-When the Agent's judgment *is* the mechanism under test and no mature automation exists to verify it, the experiment lives in `exph_<mechanism>/` (see Naming conventions above). A human reviewer reads the playbook's review checklist and judges the Agent's output quality — the gate only checks structure, not semantic correctness.
+A hand-written `result.json` fixture is allowed only as Engine-layer fixture evidence. It must be described as fixture-backed, must pass through the same schema or contract boundary used by production after that point, and must not be described as real Agent output.
+
+When the Agent's judgment *is* the mechanism under test and no mature automation exists to verify it, the experiment lives in `exph_<mechanism>/` (see Naming conventions above). A reviewer in the human-judgment role reads the playbook's review checklist and judges the Agent's output quality: real human for 901-949, or explicitly tagged AI-judge dual for 950-999. The gate only checks structure, not semantic correctness.
 
 ### Human-in-the-Loop Playbooks (`exph_`)
 
-Some experiments currently require human intervention to complete — for example, HITL1 topic rewrite exercises a real LLM Agent's ability to read `phase-hitl1.md` §3a and produce a structured original topic with seed topics, but there is no programmatic way to judge whether the rewrite is *good*. These playbooks live in `exph_<mechanism>/` (`exph_` = exp + human), paired with their auto-runnable `exp_<mechanism>/` counterparts.
+Some experiments currently require human intervention to complete — for example, HITL1 topic rewrite exercises a real LLM Agent's ability to read `phase-hitl1.md` §3a and produce a structured original topic with seed topics, but there is no programmatic way to judge whether the rewrite is *good*. These playbooks live in `exph_<mechanism>/` (`exph_` = exp + human), paired with their auto-runnable `exp_<mechanism>/` counterparts. The mechanism content and proof intent should stay the same as the automated experiment family; the difference is that a human-judgment role enters the loop where automation is not mature enough, either as a real human case or as an explicitly tagged AI-judge dual.
 
 **This is a temporary state, not a permanent architecture.**
 
-- `exph_` is a "known-not-yet-automated" backlog, not "forever manual"
-- Every `exph_` playbook targets eventual migration to `exp_` once automation matures
-- Does not block progress — automated experiments keep running, manual ones wait for capability
-- The runner skips `exph_` directories by default
+- `exph_` is a "known-not-yet-automated" mirror for mechanisms with human-judgment surfaces, not a weaker version of the mechanism.
+- `exph_` playbooks keep the same mechanism content and proof intent as the automated family; the difference is who enters the human-judgment loop.
+- Does not block progress — automated experiments keep running, real-human cases wait for capability, and AI-judge duals are clearly tagged.
+- Runner behavior follows the 9NN band: 901-949 real-human cases are manual/skipped; 950-999 AI-judge duals may run automatically and MUST tag `source: ai-judge`.
 - Each `exph_` playbook must identify the human judgment point, why deterministic automation cannot yet replace it, and why gate pass alone is not a human pass
-- Each `exph_` playbook should name the automation condition that would let it move back to `exp_`, such as a reliable programmatic reviewer, Agent-run receipt, or accepted semantic check
+- If a credible automation condition is known, the playbook should name the condition that would let the mechanism move back to `exp_`, such as a reliable programmatic reviewer, Agent-run receipt, or accepted semantic check.
 
 ---
 
@@ -404,8 +467,91 @@ Rules:
 - Trace events follow a single canonical format owned by the accepted trace-writer contract. Prototypes do not keep a parallel trace writer.
 - Follow the Import Boundary above; relative paths depend on where the inline driver file is written and executed.
 - **Engine provides the deterministic loop; MD/Agent provides the intelligent strategy.** When a mechanism needs a decision — how to repair, what to dispatch, which branch to take — Engine exposes an injection point (a function parameter or factory argument) and the Agent/MD supplies the actual logic. Engine owns the loop mechanics: iterate, detect stall, enforce a max-iterations bound, recognize terminal branches. The *strategy* inside each step — what counts as a repair, which branch to choose — is an intelligent decision owned by the Agent/MD. Engine must not hardcode a repair strategy, dispatch rule, or branch action.
+- **Engine consumes structured Agent output declarations; it does not scan directories.** See the Agent Output Declaration section below for the full principle and its implications.
 
 Trace writer rule: every trace event must conform to the canonical format defined by the accepted trace-writer contract. Whether a playbook writes events through the framework writer or a shared helper, the format must match — do not invent a parallel trace format, and do not recreate trace helpers inside playbooks or prototype fixtures.
+
+---
+
+## Agent Output Declaration
+
+This section defines the future-facing, normative **Agent-Engine data contract**: the structured declaration that an Agent (or Sub-agent) must produce alongside its file output, and that the Engine consumes for all downstream checks. It describes the correct target shape for this boundary, not a runtime inventory of whatever happens to exist today. Exact fields, role enums, CLI flags, trace events, schema signatures, and framework APIs remain owned by active/accepted OpenSpec specs and the framework implementation.
+
+### The Problem
+
+Without a declaration, the Engine has no way to know what files an Agent produced except by scanning the filesystem (`fs.readdir`, glob). This creates three gaps:
+
+- **`complete()` is blind.** It checks only the `completion_receipt` field — it does not know what other files the Sub-agent wrote, or whether cache evidence exists.
+- **Gate `content_dedup` must guess.** It scans `reference/` looking for files, with no way to distinguish Agent-written references from hand-placed fixtures or stale artifacts.
+- **Experiment and production diverge.** Experiment playbooks hand-write fixture paths deterministically; production Agent paths are non-deterministic. The two verify different things.
+
+### The Mechanism: `output_files` + `cache_trails`
+
+Correct Agent/Sub-agent output surfaces MUST carry a structured declaration. For Sub-agent slots, this declaration belongs in result JSON:
+
+```json
+{
+  "output_files": [
+    { "path": "reference/01_topic-source.md", "role": "reference", "source_url": "https://..." },
+    { "path": "artifacts/wave0/01_topic/source.yaml", "role": "source_yaml" }
+  ],
+  "cache_trails": [
+    "_cache/wave0/primary/01_topic/s01_source/"
+  ]
+}
+```
+
+The correct acceptance path schema-validates the declaration through `commitSlotResult()` before the result is accepted. After validation, every downstream consumer reads from the declaration, not from the filesystem shape.
+
+### Principle 1: Declaration over Directory Scanning
+
+**Engine code SHALL NOT use `fs.readdir`, glob, or directory traversal to discover Agent output files.** Every check that needs to know what files exist — receipt verification, content dedup, cross-file consistency — SHALL read that information from a structured Agent output declaration.
+
+The declaration is the contract. Files not declared do not exist as far as the Engine is concerned, even if they happen to be on disk.
+
+This is a discovery rule, not a blanket ban on deterministic file checks. `fs.readdir`, glob, or directory traversal MAY be used when the source of truth is an explicit deterministic contract, such as a gate definition target, a registry-derived slug set, a static fixture set, or a non-Agent-owned directory invariant. They MUST NOT be used after the declaration point to discover, broaden, substitute, or count Agent-produced outputs.
+
+Agent-output-sensitive checks — for example reference count floors, content dedup, receipt verification, cross-file consistency, and source/artifact pairing — MUST consume the declaration or a declaration-derived index. If a legacy check still scans a directory, the experiment must not treat that scan as proof that Agent output was correctly declared.
+
+### Principle 2: One Pipeline for Production and Experiment
+
+```
+Production                                      Experiment
+────                                            ────
+Sub-agent writes files + declaration            Playbook writes files + declaration (same schema)
+        │                                                │
+        └────────────────┬───────────────────────────────┘
+                         │
+                         ▼       ← identical code path from here
+                commitSlotResult() schema validation
+                complete() per-item receipt check
+                gate content_dedup (reads declaration, not directory)
+                trace verdict
+```
+
+Production declarations MUST come from Sub-agents and pass through `commitSlotResult()`. Experiment declarations MUST come from playbook fixtures using the same JSON schema. After the declaration point, the downstream pipeline — `complete()`, gate rules, trace verdict — is identical. There is no "production path" vs. "experiment path."
+
+An experiment is valid to the extent that its fixture declaration matches the same schema a real Sub-agent would produce. The experiment tests Engine behavior; it does not claim to test Agent behavior unless a real Agent was spawned.
+
+The diagram shows the concrete Sub-agent slot path because that is the current executable convergence surface. Other Agent-owned output surfaces must provide an equivalent declaration and convergence boundary before Engine consumes their outputs. They do not get a directory-scanning exception merely because they are not Sub-agent slots.
+
+### Principle 3: The Declaration is the Contract; The Filesystem is Implementation
+
+The `output_files[].path` entries define what files exist and what role each plays; current target roles include `reference`, `evidence_summary`, `question_list`, `source_yaml`, `index`, and `other`, with the exact enum owned by the relevant spec. The `cache_trails[]` entries define where cache evidence directories live. The Engine checks these declarations — it does not care what else might be on disk.
+
+This also means Sub-agent naming decisions (e.g. `source-slug`) are recorded in the declaration and can be verified by the Engine for naming consistency — they are no longer implicit conventions that cannot be checked.
+
+### Principle 4: Orphan Output is Contamination
+
+Agent-owned output directories are not anonymous scratch space. If a file looks like an Agent-produced reference, artifact, cache trail, receipt, or summary but is absent from the accepted output declaration, it is orphan output. Orphan output MUST NOT contribute to pass conditions. When detected, it MUST fail the relevant check, produce inspect/advice explaining the contamination, or be explicitly reported as ignored with the reason it cannot affect the verdict.
+
+This matters because stale files and hand-placed fixtures can otherwise make a controlled experiment pass for reasons production would not trust. A playbook may intentionally stage orphan files only when the case is explicitly testing orphan rejection or legacy compatibility, and the verdict must make that purpose clear.
+
+### Relationship to Other Sections
+
+- **§Agent-Dependent Experiments** says Agents must write their own runtime evidence. This section defines *what form* that evidence takes: a structured, schema-validated declaration in result JSON.
+- **§Framework Code Rules** says Engine provides the deterministic loop. This section defines *how Engine reads* Agent output — through declarations, not filesystem scanning.
+- **§Anti-Patterns** forbids the corresponding violations: using `fs.readdir`/glob to discover Agent output instead of reading the declaration, and allowing undeclared orphan output to satisfy pass conditions.
 
 ---
 
@@ -437,15 +583,21 @@ Names such as `simple`, `medium`, `complex`, and `identity` are acceptable when 
 - Bash/JS prewrites the output that a real Agent is supposed to infer, write, search, repair, synthesize, or judge, while the case still claims to test Agent ability.
 - A fixture-backed structural/gate test is described as if it proved Agent semantic behavior.
 - A test passes from hard-coded expected output rather than runtime evidence.
+- A shallow run creates a bundle, writes a trivial `passed:true` check, and reports PASS without exercising the mechanism's stated pass conditions.
 - `console.log` is treated as the verdict.
 - Runtime artifact checks print `V1 PASS`/`V2 FAIL` but never become trace `check` events, so the final verdict can pass while those checks failed.
 - Source fixtures are read directly from the prototype directory at runtime instead of being staged into the disposable bundle when the experiment contract requires staged runtime inputs.
+- Engine or gate code discovers Agent output files by scanning directories with `fs.readdir` / glob instead of reading the structured Agent output declaration (`output_files[]` in result JSON). All post-declaration checks and verification MUST treat the declaration as the contract — Engine does not consume filesystem shape.
+- Undeclared files in Agent-owned output directories are counted toward pass conditions, silently ignored, or otherwise left unexplained instead of being rejected, surfaced as contamination, or explicitly reported as ignored with a reason.
+- A parent/main shell prewrites child Agent semantic output, then labels the result as Agent/subagent evidence.
+- A hand-written `result.json` fixture is presented as real Agent output rather than Engine-layer fixture evidence.
+- An Agent-dependent step is skipped or replaced with a deterministic script while the case still claims to verify Agent behavior.
 - A failed receipt is patched by hand instead of producing a repair path or explicit failure.
 - A disposable bundle is left behind after a successful case.
 - A higher-level runner rewrites, batches, or compresses playbook steps instead of faithfully executing the Markdown one playbook at a time.
 - Current known experiment families are treated as the full universe of future command experiments.
 - Case labels such as `simple`/`medium`/`complex` are treated as mandatory even when a mechanism needs a different proof shape.
-- Treating `exph_` playbooks as auto-runnable — they require human intervention by design. Runner must skip `exph_` directories.
+- Treating all `exph_` playbooks as either auto-runnable or skipped solely by directory prefix. Runner behavior must follow the 9NN band: 901-949 real-human cases are manual/skipped; 950-999 AI-judge duals may run automatically only when trace/report context tags `source: ai-judge`.
 
 ---
 
@@ -577,12 +729,31 @@ These criteria judge the experiment design shape, not whether a future execution
 - [ ] Filename `cost` matches frontmatter `weight`: `light` and `standard` use `weight: light`; `heavy` uses `weight: heavy`.
 - [ ] If the case uses fixed fixtures or prefilled runtime content, its contract states that it tests a deterministic surface, not Agent semantic ability.
 - [ ] If the case goal depends on Agent judgment, writing, search, repair, synthesis, or subagent behavior, real Agent/subagent execution is part of the steps.
+- [ ] Agent-dependent mechanism coverage includes at least one Agent-layer case before the family claims production behavior is covered.
 - [ ] Frontmatter names the disposable runtime context and trace paths.
 - [ ] The playbook keeps stage sequence and Agent handoff visible in Markdown.
 - [ ] Any inline `.mjs` is only a thin deterministic driver/checkpoint.
 - [ ] Runtime context setup uses approved shared experiment infrastructure.
 - [ ] Disposable runtime context passes validate + inspect before mechanism execution.
 - [ ] The playbook states the runtime facts that should change by the end of the run.
+
+**Convergence & reality distance**
+
+- [ ] The playbook identifies the production boundary where the experiment converges: schema validator, Engine API, CLI, trace writer, Agent output declaration, or gate.
+- [ ] Fixture data enters the same schema/CLI/Engine path production uses after the fixture point.
+- [ ] The playbook includes a Reality Distance Ledger when it uses fixtures, actor substitutes, human/AI judge points, external-call substitutes, or narrowed production claims; otherwise it explicitly states there is no production distance.
+- [ ] The case does not use a lower-level helper path while claiming evidence for a higher-level production path.
+- [ ] Hand-written `result.json` or similar fixture output is explicitly labeled as Engine-layer fixture evidence and is not described as real Agent output.
+- [ ] Agent-owned output files used by pass conditions are declared through the relevant output declaration or declaration-derived index.
+- [ ] Orphan/undeclared output in Agent-owned directories is rejected, surfaced as contamination, or explicitly reported as ignored with a reason; it is not silently counted toward PASS.
+
+**Markdown control-flow testability**
+
+- [ ] Step headings are stable and ordered (`## Step N: ...` or an accepted equivalent).
+- [ ] Actor and step kind are inspectable from the heading, tag, or first paragraph for every verdict-affecting step.
+- [ ] Each verdict-affecting step names the expected runtime fact it changes or checks.
+- [ ] Every PASS/FAIL claim maps to auditable evidence: CLI JSON, schema result, trace `check`, declared output, runtime file, human review, or AI judge tag.
+- [ ] The playbook exposes enough structure for a future JS inspector to project the control flow without executing Markdown or replacing Agent judgment.
 
 **Runner principles**
 
@@ -604,7 +775,7 @@ These criteria judge the experiment design shape, not whether a future execution
 **Human-in-the-loop**
 
 - [ ] Any `exph_` playbook explains the human judgment point, why automation is not mature yet, and why gate pass is not human pass.
-- [ ] Any `exph_` playbook states the future automation condition for migration back to `exp_`.
+- [ ] Any `exph_` playbook keeps the mechanism content and proof intent aligned with its automated experiment family; if a credible migration condition is known, it names that condition.
 
 ## Completion Criteria
 
