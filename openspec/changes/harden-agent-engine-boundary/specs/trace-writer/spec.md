@@ -4,77 +4,72 @@
 
 ## ADDED Requirements
 
-### Requirement: Single rb_trace.jsonl SHALL be the only trace file
+### Requirement: rb_trace.jsonl SHALL be the only trace sink
 
-系统 SHALL 只维护一份 trace 文件：bundle root 下的 `rb_trace.jsonl`。`_logs/` 目录下的以下 trace 文件 SHALL 被消灭：
+System SHALL use bundle root `rb_trace.jsonl` as the only trace JSONL sink for runtime audit events and command experiment verdict check events.
 
-- `_logs/_trace_agq_cli.jsonl` — queue-manager.mjs 的 queue 操作审计 trace
-- `_logs/_trace_subagent.jsonl` — subagent-relay.mjs 的 subagent relay 审计 trace
-- `_logs/_trace.jsonl` — wff-playbook-utils.mjs 的实验 verdict trace
+All trace writers SHALL append to `rb_trace.jsonl`:
 
-所有 trace 写入者 SHALL 统一写 `rb_trace.jsonl`（追加模式，互不干扰）：
+- bundle creation `traceInit()`
+- gate attempt writing
+- `log-event.mjs`
+- `advance-status.mjs`
+- `queue-manager.mjs`
+- `subagent-relay.mjs`
+- `wff-playbook-utils.mjs` `recordCheck()` / `verdict()`
 
-- `instantiate-run-bundle.mjs` / `new-disposable-bundle.mjs`：bundle 创建时 `traceInit()`（清空+写 `run_start`）
-- `gate-helpers.mjs` `writeGateAttempt()`：gate attempt 追加
-- `log-event.mjs --event`：check event 追加
-- `advance-status.mjs`：phase 状态变更 event 追加
-- `queue-manager.mjs` `ensureTrace()`：queue 生命周期 event 追加
-- `subagent-relay.mjs` `ensureTrace()`：subagent relay event 追加
-- `wff-playbook-utils.mjs` `recordCheck()`：实验 verdict check event 追加
+No code path SHALL write, read, require, or document another trace JSONL as trace truth. `inspect-bundle.mjs --timeline` SHALL read trace events only from `rb_trace.jsonl`; it MAY read `_logs/run.log` as process log context, but not as trace truth.
 
-`inspect-bundle.mjs --timeline` SHALL 从读 4 个 sink 简化为读 2 个（`rb_trace.jsonl` + `_logs/run.log`）。
+#### Scenario: All touched writers append to rb_trace.jsonl
 
-#### Scenario: All trace events land in single rb_trace.jsonl
+- **WHEN** a bundle executes queue operations, relay operations, gate checks, and playbook verdict checks
+- **THEN** updated trace events SHALL appear in bundle root `rb_trace.jsonl`
+- **AND** updated code SHALL NOT create any other trace JSONL
 
-- **WHEN** bundle 经历了完整的 create → queue operations → subagent spawn → gate checks → verdict 生命周期
-- **THEN** 所有 trace event（run_start、queue_claimed、queue_completed、agent_runtime_started、gate_attempt、check）SHALL 都在 `rb_trace.jsonl` 中
-- **AND** `_logs/_trace_agq_cli.jsonl` SHALL NOT 存在
-- **AND** `_logs/_trace_subagent.jsonl` SHALL NOT 存在
-- **AND** `_logs/_trace.jsonl` SHALL NOT 存在
+#### Scenario: inspect-bundle timeline uses rb_trace as trace truth
 
-#### Scenario: Multiple writers appending don't interfere
+- **WHEN** `inspect-bundle.mjs --timeline` runs
+- **THEN** trace events SHALL come from `rb_trace.jsonl`
+- **AND** `_logs/run.log` MAY provide process log context only
+- **AND** no trace sink labels such as `[queue]` or `[subagent]` SHALL be required
 
-- **WHEN** `queue-manager.mjs` 和 `subagent-relay.mjs` 和 `gate-helpers.mjs` 各自追加 event 到 `rb_trace.jsonl`
-- **THEN** 各 event 的 JSONL 行 SHALL 保持完整且不交错（每行是独立 JSON object）
-- **AND** `rb_trace.jsonl` SHALL 仍可通过 `TraceSchema` 逐行验证
+### Requirement: Trace path unification SHALL update specs and playbook infrastructure
 
-#### Scenario: inspect-bundle --timeline reads fewer sinks
+Trace unification SHALL update not only implementation files, but also accepted specs, playbook schema/tests, experiment README/RUN_EXPS references, workflow shared docs, bundle log templates, and playbook utility docs so they describe only `rb_trace.jsonl` as the trace surface.
 
-- **WHEN** `inspect-bundle.mjs --timeline` 运行
-- **THEN** it SHALL 只读 `rb_trace.jsonl` 和 `_logs/run.log`
-- **AND** `SINK_LABELS` 中 `[queue]` 和 `[subagent]` 标签 SHALL NOT 出现
+After this change, command experiment verdict `check` events SHALL be written to `rb_trace.jsonl` by the playbook thin driver. Gate CLI stdout SHALL remain the machine-readable gate result, and gate attempt entries SHALL also be recorded in `rb_trace.jsonl`.
+
+Command experiment verdict events SHALL use `event: "check"` with boolean `passed`. Updated trace readers, summaries, and playbook verdict logic SHALL NOT count any other event name as a verdict check.
+
+#### Scenario: Accepted specs no longer require separate experiment verdict trace
+
+- **WHEN** accepted specs describe command experiment verdict evidence
+- **THEN** they SHALL point to `rb_trace.jsonl`
+- **AND** they SHALL NOT require any other trace JSONL
+
+#### Scenario: Playbook tests validate unified trace path
+
+- **WHEN** playbook schema/tests validate trace path references
+- **THEN** they SHALL expect `rb_trace.jsonl`
+- **AND** they SHALL reject any other trace JSONL references in updated playbooks
 
 ## MODIFIED Requirements
 
 ### Requirement: Trace entries include bundle field
 
-所有写入 `rb_trace.jsonl` 的 JSONL 入口 SHALL 包含 `bundle` 字段。`bundle` 的值 SHALL 从 bundle 的 `rb_status.json` 读取。
-
-此要求适用于所有写入 `rb_trace.jsonl` 的模块：
-
-- `writeGateAttempt()` 写入的 `gate_attempt` 事件
-- `queue-manager.mjs` 写入的队列生命周期事件
-- `subagent-relay.mjs` 写入的 subagent 生命周期事件
-
-`bundle` SHALL 不通过函数参数显式传递——读取逻辑封装在写入函数内部，从 `rb_status.json` 自动获取。
-
-#### Scenario: Gate attempt trace includes bundle
-
-- **WHEN** `writeGateAttempt(bundlePath, result)` 写入 trace 入口
-- **THEN** 每行 JSONL SHALL 包含 `"bundle": "my-research"` 字段
+All modules writing to `rb_trace.jsonl` SHALL include `bundle` where the existing trace contract requires it. The value SHALL be derived from active bundle state, normally `rb_status.json`, not from chat memory.
 
 #### Scenario: Queue trace includes bundle
 
-- **WHEN** `queue-manager.mjs` 的 `traceEntry()` 写入事件到 `rb_trace.jsonl`
-- **THEN** 每行 JSONL SHALL 包含 `"bundle": "my-research"` 字段
+- **WHEN** `queue-manager.mjs` writes a queue lifecycle event
+- **THEN** the JSONL entry SHALL include the bundle identifier
 
 #### Scenario: Subagent trace includes bundle
 
-- **WHEN** `subagent-relay.mjs` 的 `traceEntry()` 写入事件到 `rb_trace.jsonl`
-- **THEN** 每行 JSONL SHALL 包含 `"bundle": "my-research"` 字段
+- **WHEN** `subagent-relay.mjs` writes a relay lifecycle event
+- **THEN** the JSONL entry SHALL include the bundle identifier
 
-#### Scenario: bundle survives across independent CLI processes
+#### Scenario: Independent CLI processes agree on bundle
 
-- **WHEN** 多个独立 `node` 进程（gate CLI）在同一 bundle 上运行
-- **THEN** 所有 trace 入口的 `bundle` SHALL 相同
-- **AND** `bundle` SHALL 与 `rb_status.json` 中持久化的值一致
+- **WHEN** multiple CLIs append events to the same bundle trace
+- **THEN** their `bundle` field values SHALL match active `rb_status.json`

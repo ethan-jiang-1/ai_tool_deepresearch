@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-231_agql_w2_happy_
-trace: dpt_disp_case-231_agql_w2_happy_*/_logs/_trace.jsonl
+trace: dpt_disp_case-231_agql_w2_happy_*/rb_trace.jsonl
 verdict: trace-jsonl
 req: WTS-001, WTS-004, WTS-007
 ---
@@ -491,7 +491,7 @@ PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs che
 echo "=== PASSED=$PASSED (expected: true) ==="
 test "$PASSED" = "true" && echo "PASS: gate passed" || echo "FAIL"
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'happy path: post-wave1→wave2 queue-driven synthesis→三件套→backfill→gate pass'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'happy path: post-wave1→wave2 queue-driven synthesis→三件套→backfill→gate pass'})})"
 ```
 
 预期：`check.passed: true`，`check.next: phases/phase-hitl2.md`。
@@ -533,7 +533,7 @@ grep -q 'P01' $B/artifacts/wave2/cross-topic-ledger.md && echo "  scan matrix �
 ## Final Verdict
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
 ```
 
 预期：PASS。

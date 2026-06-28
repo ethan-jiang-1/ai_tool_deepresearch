@@ -8,13 +8,25 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-51_wff_val_happy
-trace: dpt_disp_case-51_wff_val_happy/_logs/_trace.jsonl
+trace: dpt_disp_case-51_wff_val_happy/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
 ## Execution Contract
 
 Playbook 是 workflow controller。**Transition Table**（`transitions.chain.json`）是 Node 转移的单一事实来源——Gate CLI 以 `--current-node` 驱动，内部调 `resolveNodeTransitionDetailed()` 查表获取详细路由结果。Playbook 不需要持路由表、不需要传 `--next` flag——只传 `--current-node` 和 `--transitions` 告诉 Gate 表和当前 node，Gate 回答的 `check.next` 和 `routing` 就是下一步信息。
+
+## Reality Distance Ledger
+
+| 维度 | 声明 |
+|------|------|
+| **Runtime context** | disposable bundle，`new-disposable-bundle.mjs` 创建 |
+| **Framework path** | gate CLI (`check-gate-*.mjs`), `advance-status.mjs`, `wff-playbook-utils.mjs` |
+| **Fixture input** | Step 1.5 预写全部 phase artifact（HITL1 payload, plan, seed topics, wave0/1/2, status）— Engine-layer fixture，不是 Agent 产出 |
+| **Agent actor** | 无（fixture-backed） |
+| **External calls** | 无 |
+| **Verdict source** | `rb_trace.jsonl` `check` events |
+| **不证明** | Agent 搜索/写作/判断/修复能力 — 仅证明 Transition Table + Gate + Trace 结构 |`
 
 # case-51-standard-happy-path
 

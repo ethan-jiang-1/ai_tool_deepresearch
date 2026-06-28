@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-71_log_simple
-trace: dpt_disp_case-71_log_simple/_logs/_trace.jsonl
+trace: dpt_disp_case-71_log_simple/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 

@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_213_iw_*
-trace: dpt_disp_213_iw_*/_logs/_trace.jsonl
+trace: dpt_disp_213_iw_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -33,7 +33,7 @@ verdict: trace-jsonl
 ## Step 1: 创建 disposable bundle
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs iw0 --case case-01 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs iw0 --case case-213 --force)
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
 node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 echo "BUNDLE=$B"
@@ -55,7 +55,7 @@ mkdir -p "$B/artifacts/wave0/01_test-topic"
 cat > "$B/reference/00-shared-test-taxonomy.md" << 'EOF'
 # Test AI Taxonomy
 
-- source_url: https://example.com/taxonomy
+- source_url: https://arxiv.org/abs/2401.00001
 - acceptance_status: accepted
 - source_type: secondary (synthesis)
 - tier: Tier 2
@@ -254,7 +254,7 @@ import { mkdirSync, writeFileSync, rmSync, readFileSync, existsSync } from 'node
 import { join } from 'node:path';
 
 const B = process.argv[2];
-const t = B + '/_logs/_trace.jsonl';
+const t = B + '/rb_trace.jsonl';
 const ref = join(B, 'reference');
 const aw0 = join(B, 'artifacts', 'wave0', '01_test-topic');
 
@@ -267,7 +267,7 @@ rmSync(join(ref, '00-shared-no-section.md'), { force: true });
 const happyOut = execSync(`node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle ${B} || true`, { encoding: 'utf8' });
 const happy = JSON.parse(happyOut);
 
-const { recordCheck, verdict } = await import('./experiments_env/shared/wff-playbook-utils.mjs');
+const { recordCheck, verdict } = await import('../experiments_env/shared/wff-playbook-utils.mjs');
 
 await recordCheck(t, {
   gate: 'inspect-wave0-happy', passed: happy.check.passed, expected: true,

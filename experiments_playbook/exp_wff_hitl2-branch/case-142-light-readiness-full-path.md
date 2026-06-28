@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-142_readfp_*
-trace: dpt_disp_case-142_readfp_*/_logs/_trace.jsonl
+trace: dpt_disp_case-142_readfp_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -106,7 +106,7 @@ echo "chain passed → kind=$PK next=$PN"
 
 OK=false; [ "$PASSED" = "true" ] && [ "$USER_DECISION" = "proceed_to_readiness" ] && [ "$PK" = "next" ] && [ "$PN" = "phases/phase-readiness.md" ] && OK=true
 [ "$OK" = "true" ] && echo "OK: Agent correctly identified proceed_to_readiness, chain → readiness" || echo "FAIL"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl2-capture-readiness',passed:$OK,detail:'Agent captured proceed_to_readiness + chain → readiness'})})" $OK
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl2-capture-readiness',passed:$OK,detail:'Agent captured proceed_to_readiness + chain → readiness'})})" $OK
 ```
 
 ## Step 3: Agent enters readiness node → readiness gate pass
@@ -126,7 +126,7 @@ echo "readiness-passed | passed=$PASSED next=$NEXT"
 
 OK=false; [ "$PASSED" = "true" ] && OK=true
 [ "$OK" = "true" ] && echo "OK: readiness gate pass — delivery chain complete" || echo "FAIL"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'readiness-gate',passed:$OK,detail:'readiness gate pass'})})" $OK
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'readiness-gate',passed:$OK,detail:'readiness gate pass'})})" $OK
 ```
 
 ## Step 4: Evidence — rb_trace.jsonl proves both nodes visited
@@ -152,14 +152,14 @@ process.exit(bothPassed?0:1);
 "
 EVIDENCE_OK=$?
 echo "both nodes visited: $([ $EVIDENCE_OK -eq 0 ] && echo yes || echo no)"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'both-nodes-visited',passed:$([ $EVIDENCE_OK -eq 0 ] && echo true || echo false),detail:'hitl2 + readiness both PASS in rb_trace.jsonl'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'both-nodes-visited',passed:$([ $EVIDENCE_OK -eq 0 ] && echo true || echo false),detail:'hitl2 + readiness both PASS in rb_trace.jsonl'})})"
 ```
 
-## Step 5: Verdict from `_logs/_trace.jsonl`
+## Step 5: Verdict from `rb_trace.jsonl`
 
 ```bash
 echo "=== Verdict ==="
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/_logs/_trace.jsonl'))"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/rb_trace.jsonl'))"
 ```
 
 ## Step 6: 结果解读

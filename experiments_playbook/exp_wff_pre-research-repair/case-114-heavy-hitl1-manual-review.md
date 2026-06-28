@@ -9,7 +9,7 @@ agent_mode: auto
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-114_wff_manual_*
-trace: dpt_disp_case-114_wff_manual_*/_logs/_trace.jsonl
+trace: dpt_disp_case-114_wff_manual_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -81,7 +81,7 @@ EOF
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "quick_factual: passed=$PASSED (expect: true)"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'vectorA: quick_factual (expect: pass)'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'vectorA: quick_factual (expect: pass)'})})"
 ```
 
 ### Vector B: `exploratory_map`（expect: pass）
@@ -109,7 +109,7 @@ EOF
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "exploratory_map: passed=$PASSED (expect: true)"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'vectorB: exploratory_map (expect: pass)'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'vectorB: exploratory_map (expect: pass)'})})"
 ```
 
 ### Vector C: `claim_verification`（expect: pass）
@@ -135,7 +135,7 @@ EOF
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "claim_verification: passed=$PASSED (expect: true)"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'vectorC: claim_verification (expect: pass)'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'vectorC: claim_verification (expect: pass)'})})"
 ```
 
 ### Vector D: `not_selected`（expect: fail — 默认值未改）
@@ -163,7 +163,7 @@ PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.pass
 echo "not_selected: passed=$PASSED (expect: false)"
 INSPECT=$(echo "$GATE" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log(j.inspect.filter(x=>x.includes('not_selected')).length>0)})")
 echo "inspect mentions not_selected: $INSPECT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,expected:false,detail:'vectorD: not_selected (expect: fail)'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,expected:false,detail:'vectorD: not_selected (expect: fail)'})})"
 ```
 
 ### Vector E: empty `root_must_answer_set`（expect: fail）
@@ -188,7 +188,7 @@ EOF
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "empty must_answer: passed=$PASSED (expect: false)"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,expected:false,detail:'vectorE: empty must_answer (expect: fail)'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,expected:false,detail:'vectorE: empty must_answer (expect: fail)'})})"
 ```
 
 ### Vector F: missing `hitl1.status`（expect: fail）
@@ -213,7 +213,7 @@ EOF
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "hitl1 not recorded: passed=$PASSED (expect: false)"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,expected:false,detail:'vectorF: hitl1 not recorded (expect: fail)'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,expected:false,detail:'vectorF: hitl1 not recorded (expect: fail)'})})"
 ```
 
 ---
@@ -225,13 +225,13 @@ REPO_ROOT=$(pwd)
 B=$(cat /tmp/pb_bundle)
 
 echo "=== Trace evidence ==="
-cat $B/_logs/_trace.jsonl | while read line; do
+cat $B/rb_trace.jsonl | while read line; do
   echo "$line" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);const icon=j.passed?'\x1b[32m✓\x1b[0m':'\x1b[31m✗\x1b[0m';console.log(icon,j.gate,'|',j.detail)})"
 done
 
 echo ""
 echo "=== Expected vs Actual ==="
-cat $B/_logs/_trace.jsonl | node -e "
+cat $B/rb_trace.jsonl | node -e "
 process.stdin.on('data', d => {
   const lines = d.trim().split('\n').filter(Boolean);
   const checks = lines.map(l => JSON.parse(l)).filter(e => e.event === 'check');

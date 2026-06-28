@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-135_rd_pre_*
-trace: dpt_disp_case-135_rd_pre_*/_logs/_trace.jsonl
+trace: dpt_disp_case-135_rd_pre_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -26,7 +26,7 @@ verdict: trace-jsonl
 4. 只保留部分 prior gate_attempt → gate fail（inspect 列出缺失 gate）
 5. 破坏 YAML → gate fail
 6. 破坏 JSONL → gate fail
-7. 从 `_logs/_trace.jsonl` 裁决（预期 1 pass + 4 fail）
+7. 从 `rb_trace.jsonl` 裁决（预期 1 pass + 4 fail）
 8. Cleanup
 
 ---
@@ -119,7 +119,7 @@ GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bun
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: readiness-passed | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'happy path — all artifacts + all prior gates passed'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'happy path — all artifacts + all prior gates passed'})})"
 ```
 
 预期：`check.passed: true`，routing.kind 为 `terminal`（next_gate: none）。
@@ -134,7 +134,7 @@ GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bun
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: readiness-passed | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'missing synthesis — expected fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'missing synthesis — expected fail'})})"
 
 # Restore for next test
 cat > $B/artifacts/wave2/synthesis.md << 'EOF'
@@ -160,7 +160,7 @@ PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs che
 echo "gate: readiness-passed | passed: $PASSED"
 INSPECT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs inspect.0)
 echo "inspect: $INSPECT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'partial gates — inspect must name missing gates'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'partial gates — inspect must name missing gates'})})"
 
 # Restore full trace for next test
 > $B/rb_trace.jsonl
@@ -181,7 +181,7 @@ GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bun
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: readiness-passed | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'corrupt YAML — expected fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'corrupt YAML — expected fail'})})"
 
 # Restore valid profile
 cat > $B/rb_profile.yaml << 'EOF'
@@ -207,16 +207,16 @@ GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bun
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: readiness-passed | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'corrupt JSONL — expected fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'corrupt JSONL — expected fail'})})"
 ```
 
 预期：`check.passed: false`，inspect 包含 unparseable lines。
 
-## Step 7: Verdict from `_logs/_trace.jsonl`
+## Step 7: Verdict from `rb_trace.jsonl`
 
 ```bash
 echo "=== Verdict ==="
-cat $B/_logs/_trace.jsonl | node -e "
+cat $B/rb_trace.jsonl | node -e "
 const fs = require('fs');
 const lines = fs.readFileSync(0, 'utf-8').trim().split('\n').filter(l => l);
 const checks = lines.map(l => JSON.parse(l)).filter(e => e.event === 'check');

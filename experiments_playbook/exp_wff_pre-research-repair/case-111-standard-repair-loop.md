@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-111_wff_repair_*
-trace: dpt_disp_case-111_wff_repair_*/_logs/_trace.jsonl
+trace: dpt_disp_case-111_wff_repair_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -80,7 +80,7 @@ trace 记录这个 fail：
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_logs/_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, expected: false, detail: 'default profile — simulating unanswered HITL1' });
+  m.recordCheck('$B/rb_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, expected: false, detail: 'default profile — simulating unanswered HITL1' });
 });
 "
 ```
@@ -128,7 +128,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_logs/_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, detail: 'repaired profile — HITL1 recorded' });
+  m.recordCheck('$B/rb_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, detail: 'repaired profile — HITL1 recorded' });
 });
 "
 ```
@@ -140,7 +140,7 @@ Trace 中应有 2 个 `check` event：第一个 `passed: false`，第二个 `pas
 ```bash
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.verdict('$B/_logs/_trace.jsonl', 'last');
+  m.verdict('$B/rb_trace.jsonl', 'last');
 });
 "
 ```

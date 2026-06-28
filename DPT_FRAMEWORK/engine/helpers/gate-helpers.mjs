@@ -582,3 +582,204 @@ export function zodErrors(error) {
     expected: i.expected,
   }));
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Content Dedup Gate Check (GAC-001..005)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Tokenize text for similarity comparison.
+ * Chinese → bigrams; English → lowercase word tokens.
+ */
+export function tokenizeForSimilarity(text) {
+  if (!text) return [];
+  const tokens = [];
+  const cjk = /\p{Script=Han}/u;
+  let i = 0;
+  while (i < text.length) {
+    if (cjk.test(text[i])) {
+      if (i + 1 < text.length && cjk.test(text[i + 1])) {
+        tokens.push(text[i] + text[i + 1]);
+      }
+      i++;
+    } else if (/[a-zA-Z]/.test(text[i])) {
+      let word = '';
+      while (i < text.length && /[a-zA-Z0-9]/.test(text[i])) {
+        word += text[i].toLowerCase();
+        i++;
+      }
+      if (word.length > 0) tokens.push(word);
+    } else {
+      i++;
+    }
+  }
+  return tokens;
+}
+
+/** Jaccard similarity: |A ∩ B| / |A ∪ B|. */
+export function jaccardSimilarity(tokensA, tokensB) {
+  const setA = new Set(tokensA);
+  const setB = new Set(tokensB);
+  if (setA.size === 0 && setB.size === 0) return 1;
+  const intersect = new Set([...setA].filter((x) => setB.has(x)));
+  const union = new Set([...setA, ...setB]);
+  return intersect.size / union.size;
+}
+
+/** Extract a named Markdown section body. */
+export function extractSection(mdContent, sectionName) {
+  const escaped = sectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`##{1,3}\\s+${escaped}\\s*\\n([\\s\\S]*?)(?=\\n##{1,3}\\s|$)`, 'i');
+  const match = mdContent.match(re);
+  return match ? match[1].trim() : '';
+}
+
+/** Normalize URL: lowercase scheme+host, remove fragment, trim trailing slash. */
+function normalizeUrl(url) {
+  try {
+    const u = new URL(url);
+    u.hash = '';
+    u.pathname = u.pathname.replace(/\/+$/, '');
+    return u.toString().toLowerCase();
+  } catch {
+    return url.toLowerCase().replace(/#.*$/, '').replace(/\/+$/, '');
+  }
+}
+
+function isHomepageUrl(url) {
+  try {
+    const u = new URL(url);
+    const path = u.pathname.replace(/\/+$/, '');
+    return path === '' || path === '/' || /\/index\.(html?|php|asp|jsp)$/i.test(path);
+  } catch { return false; }
+}
+
+const SELF_REF_PATTERNS = [
+  /this\s+reference\s+supplements/i,
+  /this\s+document\s+provides/i,
+  /this\s+file\s+contains/i,
+  /本文(件|档)?(用于|提供|补充)/,
+  /本参考(用于|提供|补充)/,
+];
+
+/**
+ * Read output declarations from rb_output_declarations.jsonl.
+ * Returns empty array if ledger doesn't exist.
+ */
+export function readOutputDeclarations(bundlePath) {
+  const file = join(bundlePath, 'rb_output_declarations.jsonl');
+  if (!existsSync(file)) return [];
+  const raw = readFileSync(file, 'utf-8').trim();
+  if (!raw) return [];
+  return raw.split('\n').map((line) => JSON.parse(line));
+}
+
+/**
+ * content_dedup gate check.
+ * Reads reference inputs ONLY from rb_output_declarations.jsonl.
+ * Does NOT scan reference/ directory to discover inputs.
+ *
+ * @param {string} bundlePath
+ * @param {object} threshold - { jaccard?, url_dedup?, homepage_detect?, self_ref_detect? }
+ * @returns {{ passed: boolean, inspect: string[], advice: string[] }}
+ */
+export function checkContentDedup(bundlePath, threshold = {}) {
+  const jaccardThreshold = threshold.jaccard ?? 0.8;
+  const checkUrlDedup = threshold.url_dedup !== false;
+  const checkHomepage = threshold.homepage_detect !== false;
+  const checkSelfRef = threshold.self_ref_detect !== false;
+
+  const inspect = [];
+  const advice = [];
+
+  const declarations = readOutputDeclarations(bundlePath);
+  if (declarations.length === 0) {
+    return {
+      passed: false,
+      inspect: ['rb_output_declarations.jsonl is missing or empty — no completed Agent output declarations available'],
+      advice: ['Run delegated Sub-agent intake through Relay and complete() to populate the declaration ledger.'],
+    };
+  }
+
+  // Collect reference entries with content
+  const references = [];
+  for (const decl of declarations) {
+    for (const entry of decl.output_files) {
+      if (entry.role === 'reference') {
+        const filePath = join(bundlePath, entry.path);
+        let content = '';
+        if (existsSync(filePath)) content = readFileSync(filePath, 'utf-8');
+        references.push({
+          path: entry.path,
+          source_url: entry.source_url || '',
+          keyFacts: extractSection(content, 'Key Facts'),
+        });
+      }
+    }
+  }
+
+  if (references.length === 0) {
+    return { passed: true, inspect: [], advice: [] };
+  }
+
+  let passed = true;
+
+  // URL Dedup
+  if (checkUrlDedup) {
+    const urlMap = new Map();
+    for (const ref of references) {
+      if (!ref.source_url) continue;
+      const norm = normalizeUrl(ref.source_url);
+      if (urlMap.has(norm)) {
+        passed = false;
+        inspect.push(`URL duplicate: "${ref.path}" and "${urlMap.get(norm)}" share normalized URL ${norm}`);
+        advice.push('Duplicate source URL detected.');
+      } else {
+        urlMap.set(norm, ref.path);
+      }
+    }
+  }
+
+  // Homepage Detection
+  if (checkHomepage) {
+    for (const ref of references) {
+      if (ref.source_url && isHomepageUrl(ref.source_url)) {
+        passed = false;
+        inspect.push(`Homepage URL in "${ref.path}": ${ref.source_url}`);
+        advice.push('Replace homepage URL with a specific article URL.');
+      }
+    }
+  }
+
+  // Self-Referential Language
+  if (checkSelfRef) {
+    for (const ref of references) {
+      if (!ref.keyFacts) continue;
+      for (const pattern of SELF_REF_PATTERNS) {
+        if (pattern.test(ref.keyFacts)) {
+          passed = false;
+          inspect.push(`Self-referential Key Facts in "${ref.path}"`);
+          advice.push('Key Facts describes the file itself. Rewrite with factual content.');
+          break;
+        }
+      }
+    }
+  }
+
+  // Jaccard Clone Detection
+  for (let i = 0; i < references.length; i++) {
+    for (let j = i + 1; j < references.length; j++) {
+      const kfA = references[i].keyFacts;
+      const kfB = references[j].keyFacts;
+      if (!kfA || !kfB) continue;
+      const sim = jaccardSimilarity(tokenizeForSimilarity(kfA), tokenizeForSimilarity(kfB));
+      if (sim >= jaccardThreshold) {
+        passed = false;
+        inspect.push(`Jaccard clone (${sim.toFixed(3)} >= ${jaccardThreshold}): "${references[i].path}" vs "${references[j].path}"`);
+        advice.push('Near-duplicate Key Facts detected.');
+      }
+    }
+  }
+
+  return { passed, inspect, advice };
+}

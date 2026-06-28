@@ -17,6 +17,7 @@ import {
   readBundlePlan,
   readBundleProfile,
   resolveThreshold,
+  checkContentDedup,
 } from '../../engine/helpers/gate-helpers.mjs';
 import {
   ReferenceMetadataArraySchema,
@@ -280,6 +281,13 @@ for (const rule of definition.rules) {
               }
             }
           }
+        }
+      } else if (rule.check === 'content_dedup') {
+        const dedupResult = checkContentDedup(bundlePath, rule.threshold || {});
+        if (!dedupResult.passed) {
+          rulePassed = false;
+          ruleDetail = dedupResult.inspect.join('; ');
+          for (const a of dedupResult.advice) advice.push(a);
         }
       } else {
         rulePassed = false;

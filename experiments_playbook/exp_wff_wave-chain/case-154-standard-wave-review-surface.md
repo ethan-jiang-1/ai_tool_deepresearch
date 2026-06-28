@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-154_w2_review_*
-trace: dpt_disp_case-154_w2_review_*/_logs/_trace.jsonl
+trace: dpt_disp_case-154_w2_review_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -409,7 +409,7 @@ echo "$GATE_OUTPUT"
 
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: wave2-complete | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'review surface: 3-topic synthesis with valid references'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'review surface: 3-topic synthesis with valid references'})})"
 ```
 
 预期：`check.passed: true`。
@@ -431,13 +431,13 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 ```bash
 echo "=== Trace ==="
-cat $B/_logs/_trace.jsonl | while read line; do
+cat $B/rb_trace.jsonl | while read line; do
   echo "$line" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);if(j.gate){const icon=j.passed?'\x1b[32mPASS\x1b[0m':'\x1b[31mFAIL\x1b[0m';console.log(icon,j.gate,'|',j.detail)}})"
 done
 
 echo ""
 echo "=== Verdict ==="
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
 ```
 
 

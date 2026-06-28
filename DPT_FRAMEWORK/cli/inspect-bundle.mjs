@@ -23,8 +23,6 @@ const REQUIRED = [
 
 const SINK_LABELS = {
   'rb_trace.jsonl':                    '[trace]',
-  '_logs/_trace_subagent.jsonl':       '[subagent]',
-  '_logs/_trace_agq_cli.jsonl':        '[queue]',
   '_logs/run.log':                     '[log]',
 };
 
@@ -109,7 +107,7 @@ if (flag === '--summary') {
   const warnings = [];
 
   // ── JSONL sink reader ──
-  const jsonlSinks = ['rb_trace.jsonl', '_logs/_trace_subagent.jsonl', '_logs/_trace_agq_cli.jsonl'];
+  const jsonlSinks = ['rb_trace.jsonl'];
   for (const file of jsonlSinks) {
     const p = join(bundleDir, file);
     if (!existsSync(p)) { warnings.push(`${file}: missing`); continue; }

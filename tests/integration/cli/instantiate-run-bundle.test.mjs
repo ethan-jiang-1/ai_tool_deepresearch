@@ -53,7 +53,7 @@ describe('instantiate-run-bundle.mjs integration', () => {
     assert.ok(cacheReadme.includes('websearch.json') && cacheReadme.includes('page.md') && cacheReadme.includes('meta.json'),
       '_cache/README.md should document the three-file-per-source convention');
     const logsReadme = readFileSync(join(dir, '_logs/README.md'), 'utf-8');
-    assert.ok(logsReadme.includes('run.log') && logsReadme.includes('_trace_subagent.jsonl'),
+    assert.ok(logsReadme.includes('run.log') && logsReadme.includes('rb_trace.jsonl'),
       '_logs/README.md should explain the log and trace file inventory');
   });
 

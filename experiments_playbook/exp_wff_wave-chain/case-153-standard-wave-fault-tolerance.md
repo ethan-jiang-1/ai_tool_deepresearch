@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-153_wf_fault_*
-trace: dpt_disp_case-153_wf_fault_*/_logs/_trace.jsonl
+trace: dpt_disp_case-153_wf_fault_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -125,7 +125,7 @@ echo "$GATE_OUTPUT"
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('is JSON: true');console.log('passed:',j.check.passed);console.log('inspect count:',j.inspect.length);j.inspect.forEach((x,i)=>console.log('  inspect['+i+']:',x))})"
 
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B1/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'case1: gate survived malformed YAML, schema_valid fail with clear inspect'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B1/rb_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'case1: gate survived malformed YAML, schema_valid fail with clear inspect'})})"
 ```
 
 预期：gate 不 crash，返回合法 JSON。`check.passed: false`。inspect 指向 YAML parse error 或 schema validation failure。
@@ -250,7 +250,7 @@ echo "$GATE_OUTPUT"
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('inspect count:',j.inspect.length);j.inspect.forEach((x,i)=>console.log('  inspect['+i+']:',x))})"
 
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B2/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:true,detail:'case2: gate pass (min_valid_refs=1 met) but inspect reports dead links'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B2/rb_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:true,detail:'case2: gate pass (min_valid_refs=1 met) but inspect reports dead links'})})"
 ```
 
 预期：`check.passed: true`（1 valid link ≥ min_valid_refs）。inspect 列出 2 条 dead links。
@@ -361,7 +361,7 @@ echo "$GATE_OUTPUT"
 echo "$GATE_OUTPUT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('inspect count:',j.inspect.length);j.inspect.forEach((x,i)=>console.log('  inspect['+i+']:',x))})"
 
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B3/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:false,detail:'case3: status drift detected'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B3/rb_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:false,detail:'case3: status drift detected'})})"
 ```
 
 预期：`check.passed: false`。inspect 指向 `status_value` rule fail。
@@ -372,15 +372,15 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 ```bash
 echo "=== Case 1 Verdict (malformed YAML) ==="
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B1/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B1/rb_trace.jsonl')})"
 
 echo ""
 echo "=== Case 2 Verdict (partial dead links) ==="
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B2/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B2/rb_trace.jsonl')})"
 
 echo ""
 echo "=== Case 3 Verdict (status drift) ==="
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B3/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B3/rb_trace.jsonl')})"
 ```
 
 

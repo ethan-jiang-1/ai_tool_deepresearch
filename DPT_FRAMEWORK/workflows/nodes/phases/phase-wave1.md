@@ -104,6 +104,7 @@ Wave1 的 claim→execute→complete 使用 relay 批量并行执行（灌料→
 - **不伪造 evidence**：每条 key finding 必须来自 WebSearch + WebFetch 获取的真实页面。不允许拿搜索摘要当 evidence 凑合
 - **网页内容抓取**（`shared-subagent-protocol.md` Page Content Fetching Chain）：内置工具（如 `WebFetch`）或用户显式开启的浏览器优先，没有则从 `curl` → `node` → `python3`。所有手段都失败才能报告"无法获取内容"
 - **complete 阻塞**：如果 complete 时 receipt check 失败（evidence-summary.md 不存在或 schema 不对），engine 自动生成 repair task（`producer_rule: queue_repair`），Phase Agent 必须修复而不是跳过
+- **delegated complete 路径**：claim 返回含 `targets.delegates.to: "sub-agent"` 的 task 后，Phase Agent MUST 通过 Relay spawn Sub-agent，收集并 `commitSlotResult()` 得到 committed slot `result.json`，再调用 `operate-queue complete --result` 并传入 `slot_result_ref`。Phase Agent MUST NOT 在自己的上下文直接执行 WebSearch/WebFetch 来替代 Sub-agent。
 - **上下文隔离**：由 relay slot 契约在机制上强制（见 `shared-subagent-protocol.md` Communication Contract）。Sub-agent 只收到 bounded 上下文，Phase Agent 通过 `commitSlotResult()` 收集结构化 `result.json`，不读 Sub-agent 原始搜索 trail
 - **即时回填 seed topic（不可跳过）**：每个 topic 的 deepening task complete 成功后，**在 claim 下一个 task 之前**，必须立刻回填 `seed_topics/{topic.slug}.md`。回填规则见下节
 

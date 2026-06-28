@@ -17,7 +17,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-11_gf_simple
-trace: dpt_disp_case-11_gf_simple/_logs/_trace.jsonl
+trace: dpt_disp_case-11_gf_simple/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -53,7 +53,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_test
-trace: dpt_disp_test/_logs/_trace.jsonl
+trace: dpt_disp_test/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 

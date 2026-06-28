@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-41_agq_simple
-trace: dpt_disp_case-41_agq_simple/_logs/_trace.jsonl
+trace: dpt_disp_case-41_agq_simple/rb_trace.jsonl
 verdict: trace-jsonl
 req: AGQ-006
 ---
@@ -16,6 +16,20 @@ req: AGQ-006
 ## Execution Contract
 
 由 coding agent 在真实 `dpt_disp_*` bundle 中执行。实验结果必须来自实际文件写入、Queue Manager API/CLI 调用和 trace event；允许读取文件系统中间产物；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
+
+## Reality Distance Ledger
+
+| 维度 | 声明 |
+|------|------|
+| **Runtime context** | disposable bundle，`new-disposable-bundle.mjs` 创建 |
+| **Framework path** | `queue-manager.mjs` API（`createQueue`, `enqueue`, `claim`, `complete`, `saveQueue`），`operate-queue.mjs` CLI |
+| **Fixture input** | task card JSON 在 playbook 内构造 — Engine-layer fixture |
+| **Agent actor** | 无（fixture-backed）— 不证明 Agent 能生成 task/claim/complete |
+| **External calls** | 无 |
+| **Verdict source** | `rb_trace.jsonl` `check` events |
+| **不证明** | Agent 队列决策、repair 策略、delegated complete — 仅证明 queue 基本生命周期 |
+
+
 
 # case-41-light-minimal-path
 
@@ -64,7 +78,7 @@ import {
 
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/_logs/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 trace.traceInit('agq-playbook/simple', { source: 'agq-playbook/simple' });
 
 writeFileSync(__dirname + '/done-1.json', '{"ok":true}\n');
@@ -99,7 +113,7 @@ import {
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const trace = createTrace(__dirname + '/_logs/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 
 let queue = loadQueue(__dirname);
 const result = claim(queue, { actor: 'main-agent' });
@@ -136,7 +150,7 @@ import {
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const trace = createTrace(__dirname + '/_logs/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 
 let queue = loadQueue(__dirname);
 const completed = complete(queue, { work_id: 'simple-1', receipt: 'json:done-1.json' }, __dirname);
@@ -170,7 +184,7 @@ import { loadQueue } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const trace = createTrace(__dirname + '/_logs/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 
 const queue = loadQueue(__dirname);
 const projectionPath = __dirname + '/_cache/agentic-queue/current-task.md';
@@ -204,7 +218,7 @@ import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
 
-const trace = createTrace(__dirname + '/_logs/_trace.jsonl', { consoleEcho: false });
+const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 const events = readFileSync(trace.traceFilePath(), 'utf-8').trim().split('\n').map(JSON.parse);
 const checks = events.filter((event) => event.event === 'check');
 const pass = checks.length >= 3 && checks.every((event) => event.passed === true);

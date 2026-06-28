@@ -73,6 +73,18 @@ _subagents/wave_NN/slot_MM/     ← relay-managed (authority)
   result.json                   ← parent-validated structured result (SlotResult schema, authority)
   result.md                     ← human-readable summary (written by commitSlotResult)
 
+**Agent Output Declaration** (`output_files[]` + `cache_trails[]` in `result.json`):
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `output_files[].path` | string (bundle-relative) | 产出文件路径 |
+| `output_files[].role` | enum | `reference`, `evidence_summary`, `question_list`, `source_yaml`, `index`, `other` |
+| `output_files[].source_url` | string (role=reference 必填) | 来源 URL |
+| `output_files[].source_slug` | string (可选) | 来源 slug |
+| `cache_trails[]` | string[] (bundle-relative) | leaf source 目录路径，每目录直接含 `websearch.json`/`page.md`/`meta.json` |
+
+**职责分工**：`commitSlotResult()` 验证声明 schema → delegated `complete()` 验证 provenance + 文件存在 + cache 完整 → 成功后 append `rb_output_declarations.jsonl` ledger → gate `content_dedup` 只读 ledger。Agent 和 playbook fixture 不直接写 production ledger；未经过 delegated `complete()` 的文件不能帮助 gate pass。
+
 _cache/                          ← intermediate products (non-authority)
   README.md                     ← bundle instantiation 时自动创建，解释四级结构
   wave0/

@@ -9,7 +9,7 @@ agent_mode: real-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-951_wff_rwa_*
-trace: dpt_disp_case-951_wff_rwa_*/_logs/_trace.jsonl
+trace: dpt_disp_case-951_wff_rwa_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -104,7 +104,7 @@ B=$(cat /tmp/pb_bundle)
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
 echo "$GATE"
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'real Agent rewrite per phase-hitl1.md 3a'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'real Agent rewrite per phase-hitl1.md 3a'})})"
 ```
 
 ## Step 7: AI reviewer 审查 rewrite 质量
@@ -125,7 +125,7 @@ B=$(cat /tmp/pb_bundle)
 # AI reviewer 的裁决（pass/fail）。AI reviewer 审查 rb_plan.md 后填入。
 AI_VERDICT=pass
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'human-review',passed:'$AI_VERDICT'==='pass',detail:'source: ai-judge — AI reviewer verdict (dual of case-901 human verdict); NOT a human verdict'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'human-review',passed:'$AI_VERDICT'==='pass',detail:'source: ai-judge — AI reviewer verdict (dual of case-901 human verdict); NOT a human verdict'})})"
 echo "ai-judge review recorded: $AI_VERDICT"
 ```
 
@@ -142,6 +142,6 @@ echo "ai-judge review recorded: $AI_VERDICT"
 ```bash
 REPO_ROOT=$(pwd)
 B=$(cat /tmp/pb_bundle)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
 ```

@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_235_iw_*
-trace: dpt_disp_235_iw_*/_logs/_trace.jsonl
+trace: dpt_disp_235_iw_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -34,7 +34,7 @@ verdict: trace-jsonl
 ## Step 1: 创建 disposable bundle
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs iw2 --case case-403 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs iw2 --case case-235 --force)
 mkdir -p "$B/artifacts/wave2" "$B/seed_topics"
 echo "BUNDLE=$B"
 ```
@@ -106,7 +106,7 @@ EOF
 # Optional 00-cross-*.md
 cat > "$B/reference/00-cross-scout-discovery.md" << 'EOF'
 # Cross Discovery
-- source_url: https://example.com/cross
+- source_url: https://arxiv.org/abs/2401.00001
 - acceptance_status: accepted
 - source_type: secondary
 - tier: Tier 2
@@ -135,6 +135,14 @@ EOF
 # Seed topic without backfill tokens
 echo "# Test Seed Topic" > "$B/seed_topics/01_test.md"
 
+# _INDEX.md with wave2_cross entry for 00-cross-*.md
+cat > "$B/reference/_INDEX.md" << 'EOF'
+# Reference Index
+| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 00-cross-scout-discovery.md | secondary | practitioner | Tier 2 | all | wave2_cross | accepted | 2026-06-26 |
+EOF
+
 echo "Happy path artifacts created."
 ```
 
@@ -151,12 +159,12 @@ import { mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const B = process.argv[2];
-const t = B + '/_logs/_trace.jsonl';
+const t = B + '/rb_trace.jsonl';
 const w2 = join(B, 'artifacts', 'wave2');
 const ref = join(B, 'reference');
 const seed = join(B, 'seed_topics');
 
-const { recordCheck, verdict } = await import('./experiments_env/shared/wff-playbook-utils.mjs');
+const { recordCheck, verdict } = await import('../experiments_env/shared/wff-playbook-utils.mjs');
 
 // ── Happy path ──
 const happyOut = execSync(`node DPT_FRAMEWORK/cli/inspect-wave2-output.mjs --bundle ${B} || true`, { encoding: 'utf8' });

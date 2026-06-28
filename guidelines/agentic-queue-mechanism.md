@@ -191,7 +191,7 @@ When the queue engine returns feedback, it uses the same Check / Inspect / Advic
 
 ### 6.2 Target Separation
 
-Which tasks use direct Phase Agent execution vs delegated Sub-agent execution is a context-management decision, not a capability question. Current task-card wire values express this as `targets.controller: "main-agent"` and optional `targets.delegates.to: "sub-agent"`; those wire values are compatibility terminology pending a later OpenSpec migration. Five dimensions guide the assignment:
+Which tasks use direct Phase Agent execution vs delegated Sub-agent execution is a context-management decision, not a capability question. Current task-card wire values express this as `targets.controller: "main-agent"` and optional `targets.delegates.to: "sub-agent"`. Five dimensions guide the assignment:
 
 | Dimension | Direct Phase Agent execution (`"main-agent"` wire value) | Delegated Sub-agent execution (`"sub-agent"` wire value) |
 |-----------|-------------------|-------------------|
@@ -262,6 +262,8 @@ These are engine-side requirements — they cannot be solved by MD instructions 
 ### Phase Agent Behavior
 
 - MUST complete every claimed task. MUST NOT skip tasks without explicit failure recording via `operate-queue fail`.
+- For tasks with `targets.delegates.to: "sub-agent"`, MUST dispatch through Relay, collect a committed slot result, and call `complete()` with `slot_result_ref`.
+- MUST NOT run WebSearch/WebFetch in Phase Agent context to satisfy delegated search/fetch tasks.
 - MUST run gate CLI at phase completion. MUST NOT bypass gate to declare phase complete.
 - MUST NOT let sub-agents pass gates, mutate queues, count evidence, or authorize final output.
 

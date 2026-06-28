@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-131_dlv_chain_*
-trace: dpt_disp_case-131_dlv_chain_*/_logs/_trace.jsonl
+trace: dpt_disp_case-131_dlv_chain_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -24,7 +24,7 @@ verdict: trace-jsonl
 2. Run hitl2-recorded gate → pass
 3. Run readiness-passed gate → pass（从 manifest 推导 prior gate 集合）
 4. Verify final phase terminal semantics（gate=none, chain 无 final transition）
-5. 从 `_logs/_trace.jsonl` 裁决（预期 2 pass）
+5. 从 `rb_trace.jsonl` 裁决（预期 2 pass）
 6. Cleanup
 
 ---
@@ -123,7 +123,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "gate: hitl2-recorded | passed: $PASSED | next: $NEXT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'hitl2 gate pass — advance to readiness'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'hitl2 gate pass — advance to readiness'})})"
 ```
 
 预期：`check.passed: true`，`check.next: phases/phase-readiness.md`。
@@ -147,7 +147,7 @@ PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs che
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 ROUTING=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs routing.kind)
 echo "gate: readiness-passed | passed: $PASSED | next: $NEXT | routing: $ROUTING"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'readiness gate pass — advance to final'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'readiness gate pass — advance to final'})})"
 ```
 
 预期：`check.passed: true`，`check.next: null`（final 是 terminal），`routing.kind: terminal`。
@@ -171,11 +171,11 @@ grep 'phase-final.md' DPT_FRAMEWORK/workflows/manifest.json | grep -q 'null' && 
 echo "=== Terminal semantics verified ==="
 ```
 
-## Step 5: Verdict from `_logs/_trace.jsonl`
+## Step 5: Verdict from `rb_trace.jsonl`
 
 ```bash
 echo "=== Verdict ==="
-cat $B/_logs/_trace.jsonl | node -e "
+cat $B/rb_trace.jsonl | node -e "
 const fs = require('fs');
 const lines = fs.readFileSync(0, 'utf-8').trim().split('\n').filter(l => l);
 const checks = lines.map(l => JSON.parse(l)).filter(e => e.event === 'check');

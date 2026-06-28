@@ -20,4 +20,5 @@ Deep Research Framework 命令索引。
 | 工具 | 文件 | 说明 |
 |------|------|------|
 | validate-bundle.mjs | cli/validate-bundle.mjs | Zod 校验 bundle 控制文件 |
+| validate-phase-templates.mjs | cli/validate-phase-templates.mjs | 校验 phase MD 模板保持 controller + delegates 合约 |
 | inspect-bundle.mjs | cli/inspect-bundle.mjs | bundle 目录结构完整性 |

@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-101_wff_happy_*
-trace: dpt_disp_case-101_wff_happy_*/_logs/_trace.jsonl
+trace: dpt_disp_case-101_wff_happy_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -24,7 +24,7 @@ verdict: trace-jsonl
 2. 验证 bundle 结构
 3. 写入 fixed HITL1 payload
 4. 依次运行三个 gate：instantiation-complete → hitl1-recorded → setup-ready
-5. 从 `_logs/_trace.jsonl` 裁决
+5. 从 `rb_trace.jsonl` 裁决
 6. Cleanup
 
 ---
@@ -94,7 +94,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_logs/_trace.jsonl', { gate: 'instantiation-complete', passed: $PASSED, detail: 'happy path bundle validation' });
+  m.recordCheck('$B/rb_trace.jsonl', { gate: 'instantiation-complete', passed: $PASSED, detail: 'happy path bundle validation' });
 });
 "
 ```
@@ -109,12 +109,13 @@ gate 返回的 JSON 关键字段：
 验证 HITL1 回答已记录到 profile：schema 合法、research_profile 不是 not_selected、must-answer 非空、HITL1 marker 已写入。
 
 ```bash
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle $B --to hitl1_recorded
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_logs/_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, detail: 'fixed HITL1 payload validation' });
+  m.recordCheck('$B/rb_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, detail: 'fixed HITL1 payload validation' });
 });
 "
 ```
@@ -137,7 +138,7 @@ EOF
 # The template from new-disposable-bundle.mjs includes (待填充…) markers that must be replaced.
 cat > $B/rb_plan.md << 'PLANEOF'
 ---
-plan_basename: pre_happy
+plan_basename: wff_happy
 derived_topic_count: 1
 topic_registry:
   - id: "topic-01"
@@ -145,7 +146,7 @@ topic_registry:
     title: "AI Safety"
 ---
 
-# Deep Research Plan: pre_happy
+# Deep Research Plan: wff_happy
 
 ## Goal
 
@@ -202,7 +203,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_logs/_trace.jsonl', { gate: 'setup-ready', passed: $PASSED, detail: 'pre-wave0 structural consistency' });
+  m.recordCheck('$B/rb_trace.jsonl', { gate: 'setup-ready', passed: $PASSED, detail: 'pre-wave0 structural consistency' });
 });
 "
 ```
@@ -218,7 +219,7 @@ gate 返回的 JSON 关键字段：
 ```bash
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.verdict('$B/_logs/_trace.jsonl');
+  m.verdict('$B/rb_trace.jsonl');
 });
 "
 ```

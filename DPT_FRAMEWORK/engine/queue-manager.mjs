@@ -45,10 +45,10 @@
 //   createQueue, loadQueue, saveQueue
 //   enqueue, claim, complete, fail, preempt
 //   inspect, render, makeItem
-//   QueueItemSchema, QUEUE
+//   QueueItemSchema, QUEUE, OutputDeclarationLedgerRecord, LEDGER_FILE
 
 import { z } from 'zod';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 
@@ -58,6 +58,7 @@ import { createHash } from 'node:crypto';
 
 import { createTrace } from './trace.mjs';
 import { createRunLogger, readBundleName } from './logger.mjs';
+import { SlotResult, validateRuntimeReceipt, resolveSlotFromResultRef } from './subagent-relay.mjs';
 
 let _trace = null;
 let _bundleDir = null;
@@ -106,7 +107,7 @@ export const QueueItemSchema = QueueWorkUnitSchema;
 export const QUEUE = {
   FILE:       'rb_queue.json',
   PROJECTION: '_cache/agentic-queue/current-task.md',
-  TRACE:      '_logs/_trace_agq_cli.jsonl',
+  TRACE:      'rb_trace.jsonl',
 };
 const SLOT_NAMES = ['slot_1_current', 'slot_2_next', 'slot_3_pending', 'slot_4_pending', 'slot_5_tail'];
 const PENDING_SLOTS = SLOT_NAMES.slice(1);
@@ -138,6 +139,7 @@ const QueueResultSchema = z.object({
   receipt: z.string().optional(),
   summary: z.string().default(''),
   writes: z.array(z.string()).default([]),
+  slot_result_ref: z.string().optional(),
 });
 
 const QueueFailureSchema = z.object({
@@ -294,6 +296,147 @@ function refill(queue) {
     }
   }
   return validateQueue(touchQueue(syncQueueHealth(q)));
+}
+
+// ============================================================
+// Internal: output declaration ledger (AGO-003, AGO-004)
+// ============================================================
+
+export const OutputDeclarationLedgerRecord = z.object({
+  declared_at: z.string(),
+  work_id: z.string().min(1),
+  producer_rule: z.string().min(1),
+  slot_result_ref: z.string().min(1),
+  runtime_receipt_ref: z.string(),
+  output_files: z.array(z.object({
+    path: z.string().min(1),
+    role: z.string(),
+    source_url: z.string().optional(),
+    source_slug: z.string().optional(),
+  })),
+  cache_trails: z.array(z.string()),
+});
+
+const LEDGER_FILE = 'rb_output_declarations.jsonl';
+
+function appendOutputDeclarationLedger(bundleDir, current, slotResultRef, slotResult) {
+  const file = path.join(bundleDir, LEDGER_FILE);
+  mkdirSync(bundleDir, { recursive: true });
+  const receiptRef = slotResultRef.replace(/\/result\.json$/, '/runtime-receipt.jsonl');
+  const record = {
+    declared_at: new Date().toISOString(),
+    work_id: current.work_id,
+    producer_rule: current.producer_rule || 'unknown',
+    slot_result_ref: slotResultRef,
+    runtime_receipt_ref: receiptRef,
+    output_files: slotResult.output_files || [],
+    cache_trails: slotResult.cache_trails || [],
+  };
+  OutputDeclarationLedgerRecord.parse(record);
+  appendFileSync(file, JSON.stringify(record) + '\n');
+  traceEntry('ledger_appended', { source: 'agq-ledger', work_id: current.work_id, slot_result_ref: slotResultRef });
+  logEvent('info', 'ledger_append', { work_id: current.work_id });
+}
+
+// ============================================================
+// Internal: delegated completion validation (AGQ-017)
+// ============================================================
+
+function validateDelegatedCompletion(current, parsedResult, bundleDir) {
+  const issues = [];
+
+  // 1. Require slot_result_ref
+  if (!parsedResult.slot_result_ref) {
+    issues.push('delegated task requires slot_result_ref — committed relay slot result provenance missing');
+    return { passed: false, inspect: issues, advice: issues.join('; ') };
+  }
+
+  // 2. Load committed slot result from disk
+  let slotResult;
+  try {
+    const resultPath = path.join(bundleDir, parsedResult.slot_result_ref);
+    if (!existsSync(resultPath)) {
+      issues.push(`committed slot result not found: ${parsedResult.slot_result_ref}`);
+      return { passed: false, inspect: issues, advice: issues.join('; ') };
+    }
+    const raw = JSON.parse(readFileSync(resultPath, 'utf-8'));
+    const parsed = SlotResult.safeParse(raw);
+    if (!parsed.success) {
+      issues.push(`slot result schema invalid: ${parsed.error.message}`);
+      return { passed: false, inspect: issues, advice: issues.join('; ') };
+    }
+    slotResult = parsed.data;
+  } catch (err) {
+    issues.push(`failed to read slot result: ${err.message}`);
+    return { passed: false, inspect: issues, advice: issues.join('; ') };
+  }
+
+  // 3. Validate output_files[] and cache_trails[] present
+  if (!slotResult.output_files) {
+    issues.push('slot result missing output_files[] declaration');
+  }
+  if (!slotResult.cache_trails) {
+    issues.push('slot result missing cache_trails[] declaration');
+  }
+  if (issues.length > 0) return { passed: false, inspect: issues, advice: issues.join('; ') };
+
+  // 4. Pure runtime receipt validation
+  let slotForReceipt;
+  try {
+    slotForReceipt = resolveSlotFromResultRef(parsedResult.slot_result_ref, bundleDir);
+  } catch (err) {
+    issues.push(`cannot resolve slot from result ref: ${err.message}`);
+    return { passed: false, inspect: issues, advice: issues.join('; ') };
+  }
+  const receiptCheck = validateRuntimeReceipt(slotForReceipt, bundleDir);
+  if (!receiptCheck.passed) {
+    issues.push(`runtime receipt invalid: ${receiptCheck.error}`);
+    return { passed: false, inspect: issues, advice: issues.join('; ') };
+  }
+
+  // 5. Validate output_files[]: bundle-relative, files exist, no escape
+  for (const entry of slotResult.output_files) {
+    if (path.isAbsolute(entry.path) || entry.path.includes('..')) {
+      issues.push(`output_files path escapes bundle: ${entry.path}`);
+      continue;
+    }
+    if (!existsSync(path.join(bundleDir, entry.path))) {
+      issues.push(`declared output file missing: ${entry.path}`);
+    }
+  }
+  if (issues.length > 0) return { passed: false, inspect: issues, advice: issues.join('; ') };
+
+  // 6. Validate cache_trails[]: bundle-relative _cache/ leaf, each contains 3 files
+  for (const trail of slotResult.cache_trails) {
+    if (path.isAbsolute(trail) || trail.includes('..')) {
+      issues.push(`cache_trails path escapes bundle: ${trail}`);
+      continue;
+    }
+    const trailFull = path.join(bundleDir, trail);
+    if (!existsSync(trailFull)) {
+      issues.push(`cache trail directory missing: ${trail}`);
+      continue;
+    }
+    for (const required of ['websearch.json', 'page.md', 'meta.json']) {
+      if (!existsSync(path.join(trailFull, required))) {
+        issues.push(`cache trail ${trail} missing ${required}`);
+      }
+    }
+  }
+  if (issues.length > 0) return { passed: false, inspect: issues, advice: issues.join('; ') };
+
+  // 7. Check standard receipt/writes consistency with declared output files
+  if (parsedResult.writes && parsedResult.writes.length > 0) {
+    const declared = new Set(slotResult.output_files.map((f) => f.path));
+    for (const w of parsedResult.writes) {
+      if (!declared.has(w)) {
+        issues.push(`write receipt declares ${w} but not in slot result output_files`);
+      }
+    }
+  }
+  if (issues.length > 0) return { passed: false, inspect: issues, advice: issues.join('; ') };
+
+  return { passed: true, slotResult };
 }
 
 // ============================================================
@@ -503,6 +646,21 @@ export function complete(queue, result, bundleDir = process.cwd()) {
   if (!current || current.work_id !== parsedResult.work_id) {
     throw new Error(`complete expected current work_id ${current?.work_id || 'none'}, got ${parsedResult.work_id}`);
   }
+
+  // ── Delegated task: validate relay provenance + declarations (AGQ-017) ──
+  const isDelegated = current.targets?.delegates?.to === 'sub-agent';
+  let delegationResult = null;
+  if (isDelegated) {
+    const delCheck = validateDelegatedCompletion(current, parsedResult, bundleDir);
+    traceEntry('receipt_checked', { source: 'agq-complete', work_id: current.work_id, delegated: true, passed: delCheck.passed });
+    if (!delCheck.passed) {
+      traceEntry('check', { source: 'agq-complete', step: 'delegated_provenance', passed: false, detail: delCheck.inspect.join('; ') });
+      return { queue: validateQueue(touchQueue(q)), feedback: delCheck };
+    }
+    delegationResult = delCheck;
+  }
+
+  // ── Standard receipt check ──
   const receipt = parsedResult.receipt || current.completion_receipt;
   const receiptCheck = checkReceipts(q, { ...current, required_receipts: [receipt] }, bundleDir);
   traceEntry('receipt_checked', { source: 'agq-complete', work_id: current.work_id, passed: receiptCheck.passed, receipt });
@@ -518,6 +676,12 @@ export function complete(queue, result, bundleDir = process.cwd()) {
   q = promote(q);
   q = refill(q);
   render(q, bundleDir);
+
+  // ── Delegated success: append output declaration ledger ──
+  if (isDelegated && delegationResult?.slotResult) {
+    appendOutputDeclarationLedger(bundleDir, current, parsedResult.slot_result_ref, delegationResult.slotResult);
+  }
+
   return { queue: validateQueue(touchQueue(q)), feedback: check(true, `Completed ${current.work_id}`) };
 }
 

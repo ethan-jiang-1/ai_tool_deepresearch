@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-305_indet_*
-trace: dpt_disp_case-305_indet_*/_logs/_trace.jsonl
+trace: dpt_disp_case-305_indet_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -30,12 +30,12 @@ for o in request_view_revision repair stop_blocked; do
   echo "$o → kind=$K"
   [ "$K" != "invalid_input" ] && OK=false
 done
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'chain-indeterminate-all',passed:$OK,detail:'indeterminate → invalid_input'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'chain-indeterminate-all',passed:$OK,detail:'indeterminate → invalid_input'})})"
 
 echo "Chain keys:"
 node -e "import('$REPO_ROOT/DPT_FRAMEWORK/engine/transition-chain.mjs').then(m=>{const c=m.loadChain('$REPO_ROOT/DPT_FRAMEWORK/workflows/transitions.chain.json');console.log(Object.keys(c['phases/phase-hitl2.md']).join(', '))})"
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/_logs/_trace.jsonl'))"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/rb_trace.jsonl'))"
 rm -rf $B
 ```
 

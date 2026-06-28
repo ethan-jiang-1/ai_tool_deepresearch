@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-201_agql_seed_
-trace: dpt_disp_case-201_agql_seed_*/_logs/_trace.jsonl
+trace: dpt_disp_case-201_agql_seed_*/rb_trace.jsonl
 verdict: trace-jsonl
 req: AGQ-010
 ---
@@ -17,7 +17,19 @@ req: AGQ-010
 
 由 coding agent 在真实 disposable experiment bundle 中执行。Agent 必须加载 `phase-seed-topics.md` 并按其 §3 三阶段指令执行：从灌料（enqueue task cards）到执行循环（claim→execute→complete）到收尾（gate）。所有产出必须来自实际的 `operate-queue` CLI 调用、文件写入和 gate 输出；禁止 mock 返回、跳过 queue 直接写文件、手写假 trace、或用 console output 代替 trace 裁决。
 
-# case-61-standard-seedtopics-queue-loop
+
+## Reality Distance Ledger
+
+| 维度 | 声明 |
+|------|------|
+| **Runtime context** | disposable bundle，`new-disposable-bundle.mjs` 创建 |
+| **Framework path** | `operate-queue.mjs` CLI, gate CLI, `wff-playbook-utils.mjs` |
+| **Fixture input** | task card JSON, registry, status 在 playbook 内写入 — Engine-layer fixture |
+| **Agent actor** | 无（fixture-backed）|\n| **External calls** | 无 |
+| **Verdict source** | `rb_trace.jsonl` `check` events |
+| **不证明** | Agent queue 决策、semantic work — 仅证明 queue loop + gate 机械结构 |
+
+# case-201-standard-seedtopics-queue-loop
 
 验证 Agent 通过 Agentic Queue 物化 3 个 seed topic 文件，产出文件遵循 `{slug}.md` 命名（slug 含 NN_ 前缀），gate pass 且 trace 可审计。
 
@@ -28,7 +40,7 @@ req: AGQ-010
 3. Agent 执行 §3.2 执行循环：`operate-queue claim` → execute（Phase Agent 写入 seed topic 文件；`main-agent` 仅是 CLI actor wire value）→ `operate-queue complete` ×3
 4. Agent 执行 §3.3 收尾：`check-gate-seed-topics-ready.mjs` → gate pass
 5. 命名约定验证（见下方 Checklist）
-6. 从 `_logs/_trace.jsonl` 裁决
+6. 从 `rb_trace.jsonl` 裁决
 7. Cleanup
 
 ---
@@ -266,7 +278,7 @@ done
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'queue-driven seed topics materialized — 3 files with {slug}.md naming, required fields, gate pass'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'queue-driven seed topics materialized — 3 files with {slug}.md naming, required fields, gate pass'})})"
 ```
 
 预期：`check.passed: true`，`check.next: phases/phase-wave0.md`。
@@ -301,7 +313,7 @@ grep '原始语境约束' $B/seed_topics/01_claude-code-cli-tool.md
 ## Step 7: 从 trace 裁决
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
 ```
 
 预期 verdict：**PASS**。trace 含 `queue_enqueued` ×3、`queue_claimed` ×3、`queue_completed` ×3、`gate_attempt(passed: true)`。

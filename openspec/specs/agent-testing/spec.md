@@ -12,11 +12,11 @@ gate-loop 的 Agent 辅助测试 playbook SHALL 为三级: simple (Gate + 1 node
 
 #### Scenario: Simple test runs independently
 - **WHEN** 测试者运行 `experiments_playbook/exp_gate-loop/test-simple.md`
-- **THEN** 创建 `dpt_disp_gl_simple/`, 写入 `_trace_gl_simple.jsonl`, 基于 `check` events 验证 PASS (~4 events)
+- **THEN** 创建 `dpt_disp_gl_simple/`, 写入 `rbrb_trace.jsonl`, 基于 `check` events 验证 PASS (~4 events)
 
 #### Scenario: Medium test runs independently
 - **WHEN** 测试者运行 `experiments_playbook/exp_gate-loop/test-medium.md`
-- **THEN** 使用 `dpt_disp_gl_medium/` 和 `_trace_gl_medium.jsonl`, 与 simple 隔离
+- **THEN** 使用 `dpt_disp_gl_medium/` 和 `rbrb_trace.jsonl`, 与 simple 隔离
 
 #### Scenario: Complex test runs independently
 - **WHEN** 测试者运行 `experiments_playbook/exp_gate-loop/test-complex.md`
@@ -26,19 +26,19 @@ gate-loop 的 Agent 辅助测试 playbook SHALL 为三级: simple (Gate + 1 node
 `DPT_FRAMEWORK/engine/trace.mjs` 模块 SHALL 提供 `createTrace(filePath, options?)` 工厂函数，每次调用返回独立的 trace 实例（无共享状态）。每个测试脚本 SHALL 调用 `createTrace()` 创建自己的 trace 实例。Node SHALL 通过 `trace.traceEntry()` 自动 trace, 不硬编码文件名。
 
 #### Scenario: 每个测试独立 trace 文件
-- **WHEN** simple test 设 `const trace = createTrace('dpt_disp_gl_simple/_trace_gl_simple.jsonl')` 且 medium test 设 `const trace = createTrace('dpt_disp_gl_medium/_trace_gl_medium.jsonl')`
-- **THEN** simple test 的 event 只写 `_trace_gl_simple.jsonl`, medium 只写 `_trace_gl_medium.jsonl`, 无交叉污染
+- **WHEN** simple test 设 `const trace = createTrace('dpt_disp_gl_simple/rbrb_trace.jsonl')` 且 medium test 设 `const trace = createTrace('dpt_disp_gl_medium/rbrb_trace.jsonl')`
+- **THEN** simple test 的 event 只写 `rbrb_trace.jsonl`, medium 只写 `rbrb_trace.jsonl`, 无交叉污染
 
 ### Requirement: gate-fork 三级测试 playbook (AGT-002)
 gate-fork 的 Agent 辅助测试 playbook SHALL 为三级 (simple/medium/complex), 每级使用独立 disposable bundle (`dpt_disp_gf_<level>/`) 和独立 trace (`_trace_gf_<level>.jsonl`)。SHALL 复用 `DPT_FRAMEWORK/engine/trace.mjs` 的 `createTrace()` 工厂 API。
 
 #### Scenario: Simple gate-fork test 验证单分支路由
 - **WHEN** 测试者运行 `experiments_playbook/exp_gate-fork/test-simple.md`
-- **THEN** 创建 `dpt_disp_gf_simple/`, 写入 `_trace_gf_simple.jsonl`, 基于 `check` events 验证 Gate 单分支路由 PASS (~4 events)
+- **THEN** 创建 `dpt_disp_gf_simple/`, 写入 `rbrb_trace.jsonl`, 基于 `check` events 验证 Gate 单分支路由 PASS (~4 events)
 
 #### Scenario: Medium gate-fork test 验证分叉 + 汇聚修复
 - **WHEN** 测试者运行 `experiments_playbook/exp_gate-fork/test-medium.md`
-- **THEN** 使用 `dpt_disp_gf_medium/` 和 `_trace_gf_medium.jsonl`, 验证 Fork 多路分发 + Converge 共享修复, 与 simple 隔离 (~9 events)
+- **THEN** 使用 `dpt_disp_gf_medium/` 和 `rbrb_trace.jsonl`, 验证 Fork 多路分发 + Converge 共享修复, 与 simple 隔离 (~9 events)
 
 #### Scenario: Complex gate-fork test 覆盖完整 pipeline + C&I
 - **WHEN** 测试者运行 `experiments_playbook/exp_gate-fork/test-complex.md`
@@ -147,29 +147,29 @@ weight 字段 SHALL 在 frontmatter 中紧接 `case` 字段之后。未显式指
 
 ### Requirement: Unified trace file naming (AGT-007)
 
-所有 command experiment playbook SHALL 使用统一的 trace 文件名 `_trace.jsonl`（位于 bundle 目录根），不再使用实验族差异化命名（如 `_trace_agq_cli.jsonl`、`_trace_subagent.jsonl`、`_trace_gf_simple.jsonl`）。
+所有 command experiment playbook SHALL 使用统一的 trace 文件名 `rb_trace.jsonl`（位于 bundle 目录根），不再使用实验族差异化命名（如 `rbrb_trace.jsonl`、`rbrb_trace.jsonl`、`rbrb_trace.jsonl`）。
 
 Bundle 目录已提供物理隔离（且本 change 引入随机后缀），trace 文件不需再靠文件名区分实验族来源。
 
-所有 playbook 的以下位置 SHALL 使用统一 `_trace.jsonl`：
+所有 playbook 的以下位置 SHALL 使用统一 `rb_trace.jsonl`：
 - inline `.mjs` 中 `createTrace()` 调用的路径参数
 - verdict 步骤中读取 trace JSONL 的路径
-- frontmatter `trace:` 字段（从精确路径更新为 `dpt_disp_<short>_<case>_*/_trace.jsonl` 前缀模式）
+- frontmatter `trace:` 字段（从精确路径更新为 `dpt_disp_<short>_<case>_*/rb_trace.jsonl` 前缀模式）
 
-#### Scenario: All playbooks write to _trace.jsonl
+#### Scenario: All playbooks write to rb_trace.jsonl
 
 - **WHEN** 任意 playbook 执行 inline `.mjs` 中的 `createTrace(...)`
-- **THEN** trace 文件写入路径为 `<bundle>/_trace.jsonl`
+- **THEN** trace 文件写入路径为 `<bundle>/rbrb_trace.jsonl`
 
-#### Scenario: Verdict reads from _trace.jsonl
+#### Scenario: Verdict reads from rb_trace.jsonl
 
 - **WHEN** playbook 执行 verdict 步骤
-- **THEN** 代码从 `<bundle>/_trace.jsonl` 读取 trace events 并裁决
+- **THEN** 代码从 `<bundle>/rbrb_trace.jsonl` 读取 trace events 并裁决
 
 #### Scenario: Frontmatter trace field uses unified name
 
 - **WHEN** 人打开任意 playbook 查看 frontmatter
-- **THEN** `trace:` 字段指向 `_trace.jsonl`（含 bundle 目录前缀），不再包含实验族特定命名
+- **THEN** `trace:` 字段指向 `rb_trace.jsonl`（含 bundle 目录前缀），不再包含实验族特定命名
 
 ### Requirement: Verdict output uses ANSI color (AGT-008)
 

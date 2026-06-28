@@ -8,13 +8,25 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-11_gf_simple
-trace: dpt_disp_case-11_gf_simple/_logs/_trace.jsonl
+trace: dpt_disp_case-11_gf_simple/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
 ## Execution Contract
 
 由 coding agent 在真实 `dpt_disp_*` bundle 中执行。实验结果必须来自实际文件写入、Engine 调用和 trace event；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
+
+## Reality Distance Ledger
+
+| 维度 | 声明 |
+|------|------|
+| **Runtime context** | disposable bundle，`new-disposable-bundle.mjs` 创建 |
+| **Framework path** | `forkGate()` from `DPT_FRAMEWORK/engine/gate-fork.mjs`（无 CLI 包装，函数即生产路径） |
+| **Fixture input** | state/rule/branch 对象在 playbook 内构造 — Engine-layer fixture |
+| **Agent actor** | 无（fixture-backed） |
+| **External calls** | 无 |
+| **Verdict source** | `rb_trace.jsonl` `check` events |
+| **不证明** | Agent gate 判断、workflow 路由 — 仅证明 forkGate 四种返回 contract |
 
 # case-11-light-four-returns
 
@@ -49,7 +61,7 @@ cat > "$B/t.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/_logs/_trace.jsonl');
+const trace = createTrace(__dirname + '/rb_trace.jsonl');
 trace.traceInit('gf-playbook/simple', { source: 'gf-playbook/simple' });
 JS
 node "$B/t.mjs" > /dev/null 2>&1
@@ -67,7 +79,7 @@ import { z } from 'zod';
 import { forkGate } from '../DPT_FRAMEWORK/engine/gate-fork.mjs';
 
 const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/_logs/_trace.jsonl');
+const trace = createTrace(__dirname + '/rb_trace.jsonl');
 
 const SRC = 'gf-playbook/simple';
 
@@ -166,7 +178,7 @@ import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/_logs/_trace.jsonl');
+const trace = createTrace(__dirname + '/rb_trace.jsonl');
 const raw = readFileSync(trace.traceFilePath(), 'utf-8').trim();
 const events = JSON.parse('[' + raw.split('\n').join(',') + ']');
 const checks = events.filter(x => x.event === 'check');

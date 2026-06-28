@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-211_agql_w0_happy_
-trace: dpt_disp_case-211_agql_w0_happy_*/_logs/_trace.jsonl
+trace: dpt_disp_case-211_agql_w0_happy_*/rb_trace.jsonl
 verdict: trace-jsonl
 req: AGQ-008
 ---
@@ -305,7 +305,7 @@ PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs che
 echo "=== PASSED=$PASSED (expected: true) ==="
 test "$PASSED" = "true" && echo "PASS: gate passed" || echo "FAIL"
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'happy path: seed_topics→wave0 queue-loop→sub-agent real search→backfill→gate pass'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'happy path: seed_topics→wave0 queue-loop→sub-agent real search→backfill→gate pass'})})"
 ```
 
 预期：`check.passed: true`，`check.next: phases/phase-wave1.md`。
@@ -327,7 +327,7 @@ for f in url title retrieved_date topic_tag; do
 done
 
 echo "=== V4-V6: queue trace events ==="
-grep -c 'queue_' $B/_logs/_trace_agq_cli.jsonl
+grep -c 'queue_' $B/rb_trace.jsonl
 
 echo "=== V7: gate_attempt in rb_trace.jsonl ==="
 grep -c 'gate_attempt' $B/rb_trace.jsonl
@@ -346,7 +346,7 @@ find $B/_cache -type d 2>/dev/null | head -10
 ## Final Verdict
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
 ```
 
 预期：PASS。

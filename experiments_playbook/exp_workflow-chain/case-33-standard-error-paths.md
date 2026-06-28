@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-33_wc_complex
-trace: dpt_disp_case-33_wc_complex/_logs/_trace.jsonl
+trace: dpt_disp_case-33_wc_complex/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -54,7 +54,7 @@ import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
-const trace = createTrace(B+'/_logs/_trace.jsonl', { consoleEcho: true });
+const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
 const SRC = 'wl-complex';
 trace.traceInit('wl-complex: MD error handling', { source: SRC });
 
@@ -80,7 +80,7 @@ node $B/step_missing.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('missing:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
@@ -105,7 +105,7 @@ import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
-const trace = createTrace(B+'/_logs/_trace.jsonl', { consoleEcho: true });
+const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
 const SRC = 'wl-complex';
 
 const runtime = createWorkflowRuntime('test', NODES_DIR);
@@ -130,7 +130,7 @@ node $B/step_cycle.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('cycle:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
@@ -155,7 +155,7 @@ import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
-const trace = createTrace(B+'/_logs/_trace.jsonl', { consoleEcho: true });
+const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
 const SRC = 'wl-complex';
 
 const runtime = createWorkflowRuntime('test', NODES_DIR);
@@ -180,7 +180,7 @@ node $B/step_malformed.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('malformed:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
@@ -203,7 +203,7 @@ import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
-const trace = createTrace(B+'/_logs/_trace.jsonl', { consoleEcho: true });
+const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
 const SRC = 'wl-complex';
 
 const runtime = createWorkflowRuntime('test', NODES_DIR);
@@ -222,7 +222,7 @@ node $B/step_recovery.mjs $B $B/exp/nodes
 
 # MD 读 trace 裁决
 node -e "
-const e=require('fs').readFileSync('$B/_logs/_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
+const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const c=e.filter(x=>x.event==='check'&&x.step.startsWith('recovery:'));
 c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
 const ok=c.length===2&&c.every(x=>x.passed);
@@ -243,7 +243,7 @@ MD 统计全部 5 个 step（4 个 load + 3×3 错误 checks + 2 recovery = 11 c
 cat > $B/verify.mjs << 'JS2'
 import { readFileSync } from 'node:fs';
 const B=process.argv[2];
-const lines = readFileSync(B+'/_logs/_trace.jsonl','utf-8').trim().split('\n');
+const lines = readFileSync(B+'/rb_trace.jsonl','utf-8').trim().split('\n');
 const events = lines.map(JSON.parse);
 const checks = events.filter(e => e.event === 'check');
 const passed = checks.filter(e => e.passed);

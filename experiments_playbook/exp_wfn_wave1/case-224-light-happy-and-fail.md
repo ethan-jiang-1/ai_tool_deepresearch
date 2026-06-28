@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_224_iw_*
-trace: dpt_disp_224_iw_*/_logs/_trace.jsonl
+trace: dpt_disp_224_iw_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -61,10 +61,9 @@ B=$(echo dpt_disp_224_iw_*)
 
 # Per-topic rich MD files
 for slug in 01_test-alpha 02_test-beta; do
-  num=$(echo $slug | cut -c1-2)
-  cat > "$B/reference/${num}-test-source.md" << 'EOF'
+  cat > "$B/reference/${slug}-source.md" << 'EOF'
 # Test Source
-- source_url: https://example.com/source
+- source_url: https://arxiv.org/abs/2401.00001
 - acceptance_status: accepted
 - source_type: secondary
 - tier: Tier 2
@@ -109,8 +108,8 @@ cat > "$B/reference/_INDEX.md" << 'EOF'
 # Reference Index
 | ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 01-test-source.md | secondary | practitioner | Tier 2 | 01 | wave1_topic | accepted | 2026-06-26 |
-| 02-test-source.md | secondary | practitioner | Tier 2 | 02 | wave1_topic | accepted | 2026-06-26 |
+| 01_test-alpha-source.md | secondary | practitioner | Tier 2 | 01_test-alpha | wave1_topic | accepted | 2026-06-26 |
+| 02_test-beta-source.md | secondary | practitioner | Tier 2 | 02_test-beta | wave1_topic | accepted | 2026-06-26 |
 EOF
 
 echo "Happy path artifacts created."
@@ -129,10 +128,10 @@ import { writeFileSync, unlinkSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const B = process.argv[2];
-const t = B + '/_logs/_trace.jsonl';
+const t = B + '/rb_trace.jsonl';
 const ref = join(B, 'reference');
 
-const { recordCheck, verdict } = await import('./experiments_env/shared/wff-playbook-utils.mjs');
+const { recordCheck, verdict } = await import('../experiments_env/shared/wff-playbook-utils.mjs');
 
 // ── Happy path ──
 const happyOut = execSync(`node DPT_FRAMEWORK/cli/inspect-wave1-output.mjs --bundle ${B} || true`, { encoding: 'utf8' });
@@ -144,10 +143,10 @@ await recordCheck(t, {
 
 // ── Fail path: introduce 3 errors ──
 // 1. Remove topic 02 reference file
-if (existsSync(join(ref, '02-test-source.md'))) unlinkSync(join(ref, '02-test-source.md'));
+if (existsSync(join(ref, '02_test-beta-source.md'))) unlinkSync(join(ref, '02_test-beta-source.md'));
 
 // 2. Corrupt topic 01 metadata (remove why_it_matters)
-const f01 = join(ref, '01-test-source.md');
+const f01 = join(ref, '01_test-alpha-source.md');
 const { readFileSync } = await import('node:fs');
 let c01 = readFileSync(f01, 'utf8');
 c01 = c01.replace(/- why_it_matters:.*\n/, '');

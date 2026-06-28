@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-152_w2_repair_*
-trace: dpt_disp_case-152_w2_repair_*/_logs/_trace.jsonl
+trace: dpt_disp_case-152_w2_repair_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -179,7 +179,7 @@ cat $B/artifacts/wave2/synthesis.md
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:false,detail:'attempt 1: all dead links, cross_field fail'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,expected:false,detail:'attempt 1: all dead links, cross_field fail'})})"
 ```
 
 预期：`check.passed: false`。inspect 列出死链接。
@@ -230,7 +230,7 @@ GATE_OUTPUT2=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bund
 echo "$GATE_OUTPUT2"
 PASSED2=$(echo "$GATE_OUTPUT2" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "gate: wave2-complete (attempt 2) | passed: $PASSED2"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED2,detail:'attempt 2: repaired — valid links added, gate pass'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'wave2-complete',passed:$PASSED2,detail:'attempt 2: repaired — valid links added, gate pass'})})"
 ```
 
 预期：`check.passed: true`。
@@ -239,13 +239,13 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 ```bash
 echo "=== Trace evidence ==="
-cat $B/_logs/_trace.jsonl | while read line; do
+cat $B/rb_trace.jsonl | while read line; do
   echo "$line" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);const icon=j.passed?'\x1b[32mPASS\x1b[0m':'\x1b[31mFAIL\x1b[0m';console.log(icon,j.gate,'|',j.detail)})"
 done
 
 echo ""
 echo "=== Verdict (mode: last) ==="
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl', 'last')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl', 'last')})"
 ```
 
 

@@ -2,7 +2,7 @@
 // @impl FRE-001: Canonical test location tests/engine/queue-manager.test.mjs
 
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
@@ -13,6 +13,10 @@ import {
   preempt, checkReceipts, render, loadQueue, saveQueue, makeItem,
 } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
 import { QueueSchema, TargetSpecSchema } from '../../DPT_FRAMEWORK/schema/contracts/queue.mjs';
+import {
+  stageSubagentSlots, commitSlotResult, writeSlotStatus,
+  createSlot, SlotResult,
+} from '../../DPT_FRAMEWORK/engine/subagent-relay.mjs';
 
 function tempBundle() {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'agq-'));
@@ -354,6 +358,255 @@ describe('Receipts, projection, and CLI (AGQ-004, AGQ-005, AGQ-006)', () => {
       const loaded = loadQueue(dir);
       assert.equal(loaded.active_window.slot_1_current.work_id, 'work-1');
       assert.equal(loaded.projection_path, QUEUE.PROJECTION);
+    } finally {
+      cleanup(dir);
+    }
+  });
+});
+
+// ── Stage 2: Delegated Queue Completion ──
+
+function baseState(overrides = {}) {
+  return {
+    current_gate: 'wave0_complete', ref_count: 5, ref_floor: 5,
+    topicReadiness: 'ready', ...overrides,
+  };
+}
+
+function writeRuntimeReceipt(baseDir, slot, overrides = {}) {
+  const receiptFile = path.join(baseDir, slot.receiptPath);
+  mkdirSync(path.dirname(receiptFile), { recursive: true });
+  const common = {
+    slotKey: slot.key,
+    roleAgentKey: slot.roleAgentKey,
+    receiptNonce: slot.receiptNonce,
+    platform: overrides.platform || 'codex',
+    runtimeMode: overrides.runtimeMode || 'project-agent',
+  };
+  writeFileSync(receiptFile, [
+    JSON.stringify({ event: 'agent_runtime_started', ...common }),
+    JSON.stringify({ event: 'agent_result_ready', ...common }),
+  ].join('\n') + '\n');
+}
+
+function setupDelegatedFixture(bundleDir) {
+  // Create a slot with committed result, receipt, and cache
+  const [slot] = stageSubagentSlots(baseState(), bundleDir);
+  writeRuntimeReceipt(bundleDir, slot);
+  // Import receipt (needed for commitSlotResult to work with running status)
+  writeSlotStatus(slot, 'running', bundleDir);
+  // Create output file
+  const refDir = path.join(bundleDir, 'reference');
+  mkdirSync(refDir, { recursive: true });
+  writeFileSync(path.join(refDir, 'source.md'), '# Source\n\nKey Facts: real facts.\n');
+  // Create cache leaf with 3 files
+  const cacheLeaf = path.join(bundleDir, '_cache', 'wave0', 'primary', '01_test', 's01_source');
+  mkdirSync(cacheLeaf, { recursive: true });
+  writeFileSync(path.join(cacheLeaf, 'websearch.json'), '[]');
+  writeFileSync(path.join(cacheLeaf, 'page.md'), '# Page');
+  writeFileSync(path.join(cacheLeaf, 'meta.json'), '{"url":"https://example.com"}');
+  // Commit slot result with declaration
+  const relay = commitSlotResult(slot, bundleDir, {
+    slotKey: slot.key, roleAgentKey: slot.roleAgentKey, status: 'done',
+    summary: 'Done', evidenceCount: 1,
+    references: [{ title: 'T', url: 'https://example.com/a', quote: 'q', relevance: 'r' }],
+    confidence: 0.9, notes: [],
+    output_files: [
+      { path: 'reference/source.md', role: 'reference', source_url: 'https://example.com/a' },
+    ],
+    cache_trails: ['_cache/wave0/primary/01_test/s01_source/'],
+  }, {
+    platform: 'fixture',
+    runtimeAgentId: 'fixture-agent-1',
+  });
+  return { slot, relay };
+}
+
+describe('Delegated queue completion (Stage 2)', () => {
+  it('non-delegated complete() works without relay provenance', () => {
+    const dir = tempBundle();
+    try {
+      let queue = createQueue('nondel');
+      const workItem = makeItem({
+        work_id: 'work-direct',
+        title: 'Direct work',
+        targets: { controller: 'main-agent' },
+        completion_receipt: 'none',
+      });
+      queue = enqueue(queue, workItem);
+      const { queue: q2, item } = claim(queue, { actor: 'main-agent' });
+      assert.ok(item);
+      const result = complete(q2, { work_id: 'work-direct', receipt: 'none', summary: 'ok' }, dir);
+      assert.equal(result.feedback.passed, true);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('delegated complete() rejects missing slot_result_ref', () => {
+    const dir = tempBundle();
+    try {
+      let queue = createQueue('del1');
+      const workItem = makeItem({
+        work_id: 'work-del',
+        title: 'Delegated work',
+        targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake' } },
+        completion_receipt: 'none',
+      });
+      queue = enqueue(queue, workItem);
+      const { queue: q2 } = claim(queue, { actor: 'main-agent' });
+      const result = complete(q2, { work_id: 'work-del', receipt: 'none' }, dir);
+      assert.equal(result.feedback.passed, false);
+      assert.ok(result.feedback.advice.includes('slot_result_ref'));
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('delegated complete() rejects uncommitted slot result', () => {
+    const dir = tempBundle();
+    try {
+      let queue = createQueue('del2');
+      const workItem = makeItem({
+        work_id: 'work-del2',
+        title: 'Delegated work 2',
+        targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake' } },
+        completion_receipt: 'none',
+      });
+      queue = enqueue(queue, workItem);
+      const { queue: q2 } = claim(queue, { actor: 'main-agent' });
+      // slot_result_ref points to a non-existent file
+      const result = complete(q2, {
+        work_id: 'work-del2',
+        receipt: 'none',
+        slot_result_ref: '_subagents/wave_01/slot_00/result.json',
+      }, dir);
+      assert.equal(result.feedback.passed, false);
+      assert.ok(result.feedback.advice.includes('not found'));
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('delegated complete() succeeds with full provenance and appends ledger', () => {
+    const dir = tempBundle();
+    try {
+      const { slot, relay } = setupDelegatedFixture(dir);
+      assert.equal(relay.ok, true);
+
+      let queue = createQueue('del-ok');
+      const workItem = makeItem({
+        work_id: 'work-del-ok',
+        title: 'Delegated intake',
+        targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake' } },
+        completion_receipt: 'none',
+      });
+      queue = enqueue(queue, workItem);
+      const { queue: q2 } = claim(queue, { actor: 'main-agent' });
+
+      const result = complete(q2, {
+        work_id: 'work-del-ok',
+        receipt: 'none',
+        summary: 'Completed via relay',
+        slot_result_ref: slot.resultPath,
+      }, dir);
+
+      assert.equal(result.feedback.passed, true, `Expected pass but got: ${result.feedback.advice}`);
+
+      // Ledger must exist and contain the declaration
+      const ledgerPath = path.join(dir, 'rb_output_declarations.jsonl');
+      assert.ok(existsSync(ledgerPath), 'ledger file should exist');
+      const ledgerContent = readFileSync(ledgerPath, 'utf-8').trim();
+      assert.ok(ledgerContent.length > 0, 'ledger should not be empty');
+      const record = JSON.parse(ledgerContent);
+      assert.equal(record.work_id, 'work-del-ok');
+      assert.equal(record.output_files.length, 1);
+      assert.equal(record.cache_trails.length, 1);
+      assert.equal(record.slot_result_ref, slot.resultPath);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('delegated complete() rejects missing declared output file', () => {
+    const dir = tempBundle();
+    try {
+      const { slot } = setupDelegatedFixture(dir);
+      // Remove the declared output file
+      rmSync(path.join(dir, 'reference', 'source.md'));
+
+      let queue = createQueue('del-missing');
+      const workItem = makeItem({
+        work_id: 'work-missing',
+        title: 'Missing output',
+        targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake' } },
+        completion_receipt: 'none',
+      });
+      queue = enqueue(queue, workItem);
+      const { queue: q2 } = claim(queue, { actor: 'main-agent' });
+      const result = complete(q2, {
+        work_id: 'work-missing', receipt: 'none',
+        slot_result_ref: slot.resultPath,
+      }, dir);
+      assert.equal(result.feedback.passed, false);
+      assert.ok(result.feedback.advice.includes('missing'));
+      // Ledger must NOT be appended for failed completion
+      const ledgerPath = path.join(dir, 'rb_output_declarations.jsonl');
+      assert.equal(existsSync(ledgerPath), false);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('delegated complete() rejects missing cache leaf file', () => {
+    const dir = tempBundle();
+    try {
+      const { slot } = setupDelegatedFixture(dir);
+      // Remove meta.json from cache leaf
+      rmSync(path.join(dir, '_cache', 'wave0', 'primary', '01_test', 's01_source', 'meta.json'));
+
+      let queue = createQueue('del-cache');
+      const workItem = makeItem({
+        work_id: 'work-cache',
+        title: 'Missing cache',
+        targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake' } },
+        completion_receipt: 'none',
+      });
+      queue = enqueue(queue, workItem);
+      const { queue: q2 } = claim(queue, { actor: 'main-agent' });
+      const result = complete(q2, {
+        work_id: 'work-cache', receipt: 'none',
+        slot_result_ref: slot.resultPath,
+      }, dir);
+      assert.equal(result.feedback.passed, false);
+      assert.ok(result.feedback.advice.includes('meta.json'));
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('delegated complete() rejects missing runtime receipt', () => {
+    const dir = tempBundle();
+    try {
+      const { slot } = setupDelegatedFixture(dir);
+      // Remove runtime receipt
+      rmSync(path.join(dir, slot.receiptPath));
+
+      let queue = createQueue('del-norec');
+      const workItem = makeItem({
+        work_id: 'work-norec',
+        title: 'No receipt',
+        targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake' } },
+        completion_receipt: 'none',
+      });
+      queue = enqueue(queue, workItem);
+      const { queue: q2 } = claim(queue, { actor: 'main-agent' });
+      const result = complete(q2, {
+        work_id: 'work-norec', receipt: 'none',
+        slot_result_ref: slot.resultPath,
+      }, dir);
+      assert.equal(result.feedback.passed, false);
+      assert.ok(result.feedback.advice.includes('runtime receipt'));
     } finally {
       cleanup(dir);
     }

@@ -43,12 +43,10 @@ suggested_context: []
 - **字段**：`queue_health`、`stop_authorization_state`、5 个 slot（nullable）、`refill_pool`
 - **位置**：`DPT_FRAMEWORK/schema/contracts/queue.mjs`
 
-### Trace: `rb_trace.jsonl` vs `_logs/_trace.jsonl`
+### Trace: `rb_trace.jsonl`
 
-- **`rb_trace.jsonl`**（runtime audit trace）：位于每个 active bundle 根目录，由 gate CLI 在每次 gate attempt 时追加 entry。记录 gate pass/fail、repair、waiting/block 等 runtime audit 事件。**这是 production runtime audit surface。**
-- **`_logs/_trace.jsonl`**（experiment verdict trace）：位于 disposable experiment bundle 根目录，由 playbook thin driver 通过 `DPT_FRAMEWORK/engine/trace.mjs` 的 `createTrace()` 写入 `check` event。**这是 command experiment 的 verdict evidence surface，不作为 production runtime truth。**
-- **`_logs/_trace_subagent.jsonl`**（subagent relay trace）：位于 active bundle 根目录，由 `subagent-relay.mjs` 的 `ensureTrace()` 自动创建，记录 slot 生命周期事件（`slot_create`、`agent_spawn_requested`、`agent_runtime_started`、`agent_result_ready`、`result_schema_validated`、`merge_complete` 等）。用于 relay pipeline 调试和 trace 对账。
-- **区分**：gate CLI 只写 `rb_trace.jsonl`；`_logs/_trace.jsonl` 只能由 experiment driver 创建；`_logs/_trace_subagent.jsonl` 由 relay engine 自动管理。
+- **`rb_trace.jsonl`**（唯一 trace sink）：位于每个 bundle 根目录，由 queue-manager、subagent-relay、gate CLI、playbook thin driver 统一 append。记录 runtime audit 事件（queue 生命周期、relay slot 生命周期、gate attempt、experiment verdict check）。**这是 runtime audit 与 experiment verdict 的单一 truth surface。**
+- 不再存在 `_logs/_trace.jsonl`、`_logs/_trace_subagent.jsonl`、`_logs/_trace_agq_cli.jsonl` 作为当前 trace sink。
 
 ### `contracts/reference.mjs` → `artifacts/wave0/<topic>/source.yaml`
 

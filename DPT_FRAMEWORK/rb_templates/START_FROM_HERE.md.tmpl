@@ -18,6 +18,7 @@
 - rb_status.json   — 运行时状态 (JSON)
 - rb_queue.json    — 执行队列 (JSON)
 - rb_trace.jsonl   — runtime audit trace (JSON Lines, append-only)
+- rb_output_declarations.jsonl — Engine-completed Agent output declaration ledger（由 delegated `complete()` 写入，gate 读取 Agent 产物的唯一发现面）
 
 ## 审计与诊断
 - rb_trace.jsonl   — runtime audit trace，pass/fail 和 gate/check evidence 从这里审计
@@ -32,6 +33,7 @@
   - `00-cross-<slug>.md` — Wave 2 跨 topic 发现 reference（可选）
   - `_INDEX.md` — Canonical reference inventory table（8 列：ref_file, source_type, trust_level, tier, related_topic, source_layer, acceptance_status, date_landed）
   - `README.md` — 人类导航
+  - Engine 不通过扫描本目录发现 Agent 产物；gate 只读取 `rb_output_declarations.jsonl` 中已完成声明的 reference 条目
 - **artifacts/** — 阶段产物，按 wave 组织
   - `wave0/<topic>/source.yaml` — thin YAML source 列表
   - `wave1/<topic>/` — evidence-summary.md + question-list.md
@@ -40,8 +42,9 @@
 - **final/** — 最终报告
 
 ## 规则
-- 当前 run 的 truth 只来自本 bundle 的控制文件、数据目录和 trace。
+- 当前 run 的 truth 只来自本 bundle 的控制文件、declaration ledger、数据目录和 trace。
 - 续跑口诀: 先读 `START_FROM_HERE.md`、`rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`；用 repo root 执行框架命令，用 bundle path 定位 runtime truth；`_logs/run.log` 只用于排障，不能靠聊天记忆或 log 推断当前状态。
+- Agent 产物进入 gate 前必须经过 Relay slot result → delegated `complete()` → `rb_output_declarations.jsonl`；未声明文件不能帮助 gate pass。
 - 不要把 HITL answer、gate result、repair state、trace、artifact 或 final output 写回 `../DPT_FRAMEWORK/`。
 - 停止授权: 仅 final_delivery / decision_blocker / empty_queue_after_refill
 - Gate 过渡前 reload 所有控制文件

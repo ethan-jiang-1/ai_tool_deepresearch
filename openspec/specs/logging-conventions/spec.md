@@ -14,7 +14,7 @@
 
 系统 SHALL 使用 bundle 名称作为 `bundle`——即 `dpt_rb_<name>` 中的 `<name>`，持久化在 `rb_status.json` 的 `bundle` 字段。Bundle 名称本就唯一、人可读、直接对应目录名。
 
-所有写入 `rb_trace.jsonl`、`_logs/run.log`、`_logs/_trace_subagent.jsonl`、`_logs/_trace_agq_cli.jsonl` 的入口 SHALL 包含 `bundle` 字段，使四个 sink 可按 `bundle` + `ts` 缝合为单条时间线。
+所有写入 `rb_trace.jsonl`、`_logs/run.log` 的入口 SHALL 包含 `bundle` 字段，使四个 sink 可按 `bundle` + `ts` 缝合为单条时间线。
 
 `bundle` SHALL 从 bundle 的 `rb_status.json` 读取——不靠进程内存、环境变量或命令行参数传递。
 

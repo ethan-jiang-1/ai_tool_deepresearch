@@ -303,7 +303,7 @@ Relay 天然支持并行 dispatch：一个 task 内可以同时 spawn 多个不�
 ### Phase Agent Behavior
 
 - MUST read only the render projection (result.json) from sub-agent output — not the full search trail.
-- MUST bridge Relay collect → Queue complete: write artifact files from relay results, then call queue complete with receipt.
+- MUST bridge Relay collect → Queue complete: collect committed slot results, pass `slot_result_ref` into delegated queue `complete()`, and let Engine append `rb_output_declarations.jsonl`.
 - MUST NOT do WebSearch/WebFetch directly in Phase Agent context.
 - MUST NOT skip sub-agent spawn when task card specifies `targets.delegates.to: "sub-agent"`.
 

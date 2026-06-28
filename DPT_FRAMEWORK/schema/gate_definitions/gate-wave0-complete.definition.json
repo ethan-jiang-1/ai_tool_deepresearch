@@ -70,6 +70,18 @@
       "target": "rb_status.json#/next_gate",
       "expected": "wave1_complete",
       "failure_message": "rb_status.json next_gate must be 'wave1_complete'. Status may have drifted \u2014 restore the correct value."
+    },
+    {
+      "id": "content_dedup",
+      "check": "content_dedup",
+      "target": "output_declarations",
+      "threshold": {
+        "jaccard": 0.8,
+        "url_dedup": true,
+        "homepage_detect": true,
+        "self_ref_detect": true
+      },
+      "failure_message": "\u68c0\u6d4b\u5230\u865a\u5047\u6216\u91cd\u590d reference \u6587\u4ef6"
     }
   ]
 }

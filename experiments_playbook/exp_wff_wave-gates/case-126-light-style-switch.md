@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-126_w0_switch_*
-trace: dpt_disp_case-126_w0_switch_*/_logs/_trace.jsonl
+trace: dpt_disp_case-126_w0_switch_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -148,7 +148,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "PASSED=$PASSED"
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'quick_factual: 6 shared refs meet threshold=6 -> gate passes'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'quick_factual: 6 shared refs meet threshold=6 -> gate passes'})})"
 ```
 
 预期：`check.passed: true`。6 shared refs + 6 per-topic entries = 满足 quick_factual 的所有 count_floor 规则。
@@ -197,7 +197,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "PASSED=$PASSED"
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'same 6 shared refs, now claim_verification threshold=12 -> gate correctly rejects (style switch changed behavior)'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'same 6 shared refs, now claim_verification threshold=12 -> gate correctly rejects (style switch changed behavior)'})})"
 ```
 
 预期：`check.passed: false`。同样的 6 个 shared ref，quick_factual 下 gate 放行（threshold=6 达标），切到 claim_verification 后 gate 拒绝（threshold=12 不达标）。per_topic_count_floor 已补足不干扰。
@@ -207,7 +207,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 预期 2 条 check：quick_factual 下 gate 放行 + claim_verification 下 gate 拒绝。
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
 ```
 
 ## Step 5: 结果解读

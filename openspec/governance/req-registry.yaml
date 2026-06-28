@@ -25,6 +25,7 @@
 # check-project-reqs.mjs 自动忽略。
 # ──────────────────────────────────────────────
 prefixes:
+  AGO: agent-output-declaration
   AGQ: agentic-queue
   AGT: agent-testing
   BUI: bundle-data-isolation
@@ -40,8 +41,10 @@ prefixes:
   CSE: cmd-subagent-environment
   DYS: dynamic-node-loading
   EXS: experiment-shared-infra
+  EXR: experiment-ref-integrity
   FOR: fork-repair-converge
   FRE: framework-engine
+  GAC: gate-content-dedup
   GAF: gate-fork-router
   GAS: gate-state-machine
   GSK: gate-skeleton
@@ -114,6 +117,14 @@ AGQ-013: agentic-queue — Producer rule topic_deepening for wave1 deepening tas
 AGQ-014: agentic-queue — Claim advice returns delegates_required and delegates_config for relay dispatch
 AGQ-015: agentic-queue — Producer rule cross_topic_synthesis for wave2 synthesis task cards
 AGQ-016: agentic-queue — Producer rule seed_topic_backfill_wave2 for wave2 backfill task cards
+AGQ-017: agentic-queue — Delegated task TargetSpec keeps controller main-agent and delegates.to sub-agent
+AGQ-018: agentic-queue — Delegated complete validates relay provenance, declarations, output files, and cache trails
+
+# agent-output-declaration
+AGO-001: agent-output-declaration — SlotResult output_files declaration with role and source_url rules
+AGO-002: agent-output-declaration — SlotResult leaf cache_trails declaration
+AGO-003: agent-output-declaration — complete writes bundle-level rb_output_declarations.jsonl ledger
+AGO-004: agent-output-declaration — Engine consumes declaration ledger rather than scanning directories for Agent outputs
 # bundle-data-isolation
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 # workflow-directory-contract (BUS-* absorbed)
@@ -144,6 +155,13 @@ DYS-001: dynamic-node-loading — Explicit fileRef Markdown closure loading with
 
 # fork-repair-converge
 FOR-001: fork-repair-converge — Multi-fail shared repair checkpoint convergence
+
+# gate-content-dedup
+GAC-001: gate-content-dedup — content_dedup reads reference inputs from declaration ledger
+GAC-002: gate-content-dedup — Jaccard similarity detects near-duplicate reference content
+GAC-003: gate-content-dedup — URL dedup detects duplicate source URLs
+GAC-004: gate-content-dedup — Homepage URL detection flags root-domain-only references
+GAC-005: gate-content-dedup — Self-referential language detection and standard gate check result
 
 # gate-fork-router
 GAF-001: gate-fork-router — Gate branch classification and explicit resolver
@@ -245,8 +263,15 @@ TRW-001: trace-writer — Unified append-only JSONL trace writer with createTrac
 TRW-002: trace-writer — Trace output validates against TraceEntrySchema contract
 TRW-003: trace-writer — Trace entries include bundle field for cross-sink correlation
 TRW-004: trace-writer — Run start trace marker (run_start at bundle creation; run_end terminal marker deferred to Phase 2)
+TRW-005: trace-writer — Single rb_trace.jsonl trace sink for queue, relay, gate, and playbook verdict events
 EXS-001: experiment-shared-infra — experiments_env/shared/ directory for experiment-scoped shared infrastructure
 EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_FRAMEWORK/command_experiments_env/scripts/ to experiments_env/shared/"
+EXR-001: experiment-ref-integrity — case-16 verifies delegated complete boundary failures and success
+EXR-002: experiment-ref-integrity — case-17 verifies gate content_dedup via declaration ledger
+EXR-003: experiment-ref-integrity — case-12 verifies wave0 real Sub-agent intake with declaration ledger
+EXR-004: experiment-ref-integrity — case-13 verifies wave0 count floor fail-to-repair loop
+EXR-005: experiment-ref-integrity — case-14 verifies wave1 real Sub-agent deepening with declaration ledger
+EXR-006: experiment-ref-integrity — case-15 verifies wave0-to-wave1 pipeline with continuous declarations
 SCO-009: schema-core — QueueWorkUnitSchema upgrade for rb_queue.json (5 slots nullable, refill_pool typed)
 PLR-001: playbook-runner — RUN.md as unified runner entry with playbook manifest and execution instructions
 PLR-003: playbook-runner — Runner execution contract and summary report
@@ -298,6 +323,7 @@ RWG-007: research-wave-gate-implementation — Wave gate CLIs follow established
 RWG-008: research-wave-gate-implementation — Wave2 gate cross_field verifies Markdown link artifact references
 RWG-009: research-wave-gate-implementation — Wave2 gate CLI supports pattern_match check type with negate and topic expansion
 RWG-010: research-wave-gate-implementation — Wave2 phase-internal feedback checks are distinct from phase boundary gate
+RWG-015: research-wave-gate-implementation — Wave0 and wave1 gate definitions include content_dedup rule from output declarations
 
 # requirement-traceability
 RET-001: requirement-traceability — Prefix abbreviation registry as self-documenting source of truth

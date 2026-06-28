@@ -7,18 +7,17 @@
 | 文件 | 写入者 | 内容 |
 |------|--------|------|
 | `run.log` | `log-event.mjs`（Agent 通过 bash 调用） | 带 envelope 的运行时日志行（`{ts, level, msg, ...}`）。一阶段一 phase START/END 行 |
-| `_trace_subagent.jsonl` | `subagent-relay.mjs` | Sub-agent relay slot 生命周期事件：`slot_create`, `agent_spawn_requested`, `agent_runtime_started`, `agent_result_ready`, `result_schema_validated`, `merge_complete` |
-| `_trace_agq_cli.jsonl` | `queue-manager.mjs` | Agentic Queue CLI 操作 trace：`enqueue`, `claim`, `complete`, `fail`, `repair` |
-| `_trace.jsonl` | experiment playbook thin driver | **仅在 disposable experiment bundle 中存在**。由 playbook 写入 `check` event，是 command experiment 的 verdict evidence surface |
 
-## 与 rb_trace.jsonl 的区分
+## Trace: `rb_trace.jsonl`
 
-| Trace 文件 | 写入者 | 用途 |
-|-----------|--------|------|
-| `rb_trace.jsonl`（bundle 根目录） | gate CLI（`writeGateAttempt`） | **Production runtime truth**——gate pass/fail 判定记录 |
-| `_logs/_trace_subagent.jsonl` | relay engine（`ensureTrace`） | Relay pipeline 调试——slot 生命周期对账 |
-| `_logs/_trace_agq_cli.jsonl` | queue manager | Queue 操作对账——enqueue/claim/complete 序列 |
-| `_logs/_trace.jsonl` | experiment driver | Experiment verdict evidence（非 production） |
+位于 bundle 根目录，不使用 `_logs/` 子目录。由以下模块统一 append：
+
+| 写入者 | 事件类型 |
+|--------|---------|
+| `queue-manager.mjs` | Queue 生命周期：`enqueue`, `claim`, `complete`, `fail`, `repair`, `ledger_appended` |
+| `subagent-relay.mjs` | Relay slot 生命周期：`slot_create`, `agent_spawn_requested`, `agent_runtime_started`, `agent_result_ready`, `result_schema_validated`, `merge_complete` |
+| gate CLI（`writeGateAttempt`） | Gate pass/fail 判定 |
+| playbook thin driver | Experiment verdict `check` event |
 
 ## 查看
 

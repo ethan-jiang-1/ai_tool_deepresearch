@@ -9,13 +9,24 @@ agent_mode: native-subagent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-61_gs_simple
-trace: dpt_disp_case-61_gs_simple/_logs/_trace.jsonl
+trace: dpt_disp_case-61_gs_simple/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
 ## Execution Contract
 
 由 coding agent 在真实 `dpt_disp_*` disposable bundle 中执行；如 playbook 包含 subagent phase，必须启动真实 native subagent。实验结果必须来自实际文件写入、Engine/Agent 调用和 trace event；允许通过文件系统读取中间产物；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
+
+## Reality Distance Ledger
+
+| 维度 | 声明 |
+|------|------|
+| **Runtime context** | disposable bundle，`new-disposable-bundle.mjs` 创建 |
+| **Framework path** | `subagent-relay.mjs`（`stageSubagentSlots`, `commitSlotResult`, `collectAndMergeSubagentResults`） |
+| **Agent actor** | **有** — 真实 Sub-agent (`dpt-source-intake`) 执行 WebSearch/WebFetch |
+| **External calls** | 有 — WebSearch + WebFetch |
+| **Verdict source** | trace events（`agent_runtime_started`, `agent_result_ready`, `result_schema_validated`） |
+| **不证明** | delegated complete() 边界、ledger 生成 — 仅证明 Sub-agent relay slot 生命周期 |
 
 # case-61-heavy-single-intake
 
@@ -189,11 +200,24 @@ import { readFileSync } from 'node:fs';
 
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
 const __dirname = esmDirname(import.meta.url);
-const events = readFileSync(__dirname + '/_logs/_trace.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
+const events = readFileSync(__dirname + '/rb_trace.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
 const required = ['agent_spawn_requested', 'agent_runtime_started', 'agent_result_ready', 'agent_result_received', 'result_schema_validated', 'collect_result', 'merge_complete'];
-const pass = required.every(name => events.some(e => e.event === name));
-console.log(pass ? '\x1b[32mSIMPLE PASS\x1b[0m' : '\x1b[31mSIMPLE FAIL\x1b[0m');
-if (!pass) console.log('missing:', required.filter(name => !events.some(e => e.event === name)).join(', '));
+// Write check events for verdict (command-experiments guideline Principle 6)
+const { appendFileSync } = await import('node:fs');
+for (const name of required) {
+  const found = events.some(e => e.event === name);
+  appendFileSync(__dirname + '/rb_trace.jsonl', JSON.stringify({
+    ts: new Date().toISOString(), event: 'check', source: 'case-61',
+    gate: 'subagent-lifecycle', passed: found, expected: true,
+    detail: found ? 'lifecycle event ' + name + ' present' : 'lifecycle event ' + name + ' missing',
+  }) + '\n');
+}
+// Re-read to include new check events
+const events2 = readFileSync(__dirname + '/rb_trace.jsonl', 'utf-8').trim().split('\n').map(JSON.parse);
+const checks = events2.filter(e => e.event === 'check');
+const pass = checks.length > 0 && checks.every(c => c.passed === true);
+console.log(pass ? '\x1b[32mCASE-61 PASS\x1b[0m' : '\x1b[31mCASE-61 FAIL\x1b[0m');
+if (!pass) console.log('failed checks:', checks.filter(c => !c.passed).map(c => c.detail).join(', '));
 if (!pass) process.exit(1);
 JS
 node "$B/audit.mjs"

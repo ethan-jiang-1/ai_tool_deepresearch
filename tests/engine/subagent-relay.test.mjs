@@ -29,6 +29,10 @@ import {
   mergeResults,
   forkAndStageSubagents,
   collectAndMergeSubagentResults,
+  validateRuntimeReceipt,
+  AgentOutputDeclarationSchema,
+  OutputFileEntry,
+  OutputFileRole,
 } from '../../DPT_FRAMEWORK/engine/subagent-relay.mjs';
 
 function tempDir() {
@@ -423,4 +427,255 @@ describe('Repair, C&I, and pipeline split', () => {
     assert.ok(smallDiag, 'should diagnose too_small');
   });
 
+});
+
+describe('Agent Output Declaration (Stage 1)', () => {
+  it('SlotResult accepts valid output_files with reference and source_url', () => {
+    const result = SlotResult.parse({
+      slotKey: 'test', roleAgentKey: 'dpt-source-intake', status: 'done',
+      summary: '', evidenceCount: 0, references: [], confidence: 0, notes: [],
+      output_files: [
+        { path: 'reference/test.md', role: 'reference', source_url: 'https://example.com/article' },
+      ],
+      cache_trails: ['_cache/wave0/primary/01_topic/s01_source/'],
+    });
+    assert.equal(result.output_files.length, 1);
+    assert.equal(result.output_files[0].role, 'reference');
+    assert.equal(result.output_files[0].source_url, 'https://example.com/article');
+    assert.equal(result.cache_trails.length, 1);
+  });
+
+  it('SlotResult accepts evidence_summary role without source_url', () => {
+    const result = SlotResult.parse({
+      slotKey: 'test', roleAgentKey: 'dpt-source-intake', status: 'done',
+      summary: '', evidenceCount: 0, references: [], confidence: 0, notes: [],
+      output_files: [
+        { path: 'evidence-summary.md', role: 'evidence_summary' },
+      ],
+    });
+    assert.equal(result.output_files.length, 1);
+    assert.equal(result.output_files[0].role, 'evidence_summary');
+  });
+
+  it('SlotResult rejects invalid role', () => {
+    const parse = SlotResult.safeParse({
+      slotKey: 'test', roleAgentKey: 'dpt-source-intake', status: 'done',
+      summary: '', evidenceCount: 0, references: [], confidence: 0, notes: [],
+      output_files: [
+        { path: 'test.md', role: 'invalid_role' },
+      ],
+    });
+    assert.equal(parse.success, false);
+  });
+
+  it('SlotResult rejects reference role without source_url', () => {
+    const parse = SlotResult.safeParse({
+      slotKey: 'test', roleAgentKey: 'dpt-source-intake', status: 'done',
+      summary: '', evidenceCount: 0, references: [], confidence: 0, notes: [],
+      output_files: [
+        { path: 'reference/test.md', role: 'reference' },
+      ],
+    });
+    assert.equal(parse.success, false);
+    assert.ok(parse.error.message.includes('source_url'));
+  });
+
+  it('AgentOutputDeclarationSchema validates without output_files (defaults to empty)', () => {
+    const decl = AgentOutputDeclarationSchema.parse({});
+    assert.deepEqual(decl.output_files, []);
+    assert.deepEqual(decl.cache_trails, []);
+  });
+
+  it('OutputFileRole enum has 6 valid roles', () => {
+    assert.equal(OutputFileRole.options.length, 6);
+    assert.ok(OutputFileRole.options.includes('reference'));
+    assert.ok(OutputFileRole.options.includes('evidence_summary'));
+    assert.ok(OutputFileRole.options.includes('question_list'));
+    assert.ok(OutputFileRole.options.includes('source_yaml'));
+    assert.ok(OutputFileRole.options.includes('index'));
+    assert.ok(OutputFileRole.options.includes('other'));
+  });
+
+  it('commitSlotResult rejects path escape in output_files', () => {
+    const testDir = tempDir();
+    try {
+      const [slot] = stageSubagentSlots(baseState(), testDir);
+      writeRuntimeReceipt(testDir, slot);
+      ingestAgentReceipt(slot, testDir, { runtimeAgentId: 'agent-esc' });
+      const relay = commitSlotResult(slot, testDir, {
+        slotKey: slot.key, roleAgentKey: slot.roleAgentKey, status: 'done',
+        summary: '', evidenceCount: 1,
+        references: [{ title: 'T', url: 'https://x.com', quote: '', relevance: '' }],
+        confidence: 1, notes: [],
+        output_files: [
+          { path: '../../etc/passwd', role: 'reference', source_url: 'https://x.com' },
+        ],
+        cache_trails: [],
+      });
+      assert.equal(relay.ok, false);
+      assert.ok(relay.result.notes.some((n) => n.includes('path escapes bundle')));
+    } finally {
+      rmSync(testDir, { recursive: true, force: true });
+    }
+  });
+
+  it('commitSlotResult rejects path escape in cache_trails', () => {
+    const testDir = tempDir();
+    try {
+      const [slot] = stageSubagentSlots(baseState(), testDir);
+      writeRuntimeReceipt(testDir, slot);
+      ingestAgentReceipt(slot, testDir, { runtimeAgentId: 'agent-esc2' });
+      const relay = commitSlotResult(slot, testDir, {
+        slotKey: slot.key, roleAgentKey: slot.roleAgentKey, status: 'done',
+        summary: '', evidenceCount: 1,
+        references: [{ title: 'T', url: 'https://x.com', quote: '', relevance: '' }],
+        confidence: 1, notes: [],
+        output_files: [],
+        cache_trails: ['../escape/'],
+      });
+      assert.equal(relay.ok, false);
+      assert.ok(relay.result.notes.some((n) => n.includes('path escapes bundle')));
+    } finally {
+      rmSync(testDir, { recursive: true, force: true });
+    }
+  });
+
+  it('commitSlotResult accepts valid declaration with output_files and cache_trails', () => {
+    const testDir = tempDir();
+    try {
+      const [slot] = stageSubagentSlots(baseState(), testDir);
+      writeRuntimeReceipt(testDir, slot);
+      ingestAgentReceipt(slot, testDir, { runtimeAgentId: 'agent-ok' });
+      const relay = commitSlotResult(slot, testDir, {
+        slotKey: slot.key, roleAgentKey: slot.roleAgentKey, status: 'done',
+        summary: 'Done', evidenceCount: 2,
+        references: [{ title: 'S', url: 'https://s.com/a', quote: 'q', relevance: 'r' }],
+        confidence: 0.9, notes: [],
+        output_files: [
+          { path: 'reference/source.md', role: 'reference', source_url: 'https://s.com/a' },
+          { path: 'source.yaml', role: 'source_yaml' },
+        ],
+        cache_trails: ['_cache/wave0/primary/01_src/s01_leaf/'],
+      });
+      assert.equal(relay.ok, true);
+      assert.equal(relay.result.output_files.length, 2);
+      assert.equal(relay.result.cache_trails.length, 1);
+    } finally {
+      rmSync(testDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('Pure runtime receipt validation (SUR-001, Stage 1)', () => {
+  let testDir;
+  let slot;
+  before(() => {
+    testDir = tempDir();
+    [slot] = stageSubagentSlots(baseState(), testDir);
+  });
+  after(() => { rmSync(testDir, { recursive: true, force: true }); });
+
+  it('validateRuntimeReceipt passes for valid receipt', () => {
+    writeRuntimeReceipt(testDir, slot);
+    const result = validateRuntimeReceipt(slot, testDir);
+    assert.equal(result.passed, true);
+    assert.equal(result.events.length, 2);
+  });
+
+  it('validateRuntimeReceipt fails for missing receipt file', () => {
+    // Remove receipt file to test missing case
+    const receiptFile = path.join(testDir, slot.receiptPath);
+    if (existsSync(receiptFile)) rmSync(receiptFile, { force: true });
+    const result = validateRuntimeReceipt(slot, testDir);
+    assert.equal(result.passed, false);
+    assert.ok(result.error.includes('missing'));
+  });
+
+  it('validateRuntimeReceipt fails for missing agent_runtime_started', () => {
+    const receiptFile = path.join(testDir, slot.receiptPath);
+    mkdirSync(path.dirname(receiptFile), { recursive: true });
+    writeFileSync(receiptFile, JSON.stringify({
+      event: 'agent_result_ready', slotKey: slot.key,
+      roleAgentKey: slot.roleAgentKey, receiptNonce: slot.receiptNonce,
+    }) + '\n');
+    const result = validateRuntimeReceipt(slot, testDir);
+    assert.equal(result.passed, false);
+    assert.ok(result.error.includes('agent_runtime_started'));
+  });
+
+  it('validateRuntimeReceipt fails for nonce mismatch', () => {
+    const receiptFile = path.join(testDir, slot.receiptPath);
+    mkdirSync(path.dirname(receiptFile), { recursive: true });
+    writeFileSync(receiptFile, [
+      JSON.stringify({ event: 'agent_runtime_started', slotKey: slot.key, roleAgentKey: slot.roleAgentKey, receiptNonce: 'wrong-nonce' }),
+      JSON.stringify({ event: 'agent_result_ready', slotKey: slot.key, roleAgentKey: slot.roleAgentKey, receiptNonce: 'wrong-nonce' }),
+    ].join('\n') + '\n');
+    const result = validateRuntimeReceipt(slot, testDir);
+    assert.equal(result.passed, false);
+    assert.ok(result.error.includes('nonce mismatch'));
+  });
+
+  it('validateRuntimeReceipt fails for slotKey mismatch', () => {
+    const receiptFile = path.join(testDir, slot.receiptPath);
+    writeFileSync(receiptFile, [
+      JSON.stringify({ event: 'agent_runtime_started', slotKey: 'wrong-slot', roleAgentKey: slot.roleAgentKey, receiptNonce: slot.receiptNonce }),
+      JSON.stringify({ event: 'agent_result_ready', slotKey: 'wrong-slot', roleAgentKey: slot.roleAgentKey, receiptNonce: slot.receiptNonce }),
+    ].join('\n') + '\n');
+    const result = validateRuntimeReceipt(slot, testDir);
+    assert.equal(result.passed, false);
+    assert.ok(result.error.includes('slotKey mismatch'));
+  });
+
+  it('validateRuntimeReceipt does not require runtimeAgentId', () => {
+    writeRuntimeReceipt(testDir, slot);
+    const result = validateRuntimeReceipt(slot, testDir);
+    assert.equal(result.passed, true);
+    // No runtimeAgentId was provided — this is the key difference from ingestAgentReceipt
+  });
+
+  it('ingestAgentReceipt returns receiptRef', () => {
+    const slot2 = createSlot({
+      key: 'ref_slot', slotIndex: 20,
+      roleAgentKey: 'dpt-source-intake', taskDescription: 'Test ref',
+    }, 1);
+    writeRuntimeReceipt(testDir, slot2);
+    const imported = ingestAgentReceipt(slot2, testDir, { runtimeAgentId: 'agent-ref' });
+    assert.ok(imported.receiptRef);
+    assert.ok(imported.receiptRef.includes('runtime-receipt.jsonl'));
+  });
+
+  it('collectAndMergeSubagentResults aggregates output_files and cache_trails', () => {
+    const innerDir = tempDir();
+    try {
+      const state = baseState();
+      const { slots: innerSlots } = forkAndStageSubagents(state, innerDir);
+      const outFiles = [];
+      const cacheTr = [];
+      for (const [i, s] of innerSlots.entries()) {
+        writeRuntimeReceipt(innerDir, s);
+        ingestAgentReceipt(s, innerDir, { runtimeAgentId: `agent-agg-${i}` });
+        const of = i === 0
+          ? [{ path: `reference/r${i}.md`, role: 'reference', source_url: `https://example.com/${i}` }]
+          : [];
+        const ct = i <= 1 ? [`_cache/wave0/primary/01_topic/s0${i}_src/`] : [];
+        outFiles.push(...of);
+        cacheTr.push(...ct);
+        commitSlotResult(s, innerDir, {
+          slotKey: s.key, roleAgentKey: s.roleAgentKey, status: 'done',
+          summary: '', evidenceCount: i + 1,
+          references: [{ title: 'T', url: `https://x.com/${i}`, quote: '', relevance: '' }],
+          confidence: 0.5, notes: [],
+          output_files: of,
+          cache_trails: ct,
+        }, { platform: 'codex' });
+      }
+      const merged = collectAndMergeSubagentResults(state, innerSlots, innerDir);
+      assert.equal(merged.output_files.length, 1); // only slot 0 has output_files
+      assert.equal(merged.cache_trails.length, 2);  // slots 0 and 1 have cache_trails
+      assert.equal(merged.slotResultRefs.length, 4);
+      assert.equal(merged.receiptRefs.length, 4);
+    } finally {
+      rmSync(innerDir, { recursive: true, force: true });
+    }
+  });
 });

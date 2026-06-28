@@ -17,7 +17,7 @@ suggested_context: []
 
 ### 1. 禁止伪造 trace event、receipt、或 gate result
 
-**正确替代**：运行真实的 Engine/Agent 路径来产生这些 artifact。`rb_trace.jsonl` 只能由 gate CLI 的真实执行写入，`_logs/_trace.jsonl` 只能由 playbook thin driver 基于真实 CLI result 写入。
+**正确替代**：运行真实的 Engine/Agent 路径来产生这些 artifact。`rb_trace.jsonl` 只能由 Engine 和 playbook thin driver 基于真实 CLI result 写入。
 
 ### 2. 禁止在 gate 未 pass 时修改 control files 冒充 pass
 
@@ -60,6 +60,24 @@ suggested_context: []
 **正确替代**：`user_decision` 和 `rationale` 必须来自真实用户输入。Agent 可以产出 decision brief 帮助用户做决策，但不能在用户未回答时填入 placeholder decision（如选 `proceed_to_readiness` 作为默认值）。
 
 ### 12. 禁止把 setup pass 当成 readiness pass
+
+### 13. 禁止遗漏 `output_files[]` 和 `cache_trails[]`
+
+Sub-agent 返回的 `result.json` MUST 包含 `output_files[]`（声明每个产出文件的 path/role/source_url）和 `cache_trails[]`（声明实际写入的 leaf source 目录路径）。遗漏声明会使 delegated `complete()` reject。
+
+**正确替代**：Sub-agent 在返回 result JSON 前确认所有产出文件已在 `output_files[]` 中声明，所有 `_cache/` leaf 目录已在 `cache_trails[]` 中声明。
+
+### 14. 禁止遗漏 `cache_trails[]`
+
+每个 `cache_trails[]` 项必须是 leaf source directory（直接含 `websearch.json`/`page.md`/`meta.json` 三文件），不得声明 parent cache dir。`complete()` 会逐 leaf 验证三文件存在。
+
+**正确替代**：声明 `_cache/wave0/primary/01_test/s01_source/`（leaf）而不是 `_cache/wave0/primary/01_test/`（parent）。
+
+### 15. 禁止绕过 Relay provenance
+
+Delegated task 的 `complete()` MUST 通过 committed slot result + runtime receipt 证明 Sub-agent 确实经 Relay 执行。Phase Agent 不直接执行 WebSearch/WebFetch；不直接写 `rb_output_declarations.jsonl`；不手写 ledger row 冒充 completion。
+
+**正确替代**：Phase Agent claim delegated task → spawn Sub-agent via Relay → `commitSlotResult()` → delegated `complete()` → Engine append ledger。
 
 **正确替代**：`setup-ready` gate pass 只确认 structural consistency（文件存在、schema 合法、basename 一致）。它不意味着研究质量过关或可以交付最终报告。`readiness-passed` 是另一个 gate，在 wave0/1/2 + HITL2 之后。
 

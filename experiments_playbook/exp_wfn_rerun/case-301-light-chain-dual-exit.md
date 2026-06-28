@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-301_dualexit_*
-trace: dpt_disp_case-301_dualexit_*/_logs/_trace.jsonl
+trace: dpt_disp_case-301_dualexit_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -26,7 +26,7 @@ verdict: trace-jsonl
 4. Verify `passed` outcome still returns `next: phases/phase-readiness.md`
 5. Verify indeterminate outcomes return `invalid_input`
 6. Inspect chain file — confirm both `passed` and `rerun` keys exist
-7. 从 `_logs/_trace.jsonl` 裁决
+7. 从 `rb_trace.jsonl` 裁决
 8. Cleanup
 
 ---
@@ -79,7 +79,7 @@ GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundl
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "hitl2 | passed=$PASSED next=$NEXT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'rerun — gate passes'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'rerun — gate passes'})})"
 ```
 
 预期：`check.passed: true`。
@@ -93,7 +93,7 @@ RERUN_NEXT=$(echo "$RERUN_RESULT" | node experiments_env/shared/extract-field.mj
 echo "rerun → kind=$RERUN_KIND next=$RERUN_NEXT"
 OK=false; [ "$RERUN_KIND" = "next" ] && [ "$RERUN_NEXT" = "phases/phase-rerun.md" ] && OK=true
 [ "$OK" = "true" ] && echo "OK: rerun routes to phase-rerun.md" || echo "FAIL"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'chain-rerun',passed:$OK,detail:'rerun → phase-rerun.md'})})" $OK
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'chain-rerun',passed:$OK,detail:'rerun → phase-rerun.md'})})" $OK
 ```
 
 ## Step 4: Verify passed outcome still returns readiness
@@ -105,7 +105,7 @@ PASSED_NEXT=$(echo "$PASSED_RESULT" | node experiments_env/shared/extract-field.
 echo "passed → kind=$PASSED_KIND next=$PASSED_NEXT"
 OK=false; [ "$PASSED_KIND" = "next" ] && [ "$PASSED_NEXT" = "phases/phase-readiness.md" ] && OK=true
 [ "$OK" = "true" ] && echo "OK: passed still routes to readiness" || echo "FAIL"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'chain-passed',passed:$OK,detail:'passed → readiness'})})" $OK
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'chain-passed',passed:$OK,detail:'passed → readiness'})})" $OK
 ```
 
 ## Step 5: Verify indeterminate outcomes return invalid_input
@@ -120,7 +120,7 @@ for outcome in request_view_revision repair stop_blocked; do
   [ "$KIND" != "invalid_input" ] && INDET_OK=false
 done
 $INDET_OK && echo "OK: all indeterminate → invalid_input" || echo "FAIL"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'chain-indeterminate',passed:$INDET_OK,detail:'indeterminate → invalid_input'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'chain-indeterminate',passed:$INDET_OK,detail:'indeterminate → invalid_input'})})"
 ```
 
 ## Step 6: Inspect chain file
@@ -130,11 +130,11 @@ echo "=== Chain File Inspection ==="
 node -e "import('$REPO_ROOT/DPT_FRAMEWORK/engine/transition-chain.mjs').then(m=>{const c=m.loadChain('$REPO_ROOT/DPT_FRAMEWORK/workflows/transitions.chain.json');const e=c['phases/phase-hitl2.md'];const k=Object.keys(e);console.log('Keys:',k.join(', '));console.log(k.includes('passed')&&k.includes('rerun')?'OK: chain has passed + rerun':'FAIL')})"
 ```
 
-## Step 7: Verdict from `_logs/_trace.jsonl`
+## Step 7: Verdict from `rb_trace.jsonl`
 
 ```bash
 echo "=== Verdict ==="
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/_logs/_trace.jsonl'))"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/rb_trace.jsonl'))"
 ```
 
 ## Step 8: 结果解读

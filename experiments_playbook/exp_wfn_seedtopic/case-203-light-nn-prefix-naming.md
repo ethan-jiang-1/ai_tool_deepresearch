@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-203_nn_name_
-trace: dpt_disp_case-203_nn_name_*/_logs/_trace.jsonl
+trace: dpt_disp_case-203_nn_name_*/rb_trace.jsonl
 verdict: trace-jsonl
 req: STM-006
 ---
@@ -16,6 +16,19 @@ req: STM-006
 ## Execution Contract
 
 由 coding agent 在真实 disposable experiment bundle 中执行。本 case 不依赖 Agent 行为——所有操作都是确定性 CLI/FS/gate 调用，验证 NN_ 命名约定的正确性。不涉及 queue、不涉及 WebSearch/WebFetch、不涉及 subagent。
+
+
+## Reality Distance Ledger
+
+| 维度 | 声明 |
+|------|------|
+| **Runtime context** | disposable bundle，`new-disposable-bundle.mjs` 创建 |
+| **Framework path** | `operate-queue.mjs` CLI, gate CLI, `wff-playbook-utils.mjs` |
+| **Fixture input** | task card JSON, registry, status 在 playbook 内写入 — Engine-layer fixture |
+| **Agent actor** | 无（fixture-backed）— 不证明 Agent 搜索/写作/修复 |
+| **External calls** | 无 |
+| **Verdict source** | `rb_trace.jsonl` `check` events |
+| **不证明** | Agent queue 决策、semantic work — 仅证明 queue loop + gate 机械结构 |
 
 # case-203-light-nn-prefix-naming
 
@@ -275,7 +288,7 @@ PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs che
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "seed-topics-ready: passed=$PASSED next=$NEXT"
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'seed-topics-ready-happy',passed:$PASSED,detail:'4 seed topics with NN_ prefix slugs, triple-consistency verified, next=' + '$NEXT'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'seed-topics-ready-happy',passed:$PASSED,detail:'4 seed topics with NN_ prefix slugs, triple-consistency verified, next=' + '$NEXT'})})"
 ```
 
 → `passed: true`，`next: phases/phase-wave0.md`。gate 的 7 条 rule 全部通过（dir_non_empty / slug_consistency bidirectional / per_file_title_non_empty / per_file_slug_stem_consistency byte-for-byte / trace_event_present / status_value ×2）。
@@ -324,7 +337,7 @@ for f in $B/seed_topics/*.md; do
   fi
 done
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'nn-prefix-ordering',passed:$ORDER_OK,detail:'ls natural order matches registry 1-based position, NN=zero-padded index, frontmatter id=NN'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'nn-prefix-ordering',passed:$ORDER_OK,detail:'ls natural order matches registry 1-based position, NN=zero-padded index, frontmatter id=NN'})})"
 ```
 
 → 三个检查全部通过：ls 按 01-04 排列，每个 NN 前缀等于其数组 1-based 位置，frontmatter id 与 NN 一致。
@@ -495,9 +508,9 @@ done
 
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_logs/_trace.jsonl', { gate: 'ref-per-topic-naming', passed: $REF_OK,    detail: 'Per-topic reference files use {slug}-<qualifier>.md pattern' });
-  m.recordCheck('$B/_logs/_trace.jsonl', { gate: 'ref-shared-naming',   passed: $SHARED_OK,  detail: 'Shared reference uses 00-shared-<slug>.md pattern' });
-  m.recordCheck('$B/_logs/_trace.jsonl', { gate: 'delimiter-convention',passed: $DELIM_OK,   detail: 'Seed topic uses NN_ (underscore), reference qualifier uses hyphen' });
+  m.recordCheck('$B/rb_trace.jsonl', { gate: 'ref-per-topic-naming', passed: $REF_OK,    detail: 'Per-topic reference files use {slug}-<qualifier>.md pattern' });
+  m.recordCheck('$B/rb_trace.jsonl', { gate: 'ref-shared-naming',   passed: $SHARED_OK,  detail: 'Shared reference uses 00-shared-<slug>.md pattern' });
+  m.recordCheck('$B/rb_trace.jsonl', { gate: 'delimiter-convention',passed: $DELIM_OK,   detail: 'Seed topic uses NN_ (underscore), reference qualifier uses hyphen' });
 })"
 ```
 
@@ -523,7 +536,7 @@ echo "seed-topics-ready (boundary): passed=$PASSED inspect_count=$INSPECT_COUNT"
 
 node -e "
 import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/_logs/_trace.jsonl', {
+  m.recordCheck('$B/rb_trace.jsonl', {
     gate: 'seed-topics-ready-boundary-misnamed',
     passed: $PASSED,
     expected: false,
@@ -543,7 +556,7 @@ rm "$B/seed_topics/04_wrong-name.md"
 REPO_ROOT=$(pwd)
 B=$(echo dpt_disp_case-203_nn_name_*)
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
 ```
 
 → 预期 **PASS**。trace 含 6 个 check event：

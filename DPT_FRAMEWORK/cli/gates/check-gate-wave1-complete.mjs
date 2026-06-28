@@ -17,6 +17,7 @@ import {
   readBundlePlan,
   readBundleProfile,
   resolveThreshold,
+  checkContentDedup,
 } from '../../engine/helpers/gate-helpers.mjs';
 
 const args = parseGateCliArgs();
@@ -311,6 +312,13 @@ for (const rule of definition.rules) {
             ruleDetail = `Count floor not met for ${resolvedTarget}: ${count} entries (threshold: ${threshold})`;
             if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
           }
+        }
+      } else if (rule.check === 'content_dedup') {
+        const dedupResult = checkContentDedup(bundlePath, rule.threshold || {});
+        if (!dedupResult.passed) {
+          rulePassed = false;
+          ruleDetail = dedupResult.inspect.join('; ');
+          for (const a of dedupResult.advice) advice.push(a);
         }
       } else {
         rulePassed = false;

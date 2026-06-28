@@ -70,8 +70,8 @@ The trace writer at `DPT_FRAMEWORK/engine/trace.mjs` SHALL be the sole mechanism
 
 此要求适用于：
 - `writeGateAttempt()` 写入的 `gate_attempt` 事件
-- `queue-manager.mjs` 写入的队列生命周期事件（`_logs/_trace_agq_cli.jsonl`）
-- `subagent-relay.mjs` 写入的 subagent 生命周期事件（`_logs/_trace_subagent.jsonl`）
+(removed — unified to `rb_trace.jsonl`)
+(removed — unified to `rb_trace.jsonl`)
 
 `bundle` SHALL 不通过函数参数显式传递——读取逻辑封装在写入函数内部，从 `rb_status.json` 自动获取。
 

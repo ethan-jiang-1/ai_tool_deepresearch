@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-302_rerun_happy_*
-trace: dpt_disp_case-302_rerun_happy_*/_logs/_trace.jsonl
+trace: dpt_disp_case-302_rerun_happy_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -24,7 +24,7 @@ verdict: trace-jsonl
 2. Run hitl2-recorded gate → pass
 3. Chain query `rerun` → `phases/phase-rerun.md`
 4. Set status to rerun-ready, run check-gate-rerun-ready.mjs → pass + chain → seed-topics
-5. 从 `_logs/_trace.jsonl` 裁决
+5. 从 `rb_trace.jsonl` 裁决
 6. Cleanup
 
 ## Case Goal
@@ -86,7 +86,7 @@ EOF
 GATE_OUTPUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "hitl2-recorded | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'hitl2 gate — rerun decision'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'hitl2 gate — rerun decision'})})"
 ```
 
 ## Step 3: Chain query rerun → phase-rerun.md
@@ -98,7 +98,7 @@ RN=$(echo "$RR" | node experiments_env/shared/extract-field.mjs next)
 echo "chain rerun → kind=$RK next=$RN"
 OK=false; [ "$RK" = "next" ] && [ "$RN" = "phases/phase-rerun.md" ] && OK=true
 [ "$OK" = "true" ] && echo "OK" || echo "FAIL"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'chain-rerun-to-rerun-node',passed:$OK,detail:'rerun → phase-rerun.md'})})" $OK
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'chain-rerun-to-rerun-node',passed:$OK,detail:'rerun → phase-rerun.md'})})" $OK
 ```
 
 ## Step 4: Run rerun-ready gate → pass
@@ -113,14 +113,14 @@ NEXT=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.next)
 echo "rerun-ready | passed=$PASSED next=$NEXT"
 OK=false; [ "$PASSED" = "true" ] && [ "$NEXT" = "phases/phase-seed-topics.md" ] && OK=true
 [ "$OK" = "true" ] && echo "OK: gate pass → seed-topics" || echo "FAIL"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'rerun-ready',passed:$OK,detail:'gate pass → seed-topics'})})" $OK
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'rerun-ready',passed:$OK,detail:'gate pass → seed-topics'})})" $OK
 ```
 
-## Step 5: Verdict from `_logs/_trace.jsonl`
+## Step 5: Verdict from `rb_trace.jsonl`
 
 ```bash
 echo "=== Verdict ==="
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/_logs/_trace.jsonl'))"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/rb_trace.jsonl'))"
 ```
 
 ## Step 6: 结果解读

@@ -6,7 +6,11 @@ import { z } from 'zod';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateState, validateRules, zodErrors, writeGateAttempt } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import {
+  validateState, validateRules, zodErrors, writeGateAttempt,
+  tokenizeForSimilarity, jaccardSimilarity, extractSection,
+  readOutputDeclarations, checkContentDedup,
+} from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-gate-helpers-tmp');
@@ -196,5 +200,205 @@ describe('writeGateAttempt (GSK-005, TRW-003)', () => {
 
     const logContent = readFileSync(join(b, '_logs', 'run.log'), 'utf-8');
     assert.ok(logContent.includes('bundle=test-gate-match'));
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Content Dedup (Stage 3)
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('tokenizeForSimilarity', () => {
+  it('tokenizes Chinese text into bigrams', () => {
+    const tokens = tokenizeForSimilarity('年轻人消费平替趋势明显');
+    assert.ok(tokens.includes('年轻'));
+    assert.ok(tokens.includes('消费'));
+    assert.ok(tokens.includes('平替'));
+    assert.ok(tokens.includes('趋势'));
+  });
+
+  it('tokenizes English text into lowercase words', () => {
+    const tokens = tokenizeForSimilarity('Young consumers prefer affordable alternatives');
+    assert.ok(tokens.includes('young'));
+    assert.ok(tokens.includes('consumers'));
+    assert.ok(tokens.includes('affordable'));
+  });
+
+  it('returns empty array for empty input', () => {
+    assert.deepEqual(tokenizeForSimilarity(''), []);
+    assert.deepEqual(tokenizeForSimilarity(null), []);
+  });
+});
+
+describe('jaccardSimilarity', () => {
+  it('returns 1 for identical token sets', () => {
+    assert.strictEqual(jaccardSimilarity(['a', 'b', 'c'], ['a', 'b', 'c']), 1);
+  });
+
+  it('returns 0 for disjoint sets', () => {
+    assert.strictEqual(jaccardSimilarity(['a', 'b'], ['c', 'd']), 0);
+  });
+
+  it('returns ~0.5 for half overlap', () => {
+    const sim = jaccardSimilarity(['a', 'b', 'c'], ['b', 'c', 'd', 'e']);
+    assert.ok(sim > 0.3 && sim < 0.6, `expected ~0.5, got ${sim}`);
+  });
+
+  it('returns 1 for both empty', () => {
+    assert.strictEqual(jaccardSimilarity([], []), 1);
+  });
+});
+
+describe('extractSection', () => {
+  const md = `# Title
+
+Some content.
+
+## Key Facts
+
+年轻人消费平替趋势明显。
+国潮品牌市场份额增长。
+
+## Other Section
+
+More content here.`;
+
+  it('extracts section by name', () => {
+    const kf = extractSection(md, 'Key Facts');
+    assert.ok(kf.includes('年轻人消费平替'));
+    assert.ok(kf.includes('国潮品牌'));
+    assert.ok(!kf.includes('Other Section'));
+  });
+
+  it('returns empty string for missing section', () => {
+    assert.strictEqual(extractSection(md, 'NonExistent'), '');
+  });
+});
+
+describe('readOutputDeclarations', () => {
+  it('returns empty array when ledger file missing', () => {
+    const dir = join(__dirname, '.test-gh-nonexistent');
+    assert.deepEqual(readOutputDeclarations(dir), []);
+  });
+
+  it('reads declaration records from JSONL', () => {
+    const dir = join(__dirname, '.test-gh-read-decl');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
+      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'ref/a.md', role: 'reference', source_url: 'https://a.com' }], cache_trails: [] }),
+      JSON.stringify({ work_id: 'w2', output_files: [{ path: 'ref/b.md', role: 'evidence_summary' }], cache_trails: ['_cache/leaf/'] }),
+    ].join('\n') + '\n');
+    try {
+      const decls = readOutputDeclarations(dir);
+      assert.strictEqual(decls.length, 2);
+      assert.strictEqual(decls[0].work_id, 'w1');
+      assert.strictEqual(decls[1].work_id, 'w2');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('checkContentDedup', () => {
+  it('fails closed when ledger is missing', () => {
+    const dir = join(__dirname, '.test-gh-cd-empty');
+    mkdirSync(dir, { recursive: true });
+    try {
+      const result = checkContentDedup(dir);
+      assert.strictEqual(result.passed, false);
+      assert.ok(result.inspect.some((i) => i.includes('missing or empty')));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('detects URL duplicates via normalization', () => {
+    const dir = join(__dirname, '.test-gh-cd-url');
+    mkdirSync(dir, { recursive: true });
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    writeFileSync(join(dir, 'reference', 'a.md'), '## Key Facts\n\nReal facts A.\n');
+    writeFileSync(join(dir, 'reference', 'b.md'), '## Key Facts\n\nReal facts B.\n');
+    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
+      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'reference/a.md', role: 'reference', source_url: 'https://example.com/article' }], cache_trails: [] }),
+      JSON.stringify({ work_id: 'w2', output_files: [{ path: 'reference/b.md', role: 'reference', source_url: 'https://example.com/article/' }], cache_trails: [] }),
+    ].join('\n') + '\n');
+    try {
+      const result = checkContentDedup(dir);
+      assert.strictEqual(result.passed, false);
+      assert.ok(result.inspect.some((i) => i.includes('URL duplicate')));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('detects homepage URLs', () => {
+    const dir = join(__dirname, '.test-gh-cd-home');
+    mkdirSync(dir, { recursive: true });
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    writeFileSync(join(dir, 'reference', 'hp.md'), '## Key Facts\n\nSome facts.\n');
+    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
+      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'reference/hp.md', role: 'reference', source_url: 'https://www.chinanews.com.cn/' }], cache_trails: [] }),
+    ].join('\n') + '\n');
+    try {
+      const result = checkContentDedup(dir);
+      assert.strictEqual(result.passed, false);
+      assert.ok(result.inspect.some((i) => i.includes('Homepage URL')));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('detects self-referential Key Facts', () => {
+    const dir = join(__dirname, '.test-gh-cd-self');
+    mkdirSync(dir, { recursive: true });
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    writeFileSync(join(dir, 'reference', 'self.md'), '## Key Facts\n\nThis reference supplements the wave1 deepening evidence.\n');
+    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
+      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'reference/self.md', role: 'reference', source_url: 'https://example.com/a' }], cache_trails: [] }),
+    ].join('\n') + '\n');
+    try {
+      const result = checkContentDedup(dir);
+      assert.strictEqual(result.passed, false);
+      assert.ok(result.inspect.some((i) => i.includes('Self-referential')));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('detects Jaccard clones', () => {
+    const dir = join(__dirname, '.test-gh-cd-jac');
+    mkdirSync(dir, { recursive: true });
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    const sameText = '## Key Facts\n\n年轻人消费平替趋势明显。国潮品牌市场份额增长。新能源汽车销量突破千万。\n';
+    writeFileSync(join(dir, 'reference', 'clone1.md'), sameText);
+    writeFileSync(join(dir, 'reference', 'clone2.md'), sameText);
+    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
+      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'reference/clone1.md', role: 'reference', source_url: 'https://a.com/1' }], cache_trails: [] }),
+      JSON.stringify({ work_id: 'w2', output_files: [{ path: 'reference/clone2.md', role: 'reference', source_url: 'https://b.com/2' }], cache_trails: [] }),
+    ].join('\n') + '\n');
+    try {
+      const result = checkContentDedup(dir, { jaccard: 0.8 });
+      assert.strictEqual(result.passed, false);
+      assert.ok(result.inspect.some((i) => i.includes('Jaccard clone')));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('passes clean declared references', () => {
+    const dir = join(__dirname, '.test-gh-cd-clean');
+    mkdirSync(dir, { recursive: true });
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    writeFileSync(join(dir, 'reference', 'r1.md'), '## Key Facts\n\n中国新能源汽车销量突破 1000 万辆。比亚迪市场份额领先。\n');
+    writeFileSync(join(dir, 'reference', 'r2.md'), '## Key Facts\n\n日本电子产业出口额增长 15%。半导体需求旺盛。\n');
+    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
+      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'reference/r1.md', role: 'reference', source_url: 'https://auto.example.com/ev-2024' }], cache_trails: [] }),
+      JSON.stringify({ work_id: 'w2', output_files: [{ path: 'reference/r2.md', role: 'reference', source_url: 'https://electronics.example.com/japan-2024' }], cache_trails: [] }),
+    ].join('\n') + '\n');
+    try {
+      const result = checkContentDedup(dir, { jaccard: 0.8, url_dedup: true, homepage_detect: true, self_ref_detect: true });
+      assert.strictEqual(result.passed, true, `Expected pass but got: ${result.inspect.join('; ')}`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

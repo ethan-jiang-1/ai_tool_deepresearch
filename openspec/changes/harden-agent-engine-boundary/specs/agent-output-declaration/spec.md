@@ -4,90 +4,117 @@
 
 ## Purpose
 
-定义 Sub-agent 的结构化产出声明合同——Agent 的文件产出（路径、角色、来源）必须以 schema-validated 的声明形式记录在 result JSON 中。Engine 消费声明做 receipt 检查、content dedup 和跨文件一致性验证，不再通过 glob/readdir 扫描文件系统"发现" Agent 产出。生产和实验在这个声明处汇聚：两者提供同样 schema 的声明，声明之后的下游管道走完全相同的代码路径。
+定义 Agent 产出声明合同：Sub-agent 的 slot `result.json` 声明其文件产出与 cache leaf；Engine 在 delegated `complete()` 成功校验后写入 bundle-level `rb_output_declarations.jsonl` ledger；下游 gate 只从 ledger 读取 Agent 产物，不通过目录扫描发现产物。
 
 ## ADDED Requirements
 
-### Requirement: Sub-agent result SHALL include structured output_files declaration
+### Requirement: SlotResult SHALL include structured output_files declaration
 
-Sub-agent 在完成搜索和文件写入后，SHALL 在返回的 result JSON 中包含 `output_files` 数组。数组每项 SHALL 至少包含 `path`（bundle-relative 路径）和 `role`（文件角色）。`role` 为 `reference` 的条目 SHALL 额外包含 `source_url`。
+Sub-agent 在完成文件写入后，SHALL 在返回的 slot result JSON 中包含 `output_files` 数组。数组每项 SHALL 至少包含 `path`（bundle-relative 路径）和 `role`（文件角色）。
 
-`output_files[].role` SHALL 取以下值之一：`reference`、`evidence_summary`、`question_list`、`source_yaml`、`index`、`other`。
+`output_files[].role` SHALL 取以下值之一：`reference`、`evidence_summary`、`question_list`、`source_yaml`、`index`、`other`。`role=reference` 的条目 SHALL 包含 `source_url`。`source_slug` MAY be present。
 
-`commitSlotResult()` SHALL 在写入 result.json 前用 Zod schema 验证 `output_files`。
+`commitSlotResult()` SHALL 在写入 committed slot `result.json` 前验证该 schema。generated `result.schema.json` SHALL 与 Zod schema 同步包含此字段。
 
 #### Scenario: Sub-agent declares reference file
 
-- **WHEN** Sub-agent 写入 `reference/01_xinhua-xinhua-box-office.md` 作为 reference
-- **AND** 返回 result JSON 包含 `output_files: [{ path: "reference/01_xinhua-xinhua-box-office.md", role: "reference", source_url: "https://www.chinanews.com.cn/sh/2024/01-01/10138674.shtml" }]`
-- **THEN** `commitSlotResult()` SHALL 通过 schema 验证并写入 result.json
-
-#### Scenario: Sub-agent declares evidence summary
-
-- **WHEN** Sub-agent 写入 wave1 deepening 产出 `artifacts/wave1/01_xinhua/evidence-summary.md`
-- **AND** 返回 result JSON 包含 `output_files: [{ path: "artifacts/wave1/01_xinhua/evidence-summary.md", role: "evidence_summary" }]`
-- **THEN** `commitSlotResult()` SHALL 通过 schema 验证
+- **WHEN** Sub-agent 写入 `reference/01_xinhua-xinhua-box-office.md`
+- **AND** slot result 包含 `output_files: [{ path: "reference/01_xinhua-xinhua-box-office.md", role: "reference", source_url: "https://www.chinanews.com.cn/sh/2024/01-01/10138674.shtml" }]`
+- **THEN** `commitSlotResult()` SHALL 通过 schema 验证并写入 committed slot `result.json`
 
 #### Scenario: Missing role is rejected
 
-- **WHEN** output_files 条目只有 `{ path: "reference/file.md" }` 而无 `role`
-- **THEN** schema 验证 SHALL fail
+- **WHEN** `output_files` 条目只有 `{ path: "reference/file.md" }` 而无 `role`
+- **THEN** `commitSlotResult()` SHALL reject before writing committed result
 
 #### Scenario: reference role without source_url is rejected
 
-- **WHEN** output_files 条目 role 为 `reference` 但无 `source_url`
-- **THEN** schema 验证 SHALL fail
+- **WHEN** `output_files` 条目 `role` 为 `reference` 但无 `source_url`
+- **THEN** `commitSlotResult()` SHALL reject before writing committed result
 
-### Requirement: Sub-agent result SHALL include cache_trails declaration
+### Requirement: SlotResult SHALL include leaf cache_trails declaration
 
-Sub-agent SHALL 在 result JSON 中包含 `cache_trails` 数组。每项 SHALL 是 bundle-relative 路径字符串，指向 Sub-agent 写入 `_cache/` 的 source 目录。cache_trails SHALL 用于 `complete()` 的 cache 存在性检查。
+Sub-agent SHALL 在 slot result JSON 中包含 `cache_trails` 数组。每项 SHALL 是 bundle-relative path，指向 `_cache/` 下的 leaf source directory，例如 `_cache/wave0/primary/01_topic/s01_source/`。
 
-#### Scenario: Sub-agent declares cache trail
+每个 declared leaf directory SHALL directly contain:
 
-- **WHEN** Sub-agent 在 `_cache/wave0/primary/01_xinhua/s01_xinhua-box-office/` 下写入了 websearch.json + page.md + meta.json
-- **AND** 返回 result JSON 包含 `cache_trails: ["_cache/wave0/primary/01_xinhua/s01_xinhua-box-office/"]`
-- **THEN** `commitSlotResult()` SHALL 通过 schema 验证
+- `websearch.json`
+- `page.md`
+- `meta.json`
 
-#### Scenario: Empty cache_trails is valid
+`cache_trails[]` SHALL NOT point to a parent directory that merely contains `sNN_*` children. `complete()` SHALL validate the declared path itself as the leaf.
 
-- **WHEN** Sub-agent 未写入任何 _cache/（例如因搜索失败）
-- **AND** 返回 result JSON 包含 `cache_trails: []`
-- **THEN** schema 验证 SHALL pass（空数组合法）
-- **AND** `complete()` 的 cache trail 检查 SHALL 在 delegated task 时 reject（见 AGQ-018）
+#### Scenario: Sub-agent declares cache leaf
 
-### Requirement: Engine SHALL consume output_files declaration, not scan directories
+- **WHEN** Sub-agent 在 `_cache/wave0/primary/01_xinhua/s01_xinhua-box-office/` 下写入三文件
+- **AND** slot result 包含 `cache_trails: ["_cache/wave0/primary/01_xinhua/s01_xinhua-box-office/"]`
+- **THEN** `commitSlotResult()` SHALL pass schema validation
+- **AND** delegated `complete()` SHALL validate the three files directly under that leaf directory
 
-Engine 代码（`complete()`、gate `content_dedup`、trace verdict）SHALL 从结构化 `output_files[]` 声明中获取 Agent 产出文件列表，SHALL NOT 通过 `fs.readdir` / glob 扫描目录来"发现" Agent 产出文件。
+#### Scenario: Parent cache directory is not accepted as a leaf
 
-- `complete()` SHALL 遍历 `output_files[].path` 逐项验证文件存在
-- gate `content_dedup` SHALL 读 `output_files[]` 中 `role=reference` 的条目获取 reference 文件列表，不再扫描 `reference/` 目录
-- trace verdict SHALL 基于声明做事件记录
+- **WHEN** slot result 声明 `cache_trails: ["_cache/wave0/primary/01_xinhua/"]`
+- **AND** 三文件实际位于 `_cache/wave0/primary/01_xinhua/s01_source/`
+- **THEN** delegated `complete()` SHALL reject because the declared path is not the leaf containing the required files
 
-#### Scenario: complete() checks files from declaration
+### Requirement: complete() SHALL write bundle-level output declaration ledger
 
-- **WHEN** `complete()` 被调用
-- **AND** result JSON 的 output_files 声明了 3 个文件路径
-- **THEN** `complete()` SHALL 逐项检查这 3 个文件是否存在
-- **AND** SHALL NOT 扫描 artifacts/ 或 reference/ 目录
+`complete()` SHALL append one JSONL record to bundle root `rb_output_declarations.jsonl` after a delegated task passes all provenance and declaration checks. The ledger record SHALL be derived from the committed slot result; Agent SHALL NOT write this ledger directly.
 
-#### Scenario: gate content_dedup reads from declaration
+Each ledger record SHALL include at least:
 
-- **WHEN** gate `content_dedup` 需要获取 reference 文件列表
-- **THEN** it SHALL 从 `output_files[]` 中过滤 `role=reference` 的条目
-- **AND** SHALL NOT 扫描 `reference/` 目录
+- `declared_at`
+- `work_id`
+- `producer_rule`
+- `slot_result_ref`
+- `runtime_receipt_ref`
+- `output_files`
+- `cache_trails`
 
-### Requirement: Production and experiment converge at output declaration
+The ledger SHALL be append-only. Downstream gates SHALL treat this ledger as the authoritative index of completed Agent outputs.
 
-生产环境由 Sub-agent 产出声明（经 `commitSlotResult()` schema 验证）。实验环境由 playbook 提供同样 schema 的 fixture 声明（手写 result.json）。声明之后的所有下游代码路径（`complete()` receipt 检查、gate `content_dedup`、trace verdict）SHALL 完全相同，不区分生产与实验。
+#### Scenario: complete writes ledger after delegated success
 
-#### Scenario: Experiment fixture uses same result.json schema as production
+- **WHEN** delegated `complete()` validates committed slot result, runtime receipt, output files, and cache leaves
+- **THEN** it SHALL append a record to `rb_output_declarations.jsonl`
+- **AND** the record SHALL contain the validated `output_files[]` and `cache_trails[]`
 
-- **WHEN** 实验 playbook 手写 result.json fixture 包含 `output_files[]` + `cache_trails[]`
-- **AND** fixture 通过 `commitSlotResult()` 的 schema 验证
-- **THEN** `complete()` 和 gate 对 fixture 的检查 SHALL 与对生产 Sub-agent 产出的检查走完全相同的代码路径
+#### Scenario: failed completion does not write ledger
 
-#### Scenario: Production Sub-agent output goes through same pipeline
+- **WHEN** delegated `complete()` rejects because runtime receipt is missing or cache leaf is incomplete
+- **THEN** it SHALL NOT append a record to `rb_output_declarations.jsonl`
 
-- **WHEN** Sub-agent 在真实搜索后返回 result JSON
-- **AND** result JSON 通过 schema 验证
-- **THEN** 下游 `complete()` 和 gate 调用 SHALL 与实验无任何代码路径差异
+### Requirement: Engine SHALL consume declaration ledger, not scan directories to discover Agent outputs
+
+Engine code that needs Agent-produced file lists SHALL read from `rb_output_declarations.jsonl` after the completion boundary. Gate `content_dedup` SHALL read `role=reference` entries from the ledger. It SHALL NOT scan `reference/` with `fs.readdir` or glob to discover reference inputs.
+
+Directory scanning MAY be used by a separate contamination diagnostic to report orphan files, but orphan files SHALL NOT be added to the reference input set and SHALL NOT help a gate pass.
+
+#### Scenario: gate content_dedup reads from ledger
+
+- **WHEN** gate `content_dedup` evaluates a bundle
+- **THEN** it SHALL load `rb_output_declarations.jsonl`
+- **AND** it SHALL filter `output_files[]` entries where `role=reference`
+- **AND** it SHALL use only those entries as reference inputs
+
+#### Scenario: orphan reference cannot help pass
+
+- **WHEN** `reference/orphan.md` exists on disk
+- **AND** no `rb_output_declarations.jsonl` record declares that path
+- **THEN** `content_dedup` SHALL NOT count it as an input reference
+- **AND** it SHALL NOT help satisfy any pass condition
+
+### Requirement: Production and experiments SHALL converge at schema-validated declaration
+
+Production SHALL obtain declarations from real Sub-agent committed slot results. Engine-layer experiments MAY use fixture slot results, but those fixtures SHALL pass the same SlotResult schema and enter the same delegated `complete()` / ledger / gate path as production after the declaration point.
+
+#### Scenario: Experiment fixture uses same downstream pipeline
+
+- **WHEN** an Engine-layer playbook provides a fixture slot result containing `output_files[]` and `cache_trails[]`
+- **AND** that fixture passes `commitSlotResult()` schema validation
+- **THEN** delegated `complete()` and gate SHALL process it through the same code path as a production Sub-agent result
+
+#### Scenario: Production Sub-agent uses same downstream pipeline
+
+- **WHEN** a real Sub-agent returns a committed slot result with declarations
+- **THEN** delegated `complete()` SHALL validate and ledger it using the same code path used by fixture-backed Engine tests

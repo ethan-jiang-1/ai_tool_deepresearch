@@ -6,7 +6,7 @@
 
 ### 一切来自 Trace
 
-Playbook 的 PASS/FAIL 裁决必须来自 `_logs/_trace.jsonl` 里的 event，不是 console.log，不是肉眼判断，不是"看起来对了"。每个 check event 的 `passed` 字段是唯一裁决依据。
+Playbook 的 PASS/FAIL 裁决必须来自 `rb_trace.jsonl` 里的 event，不是 console.log，不是肉眼判断，不是"看起来对了"。每个 check event 的 `passed` 字段是唯一裁决依据。
 
 ### 忠实执行，不改写
 

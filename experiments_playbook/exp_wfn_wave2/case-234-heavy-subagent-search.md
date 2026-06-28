@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-234_agql_w2_search_
-trace: dpt_disp_case-234_agql_w2_search_*/_logs/_trace.jsonl
+trace: dpt_disp_case-234_agql_w2_search_*/rb_trace.jsonl
 verdict: trace-jsonl
 req: WTS-002, WTS-003, WTS-006
 ---
@@ -515,8 +515,8 @@ echo "Bundle: $B  (KEPT)"
 ## Final Verdict
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'sub-agent search: v1待搜索→spawn→receipt→v2写结果→00-cross→gate pass'})})" 2>/dev/null
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})" 2>/dev/null
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'wave2-complete',passed:$PASSED,detail:'sub-agent search: v1待搜索→spawn→receipt→v2写结果→00-cross→gate pass'})})" 2>/dev/null
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})" 2>/dev/null
 ```
 
 

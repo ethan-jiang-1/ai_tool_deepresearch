@@ -151,6 +151,19 @@ function createBundle(name) {
     '## Key Facts\n- Finding.\n## Core Content Capture\nContent.\n' +
     '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- Term.\n## Risks And Limitations\n- None.\n');
 
+  // output declaration ledger (content_dedup gate reads from this)
+  writeFileSync(join(dir, 'rb_output_declarations.jsonl'), JSON.stringify({
+    declared_at: new Date().toISOString(),
+    work_id: 'wave1-deepening-topic-a',
+    producer_rule: 'deepening_intake',
+    slot_result_ref: '_subagents/wave_02/slot_00/result.json',
+    runtime_receipt_ref: '_subagents/wave_02/slot_00/runtime-receipt.jsonl',
+    output_files: [
+      { path: 'reference/01-topic-a-deepening.md', role: 'reference', source_url: 'https://example.com/deepening-topic-a' },
+    ],
+    cache_trails: [],
+  }) + '\n');
+
   return dir;
 }
 

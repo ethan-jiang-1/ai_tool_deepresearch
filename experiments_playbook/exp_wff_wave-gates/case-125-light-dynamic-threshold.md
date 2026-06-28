@@ -8,7 +8,7 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-125_w0_dynt_*
-trace: dpt_disp_case-125_w0_dynt_*/_logs/_trace.jsonl
+trace: dpt_disp_case-125_w0_dynt_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -161,7 +161,7 @@ echo "PASSED=$PASSED"
 INSPECT=$(echo "$GATE_OUTPUT" | node -e "process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const o=JSON.parse(d);console.log(JSON.stringify(o.check.inspect))})")
 echo "INSPECT: $INSPECT"
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'only 2 shared refs, threshold=12 from research_style_params -> gate correctly rejects'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,expected:false,detail:'only 2 shared refs, threshold=12 from research_style_params -> gate correctly rejects'})})"
 ```
 
 预期：gate 返回 `check.passed: false`。`shared_ref_count_floor` 规则从 research_style_params 读到 threshold=12，只有 2 个文件所以拒绝。inspect 内容类似 `"Count floor not met for reference/00-shared-*.md: 2 files (threshold: 12)"`——明确标出了实际阈值 12 和当前数量 2。这一步验证的是"不够时 gate 敢拒绝"。
@@ -188,7 +188,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 echo "PASSED=$PASSED"
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'12 shared refs meet threshold=12 from claim_verification research_style_params -> gate passes'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'12 shared refs meet threshold=12 from claim_verification research_style_params -> gate passes'})})"
 ```
 
 预期：`check.passed: true`。12 个 shared ref 满足 threshold=12，gate 放行。
@@ -198,7 +198,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 预期 2 条 check：Step 3 gate 拒绝（符合预期），Step 4 gate 放行（符合预期）。
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
 ```
 
 ## Step 6: 结果解读

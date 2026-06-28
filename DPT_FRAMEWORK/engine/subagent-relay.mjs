@@ -52,7 +52,7 @@
 //
 // ## Trace
 // Auto-inits on first mutation call via ensureTrace(baseDir). Fixed filename
-// `_logs/_trace_subagent.jsonl` inside the bundle. consoleEcho: false (file only).
+// `rb_trace.jsonl` inside the bundle. consoleEcho: false (file only).
 // Consumers never touch trace setup — no setter, no createTrace import needed.
 //
 // ## On-disk paths
@@ -64,13 +64,14 @@
 //   Pipeline:     stageSubagentSlots, recordAgentSpawnRequested, ingestAgentReceipt,
 //                 commitSlotResult, collectAndMergeSubagentResults, forkRouter
 //   Branch:       classifyBranch, convergeRepair
-//   Validation:   validateAndDiagnose, inspectFailure
+//   Validation:   validateAndDiagnose, inspectFailure, validateRuntimeReceipt
 //   Slot I/O:     createSlot, readSlotStatus, writeSlotStatus, readSlotResult
 //   Dispatch:     getDispatchMap
 //   Collection:   collectResults, mergeResults, forkAndStageSubagents
 //   Convenience:  markSlotFailed
 //   Schemas:      SubagentWorkflowState, SlotResult, Branch, SlotStatus, DispatchManifest
 //   Constants:    MAX_CONCURRENT_SUBAGENTS
+//   Receipt:      validateRuntimeReceipt, resolveSlotFromResultRef
 
 import { z } from 'zod';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -80,7 +81,7 @@ import { createTrace } from './trace.mjs';
 import { createRunLogger, readBundleName } from './logger.mjs';
 
 // Trace + logger auto-init on first mutation call via ensureTrace(bundleDir).
-// Fixed trace filename `_logs/_trace_subagent.jsonl` within the bundle. consoleEcho: false.
+// Fixed trace filename `rb_trace.jsonl` within the bundle. consoleEcho: false.
 // Consumers never touch trace/log setup — no setter, no createTrace import needed.
 let _trace = null;
 let _traceBundleDir = null;
@@ -88,7 +89,7 @@ let _log = null;
 
 function ensureTrace(bundleDir) {
   if (bundleDir && _traceBundleDir !== bundleDir) {
-    _trace = createTrace(path.join(bundleDir, '_logs', '_trace_subagent.jsonl'), { consoleEcho: false });
+    _trace = createTrace(path.join(bundleDir, 'rb_trace.jsonl'), { consoleEcho: false });
     _traceBundleDir = bundleDir;
     _log = null; // reset on bundle change — logger must track the new bundle
   }
@@ -173,6 +174,32 @@ const RuntimeReceiptEvent = z.object({
   ts: z.string().optional(),
 });
 
+// ── Agent Output Declaration (AGO-001, AGO-002) ──
+
+export const OutputFileRole = z.enum([
+  'reference',
+  'evidence_summary',
+  'question_list',
+  'source_yaml',
+  'index',
+  'other',
+]);
+
+export const OutputFileEntry = z.object({
+  path: z.string().min(1),
+  role: OutputFileRole,
+  source_url: z.string().optional(),
+  source_slug: z.string().optional(),
+});
+
+export const AgentOutputDeclarationSchema = z.object({
+  output_files: z.array(OutputFileEntry).default([]),
+  cache_trails: z.array(z.string()).default([]),
+}).refine(
+  (data) => data.output_files.every((f) => f.role !== 'reference' || f.source_url),
+  { message: 'output_files with role=reference must include source_url' },
+);
+
 const EvidenceReference = z.object({
   title: z.string(),
   url: z.string(),
@@ -189,7 +216,12 @@ export const SlotResult = z.object({
   references: z.array(EvidenceReference).default([]),
   confidence: z.number().min(0).max(1).default(0),
   notes: z.array(z.string()).default([]),
-});
+  output_files: z.array(OutputFileEntry).default([]),
+  cache_trails: z.array(z.string()).default([]),
+}).refine(
+  (data) => data.output_files.every((f) => f.role !== 'reference' || f.source_url),
+  { message: 'output_files with role=reference must include source_url' },
+);
 
 const AgentMetadata = z.object({
   slotKey: z.string(),
@@ -380,6 +412,8 @@ function resultJsonSchemaForSlot(slotConfig) {
       'references',
       'confidence',
       'notes',
+      'output_files',
+      'cache_trails',
     ],
     properties: {
       slotKey: { const: parsed.key },
@@ -403,6 +437,32 @@ function resultJsonSchemaForSlot(slotConfig) {
       },
       confidence: { type: 'number', minimum: 0, maximum: 1 },
       notes: { type: 'array', items: { type: 'string' } },
+      output_files: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['path', 'role'],
+          properties: {
+            path: { type: 'string', minLength: 1 },
+            role: {
+              enum: ['reference', 'evidence_summary', 'question_list', 'source_yaml', 'index', 'other'],
+            },
+            source_url: { type: 'string' },
+            source_slug: { type: 'string' },
+          },
+          allOf: [
+            {
+              if: { properties: { role: { const: 'reference' } }, required: ['role'] },
+              then: { required: ['source_url'] },
+            },
+          ],
+        },
+      },
+      cache_trails: {
+        type: 'array',
+        items: { type: 'string' },
+      },
     },
   };
 }
@@ -647,6 +707,45 @@ function readReceiptEvents(slot, baseDir) {
 }
 
 /**
+ * Pure validation of a subagent slot's runtime receipt. No side effects:
+ * does NOT require runtimeAgentId, does NOT write trace, does NOT write
+ * _agent.json, does NOT update slot status.
+ *
+ * Used by queue-manager delegated complete() to prove the subagent really
+ * ran without depending on ingestAgentReceipt() side-effect chain.
+ *
+ * @param {object} slot      - slot object (must have key, roleAgentKey, receiptNonce, receiptPath)
+ * @param {string} baseDir   - bundle root directory
+ * @returns {{ passed: boolean, events?: object[], error?: string }}
+ */
+export function validateRuntimeReceipt(slot, baseDir) {
+  const s = SubagentSlot.parse(slot);
+  let events;
+  try {
+    events = readReceiptEvents(s, baseDir);
+  } catch (err) {
+    return { passed: false, error: err.message };
+  }
+  const started = events.find((event) => event.event === 'agent_runtime_started');
+  const ready = events.find((event) => event.event === 'agent_result_ready');
+  if (!started) return { passed: false, error: 'runtime receipt missing agent_runtime_started' };
+  if (!ready) return { passed: false, error: 'runtime receipt missing agent_result_ready' };
+
+  for (const event of [started, ready]) {
+    if (event.slotKey !== s.key) {
+      return { passed: false, error: `runtime receipt slotKey mismatch: ${event.slotKey} !== ${s.key}` };
+    }
+    if (event.roleAgentKey !== s.roleAgentKey) {
+      return { passed: false, error: `runtime receipt roleAgentKey mismatch: ${event.roleAgentKey} !== ${s.roleAgentKey}` };
+    }
+    if (event.receiptNonce !== s.receiptNonce) {
+      return { passed: false, error: `runtime receipt nonce mismatch: ${event.receiptNonce} !== ${s.receiptNonce}` };
+    }
+  }
+  return { passed: true, events };
+}
+
+/**
  * Validate the subagent-written runtime-receipt.jsonl and import it into the
  * engine trace. Writes _agent.json and transitions slot status to 'running'.
  *
@@ -713,7 +812,7 @@ export function ingestAgentReceipt(slot, baseDir, metadata = {}) {
     receiptPath: s.receiptPath,
     receiptNonce: s.receiptNonce,
   });
-  return { agent, events };
+  return { agent, events, receiptRef: s.receiptPath };
 }
 
 function failedResultForSlot(slot, notes = []) {
@@ -777,6 +876,29 @@ export function commitSlotResult(slot, baseDir, candidateResult, metadata = {}) 
 
   const validation = validateSlotResult(s, candidateResult);
   const completedAt = new Date().toISOString();
+
+  // Path escape validation for output_files[] and cache_trails[]
+  if (validation.ok) {
+    // Validate output_files paths are bundle-relative and don't escape
+    for (const entry of validation.data.output_files) {
+      if (path.isAbsolute(entry.path) || entry.path.includes('..')) {
+        validation.ok = false;
+        validation.error = new Error(`output_files path escapes bundle: ${entry.path}`);
+        break;
+      }
+    }
+    // Validate cache_trails paths are bundle-relative and don't escape
+    if (validation.ok) {
+      for (const trail of validation.data.cache_trails) {
+        if (path.isAbsolute(trail) || trail.includes('..')) {
+          validation.ok = false;
+          validation.error = new Error(`cache_trails path escapes bundle: ${trail}`);
+          break;
+        }
+      }
+    }
+  }
+
   const result = validation.ok
     ? validation.data
     : failedResultForSlot(s, [`schema validation failed: ${validation.error.message}`]);
@@ -1071,7 +1193,11 @@ export function forkAndStageSubagents(state, baseDir, customDispatchMap) {
  *   checkResult: object|null,
  *   forkDecision: object|null,
  *   repaired: object|null,
- *   phaseLog: object[]
+ *   phaseLog: object[],
+ *   output_files: object[],
+ *   cache_trails: string[],
+ *   slotResultRefs: string[],
+ *   receiptRefs: string[]
  * }}
  */
 export function collectAndMergeSubagentResults(state, slots, baseDir) {
@@ -1084,16 +1210,77 @@ export function collectAndMergeSubagentResults(state, slots, baseDir) {
   let repaired = null;
   const phaseLog = [];
 
+  // Aggregate declaration data from collected results
+  const output_files = results.flatMap((r) => r.output_files || []);
+  const cache_trails = results.flatMap((r) => r.cache_trails || []);
+  const slotResultRefs = slots.map((s) => s.resultPath);
+  const receiptRefs = slots.map((s) => s.receiptPath);
+
   if (merged.subagent_all_failed) {
     repaired = convergeRepair(merged);
     phaseLog.push({ phase: 'subagent_repair', outcome: repaired.outcome });
     logEvent('warn', 'repair', { trigger: 'all_subagents_failed', outcome: repaired.outcome, iterations: repaired.iterations });
     traceEntry('repair', { trigger: 'all_subagents_failed', outcome: repaired.outcome, iterations: repaired.iterations });
-    return { finalState: repaired.state, results, checkResult, forkDecision, repaired, phaseLog };
+    return { finalState: repaired.state, results, checkResult, forkDecision, repaired, phaseLog, output_files, cache_trails, slotResultRefs, receiptRefs };
   }
 
   checkResult = validateAndDiagnose(merged, SubagentWorkflowState);
   forkDecision = forkRouter(merged);
   phaseLog.push({ phase: 'ci_check', passed: checkResult.passed }, { phase: 're_fork', branch: forkDecision.branch });
-  return { finalState: merged, results, checkResult, forkDecision, repaired, phaseLog };
+  return { finalState: merged, results, checkResult, forkDecision, repaired, phaseLog, output_files, cache_trails, slotResultRefs, receiptRefs };
+}
+
+/**
+ * Reconstruct a minimal slot-like object from a committed result.json reference.
+ * Needed by queue-manager delegated complete() to call validateRuntimeReceipt
+ * without having access to the original in-memory slot object.
+ *
+ * @param {string} resultRef  - bundle-relative path to committed result.json
+ * @param {string} bundleDir  - bundle root directory
+ * @returns {object} minimal slot object suitable for SubagentSlot.parse + validateRuntimeReceipt
+ */
+export function resolveSlotFromResultRef(resultRef, bundleDir) {
+  const resultPath = path.join(bundleDir, resultRef);
+  if (!existsSync(resultPath)) {
+    throw new Error(`committed slot result not found: ${resultRef}`);
+  }
+  const result = JSON.parse(readFileSync(resultPath, 'utf-8'));
+  const slotDir = path.dirname(resultRef);
+  const receiptPath = `${slotDir}/runtime-receipt.jsonl`;
+  const receiptFull = path.join(bundleDir, receiptPath);
+
+  // Extract receiptNonce from receipt file if it exists
+  // Use a placeholder so SubagentSlot.parse doesn't reject min(1) requirement;
+  // validateRuntimeReceipt will catch the actual nonce mismatch later.
+  let receiptNonce = 'unresolved';
+  if (existsSync(receiptFull)) {
+    const text = readFileSync(receiptFull, 'utf-8').trim();
+    if (text) {
+      try { receiptNonce = JSON.parse(text.split('\n')[0]).receiptNonce || 'unresolved'; }
+      catch { /* keep placeholder — validateRuntimeReceipt will catch */ }
+    }
+  }
+
+  // Parse wave_NN / slot_MM from path segments
+  const segments = slotDir.split(path.sep);
+  const waveStr = segments.find((s) => s.startsWith('wave_'));
+  const slotStr = segments.find((s) => s.startsWith('slot_'));
+  const waveIndex = waveStr ? parseInt(waveStr.split('_')[1], 10) || 1 : 1;
+  const slotIndex = slotStr ? parseInt(slotStr.split('_')[1], 10) || 0 : 0;
+
+  return {
+    key: result.slotKey,
+    roleAgentKey: result.roleAgentKey,
+    waveIndex,
+    slotIndex,
+    taskPath: `${slotDir}/task.md`,
+    schemaPath: `${slotDir}/result.schema.json`,
+    resultPath: resultRef,
+    summaryPath: `${slotDir}/result.md`,
+    statusPath: `${slotDir}/_status.json`,
+    agentPath: `${slotDir}/_agent.json`,
+    receiptPath,
+    receiptNonce,
+    status: result.status,
+  };
 }

@@ -9,7 +9,7 @@ agent_mode: real-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-901_wff_rwa_*
-trace: dpt_disp_case-901_wff_rwa_*/_logs/_trace.jsonl
+trace: dpt_disp_case-901_wff_rwa_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -112,7 +112,7 @@ B=$(cat /tmp/pb_bundle)
 GATE=$(node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
 echo "$GATE"
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'real Agent rewrite per phase-hitl1.md 3a'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'real Agent rewrite per phase-hitl1.md 3a'})})"
 ```
 
 ## Step 7: Human Review Checklist
@@ -137,7 +137,7 @@ B=$(cat /tmp/pb_bundle)
 # 人工裁决：pass 或 fail（reviewer 填）
 HUMAN_VERDICT=pass
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'human-review',passed:'$HUMAN_VERDICT'==='pass',detail:'source: human — rewrite quality verdict by reviewer'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'human-review',passed:'$HUMAN_VERDICT'==='pass',detail:'source: human — rewrite quality verdict by reviewer'})})"
 echo "human-review recorded: $HUMAN_VERDICT"
 ```
 
@@ -155,6 +155,6 @@ echo "human-review recorded: $HUMAN_VERDICT"
 ```bash
 REPO_ROOT=$(pwd)
 B=$(cat /tmp/pb_bundle)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
 ```

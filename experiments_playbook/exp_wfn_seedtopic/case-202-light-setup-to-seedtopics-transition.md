@@ -8,13 +8,26 @@ runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-202_s2s_
-trace: dpt_disp_case-202_s2s_*/_logs/_trace.jsonl
+trace: dpt_disp_case-202_s2s_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
 ## Execution Contract
 
 由 coding agent 在真实 disposable experiment bundle 中执行。不依赖具体 topic 内容——只验证过渡机制。
+
+
+## Reality Distance Ledger
+
+| 维度 | 声明 |
+|------|------|
+| **Runtime context** | disposable bundle，`new-disposable-bundle.mjs` 创建 |
+| **Framework path** | `operate-queue.mjs` CLI, gate CLI, `wff-playbook-utils.mjs` |
+| **Fixture input** | task card JSON, registry, status 在 playbook 内写入 — Engine-layer fixture |
+| **Agent actor** | 无（fixture-backed）— 不证明 Agent 搜索/写作/修复 |
+| **External calls** | 无 |
+| **Verdict source** | `rb_trace.jsonl` `check` events |
+| **不证明** | Agent queue 决策、semantic work — 仅证明 queue loop + gate 机械结构 |
 
 # case-202-light-setup-to-seedtopics-transition
 
@@ -128,7 +141,7 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "seed-topics-ready: passed=$PASSED next=$NEXT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/_logs/_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'setup→seed-topics transition, next=wave0'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'setup→seed-topics transition, next=wave0'})})"
 ```
 
 预期：`passed: true`，`next: phases/phase-wave0.md`。
@@ -136,7 +149,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ## Step 5: 裁决
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/_logs/_trace.jsonl')})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
 ```
 
 ## Step 6: 结果解读
