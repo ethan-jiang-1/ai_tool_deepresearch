@@ -1,6 +1,6 @@
 # Research Wave Phase Content (delta)
 
-> req: RWP-012
+> req: RWP-012, RWP-013
 
 ## ADDED Requirements
 
@@ -18,11 +18,14 @@
 
 `action: supplement` 时保持当前 delta/append 行为（`phase-wave2.md` L351-376 现有文本）。
 
+Gate wave2-complete SHALL include a rerun add coverage check: when any seed topic declares `action: add`, `synthesis.md` SHALL NOT use `## Delta Synthesis` as the main processing path, and `cross-topic-ledger.md` or `finding-index.yaml` SHALL cover all topic slugs from `rb_plan.md` topic_registry.
+
 #### Scenario: Wave2 rerun action:add triggers full synthesis
 
 - **WHEN** seed topic 文件含 `action: add`（新 topic）
 - **THEN** Phase Agent SHALL 全量重合成，不追加 delta section
 - **AND** synthesis.md SHALL NOT 含 `## Delta Synthesis (Rerun N)` header
+- **AND** gate SHALL fail if scan/index coverage omits any topic slug
 
 #### Scenario: Wave2 rerun action:supplement keeps delta mode
 

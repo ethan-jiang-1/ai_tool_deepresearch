@@ -1,30 +1,27 @@
 # Gate Content Dedup (delta)
 
-> req: GAC-006, GAC-007
+> req: GAC-006, GAC-007, GAC-008
 
 ## ADDED Requirements
 
-### Requirement: content_dedup filesystem fallback on empty ledger
+### Requirement: content_dedup SHALL NOT vacuously pass on empty reference declarations
 
-`checkContentDedup(bundlePath, options)` SHALL 当 declaration ledger 中 `role === 'reference'` entry 数量为 0 时，触发 filesystem fallback：
+`checkContentDedup(bundlePath, options)` SHALL continue to use `rb_output_declarations.jsonl` as its only provenance authority for reference inputs.
 
-1. 用 `readdirSync` 扫描 `reference/` 目录，筛选匹配 topic slug pattern 的 `.md` 文件
-2. 对每个文件，从文件内容中解析 metadata block 的 `- source_url:` 行获取 source URL
-3. 若文件使用 YAML frontmatter（`---`）且无法解析 `source_url`，SHALL fail，inspect 说明格式不兼容
-4. 对 fallback 文件集执行与 ledger 模式相同的检查：URL dedup、homepage detect、self-referential check、Jaccard clone detection
+当 ledger 存在但不含任何 `role === "reference"` declaration 时，`checkContentDedup()` SHALL return `passed: false`。它 SHALL NOT scan `reference/` and treat filesystem-only files as valid dedup inputs.
 
-#### Scenario: Empty reference ledger triggers directory scan
+#### Scenario: Empty reference declarations fail closed
 
 - **WHEN** `rb_output_declarations.jsonl` 不含任何 `role === 'reference'` 的 declaration
-- **THEN** `checkContentDedup()` SHALL 扫描 `reference/` 目录
-- **AND** SHALL 执行完整的 dedup + homepage + self-ref + Jaccard 检查
+- **THEN** `checkContentDedup()` SHALL return `passed: false`
+- **AND** inspect/advice SHALL explain that no completed reference output declarations were available
 
-#### Scenario: Frontmatter-format reference causes fallback failure
+#### Scenario: Filesystem-only references are not trusted dedup inputs
 
-- **WHEN** filesystem fallback 遇到以 `---` 开头的 YAML frontmatter 文件
-- **AND** 无法从中解析 `source_url`
-- **THEN** `content_dedup` SHALL return `passed: false`
-- **AND** inspect SHALL 指示该文件需转换为 metadata block 格式
+- **WHEN** `reference/orphan.md` exists on disk
+- **AND** no ledger declaration includes `reference/orphan.md`
+- **THEN** `content_dedup` SHALL NOT use that file as a dedup input
+- **AND** the separate ledger coverage rule SHALL fail the gate
 
 ### Requirement: content_dedup homepage detection uses path-depth heuristic
 
@@ -41,3 +38,25 @@
 
 - **WHEN** URL 为 `https://m-en.yna.co.kr/view/AEN20260113007053315`
 - **THEN** `isHomepageUrl()` SHALL return `false`
+
+### Requirement: Gate SHALL detect reference ledger coverage gaps
+
+Gate wave1-complete SHALL include a ledger coverage rule that compares filesystem reference files participating in `count_floor` with declared ledger reference paths.
+
+The rule SHALL:
+- Expand the same `reference/*{topic}*.md` target used by count-floor style checks
+- Read declared paths from `rb_output_declarations.jsonl` entries where `output_files[].role === "reference"`
+- Fail when any filesystem reference file matching the topic target is missing from the declared path set
+- Treat filesystem scan only as orphan detection; filesystem-only files SHALL NOT become valid provenance inputs
+
+#### Scenario: Filesystem reference missing from ledger fails
+
+- **WHEN** `reference/05_south-korea-factor-shell.md` exists
+- **AND** no `role === "reference"` declaration includes that path
+- **THEN** `ledger_coverage` SHALL fail
+- **AND** inspect SHALL list the orphan reference path
+
+#### Scenario: Declared reference coverage passes
+
+- **WHEN** each `reference/*05_south-korea-factor*.md` file has a matching `role === "reference"` declaration
+- **THEN** `ledger_coverage` SHALL pass for that topic

@@ -1,10 +1,10 @@
 # Rerun Topic Integration
 
-> req: RTI-001, RTI-002, RTI-003
+> req: RTI-001, RTI-002, RTI-003, RTI-004
 
 ## Purpose
 
-当 HITL2 用户选择 rerun 并新增 topic 时，确保该 topic 的 reference 文件符合规范格式、wave2 cross-topic 合成完整覆盖新 topic（全量重合成而非 delta/append）、gate 能检测内容质量逃逸。消除 BUG-007：三个链断裂在 rerun 增量 topic 场景同时触发导致 gate 全绿但语义集成未发生。
+当 HITL2 用户选择 rerun 并新增 topic 时，确保该 topic 的 reference 文件符合规范格式、wave2 cross-topic 合成完整覆盖新 topic（全量重合成而非 delta/append）、gate 能检测内容质量逃逸。消除 backlog bug 007 所暴露的问题：三个链断裂在 rerun 增量 topic 场景同时触发导致 gate 全绿但语义集成未发生。
 
 ## Requirements
 
@@ -65,7 +65,9 @@ Gate wave1-complete SHALL 包含以下内容质量规则，在 structural check 
 
 2. **`key_facts_min_lines`**：reference 文件的 `## Key Facts` section SHALL 包含至少 5 行以 `- ` 开头的实质性条目。检测范围：filesystem 中所有 `reference/*{topic}*.md` 文件。
 
-3. **`ledger_coverage`**：filesystem 中 `reference/*{topic}*.md` 的文件数 SHALL ≤ `rb_output_declarations.jsonl` 中 `role === 'reference'` 且 path 匹配同一 glob 的声明数。若 filesystem 中的 reference 文件未被声明进 ledger，gate SHALL fail。
+3. **`reference_format`**：reference 文件 SHALL 使用 metadata block（`- key: value`）并包含 9 个 required metadata fields 和 5 个 standard sections；YAML frontmatter SHALL fail。
+
+4. **`ledger_coverage`**：filesystem 中 `reference/*{topic}*.md` 的每个文件 SHALL 在 `rb_output_declarations.jsonl` 中有 `role === 'reference'` declaration。若 filesystem 中的 reference 文件未被声明进 ledger，gate SHALL fail。Filesystem 只用于 orphan detection，不作为 provenance authority。
 
 #### Scenario: Homepage URL rejected by article-level check
 
@@ -91,25 +93,26 @@ Gate wave1-complete SHALL 包含以下内容质量规则，在 structural check 
 - **THEN** `ledger_coverage` rule SHALL fail
 - **AND** inspect SHALL 列出未被声明的文件路径
 
-### Requirement: content_dedup filesystem fallback
+### Requirement: Gate shall not vacuously pass empty reference declarations
 
-`checkContentDedup()` SHALL 当 declaration ledger 中 `role === 'reference'` 的 entry 数量为 0 时，回退扫描 `reference/` 目录中匹配 topic slug pattern 的文件。
+`checkContentDedup()` SHALL NOT vacuously pass when declaration ledger contains no `role === "reference"` entries.
 
-Fallback 模式下：
-- 扫描 filesystem 获取 `reference/*{topic}*.md` 文件列表
-- 对每个文件执行与 ledger 模式相同的检查：URL dedup、homepage detect、self-referential check、Jaccard clone detection
-- `source_url` 从文件内容中解析（metadata block 中的 `- source_url:` 行）
-- 若文件使用 YAML frontmatter 格式（`---`），`source_url` 解析失败时 gate SHALL fail 并返回 inspect 说明格式不兼容
+该检查 SHALL 保持 ledger authority：
+- 只使用 `rb_output_declarations.jsonl` 中 `role === "reference"` entries 作为 dedup input
+- 若 ledger 缺失或为空，fail closed
+- 若 ledger 存在但没有 reference declaration，fail closed
+- SHALL NOT 扫描 filesystem 并把 orphan reference 文件当作合法 dedup input
+- filesystem orphan reference 由 `ledger_coverage` rule fail
 
-#### Scenario: Empty ledger triggers filesystem fallback
+#### Scenario: Empty reference declarations fail closed
 
 - **WHEN** `rb_output_declarations.jsonl` 存在但不含任何 `role === 'reference'` 的 declaration
-- **THEN** `checkContentDedup()` SHALL 扫描 `reference/` 目录
-- **AND** 对扫描到的文件执行完整的 dedup + homepage + self-ref + Jaccard 检查
-
-#### Scenario: YAML frontmatter reference fails fallback
-
-- **WHEN** filesystem fallback 遇到使用 YAML frontmatter（`---`）格式的 reference 文件
-- **AND** 无法从 frontmatter 中解析出 `source_url`
 - **THEN** `content_dedup` SHALL fail
-- **AND** inspect SHALL 说明该文件格式不支持，需转换为 metadata block 格式
+- **AND** inspect SHALL explain that no completed reference declarations are available
+
+#### Scenario: Orphan reference is caught by ledger coverage
+
+- **WHEN** filesystem contains a matching `reference/*{topic}*.md` file
+- **AND** no declaration ledger entry declares that path
+- **THEN** `ledger_coverage` SHALL fail
+- **AND** `content_dedup` SHALL still not use the orphan file as a dedup input

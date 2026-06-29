@@ -62,6 +62,7 @@ prefixes:
   PRP: pre-research-phase-content
   REF: reference-flat-format
   REI: rerun-incremental-node
+  RTI: rerun-topic-integration
   REL: repair-loop
   RES: research-styles
   RET: requirement-traceability
@@ -173,6 +174,9 @@ GAC-002: gate-content-dedup — Jaccard similarity detects near-duplicate refere
 GAC-003: gate-content-dedup — URL dedup detects duplicate source URLs
 GAC-004: gate-content-dedup — Homepage URL detection flags root-domain-only references
 GAC-005: gate-content-dedup — Self-referential language detection and standard gate check result
+GAC-006: gate-content-dedup — Reference declaration coverage prevents filesystem orphan pass-through
+GAC-007: gate-content-dedup — Homepage URL detection includes shallow path heuristic and empty URL failure
+GAC-008: gate-content-dedup — Ledger coverage rule detects filesystem reference files missing from declaration ledger
 
 # gate-fork-router
 GAF-001: gate-fork-router — Gate branch classification and explicit resolver
@@ -200,6 +204,13 @@ REI-002: rerun-incremental-node — ProfileSchema rerun_count field (non-negativ
 REI-003: "rerun-incremental-node — Gate-rerun-ready checks rerun state legality (4 rules: rationale, count<3, structure, status)"
 REI-004: rerun-incremental-node — Chain routes HITL2 rerun as deterministic outcome (passed→readiness, rerun→rerun-node)
 REI-005: rerun-incremental-node — Rerun loop protection with max iterations (rerun_count<3, terminal fail on exhaustion)
+
+# rerun-topic-integration
+RTI-001: rerun-topic-integration — Sub-agent reference format is explicit in rerun topic integration
+RTI-002: rerun-topic-integration — Wave2 action:add rerun performs full re-synthesis
+RTI-003: rerun-topic-integration — Gate detects rerun topic reference quality and provenance escape
+RTI-004: rerun-topic-integration — content_dedup SHALL NOT vacuously pass when ledger contains no reference declarations
+
 # schema-core
 SCO-001: schema-core — Six domain enums
 SCO-002: schema-core — Six Zod contracts
@@ -442,6 +453,7 @@ REF-002: reference-flat-format — Rich MD reference file template (metadata blo
 REF-003: reference-flat-format — _INDEX.md as canonical reference inventory with source_layer column
 REF-004: reference-flat-format — README.md as human navigation for reference directory
 REF-005: reference-flat-format — Phase nodes enforce reference file naming convention
+REF-006: reference-flat-format — Wave1 sub-agent reference file format specification
 
 # wave0-artifacts-directory
 WAD-001: wave0-artifacts-directory — Bundle structure includes artifacts/wave0/ directory
@@ -452,6 +464,8 @@ WAD-003: wave0-artifacts-directory — instantiate-run-bundle.mjs creates artifa
 RWP-009: research-wave-phase-content — Wave0 phase produces 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
 RWP-010: research-wave-phase-content — Wave1 phase produces reference/{topic_slug}-<qualifier>.md rich MD per topic
 RWP-011: research-wave-phase-content — Wave2 phase produces 00-cross-*.md (optional), synthesis stays in artifacts/wave2/
+RWP-012: research-wave-phase-content — Wave2 rerun action:add full re-synthesis with gate coverage
+RWP-013: research-wave-phase-content — Wave2 gate rerun action:add check forbids delta-only synthesis and requires scan/index full topic slug coverage
 
 # research-wave-gate-implementation (delta)
 RWG-011: research-wave-gate-implementation — Wave0 gate checks for 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml

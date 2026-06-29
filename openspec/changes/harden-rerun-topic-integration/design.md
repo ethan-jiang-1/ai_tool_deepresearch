@@ -1,6 +1,6 @@
 ## Context
 
-BUG-007：Rerun 增量 topic 产出空壳，gate 全绿但语义未集成。根因是三个独立的链断裂在 rerun 场景同时触发：
+Backlog bug 007：Rerun 增量 topic 产出空壳，gate 全绿但语义未集成。根因是三个独立的链断裂在 rerun 场景同时触发：
 
 ```
 sub-agent ──► reference/*.md          wave2 rerun ──► synthesis
@@ -8,9 +8,9 @@ sub-agent ──► reference/*.md          wave2 rerun ──► synthesis
     │ frontmatter / 壳                       │ delta/append only
     │                                        │
     ▼                                        ▼
-        gate content_dedup ←── 空转通过 ──┘
+        gate content_dedup ←── reference declarations 空转通过 ──┘
               │
-              │ 只读 ledger，不扫 filesystem
+              │ count_floor 信 filesystem；content_dedup 信 ledger
 ```
 
 三个修复分布在 MD prose（Agent Flow）和 JS engine（gate）两侧，均不新增依赖。
@@ -47,21 +47,27 @@ sub-agent ──► reference/*.md          wave2 rerun ──► synthesis
 
 ### D3: Gate 质量规则作为 gate definition JSON 新 rule
 
-**选择**：在 `gate-wave1-complete.definition.json` 中新增三条 rule entry：`source_url_article_level`（`pattern_match` 变体，检查 path depth）、`key_facts_min_lines`（`pattern_match` 变体，计数 `- ` 行）、`ledger_coverage`（新 `cross_check` 类型，比较 filesystem glob 与 ledger entry 数）。
+**选择**：在 `gate-wave1-complete.definition.json` 中新增 rule entry：`reference_format`（metadata block + 5 sections）、`source_url_article_level`（检查 path depth）、`key_facts_min_lines`（计数 `- ` 行）、`ledger_coverage`（比较 filesystem glob 与 ledger declaration path set）。
 
 **为什么**：gate definition JSON 是 gate 规则的唯一权威。新增规则遵循已有 pattern（`no_example_com_ref_url` 是 `pattern_match` 规则的已有实例），降低认知负担。`source_url_article_level` 的 path-depth 逻辑在 `gate-helpers.mjs` 中实现。
 
 **替代方案**：新增独立 gate（如 `gate-wave1-content-quality`）。拒绝原因——内容质量与 wave1-complete 的结构检查应同批执行（同一 gate pass/fail），分开会增加 Phase Agent 的 gate 执行循环复杂度。
 
-### D4: content_dedup filesystem fallback 保留在当前函数中
+### D4: content_dedup 保持 ledger authority，但不得 reference declarations 空转通过
 
-**选择**：在 `checkContentDedup()` 的 L695（读 ledger 后）增加条件分支：若 `referenceEntries.length === 0`，扫描 `reference/` 目录。删除 L721-723 的空转通过代码。
+**选择**：`checkContentDedup()` 继续只从 `rb_output_declarations.jsonl` 读取 `role === "reference"` entry。删除 L721-723 的空转通过代码，若 ledger 存在但没有 reference declaration，则 fail closed，inspect/advice 指向 delegated relay/queue complete 产出 reference declaration。
 
-**为什么**：最小改动，不改变函数签名和调用方。空转通过（L721-723 `return { passed: true }`）是 BUG-007 的直接原因——移除它并替换为 fallback 扫描即可封堵。
+**为什么**：`gate-content-dedup` accepted spec 明确将 declaration ledger 作为 provenance authority；filesystem orphan 文件不能成为合法 pass 输入。Backlog bug 007 的直接缺口不是“dedup 没把 orphan 当输入”，而是“orphan 能帮 count_floor pass 且 ledger 无 reference declaration 时 content_dedup 空转通过”。因此用 `ledger_coverage` 发现 orphan 并 fail，同时让 `content_dedup` 对空 reference declarations fail closed。
+
+### D5: Wave2 action:add 增加 gate 可验证约束
+
+**选择**：在 `gate-wave2-complete.definition.json` 增加 rerun add 专用检查：若任一 seed topic 的 `## 本轮重跑方向` section 含 `action: add`，则 `synthesis.md` 不得包含 `## Delta Synthesis` 作为主处理路径，且 `cross-topic-ledger.md` 或 `finding-index.yaml` 必须覆盖 topic_registry 中全部 topic slug。
+
+**为什么**：只改 `phase-wave2.md` prose 仍依赖 Agent 自律。新增检查让 JS/CLI 能抓住 delta-only synthesis，保证新增 topic 被纳入全量 cross-topic projection。Wave1 不负责旧 topic 交叉引用，旧 topic 的语义更新由 Wave2 full synthesis/backfill 处理。
 
 ## Risks / Trade-offs
 
-**[Risk] filesystem fallback 可能扫描到非当前 topic 的旧 reference 文件** → Mitigation：fallback 使用与 `count_floor` 相同的 topic-glob pattern（从 gate definition JSON 的 `target` 字段读取），确保只扫描当前 topic 的文件。
+**[Risk] ledger coverage 扫描到非当前 topic 的旧 reference 文件** → Mitigation：coverage 使用与 `count_floor` 相同的 topic-glob pattern，按 topic slug 展开，只检查参与 count_floor 的 files。
 
 **[Risk] `source_url_article_level` 的 path-depth heuristic 可能误判** → Mitigation：只拒绝 depth < 2 的 URL（homepage + 单级路径如 `/news/`）。合法 article URL（如 `/view/AEN20260113007053315`）depth ≥ 3，不会误判。edge case（如 `/articles/short` depth=2）按保守处理：放过，由 `content_dedup` Jaccard 检查兜底。
 
