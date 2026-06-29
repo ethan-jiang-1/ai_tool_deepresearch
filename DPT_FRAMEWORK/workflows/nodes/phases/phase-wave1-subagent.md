@@ -47,6 +47,7 @@ Wave1 produces TWO paired artifacts per topic:
 |------|------|
 | `artifacts/wave1/{topic.slug}/evidence-summary.md` | "What We Know" — source URLs, key findings, open questions |
 | `artifacts/wave1/{topic.slug}/question-list.md` | "What We Still Don't Know" — four-section exploration ledger |
+| `reference/{topic.slug}-<source-slug>.md` | One rich MD reference file per fetched source page |
 
 ### 2.1 evidence-summary.md
 
@@ -140,6 +141,58 @@ last_updated: YYYY-MM-DD
 
 **Note:** Question Reconciliation (§2) uses `[已解决]`/`[部分进展]`/`[仍开放]`/`[需内部数据]` to mark what CHANGED. Evidence-summary Open Questions uses `[开放]`/`[部分解答]`/`[涌现]` to mark CURRENT state. These are different label sets for different purposes — do not mix them.
 
+### 2.3 reference/{topic.slug}-<source-slug>.md
+
+For each fetched source page, write one rich Markdown reference file in `reference/`. The file MUST use metadata block format, not YAML frontmatter.
+
+Required file shape:
+
+```markdown
+# <Source-specific title>
+
+- source_url: <specific article/source URL>
+- acceptance_status: accepted
+- source_type: <primary|secondary|mixed|meta>
+- tier: <Tier 1|Tier 2|Tier 3|Tier 4>
+- evidence_role: deepening_reference
+- trust_level: <academic|practitioner|official|caution|analyst|community>
+- why_it_matters: <one sentence tied to this topic>
+- accessed_at: YYYY-MM-DD
+- related_topic: {topic.slug}
+
+## Key Facts
+
+- <specific fact from fetched page>
+- <specific fact from fetched page>
+- <specific fact from fetched page>
+- <specific fact from fetched page>
+- <specific fact from fetched page>
+
+## Core Content Capture
+
+<Narrative capture of what the source says.>
+
+## Relevance To This Research
+
+<Why this source matters for the topic.>
+
+## Quotable Terms / Concepts
+
+- <term, phrase, or concept>
+
+## Risks And Limitations
+
+- <what this source cannot prove>
+```
+
+**Reference format rules:**
+- The metadata block is at the top of the file before the first `## ` header.
+- Metadata lines MUST use `- key: value`; YAML frontmatter fences (`---`) are forbidden.
+- The 9 required metadata fields are exactly: `source_url`, `acceptance_status`, `source_type`, `tier`, `evidence_role`, `trust_level`, `why_it_matters`, `accessed_at`, `related_topic`.
+- The 5 section headers are exactly: `## Key Facts`, `## Core Content Capture`, `## Relevance To This Research`, `## Quotable Terms / Concepts`, `## Risks And Limitations`.
+- `source_url` MUST identify the specific article/source page used for extraction, not a homepage or broad section landing page.
+- `## Key Facts` MUST contain at least 5 concrete bullet facts from the fetched page.
+
 ## 3. Execution Within Relay Slot
 
 The Sub-agent operates within a relay-assigned slot directory (`_subagents/wave_NN/slot_MM/`). It receives two files:
@@ -154,8 +207,9 @@ The Sub-agent operates within a relay-assigned slot directory (`_subagents/wave_
 5. Extract mechanisms, trends, contradictions, open questions
 6. Write `evidence-summary.md` with canonical labels
 7. Write `question-list.md` with complete four-section structure
-8. Write `agent_result_ready` event to `runtime-receipt.jsonl` (IMMEDIATELY before returning)
-9. Return JSON matching `result.schema.json` to the Phase Agent
+8. Write one `reference/{topic.slug}-<source-slug>.md` metadata-block file per fetched source page
+9. Write `agent_result_ready` event to `runtime-receipt.jsonl` (IMMEDIATELY before returning)
+10. Return JSON matching `result.schema.json` to the Phase Agent
 
 **Intermediate products:** Raw WebSearch output, fetched page content, and source metadata MUST be written to the cache directory from the spawn prompt (`Cache directory:` line) and task.md (`## Cache Directory` section). The path follows `_cache/wave1/{batch}/{topic_slug}/`. For each source, create `sNN_{source-slug}/` with:
 - `websearch.json` — raw WebSearch result
@@ -172,6 +226,7 @@ See `shared-subagent-protocol.md` for the full chain. The Sub-agent MUST exhaust
 
 - **No fabricated evidence:** Every source URL and key finding must come from real page-fetching. Search snippets are not a substitute for page content
 - **No placeholder question-list.md:** All four sections must contain substantive content — no "TBD" or "待补充" placeholders
+- **No YAML frontmatter reference files:** `reference/*.md` files must use metadata block lines (`- key: value`) and the 5 standard sections
 - **Canonical labels only:** Question status labels must be `[开放]`/`[部分解答]`/`[涌现]` (evidence-summary) and `[已解决]`/`[部分进展]`/`[仍开放]`/`[需内部数据]` (question-list Reconciliation). Topic-descriptor labels like `[Bridge gap]` are forbidden
 - **No fake key finding prefixes:** Each Key Finding must start with `**机制理解**:` or `**趋势观察**:`
 - **Partial evidence is acceptable:** If a source is inaccessible after exhausting the degradation chain, record the access failure — do not fabricate. Partial evidence-summary with honest access limitations is valid output
@@ -194,7 +249,7 @@ See `shared-subagent-protocol.md` Forbidden Authority section for universal Sub-
 - **On count_floor gate fail:** Re-fill queue with supplementary task cards (§3.3.2 of phase-wave1.md) — same sub-agent role (`dpt-evidence-extractor`), same relay contract, focused action: find additional sources only, write `reference/{topic.slug}-*.md` files only, do NOT modify evidence-summary.md or question-list.md
 
 **Sub-agent (this file) does:**
-- Search + fetch + extract + write TWO artifacts (evidence-summary.md + question-list.md)
+- Search + fetch + extract + write paired topic artifacts plus reference files (evidence-summary.md + question-list.md + `reference/{topic.slug}-*.md`)
 - Return bounded JSON to Phase Agent
 - Stay within relay slot directory
 

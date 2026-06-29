@@ -144,6 +144,95 @@ Cross-topic judgment from wave2 ledger/index projection.
 `);
 }
 
+function configureActionAddRerun(dir) {
+  writeFileSync(join(dir, 'rb_plan.md'), `---
+plan_basename: test-rerun
+derived_topic_count: 2
+topic_registry:
+  - slug: topic-a
+    label: Topic A
+  - slug: topic-b
+    label: Topic B
+---
+# Plan
+`);
+
+  mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-b'), { recursive: true });
+  writeFileSync(join(dir, 'artifacts/wave1/topic-b/evidence-summary.md'), '# Topic B Evidence Summary\n\n## Source URLs\n\n- [Source B](https://example.com/news/b)\n\n## Key Findings\n\n1. **机制理解**: Finding B\n\n## Open Questions\n\n1. [开放] Question B\n');
+  writeFileSync(join(dir, 'artifacts/wave1/topic-b/question-list.md'), '# Topic B Question List\n\n## Topic Investigation Targets\n\n## Question Reconciliation\n\n## Emergent Question Protocol\n\n## Exploration / Exploitation Decision\n');
+
+  writeFileSync(join(dir, 'seed_topics/topic-a.md'), `# Topic A
+
+## Wave2 Judgment
+Cross-topic judgment from wave2 ledger/index projection.
+
+## Pending Questions
+- [开放] Question 1
+`);
+  writeFileSync(join(dir, 'seed_topics/topic-b.md'), `# Topic B
+
+## 本轮重跑方向
+action: add
+
+## Wave2 Judgment
+Cross-topic judgment from wave2 ledger/index projection.
+
+## Pending Questions
+- [开放] Question B
+`);
+}
+
+function createFullCoverageLedger(dir) {
+  writeFileSync(join(dir, 'artifacts/wave2/cross-topic-ledger.md'), `# Cross-Topic Ledger
+
+## Cross-Topic Scan Matrix
+
+| pair_id | topics | checked_dimensions | finding_ids | notes |
+| P01 | topic-a + topic-b | shared_pattern, contradiction, resolution_opportunity, emergent_question | W2F-001 | Full rerun add scan |
+
+## Wave1 Legacy Questions
+
+topic-a and topic-b reviewed.
+
+## Cross-Topic Resolutions
+
+W2F-001 covers topic-a and topic-b.
+
+## Emergent Cross-Topic Questions
+
+None found.
+
+## Exploration Decisions
+
+None needed.
+
+## HITL2 Handoff
+
+None.
+`);
+}
+
+function createFullCoverageIndex(dir) {
+  writeFileSync(join(dir, 'artifacts/wave2/finding-index.yaml'), `version: "0.1"
+source_layer: wave2_cross_topic
+ledger: artifacts/wave2/cross-topic-ledger.md
+synthesis: artifacts/wave2/synthesis.md
+scan:
+  topics:
+    - topic-a
+    - topic-b
+  topic_count: 2
+  pair_count_expected: 1
+  pair_count_checked: 1
+findings:
+  - id: W2F-001
+    type: cross_topic_resolution
+    status: resolved
+    decision: use_existing_evidence
+    affected_topics: [topic-a, topic-b]
+`);
+}
+
 describe('check-gate-wave2-complete', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
 
@@ -280,5 +369,38 @@ describe('check-gate-wave2-complete', () => {
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('BACKFILL') || m.includes('Forbidden')), `Expected backfill token fail: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('11. fails action:add rerun when synthesis uses delta-only mode', () => {
+    const dir = createBundle(unique('adddelta'));
+    configureActionAddRerun(dir);
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), `${SYNTHESIS_WITH_VALID_LINKS}
+
+## Delta Synthesis (Rerun 1)
+
+W2F-001: Delta-only addition for topic-b.
+`);
+    createFullCoverageLedger(dir);
+    createFullCoverageIndex(dir);
+    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('Delta Synthesis')), `Expected delta-only fail: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('12. passes action:add rerun with full topic coverage and no delta synthesis', () => {
+    const dir = createBundle(unique('addfull'));
+    configureActionAddRerun(dir);
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), `# Cross-Topic Synthesis
+
+W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) and [Topic B](../wave1/topic-b/evidence-summary.md).
+`);
+    createFullCoverageLedger(dir);
+    createFullCoverageIndex(dir);
+    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, true, `Expected full rerun pass, got inspect: ${JSON.stringify(output.inspect)}`);
   });
 });

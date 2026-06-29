@@ -20,7 +20,7 @@ function runGate(bundlePath) {
 const VALID_EVIDENCE_SUMMARY = `# Evidence Summary: Topic A
 
 ## Source URLs
-- [Example Source](https://example.com/deepening-topic-a) — retrieved 2026-01-15
+- [Example Source](https://example.com/news/deepening-topic-a) — retrieved 2026-01-15
 
 ## Key Findings
 1. **机制理解**: AI alignment research shows promising results in scalable oversight.
@@ -61,7 +61,7 @@ last_updated: 2026-01-15
 
 | target_id | target_question | origin | status | backing_refs | next_action |
 | --- | --- | --- | --- | --- | --- |
-| topic-a-T01 | How to measure alignment? | seed | 开放 | https://example.com/deepening-topic-a | 移交 wave2 |
+| topic-a-T01 | How to measure alignment? | seed | 开放 | https://example.com/news/deepening-topic-a | 移交 wave2 |
 
 ## Question Reconciliation
 
@@ -78,7 +78,7 @@ last_updated: 2026-01-15
 ## Exploration / Exploitation Decision
 
 - decision: continue
-- trigger_refs: https://example.com/deepening-topic-a
+- trigger_refs: https://example.com/news/deepening-topic-a
 - unresolved_questions: topic-a-T01
 - queue_consequence: 移交 wave2 cross-topic synthesis
 - next_action: wave2
@@ -144,11 +144,17 @@ function createBundle(name) {
 
   // Reference: flat format with topic-prefixed files (required by count_floor)
   writeFileSync(join(dir, 'reference', '01-topic-a-deepening.md'),
-    '---\nsource_url: https://example.com/deepening-topic-a\nacceptance_status: accepted\n' +
-    'source_type: secondary\ntier: Tier 2\nevidence_role: deepening_reference\n' +
-    'trust_level: practitioner\nwhy_it_matters: Deepening evidence.\n' +
-    'accessed_at: 2026-06-15\nrelated_topic: topic-a\n---\n' +
-    '## Key Facts\n- Finding.\n## Core Content Capture\nContent.\n' +
+    '# Topic A Deepening Reference\n\n' +
+    '- source_url: https://example.com/news/deepening-topic-a\n' +
+    '- acceptance_status: accepted\n' +
+    '- source_type: secondary\n' +
+    '- tier: Tier 2\n' +
+    '- evidence_role: deepening_reference\n' +
+    '- trust_level: practitioner\n' +
+    '- why_it_matters: Deepening evidence.\n' +
+    '- accessed_at: 2026-06-15\n' +
+    '- related_topic: topic-a\n\n' +
+    '## Key Facts\n- Finding one.\n- Finding two.\n- Finding three.\n- Finding four.\n- Finding five.\n\n## Core Content Capture\nContent.\n' +
     '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- Term.\n## Risks And Limitations\n- None.\n');
 
   // output declaration ledger (content_dedup gate reads from this)
@@ -159,7 +165,7 @@ function createBundle(name) {
     slot_result_ref: '_subagents/wave_02/slot_00/result.json',
     runtime_receipt_ref: '_subagents/wave_02/slot_00/runtime-receipt.jsonl',
     output_files: [
-      { path: 'reference/01-topic-a-deepening.md', role: 'reference', source_url: 'https://example.com/deepening-topic-a' },
+      { path: 'reference/01-topic-a-deepening.md', role: 'reference', source_url: 'https://example.com/news/deepening-topic-a' },
     ],
     cache_trails: [],
   }) + '\n');
@@ -262,16 +268,59 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave1_completion', ts: new Date().toISOString() }) + '\n');
     // Write a second reference with placeholder source_url — the first one has a real URL
     writeFileSync(join(dir, 'reference/topic-a-placeholder.md'),
-      '---\nsource_url: "https://example.com"\nacceptance_status: accepted\n' +
-      'source_type: supplementary\ntier: tier_3\nevidence_role: supporting\n' +
-      'trust_level: medium\nwhy_it_matters: "Supplementary reference"\n' +
-      'accessed_at: "2026-06-27"\nrelated_topic: "topic-a"\n---\n' +
-      '## Key Facts\n- Collected during wave1 deepening.\n## Core Content Capture\nSee primary reference.\n' +
+      '# Placeholder\n\n' +
+      '- source_url: https://example.com\n' +
+      '- acceptance_status: accepted\n' +
+      '- source_type: secondary\n' +
+      '- tier: Tier 3\n' +
+      '- evidence_role: deepening_reference\n' +
+      '- trust_level: caution\n' +
+      '- why_it_matters: Supplementary reference\n' +
+      '- accessed_at: 2026-06-27\n' +
+      '- related_topic: topic-a\n\n' +
+      '## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nSee primary reference.\n' +
       '## Relevance To This Research\nSupports topic analysis.\n## Quotable Terms / Concepts\n- None.\n## Risks And Limitations\n- Supplementary source.\n');
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false, `Expected placeholder rejection, got pass. Inspect: ${JSON.stringify(output.inspect)}`);
     assert.ok(output.inspect.some(m => m.includes('placeholder') || m.includes('example.com')),
       `Expected inspect to mention placeholder/example.com, got: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('9. rejects orphan reference files not declared in ledger', () => {
+    const dir = createBundle(unique('orphan'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    writeFileSync(join(dir, 'reference/topic-a-orphan.md'),
+      '# Orphan\n\n' +
+      '- source_url: https://example.com/news/orphan\n' +
+      '- acceptance_status: accepted\n' +
+      '- source_type: secondary\n' +
+      '- tier: Tier 2\n' +
+      '- evidence_role: deepening_reference\n' +
+      '- trust_level: practitioner\n' +
+      '- why_it_matters: Orphan test\n' +
+      '- accessed_at: 2026-06-27\n' +
+      '- related_topic: topic-a\n\n' +
+      '## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nContent.\n' +
+      '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- Term.\n## Risks And Limitations\n- None.\n');
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('not declared')), `Expected orphan fail: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('10. rejects YAML frontmatter reference files', () => {
+    const dir = createBundle(unique('yamlref'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    writeFileSync(join(dir, 'reference/01-topic-a-deepening.md'),
+      '---\nsource_url: https://example.com/news/deepening-topic-a\n---\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n');
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('YAML frontmatter')), `Expected YAML format fail: ${JSON.stringify(output.inspect)}`);
   });
 });

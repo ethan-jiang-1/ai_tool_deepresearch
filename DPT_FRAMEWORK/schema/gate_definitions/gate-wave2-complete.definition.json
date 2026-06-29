@@ -73,6 +73,12 @@
       "failure_message": "synthesis.md contains no reference to wave1 evidence-summary.md or question-list.md. Add at least one Markdown link to a wave1 deepening artifact."
     },
     {
+      "id": "rerun_add_full_synthesis",
+      "check": "rerun_add_full_synthesis",
+      "target": "artifacts/wave2",
+      "failure_message": "Rerun action:add requires full Wave2 re-synthesis: no Delta Synthesis as the main path, and ledger/index coverage must include every topic slug."
+    },
+    {
       "id": "backfill_judgment_token_absent",
       "check": "pattern_match",
       "target": "seed_topics/{topic}.md",

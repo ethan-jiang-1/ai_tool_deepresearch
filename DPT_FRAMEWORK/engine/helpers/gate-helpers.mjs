@@ -17,8 +17,8 @@
 //   - zodErrors()                 — map ZodError issues to plain diagnostics
 
 import { parseArgs } from 'node:util';
-import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, appendFileSync, readdirSync, statSync } from 'node:fs';
+import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseYaml } from 'yaml';
 import { resolveNodeTransitionDetailed } from '../ask-next.mjs';
@@ -646,12 +646,135 @@ function normalizeUrl(url) {
   }
 }
 
-function isHomepageUrl(url) {
+export function isHomepageUrl(url) {
   try {
     const u = new URL(url);
     const path = u.pathname.replace(/\/+$/, '');
-    return path === '' || path === '/' || /\/index\.(html?|php|asp|jsp)$/i.test(path);
+    if (path === '' || path === '/' || /\/index\.(html?|php|asp|jsp)$/i.test(path)) return true;
+    const depth = path.split('/').filter(Boolean).length;
+    return depth < 2;
   } catch { return false; }
+}
+
+export const REQUIRED_REFERENCE_METADATA_FIELDS = [
+  'source_url',
+  'acceptance_status',
+  'source_type',
+  'tier',
+  'evidence_role',
+  'trust_level',
+  'why_it_matters',
+  'accessed_at',
+  'related_topic',
+];
+
+export const REQUIRED_REFERENCE_SECTIONS = [
+  'Key Facts',
+  'Core Content Capture',
+  'Relevance To This Research',
+  'Quotable Terms / Concepts',
+  'Risks And Limitations',
+];
+
+export function parseReferenceMetadata(mdContent) {
+  const beforeFirstSection = mdContent.split(/\n##\s+/)[0] || '';
+  const metadata = new Map();
+  for (const line of beforeFirstSection.split(/\r?\n/)) {
+    const match = line.match(/^\s*-\s*([A-Za-z0-9_]+):\s*(.*)$/);
+    if (match) metadata.set(match[1], match[2].trim());
+  }
+  return metadata;
+}
+
+export function listMatchingBundleFiles(bundlePath, target) {
+  const targetDir = join(bundlePath, dirname(target));
+  const pattern = basename(target);
+  if (!existsSync(targetDir) || !statSync(targetDir).isDirectory()) return [];
+  const regex = new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '[^/]*') + '$');
+  return readdirSync(targetDir)
+    .filter((f) => regex.test(f))
+    .map((f) => ({
+      relPath: join(dirname(target), f),
+      absPath: join(targetDir, f),
+    }));
+}
+
+export function checkReferenceFormatFiles(files) {
+  const inspect = [];
+  for (const file of files) {
+    const content = readFileSync(file.absPath, 'utf-8');
+    if (content.trimStart().startsWith('---')) {
+      inspect.push(`YAML frontmatter is not allowed in ${file.relPath}`);
+      continue;
+    }
+    const metadata = parseReferenceMetadata(content);
+    for (const field of REQUIRED_REFERENCE_METADATA_FIELDS) {
+      if (!metadata.has(field) || !metadata.get(field)) {
+        inspect.push(`Missing required metadata "${field}" in ${file.relPath}`);
+      }
+    }
+    for (const section of REQUIRED_REFERENCE_SECTIONS) {
+      if (!extractSection(content, section)) {
+        inspect.push(`Missing or empty section "## ${section}" in ${file.relPath}`);
+      }
+    }
+  }
+  return { passed: inspect.length === 0, inspect };
+}
+
+export function checkReferenceSourceUrls(files) {
+  const inspect = [];
+  for (const file of files) {
+    const content = readFileSync(file.absPath, 'utf-8');
+    const metadata = parseReferenceMetadata(content);
+    const sourceUrl = metadata.get('source_url') || '';
+    if (!sourceUrl) {
+      inspect.push(`Missing metadata source_url in ${file.relPath}`);
+      continue;
+    }
+    const urls = sourceUrl.split(';').map((u) => u.trim()).filter(Boolean);
+    if (urls.length === 0) {
+      inspect.push(`Empty metadata source_url in ${file.relPath}`);
+      continue;
+    }
+    for (const url of urls) {
+      if (isHomepageUrl(url)) inspect.push(`Homepage or shallow source_url in ${file.relPath}: ${url}`);
+    }
+  }
+  return { passed: inspect.length === 0, inspect };
+}
+
+export function checkReferenceKeyFactsMinLines(files, minLines = 5) {
+  const inspect = [];
+  for (const file of files) {
+    const content = readFileSync(file.absPath, 'utf-8');
+    const keyFacts = extractSection(content, 'Key Facts');
+    const bulletCount = keyFacts.split(/\r?\n/).filter((line) => /^\s*-\s+\S/.test(line)).length;
+    if (bulletCount < minLines) {
+      inspect.push(`Key Facts in ${file.relPath} has ${bulletCount} bullet line(s), expected at least ${minLines}`);
+    }
+  }
+  return { passed: inspect.length === 0, inspect };
+}
+
+export function getDeclaredReferencePaths(bundlePath) {
+  const declarations = readOutputDeclarations(bundlePath);
+  const paths = new Set();
+  for (const decl of declarations) {
+    for (const entry of decl.output_files || []) {
+      if (entry.role === 'reference') paths.add(entry.path);
+    }
+  }
+  return paths;
+}
+
+export function checkReferenceLedgerCoverage(bundlePath, files) {
+  const declared = getDeclaredReferencePaths(bundlePath);
+  const missing = files.map((f) => f.relPath).filter((p) => !declared.has(p));
+  return {
+    passed: missing.length === 0,
+    inspect: missing.map((p) => `Reference file is not declared in rb_output_declarations.jsonl: ${p}`),
+  };
 }
 
 const SELF_REF_PATTERNS = [
@@ -719,7 +842,11 @@ export function checkContentDedup(bundlePath, threshold = {}) {
   }
 
   if (references.length === 0) {
-    return { passed: true, inspect: [], advice: [] };
+    return {
+      passed: false,
+      inspect: ['rb_output_declarations.jsonl contains no role=reference output declarations'],
+      advice: ['Complete delegated reference-producing tasks through Relay/Queue so reference files are declared in rb_output_declarations.jsonl.'],
+    };
   }
 
   let passed = true;
@@ -728,7 +855,12 @@ export function checkContentDedup(bundlePath, threshold = {}) {
   if (checkUrlDedup) {
     const urlMap = new Map();
     for (const ref of references) {
-      if (!ref.source_url) continue;
+      if (!ref.source_url) {
+        passed = false;
+        inspect.push(`Missing source_url in declared reference "${ref.path}"`);
+        advice.push('Every declared reference output must include a non-empty source_url.');
+        continue;
+      }
       const norm = normalizeUrl(ref.source_url);
       if (urlMap.has(norm)) {
         passed = false;
@@ -743,10 +875,14 @@ export function checkContentDedup(bundlePath, threshold = {}) {
   // Homepage Detection
   if (checkHomepage) {
     for (const ref of references) {
-      if (ref.source_url && isHomepageUrl(ref.source_url)) {
-        passed = false;
-        inspect.push(`Homepage URL in "${ref.path}": ${ref.source_url}`);
-        advice.push('Replace homepage URL with a specific article URL.');
+      if (!ref.source_url) continue;
+      const urls = ref.source_url.split(';').map((u) => u.trim()).filter(Boolean);
+      for (const url of urls) {
+        if (isHomepageUrl(url)) {
+          passed = false;
+          inspect.push(`Homepage URL in "${ref.path}": ${url}`);
+          advice.push('Replace homepage URL with a specific article URL.');
+        }
       }
     }
   }

@@ -37,6 +37,31 @@
       "failure_message": "Reference file for {topic} contains placeholder source_url (example.com). Delete the placeholder file and write a real reference or suppl-failure-r{N}.md instead."
     },
     {
+      "id": "reference_format",
+      "check": "reference_format",
+      "target": "reference/*{topic}*.md",
+      "failure_message": "Reference files for {topic} must use metadata block format with 9 required fields and the 5 standard sections; YAML frontmatter is not allowed."
+    },
+    {
+      "id": "source_url_article_level",
+      "check": "reference_source_url_article_level",
+      "target": "reference/*{topic}*.md",
+      "failure_message": "Reference files for {topic} must declare a non-empty article-level source_url in metadata block format."
+    },
+    {
+      "id": "key_facts_min_lines",
+      "check": "reference_key_facts_min_lines",
+      "target": "reference/*{topic}*.md",
+      "min_lines": 5,
+      "failure_message": "Reference files for {topic} must contain at least 5 concrete bullet facts in ## Key Facts."
+    },
+    {
+      "id": "ledger_coverage",
+      "check": "reference_ledger_coverage",
+      "target": "reference/*{topic}*.md",
+      "failure_message": "Reference files for {topic} must be declared in rb_output_declarations.jsonl via delegated relay/queue completion."
+    },
+    {
       "id": "question_list_has_four_sections",
       "check": "pattern_match",
       "target": "artifacts/wave1/{topic}/question-list.md",

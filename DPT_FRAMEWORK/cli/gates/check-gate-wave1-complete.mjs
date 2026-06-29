@@ -18,6 +18,11 @@ import {
   readBundleProfile,
   resolveThreshold,
   checkContentDedup,
+  listMatchingBundleFiles,
+  checkReferenceFormatFiles,
+  checkReferenceSourceUrls,
+  checkReferenceKeyFactsMinLines,
+  checkReferenceLedgerCoverage,
 } from '../../engine/helpers/gate-helpers.mjs';
 
 const args = parseGateCliArgs();
@@ -319,6 +324,34 @@ for (const rule of definition.rules) {
           rulePassed = false;
           ruleDetail = dedupResult.inspect.join('; ');
           for (const a of dedupResult.advice) advice.push(a);
+        }
+      } else if (rule.check === 'reference_format') {
+        const files = listMatchingBundleFiles(bundlePath, resolvedTarget);
+        const result = checkReferenceFormatFiles(files);
+        if (!result.passed) {
+          rulePassed = false;
+          ruleDetail = result.inspect.join('; ');
+        }
+      } else if (rule.check === 'reference_source_url_article_level') {
+        const files = listMatchingBundleFiles(bundlePath, resolvedTarget);
+        const result = checkReferenceSourceUrls(files);
+        if (!result.passed) {
+          rulePassed = false;
+          ruleDetail = result.inspect.join('; ');
+        }
+      } else if (rule.check === 'reference_key_facts_min_lines') {
+        const files = listMatchingBundleFiles(bundlePath, resolvedTarget);
+        const result = checkReferenceKeyFactsMinLines(files, rule.min_lines || 5);
+        if (!result.passed) {
+          rulePassed = false;
+          ruleDetail = result.inspect.join('; ');
+        }
+      } else if (rule.check === 'reference_ledger_coverage') {
+        const files = listMatchingBundleFiles(bundlePath, resolvedTarget);
+        const result = checkReferenceLedgerCoverage(bundlePath, files);
+        if (!result.passed) {
+          rulePassed = false;
+          ruleDetail = result.inspect.join('; ');
         }
       } else {
         rulePassed = false;

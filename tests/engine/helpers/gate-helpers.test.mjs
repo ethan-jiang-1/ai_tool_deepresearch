@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 import {
   validateState, validateRules, zodErrors, writeGateAttempt,
   tokenizeForSimilarity, jaccardSimilarity, extractSection,
-  readOutputDeclarations, checkContentDedup,
+  readOutputDeclarations, checkContentDedup, isHomepageUrl,
+  listMatchingBundleFiles, checkReferenceFormatFiles, checkReferenceLedgerCoverage,
 } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -318,8 +319,8 @@ describe('checkContentDedup', () => {
     writeFileSync(join(dir, 'reference', 'a.md'), '## Key Facts\n\nReal facts A.\n');
     writeFileSync(join(dir, 'reference', 'b.md'), '## Key Facts\n\nReal facts B.\n');
     writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
-      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'reference/a.md', role: 'reference', source_url: 'https://example.com/article' }], cache_trails: [] }),
-      JSON.stringify({ work_id: 'w2', output_files: [{ path: 'reference/b.md', role: 'reference', source_url: 'https://example.com/article/' }], cache_trails: [] }),
+      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'reference/a.md', role: 'reference', source_url: 'https://example.com/news/article' }], cache_trails: [] }),
+      JSON.stringify({ work_id: 'w2', output_files: [{ path: 'reference/b.md', role: 'reference', source_url: 'https://example.com/news/article/' }], cache_trails: [] }),
     ].join('\n') + '\n');
     try {
       const result = checkContentDedup(dir);
@@ -353,7 +354,7 @@ describe('checkContentDedup', () => {
     mkdirSync(join(dir, 'reference'), { recursive: true });
     writeFileSync(join(dir, 'reference', 'self.md'), '## Key Facts\n\nThis reference supplements the wave1 deepening evidence.\n');
     writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
-      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'reference/self.md', role: 'reference', source_url: 'https://example.com/a' }], cache_trails: [] }),
+      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'reference/self.md', role: 'reference', source_url: 'https://example.com/news/a' }], cache_trails: [] }),
     ].join('\n') + '\n');
     try {
       const result = checkContentDedup(dir);
@@ -372,8 +373,8 @@ describe('checkContentDedup', () => {
     writeFileSync(join(dir, 'reference', 'clone1.md'), sameText);
     writeFileSync(join(dir, 'reference', 'clone2.md'), sameText);
     writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
-      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'reference/clone1.md', role: 'reference', source_url: 'https://a.com/1' }], cache_trails: [] }),
-      JSON.stringify({ work_id: 'w2', output_files: [{ path: 'reference/clone2.md', role: 'reference', source_url: 'https://b.com/2' }], cache_trails: [] }),
+      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'reference/clone1.md', role: 'reference', source_url: 'https://a.com/news/1' }], cache_trails: [] }),
+      JSON.stringify({ work_id: 'w2', output_files: [{ path: 'reference/clone2.md', role: 'reference', source_url: 'https://b.com/news/2' }], cache_trails: [] }),
     ].join('\n') + '\n');
     try {
       const result = checkContentDedup(dir, { jaccard: 0.8 });
@@ -391,12 +392,66 @@ describe('checkContentDedup', () => {
     writeFileSync(join(dir, 'reference', 'r1.md'), '## Key Facts\n\n中国新能源汽车销量突破 1000 万辆。比亚迪市场份额领先。\n');
     writeFileSync(join(dir, 'reference', 'r2.md'), '## Key Facts\n\n日本电子产业出口额增长 15%。半导体需求旺盛。\n');
     writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
-      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'reference/r1.md', role: 'reference', source_url: 'https://auto.example.com/ev-2024' }], cache_trails: [] }),
-      JSON.stringify({ work_id: 'w2', output_files: [{ path: 'reference/r2.md', role: 'reference', source_url: 'https://electronics.example.com/japan-2024' }], cache_trails: [] }),
+      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'reference/r1.md', role: 'reference', source_url: 'https://auto.example.com/news/ev-2024' }], cache_trails: [] }),
+      JSON.stringify({ work_id: 'w2', output_files: [{ path: 'reference/r2.md', role: 'reference', source_url: 'https://electronics.example.com/news/japan-2024' }], cache_trails: [] }),
     ].join('\n') + '\n');
     try {
       const result = checkContentDedup(dir, { jaccard: 0.8, url_dedup: true, homepage_detect: true, self_ref_detect: true });
       assert.strictEqual(result.passed, true, `Expected pass but got: ${result.inspect.join('; ')}`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('fails closed when ledger has no reference declarations', () => {
+    const dir = join(__dirname, '.test-gh-cd-noref');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
+      JSON.stringify({ work_id: 'w1', output_files: [{ path: 'artifacts/wave1/topic/evidence-summary.md', role: 'evidence_summary' }], cache_trails: [] }),
+    ].join('\n') + '\n');
+    try {
+      const result = checkContentDedup(dir);
+      assert.strictEqual(result.passed, false);
+      assert.ok(result.inspect.some((i) => i.includes('no role=reference')));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('reference file gate helpers', () => {
+  it('treats shallow paths as homepage URLs', () => {
+    assert.equal(isHomepageUrl('https://m-en.yna.co.kr/'), true);
+    assert.equal(isHomepageUrl('https://m-en.yna.co.kr/news/'), true);
+    assert.equal(isHomepageUrl('https://m-en.yna.co.kr/view/AEN20260113007053315'), false);
+  });
+
+  it('rejects YAML frontmatter reference format', () => {
+    const dir = join(__dirname, '.test-gh-ref-yaml');
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    writeFileSync(join(dir, 'reference', 'topic-a-bad.md'), '---\nsource_url: https://example.com/news/a\n---\n## Key Facts\n- Fact\n');
+    try {
+      const files = listMatchingBundleFiles(dir, 'reference/*topic-a*.md');
+      const result = checkReferenceFormatFiles(files);
+      assert.equal(result.passed, false);
+      assert.ok(result.inspect.some((i) => i.includes('YAML frontmatter')));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('detects filesystem reference files missing from ledger declarations', () => {
+    const dir = join(__dirname, '.test-gh-ref-orphan');
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    writeFileSync(join(dir, 'reference', 'topic-a-orphan.md'), '# Ref\n');
+    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
+      JSON.stringify({ work_id: 'w1', output_files: [], cache_trails: [] }),
+    ].join('\n') + '\n');
+    try {
+      const files = listMatchingBundleFiles(dir, 'reference/*topic-a*.md');
+      const result = checkReferenceLedgerCoverage(dir, files);
+      assert.equal(result.passed, false);
+      assert.ok(result.inspect.some((i) => i.includes('not declared')));
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

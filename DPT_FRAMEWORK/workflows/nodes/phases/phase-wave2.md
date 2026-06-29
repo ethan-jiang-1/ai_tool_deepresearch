@@ -350,13 +350,22 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
 
 ## Rerun-Aware Behavior
 
-> 当 rerun 路径被触发，Phase Agent MUST 按增量模式执行 synthesis——已有 synthesis 保留为 baseline，新增/变更 topic 的 synthesis 作为 delta section 追加。
+> 当 rerun 路径被触发，Phase Agent MUST 先判断 rerun action。新增 topic (`action: add`) 走全量重合成；已有 topic 补维度 (`action: supplement`) 才走 delta/append。
 
 ### 检测
 
-读 `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count`。若 `rerun_count > 0`，当前为 rerun 轮次。
+读 `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count`。若 `rerun_count > 0`，当前为 rerun 轮次。同时读取各 topic 的 `seed_topics/{slug}.md` 中的 `## 本轮重跑方向` section。
 
-### Merge 策略
+### 场景表
+
+| 场景 | 行为 |
+|------|------|
+| **新增 topic（`action: add`）** | 全量 synthesis——与首次 wave2 一致。重读所有 topic 的 evidence-summary.md 和 question-list.md（包括新增 topic），重建 cross-topic scan matrix，重新生成 `synthesis.md`、`cross-topic-ledger.md`、`finding-index.yaml`。旧 synthesis 可备份为 `synthesis.prev-rerun-N.md`，但不得作为 baseline 追加 delta。 |
+| **已有 topic，有 `action: supplement`** | 保持 delta/append。已有 synthesis 保留为 baseline，只针对新增/变更维度追加 delta section，并显式标注 conflict/defer HITL2。 |
+| **已有 topic，无变更** | 保留已有 synthesis 判断；若无任何 add/supplement action，不重复合成。 |
+| **移除 topic（`action: remove`）** | 不删除历史 synthesis；在本轮 ledger/index 中标记该 topic 已退出后续 projection。 |
+
+### `action: supplement` Merge 策略
 
 - **已有 synthesis 保留为 baseline**：前一（或首次）轮次的 `synthesis.md`、`cross-topic-ledger.md`、`finding-index.yaml` 全部保留。不作为本轮 synthesis 覆盖的目标——它们反映的是之前轮次 cross-topic synthesis 的结论。
 - **Delta section 追加**：本轮 rerun 的新 synthesis（针对新增/变更 topic 的 cross-topic 分析）作为 delta section 追加到 `synthesis.md` 末尾：

@@ -109,6 +109,54 @@ function resolveLinkTarget(linkPath, baseDir) {
   return resolvePath(baseDir, linkPath);
 }
 
+function seedTopicHasActionAdd(topicSlug) {
+  const seedPath = join(bundlePath, 'seed_topics', `${topicSlug}.md`);
+  if (!existsSync(seedPath)) return false;
+  const content = readFileSync(seedPath, 'utf-8');
+  const rerunMatch = content.match(/##\s*本轮重跑方向[\s\S]*?(?=\n##\s+|$)/);
+  const scope = rerunMatch ? rerunMatch[0] : content;
+  return /action\s*:\s*add\b/i.test(scope);
+}
+
+function checkRerunAddFullSynthesis() {
+  const topics = getTopicKeys();
+  const addTopics = topics.filter((topic) => seedTopicHasActionAdd(topic));
+  if (addTopics.length === 0) return { passed: true, inspect: [] };
+
+  const synthesisPath = join(bundlePath, 'artifacts/wave2/synthesis.md');
+  const ledgerPath = join(bundlePath, 'artifacts/wave2/cross-topic-ledger.md');
+  const indexPath = join(bundlePath, 'artifacts/wave2/finding-index.yaml');
+  const inspect = [];
+
+  const synthesis = existsSync(synthesisPath) ? readFileSync(synthesisPath, 'utf-8') : '';
+  if (/^##\s+Delta Synthesis\b/m.test(synthesis)) {
+    inspect.push(`Rerun action:add topic(s) ${addTopics.join(', ')} cannot use Delta Synthesis mode`);
+  }
+
+  const ledger = existsSync(ledgerPath) ? readFileSync(ledgerPath, 'utf-8') : '';
+  let indexText = '';
+  let indexData = null;
+  if (existsSync(indexPath)) {
+    indexText = readFileSync(indexPath, 'utf-8');
+    try { indexData = parseYaml(indexText); } catch { indexData = null; }
+  }
+
+  const covered = new Set();
+  for (const topic of topics) {
+    if (ledger.includes(topic) || indexText.includes(topic)) covered.add(topic);
+  }
+  if (indexData?.scan?.topics && Array.isArray(indexData.scan.topics)) {
+    for (const topic of indexData.scan.topics) covered.add(topic);
+  }
+
+  const missing = topics.filter((topic) => !covered.has(topic));
+  if (missing.length > 0) {
+    inspect.push(`Rerun action:add scan/index coverage missing topic slug(s): ${missing.join(', ')}`);
+  }
+
+  return { passed: inspect.length === 0, inspect };
+}
+
 // ── Rule evaluation ──
 for (const rule of definition.rules) {
   if (rule.check === 'placeholder') continue;
@@ -242,6 +290,12 @@ for (const rule of definition.rules) {
             rulePassed = false;
             ruleDetail = `${rule.target}: expected "${rule.expected}", got "${value}"`;
           }
+        }
+      } else if (rule.check === 'rerun_add_full_synthesis') {
+        const result = checkRerunAddFullSynthesis();
+        if (!result.passed) {
+          rulePassed = false;
+          ruleDetail = result.inspect.join('; ');
         }
       } else {
         rulePassed = false;
