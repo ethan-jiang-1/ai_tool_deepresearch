@@ -89,19 +89,19 @@
 
 ## 8B. Controlled command experiments
 
-- [ ] 8B.1 Add `experiments_playbook/exp_reentry-debuggability/` playbook(s) using a real disposable `dpt_disp_*` bundle, canonical framework CLIs/APIs, Reality Distance Ledger, trace-backed verdict, PASS cleanup, and FAIL preserve.
-- [ ] 8B.2 Command experiment: clean `check-reentry --at wave1_complete` passes on a valid disposable bundle and returns stable JSON contract plus exit code 0.
-- [ ] 8B.3 Command experiment: stale prior-phase queue work after `hitl2_recorded` produces a reentry blocker, actionable inspect/advice, and exit code 1.
-- [ ] 8B.4 Command experiment: checkpoint drift is surfaced with deterministic severity and appears in trace-backed verdict.
-- [ ] 8B.5 Add `experiments_playbook/exp_file-observability/` playbook(s) using a real disposable bundle and command-experiment Reality Distance Ledger.
-- [ ] 8B.6 Command experiment: orphan reference file fails gate authority and produces durable trace/log/diagnostic evidence.
-- [ ] 8B.7 Command experiment: Agent records a file explanation through `log-event.mjs`; trace/log retain the explanation, but the file remains non-authoritative until ledger/receipt authority exists.
-- [ ] 8B.8 Command experiment: Wave2 `action:add` slug-only coverage fails, while full pair-scan coverage passes through the canonical gate path.
-- [ ] 8B.9 Ensure any fixture-backed playbook states its production distance and does not claim to prove Agent search, judgment, writing, or synthesis without a real Agent/sub-agent actor.
+- [x] 8B.1 Add `experiments_playbook/exp_reentry-debuggability/` playbook(s) using a real disposable `dpt_disp_*` bundle, canonical framework CLIs/APIs, Reality Distance Ledger, trace-backed verdict, PASS cleanup, and FAIL preserve. (3 cases: 307-309)
+- [x] 8B.2 Command experiment: clean `check-reentry --at wave1_complete` passes on a valid disposable bundle and returns stable JSON contract plus exit code 0. (case-307)
+- [x] 8B.3 Command experiment: stale prior-phase queue work after `hitl2_recorded` produces a reentry blocker, actionable inspect/advice, and exit code 1. (case-308)
+- [x] 8B.4 Command experiment: checkpoint drift is surfaced with deterministic severity and appears in trace-backed verdict. (case-309)
+- [x] 8B.5 Add `experiments_playbook/exp_file-observability/` playbook(s) using a real disposable bundle and command-experiment Reality Distance Ledger. (3 cases: 310-312)
+- [x] 8B.6 Command experiment: orphan reference file fails gate authority and produces durable trace/log/diagnostic evidence. (case-310)
+- [x] 8B.7 Command experiment: Agent records a file explanation through `log-event.mjs`; trace/log retain the explanation, but the file remains non-authoritative until ledger/receipt authority exists. (case-311)
+- [x] 8B.8 Command experiment: Wave2 `action:add` slug-only coverage fails, while full pair-scan coverage passes through the canonical gate path. (case-312)
+- [x] 8B.9 Ensure any fixture-backed playbook states its production distance and does not claim to prove Agent search, judgment, writing, or synthesis without a real Agent/sub-agent actor. (production_distance in all 6 cases)
 
 ## 9. Governance and validation
 
 - [x] 9.1 Run relevant unit/integration regression tests. (892 tests, 0 failures)
-- [ ] 9.2 Execute controlled command experiments from clean repo state; committed-but-never-run playbooks do not count as done. (deferred with §8B)
+- [ ] 9.2 Execute controlled command experiments from clean repo state; committed-but-never-run playbooks do not count as done. (playbooks authored, await execution)
 - [x] 9.3 Run `node openspec/governance/check-project-reqs.mjs`. (326 requirement IDs consistent, 0 orphan)
 - [x] 9.4 Run `node openspec/governance/check-project-specs.mjs`. (59 main specs valid, 0 violations)
