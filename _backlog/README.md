@@ -12,7 +12,7 @@ _backlog/
 ├── README.md                          # 本文件（规矩手册 + 索引）
 │
 ├── done/                              # ✅ 已完成/已归档的分析与决策记录
-│   ├── DONE-*.md ×13                  #   单条已完成的 TODO/分析
+│   ├── DONE-*.md ×14                  #   单条已完成的 TODO/分析
 │   ├── _fixed_bugs/                   #   已修复的 Bug 记录（7 个，BUG-001~007）
 │   ├── _old_topics/                   #   已归档的历史文件夹
 │   │   ├── _v12-migration/            #     V12→Agentic DPT 迁移记录（6 change 全 DONE）
@@ -22,9 +22,8 @@ _backlog/
 │   │   ├── _guideline/                #     术语对齐审计
 │   │   └── _trainsistion/             #     Transition 层设计分析
 │
-├── todo-*.md ×10                      # 📋 待设计/待实现的 TODO
+├── todo-*.md ×9                       # 📋 待设计/待实现的 TODO
 │   ├── todo-helper-not-tool.md        #   ⭐ 北星：让系统成为"靠谱的同事"（记忆/主动/沟通/同频）
-│   ├── todo-hitl-ux.md                #   HITL 是一个环，不是一张问卷
 │   ├── todo-evidence-extraction.md    #   证据提取（来源→结构化 reference，含干货）（部分完成）
 │   ├── todo-evidence-quality.md       #   证据质量评估——不够格就放弃
 │   ├── todo-explore-exploit.md        #   搜索收敛检测与方向决策
@@ -94,9 +93,10 @@ git mv todo-<name>.md done/DONE-<name>.md
 
 ### ✅ DONE（已完成/已归档，在 `done/`）
 
-13 个 `DONE-*.md` + `done/_old_topics/`（含 `_v12-migration`/6 change、`_workflow`/8 change、`_original_dpt_requirement`、`_original_dpt_v12`、`_guideline`、`_trainsistion`）+ `done/_fixed_bugs/`（7 个已修复 bug，BUG-001~007）。
+14 个 `DONE-*.md` + `done/_old_topics/`（含 `_v12-migration`/6 change、`_workflow`/8 change、`_original_dpt_requirement`、`_original_dpt_v12`、`_guideline`、`_trainsistion`）+ `done/_fixed_bugs/`（7 个已修复 bug，BUG-001~007）。
 
 关键完成项：
+- **HITL UX**（2026-06-28）：HITL 环机制——3 个浮出水面点 + 静默自主契约 + 预设 prompt 模板。OpenSpec change `establish-hitl-ux` 已归档。详见 `done/DONE-hitl-ux.md`
 - **prototype loop engineering**：gate-loop、gate-fork、subagent 三个原型全部 DONE，对应的 OpenSpec change 已归档
 - **queue engine**：`queue-manager.mjs` 完整实现，AGQ-001~006 全部 accepted，3 个 playbook 验证通过
 - **workflow foundation**：10-phase lifecycle 完整实现，19 phase node MD + 6 shared node MD，9 gate CLI
@@ -120,7 +120,6 @@ git mv todo-<name>.md done/DONE-<name>.md
 | 6 | `todo-phase-recover.md` | **中（升级，2026-07-01）** | 模型失焦时从 ground truth 重新定位并复活当前 phase（兜底层）。**升级理由：check-reentry.mjs 提供了 ground-truth 检测基础设施（status/queue/artifact/ledger/drift audit），此前缺失的"真相源对照"能力已就位** | 无硬阻塞；与 context-reground 真相源对齐；reentry CLI 可做检测基础 |
 | 7 | `todo-context-reground.md` | **低（parked）** | 长上下文定期 reload 工程总图+root question，对抗 lost-in-the-middle（预防层） | 无硬阻塞；plan-hostfile ✅ 提供 `## Goal` 北星 |
 | 8 | `todo-coding-agent-setup-ux.md` | **中（launch 前抬起）** | 用户手册：怎么配 Claude Code/Codex 的 permission/approval 才能让框架 HITL1↔HITL2 自主跑不卡 | 无硬阻塞；真跑一次完整 research 的前置 UX 条件 |
-| 9 | `todo-hitl-ux.md` | **最高（与 evidence-quality 并列，active change 进行中）** | HITL 环机制 + 3 个浮出水面点 + 静默自主契约 + 预设 prompt 模板 | research-styles ✅ DONE（profile 参数体系已就位）；active change `establish-hitl-ux` |
 
 ### 🔮 分析文档中标记但未建 TODO 的待办
 
@@ -210,7 +209,7 @@ flowchart TB
 
 **决定：evidence-quality 现在走。理由：sufficiency-gates ✅ DONE（标准已定）、evidence-extraction 部分完成（CCC section + _cache/ 约定已落地）。现在该让质量评估落地——把 profile 里已定义的质量阈值接入 per-reference 评估，实现 `fail_c` 分支，让不够格的 reference 被 discard 而不是 repair。**
 
-**UX 层双轨并行：`todo-hitl-ux` active change 进行中 + `todo-helper-not-tool` 北星已立——前者解决交互结构（环/静默契约/3 浮出水面点），后者解决人格层（记忆/主动/沟通/同频）。两者与 evidence 流水线正交，互不阻塞。**
+**UX 层：`todo-hitl-ux` ✅ DONE（环机制已落地，OpenSpec 已归档）+ `todo-helper-not-tool` 北星已立（人格层——记忆/主动/沟通/同频）。helper-not-tool 与 evidence 流水线正交，互不阻塞。**
 
 ```mermaid
 flowchart LR
@@ -282,7 +281,7 @@ flowchart LR
 ### 想看具体 TODO 的设计思路
 → 对应的 `todo-*.md` 文件，每个都包含：Why、核心挑战、从 V12 借鉴的模式、实验范围（Goals/Non-Goals）、关键设计问题、实现思路、下一步
 → **UX 层北星**：`todo-helper-not-tool.md` — 让系统成为"靠谱的同事"（记忆/主动/沟通/同频）
-→ **HITL 环机制**：`todo-hitl-ux.md` — HITL 是一个环，不是一张问卷
+→ **HITL 环机制**：`done/DONE-hitl-ux.md` — HITL 是一个环，不是一张问卷（✅ DONE）
 
 ## 相关外部文件
 
