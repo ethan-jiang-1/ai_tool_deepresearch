@@ -1,44 +1,45 @@
-## 1. Registry update
+## 1. OpenSpec and governance
 
-- [ ] 1.1 Register LOG-006, LOG-007 in `openspec/governance/req-registry.yaml`（LOC-010 已存在，无需注册）
+- [ ] 1.1 Register LOG-006 and LOG-007 in `openspec/governance/req-registry.yaml` during implementation.
+- [x] 1.2 Update this change's proposal/design/specs to accident-grade logging scope.
 
-## 2. Engine: queue-manager logging (LOG-006)
+## 2. Logger and gate shared helpers
 
-- [ ] 2.1 `enqueue()` — add entry log with work_id and slot (or `refill_pool`)
-- [ ] 2.2 `claim()` — add entry log `claim_attempt`; add `claim_empty` when slot_1 is empty
-- [ ] 2.3 `complete()` — add entry log `complete_attempt` before validation; add `complete_reject` on delegated validation fail; add `complete_receipt_fail` on receipt fail
-- [ ] 2.4 `fail()` — add entry log `fail_attempt` with work_id and reason
-- [ ] 2.5 `preempt()` — add entry log `preempt_attempt` with work_id, slot, and reason
-- [ ] 2.6 `saveQueue()` — add entry log `queue_save` with queue_id and queue_health
-- [ ] 2.7 `loadQueue()` — add entry log `queue_load` with queue_id and existed flag
-- [ ] 2.8 Unit test: verify log events fire on each code path (`tests/engine/queue-manager.test.mjs`)
+- [ ] 2.1 `createRunLogger()` writes `logger_ready` heartbeat with `pid`, without requiring it to be the first run.log line.
+- [ ] 2.2 `writeGateAttempt()` keeps the shared gate logging entrypoint and includes `diagnostic_path` in failed gate log detail when available.
+- [ ] 2.3 `emitGateResult()` can log early invalid/config gate results through `writeGateAttempt()` when a bundle path is available.
+- [ ] 2.4 Gate CLI wrappers pass the bundle path to `emitGateResult()` for early errors.
+- [ ] 2.5 Unit tests cover heartbeat, early gate error logging, and diagnostic pointer logging.
 
-## 3. Engine: subagent-relay logging (LOG-006)
+## 3. Engine: queue-manager logging (LOG-006)
 
-- [ ] 3.1 `stageSubagentSlots()` — add entry log `relay_stage` with waveIndex and slotCount
-- [ ] 3.2 `commitSlotResult()` — add entry log `relay_commit_attempt`; add `relay_commit_schema_fail` on schema failure; add `relay_commit_path_escape` on path escape; add `relay_commit` on success
-- [ ] 3.3 `collectAndMergeSubagentResults()` — add entry log `relay_collect`; add `relay_all_failed` when all failed; add `relay_merge` with ref_count and branch
-- [ ] 3.4 `forkRouter()` — add log `fork` with branch, ref_count, ref_floor
-- [ ] 3.5 `convergeRepair()` — add entry log `repair_attempt`; add `repair_stalled` on stall; add `repair_done` on success
-- [ ] 3.6 Unit test: verify relay log events on each lifecycle stage (`tests/engine/subagent-relay.test.mjs`)
+- [ ] 3.1 `enqueue()` logs `queue_enqueue_attempt` and `queue_enqueue_done`.
+- [ ] 3.2 `claim()` logs `queue_claim_attempt`, `queue_claim`, and `queue_claim_empty`.
+- [ ] 3.3 `complete()` logs `queue_complete_attempt`, `queue_complete_reject`, `queue_complete_receipt_fail`, and `queue_complete`.
+- [ ] 3.4 `fail()` logs `queue_fail_attempt` and `queue_fail`.
+- [ ] 3.5 `preempt()` logs `queue_preempt_attempt`, `queue_preempt_reject`, and `queue_preempt`.
+- [ ] 3.6 `saveQueue()` and `loadQueue()` log attempt/done/exception outcomes.
+- [ ] 3.7 Unit tests verify queue log events for success, empty, reject, and receipt-fail paths.
 
-## 4. Sub-agent spawn prompt logging (LOG-007, LOC-010)
+## 4. Engine: subagent-relay logging (LOG-006)
 
-- [ ] 4.1 `buildSpawnPrompt()` — add "Diagnostic logging" section with 6 event types (search_start, search_done, fetch_done, file_written, error, work_done), format examples, level conventions, and what NOT to log
-- [ ] 4.2 Update `shared-subagent-protocol.md` — reflect logging instructions in sub-agent contract
+- [ ] 4.1 `stageSubagentSlots()` logs `relay_stage_attempt`, `relay_stage_empty`, `relay_stage_done`, and exceptions.
+- [ ] 4.2 `recordAgentSpawnRequested()` logs `relay_spawn_requested`.
+- [ ] 4.3 `ingestAgentReceipt()` logs receipt ingest attempt/done/failed.
+- [ ] 4.4 `commitSlotResult()` logs commit attempt, schema fail/path escape, and success/failure outcome.
+- [ ] 4.5 `collectAndMergeSubagentResults()`, `forkRouter()`, and `convergeRepair()` log collect/all-failed/merge/refork/repair outcomes.
+- [ ] 4.6 Unit tests verify relay log events on lifecycle, invalid result, all-failed, and repair paths.
 
-## 5. Logger heartbeat (LOG-004)
+## 5. Agent-facing logging instructions
 
-- [ ] 5.1 `createRunLogger()` — write `logger_ready` heartbeat line with `pid: process.pid` on initialization
-- [ ] 5.2 Unit test: verify heartbeat appears as first log line (`tests/engine/logger.test.mjs` or equivalent)
+- [ ] 5.1 `buildSpawnPrompt()` includes "Diagnostic logging" with 6 event types using `log-event.mjs` command examples.
+- [ ] 5.2 `shared-subagent-protocol.md` reflects the log-event CLI contract and forbidden logging content.
+- [ ] 5.3 Wave repair/supplementary loop phase nodes require `repair_loop_start`, `repair_action`, `repair_loop_done`, and escalation/degradation logs.
 
-## 6. Gate attempt logging (LOC-006)
+## 6. Validation
 
-- [ ] 6.1 `check-gate-wave0-complete.mjs` — add log after execution: gate name, passed, inspect_count, advice_count
-- [ ] 6.2 `check-gate-wave1-complete.mjs` — same
-
-## 7. Governance and validation
-
-- [ ] 7.1 Run `node openspec/governance/check-project-reqs.mjs`
-- [ ] 7.2 Run `node openspec/governance/check-project-specs.mjs`
-- [ ] 7.3 Run all regression tests: `node --test tests/`
+- [ ] 6.1 Run `openspec validate fix-logger-reliability --strict`.
+- [ ] 6.2 Run `node openspec/governance/check-project-reqs.mjs`.
+- [ ] 6.3 Run `node openspec/governance/check-project-specs.mjs`.
+- [ ] 6.4 Run focused regression tests for logger, gate helpers, queue-manager, and subagent-relay.
+- [ ] 6.5 Run all regression tests: `node --test tests/`.

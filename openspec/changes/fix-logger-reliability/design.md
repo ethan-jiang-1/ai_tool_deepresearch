@@ -1,14 +1,15 @@
 ## Context
 
-生产 bundle 的 `_logs/run.log` 49 次 complete 只 1 条记录。根因：`logEvent()` 只在 happy path 上，engine 入口/出口/错误路径全静默，sub-agent 完全没参与。
+生产 bundle 的 `_logs/run.log` 49 次 complete 只 1 条记录。根因是事故现场因果链断裂：engine happy path 有少量摘要，失败前、gate early error、repair loop、sub-agent 运行中事件、diagnostic artifact pointer 都不稳定。
 
 ## Goals / Non-Goals
 
 **Goals:**
-1. Engine 每个入口函数记 entry log，每个 return 路径记原因
-2. Gate fail + repair attempt + inspect/advice 反馈记 log
-3. Sub-agent spawn prompt 给具体指令：搜索/抓取/写文件/出错时记什么
-4. Logger 初始化 heartbeat
+1. Engine hot path 记录事故级 attempt/outcome/reject/failed/empty/exception 事件，失败前写原因
+2. Gate 通过 `writeGateAttempt()` 统一写 pass/fail/early error，并把 failure diagnostic path 写入 log detail
+3. Phase repair loop 记录 start/action/done/escalated/degraded
+4. Sub-agent spawn prompt 给具体 `log-event.mjs` 命令：搜索/抓取/写文件/出错时记什么
+5. Logger 初始化 heartbeat
 
 **Non-Goals:**
 - 不改变 logger 格式或 level 体系
@@ -17,74 +18,71 @@
 
 ## Design
 
-### Layer 1: Engine 出入口全覆盖
+### Layer 1: Engine 事故级 hot-path 覆盖
 
 队列操作（`queue-manager.mjs`）：
 
 ```
-enqueue()    → entry: logEvent('info', 'enqueue', {work_id, slot|refill_pool})
-claim()      → entry: logEvent('info', 'claim_attempt', {work_id})
-               success: 已有 logEvent('info', 'claim', ...)
-               empty:   logEvent('warn', 'claim_empty', {queue_health})
-complete()   → entry: logEvent('info', 'complete_attempt', {work_id, delegated})
-               validate_fail: logEvent('warn', 'complete_reject', {work_id, reason})
-               receipt_fail:  logEvent('warn', 'complete_receipt_fail', {work_id, receipt})
-               success: 已有 logEvent('info', 'complete', ...) + logEvent('info', 'ledger_append', ...)
-fail()       → entry: logEvent('info', 'fail_attempt', {work_id, reason})
-               success: 已有 logEvent('warn', 'fail', ...)
-preempt()    → entry: logEvent('info', 'preempt_attempt', {work_id, slot, reason})
-               success: 已有 logEvent('warn', 'preempt', ...)
-saveQueue()  → entry: logEvent('info', 'queue_save', {queue_id, queue_health})
-loadQueue()  → entry: logEvent('info', 'queue_load', {queue_id, existed})
+enqueue()    → queue_enqueue_attempt / queue_enqueue_done
+claim()      → queue_claim_attempt / queue_claim / queue_claim_empty
+complete()   → queue_complete_attempt / queue_complete_reject / queue_complete_receipt_fail / queue_complete
+fail()       → queue_fail_attempt / queue_fail
+preempt()    → queue_preempt_attempt / queue_preempt / queue_preempt_reject
+saveQueue()  → queue_save_attempt / queue_save_done / queue_save_exception
+loadQueue()  → queue_load_attempt / queue_load_done / queue_load_exception
 ```
 
 Sub-agent relay（`subagent-relay.mjs`）：
 
 ```
-stageSubagentSlots()     → logEvent('info', 'relay_stage', {waveIndex, slotCount})
-commitSlotResult()       → entry: logEvent('info', 'relay_commit_attempt', {slotKey})
-                            schema_fail: logEvent('warn', 'relay_commit_schema_fail', {slotKey, error})
-                            path_escape: logEvent('warn', 'relay_commit_path_escape', {slotKey, path})
-                            success: logEvent('info', 'relay_commit', {slotKey, status})
-collectAndMerge()        → entry: logEvent('info', 'relay_collect', {slotCount})
-                            all_failed: logEvent('warn', 'relay_all_failed', {slotCount})
-                            merge: logEvent('info', 'relay_merge', {ref_count, branch})
-forkRouter()             → logEvent('info', 'fork', {branch, ref_count, ref_floor})
-convergeRepair()         → entry: logEvent('info', 'repair_attempt', {outcome})
-                            stalled: logEvent('warn', 'repair_stalled', {iterations})
-                            success: logEvent('info', 'repair_done', {outcome, iterations})
+stageSubagentSlots()          → relay_stage_attempt / relay_stage_empty / relay_stage_done / relay_stage_exception
+recordAgentSpawnRequested()   → relay_spawn_requested
+ingestAgentReceipt()          → relay_receipt_ingest_attempt / relay_receipt_ingest_done / relay_receipt_ingest_failed
+commitSlotResult()            → relay_commit_attempt / relay_commit_schema_fail / relay_commit_path_escape / relay_commit
+collectAndMergeSubagentResults() → relay_collect_attempt / relay_all_failed / relay_merge / relay_refork_done
+forkRouter()                  → relay_fork
+convergeRepair()              → repair_attempt / repair_stalled / repair_done
 ```
 
-### Layer 2: Gate 反馈记 log
+All diagnostic detail SHOULD use stable fields where available: `kind`, `phase`, `gate`, `work_id`, `slotKey`, `attempt`, `outcome`, `reason`, `diagnostic_path`, `inspect_count`, `advice_count`.
 
-Gate CLI 执行后记一行（已有的 `writeGateAttempt` 只写 trace，不加 log）：
+### Layer 2: Gate 共享入口
 
-```
-gate executed → logEvent(gate.passed ? 'info' : 'warn', 'gate_attempt',
-                 {gate, passed, inspect_count, advice_count})
-```
-
-Phase Agent 做 repair 时记：
+Gate CLIs already call `writeGateAttempt()` for normal results. This change keeps that as the only gate logging entrypoint and adds two refinements:
 
 ```
-repair loop → logEvent('info', 'repair_loop', {gate, attempt, action})
+normal result → writeGateAttempt(bundlePath, result)
+early invalid/config result → emitGateResult(result, { bundlePath: args.bundle })
+failure diagnostic → writeGateAttempt() includes diagnostic_path in run.log detail
 ```
 
-### Layer 3: Sub-agent 具体指令
+### Layer 3: Phase repair loop 诊断
 
-`buildSpawnPrompt()` 追加以下具体指令（替换现在的"只写 runtime receipt"）：
+Phase Agent 做 repair 时通过 `log-event.mjs` 记：
 
 ```
-Diagnostic logging: Append lines to _logs/run.log in the bundle root.
-Format: [ISO8601] LEVEL subagent <slotKey> <message>
+repair_loop_start     {phase, gate, attempt, inspect_count, reason}
+repair_action         {phase, gate, attempt, action, work_id}
+repair_loop_done      {phase, gate, attempt, outcome}
+repair_escalated      {phase, gate, attempt, reason}
+repair_degraded       {phase, gate, attempt, reason}
+```
+
+### Layer 4: Sub-agent 具体指令
+
+`buildSpawnPrompt()` 追加以下具体指令，使用现有 CLI，不让 sub-agent 手写 log envelope：
+
+```
+Diagnostic logging: write to the parent bundle run log via:
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level <level> --msg "<message>" --detail '<json>'
 
 Log these events:
-- When you start work: "subagent <slotKey> search_start query=<q>"
-- After each WebSearch: "subagent <slotKey> search_done results=<N>"
-- After each WebFetch: "subagent <slotKey> fetch_done url=<U> status=<ok|blocked>"
-- When you write a file: "subagent <slotKey> file_written path=<P>"
-- When you hit an error: "subagent <slotKey> ERROR <description>"
-- When work is complete: "subagent <slotKey> work_done files=<N> confidence=<C>"
+- search_start
+- search_done
+- fetch_done
+- file_written
+- error
+- work_done
 
 Use level INFO for normal progress, WARN for blocked fetches or degraded results,
 ERROR for failures that prevent completion.
@@ -92,10 +90,12 @@ ERROR for failures that prevent completion.
 Do NOT log: raw page content, full search result bodies, or private reasoning.
 ```
 
-### Layer 4: Heartbeat
+### Layer 5: Heartbeat
 
 `createRunLogger()` 末尾加一行：
 
 ```javascript
 log.info('logger_ready', { pid: process.pid });
 ```
+
+Heartbeat may not be the first line in a bundle because `run_start` can be written by instantiation first, and multiple engine modules may initialize run-scoped loggers in one process.

@@ -1,12 +1,13 @@
 ## Why
 
-生产 bundle 的 `_logs/run.log` 49 次 `complete()` 只 1 条记录，0 条 `ledger_append`。根因：`logEvent()` 只放在 happy path 上——engine 入口/出口/错误路径全静默，gate fail 和 repair attempt 不记 log，sub-agent spawn prompt 完全没提 `_logs/run.log`。整个系统目前没有可用的诊断日志。
+生产 bundle 的 `_logs/run.log` 49 次 `complete()` 只 1 条记录，0 条 `ledger_append`。根因不是单纯“日志少”，而是事故现场因果链断裂：engine 入口/出口/错误路径不稳定，gate early error 与 diagnostic artifact 指针不完整，repair loop 和 sub-agent 执行过程缺少可检索事件。现场出错时，run.log 无法回答“在哪个 phase/queue/gate/sub-agent、当时状态、失败原因、下一步 repair 动作”。
 
 ## What Changes
 
-- **Engine 出入口全覆盖**：`enqueue/claim/complete/fail/preempt/saveQueue/loadQueue` 每个入口记 entry log，每个 return 路径记原因。`stageSubagentSlots/commitSlotResult/collectAndMerge/convergeRepair/forkRouter` 同样全覆盖
-- **Gate 反馈记 log**：gate attempt（pass 或 fail）记一行，repair loop 记 attempt 和 action
-- **Sub-agent 具体指令**：`buildSpawnPrompt()` 追加 6 种具体事件（搜索开始/搜索完成/抓取完成/文件写入/错误/工作完成），每种给格式示例，说清楚用什么 level、不记什么
+- **Engine 事故级覆盖**：`enqueue/claim/complete/fail/preempt/saveQueue/loadQueue` 与 relay hot path 记录 attempt/done/reject/failed/empty/exception 等稳定事件；失败前写原因
+- **Gate 共享入口**：以 `writeGateAttempt()` 为唯一 gate logging 入口，覆盖 pass/fail、invalid input/config error、diagnostic artifact path、inspect/advice count
+- **Repair loop 留痕**：phase nodes 在 gate fail 后记录 repair loop start/action/done/escalated/degraded，尤其 wave0/wave1/wave2 supplementary loop
+- **Sub-agent 具体指令**：`buildSpawnPrompt()` 用现有 `log-event.mjs` CLI 指示 6 种具体事件（搜索开始/搜索完成/抓取完成/文件写入/错误/工作完成），说明 level 与禁止记录内容
 - **Heartbeat**：`createRunLogger()` 初始化时写 `logger_ready` + pid
 - **不改变**：logger 文件格式、level 体系、appendFileSync 机制
 
@@ -16,13 +17,13 @@
 - *无*
 
 ### Modified Capabilities
-- `logger`: LOG-004（修改：heartbeat 加入现有 run-scoped logger 初始化）、LOG-006（新增：Engine hot-path 全覆盖）、LOG-007（新增：sub-agent spawn prompt 含 run.log 指令）
-- `logging-conventions`: LOC-006（修改：Engine 激活范围扩大）、LOC-010（新增：sub-agent 纳入 long-running phase 诊断范围，注册到 registry）
+- `logger`: LOG-004（修改：heartbeat 加入现有 run-scoped logger 初始化）、LOG-006（新增：Engine hot-path 事故级覆盖）、LOG-007（新增：sub-agent spawn prompt 使用 log-event CLI）
+- `logging-conventions`: LOC-006（修改：closed-set 摘要升级为事故级诊断事件集）、LOC-010（新增：repair loop 与 sub-agent 纳入 long-running phase 诊断范围）
 
 ## Impact
 
 - `DPT_FRAMEWORK/engine/queue-manager.mjs` — 所有队列操作函数加 entry/exit log
 - `DPT_FRAMEWORK/engine/subagent-relay.mjs` — 所有 relay 函数加 entry/exit log + `buildSpawnPrompt()` 加 sub-agent 指令
 - `DPT_FRAMEWORK/engine/logger.mjs` — `createRunLogger` 加 heartbeat
-- `DPT_FRAMEWORK/cli/gates/check-gate-*.mjs` — gate attempt 加 log（或在 gate-helpers 的 `writeGateAttempt` 里加）
-- `DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md` — 更新 sub-agent logging 约定
+- `DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs` — gate attempt、early error、failure diagnostic pointer 统一写 log
+- `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave{0,1,2}.md` 与 shared repair/subagent docs — 更新 repair loop 与 sub-agent logging 约定
