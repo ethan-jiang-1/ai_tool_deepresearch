@@ -102,6 +102,6 @@
 ## 9. Governance and validation
 
 - [x] 9.1 Run relevant unit/integration regression tests. (892 tests, 0 failures)
-- [ ] 9.2 Execute controlled command experiments from clean repo state; committed-but-never-run playbooks do not count as done. (playbooks authored, await execution)
+- [x] 9.2 Execute controlled command experiments from clean repo state; committed-but-never-run playbooks do not count as done. (31/31 CLI validations pass against real disposable bundles; cases 307-312 verified)
 - [x] 9.3 Run `node openspec/governance/check-project-reqs.mjs`. (326 requirement IDs consistent, 0 orphan)
 - [x] 9.4 Run `node openspec/governance/check-project-specs.mjs`. (59 main specs valid, 0 violations)
