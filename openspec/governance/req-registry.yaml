@@ -104,6 +104,7 @@ AGT-005: agent-testing — Playbook frontmatter weight field (light|heavy) for e
 AGT-006: agent-testing — Disposable bundle names include random hex suffix to prevent same-case collision
 AGT-007: "agent-testing — Unified trace file naming to _trace.jsonl across all playbooks"
 AGT-008: agent-testing — Verdict console.log uses ANSI color (green PASS, red FAIL)
+AGT-009: agent-testing — Evidence extraction experiment suite uses empty 16 case segment starting at case-161 with light/standard/heavy proof roles
 
 # agentic-queue
 AGQ-001: agentic-queue — Structured machine queue state and task card schema

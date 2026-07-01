@@ -87,6 +87,20 @@ Phase 1 warning 只兼容旧 bundle / 旧 declaration 的空 trail 缺口。新 
 
 **顺序**：`cache_coverage` 在 `ledger_coverage` 之后、`content_dedup` 之前执行——先确认文件有 provenance，再确认 provenance 有 cache trail，最后做内容去重。**Wave0 gate 无 `ledger_coverage` 规则**，`cache_coverage` 直接插入在 `content_dedup` 之前（最后一个实质性规则之后）。
 
+### D6: 实验资产分层与编号
+
+**选择**：新增独立实验族 `experiments_playbook/exp_evidence-extraction/`，case 编号使用空置的 16 段，从 `case-161` 开始。该段位于 `case-151..154` wave-chain 之后、`case-181..182` topic-rewrite 之前，语义上比跳到 500 段更贴近 research-wave evidence mechanism；同时不顺接 `exp_engine-boundary` 的 401 段或 `exp_file-observability` 的 310 段。那些实验族提供可复用模式，但本 change 是新的机制组合：reference countability + cache trail authority + gate coverage + reentry diagnostics + rerun Agent compliance。
+
+**case 矩阵**：
+
+| Case | Cost | 证明什么 | 不证明什么 |
+|------|------|----------|------------|
+| `case-161-light-complete-cache-trails.md` | light | fixture slot result 进入 delegated `complete()` 后，verified cache trails 写 ledger；incomplete leaf warning + 不写 ledger；unsafe/non-leaf hard-fail | 不证明 Agent 会搜索或写 cache |
+| `case-162-standard-gate-reentry-cache-coverage.md` | standard | disposable bundle 中 `cache_coverage`、`count_floor`、file observability `cache_gap`、`check-reentry` 的 legacy warning / verified pass / missing fail 组合 | 不证明真实 Sub-agent 遵守 phase prose |
+| `case-163-heavy-rerun-add-real-cache-trail.md` | heavy | 新 rerun `action:add` prose/task card 能否驱动真实 Agent/Sub-agent 写 `_cache` 三文件 leaf、reference、slot result `cache_trails`，并经 Engine 写 ledger | 不作为日常 regression；无 real actor surface 时只能 NOT RUN，不能 PASS |
+
+**原因**：传统 regression 能覆盖 deterministic helper、schema、gate CLI、queue-manager 边界；但不能单独证明这个 change 修复的真实断裂链。controlled experiments 必须证明跨边界路径，heavy canary 才能证明 Agent prose compliance。
+
 ## Risks / Trade-offs
 
 - **[Risk] 现有 bundle 的 cache_trails 全空** → 如果在 `complete()` 中强制要求 cache_trails 非空，已完成的 bundle 重跑 gate 会全挂。缓解：gate 的 cache_coverage 规则只检查 declaration 中已声明的 trail，不要求 declaration 必须有 trail（那是 content_dedup 和 ledger_coverage 的职责）。首次实现时 cache_trails 验证是 warn 不是 reject，给现有 bundle 过渡期。

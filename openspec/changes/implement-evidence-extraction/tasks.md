@@ -51,8 +51,12 @@
 
 ## 8. Controlled experiment playbooks
 
-- [ ] 8.1 Add `experiments_playbook/exp_evidence-extraction/` playbook — cases: (a) isCountable excludes homepage + thin-content refs, (b) cache_coverage gate 两阶段行为， (c) complete() 后的 cache_trails 填充, (d) legacy empty trail warning vs new rerun non-empty verified trail success
-- [ ] 8.2 Ensure production distance disclaimer on all fixture-backed playbooks
+- [ ] 8.1 Add `experiments_playbook/exp_evidence-extraction/README.md` suite contract — new case-number segment uses the empty 16段 and starts at `case-161`, explains why this mechanism is not just engine-boundary/file-observability continuation
+- [ ] 8.2 Add `experiments_playbook/exp_evidence-extraction/case-161-light-complete-cache-trails.md` — fixture-backed Engine path: candidate `cache_trails` → delegated `complete()` → verified ledger trails; incomplete leaf warning + no ledger trail; unsafe/non-leaf trail hard-fail. Reality Distance Ledger MUST state no Agent actor and no external calls.
+- [ ] 8.3 Add `experiments_playbook/exp_evidence-extraction/case-162-standard-gate-reentry-cache-coverage.md` — disposable bundle path: `count_floor`, `cache_coverage`, file observability `kind/check: cache_gap`, and `check-reentry` cover verified pass, non-empty missing trail fail, and legacy empty trail warning. Reality Distance Ledger MUST state fixture-backed runtime files after bundle creation.
+- [ ] 8.4 Add `experiments_playbook/exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md` — real Agent/Sub-agent canary for new rerun `action:add`: phase/task prose must drive `_cache` three-file leaves, reference files, slot result `cache_trails`, delegated complete ledger append, and gate/reentry feedback. If no real Agent actor surface exists, record NOT RUN and preserve bundle; MUST NOT mark PASS from fixtures.
+- [ ] 8.5 Ensure each fixture-backed case includes production distance disclaimer and does not claim Agent search/judgment/writing behavior
+- [ ] 8.6 Update `experiments_playbook/RUN_EXPS.md` only after the runnable case files exist and have been executed successfully at least once; do not list planned-but-unimplemented cases as runnable inventory
 
 ## 9. Governance and validation
 
