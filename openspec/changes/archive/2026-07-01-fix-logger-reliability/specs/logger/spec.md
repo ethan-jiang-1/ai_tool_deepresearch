@@ -4,7 +4,7 @@
 
 ## MODIFIED Requirements
 
-### Requirement: Run-scoped logger creation at bundle initialization (LOG-004)
+### Requirement: Run-scoped logger creation at bundle initialization
 
 `createRunLogger()` SHALL write a `logger_ready` heartbeat line at INFO level with `{ pid: <process.pid> }` upon successful initialization. The heartbeat proves the logger is alive, the file path is correct, and write permissions are valid. If `logger_ready` is absent from `run.log`, no run-scoped logger successfully initialized for that process.
 

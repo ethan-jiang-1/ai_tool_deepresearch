@@ -7,9 +7,7 @@
 定义系统级日志约定——跨 `.mjs`（JS engine/CLI）和 `.md`（Agent phase node）的诊断记录规范。在已有 `logger.mjs`（Logger capability）和 `trace.mjs`（Trace Writer capability）的基础上，建立"什么时候记、记什么、记到哪、用什么 level"的统一规则，使每次 run 的行为可追溯、可排障。
 
 本 capability 不定义新的 logger API 或 trace API——只定义使用它们的约定。
-
 ## Requirements
-
 ### Requirement: Run ID generation and propagation
 
 系统 SHALL 使用 bundle 名称作为 `bundle`——即 `dpt_rb_<name>` 中的 `<name>`，持久化在 `rb_status.json` 的 `bundle` 字段。Bundle 名称本就唯一、人可读、直接对应目录名。
@@ -178,28 +176,33 @@ CLI 参数：
 
 ### Requirement: Logger activation in engines
 
-`queue-manager.mjs` 和 `subagent-relay.mjs` SHALL 在入口处调用 `createRunLogger(bundleDir)` 获取 logger 实例。仅下列**闭集**事件同时写 trace 与 log（level 见括号）；其余内部 `traceEntry` 点 SHALL NOT 产生 log 行，避免 I/O 翻倍。
+Engine modules `queue-manager.mjs` and `subagent-relay.mjs` SHALL activate `createRunLogger` at bundle-aware entrypoints and SHALL emit accident-grade attempt/outcome diagnostics for public hot-path functions. Non-success paths SHALL include the reason before returning or throwing when a run-scoped logger is available.
 
-- **queue-manager**：`enqueue`(info) / `claim`(info) / `complete`(info) / `fail`(warn) / `preempt`(warn) / `refill`(info)
-- **subagent-relay**：`slot_create`(info) / `dispatch`(info) / `result`(info) / `collect`(info) / `merge`(info)；repair 触发 `warn`
+This requirement replaces the previous LOC-006 engine closed-set summary. The new closed-set is the accident-grade event set in LOG-006. Engine trace points not named in LOG-006 still SHALL NOT automatically create log lines.
 
-**判定规则**：以上述列出的 log 事件名为 closed-set——只有精确匹配这些事件名的 engine 生命周期点同时写 log + trace。任何未列出的 `traceEntry` 调用点（如 queue-manager 的 `queue_loaded`、`projection_rendered`、`receipt_checked` 等内部诊断事件）SHALL NOT 产生对应的 log 行。新增 trace 点时 default 不写 log，除非显式将事件名加入本 closed-set。
+The historical `guidelines/logging-conventions.md` principles remain in force, but its old LOC-006 summary event list SHALL be considered superseded once this change is accepted. Any later guideline update SHALL preserve the trace/log authority boundary while replacing the old summary event names with the accepted LOG-006 accident-grade set.
 
-`createRunLogger(bundleDir)` SHALL 内部封装 `createLogger({ file: join(bundleDir, '_logs', 'run.log'), bundle })`——engine 只需 `bundleDir`，不需要知道日志文件路径或 bundle 获取方式。
+Gate CLIs SHALL use `writeGateAttempt()` as the only gate logging entrypoint for pass/fail results. Early invalid input/config errors SHALL also be logged when a bundle path is available. Failure diagnostic artifact paths SHALL be discoverable from run.log detail.
 
-#### Scenario: Queue manager logs closed event set
+#### Scenario: Queue operations log at function granularity
+- **WHEN** any LOG-006-covered public queue hot-path function is called
+- **THEN** attempt SHALL be logged with work_id and relevant parameters when a run-scoped logger is available
+- **AND** success/reject/empty/exception outcomes SHALL be logged with reason where applicable
+- **AND** unexpected validation or IO failures SHALL log function-specific `*_exception` events before rethrowing when a run-scoped logger is available
 
-- **WHEN** `loadQueue(bundleDir)` 被调用
-- **THEN** queue-manager SHALL 初始化 logger 指向 `_logs/run.log`
-- **AND** 在 enqueue/claim/complete/refill 记 INFO、在 fail/preempt 记 WARN
-- **AND** 其余内部 trace 点 SHALL NOT 产生 log 行
+#### Scenario: Gate attempts are logged
+- **WHEN** a gate CLI executes and produces a result
+- **THEN** the result SHALL be logged as a `gate_attempt` event with gate name, passed status, and inspect/advice counts
+- **AND** failed gate log detail SHALL include `diagnostic_path` only when the diagnostic artifact write succeeds
+- **AND** the same `diagnostic_path` SHALL be used by the detailed diagnostic artifact and trace diagnostic pointer
+- **AND** if the diagnostic artifact write fails, failed gate log detail SHALL include `diagnostic_write_failed: true` and SHALL NOT include `diagnostic_path`
 
-#### Scenario: Subagent relay logs closed event set
-
-- **WHEN** subagent relay 开始处理 slot
-- **THEN** relay SHALL 初始化 logger 指向 `_logs/run.log`
-- **AND** 在 slot_create/dispatch/result/collect/merge 记 INFO、repair 触发记 WARN
-- **AND** 其余内部 trace 点 SHALL NOT 产生 log 行
+#### Scenario: Early gate errors are logged when bundle is known
+- **WHEN** a gate CLI detects missing `--bundle`
+- **THEN** no run.log write SHALL be required because the target bundle is unknown
+- **WHEN** a gate CLI detects missing `--current-node`, config error, or node/gate binding error after `--bundle` is known
+- **THEN** `emitGateResult(result, { bundlePath })` SHALL call `writeGateAttempt()` before exiting
+- **AND** `parseGateCliArgs()` error returns SHALL preserve the provided bundle path when one was supplied
 
 ### Requirement: Inspect-bundle observable extension
 
@@ -233,47 +236,20 @@ CLI 参数：
 
 ### Requirement: Long-running phases SHALL leave enough log and diagnostic evidence for post-mortem debugging
 
-Long-running Agentic phases SHALL emit sufficient runtime diagnostics to reconstruct process state without chat memory.
+Sub-agent execution and Agent-side repair loops SHALL be included in the long-running phase diagnostic scope. The sub-agent spawn prompt SHALL contain explicit logging instructions naming specific events to log (search start, search done, fetch done, file written, error, work complete) with concrete, copyable `log-event.mjs` examples. Sub-agents are not required to log but strongly encouraged with clear, actionable instructions.
 
-At minimum, logging/diagnostics SHALL cover:
-- phase START and END
-- queue enqueue/refill/claim/complete/fail/preempt summaries
-- delegated provenance failures
-- receipt checks for delegated tasks
-- ledger append events
-- rerun action summaries
-- file observability diagnostics
-- failed gate diagnostic artifact paths
+#### Scenario: Sub-agent spawn prompt includes logging instructions
+- **WHEN** a sub-agent is spawned via `buildSpawnPrompt()`
+- **THEN** the spawn prompt SHALL include a "Diagnostic logging" section with 6 event types and `log-event.mjs` examples
+- **AND** the instructions SHALL specify level conventions and what not to log
+- **AND** command examples SHALL use lowercase `--level info|warn|error` values accepted by `log-event.mjs`
+- **AND** command examples SHALL use `--msg <event>` and `--detail` JSON containing `kind`, `slotKey`, and `roleAgentKey`
+- **AND** command examples SHALL use the absolute path to `DPT_FRAMEWORK/cli/log-event.mjs`
 
-Structured diagnostic events SHALL use stable `kind` values when emitting the corresponding event type so tests and post-mortem tooling can find them without parsing prose. Required kinds for this change include:
-- `phase_start`
-- `phase_end`
-- `queue_enqueue`
-- `queue_claim`
-- `queue_complete`
-- `queue_fail`
-- `receipt_check`
-- `ledger_append`
-- `rerun_action_summary`
-- `file_observability_finding`
-- `file_explanation`
-- `gate_failure_detail`
+#### Scenario: Repair loops leave reconstructable log evidence
+- **WHEN** any phase enters an autonomous repair, retry, or supplementary loop after a gate failure
+- **THEN** the phase instructions SHALL require `repair_loop_start`, `repair_action`, and `repair_loop_done` log events
+- **AND** escalation or degradation SHALL log `repair_escalated` or `repair_degraded` with reason
+- **AND** terminal gate failures that do not enter a repair loop SHALL still log `repair_escalated` or `repair_degraded` before stopping when a bundle path is available
+- **AND** the affected phase set SHALL include every phase node with autonomous repair/retry behavior, at minimum instantiation, setup, hitl1, hitl2 repair branch, seed-topics, wave0, wave1, wave2, readiness, and terminal/degraded rerun handling
 
-`_logs/run.log` remains human-readable diagnostics and SHALL NOT become verdict authority. Structured reentry facts SHALL be recorded in `rb_trace.jsonl`, `_checkpoints/`, `_diagnostics/`, and `rb_output_declarations.jsonl`.
-
-#### Scenario: Failed gate preserves debug path
-
-- **WHEN** a gate fails
-- **THEN** `_logs/run.log` SHALL include a WARN diagnostic line
-- **AND** `rb_trace.jsonl` SHALL include a non-verdict diagnostic event pointing to the detailed artifact
-
-#### Scenario: Ledger append is visible
-
-- **WHEN** delegated `complete()` appends `rb_output_declarations.jsonl`
-- **THEN** `_logs/run.log` SHALL include a ledger append summary with work id and slot result ref
-
-#### Scenario: File observability finding is discoverable
-
-- **WHEN** Engine records a file observability finding
-- **THEN** `rb_trace.jsonl` SHALL include a non-verdict diagnostic event with `kind: "file_observability_finding"`
-- **AND** `_logs/run.log` SHALL include the finding classification and path

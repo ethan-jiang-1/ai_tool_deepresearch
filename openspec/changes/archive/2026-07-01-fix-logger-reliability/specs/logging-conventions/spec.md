@@ -4,7 +4,7 @@
 
 ## MODIFIED Requirements
 
-### Requirement: Logger activation in engines (LOC-006)
+### Requirement: Logger activation in engines
 
 Engine modules `queue-manager.mjs` and `subagent-relay.mjs` SHALL activate `createRunLogger` at bundle-aware entrypoints and SHALL emit accident-grade attempt/outcome diagnostics for public hot-path functions. Non-success paths SHALL include the reason before returning or throwing when a run-scoped logger is available.
 
@@ -34,7 +34,7 @@ Gate CLIs SHALL use `writeGateAttempt()` as the only gate logging entrypoint for
 - **THEN** `emitGateResult(result, { bundlePath })` SHALL call `writeGateAttempt()` before exiting
 - **AND** `parseGateCliArgs()` error returns SHALL preserve the provided bundle path when one was supplied
 
-### Requirement: Long-running phases emit stable diagnostics (LOC-010)
+### Requirement: Long-running phases SHALL leave enough log and diagnostic evidence for post-mortem debugging
 
 Sub-agent execution and Agent-side repair loops SHALL be included in the long-running phase diagnostic scope. The sub-agent spawn prompt SHALL contain explicit logging instructions naming specific events to log (search start, search done, fetch done, file written, error, work complete) with concrete, copyable `log-event.mjs` examples. Sub-agents are not required to log but strongly encouraged with clear, actionable instructions.
 
