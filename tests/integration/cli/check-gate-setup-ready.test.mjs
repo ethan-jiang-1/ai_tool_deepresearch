@@ -153,8 +153,8 @@ describe('check-gate-setup-ready', () => {
 
     const traceAfter = readFileSync(join(bundleDir, 'rb_trace.jsonl'), 'utf-8').trim().split('\n').filter(Boolean);
     assert.ok(traceAfter.length > traceBefore.length, 'Expected new trace entry after gate run');
-    const lastEntry = JSON.parse(traceAfter[traceAfter.length - 1]);
-    assert.equal(lastEntry.event, 'gate_attempt');
-    assert.equal(lastEntry.gate, 'setup-ready');
+    const gateEntry = traceAfter.map(l => JSON.parse(l)).find(e => e.event === 'gate_attempt');
+    assert.ok(gateEntry, 'Expected gate_attempt trace entry');
+    assert.equal(gateEntry.gate, 'setup-ready');
   });
 });

@@ -887,4 +887,78 @@ describe('Delegated queue completion (Stage 2)', () => {
       cleanup(dir);
     }
   });
+
+  it('ledger record includes non-empty creation_reason derived from queue item and slot result', () => {
+    // @impl 8A.15 — creation_reason must be present and non-empty in delegated ledger records
+    const dir = tempBundle();
+    try {
+      let queue = createQueue('cr-reason');
+      const workItem = makeItem({
+        work_id: 'work-cr',
+        title: 'CreationReason test',
+        action: 'Deepen topic: Test Topic using WebSearch and WebFetch',
+        targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor' } },
+        completion_receipt: 'none',
+      });
+      queue = enqueue(queue, workItem);
+      const { queue: q2 } = claim(queue, { actor: 'main-agent' });
+      const slots = stageSubagentSlots(baseState(), dir);
+      const slot = slots[0];
+
+      writeRuntimeReceipt(dir, slot);
+      ingestAgentReceipt(slot, dir, { runtimeAgentId: 'cr-agent' });
+      writeSlotStatus(slot, 'running', dir);
+
+      mkdirSync(path.join(dir, 'reference'), { recursive: true });
+      writeFileSync(path.join(dir, 'reference', 'cr-source.md'), '# CR Ref\n\nSource URL: https://example.com/cr\n');
+
+      const cacheLeaf = path.join(dir, '_cache', 'wave0', 'cr', 's01');
+      mkdirSync(cacheLeaf, { recursive: true });
+      writeFileSync(path.join(cacheLeaf, 'websearch.json'), '[]');
+      writeFileSync(path.join(cacheLeaf, 'page.md'), '# Page');
+      writeFileSync(path.join(cacheLeaf, 'meta.json'), '{"url":"https://example.com/cr"}');
+
+      const relay = commitSlotResult(slot, dir, {
+        slotKey: slot.key, roleAgentKey: slot.roleAgentKey, status: 'done',
+        summary: 'Found 3 deep evidence sources for topic',
+        evidenceCount: 1,
+        references: [{ title: 'CR', url: 'https://example.com/cr', quote: 'q', relevance: 'r' }],
+        confidence: 0.9, notes: [],
+        output_files: [{ path: 'reference/cr-source.md', role: 'reference', source_url: 'https://example.com/cr' }],
+        cache_trails: ['_cache/wave0/cr/s01/'],
+      }, { platform: 'cr-test', runtimeAgentId: 'cr-agent' });
+      assert.equal(relay.ok, true);
+
+      const result = complete(q2, {
+        work_id: 'work-cr',
+        receipt: 'none',
+        summary: 'CR complete',
+        slot_result_ref: slot.resultPath,
+      }, dir);
+      assert.equal(result.feedback.passed, true);
+
+      // Read the ledger and validate creation_reason
+      const ledgerPath = path.join(dir, 'rb_output_declarations.jsonl');
+      assert.ok(existsSync(ledgerPath));
+      const ledger = JSON.parse(readFileSync(ledgerPath, 'utf-8'));
+
+      // MUST be present and non-empty
+      assert.ok(ledger.creation_reason, 'creation_reason must be present');
+      assert.ok(ledger.creation_reason.length > 0, 'creation_reason must be non-empty');
+
+      // MUST start with "Delegated: " since this is a delegated task
+      assert.ok(ledger.creation_reason.startsWith('Delegated: '),
+        `creation_reason should start with "Delegated: ", got: "${ledger.creation_reason}"`);
+
+      // MUST include the action text
+      assert.ok(ledger.creation_reason.includes('Deepen topic'),
+        `creation_reason should include action text, got: "${ledger.creation_reason}"`);
+
+      // MUST include the slot result summary
+      assert.ok(ledger.creation_reason.includes('Found 3 deep evidence'),
+        `creation_reason should include summary, got: "${ledger.creation_reason}"`);
+    } finally {
+      cleanup(dir);
+    }
+  });
 });

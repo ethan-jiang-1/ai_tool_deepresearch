@@ -17,9 +17,10 @@
 //   - zodErrors()                 — map ZodError issues to plain diagnostics
 
 import { parseArgs } from 'node:util';
-import { existsSync, readFileSync, writeFileSync, appendFileSync, readdirSync, statSync } from 'node:fs';
-import { join, dirname, basename } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, appendFileSync, readdirSync, statSync, mkdirSync } from 'node:fs';
+import { join, dirname, basename, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
 import { resolveNodeTransitionDetailed } from '../ask-next.mjs';
 
@@ -287,6 +288,7 @@ export function writeGateAttempt(bundlePath, result) {
         ts,
         bundle,
         event: 'gate_attempt',
+        kind: 'gate_attempt',
         gate: check.gate,
         passed: check.passed,
         currentNodeRef: check.currentNodeRef,
@@ -298,8 +300,265 @@ export function writeGateAttempt(bundlePath, result) {
     } catch {
       // Trace write failure silently ignored
     }
+
+    // 3. Checkpoint manifest — durable reentry artifact (RRD-001)
+    writeCheckpointManifest(bundlePath, result);
+
+    // 4. Gate failure diagnostic — full post-mortem on failure (RRD-004)
+    if (!check.passed) {
+      writeGateFailureDiagnostic(bundlePath, result);
+    }
   } catch {
     // Audit write failure must not affect gate output
+  }
+}
+
+/**
+ * Write a checkpoint manifest at _checkpoints/<iso>-<gate>.json after a gate attempt.
+ * Called from writeGateAttempt(). Never throws — failures silently ignored.
+ *
+ * Manifest records schema_version, created_at, bundle, trigger, gate_result_ref,
+ * normalized_target, status_snapshot, topic_registry_summary, queue_summary,
+ * artifact_inventory, cursors (ledger/trace/log line counts), and hashes
+ * (sha256/size/mtime for control files). No artifact content copying.
+ *
+ * @param {string} bundlePath
+ * @param {object} result — gate result from buildGateResult()
+ * @returns {void}
+ *
+ * @impl RRD-001
+ */
+export function writeCheckpointManifest(bundlePath, result) {
+  try {
+    const { check } = result;
+    const iso = new Date().toISOString();
+    const isoFile = iso.replace(/:/g, '-');
+    const ckptDir = join(bundlePath, '_checkpoints');
+    mkdirSync(ckptDir, { recursive: true });
+
+    const bundle = (() => {
+      try { return readBundleName(bundlePath); } catch { return basename(bundlePath); }
+    })();
+
+    // ── normalized_target from manifest ──
+    let normalizedTarget = null;
+    try {
+      const manifest = loadManifest();
+      const phase = manifest.phases.find(p => p.gate === check.gate);
+      if (phase) {
+        const phaseKey = basename(phase.node, '.md').replace(/^phase-/, '');
+        normalizedTarget = {
+          status_gate: (check.gate || '').replace(/-/g, '_'),
+          gate_key: check.gate,
+          node_ref: phase.node,
+          phase_key: phaseKey,
+        };
+      }
+    } catch { /* manifest load failure → normalized_target stays null */ }
+
+    // ── status snapshot ──
+    let statusSnapshot = null;
+    try {
+      const sp = join(bundlePath, 'rb_status.json');
+      if (existsSync(sp)) {
+        const raw = JSON.parse(readFileSync(sp, 'utf-8'));
+        statusSnapshot = {
+          current_gate: raw.current_gate || null,
+          next_gate: raw.next_gate || null,
+          state: raw.state || null,
+        };
+      }
+    } catch { /* ignore */ }
+
+    // ── topic registry summary ──
+    let topicRegistrySummary = null;
+    try {
+      const pp = join(bundlePath, 'rb_plan.md');
+      if (existsSync(pp)) {
+        const fm = parseMdFrontmatter(readFileSync(pp, 'utf-8'));
+        if (fm.topic_registry && Array.isArray(fm.topic_registry)) {
+          topicRegistrySummary = {
+            count: fm.topic_registry.length,
+            slugs: fm.topic_registry.map(t => t.slug).filter(Boolean),
+          };
+        }
+      }
+    } catch { /* ignore */ }
+
+    // ── queue summary ──
+    let queueSummary = null;
+    try {
+      const qp = join(bundlePath, 'rb_queue.json');
+      if (existsSync(qp)) {
+        const q = JSON.parse(readFileSync(qp, 'utf-8'));
+        const slots = ['slot_1_current', 'slot_2_next', 'slot_3_pending', 'slot_4_pending', 'slot_5_tail'];
+        const activeCount = slots.filter(s => q[s] !== null && q[s] !== undefined).length;
+        queueSummary = {
+          queue_health: q.queue_health || null,
+          active_count: activeCount,
+          pool_count: Array.isArray(q.refill_pool) ? q.refill_pool.length : 0,
+          slot_1_status: q.slot_1_current?.status || null,
+        };
+      }
+    } catch { /* ignore */ }
+
+    // ── artifact inventory (one level deep for seed_topics/ and reference/) ──
+    const artifactInventory = {};
+    const shallowDirs = ['seed_topics', 'reference'];
+    for (const dir of shallowDirs) {
+      const dp = join(bundlePath, dir);
+      if (existsSync(dp) && statSync(dp).isDirectory()) {
+        try {
+          artifactInventory[dir] = readdirSync(dp).filter(f => {
+            try { return statSync(join(dp, f)).isFile(); } catch { return false; }
+          });
+        } catch { artifactInventory[dir] = []; }
+      }
+    }
+    // Recursive for artifacts/
+    const artifactsDir = join(bundlePath, 'artifacts');
+    if (existsSync(artifactsDir) && statSync(artifactsDir).isDirectory()) {
+      const walk = (dir, base) => {
+        const result = [];
+        try {
+          for (const entry of readdirSync(dir, { withFileTypes: true })) {
+            const rel = join(base, entry.name);
+            if (entry.isFile()) result.push(rel);
+            else if (entry.isDirectory()) result.push(...walk(join(dir, entry.name), rel));
+          }
+        } catch { /* ignore */ }
+        return result;
+      };
+      artifactInventory['artifacts'] = walk(artifactsDir, 'artifacts');
+    }
+
+    // ── cursors ──
+    const cursors = {};
+    const cursorFiles = {
+      ledger_lines: join(bundlePath, 'rb_output_declarations.jsonl'),
+      trace_lines: join(bundlePath, 'rb_trace.jsonl'),
+      log_lines: join(bundlePath, '_logs', 'run.log'),
+    };
+    for (const [key, fp] of Object.entries(cursorFiles)) {
+      try {
+        if (existsSync(fp)) {
+          cursors[key] = readFileSync(fp, 'utf-8').split('\n').filter(l => l.trim()).length;
+        } else {
+          cursors[key] = 0;
+        }
+      } catch { cursors[key] = -1; }
+    }
+
+    // ── hashes for control files ──
+    const hashes = {};
+    const controlFiles = ['rb_status.json', 'rb_queue.json', 'rb_plan.md', 'rb_profile.yaml', 'rb_output_declarations.jsonl'];
+    for (const cf of controlFiles) {
+      const fp = join(bundlePath, cf);
+      try {
+        if (existsSync(fp)) {
+          const content = readFileSync(fp);
+          const st = statSync(fp);
+          hashes[cf] = {
+            sha256: createHash('sha256').update(content).digest('hex'),
+            size: st.size,
+            mtime: st.mtime.toISOString(),
+          };
+        }
+      } catch { /* skip unreadable control file */ }
+    }
+
+    // ── Write manifest ──
+    const manifest = {
+      schema_version: '1.0.0',
+      created_at: iso,
+      bundle,
+      trigger: 'gate_attempt',
+      gate_result_ref: {
+        gate: check.gate,
+        passed: check.passed,
+        currentNodeRef: check.currentNodeRef,
+        next: check.next,
+      },
+      normalized_target: normalizedTarget,
+      status_snapshot: statusSnapshot,
+      topic_registry_summary: topicRegistrySummary,
+      queue_summary: queueSummary,
+      artifact_inventory: artifactInventory,
+      cursors,
+      hashes,
+    };
+
+    const ckptPath = join(ckptDir, `${isoFile}-${check.gate}.json`);
+    writeFileSync(ckptPath, JSON.stringify(manifest, null, 2));
+  } catch {
+    // Checkpoint write failure silently ignored — must not affect gate output
+  }
+}
+
+// ─── Gate Failure Diagnostics ─────────────────────────────────────────────
+
+/**
+ * Write full gate failure diagnostics to _diagnostics/gates/<iso>-<gate>.json.
+ * Called from writeGateAttempt() when check.passed === false.
+ *
+ * Preserves the complete check/routing/inspect/advice for post-mortem debugging.
+ * Also writes a compact trace event pointing to the diagnostic artifact so
+ * rb_trace.jsonl stays lean while providing a durable pointer.
+ *
+ * @param {string} bundlePath
+ * @param {object} result — gate result from buildGateResult()
+ * @returns {void}
+ *
+ * @impl RRD-004
+ */
+export function writeGateFailureDiagnostic(bundlePath, result) {
+  try {
+    const { check, routing, inspect, advice } = result;
+    if (check.passed) return; // Only write on failure
+
+    const iso = new Date().toISOString();
+    const isoFile = iso.replace(/:/g, '-');
+    const diagDir = join(bundlePath, '_diagnostics', 'gates');
+    mkdirSync(diagDir, { recursive: true });
+
+    const bundle = (() => {
+      try { return readBundleName(bundlePath); } catch { return basename(bundlePath); }
+    })();
+
+    const diagnosticPath = `_diagnostics/gates/${isoFile}-${check.gate}.json`;
+
+    const diagnostic = {
+      schema_version: '1.0.0',
+      kind: 'gate_failure_detail',
+      created_at: iso,
+      bundle,
+      source_event_ref: null, // filled by caller if trace entry was written first
+      gate: check.gate,
+      currentNodeRef: check.currentNodeRef,
+      check,
+      routing,
+      inspect,
+      advice,
+    };
+
+    writeFileSync(join(bundlePath, diagnosticPath), JSON.stringify(diagnostic, null, 2));
+
+    // Write compact trace pointer
+    try {
+      const tracePath = join(bundlePath, 'rb_trace.jsonl');
+      const traceEntry = JSON.stringify({
+        ts: iso,
+        bundle,
+        event: 'diagnostic',
+        kind: 'gate_failure_detail',
+        gate: check.gate,
+        passed: false,
+        diagnostic_path: diagnosticPath,
+      });
+      appendFileSync(tracePath, traceEntry + '\n');
+    } catch { /* trace write failure silently ignored */ }
+  } catch {
+    // Diagnostic write failure silently ignored — must not affect gate output
   }
 }
 

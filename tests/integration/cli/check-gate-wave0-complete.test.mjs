@@ -64,7 +64,7 @@ function setupHappyPath(dir) {
     '| 00-shared-ai-safety.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-06-15 |\n');
   writeFileSync(join(dir, 'reference/README.md'), '# Reference Evidence\nFlat reference directory.\n');
   writeFileSync(join(dir, 'reference/00-shared-ai-safety.md'),
-    '---\nsource_url: https://example.com/ai-safety\nacceptance_status: accepted\n' +
+    '---\nsource_url: https://example.com/research/ai-safety\nacceptance_status: accepted\n' +
     'source_type: secondary\ntier: Tier 2\nevidence_role: foundation\ntrust_level: practitioner\n' +
     'why_it_matters: Foundational overview\naccessed_at: 2026-06-15\nrelated_topic: all\n---\n' +
     '## Key Facts\n- AI safety is important.\n## Core Content Capture\nOverview.\n' +
@@ -86,7 +86,7 @@ function setupHappyPath(dir) {
     slot_result_ref: '_subagents/wave_01/slot_00/result.json',
     runtime_receipt_ref: '_subagents/wave_01/slot_00/runtime-receipt.jsonl',
     output_files: [
-      { path: 'reference/00-shared-ai-safety.md', role: 'reference', source_url: 'https://example.com/ai-safety' },
+      { path: 'reference/00-shared-ai-safety.md', role: 'reference', source_url: 'https://example.com/research/ai-safety' },
     ],
     cache_trails: [],
   }) + '\n');

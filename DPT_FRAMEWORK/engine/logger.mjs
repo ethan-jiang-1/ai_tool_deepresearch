@@ -1,5 +1,5 @@
 // logger.mjs — minimal structured logger
-// @impl LOG-001, LOG-002, LOG-004, LOG-005
+// @impl LOG-001, LOG-002, LOG-004, LOG-005, LOC-010
 //
 // Complementary to trace.mjs (trace = audit trail, logger = diagnostic detail).
 // Logger does NOT write to rb_trace.jsonl.
@@ -41,6 +41,35 @@ import path from 'node:path';
 
 const LEVELS = { debug: 10, info: 20, warn: 30, error: 40 };
 const LEVEL_LABELS = { debug: 'DEBUG', info: 'INFO', warn: 'WARN', error: 'ERROR' };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Stable diagnostic event kind registry (LOC-010)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Canonical registry of 12 stable diagnostic event kinds.
+ *
+ * These are the only allowed `kind` values for structured diagnostic events
+ * emitted to `_logs/run.log` and `rb_trace.jsonl`. Engine code SHOULD use
+ * these values when writing diagnostic events. The registry is documentation-
+ * only — it does not enforce, but serves as the canonical reference.
+ *
+ * @impl LOC-010
+ */
+export const DIAGNOSTIC_KINDS = Object.freeze([
+  'phase_start',
+  'phase_end',
+  'queue_enqueue',
+  'queue_claim',
+  'queue_complete',
+  'queue_fail',
+  'receipt_check',
+  'ledger_append',
+  'rerun_action_summary',
+  'file_observability_finding',
+  'file_explanation',
+  'gate_failure_detail',
+]);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Single read point for bundle name (Design D9)
