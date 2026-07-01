@@ -144,10 +144,33 @@ done
 ```bash
 # Write only 2 shared refs (far below threshold=12)
 for i in 1 2; do
-  echo "# Shared Reference $i" > $B/reference/00-shared-ref-$i.md
-  echo "- source_url: https://example.com/shared-$i" >> $B/reference/00-shared-ref-$i.md
-  echo "- acceptance_status: accepted" >> $B/reference/00-shared-ref-$i.md
+  cat > $B/reference/00-shared-ref-$i.md << INNEREOF
+- source_url: https://example.com/research/shared-ref-$i
+- acceptance_status: accepted
+- source_type: secondary
+- tier: Tier 2
+- evidence_role: foundation
+- trust_level: practitioner
+- why_it_matters: Shared reference $i for dynamic threshold testing.
+- accessed_at: 2026-06-15
+- related_topic: all
+
+## Key Facts
+- First key finding from shared reference $i.
+- Second important insight from the source material.
+- Third data point supporting the analysis.
+- Fourth observation about industry trends.
+- Fifth concluding fact with policy implications.
+
+## Core Content Capture
+This shared reference provides substantive analysis covering multiple dimensions of AI safety research. The content exceeds one hundred characters to satisfy the minimum quality threshold for reference counting in the gate evaluation framework.
+INNEREOF
 done
+
+# Write ledger declaring both shared refs
+cat > $B/rb_output_declarations.jsonl << 'JSONL'
+{"declared_at":"2026-06-15T00:00:00.000Z","work_id":"wave0-shared","producer_rule":"source_intake_fan_in","slot_result_ref":"_subagents/wave_01/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_01/slot_00/runtime-receipt.jsonl","output_files":[{"path":"reference/00-shared-ref-1.md","role":"reference","source_url":"https://example.com/research/shared-ref-1"},{"path":"reference/00-shared-ref-2.md","role":"reference","source_url":"https://example.com/research/shared-ref-2"}],"cache_trails":[],"creation_reason":"Fixture-backed shared references for dynamic threshold gate testing"}
+JSONL
 
 echo "=== Shared refs (only 2 of 12 needed) ==="
 ls $B/reference/00-shared-*.md
@@ -170,15 +193,38 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 ```bash
 for i in $(seq 3 12); do
-  echo "# Shared Reference $i" > $B/reference/00-shared-ref-$i.md
-  echo "- source_url: https://example.com/shared-$i" >> $B/reference/00-shared-ref-$i.md
-  echo "- acceptance_status: accepted" >> $B/reference/00-shared-ref-$i.md
+  cat > $B/reference/00-shared-ref-$i.md << INNEREOF
+- source_url: https://example.com/research/shared-ref-$i
+- acceptance_status: accepted
+- source_type: secondary
+- tier: Tier 2
+- evidence_role: foundation
+- trust_level: practitioner
+- why_it_matters: Shared reference $i for dynamic threshold testing.
+- accessed_at: 2026-06-15
+- related_topic: all
+
+## Key Facts
+- First key finding from shared reference $i.
+- Second important insight from the source material.
+- Third data point supporting the analysis.
+- Fourth observation about industry trends.
+- Fifth concluding fact with policy implications.
+
+## Core Content Capture
+This shared reference provides substantive analysis covering multiple dimensions of AI safety research. The content exceeds one hundred characters to satisfy the minimum quality threshold for reference counting.
+INNEREOF
 done
 
 # Also add them to _INDEX.md
 for i in $(seq 1 12); do
   echo "| 00-shared-ref-$i.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-06-15 |" >> $B/reference/_INDEX.md
 done
+
+# Update ledger to declare all 12 shared refs
+cat > $B/rb_output_declarations.jsonl << 'JSONL'
+{"declared_at":"2026-06-15T00:00:00.000Z","work_id":"wave0-shared","producer_rule":"source_intake_fan_in","slot_result_ref":"_subagents/wave_01/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_01/slot_00/runtime-receipt.jsonl","output_files":[{"path":"reference/00-shared-ref-1.md","role":"reference","source_url":"https://example.com/research/shared-ref-1"},{"path":"reference/00-shared-ref-2.md","role":"reference","source_url":"https://example.com/research/shared-ref-2"},{"path":"reference/00-shared-ref-3.md","role":"reference","source_url":"https://example.com/research/shared-ref-3"},{"path":"reference/00-shared-ref-4.md","role":"reference","source_url":"https://example.com/research/shared-ref-4"},{"path":"reference/00-shared-ref-5.md","role":"reference","source_url":"https://example.com/research/shared-ref-5"},{"path":"reference/00-shared-ref-6.md","role":"reference","source_url":"https://example.com/research/shared-ref-6"},{"path":"reference/00-shared-ref-7.md","role":"reference","source_url":"https://example.com/research/shared-ref-7"},{"path":"reference/00-shared-ref-8.md","role":"reference","source_url":"https://example.com/research/shared-ref-8"},{"path":"reference/00-shared-ref-9.md","role":"reference","source_url":"https://example.com/research/shared-ref-9"},{"path":"reference/00-shared-ref-10.md","role":"reference","source_url":"https://example.com/research/shared-ref-10"},{"path":"reference/00-shared-ref-11.md","role":"reference","source_url":"https://example.com/research/shared-ref-11"},{"path":"reference/00-shared-ref-12.md","role":"reference","source_url":"https://example.com/research/shared-ref-12"}],"cache_trails":[],"creation_reason":"Fixture-backed shared references for dynamic threshold gate testing"}
+JSONL
 
 echo "=== Shared refs (now 12) ==="
 ls $B/reference/00-shared-*.md | wc -l

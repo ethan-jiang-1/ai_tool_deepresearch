@@ -404,6 +404,11 @@ cat $B/artifacts/wave2/synthesis.md
 
 ```bash
 
+# Write ledger declaring all shared reference files for gate count_floor
+cat > $B/rb_output_declarations.jsonl << 'JSONL'
+{"declared_at":"2026-06-15T00:00:00.000Z","work_id":"wave-shared","producer_rule":"source_intake_fan_in","slot_result_ref":"_subagents/wave_01/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_01/slot_00/runtime-receipt.jsonl","output_files":[{"path":"reference/00-shared-ai-safety-landscape.md","role":"reference","source_url":"https://arxiv.org/abs/2601.12345"},{"path":"reference/00-shared-ai-policy.md","role":"reference","source_url":"https://example.com/research/ai-policy"},{"path":"reference/00-shared-technical-alignment.md","role":"reference","source_url":"https://example.com/research/technical-alignment"}],"cache_trails":[],"creation_reason":"Fixture-backed reference declaration for wave-chain review-surface testing"}
+JSONL
+
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE_OUTPUT"
 

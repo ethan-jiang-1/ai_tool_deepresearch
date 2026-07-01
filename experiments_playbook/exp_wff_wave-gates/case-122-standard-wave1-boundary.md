@@ -80,7 +80,7 @@ EOF
 # Pre-seed reference/ with 00-shared-*.md + _INDEX.md + README.md
 cat > $B/reference/00-shared-foundation.md << 'EOF'
 # AI Safety Foundation
-- source_url: https://example.com/ai-safety
+- source_url: https://example.com/research/ai-safety
 - acceptance_status: accepted
 - source_type: secondary
 - tier: Tier 2
@@ -91,10 +91,14 @@ cat > $B/reference/00-shared-foundation.md << 'EOF'
 - related_topic: topic-a
 
 ## Key Facts
-- AI safety research is active.
+- AI safety research is an active and growing field.
+- Multiple regulatory frameworks are under development globally.
+- Industry investment in safety has increased significantly.
+- Academic research output on alignment has doubled since 2020.
+- International coordination on safety standards remains challenging.
 
 ## Core Content Capture
-Foundation overview of AI safety.
+Foundation overview of AI safety covering regulatory developments, industry investment trends, academic research directions, and international coordination efforts across multiple jurisdictions and stakeholder communities.
 
 ## Relevance To This Research
 Basis for topic-a investigation.
@@ -177,7 +181,7 @@ EOF
 # reference/{topic}-*.md rich MD file (count_floor requirement)
 cat > $B/reference/topic-a-deepening-source.md << 'EOF'
 # Deepening Source for Topic A
-- source_url: https://example.com/deepening
+- source_url: https://example.com/research/deepening
 - acceptance_status: accepted
 - source_type: primary
 - tier: Tier 2
@@ -188,10 +192,14 @@ cat > $B/reference/topic-a-deepening-source.md << 'EOF'
 - related_topic: topic-a
 
 ## Key Facts
-- Empirical study shows alignment progress.
+- Empirical study shows alignment progress across multiple benchmarks.
+- Second key finding demonstrates measurable improvement in safety metrics.
+- Third result confirms robustness gains from the proposed approach.
+- Fourth observation reveals transfer learning benefits across domains.
+- Fifth conclusion identifies remaining gaps for future investigation.
 
 ## Core Content Capture
-This study provides data on alignment technique effectiveness.
+This study provides data on alignment technique effectiveness through rigorous empirical evaluation across multiple benchmarks and safety metrics, exceeding the minimum character threshold required for quality-gated reference counting.
 
 ## Relevance To This Research
 Directly supports topic-a investigation targets.
@@ -202,6 +210,11 @@ Directly supports topic-a investigation targets.
 ## Risks And Limitations
 - Single study, limited sample size.
 EOF
+
+# Write ledger declaring both reference files for gate count_floor + content_dedup
+cat > $B/rb_output_declarations.jsonl << 'JSONL'
+{"declared_at":"2026-06-15T00:00:00.000Z","work_id":"wave1-deepening","producer_rule":"topic_deepening","slot_result_ref":"_subagents/wave_02/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_02/slot_00/runtime-receipt.jsonl","output_files":[{"path":"reference/00-shared-foundation.md","role":"reference","source_url":"https://example.com/research/ai-safety"},{"path":"reference/topic-a-deepening-source.md","role":"reference","source_url":"https://example.com/research/deepening"}],"cache_trails":[],"creation_reason":"Fixture-backed reference declaration for wave1 gate rule testing"}
+JSONL
 
 # Record trace event
 

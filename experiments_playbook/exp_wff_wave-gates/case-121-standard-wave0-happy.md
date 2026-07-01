@@ -128,7 +128,7 @@ EOF
 # Write 00-shared-*.md (rich MD with metadata + 5 sections)
 cat > $B/reference/00-shared-ai-safety.md << 'EOF'
 # Understanding AI Safety
-- source_url: https://example.com/ai-safety
+- source_url: https://example.com/research/ai-safety
 - acceptance_status: accepted
 - source_type: secondary
 - tier: Tier 2
@@ -140,9 +140,13 @@ cat > $B/reference/00-shared-ai-safety.md << 'EOF'
 
 ## Key Facts
 - AI safety is an active research area with growing industry investment.
+- Major AI labs have dedicated safety and alignment teams.
+- Adversarial robustness remains a key technical challenge.
+- Regulatory frameworks for AI are emerging across jurisdictions.
+- Open-source models present unique safety and governance challenges.
 
 ## Core Content Capture
-This source provides a broad overview of AI safety including technical alignment, policy governance, and societal impact dimensions.
+This source provides a broad overview of AI safety including technical alignment approaches, policy governance frameworks, and societal impact dimensions across multiple jurisdictions and research communities.
 
 ## Relevance To This Research
 Serves as shared foundation for all 3 topics in the topic_registry.
@@ -178,6 +182,11 @@ cat > $B/artifacts/wave0/topic-c/source.yaml << 'EOF'
 EOF
 
 # Record trace event
+
+# Write output declaration ledger — gate count_floor + content_dedup now read from ledger
+cat > $B/rb_output_declarations.jsonl << 'EOF'
+{"declared_at":"2026-06-15T00:00:00.000Z","work_id":"wave0-shared","producer_rule":"source_intake_fan_in","slot_result_ref":"_subagents/wave_01/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_01/slot_00/runtime-receipt.jsonl","output_files":[{"path":"reference/00-shared-ai-safety.md","role":"reference","source_url":"https://example.com/research/ai-safety"}],"cache_trails":[],"creation_reason":"Fixture-backed reference declaration for gate rule testing"}
+EOF
 
 echo "=== Reference artifacts ==="
 find $B/reference $B/artifacts -type f | sort

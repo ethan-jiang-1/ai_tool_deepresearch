@@ -110,6 +110,11 @@ EOF
 echo "=== seed_topics/ ==="
 ls -la $B/seed_topics/
 
+# Write ledger declaring reference files for gate count_floor + content_dedup
+cat > $B/rb_output_declarations.jsonl << 'JSONL'
+{"declared_at":"2026-06-15T00:00:00.000Z","work_id":"wave-shared","producer_rule":"source_intake_fan_in","slot_result_ref":"_subagents/wave_01/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_01/slot_00/runtime-receipt.jsonl","output_files":[{"path":"reference/00-shared-ai-safety-landscape.md","role":"reference","source_url":"https://example.com/research/ai-safety-landscape-2026"},{"path":"reference/topic-a-deepening-source.md","role":"reference","source_url":"https://example.com/research/alignment-governance"}],"cache_trails":[],"creation_reason":"Fixture-backed reference declaration for wave-chain gate testing"}
+JSONL
+
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -154,7 +159,7 @@ EOF
 # Write 00-shared-*.md (rich MD with metadata + 5 sections)
 cat > $B/reference/00-shared-ai-safety-landscape.md << 'EOF'
 # AI Safety Landscape: 2026 Overview
-- source_url: https://example.com/ai-safety-landscape-2026
+- source_url: https://example.com/research/ai-safety-landscape-2026
 - acceptance_status: accepted
 - source_type: secondary
 - tier: Tier 2
@@ -183,12 +188,12 @@ EOF
 
 # Write thin YAML per topic
 cat > $B/artifacts/wave0/topic-a/source.yaml << 'EOF'
-- url: "https://example.com/ai-safety-landscape-2026"
+- url: "https://example.com/research/ai-safety-landscape-2026"
   title: "AI Safety Landscape: 2026 Overview"
   retrieved_date: "2026-06-15"
   topic_tag: "topic-a"
   notes: "Comprehensive overview of major AI safety research directions"
-- url: "https://example.com/alignment-governance"
+- url: "https://example.com/research/alignment-governance"
   title: "Alignment and Governance: Bridging the Gap"
   retrieved_date: "2026-06-16"
   topic_tag: "topic-a"
@@ -199,6 +204,11 @@ EOF
 
 echo "=== Reference artifacts ==="
 find $B/reference $B/artifacts/wave0 -type f | sort
+
+# Write ledger declaring reference files for gate count_floor + content_dedup
+cat > $B/rb_output_declarations.jsonl << 'JSONL'
+{"declared_at":"2026-06-15T00:00:00.000Z","work_id":"wave-shared","producer_rule":"source_intake_fan_in","slot_result_ref":"_subagents/wave_01/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_01/slot_00/runtime-receipt.jsonl","output_files":[{"path":"reference/00-shared-ai-safety-landscape.md","role":"reference","source_url":"https://example.com/research/ai-safety-landscape-2026"},{"path":"reference/topic-a-deepening-source.md","role":"reference","source_url":"https://example.com/research/alignment-governance"}],"cache_trails":[],"creation_reason":"Fixture-backed reference declaration for wave-chain gate testing"}
+JSONL
 
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md)
 echo "$GATE_OUTPUT"
@@ -229,7 +239,7 @@ mkdir -p $B/artifacts/wave1/topic-a
 # Write evidence-summary.md
 cat > $B/artifacts/wave1/topic-a/evidence-summary.md << 'EOF'
 ## Key Findings
-1. Technical alignment research shows growing convergence with policy governance [Source](https://example.com/alignment-governance)
+1. Technical alignment research shows growing convergence with policy governance [Source](https://example.com/research/alignment-governance)
 2. The 2026 landscape indicates increased regulatory activity across jurisdictions.
 3. Multi-stakeholder coordination is emerging as a key success factor.
 EOF
@@ -253,7 +263,7 @@ EOF
 # Write reference/{topic}-*.md (topic-prefixed rich MD, count_floor requirement)
 cat > $B/reference/topic-a-deepening-source.md << 'EOF'
 # Deepening Source: Alignment and Governance
-- source_url: https://example.com/alignment-governance
+- source_url: https://example.com/research/alignment-governance
 - acceptance_status: accepted
 - source_type: primary
 - tier: Tier 2
@@ -284,6 +294,11 @@ EOF
 
 echo "=== Wave1 artifacts ==="
 find $B/artifacts/wave1 $B/reference/topic-a-* -type f | sort
+
+# Write ledger declaring reference files for gate count_floor + content_dedup
+cat > $B/rb_output_declarations.jsonl << 'JSONL'
+{"declared_at":"2026-06-15T00:00:00.000Z","work_id":"wave-shared","producer_rule":"source_intake_fan_in","slot_result_ref":"_subagents/wave_01/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_01/slot_00/runtime-receipt.jsonl","output_files":[{"path":"reference/00-shared-ai-safety-landscape.md","role":"reference","source_url":"https://example.com/research/ai-safety-landscape-2026"},{"path":"reference/topic-a-deepening-source.md","role":"reference","source_url":"https://example.com/research/alignment-governance"}],"cache_trails":[],"creation_reason":"Fixture-backed reference declaration for wave-chain gate testing"}
+JSONL
 
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave1-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B --current-node phases/phase-wave1.md)
 echo "$GATE_OUTPUT"
@@ -385,6 +400,11 @@ EOF
 
 echo "=== Wave2 artifacts ==="
 find $B/artifacts/wave2 -type f | sort
+
+# Write ledger declaring reference files for gate count_floor + content_dedup
+cat > $B/rb_output_declarations.jsonl << 'JSONL'
+{"declared_at":"2026-06-15T00:00:00.000Z","work_id":"wave-shared","producer_rule":"source_intake_fan_in","slot_result_ref":"_subagents/wave_01/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_01/slot_00/runtime-receipt.jsonl","output_files":[{"path":"reference/00-shared-ai-safety-landscape.md","role":"reference","source_url":"https://example.com/research/ai-safety-landscape-2026"},{"path":"reference/topic-a-deepening-source.md","role":"reference","source_url":"https://example.com/research/alignment-governance"}],"cache_trails":[],"creation_reason":"Fixture-backed reference declaration for wave-chain gate testing"}
+JSONL
 
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE_OUTPUT"

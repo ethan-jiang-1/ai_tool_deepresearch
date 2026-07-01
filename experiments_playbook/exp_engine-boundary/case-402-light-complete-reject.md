@@ -251,7 +251,7 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/re.json"
 sts=$?
 set -e
 if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" "E: incomplete cache" "$sts" 1
+node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" "E: incomplete cache" "$sts" 0
 ```
 
 → 预期：`EXPECTED REJECT`。
@@ -331,7 +331,7 @@ node "$B/verdict.mjs" $B
 >   [B] 缺 receipt → complete 拒绝（receipt verification fails）
 >   [C] writes 无 output_files 声明 → complete 拒绝（declaration contract violated）
 >   [D] 声明的 output file 不存在 → complete 拒绝（declaration-file mismatch）
->   [E] 缺 cache leaf（websearch.json/page.md/meta.json）→ complete 拒绝（incomplete cache trail）
+>   [E] 缺 cache leaf（websearch.json/page.md/meta.json）→ Phase 1 warning + trail 不写入 ledger（complete 不拒绝，incomplete leaf 不再是 hard-fail——见 CRC-005 两阶段策略）
 >   [F] nonce mismatch → complete 拒绝（receipt integrity violation）
 >   全部 6 个 reject 都是 expected:true — 正确拒绝等于正确行为。
 
