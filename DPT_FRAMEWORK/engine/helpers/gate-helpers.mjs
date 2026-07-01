@@ -1171,7 +1171,7 @@ export function checkContentDedup(bundlePath, threshold = {}) {
       if (sim >= jaccardThreshold) {
         passed = false;
         inspect.push(`Jaccard clone (${sim.toFixed(3)} >= ${jaccardThreshold}): "${references[i].path}" vs "${references[j].path}"`);
-        advice.push('Near-duplicate Key Facts detected.');
+        advice.push('Near-duplicate Key Facts detected. This often indicates template or script-generated reference files. Use sub-agent relay (dpt-evidence-extractor) to produce genuinely unique reference files from real WebSearch+WebFetch. Do NOT use template substitution or batch scripts.');
       }
     }
   }

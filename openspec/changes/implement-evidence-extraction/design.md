@@ -127,3 +127,23 @@ Phase 1 warning 只兼容旧 bundle / 旧 declaration 的空 trail 缺口。新 
 - **[Risk] Cache 文件内容不做验证——只查存在性** → `validateDelegatedCompletion()` 检查目录含 3 文件但不对内容做校验（`websearch.json` 可以是 `{}`，`page.md` 可以是空字符串）。这是故意简化的——内容质量判定是 `evidence-quality` 的范畴。在 design 中承认此局限，防止 reviewer 误以为是遗漏。Sub-agent 若写空文件，gate `cache_coverage` 会 pass 但 `isCountable` 最终要看 Core Content Capture 的实质性内容——空 `page.md` 不会让 reference 变成 countable。
 - **[Known] count_floor 阈值保持 1 不变** → glob→countReferences 切换后有效门槛提高（之前任何匹配文件都计数，现在需通过 4 个 isCountable 条件），但阈值数字保持 1。这是故意选择——1 是"至少需要 1 条有实质内容的 reference"，方向正确。后续 `evidence-quality` 引入 discard 后可调高阈值。
 - **[Known] Agent bypass 检测是启发式，非可靠防护** → AGO-006 通过检查 `cache_trails` 是否为空来判断 Agent 是否跳过了 `complete()`。但恶意 Agent 可以同时伪造 cache 目录和 cache_trails 路径来绕过硬编码检查。完全防御需要 Engine 对 ledger 条目签名（超出本 change 范围）。当前设计假设 Agent 不主动恶意绕过——目的是防止 Agent 因疏忽或流程缺失而跳过 cache 写入。
+
+## Post-Implementation Discoveries (2026-07-01)
+
+实现完成后分析了生产 bundle `dpt_rb_ai-agents-chinese-hospital-systems-2026`，发现了 4 个 gap：
+
+### Finding 1: Cache files exist but cache_trails empty (BUG-011)
+
+49 ledger records all have `cache_trails: []`, but `_cache/wave0/primary/{topic}/sNN_{slug}/` has complete 3-file leaves with 11 meta.json fields. The sub-agent wrote cache files but didn't declare `cache_trails[]` in result JSON — phase MD task card templates only require `output_files[]`, not `cache_trails[]`. Fix: CRC-005 Phase 2 prose update, in this change.
+
+### Finding 2: Ledger records missing required fields (BUG-010)
+
+Same bundle's `rb_output_declarations.jsonl` has only `output_files` + `cache_trails`, missing 6 required fields. `validate-bundle.mjs` caught all 49 schema violations. The ledger was not written through `appendOutputDeclarationLedger()`. Fix: harden validate-bundle to block bundles with schema-invalid ledger records.
+
+### Finding 3: Agent used Python template for batch reference generation (BUG-008)
+
+Agent batch-created 40 reference files via Python template — all Jaccard clones (>=0.95). Gate caught them correctly. But Agent broke `stop:no` after fatigue. Fix: add anti-template rule + improve gate advice. Defer fatigue counter.
+
+### Finding 4: Queue completion log events missing (BUG-012)
+
+49 completes but only 1 `queue_complete` in run.log. Deferred — needs independent logger investigation.

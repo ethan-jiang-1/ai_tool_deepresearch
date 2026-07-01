@@ -74,3 +74,32 @@
 - [x] 9.2 Run `node openspec/governance/check-project-specs.mjs`
 - [x] 9.3 Run all regression tests: `node --test tests/`
 - [x] 9.4 Execute controlled experiment playbooks
+
+## 10. BUG-009: checkCacheCoverage legacy ledger fallback
+
+- [x] 10.1 Add `declId` fallback in `checkCacheCoverage()` — prefer `decl.work_id`, fall back to `record for <first-ref-path>` when work_id is undefined
+- [x] 10.2 Verify: old format ledger (no work_id) produces readable messages, new format still uses work_id
+
+## 11. BUG-011: Phase MD cache_trails declaration (CRC-005 Phase 2)
+
+- [x] 11.1 Update `phase-wave0.md` task card `action` template — already included from task §6.1
+- [x] 11.2 Update `phase-wave1.md` primary deepening task card `action` template — added `cache_trails[]` requirement
+- [x] 11.3 Update `phase-wave1.md` supplementary task card `action` template — same
+- [x] 11.4 `shared-subagent-protocol.md` already documents `cache_trails[]` in Agent Output Declaration table
+
+## 12. BUG-008 partial: Anti-template-generation guardrails
+
+- [x] 12.1 Add rule 16 to `shared-anti-cheating-rules.md`: "MUST NOT use scripts or templates to batch-generate reference files"
+- [x] 12.2 Improve `checkContentDedup()` Jaccard clone advice to flag template generation and recommend sub-agent relay
+- [ ] 12.3 Strengthen `phase-wave1.md` reference-file provenance language (defer — existing MUST NOT language already covers this)
+
+## 13. BUG-010: validate-bundle ledger validation hardening
+
+- [x] 13.1 Already handled by existing code — `validate-bundle.mjs` increments `failed` counter for each schema-invalid ledger line, exits 1. Production bundle's 49 invalid records were correctly detected; the gap is workflow (validate-bundle was not run or exit code was ignored), not code.
+- [x] 13.2 Verified: `validate-bundle.mjs` correctly rejects the production bundle with 49 line errors
+
+## 14. Artifact updates for discovered bugs
+
+- [x] 14.1 Update `design.md` — added "Post-Implementation Discoveries" section documenting production bundle analysis
+- [x] 14.2 Delta specs assessment — BUG-009/010/011 are implementation details not requiring spec changes; CRC-005 Phase 2 already covers BUG-011
+- [ ] 14.3 Mark BUG-009/010/011 bugs as resolved in `_backlog/bugs/README.md` (after archive)

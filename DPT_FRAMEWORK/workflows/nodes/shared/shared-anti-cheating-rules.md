@@ -77,6 +77,14 @@ Sub-agent 返回的 `result.json` MUST 包含 `output_files[]`（声明每个产
 
 Delegated task 的 `complete()` MUST 通过 committed slot result + runtime receipt 证明 Sub-agent 确实经 Relay 执行。Phase Agent 不直接执行 WebSearch/WebFetch；不直接写 `rb_output_declarations.jsonl`；不手写 ledger row 冒充 completion。
 
+### 16. 禁止用脚本或模板批量生成 reference 文件
+
+Phase Agent MUST NOT use scripts (Python, bash, node, or any language) or template substitution to batch-generate `reference/*.md` files. Every reference file MUST be produced by a real sub-agent through the Agentic Queue → Sub-agent Relay pipeline, with real WebSearch + WebFetch execution and unique source content. Template-generated files share near-identical Key Facts and will be caught by `content_dedup` Jaccard clone detection (similarity ≥ 0.8), wasting fix cycles and eroding trust.
+
+正确路径：spawn `dpt-evidence-extractor` sub-agent for each topic → sub-agent performs real WebSearch + WebFetch → produces unique `reference/{topic}-<source-slug>.md` files with genuinely different source content → gate `content_dedup` passes naturally.
+
+If the Agent finds itself wanting to "create many reference files quickly," the correct answer is queue-driven sub-agent parallel execution, not a script.
+
 **正确替代**：Phase Agent claim delegated task → spawn Sub-agent via Relay → `commitSlotResult()` → delegated `complete()` → Engine append ledger。
 
 **正确替代**：`setup-ready` gate pass 只确认 structural consistency（文件存在、schema 合法、basename 一致）。它不意味着研究质量过关或可以交付最终报告。`readiness-passed` 是另一个 gate，在 wave0/1/2 + HITL2 之后。
