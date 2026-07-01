@@ -1,6 +1,6 @@
 # _backlog — 项目待办与决策记录
 
-> 最后更新: 2026-06-26 | 本目录追踪项目的工作项、设计决策、依赖分析。
+> 最后更新: 2026-07-01 | 本目录追踪项目的工作项、设计决策、依赖分析。
 > 活跃工作走 OpenSpec（`openspec/changes/`）；本目录是 **上游分析与决策记录**，不是运行时真相。
 >
 > **本文件是 `_backlog` 的规矩手册。** todo→done 的判定与搬迁流程在下面定死，今后大家都遵循这里头定的规矩。
@@ -13,7 +13,7 @@ _backlog/
 │
 ├── done/                              # ✅ 已完成/已归档的分析与决策记录
 │   ├── DONE-*.md ×13                  #   单条已完成的 TODO/分析
-│   ├── _fixed_bugs/                   #   已修复的 Bug 记录（4 个）
+│   ├── _fixed_bugs/                   #   已修复的 Bug 记录（7 个，BUG-001~007）
 │   ├── _old_topics/                   #   已归档的历史文件夹
 │   │   ├── _v12-migration/            #     V12→Agentic DPT 迁移记录（6 change 全 DONE）
 │   │   ├── _workflow/                 #     Workflow Foundation 需求与拆解（8 change 全 ARCHIVED）
@@ -34,7 +34,7 @@ _backlog/
 │   ├── todo-context-reground.md       #   长上下文定期重锚——预防（低，parked）
 │   └── todo-coding-agent-setup-ux.md  #   用户手册：怎么配 coding agent 才不卡（Claude Code + Codex）
 │
-└── bugs/                              # （空，预留）
+└── bugs/                              # 无活跃 bug（BUG-007 已修复，移入 done/_fixed_bugs/）
 ```
 
 ---
@@ -94,7 +94,7 @@ git mv todo-<name>.md done/DONE-<name>.md
 
 ### ✅ DONE（已完成/已归档，在 `done/`）
 
-13 个 `DONE-*.md` + `done/_old_topics/`（含 `_v12-migration`/6 change、`_workflow`/8 change、`_original_dpt_requirement`、`_original_dpt_v12`、`_guideline`、`_trainsistion`）+ `done/_fixed_bugs/`（4 个已修复 bug）。
+13 个 `DONE-*.md` + `done/_old_topics/`（含 `_v12-migration`/6 change、`_workflow`/8 change、`_original_dpt_requirement`、`_original_dpt_v12`、`_guideline`、`_trainsistion`）+ `done/_fixed_bugs/`（7 个已修复 bug，BUG-001~007）。
 
 关键完成项：
 - **prototype loop engineering**：gate-loop、gate-fork、subagent 三个原型全部 DONE，对应的 OpenSpec change 已归档
@@ -105,6 +105,7 @@ git mv todo-<name>.md done/DONE-<name>.md
 - **rerun-incremental-node**（2026-06-26）：HITL2 增量重跑节点——薄层 phase-rerun + gate + chain 边 `rerun → seed-topics`，5 个设计问题全解。详见 `done/DONE-rerun-incremental-node.md`
 - **plan-hostfile-sections**（2026-06-26）：`rb_plan.md` 内部 Section 化（`## Goal`/`## Topic Registry`/`## Constraints`/`## Progress`/`## Decisions`），不改名、Frontmatter 不变。解锁 context-reground 的北星锚点与 final-output-eval 的完成度信号。详见 `done/DONE-plan-hostfile-sections.md`
 - **wave1-sufficiency-gates**（2026-06-27）：研究充分性标准——4 套 research style JSON + `apply-research-style.mjs` CLI + gate `threshold_source` 动态阈值 + 三个 phase MD re-fill loop + placeholder 三层防线。OpenSpec change `establish-research-styles` 已归档，spec 已同步至 `openspec/specs/research-styles/`。详见 `done/DONE-wave1-sufficiency-gates.md`
+- **BUG-007 修复 — harden-rerun-topic-integration**（2026-07-01）：修复 rerun 增量 topic 空壳 bug（3 条独立根因链）。新增基础设施：checkpoint manifests (`_checkpoints/`)、reentry checker CLI (`check-reentry.mjs`)、file observability (`file-observability.mjs`)、gate failure diagnostics (`_diagnostics/gates/`)、`creation_reason` in ledger、12 种 stable diagnostic event kinds。OpenSpec change 已归档，delta spec 已同步至 8 个 capability（含 3 个新能力）。详见 `done/_fixed_bugs/BUG-007-rerun-incremental-topic.md`
 
 ### 📋 PENDING（待设计/待实现，在根目录）
 
@@ -116,7 +117,7 @@ git mv todo-<name>.md done/DONE-<name>.md
 | 3 | `todo-explore-exploit.md` | **高** | 搜索收敛检测与方向决策（wave 级） | subagent ✅, gate-fork ✅, evidence-quality 集成 |
 | 4 | `todo-final-output-eval.md` | **中** | 最终产物整体评估——不够格就自动 rerun（不等用户） | evidence-quality + explore-exploit 信号；plan-hostfile ✅（提供 Progress 信号） |
 | 5 | `todo-hooks-deferral.md` | **延后** | V12 的 6 个 Boundary Hook | evidence 管理器就位 |
-| 6 | `todo-phase-recover.md` | **低（parked）** | 模型失焦时从 ground truth 重新定位并复活当前 phase（兜底层） | 无硬阻塞；与 context-reground 真相源对齐 |
+| 6 | `todo-phase-recover.md` | **中（升级，2026-07-01）** | 模型失焦时从 ground truth 重新定位并复活当前 phase（兜底层）。**升级理由：check-reentry.mjs 提供了 ground-truth 检测基础设施（status/queue/artifact/ledger/drift audit），此前缺失的"真相源对照"能力已就位** | 无硬阻塞；与 context-reground 真相源对齐；reentry CLI 可做检测基础 |
 | 7 | `todo-context-reground.md` | **低（parked）** | 长上下文定期 reload 工程总图+root question，对抗 lost-in-the-middle（预防层） | 无硬阻塞；plan-hostfile ✅ 提供 `## Goal` 北星 |
 | 8 | `todo-coding-agent-setup-ux.md` | **中（launch 前抬起）** | 用户手册：怎么配 Claude Code/Codex 的 permission/approval 才能让框架 HITL1↔HITL2 自主跑不卡 | 无硬阻塞；真跑一次完整 research 的前置 UX 条件 |
 | 9 | `todo-hitl-ux.md` | **最高（与 evidence-quality 并列，active change 进行中）** | HITL 环机制 + 3 个浮出水面点 + 静默自主契约 + 预设 prompt 模板 | research-styles ✅ DONE（profile 参数体系已就位）；active change `establish-hitl-ux` |
@@ -239,7 +240,8 @@ flowchart LR
     DONE --> P1 --> P2 --> P3 --> FINAL
 ```
 
-✅ 已完成（已进 done/）：rerun-incremental-node、plan-hostfile-sections、wave1-sufficiency-gates
+✅ 已完成（已进 done/）：BUG-007（harden-rerun-topic-integration）、rerun-incremental-node、plan-hostfile-sections、wave1-sufficiency-gates
+   → BUG-007 解锁 phase-recover 的 ground-truth 检测基础设施（check-reentry.mjs + file-observability + gate diagnostics）
    → rerun 解锁 final-output-eval 的 auto_rerun 落点
    → plan-hostfile 解锁 context-reground 北星 + final-output-eval 完成度信号
    → wave1-sufficiency-gates 定标准——4 套 style + 动态阈值 + re-fill loop
@@ -255,7 +257,7 @@ flowchart LR
 
 ### 三个 parked TODO（健壮性/元机制，低优先级）
 
-`todo-phase-recover` / `todo-context-reground`（#6-7）**不参与上述执行顺序**——它们正交于核心流水线，当前先记录、不抢跑道，低优先级 long park。`todo-system-logging` 已迁移至 `/openspec/changes/system-logging/` 并已实现。
+`todo-phase-recover` / `todo-context-reground`（#6-7）**不参与上述执行顺序**——它们正交于核心流水线，当前先记录、不抢跑道。**2026-07-01 更新**：phase-recover 从 Low 升级到 Medium——`check-reentry.mjs` + file-observability 已提供 ground-truth 检测层，修复此前缺失的关键基础设施。但 evidence pipeline 仍是主线，phase-recover 在 pipeline 有进展时并行抬起即可。`todo-system-logging` 已迁移至 `/openspec/changes/system-logging/` 并已实现。
 
 ## 快速查阅指南
 
@@ -275,6 +277,7 @@ flowchart LR
 - **workflow 怎么拆成 change** → `done/_old_topics/_workflow/openspec-change-map.md`
 - **术语怎么乱** → `done/_old_topics/_guideline/terminology-gap-audit.md`
 - **研究充分性标准怎么定** → `done/DONE-wave1-sufficiency-gates.md`（8 层 gap → 4 style JSON + CLI + gate threshold_source）
+- **BUG-007 怎么修的** → `done/_fixed_bugs/BUG-007-rerun-incremental-topic.md`（3 条独立根因链 → 4 个新基础设施 + 8 个 delta spec）
 
 ### 想看具体 TODO 的设计思路
 → 对应的 `todo-*.md` 文件，每个都包含：Why、核心挑战、从 V12 借鉴的模式、实验范围（Goals/Non-Goals）、关键设计问题、实现思路、下一步

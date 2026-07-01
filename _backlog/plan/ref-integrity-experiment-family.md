@@ -1,6 +1,6 @@
 # Ref Integrity 实验家族设计方案
 
-> 状态: 待 review | 日期: 2026-06-28 | 作者: ethanmac + Claude
+> 状态: 待 review — content_dedup hardening + file-observability 部分覆盖了 case-16/17 场景（Jaccard dedup + homepage detection + orphan detection 已实现）| 日期: 2026-06-28 | 更新: 2026-07-01 | 作者: ethanmac + Claude
 
 ---
 

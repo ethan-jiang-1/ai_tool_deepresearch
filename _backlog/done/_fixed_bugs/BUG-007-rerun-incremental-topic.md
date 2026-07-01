@@ -1,6 +1,7 @@
 # Bug: Rerun 增量 Topic 产出空壳 — Gate 通过但语义未集成
 
-**Severity**: P0 | **Discovered**: 2026-06-29 | **Bundle**: `dpt_rb_china-japan-relations-since-april-2026`
+**Severity**: P0 | **Discovered**: 2026-06-29 | **Fixed**: 2026-07-01 | **Bundle**: `dpt_rb_china-japan-relations-since-april-2026`
+> 状态: 已修复（已移入 done/_fixed_bugs/）
 
 ---
 
@@ -155,3 +156,25 @@ grep '^## 8\.' artifacts/wave2/synthesis.md  # "Cross-Topic Addition (Rerun #1)"
 # 正确做法应为重写 §1-§7，将韩国纳入主分析
 ```
 
+---
+
+## 修复记录 (2026-07-01)
+
+通过 OpenSpec change `harden-rerun-topic-integration` 修复，已归档至 `openspec/changes/archive/2026-07-01-harden-rerun-topic-integration/`。
+
+**Bug A（reference 格式链断裂）修复：**
+- `phase-wave1-subagent.md` §2 含完整 metadata block 格式 spec（9 必填字段 + 5 标准 section）
+- `phase-wave1.md` task card action 内联格式要求
+- gate-wave1-complete 新增 4 条质量规则：`reference_format`（拒绝 YAML frontmatter）、`source_url_article_level`（拒绝 homepage URL）、`key_facts_min_lines`（≥5 条 bullet）、`ledger_coverage`（文件系统↔ledger 交叉验证）
+- `checkContentDedup()` fail-closed on empty/missing/no-reference ledger
+- `isHomepageUrl()` path-depth heuristic（空/`/`/`/index.*`/depth<2）
+
+**Bug B（Wave2 缺少 action:add 分支）修复：**
+- `phase-wave2.md` Rerun-Aware Behavior 含场景表（action:add → 全量重合成，action:supplement → delta/append）
+- gate-wave2-complete 新增 `rerun_add_full_synthesis` 规则：Delta Synthesis 作为主路径 → fail；slug 覆盖不完整 → fail
+
+**Bug C（gate 只查结构不查内容）修复：**
+- 以上所有 gate 质量规则
+- 新增基础设施：checkpoint manifests (`_checkpoints/`)、reentry checker CLI (`check-reentry.mjs`)、file observability (`file-observability.mjs`)、gate failure diagnostics (`_diagnostics/gates/`)、`creation_reason` in ledger、12 种 stable diagnostic event kinds
+
+**验证：** 892 回归测试 + 6 个 playbook cases (307-312) 全部通过。

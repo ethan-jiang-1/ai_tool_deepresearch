@@ -1,6 +1,6 @@
 # command-experiments.md 调整思路 — Agent 产出声明原则
 
-> 状态: 待 review | 日期: 2026-06-28 | 来源: openspec explore 对话
+> 状态: 已落地 — declaration-ledger + file-observability 在 harden-rerun-topic-integration 中实现 | 日期: 2026-06-28 | 更新: 2026-07-01 | 来源: openspec explore 对话
 >
 > 与 `ref-integrity-experiment-family.md` 并列。该文件设计了 6 个实验，本文补充实验和生产的 converge 机制。
 

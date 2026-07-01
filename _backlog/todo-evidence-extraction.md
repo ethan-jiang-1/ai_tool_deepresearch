@@ -1,13 +1,20 @@
 # TODO: evidence-extraction（证据提取——把"干货"从来源抽到 reference）
 
-> 状态: 部分完成（见下方"已完成部分"） | 优先级: 高 | 创建: 2026-06-16 | 更新: 2026-06-27
+> 状态: 部分完成（见下方"已完成部分"） | 优先级: 高 | 创建: 2026-06-16 | 更新: 2026-07-01
 >
 > 曾用名: `todo-prototype-extract.md`（太模糊——不知道到底在 extract 什么。更名为 evidence-extraction，明确是提取证据内容/干货。）
 >
 > 直接依赖: `prototype-subagent` ✅ DONE | `prototype-gate-fork` ✅ DONE
 > 上游 of: `todo-evidence-quality`（extraction 产出 reference，quality 评估每条 reference——不够格就放弃）
 >
-> ## 已完成部分（2026-06-27）
+> ## 已完成部分（2026-06-27，更新 2026-07-01）
+>
+> **2026-07-01 更新 — BUG-007 修复带来的进展：**
+> - ✅ reference 格式链已硬化：`phase-wave1-subagent.md` §2 含完整 metadata block 格式 spec（9 必填字段 + 5 标准 section），gate-wave1-complete 新增 4 条质量规则（`reference_format`/`source_url_article_level`/`key_facts_min_lines`/`ledger_coverage`），`checkContentDedup()` fail-closed
+> - ✅ file-observability 基础设施就绪：`auditFileObservability()` 可独立于 ledger 扫描文件系统，区分 declared/orphan/explained 文件
+> - ✅ `creation_reason` 字段已加入 `OutputDeclarationLedgerRecord`
+> - ⚡ `countReferences(baseDir)` 和 `isCountable(ref)` 有了 file-observability 做基础，但尚未实现
+> - ⚡ `ref_count` 仍由 Agent 决定，尚未改为 Engine 计算
 >
 > Goal 1（扩展 reference 格式，增加 `## Core Content Capture` section）**部分落地**：
 > - ✅ `## Core Content Capture` section 作为 reference template 的 mandatory section 2/5 已存在于 `DPT_FRAMEWORK/workflows/nodes/shared/shared-reference-template.md:48-53`
