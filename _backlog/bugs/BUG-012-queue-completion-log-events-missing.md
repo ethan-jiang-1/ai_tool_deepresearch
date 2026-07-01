@@ -2,7 +2,7 @@
 
 **Severity**: P2 — 诊断信号缺失，影响问题发现时机
 **Found**: 2026-07-01, 分析生产 bundle `dpt_rb_ai-agents-chinese-hospital-systems-2026`
-**Related**: [[BUG-009-production-ledger-missing-required-fields]], [[implement-evidence-extraction]]
+**Related**: [[BUG-010-production-ledger-missing-required-fields]], [[implement-evidence-extraction]]
 
 ## 症状
 

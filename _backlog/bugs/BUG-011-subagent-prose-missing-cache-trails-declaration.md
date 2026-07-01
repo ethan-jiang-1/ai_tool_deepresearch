@@ -2,7 +2,7 @@
 
 **Severity**: P1 — 阻塞 cache_coverage Phase 2 迁移
 **Found**: 2026-07-01, 分析生产 bundle `dpt_rb_ai-agents-chinese-hospital-systems-2026`
-**Related**: [[BUG-009-production-ledger-missing-required-fields]], [[implement-evidence-extraction]], [[cache_coverage]]
+**Related**: [[BUG-010-production-ledger-missing-required-fields]], [[implement-evidence-extraction]], [[cache_coverage]]
 
 ## 症状
 
