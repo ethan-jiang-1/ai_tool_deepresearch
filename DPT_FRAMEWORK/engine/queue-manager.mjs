@@ -52,7 +52,7 @@
 //   QueueItemSchema, QUEUE, OutputDeclarationLedgerRecord, LEDGER_FILE
 
 import { z } from 'zod';
-import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 
@@ -343,10 +343,15 @@ function deriveCreationReason(current, slotResult) {
   return `${prefix}${base}${summary}${rerunSuffix}`.slice(0, 500);
 }
 
-function appendOutputDeclarationLedger(bundleDir, current, slotResultRef, slotResult) {
+function appendOutputDeclarationLedger(bundleDir, current, slotResultRef, slotResult, verifiedCacheTrails = null) {
   const file = path.join(bundleDir, LEDGER_FILE);
   mkdirSync(bundleDir, { recursive: true });
   const receiptRef = slotResultRef.replace(/\/result\.json$/, '/runtime-receipt.jsonl');
+  // Use Engine-verified cache trails when available; fall back to raw declaration
+  // (raw fallback only for legacy bundles without the validation refinement)
+  const cacheTrails = verifiedCacheTrails !== null
+    ? verifiedCacheTrails
+    : (slotResult.cache_trails || []);
   const record = {
     declared_at: new Date().toISOString(),
     work_id: current.work_id,
@@ -354,7 +359,7 @@ function appendOutputDeclarationLedger(bundleDir, current, slotResultRef, slotRe
     slot_result_ref: slotResultRef,
     runtime_receipt_ref: receiptRef,
     output_files: slotResult.output_files || [],
-    cache_trails: slotResult.cache_trails || [],
+    cache_trails: cacheTrails,
     creation_reason: deriveCreationReason(current, slotResult),
   };
   OutputDeclarationLedgerRecord.parse(record);
@@ -431,23 +436,101 @@ function validateDelegatedCompletion(current, parsedResult, bundleDir) {
   }
   if (issues.length > 0) return { passed: false, inspect: issues, advice: issues.join('; ') };
 
-  // 6. Validate cache_trails[]: bundle-relative _cache/ leaf, each contains 3 files
+  // 6. Validate cache_trails[]: separate unsafe (hard-fail) from incomplete (warning + filter)
+  // @impl CRC-005, AGO-006
+  const hardIssues = [];
+  const cacheWarnings = [];
+  const verifiedCacheTrails = [];
+
   for (const trail of slotResult.cache_trails) {
+    // 6a. Hard-fail: path escape
     if (path.isAbsolute(trail) || trail.includes('..')) {
-      issues.push(`cache_trails path escapes bundle: ${trail}`);
+      hardIssues.push(`cache_trails path escapes bundle: ${trail}`);
       continue;
     }
+
+    // 6b. Hard-fail: not under _cache/
+    if (!trail.startsWith('_cache/')) {
+      hardIssues.push(`cache_trails path not under _cache/: ${trail}`);
+      continue;
+    }
+
     const trailFull = path.join(bundleDir, trail);
-    if (!existsSync(trailFull)) {
-      issues.push(`cache trail directory missing: ${trail}`);
-      continue;
-    }
-    for (const required of ['websearch.json', 'page.md', 'meta.json']) {
-      if (!existsSync(path.join(trailFull, required))) {
-        issues.push(`cache trail ${trail} missing ${required}`);
+
+    // 6c. Hard-fail: parent cache directory (has sNN_* subdirs but not the 3 files directly)
+    if (existsSync(trailFull) && statSync(trailFull).isDirectory()) {
+      const directFiles = readdirSync(trailFull).filter(f => {
+        try { return statSync(path.join(trailFull, f)).isFile(); } catch { return false; }
+      });
+      const hasThreeFiles = ['websearch.json', 'page.md', 'meta.json']
+        .every(f => directFiles.includes(f));
+      const subdirs = readdirSync(trailFull).filter(f => {
+        try { return statSync(path.join(trailFull, f)).isDirectory(); } catch { return false; }
+      });
+
+      if (!hasThreeFiles && subdirs.length > 0) {
+        hardIssues.push(`cache_trails path is a parent directory, not a leaf source dir: ${trail} (contains subdirectories but no cache files)`);
+        continue;
       }
+
+      // 6d. Warning: incomplete leaf (directory exists but missing one or more 3 files)
+      if (!hasThreeFiles && subdirs.length === 0) {
+        const missing = ['websearch.json', 'page.md', 'meta.json']
+          .filter(f => !directFiles.includes(f));
+        for (const m of missing) {
+          cacheWarnings.push(`cache trail ${trail} missing ${m} — trail filtered from ledger`);
+        }
+        logEvent('warn', 'cache_trail_incomplete', { trail, missing });
+        traceEntry('cache_trail_warning', {
+          source: 'agq-complete',
+          kind: 'cache_trail_incomplete',
+          trail,
+          missing,
+          work_id: current.work_id,
+        });
+        continue;
+      }
+
+      // 6e. Verified: directory exists with all 3 files
+      verifiedCacheTrails.push(trail);
+    } else {
+      // Directory doesn't exist — Phase 1 warning, not hard-fail
+      cacheWarnings.push(`cache trail directory missing: ${trail} — trail filtered from ledger`);
+      logEvent('warn', 'cache_trail_missing', { trail });
+      traceEntry('cache_trail_warning', {
+        source: 'agq-complete',
+        kind: 'cache_trail_missing',
+        trail,
+        work_id: current.work_id,
+      });
     }
   }
+
+  // Hard-fail if any unsafe/non-leaf trails
+  if (hardIssues.length > 0) {
+    for (const hi of hardIssues) issues.push(hi);
+  }
+  // Aggregate warnings for incomplete trails (don't fail complete)
+  if (cacheWarnings.length > 0) {
+    logEvent('warn', 'cache_trail_warnings', { count: cacheWarnings.length, warnings: cacheWarnings });
+  }
+  // Emit warning if cache_trails is empty on a reference-producing task
+  if (slotResult.cache_trails.length === 0) {
+    const hasReferenceOutput = (slotResult.output_files || []).some(f => f.role === 'reference');
+    if (hasReferenceOutput) {
+      logEvent('warn', 'cache_trail_empty', {
+        work_id: current.work_id,
+        detail: 'cache_trails is empty on a reference-producing task — gate cache_coverage will report gap',
+      });
+      traceEntry('cache_trail_warning', {
+        source: 'agq-complete',
+        kind: 'cache_trail_empty',
+        work_id: current.work_id,
+        detail: 'cache_trails is empty on a reference-producing task',
+      });
+    }
+  }
+
   if (issues.length > 0) return { passed: false, inspect: issues, advice: issues.join('; ') };
 
   // 7. Check standard receipt/writes consistency with declared output files
@@ -461,7 +544,7 @@ function validateDelegatedCompletion(current, parsedResult, bundleDir) {
   }
   if (issues.length > 0) return { passed: false, inspect: issues, advice: issues.join('; ') };
 
-  return { passed: true, slotResult };
+  return { passed: true, slotResult, verifiedCacheTrails };
 }
 
 // ============================================================
@@ -704,7 +787,11 @@ export function complete(queue, result, bundleDir = process.cwd()) {
 
   // ── Delegated success: append output declaration ledger ──
   if (isDelegated && delegationResult?.slotResult) {
-    appendOutputDeclarationLedger(bundleDir, current, parsedResult.slot_result_ref, delegationResult.slotResult);
+    appendOutputDeclarationLedger(
+      bundleDir, current, parsedResult.slot_result_ref,
+      delegationResult.slotResult,
+      delegationResult.verifiedCacheTrails || null,
+    );
   }
 
   return { queue: validateQueue(touchQueue(q)), feedback: check(true, `Completed ${current.work_id}`) };

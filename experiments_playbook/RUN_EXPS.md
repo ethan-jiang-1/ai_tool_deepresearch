@@ -62,6 +62,13 @@
 | G25 engine-boundary | case-402 | `exp_engine-boundary/case-402-light-complete-reject.md` | delegated complete() reject 场景：缺 ref/receipt、writes 无 declaration、缺文件/缺 cache、nonce mismatch |
 | G25 engine-boundary | case-403 | `exp_engine-boundary/case-403-light-gate-content-dedup.md` | content_dedup gate：ledger-generated 输入；URL dup/Jaccard/homepage/self-ref fail；clean pass；orphan cannot help |
 | G25 engine-boundary | case-405 | `exp_engine-boundary/case-405-light-trace-single-sink.md` | trace 单 sink：只存在 bundle 根 rb_trace.jsonl |
+| G27 evidence-extraction | case-161 | `exp_evidence-extraction/case-161-light-complete-cache-trails.md` | cache_trails Engine 三条路径：valid→ledger、incomplete→warning+filter、unsafe→hard-fail |
+| G26 file-observability | case-310 | `exp_file-observability/case-310-light-orphan-reference.md` | orphan reference 检测：未声明文件分类为 orphan_authority_blocking，severity=blocker |
+| G26 file-observability | case-311 | `exp_file-observability/case-311-light-file-explanation.md` | file_explanation 诊断 event：unplanned 文件可通过 trace 解释为非权威 |
+| G26 file-observability | case-312 | `exp_file-observability/case-312-light-wave2-action-add.md` | wave2 action:add 文件可观测性：新增文件正确分类 |
+| G30 reentry-debuggability | case-307 | `exp_reentry-debuggability/case-307-light-clean-reentry.md` | clean reentry：所有 audit 通过，无 blocker |
+| G30 reentry-debuggability | case-308 | `exp_reentry-debuggability/case-308-light-stale-queue-blocker.md` | stale queue blocker 检测：prior-phase active work 阻塞 reentry |
+| G30 reentry-debuggability | case-309 | `exp_reentry-debuggability/case-309-light-drift-detection.md` | checkpoint drift 检测：control file hash 变化 → blocker |
 
 ### Standard（真实 bundle 多步骤，无外部调用）
 
@@ -105,6 +112,7 @@
 | G13 delivery | case-135 | `exp_wff_delivery/case-135-standard-readiness-precheck.md` | readiness gate：manifest 拓扑推导 prior gate 集合 + artifact/parsability 审计 |
 | G24 wfn-rerun | case-306 | `exp_wfn_rerun/case-306-standard-two-round-delta.md` | Agent-driven：两轮 rerun，验证 rerun_count 递增和 direction section 更新（⚠️ verdict 来自文件系统检查，非 gate） |
 | G25 engine-boundary | case-404 | `exp_engine-boundary/case-404-standard-queue-boundary.md` | Queue 边界合约：non-delegated 不受影响；delegated 强制 provenance；controller:"sub-agent" 被拒 |
+| G27 evidence-extraction | case-162 | `exp_evidence-extraction/case-162-standard-gate-reentry-cache-coverage.md` | gate count_floor（scoped）+ cache_coverage（verified+mapped/missing/empty）+ file observability cache_gap + check-reentry 集成 |
 
 ### Heavy（真实外部调用：WebSearch/WebFetch/subagent spawn，自动化可跑）
 
@@ -126,6 +134,7 @@
 | G6 subagent | case-64 | `exp_subagent/case-64-heavy-triple-failure.md` | 三个 subagent 并发 + partial failure |
 | G15 ai-judge | case-951 | `exph_workflow-foundation/case-951-heavy-topic-rewrite-ai-judge.md` | AI 扮演真人 dual of 901：真 Agent rewrite + AI reviewer verdict（source: ai-judge，非真人）；9NN +50 对偶 |
 | G25 engine-boundary | case-406 | `exp_engine-boundary/case-406-heavy-real-subagent-boundary.md` | 真实 Sub-agent/WebSearch/WebFetch：output declaration → delegated complete → ledger → content_dedup；无 real-agent surface 时记录 NOT RUN，不算 PASS |
+| G27 evidence-extraction | case-163 | `exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md` | 真实 Agent/Sub-agent canary：rerun action:add → _cache 三文件 leaf → slot result cache_trails → Engine ledger → gate cache_coverage → 质量指标；无 Agent 时 NOT RUN |
 
 ### Human（需人类交互/判断，不能自动化，必须手动跑）
 

@@ -121,6 +121,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle <path> --curren
 
 - 受影响 seed_topic 文件中的 `## 本轮重跑方向` section 已写入/更新
 - `rb_plan.md` frontmatter `topic_registry` 已同步（add → 追加，remove → 移除），`derived_topic_count` 反映当前条目数
+- **新增 topic（`action: add`）必须在后续 phase（wave0/wave1/wave2）中遵循完整 `_cache/` 写入约定**：每个 source 写入 `websearch.json` + `page.md` + `meta.json`（11 字段），在 slot result 的 `cache_trails[]` 中声明 leaf 路径，确保 gate `cache_coverage` 可溯源。此约定与首次运行的 topic 完全一致。
 - `rb_profile.yaml#/research_style_params` 已更新——`wave0_shared_ref_total` 反映当前 `topic_count`（通过 `apply-research-style.mjs` 重算）
 - `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count` 已递增
 - `rb_status.json` 中 `current_gate: rerun_ready` / `next_gate: seed_topics_ready`（通过 CLI 推进）：

@@ -49,7 +49,7 @@ function baseState(overrides = {}) {
   };
 }
 
-function doneResult(slot, evidenceCount = 2) {
+function doneResult(slot, evidenceCount = 2, outputFiles = []) {
   return {
     slotKey: slot.key,
     roleAgentKey: slot.roleAgentKey,
@@ -64,7 +64,45 @@ function doneResult(slot, evidenceCount = 2) {
     }],
     confidence: 0.8,
     notes: [],
+    output_files: outputFiles,
+    cache_trails: [],
   };
+}
+
+/** Write a minimal countable reference file to disk. */
+function writeCountableRef(bundleDir, relPath, sourceUrl) {
+  const absPath = path.join(bundleDir, relPath);
+  mkdirSync(path.dirname(absPath), { recursive: true });
+  writeFileSync(absPath, [
+    `- source_url: ${sourceUrl}`,
+    '- acceptance_status: accepted',
+    '- source_type: primary',
+    '- tier: Tier 2',
+    '- trust_level: expert',
+    '- related_topic: topic-a',
+    '- evidence_role: deepening_reference',
+    '- why_it_matters: Test reference.',
+    '- accessed_at: 2026-06-15',
+    '',
+    '## Key Facts',
+    '- Fact 1: Important finding.',
+    '- Fact 2: Second insight.',
+    '- Fact 3: Third data point.',
+    '- Fact 4: Fourth observation.',
+    '- Fact 5: Fifth fact.',
+    '',
+    '## Core Content Capture',
+    'This is substantive content that is more than one hundred characters. It provides meaningful analysis of the source material and extends well beyond a brief summary to ensure quality thresholds are met.',
+    '',
+    '## Relevance To This Research',
+    'Relevant context.',
+    '',
+    '## Quotable Terms / Concepts',
+    '- Term',
+    '',
+    '## Risks And Limitations',
+    'Limited.',
+  ].join('\n'));
 }
 
 function writeRuntimeReceipt(baseDir, slot, overrides = {}) {
@@ -353,19 +391,24 @@ describe('Repair, C&I, and pipeline split', () => {
     }
   });
 
-  it('collectAndMergeSubagentResults merges after agent results are committed', () => {
+  it('collectAndMergeSubagentResults uses Engine-computed ref_count from countable references', () => {
     const testDir = tempDir();
     try {
-      // Trace auto-inits via ensureTrace(bundleDir) — no setup needed.
       const state = baseState();
       const { slots } = forkAndStageSubagents(state, testDir);
       for (const [index, slot] of slots.entries()) {
+        // Write a countable reference file for each slot
+        const refPath = `reference/slot-${index}-ref.md`;
+        writeCountableRef(testDir, refPath, `https://example.com/research/slot-${index}`);
         writeRuntimeReceipt(testDir, slot, { platform: 'codex', runtimeMode: 'builtin-agent-with-role-prompt' });
         ingestAgentReceipt(slot, testDir, { runtimeAgentId: `agent-${index + 1}` });
-        commitSlotResult(slot, testDir, doneResult(slot, index + 1), { platform: 'codex', runtimeMode: 'builtin-agent-with-role-prompt' });
+        commitSlotResult(slot, testDir, doneResult(slot, index + 1, [
+          { path: refPath, role: 'reference', source_url: `https://example.com/research/slot-${index}` },
+        ]), { platform: 'codex', runtimeMode: 'builtin-agent-with-role-prompt' });
       }
       const merged = collectAndMergeSubagentResults(state, slots, testDir);
-      assert.equal(merged.finalState.ref_count, 15);
+      // 5 (base ref_count) + 4 (one countable reference per slot) = 9
+      assert.equal(merged.finalState.ref_count, 9);
       assert.equal(merged.checkResult.passed, true);
       assert.equal(merged.forkDecision.branch, 'pass');
     } finally {

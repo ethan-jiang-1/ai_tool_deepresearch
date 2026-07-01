@@ -154,7 +154,7 @@ function createBundle(name) {
     '- why_it_matters: Deepening evidence.\n' +
     '- accessed_at: 2026-06-15\n' +
     '- related_topic: topic-a\n\n' +
-    '## Key Facts\n- Finding one.\n- Finding two.\n- Finding three.\n- Finding four.\n- Finding five.\n\n## Core Content Capture\nContent.\n' +
+    '## Key Facts\n- Finding one: Important initial finding.\n- Finding two: Second key insight.\n- Finding three: Third data point.\n- Finding four: Fourth observation.\n- Finding five: Fifth concluding fact.\n\n## Core Content Capture\nThis is a substantive core content capture section that provides meaningful analysis of the topic being researched. It exceeds one hundred characters to satisfy the minimum quality threshold for reference counting.\n' +
     '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- Term.\n## Risks And Limitations\n- None.\n');
 
   // output declaration ledger (content_dedup gate reads from this)

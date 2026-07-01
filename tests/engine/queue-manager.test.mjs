@@ -623,11 +623,11 @@ describe('Delegated queue completion (Stage 2)', () => {
     }
   });
 
-  it('delegated complete() rejects missing cache leaf file', () => {
+  it('delegated complete() warns but succeeds with incomplete cache leaf (Phase 1)', () => {
     const dir = tempBundle();
     try {
       const { slot } = setupDelegatedFixture(dir);
-      // Remove meta.json from cache leaf
+      // Remove meta.json from cache leaf — incomplete leaf, not unsafe
       rmSync(path.join(dir, '_cache', 'wave0', 'primary', '01_test', 's01_source', 'meta.json'));
 
       let queue = createQueue('del-cache');
@@ -643,8 +643,21 @@ describe('Delegated queue completion (Stage 2)', () => {
         work_id: 'work-cache', receipt: 'none',
         slot_result_ref: slot.resultPath,
       }, dir);
-      assert.equal(result.feedback.passed, false);
-      assert.ok(result.feedback.advice.includes('meta.json'));
+      // Phase 1: incomplete leaf is warning, not hard-fail — complete succeeds
+      assert.equal(result.feedback.passed, true, 'Incomplete cache leaf should warn but not block complete');
+      // Verify the incomplete trail was filtered from the ledger
+      const ledgerPath = path.join(dir, 'rb_output_declarations.jsonl');
+      if (existsSync(ledgerPath)) {
+        const ledgerLines = readFileSync(ledgerPath, 'utf-8').trim().split('\n').filter(Boolean);
+        for (const line of ledgerLines) {
+          const rec = JSON.parse(line);
+          if (rec.work_id === 'work-cache') {
+            // The incomplete trail should NOT be in the ledger
+            const hasIncompleteTrail = (rec.cache_trails || []).some(t => t.includes('s01_source'));
+            assert.equal(hasIncompleteTrail, false, 'Incomplete trail should be filtered from ledger');
+          }
+        }
+      }
     } finally {
       cleanup(dir);
     }

@@ -64,11 +64,14 @@ function setupHappyPath(dir) {
     '| 00-shared-ai-safety.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-06-15 |\n');
   writeFileSync(join(dir, 'reference/README.md'), '# Reference Evidence\nFlat reference directory.\n');
   writeFileSync(join(dir, 'reference/00-shared-ai-safety.md'),
-    '---\nsource_url: https://example.com/research/ai-safety\nacceptance_status: accepted\n' +
-    'source_type: secondary\ntier: Tier 2\nevidence_role: foundation\ntrust_level: practitioner\n' +
-    'why_it_matters: Foundational overview\naccessed_at: 2026-06-15\nrelated_topic: all\n---\n' +
-    '## Key Facts\n- AI safety is important.\n## Core Content Capture\nOverview.\n' +
-    '## Relevance To This Research\nFoundation.\n## Quotable Terms / Concepts\n- "AI safety"\n## Risks And Limitations\n- High-level.\n');
+    '- source_url: https://example.com/research/ai-safety\n- acceptance_status: accepted\n' +
+    '- source_type: secondary\n- tier: Tier 2\n- evidence_role: foundation\n- trust_level: practitioner\n' +
+    '- why_it_matters: Foundational overview of AI safety research.\n- accessed_at: 2026-06-15\n- related_topic: all\n' +
+    '\n## Key Facts\n- Fact 1: AI safety research focuses on alignment and robustness.\n- Fact 2: Major labs have dedicated safety teams.\n- Fact 3: Adversarial attacks remain a key concern.\n- Fact 4: Regulatory frameworks are emerging globally.\n- Fact 5: Open-source models present unique challenges.\n' +
+    '\n## Core Content Capture\nComprehensive overview of the AI safety landscape covering alignment research, robustness against adversarial attacks, and the emerging regulatory frameworks that are shaping the field globally.\n' +
+    '\n## Relevance To This Research\nFoundational context for understanding AI governance landscape.\n' +
+    '\n## Quotable Terms / Concepts\n- AI alignment\n- Adversarial robustness\n' +
+    '\n## Risks And Limitations\n- Field is rapidly evolving; conclusions may date quickly.\n');
 
   // Thin YAML in artifacts/wave0/ per topic
   mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-a'), { recursive: true });

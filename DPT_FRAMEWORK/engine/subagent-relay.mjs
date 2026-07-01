@@ -79,6 +79,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { createTrace } from './trace.mjs';
 import { createRunLogger, readBundleName } from './logger.mjs';
+import { isCountable } from './helpers/ref-count.mjs';
 
 // Trace + logger auto-init on first mutation call via ensureTrace(bundleDir).
 // Fixed trace filename `rb_trace.jsonl` within the bundle. consoleEcho: false.
@@ -1017,17 +1018,42 @@ export function collectResults(slots, baseDir) {
 /**
  * Merge collected slot results into workflow state.
  *
- * Pure function — does NOT write to disk. Adds evidence counts to ref_count,
- * increments subagent_wave, and sets subagent_all_failed if every slot failed.
+ * Pure function — does NOT write to disk. Computes ref_count from committed
+ * SlotResult output_files declarations using isCountable() quality filtering
+ * instead of Agent evidenceCount accumulation.
+ *
+ * When baseDir is provided, each role=reference output_file declared in the
+ * committed slot results is checked against isCountable(). When baseDir is
+ * null (legacy callers), falls back to evidenceCount summation.
  *
  * @param {object[]} results - array of SlotResult objects
  * @param {object}   state   - current workflow state
+ * @param {string|null} [baseDir=null] - bundle root for isCountable() file access
  * @returns {object} updated workflow state (parsed against SubagentWorkflowState)
+ *
+ * @impl EEX-003
  */
-export function mergeResults(results, state) {
+export function mergeResults(results, state, baseDir = null) {
   const doneResults = results.filter((r) => r.status === 'done');
-  const totalEvidence = doneResults.reduce((sum, r) => sum + r.evidenceCount, 0);
   const allFailed = results.length > 0 && results.every((r) => r.status === 'failed');
+
+  let computedRefCount = 0;
+
+  if (baseDir) {
+    // Engine-computed: count isCountable() reference output_files from committed slot results
+    for (const r of doneResults) {
+      for (const entry of (r.output_files || [])) {
+        if (entry.role !== 'reference') continue;
+        const check = isCountable(entry.path, baseDir);
+        if (check.countable) computedRefCount++;
+      }
+    }
+  } else {
+    // Legacy fallback: use Agent evidenceCount (backward compat for test callers without baseDir)
+    computedRefCount = doneResults.reduce((sum, r) => sum + r.evidenceCount, 0);
+  }
+
+  const totalEvidence = computedRefCount;
   const merged = SubagentWorkflowState.parse({
     ...state,
     ref_count: state.ref_count + totalEvidence,
@@ -1203,7 +1229,7 @@ export function forkAndStageSubagents(state, baseDir, customDispatchMap) {
 export function collectAndMergeSubagentResults(state, slots, baseDir) {
   ensureTrace(baseDir);
   const results = collectResults(slots, baseDir);
-  const merged = mergeResults(results, state);
+  const merged = mergeResults(results, state, baseDir);
 
   let checkResult = null;
   let forkDecision = null;

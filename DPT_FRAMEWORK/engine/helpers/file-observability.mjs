@@ -488,6 +488,71 @@ export function auditFileObservability(bundlePath, {
     });
   }
 
+  // ── Cache gap detection (RTI-006) ──
+  // For each declared reference file, check if its cache trail exists.
+  // Reported via inspect, NOT as a new FILE_CLASSIFICATIONS value.
+  for (const decl of ledgerDeclarations) {
+    const refOutputs = (decl.output_files || []).filter(f => f.role === 'reference');
+    if (refOutputs.length === 0) continue;
+
+    const cacheTrails = decl.cache_trails || [];
+
+    if (cacheTrails.length === 0) {
+      for (const ref of refOutputs) {
+        inspect.push(`[cache_gap] declaration ${decl.work_id}: reference ${ref.path} has empty cache_trails — no raw source provenance`);
+      }
+      continue;
+    }
+
+    for (const trail of cacheTrails) {
+      const trailDir = join(bundlePath, trail);
+      if (!existsSync(trailDir)) {
+        inspect.push(`[cache_gap] declaration ${decl.work_id}: cache trail directory missing: ${trail}`);
+        continue;
+      }
+      const missingFiles = [];
+      for (const f of ['websearch.json', 'page.md', 'meta.json']) {
+        if (!existsSync(join(trailDir, f))) missingFiles.push(f);
+      }
+      if (missingFiles.length > 0) {
+        inspect.push(`[cache_gap] declaration ${decl.work_id}: cache trail ${trail} missing files: ${missingFiles.join(', ')}`);
+      }
+    }
+
+    // Check per-reference mapping
+    for (const ref of refOutputs) {
+      const mapped = cacheTrails.some(trail => {
+        const trailDir = join(bundlePath, trail);
+        if (!existsSync(trailDir)) return false;
+        // Check meta.json.url match
+        try {
+          const metaPath = join(trailDir, 'meta.json');
+          if (existsSync(metaPath)) {
+            const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
+            if (meta.url && ref.source_url) {
+              try {
+                const a = new URL(meta.url); a.hash = '';
+                const b = new URL(ref.source_url); b.hash = '';
+                if (a.toString() === b.toString()) return true;
+              } catch { /* URL parse error — skip */ }
+            }
+          }
+        } catch { /* meta.json unreadable */ }
+        // Check source_slug or filename qualifier
+        if (ref.source_slug && trail.includes(ref.source_slug)) return true;
+        if (ref.path) {
+          const refStem = basename(ref.path).replace(/\.md$/, '');
+          if (basename(trail).includes(refStem) || refStem.includes(basename(trail))) return true;
+        }
+        return false;
+      });
+
+      if (!mapped && cacheTrails.length > 0) {
+        inspect.push(`[cache_gap] declaration ${decl.work_id}: reference ${ref.path} not mapped to any cache trail`);
+      }
+    }
+  }
+
   // Aggregate inspect/advice
   const blockers = findings.filter(f => f.severity === 'blocker');
   const warnings = findings.filter(f => f.severity === 'warning');

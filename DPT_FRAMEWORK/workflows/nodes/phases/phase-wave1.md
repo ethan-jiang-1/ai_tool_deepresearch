@@ -401,7 +401,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave2_complete
 |------|------|
 | **已有 topic，无变更** | 已完成的 deepening（`evidence-summary.md` + `question-list.md`）保留。跳过该 topic 的 deepening task card（不重复执行）。 |
 | **已有 topic，有 `action: supplement`** | 保留已有 `evidence-summary.md` 和 `question-list.md`。只为 `new_search_dimensions` 中新增的角度做 deepening——创建 task card，action 聚焦新维度而非全量重搜。已有维度的 key findings 保留，新增 findings 以 "Rerun Supplement" 标记追加。`question-list.md` 的 Emergent Question Protocol 基于新 evidence 更新。 |
-| **新增 topic（`action: add`）** | 全量 deepening——与首次 wave1 一致。创建 standard task card。 |
+| **新增 topic（`action: add`）** | 全量 deepening——与首次 wave1 一致。创建 standard task card。**Cache 写入与首次运行完全相同**：每个 source 必须在 `_cache/wave1/primary/{topic.slug}/sNN_<source-slug>/` 下写入 `websearch.json` + `page.md` + `meta.json`（11 字段），并在 slot result 的 `cache_trails[]` 中声明每个 leaf 路径。 |
 | **移除 topic（`action: remove`）** | 已有 `evidence-summary.md` 和 `question-list.md` 保留，不再为该 topic 创建 deepening task card。 |
 
 ### Backfill 约束

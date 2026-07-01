@@ -18,10 +18,12 @@ import {
   readBundleProfile,
   resolveThreshold,
   checkContentDedup,
+  checkCacheCoverage,
 } from '../../engine/helpers/gate-helpers.mjs';
 import {
   ReferenceMetadataArraySchema,
 } from '../../schema/index.mjs';
+import { countReferences } from '../../engine/helpers/ref-count.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error); }
@@ -160,8 +162,25 @@ for (const rule of definition.rules) {
       } else if (rule.check === 'count_floor') {
         const threshold = resolveThreshold(rule, getProfile());
         let count = 0;
-        if (resolvedTarget.includes('*')) {
-          // Glob mode: count files matching wildcard pattern
+        if (resolvedTarget.includes('*') && resolvedTarget.startsWith('reference/')) {
+          // EEX-003: Use Engine ledger countReferences() for reference globs
+          // Only countable (quality-filtered) declared references count
+          const refResult = countReferences(bundlePath, {
+            source: 'ledger',
+            targetGlob: resolvedTarget,
+            topic: exp.topic || undefined,
+          });
+          count = refResult.count;
+          if (count < threshold) {
+            rulePassed = false;
+            ruleDetail = `Count floor not met for ${resolvedTarget}: ${count} countable references (threshold: ${threshold})`;
+            if (refResult.uncountable.length > 0) {
+              ruleDetail += ` [${refResult.uncountable.length} uncountable: ${refResult.uncountable.map(u => u.reason).join('; ')}]`;
+            }
+            if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+          }
+        } else if (resolvedTarget.includes('*')) {
+          // Glob mode (non-reference): count files matching wildcard pattern
           const targetDir = join(bundlePath, dirname(resolvedTarget));
           const pattern = basename(resolvedTarget);
           if (existsSync(targetDir) && statSync(targetDir).isDirectory()) {
@@ -289,6 +308,16 @@ for (const rule of definition.rules) {
           ruleDetail = dedupResult.inspect.join('; ');
           for (const a of dedupResult.advice) advice.push(a);
         }
+      } else if (rule.check === 'cache_coverage') {
+        const ccResult = checkCacheCoverage(bundlePath);
+        if (!ccResult.passed) {
+          rulePassed = false;
+          ruleDetail = ccResult.inspect.join('; ');
+        } else if (ccResult.inspect.length > 0) {
+          // Warnings (empty trails) — emit to inspect but don't fail
+          for (const line of ccResult.inspect) inspect.push(line);
+        }
+        for (const a of ccResult.advice) advice.push(a);
       } else {
         rulePassed = false;
       ruleDetail = `Unknown check type: ${rule.check} — must fail (check type not implemented)`;

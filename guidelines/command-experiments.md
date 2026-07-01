@@ -555,6 +555,19 @@ This matters because stale files and hand-placed fixtures can otherwise make a c
 
 ---
 
+## Specs Refer to Cases by Role, Not by Number
+
+Case names and numbers are playbook implementation details. OpenSpec specs MUST NOT hardcode specific case names (e.g. `case-161`) in requirement or scenario text.
+
+Specs describe WHAT must be proven using role-based references ("the fixture-backed Engine path case", "the heavy real-Agent canary case"). The experiment suite README maps each role to the current case file. When a case is renumbered, only the README changes — no spec change is needed.
+
+#### Scenario: Case renumbering does not invalidate specs
+- **WHEN** a case file is renumbered
+- **THEN** the suite README updates the role-to-number mapping
+- **AND** no spec requires modification
+
+---
+
 ## Case Design
 
 Case names are labels for mechanism questions, not a fixed taxonomy. Use the smallest set of cases that proves the mechanism without mixing unrelated claims.
@@ -598,6 +611,7 @@ Names such as `simple`, `medium`, `complex`, and `identity` are acceptable when 
 - Current known experiment families are treated as the full universe of future command experiments.
 - Case labels such as `simple`/`medium`/`complex` are treated as mandatory even when a mechanism needs a different proof shape.
 - Treating all `exph_` playbooks as either auto-runnable or skipped solely by directory prefix. Runner behavior must follow the 9NN band: 901-949 real-human cases are manual/skipped; 950-999 AI-judge duals may run automatically only when trace/report context tags `source: ai-judge`.
+- OpenSpec specs that hardcode specific case file names in requirement or scenario text. Specs describe proof roles; the suite README maps roles to case files.
 
 ---
 

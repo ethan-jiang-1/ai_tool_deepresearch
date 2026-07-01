@@ -46,7 +46,7 @@ experiments_playbook/
 2. **验证 AI 能不能顶替人。** 同一份 Agent 产出，真人 verdict（如 901）vs AI verdict（如 951）一对比，就能判断"AI 扮演这个人类角色是否合格"。
 3. **诚实标注。** 950–999 的 verdict 在 trace 里必须显式标 `source: ai-judge`（或等价标记）——**它不是真人判断**。gate 结构 pass 不代表 AI verdict 等于真人 verdict。
 
-> 注：常规 case 仍是两位 `MN`（见 `guidelines/command-experiments.md`）。9NN 是"机制含人类判断"的例外段；+50 对偶是这一段的内部规则。
+> 编号约定的权威定义在 `guidelines/command-experiments.md` § Naming。常规 case 使用两位 (`MN`) 或三位 (`MMN`) 阿拉伯数字，其中前导数字标识 case group，末位是 group 内顺序。9NN 是"机制含人类判断"的例外段；+50 对偶是这一段的内部规则。
 
 ## 成本分级
 

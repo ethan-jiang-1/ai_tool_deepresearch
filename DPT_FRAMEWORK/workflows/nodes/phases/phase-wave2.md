@@ -363,6 +363,8 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
 | **新增 topic（`action: add`）** | 全量 synthesis——与首次 wave2 一致。重读所有 topic 的 evidence-summary.md 和 question-list.md（包括新增 topic），重建 cross-topic scan matrix，重新生成 `synthesis.md`、`cross-topic-ledger.md`、`finding-index.yaml`。旧 synthesis 可备份为 `synthesis.prev-rerun-N.md`，但不得作为 baseline 追加 delta。 |
 | **已有 topic，有 `action: supplement`** | 保持 delta/append。已有 synthesis 保留为 baseline，只针对新增/变更维度追加 delta section，并显式标注 conflict/defer HITL2。 |
 | **已有 topic，无变更** | 保留已有 synthesis 判断；若无任何 add/supplement action，不重复合成。 |
+
+> **Cache auditability note (RWP-014):** Emergent search (backing / depth / emergent) SHOULD write raw search results to `_cache/wave2/{backing,depth,emergent}/` for future auditability. Enforcement of cache_coverage for wave2 is deferred to a subsequent change; this prose reminder establishes the convention.
 | **移除 topic（`action: remove`）** | 不删除历史 synthesis；在本轮 ledger/index 中标记该 topic 已退出后续 projection。 |
 
 ### `action: supplement` Merge 策略

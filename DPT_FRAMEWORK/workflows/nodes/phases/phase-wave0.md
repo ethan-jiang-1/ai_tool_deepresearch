@@ -263,7 +263,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave1_complete
 |------|------|
 | **已有 topic，无 `## 本轮重跑方向` section** | Reference 全部保留。若该 topic 的 `artifacts/wave0/{slug}/source.yaml` 已有 foundation floor 数量的 reference，不再为此 topic 创建 task card（跳过）。若不足 floor，只为不足的部分搜索。 |
 | **已有 topic，有 `action: supplement`** | 保留已有 reference。task card 的 action 中追加 `new_search_dimensions` 中指定的新搜索角度。已有维度的 reference 全部保留——不做去重或覆盖。 |
-| **新增 topic（`action: add`）** | 全量搜索——与首次 wave0 一致。创建 standard task card。 |
+| **新增 topic（`action: add`）** | 全量搜索——与首次 wave0 一致。创建 standard task card。**Cache 写入与首次运行完全相同**：每个 source 必须在 `_cache/wave0/primary/{topic.slug}/sNN_<source-slug>/` 下写入 `websearch.json` + `page.md` + `meta.json`（11 字段），并在 slot result 的 `cache_trails[]` 中声明每个 leaf 路径。 |
 | **移除 topic（`action: remove`）** | 该 topic 的 reference 保留在 `reference/{slug}/` 中，但不再为该 topic 创建 task card。如需标记，在 `reference/_INDEX.md` 中注明 deprecated。 |
 
 ### 灌料约束

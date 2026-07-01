@@ -1178,3 +1178,121 @@ export function checkContentDedup(bundlePath, threshold = {}) {
 
   return { passed, inspect, advice };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// cache_coverage gate check (CRC-006)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Verify that each role=reference declaration in the ledger has its declared
+ * cache trails present and mapped. Phase 1 strategy:
+ *   - Non-empty cache_trails with missing/missing-files/unmapped → fail
+ *   - Empty cache_trails → warning (legacy transition gap)
+ *
+ * @param {string} bundlePath — absolute path to bundle root
+ * @returns {{ passed: boolean, inspect: string[], advice: string[] }}
+ *
+ * @impl CRC-006
+ */
+export function checkCacheCoverage(bundlePath) {
+  const declarations = readOutputDeclarations(bundlePath);
+  const inspect = [];
+  const advice = [];
+  let passed = true;
+
+  if (declarations.length === 0) {
+    return { passed: true, inspect, advice }; // Nothing to check
+  }
+
+  for (const decl of declarations) {
+    const refOutputs = (decl.output_files || []).filter(f => f.role === 'reference');
+    if (refOutputs.length === 0) continue;
+
+    const cacheTrails = decl.cache_trails || [];
+
+    // ── Phase 1: empty cache_trails → warning only ──
+    if (cacheTrails.length === 0) {
+      for (const ref of refOutputs) {
+        inspect.push(`[cache_coverage] WARNING (Phase 1): declaration ${decl.work_id} has empty cache_trails for reference ${ref.path} — gap will become fail in Phase 2`);
+      }
+      advice.push('Empty cache_trails on a reference-producing task — ensure sub-agents write _cache/ leaves and declare cache_trails in slot results.');
+      continue;
+    }
+
+    // ── Non-empty: verify each trail exists with 3 files ──
+    const missingTrails = [];
+    const validTrails = [];
+    for (const trail of cacheTrails) {
+      const trailDir = join(bundlePath, trail);
+      if (!existsSync(trailDir)) {
+        missingTrails.push({ trail, reason: 'directory missing' });
+        continue;
+      }
+      const missingFiles = [];
+      for (const f of ['websearch.json', 'page.md', 'meta.json']) {
+        if (!existsSync(join(trailDir, f))) missingFiles.push(f);
+      }
+      if (missingFiles.length > 0) {
+        missingTrails.push({ trail, reason: `missing files: ${missingFiles.join(', ')}` });
+        continue;
+      }
+      validTrails.push(trail);
+    }
+
+    if (missingTrails.length > 0) {
+      passed = false;
+      for (const mt of missingTrails) {
+        inspect.push(`[cache_coverage] FAIL: declaration ${decl.work_id}: cache trail ${mt.trail} — ${mt.reason}`);
+      }
+      advice.push(`Cache trail(s) missing for declaration ${decl.work_id}. Re-run the delegated intake to produce complete cache leaves.`);
+    }
+
+    // ── Per-reference mapping: each reference must map to at least one valid trail ──
+    for (const ref of refOutputs) {
+      let mapped = false;
+      for (const trail of validTrails) {
+        // Try meta.json.url match
+        try {
+          const metaPath = join(bundlePath, trail, 'meta.json');
+          if (existsSync(metaPath)) {
+            const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
+            if (meta.url && ref.source_url && normalizeUrl(meta.url) === normalizeUrl(ref.source_url)) {
+              mapped = true;
+              break;
+            }
+          }
+        } catch { /* meta.json unreadable — skip this trail */ }
+
+        // Try source_slug match from output_files entry
+        if (ref.source_slug) {
+          const trailBasename = basename(trail);
+          if (trailBasename.includes(ref.source_slug)) {
+            mapped = true;
+            break;
+          }
+        }
+
+        // Try filename qualifier match (reference filename stem vs trail slug)
+        if (ref.path) {
+          const refStem = basename(ref.path).replace(/\.md$/, '');
+          const trailBasename = basename(trail);
+          // Check if trail contains ref stem or ref stem appears in trail components
+          if (trailBasename.includes(refStem) || refStem.includes(trailBasename)) {
+            mapped = true;
+            break;
+          }
+        }
+      }
+
+      if (!mapped && validTrails.length > 0) {
+        passed = false;
+        inspect.push(`[cache_coverage] FAIL: declaration ${decl.work_id}: reference ${ref.path} (source_url: ${ref.source_url || 'none'}) not mapped to any valid cache trail`);
+        advice.push(`Reference ${ref.path} has no cache trail mapping. Ensure sub-agent includes a matching _cache/ leaf (via meta.json.url or source_slug).`);
+      } else if (!mapped && validTrails.length === 0) {
+        // Already reported as missing trail above — don't double-report
+      }
+    }
+  }
+
+  return { passed, inspect, advice };
+}
