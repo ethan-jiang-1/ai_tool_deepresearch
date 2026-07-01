@@ -648,15 +648,24 @@ export function createQueue(queueId = 'agentic-queue') {
  */
 export function loadQueue(bundleDir) {
   ensureTrace(bundleDir);
-  const file = queuePath(bundleDir);
-  if (!existsSync(file)) {
-    const queue = createQueue(path.basename(bundleDir));
-    traceEntry('queue_loaded', { source: 'agq-load', existed: false, queue_id: queue.queue_id });
+  logEvent('info', 'queue_load_attempt', { kind: 'queue_enqueue' });
+  try {
+    const file = queuePath(bundleDir);
+    if (!existsSync(file)) {
+      const queue = createQueue(path.basename(bundleDir));
+      traceEntry('queue_loaded', { source: 'agq-load', existed: false, queue_id: queue.queue_id });
+      logEvent('info', 'queue_load_done', { kind: 'queue_enqueue', queue_id: queue.queue_id, existed: false });
+      return queue;
+    }
+    const queue = queueStateFromFile(JSON.parse(readFileSync(file, 'utf-8')), { queueId: path.basename(bundleDir) });
+    traceEntry('queue_loaded', { source: 'agq-load', existed: true, queue_id: queue.queue_id });
+    logEvent('info', 'queue_load_done', { kind: 'queue_enqueue', queue_id: queue.queue_id, existed: true });
     return queue;
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    logEvent('error', 'queue_load_exception', { kind: 'queue_enqueue', reason: safeMsg });
+    throw err;
   }
-  const queue = queueStateFromFile(JSON.parse(readFileSync(file, 'utf-8')), { queueId: path.basename(bundleDir) });
-  traceEntry('queue_loaded', { source: 'agq-load', existed: true, queue_id: queue.queue_id });
-  return queue;
 }
 
 /**
@@ -668,12 +677,20 @@ export function loadQueue(bundleDir) {
  */
 export function saveQueue(bundleDir, queue) {
   ensureTrace(bundleDir);
-  const parsed = validateQueue(queue);
-  const persisted = canonicalQueueFileShape(parsed);
-  mkdirSync(bundleDir, { recursive: true });
-  writeFileSync(queuePath(bundleDir), `${JSON.stringify(persisted, null, 2)}\n`);
-  traceEntry('check', { source: 'agq-save', step: 'save', passed: true, queue_id: parsed.queue_id });
-  return parsed;
+  logEvent('info', 'queue_save_attempt', { kind: 'queue_enqueue' });
+  try {
+    const parsed = validateQueue(queue);
+    const persisted = canonicalQueueFileShape(parsed);
+    mkdirSync(bundleDir, { recursive: true });
+    writeFileSync(queuePath(bundleDir), `${JSON.stringify(persisted, null, 2)}\n`);
+    traceEntry('check', { source: 'agq-save', step: 'save', passed: true, queue_id: parsed.queue_id });
+    logEvent('info', 'queue_save_done', { kind: 'queue_enqueue', queue_id: parsed.queue_id });
+    return parsed;
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    logEvent('error', 'queue_save_exception', { kind: 'queue_enqueue', reason: safeMsg });
+    throw err;
+  }
 }
 
 /**
@@ -690,17 +707,25 @@ export function saveQueue(bundleDir, queue) {
 export function enqueue(queue, item, { mode = 'auto' } = {}) {
   const q = clone(validateQueue(queue));
   const prepared = withTimestamps({ ...item, status: 'queued' });
-  const slot = mode === 'pool' ? null : firstOpenSlot(q);
-  if (slot) {
-    q.active_window[slot] = prepared;
-    traceEntry('check', { source: 'agq-enqueue', step: 'enqueue', passed: true, work_id: prepared.work_id, slot });
-    logEvent('info', 'enqueue', { kind: 'queue_enqueue', work_id: prepared.work_id, slot });
-  } else {
-    q.refill_pool = sortPool([...q.refill_pool, prepared]);
-    traceEntry('check', { source: 'agq-enqueue', step: 'enqueue', passed: true, work_id: prepared.work_id, slot: 'refill_pool' });
-    logEvent('info', 'enqueue', { kind: 'queue_enqueue', work_id: prepared.work_id, slot: 'refill_pool' });
+  const target = item.targets?.controller;
+  logEvent('info', 'queue_enqueue_attempt', { kind: 'queue_enqueue', work_id: prepared.work_id, target });
+  try {
+    const slot = mode === 'pool' ? null : firstOpenSlot(q);
+    if (slot) {
+      q.active_window[slot] = prepared;
+      traceEntry('check', { source: 'agq-enqueue', step: 'enqueue', passed: true, work_id: prepared.work_id, slot });
+      logEvent('info', 'queue_enqueue_done', { kind: 'queue_enqueue', work_id: prepared.work_id, slot, target });
+    } else {
+      q.refill_pool = sortPool([...q.refill_pool, prepared]);
+      traceEntry('check', { source: 'agq-enqueue', step: 'enqueue', passed: true, work_id: prepared.work_id, slot: 'refill_pool' });
+      logEvent('info', 'queue_enqueue_done', { kind: 'queue_enqueue', work_id: prepared.work_id, slot: 'refill_pool', target });
+    }
+    return validateQueue(touchQueue(syncQueueHealth(q)));
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    logEvent('error', 'queue_enqueue_exception', { kind: 'queue_enqueue', work_id: item?.work_id, reason: safeMsg });
+    throw err;
   }
-  return validateQueue(touchQueue(syncQueueHealth(q)));
 }
 
 /**
@@ -713,27 +738,35 @@ export function enqueue(queue, item, { mode = 'auto' } = {}) {
  *   - `item` is the claimed QueueItem, or null if slot_1 is empty
  */
 export function claim(queue, { actor = 'main-agent' } = {}) {
-  const q = clone(validateQueue(queue));
-  const item = q.active_window.slot_1_current;
-  if (!item) {
-    q.queue_health = q.refill_pool.length > 0 ? 'thin' : 'blocked';
-    q.stop_authorization_state = q.refill_pool.length > 0 ? 'unauthorized_continue_required' : 'empty_queue_after_refill';
-    traceEntry('check', { source: 'agq-claim', step: 'claim', passed: false, reason: 'empty' });
-    return { queue: validateQueue(touchQueue(q)), item: null, queue_health: q.queue_health, stop_authorization_state: q.stop_authorization_state };
+  logEvent('info', 'queue_claim_attempt', { kind: 'queue_claim', actor });
+  try {
+    const q = clone(validateQueue(queue));
+    const item = q.active_window.slot_1_current;
+    if (!item) {
+      q.queue_health = q.refill_pool.length > 0 ? 'thin' : 'blocked';
+      q.stop_authorization_state = q.refill_pool.length > 0 ? 'unauthorized_continue_required' : 'empty_queue_after_refill';
+      traceEntry('check', { source: 'agq-claim', step: 'claim', passed: false, reason: 'empty' });
+      logEvent('warn', 'queue_claim_empty', { kind: 'queue_claim', actor, queue_health: q.queue_health, stop_authorization_state: q.stop_authorization_state });
+      return { queue: validateQueue(touchQueue(q)), item: null, queue_health: q.queue_health, stop_authorization_state: q.stop_authorization_state };
+    }
+    item.status = 'running';
+    item.updated_at = now();
+    q.active_window.slot_1_current = item;
+
+    // Build delegates advice from targets field
+    const delegates = item.targets?.delegates;
+    const advice = delegates
+      ? { delegates_required: true, delegates_config: { role_key: delegates.role_key, timeout_ms: delegates.timeout_ms ?? 600000 } }
+      : { delegates_required: false };
+
+    traceEntry('check', { source: 'agq-claim', step: 'claim', passed: true, work_id: item.work_id });
+    logEvent('info', 'queue_claim_done', { kind: 'queue_claim', work_id: item.work_id, actor });
+    return { queue: validateQueue(touchQueue(q)), item, advice };
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    logEvent('error', 'queue_claim_exception', { kind: 'queue_claim', actor, reason: safeMsg });
+    throw err;
   }
-  item.status = 'running';
-  item.updated_at = now();
-  q.active_window.slot_1_current = item;
-
-  // Build delegates advice from targets field
-  const delegates = item.targets?.delegates;
-  const advice = delegates
-    ? { delegates_required: true, delegates_config: { role_key: delegates.role_key, timeout_ms: delegates.timeout_ms ?? 600000 } }
-    : { delegates_required: false };
-
-  traceEntry('check', { source: 'agq-claim', step: 'claim', passed: true, work_id: item.work_id });
-  logEvent('info', 'claim', { kind: 'queue_claim', work_id: item.work_id, actor });
-  return { queue: validateQueue(touchQueue(q)), item, advice };
 }
 
 /**
@@ -748,10 +781,21 @@ export function claim(queue, { actor = 'main-agent' } = {}) {
  *   - MD reads `feedback.passed` to decide next step. If false, read `advice`.
  */
 export function complete(queue, result, bundleDir = process.cwd()) {
-  const parsedResult = QueueResultSchema.parse(result);
+  ensureTrace(bundleDir);
+  let parsedResult;
+  try {
+    parsedResult = QueueResultSchema.parse(result);
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    logEvent('error', 'queue_complete_exception', { kind: 'queue_complete', reason: safeMsg });
+    throw err;
+  }
+
+  logEvent('info', 'queue_complete_attempt', { kind: 'queue_complete', work_id: parsedResult.work_id, delegated: false });
   let q = clone(validateQueue(queue));
   const current = q.active_window.slot_1_current;
   if (!current || current.work_id !== parsedResult.work_id) {
+    logEvent('error', 'queue_complete_exception', { kind: 'queue_complete', work_id: parsedResult.work_id, reason: `work_id mismatch: expected ${current?.work_id || 'none'}, got ${parsedResult.work_id}` });
     throw new Error(`complete expected current work_id ${current?.work_id || 'none'}, got ${parsedResult.work_id}`);
   }
 
@@ -763,6 +807,7 @@ export function complete(queue, result, bundleDir = process.cwd()) {
     traceEntry('receipt_checked', { source: 'agq-complete', work_id: current.work_id, delegated: true, passed: delCheck.passed });
     if (!delCheck.passed) {
       traceEntry('check', { source: 'agq-complete', step: 'delegated_provenance', passed: false, detail: delCheck.inspect.join('; ') });
+      logEvent('warn', 'queue_complete_reject', { kind: 'queue_complete', work_id: current.work_id, delegated: true, reason: delCheck.inspect.join('; ') });
       return { queue: validateQueue(touchQueue(q)), feedback: delCheck };
     }
     delegationResult = delCheck;
@@ -774,26 +819,36 @@ export function complete(queue, result, bundleDir = process.cwd()) {
   traceEntry('receipt_checked', { source: 'agq-complete', work_id: current.work_id, passed: receiptCheck.passed, receipt });
   if (!receiptCheck.passed) {
     traceEntry('check', { source: 'agq-complete', step: 'completion_receipt', passed: false, detail: receiptCheck.inspect.join('; ') });
+    logEvent('warn', 'queue_complete_receipt_fail', { kind: 'receipt_check', work_id: current.work_id, receipt, reason: receiptCheck.inspect.join('; ') });
     return { queue: validateQueue(touchQueue(q)), feedback: receiptCheck };
   }
   current.status = 'done';
   current.updated_at = now();
   traceEntry('queue_completed', { source: 'agq-complete', work_id: current.work_id, summary: parsedResult.summary });
   traceEntry('check', { source: 'agq-complete', step: 'completion_receipt', passed: true, work_id: current.work_id });
-  logEvent('info', 'complete', { kind: 'queue_complete', work_id: current.work_id, summary: parsedResult.summary });
   q = promote(q);
   q = refill(q);
   render(q, bundleDir);
 
   // ── Delegated success: append output declaration ledger ──
   if (isDelegated && delegationResult?.slotResult) {
-    appendOutputDeclarationLedger(
-      bundleDir, current, parsedResult.slot_result_ref,
-      delegationResult.slotResult,
-      delegationResult.verifiedCacheTrails || null,
-    );
+    const slotRef = parsedResult.slot_result_ref;
+    logEvent('info', 'ledger_append_attempt', { kind: 'ledger_append', work_id: current.work_id, slot_result_ref: slotRef });
+    try {
+      appendOutputDeclarationLedger(
+        bundleDir, current, slotRef,
+        delegationResult.slotResult,
+        delegationResult.verifiedCacheTrails || null,
+      );
+      logEvent('info', 'ledger_append_done', { kind: 'ledger_append', work_id: current.work_id });
+    } catch (err) {
+      const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+      logEvent('error', 'ledger_append_exception', { kind: 'ledger_append', work_id: current.work_id, reason: safeMsg });
+      throw err;
+    }
   }
 
+  logEvent('info', 'queue_complete_done', { kind: 'queue_complete', work_id: current.work_id, delegated: isDelegated });
   return { queue: validateQueue(touchQueue(q)), feedback: check(true, `Completed ${current.work_id}`) };
 }
 
@@ -807,17 +862,27 @@ export function complete(queue, result, bundleDir = process.cwd()) {
  * @returns {object} QueueState — mutated queue with repair item inserted
  */
 export function fail(queue, failure, bundleDir = process.cwd()) {
-  const parsedFailure = QueueFailureSchema.parse(failure);
+  ensureTrace(bundleDir);
+  let parsedFailure;
+  try {
+    parsedFailure = QueueFailureSchema.parse(failure);
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    logEvent('error', 'queue_fail_exception', { kind: 'queue_fail', reason: safeMsg });
+    throw err;
+  }
+
+  logEvent('warn', 'queue_fail_attempt', { kind: 'queue_fail', work_id: parsedFailure.work_id, reason: parsedFailure.reason });
   let q = clone(validateQueue(queue));
   const current = q.active_window.slot_1_current;
   if (!current || current.work_id !== parsedFailure.work_id) {
+    logEvent('error', 'queue_fail_exception', { kind: 'queue_fail', work_id: parsedFailure.work_id, reason: `work_id mismatch: expected ${current?.work_id || 'none'}, got ${parsedFailure.work_id}` });
     throw new Error(`fail expected current work_id ${current?.work_id || 'none'}, got ${parsedFailure.work_id}`);
   }
   current.status = 'failed';
   current.updated_at = now();
   traceEntry('queue_failed', { source: 'agq-fail', work_id: current.work_id, reason: parsedFailure.reason });
   traceEntry('check', { source: 'agq-fail', step: 'fail', passed: true, work_id: current.work_id, reason: parsedFailure.reason });
-  logEvent('warn', 'fail', { kind: 'queue_fail', work_id: current.work_id, reason: parsedFailure.reason });
   const repair = withTimestamps(parsedFailure.repair || makeRepairItem(parsedFailure));
   q = promote(q);
   q = q.active_window.slot_1_current
@@ -825,6 +890,7 @@ export function fail(queue, failure, bundleDir = process.cwd()) {
     : enqueue(q, repair, { mode: 'auto' });
   q = refill(q);
   render(q, bundleDir);
+  logEvent('warn', 'queue_fail_done', { kind: 'queue_fail', work_id: current.work_id, reason: parsedFailure.reason });
   return validateQueue(touchQueue(q));
 }
 
@@ -847,41 +913,48 @@ export function fail(queue, failure, bundleDir = process.cwd()) {
  * @returns {object} QueueState — mutated queue
  */
 export function preempt(queue, item, { reason = 'urgent_preemption', unsafeCurrent = false, replaceCurrent = false } = {}) {
-  const q = clone(validateQueue(queue));
-  const urgent = withTimestamps({ ...item, producer_rule: item.producer_rule || 'urgent_preemption', priority_class: item.priority_class || 'P1_state_or_gate_repair' });
+  logEvent('warn', 'queue_preempt_attempt', { kind: 'queue_enqueue', reason, slot: replaceCurrent ? 'slot_1_current' : 'slot_2_next', unsafeCurrent });
+  try {
+    const q = clone(validateQueue(queue));
+    const urgent = withTimestamps({ ...item, producer_rule: item.producer_rule || 'urgent_preemption', priority_class: item.priority_class || 'P1_state_or_gate_repair' });
 
-  if (replaceCurrent && !unsafeCurrent) {
-    throw new Error('Replacing slot_1_current requires unsafeCurrent=true');
-  }
-
-  if (unsafeCurrent) {
-    const displaced = q.active_window.slot_1_current;
-    q.active_window.slot_1_current = urgent;
-    if (displaced) {
-      q.refill_pool = sortPool([{ ...displaced, status: 'queued', preempted_from_slot: 'slot_1_current', restore_priority: 'next_tail_opening', updated_at: now() }, ...q.refill_pool]);
+    if (replaceCurrent && !unsafeCurrent) {
+      throw new Error('Replacing slot_1_current requires unsafeCurrent=true');
     }
-    traceEntry('queue_preempted', { source: 'agq-preempt', reason, slot: 'slot_1_current', unsafeCurrent: true });
-    traceEntry('check', { source: 'agq-preempt', step: 'preempt', passed: true, reason, slot: 'slot_1_current' });
-    logEvent('warn', 'preempt', { kind: 'queue_enqueue', reason, slot: 'slot_1_current', unsafeCurrent: true });
-    return validateQueue(touchQueue(syncQueueHealth(q)));
-  }
 
-  const old = {};
-  for (const slot of SLOT_NAMES) old[slot] = q.active_window[slot];
-  const insertIndex = 1;
-  const tailSlot = SLOT_NAMES.at(-1);
-  const displacedTail = old[tailSlot];
-  q.active_window[SLOT_NAMES[insertIndex]] = urgent;
-  for (let i = insertIndex + 1; i < SLOT_NAMES.length; i++) {
-    q.active_window[SLOT_NAMES[i]] = old[SLOT_NAMES[i - 1]];
+    if (unsafeCurrent) {
+      const displaced = q.active_window.slot_1_current;
+      q.active_window.slot_1_current = urgent;
+      if (displaced) {
+        q.refill_pool = sortPool([{ ...displaced, status: 'queued', preempted_from_slot: 'slot_1_current', restore_priority: 'next_tail_opening', updated_at: now() }, ...q.refill_pool]);
+      }
+      traceEntry('queue_preempted', { source: 'agq-preempt', reason, slot: 'slot_1_current', unsafeCurrent: true });
+      traceEntry('check', { source: 'agq-preempt', step: 'preempt', passed: true, reason, slot: 'slot_1_current' });
+      logEvent('warn', 'queue_preempt_done', { kind: 'queue_enqueue', reason, slot: 'slot_1_current', unsafeCurrent: true });
+      return validateQueue(touchQueue(syncQueueHealth(q)));
+    }
+
+    const old = {};
+    for (const slot of SLOT_NAMES) old[slot] = q.active_window[slot];
+    const insertIndex = 1;
+    const tailSlot = SLOT_NAMES.at(-1);
+    const displacedTail = old[tailSlot];
+    q.active_window[SLOT_NAMES[insertIndex]] = urgent;
+    for (let i = insertIndex + 1; i < SLOT_NAMES.length; i++) {
+      q.active_window[SLOT_NAMES[i]] = old[SLOT_NAMES[i - 1]];
+    }
+    if (displacedTail) {
+      q.refill_pool = sortPool([{ ...displacedTail, status: 'queued', preempted_from_slot: tailSlot, restore_priority: 'next_tail_opening', updated_at: now() }, ...q.refill_pool]);
+    }
+    traceEntry('queue_preempted', { source: 'agq-preempt', reason, slot: 'slot_2_next', unsafeCurrent: false });
+    traceEntry('check', { source: 'agq-preempt', step: 'preempt', passed: true, reason, slot: 'slot_2_next' });
+    logEvent('warn', 'queue_preempt_done', { kind: 'queue_enqueue', reason, slot: 'slot_2_next' });
+    return validateQueue(touchQueue(syncQueueHealth(q)));
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    logEvent('error', 'queue_preempt_exception', { kind: 'queue_enqueue', work_id: item?.work_id, reason: safeMsg });
+    throw err;
   }
-  if (displacedTail) {
-    q.refill_pool = sortPool([{ ...displacedTail, status: 'queued', preempted_from_slot: tailSlot, restore_priority: 'next_tail_opening', updated_at: now() }, ...q.refill_pool]);
-  }
-  traceEntry('queue_preempted', { source: 'agq-preempt', reason, slot: 'slot_2_next', unsafeCurrent: false });
-  traceEntry('check', { source: 'agq-preempt', step: 'preempt', passed: true, reason, slot: 'slot_2_next' });
-  logEvent('warn', 'preempt', { kind: 'queue_enqueue', reason, slot: 'slot_2_next' });
-  return validateQueue(touchQueue(syncQueueHealth(q)));
 }
 
 /**

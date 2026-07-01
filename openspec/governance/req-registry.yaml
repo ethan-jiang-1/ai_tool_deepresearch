@@ -428,6 +428,8 @@ LOG-002: "logger — Logger file output via option (createLogger({ file }) → c
 LOG-003: logger — Logger injection pattern in engine (logger = null trailing parameter, silent no-op)
 LOG-004: logger — Run-scoped logger creation at bundle initialization (logToRun for first line, createRunLogger for engines)
 LOG-005: logger — logToRun(bundlePath, level, msg, detail?) one-shot and createRunLogger(bundlePath) factory, encapsulating _logs/run.log path convention and bundle auto-injection
+LOG-006: logger — Engine hot-path accident-grade diagnostics (queue-manager + subagent-relay attempt/outcome/reject/failed/empty/exception events)
+LOG-007: logger — Sub-agent spawn prompt includes diagnostic logging CLI instructions with copyable log-event.mjs examples
 
 # logging-conventions
 LOC-001: logging-conventions — Bundle identity is the bundle name (dpt_rb_<name> → bundle=<name>); persisted in rb_status.json at instantiation, injected into all sink entries

@@ -42,6 +42,8 @@ The spawn prompt MAY also name the bundle root and runtime log path so the Sub-a
 
 The Sub-agent returns structured JSON matching `result.schema.json` to the Phase Agent. The Phase Agent writes `result.json` to the slot directory after validation.
 
+**Diagnostic log CLI contract:** Sub-agents write `_logs/run.log` entries via the `log-event.mjs` CLI, NOT by hand-writing log envelopes. The spawn prompt includes copyable command examples with the correct bundle path, level, and detail format. Log entries MUST use lowercase `--level info|warn|error`, MUST include `kind`, `slotKey`, and `roleAgentKey` in `--detail` JSON. Sub-agents MUST NOT log raw page content, full search result bodies, or private reasoning.
+
 **Note:** Artifact files are written outside the slot directory — this is expected. The bounded context protection (§1.4) is about what the Sub-agent RECEIVES (only `task.md` + `result.schema.json`), not about restricting which artifact paths it can write to.
 
 ### 1.3 Files the Phase Agent READS (collect pipeline)

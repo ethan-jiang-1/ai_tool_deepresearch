@@ -166,3 +166,16 @@ Rerun-ready gate fail 是终端状态——不可修复。读取 CLI `inspect` /
 - **MUST NOT 在无 rationale 或 rationale 为空时写 ## 本轮重跑方向**：方向 hints 必须来自用户明确的意图
 - **MUST NOT 绕过 chain 直接加载 seed-topics**：所有路由必须通过 gate → chain 查询
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
+
+## Log
+
+记录命令: `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level <LEVEL> --msg "<message>" --detail '<json>'`
+
+| 时机 | 命令 |
+|------|------|
+| Phase 开始 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:rerun START"` |
+| Phase 结束 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:rerun END — <summary>"` |
+| Gate fail (terminal) | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "repair_escalated" --detail '{"kind":"repair_escalated","phase":"rerun","gate":"rerun-ready","reason":"<reason>"}'` |
+| 降级处理 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "repair_degraded" --detail '{"kind":"repair_degraded","phase":"rerun","gate":"rerun-ready","reason":"<reason>"}'` |
+
+> rerun-ready gate fail 后不会进入 repair loop（termial gate），但 MUST 在退出前记录 `repair_escalated` 或 `repair_degraded` 解释为何停止。

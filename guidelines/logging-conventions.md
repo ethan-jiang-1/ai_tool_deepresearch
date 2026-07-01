@@ -84,12 +84,13 @@ Agent 从 `## Log` 段复制命令，不需要知道文件路径或格式。
 
 ## Engine Logger Activation (LOC-006 Closed Set)
 
-仅下列事件双写 log + trace：
+Engine 模块的 log 输出遵循事故级诊断原则：**每个对外入口函数在成功/失败/拒绝/异常等关键出口记录原因，使事后能从 run.log 重建事故因果链。** 这不是全量 trace——trace 仍然记录所有内部事件作为判决权威，log 只记录事故现场需要的关键诊断点。
 
-| Engine | Events |
-|--------|--------|
-| queue-manager | enqueue(info), claim(info), complete(info), fail(warn), preempt(warn), refill(info) |
-| subagent-relay | slot_create(info), dispatch(info), result(info), collect(info), merge(info); repair(warn) |
+具体哪些 engine 函数对外暴露、每个函数记录哪些事件，由 accepted spec（`openspec/specs/logger/spec.md`）给出权威清单。本条 guideline 的核心约束是：
+
+- **闭集原则**：只有 engine 对外的 hot-path 函数双写 log + trace。内部辅助函数、纯计算、schema 校验等 trace 点 SHALL NOT 自动产生 log 行。
+- **事件粒度**：log 事件名应能区分"企图/成功/失败/拒绝/空/异常"——事故发生时单看 run.log 就能定位到具体函数的具体出口，不需要去 trace 交叉对照。
+- **兼容性**：`detail.kind` 可保留粗粒度的诊断分类键（方便现有工具按大类过滤），但 log 消息本身用细粒度事件名（方便 grep 精确事故点）。
 
 其余内部 trace 点 SHALL NOT 产生 log 行。
 

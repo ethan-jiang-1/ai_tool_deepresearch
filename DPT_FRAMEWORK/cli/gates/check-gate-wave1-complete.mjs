@@ -28,11 +28,11 @@ import {
 import { countReferences } from '../../engine/helpers/ref-count.mjs';
 
 const args = parseGateCliArgs();
-if (args.error) { emitGateResult(args.error); }
+if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
 
 // Load gate definition
 const { definition, error: defError } = tryLoadGateDefinition('wave1-complete', args.currentNode || null);
-if (defError) { emitGateResult(defError); }
+if (defError) { emitGateResult(defError, { bundlePath: args.bundle }); }
 
 // Validate node/gate binding
 const bindingError = validateNodeGateBinding(args.currentNode, definition.gate);
@@ -43,7 +43,7 @@ if (bindingError) {
     inspect: [bindingError],
     advice: ['Verify --current-node matches the phase for this gate.'],
   };
-  emitGateResult(result);
+  emitGateResult(result, { bundlePath: args.bundle });
 }
 
 const bundlePath = args.bundle;

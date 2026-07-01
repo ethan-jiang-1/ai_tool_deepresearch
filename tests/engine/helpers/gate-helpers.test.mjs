@@ -8,6 +8,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   validateState, validateRules, zodErrors, writeGateAttempt,
+  writeGateFailureDiagnostic, buildGateResult, parseGateCliArgs,
   tokenizeForSimilarity, jaccardSimilarity, extractSection,
   readOutputDeclarations, checkContentDedup, isHomepageUrl,
   listMatchingBundleFiles, checkReferenceFormatFiles, checkReferenceLedgerCoverage,
@@ -454,6 +455,61 @@ describe('reference file gate helpers', () => {
       assert.ok(result.inspect.some((i) => i.includes('not declared')));
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('writeGateFailureDiagnostic returns status', () => {
+  it('returns { ok: true, path } on success', () => {
+    const dir = setupBundle('test-diag-status');
+    const result = makeGateResult(false, 'test-gate');
+    const status = writeGateFailureDiagnostic(dir, result);
+    assert.equal(status.ok, true);
+    assert.ok(status.path.includes('_diagnostics/gates/'));
+    assert.ok(status.path.includes('test-gate'));
+    const artifactPath = join(dir, status.path);
+    assert.ok(existsSync(artifactPath));
+  });
+
+  it('returns { ok: true } for passed gate (no-op)', () => {
+    const dir = setupBundle('test-diag-pass');
+    const result = makeGateResult(true, 'test-gate');
+    const status = writeGateFailureDiagnostic(dir, result);
+    assert.equal(status.ok, true);
+    assert.equal(status.path, undefined);
+  });
+});
+
+describe('writeGateAttempt diagnostic_path in log detail', () => {
+  it('includes diagnostic_path in failed gate log', () => {
+    const dir = setupBundle('test-diag-log');
+    const result = makeGateResult(false, 'test-gate');
+    writeGateAttempt(dir, result);
+
+    const logContent = readFileSync(join(dir, '_logs', 'run.log'), 'utf-8');
+    assert.ok(logContent.includes('gate_attempt'));
+    assert.ok(logContent.includes('diagnostic_path'));
+    assert.ok(logContent.includes('_diagnostics/gates/'));
+    assert.ok(logContent.includes('test-gate'));
+
+    // Verify diagnostic artifact actually exists at the logged path
+    const diagPathMatch = logContent.match(/"diagnostic_path":"([^"]+)"/);
+    assert.ok(diagPathMatch);
+    assert.ok(existsSync(join(dir, diagPathMatch[1])));
+  });
+});
+
+describe('parseGateCliArgs preserves bundle in error returns', () => {
+  it('includes bundle when --current-node is missing but --bundle is provided', () => {
+    const savedArgv = process.argv;
+    try {
+      process.argv = ['node', 'test.mjs', '--bundle', '/tmp/test-bundle'];
+      const args = parseGateCliArgs();
+      assert.equal(args.bundle, '/tmp/test-bundle');
+      assert.ok(args.error);
+      assert.equal(args.error.routing.kind, 'invalid_input');
+    } finally {
+      process.argv = savedArgv;
     }
   });
 });

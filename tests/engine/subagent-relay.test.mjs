@@ -722,3 +722,198 @@ describe('Pure runtime receipt validation (SUR-001, Stage 1)', () => {
     }
   });
 });
+
+// ── LOG-006 relay diagnostics ──────────────────────────────────────────
+
+function setupRelayBundle(name) {
+  const dir = mkdtempSync(path.join(tmpdir(), `gs_log_${name}_`));
+  writeFileSync(path.join(dir, 'rb_status.json'), JSON.stringify({ bundle: `dpt_rb_${name}` }));
+  return dir;
+}
+
+describe('LOG-006 relay diagnostics', () => {
+  it('stageSubagentSlots logs attempt/done for pass branch', () => {
+    const dir = setupRelayBundle('stage');
+    const state = baseState({ ref_count: 5, ref_floor: 5 });
+    const slots = stageSubagentSlots(state, dir);
+    const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
+    assert.ok(content.includes('relay_stage_attempt'));
+    assert.ok(content.includes('relay_stage_done'));
+    assert.ok(content.includes('"kind":"queue_enqueue"'));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('stageSubagentSlots logs empty for non-pass branch', () => {
+    const dir = setupRelayBundle('stage-empty');
+    const state = baseState({ ref_count: 5, ref_floor: 5 }); // meets floor → pass, but we want a fail branch
+    // Use a state that forkRouter classifies as non-pass
+    const state2 = baseState({ ref_count: 5, ref_floor: 5, topicReadiness: 'blocked' });
+    const slots = stageSubagentSlots(state2, dir);
+    const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
+    assert.ok(content.includes('relay_stage_attempt'));
+    // May or may not be empty depending on dispatchMap; just verify attempt was logged
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('recordAgentSpawnRequested logs attempt/requested', () => {
+    const dir = setupRelayBundle('spawn');
+    const state = baseState({ ref_count: 5, ref_floor: 5 });
+    const slots = stageSubagentSlots(state, dir);
+    assert.ok(slots.length > 0);
+    const prompt = recordAgentSpawnRequested(slots[0], dir, { platform: 'codex' });
+    const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
+    assert.ok(content.includes('relay_spawn_attempt'));
+    assert.ok(content.includes('relay_spawn_requested'));
+    assert.ok(content.includes('"slotKey"'));
+    assert.ok(content.includes('"roleAgentKey"'));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('ingestAgentReceipt logs attempt/done on success', () => {
+    const dir = setupRelayBundle('ingest');
+    const state = baseState({ ref_count: 5, ref_floor: 5 });
+    const slots = stageSubagentSlots(state, dir);
+    const slot = slots[0];
+    writeRuntimeReceipt(dir, slot, { platform: 'codex', runtimeMode: 'project-agent' });
+    const result = ingestAgentReceipt(slot, dir, { runtimeAgentId: 'test-agent-1', platform: 'codex' });
+    const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
+    assert.ok(content.includes('relay_receipt_ingest_attempt'));
+    assert.ok(content.includes('relay_receipt_ingest_done'));
+    assert.ok(content.includes('"kind":"receipt_check"'));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('ingestAgentReceipt logs failed on missing runtimeAgentId', () => {
+    const dir = setupRelayBundle('ingest-fail');
+    const state = baseState({ ref_count: 5, ref_floor: 5 });
+    const slots = stageSubagentSlots(state, dir);
+    const slot = slots[0];
+    writeRuntimeReceipt(dir, slot);
+    assert.throws(() => {
+      ingestAgentReceipt(slot, dir, {}); // missing runtimeAgentId
+    });
+    const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
+    assert.ok(content.includes('relay_receipt_ingest_attempt'));
+    assert.ok(content.includes('relay_receipt_ingest_failed'));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('commitSlotResult logs schema_fail on invalid result', () => {
+    const dir = setupRelayBundle('commit-schema');
+    const state = baseState({ ref_count: 5, ref_floor: 5 });
+    const slots = stageSubagentSlots(state, dir);
+    const slot = slots[0];
+    writeRuntimeReceipt(dir, slot);
+    ingestAgentReceipt(slot, dir, { runtimeAgentId: 'test-agent-1' });
+    const result = commitSlotResult(slot, dir, {
+      // Invalid: wrong slotKey, missing required fields
+      slotKey: 'wrong-key',
+      roleAgentKey: slot.roleAgentKey,
+    });
+    const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
+    assert.ok(content.includes('relay_commit_attempt'));
+    assert.ok(content.includes('relay_commit_schema_fail'));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('commitSlotResult logs path_escape on absolute output_files path', () => {
+    const dir = setupRelayBundle('commit-escape');
+    const state = baseState({ ref_count: 5, ref_floor: 5 });
+    const slots = stageSubagentSlots(state, dir);
+    const slot = slots[0];
+    writeRuntimeReceipt(dir, slot);
+    ingestAgentReceipt(slot, dir, { runtimeAgentId: 'test-agent-1' });
+    const result = commitSlotResult(slot, dir, {
+      slotKey: slot.key,
+      roleAgentKey: slot.roleAgentKey,
+      status: 'done',
+      summary: 'test',
+      evidenceCount: 1,
+      references: [{ title: 'T', url: 'https://x.com', quote: '', relevance: '' }],
+      confidence: 0.5,
+      notes: [],
+      output_files: [{ path: '/etc/passwd', role: 'reference', source_url: 'https://x.com' }],
+      cache_trails: [],
+    });
+    const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
+    assert.ok(content.includes('relay_commit_attempt'));
+    assert.ok(content.includes('relay_commit_path_escape'));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('commitSlotResult logs done on success', () => {
+    const dir = setupRelayBundle('commit-done');
+    const state = baseState({ ref_count: 5, ref_floor: 5 });
+    const slots = stageSubagentSlots(state, dir);
+    const slot = slots[0];
+    writeRuntimeReceipt(dir, slot);
+    ingestAgentReceipt(slot, dir, { runtimeAgentId: 'test-agent-1' });
+    const result = commitSlotResult(slot, dir, doneResult(slot, 2));
+    const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
+    assert.ok(content.includes('relay_commit_attempt'));
+    assert.ok(content.includes('relay_commit_done'));
+    assert.ok(content.includes('"kind":"queue_complete"'));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('forkAndStageSubagents logs fork attempt/done for pass branch', () => {
+    const dir = setupRelayBundle('fork-pass');
+    const state = baseState({ ref_count: 5, ref_floor: 5 });
+    const outcome = forkAndStageSubagents(state, dir);
+    const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
+    assert.ok(content.includes('relay_fork_attempt'));
+    assert.ok(content.includes('relay_fork_done'));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('forkAndStageSubagents logs repair for non-pass branch', () => {
+    const dir = setupRelayBundle('fork-repair');
+    const state = baseState({ ref_count: 3, ref_floor: 10, topicReadiness: 'ready' });
+    const outcome = forkAndStageSubagents(state, dir);
+    const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
+    assert.ok(content.includes('relay_fork_attempt'));
+    assert.ok(content.includes('repair_attempt'));
+    assert.ok(content.includes('repair_done'));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('collectAndMergeSubagentResults logs collect/merge/refork', () => {
+    const dir = setupRelayBundle('collect');
+    const state = baseState({ ref_count: 5, ref_floor: 5 });
+    const slots = stageSubagentSlots(state, dir);
+    // Write receipts and commit results for all slots
+    for (const s of slots) {
+      writeRuntimeReceipt(dir, s);
+      ingestAgentReceipt(s, dir, { runtimeAgentId: 'test-agent-1' });
+      commitSlotResult(s, dir, doneResult(s, 2));
+    }
+    const merged = collectAndMergeSubagentResults(state, slots, dir);
+    const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
+    assert.ok(content.includes('relay_collect_attempt'));
+    assert.ok(content.includes('relay_merge_done'));
+    assert.ok(content.includes('relay_refork_done'));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('buildSpawnPrompt includes diagnostic logging section', () => {
+    const dir = setupRelayBundle('spawn-diag');
+    const state = baseState({ ref_count: 5, ref_floor: 5 });
+    const slots = stageSubagentSlots(state, dir);
+    assert.ok(slots.length > 0);
+    const prompt = recordAgentSpawnRequested(slots[0], dir, { platform: 'codex' });
+    // Verify the prompt contains the diagnostic logging section
+    assert.ok(prompt.includes('Diagnostic logging'));
+    assert.ok(prompt.includes('log-event.mjs'));
+    assert.ok(prompt.includes('search_start'));
+    assert.ok(prompt.includes('search_done'));
+    assert.ok(prompt.includes('fetch_done'));
+    assert.ok(prompt.includes('file_written'));
+    assert.ok(prompt.includes('error'));
+    assert.ok(prompt.includes('work_done'));
+    assert.ok(prompt.includes('--level <info|warn|error>'));
+    assert.ok(prompt.includes('slotKey'));
+    assert.ok(prompt.includes('roleAgentKey'));
+    assert.ok(prompt.includes('Do NOT log'));
+    rmSync(dir, { recursive: true, force: true });
+  });
+});

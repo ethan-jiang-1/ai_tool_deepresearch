@@ -76,10 +76,13 @@
 import { z } from 'zod';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { createTrace } from './trace.mjs';
 import { createRunLogger, readBundleName } from './logger.mjs';
 import { isCountable } from './helpers/ref-count.mjs';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Trace + logger auto-init on first mutation call via ensureTrace(bundleDir).
 // Fixed trace filename `rb_trace.jsonl` within the bundle. consoleEcho: false.
@@ -509,6 +512,8 @@ The parent performs Parent Relay: it validates your JSON and writes \`result.jso
 function buildSpawnPrompt(slot, baseDir, platform = 'codex', cacheDir = null) {
   const s = SubagentSlot.parse(slot);
   const cacheLine = cacheDir ? `Cache directory: ${cacheDir}\n` : '';
+  const logEventCli = path.join(__dirname, '..', 'cli', 'log-event.mjs');
+
   return `You are being launched as DPT role ${s.roleAgentKey} for slot ${s.key}.
 
 Platform: ${platform}
@@ -523,7 +528,29 @@ Write runtime receipt events to the Runtime receipt JSONL file from inside your 
 - first line before doing task work: {"event":"agent_runtime_started","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receiptNonce":"${s.receiptNonce}"}
 - second line immediately before returning: {"event":"agent_result_ready","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receiptNonce":"${s.receiptNonce}"}
 Return strict JSON only. Do not write workflow state. Do not pass gates, repair queues, or authorize stopping.
-The parent will validate your JSON and write durable slot files.`;
+The parent will validate your JSON and write durable slot files.
+
+## Diagnostic logging
+Write to the parent bundle run log via:
+  node ${logEventCli} --bundle ${baseDir} --level <info|warn|error> --msg "<event>" --detail '<json>'
+
+Log these events:
+- \`search_start\` — when beginning a new search:
+  node ${logEventCli} --bundle ${baseDir} --level info --msg "search_start" --detail '{"kind":"search_start","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}"}'
+- \`search_done\` — when a search completes:
+  node ${logEventCli} --bundle ${baseDir} --level info --msg "search_done" --detail '{"kind":"search_done","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","result_count":<N>}'
+- \`fetch_done\` — when a page fetch completes:
+  node ${logEventCli} --bundle ${baseDir} --level info --msg "fetch_done" --detail '{"kind":"fetch_done","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","url":"<url>"}'
+- \`file_written\` — when writing an artifact file:
+  node ${logEventCli} --bundle ${baseDir} --level info --msg "file_written" --detail '{"kind":"file_written","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","path":"<bundle-relative-path>"}'
+- \`error\` — when encountering an error:
+  node ${logEventCli} --bundle ${baseDir} --level error --msg "error" --detail '{"kind":"error","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","reason":"<reason>"}'
+- \`work_done\` — when all work is complete:
+  node ${logEventCli} --bundle ${baseDir} --level info --msg "work_done" --detail '{"kind":"work_done","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","summary":"<summary>"}'
+
+Use lowercase CLI levels: \`info\` for normal progress, \`warn\` for blocked fetches or degraded results, and \`error\` for failures that prevent completion.
+
+Do NOT log: raw page content, full search result bodies, or private reasoning.`;
 }
 
 function createDispatchManifest(slotConfigs, state, baseDir, waveIndex, cacheDirBySlotKey = null) {
@@ -604,10 +631,23 @@ export function stageSubagentSlots(state, baseDir, customDispatchMap) {
   ensureTrace(baseDir);
   const map = customDispatchMap || dispatchMap;
   const branch = classifyBranch(state);
-  const slotConfigs = map.get(branch);
-  if (!slotConfigs) return [];
-  const waveIndex = nextWaveIndex(state);
-  return createDispatchManifest(slotConfigs, state, baseDir, waveIndex);
+  logEvent('info', 'relay_stage_attempt', { kind: 'queue_enqueue', branch });
+
+  try {
+    const slotConfigs = map.get(branch);
+    if (!slotConfigs) {
+      logEvent('warn', 'relay_stage_empty', { kind: 'queue_enqueue', branch: branch });
+      return [];
+    }
+    const waveIndex = nextWaveIndex(state);
+    const slots = createDispatchManifest(slotConfigs, state, baseDir, waveIndex);
+    logEvent('info', 'relay_stage_done', { kind: 'queue_enqueue', slotCount: slots.length, waveIndex });
+    return slots;
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    logEvent('error', 'relay_stage_exception', { kind: 'queue_enqueue', reason: safeMsg });
+    throw err;
+  }
 }
 
 const slotTransitions = new Map([
@@ -677,19 +717,28 @@ export function writeSlotStatus(slot, status, baseDir) {
 export function recordAgentSpawnRequested(slot, baseDir, metadata = {}) {
   ensureTrace(baseDir);
   const s = SubagentSlot.parse(slot);
-  const prompt = buildSpawnPrompt(s, baseDir, metadata.platform || 'unknown');
-  const parentId = extractParentRuntimeId(metadata);
-  traceEntry('agent_spawn_requested', {
-    source: 'gs-agent',
-    actor: 'parent',
-    actorRuntimeAgentId: parentId,
-    parentRuntimeAgentId: parentId,
-    key: s.key,
-    roleAgentKey: s.roleAgentKey,
-    platform: metadata.platform || 'unknown',
-    runtimeMode: metadata.runtimeMode || 'unknown',
-  });
-  return prompt;
+  logEvent('info', 'relay_spawn_attempt', { kind: 'queue_enqueue', slotKey: s.key, roleAgentKey: s.roleAgentKey, platform: metadata.platform || 'unknown', runtimeMode: metadata.runtimeMode || 'unknown' });
+
+  try {
+    const prompt = buildSpawnPrompt(s, baseDir, metadata.platform || 'unknown');
+    const parentId = extractParentRuntimeId(metadata);
+    traceEntry('agent_spawn_requested', {
+      source: 'gs-agent',
+      actor: 'parent',
+      actorRuntimeAgentId: parentId,
+      parentRuntimeAgentId: parentId,
+      key: s.key,
+      roleAgentKey: s.roleAgentKey,
+      platform: metadata.platform || 'unknown',
+      runtimeMode: metadata.runtimeMode || 'unknown',
+    });
+    logEvent('info', 'relay_spawn_requested', { kind: 'queue_enqueue', slotKey: s.key, roleAgentKey: s.roleAgentKey });
+    return prompt;
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    logEvent('error', 'relay_spawn_exception', { kind: 'queue_enqueue', slotKey: s.key, roleAgentKey: s.roleAgentKey, reason: safeMsg });
+    throw err;
+  }
 }
 
 function readReceiptEvents(slot, baseDir) {
@@ -762,58 +811,67 @@ export function validateRuntimeReceipt(slot, baseDir) {
 export function ingestAgentReceipt(slot, baseDir, metadata = {}) {
   ensureTrace(baseDir);
   const s = SubagentSlot.parse(slot);
-  if (!metadata.runtimeAgentId) throw new Error('runtimeAgentId required when ingesting runtime receipt');
-  const events = readReceiptEvents(s, baseDir);
-  const started = events.find((event) => event.event === 'agent_runtime_started');
-  const ready = events.find((event) => event.event === 'agent_result_ready');
-  if (!started) throw new Error('runtime receipt missing agent_runtime_started');
-  if (!ready) throw new Error('runtime receipt missing agent_result_ready');
+  logEvent('info', 'relay_receipt_ingest_attempt', { kind: 'receipt_check', slotKey: s.key, roleAgentKey: s.roleAgentKey, receiptPath: s.receiptPath });
 
-  for (const event of [started, ready]) {
-    if (event.slotKey !== s.key) throw new Error(`runtime receipt slotKey mismatch: ${event.slotKey} !== ${s.key}`);
-    if (event.roleAgentKey !== s.roleAgentKey) throw new Error(`runtime receipt roleAgentKey mismatch: ${event.roleAgentKey} !== ${s.roleAgentKey}`);
-    if (event.receiptNonce !== s.receiptNonce) throw new Error(`runtime receipt nonce mismatch: ${event.receiptNonce} !== ${s.receiptNonce}`);
+  try {
+    if (!metadata.runtimeAgentId) throw new Error('runtimeAgentId required when ingesting runtime receipt');
+    const events = readReceiptEvents(s, baseDir);
+    const started = events.find((event) => event.event === 'agent_runtime_started');
+    const ready = events.find((event) => event.event === 'agent_result_ready');
+    if (!started) throw new Error('runtime receipt missing agent_runtime_started');
+    if (!ready) throw new Error('runtime receipt missing agent_result_ready');
+
+    for (const event of [started, ready]) {
+      if (event.slotKey !== s.key) throw new Error(`runtime receipt slotKey mismatch: ${event.slotKey} !== ${s.key}`);
+      if (event.roleAgentKey !== s.roleAgentKey) throw new Error(`runtime receipt roleAgentKey mismatch: ${event.roleAgentKey} !== ${s.roleAgentKey}`);
+      if (event.receiptNonce !== s.receiptNonce) throw new Error(`runtime receipt nonce mismatch: ${event.receiptNonce} !== ${s.receiptNonce}`);
+    }
+
+    writeSlotStatus(s, 'running', baseDir);
+    const now = new Date().toISOString();
+    const agent = AgentMetadata.parse({
+      slotKey: s.key,
+      roleAgentKey: s.roleAgentKey,
+      platform: started.platform || metadata.platform || 'unknown',
+      runtimeMode: started.runtimeMode || metadata.runtimeMode || 'unknown',
+      runtimeAgentId: metadata.runtimeAgentId,
+      agentType: started.agentType || metadata.agentType,
+      spawnedAt: started.ts || metadata.spawnedAt || now,
+      status: 'running',
+    });
+    writeFileSync(path.join(baseDir, s.agentPath), JSON.stringify(agent, null, 2));
+
+    traceEntry('agent_runtime_started', {
+      source: 'gs-agent-runtime',
+      actor: 'subagent',
+      actorRuntimeAgentId: agent.runtimeAgentId,
+      key: s.key,
+      roleAgentKey: s.roleAgentKey,
+      platform: agent.platform,
+      runtimeMode: agent.runtimeMode,
+      runtimeAgentId: agent.runtimeAgentId,
+      receiptPath: s.receiptPath,
+      receiptNonce: s.receiptNonce,
+    });
+    traceEntry('agent_result_ready', {
+      source: 'gs-agent-runtime',
+      actor: 'subagent',
+      actorRuntimeAgentId: agent.runtimeAgentId,
+      key: s.key,
+      roleAgentKey: s.roleAgentKey,
+      platform: agent.platform,
+      runtimeMode: agent.runtimeMode,
+      runtimeAgentId: agent.runtimeAgentId,
+      receiptPath: s.receiptPath,
+      receiptNonce: s.receiptNonce,
+    });
+    logEvent('info', 'relay_receipt_ingest_done', { kind: 'receipt_check', slotKey: s.key, roleAgentKey: s.roleAgentKey });
+    return { agent, events, receiptRef: s.receiptPath };
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    logEvent('warn', 'relay_receipt_ingest_failed', { kind: 'receipt_check', slotKey: s.key, roleAgentKey: s.roleAgentKey, reason: safeMsg });
+    throw err;
   }
-
-  writeSlotStatus(s, 'running', baseDir);
-  const now = new Date().toISOString();
-  const agent = AgentMetadata.parse({
-    slotKey: s.key,
-    roleAgentKey: s.roleAgentKey,
-    platform: started.platform || metadata.platform || 'unknown',
-    runtimeMode: started.runtimeMode || metadata.runtimeMode || 'unknown',
-    runtimeAgentId: metadata.runtimeAgentId,
-    agentType: started.agentType || metadata.agentType,
-    spawnedAt: started.ts || metadata.spawnedAt || now,
-    status: 'running',
-  });
-  writeFileSync(path.join(baseDir, s.agentPath), JSON.stringify(agent, null, 2));
-
-  traceEntry('agent_runtime_started', {
-    source: 'gs-agent-runtime',
-    actor: 'subagent',
-    actorRuntimeAgentId: agent.runtimeAgentId,
-    key: s.key,
-    roleAgentKey: s.roleAgentKey,
-    platform: agent.platform,
-    runtimeMode: agent.runtimeMode,
-    runtimeAgentId: agent.runtimeAgentId,
-    receiptPath: s.receiptPath,
-    receiptNonce: s.receiptNonce,
-  });
-  traceEntry('agent_result_ready', {
-    source: 'gs-agent-runtime',
-    actor: 'subagent',
-    actorRuntimeAgentId: agent.runtimeAgentId,
-    key: s.key,
-    roleAgentKey: s.roleAgentKey,
-    platform: agent.platform,
-    runtimeMode: agent.runtimeMode,
-    runtimeAgentId: agent.runtimeAgentId,
-    receiptPath: s.receiptPath,
-    receiptNonce: s.receiptNonce,
-  });
-  return { agent, events, receiptRef: s.receiptPath };
 }
 
 function failedResultForSlot(slot, notes = []) {
@@ -864,82 +922,97 @@ export function commitSlotResult(slot, baseDir, candidateResult, metadata = {}) 
   ensureTrace(baseDir);
   const s = SubagentSlot.parse(slot);
   const parentId = extractParentRuntimeId(metadata);
-  traceEntry('agent_result_received', {
-    source: 'gs-agent',
-    actor: 'parent',
-    actorRuntimeAgentId: parentId,
-    parentRuntimeAgentId: parentId,
-    key: s.key,
-    roleAgentKey: s.roleAgentKey,
-    platform: metadata.platform || 'unknown',
-  });
-  logEvent('info', 'result', { key: s.key, roleAgentKey: s.roleAgentKey, platform: metadata.platform || 'unknown' });
+  logEvent('info', 'relay_commit_attempt', { kind: 'queue_complete', slotKey: s.key, roleAgentKey: s.roleAgentKey });
 
-  const validation = validateSlotResult(s, candidateResult);
-  const completedAt = new Date().toISOString();
+  try {
+    traceEntry('agent_result_received', {
+      source: 'gs-agent',
+      actor: 'parent',
+      actorRuntimeAgentId: parentId,
+      parentRuntimeAgentId: parentId,
+      key: s.key,
+      roleAgentKey: s.roleAgentKey,
+      platform: metadata.platform || 'unknown',
+    });
 
-  // Path escape validation for output_files[] and cache_trails[]
-  if (validation.ok) {
-    // Validate output_files paths are bundle-relative and don't escape
-    for (const entry of validation.data.output_files) {
-      if (path.isAbsolute(entry.path) || entry.path.includes('..')) {
-        validation.ok = false;
-        validation.error = new Error(`output_files path escapes bundle: ${entry.path}`);
-        break;
-      }
-    }
-    // Validate cache_trails paths are bundle-relative and don't escape
+    const validation = validateSlotResult(s, candidateResult);
+    const completedAt = new Date().toISOString();
+
+    // Path escape validation for output_files[] and cache_trails[]
     if (validation.ok) {
-      for (const trail of validation.data.cache_trails) {
-        if (path.isAbsolute(trail) || trail.includes('..')) {
+      // Validate output_files paths are bundle-relative and don't escape
+      for (const entry of validation.data.output_files) {
+        if (path.isAbsolute(entry.path) || entry.path.includes('..')) {
           validation.ok = false;
-          validation.error = new Error(`cache_trails path escapes bundle: ${trail}`);
+          validation.error = new Error(`output_files path escapes bundle: ${entry.path}`);
+          logEvent('warn', 'relay_commit_path_escape', { kind: 'queue_complete', slotKey: s.key, roleAgentKey: s.roleAgentKey, path: entry.path, field: 'output_files' });
           break;
         }
       }
+      // Validate cache_trails paths are bundle-relative and don't escape
+      if (validation.ok) {
+        for (const trail of validation.data.cache_trails) {
+          if (path.isAbsolute(trail) || trail.includes('..')) {
+            validation.ok = false;
+            validation.error = new Error(`cache_trails path escapes bundle: ${trail}`);
+            logEvent('warn', 'relay_commit_path_escape', { kind: 'queue_complete', slotKey: s.key, roleAgentKey: s.roleAgentKey, path: trail, field: 'cache_trails' });
+            break;
+          }
+        }
+      }
     }
+
+    if (!validation.ok) {
+      const safeMsg = (validation.error?.message || String(validation.error)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+      logEvent('warn', 'relay_commit_schema_fail', { kind: 'queue_complete', slotKey: s.key, roleAgentKey: s.roleAgentKey, reason: safeMsg });
+    }
+
+    const result = validation.ok
+      ? validation.data
+      : failedResultForSlot(s, [`schema validation failed: ${validation.error.message}`]);
+
+    traceEntry('result_schema_validated', {
+      source: 'gs-agent',
+      actor: 'parent',
+      actorRuntimeAgentId: parentId,
+      parentRuntimeAgentId: parentId,
+      key: s.key,
+      roleAgentKey: s.roleAgentKey,
+      valid: validation.ok,
+    });
+
+    writeFileSync(path.join(baseDir, s.resultPath), JSON.stringify(result, null, 2));
+    if (result.status === 'done') {
+      writeFileSync(path.join(baseDir, s.summaryPath), `# ${s.key}\n\n${result.summary}\n`);
+    }
+    writeSlotStatus(s, result.status, baseDir);
+
+    const existingAgentPath = path.join(baseDir, s.agentPath);
+    const existing = existsSync(existingAgentPath)
+      ? JSON.parse(readFileSync(existingAgentPath, 'utf-8'))
+      : {};
+    const agent = AgentMetadata.parse({
+      slotKey: s.key,
+      roleAgentKey: s.roleAgentKey,
+      platform: metadata.platform || existing.platform || 'unknown',
+      runtimeMode: metadata.runtimeMode || existing.runtimeMode || 'unknown',
+      runtimeAgentId: metadata.runtimeAgentId || existing.runtimeAgentId,
+      agentType: metadata.agentType || existing.agentType,
+      spawnedAt: metadata.spawnedAt || existing.spawnedAt || completedAt,
+      completedAt,
+      status: result.status,
+      validationOk: validation.ok,
+      error: validation.ok ? undefined : validation.error.message,
+    });
+    writeFileSync(existingAgentPath, JSON.stringify(agent, null, 2));
+
+    logEvent('info', 'relay_commit_done', { kind: 'queue_complete', slotKey: s.key, roleAgentKey: s.roleAgentKey, status: result.status });
+    return { ok: validation.ok, result, agent };
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    logEvent('error', 'relay_commit_exception', { kind: 'queue_complete', slotKey: s.key, roleAgentKey: s.roleAgentKey, reason: safeMsg });
+    throw err;
   }
-
-  const result = validation.ok
-    ? validation.data
-    : failedResultForSlot(s, [`schema validation failed: ${validation.error.message}`]);
-
-  traceEntry('result_schema_validated', {
-    source: 'gs-agent',
-    actor: 'parent',
-    actorRuntimeAgentId: parentId,
-    parentRuntimeAgentId: parentId,
-    key: s.key,
-    roleAgentKey: s.roleAgentKey,
-    valid: validation.ok,
-  });
-
-  writeFileSync(path.join(baseDir, s.resultPath), JSON.stringify(result, null, 2));
-  if (result.status === 'done') {
-    writeFileSync(path.join(baseDir, s.summaryPath), `# ${s.key}\n\n${result.summary}\n`);
-  }
-  writeSlotStatus(s, result.status, baseDir);
-
-  const existingAgentPath = path.join(baseDir, s.agentPath);
-  const existing = existsSync(existingAgentPath)
-    ? JSON.parse(readFileSync(existingAgentPath, 'utf-8'))
-    : {};
-  const agent = AgentMetadata.parse({
-    slotKey: s.key,
-    roleAgentKey: s.roleAgentKey,
-    platform: metadata.platform || existing.platform || 'unknown',
-    runtimeMode: metadata.runtimeMode || existing.runtimeMode || 'unknown',
-    runtimeAgentId: metadata.runtimeAgentId || existing.runtimeAgentId,
-    agentType: metadata.agentType || existing.agentType,
-    spawnedAt: metadata.spawnedAt || existing.spawnedAt || completedAt,
-    completedAt,
-    status: result.status,
-    validationOk: validation.ok,
-    error: validation.ok ? undefined : validation.error.message,
-  });
-  writeFileSync(existingAgentPath, JSON.stringify(agent, null, 2));
-
-  return { ok: validation.ok, result, agent };
 }
 
 /**
@@ -1183,23 +1256,38 @@ export function inspectFailure(zodError) {
  *             awaitingAgent?: boolean }}
  */
 export function forkAndStageSubagents(state, baseDir, customDispatchMap) {
+  ensureTrace(baseDir);
   const phaseLog = [];
   const map = customDispatchMap || dispatchMap;
   const { branch } = forkRouter(state);
   phaseLog.push({ phase: 'fork', branch });
 
-  if (branch !== 'pass') {
-    const repaired = convergeRepair(state);
-    phaseLog.push({ phase: 'converge_repair', outcome: repaired.outcome });
-    logEvent('warn', 'repair', { trigger: 'fork_reject', outcome: repaired.outcome, iterations: repaired.iterations });
-    traceEntry('repair', { trigger: 'fork_reject', outcome: repaired.outcome, iterations: repaired.iterations });
-    return { finalState: repaired.state, phaseLog, slots: [] };
-  }
+  logEvent('info', 'relay_fork_attempt', { kind: 'queue_enqueue', branch: branch });
 
-  const slots = stageSubagentSlots(state, baseDir, map);
-  phaseLog.push({ phase: 'dispatch', slotCount: slots.length });
-  phaseLog.push({ phase: 'await_agent', slotCount: slots.length });
-  return { finalState: SubagentWorkflowState.parse(state), slots, phaseLog, awaitingAgent: true };
+  try {
+    if (branch !== 'pass') {
+      logEvent('info', 'repair_attempt', { kind: 'queue_enqueue', outcome: 'pending' });
+      const repaired = convergeRepair(state);
+      phaseLog.push({ phase: 'converge_repair', outcome: repaired.outcome });
+      if (repaired.outcome === 'stalled') {
+        logEvent('warn', 'repair_stalled', { kind: 'queue_enqueue', outcome: repaired.outcome, iterations: repaired.iterations });
+      } else {
+        logEvent('info', 'repair_done', { kind: 'queue_enqueue', outcome: repaired.outcome, iterations: repaired.iterations });
+      }
+      traceEntry('repair', { trigger: 'fork_reject', outcome: repaired.outcome, iterations: repaired.iterations });
+      return { finalState: repaired.state, phaseLog, slots: [] };
+    }
+
+    const slots = stageSubagentSlots(state, baseDir, map);
+    phaseLog.push({ phase: 'dispatch', slotCount: slots.length });
+    phaseLog.push({ phase: 'await_agent', slotCount: slots.length });
+    logEvent('info', 'relay_fork_done', { kind: 'queue_enqueue', branch: branch, slotCount: slots.length });
+    return { finalState: SubagentWorkflowState.parse(state), slots, phaseLog, awaitingAgent: true };
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    logEvent('error', 'relay_fork_exception', { kind: 'queue_enqueue', branch: branch, reason: safeMsg });
+    throw err;
+  }
 }
 
 /**
@@ -1228,32 +1316,54 @@ export function forkAndStageSubagents(state, baseDir, customDispatchMap) {
  */
 export function collectAndMergeSubagentResults(state, slots, baseDir) {
   ensureTrace(baseDir);
-  const results = collectResults(slots, baseDir);
-  const merged = mergeResults(results, state, baseDir);
 
-  let checkResult = null;
-  let forkDecision = null;
-  let repaired = null;
-  const phaseLog = [];
+  logEvent('info', 'relay_collect_attempt', { kind: 'queue_complete', slotCount: slots.length });
 
-  // Aggregate declaration data from collected results
-  const output_files = results.flatMap((r) => r.output_files || []);
-  const cache_trails = results.flatMap((r) => r.cache_trails || []);
-  const slotResultRefs = slots.map((s) => s.resultPath);
-  const receiptRefs = slots.map((s) => s.receiptPath);
+  try {
+    if (slots.length === 0) {
+      logEvent('warn', 'relay_collect_empty', { kind: 'queue_complete' });
+      return { finalState: state, results: [], checkResult: null, forkDecision: null, repaired: null, phaseLog: [], output_files: [], cache_trails: [], slotResultRefs: [], receiptRefs: [] };
+    }
 
-  if (merged.subagent_all_failed) {
-    repaired = convergeRepair(merged);
-    phaseLog.push({ phase: 'subagent_repair', outcome: repaired.outcome });
-    logEvent('warn', 'repair', { trigger: 'all_subagents_failed', outcome: repaired.outcome, iterations: repaired.iterations });
-    traceEntry('repair', { trigger: 'all_subagents_failed', outcome: repaired.outcome, iterations: repaired.iterations });
-    return { finalState: repaired.state, results, checkResult, forkDecision, repaired, phaseLog, output_files, cache_trails, slotResultRefs, receiptRefs };
+    const results = collectResults(slots, baseDir);
+    const merged = mergeResults(results, state, baseDir);
+
+    let checkResult = null;
+    let forkDecision = null;
+    let repaired = null;
+    const phaseLog = [];
+
+    // Aggregate declaration data from collected results
+    const output_files = results.flatMap((r) => r.output_files || []);
+    const cache_trails = results.flatMap((r) => r.cache_trails || []);
+    const slotResultRefs = slots.map((s) => s.resultPath);
+    const receiptRefs = slots.map((s) => s.receiptPath);
+
+    if (merged.subagent_all_failed) {
+      logEvent('warn', 'relay_all_failed', { kind: 'queue_complete', slotCount: slots.length });
+      logEvent('info', 'repair_attempt', { kind: 'queue_enqueue', outcome: 'pending' });
+      repaired = convergeRepair(merged);
+      phaseLog.push({ phase: 'subagent_repair', outcome: repaired.outcome });
+      if (repaired.outcome === 'stalled') {
+        logEvent('warn', 'repair_stalled', { kind: 'queue_enqueue', outcome: repaired.outcome, iterations: repaired.iterations });
+      } else {
+        logEvent('info', 'repair_done', { kind: 'queue_enqueue', outcome: repaired.outcome, iterations: repaired.iterations });
+      }
+      traceEntry('repair', { trigger: 'all_subagents_failed', outcome: repaired.outcome, iterations: repaired.iterations });
+      return { finalState: repaired.state, results, checkResult, forkDecision, repaired, phaseLog, output_files, cache_trails, slotResultRefs, receiptRefs };
+    }
+
+    checkResult = validateAndDiagnose(merged, SubagentWorkflowState);
+    forkDecision = forkRouter(merged);
+    phaseLog.push({ phase: 'ci_check', passed: checkResult.passed }, { phase: 're_fork', branch: forkDecision.branch });
+    logEvent('info', 'relay_merge_done', { kind: 'queue_complete', slotCount: slots.length, ref_count: merged.ref_count });
+    logEvent('info', 'relay_refork_done', { kind: 'queue_complete', branch: forkDecision.branch });
+    return { finalState: merged, results, checkResult, forkDecision, repaired, phaseLog, output_files, cache_trails, slotResultRefs, receiptRefs };
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    logEvent('error', 'relay_collect_exception', { kind: 'queue_complete', slotCount: slots.length, reason: safeMsg });
+    throw err;
   }
-
-  checkResult = validateAndDiagnose(merged, SubagentWorkflowState);
-  forkDecision = forkRouter(merged);
-  phaseLog.push({ phase: 'ci_check', passed: checkResult.passed }, { phase: 're_fork', branch: forkDecision.branch });
-  return { finalState: merged, results, checkResult, forkDecision, repaired, phaseLog, output_files, cache_trails, slotResultRefs, receiptRefs };
 }
 
 /**

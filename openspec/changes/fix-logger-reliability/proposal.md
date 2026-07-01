@@ -9,6 +9,7 @@
 - **Repair loop 留痕**：phase nodes 在 gate fail 后记录 repair loop start/action/done/escalated/degraded，尤其 wave0/wave1/wave2 supplementary loop
 - **Sub-agent 具体指令**：`buildSpawnPrompt()` 用现有 `log-event.mjs` CLI 指示 6 种具体事件（搜索开始/搜索完成/抓取完成/文件写入/错误/工作完成），说明 level 与禁止记录内容
 - **Heartbeat**：`createRunLogger()` 初始化时写 `logger_ready` + pid
+- **Guideline 对齐**：`guidelines/logging-conventions.md` 的核心原则仍有效，但 LOC-006 旧 closed-set 已过时；本 change 的 accepted spec 同步后必须更新 guideline，避免继续指导实现使用摘要级日志
 - **不改变**：logger 文件格式、level 体系、appendFileSync 机制
 
 ## Capabilities
@@ -22,8 +23,9 @@
 
 ## Impact
 
-- `DPT_FRAMEWORK/engine/queue-manager.mjs` — 所有队列操作函数加 entry/exit log
-- `DPT_FRAMEWORK/engine/subagent-relay.mjs` — 所有 relay 函数加 entry/exit log + `buildSpawnPrompt()` 加 sub-agent 指令
+- `DPT_FRAMEWORK/engine/queue-manager.mjs` — 队列 hot path 按事故级 closed-set 写 attempt/outcome/reject/fail/empty/exception log
+- `DPT_FRAMEWORK/engine/subagent-relay.mjs` — relay bundle-aware callers 按事故级 closed-set 写 lifecycle/receipt/commit/repair log + `buildSpawnPrompt()` 加 sub-agent 指令
 - `DPT_FRAMEWORK/engine/logger.mjs` — `createRunLogger` 加 heartbeat
 - `DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs` — gate attempt、early error、failure diagnostic pointer 统一写 log
-- `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave{0,1,2}.md` 与 shared repair/subagent docs — 更新 repair loop 与 sub-agent logging 约定
+- `DPT_FRAMEWORK/workflows/nodes/phases/phase-*.md` 与 shared repair/subagent docs — 更新 repair loop、terminal/degraded gate fail 与 sub-agent logging 约定
+- `guidelines/logging-conventions.md` — 当允许修改 change 目录外文件时，将旧 LOC-006 摘要清单替换为 accepted accident-grade event set，并保留 trace/log authority 原则

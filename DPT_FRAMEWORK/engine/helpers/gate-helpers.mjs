@@ -64,6 +64,7 @@ export function parseGateCliArgs() {
 
   if (!values['current-node']) {
     return {
+      bundle: values.bundle,
       error: {
         check: { passed: false, gate: '(unknown)', currentNodeRef: null, next: null },
         routing: { kind: 'invalid_input', next: null, detail: 'Missing required argument: --current-node <fileRef>' },
@@ -229,7 +230,16 @@ export function buildGateResult({ passed, gate, currentNodeRef, routing, inspect
  *
  * @impl GSK-002
  */
-export function emitGateResult(result) {
+export function emitGateResult(result, { bundlePath } = {}) {
+  // Log early gate errors when bundle path is available
+  if (bundlePath && result.check && !result.check.passed) {
+    try {
+      writeGateAttempt(bundlePath, result);
+    } catch {
+      // Audit write failure must not affect gate output
+    }
+  }
+
   console.log(JSON.stringify(result, null, 2));
 
   // no_transition is a normal runtime outcome (chain table intentionally sparse),
@@ -272,15 +282,42 @@ export function writeGateAttempt(bundlePath, result) {
     const { check, routing, inspect, advice } = result;
     const bundle = readBundleName(bundlePath);
 
-    // 1. Logger — via logToRun with unified envelope (Design D6.1)
-    //    msg = 'gate_attempt', gate details → detail JSON
+    // 1. Precompute diagnostic path and write failure diagnostic BEFORE logging
+    //    so run.log can include the verified diagnostic_path pointer.
+    let logDetail;
     const level = check.passed ? 'info' : 'warn';
-    const logDetail = check.passed
-      ? { gate: check.gate, currentNodeRef: check.currentNodeRef, next: check.next, inspect_count: inspect.length, advice_count: advice.length }
-      : { gate: check.gate, currentNodeRef: check.currentNodeRef, next: check.next, routing_kind: routing.kind, inspect: inspect.slice(0, 5), advice: advice.slice(0, 3) };
+
+    if (!check.passed) {
+      const iso = new Date().toISOString();
+      const isoFile = iso.replace(/:/g, '-');
+      const diagnosticPath = `_diagnostics/gates/${isoFile}-${check.gate}.json`;
+
+      // Write diagnostic artifact first so we know whether it succeeded
+      const diagResult = writeGateFailureDiagnostic(bundlePath, result, diagnosticPath);
+
+      logDetail = {
+        gate: check.gate, currentNodeRef: check.currentNodeRef, next: check.next,
+        routing_kind: routing.kind,
+        inspect: inspect.slice(0, 5), advice: advice.slice(0, 3),
+      };
+
+      if (diagResult.ok) {
+        logDetail.diagnostic_path = diagnosticPath;
+      } else {
+        logDetail.diagnostic_write_failed = true;
+        logDetail.diagnostic_write_reason = diagResult.reason;
+      }
+    } else {
+      logDetail = {
+        gate: check.gate, currentNodeRef: check.currentNodeRef, next: check.next,
+        inspect_count: inspect.length, advice_count: advice.length,
+      };
+    }
+
+    // 2. Logger — via logToRun with unified envelope (Design D6.1)
     logToRun(bundlePath, level, 'gate_attempt', logDetail);
 
-    // 2. Trace — structured evidence with bundle field (Design D2)
+    // 3. Trace — structured evidence with bundle field (Design D2)
     try {
       const tracePath = join(bundlePath, 'rb_trace.jsonl');
       const ts = new Date().toISOString();
@@ -301,13 +338,8 @@ export function writeGateAttempt(bundlePath, result) {
       // Trace write failure silently ignored
     }
 
-    // 3. Checkpoint manifest — durable reentry artifact (RRD-001)
+    // 4. Checkpoint manifest — durable reentry artifact (RRD-001)
     writeCheckpointManifest(bundlePath, result);
-
-    // 4. Gate failure diagnostic — full post-mortem on failure (RRD-004)
-    if (!check.passed) {
-      writeGateFailureDiagnostic(bundlePath, result);
-    }
   } catch {
     // Audit write failure must not affect gate output
   }
@@ -507,14 +539,15 @@ export function writeCheckpointManifest(bundlePath, result) {
  *
  * @param {string} bundlePath
  * @param {object} result — gate result from buildGateResult()
- * @returns {void}
+ * @param {string} [precomputedPath] — optional precomputed diagnostic path to avoid recomputing ISO timestamp
+ * @returns {{ ok: boolean, path?: string, reason?: string }}
  *
  * @impl RRD-004
  */
-export function writeGateFailureDiagnostic(bundlePath, result) {
+export function writeGateFailureDiagnostic(bundlePath, result, precomputedPath = null) {
   try {
     const { check, routing, inspect, advice } = result;
-    if (check.passed) return; // Only write on failure
+    if (check.passed) return { ok: true }; // Only write on failure
 
     const iso = new Date().toISOString();
     const isoFile = iso.replace(/:/g, '-');
@@ -525,7 +558,7 @@ export function writeGateFailureDiagnostic(bundlePath, result) {
       try { return readBundleName(bundlePath); } catch { return basename(bundlePath); }
     })();
 
-    const diagnosticPath = `_diagnostics/gates/${isoFile}-${check.gate}.json`;
+    const diagnosticPath = precomputedPath || `_diagnostics/gates/${isoFile}-${check.gate}.json`;
 
     const diagnostic = {
       schema_version: '1.0.0',
@@ -557,8 +590,11 @@ export function writeGateFailureDiagnostic(bundlePath, result) {
       });
       appendFileSync(tracePath, traceEntry + '\n');
     } catch { /* trace write failure silently ignored */ }
-  } catch {
-    // Diagnostic write failure silently ignored — must not affect gate output
+
+    return { ok: true, path: diagnosticPath };
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    return { ok: false, reason: safeMsg };
   }
 }
 

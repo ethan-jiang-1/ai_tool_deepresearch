@@ -38,6 +38,9 @@
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const LEVELS = { debug: 10, info: 20, warn: 30, error: 40 };
 const LEVEL_LABELS = { debug: 'DEBUG', info: 'INFO', warn: 'WARN', error: 'ERROR' };
@@ -242,10 +245,16 @@ export function logToRun(bundlePath, level, msg, detail) {
  * @param {string} bundlePath — path to the bundle directory
  * @returns {{ info, warn, error, debug }} logger instance bound to _logs/run.log
  *
- * @impl LOG-005, LOC-008
+ * @impl LOG-004, LOG-005, LOC-008
  */
 export function createRunLogger(bundlePath) {
   const bundle = readBundleName(bundlePath);
   const logPath = path.join(bundlePath, '_logs', 'run.log');
-  return createLogger({ file: logPath, bundle, consoleEcho: false });
+  const log = createLogger({ file: logPath, bundle, consoleEcho: false });
+  log.info('logger_ready', {
+    node: process.version,
+    platform: process.platform,
+    framework_root: path.resolve(__dirname, '..'),
+  });
+  return log;
 }

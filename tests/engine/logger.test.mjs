@@ -177,7 +177,8 @@ describe('createRunLogger (LOG-005, LOC-008)', () => {
     const logPath = join(b, '_logs', 'run.log');
     const content = readFileSync(logPath, 'utf-8');
     const lines = content.trim().split('\n');
-    assert.strictEqual(lines.length, 2);
+    assert.strictEqual(lines.length, 3);
+    assert.ok(lines[0].includes('logger_ready'));
     for (const line of lines) {
       assert.ok(line.includes('bundle=test-runlogger-write'));
     }
@@ -205,5 +206,28 @@ describe('createLogger with bundle option (LOG-005)', () => {
       assert.ok(line.includes('bundle=my-research'));
       assert.ok(line.includes('gate_attempt'));
     }
+  });
+});
+
+describe('createRunLogger heartbeat (LOG-004)', () => {
+  it('writes logger_ready with runtime metadata', () => {
+    const b = setupBundle('test-heartbeat');
+    const log = createRunLogger(b);
+    const logPath = join(b, '_logs', 'run.log');
+    const content = readFileSync(logPath, 'utf-8');
+    assert.ok(content.includes('logger_ready'));
+    assert.ok(content.includes('"node":'));
+    assert.ok(content.includes('"platform":'));
+    assert.ok(content.includes('"framework_root":'));
+  });
+
+  it('logger_ready is written before subsequent events', () => {
+    const b = setupBundle('test-heartbeat-order');
+    const log = createRunLogger(b);
+    log.info('subsequent_event');
+    const content = readFileSync(join(b, '_logs', 'run.log'), 'utf-8');
+    const lines = content.trim().split('\n');
+    assert.ok(lines[0].includes('logger_ready'));
+    assert.ok(lines[1].includes('subsequent_event'));
   });
 });

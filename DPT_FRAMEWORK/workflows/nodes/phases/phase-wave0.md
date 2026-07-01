@@ -286,3 +286,8 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave1_complete
 |------|------|
 | Phase 开始 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:wave0 START"` |
 | Phase 结束 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "phase:wave0 END — <summary>"` |
+| Repair loop 开始 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "repair_loop_start" --detail '{"kind":"repair_loop_start","phase":"wave0","gate":"wave0-complete","attempt":<N>,"reason":"<reason>"}'` |
+| Repair 动作 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "repair_action" --detail '{"kind":"repair_action","phase":"wave0","gate":"wave0-complete","attempt":<N>,"action":"<action>","work_id":"<id>"}'` |
+| Repair loop 结束 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level info --msg "repair_loop_done" --detail '{"kind":"repair_loop_done","phase":"wave0","gate":"wave0-complete","attempt":<N>,"outcome":"<outcome>"}'` |
+| Repair 升级 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "repair_escalated" --detail '{"kind":"repair_escalated","phase":"wave0","gate":"wave0-complete","attempt":<N>,"reason":"<reason>"}'` |
+| Repair 降级 | `node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "repair_degraded" --detail '{"kind":"repair_degraded","phase":"wave0","gate":"wave0-complete","attempt":<N>,"reason":"<reason>"}'` |
