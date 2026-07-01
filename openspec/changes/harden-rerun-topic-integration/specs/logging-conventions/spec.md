@@ -18,7 +18,7 @@ At minimum, logging/diagnostics SHALL cover:
 - file observability diagnostics
 - failed gate diagnostic artifact paths
 
-Structured diagnostic events SHOULD use stable `kind` values so tests and post-mortem tooling can find them without parsing prose. Required kinds for this change include:
+Structured diagnostic events SHALL use stable `kind` values when emitting the corresponding event type so tests and post-mortem tooling can find them without parsing prose. Required kinds for this change include:
 - `phase_start`
 - `phase_end`
 - `queue_enqueue`

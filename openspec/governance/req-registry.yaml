@@ -45,6 +45,7 @@ prefixes:
   EXR: experiment-ref-integrity
   FOR: fork-repair-converge
   FRE: framework-engine
+  FIO: file-observability
   GAC: gate-content-dedup
   GAF: gate-fork-router
   GAS: gate-state-machine
@@ -66,6 +67,7 @@ prefixes:
   REL: repair-loop
   RES: research-styles
   RET: requirement-traceability
+  RRD: runtime-reentry-debuggability
   RWE: research-wave-experiments
   RWG: research-wave-gate-implementation
   RWP: research-wave-phase-content
@@ -129,6 +131,7 @@ AGO-001: agent-output-declaration — SlotResult output_files declaration with r
 AGO-002: agent-output-declaration — SlotResult leaf cache_trails declaration
 AGO-003: agent-output-declaration — complete writes bundle-level rb_output_declarations.jsonl ledger
 AGO-004: agent-output-declaration — Engine consumes declaration ledger rather than scanning directories for Agent outputs
+AGO-005: agent-output-declaration — Ledger declarations preserve non-empty creation context for accepted outputs
 # bundle-data-isolation
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 # workflow-directory-contract (BUS-* absorbed)
@@ -165,6 +168,12 @@ EXO-004: experiment-observability — Non-verdict diagnostic trace events for ob
 EXO-005: experiment-observability — Ledger-driven Heavy provenance inspection
 EXO-006: experiment-observability — Runner health report protocol
 
+# file-observability
+FIO-001: file-observability — Engine audits phase-owned directories with stable file finding classifications
+FIO-002: file-observability — Unplanned files produce inspect/advice and authority blockers when relevant
+FIO-003: file-observability — Agent file explanations are diagnostic trace/log entries only
+FIO-004: file-observability — Explained files remain non-authoritative until ledger or receipt authority exists
+
 # fork-repair-converge
 FOR-001: fork-repair-converge — Multi-fail shared repair checkpoint convergence
 
@@ -177,6 +186,7 @@ GAC-005: gate-content-dedup — Self-referential language detection and standard
 GAC-006: gate-content-dedup — Reference declaration coverage prevents filesystem orphan pass-through
 GAC-007: gate-content-dedup — Homepage URL detection includes shallow path heuristic and empty URL failure
 GAC-008: gate-content-dedup — Ledger coverage rule detects filesystem reference files missing from declaration ledger
+GAC-009: gate-content-dedup — Orphan reference diagnostics are durable in trace/log and diagnostic artifacts
 
 # gate-fork-router
 GAF-001: gate-fork-router — Gate branch classification and explicit resolver
@@ -210,6 +220,14 @@ RTI-001: rerun-topic-integration — Sub-agent reference format is explicit in r
 RTI-002: rerun-topic-integration — Wave2 action:add rerun performs full re-synthesis
 RTI-003: rerun-topic-integration — Gate detects rerun topic reference quality and provenance escape
 RTI-004: rerun-topic-integration — content_dedup SHALL NOT vacuously pass when ledger contains no reference declarations
+RTI-005: rerun-topic-integration — Rerun-produced files remain traceable to rerun intent or declared provenance
+
+# runtime-reentry-debuggability
+RRD-001: runtime-reentry-debuggability — Gate attempts record lightweight reentry checkpoint manifests
+RRD-002: runtime-reentry-debuggability — Reentry check validates runtime consistency for closed target vocabulary
+RRD-003: runtime-reentry-debuggability — Queue state cannot conflict with lifecycle status after phase pass
+RRD-004: runtime-reentry-debuggability — Failed gates preserve full post-mortem diagnostic detail
+RRD-005: runtime-reentry-debuggability — Reentry tooling derives facts from bundle truth without chat memory
 
 # schema-core
 SCO-001: schema-core — Six domain enums
@@ -411,6 +429,7 @@ LOC-006: logging-conventions — Logger activation in engines (queue-manager + s
 LOC-007: logging-conventions — One-shot log API (logToRun(bundlePath, level, msg, detail?) encapsulates path, format, bundle)
 LOC-008: logging-conventions — Run-scoped logger factory (createRunLogger(bundlePath) returns {info,warn,error,debug} bound to _logs/run.log)
 LOC-009: logging-conventions — Agent log CLI (log-event.mjs --bundle --level --msg, bash command for Phase Agent, zero JS knowledge)
+LOC-010: logging-conventions — Long-running phases emit stable diagnostics for post-mortem debugging
 
 LFW-001: lifecycle-walker — Walker reads manifest and walks lifecycle (--bundle required, --manifest optional, 9 phases) [DEPRECATED]
 LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass (max 3 retries, escalation on exceeded limit) [DEPRECATED]

@@ -4,9 +4,9 @@
 
 ## Purpose
 
-确保长程 Agentic Workflow 可以从任意 phase/gate 节点重新进入并调试，而不依赖 chat memory 或从头重跑。Engine 只提供 deterministic checkpoint、drift detection 和 inspect/advice；Agent 仍然负责语义修复和继续执行。
+确保长程 Agentic Workflow 可以从任意 phase/gate/checkpoint 可恢复边界重新进入并调试，而不依赖 chat memory 或从头重跑。Engine 只提供 deterministic checkpoint、drift detection 和 inspect/advice；Agent 仍然负责语义修复和继续执行。
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Phase boundary SHALL record a reentry checkpoint manifest
 
@@ -30,6 +30,8 @@ The manifest SHALL NOT copy artifact contents.
 
 The checkpoint SHALL represent the runtime state at gate-attempt audit time. It SHALL NOT pretend to describe a later `advance-status` transition unless that transition has already occurred and is visible in bundle files.
 
+When multiple checkpoint manifests exist, reentry tooling SHALL select the latest checkpoint whose `gate_result_ref.gate` or `normalized_target.status_gate` matches the requested target. If no matching checkpoint exists, it MAY fall back to the latest checkpoint for global drift context, but SHALL report the absence of a target-matching checkpoint as inspect/advice.
+
 #### Scenario: Gate attempt records checkpoint
 
 - **WHEN** a gate CLI writes a `gate_attempt`
@@ -37,13 +39,22 @@ The checkpoint SHALL represent the runtime state at gate-attempt audit time. It 
 - **AND** the manifest SHALL include status, queue summary, artifact inventory, and ledger/trace/log cursors
 - **AND** the manifest SHALL include `schema_version`, `trigger`, `gate_result_ref`, `status_snapshot`, `cursors`, and `hashes`
 
+#### Scenario: Reentry selects latest matching checkpoint
+
+- **WHEN** `_checkpoints/` contains multiple checkpoint manifests
+- **AND** `check-reentry --at wave1_complete` is executed
+- **THEN** reentry tooling SHALL select the newest checkpoint matching `wave1_complete` / `wave1-complete`
+- **AND** it SHALL report when only a global fallback checkpoint was available
+
 ### Requirement: Reentry check SHALL validate runtime consistency for a target node
 
 The system SHALL provide `DPT_FRAMEWORK/cli/check-reentry.mjs --bundle <path> --at <target>`.
 
-The `--at` target vocabulary SHALL be closed and deterministic. The checker SHALL normalize targets into one of:
+The `--at` target vocabulary SHALL be closed and deterministic. Target normalization SHALL be derived from `DPT_FRAMEWORK/workflows/manifest.json` whenever possible, using each phase entry's `key`, `node`, and `gate`. Implementations SHALL NOT maintain a second hand-written phase/gate mapping that can drift from the manifest.
+
+The checker SHALL normalize targets into one of:
 - `kind: "gate"`: a gate or lifecycle checkpoint value comparable to `rb_status.json#/current_gate`, such as `wave1_complete` or `hitl2_recorded`
-- `kind: "phase"`: a known phase node alias or node ref, such as `phase-wave1` or `phases/phase-wave1.md`, mapped by a framework-owned table to the gate/checkpoint and required artifact set for reentry
+- `kind: "phase"`: a known phase node alias or node ref, such as `phase-wave1` or `phases/phase-wave1.md`, mapped from the workflow manifest to the gate/checkpoint and required artifact set for reentry
 
 The normalized target object SHALL include:
 - `input`
@@ -53,7 +64,23 @@ The normalized target object SHALL include:
 - `node_ref`: canonical workflow node ref when applicable, such as `phases/phase-wave1.md`
 - `phase_key`: phase key when applicable, such as `wave1`
 
-Unknown targets SHALL fail as a configuration error with inspect/advice listing accepted target examples. The checker SHALL include the normalized target in its JSON output.
+Unknown targets SHALL fail as a configuration error with inspect/advice listing accepted target examples. The checker SHALL include the normalized target in its JSON output when normalization succeeds.
+
+The CLI SHALL emit JSON with at least:
+- `schema_version`
+- `check`: `{ passed, target, exit_code }`
+- `normalized_target` when available
+- `blockers`: array of blocker findings
+- `warnings`: array of warning findings
+- `drift`: array of checkpoint drift findings
+- `findings`: array of file observability findings
+- `inspect`
+- `advice`
+
+Exit codes SHALL be:
+- `0`: no blockers; reentry is clean enough to continue, though warnings MAY be present
+- `1`: one or more blockers prevent reliable reentry
+- `2`: configuration or invocation error, such as unknown target, missing bundle, or unreadable required control file
 
 The CLI SHALL return check/inspect/advice JSON and SHALL validate:
 - `rb_status.json` matches the normalized target gate/checkpoint when target kind is `gate`
@@ -71,6 +98,7 @@ The CLI SHALL NOT mutate runtime files.
 - **WHEN** a bundle has `rb_status.json#/current_gate = wave1_complete`
 - **AND** required wave1 artifacts and ledger-covered references exist
 - **THEN** `check-reentry --at wave1_complete` SHALL return `check.passed: true`
+- **AND** process exit code SHALL be `0`
 - **AND** output SHALL include `normalized_target.status_gate = "wave1_complete"`
 - **AND** output SHALL include `normalized_target.gate_key = "wave1-complete"`
 
@@ -80,11 +108,13 @@ The CLI SHALL NOT mutate runtime files.
 - **THEN** output SHALL include `normalized_target.kind = "phase"`
 - **AND** output SHALL include `normalized_target.node_ref = "phases/phase-wave1.md"`
 - **AND** output SHALL include the mapped reentry gate/checkpoint for wave1
+- **AND** the mapping SHALL be derived from `DPT_FRAMEWORK/workflows/manifest.json`
 
 #### Scenario: Unknown target fails closed
 
 - **WHEN** `check-reentry --at arbitrary-chat-node` is executed
 - **THEN** the checker SHALL return a configuration failure
+- **AND** process exit code SHALL be `2`
 - **AND** inspect/advice SHALL list accepted gate/checkpoint and phase target examples
 
 #### Scenario: Reentry detects drift
@@ -92,6 +122,24 @@ The CLI SHALL NOT mutate runtime files.
 - **WHEN** a checkpoint manifest records a file hash
 - **AND** that file later changes
 - **THEN** `check-reentry` SHALL return inspect/advice describing checkpoint drift
+
+Drift severity SHALL be deterministic:
+- `info`: append-only cursor advance in `_logs/run.log` or `rb_trace.jsonl` with no control/artifact hash conflict
+- `warning`: non-authority artifact or diagnostic file drift that does not affect target pass conditions
+- `blocker`: drift in control files, ledger declarations, queue state, status state, or authority artifacts that participate in target pass conditions
+
+#### Scenario: Trace cursor advance is informational
+
+- **WHEN** a checkpoint recorded `rb_trace.jsonl` line count
+- **AND** later trace contains additional well-formed append-only diagnostic events
+- **THEN** drift SHALL be classified as `info`
+
+#### Scenario: Authority artifact drift blocks reentry
+
+- **WHEN** a checkpoint recorded a reference file hash
+- **AND** that reference participates in target gate pass conditions
+- **AND** the file hash later changes
+- **THEN** drift SHALL be classified as `blocker`
 
 ### Requirement: Queue state SHALL NOT conflict with lifecycle status after phase pass
 

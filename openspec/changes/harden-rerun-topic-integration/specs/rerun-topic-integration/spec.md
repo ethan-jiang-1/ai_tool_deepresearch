@@ -6,7 +6,7 @@
 
 当 HITL2 用户选择 rerun 并新增 topic 时，确保该 topic 的 reference 文件符合规范格式、wave2 cross-topic 合成完整覆盖新 topic（全量重合成而非 delta/append）、gate 能检测内容质量逃逸。消除 backlog bug 007 所暴露的问题：三个链断裂在 rerun 增量 topic 场景同时触发导致 gate 全绿但语义集成未发生。
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Sub-agent reference file format specification
 

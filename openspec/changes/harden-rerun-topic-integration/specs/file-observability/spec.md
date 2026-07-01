@@ -6,7 +6,7 @@
 
 Allow Agentic Workflow to create new files while ensuring every meaningful runtime file is explainable. File observability discovers unexpected files, asks the Agent to explain them, records diagnostics, and keeps authority decisions bound to deterministic receipts and ledgers.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Engine SHALL audit phase-owned directories against expected file patterns
 
@@ -18,6 +18,11 @@ Engine SHALL provide a file observability helper that audits at least:
 - `artifacts/wave1/`
 - `artifacts/wave2/`
 - `_cache/`
+- `_subagents/` slot structure, including slot-scoped `task.md`, `result.schema.json`, `runtime-receipt.jsonl`, and committed `result.json`
+
+Known relay runtime files such as `_subagents/**/runtime-receipt.jsonl` SHALL be classified by their slot path and relay contract. They SHALL NOT be treated as unexplained new root-level artifacts merely because they were created during a run.
+
+A `runtime-receipt.jsonl` file outside a recognized relay slot path SHALL NOT be silently accepted as a known runtime receipt. Unless another accepted contract declares that path, file observability SHALL report it as an unplanned file and request explanation or cleanup.
 
 The audit SHALL use directory shape, filename patterns, topic registry, queue `writes_to` / `required_receipts`, declaration ledger paths, and cache leaf structure rather than fixed file counts.
 
@@ -45,6 +50,20 @@ Only `declared_authoritative` files SHALL be allowed to satisfy ledger-backed ga
 - **WHEN** `artifacts/wave1/topic-a/scratch.md` exists
 - **AND** it is not an expected artifact, receipt, declared output, or known diagnostic
 - **THEN** file observability SHALL report it as `unplanned_needs_explanation` or `unplanned_nonblocking` depending on the requested target
+
+#### Scenario: Slot runtime receipt is expected
+
+- **WHEN** `_subagents/wave_01/slot_01/runtime-receipt.jsonl` exists
+- **AND** the slot shape matches the relay contract for an active or completed delegated task
+- **THEN** file observability SHALL classify the runtime receipt as `expected`
+- **AND** it SHALL NOT request an Agent explanation for the receipt file itself
+
+#### Scenario: Root-level runtime receipt is unplanned
+
+- **WHEN** `runtime-receipt.jsonl` exists at the bundle root
+- **AND** no accepted contract declares that root-level path
+- **THEN** file observability SHALL classify it as `unplanned_needs_explanation` or `unplanned_nonblocking` according to the requested target
+- **AND** inspect/advice SHALL explain that recognized relay runtime receipts are slot-scoped under `_subagents/`
 
 ### Requirement: Unplanned files SHALL produce inspect/advice requesting explanation
 
