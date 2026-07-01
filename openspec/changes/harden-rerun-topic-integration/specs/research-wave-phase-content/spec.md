@@ -20,12 +20,21 @@
 
 Gate wave2-complete SHALL include a rerun add coverage check: when any seed topic declares `action: add`, `synthesis.md` SHALL NOT use `## Delta Synthesis` as the main processing path, and `cross-topic-ledger.md` or `finding-index.yaml` SHALL cover all topic slugs from `rb_plan.md` topic_registry.
 
+For `action:add`, slug-name coverage alone SHALL NOT be sufficient when the added topic can be identified. The gate SHALL also verify that the added topic participates in cross-topic scan coverage with every pre-existing topic, either through explicit topic-pair rows in `cross-topic-ledger.md` or equivalent structured entries in `finding-index.yaml`.
+
 #### Scenario: Wave2 rerun action:add triggers full synthesis
 
 - **WHEN** seed topic 文件含 `action: add`（新 topic）
 - **THEN** Phase Agent SHALL 全量重合成，不追加 delta section
 - **AND** synthesis.md SHALL NOT 含 `## Delta Synthesis (Rerun N)` header
 - **AND** gate SHALL fail if scan/index coverage omits any topic slug
+- **AND** gate SHALL fail if the added topic has no scan coverage with any pre-existing topic
+
+#### Scenario: Slug-only coverage is insufficient for added topic
+
+- **WHEN** seed topic 文件含 `action: add`
+- **AND** `finding-index.yaml` lists all topic slugs but no topic-pair or scan evidence involving the added topic
+- **THEN** wave2 gate SHALL fail with inspect/advice requesting full cross-topic scan coverage
 
 #### Scenario: Wave2 rerun action:supplement keeps delta mode
 

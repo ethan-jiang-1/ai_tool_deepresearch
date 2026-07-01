@@ -1,6 +1,6 @@
 # Gate Content Dedup (delta)
 
-> req: GAC-006, GAC-007, GAC-008
+> req: GAC-006, GAC-007, GAC-008, GAC-009
 
 ## ADDED Requirements
 
@@ -60,3 +60,21 @@ The rule SHALL:
 
 - **WHEN** each `reference/*05_south-korea-factor*.md` file has a matching `role === "reference"` declaration
 - **THEN** `ledger_coverage` SHALL pass for that topic
+
+### Requirement: Orphan reference diagnostics SHALL be durable
+
+When gate-content-dedup or ledger coverage detects filesystem-only reference files, the Engine SHALL record a durable diagnostic in addition to returning inspect/advice.
+
+The diagnostic SHALL include:
+- orphan path
+- gate or rule name
+- `authority_status`
+- reason the file cannot count toward pass conditions
+- recommended repair path
+
+#### Scenario: Orphan reference emits diagnostic
+
+- **WHEN** `ledger_coverage` fails because `reference/topic-a-orphan.md` has no ledger declaration
+- **THEN** inspect SHALL list the path
+- **AND** `rb_trace.jsonl` SHALL contain a non-verdict diagnostic for the orphan
+- **AND** `_logs/run.log` SHALL include a WARN diagnostic line

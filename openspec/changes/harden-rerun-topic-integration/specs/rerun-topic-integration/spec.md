@@ -1,6 +1,6 @@
 # Rerun Topic Integration
 
-> req: RTI-001, RTI-002, RTI-003, RTI-004
+> req: RTI-001, RTI-002, RTI-003, RTI-004, RTI-005
 
 ## Purpose
 
@@ -61,7 +61,7 @@
 
 Gate wave1-complete SHALL 包含以下内容质量规则，在 structural check 之上提供 semantic quality 验证：
 
-1. **`source_url_article_level`**：reference 文件的 `source_url` SHALL 指向 article 级 URL（path depth ≥ 2），SHALL NOT 为 homepage（path 为 `/`、空、或仅 `/index.*`）。检测范围：filesystem 中所有 `reference/*{topic}*.md` 文件，不依赖 declaration ledger。
+1. **`source_url_article_level`**：reference 文件的 `source_url` SHALL 指向 article 级 URL（path depth ≥ 2），SHALL NOT 为 homepage 或 shallow section URL（path 为 `/`、空、仅 `/index.*`、或仅一个 segment 如 `/news/`）。检测范围：filesystem 中所有 `reference/*{topic}*.md` 文件，不依赖 declaration ledger。
 
 2. **`key_facts_min_lines`**：reference 文件的 `## Key Facts` section SHALL 包含至少 5 行以 `- ` 开头的实质性条目。检测范围：filesystem 中所有 `reference/*{topic}*.md` 文件。
 
@@ -116,3 +116,19 @@ Gate wave1-complete SHALL 包含以下内容质量规则，在 structural check 
 - **AND** no declaration ledger entry declares that path
 - **THEN** `ledger_coverage` SHALL fail
 - **AND** `content_dedup` SHALL still not use the orphan file as a dedup input
+
+### Requirement: Rerun-produced files SHALL be traceable to rerun intent or declared provenance
+
+When HITL2 rerun adds or supplements topics, new files created under `reference/`, `artifacts/`, `seed_topics/`, or `_cache/` SHALL be traceable to at least one of:
+- HITL2 rerun rationale
+- a seed topic `## 本轮重跑方向` action
+- a queue work item and delegated output declaration
+- a file explanation diagnostic with non-authoritative status
+
+This traceability SHALL support reentry debugging and SHALL NOT replace ledger/receipt authority for files that participate in gate pass conditions.
+
+#### Scenario: Added topic reference is traceable
+
+- **WHEN** rerun `action: add` creates `reference/06_switzerland-factor-*.md`
+- **THEN** the file SHALL either be declared through `rb_output_declarations.jsonl` or reported as an explained/unplanned file
+- **AND** only the declared reference SHALL count toward gate pass
