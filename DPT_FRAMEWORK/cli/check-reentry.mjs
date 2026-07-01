@@ -340,7 +340,10 @@ function auditQueueConflicts(bundlePath, target, manifest) {
           wave2: [/^artifacts\/wave2\//],
           'seed-topics': [/^seed_topics\//],
         };
-        const pats = patterns[target.phase_key] || [];
+        const pats = patterns[target.phase_key];
+        // If no specific patterns defined for this phase, any prior-phase active
+        // work is conservatively treated as affecting gate pass conditions.
+        if (!pats) return true;
         return pats.some(p => p.test(w));
       });
 
