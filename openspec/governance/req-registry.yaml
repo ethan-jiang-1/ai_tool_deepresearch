@@ -40,6 +40,7 @@ prefixes:
   CRC: cache-raw-web-content
   CSE: cmd-subagent-environment
   DYS: dynamic-node-loading
+  EEX: evidence-extraction
   EXO: experiment-observability
   EXS: experiment-shared-infra
   EXR: experiment-ref-integrity
@@ -132,6 +133,7 @@ AGO-002: agent-output-declaration — SlotResult leaf cache_trails declaration
 AGO-003: agent-output-declaration — complete writes bundle-level rb_output_declarations.jsonl ledger
 AGO-004: agent-output-declaration — Engine consumes declaration ledger rather than scanning directories for Agent outputs
 AGO-005: agent-output-declaration — Ledger declarations preserve non-empty creation context for accepted outputs
+AGO-006: agent-output-declaration — cache_trails MUST be populated by Engine (complete() validates filesystem and writes verified trails), not Agent
 # bundle-data-isolation
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 # workflow-directory-contract (BUS-* absorbed)
@@ -159,6 +161,12 @@ CSE-001: cmd-subagent-environment — Command playbook for project-level real su
 
 # dynamic-node-loading
 DYS-001: dynamic-node-loading — Explicit fileRef Markdown closure loading with cached parsed node data
+
+# evidence-extraction
+EEX-001: evidence-extraction — isCountable reference判定（acceptance_status + CCC length + article URL + Key Facts lines）
+EEX-002: evidence-extraction — countReferences Engine计算（扫描reference/目录，只数isCountable）
+EEX-003: evidence-extraction — ref_count改为Engine计算（mergeResults用countReferences替代evidenceCount累加）
+EEX-004: evidence-extraction — cache_trails文件系统验证（validateDelegatedCompletion验证3文件+写入ledger）
 
 # experiment-observability
 EXO-001: experiment-observability — Stable post-run bundle health report contract
@@ -221,6 +229,7 @@ RTI-002: rerun-topic-integration — Wave2 action:add rerun performs full re-syn
 RTI-003: rerun-topic-integration — Gate detects rerun topic reference quality and provenance escape
 RTI-004: rerun-topic-integration — content_dedup SHALL NOT vacuously pass when ledger contains no reference declarations
 RTI-005: rerun-topic-integration — Rerun-produced files remain traceable to rerun intent or declared provenance
+RTI-006: rerun-topic-integration — Rerun-produced reference files SHALL have traceable cache trails（cache_coverage gate对rerun路径与首次运行一视同仁）
 
 # runtime-reentry-debuggability
 RRD-001: runtime-reentry-debuggability — Gate attempts record lightweight reentry checkpoint manifests
@@ -485,6 +494,7 @@ RWP-010: research-wave-phase-content — Wave1 phase produces reference/{topic_s
 RWP-011: research-wave-phase-content — Wave2 phase produces 00-cross-*.md (optional), synthesis stays in artifacts/wave2/
 RWP-012: research-wave-phase-content — Wave2 rerun action:add full re-synthesis with gate coverage
 RWP-013: research-wave-phase-content — Wave2 gate rerun action:add check forbids delta-only synthesis and requires scan/index full topic slug coverage
+RWP-014: research-wave-phase-content — Rerun action:add SHALL include full cache trail（新增topic的source intake与首次运行一致，含_cache/写入）
 
 # research-wave-gate-implementation (delta)
 RWG-011: research-wave-gate-implementation — Wave0 gate checks for 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
@@ -530,3 +540,5 @@ CRC-001: "cache-raw-web-content — Standardized _cache/ directory structure (wa
 CRC-002: "cache-raw-web-content — Cache path delivery via spawn prompt (Cache directory line)"
 CRC-003: "cache-raw-web-content — source-slug consistency between _cache/ and reference/ filenames"
 CRC-004: "cache-raw-web-content — Cache is non-authority and deletable; _cache/README.md created at instantiation"
+CRC-005: cache-raw-web-content — cache_trails SHALL be Engine-populated in complete() rather than Agent-declared or empty
+CRC-006: cache-raw-web-content — Gate cache_coverage rule cross-validates declaration cache_trails with filesystem
