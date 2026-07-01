@@ -1,6 +1,6 @@
 # Reference Flat Format
 
-> req: REF-001, REF-002, REF-003, REF-004, REF-005
+> req: REF-001, REF-002, REF-003, REF-004, REF-005, REF-006
 
 ## Purpose
 
@@ -148,3 +148,20 @@ Phase node body 中的 Expected Artifacts 和 Allowed Actions 节 SHALL 明确�
 - **WHEN** Agent 读取 `phase-wave1.md` 的 Expected Artifacts 节
 - **THEN** 指令 SHALL 要求创建 `reference/{topic_slug}-<qualifier>.md`（topic_slug 为含 `NN_` 前缀的完整 slug）
 - **AND** SHALL NOT 要求创建 `reference/0N-<slug>.md`（`0N-` 前缀已被 slug 内置的 `NN_` 取代）
+
+### Requirement: Wave1 sub-agent reference file format specification
+
+`phase-wave1-subagent.md` SHALL include the complete format specification for reference files (`reference/{topic.slug}-<source-slug>.md`) in its §2 Artifacts section.
+
+The format specification SHALL align with `shared-reference-template.md`:
+
+- **Metadata block**: at the top of the file, before the first `## ` header. Each line in `- key: value` format. 9 required fields: `source_url`, `acceptance_status`, `source_type`, `tier`, `evidence_role`, `trust_level`, `why_it_matters`, `accessed_at`, `related_topic`
+- **5 standard sections** (`## ` headers, fixed order): Key Facts, Core Content Capture, Relevance To This Research, Quotable Terms / Concepts, Risks And Limitations
+- **Explicitly exclude YAML frontmatter**: reference files SHALL NOT use `---` wrapped YAML frontmatter format
+
+#### Scenario: Sub-agent role definition includes reference format spec
+
+- **WHEN** Phase Agent reads `phase-wave1-subagent.md` §2 Artifacts
+- **THEN** the section SHALL include the reference file format specification after evidence-summary and question-list
+- **AND** the specification SHALL list 9 metadata field names and 5 section header names
+- **AND** the specification SHALL explicitly forbid YAML frontmatter format

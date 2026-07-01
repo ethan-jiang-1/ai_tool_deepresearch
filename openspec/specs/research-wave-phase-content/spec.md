@@ -1,6 +1,6 @@
 # Research Wave Phase Content
 
-> req: RWP-001, RWP-002, RWP-003, RWP-004, RWP-005, RWP-006, RWP-007, RWP-008, RWP-009, RWP-010, RWP-011
+> req: RWP-001, RWP-002, RWP-003, RWP-004, RWP-005, RWP-006, RWP-007, RWP-008, RWP-009, RWP-010, RWP-011, RWP-012, RWP-013
 
 ## Purpose
 
@@ -278,3 +278,41 @@ Sub-agent phase file SHALL 包含：
 - **WHEN** a gap-fill Sub-agent is spawned during wave2 synthesis
 - **THEN** Sub-agent SHALL receive instructions from `phase-wave2-subagent.md`
 - **AND** instructions SHALL cover all required behavior dimensions (role, input, output, directories, forbidden actions, fetch chain)
+
+### Requirement: Wave2 rerun full re-synthesis on topic addition
+
+The `phase-wave2.md` Rerun-Aware Behavior section SHALL include a scenario table distinguishing `action: add` (full re-synthesis) and `action: supplement` (delta/append).
+
+`action: add` behavior SHALL align with wave0 (`phase-wave0.md` L266) and wave1 (`phase-wave1.md` L404) `action: add` semantics: full execution, same as first run.
+
+When `action: add`:
+- Phase Agent SHALL re-read evidence-summary.md for all topics (including the new topic)
+- Phase Agent SHALL rebuild the cross-topic scan matrix covering all topic pairs
+- Phase Agent SHALL generate synthesis.md, cross-topic-ledger.md, finding-index.yaml from scratch
+- Old synthesis may be preserved as backup (`*.prev-rerun-N.md`) but SHALL NOT serve as baseline
+
+When `action: supplement`, maintain current delta/append behavior (`phase-wave2.md` L351-376 existing text).
+
+The wave2-complete gate SHALL include a rerun add coverage check: when any seed topic declares `action: add`, `synthesis.md` SHALL NOT use `## Delta Synthesis` as the main processing path, and `cross-topic-ledger.md` or `finding-index.yaml` SHALL cover all topic slugs from `rb_plan.md` topic_registry.
+
+For `action:add`, slug-name coverage alone SHALL NOT be sufficient when the added topic can be identified. The gate SHALL also verify that the added topic participates in cross-topic scan coverage with every pre-existing topic, either through explicit topic-pair rows in `cross-topic-ledger.md` or equivalent structured entries in `finding-index.yaml`.
+
+#### Scenario: Wave2 rerun action:add triggers full synthesis
+
+- **WHEN** a seed topic file contains `action: add` (new topic)
+- **THEN** Phase Agent SHALL perform full re-synthesis, not append a delta section
+- **AND** synthesis.md SHALL NOT contain `## Delta Synthesis (Rerun N)` header
+- **AND** gate SHALL fail if scan/index coverage omits any topic slug
+- **AND** gate SHALL fail if the added topic has no scan coverage with any pre-existing topic
+
+#### Scenario: Slug-only coverage is insufficient for added topic
+
+- **WHEN** a seed topic file contains `action: add`
+- **AND** `finding-index.yaml` lists all topic slugs but no topic-pair or scan evidence involving the added topic
+- **THEN** wave2 gate SHALL fail with inspect/advice requesting full cross-topic scan coverage
+
+#### Scenario: Wave2 rerun action:supplement keeps delta mode
+
+- **WHEN** a seed topic file contains `action: supplement`
+- **THEN** Phase Agent SHALL retain existing synthesis as baseline
+- **AND** new analysis SHALL be appended with `## Delta Synthesis (Rerun N)` header
