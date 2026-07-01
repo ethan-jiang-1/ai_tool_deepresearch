@@ -1208,12 +1208,15 @@ export function checkCacheCoverage(bundlePath) {
     const refOutputs = (decl.output_files || []).filter(f => f.role === 'reference');
     if (refOutputs.length === 0) continue;
 
+    // Derive a stable identifier: prefer work_id, fall back to first reference path
+    const declId = decl.work_id || (refOutputs[0]?.path ? `record for ${refOutputs[0].path}` : 'unknown');
+
     const cacheTrails = decl.cache_trails || [];
 
     // ── Phase 1: empty cache_trails → warning only ──
     if (cacheTrails.length === 0) {
       for (const ref of refOutputs) {
-        inspect.push(`[cache_coverage] WARNING (Phase 1): declaration ${decl.work_id} has empty cache_trails for reference ${ref.path} — gap will become fail in Phase 2`);
+        inspect.push(`[cache_coverage] WARNING (Phase 1): ${declId} has empty cache_trails for reference ${ref.path} — gap will become fail in Phase 2`);
       }
       advice.push('Empty cache_trails on a reference-producing task — ensure sub-agents write _cache/ leaves and declare cache_trails in slot results.');
       continue;
@@ -1242,9 +1245,9 @@ export function checkCacheCoverage(bundlePath) {
     if (missingTrails.length > 0) {
       passed = false;
       for (const mt of missingTrails) {
-        inspect.push(`[cache_coverage] FAIL: declaration ${decl.work_id}: cache trail ${mt.trail} — ${mt.reason}`);
+        inspect.push(`[cache_coverage] FAIL: ${declId}: cache trail ${mt.trail} — ${mt.reason}`);
       }
-      advice.push(`Cache trail(s) missing for declaration ${decl.work_id}. Re-run the delegated intake to produce complete cache leaves.`);
+      advice.push(`Cache trail(s) missing for ${declId}. Re-run the delegated intake to produce complete cache leaves.`);
     }
 
     // ── Per-reference mapping: each reference must map to at least one valid trail ──
@@ -1286,7 +1289,7 @@ export function checkCacheCoverage(bundlePath) {
 
       if (!mapped && validTrails.length > 0) {
         passed = false;
-        inspect.push(`[cache_coverage] FAIL: declaration ${decl.work_id}: reference ${ref.path} (source_url: ${ref.source_url || 'none'}) not mapped to any valid cache trail`);
+        inspect.push(`[cache_coverage] FAIL: ${declId}: reference ${ref.path} (source_url: ${ref.source_url || 'none'}) not mapped to any valid cache trail`);
         advice.push(`Reference ${ref.path} has no cache trail mapping. Ensure sub-agent includes a matching _cache/ leaf (via meta.json.url or source_slug).`);
       } else if (!mapped && validTrails.length === 0) {
         // Already reported as missing trail above — don't double-report
