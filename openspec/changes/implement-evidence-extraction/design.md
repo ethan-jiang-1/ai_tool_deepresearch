@@ -59,13 +59,15 @@ BUG-007 修复提供了关键基础设施：file-observability 可独立于 ledg
 
 ### D3: ref_count 切换策略
 
-**选择**：新增 Engine helper `ref-count.mjs`，导出 `countReferences(baseDir)`。两处切换：(1) `subagent-relay.mjs` 的 `mergeResults()` 不再累加 Agent 的 `evidenceCount`，改用 `countReferences()`——函数签名新增 `baseDir` 参数（`mergeResults(results, state, baseDir)`），从纯函数变为需磁盘 I/O。唯一调用者 `collectAndMergeSubagentResults` 已有 `baseDir` 可用。(2) `check-gate-wave0-complete.mjs` 和 `check-gate-wave1-complete.mjs` 的 `count_floor` 实现从 `readdirSync` + regex glob 改为调用 `countReferences()`。
+**选择**：新增 Engine helper `ref-count.mjs`，导出 `countReferences(baseDir, options?)`。默认 `options.source` 为 `"ledger"`：只从 Engine-written `rb_output_declarations.jsonl` 的 role=`reference` declarations 取得候选 reference，再调用 `isCountable()`。filesystem scan 只允许用于 observability diagnostics，不能用于 gate/fork pass。
 
-**注意**：gate CLI 的 `count_floor` 是独立实现（直接用 `readdirSync` 数文件），不受 `mergeResults()` 影响。两处必须分别迁移，否则 fork router 用 Engine 数字但 gate 用 glob 数字——结果不一致。**另外**：当前 `validateDelegatedCompletion()` 已有 cache trail 验证代码（queue-manager.mjs:434-450）——本次改动不是新增验证，而是将现有 hard-fail 改为"验证通过的路径写入 ledger，失败的 emit warning 不阻塞 complete()"，将 enforcement 从 complete() 移至 gate。
+两处切换：(1) `subagent-relay.mjs` 的 `mergeResults()` 不再累加 Agent 的 `evidenceCount`，改用 committed SlotResult declarations 或 Engine ledger + `isCountable()` 计算；函数签名需要携带 `baseDir`，并且只能消费 schema-validated declaration paths。(2) `check-gate-wave0-complete.mjs` 和 `check-gate-wave1-complete.mjs` 的 glob-based `count_floor` 实现从 `readdirSync` + regex glob 改为调用 `countReferences(baseDir, { targetGlob, topic, source: "ledger" })`。
 
-**authority 边界**：`countReferences()` 是 quality/count helper，不是 output discovery authority。它可以扫描 `reference/` 来计算 `count_floor` 和 fork-router `ref_count`，但不能让 orphan reference 变成 authoritative input。`content_dedup` 等需要 Agent-produced content inputs 的 gate 仍然从 `rb_output_declarations.jsonl` 读取；ledger/file observability 仍负责报告 orphan authority gap。
+**注意**：gate CLI 的 `count_floor` 是独立实现（直接用 `readdirSync` 数文件），不受 `mergeResults()` 影响。两处必须分别迁移，否则 fork router 用 Engine 数字但 gate 用 glob 数字——结果不一致。`countReferences()` 必须保留 target scope：`shared_ref_count_floor` 只数 `reference/00-shared-*.md`，`per_topic_ref_md_count_floor` 只数当前 topic 的 matching target，不能用全局 reference count 满足 per-topic floor。**另外**：当前 `validateDelegatedCompletion()` 已有 cache trail 验证代码（queue-manager.mjs:434-450）——本次改动不是新增验证，而是将现有 hard-fail 改为"验证通过的路径写入 ledger，失败的 emit warning 不阻塞 complete()"，将 enforcement 从 complete() 移至 gate。
 
-**原因**：fork router 和 gate 必须使用同一个 `ref_count` 来源。向后兼容：如果 reference 目录不存在或为空，`countReferences()` 返回 0，Gate 自然 fail——safe default。
+**authority 边界**：`countReferences()` 是 quality/count helper，不是 output discovery authority。默认 ledger 模式不会让 orphan reference 帮助 gate/fork pass；orphan 只能由 file observability / ledger coverage 报告。`content_dedup` 等需要 Agent-produced content inputs 的 gate 仍然从 `rb_output_declarations.jsonl` 读取。
+
+**原因**：fork router 和 gate 必须使用同一个 `ref_count` 来源。向后兼容：如果 ledger 不存在或无 declared references，`countReferences()` 返回 0，Gate 自然 fail——safe default。
 
 ### D4: Rerun cache 修复方式
 
@@ -75,11 +77,15 @@ BUG-007 修复提供了关键基础设施：file-observability 可独立于 ledg
 
 ### D5: cache_coverage gate 规则
 
-**选择**：在 gate-wave0-complete 和 gate-wave1-complete 中新增 `cache_coverage` 规则，作为独立规则（不合并到 `ledger_coverage`——两者检查不同的东西：ledger_coverage 查"文件是否在 declaration 中"，cache_coverage 查"declaration 声称的 cache 是否存在"）。
+**选择**：在 gate-wave0-complete 和 gate-wave1-complete 中新增 `cache_coverage` 规则，作为独立规则（不合并到 `ledger_coverage`——两者检查不同的东西：ledger_coverage 查"文件是否在 declaration 中"，cache_coverage 查"declaration 声称的 cache 是否存在且能支撑具体 reference"）。
 
-**两阶段策略**：首版对空 `cache_trails` 只 emit warning 不 fail（当前 53 条全空），对非空 `cache_trails` 中路径缺失的 fail。等 prose 层更新（task card 模板含 cache 路径指令、修复 rerun cache 缺失）后，升为对空 `cache_trails` 也 fail。此策略在 spec 中明确标注。
+**两阶段策略**：首版对空 `cache_trails` 只 emit warning 不 fail（当前 53 条全空），对非空 `cache_trails` 中路径缺失或 reference 无法映射到 cache leaf 的 fail。等 prose 层更新（task card 模板含 cache 路径指令、修复 rerun cache 缺失）后，升为对空 `cache_trails` 也 fail。此策略在 spec 中明确标注。
 
 Phase 1 warning 只兼容旧 bundle / 旧 declaration 的空 trail 缺口。新 rerun `action:add` 的成功路径必须产出非空 verified cache trail；如果新 rerun 仍为空，file observability 应用现有 classification 报告 `kind/check: cache_gap`，不能新增第七个 `FILE_CLASSIFICATIONS` 值。
+
+**reference-to-cache 映射**：仅证明 declaration 有非空 `cache_trails` 不够。`cache_coverage` 必须对每个 role=`reference` output 找到至少一个 cache leaf，优先以 `meta.json.url == output_files[].source_url` 判定；若 URL normalization 后仍无法匹配，可用 `output_files[].source_slug` 或 reference filename qualifier 与 `sNN_<slug>` leaf 匹配。无法映射时作为 blocking cache gap。
+
+**cache retention**：accepted CRC-004 允许 `_cache/` 在 wave 完成后删除；本 change 收紧为"被 ledger 引用的 cache leaves 在 `cache_coverage` / reentry verdict 记录前不可删除"。检查完成并记录 gate attempt / trace 后，可以继续按 non-authority cache 清理。
 
 **替代方案 A**：合并进 `ledger_coverage` → 拒绝。两者错误消息、修复策略、severity 都不同。分开便于 Agent 理解具体缺什么。
 
@@ -97,15 +103,24 @@ Phase 1 warning 只兼容旧 bundle / 旧 declaration 的空 trail 缺口。新 
 |------|------|----------|------------|
 | `case-161-light-complete-cache-trails.md` | light | fixture slot result 进入 delegated `complete()` 后，verified cache trails 写 ledger；incomplete leaf warning + 不写 ledger；unsafe/non-leaf hard-fail | 不证明 Agent 会搜索或写 cache |
 | `case-162-standard-gate-reentry-cache-coverage.md` | standard | disposable bundle 中 `cache_coverage`、`count_floor`、file observability `cache_gap`、`check-reentry` 的 legacy warning / verified pass / missing fail 组合 | 不证明真实 Sub-agent 遵守 phase prose |
-| `case-163-heavy-rerun-add-real-cache-trail.md` | heavy | 新 rerun `action:add` prose/task card 能否驱动真实 Agent/Sub-agent 写 `_cache` 三文件 leaf、reference、slot result `cache_trails`，并经 Engine 写 ledger | 不作为日常 regression；无 real actor surface 时只能 NOT RUN，不能 PASS |
+| `case-163-heavy-rerun-add-real-cache-trail.md` | heavy | 新 rerun `action:add` prose/task card 能否驱动真实 Agent/Sub-agent 写 `_cache` 三文件 leaf、reference、slot result `cache_trails`，并经 Engine 写 ledger；同时记录 coverage / grounding / countable-rate 指标 | 不作为日常 regression；无 real actor surface 时只能 NOT RUN，不能 PASS，且不能作为 archive/release 的质量证明 |
 
-**原因**：传统 regression 能覆盖 deterministic helper、schema、gate CLI、queue-manager 边界；但不能单独证明这个 change 修复的真实断裂链。controlled experiments 必须证明跨边界路径，heavy canary 才能证明 Agent prose compliance。
+**原因**：传统 regression 能覆盖 deterministic helper、schema、gate CLI、queue-manager 边界；但不能单独证明这个 change 修复的真实断裂链。controlled experiments 必须证明跨边界路径，heavy canary 才能证明 Agent prose compliance。若 case-163 因缺少 real actor surface 只能 NOT RUN，则本 change 最多声明 Engine auditability 已实现，不能声明 Agent extraction quality 已被验证；archive 前必须二选一：case-163 PASS，或在 proposal/tasks 中明确降级范围。
+
+**最小质量指标**：
+- cache trail coverage: new rerun `action:add` references 100% have non-empty verified and mapped cache trails
+- grounding spot-check: sampled Key Facts are supported by `page.md` / source text
+- URL precision: counted references have article-level URLs, no homepage/shallow URL counted
+- countable rate: produced declared references vs `isCountable()` pass count is reported
+- gap rate: new-run `cache_gap`, orphan, empty-trail findings are zero for success verdict
 
 ## Risks / Trade-offs
 
 - **[Risk] 现有 bundle 的 cache_trails 全空** → 如果在 `complete()` 中强制要求 cache_trails 非空，已完成的 bundle 重跑 gate 会全挂。缓解：gate 的 cache_coverage 规则只检查 declaration 中已声明的 trail，不要求 declaration 必须有 trail（那是 content_dedup 和 ledger_coverage 的职责）。首次实现时 cache_trails 验证是 warn 不是 reject，给现有 bundle 过渡期。
 - **[Risk] `isCountable` 条件太松** → 4 个条件全部满足可能仍然包含低质量 reference（如 AI 生成的 filler text）。缓解：这是证据提取的**最低门槛**，不是质量判断。质量判断（`todo-evidence-quality`）在后续层做 discard。
 - **[Risk] `countReferences` 替换 `evidenceCount` 改变 fork 路由行为** → fork router 之前用 Agent 声明数做 branch decision，现在用 Engine 计算数。如果 Engine 数出来的比 Agent 少（例如 reference 文件缺 Core Content Capture section），以前 pass 的场景可能 fail。缓解：这是预期行为——之前 pass 是假阳性（Agent 夸大了 ref_count），现在 fail 是真阴性。
+- **[Risk] directory scan accidentally reintroduces orphan pass** → 如果 `countReferences()` 默认扫描 `reference/`，orphan reference 可能帮助 `count_floor` pass，违反 ledger authority。缓解：默认只读 Engine ledger / committed declarations；filesystem scan 只用于 diagnostics，tests 覆盖 orphan cannot help pass。
+- **[Risk] per-topic count_floor 被全局 reference count 满足** → `countReferences(baseDir)` 如果不带 target scope，topic-a 可能被 topic-b 的 references 误判通过。缓解：gate 必须传 `targetGlob` / `topic`，tests 覆盖 scope-preserving count。
 - **[Risk] cache_coverage fail 无法被现有 repair loop 修复** → 当前 repair loop（`subagent-relay.mjs`）通过 +2 `ref_count` 修复 `count_floor` 不足。cache_coverage fail 需要重新 spawn Sub-agent 产生 cache trail——不是加数字能解决的。缓解：首版 cache_coverage 只对非空 trail 的路径缺失 fail（这种情况极少——Sub-agent 要么写全、要么不写）。空 `cache_trails` 的 warn 不触发 repair loop。等到 prose 层更新、新 bundle 都有 cache trail 后，空 trail 升为 fail 时 repair loop 已有正常的 cache 产出路径。
 - **[Risk] 现有测试因 `evidenceCount` 移除而 break** → `tests/engine/subagent-relay.test.mjs` 大量使用 `evidenceCount`（~12 处）。缓解：测试更新必须与 `mergeResults()` 改动在同一个 task 中完成，不能排在 §8 之后。任务排序已调整。
 - **[Risk] `isCountable` 需要逐文件 MD 解析，性能高于 glob** → glob 是 sub-millisecond，解析 100 个 reference 文件（~500KB I/O + regex）可能需要 50-100ms。缓解：对于 wave0 scope 可控——wave0-complete gate 执行时 reference 文件数通常 < 30。后续如有性能问题，可加 simple LRU cache（bundlePath → count，在 `writeGateAttempt()` 时 invalidate）。

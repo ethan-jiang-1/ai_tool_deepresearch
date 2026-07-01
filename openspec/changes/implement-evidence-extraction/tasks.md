@@ -3,15 +3,20 @@
 - [x] 1.1 Verify requirement ID registration for `EEX-001..004`, `CRC-005..006`, `AGO-006`, `RWP-014`, `RTI-006` in `openspec/governance/req-registry.yaml`（已预注册——确认无冲突）
 - [x] 1.2 Revise delta specs to use explicit `MODIFIED Requirements` where existing `agent-output-declaration` behavior changes, including delegated `complete()` cache trail failure semantics
 - [x] 1.3 Clarify `cache_trails` authority wording: Sub-agent slot result may declare candidate trails; only Engine writes verified ledger `cache_trails`; Agent MUST NOT directly append `rb_output_declarations.jsonl`
-- [x] 1.4 Clarify `countReferences()` authority boundary: it supports quality/count decisions but does not grant ledger authority to orphan reference files
+- [x] 1.4 Clarify `countReferences()` authority boundary: pass/fail decisions use Engine ledger / committed declarations only; filesystem scan is diagnostic-only and orphan reference files cannot help gate/fork pass
 - [x] 1.5 Clarify transition behavior: legacy empty `cache_trails` warn in Phase 1, but new rerun `action:add` success requires non-empty verified trails
+- [x] 1.6 Add `agentic-queue` delta for AGQ-018 failure-semantics change: incomplete cache leaf becomes Phase 1 filter + warning, unsafe/non-leaf remains hard-fail
+- [x] 1.7 Clarify referenced cache retention: ledger-referenced cache leaves cannot be deleted before `cache_coverage` / reentry verdict evidence is recorded
+- [x] 1.8 Clarify quality-proof boundary: case-163 NOT RUN is honest diagnostic state but cannot satisfy Agent extraction quality proof for archive/release claims
 
 ## 2. Engine: ref-count helper (EEX-001, EEX-002)
 
 - [ ] 2.1 Create `DPT_FRAMEWORK/engine/helpers/ref-count.mjs` with `isCountable(ref)` → `{ countable: boolean, reason?: string }` — 4 conditions (acceptance_status, Core Content Capture ≥ 100 chars, article-level URL, Key Facts ≥ 5 bullets) + unparseable fallback
-- [ ] 2.2 Add `countReferences(baseDir)` — scan `reference/` dir（排除 `_INDEX.md`/`README.md`），filter `isCountable`，return `{ count, uncountable: [{path, reason}] }` for audit transparency
-- [ ] 2.3 Unit tests: `tests/engine/helpers/ref-count.test.mjs` — test all 4 conditions independently, unparseable files, empty dir
-- [ ] 2.4 Unit/integration test: a countable orphan reference MAY affect `countReferences()` output but SHALL NOT become authoritative input for `content_dedup` or bypass ledger/file observability
+- [ ] 2.2 Add `countReferences(baseDir, options?)` — default `source: "ledger"` reads role=reference paths from Engine-written `rb_output_declarations.jsonl`; `targetGlob` / `topic` preserve gate target scope; return `{ count, uncountable: [{path, reason}] }` for audit transparency
+- [ ] 2.3 Add diagnostic-only filesystem mode if needed for file observability; it MUST NOT be used by gate pass/fork branch decisions
+- [ ] 2.4 Unit tests: `tests/engine/helpers/ref-count.test.mjs` — test all 4 conditions independently, unparseable files, no ledger / empty declared refs
+- [ ] 2.5 Unit/integration test: a countable orphan reference SHALL NOT affect default `countReferences()` output, `count_floor` pass, `mergeResults()` `ref_count`, or `content_dedup`; file observability / ledger coverage still reports it
+- [ ] 2.6 Unit/integration test: scoped count preserves target semantics (`reference/00-shared-*.md`, `reference/*{topic}*.md`) and global references cannot satisfy another topic's floor
 
 ## 3. Engine: cache trail validation (CRC-005, AGO-006)
 
@@ -20,21 +25,25 @@
 - [ ] 3.3 Write warning to trace/log when `cache_trails` is empty on a reference-producing task
 - [ ] 3.4 Unit tests: extend `tests/engine/queue-manager.test.mjs` — delegated completion with valid cache trail, missing/incomplete leaf（warning + 不写入 ledger），empty trail（warning），mixed trails
 - [ ] 3.5 Unit tests: path escape, absolute path, non-`_cache/` path, and parent cache directory SHALL hard-fail delegated `complete()` and SHALL NOT append ledger
+- [ ] 3.6 Update AGQ-018-related tests / expectations that previously required missing leaf hard-fail; assert Phase 1 filter+warning instead while preserving hard-fail for unsafe/non-leaf trails
 
 ## 4. Engine: ref_count switch (EEX-003)
 
-- [ ] 4.1 Modify `mergeResults()` in `subagent-relay.mjs` — use `countReferences()` instead of Agent `evidenceCount` accumulation
+- [ ] 4.1 Modify `mergeResults()` in `subagent-relay.mjs` — use committed SlotResult declarations / Engine ledger + `isCountable()` instead of Agent `evidenceCount` accumulation; carry `baseDir` as needed
 - [ ] 4.2 Update fork router to consume Engine-computed `ref_count`
 - [ ] 4.3 **同步更新 `tests/engine/subagent-relay.test.mjs`** — 将所有 `evidenceCount` 断言改为 `countReferences()` 调用（~12 处，不可排在 §8 之后——避免测试套件在实现期间 break）
-- [ ] 4.4 **Migrate glob-based gate `count_floor` rules to `countReferences()`** — 仅迁移 glob 模式规则：`shared_ref_count_floor`（wave0，target 含 `*`）和 `per_topic_ref_md_count_floor`（wave1，target 含 `*`）。`per_topic_count_floor`（wave0，target 为 `artifacts/wave0/{topic}/source.yaml`，YAML 数组计数）保持原实现不变——`countReferences()` 只扫描 `reference/*.md`，不适用于 YAML。glob 保留做快速预检（fail fast），实际计数用 `countReferences()`
+- [ ] 4.4 **Migrate glob-based gate `count_floor` rules to `countReferences()`** — 仅迁移 glob 模式规则：`shared_ref_count_floor`（wave0，target 含 `*`）和 `per_topic_ref_md_count_floor`（wave1，target 含 `*`）。`per_topic_count_floor`（wave0，target 为 `artifacts/wave0/{topic}/source.yaml`，YAML 数组计数）保持原实现不变。Pass/fail count must use `source: "ledger"` and pass `targetGlob` / `topic`; glob may remain only as target scope / fast diagnostic, not as authority
+- [ ] 4.5 Tests: Agent `evidenceCount: 99` with only 3 countable declared refs yields `ref_count: 3`
+- [ ] 4.6 Tests: topic-a gate fails when only topic-b has countable declared references
 
 ## 5. Gate: cache_coverage rule (CRC-006)
 
 - [ ] 5.1 Add `cache_coverage` rule to `gate-wave0-complete.definition.json` — Phase 1: 非空 `cache_trails` 的路径缺失 → fail；空 `cache_trails` → warn 不 fail
 - [ ] 5.2 Add `cache_coverage` rule to `gate-wave1-complete.definition.json` — 同上
-- [ ] 5.3 Implement `check: cache_coverage` in gate CLIs (`check-gate-wave0-complete.mjs`, `check-gate-wave1-complete.mjs`) — read declarations from `rb_output_declarations.jsonl`，对每条 role=reference 的 declaration 交叉验证 `cache_trails` 中的路径在文件系统中存在且含 3 文件
-- [ ] 5.4 Gate integration tests: extend wave0 and wave1 gate tests — 非空 trail 缺失路径 → fail，legacy 空 trail → warn，全部 verified → pass
+- [ ] 5.3 Implement `check: cache_coverage` in gate CLIs (`check-gate-wave0-complete.mjs`, `check-gate-wave1-complete.mjs`) — read declarations from `rb_output_declarations.jsonl`，对每条 role=reference 的 declaration 交叉验证 `cache_trails` 中的路径在文件系统中存在且含 3 文件，并且每个 reference maps to at least one cache leaf by `meta.json.url` / `source_slug` / filename qualifier
+- [ ] 5.4 Gate integration tests: extend wave0 and wave1 gate tests — 非空 trail 缺失路径 → fail，legacy 空 trail → warn，全部 verified + mapped → pass，non-empty trails but no per-reference mapping → fail / blocking gap
 - [ ] 5.5 Gate/observability tests: new rerun `action:add` success path requires non-empty verified `cache_trails`; empty trail is only legacy Phase 1 warning, not a valid new-rerun success
+- [ ] 5.6 Cache retention tests / playbook assertions: ledger-referenced cache leaves deleted before `cache_coverage` cause fail/gap; deletion after recorded verdict does not rewrite historical gate result
 
 ## 6. Phase MD: rerun cache fix (RWP-014)
 
@@ -53,10 +62,11 @@
 
 - [ ] 8.1 Add `experiments_playbook/exp_evidence-extraction/README.md` suite contract — new case-number segment uses the empty 16段 and starts at `case-161`, explains why this mechanism is not just engine-boundary/file-observability continuation
 - [ ] 8.2 Add `experiments_playbook/exp_evidence-extraction/case-161-light-complete-cache-trails.md` — fixture-backed Engine path: candidate `cache_trails` → delegated `complete()` → verified ledger trails; incomplete leaf warning + no ledger trail; unsafe/non-leaf trail hard-fail. Reality Distance Ledger MUST state no Agent actor and no external calls.
-- [ ] 8.3 Add `experiments_playbook/exp_evidence-extraction/case-162-standard-gate-reentry-cache-coverage.md` — disposable bundle path: `count_floor`, `cache_coverage`, file observability `kind/check: cache_gap`, and `check-reentry` cover verified pass, non-empty missing trail fail, and legacy empty trail warning. Reality Distance Ledger MUST state fixture-backed runtime files after bundle creation.
-- [ ] 8.4 Add `experiments_playbook/exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md` — real Agent/Sub-agent canary for new rerun `action:add`: phase/task prose must drive `_cache` three-file leaves, reference files, slot result `cache_trails`, delegated complete ledger append, and gate/reentry feedback. If no real Agent actor surface exists, record NOT RUN and preserve bundle; MUST NOT mark PASS from fixtures.
+- [ ] 8.3 Add `experiments_playbook/exp_evidence-extraction/case-162-standard-gate-reentry-cache-coverage.md` — disposable bundle path: `count_floor`, `cache_coverage`, file observability `kind/check: cache_gap`, and `check-reentry` cover verified+mapped pass, non-empty missing trail fail, non-empty unmapped trail fail/gap, scoped count_floor, orphan cannot help pass, and legacy empty trail warning. Reality Distance Ledger MUST state fixture-backed runtime files after bundle creation.
+- [ ] 8.4 Add `experiments_playbook/exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md` — real Agent/Sub-agent canary for new rerun `action:add`: phase/task prose must drive `_cache` three-file leaves, reference files, slot result `cache_trails`, delegated complete ledger append, mapped cache_coverage, and gate/reentry feedback. It MUST report minimum quality metrics: cache trail coverage, grounding spot-check, URL precision, countable rate, and cache/orphan/empty-trail gap rate. If no real Agent actor surface exists, record NOT RUN and preserve bundle; MUST NOT mark PASS from fixtures; NOT RUN does not satisfy archive/release quality proof.
 - [ ] 8.5 Ensure each fixture-backed case includes production distance disclaimer and does not claim Agent search/judgment/writing behavior
 - [ ] 8.6 Update `experiments_playbook/RUN_EXPS.md` only after the runnable case files exist and have been executed successfully at least once; do not list planned-but-unimplemented cases as runnable inventory
+- [ ] 8.7 Before archive, either case-163 PASS with quality metrics or explicitly downgrade the change claim to Engine auditability only; do not claim Agent extraction quality from regression/fixture evidence
 
 ## 9. Governance and validation
 

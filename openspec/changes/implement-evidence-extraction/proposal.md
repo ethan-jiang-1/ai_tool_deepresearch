@@ -52,10 +52,10 @@ cache 不可审计
 
 ## What Changes
 
-- **Cache trail 硬化为 Engine 可审计**：`complete()` 在 delegated task 完成时验证 `_cache/` 目录存在且含 3 文件（`websearch.json`/`page.md`/`meta.json`），将验证通过的路径写入 `cache_trails` 字段（保持 `z.array(z.string())` 格式不变——只存路径字符串，不改变 schema 结构）。Gate 新增 `cache_coverage` 规则：声明了 role=reference 的 declaration，其 `cache_trails` 中的每条路径在文件系统中必须存在且含 3 文件。**过渡策略**：首版 gate 对空 `cache_trails` 只 warn 不 fail（兼容现有 bundle 53 条 declaration 全空），等 prose 层更新后升为 fail。
+- **Cache trail 硬化为 Engine 可审计**：`complete()` 在 delegated task 完成时验证 `_cache/` 目录存在且含 3 文件（`websearch.json`/`page.md`/`meta.json`），将验证通过的路径写入 `cache_trails` 字段（保持 `z.array(z.string())` 格式不变——只存路径字符串，不改变 schema 结构）。Gate 新增 `cache_coverage` 规则：声明了 role=reference 的 declaration，其 `cache_trails` 中的每条路径在文件系统中必须存在且含 3 文件，并且每个 reference 必须能通过 `source_url` / `source_slug` / filename qualifier 映射到至少一个 cache leaf。**过渡策略**：首版 gate 对空 `cache_trails` 只 warn 不 fail（兼容现有 bundle 53 条 declaration 全空），但新 rerun `action:add` 成功路径必须非空且可映射；等 prose 层更新后升为 fail。
 - **Rerun action:add 的 cache 修复**：`phase-wave0.md`、`phase-wave1.md`、`phase-wave2.md` 的 Rerun-Aware Behavior 中明确要求新增 topic 必须走完整的 source intake（含 `_cache/` 写入），与首次运行一致。Phase rerun task card 模板含 cache 路径指令，`phase-rerun.md` 注明下游 phase 的 cache 要求。
-- **`isCountable(ref)` 和 `countReferences(baseDir)` 实现**：新 Engine helper `ref-count.mjs`。`isCountable` 返回 `{ countable: boolean, reason?: string }`（不返回裸 boolean，以便 audit 时了解为何不可计数）。使用 4 个最小条件（全部可从现有 metadata block + section 判定，不需要新字段）：(1) `acceptance_status: accepted`、(2) `## Core Content Capture` ≥ 100 chars、(3) `source_url` 是 article-level（复用 `isHomepageUrl()`）、(4) `## Key Facts` ≥ 5 bullets（复用 `checkReferenceKeyFactsMinLines()`）。文件不可解析时返回 `{ countable: false, reason: "unparseable" }`。Engine 扫描 `reference/` 目录（排除 `_INDEX.md`/`README.md`），只数 `isCountable` 返回 `countable: true` 的。
-- **`ref_count` 改为 Engine 计算**：`subagent-relay.mjs` 的 `mergeResults()` 不再累加 Agent 的 `evidenceCount`，改用 `countReferences()` 返回值。Gate 的 **glob-based** `count_floor` 规则同步切换——`shared_ref_count_floor`（wave0）和 `per_topic_ref_md_count_floor`（wave1）从 `readdirSync` + regex glob 改为调用 `countReferences()`。**YAML-array 规则不迁移**：`per_topic_count_floor`（wave0，计数 `source.yaml` 条目）保持 YAML 解析——`countReferences()` 只扫描 `reference/*.md`，不适用于 YAML 数组。
+- **`isCountable(ref)` 和 `countReferences(baseDir, options?)` 实现**：新 Engine helper `ref-count.mjs`。`isCountable` 返回 `{ countable: boolean, reason?: string }`（不返回裸 boolean，以便 audit 时了解为何不可计数）。使用 4 个最小条件（全部可从现有 metadata block + section 判定，不需要新字段）：(1) `acceptance_status: accepted`、(2) `## Core Content Capture` ≥ 100 chars、(3) `source_url` 是 article-level（复用 `isHomepageUrl()`）、(4) `## Key Facts` ≥ 5 bullets（复用 `checkReferenceKeyFactsMinLines()`）。文件不可解析时返回 `{ countable: false, reason: "unparseable" }`。默认计数只读取 Engine-written `rb_output_declarations.jsonl` 中 role=reference 的 declared paths；filesystem scan 只用于 observability diagnostics，不能让 orphan reference 帮 gate/fork pass。
+- **`ref_count` 改为 Engine 计算**：`subagent-relay.mjs` 的 `mergeResults()` 不再累加 Agent 的 `evidenceCount`，改用 committed SlotResult declarations / Engine ledger + `isCountable()` 计算。Gate 的 **glob-based** `count_floor` 规则同步切换——`shared_ref_count_floor`（wave0）和 `per_topic_ref_md_count_floor`（wave1）从 `readdirSync` + regex glob 改为调用 `countReferences(baseDir, { targetGlob, topic, source: "ledger" })`，保留 per-target/per-topic scope。**YAML-array 规则不迁移**：`per_topic_count_floor`（wave0，计数 `source.yaml` 条目）保持 YAML 解析——rich reference counting helper 不适用于 YAML 数组。
 
 **Non-Goals（明确不做）：**
 - 不实现 CandidateCard 系统或 promote 流程（cache→triage→enriched reference）
@@ -67,19 +67,21 @@ cache 不可审计
 ## Capabilities
 
 ### New Capabilities
-- `evidence-extraction`: Engine 驱动的证据提取审计——`isCountable(ref)` 计数条件、`countReferences(baseDir)` Engine 计算、`cache_trails` 文件系统验证、`ref_count` 从 Agent 声明切换为 Engine 计算。前缀 `EEX`。
+- `evidence-extraction`: Engine 驱动的证据提取审计——`isCountable(ref)` 计数条件、`countReferences(baseDir, options?)` Engine 计算、`cache_trails` 文件系统验证、reference-to-cache 映射、`ref_count` 从 Agent 声明切换为 Engine 计算。前缀 `EEX`。
 
 ### Modified Capabilities
 - `cache-raw-web-content`: SHALL 从 guidance-only 升级为 Engine-auditable——`complete()` 验证 cache 完整性并将验证结果写入 `cache_trails`（CRC-005），gate `cache_coverage` 规则交叉验证 declaration 的 `cache_trails` 与文件系统（CRC-006）。
 - `agent-output-declaration`: `cache_trails` 字段 MUST 由 Engine 在 `complete()` 中填充（当前 53 条 declaration 全为空），MUST NOT 由 Agent 声明（AGO-006）。
+- `agentic-queue`: delegated `complete()` 的 cache leaf missing/incomplete 行为在 Phase 1 从 hard reject 调整为 filter + warning；unsafe / non-leaf 仍 hard reject（AGQ-018）。
+- `agent-testing`: evidence extraction controlled experiment suite 使用 case-161..163，并要求 heavy real-agent canary 记录 extraction quality metrics；NOT RUN 不能作为质量证明（AGT-009）。
 - `research-wave-phase-content`: rerun-aware behavior 中 SHALL 要求 `action: add` topic 走完整 source intake——Phase Agent MUST spawn 前创建 cache 目录，Sub-agent MUST 写入 3 文件，与首次运行一致（RWP-014）。
 - `rerun-topic-integration`: `action: add` 路径 MUST 包含 cache trail——rerun 新增 topic 的 reference 文件必须可追溯到原始 websearch/page/meta，`cache_coverage` gate 对 rerun 路径与首次运行一视同仁（RTI-006）。
 
 ## Impact
 
-- **Engine**: `queue-manager.mjs` — `validateDelegatedCompletion()` 扩展 cache trail 验证（路径+bundle内+3文件）；`complete()` 填充 `cache_trails`。新 helper `ref-count.mjs` — `isCountable()`/`countReferences()`。`subagent-relay.mjs` — `mergeResults()` 改用 `countReferences()`，fork router 消费 Engine 计算值。
-- **Gate**: `gate-wave0-complete.definition.json` / `gate-wave1-complete.definition.json` 新增 `cache_coverage` 规则（check type: `cache_coverage`）。CLI `check-gate-wave0-complete.mjs` / `check-gate-wave1-complete.mjs` 实现该 check。
+- **Engine**: `queue-manager.mjs` — `validateDelegatedCompletion()` 扩展 cache trail 验证（路径+bundle内+3文件）；`complete()` 填充 `cache_trails`。新 helper `ref-count.mjs` — `isCountable()`/`countReferences(baseDir, options?)`。`subagent-relay.mjs` — `mergeResults()` 改用 committed declarations / Engine ledger count，fork router 消费 Engine 计算值。
+- **Gate**: `gate-wave0-complete.definition.json` / `gate-wave1-complete.definition.json` 新增 `cache_coverage` 规则（check type: `cache_coverage`）。CLI `check-gate-wave0-complete.mjs` / `check-gate-wave1-complete.mjs` 实现该 check，并保证 per-topic `count_floor` scope 不被全局 reference count 满足。
 - **Phase MD**: `phase-wave0.md`、`phase-wave1.md`、`phase-wave2.md` Rerun-Aware Behavior 补充 cache 要求。`phase-rerun.md` 注明下游 phase 的 cache 约定。
-- **File observability**: `file-observability.mjs` 扩展 cache gap 检测——对每个 reference 文件检查对应 `_cache/` trail 是否存在，缺失的报告为 `cache_gap` finding。
+- **File observability**: `file-observability.mjs` 扩展 cache gap 检测——对每个 reference 文件检查对应 `_cache/` trail 是否存在且能映射，缺失的报告为 `cache_gap` finding。
 - **Schema**: `OutputDeclarationLedgerRecord.cache_trails` 保持 `z.array(z.string())` 格式不变——只存路径字符串。验证结果（路径存在+3文件完整）由 gate `cache_coverage` 规则在门控时动态判定，不写入 schema 字段。零 migration，不 breaking 现有 bundle。
-- **Tests**: 新 `tests/engine/helpers/ref-count.test.mjs`（isCountable/countReferences）、扩展 `tests/engine/queue-manager.test.mjs`（cache trail validation）、扩展 wave0/wave1 gate 集成测试（cache_coverage）、新 playbook `experiments_playbook/exp_evidence-extraction/`。
+- **Tests**: 新 `tests/engine/helpers/ref-count.test.mjs`（isCountable/countReferences）、扩展 `tests/engine/queue-manager.test.mjs`（cache trail validation）、扩展 wave0/wave1 gate 集成测试（cache_coverage、scope-preserving count_floor、orphan cannot help pass）、新 playbook `experiments_playbook/exp_evidence-extraction/`。

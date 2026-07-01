@@ -1,6 +1,27 @@
 # cache-raw-web-content Delta Spec
 
-> req: CRC-005, CRC-006
+> req: CRC-004, CRC-005, CRC-006
+
+## MODIFIED Requirements
+
+### Requirement: Cache is non-authority and deletable
+
+`_cache/` remains non-authority: Gate SHALL NOT judge source quality from raw cache contents, and accepted verdict truth remains in Engine checks, ledger, receipts, and trace. However, once `cache_coverage` is enabled for wave0/wave1, cache leaves referenced by `rb_output_declarations.jsonl.cache_trails` become required provenance evidence until the relevant gate/reentry checks have completed and their verdict evidence has been recorded.
+
+Phase Agent MAY delete `_cache/{wave}/` only after the gate/reentry verdicts that depend on `cache_coverage` have already completed and recorded their trace/gate-attempt evidence. Deleting cache leaves before those checks SHALL cause `cache_coverage` to fail or report a blocking gap for any non-empty ledger trail that no longer exists.
+
+This modifies the previous deletability rule only for cache leaves that are actively referenced by Engine-written declarations. Unreferenced intermediate cache files remain non-authority and may be cleaned up according to existing bundle hygiene rules.
+
+#### Scenario: Referenced cache leaf is retained until cache_coverage runs
+- **WHEN** `rb_output_declarations.jsonl` contains `cache_trails: ["_cache/wave1/primary/topic-a/s01_source/"]`
+- **AND** wave1 `cache_coverage` has not yet recorded a verdict
+- **THEN** Phase Agent SHALL NOT delete that cache leaf
+- **AND** if it is deleted, `cache_coverage` SHALL fail or report a blocking gap for that trail
+
+#### Scenario: Cache may be cleaned after provenance verdict is recorded
+- **WHEN** wave1 `cache_coverage` has passed and its gate attempt / trace evidence has been recorded
+- **THEN** Phase Agent MAY clean `_cache/wave1/` to free space
+- **AND** the historical gate verdict SHALL remain valid because the verdict evidence, ledger, and trace were recorded before cleanup
 
 ## ADDED Requirements
 
@@ -38,8 +59,13 @@ Engine SHALL hard-fail structurally unsafe candidate trails（absolute path、bu
 
 Gate wave0-complete 和 wave1-complete 的 `cache_coverage` 规则 SHALL 读取 `rb_output_declarations.jsonl`，检查每条 role 为 `reference` 的 declaration。
 
+For each declared role=`reference` output, `cache_coverage` SHALL verify both:
+
+1. every non-empty declared cache trail path still exists and contains `websearch.json` / `page.md` / `meta.json`
+2. the reference has at least one plausible cache leaf mapping by `meta.json.url == output_files[].source_url` and/or by matching the cache leaf slug to `output_files[].source_slug` / reference filename qualifier
+
 **Phase 1（过渡期——首版实现）：**
-1. 如果 `cache_trails` 非空 → 验证每个 trail 路径在文件系统中存在且含 3 文件。缺失 → fail。
+1. 如果 `cache_trails` 非空 → 验证每个 trail 路径在文件系统中存在且含 3 文件，并验证每个 role=`reference` output 至少映射到一个 trail。缺失或无法映射 → fail / blocking gap。
 2. 如果 `cache_trails` 为空 → emit warning（不 fail）。该兼容只用于旧 bundle / 旧 declaration 的过渡缺口；新 rerun `action:add` 正常路径仍 SHALL 产生非空 verified cache trails。
 
 **Phase 2（prose 层更新后——后续 change）：**
@@ -61,4 +87,11 @@ Gate wave0-complete 和 wave1-complete 的 `cache_coverage` 规则 SHALL 读取 
 #### Scenario: All cache trails verified passes gate
 - **WHEN** declaration 的 `cache_trails` 含 3 条路径
 - **AND** 文件系统中每条路径都存在且含 3 文件
+- **AND** each role=`reference` output maps to at least one trail by `source_url` or `source_slug`
 - **THEN** `cache_coverage` 规则 SHALL pass
+
+#### Scenario: Non-empty cache trails without reference mapping fails gate
+- **WHEN** declaration 的 role=`reference` output has `source_url: "https://example.com/a"`
+- **AND** `cache_trails` 非空且每条路径都存在并含 3 文件
+- **AND** none of the trail `meta.json.url` values or slugs match that reference
+- **THEN** `cache_coverage` 规则 SHALL fail or report a blocking cache mapping gap

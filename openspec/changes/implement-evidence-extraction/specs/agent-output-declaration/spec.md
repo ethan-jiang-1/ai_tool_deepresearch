@@ -45,7 +45,7 @@ Delegated `complete()` SHALL NOT hard-fail solely because a candidate leaf direc
 
 Ledger append SHALL still require delegated task provenance, runtime receipt, and declared output file checks to pass. Incomplete candidate cache leaves SHALL be omitted from ledger `cache_trails` with warning during Phase 1; path escape, non-`_cache/`, or non-leaf trail declarations remain hard failures.
 
-Downstream gates SHALL treat `rb_output_declarations.jsonl` as the authoritative index of Agent-produced outputs. `cache_coverage` SHALL dynamically re-check that ledger cache trail paths still exist and contain the required three files.
+Downstream gates SHALL treat `rb_output_declarations.jsonl` as the authoritative index of Agent-produced outputs. `cache_coverage` SHALL dynamically re-check that ledger cache trail paths still exist, contain the required three files, and map each role=`reference` output to at least one plausible cache leaf by `source_url`, `source_slug`, or reference filename qualifier.
 
 #### Scenario: Engine writes verified path strings to ledger
 - **WHEN** Sub-agent 在 slot result 中声明 cache_trails 含 3 条路径
