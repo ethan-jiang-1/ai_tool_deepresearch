@@ -1,8 +1,9 @@
-# Fixed Bugs Index
+# Fixed Bugs Index — 已修复 bug 归档
 
-已修复 bug，按编号顺序排列。bug 修完后从 [`../../bugs/`](../../bugs/) 移入本目录。
-
-**本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
+> 最后更新: 2026-07-02 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
+>
+> **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
 
 ## 接收一个修完的 bug
 

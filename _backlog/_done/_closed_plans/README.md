@@ -1,20 +1,26 @@
-# Closed Plans Index
+# Closed Plans Index — 已完成 plan 归档
 
-已完成的 plan/分析文档。plan 完成后从 [`../../plans/`](../../plans/) 移入本目录。
-
-**plan 没有编号——文件名本身就是标识。文件名不变，位置即状态。**
+> 最后更新: 2026-07-02 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
+>
+> **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
 
 ## 接收一个完成的 plan
 
 plan 完成后从 `_backlog/plans/` 通过 `git mv` 移入本目录：
-1. 在本文件加一行（文件名 + 简述）
-2. 更新 `../../plans/README.md`（删掉该 plan）
-3. 更新 `../README.md`（计数 +1）
+1. 在本文件表格加一行（CLS-NNN + 日期 + 文件名 + 简述），编号 = 当前最大 + 1
+2. 更新最后的 "Next available plan ID" 行
+3. 更新 `../../plans/README.md`（移除该 plan 的行）
+4. 更新 `../README.md`（计数 +1）
 
 ---
 
 ## 已完成列表
 
-- experiment-production-convergence.md — Agent 产出声明原则：declaration-ledger + file-observability（harden-rerun-topic-integration 已实现）
-- trace-unification-assessment.md — 统一 trace：四份合并为 rb_trace.jsonl（已实现：QUEUE.TRACE、subagent-relay、inspect-bundle 均已迁入）
-- ref-integrity-experiment-family.md — Reference 完整性实验家族设计（Engine 层防御全部落地：content_dedup、declaration ledger、cache trail 验证、file-observability；实验 playbook 未创建，controller 字段采用 relay 方案替代）
+| ID | Date | File | Summary |
+|----|------|------|---------|
+| CLS-001 | 2026-06-28 | experiment-production-convergence.md | Agent 产出声明原则：declaration-ledger + file-observability |
+| CLS-002 | 2026-06-28 | trace-unification-assessment.md | 统一 trace：四份合并为 rb_trace.jsonl |
+| CLS-003 | 2026-06-28 | ref-integrity-experiment-family.md | Reference 完整性实验家族设计（Engine 防御全落地） |
+
+**Next available plan ID: CLS-004**

@@ -34,8 +34,8 @@ _backlog/
 | 类型 | 活跃（当前工作） | 归档（已完成） | 编号方式 |
 |------|-----------------|---------------|---------|
 | 🐛 **Bug** | [`bugs/`](bugs/) — 活跃 bug 列表 | [`_done/_fixed_bugs/`](_done/_fixed_bugs/) — 已修复（13 个，BUG-001~013） | BUG-NNN 递增，权威在 `_fixed_bugs/` |
-| 📋 **Todo** | [`todos/`](todos/) — 活跃 todo + PENDING 表 + 依赖链 + 执行顺序 | [`_done/_done_todos/`](_done/_done_todos/) — 已完成（14 个） | 无编号，文件名即标识 |
-| 📐 **Plan** | [`plans/`](plans/) — 活跃 plan 列表 | [`_done/_closed_plans/`](_done/_closed_plans/) — 已完成（3 个） | 无编号，文件名即标识 |
+| 📋 **Todo** | [`todos/`](todos/) — 活跃 todo + PENDING 表 + 依赖链 + 执行顺序 | [`_done/_done_todos/`](_done/_done_todos/) — 已完成（14 个，DONE-001~014） | DONE-NNN 递增，移入时分配 |
+| 📐 **Plan** | [`plans/`](plans/) — 活跃 plan 列表 | [`_done/_closed_plans/`](_done/_closed_plans/) — 已完成（3 个，CLS-001~003） | CLS-NNN 递增，移入时分配 |
 
 > 📖 **想看全局状态、历史决策、查阅指南** → [`_done/README.md`](_done/README.md)
 >
@@ -68,15 +68,34 @@ git mv plans/<name>.md _done/_closed_plans/<name>.md
 
 ### 搬完更新
 
-| 源 README | 目标 README | 汇总 README |
-|-----------|------------|-----------|
-| `bugs/README.md`（删掉） | `_done/_fixed_bugs/README.md`（加行 + 更新 Next ID） | `_done/README.md`（计数 +1） |
-| `todos/README.md`（删掉） | `_done/_done_todos/README.md`（加行） | `_done/README.md`（计数 +1） |
-| `plans/README.md`（删掉） | `_done/_closed_plans/README.md`（加行） | `_done/README.md`（计数 +1） |
+> ⚠️ **README 文件本身永不删除。** "移除"指的是从活跃列表中移除该条目的行，不是删文件。每个 README 永远留在目录里做索引。**文件内容原样保留，`git mv` 搬迁。**
+
+**🐛 Bug 修完：**
+| 操作 | 怎么改 |
+|------|--------|
+| `bugs/README.md` | 从活跃列表移除该 bug 的行 |
+| `_done/_fixed_bugs/README.md` | 表格加一行 + 更新 Next available bug ID |
+| `_done/README.md` | 已修复 bug 计数 +1 |
+
+**📋 Todo 做完：**
+| 操作 | 怎么改 |
+|------|--------|
+| `todos/README.md` | 从活跃列表移除该 todo 的行 |
+| `_done/_done_todos/README.md` | 表格加一行 + 更新 Next available DONE ID |
+| `_done/README.md` | DONE 计数 +1 |
+
+**📐 Plan 完成：**
+| 操作 | 怎么改 |
+|------|--------|
+| `plans/README.md` | 从活跃列表移除该 plan 的行 |
+| `_done/_closed_plans/README.md` | 表格加一行 + 更新 Next available plan ID |
+| `_done/README.md` | 已关闭 plan 计数 +1 |
 
 ---
 
 ## 相关外部文件
+
+> 以下路径相对于 **repo 根目录**（`/Users/bowhead/ai_tool_deepresearch/`），不是 `_backlog/` 目录。
 
 | 路径 | 角色 |
 |------|------|
