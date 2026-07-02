@@ -76,38 +76,37 @@ The Agent SHALL NOT delete existing artifacts or references. Downstream phases (
 - **WHEN** Agent executes phase-rerun
 - **THEN** existing `reference/` and `artifacts/` SHALL NOT be deleted
 
-### Requirement: Gate-rerun-ready checks rerun state legality
+### Requirement: Rerun-ready gate validates legal rerun state
 
-A deterministic gate `rerun-ready` SHALL validate that the bundle is in a legal state for incremental rerun. The gate SHALL include at minimum:
+`phase-rerun.md` remains `stop: "no"` and the `rerun-ready` gate remains the deterministic checkpoint for legal rerun state. Gate failure SHALL NOT create a failed chain transition or allow the Agent to load another phase without `check.next`.
 
-- `rerun_rationale_present`: `hitl2.rationale` is non-empty
-- `rerun_count_valid`: `rerun_count < max_reruns` (default max: 3)
-- `bundle_structure_valid`: required directories exist for seed-topics/wave0
-- `status_consistent`: `rb_status.json` reflects rerun phase
+Rerun preparation is not a reporting checkpoint. If rerun analysis or materialization appears locally complete, the Agent SHALL run the `rerun-ready` gate, repair from inspect/advice, or record a legal silent holding event. It SHALL NOT report "rerun prep is done so far," wait for confirmation, or route forward without `check.next`.
 
-`stop` SHALL be `"no"` — the rerun node does not wait for user input.
+For fixable rerun preparation failures, such as missing derived seed topic materialization when the HITL2 rerun decision is otherwise valid, the phase body SHALL instruct the Agent to repair or take a silent degradation path without asking the user. In the specific case where `seed_topics/` is empty, the default silent degradation path SHALL be a full rerun seed regeneration, with the decision recorded through an accepted trace/log surface.
 
-#### Scenario: Gate passes with valid rerun state
+Hard non-repairable legality failures, such as exhausted `rerun_count >= max_reruns` or missing HITL2 rerun rationale, remain gate failures. Because no failed chain edge exists, the Agent SHALL NOT route to another phase. The Agent SHALL record `silent_unpassable` through an accepted trace/log surface, keep the run in the current non-blocked/in-progress holding state, and SHALL NOT ask the user mid-rerun.
 
-- **WHEN** rationale is non-empty, rerun_count is 2 (< 3), bundle structure is intact, status is consistent
-- **THEN** gate SHALL return `check.passed: true`
+#### Scenario: Empty seed topics defaults to full rerun silently
 
-#### Scenario: Gate fails when rationale is empty
+- **WHEN** the rerun phase finds `seed_topics/` empty while preparing rerun inputs
+- **THEN** the Agent SHALL default to full rerun seed regeneration
+- **AND** the Agent SHALL record `silent_degradation` through an accepted trace/log surface
+- **AND** the Agent SHALL NOT ask the user to confirm full rerun
 
-- **WHEN** `hitl2.rationale` is empty or absent
-- **THEN** gate SHALL return `check.passed: false` with inspect pointing to `rerun_rationale_present`
+#### Scenario: Non-repairable rerun legality failure does not route forward
 
-#### Scenario: Gate fails when rerun_count exceeds max
+- **WHEN** the `rerun-ready` gate fails because `rerun_count >= max_reruns` or HITL2 rerun rationale is absent
+- **THEN** `resolveNodeTransitionDetailed` SHALL return `kind: "no_transition"`
+- **AND** the Agent SHALL NOT load another phase without `check.next`
+- **AND** the Agent SHALL NOT ask the user from inside the `stop: "no"` rerun phase
+- **AND** the Agent SHALL record `silent_unpassable` with the gate failure reason through an accepted trace/log surface
 
-- **WHEN** `rerun_count >= 3`
-- **THEN** gate SHALL return `check.passed: false` with inspect pointing to `rerun_count_valid`
+#### Scenario: Rerun local completion does not become progress reporting
 
-#### Scenario: Gate fail is terminal — no chain edge, Agent stops
-
-- **WHEN** rerun-ready gate returns `check.passed: false`
-- **THEN** `resolveNodeTransitionDetailed` SHALL return `kind: 'no_transition'` (no `failed` chain edge exists)
-- **AND** Agent SHALL stop execution, inform user of the reason, and suggest starting a new Deep Research or accepting current results
-- **AND** Agent SHALL NOT attempt repair or route to another node — rerun-ready failure is non-repairable
+- **WHEN** rerun preparation has no obvious local work remaining
+- **THEN** the Agent SHALL run the `rerun-ready` gate or follow gate fail repair guidance
+- **AND** the Agent SHALL NOT surface a progress summary or idle report
+- **AND** the Agent SHALL NOT load `seed-topics` without gate CLI `check.next`
 
 ### Requirement: Chain routes HITL2 rerun as a deterministic outcome
 
@@ -121,12 +120,11 @@ See the `transition-table` spec chain rerun-exit requirement for the concrete ch
 
 ### Requirement: Rerun loop protection with max iterations
 
-The rerun path SHALL enforce a maximum of 3 rerun cycles via the `rerun_count_valid` gate rule (`rerun_count < 3`). When the limit is reached, the rerun-ready gate SHALL fail, blocking the rerun path. The user SHALL then choose a different HITL2 decision (e.g., `stop_blocked` or `proceed_to_readiness`).
+Rerun loop protection remains mandatory. The change from user-facing stop to silent degradation SHALL NOT weaken `rerun_count < max_reruns`. When the max rerun count is exhausted, the Agent SHALL treat the current rerun path as unpassable rather than bypassing the gate, resetting the counter, or inventing a new route.
 
-Stall detection is explicitly NOT implemented — the rerun cycle spans multiple async phases across Agent turns, making reliable cross-turn state comparison infeasible in the Agent layer. The hard iteration cap is sufficient protection.
+#### Scenario: Max reruns exhausted remains unpassable
 
-#### Scenario: Rerun count exhausted blocks rerun path
-
-- **WHEN** `rerun_count` reaches 3 and rerun-ready gate is executed
-- **THEN** gate SHALL return `check.passed: false` with inspect pointing to `rerun_count_valid`
-- **AND** the rerun path SHALL be blocked; the user must choose a different decision at HITL2
+- **WHEN** `rerun_count >= max_reruns`
+- **THEN** the rerun-ready gate SHALL fail
+- **AND** the Agent SHALL NOT reset `rerun_count`
+- **AND** the Agent SHALL NOT bypass the gate through Markdown prose

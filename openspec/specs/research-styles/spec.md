@@ -75,59 +75,54 @@ The `count_floor` rule type in gate definition JSONs SHALL support an optional `
 
 ### Requirement: Phase MD references style-specific targets and uses unified Queue re-fill loop
 
-Phase MD files for wave0, wave1, and wave2 SHALL instruct the Agent to read `rb_profile.yaml#/research_style_params` to determine phase-specific targets. All three waves SHALL use the same execution model: **fill Q → drain Q → check → (gap?) → re-fill Q → drain → re-check → ... → gate pass**. The check mechanism differs by phase (gate `count_floor` for wave0/1, Agent Quality Self-Check for wave2), but the re-fill loop is identical.
+The existing wave0/wave1/wave2 re-fill loop SHALL remain the execution model: fill Q, drain Q, check, identify gaps, re-fill Q, drain, re-check, and repeat until the relevant checkpoint passes or a legal degradation path is recorded.
 
-The wave1 phase MD SHALL include a Stop Conditions checklist. The wave2 phase MD SHALL include a Quality Self-Check covering all wave2 parameters.
+For wave phases, active queue, thin queue, count-floor gap, placeholder-only output, exhausted search documentation, and Quality Self-Check gap are all work signals. They SHALL drive enqueue/claim/complete, supplementary task creation, strategy change, self-check, or gate rerun. They SHALL NOT be interpreted as permission to surface a stage summary, "nothing left" message, or "done so far" progress report.
 
-#### Scenario: wave0 Agent reads per-topic and shared floor, triggers re-fill on gate fail
-- **WHEN** Agent enters phase-wave0
-- **THEN** it SHALL read `research_style_params.wave0_per_topic_source_floor` (per-topic `source.yaml` entries) and the gate CLI SHALL resolve `wave0_shared_ref_total` from the same profile section (global `00-shared-*.md` files, computed by `apply-research-style.mjs` from `wave0_shared_ref.base + per_topic × topic_count`)
-- **WHEN** gate fails with `per_topic_count_floor` or `shared_ref_count_floor`
-- **THEN** Phase Agent SHALL enter the Count-Floor Re-Fill Loop (§3.3.1 of phase-wave0.md): parse gate inspect → create supplementary task cards (`wave0-suppl-{topic.slug}-r{N}`) → enqueue → drain → rerun gate (max 3 attempts + no-progress escalation)
-- **AND** supplementary tasks SHALL append to `source.yaml` without modifying existing entries, and SHALL NOT re-backfill seed topic tokens
+The wave0/wave1/wave2 Stop Behavior wording MAY remain node-specific, because each wave optimizes a different quality target. The common invariant is that quality work continues inside the node until the gate/checkpoint passes or a legal silent holding path is reached.
 
-#### Scenario: wave1 Agent reads per-topic floor and stop conditions, triggers re-fill on gate fail
-- **WHEN** Agent enters phase-wave1
-- **THEN** it SHALL read `research_style_params.wave1_per_topic_ref_floor` and `topic_unique_ratio`, and apply the Stop Conditions checklist (7 items, including `counterexample_search` and `cross_verification` which vary by style)
-- **WHEN** gate fails with `per_topic_ref_md_count_floor`
-- **THEN** Phase Agent SHALL enter the Count-Floor Re-Fill Loop (§3.3.2 of phase-wave1.md): parse gate inspect → create supplementary task cards (`wave1-suppl-{topic.slug}-r{N}`, produce only `reference/*.md` files) → enqueue → drain → rerun gate (max 3 attempts + no-progress escalation)
-- **AND** supplementary tasks SHALL NOT modify evidence-summary.md, question-list.md, or backfill seed topic tokens
+For `stop: "no"` wave phases, no-progress after repeated re-fill attempts SHALL NOT escalate to a user-facing stop, write `rb_status.json` state `blocked`, or ask the user for a decision. Instead, the phase body SHALL instruct the Phase Agent to take a silent degradation path: document the failed search/refill attempts, record `silent_degradation` or `silent_gap` through an accepted trace/log surface, change strategy where possible, and continue only within the boundary accepted by the current gate/checkpoint.
 
-#### Scenario: wave2 Agent executes Quality Self-Check, triggers re-fill on quality gap
-- **WHEN** Agent enters wave2
-- **THEN** it SHALL read all 5 wave2 parameters from `research_style_params` and execute a Quality Self-Check (§3.3.1 of phase-wave2.md) before running gate:
-  1. `p0p1_independent_backing` — each P0/P1 finding's `backing_refs` count ≥ threshold
-  2. `quality_min_tier` — each backing source's tier ≥ threshold
-  3. `quality_min_substance` — each backing source's substance ≥ threshold
-  4. `wave2_cross_topic_depth` — each topic connected to ≥ N other topics in scan matrix (0=skip)
-  5. `wave2_emergent_search_rounds` — each topic has ≥ N emergent search rounds, each from different angle (0=skip)
-- **WHEN** any of the 5 checks fails
-- **THEN** Phase Agent SHALL enter the Quality Re-Fill Loop (§3.3.2 of phase-wave2.md): create supplementary task cards targeting the specific gap type (backing → `wave2-suppl-backing-{finding_id}`, cross-topic → `wave2-suppl-cross-{topic}`, emergent → `wave2-suppl-emergent-{topic}-r{N}`) → enqueue → drain → re-run Quality Self-Check (max 3 attempts + no-progress escalation)
+Silent degradation SHALL NOT authorize phase transition. If the gate/checkpoint does not accept the degraded artifact state, the Phase Agent SHALL remain in the current phase and continue repair or change strategy. If the gate/checkpoint is structurally unpassable after legal strategies are exhausted, the Phase Agent SHALL record `silent_unpassable` through an accepted trace/log surface and enter the silent holding behavior defined by `silent-wave-execution`. The Phase Agent SHALL NOT load the next phase without gate CLI `check.next`.
 
-**Enforcement boundary (this change):** Gate enforcement applies to 3 numeric parameters (`wave0_per_topic_source_floor`, `wave0_shared_ref_total`, `wave1_per_topic_ref_floor`) via `count_floor` rules with `threshold_source`, plus 1 content rule (`no_example_com_ref_url` / `no_example_com_shared_ref_url`) via `pattern_match` with glob target. All other parameters are enforced by Agent checklist + Queue re-fill loop — Agent discipline backed by structured MD instructions and Q as the autonomous execution engine. Upgrading quality parameters to Gate rules is deferred to `todo-evidence-quality` and `todo-explore-exploit`.
+#### Scenario: wave0 no-progress re-fill degrades silently
+
+- **WHEN** wave0 count-floor re-fill has made no progress after the retry limit
+- **THEN** the Phase Agent SHALL record `silent_degradation` or `silent_gap` through an accepted trace/log surface
+- **AND** the Phase Agent SHALL NOT ask the user, report and stop, or write `rb_status.json` state `blocked`
+- **AND** the Phase Agent SHALL NOT load wave1 unless the wave0 gate returns `check.next`
+
+#### Scenario: wave1 no-progress re-fill degrades silently
+
+- **WHEN** wave1 count-floor re-fill has made no progress after the retry limit
+- **THEN** the Phase Agent SHALL record the exhausted search angles and degradation decision through an accepted trace/log surface
+- **AND** the Phase Agent SHALL NOT ask the user for a decision
+- **AND** the Phase Agent SHALL NOT load wave2 unless the wave1 gate returns `check.next`
+
+#### Scenario: wave2 quality re-fill degrades silently
+
+- **WHEN** wave2 Quality Self-Check still identifies a gap after repeated re-fill attempts
+- **THEN** the Phase Agent SHALL record `silent_degradation` or `silent_gap` with gap impact
+- **AND** the Phase Agent SHALL NOT surface to the user mid-phase
+- **AND** the Phase Agent SHALL NOT treat degradation as a gate pass
+
+#### Scenario: wave phase active work does not become idle reporting
+
+- **WHEN** a wave phase has active queue items, thin queue state, count-floor gap, or Quality Self-Check gap
+- **THEN** the Phase Agent SHALL continue the queue/refill/self-check loop using node-specific instructions
+- **AND** the Phase Agent SHALL NOT produce a stage progress report or idle summary
+- **AND** the Phase Agent SHALL NOT advance without the current gate/checkpoint returning `check.next`
 
 ### Requirement: Supplementary tasks SHALL NOT produce placeholder references
 
-Supplementary task cards created by Count-Floor Re-Fill Loops (wave0 §3.3.1, wave1 §3.3.2) SHALL enforce a three-layer defense against placeholder reference files with fake source URLs (e.g. `https://example.com`). The defense SHALL cover: (1) task card instruction ban, (2) Gate CLI deterministic rejection, and (3) Phase Agent post-drain verification.
+When supplementary task execution produces only placeholder references or documented failure reports, the Phase Agent SHALL treat that round as no-progress and enter the silent degradation path defined in the Queue re-fill loop requirement. It SHALL delete placeholder references as before, preserve honest failure documentation, and SHALL NOT escalate to a user-facing stop from a `stop: "no"` wave phase.
 
-#### Scenario: Supplementary task card prohibits placeholder source URLs
-- **WHEN** Phase Agent creates a supplementary task card for count-floor re-fill
-- **THEN** the task card `action` SHALL explicitly forbid creating reference files with `source_url` set to `https://example.com` or any equivalent placeholder domain
-- **AND** the `action` SHALL require each new reference file's Key Facts section to contain at least 3 specific, verifiable factual statements (not generic filler)
-- **AND** the `action` SHALL instruct: if no legitimate new source can be found after thorough search (≥3 different search angles), write `artifacts/wave{N}/{topic_slug}/suppl-failure-r{attempt}.md` documenting search keywords, angles attempted, and reasons for failure — rather than creating a placeholder reference file
+#### Scenario: Placeholder-only supplementary round enters silent degradation
 
-#### Scenario: Gate CLI rejects reference files with placeholder URLs
-- **WHEN** gate-wave1-complete evaluates `no_example_com_ref_url` rule with `pattern_match` against `reference/{topic}-*.md` using glob expansion
-- **AND** any matching file contains `source_url: "https://example.com"` (or `http://example.com`, `https://www.example.com`)
-- **THEN** the rule SHALL fail with a clear message identifying the offending file
-- **AND** wave0-complete SHALL enforce the same via `no_example_com_shared_ref_url` rule against `reference/00-shared-*.md`
-
-#### Scenario: Phase Agent detects placeholder-only supplementary round
-- **WHEN** Phase Agent drains supplementary task cards and inspects newly created reference files before rerunning gate
-- **AND** all new reference files from this round have `source_url` set to placeholder domains (example.com, placeholder.com, fake-url.com)
-- **THEN** Phase Agent SHALL treat this as no-progress — immediate escalation without waiting for 3 attempts
-- **AND** the placeholder reference files SHALL be deleted (`rm reference/{topic.slug}-ref-*.md` matching placeholder source_url)
-- **AND** if a Sub-agent wrote `suppl-failure-r{attempt}.md`, this SHALL also trigger immediate escalation with the failure report content included in the escalation record
+- **WHEN** Phase Agent drains supplementary task cards and all new reference files from this round have placeholder source URLs
+- **THEN** placeholder reference files SHALL be deleted
+- **AND** honest `suppl-failure-r{attempt}.md` documentation SHALL be preserved where present
+- **AND** the Phase Agent SHALL record silent degradation instead of escalating to the user
 
 ### Requirement: Debug style is hidden from end users
 

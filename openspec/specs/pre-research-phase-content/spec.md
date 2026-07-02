@@ -132,39 +132,42 @@ checklist SHALL 至少包含：
 
 ### Requirement: Instantiation scope boundary enforcement
 
-`phase-instantiation.md` SHALL 显式声明 instantiation 的允许和禁止边界。
+`phase-instantiation.md` SHALL remain limited to naming, invoking the instantiation CLI, and checking the instantiated bundle surface. This requirement narrows how `stop: "no"` instantiation handles name problems: it SHALL resolve ordinary naming problems silently instead of asking the user.
 
-允许：
-- 定名并调用实例化 CLI
-- 检查 CLI 返回的 bundle surface
-- 在 gate fail 时修复缺失的 instantiation surface
+Instantiation completion SHALL mean the instantiated bundle surface has been reloaded, the instantiation gate has passed, and the Agent follows gate CLI `check.next`. Creating the directory or control files is not a user-facing checkpoint. The phase body SHALL NOT allow progress reports such as "bundle created" or idle reports such as "nothing left to do" before the gate pass.
 
-禁止：
-- 问 HITL 问题
-- 搜索 / 阅读 / 产出 evidence
-- 做 synthesis judgment
-- 在 bundle 名冲突时自动追加 `-2` / `-3`
+For production bundle name collision, the phase body SHALL instruct the Agent to derive a replacement basename by appending a short deterministic-safe suffix such as `-<hex6>`, record the substitution through an accepted trace/log surface, and continue instantiation without asking the user.
 
-#### Scenario: Name collision remains fail-stop
+For illegal user-provided basename characters, the phase body SHALL instruct the Agent to normalize the basename into the accepted pattern (for example replacing illegal characters with `-`), record the normalization through an accepted trace/log surface, and continue instantiation without asking the user.
 
-- **WHEN** 目标 production bundle 名已存在
-- **THEN** body SHALL 指示 Agent 报错停止并请求新名称
-- **AND** body SHALL NOT 指示 Agent 自动改名覆盖
+This does not allow unsafe repair of an already-created illegal bundle. The Agent SHALL NOT rename an existing runtime directory, patch `rb_plan.md` / `rb_profile.yaml` to retroactively bless an illegal basename, or treat an invalid existing bundle as valid.
 
-### Requirement: Invalid bundle name remains fail-stop
+#### Scenario: Name collision uses silent replacement name
 
-如果目标 bundle basename 不满足当前 accepted naming pattern，`phase-instantiation.md` SHALL 指示 Agent 停止并重新选择合法名称，然后重新走 approved instantiation path。
+- **WHEN** the desired production bundle basename already exists
+- **THEN** `phase-instantiation.md` SHALL instruct the Agent to generate a replacement basename with a short suffix
+- **AND** the Agent SHALL record the substitution through an accepted trace/log surface
+- **AND** the Agent SHALL NOT stop to ask the user for a new name
 
-Agent SHALL NOT：
-- rename 已创建目录来规避命名错误
-- 修改 `rb_plan.md` / `rb_profile.yaml` 的 `plan_basename` 来追认非法目录名
-- 把非法命名 bundle 当作可 repair 的现成 runtime surface
+#### Scenario: Illegal name is normalized before instantiation
 
-#### Scenario: Invalid name requires fresh instantiation
+- **WHEN** the requested bundle basename contains illegal characters
+- **THEN** `phase-instantiation.md` SHALL instruct the Agent to normalize the basename before creating the bundle
+- **AND** the Agent SHALL record the normalization through an accepted trace/log surface
+- **AND** the Agent SHALL NOT stop to ask the user for a replacement name
 
-- **WHEN** Agent 发现当前 bundle basename 不满足 accepted pattern
-- **THEN** body SHALL 指示 Agent stop 并重新 instantiate 正确命名的 bundle
-- **AND** body SHALL NOT 指示 Agent 通过目录 rename 或跨文件补丁修复
+#### Scenario: Existing illegal bundle is not retroactively repaired
+
+- **WHEN** Agent discovers an already-created bundle basename that violates the accepted pattern
+- **THEN** the Agent SHALL NOT rename the existing directory or patch control files to make it look valid
+- **AND** any recovery SHALL use a fresh legal instantiation path
+
+#### Scenario: Instantiation does not surface after local creation
+
+- **WHEN** the instantiation CLI creates a bundle directory and control files
+- **THEN** the Agent SHALL reload/check the instantiated surface and run the instantiation gate
+- **AND** the Agent SHALL NOT report progress or idle state to the user before gate pass
+- **AND** the Agent SHALL advance only via gate CLI `check.next`
 
 ### Requirement: HITL1 stop semantics enforcement
 
@@ -177,13 +180,24 @@ Agent SHALL NOT：
 
 ### Requirement: Setup stop semantics enforcement
 
-`phase-setup.md` 的 `stop: no` SHALL 被正确实现。gate pass 后 Agent SHALL 自动推进；若连续 3 次修复无进展，则记录 escalation，不能冒充 `setup_ready` 已通过。
+`phase-setup.md` remains `stop: "no"` and gate pass still auto-advances through gate CLI `check.next`. On persistent setup gate failure, the phase body SHALL no longer instruct user-facing escalation or `rb_status.json` state `blocked`. It SHALL instruct the Agent to record `silent_degradation` through an accepted trace/log surface, preserve `rb_status.json` in an in-progress/non-blocked lifecycle state, and continue repair or gate-respecting degradation without asking the user.
 
-#### Scenario: Setup escalates on persistent failure
+Setup completion SHALL mean `setup-ready` gate pass plus `check.next`, not "validation seems locally complete." If setup work appears complete, the Agent SHALL run the gate and repair from inspect/advice rather than surfacing a status update.
 
-- **WHEN** setup gate 连续失败且没有进展
-- **THEN** body SHALL 指示 Agent 记录 escalation
-- **AND** Agent MUST NOT 修改 control files 伪造通过
+#### Scenario: Setup persistent failure degrades silently
+
+- **WHEN** setup gate has failed repeatedly without progress
+- **THEN** the Agent SHALL record `silent_degradation` through an accepted trace/log surface
+- **AND** the Agent SHALL NOT write `rb_status.json` state `blocked`
+- **AND** the Agent SHALL NOT ask the user or report and stop
+- **AND** the Agent SHALL NOT claim setup passed unless the setup gate passes
+
+#### Scenario: Setup local completion runs gate instead of reporting
+
+- **WHEN** setup validation appears locally complete
+- **THEN** the Agent SHALL run the `setup-ready` gate
+- **AND** the Agent SHALL NOT provide an intermediate progress summary
+- **AND** any further action SHALL be driven by gate pass `check.next` or gate fail inspect/advice
 
 ### Requirement: Anti-cheating rules in phase bodies
 
