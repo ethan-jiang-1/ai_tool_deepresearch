@@ -137,8 +137,8 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --cur
 4. 分类 fail：
    - 若 inspect 中包含 `"Count floor not met"`（`per_topic_count_floor`：某 topic 的 `source.yaml` 条目不足；`shared_ref_count_floor`：`00-shared-*.md` 文件不足）→ 进入补充流程（继续步骤 5）
    - 若 count_floor 全部通过但其他规则失败 → 跳过补充流程，按 §7 表逐条修复 → rerun gate
-5. 追踪 attempt：从 `rb_trace.jsonl` 中 grep `gate_attempt` 得到 attempt 计数。若 attempt_count ≥ 3 → escalation
-6. No-progress?（连续两次同一 topic/shared 的 count 未增加）→ escalation
+5. 追踪 attempt：从 `rb_trace.jsonl` 中 grep `gate_attempt` 得到 attempt 计数。若 attempt_count ≥ 3 → 通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: partial`），切换策略（调整搜索关键词、更换搜索角度），不 escalation
+6. No-progress?（连续两次同一 topic/shared 的 count 未增加）→ 通过 accepted trace/log surface 记录 `silent_gap`（`gap_impact: partial`），切换策略（调整搜索关键词、更换搜索角度），不 escalation
 7. 解析不足：
    - `per_topic_count_floor` fail → 提取 topic slug、当前数 N、阈值 T，gap = T - N
    - `shared_ref_count_floor` fail → 提取当前数 N、阈值 T，gap = T - N
@@ -191,7 +191,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --cur
 - 补充循环期间**不重新回填 seed topic**——backfill token 已在首次 intake 完成后替换。
 - Sub-agent 可能找不到足够的新来源——gate rerun 会重新计算 gap。只要至少 1 条有效新增就算 partial success。
 
-**Loop 终止条件：**（与 wave1 一致）gate pass → 退出；all count_floor pass but other rules fail → 退出补充 loop，按 §7 修复；attempt ≥3 → escalation；no-progress → escalation。
+**Loop 终止条件：**（与 wave1 一致）gate pass → 退出；all count_floor pass but other rules fail → 退出补充 loop，按 §7 修复；attempt ≥3 → 通过 accepted trace/log surface 记录 `silent_degradation`，切换策略；no-progress → 通过 accepted trace/log surface 记录 `silent_gap`，切换策略。
 
 ## 4. Expected Artifacts
 
@@ -215,8 +215,10 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --cur
 ## 5. Gate Command
 
 ```bash
-node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --current-node phases/phase-wave0.md
+node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --current-node phases/phase-wave0.md --attempt <N>
 ```
+
+Retry 时传 Agent-reported `--attempt N`（N 从 1 开始，每次 rerun 递增）。若 gate 返回 `step_back: true`，暂停并重新阅读本 phase instructions §0 和 §3.3.1 后再决定策略。
 
 ## 6. On Gate Pass
 
@@ -237,15 +239,21 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave1_complete
 | schema violation（缺少 url/title 等必填字段） | 补充缺失字段 |
 | `per_topic_count_floor` fail：某 topic 的 `source.yaml` 条目数 < 动态阈值 | **进入 §3.3.1 Count-Floor Re-Fill Loop**：读 gate inspect → 解析不足 topic 和 gap → 创建 supplementary task card（`work_id: wave0-suppl-{topic.slug}-r{N}`，追加 source.yaml 条目，不覆盖已有）→ enqueue + drain → rerun gate。最多 3 次 gate attempt |
 | `shared_ref_count_floor` fail：`00-shared-*.md` 文件数 < 动态阈值 | **同上**：进入 §3.3.1 Re-Fill Loop，创建 supplementary task card 搜集跨 topic 共享 foundation reference → 写 `00-shared-*.md` |
-| registry 为空 | 回到 HITL1 补充 topic_registry |
+| registry 为空 | 通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: blocks_must_answer`），从 `rb_plan.md` frontmatter 尝试重建 topic_registry。不浮出水面，不回到 HITL1 |
 | `trace_event_present` fail | 确认已记录 `wave0_completion` trace event |
 | status drift | 恢复 `current_gate`/`next_gate` 为 `wave0_complete`/`wave1_complete` |
 
-**Persistent failure：** 若 wave0 gate 连续 3 次修复无进展（含 count_floor re-fill attempt），记录 escalation 到 `rb_status.json`（`state: blocked`，`blocked_reason` 描述具体 fail 原因和 attempt 次数）和 `rb_trace.jsonl`。
+**Persistent failure：** 若 wave0 gate 连续 3 次修复无进展（含 count_floor re-fill attempt），通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: partial`）：
+```bash
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silent_degradation" --detail '{"kind":"silent_degradation","phase":"wave0","gate":"wave0-complete","gap_impact":"partial","reason":"persistent_failure_3x","attempts":3}'
+```
+不写 `state: blocked`。降级后 Agent 仍有责任继续尝试不同的修复策略（换搜索关键词、调整搜索角度），不浮出水面。
 
 ## 8. Stop Behavior
 
-`stop: no` — Phase Agent 自主搜集 foundation reference。若 registry 为空，报告并停止，不编造假 reference。
+`stop: no` — Phase Agent 自主搜集 foundation reference，不发送阶段进度或 idle/no-work 汇报。Active queue、thin queue、per-topic count-floor gap、shared-ref count-floor gap、no-progress round、或 registry 为空，都是继续灌料、claim/complete、re-fill、换搜索策略、运行 gate 或记录 silent holding 的信号。
+
+若 registry 为空，通过 accepted trace/log surface 记录 `silent_degradation`，尝试从 `rb_plan.md` 重建 topic_registry。Evidence quality and reference coverage take priority: before gate pass, do not turn quality/count gaps into user-facing status. Phase 完成条件是 `wave0-complete` gate pass + gate CLI `check.next`；不得自判完成或自行加载下一 phase。
 
 > **静默阶段纪律**：本 phase 在静默自主阶段。`requires` 已加载 `shared-silent-execution.md`。遇错按降级优先级链处理（重试→换源→降级方法→标记 gap），绝不浮出水面向用户报告进度、提问或请求确认。
 

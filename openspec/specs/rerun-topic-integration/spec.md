@@ -150,7 +150,7 @@ This requirement applies to new rerun executions after this change is implemente
 #### Scenario: Legacy rerun reference file without cache trail is flagged
 - **WHEN** an existing legacy rerun reference file exists but its declaration has empty `cache_trails`
 - **THEN** `check-reentry` 的 file observability SHALL 报告该文件
-- **AND** `cache_coverage` gate 规则 SHALL 按两阶段策略处理：Phase 1 emit warning（兼容过渡期），Phase 2 fail（CRC-006 定义）
+- **AND** `cache_coverage` gate 规则 SHALL 按 cache-raw-web-content 中定义的两阶段策略处理：Phase 1 emit warning（兼容过渡期），Phase 2 fail
 
 #### Scenario: New rerun action:add omitting cache trail is not acceptable
 - **WHEN** this change is implemented

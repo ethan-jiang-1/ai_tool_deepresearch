@@ -178,14 +178,14 @@ CLI 参数：
 
 Engine modules `queue-manager.mjs` and `subagent-relay.mjs` SHALL activate `createRunLogger` at bundle-aware entrypoints and SHALL emit accident-grade attempt/outcome diagnostics for public hot-path functions. Non-success paths SHALL include the reason before returning or throwing when a run-scoped logger is available.
 
-This requirement replaces the previous LOC-006 engine closed-set summary. The new closed-set is the accident-grade event set in LOG-006. Engine trace points not named in LOG-006 still SHALL NOT automatically create log lines.
+This requirement replaces the previous LOC-006 engine closed-set summary. The new closed-set is the accident-grade event set defined by the logger specification. Engine trace points outside that accident-grade set still SHALL NOT automatically create log lines.
 
-The historical `guidelines/logging-conventions.md` principles remain in force, but its old LOC-006 summary event list SHALL be considered superseded once this change is accepted. Any later guideline update SHALL preserve the trace/log authority boundary while replacing the old summary event names with the accepted LOG-006 accident-grade set.
+The historical `guidelines/logging-conventions.md` principles remain in force, but its old LOC-006 summary event list SHALL be considered superseded once this change is accepted. Any later guideline update SHALL preserve the trace/log authority boundary while replacing the old summary event names with the accepted accident-grade diagnostic set.
 
 Gate CLIs SHALL use `writeGateAttempt()` as the only gate logging entrypoint for pass/fail results. Early invalid input/config errors SHALL also be logged when a bundle path is available. Failure diagnostic artifact paths SHALL be discoverable from run.log detail.
 
 #### Scenario: Queue operations log at function granularity
-- **WHEN** any LOG-006-covered public queue hot-path function is called
+- **WHEN** any accident-grade public queue hot-path function is called
 - **THEN** attempt SHALL be logged with work_id and relevant parameters when a run-scoped logger is available
 - **AND** success/reject/empty/exception outcomes SHALL be logged with reason where applicable
 - **AND** unexpected validation or IO failures SHALL log function-specific `*_exception` events before rethrowing when a run-scoped logger is available
@@ -252,4 +252,3 @@ Sub-agent execution and Agent-side repair loops SHALL be included in the long-ru
 - **AND** escalation or degradation SHALL log `repair_escalated` or `repair_degraded` with reason
 - **AND** terminal gate failures that do not enter a repair loop SHALL still log `repair_escalated` or `repair_degraded` before stopping when a bundle path is available
 - **AND** the affected phase set SHALL include every phase node with autonomous repair/retry behavior, at minimum instantiation, setup, hitl1, hitl2 repair branch, seed-topics, wave0, wave1, wave2, readiness, and terminal/degraded rerun handling
-

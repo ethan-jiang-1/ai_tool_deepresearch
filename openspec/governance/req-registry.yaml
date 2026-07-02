@@ -292,6 +292,7 @@ SHC-006: shared-node-content — Shared node authority boundary enforcement (no 
 
 # silent-wave-execution
 SWE-001: silent-wave-execution — Silent wave execution contract with degradation priority chain and repair escalation override
+SWE-002: silent-wave-execution — Fatigue resistance guidance (self-check protocol, structural vs fixable failure, step-back), universal scope extension to all stop:no phases
 
 # test-fixtures
 TEF-001: test-fixtures — Fixture framework for integration tests
@@ -418,6 +419,8 @@ WNC-004: "workflow-node-contract — Phase node body structure (9 required secti
 WNC-005: "workflow-node-contract — Final node terminal semantics (gate=none, no outgoing gate or next authority, user feedback via HITL2 repair/rerun)"
 WNC-006: workflow-node-contract — Skeleton completeness criteria (parseable frontmatter, executable CLI, valid JSON)
 WNC-007: workflow-node-contract — Workflow package consistency validation across manifest, frontmatter, gate definitions, transition tables, and loader runtime cache / dependency plan
+WNC-008: workflow-node-contract — Autonomous contract header injection in assessNode() for stop:no phases (prepended after frontmatter, before body)
+WNC-009: workflow-node-contract — Universal silent execution dependency (every stop:no phase SHALL require shared/shared-silent-execution)
 GSK-001: gate-skeleton — Gate definition JSON skeleton structure (gate, description, rules[] with id/check/target/threshold/failure_message)
 GSK-002: "gate-skeleton — Gate CLI skeleton shape (parseArgs, --bundle/--current-node required, check/inspect/advice JSON output, exit codes)"
 GSK-003: gate-skeleton — One gate per CLI (8 independent CLI wrappers, no generic runner with subcommand)
@@ -449,6 +452,7 @@ LFW-003: "lifecycle-walker — Walker logs progress via logger (createLogger({ f
 LFW-004: lifecycle-walker — Walker requires --bundle flag (exit(2) on missing) [DEPRECATED]
 GSK-004: "gate-skeleton — Gate CLI evaluates rules from definition and emits detailed routing diagnostics (load definition JSON, iterate all rule types, check/inspect/advice feedback; 9 gate CLIs: 3 pre-research + 1 seed-topics + 3 wave + 2 delivery; new check types: count_floor, dir_non_empty, cross_field slug_consistency, cross_field markdown_link_resolution, yaml_parse, jsonl_parse, trace_has_all_gates)"
 GSK-005: gate-skeleton — Shared gate attempt audit helper writeGateAttempt(bundlePath, result) writes to logger + trace with bundle; ALL gate CLIs MUST use it, inline appendFileSync to rb_trace.jsonl forbidden
+GSK-006: gate-skeleton — Gate CLI accepts --attempt N; buildGateResult injects fatigue_warning + step_back diagnostic signals when consecutive failures exceed threshold
 
 # wff-state-chain
 TRT-001: transition-table — File naming convention transitions.chain.json

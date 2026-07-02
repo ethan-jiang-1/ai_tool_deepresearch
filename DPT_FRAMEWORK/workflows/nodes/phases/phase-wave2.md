@@ -160,7 +160,7 @@ Quality Self-Check → all pass? → gate
   解析 gap type + target + magnitude
          │
          ▼
-  attempt_count ≥ 3? → escalation
+  attempt_count ≥ 3? → 记录 silent_degradation，切换策略
          │ no
          ▼
   为每种 gap 创建 supplementary task card → enqueue Q
@@ -172,7 +172,7 @@ Quality Self-Check → all pass? → gate
   Re-run Quality Self-Check（回到顶部）
 ```
 
-**Loop 终止条件：** 与 wave0/wave1 一致——全部 5 项通过 → gate；attempt ≥3 → escalation；no-progress（连续两次同一维度的 gap 未缩小）→ escalation。
+**Loop 终止条件：** 与 wave0/wave1 一致——全部 5 项通过 → gate；attempt ≥3 → 通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: partial`），切换策略；no-progress（连续两次同一维度的 gap 未缩小）→ 通过 accepted trace/log surface 记录 `silent_gap`（`gap_impact: partial`），切换策略。
 
 **Supplementary task card 模板：**
 
@@ -253,14 +253,14 @@ Feedback 分三层，按语义边界触发（不每次编辑都跑，不只在�
 | Level | 触发时机 | 检查内容 | 修复策略 |
 |-------|---------|---------|---------|
 | L0 | ledger/index 初建后 | 文件存在、ledger 固定 section、YAML parse、finding 字段完整、scan matrix 存在 | 立即修复并 rerun |
-| L1 | finding triage 后 | type/decision/status/refs 完整、resolution.search_required=false、emergent 至少 2 topic | 最多 2 次修复后 escalate |
+| L1 | finding triage 后 | type/decision/status/refs 完整、resolution.search_required=false、emergent 至少 2 topic | 最多 2 次修复后记录 `silent_degradation` |
 | L1 | Sub-agent spawn 前 | 只有 exploit_search/explore_search 才 spawn；defer/internal-data 不 spawn | 立即修复 |
-| L1 | receipt ingest 后 | receipt refs 存在、status 已更新、失败如实记录 | 最多 2 次修复后 escalate |
-| L1 | synthesis projection 后 | narrative 引用 W2F-xxx、无 unknown id、无 orphan | 最多 2 次修复后 escalate |
-| L1 | backfill projection 后 | backfill 引用有效 finding id、保留 source_layer | 最多 2 次修复后 escalate |
+| L1 | receipt ingest 后 | receipt refs 存在、status 已更新、失败如实记录 | 最多 2 次修复后记录 `silent_degradation` |
+| L1 | synthesis projection 后 | narrative 引用 W2F-xxx、无 unknown id、无 orphan | 最多 2 次修复后记录 `silent_degradation` |
+| L1 | backfill projection 后 | backfill 引用有效 finding id、保留 source_layer | 最多 2 次修复后记录 `silent_degradation` |
 | L2 | phase gate | 全部 12 条 gate 规则 | 现有 gate repair discipline |
 
-Failure budget：L0 立即修复；L1 同一 finding/边界最多 2 次修复尝试 → 超过则 escalate 到 `defer_hitl2` 或 `record_only` 附原因；L2 不降级。
+Failure budget：L0 立即修复；L1 同一 finding/边界最多 2 次修复尝试 → 超过则通过 accepted trace/log surface 记录 `silent_degradation` 或 `defer_hitl2`/`record_only` 附原因；L2 不降级。
 
 ### §3.5 Finding Lifecycle 参考
 
@@ -310,8 +310,10 @@ Ledger 记录 reasoning，index 记录 lifecycle state。JS 不判断 reasoning 
 ## 5. Gate Command
 
 ```bash
-node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle <path> --current-node phases/phase-wave2.md
+node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle <path> --current-node phases/phase-wave2.md --attempt <N>
 ```
+
+Retry 时传 Agent-reported `--attempt N`（N 从 1 开始，每次 rerun 递增）。若 gate 返回 `step_back: true`，暂停并重新阅读本 phase instructions §0 和 §3.3.2 后再决定策略。
 
 ## 6. On Gate Pass
 
@@ -340,11 +342,17 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
 | status drift | 恢复 `current_gate`/`next_gate` 为 `wave2_complete`/`hitl2_recorded` |
 | Quality gap（backing/cross-topic/emergent 不达标）| **进入 §3.3.2 Quality Re-Fill Loop**：读 Quality Self-Check gap → 创建对应 supplementary task card（backing/cross-topic/emergent）→ enqueue + drain → re-run Quality Self-Check。最多 3 次 gate attempt |
 
-**Persistent failure：** 若 wave2 gate 连续 3 次修复无进展（含 quality re-fill attempt），记录 escalation 到 `rb_status.json`（`state: blocked`，`blocked_reason` 描述具体 gap 和 attempt 次数）和 `rb_trace.jsonl`。
+**Persistent failure：** 若 wave2 gate 连续 3 次修复无进展（含 quality re-fill attempt），通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: partial`）：
+```bash
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silent_degradation" --detail '{"kind":"silent_degradation","phase":"wave2","gate":"wave2-complete","gap_impact":"partial","reason":"persistent_failure_3x","attempts":3}'
+```
+不写 `state: blocked`。Quality gap 不作为中途浮出水面理由——降级后记录 gap，保留 unresolved finding 到 HITL2 handoff。
 
 ## 8. Stop Behavior
 
-`stop: no` — Phase Agent 自主执行 synthesis + finding triage + Quality Self-Check + re-fill loop。Wave2 不做 stop-and-wait 人类审查（HITL2 是独立的审查阶段）。Quality gap 通过 Q re-fill 静默补足——Phase Agent 不应因 quality 不达标就停下来问用户。
+`stop: no` — Phase Agent 自主执行 synthesis + finding triage + Quality Self-Check + re-fill loop，不发送阶段进度或 idle/no-work 汇报。Active queue、thin queue、backing/cross-topic/emergent quality gap、unresolved finding、或 no-progress round，都是继续 drain、Quality Self-Check、targeted re-fill、换策略、运行 gate 或记录 silent holding 的信号。
+
+Wave2 不做 stop-and-wait 人类审查（HITL2 是独立的审查阶段）。Evidence quality, cross-topic synthesis, and finding backing take priority: before gate pass, do not turn quality gaps into user-facing status. Phase 完成条件是 `wave2-complete` gate pass + gate CLI `check.next`；不得自判完成或自行加载下一 phase。
 
 > **静默阶段纪律**：本 phase 在静默自主阶段。`requires` 已加载 `shared-silent-execution.md`。遇错按降级优先级链处理（重试→换源→降级方法→标记 gap），绝不浮出水面向用户报告进度、提问或请求确认。
 

@@ -6,6 +6,7 @@ gate: setup-ready
 stop: "no"
 requires:
   - shared/shared-profile
+  - shared/shared-silent-execution
 suggested_context:
   - shared/shared-schemas
 ---
@@ -47,6 +48,8 @@ suggested_context:
 node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle <path> --current-node phases/phase-setup.md
 ```
 
+Retry 时传 Agent-reported `--attempt N`（N 从 1 开始，每次 rerun 递增）。若 gate 返回 `step_back: true`，暂停并重新阅读本 phase instructions §0 和 §5 后再决定策略。
+
 ## 6. On Gate Pass
 
 读取 `check.next`。调用 `advance-status` 推进状态：
@@ -64,15 +67,21 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to seed_topics_ready
 | 缺失 control file | 检查文件是否被误删，按 template 重建 |
 | Schema 校验失败 | 读取 inspect 中的 Zod error detail，修正对应字段 |
 | 缺失 scaffold dir | `mkdir` 创建对应目录 |
-| HITL1 marker 未记录 | 回到 HITL1 phase 完成用户输入收集 |
+| HITL1 marker 未记录 | 通过 accepted trace/log surface 记录 `silent_degradation`，确认 HITL1 是否已完成；若未完成，加载 hitl1 phase 完成用户输入收集后返回 setup |
 | Status drift | 将 `current_gate`/`next_gate` 恢复为 `setup_ready`/`seed_topics_ready` |
 | Basename 不一致 | 以 `plan_basename` in plan + profile 为准；若 bundle dir 命名非法→fail-stop 重新 instantiate |
 
-**Persistent failure：** 若 setup gate 连续 3 次修复无进展，记录 escalation 到 `rb_status.json`（`state: blocked`）和 `rb_trace.jsonl`，不能冒充 `setup-ready` 已通过。
+**Persistent failure：** 若 setup gate 连续 3 次修复无进展，通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: partial`），不写 `state: blocked`：
+```bash
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silent_degradation" --detail '{"kind":"silent_degradation","phase":"setup","gate":"setup-ready","gap_impact":"partial","reason":"persistent_failure_3x","attempts":3}'
+```
+降级后 Agent 仍有责任继续尝试不同的修复策略（换方向、换诊断策略），而非放弃或浮出水面。静默阶段不设 `state: blocked`。若所有修复路径穷尽后仍然无法通过 gate，记录 `silent_unpassable`（见 §8）并保持 non-blocked/in-progress holding。
 
 ## 8. Stop Behavior
 
-`stop: no` — Agent 自主验证。若遇到权限/工具/结构性 blocker 无法修复，记录 escalation。
+`stop: no` — Agent 自主验证，不发送 setup progress 或 idle/no-work 汇报。Setup 本地校验完成后必须运行 `setup-ready` gate；phase 完成条件是 gate pass + `check.next`，不是“看起来已验证”。
+
+若遇到权限/工具/结构性 blocker 无法修复，通过 accepted trace/log surface 记录 `silent_degradation` 或 `silent_unpassable`（保持 non-blocked/in-progress），不写 `state: blocked`。Gate fail 后按 inspect/advice 修复并 rerun；所有下一 phase 路由只来自 gate CLI `check.next`。
 
 ## 9. Anti-Cheating Rules
 

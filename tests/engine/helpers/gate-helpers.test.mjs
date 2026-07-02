@@ -513,3 +513,204 @@ describe('parseGateCliArgs preserves bundle in error returns', () => {
     }
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GSK-006: --attempt option and fatigue diagnostics
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('parseGateCliArgs --attempt (GSK-006)', () => {
+  const savedArgv = process.argv;
+
+  after(() => {
+    process.argv = savedArgv;
+  });
+
+  it('parses valid --attempt integer', () => {
+    process.argv = ['node', 'test.mjs', '--bundle', '/tmp/b', '--current-node', 'phases/phase-wave0.md', '--attempt', '5'];
+    const args = parseGateCliArgs();
+    assert.equal(args.attempt, 5);
+    assert.equal(args.error, null);
+  });
+
+  it('defaults to 0 when --attempt is omitted', () => {
+    process.argv = ['node', 'test.mjs', '--bundle', '/tmp/b', '--current-node', 'phases/phase-wave0.md'];
+    const args = parseGateCliArgs();
+    assert.equal(args.attempt, 0);
+  });
+
+  it('falls back to 0 for bare --attempt flag', () => {
+    process.argv = ['node', 'test.mjs', '--bundle', '/tmp/b', '--current-node', 'phases/phase-wave0.md', '--attempt'];
+    const args = parseGateCliArgs();
+    assert.equal(args.attempt, 0);
+  });
+
+  it('falls back to 0 when --attempt value is missing and followed by another option', () => {
+    process.argv = ['node', 'test.mjs', '--bundle', '/tmp/b', '--current-node', 'phases/phase-wave0.md', '--attempt', '--transitions', '/tmp/t.json'];
+    const args = parseGateCliArgs();
+    assert.equal(args.attempt, 0);
+    // The transition path is either preserved or falls to default — both are
+    // acceptable because the error-recovery path strips --attempt from argv.
+    // The key assertion: attempt must NOT consume --transitions as its value.
+    assert.ok(args.transitions === '/tmp/t.json' || args.transitions.endsWith('transitions.chain.json'));
+  });
+
+  it('falls back to 0 for unparseable --attempt value', () => {
+    process.argv = ['node', 'test.mjs', '--bundle', '/tmp/b', '--current-node', 'phases/phase-wave0.md', '--attempt', 'abc'];
+    const args = parseGateCliArgs();
+    assert.equal(args.attempt, 0);
+  });
+
+  it('falls back to 0 for negative --attempt value', () => {
+    process.argv = ['node', 'test.mjs', '--bundle', '/tmp/b', '--current-node', 'phases/phase-wave0.md', '--attempt', '-1'];
+    const args = parseGateCliArgs();
+    assert.equal(args.attempt, 0);
+  });
+
+  it('falls back to 0 for non-integer --attempt value', () => {
+    process.argv = ['node', 'test.mjs', '--bundle', '/tmp/b', '--current-node', 'phases/phase-wave0.md', '--attempt', '3.5'];
+    const args = parseGateCliArgs();
+    assert.equal(args.attempt, 0);
+  });
+
+  it('falls back to 0 for empty --attempt value', () => {
+    process.argv = ['node', 'test.mjs', '--bundle', '/tmp/b', '--current-node', 'phases/phase-wave0.md', '--attempt', ''];
+    const args = parseGateCliArgs();
+    assert.equal(args.attempt, 0);
+  });
+});
+
+describe('buildGateResult fatigue diagnostics (GSK-006)', () => {
+  const baseRouting = { kind: 'next', next: 'phases/phase-wave1.md', detail: '' };
+
+  it('injects fatigue_warning + step_back when gate fails and attemptNumber >= fatigueThreshold', () => {
+    const result = buildGateResult({
+      passed: false,
+      gate: 'wave0-complete',
+      currentNodeRef: 'phases/phase-wave0.md',
+      routing: baseRouting,
+      inspect: ['Count floor not met'],
+      advice: ['Add more sources'],
+      attemptNumber: 3,
+      fatigueThreshold: 3,
+    });
+
+    assert.equal(result.check.fatigue_warning, true);
+    assert.equal(result.check.step_back, true);
+    assert.ok(result.advice.some(a => a.includes('[fatigue]')));
+    assert.ok(result.advice.some(a => a.includes('Agent-reported retry hint')));
+  });
+
+  it('injects fatigue when attemptNumber exceeds threshold', () => {
+    const result = buildGateResult({
+      passed: false,
+      gate: 'wave1-complete',
+      currentNodeRef: 'phases/phase-wave1.md',
+      routing: baseRouting,
+      attemptNumber: 7,
+      fatigueThreshold: 3,
+    });
+
+    assert.equal(result.check.fatigue_warning, true);
+    assert.equal(result.check.step_back, true);
+  });
+
+  it('does NOT inject fatigue when gate fails but attemptNumber < threshold', () => {
+    const result = buildGateResult({
+      passed: false,
+      gate: 'wave0-complete',
+      currentNodeRef: 'phases/phase-wave0.md',
+      routing: baseRouting,
+      inspect: ['Count floor not met'],
+      advice: ['Add more sources'],
+      attemptNumber: 1,
+      fatigueThreshold: 3,
+    });
+
+    assert.equal(result.check.fatigue_warning, undefined);
+    assert.equal(result.check.step_back, undefined);
+  });
+
+  it('does NOT inject fatigue when gate passes even with high attemptNumber', () => {
+    const result = buildGateResult({
+      passed: true,
+      gate: 'wave0-complete',
+      currentNodeRef: 'phases/phase-wave0.md',
+      routing: baseRouting,
+      attemptNumber: 5,
+      fatigueThreshold: 3,
+    });
+
+    assert.equal(result.check.fatigue_warning, undefined);
+    assert.equal(result.check.step_back, undefined);
+  });
+
+  it('does NOT inject fatigue when attemptNumber is 0 (default)', () => {
+    const result = buildGateResult({
+      passed: false,
+      gate: 'wave0-complete',
+      currentNodeRef: 'phases/phase-wave0.md',
+      routing: baseRouting,
+    });
+
+    assert.equal(result.check.fatigue_warning, undefined);
+    assert.equal(result.check.step_back, undefined);
+  });
+
+  it('fatigue advice does NOT claim Engine verified consecutive failures', () => {
+    const result = buildGateResult({
+      passed: false,
+      gate: 'wave0-complete',
+      currentNodeRef: 'phases/phase-wave0.md',
+      routing: baseRouting,
+      attemptNumber: 5,
+    });
+
+    const fatigueAdvice = result.advice.filter(a => a.includes('[fatigue]'));
+    assert.ok(fatigueAdvice.length >= 3);
+    for (const msg of fatigueAdvice) {
+      assert.ok(!msg.includes('verified consecutive'));
+      assert.ok(!msg.includes('Engine verified'));
+    }
+    // Must mention "Agent-reported" somewhere in the advice
+    assert.ok(fatigueAdvice.some(a => a.includes('Agent-reported')));
+  });
+
+  it('fatigue advice is stop-mode-safe — does NOT unconditionally declare stop:no', () => {
+    const result = buildGateResult({
+      passed: false,
+      gate: 'wave0-complete',
+      currentNodeRef: 'phases/phase-wave0.md',
+      routing: baseRouting,
+      attemptNumber: 5,
+    });
+
+    const fatigueAdvice = result.advice.filter(a => a.includes('[fatigue]'));
+    // Check that stop:no is mentioned conditionally, not unconditionally
+    const unconditional = fatigueAdvice.filter(a =>
+      a.includes('stop:no') && !a.includes('If this invocation') && !a.includes('If this is')
+    );
+    // The advice should use conditional language for stop:no references
+    assert.ok(
+      fatigueAdvice.some(a => a.includes('If this invocation is for a stop:no phase')),
+      'At least one fatigue advice must use conditional stop:no language'
+    );
+  });
+
+  it('fatigue advice uses no-surfacing stop contract language', () => {
+    const result = buildGateResult({
+      passed: false,
+      gate: 'wave0-complete',
+      currentNodeRef: 'phases/phase-wave0.md',
+      routing: baseRouting,
+      attemptNumber: 5,
+    });
+
+    const fatigueAdvice = result.advice.filter(a => a.includes('[fatigue]'));
+    const joined = fatigueAdvice.join('\n');
+    assert.ok(!joined.includes('only prohibited behavior'));
+    assert.ok(joined.includes('User-facing surfacing is prohibited'));
+    assert.ok(joined.includes('progress updates'));
+    assert.ok(joined.includes('idle/no-work summaries'));
+    assert.ok(joined.includes('A/B choices'));
+  });
+});

@@ -1,5 +1,5 @@
 // gate-helpers.mjs — Shared gate CLI utilities and validation helpers
-// @impl GSK-001, GSK-002, GSK-004
+// @impl GSK-001, GSK-002, GSK-004, GSK-006
 // Canonical engine location: DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs
 //
 // ## Role
@@ -33,23 +33,80 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // ─── CLI Argument Parsing ──────────────────────────────────────────────────
 
 /**
+ * Extract --attempt value from raw process.argv manually.
+ * Used as fallback when parseArgs throws on ambiguous --attempt values
+ * (bare flag, negative numbers, values starting with -).
+ *
+ * @param {string[]} argv — raw process.argv
+ * @returns {string|undefined} the raw attempt value, or undefined
+ */
+function extractAttemptFromArgv(argv) {
+  const idx = argv.indexOf('--attempt');
+  if (idx === -1) return undefined;
+  if (idx >= argv.length - 1) return '';
+  const next = argv[idx + 1];
+  // If next value looks like another option, treat as bare flag
+  if (next.startsWith('-')) return '';
+  return next;
+}
+
+/**
  * Parse standard gate CLI arguments.
  *
- * On success returns `{ bundle, currentNode, transitions, error: null }`.
+ * On success returns `{ bundle, currentNode, transitions, attempt, args, error: null }`.
  * On failure (missing required args) returns `{ error }` with a structured
  * error ready to emit as JSON. Never calls process.exit() — the caller
  * decides how to emit the error.
  *
- * @returns {{ bundle?: string, currentNode?: string, transitions?: string, error?: { check: object, routing: object, inspect: string[], advice: string[] } | null }}
+ * @returns {{ bundle?: string, currentNode?: string, transitions?: string, attempt?: number, args?: object, error?: { check: object, routing: object, inspect: string[], advice: string[] } | null }}
+ *
+ * @impl GSK-006
  */
 export function parseGateCliArgs() {
-  const { values } = parseArgs({
-    options: {
-      bundle: { type: 'string' },
-      'current-node': { type: 'string' },
-      transitions: { type: 'string' },
-    },
-  });
+  // Parse known options first. We parse --attempt separately because
+  // node:util parseArgs with type:'string' throws on bare flag and
+  // on values starting with '-' (e.g. negative numbers). We handle
+  // those as fallback-to-0 cases per GSK-006.
+  let parseResult;
+  try {
+    parseResult = parseArgs({
+      options: {
+        bundle: { type: 'string' },
+        'current-node': { type: 'string' },
+        transitions: { type: 'string' },
+        attempt: { type: 'string' },
+      },
+      allowPositionals: true,
+      strict: false,
+    });
+  } catch (err) {
+    // parseArgs may throw on ambiguous --attempt values (bare flag,
+    // negative numbers, values starting with -). Retry without --attempt
+    // by rebuilding argv with --attempt and its value removed.
+    if (err.code === 'ERR_PARSE_ARGS_INVALID_OPTION_VALUE' ||
+        err.code === 'ERR_PARSE_ARGS_UNKNOWN_OPTION') {
+      const rawAttempt = extractAttemptFromArgv(process.argv);
+      // Strip only --attempt from argv (not its value — the value is
+      // ambiguous and should be re-interpreted by parseArgs naturally).
+      const cleanedArgv = process.argv.filter(a => a !== '--attempt');
+      // Re-parse with cleaned argv
+      parseResult = parseArgs({
+        args: cleanedArgv,
+        options: {
+          bundle: { type: 'string' },
+          'current-node': { type: 'string' },
+          transitions: { type: 'string' },
+        },
+        allowPositionals: true,
+        strict: false,
+      });
+      parseResult.values.attempt = rawAttempt;
+    } else {
+      throw err;
+    }
+  }
+
+  const { values } = parseResult;
 
   if (!values.bundle) {
     return {
@@ -74,6 +131,25 @@ export function parseGateCliArgs() {
     };
   }
 
+  // Parse --attempt: Agent-reported retry hint (GSK-006)
+  // Must be a base-10 non-negative integer. Fall back to 0 on:
+  // missing, bare flag, empty value, unparseable, negative, non-integer.
+  // IMPORTANT: when --attempt value is empty or followed by another option,
+  // we must NOT consume the next option token.
+  let attempt = 0;
+  if (values.attempt !== undefined && values.attempt !== null) {
+    if (values.attempt === '' || values.attempt === true) {
+      // bare flag or --attempt followed by another option → fallback 0
+      attempt = 0;
+    } else {
+      const parsed = Number(values.attempt);
+      if (Number.isFinite(parsed) && Number.isInteger(parsed) && parsed >= 0) {
+        attempt = parsed;
+      }
+      // else: unparseable/negative/non-integer → fallback 0
+    }
+  }
+
   const transitionsPath = values.transitions
     || join(__dirname, '..', '..', 'workflows', 'transitions.chain.json');
 
@@ -81,6 +157,8 @@ export function parseGateCliArgs() {
     bundle: values.bundle,
     currentNode: values['current-node'],
     transitions: transitionsPath,
+    attempt,
+    args: values,
     error: null,
   };
 }
@@ -195,24 +273,46 @@ export function resolveRouting(transitionsPath, currentNodeRef, outcome, context
  * @param {string[]} [opts.inspect] — diagnostic messages
  * @param {string[]} [opts.advice] — guidance messages
  * @param {object} [opts.extraCheck] — extra fields to merge into check
+ * @param {number} [opts.attemptNumber] — Agent-reported retry hint (GSK-006), default 0
+ * @param {number} [opts.fatigueThreshold] — threshold for fatigue diagnostics (GSK-006), default 3
  * @returns {{ check: object, routing: object, inspect: string[], advice: string[] }}
  *
- * @impl GSK-002
+ * @impl GSK-002, GSK-006
  */
-export function buildGateResult({ passed, gate, currentNodeRef, routing, inspect = [], advice = [], extraCheck = {} }) {
+export function buildGateResult({ passed, gate, currentNodeRef, routing, inspect = [], advice = [], extraCheck = {}, attemptNumber = 0, fatigueThreshold = 3 }) {
   const checkNext = routing.kind === 'next' ? routing.next : null;
 
+  let checkFields = {
+    passed,
+    gate,
+    currentNodeRef,
+    next: checkNext,
+    ...extraCheck,
+  };
+
+  let finalAdvice = [...advice];
+
+  // GSK-006: Fatigue diagnostics — injected when Agent-reported attemptNumber
+  // reaches fatigueThreshold AND the gate did not pass. Pass + high attempt
+  // count is normal (try, try, succeed). Only fail + threshold triggers.
+  // IMPORTANT: advice must be stop-mode-safe — must NOT unconditionally
+  // declare the current invocation is stop:no.
+  if (!passed && attemptNumber >= fatigueThreshold) {
+    checkFields.fatigue_warning = true;
+    checkFields.step_back = true;
+
+    finalAdvice.push(
+      `[fatigue] Agent-reported retry hint (--attempt ${attemptNumber}) has reached the fatigue threshold (${fatigueThreshold}). Consider stepping back rather than retrying the same repair.`,
+      '[fatigue] Re-read the phase instructions — particularly §0 (ABSOLUTE PROHIBITION) and §5 (Gate Command). Verify you are running the correct CLI and interpreting inspect/advice correctly.',
+      '[fatigue] If this invocation is for a stop:no phase, remember: gate failure is not an emergency. User-facing surfacing is prohibited, including questions, progress updates, idle/no-work summaries, and A/B choices. Switch strategies, record a silent degradation, or hold in place.',
+    );
+  }
+
   return {
-    check: {
-      passed,
-      gate,
-      currentNodeRef,
-      next: checkNext,
-      ...extraCheck,
-    },
+    check: checkFields,
     routing,
     inspect,
-    advice,
+    advice: finalAdvice,
   };
 }
 

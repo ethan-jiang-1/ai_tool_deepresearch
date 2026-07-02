@@ -4,7 +4,8 @@ id: phase-readiness
 phase: readiness
 gate: readiness-passed
 stop: "no"
-requires: []
+requires:
+  - shared/shared-silent-execution
 suggested_context:
   - shared/shared-gate-rules
   - shared/shared-schemas
@@ -88,7 +89,9 @@ Readiness fail 可能需要回到 earlier phase 修复缺失 artifact。修复�
 
 ## 8. Stop Behavior
 
-`stop: no` — Agent 自主执行 readiness check，不等待人类。
+`stop: no` — Agent 自主执行 readiness check，不等待人类，不发送 readiness progress 或 idle/no-work 汇报。本地 precheck 完成后必须运行 `readiness-passed` gate；phase 完成条件是 gate pass + `check.next` 指向 final。
+
+Readiness gate fail 后按 inspect/advice 修复缺失 artifact、trace、profile/status drift 或结构问题并 rerun。若必须回到 earlier phase 修复，仍要遵守 gate boundary：不得把“本地检查完成”当成完成点，不得自行绕过 gate 加载 final。
 
 ## 9. Anti-Cheating Rules
 

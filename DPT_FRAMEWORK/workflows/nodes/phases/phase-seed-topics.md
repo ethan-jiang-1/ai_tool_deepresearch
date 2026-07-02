@@ -7,6 +7,7 @@ stop: "no"
 requires:
   - shared/shared-profile
   - shared/shared-schemas
+  - shared/shared-silent-execution
 suggested_context:
   - shared/shared-anti-cheating-rules
 ---
@@ -285,13 +286,19 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave0_complete
 | slug 与文件名 stem 不一致 | 统一为 registry 中的 slug |
 | `trace_event_present` fail | 确认已记录 `seed_topics_completion` trace event |
 | status drift | 将 `current_gate`/`next_gate` 恢复为 `seed_topics_ready`/`wave0_complete` |
-| registry 为空 | 回到 HITL1 补充 topic_registry；不能物化空目录 |
+| registry 为空 | 通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: blocks_must_answer`），从 `rb_plan.md` frontmatter 尝试重建 topic_registry，不浮出水面 |
 
-**Persistent failure：** 若 seed-topics gate 连续 3 次修复无进展，记录 escalation 到 `rb_status.json`（`state: blocked`）和 `rb_trace.jsonl`。
+**Persistent failure：** 若 seed-topics gate 连续 3 次修复无进展，通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: partial`）：
+```bash
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silent_degradation" --detail '{"kind":"silent_degradation","phase":"seed-topics","gate":"seed-topics-ready","gap_impact":"partial","reason":"persistent_failure_3x","attempts":3}'
+```
+不写 `state: blocked`。降级后 Agent 仍有责任继续尝试不同的修复策略，不浮出水面。
 
 ## 8. Stop Behavior
 
-`stop: no` — Agent 自主物化。若 registry 为空（topic 集合未建立），报告并停止物化，不编造 topic。
+`stop: no` — Agent 自主物化，不发送阶段进度或 idle/no-work 汇报。Queue thin、active window 为空、registry 为空、或 seed topic 本地文件已写完，都不是停顿点；它们分别触发继续灌料、drain、registry repair、运行 gate 或静默降级。
+
+若 registry 为空（topic 集合未建立），通过 accepted trace/log surface 记录 `silent_degradation`，尝试从 `rb_plan.md` frontmatter 重建 topic_registry。Phase 完成条件是 `seed-topics-ready` gate pass + gate CLI `check.next`；不得自判完成或自行加载下一 phase。
 
 ## Rerun-Aware Behavior
 

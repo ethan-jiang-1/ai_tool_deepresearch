@@ -6,6 +6,7 @@ gate: rerun-ready
 stop: "no"
 requires:
   - shared/shared-profile
+  - shared/shared-silent-execution
 suggested_context:
   - shared/shared-anti-cheating-rules
 ---
@@ -37,7 +38,10 @@ HITL2 `user_decision: rerun` 后，Agent 用 `rerun` outcome 查 chain 进入本
    - 当前深度（quick_factual / exploratory_map / claim_verification）
    - 已有的 ## 本轮重跑方向 section（上一轮 rerun 的方向 hints，如有）
 
-**MUST** 检查 `seed_topics/` 非空。若意外为空（topic_registry 有但 seed_topics/ 为空），退化为全量重跑模式并告知用户："seed_topics/ 为空，将按全量重跑执行。请确认：1) 全量重跑（保留现有 reference），2) 开新 Deep Research"。
+**MUST** 检查 `seed_topics/` 非空。若意外为空（topic_registry 有但 seed_topics/ 为空），默认全量重跑——保留现有 reference 和 artifacts，按 topic_registry 重建 seed_topics/，然后走全量重跑路径。通过 accepted trace/log surface 记录 `silent_degradation`，不询问用户确认：
+```bash
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silent_degradation" --detail '{"kind":"silent_degradation","phase":"rerun","reason":"seed_topics_empty","action":"full_rerun"}'
+```
 
 ### Stage 2: 对比推断 — 产出 topic 调整方案
 
@@ -136,8 +140,10 @@ node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle <path> --curren
 ## 5. Gate Command
 
 ```bash
-node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle <path> --current-node phases/phase-rerun.md
+node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle <path> --current-node phases/phase-rerun.md --attempt <N>
 ```
+
+Retry 时传 Agent-reported `--attempt N`（N 从 1 开始，每次 rerun 递增）。若 gate 返回 `step_back: true`，暂停并重新阅读本 phase instructions §0 和 §5。Rerun-ready gate fail 是结构性 fail——不可通过 re-fill loop 修复，按 §7 表处理。
 
 ## 6. On Gate Pass
 
@@ -145,24 +151,32 @@ node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle <path> --curren
 
 ## 7. On Gate Fail
 
-Rerun-ready gate fail 是终端状态——不可修复。读取 CLI `inspect` / `advice`：
+Rerun-ready gate fail 是结构性 gate failure——不可通过 re-fill loop 修复。读取 CLI `inspect` / `advice`：
 
-| Fail | 说明 | 用户选项 |
-|------|------|---------|
-| `rerun_rationale_present` fail | HITL2 rationale 为空 | 回到 HITL2 补充 rationale |
-| `rerun_count_valid` fail | `rerun_count >= 3`，已达上限 | 接受当前结果 或 开新 Deep Research |
-| `bundle_structure_valid` fail | 目录结构不完整 | 检查 bundle 完整性 |
-| `status_consistent` fail | rb_status.json 不一致 | 恢复 status 到正确值 |
+| Fail | 行为 |
+|------|------|
+| `rerun_rationale_present` fail | HITL2 rationale 为空 → 通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: blocks_must_answer`），标记当前 research 缺乏用户方向。保持 non-blocked/in-progress，等待后续 HITL2 补充 rationale |
+| `rerun_count_valid` fail | `rerun_count >= 3`，已达上限 → 通过 accepted trace/log surface 记录 `silent_unpassable`，建议接受当前结果（走 `phase-final` 交付）。不浮出水面询问用户 |
+| `bundle_structure_valid` fail | 目录结构不完整 → 检查 bundle 完整性，按 inspect/advice 修复后 retry。传 `--attempt N` |
+| `status_consistent` fail | rb_status.json 不一致 → 恢复 status 到正确值，retry gate |
+
+所有 `silent_degradation` / `silent_unpassable` 记录通过 accepted trace/log surface：
+```bash
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silent_degradation" --detail '{"kind":"silent_degradation","phase":"rerun","gate":"rerun-ready","reason":"<reason>"}'
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silent_unpassable" --detail '{"kind":"silent_unpassable","phase":"rerun","gate":"rerun-ready","reason":"rerun_count_exceeded","rerun_count":<N>}'
+```
 
 ## 8. Stop Behavior
 
-`stop: no` — 本 phase 不等待用户输入。但 gate fail 时 MUST 停止并告知用户（gate fail = terminal）。
+`stop: no` — 本 phase 不等待用户输入，不发送 rerun prep progress 或 idle/no-work 汇报。Rerun prep 本地写完后必须运行 `rerun-ready` gate；phase 完成条件是 gate pass + `check.next` 指向 seed-topics。
+
+Gate fail 时通过 accepted trace/log surface 记录 `silent_degradation` 或 `silent_unpassable`，保持 non-blocked/in-progress。`rerun_count >= 3` 时记录 `silent_unpassable`；不得自行加载 seed-topics 或 final，所有路由必须来自 gate CLI `check.next`。
 
 ## 9. Anti-Cheating Rules
 
 - **MUST NOT 删除已有 artifacts**：reference/、artifacts/、seed_topics/ 中的已有文件全部保留
 - **MUST 读当前 rerun_count 后再递增**：若字段缺失则初始化为 1，若已有值则 +1。MUST NOT 直接覆盖为固定值
-- **MUST 检查 seed_topics/ 非空**：若意外为空，退化为全量重跑模式并告知用户
+- **MUST 检查 seed_topics/ 非空**：若意外为空，默认全量重跑，通过 accepted trace/log surface 记录 `silent_degradation`
 - **MUST NOT 在无 rationale 或 rationale 为空时写 ## 本轮重跑方向**：方向 hints 必须来自用户明确的意图
 - **MUST NOT 绕过 chain 直接加载 seed-topics**：所有路由必须通过 gate → chain 查询
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令

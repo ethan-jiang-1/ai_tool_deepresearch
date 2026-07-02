@@ -4,7 +4,7 @@
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -391,5 +391,306 @@ describe('nodePath', () => {
   it('allows subdirectory paths under nodes dir (WNC-006)', () => {
     assert.ok(nodePath('phases/phase-wave0.md', TEST_NODES_DIR).endsWith('phases/phase-wave0.md'));
     assert.ok(nodePath('shared/shared-profile.md', TEST_NODES_DIR).endsWith('shared/shared-profile.md'));
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WNC-008: Autonomous contract header injection
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('assessNode contract header injection (WNC-008)', () => {
+  const WNC_TMP = join(__dirname, '.test-wnc-tmp');
+  const PHASES_DIR = join(WNC_TMP, 'nodes-workflow-chain', 'phases');
+  const SHARED_DIR = join(WNC_TMP, 'nodes-workflow-chain', 'shared');
+
+  before(() => {
+    mkdirSync(WNC_TMP, { recursive: true });
+    mkdirSync(join(WNC_TMP, 'nodes-workflow-chain'), { recursive: true });
+    mkdirSync(PHASES_DIR, { recursive: true });
+    mkdirSync(SHARED_DIR, { recursive: true });
+
+    // Write manifest with lifecycle phases + shared entries
+    const manifest = {
+      phases: [
+        { key: 'wave0', node: 'phases/phase-wave0.md', gate: 'wave0-complete' },
+        { key: 'final', node: 'phases/phase-final.md', gate: null },
+        { key: 'hitl1', node: 'phases/phase-hitl1.md', gate: 'hitl1-recorded' },
+      ],
+      shared: ['shared/shared-silent-execution.md'],
+    };
+    writeFileSync(join(WNC_TMP, 'manifest.json'), JSON.stringify(manifest));
+
+    // Phase files with distinct frontmatter
+    writeFileSync(join(PHASES_DIR, 'phase-wave0.md'), [
+      '---',
+      'node_type: phase',
+      'id: phase-wave0',
+      'phase: wave0',
+      'gate: wave0-complete',
+      'stop: "no"',
+      'requires:',
+      '  - shared/shared-silent-execution',
+      '---',
+      '',
+      '# Phase: Wave0',
+      '',
+      '## 1. Stage Goal',
+      '',
+      'Test phase body content.',
+    ].join('\n'));
+
+    writeFileSync(join(PHASES_DIR, 'phase-final.md'), [
+      '---',
+      'node_type: phase',
+      'id: phase-final',
+      'phase: final',
+      'gate: null',
+      'stop: "no"',
+      'requires:',
+      '  - shared/shared-silent-execution',
+      '---',
+      '',
+      '# Phase: Final',
+      '',
+      '## 1. Stage Goal',
+      '',
+      'Test final phase body.',
+    ].join('\n'));
+
+    writeFileSync(join(PHASES_DIR, 'phase-hitl1.md'), [
+      '---',
+      'node_type: phase',
+      'id: phase-hitl1',
+      'phase: hitl1',
+      'gate: hitl1-recorded',
+      'stop: "yes"',
+      'requires: []',
+      '---',
+      '',
+      '# Phase: HITL1',
+      '',
+      'Human-in-the-loop phase.',
+    ].join('\n'));
+
+    // Shared dependencies
+    writeFileSync(join(SHARED_DIR, 'shared-subagent-protocol.md'), [
+      '---',
+      'node_type: shared',
+      'id: shared-subagent-protocol',
+      'shared_scope: subagent-protocol',
+      'authority: protocol',
+      'requires: []',
+      '---',
+      '',
+      '# Shared: Sub-agent Protocol',
+      '',
+      'Test shared content.',
+    ].join('\n'));
+
+    writeFileSync(join(SHARED_DIR, 'shared-silent-execution.md'), [
+      '---',
+      'node_type: shared',
+      'id: shared-silent-execution',
+      'shared_scope: silent-execution',
+      'authority: behavioral-contract',
+      'requires: []',
+      '---',
+      '',
+      '# Shared: Silent Execution',
+      '',
+      'Test shared content.',
+    ].join('\n'));
+
+    // Relay/sub-agent task surface — NOT in manifest
+    writeFileSync(join(PHASES_DIR, 'phase-wave2-subagent.md'), [
+      '---',
+      'node_type: phase',
+      'id: phase-wave2-subagent',
+      'phase: wave2',
+      'role: dpt-topic-scout',
+      'stop: "no"',
+      'requires:',
+      '  - shared/shared-subagent-protocol',
+      '---',
+      '',
+      '# Phase: Wave2 Sub-Agent',
+      '',
+      'Relay task surface — not a manifest lifecycle phase.',
+    ].join('\n'));
+
+    // Phase with no stop field
+    writeFileSync(join(PHASES_DIR, 'phase-no-stop.md'), [
+      '---',
+      'node_type: phase',
+      'id: phase-no-stop',
+      'phase: test',
+      'gate: test-gate',
+      'requires: []',
+      '---',
+      '',
+      '# Phase: No Stop',
+      '',
+      'Phase without stop field.',
+    ].join('\n'));
+
+    // Add these to manifest for the no-stop test
+    manifest.phases.push({ key: 'test', node: 'phases/phase-no-stop.md', gate: 'test-gate' });
+    manifest.phases.push({ key: 'wave2-sub', node: 'phases/phase-wave2-subagent.md', gate: 'wave2-complete' });
+    // NOTE: phase-wave2-subagent IS in manifest now for the "not in manifest" test to work as a negative case
+    // For the actual subagent negative test, we use a different approach
+    writeFileSync(join(WNC_TMP, 'manifest.json'), JSON.stringify(manifest));
+  });
+
+  after(() => {
+    if (existsSync(WNC_TMP)) rmSync(WNC_TMP, { recursive: true, force: true });
+  });
+
+  it('injects AUTONOMOUS MODE header for ordinary stop:no + gate!=null phase', () => {
+    const nodesDir = join(WNC_TMP, 'nodes-workflow-chain');
+    const runtime = createWorkflowRuntime('test', nodesDir);
+    const state = createState();
+    const result = assessNode('phases/phase-wave0.md', state, runtime);
+
+    assert.equal(result.status, 'loaded');
+    const entry = runtime.contentCache.get('phases/phase-wave0.md');
+    assert.ok(entry.md.includes('AUTONOMOUS MODE'));
+    assert.ok(entry.md.includes('YOU SHALL NOT SURFACE TO THE USER'));
+    assert.ok(entry.md.includes('non-terminal `stop: no` phase'));
+    assert.ok(entry.md.includes('idle/no-work state'));
+    assert.ok(entry.md.includes('"nothing left"'));
+    assert.ok(entry.md.includes('"done so far"'));
+    assert.ok(entry.md.includes('Complete this node by draining/repairing/degrading'));
+    assert.ok(entry.md.includes('Next phase comes ONLY from gate CLI `check.next`'));
+    assert.ok(entry.md.includes('principle guardrail'));
+    assert.ok(entry.md.includes('node-specific Stop Behavior'));
+  });
+
+  it('injects TERMINAL DELIVERY MODE header for final phase (phase:final + stop:no + gate:null)', () => {
+    const nodesDir = join(WNC_TMP, 'nodes-workflow-chain');
+    const runtime = createWorkflowRuntime('test', nodesDir);
+    const state = createState();
+    const result = assessNode('phases/phase-final.md', state, runtime);
+
+    assert.equal(result.status, 'loaded');
+    const entry = runtime.contentCache.get('phases/phase-final.md');
+    assert.ok(entry.md.includes('TERMINAL DELIVERY MODE'));
+    assert.ok(entry.md.includes('DELIVER FINAL ARTIFACTS ONLY'));
+  });
+
+  it('does NOT inject header for stop: yes phase', () => {
+    const nodesDir = join(WNC_TMP, 'nodes-workflow-chain');
+    const runtime = createWorkflowRuntime('test', nodesDir);
+    const state = createState();
+    const result = assessNode('phases/phase-hitl1.md', state, runtime);
+
+    assert.equal(result.status, 'loaded');
+    const entry = runtime.contentCache.get('phases/phase-hitl1.md');
+    assert.ok(!entry.md.includes('AUTONOMOUS MODE'));
+    assert.ok(!entry.md.includes('TERMINAL DELIVERY MODE'));
+  });
+
+  it('does NOT inject header when stop field is absent', () => {
+    const nodesDir = join(WNC_TMP, 'nodes-workflow-chain');
+    const runtime = createWorkflowRuntime('test', nodesDir);
+    const state = createState();
+    const result = assessNode('phases/phase-no-stop.md', state, runtime);
+
+    assert.equal(result.status, 'loaded');
+    const entry = runtime.contentCache.get('phases/phase-no-stop.md');
+    assert.ok(!entry.md.includes('AUTONOMOUS MODE'));
+    assert.ok(!entry.md.includes('TERMINAL DELIVERY MODE'));
+  });
+
+  it('does NOT inject header for relay/sub-agent task surface even with stop:no frontmatter (tested via non-manifest path)', () => {
+    // Remove phase-wave2-subagent from manifest to simulate a non-manifest node
+    const manifestPath = join(WNC_TMP, 'manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+    const filtered = manifest.phases.filter(p => p.node !== 'phases/phase-wave2-subagent.md');
+    const orig = JSON.stringify(manifest);
+    writeFileSync(manifestPath, JSON.stringify({ ...manifest, phases: filtered }));
+
+    try {
+      const nodesDir = join(WNC_TMP, 'nodes-workflow-chain');
+      const runtime = createWorkflowRuntime('test', nodesDir);
+      const state = createState();
+      const result = assessNode('phases/phase-wave2-subagent.md', state, runtime);
+
+      assert.equal(result.status, 'loaded');
+      const entry = runtime.contentCache.get('phases/phase-wave2-subagent.md');
+      assert.ok(!entry.md.includes('AUTONOMOUS MODE'));
+      assert.ok(!entry.md.includes('TERMINAL DELIVERY MODE'));
+    } finally {
+      // Restore manifest
+      writeFileSync(manifestPath, orig);
+    }
+  });
+
+  it('injects header after frontmatter and before body', () => {
+    const nodesDir = join(WNC_TMP, 'nodes-workflow-chain');
+    const runtime = createWorkflowRuntime('test', nodesDir);
+    const state = createState();
+    const result = assessNode('phases/phase-wave0.md', state, runtime);
+
+    const entry = runtime.contentCache.get('phases/phase-wave0.md');
+    const fmEnd = entry.md.indexOf('---\n', entry.md.indexOf('---\n') + 4) + 4;
+    const headerStart = entry.md.indexOf('## AUTONOMOUS MODE');
+    const bodyStart = entry.md.indexOf('# Phase: Wave0');
+
+    assert.ok(headerStart >= fmEnd, 'Header starts after frontmatter');
+    assert.ok(bodyStart > headerStart, 'Body starts after header');
+  });
+
+  it('injection is idempotent — second load does not double-inject', () => {
+    const nodesDir = join(WNC_TMP, 'nodes-workflow-chain');
+    const runtime = createWorkflowRuntime('test', nodesDir);
+    const state = createState();
+
+    // First load
+    assessNode('phases/phase-wave0.md', state, runtime);
+    const entry = runtime.contentCache.get('phases/phase-wave0.md');
+    const firstCount = (entry.md.match(/AUTONOMOUS MODE/g) || []).length;
+
+    // Second load on a fresh runtime (re-reads from disk, re-injects)
+    const runtime2 = createWorkflowRuntime('test', nodesDir);
+    assessNode('phases/phase-wave0.md', createState(), runtime2);
+    const entry2 = runtime2.contentCache.get('phases/phase-wave0.md');
+    const secondCount = (entry2.md.match(/AUTONOMOUS MODE/g) || []).length;
+
+    assert.equal(firstCount, 1);
+    assert.equal(secondCount, 1);
+  });
+
+  it('uses manifest membership as lifecycle coverage source of truth — frontmatter alone does not trigger', () => {
+    // phase-wave0-subagent has stop:no in its frontmatter but is NOT in the manifest here
+    // Create a standalone file not in any manifest
+    const standaloneDir = join(WNC_TMP, 'nodes-workflow-chain', 'standalone');
+    mkdirSync(standaloneDir, { recursive: true });
+    writeFileSync(join(standaloneDir, 'standalone-no-manifest.md'), [
+      '---',
+      'node_type: phase',
+      'phase: custom',
+      'gate: custom-gate',
+      'stop: "no"',
+      'requires: []',
+      '---',
+      '',
+      '# Standalone Phase',
+      '',
+      'This file is not in any manifest.',
+    ].join('\n'));
+
+    // No manifest at this level — runtime.nodesDir/nodes-workflow-chain/../manifest.json
+    // We need to ensure the standalone node is not covered by a manifest.
+    // Since the parent manifest is at WNC_TMP/manifest.json, and nodesDir is WNC_TMP/nodes-workflow-chain,
+    // the manifest is found. But standalone-no-manifest.md is not in it.
+    const nodesDir = join(WNC_TMP, 'nodes-workflow-chain');
+    const runtime = createWorkflowRuntime('test', nodesDir);
+    const state = createState();
+    const result = assessNode('standalone/standalone-no-manifest.md', state, runtime);
+
+    assert.equal(result.status, 'loaded');
+    const entry = runtime.contentCache.get('standalone/standalone-no-manifest.md');
+    assert.ok(!entry.md.includes('AUTONOMOUS MODE'));
+    assert.ok(!entry.md.includes('TERMINAL DELIVERY MODE'));
   });
 });

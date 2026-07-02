@@ -158,6 +158,7 @@ const result = buildGateResult({
   routing,
   inspect,
   advice,
+  attemptNumber: args.attempt ?? 0,
 });
 
 // Write gate attempt audit (logger + trace)

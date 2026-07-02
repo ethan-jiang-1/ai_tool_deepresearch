@@ -408,6 +408,7 @@ const result = buildGateResult({
   routing,
   inspect,
   advice,
+  attemptNumber: args.attempt ?? 0,
 });
 
 writeGateAttempt(bundlePath, result);

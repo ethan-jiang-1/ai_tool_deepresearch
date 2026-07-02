@@ -11,11 +11,35 @@ suggested_context:
 
 # Shared: Silent Execution（静默阶段行为纪律）
 
+## §0 ABSOLUTE PROHIBITION — READ FIRST
+
+@impl SWE-002
+
+**THIS SECTION IS THE FIRST THING YOU READ IN THIS FILE. IT OVERRIDES EVERYTHING ELSE.**
+
+You are in a **non-terminal `stop: no` phase**. This means:
+
+1. **You SHALL NOT surface to the user. Period.** No messages, no questions, no confirmations, no progress reports, no idle/no-work reports, no "nothing left" / "done so far" summaries, no A/B choices. The user is NOT available for consultation. There is no HITL checkpoint here.
+
+2. **Gate failure is NOT an emergency.** Gate fail means "the current artifact set has gaps" — nothing more. It does NOT mean "stop and ask the user." It means "read the inspect/advice, fix what's broken, rerun the gate." Gate failure is a normal, expected part of autonomous execution.
+
+3. **User-facing surfacing is the prohibited behavior.** You may retry, switch strategies, degrade gracefully, record gaps, inspect queue/status/artifacts, run the gate, or hold in place. You may NOT ask the user for help, confirmation, or direction, and you may NOT send progress, idle, "nothing left", "没事做", "做到这里", or "done so far" updates. If you are about to write a mid-phase user-facing message — STOP. That message is forbidden.
+
+4. **Every silent degradation path leads to one of two outcomes:** (a) you fix the issue and pass the gate, or (b) you record the gap via accepted trace/log surface and continue. Neither outcome involves the user.
+
+5. **If you are fatigued (3+ gate failures on the same issue):** Pause. Re-read these §0 rules. Switch strategies — do not repeat the same fix. Use `--attempt N` on the gate CLI so the Engine can give you step-back advice. Read that advice. Degradation is not failure — it is the expected behavior when a non-terminal `stop:no` phase cannot achieve perfection.
+
+6. **Gate-pass objective:** This phase is an active autonomous work loop. Local sub-step completion, an empty active window, or repeated gate failure is not a checkpoint. Continue current-node work, repair, degradation, or silent holding until the current gate passes and returns `check.next`.
+
+7. **Gate boundary:** Silent degradation does not bypass the gate. You may not self-load the next phase. The next phase comes ONLY from the gate CLI's `check.next`.
+
+---
+
 ## Purpose
 
-定义 wave0/1/2、setup、seed-topics 和 readiness 阶段的静默自主执行契约。Agent 在这些阶段 SHALL NOT 浮出水面——不展示内容、不提问、不确认、不报告进度。遇错按降级优先级链自行处理。
+定义所有 manifest lifecycle `stop: no` phase 的静默自主执行契约。Agent 在这些阶段 SHALL NOT 浮出水面——不展示内容、不提问、不确认、不报告进度、不报告 idle/no-work 状态、不做“nothing left / 没事做 / 做到这里”中途总结。遇错按降级优先级链自行处理，并持续推进到 gate pass + `check.next` 或合法 silent holding。
 
-此文件是 **行为约定**——wave phase MD 通过 `requires` 加载此文件，Agent 在静默阶段 SHALL 遵守本文中的所有规则。
+此文件是 **行为约定**——所有 manifest lifecycle phase MD 通过 `requires` 加载此文件，Agent 在静默阶段 SHALL 遵守本文中的所有规则。
 
 **冲突解决**：当本文规则与 `shared-repair-guidance.md` 或 `shared-anti-cheating-rules.md` 冲突时，本文的静默纪律优先（详见第 3 节优先级覆盖表）。
 
@@ -29,16 +53,19 @@ suggested_context:
 
 ### 1.1 适用范围
 
-以下 phase 为静默阶段（均为 `stop: no`）：
+以下 phase 为静默阶段（均为 manifest lifecycle `stop: no`）：
 
 | Phase | 特点 |
 |-------|------|
+| instantiation | 执行时间短，name collision/illegal name 时自动 hex6 后缀或规范化 |
 | setup | 执行时间短，实践中几乎不会触发降级 |
 | seed-topics | 执行时间短，实践中几乎不会触发降级 |
 | wave0 | 长程，可能触发降级 |
 | wave1 | 长程，可能触发降级 |
 | wave2 | 长程，可能触发降级 |
 | readiness | 程序化 precheck，执行时间极短 |
+| rerun | HITL2 rerun 后的增量分析 phase |
+| final | **Terminal delivery exception** — `stop:no` + `gate:null`。允许在 `final/` artifact 写入后交付最终报告，但禁止中途提问/确认/A-B 选项/post-delivery feedback loop |
 
 ### 1.2 核心禁令
 
@@ -47,9 +74,17 @@ Agent 在静默阶段 SHALL NOT：
 - 向用户提问
 - 请求用户确认
 - 报告执行进度
+- 报告 idle/no-work 状态或声称 "nothing left" / "没事做" / "done so far"
 - 发送类似 "继续吗？"、"已完成 XX，是否继续？"、"遇到错误，是否重试？" 的消息
+- 提供 A/B 选项或要求用户做任何决策
 
-### 1.3 降级优先级链（Degradation Priority Chain）
+### 1.3 Active Work Loop
+
+非终端 `stop: no` phase 不是对话 checkpoint。Agent 的当前目标始终是完成当前 node：检查 queue/status/artifacts，drain active queue，修复 gate fail，执行降级链，重新运行 gate，并只按 gate CLI `check.next` 进入下一 phase。
+
+当本地工作看似完成、queue 暂时为空、active window 为空、质量缺口尚未补齐、或同一 gate 多次失败时，Agent SHALL 将这些状态视为继续工作的信号，而不是中途汇报理由。下一步必须是 node-specific work/repair/degradation、gate rerun，或 §6.3 定义的 silent holding。
+
+### 1.4 降级优先级链（Degradation Priority Chain）
 
 遇错时 Agent SHALL 按以下顺序自行处理，不浮出水面：
 
@@ -61,7 +96,7 @@ Agent 在静默阶段 SHALL NOT：
 
 Agent SHALL 在每个降级步骤记录到 `rb_trace.jsonl`：原问题、已尝试的恢复步骤（按优先级链顺序）、最终降级决策、影响评估（`gap_impact`）。
 
-### 1.4 终端恢复
+### 1.5 终端恢复
 
 用户可以在静默阶段关闭终端。系统 SHALL 能从 durable state（`rb_status.json`、`rb_profile.yaml`、`rb_trace.jsonl`）恢复。Agent 恢复时 SHALL 通过 `rb_status.json` 定位当前 phase 继续执行，SHALL NOT 重新开始已完成的工作。
 
@@ -92,7 +127,7 @@ Agent 在静默阶段降级时 SHALL NOT 将 `rb_status.json` 的 state 设为 `
 
 @impl SWE-001
 
-在 wave0/1/2 静默阶段，以下来自其他 shared 文件的规则被静默纪律显式覆盖：
+在所有 manifest lifecycle `stop: no` phase（instantiation, setup, seed-topics, wave0, wave1, wave2, readiness, rerun, final），以下来自其他 shared 文件的规则被静默纪律显式覆盖：
 
 | 被覆盖的规则 | 来源 | 静默阶段改写 |
 |-------------|------|------------|
@@ -125,3 +160,81 @@ Agent SHALL NOT 因 escalation 条件满足而浮出水面。只有在到达下�
 **补充信息处理**：
 - 如果用户消息包含研究相关的补充信息（如 "对了，也帮我看看 X"），Agent SHALL 记录到 `rb_trace.jsonl` 但不立即处理
 - 在 HITL2 时提醒用户该补充信息尚未纳入当前研究
+
+---
+
+## 5. Fatigue Resistance
+
+@impl SWE-002
+
+Gate failure patterns in long-running silent phases (wave0, wave1, wave2) can induce LLM context fatigue — the model's most natural fallback when uncertain is "ask the user." This section provides a self-check protocol to resist fatigue-induced surfacing.
+
+### 5.1 Self-Check Protocol
+
+After 3 consecutive gate failures on the same phase, PAUSE before taking any action. Execute this protocol:
+
+1. **Re-read §0 of this file.** Read every line. The absolute prohibition is the first thing you read in this file for a reason.
+
+2. **Re-read the current phase instructions' §5 (Gate Command) and §7 (On Gate Fail).** Verify you are running the correct CLI command and interpreting inspect/advice correctly.
+
+3. **Classify the failure:**
+   - **Structural (fixable):** Missing file, schema violation, stale token — you know the fix and can apply it directly. Apply it, rerun gate with `--attempt N`.
+   - **Structural (unfixable):** Gate rule that fundamentally cannot be satisfied with current bundle state (e.g., `rerun_count >= 3` for rerun-ready) — record `silent_unpassable`, hold non-blocked.
+   - **Degradation (retryable):** Count floor not met, search space partial — the normal silent execution scenario. Switch strategy (different keywords, different search angles, different repair tactic) rather than repeating the same action. Rerun gate with `--attempt N`.
+
+4. **Switch strategy — do not repeat.** If your last attempt used strategy A (e.g., supplementary re-fill with one search angle), use strategy B (different search keywords, different sources, different repair method). Degradation is NOT failure — it is the expected behavior when a non-terminal `stop:no` phase cannot achieve perfection.
+
+### 5.2 Gate CLI `--attempt N` Usage
+
+When retrying a gate after failure, pass `--attempt N` where N is your 1-based retry count:
+
+```bash
+node DPT_FRAMEWORK/cli/gates/check-gate-<gate-name>.mjs --bundle <path> --current-node phases/<phase>.md --attempt <N>
+```
+
+The Engine will use this Agent-reported retry hint to return fatigue diagnostics when `N >= 3`:
+- `fatigue_warning: true` — the Engine is signaling that you should step back
+- `step_back: true` — you SHOULD pause, re-read phase instructions, and switch strategies
+- Additional `advice` messages with stop-mode-safe guidance
+
+**Important:** `--attempt` is an Agent-reported retry hint. The Engine does not track or verify consecutive failure counts. The Engine returns diagnostics based on what you report — be honest with your attempt count.
+
+### 5.3 Degradation Is Not Failure
+
+Silent degradation (`silent_degradation`, `silent_gap`, `silent_gap_critical`, `silent_unpassable`) is the CORRECT behavior for a non-terminal `stop:no` phase that cannot achieve perfection. Every degradation event recorded via accepted trace/log surface is a successful execution of the contract — the phase is doing exactly what it was designed to do.
+
+When you record a degradation event, you are NOT failing. You are following the contract. Surface to the user would be a contract violation.
+
+---
+
+## 6. Gate Boundary
+
+@impl SWE-002
+
+### 6.1 Silent Degradation Does Not Bypass the Gate
+
+Recording a degradation event (`silent_degradation`, `silent_gap`, etc.) does NOT constitute gate passage. You may NOT:
+- Skip the gate because you recorded a degradation
+- Self-load the next phase because "the gap is documented"
+- Advance `rb_status.json` to the downstream gate without `check.next` from the gate CLI
+- Bypass the gate and directly invoke `advance-status.mjs`
+
+### 6.2 Next Phase Comes ONLY from Gate CLI
+
+The ONLY authority for phase transition is the gate CLI's `check.next` field. When the gate passes, `check.next` contains the next node fileRef. Load that fileRef. Do NOT load any other phase.
+
+### 6.3 Silent Unpassable Holding
+
+When a gate is structurally unpassable (the gate rule fundamentally cannot be satisfied with the current bundle state, and all repair/strategy-change paths are exhausted):
+
+1. Record `silent_unpassable` via accepted trace/log surface:
+   ```bash
+   node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silent_unpassable" --detail '{"kind":"silent_unpassable","phase":"<phase>","gate":"<gate>","reason":"<reason>"}'
+   ```
+2. Keep the current phase in non-blocked/in-progress holding state
+3. Do NOT write `state: blocked` to `rb_status.json`
+4. Do NOT surface to the user
+5. Do NOT self-load the next phase
+6. Do NOT repeat the same ineffective repair
+
+The `silent_unpassable` event is an audit trail for later review or operator inspection. It is NOT a phase transition authority.

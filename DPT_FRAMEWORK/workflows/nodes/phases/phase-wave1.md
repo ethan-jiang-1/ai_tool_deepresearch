@@ -249,11 +249,11 @@ Agent MUST 在跑 gate 之前逐条确认以下 stop conditions。这不是 gate
 │     gap = T - N                                          │
 │         │                                               │
 │         ▼                                               │
-│  3. attempt_count ≥ 3? → escalation                      │
+│  3. attempt_count ≥ 3? → 记录 silent_degradation，切换策略 │
 │         │                                               │
 │         ▼                                               │
 │  4. no-progress?（同一 topic 的 count 连续两次未增加）      │
-│     → escalation                                         │
+│     → 记录 silent_gap，切换策略                            │
 │         │                                               │
 │         ▼                                               │
 │  5. 为每个不足 topic 创建 supplementary task card          │
@@ -287,7 +287,7 @@ Agent MUST 在跑 gate 之前逐条确认以下 stop conditions。这不是 gate
 **关键约束（防止占位符 reference）：**
 - **禁止占位符 URL**：不得创建 source_url 为 https://example.com 或任何等效占位符 URL（如 placeholder.com、fake-url.com 等）的 reference 文件。每个 reference 文件必须来自真实的 WebSearch + WebFetch 获取的页面，source_url 必须指向可访问的真实网页。
 - **最低内容标准**：每个新 reference 文件的 ## Key Facts section 必须包含至少 5 条具体的、可验证的事实陈述——不得使用泛化描述如 "Collected during wave1 deepening phase" 或 "See primary reference files"。
-- **诚实失败**：如果经彻底搜索后（至少 3 个不同搜索角度、多种关键词组合）无法找到新增的合法来源：**不得创建占位符 reference 文件**。改为写入 artifacts/wave1/{topic.slug}/suppl-failure-r{attempt}.md，内容包括：搜索关键词列表、尝试的搜索角度（至少 3 个）、为何未能找到新来源（搜索空间已耗尽 / 所有搜索结果均为已收录来源 / 页面无法访问等具体原因）。Phase Agent 会在 drain 后检查此文件，据此判断是否需要 escalation。",
+- **诚实失败**：如果经彻底搜索后（至少 3 个不同搜索角度、多种关键词组合）无法找到新增的合法来源：**不得创建占位符 reference 文件**。改为写入 artifacts/wave1/{topic.slug}/suppl-failure-r{attempt}.md，内容包括：搜索关键词列表、尝试的搜索角度（至少 3 个）、为何未能找到新来源（搜索空间已耗尽 / 所有搜索结果均为已收录来源 / 页面无法访问等具体原因）。Phase Agent 会在 drain 后检查此文件，据此判断是否需要记录 silent_degradation 或切换策略。",
   "producer_rule": "topic_deepening",
   "lineage": {"topic_slug": "{topic.slug}", "phase": "wave1", "trigger": "count_floor_repair", "attempt": {attempt}},
   "priority_class": "P1_state_or_gate_repair",
@@ -317,8 +317,8 @@ Agent MUST 在跑 gate 之前逐条确认以下 stop conditions。这不是 gate
 
 - Supplementary task 的 `required_receipts: []`、`completion_receipt: null`——`operate-queue complete` 的 receipt check 不判定 pass/fail。Phase Agent 在 Sub-agent 返回后**手动验证**：检查 reference/ 目录下新增了匹配 `{topic.slug}` 的文件，且新文件含完整 metadata + 5 sections。若 Sub-agent 未能产出有效 reference 文件 → `operate-queue fail` → engine 自动生成 repair task → Phase Agent 修复或进入下一个 gate attempt。
 - **占位符检测（Post-Drain Placeholder Check）**：drain 完成后、rerun gate 之前，Phase Agent MUST 执行占位符检测。检查本轮新写入的 reference/{topic.slug}-*.md 文件的 source_url metadata：
-  - 若任何新文件的 `source_url` 为 `https://example.com` 或等效占位符 URL（`placeholder.com`、`fake-url.com` 等）→ **立即视为 no-progress**，删除占位符文件（`rm reference/{topic.slug}-ref-*.md` 中 source_url 为占位符的文件），不等满 3 次 attempt，直接 escalation。
-  - 若 Sub-agent 写入了 `artifacts/wave1/{topic.slug}/suppl-failure-r{attempt}.md`（表示搜索空间已耗尽）→ 同样视为 no-progress，立即 escalation。Escalation 时注明 "search space exhausted for topic {topic.slug} after {N} real sources found, supplementary attempt {attempt} produced only failure report"。
+  - 若任何新文件的 `source_url` 为 `https://example.com` 或等效占位符 URL（`placeholder.com`、`fake-url.com` 等）→ **立即视为 no-progress**，删除占位符文件（`rm reference/{topic.slug}-ref-*.md` 中 source_url 为占位符的文件），不等满 3 次 attempt，直接记录 `silent_gap`。
+  - 若 Sub-agent 写入了 `artifacts/wave1/{topic.slug}/suppl-failure-r{attempt}.md`（表示搜索空间已耗尽）→ 同样视为 no-progress，立即记录 `silent_gap`。记录时注明 "search space exhausted for topic {topic.slug} after {N} real sources found, supplementary attempt {attempt} produced only failure report"。不浮出水面，切换策略或接受当前 count floor 降级。
   - 若至少 1 个新 reference 文件有真实 source_url（非占位符）→ 保留有效文件，继续 rerun gate。
 - Supplementary task 的 `action` 以 `{target_count}` 告诉 Sub-agent 目标数量，但 Sub-agent 可能找不到那么多合法来源。这是预期行为——gate rerun 会重新计算 gap，触发下一轮补充。只要产出至少 1 个有效 reference 文件就算 partial success，不要因未达到 `{target_count}` 就 fail the task。
 - 补充循环期间**不重新回填 seed topic**——backfill token 已在首次 deepening 完成后替换完毕。Supplementary task 不产生新的 mechanism/trend/question 内容。
@@ -329,8 +329,11 @@ Agent MUST 在跑 gate 之前逐条确认以下 stop conditions。这不是 gate
 |------|------|
 | Gate pass（所有 count_floor 规则通过） | 退出 loop，进入 §6 On Gate Pass |
 | 所有 count_floor 已通过，但其他规则仍 fail | 退出 re-fill loop，按 §7 表逐条修复 → rerun gate |
-| `attempt_count ≥ 3` 且 count_floor 仍未通过 | Escalation：`rb_status.json` → `state: "blocked"` + `blocked_reason: "wave1 count_floor not met after 3 attempts"`，记录 escalation trace event |
-| No-progress：连续两次 gate attempt 的 inspect 中同一 topic 的 reference count 未增加；**或**本轮 supplementary round 产出的全部新 reference 文件 source_url 均为占位符 URL（如 `example.com`）；**或** Sub-agent 写入了 `suppl-failure-r{attempt}.md` | Escalation：不等满 3 次，立即记录。占位符：删除占位符文件后 escalation，注明 "search space exhausted for topic {topic.slug} after {N} real sources found, supplementary attempt {attempt} produced only placeholders"。诚实失败：注明 suppl-failure-r{attempt}.md 中的具体原因 |
+| `attempt_count ≥ 3` 且 count_floor 仍未通过 | 通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: partial`），切换策略（调整搜索关键词、更换搜索角度、接受当前 count floor 降级），不写 `state: blocked`：
+```bash
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silent_degradation" --detail '{"kind":"silent_degradation","phase":"wave1","gate":"wave1-complete","gap_impact":"partial","reason":"count_floor_persistent_3x","attempts":3}'
+``` |
+| No-progress：连续两次 gate attempt 的 inspect 中同一 topic 的 reference count 未增加；**或**本轮 supplementary round 产出的全部新 reference 文件 source_url 均为占位符 URL（如 `example.com`）；**或** Sub-agent 写入了 `suppl-failure-r{attempt}.md` | 通过 accepted trace/log surface 记录 `silent_gap`，不等满 3 次。占位符：删除占位符文件后记录 `silent_gap`，注明 "search space exhausted for topic {topic.slug} after {N} real sources found"。诚实失败：记录 `silent_gap` 并注明 suppl-failure-r{attempt}.md 中的具体原因。切换策略或接受当前 count floor 降级，不浮出水面 |
 
 ## 4. Expected Artifacts
 
@@ -350,8 +353,10 @@ Agent MUST 在跑 gate 之前逐条确认以下 stop conditions。这不是 gate
 ## 5. Gate Command
 
 ```bash
-node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle <path> --current-node phases/phase-wave1.md
+node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle <path> --current-node phases/phase-wave1.md --attempt <N>
 ```
+
+Retry 时传 Agent-reported `--attempt N`（N 从 1 开始，每次 rerun 递增）。若 gate 返回 `step_back: true`，暂停并重新阅读本 phase instructions §0 和 §3.3.2 后再决定策略。
 
 ## 6. On Gate Pass
 
@@ -376,14 +381,20 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave2_complete
 | `__BACKFILL_WAVE1_*__` token stale（未替换） | grep 定位 stale token → 从 evidence-summary 提取内容 → 替换 token 行 |
 | `trace_event_present` fail | 确认已记录 `wave1_completion` trace event |
 | status drift | 恢复 `current_gate`/`next_gate` 为 `wave1_complete`/`wave2_complete` |
-| `per_topic_ref_md_count_floor` fail：某 topic 的 `reference/*{topic}*.md` 数量 < `rb_profile.yaml#/research_style_params/wave1_per_topic_ref_floor` 的动态阈值 | **进入 §3.3.2 Count-Floor Re-Fill Loop**：读 gate inspect → 解析不足 topic 和 gap → 创建 supplementary task card（`work_id: wave1-suppl-{topic.slug}-r{N}`，只产出 reference/*.md，不修改 evidence-summary/question-list）→ enqueue + drain → rerun gate。最多 3 次 gate attempt（含初始）。No-progress（同一 topic count 连续两次未增）→ immediate escalation |
-| registry 为空 | 回到 HITL1 补充 topic_registry |
+| `per_topic_ref_md_count_floor` fail：某 topic 的 `reference/*{topic}*.md` 数量 < `rb_profile.yaml#/research_style_params/wave1_per_topic_ref_floor` 的动态阈值 | **进入 §3.3.2 Count-Floor Re-Fill Loop**：读 gate inspect → 解析不足 topic 和 gap → 创建 supplementary task card（`work_id: wave1-suppl-{topic.slug}-r{N}`，只产出 reference/*.md，不修改 evidence-summary/question-list）→ enqueue + drain → rerun gate。最多 3 次 gate attempt（含初始）。No-progress（同一 topic count 连续两次未增）→ 记录 `silent_gap`，切换策略 |
+| registry 为空 | 通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: blocks_must_answer`），从 `rb_plan.md` frontmatter 尝试重建 topic_registry。不浮出水面，不回到 HITL1 |
 
-**Persistent failure：** 若 wave1 gate 连续 3 次修复无进展（含 count_floor re-fill attempt），记录 escalation 到 `rb_status.json`（`state: blocked`，`blocked_reason` 描述具体 fail 原因和 attempt 次数）和 `rb_trace.jsonl`（`gate_attempt` entry with `escalated: true`）。
+**Persistent failure：** 若 wave1 gate 连续 3 次修复无进展（含 count_floor re-fill attempt），通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: partial`）：
+```bash
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silent_degradation" --detail '{"kind":"silent_degradation","phase":"wave1","gate":"wave1-complete","gap_impact":"partial","reason":"persistent_failure_3x","attempts":3}'
+```
+不写 `state: blocked`。降级后 Agent 仍有责任继续尝试不同的修复策略，不浮出水面。
 
 ## 8. Stop Behavior
 
-`stop: no` — Phase Agent 自主执行 deepening 循环。每个 topic 的 deepening 和 backfill 不需要停下来等待用户审批。
+`stop: no` — Phase Agent 自主执行 deepening 循环，不发送阶段进度或 idle/no-work 汇报。每个 topic 的 deepening/backfill、active queue、thin queue、reference count-floor gap、placeholder-only output、search-space-exhausted note、或 no-progress round，都是继续 drain、re-fill、换搜索策略、运行 gate 或记录 silent holding 的信号。
+
+Reference quality and per-topic evidence depth take priority: before gate pass, do not turn thin queue or quality/count gaps into user-facing status. Phase 完成条件是 `wave1-complete` gate pass + gate CLI `check.next`；不得自判完成或自行加载下一 phase。
 
 > **静默阶段纪律**：本 phase 在静默自主阶段。`requires` 已加载 `shared-silent-execution.md`。遇错按降级优先级链处理（重试→换源→降级方法→标记 gap），绝不浮出水面向用户报告进度、提问或请求确认。
 

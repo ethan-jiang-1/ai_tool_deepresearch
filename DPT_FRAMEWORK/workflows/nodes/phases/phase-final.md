@@ -4,7 +4,8 @@ id: phase-final
 phase: final
 gate: null
 stop: "no"
-requires: []
+requires:
+  - shared/shared-silent-execution
 suggested_context:
   - shared/shared-schemas
   - shared/shared-anti-cheating-rules
@@ -55,11 +56,23 @@ N/A — final 无 outgoing gate。
 
 ## 7. On Gate Fail
 
-N/A — final 无 gate，fail 场景由 Agent 自主判断是否需要回到 HITL2 repair/rerun。
+N/A — final 无 gate。Final 是 terminal delivery node。
 
-## 8. Stop Behavior
+## 8. Stop Behavior — Terminal Delivery
 
-`stop: no` — Agent 自主完成 final delivery。
+`stop: no` + `gate: null` — Agent 在 `final/` artifact 写入后交付最终报告。这是 terminal delivery point：
+
+**允许的行为：**
+- 从 verified bundle state 写入 `final/` artifact（至少 1 份报告文件）
+- 更新 `rb_status.json`：`current_gate: none` / `next_gate: null`
+
+**绝对禁止的行为：**
+- 向用户提问或请求确认
+- 提供 A/B 选项或进度汇报
+- 在 `final/` artifact 写入前发送 idle/no-work 或 delivery summary
+- 启动 post-delivery feedback loop
+- 等待用户反馈后再修改报告
+- 回到 HITL2 repair/rerun（用户反馈通过独立路径触发 `phase-hitl2.md`）
 
 Post-delivery 用户反馈入口：用户反馈写入 `rb_profile.yaml` 的 HITL2/user feedback 字段，通过 HITL2 `rerun` 从 `seed-topics` 重新跑。Final node 自身不处理 post-delivery 修改。
 
