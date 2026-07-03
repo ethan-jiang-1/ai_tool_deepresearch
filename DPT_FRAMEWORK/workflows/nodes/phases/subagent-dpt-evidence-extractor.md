@@ -170,6 +170,14 @@ Rules:
 - `source_url` must be the specific source page, not a homepage.
 - `## Key Facts` must contain at least 5 concrete bullet facts from the fetched page.
 
+**Output serialization:** All structured output files MUST be written via standard library serialization, never hand-concatenated:
+
+- JSON files (e.g. `meta.json`, `websearch.json`) → `JSON.stringify(data, null, 2)`
+- YAML content (e.g. `source.yaml` when produced) → `yaml.stringify(data)` from the `yaml` npm package
+- Markdown with structured metadata blocks → construct the metadata lines from a data object, then assemble with section text — do NOT inline raw values into template literals without escaping
+
+Construct a plain JavaScript object, serialize it, then write the result. NEVER hand-concatenate structured formats with template literals, string interpolation, or shell heredocs. Values containing double quotes, colons, newlines, emoji, or CJK characters will produce malformed output when hand-concatenated.
+
 ## 4. Execution Within Relay Slot
 
 The Sub-agent works only inside the relay-assigned slot directory (`_subagents/wave_NN/slot_MM/`). It receives `task.md` and `result.schema.json`; the task text includes the topic, cache directory, action, and required output declarations.

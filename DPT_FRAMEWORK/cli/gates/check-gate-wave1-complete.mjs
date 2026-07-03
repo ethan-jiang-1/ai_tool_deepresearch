@@ -29,6 +29,8 @@ import {
   checkOutputDeclarationCoverage,
   checkSubagentSlotPresence,
   detectRelayBypassSuspicion,
+  scanTemplateNotExpanded,
+  readYamlArraySafe,
 } from '../../engine/helpers/gate-helpers.mjs';
 import { countReferences } from '../../engine/helpers/ref-count.mjs';
 
@@ -90,17 +92,20 @@ function getTopicKeys() {
 }
 
 /**
- * Read YAML array from a file. Returns parsed array or null if file missing/unparseable.
+ * Read YAML array from a file. Uses centralized safe reader with repair.
+ * Returns parsed array or null if file missing/unparseable.
+ * Emits actionable parse error diagnostics to gate inspect on failure.
  */
 function readYamlArray(filePath) {
-  if (!existsSync(filePath)) return null;
-  const raw = readFileSync(filePath, 'utf-8');
-  try {
-    const parsed = parseYaml(raw);
-    return Array.isArray(parsed) ? parsed : null;
-  } catch {
+  const result = readYamlArraySafe(filePath, bundlePath);
+  if (!result.ok) {
+    inspect.push(`[parse_error] ${result.error}`);
     return null;
   }
+  if (result.repaired) {
+    inspect.push(`[yaml_repaired] ${filePath}: ${result.repairDetail}`);
+  }
+  return Array.isArray(result.data) ? result.data : null;
 }
 
 /**
@@ -113,6 +118,14 @@ function expandTopicTarget(target) {
     return topics.map(t => ({ topic: t, resolved: target.replace(/\{topic\}/g, t) }));
   }
   return [{ topic: null, resolved: target }];
+}
+
+// ── Pre-rule scan: template_not_expanded diagnostics ──
+const templateScanFindings = scanTemplateNotExpanded(bundlePath);
+if (templateScanFindings.findings.length > 0) {
+  for (const f of templateScanFindings.findings) {
+    inspect.push(`[template_not_expanded] ${f.file}: ${f.field} contains unexpanded template variable: ${f.value}`);
+  }
 }
 
 // ── Rule evaluation ──

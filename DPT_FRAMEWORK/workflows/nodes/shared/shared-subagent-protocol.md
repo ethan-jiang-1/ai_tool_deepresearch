@@ -198,3 +198,44 @@ If Tier 1 is unavailable, blocked, or times out, fall through to system tools.
 If all tiers fail, record the access failure and proceed with remaining sources. NEVER fabricate page content from search snippets.
 
 This is a mechanism requirement, not a convention — the Sub-agent MUST exhaust the chain before reporting a source as inaccessible.
+
+## 6. Output Serialization
+
+All Sub-agent YAML/JSON output files MUST be written through the corresponding standard library serialization function. Hand-concatenated format strings are prohibited — they produce malformed output when values contain special characters (double quotes, colons, newlines, emoji, CJK, URLs with query/fragment components).
+
+### 6.1 Required serialization methods
+
+| Output format | Required method | Package / API |
+|---------------|----------------|---------------|
+| YAML | `yaml.stringify(data)` | `yaml` npm package |
+| JSON | `JSON.stringify(data, null, 2)` | Built-in |
+
+### 6.2 Prohibited patterns
+
+- **Template literal concatenation**: `` `${key}: ${value}\n` `` — breaks on `value` containing `"`, `:`, `\n`, emoji, CJK
+- **Shell heredoc**: `cat > file.yaml << 'EOF' ... EOF` — no escaping, same breakage
+- **String interpolation**: `"title: " + title` — same issues as template literals
+- **Manual quoting**: `'"' + title + '"'` — breaks on embedded double quotes, produces invalid YAML/JSON
+
+### 6.3 Correct pattern
+
+```
+import yaml from 'yaml';
+
+// 1. Build a plain JavaScript data object
+const entries = [{
+  url: "https://example.com/article",
+  title: pageTitle,        // may contain ", :, emoji, CJK — safe
+  retrieved_date: today,
+  topic_tag: topicSlug,
+  notes: extractNotes(pageContent),
+}];
+
+// 2. Serialize through the standard library — handles all escaping
+const yamlString = yaml.stringify(entries);
+
+// 3. Write the serialized string to the artifact file
+writeFileSync(outputPath, yamlString);
+```
+
+This applies to all Sub-agent roles: `dpt-source-intake` (`source.yaml`), `dpt-evidence-extractor` (`meta.json`, `websearch.json`, any YAML content), and `dpt-topic-scout` (result JSON, `reference/00-cross-*.md` YAML frontmatter, `meta.json`).

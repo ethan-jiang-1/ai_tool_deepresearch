@@ -21,6 +21,7 @@ import {
   checkOutputDeclarationCoverage,
   checkSubagentSlotPresence,
   detectRelayBypassSuspicion,
+  scanTemplateNotExpanded,
 } from '../../engine/helpers/gate-helpers.mjs';
 
 const args = parseGateCliArgs();
@@ -164,6 +165,14 @@ function checkRerunAddFullSynthesis() {
 }
 
 // ── Rule evaluation ──
+// ── Pre-rule scan: template_not_expanded diagnostics ──
+const templateScanFindings = scanTemplateNotExpanded(bundlePath);
+if (templateScanFindings.findings.length > 0) {
+  for (const f of templateScanFindings.findings) {
+    inspect.push(`[template_not_expanded] ${f.file}: ${f.field} contains unexpanded template variable: ${f.value}`);
+  }
+}
+
 for (const rule of definition.rules) {
   if (rule.check === 'placeholder') continue;
 

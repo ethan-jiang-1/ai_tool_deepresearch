@@ -33,7 +33,7 @@ Agentic Queue (AGQ) 是 Engine-side 的任务队列系统：Phase Agent 从队�
 > | 内容 | 状态 | 说明 |
 > |------|------|------|
 > | Queue engine (`queue-manager.mjs`, `operate-queue.mjs`) | **✅ 已实现** | enqueue / claim / complete / fail / preempt / render / checkReceipts，AGQ-001~006 accepted，3 个 playbook 验证通过 |
-> | Queue 数据结构 (`rb_queue.json`, 5-slot window + refill pool) | **✅ 已实现** | Zod-validated QueueItemSchema，`_cache/agentic-queue/current-task.md` projection |
+> | Queue 数据结构 (`rb_queue.json`, 20-slot window + refill pool) | **✅ 已实现** | Zod-validated QueueItemSchema，`_cache/agentic-queue/current-task.md` projection |
 > | 两层嵌套 loop 架构 | **📐 定调** | 外层 (gate+chain) vs 内层 (queue) 的边界划分已在本文件 §3–§5 定调。内层 loop 的 workflow 集成已部分落地（见下两行） |
 > | Phase node MD 驱动 queue loop | **✅ 部分实现** | `phase-seed-topics.md`、`phase-wave0.md`、`phase-wave1.md`、`phase-wave2.md` 已接入并归档入 accepted specs。readiness 仍不是标准 queue-driven phase。 |
 > | Stop authorization 强制执行 | **❌ 未实现** | Engine 已计算 `stop_authorization_state`，但无任何东西读取它来阻止 Phase Agent 停机。§7.2 |

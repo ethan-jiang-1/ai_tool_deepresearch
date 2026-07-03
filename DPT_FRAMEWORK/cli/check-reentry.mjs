@@ -26,6 +26,7 @@ import {
   parseMdFrontmatter,
 } from '../engine/helpers/gate-helpers.mjs';
 import { auditFileObservability } from '../engine/helpers/file-observability.mjs';
+import { SLOT_NAMES } from '../schema/contracts/queue-slots.mjs';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Constants
@@ -286,8 +287,7 @@ function auditQueueConflicts(bundlePath, target, manifest) {
 
   // Collect all items
   const allItems = [];
-  const slots = ['slot_1_current', 'slot_2_next', 'slot_3_pending', 'slot_4_pending', 'slot_5_tail'];
-  for (const slot of slots) {
+  for (const slot of SLOT_NAMES) {
     if (queue[slot]) allItems.push({ slot, item: queue[slot] });
   }
   if (Array.isArray(queue.refill_pool)) {

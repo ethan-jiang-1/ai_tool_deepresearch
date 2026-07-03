@@ -199,13 +199,13 @@ Residual classification recorded for 8.13: current framework/tests/guidelines/ba
 >
 > **Residual scans**: Current-contract residual scan should flag unclassified `slot_5_tail`, `five-slot`, `5-slot`, `five null slots`, `QUEUE_ACTIVE_WINDOW_SLOTS=5`, and `QUEUE_ACTIVE_WINDOW_SLOTS = 5` hits outside historical archives. Historical incident notes may keep old values only when the validation record classifies them as historical observations, not current contract.
 
-- [ ] 9.1 Run and record AGQ-019 impact scan across framework code, templates, tests, experiments, current guidance, active OpenSpec, accepted specs, and governance. Classify every 5-slot hit as current-contract-to-update, accepted-spec pending archive/sync, historical observation, or residual bug.
-- [ ] 9.2 Implement SSOT + template expansion: `QUEUE_ACTIVE_WINDOW_SLOTS` 5→20; `SLOT_NAMES` becomes `slot_1_current`, `slot_2_next`, `slot_3_pending` through `slot_19_pending`, `slot_20_tail`; `PENDING_SLOT_NAMES` remains `SLOT_NAMES.slice(1)`; `rb_queue.json.tmpl` renames `slot_5_tail` to `slot_5_pending` and adds `slot_6_pending` through `slot_20_tail`.
-- [ ] 9.3 Replace hardcoded active-window arrays with the SSOT import. Search for hardcoded slot-name arrays in `check-reentry.mjs` (near current `slot_1_current`…`slot_5_tail` array literal), `gate-helpers.mjs` (near current active-window scan loop), and `file-observability.mjs` (near current slot enumeration). Replace each with `import { SLOT_NAMES } from '../schema/contracts/queue-slots.mjs'` (path adjusted per file location). Also update `queue-manager.mjs` comments/tests to describe a 20-slot preview window without implying queue-level concurrency. Do NOT rely on specific line numbers — the sections 1-8 implementation may have shifted line positions; grep for `slot_5_tail` or `slot_1_current` array literals to locate the hardcoded arrays.
-- [ ] 9.4 Update experiment/test fixture generation: `experiments_env/shared/new-disposable-bundle.mjs` and every hardcoded current-contract queue fixture under `tests/` and `experiments_playbook/` must either derive slots from `SLOT_NAMES` (when executable JS) or explicitly include the 20-slot wire shape (when Markdown/shell fixture text). **Retroactive coverage**: Sections 1-8 tests that were written against the 5-slot SSOT may break when `QUEUE_ACTIVE_WINDOW_SLOTS` changes. After implementing 9.2, run the full regression suite (`node --test tests/schema/contracts/queue.test.mjs tests/engine/queue-manager.test.mjs tests/engine/helpers/checkpoint-manifest.test.mjs tests/engine/helpers/file-observability.test.mjs tests/integration/cli/check-reentry.test.mjs tests/integration/cli/operate-queue.test.mjs`) and fix any test that hardcodes `5` or a 5-element `SLOT_NAMES` array. Pay special attention to tests created in tasks 2.8, 3.9, and 4.5 — their assertions may reference the old slot count or old `slot_5_tail` key name.
-- [ ] 9.5 Update governance and current guidance: `openspec/governance/req-registry.yaml` AGQ-019 uses `QUEUE_ACTIVE_WINDOW_SLOTS=20`; current guidance/shared schema docs describe 20 slots; accepted `agentic-queue`, `schema-core`, and `cmd-bundle-instantiation` spec text updates remain represented by this change's delta specs and archive/sync path.
-- [ ] 9.6 Add/update regression coverage: schema/engine tests assert `20`, `SLOT_NAMES.length`, configured tail displacement via `SLOT_NAMES.at(-1)`, enqueueing 20 active-window task cards before `refill_pool`, pendingCount over 20 active slots, and queue/relay decoupling from `MAX_CONCURRENT_SUBAGENTS=8`.
-- [ ] 9.7 Run validation with exact commands: `node --test tests/schema/contracts/queue.test.mjs tests/engine/queue-manager.test.mjs tests/engine/helpers/checkpoint-manifest.test.mjs tests/engine/helpers/file-observability.test.mjs tests/integration/cli/check-reentry.test.mjs tests/integration/cli/operate-queue.test.mjs`; `openspec validate harden-relay-pipeline --strict`; `git diff --check -- openspec/changes/harden-relay-pipeline DPT_FRAMEWORK tests experiments_env experiments_playbook guidelines openspec/governance`; and the AGQ-019 residual scan from this section. Record any remaining historical-only 5-slot hits.
+- [x] 9.1 Run and record AGQ-019 impact scan across framework code, templates, tests, experiments, current guidance, active OpenSpec, accepted specs, and governance. Classify every 5-slot hit as current-contract-to-update, accepted-spec pending archive/sync, historical observation, or residual bug.
+- [x] 9.2 Implement SSOT + template expansion: `QUEUE_ACTIVE_WINDOW_SLOTS` 5→20; `SLOT_NAMES` becomes `slot_1_current`, `slot_2_next`, `slot_3_pending` through `slot_19_pending`, `slot_20_tail`; `PENDING_SLOT_NAMES` remains `SLOT_NAMES.slice(1)`; `rb_queue.json.tmpl` renames `slot_5_tail` to `slot_5_pending` and adds `slot_6_pending` through `slot_20_tail`.
+- [x] 9.3 Replace hardcoded active-window arrays with the SSOT import. Search for hardcoded slot-name arrays in `check-reentry.mjs` (near current `slot_1_current`…`slot_5_tail` array literal), `gate-helpers.mjs` (near current active-window scan loop), and `file-observability.mjs` (near current slot enumeration). Replace each with `import { SLOT_NAMES } from '../schema/contracts/queue-slots.mjs'` (path adjusted per file location). Also update `queue-manager.mjs` comments/tests to describe a 20-slot preview window without implying queue-level concurrency. Do NOT rely on specific line numbers — the sections 1-8 implementation may have shifted line positions; grep for `slot_5_tail` or `slot_1_current` array literals to locate the hardcoded arrays.
+- [x] 9.4 Update experiment/test fixture generation: `experiments_env/shared/new-disposable-bundle.mjs` and every hardcoded current-contract queue fixture under `tests/` and `experiments_playbook/` must either derive slots from `SLOT_NAMES` (when executable JS) or explicitly include the 20-slot wire shape (when Markdown/shell fixture text). **Retroactive coverage**: Sections 1-8 tests that were written against the 5-slot SSOT may break when `QUEUE_ACTIVE_WINDOW_SLOTS` changes. After implementing 9.2, run the full regression suite (`node --test tests/schema/contracts/queue.test.mjs tests/engine/queue-manager.test.mjs tests/engine/helpers/checkpoint-manifest.test.mjs tests/engine/helpers/file-observability.test.mjs tests/integration/cli/check-reentry.test.mjs tests/integration/cli/operate-queue.test.mjs`) and fix any test that hardcodes `5` or a 5-element `SLOT_NAMES` array. Pay special attention to tests created in tasks 2.8, 3.9, and 4.5 — their assertions may reference the old slot count or old `slot_5_tail` key name.
+- [x] 9.5 Update governance and current guidance: `openspec/governance/req-registry.yaml` AGQ-019 uses `QUEUE_ACTIVE_WINDOW_SLOTS=20`; current guidance/shared schema docs describe 20 slots; accepted `agentic-queue`, `schema-core`, and `cmd-bundle-instantiation` spec text updates remain represented by this change's delta specs and archive/sync path.
+- [x] 9.6 Add/update regression coverage: schema/engine tests assert `20`, `SLOT_NAMES.length`, configured tail displacement via `SLOT_NAMES.at(-1)`, enqueueing 20 active-window task cards before `refill_pool`, pendingCount over 20 active slots, and queue/relay decoupling from `MAX_CONCURRENT_SUBAGENTS=8`.
+- [x] 9.7 Run validation with exact commands: `node --test tests/schema/contracts/queue.test.mjs tests/engine/queue-manager.test.mjs tests/engine/helpers/checkpoint-manifest.test.mjs tests/engine/helpers/file-observability.test.mjs tests/integration/cli/check-reentry.test.mjs tests/integration/cli/operate-queue.test.mjs`; `openspec validate harden-relay-pipeline --strict`; `git diff --check -- openspec/changes/harden-relay-pipeline DPT_FRAMEWORK tests experiments_env experiments_playbook guidelines openspec/governance`; and the AGQ-019 residual scan from this section. Record any remaining historical-only 5-slot hits.
 
 ## 10. Sub-agent Output Sanitization + Gate Sanity Checks (BUG-018)
 
@@ -221,16 +221,16 @@ Residual classification recorded for 8.13: current framework/tests/guidelines/ba
 > - Gate helpers: `gate-helpers.mjs` YAML/JSON read functions (parse error diagnostics, JSON deterministic repair).
 > - Workflow validators: `consistency-validator.mjs` or equivalent must flag role specs that describe hand-concatenated YAML/JSON patterns.
 
-- [ ] 10.1 实现 WNC-009: 更新 `subagent-dpt-source-intake.md` §3，将 YAML 写入指令从手拼字符串改为 JS 对象 + `yaml.stringify()`；增加反例警告（禁止 template literal 拼接、禁止 shell heredoc 写 YAML）。
-- [ ] 10.2 实现 WNC-009: 更新 `subagent-dpt-evidence-extractor.md` §3，同样要求 `yaml.stringify()` 或 `JSON.stringify()` 作为结构化输出的唯一方式。
-- [ ] 10.2b 实现 WNC-009: 更新 `subagent-dpt-topic-scout.md` §3，要求 `yaml.stringify()` 或 `JSON.stringify()` 作为结构化输出（包括 `reference/00-cross-*.md` 的 YAML frontmatter）的唯一方式。Wave 2 有两个 sub-agent 角色（topic-scout + evidence-extractor），都产生 YAML 内容，都受此约束。
-- [ ] 10.3 实现 WNC-009: 更新 `shared-subagent-protocol.md`，在 §5 Page Content Fetching 之后增加 §6 "Output Serialization"，声明所有 sub-agent 产出的 YAML/JSON 文件 MUST 通过对应标准库序列化写入，禁止手拼格式字符串。
-- [ ] 10.4 实现 GSK: 在 Wave0/Wave1/Wave2 gate CLI 的 rule evaluation loop 之前增加轻量 pre-rule scan：遍历所有 `source_url` 字段（包括 source.yaml 和 reference markdown frontmatter），如果值包含 `${` 则 emit `template_not_expanded` diagnostic（不 fail gate，只在 inspect 中展示）。Wave2 的 search/gap-fill 产出同样可能有 `source_url`，不应被排除。
-- [ ] 10.4b 实现 GSK parse error 诊断: 更新 `gate-helpers.mjs` 中 YAML/JSON 读取函数（`readYamlArray()` 及同类 helper），parse 失败时区分「文件不存在」vs「parse 失败」；parse 失败时在 inspect 中包含文件路径、行号/位置、parser error message。废除 "Cannot read or parse YAML array" 这种无法定位的通用消息。覆盖 `source.yaml`、frontmatter block、`rb_output_declarations.jsonl`、slot result JSON。
-- [ ] 10.4c 实现 GSK JSON repair: 更新 JSON 读取 helper，`JSON.parse()` 失败时尝试确定性修复（trailing commas、missing closing brackets/braces、unquoted keys、single-quoted strings）。修复成功时 log `json_repaired` diagnostic 并继续；修复失败时在 parse failure 中附加修复尝试信息。
-- [ ] 10.4d 实现 GSK YAML repair: 更新 `readYamlArray()` 及 YAML 读取 helper，`yaml.parse()` 失败时尝试确定性修复。首期目标：检测双引号字符串内未转义的 ASCII `"`（U+0022）——从 parser error 定位失败行，转义行内未转义的双引号，retry parse。修复成功时 log `yaml_repaired` diagnostic（文件、行号、修复内容）；修复失败或模式未识别时 fallback 到 parse error 诊断。后续可按实际故障数据扩展修复模式。
-- [ ] 10.5 扩展 workflow validator: 检测 sub-agent role spec 的 artifact 写入指令，如果描述的是 template literal 拼接、shell heredoc 或字符串插值方式写 YAML/JSON，报 serialization contract violation。
-- [ ] 10.6 验证: disposable bundle 上构造含 ASCII 双引号的页面标题 → sub-agent 按新 spec 使用 `yaml.stringify()` 写入 source.yaml → gate `readYamlArray()` 成功 parse → count_floor 看到正确 entry 数。再构造 `${url}` 模板残留 → gate emit `template_not_expanded` diagnostic。
+- [x] 10.1 实现 WNC-009: 更新 `subagent-dpt-source-intake.md` §3，将 YAML 写入指令从手拼字符串改为 JS 对象 + `yaml.stringify()`；增加反例警告（禁止 template literal 拼接、禁止 shell heredoc 写 YAML）。
+- [x] 10.2 实现 WNC-009: 更新 `subagent-dpt-evidence-extractor.md` §3，同样要求 `yaml.stringify()` 或 `JSON.stringify()` 作为结构化输出的唯一方式。
+- [x] 10.2b 实现 WNC-009: 更新 `subagent-dpt-topic-scout.md` §3，要求 `yaml.stringify()` 或 `JSON.stringify()` 作为结构化输出（包括 `reference/00-cross-*.md` 的 YAML frontmatter）的唯一方式。Wave 2 有两个 sub-agent 角色（topic-scout + evidence-extractor），都产生 YAML 内容，都受此约束。
+- [x] 10.3 实现 WNC-009: 更新 `shared-subagent-protocol.md`，在 §5 Page Content Fetching 之后增加 §6 "Output Serialization"，声明所有 sub-agent 产出的 YAML/JSON 文件 MUST 通过对应标准库序列化写入，禁止手拼格式字符串。
+- [x] 10.4 实现 GSK: 在 Wave0/Wave1/Wave2 gate CLI 的 rule evaluation loop 之前增加轻量 pre-rule scan：遍历所有 `source_url` 字段（包括 source.yaml 和 reference markdown frontmatter），如果值包含 `${` 则 emit `template_not_expanded` diagnostic（不 fail gate，只在 inspect 中展示）。Wave2 的 search/gap-fill 产出同样可能有 `source_url`，不应被排除。
+- [x] 10.4b 实现 GSK parse error 诊断: 更新 `gate-helpers.mjs` 中 YAML/JSON 读取函数（`readYamlArray()` 及同类 helper），parse 失败时区分「文件不存在」vs「parse 失败」；parse 失败时在 inspect 中包含文件路径、行号/位置、parser error message。废除 "Cannot read or parse YAML array" 这种无法定位的通用消息。覆盖 `source.yaml`、frontmatter block、`rb_output_declarations.jsonl`、slot result JSON。
+- [x] 10.4c 实现 GSK JSON repair: 更新 JSON 读取 helper，`JSON.parse()` 失败时尝试确定性修复（trailing commas、missing closing brackets/braces、unquoted keys、single-quoted strings）。修复成功时 log `json_repaired` diagnostic 并继续；修复失败时在 parse failure 中附加修复尝试信息。
+- [x] 10.4d 实现 GSK YAML repair: 更新 `readYamlArray()` 及 YAML 读取 helper，`yaml.parse()` 失败时尝试确定性修复。首期目标：检测双引号字符串内未转义的 ASCII `"`（U+0022）——从 parser error 定位失败行，转义行内未转义的双引号，retry parse。修复成功时 log `yaml_repaired` diagnostic（文件、行号、修复内容）；修复失败或模式未识别时 fallback 到 parse error 诊断。后续可按实际故障数据扩展修复模式。
+- [x] 10.5 扩展 workflow validator: 检测 sub-agent role spec 的 artifact 写入指令，如果描述的是 template literal 拼接、shell heredoc 或字符串插值方式写 YAML/JSON，报 serialization contract violation。
+- [x] 10.6 验证: disposable bundle 上构造含 ASCII 双引号的页面标题 → sub-agent 按新 spec 使用 `yaml.stringify()` 写入 source.yaml → gate `readYamlArray()` 成功 parse → count_floor 看到正确 entry 数。再构造 `${url}` 模板残留 → gate emit `template_not_expanded` diagnostic。（程序化覆盖：§11 tests/engine/helpers/gate-read-resilience.test.mjs, 25 tests pass）
 
 ## 11. Robustness Regression Tests — Malformed YAML/JSON Injection (BUG-018)
 
@@ -238,13 +238,13 @@ Residual classification recorded for 8.13: current framework/tests/guidelines/ba
 >
 > **Test file**: `tests/engine/helpers/gate-read-resilience.test.mjs` (new). Tests import `readYamlArray()` and JSON-reading helpers from `gate-helpers.mjs`, plus `yaml.stringify()` / `JSON.stringify()` for the write-side roundtrip tests.
 
-- [ ] 11.1 写侧 YAML roundtrip: 构造包含各类特殊字符的 JS 对象（ASCII `"` in string、`:` in value、`\n` in text、emoji、CJK、URL with `?`/`&`/`=`），经 `yaml.stringify()` 写入临时文件，`readYamlArray()` 读回，断言每个 field value 与原始对象逐字节一致。覆盖 `yaml` package 的 plain/double-quoted/literal block scalar 自动选择。
+- [x] 11.1 写侧 YAML roundtrip: 构造包含各类特殊字符的 JS 对象（ASCII `"` in string、`:` in value、`\n` in text、emoji、CJK、URL with `?`/`&`/`=`），经 `yaml.stringify()` 写入临时文件，`readYamlArray()` 读回，断言每个 field value 与原始对象逐字节一致。覆盖 `yaml` package 的 plain/double-quoted/literal block scalar 自动选择。
 
-- [ ] 11.2 写侧 JSON roundtrip: 同上，用 `JSON.stringify()` 写入，`JSON.parse()` 读回，断言一致。
+- [x] 11.2 写侧 JSON roundtrip: 同上，用 `JSON.stringify()` 写入，`JSON.parse()` 读回，断言一致。
 
-- [ ] 11.3 读侧 YAML parse failure → 可操作诊断: 手工构造畸形的 YAML 临时文件（双引号字符串内嵌未转义 ASCII `"`、bad indentation、`key: : value`），调用 `readYamlArray()`，断言：(a) 不 throw，(b) 返回的 error 包含文件路径，(c) 包含行号，(d) 包含 parser error message，(e) 明确区分 "file does not exist" vs "parse failure"。不复现 "Cannot read or parse YAML array" 这种无位置信息的消息。
+- [x] 11.3 读侧 YAML parse failure → 可操作诊断: 手工构造畸形的 YAML 临时文件（双引号字符串内嵌未转义 ASCII `"`、bad indentation、`key: : value`），调用 `readYamlArray()`，断言：(a) 不 throw，(b) 返回的 error 包含文件路径，(c) 包含行号，(d) 包含 parser error message，(e) 明确区分 "file does not exist" vs "parse failure"。不复现 "Cannot read or parse YAML array" 这种无位置信息的消息。
 
-- [ ] 11.3b 读侧 YAML repair: 手工构造畸形 YAML 临时文件，逐个验证：
+- [x] 11.3b 读侧 YAML repair: 手工构造畸形 YAML 临时文件，逐个验证：
   - `title: "点球｜亚洲球队遭遇"滑铁卢" — 新华报业网"` (BUG-018 原始 case，双引号内嵌未转义 ASCII `"`) → repair 成功 → 内嵌引号被转义 → `yaml.parse()` 成功
   - `title: "foo "bar" baz"` (多处未转义引号) → repair 成功
   - `notes: "he said "hello" and "goodbye""` (嵌套引语) → repair 成功
@@ -252,7 +252,7 @@ Residual classification recorded for 8.13: current framework/tests/guidelines/ba
   - 不可修复的畸形（如乱码二进制内容） → repair 失败 → fallback 到 parse error 诊断
   每种 case 断言 repair 成功时 log `yaml_repaired` diagnostic 含文件和行号，失败时 parse error 含文件路径+行号+parser message。
 
-- [ ] 11.4 读侧 JSON repair: 手工构造畸形 JSON 临时文件，逐个验证每种修复：
+- [x] 11.4 读侧 JSON repair: 手工构造畸形 JSON 临时文件，逐个验证每种修复：
   - `{ "a": 1, }` (trailing comma) → repair 成功 → parse 得到 `{ a: 1 }`
   - `{ a: 1 }` (unquoted key) → repair 成功
   - `{ 'a': 1 }` (single-quoted string) → repair 成功（如 repair 算法覆盖）
@@ -260,8 +260,8 @@ Residual classification recorded for 8.13: current framework/tests/guidelines/ba
   - `{ "a": 1 ]` (mismatched bracket) → repair 失败 → 错误信息包含修复尝试说明
   每种 case 断言 repair 成功时 log `json_repaired` diagnostic，失败时 parse error 包含尝试信息。
 
-- [ ] 11.5 读侧 template_not_expanded 检测: 构造包含 `${url}`、`${topic_slug}` 等未展开模板变量的 YAML 和 markdown frontmatter 临时文件，调用 gate pre-rule scan，断言 emit `template_not_expanded` diagnostic 且标识受影响文件和字段。再构造正常数据（不含 `${`），断言不误报。
+- [x] 11.5 读侧 template_not_expanded 检测: 构造包含 `${url}`、`${topic_slug}` 等未展开模板变量的 YAML 和 markdown frontmatter 临时文件，调用 gate pre-rule scan，断言 emit `template_not_expanded` diagnostic 且标识受影响文件和字段。再构造正常数据（不含 `${`），断言不误报。
 
-- [ ] 11.6 集成: 构造一个完整的畸形 `source.yaml`（混合了 unescaped 引号 + bad indentation + 正常 entry），调用完整 gate rule loop（或最小复现路径），断言：(a) 正常 entry 可被 count_floor 识别，(b) 畸形 entry 被 parse error 报告且不影响正常 entry 的识别（如实现了 per-entry 恢复），或整体 parse 失败但错误消息精确定位到第一个问题的行号（如未实现 per-entry 恢复）。
+- [x] 11.6 集成: 构造一个完整的畸形 `source.yaml`（混合了 unescaped 引号 + bad indentation + 正常 entry），调用完整 gate rule loop（或最小复现路径），断言：(a) 正常 entry 可被 count_floor 识别，(b) 畸形 entry 被 parse error 报告且不影响正常 entry 的识别（如实现了 per-entry 恢复），或整体 parse 失败但错误消息精确定位到第一个问题的行号（如未实现 per-entry 恢复）。
 
-- [ ] 11.7 运行: `node --test tests/engine/helpers/gate-read-resilience.test.mjs` 必须 PASS。所有临时文件在 `node:test` 的 `afterEach` 中清理。
+- [x] 11.7 运行: `node --test tests/engine/helpers/gate-read-resilience.test.mjs` 必须 PASS。所有临时文件在 `node:test` 的 `afterEach` 中清理。

@@ -133,7 +133,7 @@ describe('QueueWorkUnitSchema', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// QueueSchema (five-slot outer wrapper)
+// QueueSchema (20-slot outer wrapper)
 // ═══════════════════════════════════════════════════════════════════
 
 const validQueue = {
@@ -144,8 +144,8 @@ const validQueue = {
 };
 
 describe('QueueSchema', () => {
-  it('uses shared Queue slot constants for the five-slot wire shape', () => {
-    assert.equal(QUEUE_ACTIVE_WINDOW_SLOTS, 5);
+  it('uses shared Queue slot constants for the 20-slot wire shape', () => {
+    assert.equal(QUEUE_ACTIVE_WINDOW_SLOTS, 20);
     assert.equal(SLOT_NAMES.length, QUEUE_ACTIVE_WINDOW_SLOTS);
     assert.deepEqual(Object.keys(validQueue).filter((key) => key.startsWith('slot_')), SLOT_NAMES);
   });

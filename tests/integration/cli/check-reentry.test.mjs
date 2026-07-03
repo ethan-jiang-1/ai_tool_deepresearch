@@ -8,6 +8,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { SLOT_NAMES } from '../../../DPT_FRAMEWORK/schema/contracts/queue-slots.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-reentry-tmp');
@@ -50,11 +51,7 @@ function setupBundle(name, statusOverrides = {}, queueOverrides = {}, extraFiles
   const queue = {
     queue_health: 'ready',
     stop_authorization_state: 'unauthorized_continue_required',
-    slot_1_current: null,
-    slot_2_next: null,
-    slot_3_pending: null,
-    slot_4_pending: null,
-    slot_5_tail: null,
+    ...Object.fromEntries(SLOT_NAMES.map(s => [s, null])),
     refill_pool: [],
     ...queueOverrides,
   };

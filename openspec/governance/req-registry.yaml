@@ -129,7 +129,7 @@ AGQ-015: agentic-queue — Producer rule cross_topic_synthesis for wave2 synthes
 AGQ-016: agentic-queue — Producer rule seed_topic_backfill_wave2 for wave2 backfill task cards
 AGQ-017: agentic-queue — Delegated task TargetSpec keeps controller main-agent and delegates.to sub-agent
 AGQ-018: agentic-queue — Delegated complete validates relay provenance, declarations, output files, and cache trails
-AGQ-019: agentic-queue — Queue active-window slot SSOT (QUEUE_ACTIVE_WINDOW_SLOTS=5, SLOT_NAMES) independent of Relay concurrency (MAX_CONCURRENT_SUBAGENTS=8)
+AGQ-019: agentic-queue — Queue active-window slot SSOT (QUEUE_ACTIVE_WINDOW_SLOTS=20, SLOT_NAMES) independent of Relay concurrency (MAX_CONCURRENT_SUBAGENTS=8)
 AGQ-020: agentic-queue — pendingCount exposes active window plus refill pool task total
 
 # agent-output-declaration

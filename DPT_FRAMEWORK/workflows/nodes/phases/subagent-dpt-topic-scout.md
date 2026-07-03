@@ -75,6 +75,14 @@ Expected meanings:
 
 If the task asks the Sub-agent to write source files directly, declared output paths must be included in `output_files[]`; otherwise, the Phase Agent promotes suitable sources to `reference/00-cross-*.md` during ingestion. In both cases, cache trails for real fetched sources must be returned when available.
 
+**Output serialization:** All structured output files MUST be written via standard library serialization, never hand-concatenated:
+
+- Return JSON → `JSON.stringify(result, null, 2)` matching `result.schema.json`
+- JSON files (e.g. `meta.json`) → `JSON.stringify(data, null, 2)`
+- YAML content (e.g. `reference/00-cross-*.md` YAML frontmatter, `source.yaml`) → `yaml.stringify(data)` from the `yaml` npm package
+
+Construct a plain JavaScript object, serialize it, then write the result. NEVER hand-concatenate structured formats with template literals, string interpolation, or shell heredocs. Values containing double quotes, colons, newlines, emoji, or CJK characters will produce malformed output when hand-concatenated.
+
 ## 4. Execution Within Relay Slot
 
 The Sub-agent works only inside the relay-assigned slot directory (`_subagents/wave_02/slot_MM/`). It receives `task.md` and `result.schema.json`; the task text includes the finding/gap, keywords, cache directory, and output contract.

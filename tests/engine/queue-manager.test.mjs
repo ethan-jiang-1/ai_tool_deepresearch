@@ -61,15 +61,13 @@ describe('Queue schema (AGQ-001)', () => {
 });
 
 describe('Queue active-window constants (AGQ-019)', () => {
-  it('defines the five-slot Queue wire shape independently of Relay concurrency', () => {
-    assert.equal(QUEUE_ACTIVE_WINDOW_SLOTS, 5);
-    assert.deepEqual(SLOT_NAMES, [
-      'slot_1_current',
-      'slot_2_next',
-      'slot_3_pending',
-      'slot_4_pending',
-      'slot_5_tail',
-    ]);
+  it('defines the 20-slot Queue wire shape independently of Relay concurrency', () => {
+    assert.equal(QUEUE_ACTIVE_WINDOW_SLOTS, 20);
+    assert.equal(SLOT_NAMES.length, 20);
+    assert.equal(SLOT_NAMES[0], 'slot_1_current');
+    assert.equal(SLOT_NAMES[1], 'slot_2_next');
+    assert.equal(SLOT_NAMES.at(-1), 'slot_20_tail');
+    assert.equal(SLOT_NAMES.at(-2), 'slot_19_pending');
   });
 
   it('Queue active-window slot count is NOT derived from Relay sub-agent concurrency cap', () => {
@@ -78,7 +76,7 @@ describe('Queue active-window constants (AGQ-019)', () => {
     // and no test would fail — the decoupling would be silently lost.
     assert.notEqual(QUEUE_ACTIVE_WINDOW_SLOTS, MAX_CONCURRENT_SUBAGENTS,
       'Queue slot count must be independent of Relay concurrency cap');
-    assert.equal(QUEUE_ACTIVE_WINDOW_SLOTS, 5);
+    assert.equal(QUEUE_ACTIVE_WINDOW_SLOTS, 20);
     assert.equal(MAX_CONCURRENT_SUBAGENTS, 8);
   });
 });
@@ -197,18 +195,14 @@ describe('Claim advice with targets.delegates (AGQ-014)', () => {
 });
 
 describe('Enqueue and claim (AGQ-002)', () => {
-  it('fills five active slots before using refill_pool', () => {
+  it('fills all active slots before using refill_pool', () => {
     let queue = createQueue('enqueue-test');
-    for (let i = 1; i <= 6; i++) queue = enqueue(queue, item(i));
-    assert.deepEqual(SLOT_NAMES.map((slot) => queue.active_window[slot]?.work_id), [
-      'work-1',
-      'work-2',
-      'work-3',
-      'work-4',
-      'work-5',
-    ]);
+    for (let i = 1; i <= SLOT_NAMES.length + 1; i++) queue = enqueue(queue, item(i));
+    assert.deepEqual(SLOT_NAMES.map((slot) => queue.active_window[slot]?.work_id),
+      Array.from({ length: SLOT_NAMES.length }, (_, i) => `work-${i + 1}`),
+    );
     assert.equal(queue.refill_pool.length, 1);
-    assert.equal(queue.refill_pool[0].work_id, 'work-6');
+    assert.equal(queue.refill_pool[0].work_id, `work-${SLOT_NAMES.length + 1}`);
   });
 
   it('claim returns only slot_1_current and marks it running', () => {
@@ -271,13 +265,14 @@ describe('Complete, promote, refill, and fail (AGQ-002, AGQ-004)', () => {
     try {
       writeFileSync(path.join(dir, 'done.json'), '{"ok":true}\n');
       let queue = createQueue('complete-test');
-      for (let i = 1; i <= 6; i++) {
+      const total = SLOT_NAMES.length + 1; // fill all slots + 1 for pool
+      for (let i = 1; i <= total; i++) {
         queue = enqueue(queue, item(i, i === 1 ? { completion_receipt: 'json:done.json' } : {}));
       }
       const result = complete(queue, { work_id: 'work-1', receipt: 'json:done.json' }, dir);
       assert.equal(result.feedback.passed, true);
       assert.equal(result.queue.active_window.slot_1_current.work_id, 'work-2');
-      assert.equal(result.queue.active_window.slot_5_tail.work_id, 'work-6');
+      assert.equal(result.queue.active_window[SLOT_NAMES.at(-1)].work_id, `work-${SLOT_NAMES.length + 1}`);
       assert.equal(result.queue.refill_pool.length, 0);
     } finally {
       cleanup(dir);
@@ -325,13 +320,15 @@ describe('Preemption (AGQ-003)', () => {
     assert.equal(queue.active_window.slot_3_pending.work_id, 'work-2');
   });
 
-  it('preserves displaced slot_5_tail with restore metadata', () => {
+  it('preserves displaced tail slot with restore metadata', () => {
     let queue = createQueue('full-preempt-test');
-    for (let i = 1; i <= 5; i++) queue = enqueue(queue, item(i));
+    for (let i = 1; i <= SLOT_NAMES.length; i++) queue = enqueue(queue, item(i));
+    const displacedWorkId = `work-${SLOT_NAMES.length}`;
+    const displacedFromSlot = SLOT_NAMES.at(-1);
     queue = preempt(queue, item('urgent', { priority_class: 'P1_state_or_gate_repair' }), { reason: 'urgent' });
-    assert.equal(queue.active_window.slot_5_tail.work_id, 'work-4');
-    assert.equal(queue.refill_pool[0].work_id, 'work-5');
-    assert.equal(queue.refill_pool[0].preempted_from_slot, 'slot_5_tail');
+    assert.equal(queue.active_window[SLOT_NAMES.at(-1)].work_id, `work-${SLOT_NAMES.length - 1}`);
+    assert.equal(queue.refill_pool[0].work_id, displacedWorkId);
+    assert.equal(queue.refill_pool[0].preempted_from_slot, displacedFromSlot);
     assert.equal(queue.refill_pool[0].restore_priority, 'next_tail_opening');
   });
 

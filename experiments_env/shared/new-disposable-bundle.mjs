@@ -17,6 +17,7 @@ import {
   QueueSchema,
   ProfileSchema,
   PlanSchema,
+  SLOT_NAMES,
 } from '../../DPT_FRAMEWORK/schema/index.mjs';
 import { parseMdFrontmatter } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 import { createTrace } from '../../DPT_FRAMEWORK/engine/trace.mjs';
@@ -102,11 +103,7 @@ writeFileSync(join(bundleDir, 'rb_status.json'), JSON.stringify(statusDefault, n
 const queueDefault = {
   queue_health: 'ready',
   stop_authorization_state: 'unauthorized_continue_required',
-  slot_1_current: null,
-  slot_2_next: null,
-  slot_3_pending: null,
-  slot_4_pending: null,
-  slot_5_tail: null,
+  ...Object.fromEntries(SLOT_NAMES.map(s => [s, null])),
   refill_pool: [],
 };
 QueueSchema.parse(queueDefault);

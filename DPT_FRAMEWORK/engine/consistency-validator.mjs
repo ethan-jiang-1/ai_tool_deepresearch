@@ -677,6 +677,24 @@ export function validateWorkflowPackage(opts = {}) {
         file: nodePath,
       });
     }
+
+    // WNC-009: Serialization contract — role spec §3 (Artifacts) must require
+    // yaml.stringify() / JSON.stringify() for structured output.
+    // Check: if the Artifacts section mentions YAML or JSON file output, it must
+    // reference the correct serialization method (not hand-concatenation patterns).
+    const artifactsSection = md.match(/## 3\. Artifacts\b[\s\S]*?(?=## [4-9]\. |## 1[0-9]\. |$)/);
+    if (artifactsSection) {
+      const sectionText = artifactsSection[0];
+      const mentionsYamlOrJson = /\b(?:yaml|YAML|\.yaml|\.json|JSON)\b/.test(sectionText);
+      const hasCorrectMethod = /yaml\.stringify|JSON\.stringify/.test(sectionText);
+      if (mentionsYamlOrJson && !hasCorrectMethod) {
+        issues.push({
+          class: 'serialization_contract_violation',
+          detail: `Role spec "${entry.node}" §3 Artifacts mentions YAML/JSON output but does not require yaml.stringify() / JSON.stringify() for serialization`,
+          file: nodePath,
+        });
+      }
+    }
   }
 
   // Check shared guidance

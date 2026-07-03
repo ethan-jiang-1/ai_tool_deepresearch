@@ -15,6 +15,7 @@
 
 import { existsSync, readdirSync, statSync, readFileSync } from 'node:fs';
 import { join, relative, basename } from 'node:path';
+import { SLOT_NAMES } from '../../schema/contracts/queue-slots.mjs';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Constants
@@ -165,8 +166,7 @@ function buildExpectedSets({ topicSlugs, queue, ledgerDeclarations }) {
   if (queue) {
     const allItems = [];
     // Active window slots
-    const slots = ['slot_1_current', 'slot_2_next', 'slot_3_pending', 'slot_4_pending', 'slot_5_tail'];
-    for (const slot of slots) {
+    for (const slot of SLOT_NAMES) {
       if (queue[slot]) allItems.push(queue[slot]);
     }
     // Refill pool

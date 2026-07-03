@@ -77,6 +77,17 @@ Requirements:
 - `topic_tag` matches the task topic slug
 - each entry is backed by real fetched content or an honest access-failure note after the fetch chain is exhausted
 
+**Output serialization:** YAML files MUST be written via `yaml.stringify()` (the `yaml` npm package). Construct a plain JavaScript object, then pass it to `yaml.stringify()`. NEVER hand-concatenate YAML with template literals, string interpolation, or shell heredocs — these produce malformed output when values contain special characters (double quotes, colons, newlines, emoji, CJK). Example:
+
+```js
+import yaml from 'yaml';
+const data = [{ url: "https://...", title: "Actual page title", retrieved_date: "2026-07-03", topic_tag: "my-topic", notes: "..." }];
+const yamlString = yaml.stringify(data);
+// write yamlString to artifacts/wave0/{topic.slug}/source.yaml
+```
+
+JSON files (e.g. `meta.json`) MUST be written via `JSON.stringify()` — same principle, same anti-pattern prohibition.
+
 When the task discovers a cross-topic foundation source, it may also write:
 
 ```text
