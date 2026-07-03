@@ -76,7 +76,7 @@ The ProfileSchema SHALL add `rerun_count` to the HITL2 section. HITL2 section SH
 #### Scenario: Queue contract validates structured slots
 
 - **WHEN** `validate-bundle.mjs` checks `rb_queue.json`
-- **THEN** each of the 5 active window slots (`slot_1_current` through `slot_5_tail`) SHALL validate against `QueueWorkUnitSchema` (nullable)
+- **THEN** each of the 20 active window slots (`slot_1_current` through `slot_20_tail`) SHALL validate against `QueueWorkUnitSchema` (nullable)
 - **AND** `refill_pool` SHALL validate as `z.array(QueueWorkUnitSchema)`
 
 #### Scenario: QueueWorkUnitSchema validates a complete task card

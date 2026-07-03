@@ -20,6 +20,13 @@
 | `requires` | yes | Mandatory shared Markdown dependency 的 id 数组；无则为 `[]` |
 | `suggested_context` | yes | Optional reference 的 id 数组；无则为 `[]` |
 | `subagent` | no | 标记该 phase 未来使用 subagent mechanics；值为 `true` 或不出现 |
+| `execution_contract` | yes (lifecycle phases, relay role specs, shared nodes touched by this change) | Object declaring `surface` (`phase-agent` / `relay-subagent-role` / `shared-guidance`), `search_policy` (`no_search` / `relay_required` / `relay_required_for_new_evidence` / `subagent_performs_search`), and conditional fields `delegated_role_keys`, `loaded_by`, `delivered_via` |
+
+`execution_contract` is Agent-readable + validator-enforceable guidance. It SHALL NOT replace relay receipts, `rb_output_declarations.jsonl`, slot markers, or gate provenance checks as deterministic authority.
+
+`surface: phase-agent` means the Markdown is a manifest lifecycle node. `surface: relay-subagent-role` means it is a Phase-Agent-loaded role spec delivered via relay `task.md`. `surface: shared-guidance` means it is shared context/guidance only.
+
+`search_policy: relay_required` means any WebSearch/WebFetch task SHALL delegate through relay with `targets.controller: "main-agent"` + `targets.delegates.to: "sub-agent"`. `relay_required_for_new_evidence` allows main-agent synthesis but requires relay delegation for new search/evidence/reference outputs. `no_search` prohibits WebSearch/WebFetch. `subagent_performs_search` describes role-spec search behavior.
 
 `stop: "yes"` SHALL 仅出现在 HITL nodes（`phase-hitl1`、`phase-hitl2`）。
 
@@ -154,6 +161,14 @@ The validator SHALL report at least these mismatch classes:
 - gate definition `gate` disagrees with the node binding
 - transition table references a missing current node or next node
 - loader-resolved dependency ref cannot be resolved under the configured node directory
+- missing `execution_contract` on lifecycle phase nodes, shared nodes, or relay role specs
+- unknown `surface` or `search_policy` value
+- `surface: relay-subagent-role` listed in `manifest.phases[]`
+- relay role spec missing `loaded_by: phase-agent` or `delivered_via: relay_task_md`
+- `search_policy: relay_required` task template performs WebSearch/WebFetch without `targets.delegates.to: "sub-agent"`
+- relay-capable lifecycle node keeps subagent/anti-cheating rules only in `suggested_context` instead of `requires`
+- missing `Execution Brief` on lifecycle phase nodes or `Role Brief` on relay role specs
+- sub-agent role spec artifact instructions using template literal, heredoc, or string interpolation patterns (serialization contract violation)
 
 #### Scenario: Consistent package passes validation
 
@@ -255,7 +270,7 @@ Every manifest lifecycle phase node with `stop: "no"` in its frontmatter SHALL i
 
 The `requires` array SHALL be used for this dependency — `suggested_context` is insufficient because it does not guarantee the dependency is loaded before the phase body.
 
-Lifecycle phases covered: instantiation, setup, seed-topics, wave0, wave1, wave2, readiness, rerun, final. Final is covered by the dependency requirement but uses terminal delivery semantics in the injected header. Relay/sub-agent task surfaces such as `phase-wave2-subagent.md` are outside this requirement even if their frontmatter contains `stop: "no"`; their behavior is governed by relay/sub-agent contracts.
+Lifecycle phases covered: instantiation, setup, seed-topics, wave0, wave1, wave2, readiness, rerun, final. Final is covered by the dependency requirement but uses terminal delivery semantics in the injected header. Relay/sub-agent task surfaces such as `subagent-dpt-topic-scout.md` are outside this requirement even if their frontmatter contains `stop: "no"`; their behavior is governed by relay/sub-agent contracts.
 
 #### Scenario: Every lifecycle stop:no phase requires shared-silent-execution
 
@@ -263,13 +278,43 @@ Lifecycle phases covered: instantiation, setup, seed-topics, wave0, wave1, wave2
 - **THEN** its `requires` array SHALL include `shared/shared-silent-execution`
 - **AND** `resolveDependencyClosure()` SHALL include `shared-silent-execution.md` in the load plan before the phase body
 
-#### Scenario: relay sub-agent surface is outside universal silent dependency
+### Requirement: Self-documenting lifecycle and relay role nodes
 
-- **WHEN** `phase-wave2-subagent.md` declares `stop: "no"` but is not a manifest lifecycle phase entry
-- **THEN** WNC-009 SHALL NOT require it to include `shared/shared-silent-execution`
-- **AND** its required context SHALL remain governed by the relay/sub-agent specs
+Workflow Markdown nodes SHALL expose their execution identity at first load without changing runtime authority.
 
-#### Scenario: stop:yes phases are not required to load silent execution
+Every manifest lifecycle phase node SHALL contain `## 0. Execution Brief` immediately after the H1 and before `## 1. Stage Goal`. The brief fields in order: `Objective`, `Start here`, `Path to pass`, `Completion check`, `Failure posture`. Lifecycle phase nodes SHALL retain the existing 9-section body after the brief.
 
-- **WHEN** a phase node frontmatter declares `stop: "yes"`
-- **THEN** its `requires` array MAY omit `shared/shared-silent-execution`
+Every relay role spec SHALL contain `## 0. Role Brief` immediately after the H1. Fields in order: `Role key`, `Used by`, `Receives`, `Produces`, `Boundary`, `Handoff`. Role specs SHALL use a role-oriented body structure and SHALL NOT use lifecycle-primary headings.
+
+`Execution Brief` and `Role Brief` are Agent orientation layers only. They SHALL NOT replace schemas, queue state, relay receipts, output declarations, trace, transition routing, or gate CLI verdicts as deterministic authority.
+
+#### Scenario: Lifecycle phase has ordered execution brief
+
+- **WHEN** workflow package validation reads any `manifest.phases[].node`
+- **THEN** the node SHALL contain `## 0. Execution Brief` with five required fields in order before `## 1. Stage Goal`
+
+### Requirement: Sub-agent role specs SHALL mandate standard library output serialization
+
+Sub-agent role specs SHALL require that all structured output files written by the sub-agent be produced through standard library serialization: `yaml.stringify()` for YAML outputs and `JSON.stringify()` for JSON outputs. Hand-concatenated format strings (template literals, string interpolation, shell heredocs) SHALL NOT be described as an acceptable method.
+
+Standard library serialization prevents parse failures from unescaped special characters — the `yaml` package's `stringify()` automatically selects the correct scalar style for each value. This is the write-side prevention for BUG-018.
+
+> **Read-side complement:** `gate-skeleton` GSK-002 adds deterministic YAML/JSON repair in gate helpers for legacy data and edge cases. Together they form the BUG-018 double defense.
+
+#### Scenario: YAML output uses yaml.stringify
+
+- **WHEN** a sub-agent role spec instructs the sub-agent to write `source.yaml`
+- **THEN** the spec SHALL mandate constructing a JS array and calling `yaml.stringify(data)` to produce file content
+- **AND** the spec SHALL explicitly warn against hand-concatenating YAML strings
+
+### Requirement: Header injection uses manifest membership and execution_contract surface
+
+Header injection SHALL use manifest lifecycle membership as authority. `execution_contract.surface` SHALL reinforce this boundary:
+- `surface: phase-agent` MAY receive autonomous or terminal-delivery header injection when the file is a manifest lifecycle phase
+- `surface: relay-subagent-role` SHALL NOT receive lifecycle header injection
+- `surface: shared-guidance` SHALL NOT receive lifecycle header injection
+
+#### Scenario: Relay role surface does not receive lifecycle header
+
+- **WHEN** `assessNode()` loads a role spec with `execution_contract.surface: relay-subagent-role`
+- **THEN** the returned content SHALL NOT contain a lifecycle autonomous or terminal-delivery contract header

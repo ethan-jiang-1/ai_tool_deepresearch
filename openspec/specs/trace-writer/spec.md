@@ -62,6 +62,25 @@ The trace writer at `DPT_FRAMEWORK/engine/trace.mjs` SHALL be the sole mechanism
 - **THEN** each line SHALL conform to `TraceEntrySchema` from `DPT_FRAMEWORK/schema/contracts/trace.mjs`
 - **AND** the full file SHALL pass `TraceSchema` validation
 
+### Requirement: Gate attempt trace entries SHALL include diagnostic path and phase context
+
+When `writeGateAttempt()` writes a `gate_attempt` event to `rb_trace.jsonl`, the entry SHALL include a `diagnostic_path` field pointing to `_diagnostics/gates/<iso>-<gate>.json` and a `phase` field derived from the gate name (e.g., `wave0-complete` → `wave0`). Gate pass also writes a lightweight diagnostic artifact at the same path.
+
+#### Scenario: Failed gate attempt carries diagnostic path in trace
+
+- **WHEN** a gate fails and `writeGateAttempt()` is called
+- **THEN** the `rb_trace.jsonl` `gate_attempt` entry SHALL include `diagnostic_path` and `phase`
+
+### Requirement: Trace SHALL capture relay bypass suspicion
+
+The system SHALL define a `relay_bypass_suspected` trace event written automatically by gate CLI when phase artifacts indicate evidence/search work but matching phase-scoped relay provenance markers are absent. Detection is phase-aware: Wave0/Wave1 trigger on current-wave artifacts without provenance; Wave2 only triggers on search/evidence/reference outputs. The event is diagnostic only and SHALL NOT cause filesystem-only artifacts to count toward gate pass.
+
+#### Scenario: Relay bypass suspicion recorded in trace
+
+- **WHEN** gate evaluation detects artifacts without relay provenance
+- **THEN** a `relay_bypass_suspected` event SHALL be appended to `rb_trace.jsonl`
+- **AND** the event SHALL include what was found and what was missing
+
 ### Requirement: Trace entries include bundle field
 
 All modules writing to `rb_trace.jsonl` SHALL include `bundle` where the existing trace contract requires it. The value SHALL be derived from active bundle state, normally `rb_status.json`, not from chat memory.

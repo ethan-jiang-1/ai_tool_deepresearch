@@ -26,7 +26,7 @@ Silent Wave Execution 定义了 Agent 在用户缺席（静默自主阶段）时
 **降级优先级链（Degradation Priority Chain）：**
 1. **重试（Retry）**：网络波动、临时不可用 → 等待后重试（遵循 `shared-repair-guidance.md` 已有修复策略），阻塞消除后自动恢复
 2. **换源（Alternative Source）**：特定 URL 不可访问、爬取被拒 → 搜索替代源（更换 domain、更换搜索策略），不降低 evidence quality tier 要求
-3. **降级方法（Method Degradation）**：当前方法路径全部失败 → 切换到替代方法（如 WebFetch 不可用 → curl → node fetch → python3），记录方法切换链
+3. **降级方法（Method Degradation）**：当前方法路径全部失败 → 切换到替代方法（如 WebFetch 不可用 → curl → node fetch → python3），记录方法切换链。替代方法 MUST 保持在 relay pipeline 内。直接执行 WebSearch/WebFetch 并手工写入 artifact（绕过 relay）不是合法的替代方法。如果 relay pipeline 中的 queue/spawn/commit 路径全部失败，Agent SHALL 选择 mark gap（降级链第四步）而非绕过 relay。
 4. **标记 gap（Mark Gap）**：所有替代方案已穷尽、源和方法均不可用 → 通过 accepted trace/log surface 在 `rb_trace.jsonl` 中标记为 `silent_gap`，记录对 must-answer 问题的影响评估（`gap_impact: none|partial|blocks_must_answer`），继续到下一个 task
    - `gap_impact: blocks_must_answer` 时 Agent SHALL 在周围 topic 中搜索替代覆盖路径，但不浮出水面
 
@@ -42,6 +42,7 @@ Agent SHALL NOT 在任何静默阶段因阻塞而向用户请求决策（包括�
 
 | 被覆盖的规则 | 来源 | 静默阶段改写 |
 |-------------|------|------------|
+| "遇到阻塞→切换方法→自己解决，不要浮出水面" | `shared-silent-execution.md` §1.1 (method switch guidance) | → 方法切换的合法范围限定在 relay pipeline 内。直接 WebSearch + 手工写 artifact 不在合法替代方法集合中 |
 | "修复需要用户 decision 或权限 → escalation/block" | `shared-repair-guidance.md` Escalation 段 | → 降级处理（按降级优先级链），不 escalation，不 block |
 | "连续 repair 达到 retry limit 且无进展 → escalation" | `shared-repair-guidance.md` Retry Limit 段 | → 降级处理（按降级优先级链），不 escalation |
 | "不能在 escalation 条件触发后继续假装一切正常" | `shared-anti-cheating-rules.md` 规则 3 | → 在静默阶段，"继续执行"不是"假装正常"——降级 + trace 本身就是静默阶段的正确行为。本规则在静默阶段不适用 |

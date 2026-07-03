@@ -58,11 +58,11 @@ Body SHALL 包含 Authority Boundary section，明确说明 schema authority 在
 - `hitl1-recorded`：HITL1 写入 profile 的 completeness
 - `setup-ready`：pre-wave0 structural consistency
 - `seed-topics-ready`：seed topic 物化的结构、数量和 slug 一致性
-- `wave0-complete`：foundation reference collection 的 completeness
-- `wave1-complete`：topic-scoped skeleton artifact 的 placeholder boundary
-- `wave2-complete`：cross-topic synthesis 的 artifact reference chain
+- `wave0-complete`：relay-backed foundation source intake（reference/_INDEX.md, reference/README.md, reference/00-shared-*.md, artifacts/wave0/{topic}/source.yaml, relay provenance + count/cache/dedup checks）
+- `wave1-complete`：relay-backed topic deepening（artifacts/wave1/{topic.slug}/evidence-summary.md, question-list.md, reference/{topic.slug}-*.md, relay provenance checks）
+- `wave2-complete`：cross-topic synthesis with conditional relay provenance（only for new search/evidence/reference or promoted cross references, not unconditional whole-phase hard gate）
 - `hitl2-recorded`：HITL2 delivery 决策记录
-- `readiness-passed`：delivery 前的最终 deterministic precheck
+- `readiness-passed`：delivery 前的最终 deterministic precheck，reference index 为 `reference/_INDEX.md`
 
 对每个 gate，内容 SHALL 包含：
 - 该 gate 保护什么（一句话）
@@ -91,8 +91,12 @@ Shared gate summary SHALL NOT 复制完整 rule-by-rule 列表。
 - 摘要 ReferenceMetadata schema（`DPT_FRAMEWORK/schema/contracts/reference.mjs`）：每条 reference 必填 `url`、`title`、`retrieved_date`、`topic_tag`
 - 摘要 wave artifact 目录结构：
   - `reference/<topic>/source.yaml` → Wave0 per-topic reference metadata（YAML array，每项满足 ReferenceMetadata schema）
-  - `artifacts/wave1/<topic>/skeleton.md` → Wave1 topic-scoped placeholder skeleton（标记 `capability: foundation-placeholder`）
+  - `artifacts/wave1/<topic>/evidence-summary.md` → Wave1 relay-backed evidence summary
+  - `artifacts/wave1/<topic>/question-list.md` → Wave1 relay-backed question list
+  - `reference/{topic.slug}-*.md` → Wave1 relay-backed rich reference files
   - `artifacts/wave2/synthesis.md` → Wave2 cross-topic synthesis（引用用 Markdown link `[label](relative/path.md)` 格式）
+  - `artifacts/wave2/cross-topic-ledger.md` → Wave2 Agent-readable finding ledger
+  - `artifacts/wave2/finding-index.yaml` → Wave2 JS-readable shadow index
 - 摘要 final report artifact 目录：
   - `final/` → 终端交付输出目录，每次 delivery pass 生成一次。与 wave-level artifact 目录（`reference/`, `artifacts/wave1/`, `artifacts/wave2/`）不同——`final/` 是 terminal delivery output，不是中间产出
 

@@ -21,7 +21,7 @@
 | Field | Required | Meaning |
 |-------|----------|---------|
 | `id` | yes | 稳定 rule identifier（如 `wave0_artifact_index`） |
-| `check` | yes | Check type；合法值包括 `file_exists`、`yaml_parse`、`jsonl_parse`、`field_non_empty`、`field_value`、`trace_event_present`、`trace_has_events`、`status_value`、`dir_non_empty`、`count_min`、`placeholder` |
+| `check` | yes | Check type；合法值包括 `file_exists`、`yaml_parse`、`jsonl_parse`、`field_non_empty`、`field_value`、`trace_event_present`、`trace_has_events`、`status_value`、`dir_non_empty`、`count_min`、`placeholder`、`output_declaration_ledger_exists`、`output_declaration_coverage`、`subagent_slot_presence` |
 | `target` | yes | 被检查的 file/state path、field、glob 或 trace query |
 | `threshold` | no | Count 或 ratio 的 comparison value；不适用时为 `null` |
 | `failure_message` | yes | 指向 Agent 的 repair guidance |
@@ -101,6 +101,20 @@ CLI SHALL NOT 通过统一入口加 subcommand 区分 gate。内部 shared helpe
 
 - **WHEN** agent 需要运行 `wave0-complete` gate
 - **THEN** agent MUST 调用 `node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path>`，MUST NOT 调用一个 generic runner 加 `--gate wave0-complete` 参数
+
+### Requirement: Gate CLI SHALL include template_not_expanded pre-rule sanity check
+
+Before the deterministic rule loop, Wave0/Wave1/Wave2 gate CLIs SHALL scan `source_url` field values in source YAML and reference artifacts. If any `source_url` value contains `${` (indicating an unexpanded template variable), the gate SHALL emit a `template_not_expanded` diagnostic identifying the affected file and field. This diagnostic SHALL NOT by itself fail the gate but SHALL appear in inspect output.
+
+### Requirement: Gate helpers SHALL provide actionable parse error diagnostics and deterministic repair
+
+When gate helpers read YAML or JSON files, parse failures SHALL produce diagnostics that distinguish "file does not exist" from "file exists but cannot be parsed," SHALL include the file path, and SHALL include the parser error message with line/position. Generic "Cannot read or parse" messages SHALL be replaced.
+
+For JSON files, gate helpers SHALL attempt deterministic repair for common LLM-produced malformations before failing: trailing commas, single missing closing brackets/braces at depth 1, unquoted property keys matching `/^[a-zA-Z_$][a-zA-Z0-9_$]*$/`, and single-quoted strings. Repaired files SHALL log a `json_repaired` diagnostic.
+
+For YAML files, gate helpers SHALL attempt deterministic repair for unescaped ASCII double quotes (`"`, U+0022) inside double-quoted YAML scalars — the primary hand-concatenation failure pattern. The repair SHALL locate the failure line, escape interior double quotes, and retry parsing. Success SHALL log `yaml_repaired`; failure SHALL fall back to actionable parse error diagnostics. The initial repair target is single-line double-quoted scalars only.
+
+> **Write-side complement:** `workflow-node-contract` WNC-009 mandates `yaml.stringify()` / `JSON.stringify()` for all sub-agent outputs, eliminating malformations at the source. These read-side repairs handle legacy data and edge cases.
 
 ### Requirement: Gate CLI evaluates rules from definition
 

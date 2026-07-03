@@ -75,30 +75,34 @@ Section 内容要求：
 - **AND** 当 claim 返回 `item: null` 时循环终止
 ### Requirement: Wave1 phase body completeness with subagent boundary
 
-`phase-wave1.md` SHALL 包含完整的 9-section body，并在 body 中明确区分 Current Phase Actions 与 Future Expansion Guidance。
+`phase-wave1.md` SHALL describe relay-driven topic-specific deepening, not a foundation-placeholder skeleton phase.
 
-Section 内容要求：
-- **Stage Goal**: 为 topic registry 中的每个 topic 写入 topic-scoped skeleton artifact，明确标记 foundation placeholder capability boundary
-- **Required Inputs**: Wave0 产出的 `reference/index.md` 和 `reference/<topic>/source.yaml`、`shared-profile.md`
-- **Allowed Actions**:
-  - 读取 Wave0 的 reference index 和 metadata
-  - 为每个 topic 创建 topic-scoped skeleton artifact（`artifacts/wave1/<topic>/skeleton.md`）
-  - 在 skeleton 中显式标注 `capability: foundation-placeholder`
-  - 在 body 末尾提供 Future Expansion Guidance section（只读参考，不作为 gate pass 条件）
-  - 更新 `rb_status.json` 与 `rb_trace.jsonl`
-  - trace 中记录 `wave1_completion` event
-- **Expected Artifacts**: `artifacts/wave1/<topic>/skeleton.md`（每个 topic 至少 1 个，标记 `capability: foundation-placeholder`）、trace 中有 `wave1_completion` event
-- **Gate Command**: `node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle <path> --current-node phases/phase-wave1.md`
-- **On Gate Pass**: 读取 `check.next`
-- **On Gate Fail**: 读取 `inspect` / `advice`，补充缺失的 skeleton 或补加 placeholder marker 后 rerun
-- **Stop Behavior**: `stop: no`
-- **Anti-Cheating Rules**: 禁止声称 full subagent coverage / deepening / candidate intake / fan-in review 已完成；禁止移除或弱化 placeholder marker 以通过 gate；禁止写 fake skeleton 内容冒充真实 artifact
+The Wave1 lifecycle node SHALL guide the Phase Agent to create one `topic_deepening` task card per topic in `rb_plan.md` `topic_registry`, using accepted TargetSpec wire shape:
 
-#### Scenario: Wave1 phase stays within foundation boundary
+- `targets.controller: "main-agent"`
+- `targets.delegates.to: "sub-agent"`
+- `targets.delegates.role_key: "dpt-evidence-extractor"`
 
-- **WHEN** Phase Agent 加载 `phase-wave1.md`
-- **THEN** body SHALL 包含 Current Phase Actions section（描述 Phase Agent 必须做的事）和 Future Expansion Guidance section（只读参考）
-- **AND** Future Expansion Guidance SHALL NOT 成为 `wave1-complete` gate 的 pass 条件
+Wave1 primary deepening SHALL produce, for each topic, paired artifacts plus rich reference files:
+
+- `artifacts/wave1/{topic.slug}/evidence-summary.md`
+- `artifacts/wave1/{topic.slug}/question-list.md`
+- one or more `reference/{topic.slug}-<source-slug>.md` files when fetched sources are accepted
+
+The phase body SHALL state that Wave1 WebSearch/WebFetch work MUST be delegated through the relay pipeline. Direct Phase Agent search followed by hand-written artifacts is not a legal Wave1 completion path.
+
+#### Scenario: Wave1 lifecycle creates delegated deepening tasks
+
+- **WHEN** Phase Agent loads `phase-wave1.md`
+- **THEN** the body SHALL instruct it to enqueue `topic_deepening` task cards for topic registry entries
+- **AND** each search-capable task card SHALL delegate to `dpt-evidence-extractor` through `targets.delegates`
+- **AND** the Phase Agent SHALL complete task cards through delegated relay completion before running `wave1-complete`
+
+#### Scenario: Wave1 no longer writes placeholder skeletons
+
+- **WHEN** Wave1 completes under this change
+- **THEN** `artifacts/wave1/{topic}/skeleton.md` with `capability: foundation-placeholder` SHALL NOT be the expected completion artifact
+- **AND** `wave1-complete` SHALL be evaluated against relay-produced evidence summaries, question lists, declared references, and accepted quality/countability rules
 
 ### Requirement: Wave2 phase body completeness
 
@@ -183,22 +187,15 @@ Section 内容要求：
 
 ### Requirement: Wave1 foundation placeholder boundary enforcement
 
-`phase-wave1.md` body SHALL 显式声明 foundation 阶段的 capability boundary：
+Wave1 SHALL treat the old prohibition on claiming "topic-specific deepening completed" as a foundation-stage placeholder boundary superseded by this change. Under this change, Wave1 is allowed to claim topic-specific deepening only when the topic's evidence-producing outputs are covered by Engine-written output declarations and current-wave successful relay slot provenance.
 
-禁止声称的内容（Anti-Cheating Rules 中显式列出）：
-- full subagent coverage completed
-- topic-specific deepening completed
-- candidate intake/backfill completed
-- fan-in review completed
-- native subagent fan-out/fan-in completed
+Wave1 SHALL continue to forbid fake completion claims. The forbidden set shifts from "do not claim deepening at all" to "do not claim deepening without relay-backed evidence, declared references, cache trail handling, and gate pass."
 
-`subagent: true` frontmatter SHALL 只在 node metadata 中表示 future capability direction，foundation 阶段 SHALL NOT dispatch subagent。
+#### Scenario: Deepening claim requires current-wave relay provenance
 
-#### Scenario: Wave1 placeholder marker is unmissable
-
-- **WHEN** Phase Agent 写入 `artifacts/wave1/<topic>/skeleton.md`
-- **THEN** artifact SHALL 显式包含 `capability: foundation-placeholder`
-- **AND** `wave1-complete` gate SHALL 检查该 marker 存在
+- **WHEN** a Wave1 artifact claims topic-specific deepening completed
+- **AND** the corresponding reference/evidence outputs are not covered by current-wave output declaration coverage and successful slot binding
+- **THEN** `wave1-complete` SHALL fail provenance checks or emit bypass diagnostics according to this change
 
 ### Requirement: Wave1 future expansion tracks documentation
 
@@ -261,23 +258,25 @@ Wave2 phase-specific 禁令 SHALL 至少包含：
 - **THEN** section SHALL 至少列出 10 条 phase-specific 禁令
 - **AND** 每条禁令 SHALL 指向正确替代动作
 
-### Requirement: Wave2 gap-fill sub-agent phase file
+### Requirement: Relay role spec files are Phase-Agent-loaded guidance
 
-`phase-wave2-subagent.md` SHALL 定义 gap-fill Sub-agent (`dpt-topic-scout`) 的完整行为指令，遵循 relay slot 通信契约（`shared-subagent-protocol.md`）。
+`subagent-dpt-source-intake.md`, `subagent-dpt-evidence-extractor.md`, and `subagent-dpt-topic-scout.md` SHALL be treated as relay subagent role specification files loaded by the Phase Agent. They are not manifest lifecycle phase nodes. They SHALL NOT appear in `manifest.phases[]` or receive lifecycle header injection.
 
-Sub-agent phase file SHALL 包含：
-- **Role**: `dpt-topic-scout` — targeted gap-fill search
-- **Receives**: Bounded gap description + search keywords + target output schema from Phase Agent
-- **Produces**: Structured JSON matching result schema (found_evidence, source_urls, fills_gap, confidence)
-- **Writes**: Intermediate products to `_cache/wave2/slot_MM/`, runtime receipt to slot directory
-- **Forbidden**: Writing to WorkflowState, modifying queue, passing/failing gate, making cross-topic claims
-- **Required**: Tool degradation chain (WebFetch → curl → node → python3), honest failure recording, no fabrication
+Each role spec SHALL state that the Phase Agent reads it to construct bounded relay slot instructions, and the Sub-agent receives only the generated slot `task.md`, `result.schema.json`, runtime receipt, and slot-local/cache paths.
 
-#### Scenario: Wave2 Sub-agent file exists with complete behavior specification
+The role mapping SHALL be:
 
-- **WHEN** a gap-fill Sub-agent is spawned during wave2 synthesis
-- **THEN** Sub-agent SHALL receive instructions from `phase-wave2-subagent.md`
-- **AND** instructions SHALL cover all required behavior dimensions (role, input, output, directories, forbidden actions, fetch chain)
+| Role spec | Role key | Primary consuming phase |
+|-----------|----------|-------------------------|
+| `subagent-dpt-source-intake.md` | `dpt-source-intake` | Wave0 |
+| `subagent-dpt-evidence-extractor.md` | `dpt-evidence-extractor` | Wave1 and Wave2 backing supplementary tasks |
+| `subagent-dpt-topic-scout.md` | `dpt-topic-scout` | Wave2 gap-fill/search |
+
+#### Scenario: Role spec is not in manifest lifecycle
+
+- **WHEN** workflow package validation examines manifest phases
+- **THEN** no `subagent-dpt-*` role spec SHALL appear in `manifest.phases[]`
+- **AND** lifecycle header injection SHALL NOT be applied to those role spec files
 
 ### Requirement: Wave2 rerun full re-synthesis on topic addition
 

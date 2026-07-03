@@ -12,8 +12,8 @@ The Queue Manager SHALL expose JS APIs for `enqueue`, `claim`, `complete`, and `
 
 #### Scenario: Enqueue fills active window before refill pool
 
-- **WHEN** six valid items are enqueued into an empty queue
-- **THEN** five items occupy active window slots and the sixth is stored in `refill_pool`
+- **WHEN** 21 valid items are enqueued into an empty queue
+- **THEN** 20 items occupy active window slots and the 21st is stored in `refill_pool`
 
 #### Scenario: Claim returns current slot only
 
@@ -32,7 +32,7 @@ The Queue Manager SHALL expose JS APIs for `enqueue`, `claim`, `complete`, and `
 
 ### Requirement: Preemption inserts urgent work without hidden execution
 
-The Queue Manager SHALL expose `preempt(queue, item, { reason, unsafeCurrent })`. By default, preemption SHALL insert urgent work into the earliest pending slot and SHALL NOT interrupt `slot_1_current`. When the active window is full, displaced `slot_5_tail` SHALL move to the top of `refill_pool` with restore metadata. Replacing `slot_1_current` SHALL require `unsafeCurrent=true`.
+The Queue Manager SHALL expose `preempt(queue, item, { reason, unsafeCurrent })`. By default, preemption SHALL insert urgent work into the earliest pending slot and SHALL NOT interrupt `slot_1_current`. When the active window is full, the configured tail slot SHALL move to the top of `refill_pool` with restore metadata. Replacing `slot_1_current` SHALL require `unsafeCurrent=true`.
 
 #### Scenario: Preempt inserts into pending slot
 
@@ -42,7 +42,7 @@ The Queue Manager SHALL expose `preempt(queue, item, { reason, unsafeCurrent })`
 #### Scenario: Full window displacement is preserved
 
 - **WHEN** urgent work preempts a full active window
-- **THEN** the previous `slot_5_tail` appears in `refill_pool` with `preempted_from_slot=slot_5_tail` and `restore_priority=next_tail_opening`
+- **THEN** the previous configured tail slot appears in `refill_pool` with `preempted_from_slot` set to the configured tail slot name and `restore_priority=next_tail_opening`
 
 #### Scenario: Current slot replacement requires unsafe flag
 
@@ -168,7 +168,7 @@ The playbook SHALL use local fixture data for topic_registry entries (pre-writte
 
 ### Requirement: Queue state and item schema are structured
 
-The Queue Manager SHALL define Zod-validated `QueueState` and `QueueItem` schemas. `QueueState` SHALL contain a five-slot active window (`slot_1_current` through `slot_5_tail`), a `refill_pool`, queue health, stop authorization state, and a trace path. `QueueItem` SHALL contain fixed executable work fields (`work_id`, `title`, `targets`, `action`, `producer_rule`, `lineage`, `priority_class`, `required_receipts`, `done_condition`, `verification`, `writes_to`, `status_sync`, `completion_receipt`, `failure_route`, `status`, `created_at`, `updated_at`) plus a flexible JSON `payload`. The `targets` field SHALL be a `TargetSpec` object with `controller` (enum: `main-agent` | `engine`) and optional `delegates` (object with `to`: `sub-agent`, `role_key`: string, `timeout_ms`: number). The schema SHALL reject items missing `producer_rule`, `required_receipts`, or `completion_receipt`.
+The Queue Manager SHALL define Zod-validated `QueueState` and `QueueItem` schemas. `QueueState` SHALL contain a 20-slot active window (`slot_1_current` through `slot_20_tail`), a `refill_pool`, queue health, stop authorization state, and a trace path. `QueueItem` SHALL contain fixed executable work fields (`work_id`, `title`, `targets`, `action`, `producer_rule`, `lineage`, `priority_class`, `required_receipts`, `done_condition`, `verification`, `writes_to`, `status_sync`, `completion_receipt`, `failure_route`, `status`, `created_at`, `updated_at`) plus a flexible JSON `payload`. The `targets` field SHALL be a `TargetSpec` object with `controller` (enum: `main-agent` | `engine`) and optional `delegates` (object with `to`: `sub-agent`, `role_key`: string, `timeout_ms`: number). The schema SHALL reject items missing `producer_rule`, `required_receipts`, or `completion_receipt`.
 
 #### Scenario: Valid queue item passes schema
 
@@ -503,13 +503,15 @@ If a task has no `targets.delegates`, `complete()` SHALL NOT require relay slot 
 
 ### Requirement: Queue active window has an explicit slot-shape SSOT
 
-The Queue active window slot count SHALL be defined as `QUEUE_ACTIVE_WINDOW_SLOTS = 5`, and the active-window wire keys SHALL be defined by `SLOT_NAMES`. Both Queue schema validation and Queue engine operations SHALL use the same `SLOT_NAMES` source of truth. Queue slot count SHALL NOT be derived from Relay sub-agent concurrency.
+The Queue active window slot count SHALL be defined as `QUEUE_ACTIVE_WINDOW_SLOTS = 20`, and the active-window wire keys SHALL be defined by `SLOT_NAMES` (expanded to `slot_1_current`, `slot_2_next`, `slot_3_pending` through `slot_19_pending`, `slot_20_tail`). Both Queue schema validation and Queue engine operations SHALL use the same `SLOT_NAMES` source of truth. Queue slot count SHALL NOT be derived from Relay sub-agent concurrency (`MAX_CONCURRENT_SUBAGENTS = 8`).
 
-#### Scenario: Queue slot constants define the five-slot wire shape
+When a legacy 5-slot `rb_queue.json` is encountered, the first `operate-queue` operation SHALL migrate it: `slot_5_tail` SHALL be renamed to `slot_5_pending` with its value preserved, and `slot_6_pending` through `slot_20_tail` SHALL be initialized to `null`.
+
+#### Scenario: Queue slot constants define the 20-slot wire shape
 
 - **WHEN** Queue code imports the active-window constants
-- **THEN** `QUEUE_ACTIVE_WINDOW_SLOTS` SHALL equal 5
-- **AND** `SLOT_NAMES` SHALL equal `slot_1_current`, `slot_2_next`, `slot_3_pending`, `slot_4_pending`, `slot_5_tail`
+- **THEN** `QUEUE_ACTIVE_WINDOW_SLOTS` SHALL equal 20
+- **AND** `SLOT_NAMES` SHALL include `slot_1_current`, `slot_2_next`, `slot_3_pending` through `slot_19_pending`, `slot_20_tail`
 
 #### Scenario: Promote shifts the configured active window left
 

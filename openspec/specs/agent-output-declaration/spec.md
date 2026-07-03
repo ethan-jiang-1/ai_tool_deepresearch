@@ -77,6 +77,8 @@ Ledger append SHALL still require delegated task provenance, runtime receipt, an
 
 Downstream gates SHALL treat `rb_output_declarations.jsonl` as the authoritative index of Agent-produced outputs. `cache_coverage` SHALL dynamically re-check that ledger cache trail paths still exist, contain the required three files, and map each role=`reference` output to at least one plausible cache leaf by `source_url`, `source_slug`, or reference filename qualifier.
 
+`rb_output_declarations.jsonl` is mandatory provenance proof for reference/evidence-producing relay outputs. Wave0/Wave1 gate provenance relies on current-wave output declaration coverage plus successful current-wave subagent slot binding. Wave2 main-agent synthesis/backfill does not require a Wave2 ledger entry by itself; Wave2 new search/evidence/reference outputs, including promoted `reference/00-cross-*.md`, SHALL be ledger-covered. Files found on disk but not declared in Engine-written ledger records SHALL be treated as orphan/direct-written output and SHALL NOT satisfy coverage or countability by filesystem presence alone.
+
 #### Scenario: complete writes ledger after delegated success
 
 - **WHEN** delegated `complete()` validates committed slot result, runtime receipt, output files, and cache leaves

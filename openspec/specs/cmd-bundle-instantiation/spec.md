@@ -32,7 +32,7 @@ The `DPT_FRAMEWORK/rb_templates/` directory SHALL contain template files with `{
 
 #### Scenario: Template for rb_queue.json
 - **WHEN** `DPT_FRAMEWORK/rb_templates/rb_queue.json.tmpl` is read
-- **THEN** it contains valid JSON with `"queue_health": "ready"`, `"stop_authorization_state": "unauthorized_continue_required"`, five null slots, and an empty `"refill_pool": []`
+- **THEN** it contains valid JSON with `"queue_health": "ready"`, `"stop_authorization_state": "unauthorized_continue_required"`, 20 null slots (`slot_1_current` through `slot_20_tail`), and an empty `"refill_pool": []`
 
 #### Scenario: Template for rb_profile.yaml
 - **WHEN** `DPT_FRAMEWORK/rb_templates/rb_profile.yaml.tmpl` is read
