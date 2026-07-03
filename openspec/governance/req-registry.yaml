@@ -238,6 +238,8 @@ RPG-008: relay-provenance-gate — Gate emits relay_commit_missing diagnostic wh
 RPG-009: relay-provenance-gate — Gate emits agent_timestamp_span_suspicious diagnostic when spawnedAt/completedAt span is sub-second (advisory only)
 RPG-010: relay-provenance-gate — Framework ships a provenance-forensics judgment guide (5 signals + decision matrix + write-back, content from plan §10) so a future coding agent can decide from landed evidence
 RPG-011: relay-provenance-gate — Gate emits lifecycle_events_missing diagnostic when an evidence-producing slot lacks nonce-carrying lifecycle events (advisory only; read-side for SRL-004)
+RPG-012: relay-provenance-gate — Gate emits provenance_chain_inconsistency diagnostic when engine-emitted artifact cross-references contradict (advisory only; cross-artifact consistency — primary detector for determined forgery)
+RPG-013: relay-provenance-gate — All gate provenance diagnostics carry slotKey and wave for per-slot/per-wave aggregation
 
 # repair-loop
 REL-001: repair-loop — Repair checkpoint loopback and deterministic termination
@@ -292,6 +294,7 @@ SUC-002: subagent-collect — Per-slot collect during batch sub-agent execution 
 SUD-004: subagent-dispatch — Staging writes per-slot _beacon.json (bundle_dir, log_cli, slot_key, UUID receipt_nonce)
 SUD-005: subagent-dispatch — dispatch.json persists each slot engine-generated UUID receipt_nonce for forensic binding
 SUD-006: subagent-dispatch — buildSpawnPrompt hands sub-agent only slot directory plus beacon pointer (beacon mode)
+SUD-007: subagent-dispatch — Staging and commit trace events (slot_create, dispatch_create, agent_result_received, result_schema_validated) carry the slot receipt_nonce, nonce-anchoring the engine trace chain end-to-end
 SRD-001: subagent-relay-driver — Driver CLI orchestrates relay slot lifecycle end-to-end via stage/commit subcommands
 SRD-002: subagent-relay-driver — Driver performs no search, evidence judgment, or routing (deterministic lifecycle only)
 SRD-003: subagent-relay-driver — Driver passes result through commitSlotResult validation unchanged (no hand-written slot files)

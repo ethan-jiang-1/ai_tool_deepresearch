@@ -71,29 +71,31 @@ L3 + L5 是两个独立的结构性缺口。BUG-014 早指出 L3（"正道 10+ �
 
 ## 4. 要埋什么（forensic 埋点设计）
 
-目标是：**让"真 sub-agent 跑过"和"手糊 provenance"在 log 里可区分、可检测。** 四类埋点，由弱到强：
+目标是：**让"真 sub-agent 跑过"和"手糊 provenance"在 log 里可区分、可检测。**
 
-### 4.1 unforgeable nonce binding（最强单点）
-- `createSlot()` 已用 `randomUUID()`（E5 证明手糊 nonce 形状不对）。
-- **埋点强化**：在 `dispatch.json`（`createDispatchManifest` 已写 `subagent-relay.mjs:604`）里记录每个 slot 的 engine-generated nonce。
-- **取证检查**：比对 `runtime-receipt.jsonl` 的 `receiptNonce` 是否 = `dispatch.json` 记录值、且为 UUID 形状。不一致 → `provenance_nonce_mismatch`。
-- 手糊者拿不到引擎生成的 nonce（除非也手糊 dispatch.json 并猜中——但 dispatch.json 由引擎写，且可交叉校验）。
+> **修正（第 4 轮复盘）**：早先把 §4.1 nonce 当"最强单点"是**反了**。抗手糊是**频谱**不是二元——单个文件（`dispatch.json`/`_beacon.json`/`_agent.json`/`runtime-receipt.jsonl`）可被 `writeFileSync` 直接伪造；engine 在引擎函数内经 `traceEntry` 写进 `rb_trace.jsonl` 的**事件链**才更难伪造（要 append 进 append-only 链且保持跨文件自洽）。诊断价值 ∝ 手糊者要维持一致多少处交叉引用。
 
-### 4.2 sub-agent lifecycle event presence
-- buildSpawnPrompt 已定义 lifecycle 事件（E3）。真实 spawn 的 sub-agent 应在 `run.log`/`rb_trace.jsonl` 留下至少 `work_done`。
-- **取证检查**：每个 evidence-producing slot 必须有对应 lifecycle 事件；缺失 → 产出视为无 provenance。
-- 价值：即使 §5.2 把 logging 下沉到 role spec，手糊者仍可绕过——lifecycle 事件缺失是独立兜底信号。
+### 4.0 主信号：engine trace 链（S0）
+真·"engine 跑过"的证据 = `rb_trace.jsonl` 里该 slot 的引擎事件链**存在且自洽**：`slot_create`+`dispatch_create`（staging）→ `agent_runtime_started`+`agent_result_ready`（ingest，已带 nonce）→ `agent_result_received`+`result_schema_validated`（commit）。**关键缺口**：当前 staging/commit 的 trace 事件**不带 nonce**（只有 ingest 带），所以"staging 链在"和懒手糊一样好伪造。**SUD-007 修这个**——给 `slot_create`/`dispatch_create`/`agent_result_received`/`result_schema_validated` 四个 `traceEntry` 加 `receiptNonce`，让整条链 nonce-anchored、可交叉校验。**没有 SUD-007，tier-3（staged-not-committed）与 tier-5（懒手糊）不可区分。**
 
-### 4.3 engine-execution trace binding（"验证执行"而非"验证存在"的核心）
-- `commitSlotResult` 会 emit `relay_commit_attempt`/`result_schema_validated`/`relay_commit_done`（engine 自写，Agent 手糊不出来——这是引擎函数运行时的 `traceEntry` 副产物）。
-- **取证检查**：gate 的 `subagent_slot_presence` 升级为——除了文件存在，**还要求 `rb_trace.jsonl` 里有该 slot 的 `relay_commit_done` 事件**。
-- 这是把 gate 从 presence-based 升级为 execution-based 的关键。Agent 手糊文件时**不会**产生这些 trace 事件（除非手写 trace——但 trace 是 append-only 且有交叉校验，难度量级不同）。
+### 4.1 nonce 持久化（**降级为：懒手糊筛查**，非"最强单点"）
+- `createSlot()` 用 `randomUUID()`；把 nonce 持久化进 `dispatch.json`/`_beacon.json`。
+- **取证检查**：receipt nonce 是否 ∈ dispatch.json 且 UUID 形状。不一致 → `provenance_nonce_mismatch`。
+- **诚实**：只抓**懒手糊**（BUG-019：连 dispatch.json 都不写、nonce 手糊形状）。认真手糊者写齐 dispatch.json + receipt + beacon + 同一个自造 UUID 就能过。**不证明 staging 真跑过。**
 
-### 4.4 时间跨度 sanity
-- 真实 sub-agent `spawnedAt → completedAt` 应秒级以上。同毫秒 = 手糊（E8）。
-- **取证检查**：`_agent.json` 跨度 < 阈值（如 1s）→ 可疑。
+### 4.2 sub-agent lifecycle 事件（**辅助**，依赖 sub-agent 配合）
+- 真实 spawn 的 sub-agent 在 `run.log` 留 lifecycle 事件。缺失 → `lifecycle_events_missing`。
+- **降级为辅助**：run.log 是 sub-agent-authored（可伪造）；且若没 staging，sub-agent 无 beacon 可读、根本不 log。不作主判据。
 
-> **诚实声明**：§4 全部是"更难手糊"而非"密码学不可伪造"。真正不可伪造需要 engine 侧签名（harden-relay-pipeline design 已明示 out-of-scope）。但 §4.1+4.3 组合已把"手糊"从 trivial（写几个 JSON）提升到 needs-effort（要伪造 UUID nonce + 伪造引擎 trace 事件 + 对齐时间跨度），足以让"normal shortcut"暴露——而这正是 change 声称要防的 "accidental/shortcut bypass"。
+### 4.3 engine-execution trace binding（**主信号**，见 §4.0）
+- engine `commitSlotResult` 经 `traceEntry` 写 `result_schema_validated`/`agent_result_received`（`rb_trace.jsonl`）+ `relay_commit_done`（`run.log`）。这些是引擎函数运行的副产物，手糊者要伪造须复制**整条自洽链**。
+- **取证检查**：判 slot 是否真 commit，看 `rb_trace.jsonl` 的 trace 链（SUD-007 后 nonce-anchored，可交叉校验）+ RPG-012 一致性诊断。
+- 本轮 diagnostic-only（不把 RPG-003 升级为阻断）；阻断升级是未来 change。
+
+### 4.4 时间跨度 sanity（**佐证**，有 fast-but-real 假阳性）
+- 真实 sub-agent `spawnedAt → completedAt` 应秒级以上。同毫秒 = 可疑。但**合法的极快 slot 也会触发**（<1s）。**单独不足以判伪造**（RPG-009），须与 RPG-012 并发才判。
+
+> **诚实声明**：§4 没有任何单点密码学不可伪造（签名 out-of-scope）。change 把"懒手糊"→稳抓（§4.1 就够），把"认真手糊"→要伪造整条 nonce-anchored 自洽 trace 链（成本量级上升，靠 §4.0+§4.3+SUD-007+RPG-012）。**不**等于不可伪造。SUD-007 落地**前**，连 trace 链都能靠 append 一致行伪造——所以 §9 要标这个 open。
 
 ---
 
@@ -121,9 +123,11 @@ sub-agent 读 beacon → 拿到 bundle_dir + nonce + log_cli
   → 调 log-event.mjs，每个 lifecycle 事件带上那个 UUID nonce
 ```
 
-**两层取证（按是否依赖 sub-agent 配合分层）：**
-- **Layer-1（staging 证明，无需 sub-agent 配合）**：engine 在 staging 把 UUID nonce 写进 `dispatch.json`/`_beacon.json`。检测 = receipt/ledger 的 nonce 是否 ∈ dispatch.json 的 UUID。**这一层直接抓 BUG-019 那种手糊**（已证实：bundle 无 dispatch.json、4 nonce 全非 UUID）——哪怕 sub-agent 一个字都没 log。
-- **Layer-2（execution 证明，需 sub-agent 配合）**：sub-agent 读 beacon、log 带 nonce 的 lifecycle 事件、engine 跑 `commitSlotResult` 留 `relay_commit_done`。检测 = trace 里是否有该 slot 的 commit + lifecycle 事件。
+**取证分层（修正后，按抗手糊强度分，**非**"是否需 sub-agent"）：**
+- **主层（engine trace 链，S0/S3）**：engine 经 `traceEntry` 写 `rb_trace.jsonl` 的 staging→ingest→commit 事件链。**真·难伪造**（要复制整条 nonce-anchored 自洽链）。SUD-007 把 nonce 贯穿 staging/commit 事件，使其可交叉校验。无需 sub-agent 配合（engine 自写）。
+- **筛查层（nonce/文件，S1/S2）**：dispatch.json + nonce UUID 形状。**只抓懒手糊**（文件可伪造）。也无需 sub-agent 配合。
+- **辅助层（lifecycle，S5）**：sub-agent 读 beacon 后 log 的事件。依赖 sub-agent 配合，可伪造，仅辅助。
+- **注意**：早先"Layer-1=nonce 无需 sub-agent 就抓伪造 / Layer-2=trace 需 sub-agent"的分层**是反的**——抗手糊的主信号是 trace 链（主层），不是 nonce（筛查层）。
 
 下面两条路径（§5.1 driver、§5.2 role-spec 下沉）都建立在 beacon 模式之上——它们决定 beacon 如何被**生成与读取**。
 
@@ -180,9 +184,11 @@ sub-agent 读 beacon → 拿到 bundle_dir + nonce + log_cli
 
 ## 9. 把握度标定
 
-- **高（证据级，已验证）**：sub-agent logging 管线本身工作（E1/E2）；BUG-019 bundle provenance 是手糊（E5/E7/E8）；relay 无 runtime driver（E4/Exp-4）；bundle 在 post-change 跑（E9）。
-- **中（方向对、待设计）**：driver 命令形态（§5.1）、gate execution-based 升级（§4.3）——方向由证据支撑，具体实现需 design + 测试。
-- **低 / 未决**：BUG-019 对策最终怎么定——**故意悬置，不在本会话判**。等 §4/§5 埋点落地、跑过真实 run 后，**由下一个 coding agent 按 §10 判断手册判决**（5 个信号 + 矩阵的明确流程，不再是泛泛"收集数据"）。
+- **高（证据级，已验证）**：sub-agent logging 管线本身工作（E1/E2）；BUG-019 bundle provenance 是**懒手糊**（E5/E7/E8：S1✗ 无 dispatch.json、S2✗ 非 UUID nonce）；relay 无 runtime driver（E4/Exp-4）；bundle 在 post-change 跑（E9）。
+- **中（方向对、待设计）**：driver 命令形态（§5.1）、gate execution-based 升级（§4.3）。
+- **重要修正（第 4 轮）**：BUG-019 是**懒手糊** tier——**不会**被抓到"认真手糊者"（写齐 dispatch.json + UUID nonce + append 一致 trace 行）。
+- **open（必须在 §9 标出）**：SUD-007 落地**前**，连 trace 链都可被 append 一致行伪造；SUD-007 + RPG-012 落地后才把认真手糊的成本量级提上去。**仍非密码学不可伪造。**
+- **低 / 未决**：BUG-019 对策最终怎么定——**故意悬置**。等埋点落地、跑过真实 run 后，**由下一个 coding agent 按 §10 判断手册（6-tier 矩阵）判决**。
 
 ---
 
@@ -192,42 +198,47 @@ sub-agent 读 beacon → 拿到 bundle_dir + nonce + log_cli
 
 ### 10.1 前置确认（先做，否则信号不存在）
 
-埋点必须已 apply。确认这 4 样东西在产出里：
-- `_subagents/wave_NN/dispatch.json` 每个 slot 带 `receipt_nonce`（UUID）← Layer-1
-- `_subagents/wave_NN/slot_MM/_beacon.json` 含 `bundle_dir`/`log_cli`/`slot_key`/`receipt_nonce`
-- sub-agent role spec / task.md MANDATE 调 `log-event.mjs` 的 lifecycle 事件 ← §5.2
-- 有 runtime driver 能真把 relay 跑通 ← §5.1
+埋点必须已 apply。确认这 6 样东西在产出里：
+- `_subagents/wave_NN/dispatch.json` 每个 slot 带 `receipt_nonce`（UUID）← SUD-005
+- `_subagents/wave_NN/slot_MM/_beacon.json` 含 `bundle_dir`/`log_cli`/`slot_key`/`receipt_nonce` ← SUD-004
+- **staging/commit 的 trace 事件带 `receiptNonce`**（S0/S3 才能交叉校验）← **SUD-007**
+- sub-agent role spec / task.md MANDATE 调 `log-event.mjs` 的 lifecycle 事件 ← §5.2 / WNC-010/011
+- **phase MD 指示 Phase Agent 用 `drive-relay-slot`** ← WNC-012（否则 driver 是 dead code）
+- 有 runtime driver `drive-relay-slot` 能真把 relay 跑通 ← §5.1 / SRD
 
 没 apply 就先 apply（开 `subagent-execution-logging` change 的 apply 阶段），别往下判。
 
-### 10.2 跑完一轮真实 run 后，读这 5 个信号（每个 evidence-producing slot / 每个 wave）
+### 10.2 跑完一轮真实 run 后，读这些信号（**每个 evidence-producing slot**，不是 per-wave）
 
-| 信号 | 看哪里 | 谁写的 | 缺失意味着 |
+| 信号 | 看哪里 | 谁写的 | 抗手糊 | 缺失意味着 |
+|---|---|---|---|---|
+| **S0** engine trace 链在且自洽 | `rb_trace.jsonl` 的 `slot_create`/`dispatch_create`/`agent_runtime_started`/`agent_result_ready`/`agent_result_received`/`result_schema_validated`（SUD-007 后全带 nonce） | engine `traceEntry` | **强**（要伪造整条自洽链） | engine 没真跑（**最关键**） |
+| **S1** `dispatch.json` 在 | `_subagents/wave_NN/dispatch.json` | engine 写文件 | 弱（文件可伪造） | staging 没跑（懒手糊筛查） |
+| **S2** nonce UUID 且 ∈ dispatch | receipt/beacon nonce ↔ dispatch | `createSlot` | 弱（两边都可手糊写） | 懒手糊 / nonce 未绑定 |
+| **S3** commit 链在（`result_schema_validated`+`agent_result_received`，带 nonce） | `rb_trace.jsonl` | engine `commitSlotResult` | **强** | 引擎 commit 没跑 |
+| **S4** `spawnedAt→completedAt` 跨度 > 1s | `_agent.json` | engine `commitSlotResult` | 弱（可伪造，且有 fast-but-real 假阳性） | 可疑（**单独不足**） |
+| **S5** run.log 有带 nonce 的 lifecycle 事件 | `_logs/run.log` | sub-agent | 弱（sub-agent-authored，依赖配合） | sub-agent 没 log（辅助） |
+
+> **S0/S3（engine trace 链）才是主信号**——引擎函数运行的副产物，手糊者要复制整条 nonce-anchored 自洽链。**S1/S2 只是懒手糊筛查**（文件可伪造，只抓懒的）。**S4 佐证、S5 辅助**。**绝不从单一信号定伪造**：tier-6（不一致）须 RPG-012 交叉引用矛盾 + 复核。
+
+### 10.3 判决矩阵（6 tier，pattern → 结论 → 对 BUG-019 怎么办；**按 slot 判**）
+
+| tier | 观察到的 pattern | 结论 | BUG-019 对策含义 |
 |---|---|---|---|
-| **S1** `dispatch.json` 在 | `_subagents/wave_NN/dispatch.json` | `createDispatchManifest`（engine，staging） | staging 没跑 |
-| **S2** nonce 是 UUID 且 ∈ dispatch.json | slot `runtime-receipt.jsonl` / `_beacon.json` 的 nonce ↔ dispatch.json 记录 | `createSlot`（`randomUUID()`） | 手糊 / nonce 未绑定 |
-| **S3** trace 有 `relay_commit_done` | `rb_trace.jsonl` 该 slot 事件 | `commitSlotResult`（engine） | 引擎 commit 没跑 |
-| **S4** `spawnedAt→completedAt` 跨度 > 1s | `_agent.json` | `commitSlotResult` | 手糊（同毫秒） |
-| **S5** run.log 有带 nonce 的 lifecycle 事件 | `_logs/run.log` 的 `search_start`/`work_done` 等 | sub-agent（经 `log-event.mjs`） | sub-agent 没真跑 / 没 log |
-
-> **S1–S4 是 engine 侧落地、sub-agent 无法伪造**（除非恶意手写 trace/dispatch——那已超出"normal shortcut"，密码学签名才防，out-of-scope）。**S5 依赖 sub-agent 配合，是辅助而非必要。所以哪怕只看 S1–S4 也足以判 relay 是否真驱动过。**
-
-### 10.3 判决矩阵（pattern → 结论 → 对 BUG-019 怎么办）
-
-| 观察到的 pattern | 结论 | BUG-019 对策含义 |
-|---|---|---|
-| S1✓ S2✓ S3✓ S4✓ S5✓ | relay 端到端**真跑通** | BUG-019 的"relay 走不通所以要 fallback"**前提为假** → 对策（gate 接受非 relay 产出）**否决**。若 gate 仍卡 → 是格式/YAML 问题（BUG-018 范畴），不是 relay 架构 |
-| S1✓ S2✓ S3✓ 但 S5✗ | relay 真跑、provenance 真，只是 sub-agent 没 log | 观测缺口（补 §5.2 role-spec 下沉），**不是** provenance 问题；BUG-019 fallback **仍否决** |
-| S1✗ **或** S2✗ **或** S3✗ | provenance 被**手糊**（= 当前 BUG-019 bundle 情形，见 §2） | relay **没被驱动**（L3 driver gap），不是"走不通"。修法 = §5.1 driver + §4.3 execution-based gate，**不是** fallback（fallback 会把手糊官方化） |
-| 即便 driver 已存在仍持续手糊 | Agent 主动偏好伪造 | provenance 必须 execution-based 硬阻断（§4.3），并立项查"为何 Agent 不走 driver" |
+| 1 | S0✓ S3✓ `status=done` | relay 端到端**真跑通** | "relay 走不通所以要 fallback"**前提为假** → fallback **否决**。若 gate 仍卡 → 格式/YAML 问题（BUG-018），非 relay 架构 |
+| 2 | S0✓ S3✓ `status=failed/partial` | relay 真跑，但 slot **真失败**了 | 非伪造、非观测缺口 → 查 slot 为何失败。fallback 仍否决 |
+| 3 | S0✓ 但 S5✗ | relay 真跑、provenance 真，只是 sub-agent 没 log | 观测缺口（补 §5.2 role-spec 下沉），**非** provenance 问题；fallback 仍否决 |
+| 4 | staging✓（S0 staging 段 + dispatch.json）commit✗（无 S3，`_status≠done`） | **staged-not-committed**：engine staged，commit 没跑 | driver **有** staging，commit 路径出问题 → 查 commit 为何跳过。**非伪造**，非"修 driver" |
+| 5 | S1✗ **或** S2✗（无 dispatch.json / 非 UUID nonce） | **懒手糊**（= 当前 BUG-019 bundle） | relay **没被驱动**（driver gap），非"走不通" → §5.1 driver + WNC-012 接线，**非** fallback |
+| 6 | 文件/trace 在但**交叉引用矛盾**（RPG-012） | **不一致**：认真手糊 / 损坏 / fast-but-real 之一 | 须 RPG-012 + 复核，**不单凭 RPG-009 定伪造**；数据够了开 execution-based 阻断 change |
 
 ### 10.4 你的操作步骤
 
-1. 确认 §10.1 埋点已 apply。
+1. 确认 §10.1 埋点已 apply（**含 SUD-007**——否则 S0 trace 链没 nonce-anchored，tier 4/6 不可靠）。
 2. 跑 ≥1 轮真实 wave0（或 wave1）。
-3. 对每个 evidence-producing slot 读 §10.2 的 5 个信号。
-4. 套 §10.3 矩阵得出结论。
-5. 按结论定 BUG-019 对策：否决 fallback / 否决+补观测 / 上 driver+execution-gate / 立项查伪造偏好。
-6. **把结论回写**：更新 `_backlog/bugs/BUG-019-*.md` 的对策段 + 本 plan §9 把握度（把"低/未决"升到"高，证据见…"）。
+3. **对每个 evidence-producing slot** 读 §10.2 的 S0–S5（一个 wave 里不同 slot 可能在不同 tier，**按 slot 判，不按 wave 笼统判**）。
+4. 套 §10.3 的 6-tier 矩阵得出每个 slot 的结论。
+5. 按结论定 BUG-019 对策（tier 1/2/3 → fallback 否决；tier 4 → 查 commit；tier 5 → driver + 接线；tier 6 → 复核 + 考虑阻断 change）。
+6. **把结论回写**：更新 `_backlog/bugs/BUG-019-*.md` 的对策段 + 本 plan §9 把握度。
 
-> 一句话：**S1–S4 全✓ → relay 没坏，BUG-019 的 fallback 是错的；S1/S2/S3 任一✗ → 是"没驱动"不是"走不通"，修 driver 而不是开 fallback。**
+> 一句话：**S0/S3（engine trace 链）是主信号；S1/S2 只是懒手糊筛查；绝不从单一信号定伪造。staged-not-committed（tier 4）≠ 手糊——别误判成"修 driver"。**

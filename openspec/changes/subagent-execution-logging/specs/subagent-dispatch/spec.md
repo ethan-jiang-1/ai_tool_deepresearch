@@ -1,6 +1,6 @@
 # Subagent Dispatch (delta)
 
-> req: SUD-004, SUD-005, SUD-006
+> req: SUD-004, SUD-005, SUD-006, SUD-007
 
 ## Purpose
 
@@ -42,3 +42,20 @@ When `stageSubagentSlots` / `createDispatchManifest` creates a slot directory, i
 - **WHEN** `recordAgentSpawnRequested` builds the spawn prompt
 - **THEN** the prompt SHALL contain the slot directory absolute path and a directive to read `<slot>/_beacon.json`
 - **AND** SHALL instruct the sub-agent to emit lifecycle events carrying the beacon `receipt_nonce`
+
+### Requirement: Staging and commit trace events SHALL carry the slot receipt nonce
+
+The `slot_create`, `dispatch_create`, `agent_result_received`, and `result_schema_validated` trace events (emitted via `traceEntry` to `rb_trace.jsonl` by `createDispatchManifest`/`stageSubagentSlots` and `commitSlotResult` in `DPT_FRAMEWORK/engine/subagent-relay.mjs`) SHALL include the slot's `receiptNonce` in their detail. Today only the ingest events (`agent_runtime_started`/`agent_result_ready`) carry the nonce; this requirement extends nonce-anchoring across the **entire** engine trace chain (staging → ingest → commit) so the chain is cross-checkable end-to-end by provenance forensics (RPG-012). Without it, a hand-faker can append staging/commit trace lines without keeping nonces consistent, making "staging chain present" no harder to forge than a plain file.
+
+#### Scenario: Staging trace events carry the nonce
+- **WHEN** `stageSubagentSlots`/`createDispatchManifest` emits `slot_create` and `dispatch_create` trace events for a slot
+- **THEN** each event's detail SHALL include that slot's `receiptNonce`
+
+#### Scenario: Commit trace events carry the nonce
+- **WHEN** `commitSlotResult` emits `agent_result_received` and `result_schema_validated` trace events for a slot
+- **THEN** each event's detail SHALL include that slot's `receiptNonce`
+
+#### Scenario: Forensics can cross-check the nonce across the chain
+- **WHEN** a provenance forensic check (RPG-012) reads any of the four trace events for a slot
+- **THEN** it SHALL be able to read the `receiptNonce` and cross-check it against `_beacon.json` / `dispatch.json` / lifecycle events
+- **AND** the nonce SHALL be identical across staging → ingest → commit events for the same slot

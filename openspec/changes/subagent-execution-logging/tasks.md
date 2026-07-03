@@ -3,12 +3,13 @@
 > 实现顺序按依赖：先 engine beacon/nonce（其他都读它）→ driver（让 engine 函数有 runtime 调用者）→ role spec/task.md logging 强制 → gate forensic 诊断 → 受控 playbook 验证 5 信号 → version + governance 收尾。
 > 详细设计见 `design.md`；判决手册见 `_backlog/plans/subagent-logging-come-alive-plan.md` §10。
 
-## 1. Engine: beacon 模式 + nonce 持久化（SUD-004/005/006）
+## 1. Engine: beacon 模式 + nonce 持久化 + trace 链 nonce-anchoring（SUD-004/005/006/007）
 
 - [ ] 1.1 实现 SUD-004：扩展 `createDispatchManifest`/`stageSubagentSlots`（`DPT_FRAMEWORK/engine/subagent-relay.mjs`），在每个 slot 目录写 `_beacon.json = { bundle_dir(abs), log_cli(abs), slot_key, receipt_nonce }`，nonce 取自 `createSlot()` 的 `randomUUID()`
 - [ ] 1.2 实现 SUD-005：`dispatch.json` 的每个 slot entry 增加 UUID `receipt_nonce`，与 `_beacon.json` 一致
 - [ ] 1.3 实现 SUD-006：重构 `buildSpawnPrompt`——spawn prompt 只内联 slot 目录绝对路径 + "先读 `_beacon.json`" 指令 + "lifecycle 事件带 nonce" 指令；不再把 bundle path 作为唯一通道内联
 - [ ] 1.4 回归测试 `tests/engine/subagent-relay.test.mjs`：staging 后 `_beacon.json` 存在且字段齐全、`dispatch.json` nonce = beacon nonce（UUID 形状）、spawn prompt 含 slot 目录 + beacon 指针
+- [ ] 1.5 实现 SUD-007：在 4 个 `traceEntry` 站点（`subagent-relay.mjs` L586 `slot_create` / L606 `dispatch_create` / L928 `agent_result_received` / L1015 `result_schema_validated`）的 detail 加 `receiptNonce`；回归测试断言四个事件都带 slot 的 nonce（staging→ingest→commit 链 nonce-anchored，可被 RPG-012 交叉校验）
 
 ## 2. Engine: relay driver CLI（SRD-001/002/003/004）
 
@@ -25,21 +26,28 @@
 - [ ] 3.3 回归测试/validator：role spec 与生成的 task.md 含 logging 指令；validator（`validate-phase-templates.mjs` 或对应）校验 sub-agent role spec 携带该契约
 - [ ] 3.4 实现 WNC-012（供需接线）：更新 `phase-wave0.md`/`phase-wave1.md` 的 relay 段 + Wave2 search delegation 段 + `shared-subagent-protocol.md`，指示 Phase Agent 用 `drive-relay-slot stage/commit/merge` 驱动 relay（**不**手编排 `stageSubagentSlots`/`commitSlotResult`、**不**手写 slot 文件）；validator 校验这些 phase node 的 relay 段指向 `drive-relay-slot`
 
-## 4. Gate：forensic 诊断 + 判断指南（diagnostic-only）（RPG-007/008/009/010/011, SRL-004）
+## 4. Gate：forensic 诊断 + 判断指南（diagnostic-only）（RPG-007/008/009/010/011/012/013, SRL-004）
 
 - [ ] 4.1 实现 RPG-007：gate 增加 `provenance_nonce_mismatch` 诊断——slot nonce 非 UUID 或不在 `dispatch.json` 时，经既有 logging surface 写 trace event + run.log WARN（不改 pass/fail）
 - [ ] 4.2 实现 RPG-008：gate 增加 `relay_commit_missing` 诊断——evidence-producing slot 在 `rb_trace.jsonl` 无 `relay_commit_done` 时报告（advisory only）
 - [ ] 4.3 实现 RPG-009：gate 增加 `agent_timestamp_span_suspicious` 诊断——`_agent.json` 的 spawnedAt/completedAt 相等或 < 阈值（默认 1s）时报告（advisory only）
 - [ ] 4.4 实现 RPG-011：gate 增加 `lifecycle_events_missing` 诊断——evidence-producing slot 在 `_logs/run.log`/`rb_trace.jsonl` 无带 nonce 的 lifecycle 事件时报告（advisory only）；这是 SRL-004 的读取侧
-- [ ] 4.5 实现 RPG-010：创建 `DPT_FRAMEWORK/command_playbook/provenance-forensics-guide.md`，内容来自 plan §10——5 信号 S1–S5（含精确文件路径）+ 判决矩阵（真 relay 行 + 手糊行，各带 BUG-019 对策含义）+ write-back 流程；validator 确认指南存在且覆盖三部分
-- [ ] 4.6 回归测试（RPG-007/008/009/011 + SRL-004）：注入手糊信号（非 UUID nonce / 无 commit trace / 同毫秒启停 / 无 lifecycle）→ 诊断 emit；注入真 relay run 信号 → 诊断 silent；断言本轮 pass/fail 不变（advisory only）
+- [ ] 4.5 实现 RPG-010：创建 `DPT_FRAMEWORK/command_playbook/provenance-forensics-guide.md`，内容来自 plan §10——**S0–S5 信号**（含精确文件路径 + 抗手糊强度标注）+ **6-tier 判决矩阵**（真 relay / 真失败 / 观测缺口 / staged-not-committed / 懒手糊 / 不一致，各带 BUG-019 对策含义）+ 抗手糊频谱说明 + write-back 流程；明示"RPG-009 单独不足判伪造"、"认真手糊只被 RPG-012 抓"；validator 确认指南覆盖这些
+- [ ] 4.6 回归测试（RPG-007/008/009/011 + SRL-004）：注入手糊信号（非 UUID nonce / 无 commit trace / 同毫秒启停 / 无 lifecycle）→ 对应诊断 emit；注入真 relay run 信号 → 诊断 silent；断言本轮 pass/fail 不变（advisory only）
+- [ ] 4.7 实现 RPG-012：gate 跨文件/跨事件一致性检查——`result_schema_validated` 缺但 `agent_result_received` 在、`agent_result_ready` 在但 `agent_runtime_started` 缺、nonce 跨 trace/beacon/dispatch/lifecycle 不一致、slot 在 dispatch 但无 staging trace → emit `provenance_chain_inconsistency`（advisory only）；**显式避开 RPG-008 的"_status=done 无 commit"触发**（RPG-012 只引用、不重复）
+- [ ] 4.8 实现 RPG-013：所有诊断（RPG-007..012）event detail 带 `slotKey`+`wave`；wave 级条件（如 dispatch.json 整体缺席）按受影响 slot 各发一条
+- [ ] 4.9 回归测试（RPG-012 + RPG-013）：注入 4 种 RPG-012 触发 → 各 emit；一致链 → silent；每条诊断带 slotKey+wave
 
 ## 5. 受控 E2E playbook（接近真实环境）：`experiments_playbook/exp_system-logging/`
 
 > 落在既有 `exp_system-logging`（非新建），扩其 subagent 例子（case-76 spawn-prompt-logging / case-77 subagent-logging）在接近真实环境确认 logging 正确。
 
-- [ ] 5.1 扩 `exp_system-logging` 的 subagent 例子：用 `drive-relay-slot` 驱动真 sub-agent 跑一个 wave0 slot，按 `DPT_FRAMEWORK/command_playbook/provenance-forensics-guide.md`（RPG-010）的 5 信号定义从 trace/run.log 裁决 S1(dispatch.json)✓ S2(nonce UUID ∈ dispatch)✓ S3(relay_commit_done)✓ S4(启停跨度>1s)✓ S5(lifecycle 事件带 nonce)✓
-- [ ] 5.2 同 playbook 加 case：手糊一个 slot（仿 BUG-019：无 dispatch.json、非 UUID nonce、无 commit trace、同毫秒启停、无 lifecycle），裁决 RPG-007/008/009/011 诊断全 emit，且按 `provenance-forensics-guide.md` 矩阵命中"手糊→driver gap"行
+- [ ] 5.1 tier 1（真·sound）：用 `drive-relay-slot` 驱动真 sub-agent 跑一个 wave0 slot，按 `provenance-forensics-guide.md`（RPG-010）裁决 S0✓ S3✓ `status=done` → 所有诊断 silent
+- [ ] 5.2 tier 2（真·失败）：整条 trace 链在但 `status=failed` → 诊断 silent，verdict 区分于 tier 1
+- [ ] 5.3 tier 3（观测缺口）：整条链在、`status=done`，但无 lifecycle 事件（S5✗）→ **只** RPG-011 emit
+- [ ] 5.4 tier 4（staged-not-committed）：staging trace + dispatch.json 在，但无 commit trace、`_status≠done` → **只** RPG-008 emit，**不** RPG-012（验证 carve-out）
+- [ ] 5.5 tier 5（懒手糊，仿 BUG-019）：无 dispatch.json + 非 UUID nonce → RPG-007 按 slot emit；按矩阵命中"懒手糊→driver gap"
+- [ ] 5.6 tier 6（认真手糊/不一致）：写齐 dispatch.json+UUID+commit trace 但**漏 `result_schema_validated`** → RPG-012 emit；子 case：`_agent.json` 跨度<1s 但链自洽 → **只** RPG-009（验证"RPG-009 单独不足判伪造"）
 
 ## 6. Version + governance 收尾
 

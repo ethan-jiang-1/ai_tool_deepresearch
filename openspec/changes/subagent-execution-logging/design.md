@@ -45,13 +45,15 @@ BUG-019 报告 Main Agent 与 relay/gate 基础设施搏斗。取证（`_backlog
 
 **Source of Record**：`_beacon.json` 由 `createDispatchManifest`/`stageSubagentSlots`（engine）写；`receipt_nonce` 由 `createSlot` 的 `randomUUID()` 生成（`subagent-relay.mjs:390`）。
 
-### Decision 2: 两层取证（Layer-1 无需 sub-agent 配合 / Layer-2 需要）
+### Decision 2: 抗手糊是频谱——engine trace 链为主信号，nonce/文件为懒手糊筛查（第 4 轮修正）
 
-**Layer-1（staging 证明）**：把 `createSlot` 的 UUID nonce 持久化进 `dispatch.json`。检测 = receipt/ledger 的 nonce 是否 ∈ dispatch.json 的 UUID。**这一层不依赖 sub-agent 配合**——直接抓"staging 没跑"（BUG-019 bundle：无 dispatch.json、nonce 非 UUID）。
+**修正**：早先"Layer-1 nonce=主信号 / Layer-2 trace=需 sub-agent"的分层**反了**。抗手糊按**信号强度**分，不按"是否需 sub-agent"分：
 
-**Layer-2（execution 证明）**：sub-agent 读 beacon、log 带 nonce 的 lifecycle 事件；engine 跑 `commitSlotResult` 留 `relay_commit_done` trace。检测 = trace 是否有该 slot 的 commit + lifecycle 事件（lifecycle 缺失由 RPG-011 `lifecycle_events_missing` 诊断报告）。
+- **主信号（engine trace 链，S0/S3）**：engine 经 `traceEntry` 写进 `rb_trace.jsonl` 的 staging→ingest→commit 事件链。真·难伪造——手糊者要 append 进 append-only 链且保持跨文件/跨事件自洽。**今天只有 ingest 事件（agent_runtime_started/result_ready）带 nonce**；本 change 经 **SUD-007** 把 nonce 贯穿 staging（`slot_create`/`dispatch_create`）+ commit（`agent_result_received`/`result_schema_validated`）事件，使整条链 nonce-anchored、可交叉校验。**RPG-012** 检测该链的内部矛盾（认真手糊主判据）。无需 sub-agent 配合。
+- **懒手糊筛查（nonce/文件，S1/S2）**：dispatch.json + nonce UUID 形状。**只抓懒手糊**（文件可被 `writeFileSync` 直接伪造——dispatch.json/beacon/receipt/_agent.json 都是）。无需 sub-agent 配合，但**不证明 staging 真跑过**。
+- **辅助（lifecycle，S5）**：sub-agent-authored，依赖配合，可伪造。
 
-**为什么分两层**：Layer-1 足以判"relay 是否被驱动过"（回答 BUG-019 的"走不通 vs 没驱动"），且无需 sub-agent 配合——即使 sub-agent 完全没 log，Layer-1 仍能判决。Layer-2 进一步证"sub-agent 真做了工作"。plan §10 的判决矩阵主要靠 S1–S4（= Layer-1 + commit trace），S5（lifecycle）是辅助。
+**没有 SUD-007 时**，连 trace 链都能靠 append 一致行伪造——所以 SUD-007 是 load-bearing。**没有任何单点密码学不可伪造**（签名 out-of-scope）。
 
 ### Decision 3: forensic 本轮 diagnostic-only，阻断升级延后
 
@@ -81,11 +83,13 @@ BUG-019 报告 Main Agent 与 relay/gate 基础设施搏斗。取证（`_backlog
 
 **为什么**：当前 logging 指令只在 `buildSpawnPrompt`（dead code）。下沉到 always-loaded role spec + task.md 后，**任何 spawn 路径**（driver 或 Phase Agent 手 Agent-tool spawn）的 sub-agent 都被要求 log。这是"让 logging 活过来"的兜底——即使 driver 没被用，role spec 仍强制留痕。
 
+**但 S5 是辅助信号**——主抗手糊信号是 engine trace 链（S0/S3，Decision 2），不依赖 sub-agent 配合。即使 sub-agent 完全不 log，主信号仍能判 relay 是否被驱动过。
+
 ### Decision 6: nonce 沿用 `randomUUID()`，不引入签名
 
 **选**：nonce 继续用 `node:crypto.randomUUID()`（`createSlot` 已如此），本 change 只加"持久化到 dispatch.json + beacon + 交叉校验"。
 
-**不选 HMAC/签名**：密码学签名是 harden-relay-pipeline 已明示的 out-of-scope。nonce + dispatch.json 交叉校验 + commit trace 已把"手糊"从 trivial（写几个 JSON）提升到 needs-effort（伪造匹配的 UUID + 伪造 engine trace 事件 + 对齐时间跨度），足以暴露 normal shortcut。
+**不选 HMAC/签名**：密码学签名是 harden-relay-pipeline 已明示的 out-of-scope。**因此模型强度来自跨引用一致性，不是任何单一不可伪造 artifact**——RPG-012 把跨文件/跨事件一致性检查 operationalize。SUD-007（trace 链 nonce-anchored）+ RPG-012（一致性诊断）一起，把"认真手糊"从"写几个文件"提升到"伪造整条自洽 nonce-anchored 链"（成本量级上升）。仍非不可伪造——签名才不可伪造，out-of-scope。
 
 ### Decision 7: §10 判断指南 ship 进框架（RPG-010），非仅留在 plan
 
@@ -97,9 +101,9 @@ BUG-019 报告 Main Agent 与 relay/gate 基础设施搏斗。取证（`_backlog
 
 ## Risks / Trade-offs
 
-- **[Risk] beacon.json / dispatch.json 本身可被手糊** → Mitigation: nonce 必须同时出现在 dispatch.json + beacon +（Layer-2）trace lifecycle 事件且互相匹配；多源交叉校验。完全不可伪造需签名（out-of-scope）。
+- **[Risk] 单文件信号（dispatch.json / _beacon.json / _agent.json / receipt）可被 `writeFileSync` 直接手糊** → Mitigation: **主信号是 engine trace 链（S0/S3，Decision 2），不是文件**；S1/S2 只是懒手糊筛查。SUD-007 nonce-anchor trace 链 + RPG-012 跨引用一致性检查，使"认真手糊"须伪造整条自洽链。完全不可伪造需签名（out-of-scope）。
 - **[Risk] diagnostic-only 意味着手糊 provenance 本轮仍能过 gate** → Mitigation: 这是**有意为之**（先攒数据）；diagnostic 会在 trace/run.log 留 `provenance_nonce_mismatch` 等，可被 plan §10 检测；阻断升级作为下一个 change，依 §10 判决。
-- **[Risk] sub-agent 仍可能不 log（LLM 合规性）** → Mitigation: S5 lifecycle 是辅助信号；判决主要靠 S1–S4（engine 侧，sub-agent 无法影响）。即使 sub-agent 不 log，Layer-1 仍能判 staging 是否发生。
+- **[Risk] sub-agent 仍可能不 log（LLM 合规性）** → Mitigation: S5 lifecycle 是**辅助**信号；主抗手糊信号是 engine trace 链（S0/S3，引擎自写、不依赖 sub-agent）。即使 sub-agent 完全不 log，主信号仍能判 relay 是否被驱动过。
 - **[Risk] driver 新增 Agent 可调用表面，可能被误用做编排** → Mitigation: SRD spec 明确边界（只 stage/commit + 输出 spawn prompt，不做 search/judgment/route）；tests 锁边界。
 - **[Risk] 旧 bundle 无 beacon → forensics 全报缺失** → Mitigation: forensics 是 diagnostic，缺失不 fail gate；旧 bundle 只是"无法证明 relay 跑过"，不破坏现有流程。
 
