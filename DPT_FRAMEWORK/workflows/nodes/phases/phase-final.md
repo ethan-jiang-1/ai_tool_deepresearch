@@ -4,6 +4,9 @@ id: phase-final
 phase: final
 gate: null
 stop: "no"
+execution_contract:
+  surface: phase-agent
+  search_policy: no_search
 requires:
   - shared/shared-silent-execution
 suggested_context:
@@ -14,6 +17,14 @@ suggested_context:
 # Phase: Final — Delivery
 
 > **Terminal Node**: 这是当前 delivery pass 的 terminal node。`gate: null`，`next: null`。`transitions.chain.json` 不包含 `phases/phase-final.md` 的条目。没有 outgoing gate，没有 hidden loop。
+
+## 0. Execution Brief
+
+- **Objective**: Deliver final report artifacts from verified bundle state.
+- **Start here**: Confirm readiness-passed state, then read verified wave artifacts, profile, status, and trace.
+- **Path to pass**: Generate at least one report under `final/`, update terminal status, and record final delivery through the accepted Agent-side event surface.
+- **Completion check**: At least one final artifact exists under `final/`; there is no gate command for this terminal node.
+- **Failure posture**: Do not ask the user or start a feedback loop; if delivery state is missing, repair from verified bundle state before reporting completion.
 
 ## 1. Stage Goal
 

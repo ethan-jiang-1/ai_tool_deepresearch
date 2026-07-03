@@ -184,6 +184,9 @@ rules:
     - 用中文写 proposal，明确这个 change 产出什么、不产出什么
     - 引用原始需求时注明来源文件
     - 为新 capability 分配 3 字母缩写并提前登记到 openspec/governance/req-registry.yaml (先查历史，避免冲突，别随意发挥)
+    - |
+      修改 `DPT_FRAMEWORK/` 行为的 change 必须在 proposal 中声明是否需要 version bump；
+      需要时声明 target version（如 `v0.2`），作为 implementation 阶段 CHANGELOG 和 RUN.md banner 更新的依据。
   design:
     - "数据结构用 Zod schema 定义（`.refine()` 做跨字段校验）"
     - 状态机用显式转换表 (Map/object)，不允许隐藏在 prose 里
@@ -202,6 +205,10 @@ rules:
            (0 deltaHeaderInMain / 0 missingPurpose / 0 missingRequirements / 0 missingReqHeader)
       收尾检查固化进每个 change 生命周期——防止 requirement ID 堆叠/漏标/被覆盖，
       以及 delta 格式污染 OpenSpec main spec 而无人发现。
+    - |
+      修改 `DPT_FRAMEWORK/` 行为且 proposal 声明了 version bump 的 change，
+      其 tasks 必须包含两步：(a) 更新 `CHANGELOG.md`（简洁格式：版本号 + 一两句说清改了什么）；
+      (b) 同步 `DPT_FRAMEWORK/RUN.md` 版本横幅与 CHANGELOG 最新条目一致。
   specs:
     - Capability 用 kebab-case 命名，目录名即分类
     - Spec 文件是 Zod schema 的人类可读投影

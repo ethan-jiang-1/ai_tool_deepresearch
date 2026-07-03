@@ -4,15 +4,25 @@ id: phase-hitl1
 phase: hitl1
 gate: hitl1-recorded
 stop: "yes"
+execution_contract:
+  surface: phase-agent
+  search_policy: no_search
 requires:
   - shared/shared-profile
   - shared/shared-agent-ux-guidance
 suggested_context:
   - brief/hitl1
-suggested_context: []
 ---
 
 # Phase: HITL1 (Human-in-the-Loop 1)
+
+## 0. Execution Brief
+
+- **Objective**: Collect the user's research profile, root must-answer set, and HITL1 constraints into durable bundle state.
+- **Start here**: Read `brief/hitl1.md`, the original question, `rb_plan.md`, and `rb_profile.yaml`.
+- **Path to pass**: Present the HITL1 prompt, wait for the user's answer, write profile decisions and style parameters, then run the HITL1 gate.
+- **Completion check**: User input is recorded in `rb_profile.yaml` and `check-gate-hitl1-recorded.mjs` passes.
+- **Failure posture**: Because `stop: yes`, do not invent missing user choices; ask/repair only around real user input and gate feedback.
 
 ## 1. Stage Goal
 

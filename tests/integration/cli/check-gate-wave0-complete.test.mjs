@@ -81,18 +81,41 @@ function setupHappyPath(dir) {
 
   // trace event
   writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave0_completion', ts: new Date().toISOString() }) + '\n');
-  // output declaration ledger (content_dedup gate reads from this)
+  // output declaration ledger (content_dedup + provenance gates read from this)
   writeFileSync(join(dir, 'rb_output_declarations.jsonl'), JSON.stringify({
     declared_at: new Date().toISOString(),
     work_id: 'wave0-source-topic-a',
     producer_rule: 'source_intake_fan_in',
-    slot_result_ref: '_subagents/wave_01/slot_00/result.json',
-    runtime_receipt_ref: '_subagents/wave_01/slot_00/runtime-receipt.jsonl',
+    slot_result_ref: '_subagents/wave_00/slot_00/result.json',
+    runtime_receipt_ref: '_subagents/wave_00/slot_00/runtime-receipt.jsonl',
     output_files: [
       { path: 'reference/00-shared-ai-safety.md', role: 'reference', source_url: 'https://example.com/research/ai-safety' },
+      { path: 'artifacts/wave0/topic-a/source.yaml', role: 'source_yaml' },
+      { path: 'artifacts/wave0/topic-b/source.yaml', role: 'source_yaml' },
     ],
     cache_trails: [],
   }) + '\n');
+
+  // Subagent slot artifacts for provenance gate (RPG-002)
+  const slotDir = join(dir, '_subagents', 'wave_00', 'slot_00');
+  mkdirSync(slotDir, { recursive: true });
+  writeFileSync(join(slotDir, '_status.json'), JSON.stringify({ status: 'done', updated: new Date().toISOString() }));
+  writeFileSync(join(slotDir, 'result.json'), JSON.stringify({
+    slotKey: 'source_intake',
+    roleAgentKey: 'dpt-source-intake',
+    status: 'done',
+    summary: 'Test slot result',
+    evidenceCount: 1,
+    references: [],
+    confidence: 0.8,
+    notes: [],
+    output_files: [
+      { path: 'reference/00-shared-ai-safety.md', role: 'reference', source_url: 'https://example.com/research/ai-safety' },
+      { path: 'artifacts/wave0/topic-a/source.yaml', role: 'source_yaml' },
+      { path: 'artifacts/wave0/topic-b/source.yaml', role: 'source_yaml' },
+    ],
+    cache_trails: [],
+  }));
 }
 
 describe('check-gate-wave0-complete', () => {

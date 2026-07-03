@@ -3,6 +3,9 @@ node_type: shared
 id: shared-silent-execution
 shared_scope: silent-execution
 authority: behavioral-contract
+execution_contract:
+  surface: shared-guidance
+  search_policy: no_search
 requires: []
 suggested_context:
   - shared/shared-repair-guidance
@@ -90,8 +93,8 @@ Agent 在静默阶段 SHALL NOT：
 
 1. **重试（Retry）**：网络波动、临时不可用 → 等待后重试（遵循 `shared-repair-guidance.md` 已有修复策略），阻塞消除后自动恢复
 2. **换源（Alternative Source）**：特定 URL 不可访问、爬取被拒 → 搜索替代源（更换 domain、更换搜索策略），不降低 evidence quality tier 要求
-3. **降级方法（Method Degradation）**：当前方法路径全部失败 → 切换到替代方法（如 WebFetch 不可用 → curl → node fetch → python3），记录方法切换链
-4. **标记 gap（Mark Gap）**：所有替代方案已穷尽 → 在 `rb_trace.jsonl` 中标记为 `silent_gap`，记录 `gap_impact: none|partial|blocks_must_answer`，继续到下一个 task
+3. **降级方法（Method Degradation）**：当前方法路径全部失败 → 切换到替代方法（如 WebFetch 不可用 → curl → node fetch → python3），记录方法切换链。**替代方法 MUST 保持在 relay pipeline 内**：直接执行 WebSearch/WebFetch 并手工写入 artifact（绕过 relay pipeline）不是合法的替代方法。合法的替代方法包括：更换 queue slot、切换 relay role key、调整 delegate timeout、或使用不同的 search provider 但仍通过 relay task card 委托。如果 relay pipeline 中的 queue/spawn/commit 路径全部失败，Agent SHALL 进入 mark gap（第四步）而非绕过 relay。
+4. **标记 gap（Mark Gap）**：所有替代方案（包括 relay pipeline 内合法替代方法）已穷尽 → 在 `rb_trace.jsonl` 中标记为 `silent_gap`，记录 `gap_impact: none|partial|blocks_must_answer`，继续到下一个 task
    - `gap_impact: blocks_must_answer` 时 Agent SHALL 在周围 topic 中搜索替代覆盖路径，但不浮出水面
 
 Agent SHALL 在每个降级步骤记录到 `rb_trace.jsonl`：原问题、已尝试的恢复步骤（按优先级链顺序）、最终降级决策、影响评估（`gap_impact`）。
@@ -135,6 +138,7 @@ Agent 在静默阶段降级时 SHALL NOT 将 `rb_status.json` 的 state 设为 `
 | "连续 repair 达到 retry limit 且无进展 → escalation" | `shared-repair-guidance.md` Retry Limit 段 | → 降级处理（按降级优先级链），不 escalation |
 | "不能在 escalation 条件触发后继续假装一切正常" | `shared-anti-cheating-rules.md` 规则 3 | → 在静默阶段，"继续执行"不是"假装正常"——降级 + trace 本身就是静默阶段的正确行为。本规则在静默阶段不适用 |
 | "遵守 3 次 retry limit；no-progress 或超限后 escalation→block" | `shared-anti-cheating-rules.md` 规则 3 | → 3 次 retry 后不 escalation/block，改为降级 + trace + 继续，按降级优先级链选择下一步 |
+| "遇到阻塞→切换方法→自己解决，不要浮出水面" | `shared-silent-execution.md` §1.1 (method switch guidance) | → 方法切换的合法范围限定在 relay pipeline 内。直接 WebSearch + 手工写 artifact 不在合法替代方法集合中。若 relay pipeline 全部失败，进入 mark gap（降级链第四步） |
 
 Agent SHALL NOT 因 escalation 条件满足而浮出水面。只有在到达下一个合法浮出水面点（HITL2）时，Agent 才将静默期积累的降级和未解决阻塞汇总报告给用户。
 

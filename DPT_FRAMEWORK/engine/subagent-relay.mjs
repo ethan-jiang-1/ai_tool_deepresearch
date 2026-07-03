@@ -971,6 +971,47 @@ export function commitSlotResult(slot, baseDir, candidateResult, metadata = {}) 
       ? validation.data
       : failedResultForSlot(s, [`schema validation failed: ${validation.error.message}`]);
 
+    // ── Slot-local deterministic diagnostics (AGO-002) ──
+    // Detect duplicate source_url within this slot's reference outputs.
+    // Diagnostic only — does NOT replace delegate complete() provenance,
+    // ledger coverage, cache trail policy, or gate ledger authority.
+    if (validation.ok) {
+      const refOutputs = (result.output_files || []).filter((f) => f.role === 'reference' && f.source_url);
+      const seenUrls = new Map();
+      for (const ref of refOutputs) {
+        // Normalize for comparison: lowercase, strip fragment/trailing slash
+        let norm;
+        try {
+          const u = new URL(ref.source_url);
+          u.hash = '';
+          u.pathname = u.pathname.replace(/\/+$/, '');
+          norm = u.toString().toLowerCase();
+        } catch {
+          norm = ref.source_url.toLowerCase().replace(/#.*$/, '').replace(/\/+$/, '');
+        }
+        if (seenUrls.has(norm)) {
+          traceEntry('slot_diagnostic', {
+            source: 'gs-commit',
+            kind: 'duplicate_source_url',
+            slotKey: result.slotKey,
+            roleAgentKey: result.roleAgentKey,
+            url: norm,
+            file_a: seenUrls.get(norm),
+            file_b: ref.path,
+          });
+          logEvent('warn', 'slot_duplicate_source_url', {
+            kind: 'file_explanation',
+            slotKey: result.slotKey,
+            roleAgentKey: result.roleAgentKey,
+            url: norm,
+            files: [seenUrls.get(norm), ref.path],
+          });
+        } else {
+          seenUrls.set(norm, ref.path);
+        }
+      }
+    }
+
     traceEntry('result_schema_validated', {
       source: 'gs-agent',
       actor: 'parent',

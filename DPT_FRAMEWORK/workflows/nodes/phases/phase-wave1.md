@@ -4,17 +4,30 @@ id: phase-wave1
 phase: wave1
 gate: wave1-complete
 stop: "no"
+execution_contract:
+  surface: phase-agent
+  search_policy: relay_required
+  delegated_role_keys:
+    - dpt-evidence-extractor
 requires:
   - shared/shared-profile
   - shared/shared-schemas
   - shared/shared-silent-execution
-suggested_context:
-  - shared/shared-anti-cheating-rules
   - shared/shared-subagent-protocol
-  - phases/phase-wave1-subagent
+  - shared/shared-anti-cheating-rules
+suggested_context:
+  - phases/subagent-dpt-evidence-extractor
 ---
 
 # Phase: Wave1 — Topic-Specific Deepening
+
+## 0. Execution Brief
+
+- **Objective**: Run relay-backed topic deepening and produce paired Wave1 artifacts per topic.
+- **Start here**: Load queue state, Wave0 outputs, seed topics, and role guidance `dpt-evidence-extractor`.
+- **Path to pass**: Enqueue delegated deepening tasks, spawn relay Sub-agents, complete with committed slot results, backfill seed topics, then run the Wave1 gate.
+- **Completion check**: `check-gate-wave1-complete.mjs` passes for `phases/phase-wave1.md`.
+- **Failure posture**: Do not write direct-search evidence from the Phase Agent; use refill/repair loops, delete placeholder references, and record silent gaps when real sources are exhausted.
 
 ## 1. Stage Goal
 
@@ -83,7 +96,7 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 
 ### 3.2 Batch Parallel Execution — 引用 Shared Sub-agent Protocol
 
-Wave1 的 claim→execute→complete 使用 relay 批量并行执行（灌料→stage→并行 spawn→collect-as-return→backfill→补位→merge→gate）。Sub-agent 的具体搜索和产出指令见 `phase-wave1-subagent.md`（via `suggested_context`）。Relay 基础设施（slot 契约、目录结构、并发控制、禁区清单）见 `shared-subagent-protocol.md`。
+Wave1 的 claim→execute→complete 使用 relay 批量并行执行（灌料→stage→并行 spawn→collect-as-return→backfill→补位→merge→gate）。Sub-agent 的具体搜索和产出指令见 `subagent-dpt-evidence-extractor.md`（via `suggested_context`）。Relay 基础设施（slot 契约、目录结构、并发控制、禁区清单）见 `shared-subagent-protocol.md`。
 
 **Wave1 参数表**：
 
@@ -191,6 +204,10 @@ last_updated: YYYY-MM-DD
 
 ### 3.3 收尾与 Gate
 
+#### Transition trigger
+
+当 `operate-queue claim <bundle> ...` 返回 `item: null` 时，表示 active queue 已被 drain。Agent 应进入本节的 closeout/gate 流程，不得因为没有新 task 就自行发明 work item。
+
 当所有 Sub-agent 已返回、queue 无 pending task card 时：
 
 1. `collectAndMergeSubagentResults(state, slots, baseDir)` — collect 所有 slot 结果，merge evidence counts 到 WorkflowState
@@ -220,7 +237,7 @@ Agent MUST 在跑 gate 之前逐条确认以下 stop conditions。这不是 gate
 | 6 | **Cross-verification** — **强制** 当 `research_style_params.cross_verification: true`；official/authoritative claims MUST 被 independent sources 交叉验证 | 读 `rb_profile.yaml#/research_style_params/cross_verification`。若 `true`：evidence-summary.md 中至少 1 条 key finding 引用 ≥2 个不同 source URL（交叉验证）。若 `false`：单 source 可接受 |
 | 7 | **Remaining unknowns listed** — 所有已知 gap、open question、unresolvable uncertainty 均显式记录 | 检查 question-list.md 的 Question Reconciliation section 中有 `[仍开放]` 条目和原因说明 |
 
-**Enforcement boundary（本 change）：** 以上 7 条是 Agent discipline——由 phase-wave1.md body 约束，不由 gate rule 验证。条件 5/6 升级为 gate rule 留给 `todo-explore-exploit`；条件 2/3 的 must-answer 验证留给 `todo-evidence-extraction`。本 change 只有 `wave1_per_topic_ref_floor`（条件 2 引用 count 的 floor）通过 gate `count_floor` rule 的 `threshold_source` 做 Gate enforcement。
+> **Enforcement boundary（本 change）**：以上 7 条是 Agent discipline，由 `phase-wave1.md` body 约束，不由 gate rule 完整验证。条件 5/6 升级为 gate rule 留给 `todo-explore-exploit`；条件 2/3 的 must-answer 验证留给 `todo-evidence-extraction`。本 change 只有 `wave1_per_topic_ref_floor`（条件 2 引用 count 的 floor）通过 gate `count_floor` rule 的 `threshold_source` 做 Gate enforcement。不要声称 gate 已经验证这些内容级质量条件。
 
 #### 3.3.2 Count-Floor Re-Fill Loop（reference 数量不足时的自主补充循环）
 
@@ -442,7 +459,7 @@ Reference quality and per-topic evidence depth take priority: before gate pass, 
 | Track | 能力 | 状态 |
 |-------|------|------|
 | 1. topic-specific deepening | 对每个 topic 的 open questions 做定向 deep research，产出 evidence-summary.md | ✅ **已实现**（本 phase） |
-| 2. Sub-agent dispatch | 启动独立 Sub-agent（`dpt-evidence-extractor`），通过 relay slot 契约执行 WebSearch+WebFetch，Phase Agent 通过 `ingestAgentReceipt` + `commitSlotResult` 收集结果 | ✅ **已实现**（通过 `subagent-relay.mjs` + `phase-wave1-subagent.md`） |
+| 2. Sub-agent dispatch | 启动独立 Sub-agent（`dpt-evidence-extractor`），通过 relay slot 契约执行 WebSearch+WebFetch，Phase Agent 通过 `ingestAgentReceipt` + `commitSlotResult` 收集结果 | ✅ **已实现**（通过 `subagent-relay.mjs` + `subagent-dpt-evidence-extractor.md`） |
 | 3. candidate intake | 从 deepening 产出中提取 candidate evidence particle，按 schema 入库 | ❌ 留给后续 |
 | 4. repair/backfill | 对 gate fail 的 topic 做定向补充，per-topic 即时回填 `__BACKFILL_WAVE1_*__` token | ✅ **已实现**（本 phase §3.2.1 + gate repair） |
 | 5. fan-in review | 收集 Sub-agent 结果后进行跨 topic 交叉验证和冲突解决 | ❌ 留给后续 |

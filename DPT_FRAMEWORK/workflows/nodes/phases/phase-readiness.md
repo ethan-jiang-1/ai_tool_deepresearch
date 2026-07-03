@@ -4,6 +4,9 @@ id: phase-readiness
 phase: readiness
 gate: readiness-passed
 stop: "no"
+execution_contract:
+  surface: phase-agent
+  search_policy: no_search
 requires:
   - shared/shared-silent-execution
 suggested_context:
@@ -13,6 +16,14 @@ suggested_context:
 ---
 
 # Phase: Readiness — Final Deterministic Precheck
+
+## 0. Execution Brief
+
+- **Objective**: Run the final deterministic precheck before terminal delivery.
+- **Start here**: Read trace, profile, status, required artifact paths, and prior gate history.
+- **Path to pass**: Repair missing structural artifacts or audit evidence, then run the readiness gate.
+- **Completion check**: `check-gate-readiness-passed.mjs` passes for `phases/phase-readiness.md`.
+- **Failure posture**: Fix deterministic structure only; do not turn readiness into a content-quality review or bypass missing gate evidence.
 
 ## 1. Stage Goal
 
@@ -28,7 +39,7 @@ Final 交付前运行最后一个 deterministic checkpoint：验证所有 requir
 - `rb_status.json`（当前 lifecycle 位置的 status 快照）
 - Required artifact 集合：
   - `seed_topics/`（seed topic 物化目录）
-  - `reference/index.md`（Wave0 evidence index）
+  - `reference/_INDEX.md`（Wave0 evidence index）
   - `artifacts/wave2/synthesis.md`（Wave2 synthesis）
   - `artifacts/hitl2/decision-brief.md`（HITL2 decision brief）
 
@@ -46,7 +57,7 @@ Final 交付前运行最后一个 deterministic checkpoint：验证所有 requir
 
 ## 4. Expected Artifacts
 
-- All required artifacts 存在且可访问（`seed_topics/`、`reference/index.md`、`artifacts/wave2/synthesis.md`、`artifacts/hitl2/decision-brief.md`）
+- All required artifacts 存在且可访问（`seed_topics/`、`reference/_INDEX.md`、`artifacts/wave2/synthesis.md`、`artifacts/hitl2/decision-brief.md`）
 - `rb_trace.jsonl` 中所有 prior gate 均有 `gate_attempt` 事件 `passed: true`
 - `rb_profile.yaml` 可解析
 - `rb_trace.jsonl` 每行合法 JSON

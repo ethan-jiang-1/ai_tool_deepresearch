@@ -3,6 +3,9 @@ node_type: shared
 id: shared-anti-cheating-rules
 shared_scope: rules
 authority: guidance-only
+execution_contract:
+  surface: shared-guidance
+  search_policy: no_search
 requires: []
 suggested_context: []
 ---

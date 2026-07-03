@@ -33,11 +33,17 @@ Use `guidelines/` when the right direction, layer boundary, or experiment path i
 - Use Node.js >=20, pure JavaScript ESM (`.mjs`). No TypeScript.
 - Do not add dependencies. Approved npm deps only: `zod`, `yaml`; otherwise use Node built-ins.
 - Use `node:test` + `node:assert` for regression tests.
+- **Tests always under `tests/` at repo root, never inside `DPT_FRAMEWORK/`.** `DPT_FRAMEWORK/` is the distributable framework — framework code only, no test files, no experiment fixtures. Test dirs mirror framework dirs: `tests/engine/`, `tests/engine/`, `tests/schema/`, etc.
 - Test layering: `tests/` = regression (unit + integration). `experiments_playbook/exp_*/` = controlled E2E (Agent-driven playbooks). Real-environment E2E is deferred.
+- **OpenSpec phase gate: `DPT_FRAMEWORK/` is read-only until `/opsx:apply`.** During propose/explore, work in `openspec/changes/` only. You may read anything for context; you may write only change artifacts (specs, design, tasks). Target code (`DPT_FRAMEWORK/`, `tests/`, `experiments_playbook/`) is modified only during apply, per the approved task list. Deliberation fatigue does not grant an exception.
 
-## OpenSpec Commands
+## OpenSpec Workflow
 
-- `/opsx:propose "idea"`
-- `/opsx:explore`
-- `/opsx:apply`
-- `/opsx:archive`
+Sequential phases — never skip ahead. If a phase is taking too long, surface the friction; don't jump to implementation.
+
+| Phase | Command | Working Area |
+|-------|---------|-------------|
+| Propose | `/opsx:propose` | `openspec/changes/` — specs, design, tasks |
+| Explore | `/opsx:explore` | `openspec/changes/` — investigate, clarify, refine |
+| Apply | `/opsx:apply` | Target code — implement per approved task list |
+| Archive | `/opsx:archive` | Finalize and archive |

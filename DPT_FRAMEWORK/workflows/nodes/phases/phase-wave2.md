@@ -4,15 +4,31 @@ id: phase-wave2
 phase: wave2
 gate: wave2-complete
 stop: "no"
+execution_contract:
+  surface: phase-agent
+  search_policy: relay_required_for_new_evidence
+  delegated_role_keys:
+    - dpt-topic-scout
+    - dpt-evidence-extractor
 requires:
   - shared/shared-schemas
   - shared/shared-subagent-protocol
   - shared/shared-silent-execution
-suggested_context:
   - shared/shared-anti-cheating-rules
+suggested_context:
+  - phases/subagent-dpt-topic-scout
+  - phases/subagent-dpt-evidence-extractor
 ---
 
 # Phase: Wave2 — Cross-Topic Synthesis
+
+## 0. Execution Brief
+
+- **Objective**: Produce cross-topic synthesis and delegate any new search/evidence/reference work through relay.
+- **Start here**: Load Wave1 artifacts, `finding-index.yaml` expectations, queue state, role `dpt-topic-scout`, and role `dpt-evidence-extractor`.
+- **Path to pass**: Run main-agent synthesis/backfill, triage findings, delegate search-required findings through relay, complete delegated results with `slot_result_ref`, then run the Wave2 gate.
+- **Completion check**: `check-gate-wave2-complete.mjs` passes for `phases/phase-wave2.md`.
+- **Failure posture**: Keep pure synthesis under Phase Agent control, but never direct-search new evidence; unresolved quality/search gaps become explicit findings, HITL2 handoff, or bounded refill work.
 
 ## 1. Stage Goal
 
@@ -83,17 +99,19 @@ Claim → execute synthesis（cross-topic scan + finding triage + initial search
     → 写入 cross-topic-ledger.md §Cross-Topic Scan Matrix
 
  3. 将 findings 写入 ledger/index
-    — 三类 finding（不变）
+    — 三类 finding：`wave1_legacy_question`、`cross_topic_resolution`、`cross_topic_emergent_question`
     → 写入 cross-topic-ledger.md（reasoning）
     → 写入 finding-index.yaml（id/type/status/decision/refs 等 11 field）
 
- 4. 对每个 finding 做 exploration/exploitation decision（6 种 decision，不变）
+ 4. 对每个 finding 做 exploration/exploitation decision（6 种 decision：`use_existing_evidence`、`exploit_search`、`explore_search`、`defer_hitl2`、`requires_internal_data`、`record_only`）
     → 更新 finding-index.yaml 的 decision 和 search_required 字段
 
  5. 对 decision=exploit_search|explore_search 的 finding spawn Sub-agent
-    — spawn dpt-topic-scout Sub-agent（sub-agent role 不变）
+    — spawn `dpt-topic-scout` Sub-agent（role guidance: `subagent-dpt-topic-scout.md`）
     — 每 finding 做 1 轮搜索（更多的 emergent search round 由 §3.3.2 Re-Fill Loop 追加）
-    → ingestion receipt → 更新 finding-index.yaml 的 receipt_refs + status
+    → relay ingestion validates runtime receipt → `commitSlotResult()` commits slot `result.json`
+    → `operate-queue complete --result <result.json>` with `slot_result_ref`
+    → 更新 finding-index.yaml 的 receipt_refs + status
     → 有价值的跨 topic source → promote 到 reference/00-cross-<slug>.md
 
  6. 跑 JS feedback check（L0/L1）（不变）
@@ -120,6 +138,10 @@ Claim → execute synthesis（cross-topic scan + finding triage + initial search
 
 ### §3.3 收尾与 Quality Self-Check
 
+#### Transition trigger
+
+当 `operate-queue claim <bundle> ...` 返回 `item: null` 时，表示 active queue 已被 drain。Agent 应进入本节的 closeout/gate 流程，不得因为没有新 task 就自行发明 work item。
+
 1. 检查三件套 artifact 均存在（synthesis.md + cross-topic-ledger.md + finding-index.yaml）
 2. 检查 ledger 含 6 个固定 section、index 可 parse
 3. 检查所有 backfill token 已被替换
@@ -144,7 +166,7 @@ Agent MUST 在跑 gate 之前读 `rb_profile.yaml#/research_style_params`，逐�
 | 4 | `wave2_cross_topic_depth` | 每 topic 在 scan matrix 中至少与 N 个其他 topic 有 connection | 读 cross-topic-ledger.md §Cross-Topic Scan Matrix 表，统计每个 topic 出现的 pair 数。depth=0 → 跳过此条件。depth≥1 → 每个 topic 至少在 N 个 pair 中出现。若某 topic 的 pair 数 < depth → gap |
 | 5 | `wave2_emergent_search_rounds` | 每 topic 至少完成 N 轮 emergent search，每轮不同搜索角度 | 检查 finding-index.yaml 中 type=emergent 的 finding 的 search 执行记录。rounds=0 → 跳过此条件。rounds≥1 → 每 topic 至少有 N 个 type=emergent finding 已完成搜索（status≠pending_search）。若不足 → gap |
 
-**Enforcement boundary:** 以上 5 条是 Agent discipline——由 phase-wave2.md body 约束，不由 gate rule 验证。Gate 做 structural 检查（文件存在、section 完整、YAML parse），不做内容级质量判断。
+> **Enforcement boundary（本 change）**：以上 5 条是 Agent discipline，由 `phase-wave2.md` body 约束，不由 gate rule 完整验证。Gate 做 structural checks（文件存在、section 完整、YAML parse、link/reference/provenance 等当前 definition 中声明的规则），并对新增搜索/evidence/reference 产出执行条件 relay provenance；gate 不做这些 wave2 参数的内容级质量判断。不要声称 gate 已经验证 backing 充分性、cross-topic depth 或 emergent search 轮次的语义质量。
 
 #### §3.3.2 Quality Re-Fill Loop（quality gap 时的自主补充循环）
 

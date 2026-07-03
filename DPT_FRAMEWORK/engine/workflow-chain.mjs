@@ -248,6 +248,17 @@ export function nodePath(fileRef, nodesDir) {
 
 const FRONTMATTER_RE = /^---\s*\n([\s\S]*?)---\s*\n/;
 
+// Lazy sync load of yaml package via createRequire (ESM-compatible)
+import { createRequire } from 'node:module';
+const _require = createRequire(import.meta.url);
+let _yamlParse = null;
+function loadYamlParse() {
+  if (!_yamlParse) {
+    _yamlParse = _require('yaml').parse;
+  }
+  return _yamlParse;
+}
+
 /**
  * Extract and validate YAML-ish JSON frontmatter from a Markdown string.
  *
@@ -276,11 +287,15 @@ export function parseFrontmatter(md) {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    // Fallback: YAML subset line-by-line parser
+    // Fallback: use the yaml package (YAML 1.2 is a superset of JSON)
+    // Use process-level lazy load to avoid top-level await issues
     try {
-      parsed = parseYAMLSubset(raw);
+      parsed = loadYamlParse()(raw);
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('Frontmatter parsed to non-object');
+      }
     } catch (err) {
-      throw new Error(`Malformed frontmatter (not valid JSON or YAML subset): ${err.message}`);
+      throw new Error(`Malformed frontmatter (not valid JSON or YAML): ${err.message}`);
     }
   }
 

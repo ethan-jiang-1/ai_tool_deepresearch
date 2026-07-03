@@ -4,6 +4,9 @@ id: phase-rerun
 phase: rerun
 gate: rerun-ready
 stop: "no"
+execution_contract:
+  surface: phase-agent
+  search_policy: no_search
 requires:
   - shared/shared-profile
   - shared/shared-silent-execution
@@ -12,6 +15,14 @@ suggested_context:
 ---
 
 # Phase: Rerun — 增量重跑预备
+
+## 0. Execution Brief
+
+- **Objective**: Translate HITL2 rerun intent into incremental topic changes before re-entering seed-topics.
+- **Start here**: Read HITL2 rationale, current `rerun_count`, existing seed topic files, and `topic_registry`.
+- **Path to pass**: Infer add/remove/supplement actions, update seed topic direction markers and registry/style params, increment `rerun_count`, then run the rerun gate.
+- **Completion check**: `check-gate-rerun-ready.mjs` passes for `phases/phase-rerun.md`.
+- **Failure posture**: Do not search or rewrite research artifacts here; if rerun is structurally impossible, record the accepted silent degradation/unpassable event and obey gate routing.
 
 ## 1. Stage Goal
 

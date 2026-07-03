@@ -1,9 +1,10 @@
 ---
 {
-  requires: ["this-is-not-valid-json"],
-  req: "WMD-001"
-}
+  "requires": ["valid-json"],
+  "req": "WMD-001"
+unclosed-brace
 ---
+
 
 # Malformed Entry
 

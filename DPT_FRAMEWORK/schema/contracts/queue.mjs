@@ -53,7 +53,7 @@ export const QueueWorkUnitSchema = z.object({
   }),
   writes_to: z.array(z.string()),
   status_sync: z.array(z.string()),
-  completion_receipt: z.string(),
+  completion_receipt: z.string().nullable(),
   failure_route: z.string().min(1),
   status: ItemStatus.default('queued'),
   preempted_from_slot: z.string().default('not_applicable'),
@@ -61,6 +61,16 @@ export const QueueWorkUnitSchema = z.object({
   created_at: z.string().datetime().optional(),
   updated_at: z.string().datetime().optional(),
   payload: JsonObject,
+}).superRefine((data, ctx) => {
+  // AGQ-001: completion_receipt property is required (missing = reject)
+  // AGQ-004: null is valid ONLY when required_receipts is empty
+  if (data.completion_receipt === null && data.required_receipts.length > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['completion_receipt'],
+      message: 'completion_receipt can only be null when required_receipts is empty. Non-empty required_receipts require a concrete completion_receipt.',
+    });
+  }
 });
 
 // ─── QueueSchema ─────────────────────────────────────────────────────────
@@ -69,8 +79,9 @@ const QueueSlot = QueueWorkUnitSchema.nullable();
 
 export { TargetSpecSchema };
 
-/** @impl SCO-002, SCO-009 */
+/** @impl SCO-002, SCO-009, QIV-002 */
 export const QueueSchema = z.object({
+  bundle_name: z.string().nullable().optional(),
   queue_health: QueueHealth,
   stop_authorization_state: StopAuthorizationState,
   ...Object.fromEntries(SLOT_NAMES.map((slot) => [slot, QueueSlot])),

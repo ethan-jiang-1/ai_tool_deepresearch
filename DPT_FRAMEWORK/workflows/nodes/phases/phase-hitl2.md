@@ -4,17 +4,27 @@ id: phase-hitl2
 phase: hitl2
 gate: hitl2-recorded
 stop: "yes"
+execution_contract:
+  surface: phase-agent
+  search_policy: no_search
 requires:
   - shared/shared-profile
   - shared/shared-agent-ux-guidance
 suggested_context:
   - brief/hitl2
-suggested_context:
   - shared/shared-gate-rules
   - shared/shared-anti-cheating-rules
 ---
 
 # Phase: HITL2 (Human-in-the-Loop 2 — Final Review)
+
+## 0. Execution Brief
+
+- **Objective**: Present the final review decision brief and persist the user's HITL2 decision.
+- **Start here**: Read Wave artifacts, `brief/hitl2.md`, `rb_profile.yaml`, `rb_status.json`, and `rb_trace.jsonl`.
+- **Path to pass**: Write the decision brief and pending marker, ask the user, persist the canonical decision enum, then run the HITL2 gate.
+- **Completion check**: User decision is recorded and `check-gate-hitl2-recorded.mjs` passes.
+- **Failure posture**: Because `stop: yes`, never invent a final decision; repair only durable state and prompt/enum translation around real user input.
 
 ## 1. Stage Goal
 

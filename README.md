@@ -41,3 +41,4 @@ Spec-driven rewrite of a Deep Research Tool: broad question in, evidence-backed 
 - Everything else uses Node built-ins.
 - Tests use `node:test` + `node:assert`.
 - `_original_*` directories are archives; read them only when explicitly requested.
+- `DPT_FRAMEWORK/` is read-only until a change reaches `/opsx:apply`.

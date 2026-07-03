@@ -157,18 +157,41 @@ function createBundle(name) {
     '## Key Facts\n- Finding one: Important initial finding.\n- Finding two: Second key insight.\n- Finding three: Third data point.\n- Finding four: Fourth observation.\n- Finding five: Fifth concluding fact.\n\n## Core Content Capture\nThis is a substantive core content capture section that provides meaningful analysis of the topic being researched. It exceeds one hundred characters to satisfy the minimum quality threshold for reference counting.\n' +
     '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- Term.\n## Risks And Limitations\n- None.\n');
 
-  // output declaration ledger (content_dedup gate reads from this)
+  // output declaration ledger (content_dedup + provenance gates read from this)
   writeFileSync(join(dir, 'rb_output_declarations.jsonl'), JSON.stringify({
     declared_at: new Date().toISOString(),
     work_id: 'wave1-deepening-topic-a',
     producer_rule: 'deepening_intake',
-    slot_result_ref: '_subagents/wave_02/slot_00/result.json',
-    runtime_receipt_ref: '_subagents/wave_02/slot_00/runtime-receipt.jsonl',
+    slot_result_ref: '_subagents/wave_01/slot_00/result.json',
+    runtime_receipt_ref: '_subagents/wave_01/slot_00/runtime-receipt.jsonl',
     output_files: [
       { path: 'reference/01-topic-a-deepening.md', role: 'reference', source_url: 'https://example.com/news/deepening-topic-a' },
+      { path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary' },
+      { path: 'artifacts/wave1/topic-a/question-list.md', role: 'question_list' },
     ],
     cache_trails: [],
   }) + '\n');
+
+  // Subagent slot artifacts for provenance gate (RPG-002)
+  const slotDir = join(dir, '_subagents', 'wave_01', 'slot_00');
+  mkdirSync(slotDir, { recursive: true });
+  writeFileSync(join(slotDir, '_status.json'), JSON.stringify({ status: 'done', updated: new Date().toISOString() }));
+  writeFileSync(join(slotDir, 'result.json'), JSON.stringify({
+    slotKey: 'deepening',
+    roleAgentKey: 'dpt-evidence-extractor',
+    status: 'done',
+    summary: 'Test slot result',
+    evidenceCount: 1,
+    references: [],
+    confidence: 0.8,
+    notes: [],
+    output_files: [
+      { path: 'reference/01-topic-a-deepening.md', role: 'reference', source_url: 'https://example.com/news/deepening-topic-a' },
+      { path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary' },
+      { path: 'artifacts/wave1/topic-a/question-list.md', role: 'question_list' },
+    ],
+    cache_trails: [],
+  }));
 
   return dir;
 }

@@ -70,6 +70,37 @@ export function validateWorkflowPackage(opts = {}) {
     return fm;
   }
 
+  function readNodeMarkdown(nodePath) {
+    try {
+      return readFileSync(nodePath, 'utf-8');
+    } catch (err) {
+      issues.push({
+        class: 'node_unreadable',
+        detail: `Cannot read node markdown: ${err.message}`,
+        file: nodePath,
+      });
+      return '';
+    }
+  }
+
+  function findOrderedFields(sectionText, fieldNames) {
+    let cursor = -1;
+    const missing = [];
+    for (const field of fieldNames) {
+      const pattern = `**${field}**`;
+      const idx = sectionText.indexOf(pattern);
+      if (idx === -1) {
+        missing.push(field);
+        continue;
+      }
+      if (idx <= cursor) {
+        missing.push(`${field} (out of order)`);
+      }
+      cursor = idx;
+    }
+    return missing;
+  }
+
   // ── 1. Manifest entries → missing node files ───────────────────────
   for (const phase of manifest.phases || []) {
     const nodePath = join(nodesDir, phase.node);
@@ -246,6 +277,444 @@ export function validateWorkflowPackage(opts = {}) {
           });
         }
       }
+    }
+  }
+
+  // ── 6. Execution contract validation (WNC-001, WNC-002, WNC-008) ──
+  // Lifecycle inventory of nodes that SHALL have execution_contract
+  const LIFECYCLE_INVENTORY = [
+    { node: 'phases/phase-instantiation.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
+    { node: 'phases/phase-hitl1.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
+    { node: 'phases/phase-setup.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
+    { node: 'phases/phase-seed-topics.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
+    { node: 'phases/phase-wave0.md', surface: 'phase-agent', search_policy: 'relay_required', relay_capable: true },
+    { node: 'phases/phase-wave1.md', surface: 'phase-agent', search_policy: 'relay_required', relay_capable: true },
+    { node: 'phases/phase-wave2.md', surface: 'phase-agent', search_policy: 'relay_required_for_new_evidence', relay_capable: true },
+    { node: 'phases/phase-hitl2.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
+    { node: 'phases/phase-readiness.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
+    { node: 'phases/phase-rerun.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
+    { node: 'phases/phase-final.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
+  ];
+
+  const ROLE_SPEC_INVENTORY = [
+    {
+      node: 'phases/subagent-dpt-source-intake.md',
+      id: 'subagent-dpt-source-intake',
+      roleKey: 'dpt-source-intake',
+      h1: '# Relay Role: dpt-source-intake — Foundation Reference Intake',
+    },
+    {
+      node: 'phases/subagent-dpt-evidence-extractor.md',
+      id: 'subagent-dpt-evidence-extractor',
+      roleKey: 'dpt-evidence-extractor',
+      h1: '# Relay Role: dpt-evidence-extractor — Topic-Specific Deepening',
+    },
+    {
+      node: 'phases/subagent-dpt-topic-scout.md',
+      id: 'subagent-dpt-topic-scout',
+      roleKey: 'dpt-topic-scout',
+      h1: '# Relay Role: dpt-topic-scout — Gap-Fill Search',
+    },
+  ];
+
+  const SHARED_GUIDANCE_INVENTORY = [
+    'shared/shared-silent-execution.md',
+    'shared/shared-subagent-protocol.md',
+    'shared/shared-anti-cheating-rules.md',
+  ];
+
+  const VALID_SURFACES = ['phase-agent', 'relay-subagent-role', 'shared-guidance'];
+  const VALID_SEARCH_POLICIES = ['no_search', 'relay_required', 'relay_required_for_new_evidence', 'subagent_performs_search'];
+  const EXECUTION_BRIEF_FIELDS = ['Objective', 'Start here', 'Path to pass', 'Completion check', 'Failure posture'];
+  const ROLE_BRIEF_FIELDS = ['Role key', 'Used by', 'Receives', 'Produces', 'Boundary', 'Handoff'];
+  const PHASE_BODY_SECTIONS = [
+    '## 1. Stage Goal',
+    '## 2. Required Inputs',
+    '## 3. Allowed Actions',
+    '## 4. Expected Artifacts',
+    '## 5. Gate Command',
+    '## 6. On Gate Pass',
+    '## 7. On Gate Fail',
+    '## 8. Stop Behavior',
+    '## 9. Anti-Cheating Rules',
+  ];
+  const ROLE_BODY_SECTIONS = [
+    '## 1. Purpose',
+    '## 2. Search Focus',
+    '## 3. Artifacts',
+    '## 4. Execution Within Relay Slot',
+    '## 5. Page Content Fetching',
+    '## 6. Anti-Cheating Rules',
+    '## 7. Relationship to Phase Agent',
+  ];
+
+  // Check lifecycle nodes have valid execution_contract
+  for (const entry of LIFECYCLE_INVENTORY) {
+    const nodePath = join(nodesDir, entry.node);
+    if (!existsSync(nodePath)) continue;
+
+    const fm = readNodeFrontmatter(nodePath);
+    if (!fm) continue;
+    const md = readNodeMarkdown(nodePath);
+
+    const ec = fm.execution_contract;
+    if (!ec) {
+      issues.push({
+        class: 'execution_contract_missing',
+        detail: `Lifecycle node "${entry.node}" is missing execution_contract frontmatter`,
+        file: nodePath,
+      });
+      continue;
+    }
+
+    // Validate surface
+    if (!VALID_SURFACES.includes(ec.surface)) {
+      issues.push({
+        class: 'execution_contract_invalid_surface',
+        detail: `Node "${entry.node}" has unknown execution_contract.surface: "${ec.surface}". Valid: ${VALID_SURFACES.join(', ')}`,
+        file: nodePath,
+      });
+    }
+
+    // Validate search_policy
+    if (!VALID_SEARCH_POLICIES.includes(ec.search_policy)) {
+      issues.push({
+        class: 'execution_contract_invalid_search_policy',
+        detail: `Node "${entry.node}" has unknown execution_contract.search_policy: "${ec.search_policy}". Valid: ${VALID_SEARCH_POLICIES.join(', ')}`,
+        file: nodePath,
+      });
+    }
+
+    // Check surface matches expected
+    if (ec.surface && ec.surface !== entry.surface) {
+      issues.push({
+        class: 'execution_contract_surface_mismatch',
+        detail: `Node "${entry.node}" execution_contract.surface="${ec.surface}" expected="${entry.surface}"`,
+        file: nodePath,
+      });
+    }
+
+    // Check search_policy matches expected
+    if (ec.search_policy && ec.search_policy !== entry.search_policy) {
+      issues.push({
+        class: 'execution_contract_search_policy_mismatch',
+        detail: `Node "${entry.node}" execution_contract.search_policy="${ec.search_policy}" expected="${entry.search_policy}"`,
+        file: nodePath,
+      });
+    }
+
+    // Relay-capable phases MUST have shared-subagent-protocol + shared-anti-cheating-rules in requires
+    if (entry.relay_capable) {
+      if (!fm.requires || (!fm.requires.includes('shared/shared-subagent-protocol') && !fm.requires.includes('shared/shared-subagent-protocol.md'))) {
+        issues.push({
+          class: 'relay_capable_missing_subagent_protocol',
+          detail: `Relay-capable node "${entry.node}" must have shared-subagent-protocol in requires, not only suggested_context`,
+          file: nodePath,
+        });
+      }
+      if (!fm.requires || (!fm.requires.includes('shared/shared-anti-cheating-rules') && !fm.requires.includes('shared/shared-anti-cheating-rules.md'))) {
+        issues.push({
+          class: 'relay_capable_missing_anti_cheating',
+          detail: `Relay-capable node "${entry.node}" must have shared-anti-cheating-rules in requires, not only suggested_context`,
+          file: nodePath,
+        });
+      }
+    }
+
+    // Check delegated_role_keys for relay_required / relay_required_for_new_evidence
+    if ((ec.search_policy === 'relay_required' || ec.search_policy === 'relay_required_for_new_evidence') && ec.surface === 'phase-agent') {
+      if (!ec.delegated_role_keys || !Array.isArray(ec.delegated_role_keys) || ec.delegated_role_keys.length === 0) {
+        issues.push({
+          class: 'execution_contract_missing_delegated_role_keys',
+          detail: `Node "${entry.node}" has search_policy="${ec.search_policy}" but no delegated_role_keys`,
+          file: nodePath,
+        });
+      }
+    }
+
+    const h1Match = md.match(/^# .+$/m);
+    const h1Idx = h1Match ? md.indexOf(h1Match[0]) : -1;
+    const briefIdx = md.indexOf('## 0. Execution Brief');
+    const stageIdx = md.indexOf('## 1. Stage Goal');
+    if (h1Idx === -1 || briefIdx === -1 || stageIdx === -1 || !(h1Idx < briefIdx && briefIdx < stageIdx)) {
+      issues.push({
+        class: 'lifecycle_execution_brief_invalid',
+        detail: `Lifecycle node "${entry.node}" must place ## 0. Execution Brief immediately after H1 and before ## 1. Stage Goal`,
+        file: nodePath,
+      });
+    } else {
+      const briefText = md.slice(briefIdx, stageIdx);
+      const missingFields = findOrderedFields(briefText, EXECUTION_BRIEF_FIELDS);
+      if (missingFields.length > 0) {
+        issues.push({
+          class: 'lifecycle_execution_brief_fields_invalid',
+          detail: `Lifecycle node "${entry.node}" Execution Brief missing or misordered fields: ${missingFields.join(', ')}`,
+          file: nodePath,
+        });
+      }
+    }
+
+    for (const section of PHASE_BODY_SECTIONS) {
+      if (!md.includes(section)) {
+        issues.push({
+          class: 'lifecycle_phase_body_section_missing',
+          detail: `Lifecycle node "${entry.node}" is missing required body section "${section}"`,
+          file: nodePath,
+        });
+      }
+    }
+  }
+
+  // Check role specs
+  for (const entry of ROLE_SPEC_INVENTORY) {
+    const nodePath = join(nodesDir, entry.node);
+    if (!existsSync(nodePath)) {
+      issues.push({
+        class: 'missing_role_spec',
+        detail: `Relay role spec "${entry.node}" is missing`,
+        file: nodePath,
+      });
+      continue;
+    }
+
+    const fm = readNodeFrontmatter(nodePath);
+    if (!fm) continue;
+    const md = readNodeMarkdown(nodePath);
+
+    const ec = fm.execution_contract;
+    if (!ec) {
+      issues.push({
+        class: 'execution_contract_missing',
+        detail: `Role spec "${entry.node}" is missing execution_contract`,
+        file: nodePath,
+      });
+      continue;
+    }
+
+    if (fm.node_type !== 'shared') {
+      issues.push({
+        class: 'role_spec_wrong_node_type',
+        detail: `Role spec "${entry.node}" must declare node_type: shared`,
+        file: nodePath,
+      });
+    }
+
+    if (fm.id !== entry.id) {
+      issues.push({
+        class: 'role_spec_id_mismatch',
+        detail: `Role spec "${entry.node}" id="${fm.id}" expected="${entry.id}"`,
+        file: nodePath,
+      });
+    }
+
+    if (fm.shared_scope !== 'subagent-protocol') {
+      issues.push({
+        class: 'role_spec_wrong_shared_scope',
+        detail: `Role spec "${entry.node}" must declare shared_scope: subagent-protocol`,
+        file: nodePath,
+      });
+    }
+
+    if (fm.role !== entry.roleKey) {
+      issues.push({
+        class: 'role_spec_role_mismatch',
+        detail: `Role spec "${entry.node}" role="${fm.role}" expected="${entry.roleKey}"`,
+        file: nodePath,
+      });
+    }
+
+    if (fm.authority !== 'guidance-only') {
+      issues.push({
+        class: 'role_spec_wrong_authority',
+        detail: `Role spec "${entry.node}" must declare authority: guidance-only`,
+        file: nodePath,
+      });
+    }
+
+    for (const forbidden of ['phase', 'gate', 'stop']) {
+      if (Object.hasOwn(fm, forbidden)) {
+        issues.push({
+          class: 'role_spec_lifecycle_frontmatter',
+          detail: `Role spec "${entry.node}" must not declare lifecycle frontmatter field "${forbidden}"`,
+          file: nodePath,
+        });
+      }
+    }
+
+    const requiredDeps = ['shared/shared-subagent-protocol', 'shared/shared-schemas'];
+    for (const dep of requiredDeps) {
+      if (!Array.isArray(fm.requires) || !fm.requires.includes(dep)) {
+        issues.push({
+          class: 'role_spec_requires_invalid',
+          detail: `Role spec "${entry.node}" must require "${dep}"`,
+          file: nodePath,
+        });
+      }
+    }
+
+    if (!Array.isArray(fm.suggested_context) || fm.suggested_context.length !== 0) {
+      issues.push({
+        class: 'role_spec_suggested_context_invalid',
+        detail: `Role spec "${entry.node}" must declare suggested_context: []`,
+        file: nodePath,
+      });
+    }
+
+    const h1Match = md.match(/^# .+$/m);
+    const actualH1 = h1Match ? h1Match[0] : '';
+    if (actualH1 !== entry.h1) {
+      issues.push({
+        class: 'role_spec_h1_mismatch',
+        detail: `Role spec "${entry.node}" H1="${actualH1}" expected="${entry.h1}"`,
+        file: nodePath,
+      });
+    }
+
+    if (actualH1.startsWith('# Phase:')) {
+      issues.push({
+        class: 'role_spec_phase_h1',
+        detail: `Role spec "${entry.node}" must not use a lifecycle phase H1`,
+        file: nodePath,
+      });
+    }
+
+    const h1Idx = actualH1 ? md.indexOf(actualH1) : -1;
+    const briefIdx = md.indexOf('## 0. Role Brief');
+    const purposeIdx = md.indexOf('## 1. Purpose');
+    if (h1Idx === -1 || briefIdx === -1 || purposeIdx === -1 || !(h1Idx < briefIdx && briefIdx < purposeIdx)) {
+      issues.push({
+        class: 'role_brief_invalid',
+        detail: `Role spec "${entry.node}" must place ## 0. Role Brief after H1 and before ## 1. Purpose`,
+        file: nodePath,
+      });
+    } else {
+      const briefText = md.slice(briefIdx, purposeIdx);
+      const missingFields = findOrderedFields(briefText, ROLE_BRIEF_FIELDS);
+      if (missingFields.length > 0) {
+        issues.push({
+          class: 'role_brief_fields_invalid',
+          detail: `Role spec "${entry.node}" Role Brief missing or misordered fields: ${missingFields.join(', ')}`,
+          file: nodePath,
+        });
+      }
+      if (!briefText.includes(`**Role key**: \`${entry.roleKey}\``)) {
+        issues.push({
+          class: 'role_brief_role_key_mismatch',
+          detail: `Role spec "${entry.node}" Role Brief Role key must be "${entry.roleKey}"`,
+          file: nodePath,
+        });
+      }
+    }
+
+    for (const section of ROLE_BODY_SECTIONS) {
+      if (!md.includes(section)) {
+        issues.push({
+          class: 'role_body_section_missing',
+          detail: `Role spec "${entry.node}" is missing required role body section "${section}"`,
+          file: nodePath,
+        });
+      }
+    }
+
+    const lifecycleHeadings = ['## 1. Stage Goal', '## 5. Gate Command', '## 8. Stop Behavior'];
+    for (const heading of lifecycleHeadings) {
+      if (md.includes(heading)) {
+        issues.push({
+          class: 'role_spec_lifecycle_heading',
+          detail: `Role spec "${entry.node}" must not use lifecycle-primary heading "${heading}"`,
+          file: nodePath,
+        });
+      }
+    }
+
+    if (ec.surface !== 'relay-subagent-role') {
+      issues.push({
+        class: 'role_spec_wrong_surface',
+        detail: `Role spec "${entry.node}" must have surface: relay-subagent-role, got "${ec.surface}"`,
+        file: nodePath,
+      });
+    }
+
+    if (ec.search_policy !== 'subagent_performs_search') {
+      issues.push({
+        class: 'role_spec_wrong_search_policy',
+        detail: `Role spec "${entry.node}" must have search_policy: subagent_performs_search, got "${ec.search_policy}"`,
+        file: nodePath,
+      });
+    }
+
+    if (ec.loaded_by !== 'phase-agent') {
+      issues.push({
+        class: 'role_spec_missing_loaded_by',
+        detail: `Role spec "${entry.node}" must have loaded_by: phase-agent`,
+        file: nodePath,
+      });
+    }
+
+    if (ec.delivered_via !== 'relay_task_md') {
+      issues.push({
+        class: 'role_spec_missing_delivered_via',
+        detail: `Role spec "${entry.node}" must have delivered_via: relay_task_md`,
+        file: nodePath,
+      });
+    }
+
+    // Role spec must NOT appear in manifest.phases[]
+    const inManifestPhases = (manifest.phases || []).some((p) => p.node === entry.node);
+    if (inManifestPhases) {
+      issues.push({
+        class: 'role_spec_in_manifest_phases',
+        detail: `Role spec "${entry.node}" has surface: relay-subagent-role but appears in manifest.phases[] — it must not be a manifest lifecycle phase`,
+        file: nodePath,
+      });
+    }
+
+    const inManifestShared = (manifest.shared || []).some((sharedRef) => sharedRef === entry.node);
+    if (inManifestShared) {
+      issues.push({
+        class: 'role_spec_in_manifest_shared',
+        detail: `Role spec "${entry.node}" must not appear in manifest.shared[] — role specs are Phase-Agent-loaded guidance, not globally loaded shared nodes`,
+        file: nodePath,
+      });
+    }
+  }
+
+  // Check shared guidance
+  for (const sharedRef of SHARED_GUIDANCE_INVENTORY) {
+    const candidates = [
+      join(nodesDir, sharedRef),
+      join(nodesDir, 'shared', sharedRef.replace('shared/', '')),
+    ];
+    const nodePath = candidates.find((c) => existsSync(c));
+    if (!nodePath) continue;
+
+    const fm = readNodeFrontmatter(nodePath);
+    if (!fm) continue;
+
+    const ec = fm.execution_contract;
+    if (!ec) {
+      issues.push({
+        class: 'execution_contract_missing',
+        detail: `Shared guidance "${sharedRef}" is missing execution_contract`,
+        file: nodePath,
+      });
+      continue;
+    }
+
+    if (ec.surface !== 'shared-guidance') {
+      issues.push({
+        class: 'shared_guidance_wrong_surface',
+        detail: `Shared guidance "${sharedRef}" must have surface: shared-guidance, got "${ec.surface}"`,
+        file: nodePath,
+      });
+    }
+
+    if (ec.search_policy !== 'no_search') {
+      issues.push({
+        class: 'shared_guidance_search_capable',
+        detail: `Shared guidance "${sharedRef}" has search_policy="${ec.search_policy}" — shared guidance must have no_search`,
+        file: nodePath,
+      });
     }
   }
 

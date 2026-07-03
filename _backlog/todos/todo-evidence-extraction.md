@@ -10,7 +10,7 @@
 > ## 已完成部分（2026-06-27，更新 2026-07-01）
 >
 > **2026-07-01 更新 — BUG-007 修复带来的进展：**
-> - ✅ reference 格式链已硬化：`phase-wave1-subagent.md` §2 含完整 metadata block 格式 spec（9 必填字段 + 5 标准 section），gate-wave1-complete 新增 4 条质量规则（`reference_format`/`source_url_article_level`/`key_facts_min_lines`/`ledger_coverage`），`checkContentDedup()` fail-closed
+> - ✅ reference 格式链已硬化：`subagent-dpt-evidence-extractor.md` §3 含完整 metadata block 格式 spec（9 必填字段 + 5 标准 section），gate-wave1-complete 新增 4 条质量规则（`reference_format`/`source_url_article_level`/`key_facts_min_lines`/`ledger_coverage`），`checkContentDedup()` fail-closed
 > - ✅ file-observability 基础设施就绪：`auditFileObservability()` 可独立于 ledger 扫描文件系统，区分 declared/orphan/explained 文件
 > - ✅ `creation_reason` 字段已加入 `OutputDeclarationLedgerRecord`
 > - ⚡ `countReferences(baseDir)` 和 `isCountable(ref)` 有了 file-observability 做基础，但尚未实现
@@ -73,7 +73,7 @@ url, title, retrieved_date, topic_tag, notes
 | `subagent-relay.mjs` 的 dispatch/collect/merge | `DPT_FRAMEWORK/engine/subagent-relay.mjs` | 完整 pipeline 可用，extract 是新增 post-collect 处理层 |
 | `dpt-source-diagnostic` role agent | `subagent-relay.mjs` dispatch map | 已注册但输出用泛型 SlotResult schema——需要差异化 schema |
 | `_cache/` 目录约定 | `shared-subagent-protocol.md` §2 | 文档中定义了 `_cache/waveN/slot_MM/search-results/` 等路径，但仅作为 subagent convention（`authority: guidance-only`），Engine 不创建。实际只在 subagent 执行期 transient 存在于 bundle 中。extract 需要决定是否将其升级为 Engine-enforced staging area |
-| wave0 queue-driven 三阶段 | phase-wave0.md + phase-wave0-subagent.md | 当前 flow：搜索→直接写 source.yaml。extract 在此流程中增加 "triage + enrich" 步骤 |
+| wave0 queue-driven 三阶段 | phase-wave0.md + subagent-dpt-source-intake.md | 当前 flow：relay-backed 搜索→写 `artifacts/wave0/{topic}/source.yaml`。extract 在此流程中增加 "triage + enrich" 步骤 |
 
 ## 从 V12 借鉴的核心模式
 

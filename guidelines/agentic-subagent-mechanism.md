@@ -36,7 +36,7 @@ Agentic Subagent (Relay) 是三层执行模型的内层引擎：在一个 queue 
 > | 并发控制 (`MAX_CONCURRENT_SUBAGENTS`) | **✅ 已实现** | 定义见 `subagent-relay.mjs`（当前为 8）；超过拒绝；`-1` 全量并行哨兵计划但未实现 |
 > | 六角色定义 | **✅ 已实现** | `dpt-source-intake`, `dpt-source-diagnostic`, `dpt-claim-verifier`, `dpt-evidence-extractor` (v1) + `dpt-topic-scout`, `dpt-synthesis-reviewer` (v1.5) |
 > | Shared subagent protocol | **✅ 已实现** | 通信合约、目录边界、forbidden authority、page-fetching 降级链 |
-> | Phase subagent MD (wave0/1/2) | **✅ 已实现** | `phase-wave0-subagent.md`, `phase-wave1-subagent.md`, `phase-wave2-subagent.md` |
+> | Relay role spec MD (wave0/1/2) | **✅ 已实现** | `subagent-dpt-source-intake.md`, `subagent-dpt-evidence-extractor.md`, `subagent-dpt-topic-scout.md` |
 > | **Queue × Relay 集成** | **❌ 未实现** | task card → relay slot 映射、collect → complete 交接协议、`operate-relay.mjs` CLI 封装。详见 §8.3 |
 > | Wave2 动态 spawn vs queue-mediated | **⚠️ 设计张力** | Wave2 的 gap-fill sub-agent 直接 spawn（绕过 Queue），与标准 Chain→Queue→Relay 路径不一致。详见 §8.4 |
 >

@@ -4,12 +4,23 @@ id: phase-instantiation
 phase: instantiation
 gate: instantiation-complete
 stop: "no"
+execution_contract:
+  surface: phase-agent
+  search_policy: no_search
 requires:
   - shared/shared-silent-execution
 suggested_context: []
 ---
 
 # Phase: Instantiation
+
+## 0. Execution Brief
+
+- **Objective**: Create a real run bundle surface for the user's research question.
+- **Start here**: Derive a legal bundle name from the original question, then run `instantiate-run-bundle.mjs`.
+- **Path to pass**: Instantiate the bundle through the CLI, reload the created control files and scaffold directories, then run the instantiation gate.
+- **Completion check**: `check-gate-instantiation-complete.mjs` passes for `phases/phase-instantiation.md`.
+- **Failure posture**: Repair missing bundle surface from gate `inspect`/`advice`; for name collision or illegal name, silently suffix/normalize and re-instantiate through the CLI.
 
 ## 1. Stage Goal
 

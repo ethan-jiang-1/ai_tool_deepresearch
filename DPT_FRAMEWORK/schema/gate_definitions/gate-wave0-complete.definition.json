@@ -88,6 +88,31 @@
       "check": "cache_coverage",
       "target": "output_declarations",
       "failure_message": "Cache trail coverage gap detected: role=reference output files must map to verified _cache/ leaf directories. Missing or unmapped cache trails fail coverage; empty cache_trails on a declaration emits a Phase 1 warning."
+    },
+    {
+      "id": "wave0_ledger_exists",
+      "check": "output_declaration_ledger_exists",
+      "target": "rb_output_declarations.jsonl",
+      "wave": "wave0",
+      "failure_message": "No wave0-scoped output declaration ledger entries found. Complete delegated relay tasks (dpt-source-intake) through the queue + relay pipeline to populate the output declaration ledger."
+    },
+    {
+      "id": "wave0_output_coverage",
+      "check": "output_declaration_coverage",
+      "target": "rb_output_declarations.jsonl",
+      "wave": "wave0",
+      "output_selectors": {
+        "expected_from_topic_registry": ["artifacts/wave0/{topic}/source.yaml"],
+        "roles": ["reference", "source_yaml"]
+      },
+      "failure_message": "Wave0 outputs exist on disk but are not covered by output declaration ledger. Files may have been written directly (bypassing relay). Re-run through delegated relay tasks."
+    },
+    {
+      "id": "wave0_subagent_slots",
+      "check": "subagent_slot_presence",
+      "target": "_subagents/wave_00",
+      "wave": "wave0",
+      "failure_message": "No successful wave0 relay slots found in _subagents/wave_00/. Dispatch and complete relay tasks (dpt-source-intake) through the queue + relay pipeline."
     }
   ]
 }

@@ -14,11 +14,16 @@ import {
   buildGateResult,
   emitGateResult,
   writeGateAttempt,
+  derivePhaseFromGate,
   readBundlePlan,
   readBundleProfile,
   resolveThreshold,
   checkContentDedup,
   checkCacheCoverage,
+  checkOutputDeclarationLedgerExists,
+  checkOutputDeclarationCoverage,
+  checkSubagentSlotPresence,
+  detectRelayBypassSuspicion,
 } from '../../engine/helpers/gate-helpers.mjs';
 import {
   ReferenceMetadataArraySchema,
@@ -318,6 +323,30 @@ for (const rule of definition.rules) {
           for (const line of ccResult.inspect) inspect.push(line);
         }
         for (const a of ccResult.advice) advice.push(a);
+      } else if (rule.check === 'output_declaration_ledger_exists') {
+        const ledgerResult = checkOutputDeclarationLedgerExists(bundlePath, rule);
+        if (!ledgerResult.passed) {
+          rulePassed = false;
+          ruleDetail = ledgerResult.inspect.join('; ');
+        }
+        for (const line of ledgerResult.inspect) inspect.push(line);
+        for (const a of ledgerResult.advice) advice.push(a);
+      } else if (rule.check === 'output_declaration_coverage') {
+        const coverageResult = checkOutputDeclarationCoverage(bundlePath, rule);
+        if (!coverageResult.passed) {
+          rulePassed = false;
+          ruleDetail = coverageResult.inspect.join('; ');
+        }
+        for (const line of coverageResult.inspect) inspect.push(line);
+        for (const a of coverageResult.advice) advice.push(a);
+      } else if (rule.check === 'subagent_slot_presence') {
+        const slotResult = checkSubagentSlotPresence(bundlePath, rule);
+        if (!slotResult.passed) {
+          rulePassed = false;
+          ruleDetail = slotResult.inspect.join('; ');
+        }
+        for (const line of slotResult.inspect) inspect.push(line);
+        for (const a of slotResult.advice) advice.push(a);
       } else {
         rulePassed = false;
       ruleDetail = `Unknown check type: ${rule.check} — must fail (check type not implemented)`;
@@ -338,6 +367,13 @@ for (const rule of definition.rules) {
 
 const outcome = allPassed ? 'passed' : 'failed';
 const routing = resolveRouting(args.transitions, args.currentNode, outcome);
+
+// RPG-005: Always-on bypass suspicion detection before emitting gate result
+const phase = derivePhaseFromGate(definition.gate);
+const bypassResult = detectRelayBypassSuspicion(bundlePath, phase, definition.gate);
+if (bypassResult.suspected) {
+  inspect.push(`[relay_bypass_suspected] Phase ${phase} artifacts found without relay provenance: ${(bypassResult.provenanceMissing || []).join('; ')}`);
+}
 
 const result = buildGateResult({
   passed: allPassed,

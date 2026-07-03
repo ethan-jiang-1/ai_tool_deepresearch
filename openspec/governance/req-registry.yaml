@@ -62,13 +62,16 @@ prefixes:
   PRE: pre-research-experiments
   PRG: pre-research-gate-implementation
   PRP: pre-research-phase-content
+  QIV: queue-input-validation
   REF: reference-flat-format
   REI: rerun-incremental-node
+  RPG: relay-provenance-gate
   RTI: rerun-topic-integration
   REL: repair-loop
   RES: research-styles
   RET: requirement-traceability
   RRD: runtime-reentry-debuggability
+  RUE: run-entry
   RWE: research-wave-experiments
   RWG: research-wave-gate-implementation
   RWP: research-wave-phase-content
@@ -85,6 +88,7 @@ prefixes:
   TEF: test-fixtures
   TRT: transition-table
   TRW: trace-writer
+  VEM: version-management
   WAD: wave0-artifacts-directory
   WAI: wave1-intake
   WDC: workflow-directory-contract
@@ -214,6 +218,20 @@ HIU-006: hitl-ux — Anti-infinite-loop two-level nudge strategy (round 3 gentle
 # integration-tests
 INT-001: integration-tests — validate-bundle.mjs + inspect-bundle.mjs integration tests
 
+# queue-input-validation
+QIV-001: queue-input-validation — Enqueue validates task card topic_slug against bundle topic_registry
+QIV-002: queue-input-validation — Queue schema includes bundle identity and operate-queue validates bundle_name
+QIV-003: queue-input-validation — Queue projection cache includes generated_at and source_queue_sha256 staleness detection
+QIV-004: queue-input-validation — operate-queue repair --remove-stale removes task cards outside topic_registry
+
+# relay-provenance-gate
+RPG-001: relay-provenance-gate — Gate verifies output declaration ledger exists and meets entry threshold
+RPG-002: relay-provenance-gate — Gate verifies _subagents directory contains relay slot evidence
+RPG-003: relay-provenance-gate — Gate detects suspected relay bypass when artifacts exist without provenance markers
+RPG-004: relay-provenance-gate — Provenance checks coexist with structural checks in standard gate definitions
+RPG-005: relay-provenance-gate — Gate verifies scoped output declaration coverage for current phase outputs
+RPG-006: relay-provenance-gate — Wave2 relay provenance is conditional on search evidence
+
 # repair-loop
 REL-001: repair-loop — Repair checkpoint loopback and deterministic termination
 
@@ -238,6 +256,12 @@ RRD-002: runtime-reentry-debuggability — Reentry check validates runtime consi
 RRD-003: runtime-reentry-debuggability — Queue state cannot conflict with lifecycle status after phase pass
 RRD-004: runtime-reentry-debuggability — Failed gates preserve full post-mortem diagnostic detail
 RRD-005: runtime-reentry-debuggability — Reentry tooling derives facts from bundle truth without chat memory
+
+# run-entry
+RUE-001: run-entry — RUN.md entry point announces the framework version banner
+RUE-002: run-entry — RUN.md Section 0 instructs agents not to use built-in research shortcuts
+RUE-003: run-entry — Project changelog records version history and known limitations [DEPRECATED]
+RUE-004: run-entry — Agent behavior files stay synchronized on the research shortcut override
 
 # schema-core
 SCO-001: schema-core — Six domain enums
@@ -489,6 +513,12 @@ REF-003: reference-flat-format — _INDEX.md as canonical reference inventory wi
 REF-004: reference-flat-format — README.md as human navigation for reference directory
 REF-005: reference-flat-format — Phase nodes enforce reference file naming convention
 REF-006: reference-flat-format — Wave1 sub-agent reference file format specification
+
+# version-management
+VEM-001: version-management — CHANGELOG is concise and human-readable at project root
+VEM-002: version-management — Every DPT_FRAMEWORK behavior change updates CHANGELOG
+VEM-003: version-management — RUN.md version banner matches latest CHANGELOG entry
+VEM-004: version-management — Version number decided at proposal time, not ad-hoc
 
 # wave0-artifacts-directory
 WAD-001: wave0-artifacts-directory — Bundle structure includes artifacts/wave0/ directory

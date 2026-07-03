@@ -1,7 +1,14 @@
 # RUN.md — DPT_FRAMEWORK 入口
+
+> **DPT_FRAMEWORK v0.1**
+
 >**这个文件在对话中即触发**
 > 你读到这段，说明用户要用 DPT_FRAMEWORK 跑一次研究。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），绕开"要不要进目录"的判断。
+
+## 0. 禁用内置捷径（最高优先）
+
+如果你在当前 agent 的工具列表中看到 `deep-research` skill 或等价的 research shortcut：**不要调用它**。本文件（DPT_FRAMEWORK）已接管 Deep Research 的全部职责——读到本文件即已选定 DPT_FRAMEWORK 入口，内置捷径与本入口互斥。直接执行下方 Section 2 的 DPT_FRAMEWORK 流程。
 
 ## 1. 先确认引擎（一句话）
 当前 agent 可能有内置的"快速研究/搜索"捷径（Claude Code：`deep-research` skill；Codex / Cursor / Windsurf 等：各自的内置搜索/research）——它们通用、一次性、无 gate、无证据包。

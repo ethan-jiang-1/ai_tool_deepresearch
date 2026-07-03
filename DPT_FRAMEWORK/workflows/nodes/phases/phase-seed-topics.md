@@ -4,6 +4,9 @@ id: phase-seed-topics
 phase: seed-topics
 gate: seed-topics-ready
 stop: "no"
+execution_contract:
+  surface: phase-agent
+  search_policy: no_search
 requires:
   - shared/shared-profile
   - shared/shared-schemas
@@ -13,6 +16,14 @@ suggested_context:
 ---
 
 # Phase: Seed Topics Materialization
+
+## 0. Execution Brief
+
+- **Objective**: Materialize `rb_plan.md` `topic_registry` into search-relevant seed topic files.
+- **Start here**: Read `rb_plan.md` `topic_registry`, `rb_profile.yaml`, and the queue CLI state.
+- **Path to pass**: Enqueue one materialization task per topic, drain the queue, repair slug/frontmatter mismatches, then run the seed-topics gate.
+- **Completion check**: `check-gate-seed-topics-ready.mjs` passes for `phases/phase-seed-topics.md`.
+- **Failure posture**: Treat empty queue or thin queue as work routing, not completion; repair from gate feedback and never invent missing topic semantics.
 
 ## 1. Stage Goal
 
@@ -235,6 +246,10 @@ __BACKFILL_PENDING_QUESTIONS__
 - **seed topic 不是 chapter label**：每个 seed topic 必须包含足够的 search-relevant 约束（search_guardrails + evidence_route），否则 wave0 sub-agent 无法做定向搜索
 
 ### 3.3 Queue 空后 — 收尾与 Gate
+
+#### Transition trigger
+
+当 `operate-queue claim <bundle> ...` 返回 `item: null` 时，表示 active queue 已被 drain。Agent 应进入本节的 closeout/gate 流程，不得因为没有新 task 就自行发明 work item。
 
 当 claim 返回 `item: null`（queue 空）时：
 

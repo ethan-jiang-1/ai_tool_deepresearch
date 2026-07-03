@@ -3,6 +3,9 @@ node_type: shared
 id: shared-schemas
 shared_scope: schema-summary
 authority: guidance-only
+execution_contract:
+  surface: shared-guidance
+  search_policy: no_search
 requires: []
 suggested_context: []
 ---
@@ -88,8 +91,8 @@ Gate 通过 `pattern_match`（`negate: true`）验证 `__BACKFILL_WAVE*_*__` tok
 
 Wave1 为每个 topic 产出 paired artifacts。Gate 通过 `pattern_match` 规则验证 structure（section 标题、source URL、key finding pattern、backfill token absence）。
 
-- **`artifacts/wave1/<topic>/evidence-summary.md`**：Per-topic evidence summary（Markdown）。§Source URLs（Markdown link + retrieved date）、§Key Findings（编号条目，bold prefix 必须是 `**机制理解**:` 或 `**趋势观察**:`）、§Open Questions（编号条目，状态标签必须是 `[开放]` / `[部分解答]` / `[涌现]`——不允许 topic-descriptor 标签如 `[Bridge gap]`）。**Schema**：模板级约束（无独立 Zod contract）；structure 由 `phase-wave1-subagent.md` §2.1 定义。
-- **`artifacts/wave1/<topic>/question-list.md`**：Per-topic exploration ledger（Markdown，四节结构，顺序固定）。§1 Topic Investigation Targets（表：target_id / question / origin / status / backing_refs / next_action）。§2 Question Reconciliation（用 `[已解决]` / `[部分进展]` / `[仍开放]` / `[需内部数据]` 标记状态变化）。§3 Emergent Question Protocol（4 项检查：new_concept / contradiction / missing_information_gap / noise_pattern，每项 checked + trigger_refs）。§4 Exploration / Exploitation Decision（decision + trigger_refs + unresolved_questions + queue_consequence + next_action）。详见 `phase-wave1-subagent.md` §2.2 和 `phase-wave1.md` §3.2.1。
+- **`artifacts/wave1/<topic>/evidence-summary.md`**：Per-topic evidence summary（Markdown）。§Source URLs（Markdown link + retrieved date）、§Key Findings（编号条目，bold prefix 必须是 `**机制理解**:` 或 `**趋势观察**:`）、§Open Questions（编号条目，状态标签必须是 `[开放]` / `[部分解答]` / `[涌现]`——不允许 topic-descriptor 标签如 `[Bridge gap]`）。**Schema**：模板级约束（无独立 Zod contract）；structure 由 `subagent-dpt-evidence-extractor.md` §3.1 定义。
+- **`artifacts/wave1/<topic>/question-list.md`**：Per-topic exploration ledger（Markdown，四节结构，顺序固定）。§1 Topic Investigation Targets（表：target_id / question / origin / status / backing_refs / next_action）。§2 Question Reconciliation（用 `[已解决]` / `[部分进展]` / `[仍开放]` / `[需内部数据]` 标记状态变化）。§3 Emergent Question Protocol（4 项检查：new_concept / contradiction / missing_information_gap / noise_pattern，每项 checked + trigger_refs）。§4 Exploration / Exploitation Decision（decision + trigger_refs + unresolved_questions + queue_consequence + next_action）。详见 `subagent-dpt-evidence-extractor.md` §3.2 和 `phase-wave1.md` §3.2.1。
 
 ## Artifacts — Wave2 (Cross-Topic Synthesis)
 
@@ -167,13 +170,13 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 
 - **`final/`**：Terminal delivery 目录（`gate: null`，无 gate CLI 检查）。Agent 从 verified bundle state 生成 final report artifact(s)，格式自由。Delivery 完成由 `final/` 下存在至少一份报告文件来证明。空目录不代表 delivery 完成。Post-delivery 反馈走 HITL2 `rerun` 路径。
 
-### Sub-agent Protocol Nodes
+### Relay Role Spec Nodes
 
-每个使用 Sub-agent 的 phase 有独立的 Sub-agent 指令文件（Phase Agent 通过 `suggested_context` 加载）。共享 relay 基础设施由 `shared-subagent-protocol.md` 定义。
+每个使用 Sub-agent 的 phase 有独立的 relay role spec 文件（Phase Agent 通过 `suggested_context` 加载，用来构造 relay slot `task.md`）。这些 role specs 不是 manifest lifecycle phase nodes，也不是通过 `manifest.shared[]` 全局加载的 shared guidance。共享 relay 基础设施由 `shared-subagent-protocol.md` 定义。
 
-- **`phases/phase-wave0-subagent.md`** — Wave0 Sub-agent（role: `dpt-source-intake`）：foundation reference 搜索和 `source.yaml` 写入
-- **`phases/phase-wave1-subagent.md`** — Wave1 Sub-agent（role: `dpt-evidence-extractor`）：topic-specific deepening、`evidence-summary.md` + `question-list.md` 成对产出
-- **`phases/phase-wave2-subagent.md`** — Wave2 Sub-agent（role: `dpt-topic-scout`）：targeted gap-fill search，仅在 Phase Agent 对 finding 做 `decision=exploit_search|explore_search` 时 spawn。输入：finding description + keywords + output schema。输出：structured JSON（found_evidence, source_urls, fills_gap, confidence）
+- **`phases/subagent-dpt-source-intake.md`** — role: `dpt-source-intake`。Wave0 foundation reference 搜索和 `source.yaml` 写入
+- **`phases/subagent-dpt-evidence-extractor.md`** — role: `dpt-evidence-extractor`。Wave1 topic-specific deepening、`evidence-summary.md` + `question-list.md` 成对产出；Wave2 backing supplementary tasks 也可复用
+- **`phases/subagent-dpt-topic-scout.md`** — role: `dpt-topic-scout`。Wave2 targeted gap-fill search，仅在 Phase Agent 对 finding 做 `decision=exploit_search|explore_search` 时 spawn。输入：finding description + keywords + output schema。输出：structured JSON（found_evidence, source_urls, fills_gap, confidence）
 - **`shared/shared-subagent-protocol.md`** — 共享 relay 基础设施：slot 契约、目录 authority boundary、并发控制、禁区清单、页面抓取链
 
 ### Gate Contract

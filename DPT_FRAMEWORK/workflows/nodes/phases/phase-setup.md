@@ -4,6 +4,9 @@ id: phase-setup
 phase: setup
 gate: setup-ready
 stop: "no"
+execution_contract:
+  surface: phase-agent
+  search_policy: no_search
 requires:
   - shared/shared-profile
   - shared/shared-silent-execution
@@ -12,6 +15,14 @@ suggested_context:
 ---
 
 # Phase: Setup
+
+## 0. Execution Brief
+
+- **Objective**: Verify the instantiated bundle is structurally consistent before research waves begin.
+- **Start here**: Load the control files, scaffold directories, HITL1 marker, and basename fields.
+- **Path to pass**: Repair missing or malformed setup surface, keep status aligned, then run the setup gate.
+- **Completion check**: `check-gate-setup-ready.mjs` passes for `phases/phase-setup.md`.
+- **Failure posture**: Follow gate `inspect`/`advice`, repair deterministically, rerun with `--attempt N`, and record silent degradation if repeated repair makes no progress.
 
 ## 1. Stage Goal
 

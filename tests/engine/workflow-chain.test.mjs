@@ -184,8 +184,8 @@ describe('error handling (WMD-001, WLO-001)', () => {
     const result = assessNode('malformed.entry.md', createState(), runtime);
 
     assert.equal(result.status, 'error');
-    // YAML fallback parses the content, but schema rejects 'requires' as string
-    assert.ok(result.error.includes('Invalid frontmatter schema'));
+    // YAML parser rejects malformed content; accept either Zod or YAML error message
+    assert.ok(result.error.includes('Invalid frontmatter schema') || result.error.includes('Malformed frontmatter'), `Expected error about malformed frontmatter, got: ${result.error}`);
     assert.ok(result.error.includes('malformed.entry.md'));
     assert.equal(runtime.receipts.filter((r) => r.type === 'file_loaded').length, 0);
   });
@@ -501,21 +501,27 @@ describe('assessNode contract header injection (WNC-008)', () => {
       'Test shared content.',
     ].join('\n'));
 
-    // Relay/sub-agent task surface — NOT in manifest
-    writeFileSync(join(PHASES_DIR, 'phase-wave2-subagent.md'), [
+    // Synthetic relay-like surface — NOT in manifest
+    writeFileSync(join(PHASES_DIR, 'synthetic-relay-stop-no.md'), [
       '---',
-      'node_type: phase',
-      'id: phase-wave2-subagent',
-      'phase: wave2',
-      'role: dpt-topic-scout',
+      'node_type: shared',
+      'id: synthetic-relay-stop-no',
+      'shared_scope: subagent-protocol',
+      'role: synthetic-relay-role',
       'stop: "no"',
+      'execution_contract:',
+      '  surface: relay-subagent-role',
+      '  search_policy: subagent_performs_search',
+      '  loaded_by: phase-agent',
+      '  delivered_via: relay_task_md',
       'requires:',
       '  - shared/shared-subagent-protocol',
+      'suggested_context: []',
       '---',
       '',
-      '# Phase: Wave2 Sub-Agent',
+      '# Synthetic Relay Surface',
       '',
-      'Relay task surface — not a manifest lifecycle phase.',
+      'Synthetic non-manifest relay-like surface.',
     ].join('\n'));
 
     // Phase with no stop field
@@ -535,9 +541,6 @@ describe('assessNode contract header injection (WNC-008)', () => {
 
     // Add these to manifest for the no-stop test
     manifest.phases.push({ key: 'test', node: 'phases/phase-no-stop.md', gate: 'test-gate' });
-    manifest.phases.push({ key: 'wave2-sub', node: 'phases/phase-wave2-subagent.md', gate: 'wave2-complete' });
-    // NOTE: phase-wave2-subagent IS in manifest now for the "not in manifest" test to work as a negative case
-    // For the actual subagent negative test, we use a different approach
     writeFileSync(join(WNC_TMP, 'manifest.json'), JSON.stringify(manifest));
   });
 
@@ -602,27 +605,15 @@ describe('assessNode contract header injection (WNC-008)', () => {
   });
 
   it('does NOT inject header for relay/sub-agent task surface even with stop:no frontmatter (tested via non-manifest path)', () => {
-    // Remove phase-wave2-subagent from manifest to simulate a non-manifest node
-    const manifestPath = join(WNC_TMP, 'manifest.json');
-    const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
-    const filtered = manifest.phases.filter(p => p.node !== 'phases/phase-wave2-subagent.md');
-    const orig = JSON.stringify(manifest);
-    writeFileSync(manifestPath, JSON.stringify({ ...manifest, phases: filtered }));
+    const nodesDir = join(WNC_TMP, 'nodes-workflow-chain');
+    const runtime = createWorkflowRuntime('test', nodesDir);
+    const state = createState();
+    const result = assessNode('phases/synthetic-relay-stop-no.md', state, runtime);
 
-    try {
-      const nodesDir = join(WNC_TMP, 'nodes-workflow-chain');
-      const runtime = createWorkflowRuntime('test', nodesDir);
-      const state = createState();
-      const result = assessNode('phases/phase-wave2-subagent.md', state, runtime);
-
-      assert.equal(result.status, 'loaded');
-      const entry = runtime.contentCache.get('phases/phase-wave2-subagent.md');
-      assert.ok(!entry.md.includes('AUTONOMOUS MODE'));
-      assert.ok(!entry.md.includes('TERMINAL DELIVERY MODE'));
-    } finally {
-      // Restore manifest
-      writeFileSync(manifestPath, orig);
-    }
+    assert.equal(result.status, 'loaded');
+    const entry = runtime.contentCache.get('phases/synthetic-relay-stop-no.md');
+    assert.ok(!entry.md.includes('AUTONOMOUS MODE'));
+    assert.ok(!entry.md.includes('TERMINAL DELIVERY MODE'));
   });
 
   it('injects header after frontmatter and before body', () => {
@@ -661,7 +652,6 @@ describe('assessNode contract header injection (WNC-008)', () => {
   });
 
   it('uses manifest membership as lifecycle coverage source of truth — frontmatter alone does not trigger', () => {
-    // phase-wave0-subagent has stop:no in its frontmatter but is NOT in the manifest here
     // Create a standalone file not in any manifest
     const standaloneDir = join(WNC_TMP, 'nodes-workflow-chain', 'standalone');
     mkdirSync(standaloneDir, { recursive: true });

@@ -3,6 +3,9 @@ node_type: shared
 id: shared-subagent-protocol
 shared_scope: protocol
 authority: guidance-only
+execution_contract:
+  surface: shared-guidance
+  search_policy: no_search
 requires:
   - shared/shared-schemas
 suggested_context: []

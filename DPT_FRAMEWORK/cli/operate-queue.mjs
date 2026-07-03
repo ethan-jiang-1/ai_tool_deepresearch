@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-// @impl AGQ-002, AGQ-003, AGQ-004, AGQ-005, AGQ-006
+// @impl AGQ-002, AGQ-003, AGQ-004, AGQ-005, AGQ-006, QIV-001, QIV-002, QIV-003, QIV-004
 // @impl FRE-001: Canonical CLI location DPT_FRAMEWORK/cli/operate-queue.mjs
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
+import { createHash } from 'node:crypto';
+import { parse as parseYaml } from 'yaml';
 import {
   claim, complete, enqueue, fail, inspect,
   loadQueue, pendingCount, preempt, render, saveQueue, QUEUE, SLOT_NAMES,
@@ -19,7 +21,9 @@ function usage() {
   node DPT_FRAMEWORK/cli/operate-queue.mjs fail <bundle> --failure <failure.json>
   node DPT_FRAMEWORK/cli/operate-queue.mjs preempt <bundle> --task <task.json> --reason <reason> [--unsafe-current]
   node DPT_FRAMEWORK/cli/operate-queue.mjs count <bundle>
-  node DPT_FRAMEWORK/cli/operate-queue.mjs render <bundle>`);
+  node DPT_FRAMEWORK/cli/operate-queue.mjs render <bundle>
+  node DPT_FRAMEWORK/cli/operate-queue.mjs project <bundle>
+  node DPT_FRAMEWORK/cli/operate-queue.mjs repair <bundle> --remove-stale`);
 }
 
 function readJson(file) {
@@ -46,21 +50,380 @@ const { values } = parseArgs({
     actor: { type: 'string', default: 'main-agent' },
     reason: { type: 'string', default: 'urgent_preemption' },
     'unsafe-current': { type: 'boolean', default: false },
+    'remove-stale': { type: 'boolean', default: false },
   },
   allowPositionals: false,
 });
 
 const bundleDir = path.resolve(bundle);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// QIV-002: Bundle name validation
+// ═══════════════════════════════════════════════════════════════════════════
+
+function readBundleNameFromStatus(bundleDir) {
+  const statusPath = path.join(bundleDir, 'rb_status.json');
+  if (!existsSync(statusPath)) return null;
+  try {
+    const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
+    return status.bundle || null;
+  } catch { return null; }
+}
+
+function validateBundleName(queue, bundleDir) {
+  const statusBundle = readBundleNameFromStatus(bundleDir);
+  if (!statusBundle) return; // No status file to validate against — skip
+
+  // Legacy queue: inject bundle_name on first operation
+  if (!queue.bundle_name) {
+    queue.bundle_name = statusBundle;
+    saveQueue(bundleDir, queue);
+    return;
+  }
+
+  // QIV-002: bundle_name mismatch → reject
+  if (queue.bundle_name !== statusBundle) {
+    throw new Error(
+      `bundle_name mismatch: queue belongs to '${queue.bundle_name}', but bundle is '${statusBundle}'`
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// QIV-001: Topic slug resolution and validation
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Known topic-scoped work_id templates for fallback slug extraction
+const TOPIC_SCOPED_WORK_ID_PATTERNS = [
+  /^wave0-source-(?<slug>.+)$/,
+  /^wave0-suppl-(?<slug>.+)-r\d+$/,
+  /^wave1-deepen-(?<slug>.+)$/,
+  /^wave1-suppl-(?<slug>.+)-r\d+$/,
+  /^seed-topic-(?<slug>.+)$/,
+  /^wave2-backfill-(?<slug>.+)$/,
+  /^wave2-suppl-cross-(?<slug>.+)-r\d+$/,
+  /^wave2-suppl-emergent-(?<slug>.+)-r\d+$/,
+];
+
+function resolveTopicSlug(taskCard) {
+  // Priority 1: explicit payload.topic_slug
+  if (taskCard.payload?.topic_slug) {
+    return { slug: taskCard.payload.topic_slug, source: 'payload' };
+  }
+
+  // Priority 2: lineage.topic_slug
+  if (taskCard.lineage?.topic_slug) {
+    return { slug: taskCard.lineage.topic_slug, source: 'lineage' };
+  }
+
+  // Priority 3: fallback work_id parsing for known topic-scoped templates
+  if (taskCard.work_id) {
+    for (const pattern of TOPIC_SCOPED_WORK_ID_PATTERNS) {
+      const match = taskCard.work_id.match(pattern);
+      if (match && match.groups.slug) {
+        return { slug: match.groups.slug, source: 'work_id' };
+      }
+    }
+  }
+
+  return null;
+}
+
+function isTopicScoped(taskCard) {
+  // Has explicit topic slug
+  if (taskCard.payload?.topic_slug || taskCard.lineage?.topic_slug) return true;
+
+  // Matches a known topic-scoped work_id template
+  if (taskCard.work_id) {
+    for (const pattern of TOPIC_SCOPED_WORK_ID_PATTERNS) {
+      if (pattern.test(taskCard.work_id)) return true;
+    }
+  }
+
+  // producer_rule can indicate topic scope
+  if (taskCard.producer_rule === 'topic_deepening' && !taskCard.payload?.finding_id) return true;
+
+  return false;
+}
+
+function isFindingScoped(taskCard) {
+  return !!(taskCard.payload?.finding_id || taskCard.lineage?.finding_id);
+}
+
+function readTopicRegistry(bundleDir) {
+  const planPath = path.join(bundleDir, 'rb_plan.md');
+  if (!existsSync(planPath)) return [];
+  try {
+    const raw = readFileSync(planPath, 'utf-8');
+    const m = raw.match(/^---\n([\s\S]*?)\n---/);
+    if (!m) return [];
+    const fm = parseYaml(m[1]);
+    if (!fm.topic_registry || !Array.isArray(fm.topic_registry)) return [];
+    return fm.topic_registry.map(t => t.slug).filter(Boolean);
+  } catch { return []; }
+}
+
+function readFindingIndex(bundleDir) {
+  const indexPath = path.join(bundleDir, 'artifacts', 'wave2', 'finding-index.yaml');
+  if (!existsSync(indexPath)) return null;
+  try {
+    const raw = readFileSync(indexPath, 'utf-8');
+    return parseYaml(raw);
+  } catch { return null; }
+}
+
+function validateTopicSlug(taskCard, bundleDir) {
+  const topicScoped = isTopicScoped(taskCard);
+  const findingScoped = isFindingScoped(taskCard);
+
+  // Finding-scoped tasks: skip topic_registry validation, validate finding_id if index exists
+  if (findingScoped) {
+    const findingIndex = readFindingIndex(bundleDir);
+    if (findingIndex && taskCard.payload?.finding_id) {
+      const findingIds = (findingIndex.findings || []).map(f => f.id);
+      if (!findingIds.includes(taskCard.payload.finding_id)) {
+        return {
+          valid: false,
+          error: `finding_id '${taskCard.payload.finding_id}' not found in bundle finding-index. Valid ids: ${findingIds.join(', ') || 'none'}`,
+        };
+      }
+    }
+    return { valid: true };
+  }
+
+  // Not topic-scoped: skip validation
+  if (!topicScoped) return { valid: true };
+
+  // Topic-scoped: resolve slug and validate against topic_registry
+  const resolved = resolveTopicSlug(taskCard);
+
+  // Check for conflicting slug sources
+  if (taskCard.payload?.topic_slug && taskCard.lineage?.topic_slug &&
+      taskCard.payload.topic_slug !== taskCard.lineage.topic_slug) {
+    return {
+      valid: false,
+      error: `topic_slug conflict: payload='${taskCard.payload.topic_slug}' vs lineage='${taskCard.lineage.topic_slug}'`,
+    };
+  }
+
+  // Check payload/work_id mismatch
+  if (taskCard.payload?.topic_slug && taskCard.work_id) {
+    const workIdSlug = resolveTopicSlug({ work_id: taskCard.work_id });
+    if (workIdSlug && taskCard.payload.topic_slug !== workIdSlug.slug) {
+      return {
+        valid: false,
+        error: `topic_slug mismatch: payload='${taskCard.payload.topic_slug}' vs work_id='${taskCard.work_id}' (derived slug: '${workIdSlug.slug}')`,
+      };
+    }
+  }
+
+  if (!resolved) {
+    return {
+      valid: false,
+      error: `topic-scoped task '${taskCard.work_id}' has no resolvable topic_slug. Add payload.topic_slug or lineage.topic_slug.`,
+    };
+  }
+
+  // Validate against topic_registry
+  const registry = readTopicRegistry(bundleDir);
+  if (!registry.includes(resolved.slug)) {
+    return {
+      valid: false,
+      error: `topic_slug '${resolved.slug}' (from ${resolved.source}) not found in bundle topic_registry. Valid slugs: ${registry.join(', ') || 'none'}.`,
+    };
+  }
+
+  return { valid: true, slug: resolved.slug };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// QIV-003: Projection staleness detection
+// ═══════════════════════════════════════════════════════════════════════════
+
+function computeQueueHash(bundleDir) {
+  const queuePath = path.join(bundleDir, QUEUE.FILE);
+  if (!existsSync(queuePath)) return null;
+  const content = readFileSync(queuePath);
+  return createHash('sha256').update(content).digest('hex');
+}
+
+function writeProjection(queue, bundleDir) {
+  const q = queue;
+  const projectionDir = path.join(bundleDir, '_cache', 'agentic-queue');
+  mkdirSync(projectionDir, { recursive: true });
+  const generatedAt = new Date().toISOString();
+  const sourceHash = computeQueueHash(bundleDir);
+
+  const lines = [
+    `<!-- generated_at: ${generatedAt} -->`,
+    `<!-- source_queue_sha256: ${sourceHash || 'N/A'} -->`,
+    '# Agentic Queue Projection',
+    '',
+    `> **Runtime** — bundle: \`${bundleDir}\` | CLI: \`--bundle ${bundleDir}\` | projection ≠ authority`,
+    '',
+    `- queue_id: \`${q.queue_id}\``,
+    `- queue_health: \`${q.queue_health}\``,
+    `- stop_authorization_state: \`${q.stop_authorization_state}\``,
+    `- bundle_name: \`${q.bundle_name || 'N/A'}\``,
+    '',
+    '## Active Window',
+    '',
+  ];
+
+  for (const slot of SLOT_NAMES) {
+    const item = q.active_window[slot];
+    lines.push(`### ${slot}`);
+    if (!item) { lines.push('- empty: `true`', ''); continue; }
+    lines.push(
+      `- work_id: \`${item.work_id}\``,
+      `- title: ${item.title}`,
+      `- targets: \`controller=${item.targets?.controller || 'unknown'}${item.targets?.delegates ? `, delegates.to=${item.targets.delegates.to}, delegates.role_key=${item.targets.delegates.role_key}` : ''}\``,
+      `- status: \`${item.status}\``,
+      `- action: ${item.action}`,
+      `- required_receipts: ${item.required_receipts.map(r => `\`${r}\``).join(', ') || '`none`'}`,
+      `- completion_receipt: \`${item.completion_receipt ?? 'null'}\``,
+      `- writes_to: ${item.writes_to.map(r => `\`${r}\``).join(', ') || '`none`'}`,
+      `- failure_route: ${item.failure_route}`,
+      '',
+    );
+  }
+
+  lines.push('## Refill Pool', '');
+  for (const item of q.refill_pool) {
+    lines.push(`- \`${item.work_id}\` ${item.title} (${item.priority_class}, restore=${item.restore_priority})`);
+  }
+  if (q.refill_pool.length === 0) lines.push('- empty');
+
+  const outputPath = path.join(projectionDir, 'current-task.md');
+  writeFileSync(outputPath, `${lines.join('\n')}\n`);
+  return { outputPath, generatedAt, sourceHash };
+}
+
+function checkProjectionStaleness(bundleDir) {
+  const projectionPath = path.join(bundleDir, '_cache', 'agentic-queue', 'current-task.md');
+  if (!existsSync(projectionPath)) return { stale: false };
+
+  try {
+    const content = readFileSync(projectionPath, 'utf-8');
+    const hashMatch = content.match(/<!-- source_queue_sha256: (\S+) -->/);
+    if (!hashMatch) return { stale: false, reason: 'no hash in projection' };
+
+    const storedHash = hashMatch[1];
+    const currentHash = computeQueueHash(bundleDir);
+    if (!currentHash) return { stale: false };
+
+    if (storedHash !== currentHash) {
+      return { stale: true, reason: 'projection hash does not match current queue hash — rerun operate-queue project' };
+    }
+    return { stale: false };
+  } catch {
+    return { stale: false };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// QIV-004: Repair — remove stale task cards
+// ═══════════════════════════════════════════════════════════════════════════
+
+function repairRemoveStale(queue, bundleDir) {
+  const registry = readTopicRegistry(bundleDir);
+  const findingIndex = readFindingIndex(bundleDir);
+  const removed = [];
+
+  // Check all active window slots
+  for (const slot of SLOT_NAMES) {
+    const item = queue.active_window[slot];
+    if (!item) continue;
+
+    const isFinding = isFindingScoped(item);
+    const isTopic = isTopicScoped(item);
+
+    if (isFinding) {
+      // Finding-scoped: remove if finding_id not in current finding-index
+      if (findingIndex && item.payload?.finding_id) {
+        const findingIds = (findingIndex.findings || []).map(f => f.id);
+        if (!findingIds.includes(item.payload.finding_id)) {
+          removed.push({ slot, work_id: item.work_id, reason: `finding_id '${item.payload.finding_id}' not in current bundle finding-index` });
+          queue.active_window[slot] = null;
+        }
+      }
+      continue;
+    }
+
+    if (isTopic) {
+      const resolved = resolveTopicSlug(item);
+      if (resolved && !registry.includes(resolved.slug)) {
+        removed.push({ slot, work_id: item.work_id, reason: `topic_slug '${resolved.slug}' not in current bundle topic_registry` });
+        queue.active_window[slot] = null;
+      } else if (isTopic && !resolved) {
+        // Topic-scoped but unparsable slug — remove as stale
+        removed.push({ slot, work_id: item.work_id, reason: 'topic-scoped task with unparsable topic_slug' });
+        queue.active_window[slot] = null;
+      }
+    }
+  }
+
+  // Check refill_pool
+  const keepPool = [];
+  for (const item of queue.refill_pool) {
+    const isFinding = isFindingScoped(item);
+    const isTopic = isTopicScoped(item);
+
+    let shouldRemove = false;
+    let reason = '';
+
+    if (isFinding && findingIndex && item.payload?.finding_id) {
+      const findingIds = (findingIndex.findings || []).map(f => f.id);
+      if (!findingIds.includes(item.payload.finding_id)) {
+        shouldRemove = true;
+        reason = `finding_id '${item.payload.finding_id}' not in current bundle finding-index`;
+      }
+    } else if (isTopic) {
+      const resolved = resolveTopicSlug(item);
+      if (resolved && !registry.includes(resolved.slug)) {
+        shouldRemove = true;
+        reason = `topic_slug '${resolved.slug}' not in current bundle topic_registry`;
+      } else if (!resolved) {
+        shouldRemove = true;
+        reason = 'topic-scoped task with unparsable topic_slug';
+      }
+    }
+
+    if (shouldRemove) {
+      removed.push({ slot: 'refill_pool', work_id: item.work_id, reason });
+    } else {
+      keepPool.push(item);
+    }
+  }
+  queue.refill_pool = keepPool;
+
+  return { queue, removed };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Main command dispatch
+// ═══════════════════════════════════════════════════════════════════════════
+
 let queue = loadQueue(bundleDir);
 
 try {
   if (command === 'check') {
+    // Validate bundle_name first (QIV-002)
+    validateBundleName(queue, bundleDir);
+
+    // Check projection staleness (QIV-003)
+    const staleness = checkProjectionStaleness(bundleDir);
+    if (staleness.stale) {
+      console.error(`WARNING: ${staleness.reason}`);
+    }
+
     const feedback = inspect(queue, bundleDir);
     emit(feedback);
     process.exit(feedback.passed ? 0 : 1);
   }
 
   if (command === 'count') {
+    validateBundleName(queue, bundleDir);
     const active = SLOT_NAMES.filter((slot) => queue.active_window[slot] !== null).length;
     emit({
       pending: pendingCount(queue),
@@ -70,27 +433,46 @@ try {
     process.exit(0);
   }
 
-  if (command === 'enqueue') {
+  if (command === 'project') {
+    validateBundleName(queue, bundleDir);
+    const { outputPath, generatedAt, sourceHash } = writeProjection(queue, bundleDir);
+    emit({ ok: true, projection: outputPath, generated_at: generatedAt, source_queue_sha256: sourceHash });
+  } else if (command === 'enqueue') {
+    validateBundleName(queue, bundleDir);
     if (!values.task) throw new Error('--task is required');
-    queue = enqueue(queue, readJson(values.task));
+    const taskCard = readJson(values.task);
+
+    // QIV-001: Validate topic_slug against topic_registry
+    const validation = validateTopicSlug(taskCard, bundleDir);
+    if (!validation.valid) {
+      const error = { ok: false, error: validation.error, code: 'topic_validation_failed' };
+      emit(error);
+      process.exit(1);
+    }
+
+    queue = enqueue(queue, taskCard);
     saveQueue(bundleDir, queue);
     emit({ ok: true, queue });
   } else if (command === 'claim') {
+    validateBundleName(queue, bundleDir);
     const result = claim(queue, { actor: values.actor });
     saveQueue(bundleDir, result.queue);
     emit(result);
   } else if (command === 'complete') {
+    validateBundleName(queue, bundleDir);
     if (!values.result) throw new Error('--result is required');
     const result = complete(queue, readJson(values.result), bundleDir);
     saveQueue(bundleDir, result.queue);
     emit(result);
     process.exit(result.feedback.passed ? 0 : 1);
   } else if (command === 'fail') {
+    validateBundleName(queue, bundleDir);
     if (!values.failure) throw new Error('--failure is required');
     queue = fail(queue, readJson(values.failure), bundleDir);
     saveQueue(bundleDir, queue);
     emit({ ok: true, queue });
   } else if (command === 'preempt') {
+    validateBundleName(queue, bundleDir);
     if (!values.task) throw new Error('--task is required');
     queue = preempt(queue, readJson(values.task), {
       reason: values.reason,
@@ -100,9 +482,25 @@ try {
     saveQueue(bundleDir, queue);
     emit({ ok: true, queue });
   } else if (command === 'render') {
+    validateBundleName(queue, bundleDir);
     const projection = render(queue, bundleDir);
     saveQueue(bundleDir, queue);
     emit({ ok: true, projection });
+  } else if (command === 'repair') {
+    // QIV-004: repair --remove-stale
+    validateBundleName(queue, bundleDir);
+    if (values['remove-stale']) {
+      const result = repairRemoveStale(queue, bundleDir);
+      saveQueue(bundleDir, result.queue);
+      emit({
+        ok: true,
+        action: 'remove-stale',
+        removed_count: result.removed.length,
+        removed: result.removed,
+      });
+    } else {
+      throw new Error('repair requires --remove-stale flag');
+    }
   } else {
     usage();
     process.exit(1);

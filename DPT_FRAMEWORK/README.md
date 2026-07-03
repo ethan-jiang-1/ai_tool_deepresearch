@@ -12,7 +12,7 @@ Deep Research Framework (`DPT_FRAMEWORK/`) 的运行时入口说明。
 - 用户说"研究/调研/deep research/research report/帮我查…/…是什么"等研究意图；
 - 任何"我要就某个话题得到一份有来源、可核查的研究报告"的需求。
 
-**本框架就是项目的 Deep Research 引擎。** 用户要研究就用它跑，**不要**回退到任何内置 "deep research" skill 或通用 workflow——那些是替代品，本框架才是主体。
+**本框架就是项目的 Deep Research 引擎。** 用户要研究就用它跑，**不要**调用任何内置 "deep research" skill 或通用 research workflow——那些是替代品，本框架才是主体。入口 `RUN.md` Section 0 有完整禁用指令。
 
 不要浏览文件结构。直接走 `command_playbook/start-research.md` 流程：定名 → 创建 bundle → 写入 research question → 加载第一个 phase node。
 

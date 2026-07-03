@@ -30,6 +30,143 @@ describe('validate-workflow-package.mjs integration', () => {
     return { base, wd, nd, gd };
   }
 
+  function phaseMd({ id, phase, gate, title }) {
+    return `---
+{"node_type":"phase","id":"${id}","phase":"${phase}","gate":${gate === null ? 'null' : `"${gate}"`},"stop":"no","execution_contract":{"surface":"phase-agent","search_policy":"no_search"},"requires":[],"suggested_context":[]}
+---
+# ${title}
+
+## 0. Execution Brief
+
+- **Objective**: Test lifecycle objective.
+- **Start here**: Test lifecycle input.
+- **Path to pass**: Test lifecycle path.
+- **Completion check**: Test lifecycle check.
+- **Failure posture**: Test lifecycle failure posture.
+
+## 1. Stage Goal
+
+Test stage goal.
+
+## 2. Required Inputs
+
+Test required inputs.
+
+## 3. Allowed Actions
+
+Test allowed actions.
+
+## 4. Expected Artifacts
+
+Test expected artifacts.
+
+## 5. Gate Command
+
+Test gate command.
+
+## 6. On Gate Pass
+
+Test pass behavior.
+
+## 7. On Gate Fail
+
+Test fail behavior.
+
+## 8. Stop Behavior
+
+Test stop behavior.
+
+## 9. Anti-Cheating Rules
+
+Test anti-cheating rules.
+`;
+  }
+
+  function roleMd({ id, role, h1 }) {
+    return `---
+node_type: shared
+id: ${id}
+shared_scope: subagent-protocol
+role: ${role}
+authority: guidance-only
+execution_contract:
+  surface: relay-subagent-role
+  search_policy: subagent_performs_search
+  loaded_by: phase-agent
+  delivered_via: relay_task_md
+requires:
+  - shared/shared-subagent-protocol
+  - shared/shared-schemas
+suggested_context: []
+---
+# ${h1}
+
+## 0. Role Brief
+
+- **Role key**: \`${role}\`
+- **Used by**: Test phase agent.
+- **Receives**: Relay slot files.
+- **Produces**: Test outputs.
+- **Boundary**: Test role boundary.
+- **Handoff**: Test handoff.
+
+## 1. Purpose
+
+Test purpose.
+
+## 2. Search Focus
+
+Test search focus.
+
+## 3. Artifacts
+
+Test artifacts.
+
+## 4. Execution Within Relay Slot
+
+Test relay execution.
+
+## 5. Page Content Fetching
+
+Test fetching.
+
+## 6. Anti-Cheating Rules
+
+Test rules.
+
+## 7. Relationship to Phase Agent
+
+Test relationship.
+`;
+  }
+
+  function writeRequiredRoleSpecs(nd) {
+    const specs = [
+      {
+        file: 'subagent-dpt-source-intake.md',
+        id: 'subagent-dpt-source-intake',
+        role: 'dpt-source-intake',
+        h1: 'Relay Role: dpt-source-intake — Foundation Reference Intake',
+      },
+      {
+        file: 'subagent-dpt-evidence-extractor.md',
+        id: 'subagent-dpt-evidence-extractor',
+        role: 'dpt-evidence-extractor',
+        h1: 'Relay Role: dpt-evidence-extractor — Topic-Specific Deepening',
+      },
+      {
+        file: 'subagent-dpt-topic-scout.md',
+        id: 'subagent-dpt-topic-scout',
+        role: 'dpt-topic-scout',
+        h1: 'Relay Role: dpt-topic-scout — Gap-Fill Search',
+      },
+    ];
+
+    for (const spec of specs) {
+      writeFileSync(join(nd, 'phases', spec.file), roleMd(spec));
+    }
+  }
+
   before(() => {
     tmpRoot = createTempDir('validate-pkg');
   });
@@ -48,9 +185,10 @@ describe('validate-workflow-package.mjs integration', () => {
     }));
 
     writeFileSync(join(nd, 'phases/phase-setup.md'),
-      '---\n{"node_type":"phase","id":"phase-setup","phase":"setup","gate":"setup-ready","stop":"no","requires":[],"suggested_context":[]}\n---\n# Setup\n');
+      phaseMd({ id: 'phase-setup', phase: 'setup', gate: 'setup-ready', title: 'Setup' }));
     writeFileSync(join(nd, 'phases/phase-final.md'),
-      '---\n{"node_type":"phase","id":"phase-final","phase":"final","gate":null,"stop":"no","requires":[],"suggested_context":[]}\n---\n# Final\n');
+      phaseMd({ id: 'phase-final', phase: 'final', gate: null, title: 'Final' }));
+    writeRequiredRoleSpecs(nd);
     writeFileSync(join(nd, 'shared/shared-profile.md'),
       '---\n{"node_type":"shared","id":"shared-profile","requires":[]}\n---\n# Profile\n');
     writeFileSync(join(gd, 'gate-setup-ready.definition.json'),

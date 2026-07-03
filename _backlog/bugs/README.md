@@ -15,6 +15,10 @@
 
 ## 活跃列表
 
-无活跃 bug。
+- [BUG-014](BUG-014-phase-agent-bypasses-subagent-relay-regression.md) — Phase Agent 绕过 Sub-agent relay 直接做搜索（P0，BUG-006 回归）
+- [BUG-015](BUG-015-wave-gate-quality-rules-too-strict.md) — Wave gate 质量规则过严，非 relay 产出被结构性拒斥（P0，BUG-014 cascade effect）
+- [BUG-016](BUG-016-cross-bundle-queue-contamination-via-agent-context.md) — Agentic Queue 跨 Bundle 污染（P0，BUG-014 根因之一）
+- [BUG-017](BUG-017-trace-log-system-not-self-contained-for-diagnosis.md) — Trace/log 三层断裂，无法独立诊断 gate 失败（P1）
+- [BUG-018](BUG-018-wave0-repair-whack-a-mole-and-yaml-sanitization.md) — Wave0 gate 修复 whack-a-mole + Sub-agent YAML 未 sanitize + shared_ref 阈值不能归零（P1）
 
-**Next available bug ID: BUG-014**（= `_done/_fixed_bugs/` 最大编号 BUG-013 + 1）
+**Next available bug ID: BUG-019**

@@ -40,11 +40,159 @@ function scaffold(opts = {}) {
   };
   writeFileSync(join(wd, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
+  const phaseBody = (title = 'Test Node') => [
+    `# ${title}`,
+    '',
+    '## 0. Execution Brief',
+    '',
+    '- **Objective**: Test objective.',
+    '- **Start here**: Test start.',
+    '- **Path to pass**: Test path.',
+    '- **Completion check**: Test completion.',
+    '- **Failure posture**: Test failure posture.',
+    '',
+    '## 1. Stage Goal',
+    '',
+    'Test stage goal.',
+    '',
+    '## 2. Required Inputs',
+    '',
+    'Test inputs.',
+    '',
+    '## 3. Allowed Actions',
+    '',
+    'Test actions.',
+    '',
+    '## 4. Expected Artifacts',
+    '',
+    'Test artifacts.',
+    '',
+    '## 5. Gate Command',
+    '',
+    'Test gate command.',
+    '',
+    '## 6. On Gate Pass',
+    '',
+    'Test pass behavior.',
+    '',
+    '## 7. On Gate Fail',
+    '',
+    'Test fail behavior.',
+    '',
+    '## 8. Stop Behavior',
+    '',
+    'Test stop behavior.',
+    '',
+    '## 9. Anti-Cheating Rules',
+    '',
+    'Test rules.',
+  ].join('\n');
+
+  const roleSpecFixtures = {
+    'phases/subagent-dpt-source-intake.md': {
+      fm: {
+        node_type: 'shared',
+        id: 'subagent-dpt-source-intake',
+        shared_scope: 'subagent-protocol',
+        role: 'dpt-source-intake',
+        authority: 'guidance-only',
+        execution_contract: { surface: 'relay-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'relay_task_md' },
+        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
+        suggested_context: [],
+      },
+      h1: '# Relay Role: dpt-source-intake — Foundation Reference Intake',
+      roleKey: 'dpt-source-intake',
+    },
+    'phases/subagent-dpt-evidence-extractor.md': {
+      fm: {
+        node_type: 'shared',
+        id: 'subagent-dpt-evidence-extractor',
+        shared_scope: 'subagent-protocol',
+        role: 'dpt-evidence-extractor',
+        authority: 'guidance-only',
+        execution_contract: { surface: 'relay-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'relay_task_md' },
+        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
+        suggested_context: [],
+      },
+      h1: '# Relay Role: dpt-evidence-extractor — Topic-Specific Deepening',
+      roleKey: 'dpt-evidence-extractor',
+    },
+    'phases/subagent-dpt-topic-scout.md': {
+      fm: {
+        node_type: 'shared',
+        id: 'subagent-dpt-topic-scout',
+        shared_scope: 'subagent-protocol',
+        role: 'dpt-topic-scout',
+        authority: 'guidance-only',
+        execution_contract: { surface: 'relay-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'relay_task_md' },
+        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
+        suggested_context: [],
+      },
+      h1: '# Relay Role: dpt-topic-scout — Gap-Fill Search',
+      roleKey: 'dpt-topic-scout',
+    },
+  };
+
+  const roleBody = ({ h1, roleKey }) => [
+    h1,
+    '',
+    '## 0. Role Brief',
+    '',
+    `- **Role key**: \`${roleKey}\``,
+    '- **Used by**: Test phase agent.',
+    '- **Receives**: Relay slot files.',
+    '- **Produces**: Test outputs.',
+    '- **Boundary**: Test role boundary.',
+    '- **Handoff**: Test handoff.',
+    '',
+    '## 1. Purpose',
+    '',
+    'Test purpose.',
+    '',
+    '## 2. Search Focus',
+    '',
+    'Test search focus.',
+    '',
+    '## 3. Artifacts',
+    '',
+    'Test artifacts.',
+    '',
+    '## 4. Execution Within Relay Slot',
+    '',
+    'Test relay execution.',
+    '',
+    '## 5. Page Content Fetching',
+    '',
+    'Test fetching.',
+    '',
+    '## 6. Anti-Cheating Rules',
+    '',
+    'Test rules.',
+    '',
+    '## 7. Relationship to Phase Agent',
+    '',
+    'Test relationship.',
+  ].join('\n');
+
   // node files (opts.nodes maps nodeRef → frontmatter object)
-  const defaultFM = (gate) => ({ node_type: 'phase', id: 'test', phase: 'test', gate, stop: 'no', requires: [], suggested_context: [] });
+  const defaultFM = (gate) => ({ node_type: 'phase', id: 'test', phase: 'test', gate, stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: [], suggested_context: [] });
   const nodes = opts.nodes || {};
+  for (const [ref, spec] of Object.entries(roleSpecFixtures)) {
+    if (opts.includeDefaultRoleSpecs === false || nodes[ref]) continue;
+    writeFileSync(join(nd, ref), `---\n${JSON.stringify(spec.fm)}\n---\n${roleBody(spec)}\n`);
+  }
+
   for (const [ref, fm] of Object.entries(nodes)) {
-    writeFileSync(join(nd, ref), `---\n${JSON.stringify(fm || defaultFM(null))}\n---\n# Test Node\n`);
+    let fmObj = fm || defaultFM(null);
+    // Auto-inject execution_contract if this is a lifecycle phase node
+    // that doesn't already have one (gate is defined, or phase field present)
+    if (!fmObj.execution_contract && fmObj.gate !== undefined) {
+      fmObj = { ...fmObj, execution_contract: { surface: 'phase-agent', search_policy: 'no_search' } };
+    }
+    const body = ref.startsWith('phases/phase-')
+      ? phaseBody(fmObj.id || 'Test Node')
+      : '# Test Node\n';
+    writeFileSync(join(nd, ref), `---\n${JSON.stringify(fmObj)}\n---\n${body}\n`);
   }
 
   // Gate definitions (opts.gateDefs maps gateKey → definition object)
@@ -80,8 +228,8 @@ describe('ValidateWorkflowPackage — happy path', () => {
         shared: ['shared/shared-profile.md'],
       },
       nodes: {
-        'phases/phase-setup.md': { node_type: 'phase', id: 'phase-setup', phase: 'setup', gate: 'setup-ready', stop: 'no', requires: ['shared-profile'], suggested_context: [] },
-        'phases/phase-final.md': { node_type: 'phase', id: 'phase-final', phase: 'final', gate: null, stop: 'no', requires: [], suggested_context: [] },
+        'phases/phase-setup.md': { node_type: 'phase', id: 'phase-setup', phase: 'setup', gate: 'setup-ready', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: ['shared-profile'], suggested_context: [] },
+        'phases/phase-final.md': { node_type: 'phase', id: 'phase-final', phase: 'final', gate: null, stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: [], suggested_context: [] },
         'shared/shared-profile.md': { node_type: 'shared', id: 'shared-profile', requires: [] },
       },
       gateDefs: {
@@ -164,7 +312,7 @@ describe('ValidateWorkflowPackage — gate_binding_mismatch', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'WRONG_GATE_NAME', stop: 'no', requires: [], suggested_context: [] },
+        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'WRONG_GATE_NAME', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'relay_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
       },
       gateDefs: {
         'wave0-complete': { gate: 'wave0-complete', rules: [] },
@@ -193,7 +341,7 @@ describe('ValidateWorkflowPackage — gate_binding_mismatch', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', requires: [], suggested_context: [] },
+        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'relay_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
       },
       // No gate definition file
     });
@@ -219,7 +367,7 @@ describe('ValidateWorkflowPackage — gate_binding_mismatch', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-final.md': { node_type: 'phase', id: 'phase-final', phase: 'final', gate: null, stop: 'no', requires: [], suggested_context: [] },
+        'phases/phase-final.md': { node_type: 'phase', id: 'phase-final', phase: 'final', gate: null, stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: [], suggested_context: [] },
       },
     });
 
@@ -245,7 +393,7 @@ describe('ValidateWorkflowPackage — gate definition checks', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', requires: [], suggested_context: [] },
+        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'relay_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
       },
       gateDefs: {
         'wave0-complete': { gate: 'instantiation-complete', rules: [] },
@@ -277,7 +425,7 @@ describe('ValidateWorkflowPackage — gate definition checks', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', requires: [], suggested_context: [] },
+        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'relay_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
       },
     });
 
@@ -305,7 +453,7 @@ describe('ValidateWorkflowPackage — transition table checks', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-setup.md': { node_type: 'phase', id: 'phase-setup', phase: 'setup', gate: 'setup-ready', stop: 'no', requires: [], suggested_context: [] },
+        'phases/phase-setup.md': { node_type: 'phase', id: 'phase-setup', phase: 'setup', gate: 'setup-ready', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: [], suggested_context: [] },
       },
       chain: {
         'phases/phase-ghost.md': { passed: 'phases/phase-setup.md' },
@@ -339,8 +487,8 @@ describe('ValidateWorkflowPackage — transition table checks', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-setup.md': { node_type: 'phase', id: 'phase-setup', phase: 'setup', gate: 'setup-ready', stop: 'no', requires: [], suggested_context: [] },
-        'phases/phase-final.md': { node_type: 'phase', id: 'phase-final', phase: 'final', gate: null, stop: 'no', requires: [], suggested_context: [] },
+        'phases/phase-setup.md': { node_type: 'phase', id: 'phase-setup', phase: 'setup', gate: 'setup-ready', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: [], suggested_context: [] },
+        'phases/phase-final.md': { node_type: 'phase', id: 'phase-final', phase: 'final', gate: null, stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: [], suggested_context: [] },
       },
       chain: {
         // intentionally missing phase-setup entry
@@ -388,7 +536,7 @@ describe('ValidateWorkflowPackage — transition table checks', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-final.md': { node_type: 'phase', id: 'phase-final', phase: 'final', gate: null, stop: 'no', requires: [], suggested_context: [] },
+        'phases/phase-final.md': { node_type: 'phase', id: 'phase-final', phase: 'final', gate: null, stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: [], suggested_context: [] },
       },
     });
 
@@ -415,7 +563,7 @@ describe('ValidateWorkflowPackage — dependency resolution', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', requires: ['shared-profile'], suggested_context: [] },
+        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'relay_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-profile', 'shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
       },
       gateDefs: {
         'wave0-complete': { gate: 'wave0-complete', rules: [] },
@@ -476,16 +624,16 @@ suggested_context: []
     scaffold({
       manifest: {
         phases: [
-          { key: 'wave0', node: 'phases/phase-wave0.md', gate: 'wave0-complete' },
+          { key: 'test', node: 'phases/phase-test.md', gate: 'test-gate' },
         ],
         shared: ['shared/shared-profile.md'],
       },
       nodes: {
-        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', requires: ['shared-profile'], suggested_context: [] },
+        'phases/phase-test.md': { node_type: 'phase', id: 'phase-test', phase: 'test', gate: 'test-gate', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: ['shared-profile'], suggested_context: [] },
         'shared/shared-profile.md': { node_type: 'shared', id: 'shared-profile', requires: [] },
       },
       gateDefs: {
-        'wave0-complete': { gate: 'wave0-complete', rules: [] },
+        'test-gate': { gate: 'test-gate', rules: [] },
       },
     });
 
@@ -502,16 +650,16 @@ suggested_context: []
     scaffold({
       manifest: {
         phases: [
-          { key: 'wave0', node: 'phases/phase-wave0.md', gate: 'wave0-complete' },
+          { key: 'setup', node: 'phases/phase-setup.md', gate: 'setup-ready' },
         ],
         shared: ['shared/shared-profile.md'],
       },
       nodes: {
-        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', requires: ['shared-profile.md'], suggested_context: [] },
+        'phases/phase-setup.md': { node_type: 'phase', id: 'phase-setup', phase: 'setup', gate: 'setup-ready', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: ['shared-profile.md'], suggested_context: [] },
         'shared/shared-profile.md': { node_type: 'shared', id: 'shared-profile', requires: [] },
       },
       gateDefs: {
-        'wave0-complete': { gate: 'wave0-complete', rules: [] },
+        'setup-ready': { gate: 'setup-ready', rules: [] },
       },
     });
 
@@ -533,7 +681,7 @@ suggested_context: []
         shared: [],
       },
       nodes: {
-        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', requires: [], suggested_context: ['reference-doc'] },
+        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: [], suggested_context: ['reference-doc'] },
       },
       gateDefs: {
         'wave0-complete': { gate: 'wave0-complete', rules: [] },
@@ -637,6 +785,143 @@ describe('ValidateWorkflowPackage — manifest_unreadable', () => {
   });
 });
 
+// ─── 6. Self-documenting node contract ────────────────────────────────────
+
+describe('ValidateWorkflowPackage — self-documenting lifecycle and role nodes', () => {
+  it('reports when a manifest lifecycle phase lacks Execution Brief', () => {
+    const { nd } = scaffold({
+      manifest: {
+        phases: [
+          { key: 'setup', node: 'phases/phase-setup.md', gate: 'setup-ready' },
+        ],
+        shared: [],
+      },
+      gateDefs: {
+        'setup-ready': { gate: 'setup-ready', rules: [] },
+      },
+    });
+
+    writeFileSync(join(nd, 'phases/phase-setup.md'), `---
+node_type: phase
+id: phase-setup
+phase: setup
+gate: setup-ready
+stop: "no"
+execution_contract:
+  surface: phase-agent
+  search_policy: no_search
+requires: []
+suggested_context: []
+---
+# Phase: Setup
+
+## 1. Stage Goal
+`);
+
+    const report = validateWorkflowPackage({
+      workflowsDir: join(TMP, 'workflows'),
+      gateDefsDir: join(TMP, 'gate_defs'),
+    });
+
+    assert.strictEqual(report.passed, false);
+    const issue = report.issues.find(i => i.class === 'lifecycle_execution_brief_invalid');
+    assert.ok(issue, 'Expected lifecycle_execution_brief_invalid issue');
+    cleanup();
+  });
+
+  it('reports missing relay role spec instead of silently skipping it', () => {
+    scaffold({
+      manifest: { phases: [], shared: [] },
+      includeDefaultRoleSpecs: false,
+    });
+
+    const report = validateWorkflowPackage({
+      workflowsDir: join(TMP, 'workflows'),
+      gateDefsDir: join(TMP, 'gate_defs'),
+    });
+
+    assert.strictEqual(report.passed, false);
+    const issue = report.issues.find(i => i.class === 'missing_role_spec');
+    assert.ok(issue, 'Expected missing_role_spec issue');
+    assert.ok(issue.detail.includes('subagent-dpt-source-intake.md'));
+    cleanup();
+  });
+
+  it('reports when a role spec uses a lifecycle Phase H1', () => {
+    const { nd } = scaffold({
+      manifest: { phases: [], shared: [] },
+    });
+
+    writeFileSync(join(nd, 'phases/subagent-dpt-topic-scout.md'), `---
+node_type: shared
+id: subagent-dpt-topic-scout
+shared_scope: subagent-protocol
+role: dpt-topic-scout
+authority: guidance-only
+execution_contract:
+  surface: relay-subagent-role
+  search_policy: subagent_performs_search
+  loaded_by: phase-agent
+  delivered_via: relay_task_md
+requires:
+  - shared/shared-subagent-protocol
+  - shared/shared-schemas
+suggested_context: []
+---
+# Phase: Wave2 Sub-Agent
+
+## 0. Role Brief
+
+- **Role key**: \`dpt-topic-scout\`
+- **Used by**: Test.
+- **Receives**: Test.
+- **Produces**: Test.
+- **Boundary**: Test.
+- **Handoff**: Test.
+
+## 1. Purpose
+
+Test.
+
+## 2. Search Focus
+## 3. Artifacts
+## 4. Execution Within Relay Slot
+## 5. Page Content Fetching
+## 6. Anti-Cheating Rules
+## 7. Relationship to Phase Agent
+`);
+
+    const report = validateWorkflowPackage({
+      workflowsDir: join(TMP, 'workflows'),
+      gateDefsDir: join(TMP, 'gate_defs'),
+    });
+
+    assert.strictEqual(report.passed, false);
+    assert.ok(report.issues.some(i => i.class === 'role_spec_h1_mismatch'), 'Expected role_spec_h1_mismatch issue');
+    assert.ok(report.issues.some(i => i.class === 'role_spec_phase_h1'), 'Expected role_spec_phase_h1 issue');
+    cleanup();
+  });
+
+  it('reports when a relay role spec is listed in manifest.shared[]', () => {
+    scaffold({
+      manifest: {
+        phases: [],
+        shared: ['phases/subagent-dpt-topic-scout.md'],
+      },
+    });
+
+    const report = validateWorkflowPackage({
+      workflowsDir: join(TMP, 'workflows'),
+      gateDefsDir: join(TMP, 'gate_defs'),
+    });
+
+    assert.strictEqual(report.passed, false);
+    const issue = report.issues.find(i => i.class === 'role_spec_in_manifest_shared');
+    assert.ok(issue, 'Expected role_spec_in_manifest_shared issue');
+    cleanup();
+  });
+});
+
 // ─── Edge cases ────────────────────────────────────────────────────────────
 
 describe('ValidateWorkflowPackage — edge cases', () => {
@@ -665,7 +950,7 @@ describe('ValidateWorkflowPackage — edge cases', () => {
       },
       nodes: {
         // phase-wave0 exists but with wrong gate
-        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wrong-gate', stop: 'no', requires: ['missing-dep'], suggested_context: [] },
+        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wrong-gate', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: ['missing-dep'], suggested_context: [] },
         // phase-wave1.md is missing entirely
       },
       // No gate definitions at all

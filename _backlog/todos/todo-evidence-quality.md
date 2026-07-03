@@ -46,8 +46,8 @@
 
 | 文件 | 原文 |
 |------|------|
-| `phase-readiness.md:20` | phases/phase-readiness.md | **MUST NOT 做 content quality 或 writing quality 判断** |
-| `phase-wave2-subagent.md:58` | phases/phase-wave2-subagent.md | Sub-agent 不跑 gate。**Result quality 由 Phase Agent 在 ingestion 时判断** |
+| `phase-readiness.md` | phases/phase-readiness.md | **MUST NOT 做 content quality 或 writing quality 判断** |
+| `subagent-dpt-topic-scout.md` | phases/subagent-dpt-topic-scout.md | Sub-agent 不跑 gate。**Result quality 由 Phase Agent 在 ingestion 时判断** |
 | `shared-anti-cheating-rules.md:34` | shared/ | 禁止在 pre-research 阶段声称 evidence coverage 或 synthesis quality |
 
 **本 TODO 需要明确立场**：evidence quality 评估到底跑在 Engine（deterministic 规则：substance=thin → discard）还是 Phase Agent（LLM 判断质量）？

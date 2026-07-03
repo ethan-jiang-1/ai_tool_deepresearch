@@ -107,6 +107,18 @@
       "target": "rb_status.json#/next_gate",
       "expected": "hitl2_recorded",
       "failure_message": "rb_status.json next_gate must be 'hitl2_recorded'. Status may have drifted \u2014 restore the correct value."
+    },
+    {
+      "_comment": "Wave2 conditional provenance: only triggered when search/evidence/reference outputs exist (reference/00-cross-*.md). Pure synthesis/backfill artifacts (synthesis.md, cross-topic-ledger.md, finding-index.yaml) do NOT require relay provenance.",
+      "id": "wave2_cross_ref_coverage",
+      "check": "output_declaration_coverage",
+      "target": "reference/00-cross-*.md",
+      "wave": "wave2",
+      "output_selectors": {
+        "glob": "reference/00-cross-*.md",
+        "roles": ["reference"]
+      },
+      "failure_message": "Wave2 promoted cross references (reference/00-cross-*.md) exist without relay provenance. These must be produced through delegated relay tasks (dpt-topic-scout or dpt-evidence-extractor). Direct-written cross references are not valid."
     }
   ]
 }

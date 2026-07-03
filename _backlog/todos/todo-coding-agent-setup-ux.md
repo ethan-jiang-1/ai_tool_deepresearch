@@ -26,9 +26,9 @@ DPT_FRAMEWORK 的运行模型里，人类介入点只有两个——`hitl1`（�
 |---------|---------|---------|
 | `Bash(node …)` 跑 gate CLI | 每个 phase 的 "Gate Command"（`phase-setup.md:47`、`phase-hitl1.md:67` 等，10 个 gate） | Claude Code 已部分 allow（`.claude/settings.local.json:18` `Bash(node *)`）；**Codex 无等价 allowlist** |
 | `Bash(node … instantiate-run-bundle.mjs)` | `start-research.md:29` | 建目录树 + 写文件 |
-| `WebSearch` | `phase-wave0.md:33`、`phase-wave1.md:33`、`phase-wave2-subagent.md:28` | 网络工具，未广泛 allow，每次问 |
-| `WebFetch` | `shared-subagent-protocol.md:130,134`；`phase-wave2-subagent.md:29` | 只 allow 了 `github.com`（`settings.local.json:15`）；研究需要**任意域名**，每个新域名弹一次 |
-| `curl` / `python3` / `node -e`（Tier-2 fetch fallback） | `shared-subagent-protocol.md:139-143`、`phase-wave0-subagent.md:84`、`phase-wave2-subagent.md:30` | Codex **没有内置 fetch 工具**（`:131`），被迫走 Bash fallback；`Bash(curl *)` / `Bash(python3 *)` 都未 allow |
+| `WebSearch` | `phase-wave0.md`、`phase-wave1.md`、`subagent-dpt-topic-scout.md` | 网络工具，未广泛 allow，每次问 |
+| `WebFetch` | `shared-subagent-protocol.md`；`subagent-dpt-topic-scout.md` | 只 allow 了 `github.com`；研究需要**任意域名**，每个新域名弹一次 |
+| `curl` / `python3` / `node -e`（Tier-2 fetch fallback） | `shared-subagent-protocol.md`、`subagent-dpt-source-intake.md`、`subagent-dpt-topic-scout.md` | Codex **没有内置 fetch 工具**，被迫走 Bash fallback；`Bash(curl *)` / `Bash(python3 *)` 都未 allow |
 | `Write` / `Edit` 到 `dpt_rb_*` | 所有 phase 的 Allowed Actions（`phase-hitl1.md:36-48` 等） | 写 `rb_plan.md`/`rb_profile.yaml`/`rb_status.json`/`rb_queue.json`/`rb_trace.jsonl`/`artifacts/**`；default 模式弹 |
 | `setup-real-subagents.md:51-65` | 一次性 setup | 写 12 个 agent 文件进 `.claude/agents/` + `.codex/agents/`；弹（且 `:18-19` 要求 `DPT managed:` 标记，不能盲自动应用） |
 | subagent spawn（Task / Codex agents） | `shared-subagent-protocol.md`；`subagent-relay.mjs:38,429` | 子 agent 的工具调用各自弹，除非父 run 在 permissive 模式 |

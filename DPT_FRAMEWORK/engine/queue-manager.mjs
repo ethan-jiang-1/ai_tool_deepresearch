@@ -129,6 +129,7 @@ const ActiveWindowSchema = z.object(Object.fromEntries(SLOT_NAMES.map((slot) => 
 
 const QueueStateSchema = z.object({
   queue_id: z.string().min(1),
+  bundle_name: z.string().nullable().default(null),
   queue_health: QueueHealth.default('ready'),
   stop_authorization_state: StopAuthorizationState.default('unauthorized_continue_required'),
   active_window: ActiveWindowSchema,
@@ -192,6 +193,7 @@ function queueStateFromFile(raw, { queueId = 'agentic-queue' } = {}) {
   const ts = now();
   return validateQueue({
     queue_id: queueId,
+    bundle_name: parsed.bundle_name ?? null,
     queue_health: parsed.queue_health,
     stop_authorization_state: parsed.stop_authorization_state,
     active_window: Object.fromEntries(SLOT_NAMES.map((slot) => [slot, parsed[slot] ?? null])),
@@ -206,6 +208,7 @@ function queueStateFromFile(raw, { queueId = 'agentic-queue' } = {}) {
 function canonicalQueueFileShape(queue) {
   const q = validateQueue(queue);
   return QueueSchema.parse({
+    bundle_name: q.bundle_name,
     queue_health: q.queue_health,
     stop_authorization_state: q.stop_authorization_state,
     ...Object.fromEntries(SLOT_NAMES.map((slot) => [slot, q.active_window[slot]])),
@@ -814,13 +817,20 @@ export function complete(queue, result, bundleDir = process.cwd()) {
   }
 
   // ── Standard receipt check ──
-  const receipt = parsedResult.receipt || current.completion_receipt;
-  const receiptCheck = checkReceipts(q, { ...current, required_receipts: [receipt] }, bundleDir);
-  traceEntry('receipt_checked', { source: 'agq-complete', work_id: current.work_id, passed: receiptCheck.passed, receipt });
-  if (!receiptCheck.passed) {
-    traceEntry('check', { source: 'agq-complete', step: 'completion_receipt', passed: false, detail: receiptCheck.inspect.join('; ') });
-    logEvent('warn', 'queue_complete_receipt_fail', { kind: 'receipt_check', work_id: current.work_id, receipt, reason: receiptCheck.inspect.join('; ') });
-    return { queue: validateQueue(touchQueue(q)), feedback: receiptCheck };
+  // AGQ-001/004: completion_receipt may be null for supplementary tasks with empty required_receipts.
+  // In that case, skip the receipt check — delegated relay provenance and downstream gates decide validity.
+  const currentReceipt = parsedResult.receipt || current.completion_receipt;
+  if (currentReceipt !== null) {
+    const receiptCheck = checkReceipts(q, { ...current, required_receipts: [currentReceipt] }, bundleDir);
+    traceEntry('receipt_checked', { source: 'agq-complete', work_id: current.work_id, passed: receiptCheck.passed, receipt: currentReceipt });
+    if (!receiptCheck.passed) {
+      traceEntry('check', { source: 'agq-complete', step: 'completion_receipt', passed: false, detail: receiptCheck.inspect.join('; ') });
+      logEvent('warn', 'queue_complete_receipt_fail', { kind: 'receipt_check', work_id: current.work_id, receipt: currentReceipt, reason: receiptCheck.inspect.join('; ') });
+      return { queue: validateQueue(touchQueue(q)), feedback: receiptCheck };
+    }
+  } else {
+    // null completion_receipt: skip receipt check; delegated relay provenance decides validity
+    traceEntry('receipt_checked', { source: 'agq-complete', work_id: current.work_id, passed: true, receipt: null, note: 'null receipt — deferred to relay provenance' });
   }
   current.status = 'done';
   current.updated_at = now();
@@ -1031,7 +1041,7 @@ export function makeItem(overrides = {}) {
     verification: overrides.verification || { engine: [], agent: [] },
     writes_to: overrides.writes_to || [],
     status_sync: overrides.status_sync || [],
-    completion_receipt: overrides.completion_receipt || 'none',
+    completion_receipt: overrides.completion_receipt !== undefined ? overrides.completion_receipt : 'none',
     failure_route: overrides.failure_route || 'queue repair work',
     status: overrides.status || 'queued',
     preempted_from_slot: overrides.preempted_from_slot || 'not_applicable',

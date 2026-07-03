@@ -4,17 +4,30 @@ id: phase-wave0
 phase: wave0
 gate: wave0-complete
 stop: "no"
+execution_contract:
+  surface: phase-agent
+  search_policy: relay_required
+  delegated_role_keys:
+    - dpt-source-intake
 requires:
   - shared/shared-profile
   - shared/shared-schemas
   - shared/shared-silent-execution
-suggested_context:
-  - shared/shared-anti-cheating-rules
   - shared/shared-subagent-protocol
-  - phases/phase-wave0-subagent
+  - shared/shared-anti-cheating-rules
+suggested_context:
+  - phases/subagent-dpt-source-intake
 ---
 
 # Phase: Wave0 — Foundation Shared Reference
+
+## 0. Execution Brief
+
+- **Objective**: Run relay-backed foundation source intake for every topic.
+- **Start here**: Load queue state, `topic_registry`, seed topic files, and role guidance `dpt-source-intake`.
+- **Path to pass**: Enqueue delegated source-intake tasks, spawn relay Sub-agents, complete with committed slot results, update `reference/_INDEX.md`, then run the Wave0 gate.
+- **Completion check**: `check-gate-wave0-complete.mjs` passes for `phases/phase-wave0.md`.
+- **Failure posture**: Do not bypass relay with direct search; use gate feedback for refill/repair loops and record silent degradation only after bounded attempts.
 
 ## 1. Stage Goal
 
@@ -85,7 +98,7 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 
 ### 3.2 Batch Parallel Execution — 引用 Shared Sub-agent Protocol
 
-Wave0 的 claim→execute→complete 使用 relay 批量并行执行（灌料→stage→并行 spawn→collect-as-return→backfill→补位→merge→gate）。Sub-agent 的具体搜索和产出指令见 `phase-wave0-subagent.md`（via `suggested_context`）。Relay 基础设施（slot 契约、目录结构、并发控制、禁区清单）见 `shared-subagent-protocol.md`。
+Wave0 的 claim→execute→complete 使用 relay 批量并行执行（灌料→stage→并行 spawn→collect-as-return→backfill→补位→merge→gate）。Sub-agent 的具体搜索和产出指令见 `subagent-dpt-source-intake.md`（via `suggested_context`）。Relay 基础设施（slot 契约、目录结构、并发控制、禁区清单）见 `shared-subagent-protocol.md`。
 
 **Wave0 参数表**：
 
@@ -110,6 +123,10 @@ Wave0 的 claim→execute→complete 使用 relay 批量并行执行（灌料→
 - **即时回填 seed topic（不可跳过）**：每个 topic 的 complete 成功后，**在 claim 下一个 task 之前**，必须立刻回填 `seed_topics/{topic.slug}.md`：`grep -n '__BACKFILL_WAVE0_EVIDENCE__'` 定位 token → **替换 token 行**为 ref 摘要列表（`- **ref-XX-NN**: ...`）。趁 Sub-agent 搜索结果还 fresh 就写，不等 wave0 结束
 
 ### 3.3 Queue 空后 — 收尾与 Gate
+
+#### Transition trigger
+
+当 `operate-queue claim <bundle> ...` 返回 `item: null` 时，表示 active queue 已被 drain。Agent 应进入本节的 closeout/gate 流程，不得因为没有新 task 就自行发明 work item。
 
 当 claim 返回 `item: null`（queue 空）时：
 
