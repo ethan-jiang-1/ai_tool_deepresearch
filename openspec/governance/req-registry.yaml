@@ -79,6 +79,8 @@ prefixes:
   SEG: seg2node
   SHC: shared-node-content
   SOR: schema-core                 # sub-prefix of SCO
+  SRD: subagent-relay-driver
+  SRL: subagent-runtime-logging
   STM: seed-topic-materialization
   SUC: subagent-collect
   SUD: subagent-dispatch
@@ -231,6 +233,11 @@ RPG-003: relay-provenance-gate — Gate detects suspected relay bypass when arti
 RPG-004: relay-provenance-gate — Provenance checks coexist with structural checks in standard gate definitions
 RPG-005: relay-provenance-gate — Gate verifies scoped output declaration coverage for current phase outputs
 RPG-006: relay-provenance-gate — Wave2 relay provenance is conditional on search evidence
+RPG-007: relay-provenance-gate — Gate emits provenance_nonce_mismatch diagnostic when slot nonce is non-UUID or absent from dispatch.json (advisory only)
+RPG-008: relay-provenance-gate — Gate emits relay_commit_missing diagnostic when a slot lacks relay_commit_done trace (advisory only)
+RPG-009: relay-provenance-gate — Gate emits agent_timestamp_span_suspicious diagnostic when spawnedAt/completedAt span is sub-second (advisory only)
+RPG-010: relay-provenance-gate — Framework ships a provenance-forensics judgment guide (5 signals + decision matrix + write-back, content from plan §10) so a future coding agent can decide from landed evidence
+RPG-011: relay-provenance-gate — Gate emits lifecycle_events_missing diagnostic when an evidence-producing slot lacks nonce-carrying lifecycle events (advisory only; read-side for SRL-004)
 
 # repair-loop
 REL-001: repair-loop — Repair checkpoint loopback and deterministic termination
@@ -282,6 +289,17 @@ SUS-001: subagent-slots — Subagent slot lifecycle state machine and wave-scope
 SUD-002: subagent-dispatch — Queue task card targets.delegates triggers relay-based dynamic dispatch (task to SlotConfig mapping)
 SUD-003: subagent-dispatch — Batch sub-agent protocol defines collect-as-return loop with replacement dispatch
 SUC-002: subagent-collect — Per-slot collect during batch sub-agent execution (ingestAgentReceipt + commitSlotResult)
+SUD-004: subagent-dispatch — Staging writes per-slot _beacon.json (bundle_dir, log_cli, slot_key, UUID receipt_nonce)
+SUD-005: subagent-dispatch — dispatch.json persists each slot engine-generated UUID receipt_nonce for forensic binding
+SUD-006: subagent-dispatch — buildSpawnPrompt hands sub-agent only slot directory plus beacon pointer (beacon mode)
+SRD-001: subagent-relay-driver — Driver CLI orchestrates relay slot lifecycle end-to-end via stage/commit subcommands
+SRD-002: subagent-relay-driver — Driver performs no search, evidence judgment, or routing (deterministic lifecycle only)
+SRD-003: subagent-relay-driver — Driver passes result through commitSlotResult validation unchanged (no hand-written slot files)
+SRD-004: subagent-relay-driver — Driver-driven slot produces engine trace and persisted UUID nonce (hand-fake-distinguishable)
+SRL-001: subagent-runtime-logging — Sub-agent emits lifecycle events via log-event.mjs (search_start/done, fetch_done, file_written, error, work_done)
+SRL-002: subagent-runtime-logging — Lifecycle events carry the slot beacon receipt_nonce (UUID)
+SRL-003: subagent-runtime-logging — Sub-agent reads _beacon.json for bundle_dir/log_cli/nonce as single source of truth
+SRL-004: subagent-runtime-logging — Lifecycle events are the Layer-2 execution-proof signal read by provenance forensics
 # wave1-intake
 WAI-001: wave1-intake — Wave1 phase uses queue-driven three-stage execution for topic-specific deepening
 WAI-002: wave1-intake — Wave1 deepening task card targets sub-agent via targets.delegates (dpt-evidence-extractor)
@@ -445,6 +463,9 @@ WNC-006: workflow-node-contract — Skeleton completeness criteria (parseable fr
 WNC-007: workflow-node-contract — Workflow package consistency validation across manifest, frontmatter, gate definitions, transition tables, and loader runtime cache / dependency plan
 WNC-008: workflow-node-contract — Autonomous contract header injection in assessNode() for stop:no phases (prepended after frontmatter, before body)
 WNC-009: workflow-node-contract — Universal silent execution dependency (every stop:no phase SHALL require shared/shared-silent-execution)
+WNC-010: workflow-node-contract — Sub-agent role specs mandate lifecycle logging (read beacon, emit events with nonce, always-loaded)
+WNC-011: workflow-node-contract — taskMarkdownForSlot includes the lifecycle-logging directive in generated task.md
+WNC-012: workflow-node-contract — Phase workflow nodes / shared-subagent-protocol direct the Phase Agent to drive the relay via drive-relay-slot (demand-side wiring, avoids driver dead-code)
 GSK-001: gate-skeleton — Gate definition JSON skeleton structure (gate, description, rules[] with id/check/target/threshold/failure_message)
 GSK-002: "gate-skeleton — Gate CLI skeleton shape (parseArgs, --bundle/--current-node required, check/inspect/advice JSON output, exit codes)"
 GSK-003: gate-skeleton — One gate per CLI (8 independent CLI wrappers, no generic runner with subcommand)
