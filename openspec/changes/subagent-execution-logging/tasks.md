@@ -1,6 +1,6 @@
 # Tasks — subagent-execution-logging
 
-> 实现顺序按依赖：先 engine beacon/nonce（其他都读它）→ driver（让 engine 函数有 runtime 调用者）→ role spec/task.md logging 强制 → gate forensic 诊断 → 受控 playbook 验证 5 信号 → version + governance 收尾。
+> 实现顺序按依赖：先 engine beacon/nonce（其他都读它）→ driver（让 engine 函数有 runtime 调用者）→ role spec/task.md logging 强制 → gate forensic 诊断 → 受控 playbook 验证 S0–S5 信号（6-tier 矩阵）→ version + governance 收尾。
 > 详细设计见 `design.md`；判决手册见 `_backlog/plans/subagent-logging-come-alive-plan.md` §10。
 
 ## 1. Engine: beacon 模式 + nonce 持久化 + trace 链 nonce-anchoring（SUD-004/005/006/007）

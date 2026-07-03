@@ -236,7 +236,7 @@ RPG-006: relay-provenance-gate — Wave2 relay provenance is conditional on sear
 RPG-007: relay-provenance-gate — Gate emits provenance_nonce_mismatch diagnostic when slot nonce is non-UUID or absent from dispatch.json (advisory only)
 RPG-008: relay-provenance-gate — Gate emits relay_commit_missing diagnostic when a slot lacks relay_commit_done trace (advisory only)
 RPG-009: relay-provenance-gate — Gate emits agent_timestamp_span_suspicious diagnostic when spawnedAt/completedAt span is sub-second (advisory only)
-RPG-010: relay-provenance-gate — Framework ships a provenance-forensics judgment guide (5 signals + decision matrix + write-back, content from plan §10) so a future coding agent can decide from landed evidence
+RPG-010: relay-provenance-gate — Framework ships a provenance-forensics judgment guide (S0–S5 signals + 6-tier decision matrix + write-back, content from plan §10) so a future coding agent can decide from landed evidence
 RPG-011: relay-provenance-gate — Gate emits lifecycle_events_missing diagnostic when an evidence-producing slot lacks nonce-carrying lifecycle events (advisory only; read-side for SRL-004)
 RPG-012: relay-provenance-gate — Gate emits provenance_chain_inconsistency diagnostic when engine-emitted artifact cross-references contradict (advisory only; cross-artifact consistency — primary detector for determined forgery)
 RPG-013: relay-provenance-gate — All gate provenance diagnostics carry slotKey and wave for per-slot/per-wave aggregation

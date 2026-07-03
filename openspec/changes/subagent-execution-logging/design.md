@@ -16,9 +16,9 @@ BUG-019 报告 Main Agent 与 relay/gate 基础设施搏斗。取证（`_backlog
 **Goals:**
 1. **让 sub-agent logging 在 runtime 活过来**：通过 runtime driver（闭合 L3）+ role spec/task.md 强制 logging（任何 spawn 路径都留痕）+ **phase MD 指示 Phase Agent 用 driver（WNC-012，供需接线）**。
 2. **beacon 模式落地**：明确"bundle 路径如何从 main agent 传到 sub-agent"——engine 在 staging 写 `_beacon.json`，spawn prompt 只传 slot 目录。
-3. **engine 侧不可伪造的取证信号**：Layer-1 nonce 持久化（无需 sub-agent 配合）+ Layer-2 execution trace binding。
-4. **forensic 诊断先于阻断**：gate 输出 `provenance_nonce_mismatch` / `relay_commit_missing` / `agent_timestamp_span_suspicious`，**diagnostic-only**，不改变现有 pass/fail。
-5. **可判决（指南嵌入框架）**：真实 run 后，下一个 coding agent 用框架自带的 provenance-forensics 判断指南（RPG-010，内容来自 plan §10）按 5 信号 + 矩阵判决 BUG-019——只拿框架即可，不必读 plan。
+3. **engine 侧 execution 取证信号（更难手糊，非不可伪造）**：主信号是 engine 经 `traceEntry` 写进 `rb_trace.jsonl` 的 nonce-anchored trace 链（S0/S3，SUD-007 贯穿 staging→ingest→commit，无需 sub-agent 配合）；nonce 落盘 + 文件（S1/S2）是懒手糊筛查。无单点密码学不可伪造（签名 out-of-scope，见 Decision 2/6）。
+4. **forensic 诊断先于阻断**：gate 输出 `provenance_nonce_mismatch`（RPG-007）/ `relay_commit_missing`（RPG-008）/ `agent_timestamp_span_suspicious`（RPG-009）/ `lifecycle_events_missing`（RPG-011）/ `provenance_chain_inconsistency`（RPG-012，认真手糊主判据），**diagnostic-only**，不改变现有 pass/fail。
+5. **可判决（指南嵌入框架）**：真实 run 后，下一个 coding agent 用框架自带的 provenance-forensics 判断指南（RPG-010，内容来自 plan §10）按 S0–S5（6 信号）+ 6-tier 判决矩阵判决 BUG-019——只拿框架即可，不必读 plan。
 
 **Non-Goals:**
 - **不改 BUG-019 对策结论**（等真实 run 后由 §10 判决）。
@@ -26,7 +26,7 @@ BUG-019 报告 Main Agent 与 relay/gate 基础设施搏斗。取证（`_backlog
 - 不改 queue/relay 核心架构、slot lifecycle、dispatch/collect 语义。
 - 不做密码学签名（out-of-scope；nonce + trace binding 是"更难手糊"而非"不可伪造"）。
 - 不引入 npm 依赖。
-- 不在本 change 解决"sub-agent 不听话不 log"的强制问题——S5 lifecycle 事件是辅助信号；S1–S4 engine 侧信号足以判 staging/commit 是否真发生。
+- 不在本 change 解决"sub-agent 不听话不 log"的强制问题——S5 lifecycle 事件是辅助信号；engine 侧 trace 链（S0/S3）足以判 staging/commit 是否真发生。
 
 ## Decisions
 
@@ -93,7 +93,7 @@ BUG-019 报告 Main Agent 与 relay/gate 基础设施搏斗。取证（`_backlog
 
 ### Decision 7: §10 判断指南 ship 进框架（RPG-010），非仅留在 plan
 
-**选**：本 change 经 RPG-010 要求框架 ship `DPT_FRAMEWORK/command_playbook/provenance-forensics-guide.md`，内容 = plan §10 的 5 信号（S1–S5，含精确文件路径）+ 判决矩阵（真 relay 行 + 手糊行，各带 BUG-019 对策含义）+ write-back 流程。
+**选**：本 change 经 RPG-010 要求框架 ship `DPT_FRAMEWORK/command_playbook/provenance-forensics-guide.md`，内容 = plan §10 的 S0–S5（6 信号，含精确文件路径 + 抗手糊强度标注）+ 6-tier 判决矩阵（真 relay / 真失败 / 观测缺口 / staged-not-committed / 懒手糊 / 不一致，各带 BUG-019 对策含义）+ write-back 流程。
 
 **为什么**：本 change 的最终目的是让"下一个 coding agent 据落地证据判决 BUG-019"。若指南只留在 plan，下个 agent 只拿 change/框架就拿不到判决逻辑。ship 进框架后，下个 agent 只读框架自带指南即可完成判决，不依赖 plan 是否还在。
 
