@@ -48,7 +48,7 @@ stage → spawn → ingest → commit → collect/merge → fork/repair
 - 不改函数签名、schema 字段、trace 事件名、on-disk 路径。
 - 不改 workflow / phase MD（全仓 0 处 inline import；runtime 经 `drive-relay-slot` CLI）。
 - 不拆 `queue-manager.mjs`、`gate-helpers-core.mjs` 或其他大文件。
-- 不 mirror 拆分 `tests/engine/subagent-relay.test.mjs`（可后续做）。
+- 测试 mirror 拆分至 `tests/engine/subagent-relay-*.test.mjs` + `subagent-relay-helpers.mjs`（与 5 子模块对齐）。
 - 不引入 `subagent-relay/index.mjs` 替代 barrel 路径。
 
 ## Decisions

@@ -1,3 +1,5 @@
+> req: FRE-004
+
 ## ADDED Requirements
 
 ### Requirement: Subagent relay internal module layout

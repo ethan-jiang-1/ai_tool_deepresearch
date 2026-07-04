@@ -357,6 +357,7 @@ WML-001: workflow-manifest-loading — Workflow-next runtime initializes without
 FRE-001: framework-engine — DPT_FRAMEWORK/engine/ as canonical directory for 6 production engine modules
 FRE-002: framework-engine — workflow-fsm standalone pure FSM transition resolver (5 exports, 241 lines, zero engine imports) [DEPRECATED]
 FRE-003: framework-engine — Gate helpers shared parseMdFrontmatter and readBundlePlan for YAML 1.2 frontmatter parsing
+FRE-004: framework-engine — subagent-relay internal module layout (5 flat sub-modules + barrel, mirrored tests, zero behavior change)
 TRW-001: trace-writer — Unified append-only JSONL trace writer with createTrace factory (3 variants)
 TRW-002: trace-writer — Trace output validates against TraceEntrySchema contract
 TRW-003: trace-writer — Trace entries include bundle field for cross-sink correlation
