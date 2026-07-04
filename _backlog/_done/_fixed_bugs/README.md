@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-07-02 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-07-05 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -30,5 +30,11 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-011 | 2026-07-01 | Subagent prose missing cache trails declaration |
 | BUG-012 | 2026-07-01 | Queue completion log events missing |
 | BUG-013 | 2026-07-02 | Gate failure fatigue causes Agent to violate stop:no contract |
+| BUG-014 | 2026-07-03 | Phase Agent bypasses sub-agent relay (P0, BUG-006 regression) |
+| BUG-015 | 2026-07-03 | Wave gate quality rules too strict — non-relay output structurally rejected |
+| BUG-016 | 2026-07-03 | Agentic Queue cross-bundle contamination via Agent context |
+| BUG-017 | 2026-07-03 | Trace/log system not self-contained for gate failure diagnosis |
+| BUG-018 | 2026-07-03 | Wave0 gate repair whack-a-mole + Sub-agent YAML sanitization + shared_ref threshold |
+| BUG-019 | 2026-07-04 | Main Agent leaks search noise via relay/infrastructure fight |
 
-**Next available bug ID: BUG-014**
+**Next available bug ID: BUG-020**
