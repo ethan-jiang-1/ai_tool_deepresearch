@@ -23,7 +23,7 @@ node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>
 
 #### Scenario: Enter phase emits load complete witness
 
-- **WHEN** trace contains `gate_attempt(passed=true, gate="wave0-complete", currentNodeRef="phases/phase-wave0.md", next="phases/phase-wave1.md")`
+- **WHEN** the latest passed deterministic handoff in trace is `gate_attempt(passed=true, gate="wave0-complete", currentNodeRef="phases/phase-wave0.md", next="phases/phase-wave1.md")`
 - **AND** `enter-phase.mjs --bundle <bundle> --node phases/phase-wave1.md` is called
 - **THEN** `rb_trace.jsonl` SHALL contain a `load_complete` event with `entry: "phases/phase-wave1.md"`
 - **AND** stdout SHALL include the rendered Markdown content loaded by `assessNode()`
