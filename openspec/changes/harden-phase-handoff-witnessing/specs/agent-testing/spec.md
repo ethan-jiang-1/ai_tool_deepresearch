@@ -8,13 +8,16 @@ The change SHALL add controlled E2E coverage that proves phase handoff witnessin
 
 The required standard playbook SHALL use a disposable bundle and real framework CLIs. It SHALL NOT mock gate/status/trace behavior. It SHALL prove:
 
-- a gate can pass after multiple attempts;
+- a gate can pass after multiple real attempts, with Engine-derived attempt diagnostics visible in trace or diagnostic artifacts;
+- a controlled Wave0 cascade condition exercises cascade-mask diagnostics without changing gate truth;
 - attempting to synchronize status without a witnessed next-phase entry fails closed;
-- running `enter-phase` writes `load_complete`;
-- after `enter-phase`, status/gate operations proceed normally;
+- attempting old-style next-gate synchronization, such as `advance-status --to wave1_complete` immediately after wave0 pass, fails closed with source-gate advice;
+- running `enter-phase --node <check.next>` writes a route-bound `load_complete` tied to the latest passed deterministic predecessor gate attempt;
+- stale historical `gate_attempt.next` matches do not authorize a new `enter-phase` witness after a later passed deterministic gate attempt points elsewhere;
+- after `enter-phase`, source-gate `advance-status` and subsequent gate operations proceed normally;
 - a forced old-style resume path reports a named handoff failure and remedy instead of silently accepting the state.
 
-The playbook verdict SHALL be based on `rb_trace.jsonl`, CLI exit codes, and bundle files. Console output alone SHALL NOT be verdict authority.
+The playbook verdict SHALL be based on `rb_trace.jsonl`, CLI exit codes, diagnostic artifacts, and bundle files. Console output alone SHALL NOT be verdict authority. The standard playbook SHALL NOT claim to prove real chat-channel behavior; chat-side premature synthesis remains reserved for the optional heavy canary or manual replay evidence.
 
 #### Scenario: Standard E2E detects unwitnessed handoff
 
@@ -26,8 +29,29 @@ The playbook verdict SHALL be based on `rb_trace.jsonl`, CLI exit codes, and bun
 #### Scenario: Standard E2E passes after enter-phase
 
 - **WHEN** the playbook runs `enter-phase --bundle <bundle> --node <next-node>`
-- **THEN** `rb_trace.jsonl` SHALL contain `load_complete` for that node
+- **THEN** `rb_trace.jsonl` SHALL contain route-bound `load_complete` for that node after the matching source gate attempt
 - **AND** the subsequent status/gate checkpoint SHALL no longer fail for missing handoff witness
+
+#### Scenario: Standard E2E rejects stale route-bound witness
+
+- **WHEN** a disposable bundle contains an old `gate_attempt.next` match for a lifecycle node
+- **AND** a later passed deterministic gate attempt points to a different lifecycle node
+- **THEN** `enter-phase --node <that-node>` SHALL fail unless the latest passed deterministic gate attempt authorizes that handoff
+- **AND** no new `load_complete` SHALL be appended for the stale route
+
+#### Scenario: Standard E2E rejects old-style next gate status laundering
+
+- **WHEN** wave0 has passed after multiple attempts and returned `check.next: "phases/phase-wave1.md"`
+- **AND** the playbook calls `advance-status --bundle <bundle> --to wave1_complete` before the wave1 gate has passed
+- **THEN** the command SHALL fail closed
+- **AND** the advice SHALL identify `wave0_complete` as the source gate status synchronization after `enter-phase`
+
+#### Scenario: Standard E2E exercises high-friction diagnostics
+
+- **WHEN** the playbook drives a disposable Wave0 gate through multiple real failed attempts before pass
+- **AND** at least one failed attempt includes an upstream schema or parse failure that masks downstream count or dedup diagnostics
+- **THEN** diagnostic artifacts SHALL show deterministic attempt delta and cascade-mask diagnostics
+- **AND** those diagnostics SHALL NOT be treated as pass/fail authority
 
 ### Requirement: Optional heavy canary cannot substitute for standard proof
 

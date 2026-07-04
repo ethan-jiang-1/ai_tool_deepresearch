@@ -1,11 +1,13 @@
 ## Context
 
-BUG-020 的失败点发生在 gate pass 之后：Agent 经过高摩擦 gate 修复后，运行 `advance-status --to wave1_complete` 写出看似干净的 runtime state，然后没有加载 `check.next`，直接在 chat 中交付提前 synthesis。
+BUG-020 的失败点发生在 gate pass 之后：Agent 经过高摩擦 gate 修复后，运行旧式/错位的 status synchronization（报告中记录为 `advance-status --to wave1_complete`）写出看似干净的 runtime state，然后没有加载 `check.next`，直接在 chat 中交付提前 synthesis。
 
 当前系统已经有两个相关但未闭合的机制：
 
 - `assessNode()` 会注入 AUTONOMOUS-MODE header 并写 `load_complete`，但真实 phase handoff 路径缺少一个由 Phase Agent 主动调用的 loader checkpoint。Phase Agent 仍然通过 Markdown controller mode 驱动流程；问题不是“CLI 没有继续跑下一段 MD”，而是“MD 要求加载 `check.next` 时，没有一个确定性 loader/check 把被加载的 Markdown 返回到 Agent 上下文并写下可检查的 receipt”。
 - readiness gate 已经通过 `trace_has_all_gates` 验证 prior gate pass trace。这证明 Engine 可以用 trace 做 transition integrity Check，而不等于驱动 Agent Flow。
+
+Terminology：本 design 使用 **autonomous continuation** 指代非终端 lifecycle phase 的运行模式。它当前仍由 frontmatter `stop: no` 和注入的 AUTONOMOUS MODE header 表达；本 change 不重命名 schema 字段。这个词比裸 `stop: no` 更接近 Agent 需要执行的行为：不浮出水面、不等待用户、不自判完成，继续跑当前 Markdown controller surface，直到 gate pass 后通过 `check.next` handoff。
 
 本 design 将 phase handoff 定义为两段式 contract：
 
@@ -20,7 +22,7 @@ Engine 不选择 `check.next`、不驱动 Agent loop、不执行下一 phase 的
 
 - 让 `check.next` 的消费产生 Engine-written witness。
 - 让 `advance-status` 和后续 gate 检查能发现未见证 handoff。
-- 让 AUTONOMOUS-MODE header 真正进入 Agent 运行路径。
+- 让 AUTONOMOUS-MODE / autonomous continuation contract 真正进入 Agent 运行路径。
 - 用 wiring validator 防止 shared preflight 变成未调用死代码。
 - 用 pass-side fatigue / delta diagnostics 降低高摩擦后提前交付的诱因。
 - 在 OpenSpec 中诚实记录 residual：同一轮 chat halt 不可被 Engine 预先拦截。
@@ -28,7 +30,7 @@ Engine 不选择 `check.next`、不驱动 Agent loop、不执行下一 phase 的
 **Non-Goals:**
 
 - 不实现 JS lifecycle walker。
-- 不让 Engine 选择、加载并执行下一 phase 的工作。
+- 不让 Engine 自主选择、自动加载、或执行下一 phase 的工作。
 - 不拦截或阻止 chat channel 输出。
 - 不把 prose-only 禁令作为核心修复。
 - 不新增 npm dependency。
@@ -55,17 +57,29 @@ node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>
 
 ### D2: Handoff witness 使用现有 `load_complete`
 
-主要 witness 是 `rb_trace.jsonl` 中的 `load_complete`，其 `entry` 等于当前 phase node fileRef。Gate preflight 和 status hardening 都读取 trace，而不是相信 chat memory 或 Agent 自述。
+主要 witness 不是孤立的 `load_complete`，而是一对按 JSONL 顺序可验证的 trace 事实：
+
+1. source gate 有 `gate_attempt(passed=true)`，且该 event 的 `next` 等于 target/current node fileRef。
+2. target/current node 随后有 `load_complete(entry=<same fileRef>)`。
+
+`enter-phase --node <fileRef>` SHALL validate that `<fileRef>` is the `next` from the latest passed deterministic gate attempt in trace that has a non-null `next` before emitting a successful handoff witness. It SHALL derive legal predecessor edges from `transitions.chain.json` + `manifest.json`, require that latest passed gate attempt to name the predecessor gate and predecessor `currentNodeRef`, and reject older historical `gate_attempt.next` matches. Gate preflight 和 status hardening 也 SHALL re-check the same ordered pair, rather than accepting any stale or unrelated `load_complete`.
+
+This does not let Engine choose the route: the route remains the `check.next` already produced by the gate CLI. The Engine only verifies that the Phase Agent supplied a node that matches prior gate output and records the loader receipt.
 
 **替代方案：** 新增 `dangling_transition` / `handoff_pending` 状态机。拒绝，因为 readiness gate 的 `trace_has_all_gates` 已提供合法 precedent；本 change 应 generalize existing trace checks，不引入平行机制。
 
 ### D3: `advance-status` 只认证 trace-backed 状态
 
-`advance-status --to <gate_enum>` 在写 `rb_status.json` 前必须：
+`advance-status --to <gate_enum>` 的 `<gate_enum>` SHALL mean the just-passed source gate being synchronized into `rb_status.json`, not the next phase's gate. Example: after `wave0-complete` passes and `check.next` points to `phases/phase-wave1.md`, the status sync command is `advance-status --to wave0_complete`.
+
+Before writing `rb_status.json`, `advance-status` MUST:
 
 - 读取 `rb_trace.jsonl`。
-- 确认与该状态推进相关的 deterministic gate 已有 `gate_attempt(passed=true)`。
-- 对明显缺少 phase entry witness 的情况 fail closed，并输出 JSON error + advice，指向 `enter-phase --bundle <path> --node <fileRef>`。
+- Normalize `<gate_enum>` to the source gate key and confirm that the latest passed deterministic `gate_attempt` with non-null `next` is for that source gate.
+- Resolve the source gate to its source node through `manifest.json`, then resolve the target node from `transitions.chain.json[sourceNode].passed`.
+- Confirm the passed gate attempt's `next` equals the resolved target node.
+- For non-initial lifecycle target nodes, confirm a later `load_complete(entry=<targetNode>)` exists.
+- 对缺少 source gate pass、gate `next` mismatch、或 target entry witness 的情况 fail closed，并输出 JSON error + advice，指向正确的 `enter-phase --bundle <path> --node <targetNode>` 和 source-gate `advance-status --to <source_gate_enum>` command.
 
 成功输出保持现有 shape：
 
@@ -86,12 +100,12 @@ node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>
 新增 shared helper，例如 `checkPhaseHandoffPreflight(bundlePath, currentNodeRef)`，供 lifecycle gate CLI 调用。它验证：
 
 - 当前 node 在 manifest lifecycle 中。
-- 对非初始 lifecycle node，存在 incoming deterministic predecessor gate 的 `gate_attempt(passed=true)`。
-- 当前 node 存在 `load_complete` trace witness。
+- 对非初始 lifecycle node，存在 incoming deterministic predecessor gate 的 `gate_attempt(passed=true)`，且该 event 的 `next` 等于 `currentNodeRef`。
+- 当前 node 存在发生在该 predecessor pass 之后的 `load_complete(entry=currentNodeRef)` trace witness。
 
 Preflight failure 不改变 router。Gate 正常返回 `passed:false`、exit 1，并在 `inspect` / `advice` 中说明缺失的 prior gate 或 `load_complete`。
 
-**适用范围：** 所有有 prior lifecycle phase 的 gate。Instantiation 是入口例外，因为 bundle 尚未存在时无法提前写 run trace。
+**适用范围：** 所有有 prior lifecycle phase 的 gate。Instantiation 是入口例外，因为 bundle 尚未存在时无法提前写 run trace。若一个 node 有多个 deterministic incoming edges（例如 rerun 回到 seed-topics），helper 使用 `transitions.chain.json` 推导所有合法 predecessor，并接受最新一对合法的 `gate_attempt.next -> load_complete.entry` witness；helper 不自行选择 route。
 
 **替代方案：** 只在 wave1/wave2 加检查。拒绝，因为会复制 BUG-020 的“某些路径未接线”问题。
 
@@ -124,9 +138,10 @@ Wave0 中若上游 schema/parse failure 导致下游 count/dedup 结果不可解
 Phase §6 的核心改写：
 
 1. 读取 gate output 的 `check.next`。
-2. 调用 `enter-phase --bundle <path> --node <check.next>`。
-3. 从 `enter-phase` 渲染出的 next node 内容继续执行。
-4. 不把 `advance-status` 描述为“进入下一 phase”的动作。
+2. 调用 `enter-phase --bundle <path> --node <check.next>`，capture 其渲染出的 next node Markdown，并让 loader 写下 route-bound `load_complete`。
+3. 在执行任何 next-phase work 之前，调用 `advance-status --bundle <path> --to <this phase's gate enum>` 同步刚通过的 source gate。例如 wave0 pass 后使用 `--to wave0_complete`，不是 `--to wave1_complete`。
+4. 从 step 2 已经 capture 的 rendered Markdown 继续执行下一 phase。
+5. 不把 `advance-status` 描述为“进入下一 phase”的动作；它只在 `enter-phase` 已经写下 target node load witness 之后同步状态。
 
 这保持 Markdown 控制 Agent Flow：Markdown 要求 Phase Agent 调 CLI；CLI 只做确定性 loader/check 并把下一段 Markdown 返回给 Agent。继续执行下一 phase 的主体仍是 Phase Agent 的 agentic loop，不是 CLI。
 

@@ -11,10 +11,13 @@ The On Gate Pass section SHALL require this sequence:
 1. read the gate CLI JSON output;
 2. verify `check.passed === true`;
 3. read `check.next`;
-4. call `node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>`;
-5. read the Markdown rendered by `enter-phase` into the Agent conversation context and continue from that next phase's Markdown instructions.
+4. call `node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>` and capture the rendered Markdown as the next Agent control surface;
+5. before executing any work from that rendered next phase, call `node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to <this phase's gate enum>` to synchronize the just-passed source gate after the target node load witness exists;
+6. continue from the Markdown captured in step 4.
 
 The phase body SHALL NOT frame `advance-status` as the action that enters the next phase. `advance-status` is status synchronization and SHALL NOT substitute for `enter-phase`. `enter-phase` itself SHALL also be framed as a deterministic loader/check, not as a JS lifecycle walker or executor of the next phase.
+
+The source gate enum SHALL be the gate that just passed, not the next phase's gate. For example, wave0 gate pass SHALL synchronize with `--to wave0_complete` after `enter-phase --node phases/phase-wave1.md`; it SHALL NOT use `--to wave1_complete` until the wave1 gate itself has passed.
 
 This requirement applies to lifecycle phases whose deterministic outcome has a next lifecycle node, including wave0, wave1, wave2, readiness, and other non-entry deterministic handoffs. HITL2 indeterminate decisions remain governed by their existing decision logic; when a deterministic HITL2 branch is chosen, its selected fileRef SHALL still be consumed through `enter-phase`.
 
@@ -22,13 +25,15 @@ This requirement applies to lifecycle phases whose deterministic outcome has a n
 
 - **WHEN** a wave phase node describes its Gate Pass behavior
 - **THEN** it SHALL instruct the Agent to run `enter-phase --bundle <path> --node <check.next>`
-- **AND** it SHALL tell the Agent to continue from the rendered next node content
+- **AND** it SHALL instruct the Agent to run `advance-status --bundle <path> --to <this phase's gate enum>` only after `enter-phase`
+- **AND** it SHALL tell the Agent to continue from the captured rendered next node content as the Phase Agent's next Markdown control surface after source-gate status synchronization
 
 #### Scenario: Advance status is not described as phase entry
 
 - **WHEN** a lifecycle phase node mentions `advance-status`
 - **THEN** the phase body SHALL NOT describe it as loading, entering, or executing the next phase
 - **AND** the phase body SHALL preserve `enter-phase` as the handoff consumption action
+- **AND** the phase body SHALL NOT use the next phase's gate enum as the `--to` value for the just-passed source phase
 
 #### Scenario: Final delivery still happens only at final
 
