@@ -1,15 +1,15 @@
 ---
 schema: command-experiment/v1
 experiment: subagent
-case: case-65-heavy-drive-relay-provenance-sound
+case: case-62-heavy-drive-relay-provenance-sound
 weight: heavy
 case_goal: "验证 drive-relay-slot 金路径 + 真 native sub-agent：beacon/log-event lifecycle + engine S0–S5 全绿 + runProvenanceForensics silent（plan §10 tier-1）。"
 runner: coding-agent
 agent_mode: native-subagent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-65_relay_sound
-trace: dpt_disp_case-65_relay_sound/rb_trace.jsonl
+bundle: dpt_disp_case-62_relay_sound
+trace: dpt_disp_case-62_relay_sound/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
@@ -30,7 +30,7 @@ verdict: trace-jsonl
 | Log 验收 | **`_logs/run.log`**（必读）；`rb_trace.jsonl`（engine trace + checks） |
 | 不证明 | queue delegated-complete / ledger — 与 case-61 相同边界 |
 
-# case-65-heavy-drive-relay-provenance-sound
+# case-62-heavy-drive-relay-provenance-sound
 
 验证 subagent-execution-logging change 的 **tier-1 金路径**：relay 端到端真跑通，bundle 上留下可判决的 S0–S5 痕迹。
 
@@ -55,7 +55,7 @@ verdict: trace-jsonl
 ## Step 1: 创建 bundle + driver stage
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs relay_sound --case case-65 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs relay_sound --case case-62 --force)
 echo "B=$B"
 
 node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
@@ -271,5 +271,5 @@ cleanup 前会自动把 verdict 摘要追加进 append-only 的 `_temp/exp_verdi
 ```bash
 B= # populated from Step 1
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-65'}))"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-62'}))"
 ```

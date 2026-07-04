@@ -129,11 +129,8 @@
 | G23 wfn-wave2 | case-234 | `exp_wfn_wave2/case-234-heavy-subagent-search.md` | emergent question→explore_search→spawn dpt-topic-scout 真实搜索→ingest receipt→index 更新→re-synthesize→00_shared promote→gate pass |
 | G11 pre-research-repair | case-114 | `exp_wff_pre-research-repair/case-114-heavy-hitl1-manual-review.md` | HITL1 payload 枚举（auto mode 6 vectors） |
 | G6 subagent | case-61 | `exp_subagent/case-61-heavy-single-intake.md` | 单个 source_intake subagent（**legacy**：直调 `stageSubagentSlots`，无 driver/beacon/forensics） |
-| G6 subagent | case-62 | `exp_subagent/case-62-heavy-dual-parallel.md` | intake + diagnostic 并行两个（legacy path） |
-| G6 subagent | case-63 | `exp_subagent/case-63-heavy-identity.md` | runtime-agent identity 和 trace event（legacy path） |
-| G6 subagent | case-64 | `exp_subagent/case-64-heavy-triple-failure.md` | 三个 subagent 并发 + partial failure（legacy path） |
-| G6 subagent | case-65 | `exp_subagent/case-65-heavy-drive-relay-provenance-sound.md` | **post-change 金路径**：`drive-relay-slot` + beacon + 真 sub-agent + S0–S5 tier-1 silent |
-| G6 subagent | case-66 | `exp_subagent/case-66-standard-drive-relay-staged-not-committed.md` | **post-change 负向对照**：driver stage 真跑、不 commit → 仅 RPG-008（tier-4） |
+| G6 subagent | case-62 | `exp_subagent/case-62-heavy-drive-relay-provenance-sound.md` | **金路径**：`drive-relay-slot` + beacon + 真 sub-agent + S0–S5 tier-1 silent |
+| G6 subagent | case-66 | `exp_subagent/case-66-standard-drive-relay-staged-not-committed.md` | **负向对照**：driver stage 真跑、不 commit → 仅 RPG-008（tier-4） |
 | G15 ai-judge | case-951 | `exph_workflow-foundation/case-951-heavy-topic-rewrite-ai-judge.md` | AI 扮演真人 dual of 901：真 Agent rewrite + AI reviewer verdict（source: ai-judge，非真人）；9NN +50 对偶 |
 | G25 engine-boundary | case-406 | `exp_engine-boundary/case-406-heavy-real-subagent-boundary.md` | 真实 Sub-agent/WebSearch/WebFetch：output declaration → delegated complete → ledger → content_dedup；无 real-agent surface 时记录 NOT RUN，不算 PASS |
 | G27 evidence-extraction | case-163 | `exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md` | 真实 Agent/Sub-agent canary：rerun action:add → _cache 三文件 leaf → slot result cache_trails → Engine ledger → gate cache_coverage → 质量指标；无 Agent 时 NOT RUN |
