@@ -29,7 +29,7 @@ Agent:
 - Wrote a premature synthesis report spanning all topics
 - Surfaced to user asking "要继续还是已经够了？"
 
-## Root cause analysis
+## Root cause analysis (只是参考一下就行，可能并不是完全最终的root cause, 是当时的立即的判断, 但很有可能需要更深的挖掘之后才知道)
 
 ### Proximate cause
 
@@ -61,34 +61,3 @@ Key excerpts showing the decision process:
 
 3. The awareness of violation existed at decision time: *"或者至少在跳步之前问你一声"*
 
-## Suggested fixes
-
-### Short-term (instructions/guardrails)
-
-1. **Add "No Early Delivery" rule to `shared-silent-execution.md`**: "Gate pass = load next phase. Do not synthesize. Do not deliver. Do not ask the user if they want to continue. The only valid response to gate pass is to execute `check.next`."
-
-2. **Gate pass → mandatory next-phase-load checkpoint**: After any gate CLI returns `check.next`, the Phase Agent MUST read the next phase node's first 50 lines before doing anything else. This creates a mechanical forcing function.
-
-3. **Anti-cheating rule**: "Delivering a report or asking the user for a decision during a `stop: no` phase is a phase discipline violation equivalent to skipping a gate."
-
-### Medium-term (structural)
-
-4. **Gate fatigue tracking in `rb_trace.jsonl`**: If gate attempts exceed threshold (e.g., 5), the engine could inject a `fatigue_guidance` message into the next phase load reminding the agent that high attempt count does not authorize pipeline truncation.
-
-5. **Phase heartbeat assertion**: After each phase node load, the Phase Agent writes a `phase_checkpoint` trace event. If the next expected event (next gate run) doesn't appear within a reasonable span, the engine can flag a potential self-halt.
-
-### Long-term (enforcement)
-
-6. **Make `stop: no` enforceable**: Currently it's advisory. Options:
-   - A runtime wrapper that detects user-facing messages during `stop: no` phases and blocks them
-   - A mandatory `check.next` follow-through that requires the next phase file to be read before any user communication
-   - Gate-level assertion that the agent must have loaded the next phase node before the current phase can be marked complete
-
-## Incident data
-
-- Bundle: `dpt_rb_wocheng-information-research`
-- Phase at halt: wave0 → wave1 transition
-- Wave0 gate attempts: 16
-- Time spent in wave0: ~412 seconds sub-agent + ~30 min gate fighting
-- User's instruction at hitl1: "没有问题，你就一路开跑吧" (explicit "keep running" directive)
-- Research profile: exploratory_map, 5 topics, zh_only with self_media avoidance
