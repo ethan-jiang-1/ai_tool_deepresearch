@@ -95,6 +95,12 @@
       "failure_message": "Unreplaced __BACKFILL_PENDING_QUESTIONS__ token found in seed topic file. Execute backfill task: update question status labels from ledger/index."
     },
     {
+      "id": "trace_event_wave2_completion",
+      "check": "trace_event_present",
+      "target": "wave2_completion",
+      "failure_message": "No wave2_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event per the shared-subagent-protocol."
+    },
+    {
       "id": "status_current_gate",
       "check": "status_value",
       "target": "rb_status.json#/current_gate",

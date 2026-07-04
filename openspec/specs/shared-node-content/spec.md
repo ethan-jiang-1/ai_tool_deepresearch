@@ -79,33 +79,30 @@ Shared gate summary SHALL NOT 复制完整 rule-by-rule 列表。
 
 ### Requirement: Shared schemas content matches current executable surface
 
-`shared-schemas.md` SHALL 为 Agent 提供 workflow foundation 相关 schema surface 的摘要，包括 profile、status、queue、plan、trace、gate/transition contract、ReferenceMetadata schema 以及 wave artifact 目录结构。
+`shared-schemas.md` SHALL summarize the current executable schema surface without duplicating full Zod definitions. It SHALL cover:
 
-内容 SHALL：
-- 指向每个 contract 的当前位置（`DPT_FRAMEWORK/schema/contracts/`）
-- 摘要 `rb_status.json` 当前只有 `current_mode`、`state`、`current_gate`、`next_gate`
-- 摘要 `rb_profile.yaml` 当前 HITL1 路径是 `human_decision_checkpoints.hitl1.*`
-- 区分 runtime audit trace `rb_trace.jsonl` 与 command experiment verdict trace `_trace.jsonl`
-- 说明 gate definition JSON lives under `DPT_FRAMEWORK/schema/gate_definitions/`
-- 说明 transition / gate state contract lives in `DPT_FRAMEWORK/schema/contracts/gate.mjs`
-- 摘要 ReferenceMetadata schema（`DPT_FRAMEWORK/schema/contracts/reference.mjs`）：每条 reference 必填 `url`、`title`、`retrieved_date`、`topic_tag`
-- 摘要 wave artifact 目录结构：
-  - `reference/<topic>/source.yaml` → Wave0 per-topic reference metadata（YAML array，每项满足 ReferenceMetadata schema）
+- `rb_profile.yaml`, `rb_status.json`, `rb_queue.json`, `rb_plan.md`, `rb_trace.jsonl` field summaries
+- gate definition JSON location under `DPT_FRAMEWORK/schema/gate_definitions/`
+- transition / gate state contract in `DPT_FRAMEWORK/schema/contracts/gate.mjs`
+- ReferenceMetadata schema summary (`DPT_FRAMEWORK/schema/contracts/reference.mjs`)
+- wave artifact directory structure:
+  - `artifacts/wave0/{topic}/source.yaml` → Wave0 per-topic reference metadata（YAML array，每项满足 ReferenceMetadata schema）
   - `artifacts/wave1/<topic>/evidence-summary.md` → Wave1 relay-backed evidence summary
   - `artifacts/wave1/<topic>/question-list.md` → Wave1 relay-backed question list
   - `reference/{topic.slug}-*.md` → Wave1 relay-backed rich reference files
-  - `artifacts/wave2/synthesis.md` → Wave2 cross-topic synthesis（引用用 Markdown link `[label](relative/path.md)` 格式）
+  - `reference/_INDEX.md` → canonical flat reference inventory
+  - `artifacts/wave2/synthesis.md` → Wave2 cross-topic synthesis
   - `artifacts/wave2/cross-topic-ledger.md` → Wave2 Agent-readable finding ledger
   - `artifacts/wave2/finding-index.yaml` → Wave2 JS-readable shadow index
-- 摘要 final report artifact 目录：
-  - `final/` → 终端交付输出目录，每次 delivery pass 生成一次。与 wave-level artifact 目录（`reference/`, `artifacts/wave1/`, `artifacts/wave2/`）不同——`final/` 是 terminal delivery output，不是中间产出
+- `final/` terminal delivery output directory distinction
+- runtime audit trace `rb_trace.jsonl` vs experiment verdict trace `_trace.jsonl`
 
 Shared schemas SHALL NOT 复制完整 Zod schema 定义。
 
-#### Scenario: Agent needs status field overview
+#### Scenario: Agent understands wave artifact directory and schema
 
-- **WHEN** Agent 需要理解 `rb_status.json`
-- **THEN** `shared-schemas.md` SHALL 指出当前没有 `phases.*` 树
+- **WHEN** Agent 需要理解 wave artifacts 应放在哪些目录、metadata 用什么格式
+- **THEN** `shared-schemas.md` SHALL 摘要 `reference/`、`artifacts/wave0/`、`artifacts/wave1/`、`artifacts/wave2/` 的用途、schema 和引用格式
 - **AND** body SHALL 指向完整 contract 文件位置
 
 #### Scenario: Agent distinguishes runtime trace from experiment verdict trace
@@ -114,12 +111,6 @@ Shared schemas SHALL NOT 复制完整 Zod schema 定义。
 - **THEN** `shared-schemas.md` SHALL explain that `rb_trace.jsonl` is active bundle runtime audit
 - **AND** SHALL explain that `_trace.jsonl` is command experiment verdict evidence
 - **AND** SHALL NOT treat `_trace.jsonl` as production runtime truth
-
-#### Scenario: Agent understands wave artifact directory and schema
-
-- **WHEN** Agent 需要理解 wave artifacts 应放在哪些目录、metadata 用什么格式
-- **THEN** `shared-schemas.md` SHALL 摘要 `reference/`、`artifacts/wave1/`、`artifacts/wave2/` 的用途、schema 和引用格式
-- **AND** body SHALL 指向完整 contract 文件位置
 
 ### Requirement: Shared repair guidance content
 

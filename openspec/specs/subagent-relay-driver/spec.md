@@ -4,35 +4,25 @@
 
 ## Purpose
 
-Runtime driver 命令契约。提供一个 Agent 可调用的 CLI（`DPT_FRAMEWORK/cli/drive-relay-slot.mjs`），在 runtime 端到端驱动 relay slot 生命周期（`stageSubagentSlots → recordAgentSpawnRequested → 输出 spawn prompt → ingestAgentReceipt → commitSlotResult`），闭合"引擎函数无 runtime 调用者"缺口（`buildSpawnPrompt` 不再是 dead code）。driver 只编排 slot lifecycle，不替 Agent 做 search/judgment/routing。
+Runtime driver command contract. Provides an Agent-callable CLI (`DPT_FRAMEWORK/cli/drive-relay-slot.mjs`) that drives the relay slot lifecycle end-to-end at runtime (`stageSubagentSlots -> recordAgentSpawnRequested -> output spawn prompt -> ingestAgentReceipt -> commitSlotResult`). The driver orchestrates the slot lifecycle only; it does not perform search, judgment, or routing on behalf of the Agent.
 
 ## Requirements
 
 ### Requirement: A driver CLI SHALL orchestrate the relay slot lifecycle end-to-end
 
-The framework SHALL provide `DPT_FRAMEWORK/cli/drive-relay-slot.mjs` that invokes the relay engine functions at runtime, closing the gap that `stageSubagentSlots` / `recordAgentSpawnRequested` / `ingestAgentReceipt` / `commitSlotResult` / `collectAndMergeSubagentResults` previously had no runtime caller. The driver SHALL expose granular subcommands — `stage`, `commit`, `merge` — so the Phase Agent can run the full collect-as-return loop (per `subagent-dispatch`), including replacement dispatch into freed slots, rather than a single monolithic run.
+The framework SHALL provide `DPT_FRAMEWORK/cli/drive-relay-slot.mjs` that invokes the relay engine functions at runtime. The driver SHALL expose subcommands `stage`, `commit`, `merge`.
 
 #### Scenario: stage subcommand stages slots and emits spawn prompts
-- **WHEN** the Phase Agent invokes `drive-relay-slot stage <bundle> [--wave <N>]` (full stage, or per-item replacement form `--slot-index <M> --role <roleKey> --key <slotKey> --task <desc>`)
-- **THEN** the driver SHALL call `stageSubagentSlots` / `recordAgentSpawnRequested`, write slot directories (`task.md`, `result.schema.json`, `_status.json`, `_beacon.json`), write `dispatch.json`, and print each slot's spawn prompt
+- **WHEN** the Phase Agent invokes `drive-relay-slot stage <bundle> [--wave <N>]` (full stage), or replacement form `--slot-index <M> --role <roleKey> --key <slotKey> --task <desc> [--cache-dir <dir>] [--platform <p>]`
+- **THEN** the driver SHALL call `stageSubagentSlots` / `recordAgentSpawnRequested`, write slot directories including `_beacon.json`, write `dispatch.json`, and print each slot's spawn prompt
 
 #### Scenario: commit subcommand validates and commits a returned result
-- **WHEN** the Phase Agent invokes `drive-relay-slot commit <bundle> --wave <N> --slot <slotKey> --result '<json>' --runtime-agent-id <id>` after a sub-agent returns
-- **THEN** the driver SHALL call `ingestAgentReceipt` and `commitSlotResult`, writing `result.json` / `_status.json` / `_agent.json`, emitting the `agent_result_received` / `result_schema_validated` trace events to `rb_trace.jsonl`, and emitting the `relay_commit_done` marker to `_logs/run.log`
+- **WHEN** the Phase Agent invokes `drive-relay-slot commit <bundle> --wave <N> --slot <slotKey> --result '<json>' --runtime-agent-id <id> [--platform <p>] [--runtime-mode <mode>]`
+- **THEN** the driver SHALL call `ingestAgentReceipt` and `commitSlotResult`, emit commit trace events and `relay_commit_done` marker
 
 #### Scenario: merge subcommand collects and merges slot results
-- **WHEN** the Phase Agent invokes `drive-relay-slot merge <bundle> --wave <N>` after all slots have committed
-- **THEN** the driver SHALL call `collectAndMergeSubagentResults`, merging evidence counts into workflow state and returning the fork/repair decision
-
-#### Scenario: stage re-stages a replacement slot in a freed index
-- **WHEN** a sub-agent returns and frees a slot, and the current queue task still has undispatched batch items (per `subagent-dispatch` SUD-003 replacement dispatch)
-- **THEN** the Phase Agent SHALL invoke `stage` with the replacement SlotConfig for the freed slotIndex
-- **AND** the driver SHALL update `dispatch.json` and emit a new spawn prompt without clobbering other in-flight slots
-
-#### Scenario: Driver does not spawn the sub-agent itself
-- **WHEN** `stage` completes
-- **THEN** the driver SHALL output the spawn prompt for the Phase Agent to spawn via its native Agent tool
-- **AND** SHALL NOT itself launch a sub-agent process
+- **WHEN** the Phase Agent invokes `drive-relay-slot merge <bundle> --wave <N>`
+- **THEN** the driver SHALL call `collectAndMergeSubagentResults`
 
 ### Requirement: Driver SHALL not perform search, evidence judgment, or routing
 

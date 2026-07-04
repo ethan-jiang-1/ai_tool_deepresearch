@@ -272,15 +272,16 @@ describe('check-gate-wave1-complete', () => {
     assert.ok(output.inspect.some(m => m.includes('current_gate')), `Expected status drift fail: ${JSON.stringify(output.inspect)}`);
   });
 
-  it('7. gate passes without wave1_completion trace event (rule removed — redundant with artifact checks)', () => {
+  it('7. fails when trace event (wave1_completion) is missing from rb_trace.jsonl', () => {
     const dir = createBundle(unique('notrace'));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    // No trace event file — gate should still pass because all artifact rules are satisfied
+    // No trace event file — gate should fail because trace_event_present rule is active
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
-    assert.equal(output.check.passed, true);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('trace') || m.includes('Trace event') || m.includes('wave1_completion')), `Expected trace event fail: ${JSON.stringify(output.inspect)}`);
   });
 
   it('8. rejects reference files with placeholder source_url (example.com)', () => {

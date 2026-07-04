@@ -91,7 +91,7 @@ The phase SHALL NOT judge semantic quality or writing quality. It SHALL only per
 
 - **WHEN** Agent executes the readiness phase
 - **THEN** Agent SHALL verify required artifacts exist and are parseable
-- **AND** required artifacts SHALL include at minimum: `seed_topics/`, `reference/index.md`, `artifacts/wave2/synthesis.md`, `artifacts/hitl2/decision-brief.md`
+- **AND** required artifacts SHALL include at minimum: `seed_topics/`, `reference/_INDEX.md`, `artifacts/wave2/synthesis.md`, `artifacts/hitl2/decision-brief.md`
 
 #### Scenario: Readiness gate audit
 
@@ -108,8 +108,8 @@ The phase SHALL NOT judge semantic quality or writing quality. It SHALL only per
 #### Scenario: Readiness does not judge quality
 
 - **WHEN** Agent executes the readiness phase
-- **THEN** Agent SHALL NOT evaluate writing quality, argument strength, or synthesis completeness
-- **AND** the phase SHALL only perform deterministic structural checks
+- **THEN** the phase body SHALL NOT instruct semantic quality judgment of synthesis or decision brief content
+- **AND** SHALL restrict checks to structural/existence/consistency criteria enforced by the readiness gate
 
 ### Requirement: Phase Final body completeness
 

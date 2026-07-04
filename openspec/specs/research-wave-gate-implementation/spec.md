@@ -8,187 +8,96 @@
 ## Requirements
 ### Requirement: Wave0 complete gate rule set
 
-`gate-wave0-complete.definition.json` SHALL 定义当前 contract 下的 Wave0 rules。
+`gate-wave0-complete.definition.json` SHALL 定义当前 contract 下的 Wave0 rules，与 `DPT_FRAMEWORK/schema/gate_definitions/gate-wave0-complete.definition.json` 及 `phase-wave0.md` 一致。
 
 规则 SHALL 覆盖：
-- `reference/index.md` 存在且非空
-- `reference/` 目录存在且非空
-- 每个 topic 的 `reference/<topic>/source.yaml` 存在且通过 ReferenceMetadata schema 校验（`schema_valid` check type，schema 见 `DPT_FRAMEWORK/schema/contracts/reference.mjs`）
-- reference metadata 数量 ≥ foundation floor per topic（`count_floor` check type）
+- `reference/_INDEX.md` 存在（`file_exists`）
+- `reference/README.md` 存在（`file_exists`）
+- `reference/` 目录存在（`dir_exists`）
+- 至少 1 个 `reference/00-shared-*.md` 共享 foundation reference（`count_floor`，threshold 来自 `rb_profile.yaml#/research_style_params/wave0_shared_ref_total`）
+- 每个 topic 的 `artifacts/wave0/{topic}/source.yaml` 存在且通过 ReferenceMetadata schema 校验（`schema_valid`，schema 见 `DPT_FRAMEWORK/schema/contracts/reference.mjs`）
+- per-topic reference metadata 数量 ≥ foundation floor（`count_floor`，threshold 来自 `rb_profile.yaml#/research_style_params/wave0_per_topic_source_floor`）
+- `content_dedup`、`cache_coverage`（target: `output_declarations`）
+- wave0 output declaration ledger 存在且 coverage 完整（`output_declaration_ledger_exists`、`output_declaration_coverage`）
+- wave0 successful relay slot binding（`subagent_slot_presence`，target: `_subagents/wave_00`）
 - trace 中有 `wave0_completion` event（`trace_event_present` check type）
 - `rb_status.json#/current_gate == wave0_complete`
 - `rb_status.json#/next_gate == wave1_complete`
 
-Foundation floor SHALL 定义为每个 topic 至少 1 条 reference metadata（`count_floor` threshold = 1）。Schema 校验 SHALL 验证每条 reference 的 `url`、`title`、`retrieved_date`、`topic_tag` 均非空且类型正确。
+Foundation floor SHALL 定义为每个 topic 至少 1 条 reference metadata entry in `artifacts/wave0/{topic}/source.yaml`（`count_floor` threshold = 1，或 profile 覆盖值）。`count_floor` SHALL 统计 YAML 数组条目；`schema_valid` 独立校验每条 schema。
 
-`count_floor` 与 `schema_valid` 的交互：`count_floor` SHALL 统计 `reference/<topic>/source.yaml` 中的**所有** YAML 数组条目（无论是否 schema-valid），`schema_valid` rule 独立校验每条的 schema。两者串联工作：`count_floor` 保证数量下限，`schema_valid` 保证质量。即使所有条目都不通过 schema 校验，`count_floor` 仍可 pass（数量达标），但 `schema_valid` rule 会 fail。Agent 必须在两个 rule 都 pass 时 gate 才通过。
-
-Topic 集合的 source of truth SHALL 为 `rb_plan.md` frontmatter 的 `topic_registry`；`count_floor` 和 per-topic check SHALL 枚举该 registry 中的 topic key，SHALL NOT 扫描 `reference/` 子目录。`topic_registry` 为空时 gate SHALL return `passed: false`（缺 research scope），`inspect` SHALL 指向空的 topic registry。
+Topic 集合的 source of truth SHALL 为 `rb_plan.md` frontmatter 的 `topic_registry`。
 
 #### Scenario: All Wave0 rules pass
 
-- **WHEN** reference index 存在、每个 topic 至少 1 条 schema-valid reference metadata、trace 有 `wave0_completion` event
+- **WHEN** `reference/_INDEX.md` 存在、每个 topic 的 `artifacts/wave0/{topic}/source.yaml` 至少 1 条 schema-valid entry、trace 有 `wave0_completion` event
 - **THEN** `check-gate-wave0-complete.mjs` SHALL return `passed: true`
 
-#### Scenario: Empty reference index fails
+#### Scenario: Missing per-topic thin YAML fails
 
-- **WHEN** `reference/index.md` 为空或无实质内容
-- **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` / `advice` SHALL 指向缺失的 reference content
-
-#### Scenario: Missing per-topic metadata fails
-
-- **WHEN** 某个 topic 缺少 `reference/<topic>/source.yaml`
+- **WHEN** 某个 topic 缺少 `artifacts/wave0/{topic}/source.yaml`
 - **THEN** gate SHALL return `passed: false`
 
-#### Scenario: Invalid metadata schema fails
+#### Scenario: Missing wave0_completion trace fails
 
-- **WHEN** `reference/<topic>/source.yaml` 存在但某条 reference 缺少必填字段（如 `url` 为空）
+- **WHEN** `rb_trace.jsonl` 中无 `wave0_completion` event
 - **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL 列出 schema violation
-
-#### Scenario: Below foundation floor fails
-
-- **WHEN** 任一 topic 的 reference metadata 数量 < 1
-- **THEN** gate SHALL return `passed: false`
-
-#### Scenario: Status drift fails
-
-- **WHEN** `rb_status.json` 中 `current_gate` 或 `next_gate` 偏离 Wave0 后的 accepted 值
-- **THEN** gate SHALL return `passed: false`
+- **AND** `inspect` SHALL 指向缺失的 trace event
 
 #### Scenario: Empty topic registry fails
 
 - **WHEN** `rb_plan.md` 的 `topic_registry` 为空数组或不存在
 - **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL 指出缺少 research scope（空 topic registry）
-- **AND** `count_floor` 和 per-topic check SHALL 在 topic 集合为空时直接 fail（inspect 指向空 registry），不展开任何 `{topic}` 占位符实例
 
 ### Requirement: Wave1 complete gate rule set
 
-`gate-wave1-complete.definition.json` SHALL 定义当前 contract 下的 Wave1 rules。
+`gate-wave1-complete.definition.json` SHALL 定义当前 contract 下的 Wave1 rules，与 gate JSON 实际内容一致。
 
-规则 SHALL 覆盖：
-- `artifacts/wave1/` 目录存在且非空
-- 每个 topic 至少 1 个 `artifacts/wave1/<topic>/evidence-summary.md` 文件存在（`file_exists`）
-- 每个 topic 至少 1 个 `artifacts/wave1/<topic>/question-list.md` 文件存在（`file_exists`）
-- `per_topic_ref_md_count_floor` rule（`check: count_floor`，`threshold: 1`）的 target glob SHALL 为 `reference/*{topic}*.md`——`{topic}` 展开为 topic.slug（含 `NN_` 前缀），glob `*{topic}*` 匹配任何包含该 slug 的 `.md` 文件名（含 `{slug}-<qualifier>.md` 和裸 `{slug}.md` 两种形态）
-- evidence-summary 含至少 1 条 source URL（`pattern_match`）、key findings section 非空（`pattern_match`）
-- question-list 含四节结构（`pattern_match`：Topic Investigation Targets、Question Reconciliation、Emergent Question Protocol、Exploration/Exploitation Decision）
-- 所有 seed topic 文件中无残留 `__BACKFILL_WAVE1_MECHANISMS__`、`__BACKFILL_WAVE1_TRENDS__`、`__BACKFILL_PENDING_QUESTIONS__` token（`pattern_match`，`negate: true`）
-- trace 中有 `wave1_completion` event
-- `rb_status.json#/current_gate == wave1_complete`
-- `rb_status.json#/next_gate == wave2_complete`
+规则 SHALL 覆盖（除下列外，还包括 gate JSON 中的 provenance/quality 规则）：
+- `artifacts/wave1/` 目录存在（`dir_exists`）
+- 每个 topic 的 `artifacts/wave1/{topic}/evidence-summary.md` 存在（`file_exists`）
+- 每个 topic 的 `artifacts/wave1/{topic}/question-list.md` 存在（`file_exists`）
+- 每个 topic 至少 1 个 `reference/*{topic}*.md` rich MD reference（`count_floor`）
+- reference quality rules：`no_example_com_ref_url`、`reference_format`、`source_url_article_level`、`key_facts_min_lines`
+- evidence-summary / question-list 结构 checks（`pattern_match`）
+- backfill token 清除（`pattern_match`，`negate: true`）
+- `content_dedup`、`cache_coverage`
+- wave1 output declaration ledger + coverage + subagent slot presence（`_subagents/wave_01`）
+- trace 中有 `wave1_completion` event（`trace_event_present`）
+- status 值
 
-#### Scenario: Reference glob matches topic-slug-prefixed files with qualifier
+#### Scenario: Missing question-list fails
 
-- **WHEN** topic slug = `01_meal-timing-blood-glucose-insulin`
-- **AND** reference 文件命名为 `01_meal-timing-blood-glucose-insulin-sutton-etrf.md`
-- **THEN** gate glob `reference/*01_meal-timing-blood-glucose-insulin*.md` SHALL match 该文件
-- **AND** `count_floor` rule SHALL count ≥ 1 for this topic → pass
-
-#### Scenario: Reference glob matches bare slug file without qualifier
-
-- **WHEN** topic slug = `01_meal-timing-blood-glucose-insulin`
-- **AND** reference 文件命名为 `01_meal-timing-blood-glucose-insulin.md`（无 qualifier，无 trailing `-`）
-- **THEN** gate glob `reference/*01_meal-timing-blood-glucose-insulin*.md` SHALL still match 该文件
-- **AND** `count_floor` rule SHALL count ≥ 1 → pass
-
-#### Scenario: Reference glob does not match files from a different topic
-
-- **WHEN** topic slug = `01_meal-timing-blood-glucose-insulin`
-- **AND** reference 文件命名为 `02_front-vs-back-calorie-loading-weight-jakubowicz-2013.md`（不同 topic 的 slug）
-- **THEN** gate glob SHALL NOT match 该文件
-- **AND** `count_floor` rule SHALL count 0 for the `01_meal-...` topic on this file
-
-#### Scenario: Below reference count floor fails
-
-- **WHEN** 任一 topic 的 `reference/*{topic}*.md` 匹配文件数 < 1
+- **WHEN** 某 topic 有 `evidence-summary.md` 但无 `question-list.md`
 - **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL 列出缺失 reference 的 topic
+
+#### Scenario: Missing wave1_completion trace fails
+
+- **WHEN** `rb_trace.jsonl` 中无 `wave1_completion` event
+- **THEN** gate SHALL return `passed: false`
 
 ### Requirement: Wave2 complete gate rule set
 
-`gate-wave2-complete.definition.json` SHALL 定义当前 contract 下的 Wave2 rules。
+`gate-wave2-complete.definition.json` SHALL 定义当前 contract 下的 Wave2 rules，与 gate JSON 实际内容一致。
 
 规则 SHALL 覆盖：
-- `artifacts/wave2/synthesis.md` 存在且非空（`file_exists` + `field_non_empty`）
-- `artifacts/wave2/cross-topic-ledger.md` 存在且非空（`file_exists` + `field_non_empty`）
-- `artifacts/wave2/cross-topic-ledger.md` 含 6 个固定 section 标题（`pattern_match`：验证 "Cross-Topic Scan Matrix" / "Wave1 Legacy Questions" / "Cross-Topic Resolutions" / "Emergent Cross-Topic Questions" / "Exploration Decisions" / "HITL2 Handoff" 依序出现）
-- `artifacts/wave2/finding-index.yaml` 存在且可 parse（`file_exists` + `yaml_parse`）
-- synthesis 中包含至少 1 个 Markdown link（`[text](path)` 格式），指向 `reference/`、`artifacts/wave1/` 或其他 accepted artifact 文件
-- synthesis 中包含至少 1 个 finding id 引用（`pattern_match`：正则匹配 `W2F-\d{3}`）
-- 至少 1 条引用目标在 bundle 中真实存在（`cross_field` check type，`mode: "markdown_link_resolution"`：解析 Markdown links → 验证目标文件存在；≥1 有效引用时 pass）
-- synthesis 中至少包含 1 处 wave1 evidence 引用（`pattern_match`：正则匹配 `\[.*\]\(\.\./wave1/.*/(evidence-summary|question-list)\.md\)`）
-- 所有 seed topic 文件中无残留 `__BACKFILL_WAVE2_JUDGMENT__` 和 `__BACKFILL_PENDING_QUESTIONS__` token（`pattern_match`，`negate: true`）
-- trace 中有 `wave2_completion` event
-- `rb_status.json#/current_gate == wave2_complete`
-- `rb_status.json#/next_gate == hitl2_recorded`
+- 三件套存在性与结构（`synthesis.md`、`cross-topic-ledger.md`、`finding-index.yaml`）
+- section/YAML/link checks
+- `rerun_add_full_synthesis`（rerun action:add 场景）
+- conditional output declaration coverage + Wave2 slot binding for new search/evidence/reference outputs
+- `wave2_cross_ref_coverage`（`reference/00-cross-*.md` 须有 relay provenance）
+- trace 中有 `wave2_completion` event（`trace_event_present`）
+- status 值
 
-Gate SHALL NOT 判断 synthesis 是否有洞察、finding triage 是否充分、finding classification 是否准确、或 backfill 内容是否准确。引用格式 SHALL 使用标准 Markdown link `[label](relative/path.md)`，`cross_field` check 将 path 解析为相对于 `artifacts/wave2/` 的路径。
+#### Scenario: Missing wave2_completion trace fails
 
-#### Scenario: All Wave2 rules pass
-
-- **WHEN** 三件套 artifact 均存在且非空、ledger 含所有 6 个固定 section、index 可 parse、synthesis 含 Markdown links + W2F-xxx finding id + wave1 evidence 引用、backfill token 已替换、trace 有 `wave2_completion` event
-- **THEN** `check-gate-wave2-complete.mjs` SHALL return `passed: true`
-
-#### Scenario: Empty synthesis fails
-
-- **WHEN** `artifacts/wave2/synthesis.md` 存在但为空
+- **WHEN** `rb_trace.jsonl` 中无 `wave2_completion` event
 - **THEN** gate SHALL return `passed: false`
 
-#### Scenario: No Markdown links fails
+#### Scenario: Cross-ref without relay provenance fails
 
-- **WHEN** synthesis 中不包含任何 Markdown link
-- **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL 指向缺失的 artifact reference
-
-#### Scenario: All reference targets missing fails
-
-- **WHEN** synthesis 包含 links 但所有目标文件均不存在
-- **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL 列出每个失效的引用路径
-
-#### Scenario: At least one valid reference passes
-
-- **WHEN** synthesis 中至少 1 条 Markdown link 指向 bundle 中真实存在的文件
-- **THEN** gate SHALL return `passed: true`
-
-#### Scenario: Unreplaced backfill token fails
-
-- **WHEN** 任一 seed topic 文件中仍包含 `__BACKFILL_WAVE2_JUDGMENT__` 或 `__BACKFILL_PENDING_QUESTIONS__` 字面字符串
-- **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL list the affected seed topic file
-
-#### Scenario: No wave1 evidence reference fails
-
-- **WHEN** synthesis 包含有效的 Markdown links 但无一处 link text 匹配 `../wave1/.../(evidence-summary|question-list).md` 格式
-- **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL 指出缺少对 wave1 deepening artifact 的引用
-
-#### Scenario: Ledger missing or empty fails
-
-- **WHEN** `cross-topic-ledger.md` is missing or empty
-- **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL indicate missing ledger artifact
-
-#### Scenario: Ledger missing fixed sections fails
-
-- **WHEN** `cross-topic-ledger.md` exists but is missing one or more of the 6 fixed section headings
-- **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL indicate the ledger section requirement failed
-
-#### Scenario: Finding index YAML unparseable fails
-
-- **WHEN** `finding-index.yaml` exists but is malformed YAML
-- **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL indicate YAML parse error
-
-#### Scenario: Synthesis narrative lacks finding id reference
-
-- **WHEN** `synthesis.md` contains wave1 evidence references but no W2F-xxx finding id
-- **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL indicate narrative is detached from ledger/index
+- **WHEN** `reference/00-cross-*.md` 存在但无对应 Wave2 relay slot provenance
+- **THEN** `wave2_cross_ref_coverage` rule SHALL fail
 
 ### Requirement: Gate CLI evaluates wave0 rules from definition
 

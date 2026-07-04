@@ -58,6 +58,12 @@
       "failure_message": "Topic {topic} has fewer than 1 reference metadata entries in artifacts/wave0/{topic}/source.yaml. Collect at least the foundation floor count for each topic."
     },
     {
+      "id": "trace_event_wave0_completion",
+      "check": "trace_event_present",
+      "target": "wave0_completion",
+      "failure_message": "No wave0_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event per the shared-subagent-protocol."
+    },
+    {
       "id": "status_current_gate",
       "check": "status_value",
       "target": "rb_status.json#/current_gate",

@@ -51,7 +51,7 @@ Rejected attempts SHALL NOT append `rb_output_declarations.jsonl`.
 
 `experiments_playbook/exp_engine-boundary/case-403-light-gate-content-dedup.md` SHALL exist. It SHALL be an Engine-layer light experiment with fixture-backed SlotResult candidates and no Agent actor.
 
-For every scenario except missing-ledger/orphan-only checks, the experiment SHALL create reference/cache fixtures, call `commitSlotResult()` to validate the fixture SlotResult, call delegated `complete()` to validate provenance/declaration/cache and append `rb_output_declarations.jsonl`, then run the real wave0 gate path. `content_dedup` SHALL read `rb_output_declarations.jsonl` and SHALL NOT scan `reference/` to discover inputs.
+For every scenario except missing-ledger/orphan-only checks, the experiment SHALL create reference/cache fixtures, drive relay commit via `drive-relay-slot commit` (which invokes engine `commitSlotResult` validation), call delegated `complete()` to validate provenance/declaration/cache and append `rb_output_declarations.jsonl`, then run the real wave0 gate path. `content_dedup` SHALL read `rb_output_declarations.jsonl` and SHALL NOT scan `reference/` to discover inputs.
 
 It SHALL cover:
 

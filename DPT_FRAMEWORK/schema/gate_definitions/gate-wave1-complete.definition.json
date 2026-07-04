@@ -110,6 +110,12 @@
       "failure_message": "Stale backfill token __BACKFILL_PENDING_QUESTIONS__ found in seed_topics/{topic}.md. Replace with updated question status tags."
     },
     {
+      "id": "trace_event_wave1_completion",
+      "check": "trace_event_present",
+      "target": "wave1_completion",
+      "failure_message": "No wave1_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event per the shared-subagent-protocol."
+    },
+    {
       "id": "status_current_gate",
       "check": "status_value",
       "target": "rb_status.json#/current_gate",

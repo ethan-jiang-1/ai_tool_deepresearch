@@ -77,7 +77,7 @@ prefixes:
   RWP: research-wave-phase-content
   SCO: schema-core
   SDC: subagent-directory-contract
-  SEG: seg2node
+  SEG: seg2node                    # all entries deprecated; no spec directory
   SHC: shared-node-content
   SNC: subagent-node-contract
   SOR: schema-core                 # sub-prefix of SCO
@@ -327,7 +327,7 @@ WTS-009: wave2-synthesis — Cross-topic scan matrix as process evidence surface
 
 
 # seg2node
-SEG-001: seg2node — Global rename segments to nodes with explicit node directory configuration
+SEG-001: seg2node — Global rename segments to nodes with explicit node directory configuration [DEPRECATED]
 
 # shared-node-content
 SHC-001: shared-node-content — Shared profile content completeness (plan_basename, research_profile, root_must_answer_set, hitl1.*, hitl2.*, authority boundary)

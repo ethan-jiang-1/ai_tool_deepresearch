@@ -54,7 +54,7 @@ Each rule SHALL have a `failure_message` providing concrete repair direction.
 ### Requirement: Readiness passed gate rule set
 
 `gate-readiness-passed.definition.json` SHALL define a complete rule set replacing the placeholder. The gate SHALL verify:
-- Required artifact directories/files exist: `seed_topics/`, `reference/index.md`, `artifacts/wave2/synthesis.md`, `artifacts/hitl2/decision-brief.md`
+- Required artifact directories/files exist: `seed_topics/`, `reference/_INDEX.md`, `artifacts/wave2/synthesis.md`, `artifacts/hitl2/decision-brief.md`
 - Every prior gate that precedes readiness in the manifest topology has at least one `gate_attempt` event with `passed: true` in `rb_trace.jsonl` (the CLI derives the expected prior gate set from `manifest.json` at runtime — no hardcoded threshold)
 - `rb_profile.yaml` is parseable as valid YAML
 - `rb_trace.jsonl` is readable (every line is valid JSON)
@@ -72,27 +72,14 @@ The gate SHALL NOT evaluate content quality, writing quality, argument strength,
 #### Scenario: Required artifacts reachability check
 
 - **WHEN** the gate executes artifact existence rules
-- **AND** any required artifact (seed_topics/, reference/index.md, artifacts/wave2/synthesis.md, artifacts/hitl2/decision-brief.md) is missing
+- **AND** any required artifact (`seed_topics/`, `reference/_INDEX.md`, `artifacts/wave2/synthesis.md`, `artifacts/hitl2/decision-brief.md`) is missing
 - **THEN** the gate SHALL return fail with a message identifying the missing artifact
 
 #### Scenario: All prior gates passed audit
 
-- **WHEN** the gate executes the `all_prior_gates_passed` rule (check type: `trace_has_all_gates`)
-- **AND** the CLI derives the expected prior gate set from `manifest.json` (all phases before readiness with `gate != null`)
-- **AND** `rb_trace.jsonl` is missing a `gate_attempt(passed: true)` event for one or more of those prior gates
-- **THEN** the rule SHALL return fail with a message naming which specific gate(s) are missing from the trace
-
-#### Scenario: Profile YAML parseability check
-
-- **WHEN** the gate executes the YAML parseability rule
-- **AND** `rb_profile.yaml` is missing or contains invalid YAML
-- **THEN** the rule SHALL return fail with a message indicating the parse error
-
-#### Scenario: Trace JSONL readability check
-
-- **WHEN** the gate executes the JSONL readability rule
-- **AND** `rb_trace.jsonl` is missing or contains unparseable lines
-- **THEN** the rule SHALL return fail with a message indicating which line failed
+- **WHEN** the gate executes the prior-gate audit rule
+- **AND** any required prior gate lacks a `gate_attempt` event with `passed: true` in `rb_trace.jsonl`
+- **THEN** the gate SHALL return fail identifying the missing gate passage evidence
 
 ### Requirement: HITL2 gate CLI evaluates rules from definition
 

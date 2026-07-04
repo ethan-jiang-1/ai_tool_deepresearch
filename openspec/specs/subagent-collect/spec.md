@@ -90,17 +90,10 @@ In addition to wave-level collection (SUC-001), the system SHALL support per-slo
 
 ### Requirement: Artifact verification bridges relay result to queue receipt
 
-After a `drive-relay-slot commit` succeeds (engine `commitSlotResult` validation passed), the Phase Agent SHALL verify the task's `done_condition` against the artifact file (e.g., `reference/{topic.slug}/source.yaml` exists and passes schema). If the artifact satisfies `done_condition`, the Phase Agent SHALL call `complete()` on the corresponding queue task. If not, the Phase Agent SHALL call `fail()`.
+After a `drive-relay-slot commit` succeeds (engine `commitSlotResult` validation passed), the Phase Agent SHALL verify the task's `done_condition` against the artifact file. For wave0 source intake, the artifact path SHALL be `artifacts/wave0/{topic.slug}/source.yaml` (not `reference/{topic.slug}/source.yaml`).
 
 #### Scenario: Artifact satisfies done_condition triggers complete
 
-- **WHEN** Sub-agent result is committed via the driver and `reference/{topic}/source.yaml` exists
-- **AND** the file passes `ReferenceMetadata` schema validation
+- **WHEN** Sub-agent result is committed via the driver and `artifacts/wave0/{topic}/source.yaml` exists
+- **AND** the file passes ReferenceMetadata schema validation
 - **THEN** Phase Agent SHALL call `complete()` on the queue task
-- **AND** the receipt check SHALL pass
-
-#### Scenario: Missing artifact triggers fail
-
-- **WHEN** Sub-agent result is committed but the expected artifact file is missing
-- **THEN** Phase Agent SHALL call `fail()` on the queue task
-- **AND** the queue SHALL auto-generate a repair task

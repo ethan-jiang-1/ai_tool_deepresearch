@@ -25,6 +25,7 @@ import {
   checkSubagentSlotPresence,
   detectRelayBypassSuspicion,
   runProvenanceForensics,
+  readTraceEvents,
   scanTemplateNotExpanded,
   readYamlArraySafe,
 } from '../../engine/helpers/gate-helpers.mjs';
@@ -361,6 +362,12 @@ for (const rule of definition.rules) {
         }
         for (const line of slotResult.inspect) inspect.push(line);
         for (const a of slotResult.advice) advice.push(a);
+      } else if (rule.check === 'trace_event_present') {
+        const events = readTraceEvents(bundlePath, rule.target);
+        if (!events || events.length === 0) {
+          rulePassed = false;
+          ruleDetail = `Trace event "${rule.target}" not found in rb_trace.jsonl`;
+        }
       } else {
         rulePassed = false;
       ruleDetail = `Unknown check type: ${rule.check} — must fail (check type not implemented)`;

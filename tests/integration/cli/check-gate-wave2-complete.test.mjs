@@ -403,4 +403,17 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected full rerun pass, got inspect: ${JSON.stringify(output.inspect)}`);
   });
+
+  it('13. fails when trace event (wave2_completion) is missing from rb_trace.jsonl', () => {
+    const dir = createBundle(unique('notrace'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    createMinIndex(dir);
+    createMinBackfill(dir);
+    // No trace event file — gate should fail because trace_event_present rule is active
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('trace') || m.includes('Trace event') || m.includes('wave2_completion')), `Expected trace event fail: ${JSON.stringify(output.inspect)}`);
+  });
 });

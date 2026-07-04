@@ -217,6 +217,16 @@ describe('check-gate-wave0-complete', () => {
     assert.ok(output.inspect.some(m => m.includes('next_gate')), `Expected status drift fail: ${JSON.stringify(output.inspect)}`);
   });
 
+  it('9. fails when trace event (wave0_completion) is missing from rb_trace.jsonl', () => {
+    const dir = createBundle(unique('notrace'));
+    setupHappyPath(dir);
+    rmSync(join(dir, 'rb_trace.jsonl'));
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('trace') || m.includes('Trace event') || m.includes('wave0_completion')), `Expected trace event fail: ${JSON.stringify(output.inspect)}`);
+  });
+
   it('8. rejects shared reference files with placeholder source_url (example.com)', () => {
     const dir = createBundle(unique('phshared'));
     mkdirSync(join(dir, 'artifacts/wave0/topic-a'), { recursive: true });

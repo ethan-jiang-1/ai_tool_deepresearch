@@ -4,45 +4,19 @@
 
 ## Purpose
 
-Formalize `_subagents/` as the canonical directory for **relay-managed sub-agent slot artifacts** within the run bundle.
-This closes a long-standing gap: the `_subagents/wave_NN/slot_MM/` convention was implicit in engine code
-(`DPT_FRAMEWORK/engine/subagent-relay.mjs`), protocol docs (`shared-subagent-protocol.md`), and gate checks
-(`gate-helpers-provenance.mjs`), but no spec formally declared it as THE relay communication directory between
-the main Phase Agent and sub-agents. WDC-004 (bundle canonical structure) listed `seed_topics/`, `reference/`,
-`artifacts/`, `final/`, `_cache/` — omitting `_subagents/`.
+Formalize `_subagents/` as the canonical directory for **relay-managed sub-agent slot artifacts** within the run bundle. The `_subagents/wave_NN/slot_MM/` convention is the relay communication directory between the main Phase Agent and sub-agents.
 
-**Scope boundary:** SDC governs the relay slot channel only (`task.md`, beacon, receipts, dispatch, result,
-status, agent metadata). Sub-agent writes to `_cache/`, `reference/`, and `artifacts/` remain governed by
-WDC / task-card / output-declaration contracts — they are **not** relay slot artifacts and are outside SDC.
+**Scope boundary:** SDC governs the relay slot channel only (`task.md`, beacon, receipts, dispatch, result, status, agent metadata). Sub-agent writes to `_cache/`, `reference/`, and `artifacts/` remain governed by WDC / task-card / output-declaration contracts — they are **not** relay slot artifacts and are outside SDC.
 
-This omission caused experiments to invent ad-hoc paths (`_fixtures/`, `/tmp` subdirectories) that bypass the
-standard relay convention and made post-run provenance evidence impossible to find at a predictable location.
+Experiments SHALL use the standard `_subagents/wave_NN/slot_MM/` structure so provenance evidence is at a predictable location.
 
 ## Requirements
 
 ### Requirement: `_subagents/` SHALL be the sole directory for relay-managed slot artifacts
 
-The `_subagents/wave_NN/slot_MM/` path SHALL be the sole directory for relay-managed sub-agent slot artifacts
-between the main Phase Agent and sub-agents. This includes:
+The `_subagents/wave_NN/slot_MM/` path SHALL be the sole directory for relay-managed sub-agent slot artifacts between the main Phase Agent and sub-agents. This includes beacon delivery (`_beacon.json`), task assignment (`task.md`), schema constraint (`result.schema.json`), result collection, runtime receipts, engine-written identity and status, and wave-level dispatch manifests.
 
-- beacon delivery (`_beacon.json`: `bundle_dir`, `log_cli`, `slot_key`, `receipt_nonce`)
-- task assignment (`task.md`)
-- schema constraint (`result.schema.json`)
-- result collection (`result.json`, `result.md`)
-- runtime receipts (`runtime-receipt.jsonl`)
-- engine-written identity and status (`_agent.json`, `_status.json`)
-- wave-level dispatch manifests (`dispatch.json` under `_subagents/wave_NN/`)
-
-Sub-agent intermediate work under `_cache/` and authority outputs under `reference/` / `artifacts/` SHALL NOT
-be relocated into ad-hoc directories to bypass this relay convention.
-
-The `_subagents/` convention SHALL be identical for production runs and experiment/playbook executions.
-Experiments SHALL NOT create ad-hoc relay directories that bypass or replicate the `_subagents/` structure.
-
-#### Scenario: `_subagents/` is the predictable relay evidence location
-- **WHEN** a run bundle is inspected for relay slot / provenance evidence
-- **THEN** `_subagents/wave_NN/slot_MM/` SHALL contain all relay-managed slot artifacts
-- **AND** its internal structure SHALL follow the slot file contract (SUS-001)
+Sub-agent authority outputs under `_cache/`, `reference/`, and `artifacts/` remain outside SDC scope — they are governed by task-card and output-declaration contracts.
 
 #### Scenario: Experiment uses the same `_subagents/` convention as production
 - **WHEN** an experiment playbook needs sub-agent relay slot directories

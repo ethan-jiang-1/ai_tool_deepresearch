@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Sub-agent lifecycle 可观测性契约。定义 sub-agent 在隔离 context 中 MUST 发射哪些 lifecycle 事件、如何经 `log-event.mjs` 写入、如何带上 `_beacon.json` 的 nonce，以及这些事件如何作为 Layer-2 execution-proof 信号被 provenance forensics 读取。把当前 dead code（`buildSpawnPrompt` 里的 logging 指令）升级为 spec 化、always-loaded 的契约。
+Sub-agent lifecycle observability contract. Defines which lifecycle events a sub-agent MUST emit in its isolated context, how they are written via `log-event.mjs`, how they carry the `_beacon.json` nonce, and how they serve as Layer-2 execution-proof signals for provenance forensics.
 
 ## Requirements
 
@@ -51,9 +51,9 @@ The sub-agent SHALL treat `_beacon.json` in its slot directory as the single sou
 
 ### Requirement: Lifecycle events are the execution-proof signal for provenance forensics
 
-Lifecycle events emitted per SRL-001/SRL-002 SHALL be readable by gate provenance forensics as Layer-2 execution evidence. The absence of lifecycle events for an evidence-producing slot SHALL be reported by the `lifecycle_events_missing` diagnostic defined in `relay-provenance-gate` (RPG-011, advisory only this change) — giving SRL-004 a concrete read-side rather than a dangling assertion.
+Lifecycle events emitted per SRL-001/SRL-002 SHALL be readable by gate provenance forensics as Layer-2 execution evidence. The absence of lifecycle events for an evidence-producing slot SHALL be reported by the `lifecycle_events_missing` diagnostic (RPG-011, advisory only) — giving SRL-004 a concrete read-side rather than a dangling assertion.
 
 #### Scenario: Forensics reads lifecycle events as execution proof
 - **WHEN** a gate forensic check inspects a slot that produced evidence
-- **THEN** it SHALL be able to find lifecycle events in `_logs/run.log` / `rb_trace.jsonl` carrying the slot's nonce
-- **AND** absence SHALL be surfaced via the `lifecycle_events_missing` diagnostic (RPG-011), not a gate failure (this change)
+- **THEN** it SHALL be able to find lifecycle events in `_logs/run.log` carrying the slot's nonce
+- **AND** absence SHALL be surfaced via the `lifecycle_events_missing` diagnostic (RPG-011), not a gate failure
