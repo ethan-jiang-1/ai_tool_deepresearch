@@ -66,7 +66,7 @@
 //   Branch:       classifyBranch, convergeRepair
 //   Validation:   validateAndDiagnose, inspectFailure, validateRuntimeReceipt
 //   Slot I/O:     createSlot, readSlotStatus, writeSlotStatus, readSlotResult
-//   Dispatch:     getDispatchMap
+//   Dispatch:     getDispatchMap, stageReplacementSlot, loadSlotByManifestEntry
 //   Collection:   collectResults, mergeResults, forkAndStageSubagents
 //   Convenience:  markSlotFailed
 //   Schemas:      SubagentWorkflowState, SlotResult, Branch, SlotStatus, DispatchManifest
@@ -83,6 +83,13 @@ import { createRunLogger, readBundleName } from './logger.mjs';
 import { isCountable } from './helpers/ref-count.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Absolute path to the Agent-facing logging CLI (SUD-004 beacon `log_cli` source).
+// It is a constant — every bundle uses the same framework CLI — so it is never
+// passed through the spawn prompt; the sub-agent reads it from _beacon.json.
+function logEventCliPath() {
+  return path.join(__dirname, '..', 'cli', 'log-event.mjs');
+}
 
 // Trace + logger auto-init on first mutation call via ensureTrace(bundleDir).
 // Fixed trace filename `rb_trace.jsonl` within the bundle. consoleEcho: false.
@@ -143,12 +150,19 @@ const SlotConfig = z.object({
   timeoutMs: z.number().int().positive().optional(),
 });
 
+// Per-slot entry persisted in dispatch.json. Extends SlotConfig with the
+// engine-generated receipt_nonce (SUD-005) so provenance forensics can bind
+// receipts/ledger entries back to a staged slot from disk alone.
+const ManifestSlotEntry = SlotConfig.extend({
+  receipt_nonce: z.string().uuid(),
+});
+
 export const DispatchManifest = z.object({
   wave: z.string(),
   waveIndex: z.number().int().min(1),
   created: z.string(),
   concurrencyCap: z.number().int().positive(),
-  slots: z.array(SlotConfig),
+  slots: z.array(ManifestSlotEntry),
 });
 
 const SubagentSlot = z.object({
@@ -498,6 +512,23 @@ Return strict JSON to the parent agent. The JSON must match \`result.schema.json
 
 The parent performs Parent Relay: it validates your JSON and writes \`result.json\`, optional \`result.md\`, \`_status.json\`, and \`_agent.json\`.
 
+## Lifecycle Logging (required)
+
+You MUST leave a trace of your work so the parent can verify the relay actually ran. This directive travels with your slot task regardless of how you were spawned.
+
+1. Read \`_beacon.json\` in the same directory as this \`task.md\`. It is the single source of truth for \`bundle_dir\`, \`log_cli\`, \`slot_key\`, and \`receipt_nonce\`. Do NOT rely on environment variables or inherited cwd for the bundle path.
+2. Emit these lifecycle events via the logging CLI (the \`log_cli\` path from your beacon), carrying the beacon \`receipt_nonce\` in every event's \`--detail\` JSON:
+   - \`search_start\` / \`search_done\` — around each bounded search
+   - \`fetch_done\` — when a page fetch completes (include \`url\`)
+   - \`file_written\` — when you write an artifact file (include bundle-relative \`path\`)
+   - \`error\` — when a fetch is blocked or the result is degraded
+   - \`work_done\` — once, when all your work is complete
+
+Example (substitute \`bundle_dir\`, \`log_cli\`, and \`receipt_nonce\` from your beacon):
+  node <log_cli> --bundle <bundle_dir> --level info --msg "search_start" --detail '{"kind":"search_start","slotKey":"${parsed.key}","roleAgentKey":"${parsed.roleAgentKey}","receipt_nonce":"<receipt_nonce>"}'
+
+If \`_beacon.json\` is missing or unreadable, emit an \`error\` event and do NOT fabricate a nonce. Do NOT log raw page content, full search result bodies, or private reasoning. The logging CLI always exits 0 — diagnostics must not block your work.
+
 ## Forbidden Authority
 
 - Do not mutate WorkflowState.
@@ -512,45 +543,104 @@ The parent performs Parent Relay: it validates your JSON and writes \`result.jso
 function buildSpawnPrompt(slot, baseDir, platform = 'codex', cacheDir = null) {
   const s = SubagentSlot.parse(slot);
   const cacheLine = cacheDir ? `Cache directory: ${cacheDir}\n` : '';
-  const logEventCli = path.join(__dirname, '..', 'cli', 'log-event.mjs');
+  const slotDir = path.join(baseDir, path.dirname(s.taskPath));
 
+  // SUD-006: beacon mode. The spawn prompt hands the sub-agent ONLY its slot
+  // directory absolute path plus a directive to read _beacon.json. The bundle
+  // path, logger path, and nonce are NOT inlined as the sole channel — they
+  // are read from the beacon (cross-checkable, single source of truth).
   return `You are being launched as DPT role ${s.roleAgentKey} for slot ${s.key}.
 
 Platform: ${platform}
-Slot directory: ${path.join(baseDir, path.dirname(s.taskPath))}
-${cacheLine}Task file: ${path.join(baseDir, s.taskPath)}
-Result schema: ${path.join(baseDir, s.schemaPath)}
-Runtime receipt: ${path.join(baseDir, s.receiptPath)}
-Runtime receipt nonce: ${s.receiptNonce}
+Slot directory: ${slotDir}
+${cacheLine}
+## First step: read your beacon
 
-Read the task and schema. Perform the bounded work in your isolated agent context.
-Write runtime receipt events to the Runtime receipt JSONL file from inside your own agent context:
-- first line before doing task work: {"event":"agent_runtime_started","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receiptNonce":"${s.receiptNonce}"}
-- second line immediately before returning: {"event":"agent_result_ready","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receiptNonce":"${s.receiptNonce}"}
-Return strict JSON only. Do not write workflow state. Do not pass gates, repair queues, or authorize stopping.
-The parent will validate your JSON and write durable slot files.
+Open \`${slotDir}/_beacon.json\` before doing any work. It is the single source of truth for your runtime coordinates:
+- \`bundle_dir\` — absolute bundle root. Use it for every \`log-event.mjs --bundle\` call and to resolve bundle-relative artifact paths.
+- \`log_cli\` — absolute path to the logging CLI \`log-event.mjs\`.
+- \`slot_key\` — your slot key (use in every event and runtime-receipt detail).
+- \`receipt_nonce\` — a UUID nonce you MUST carry in every lifecycle event and every runtime-receipt event.
+
+Do NOT rely on environment variables or inherited cwd for the bundle path — read it from \`_beacon.json\`.
+
+## Inputs (all in your slot directory)
+
+- Read \`${slotDir}/task.md\`.
+- Read \`${slotDir}/result.schema.json\`.
+- Use only bounded information in your task and sources you inspect yourself.
+
+## Runtime receipt (required)
+
+Write two JSONL events to \`${slotDir}/runtime-receipt.jsonl\`, substituting the \`receipt_nonce\` from your beacon:
+- first line before doing task work: {"event":"agent_runtime_started","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receiptNonce":"<your beacon receipt_nonce>"}
+- second line immediately before returning: {"event":"agent_result_ready","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receiptNonce":"<your beacon receipt_nonce>"}
+
+## Output
+
+Return strict JSON to the parent agent. The JSON must match \`result.schema.json\`.
+
+The parent performs Parent Relay: it validates your JSON and writes \`result.json\`, optional \`result.md\`, \`_status.json\`, and \`_agent.json\`.
 
 ## Diagnostic logging
-Write to the parent bundle run log via:
-  node ${logEventCli} --bundle ${baseDir} --level <info|warn|error> --msg "<event>" --detail '<json>'
 
-Log these events:
+Write lifecycle events to the parent bundle run log via the \`log_cli\` (\`log-event.mjs\`) from your beacon. Every event MUST carry your beacon \`receipt_nonce\`:
+
+  node <log_cli> --bundle <bundle_dir> --level <info|warn|error> --msg "<event>" --detail '<json>'
+
+Log these events (substitute \`<bundle_dir>\`, \`<log_cli>\`, and \`<receipt_nonce>\` from your beacon; \`<url>\`, \`<path>\`, \`<N>\`, \`<summary>\`, \`<reason>\` from your work):
 - \`search_start\` — when beginning a new search:
-  node ${logEventCli} --bundle ${baseDir} --level info --msg "search_start" --detail '{"kind":"search_start","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}"}'
+  {"kind":"search_start","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receipt_nonce":"<receipt_nonce>"}
 - \`search_done\` — when a search completes:
-  node ${logEventCli} --bundle ${baseDir} --level info --msg "search_done" --detail '{"kind":"search_done","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","result_count":<N>}'
+  {"kind":"search_done","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receipt_nonce":"<receipt_nonce>","result_count":<N>}
 - \`fetch_done\` — when a page fetch completes:
-  node ${logEventCli} --bundle ${baseDir} --level info --msg "fetch_done" --detail '{"kind":"fetch_done","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","url":"<url>"}'
+  {"kind":"fetch_done","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receipt_nonce":"<receipt_nonce>","url":"<url>"}
 - \`file_written\` — when writing an artifact file:
-  node ${logEventCli} --bundle ${baseDir} --level info --msg "file_written" --detail '{"kind":"file_written","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","path":"<bundle-relative-path>"}'
+  {"kind":"file_written","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receipt_nonce":"<receipt_nonce>","path":"<bundle-relative-path>"}
 - \`error\` — when encountering an error:
-  node ${logEventCli} --bundle ${baseDir} --level error --msg "error" --detail '{"kind":"error","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","reason":"<reason>"}'
+  {"kind":"error","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receipt_nonce":"<receipt_nonce>","reason":"<reason>"}
 - \`work_done\` — when all work is complete:
-  node ${logEventCli} --bundle ${baseDir} --level info --msg "work_done" --detail '{"kind":"work_done","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","summary":"<summary>"}'
+  {"kind":"work_done","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receipt_nonce":"<receipt_nonce>","summary":"<summary>"}
 
-Use lowercase CLI levels: \`info\` for normal progress, \`warn\` for blocked fetches or degraded results, and \`error\` for failures that prevent completion.
+Use lowercase CLI levels: \`--level <info|warn|error>\` — \`info\` for normal progress, \`warn\` for blocked fetches or degraded results, and \`error\` for failures that prevent completion.
 
-Do NOT log: raw page content, full search result bodies, or private reasoning.`;
+Do NOT log: raw page content, full search result bodies, or private reasoning.
+
+## Forbidden Authority
+
+- Do not mutate WorkflowState.
+- Do not pass or fail gates.
+- Do not repair queues.
+- Do not decide queue integrity.
+- Do not authorize stopping.
+- Do not include raw search trails, large page dumps, or private reasoning.
+
+Perform the bounded work in your isolated agent context. Return strict JSON only. Do not write workflow state. The parent will validate your JSON and write durable slot files.`;
+}
+
+// Write the per-slot file contract (task.md, result.schema.json, _status.json,
+// _beacon.json) into a slot directory. Shared by full-wave staging
+// (createDispatchManifest) and replacement staging (stageReplacementSlot) so the
+// slot file set is always engine-produced, never driver-hand-written.
+function materializeSlotDir(baseDir, waveDir, slot, config, cacheDir = null) {
+  const slotDir = path.join(baseDir, `_subagents/${waveDir}/${slotDirName(slot.slotIndex)}`);
+  mkdirSync(slotDir, { recursive: true });
+  const configWithCache = cacheDir ? { ...config, cacheDir } : config;
+  writeFileSync(path.join(slotDir, 'task.md'), taskMarkdownForSlot(configWithCache));
+  writeFileSync(path.join(slotDir, 'result.schema.json'), JSON.stringify(resultJsonSchemaForSlot(config), null, 2));
+  writeFileSync(path.join(slotDir, '_status.json'), JSON.stringify({
+    status: 'pending',
+    updated: new Date().toISOString(),
+  }, null, 2));
+  // SUD-004: per-slot beacon = single source of truth the sub-agent reads to
+  // locate the bundle, logger, slot key, and nonce. Absolute paths so a
+  // sub-agent in an isolated context needs nothing else.
+  writeFileSync(path.join(slotDir, '_beacon.json'), JSON.stringify({
+    bundle_dir: path.resolve(baseDir),
+    log_cli: logEventCliPath(),
+    slot_key: slot.key,
+    receipt_nonce: slot.receiptNonce,
+  }, null, 2));
 }
 
 function createDispatchManifest(slotConfigs, state, baseDir, waveIndex, cacheDirBySlotKey = null) {
@@ -569,19 +659,8 @@ function createDispatchManifest(slotConfigs, state, baseDir, waveIndex, cacheDir
     const slot = createSlot(config, waveIndex);
     slots.push(slot);
 
-    // Resolve per-slot cache directory if map provided
     const perSlotCacheDir = cacheDirBySlotKey?.[config.key] || null;
-    const configWithCache = perSlotCacheDir ? { ...config, cacheDir: perSlotCacheDir } : config;
-
-    const slotDir = path.join(baseDir, `_subagents/${waveDir}/${slotDirName(config.slotIndex)}`);
-    mkdirSync(slotDir, { recursive: true });
-
-    writeFileSync(path.join(slotDir, 'task.md'), taskMarkdownForSlot(configWithCache));
-    writeFileSync(path.join(slotDir, 'result.schema.json'), JSON.stringify(resultJsonSchemaForSlot(config), null, 2));
-    writeFileSync(path.join(slotDir, '_status.json'), JSON.stringify({
-      status: 'pending',
-      updated: new Date().toISOString(),
-    }, null, 2));
+    materializeSlotDir(baseDir, waveDir, slot, config, perSlotCacheDir);
 
     traceEntry('slot_create', {
       source: 'gs-slot',
@@ -589,6 +668,7 @@ function createDispatchManifest(slotConfigs, state, baseDir, waveIndex, cacheDir
       roleAgentKey: config.roleAgentKey,
       slotIndex: config.slotIndex,
       waveIndex,
+      receiptNonce: slot.receiptNonce,
     });
     logEvent('info', 'slot_create', { key: config.key, roleAgentKey: config.roleAgentKey, slotIndex: config.slotIndex });
   }
@@ -598,7 +678,10 @@ function createDispatchManifest(slotConfigs, state, baseDir, waveIndex, cacheDir
     waveIndex,
     created: new Date().toISOString(),
     concurrencyCap: MAX_CONCURRENT_SUBAGENTS,
-    slots: configs,
+    // SUD-005: persist each slot's engine-generated UUID receipt_nonce so
+    // forensics can bind receipts/ledger entries back to a staged slot from
+    // dispatch.json alone (no in-memory slot object needed).
+    slots: configs.map((config, i) => ({ ...config, receipt_nonce: slots[i].receiptNonce })),
   };
   DispatchManifest.parse(manifest);
   writeFileSync(path.join(wavePath, 'dispatch.json'), JSON.stringify(manifest, null, 2));
@@ -607,7 +690,9 @@ function createDispatchManifest(slotConfigs, state, baseDir, waveIndex, cacheDir
     source: 'gs-dispatch',
     waveIndex,
     slotCount: slots.length,
-    slots: slots.map((s) => ({ key: s.key, roleAgentKey: s.roleAgentKey })),
+    // SUD-007: nonce-anchor the staging trace so the full chain (staging →
+    // ingest → commit) is cross-checkable end-to-end by RPG-012.
+    slots: slots.map((s) => ({ key: s.key, roleAgentKey: s.roleAgentKey, receiptNonce: s.receiptNonce })),
   });
   logEvent('info', 'dispatch', { waveIndex, slotCount: slots.length });
 
@@ -648,6 +733,108 @@ export function stageSubagentSlots(state, baseDir, customDispatchMap) {
     logEvent('error', 'relay_stage_exception', { kind: 'queue_enqueue', reason: safeMsg });
     throw err;
   }
+}
+
+/**
+ * Stage a single replacement SlotConfig into a wave's freed slotIndex (SUD-003
+ * replacement dispatch). Materializes the slot file set and updates dispatch.json
+ * in place — replacing any existing entry with the same slotIndex, else appending
+ * — WITHOUT clobbering other in-flight slots in the wave.
+ *
+ * The runtime driver calls this to refill a slot freed by a completed sub-agent
+ * when the current queue task still has undispatched batch items.
+ *
+ * @param {string} baseDir     - bundle root directory
+ * @param {object} slotConfig  - { key, slotIndex, roleAgentKey, taskDescription, modelHint?, timeoutMs? }
+ * @param {number} waveIndex   - existing wave index to stage into (1-based)
+ * @param {string|null} [cacheDir=null] - per-slot cache directory
+ * @returns {object} slot object (engine-produced, with persisted nonce + files)
+ */
+export function stageReplacementSlot(baseDir, slotConfig, waveIndex, cacheDir = null) {
+  ensureTrace(baseDir);
+  const config = SlotConfig.parse(slotConfig);
+  const waveDir = waveDirName(waveIndex);
+  const wavePath = path.join(baseDir, '_subagents', waveDir);
+  mkdirSync(wavePath, { recursive: true });
+
+  const slot = createSlot(config, waveIndex);
+  materializeSlotDir(baseDir, waveDir, slot, config, cacheDir);
+
+  traceEntry('slot_create', {
+    source: 'gs-slot',
+    key: config.key,
+    roleAgentKey: config.roleAgentKey,
+    slotIndex: config.slotIndex,
+    waveIndex,
+    receiptNonce: slot.receiptNonce,
+    replacement: true,
+  });
+  logEvent('info', 'slot_create', { key: config.key, roleAgentKey: config.roleAgentKey, slotIndex: config.slotIndex, replacement: true });
+
+  // Update dispatch.json in place — replace same-slotIndex entry, else append.
+  // Other in-flight slots are preserved untouched.
+  const dispatchPath = path.join(wavePath, 'dispatch.json');
+  const entry = { ...config, receipt_nonce: slot.receiptNonce };
+  let manifest;
+  if (existsSync(dispatchPath)) {
+    manifest = JSON.parse(readFileSync(dispatchPath, 'utf-8'));
+    const idx = manifest.slots.findIndex((s) => s.slotIndex === config.slotIndex);
+    if (idx >= 0) manifest.slots[idx] = entry;
+    else manifest.slots.push(entry);
+  } else {
+    manifest = {
+      wave: `wave-${waveIndex}`,
+      waveIndex,
+      created: new Date().toISOString(),
+      concurrencyCap: MAX_CONCURRENT_SUBAGENTS,
+      slots: [entry],
+    };
+  }
+  DispatchManifest.parse(manifest);
+  writeFileSync(dispatchPath, JSON.stringify(manifest, null, 2));
+
+  return slot;
+}
+
+/**
+ * Reconstruct a slot object from its dispatch.json entry, preserving the
+ * persisted engine-generated nonce. Used by the runtime driver to load a slot
+ * for ingest/commit/merge without an in-memory slot object, and by provenance
+ * forensics to read a slot's nonce straight from the on-disk record.
+ *
+ * @param {string} baseDir   - bundle root directory
+ * @param {number} waveIndex - wave index (1-based)
+ * @param {string} slotKey   - slot key to look up in dispatch.json
+ * @returns {object} slot object (nonce = dispatch.json receipt_nonce)
+ * @throws {Error} if dispatch.json is missing or the slot key is not recorded
+ */
+export function loadSlotByManifestEntry(baseDir, waveIndex, slotKey) {
+  const waveDir = waveDirName(waveIndex);
+  const dispatchPath = path.join(baseDir, '_subagents', waveDir, 'dispatch.json');
+  if (!existsSync(dispatchPath)) {
+    throw new Error(`dispatch.json missing: _subagents/${waveDir}/dispatch.json`);
+  }
+  const manifest = JSON.parse(readFileSync(dispatchPath, 'utf-8'));
+  const entry = (manifest.slots || []).find((s) => s.key === slotKey);
+  if (!entry) {
+    throw new Error(`slot key not found in dispatch.json: ${slotKey}`);
+  }
+  const slotBase = `_subagents/${waveDir}/${slotDirName(entry.slotIndex)}`;
+  return SubagentSlot.parse({
+    key: entry.key,
+    roleAgentKey: entry.roleAgentKey,
+    waveIndex,
+    slotIndex: entry.slotIndex,
+    taskPath: `${slotBase}/task.md`,
+    schemaPath: `${slotBase}/result.schema.json`,
+    resultPath: `${slotBase}/result.json`,
+    summaryPath: `${slotBase}/result.md`,
+    statusPath: `${slotBase}/_status.json`,
+    agentPath: `${slotBase}/_agent.json`,
+    receiptPath: `${slotBase}/runtime-receipt.jsonl`,
+    receiptNonce: entry.receipt_nonce,
+    status: 'pending',
+  });
 }
 
 const slotTransitions = new Map([
@@ -933,6 +1120,7 @@ export function commitSlotResult(slot, baseDir, candidateResult, metadata = {}) 
       key: s.key,
       roleAgentKey: s.roleAgentKey,
       platform: metadata.platform || 'unknown',
+      receiptNonce: s.receiptNonce,
     });
 
     const validation = validateSlotResult(s, candidateResult);
@@ -1020,6 +1208,7 @@ export function commitSlotResult(slot, baseDir, candidateResult, metadata = {}) 
       key: s.key,
       roleAgentKey: s.roleAgentKey,
       valid: validation.ok,
+      receiptNonce: s.receiptNonce,
     });
 
     writeFileSync(path.join(baseDir, s.resultPath), JSON.stringify(result, null, 2));

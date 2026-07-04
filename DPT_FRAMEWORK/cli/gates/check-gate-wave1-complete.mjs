@@ -29,6 +29,7 @@ import {
   checkOutputDeclarationCoverage,
   checkSubagentSlotPresence,
   detectRelayBypassSuspicion,
+  runProvenanceForensics,
   scanTemplateNotExpanded,
   readYamlArraySafe,
 } from '../../engine/helpers/gate-helpers.mjs';
@@ -448,6 +449,12 @@ const phase = derivePhaseFromGate(definition.gate);
 const bypassResult = detectRelayBypassSuspicion(bundlePath, phase, definition.gate);
 if (bypassResult.suspected) {
   inspect.push(`[relay_bypass_suspected] Phase ${phase} artifacts found without relay provenance: ${(bypassResult.provenanceMissing || []).join('; ')}`);
+}
+
+// RPG-007..013: diagnostic-only provenance forensics (advisory; never changes pass/fail).
+const forensicFindings = runProvenanceForensics(bundlePath, phase, definition.gate);
+for (const f of forensicFindings) {
+  inspect.push(`[provenance_diagnostic:${f.code}] slot=${f.slotKey} wave=${f.wave}: ${f.reason}`);
 }
 
 const result = buildGateResult({

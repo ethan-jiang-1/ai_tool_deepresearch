@@ -66,6 +66,16 @@ The Sub-agent cannot leak noise into Phase Agent context because:
 3. Phase Agent collects via `commitSlotResult()` which validates and writes `result.json` — Phase Agent reads only this structured output
 4. Self-proving files (`runtime-receipt.jsonl`) and intermediate products (`_cache/`) stay within the slot-scoped directories to prevent cross-slot collisions
 
+### 1.5 Driving the relay lifecycle — `drive-relay-slot`
+
+The Phase Agent SHALL drive the relay slot lifecycle through the runtime driver CLI `DPT_FRAMEWORK/cli/drive-relay-slot.mjs` (SNC-003), NOT by hand-orchestrating engine functions (`stageSubagentSlots` / `commitSlotResult` / `collectAndMergeSubagentResults`) or hand-writing slot files. The driver is the directed runtime path so staging, beacon, and commit actually occur and sub-agent logging comes alive:
+
+- `drive-relay-slot stage <bundle> [--wave <N>]` — stages slot directories (`task.md`, `result.schema.json`, `_status.json`, `_beacon.json`), writes `dispatch.json`, and prints each slot's spawn prompt. For replacement dispatch into a freed slotIndex (SUD-003), pass `--slot-index <M> --role <key> --key <slotKey> --task "<desc>"`.
+- `drive-relay-slot commit <bundle> --wave <N> --slot <slotKey> --result '<json>' --runtime-agent-id <id>` — ingests the runtime receipt and validates the returned result through `commitSlotResult`, writing `result.json` / `_status.json` / `_agent.json`.
+- `drive-relay-slot merge <bundle> --wave <N>` — collects and merges committed slots into workflow state and returns the fork/repair decision.
+
+The driver does NOT spawn the sub-agent itself — `stage` prints the spawn prompt for the Phase Agent to spawn via its native Agent tool, then `commit` validates whatever the sub-agent returns. The driver performs no search, evidence judgment, or routing (SRD-002/003).
+
 ## 2. Directory Structure — Authority Boundary
 
 ```

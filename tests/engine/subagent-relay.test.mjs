@@ -917,3 +917,127 @@ describe('LOG-006 relay diagnostics', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 });
+
+// ── Beacon mode + nonce persistence + trace nonce-anchoring (SUD-004/005/006/007) ──
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Read rb_trace.jsonl events (array of parsed objects) for a bundle. */
+function readTraceEvents(bundleDir) {
+  const tracePath = path.join(bundleDir, 'rb_trace.jsonl');
+  if (!existsSync(tracePath)) return [];
+  return readFileSync(tracePath, 'utf-8').trim().split('\n').filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
+describe('Beacon mode + nonce persistence (SUD-004/005/006)', () => {
+  it('staging writes a per-slot _beacon.json with complete, absolute coordinates', () => {
+    const dir = setupRelayBundle('beacon');
+    try {
+      const slots = stageSubagentSlots(baseState(), dir);
+      assert.ok(slots.length > 0);
+      for (const slot of slots) {
+        const beaconPath = path.join(dir, path.dirname(slot.taskPath), '_beacon.json');
+        assert.ok(existsSync(beaconPath), `_beacon.json missing for ${slot.key}`);
+        const beacon = JSON.parse(readFileSync(beaconPath, 'utf-8'));
+        assert.equal(beacon.slot_key, slot.key);
+        assert.equal(beacon.receipt_nonce, slot.receiptNonce, 'beacon nonce must equal in-memory slot nonce');
+        assert.ok(UUID_RE.test(beacon.receipt_nonce), 'beacon receipt_nonce must be UUID-shaped');
+        assert.ok(path.isAbsolute(beacon.bundle_dir), 'bundle_dir must be absolute');
+        assert.ok(path.isAbsolute(beacon.log_cli), 'log_cli must be absolute');
+        assert.ok(beacon.log_cli.endsWith('log-event.mjs'));
+        assert.ok(beacon.bundle_dir.endsWith(path.basename(dir)) || path.resolve(beacon.bundle_dir) === path.resolve(dir));
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('dispatch.json persists each slot UUID receipt_nonce matching its beacon', () => {
+    const dir = setupRelayBundle('dispatch-nonce');
+    try {
+      const slots = stageSubagentSlots(baseState(), dir);
+      const manifest = JSON.parse(readFileSync(path.join(dir, '_subagents', 'wave_01', 'dispatch.json'), 'utf-8'));
+      assert.equal(manifest.slots.length, slots.length);
+      for (const [i, slot] of slots.entries()) {
+        const entry = manifest.slots[i];
+        assert.equal(entry.receipt_nonce, slot.receiptNonce, `dispatch nonce mismatch for ${slot.key}`);
+        assert.ok(UUID_RE.test(entry.receipt_nonce), 'dispatch receipt_nonce must be UUID-shaped');
+        // dispatch nonce must equal the slot's _beacon.json nonce
+        const beacon = JSON.parse(readFileSync(path.join(dir, path.dirname(slot.taskPath), '_beacon.json'), 'utf-8'));
+        assert.equal(entry.receipt_nonce, beacon.receipt_nonce, 'dispatch nonce must equal beacon nonce');
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('buildSpawnPrompt is beacon-driven: slot directory + beacon pointer, no inlined bundle nonce', () => {
+    const dir = setupRelayBundle('spawn-beacon');
+    try {
+      const [slot] = stageSubagentSlots(baseState(), dir);
+      const prompt = recordAgentSpawnRequested(slot, dir, { platform: 'claude-code' });
+      const slotDir = path.join(dir, path.dirname(slot.taskPath));
+      // Slot directory absolute path is present
+      assert.ok(prompt.includes(slotDir), 'spawn prompt must contain the slot directory absolute path');
+      // Beacon pointer directive is present
+      assert.ok(prompt.includes('_beacon.json'), 'spawn prompt must direct the sub-agent to read _beacon.json');
+      assert.ok(/read .*_beacon\.json|open .*_beacon\.json/i.test(prompt), 'prompt must instruct reading the beacon');
+      // The literal nonce is NOT handed over as the sole channel — sub-agent reads it from beacon
+      assert.ok(!prompt.includes(`Runtime receipt nonce: ${slot.receiptNonce}`), 'spawn prompt must not inline the nonce as the sole channel');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('Trace nonce-anchoring across staging → ingest → commit (SUD-007)', () => {
+  it('slot_create and dispatch_create trace events carry the slot nonce', () => {
+    const dir = setupRelayBundle('trace-staging');
+    try {
+      const slots = stageSubagentSlots(baseState(), dir);
+      const events = readTraceEvents(dir);
+      const target = slots[0];
+      const slotCreates = events.filter((e) => e.event === 'slot_create' && e.key === target.key);
+      assert.ok(slotCreates.length === 1, 'expected one slot_create event');
+      assert.equal(slotCreates[0].receiptNonce, target.receiptNonce, 'slot_create must carry slot nonce');
+
+      const dispatchCreates = events.filter((e) => e.event === 'dispatch_create');
+      assert.ok(dispatchCreates.length === 1, 'expected one dispatch_create event');
+      const dispatchEntry = dispatchCreates[0].slots.find((s) => s.key === target.key);
+      assert.ok(dispatchEntry, 'dispatch_create must list the slot');
+      assert.equal(dispatchEntry.receiptNonce, target.receiptNonce, 'dispatch_create slot entry must carry nonce');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('agent_result_received and result_schema_validated trace events carry the slot nonce', () => {
+    const dir = setupRelayBundle('trace-commit');
+    try {
+      const [slot] = stageSubagentSlots(baseState(), dir);
+      writeRuntimeReceipt(dir, slot, { platform: 'codex', runtimeMode: 'project-agent' });
+      ingestAgentReceipt(slot, dir, { runtimeAgentId: 'agent-trace' });
+      commitSlotResult(slot, dir, doneResult(slot, 2), { platform: 'codex', runtimeMode: 'project-agent', runtimeAgentId: 'agent-trace' });
+
+      const events = readTraceEvents(dir);
+      const received = events.filter((e) => e.event === 'agent_result_received' && e.key === slot.key);
+      assert.ok(received.length === 1, 'expected one agent_result_received event');
+      assert.equal(received[0].receiptNonce, slot.receiptNonce, 'agent_result_received must carry slot nonce');
+
+      const validated = events.filter((e) => e.event === 'result_schema_validated' && e.key === slot.key);
+      assert.ok(validated.length === 1, 'expected one result_schema_validated event');
+      assert.equal(validated[0].receiptNonce, slot.receiptNonce, 'result_schema_validated must carry slot nonce');
+
+      // Full chain nonce-anchored: the same nonce appears across all four event kinds
+      const allNonced = ['slot_create', 'dispatch_create', 'agent_result_received', 'result_schema_validated']
+        .every((kind) => events.some((e) => e.event === kind && (
+          e.receiptNonce === slot.receiptNonce ||
+          (e.slots && e.slots.some((s) => s.receiptNonce === slot.receiptNonce && s.key === slot.key))
+        )));
+      assert.ok(allNonced, 'all four trace event kinds must carry the slot nonce');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

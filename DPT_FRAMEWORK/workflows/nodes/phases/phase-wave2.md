@@ -108,8 +108,9 @@ Claim → execute synthesis（cross-topic scan + finding triage + initial search
 
  5. 对 decision=exploit_search|explore_search 的 finding spawn Sub-agent
     — spawn `dpt-topic-scout` Sub-agent（role guidance: `subagent-dpt-topic-scout.md`）
+    — 经 `drive-relay-slot` 驱动 relay 生命周期（SNC-003）：`stage`（产出 spawn prompt + `_beacon.json`）→ 用原生 Agent tool spawn → `commit`（校验 sub-agent 返回 JSON）→ `merge`。**不**手编排 `stageSubagentSlots`/`commitSlotResult`、**不**手写 slot 文件。命令形态见 `shared-subagent-protocol.md` §1.5
     — 每 finding 做 1 轮搜索（更多的 emergent search round 由 §3.3.2 Re-Fill Loop 追加）
-    → relay ingestion validates runtime receipt → `commitSlotResult()` commits slot `result.json`
+    → `drive-relay-slot commit` 内部经 `commitSlotResult()` commits slot `result.json`
     → `operate-queue complete --result <result.json>` with `slot_result_ref`
     → 更新 finding-index.yaml 的 receipt_refs + status
     → 有价值的跨 topic source → promote 到 reference/00-cross-<slug>.md

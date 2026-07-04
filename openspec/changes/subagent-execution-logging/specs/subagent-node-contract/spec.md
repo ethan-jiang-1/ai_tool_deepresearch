@@ -1,10 +1,10 @@
-# Workflow Node Contract (delta)
+# Subagent Node Contract (delta)
 
-> req: WNC-010, WNC-011, WNC-012
+> req: SNC-001, SNC-002, SNC-003
 
 ## Purpose
 
-为 `workflow-node-contract` 增加 sub-agent lifecycle logging 的强制契约：sub-agent role spec（always-loaded）与 `taskMarkdownForSlot` 生成的 `task.md` SHALL mandate 读 `_beacon.json` + 经 `log-event.mjs` 发射 lifecycle 事件 + 事件带 nonce。把 logging 指令从 dead code（`buildSpawnPrompt`）下沉到任何 spawn 路径都能读到的契约，使 logging 真正在 runtime 活过来。
+为 sub-agent 增加 lifecycle logging 的强制契约与 relay driver 供需接线：sub-agent role spec（always-loaded）与 `taskMarkdownForSlot` 生成的 `task.md` SHALL mandate 读 `_beacon.json` + 经 `log-event.mjs` 发射 lifecycle 事件 + 事件带 nonce；phase workflow node SHALL 指示 Phase Agent 经 `drive-relay-slot` 驱动 relay。把 logging 指令从 dead code（`buildSpawnPrompt`）下沉到任何 spawn 路径都能读到的契约，使 logging 真正在 runtime 活过来。
 
 ## ADDED Requirements
 

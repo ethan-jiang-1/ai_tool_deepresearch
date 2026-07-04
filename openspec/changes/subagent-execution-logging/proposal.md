@@ -16,10 +16,11 @@ BUG-019 报告 Main Agent 在主上下文与 relay/gate 基础设施搏斗。但
 - **beacon 模式（解决"sub-agent 怎么知道 bundle 在哪"）**：engine 在 staging 写 `_subagents/wave_NN/slot_MM/_beacon.json`（含 `bundle_dir`/`log_cli`/`slot_key`/`receipt_nonce`）；spawn prompt 以 slot 目录为唯一路径坐标（另含 role + 读 beacon 指令），sub-agent 读 beacon 后用绝对路径调 `log-event.mjs`。logger CLI 路径（`DPT_FRAMEWORK/cli/log-event.mjs`）是常量，不用传。
 - **Layer-1 nonce 持久化（**懒手糊筛查**，非伪造铁证）**：把 `createSlot()` 的 `randomUUID()` nonce 持久化进 `dispatch.json`。只抓**懒手糊**——不写 dispatch.json 或 nonce 非 UUID（BUG-019 即此）。认真手糊者写齐 dispatch+receipt+beacon+同一个自造 UUID 就能过。**不单独证明 staging 真跑过。**
 - **Layer-2 execution-based 取证信号（**主信号**，本轮 diagnostic-only）**：主信号是 engine 经 `traceEntry` 写进 `rb_trace.jsonl` 的事件链（staging→ingest→commit）。**SUD-007** 把 nonce 贯穿 staging+commit trace 事件，使整条链可交叉校验；**RPG-012** 检测跨文件/跨事件的不一致（认真手糊的主判据）。gate 以**诊断**输出（advisory，不改 pass/fail）。**本轮不把 RPG-003 升级为 execution-based 阻断；阻断升级 deferred 到未来 change（依 §10 判决）。**
-- **runtime driver + 需求接线（闭合"无 driver"缺口，让 logging 活过来）**：新增 Agent 可调用的 CLI `drive-relay-slot`（`stage`/`commit`/`merge` 子命令 + replacement re-stage，以 `forkAndStageSubagents` 为内核），端到端驱动 relay slot 生命周期（stage → spawn → commit → merge）。**供需接线**：phase MD（`phase-wave0/1/2.md` 的 relay 段 + `shared-subagent-protocol.md`，WNC-012）SHALL 指示 Phase Agent 用此 driver——driver 不是可选，否则重蹈"引擎函数无 runtime 调用者"覆辙。`buildSpawnPrompt`/`recordAgentSpawnRequested`/`commitSlotResult`/`collectAndMergeSubagentResults` 不再是 dead code。
+- **runtime driver + 需求接线（闭合"无 driver"缺口，让 logging 活过来）**：新增 Agent 可调用的 CLI `drive-relay-slot`（`stage`/`commit`/`merge` 子命令 + replacement re-stage，以 `forkAndStageSubagents` 为内核），端到端驱动 relay slot 生命周期（stage → spawn → commit → merge）。**供需接线**：phase MD（`phase-wave0/1/2.md` 的 relay 段 + `shared-subagent-protocol.md`，SNC-003）SHALL 指示 Phase Agent 用此 driver——driver 不是可选，否则重蹈"引擎函数无 runtime 调用者"覆辙。`buildSpawnPrompt`/`recordAgentSpawnRequested`/`commitSlotResult`/`collectAndMergeSubagentResults` 不再是 dead code。
 - **logging 下沉到 role spec + task.md（任何 spawn 路径都留痕）**：sub-agent role spec 与 `taskMarkdownForSlot` MANDATE 读 `_beacon.json`、用绝对路径调 `log-event.mjs` 发射 lifecycle 事件（`search_start`/`search_done`/`fetch_done`/`file_written`/`error`/`work_done`），事件带 beacon nonce。
 - **forensic 诊断（advisory only）**：gate/inspect 输出 `provenance_nonce_mismatch`（RPG-007，懒手糊筛查）、`relay_commit_missing`（RPG-008）、`agent_timestamp_span_suspicious`（RPG-009，**单独不足判伪造**）、`lifecycle_events_missing`（RPG-011，辅助）、`provenance_chain_inconsistency`（**RPG-012，跨文件一致性——认真手糊主判据**）；所有诊断带 `slotKey`+`wave`（RPG-013）。**本轮 diagnostic-only，不改 pass/fail**；阻断升级 deferred（plan §10 判决）。
 - **判断手册嵌入 change（非仅引用 plan）**：本 change 经 RPG-010 要求框架 ship 一份 durable 的 provenance 取证判断指南（S0–S5 信号 + **6-tier 判决矩阵** + 抗手糊频谱说明 + write-back 流程，内容来自 plan §10），使下一个 coding agent 只拿 change/框架就能据落地证据判决 BUG-019。
+- **Relay slot directory convention formalized**：`_subagents/` 被 spec 正式声明为 relay-managed slot artifacts 的 sole 目录（SDC-001）；WDC-004 同步 catalog `_subagents/`。scope 限定 relay 通道（task/beacon/receipt/dispatch/result/status/agent metadata），**不**覆盖 `_cache/`/`reference/`/`artifacts/` 写入（SDC-002 禁止 ad-hoc 外部 relay 路径如 `_fixtures/`、`/tmp`）。闭合长期缺口——此前约定仅隐式存在于 engine 与 protocol doc，导致实验自创 ad-hoc 路径。
 
 **不改**：BUG-019 对策结论（等真实 run 后由 §10 判决）；queue/relay 核心架构；不引入 npm 依赖；不做密码学签名（out-of-scope）。
 
@@ -29,12 +30,14 @@ BUG-019 报告 Main Agent 在主上下文与 relay/gate 基础设施搏斗。但
 
 - `subagent-runtime-logging`：sub-agent lifecycle 可观测性契约——sub-agent MUST 经 `log-event.mjs` 发射哪些 lifecycle 事件、事件如何带上 `_beacon.json` 的 nonce、这些事件如何作为 execution-proof 信号被 provenance forensics 读取。把当前 dead code（`buildSpawnPrompt` 里的 logging 指令）升级为 spec 化、always-loaded 的契约。
 - `subagent-relay-driver`：runtime driver 命令契约——一个 Agent 可调用的 CLI，端到端驱动 relay slot 生命周期（stage → spawn-prompt → commit → merge，含 replacement re-stage），闭合「引擎函数无 runtime 调用者」缺口。driver 只编排 slot lifecycle，**不替 Agent 做 search/judgment**（与引擎「prepare then validate」定位一致）。
+- `subagent-directory-contract`：relay slot directory 契约——`_subagents/wave_NN/slot_MM/` 为 relay-managed slot artifacts 的 sole 目录（SDC-001），实验和生产 SHALL 使用同一 convention；禁止 ad-hoc 外部 relay 路径（SDC-002）。
 
 ### Modified Capabilities
 
 - `subagent-dispatch`：staging 行为扩展——写 `_beacon.json`、把 UUID nonce 持久化进 `dispatch.json`、`buildSpawnPrompt` 改为只传 slot 目录 + beacon 指针（beacon 模式，SUD-004/005/006）；**SUD-007：staging+commit trace 事件带 `receiptNonce`，使 engine trace 链 nonce-anchored、可交叉校验**。
+- `subagent-node-contract`：sub-agent role spec 与 `taskMarkdownForSlot` 增加 MANDATE lifecycle logging 契约（读 beacon、绝对路径调 `log-event.mjs`、事件带 nonce，SNC-001/002）；**新增 SNC-003**——phase workflow node（`phase-wave0/1/2.md` relay 段 + `shared-subagent-protocol.md`）SHALL 指示 Phase Agent 用 `drive-relay-slot` 驱动 relay（供需接线，避免 driver 重蹈 dead code）。
 - `relay-provenance-gate`：**新增 diagnostic-only 取证要求**（RPG-007 nonce-mismatch / RPG-008 commit-missing / RPG-009 timestamp-span / RPG-011 lifecycle-missing / **RPG-012 chain-inconsistency 跨文件一致性**）+ **RPG-013**（诊断带 slotKey+wave）+ **判断指南契约**（RPG-010，ship 框架自带 forensics guide，6-tier 矩阵 + 抗手糊频谱）。**RPG-003（presence-based slot binding）本轮不变**；升级为 execution-based 阻断是未来 change，依 §10 判决。
-- `workflow-node-contract`：sub-agent role spec 与 `taskMarkdownForSlot` 增加 MANDATE lifecycle logging 契约（读 beacon、绝对路径调 `log-event.mjs`、事件带 nonce，WNC-010/011）；**新增 WNC-012**——phase workflow node（`phase-wave0/1/2.md` relay 段 + `shared-subagent-protocol.md`）SHALL 指示 Phase Agent 用 `drive-relay-slot` 驱动 relay（供需接线，避免 driver 重蹈 dead code）。
+- `workflow-directory-contract`：**MODIFIED WDC-004**——在 canonical bundle structure 列出 `_subagents/`（relay slot 树，cross-ref SDC-001）。
 
 ## Impact
 
@@ -42,7 +45,7 @@ BUG-019 报告 Main Agent 在主上下文与 relay/gate 基础设施搏斗。但
 - **CLI**：新增 `DPT_FRAMEWORK/cli/drive-relay-slot.mjs`（独立 CLI，还是 `operate-queue drain` 子命令——design 阶段定）；`log-event.mjs`（可能扩 lifecycle event kind 校验）。
 - **Gate CLI / diagnostics**：gate CLI（`check-gate-wave*-complete.mjs`）增加 forensic 诊断输出（advisory only）。**本轮不改 `gate-wave*-complete.definition.json` 的 `subagent_slot_presence` 阻断语义**（保持 presence-based）；definition 级 execution-based 升级 deferred。
 - **Shipped doc**：新增 `DPT_FRAMEWORK/command_playbook/provenance-forensics-guide.md`（RPG-010，判断指南：S0–S5 信号 + 6-tier 矩阵 + 抗手糊频谱，内容来自 plan §10）。
-- **Workflow MD**：`subagent-dpt-source-intake.md` 等 role spec + `taskMarkdownForSlot` 模板（MANDATE logging，WNC-010/011）；`phase-wave0/1/2.md` relay 段 + `shared-subagent-protocol.md`（指示 Phase Agent 用 `drive-relay-slot`，WNC-012）。
-- **Tests / Playbook**：`tests/engine/subagent-relay.test.mjs`（beacon/nonce 持久化、spawn prompt 只传 slot 目录）、`tests/cli/drive-relay-slot.test.mjs`、gate forensic 测试、**`experiments_playbook/exp_system-logging/`（既有，接近真实环境；扩 case-76 spawn-prompt-logging / case-77 subagent-logging）验证「真 sub-agent run 留下完整 S0–S5 信号 + forensic 诊断」**。
+- **Workflow MD**：`subagent-dpt-source-intake.md` 等 role spec + `taskMarkdownForSlot` 模板（MANDATE logging，SNC-001/002）；`phase-wave0/1/2.md` relay 段 + `shared-subagent-protocol.md`（指示 Phase Agent 用 `drive-relay-slot`，SNC-003）。
+- **Tests / Playbook**：`tests/engine/subagent-relay.test.mjs`（beacon/nonce 持久化、spawn prompt 只传 slot 目录）、`tests/cli/drive-relay-slot.test.mjs`、gate forensic 测试、**`experiments_playbook/exp_system-logging/`（既有，接近真实环境；扩 case-76 spawn-prompt-logging / case-77 subagent-logging / case-79 provenance-forensics）验证「真 sub-agent run 留下完整 S0–S5 信号 + forensic 诊断」**。case-79 用 8 个 disposable bundle（每 tier 一个）替代 ad-hoc `_fixtures/` 子目录，符合 SDC-002。
 - **Version**：本 change 修改 DPT_FRAMEWORK 运行时行为（新增 forensic gate + driver CLI + beacon），**需要 version bump，target `v0.2`**（apply 阶段按 `version-management` VEM 更新 `RUN.md` 横幅与 `CHANGELOG.md`）。
 - **Plan 锚点**：详细设计见 `_backlog/plans/subagent-logging-come-alive-plan.md`（§4 埋点 / §5.0 beacon / §5 driver+下沉 / §10 判断手册）。

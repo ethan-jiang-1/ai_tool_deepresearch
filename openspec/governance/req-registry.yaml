@@ -76,8 +76,10 @@ prefixes:
   RWG: research-wave-gate-implementation
   RWP: research-wave-phase-content
   SCO: schema-core
+  SDC: subagent-directory-contract
   SEG: seg2node
   SHC: shared-node-content
+  SNC: subagent-node-contract
   SOR: schema-core                 # sub-prefix of SCO
   SRD: subagent-relay-driver
   SRL: subagent-runtime-logging
@@ -452,7 +454,7 @@ STM-006: seed-topic-materialization — Topic slug SHALL include zero-padded NN_
 WDC-001: workflow-directory-contract — Read-only framework assets boundary (DPT_FRAMEWORK/ = read-only, dpt_rb_*/ = mutable runtime truth)
 WDC-002: workflow-directory-contract — Workflow node directory structure (phases/ and shared/ under workflows/nodes/)
 WDC-003: workflow-directory-contract — Gate artifacts location and shape (gate definitions, CLI, engine, helpers, schema contract)
-WDC-004: workflow-directory-contract — Runtime bundle canonical structure (rb_plan.md, rb_profile.yaml, rb_status.json, rb_queue.json, rb_trace.jsonl, seed_topics/, reference/, artifacts/, final/, _cache/)
+WDC-004: workflow-directory-contract — Runtime bundle canonical structure (rb_plan.md, rb_profile.yaml, rb_status.json, rb_queue.json, rb_trace.jsonl, seed_topics/, reference/, artifacts/, final/, _subagents/, _cache/)
 WDC-005: workflow-directory-contract — Test and experiment boundary (tests/ for regression, experiments_playbook/ for Agent-driven E2E)
 WDC-006: workflow-directory-contract — Naming conventions for workflow foundation artifacts (phase-*.md, shared-*.md, gate-*.definition.json, check-gate-*.mjs, dpt_rb_*, exp_*)
 WDC-007: workflow-directory-contract — Anti-mixing rules (what must not go where, including command_playbook/ boundary)
@@ -466,9 +468,9 @@ WNC-006: workflow-node-contract — Skeleton completeness criteria (parseable fr
 WNC-007: workflow-node-contract — Workflow package consistency validation across manifest, frontmatter, gate definitions, transition tables, and loader runtime cache / dependency plan
 WNC-008: workflow-node-contract — Autonomous contract header injection in assessNode() for stop:no phases (prepended after frontmatter, before body)
 WNC-009: workflow-node-contract — Universal silent execution dependency (every stop:no phase SHALL require shared/shared-silent-execution)
-WNC-010: workflow-node-contract — Sub-agent role specs mandate lifecycle logging (read beacon, emit events with nonce, always-loaded)
-WNC-011: workflow-node-contract — taskMarkdownForSlot includes the lifecycle-logging directive in generated task.md
-WNC-012: workflow-node-contract — Phase workflow nodes / shared-subagent-protocol direct the Phase Agent to drive the relay via drive-relay-slot (demand-side wiring, avoids driver dead-code)
+SNC-001: subagent-node-contract — Sub-agent role specs SHALL mandate lifecycle logging (read beacon, emit events with nonce, always-loaded)
+SNC-002: subagent-node-contract — taskMarkdownForSlot SHALL include the lifecycle-logging directive in generated task.md
+SNC-003: subagent-node-contract — Phase workflow nodes SHALL direct the Phase Agent to drive the relay via drive-relay-slot (demand-side wiring)
 GSK-001: gate-skeleton — Gate definition JSON skeleton structure (gate, description, rules[] with id/check/target/threshold/failure_message)
 GSK-002: "gate-skeleton — Gate CLI skeleton shape (parseArgs, --bundle/--current-node required, check/inspect/advice JSON output, exit codes)"
 GSK-003: gate-skeleton — One gate per CLI (8 independent CLI wrappers, no generic runner with subcommand)
@@ -565,6 +567,8 @@ RWG-013: research-wave-gate-implementation — Wave2 gate removes reference/00_s
 # workflow-directory-contract (delta)
 WDC-009: workflow-directory-contract — Bundle canonical structure includes artifacts/wave0/ and flat reference/
 WDC-010: workflow-directory-contract — Manifest includes rerun phase entry (phases array gets rerun→phases/phase-rerun.md gate rerun-ready; manifest is inventory not routing table)
+SDC-001: subagent-directory-contract — _subagents/ as the sole inter-agent communication directory; experiments and production SHALL use the same convention
+SDC-002: subagent-directory-contract — Prohibition of external inter-agent communication paths (_fixtures/, /tmp, ad-hoc names); all sub-agent artifacts SHALL reside under _subagents/wave_NN/slot_MM/
 
 # cli-inspect-output-conventions
 IOC-001: cli-inspect-output-conventions — inspect-wave0-output.mjs (flat dir, naming, metadata, sections, _INDEX.md, README.md, thin YAML)

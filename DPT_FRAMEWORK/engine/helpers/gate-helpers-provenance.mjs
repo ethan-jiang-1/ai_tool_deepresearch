@@ -1,5 +1,5 @@
-// gate-helpers-provenance.mjs — Relay provenance gate checks + bypass detection
-// @impl RPG-001, RPG-002, RPG-004, RPG-005
+// gate-helpers-provenance.mjs — Relay provenance gate checks + bypass detection + forensics
+// @impl RPG-001, RPG-002, RPG-004, RPG-005, RPG-007, RPG-008, RPG-009, RPG-011, RPG-012, RPG-013
 // Canonical location: DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs
 //
 // Re-exported by gate-helpers.mjs for backward compatibility.
@@ -9,6 +9,236 @@ import { join, basename } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { readOutputDeclarations, readBundlePlan, listMatchingBundleFiles } from './gate-helpers-readers.mjs';
 import { readBundleName, logToRun } from '../logger.mjs';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Provenance Forensics (RPG-007..013) — diagnostic-only (advisory this change)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Forge-resistance is a SPECTRUM, not a binary (see provenance-forensics-guide.md):
+//   - Single files (dispatch.json / _beacon.json / _agent.json / runtime-receipt.jsonl)
+//     are trivially forged via writeFileSync.
+//   - The engine trace chain in rb_trace.jsonl (nonce-anchored end-to-end by
+//     SUD-007) is the primary hard-to-forge signal — a forger must append
+//     self-consistent nonce-anchored lines.
+//   - S1/S2 (dispatch.json + UUID nonce) are a sloppy-forgery screen only.
+// No single signal is crypto-unforgeable (signing is out-of-scope).
+//
+// These diagnostics emit through the EXISTING logging surface (trace event +
+// run.log WARN) and SHALL NOT change gate pass/fail. They carry slotKey + wave
+// (RPG-013) so a future coding agent can aggregate per slot/wave.
+
+const FORENSIC_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const TIMESTAMP_SPAN_THRESHOLD_MS = 1000; // RPG-009 default threshold (Q3: conservative)
+const LIFECYCLE_EVENT_RE = /search_start|search_done|fetch_done|file_written|work_done/;
+
+function readJsonSafe(filePath, fallback = null) {
+  try {
+    if (!existsSync(filePath)) return fallback;
+    return JSON.parse(readFileSync(filePath, 'utf-8'));
+  } catch { return fallback; }
+}
+
+function readTraceLines(bundlePath) {
+  const p = join(bundlePath, 'rb_trace.jsonl');
+  if (!existsSync(p)) return [];
+  return readFileSync(p, 'utf-8').split('\n').filter(Boolean).map((l) => {
+    try { return JSON.parse(l); } catch { return null; }
+  }).filter(Boolean);
+}
+
+function readRunLogText(bundlePath) {
+  const p = join(bundlePath, '_logs', 'run.log');
+  if (!existsSync(p)) return '';
+  return readFileSync(p, 'utf-8');
+}
+
+/** Match production relay_commit_done log lines only — not diagnostic reason text. */
+function runLogHasRelayCommitDone(runLog, slotKey) {
+  if (!runLog || !slotKey) return false;
+  for (const line of runLog.split('\n')) {
+    if (!/\] INFO relay_commit_done bundle=/.test(line)) continue;
+    const jsonStart = line.indexOf('{');
+    if (jsonStart >= 0) {
+      try {
+        const detail = JSON.parse(line.slice(jsonStart));
+        if (detail.slotKey === slotKey) return true;
+      } catch { /* ignore malformed line */ }
+    }
+    if (line.includes(slotKey)) return true;
+  }
+  return false;
+}
+
+function emitForensicFinding(code, slotKey, wave, reason, bundlePath, phase, gate, findings) {
+  const finding = { code, slotKey, wave, reason, phase, gate };
+  findings.push(finding);
+  try {
+    const bundle = (() => { try { return readBundleName(bundlePath); } catch { return basename(bundlePath); } })();
+    const ts = new Date().toISOString();
+    appendFileSync(join(bundlePath, 'rb_trace.jsonl'), JSON.stringify({
+      ts, bundle, event: 'provenance_diagnostic', kind: code, slotKey, wave, reason, phase, gate,
+    }) + '\n');
+  } catch { /* trace write failure must not block the gate */ }
+  try { logToRun(bundlePath, 'warn', code, { slotKey, wave, reason, phase, gate }); } catch { /* ignore */ }
+}
+
+/**
+ * Run diagnostic-only provenance forensics for a wave (RPG-007..013).
+ *
+ * For each staged slot under `_subagents/wave_NN/`, inspect the engine-emitted
+ * artifact set and emit advisory diagnostics when forge-resistance signals
+ * contradict. Diagnostics write through the existing logging surface (trace +
+ * run.log WARN) and the returned findings let the gate surface them as advisory
+ * inspect lines. Pass/fail is NEVER changed by these diagnostics.
+ *
+ * Checks:
+ *   - RPG-007 provenance_nonce_mismatch: nonce non-UUID / absent from dispatch.json
+ *   - RPG-008 relay_commit_missing: staged slot without engine commit trace
+ *   - RPG-009 agent_timestamp_span_suspicious: spawnedAt→completedAt span < threshold
+ *   - RPG-011 lifecycle_events_missing: done slot without a nonce-carrying lifecycle event
+ *   - RPG-012 provenance_chain_inconsistency: cross-artifact reference contradictions
+ *     (explicitly avoids duplicating RPG-008's "_status=done without commit trace")
+ *
+ * @param {string} bundlePath
+ * @param {string} phase - 'wave0' | 'wave1' | 'wave2'
+ * @param {string} gate - gate key
+ * @returns {Array<{code, slotKey, wave, reason, phase, gate}>} findings (also emitted to trace/log)
+ */
+export function runProvenanceForensics(bundlePath, phase, gate) {
+  const findings = [];
+  const waveNum = String(phase || '').replace('wave', '');
+  const wave = `wave_${String(waveNum).padStart(2, '0')}`;
+  const waveDir = join(bundlePath, '_subagents', wave);
+  if (!existsSync(waveDir) || !statSync(waveDir).isDirectory()) return findings;
+
+  const dispatchPath = join(waveDir, 'dispatch.json');
+  const dispatch = readJsonSafe(dispatchPath, null);
+  const dispatchEntries = (dispatch && Array.isArray(dispatch.slots)) ? dispatch.slots : [];
+  const dispatchNonceByKey = new Map(dispatchEntries.map((s) => [s.key, s.receipt_nonce]));
+  const dispatchKeys = new Set(dispatchEntries.map((s) => s.key));
+
+  const trace = readTraceLines(bundlePath);
+  const runLog = readRunLogText(bundlePath);
+  const dispatchCreateEv = trace.find((e) => e.event === 'dispatch_create');
+
+  let slotNames = [];
+  try {
+    slotNames = readdirSync(waveDir, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && d.name.startsWith('slot_'))
+      .map((d) => d.name);
+  } catch { return findings; }
+
+  for (const slotName of slotNames) {
+    const slotDir = join(waveDir, slotName);
+    const beacon = readJsonSafe(join(slotDir, '_beacon.json'), null);
+    const result = readJsonSafe(join(slotDir, 'result.json'), null);
+    const statusFile = readJsonSafe(join(slotDir, '_status.json'), null);
+    const agent = readJsonSafe(join(slotDir, '_agent.json'), null);
+
+    // nonce: prefer the staged beacon nonce; fall back to the receipt's first event.
+    let receiptNonce = null;
+    const receiptPath = join(slotDir, 'runtime-receipt.jsonl');
+    if (existsSync(receiptPath)) {
+      try {
+        const firstLine = readFileSync(receiptPath, 'utf-8').split('\n').filter(Boolean)[0];
+        if (firstLine) receiptNonce = JSON.parse(firstLine).receiptNonce || null;
+      } catch { /* keep null */ }
+    }
+    const nonce = beacon?.receipt_nonce || receiptNonce || null;
+    const nonceIsUuid = !!(nonce && FORENSIC_UUID_RE.test(nonce));
+
+    const slotKey = result?.slotKey || beacon?.slot_key || slotName;
+    const stagedSlot = !!statusFile || !!result;
+    const statusDone = (statusFile?.status === 'done') || (result?.status === 'done');
+
+    // Per-slot trace events (top-level key OR detail.key).
+    const slotEvents = trace.filter((e) => e.key === slotKey || (e.detail && e.detail.key === slotKey));
+    const tHas = (kind) => {
+      if (slotEvents.some((e) => e.event === kind)) return true;
+      if (kind === 'dispatch_create' && dispatchCreateEv && Array.isArray(dispatchCreateEv.slots)
+        && dispatchCreateEv.slots.some((s) => s.key === slotKey)) return true;
+      return false;
+    };
+    const traceNonces = new Set();
+    for (const e of slotEvents) {
+      if (e.receiptNonce) traceNonces.add(e.receiptNonce);
+      if (e.detail?.receiptNonce) traceNonces.add(e.detail.receiptNonce);
+    }
+    if (dispatchCreateEv?.slots) {
+      for (const s of dispatchCreateEv.slots) {
+        if (s.key === slotKey && s.receiptNonce) traceNonces.add(s.receiptNonce);
+      }
+    }
+
+    const commitTracePresent = tHas('result_schema_validated') || tHas('agent_result_received');
+    const runLogCommit = runLogHasRelayCommitDone(runLog, slotKey);
+    const commitProven = commitTracePresent || runLogCommit;
+
+    // lifecycle event carrying the nonce in run.log or trace (S5 signal).
+    const lifecycleWithNonce = nonce
+      ? (runLog.includes(nonce) || trace.some((e) => LIFECYCLE_EVENT_RE.test(JSON.stringify(e)) && JSON.stringify(e).includes(nonce)))
+      : false;
+
+    let agentSpanMs = null;
+    if (agent?.spawnedAt && agent?.completedAt) {
+      const s = Date.parse(agent.spawnedAt);
+      const c = Date.parse(agent.completedAt);
+      if (!Number.isNaN(s) && !Number.isNaN(c)) agentSpanMs = c - s;
+    }
+
+    // RPG-007 provenance_nonce_mismatch (sloppy-forgery screen).
+    if (stagedSlot) {
+      if (!nonceIsUuid) {
+        emitForensicFinding('provenance_nonce_mismatch', slotKey, wave, `nonce not UUID-shaped: ${String(nonce).slice(0, 60)}`, bundlePath, phase, gate, findings);
+      } else if (!dispatch) {
+        emitForensicFinding('provenance_nonce_mismatch', slotKey, wave, 'dispatch.json absent — no staged nonce can match', bundlePath, phase, gate, findings);
+      } else if (dispatchNonceByKey.get(slotKey) !== nonce) {
+        emitForensicFinding('provenance_nonce_mismatch', slotKey, wave, 'UUID nonce not present in (or not matching) dispatch.json', bundlePath, phase, gate, findings);
+      }
+    }
+
+    // RPG-008 relay_commit_missing — staged slot (any status) without engine commit trace.
+    if (stagedSlot && !commitProven) {
+      emitForensicFinding('relay_commit_missing', slotKey, wave, 'slot has _status.json/result.json but no engine commit trace (result_schema_validated / relay_commit_done)', bundlePath, phase, gate, findings);
+    }
+
+    // RPG-009 agent_timestamp_span_suspicious (alone insufficient to conclude forgery).
+    if (agentSpanMs !== null && agentSpanMs < TIMESTAMP_SPAN_THRESHOLD_MS) {
+      emitForensicFinding('agent_timestamp_span_suspicious', slotKey, wave, `spawnedAt→completedAt span ${agentSpanMs}ms < ${TIMESTAMP_SPAN_THRESHOLD_MS}ms threshold (alone insufficient to conclude forgery)`, bundlePath, phase, gate, findings);
+    }
+
+    // RPG-011 lifecycle_events_missing — done slot without a nonce-carrying lifecycle event (S5 read-side).
+    if (statusDone && !lifecycleWithNonce) {
+      emitForensicFinding('lifecycle_events_missing', slotKey, wave, 'done slot has no lifecycle event carrying its nonce in run.log/rb_trace.jsonl', bundlePath, phase, gate, findings);
+    }
+
+    // RPG-012 provenance_chain_inconsistency — cross-artifact contradictions.
+    // (a) agent_result_received present but result_schema_validated absent.
+    if (tHas('agent_result_received') && !tHas('result_schema_validated')) {
+      emitForensicFinding('provenance_chain_inconsistency', slotKey, wave, 'agent_result_received present but result_schema_validated absent', bundlePath, phase, gate, findings);
+    }
+    // (b) agent_result_ready present but agent_runtime_started absent.
+    if (tHas('agent_result_ready') && !tHas('agent_runtime_started')) {
+      emitForensicFinding('provenance_chain_inconsistency', slotKey, wave, 'agent_result_ready present but agent_runtime_started absent', bundlePath, phase, gate, findings);
+    }
+    // (c) nonce mismatch across chain artifacts.
+    if (nonce) {
+      const conflictingTraceNonce = [...traceNonces].find((tn) => tn && tn !== nonce);
+      if (conflictingTraceNonce) {
+        emitForensicFinding('provenance_chain_inconsistency', slotKey, wave, `nonce mismatch: beacon/receipt=${nonce.slice(0, 8)}… vs trace=${String(conflictingTraceNonce).slice(0, 8)}…`, bundlePath, phase, gate, findings);
+      } else if (dispatch && dispatchNonceByKey.has(slotKey) && dispatchNonceByKey.get(slotKey) !== nonce) {
+        emitForensicFinding('provenance_chain_inconsistency', slotKey, wave, 'nonce mismatch: beacon/receipt vs dispatch.json', bundlePath, phase, gate, findings);
+      }
+    }
+    // (d) slot listed in dispatch.json but no staging trace.
+    //     (Distinct from RPG-008: RPG-008 = staged-without-commit; this = dispatched-without-staging-trace.)
+    if (dispatchKeys.has(slotKey) && !tHas('slot_create') && !tHas('dispatch_create')) {
+      emitForensicFinding('provenance_chain_inconsistency', slotKey, wave, 'slot listed in dispatch.json but no slot_create/dispatch_create trace', bundlePath, phase, gate, findings);
+    }
+  }
+
+  return findings;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Relay Provenance Gate Checks (RPG-001, RPG-002, RPG-004, RPG-005)

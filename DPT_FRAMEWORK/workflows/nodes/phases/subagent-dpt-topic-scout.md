@@ -26,6 +26,23 @@ suggested_context: []
 - **Boundary**: This role searches and extracts for a specific finding or topic gap; it does not make cross-topic synthesis judgments, update final ledger state, run gates, or mutate workflow state.
 - **Handoff**: Phase Agent ingests the runtime receipt, calls `commitSlotResult()`, then completes the queue item through `operate-queue complete --result` with `slot_result_ref`.
 
+## Lifecycle Logging Mandate (always-loaded)
+
+This mandate is loaded from the role spec itself — it applies to **every spawn path** (the runtime driver `drive-relay-slot` or a hand-written spawn prompt), not only to the engine-generated spawn prompt.
+
+1. **Read your beacon first.** Open `_beacon.json` in your slot directory. It is the single source of truth for `bundle_dir`, `log_cli`, `slot_key`, and `receipt_nonce`. Do NOT use environment variables or inherited cwd for the bundle path.
+2. **Emit lifecycle events via `log-event.mjs`.** Using `log_cli` and `bundle_dir` from the beacon, emit this event set, each carrying the beacon `receipt_nonce` in its `--detail` JSON:
+   - `search_start` / `search_done` — around each bounded search (`search_done` includes `result_count`)
+   - `fetch_done` — when a page fetch completes (include `url`)
+   - `file_written` — when you write an artifact file (include bundle-relative `path`)
+   - `error` — when a fetch is blocked or the result degrades (include `reason`)
+   - `work_done` — once, when all work is complete (include `summary`)
+3. **Never fabricate a nonce.** If `_beacon.json` is missing or unreadable, emit an `error` event noting the missing beacon and proceed without lifecycle logging — do NOT invent a `receipt_nonce`.
+4. **Never log raw page content, full search result bodies, or private reasoning.** The logging CLI always exits 0; diagnostics must not block your work.
+
+Example:
+  node <log_cli> --bundle <bundle_dir> --level info --msg "work_done" --detail '{"kind":"work_done","slotKey":"<slot_key>","receipt_nonce":"<receipt_nonce>","summary":"<summary>"}'
+
 ## 1. Purpose
 
 Define the Wave2 gap-fill/search role. The Phase Agent reads this role spec to construct bounded relay slot instructions. The Sub-agent actor does not directly load this Markdown node; it receives the generated `task.md`, `result.schema.json`, runtime receipt file, and slot-local/cache paths.

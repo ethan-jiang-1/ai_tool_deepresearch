@@ -67,6 +67,7 @@ export {
   checkOutputDeclarationCoverage,
   checkSubagentSlotPresence,
   detectRelayBypassSuspicion,
+  runProvenanceForensics,
 } from './gate-helpers-provenance.mjs';
 
 // Serial

@@ -100,6 +100,8 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 
 Wave0 的 claim→execute→complete 使用 relay 批量并行执行（灌料→stage→并行 spawn→collect-as-return→backfill→补位→merge→gate）。Sub-agent 的具体搜索和产出指令见 `subagent-dpt-source-intake.md`（via `suggested_context`）。Relay 基础设施（slot 契约、目录结构、并发控制、禁区清单）见 `shared-subagent-protocol.md`。
 
+> **驱动 relay（SNC-003，供需接线）**：Phase Agent MUST 经 `drive-relay-slot` CLI 驱动 relay slot 生命周期（`stage` → spawn → `commit` → `merge`），**不**手编排 `stageSubagentSlots`/`commitSlotResult` 引擎函数、**不**手写 slot 文件。`stage` 产出 spawn prompt（含 slot 目录 + `_beacon.json` 指针），Phase Agent 用原生 Agent tool spawn sub-agent，sub-agent 返回的 JSON 经 `commit` 校验落盘。命令形态见 `shared-subagent-protocol.md` §1.5。
+
 **Wave0 参数表**：
 
 | 参数 | 值 |
