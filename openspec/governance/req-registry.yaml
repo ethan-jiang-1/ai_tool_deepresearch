@@ -290,9 +290,9 @@ SUC-001: subagent-collect — Collect slot result envelopes and merge evidence i
 SUD-001: subagent-dispatch — Gate pass dispatches subagent slots into wave-scoped file system protocol
 SUR-001: subagent-repair — All-slots-failed repair routing and partial-failure tolerance
 SUS-001: subagent-slots — Subagent slot lifecycle state machine and wave-scoped paths
-SUD-002: subagent-dispatch — Queue task card targets.delegates triggers relay-based dynamic dispatch (task to SlotConfig mapping)
-SUD-003: subagent-dispatch — Batch sub-agent protocol defines collect-as-return loop with replacement dispatch
-SUC-002: subagent-collect — Per-slot collect during batch sub-agent execution (ingestAgentReceipt + commitSlotResult)
+SUD-002: subagent-dispatch — Queue task card targets.delegates triggers relay-based dynamic dispatch, staged via drive-relay-slot (task to SlotConfig mapping)
+SUD-003: subagent-dispatch — Batch sub-agent protocol defines collect-as-return loop with replacement dispatch, driven via drive-relay-slot
+SUC-002: subagent-collect — Per-slot collect during batch sub-agent execution via drive-relay-slot commit (ingestAgentReceipt + commitSlotResult)
 SUD-004: subagent-dispatch — Staging writes per-slot _beacon.json (bundle_dir, log_cli, slot_key, UUID receipt_nonce)
 SUD-005: subagent-dispatch — dispatch.json persists each slot engine-generated UUID receipt_nonce for forensic binding
 SUD-006: subagent-dispatch — buildSpawnPrompt hands sub-agent only slot directory plus beacon pointer (beacon mode)

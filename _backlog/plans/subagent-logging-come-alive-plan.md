@@ -189,6 +189,7 @@ sub-agent 读 beacon → 拿到 bundle_dir + nonce + log_cli
 - **重要修正（第 4 轮）**：BUG-019 是**懒手糊** tier——**不会**被抓到"认真手糊者"（写齐 dispatch.json + UUID nonce + append 一致 trace 行）。
 - **open（必须在 §9 标出）**：SUD-007 落地**前**，连 trace 链都可被 append 一致行伪造；SUD-007 + RPG-012 落地后才把认真手糊的成本量级提上去。**仍非密码学不可伪造。**
 - **低 / 未决**：BUG-019 对策最终怎么定——**故意悬置**。等埋点落地、跑过真实 run 后，**由下一个 coding agent 按 §10 判断手册（6-tier 矩阵）判决**。
+- **已判（2026-07-04，受控 E2E）**：`subagent-execution-logging` apply 后，case-65 金路径（`drive-relay-slot` + 真 sub-agent + S0–S5 全自洽）判 **tier-1**——"relay 走不通"前提为假，**fallback 方向否决**；case-66 验证 tier-4 carve-out（staged-not-committed 只报 RPG-008，不误判伪造）。判决与证据回写在 `_backlog/bugs/BUG-019-*.md` §6。诚实边界：受控 E2E 已判；首次真实 production run（`dpt_rb_*`）后按 guide §4 复核确认，方可 Close。
 
 ---
 

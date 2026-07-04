@@ -24,7 +24,7 @@ suggested_context: []
 - **Receives**: Relay slot `task.md`, `result.schema.json`, runtime receipt path, and slot-local/cache paths.
 - **Produces**: Foundation source metadata in `artifacts/wave0/{topic.slug}/source.yaml`, optional shared rich references, cache trails, runtime receipt events, and a bounded SlotResult.
 - **Boundary**: This role performs search/fetch/extraction only inside a relay slot; it does not read workflow state, mutate queue/status, run gates, or decide phase completion.
-- **Handoff**: Phase Agent ingests the runtime receipt, calls `commitSlotResult()`, then completes the queue item through `operate-queue complete --result` with `slot_result_ref`.
+- **Handoff**: Phase Agent collects via `drive-relay-slot commit` (which ingests the runtime receipt and validates through the engine), then completes the queue item through `operate-queue complete --result` with `slot_result_ref`.
 
 ## Lifecycle Logging Mandate (always-loaded)
 
@@ -168,8 +168,7 @@ Phase Agent:
 - Loads this role spec as guidance via `suggested_context`
 - Builds queue task cards and relay `task.md`
 - Spawns the Sub-agent through relay
-- Ingests runtime receipts
-- Calls `commitSlotResult()`
+- Collects the returned result via `drive-relay-slot commit` (engine ingests the runtime receipt and validates the result)
 - Completes the queue item with `operate-queue complete --result <result.json>` and `slot_result_ref`
 - Performs seed-topic backfill and gate execution
 

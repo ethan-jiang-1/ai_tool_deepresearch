@@ -92,8 +92,17 @@ Data directories:
 - `artifacts/` — 阶段产物（如 `wave1/`、`wave2/`）
 - `final/` — 最终报告
 
+Relay directory:
+- `_subagents/` — relay-managed sub-agent slot tree (`wave_NN/slot_MM/` per SDC-001 / SUS-001); created on first relay staging, not necessarily present in the empty template
+
 Cache directory:
 - `_cache/` — 可重建 cache/projection，NOT runtime truth
+
+#### Scenario: `_subagents/` is part of the bundle skeleton
+
+- **WHEN** a bundle has executed relay staging for a wave
+- **THEN** `_subagents/wave_NN/` SHALL exist with `dispatch.json` and per-slot directories under `slot_MM/`
+- **AND** provenance forensics and slot presence checks SHALL scan only this tree for relay slot artifacts (SDC-002)
 
 #### Scenario: Runtime truth is in bundle not chat memory
 

@@ -31,7 +31,18 @@ const ROLE_MARKERS = [
   'search_done',
   'fetch_done',
   'file_written',
+  '`error`',
   'work_done',
+];
+
+// SNC-003 anti-pattern lock: Agent-facing control-plane MD must never instruct
+// direct engine-function orchestration (the call-form is the instruction shape;
+// bare mentions in prohibition/descriptive prose are allowed).
+const DIRECT_CALL_ANTIPATTERNS = [
+  'stageSubagentSlots(',
+  'commitSlotResult(',
+  'collectAndMergeSubagentResults(',
+  'ingestAgentReceipt(',
 ];
 
 const ROLE_PATTERN = /^subagent-dpt-.*\.md$/;
@@ -78,6 +89,32 @@ console.log('\nDemand-side wiring — drive-relay-slot (SNC-003):');
 checkFile('shared/shared-subagent-protocol.md', PROTOCOL_FILE, [DRIVER_MARKER]);
 for (const pf of PHASE_FILES) {
   checkFile(`phases/${pf.split('/').pop()}`, pf, [DRIVER_MARKER]);
+}
+
+function checkNoDirectCalls(label, file) {
+  if (!existsSync(file)) {
+    console.log(`  ${R}✗${B} ${label}: file not found (${file})`);
+    failed++;
+    return;
+  }
+  const content = readFileSync(file, 'utf-8');
+  const hits = DIRECT_CALL_ANTIPATTERNS.filter((p) => content.includes(p));
+  if (hits.length > 0) {
+    console.log(`  ${R}✗${B} ${label}: direct engine-call wording ${hits.map((h) => `\`${h})\``).join(', ')} — must route through drive-relay-slot (SNC-003)`);
+    failed++;
+  } else {
+    console.log(`  ${G}✓${B} ${label}`);
+    passed++;
+  }
+}
+
+console.log('\nAnti-pattern lock — no direct engine-call instructions (SNC-003):');
+checkNoDirectCalls('shared/shared-subagent-protocol.md', PROTOCOL_FILE);
+for (const pf of PHASE_FILES) {
+  checkNoDirectCalls(`phases/${pf.split('/').pop()}`, pf);
+}
+for (const f of roleFiles) {
+  checkNoDirectCalls(`phases/${f}`, join(phaseDir, f));
 }
 
 // SNC-002: optionally check a generated slot task.md carries the directive.

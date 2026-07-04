@@ -238,6 +238,11 @@ function handleCommit() {
     result: relay.result,
     agent: relay.agent,
   });
+  // Schema-validation failure is a failed commit: keep the full JSON report on
+  // stdout but exit non-zero so callers/scripts cannot mistake it for success.
+  if (!relay.ok) {
+    process.exit(1);
+  }
 }
 
 // ── merge ─────────────────────────────────────────────────────────────────

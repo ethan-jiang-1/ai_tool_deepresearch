@@ -119,8 +119,8 @@ Wave1 的 claim→execute→complete 使用 relay 批量并行执行（灌料→
 - **不伪造 evidence**：每条 key finding 必须来自 WebSearch + WebFetch 获取的真实页面。不允许拿搜索摘要当 evidence 凑合
 - **网页内容抓取**（`shared-subagent-protocol.md` Page Content Fetching Chain）：内置工具（如 `WebFetch`）或用户显式开启的浏览器优先，没有则从 `curl` → `node` → `python3`。所有手段都失败才能报告"无法获取内容"
 - **complete 阻塞**：如果 complete 时 receipt check 失败（evidence-summary.md 不存在或 schema 不对），engine 自动生成 repair task（`producer_rule: queue_repair`），Phase Agent 必须修复而不是跳过
-- **delegated complete 路径**：claim 返回含 `targets.delegates.to: "sub-agent"` 的 task 后，Phase Agent MUST 通过 Relay spawn Sub-agent，收集并 `commitSlotResult()` 得到 committed slot `result.json`，再调用 `operate-queue complete --result` 并传入 `slot_result_ref`。Phase Agent MUST NOT 在自己的上下文直接执行 WebSearch/WebFetch 来替代 Sub-agent。
-- **上下文隔离**：由 relay slot 契约在机制上强制（见 `shared-subagent-protocol.md` Communication Contract）。Sub-agent 只收到 bounded 上下文，Phase Agent 通过 `commitSlotResult()` 收集结构化 `result.json`，不读 Sub-agent 原始搜索 trail
+- **delegated complete 路径**：claim 返回含 `targets.delegates.to: "sub-agent"` 的 task 后，Phase Agent MUST 通过 Relay spawn Sub-agent，用 `drive-relay-slot commit` 收集（引擎校验后写 committed slot `result.json`），再调用 `operate-queue complete --result` 并传入 `slot_result_ref`。Phase Agent MUST NOT 在自己的上下文直接执行 WebSearch/WebFetch 来替代 Sub-agent。
+- **上下文隔离**：由 relay slot 契约在机制上强制（见 `shared-subagent-protocol.md` Communication Contract）。Sub-agent 只收到 bounded 上下文，Phase Agent 经 `drive-relay-slot commit` 收集结构化 `result.json`，不读 Sub-agent 原始搜索 trail
 - **即时回填 seed topic（不可跳过）**：每个 topic 的 deepening task complete 成功后，**在 claim 下一个 task 之前**，必须立刻回填 `seed_topics/{topic.slug}.md`。回填规则见下节
 
 #### 3.2.1 Inline Backfill 规则（Per-Topic 即时回填）
@@ -212,7 +212,7 @@ last_updated: YYYY-MM-DD
 
 当所有 Sub-agent 已返回、queue 无 pending task card 时：
 
-1. `collectAndMergeSubagentResults(state, slots, baseDir)` — collect 所有 slot 结果，merge evidence counts 到 WorkflowState
+1. `node DPT_FRAMEWORK/cli/drive-relay-slot.mjs merge <bundle> --wave <N>` — collect 所有 slot 结果，merge evidence counts 到 WorkflowState（driver 内部调 `collectAndMergeSubagentResults`）
 2. 检查 artifact 完整性：
    - 对于 `topic_registry` 中的每个 topic， `artifacts/wave1/{topic.slug}/evidence-summary.md` 是否存在、含至少 1 条 source URL、key findings section 非空
    - 对于 `topic_registry` 中的每个 topic， `artifacts/wave1/{topic.slug}/question-list.md` 是否存在、含全部四节（Topic Investigation Targets、Question Reconciliation、Emergent Question Protocol、Exploration/Exploitation Decision）
@@ -461,7 +461,7 @@ Reference quality and per-topic evidence depth take priority: before gate pass, 
 | Track | 能力 | 状态 |
 |-------|------|------|
 | 1. topic-specific deepening | 对每个 topic 的 open questions 做定向 deep research，产出 evidence-summary.md | ✅ **已实现**（本 phase） |
-| 2. Sub-agent dispatch | 启动独立 Sub-agent（`dpt-evidence-extractor`），通过 relay slot 契约执行 WebSearch+WebFetch，Phase Agent 通过 `ingestAgentReceipt` + `commitSlotResult` 收集结果 | ✅ **已实现**（通过 `subagent-relay.mjs` + `subagent-dpt-evidence-extractor.md`） |
+| 2. Sub-agent dispatch | 启动独立 Sub-agent（`dpt-evidence-extractor`），通过 relay slot 契约执行 WebSearch+WebFetch，Phase Agent 经 `drive-relay-slot commit` 收集结果 | ✅ **已实现**（通过 `drive-relay-slot` + `subagent-relay.mjs` + `subagent-dpt-evidence-extractor.md`） |
 | 3. candidate intake | 从 deepening 产出中提取 candidate evidence particle，按 schema 入库 | ❌ 留给后续 |
 | 4. repair/backfill | 对 gate fail 的 topic 做定向补充，per-topic 即时回填 `__BACKFILL_WAVE1_*__` token | ✅ **已实现**（本 phase §3.2.1 + gate repair） |
 | 5. fan-in review | 收集 Sub-agent 结果后进行跨 topic 交叉验证和冲突解决 | ❌ 留给后续 |

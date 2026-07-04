@@ -8,10 +8,14 @@
 //   retired — 在 openspec/governance/req-registry.yaml 该行标记 [DEPRECATED] (合法废弃, id 占位永不复用)
 //
 // 四项检查:
-//   1. duplicate      — 同一 id 落在 ≥2 个不同的 main spec 文件 (归属冲突; 同文件内多次引用不算)
-//   2. unregistered   — 出现在 specs/delta 但 registry 没有
+//   1. duplicate      — 同一 id 被 ≥2 个不同的 main spec 文件 **声明** (归属冲突)
+//   2. unregistered   — 出现在 specs/delta 但 registry 没有 (BUG-\d+ 是 bug ID, 不是 req ID, 不参与)
 //   3. orphan         — registry 有, 但三态都不是 (静默丢失探测器)
-//   4. reusedRetired  — 未归档 change 复用了已 [DEPRECATED] 的 id (禁止旧 id 指新语义)
+//   4. reusedRetired  — 未归档 change **声明** 了已 [DEPRECATED] 的 id (禁止旧 id 指新语义)
+//
+// 声明 vs 引用: 只有 `> req: XXX-001, ...` 头部行算"声明"(归属)。正文 prose 里的
+// 交叉引用 (如 "see GSK-002"、"per WNC-009") 只算"引用"——引用参与 unregistered/orphan
+// 存在性判定, 但不参与 duplicate/reusedRetired 归属判定。
 
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -69,7 +73,11 @@ function stripFencedCodeBlocks(content) {
   return output.join('\n');
 }
 
-// 分别收集 main spec 和未归档 change delta 的 id + 来源文件
+// 分别收集 main spec 和未归档 change delta 的 id + 来源文件。
+// 每条 occurrence 标记 declared: true (出现在 `> req:` 头部行) 或 false (prose 引用)。
+const REQ_HEADER_RE = /^\s*>\s*req:\s*(.+)$/;
+const BUG_ID_RE = /^BUG-\d+$/;
+
 const specOccurrences = [];
 const deltaOccurrences = [];
 function walkInto(dir, sink) {
@@ -79,7 +87,14 @@ function walkInto(dir, sink) {
     if (entry.isDirectory()) walkInto(full, sink);
     else if (entry.name.endsWith('.md')) {
       const content = stripFencedCodeBlocks(readFileSync(full, 'utf-8'));
-      for (const m of content.matchAll(/[A-Z]{3}-\d{3}/g)) sink.push({ id: m[0], file: full });
+      for (const line of content.split('\n')) {
+        const headerMatch = line.match(REQ_HEADER_RE);
+        const declared = headerMatch !== null;
+        for (const m of line.matchAll(/[A-Z]{3}-\d{3}/g)) {
+          if (BUG_ID_RE.test(m[0])) continue; // bug ID, 不是 req ID
+          sink.push({ id: m[0], file: full, declared });
+        }
+      }
     }
   }
 }
@@ -98,23 +113,25 @@ if (existsSync(changesDir)) {
 const specIdSet = new Set(specOccurrences.map((o) => o.id));
 const deltaIdSet = new Set(deltaOccurrences.map((o) => o.id));
 const allSeen = new Set([...specIdSet, ...deltaIdSet]);
+const deltaDeclaredSet = new Set(deltaOccurrences.filter((o) => o.declared).map((o) => o.id));
 
-// 1. duplicate: 同一 id 落在 ≥2 个不同 main spec 文件 (同文件内多次引用不算)
+// 1. duplicate: 同一 id 被 ≥2 个不同 main spec 文件**声明**归属 (prose 交叉引用不算)
 const specIdFiles = new Map();
-for (const { id, file } of specOccurrences) {
+for (const { id, file, declared } of specOccurrences) {
+  if (!declared) continue;
   if (!specIdFiles.has(id)) specIdFiles.set(id, new Set());
   specIdFiles.get(id).add(file);
 }
 const duplicates = [...specIdFiles.entries()].filter(([, files]) => files.size > 1).map(([id]) => id);
 
-// 2. unregistered
+// 2. unregistered: 声明与引用都参与 (typo 探测); BUG-\d+ 已在收集时排除
 const unregistered = [...allSeen].filter((id) => !registered.has(id));
-// 3. orphan (三态都不是)
+// 3. orphan (三态都不是): 声明与引用都算存在证据
 const orphans = [...registered].filter(
   (id) => !retired.has(id) && !specIdSet.has(id) && !deltaIdSet.has(id),
 );
-// 4. reused retired
-const reusedRetired = [...deltaIdSet].filter((id) => retired.has(id));
+// 4. reused retired: 未归档 change **声明**了 [DEPRECATED] id (delta prose 提及历史不算)
+const reusedRetired = [...deltaDeclaredSet].filter((id) => retired.has(id));
 
 let failed = false;
 if (duplicates.length > 0) {

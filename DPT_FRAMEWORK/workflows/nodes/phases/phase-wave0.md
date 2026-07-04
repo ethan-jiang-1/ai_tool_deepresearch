@@ -120,8 +120,8 @@ Wave0 的 claim→execute→complete 使用 relay 批量并行执行（灌料→
 - **不伪造产出**：每条 reference 必须来自 WebSearch + WebFetch 获取的真实页面。url 必须指向真实可访问页面，title 反映实际页面标题，retrieved_date 为真实检索日期
 - **网页内容抓取**：Sub-agent 必须获取来源页面的真实内容。详见 `shared-subagent-protocol.md` Page Content Fetching Chain。摘要：内置工具（如 `WebFetch`）优先，用户显式开启浏览器也可用；没有则从 `curl` 开始 → `node -e "fetch(...)"` → `python3 -c "import urllib.request..."`（最后兜底）。不允许因缺工具或工具 blocked 就拿搜索摘要凑合。所有手段都失败才能报告"无法获取内容"
 - **complete 阻塞**：如果 complete 时 receipt check 失败（source.yaml 不存在或 schema 不对），engine 自动生成 repair task（`producer_rule: queue_repair`），Phase Agent 必须修复而不是跳过。修复后重新 claim
-- **delegated complete 路径**：claim 返回含 `targets.delegates.to: "sub-agent"` 的 task 后，Phase Agent MUST 通过 Relay spawn Sub-agent，收集并 `commitSlotResult()` 得到 committed slot `result.json`，再调用 `operate-queue complete --result` 并传入 `slot_result_ref`。Phase Agent MUST NOT 在自己的上下文直接执行 WebSearch/WebFetch 来替代 Sub-agent。
-- **上下文隔离**：上下文隔离由 relay slot 契约在机制上强制（见 `shared-subagent-protocol.md` Communication Contract）。Sub-agent 只收到 bounded 上下文（task.md + result.schema.json），返回的 JSON 被 `result.schema.json` 约束形状——大段搜索 trail 不在 schema 允许的字段里。Phase Agent 通过 `commitSlotResult()` 收集验证后的 `result.json`，**不读 Sub-agent 的原始搜索输出**。如需抽查，去 `_cache/wave0/{batch}/{topic_slug}/`（非 authority），但默认不读
+- **delegated complete 路径**：claim 返回含 `targets.delegates.to: "sub-agent"` 的 task 后，Phase Agent MUST 通过 Relay spawn Sub-agent，用 `drive-relay-slot commit` 收集（引擎校验后写 committed slot `result.json`），再调用 `operate-queue complete --result` 并传入 `slot_result_ref`。Phase Agent MUST NOT 在自己的上下文直接执行 WebSearch/WebFetch 来替代 Sub-agent。
+- **上下文隔离**：上下文隔离由 relay slot 契约在机制上强制（见 `shared-subagent-protocol.md` Communication Contract）。Sub-agent 只收到 bounded 上下文（task.md + result.schema.json），返回的 JSON 被 `result.schema.json` 约束形状——大段搜索 trail 不在 schema 允许的字段里。Phase Agent 经 `drive-relay-slot commit` 收集验证后的 `result.json`，**不读 Sub-agent 的原始搜索输出**。如需抽查，去 `_cache/wave0/{batch}/{topic_slug}/`（非 authority），但默认不读
 - **即时回填 seed topic（不可跳过）**：每个 topic 的 complete 成功后，**在 claim 下一个 task 之前**，必须立刻回填 `seed_topics/{topic.slug}.md`：`grep -n '__BACKFILL_WAVE0_EVIDENCE__'` 定位 token → **替换 token 行**为 ref 摘要列表（`- **ref-XX-NN**: ...`）。趁 Sub-agent 搜索结果还 fresh 就写，不等 wave0 结束
 
 ### 3.3 Queue 空后 — 收尾与 Gate
@@ -132,7 +132,7 @@ Wave0 的 claim→execute→complete 使用 relay 批量并行执行（灌料→
 
 当 claim 返回 `item: null`（queue 空）时：
 
-1. `collectAndMergeSubagentResults(state, slots, baseDir)` — collect 所有 slot 结果，merge evidence counts 到 WorkflowState
+1. `node DPT_FRAMEWORK/cli/drive-relay-slot.mjs merge <bundle> --wave <N>` — collect 所有 slot 结果，merge evidence counts 到 WorkflowState（driver 内部调 `collectAndMergeSubagentResults`）
 2. 检查 `reference/_INDEX.md` 是否已更新（列出所有 topic 的 reference 摘要）
 3. 如果 index 缺失或未更新 → 手动写入（这是单步收尾动作，不重新灌 Q）
 4. 跑 gate（含 **§3.3.1 Count-Floor Re-Fill Loop** —— gate fail 时自动进入自主补充循环）：

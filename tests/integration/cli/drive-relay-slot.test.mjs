@@ -42,6 +42,17 @@ function run(args) {
   }
 }
 
+// Like run(), but also reports the process exit code.
+function runWithExit(args) {
+  try {
+    const out = execSync(`node "${DRIVER}" ${args}`, { encoding: 'utf-8', stdio: 'pipe', cwd: REPO_ROOT });
+    return { exitCode: 0, out: JSON.parse(out.trim()) };
+  } catch (e) {
+    if (e.stdout) return { exitCode: e.status, out: JSON.parse(e.stdout.trim()) };
+    throw e;
+  }
+}
+
 function readJson(p) {
   return JSON.parse(readFileSync(p, 'utf-8'));
 }
@@ -147,15 +158,29 @@ describe('drive-relay-slot commit — SRD-001/SRD-003/SRD-004', () => {
 
     // Wrong slotKey → commitSlotResult validation fails.
     const bad = { slotKey: 'wrong', roleAgentKey: slot.roleAgentKey, status: 'done', summary: '', evidenceCount: 0, references: [], confidence: 0, notes: [] };
-    const out = run(`commit "${bundle}" --wave 1 --slot "${slot.key}" --runtime-agent-id agent-x --result '${JSON.stringify(bad)}'`);
+    const { exitCode, out } = runWithExit(`commit "${bundle}" --wave 1 --slot "${slot.key}" --runtime-agent-id agent-x --result '${JSON.stringify(bad)}'`);
     assert.equal(out.ok, false);
     assert.equal(out.validationOk, false);
     assert.notEqual(out.status, 'done');
+    // A failed commit must exit non-zero (with the JSON report still on stdout)
+    // so callers/scripts cannot mistake it for success.
+    assert.equal(exitCode, 1, 'schema-validation failure exits 1');
 
     const status = readJson(join(bundle, slot.slotDir, '_status.json'));
     assert.notEqual(status.status, 'done');
     const committed = readJson(join(bundle, slot.slotDir, 'result.json'));
     assert.notEqual(committed.status, 'done');
+  });
+
+  it('a valid commit exits 0', () => {
+    const bundle = newBundle('commit-exit0');
+    const staged = run(`stage "${bundle}" --wave 1`);
+    const slot = staged.slots[0];
+    writeReceipt(bundle, slot);
+    const result = { slotKey: slot.key, roleAgentKey: slot.roleAgentKey, status: 'done', summary: 'ok', evidenceCount: 0, references: [], confidence: 0.5, notes: [], output_files: [], cache_trails: [] };
+    const { exitCode, out } = runWithExit(`commit "${bundle}" --wave 1 --slot "${slot.key}" --runtime-agent-id agent-1 --result '${JSON.stringify(result)}'`);
+    assert.equal(out.ok, true);
+    assert.equal(exitCode, 0);
   });
 });
 
@@ -192,6 +217,33 @@ describe('drive-relay-slot stage replacement — SUD-003', () => {
     const beacon = readJson(join(bundle, out.slot.slotDir, '_beacon.json'));
     assert.equal(beacon.receipt_nonce, out.slot.receiptNonce);
     assert.equal(beacon.slot_key, 'repl_source_01');
+  });
+
+  it('re-staging a used slotIndex clears the prior occupant\'s execution artifacts', () => {
+    const bundle = newBundle('replace-clean');
+    const staged = run(`stage "${bundle}" --wave 1`);
+    const slot = staged.slots[0];
+    writeReceipt(bundle, slot);
+    const result = { slotKey: slot.key, roleAgentKey: slot.roleAgentKey, status: 'done', summary: 'ok', evidenceCount: 0, references: [], confidence: 0.5, notes: [], output_files: [], cache_trails: [] };
+    run(`commit "${bundle}" --wave 1 --slot "${slot.key}" --runtime-agent-id agent-1 --result '${JSON.stringify(result)}'`);
+    const slotDir = join(bundle, slot.slotDir);
+    // Prior occupant left receipt/result/agent artifacts carrying the OLD nonce.
+    for (const f of ['runtime-receipt.jsonl', 'result.json', '_agent.json']) {
+      assert.ok(existsSync(join(slotDir, f)), `${f} present before re-stage`);
+    }
+
+    const out = run(`stage "${bundle}" --wave 1 --slot-index ${slot.slotIndex} --role dpt-source-intake --key repl_clean_01 --task "replacement intake"`);
+    assert.equal(out.ok, true);
+    // Stale artifacts removed — the old nonce cannot pollute the new slot's provenance chain.
+    for (const f of ['runtime-receipt.jsonl', 'result.json', 'result.md', '_agent.json']) {
+      assert.ok(!existsSync(join(slotDir, f)), `${f} cleared by re-stage`);
+    }
+    // Fresh slot contract files present with the NEW nonce.
+    const beacon = readJson(join(slotDir, '_beacon.json'));
+    assert.equal(beacon.slot_key, 'repl_clean_01');
+    assert.notEqual(beacon.receipt_nonce, slot.receiptNonce);
+    const status = readJson(join(slotDir, '_status.json'));
+    assert.equal(status.status, 'pending');
   });
 });
 

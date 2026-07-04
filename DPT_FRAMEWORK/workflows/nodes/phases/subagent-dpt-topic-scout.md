@@ -24,7 +24,7 @@ suggested_context: []
 - **Receives**: Relay slot `task.md`, `result.schema.json`, runtime receipt path, and slot-local/cache paths.
 - **Produces**: Search evidence JSON, source URLs, optional promoted cross-reference inputs, cache trails, runtime receipt events, and a bounded SlotResult.
 - **Boundary**: This role searches and extracts for a specific finding or topic gap; it does not make cross-topic synthesis judgments, update final ledger state, run gates, or mutate workflow state.
-- **Handoff**: Phase Agent ingests the runtime receipt, calls `commitSlotResult()`, then completes the queue item through `operate-queue complete --result` with `slot_result_ref`.
+- **Handoff**: Phase Agent collects via `drive-relay-slot commit` (which ingests the runtime receipt and validates through the engine), then completes the queue item through `operate-queue complete --result` with `slot_result_ref`.
 
 ## Lifecycle Logging Mandate (always-loaded)
 
@@ -156,8 +156,7 @@ Phase Agent:
 - Loads this role spec as guidance via `suggested_context`
 - Builds queue task cards and relay `task.md` for `exploit_search`, `explore_search`, cross-topic, or emergent search gaps
 - Spawns the Sub-agent through relay
-- Ingests runtime receipts
-- Calls `commitSlotResult()`
+- Collects the returned result via `drive-relay-slot commit` (engine ingests the runtime receipt and validates the result)
 - Completes the queue item with `operate-queue complete --result <result.json>` and `slot_result_ref`
 - Updates `finding-index.yaml`, `cross-topic-ledger.md`, `synthesis.md`, seed-topic backfill, and gate execution
 

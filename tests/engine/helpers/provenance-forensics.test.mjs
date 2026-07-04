@@ -14,7 +14,7 @@ import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, appendFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import { runProvenanceForensics, checkSubagentSlotPresence } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs';
 
@@ -39,11 +39,16 @@ function appendTrace(bundle, events) {
   const p = join(bundle, 'rb_trace.jsonl');
   for (const e of events) appendFileSync(p, JSON.stringify(e) + '\n');
 }
+// Production run.log envelope: [ISO8601] LEVEL msg bundle=<name> {json detail}
+// (matches logger.mjs formatMessage — the forensics parser reads this format).
 function appendRunLog(bundle, lines) {
   const dir = join(bundle, '_logs');
   mkdirSync(dir, { recursive: true });
   const p = join(dir, 'run.log');
-  for (const l of lines) appendFileSync(p, JSON.stringify(l) + '\n');
+  for (const l of lines) {
+    const label = (l.level || 'info').toUpperCase();
+    appendFileSync(p, `[2026-07-03T00:00:00.000Z] ${label} ${l.msg} bundle=${basename(bundle)} ${JSON.stringify(l.detail || {})}\n`);
+  }
 }
 const codes = (findings) => findings.map((f) => f.code);
 
@@ -72,7 +77,7 @@ function soundSlot(bundle, { nonce = UUID, slotKey = 'src', spanMs = 5000, lifec
   ]);
   appendRunLog(bundle, [
     { level: 'info', msg: 'relay_commit_done', detail: { slotKey } },
-    { level: 'info', msg: 'work_done', detail: { receipt_nonce: lifecycleNonce } },
+    { level: 'info', msg: 'work_done', detail: { kind: 'work_done', slotKey, receipt_nonce: lifecycleNonce } },
   ]);
 }
 
@@ -94,6 +99,20 @@ describe('RPG-007 provenance_nonce_mismatch (sloppy-forgery screen)', () => {
     // dispatch.json nonce also non-UUID — but RPG-007 fires on non-UUID shape first
     const findings = runProvenanceForensics(bundle, 'wave0', 'wave0-complete');
     assert.ok(findings.some((f) => f.code === 'provenance_nonce_mismatch'), 'non-UUID nonce flagged');
+  });
+
+  it('reason distinguishes nonce_malformed (present, non-UUID) from nonce_absent', () => {
+    const malformed = makeBundle('nonce-malformed');
+    soundSlot(malformed, { nonce: 'nonce-src-12345' });
+    const mf = runProvenanceForensics(malformed, 'wave0', 'wave0-complete');
+    assert.ok(mf.some((f) => f.code === 'provenance_nonce_mismatch' && /nonce_malformed/.test(f.reason)), 'malformed reason tagged');
+
+    // No beacon, no receipt → no nonce material at all (e.g. pre-instrumentation bundle).
+    const absent = makeBundle('nonce-absent');
+    soundSlot(absent);
+    fs.rmSync(join(absent, '_subagents', WAVE, 'slot_00', '_beacon.json'), { force: true });
+    const af = runProvenanceForensics(absent, 'wave0', 'wave0-complete');
+    assert.ok(af.some((f) => f.code === 'provenance_nonce_mismatch' && /nonce_absent/.test(f.reason)), 'absent reason tagged, not silenced');
   });
 
   it('flags a UUID nonce when dispatch.json is absent', () => {
@@ -180,6 +199,18 @@ describe('RPG-012 provenance_chain_inconsistency (cross-artifact contradictions)
     assert.ok(findings.some((f) => f.code === 'provenance_chain_inconsistency' && /result_schema_validated/.test(f.reason)));
   });
 
+  it('(b) agent_result_ready without agent_runtime_started', () => {
+    const bundle = makeBundle('rpg012b');
+    soundSlot(bundle);
+    // Remove only agent_runtime_started from the trace.
+    const tracePath = join(bundle, 'rb_trace.jsonl');
+    const lines = fs.readFileSync(tracePath, 'utf-8').split('\n').filter(Boolean)
+      .filter((l) => !l.includes('"agent_runtime_started"'));
+    fs.writeFileSync(tracePath, lines.join('\n') + '\n');
+    const findings = runProvenanceForensics(bundle, 'wave0', 'wave0-complete');
+    assert.ok(findings.some((f) => f.code === 'provenance_chain_inconsistency' && /agent_runtime_started absent/.test(f.reason)));
+  });
+
   it('(c) nonce mismatch between beacon and trace', () => {
     const bundle = makeBundle('rpg012c');
     soundSlot(bundle, { nonce: UUID }); // beacon + dispatch = UUID
@@ -198,6 +229,15 @@ describe('RPG-012 provenance_chain_inconsistency (cross-artifact contradictions)
     assert.ok(findings.some((f) => f.code === 'provenance_chain_inconsistency' && /nonce mismatch/.test(f.reason)));
   });
 
+  it('(c) nonce mismatch between beacon and a lifecycle event', () => {
+    const bundle = makeBundle('rpg012c-lifecycle');
+    // Trace and dispatch all carry UUID; only the lifecycle event carries UUID2.
+    soundSlot(bundle, { nonce: UUID, lifecycleNonce: UUID2 });
+    const findings = runProvenanceForensics(bundle, 'wave0', 'wave0-complete');
+    assert.ok(findings.some((f) => f.code === 'provenance_chain_inconsistency' && /lifecycle event/.test(f.reason)),
+      `lifecycle nonce conflict flagged; findings: ${JSON.stringify(codes(findings))}`);
+  });
+
   it('(d) slot in dispatch.json without staging trace', () => {
     const bundle = makeBundle('rpg012d');
     soundSlot(bundle);
@@ -209,6 +249,29 @@ describe('RPG-012 provenance_chain_inconsistency (cross-artifact contradictions)
     fs.writeFileSync(tracePath, lines.join('\n') + '\n');
     const findings = runProvenanceForensics(bundle, 'wave0', 'wave0-complete');
     assert.ok(findings.some((f) => f.code === 'provenance_chain_inconsistency' && /dispatch\.json but no slot_create/.test(f.reason)));
+  });
+});
+
+describe('RPG-012 — dispatch record without slot artifacts on disk', () => {
+  it('a dispatch.json entry whose slot directory is missing is flagged per slot key', () => {
+    const bundle = makeBundle('rpg012-pruned');
+    soundSlot(bundle);
+    fs.rmSync(join(bundle, '_subagents', WAVE, 'slot_00'), { recursive: true, force: true });
+    const findings = runProvenanceForensics(bundle, 'wave0', 'wave0-complete');
+    assert.ok(findings.some((f) => f.code === 'provenance_chain_inconsistency' && f.slotKey === 'src' && /slot directory is missing/.test(f.reason)));
+  });
+});
+
+describe('RPG-013 — __wave__ fallback when no slot can be identified', () => {
+  it('a corrupt dispatch.json emits a wave-level diagnostic with slotKey __wave__', () => {
+    const bundle = makeBundle('rpg013-wave');
+    soundSlot(bundle);
+    writeFileSync(join(bundle, '_subagents', WAVE, 'dispatch.json'), '{not json');
+    const findings = runProvenanceForensics(bundle, 'wave0', 'wave0-complete');
+    const waveFinding = findings.find((f) => f.slotKey === '__wave__');
+    assert.ok(waveFinding, 'wave-level finding present');
+    assert.equal(waveFinding.wave, WAVE);
+    assert.match(waveFinding.reason, /unparseable/);
   });
 });
 

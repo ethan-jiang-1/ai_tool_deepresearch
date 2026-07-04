@@ -53,7 +53,12 @@ Judgments are made **per slot**, not per wave. A single wave can contain slots i
 
 `_agent.json` fields that must be present and self-consistent (engine `AgentMetadata.parse`): **`platform`**, **`runtimeMode`**, **`runtimeAgentId`**, **`completedAt`**, **`validationOk`**. Missing/malformed fields = hand-written, not engine-produced.
 
-The advisory diagnostics the gate emits map to these signals: `provenance_nonce_mismatch` (RPG-007, S1/S2), `relay_commit_missing` (RPG-008, S3), `agent_timestamp_span_suspicious` (RPG-009, S4 — alone insufficient), `lifecycle_events_missing` (RPG-011, S5), `provenance_chain_inconsistency` (RPG-012, cross-artifact consistency — the **primary determined-forgery detector**). Every diagnostic carries `slotKey` + `wave`.
+The advisory diagnostics the gate emits map to these signals: `provenance_nonce_mismatch` (RPG-007, S1/S2), `relay_commit_missing` (RPG-008, S3), `agent_timestamp_span_suspicious` (RPG-009, S4 — alone insufficient), `lifecycle_events_missing` (RPG-011, S5), `provenance_chain_inconsistency` (RPG-012, cross-artifact consistency — the **primary determined-forgery detector**). Every diagnostic carries `slotKey` + `wave`; a wave-level condition with no identifiable slot uses `slotKey: "__wave__"` (RPG-013).
+
+RPG-007's reason distinguishes two cases — read it before judging:
+
+- **`nonce_absent`** — no nonce material at all (no `_beacon.json`, no receipt nonce). This can be a **pre-instrumentation bundle**: check §0 first. It is still reported (a lazy forger also leaves no nonce), but do not conclude forgery from absence alone on an old bundle.
+- **`nonce_malformed`** — a nonce is present but not UUID-shaped (e.g. `nonce-{slotkey}-{ms}`). This is the classic sloppy-forgery signal (tier 5 screen).
 
 ---
 

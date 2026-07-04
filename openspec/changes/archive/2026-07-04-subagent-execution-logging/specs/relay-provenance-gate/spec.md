@@ -30,17 +30,24 @@ The gate CLI SHALL, when evaluating subagent provenance, compare each slot's `re
 - **THEN** the gate SHALL emit `provenance_nonce_mismatch` for every evidence-producing slot (no staged nonce can match)
 - **AND** SHALL NOT fail the gate solely on this diagnostic (this change)
 
+#### Scenario: Diagnostic reason distinguishes absent from malformed nonce
+- **WHEN** a slot has no nonce material at all (no `_beacon.json`, no `runtime-receipt.jsonl` nonce — e.g. a pre-instrumentation bundle or a slot with no provenance left behind)
+- **THEN** the emitted `provenance_nonce_mismatch` reason SHALL indicate the nonce is **absent** (pointing the judge to the guide's instrumentation prerequisite check)
+- **AND WHEN** a nonce is present but not UUID-shaped
+- **THEN** the reason SHALL indicate the nonce is **malformed** (sloppy-forgery signal)
+- **AND** neither case SHALL be silenced — both remain advisory diagnostics
+
 ### Requirement: Gate SHALL emit a relay_commit_missing diagnostic
 
-The gate SHALL check, for each evidence-producing slot, that `rb_trace.jsonl` contains a `relay_commit_done` event for that slot. Absence indicates the engine's `commitSlotResult` did not run (the slot files may be hand-written). Absence SHALL emit a `relay_commit_missing` diagnostic via existing logging surfaces. In this change the diagnostic is advisory only.
+The gate SHALL check, for each evidence-producing slot, that the engine's commit path (`commitSlotResult`) actually ran. Commit is proven by either the commit trace events (`agent_result_received` / `result_schema_validated`) in `rb_trace.jsonl`, or the production `relay_commit_done` marker in `_logs/run.log` (emitted by `commitSlotResult` via the run logger — `relay_commit_done` is a run.log marker, not an `rb_trace.jsonl` event). Absence of all commit proof SHALL emit a `relay_commit_missing` diagnostic via existing logging surfaces. In this change the diagnostic is advisory only.
 
-#### Scenario: Slot files present without commit trace
-- **WHEN** a slot has `result.json` / `_status.json` but no `relay_commit_done` in `rb_trace.jsonl`
+#### Scenario: Slot files present without commit proof
+- **WHEN** a slot has `result.json` / `_status.json` but no commit trace events in `rb_trace.jsonl` and no `relay_commit_done` marker in `_logs/run.log`
 - **THEN** the gate SHALL emit `relay_commit_missing`
 - **AND** SHALL NOT fail the gate solely on this diagnostic (this change)
 
-#### Scenario: Commit trace present emits no diagnostic
-- **WHEN** `rb_trace.jsonl` contains `relay_commit_done` for the slot
+#### Scenario: Commit proof present emits no diagnostic
+- **WHEN** the slot's commit trace events exist in `rb_trace.jsonl` (or the production `relay_commit_done` marker exists in `_logs/run.log`)
 - **THEN** no `relay_commit_missing` diagnostic SHALL be emitted
 
 ### Requirement: Gate SHALL emit an agent_timestamp_span_suspicious diagnostic

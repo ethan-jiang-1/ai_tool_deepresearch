@@ -17,7 +17,7 @@
 - [x] 2.2 实现 SRD-001（commit）：`commit` 子命令封装 `ingestAgentReceipt`+`commitSlotResult`（吃 `--result <json>`），写 result.json/_status.json/_agent.json 并 emit `relay_commit_done`
 - [x] 2.3 实现 SRD-001（merge）：`merge` 子命令封装 `collectAndMergeSubagentResults`，合并 evidence 进 workflow state、返回 fork/repair 决策
 - [x] 2.4 实现 SRD-002/003：driver 边界——只 stage/commit/merge + 输出 spawn prompt，不做 search/judgment/route；result 必须经 `commitSlotResult` 校验，禁止 driver 手写 slot 文件或静默 schema 失败
-- [x] 2.5 回归测试 `tests/cli/drive-relay-slot.test.mjs`（SRD-004）：driver-driven slot 产生 `rb_trace.jsonl` 的 `relay_commit_done` + dispatch.json 的 UUID nonce + 匹配的 `_beacon.json`；replacement re-stage 不破坏在飞 slot；手糊 result 经校验失败时不写 result.json
+- [x] 2.5 回归测试 `tests/integration/cli/drive-relay-slot.test.mjs`（SRD-004）：driver-driven slot 产生 `rb_trace.jsonl` 的 `agent_result_received`/`result_schema_validated` + `_logs/run.log` 的 `relay_commit_done` 标记 + dispatch.json 的 UUID nonce + 匹配的 `_beacon.json`；replacement re-stage 不破坏在飞 slot；手糊 result 经校验失败时 slot 不落 `done`（引擎写 `failed` 态 result.json，非 done 结果）〔§10.2 修正：原文「不写 result.json」与引擎实际行为不符〕
 
 ## 3. Subagent role spec + task.md：lifecycle logging 强制契约 + 供需接线（SNC-001/002/003, SRL-001/002/003）
 
@@ -55,7 +55,7 @@
 - [x] 6.1 实现 version bump（proposal 声明 v0.2）：更新根 `CHANGELOG.md`，新增 `v0.2` 条目（简洁格式：版本号 + 一两句说清 sub-agent logging 活过来 + forensic 诊断）
 - [x] 6.2 同步 `DPT_FRAMEWORK/RUN.md` 版本横幅（现 `v0.1` → `v0.2`）与 CHANGELOG 最新条目一致
 - [x] 6.3 收尾检查：运行 `node openspec/governance/check-project-reqs.mjs` 必须 PASS（0 duplicate / 0 orphan / 0 unregistered / 0 reusedRetired）
-  - **状态（诚实记录）**：本 change **0 新增违规**（delta 引用的 SUD-004..007/SRD-001..004/SRL-001..004/RPG-007..013/SNC-001..003/SDC-001..002 全部已注册、无重复）。但 check-project-reqs 仍报 3 个 **pre-existing** fail，均由上一个 archive（`harden-relay-pipeline`，2026-07-03）引入、与本 change 无关：(1) `GSK-002` duplicate——`workflow-node-contract/spec.md` prose 交叉引用 `gate-skeleton` GSK-002 被检查器误判为 req 声明；(2) `WNC-009` duplicate——`gate-skeleton/spec.md` prose 交叉引用 `WNC-009` 同理；(3) `BUG-018` unregistered——`workflow-node-contract/spec.md` prose 提及 BUG-018（bug ID 非 req ID）。修复需改检查器（prose 交叉引用不应计为 req 声明）或改 main spec prose，属 governance tooling 范畴，超出本 change scope。建议作为独立 follow-up。
+  - **状态（诚实记录）**：本 change **0 新增违规**（delta 引用的 SUD-004..007/SRD-001..004/SRL-001..004/RPG-007..013/SNC-001..003/SDC-001..002 全部已注册、无重复）。但 check-project-reqs 仍报 3 个 **pre-existing** fail，均由上一个 archive（`harden-relay-pipeline`，2026-07-03）引入、与本 change 无关：(1) `GSK-002` duplicate——`workflow-node-contract/spec.md` prose 交叉引用 `gate-skeleton` GSK-002 被检查器误判为 req 声明；(2) `WNC-009` duplicate——`gate-skeleton/spec.md` prose 交叉引用 `WNC-009` 同理；(3) `BUG-018` unregistered——`workflow-node-contract/spec.md` prose 提及 BUG-018（bug ID 非 req ID）。修复需改检查器（prose 交叉引用不应计为 req 声明）或改 main spec prose，属 governance tooling 范畴。**已在 §17 修复**：检查器改为只把 `> req:` 头部行计为声明、`BUG-\d+` 不进 unregistered 判定；三个 pre-existing fail 全消，`check-project-reqs.mjs` 完全 PASS。
 - [x] 6.4 收尾检查：运行 `node openspec/governance/check-project-specs.mjs` 必须 PASS（0 deltaHeaderInMain / 0 missingPurpose / 0 missingRequirements / 0 missingReqHeader）— **PASS**（67 main specs, 0 violations）
 
 ## 7. Inter-Agent Communication Directory Convention（SDC-001, SDC-002）
@@ -88,3 +88,57 @@
 - [x] 9.3 更新 `experiments_playbook/RUN_EXPS.md` G6：61–64 legacy path vs 65+ post-change path ladder
 - [x] 9.4 修正 tasks §5.1 注释（见上）— 诚实记录原 `[x]` 为 intent，playbook 由 9.1 落地
 - [x] 9.5 Agent 执行 case-65 + case-66 全 playbook PASS 后 mark §9 complete
+
+## 10. 审查收口 A：Spec 收口（SSOT 去噪，先行）
+
+> apply 后四路深度审查（engine / driver / gate forensics / MD 契约）发现：accepted main specs 里多条 normative 条款仍写「Phase Agent SHALL 直调引擎函数」，与本 change SNC-003（SHALL 用 driver、禁止直调）在归档后会构成 SSOT 内直接矛盾——phase MD 的直调残留正是这些旧 spec 的镜像。§10–§18 为收口任务阶梯。
+
+- [x] 10.1 MODIFIED delta specs——消除「直调引擎函数」与 SNC-003 的 SSOT 矛盾：新增 `specs/subagent-collect/spec.md`（MODIFIED SUC per-slot collection / merge 条款）、`specs/agentic-queue/spec.md`（MODIFIED L222 收集路径 prose）；在已有 `specs/subagent-dispatch/spec.md` 追加 MODIFIED 节（SUD queue-driven dispatch / collect-as-return / replacement 条款）。改写原则：**引擎函数契约不变，调用者从「Phase Agent inline JS」改为「经 `drive-relay-slot`（driver 内部调用这些函数）」**；`req-registry.yaml` 同步摘要
+- [x] 10.2 本 change 已有 delta spec 措辞对齐实现：SRD-004 + RPG-008 的 `relay_commit_done` 落点改为 `_logs/run.log`（trace 链证据 = `agent_result_received`/`result_schema_validated`，与 forensics guide 已一致）；SRD-001 对齐实际 CLI 形态（positional bundle、commit 必填 `--wave`/`--runtime-agent-id`）；修正本文件 2.5 的「校验失败不写 result.json」描述（引擎实际写 `failed` 态 result.json，测试断言 `status !== 'done'` 正确）
+
+## 11. 审查收口 B：控制面（MD）供需接线统一
+
+- [x] 11.1 `phase-wave0.md` L123–124（delegated complete）、L135（closeout）与 `phase-wave1.md` L122–123、L215 清除 `commitSlotResult()`/`collectAndMergeSubagentResults()` 直调指令，统一为 `drive-relay-slot commit/merge`；`phase-wave2.md` 复查
+- [x] 11.2 三份 `subagent-dpt-*.md` Handoff/§7 段（`commitSlotResult()` → `drive-relay-slot commit`）；`shared-subagent-protocol.md` §1.3–1.4 统一 driver-first
+- [x] 11.3 phase MD 补 replacement-stage 生产路径可复制命令（`node DPT_FRAMEWORK/cli/drive-relay-slot.mjs stage <bundle> --wave N --slot-index M --role ... --key ... --task ...`）；`DPT_FRAMEWORK/COMMANDS.md` 索引 `drive-relay-slot` 与 `validate-subagent-logging-contract`
+- [x] 11.4 `validate-subagent-logging-contract.mjs`：phase/protocol/role MD 出现 `commitSlotResult(`/`stageSubagentSlots(`/`collectAndMergeSubagentResults(` 直调措辞即 fail（防复发锁）；ROLE_MARKERS 补 `error` 事件；`tests/integration/md/subagent-logging-contract.test.mjs` 同步
+
+## 12. 审查收口 C：Engine / CLI 缺陷修复
+
+- [x] 12.1 `drive-relay-slot.mjs`：commit schema 校验失败时 exit 1（保留 stdout JSON 报告）；`tests/integration/cli/drive-relay-slot.test.mjs` 加 exit code 断言
+- [x] 12.2 `subagent-relay.mjs` `materializeSlotDir`/`stageReplacementSlot`：replacement re-stage 清理旧 slot 产物（`runtime-receipt.jsonl`/`result.json`/`_agent.json`），防旧 nonce 污染取证；加测试
+- [x] 12.3 `gate-helpers-provenance.mjs`：RPG-012(c) 补 lifecycle nonce 交叉校验；RPG-011 收紧为解析 lifecycle 事件行（事件类型+nonce，非 `includes(nonce)`）；RPG-007 保持照报但区分 reason——`nonce_absent`（无 beacon 无 receipt，可能 pre-v0.2 旧 bundle，判决者按 guide §0 先查 instrumentation）vs `nonce_malformed`（在场但非 UUID，懒手糊信号）——不静默；RPG-013 实现 `__wave__` fallback；各配测试
+
+## 13. 审查收口 D：测试补强
+
+- [x] 13.1 gate 集成测试显式断言「forensics 有 finding 时 `check.passed` 不变」；补 wave1/wave2 gate CLI 集成测试
+- [x] 13.2 补 RPG-012(b)（`agent_result_ready` 在但 `agent_runtime_started` 缺）单测；补 `loadSlotByManifestEntry` engine 单测
+
+## 14. 审查收口 E：Guidelines 修正与防复发原则
+
+> guidelines 只修事实错误 + 沉淀原则，不定义新行为（行为在 SNC-003 + §10 MODIFIED specs）。
+
+- [x] 14.1 `guidelines/agentic-subagent-mechanism.md`：L332「Relay has no CLI wrapper, only callable via inline JS」（已是事实性错误）改指向 `drive-relay-slot`；L292「MUST use `stageSubagentSlots()` API」改 driver-first；L34/L119/L146 示意随文更新；`guidelines/agentic-execution-model.md` L209 示意图同步
+- [x] 14.2 `guidelines/project-charter.md` Agent Guardrails 表加一行防复发原则：「新增 engine 函数/CLI 能力时，必须同时在 Agent-facing 控制面接上需求侧指令并由 validator 锁住；只建供给不接需求 = dead code」
+
+## 15. 框架补齐：全角色 logging 契约 + 模板去重
+
+- [x] 15.1 补两份 always-loaded role spec：新建 `subagent-dpt-source-diagnostic.md` 与 `subagent-dpt-claim-verifier.md`（引擎 dispatchMap 已含这两角色但无 framework role spec，full stage 时 logging 只靠 task.md 兜底）；内容对齐现有三份的 `## Lifecycle Logging Mandate (always-loaded)` 段 + 各自角色职责；validator 按 `subagent-dpt-*.md` glob 自动纳管；SNC-001 delta spec 角色枚举同步为 5 个
+- [x] 15.2 提取共享 logging 指令模板：`buildSpawnPrompt` 与 `taskMarkdownForSlot` 的 lifecycle 指令段高度重复，提取为单一内部模板函数、两处引用，消除漂移风险；回归测试确认两处输出仍含全部 marker
+
+## 16. 证据可审计 + BUG-019 write-back
+
+- [x] 16.1 E2E verdict 留档机制：`experiments_env/shared/wff-playbook-utils.mjs` 新增 `recordVerdict()` 并接进 `cleanup()`——cleanup 前把 verdict 摘要（case id、bundle 名、全部 check 事件 gate/passed、verdict、时间戳）追加写入 append-only 的 `experiments_playbook/exp_verdicts.jsonl`（不写 RUN_EXPS.md 正文防污染，ledger 加一句指向该文件）；case-65/66/79 playbook Cleanup 段同步引用；加回归测试
+- [x] 16.2 BUG-019 write-back（按 forensics guide §4 流程）：更新 `_backlog/bugs/BUG-019-*.md` remedy 节——记录 case-65（tier-1 金路径 PASS：relay 端到端真跑通，「relay 走不通所以需要 fallback」前提为假 → fallback 方向否决）与 case-66（tier-4 carve-out 验证）的受控 E2E 证据与结论；诚实标注：受控 E2E 已判、首次真实 production run（`dpt_rb_*`）后按 guide 复核确认；`_backlog/plans/subagent-logging-come-alive-plan.md` 把握度节同步
+
+## 17. Governance 检查器修复（经用户决定并入本 change 收口）
+
+- [x] 17.1 修 `openspec/governance/check-project-reqs.mjs`：prose 交叉引用（如 "see GSK-002"、"per WNC-009"）不计为 requirement 声明——只把 requirement 标题级声明格式计为声明；bug ID（`BUG-\d+`）不进 unregistered 判定；配测试守住真 duplicate/orphan 检测能力不回退
+- [x] 17.2 验证清零：修复后 `check-project-reqs.mjs` 完全 PASS（GSK-002/WNC-009 duplicate、BUG-018 unregistered 三个 pre-existing fail 全消）；更新本文件 6.3 的诚实记录为「已在 §17 修复」
+
+## 18. 收尾总验证（归档前）
+
+- [x] 18.1 全量 `node --test tests/` 通过 — **PASS**（1165 tests, 0 fail）
+- [x] 18.2 `check-project-reqs.mjs` 完全 PASS（0 fail，含 §17 修复）；`check-project-specs.mjs` PASS — **双 PASS**（384 registered / 0 orphan；67 main specs / 0 violations）
+- [x] 18.3 `validate-subagent-logging-contract.mjs` 全绿（5 份 role spec + 直调反模式检测）— **PASS**（18 ok, 0 failed）
+- [x] 18.4 勾选 §10–§18 全部任务；`proposal.md`/`design.md` 补充扩展 scope 简要说明；`CHANGELOG.md` v0.2 条目补一句收口说明（SSOT 去噪 + driver-first 统一 + forensics 收紧）

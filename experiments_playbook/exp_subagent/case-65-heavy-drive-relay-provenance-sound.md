@@ -266,8 +266,10 @@ node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile hea
 
 **PASS 才执行。FAIL 时保留 bundle 现场供排查。**
 
+cleanup 前会自动把 verdict 摘要追加进 append-only 的 `experiments_playbook/exp_verdicts.jsonl`（PASS 可审计，销毁不丢证据）。
+
 ```bash
 B= # populated from Step 1
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B'))"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-65'}))"
 ```

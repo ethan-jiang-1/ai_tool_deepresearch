@@ -29,6 +29,7 @@ import {
   mergeResults,
   forkAndStageSubagents,
   collectAndMergeSubagentResults,
+  loadSlotByManifestEntry,
   validateRuntimeReceipt,
   AgentOutputDeclarationSchema,
   OutputFileEntry,
@@ -1036,6 +1037,52 @@ describe('Trace nonce-anchoring across staging → ingest → commit (SUD-007)',
           (e.slots && e.slots.some((s) => s.receiptNonce === slot.receiptNonce && s.key === slot.key))
         )));
       assert.ok(allNonced, 'all four trace event kinds must carry the slot nonce');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('loadSlotByManifestEntry — slot reconstruction from dispatch.json', () => {
+  it('reconstructs a staged slot with the persisted nonce and correct file paths', () => {
+    const dir = setupRelayBundle('load-manifest');
+    try {
+      const [slot] = stageSubagentSlots(baseState(), dir);
+      const loaded = loadSlotByManifestEntry(dir, 1, slot.key);
+      assert.equal(loaded.key, slot.key);
+      assert.equal(loaded.roleAgentKey, slot.roleAgentKey);
+      assert.equal(loaded.slotIndex, slot.slotIndex);
+      assert.equal(loaded.receiptNonce, slot.receiptNonce, 'nonce comes from dispatch.json, matching the staged slot');
+      assert.equal(loaded.taskPath, slot.taskPath);
+      assert.equal(loaded.resultPath, slot.resultPath);
+      assert.equal(loaded.receiptPath, slot.receiptPath);
+      assert.equal(loaded.status, 'pending');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('a reconstructed slot can drive ingest + commit like the in-memory slot', () => {
+    const dir = setupRelayBundle('load-manifest-commit');
+    try {
+      const [slot] = stageSubagentSlots(baseState(), dir);
+      const loaded = loadSlotByManifestEntry(dir, 1, slot.key);
+      writeRuntimeReceipt(dir, loaded, { platform: 'codex', runtimeMode: 'project-agent' });
+      ingestAgentReceipt(loaded, dir, { runtimeAgentId: 'agent-loaded' });
+      const relay = commitSlotResult(loaded, dir, doneResult(loaded, 1), { platform: 'codex', runtimeMode: 'project-agent', runtimeAgentId: 'agent-loaded' });
+      assert.equal(relay.ok, true);
+      assert.equal(relay.result.status, 'done');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('throws on missing dispatch.json and on an unknown slot key', () => {
+    const dir = setupRelayBundle('load-manifest-missing');
+    try {
+      assert.throws(() => loadSlotByManifestEntry(dir, 1, 'nope'), /dispatch\.json missing/);
+      stageSubagentSlots(baseState(), dir);
+      assert.throws(() => loadSlotByManifestEntry(dir, 1, 'nope'), /slot key not found/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

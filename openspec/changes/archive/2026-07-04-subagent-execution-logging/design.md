@@ -163,4 +163,13 @@ de-facto standard.
 - **Q1（已定）**：driver 子命令表面 = `stage`/`commit`/`merge`；`stage` 支持按 slotIndex replacement re-stage（SUD-003 补 dispatch）；`merge` 封装 `collectAndMergeSubagentResults`。需求接线由 SNC-003 保证（非可选）。
 - **Q2**：lifecycle 事件 payload 是否带 page count / url domain（便于后续 quality 诊断）？倾向带，零成本。
 - **Q3**：`agent_timestamp_span_suspicious` 阈值（1s? 5s?）？tasks 阶段定，先取保守值。
-- **Q4**（延后到 §10 判决后）：是否开"execution-based 阻断"change、是否定 BUG-019 对策——**不在本 change 决**。
+- **Q4**（延后到 §10 判决后，**受控 E2E 已判**）：case-65/66 受控 E2E 已按 forensics guide 判 tier-1（"relay 走不通"前提为假 → fallback 方向否决），write-back 见 `_backlog/bugs/BUG-019-*.md` §6；execution-based 阻断升级仍等首次真实 production run 复核后另开 change。
+
+## Post-Implementation Review Closure（tasks §10–§18）
+
+实现后的整体审查并入本 change 收口（详见 `proposal.md` Scope Extension 与 `tasks.md` §10–§18）。设计层面的关键补充决策：
+
+- **Driver-first 是 spec 级 mandate，不是文档偏好**：accepted spec（SUC-002/SUD-002/SUD-003/AGQ-007）的直调措辞与 SNC-003 矛盾，本 change 以 MODIFIED delta 收口，且 validator（`validate-subagent-logging-contract.mjs`）加反模式锁——控制面 MD 出现 `commitSlotResult(` 等直调指令即 fail。这把"供需分裂"从一次性修复升级为可持续防回归的机制。
+- **`drive-relay-slot commit` 校验失败 exit 1**：JSON report 照发 stdout，但脚本/caller 不可能把失败误当成功。
+- **replacement re-stage 清理旧残留**：同 slotIndex 重新 staging 前删除旧 occupant 的 `runtime-receipt.jsonl`/`result.json`/`result.md`/`_agent.json`，防止 stale nonce 污染新 slot 的 provenance 链。
+- **lifecycle logging 指令单一来源**：`LIFECYCLE_EVENT_SPECS` 表 + 两个 renderer（task.md 摘要形态 / spawn prompt 逐事件 detail 形态），两个 surface 不可能漂移。

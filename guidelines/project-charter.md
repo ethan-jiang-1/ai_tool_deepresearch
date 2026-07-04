@@ -251,6 +251,7 @@ If you are about to do one of these, stop and switch to the required path:
 | Copy historical prototype paths or queue rules into current docs | Extract the underlying principle, then check current OpenSpec sources and framework conventions |
 | Read `_original_*` for inspiration | Confirm the user explicitly asked for historical analysis |
 | Let Markdown decide a deterministic transition | Move the rule into schema/CLI/Engine design |
+| Ship a new engine function or CLI capability without a runtime caller | Land the demand-side wiring in the same change: Agent-facing control-plane MD must direct the Agent to invoke it, and a validator must lock the wording. Supply without demand is dead code — Agents will bridge the gap by hand (inline JS, hand-written files), which is how hand-faking starts |
 
 ---
 

@@ -74,7 +74,7 @@
 //   Receipt:      validateRuntimeReceipt, resolveSlotFromResultRef
 
 import { z } from 'zod';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -485,6 +485,45 @@ function resultJsonSchemaForSlot(slotConfig) {
   };
 }
 
+// ── Lifecycle logging instruction template (SNC-001/002) ──────────────────
+// Single source of truth for the sub-agent lifecycle event set. Both the
+// generated task.md (taskMarkdownForSlot) and the spawn prompt
+// (buildSpawnPrompt) render from this table, so the two surfaces cannot
+// drift apart (event names, detail fields, or prohibitions).
+
+const LIFECYCLE_EVENT_SPECS = [
+  { kind: 'search_start', when: 'when beginning a new search', detailExtra: '' },
+  { kind: 'search_done', when: 'when a search completes', detailExtra: ',"result_count":<N>' },
+  { kind: 'fetch_done', when: 'when a page fetch completes', detailExtra: ',"url":"<url>"' },
+  { kind: 'file_written', when: 'when writing an artifact file', detailExtra: ',"path":"<bundle-relative-path>"' },
+  { kind: 'error', when: 'when encountering an error', detailExtra: ',"reason":"<reason>"' },
+  { kind: 'work_done', when: 'when all work is complete', detailExtra: ',"summary":"<summary>"' },
+];
+
+function lifecycleDetailJson(slotKey, roleAgentKey, spec) {
+  return `{"kind":"${spec.kind}","slotKey":"${slotKey}","roleAgentKey":"${roleAgentKey}","receipt_nonce":"<receipt_nonce>"${spec.detailExtra}}`;
+}
+
+// Compact form used in the generated task.md.
+function lifecycleEventSummaryLines() {
+  return [
+    '   - `search_start` / `search_done` — around each bounded search',
+    '   - `fetch_done` — when a page fetch completes (include `url`)',
+    '   - `file_written` — when you write an artifact file (include bundle-relative `path`)',
+    '   - `error` — when a fetch is blocked or the result is degraded',
+    '   - `work_done` — once, when all your work is complete',
+  ].join('\n');
+}
+
+// Itemized form (event + copyable detail JSON) used in the spawn prompt.
+function lifecycleEventDetailLines(slotKey, roleAgentKey) {
+  return LIFECYCLE_EVENT_SPECS
+    .map((spec) => `- \`${spec.kind}\` — ${spec.when}:\n  ${lifecycleDetailJson(slotKey, roleAgentKey, spec)}`)
+    .join('\n');
+}
+
+const LIFECYCLE_LOGGING_PROHIBITION = 'Do NOT log raw page content, full search result bodies, or private reasoning.';
+
 function taskMarkdownForSlot(slotConfig) {
   const parsed = SlotConfig.parse(slotConfig);
   const cacheSection = parsed.cacheDir
@@ -518,16 +557,12 @@ You MUST leave a trace of your work so the parent can verify the relay actually 
 
 1. Read \`_beacon.json\` in the same directory as this \`task.md\`. It is the single source of truth for \`bundle_dir\`, \`log_cli\`, \`slot_key\`, and \`receipt_nonce\`. Do NOT rely on environment variables or inherited cwd for the bundle path.
 2. Emit these lifecycle events via the logging CLI (the \`log_cli\` path from your beacon), carrying the beacon \`receipt_nonce\` in every event's \`--detail\` JSON:
-   - \`search_start\` / \`search_done\` — around each bounded search
-   - \`fetch_done\` — when a page fetch completes (include \`url\`)
-   - \`file_written\` — when you write an artifact file (include bundle-relative \`path\`)
-   - \`error\` — when a fetch is blocked or the result is degraded
-   - \`work_done\` — once, when all your work is complete
+${lifecycleEventSummaryLines()}
 
 Example (substitute \`bundle_dir\`, \`log_cli\`, and \`receipt_nonce\` from your beacon):
-  node <log_cli> --bundle <bundle_dir> --level info --msg "search_start" --detail '{"kind":"search_start","slotKey":"${parsed.key}","roleAgentKey":"${parsed.roleAgentKey}","receipt_nonce":"<receipt_nonce>"}'
+  node <log_cli> --bundle <bundle_dir> --level info --msg "search_start" --detail '${lifecycleDetailJson(parsed.key, parsed.roleAgentKey, LIFECYCLE_EVENT_SPECS[0])}'
 
-If \`_beacon.json\` is missing or unreadable, emit an \`error\` event and do NOT fabricate a nonce. Do NOT log raw page content, full search result bodies, or private reasoning. The logging CLI always exits 0 — diagnostics must not block your work.
+If \`_beacon.json\` is missing or unreadable, emit an \`error\` event and do NOT fabricate a nonce. ${LIFECYCLE_LOGGING_PROHIBITION} The logging CLI always exits 0 — diagnostics must not block your work.
 
 ## Forbidden Authority
 
@@ -589,22 +624,11 @@ Write lifecycle events to the parent bundle run log via the \`log_cli\` (\`log-e
   node <log_cli> --bundle <bundle_dir> --level <info|warn|error> --msg "<event>" --detail '<json>'
 
 Log these events (substitute \`<bundle_dir>\`, \`<log_cli>\`, and \`<receipt_nonce>\` from your beacon; \`<url>\`, \`<path>\`, \`<N>\`, \`<summary>\`, \`<reason>\` from your work):
-- \`search_start\` — when beginning a new search:
-  {"kind":"search_start","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receipt_nonce":"<receipt_nonce>"}
-- \`search_done\` — when a search completes:
-  {"kind":"search_done","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receipt_nonce":"<receipt_nonce>","result_count":<N>}
-- \`fetch_done\` — when a page fetch completes:
-  {"kind":"fetch_done","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receipt_nonce":"<receipt_nonce>","url":"<url>"}
-- \`file_written\` — when writing an artifact file:
-  {"kind":"file_written","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receipt_nonce":"<receipt_nonce>","path":"<bundle-relative-path>"}
-- \`error\` — when encountering an error:
-  {"kind":"error","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receipt_nonce":"<receipt_nonce>","reason":"<reason>"}
-- \`work_done\` — when all work is complete:
-  {"kind":"work_done","slotKey":"${s.key}","roleAgentKey":"${s.roleAgentKey}","receipt_nonce":"<receipt_nonce>","summary":"<summary>"}
+${lifecycleEventDetailLines(s.key, s.roleAgentKey)}
 
 Use lowercase CLI levels: \`--level <info|warn|error>\` — \`info\` for normal progress, \`warn\` for blocked fetches or degraded results, and \`error\` for failures that prevent completion.
 
-Do NOT log: raw page content, full search result bodies, or private reasoning.
+${LIFECYCLE_LOGGING_PROHIBITION}
 
 ## Forbidden Authority
 
@@ -625,6 +649,13 @@ Perform the bounded work in your isolated agent context. Return strict JSON only
 function materializeSlotDir(baseDir, waveDir, slot, config, cacheDir = null) {
   const slotDir = path.join(baseDir, `_subagents/${waveDir}/${slotDirName(slot.slotIndex)}`);
   mkdirSync(slotDir, { recursive: true });
+  // Replacement re-stage into a previously occupied slotIndex: remove the prior
+  // occupant's execution artifacts so a stale nonce/receipt/result cannot pollute
+  // the new slot's provenance chain (forensics would cross-check the old nonce).
+  for (const stale of ['runtime-receipt.jsonl', 'result.json', 'result.md', '_agent.json']) {
+    const stalePath = path.join(slotDir, stale);
+    if (existsSync(stalePath)) unlinkSync(stalePath);
+  }
   const configWithCache = cacheDir ? { ...config, cacheDir } : config;
   writeFileSync(path.join(slotDir, 'task.md'), taskMarkdownForSlot(configWithCache));
   writeFileSync(path.join(slotDir, 'result.schema.json'), JSON.stringify(resultJsonSchemaForSlot(config), null, 2));

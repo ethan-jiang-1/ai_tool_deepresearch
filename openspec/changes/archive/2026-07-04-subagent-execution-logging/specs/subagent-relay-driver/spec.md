@@ -13,15 +13,15 @@ Runtime driver 命令契约。提供一个 Agent 可调用的 CLI（`DPT_FRAMEWO
 The framework SHALL provide `DPT_FRAMEWORK/cli/drive-relay-slot.mjs` that invokes the relay engine functions at runtime, closing the gap that `stageSubagentSlots` / `recordAgentSpawnRequested` / `ingestAgentReceipt` / `commitSlotResult` / `collectAndMergeSubagentResults` previously had no runtime caller. The driver SHALL expose granular subcommands — `stage`, `commit`, `merge` — so the Phase Agent can run the full collect-as-return loop (per `subagent-dispatch`), including replacement dispatch into freed slots, rather than a single monolithic run.
 
 #### Scenario: stage subcommand stages slots and emits spawn prompts
-- **WHEN** the Phase Agent invokes `drive-relay-slot stage --bundle <dir> --wave <N>` with a dispatch map source
+- **WHEN** the Phase Agent invokes `drive-relay-slot stage <bundle> [--wave <N>]` (full stage, or per-item replacement form `--slot-index <M> --role <roleKey> --key <slotKey> --task <desc>`)
 - **THEN** the driver SHALL call `stageSubagentSlots` / `recordAgentSpawnRequested`, write slot directories (`task.md`, `result.schema.json`, `_status.json`, `_beacon.json`), write `dispatch.json`, and print each slot's spawn prompt
 
 #### Scenario: commit subcommand validates and commits a returned result
-- **WHEN** the Phase Agent invokes `drive-relay-slot commit --bundle <dir> --slot <key> --result <json>` after a sub-agent returns
-- **THEN** the driver SHALL call `ingestAgentReceipt` and `commitSlotResult`, writing `result.json` / `_status.json` / `_agent.json` and emitting `relay_commit_done` trace
+- **WHEN** the Phase Agent invokes `drive-relay-slot commit <bundle> --wave <N> --slot <slotKey> --result '<json>' --runtime-agent-id <id>` after a sub-agent returns
+- **THEN** the driver SHALL call `ingestAgentReceipt` and `commitSlotResult`, writing `result.json` / `_status.json` / `_agent.json`, emitting the `agent_result_received` / `result_schema_validated` trace events to `rb_trace.jsonl`, and emitting the `relay_commit_done` marker to `_logs/run.log`
 
 #### Scenario: merge subcommand collects and merges slot results
-- **WHEN** the Phase Agent invokes `drive-relay-slot merge --bundle <dir> --wave <N>` after all slots have committed
+- **WHEN** the Phase Agent invokes `drive-relay-slot merge <bundle> --wave <N>` after all slots have committed
 - **THEN** the driver SHALL call `collectAndMergeSubagentResults`, merging evidence counts into workflow state and returning the fork/repair decision
 
 #### Scenario: stage re-stages a replacement slot in a freed index
@@ -54,10 +54,11 @@ The driver SHALL pass the sub-agent's returned result through `commitSlotResult`
 
 ### Requirement: Driver invocation SHALL produce engine-side trace that hand-faking cannot
 
-Because the driver calls the real engine functions, a driver-driven slot SHALL produce the engine's own trace events (`slot_create`, `dispatch_create`, `relay_commit_done`, `result_schema_validated`) and a real UUID `receipt_nonce` persisted in `dispatch.json` / `_beacon.json`. These are the signals that distinguish a driven slot from a hand-faked one.
+Because the driver calls the real engine functions, a driver-driven slot SHALL produce the engine's own execution signals: the trace events `slot_create`, `dispatch_create`, `agent_result_received`, and `result_schema_validated` in `rb_trace.jsonl` (nonce-anchored per SUD-007), the `relay_commit_done` marker in `_logs/run.log` (emitted by `commitSlotResult` via the run logger), and a real UUID `receipt_nonce` persisted in `dispatch.json` / `_beacon.json`. These are the signals that distinguish a driven slot from a hand-faked one.
 
 #### Scenario: Driven slot leaves engine trace
 - **WHEN** a slot is staged and committed via the driver
-- **THEN** `rb_trace.jsonl` SHALL contain `relay_commit_done` for that slot
+- **THEN** `rb_trace.jsonl` SHALL contain `agent_result_received` and `result_schema_validated` for that slot
+- **AND** `_logs/run.log` SHALL contain the `relay_commit_done` marker for that slot
 - **AND** `dispatch.json` SHALL record the slot's UUID `receipt_nonce`
 - **AND** `_beacon.json` SHALL exist with a matching nonce

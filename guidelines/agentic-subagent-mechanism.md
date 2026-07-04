@@ -31,7 +31,8 @@ Agentic Subagent (Relay) 是三层执行模型的内层引擎：在一个 queue 
 >
 > | 内容 | 状态 | 说明 |
 > |------|------|------|
-> | Relay engine (`subagent-relay.mjs`, 1067 行) | **✅ 已实现** | SUD-001, SUS-001, SUC-001, SUR-001 accepted。stageSubagentSlots / collectResults / mergeResults / forkRouter / convergeRepair 完整 pipeline |
+> | Relay engine (`subagent-relay.mjs`) | **✅ 已实现** | SUD-001, SUS-001, SUC-001, SUR-001 accepted。stageSubagentSlots / collectResults / mergeResults / forkRouter / convergeRepair 完整 pipeline |
+> | Relay runtime driver CLI (`drive-relay-slot.mjs`) | **✅ 已实现** | SRD-001..004（subagent-execution-logging）。`stage`/`commit`/`merge` 是 Phase Agent 驱动 relay 的唯一 runtime 路径（SNC-003），禁止 inline JS 直调引擎函数 |
 > | Slot 生命周期 + 目录结构 | **✅ 已实现** | `_subagents/wave_NN/slot_MM/` 目录，`task.md` / `result.schema.json` / `_status.json` / `_agent.json` / `runtime-receipt.jsonl` / `result.json` |
 > | 并发控制 (`MAX_CONCURRENT_SUBAGENTS`) | **✅ 已实现** | 定义见 `subagent-relay.mjs`（当前为 8）；超过拒绝；`-1` 全量并行哨兵计划但未实现 |
 > | 六角色定义 | **✅ 已实现** | `dpt-source-intake`, `dpt-source-diagnostic`, `dpt-claim-verifier`, `dpt-evidence-extractor` (v1) + `dpt-topic-scout`, `dpt-synthesis-reviewer` (v1.5) |
@@ -116,13 +117,14 @@ Relay 不是孤立机制。它嵌套在 Chain (Tier 1) 和 Queue (Tier 2) 之内
 [Phase Agent 判断] task.targets.delegates.to == "sub-agent" → 这件工作委托给 relay
                    task.targets.controller == "main-agent" 且无 delegates → Phase Agent 直接执行（如 seed-topics 纯写文件；"main-agent" 为当前 wire value）
 
-[内层 — Relay]     stageSubagentSlots(state, baseDir) → 写 slot 目录
-                   → _subagents/wave_XX/slot_MM/{task.md, result.schema.json, _status.json(=pending)}
-                   → Phase Agent spawn native sub-agent（dpt-source-intake role）
-                   → sub-agent 读 task.md，执行 WebSearch + WebFetch，按 result.schema.json 返回 JSON
-                   → sub-agent 写 runtime-receipt.jsonl（自证执行）
-                   → Phase Agent 验证 JSON，写入 result.json + 更新 _status.json
-                   → collectResults(slots, baseDir) → 读回 result.json
+[内层 — Relay]     drive-relay-slot stage <bundle> --wave N → 引擎写 slot 目录 + 打印 spawn prompt
+                   → _subagents/wave_XX/slot_MM/{task.md, result.schema.json, _status.json(=pending), _beacon.json}
+                   → Phase Agent 用 spawn prompt spawn native sub-agent（dpt-source-intake role）
+                   → sub-agent 读 task.md + _beacon.json，执行 WebSearch + WebFetch，按 result.schema.json 返回 JSON
+                   → sub-agent 写 runtime-receipt.jsonl + lifecycle 事件（自证执行，带 receipt_nonce）
+                   → drive-relay-slot commit <bundle> --wave N --slot <key> --result '<json>' --runtime-agent-id <id>
+                     （引擎校验 receipt + JSON，写 result.json / _status.json / _agent.json）
+                   → drive-relay-slot merge <bundle> --wave N → 读回全部 result.json 并 merge
                    → Phase Agent 基于 result 写产出文件 reference/<topic>/source.yaml
 
 [中层 — Queue]     operate-queue complete <bundle> --result result.json
@@ -143,7 +145,7 @@ Relay 不是孤立机制。它嵌套在 Chain (Tier 1) 和 Queue (Tier 2) 之内
 |---|---------|--------------------|-----------|
 | **Chain** | `resolveNodeTransitionDetailed()` (`ask-next.mjs`) | gate pass 后查下一个 phase | 不编排 phase 内 task、不碰 sub-agent |
 | **Queue** | `claim()` / `complete()` / `fail()` | 领 task、校验 receipt、推进下一个 | 不 spawn sub-agent、不路由 phase |
-| **Relay** | `stageSubagentSlots()` / `collectResults()` | 给 sub-agent 准备 slot、收集结果 | 不校验 task receipt、不编排 task 顺序 |
+| **Relay** | `drive-relay-slot` CLI（`stage`/`commit`/`merge`，内部调 `stageSubagentSlots()` 等引擎函数） | 给 sub-agent 准备 slot、收集结果 | 不校验 task receipt、不编排 task 顺序 |
 
 **并发性分配：** Chain 是单步串行（一步一个 phase）。Queue 是 task 级串行（一次一个 task，因为 receipt 要逐个校验）。Relay 是 role 级并行（一个 task 内可同时 spawn 多个 role sub-agent）。三层各有各的并发粒度，互不干涉。
 
@@ -289,7 +291,7 @@ Queue active window is not the Relay work pool. Relay concurrency happens inside
 
 ### Slot Operations
 
-- MUST use `stageSubagentSlots()` / `collectResults()` API for all slot mutations.
+- MUST drive all slot mutations through the runtime driver CLI `DPT_FRAMEWORK/cli/drive-relay-slot.mjs` (`stage`/`commit`/`merge`, SNC-003) — the driver invokes the engine APIs (`stageSubagentSlots()` / `commitSlotResult()` / `collectAndMergeSubagentResults()`) internally; the Phase Agent does not hand-orchestrate them as inline JS.
 - MUST NOT hand-edit slot files (`_status.json`, `result.json`, `_agent.json`).
 - MUST validate sub-agent output against `result.schema.json` before writing `result.json`.
 - MUST verify `runtime-receipt.jsonl` contains both `agent_runtime_started` and `agent_result_ready` events before accepting result.
@@ -327,11 +329,11 @@ The claim that sub-agent isolation prevents context explosion rests on an assump
 
 The intended mechanism (bounded context in, structured JSON out) is architecturally sound, but whether it keeps context growth sub-linear across a full multi-phase run is unknown and requires experimental measurement — not assumption from relay design.
 
-### 8.2 Relay CLI Gap
+### 8.2 Relay CLI Gap — CLOSED (v0.2)
 
-Queue has `operate-queue.mjs` CLI — the Phase Agent can drive queue operations via bash commands. Relay has no CLI wrapper: `stageSubagentSlots()` and `collectResults()` are pure engine APIs, only callable via inline JS scripts. This asymmetry means the Phase Agent's bridge between Queue and Relay requires a different invocation pattern on each side (CLI for queue, inline JS for relay).
+This gap is closed: `DPT_FRAMEWORK/cli/drive-relay-slot.mjs` is the relay-side CLI (`stage`/`commit`/`merge`), symmetric with `operate-queue.mjs` on the queue side. The Phase Agent now has a uniform bash-callable interface for both tiers; inline-JS orchestration of relay engine functions is prohibited (SNC-003) and locked by `validate-subagent-logging-contract.mjs`.
 
-An `operate-relay.mjs` CLI (or equivalent) would close this gap, giving the Phase Agent a uniform bash-callable interface for all three tiers. This is part of the Queue × Relay integration problem (§8.3).
+The history is worth keeping: the relay engine shipped with functions but no runtime caller (supply without demand), so Agents "bridged" the gap with hand-written inline JS or hand-crafted slot files — the direct root of the hand-faking/provenance problems. See the guardrail in `project-charter.md`: new engine capability MUST land together with its Agent-facing demand-side wiring.
 
 ### 8.3 Queue × Relay Integration
 

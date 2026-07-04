@@ -53,9 +53,9 @@ The Sub-agent returns structured JSON matching `result.schema.json` to the Phase
 
 | File | When | Purpose |
 |------|------|---------|
-| `_subagents/wave_NN/slot_MM/runtime-receipt.jsonl` | `ingestAgentReceipt()` | Verify Sub-agent actually ran (two JSONL events present) |
-| `_subagents/wave_NN/slot_MM/_status.json` | `commitSlotResult()` / `writeSlotStatus()` | Write slot terminal status (done/failed); validates state transition before writing |
-| `_subagents/wave_NN/slot_MM/result.json` | After `commitSlotResult()` | Validated result — Phase Agent reads ONLY this, NOT raw search trail |
+| `_subagents/wave_NN/slot_MM/runtime-receipt.jsonl` | During `drive-relay-slot commit` (engine ingest path) | Verify Sub-agent actually ran (two JSONL events present) |
+| `_subagents/wave_NN/slot_MM/_status.json` | During `drive-relay-slot commit` (engine commit path) | Write slot terminal status (done/failed); validates state transition before writing |
+| `_subagents/wave_NN/slot_MM/result.json` | After `drive-relay-slot commit` succeeds | Validated result — Phase Agent reads ONLY this, NOT raw search trail |
 | `_cache/waveN/slot_MM/` | **Only for debugging** | Non-authority intermediate products — default is NOT to read |
 
 ### 1.4 Context isolation is mechanism-enforced, not convention-enforced
@@ -63,7 +63,7 @@ The Sub-agent returns structured JSON matching `result.schema.json` to the Phase
 The Sub-agent cannot leak noise into Phase Agent context because:
 1. Sub-agent receives only `task.md` + `result.schema.json` — it never sees WorkflowState, gate internals, queue contents, or other topic results. Bounded INPUT is the isolation mechanism; artifact output paths are unrestricted
 2. Sub-agent's returned JSON is validated against `result.schema.json` — the schema constrains shape. Large page dumps and search trails don't fit in the schema's allowed fields
-3. Phase Agent collects via `commitSlotResult()` which validates and writes `result.json` — Phase Agent reads only this structured output
+3. Phase Agent collects via `drive-relay-slot commit`, whose engine path validates and writes `result.json` — Phase Agent reads only this structured output
 4. Self-proving files (`runtime-receipt.jsonl`) and intermediate products (`_cache/`) stay within the slot-scoped directories to prevent cross-slot collisions
 
 ### 1.5 Driving the relay lifecycle — `drive-relay-slot`
@@ -75,6 +75,24 @@ The Phase Agent SHALL drive the relay slot lifecycle through the runtime driver 
 - `drive-relay-slot merge <bundle> --wave <N>` — collects and merges committed slots into workflow state and returns the fork/repair decision.
 
 The driver does NOT spawn the sub-agent itself — `stage` prints the spawn prompt for the Phase Agent to spawn via its native Agent tool, then `commit` validates whatever the sub-agent returns. The driver performs no search, evidence judgment, or routing (SRD-002/003).
+
+Copyable production forms (replace placeholders):
+
+```bash
+# First batch stage (dispatchMap-driven full stage)
+node DPT_FRAMEWORK/cli/drive-relay-slot.mjs stage <bundle> --wave <N>
+
+# Replacement dispatch into a freed slotIndex (补位, SUD-003)
+node DPT_FRAMEWORK/cli/drive-relay-slot.mjs stage <bundle> --wave <N> \
+  --slot-index <M> --role <roleAgentKey> --key <slotKey> --task "<taskDescription>"
+
+# Commit a returned sub-agent result
+node DPT_FRAMEWORK/cli/drive-relay-slot.mjs commit <bundle> --wave <N> \
+  --slot <slotKey> --result '<json>' --runtime-agent-id <id>
+
+# Merge after all slots terminal
+node DPT_FRAMEWORK/cli/drive-relay-slot.mjs merge <bundle> --wave <N>
+```
 
 ## 2. Directory Structure — Authority Boundary
 
@@ -98,7 +116,7 @@ _subagents/wave_NN/slot_MM/     ← relay-managed (authority)
 | `output_files[].source_slug` | string (可选) | 来源 slug |
 | `cache_trails[]` | string[] (bundle-relative) | leaf source 目录路径，每目录直接含 `websearch.json`/`page.md`/`meta.json` |
 
-**职责分工**：`commitSlotResult()` 验证声明 schema → delegated `complete()` 验证 provenance + 文件存在 + cache 完整 → 成功后 append `rb_output_declarations.jsonl` ledger → gate `content_dedup` 只读 ledger。Agent 和 playbook fixture 不直接写 production ledger；未经过 delegated `complete()` 的文件不能帮助 gate pass。
+**职责分工**：`drive-relay-slot commit`（引擎 commit 路径）验证声明 schema → delegated `complete()` 验证 provenance + 文件存在 + cache 完整 → 成功后 append `rb_output_declarations.jsonl` ledger → gate `content_dedup` 只读 ledger。Agent 和 playbook fixture 不直接写 production ledger；未经过 delegated `complete()` 的文件不能帮助 gate pass。
 
 _cache/                          ← intermediate products (non-authority)
   README.md                     ← bundle instantiation 时自动创建，解释四级结构

@@ -2,7 +2,7 @@
 
 **Reported**: 2026-07-03
 **Severity**: P1（每次 wave0/wave1 必定触发；导致主 Agent SNR 崩溃、用户看到大量无意义基础设施操作）
-**Status**: Open
+**Status**: Judged（受控 E2E，见 §6）— 待首次真实 production run 复核确认
 **Bundle**: `dpt_rb_wocheng-info-china-unicom-subsidiary`
 **Related**: [[BUG-014-phase-agent-bypasses-subagent-relay-regression]], [[BUG-015-wave-gate-quality-rules-too-strict]], [[BUG-018-wave0-repair-whack-a-mole-and-yaml-sanitization]]
 
@@ -105,3 +105,30 @@ Agent tool spawn sub-agent → 收集结构化输出 → 直接写 artifact 文�
 1. Phase Agent 在什么时候应该判定"relay 走不通"？尝试 N 次失败后？特定错误类型？
 2. fallback 路径产出的 artifact 质量是否与 relay 路径等价？gate 应该如何区分对待？
 3. degradation 应该记录在哪里（run.log？silent_degradation 标记？）以便后续诊断 relay 本身的问题？
+
+---
+
+## 6. Remedy write-back（2026-07-04，受控 E2E 判决，per `provenance-forensics-guide.md` §4）
+
+`subagent-execution-logging` change apply 后，按 forensics guide 跑了受控 E2E 判决：
+
+### 6a. 证据
+
+- **case-65（`exp_subagent/case-65-heavy-drive-relay-provenance-sound.md`，heavy）— tier-1 金路径 PASS**：`drive-relay-slot stage` → beacon → **真 sub-agent 独立进程执行**（经 beacon 调 `log-event.mjs` 写 lifecycle 事件）→ `drive-relay-slot commit` → S0–S5 全信号自洽，forensics（RPG-007/008/011/012）全 silent，判 tier-1。
+- **case-66（`exp_subagent/case-66-standard-drive-relay-staged-not-committed.md`，standard）— tier-4 carve-out 验证**：staged-not-committed 只触发 RPG-008，不误伤为伪造（不触发 RPG-012），确认 tier-4 ≠ 手糊。
+
+### 6b. 判决
+
+**relay 端到端真跑通了。§2a/§4 的核心前提——"单会话模式下 relay 管线无法完整走通"——为假。**
+
+按 guide §3 tier-1 implication：**方向 1（silent degradation + 非 relay fallback）否决**。walk 不通的不是 relay，而是当时缺 runtime driver + Agent-facing 接线（供需分裂：引擎函数存在但无 MD 指示 Agent 调用，Agent 只能手糊）。修复落在：
+
+- `drive-relay-slot.mjs`（stage/commit/merge runtime driver）+ phase/protocol/role MD 全面接线（driver-first mandate）
+- `validate-subagent-logging-contract.mjs` 反模式锁（禁 MD 直调引擎函数）
+- forensics 诊断链（RPG-007..013，advisory）供后续判伪
+
+方向 2/3（gate/queue 放宽接受非 relay 产出）随之失去动机，一并不采纳——放宽 provenance 只会重新打开手糊通道。
+
+### 6c. 诚实边界
+
+本判决基于**受控 E2E**（experiments_playbook，disposable bundle），非真实 production run。首次真实 production run（`dpt_rb_*` bundle）后，须按 `provenance-forensics-guide.md` §4 对 ≥1 个真实 wave 复核 S0–S5，确认 tier-1 后本 bug 方可 Close。若真实 run 里 relay 再走不通，回到 §5d 的问题清单重新分析——但那时的证据基线已经是"receipt 链 + forensics 可判"，不再是黑箱。

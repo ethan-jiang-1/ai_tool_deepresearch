@@ -15,10 +15,13 @@ Deep Research Framework 命令索引。
 | 命令 | 文件 | 说明 |
 |------|------|------|
 | setup-real-subagents | command_playbook/setup-real-subagents.md | 设置 Codex/Claude Code 项目级 real subagent 定义 |
+| drive-relay-slot.mjs | cli/drive-relay-slot.mjs | 驱动 relay slot 生命周期（`stage`/`commit`/`merge`，SNC-003 唯一 runtime 路径；replacement 补位用 `stage --slot-index M --role ... --key ... --task ...`） |
+| provenance-forensics-guide | command_playbook/provenance-forensics-guide.md | 事后判定 subagent 证据 provenance 真伪（S0–S5 信号 + 6-tier 矩阵） |
 
 ## 质量检查
 | 工具 | 文件 | 说明 |
 |------|------|------|
 | validate-bundle.mjs | cli/validate-bundle.mjs | Zod 校验 bundle 控制文件 |
 | validate-phase-templates.mjs | cli/validate-phase-templates.mjs | 校验 phase MD 模板保持 controller + delegates 合约 |
+| validate-subagent-logging-contract.mjs | cli/validate-subagent-logging-contract.mjs | 校验 phase/role/protocol MD 的 subagent logging 契约与 driver-first 措辞（含直调反模式检测） |
 | inspect-bundle.mjs | cli/inspect-bundle.mjs | bundle 目录结构完整性 |

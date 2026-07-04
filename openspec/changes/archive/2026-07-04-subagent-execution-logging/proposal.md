@@ -49,3 +49,14 @@ BUG-019 报告 Main Agent 在主上下文与 relay/gate 基础设施搏斗。但
 - **Tests / Playbook**：`tests/engine/subagent-relay.test.mjs`（beacon/nonce 持久化、spawn prompt 只传 slot 目录）、`tests/cli/drive-relay-slot.test.mjs`、gate forensic 测试、**`experiments_playbook/exp_system-logging/`（既有，接近真实环境；扩 case-76 spawn-prompt-logging / case-77 subagent-logging / case-79 provenance-forensics）验证「真 sub-agent run 留下完整 S0–S5 信号 + forensic 诊断」**。case-79 用 8 个 disposable bundle（每 tier 一个）替代 ad-hoc `_fixtures/` 子目录，符合 SDC-002。
 - **Version**：本 change 修改 DPT_FRAMEWORK 运行时行为（新增 forensic gate + driver CLI + beacon），**需要 version bump，target `v0.2`**（apply 阶段按 `version-management` VEM 更新 `RUN.md` 横幅与 `CHANGELOG.md`）。
 - **Plan 锚点**：详细设计见 `_backlog/plans/subagent-logging-come-alive-plan.md`（§4 埋点 / §5.0 beacon / §5 driver+下沉 / §10 判断手册）。
+
+## Scope Extension（审查收口，tasks §10–§18）
+
+实现完成后的整体审查发现若干"做完但没收干净"的缺口，经用户决定并入本 change 一次收口（任务清单见 `tasks.md` §10–§18）：
+
+- **SSOT 去噪（§10）**：MODIFIED SUC-002/SUD-002/SUD-003/AGQ-007——accepted spec 原措辞指示 Phase Agent 直调引擎函数（inline JS），与 driver-first mandate（SNC-003/SRD）矛盾，统一改为经 `drive-relay-slot` 驱动。
+- **控制面接线补全（§11）+ Engine/CLI 修复（§12）+ 测试补强（§13）**：phase/protocol/role MD 清除全部直调措辞并加 validator 反模式锁；`drive-relay-slot commit` 校验失败 exit 1；replacement re-stage 清理旧 slot 残留 artifact；forensics 解析收紧（RPG-007 reason 细分、RPG-011 结构化解析、RPG-012(c) lifecycle nonce 交叉核对）。
+- **Guidelines 修正 + charter guardrail（§14）**：关闭已过期的"Relay CLI Gap"描述；charter 新增"供给无需求即 dead code"guardrail。
+- **框架补齐（§15）**：补 `dpt-source-diagnostic`/`dpt-claim-verifier` role spec（5 角色全覆盖）；`taskMarkdownForSlot`/`buildSpawnPrompt` 的 lifecycle logging 指令提取为单一共享模板（`LIFECYCLE_EVENT_SPECS`）防漂移。
+- **证据可审计 + BUG-019 write-back（§16）**：`cleanup()` 销毁 bundle 前把 verdict 摘要追加进 append-only `experiments_playbook/exp_verdicts.jsonl`；BUG-019 按 forensics guide §4 受控 E2E 判决（tier-1，fallback 方向否决）回写 bug 文件与 plan 把握度。
+- **Governance 检查器修复（§17）**：`check-project-reqs.mjs` 只把 `> req:` 头部行计为声明、bug ID 不进 unregistered 判定；GSK-002/WNC-009/BUG-018 三个 pre-existing fail 清零。

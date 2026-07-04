@@ -214,6 +214,8 @@ Heavy: N/N PASS, N HEALTH ISSUES (X FAIL)
 
 每 case 记录 `verdict`（PASS/FAIL）、`health`（CLEAN/ISSUES）、可选 `not_run_reason`、`bundle_preserved`。
 
+verdict 摘要审计留档见 append-only 的 `experiments_playbook/exp_verdicts.jsonl`（`cleanup()` 在销毁 bundle 前自动追加，PASS 即销毁也可事后审计）。
+
 用绿色 `\x1b[32m` 标 PASS、红色 `\x1b[31m` 标 FAIL。
 
 ## 开始前检查

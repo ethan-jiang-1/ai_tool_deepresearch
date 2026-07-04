@@ -88,7 +88,7 @@ Phase Agent MUST NOT use scripts (Python, bash, node, or any language) or templa
 
 If the Agent finds itself wanting to "create many reference files quickly," the correct answer is queue-driven sub-agent parallel execution, not a script.
 
-**正确替代**：Phase Agent claim delegated task → spawn Sub-agent via Relay → `commitSlotResult()` → delegated `complete()` → Engine append ledger。
+**正确替代**：Phase Agent claim delegated task → spawn Sub-agent via Relay → `drive-relay-slot commit`（引擎校验落盘）→ delegated `complete()` → Engine append ledger。
 
 **正确替代**：`setup-ready` gate pass 只确认 structural consistency（文件存在、schema 合法、basename 一致）。它不意味着研究质量过关或可以交付最终报告。`readiness-passed` 是另一个 gate，在 wave0/1/2 + HITL2 之后。
 

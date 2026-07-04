@@ -1,4 +1,4 @@
-# Subagent Node Contract (delta)
+# Subagent Node Contract
 
 > req: SNC-001, SNC-002, SNC-003
 
@@ -6,11 +6,11 @@
 
 为 sub-agent 增加 lifecycle logging 的强制契约与 relay driver 供需接线：sub-agent role spec（always-loaded）与 `taskMarkdownForSlot` 生成的 `task.md` SHALL mandate 读 `_beacon.json` + 经 `log-event.mjs` 发射 lifecycle 事件 + 事件带 nonce；phase workflow node SHALL 指示 Phase Agent 经 `drive-relay-slot` 驱动 relay。把 logging 指令从 dead code（`buildSpawnPrompt`）下沉到任何 spawn 路径都能读到的契约，使 logging 真正在 runtime 活过来。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Sub-agent role specs SHALL mandate lifecycle logging
 
-Each sub-agent role spec (`subagent-dpt-source-intake.md`, `subagent-dpt-evidence-extractor.md`, `subagent-dpt-topic-scout.md`, etc.) SHALL mandate that the sub-agent read its slot's `_beacon.json` and emit the lifecycle event set (`search_start`, `search_done`, `fetch_done`, `file_written`, `error`, `work_done`) via `log-event.mjs`, carrying the beacon `receipt_nonce`. This contract SHALL be always-loaded (in the role body / `requires`), not only delivered via spawn prompt, so that any spawn path leaves trace.
+Each sub-agent role spec shipped in the framework — the full production-dispatch set: `subagent-dpt-source-intake.md`, `subagent-dpt-source-diagnostic.md`, `subagent-dpt-claim-verifier.md`, `subagent-dpt-evidence-extractor.md`, `subagent-dpt-topic-scout.md` — SHALL mandate that the sub-agent read its slot's `_beacon.json` and emit the lifecycle event set (`search_start`, `search_done`, `fetch_done`, `file_written`, `error`, `work_done`) via `log-event.mjs`, carrying the beacon `receipt_nonce`. This contract SHALL be always-loaded (in the role body / `requires`), not only delivered via spawn prompt, so that any spawn path leaves trace. Every role the engine's production dispatchMap can dispatch SHALL have a framework role spec carrying this mandate (no dispatchable role may rely on the generated `task.md` alone).
 
 #### Scenario: Role spec mandates beacon read + logging
 - **WHEN** a sub-agent loads its role spec
@@ -20,6 +20,11 @@ Each sub-agent role spec (`subagent-dpt-source-intake.md`, `subagent-dpt-evidenc
 #### Scenario: Logging mandate is independent of spawn path
 - **WHEN** a sub-agent is spawned via the driver OR via a hand-written Phase Agent prompt
 - **THEN** the role spec's logging mandate SHALL still apply (it is loaded from the role spec, not only the spawn prompt)
+
+#### Scenario: Every production-dispatchable role has a role spec with the mandate
+- **WHEN** the engine dispatchMap can dispatch a role (e.g. `dpt-source-diagnostic`, `dpt-claim-verifier` in the built-in pass branch)
+- **THEN** the framework SHALL ship a `subagent-dpt-<role>.md` role spec carrying the always-loaded logging mandate
+- **AND** the logging-contract validator SHALL cover it (glob-scanned, not hardcoded)
 
 ### Requirement: taskMarkdownForSlot SHALL include the lifecycle-logging directive
 

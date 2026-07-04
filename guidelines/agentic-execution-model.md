@@ -206,18 +206,19 @@ Queue active window is not the Relay work pool. Relay concurrency happens inside
    task.targets.delegates.to == "sub-agent" → 这件工作委托给 Tier 3 (Relay)
 
 3. Tier 3 — Relay: stage
-   Phase Agent 调 stageSubagentSlots() → 写 slot 目录:
-   _subagents/wave_00/slot_01/{task.md, result.schema.json, _status.json(=pending)}
+   Phase Agent 跑 drive-relay-slot stage <bundle> --wave N → 引擎写 slot 目录 + 打印 spawn prompt:
+   _subagents/wave_00/slot_01/{task.md, result.schema.json, _status.json(=pending), _beacon.json}
 
 4. Tier 3 — Relay: spawn
-   Phase Agent spawn native sub-agent (dpt-source-intake)
-   → sub-agent 读 task.md，执行 WebSearch + WebFetch
-   → sub-agent 写 runtime-receipt.jsonl (agent_runtime_started + agent_result_ready)
+   Phase Agent 用 spawn prompt spawn native sub-agent (dpt-source-intake)
+   → sub-agent 读 task.md + _beacon.json，执行 WebSearch + WebFetch
+   → sub-agent 写 runtime-receipt.jsonl (agent_runtime_started + agent_result_ready) + lifecycle 事件
    → sub-agent 返回结构化 JSON
 
 5. Tier 3 — Relay: collect
-   Phase Agent 验证 JSON 符合 result.schema.json → 写入 result.json → 更新 _status.json(=done)
-   Phase Agent 调 collectResults() → 读回 result
+   Phase Agent 跑 drive-relay-slot commit <bundle> --wave N --slot <key> --result '<json>' --runtime-agent-id <id>
+   → 引擎（commitSlotResult）校验 JSON 符合 result.schema.json → 写 result.json → 更新 _status.json(=done)
+   全部 slot 终态后 drive-relay-slot merge <bundle> --wave N → 读回并 merge result
    Phase Agent 基于 result 写产出文件: reference/<topic>/source.yaml
 
 6. Tier 2 — Queue: complete

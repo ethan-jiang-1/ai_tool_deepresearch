@@ -23,6 +23,8 @@ const REPO_ROOT = join(__dirname, '..', '..', '..');
 
 const ROLE_SPECS = [
   join(NODES, 'phases', 'subagent-dpt-source-intake.md'),
+  join(NODES, 'phases', 'subagent-dpt-source-diagnostic.md'),
+  join(NODES, 'phases', 'subagent-dpt-claim-verifier.md'),
   join(NODES, 'phases', 'subagent-dpt-evidence-extractor.md'),
   join(NODES, 'phases', 'subagent-dpt-topic-scout.md'),
 ];
@@ -34,7 +36,16 @@ const DRIVER_NODES = [
   join(NODES, 'phases', 'phase-wave2.md'),
 ];
 
-const ROLE_MARKERS = ['_beacon.json', 'receipt_nonce', 'log-event.mjs', 'search_start', 'search_done', 'fetch_done', 'file_written', 'work_done'];
+const ROLE_MARKERS = ['_beacon.json', 'receipt_nonce', 'log-event.mjs', 'search_start', 'search_done', 'fetch_done', 'file_written', '`error`', 'work_done'];
+
+// SNC-003 anti-pattern lock: the call-form is the instruction shape; bare mentions
+// in prohibition/descriptive prose are allowed.
+const DIRECT_CALL_ANTIPATTERNS = [
+  'stageSubagentSlots(',
+  'commitSlotResult(',
+  'collectAndMergeSubagentResults(',
+  'ingestAgentReceipt(',
+];
 
 describe('SNC-001/SRL-001..003 — sub-agent role specs mandate lifecycle logging', () => {
   for (const spec of ROLE_SPECS) {
@@ -54,6 +65,16 @@ describe('SNC-003 — phase nodes + shared protocol wire Phase Agent to drive-re
     it(`${node.split('/').pop()} directs Phase Agent to drive-relay-slot`, () => {
       const content = readFileSync(node, 'utf-8');
       assert.ok(content.includes('drive-relay-slot'), `${node} must reference drive-relay-slot`);
+    });
+  }
+});
+
+describe('SNC-003 — control-plane MD carries no direct engine-call instructions', () => {
+  for (const node of [...DRIVER_NODES, ...ROLE_SPECS]) {
+    it(`${node.split('/').pop()} has no direct-call wording`, () => {
+      const content = readFileSync(node, 'utf-8');
+      const hits = DIRECT_CALL_ANTIPATTERNS.filter((p) => content.includes(p));
+      assert.deepEqual(hits, [], `${node} instructs direct engine calls: ${hits.join(', ')} — must route through drive-relay-slot`);
     });
   }
 });
