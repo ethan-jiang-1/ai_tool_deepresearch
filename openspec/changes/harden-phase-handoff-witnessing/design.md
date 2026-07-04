@@ -95,6 +95,8 @@ Before writing `rb_status.json`, `advance-status` MUST:
 
 **替代方案：** 保持 `advance-status` 仅做 chain lookup。拒绝，因为这正是 BUG-020 中状态被过早洗白的 seam。
 
+This decision changes the active status interpretation for covered downstream gates. After a source-gate sync, `current_gate` names the latest certified predecessor gate and `next_gate` names the current phase's gate to be completed. Covered gates MUST derive this predecessor/current status window from `manifest.json` + `transitions.chain.json`; they MUST NOT keep hardcoded checks that require their own gate enum to already be `current_gate` before the gate has passed. The covered deterministic handoff span is setup→seed-topics through readiness→final plus rerun→seed-topics. Instantiation/HITL1 bootstrap status remains an explicit compatibility exception for this change.
+
 ### D4: Gate preflight 在 content rules 前执行
 
 新增 shared helper，例如 `checkPhaseHandoffPreflight(bundlePath, currentNodeRef)`，供 lifecycle gate CLI 调用。它验证：
@@ -103,9 +105,9 @@ Before writing `rb_status.json`, `advance-status` MUST:
 - 对非初始 lifecycle node，存在 incoming deterministic predecessor gate 的 `gate_attempt(passed=true)`，且该 event 的 `next` 等于 `currentNodeRef`。
 - 当前 node 存在发生在该 predecessor pass 之后的 `load_complete(entry=currentNodeRef)` trace witness。
 
-Preflight failure 不改变 router。Gate 正常返回 `passed:false`、exit 1，并在 `inspect` / `advice` 中说明缺失的 prior gate 或 `load_complete`。
+Preflight failure 不改变 router。Gate 正常返回 `passed:false`、exit 1，并在 `inspect` / `advice` 中说明缺失的 prior gate、status-window mismatch 或 `load_complete`。
 
-**适用范围：** 所有有 prior lifecycle phase 的 gate。Instantiation 是入口例外，因为 bundle 尚未存在时无法提前写 run trace。若一个 node 有多个 deterministic incoming edges（例如 rerun 回到 seed-topics），helper 使用 `transitions.chain.json` 推导所有合法 predecessor，并接受最新一对合法的 `gate_attempt.next -> load_complete.entry` witness；helper 不自行选择 route。
+**适用范围：** covered deterministic lifecycle gates from setup onward. Instantiation 是入口例外，因为 bundle 尚未存在时无法提前写 run trace；HITL1/bootstrap status shape is also an explicit compatibility exception unless separately migrated. 若一个 node 有多个 deterministic incoming edges（例如 rerun 回到 seed-topics），helper 使用 `transitions.chain.json` 推导所有合法 predecessor，并接受最新一对合法的 `gate_attempt.next -> load_complete.entry` witness；helper 不自行选择 route。
 
 **替代方案：** 只在 wave1/wave2 加检查。拒绝，因为会复制 BUG-020 的“某些路径未接线”问题。
 
@@ -142,6 +144,8 @@ Phase §6 的核心改写：
 3. 在执行任何 next-phase work 之前，调用 `advance-status --bundle <path> --to <this phase's gate enum>` 同步刚通过的 source gate。例如 wave0 pass 后使用 `--to wave0_complete`，不是 `--to wave1_complete`。
 4. 从 step 2 已经 capture 的 rendered Markdown 继续执行下一 phase。
 5. 不把 `advance-status` 描述为“进入下一 phase”的动作；它只在 `enter-phase` 已经写下 target node load witness 之后同步状态。
+
+The wording update SHALL name the concrete source-gate enum for every covered handoff so the Phase Agent does not infer it: setup→seed-topics uses `setup_ready`; seed-topics→wave0 uses `seed_topics_ready`; wave0→wave1 uses `wave0_complete`; wave1→wave2 uses `wave1_complete`; wave2→HITL2 uses `wave2_complete`; HITL2 proceed→readiness uses `hitl2_recorded` when that runtime branch is emitted; readiness→final uses `readiness_passed`; rerun→seed-topics uses `rerun_ready`.
 
 这保持 Markdown 控制 Agent Flow：Markdown 要求 Phase Agent 调 CLI；CLI 只做确定性 loader/check 并把下一段 Markdown 返回给 Agent。继续执行下一 phase 的主体仍是 Phase Agent 的 agentic loop，不是 CLI。
 

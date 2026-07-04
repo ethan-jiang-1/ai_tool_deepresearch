@@ -19,7 +19,20 @@ The phase body SHALL NOT frame `advance-status` as the action that enters the ne
 
 The source gate enum SHALL be the gate that just passed, not the next phase's gate. For example, wave0 gate pass SHALL synchronize with `--to wave0_complete` after `enter-phase --node phases/phase-wave1.md`; it SHALL NOT use `--to wave1_complete` until the wave1 gate itself has passed.
 
-This requirement applies to lifecycle phases whose deterministic outcome has a next lifecycle node, including wave0, wave1, wave2, readiness, and other non-entry deterministic handoffs. HITL2 indeterminate decisions remain governed by their existing decision logic; when a deterministic HITL2 branch is chosen, its selected fileRef SHALL still be consumed through `enter-phase`.
+This requirement applies to lifecycle phases whose deterministic outcome has a next lifecycle node from setup onward, including setup→seed-topics, seed-topics→wave0, wave0→wave1, wave1→wave2, wave2→HITL2, HITL2→readiness, readiness→final, and rerun→seed-topics. HITL2 indeterminate decisions remain governed by their existing decision logic; when the current runtime emits a deterministic HITL2 branch, its selected fileRef SHALL still be consumed through `enter-phase`. The instantiation/HITL1 bootstrap status shape is a compatibility exception for this change and SHALL NOT be silently rewritten by the phase wording update.
+
+The phase wording SHALL give concrete source-gate `advance-status` commands so the Agent does not infer them at runtime:
+
+| Passed phase | Target from `check.next` | Source-gate status sync |
+| --- | --- | --- |
+| setup | `phases/phase-seed-topics.md` | `advance-status --to setup_ready` |
+| seed-topics | `phases/phase-wave0.md` | `advance-status --to seed_topics_ready` |
+| wave0 | `phases/phase-wave1.md` | `advance-status --to wave0_complete` |
+| wave1 | `phases/phase-wave2.md` | `advance-status --to wave1_complete` |
+| wave2 | `phases/phase-hitl2.md` | `advance-status --to wave2_complete` |
+| HITL2 proceed branch | `phases/phase-readiness.md` | `advance-status --to hitl2_recorded` |
+| readiness | `phases/phase-final.md` | `advance-status --to readiness_passed` |
+| rerun | `phases/phase-seed-topics.md` | `advance-status --to rerun_ready` |
 
 #### Scenario: Wave phase gate pass uses enter-phase
 
@@ -40,3 +53,17 @@ This requirement applies to lifecycle phases whose deterministic outcome has a n
 - **WHEN** readiness gate pass points to `phase-final.md`
 - **THEN** readiness SHALL instruct the Agent to consume that node through `enter-phase`
 - **AND** final report delivery SHALL remain governed by the Final node after final artifacts are written
+
+#### Scenario: Wave1 and Wave2 handoffs use source-gate synchronization
+
+- **WHEN** wave1 or wave2 phase nodes describe their Gate Pass behavior
+- **THEN** wave1 SHALL instruct `enter-phase --node phases/phase-wave2.md` followed by `advance-status --to wave1_complete`
+- **AND** wave2 SHALL instruct `enter-phase --node phases/phase-hitl2.md` followed by `advance-status --to wave2_complete`
+- **AND** neither phase SHALL instruct the Agent to synchronize to the next phase's gate before that next phase passes
+
+#### Scenario: Rerun handoff preserves alternate predecessor semantics
+
+- **WHEN** rerun gate pass points to `phases/phase-seed-topics.md`
+- **THEN** rerun SHALL instruct the Agent to consume seed-topics through `enter-phase`
+- **AND** rerun SHALL synchronize source status with `advance-status --to rerun_ready`
+- **AND** seed-topics SHALL treat rerun as a legal predecessor when the runtime trace proves that branch

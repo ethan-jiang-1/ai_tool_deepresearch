@@ -11,7 +11,13 @@ For every manifest lifecycle phase that has an incoming deterministic transition
 - the latest passed deterministic `gate_attempt` trace event with a non-null `next` has `next` equal to the current phase node fileRef and names the legal predecessor gate/currentNodeRef; and
 - the current phase node has a later route-bound `load_complete(entry=<current phase node fileRef>)` trace event proving the Phase Agent consumed that prior gate's `check.next` through `enter-phase` or another accepted loader path that enforces the same predecessor-gate binding.
 
-The preflight SHALL derive lifecycle membership and deterministic incoming edges from `manifest.json` and `transitions.chain.json`; it SHALL NOT infer lifecycle membership from file names alone. If a node has multiple deterministic incoming edges, the preflight SHALL accept the latest valid ordered pair for any legal predecessor edge. The instantiation entry phase is exempt from the prior-handoff preflight because the runtime bundle may not exist before instantiation.
+The preflight SHALL derive lifecycle membership and deterministic incoming edges from `manifest.json` and `transitions.chain.json`; it SHALL NOT infer lifecycle membership from file names alone. If a node has multiple deterministic incoming edges, the preflight SHALL accept the latest valid ordered pair for any legal predecessor edge. The instantiation entry phase is exempt from the prior-handoff preflight because the runtime bundle may not exist before instantiation. The instantiation/HITL1 bootstrap status shape remains a compatibility exception unless separately migrated, but deterministic handoffs from setup onward SHALL use the preflight and status-window contract.
+
+For deterministic lifecycle gates covered by this change, gate status validation SHALL be derived from the same manifest/chain predecessor set rather than hardcoded to the gate's own enum as `current_gate` before the gate has passed. Before a covered current node's gate evaluates content rules:
+
+- `rb_status.json#/next_gate` SHALL equal the current node's gate enum;
+- `rb_status.json#/current_gate` SHALL equal a legal predecessor source gate enum whose passed `gate_attempt.next` points to the current node; and
+- old hardcoded checks such as requiring wave2's `current_gate` to be `wave2_complete` before the wave2 gate passes SHALL be replaced or interpreted through this status-window rule.
 
 If preflight fails, the gate CLI SHALL return normal gate failure output (`passed: false`, exit 1) with `inspect` and `advice` naming the missing trace evidence. It SHALL NOT change routing authority or select a next node.
 
@@ -43,11 +49,34 @@ If preflight fails, the gate CLI SHALL return normal gate failure output (`passe
 - **THEN** the gate SHALL continue to evaluate its existing definition rules
 - **AND** pass/fail SHALL still be determined by the full rule set
 
+#### Scenario: Downstream gate accepts source-gate status window
+
+- **WHEN** wave1 has passed, `enter-phase` has loaded `phases/phase-wave2.md`, and source-gate status synchronization has written `current_gate: "wave1_complete"` and `next_gate: "wave2_complete"`
+- **AND** `check-gate-wave2-complete.mjs` is called for `phases/phase-wave2.md`
+- **THEN** the shared gate status preflight SHALL accept the status window
+- **AND** the gate SHALL NOT fail merely because `current_gate` is not yet `wave2_complete`
+- **AND** the gate SHALL continue to evaluate wave2's normal content rules
+
+#### Scenario: Rerun path accepts legal alternate predecessor
+
+- **WHEN** rerun has passed with `gate_attempt(passed=true, gate="rerun-ready", currentNodeRef="phases/phase-rerun.md", next="phases/phase-seed-topics.md")`
+- **AND** a later `load_complete(entry="phases/phase-seed-topics.md")` exists
+- **AND** source-gate status synchronization has written `current_gate: "rerun_ready"` and `next_gate: "seed_topics_ready"`
+- **THEN** the seed-topics gate preflight SHALL accept the rerun predecessor as legal
+- **AND** it SHALL NOT require the setup predecessor for that run
+
+#### Scenario: Terminal final entry is witnessed before readiness status sync
+
+- **WHEN** readiness has passed with `check.next: "phases/phase-final.md"`
+- **AND** `enter-phase` has written a later `load_complete(entry="phases/phase-final.md")`
+- **THEN** `advance-status --to readiness_passed` SHALL be eligible to write `next_gate: "none"`
+- **AND** final delivery SHALL still be governed by the Final node, not by the readiness gate itself
+
 ### Requirement: Lifecycle gate preflight wiring is enforced
 
-The project SHALL include a regression check or validator that verifies every applicable lifecycle gate CLI invokes the shared handoff preflight helper.
+The project SHALL include a regression check or validator that verifies every applicable lifecycle gate CLI invokes the shared handoff preflight/status-window helper.
 
-The check SHALL fail if an applicable gate CLI omits the helper call or replaces it with ad hoc inline logic. The goal is to prevent a shared enforcement mechanism from existing without being wired into the real runtime path.
+The check SHALL fail if an applicable gate CLI omits the helper call or replaces it with ad hoc inline logic. The goal is to prevent a shared enforcement mechanism from existing without being wired into the real runtime path. Applicable covered gates include setup onward deterministic lifecycle gates and rerun-entry coverage where the runtime emits the corresponding deterministic handoff. Instantiation/HITL1 bootstrap exceptions SHALL be named explicitly in the validator allowlist rather than omitted silently.
 
 #### Scenario: Missing preflight call fails validation
 

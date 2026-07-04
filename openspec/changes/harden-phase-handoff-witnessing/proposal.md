@@ -13,11 +13,11 @@ Terminology note：本 change 保留既有 `stop: no` frontmatter 字段，不�
 ## What Changes
 
 - 新增 `enter-phase` Agent-facing loader/check CLI：Phase Agent 将 gate CLI 返回的 `check.next` 作为 `--node` 传入；CLI 只调用现有 `assessNode()`、写入 `load_complete` trace、渲染加载后的 Agent-readable Markdown，不驱动 lifecycle loop 或执行下一 phase。
-- 强化 `advance-status`：`--to` 明确表示刚通过的 source gate enum（例如 wave0 pass 后为 `wave0_complete`，不是下一 phase 的 `wave1_complete`）；写入 `rb_status.json` 前必须能在 `rb_trace.jsonl` 中看到该 source gate 的真实 `gate_attempt(passed=true)`，且其 `next` 与 post-pass `load_complete` target node 成对。
-- 给 lifecycle gate 增加 handoff preflight：当前 node 的 gate 在评估自身 rules 之前，先检查前一 deterministic gate pass 的 `next` 指向当前 node，且当前 node 的 `load_complete` witness 发生在该 pass 之后。
+- 强化 `advance-status`：`--to` 明确表示刚通过的 source gate enum（例如 wave0 pass 后为 `wave0_complete`，不是下一 phase 的 `wave1_complete`）；写入 `rb_status.json` 前必须能在 `rb_trace.jsonl` 中看到该 source gate 的真实 `gate_attempt(passed=true)`，且其 `next` 与 post-pass `load_complete` target node 成对。成功后形成 source-gate status window：`current_gate` 是刚通过的 predecessor gate，`next_gate` 是下一阶段待完成 gate。
+- 给 lifecycle gate 增加 handoff/status-window preflight：当前 node 的 gate 在评估自身 rules 之前，先检查前一 deterministic gate pass 的 `next` 指向当前 node，当前 node 的 `load_complete` witness 发生在该 pass 之后，且 `rb_status.json` 表示合法 predecessor→current gate window，而不是要求当前 gate 在 pass 前已经成为 `current_gate`。
 - 增加 wiring validator / regression test，确保所有适用 gate CLI 真正调用 shared handoff preflight，避免新机制变成未接线死代码。
 - 增强 gate 诊断：基于 Engine 可见 trace/diagnostics 计算 attempt count、cross-attempt delta、pass-side fatigue advice；Wave0 级联失败以 diagnostic mask 呈现，减少“越修越乱”的疲劳感。
-- 更新 phase node §6 控制面：gate pass 后先通过 `enter-phase` 消费 `check.next`，再用 `advance-status --to <this phase's gate enum>` 同步 just-passed source gate；不要把 `advance-status` 表述成进入下一 phase 的动作。
+- 更新 phase node §6 控制面：gate pass 后先通过 `enter-phase` 消费 `check.next`，再用 `advance-status --to <this phase's gate enum>` 同步 just-passed source gate；不要把 `advance-status` 表述成进入下一 phase 的动作。覆盖范围从 setup onward 到 readiness/final，并包括 rerun→seed-topics；instantiation/HITL1 bootstrap status shape 保持显式兼容例外，除非另开迁移。
 - 更新 silent/autonomous continuation 契约：加入 “Why Continue”/terminal delivery visibility，明确最终报告会在 `phase-final` 交付，提前 chat synthesis 是不合法且更不有用的行为。
 - 明确拒绝以下方案作为核心修复：
   - prose-only fix；
@@ -54,4 +54,4 @@ Terminology note：本 change 保留既有 `stop: no` frontmatter 字段，不�
   - `experiments_playbook/`
 - No new npm dependencies.
 - Engine remains passive: it checks trace/state and refuses invalid certification; it does not select routes, execute research work, or intercept user-facing chat.
-- Accepted success claim: silent, launderable mid-pipeline truncation becomes loud, diagnosable state failure with a concrete `enter-phase` remedy. 同一轮 chat halt 仍是 Layer-1 residual，只能在恢复或下一次 Engine touch 时暴露。
+- Accepted success claim: silent, launderable mid-pipeline truncation becomes loud, diagnosable state failure with a concrete `enter-phase` remedy across covered deterministic lifecycle handoffs. 同一轮 chat halt 仍是 Layer-1 residual，只能在恢复或下一次 Engine touch 时暴露。

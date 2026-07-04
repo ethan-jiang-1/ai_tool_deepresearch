@@ -27,6 +27,8 @@ These tasks are not a generic CLI hardening pass. They implement the BUG-020 les
 - [ ] 2.6 实现 GSK-007: 在 gate helper 中新增 shared lifecycle handoff preflight，基于 shared helper 推导 legal predecessor edge，并验证 latest passed deterministic gate attempt 的 `next` 与当前 node post-pass `load_complete` 成对。
 - [ ] 2.7 实现 GSK-007: 将 shared handoff preflight 接入所有适用 lifecycle gate CLI；instantiation 入口例外，多 incoming deterministic edge 只接受 trace 中最新合法 pair，HITL/rerun branch 不得由 helper 自行选择 route。
 - [ ] 2.8 实现 GSK-007: preflight failure 作为普通 gate failure 返回 inspect/advice，不改变 router、transition table 或 gate-specific content rules。
+- [ ] 2.9 实现 CPT-004/GSK-007: 增加 source-gate status-window derivation；covered gate 在自身 pass 前验证 `next_gate == <this gate enum>`、`current_gate == <legal predecessor source gate enum>`，而不是要求 `current_gate` 已等于自身 gate enum。
+- [ ] 2.10 实现 CPT-004/GSK-007: 更新或替换 setup onward covered gate definitions / gate CLI status checks，覆盖 setup→seed-topics、seed-topics→wave0、wave0→wave1、wave1→wave2、wave2→HITL2、HITL2→readiness、readiness→final、rerun→seed-topics；instantiation/HITL1 bootstrap status shape 作为显式兼容例外列入 validator allowlist。
 
 ## 3. Gate Diagnostics And Friction Reduction
 
@@ -41,6 +43,7 @@ These tasks are not a generic CLI hardening pass. They implement the BUG-020 les
 - [ ] 4.2 实现 WNC-010: On Gate Pass 文案随后运行 `advance-status --bundle <path> --to <this phase's gate enum>`，明确它同步 just-passed source gate（例如 wave0 使用 `wave0_complete`，不是 `wave1_complete`）；按 manifest gate key 转 snake_case 系统性更新所有 deterministic lifecycle handoff，不让执行者临场推导。
 - [ ] 4.3 实现 WNC-010: 移除或改写把 `advance-status` 表述为“进入/加载下一 phase”的 wording；保留其 status synchronization 角色，并明确下一 phase 执行主体仍是 Phase Agent 读取渲染 Markdown 后的 agentic loop。
 - [ ] 4.4 实现 SWE-003: 在 `shared-silent-execution.md` 增加 “Autonomous Continuation / Why Continue” section，明确 `stop: no` 是兼容字段、非终端行为名是 autonomous continuation，final delivery 在 Final，提前 chat synthesis 不合法且更不有用。
+- [ ] 4.5 实现 WNC-010: 在 phase §6 中写明 covered handoff 的具体 source-gate commands：setup→seed-topics 使用 `setup_ready`，seed-topics→wave0 使用 `seed_topics_ready`，wave0→wave1 使用 `wave0_complete`，wave1→wave2 使用 `wave1_complete`，wave2→HITL2 使用 `wave2_complete`，HITL2 proceed→readiness 使用 `hitl2_recorded`，readiness→final 使用 `readiness_passed`，rerun→seed-topics 使用 `rerun_ready`。
 
 ## 5. Regression Tests
 
@@ -50,6 +53,7 @@ These tasks are not a generic CLI hardening pass. They implement the BUG-020 les
 - [ ] 5.4 验证 GSK-007: 添加 gate preflight 测试，覆盖 Wave1/Wave2 缺 current predecessor pass、latest pass `next` mismatch、缺 current post-pass `load_complete`、stale `load_complete`、witness 完整后继续正常 rules。
 - [ ] 5.5 验证 GSK-007: 添加 wiring validator/regression，断言所有适用 lifecycle gate CLI 调用 shared handoff preflight helper。
 - [ ] 5.6 验证 GSK-008: 添加 attempt delta / pass-side fatigue / cascade-mask 单元或集成测试。
+- [ ] 5.7 验证 CPT-004/GSK-007: 添加 status-window derivation 测试，覆盖 setup→seed-topics、seed-topics→wave0、wave0→wave1、wave1→wave2、wave2→HITL2、HITL2→readiness、readiness→final、rerun→seed-topics；断言 downstream gate 不再要求自身 gate enum 提前出现在 `current_gate`。
 
 ## 6. Controlled E2E
 
@@ -60,6 +64,7 @@ These tasks are not a generic CLI hardening pass. They implement the BUG-020 les
 - [ ] 6.5 实现 AGT-010: E2E 断言运行 `enter-phase --node <check.next>` 后产生绑定当前 source gate attempt 的 route-bound `load_complete`，随后 source-gate `advance-status` 和后续 gate 操作不再因 handoff witness 缺失失败。
 - [ ] 6.6 实现 AGT-010: E2E 断言 stale historical `gate_attempt.next` match 在 later passed deterministic gate attempt 指向其他 node 后，不能授权新的 `enter-phase` witness。
 - [ ] 6.7 实现 AGT-010: 如添加 heavy canary，则支持 `NOT RUN` 并明确不得作为 real Agent proof；standard E2E 仍为必跑机制证明，也不得声称已证明 chat-channel 行为。
+- [ ] 6.8 实现 AGT-010: 扩展 standard E2E 至至少覆盖 wave1→wave2、wave2→HITL2 或当前 runtime 可证明的 wave2 downstream progression、readiness→final，以及 rerun→seed-topics 多 predecessor case；所有 verdict 仍基于 trace/CLI exit/bundle files，不以 console prose 作证。
 
 ## 7. Version And Documentation
 
@@ -82,6 +87,8 @@ Before marking this change ready for archive, verify these cross-cutting points 
 - [ ] Every implemented handoff check uses the shared helper or proves equivalent logic; no ad hoc parser/check is allowed to drift from the shared latest-handoff semantics.
 - [ ] Every failure path that rejects missing/mismatched handoff evidence exits non-zero and does not mutate `rb_status.json`, append `phase_transition`, or write a misleading `load_complete`.
 - [ ] Every Agent-facing instruction preserves the same control order: gate output -> `check.next` -> `enter-phase` loader receipt -> source-gate `advance-status` -> continue from captured Markdown.
+- [ ] Every covered downstream gate uses the source-gate status window (`current_gate` = legal predecessor source gate, `next_gate` = current gate) and no covered gate still requires its own gate enum as `current_gate` before it has passed.
+- [ ] Instantiation/HITL1 bootstrap status exceptions are explicitly documented and allowlisted; no other lifecycle gate is omitted from handoff/status-window enforcement silently.
 - [ ] Gate/preflight/status advice names the concrete remedy command with the bundle path and target node/source gate, instead of generic prose.
 - [ ] Autonomous continuation language appears where the Agent will read it, while `stop: no` remains only the compatibility field and not the primary behavior explanation.
 - [ ] Standard E2E proves the mechanism with real framework CLIs and disposable bundle state; optional heavy canary, if not run, is recorded as `NOT RUN` and not claimed as Agent-behavior proof.

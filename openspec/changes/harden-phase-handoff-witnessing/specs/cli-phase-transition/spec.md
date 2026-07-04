@@ -78,6 +78,13 @@ On failure, the CLI SHALL print JSON with `status: "error"`, a short `reason`, a
 
 The existing success output shape SHALL be preserved.
 
+Successful status synchronization SHALL establish a source-gate status window for the next lifecycle phase. After source gate `G` passes and its deterministic transition points to target node `N`, `advance-status --to <G enum>` SHALL set:
+
+- `rb_status.json#/current_gate` to the just-passed source gate enum;
+- `rb_status.json#/next_gate` to the target node's gate enum, or `"none"` when the target node is terminal Final.
+
+Downstream lifecycle gates SHALL NOT require `current_gate` to already equal their own gate enum before they pass. For a non-entry lifecycle node, the active status window before its gate pass is `current_gate == <legal predecessor source gate enum>` and `next_gate == <this node's gate enum>`, derived from `manifest.json` and `transitions.chain.json`. This status-window contract applies to deterministic handoffs from setup onward, including setup→seed-topics, seed-topics→wave0, wave0→wave1, wave1→wave2, wave2→HITL2, HITL2→readiness, readiness→final, and rerun→seed-topics. The instantiation/HITL1 bootstrap status shape remains a compatibility exception unless separately migrated.
+
 #### Scenario: Advance status rejects source gate that is not the latest handoff
 
 - **WHEN** `advance-status.mjs --bundle <bundle> --to wave0_complete` is called
@@ -108,3 +115,19 @@ The existing success output shape SHALL be preserved.
 - **THEN** `rb_status.json` SHALL be updated using the existing chain lookup behavior
 - **AND** stdout SHALL retain `{ "status": "ok", "current_gate": "<value>", "next_gate": "<value>" }`
 - **AND** a `phase_transition` trace event SHALL be appended
+
+#### Scenario: Status window enables the next lifecycle gate
+
+- **WHEN** wave1 has passed with `check.next: "phases/phase-wave2.md"`
+- **AND** `enter-phase --bundle <bundle> --node phases/phase-wave2.md` has written a later `load_complete(entry="phases/phase-wave2.md")`
+- **AND** `advance-status.mjs --bundle <bundle> --to wave1_complete` succeeds
+- **THEN** `rb_status.json` SHALL contain `current_gate: "wave1_complete"` and `next_gate: "wave2_complete"`
+- **AND** the wave2 gate SHALL treat that pair as the valid active status window for `phases/phase-wave2.md`
+- **AND** the wave2 gate SHALL NOT require `current_gate: "wave2_complete"` before wave2 itself passes
+
+#### Scenario: Terminal target sets next gate to none after witnessed final entry
+
+- **WHEN** readiness has passed with `check.next: "phases/phase-final.md"`
+- **AND** `enter-phase --bundle <bundle> --node phases/phase-final.md` has written a later `load_complete(entry="phases/phase-final.md")`
+- **AND** `advance-status.mjs --bundle <bundle> --to readiness_passed` succeeds
+- **THEN** `rb_status.json` SHALL contain `current_gate: "readiness_passed"` and `next_gate: "none"`

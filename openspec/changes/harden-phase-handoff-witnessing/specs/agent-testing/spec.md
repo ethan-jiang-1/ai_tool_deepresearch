@@ -14,7 +14,8 @@ The required standard playbook SHALL use a disposable bundle and real framework 
 - attempting old-style next-gate synchronization, such as `advance-status --to wave1_complete` immediately after wave0 pass, fails closed with source-gate advice;
 - running `enter-phase --node <check.next>` writes a route-bound `load_complete` tied to the latest passed deterministic predecessor gate attempt;
 - stale historical `gate_attempt.next` matches do not authorize a new `enter-phase` witness after a later passed deterministic gate attempt points elsewhere;
-- after `enter-phase`, source-gate `advance-status` and subsequent gate operations proceed normally;
+- after `enter-phase`, source-gate `advance-status` and subsequent gate operations proceed normally under the source-gate status-window contract;
+- the status-window contract is exercised beyond wave0→wave1, covering at minimum wave1→wave2, wave2→HITL2 or readiness-side progression available in the current runtime, readiness→final, and one rerun→seed-topics multi-incoming predecessor case;
 - a forced old-style resume path reports a named handoff failure and remedy instead of silently accepting the state.
 
 The playbook verdict SHALL be based on `rb_trace.jsonl`, CLI exit codes, diagnostic artifacts, and bundle files. Console output alone SHALL NOT be verdict authority. The standard playbook SHALL NOT claim to prove real chat-channel behavior; chat-side premature synthesis remains reserved for the optional heavy canary or manual replay evidence.
@@ -46,6 +47,20 @@ The playbook verdict SHALL be based on `rb_trace.jsonl`, CLI exit codes, diagnos
 - **THEN** the command SHALL fail closed
 - **AND** the advice SHALL identify `wave0_complete` as the source gate status synchronization after `enter-phase`
 
+#### Scenario: Standard E2E exercises full lifecycle status windows
+
+- **WHEN** the playbook advances through witnessed handoffs after wave1 and wave2 gate passes
+- **THEN** wave2 SHALL accept `current_gate: "wave1_complete"` and `next_gate: "wave2_complete"` as its active status window before wave2 passes
+- **AND** the next covered phase after wave2 SHALL accept `current_gate: "wave2_complete"` and its own gate as `next_gate`
+- **AND** no downstream gate SHALL require its own gate enum as `current_gate` before it has passed
+
+#### Scenario: Standard E2E covers rerun alternate predecessor
+
+- **WHEN** a disposable bundle trace contains a real rerun-ready pass whose `next` points to `phases/phase-seed-topics.md`
+- **AND** `enter-phase --node phases/phase-seed-topics.md` writes the corresponding post-pass load witness
+- **THEN** source-gate `advance-status --to rerun_ready` SHALL establish `current_gate: "rerun_ready"` and `next_gate: "seed_topics_ready"`
+- **AND** the seed-topics gate preflight SHALL accept rerun as the legal predecessor for that branch
+
 #### Scenario: Standard E2E exercises high-friction diagnostics
 
 - **WHEN** the playbook drives a disposable Wave0 gate through multiple real failed attempts before pass
@@ -55,7 +70,7 @@ The playbook verdict SHALL be based on `rb_trace.jsonl`, CLI exit codes, diagnos
 
 ### Requirement: Optional heavy canary cannot substitute for standard proof
 
-The change MAY include a heavy real-Agent canary that replays high-friction behavior with native Agent/subagent execution. This canary MAY report `NOT RUN` when the runtime surface is unavailable or too costly.
+If the change includes a heavy real-Agent canary, that canary SHALL replay high-friction behavior with native Agent/subagent execution and MAY report `NOT RUN` when the runtime surface is unavailable or too costly.
 
 The heavy canary SHALL NOT be required for archive, and `NOT RUN` SHALL NOT be claimed as proof of real Agent behavior. The standard disposable-bundle E2E remains the required mechanism proof.
 
