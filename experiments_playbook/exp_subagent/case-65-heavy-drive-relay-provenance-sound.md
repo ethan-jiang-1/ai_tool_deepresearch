@@ -266,7 +266,7 @@ node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile hea
 
 **PASS 才执行。FAIL 时保留 bundle 现场供排查。**
 
-cleanup 前会自动把 verdict 摘要追加进 append-only 的 `experiments_playbook/exp_verdicts.jsonl`（PASS 可审计，销毁不丢证据）。
+cleanup 前会自动把 verdict 摘要追加进 append-only 的 `_temp/exp_verdicts.jsonl`（PASS 可审计，销毁不丢证据）。
 
 ```bash
 B= # populated from Step 1

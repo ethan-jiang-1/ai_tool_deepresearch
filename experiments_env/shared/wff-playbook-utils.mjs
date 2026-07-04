@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 // experiments_env/shared/ → repo root is two levels up.
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const DEFAULT_VERDICTS_PATH = path.join(REPO_ROOT, 'experiments_playbook', 'exp_verdicts.jsonl');
+const DEFAULT_VERDICTS_PATH = path.join(REPO_ROOT, '_temp', 'exp_verdicts.jsonl');
 
 const G = '\x1b[32m';
 const R = '\x1b[31m';

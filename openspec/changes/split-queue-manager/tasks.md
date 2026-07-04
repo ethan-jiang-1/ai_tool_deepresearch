@@ -1,40 +1,40 @@
 ## 1. Baseline, Registry, And Impact Map
 
-- [ ] 1.1 @impl FRE-005 确认 `FRE-005` 已登记在 `openspec/governance/req-registry.yaml` 的 `framework-engine` 分组：`FRE-005: framework-engine — Queue Manager internal module layout + companion regression split (5 flat sub-modules + barrel, zero behavior change)`；确认 `FRE-004` 已由 `split-subagent-relay` 占用，不复用。
-- [ ] 1.2 @impl FRE-005 记录 engine public export baseline：`rg '^export ' DPT_FRAMEWORK/engine/queue-manager.mjs`，验收 public exports 为 `QUEUE_ACTIVE_WINDOW_SLOTS`, `SLOT_NAMES`, `QueueItemSchema`, `QUEUE`, `OutputDeclarationLedgerRecord`, `checkReceipts`, `createQueue`, `loadQueue`, `saveQueue`, `enqueue`, `claim`, `complete`, `fail`, `preempt`, `inspect`, `pendingCount`, `render`, `makeItem`。
-- [ ] 1.3 @impl FRE-005 记录 direct import baseline：`rg -n "from ['\"].*queue-manager|import\\(.*queue-manager|queue-manager\\.mjs" DPT_FRAMEWORK tests experiments_playbook experiments_env guidelines openspec/specs --glob '*.{mjs,js,md}' --glob '!openspec/changes/archive/**' --glob '!_backlog/**'`；分类 production JS/CLI、regression tests、experiment inline JS、guidelines/spec prose。
-- [ ] 1.4 @impl FRE-005 记录 indirect MD/CLI impact baseline：扫描 `operate-queue.mjs`, `rb_queue.json`, `_cache/agentic-queue/current-task.md`, `complete()`, `checkReceipts()`, `OutputDeclarationLedgerRecord` 在 `DPT_FRAMEWORK/workflows`, `DPT_FRAMEWORK/command_playbook`, `tests`, `experiments_playbook`, `guidelines`, `openspec/specs` 中的引用；标注“不改内容、但纳入验收”的 workflow/playbook 文件。
-- [ ] 1.5 @impl FRE-005 记录 regression test inventory：`rg -n "describe\\(" tests/engine/queue-manager.test.mjs`，把每个 describe group 映射到新 test 文件；done condition 是当前所有 describe group 均有目标文件。
-- [ ] 1.6 @impl FRE-005 记录 line-count baseline：`wc -l DPT_FRAMEWORK/engine/queue-manager.mjs tests/engine/queue-manager.test.mjs`；apply 后 queue manager implementation 和 queue manager regression test files 均不得再出现单文件 >1000 行。
+- [x] 1.1 @impl FRE-005 确认 `FRE-005` 已登记在 `openspec/governance/req-registry.yaml` 的 `framework-engine` 分组：`FRE-005: framework-engine — Queue Manager internal module layout + companion regression split (5 flat sub-modules + barrel, zero behavior change)`；确认 `FRE-004` 已由 `split-subagent-relay` 占用，不复用。
+- [x] 1.2 @impl FRE-005 记录 engine public export baseline：`rg '^export ' DPT_FRAMEWORK/engine/queue-manager.mjs`，验收 public exports 为 `QUEUE_ACTIVE_WINDOW_SLOTS`, `SLOT_NAMES`, `QueueItemSchema`, `QUEUE`, `OutputDeclarationLedgerRecord`, `checkReceipts`, `createQueue`, `loadQueue`, `saveQueue`, `enqueue`, `claim`, `complete`, `fail`, `preempt`, `inspect`, `pendingCount`, `render`, `makeItem`。
+- [x] 1.3 @impl FRE-005 记录 direct import baseline：`rg -n "from ['\"].*queue-manager|import\\(.*queue-manager|queue-manager\\.mjs" DPT_FRAMEWORK tests experiments_playbook experiments_env guidelines openspec/specs --glob '*.{mjs,js,md}' --glob '!openspec/changes/archive/**' --glob '!_backlog/**'`；分类 production JS/CLI、regression tests、experiment inline JS、guidelines/spec prose。
+- [x] 1.4 @impl FRE-005 记录 indirect MD/CLI impact baseline：扫描 `operate-queue.mjs`, `rb_queue.json`, `_cache/agentic-queue/current-task.md`, `complete()`, `checkReceipts()`, `OutputDeclarationLedgerRecord` 在 `DPT_FRAMEWORK/workflows`, `DPT_FRAMEWORK/command_playbook`, `tests`, `experiments_playbook`, `guidelines`, `openspec/specs` 中的引用；标注“不改内容、但纳入验收”的 workflow/playbook 文件。
+- [x] 1.5 @impl FRE-005 记录 regression test inventory：`rg -n "describe\\(" tests/engine/queue-manager.test.mjs`，把每个 describe group 映射到新 test 文件；done condition 是当前所有 describe group 均有目标文件。
+- [x] 1.6 @impl FRE-005 记录 line-count baseline：`wc -l DPT_FRAMEWORK/engine/queue-manager.mjs tests/engine/queue-manager.test.mjs`；apply 后 queue manager implementation 和 queue manager regression test files 均不得再出现单文件 >1000 行。
 
 ## 2. Engine Scaffold And Core Extraction
 
-- [ ] 2.1 @impl FRE-005 创建 5 个 engine sub-module 文件：`queue-manager-core.mjs`, `queue-manager-window.mjs`, `queue-manager-ledger.mjs`, `queue-manager-lifecycle.mjs`, `queue-manager-render.mjs`；每个文件头写职责域和 `// @impl FRE-005`，不得放测试或 fixtures。
-- [ ] 2.2 @impl FRE-005 迁出 core foundation：trace/logger singleton (`ensureTrace`, `traceEntry`, `logEvent`, `_trace`, `_bundleDir`, `_log`)、`QUEUE`, `QueueItemSchema`, queue state/result/failure schemas、timestamp/clone/path/validate helpers、C&I feedback helpers；`queue-manager.mjs` 同步 re-export public core symbols。
-- [ ] 2.3 @impl FRE-005 跑 `node --test tests/engine/queue-manager.test.mjs`；done condition 是现有 monolith tests 在 core extraction 后 0 fail。
+- [x] 2.1 @impl FRE-005 创建 5 个 engine sub-module 文件：`queue-manager-core.mjs`, `queue-manager-window.mjs`, `queue-manager-ledger.mjs`, `queue-manager-lifecycle.mjs`, `queue-manager-render.mjs`；每个文件头写职责域和 `// @impl FRE-005`，不得放测试或 fixtures。
+- [x] 2.2 @impl FRE-005 迁出 core foundation：trace/logger singleton (`ensureTrace`, `traceEntry`, `logEvent`, `_trace`, `_bundleDir`, `_log`)、`QUEUE`, `QueueItemSchema`, queue state/result/failure schemas、timestamp/clone/path/validate helpers、C&I feedback helpers；`queue-manager.mjs` 同步 re-export public core symbols。
+- [x] 2.3 @impl FRE-005 跑 `node --test tests/engine/queue-manager.test.mjs`；done condition 是现有 monolith tests 在 core extraction 后 0 fail。
 
 ## 3. Engine Window, Ledger, Render, Lifecycle Extraction
 
-- [ ] 3.1 @impl FRE-005 迁出 active-window mechanics 到 `queue-manager-window.mjs`：`rank`, `sortPool`, `firstOpenSlot`, `promote`, `refill`, public `preempt`；依赖只指向 core，不 import lifecycle。
-- [ ] 3.2 @impl FRE-005 迁出 delegated provenance 和 ledger 到 `queue-manager-ledger.mjs`：`OutputDeclarationLedgerRecord`, `deriveCreationReason`, `appendOutputDeclarationLedger`, `validateDelegatedCompletion`；保留对 `./subagent-relay.mjs` barrel 的 public import。
-- [ ] 3.3 @impl FRE-005 迁出 projection renderer 到 `queue-manager-render.mjs`：public `render(queue, bundleDir)`；保持 `QUEUE.PROJECTION`、Markdown 文案、trace event `projection_rendered` 不变。
-- [ ] 3.4 @impl FRE-005 迁出 lifecycle API 到 `queue-manager-lifecycle.mjs`：`checkReceipts`, `createQueue`, `loadQueue`, `saveQueue`, `enqueue`, `claim`, `complete`, `fail`, `inspect`, `pendingCount`, `makeItem`；`complete/fail` 调用 window/render/ledger helpers，行为不变。
-- [ ] 3.5 @impl FRE-005 每完成 3.1-3.4 任一迁出后跑 `node --test tests/engine/queue-manager.test.mjs`；done condition 是迁移中间态始终 0 fail。
-- [ ] 3.6 @impl FRE-005 清理 `queue-manager.mjs` 为纯 barrel：保留 role/lifecycle 注释、sub-module 列表、public re-export 块；不得残留 inline implementation。
-- [ ] 3.7 @impl FRE-005 验证 dependency DAG：`queue-manager-core` 不 import queue-manager siblings；`window/render/ledger` 不 import lifecycle；`lifecycle` 可 import core/window/render/ledger；grep 确认无 circular path pair。
-- [ ] 3.8 @impl FRE-005 验证 singleton：`rg "_trace =|_bundleDir =|_log =" DPT_FRAMEWORK/engine/queue-manager*.mjs` 只在 `queue-manager-core.mjs` 匹配。
+- [x] 3.1 @impl FRE-005 迁出 active-window mechanics 到 `queue-manager-window.mjs`：`rank`, `sortPool`, `firstOpenSlot`, `promote`, `refill`, public `preempt`；依赖只指向 core，不 import lifecycle。
+- [x] 3.2 @impl FRE-005 迁出 delegated provenance 和 ledger 到 `queue-manager-ledger.mjs`：`OutputDeclarationLedgerRecord`, `deriveCreationReason`, `appendOutputDeclarationLedger`, `validateDelegatedCompletion`；保留对 `./subagent-relay.mjs` barrel 的 public import。
+- [x] 3.3 @impl FRE-005 迁出 projection renderer 到 `queue-manager-render.mjs`：public `render(queue, bundleDir)`；保持 `QUEUE.PROJECTION`、Markdown 文案、trace event `projection_rendered` 不变。
+- [x] 3.4 @impl FRE-005 迁出 lifecycle API 到 `queue-manager-lifecycle.mjs`：`checkReceipts`, `createQueue`, `loadQueue`, `saveQueue`, `enqueue`, `claim`, `complete`, `fail`, `inspect`, `pendingCount`, `makeItem`；`complete/fail` 调用 window/render/ledger helpers，行为不变。
+- [x] 3.5 @impl FRE-005 每完成 3.1-3.4 任一迁出后跑 `node --test tests/engine/queue-manager.test.mjs`；done condition 是迁移中间态始终 0 fail。
+- [x] 3.6 @impl FRE-005 清理 `queue-manager.mjs` 为纯 barrel：保留 role/lifecycle 注释、sub-module 列表、public re-export 块；不得残留 inline implementation。
+- [x] 3.7 @impl FRE-005 验证 dependency DAG：`queue-manager-core` 不 import queue-manager siblings；`window/render/ledger` 不 import lifecycle；`lifecycle` 可 import core/window/render/ledger；grep 确认无 circular path pair。
+- [x] 3.8 @impl FRE-005 验证 singleton：`rg "_trace =|_bundleDir =|_log =" DPT_FRAMEWORK/engine/queue-manager*.mjs` 只在 `queue-manager-core.mjs` 匹配。
 
 ## 4. Regression Test Split
 
-- [ ] 4.1 @impl FRE-005 创建 `tests/engine/queue-manager-fixtures.mjs`，迁入 shared helpers：`tempBundle`, `cleanup`, `item`, `baseState`, `writeRuntimeReceipt`, `setupDelegatedFixture`；helper 可 import Queue Manager barrel、Subagent Relay barrel、Gate Helpers public API，不 import Queue Manager submodules。
-- [ ] 4.2 @impl FRE-005 创建 `tests/engine/queue-manager-schema.test.mjs`，覆盖原 describe groups：`Queue schema`, `Queue active-window constants`, `TargetSpec schema`, `Queue item with targets`, `Claim advice with targets.delegates`。
-- [ ] 4.3 @impl FRE-005 创建 `tests/engine/queue-manager-window-lifecycle.test.mjs`，覆盖原 describe groups：`Enqueue and claim`, `Queue pending count`, `Complete, promote, refill, and fail`, `Preemption`。
-- [ ] 4.4 @impl FRE-005 创建 `tests/engine/queue-manager-receipts-cli-render.test.mjs`，覆盖原 describe group：`Receipts, projection, and CLI`，包括 `checkReceipts`, `render`, `saveQueue/loadQueue`, `operate-queue.mjs` smoke。
-- [ ] 4.5 @impl FRE-005 创建 `tests/engine/queue-manager-delegated.test.mjs`，覆盖原 describe group：`Delegated queue completion (Stage 2)`，包括 delegated complete rejection/success, Queue↔Relay pipeline, batch slots, ledger, `checkContentDedup`, `creation_reason`。
-- [ ] 4.6 @impl FRE-005 创建 `tests/engine/queue-manager-logging.test.mjs`，覆盖原 describe group：`LOG-006 accident-grade diagnostics`。
-- [ ] 4.7 @impl FRE-005 删除或清空 `tests/engine/queue-manager.test.mjs` monolith；done condition 是 `find tests/engine -maxdepth 1 -name 'queue-manager*.test.mjs' -exec wc -l {} +` 无单文件 >1000 行，且不保留重复执行同一测试的大型 aggregator。
-- [ ] 4.8 @impl FRE-005 验证 regression tests 只 import public barrel：`rg -n "from ['\"].*DPT_FRAMEWORK/engine/queue-manager-|import\\(.*DPT_FRAMEWORK/engine/queue-manager-" tests/engine/queue-manager*.test.mjs tests/engine/queue-manager-fixtures.mjs` 必须 0 匹配；允许 test files/helpers 彼此 import `./queue-manager-fixtures.mjs`。
-- [ ] 4.9 @impl FRE-005 跑 `node --test tests/engine/queue-manager*.test.mjs`；done condition 是 split regression suite 0 fail。
+- [x] 4.1 @impl FRE-005 创建 `tests/engine/queue-manager-fixtures.mjs`，迁入 shared helpers：`tempBundle`, `cleanup`, `item`, `baseState`, `writeRuntimeReceipt`, `setupDelegatedFixture`；helper 可 import Queue Manager barrel、Subagent Relay barrel、Gate Helpers public API，不 import Queue Manager submodules。
+- [x] 4.2 @impl FRE-005 创建 `tests/engine/queue-manager-schema.test.mjs`，覆盖原 describe groups：`Queue schema`, `Queue active-window constants`, `TargetSpec schema`, `Queue item with targets`, `Claim advice with targets.delegates`。
+- [x] 4.3 @impl FRE-005 创建 `tests/engine/queue-manager-window-lifecycle.test.mjs`，覆盖原 describe groups：`Enqueue and claim`, `Queue pending count`, `Complete, promote, refill, and fail`, `Preemption`。
+- [x] 4.4 @impl FRE-005 创建 `tests/engine/queue-manager-receipts-cli-render.test.mjs`，覆盖原 describe group：`Receipts, projection, and CLI`，包括 `checkReceipts`, `render`, `saveQueue/loadQueue`, `operate-queue.mjs` smoke。
+- [x] 4.5 @impl FRE-005 创建 `tests/engine/queue-manager-delegated.test.mjs`，覆盖原 describe group：`Delegated queue completion (Stage 2)`，包括 delegated complete rejection/success, Queue↔Relay pipeline, batch slots, ledger, `checkContentDedup`, `creation_reason`。
+- [x] 4.6 @impl FRE-005 创建 `tests/engine/queue-manager-logging.test.mjs`，覆盖原 describe group：`LOG-006 accident-grade diagnostics`。
+- [x] 4.7 @impl FRE-005 删除或清空 `tests/engine/queue-manager.test.mjs` monolith；done condition 是 `find tests/engine -maxdepth 1 -name 'queue-manager*.test.mjs' -exec wc -l {} +` 无单文件 >1000 行，且不保留重复执行同一测试的大型 aggregator。
+- [x] 4.8 @impl FRE-005 验证 regression tests 只 import public barrel：`rg -n "from ['\"].*DPT_FRAMEWORK/engine/queue-manager-|import\\(.*DPT_FRAMEWORK/engine/queue-manager-" tests/engine/queue-manager*.test.mjs tests/engine/queue-manager-fixtures.mjs` 必须 0 匹配；允许 test files/helpers 彼此 import `./queue-manager-fixtures.mjs`。
+- [x] 4.9 @impl FRE-005 跑 `node --test tests/engine/queue-manager*.test.mjs`；done condition 是 split regression suite 0 fail。
 
 ## 5. JS, CLI, MD, And Experiment Impact Verification
 

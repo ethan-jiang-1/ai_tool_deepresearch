@@ -100,8 +100,6 @@ const dir = process.argv[2];
 const tracePath = join(dir, 'rb_trace.jsonl');
 const waveDir = 'wave_01';
 const slotKey = 'source_intake';
-const runLog = existsSync(join(dir, '_logs', 'run.log')) ? readFileSync(join(dir, '_logs', 'run.log'), 'utf-8') : '';
-const runLines = splitRunLogLines(runLog);
 
 function record(gate, passed, detail) {
   recordCheck(tracePath, { gate, passed, detail });
@@ -111,15 +109,18 @@ const beacon = join(dir, '_subagents', waveDir, 'slot_00', '_beacon.json');
 const dispatch = join(dir, '_subagents', waveDir, 'dispatch.json');
 record('staging-dispatch-exists', existsSync(dispatch), 'dispatch.json from drive-relay-slot stage');
 record('staging-beacon-exists', existsSync(beacon), '_beacon.json from drive-relay-slot stage');
+
+const findings = runProvenanceForensics(dir, 'wave1', 'wave1-complete');
+const codes = findings.map((f) => f.code);
+
+const runLog = existsSync(join(dir, '_logs', 'run.log')) ? readFileSync(join(dir, '_logs', 'run.log'), 'utf-8') : '';
+const runLines = splitRunLogLines(runLog);
 record('log-has-rpg008-warn', runLogHasRelayCommitMissing(runLog, slotKey),
   'run.log carries relay_commit_missing diagnostic');
 record('log-no-commit-done', !runLogHasRelayCommitDone(runLog),
   'run.log must NOT have production relay_commit_done (staged-not-committed)');
 record('log-no-subagent-lifecycle', filterLifecycleLines(runLines).length === 0,
   `${filterLifecycleLines(runLines).length} lifecycle lines (expect 0 — no sub-agent spawn)`);
-
-const findings = runProvenanceForensics(dir, 'wave1', 'wave1-complete');
-const codes = findings.map((f) => f.code);
 
 record('tier4-only-rpg008', codes.length === 1 && codes[0] === 'relay_commit_missing',
   `codes=[${codes.join(',')}]`);
@@ -166,7 +167,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 **PASS 才执行。FAIL 时保留 bundle 现场供排查。**
 
-cleanup 前会自动把 verdict 摘要追加进 append-only 的 `experiments_playbook/exp_verdicts.jsonl`（PASS 可审计，销毁不丢证据）。
+cleanup 前会自动把 verdict 摘要追加进 append-only 的 `_temp/exp_verdicts.jsonl`（PASS 可审计，销毁不丢证据）。
 
 ```bash
 B= # populated from Step 1

@@ -292,7 +292,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 **PASS 才执行。FAIL 时保留 bundle 现场供排查。**
 
-cleanup 前会自动把 verdict 摘要追加进 append-only 的 `experiments_playbook/exp_verdicts.jsonl`（PASS 可审计，销毁不丢证据）。
+cleanup 前会自动把 verdict 摘要追加进 append-only 的 `_temp/exp_verdicts.jsonl`（PASS 可审计，销毁不丢证据）。
 
 ```bash
 B= # populated from Step 1
@@ -303,6 +303,6 @@ for d in $(node -e "const b=require('$B/_logs/_tier_bundles.json'); console.log(
   rm -rf "$d"
 done
 
-# Remove main bundle (records verdict summary to exp_verdicts.jsonl first)
+# Remove main bundle (records verdict summary to _temp/exp_verdicts.jsonl first)
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-79'}))"
 ```
