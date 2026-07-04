@@ -116,7 +116,7 @@ writeFileSync(path.join(B, 'artifacts/wave0/topic-a/source.yaml'), '- url: "http
 //   (e) unsafe-parent: _cache/wave0/primary/ — parent dir, not leaf
 
 for (const [leaf, files] of [
-  ['s01_valid', { 'websearch.json': JSON.stringify([{ title: 'R1', url: 'https://example.com/1' }]), 'page.md': '# Page 1', 'meta.json': JSON.stringify({ url: 'https://example.com/1', title: 'S1', source_domain: 'example.com', source_name: 'S1', fetched_at: new Date().toISOString(), fetch_method: 'WebFetch', fetch_chain: 'direct', content_type: 'article', reliability_tier: 'Tier 2', reliability_basis: 'practitioner', whitelist_status: 'allowed' }) }],
+  ['s01_valid', { 'websearch.json': JSON.stringify([{ title: 'R1', url: 'https://fixture-source.test/ai-safety' }]), 'page.md': '# Page 1', 'meta.json': JSON.stringify({ url: 'https://fixture-source.test/ai-safety', title: 'S1', source_domain: 'example.com', source_name: 'S1', fetched_at: new Date().toISOString(), fetch_method: 'WebFetch', fetch_chain: 'direct', content_type: 'article', reliability_tier: 'Tier 2', reliability_basis: 'practitioner', whitelist_status: 'allowed' }) }],
   ['s02_incomplete', { 'websearch.json': JSON.stringify([{ title: 'R2', url: 'https://example.com/2' }]), 'meta.json': JSON.stringify({ url: 'https://example.com/2', title: 'S2', source_domain: 'example.com', source_name: 'S2', fetched_at: new Date().toISOString(), fetch_method: 'WebFetch', fetch_chain: 'direct', content_type: 'article', reliability_tier: 'Tier 2', reliability_basis: 'practitioner', whitelist_status: 'allowed' }) }],
 ]) {
   const d = path.join(B, '_cache/wave0/primary/01_intake', leaf);

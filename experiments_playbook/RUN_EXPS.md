@@ -158,6 +158,7 @@
 2. **读了之后自己改写**——读了 playbook 的 MD 和 JS，理解了意图，然后自己重写一份"等价的"来跑。这会产生假 FAIL，因为你写的跟原 playbook 不完全一样。必须**忠实跑原 MD/代码**。
 3. **偷懒**——因为忠实跑一个 playbook 要好几轮（Read → Step 1 → Step 2...→ Verdict → Cleanup），15 个就是几十轮，你觉得太费劲，于是想压缩成"看懂意思→自己写→一口气跑"。**这是最致命的错误。** 省下来的轮次全变成了假 FAIL，最后花更多时间去诊断、重跑、怀疑 framework 有 bug——实际上从头到尾都是你自己乱改造成的。
 4. **浅跑**——只验证 bundle 创建 + `_logs/` 存在 + 写一条 trivial `passed:true` check，就报 PASS。**这不是跑实验——这是伪造结果。** 一个 playbook 的价值在它的全部断言：gate 的 pass/fail 语义、trace 的精确内容、engine 的返回 contract、artifact 的正确产出。跳过这些只测最外层，等于什么都没测。**这种 PASS 是假的，会让真正的 bug 漏过去。** 必须老老实实逐 step 跑完，执行每一个 bash block，跑完每一个 verdict。
+5. **并行跑**——同时跑多个 playbook。**绝对禁止。** 这些 playbook 在设计时从未考虑过并行执行——它们依赖共享的 disposable bundle 命名空间、全局 process.argv 替换、以及 `node:test` 的串行假设。并行跑会产生不可调试的假 FAIL（竞态、bundle 命名冲突、process.argv 交叉污染），且这些失败不可复现。**必须严格串行：一个 playbook 跑完（含 verdict + health check + cleanup），才能开始下一个。**
 
 **不许偷懒。不管多少轮，一个一个忠实跑完。**
 
@@ -179,6 +180,7 @@
 
 **禁止的做法：**
 - ❌ 把多个 playbook 的 JS 拼到一个文件里批量跑
+- ❌ 并行跑多个 playbook（设计时从未考虑并行，会产生不可复现的假 FAIL）
 - ❌ 读了 playbook 后自己写"等价的" JS 来跑
 - ❌ 跳过 bash block 直接猜结果
 - ❌ 用 `console.log` 代替 trace JSONL 裁决

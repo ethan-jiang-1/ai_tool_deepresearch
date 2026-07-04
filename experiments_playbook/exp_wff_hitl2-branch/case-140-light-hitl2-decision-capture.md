@@ -78,6 +78,23 @@ human_decision_checkpoints:
 EOF
 echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",\"event\":\"hitl2_recorded\"}" >> $B/rb_trace.jsonl
 echo "=== Bundle ready, user_decision: rerun ==="
+
+	# Prior gate traces + wave2 artifact (readiness-passed gate prerequisites)
+	cat >> $B/rb_trace.jsonl << 'TRACES'
+	{"event":"gate_attempt","gate":"instantiation-complete","passed":true,"ts":"2026-06-15T00:00:00Z"}
+	{"event":"gate_attempt","gate":"hitl1-recorded","passed":true,"ts":"2026-06-15T01:00:00Z"}
+	{"event":"gate_attempt","gate":"setup-ready","passed":true,"ts":"2026-06-15T02:00:00Z"}
+	{"event":"gate_attempt","gate":"seed-topics-ready","passed":true,"ts":"2026-06-15T03:00:00Z"}
+	{"event":"gate_attempt","gate":"wave0-complete","passed":true,"ts":"2026-06-15T04:00:00Z"}
+	{"event":"gate_attempt","gate":"wave1-complete","passed":true,"ts":"2026-06-15T05:00:00Z"}
+	{"event":"gate_attempt","gate":"wave2-complete","passed":true,"ts":"2026-06-15T06:00:00Z"}
+	TRACES
+	mkdir -p $B/artifacts/wave2
+	cat > $B/artifacts/wave2/synthesis.md << 'SYN'
+	# Cross-Topic Synthesis
+	W2F-001: Test synthesis.
+	See [evidence](../wave1/topic-a/evidence-summary.md).
+	SYN
 ```
 
 ## Step 2: hitl2 gate pass → Agent 读取 decision + rationale

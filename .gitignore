@@ -62,4 +62,6 @@ tests/.test-tmp/
 # ===== Claude Code =====
 .claude/settings.local.json
 
-_temp
+_temp/
+_logs/
+_subagents/
