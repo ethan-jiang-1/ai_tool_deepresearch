@@ -174,6 +174,62 @@ find $B2/artifacts -type f | sort
 
 ```bash
 
+# ── Machinery: per-topic reference files, ledger, subagent slots ──
+# Per-topic reference files (gate: per_topic_ref_md_count_floor >= 1)
+cat > "$B2/reference/topic-x-foundation.md" << 'REFEOF'
+# Topic X — Foundation Reference
+## Metadata
+- source_url: "https://example.com/topic-x-ref"
+- topic_tag: "topic-x"
+- source_layer: "wave1"
+- trust_tier: "primary"
+- retrieved_date: "2026-06-23"
+- acceptance_status: "accepted"
+- related_topic: "topic-x"
+- ref_file: "topic-x-foundation.md"
+## Key Facts
+1. Topic X mechanism finding from evidence-summary
+2. Evidence extracted via dpt-evidence-extractor sub-agent
+3. Source validation passes schema check
+4. Question status tracked in question-list.md
+5. Backfill tokens replaced in seed_topics/topic-x.md
+REFEOF
+
+cat > "$B2/reference/topic-y-foundation.md" << 'REFEOF'
+# Topic Y — Foundation Reference
+## Metadata
+- source_url: "https://example.com/topic-y-ref"
+- topic_tag: "topic-y"
+- source_layer: "wave1"
+- trust_tier: "primary"
+- retrieved_date: "2026-06-23"
+- acceptance_status: "accepted"
+- related_topic: "topic-y"
+- ref_file: "topic-y-foundation.md"
+## Key Facts
+1. Topic Y intentionally gapped — evidence-summary missing in Scenario A
+2. Source intake completed in wave0
+3. Deepening pending via repair task
+4. Backfill tokens remain stale until repair
+5. Question list will be written after repair completes
+REFEOF
+
+# Output declaration ledger (gate: wave1_ledger_exists + wave1_output_coverage)
+mkdir -p "$B2/_subagents/wave_01/slot_00" "$B2/_subagents/wave_01/slot_01"
+TS=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+cat > "$B2/rb_output_declarations.jsonl" << LEDGEREOF
+{"declared_at":"$TS","work_id":"wave1-deepen-topic-x","producer_rule":"topic_deepening","slot_result_ref":"_subagents/wave_01/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_01/slot_00/runtime-receipt.jsonl","output_files":[{"path":"artifacts/wave1/topic-x/evidence-summary.md","role":"evidence_summary"},{"path":"artifacts/wave1/topic-x/question-list.md","role":"question_list"},{"path":"reference/topic-x-foundation.md","role":"reference","source_url":"https://example.com/topic-x-ref"}],"cache_trails":[],"creation_reason":"Delegated: Deepen topic: Topic X"}
+LEDGEREOF
+
+# Subagent slot artifacts (gate: wave1_subagent_slots) — slot_00 for topic-x
+printf '{"status":"done","updated":"%s"}\n' "$TS" > "$B2/_subagents/wave_01/slot_00/_status.json"
+printf '{"slotKey":"evidence_extractor","roleAgentKey":"dpt-evidence-extractor","status":"done","summary":"Topic X deepening complete","evidenceCount":1,"references":[],"confidence":0.8,"notes":[],"output_files":[{"path":"artifacts/wave1/topic-x/evidence-summary.md","role":"evidence_summary"},{"path":"artifacts/wave1/topic-x/question-list.md","role":"question_list"},{"path":"reference/topic-x-foundation.md","role":"reference","source_url":"https://example.com/topic-x-ref"}]}\n' > "$B2/_subagents/wave_01/slot_00/result.json"
+printf '{"event":"agent_runtime_started","slotKey":"evidence_extractor","roleAgentKey":"dpt-evidence-extractor","receiptNonce":"nonce-222-slot_00","ts":"%s"}\n{"event":"agent_result_ready","slotKey":"evidence_extractor","roleAgentKey":"dpt-evidence-extractor","receiptNonce":"nonce-222-slot_00","ts":"%s"}\n' "$TS" "$TS" > "$B2/_subagents/wave_01/slot_00/runtime-receipt.jsonl"
+
+echo "=== Machinery ready (topic-y intentionally missing from ledger — will be added in repair) ==="
+
+# Phase-agent obligation (phase-wave1.md): write wave1_completion before the wave1-complete gate
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle $B2 --event wave1_completion
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave1-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B2 --current-node phases/phase-wave1.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')); console.log(d.check.passed)")
@@ -286,6 +342,15 @@ sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/[仍开放] ty-q1: Topic Y deepening
 
 echo "=== Backfill topic-y ==="
 grep -q '__BACKFILL_WAVE1_MECHANISMS__' $B2/seed_topics/topic-y.md && echo "AFTER FAIL: token not replaced" || echo "AFTER: token replaced"
+
+# Append topic-y to output declaration ledger (previously orphaned — now covered)
+TS2=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+mkdir -p "$B2/_subagents/wave_01/slot_01"
+printf '{"status":"done","updated":"%s"}\n' "$TS2" > "$B2/_subagents/wave_01/slot_01/_status.json"
+printf '{"slotKey":"evidence_extractor","roleAgentKey":"dpt-evidence-extractor","status":"done","summary":"Topic Y repair deepening complete","evidenceCount":1,"references":[],"confidence":0.7,"notes":[],"output_files":[{"path":"artifacts/wave1/topic-y/evidence-summary.md","role":"evidence_summary"},{"path":"artifacts/wave1/topic-y/question-list.md","role":"question_list"},{"path":"reference/topic-y-foundation.md","role":"reference","source_url":"https://example.com/topic-y-ref"}]}\n' > "$B2/_subagents/wave_01/slot_01/result.json"
+printf '{"event":"agent_runtime_started","slotKey":"evidence_extractor","roleAgentKey":"dpt-evidence-extractor","receiptNonce":"nonce-222-slot_01","ts":"%s"}\n{"event":"agent_result_ready","slotKey":"evidence_extractor","roleAgentKey":"dpt-evidence-extractor","receiptNonce":"nonce-222-slot_01","ts":"%s"}\n' "$TS2" "$TS2" > "$B2/_subagents/wave_01/slot_01/runtime-receipt.jsonl"
+# Append ledger line for topic-y
+printf '{"declared_at":"%s","work_id":"wave1-deepen-topic-y","producer_rule":"topic_deepening","slot_result_ref":"_subagents/wave_01/slot_01/result.json","runtime_receipt_ref":"_subagents/wave_01/slot_01/runtime-receipt.jsonl","output_files":[{"path":"artifacts/wave1/topic-y/evidence-summary.md","role":"evidence_summary"},{"path":"artifacts/wave1/topic-y/question-list.md","role":"question_list"},{"path":"reference/topic-y-foundation.md","role":"reference","source_url":"https://example.com/topic-y-ref"}],"cache_trails":[],"creation_reason":"Delegated: Deepen topic: Topic Y (repair)"}\n' "$TS2" >> "$B2/rb_output_declarations.jsonl"
 ```
 
 ### Step B2: Rerun gate — 预期 pass

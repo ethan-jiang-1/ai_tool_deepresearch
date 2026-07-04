@@ -443,6 +443,7 @@ RWE-006: "research-wave-experiments — Wave fault-tolerance playbook (malformed
 RWE-007: "research-wave-experiments — Wave review-surface playbook (Wave0 reference metadata table, synthesis full text, reference chain table, human review checklist)"
 RWE-008: "research-wave-experiments — Wave1 placeholder not mistaken for full subagent research — cross-cutting constraint, no standalone playbook"
 RWE-009: "research-wave-experiments — Cross-artifact reference verification in wave2 synthesis — cross-cutting constraint, no standalone playbook"
+RWE-010: "research-wave-experiments — Wave experiment playbook SHALL write wave{N}_completion trace event before its wave-complete gate (phase-wave{0,1,2}.md completion obligation)"
 
 # wff-research-waves / seed-topic-materialization
 STM-001: seed-topic-materialization — Seed topic materialization phase node (9-section body, forces topic_registry→seed_topics/ materialization, seed_topics_completion trace event)
@@ -571,6 +572,7 @@ WDC-009: workflow-directory-contract — Bundle canonical structure includes art
 WDC-010: workflow-directory-contract — Manifest includes rerun phase entry (phases array gets rerun→phases/phase-rerun.md gate rerun-ready; manifest is inventory not routing table)
 SDC-001: subagent-directory-contract — _subagents/ as the sole inter-agent communication directory; experiments and production SHALL use the same convention
 SDC-002: subagent-directory-contract — Prohibition of external inter-agent communication paths (_fixtures/, /tmp, ad-hoc names); all sub-agent artifacts SHALL reside under _subagents/wave_NN/slot_MM/
+SDC-003: "subagent-directory-contract — Relay staging places logical wave N slots in _subagents/wave_{NN}/ (0-based, matching canonical convention + gate wave field); stageSubagentSlots accepts optional explicitWaveIndex, drive-relay-slot passes --wave"
 
 # cli-inspect-output-conventions
 IOC-001: cli-inspect-output-conventions — inspect-wave0-output.mjs (flat dir, naming, metadata, sections, _INDEX.md, README.md, thin YAML)

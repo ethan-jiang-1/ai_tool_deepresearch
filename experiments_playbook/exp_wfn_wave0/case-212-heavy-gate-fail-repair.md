@@ -77,7 +77,63 @@ mkdir -p $B2/seed_topics
 
 ```bash
 # topic-x, topic-y, topic-z 各一个 seed topic 文件
-# 格式: YAML frontmatter (id/slug/title/must_answer/hypothesis/search_guardrails/evidence_route) + 正文初始化区 + 轮次追加区
+cat > $B2/seed_topics/topic-x.md << 'SEEDEOF'
+---
+id: "t-x"
+slug: "topic-x"
+title: "Topic X"
+search_guardrails:
+  required_terms: ["topic x research"]
+evidence_route:
+  preferred_sources: ["权威来源"]
+---
+# Topic X
+
+## 主题定位
+Test topic X for wave0 gate fail/repair.
+
+## 本轮新增证据
+__BACKFILL_WAVE0_EVIDENCE__
+SEEDEOF
+
+cat > $B2/seed_topics/topic-y.md << 'SEEDEOF'
+---
+id: "t-y"
+slug: "topic-y"
+title: "Topic Y"
+search_guardrails:
+  required_terms: ["topic y research"]
+evidence_route:
+  preferred_sources: ["权威来源"]
+---
+# Topic Y
+
+## 主题定位
+Test topic Y for wave0 gate fail/repair.
+
+## 本轮新增证据
+__BACKFILL_WAVE0_EVIDENCE__
+SEEDEOF
+
+cat > $B2/seed_topics/topic-z.md << 'SEEDEOF'
+---
+id: "t-z"
+slug: "topic-z"
+title: "Topic Z (repair target)"
+search_guardrails:
+  required_terms: ["topic z research"]
+evidence_route:
+  preferred_sources: ["权威来源"]
+---
+# Topic Z
+
+## 主题定位
+Test topic Z — intentionally missing source.yaml, marked as repair target.
+
+## 本轮新增证据
+__BACKFILL_WAVE0_EVIDENCE__
+SEEDEOF
+
 # 验证
 echo "seed_topics:" && ls $B2/seed_topics/
 # 预期: topic-x.md  topic-y.md  topic-z.md
@@ -118,7 +174,51 @@ cat > $B2/reference/_INDEX.md << 'EOF'
 - topic-y: 1 reference
 EOF
 
+# ── Machinery: 00-shared, README, ledger, subagent slots ──
+cat > $B2/reference/README.md << 'READMEEOF'
+# Reference Directory
+Flat reference directory. 00-shared-*.md = cross-topic shared refs.
+READMEEOF
 
+cat > "$B2/reference/00-shared-wave0-foundation.md" << 'SHAREDEOF'
+# Wave0 Foundation — Shared Reference
+## Metadata
+- source_url: "https://example.com/research/wave0-foundation"
+- topic_tag: "shared"
+- source_layer: "wave0"
+- trust_tier: "primary"
+- retrieved_date: "2026-07-05"
+- acceptance_status: "accepted"
+- related_topic: "shared"
+- ref_file: "00-shared-wave0-foundation.md"
+## Key Facts
+1. Wave0 foundation collects per-topic source references
+2. Each topic must have at least 1 entry in source.yaml
+3. Shared references live in reference/00-shared-*.md
+4. Gate validates count_floor, schema, trace events
+5. Output declarations track provenance via rb_output_declarations.jsonl
+SHAREDEOF
+
+mkdir -p "$B2/_subagents/wave_00/slot_00" "$B2/_subagents/wave_00/slot_01"
+TS=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+cat > "$B2/rb_output_declarations.jsonl" << LEDGEREOF
+{"declared_at":"$TS","work_id":"wave0-source-topic-x","producer_rule":"source_intake_fan_in","slot_result_ref":"_subagents/wave_00/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_00/slot_00/runtime-receipt.jsonl","output_files":[{"path":"artifacts/wave0/topic-x/source.yaml","role":"source_yaml"},{"path":"reference/00-shared-wave0-foundation.md","role":"reference","source_url":"https://example.com/research/wave0-foundation"}],"cache_trails":[],"creation_reason":"Delegated: source intake topic-x"}
+{"declared_at":"$TS","work_id":"wave0-source-topic-y","producer_rule":"source_intake_fan_in","slot_result_ref":"_subagents/wave_00/slot_01/result.json","runtime_receipt_ref":"_subagents/wave_00/slot_01/runtime-receipt.jsonl","output_files":[{"path":"artifacts/wave0/topic-y/source.yaml","role":"source_yaml"}],"cache_trails":[],"creation_reason":"Delegated: source intake topic-y"}
+LEDGEREOF
+
+# slot_00
+printf '{"status":"done","updated":"%s"}\n' "$TS" > "$B2/_subagents/wave_00/slot_00/_status.json"
+printf '{"slotKey":"source_intake","roleAgentKey":"dpt-source-intake","status":"done","summary":"Source intake complete","evidenceCount":1,"references":[],"confidence":0.8,"notes":[]}\n' > "$B2/_subagents/wave_00/slot_00/result.json"
+printf '{"event":"agent_runtime_started","slotKey":"source_intake","roleAgentKey":"dpt-source-intake","receiptNonce":"nonce-212-slot_00","ts":"%s"}\n{"event":"agent_result_ready","slotKey":"source_intake","roleAgentKey":"dpt-source-intake","receiptNonce":"nonce-212-slot_00","ts":"%s"}\n' "$TS" "$TS" > "$B2/_subagents/wave_00/slot_00/runtime-receipt.jsonl"
+# slot_01
+printf '{"status":"done","updated":"%s"}\n' "$TS" > "$B2/_subagents/wave_00/slot_01/_status.json"
+printf '{"slotKey":"source_intake","roleAgentKey":"dpt-source-intake","status":"done","summary":"Source intake complete","evidenceCount":1,"references":[],"confidence":0.8,"notes":[]}\n' > "$B2/_subagents/wave_00/slot_01/result.json"
+printf '{"event":"agent_runtime_started","slotKey":"source_intake","roleAgentKey":"dpt-source-intake","receiptNonce":"nonce-212-slot_01","ts":"%s"}\n{"event":"agent_result_ready","slotKey":"source_intake","roleAgentKey":"dpt-source-intake","receiptNonce":"nonce-212-slot_01","ts":"%s"}\n' "$TS" "$TS" > "$B2/_subagents/wave_00/slot_01/runtime-receipt.jsonl"
+
+echo "=== Machinery ready ==="
+
+# Phase-agent obligation (phase-wave0.md): write wave0_completion before the wave0-complete gate
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle $B2 --event wave0_completion
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B2 --current-node phases/phase-wave0.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)

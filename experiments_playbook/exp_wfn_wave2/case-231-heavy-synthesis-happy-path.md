@@ -479,6 +479,8 @@ grep -q '__BACKFILL_PENDING_QUESTIONS__' $B/seed_topics/02_ai-regulation.md && e
 # Write trace event
 
 # Run gate
+# Phase-agent obligation (phase-wave2.md): write wave2_completion before the wave2-complete gate
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle $B --event wave2_completion
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE_OUTPUT" | node -e "
 const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));

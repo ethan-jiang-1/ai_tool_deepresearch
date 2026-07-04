@@ -188,6 +188,8 @@ echo "  3. backfill token __BACKFILL_PENDING_QUESTIONS__ still present in seed t
 ## Phase 2: First Gate Run — Expected FAIL
 
 ```bash
+# Phase-agent obligation (phase-wave2.md): write wave2_completion before the wave2-complete gate
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle $B --event wave2_completion
 GATE1=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE1" | node -e "
 const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));

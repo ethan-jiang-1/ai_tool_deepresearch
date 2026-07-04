@@ -81,11 +81,12 @@ if (!command || !bundle) {
 
 const bundleDir = path.resolve(bundle);
 
-// ── Wave inference: default to next wave (max existing _subagents/wave_NN + 1) ──
+// ── Wave inference: default to next wave (max existing _subagents/wave_NN + 1, 0-based) ──
+// @impl SDC-003: fresh bundle → 0 (wave_00); after wave_NN exists → N+1.
 function inferWaveFromBundle(baseDir) {
   const subagentsDir = path.join(baseDir, '_subagents');
-  if (!existsSync(subagentsDir)) return 1;
-  let maxWave = 0;
+  if (!existsSync(subagentsDir)) return 0;
+  let maxWave = -1;
   for (const entry of readdirSync(subagentsDir)) {
     const m = entry.match(/^wave_(\d+)$/);
     if (m) maxWave = Math.max(maxWave, parseInt(m[1], 10));
@@ -169,7 +170,9 @@ function handleStage() {
   });
   const waveIndex = values.wave ? parseInt(values.wave, 10) : inferWaveFromBundle(bundleDir);
   const state = passBranchState(waveIndex);
-  const slots = stageSubagentSlots(state, bundleDir);
+  // @impl SDC-003: pass explicit waveIndex so --wave N stages into wave_{NN} (0-based,
+  // matching canonical convention + gate). Without this, wave0 lands in wave_01 (off-by-one).
+  const slots = stageSubagentSlots(state, bundleDir, undefined, waveIndex);
   if (slots.length === 0) {
     fail(`stageSubagentSlots returned no slots for wave ${waveIndex} (branch not 'pass')`);
   }

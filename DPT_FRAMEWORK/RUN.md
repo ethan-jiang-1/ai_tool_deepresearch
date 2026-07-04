@@ -1,6 +1,6 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.2**
+> **DPT_FRAMEWORK v0.3**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明用户要用 DPT_FRAMEWORK 跑一次研究。

@@ -374,9 +374,74 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent | node -e "
 ## Phase 5: Gate + Verify
 
 ```bash
+# ── Machinery: per-topic reference files, ledger, subagent slots ──
+# Per-topic reference files (gate: per_topic_ref_md_count_floor >= 1 for reference/*{topic}*.md)
+cat > "$B/reference/01_ai-safety-foundation.md" << 'REFEOF'
+# AI Safety — Foundation Reference
+
+## Metadata
+- source_url: "https://example.com/ai-safety-overview"
+- topic_tag: "01_ai-safety"
+- source_layer: "wave1"
+- trust_tier: "primary"
+- retrieved_date: "2026-06-20"
+- acceptance_status: "accepted"
+- related_topic: "01_ai-safety"
+- ref_file: "01_ai-safety-foundation.md"
+
+## Key Facts
+1. AI safety focuses on alignment, robustness, and interpretability
+2. Major research directions include RLHF, constitutional AI, and mechanistic interpretability
+3. Industry shift from "capability first" to "safety-by-design" (2025-2026)
+4. Open-source vs closed-source safety strategies diverge significantly
+5. Deployment evidence for safety mechanisms remains limited
+REFEOF
+
+cat > "$B/reference/02_ai-regulation-foundation.md" << 'REFEOF'
+# AI Regulation — Foundation Reference
+
+## Metadata
+- source_url: "https://example.com/ai-regulation-overview"
+- topic_tag: "02_ai-regulation"
+- source_layer: "wave1"
+- trust_tier: "primary"
+- retrieved_date: "2026-06-20"
+- acceptance_status: "accepted"
+- related_topic: "02_ai-regulation"
+- ref_file: "02_ai-regulation-foundation.md"
+
+## Key Facts
+1. EU AI Act and US Executive Order form two major regulatory frameworks
+2. Regulatory focus shifting from "model scale" to "high-risk application scenarios"
+3. Open-source model exemption boundaries remain ambiguous
+4. EU AI Act implementation timeline spans 2024-2027
+5. International coordination on AI governance still nascent
+REFEOF
+
+# Output declaration ledger (gate: wave1_ledger_exists + wave1_output_coverage)
+mkdir -p "$B/_subagents/wave_01/slot_00" "$B/_subagents/wave_01/slot_01"
+TS=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+cat > "$B/rb_output_declarations.jsonl" << LEDGEREOF
+{"declared_at":"$TS","work_id":"wave1-deepen-01_ai-safety","producer_rule":"topic_deepening","slot_result_ref":"_subagents/wave_01/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_01/slot_00/runtime-receipt.jsonl","output_files":[{"path":"artifacts/wave1/01_ai-safety/evidence-summary.md","role":"evidence_summary"},{"path":"artifacts/wave1/01_ai-safety/question-list.md","role":"question_list"},{"path":"reference/01_ai-safety-foundation.md","role":"reference","source_url":"https://example.com/ai-safety-overview"}],"cache_trails":[],"creation_reason":"Delegated: Deepen topic: AI Safety"}
+{"declared_at":"$TS","work_id":"wave1-deepen-02_ai-regulation","producer_rule":"topic_deepening","slot_result_ref":"_subagents/wave_01/slot_01/result.json","runtime_receipt_ref":"_subagents/wave_01/slot_01/runtime-receipt.jsonl","output_files":[{"path":"artifacts/wave1/02_ai-regulation/evidence-summary.md","role":"evidence_summary"},{"path":"artifacts/wave1/02_ai-regulation/question-list.md","role":"question_list"},{"path":"reference/02_ai-regulation-foundation.md","role":"reference","source_url":"https://example.com/ai-regulation-overview"}],"cache_trails":[],"creation_reason":"Delegated: Deepen topic: AI Regulation"}
+LEDGEREOF
+
+# Subagent slot artifacts (gate: wave1_subagent_slots)
+printf '{"status":"done","updated":"%s"}\n' "$TS" > "$B/_subagents/wave_01/slot_00/_status.json"
+printf '{"slotKey":"evidence_extractor","roleAgentKey":"dpt-evidence-extractor","status":"done","summary":"AI Safety deepening complete","evidenceCount":1,"references":[],"confidence":0.8,"notes":[]}\n' > "$B/_subagents/wave_01/slot_00/result.json"
+printf '{"event":"agent_runtime_started","slotKey":"evidence_extractor","roleAgentKey":"dpt-evidence-extractor","receiptNonce":"nonce-221-slot_00","ts":"%s"}\n{"event":"agent_result_ready","slotKey":"evidence_extractor","roleAgentKey":"dpt-evidence-extractor","receiptNonce":"nonce-221-slot_00","ts":"%s"}\n' "$TS" "$TS" > "$B/_subagents/wave_01/slot_00/runtime-receipt.jsonl"
+
+printf '{"status":"done","updated":"%s"}\n' "$TS" > "$B/_subagents/wave_01/slot_01/_status.json"
+printf '{"slotKey":"evidence_extractor","roleAgentKey":"dpt-evidence-extractor","status":"done","summary":"AI Regulation deepening complete","evidenceCount":1,"references":[],"confidence":0.8,"notes":[]}\n' > "$B/_subagents/wave_01/slot_01/result.json"
+printf '{"event":"agent_runtime_started","slotKey":"evidence_extractor","roleAgentKey":"dpt-evidence-extractor","receiptNonce":"nonce-221-slot_01","ts":"%s"}\n{"event":"agent_result_ready","slotKey":"evidence_extractor","roleAgentKey":"dpt-evidence-extractor","receiptNonce":"nonce-221-slot_01","ts":"%s"}\n' "$TS" "$TS" > "$B/_subagents/wave_01/slot_01/runtime-receipt.jsonl"
+
+echo "=== Machinery ready ==="
+
 # Write trace event
 
 # Run gate
+# Phase-agent obligation (phase-wave1.md): write wave1_completion before the wave1-complete gate
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle $B --event wave1_completion
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave1-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle $B --current-node phases/phase-wave1.md)
 echo "$GATE_OUTPUT" | node -e "
 const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));

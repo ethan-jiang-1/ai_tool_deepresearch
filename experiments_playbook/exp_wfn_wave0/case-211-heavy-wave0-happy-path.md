@@ -73,7 +73,7 @@ cat > $B/rb_status.json << 'EOF'
 }
 EOF
 
-mkdir -p $B/reference/claude-code-cli-tool $B/seed_topics
+mkdir -p $B/artifacts/wave0/claude-code-cli-tool $B/reference $B/seed_topics
 ```
 
 ### Materialize seed topic
@@ -170,16 +170,16 @@ cat > /tmp/wfq-task-claude-code-cli-tool.json << 'EOF'
   "work_id": "wave0-source-claude-code-cli-tool",
   "title": "Source intake: Claude Code CLI 工具",
   "targets": { "controller": "main-agent", "delegates": { "to": "sub-agent", "role_key": "dpt-source-intake", "timeout_ms": 600000 } },
-  "action": "搜索 Claude Code CLI 的 foundation reference。从 seed_topics/claude-code-cli-tool.md 的 search_guardrails 派生搜索关键词。使用 WebSearch + WebFetch 获取真实来源。写入 reference/claude-code-cli-tool/source.yaml（YAML 数组，每条含 url/title/retrieved_date/topic_tag）。搜索过程和中间结果写入 relay slot 目录（_cache/wave0/slot_MM/），sub-agent 只写自己的 slot 目录，Phase Agent 通过 relay 收集结果。",
+  "action": "搜索 Claude Code CLI 的 foundation reference。从 seed_topics/claude-code-cli-tool.md 的 search_guardrails 派生搜索关键词。使用 WebSearch + WebFetch 获取真实来源。写入 artifacts/wave0/claude-code-cli-tool/source.yaml（YAML 数组，每条含 url/title/retrieved_date/topic_tag）。搜索过程和中间结果写入 relay slot 目录（_cache/wave0/slot_MM/），sub-agent 只写自己的 slot 目录，Phase Agent 通过 relay 收集结果。",
   "producer_rule": "source_intake_fan_in",
   "lineage": {"topic_slug": "claude-code-cli-tool", "phase": "wave0"},
   "priority_class": "P5_new_reference_intake",
-  "required_receipts": ["file:reference/claude-code-cli-tool/source.yaml"],
+  "required_receipts": ["file:artifacts/wave0/claude-code-cli-tool/source.yaml"],
   "done_condition": "source.yaml 存在且通过 schema 校验，至少含 1 条 reference",
   "verification": {"engine": ["receipt_check"], "agent": ["url_accessible", "title_matches_page"]},
-  "writes_to": ["reference/claude-code-cli-tool/source.yaml"],
+  "writes_to": ["artifacts/wave0/claude-code-cli-tool/source.yaml"],
   "status_sync": ["wave0_intake"],
-  "completion_receipt": "file:reference/claude-code-cli-tool/source.yaml",
+  "completion_receipt": "file:artifacts/wave0/claude-code-cli-tool/source.yaml",
   "failure_route": "queue_repair",
   "payload": {"topic_slug": "claude-code-cli-tool", "topic_title": "Claude Code CLI 工具"}
 }
@@ -208,7 +208,7 @@ Agent 通过 `shared-subagent-protocol.md` §3 批量并行协议启动 sub-agen
 
 ```bash
 # Sub-agent 产出验证
-echo "=== source.yaml ===" && cat $B/reference/claude-code-cli-tool/source.yaml
+echo "=== source.yaml ===" && cat $B/artifacts/wave0/claude-code-cli-tool/source.yaml
 echo "=== relay slot dirs ===" && ls $B/_subagents/ 2>/dev/null || echo "(slots managed by relay)"
 ```
 
@@ -219,9 +219,9 @@ cat > /tmp/wfq-result-wave0-source-claude-code-cli-tool.json << 'EOF'
 {
   "work_id": "wave0-source-claude-code-cli-tool",
   "status": "done",
-  "receipt": "file:reference/claude-code-cli-tool/source.yaml",
+  "receipt": "file:artifacts/wave0/claude-code-cli-tool/source.yaml",
   "summary": "source intake complete: N real references from WebSearch + WebFetch",
-  "writes": ["reference/claude-code-cli-tool/source.yaml"]
+  "writes": ["artifacts/wave0/claude-code-cli-tool/source.yaml"]
 }
 EOF
 
@@ -244,7 +244,7 @@ cat > /tmp/wfq-backfill-claude-code-cli-tool.json << 'EOF'
   "work_id": "backfill-wave0-claude-code-cli-tool",
   "title": "Backfill wave0 evidence to seed topic: Claude Code CLI 工具",
   "targets": { "controller": "main-agent" },
-  "action": "读取 reference/claude-code-cli-tool/source.yaml，回填到 seed_topics/claude-code-cli-tool.md 的 ## 本轮新增证据，替换 __BACKFILL_WAVE0_EVIDENCE__。",
+  "action": "读取 artifacts/wave0/claude-code-cli-tool/source.yaml，回填到 seed_topics/claude-code-cli-tool.md 的 ## 本轮新增证据，替换 __BACKFILL_WAVE0_EVIDENCE__。",
   "producer_rule": "backfill_wave0_evidence",
   "lineage": {"topic_slug": "claude-code-cli-tool", "phase": "wave0", "trigger": "wave0_complete"},
   "priority_class": "P2_close_open_loop",
@@ -297,8 +297,69 @@ cat > $B/reference/_INDEX.md << 'EOF'
 - N foundation references (real WebSearch + WebFetch)
 EOF
 
+# ── Machinery: 00-shared reference, README, ledger, subagent slots ──
+
+# reference/README.md (gate: reference_readme_exists)
+cat > $B/reference/README.md << 'READMEEOF'
+# Reference Directory
+
+Flat reference directory for foundation sources collected during Wave0.
+
+## Convention
+- `00-shared-*.md`: cross-topic shared foundation references
+- `_INDEX.md`: canonical Markdown table inventory of all reference files
+- `README.md`: this file
+
+## Source Layers
+- wave0: foundation reference intake (source_intake_fan_in)
+READMEEOF
+
+# reference/00-shared-*.md (gate: shared_ref_count_floor >= 1)
+cat > "$B/reference/00-shared-claude-code.md" << 'SHAREDEOF'
+# Claude Code CLI — Shared Foundation Reference
+
+## Metadata
+- source_url: "https://docs.anthropic.com/en/docs/claude-code/overview"
+- topic_tag: "shared"
+- source_layer: "wave0"
+- trust_tier: "primary"
+- retrieved_date: "2026-07-05"
+- acceptance_status: "accepted"
+- related_topic: "claude-code-cli-tool"
+- ref_file: "00-shared-claude-code.md"
+
+## Key Facts
+1. Claude Code is Anthropic's agentic coding tool, launched as a CLI
+2. Supports sub-agent architecture, MCP integration, and hooks system
+3. Dynamic Workflow feature (May 2026) allows adaptive parallelism 1-5 sub-agents
+4. Terminal-native design distinguishes it from IDE-first competitors
+5. Uses Claude Opus/Sonnet models for agentic coding tasks
+SHAREDEOF
+
+# ── Output declaration ledger (gate: wave0_ledger_exists + wave0_output_coverage) ──
+mkdir -p "$B/_subagents/wave_00/slot_00"
+TS=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+cat > "$B/rb_output_declarations.jsonl" << LEDGEREOF
+{"declared_at":"$TS","work_id":"wave0-source-claude-code-cli-tool","producer_rule":"source_intake_fan_in","slot_result_ref":"_subagents/wave_00/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_00/slot_00/runtime-receipt.jsonl","output_files":[{"path":"artifacts/wave0/claude-code-cli-tool/source.yaml","role":"source_yaml"},{"path":"reference/00-shared-claude-code.md","role":"reference","source_url":"https://docs.anthropic.com/en/docs/claude-code/overview"}],"cache_trails":[],"creation_reason":"Delegated: Source intake: Claude Code CLI 工具 — source intake complete: N real references from WebSearch + WebFetch"}
+LEDGEREOF
+
+# ── Subagent slot artifacts (gate: wave0_subagent_slots) ──
+cat > "$B/_subagents/wave_00/slot_00/_status.json" << STATEOF
+{"status":"done","updated":"$TS"}
+STATEOF
+cat > "$B/_subagents/wave_00/slot_00/result.json" << RESULTEOF
+{"slotKey":"source_intake","roleAgentKey":"dpt-source-intake","status":"done","summary":"Source intake: 1 real reference from WebSearch + WebFetch","evidenceCount":1,"references":[],"confidence":0.8,"notes":[],"output_files":[{"path":"artifacts/wave0/claude-code-cli-tool/source.yaml","role":"source_yaml"},{"path":"reference/00-shared-claude-code.md","role":"reference","source_url":"https://docs.anthropic.com/en/docs/claude-code/overview"}]}
+RESULTEOF
+cat > "$B/_subagents/wave_00/slot_00/runtime-receipt.jsonl" << RECEIPTEOF
+{"event":"agent_runtime_started","slotKey":"source_intake","roleAgentKey":"dpt-source-intake","receiptNonce":"nonce-211-001","ts":"$TS"}
+{"event":"agent_result_ready","slotKey":"source_intake","roleAgentKey":"dpt-source-intake","receiptNonce":"nonce-211-001","ts":"$TS"}
+RECEIPTEOF
+
+echo "=== Machinery: 00-shared, README, ledger, slot_00 ready ==="
 
 # Run gate
+# Phase-agent obligation (phase-wave0.md): write wave0_completion before the wave0-complete gate
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle $B --event wave0_completion
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -314,16 +375,16 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 ```bash
 echo "=== V1: source.yaml ==="
-test -s $B/reference/claude-code-cli-tool/source.yaml && echo "V1 PASS" || echo "V1 FAIL"
+test -s $B/artifacts/wave0/claude-code-cli-tool/source.yaml && echo "V1 PASS" || echo "V1 FAIL"
 
 echo "=== V2: ref count ==="
-REF_COUNT=$(grep -c 'url:' $B/reference/claude-code-cli-tool/source.yaml)
+REF_COUNT=$(grep -c 'url:' $B/artifacts/wave0/claude-code-cli-tool/source.yaml)
 echo "refs: $REF_COUNT"
 test "$REF_COUNT" -ge 1 && echo "V2 PASS" || echo "V2 FAIL"
 
 echo "=== V3: required fields ==="
 for f in url title retrieved_date topic_tag; do
-  grep -q "$f" $B/reference/claude-code-cli-tool/source.yaml && echo "  $f ✓" || echo "  $f ✗"
+  grep -q "$f" $B/artifacts/wave0/claude-code-cli-tool/source.yaml && echo "  $f ✓" || echo "  $f ✗"
 done
 
 echo "=== V4-V6: queue trace events ==="

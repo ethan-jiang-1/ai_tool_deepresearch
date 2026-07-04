@@ -395,6 +395,8 @@ sed -i '' 's/__BACKFILL_WAVE2_JUDGMENT__/W2F-001 cross_topic_resolution: Agentic
 sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/[部分解答] t2-q1: Copilot vs Claude Code 对比——Copilot ~200ms 基线可用（W2F-001） | [仍开放] W2F-002: 调度策略差异/' $B/seed_topics/02_agentic-tools.md
 
 # Gate
+# Phase-agent obligation (phase-wave2.md): write wave2_completion before the wave2-complete gate
+node DPT_FRAMEWORK/cli/log-event.mjs --bundle $B --event wave2_completion
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
 echo "$GATE_OUTPUT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));console.log('gate passed:',d.check.passed)"
 

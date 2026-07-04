@@ -85,7 +85,7 @@ export const ManifestSlotEntry = SlotConfig.extend({
 
 export const DispatchManifest = z.object({
   wave: z.string(),
-  waveIndex: z.number().int().min(1),
+  waveIndex: z.number().int().min(0),
   created: z.string(),
   concurrencyCap: z.number().int().positive(),
   slots: z.array(ManifestSlotEntry),
@@ -94,7 +94,7 @@ export const DispatchManifest = z.object({
 export const SubagentSlot = z.object({
   key: z.string(),
   roleAgentKey: z.string(),
-  waveIndex: z.number().int().min(1),
+  waveIndex: z.number().int().min(0),
   slotIndex: z.number().int().min(0),
   taskPath: z.string(),
   schemaPath: z.string(),

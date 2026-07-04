@@ -370,7 +370,7 @@ function createDispatchManifest(slotConfigs, state, baseDir, waveIndex, cacheDir
  * @returns {object[]} array of slot objects (empty if branch !== 'pass')
  * @throws {Error} if concurrency cap is exceeded
  */
-export function stageSubagentSlots(state, baseDir, customDispatchMap) {
+export function stageSubagentSlots(state, baseDir, customDispatchMap, explicitWaveIndex) {
   ensureTrace(baseDir);
   const map = customDispatchMap || getDispatchMap();
   const branch = classifyBranch(state);
@@ -382,7 +382,10 @@ export function stageSubagentSlots(state, baseDir, customDispatchMap) {
       logEvent('warn', 'relay_stage_empty', { kind: 'queue_enqueue', branch: branch });
       return [];
     }
-    const waveIndex = nextWaveIndex(state);
+    // @impl SDC-003: explicitWaveIndex (from drive-relay-slot --wave) places logical
+    // wave N into wave_{NN} (0-based, matching canonical convention + gate wave field).
+    // Default (legacy direct callers / unit tests) still uses nextWaveIndex(state).
+    const waveIndex = explicitWaveIndex ?? nextWaveIndex(state);
     const slots = createDispatchManifest(slotConfigs, state, baseDir, waveIndex);
     logEvent('info', 'relay_stage_done', { kind: 'queue_enqueue', slotCount: slots.length, waveIndex });
     return slots;

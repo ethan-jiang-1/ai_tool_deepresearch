@@ -109,7 +109,7 @@ describe('drive-relay-slot stage (full wave) — SRD-001/SRD-004', () => {
     const bundle = newBundle('stage-infer');
     const out = run(`stage "${bundle}"`);
     assert.equal(out.ok, true);
-    assert.equal(out.waveIndex, 1); // no prior waves → wave 1
+    assert.equal(out.waveIndex, 0); // fresh bundle → wave 0 (0-based, wave_00) per SDC-003
   });
 });
 
