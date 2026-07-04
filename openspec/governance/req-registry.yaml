@@ -358,6 +358,7 @@ FRE-001: framework-engine — DPT_FRAMEWORK/engine/ as canonical directory for 6
 FRE-002: framework-engine — workflow-fsm standalone pure FSM transition resolver (5 exports, 241 lines, zero engine imports) [DEPRECATED]
 FRE-003: framework-engine — Gate helpers shared parseMdFrontmatter and readBundlePlan for YAML 1.2 frontmatter parsing
 FRE-004: framework-engine — subagent-relay internal module layout (5 flat sub-modules + barrel, mirrored tests, zero behavior change)
+FRE-005: framework-engine — Queue Manager internal module layout + companion regression split (5 flat sub-modules + barrel, zero behavior change)
 TRW-001: trace-writer — Unified append-only JSONL trace writer with createTrace factory (3 variants)
 TRW-002: trace-writer — Trace output validates against TraceEntrySchema contract
 TRW-003: trace-writer — Trace entries include bundle field for cross-sink correlation
