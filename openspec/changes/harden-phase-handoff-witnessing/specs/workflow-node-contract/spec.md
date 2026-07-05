@@ -19,7 +19,7 @@ The phase body SHALL NOT frame `advance-status` as the action that enters the ne
 
 The source gate enum SHALL be the gate that just passed, not the next phase's gate. For example, wave0 gate pass SHALL synchronize with `--to wave0_complete` after `enter-phase --node phases/phase-wave1.md`; it SHALL NOT use `--to wave1_complete` until the wave1 gate itself has passed.
 
-This requirement applies to lifecycle phases whose deterministic outcome has a next lifecycle node from setup onward, including setup→seed-topics, seed-topics→wave0, wave0→wave1, wave1→wave2, wave2→HITL2, HITL2→readiness, readiness→final, and rerun→seed-topics. HITL2 indeterminate decisions remain governed by their existing decision logic; when the current runtime emits a deterministic HITL2 branch, its selected fileRef SHALL still be consumed through `enter-phase`. The instantiation/HITL1 bootstrap status shape is a compatibility exception for this change and SHALL NOT be silently rewritten by the phase wording update.
+This requirement applies to lifecycle phases whose deterministic outcome has a next lifecycle node from setup onward, including setup→seed-topics, seed-topics→wave0, wave0→wave1, wave1→wave2, wave2→HITL2, HITL2→readiness, HITL2→rerun, readiness→final, and rerun→seed-topics. HITL2 indeterminate decisions remain governed by their existing decision logic; when the current runtime emits a deterministic HITL2 branch, its selected fileRef SHALL still be consumed through `enter-phase`. The instantiation/HITL1 bootstrap status shape is a compatibility exception for this change and SHALL NOT be silently rewritten by the phase wording update.
 
 The phase wording SHALL give concrete source-gate `advance-status` commands so the Agent does not infer them at runtime:
 
@@ -31,6 +31,7 @@ The phase wording SHALL give concrete source-gate `advance-status` commands so t
 | wave1 | `phases/phase-wave2.md` | `advance-status --to wave1_complete` |
 | wave2 | `phases/phase-hitl2.md` | `advance-status --to wave2_complete` |
 | HITL2 proceed branch | `phases/phase-readiness.md` | `advance-status --to hitl2_recorded` |
+| HITL2 rerun branch | `phases/phase-rerun.md` | `advance-status --to hitl2_recorded` |
 | readiness | `phases/phase-final.md` | `advance-status --to readiness_passed` |
 | rerun | `phases/phase-seed-topics.md` | `advance-status --to rerun_ready` |
 
@@ -67,3 +68,11 @@ The phase wording SHALL give concrete source-gate `advance-status` commands so t
 - **THEN** rerun SHALL instruct the Agent to consume seed-topics through `enter-phase`
 - **AND** rerun SHALL synchronize source status with `advance-status --to rerun_ready`
 - **AND** seed-topics SHALL treat rerun as a legal predecessor when the runtime trace proves that branch
+
+#### Scenario: HITL2 deterministic branches consume the selected target
+
+- **WHEN** HITL2 proceeds to readiness
+- **THEN** HITL2 SHALL consume `phases/phase-readiness.md` through `enter-phase` and synchronize with `advance-status --to hitl2_recorded`
+- **WHEN** HITL2 selects the deterministic rerun branch
+- **THEN** HITL2 SHALL consume `phases/phase-rerun.md` through `enter-phase` and synchronize with `advance-status --to hitl2_recorded`
+- **AND** neither branch SHALL let `advance-status` choose the target in place of the selected `check.next`

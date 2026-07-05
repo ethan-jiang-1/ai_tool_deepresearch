@@ -13,6 +13,10 @@ For every manifest lifecycle phase that has an incoming deterministic transition
 
 The preflight SHALL derive lifecycle membership and deterministic incoming edges from `manifest.json` and `transitions.chain.json`; it SHALL NOT infer lifecycle membership from file names alone. If a node has multiple deterministic incoming edges, the preflight SHALL accept the latest valid ordered pair for any legal predecessor edge. The instantiation entry phase is exempt from the prior-handoff preflight because the runtime bundle may not exist before instantiation. The instantiation/HITL1 bootstrap status shape remains a compatibility exception unless separately migrated, but deterministic handoffs from setup onward SHALL use the preflight and status-window contract.
 
+If the trace contains a newer `gate_attempt` for the same predecessor gate/currentNodeRef after an otherwise valid passed handoff, and that newer attempt failed or passed with a different `next`, the older passed handoff SHALL be treated as superseded and SHALL NOT satisfy preflight.
+
+For branch-sensitive deterministic routes such as HITL2 proceed versus HITL2 rerun, the preflight SHALL validate the concrete target already emitted in `gate_attempt.next`. It SHALL NOT read profile state to choose a branch and SHALL NOT prefer a default `passed` edge when the trace authorizes a different legal deterministic target.
+
 For deterministic lifecycle gates covered by this change, gate status validation SHALL be derived from the same manifest/chain predecessor set rather than hardcoded to the gate's own enum as `current_gate` before the gate has passed. Before a covered current node's gate evaluates content rules:
 
 - `rb_status.json#/next_gate` SHALL equal the current node's gate enum;
@@ -43,6 +47,14 @@ If preflight fails, the gate CLI SHALL return normal gate failure output (`passe
 - **THEN** the preflight SHALL NOT treat that stale load as a valid handoff witness
 - **AND** the gate SHALL return `passed: false` with advice to rerun `enter-phase`
 
+#### Scenario: Gate rejects superseded predecessor pass
+
+- **WHEN** `check-gate-wave1-complete.mjs` is called for `phases/phase-wave1.md`
+- **AND** trace contains an older passed `wave0-complete` attempt whose `next` points to `phases/phase-wave1.md`
+- **AND** a newer `wave0-complete` attempt failed or passed with a different `next`
+- **THEN** the preflight SHALL NOT treat the older pass as a valid handoff
+- **AND** the gate SHALL return `passed: false` with advice to rerun the source gate and `enter-phase`
+
 #### Scenario: Gate evaluates normal rules after witnessed handoff
 
 - **WHEN** the prior gate pass has `next` equal to the current node and a later current-node `load_complete` witness is present
@@ -65,6 +77,13 @@ If preflight fails, the gate CLI SHALL return normal gate failure output (`passe
 - **THEN** the seed-topics gate preflight SHALL accept the rerun predecessor as legal
 - **AND** it SHALL NOT require the setup predecessor for that run
 
+#### Scenario: HITL2 rerun branch validates selected deterministic target
+
+- **WHEN** HITL2 has produced a deterministic rerun handoff with `gate_attempt(passed=true, gate="hitl2-recorded", currentNodeRef="phases/phase-hitl2.md", next="phases/phase-rerun.md")`
+- **AND** a later `load_complete(entry="phases/phase-rerun.md")` exists
+- **THEN** the rerun gate preflight SHALL accept HITL2 as the legal predecessor for `phases/phase-rerun.md`
+- **AND** it SHALL NOT replace the selected rerun target with `phases/phase-readiness.md`
+
 #### Scenario: Terminal final entry is witnessed before readiness status sync
 
 - **WHEN** readiness has passed with `check.next: "phases/phase-final.md"`
@@ -78,11 +97,19 @@ The project SHALL include a regression check or validator that verifies every ap
 
 The check SHALL fail if an applicable gate CLI omits the helper call or replaces it with ad hoc inline logic. The goal is to prevent a shared enforcement mechanism from existing without being wired into the real runtime path. Applicable covered gates include setup onward deterministic lifecycle gates and rerun-entry coverage where the runtime emits the corresponding deterministic handoff. Instantiation/HITL1 bootstrap exceptions SHALL be named explicitly in the validator allowlist rather than omitted silently.
 
+The same validator or companion regression SHALL fail if a covered gate definition or gate-specific status check still requires `current_gate` to equal the gate's own enum before that gate has passed. Covered gates SHALL use the source-gate status window, except for explicitly allowlisted bootstrap compatibility cases.
+
 #### Scenario: Missing preflight call fails validation
 
 - **WHEN** an applicable lifecycle gate CLI does not invoke the shared handoff preflight helper
 - **THEN** the wiring test or validator SHALL fail
 - **AND** the failure SHALL name the gate CLI that is missing the call
+
+#### Scenario: Stale own-gate status expectation fails validation
+
+- **WHEN** a covered downstream gate definition still hardcodes `rb_status.json#/current_gate` to that same gate's enum before pass
+- **THEN** the validator SHALL fail
+- **AND** the failure SHALL name the stale rule or gate definition
 
 ### Requirement: Engine-derived gate attempt diagnostics
 

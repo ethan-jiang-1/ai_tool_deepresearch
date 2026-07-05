@@ -12,12 +12,15 @@ Terminology note：本 change 保留既有 `stop: no` frontmatter 字段，不�
 
 ## What Changes
 
-- 新增 `enter-phase` Agent-facing loader/check CLI：Phase Agent 将 gate CLI 返回的 `check.next` 作为 `--node` 传入；CLI 只调用现有 `assessNode()`、写入 `load_complete` trace、渲染加载后的 Agent-readable Markdown，不驱动 lifecycle loop 或执行下一 phase。
-- 强化 `advance-status`：`--to` 明确表示刚通过的 source gate enum（例如 wave0 pass 后为 `wave0_complete`，不是下一 phase 的 `wave1_complete`）；写入 `rb_status.json` 前必须能在 `rb_trace.jsonl` 中看到该 source gate 的真实 `gate_attempt(passed=true)`，且其 `next` 与 post-pass `load_complete` target node 成对。成功后形成 source-gate status window：`current_gate` 是刚通过的 predecessor gate，`next_gate` 是下一阶段待完成 gate。
+- 新增 `enter-phase` Agent-facing loader/check CLI：Phase Agent 将 gate CLI 返回的 `check.next` 作为 `--node` 传入；CLI 只调用现有 `assessNode()`、写入带 source gate/source node/target node metadata 的 route-bound `load_complete` trace、渲染加载后的 Agent-readable Markdown，不驱动 lifecycle loop 或执行下一 phase。
+- 强化 `advance-status`：`--to` 明确表示刚通过的 source gate enum（例如 wave0 pass 后为 `wave0_complete`，不是下一 phase 的 `wave1_complete`）；写入 `rb_status.json` 前必须能在 `rb_trace.jsonl` 中看到该 source gate 的真实、未被更新 attempt supersede 的 `gate_attempt(passed=true)`，且其实际 `next` 与 post-pass `load_complete` target node 成对。成功后形成 source-gate status window：`current_gate` 是刚通过的 predecessor gate，`next_gate` 是下一阶段待完成 gate。
 - 给 lifecycle gate 增加 handoff/status-window preflight：当前 node 的 gate 在评估自身 rules 之前，先检查前一 deterministic gate pass 的 `next` 指向当前 node，当前 node 的 `load_complete` witness 发生在该 pass 之后，且 `rb_status.json` 表示合法 predecessor→current gate window，而不是要求当前 gate 在 pass 前已经成为 `current_gate`。
-- 增加 wiring validator / regression test，确保所有适用 gate CLI 真正调用 shared handoff preflight，避免新机制变成未接线死代码。
+- 对 HITL2/rerun 等 multi-edge handoff 使用 trace 中实际 emitted `gate_attempt.next` 作为 target；helper 只验证 selected branch，不读取 profile 或用 hardcoded default outcome 自行选路。
+- 明确 HITL2 deterministic branch emission：HITL2 gate/routing trace 必须根据已记录 user decision 真实 emit selected deterministic target；`proceed_to_readiness` 使用 `passed -> phase-readiness`，`rerun` 使用 `rerun -> phase-rerun`，不得让 E2E 或 helper 用手写 trace 代替 gate output。
+- 增加 wiring/status validator / regression test，确保所有适用 gate CLI 真正调用 shared handoff preflight，且 covered gate 不保留旧式 own-gate `current_gate` pre-pass expectation，避免新机制变成未接线死代码。
 - 增强 gate 诊断：基于 Engine 可见 trace/diagnostics 计算 attempt count、cross-attempt delta、pass-side fatigue advice；Wave0 级联失败以 diagnostic mask 呈现，减少“越修越乱”的疲劳感。
-- 更新 phase node §6 控制面：gate pass 后先通过 `enter-phase` 消费 `check.next`，再用 `advance-status --to <this phase's gate enum>` 同步 just-passed source gate；不要把 `advance-status` 表述成进入下一 phase 的动作。覆盖范围从 setup onward 到 readiness/final，并包括 rerun→seed-topics；instantiation/HITL1 bootstrap status shape 保持显式兼容例外，除非另开迁移。
+- 更新 phase node §6 控制面：gate pass 后先通过 `enter-phase` 消费 `check.next`，再用 `advance-status --to <this phase's gate enum>` 同步 just-passed source gate；不要把 `advance-status` 表述成进入下一 phase 的动作。覆盖范围从 setup onward 到 readiness/final，并包括 HITL2 proceed/rerun branch 与 rerun→seed-topics；instantiation/HITL1 bootstrap status shape 保持显式兼容例外，除非另开迁移。
+- 同步修正 `workflow-node-contract` 的 lifecycle manifest contract：accepted main spec 中旧的 9-phase 描述必须更新为当前 11-phase lifecycle（含 seed-topics/rerun），避免 handoff/preflight 覆盖范围和 Source of Record 分裂。
 - 更新 silent/autonomous continuation 契约：加入 “Why Continue”/terminal delivery visibility，明确最终报告会在 `phase-final` 交付，提前 chat synthesis 是不合法且更不有用的行为。
 - 明确拒绝以下方案作为核心修复：
   - prose-only fix；
@@ -36,7 +39,7 @@ Terminology note：本 change 保留既有 `stop: no` frontmatter 字段，不�
 
 - `cli-phase-transition`: 增加 `enter-phase`，并给 `advance-status` 增加 trace-backed handoff/pass precondition。
 - `gate-skeleton`: 增加 lifecycle gate handoff preflight、wiring enforcement、engine-derived attempt/delta diagnostics 和 pass-side fatigue advice。
-- `workflow-node-contract`: phase §6 handoff wiring 改为通过 `enter-phase` 消费 `check.next`。
+- `workflow-node-contract`: phase §6 handoff wiring 改为通过 `enter-phase` 消费 `check.next`，并修正 lifecycle manifest contract 为当前 11-phase inventory。
 - `silent-wave-execution`: 增加 autonomous continuation / terminal delivery visibility，防止把提前 synthesis 误当作更有帮助。
 - `agent-testing`: 增加 handoff witnessing 的标准 E2E 覆盖和可选 heavy canary。
 

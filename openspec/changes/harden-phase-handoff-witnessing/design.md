@@ -53,6 +53,8 @@ node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>
 4. 从 `runtime.contentCache` 按 `plan` 顺序渲染 loaded Markdown 到 stdout，作为 Phase Agent 下一步要读入 conversation context 的控制面。
 5. 保留 `assessNode()` 已有 trace：`load_start`、`dependency_resolved`、`load_complete`。
 
+Successful stdout is Agent-readable Markdown only. It SHALL render each loaded file in plan order with stable file-boundary headings so the Phase Agent can capture the control surface without parsing JSON mixed into Markdown. Failure stdout SHALL be JSON error output and exit non-zero; failed invocations SHALL NOT append `load_complete`.
+
 **替代方案：** 让 gate CLI 自动加载或执行下一 node。拒绝，因为这会让 Engine 驱动 loop，破坏 Agent Flow 边界。`enter-phase` 也不是 walker；它只是 Phase Agent 按 Markdown handoff 要求调用的 loader/check。
 
 ### D2: Handoff witness 使用现有 `load_complete`
@@ -60,9 +62,13 @@ node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>
 主要 witness 不是孤立的 `load_complete`，而是一对按 JSONL 顺序可验证的 trace 事实：
 
 1. source gate 有 `gate_attempt(passed=true)`，且该 event 的 `next` 等于 target/current node fileRef。
-2. target/current node 随后有 `load_complete(entry=<same fileRef>)`。
+2. target/current node 随后有 `load_complete(entry=<same fileRef>)`，并带有 route-bound handoff metadata。
 
 `enter-phase --node <fileRef>` SHALL validate that `<fileRef>` is the `next` from the latest passed deterministic gate attempt in trace that has a non-null `next` before emitting a successful handoff witness. It SHALL derive legal predecessor edges from `transitions.chain.json` + `manifest.json`, require that latest passed gate attempt to name the predecessor gate and predecessor `currentNodeRef`, and reject older historical `gate_attempt.next` matches. Gate preflight 和 status hardening 也 SHALL re-check the same ordered pair, rather than accepting any stale or unrelated `load_complete`.
+
+The accepted `enter-phase` witness SHALL enrich the existing `load_complete` trace event with at least `handoff_source_gate`, `handoff_source_node`, `handoff_target_node`, `handoff_source_attempt_index`, and `handoff_source_attempt_ts`. `handoff_source_attempt_index` is the zero-based JSONL event index of the authorizing `gate_attempt` in `rb_trace.jsonl` at validation time. Status/preflight helpers SHALL verify that the indexed trace event still matches the named source gate/source node/target node; timestamp alone is diagnostic context, not the primary trace reference. This is metadata on the existing witness, not a new routing authority or parallel state machine.
+
+If a newer `gate_attempt` for the same source gate/source node occurs after a passed handoff attempt and does not pass with the same `next`, the older pass SHALL NOT continue to authorize `enter-phase`. The Agent must obtain a new passing source gate attempt before a new handoff witness can be written.
 
 This does not let Engine choose the route: the route remains the `check.next` already produced by the gate CLI. The Engine only verifies that the Phase Agent supplied a node that matches prior gate output and records the loader receipt.
 
@@ -76,8 +82,8 @@ Before writing `rb_status.json`, `advance-status` MUST:
 
 - 读取 `rb_trace.jsonl`。
 - Normalize `<gate_enum>` to the source gate key and confirm that the latest passed deterministic `gate_attempt` with non-null `next` is for that source gate.
-- Resolve the source gate to its source node through `manifest.json`, then resolve the target node from `transitions.chain.json[sourceNode].passed`.
-- Confirm the passed gate attempt's `next` equals the resolved target node.
+- Resolve the source gate to its source node through `manifest.json`, then confirm the passed gate attempt's `next` is one of the legal deterministic outgoing targets for that source node in `transitions.chain.json`.
+- Use the actual passed gate attempt's `next` as the target node; do not choose `passed` over `rerun` or otherwise infer a target when the source node has multiple deterministic outgoing edges.
 - For non-initial lifecycle target nodes, confirm a later `load_complete(entry=<targetNode>)` exists.
 - 对缺少 source gate pass、gate `next` mismatch、或 target entry witness 的情况 fail closed，并输出 JSON error + advice，指向正确的 `enter-phase --bundle <path> --node <targetNode>` 和 source-gate `advance-status --to <source_gate_enum>` command.
 
@@ -109,11 +115,17 @@ Preflight failure 不改变 router。Gate 正常返回 `passed:false`、exit 1�
 
 **适用范围：** covered deterministic lifecycle gates from setup onward. Instantiation 是入口例外，因为 bundle 尚未存在时无法提前写 run trace；HITL1/bootstrap status shape is also an explicit compatibility exception unless separately migrated. 若一个 node 有多个 deterministic incoming edges（例如 rerun 回到 seed-topics），helper 使用 `transitions.chain.json` 推导所有合法 predecessor，并接受最新一对合法的 `gate_attempt.next -> load_complete.entry` witness；helper 不自行选择 route。
 
+HITL2 is branch-sensitive. `proceed_to_readiness` and `rerun` are deterministic only after the runtime has selected that branch and produced a concrete target in the gate/routing trace. The helper SHALL validate the selected `gate_attempt.next` target; it SHALL NOT read `rb_profile.yaml` and decide between readiness or rerun on its own. `request_view_revision`, `repair`, and `stop_blocked` remain outside this deterministic handoff witness unless a future change defines fixed targets for them.
+
+The source gate must actually emit that selected deterministic branch. HITL2 gate/routing implementation SHALL derive the routing outcome from the recorded HITL2 user decision for deterministic exits: `proceed_to_readiness` resolves through outcome `passed` to `phases/phase-readiness.md`, and `rerun` resolves through outcome `rerun` to `phases/phase-rerun.md`. Non-deterministic HITL2 decisions SHALL NOT be laundered into the default `passed` readiness target. Tests and E2E SHALL use real HITL2 gate output for these branches rather than hand-written `gate_attempt` trace fixtures.
+
 **替代方案：** 只在 wave1/wave2 加检查。拒绝，因为会复制 BUG-020 的“某些路径未接线”问题。
 
 ### D5: Wiring validator 是必做项
 
 新增 regression/validator，静态检查适用 gate CLI 是否调用 shared preflight helper。没有这个测试，shared helper 可能再次成为“大家以为存在但没人调用”的死代码。
+
+The validator also SHALL check covered gate definitions/status checks for stale own-gate pre-pass expectations. Covered downstream gates MUST NOT keep hardcoded `current_gate == <this gate enum>` requirements before that gate has passed; they must use the source-gate status window or an allowlisted bootstrap exception.
 
 **替代方案：** 只靠 code review。拒绝，因为 BUG-020 的根因之一就是 mechanical defense 未进入真实路径。
 
@@ -145,9 +157,13 @@ Phase §6 的核心改写：
 4. 从 step 2 已经 capture 的 rendered Markdown 继续执行下一 phase。
 5. 不把 `advance-status` 描述为“进入下一 phase”的动作；它只在 `enter-phase` 已经写下 target node load witness 之后同步状态。
 
-The wording update SHALL name the concrete source-gate enum for every covered handoff so the Phase Agent does not infer it: setup→seed-topics uses `setup_ready`; seed-topics→wave0 uses `seed_topics_ready`; wave0→wave1 uses `wave0_complete`; wave1→wave2 uses `wave1_complete`; wave2→HITL2 uses `wave2_complete`; HITL2 proceed→readiness uses `hitl2_recorded` when that runtime branch is emitted; readiness→final uses `readiness_passed`; rerun→seed-topics uses `rerun_ready`.
+The wording update SHALL name the concrete source-gate enum for every covered handoff so the Phase Agent does not infer it: setup→seed-topics uses `setup_ready`; seed-topics→wave0 uses `seed_topics_ready`; wave0→wave1 uses `wave0_complete`; wave1→wave2 uses `wave1_complete`; wave2→HITL2 uses `wave2_complete`; HITL2 proceed→readiness uses `hitl2_recorded` when that runtime branch is emitted; HITL2 rerun→rerun uses the selected deterministic `hitl2-recorded` rerun outcome and target `phases/phase-rerun.md`; readiness→final uses `readiness_passed`; rerun→seed-topics uses `rerun_ready`.
 
 这保持 Markdown 控制 Agent Flow：Markdown 要求 Phase Agent 调 CLI；CLI 只做确定性 loader/check 并把下一段 Markdown 返回给 Agent。继续执行下一 phase 的主体仍是 Phase Agent 的 agentic loop，不是 CLI。
+
+### D9: Lifecycle manifest spec drift must be corrected
+
+The accepted `workflow-node-contract` main spec still contains a legacy 9-phase manifest sentence, while the executable manifest currently contains 11 lifecycle phases: instantiation, hitl1, setup, seed-topics, wave0, wave1, wave2, hitl2, readiness, rerun, final. Because this change derives handoff coverage from manifest lifecycle membership, the OpenSpec delta SHALL modify the Phase manifest structure requirement to name the current 11-phase inventory and to preserve transition-table ownership for runtime next-node lookup. This is a source-of-record cleanup required for this change, not an unrelated doc polish.
 
 ## Risks / Trade-offs
 
@@ -169,4 +185,4 @@ Rollback strategy：若 preflight 误伤生产 bundle，可回滚 gate preflight
 
 ## Open Questions
 
-- 无阻塞问题。Apply 阶段若发现 HITL2 rerun edge 的 predecessor 推导需要更精细，应在同一 requirement 下实现 chain-aware incoming edge 解析，而不是回退到 prose。
+- 无阻塞问题。Apply 阶段必须实现 chain-aware incoming/outgoing edge 解析，覆盖 HITL2 proceed/rerun、readiness→final、rerun→seed-topics；不得回退到 prose 或 hardcoded single-edge lookup。

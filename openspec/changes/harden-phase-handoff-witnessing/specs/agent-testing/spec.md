@@ -12,10 +12,11 @@ The required standard playbook SHALL use a disposable bundle and real framework 
 - a controlled Wave0 cascade condition exercises cascade-mask diagnostics without changing gate truth;
 - attempting to synchronize status without a witnessed next-phase entry fails closed;
 - attempting old-style next-gate synchronization, such as `advance-status --to wave1_complete` immediately after wave0 pass, fails closed with source-gate advice;
-- running `enter-phase --node <check.next>` writes a route-bound `load_complete` tied to the latest passed deterministic predecessor gate attempt;
+- running `enter-phase --node <check.next>` writes a route-bound `load_complete` tied to the latest passed deterministic predecessor gate attempt, including source gate/source node/target node metadata;
 - stale historical `gate_attempt.next` matches do not authorize a new `enter-phase` witness after a later passed deterministic gate attempt points elsewhere;
+- an older passed handoff is rejected when a newer attempt for the same source gate/source node fails or points elsewhere;
 - after `enter-phase`, source-gate `advance-status` and subsequent gate operations proceed normally under the source-gate status-window contract;
-- the status-window contract is exercised beyond wave0→wave1, covering at minimum wave1→wave2, wave2→HITL2 or readiness-side progression available in the current runtime, readiness→final, and one rerun→seed-topics multi-incoming predecessor case;
+- the status-window contract is exercised beyond wave0→wave1, covering at minimum wave1→wave2, wave2→HITL2, HITL2→readiness, readiness→final, one HITL2→rerun deterministic branch, and one rerun→seed-topics multi-incoming predecessor case;
 - a forced old-style resume path reports a named handoff failure and remedy instead of silently accepting the state.
 
 The playbook verdict SHALL be based on `rb_trace.jsonl`, CLI exit codes, diagnostic artifacts, and bundle files. Console output alone SHALL NOT be verdict authority. The standard playbook SHALL NOT claim to prove real chat-channel behavior; chat-side premature synthesis remains reserved for the optional heavy canary or manual replay evidence.
@@ -31,6 +32,7 @@ The playbook verdict SHALL be based on `rb_trace.jsonl`, CLI exit codes, diagnos
 
 - **WHEN** the playbook runs `enter-phase --bundle <bundle> --node <next-node>`
 - **THEN** `rb_trace.jsonl` SHALL contain route-bound `load_complete` for that node after the matching source gate attempt
+- **AND** that `load_complete` SHALL expose source gate/source node/target node metadata
 - **AND** the subsequent status/gate checkpoint SHALL no longer fail for missing handoff witness
 
 #### Scenario: Standard E2E rejects stale route-bound witness
@@ -39,6 +41,13 @@ The playbook verdict SHALL be based on `rb_trace.jsonl`, CLI exit codes, diagnos
 - **AND** a later passed deterministic gate attempt points to a different lifecycle node
 - **THEN** `enter-phase --node <that-node>` SHALL fail unless the latest passed deterministic gate attempt authorizes that handoff
 - **AND** no new `load_complete` SHALL be appended for the stale route
+
+#### Scenario: Standard E2E rejects superseded pass
+
+- **WHEN** a disposable bundle contains an older passed handoff for a source gate/source node
+- **AND** a newer attempt for the same source gate/source node fails or points to a different target
+- **THEN** `enter-phase` and `advance-status` SHALL reject the older handoff
+- **AND** neither command SHALL mutate status or write a misleading witness
 
 #### Scenario: Standard E2E rejects old-style next gate status laundering
 
@@ -60,6 +69,14 @@ The playbook verdict SHALL be based on `rb_trace.jsonl`, CLI exit codes, diagnos
 - **AND** `enter-phase --node phases/phase-seed-topics.md` writes the corresponding post-pass load witness
 - **THEN** source-gate `advance-status --to rerun_ready` SHALL establish `current_gate: "rerun_ready"` and `next_gate: "seed_topics_ready"`
 - **AND** the seed-topics gate preflight SHALL accept rerun as the legal predecessor for that branch
+
+#### Scenario: Standard E2E covers HITL2 deterministic branch targets
+
+- **WHEN** HITL2 emits a deterministic proceed handoff to `phases/phase-readiness.md`
+- **THEN** `enter-phase`, source-gate `advance-status`, and readiness preflight SHALL accept the readiness target
+- **WHEN** HITL2 emits a deterministic rerun handoff to `phases/phase-rerun.md`
+- **THEN** `enter-phase`, source-gate `advance-status`, and rerun preflight SHALL accept the rerun target
+- **AND** neither branch SHALL be replaced by a default outcome target
 
 #### Scenario: Standard E2E exercises high-friction diagnostics
 
