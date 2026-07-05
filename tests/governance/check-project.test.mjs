@@ -2,16 +2,19 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const ROOT = process.cwd();
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const TMP = join(__dirname, '..', '.test-tmp');
 const CHECK_REQS = join(ROOT, 'openspec/governance/check-project-reqs.mjs');
 const CHECK_SPECS = join(ROOT, 'openspec/governance/check-project-specs.mjs');
 
 describe('project governance checks', () => {
   it('ignores requirement IDs inside fenced code blocks', () => {
-    const tmpDir = mkdtempSync('dpt_rb_test_');
+    const tmpDir = mkdtempSync(join(TMP, 'dpt_rb_test_'));
     try {
       seedGovernanceFixture(tmpDir);
       const result = spawnSync('node', [CHECK_REQS, tmpDir], { encoding: 'utf-8' });
@@ -22,7 +25,7 @@ describe('project governance checks', () => {
   });
 
   it('prose cross-references do not count as declarations (no false duplicate)', () => {
-    const tmpDir = mkdtempSync('dpt_rb_test_');
+    const tmpDir = mkdtempSync(join(TMP, 'dpt_rb_test_'));
     try {
       seedGovernanceFixture(tmpDir);
       // Second spec file declares its own id but cross-references ABC-001 in prose,
@@ -54,7 +57,7 @@ describe('project governance checks', () => {
   });
 
   it('still detects a true duplicate: same id declared in two spec files', () => {
-    const tmpDir = mkdtempSync('dpt_rb_test_');
+    const tmpDir = mkdtempSync(join(TMP, 'dpt_rb_test_'));
     try {
       seedGovernanceFixture(tmpDir);
       mkdirSync(join(tmpDir, 'openspec/specs/other-capability'), { recursive: true });
@@ -81,7 +84,7 @@ describe('project governance checks', () => {
   });
 
   it('bug IDs (BUG-\\d+) in prose do not enter the unregistered check', () => {
-    const tmpDir = mkdtempSync('dpt_rb_test_');
+    const tmpDir = mkdtempSync(join(TMP, 'dpt_rb_test_'));
     try {
       seedGovernanceFixture(tmpDir, {
         specContent: [
@@ -103,7 +106,7 @@ describe('project governance checks', () => {
   });
 
   it('still detects an unregistered prose reference (typo detection)', () => {
-    const tmpDir = mkdtempSync('dpt_rb_test_');
+    const tmpDir = mkdtempSync(join(TMP, 'dpt_rb_test_'));
     try {
       seedGovernanceFixture(tmpDir, {
         specContent: [
@@ -127,7 +130,7 @@ describe('project governance checks', () => {
   });
 
   it('still detects an orphan: registered id absent from specs and deltas', () => {
-    const tmpDir = mkdtempSync('dpt_rb_test_');
+    const tmpDir = mkdtempSync(join(TMP, 'dpt_rb_test_'));
     try {
       seedGovernanceFixture(tmpDir);
       writeFileSync(
@@ -145,7 +148,7 @@ describe('project governance checks', () => {
   });
 
   it('requires req trace before the first second-level heading', () => {
-    const tmpDir = mkdtempSync('dpt_rb_test_');
+    const tmpDir = mkdtempSync(join(TMP, 'dpt_rb_test_'));
     try {
       seedGovernanceFixture(tmpDir, {
         specContent: [

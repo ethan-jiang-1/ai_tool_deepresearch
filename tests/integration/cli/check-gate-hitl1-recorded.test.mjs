@@ -8,6 +8,7 @@ import { join } from 'node:path';
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
+const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
 
 function track(dir) { createdDirs.push(dir); return dir; }
@@ -41,7 +42,7 @@ describe('check-gate-hitl1-recorded', () => {
 
   it('passes with a complete profile', () => {
     const name = unique('valid');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     writeProfileYaml(bundleDir, VALID_PROFILE);
 
@@ -56,7 +57,7 @@ describe('check-gate-hitl1-recorded', () => {
 
   it('fails when rb_profile.yaml is missing', () => {
     const name = unique('noprofile');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     rmSync(join(bundleDir, 'rb_profile.yaml'));
 
@@ -69,7 +70,7 @@ describe('check-gate-hitl1-recorded', () => {
 
   it('fails on YAML parse error', () => {
     const name = unique('badyaml');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     writeProfileYaml(bundleDir, 'not: valid: yaml: [[');
 
@@ -81,7 +82,7 @@ describe('check-gate-hitl1-recorded', () => {
 
   it('fails when research_profile is still not_selected', () => {
     const name = unique('default');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     // Keep default profile (not_selected)
 
@@ -94,7 +95,7 @@ describe('check-gate-hitl1-recorded', () => {
 
   it('fails when root_must_answer_set is empty', () => {
     const name = unique('emptymust');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     writeProfileYaml(bundleDir, `plan_basename: test
 research_profile: exploratory_map
@@ -119,7 +120,7 @@ human_decision_checkpoints:
 
   it('fails when hitl1.status is not recorded', () => {
     const name = unique('nostatus');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     writeProfileYaml(bundleDir, `plan_basename: test
 research_profile: claim_verification
@@ -144,7 +145,7 @@ human_decision_checkpoints:
 
   it('fails when recorded_at is missing', () => {
     const name = unique('noat');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     writeProfileYaml(bundleDir, `plan_basename: test
 research_profile: quick_factual

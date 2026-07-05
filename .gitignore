@@ -58,6 +58,7 @@ dpt_disp_temp*/
 dpt_val_*/
 dpt_rb_*/
 tests/.test-tmp/
+tests/.test-bundles/
 
 # ===== Claude Code =====
 .claude/settings.local.json

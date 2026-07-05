@@ -14,6 +14,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const STYLES_DIR = join(__dirname, '..', '..', 'DPT_FRAMEWORK', 'schema', 'research-styles');
 const NEW_BUNDLE = join(__dirname, '..', '..', 'experiments_env', 'shared', 'new-disposable-bundle.mjs');
 const APPLY_STYLE = join(__dirname, '..', '..', 'DPT_FRAMEWORK', 'cli', 'apply-research-style.mjs');
+const BUNDLES_DIR = join(__dirname, '..', '.test-bundles');
 
 const STYLES = ['debug', 'quick_factual', 'exploratory_map', 'claim_verification'];
 
@@ -260,7 +261,7 @@ describe('apply-research-style.mjs CLI integration', () => {
   });
 
   function createBundleWithTopics(topicCount) {
-    const r = spawnSync('node', [NEW_BUNDLE, unique(), '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, unique(), '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const dir = track(r.stdout.trim());
     // Write plan with N topics
     const topics = [];

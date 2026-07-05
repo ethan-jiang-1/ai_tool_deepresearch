@@ -13,6 +13,7 @@ const REPO_ROOT = process.cwd();
 const GATE_W0 = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs');
 const GATE_W1 = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
+const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
 
 function track(dir) { createdDirs.push(dir); return dir; }
@@ -24,7 +25,7 @@ function runGate(cli, bundlePath, nodeRef) {
 
 /** Create a minimal bundle with research_style_params in rb_profile.yaml. */
 function createBundle(name, styleParams) {
-  const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+  const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
   const dir = track(r.stdout.trim());
 
   // Write rb_profile.yaml with research_style_params

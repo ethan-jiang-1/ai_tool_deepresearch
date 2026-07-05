@@ -16,6 +16,7 @@ import { randomInt } from 'node:crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim();
+const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 
 // Unique name to avoid collisions
 const BUNDLE_NAME = `test-gate-chain-${randomInt(0, 65536).toString(16)}`;
@@ -40,11 +41,11 @@ describe('Gate chain consistency (instantiation→hitl1→setup→seed-topics)',
 
   // ── Setup: create production bundle ──
   it('creates a production bundle with correct initial status', () => {
-    bundlePath = join(REPO_ROOT, `dpt_rb_${BUNDLE_NAME}`);
+    bundlePath = join(BUNDLES_DIR, `dpt_rb_${BUNDLE_NAME}`);
     // Clean up any leftover from previous failed run
     if (existsSync(bundlePath)) rmSync(bundlePath, { recursive: true, force: true });
 
-    const out = run(`node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs ${BUNDLE_NAME}`);
+    const out = run(`node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs ${BUNDLE_NAME} --target-dir ${BUNDLES_DIR}`);
     bundlePath = out.trim().split('\n').pop(); // last line = absolute path
 
     assert.ok(existsSync(bundlePath), 'bundle directory must exist');

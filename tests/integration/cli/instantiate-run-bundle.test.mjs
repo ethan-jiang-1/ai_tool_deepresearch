@@ -7,6 +7,7 @@ import { join } from 'node:path';
 
 const REPO_ROOT = process.cwd();
 const INSTANTIATE = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs');
+const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdBundleDirs = new Set();
 
 describe('instantiate-run-bundle.mjs integration', () => {
@@ -89,7 +90,7 @@ describe('instantiate-run-bundle.mjs integration', () => {
 });
 
 function runInstantiate(...args) {
-  return spawnSync('node', [INSTANTIATE, ...args], {
+  return spawnSync('node', [INSTANTIATE, ...args, '--target-dir', BUNDLES_DIR], {
     cwd: REPO_ROOT,
     encoding: 'utf-8',
     timeout: 10000,
@@ -101,7 +102,7 @@ function uniqueName(label) {
 }
 
 function trackBundle(name) {
-  const dir = join(REPO_ROOT, `dpt_rb_${name}`);
+  const dir = join(BUNDLES_DIR, `dpt_rb_${name}`);
   createdBundleDirs.add(dir);
   rmSync(dir, { recursive: true, force: true }); // clean any leftover from previous aborted run
   return dir;

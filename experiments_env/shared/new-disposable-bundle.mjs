@@ -25,21 +25,24 @@ import { logToRun } from '../../DPT_FRAMEWORK/engine/logger.mjs';
 
 const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
 
-// Parse args: supports --case <id>, --nodes <dir>, --nodes=<dir>
+// Parse args: supports --case <id>, --nodes <dir>, --nodes=<dir>, --target-dir <dir>
 const args = process.argv.slice(2);
 const bundleName = args[0];
 let nodesDir = null;
 let caseId = null;
+let targetDir = null;
 for (const a of args) {
   if (a === '--nodes') { nodesDir = args[args.indexOf(a) + 1]; }
   if (a.startsWith('--nodes=')) { nodesDir = a.slice('--nodes='.length); }
   if (a === '--case') { caseId = args[args.indexOf(a) + 1]; }
   if (a.startsWith('--case=')) { caseId = a.slice('--case='.length); }
+  if (a === '--target-dir') { targetDir = args[args.indexOf(a) + 1]; }
+  if (a.startsWith('--target-dir=')) { targetDir = a.slice('--target-dir='.length); }
 }
 const force = args.includes('--force');
 
 if (!bundleName) {
-  console.error('Usage: node new-bundle.mjs <bundleName> [--case <id>] [--nodes <dir>] [--force]');
+  console.error('Usage: node new-bundle.mjs <bundleName> [--case <id>] [--nodes <dir>] [--target-dir <dir>] [--force]');
   console.error('  Example: node new-bundle.mjs wc_simple --case case-31 --nodes=experiments_env/prototype-workflow-chain/nodes-workflow-chain --force');
   process.exit(1);
 }
@@ -61,7 +64,9 @@ const hexSuffix = randomInt(0, 16).toString(16);
 const dirName = caseId
   ? `dpt_disp_${caseId}_${strippedName}_${hexSuffix}`
   : `dpt_disp_${bundleName}_${hexSuffix}`;
-const bundleDir = join(repoRoot, dirName);
+const baseDir = targetDir ?? repoRoot;
+mkdirSync(baseDir, { recursive: true });
+const bundleDir = join(baseDir, dirName);
 
 if (existsSync(bundleDir)) {
   if (force) {

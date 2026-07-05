@@ -8,6 +8,7 @@ import { join } from 'node:path';
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
+const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
 
 function track(dir) { createdDirs.push(dir); return dir; }
@@ -50,7 +51,7 @@ describe('check-gate-setup-ready', () => {
 
   it('passes with a valid bundle (HITL1 recorded, status correct, basename consistent)', () => {
     const name = unique('prod');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     // Profile must use the same plan_basename as the bundle logical name
     writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', `plan_basename: ${name}`));
@@ -65,7 +66,7 @@ describe('check-gate-setup-ready', () => {
 
   it('passes with disposable basename normalization', () => {
     const name = unique('disp');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     setupValidBundle(bundleDir);
     // The new-disposable-bundle.mjs creates dpt_disp_rt_<name>_<hex>
@@ -83,7 +84,7 @@ describe('check-gate-setup-ready', () => {
 
   it('fails when a scaffold directory is missing', () => {
     const name = unique('nofinal');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     setupValidBundle(bundleDir);
     rmSync(join(bundleDir, 'final'), { recursive: true, force: true });
@@ -97,7 +98,7 @@ describe('check-gate-setup-ready', () => {
 
   it('fails when status has drifted', () => {
     const name = unique('drift');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     setupValidBundle(bundleDir);
 
@@ -115,7 +116,7 @@ describe('check-gate-setup-ready', () => {
 
   it('fails on basename mismatch', () => {
     const name = unique('mismatch');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     setupValidBundle(bundleDir);
     // Write profile with a different plan_basename
@@ -130,7 +131,7 @@ describe('check-gate-setup-ready', () => {
 
   it('fails on unparseable status', () => {
     const name = unique('badstatus');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     setupValidBundle(bundleDir);
     writeFileSync(join(bundleDir, 'rb_status.json'), 'not json {{{');
@@ -143,7 +144,7 @@ describe('check-gate-setup-ready', () => {
 
   it('appends runtime audit entry to rb_trace.jsonl', () => {
     const name = unique('trace');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     setupValidBundle(bundleDir);
 

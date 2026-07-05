@@ -26,10 +26,15 @@ const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
 const args = process.argv.slice(2);
 const bundleName = args[0];
 const forceRequested = args.includes('--force');
+let targetDir = null;
+for (const a of args) {
+  if (a === '--target-dir') { targetDir = args[args.indexOf(a) + 1]; }
+  if (a.startsWith('--target-dir=')) { targetDir = a.slice('--target-dir='.length); }
+}
 
 if (!bundleName) {
-  console.error('Usage: node instantiate-run-bundle.mjs <name>');
-  console.error('  Creates dpt_rb_<name>/ at repo root from DPT_FRAMEWORK/rb_templates/');
+  console.error('Usage: node instantiate-run-bundle.mjs <name> [--target-dir <dir>]');
+  console.error('  Creates dpt_rb_<name>/ at <dir> (default: repo root) from DPT_FRAMEWORK/rb_templates/');
   process.exit(1);
 }
 
@@ -47,7 +52,9 @@ try {
   process.exit(1);
 }
 
-const bundleDir = join(repoRoot, `dpt_rb_${bundleName}`);
+const baseDir = targetDir ?? repoRoot;
+mkdirSync(baseDir, { recursive: true });
+const bundleDir = join(baseDir, `dpt_rb_${bundleName}`);
 
 // Handle existing
 if (existsSync(bundleDir)) {

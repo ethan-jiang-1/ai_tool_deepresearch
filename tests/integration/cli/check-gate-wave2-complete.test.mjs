@@ -9,6 +9,7 @@ import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './han
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
+const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
 
 function track(dir) { createdDirs.push(dir); return dir; }
@@ -31,7 +32,7 @@ function writeWave2Trace(dir, { completion = true } = {}) {
 
 /** Create a bundle with wave2-ready status and pre-existing wave1 artifacts. */
 function createBundle(name) {
-  const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+  const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
   const dir = track(r.stdout.trim());
 
   setStatusWindow(dir, 'wave1_complete', 'wave2_complete');

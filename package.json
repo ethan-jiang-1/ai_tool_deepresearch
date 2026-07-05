@@ -1,0 +1,9 @@
+{
+  "name": "ai_tool_deepresearch",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "find tests/ -name '*.test.mjs' -print0 | xargs -0 node --test"
+  }
+}

@@ -8,6 +8,7 @@ import { join } from 'node:path';
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
+const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
 
 function track(dir) { createdDirs.push(dir); return dir; }
@@ -22,7 +23,7 @@ describe('check-gate-instantiation-complete', () => {
 
   it('passes on a valid disposable bundle', () => {
     const name = unique('valid');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     if (r.status !== 0) throw new Error(`new-disposable-bundle failed: ${r.stderr}`);
     const bundleDir = track(r.stdout.trim());
 
@@ -36,7 +37,7 @@ describe('check-gate-instantiation-complete', () => {
 
   it('fails when a control file is missing', () => {
     const name = unique('missing');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
 
     // Remove rb_profile.yaml
@@ -50,7 +51,7 @@ describe('check-gate-instantiation-complete', () => {
   });
 
   it('fails on illegal bundle name (spaces)', () => {
-    const illegalName = join(REPO_ROOT, 'dpt_rb_bad name');
+    const illegalName = join(BUNDLES_DIR, 'dpt_rb_bad name');
     const bundleDir = track(illegalName);
     mkdirSync(bundleDir, { recursive: true });
 
@@ -63,7 +64,7 @@ describe('check-gate-instantiation-complete', () => {
 
   it('fails when status has drifted', () => {
     const name = unique('drift');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
 
     // Corrupt current_gate
@@ -81,7 +82,7 @@ describe('check-gate-instantiation-complete', () => {
 
   it('advice contains failure_message for each failed rule', () => {
     const name = unique('advice');
-    const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     rmSync(join(bundleDir, 'rb_plan.md'));
 
