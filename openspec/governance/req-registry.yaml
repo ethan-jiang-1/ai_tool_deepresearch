@@ -25,6 +25,7 @@
 # check-project-reqs.mjs 自动忽略。
 # ──────────────────────────────────────────────
 prefixes:
+  ACS: agent-command-surface
   AGO: agent-output-declaration
   AGQ: agentic-queue
   AGT: agent-testing
@@ -34,6 +35,7 @@ prefixes:
   CDG: content-delivery-gate-implementation
   CDP: content-delivery-phase-content
   CHI: check-inspect-feedback
+  CLE: cli-exit-code-conventions
   CMI: cmd-bundle-instantiation
   COS: conditional-nodes
   CPT: cli-phase-transition
@@ -103,6 +105,12 @@ prefixes:
   WNC: workflow-node-contract
   WTS: wave2-synthesis
 
+# agent-command-surface
+ACS-001: agent-command-surface — Command surfaces declare Agent-facing audience and HITL-only human interaction boundary
+ACS-002: agent-command-surface — Entry docs distinguish one-time human trigger from Agent-run command execution
+ACS-003: agent-command-surface — Static validation prevents implicit operator or mid-pipeline user interaction wording drift
+ACS-004: agent-command-surface — Phase-boundary terminology is discoverable and aligned with guidance terminology canon
+
 # agent-testing
 AGT-001: agent-testing — Agent-assisted test playbook for gate-loop
 AGT-002: "agent-testing — Agent-assisted test playbook for gate-fork (3 levels: simple/medium/complex)"
@@ -154,6 +162,7 @@ CMI-001: cmd-bundle-instantiation — Command playbook for bundle production
 CMI-002: cmd-bundle-instantiation — JS helper validate-bundle.mjs (Zod validation)
 CMI-003: cmd-bundle-instantiation — JS helper inspect-bundle.mjs (structure check)
 CMI-004: cmd-bundle-instantiation — Template files (rb_templates/)
+CMI-005: cmd-bundle-instantiation — Bundle naming is Agent-derived or already-supplied, not a mid-pipeline user dependency
 
 # check-inspect-feedback
 CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
@@ -167,6 +176,13 @@ CPT-001: "cli-phase-transition — Advance status CLI (advance-status.mjs): adva
 CPT-002: "cli-phase-transition — Log event CLI extension (--event flag): write phase-completion trace events to rb_trace.jsonl"
 CPT-003: cli-phase-transition — Enter phase CLI witnesses lifecycle node entry through assessNode and load_complete trace
 CPT-004: cli-phase-transition — Advance status refuses unwitnessed or unpassed phase handoffs
+CPT-005: cli-phase-transition — Phase-boundary terminology separates status transition, Agent handoff, work completion, and witnessing
+
+# cli-exit-code-conventions
+CLE-001: cli-exit-code-conventions — Discoverable framework CLI exit-code contract in top-level command docs
+CLE-002: cli-exit-code-conventions — Exit codes remain control-flow signals and never encode morale or continuation encouragement
+CLE-003: cli-exit-code-conventions — Known CLI exit-code exceptions and drift are documented without behavior changes
+CLE-004: cli-exit-code-conventions — Regression coverage locks documented exit-code convention and exception inventory
 
 # cmd-subagent-environment
 CSE-001: cmd-subagent-environment — Command playbook for project-level real subagent setup
@@ -270,12 +286,14 @@ RRD-002: runtime-reentry-debuggability — Reentry check validates runtime consi
 RRD-003: runtime-reentry-debuggability — Queue state cannot conflict with lifecycle status after phase pass
 RRD-004: runtime-reentry-debuggability — Failed gates preserve full post-mortem diagnostic detail
 RRD-005: runtime-reentry-debuggability — Reentry tooling derives facts from bundle truth without chat memory
+RRD-006: runtime-reentry-debuggability — Reentry CLI exit-code semantics align with the documented framework convention
 
 # run-entry
 RUE-001: run-entry — RUN.md entry point announces the framework version banner
 RUE-002: run-entry — RUN.md Section 0 instructs agents not to use built-in research shortcuts
 RUE-003: run-entry — Project changelog records version history and known limitations [DEPRECATED]
 RUE-004: run-entry — Agent behavior files stay synchronized on the research shortcut override
+RUE-005: run-entry — RUN.md frames drag/paste trigger as one-time handoff into Agent-run framework execution
 
 # schema-core
 SCO-001: schema-core — Six domain enums
@@ -344,6 +362,7 @@ SHC-006: shared-node-content — Shared node authority boundary enforcement (no 
 SWE-001: silent-wave-execution — Silent wave execution contract with degradation priority chain and repair escalation override
 SWE-002: silent-wave-execution — Fatigue resistance guidance (self-check protocol, structural vs fixable failure, step-back), universal scope extension to all stop:no phases
 SWE-003: silent-wave-execution — Positive continuation contract and terminal delivery visibility for autonomous phases
+SWE-004: silent-wave-execution — Autonomous silent execution has no implicit human co-runner outside HITL1/HITL2
 
 # test-fixtures
 TEF-001: test-fixtures — Fixture framework for integration tests
@@ -476,6 +495,7 @@ WNC-007: workflow-node-contract — Workflow package consistency validation acro
 WNC-008: workflow-node-contract — Autonomous contract header injection in assessNode() for stop:no phases (prepended after frontmatter, before body)
 WNC-009: workflow-node-contract — Universal silent execution dependency (every stop:no phase SHALL require shared/shared-silent-execution)
 WNC-010: workflow-node-contract — Lifecycle phase handoff wiring consumes check.next through enter-phase
+WNC-011: workflow-node-contract — Lifecycle node wording uses canonical phase-boundary terminology and does not overclaim entry as completion
 SNC-001: subagent-node-contract — Sub-agent role specs SHALL mandate lifecycle logging (read beacon, emit events with nonce, always-loaded)
 SNC-002: subagent-node-contract — taskMarkdownForSlot SHALL include the lifecycle-logging directive in generated task.md
 SNC-003: subagent-node-contract — Phase workflow nodes SHALL direct the Phase Agent to drive the relay via drive-relay-slot (demand-side wiring)
@@ -503,6 +523,7 @@ LOC-007: logging-conventions — One-shot log API (logToRun(bundlePath, level, m
 LOC-008: logging-conventions — Run-scoped logger factory (createRunLogger(bundlePath) returns {info,warn,error,debug} bound to _logs/run.log)
 LOC-009: logging-conventions — Agent log CLI (log-event.mjs --bundle --level --msg, bash command for Phase Agent, zero JS knowledge)
 LOC-010: logging-conventions — Long-running phases emit stable diagnostics for post-mortem debugging
+LOC-011: logging-conventions — log-event.mjs always-zero behavior is a documented CLI exit-code exception
 
 LFW-001: lifecycle-walker — Walker reads manifest and walks lifecycle (--bundle required, --manifest optional, 9 phases) [DEPRECATED]
 LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass (max 3 retries, escalation on exceeded limit) [DEPRECATED]
@@ -513,6 +534,7 @@ GSK-005: gate-skeleton — Shared gate attempt audit helper writeGateAttempt(bun
 GSK-006: gate-skeleton — Gate CLI accepts --attempt N; buildGateResult injects fatigue_warning + step_back diagnostic signals when consecutive failures exceed threshold
 GSK-007: gate-skeleton — Lifecycle gate handoff preflight verifies prior gate pass and current load_complete witness
 GSK-008: gate-skeleton — Engine-derived gate attempt delta and pass-side fatigue diagnostics
+GSK-009: gate-skeleton — Gate CLI exit-code behavior and high-friction continuation advice align with the framework convention
 
 # wff-state-chain
 TRT-001: transition-table — File naming convention transitions.chain.json
@@ -528,6 +550,7 @@ TRT-012: transition-table — Phase MD test helper (md-phase-checks.mjs) validat
 CDP-001: content-delivery-phase-content — phase-hitl2.md 9-section body (decision brief, structured user decision, stop=yes, anti-cheating)
 CDP-002: content-delivery-phase-content — phase-readiness.md 9-section body (deterministic precheck, all-prior-gate audit from manifest topology, anti-cheating)
 CDP-003: content-delivery-phase-content — phase-final.md 9-section body (terminal node gate=none, final report from verified bundle state, anti-cheating)
+CDP-004: content-delivery-phase-content — Final delivery is terminal; post-final feedback re-enters through HITL2 repair/rerun, not a Final-owned loop
 
 # wff-content-delivery — gate implementation
 CDG-001: content-delivery-gate-implementation — gate-hitl2-recorded rule set (decision brief, yaml_parse, field_value enum, trace_event_present, status_value)
@@ -577,6 +600,7 @@ RWG-013: research-wave-gate-implementation — Wave2 gate removes reference/00_s
 # workflow-directory-contract (delta)
 WDC-009: workflow-directory-contract — Bundle canonical structure includes artifacts/wave0/ and flat reference/
 WDC-010: workflow-directory-contract — Manifest includes rerun phase entry (phases array gets rerun→phases/phase-rerun.md gate rerun-ready; manifest is inventory not routing table)
+WDC-011: workflow-directory-contract — command_playbook contains Agent-facing command instructions, not operator co-runner instructions
 SDC-001: subagent-directory-contract — _subagents/ as the sole inter-agent communication directory; experiments and production SHALL use the same convention
 SDC-002: subagent-directory-contract — Prohibition of external inter-agent communication paths (_fixtures/, /tmp, ad-hoc names); all sub-agent artifacts SHALL reside under _subagents/wave_NN/slot_MM/
 SDC-003: "subagent-directory-contract — Relay staging places logical wave N slots in _subagents/wave_{NN}/ (0-based, matching canonical convention + gate wave field); stageSubagentSlots accepts optional explicitWaveIndex, drive-relay-slot passes --wave"
@@ -585,6 +609,7 @@ SDC-003: "subagent-directory-contract — Relay staging places logical wave N sl
 IOC-001: cli-inspect-output-conventions — inspect-wave0-output.mjs (flat dir, naming, metadata, sections, _INDEX.md, README.md, thin YAML)
 IOC-002: cli-inspect-output-conventions — inspect-wave1-output.mjs ({topic.slug}*.md per topic, metadata/sections, evidence-summary, question-list, _INDEX.md wave1 entries)
 IOC-003: cli-inspect-output-conventions — inspect-wave2-output.mjs (no 00_shared/, 00-cross-* format, artifacts/wave2/ triple, no backfill tokens)
+IOC-004: cli-inspect-output-conventions — Inspect CLIs are documented non-gate structured-output commands with invocation-error code 2
 
 # bundle-start-from-here (delta)
 BUS-002: bundle-start-from-here — START_FROM_HERE.md documents flat reference/ and artifacts/wave0/
