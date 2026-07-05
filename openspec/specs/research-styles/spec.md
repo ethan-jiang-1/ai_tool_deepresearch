@@ -75,43 +75,20 @@ The `count_floor` rule type in gate definition JSONs SHALL support an optional `
 
 ### Requirement: Phase MD references style-specific targets and uses unified Queue re-fill loop
 
-The existing wave0/wave1/wave2 re-fill loop SHALL remain the execution model: fill Q, drain Q, check, identify gaps, re-fill Q, drain, re-check, and repeat until the relevant checkpoint passes or a legal degradation path is recorded.
+Research-style phase wording SHALL preserve the existing Queue re-fill loop while using canonical phase-boundary terminology for silent degradation.
 
-For wave phases, active queue, thin queue, count-floor gap, placeholder-only output, exhausted search documentation, and Quality Self-Check gap are all work signals. They SHALL drive enqueue/claim/complete, supplementary task creation, strategy change, self-check, or gate rerun. They SHALL NOT be interpreted as permission to surface a stage summary, "nothing left" message, or "done so far" progress report.
+Silent degradation, `silent_gap`, and no-progress refill handling SHALL NOT be described as authorizing a phase transition in the broad historical sense. The wording SHALL instead distinguish the two forbidden boundary effects:
 
-The wave0/wave1/wave2 Stop Behavior wording MAY remain node-specific, because each wave optimizes a different quality target. The common invariant is that quality work continues inside the node until the gate/checkpoint passes or a legal silent holding path is reached.
+- silent degradation SHALL NOT authorize phase handoff or loading the next phase control surface; only gate CLI `check.next` consumed through the accepted handoff path can do that; and
+- silent degradation SHALL NOT authorize source-gate status synchronization in `rb_status.json`; status synchronization remains governed by `advance-status` and its accepted preconditions.
 
-For `stop: "no"` wave phases, no-progress after repeated re-fill attempts SHALL NOT escalate to a user-facing stop, write `rb_status.json` state `blocked`, or ask the user for a decision. Instead, the phase body SHALL instruct the Phase Agent to take a silent degradation path: document the failed search/refill attempts, record `silent_degradation` or `silent_gap` through an accepted trace/log surface, change strategy where possible, and continue only within the boundary accepted by the current gate/checkpoint.
+The existing behavior remains unchanged: if the gate/checkpoint does not accept the degraded artifact state, the Phase Agent remains in the current phase, repairs or changes strategy, records accepted silent diagnostics where allowed, and does not ask the user for a decision.
 
-Silent degradation SHALL NOT authorize phase transition. If the gate/checkpoint does not accept the degraded artifact state, the Phase Agent SHALL remain in the current phase and continue repair or change strategy. If the gate/checkpoint is structurally unpassable after legal strategies are exhausted, the Phase Agent SHALL record `silent_unpassable` through an accepted trace/log surface and enter the silent holding behavior defined by `silent-wave-execution`. The Phase Agent SHALL NOT load the next phase without gate CLI `check.next`.
+#### Scenario: Silent degradation is not boundary authority
 
-#### Scenario: wave0 no-progress re-fill degrades silently
-
-- **WHEN** wave0 count-floor re-fill has made no progress after the retry limit
-- **THEN** the Phase Agent SHALL record `silent_degradation` or `silent_gap` through an accepted trace/log surface
-- **AND** the Phase Agent SHALL NOT ask the user, report and stop, or write `rb_status.json` state `blocked`
-- **AND** the Phase Agent SHALL NOT load wave1 unless the wave0 gate returns `check.next`
-
-#### Scenario: wave1 no-progress re-fill degrades silently
-
-- **WHEN** wave1 count-floor re-fill has made no progress after the retry limit
-- **THEN** the Phase Agent SHALL record the exhausted search angles and degradation decision through an accepted trace/log surface
-- **AND** the Phase Agent SHALL NOT ask the user for a decision
-- **AND** the Phase Agent SHALL NOT load wave2 unless the wave1 gate returns `check.next`
-
-#### Scenario: wave2 quality re-fill degrades silently
-
-- **WHEN** wave2 Quality Self-Check still identifies a gap after repeated re-fill attempts
-- **THEN** the Phase Agent SHALL record `silent_degradation` or `silent_gap` with gap impact
-- **AND** the Phase Agent SHALL NOT surface to the user mid-phase
-- **AND** the Phase Agent SHALL NOT treat degradation as a gate pass
-
-#### Scenario: wave phase active work does not become idle reporting
-
-- **WHEN** a wave phase has active queue items, thin queue state, count-floor gap, or Quality Self-Check gap
-- **THEN** the Phase Agent SHALL continue the queue/refill/self-check loop using node-specific instructions
-- **AND** the Phase Agent SHALL NOT produce a stage progress report or idle summary
-- **AND** the Phase Agent SHALL NOT advance without the current gate/checkpoint returning `check.next`
+- **WHEN** wave0/wave1/wave2 refill work records `silent_degradation` or `silent_gap`
+- **THEN** the docs SHALL state that the Agent remains in the current phase unless the current gate emits `check.next`
+- **AND** the docs SHALL NOT describe degradation as authorizing phase handoff, next-node loading, or `advance-status` synchronization
 
 ### Requirement: Supplementary tasks SHALL NOT produce placeholder references
 

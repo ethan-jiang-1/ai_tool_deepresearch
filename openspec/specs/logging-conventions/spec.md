@@ -1,6 +1,6 @@
 # Logging Conventions
 
-> req: LOC-001, LOC-002, LOC-003, LOC-004, LOC-005, LOC-006, LOC-007, LOC-008, LOC-009, LOC-010
+> req: LOC-001, LOC-002, LOC-003, LOC-004, LOC-005, LOC-006, LOC-007, LOC-008, LOC-009, LOC-010, LOC-011
 
 ## Purpose
 
@@ -252,3 +252,23 @@ Sub-agent execution and Agent-side repair loops SHALL be included in the long-ru
 - **AND** escalation or degradation SHALL log `repair_escalated` or `repair_degraded` with reason
 - **AND** terminal gate failures that do not enter a repair loop SHALL still log `repair_escalated` or `repair_degraded` before stopping when a bundle path is available
 - **AND** the affected phase set SHALL include every phase node with autonomous repair/retry behavior, at minimum instantiation, setup, hitl1, hitl2 repair branch, seed-topics, wave0, wave1, wave2, readiness, and terminal/degraded rerun handling
+
+### Requirement: log-event always-zero behavior is a documented exit-code exception
+
+`log-event.mjs` SHALL remain a documented diagnostic/logging exception to the framework CLI exit-code convention.
+
+The command MAY exit `0` even when the requested diagnostic log or trace write cannot be completed, because logging failure must not block Agent flow unless a separate accepted contract makes a specific trace write load-bearing. This always-zero behavior SHALL be visible in the top-level command contract and CLI implementer docs so Agent callers do not infer that every non-gate utility reports failures through the same numeric exit behavior.
+
+This exception SHALL NOT authorize hand-writing trace, faking load-bearing gate evidence, or ignoring accepted trace requirements. Load-bearing gate attempts, handoff witnesses, and status synchronization remain governed by their own accepted specs.
+
+#### Scenario: Logging failure does not block Agent flow
+
+- **WHEN** `log-event.mjs` cannot append a diagnostic log line
+- **THEN** it MAY still exit `0`
+- **AND** the failure SHALL NOT be treated as proof that a load-bearing trace event was written
+
+#### Scenario: Exception inventory names log-event
+
+- **WHEN** the Agent reads the framework CLI exit-code convention
+- **THEN** it SHALL see `log-event.mjs` listed as an always-zero diagnostic exception
+- **AND** the docs SHALL distinguish that exception from gate, handoff, and status synchronization evidence

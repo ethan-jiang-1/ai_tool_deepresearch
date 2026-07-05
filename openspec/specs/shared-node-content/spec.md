@@ -160,15 +160,18 @@ Repair guidance SHALL NOT 变成某个具体 gate 的隐藏脚本。
 
 ### Requirement: Shared node authority boundary enforcement
 
-所有 shared node 的 body SHALL 包含 Authority Boundary section，声明：
-- 该 node 的 authority 类型及其含义
-- 冲突时的 Source of Record
-- 该 node 不能替代哪些 deterministic checks
+Shared node authority-boundary wording SHALL use canonical phase-boundary terminology when prohibiting hidden phase movement.
 
-Shared node SHALL NOT 包含 `phase`、`gate`、`next`、`stop` frontmatter 字段。Shared node body SHALL NOT 包含 hidden phase 指令，如"运行以下命令后继续到下一阶段"。
+Shared node bodies SHALL continue to avoid `phase`, `gate`, `next`, and `stop` frontmatter fields and SHALL NOT contain hidden phase instructions such as "run this command then continue to the next phase." When describing that prohibition, the wording SHALL distinguish:
+
+- shared nodes SHALL NOT instruct phase handoff, next-node loading, or consuming a gate `check.next`;
+- shared nodes SHALL NOT instruct source-gate status synchronization or `advance-status`; and
+- shared nodes SHALL NOT claim target-phase work completion.
+
+Shared nodes remain Agent-readable guidance or generated summaries, not lifecycle phase nodes and not deterministic boundary authorities.
 
 #### Scenario: Shared node does not become hidden phase
 
-- **WHEN** Agent 加载任意 shared node
-- **THEN** body SHALL NOT 指示 phase transition
-- **AND** frontmatter SHALL 保持 `node_type: shared`
+- **WHEN** the Agent loads any shared node
+- **THEN** the body SHALL NOT instruct phase handoff, status synchronization, or target work completion
+- **AND** frontmatter SHALL remain `node_type: shared`

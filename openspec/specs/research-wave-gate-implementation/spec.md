@@ -189,36 +189,20 @@ Topic 集合的 source of truth SHALL 为 `rb_plan.md` frontmatter 的 `topic_re
 
 ### Requirement: Wave2 phase-internal feedback checks are distinct from phase boundary gate
 
-Wave2 SHALL have phase-internal JS feedback checks that are distinct in timing, authority, and purpose from the `wave2-complete` phase boundary gate.
+Wave2 phase-internal feedback wording SHALL preserve the distinction between advisory in-phase checks and the phase-boundary gate while using canonical phase-boundary terminology.
 
-| Surface | Timing | Authority |
-|---|---|---|
-| Phase-internal feedback check | During Wave2, at semantic boundaries（after ledger/index creation, finding triage, before sub-agent spawn, after receipt ingest, after synthesis projection, after backfill projection） | Advisory checkpoint: returns `{ check, inspect, advice }` for Phase Agent repair |
-| `wave2-complete` gate | End of Wave2, before chain transition to HITL2 | Phase boundary: `pass/fail` controls whether workflow can advance |
+Phase-internal feedback checks SHALL continue to return `{ check, inspect, advice }` for Phase Agent repair, SHALL NOT block phase advancement by themselves, and SHALL NOT automatically drive workflow, spawn sub-agents, mutate queue state, load another phase, or synchronize `rb_status.json`.
 
-Phase-internal feedback SHALL:
-- Be invoked by the Phase Agent calling the checker CLI
-- Return `{ check, inspect, advice }` for the Phase Agent to read and act on
-- Use L0 checks（file existence, YAML parse, fixed section presence）for immediate structure feedback
-- Use L1 checks（finding field completeness, decision/receipt consistency, handoff coverage）for lifecycle consistency feedback
-- NOT block phase advancement（only L2 gate has that authority）
-- NOT automatically drive workflow, spawn sub-agents, or mutate queue state
+The `wave2-complete` gate remains the phase-boundary gate. Its pass/fail result controls whether the Agent may proceed to the accepted handoff path: a pass may emit `check.next`, after which the Phase Agent must consume that target through `enter-phase` or another accepted loader/check path before source-gate status synchronization. A failing gate blocks phase handoff and status synchronization until repaired and rerun.
 
-The same check rule that serves as phase-internal advice MAY later be promoted to gate rule, but this promotion requires an explicit OpenSpec/spec change.
+Existing wording such as "Gate check controls phase transition" SHALL be revised to distinguish gate pass, phase handoff, and status synchronization rather than using `phase transition` as a broad synonym for all boundary movement.
 
-#### Scenario: Phase-internal feedback returns advice, not pass/fail
-
-- **WHEN** Phase Agent runs phase-internal checker after ledger/index creation
-- **THEN** checker SHALL return structured `{ check, inspect, advice }` output
-- **AND** Phase Agent SHALL read the output and decide repair actions
-- **AND** phase-internal feedback SHALL NOT block the synthesis task from continuing
-
-#### Scenario: Gate check controls phase transition
+#### Scenario: Gate check controls boundary authorization, not hidden movement
 
 - **WHEN** Phase Agent runs `check-gate-wave2-complete.mjs` at phase end
-- **THEN** gate SHALL return `{ passed, say, inspect, advice }` with routing to `hitl2` or repair
-- **AND** `passed: false` SHALL block chain advancement
-- **AND** Phase Agent SHALL repair and rerun gate until pass
+- **THEN** a passing gate MAY emit `check.next` for the accepted handoff path
+- **AND** `passed: false` SHALL block phase handoff and source-gate status synchronization
+- **AND** docs SHALL NOT describe the gate as directly loading the next phase or completing HITL2 work
 
 ### Requirement: Wave gate CLIs follow established double trace convention
 
