@@ -57,4 +57,4 @@ Terminology note：本 change 保留既有 `stop: no` frontmatter 字段，不�
   - `experiments_playbook/`
 - No new npm dependencies.
 - Engine remains passive: it checks trace/state and refuses invalid certification; it does not select routes, execute research work, or intercept user-facing chat.
-- Accepted success claim: silent, launderable mid-pipeline truncation becomes loud, diagnosable state failure with a concrete `enter-phase` remedy across covered deterministic lifecycle handoffs. 同一轮 chat halt 仍是 Layer-1 residual，只能在恢复或下一次 Engine touch 时暴露。
+- Accepted success claim: silent, launderable mid-pipeline truncation becomes loud, diagnosable state failure with a concrete `enter-phase` remedy across covered deterministic lifecycle handoffs. 同一轮 chat halt 仍是 Layer-1 residual，只能在恢复或下一次 Engine touch 时暴露。`enter-phase` witness only proves target node entry; it does not prove target-phase work completion, which remains the job of the target phase's normal gate/content rules.

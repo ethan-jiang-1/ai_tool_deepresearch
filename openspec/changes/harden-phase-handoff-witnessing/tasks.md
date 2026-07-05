@@ -6,7 +6,8 @@ These tasks are not a generic CLI hardening pass. They implement the BUG-020 les
 - **CLI / Engine is checkpoint and loader receipt only.** `enter-phase` is not a lifecycle walker and does not execute next-phase work. It renders the next Markdown control surface and writes route-bound loader trace.
 - **`stop: no` stays as the compatibility field.** The behavior name for non-terminal lifecycle phases is **autonomous continuation**: do not surface, do not wait, do not self-declare completion, continue through gate and `check.next` handoff.
 - **Handoff truth is an ordered trace pair.** The accepted witness is latest passed deterministic `gate_attempt(next=<target>)` plus later `load_complete(entry=<target>)`. Stale historical matches must not certify current state.
-- **Route-bound witness metadata is required.** The `load_complete` written by `enter-phase` must name the source gate/source node/target node that authorized it; ordering alone is not enough for auditability.
+- **Route-bound witness metadata is required.** The `load_complete` written by `enter-phase` must name the source gate/source node/target node and `handoff_source_attempt_index` that authorized it; ordering alone is not enough for auditability.
+- **Entry witness is not work completion.** A route-bound `load_complete` proves that the target Markdown control surface was entered; the target phase's normal artifacts, completion trace, and gate rules still prove whether target-phase work happened.
 - **Superseded passes do not authorize handoff.** If a newer attempt for the same source gate/source node fails or points elsewhere, an older pass cannot be used for `enter-phase` or `advance-status`.
 - **`advance-status --to` means source gate sync.** After wave0 passes, use `--to wave0_complete`, never `--to wave1_complete` until the wave1 gate itself passes.
 - **Do not invent a new routing authority.** `check.next` remains the route. Do not add `dangling_transition`, `handoff_pending`, JS walkers, chat wrappers, schema rename, or new dependencies.
@@ -77,6 +78,7 @@ These tasks are not a generic CLI hardening pass. They implement the BUG-020 les
 - [ ] 6.7 实现 AGT-010: 如添加 heavy canary，则支持 `NOT RUN` 并明确不得作为 real Agent proof；standard E2E 仍为必跑机制证明，也不得声称已证明 chat-channel 行为。
 - [ ] 6.8 实现 AGT-010: 扩展 standard E2E 至至少覆盖 wave1→wave2、wave2→HITL2、HITL2→readiness、HITL2→rerun、readiness→final，以及 rerun→seed-topics 多 predecessor case；所有 verdict 仍基于 trace/CLI exit/bundle files，不以 console prose 作证。
 - [ ] 6.9 实现 AGT-010: HITL2→rerun E2E 必须通过真实 HITL2 gate CLI 产生 `gate_attempt.next: phases/phase-rerun.md`；不得通过手写 trace 或 fixture event 伪造 rerun branch。
+- [ ] 6.10 实现 AGT-010: E2E 明确 entry witness 不等于 target work completion；若 `enter-phase` 已写入 target `load_complete` 但 target artifacts/completion trace 缺失，handoff preflight 可通过，但 target gate normal content/status rules 仍必须 fail，且 playbook 不得声称已证明 chat-channel halt prevention。
 
 ## 7. Version And Documentation
 
@@ -106,6 +108,9 @@ Before marking this change ready for archive, verify these cross-cutting points 
 - [ ] HITL2 proceed and HITL2 rerun both use the selected deterministic trace target; helper code never chooses the HITL2 branch from profile state or hardcoded default outcome preference.
 - [ ] HITL2 gate output itself emits the selected deterministic route for proceed/rerun; tests and E2E do not satisfy HITL2 rerun by hand-writing `gate_attempt` trace events.
 - [ ] Instantiation/HITL1 bootstrap status exceptions are explicitly documented and allowlisted; no other lifecycle gate is omitted from handoff/status-window enforcement silently.
+- [ ] Bootstrap/final coverage is explicit: instantiation, HITL1, and setup inbound entries are the only bootstrap inbound exceptions; Final has no gate preflight but readiness→final status sync still requires a witnessed `enter-phase` load.
+- [ ] Accepted `cli-phase-transition` semantics do not conflict: CPT-001's status advancement contract, CPT-004's trace-backed preconditions, and HITL2 multi-edge routing all use the same actual `gate_attempt.next` target for covered handoffs.
+- [ ] No implementation or archive note treats `enter-phase`/`load_complete` as proof that target-phase work completed; target gate rules remain the authority for target work completion.
 - [ ] Gate/preflight/status advice names the concrete remedy command with the bundle path and target node/source gate, instead of generic prose.
 - [ ] Autonomous continuation language appears where the Agent will read it, while `stop: no` remains only the compatibility field and not the primary behavior explanation.
 - [ ] Standard E2E proves the mechanism with real framework CLIs and disposable bundle state; optional heavy canary, if not run, is recorded as `NOT RUN` and not claimed as Agent-behavior proof.

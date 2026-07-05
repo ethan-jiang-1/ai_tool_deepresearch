@@ -84,7 +84,7 @@ Before writing `rb_status.json`, `advance-status` MUST:
 - Normalize `<gate_enum>` to the source gate key and confirm that the latest passed deterministic `gate_attempt` with non-null `next` is for that source gate.
 - Resolve the source gate to its source node through `manifest.json`, then confirm the passed gate attempt's `next` is one of the legal deterministic outgoing targets for that source node in `transitions.chain.json`.
 - Use the actual passed gate attempt's `next` as the target node; do not choose `passed` over `rerun` or otherwise infer a target when the source node has multiple deterministic outgoing edges.
-- For non-initial lifecycle target nodes, confirm a later `load_complete(entry=<targetNode>)` exists.
+- For non-initial lifecycle target nodes, confirm a later route-bound `load_complete(entry=<targetNode>)` exists and references the same authorizing source attempt by `handoff_source_attempt_index`.
 - 对缺少 source gate pass、gate `next` mismatch、或 target entry witness 的情况 fail closed，并输出 JSON error + advice，指向正确的 `enter-phase --bundle <path> --node <targetNode>` 和 source-gate `advance-status --to <source_gate_enum>` command.
 
 成功输出保持现有 shape：
@@ -109,11 +109,13 @@ This decision changes the active status interpretation for covered downstream ga
 
 - 当前 node 在 manifest lifecycle 中。
 - 对非初始 lifecycle node，存在 incoming deterministic predecessor gate 的 `gate_attempt(passed=true)`，且该 event 的 `next` 等于 `currentNodeRef`。
-- 当前 node 存在发生在该 predecessor pass 之后的 `load_complete(entry=currentNodeRef)` trace witness。
+- 当前 node 存在发生在该 predecessor pass 之后的 route-bound `load_complete(entry=currentNodeRef)` trace witness，且 `handoff_source_attempt_index` 指向同一个 predecessor pass。
 
 Preflight failure 不改变 router。Gate 正常返回 `passed:false`、exit 1，并在 `inspect` / `advice` 中说明缺失的 prior gate、status-window mismatch 或 `load_complete`。
 
-**适用范围：** covered deterministic lifecycle gates from setup onward. Instantiation 是入口例外，因为 bundle 尚未存在时无法提前写 run trace；HITL1/bootstrap status shape is also an explicit compatibility exception unless separately migrated. 若一个 node 有多个 deterministic incoming edges（例如 rerun 回到 seed-topics），helper 使用 `transitions.chain.json` 推导所有合法 predecessor，并接受最新一对合法的 `gate_attempt.next -> load_complete.entry` witness；helper 不自行选择 route。
+**适用范围：** covered deterministic lifecycle handoffs whose source gate is setup onward. This change covers these target entries: `phases/phase-seed-topics.md` (from setup or rerun), `phases/phase-wave0.md`, `phases/phase-wave1.md`, `phases/phase-wave2.md`, `phases/phase-hitl2.md`, `phases/phase-readiness.md`, `phases/phase-rerun.md`, and `phases/phase-final.md`. Final has no gate preflight, but readiness→final still requires `enter-phase` and route-bound final-entry witness before `advance-status --to readiness_passed` can write `next_gate: "none"`.
+
+Bootstrap inbound entries are explicit compatibility exceptions for this change: `phases/phase-instantiation.md` (runtime entry), `phases/phase-hitl1.md` (instantiation→HITL1), and `phases/phase-setup.md` (HITL1→setup). The validator allowlist SHALL name these exact exemptions; no other lifecycle node may be omitted silently. 若一个 node 有多个 deterministic incoming edges（例如 setup 或 rerun 回到 seed-topics），helper 使用 `transitions.chain.json` 推导所有合法 predecessor，并接受最新一对合法的 `gate_attempt.next -> route-bound load_complete.entry` witness；helper 不自行选择 route。
 
 HITL2 is branch-sensitive. `proceed_to_readiness` and `rerun` are deterministic only after the runtime has selected that branch and produced a concrete target in the gate/routing trace. The helper SHALL validate the selected `gate_attempt.next` target; it SHALL NOT read `rb_profile.yaml` and decide between readiness or rerun on its own. `request_view_revision`, `repair`, and `stop_blocked` remain outside this deterministic handoff witness unless a future change defines fixed targets for them.
 
@@ -168,6 +170,8 @@ The accepted `workflow-node-contract` main spec still contains a legacy 9-phase 
 ## Risks / Trade-offs
 
 - **Risk: 同一轮 chat halt 仍可能发生。** → Mitigation: proposal/spec 明确 residual；目标是让状态不能被洗白，并在恢复/下一 Engine touch 暴露。
+- **Risk: `enter-phase` 后仍提前 halt。** → Mitigation: 本 change 不声称 `load_complete` 证明 next phase work 已完成；它只证明 handoff 被消费。若 Agent 在 `enter-phase` 之后、next phase artifacts/rules 完成之前提前 chat halt，后续 target gate 仍应通过正常 content/status rules fail closed，而不是作为 handoff witness failure 被混淆。
+- **Risk: trace authority write failure.** → Mitigation: Apply 阶段必须审计 covered success paths：如果 covered gate pass、`enter-phase` success、或 source-gate status sync 需要写入 authoritative `gate_attempt` / route-bound `load_complete` / `phase_transition`，写入失败不得被包装成成功。已有 legacy helper 若吞掉 trace write failure，covered handoff path 需要 fail closed 或输出明确 diagnostic，让 Agent rerun the source checkpoint instead of trusting a non-durable pass.
 - **Risk: `enter-phase` 输出过大。** → Mitigation: 只输出 dependency closure plan 中的 Markdown，不输出 runtime internals；后续可加 projection，但本 change 不引入额外机制。
 - **Risk: Gate preflight 误伤 HITL/rerun 路径。** → Mitigation: helper 以 manifest + transitions.chain.json 推导 incoming deterministic edges；instantiation 入口例外；HITL2 indeterminate branches 不由 preflight 自行选择目标。
 - **Risk: Delta diagnostics 变成 pass/fail authority。** → Mitigation: specs 明确 diagnostic-only；gate truth 仍来自 rules。

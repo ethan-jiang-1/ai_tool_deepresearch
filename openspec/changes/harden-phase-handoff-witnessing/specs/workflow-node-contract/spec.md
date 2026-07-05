@@ -1,3 +1,32 @@
+## MODIFIED Requirements
+
+> req: WNC-003
+
+### Requirement: Phase manifest structure
+
+`DPT_FRAMEWORK/workflows/manifest.json` SHALL define the current lifecycle inventory/index.
+
+- `phases` array SHALL contain 11 entries in this order: `instantiation -> hitl1 -> setup -> seed-topics -> wave0 -> wave1 -> wave2 -> hitl2 -> readiness -> rerun -> final`.
+- Each phase entry SHALL contain `key`, `node`, and `gate`.
+- `node` SHALL be the canonical fileRef used by transition lookup.
+- `final` phase SHALL have `gate: null`.
+- `next` is not part of the manifest contract; phase order is an Agent-readable inventory/index only.
+- Runtime next-node lookup SHALL come from gate CLI `check.next`, sourced from detailed transition router results and `transitions.chain.json`, not from manifest order or phase frontmatter.
+- `shared` array SHALL list shared node fileRefs.
+
+#### Scenario: Manifest includes current lifecycle phases
+
+- **WHEN** workflow package validation reads `DPT_FRAMEWORK/workflows/manifest.json`
+- **THEN** `manifest.phases[]` SHALL include seed-topics and rerun as first-class lifecycle phases
+- **AND** the ordered lifecycle inventory SHALL be instantiation, hitl1, setup, seed-topics, wave0, wave1, wave2, hitl2, readiness, rerun, final
+- **AND** validation SHALL NOT enforce the retired 9-phase inventory.
+
+#### Scenario: Transition table remains runtime routing authority
+
+- **WHEN** a gate result contains `check.next`
+- **THEN** that fileRef SHALL be sourced from the detailed transition router and `transitions.chain.json`
+- **AND** manifest order SHALL NOT be used to infer runtime next-node transitions.
+
 ## ADDED Requirements
 
 > req: WNC-010

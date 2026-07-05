@@ -6,16 +6,20 @@
 
 Lifecycle gate CLIs SHALL run a shared handoff preflight before evaluating their gate-specific content rules.
 
-For every manifest lifecycle phase that has an incoming deterministic transition, the preflight SHALL verify:
+For every covered non-bootstrap manifest lifecycle phase that has an incoming deterministic transition, the preflight SHALL verify:
 
 - the latest passed deterministic `gate_attempt` trace event with a non-null `next` has `next` equal to the current phase node fileRef and names the legal predecessor gate/currentNodeRef; and
-- the current phase node has a later route-bound `load_complete(entry=<current phase node fileRef>)` trace event proving the Phase Agent consumed that prior gate's `check.next` through `enter-phase` or another accepted loader path that enforces the same predecessor-gate binding.
+- the current phase node has a later route-bound `load_complete(entry=<current phase node fileRef>)` trace event whose `handoff_source_attempt_index` points to the same predecessor `gate_attempt`, proving the Phase Agent consumed that prior gate's `check.next` through `enter-phase` or another accepted loader path that enforces the same predecessor-gate binding.
 
-The preflight SHALL derive lifecycle membership and deterministic incoming edges from `manifest.json` and `transitions.chain.json`; it SHALL NOT infer lifecycle membership from file names alone. If a node has multiple deterministic incoming edges, the preflight SHALL accept the latest valid ordered pair for any legal predecessor edge. The instantiation entry phase is exempt from the prior-handoff preflight because the runtime bundle may not exist before instantiation. The instantiation/HITL1 bootstrap status shape remains a compatibility exception unless separately migrated, but deterministic handoffs from setup onward SHALL use the preflight and status-window contract.
+The preflight SHALL derive lifecycle membership and deterministic incoming edges from `manifest.json` and `transitions.chain.json`; it SHALL NOT infer lifecycle membership from file names alone. If a node has multiple deterministic incoming edges, the preflight SHALL accept the latest valid ordered pair for any legal predecessor edge.
+
+For this change, covered non-bootstrap gate preflight targets are `phases/phase-seed-topics.md`, `phases/phase-wave0.md`, `phases/phase-wave1.md`, `phases/phase-wave2.md`, `phases/phase-hitl2.md`, `phases/phase-readiness.md`, and `phases/phase-rerun.md`. `phases/phase-final.md` has no gate preflight because Final has `gate: null`, but readiness→final entry still SHALL be witnessed before `advance-status --to readiness_passed` writes terminal status. Bootstrap inbound targets `phases/phase-instantiation.md`, `phases/phase-hitl1.md`, and `phases/phase-setup.md` are compatibility exceptions unless separately migrated. The validator allowlist SHALL name these exact bootstrap/final exceptions; no other lifecycle node may be omitted silently.
 
 If the trace contains a newer `gate_attempt` for the same predecessor gate/currentNodeRef after an otherwise valid passed handoff, and that newer attempt failed or passed with a different `next`, the older passed handoff SHALL be treated as superseded and SHALL NOT satisfy preflight.
 
 For branch-sensitive deterministic routes such as HITL2 proceed versus HITL2 rerun, the preflight SHALL validate the concrete target already emitted in `gate_attempt.next`. It SHALL NOT read profile state to choose a branch and SHALL NOT prefer a default `passed` edge when the trace authorizes a different legal deterministic target.
+
+The HITL2 gate CLI SHALL emit the selected deterministic routing outcome for fixed-target HITL2 decisions. When `human_decision_checkpoints.hitl2.user_decision` is `proceed_to_readiness`, the gate's successful routing outcome SHALL be `passed`, yielding `check.next: "phases/phase-readiness.md"`. When the decision is `rerun`, the gate's successful routing outcome SHALL be `rerun`, yielding `check.next: "phases/phase-rerun.md"`. Non-deterministic HITL2 decisions (`request_view_revision`, `repair`, `stop_blocked`) SHALL NOT be defaulted to the readiness handoff.
 
 For deterministic lifecycle gates covered by this change, gate status validation SHALL be derived from the same manifest/chain predecessor set rather than hardcoded to the gate's own enum as `current_gate` before the gate has passed. Before a covered current node's gate evaluates content rules:
 
@@ -45,6 +49,13 @@ If preflight fails, the gate CLI SHALL return normal gate failure output (`passe
 - **WHEN** `check-gate-wave1-complete.mjs` is called for `phases/phase-wave1.md`
 - **AND** trace contains `load_complete(entry="phases/phase-wave1.md")` before the matching `gate_attempt(passed=true, gate="wave0-complete", next="phases/phase-wave1.md")`
 - **THEN** the preflight SHALL NOT treat that stale load as a valid handoff witness
+- **AND** the gate SHALL return `passed: false` with advice to rerun `enter-phase`
+
+#### Scenario: Gate rejects unbound load complete
+
+- **WHEN** `check-gate-wave1-complete.mjs` is called for `phases/phase-wave1.md`
+- **AND** trace contains a later `load_complete(entry="phases/phase-wave1.md")` whose `handoff_source_attempt_index` is missing or points to a different `gate_attempt`
+- **THEN** the preflight SHALL NOT treat that load as a valid handoff witness
 - **AND** the gate SHALL return `passed: false` with advice to rerun `enter-phase`
 
 #### Scenario: Gate rejects superseded predecessor pass
@@ -83,6 +94,22 @@ If preflight fails, the gate CLI SHALL return normal gate failure output (`passe
 - **AND** a later `load_complete(entry="phases/phase-rerun.md")` exists
 - **THEN** the rerun gate preflight SHALL accept HITL2 as the legal predecessor for `phases/phase-rerun.md`
 - **AND** it SHALL NOT replace the selected rerun target with `phases/phase-readiness.md`
+
+#### Scenario: HITL2 gate emits rerun outcome from recorded decision
+
+- **WHEN** `check-gate-hitl2-recorded.mjs` is called after `human_decision_checkpoints.hitl2.user_decision` is recorded as `rerun`
+- **AND** all HITL2 gate rules pass
+- **THEN** the gate result SHALL have `check.passed: true`
+- **AND** routing SHALL use outcome `rerun`
+- **AND** `check.next` SHALL be `phases/phase-rerun.md`
+- **AND** the resulting `gate_attempt` trace event SHALL contain `next: "phases/phase-rerun.md"`
+
+#### Scenario: HITL2 gate does not default non-deterministic decisions to readiness
+
+- **WHEN** `check-gate-hitl2-recorded.mjs` is called after `human_decision_checkpoints.hitl2.user_decision` is recorded as `request_view_revision`, `repair`, or `stop_blocked`
+- **AND** the decision is otherwise validly recorded
+- **THEN** the gate SHALL NOT emit `check.next: "phases/phase-readiness.md"` solely because HITL2 rules passed
+- **AND** deterministic handoff witnessing SHALL NOT treat that decision as a readiness handoff
 
 #### Scenario: Terminal final entry is witnessed before readiness status sync
 
