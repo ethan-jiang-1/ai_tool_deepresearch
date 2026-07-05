@@ -1,6 +1,6 @@
 {
   "gate": "seed-topics-ready",
-  "description": "Verify seed topics have been materialized from topic_registry to seed_topics/ directory: directory non-empty, each file has non-empty title, slug set is bidirectionally consistent with registry, trace evidence present, status values point to seed-topics\u2192wave0.",
+  "description": "Verify seed topics have been materialized from topic_registry to seed_topics/ directory: directory non-empty, each file has non-empty title, slug set is bidirectionally consistent with registry, and trace evidence is present. Source-gate status-window and handoff witness are enforced by shared gate preflight.",
   "rules": [
     {
       "id": "seed_topics_dir_non_empty",
@@ -24,7 +24,7 @@
         }
       ],
       "comparison": "bidirectional_set_equality",
-      "failure_message": "Slug consistency check failed. The set of slugs in seed_topics/*.md must be exactly equal to the set of slugs in rb_plan.md topic_registry \u2014 no missing, no extra."
+      "failure_message": "Slug consistency check failed. The set of slugs in seed_topics/*.md must be exactly equal to the set of slugs in rb_plan.md topic_registry — no missing, no extra."
     },
     {
       "id": "per_file_title_non_empty",
@@ -49,20 +49,6 @@
       ],
       "comparison": "byte_for_byte",
       "failure_message": "A seed topic file's frontmatter 'slug' does not match its filename stem. They must be byte-for-byte equal."
-    },
-    {
-      "id": "status_current_gate",
-      "check": "status_value",
-      "target": "rb_status.json#/current_gate",
-      "expected": "seed_topics_ready",
-      "failure_message": "rb_status.json current_gate must be 'seed_topics_ready'. Status may have drifted \u2014 restore the correct gate value."
-    },
-    {
-      "id": "status_next_gate",
-      "check": "status_value",
-      "target": "rb_status.json#/next_gate",
-      "expected": "wave0_complete",
-      "failure_message": "rb_status.json next_gate must be 'wave0_complete'. Status may have drifted \u2014 restore the correct value."
     }
   ]
 }

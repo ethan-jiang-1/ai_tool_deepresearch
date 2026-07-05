@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs');
@@ -17,15 +18,23 @@ function runGate(bundlePath) {
   return spawnSync('node', [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-wave2.md'], { encoding: 'utf-8', timeout: 10000 });
 }
 
+function writeWave2Trace(dir, { completion = true } = {}) {
+  const events = witnessedHandoffEvents({
+    sourceGate: 'wave1-complete',
+    phase: 'wave1',
+    sourceNode: 'phases/phase-wave1.md',
+    targetNode: 'phases/phase-wave2.md',
+  });
+  if (completion) events.push({ event: 'wave2_completion', ts: new Date().toISOString() });
+  writeTraceEvents(dir, events);
+}
+
 /** Create a bundle with wave2-ready status and pre-existing wave1 artifacts. */
 function createBundle(name) {
   const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
   const dir = track(r.stdout.trim());
 
-  const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf-8'));
-  status.current_gate = 'wave2_complete';
-  status.next_gate = 'hitl2_recorded';
-  writeFileSync(join(dir, 'rb_status.json'), JSON.stringify(status));
+  setStatusWindow(dir, 'wave1_complete', 'wave2_complete');
 
   // Create reference target files (Wave0 artifacts)
   mkdirSync(join(dir, 'reference', 'topic-a'), { recursive: true });
@@ -244,7 +253,7 @@ describe('check-gate-wave2-complete', () => {
     createMinLedger(dir);
     createMinIndex(dir);
     createMinBackfill(dir);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave2Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
@@ -255,7 +264,7 @@ describe('check-gate-wave2-complete', () => {
     createMinLedger(dir);
     createMinIndex(dir);
     createMinBackfill(dir);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave2Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -268,7 +277,7 @@ describe('check-gate-wave2-complete', () => {
     createMinLedger(dir);
     createMinIndex(dir);
     createMinBackfill(dir);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave2Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -281,7 +290,7 @@ describe('check-gate-wave2-complete', () => {
     createMinLedger(dir);
     createMinIndex(dir);
     createMinBackfill(dir);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave2Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -294,7 +303,7 @@ describe('check-gate-wave2-complete', () => {
     createMinLedger(dir);
     createMinIndex(dir);
     createMinBackfill(dir);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave2Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -307,7 +316,7 @@ describe('check-gate-wave2-complete', () => {
     createMinLedger(dir);
     createMinIndex(dir);
     createMinBackfill(dir);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave2Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected pass with mixed links (1 valid, 1 dead), got: ${JSON.stringify(output.inspect)}`);
@@ -320,7 +329,7 @@ describe('check-gate-wave2-complete', () => {
     createMinLedger(dir);
     createMinIndex(dir);
     createMinBackfill(dir);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave2Trace(dir);
     const statusPath = join(dir, 'rb_status.json');
     const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
     status.next_gate = 'wave1_complete'; // wrong
@@ -338,7 +347,7 @@ describe('check-gate-wave2-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
     createMinIndex(dir);
     createMinBackfill(dir);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave2Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -351,7 +360,7 @@ describe('check-gate-wave2-complete', () => {
     createMinLedger(dir);
     writeFileSync(join(dir, 'artifacts/wave2/finding-index.yaml'), '{ this is not valid YAML: [[[');
     createMinBackfill(dir);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave2Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -364,7 +373,7 @@ describe('check-gate-wave2-complete', () => {
     createMinLedger(dir);
     createMinIndex(dir);
     // Don't call createMinBackfill — leave token unreplaced
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave2Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -382,7 +391,7 @@ W2F-001: Delta-only addition for topic-b.
 `);
     createFullCoverageLedger(dir);
     createFullCoverageIndex(dir);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave2Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -398,7 +407,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
 `);
     createFullCoverageLedger(dir);
     createFullCoverageIndex(dir);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave2_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave2Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected full rerun pass, got inspect: ${JSON.stringify(output.inspect)}`);
@@ -410,7 +419,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
     createMinLedger(dir);
     createMinIndex(dir);
     createMinBackfill(dir);
-    // No trace event file — gate should fail because trace_event_present rule is active
+    writeWave2Trace(dir, { completion: false });
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);

@@ -33,21 +33,62 @@ human_decision_checkpoints:
     recorded_at: "2026-06-20T10:00:00Z"
 `;
 
+function profileWithDecision(decision) {
+  return VALID_PROFILE.replace('user_decision: proceed_to_readiness', `user_decision: ${decision}`);
+}
+
+function writePassingHitl2Inputs(dir, decision = 'proceed_to_readiness') {
+  writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'),
+    '# Final Review Decision Brief\n\n## Key Findings\n\nThe research produced strong evidence across 3 topics.\n\n## Open Questions\n\n1. How to generalize?\n\n## Recommended Actions\n\nProceed to final delivery.\n');
+  writeFileSync(join(dir, 'rb_profile.yaml'), profileWithDecision(decision));
+  writeHitl2HandoffTrace(dir, [{ event: 'hitl2_recorded', ts: new Date().toISOString() }]);
+}
+
+function readTrace(dir) {
+  return readFileSync(join(dir, 'rb_trace.jsonl'), 'utf-8')
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .map(line => JSON.parse(line));
+}
+
 /** Create a bundle with hitl2-ready state. */
 function createBundle(name) {
   const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
   const dir = track(r.stdout.trim());
 
-  // Set status for hitl2
+  // Set source-gate status window for hitl2 entry
   const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf-8'));
-  status.current_gate = 'hitl2_recorded';
-  status.next_gate = 'readiness_passed';
+  status.current_gate = 'wave2_complete';
+  status.next_gate = 'hitl2_recorded';
   writeFileSync(join(dir, 'rb_status.json'), JSON.stringify(status));
 
   // Create hitl2 artifact directory and decision brief
   mkdirSync(join(dir, 'artifacts', 'hitl2'), { recursive: true });
 
   return dir;
+}
+
+function writeHitl2HandoffTrace(dir, extraEvents = []) {
+  const source = {
+    event: 'gate_attempt',
+    gate: 'wave2-complete',
+    phase: 'wave2',
+    passed: true,
+    currentNodeRef: 'phases/phase-wave2.md',
+    next: 'phases/phase-hitl2.md',
+    ts: new Date().toISOString(),
+  };
+  const load = {
+    event: 'load_complete',
+    entry: 'phases/phase-hitl2.md',
+    handoff_source_gate: 'wave2-complete',
+    handoff_source_node: 'phases/phase-wave2.md',
+    handoff_target_node: 'phases/phase-hitl2.md',
+    handoff_source_attempt_index: 0,
+    ts: new Date().toISOString(),
+  };
+  writeFileSync(join(dir, 'rb_trace.jsonl'), [source, load, ...extraEvents].map(e => JSON.stringify(e)).join('\n') + '\n');
 }
 
 describe('check-gate-hitl2-recorded', () => {
@@ -63,10 +104,7 @@ describe('check-gate-hitl2-recorded', () => {
     // Write profile with valid hitl2 decision
     writeFileSync(join(dir, 'rb_profile.yaml'), VALID_PROFILE);
 
-    // Write trace with hitl2_recorded event
-    writeFileSync(join(dir, 'rb_trace.jsonl'),
-      JSON.stringify({ event: 'gate_attempt', gate: 'wave2-complete', passed: true, ts: new Date().toISOString() }) + '\n' +
-      JSON.stringify({ event: 'hitl2_recorded', ts: new Date().toISOString() }) + '\n');
+    writeHitl2HandoffTrace(dir, [{ event: 'hitl2_recorded', ts: new Date().toISOString() }]);
 
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -78,8 +116,7 @@ describe('check-gate-hitl2-recorded', () => {
     const dir = createBundle(unique('nobrief'));
 
     writeFileSync(join(dir, 'rb_profile.yaml'), VALID_PROFILE);
-    writeFileSync(join(dir, 'rb_trace.jsonl'),
-      JSON.stringify({ event: 'hitl2_recorded', ts: new Date().toISOString() }) + '\n');
+    writeHitl2HandoffTrace(dir, [{ event: 'hitl2_recorded', ts: new Date().toISOString() }]);
 
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -93,8 +130,7 @@ describe('check-gate-hitl2-recorded', () => {
 
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '---\n---\n');
     writeFileSync(join(dir, 'rb_profile.yaml'), VALID_PROFILE);
-    writeFileSync(join(dir, 'rb_trace.jsonl'),
-      JSON.stringify({ event: 'hitl2_recorded', ts: new Date().toISOString() }) + '\n');
+    writeHitl2HandoffTrace(dir, [{ event: 'hitl2_recorded', ts: new Date().toISOString() }]);
 
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -109,8 +145,7 @@ describe('check-gate-hitl2-recorded', () => {
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
     const badProfile = VALID_PROFILE.replace('status: recorded\n    user_decision: proceed_to_readiness', 'status: pending_user\n    user_decision: proceed_to_readiness');
     writeFileSync(join(dir, 'rb_profile.yaml'), badProfile);
-    writeFileSync(join(dir, 'rb_trace.jsonl'),
-      JSON.stringify({ event: 'hitl2_recorded', ts: new Date().toISOString() }) + '\n');
+    writeHitl2HandoffTrace(dir, [{ event: 'hitl2_recorded', ts: new Date().toISOString() }]);
 
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -125,8 +160,7 @@ describe('check-gate-hitl2-recorded', () => {
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
     const noDecisionProfile = VALID_PROFILE.replace('user_decision: proceed_to_readiness', 'user_decision: ');
     writeFileSync(join(dir, 'rb_profile.yaml'), noDecisionProfile);
-    writeFileSync(join(dir, 'rb_trace.jsonl'),
-      JSON.stringify({ event: 'hitl2_recorded', ts: new Date().toISOString() }) + '\n');
+    writeHitl2HandoffTrace(dir, [{ event: 'hitl2_recorded', ts: new Date().toISOString() }]);
 
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -141,8 +175,7 @@ describe('check-gate-hitl2-recorded', () => {
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
     const badEnumProfile = VALID_PROFILE.replace('user_decision: proceed_to_readiness', 'user_decision: random_choice');
     writeFileSync(join(dir, 'rb_profile.yaml'), badEnumProfile);
-    writeFileSync(join(dir, 'rb_trace.jsonl'),
-      JSON.stringify({ event: 'hitl2_recorded', ts: new Date().toISOString() }) + '\n');
+    writeHitl2HandoffTrace(dir, [{ event: 'hitl2_recorded', ts: new Date().toISOString() }]);
 
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -156,7 +189,7 @@ describe('check-gate-hitl2-recorded', () => {
 
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
     writeFileSync(join(dir, 'rb_profile.yaml'), VALID_PROFILE);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), '');
+    writeHitl2HandoffTrace(dir);
 
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -168,8 +201,7 @@ describe('check-gate-hitl2-recorded', () => {
 
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
     writeFileSync(join(dir, 'rb_profile.yaml'), '{invalid: [yaml: :}:');
-    writeFileSync(join(dir, 'rb_trace.jsonl'),
-      JSON.stringify({ event: 'hitl2_recorded', ts: new Date().toISOString() }) + '\n');
+    writeHitl2HandoffTrace(dir, [{ event: 'hitl2_recorded', ts: new Date().toISOString() }]);
 
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -183,8 +215,7 @@ describe('check-gate-hitl2-recorded', () => {
 
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
     writeFileSync(join(dir, 'rb_profile.yaml'), VALID_PROFILE);
-    writeFileSync(join(dir, 'rb_trace.jsonl'),
-      JSON.stringify({ event: 'hitl2_recorded', ts: new Date().toISOString() }) + '\n');
+    writeHitl2HandoffTrace(dir, [{ event: 'hitl2_recorded', ts: new Date().toISOString() }]);
 
     // Drift next_gate
     const statusPath = join(dir, 'rb_status.json');
@@ -197,5 +228,45 @@ describe('check-gate-hitl2-recorded', () => {
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('next_gate')),
       `Expected status drift fail: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('10. proceed_to_readiness emits readiness target in check.next and trace', () => {
+    const dir = createBundle(unique('proceed-next'));
+    writePassingHitl2Inputs(dir, 'proceed_to_readiness');
+
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, true);
+    assert.equal(output.check.next, 'phases/phase-readiness.md');
+
+    const attempts = readTrace(dir).filter(e => e.event === 'gate_attempt' && e.gate === 'hitl2-recorded');
+    assert.equal(attempts.at(-1).next, 'phases/phase-readiness.md');
+  });
+
+  it('11. rerun emits rerun target in check.next and trace', () => {
+    const dir = createBundle(unique('rerun-next'));
+    writePassingHitl2Inputs(dir, 'rerun');
+
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, true);
+    assert.equal(output.check.next, 'phases/phase-rerun.md');
+
+    const attempts = readTrace(dir).filter(e => e.event === 'gate_attempt' && e.gate === 'hitl2-recorded');
+    assert.equal(attempts.at(-1).next, 'phases/phase-rerun.md');
+  });
+
+  it('12. non-deterministic decisions do not default to readiness handoff', () => {
+    const dir = createBundle(unique('repair-no-default'));
+    writePassingHitl2Inputs(dir, 'repair');
+
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.notEqual(output.check.next, 'phases/phase-readiness.md');
+
+    const attempts = readTrace(dir).filter(e => e.event === 'gate_attempt' && e.gate === 'hitl2-recorded');
+    if (attempts.length > 0) {
+      assert.notEqual(attempts.at(-1).next, 'phases/phase-readiness.md');
+    }
   });
 });

@@ -168,6 +168,35 @@ describe('Gate CLI integration', () => {
   describe('Output Contract — CLI always returns actionable JSON', () => {
     function fwCopy() { return join(tmpDir, 'DPT_FRAMEWORK'); }
 
+    function writeWave0PreflightState() {
+      writeFileSync(join(tmpDir, 'rb_status.json'), JSON.stringify({
+        current_mode: 'execution',
+        state: 'in_progress',
+        current_gate: 'seed_topics_ready',
+        next_gate: 'wave0_complete',
+      }));
+      writeFileSync(join(tmpDir, 'rb_trace.jsonl'), [
+        JSON.stringify({
+          event: 'gate_attempt',
+          gate: 'seed-topics-ready',
+          phase: 'seed-topics',
+          passed: true,
+          currentNodeRef: 'phases/phase-seed-topics.md',
+          next: 'phases/phase-wave0.md',
+          ts: new Date().toISOString(),
+        }),
+        JSON.stringify({
+          event: 'load_complete',
+          entry: 'phases/phase-wave0.md',
+          handoff_source_gate: 'seed-topics-ready',
+          handoff_source_node: 'phases/phase-seed-topics.md',
+          handoff_target_node: 'phases/phase-wave0.md',
+          handoff_source_attempt_index: 0,
+          ts: new Date().toISOString(),
+        }),
+      ].join('\n') + '\n');
+    }
+
     it('unknown check type makes gate FAIL (not silently pass)', () => {
       // Write a bad definition with only an unknown check type
       const badDefPath = join(fwCopy(), 'schema', 'gate_definitions', 'gate-wave0-complete.definition.json');
@@ -178,6 +207,7 @@ describe('Gate CLI integration', () => {
           { id: 'bad_rule', check: 'nonexistent_check_type_xyz', target: 'dummy', failure_message: 'Should never see this if rule fails' },
         ],
       }));
+      writeWave0PreflightState();
 
       // Run from the temp copy so it reads the modified definition
       const script = join(fwCopy(), 'cli', 'gates', 'check-gate-wave0-complete.mjs');

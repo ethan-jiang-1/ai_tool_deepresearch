@@ -116,21 +116,15 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
    - 若已有值 → `+1`
    - 写入 `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count`
 
-3. **推进 status**（使用 `advance-status` CLI 自动计算 `next_gate`）：
-   ```bash
-   node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to rerun_ready
-   ```
-   （CLI 自动从 chain.json 计算 `next_gate: seed_topics_ready`）
+3. **确认 incoming status window**：Gate 前应保持 HITL2→rerun 的 source-gate window：`current_gate: hitl2_recorded` / `next_gate: rerun_ready`。不得在 rerun gate 通过前运行 `advance-status --to rerun_ready`。
 
 4. **运行 gate CLI**：
 ```bash
 node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle <path> --current-node phases/phase-rerun.md
 ```
 
-5. **Gate pass** → chain 返回 `phases/phase-seed-topics.md` → Agent 加载 seed-topics phase
-6. **Gate fail** → `no_transition`（rerun-ready gate fail 不可修复）。Agent MUST 停止执行并向用户说明原因（上限已到、目录缺失、status 不一致等），建议：
-   - `rerun_count >= 3`：已达 rerun 上限，建议接受当前结果或开新 Deep Research
-   - 其他 gate fail：检查 bundle 完整性并按 gate inspect/advice 修复后重试
+5. **Gate pass** → 进入 §6：通过 `enter-phase --node <check.next>` 消费 `phases/phase-seed-topics.md`，再运行 `advance-status --to rerun_ready`
+6. **Gate fail** → `no_transition`。Agent MUST 读取 inspect/advice，修复可修复的 bundle/profile 问题后 rerun gate；若 `rerun_count >= 3` 或 rationale 缺失等不可修复条件成立，记录 `silent_unpassable` / `repair_degraded`，保持当前 non-blocked/in-progress holding，不从 stop:no rerun phase 中途向用户提问或汇报。
 
 ## 4. Expected Artifacts
 
@@ -139,10 +133,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle <path> --curren
 - **新增 topic（`action: add`）必须在后续 phase（wave0/wave1/wave2）中遵循完整 `_cache/` 写入约定**：每个 source 写入 `websearch.json` + `page.md` + `meta.json`（11 字段），在 slot result 的 `cache_trails[]` 中声明 leaf 路径，确保 gate `cache_coverage` 可溯源。此约定与首次运行的 topic 完全一致。
 - `rb_profile.yaml#/research_style_params` 已更新——`wave0_shared_ref_total` 反映当前 `topic_count`（通过 `apply-research-style.mjs` 重算）
 - `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count` 已递增
-- `rb_status.json` 中 `current_gate: rerun_ready` / `next_gate: seed_topics_ready`（通过 CLI 推进）：
-  ```bash
-  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to rerun_ready
-  ```
+- Gate 前 status window 为 `current_gate: hitl2_recorded` / `next_gate: rerun_ready`。Rerun gate pass 后，§6 的 `advance-status --to rerun_ready` 才会写入 `current_gate: rerun_ready` / `next_gate: seed_topics_ready`。
 - `rb_trace.jsonl` 中有 `gate_attempt` event（由 gate CLI 写入）和 `rerun_ready` event：
   ```bash
   node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --event rerun_ready
@@ -158,7 +149,14 @@ Retry 时传 Agent-reported `--attempt N`（N 从 1 开始，每次 rerun 递增
 
 ## 6. On Gate Pass
 
-读取 `check.next`。Chain 返回 `phases/phase-seed-topics.md`。加载 seed-topics phase——下游 phase 读 `rerun_count > 0` + `## 本轮重跑方向` section，以 delta 模式运行。
+读取 gate CLI JSON output，确认 `check.passed === true`，然后读取 `check.next`（应为 `phases/phase-seed-topics.md`）。先消费 handoff，再同步 source gate status：
+
+```bash
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to rerun_ready
+```
+
+从 `enter-phase` 渲染出的 seed-topics Markdown 继续执行下一 phase；下游 phase 读取 `rerun_count > 0` + `## 本轮重跑方向` section，以 delta 模式运行。
 
 ## 7. On Gate Fail
 
@@ -169,7 +167,7 @@ Rerun-ready gate fail 是结构性 gate failure——不可通过 re-fill loop �
 | `rerun_rationale_present` fail | HITL2 rationale 为空 → 通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: blocks_must_answer`），标记当前 research 缺乏用户方向。保持 non-blocked/in-progress，等待后续 HITL2 补充 rationale |
 | `rerun_count_valid` fail | `rerun_count >= 3`，已达上限 → 通过 accepted trace/log surface 记录 `silent_unpassable`，建议接受当前结果（走 `phase-final` 交付）。不浮出水面询问用户 |
 | `bundle_structure_valid` fail | 目录结构不完整 → 检查 bundle 完整性，按 inspect/advice 修复后 retry。传 `--attempt N` |
-| `status_consistent` fail | rb_status.json 不一致 → 恢复 status 到正确值，retry gate |
+| status-window fail | Gate 前恢复 `current_gate: hitl2_recorded` / `next_gate: rerun_ready`，retry gate；不要在 rerun gate pass 前同步 `rerun_ready` |
 
 所有 `silent_degradation` / `silent_unpassable` 记录通过 accepted trace/log surface：
 ```bash
@@ -179,7 +177,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 
 ## 8. Stop Behavior
 
-`stop: no` — 本 phase 不等待用户输入，不发送 rerun prep progress 或 idle/no-work 汇报。Rerun prep 本地写完后必须运行 `rerun-ready` gate；phase 完成条件是 gate pass + `check.next` 指向 seed-topics。
+`stop: no` — 本 phase 不等待用户输入，不发送 rerun prep progress 或 idle/no-work 汇报。Rerun prep 本地写完后必须运行 `rerun-ready` gate；phase handoff 完成条件是 gate pass + `enter-phase --node <check.next>` 写入 seed-topics route-bound load witness + `advance-status --to rerun_ready`。
 
 Gate fail 时通过 accepted trace/log surface 记录 `silent_degradation` 或 `silent_unpassable`，保持 non-blocked/in-progress。`rerun_count >= 3` 时记录 `silent_unpassable`；不得自行加载 seed-topics 或 final，所有路由必须来自 gate CLI `check.next`。
 
@@ -189,7 +187,7 @@ Gate fail 时通过 accepted trace/log surface 记录 `silent_degradation` 或 `
 - **MUST 读当前 rerun_count 后再递增**：若字段缺失则初始化为 1，若已有值则 +1。MUST NOT 直接覆盖为固定值
 - **MUST 检查 seed_topics/ 非空**：若意外为空，默认全量重跑，通过 accepted trace/log surface 记录 `silent_degradation`
 - **MUST NOT 在无 rationale 或 rationale 为空时写 ## 本轮重跑方向**：方向 hints 必须来自用户明确的意图
-- **MUST NOT 绕过 chain 直接加载 seed-topics**：所有路由必须通过 gate → chain 查询
+- **MUST NOT 绕过 handoff 直接加载 seed-topics**：所有路由必须来自 gate CLI `check.next`，并通过 `enter-phase --node <check.next>` 消费
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
 
 ## Log

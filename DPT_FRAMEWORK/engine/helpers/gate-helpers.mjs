@@ -9,6 +9,7 @@
 //   gate-helpers-checks.mjs     — Gate rule checks: reference validation, content_dedup, cache_coverage
 //   gate-helpers-provenance.mjs — Relay provenance checks + bypass detection
 //   gate-helpers-serial.mjs     — YAML/JSON safe readers with repair + template scan
+//   handoff-helpers.mjs         — Trace-backed lifecycle handoff validation
 
 // Core
 export {
@@ -76,3 +77,18 @@ export {
   readJsonFileSafe,
   scanTemplateNotExpanded,
 } from './gate-helpers-serial.mjs';
+
+// Handoff
+export {
+  BOOTSTRAP_TARGET_NODES,
+  COVERED_ENTRY_TARGET_NODES,
+  COVERED_PREFLIGHT_TARGET_NODES,
+  COVERED_SOURCE_NODES,
+  gateKeyToEnum,
+  gateEnumToKey,
+  loadHandoffTopology,
+  readTraceEventsWithIndex,
+  validateEnterPhaseTarget,
+  validateSourceGateStatusSync,
+  checkPhaseHandoffPreflight,
+} from './handoff-helpers.mjs';

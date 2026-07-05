@@ -327,7 +327,11 @@ function inspectTimeline(bundlePath, profile, traceByEvent) {
           if (entry.event === 'gate_attempt' || entry.msg === 'gate_attempt') {
             logGateAttempts++;
           }
-        } catch { /* skip unparseable lines */ }
+        } catch {
+          if (/\]\s+(INFO|WARN|ERROR)\s+gate_attempt\s+bundle=/.test(line)) {
+            logGateAttempts++;
+          }
+        }
       }
     } catch { /* log read failure is non-fatal */ }
   }
@@ -744,8 +748,10 @@ function main() {
     console.log(JSON.stringify(report, null, 2));
   }
 
-  // Exit code: 0 for clean, 1 for issues
-  process.exit(report.status === 'clean' ? 0 : 1);
+  // Exit code: 0 for clean, 1 for issues. Let stdout flush naturally; forcing
+  // process.exit() here can truncate large JSON reports when the caller uses a
+  // pipe-backed child process.
+  process.exitCode = report.status === 'clean' ? 0 : 1;
 }
 
 main();

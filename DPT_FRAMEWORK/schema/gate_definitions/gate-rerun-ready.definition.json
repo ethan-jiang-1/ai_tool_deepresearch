@@ -19,22 +19,11 @@
     {
       "id": "bundle_structure_valid",
       "check": "structural",
-      "targets": ["seed_topics", "reference"],
+      "targets": [
+        "seed_topics",
+        "reference"
+      ],
       "failure_message": "Required bundle directories are missing. seed_topics/ and reference/ must exist. Verify bundle integrity before rerunning."
-    },
-    {
-      "id": "status_consistent",
-      "check": "status_value",
-      "target": "rb_status.json#/current_gate",
-      "expected": "rerun_ready",
-      "failure_message": "rb_status.json current_gate must be 'rerun_ready'. Use advance-status --to rerun_ready to advance."
-    },
-    {
-      "id": "status_next_gate",
-      "check": "status_value",
-      "target": "rb_status.json#/next_gate",
-      "expected": "seed_topics_ready",
-      "failure_message": "rb_status.json next_gate must be 'seed_topics_ready'. Status may have drifted — use advance-status --to rerun_ready to set the correct value."
     }
   ]
 }

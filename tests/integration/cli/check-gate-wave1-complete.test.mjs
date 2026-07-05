@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs');
@@ -15,6 +16,17 @@ function unique(prefix) { return `rt_w1_${prefix}_${Date.now()}_${Math.random().
 
 function runGate(bundlePath) {
   return spawnSync('node', [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-wave1.md'], { encoding: 'utf-8', timeout: 10000 });
+}
+
+function writeWave1Trace(dir, { completion = true } = {}) {
+  const events = witnessedHandoffEvents({
+    sourceGate: 'wave0-complete',
+    phase: 'wave0',
+    sourceNode: 'phases/phase-wave0.md',
+    targetNode: 'phases/phase-wave1.md',
+  });
+  if (completion) events.push({ event: 'wave1_completion', ts: new Date().toISOString() });
+  writeTraceEvents(dir, events);
 }
 
 const VALID_EVIDENCE_SUMMARY = `# Evidence Summary: Topic A
@@ -126,11 +138,7 @@ function createBundle(name) {
   const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
   const dir = track(r.stdout.trim());
 
-  // Status to wave1
-  const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf-8'));
-  status.current_gate = 'wave1_complete';
-  status.next_gate = 'wave2_complete';
-  writeFileSync(join(dir, 'rb_status.json'), JSON.stringify(status));
+  setStatusWindow(dir, 'wave0_complete', 'wave1_complete');
 
   // topic_registry
   const planPath = join(dir, 'rb_plan.md');
@@ -204,7 +212,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave1_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
@@ -213,7 +221,7 @@ describe('check-gate-wave1-complete', () => {
   it('2. fails when per-topic evidence-summary is missing', () => {
     const dir = createBundle(unique('nomd'));
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave1_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -225,7 +233,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), NO_SOURCE_URL_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave1_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -237,7 +245,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), EMPTY_FINDINGS_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave1_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -249,7 +257,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), STALE_TOKEN_SEED_TOPIC);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave1_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -261,15 +269,15 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave1_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave1Trace(dir);
     const statusPath = join(dir, 'rb_status.json');
     const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
-    status.current_gate = 'wave0_complete'; // wrong
+    status.next_gate = 'wave2_complete'; // wrong before wave1 itself passes
     writeFileSync(statusPath, JSON.stringify(status));
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
-    assert.ok(output.inspect.some(m => m.includes('current_gate')), `Expected status drift fail: ${JSON.stringify(output.inspect)}`);
+    assert.ok(output.inspect.some(m => m.includes('next_gate')), `Expected status drift fail: ${JSON.stringify(output.inspect)}`);
   });
 
   it('7. fails when trace event (wave1_completion) is missing from rb_trace.jsonl', () => {
@@ -277,7 +285,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    // No trace event file — gate should fail because trace_event_present rule is active
+    writeWave1Trace(dir, { completion: false });
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -289,7 +297,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave1_completion', ts: new Date().toISOString() }) + '\n');
+    writeWave1Trace(dir);
     // Write a second reference with placeholder source_url — the first one has a real URL
     writeFileSync(join(dir, 'reference/topic-a-placeholder.md'),
       '# Placeholder\n\n' +
@@ -316,6 +324,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    writeWave1Trace(dir);
     writeFileSync(join(dir, 'reference/topic-a-orphan.md'),
       '# Orphan\n\n' +
       '- source_url: https://example.com/news/orphan\n' +
@@ -340,6 +349,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    writeWave1Trace(dir);
     writeFileSync(join(dir, 'reference/01-topic-a-deepening.md'),
       '---\nsource_url: https://example.com/news/deepening-topic-a\n---\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n');
     const result = runGate(dir);

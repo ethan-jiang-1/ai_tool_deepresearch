@@ -347,6 +347,91 @@ export function emitGateResult(result, { bundlePath } = {}) {
 
 import { readBundleName, logToRun } from '../logger.mjs';
 
+function readDiagnostic(bundlePath, diagnosticPath) {
+  if (!diagnosticPath) return null;
+  try {
+    return JSON.parse(readFileSync(join(bundlePath, diagnosticPath), 'utf-8'));
+  } catch {
+    return null;
+  }
+}
+
+function classifyAttemptTrend({ passed, newlyPassing, stillFailing, regressed, previousFailures }) {
+  if (!previousFailures) return 'first';
+  if (passed) return 'converging';
+  if (regressed.length > 0) return 'regressed';
+  if (newlyPassing.length > 0 && stillFailing.length > 0) return 'converging';
+  return 'stalled';
+}
+
+function comparableFailuresFromDiagnostic(diagnostic) {
+  if (!diagnostic) return null;
+  if (Array.isArray(diagnostic.check?.failed_rule_ids)) return diagnostic.check.failed_rule_ids;
+  if (Array.isArray(diagnostic.failed_rule_ids)) return diagnostic.failed_rule_ids;
+  if (Array.isArray(diagnostic.inspect)) return diagnostic.inspect;
+  return null;
+}
+
+function comparableFailuresFromResult(result) {
+  if (Array.isArray(result.check?.failed_rule_ids)) return result.check.failed_rule_ids;
+  if (Array.isArray(result.inspect)) return result.inspect;
+  return [];
+}
+
+function gateAttemptWindow(events, currentNodeRef) {
+  let startIndex = -1;
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.event === 'load_complete' && e.entry === currentNodeRef) {
+      startIndex = i;
+      break;
+    }
+  }
+  return events.slice(startIndex + 1);
+}
+
+function applyEngineAttemptDiagnostics(bundlePath, result, fatigueThreshold = 3) {
+  try {
+    const { check, inspect, advice } = result;
+    const events = gateAttemptWindow(readTraceEvents(bundlePath), check.currentNodeRef)
+      .filter(e => e.gate === check.gate && e.currentNodeRef === check.currentNodeRef);
+    const attemptCount = events.length + 1;
+    const previous = events.length > 0 ? events[events.length - 1] : null;
+    const previousDiag = readDiagnostic(bundlePath, previous?.diagnostic_path);
+    const previousFailures = comparableFailuresFromDiagnostic(previousDiag);
+    const currentFailures = comparableFailuresFromResult(result);
+
+    const previousSet = new Set(previousFailures || []);
+    const currentSet = new Set(currentFailures);
+    const newlyPassing = previousFailures ? [...previousSet].filter(item => !currentSet.has(item)) : [];
+    const stillFailing = previousFailures ? [...currentSet].filter(item => previousSet.has(item)) : currentFailures;
+    const regressed = previousFailures ? [...currentSet].filter(item => !previousSet.has(item)) : [];
+    const attemptTrend = classifyAttemptTrend({
+      passed: check.passed,
+      newlyPassing,
+      stillFailing,
+      regressed,
+      previousFailures,
+    });
+
+    check.attempt_count = attemptCount;
+    check.attempt_trend = attemptTrend;
+    check.newly_passing = newlyPassing;
+    check.still_failing = stillFailing;
+    check.regressed = regressed;
+
+    if (check.passed && attemptCount >= fatigueThreshold && check.next) {
+      check.fatigue_warning = true;
+      advice.push(
+        `[autonomous_continuation] Gate passed after ${attemptCount} Engine-visible attempt(s). Consume check.next through enter-phase: node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node ${check.next}`,
+        '[autonomous_continuation] Final report delivery happens at phase-final after final artifacts are written; high gate friction does not authorize premature chat synthesis.',
+      );
+    }
+  } catch {
+    // Diagnostics are advisory and must not change gate truth.
+  }
+}
+
 /**
  * Derive phase from gate name.
  * e.g. 'wave0-complete' → 'wave0', 'wave1-complete' → 'wave1'
@@ -371,17 +456,21 @@ export function derivePhaseFromGate(gateKey) {
  * `bundle`, `phase`, and `diagnostic_path` fields for cross-sink stitching
  * (Design D2, TRW-001, TRW-002).
  *
- * Write failures are silently caught — they MUST NOT affect gate output or
- * exit code.
+ * Write failures are silently caught by default for legacy failed/non-routing
+ * attempts. Covered successful handoffs pass strictTrace=true so a non-durable
+ * authoritative gate_attempt cannot be reported as a successful route.
  *
  * @param {string} bundlePath — path to the active runtime context
  * @param {object} result — gate result from buildGateResult()
+ * @param {{ strictTrace?: boolean }} [options]
  * @returns {void}
  *
  * @impl GSK-005, LOC-001, LOC-002, TRW-001, TRW-002, TRW-003, TRW-004
  */
-export function writeGateAttempt(bundlePath, result) {
+export function writeGateAttempt(bundlePath, result, options = {}) {
+  const { strictTrace = false } = options;
   try {
+    applyEngineAttemptDiagnostics(bundlePath, result);
     const { check, routing, inspect, advice } = result;
     const bundle = readBundleName(bundlePath);
     const phase = derivePhaseFromGate(check.gate);
@@ -452,13 +541,15 @@ export function writeGateAttempt(bundlePath, result) {
         traceEntry.diagnostic_path = logDetail.diagnostic_path;
       }
       appendFileSync(tracePath, JSON.stringify(traceEntry) + '\n');
-    } catch {
+    } catch (err) {
+      if (strictTrace) throw err;
       // Trace write failure silently ignored
     }
 
     // 4. Checkpoint manifest — durable reentry artifact (RRD-001)
     writeCheckpointManifest(bundlePath, result);
-  } catch {
+  } catch (err) {
+    if (strictTrace) throw err;
     // Audit write failure must not affect gate output
   }
 }
@@ -731,7 +822,7 @@ export function writeGateFailureDiagnostic(bundlePath, result, precomputedPath =
  */
 export function writeGatePassDiagnostic(bundlePath, result, precomputedPath = null) {
   try {
-    const { check, routing } = result;
+    const { check, routing, inspect = [], advice = [] } = result;
     if (!check.passed) return { ok: true }; // Only write on pass
 
     const iso = new Date().toISOString();
@@ -752,6 +843,8 @@ export function writeGatePassDiagnostic(bundlePath, result, precomputedPath = nu
       gate: check.gate,
       passed: true,
       phase: derivePhaseFromGate(check.gate),
+      inspect,
+      advice,
       rules_summary: {
         currentNodeRef: check.currentNodeRef,
         next: check.next,

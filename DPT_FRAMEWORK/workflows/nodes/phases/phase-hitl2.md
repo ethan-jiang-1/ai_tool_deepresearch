@@ -65,10 +65,10 @@ HITL2 是 delivery 前最后一次人类审查——用户在此决定是否 pro
 | `proceed_to_readiness` | chain | 正常进 readiness。Agent 跟随 chain routing。 |
 | `request_view_revision` | Agent | Agent 读 profile，决定回到哪个 phase 修改 view。 |
 | `repair` | Agent | 当前 run 有需要修复的问题。Agent 读 rationale 修复后 rerun 当前 gate，不重启 lifecycle。 |
-| `rerun` | chain | 用户想调整方向/补充内容/改模式。Agent 用 `rerun` outcome 查 chain → 进入 `phase-rerun.md`。 |
+| `rerun` | chain | 用户想调整方向/补充内容/改模式。Gate CLI 使用 `rerun` outcome 产出 `check.next: phases/phase-rerun.md`，Agent 通过 `enter-phase` 消费该 selected target。 |
 | `stop_blocked` | Agent | lifecycle 终止，记录原因到 profile。 |
 
-`proceed_to_readiness` 以外 decision **不编码进 transition chain**——chain 只管 `proceed_to_readiness` 的 normal next。branch 路由归 Agent decision authority。
+`proceed_to_readiness` 与 `rerun` 是 HITL2 当前两个 deterministic chain exit。`request_view_revision`、`repair`、`stop_blocked` 不编码进 transition chain——其目标依赖 Agent 判断运行时状态，归 Agent decision authority。
 
 ### 字母→Canonical Enum 映射表
 
@@ -82,10 +82,6 @@ HITL2 是 delivery 前最后一次人类审查——用户在此决定是否 pro
 | D | `repair` |
 | E | `stop_blocked` |
 
-- 调用 `advance-status` 推进状态：
-  ```bash
-  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
-  ```
 - 记录 `hitl2_recorded` trace event 到 `rb_trace.jsonl`：
   ```bash
   node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --event hitl2_recorded
@@ -97,7 +93,7 @@ HITL2 是 delivery 前最后一次人类审查——用户在此决定是否 pro
 - `rb_profile.yaml#/human_decision_checkpoints/hitl2/status` = `recorded`
 - `rb_profile.yaml#/human_decision_checkpoints/hitl2/user_decision` 非空且为合法枚举值
 - `rb_trace.jsonl` 中有 `hitl2_recorded` event
-- `rb_status.json` 中 `current_gate: hitl2_recorded` / `next_gate: readiness_passed`
+- Gate 前 status window 为 `current_gate: wave2_complete` / `next_gate: hitl2_recorded`。HITL2 自己通过后，才在 §6 按 selected branch 运行 `advance-status --to hitl2_recorded`，写入 `next_gate: readiness_passed` 或 `next_gate: rerun_ready`。
 
 ## 5. Gate Command
 
@@ -109,10 +105,20 @@ node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle <path> --cur
 
 Gate pass 后，Agent 读取 `rb_profile.yaml#/human_decision_checkpoints/hitl2/user_decision` 决定路由：
 
-- `proceed_to_readiness` → **发送 HITL2 出口语**（从 `brief/hitl2.md` 的「出口语」节 A 路径读取模板文字，告知用户即将生成最终报告，期间不会浮出水面，完成后交付）→ 跟随 chain routing 进 `phase-readiness.md`
+- `proceed_to_readiness` → gate CLI 使用 deterministic `passed` outcome，`check.next` 应为 `phases/phase-readiness.md`。先消费 selected handoff，再同步 source gate status：
+  ```bash
+  node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>
+  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
+  ```
+  然后从 `enter-phase` 渲染出的 readiness Markdown 继续执行。不要让 `advance-status` 替代 target selection。
 - `request_view_revision` → Agent 读取 rationale，决定回到哪个 phase 修改 view（不 restart）
 - `repair` → Agent 就地修复当前问题后 rerun HITL2 gate，不重启 lifecycle
-- `rerun` → Agent 用 `rerun` outcome 查 chain → chain 返回 `phases/phase-rerun.md` → 加载 phase-rerun node
+- `rerun` → gate CLI 使用 deterministic `rerun` outcome，`check.next` 应为 `phases/phase-rerun.md`。先消费 selected handoff，再同步 source gate status：
+  ```bash
+  node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>
+  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
+  ```
+  然后从 `enter-phase` 渲染出的 rerun Markdown 继续执行。不得把 rerun 默认洗成 readiness。
 - `stop_blocked` → lifecycle 终止，记录原因
 
 **Chain routing 对 HITL2 有两条 entry**：`phase-hitl2.md` → `passed` → `phase-readiness.md`（正常交付）和 `phase-hitl2.md` → `rerun` → `phase-rerun.md`（增量重跑）。`proceed_to_readiness` 和 `rerun` 均为确定性出口——有固定、上下文无关的 next-node 目标。`request_view_revision`/`repair`/`stop_blocked` 不进入 chain——其目标依赖 Agent 判断运行时状态。
@@ -128,7 +134,7 @@ Gate pass 后，Agent 读取 `rb_profile.yaml#/human_decision_checkpoints/hitl2/
 | `user_decision` 为空 | 向用户询问并填写 decision |
 | `user_decision` 不在合法枚举中 | 修正为 5 个合法值之一 |
 | `trace_event_present` fail | 确认 hitl2_recorded trace event 已写入 |
-| status drift | 恢复 `current_gate`/`next_gate` 为 `hitl2_recorded`/`readiness_passed` |
+| status drift | Gate 前恢复 source-gate window：`current_gate: wave2_complete` / `next_gate: hitl2_recorded`；gate pass 后再按 §6 同步 `hitl2_recorded` |
 
 ## 8. Stop Behavior
 
@@ -139,7 +145,7 @@ Gate pass 后，Agent 读取 `rb_profile.yaml#/human_decision_checkpoints/hitl2/
 - **用户 decision MUST 写入 `rb_profile.yaml`**，不能只停留在 chat memory
 - **MUST NOT 在用户未回答时填写 placeholder decision**——`user_decision` 必须来自真实用户输入
 - **MUST NOT 将不确定 branch 的路由编码进 transition chain**——确定性出口（有固定、上下文无关的 next-node 目标）SHALL 进 chain。当前确定性出口：`passed`、`rerun`。不确定 branch：`request_view_revision`、`repair`、`stop_blocked`（目标依赖 Agent 判断运行时状态）——归 Agent
-- **MUST NOT 在 `user_decision: rerun` 时仍然 advance 到 readiness**——Agent MUST 用 `rerun` outcome 查 chain，进入 `phase-rerun.md`
+- **MUST NOT 在 `user_decision: rerun` 时仍然 advance 到 readiness**——gate CLI MUST emit the `rerun` outcome, and Agent MUST consume `check.next: phases/phase-rerun.md` through `enter-phase`
 - **HITL2 phase 写 `human_decision_checkpoints/hitl2` 时 MUST preserve 已有的 `rerun_count` 值**——MUST NOT 重置或删除。`rerun_count` 由 `phase-rerun.md` 管理递增，HITL2 只能读取不能修改
 - **用户 final 后反馈 MUST 通过 HITL2 repair/rerun 承载**，MUST NOT 通过 final node hidden loop
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令

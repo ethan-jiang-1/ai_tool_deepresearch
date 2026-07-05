@@ -1,6 +1,6 @@
 {
   "gate": "wave0-complete",
-  "description": "Verify Wave0 produced shared foundation evidence: _INDEX.md and README.md exist, 00-shared-*.md reference files exist (count_floor >=1), per-topic thin YAML exists in artifacts/wave0/ and passes ReferenceMetadata schema validation, trace evidence present, status values point to wave0\u2192wave1.",
+  "description": "Verify Wave0 produced shared foundation evidence: _INDEX.md and README.md exist, 00-shared-*.md reference files exist (count_floor >=1), per-topic thin YAML exists in artifacts/wave0/ and passes ReferenceMetadata schema validation, and trace evidence is present. Source-gate status-window and handoff witness are enforced by shared gate preflight.",
   "rules": [
     {
       "id": "reference_index_md_exists",
@@ -64,20 +64,6 @@
       "failure_message": "No wave0_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event per the shared-subagent-protocol."
     },
     {
-      "id": "status_current_gate",
-      "check": "status_value",
-      "target": "rb_status.json#/current_gate",
-      "expected": "wave0_complete",
-      "failure_message": "rb_status.json current_gate must be 'wave0_complete'. Status may have drifted \u2014 restore the correct gate value."
-    },
-    {
-      "id": "status_next_gate",
-      "check": "status_value",
-      "target": "rb_status.json#/next_gate",
-      "expected": "wave1_complete",
-      "failure_message": "rb_status.json next_gate must be 'wave1_complete'. Status may have drifted \u2014 restore the correct value."
-    },
-    {
       "id": "content_dedup",
       "check": "content_dedup",
       "target": "output_declarations",
@@ -87,7 +73,7 @@
         "homepage_detect": true,
         "self_ref_detect": true
       },
-      "failure_message": "\u68c0\u6d4b\u5230\u865a\u5047\u6216\u91cd\u590d reference \u6587\u4ef6"
+      "failure_message": "检测到虚假或重复 reference 文件"
     },
     {
       "id": "cache_coverage",
@@ -108,8 +94,13 @@
       "target": "rb_output_declarations.jsonl",
       "wave": "wave0",
       "output_selectors": {
-        "expected_from_topic_registry": ["artifacts/wave0/{topic}/source.yaml"],
-        "roles": ["reference", "source_yaml"]
+        "expected_from_topic_registry": [
+          "artifacts/wave0/{topic}/source.yaml"
+        ],
+        "roles": [
+          "reference",
+          "source_yaml"
+        ]
       },
       "failure_message": "Wave0 outputs exist on disk but are not covered by output declaration ledger. Files may have been written directly (bypassing relay). Re-run through delegated relay tasks."
     },

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { setStatusWindow, witnessedHandoffEvents } from './handoff-fixtures.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs');
@@ -37,9 +38,22 @@ const PRIOR_GATES = [
 
 /** Build a trace with gate_attempt(passed:true) for the given gate names. */
 function buildTrace(gateNames) {
-  return gateNames.map(g =>
-    JSON.stringify({ event: 'gate_attempt', gate: g, passed: true, ts: new Date().toISOString() })
-  ).join('\n') + '\n';
+  const events = [];
+  for (const gate of gateNames) {
+    if (gate === 'hitl2-recorded') {
+      events.push(...witnessedHandoffEvents({
+        sourceGate: 'hitl2-recorded',
+        phase: 'hitl2',
+        sourceNode: 'phases/phase-hitl2.md',
+        targetNode: 'phases/phase-readiness.md',
+        sourceAttemptIndex: events.length,
+      }));
+      continue;
+    }
+
+    events.push({ event: 'gate_attempt', gate, passed: true, ts: new Date().toISOString() });
+  }
+  return events.map(e => JSON.stringify(e)).join('\n') + '\n';
 }
 
 /** Create a bundle with readiness-ready state (all artifacts present). */
@@ -47,11 +61,7 @@ function createBundle(name) {
   const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
   const dir = track(r.stdout.trim());
 
-  // Set status for readiness
-  const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf-8'));
-  status.current_gate = 'readiness_passed';
-  status.next_gate = 'none';
-  writeFileSync(join(dir, 'rb_status.json'), JSON.stringify(status));
+  setStatusWindow(dir, 'hitl2_recorded', 'readiness_passed');
 
   // Create all required artifacts
   writeFileSync(join(dir, 'seed_topics/dummy.md'), '---\nslug: dummy\ntitle: Dummy\n---\n# Dummy\n');
@@ -136,7 +146,13 @@ describe('check-gate-readiness-passed', () => {
     const dir = createBundle(unique('fewgates'));
 
     // Overwrite trace with only 5 passed gates
-    const partialTrace = buildTrace(PRIOR_GATES.slice(0, 5));
+    const partialTrace = buildTrace([
+      'instantiation-complete',
+      'setup-ready',
+      'wave0-complete',
+      'wave2-complete',
+      'hitl2-recorded',
+    ]);
     // Add one failed gate_attempt to ensure it's not counted
     const traceWithFail = partialTrace +
       JSON.stringify({ event: 'gate_attempt', gate: 'wave1-complete', passed: false, ts: new Date().toISOString() }) + '\n';
@@ -179,7 +195,7 @@ describe('check-gate-readiness-passed', () => {
 
     const statusPath = join(dir, 'rb_status.json');
     const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
-    status.next_gate = 'hitl2_recorded'; // wrong — should be 'none'
+    status.next_gate = 'hitl2_recorded'; // wrong before readiness itself passes
     writeFileSync(statusPath, JSON.stringify(status));
 
     const result = runGate(dir);

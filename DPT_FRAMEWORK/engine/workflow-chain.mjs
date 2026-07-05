@@ -89,7 +89,7 @@ This is a non-terminal \`stop: no\` phase. You are executing autonomously withou
 - Complete this node by draining/repairing/degrading as needed, then run the gate
 - Gate failure → read inspect/advice → repair → rerun gate with \`--attempt N\`
 - Persistent failure → record \`silent_degradation\` via \`log-event.mjs\` → switch strategy
-- Next phase comes ONLY from gate CLI \`check.next\`
+- Next phase comes ONLY from gate CLI \`check.next\`; after gate pass, consume it through \`enter-phase --bundle <path> --node <check.next>\` before source-gate status sync
 - This header is a principle guardrail; the phase body's node-specific Stop Behavior still governs queue, quality, and repair details
 
 **Reference:** \`shared/shared-silent-execution.md\` — the full silent execution behavioral contract (loaded via \`requires\`).
@@ -104,7 +104,7 @@ This is the terminal \`stop: no\` + \`gate: null\` phase. You are delivering the
 
 **Allowed:**
 - Write \`final/\` artifact(s) from verified bundle state
-- Update \`rb_status.json\`: \`current_gate: none\` / \`next_gate: null\`
+- Keep terminal status from readiness: \`current_gate: readiness_passed\` / \`next_gate: none\`; Final has no gate and does not advance status
 
 **Absolute prohibitions:**
 - You SHALL NOT ask the user any question or request confirmation

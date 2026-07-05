@@ -139,7 +139,7 @@ Wave0 的 claim→execute→complete 使用 relay 批量并行执行（灌料→
 ```bash
 node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --current-node phases/phase-wave0.md
 ```
-5. gate pass → 读取 `check.next` → 加载 `phase-wave1.md`
+5. gate pass → 进入 §6：通过 `enter-phase --node <check.next>` 消费 `phase-wave1.md`，再同步 `wave0_complete`
 6. gate fail → 按 §3.3.1 和 §7 处理
 
 #### 3.3.1 Count-Floor Re-Fill Loop（source 数量不足时的自主补充循环）
@@ -226,10 +226,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --cur
   ```bash
   node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --event wave0_completion
   ```
-- `rb_status.json` 中 `current_gate: wave0_complete` / `next_gate: wave1_complete`（通过 CLI 推进）：
-  ```bash
-  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave0_complete
-  ```
+- Gate 前 status window 为 `current_gate: seed_topics_ready` / `next_gate: wave0_complete`。Wave0 gate pass 后，§6 的 `advance-status --to wave0_complete` 才会写入 `current_gate: wave0_complete` / `next_gate: wave1_complete`。
 
 ## 5. Gate Command
 
@@ -241,11 +238,14 @@ Retry 时传 Agent-reported `--attempt N`（N 从 1 开始，每次 rerun 递增
 
 ## 6. On Gate Pass
 
-读取 `check.next`。调用 `advance-status` 推进状态后加载下一 phase：
+读取 gate CLI JSON output，确认 `check.passed === true`，然后读取 `check.next`（应为 `phases/phase-wave1.md`）。先消费 handoff，再同步 source gate status：
+
 ```bash
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave1_complete
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave0_complete
 ```
-然后加载 `check.next` 指向的 node（应为 `phase-wave1.md`）。
+
+从 `enter-phase` 渲染出的 wave1 Markdown 继续执行下一 phase。`advance-status --to wave1_complete` 只能在 wave1 gate 自己通过后使用，不得在 wave0 pass 后使用。
 
 ## 7. On Gate Fail
 
@@ -260,7 +260,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave1_complete
 | `shared_ref_count_floor` fail：`00-shared-*.md` 文件数 < 动态阈值 | **同上**：进入 §3.3.1 Re-Fill Loop，创建 supplementary task card 搜集跨 topic 共享 foundation reference → 写 `00-shared-*.md` |
 | registry 为空 | 通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: blocks_must_answer`），从 `rb_plan.md` frontmatter 尝试重建 topic_registry。不浮出水面，不回到 HITL1 |
 | `trace_event_present` fail | 确认已记录 `wave0_completion` trace event |
-| status drift | 恢复 `current_gate`/`next_gate` 为 `wave0_complete`/`wave1_complete` |
+| status drift | Gate 前恢复 `current_gate: seed_topics_ready` / `next_gate: wave0_complete`；gate pass 后再按 §6 同步 `wave0_complete` |
 
 **Persistent failure：** 若 wave0 gate 连续 3 次修复无进展（含 count_floor re-fill attempt），通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: partial`）：
 ```bash
@@ -272,7 +272,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 
 `stop: no` — Phase Agent 自主搜集 foundation reference，不发送阶段进度或 idle/no-work 汇报。Active queue、thin queue、per-topic count-floor gap、shared-ref count-floor gap、no-progress round、或 registry 为空，都是继续灌料、claim/complete、re-fill、换搜索策略、运行 gate 或记录 silent holding 的信号。
 
-若 registry 为空，通过 accepted trace/log surface 记录 `silent_degradation`，尝试从 `rb_plan.md` 重建 topic_registry。Evidence quality and reference coverage take priority: before gate pass, do not turn quality/count gaps into user-facing status. Phase 完成条件是 `wave0-complete` gate pass + gate CLI `check.next`；不得自判完成或自行加载下一 phase。
+若 registry 为空，通过 accepted trace/log surface 记录 `silent_degradation`，尝试从 `rb_plan.md` 重建 topic_registry。Evidence quality and reference coverage take priority: before gate pass, do not turn quality/count gaps into user-facing status. Phase handoff 完成条件是 `wave0-complete` gate pass + `enter-phase --node <check.next>` 写入 route-bound load witness + `advance-status --to wave0_complete`；不得自判完成或自行加载下一 phase。
 
 > **静默阶段纪律**：本 phase 在静默自主阶段。`requires` 已加载 `shared-silent-execution.md`。遇错按降级优先级链处理（重试→换源→降级方法→标记 gap），绝不浮出水面向用户报告进度、提问或请求确认。
 

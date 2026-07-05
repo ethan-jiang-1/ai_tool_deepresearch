@@ -22,7 +22,7 @@ suggested_context:
 
 - **Objective**: Deliver final report artifacts from verified bundle state.
 - **Start here**: Confirm readiness-passed state, then read verified wave artifacts, profile, status, and trace.
-- **Path to pass**: Generate at least one report under `final/`, update terminal status, and record final delivery through the accepted Agent-side event surface.
+- **Path to pass**: Confirm terminal status from readiness (`current_gate: readiness_passed` / `next_gate: none`), generate at least one report under `final/`, and record final delivery through the accepted Agent-side event surface.
 - **Completion check**: At least one final artifact exists under `final/`; there is no gate command for this terminal node.
 - **Failure posture**: Do not ask the user or start a feedback loop; if delivery state is missing, repair from verified bundle state before reporting completion.
 
@@ -47,14 +47,14 @@ Delivery completion 的 evidence 是 `final/` 目录下存在至少一份报告�
 - 从 verified bundle state 生成至少 1 份 final report artifact 到 `final/` 目录
 - 报告格式自由（Markdown、研究摘要、executive brief 等），内容必须引用 bundle 中真实存在的 source artifact
 - Report 中的声明使用标准 Markdown link `[label](relative/path.md)` 引用来源
-- 更新 `rb_status.json`：`current_gate: none` / `next_gate: null`
+- 确认 `rb_status.json` 已由 readiness §6 写成 `current_gate: readiness_passed` / `next_gate: none`；Final 没有 gate，不再运行 `advance-status`，也不把 status 改成 `none/null`
 - 记录 final 完成信息到 `rb_trace.jsonl`（使用 Agent 侧 event，如 `md:final_delivery`）
 
 ## 4. Expected Artifacts
 
 - `final/` 目录下至少 1 份报告文件（如 `final/report.md`、`final/executive-summary.md` 等）
 - Report content 来自 verified bundle state（wave artifacts、profile、status），不来自 chat memory
-- `rb_status.json` 中 `current_gate: none` / `next_gate: null`
+- `rb_status.json` 中保持 `current_gate: readiness_passed` / `next_gate: none`
 - `final/` 目录存在即证明 delivery 完成
 
 ## 5. Gate Command
@@ -75,7 +75,7 @@ N/A — final 无 gate。Final 是 terminal delivery node。
 
 **允许的行为：**
 - 从 verified bundle state 写入 `final/` artifact（至少 1 份报告文件）
-- 更新 `rb_status.json`：`current_gate: none` / `next_gate: null`
+- 保持 readiness 已同步的 terminal status：`current_gate: readiness_passed` / `next_gate: none`
 
 **绝对禁止的行为：**
 - 向用户提问或请求确认

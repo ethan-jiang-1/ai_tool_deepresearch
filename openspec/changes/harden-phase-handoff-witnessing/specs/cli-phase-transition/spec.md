@@ -148,6 +148,8 @@ Successful status synchronization SHALL establish a source-gate status window fo
 
 Downstream lifecycle gates SHALL NOT require `current_gate` to already equal their own gate enum before they pass. For a non-entry lifecycle node, the active status window before its gate pass is `current_gate == <legal predecessor source gate enum>` and `next_gate == <this node's gate enum>`, derived from `manifest.json` and `transitions.chain.json`. This status-window contract applies to deterministic handoffs from setup onward, including setup→seed-topics, seed-topics→wave0, wave0→wave1, wave1→wave2, wave2→HITL2, HITL2→readiness, HITL2→rerun, readiness→final, and rerun→seed-topics. Bootstrap inbound entries for instantiation, HITL1, and setup remain compatibility exceptions unless separately migrated, and any validator exception SHALL name them explicitly.
 
+The bootstrap compatibility exception for setup is narrow. Legacy/bootstrap status may establish `current_gate: "setup_ready"` and `next_gate: "seed_topics_ready"` as setup's pre-pass status window, because setup inbound is not migrated by this change. That same status pair SHALL NOT be treated as proof that setup→seed-topics has been witnessed. After the `setup-ready` gate itself passes, the covered setup→seed-topics handoff still requires the real `gate_attempt.next`, `enter-phase --node phases/phase-seed-topics.md`, and source-gate `advance-status --to setup_ready` path.
+
 For multi-outcome source nodes such as HITL2, status synchronization SHALL be tied to the actual deterministic target emitted into `gate_attempt.next`. A HITL2 proceed handoff and a HITL2 rerun handoff are distinct witnessed routes; `advance-status` SHALL NOT infer one from profile fields or hardcoded outcome preference. The HITL2 gate CLI SHALL be responsible for emitting the selected deterministic route into `gate_attempt.next`; tests SHALL NOT satisfy this requirement by hand-writing a `gate_attempt` trace event.
 
 #### Scenario: Advance status rejects source gate that is not the latest handoff
@@ -213,6 +215,13 @@ For multi-outcome source nodes such as HITL2, status synchronization SHALL be ti
 - **THEN** `rb_status.json` SHALL contain `current_gate: "wave1_complete"` and `next_gate: "wave2_complete"`
 - **AND** the wave2 gate SHALL treat that pair as the valid active status window for `phases/phase-wave2.md`
 - **AND** the wave2 gate SHALL NOT require `current_gate: "wave2_complete"` before wave2 itself passes
+
+#### Scenario: Setup bootstrap status does not replace covered setup handoff
+
+- **WHEN** bootstrap compatibility has established `current_gate: "setup_ready"` and `next_gate: "seed_topics_ready"` before the setup gate passes
+- **THEN** that status pair MAY enable the setup gate's own legacy/bootstrap checks
+- **BUT** it SHALL NOT authorize seed-topics entry by itself
+- **AND** after setup passes, seed-topics entry SHALL still require setup's real `gate_attempt.next`, route-bound `enter-phase` witness, and source-gate `advance-status --to setup_ready`
 
 #### Scenario: Terminal target sets next gate to none after witnessed final entry
 

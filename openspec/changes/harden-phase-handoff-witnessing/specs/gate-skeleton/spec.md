@@ -29,6 +29,8 @@ For deterministic lifecycle gates covered by this change, gate status validation
 
 If preflight fails, the gate CLI SHALL return normal gate failure output (`passed: false`, exit 1) with `inspect` and `advice` naming the missing trace evidence. It SHALL NOT change routing authority or select a next node.
 
+For a covered deterministic gate success that emits a non-null `check.next`, the `gate_attempt(passed=true,next=<target>)` trace event is authoritative handoff evidence. The gate CLI SHALL NOT report a successful covered route if that required trace append cannot be made durable. Non-routing failures or legacy failed attempts MAY continue to tolerate audit write failures as diagnostics-only, but a non-durable covered pass MUST fail closed or produce explicit diagnostics instead of certifying a route the later helper cannot witness.
+
 #### Scenario: Gate fails when prior gate pass is missing
 
 - **WHEN** `check-gate-wave1-complete.mjs` is called for `phases/phase-wave1.md`
@@ -118,6 +120,13 @@ If preflight fails, the gate CLI SHALL return normal gate failure output (`passe
 - **THEN** `advance-status --to readiness_passed` SHALL be eligible to write `next_gate: "none"`
 - **AND** final delivery SHALL still be governed by the Final node, not by the readiness gate itself
 
+#### Scenario: Covered gate pass is trace-durable
+
+- **WHEN** a covered lifecycle gate's content rules pass and routing emits non-null `check.next`
+- **AND** appending the authoritative `gate_attempt(passed=true,next=<target>)` to `rb_trace.jsonl` fails
+- **THEN** the gate CLI SHALL NOT return a misleading successful handoff
+- **AND** later `enter-phase`, `advance-status`, or gate preflight SHALL NOT be forced to trust console output without durable trace evidence
+
 ### Requirement: Lifecycle gate preflight wiring is enforced
 
 The project SHALL include a regression check or validator that verifies every applicable lifecycle gate CLI invokes the shared handoff preflight/status-window helper.
@@ -150,6 +159,10 @@ The diagnostics SHALL include:
 - `still_failing`: rule IDs that failed in both previous and current comparable attempts;
 - `regressed`: rule IDs that previously passed and now fail.
 
+`attempt_count` SHALL be scoped to the current node entry: it counts comparable attempts for the same gate/currentNodeRef after the latest relevant `load_complete(entry=<currentNodeRef>)`. Historical attempts before a later node re-entry SHALL NOT inflate a fresh phase attempt count.
+
+Delta diagnostics SHALL prefer stable rule identifiers from `failed_rule_ids` in the current result or prior diagnostic artifact. Human-readable `inspect` prose MAY be used only as a legacy fallback; new rule-level diagnostics SHOULD expose stable IDs so wording changes do not corrupt `newly_passing`, `still_failing`, or `regressed`.
+
 When a gate passes after the fatigue threshold, the gate result SHALL include stop-mode-safe autonomous continuation advice: `check.next` must be consumed through `enter-phase`, final delivery happens at `phase-final`, and high gate friction does not authorize premature chat synthesis.
 
 The existing `--attempt N` flag SHALL remain accepted as an Agent-reported hint, but it SHALL NOT be the authoritative source for the Engine-derived attempt diagnostics.
@@ -166,6 +179,20 @@ The existing `--attempt N` flag SHALL remain accepted as an Agent-reported hint,
 - **WHEN** the current gate attempt fixes at least one rule that failed in the previous comparable attempt
 - **THEN** the gate result or diagnostic artifact SHALL list that rule ID under `newly_passing`
 - **AND** `attempt_trend` SHALL be `converging` unless other regressions dominate
+
+#### Scenario: Attempt count resets after node re-entry
+
+- **WHEN** trace contains older attempts for a gate before the latest `load_complete(entry=<currentNodeRef>)`
+- **AND** the current gate is run after that node re-entry
+- **THEN** `attempt_count` SHALL exclude the older pre-entry attempts
+- **AND** fatigue advice SHALL be based on the current entry window rather than stale historical friction
+
+#### Scenario: Delta diagnostics use stable failed rule IDs
+
+- **WHEN** a prior diagnostic artifact contains `failed_rule_ids`
+- **AND** the current gate result contains `failed_rule_ids`
+- **THEN** `newly_passing`, `still_failing`, and `regressed` SHALL be computed from those stable IDs
+- **AND** changes to `inspect` prose SHALL NOT change the delta classification
 
 ### Requirement: Cascade-masked diagnostics remain non-authority
 

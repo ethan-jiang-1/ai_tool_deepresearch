@@ -257,7 +257,7 @@ __BACKFILL_PENDING_QUESTIONS__
 ```bash
 node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle <path> --current-node phases/phase-seed-topics.md
 ```
-2. gate pass → 读取 `check.next` → 加载 `phase-wave0.md`
+2. gate pass → 进入 §6：通过 `enter-phase --node <check.next>` 消费 `phase-wave0.md`，再同步 `seed_topics_ready`
 3. gate fail → 按 §7 On Gate Fail 处理
 
 ## 4. Expected Artifacts
@@ -269,10 +269,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle <path> --
   ```bash
   node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --event seed_topics_completion --detail '{"topic_count":<N>}'
   ```
-- `rb_status.json` 中 `current_gate: seed_topics_ready` / `next_gate: wave0_complete`（通过 CLI 推进）：
-  ```bash
-  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to seed_topics_ready
-  ```
+- Gate 前 status window 为 `current_gate: setup_ready` / `next_gate: seed_topics_ready`（首次运行）或 `current_gate: rerun_ready` / `next_gate: seed_topics_ready`（rerun 回流）。Seed-topics gate pass 后，§6 的 `advance-status --to seed_topics_ready` 才会写入 `current_gate: seed_topics_ready` / `next_gate: wave0_complete`。
 
 ## 5. Gate Command
 
@@ -282,11 +279,14 @@ node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle <path> --
 
 ## 6. On Gate Pass
 
-读取 `check.next`。调用 `advance-status` 推进状态后加载下一 phase：
+读取 gate CLI JSON output，确认 `check.passed === true`，然后读取 `check.next`（应为 `phases/phase-wave0.md`）。先消费 handoff，再同步 source gate status：
+
 ```bash
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave0_complete
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to seed_topics_ready
 ```
-然后加载 `check.next` 指向的 node（应为 `phase-wave0.md`）。
+
+从 `enter-phase` 渲染出的 wave0 Markdown 继续执行下一 phase。`advance-status` 只同步 just-passed source gate；它不是加载或执行下一 phase 的动作。
 
 ## 7. On Gate Fail
 
@@ -300,7 +300,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave0_complete
 | frontmatter `title` 为空 | 补充对应文件的 `title` 字段 |
 | slug 与文件名 stem 不一致 | 统一为 registry 中的 slug |
 | `trace_event_present` fail | 确认已记录 `seed_topics_completion` trace event |
-| status drift | 将 `current_gate`/`next_gate` 恢复为 `seed_topics_ready`/`wave0_complete` |
+| status drift | Gate 前恢复合法 predecessor window：首次运行用 `setup_ready`/`seed_topics_ready`，rerun 回流用 `rerun_ready`/`seed_topics_ready` |
 | registry 为空 | 通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: blocks_must_answer`），从 `rb_plan.md` frontmatter 尝试重建 topic_registry，不浮出水面 |
 
 **Persistent failure：** 若 seed-topics gate 连续 3 次修复无进展，通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: partial`）：
@@ -313,7 +313,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 
 `stop: no` — Agent 自主物化，不发送阶段进度或 idle/no-work 汇报。Queue thin、active window 为空、registry 为空、或 seed topic 本地文件已写完，都不是停顿点；它们分别触发继续灌料、drain、registry repair、运行 gate 或静默降级。
 
-若 registry 为空（topic 集合未建立），通过 accepted trace/log surface 记录 `silent_degradation`，尝试从 `rb_plan.md` frontmatter 重建 topic_registry。Phase 完成条件是 `seed-topics-ready` gate pass + gate CLI `check.next`；不得自判完成或自行加载下一 phase。
+若 registry 为空（topic 集合未建立），通过 accepted trace/log surface 记录 `silent_degradation`，尝试从 `rb_plan.md` frontmatter 重建 topic_registry。Phase handoff 完成条件是 `seed-topics-ready` gate pass + `enter-phase --node <check.next>` 写入 route-bound load witness + `advance-status --to seed_topics_ready`；不得自判完成或自行加载下一 phase。
 
 ## Rerun-Aware Behavior
 

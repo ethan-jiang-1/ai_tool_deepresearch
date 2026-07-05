@@ -1,6 +1,6 @@
 {
   "gate": "wave1-complete",
-  "description": "Verify Wave1 produced deepening artifacts per topic: evidence-summary.md, question-list.md, reference/{topic_slug}*.md rich MD reference files per topic, backfill token replacement, trace, and status.",
+  "description": "Verify Wave1 produced deepening artifacts per topic: evidence-summary.md, question-list.md, reference/{topic_slug}*.md rich MD reference files per topic, backfill token replacement, and trace evidence. Source-gate status-window and handoff witness are enforced by shared gate preflight.",
   "rules": [
     {
       "id": "wave1_dir_exists",
@@ -116,20 +116,6 @@
       "failure_message": "No wave1_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event per the shared-subagent-protocol."
     },
     {
-      "id": "status_current_gate",
-      "check": "status_value",
-      "target": "rb_status.json#/current_gate",
-      "expected": "wave1_complete",
-      "failure_message": "rb_status.json current_gate must be 'wave1_complete'. Status may have drifted \u2014 restore the correct gate value."
-    },
-    {
-      "id": "status_next_gate",
-      "check": "status_value",
-      "target": "rb_status.json#/next_gate",
-      "expected": "wave2_complete",
-      "failure_message": "rb_status.json next_gate must be 'wave2_complete'. Status may have drifted \u2014 restore the correct value."
-    },
-    {
       "id": "content_dedup",
       "check": "content_dedup",
       "target": "output_declarations",
@@ -139,7 +125,7 @@
         "homepage_detect": true,
         "self_ref_detect": true
       },
-      "failure_message": "\u68c0\u6d4b\u5230\u865a\u5047\u6216\u91cd\u590d reference \u6587\u4ef6"
+      "failure_message": "检测到虚假或重复 reference 文件"
     },
     {
       "id": "cache_coverage",
@@ -160,8 +146,15 @@
       "target": "rb_output_declarations.jsonl",
       "wave": "wave1",
       "output_selectors": {
-        "expected_from_topic_registry": ["artifacts/wave1/{topic}/evidence-summary.md", "artifacts/wave1/{topic}/question-list.md"],
-        "roles": ["reference", "evidence_summary", "question_list"]
+        "expected_from_topic_registry": [
+          "artifacts/wave1/{topic}/evidence-summary.md",
+          "artifacts/wave1/{topic}/question-list.md"
+        ],
+        "roles": [
+          "reference",
+          "evidence_summary",
+          "question_list"
+        ]
       },
       "failure_message": "Wave1 outputs exist on disk but are not covered by output declaration ledger. Files may have been written directly (bypassing relay). Re-run through delegated relay tasks."
     },

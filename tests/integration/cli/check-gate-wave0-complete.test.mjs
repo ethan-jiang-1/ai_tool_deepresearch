@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs');
@@ -22,11 +23,7 @@ function createBundle(name) {
   const r = spawnSync('node', [NEW_BUNDLE, name, '--force'], { encoding: 'utf-8', timeout: 10000 });
   const dir = track(r.stdout.trim());
 
-  // Setup status to wave0-ready
-  const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf-8'));
-  status.current_gate = 'wave0_complete';
-  status.next_gate = 'wave1_complete';
-  writeFileSync(join(dir, 'rb_status.json'), JSON.stringify(status));
+  setStatusWindow(dir, 'seed_topics_ready', 'wave0_complete');
 
   // Write topic_registry into rb_plan.md frontmatter
   const planPath = join(dir, 'rb_plan.md');
@@ -79,8 +76,15 @@ function setupHappyPath(dir) {
   writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), VALID_REF);
   writeFileSync(join(dir, 'artifacts/wave0/topic-b/source.yaml'), VALID_REF_B);
 
-  // trace event
-  writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave0_completion', ts: new Date().toISOString() }) + '\n');
+  writeTraceEvents(dir, [
+    ...witnessedHandoffEvents({
+      sourceGate: 'seed-topics-ready',
+      phase: 'seed-topics',
+      sourceNode: 'phases/phase-seed-topics.md',
+      targetNode: 'phases/phase-wave0.md',
+    }),
+    { event: 'wave0_completion', ts: new Date().toISOString() },
+  ]);
   // output declaration ledger (content_dedup + provenance gates read from this)
   writeFileSync(join(dir, 'rb_output_declarations.jsonl'), JSON.stringify({
     declared_at: new Date().toISOString(),
@@ -169,6 +173,20 @@ describe('check-gate-wave0-complete', () => {
     assert.ok(output.inspect.some(m => m.includes('Count floor') || m.includes('count')), `Expected count floor fail: ${JSON.stringify(output.inspect)}`);
   });
 
+  it('5b. marks downstream count diagnostics as masked when upstream YAML parse fails', () => {
+    const dir = createBundle(unique('mask'));
+    setupHappyPath(dir);
+    writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), ': definitely-not-yaml\n');
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('masked:true upstream_schema_failure')),
+      `Expected masked upstream schema diagnostic: ${JSON.stringify(output.inspect)}`);
+    assert.ok(output.check.failed_rule_ids.includes('per_topic_reference_schema_valid:topic-a'));
+    assert.ok(output.check.failed_rule_ids.includes('per_topic_count_floor:topic-a'));
+    assert.ok(output.check.masked_rule_ids.includes('per_topic_count_floor:topic-a'));
+  });
+
   it('6. fails when count_floor passes but schema_valid fails (AND interaction)', () => {
     const dir = createBundle(unique('and'));
     setupHappyPath(dir);
@@ -220,7 +238,12 @@ describe('check-gate-wave0-complete', () => {
   it('9. fails when trace event (wave0_completion) is missing from rb_trace.jsonl', () => {
     const dir = createBundle(unique('notrace'));
     setupHappyPath(dir);
-    rmSync(join(dir, 'rb_trace.jsonl'));
+    writeTraceEvents(dir, witnessedHandoffEvents({
+      sourceGate: 'seed-topics-ready',
+      phase: 'seed-topics',
+      sourceNode: 'phases/phase-seed-topics.md',
+      targetNode: 'phases/phase-wave0.md',
+    }));
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
@@ -242,7 +265,15 @@ describe('check-gate-wave0-complete', () => {
       'accessed_at: "2026-06-27"\nrelated_topic: "shared"\n---\n' +
       '## Key Facts\n- Generic placeholder\n## Core Content Capture\nNo real content.\n' +
       '## Relevance To This Research\nMinimal.\n## Quotable Terms / Concepts\n- None.\n## Risks And Limitations\n- Placeholder.\n');
-    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: 'wave0_completion', ts: new Date().toISOString() }) + '\n');
+    writeTraceEvents(dir, [
+      ...witnessedHandoffEvents({
+        sourceGate: 'seed-topics-ready',
+        phase: 'seed-topics',
+        sourceNode: 'phases/phase-seed-topics.md',
+        targetNode: 'phases/phase-wave0.md',
+      }),
+      { event: 'wave0_completion', ts: new Date().toISOString() },
+    ]);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false, `Expected placeholder rejection, got pass. Inspect: ${JSON.stringify(output.inspect)}`);

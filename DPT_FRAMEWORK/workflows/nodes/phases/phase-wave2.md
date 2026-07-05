@@ -152,7 +152,7 @@ Claim → execute synthesis（cross-topic scan + finding triage + initial search
    node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs \
      --bundle <path> --current-node phases/phase-wave2.md
    ```
-6. gate pass → 读 `check.next`，advance to `hitl2`
+6. gate pass → 进入 §6：通过 `enter-phase --node <check.next>` 消费 `phase-hitl2.md`，再同步 `wave2_complete`
 7. gate fail → 按 §3.3.2 和 §7 处理
 
 #### §3.3.1 Quality Self-Check（跑 Gate 前逐条确认 wave2 参数达标）
@@ -325,10 +325,7 @@ Ledger 记录 reasoning，index 记录 lifecycle state。JS 不判断 reasoning 
   ```bash
   node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --event wave2_completion
   ```
-- `rb_status.json` 中 `current_gate: wave2_complete` / `next_gate: hitl2_recorded`（通过 CLI 推进）：
-  ```bash
-  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave2_complete
-  ```
+- Gate 前 status window 为 `current_gate: wave1_complete` / `next_gate: wave2_complete`。Wave2 gate pass 后，§6 的 `advance-status --to wave2_complete` 才会写入 `current_gate: wave2_complete` / `next_gate: hitl2_recorded`。
 
 ## 5. Gate Command
 
@@ -340,11 +337,14 @@ Retry 时传 Agent-reported `--attempt N`（N 从 1 开始，每次 rerun 递增
 
 ## 6. On Gate Pass
 
-读取 `check.next`。调用 `advance-status` 推进状态后加载下一 phase：
+读取 gate CLI JSON output，确认 `check.passed === true`，然后读取 `check.next`（应为 `phases/phase-hitl2.md`）。先消费 handoff，再同步 source gate status：
+
 ```bash
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave2_complete
 ```
-然后加载 `check.next` 指向的 node（应为 `phase-hitl2.md`）。
+
+从 `enter-phase` 渲染出的 HITL2 Markdown 继续执行下一 phase。`advance-status --to hitl2_recorded` 只能在 HITL2 gate 自己通过后使用，不得在 wave2 pass 后使用。
 
 ## 7. On Gate Fail
 
@@ -362,7 +362,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
 | backfill token 残留 | 执行 backfill task 从 ledger/index 投影替换 token |
 | 无 wave1 evidence 引用 | 在 synthesis 中添加对 evidence-summary/question-list 的引用 |
 | `trace_event_present` fail | 确认已记录 `wave2_completion` trace event |
-| status drift | 恢复 `current_gate`/`next_gate` 为 `wave2_complete`/`hitl2_recorded` |
+| status drift | Gate 前恢复 `current_gate: wave1_complete` / `next_gate: wave2_complete`；gate pass 后再按 §6 同步 `wave2_complete` |
 | Quality gap（backing/cross-topic/emergent 不达标）| **进入 §3.3.2 Quality Re-Fill Loop**：读 Quality Self-Check gap → 创建对应 supplementary task card（backing/cross-topic/emergent）→ enqueue + drain → re-run Quality Self-Check。最多 3 次 gate attempt |
 
 **Persistent failure：** 若 wave2 gate 连续 3 次修复无进展（含 quality re-fill attempt），通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: partial`）：
@@ -375,7 +375,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 
 `stop: no` — Phase Agent 自主执行 synthesis + finding triage + Quality Self-Check + re-fill loop，不发送阶段进度或 idle/no-work 汇报。Active queue、thin queue、backing/cross-topic/emergent quality gap、unresolved finding、或 no-progress round，都是继续 drain、Quality Self-Check、targeted re-fill、换策略、运行 gate 或记录 silent holding 的信号。
 
-Wave2 不做 stop-and-wait 人类审查（HITL2 是独立的审查阶段）。Evidence quality, cross-topic synthesis, and finding backing take priority: before gate pass, do not turn quality gaps into user-facing status. Phase 完成条件是 `wave2-complete` gate pass + gate CLI `check.next`；不得自判完成或自行加载下一 phase。
+Wave2 不做 stop-and-wait 人类审查（HITL2 是独立的审查阶段）。Evidence quality, cross-topic synthesis, and finding backing take priority: before gate pass, do not turn quality gaps into user-facing status. Phase handoff 完成条件是 `wave2-complete` gate pass + `enter-phase --node <check.next>` 写入 route-bound load witness + `advance-status --to wave2_complete`；不得自判完成或自行加载下一 phase。
 
 > **静默阶段纪律**：本 phase 在静默自主阶段。`requires` 已加载 `shared-silent-execution.md`。遇错按降级优先级链处理（重试→换源→降级方法→标记 gap），绝不浮出水面向用户报告进度、提问或请求确认。
 

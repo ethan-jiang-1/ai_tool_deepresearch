@@ -14,6 +14,7 @@ import {
   buildGateResult,
   emitGateResult,
   writeGateAttempt,
+  checkPhaseHandoffPreflight,
   stripMdFrontmatter,
 } from '../../engine/helpers/gate-helpers.mjs';
 
@@ -34,6 +35,23 @@ if (bindingError) {
     advice: ['Verify --current-node matches the phase for this gate.'],
   };
   emitGateResult(result, { bundlePath: args.bundle });
+}
+
+const handoffPreflight = checkPhaseHandoffPreflight(args.bundle, args.currentNode);
+if (!handoffPreflight.ok) {
+  const routing = resolveRouting(args.transitions, args.currentNode, 'failed');
+  const result = buildGateResult({
+    passed: false,
+    gate: definition.gate,
+    currentNodeRef: args.currentNode,
+    routing,
+    inspect: handoffPreflight.inspect || [handoffPreflight.reason || 'Lifecycle handoff preflight failed'],
+    advice: handoffPreflight.advice || ['Follow the handoff remedy and rerun this gate.'],
+    extraCheck: { handoff_preflight: false },
+    attemptNumber: args.attempt ?? 0,
+  });
+  writeGateAttempt(args.bundle, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+  emitGateResult(result);
 }
 
 const bundlePath = args.bundle;
@@ -186,7 +204,22 @@ for (const rule of definition.rules) {
   }
 }
 
-const outcome = allPassed ? 'passed' : 'failed';
+let selectedDecision = null;
+if (allPassed) {
+  const profile = getProfile();
+  selectedDecision = resolvePath(profile || {}, 'human_decision_checkpoints/hitl2/user_decision');
+}
+
+let outcome = 'failed';
+let deterministicHandoff = false;
+if (allPassed && selectedDecision === 'proceed_to_readiness') {
+  outcome = 'passed';
+  deterministicHandoff = true;
+} else if (allPassed && selectedDecision === 'rerun') {
+  outcome = 'rerun';
+  deterministicHandoff = true;
+}
+
 const routing = resolveRouting(args.transitions, args.currentNode, outcome);
 
 const result = buildGateResult({
@@ -196,10 +229,14 @@ const result = buildGateResult({
   routing,
   inspect,
   advice,
+  extraCheck: {
+    hitl2_user_decision: selectedDecision,
+    deterministic_handoff: deterministicHandoff,
+  },
   attemptNumber: args.attempt ?? 0,
 });
 
 // Write gate attempt audit (logger + trace)
-writeGateAttempt(bundlePath, result);
+writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
 
 emitGateResult(result);

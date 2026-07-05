@@ -1,6 +1,6 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.3**
+> **DPT_FRAMEWORK v0.4**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明用户要用 DPT_FRAMEWORK 跑一次研究。
@@ -22,6 +22,8 @@
 2. 建 bundle：`B=$(node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs <name>)`
 3. 把研究问题写进 `$B/rb_plan.md`
 4. 加载 `workflows/nodes/phases/phase-instantiation.md`，按 instruction 执行，之后靠 gate 的 `check.next` 自驱动到 `phase-final`
+
+从 setup onward，gate pass 后不要直接手读下一 phase：先运行 `enter-phase --bundle <path> --node <check.next>` 写入 route-bound handoff witness，再按 phase §6 用 source-gate `advance-status --to <source_gate_enum>` 同步状态。
 
 人类介入点只有 `hitl1`（定方向 / profile / topics）和 `hitl2`（审 synthesis），其余 phase 均 `stop: no`，Agent 自行推进。
 

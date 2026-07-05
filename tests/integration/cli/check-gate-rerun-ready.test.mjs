@@ -93,13 +93,42 @@ function setupBundle(name, overrides = {}) {
 
   writeFileSync(join(dir, 'rb_profile.yaml'), yamlContent.join('\n') + '\n');
 
-  // rb_status.json
+  // rb_status.json: before rerun-ready passes, the active status window is the
+  // witnessed predecessor source gate (HITL2) and the current rerun gate.
   writeFileSync(join(dir, 'rb_status.json'), JSON.stringify({
     current_mode: 'execution',
     state: 'in_progress',
-    current_gate: overrides.status_current_gate || 'rerun_ready',
-    next_gate: overrides.status_next_gate || 'seed_topics_ready',
+    current_gate: overrides.status_current_gate || 'hitl2_recorded',
+    next_gate: overrides.status_next_gate || 'rerun_ready',
   }));
+
+  if (!overrides.skip_handoff_trace) {
+    const traceEvents = [
+      JSON.stringify({
+        ts: '2026-01-01T00:00:00.000Z',
+        event: 'gate_attempt',
+        gate: 'hitl2-recorded',
+        phase: 'hitl2',
+        passed: true,
+        currentNodeRef: 'phases/phase-hitl2.md',
+        next: 'phases/phase-rerun.md',
+      }),
+    ];
+
+    if (!overrides.skip_handoff_load) {
+      traceEvents.push(JSON.stringify({
+        ts: '2026-01-01T00:00:01.000Z',
+        event: 'load_complete',
+        entry: 'phases/phase-rerun.md',
+        handoff_source_gate: 'hitl2-recorded',
+        handoff_source_node: 'phases/phase-hitl2.md',
+        handoff_target_node: 'phases/phase-rerun.md',
+        handoff_source_attempt_index: 0,
+      }));
+    }
+
+    writeFileSync(join(dir, 'rb_trace.jsonl'), traceEvents.join('\n') + '\n');
+  }
 
   // Required directories
   mkdirSync(join(dir, 'seed_topics'), { recursive: true });
@@ -213,17 +242,26 @@ describe('gate-rerun-ready — bundle_structure_valid', () => {
   });
 });
 
-// ─── Status consistency rule ───────────────────────────────────────────────
+// ─── Handoff/status-window preflight ───────────────────────────────────────
 
-describe('gate-rerun-ready — status_consistent', () => {
-  it('fails when current_gate is not rerun_ready', () => {
+describe('gate-rerun-ready — handoff/status-window preflight', () => {
+  it('fails when current_gate is not the witnessed HITL2 predecessor', () => {
     const bundle = setupBundle('fail-status-drift', {
-      status_current_gate: 'hitl2_recorded',
-      status_next_gate: 'readiness_passed',
+      status_current_gate: 'wave2_complete',
+      status_next_gate: 'rerun_ready',
     });
     const result = runGate(bundle);
     assert.strictEqual(result.check.passed, false);
     assert.ok(result.inspect.some(m => m.includes('current_gate')));
+  });
+
+  it('fails when the HITL2 rerun entry witness is missing', () => {
+    const bundle = setupBundle('fail-missing-handoff', {
+      skip_handoff_load: true,
+    });
+    const result = runGate(bundle);
+    assert.strictEqual(result.check.passed, false);
+    assert.ok(result.advice.some(m => m.includes('enter-phase')));
   });
 });
 

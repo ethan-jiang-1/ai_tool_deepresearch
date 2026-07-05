@@ -17,10 +17,12 @@ The required standard playbook SHALL use a disposable bundle and real framework 
 - an older passed handoff is rejected when a newer attempt for the same source gate/source node fails or points elsewhere;
 - after `enter-phase`, source-gate `advance-status` and subsequent gate operations proceed normally under the source-gate status-window contract;
 - the status-window contract is exercised beyond wave0→wave1, covering at minimum wave1→wave2, wave2→HITL2, HITL2→readiness, readiness→final, one HITL2→rerun deterministic branch emitted by the real HITL2 gate CLI, and one rerun→seed-topics multi-incoming predecessor case;
-- a forced old-style resume path reports a named handoff failure and remedy instead of silently accepting the state.
+- a forced old-style resume path reports a named handoff failure and remedy instead of silently accepting the state;
 - a witnessed entry without subsequent target-phase work is not overclaimed as pipeline completion: the next target gate SHALL still fail its normal content/status rules when required artifacts are absent, and the playbook SHALL NOT claim to prove chat-channel halt prevention.
 
 The playbook verdict SHALL be based on `rb_trace.jsonl`, CLI exit codes, diagnostic artifacts, and bundle files. Console output alone SHALL NOT be verdict authority. The standard playbook SHALL NOT claim to prove real chat-channel behavior; chat-side premature synthesis remains reserved for the optional heavy canary or manual replay evidence.
+
+If the standard playbook deliberately records failed gate attempts to prove fail-closed behavior, post-run health verification MAY report those expected gate-attempt issues. The playbook SHALL distinguish expected health issues caused by deliberate negative cases from unexpected health failures such as schema corruption, missing trace files, ledger parse failures, or timeline parser breakage. Expected health issues SHALL NOT overturn a mechanism verdict that is otherwise proven by real CLI exits and bundle/trace evidence, but they SHALL be documented so archive notes do not overclaim a globally clean bundle health result.
 
 #### Scenario: Standard E2E detects unwitnessed handoff
 
@@ -100,6 +102,14 @@ The playbook verdict SHALL be based on `rb_trace.jsonl`, CLI exit codes, diagnos
 - **AND** at least one failed attempt includes an upstream schema or parse failure that masks downstream count or dedup diagnostics
 - **THEN** diagnostic artifacts SHALL show deterministic attempt delta and cascade-mask diagnostics
 - **AND** those diagnostics SHALL NOT be treated as pass/fail authority
+
+#### Scenario: Standard E2E separates mechanism verdict from expected negative-case health issues
+
+- **WHEN** the playbook intentionally creates failed gate attempts to prove fail-closed behavior
+- **AND** the standard health checker reports issues that correspond to those intentional failed attempts
+- **THEN** the playbook MAY still report a mechanism PASS if all required CLI/trace/bundle checks pass
+- **AND** the health issues SHALL be documented as expected negative-case artifacts
+- **AND** unexpected health failures such as missing trace, invalid ledger, schema parse failure, or timeline parser failure SHALL still fail or block the E2E verdict
 
 ### Requirement: Optional heavy canary cannot substitute for standard proof
 

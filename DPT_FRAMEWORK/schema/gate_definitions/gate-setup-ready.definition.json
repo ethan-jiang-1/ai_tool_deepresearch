@@ -1,6 +1,6 @@
 {
   "gate": "setup-ready",
-  "description": "Verify the instantiated bundle has structural consistency: canonical control files exist and parse, scaffold directories exist, HITL1 is recorded, status fields point to setup→wave0, and bundle basename agrees with plan/profile basename. setup-ready is NOT readiness-passed — it only checks structure, not research quality.",
+  "description": "Verify the instantiated bundle has structural consistency: canonical control files exist and parse, scaffold directories exist, HITL1 is recorded, bootstrap-compatible setup status is present, and bundle basename agrees with plan/profile basename. setup-ready is NOT readiness-passed — it only checks structure, not research quality.",
   "rules": [
     {
       "id": "rb_plan_exists",

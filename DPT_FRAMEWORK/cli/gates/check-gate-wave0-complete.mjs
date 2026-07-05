@@ -14,6 +14,7 @@ import {
   buildGateResult,
   emitGateResult,
   writeGateAttempt,
+  checkPhaseHandoffPreflight,
   derivePhaseFromGate,
   readBundlePlan,
   readBundleProfile,
@@ -53,9 +54,28 @@ if (bindingError) {
   emitGateResult(result, { bundlePath: args.bundle });
 }
 
+const handoffPreflight = checkPhaseHandoffPreflight(args.bundle, args.currentNode);
+if (!handoffPreflight.ok) {
+  const routing = resolveRouting(args.transitions, args.currentNode, 'failed');
+  const result = buildGateResult({
+    passed: false,
+    gate: definition.gate,
+    currentNodeRef: args.currentNode,
+    routing,
+    inspect: handoffPreflight.inspect || [handoffPreflight.reason || 'Lifecycle handoff preflight failed'],
+    advice: handoffPreflight.advice || ['Follow the handoff remedy and rerun this gate.'],
+    extraCheck: { handoff_preflight: false },
+    attemptNumber: args.attempt ?? 0,
+  });
+  writeGateAttempt(args.bundle, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+  emitGateResult(result);
+}
+
 const bundlePath = args.bundle;
 const inspect = [];
 const advice = [];
+const failedRuleIds = new Set();
+const maskedRuleIds = new Set();
 let allPassed = true;
 
 // ── Cached parsers (lazy) ──
@@ -105,6 +125,15 @@ function expandTopicTarget(target) {
   return [{ topic: null, resolved: target }];
 }
 
+function scopedRuleId(ruleId, topic) {
+  return topic ? `${ruleId}:${topic}` : ruleId;
+}
+
+function markMasked(ruleId, topic) {
+  maskedRuleIds.add(scopedRuleId(ruleId, topic));
+  return ' [masked:true upstream_schema_failure]';
+}
+
 /**
  * Read YAML array from a file. Uses centralized safe reader with repair.
  * Returns parsed array or null if file missing/unparseable.
@@ -131,6 +160,7 @@ if (templateScanFindings.findings.length > 0) {
 }
 
 // ── Rule evaluation ──
+const schemaFailedTopics = new Set();
 for (const rule of definition.rules) {
   if (rule.check === 'placeholder') continue;
 
@@ -170,6 +200,7 @@ for (const rule of definition.rules) {
           rulePassed = false;
           ruleDetail = `Cannot read or parse YAML array from ${resolvedTarget}`;
           if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+          if (exp.topic) schemaFailedTopics.add(exp.topic);
         } else {
           const parsed = ReferenceMetadataArraySchema.safeParse(arr);
           if (!parsed.success) {
@@ -177,6 +208,7 @@ for (const rule of definition.rules) {
             const issues = parsed.error.issues.map(i => `[${i.path.join('.')}] ${i.message}`).join('; ');
             ruleDetail = `Schema validation failed for ${resolvedTarget}: ${issues}`;
             if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+            if (exp.topic) schemaFailedTopics.add(exp.topic);
           }
         }
       } else if (rule.check === 'count_floor') {
@@ -198,6 +230,9 @@ for (const rule of definition.rules) {
               ruleDetail += ` [${refResult.uncountable.length} uncountable: ${refResult.uncountable.map(u => u.reason).join('; ')}]`;
             }
             if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+            if (exp.topic && schemaFailedTopics.has(exp.topic)) {
+              ruleDetail += markMasked(rule.id, exp.topic);
+            }
           }
         } else if (resolvedTarget.includes('*')) {
           // Glob mode (non-reference): count files matching wildcard pattern
@@ -211,6 +246,9 @@ for (const rule of definition.rules) {
             rulePassed = false;
             ruleDetail = `Count floor not met for ${resolvedTarget}: ${count} files (threshold: ${threshold})`;
             if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+            if (exp.topic && schemaFailedTopics.has(exp.topic)) {
+              ruleDetail += markMasked(rule.id, exp.topic);
+            }
           }
         } else {
           // YAML mode: count array entries
@@ -221,6 +259,9 @@ for (const rule of definition.rules) {
             rulePassed = false;
             ruleDetail = `Count floor not met for ${resolvedTarget}: ${count} entries (threshold: ${threshold})`;
             if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
+            if (exp.topic && schemaFailedTopics.has(exp.topic)) {
+              ruleDetail += markMasked(rule.id, exp.topic);
+            }
           }
         }
       } else if (rule.check === 'status_value') {
@@ -326,6 +367,10 @@ for (const rule of definition.rules) {
         if (!dedupResult.passed) {
           rulePassed = false;
           ruleDetail = dedupResult.inspect.join('; ');
+          if (schemaFailedTopics.size > 0) {
+            ruleDetail += ` [masked:true upstream_schema_failure topics=${[...schemaFailedTopics].join(',')}]`;
+            maskedRuleIds.add(rule.id);
+          }
           for (const a of dedupResult.advice) advice.push(a);
         }
       } else if (rule.check === 'cache_coverage') {
@@ -380,6 +425,7 @@ for (const rule of definition.rules) {
 
     if (!rulePassed) {
       allPassed = false;
+      failedRuleIds.add(scopedRuleId(rule.id, exp.topic));
       inspect.push(ruleDetail);
       advice.push(exp.topic ? rule.failure_message.replace(/\{topic\}/g, exp.topic) : rule.failure_message);
     }
@@ -409,9 +455,13 @@ const result = buildGateResult({
   routing,
   inspect,
   advice,
+  extraCheck: {
+    failed_rule_ids: [...failedRuleIds],
+    masked_rule_ids: [...maskedRuleIds],
+  },
   attemptNumber: args.attempt ?? 0,
 });
 
-writeGateAttempt(bundlePath, result);
+writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
 
 emitGateResult(result);

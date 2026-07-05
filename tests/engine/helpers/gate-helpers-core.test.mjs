@@ -88,6 +88,23 @@ describe('writeGateAttempt (GSK-005, TRW-003)', () => {
     assert.doesNotThrow(() => writeGateAttempt('/nonexistent/path', makeGateResult(true)));
   });
 
+  it('throws on non-durable covered pass trace writes when strictTrace is enabled', () => {
+    const b = setupBundle('test-gate-strict-trace-fail');
+    mkdirSync(join(b, 'rb_trace.jsonl'), { recursive: true });
+
+    assert.throws(
+      () => writeGateAttempt(b, makeGateResult(true), { strictTrace: true }),
+      /EISDIR|illegal operation|directory/i,
+    );
+  });
+
+  it('continues to tolerate trace write failures when strictTrace is disabled', () => {
+    const b = setupBundle('test-gate-nonstrict-trace-fail');
+    mkdirSync(join(b, 'rb_trace.jsonl'), { recursive: true });
+
+    assert.doesNotThrow(() => writeGateAttempt(b, makeGateResult(true), { strictTrace: false }));
+  });
+
   it('bundle matches rb_status.json value', () => {
     const b = setupBundle('test-gate-match');
     writeGateAttempt(b, makeGateResult(true));
@@ -142,6 +159,176 @@ describe('writeGateAttempt diagnostic_path in log detail', () => {
     const diagPathMatch = logContent.match(/"diagnostic_path":"([^"]+)"/);
     assert.ok(diagPathMatch);
     assert.ok(existsSync(join(dir, diagPathMatch[1])));
+  });
+});
+
+describe('Engine-derived attempt diagnostics (GSK-008)', () => {
+  it('computes attempt_count and cross-attempt deltas from prior diagnostics', () => {
+    const dir = setupBundle('test-attempt-delta');
+
+    const first = {
+      check: { passed: false, gate: 'wave0-complete', currentNodeRef: 'phases/phase-wave0.md', next: null },
+      routing: { kind: 'retry', next: null },
+      inspect: ['rule-a failed', 'rule-b failed'],
+      advice: [],
+    };
+    writeGateAttempt(dir, first);
+    assert.equal(first.check.attempt_count, 1);
+    assert.equal(first.check.attempt_trend, 'first');
+
+    const second = {
+      check: { passed: false, gate: 'wave0-complete', currentNodeRef: 'phases/phase-wave0.md', next: null },
+      routing: { kind: 'retry', next: null },
+      inspect: ['rule-b failed', 'rule-c failed'],
+      advice: [],
+    };
+    writeGateAttempt(dir, second);
+
+    assert.equal(second.check.attempt_count, 2);
+    assert.deepEqual(second.check.newly_passing, ['rule-a failed']);
+    assert.deepEqual(second.check.still_failing, ['rule-b failed']);
+    assert.deepEqual(second.check.regressed, ['rule-c failed']);
+    assert.equal(second.check.attempt_trend, 'regressed');
+  });
+
+  it('emits autonomous continuation advice on high-attempt pass using Engine-visible attempts', () => {
+    const dir = setupBundle('test-attempt-pass-advice');
+
+    for (const label of ['rule-a failed', 'rule-b failed']) {
+      writeGateAttempt(dir, {
+        check: { passed: false, gate: 'wave0-complete', currentNodeRef: 'phases/phase-wave0.md', next: null },
+        routing: { kind: 'retry', next: null },
+        inspect: [label],
+        advice: [],
+      });
+    }
+
+    const pass = {
+      check: {
+        passed: true,
+        gate: 'wave0-complete',
+        currentNodeRef: 'phases/phase-wave0.md',
+        next: 'phases/phase-wave1.md',
+      },
+      routing: { kind: 'next', next: 'phases/phase-wave1.md' },
+      inspect: [],
+      advice: [],
+    };
+    writeGateAttempt(dir, pass);
+
+    assert.equal(pass.check.attempt_count, 3);
+    assert.equal(pass.check.attempt_trend, 'converging');
+    assert.equal(pass.check.fatigue_warning, true);
+    assert.ok(pass.advice.some(a => a.includes('enter-phase')));
+    assert.ok(pass.advice.some(a => a.includes('phase-final')));
+  });
+
+  it('treats a failure after a prior pass diagnostic as a regression', () => {
+    const dir = setupBundle('test-pass-then-regress');
+
+    writeGateAttempt(dir, {
+      check: {
+        passed: true,
+        gate: 'wave1-complete',
+        currentNodeRef: 'phases/phase-wave1.md',
+        next: 'phases/phase-wave2.md',
+      },
+      routing: { kind: 'next', next: 'phases/phase-wave2.md' },
+      inspect: [],
+      advice: [],
+    });
+
+    const regressed = {
+      check: { passed: false, gate: 'wave1-complete', currentNodeRef: 'phases/phase-wave1.md', next: null },
+      routing: { kind: 'retry', next: null },
+      inspect: ['rule-x failed'],
+      advice: [],
+    };
+    writeGateAttempt(dir, regressed);
+
+    assert.equal(regressed.check.attempt_count, 2);
+    assert.deepEqual(regressed.check.regressed, ['rule-x failed']);
+    assert.equal(regressed.check.attempt_trend, 'regressed');
+  });
+
+  it('resets Engine-derived attempt_count after the current node is re-entered', () => {
+    const dir = setupBundle('test-attempt-window-reset');
+
+    writeGateAttempt(dir, {
+      check: {
+        passed: false,
+        gate: 'wave0-complete',
+        currentNodeRef: 'phases/phase-wave0.md',
+        next: null,
+        failed_rule_ids: ['wave0_old_gap'],
+      },
+      routing: { kind: 'retry', next: null },
+      inspect: ['old gap'],
+      advice: [],
+    });
+
+    writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({
+      ts: '2026-01-01T00:00:01.000Z',
+      event: 'load_complete',
+      entry: 'phases/phase-wave0.md',
+    }) + '\n', { flag: 'a' });
+
+    const fresh = {
+      check: {
+        passed: false,
+        gate: 'wave0-complete',
+        currentNodeRef: 'phases/phase-wave0.md',
+        next: null,
+        failed_rule_ids: ['wave0_new_gap'],
+      },
+      routing: { kind: 'retry', next: null },
+      inspect: ['new gap'],
+      advice: [],
+    };
+    writeGateAttempt(dir, fresh);
+
+    assert.equal(fresh.check.attempt_count, 1);
+    assert.equal(fresh.check.attempt_trend, 'first');
+    assert.deepEqual(fresh.check.regressed, []);
+  });
+
+  it('uses diagnostic failed_rule_ids for deltas instead of brittle inspect prose', () => {
+    const dir = setupBundle('test-attempt-rule-id-delta');
+
+    writeGateAttempt(dir, {
+      check: {
+        passed: false,
+        gate: 'wave0-complete',
+        currentNodeRef: 'phases/phase-wave0.md',
+        next: null,
+        failed_rule_ids: ['schema_valid:alpha', 'count_floor:alpha'],
+      },
+      routing: { kind: 'retry', next: null },
+      inspect: [
+        'Schema validation failed for artifacts/wave0/alpha/source.yaml',
+        'Count floor not met for reference/alpha-*.md',
+      ],
+      advice: [],
+    });
+
+    const second = {
+      check: {
+        passed: false,
+        gate: 'wave0-complete',
+        currentNodeRef: 'phases/phase-wave0.md',
+        next: null,
+        failed_rule_ids: ['count_floor:alpha'],
+      },
+      routing: { kind: 'retry', next: null },
+      inspect: ['Count floor still short, but message wording changed'],
+      advice: [],
+    };
+    writeGateAttempt(dir, second);
+
+    assert.deepEqual(second.check.newly_passing, ['schema_valid:alpha']);
+    assert.deepEqual(second.check.still_failing, ['count_floor:alpha']);
+    assert.deepEqual(second.check.regressed, []);
+    assert.equal(second.check.attempt_trend, 'converging');
   });
 });
 

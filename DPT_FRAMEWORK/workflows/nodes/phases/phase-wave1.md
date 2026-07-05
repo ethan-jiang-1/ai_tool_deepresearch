@@ -222,7 +222,7 @@ last_updated: YYYY-MM-DD
 ```bash
 node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle <path> --current-node phases/phase-wave1.md
 ```
-5. gate pass → 读取 `check.next` → 加载 `phase-wave2.md`
+5. gate pass → 进入 §6：通过 `enter-phase --node <check.next>` 消费 `phase-wave2.md`，再同步 `wave1_complete`
 6. gate fail → 按 §3.3.2 和 §7 处理
 
 #### 3.3.1 Stop Conditions Checklist（跑 Gate 前自检）
@@ -364,10 +364,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
   ```bash
   node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --event wave1_completion
   ```
-- `rb_status.json` 中 `current_gate: wave1_complete` / `next_gate: wave2_complete`（通过 CLI 推进）：
-  ```bash
-  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave1_complete
-  ```
+- Gate 前 status window 为 `current_gate: wave0_complete` / `next_gate: wave1_complete`。Wave1 gate pass 后，§6 的 `advance-status --to wave1_complete` 才会写入 `current_gate: wave1_complete` / `next_gate: wave2_complete`。
 
 ## 5. Gate Command
 
@@ -379,11 +376,14 @@ Retry 时传 Agent-reported `--attempt N`（N 从 1 开始，每次 rerun 递增
 
 ## 6. On Gate Pass
 
-读取 `check.next`。调用 `advance-status` 推进状态后加载下一 phase：
+读取 gate CLI JSON output，确认 `check.passed === true`，然后读取 `check.next`（应为 `phases/phase-wave2.md`）。先消费 handoff，再同步 source gate status：
+
 ```bash
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave2_complete
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave1_complete
 ```
-然后加载 `check.next` 指向的 node（应为 `phase-wave2.md`）。
+
+从 `enter-phase` 渲染出的 wave2 Markdown 继续执行下一 phase。`advance-status --to wave2_complete` 只能在 wave2 gate 自己通过后使用，不得在 wave1 pass 后使用。
 
 ## 7. On Gate Fail
 
@@ -399,7 +399,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to wave2_complete
 | question-list.md Emergent Question Protocol 4 项检查未记录 | 逐一检查 new_concept / contradiction / missing_information_gap / noise_pattern，即使结果为 `none` 也要显式写 `checked; none; trigger_refs=none`。注意：gate 的 `question_list_has_four_sections` 规则只验证 section header 存在，不验证 4 项检查是否填写——此项由 phase body 约束和 anti-cheating rules 兜底 |
 | `__BACKFILL_WAVE1_*__` token stale（未替换） | grep 定位 stale token → 从 evidence-summary 提取内容 → 替换 token 行 |
 | `trace_event_present` fail | 确认已记录 `wave1_completion` trace event |
-| status drift | 恢复 `current_gate`/`next_gate` 为 `wave1_complete`/`wave2_complete` |
+| status drift | Gate 前恢复 `current_gate: wave0_complete` / `next_gate: wave1_complete`；gate pass 后再按 §6 同步 `wave1_complete` |
 | `per_topic_ref_md_count_floor` fail：某 topic 的 `reference/*{topic}*.md` 数量 < `rb_profile.yaml#/research_style_params/wave1_per_topic_ref_floor` 的动态阈值 | **进入 §3.3.2 Count-Floor Re-Fill Loop**：读 gate inspect → 解析不足 topic 和 gap → 创建 supplementary task card（`work_id: wave1-suppl-{topic.slug}-r{N}`，只产出 reference/*.md，不修改 evidence-summary/question-list）→ enqueue + drain → rerun gate。最多 3 次 gate attempt（含初始）。No-progress（同一 topic count 连续两次未增）→ 记录 `silent_gap`，切换策略 |
 | registry 为空 | 通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: blocks_must_answer`），从 `rb_plan.md` frontmatter 尝试重建 topic_registry。不浮出水面，不回到 HITL1 |
 
@@ -413,7 +413,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 
 `stop: no` — Phase Agent 自主执行 deepening 循环，不发送阶段进度或 idle/no-work 汇报。每个 topic 的 deepening/backfill、active queue、thin queue、reference count-floor gap、placeholder-only output、search-space-exhausted note、或 no-progress round，都是继续 drain、re-fill、换搜索策略、运行 gate 或记录 silent holding 的信号。
 
-Reference quality and per-topic evidence depth take priority: before gate pass, do not turn thin queue or quality/count gaps into user-facing status. Phase 完成条件是 `wave1-complete` gate pass + gate CLI `check.next`；不得自判完成或自行加载下一 phase。
+Reference quality and per-topic evidence depth take priority: before gate pass, do not turn thin queue or quality/count gaps into user-facing status. Phase handoff 完成条件是 `wave1-complete` gate pass + `enter-phase --node <check.next>` 写入 route-bound load witness + `advance-status --to wave1_complete`；不得自判完成或自行加载下一 phase。
 
 > **静默阶段纪律**：本 phase 在静默自主阶段。`requires` 已加载 `shared-silent-execution.md`。遇错按降级优先级链处理（重试→换源→降级方法→标记 gap），绝不浮出水面向用户报告进度、提问或请求确认。
 

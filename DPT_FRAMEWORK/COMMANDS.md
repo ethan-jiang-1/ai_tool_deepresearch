@@ -25,3 +25,9 @@ Deep Research Framework 命令索引。
 | validate-phase-templates.mjs | cli/validate-phase-templates.mjs | 校验 phase MD 模板保持 controller + delegates 合约 |
 | validate-subagent-logging-contract.mjs | cli/validate-subagent-logging-contract.mjs | 校验 phase/role/protocol MD 的 subagent logging 契约与 driver-first 措辞（含直调反模式检测） |
 | inspect-bundle.mjs | cli/inspect-bundle.mjs | bundle 目录结构完整性 |
+
+## Phase Handoff
+| 工具 | 文件 | 说明 |
+|------|------|------|
+| enter-phase.mjs | cli/enter-phase.mjs | 消费 gate CLI 返回的 `check.next`，调用 workflow loader 渲染下一 node Markdown，并写入 route-bound `load_complete` handoff witness |
+| advance-status.mjs | cli/advance-status.mjs | 在 `enter-phase` witness 存在后同步 just-passed source gate；covered handoff 使用真实 `gate_attempt.next`，不是默认 `passed` target |

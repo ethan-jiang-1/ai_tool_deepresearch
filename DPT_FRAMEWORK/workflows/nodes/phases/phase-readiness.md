@@ -49,7 +49,7 @@ Final 交付前运行最后一个 deterministic checkpoint：验证所有 requir
 - 检查 `rb_trace.jsonl` 中所有 prior gate 均有 `gate_attempt` 事件 `passed: true`（`trace_has_all_gates`——从 manifest 推导 prior gate 集合，无硬编码阈值）
 - 检查 `rb_profile.yaml` 可解析为合法 YAML（`yaml_parse`）
 - 检查 `rb_trace.jsonl` 每行都是合法 JSON（`jsonl_parse`）
-- 检查 `rb_status.json` 中 `current_gate: readiness_passed` / `next_gate: none`（`status_value`）
+- 检查 `rb_status.json` 中 gate 前 source-gate window：`current_gate: hitl2_recorded` / `next_gate: readiness_passed`
 - 更新 `rb_status.json` 中 readiness 相关状态
 - 记录 `readiness_check` trace event 到 `rb_trace.jsonl`
 
@@ -61,10 +61,7 @@ Final 交付前运行最后一个 deterministic checkpoint：验证所有 requir
 - `rb_trace.jsonl` 中所有 prior gate 均有 `gate_attempt` 事件 `passed: true`
 - `rb_profile.yaml` 可解析
 - `rb_trace.jsonl` 每行合法 JSON
-- `rb_status.json` 中 `current_gate: readiness_passed` / `next_gate: none`（通过 CLI 推进）：
-  ```bash
-  node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to readiness_passed
-  ```
+- Gate 前 status window 为 `current_gate: hitl2_recorded` / `next_gate: readiness_passed`。Readiness gate pass 后，§6 的 `advance-status --to readiness_passed` 才会写入 terminal status `current_gate: readiness_passed` / `next_gate: none`。
 
 ## 5. Gate Command
 
@@ -74,13 +71,14 @@ node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle <path> --c
 
 ## 6. On Gate Pass
 
-读取 `check.next`（terminal routing，`next_gate: "none"`）。调用 `advance-status` 标记终态后加载 final：
+读取 gate CLI JSON output，确认 `check.passed === true`，然后读取 `check.next`（应为 `phases/phase-final.md`）。先消费 final handoff，再同步 source gate terminal status：
+
 ```bash
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to readiness_passed
 ```
-然后加载 `phase-final.md`。
 
-Readiness pass 后 `next_gate: none`——final 是 terminal node，无 outgoing gate。
+从 `enter-phase` 渲染出的 Final Markdown 继续执行 final delivery。Readiness pass 后 `next_gate: none`，但 final delivery 仍由 `phase-final.md` 控制。
 
 ## 7. On Gate Fail
 
@@ -92,7 +90,7 @@ Readiness pass 后 `next_gate: none`——final 是 terminal node，无 outgoing
 | prior gate pass 缺失 | CLI inspect 列出具体缺失的 gate——回到对应 gate 修复后 rerun |
 | YAML 不可解析 | 检查 `rb_profile.yaml` 语法，修复 malformed YAML |
 | JSONL 不可解析 | 检查 `rb_trace.jsonl` 中有无非 JSON 行（如手动编辑痕迹），移除或修复 |
-| status drift | 恢复 `current_gate`/`next_gate` 同步 |
+| status drift | Gate 前恢复 `current_gate: hitl2_recorded` / `next_gate: readiness_passed`；gate pass 后再按 §6 同步 terminal status |
 
 **Persistent failure：** 若 readiness gate 连续 3 次修复无进展，检查是否有结构性 bug（如 gate CLI 本身异常）。
 
@@ -100,7 +98,7 @@ Readiness fail 可能需要回到 earlier phase 修复缺失 artifact。修复�
 
 ## 8. Stop Behavior
 
-`stop: no` — Agent 自主执行 readiness check，不等待人类，不发送 readiness progress 或 idle/no-work 汇报。本地 precheck 完成后必须运行 `readiness-passed` gate；phase 完成条件是 gate pass + `check.next` 指向 final。
+`stop: no` — Agent 自主执行 readiness check，不等待人类，不发送 readiness progress 或 idle/no-work 汇报。本地 precheck 完成后必须运行 `readiness-passed` gate；final handoff 完成条件是 gate pass + `enter-phase --node <check.next>` 写入 final route-bound load witness + `advance-status --to readiness_passed`。
 
 Readiness gate fail 后按 inspect/advice 修复缺失 artifact、trace、profile/status drift 或结构问题并 rerun。若必须回到 earlier phase 修复，仍要遵守 gate boundary：不得把“本地检查完成”当成完成点，不得自行绕过 gate 加载 final。
 

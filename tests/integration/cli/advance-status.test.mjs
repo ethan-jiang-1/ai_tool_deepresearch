@@ -1,196 +1,210 @@
-// @impl CPT-001: advance-status.mjs regression — contract, error paths, full chain
-//
-// Tests advance-status CLI in isolation:
-//   - Happy path: every gate transition produces correct current_gate/next_gate
-//   - Error paths: unknown gate, bad bundle, missing args
-//   - Full chain: all 10 gates in sequence
-//   - Trace correctness: phase_transition events written with from/to/next
-//   - Idempotency: advancing twice to same gate
+// @impl CPT-001, CPT-004: trace-backed advance-status regression
 
-import { describe, it, before, after } from 'node:test';
+import { describe, it, beforeEach, afterEach } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { execSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { randomInt } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { chmodSync, mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim();
-
-function run(cmd) {
-  try {
-    return execSync(cmd, { encoding: 'utf-8', stdio: 'pipe', cwd: REPO_ROOT });
-  } catch (e) {
-    // CLI exits 1 on error but still writes JSON to stdout
-    if (e.stdout) return e.stdout;
-    throw e;
-  }
-}
+const REPO_ROOT = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
 
 function runAdvance(bundlePath, toGate) {
   try {
-    const out = run(`node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "${bundlePath}" --to ${toGate}`);
+    const out = execFileSync('node', ['DPT_FRAMEWORK/cli/advance-status.mjs', '--bundle', bundlePath, '--to', toGate], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
     return JSON.parse(out.trim());
-  } catch (e) {
-    // CLI exits 1 on error; stdout still has JSON
-    if (e.stdout) return JSON.parse(e.stdout.trim());
-    throw e;
+  } catch (err) {
+    return JSON.parse(err.stdout.trim());
   }
 }
 
-// ── Full chain: gate enum → expected next_gate (aligned with transitions.chain.json) ──
-const CHAIN = [
-  { from: 'instantiation_complete', next: 'hitl1_recorded' },
-  { from: 'hitl1_recorded',         next: 'setup_ready' },
-  { from: 'setup_ready',            next: 'seed_topics_ready' },
-  { from: 'seed_topics_ready',      next: 'wave0_complete' },
-  { from: 'wave0_complete',         next: 'wave1_complete' },
-  { from: 'wave1_complete',         next: 'wave2_complete' },
-  { from: 'wave2_complete',         next: 'hitl2_recorded' },
-  { from: 'hitl2_recorded',         next: 'readiness_passed' },
-  { from: 'rerun_ready',            next: 'seed_topics_ready' },
-  { from: 'readiness_passed',       next: 'none' },  // terminal: final has gate=null, writes string "none"
-];
-
-const BUNDLE_NAME = `test-advance-${randomInt(0, 65536).toString(16)}`;
-
 describe('advance-status CLI', () => {
-  let bundlePath;
-  let tracePath;
+  let dir;
   let statusPath;
+  let tracePath;
 
-  // ── Setup: disposable bundle (fast) ──
-  before(() => {
-    // Use disposable for speed (production requires kebab naming which is fine too)
-    const out = run(`node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs ${BUNDLE_NAME}`);
-    bundlePath = out.trim().split('\n').pop();
-    tracePath = join(bundlePath, 'rb_trace.jsonl');
-    statusPath = join(bundlePath, 'rb_status.json');
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'dpt-advance-'));
+    statusPath = join(dir, 'rb_status.json');
+    tracePath = join(dir, 'rb_trace.jsonl');
+    writeFileSync(statusPath, JSON.stringify({
+      bundle: 'test',
+      current_mode: 'execution',
+      state: 'in_progress',
+      current_gate: 'hitl1_recorded',
+      next_gate: 'setup_ready',
+    }, null, 2) + '\n');
   });
 
-  after(() => {
-    if (existsSync(bundlePath)) {
-      rmSync(bundlePath, { recursive: true, force: true });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  function writeTrace(events) {
+    writeFileSync(tracePath, events.map(e => JSON.stringify(e)).join('\n') + '\n');
+  }
+
+  function gateAttempt(overrides = {}) {
+    return {
+      ts: '2026-01-01T00:00:00.000Z',
+      event: 'gate_attempt',
+      gate: 'wave0-complete',
+      phase: 'wave0',
+      passed: true,
+      currentNodeRef: 'phases/phase-wave0.md',
+      next: 'phases/phase-wave1.md',
+      ...overrides,
+    };
+  }
+
+  function loadComplete(index, overrides = {}) {
+    const gate = overrides.handoff_source_gate || 'wave0-complete';
+    const source = overrides.handoff_source_node || 'phases/phase-wave0.md';
+    const target = overrides.entry || overrides.handoff_target_node || 'phases/phase-wave1.md';
+    return {
+      ts: '2026-01-01T00:00:01.000Z',
+      event: 'load_complete',
+      entry: target,
+      handoff_source_gate: gate,
+      handoff_source_node: source,
+      handoff_target_node: target,
+      handoff_source_attempt_index: index,
+      ...overrides,
+    };
+  }
+
+  it('allows explicit bootstrap source gates without handoff witness', () => {
+    const result = runAdvance(dir, 'hitl1_recorded');
+    assert.equal(result.status, 'ok');
+    assert.equal(result.current_gate, 'hitl1_recorded');
+    assert.equal(result.next_gate, 'setup_ready');
+    assert.ok(existsSync(tracePath));
+  });
+
+  it('fails covered source gate without gate pass witness and does not mutate status', () => {
+    const before = readFileSync(statusPath, 'utf8');
+    writeTrace([]);
+    const result = runAdvance(dir, 'setup_ready');
+    assert.equal(result.status, 'error');
+    assert.match(result.reason, /no latest passed deterministic/);
+    assert.equal(readFileSync(statusPath, 'utf8'), before);
+  });
+
+  it('fails covered source gate without route-bound target entry witness', () => {
+    const before = readFileSync(statusPath, 'utf8');
+    writeTrace([gateAttempt()]);
+    const result = runAdvance(dir, 'wave0_complete');
+    assert.equal(result.status, 'error');
+    assert.match(result.reason, /missing route-bound load_complete/);
+    assert.equal(readFileSync(statusPath, 'utf8'), before);
+  });
+
+  it('fails covered source gate when load_complete is not bound to the source attempt index', () => {
+    const before = readFileSync(statusPath, 'utf8');
+    writeTrace([gateAttempt(), loadComplete(99)]);
+    const result = runAdvance(dir, 'wave0_complete');
+    assert.equal(result.status, 'error');
+    assert.match(result.reason, /missing route-bound load_complete/);
+    assert.equal(readFileSync(statusPath, 'utf8'), before);
+  });
+
+  it('succeeds after witnessed handoff and writes phase_transition', () => {
+    writeTrace([gateAttempt(), loadComplete(0)]);
+    const result = runAdvance(dir, 'wave0_complete');
+    assert.equal(result.status, 'ok');
+    assert.equal(result.current_gate, 'wave0_complete');
+    assert.equal(result.next_gate, 'wave1_complete');
+
+    const status = JSON.parse(readFileSync(statusPath, 'utf8'));
+    assert.equal(status.current_gate, 'wave0_complete');
+    assert.equal(status.next_gate, 'wave1_complete');
+
+    const events = readFileSync(tracePath, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    assert.ok(events.some(e => e.event === 'phase_transition' && e.to === 'wave0_complete' && e.next === 'wave1_complete'));
+  });
+
+  it('fails closed and restores status when phase_transition trace append fails', () => {
+    writeTrace([gateAttempt(), loadComplete(0)]);
+    const before = readFileSync(statusPath, 'utf8');
+    chmodSync(tracePath, 0o444);
+    try {
+      const result = runAdvance(dir, 'wave0_complete');
+      assert.equal(result.status, 'error');
+      assert.match(result.reason, /Failed to append phase_transition/);
+      assert.equal(readFileSync(statusPath, 'utf8'), before);
+    } finally {
+      chmodSync(tracePath, 0o644);
     }
+
+    const events = readFileSync(tracePath, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    assert.equal(events.some(e => e.event === 'phase_transition'), false);
   });
 
-  // ── Error paths ──
-
-  describe('error paths', () => {
-    it('rejects unknown gate', () => {
-      const result = runAdvance(bundlePath, 'nonexistent_gate');
-      assert.equal(result.status, 'error');
-      assert.match(result.reason, /Unknown gate/);
-    });
-
-    it('rejects missing bundle', () => {
-      const out = run(`node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "/nonexistent/path" --to setup_ready`);
-      const result = JSON.parse(out.trim());
-      assert.equal(result.status, 'error');
-      assert.match(result.reason, /not found/);
-    });
-
-    it('rejects missing --to arg', () => {
-      const out = run(`node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "${bundlePath}"`);
-      const result = JSON.parse(out.trim());
-      assert.equal(result.status, 'error');
-      assert.match(result.reason, /Missing required/);
-    });
+  it('rejects old-style next-gate enum sync', () => {
+    writeTrace([gateAttempt(), loadComplete(0)]);
+    const result = runAdvance(dir, 'wave1_complete');
+    assert.equal(result.status, 'error');
+    assert.match(result.reason, /not the latest deterministic handoff/);
+    assert.ok(result.advice.some(a => a.includes('--to wave0_complete')));
   });
 
-  // ── Happy path: every gate transition ──
-
-  describe('gate transitions', () => {
-    for (const { from, next } of CHAIN) {
-      it(`${from} → ${next ?? 'terminal'}`, () => {
-        const result = runAdvance(bundlePath, from);
-        assert.equal(result.status, 'ok', `advance to ${from} should succeed: ${JSON.stringify(result)}`);
-        assert.equal(result.current_gate, from);
-        assert.equal(result.next_gate, next);
-      });
-    }
+  it('rejects superseded source pass and does not mutate status', () => {
+    const before = readFileSync(statusPath, 'utf8');
+    writeTrace([
+      gateAttempt(),
+      loadComplete(0),
+      gateAttempt({
+        ts: '2026-01-01T00:00:02.000Z',
+        passed: false,
+        next: null,
+      }),
+    ]);
+    const result = runAdvance(dir, 'wave0_complete');
+    assert.equal(result.status, 'error');
+    assert.equal(readFileSync(statusPath, 'utf8'), before);
   });
 
-  // ── Trace correctness ──
-
-  describe('trace events', () => {
-    it('writes phase_transition for every advance', () => {
-      const trace = readFileSync(tracePath, 'utf-8').trim();
-      const events = trace.split('\n').map(l => JSON.parse(l));
-      const transitions = events.filter(e => e.event === 'phase_transition');
-
-      // We ran all 10 transitions in CHAIN
-      assert.ok(transitions.length >= 10,
-        `expected >=10 phase_transition events, got ${transitions.length}`);
-
-      for (const t of transitions) {
-        assert.ok(t.ts, 'phase_transition must have ts');
-        assert.ok(t.from, 'phase_transition must have from');
-        assert.ok(t.to, 'phase_transition must have to');
-        assert.ok(t.bundle, 'phase_transition must have bundle');
-        // from should not equal to; to should match current_gate after advance
-        assert.notEqual(t.from, t.to, `from and to should differ: ${t.from} → ${t.to}`);
-      }
-    });
-
-    it('trace events are valid JSONL', () => {
-      const trace = readFileSync(tracePath, 'utf-8').trim();
-      const lines = trace.split('\n');
-      for (const line of lines) {
-        assert.doesNotThrow(() => JSON.parse(line), `invalid JSONL line: ${line.slice(0, 80)}`);
-      }
-    });
+  it('uses actual HITL2 rerun target instead of default passed target', () => {
+    writeTrace([
+      gateAttempt({
+        gate: 'hitl2-recorded',
+        phase: 'hitl2',
+        currentNodeRef: 'phases/phase-hitl2.md',
+        next: 'phases/phase-rerun.md',
+      }),
+      loadComplete(0, {
+        entry: 'phases/phase-rerun.md',
+        handoff_source_gate: 'hitl2-recorded',
+        handoff_source_node: 'phases/phase-hitl2.md',
+        handoff_target_node: 'phases/phase-rerun.md',
+      }),
+    ]);
+    const result = runAdvance(dir, 'hitl2_recorded');
+    assert.equal(result.status, 'ok');
+    assert.equal(result.next_gate, 'rerun_ready');
   });
 
-  // ── Status file integrity ──
-
-  describe('status file integrity', () => {
-    it('writes valid rb_status.json after every advance', () => {
-      const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
-      assert.ok(status.current_gate, 'current_gate must be set');
-      // next_gate is "none" for terminal (readiness_passed → final → gate=null)
-      if (status.current_gate !== 'readiness_passed') {
-        assert.ok(status.next_gate, `next_gate must be set for ${status.current_gate}`);
-      }
-      // current_mode and state should be preserved
-      assert.equal(status.current_mode, 'execution');
-      assert.ok(status.state, 'state must be present');
-    });
-
-    it('preserves fields not managed by advance-status', () => {
-      const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
-      assert.equal(status.current_mode, 'execution', 'current_mode should be preserved');
-      assert.ok('bundle' in status, 'bundle field should be preserved');
-    });
-  });
-
-  // ── Advancing to first gate from initial state ──
-
-  describe('from initial state', () => {
-    it('advances from initial setup_ready to seed_topics_ready', () => {
-      // Create a fresh disposable that starts at setup_ready
-      const freshName = `test-advance-fresh-${randomInt(0, 65536).toString(16)}`;
-      const out = run(`node experiments_env/shared/new-disposable-bundle.mjs ${freshName} --force`);
-      const freshPath = out.trim();
-      const freshStatus = join(freshPath, 'rb_status.json');
-
-      // Initial state should be setup_ready / seed_topics_ready
-      let status = JSON.parse(readFileSync(freshStatus, 'utf-8'));
-      assert.equal(status.current_gate, 'setup_ready');
-      assert.equal(status.next_gate, 'seed_topics_ready');
-
-      // Advance to seed_topics_ready
-      const result = runAdvance(freshPath, 'seed_topics_ready');
-      assert.equal(result.status, 'ok');
-      assert.equal(result.current_gate, 'seed_topics_ready');
-      assert.equal(result.next_gate, 'wave0_complete');
-
-      status = JSON.parse(readFileSync(freshStatus, 'utf-8'));
-      assert.equal(status.current_gate, 'seed_topics_ready');
-      assert.equal(status.next_gate, 'wave0_complete');
-
-      rmSync(freshPath, { recursive: true, force: true });
-    });
+  it('sets next_gate none for witnessed readiness to final handoff', () => {
+    writeTrace([
+      gateAttempt({
+        gate: 'readiness-passed',
+        phase: 'readiness',
+        currentNodeRef: 'phases/phase-readiness.md',
+        next: 'phases/phase-final.md',
+      }),
+      loadComplete(0, {
+        entry: 'phases/phase-final.md',
+        handoff_source_gate: 'readiness-passed',
+        handoff_source_node: 'phases/phase-readiness.md',
+        handoff_target_node: 'phases/phase-final.md',
+      }),
+    ]);
+    const result = runAdvance(dir, 'readiness_passed');
+    assert.equal(result.status, 'ok');
+    assert.equal(result.next_gate, 'none');
   });
 });

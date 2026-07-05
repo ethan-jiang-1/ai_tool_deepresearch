@@ -201,7 +201,7 @@ The Engine will use this Agent-reported retry hint to return fatigue diagnostics
 - `step_back: true` — you SHOULD pause, re-read phase instructions, and switch strategies
 - Additional `advice` messages with stop-mode-safe guidance
 
-**Important:** `--attempt` is an Agent-reported retry hint. The Engine does not track or verify consecutive failure counts. The Engine returns diagnostics based on what you report — be honest with your attempt count.
+**Important:** `--attempt` is a compatibility hint only. The Engine also derives `attempt_count`, `attempt_trend`, and cross-attempt deltas from trace/diagnostic artifacts. Treat Engine-derived diagnostics as stronger than your self-reported counter.
 
 ### 5.3 Degradation Is Not Failure
 
@@ -223,9 +223,15 @@ Recording a degradation event (`silent_degradation`, `silent_gap`, etc.) does NO
 - Advance `rb_status.json` to the downstream gate without `check.next` from the gate CLI
 - Bypass the gate and directly invoke `advance-status.mjs`
 
-### 6.2 Next Phase Comes ONLY from Gate CLI
+### 6.2 Next Phase Comes ONLY from Gate CLI and `enter-phase`
 
-The ONLY authority for phase transition is the gate CLI's `check.next` field. When the gate passes, `check.next` contains the next node fileRef. Load that fileRef. Do NOT load any other phase.
+The ONLY routing authority for phase transition is the gate CLI's `check.next` field. When the gate passes, `check.next` contains the next node fileRef. Consume that fileRef through the accepted loader/check path:
+
+```bash
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>
+```
+
+Then synchronize the just-passed source gate with `advance-status --to <source_gate_enum>` exactly as the phase node instructs. Do NOT load any other phase, and do NOT use `advance-status` as a substitute for `enter-phase`.
 
 ### 6.3 Silent Unpassable Holding
 
@@ -242,3 +248,15 @@ When a gate is structurally unpassable (the gate rule fundamentally cannot be sa
 6. Do NOT repeat the same ineffective repair
 
 The `silent_unpassable` event is an audit trail for later review or operator inspection. It is NOT a phase transition authority.
+
+---
+
+## 7. Autonomous Continuation / Why Continue
+
+@impl SWE-003
+
+`stop: no` is the compatibility frontmatter field. The behavior name is autonomous continuation: during a non-terminal lifecycle phase, the Phase Agent does not surface to the user, does not wait for user input, does not self-declare completion, and continues through the Markdown-controlled loop until gate pass and accepted `check.next` handoff.
+
+Final report delivery is guaranteed at `phase-final` after final artifacts are written. Every completed wave improves evidence grounding, source coverage, question reconciliation, and synthesis quality. High gate friction, user waiting time, or local confidence in partial data does not authorize premature chat synthesis.
+
+Early chat delivery during a non-terminal autonomous continuation phase is less helpful than completing the verified pipeline. After a non-terminal gate pass, the correct next action is to consume `check.next` through `enter-phase`, then synchronize the just-passed source gate, then continue from the rendered next phase Markdown. Prose in this section is guidance; deterministic handoff truth still comes from `gate_attempt(passed=true)`, route-bound `load_complete`, and Engine checks.

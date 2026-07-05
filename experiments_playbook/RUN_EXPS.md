@@ -113,6 +113,7 @@
 | G24 wfn-rerun | case-306 | `exp_wfn_rerun/case-306-standard-two-round-delta.md` | Agent-driven：两轮 rerun，验证 rerun_count 递增和 direction section 更新（⚠️ verdict 来自文件系统检查，非 gate） |
 | G25 engine-boundary | case-404 | `exp_engine-boundary/case-404-standard-queue-boundary.md` | Queue 边界合约：non-delegated 不受影响；delegated 强制 provenance；controller:"sub-agent" 被拒 |
 | G27 evidence-extraction | case-162 | `exp_evidence-extraction/case-162-standard-gate-reentry-cache-coverage.md` | gate count_floor（scoped）+ cache_coverage（verified+mapped/missing/empty）+ file observability cache_gap + check-reentry 集成 |
+| G50 handoff-witnessing | case-501 | `exp_handoff-witnessing/case-501-standard-handoff-witnessing.md` | phase handoff witnessing：unwitnessed/old-style status fail closed、route-bound load witness、HITL2 rerun、rerun→seed-topics、superseded pass |
 
 ### Heavy（真实外部调用：WebSearch/WebFetch/subagent spawn，自动化可跑）
 

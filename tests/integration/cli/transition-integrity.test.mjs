@@ -1,8 +1,8 @@
 // @impl CPT-001: Transition integrity — 5-layer self-consistency validation
 //
 // Light integration test: reads framework data files (chain.json, manifest.json,
-// 10 gate definitions, enums.mjs, phase body MDs) and validates that every layer
-// of the transition system is internally consistent.
+// 10 gate definitions, enums.mjs, phase body MDs, and handoff coverage constants)
+// and validates that every layer of the transition system is internally consistent.
 //
 // No bundle creation, no CLI subprocess, no artifact fixtures. Pure data validation.
 // If any of these checks fail, the transition system has a latent inconsistency
@@ -10,8 +10,8 @@
 //
 // Layers:
 //   1. Structural — chain↔manifest key alignment, enum coverage
-//   2. Gate def integrity — every non-terminal gate has both status rules
-//   3. advance-status computed — algorithm output matches gate def expectations
+//   2. Gate def integrity — covered downstream gates do not keep stale status rules
+//   3. source-gate status-window derivation — manifest+chain actual targets drive next_gate
 //   4. Full chain walk — both HITL2 paths (passed→readiness, rerun→seed-topics)
 //   5. Trace events — gate def trace_event_present ↔ phase body event references
 
@@ -20,6 +20,12 @@ import { strict as assert } from 'node:assert';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  BOOTSTRAP_TARGET_NODES,
+  COVERED_ENTRY_TARGET_NODES,
+  COVERED_PREFLIGHT_TARGET_NODES,
+  COVERED_SOURCE_NODES,
+} from '../../../DPT_FRAMEWORK/engine/helpers/handoff-helpers.mjs';
 
 const __dirname = join(fileURLToPath(import.meta.url), '..');
 const REPO_ROOT = join(__dirname, '..', '..', '..');
@@ -95,11 +101,41 @@ function computeNextGate(gateEnum, manifest, chain) {
   if (!transitions) return { next: null, error: `node "${node}" not in chain` };
 
   const nextNode = transitions['passed'] || transitions['rerun'];
-  if (!nextNode) return { next: null, error: `no passed/reerun from "${node}"` };
+  if (!nextNode) return { next: null, error: `no passed/rerun from "${node}"` };
 
   const nextGateKey = manifest.nodeToGate.get(nextNode);
   const nextGateEnum = nextGateKey ? gateKeyToEnum(nextGateKey) : 'none';
   return { next: nextGateEnum, error: null };
+}
+
+function deriveStatusWindow(sourceGateEnum, targetNode, manifest, chain) {
+  const sourceGate = gateEnumToKey(sourceGateEnum);
+  const sourceNode = manifest.gateToNode.get(sourceGate);
+  assert.ok(sourceNode, `source gate "${sourceGate}" must map to a manifest node`);
+
+  const legalTargets = Object.values(chain[sourceNode] || {});
+  assert.ok(legalTargets.includes(targetNode),
+    `${sourceGate} target "${targetNode}" must be a legal transition target`);
+
+  const targetGate = manifest.nodeToGate.get(targetNode);
+  return {
+    current: sourceGateEnum,
+    next: targetGate ? gateKeyToEnum(targetGate) : 'none',
+  };
+}
+
+function statusRules(def) {
+  return def.rules.filter(rule => {
+    const target = String(rule.target || '');
+    return rule.check === 'status_value' &&
+      (target === 'rb_status.json#/current_gate' || target === 'rb_status.json#/next_gate');
+  });
+}
+
+function readPhaseBody(filename) {
+  const p = join(PHASES_DIR, filename);
+  if (!existsSync(p)) return '';
+  return readFileSync(p, 'utf-8');
 }
 
 // ── Layer 1: Structural consistency ──────────────────────────────────
@@ -154,111 +190,199 @@ describe('Layer 1 — Structural consistency', () => {
   });
 });
 
-// ── Layer 2: Gate definition integrity ───────────────────────────────
+// ── Layer 2: Gate definition and wiring integrity ─────────────────────
 
-describe('Layer 2 — Gate definition integrity', () => {
+describe('Layer 2 — Gate definition and wiring integrity', () => {
+  const manifest = loadManifest();
   const gateDefs = loadGateDefs();
 
-  it('every non-terminal gate def has both status_current_gate and status_next_gate rules', () => {
-    const terminal = new Set(['readiness-passed']); // readiness-passed is not terminal in chain (points to final), but its next_gate="none"
-    for (const [gateKey, def] of Object.entries(gateDefs)) {
-      const ruleIds = def.rules.map(r => r.id);
-      const hasCurrent = ruleIds.some(id => id.includes('current_gate') || id === 'status_consistent');
-      const hasNext = ruleIds.some(id => id.includes('next_gate'));
+  const bootstrapGateKeys = new Set(
+    manifest.phases
+      .filter(p => p.gate && BOOTSTRAP_TARGET_NODES.has(p.node))
+      .map(p => p.gate),
+  );
+  const coveredTargetGateKeys = new Set(
+    manifest.phases
+      .filter(p => p.gate && COVERED_PREFLIGHT_TARGET_NODES.has(p.node))
+      .map(p => p.gate),
+  );
 
-      assert.ok(hasCurrent,
-        `gate "${gateKey}" missing status_current_gate rule (rule ids: ${ruleIds.join(', ')})`);
-      // Only readiness-passed is allowed to not check next_gate="none" — actually it DOES check it
-      // Let's verify: readiness-passed has status_next_gate expected="none"
-      assert.ok(hasNext || gateKey === 'readiness-passed',
-        `gate "${gateKey}" missing status_next_gate rule (rule ids: ${ruleIds.join(', ')})`);
-    }
-  });
-
-  it('every gate def status_current_gate.expected matches its own gate name (except instantiation-complete, which reads template initial value)', () => {
-    // instantiation-complete is the only gate whose status values come from the
-    // rb_status.json.tmpl template (current_gate=setup_ready, next_gate=seed_topics_ready)
-    // rather than from a prior advance-status call. All other gates are preceded by
-    // an advance-status call that sets current_gate to their own name.
-    const templateGates = new Set(['instantiation-complete']);
+  it('bootstrap inbound gates are the only definitions allowed to keep direct status rules', () => {
     for (const [gateKey, def] of Object.entries(gateDefs)) {
-      if (templateGates.has(gateKey)) continue;
-      const expectedEnum = gateKeyToEnum(gateKey);
-      const currentRule = def.rules.find(r =>
-        r.check === 'status_value' &&
-        (r.id.includes('current_gate') || r.id === 'status_consistent') &&
-        r.target.endsWith('current_gate'));
-      if (currentRule) {
-        assert.equal(currentRule.expected, expectedEnum,
-          `gate "${gateKey}" status_current_gate expected="${currentRule.expected}", should be "${expectedEnum}"`);
+      const directStatusRules = statusRules(def);
+      if (bootstrapGateKeys.has(gateKey)) {
+        assert.ok(directStatusRules.length > 0,
+          `bootstrap gate "${gateKey}" should retain explicit compatibility status rules`);
+        continue;
+      }
+
+      if (coveredTargetGateKeys.has(gateKey)) {
+        assert.equal(directStatusRules.length, 0,
+          `covered gate "${gateKey}" must use shared source-gate status-window preflight, not definition rules: ${directStatusRules.map(r => r.id).join(', ')}`);
       }
     }
   });
 
-  it('terminal readiness-passed gate expects next_gate="none"', () => {
-    const def = gateDefs['readiness-passed'];
-    const nextRule = def.rules.find(r =>
-      r.check === 'status_value' && r.id.includes('next_gate'));
-    assert.ok(nextRule, 'readiness-passed must have status_next_gate rule');
-    assert.equal(nextRule.expected, 'none',
-      `readiness-passed next_gate expected="${nextRule.expected}", should be "none"`);
+  it('covered gate definitions do not require their own current_gate before pass', () => {
+    for (const gateKey of coveredTargetGateKeys) {
+      const def = gateDefs[gateKey];
+      assert.ok(def, `covered gate "${gateKey}" definition must exist`);
+      const ownEnum = gateKeyToEnum(gateKey);
+      const staleRules = statusRules(def).filter(rule =>
+        rule.target === 'rb_status.json#/current_gate' && rule.expected === ownEnum);
+      assert.equal(staleRules.length, 0,
+        `covered gate "${gateKey}" has stale own-gate current_gate rule(s): ${staleRules.map(r => r.id).join(', ')}`);
+    }
+  });
+
+  it('applicable covered gate CLIs invoke the shared handoff preflight helper', () => {
+    for (const gateKey of coveredTargetGateKeys) {
+      const cliPath = join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'gates', `check-gate-${gateKey}.mjs`);
+      assert.ok(existsSync(cliPath), `missing gate CLI for covered gate "${gateKey}"`);
+      const raw = readFileSync(cliPath, 'utf-8');
+      assert.ok(raw.includes('checkPhaseHandoffPreflight(args.bundle, args.currentNode)'),
+        `covered gate CLI check-gate-${gateKey}.mjs must call shared checkPhaseHandoffPreflight`);
+    }
+  });
+
+  it('bootstrap/final exceptions and covered preflight targets match manifest lifecycle nodes', () => {
+    const lifecycleNodes = new Set(manifest.phases.map(p => p.node));
+    for (const node of BOOTSTRAP_TARGET_NODES) {
+      assert.ok(lifecycleNodes.has(node), `bootstrap exception "${node}" is not in manifest`);
+    }
+    for (const node of COVERED_PREFLIGHT_TARGET_NODES) {
+      assert.ok(lifecycleNodes.has(node), `covered preflight target "${node}" is not in manifest`);
+      assert.ok(!BOOTSTRAP_TARGET_NODES.has(node), `node "${node}" cannot be both covered and bootstrap-exempt`);
+    }
+
+    const final = manifest.phases.find(p => p.key === 'final');
+    assert.equal(final?.gate, null, 'final must remain gate:null and therefore outside gate preflight');
+    assert.ok(COVERED_ENTRY_TARGET_NODES.has(final.node),
+      'final entry must still be covered by enter-phase/advance-status witnessing');
   });
 });
 
-// ── Layer 3: advance-status computed vs gate def expected ─────────────
+// ── Layer 3: Source-gate status-window derivation ─────────────────────
 
-describe('Layer 3 — advance-status computed next_gate matches gate def expected', () => {
+describe('Layer 3 — Source-gate status-window derivation', () => {
   const manifest = loadManifest();
   const chain = loadChain();
-  const gateDefs = loadGateDefs();
 
-  it('for every gate, computed next_gate equals gate def status_next_gate.expected', () => {
-    // instantiation-complete is excluded: its status values come from the template
-    // (current_gate=setup_ready, next_gate=seed_topics_ready), NOT from a prior
-    // advance-status call. The template→gate consistency is verified in Layer 4.
-    const templateGates = new Set(['instantiation-complete']);
-    const failures = [];
-    for (const [gateKey, def] of Object.entries(gateDefs)) {
-      if (templateGates.has(gateKey)) continue;
-      const gateEnum = gateKeyToEnum(gateKey);
-      const nextRule = def.rules.find(r =>
-        r.check === 'status_value' && r.id.includes('next_gate'));
-      if (!nextRule) continue;
+  it('covered source transitions derive current_gate from source gate and next_gate from actual target node', () => {
+    const expectedPairs = new Set([
+      'setup_ready -> seed_topics_ready',
+      'seed_topics_ready -> wave0_complete',
+      'wave0_complete -> wave1_complete',
+      'wave1_complete -> wave2_complete',
+      'wave2_complete -> hitl2_recorded',
+      'hitl2_recorded -> readiness_passed',
+      'hitl2_recorded -> rerun_ready',
+      'readiness_passed -> none',
+      'rerun_ready -> seed_topics_ready',
+    ]);
 
-      const computed = computeNextGate(gateEnum, manifest, chain);
-      if (computed.error) {
-        failures.push(`${gateEnum}: ${computed.error}`);
-        continue;
-      }
-      if (computed.next !== nextRule.expected) {
-        failures.push(
-          `${gateEnum}: computed next="${computed.next}", gate def expected="${nextRule.expected}"`);
+    const actualPairs = new Set();
+    for (const sourceNode of COVERED_SOURCE_NODES) {
+      const sourceGate = manifest.nodeToGate.get(sourceNode);
+      assert.ok(sourceGate, `covered source node "${sourceNode}" must have a source gate`);
+      const sourceGateEnum = gateKeyToEnum(sourceGate);
+      const transitions = chain[sourceNode] || {};
+
+      for (const targetNode of Object.values(transitions)) {
+        assert.ok(COVERED_ENTRY_TARGET_NODES.has(targetNode),
+          `${sourceNode} target "${targetNode}" must be a covered entry target`);
+        const window = deriveStatusWindow(sourceGateEnum, targetNode, manifest, chain);
+        actualPairs.add(`${window.current} -> ${window.next}`);
       }
     }
-    assert.equal(failures.length, 0, `Next-gate mismatches:\n  ${failures.join('\n  ')}`);
+
+    assert.deepEqual(actualPairs, expectedPairs);
   });
 
-  it('rerun path: hitl2→rerun→seed-topics chain is consistent', () => {
-    // Manually verify the rerun branch (not the passed default)
-    const hitl2Node = manifest.gateToNode.get('hitl2-recorded');
-    const hitl2Transitions = chain[hitl2Node];
-    assert.ok(hitl2Transitions, 'phase-hitl2 must be in chain');
-    assert.equal(hitl2Transitions.rerun, 'phases/phase-rerun.md',
-      'hitl2 rerun outcome must point to phase-rerun.md');
+  it('HITL2 status derivation follows the selected target instead of defaulting to passed', () => {
+    assert.deepEqual(
+      deriveStatusWindow('hitl2_recorded', 'phases/phase-readiness.md', manifest, chain),
+      { current: 'hitl2_recorded', next: 'readiness_passed' },
+    );
+    assert.deepEqual(
+      deriveStatusWindow('hitl2_recorded', 'phases/phase-rerun.md', manifest, chain),
+      { current: 'hitl2_recorded', next: 'rerun_ready' },
+    );
+  });
 
-    const rerunNode = 'phases/phase-rerun.md';
-    const rerunTransitions = chain[rerunNode];
-    assert.ok(rerunTransitions, 'phase-rerun must be in chain');
-    assert.equal(rerunTransitions.passed, 'phases/phase-seed-topics.md',
-      'rerun passed must point back to seed-topics');
+  it('readiness terminal status is derived from witnessed final entry, not a gate definition rule', () => {
+    const window = deriveStatusWindow('readiness_passed', 'phases/phase-final.md', manifest, chain);
+    assert.deepEqual(window, { current: 'readiness_passed', next: 'none' });
+  });
 
-    // Verify rerun-ready gate expects seed_topics_ready
-    const rerunDef = gateDefs['rerun-ready'];
-    const nextRule = rerunDef.rules.find(r =>
-      r.check === 'status_value' && r.id.includes('next_gate'));
-    assert.ok(nextRule, 'rerun-ready must have status_next_gate');
-    assert.equal(nextRule.expected, 'seed_topics_ready',
-      `rerun-ready next_gate expected="${nextRule.expected}", should be "seed_topics_ready"`);
+  it('Final node preserves readiness_passed/none terminal status wording', () => {
+    const body = readPhaseBody('phase-final.md');
+    const workflowChain = readFileSync(join(REPO_ROOT, 'DPT_FRAMEWORK', 'engine', 'workflow-chain.mjs'), 'utf-8');
+    assert.ok(body.includes('current_gate: readiness_passed'));
+    assert.ok(body.includes('next_gate: none'));
+    assert.ok(workflowChain.includes('current_gate: readiness_passed'));
+    assert.ok(workflowChain.includes('next_gate: none'));
+    assert.ok(!body.includes('current_gate: none'));
+    assert.ok(!body.includes('next_gate: null'));
+    assert.ok(!workflowChain.includes('current_gate: none'));
+    assert.ok(!workflowChain.includes('next_gate: null'));
+  });
+});
+
+// ── Layer 3b: Agent-facing handoff wording ───────────────────────────
+
+describe('Layer 3b — Agent-facing handoff wording', () => {
+  const handoffSources = [
+    { phaseFile: 'phase-setup.md', sourceGate: 'setup_ready' },
+    { phaseFile: 'phase-seed-topics.md', sourceGate: 'seed_topics_ready' },
+    { phaseFile: 'phase-wave0.md', sourceGate: 'wave0_complete' },
+    { phaseFile: 'phase-wave1.md', sourceGate: 'wave1_complete' },
+    { phaseFile: 'phase-wave2.md', sourceGate: 'wave2_complete' },
+    { phaseFile: 'phase-hitl2.md', sourceGate: 'hitl2_recorded' },
+    { phaseFile: 'phase-readiness.md', sourceGate: 'readiness_passed' },
+    { phaseFile: 'phase-rerun.md', sourceGate: 'rerun_ready' },
+  ];
+
+  it('phase On Gate Pass sections consume check.next through enter-phase before source-gate status sync', () => {
+    for (const { phaseFile, sourceGate } of handoffSources) {
+      const body = readPhaseBody(phaseFile);
+      const section = body.match(/## 6\. On Gate Pass([\s\S]*?)(?=## 7\.|$)/)?.[1] || '';
+      assert.ok(section.includes('enter-phase.mjs --bundle <path> --node <check.next>'),
+        `${phaseFile} §6 must instruct enter-phase --node <check.next>`);
+      assert.ok(section.includes(`advance-status.mjs --bundle <path> --to ${sourceGate}`),
+        `${phaseFile} §6 must sync just-passed source gate ${sourceGate}`);
+      assert.ok(
+        section.indexOf('enter-phase.mjs --bundle <path> --node <check.next>') <
+          section.indexOf(`advance-status.mjs --bundle <path> --to ${sourceGate}`),
+        `${phaseFile} §6 must run enter-phase before advance-status`,
+      );
+    }
+  });
+
+  it('covered phase bodies do not tell the Agent to sync their own gate before §6 pass handling', () => {
+    for (const { phaseFile, sourceGate } of handoffSources) {
+      const body = readPhaseBody(phaseFile);
+      const beforeGatePass = body.split('## 6. On Gate Pass')[0] || body;
+      const forbidden = [
+        `node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to ${sourceGate}`,
+      ];
+      for (const phrase of forbidden) {
+        assert.ok(!beforeGatePass.includes(phrase),
+          `${phaseFile} must not instruct ${phrase} before its own gate has passed`);
+      }
+    }
+  });
+
+  it('shared silent execution names autonomous continuation and enter-phase handoff', () => {
+    const body = readFileSync(
+      join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows', 'nodes', 'shared', 'shared-silent-execution.md'),
+      'utf-8',
+    );
+    assert.ok(body.includes('## 7. Autonomous Continuation / Why Continue'));
+    assert.ok(body.includes('`stop: no` is the compatibility frontmatter field'));
+    assert.ok(body.includes('Final report delivery is guaranteed at `phase-final`'));
+    assert.ok(body.includes('consume `check.next` through `enter-phase`'));
+    assert.ok(!body.includes('ask the user whether'));
   });
 });
 
@@ -426,12 +550,6 @@ describe('Layer 5 — Trace event consistency', () => {
   }
 
   // Read phase body and check for event mentions
-  function readPhaseBody(filename) {
-    const p = join(PHASES_DIR, filename);
-    if (!existsSync(p)) return '';
-    return readFileSync(p, 'utf-8');
-  }
-
   it('every trace_event_present rule has a corresponding phase body event reference', () => {
     // Build gateKey → phase filename mapping
     const gateToPhaseFile = new Map();

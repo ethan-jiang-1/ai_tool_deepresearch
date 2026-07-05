@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
+import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_W0 = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs');
@@ -75,20 +76,12 @@ function stringifyYaml(obj) {
 
 /** Set up wave0 status so gate can run. */
 function setupWave0Status(dir) {
-  const statusPath = join(dir, 'rb_status.json');
-  const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
-  status.current_gate = 'wave0_complete';
-  status.next_gate = 'wave1_complete';
-  writeFileSync(statusPath, JSON.stringify(status));
+  setStatusWindow(dir, 'seed_topics_ready', 'wave0_complete');
 }
 
 /** Set up wave1 status so gate can run. */
 function setupWave1Status(dir) {
-  const statusPath = join(dir, 'rb_status.json');
-  const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
-  status.current_gate = 'wave1_complete';
-  status.next_gate = 'wave2_complete';
-  writeFileSync(statusPath, JSON.stringify(status));
+  setStatusWindow(dir, 'wave0_complete', 'wave1_complete');
 }
 
 /** Create the minimal reference/ directory structure the gate needs. */
@@ -116,7 +109,20 @@ function ensureWave1ArtifactDirs(dir) {
 }
 
 function writeTraceEvent(dir, eventName) {
-  writeFileSync(join(dir, 'rb_trace.jsonl'), JSON.stringify({ event: eventName, ts: new Date().toISOString() }) + '\n');
+  const handoff = eventName === 'wave1_completion'
+    ? witnessedHandoffEvents({
+      sourceGate: 'wave0-complete',
+      phase: 'wave0',
+      sourceNode: 'phases/phase-wave0.md',
+      targetNode: 'phases/phase-wave1.md',
+    })
+    : witnessedHandoffEvents({
+      sourceGate: 'seed-topics-ready',
+      phase: 'seed-topics',
+      sourceNode: 'phases/phase-seed-topics.md',
+      targetNode: 'phases/phase-wave0.md',
+    });
+  writeTraceEvents(dir, [...handoff, { event: eventName, ts: new Date().toISOString() }]);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

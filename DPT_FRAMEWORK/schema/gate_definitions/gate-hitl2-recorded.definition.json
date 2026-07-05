@@ -47,20 +47,6 @@
         "stop_blocked"
       ],
       "failure_message": "user_decision is not one of the accepted values. Must be one of: proceed_to_readiness, request_view_revision, repair, rerun, stop_blocked."
-    },
-    {
-      "id": "status_current_gate",
-      "check": "status_value",
-      "target": "rb_status.json#/current_gate",
-      "expected": "hitl2_recorded",
-      "failure_message": "rb_status.json current_gate must be 'hitl2_recorded'. Status may have drifted \u2014 restore the correct gate value."
-    },
-    {
-      "id": "status_next_gate",
-      "check": "status_value",
-      "target": "rb_status.json#/next_gate",
-      "expected": "readiness_passed",
-      "failure_message": "rb_status.json next_gate must be 'readiness_passed'. Status may have drifted \u2014 restore the correct value."
     }
   ]
 }

@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
+import { setStatusWindow, witnessedHandoffEvents } from './handoff-fixtures.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs');
@@ -46,6 +47,7 @@ function handFakeSlot(bundle, slotKey, status = 'done', wave = 'wave_00') {
 }
 
 function runGate(bundlePath, cli = GATE_CLI, currentNode = 'phases/phase-wave0.md') {
+  appendCurrentNodeHandoff(bundlePath, currentNode);
   const r = spawnSync('node', [cli, '--bundle', bundlePath, '--current-node', currentNode], { encoding: 'utf-8', timeout: 15000 });
   return JSON.parse(r.stdout.trim());
 }
@@ -53,6 +55,48 @@ function runGate(bundlePath, cli = GATE_CLI, currentNode = 'phases/phase-wave0.m
 function appendTrace(bundle, events) {
   const p = join(bundle, 'rb_trace.jsonl');
   for (const e of events) appendFileSync(p, JSON.stringify(e) + '\n');
+}
+
+function traceEventCount(bundle) {
+  const raw = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf-8').trim();
+  return raw ? raw.split('\n').length : 0;
+}
+
+function appendCurrentNodeHandoff(bundle, currentNode) {
+  const configs = {
+    'phases/phase-wave0.md': {
+      currentGate: 'seed_topics_ready',
+      nextGate: 'wave0_complete',
+      sourceGate: 'seed-topics-ready',
+      phase: 'seed-topics',
+      sourceNode: 'phases/phase-seed-topics.md',
+    },
+    'phases/phase-wave1.md': {
+      currentGate: 'wave0_complete',
+      nextGate: 'wave1_complete',
+      sourceGate: 'wave0-complete',
+      phase: 'wave0',
+      sourceNode: 'phases/phase-wave0.md',
+    },
+    'phases/phase-wave2.md': {
+      currentGate: 'wave1_complete',
+      nextGate: 'wave2_complete',
+      sourceGate: 'wave1-complete',
+      phase: 'wave1',
+      sourceNode: 'phases/phase-wave1.md',
+    },
+  };
+  const cfg = configs[currentNode];
+  if (!cfg) return;
+
+  setStatusWindow(bundle, cfg.currentGate, cfg.nextGate);
+  appendTrace(bundle, witnessedHandoffEvents({
+    sourceGate: cfg.sourceGate,
+    phase: cfg.phase,
+    sourceNode: cfg.sourceNode,
+    targetNode: currentNode,
+    sourceAttemptIndex: traceEventCount(bundle),
+  }));
 }
 // Production run.log envelope: [ISO8601] LEVEL msg bundle=<name> {json detail}
 // (matches logger.mjs formatMessage — the forensics parser reads this format).

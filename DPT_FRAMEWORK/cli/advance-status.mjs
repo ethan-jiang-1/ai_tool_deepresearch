@@ -15,6 +15,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { validateSourceGateStatusSync } from '../engine/helpers/handoff-helpers.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKFLOWS_DIR = join(__dirname, '..', 'workflows');
@@ -91,7 +92,9 @@ try {
   process.exit(1);
 }
 
-// Resolve gate → node → next node → next gate via manifest + chain
+// Resolve gate → node → next node → next gate via manifest + chain.
+// Covered source-gate handoffs are validated against trace first; bootstrap
+// compatibility source gates retain the legacy chain lookup below.
 const targetGateKey = gateEnumToKey(targetGateEnum);
 const { gateToNode, nodeToGate } = loadManifest();
 const chain = loadChain();
@@ -108,9 +111,21 @@ if (!transitions) {
   process.exit(1);
 }
 
-const nextNode = transitions['passed'] || transitions['rerun'];
+const handoffCheck = validateSourceGateStatusSync(bundlePath, targetGateEnum);
+if (!handoffCheck.ok) {
+  console.log(JSON.stringify({
+    status: 'error',
+    reason: handoffCheck.reason,
+    advice: handoffCheck.advice || [],
+  }));
+  process.exit(1);
+}
+
+const nextNode = handoffCheck.covered
+  ? handoffCheck.handoff.targetNode
+  : (transitions['passed'] || transitions['rerun']);
 if (!nextNode) {
-  console.log(JSON.stringify({ status: 'error', reason: `No "passed" transition from "${currentNode}" in chain.json. Available outcomes: ${Object.keys(transitions).join(', ')}` }));
+  console.log(JSON.stringify({ status: 'error', reason: `No transition from "${currentNode}" in chain.json. Available outcomes: ${Object.keys(transitions).join(', ')}` }));
   process.exit(1);
 }
 
@@ -120,12 +135,13 @@ const nextGateKey = nodeToGate.get(nextNode);
 // not JavaScript null (which serializes to JSON null ≠ "none").
 const nextGateEnum = nextGateKey ? gateKeyToEnum(nextGateKey) : 'none';
 
-// Update status
 const from = status.current_gate || 'unknown';
-status.current_gate = targetGateEnum;
-status.next_gate = nextGateEnum;
-
-writeFileSync(statusPath, JSON.stringify(status, null, 2) + '\n');
+const previousStatusRaw = readFileSync(statusPath, 'utf-8');
+const nextStatus = {
+  ...status,
+  current_gate: targetGateEnum,
+  next_gate: nextGateEnum,
+};
 
 // Write phase_transition trace event
 const tracePath = join(bundlePath, 'rb_trace.jsonl');
@@ -137,7 +153,37 @@ const traceEvent = JSON.stringify({
   to: targetGateEnum,
   next: nextGateEnum,
 });
-writeFileSync(tracePath, traceEvent + '\n', { flag: 'a' });
+
+try {
+  writeFileSync(statusPath, JSON.stringify(nextStatus, null, 2) + '\n');
+  try {
+    writeFileSync(tracePath, traceEvent + '\n', { flag: 'a' });
+  } catch (err) {
+    try {
+      writeFileSync(statusPath, previousStatusRaw);
+    } catch (rollbackErr) {
+      console.log(JSON.stringify({
+        status: 'error',
+        reason: `Failed to append phase_transition and failed to restore rb_status.json: ${err.message}; rollback: ${rollbackErr.message}`,
+        advice: ['Treat rb_status.json as suspect; restore it from checkpoint or rerun the prior verified gate before continuing.'],
+      }));
+      process.exit(1);
+    }
+    console.log(JSON.stringify({
+      status: 'error',
+      reason: `Failed to append phase_transition: ${err.message}`,
+      advice: ['Status was restored to its previous value; fix rb_trace.jsonl durability and rerun advance-status.'],
+    }));
+    process.exit(1);
+  }
+} catch (err) {
+  console.log(JSON.stringify({
+    status: 'error',
+    reason: `Failed to write rb_status.json: ${err.message}`,
+    advice: ['Fix bundle write permissions and rerun advance-status.'],
+  }));
+  process.exit(1);
+}
 
 console.log(JSON.stringify({ status: 'ok', current_gate: targetGateEnum, next_gate: nextGateEnum }));
 process.exit(0);

@@ -63,11 +63,14 @@ Retry 时传 Agent-reported `--attempt N`（N 从 1 开始，每次 rerun 递增
 
 ## 6. On Gate Pass
 
-读取 `check.next`。调用 `advance-status` 推进状态：
+读取 gate CLI JSON output，确认 `check.passed === true`，然后读取 `check.next`（应为 `phases/phase-seed-topics.md`）。先消费 handoff，再同步 source gate status：
+
 ```bash
-node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to seed_topics_ready
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to setup_ready
 ```
-然后加载 `check.next` 指向的 node（应为 `phase-seed-topics.md`）。
+
+从 `enter-phase` 渲染出的 seed-topics Markdown 继续执行下一 phase。`advance-status` 只同步 just-passed source gate；它不是加载或执行下一 phase 的动作。
 
 ## 7. On Gate Fail
 
@@ -90,7 +93,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 
 ## 8. Stop Behavior
 
-`stop: no` — Agent 自主验证，不发送 setup progress 或 idle/no-work 汇报。Setup 本地校验完成后必须运行 `setup-ready` gate；phase 完成条件是 gate pass + `check.next`，不是“看起来已验证”。
+`stop: no` — Agent 自主验证，不发送 setup progress 或 idle/no-work 汇报。Setup 本地校验完成后必须运行 `setup-ready` gate；phase handoff 完成条件是 gate pass + `enter-phase --node <check.next>` 写入 seed-topics route-bound load witness + `advance-status --to setup_ready`，不是“看起来已验证”。
 
 若遇到权限/工具/结构性 blocker 无法修复，通过 accepted trace/log surface 记录 `silent_degradation` 或 `silent_unpassable`（保持 non-blocked/in-progress），不写 `state: blocked`。Gate fail 后按 inspect/advice 修复并 rerun；所有下一 phase 路由只来自 gate CLI `check.next`。
 

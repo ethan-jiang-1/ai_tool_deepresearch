@@ -1,6 +1,6 @@
 {
   "gate": "wave2-complete",
-  "description": "Verify Wave2 produced the three-artifact group: synthesis.md (narrative projection with W2F-xxx references), cross-topic-ledger.md (6 fixed sections), finding-index.yaml (parseable YAML with required fields). Also verify Markdown link cross-references exist and resolve, backfill tokens are replaced, trace and status are present.",
+  "description": "Verify Wave2 produced the three-artifact group: synthesis.md (narrative projection with W2F-xxx references), cross-topic-ledger.md (6 fixed sections), finding-index.yaml (parseable YAML with required fields). Also verify Markdown link cross-references exist and resolve, backfill tokens are replaced, and trace evidence is present. Source-gate status-window and handoff witness are enforced by shared gate preflight.",
   "rules": [
     {
       "id": "synthesis_exists",
@@ -101,20 +101,6 @@
       "failure_message": "No wave2_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event per the shared-subagent-protocol."
     },
     {
-      "id": "status_current_gate",
-      "check": "status_value",
-      "target": "rb_status.json#/current_gate",
-      "expected": "wave2_complete",
-      "failure_message": "rb_status.json current_gate must be 'wave2_complete'. Status may have drifted \u2014 restore the correct gate value."
-    },
-    {
-      "id": "status_next_gate",
-      "check": "status_value",
-      "target": "rb_status.json#/next_gate",
-      "expected": "hitl2_recorded",
-      "failure_message": "rb_status.json next_gate must be 'hitl2_recorded'. Status may have drifted \u2014 restore the correct value."
-    },
-    {
       "_comment": "Wave2 conditional provenance: only triggered when search/evidence/reference outputs exist (reference/00-cross-*.md). Pure synthesis/backfill artifacts (synthesis.md, cross-topic-ledger.md, finding-index.yaml) do NOT require relay provenance.",
       "id": "wave2_cross_ref_coverage",
       "check": "output_declaration_coverage",
@@ -122,7 +108,9 @@
       "wave": "wave2",
       "output_selectors": {
         "glob": "reference/00-cross-*.md",
-        "roles": ["reference"]
+        "roles": [
+          "reference"
+        ]
       },
       "failure_message": "Wave2 promoted cross references (reference/00-cross-*.md) exist without relay provenance. These must be produced through delegated relay tasks (dpt-topic-scout or dpt-evidence-extractor). Direct-written cross references are not valid."
     }

@@ -1,7 +1,7 @@
 // @impl CPT-001, CPT-002: E2E regression — gate chain consistency from instantiation through seed-topics
 //
-// Uses instantiate-run-bundle (production) → advance-status + log-event --event (new CLI tools)
-// to advance through 4 gates WITHOUT hand-editing any control file.
+// Uses instantiate-run-bundle (production) → gate → enter-phase → advance-status
+// + log-event --event to advance through 4 gates WITHOUT hand-editing control state.
 //
 // Gates tested: instantiation-complete, hitl1-recorded, setup-ready, seed-topics-ready
 // Each gate must pass and return the correct `next` node ref.
@@ -179,8 +179,8 @@ human_decision_checkpoints:
     assert.equal(result.routing.kind, 'next');
   });
 
-  // ── Use advance-status to move to setup ──
-  it('advances status to setup_ready via advance-status CLI', () => {
+  // ── Bootstrap sync into setup ──
+  it('advances status to setup_ready via bootstrap-compatible advance-status CLI', () => {
     const out = run(`node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "${bundlePath}" --to setup_ready`);
     const parsed = JSON.parse(out);
     assert.equal(parsed.status, 'ok');
@@ -201,13 +201,23 @@ human_decision_checkpoints:
     assert.equal(result.routing.kind, 'next');
   });
 
-  // ── Use advance-status to move to seed-topics ──
-  it('advances status to seed_topics_ready via advance-status CLI', () => {
-    const out = run(`node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "${bundlePath}" --to seed_topics_ready`);
+  // ── Consume setup check.next, then sync setup source gate ──
+  it('enters seed-topics then syncs setup_ready as the just-passed source gate', () => {
+    const entered = run(`node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "${bundlePath}" --node phases/phase-seed-topics.md`);
+    assert.ok(entered.trim().length > 0, 'enter-phase should render the next control surface');
+
+    const trace = readFileSync(join(bundlePath, 'rb_trace.jsonl'), 'utf-8').trim().split('\n').map(l => JSON.parse(l));
+    assert.ok(trace.some(e =>
+      e.event === 'load_complete' &&
+      e.entry === 'phases/phase-seed-topics.md' &&
+      e.handoff_source_gate === 'setup-ready'
+    ), 'enter-phase should write route-bound seed-topics load_complete');
+
+    const out = run(`node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "${bundlePath}" --to setup_ready`);
     const parsed = JSON.parse(out);
     assert.equal(parsed.status, 'ok');
-    assert.equal(parsed.current_gate, 'seed_topics_ready');
-    assert.equal(parsed.next_gate, 'wave0_complete');
+    assert.equal(parsed.current_gate, 'setup_ready');
+    assert.equal(parsed.next_gate, 'seed_topics_ready');
   });
 
   // ── Materialize seed topics ──
