@@ -12,7 +12,7 @@ Agent 命令：从零开始一次完整的 Deep Research。
 
 ### 1. 定名
 
-从用户提供的 research question 生成 kebab-case bundle name：
+从 research question 生成 kebab-case bundle name，或使用 framework execution 开始前已提供的 `--name`：
 
 - 取英文前 6 个词
 - 去除非字母数字，空格替换为 `-`
@@ -21,7 +21,7 @@ Agent 命令：从零开始一次完整的 Deep Research。
 
 目标目录：`dpt_rb_<name>/`。
 
-用户也可以直接指定 `--name`。
+如果名称已在 entry 前提供，可以直接使用该名称。不要把 bundle naming 变成 autonomous execution 中的 mid-pipeline dependency。
 
 ### 2. 创建 Bundle
 
@@ -29,7 +29,7 @@ Agent 命令：从零开始一次完整的 Deep Research。
 B=$(node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs <name>)
 ```
 
-若目录已存在，报错退出。Production run bundle 不允许覆盖；换一个新的 bundle 名称。
+若目录已存在，报错退出。Production run bundle 不允许覆盖；Agent 派生新的 collision-safe 名称后重试，或使用 entry 前已提供的替代名称。
 
 JS 脚本内部已完成：目录创建、模板替换、Zod schema 校验、validate-bundle + inspect-bundle 质量检查。
 
@@ -66,11 +66,11 @@ research_profile: <profile>
 1. 读 phase node（`phases/phase-<name>.md`）
 2. 按 "Allowed Actions" section 执行
 3. 运行 "Gate Command" section 中指定的 gate CLI
-4. Gate pass → 读 JSON output 中的 `check.next` → 加载 `check.next` 指向的下一 phase
+4. Gate pass → 读 JSON output 中的 `check.next` → 运行 `enter-phase --bundle <path> --node <check.next>` 获取下一 Markdown control surface
 5. Gate fail → 读 `inspect` / `advice` → repair → rerun same gate
 6. 回到步骤 1，直到 `phase-final`（terminal，无 gate）
 
-人类介入点：`hitl1`（`stop: yes`，确认研究方向、设置 profile、注册 topics）和 `hitl2`（`stop: yes`，审阅 synthesis 后放行）。其余 phase 均为 `stop: no`，Agent 自行推进。
+Interactive in-run checkpoints：`hitl1`（`stop: yes`，确认研究方向、设置 profile、注册 topics）和 `hitl2`（`stop: yes`，审阅 synthesis 后放行）。Final 是 terminal non-interactive delivery，不是确认循环；post-final feedback 通过 HITL2 repair/rerun 重新进入。其余 phase 均为 `stop: no`，Agent 自行推进。
 
 ## 如果已有 Active Bundle
 

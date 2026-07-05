@@ -14,7 +14,7 @@ Deep Research Framework (`DPT_FRAMEWORK/`) 的运行时入口说明。
 
 **本框架就是项目的 Deep Research 引擎。** 用户要研究就用它跑，**不要**调用任何内置 "deep research" skill 或通用 research workflow——那些是替代品，本框架才是主体。入口 `RUN.md` Section 0 有完整禁用指令。
 
-不要浏览文件结构。直接走 `command_playbook/start-research.md` 流程：定名 → 创建 bundle → 写入 research question → 加载第一个 phase node。
+不要浏览文件结构。直接走 `command_playbook/start-research.md` 流程：Agent 派生或使用已提供的 bundle 名称 → 创建 bundle → 写入 research question → 加载第一个 phase node。
 
 ## 第一条
 
@@ -52,7 +52,7 @@ Deep Research Framework (`DPT_FRAMEWORK/`) 的运行时入口说明。
 - `schema/contracts/`：当前 executable schema contracts，包括 `gate.mjs`、`plan.mjs`、`profile.mjs`、`queue.mjs`、`status.mjs`、`trace.mjs`。
 - `engine/`：当前 deterministic engine code 和 trace utility。
 - `rb_templates/`：实例化 run bundle 时 materialize 的初始模板。
-- `command_playbook/`：Agent/operator 可读命令说明。
+- `command_playbook/`：Agent-facing command instructions and diagnostic/maintenance playbooks; not a human/operator co-runner surface for autonomous pipeline execution.
 
 ## Workflow Foundation / runtime surface
 
@@ -72,7 +72,7 @@ Production run bundle 位于 repo root，当前命名形态：
 dpt_rb_<name>/
 ```
 
-- 当前 production 实例化入口接收显式 `<name>`，创建 `dpt_rb_<name>/`。
+- 当前 production 实例化入口接收显式 `<name>`，创建 `dpt_rb_<name>/`；Agent-facing playbooks derive this name from the research request unless a name was already supplied before framework execution.
 - 如果目标目录已存在，必须报错停止；不能覆盖或复用旧 bundle。
 - 自动英文 slug 和 collision suffix 是 workflow-foundation target，不是当前 production CLI 行为。
 - Disposable experiment bundle 使用 `dpt_disp_*`，也是 mutable runtime context。

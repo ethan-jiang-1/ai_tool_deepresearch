@@ -223,15 +223,15 @@ Recording a degradation event (`silent_degradation`, `silent_gap`, etc.) does NO
 - Advance `rb_status.json` to the downstream gate without `check.next` from the gate CLI
 - Bypass the gate and directly invoke `advance-status.mjs`
 
-### 6.2 Next Phase Comes ONLY from Gate CLI and `enter-phase`
+### 6.2 Phase Handoff Comes ONLY from Gate CLI and `enter-phase`
 
-The ONLY routing authority for phase transition is the gate CLI's `check.next` field. When the gate passes, `check.next` contains the next node fileRef. Consume that fileRef through the accepted loader/check path:
+The ONLY routing authority for phase handoff is the gate CLI's `check.next` field. When the gate passes, `check.next` contains the next node fileRef. Consume that fileRef through the accepted loader/check path:
 
 ```bash
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>
 ```
 
-Then synchronize the just-passed source gate with `advance-status --to <source_gate_enum>` exactly as the phase node instructs. Do NOT load any other phase, and do NOT use `advance-status` as a substitute for `enter-phase`.
+Then synchronize the just-passed source gate with `advance-status --to <source_gate_enum>` exactly as the phase node instructs. Do NOT load any other phase, and do NOT use `advance-status` as a substitute for `enter-phase`. `enter-phase` / route-bound `load_complete` witness entry into the target Markdown control surface; they do not prove target-phase work completion.
 
 ### 6.3 Silent Unpassable Holding
 
@@ -247,7 +247,7 @@ When a gate is structurally unpassable (the gate rule fundamentally cannot be sa
 5. Do NOT self-load the next phase
 6. Do NOT repeat the same ineffective repair
 
-The `silent_unpassable` event is an audit trail for later review or operator inspection. It is NOT a phase transition authority.
+The `silent_unpassable` event is an audit trail for later review or operator inspection. It is NOT phase handoff authority, status synchronization authority, or target work completion.
 
 ---
 

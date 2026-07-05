@@ -28,6 +28,8 @@ Spec-driven rewrite of a Deep Research Tool: broad question in, evidence-backed 
 
 ## Test Layering
 
+Use `npm test` for the full regression suite. It is intentionally scoped to `tests/**/*.test.mjs`; bare `node --test` from the repo root may discover archived OpenSpec artifacts outside `tests/`. See `tests/README.md` and the README files in each test layer for focused commands.
+
 | 层 | 位置 | 性质 |
 |---|------|------|
 | 回归测试 | `tests/` | 单元测试（零 I/O）+ 集成测试（真实文件 I/O），跑在 `node:test` 下 |

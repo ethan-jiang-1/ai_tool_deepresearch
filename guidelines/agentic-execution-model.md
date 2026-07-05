@@ -146,6 +146,11 @@ Queue active window is not the Relay work pool. Relay concurrency happens inside
 | **Sub-agent** | 执行 bounded task Markdown（`task.md` + `result.schema.json`）的 Agent actor：做 I/O 密集或窄范围工作，返回结构化结果 | "child Agent", "worker" | Sub-agent 也跑 MD，只是 MD surface 更窄；它不碰 WorkflowState、gate、queue |
 | **MD controller mode** | Phase Agent 使用 phase-level Markdown 进行流程控制的模式：读 phase MD → 调 Engine checkpoint → 读取 check/inspect/advice → 继续/修复/阻塞 | "MD controller" | 这是控制模式/控制面，不是 Agent 身份。Sub-agent 也使用 Markdown control surface，但不是 workflow-level MD controller mode |
 | **Markdown control surface** | Agent actor 可读的 Markdown 操作面，包括 phase node、task card、playbook、slot task 等 | "MD control surface" | 不拥有机器裁决；它把任务、约束和反馈带回 Agent 上下文 |
+| **Phase transition** | Runtime status synchronization such as updating `rb_status.json` `current_gate` / `next_gate` after accepted preconditions pass | `phase_transition` trace event, `advance-status` | Not the same as loading the next phase or completing its work |
+| **Phase handoff** | Phase Agent consumes gate CLI `check.next` through the accepted loader/check path and receives the target Markdown control surface | `enter-phase`, accepted handoff loader/check | Handoff proves entry into the target control surface, not target work completion |
+| **Work completion** | Target-phase artifacts and accepted gate/content rules prove that the target phase's own work is done | — | A route-bound entry witness alone is not completion |
+| **Witnessing** | Engine-written evidence that binds deterministic gate output to later handoff entry, such as a passed `gate_attempt` followed by route-bound `load_complete` | handoff witness, entry witness | Machine event names remain stable unless an OpenSpec migration changes them |
+| **Autonomous continuation** | Non-terminal lifecycle `stop: no` behavior: the Agent does not surface, wait, self-declare completion, or deliver early chat output; it continues through the Markdown-controlled loop until gate pass and accepted handoff | silent autonomous execution | Final delivery is terminal non-interactive output, not a continuation checkpoint |
 
 ### 4.2 Actor Roles and MD Surfaces
 

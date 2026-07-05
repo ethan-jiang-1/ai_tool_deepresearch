@@ -81,6 +81,8 @@ Agent 驱动的 workflow 不是 JS engine 跑循环。它是一个 **Phase Agent
 
 这个循环的驱动力是 **Phase Agent operating in MD controller mode**，不是 JS 代码。不存在 `while(true) { advance() }`，不存在 lifecycle walker，不存在 cursor 指针。Phase Agent 手持当前 node，做完 gate 验证后问 chain "下一个是谁"，拿到 fileRef，再通过 accepted loader/check 消费这个 `check.next` 并把渲染出的下一段 Markdown 读回上下文。
 
+边界词要分清：`advance-status` / `phase_transition` 只同步 runtime status；`enter-phase` / route-bound `load_complete` 只证明 Phase Agent 进入了目标 Markdown control surface。目标 phase 的 work completion 仍要靠目标 phase 自己的 artifacts 和 gate/content rules 证明。
+
 ---
 
 ## Three-Authority Architecture
@@ -177,6 +179,8 @@ Every new phase added to the workflow MUST include its deterministic chain entri
 ### Dynamic Loading Integrity
 
 The Phase Agent MUST load each phase node on demand by consuming `check.next` through the accepted handoff loader/check. If nodes are preloaded (or the Phase Agent guesses the next node), two failures become possible: (a) the Phase Agent executes a phase the gate did not authorize, bypassing the gate's deterministic checkpoint; (b) the Phase Agent's context accumulates the content of phases it has not yet reached, defeating the context-isolation benefit of single-phase-at-a-time execution. The on-demand loading is not a performance optimization — it is a structural requirement for the gate-chain contract to hold.
+
+`enter-phase` and the resulting route-bound `load_complete` are handoff witnesses. They prove target-node entry/loading, not target-phase work completion. After handoff, the Phase Agent must still execute the target phase and pass its own gate or content checks before that target work is complete.
 
 ### Gate as Sole Phase Boundary
 

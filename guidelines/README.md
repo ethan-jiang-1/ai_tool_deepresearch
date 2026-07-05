@@ -182,6 +182,11 @@ Each file has frontmatter declaring its role, scope, authority level, and siblin
 | Trace | Append-only JSONL diagnostic memory from real execution. |
 | Gate | Deterministic lifecycle boundary that passes only through accepted checks. |
 | Gate Definition | Read-only framework-side rule definition that says what a gate checks; not a run result. |
+| Phase transition | Runtime status synchronization such as `rb_status.json` current/next gate updates; not the same as loading or completing the next phase. |
+| Phase handoff | Phase Agent consumes gate CLI `check.next` through the accepted loader/check path and receives the next Markdown control surface. |
+| Work completion | Target-phase artifacts and accepted gate/content rules prove the target phase's work is done; `enter-phase` / `load_complete` alone do not. |
+| Witnessing | Engine-written evidence binding a deterministic gate route to later handoff entry, such as `gate_attempt(passed=true,next=...)` plus route-bound `load_complete`. |
+| Autonomous continuation | Non-terminal `stop: no` behavior where the Agent continues silently through gate-driven work and handoff rather than surfacing, waiting, or delivering early chat output. |
 | Runtime context | Run or disposable experiment directory containing current control files, evidence, receipts, trace, and artifacts. |
 | Bundle | Current project convention for a runtime context, such as `dpt_rb_*` or `dpt_disp_*`. |
 | Prototype | Experiment-specific fixtures, notes, or proof scaffold; not the production Engine source. |

@@ -25,5 +25,11 @@ plan 完成后从 `_backlog/plans/` 通过 `git mv` 移入本目录：
 | CLS-004 | 2026-07-03 | self-documenting-phase-role-nodes-plan.md | Self-Documenting Phase + Relay Role Nodes — phase Execution Brief + role Role Brief/Handoff；落地 via 2026-07-03-harden-relay-pipeline（§7/§8） |
 | CLS-005 | 2026-07-03 | simplify-relay-pipeline.md | 化簡 Relay Pipeline — 思考草稿；原激进简化被 review 否决，§9 保守版落地 via harden-relay-pipeline（superseded，非按原文实施） |
 | CLS-006 | 2026-07-04 | subagent-logging-come-alive-plan.md | Sub-agent logging 活过来 + provenance 取证 — beacon 模式 + lifecycle 事件 + forge-resistance；落地 via 2026-07-04-subagent-execution-logging |
+| CLS-007 | 2026-07-05 | agent-persistence-and-exit-codes.md | Absorbed by autonomous-command-contract-hardening: exit code stays honest coarse control-flow; encouragement/repair/continuation guidance goes through `advice[]`, structured diagnostics, or Agent-readable Markdown |
+| CLS-008 | 2026-07-05 | autonomous-silent-execution-terminology.md | Absorbed by autonomous-command-contract-hardening: phase boundary terms now distinguish transition, handoff, work completion, and witnessing across guidance, command docs, and validators |
+| CLS-009 | 2026-07-05 | cli-exit-code-contract.md | Absorbed by autonomous-command-contract-hardening: top-level and CLI docs now expose canonical `0/1/2`, gate/non-gate classes, `log-event.mjs` always-0 exception, and known doc/code drift |
+| CLS-010 | 2026-07-05 | no-implicit-human-interaction.md | Absorbed by autonomous-command-contract-hardening: commands are Agent-facing; HITL1/HITL2 are the only interactive in-run checkpoints; Final is terminal non-interactive delivery with post-final feedback routed through HITL2 repair/rerun |
 
-**Next available plan ID: CLS-007**
+Closure boundary for CLS-007..010: this change did not implement runtime exit-helper unification, code-2 semantic migration, a JS lifecycle walker, chat interceptor, environment-variable control, same-turn chat halt prevention, or fake evidence/trace handling.
+
+**Next available plan ID: CLS-011**

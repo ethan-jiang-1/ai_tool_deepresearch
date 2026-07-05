@@ -12,7 +12,7 @@ _done/
 ├── README.md              # 本文件（状态总览 + 查阅指南）
 ├── _fixed_bugs/           # 已修复 Bug（19 个，BUG-001~019）
 ├── _done_todos/           # 已完成 TODO（14 个，DONE-001~014）
-├── _closed_plans/         # 已完成 Plan（6 个，CLS-001~006）
+├── _closed_plans/         # 已完成 Plan（10 个，CLS-001~010）
 └── _old_topics/           # 历史归档（⚠️ 勿读，除非显式要求）
 ```
 
@@ -26,7 +26,7 @@ _done/
 |---------|------|---------|
 | `_fixed_bugs/` | 19 个已修复 bug（BUG-001~019） | BUG-020 |
 | `_done_todos/` | 14 个已完成 todo（DONE-001~014） | DONE-015 |
-| `_closed_plans/` | 6 个已完成 plan（CLS-001~006） | CLS-007 |
+| `_closed_plans/` | 10 个已完成 plan（CLS-001~010） | CLS-011 |
 | `_old_topics/` | 历史归档：`_v12-migration/`（6 个 OpenSpec change 全 DONE）、`_workflow/`（8 个 OpenSpec change 全 ARCHIVED）、`_original_dpt_requirement/`、`_original_dpt_v12/`、`_guideline/`、`_trainsistion/` | — |
 
 关键完成项（按完成日期）：

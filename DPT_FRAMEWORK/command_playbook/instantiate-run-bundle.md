@@ -11,13 +11,13 @@ Agent 命令：从 DPT_FRAMEWORK 生产一个新的 Runtime Bundle。
 ## 步骤
 
 ### 1. 定名
-用户提供 bundle 名称 (kebab-case, 如 `ai-safety`)。目标目录: `dpt_rb_<name>/`。
+Agent 从 research request 派生稳定的 kebab-case bundle 名称，或使用 framework execution 开始前已提供的名称（如 `ai-safety`）。不要在 autonomous execution 中要求用户提供名称。目标目录: `dpt_rb_<name>/`。
 
 ### 2. 创建 Bundle
 ```bash
 B=$(node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs <name>)
 ```
-若目录已存在，报错退出。Production run bundle 不允许覆盖；换一个新的 bundle 名称。
+若目录已存在，报错退出。Production run bundle 不允许覆盖；Agent 派生新的 collision-safe 名称后重试，或使用 entry 前已提供的替代名称。
 
 ### 3. 报告
 ```bash
