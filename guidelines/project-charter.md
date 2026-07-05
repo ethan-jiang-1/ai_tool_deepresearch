@@ -29,6 +29,8 @@ siblings:
 
 本项目的目标是 Deep Research Tool rewrite：一个 agentic framework，用于产出证据支撑、多阶段、多 checkpoint 的深度研究报告。
 
+本项目完全靠 OpenSpec 推进工程变更。OpenSpec 不是旁路文档或事后记录，而是 proposal、spec、tasks、apply、archive 的执行主干：它把要做什么、为什么做、按什么顺序做、怎样验证、完成后如何并入 main specs 固化下来。
+
 本项目的开发模式是 spec-driven development。所有能力、行为、schema、状态机、deterministic checkpoint、receipt、trace 相关迭代都必须严格遵循 OpenSpec：先 proposal/spec/tasks，再实现、验证、归档。`guidelines/` 只能解释和指路，不能绕过 OpenSpec 直接定义新行为。
 
 核心分工固定不变：
@@ -295,6 +297,20 @@ Explore / design
 ```
 
 实验验证的是机制，不是演示脚本。机制通过后，按 OpenSpec 结果进入 accepted specs、framework implementation、实验指导或测试。
+
+### OpenSpec Apply Discipline
+
+本项目的工程纪律主要靠 OpenSpec 外化和维持，而不是靠 Agent 自律、聊天记忆或一次性 code review。OpenSpec 把意图、任务顺序、contract、验证要求和归档入口放到可检查的 artifact 里，让 implementation 可以被追踪、质疑和复盘；没有 OpenSpec artifact 承载的行为变化，不应伪装成已接受工程事实。
+
+因此，OpenSpec apply 不是机械照抄计划，也不是脱离计划的临场发挥。它是一个受 `tasks.md` 约束的反馈闭环：任务序列提供依赖顺序和审计面；真实实现、测试和 E2E 暴露计划中没有完全说清的边界；这些新边界再回到 active delta specs 和 tasks，最后才进入 accepted specs。
+
+因此，Apply 阶段默认按已批准的 `tasks.md` 顺序执行。若实施中发现任务顺序本身会导致假验证、漏实现或错误依赖，必须显式说明原因，再调整执行顺序或补充 task section；不要静默跳步。Tasks 是 apply 审计面，不是事后装饰。
+
+真实 bug 不是孤立补丁入口，而是 contract-class probe。一个具体缺口若暴露某类 contract drift，应横向检查同一 contract 的所有权威面：delta/main specs、schema/definitions、CLI/runtime implementation、shared helper、Agent-facing Markdown、validators、regression tests、controlled E2E 和 archive wording。单点修复不能替代类问题审计。
+
+实施中发现的高信噪比规则要回写到 active delta spec；归档后再进入 main specs。不要让“这次才想明白的边界”只留在聊天、测试名、一次性复盘或某个实现注释里。若旧 spec/guideline wording 会误导未来 Agent，优先用当前 change 的 delta spec 或同轮 guideline 更新清理它，而不是依赖记忆。
+
+验证和任务勾选必须跟真实证据同步：先跑对应 regression/E2E/governance，再勾 final checks；若完成后又补了 spec 或验证边界，新增一个 post-apply task section 记录原因和结果。完成说明和 archive note 不得 overclaim；必须明确区分机制证明、真实 Agent 行为证明、negative-case diagnostic artifacts、以及仍然存在的 residual risk。
 
 ---
 

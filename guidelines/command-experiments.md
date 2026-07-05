@@ -628,7 +628,7 @@ The gate CLI is an Engine-layer deterministic checkpoint. Its primary output is 
 | Field | Role | Used by |
 |-------|------|---------|
 | `check.passed` | Did the gate pass? | verdict |
-| `check.next` | Where does the walker go if passed? | routing |
+| `check.next` | Which node must the Phase Agent consume through the accepted handoff loader/check if passed? | routing |
 | `inspect[]` | What specifically is wrong? (diagnosis) | LLM reads → decides repair |
 | `advice[]` | How should the Agent fix it? (guidance) | LLM reads → executes repair |
 

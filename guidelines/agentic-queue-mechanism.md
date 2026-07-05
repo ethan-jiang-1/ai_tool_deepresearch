@@ -86,7 +86,7 @@ The agentic queue loop is not one loop. It is **two nested loops**. Each has a d
 ### 3.1 The Outer Loop (Phase-to-Phase)
 
 ```
-读 MD node → 执行 → 跑 gate CLI → chain 查 next → 加载下一 MD node → 循环
+读 MD node → 执行 → 跑 gate CLI → chain 查 next → 通过 accepted handoff loader/check 消费下一 MD node → 循环
 权威 = gate + transitions.chain.json
 ```
 

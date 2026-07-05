@@ -106,7 +106,7 @@ This file cannot decide:
 
 ```
 Chain 产出: gate pass → check.next (fileRef)
-  → Phase Agent 加载下一个 phase MD → 进入 Queue
+  → Phase Agent 通过 accepted handoff loader/check 消费下一个 phase MD → 进入 Queue
 Queue 产出: task card (`targets` + receipt spec)
   → Phase Agent 判断 `targets` / delegation → 如需 Sub-agent，进入 Relay
 Relay 产出: result.json
@@ -232,7 +232,7 @@ Queue active window is not the Relay work pool. Relay concurrency happens inside
 
 8. Tier 1 — Chain: gate + transition
    Phase Agent 跑 gate CLI → gate pass → chain lookup → check.next = phase-wave1.md
-   Phase Agent 加载 phase-wave1.md → 进入下一个 phase
+   Phase Agent 通过 accepted handoff loader/check 消费 phase-wave1.md → 进入下一个 phase
 ```
 
 **关键交接点（只有三个）**：

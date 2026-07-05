@@ -120,3 +120,9 @@ Before marking this change ready for archive, verify these cross-cutting points 
 - [x] Gate/preflight/status advice names the concrete remedy command with the bundle path and target node/source gate, instead of generic prose.
 - [x] Autonomous continuation language appears where the Agent will read it, while `stop: no` remains only the compatibility field and not the primary behavior explanation.
 - [x] Standard E2E proves the mechanism with real framework CLIs and disposable bundle state; optional heavy canary, if not run, is recorded as `NOT RUN` and not claimed as Agent-behavior proof.
+
+## 10. Post-Apply Spec Backfill
+
+- [x] 10.1 将 apply 中发现的 high-signal contract 细节补回 delta specs：covered gate pass trace durability、attempt_count entry-window reset、delta diagnostics stable `failed_rule_ids` source、setup bootstrap status compatibility boundary、standard E2E expected negative-case health issue boundary。
+- [x] 10.2 重新运行 `openspec validate harden-phase-handoff-witnessing --strict`，确认 spec backfill 后 change 仍 valid。
+- [x] 10.3 重新运行 `node openspec/governance/check-project-reqs.mjs` 和 `node openspec/governance/check-project-specs.mjs`，确认 active delta specs 与 governance checks 仍 PASS。

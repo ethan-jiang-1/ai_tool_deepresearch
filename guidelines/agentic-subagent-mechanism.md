@@ -83,7 +83,7 @@ Relay 不是孤立机制。它嵌套在 Chain (Tier 1) 和 Queue (Tier 2) 之内
 
 ```
 外层 — Chain (Tier 1)
-       管 phase 间路由。gate pass → chain 查 next phase node → 加载下一个 MD。
+       管 phase 间路由。gate pass → chain 查 next phase node → accepted handoff loader/check 渲染下一个 MD。
        权威 = gate verdict + chain 路由表。不进 queue，不碰 relay。
   │
   └─ 中层 — Queue (queue-manager.mjs, AGQ-001~010)
@@ -107,7 +107,7 @@ Relay 不是孤立机制。它嵌套在 Chain (Tier 1) 和 Queue (Tier 2) 之内
 以 wave0 的一个 source-intake task 为例，完整经过三层：
 
 ```
-[外层已就位] Phase Agent 加载 phase-wave0.md（chain 已路由到这个 phase）
+[外层已就位] Phase Agent 已通过 accepted handoff loader/check 进入 phase-wave0.md（chain 已路由到这个 phase）
 
 [中层 — Queue]     operate-queue claim <bundle> --actor main-agent
                    # "main-agent" is the current CLI wire value for the Phase Agent
@@ -134,7 +134,7 @@ Relay 不是孤立机制。它嵌套在 Chain (Tier 1) 和 Queue (Tier 2) 之内
 
 [中层 — Queue]     queue 空 (claim 返回 item: null) → 出内层 loop
 
-[外层 — Chain]     operate-queue 退场 → 跑 gate CLI → pass → chain 查 next → 加载 phase-wave1.md
+[外层 — Chain]     operate-queue 退场 → 跑 gate CLI → pass → chain 查 next → handoff loader/check 消费 phase-wave1.md
 ```
 
 **关键交接点：** Relay collect 完结果后，是 Phase Agent 基于 result 写产出文件，然后调 Queue complete 做 receipt。Relay 和 Queue 之间不直接通信——Phase Agent 是桥梁。产出文件（`reference/<topic>/source.yaml`）是两者的唯一共享契约：Relay 的 result 提供"搜到了什么"，Phase Agent 把它结构化成产出文件，Queue 的 receipt 检查"产出文件在不在、对不对"。
@@ -143,7 +143,7 @@ Relay 不是孤立机制。它嵌套在 Chain (Tier 1) 和 Queue (Tier 2) 之内
 
 | 层 | 引擎接口 | Phase Agent 调它做什么 | 它不管什么 |
 |---|---------|--------------------|-----------|
-| **Chain** | `resolveNodeTransitionDetailed()` (`ask-next.mjs`) | gate pass 后查下一个 phase | 不编排 phase 内 task、不碰 sub-agent |
+| **Chain** | `resolveNodeTransitionDetailed()` (`ask-next.mjs`) | gate pass 后查下一个 phase；Phase Agent 再通过 handoff loader/check 消费该目标 | 不编排 phase 内 task、不碰 sub-agent |
 | **Queue** | `claim()` / `complete()` / `fail()` | 领 task、校验 receipt、推进下一个 | 不 spawn sub-agent、不路由 phase |
 | **Relay** | `drive-relay-slot` CLI（`stage`/`commit`/`merge`，内部调 `stageSubagentSlots()` 等引擎函数） | 给 sub-agent 准备 slot、收集结果 | 不校验 task receipt、不编排 task 顺序 |
 

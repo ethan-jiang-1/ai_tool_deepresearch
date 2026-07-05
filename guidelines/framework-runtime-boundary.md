@@ -239,7 +239,7 @@ Gate CLI 是纯确定性检查器——遍历 rules、执行 check、返回结�
 
 这层封装：
 
-- **Phase Agent 不再背路由**——Playbook 不需要手动查 manifest、拼 `--next` flag、喂给 gate。Gate 自己以 `--current-node` 驱动，问 transition table，回答直接带回 `check.next` 和详细 `routing`。Playbook 读这个值加载下一 node。
+- **Phase Agent 不再背路由**——Playbook 不需要手动查 manifest、拼 `--next` flag、喂给 gate。Gate 自己以 `--current-node` 驱动，问 transition table，回答直接带回 `check.next` 和详细 `routing`。Playbook/Phase Agent 读这个值，并通过 accepted handoff loader/check 消费下一 node。
 - **Transition table 只管 Node 间的转移**——给定 (currentNodeRef, outcome)，回答 routing result (next / terminal / no_transition / invalid_input / config_error)。其他一概不管。
 - **"不知道"是合法回答**——transition table 返回 `no_transition` 时，Gate 诚实告诉 Phase Agent。Phase Agent 决定怎么办。
 - **Routing identity 是 node fileRef**——例如 `phases/phase-wave0.md`，而不是 gate key、phase key 或 frontmatter `id`。
