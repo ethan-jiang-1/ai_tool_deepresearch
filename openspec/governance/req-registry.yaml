@@ -41,6 +41,7 @@ prefixes:
   CPT: cli-phase-transition
   CRC: cache-raw-web-content
   CSE: cmd-subagent-environment
+  DEW: delegated-work-units
   DYS: dynamic-node-loading
   EEX: evidence-extraction
   EXO: experiment-observability
@@ -137,12 +138,12 @@ AGQ-010: agentic-queue — Seed-topics queue-loop simple playbook (3-topic happy
 AGQ-011: agentic-queue — QueueItemSchema targets field (TargetSpec) replaces single enum target
 AGQ-012: agentic-queue — TargetSpec schema (controller enum, optional delegates with to/role_key/timeout_ms)
 AGQ-013: agentic-queue — Producer rule topic_deepening for wave1 deepening task cards
-AGQ-014: agentic-queue — Claim advice returns delegates_required and delegates_config for relay dispatch
+AGQ-014: agentic-queue — Work-unit claim response reports delegated allocation and phase-drain diagnostics
 AGQ-015: agentic-queue — Producer rule cross_topic_synthesis for wave2 synthesis task cards
 AGQ-016: agentic-queue — Producer rule seed_topic_backfill_wave2 for wave2 backfill task cards
 AGQ-017: agentic-queue — Delegated task TargetSpec keeps controller main-agent and delegates.to sub-agent
-AGQ-018: agentic-queue — Delegated complete validates relay provenance, declarations, output files, and cache trails
-AGQ-019: agentic-queue — Queue active-window slot SSOT (QUEUE_ACTIVE_WINDOW_SLOTS=20, SLOT_NAMES) independent of Relay concurrency (MAX_CONCURRENT_SUBAGENTS=8)
+AGQ-018: agentic-queue — Delegated completion is work-unit submit with declaration, output file, and cache trail validation
+AGQ-019: agentic-queue — Queue v2 active_window, refill_pool, delegated_in_flight, and terminal_history state model
 AGQ-020: agentic-queue — pendingCount exposes active window plus refill pool task total
 
 # agent-output-declaration
@@ -167,6 +168,16 @@ CMI-005: cmd-bundle-instantiation — Bundle naming is Agent-derived or already-
 # check-inspect-feedback
 CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
 CHI-002: check-inspect-feedback — C&I feedback loop for fork variant (topicReadiness validation)
+
+# delegated-work-units
+DEW-001: delegated-work-units — Work-unit pipeline is the sole production delegated-work path
+DEW-002: delegated-work-units — Work-unit identity and Engine-owned allocation index
+DEW-003: delegated-work-units — Queue demand binding, leases, and in-flight attempt state
+DEW-004: delegated-work-units — Work-unit envelope, manifest, beacon, task, result, and receipt nonce surfaces
+DEW-005: delegated-work-units — Submit transaction is the only successful delegated completion transition
+DEW-006: delegated-work-units — Terminal attempts and timeout retry allocate replacement work IDs
+DEW-007: delegated-work-units — Submitted work-unit ledger rows are delegated gate coverage authority
+DEW-008: delegated-work-units — Non-work-unit delegated artifacts are cleanup diagnostics only
 
 # conditional-nodes
 COS-001: conditional-nodes — Deterministic branch checkpoint transforms
@@ -249,18 +260,18 @@ QIV-004: queue-input-validation — operate-queue repair --remove-stale removes 
 
 # relay-provenance-gate
 RPG-001: relay-provenance-gate — Gate verifies output declaration ledger exists and meets entry threshold
-RPG-002: relay-provenance-gate — Gate verifies _subagents directory contains relay slot evidence
-RPG-003: relay-provenance-gate — Gate detects suspected relay bypass when artifacts exist without provenance markers
+RPG-002: relay-provenance-gate — Gate verifies submitted work-unit presence and cross-check surfaces
+RPG-003: relay-provenance-gate — Gate detects suspected delegated bypass when artifacts exist without submitted work-unit coverage
 RPG-004: relay-provenance-gate — Provenance checks coexist with structural checks in standard gate definitions
 RPG-005: relay-provenance-gate — Gate verifies scoped output declaration coverage for current phase outputs
-RPG-006: relay-provenance-gate — Wave2 relay provenance is conditional on search evidence
-RPG-007: relay-provenance-gate — Gate emits provenance_nonce_mismatch diagnostic when slot nonce is non-UUID or absent from dispatch.json (advisory only)
-RPG-008: relay-provenance-gate — Gate emits relay_commit_missing diagnostic when a slot lacks relay_commit_done trace (advisory only)
+RPG-006: relay-provenance-gate — Wave2 work-unit provenance is conditional on delegated search evidence
+RPG-007: relay-provenance-gate — Gate emits provenance_nonce_mismatch diagnostic when work-unit nonce binding is invalid (advisory only)
+RPG-008: relay-provenance-gate — Gate emits missing work-unit submit diagnostic when delegated attempt lacks submitted coverage (advisory only)
 RPG-009: relay-provenance-gate — Gate emits agent_timestamp_span_suspicious diagnostic when spawnedAt/completedAt span is sub-second (advisory only)
 RPG-010: relay-provenance-gate — Framework ships a provenance-forensics judgment guide (S0–S5 signals + 6-tier decision matrix + write-back, content from plan §10) so a future coding agent can decide from landed evidence
-RPG-011: relay-provenance-gate — Gate emits lifecycle_events_missing diagnostic when an evidence-producing slot lacks nonce-carrying lifecycle events (advisory only; read-side for SRL-004)
+RPG-011: relay-provenance-gate — Gate emits lifecycle_events_missing diagnostic when evidence-producing work unit lacks nonce-carrying lifecycle events (advisory only; read-side for SRL-004)
 RPG-012: relay-provenance-gate — Gate emits provenance_chain_inconsistency diagnostic when engine-emitted artifact cross-references contradict (advisory only; cross-artifact consistency — primary detector for determined forgery)
-RPG-013: relay-provenance-gate — All gate provenance diagnostics carry slotKey and wave for per-slot/per-wave aggregation
+RPG-013: relay-provenance-gate — Gate provenance diagnostics carry work_id, queue_item_id, wave, and kind for aggregation
 
 # repair-loop
 REL-001: repair-loop — Repair checkpoint loopback and deterministic termination
@@ -307,21 +318,21 @@ SCO-008: schema-core-hitl — ProfileSchema hitl1/hitl2 field update
 SOR-001: schema-core — Source-of-record invariant marker for schema-core specs
 
 # subagent-system
-SUC-001: subagent-collect — Collect slot result envelopes and merge evidence into workflow state
-SUD-001: subagent-dispatch — Gate pass dispatches subagent slots into wave-scoped file system protocol
+SUC-001: subagent-collect — Work-unit submit validates returned result envelopes and records delegated completion
+SUD-001: subagent-dispatch — Work-unit claim creates dispatchable prompt and runtime envelope
 SUR-001: subagent-repair — All-slots-failed repair routing and partial-failure tolerance
-SUS-001: subagent-slots — Subagent slot lifecycle state machine and wave-scoped paths
-SUD-002: subagent-dispatch — Queue task card targets.delegates triggers relay-based dynamic dispatch, staged via drive-relay-slot (task to SlotConfig mapping)
-SUD-003: subagent-dispatch — Batch sub-agent protocol defines collect-as-return loop with replacement dispatch, driven via drive-relay-slot
-SUC-002: subagent-collect — Per-slot collect during batch sub-agent execution via drive-relay-slot commit (ingestAgentReceipt + commitSlotResult)
-SUD-004: subagent-dispatch — Staging writes per-slot _beacon.json (bundle_dir, log_cli, slot_key, UUID receipt_nonce)
-SUD-005: subagent-dispatch — dispatch.json persists each slot engine-generated UUID receipt_nonce for forensic binding
-SUD-006: subagent-dispatch — buildSpawnPrompt hands sub-agent only slot directory plus beacon pointer (beacon mode)
-SUD-007: subagent-dispatch — Staging and commit trace events (slot_create, dispatch_create, agent_result_received, result_schema_validated) carry the slot receipt_nonce, nonce-anchoring the engine trace chain end-to-end
-SRD-001: subagent-relay-driver — Driver CLI orchestrates relay slot lifecycle end-to-end via stage/commit subcommands
+SUS-001: subagent-slots — Replaced production slot lifecycle/path contracts are removed in favor of work-unit runtime contracts
+SUD-002: subagent-dispatch — Queue task card targets.delegates becomes eligible for work-unit claim
+SUD-003: subagent-dispatch — Batched sub-agent dispatch uses work-unit claim --count and submit-by-work-id returns
+SUC-002: subagent-collect — Invalid work-unit submit is a non-terminal rejection with correction path
+SUD-004: subagent-dispatch — Work-unit claim writes beacon metadata with bundle, log CLI, work_id, queue_item_id, kind, and receipt_nonce
+SUD-005: subagent-dispatch — Work-unit index and manifest persist Engine-generated receipt nonce for forensic binding
+SUD-006: subagent-dispatch — buildSpawnPrompt hands sub-agent its work-unit directory plus beacon pointer
+SUD-007: subagent-dispatch — Work-unit claim and submit trace events carry receipt nonce across Engine trace chain
+SRD-001: subagent-relay-driver — Delegated driver production entrypoint is replaced by operate-work-unit lifecycle CLI
 SRD-002: subagent-relay-driver — Driver performs no search, evidence judgment, or routing (deterministic lifecycle only)
-SRD-003: subagent-relay-driver — Driver passes result through commitSlotResult validation unchanged (no hand-written slot files)
-SRD-004: subagent-relay-driver — Driver-driven slot produces engine trace and persisted UUID nonce (hand-fake-distinguishable)
+SRD-003: subagent-relay-driver — Work-unit submit passes provided result through Engine validation unchanged
+SRD-004: subagent-relay-driver — Work-unit lifecycle produces Engine trace and persisted UUID nonce evidence
 SRL-001: subagent-runtime-logging — Sub-agent emits lifecycle events via log-event.mjs (search_start/done, fetch_done, file_written, error, work_done)
 SRL-002: subagent-runtime-logging — Lifecycle events carry the slot beacon receipt_nonce (UUID)
 SRL-003: subagent-runtime-logging — Sub-agent reads _beacon.json for bundle_dir/log_cli/nonce as single source of truth
@@ -395,7 +406,7 @@ EXR-003: experiment-ref-integrity — case-403 verifies content_dedup via Engine
 EXR-004: experiment-ref-integrity — case-404 verifies queue boundary contract
 EXR-005: experiment-ref-integrity — case-405 verifies rb_trace.jsonl is the only trace sink
 EXR-006: experiment-ref-integrity — case-406 verifies real Sub-agent boundary path
-SCO-009: schema-core — QueueWorkUnitSchema upgrade for rb_queue.json (5 slots nullable, refill_pool typed)
+SCO-009: schema-core — Queue v2 contract separates queue_item_id demand identity from work_id attempt identity
 PLR-001: playbook-runner — RUN.md as unified runner entry with playbook manifest and execution instructions
 PLR-003: playbook-runner — Runner execution contract and summary report
 PRE-001: pre-research-experiments — Workflow-foundation happy-path pre-research playbook (simple, light, fixed HITL payload, 3 gates pass)
@@ -480,7 +491,7 @@ STM-006: seed-topic-materialization — Topic slug SHALL include zero-padded NN_
 WDC-001: workflow-directory-contract — Read-only framework assets boundary (DPT_FRAMEWORK/ = read-only, dpt_rb_*/ = mutable runtime truth)
 WDC-002: workflow-directory-contract — Workflow node directory structure (phases/ and shared/ under workflows/nodes/)
 WDC-003: workflow-directory-contract — Gate artifacts location and shape (gate definitions, CLI, engine, helpers, schema contract)
-WDC-004: workflow-directory-contract — Runtime bundle canonical structure (rb_plan.md, rb_profile.yaml, rb_status.json, rb_queue.json, rb_trace.jsonl, seed_topics/, reference/, artifacts/, final/, _subagents/, _cache/)
+WDC-004: workflow-directory-contract — Runtime bundle canonical structure includes _work_units/ for delegated attempt state
 WDC-005: workflow-directory-contract — Test and experiment boundary (tests/ for regression, experiments_playbook/ for Agent-driven E2E)
 WDC-006: workflow-directory-contract — Naming conventions for workflow foundation artifacts (phase-*.md, shared-*.md, gate-*.definition.json, check-gate-*.mjs, dpt_rb_*, exp_*)
 WDC-007: workflow-directory-contract — Anti-mixing rules (what must not go where, including command_playbook/ boundary)
@@ -497,8 +508,8 @@ WNC-009: workflow-node-contract — Universal silent execution dependency (every
 WNC-010: workflow-node-contract — Lifecycle phase handoff wiring consumes check.next through enter-phase
 WNC-011: workflow-node-contract — Lifecycle node wording uses canonical phase-boundary terminology and does not overclaim entry as completion
 SNC-001: subagent-node-contract — Sub-agent role specs SHALL mandate lifecycle logging (read beacon, emit events with nonce, always-loaded)
-SNC-002: subagent-node-contract — taskMarkdownForSlot SHALL include the lifecycle-logging directive in generated task.md
-SNC-003: subagent-node-contract — Phase workflow nodes SHALL direct the Phase Agent to drive the relay via drive-relay-slot (demand-side wiring)
+SNC-002: subagent-node-contract — Work-unit task Markdown includes lifecycle logging directives
+SNC-003: subagent-node-contract — Phase workflow nodes direct the Phase Agent through the work-unit claim/submit loop
 GSK-001: gate-skeleton — Gate definition JSON skeleton structure (gate, description, rules[] with id/check/target/threshold/failure_message)
 GSK-002: "gate-skeleton — Gate CLI skeleton shape (parseArgs, --bundle/--current-node required, check/inspect/advice JSON output, exit codes)"
 GSK-003: gate-skeleton — One gate per CLI (8 independent CLI wrappers, no generic runner with subcommand)
@@ -601,9 +612,9 @@ RWG-013: research-wave-gate-implementation — Wave2 gate removes reference/00_s
 WDC-009: workflow-directory-contract — Bundle canonical structure includes artifacts/wave0/ and flat reference/
 WDC-010: workflow-directory-contract — Manifest includes rerun phase entry (phases array gets rerun→phases/phase-rerun.md gate rerun-ready; manifest is inventory not routing table)
 WDC-011: workflow-directory-contract — command_playbook contains Agent-facing command instructions, not operator co-runner instructions
-SDC-001: subagent-directory-contract — _subagents/ as the sole inter-agent communication directory; experiments and production SHALL use the same convention
-SDC-002: subagent-directory-contract — Prohibition of external inter-agent communication paths (_fixtures/, /tmp, ad-hoc names); all sub-agent artifacts SHALL reside under _subagents/wave_NN/slot_MM/
-SDC-003: "subagent-directory-contract — Relay staging places logical wave N slots in _subagents/wave_{NN}/ (0-based, matching canonical convention + gate wave field); stageSubagentSlots accepts optional explicitWaveIndex, drive-relay-slot passes --wave"
+SDC-001: subagent-directory-contract — Work-unit directory is the production delegated runtime envelope
+SDC-002: subagent-directory-contract — Delegated artifact containment is enforced through work-unit directory and ledger contracts
+SDC-003: subagent-directory-contract — Work-unit wave directory convention matches encoded work_id wave and manifest wave
 
 # cli-inspect-output-conventions
 IOC-001: cli-inspect-output-conventions — inspect-wave0-output.mjs (flat dir, naming, metadata, sections, _INDEX.md, README.md, thin YAML)
