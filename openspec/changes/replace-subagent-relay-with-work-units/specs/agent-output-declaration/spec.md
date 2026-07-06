@@ -22,17 +22,17 @@ Each Engine-written output declaration ledger row for delegated work SHALL inclu
 - **THEN** submit SHALL return success without appending a duplicate row
 - **AND** a duplicate submit with different content SHALL fail closed
 
-## MODIFIED Requirements
+### Requirement: Work-unit submit SHALL write bundle-level output declaration ledger
 
-### Requirement: complete() SHALL write bundle-level output declaration ledger
-
-For delegated work, `operate-work-unit submit` SHALL write the bundle-level `rb_output_declarations.jsonl` ledger. Queue `complete()` SHALL NOT write delegated work ledger rows. The ledger SHALL remain the single production submission ledger and SHALL use work-unit-only provenance fields.
+For delegated work, `operate-work-unit submit` SHALL write the bundle-level `rb_output_declarations.jsonl` ledger. Queue completion SHALL NOT write delegated work ledger rows. The ledger SHALL remain the single production submission ledger and SHALL use work-unit-only provenance fields.
 
 #### Scenario: successful submit appends one ledger row
 
 - **WHEN** a delegated work unit submits successfully
 - **THEN** the Engine SHALL append exactly one `rb_output_declarations.jsonl` row for that `work_id`
 - **AND** the row SHALL include `work_id`, `queue_item_id`, `work_unit_ref`, `result_ref`, `runtime_receipt_ref`, `receipt_nonce`, `output_files`, and `cache_trails`
+
+## MODIFIED Requirements
 
 ### Requirement: Engine SHALL consume declaration ledger, not scan directories to discover Agent outputs
 
@@ -43,6 +43,21 @@ The Engine and gates SHALL consume submitted work-unit rows in `rb_output_declar
 - **WHEN** an output file exists under a phase-owned directory without a matching submitted work-unit ledger row
 - **THEN** gate provenance SHALL treat it as bypass-suspected diagnostic evidence
 - **AND** the file SHALL NOT satisfy delegated output coverage
+
+### Requirement: Production and experiments SHALL converge at schema-validated declaration
+
+Production SHALL obtain declarations from real work-unit submit results. Engine-layer experiments MAY use fixture work-unit results, but those fixtures SHALL pass the same work-unit result schema and enter the same submit / ledger / gate path as production after the declaration point.
+
+#### Scenario: Experiment fixture uses same downstream pipeline
+
+- **WHEN** an Engine-layer playbook provides a fixture work-unit result containing `output_files[]` and `cache_trails[]`
+- **AND** that fixture passes work-unit result schema validation
+- **THEN** submit and gate SHALL process it through the same code path as a production sub-agent result
+
+#### Scenario: Production sub-agent uses same downstream pipeline
+
+- **WHEN** a real sub-agent submits a work-unit result with declarations
+- **THEN** `operate-work-unit submit` SHALL validate and ledger it using the same code path used by fixture-backed Engine tests
 
 ### Requirement: Ledger declarations SHALL preserve enough creation context for accepted outputs
 
@@ -77,3 +92,15 @@ Work-unit ledger declarations SHALL preserve creation context through `work_id`,
 
 - **WHEN** cache trails are declared without a matching work-unit binding
 - **THEN** the Engine SHALL reject them as delegated provenance
+
+### Requirement: complete() SHALL write bundle-level output declaration ledger
+
+**Reason**: Delegated ledger append moves from queue completion to successful work-unit submit.
+
+**Migration**: Use `operate-work-unit submit`, which validates the delegated result and appends one Engine-written `rb_output_declarations.jsonl` row.
+
+#### Scenario: queue complete no longer writes delegated ledger row
+
+- **WHEN** delegated work attempts to append output declarations through queue `complete()`
+- **THEN** the Engine SHALL reject that delegated completion path
+- **AND** no delegated ledger row SHALL be appended

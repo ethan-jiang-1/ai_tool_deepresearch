@@ -1,8 +1,8 @@
 > req: LOG-006, LOG-007
 
-## MODIFIED Requirements
+## ADDED Requirements
 
-### Requirement: Engine hot-path SHALL emit accident-grade diagnostics (LOG-006)
+### Requirement: Engine hot-path SHALL emit accident-grade diagnostics
 
 Engine hot paths SHALL emit accident-grade diagnostics for work-unit claim, submit, submit rejection, ledger append, fail, timeout, abandon, retry claim, late submit rejection, inspect failure, transaction mismatch, and gate provenance mismatch.
 
@@ -11,7 +11,7 @@ Engine hot paths SHALL emit accident-grade diagnostics for work-unit claim, subm
 - **WHEN** work-unit submit rejects a result as invalid
 - **THEN** run log SHALL include `work_id`, `queue_item_id`, reason code, and the inspected result/receipt hash when available
 
-### Requirement: Sub-agent spawn prompt SHALL include diagnostic logging CLI instructions (LOG-007)
+### Requirement: Sub-agent spawn prompt SHALL include diagnostic logging CLI instructions
 
 Sub-agent spawn prompts SHALL include diagnostic logging instructions bound to work-unit identity and receipt nonce. The instructions SHALL avoid slot-based command examples as production guidance.
 
@@ -20,8 +20,6 @@ Sub-agent spawn prompts SHALL include diagnostic logging instructions bound to w
 - **WHEN** a work-unit prompt is generated
 - **THEN** it SHALL include copyable logging instructions that carry `work_id` and `receipt_nonce`
 - **AND** it SHALL not instruct the sub-agent to log against a non-work-unit delegated channel
-
-## ADDED Requirements
 
 ### Requirement: Timeout recovery SHALL record operator-visible diagnostics
 
@@ -32,3 +30,27 @@ Timeout recovery SHALL write run log and trace diagnostics that explain the clos
 - **WHEN** `operate-work-unit timeout` closes an attempt and requeues the demand
 - **THEN** the log SHALL identify the timed-out `work_id`
 - **AND** it SHALL identify whether the same `queue_item_id` was requeued or a replacement was created
+
+## REMOVED Requirements
+
+### Requirement: Engine hot-path SHALL emit accident-grade diagnostics (LOG-006)
+
+**Reason**: Requirement IDs belong in the `> req:` header, registry, tasks, and implementation annotations, not in main-spec requirement titles.
+
+**Migration**: Use `Engine hot-path SHALL emit accident-grade diagnostics`.
+
+#### Scenario: requirement title omits registry ID
+
+- **WHEN** the logger spec is archived
+- **THEN** the replacement requirement title SHALL omit `(LOG-006)`
+
+### Requirement: Sub-agent spawn prompt SHALL include diagnostic logging CLI instructions (LOG-007)
+
+**Reason**: Requirement IDs belong in the `> req:` header, registry, tasks, and implementation annotations, not in main-spec requirement titles.
+
+**Migration**: Use `Sub-agent spawn prompt SHALL include diagnostic logging CLI instructions`.
+
+#### Scenario: prompt logging title omits registry ID
+
+- **WHEN** the logger spec is archived
+- **THEN** the replacement requirement title SHALL omit `(LOG-007)`

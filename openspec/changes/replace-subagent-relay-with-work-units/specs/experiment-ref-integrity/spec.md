@@ -1,5 +1,17 @@
 > req: EXR-001, EXR-002, EXR-003, EXR-004, EXR-005, EXR-006
 
+## ADDED Requirements
+
+### Requirement: case-402 SHALL verify work-unit submit rejection matrix
+
+case-402 SHALL be rewritten as a work-unit submit rejection matrix. It SHALL verify invalid submit is non-terminal, terminal attempt commands fail closed where appropriate, and late submit from terminal attempts is rejected.
+
+#### Scenario: invalid submit leaves attempt claimed
+
+- **WHEN** case-402 submits a result with a missing required output
+- **THEN** the attempt SHALL remain `claimed`
+- **AND** no ledger row SHALL be appended
+
 ## MODIFIED Requirements
 
 ### Requirement: case-401 SHALL verify positive Agent-Engine boundary path
@@ -10,16 +22,6 @@ case-401 SHALL verify the positive work-unit Agent-Engine boundary path: queue d
 
 - **WHEN** case-401 runs
 - **THEN** its delegated completion SHALL use `operate-work-unit submit`
-
-### Requirement: case-402 SHALL verify delegated complete() rejection matrix
-
-case-402 SHALL be rewritten as a work-unit submit rejection matrix. It SHALL verify invalid submit is non-terminal, terminal attempt commands fail closed where appropriate, and late submit from terminal attempts is rejected.
-
-#### Scenario: invalid submit leaves attempt claimed
-
-- **WHEN** case-402 submits a result with a missing required output
-- **THEN** the attempt SHALL remain `claimed`
-- **AND** no ledger row SHALL be appended
 
 ### Requirement: case-403 SHALL verify content_dedup via Engine-generated ledger
 
@@ -47,3 +49,17 @@ case-406 SHALL verify a real sub-agent boundary through work-unit claim, work-un
 
 - **WHEN** the real sub-agent completes its assigned task
 - **THEN** the return SHALL be accepted only through `operate-work-unit submit`
+
+## REMOVED Requirements
+
+### Requirement: case-402 SHALL verify delegated complete() rejection matrix
+
+**Reason**: Delegated rejection behavior now belongs to work-unit submit and terminal attempt transitions, not queue `complete()`.
+
+**Migration**: Use `case-402 SHALL verify work-unit submit rejection matrix`.
+
+#### Scenario: delegated complete rejection case is replaced
+
+- **WHEN** case-402 exercises delegated rejection behavior
+- **THEN** it SHALL call `operate-work-unit submit` or terminal attempt commands
+- **AND** it SHALL NOT rely on delegated queue `complete()`

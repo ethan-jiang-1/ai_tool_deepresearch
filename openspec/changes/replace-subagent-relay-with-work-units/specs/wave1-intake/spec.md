@@ -1,5 +1,16 @@
 > req: WAI-001, WAI-002, WAI-003, WAI-004, WAI-005, WAI-006, WAI-007
 
+## ADDED Requirements
+
+### Requirement: Wave1 deepening queue items SHALL claim work units
+
+Wave1 deepening queue items SHALL become eligible for `operate-work-unit claim` rather than non-work-unit delegated dispatch. The queue demand SHALL include enough kind/output contract data for the Engine to create a `wave1_topic_deepening` work unit.
+
+#### Scenario: Wave1 claim creates deepening work unit
+
+- **WHEN** a Wave1 deepening queue item is claimed
+- **THEN** the allocated work unit SHALL have kind `wave1_topic_deepening`
+
 ## MODIFIED Requirements
 
 ### Requirement: Wave1 phase uses queue-driven three-stage execution
@@ -10,15 +21,6 @@ Wave1 SHALL use queue-driven execution with delegated topic deepening represente
 
 - **WHEN** Wave1 has an in-flight topic deepening work unit
 - **THEN** Wave1 SHALL not be considered drained
-
-### Requirement: Wave1 deepening task card targets sub-agent via targets.delegates
-
-Wave1 deepening queue items SHALL become eligible for `operate-work-unit claim` rather than relay dispatch. The queue demand SHALL include enough kind/output contract data for the Engine to create a `wave1_topic_deepening` work unit.
-
-#### Scenario: Wave1 claim creates deepening work unit
-
-- **WHEN** a Wave1 deepening queue item is claimed
-- **THEN** the allocated work unit SHALL have kind `wave1_topic_deepening`
 
 ### Requirement: Sub-agent executes deepening search and writes bounded output
 
@@ -58,13 +60,13 @@ Wave1 playbook SHALL verify deepening end to end through work-unit claim, sub-ag
 
 ## REMOVED Requirements
 
-### Requirement: Wave1 batch parallel sub-agent execution protocol via relay
+### Requirement: Wave1 deepening task card targets sub-agent via targets.delegates
 
-**Reason**: Wave1 parallelism is now work-unit `claim --count N` fan-out.
+**Reason**: Wave1 delegated task-card targeting no longer routes through relay dispatch authority. Work-unit claim is the production allocation boundary.
 
-**Migration**: Use `wave1_topic_deepening` work units and out-of-order submit.
+**Migration**: Use `Wave1 deepening queue items SHALL claim work units`.
 
-#### Scenario: Wave1 parallel protocol uses work units
+#### Scenario: Wave1 deepening target routes through claim
 
-- **WHEN** Wave1 runs multiple delegated deepening tasks
-- **THEN** it SHALL allocate multiple work units through the Engine
+- **WHEN** a Wave1 deepening queue item targets delegated work
+- **THEN** the Engine SHALL allocate a `wave1_topic_deepening` work unit through claim

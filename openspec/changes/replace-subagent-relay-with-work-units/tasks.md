@@ -9,18 +9,29 @@
 ## 2. OpenSpec And Archive Hygiene
 
 - [ ] 2.1 @impl DEW-001, DEW-002, DEW-005, DEW-007: Keep `delegated-work-units` as the positive main-spec home for the new mechanism and avoid expressing core work-unit concepts only inside removed relay/sub-agent capability names.
-- [ ] 2.2 @impl DEW-008, RPG-002, GSK-001: Ensure archive-facing `ADDED` and `MODIFIED` requirements use long-lived positive wording and do not preserve concrete legacy runtime paths, command names, or check names as examples.
-- [ ] 2.3 @impl SRD-001, SDC-001, SUD-001, SUS-001: Use `REMOVED Requirements` only for exact main-spec requirement titles that should disappear or stop being production authority after archive.
-- [ ] 2.4 @impl DEW-001, AGQ-018, RPG-013, SDC-003: Keep `openspec/governance/req-registry.yaml` descriptions aligned with work-unit semantics without prematurely deprecating IDs still referenced by active main or delta specs.
-- [ ] 2.5 @impl DEW-008, RPG-002, RWP-001: Re-run the archive-facing noise scan after spec edits and require zero old/noise token hits in `ADDED` and `MODIFIED` sections.
+- [ ] 2.2 @impl DEW-001, DEW-008, RET-002: Treat capability directory names as archive-facing signal; produce a capability retirement map before implementation and keep it updated whenever a delta spec is moved, absorbed, or retired.
+- [ ] 2.3 @impl DEW-001, DEW-008, RET-005: Ensure `relay-provenance-gate` is replaced by `work-unit-provenance-gate` or an equivalently named work-unit/delegated provenance gate home before archive; it SHALL NOT remain as the active main-spec provenance gate capability name.
+- [ ] 2.4 @impl DEW-001, DEW-008, RET-002: Apply the actor-vs-mechanism test to `subagent-*` capabilities: keep names that describe the surviving sub-agent actor's work-unit task, prompt, dispatch, runtime logging, or environment contracts; retire or rename names whose stable meaning is relay driver, slot lifecycle, old collect/merge, or all-slots repair.
+- [ ] 2.5 @impl SUD-001, SNC-003, SRL-001, CSE-001: Keep actor-centric `subagent-dispatch`, `subagent-node-contract`, `subagent-runtime-logging`, and `cmd-subagent-environment` only if their archive-facing content contains no relay/slot authority and binds sub-agent behavior to work-unit identity.
+- [ ] 2.6 @impl SUC-001, SDC-001, SRD-001, SUR-001, SUS-001: Retire, rename, or absorb `subagent-collect`, `subagent-directory-contract`, `subagent-relay-driver`, `subagent-repair`, and `subagent-slots` when their post-change content would still read as old relay/slot mechanism guidance.
+- [ ] 2.7 @impl DEW-008, RPG-002, GSK-001: Ensure archive-facing `ADDED` and `MODIFIED` requirements use long-lived positive wording and do not preserve concrete legacy runtime paths, command names, or check names as examples.
+- [ ] 2.8 @impl SRD-001, SDC-001, SUD-001, SUS-001: Use `REMOVED Requirements` only for exact main-spec requirement titles that should disappear or stop being production authority after archive.
+- [ ] 2.9 @impl DEW-001, AGQ-018, RPG-013, SDC-003: Keep `openspec/governance/req-registry.yaml` descriptions aligned with work-unit semantics without prematurely deprecating IDs still referenced by active main or delta specs.
+- [ ] 2.10 @impl DEW-008, RPG-002, RWP-001: Re-run the archive-facing noise scan after spec edits and require zero old/noise token hits in `ADDED` and `MODIFIED` sections.
+- [ ] 2.11 @impl DEW-008, RET-005: Before archive/sync completion, verify retired old capability directories are absent from active main specs or have no production requirements, and update governance prefixes/groups to the deprecated `no spec directory` form only after the corresponding requirements are removed.
 
 ## 3. Surface Inventory And Cutover Map
 
 - [ ] 3.1 @impl DEW-001, FRE-001, SRD-001: Inventory all production code paths that allocate, stage, collect, commit, complete, declare, inspect, or gate delegated work; mark each path as replace, rewrite, or remove.
 - [ ] 3.2 @impl AGQ-001, AGQ-005, QIV-004, CMI-004: Inventory queue schema/template/projection/repair/reentry assumptions that use top-level slots or queue-item `work_id`.
 - [ ] 3.3 @impl AGO-003, RPG-001, RWG-001, GSK-001: Inventory ledger and gate helpers/definitions that use declaration coverage, submission presence, bypass diagnostics, or delegated output coverage.
-- [ ] 3.4 @impl RWP-001, SNC-003, LOG-007: Inventory Agent-facing phase docs, command playbooks, shared nodes, and generated prompts that teach delegated execution.
+- [ ] 3.4 @impl RWP-001, SNC-003, LOG-007: Inventory Agent-facing phase docs, command playbooks, shared nodes, generated prompts, and `guidelines/` files that teach delegated execution.
 - [ ] 3.5 @impl RWE-001, EXR-001, FIO-004: Inventory regression tests and controlled E2E playbooks that need replacement rather than narrow assertion edits.
+- [ ] 3.6 @impl FRE-001, FRE-004, RET-001: Maintain an apply evidence ledger mapping each section 4-14 to changed surfaces, focused commands run, verdict sources, and residual risks before moving to the next section.
+- [ ] 3.7 @impl AGQ-001, DEW-001, RPG-001: At each section 4-14 exit, run the smallest affected deterministic check or focused regression slice; if no check exists, add the missing checker before marking the section complete.
+- [ ] 3.8 @impl FRE-001, RPG-004, RWP-001: Treat every failed check or concrete drift as a contract-class probe across schema, CLI/helper wiring, gate definitions, Agent-facing Markdown, validators, regression tests, and E2E surfaces.
+- [ ] 3.9 @impl DEW-008, FIO-004, LOG-006: At each section 4-14 exit, update the cleanup ledger for removed-path or removed-term hits and classify each hit as removed, rewritten, diagnostic-only, or cleanup-only.
+- [ ] 3.10 @impl SUD-001, SUC-001, GSK-001: Do not mark a section 4-14 implementation surface complete until any new helper, CLI, or check introduced there is proven wired into a real production caller.
 
 ## 4. Queue V2 Contract Foundation
 
@@ -80,6 +91,7 @@
 - [ ] 10.3 @impl DEW-007, AGO-006, CRC-005: Verify declared output files and cache trails during submit before ledger append.
 - [ ] 10.4 @impl DEW-007, CRC-004, CRC-006: Make cache presence non-authoritative unless declared by submitted work-unit ledger rows and passing cross-checks.
 - [ ] 10.5 @impl DEW-007, AGO-003, RPG-002: Prove `_work_units/_index.json`, manifest, receipt, beacon, result, cache, and filesystem presence are cross-check surfaces only, not pass coverage.
+- [ ] 10.6 @impl EEX-003, EEX-004, AGO-006: Update `ref_count` and `cache_trails` validation to derive from submitted work-unit declarations and Engine-written ledger rows, not delegated completion fixtures or Agent numeric claims.
 
 ## 11. Gate Provenance And Definition Wiring
 
@@ -108,7 +120,10 @@
 - [ ] 13.4 @impl RWP-010, WTS-001, WTS-005: Update Wave2 instructions so pure synthesis remains main-agent work and delegated targeted evidence uses `wave2_targeted_evidence` work units.
 - [ ] 13.5 @impl SHC-002, GSK-001, RPG-004: Update generated gate summaries so they teach work-unit ledger coverage at summary level and point to gate CLI output for authority.
 - [ ] 13.6 @impl AGQ-004, SUD-002, SRD-001: Update command docs/playbooks so `operate-work-unit` is the delegated CLI and `operate-queue` is non-delegated queue maintenance/completion.
-- [ ] 13.7 @impl RWP-001, AGQ-005, DEW-001: Align mechanism guidelines after implementation so future Agents see one delegated-work path only.
+- [ ] 13.7 @impl DEW-001, DEW-008, AGQ-018: Rewrite or replace `guidelines/agentic-subagent-mechanism.md` so it teaches work-unit-mediated sub-agent execution, not Tier 3 Relay, slot lifecycle, `_subagents/`, `drive-relay-slot`, `SlotResult`, or queue `complete()` as delegated production authority.
+- [ ] 13.8 @impl DEW-001, AGQ-001, RWP-001: Update guideline entry points `guidelines/README.md`, `guidelines/project-charter.md`, `guidelines/agentic-execution-model.md`, `guidelines/agentic-queue-mechanism.md`, `guidelines/agentic-workflow-mechanism.md`, and `guidelines/framework-runtime-boundary.md` so they describe one delegated-work path and distinguish the surviving sub-agent actor from the retired relay/slot mechanism.
+- [ ] 13.9 @impl LOC-001, LOC-002, LOG-007, SRL-001: Update `guidelines/logging-conventions.md` so delegated runtime logging binds `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`, and does not teach slot-key logging as production guidance.
+- [ ] 13.10 @impl AGT-009, EXR-001, DEW-007: Update `guidelines/command-experiments.md` so experiment guidance converges on work-unit claim/submit, submitted ledger coverage, and gate verdicts, not `commitSlotResult()`, delegated queue `complete()`, `SlotResult`, or relay-slot fixtures as the production path.
 
 ## 14. Remove Old Production Path And Add Wiring Validators
 
@@ -118,6 +133,7 @@
 - [ ] 14.4 @impl AGQ-005, SCO-009, WDC-004: Add a static semantic validator or equivalent test that blocks queue demand `work_id`, top-level delegated slot shape, current-slot delegated completion, and index/filesystem pass coverage wording.
 - [ ] 14.5 @impl GSK-001, RWG-010, RWG-011: Prove new shared helpers are wired into real gate CLIs and gate definitions, not only unit-tested in isolation.
 - [ ] 14.6 @impl SUD-001, SUC-001, FRE-001: Prove new work-unit helpers are wired into real `operate-work-unit` CLI commands, not only exported.
+- [ ] 14.7 @impl COS-001, FOR-001, GAF-001, REL-001, TRW-003, TRW-005, LOC-001, LOC-002, LOC-006: Rewrite deterministic checkpoint, fork/repair, trace, and logging references so they name neutral checkpoint/work-unit/queue/gate surfaces rather than the removed relay module.
 
 ## 15. Focused Regression Tests
 
@@ -129,6 +145,7 @@
 - [ ] 15.6 @impl DEW-006, SRL-004, LOG-006: Add terminal attempt tests for fail/timeout/abandon idempotency, mismatch failure, retry allocation, same-batch timeout retry, and late-submit rejection.
 - [ ] 15.7 @impl DEW-007, RPG-001, GSK-001: Add gate helper tests proving ledger-first coverage and rejection of hand-written rows, filesystem-only outputs, index-only state, and non-work-unit delegated artifacts.
 - [ ] 15.8 @impl EXO-001, FIO-004, LOG-006: Add observability/log/inspect tests for expired attempts, mixed provenance, projection drift, uncommitted transactions, and mismatch diagnostics.
+- [ ] 15.9 @impl FRE-001, FRE-004, RET-001: Promote each section-exit check from 3.7 into the regression suite or record why it remains a temporary smoke command with its final evidence source.
 
 ## 16. Controlled E2E Playbooks
 
@@ -138,6 +155,7 @@
 - [ ] 16.4 @impl RWE-001, RWE-004, WTS-005: Rewrite Wave2 playbooks so pure synthesis needs no delegated row and optional targeted evidence must submit by `work_id`.
 - [ ] 16.5 @impl RWE-005, RWE-006, AGQ-014: Rewrite full-chain and repair-loop playbooks so gates run only after phase drain and gate failure opens repair/refill batches with `batch_reason`.
 - [ ] 16.6 @impl RWE-007, RWE-008, RWE-009, RWE-010: Add fault-tolerance E2E for invalid submit, fail, timeout, abandon, duplicate submit, stale binding, late submit rejection, and no mixed provenance pass.
+- [ ] 16.7 @impl AGT-009, EEX-003, EEX-004: Rewrite evidence-extraction controlled experiment proof roles so fixture, standard, and real-Agent cases use work-unit submit, submitted ledger coverage, and work-unit cache trail validation.
 
 ## 17. Full Validation And Release Hygiene
 
@@ -148,4 +166,6 @@
 - [ ] 17.5 @impl EXR-001, RWE-001, EXO-001: Run updated controlled E2E playbooks using real CLIs and disposable bundles; verdicts must come from trace JSONL, gate output, or playbook verdict artifacts.
 - [ ] 17.6 @impl AGQ-001, FRE-001, AGO-001, RPG-001: Run the full regression suite required by the repo and fix failures instead of burying them under focused or E2E passes.
 - [ ] 17.7 @impl RET-001, AGQ-001, FRE-001, RPG-001: Run `node openspec/governance/check-project-reqs.mjs`, `node openspec/governance/check-project-specs.mjs`, and `openspec validate replace-subagent-relay-with-work-units --strict`.
-- [ ] 17.8 @impl DEW-001, DEW-008, RWP-001: Before archive, write a short residual-risk note distinguishing mechanism proof, real Agent behavior proof, negative diagnostic coverage, and deferred risks.
+- [ ] 17.8 @impl RET-001, DEW-008, GSK-008, LOG-006, LOG-007: During archive/sync readiness, verify main spec `> req:` headers include any IDs removed from requirement titles by this change; repair header drift before treating governance as complete.
+- [ ] 17.9 @impl DEW-001, DEW-008, RWP-001: Before archive, write a short residual-risk note distinguishing mechanism proof, real Agent behavior proof, negative diagnostic coverage, and deferred risks.
+- [ ] 17.10 @impl DEW-008, RET-006, RWP-001: Run a guidelines-specific semantic scan before archive; active `guidelines/` production guidance SHALL have zero old relay/slot authority hits, and any remaining `sub-agent` mentions SHALL refer only to the actor executing a work-unit task.

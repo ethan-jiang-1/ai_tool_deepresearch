@@ -12,11 +12,21 @@ Gate definitions SHALL support the production check types `work_unit_ledger_exis
 - **THEN** gate definition validation SHALL fail
 - **AND** the diagnostic SHALL require `work_unit_submission_presence`
 
+### Requirement: Engine-derived gate attempt diagnostics
+
+Engine-derived diagnostics SHALL include work-unit mismatch details for failed provenance checks, including `work_id`, `queue_item_id`, wave, kind, ledger ref, index ref, manifest ref, result ref, receipt ref, beacon ref, and hash mismatch details when available.
+
+#### Scenario: diagnostic includes binding refs
+
+- **WHEN** `work_unit_submission_presence` fails because a receipt nonce differs
+- **THEN** the gate diagnostic SHALL identify the conflicting work-unit surfaces
+- **AND** it SHALL not require non-work-unit delegated channel keys
+
 ## MODIFIED Requirements
 
 ### Requirement: Gate definition JSON skeleton structure
 
-Gate definition JSON SHALL preserve the existing skeleton shape while allowing work-unit provenance rules to name wave, kind, output scope, and required coverage. Rule targets for delegated outputs SHALL be ledger-first and SHALL NOT target `_subagents` directories as coverage authority.
+Gate definition JSON SHALL preserve the existing skeleton shape while allowing work-unit provenance rules to name wave, kind, output scope, and required coverage. Rule targets for delegated outputs SHALL be ledger-first and SHALL NOT target non-work-unit delegated directories as coverage authority.
 
 #### Scenario: work-unit rule target is accepted
 
@@ -34,12 +44,15 @@ Gate CLIs SHALL evaluate work-unit provenance checks from definitions through sh
 - **AND** only filesystem output exists without submitted work-unit ledger coverage
 - **THEN** the gate CLI SHALL fail that rule
 
+## REMOVED Requirements
+
 ### Requirement: Engine-derived gate attempt diagnostics (GSK-008)
 
-Engine-derived diagnostics SHALL include work-unit mismatch details for failed provenance checks, including `work_id`, `queue_item_id`, wave, kind, ledger ref, index ref, manifest ref, result ref, receipt ref, beacon ref, and hash mismatch details when available.
+**Reason**: Requirement IDs belong in the `> req:` header, registry, tasks, and implementation annotations, not in main-spec requirement titles.
 
-#### Scenario: diagnostic includes binding refs
+**Migration**: Use `Engine-derived gate attempt diagnostics`.
 
-- **WHEN** `work_unit_submission_presence` fails because a receipt nonce differs
-- **THEN** the gate diagnostic SHALL identify the conflicting work-unit surfaces
-- **AND** it SHALL not require non-work-unit delegated channel keys
+#### Scenario: gate diagnostic title omits registry ID
+
+- **WHEN** the gate-skeleton spec is archived
+- **THEN** the replacement requirement title SHALL omit `(GSK-008)`

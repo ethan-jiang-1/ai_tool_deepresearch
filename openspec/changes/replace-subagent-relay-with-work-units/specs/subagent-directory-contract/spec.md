@@ -10,7 +10,7 @@ Production delegated work SHALL write one directory per `work_id` under `_work_u
 
 - **WHEN** the Engine creates `wu-w1-b000-deep-i0001`
 - **THEN** the production directory SHALL be `_work_units/wave1/wu-w1-b000-deep-i0001/`
-- **AND** a path under `_work_units/w1/` or `_subagents/` SHALL NOT be accepted as the canonical production path
+- **AND** malformed work-unit paths or non-work-unit delegated paths SHALL NOT be accepted as the canonical production path
 
 ### Requirement: Work-unit directory SHALL contain binding surfaces
 

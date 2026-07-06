@@ -23,9 +23,7 @@ Sub-agent dispatch SHALL originate from `operate-work-unit claim`. Claim SHALL a
 - **THEN** the Engine SHALL allocate three distinct `work_id` values
 - **AND** all three queue demands SHALL be recorded in `delegated_in_flight`
 
-## MODIFIED Requirements
-
-### Requirement: V1 dispatch enforces MAX_CONCURRENT_SUBAGENTS concurrency cap
+### Requirement: Work-unit dispatch SHALL enforce delegated fan-out concurrency cap
 
 V1 dispatch concurrency SHALL be enforced by the Main Agent's choice of `claim --count N` and any accepted cap. The cap SHALL limit how many work-unit prompts are fanned out at once; it SHALL NOT create multiple schedulers or allow sub-agents to allocate IDs.
 
@@ -36,6 +34,18 @@ V1 dispatch concurrency SHALL be enforced by the Main Agent's choice of `claim -
 - **AND** all IDs SHALL still be allocated by the Engine in one transaction
 
 ## REMOVED Requirements
+
+### Requirement: V1 dispatch enforces MAX_CONCURRENT_SUBAGENTS concurrency cap
+
+**Reason**: The old concurrency source of truth was tied to the relay dispatch module. Work-unit fan-out is controlled by Engine claim transactions plus an accepted delegated fan-out cap.
+
+**Migration**: Use `Work-unit dispatch SHALL enforce delegated fan-out concurrency cap`.
+
+#### Scenario: old concurrency symbol is not production authority
+
+- **WHEN** delegated work is claimed for fan-out
+- **THEN** the Engine SHALL allocate work-unit IDs through claim
+- **AND** no relay-specific concurrency symbol SHALL be the delegated allocation authority
 
 ### Requirement: Gate pass declares real subagent slots
 

@@ -237,6 +237,38 @@ The new capability defines the stable model: queue demand item, Engine-allocated
 
 Alternative considered: keep "New Capabilities: none" and express all work-unit behavior as modifications to old capabilities. Rejected because archive would leave future coding agents with a lower-signal reading path and would make the new concept look like a footnote to the removed mechanism.
 
+### Decision 13: Treat capability names as main-spec signal
+
+Main-spec capability directory names are part of the contract surface. They are the first thing a future coding agent scans, so old mechanism names must not remain as active-looking production homes after archive.
+
+OpenSpec `RENAMED Requirements` changes requirement titles, not capability folders. Therefore this change SHALL use a capability replacement pattern:
+
+1. Put long-lived positive requirements in new or existing positive homes.
+2. Distinguish actor names from mechanism names: `sub-agent` remains valid; `relay`, `slot`, `drive-relay-slot`, and `_subagents/` are retired production mechanism terms.
+3. Keep actor-centric `subagent-*` capabilities only when their archive-facing content describes work-unit-mediated sub-agent contracts.
+4. Keep old relay/slot capability directories only as delta carriers for exact-title `REMOVED Requirements` or short migration context.
+5. During archive/sync readiness, verify that retired old capability directories are absent from active main specs or contain no production requirements.
+6. Move retired capability IDs/prefixes to the governance deprecated/no-spec-directory form only after their main-spec requirements are removed.
+
+The archive-facing capability map is:
+
+| Old capability name | Archive target |
+| --- | --- |
+| `relay-provenance-gate` | Replace with `work-unit-provenance-gate` or an equivalently named work-unit/delegated provenance gate home; do not keep relay as the gate capability name. |
+| `subagent-collect` | Likely retire or rename; "collect" is old slot-return language. Positive submit semantics live in `delegated-work-units`, `agentic-queue`, and `agent-output-declaration`. |
+| `subagent-directory-contract` | May remain if rewritten as the sub-agent work-unit envelope/directory view; old `_subagents/` relay directory authority is removed. |
+| `subagent-dispatch` | May remain if dispatch means Engine work-unit claim creating bounded sub-agent prompts; old relay slot dispatch is removed. |
+| `subagent-node-contract` | May remain if rewritten as sub-agent task/result/receipt contracts over work-unit identity; old relay driver guidance is removed. |
+| `subagent-relay-driver` | Retire; positive CLI semantics live in `framework-engine`. |
+| `subagent-repair` | Likely retire or absorb; current content is all-slots repair. Positive retry/repair semantics live in `delegated-work-units`, `agentic-queue`, and `repair-loop`. |
+| `subagent-runtime-logging` | Keep if it remains actor-runtime logging and all relay/slot authority is gone; otherwise absorb into `logging-conventions` and `logger`. |
+| `subagent-slots` | Retire; positive lifecycle semantics live in work-unit attempt state. |
+| `cmd-subagent-environment` | Keep unless it teaches relay/slot authority; the sub-agent actor still exists. |
+
+Alternative considered: retire every `subagent-*` capability. Rejected because it would confuse the surviving actor (`sub-agent`) with the retired transport (`relay/slot`) and would remove useful homes for actor-facing task, prompt, logging, and environment contracts.
+
+Alternative considered: rely on requirement-body cleanup while leaving old relay capability names in place. Rejected because `relay-provenance-gate` preserves a low-signal entry point and makes the replacement look like a variant of the removed relay system.
+
 ## Risks / Trade-offs
 
 | Risk | Mitigation |
@@ -249,6 +281,8 @@ Alternative considered: keep "New Capabilities: none" and express all work-unit 
 | Readable `work_id` fields drift from manifest/index | Validation rejects encoded field mismatch across path, index, manifest, result, and ledger. |
 | Gate coverage accidentally comes from index/filesystem | Gate helper tests must prove index/manifest/output files alone cannot pass without submit-written ledger rows. |
 | Requirement registry drift | Apply tasks must update `openspec/governance/req-registry.yaml`, mark replaced relay production IDs as deprecated where appropriate, and run governance checks. |
+| Title-carried requirement IDs are removed without header repair | Archive/sync hygiene must verify affected main specs carry those IDs in the `> req:` header before governance is considered clean. |
+| Old mechanism names remain as empty or positive-looking main-spec directories | Treat capability-name cleanup as an archive readiness gate; retired old capability dirs must be removed or reduced to non-production/no-spec-directory governance entries after their requirements are removed, while actor-centric sub-agent dirs must pass the actor-vs-mechanism test. |
 | Version surfaces are already inconsistent | Treat version alignment as release hygiene in apply; target bump is `v0.3 -> v0.4`. |
 
 ## Migration Plan

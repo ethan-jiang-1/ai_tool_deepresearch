@@ -15,7 +15,7 @@ The Agentic Queue system SHALL expose delegated queue demand through `operate-wo
 
 ### Requirement: Delegated submit completes queue demand by work-id binding
 
-The Agentic Queue system SHALL complete delegated queue demand only through `operate-work-unit submit`. Submit SHALL complete the bound `queue_item_id` by validating the `work_id` binding in `delegated_in_flight`; it SHALL NOT depend on a current slot name or return order.
+The Agentic Queue system SHALL complete delegated queue demand only through `operate-work-unit submit`. Submit SHALL complete the bound `queue_item_id` by validating the `work_id` binding in `delegated_in_flight`; it SHALL NOT depend on queue-front aliases or return order.
 
 #### Scenario: out-of-order submit completes correct demand
 
@@ -34,6 +34,48 @@ The Agentic Queue system SHALL report a phase as drained only when the phase has
 - **AND** `delegated_in_flight` contains a claimed work unit whose `deadline_at` has passed
 - **THEN** queue inspect SHALL report the phase as not drained
 - **AND** the Main Agent SHALL resolve the attempt through submit, fail, timeout, or abandon before the wave gate may be run
+
+### Requirement: Work-unit submit SHALL validate delegated cache trails
+
+Delegated cache trail validation SHALL occur during `operate-work-unit submit`, not queue completion. Submit SHALL validate candidate `cache_trails[]` from the work-unit result against the kind-specific cache policy, filter or reject paths according to that policy, and write only verified cache trails to the submitted ledger row.
+
+#### Scenario: valid cache leaf is ledger-written
+
+- **WHEN** a work-unit result declares a valid leaf cache trail required by its kind
+- **THEN** submit SHALL write the verified cache trail to the ledger row
+
+#### Scenario: unsafe cache trail rejects submit
+
+- **WHEN** a work-unit result declares a cache trail outside the bundle cache policy
+- **THEN** submit SHALL reject the result as non-terminal
+- **AND** no ledger row SHALL be appended
+
+### Requirement: Work-unit submit SHALL validate declared output files
+
+For delegated tasks, `operate-work-unit submit` SHALL validate `output_files[]` from the work-unit result. It SHALL verify each declared `path` is bundle-relative, does not escape the bundle, and exists on disk. Standard completion receipt and writes checks SHALL be consistent with the declared output files.
+
+#### Scenario: declared output file exists
+
+- **WHEN** a work-unit result declares `output_files: [{ path: "reference/source.md", role: "reference", source_url: "https://example.com/article" }]`
+- **AND** `reference/source.md` exists in the bundle
+- **THEN** output file validation SHALL pass for that entry
+
+#### Scenario: missing declared file rejects submit
+
+- **WHEN** a work-unit result declares `output_files: [{ path: "reference/missing.md", role: "reference", source_url: "https://example.com/article" }]`
+- **AND** that file does not exist
+- **THEN** `operate-work-unit submit` SHALL reject the result as non-terminal
+- **AND** feedback SHALL identify the missing declared output file
+
+### Requirement: Non-delegated queue completion SHALL skip work-unit checks
+
+If a queue item has no delegated target and no work-unit binding, `operate-queue complete` SHALL skip delegated work-unit receipt, ledger, cache trail, and submission checks. It SHALL retain standard non-delegated receipt behavior for direct Phase Agent or engine tasks.
+
+#### Scenario: non-delegated task skips work-unit checks
+
+- **WHEN** a direct Phase Agent task with no delegated target calls `operate-queue complete`
+- **THEN** work-unit result and runtime receipt checks SHALL be skipped
+- **AND** standard completion receipt checks SHALL still run
 
 ## MODIFIED Requirements
 
@@ -117,31 +159,6 @@ Queue projection SHALL be generated from queue v2 JSON and SHALL include delegat
 - **THEN** the projection SHALL show both unclaimed demand and in-flight delegated attempts
 - **AND** the projection SHALL derive its counts from `rb_queue.json` and `_work_units/_index.json`
 
-### Requirement: delegated complete() SHALL validate leaf cache trails
-
-Delegated cache trail validation SHALL occur during `operate-work-unit submit`, not queue `complete()`. Submit SHALL validate candidate `cache_trails[]` from the work-unit result against the kind-specific cache policy, filter or reject paths according to that policy, and write only verified cache trails to the submitted ledger row.
-
-#### Scenario: valid cache leaf is ledger-written
-
-- **WHEN** a work-unit result declares a valid leaf cache trail required by its kind
-- **THEN** submit SHALL write the verified cache trail to the ledger row
-
-#### Scenario: unsafe cache trail rejects submit
-
-- **WHEN** a work-unit result declares a cache trail outside the bundle cache policy
-- **THEN** submit SHALL reject the result as non-terminal
-- **AND** no ledger row SHALL be appended
-
-### Requirement: non-delegated complete() SHALL skip relay-specific checks
-
-If a queue item has no delegated target and no work-unit binding, `operate-queue complete` SHALL skip delegated work-unit receipt, ledger, cache trail, and submission checks. It SHALL retain standard non-delegated receipt behavior for direct Phase Agent or engine tasks.
-
-#### Scenario: non-delegated task skips work-unit checks
-
-- **WHEN** a direct Phase Agent task with no delegated target calls `operate-queue complete`
-- **THEN** work-unit result and runtime receipt checks SHALL be skipped
-- **AND** standard completion receipt checks SHALL still run
-
 ## REMOVED Requirements
 
 ### Requirement: Claim advice reports delegates config for relay dispatch
@@ -179,6 +196,39 @@ If a queue item has no delegated target and no work-unit binding, `operate-queue
 - **WHEN** a delegated result attempts to complete through queue `complete()`
 - **THEN** the Engine SHALL reject the transition
 - **AND** no queue completion or ledger append SHALL occur
+
+### Requirement: delegated complete() SHALL validate leaf cache trails
+
+**Reason**: Delegated cache trail validation is now part of successful work-unit submit, not queue completion.
+
+**Migration**: Use `Work-unit submit SHALL validate delegated cache trails`.
+
+#### Scenario: cache trails are submit-validated
+
+- **WHEN** a delegated work-unit result declares cache trails
+- **THEN** `operate-work-unit submit` SHALL validate them before any ledger append
+
+### Requirement: delegated complete() SHALL validate declared output files
+
+**Reason**: Delegated output-file validation is now part of successful work-unit submit, not queue completion.
+
+**Migration**: Use `Work-unit submit SHALL validate declared output files`.
+
+#### Scenario: output files are submit-validated
+
+- **WHEN** a delegated work-unit result declares output files
+- **THEN** `operate-work-unit submit` SHALL validate them before any ledger append
+
+### Requirement: non-delegated complete() SHALL skip relay-specific checks
+
+**Reason**: The old relay-specific wording is replaced by a work-unit boundary for delegated checks.
+
+**Migration**: Use `Non-delegated queue completion SHALL skip work-unit checks`.
+
+#### Scenario: non-delegated complete avoids delegated checks
+
+- **WHEN** non-delegated queue work completes through `operate-queue complete`
+- **THEN** work-unit receipt/result checks SHALL not be required
 
 ### Requirement: Queue active window has an explicit slot-shape SSOT
 

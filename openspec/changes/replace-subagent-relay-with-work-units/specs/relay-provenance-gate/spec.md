@@ -92,6 +92,53 @@ Gate CLI rule evaluation SHALL dispatch to work-unit provenance checks through t
 - **THEN** the failure SHALL appear in `inspect` with the rule's failure message
 - **AND** the output JSON SHALL use the standard check/inspect/advice shape
 
+### Requirement: Gate SHALL emit a provenance_chain_inconsistency diagnostic
+
+Gate provenance SHALL cross-check submitted work-unit ledger rows and work-unit binding surfaces, then emit a `provenance_chain_inconsistency` diagnostic when intra-chain references contradict. The diagnostic SHALL cover mismatches among ledger row, index entry, manifest, result, runtime receipt, beacon, lifecycle events, submit fingerprints, and work-unit status. Missing successful submit evidence is owned by work-unit submission/ledger checks and SHALL NOT be duplicated as a separate relay-commit trigger. The diagnostic is advisory only unless paired with a failing authoritative provenance check.
+
+#### Scenario: submitted result without matching receipt is flagged
+
+- **WHEN** a submitted work-unit ledger row points to a result whose receipt nonce disagrees with the runtime receipt or beacon
+- **THEN** the gate SHALL emit `provenance_chain_inconsistency`
+- **AND** the diagnostic SHALL identify the mismatched work-unit surfaces
+
+#### Scenario: lifecycle event mismatch is flagged
+
+- **WHEN** lifecycle events for a work unit carry a nonce or work identity that disagrees with the submitted binding surfaces
+- **THEN** the gate SHALL emit `provenance_chain_inconsistency`
+
+### Requirement: Gate SHALL emit a provenance_nonce_mismatch diagnostic
+
+Gate provenance SHALL compare the work-unit `receipt_nonce` across submitted ledger row, manifest, result, runtime receipt, beacon, and lifecycle events when those surfaces are available. A missing nonce, malformed nonce, or nonce disagreement SHALL emit a `provenance_nonce_mismatch` diagnostic. The diagnostic is advisory unless paired with a failing authoritative work-unit provenance check.
+
+#### Scenario: malformed nonce is flagged
+
+- **WHEN** a work-unit binding surface carries a receipt nonce that is malformed or not equal to the manifest nonce
+- **THEN** the gate SHALL emit `provenance_nonce_mismatch`
+- **AND** the diagnostic SHALL identify the mismatched work-unit surfaces
+
+#### Scenario: matching nonce emits no diagnostic
+
+- **WHEN** all available work-unit binding surfaces carry the same valid receipt nonce
+- **THEN** no `provenance_nonce_mismatch` diagnostic SHALL be emitted for that work unit
+
+### Requirement: Framework SHALL ship a provenance-forensics judgment guide
+
+The framework SHALL ship a durable provenance-forensics judgment guide that a coding agent can read post-run to decide whether delegated evidence provenance is real or bypassed. The guide SHALL describe work-unit signals across submitted ledger rows, `_work_units/_index.json`, manifest, result, runtime receipt, beacon, lifecycle events, submit fingerprints, output files, cache trails, and gate diagnostics.
+
+The guide SHALL explain forge-resistance as a spectrum: single files can be hand-shaped, while Engine-written submit transactions plus cross-surface hash/nonce consistency and trace/log timing are stronger evidence. The guide SHALL include a decision matrix mapping signal patterns to conclusions and remediation. Signing remains out of scope.
+
+#### Scenario: Coding agent decides from landed evidence using the guide
+
+- **WHEN** a coding agent inspects a completed run bundle
+- **THEN** it SHALL be able to open the shipped provenance-forensics judgment guide
+- **AND** follow work-unit ledger/index/manifest/result/receipt/beacon/lifecycle signals to reach a documented conclusion
+
+#### Scenario: Guide covers submit, bypass, and stale-binding patterns
+
+- **WHEN** the guide describes common provenance failures
+- **THEN** it SHALL include successful submit, non-work-unit bypass, stale binding, nonce mismatch, missing lifecycle evidence, and late-submit rejection patterns
+
 ## REMOVED Requirements
 
 ### Requirement: Gate SHALL verify successful current-wave subagent slot binding

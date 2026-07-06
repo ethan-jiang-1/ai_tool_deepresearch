@@ -41,11 +41,11 @@ The Wave0 gate CLI SHALL evaluate work-unit provenance rule types from the gate 
 
 ### Requirement: Gate CLI evaluates wave1 rules from definition
 
-The Wave1 gate CLI SHALL evaluate work-unit provenance rule types from the gate definition and SHALL not scan `_subagents` as a production coverage source.
+The Wave1 gate CLI SHALL evaluate work-unit provenance rule types from the gate definition and SHALL not scan non-work-unit delegated directories as a production coverage source.
 
 #### Scenario: Wave1 CLI ignores non-work-unit coverage
 
-- **WHEN** `_subagents` contains Wave1-looking result files
+- **WHEN** non-work-unit delegated directories contain Wave1-looking result files
 - **AND** no submitted work-unit ledger rows cover the outputs
 - **THEN** Wave1 gate CLI SHALL fail delegated provenance
 
