@@ -38,7 +38,7 @@
 
 **Reason**: The requirement title and semantics encode the removed delegated authority term.
 
-**Migration**: Use `Wave2 work-unit provenance SHALL be conditional on search evidence`.
+**Migration**: Use `Wave2 work-unit provenance SHALL be conditional on delegated evidence search`.
 
 #### Scenario: Wave2 provenance wording is replaced
 
@@ -71,7 +71,7 @@
 
 **Reason**: Work-unit diagnostics identify `work_id` and `queue_item_id`; slot keys are not production context.
 
-**Migration**: Use `Gate provenance diagnostics SHALL carry work-unit binding context`.
+**Migration**: Use `Gate diagnostics SHALL carry work-unit binding context`.
 
 #### Scenario: diagnostics use work-unit context
 
