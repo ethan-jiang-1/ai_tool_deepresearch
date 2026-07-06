@@ -1,6 +1,33 @@
-> req: LOC-001, LOC-002, LOC-006, LOC-010
+> req: LOC-001, LOC-002, LOC-003, LOC-006, LOC-007, LOC-009, LOC-010
 
 ## MODIFIED Requirements
+
+### Requirement: Log level conventions
+
+Log levels SHALL preserve their existing meanings for runtime diagnostics. Examples SHALL use work-unit, queue, gate, cache, and file-observability events when describing delegated work. Delegated examples SHALL identify `work_id`, `queue_item_id`, `kind`, or `receipt_nonce` instead of non-work-unit channel fields.
+
+#### Scenario: delegated debug example uses work-unit context
+
+- **WHEN** a delegated diagnostic is logged at DEBUG
+- **THEN** the example detail SHALL name work-unit binding context
+
+### Requirement: One-shot log API
+
+`logToRun(bundlePath, level, msg, detail?)` SHALL remain the one-shot bundle log helper. Delegated examples SHALL use work-unit detail fields and SHALL NOT teach non-work-unit delegated channels as production logging context.
+
+#### Scenario: one-shot log records work-unit detail
+
+- **WHEN** `logToRun()` is used for delegated repair or submit diagnostics
+- **THEN** the detail object SHALL carry work-unit identity where available
+
+### Requirement: Agent log CLI
+
+The Agent-facing log CLI SHALL allow Phase Agents and sub-agents to write bundle diagnostic records without inline JavaScript. Delegated examples SHALL bind work-unit identity and accepted log levels.
+
+#### Scenario: sub-agent log CLI uses work-unit fields
+
+- **WHEN** a sub-agent writes a diagnostic event
+- **THEN** the CLI detail JSON SHALL include assigned work-unit identity and receipt nonce where available
 
 ### Requirement: Run ID generation and propagation
 

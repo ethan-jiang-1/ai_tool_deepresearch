@@ -1,4 +1,4 @@
-> req: RWP-001, RWP-002, RWP-003, RWP-008, RWP-009, RWP-010, RWP-011, RWP-014
+> req: RWP-001, RWP-002, RWP-003, RWP-007, RWP-008, RWP-009, RWP-010, RWP-011, RWP-014
 
 ## ADDED Requirements
 
@@ -67,6 +67,16 @@ Wave1 SHALL forbid fake completion claims while allowing topic-specific deepenin
 - **WHEN** a Wave1 artifact claims topic-specific deepening completed
 - **AND** the corresponding evidence outputs lack submitted work-unit ledger coverage
 - **THEN** `wave1-complete` SHALL fail provenance checks or emit delegated bypass diagnostics
+
+### Requirement: Anti-cheating rules in wave phase bodies
+
+Wave phase bodies SHALL forbid claims of delegated evidence, search, or reference production unless the claimed outputs are covered by submitted work-unit ledger rows and pass the relevant gate checks. Anti-cheating examples SHALL point to work-unit submit, output declarations, cache trail validation, and gate verdicts as the corrective path.
+
+#### Scenario: delegated evidence claim requires work-unit coverage
+
+- **WHEN** a phase artifact claims delegated evidence production
+- **AND** no submitted work-unit ledger row covers the evidence
+- **THEN** the phase or gate guidance SHALL treat the claim as invalid
 
 ## REMOVED Requirements
 

@@ -10,5 +10,4 @@ The `DPT_FRAMEWORK/rb_templates/` directory SHALL contain template files with `{
 
 - **WHEN** `DPT_FRAMEWORK/rb_templates/rb_queue.json.tmpl` is read
 - **THEN** it SHALL contain valid queue v2 JSON
-- **AND** it SHALL NOT expose top-level delegated queue slots as the production queue shape
-
+- **AND** it SHALL NOT expose the legacy top-level delegated queue shape as production queue authority

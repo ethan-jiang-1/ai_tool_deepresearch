@@ -26,7 +26,7 @@ The two source planning notes are:
 - **BREAKING**: queue demand identity becomes `queue_item_id`. `work_id` means only one Engine-allocated delegated execution attempt.
 - **BREAKING**: target `rb_queue.json` becomes nested queue v2: `active_window`, `refill_pool`, `delegated_in_flight`, and `terminal_history`. Top-level slot/current fields are not the delegated completion authority.
 - Add Engine-owned allocation registry `_work_units/_index.json`. It is the allocation and attempt-state truth for work units, not a gate coverage ledger.
-- Define canonical `work_id` format: `wu-w{wave}-b{batch_index}-{kind_code}-i{claim_index}`, with three-digit batches such as `b000` and four-digit claim indexes such as `i0001`.
+- Define canonical `work_id` format: `wu-w{wave}-b{batch_index}-{kind_code}-i{claim_index}`, with three-digit batches such as `b000`, four-digit claim indexes such as `i0001`, and an Engine-owned kind registry mapping full work-unit kinds to short `kind_code` values.
 - Add the production delegated CLI `operate-work-unit claim/submit/fail/timeout/abandon/inspect`.
 - Keep `operate-queue` for non-delegated main-agent queue work; delegated sub-agent completion must use `operate-work-unit submit`.
 - Define `claim --count N` as a real in-flight allocation transaction: it claims the contiguous eligible delegated queue-front prefix, creates N work-unit envelopes when available, and returns prompts that may be dispatched in parallel.
@@ -47,6 +47,7 @@ The two source planning notes are:
 ### New Capabilities
 
 - `delegated-work-units`: canonical positive contract for the new production delegated-work mechanism: queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate. This capability exists so the new concept has a clean main-spec home after archive instead of being scattered only through old relay/subagent capability names.
+- `work-unit-provenance-gate`: canonical positive contract for delegated provenance gates. This capability replaces the relay-named gate home and defines ledger-first work-unit gate checks, diagnostics, and forensic guidance.
 
 ### Capability-Name Cleanup
 
@@ -54,7 +55,7 @@ Capability names are archive-facing navigation, not just storage folders. Old me
 
 - keep `delegated-work-units` as the canonical positive home for the delegated-work pipeline;
 - keep actor-neutral or already-positive homes such as `agentic-queue`, `framework-engine`, `workflow-directory-contract`, `agent-output-declaration`, `gate-skeleton`, `logging-conventions`, `logger`, `research-wave-phase-content`, `wave1-intake`, and `wave2-synthesis` for their own contracts;
-- replace `relay-provenance-gate` with `work-unit-provenance-gate` or absorb it into an equivalently named work-unit/delegated provenance gate home before archive, because the current name still teaches relay as the gate concept;
+- replace `relay-provenance-gate` with `work-unit-provenance-gate` before archive, because the current name still teaches relay as the gate concept;
 - apply an actor-vs-mechanism test to `subagent-*`: `sub-agent` is still the delegated actor, while `relay`, `slot`, `drive-relay-slot`, and `_subagents/` are retired mechanism surfaces;
 - keep or rewrite actor-centric `subagent-*` capabilities when they describe surviving sub-agent task, dispatch, runtime logging, or environment contracts through work units;
 - retire or rename mechanism-centric `subagent-*` capabilities when their stable meaning is relay/slot collect, relay driver, slot lifecycle, or all-slots repair;
@@ -64,24 +65,27 @@ Capability names are archive-facing navigation, not just storage folders. Old me
 
 - `agentic-queue`: queue demand identity, nested queue v2, front-contiguous delegated claim, `delegated_in_flight`, phase drain, timeout/retry queue recovery, and non-delegated `operate-queue` boundary.
 - `cmd-bundle-instantiation`: initial `rb_queue.json` template becomes queue v2 and stops teaching top-level delegated slot shape.
+- `cmd-subagent-environment`: setup remains real sub-agent environment preparation only and does not produce work-unit result/status/runtime outputs.
 - `schema-core`: queue contract validates queue v2 demand items and separates queue demand identity from work-unit attempt identity.
 - `framework-engine`: `operate-work-unit`, work-unit index, bundle lock, transaction journal, work-unit ID validation/allocation, file-based submit, terminal attempt commands, inspect diagnostics, and version alignment.
 - `agent-output-declaration`: bundle-root `rb_output_declarations.jsonl` remains the production submission ledger, but relay/slot fields are replaced by work-unit-only provenance fields.
-- `relay-provenance-gate`: old relay/slot provenance requirements are retired or absorbed; positive ledger-first work-unit provenance requirements SHALL live under `work-unit-provenance-gate` or an equivalently named work-unit/delegated provenance gate home, not under a relay-named capability.
+- `relay-provenance-gate`: old relay/slot provenance requirements are removed from active main specs; positive ledger-first work-unit provenance requirements live under `work-unit-provenance-gate`.
 - `research-wave-gate-implementation`: Wave0/Wave1/Wave2 gates read work-unit ledger coverage and reject `_subagents` artifacts, direct/orphan outputs, hand-written ledger rows, and stale binding mismatches.
 - `gate-skeleton`: gate definitions and check names expose work-unit provenance checks and remove old production check names.
 - `workflow-directory-contract`: runtime bundle canonical delegated directory becomes `_work_units/` with `_work_units/_index.json`.
+- `work-unit-provenance-gate`: delegated gate coverage comes from submitted work-unit ledger rows and work-unit cross-checks, with non-work-unit delegated surfaces reported only as bypass/cleanup diagnostics.
+- `workflow-node-contract`: lifecycle metadata, header injection, and self-documenting guidance surfaces distinguish work-unit sub-agent task guidance from manifest lifecycle phases.
 - `trace-writer`: delegated bypass diagnostics use the work-unit coverage model and `delegated_bypass_suspected`.
 - `shared-node-content`: generated gate summaries describe work-unit ledger coverage.
 - `queue-input-validation`: repair and stale-card checks operate over queue v2 locations and respect delegated in-flight work-unit bindings.
 - `logging-conventions`: long-running delegated diagnostics bind work-unit identity and receipt nonce.
-- `subagent-directory-contract`: may remain only if rewritten as the sub-agent's work-unit envelope/directory view; old `_subagents/` relay directory requirements are retired.
-- `subagent-dispatch`: may remain if dispatch means Engine work-unit claim producing bounded sub-agent prompts; old relay slot dispatch requirements are retired.
-- `subagent-collect`: likely retires or renames because "collect" is tied to old slot collection; positive submit/invalid-submit contracts live in `delegated-work-units`, `agentic-queue`, and `agent-output-declaration`.
-- `subagent-node-contract`: may remain if rewritten as sub-agent task/result/receipt contract over work-unit identity; old relay driver/node guidance is retired.
+- `subagent-directory-contract`: remains only as the sub-agent's work-unit envelope/directory view; old `_subagents/` relay directory requirements are retired.
+- `subagent-dispatch`: remains only when dispatch means Engine work-unit claim producing bounded sub-agent prompts; old relay slot dispatch requirements are retired.
+- `subagent-collect`: retires as an active positive capability because "collect" is tied to old slot collection; positive submit/invalid-submit contracts live in `delegated-work-units`, `agentic-queue`, and `agent-output-declaration`.
+- `subagent-node-contract`: remains as sub-agent task/result/receipt contract over work-unit identity; old relay driver/node guidance is retired.
 - `subagent-relay-driver`: `drive-relay-slot` is removed as a production CLI path and replaced by `operate-work-unit`.
-- `subagent-runtime-logging`: runtime lifecycle events bind work-unit nonce and optional runtime refs, not slot beacons.
-- `subagent-repair`: likely retires or absorbs into work-unit terminal/retry semantics because current content is all-slots repair; positive repair/retry behavior lives in `delegated-work-units`, `agentic-queue`, and `repair-loop`.
+- `subagent-runtime-logging`: remains as actor-runtime logging; lifecycle events bind work-unit nonce and optional runtime refs, not slot beacons.
+- `subagent-repair`: retires or absorbs into work-unit terminal/retry semantics because current content is all-slots repair; positive repair/retry behavior lives in `delegated-work-units`, `agentic-queue`, and `repair-loop`.
 - `subagent-slots`: slot lifecycle/path requirements are removed from production specs; work-unit attempt state and runtime refs are the replacement.
 - `file-observability`: known production runtime path becomes `_work_units/waveN/{work_id}/`; old sub-agent paths are failure/removal diagnostics only.
 - `experiment-observability`: reports and projections recognize work-unit events, in-flight attempts, expired leases, retries, and no mixed provenance path.

@@ -34,13 +34,19 @@ The Framework Engine SHALL acquire a bundle-scoped lock before mutating queue, i
 
 ### Requirement: Work-unit ID validation is deterministic
 
-The Framework Engine SHALL validate `work_id` with `^wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4}$` and SHALL reject IDs whose encoded fields disagree with directory path, manifest, index, result, or ledger fields.
+The Framework Engine SHALL validate `work_id` with `^wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4}$` and SHALL reject IDs whose encoded fields disagree with directory path, manifest, index, result, or ledger fields. The encoded kind segment is `kind_code`; validation SHALL resolve it through the Engine-owned kind registry before comparing it with the full `kind` field on queue demand, manifest, result, and ledger surfaces.
 
 #### Scenario: two-digit batch is invalid
 
 - **WHEN** a work-unit path or result uses `wu-w0-b00-src-i0001`
 - **THEN** Engine validation SHALL reject the ID
 - **AND** `wu-w0-b000-src-i0001` SHALL pass format validation before cross-field checks
+
+#### Scenario: unregistered kind code is invalid
+
+- **WHEN** a work-unit ID contains kind code `deep`
+- **AND** `_work_units/_index.json` has no kind registry entry mapping `deep` to the manifest's full `kind`
+- **THEN** Engine validation SHALL reject the work-unit binding
 
 ## MODIFIED Requirements
 
@@ -58,7 +64,7 @@ Production work-unit Engine code SHALL live under `DPT_FRAMEWORK/engine/` and pr
 
 Queue Manager internals SHALL be updated from single-current-item delegated completion to queue v2 and work-unit binding helpers while preserving the public framework boundary for non-delegated queue operations. Regression coverage SHALL move from non-work-unit delegated completion to work-unit claim/submit state transitions.
 
-#### Scenario: queue manager no longer completes delegated relay results
+#### Scenario: queue manager rejects non-work-unit delegated completion
 
 - **WHEN** Queue Manager receives a delegated completion request that lacks a work-unit submit transaction
 - **THEN** it SHALL reject the request

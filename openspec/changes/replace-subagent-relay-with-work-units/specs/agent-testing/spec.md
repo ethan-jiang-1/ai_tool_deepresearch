@@ -1,10 +1,38 @@
-> req: AGT-009
+> req: AGT-003, AGT-009
 
 ## MODIFIED Requirements
 
+### Requirement: Three-level real subagent test playbooks (AGT-003)
+
+The real subagent test playbook family SHALL exercise sub-agent actor behavior through work-unit claim, bounded prompt execution, submit, submitted ledger coverage, and gate-visible provenance. It SHALL keep light/standard/heavy levels, but production-path assertions SHALL use work-unit artifacts and Engine submit results.
+
+#### Scenario: simple subagent playbook uses work-unit path
+
+- **WHEN** the simple real subagent playbook runs
+- **THEN** it SHALL claim a work unit, spawn a bounded sub-agent task, submit by `work_id`, and verify submitted ledger coverage
+
+### Requirement: Runtime-agent trace events prove real execution path (AGT-003)
+
+Runtime-agent trace evidence SHALL bind to work-unit lifecycle events and submitted work-unit identity. The playbook SHALL prove that the sub-agent actor actually ran by checking Engine and runtime evidence associated with `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
+
+#### Scenario: runtime evidence binds work unit
+
+- **WHEN** a sub-agent result is accepted
+- **THEN** the trace and log evidence SHALL identify the submitted work unit
+- **AND** the verdict SHALL not depend on unsubmitted filesystem artifacts
+
+### Requirement: Runtime-agent evidence is mandatory (AGT-003)
+
+The real subagent test suite SHALL require sub-agent-written runtime receipts and Engine-validated work-unit submit output for real LLM sub-agent acceptance.
+
+#### Scenario: missing runtime evidence fails real-agent proof
+
+- **WHEN** a claimed work unit lacks matching runtime evidence for its receipt nonce
+- **THEN** the real subagent playbook SHALL NOT claim proof of real sub-agent execution
+
 ### Requirement: Evidence extraction experiment suite SHALL use a new case segment
 
-`experiments_playbook/exp_evidence-extraction/` SHALL define the controlled experiment suite for the `implement-evidence-extraction` mechanism. The suite SHALL use the currently empty segment reserved for evidence-chain experiments, distinct from the existing engine-boundary and file-observability experiment families. The specific starting case number is determined by the first available slot in the segment and documented in the suite README; specs refer to cases by role, not by number.
+`experiments_playbook/exp_evidence-extraction/` SHALL define the controlled experiment suite for the `implement-evidence-extraction` mechanism. The suite SHALL use the currently empty segment reserved for evidence-chain experiments, distinct from the existing engine-boundary and file-observability experiment families. The specific starting case number is determined by the first available case-number position in the segment and documented in the suite README; specs refer to cases by role, not by number.
 
 The suite SHALL include cases covering these proof roles:
 

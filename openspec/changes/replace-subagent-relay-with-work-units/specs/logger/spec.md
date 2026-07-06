@@ -13,7 +13,7 @@ Engine hot paths SHALL emit accident-grade diagnostics for work-unit claim, subm
 
 ### Requirement: Sub-agent spawn prompt SHALL include diagnostic logging CLI instructions
 
-Sub-agent spawn prompts SHALL include diagnostic logging instructions bound to work-unit identity and receipt nonce. The instructions SHALL avoid slot-based command examples as production guidance.
+Sub-agent spawn prompts SHALL include diagnostic logging instructions bound to work-unit identity and receipt nonce. The instructions SHALL avoid non-work-unit command examples as production guidance.
 
 #### Scenario: spawn prompt includes work-unit log example
 

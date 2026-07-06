@@ -34,7 +34,7 @@ Generated work-unit task Markdown SHALL include lifecycle logging directives, re
 
 ### Requirement: Sub-agent role specs SHALL mandate lifecycle logging
 
-Sub-agent role specs SHALL mandate lifecycle logging through work-unit receipt/logging instructions. Lifecycle events SHALL be associated with the work-unit receipt nonce rather than a slot beacon nonce.
+Sub-agent role specs SHALL mandate lifecycle logging through work-unit receipt/logging instructions. Lifecycle events SHALL be associated with the work-unit receipt nonce rather than a non-work-unit beacon nonce.
 
 #### Scenario: lifecycle event binds work unit
 

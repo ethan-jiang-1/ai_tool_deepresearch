@@ -1,5 +1,3 @@
-> req: SRD-001, SRD-002, SRD-003, SRD-004
-
 ## REMOVED Requirements
 
 ### Requirement: A driver CLI SHALL orchestrate the relay slot lifecycle end-to-end

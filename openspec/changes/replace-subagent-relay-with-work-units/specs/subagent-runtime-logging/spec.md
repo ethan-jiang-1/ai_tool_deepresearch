@@ -20,7 +20,7 @@ Sub-agents SHALL read `_work_units/waveN/{work_id}/_beacon.json` for runtime coo
 
 - **WHEN** a sub-agent is spawned for a work unit
 - **THEN** its task SHALL point to the work-unit `_beacon.json`
-- **AND** it SHALL not rely on a slot beacon as production authority
+- **AND** it SHALL not rely on a non-work-unit beacon as production authority
 
 ### Requirement: Lifecycle events are the execution-proof signal for provenance forensics
 

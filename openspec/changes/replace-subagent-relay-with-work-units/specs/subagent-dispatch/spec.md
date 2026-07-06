@@ -33,6 +33,17 @@ V1 dispatch concurrency SHALL be enforced by the Main Agent's choice of `claim -
 - **THEN** the Main Agent MAY request `claim --count 3`
 - **AND** all IDs SHALL still be allocated by the Engine in one transaction
 
+## MODIFIED Requirements
+
+### Requirement: Dispatch manifest is schema-validated
+
+The work-unit dispatch manifest and related envelope files SHALL be validated at write time. Invalid manifests SHALL be rejected before any sub-agent prompt is treated as dispatchable.
+
+#### Scenario: invalid work-unit manifest blocks dispatch
+
+- **WHEN** a claimed work unit has a manifest that fails schema validation
+- **THEN** its prompt SHALL NOT be treated as dispatchable
+
 ## REMOVED Requirements
 
 ### Requirement: V1 dispatch enforces MAX_CONCURRENT_SUBAGENTS concurrency cap

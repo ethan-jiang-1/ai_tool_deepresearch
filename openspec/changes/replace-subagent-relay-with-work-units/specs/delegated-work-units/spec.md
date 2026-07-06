@@ -14,13 +14,21 @@ Production delegated work SHALL use the path `queue demand item -> work unit -> 
 
 ### Requirement: Work-unit identity SHALL be Engine-allocated and index-backed
 
-The Engine SHALL allocate every `work_id` and record it in `_work_units/_index.json`. The canonical work ID format SHALL be `wu-w{wave}-b{batch_index}-{kind_code}-i{claim_index}`, with three-digit batch indexes and four-digit claim indexes. Encoded fields SHALL match the index, directory path, manifest, result, and ledger row.
+The Engine SHALL allocate every `work_id` and record it in `_work_units/_index.json`. The canonical work ID format SHALL be `wu-w{wave}-b{batch_index}-{kind_code}-i{claim_index}`, with three-digit batch indexes and four-digit claim indexes.
+
+`kind` SHALL be the stable full work-unit kind used by queue demand, manifests, results, and ledger rows, such as `wave0_source_intake`, `wave1_topic_deepening`, or `wave2_targeted_evidence`. `kind_code` SHALL be a short Engine-registered code used only inside `work_id`. `_work_units/_index.json` SHALL contain the authoritative kind registry mapping each full `kind` to exactly one `kind_code`, and each `kind_code` back to exactly one full `kind`. Encoded fields SHALL match the index, directory path, manifest, result, and ledger row.
 
 #### Scenario: malformed work ID is rejected
 
-- **WHEN** a submitted result names a `work_id` whose encoded wave, batch, kind, or claim index disagrees with the manifest or index
+- **WHEN** a submitted result names a `work_id` whose encoded wave, batch, `kind_code`, or claim index disagrees with the manifest or index kind registry
 - **THEN** submit SHALL fail closed
 - **AND** no queue completion or ledger append SHALL occur
+
+#### Scenario: kind registry maps long kind to short code
+
+- **WHEN** the Engine allocates a `wave1_topic_deepening` work unit with kind code `deep`
+- **THEN** the `work_id` MAY contain `deep`
+- **AND** the manifest, result, and ledger row SHALL still carry the full `kind: "wave1_topic_deepening"`
 
 ### Requirement: Work-unit claim SHALL bind queue demand and lease
 

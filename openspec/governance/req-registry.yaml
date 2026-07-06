@@ -68,7 +68,7 @@ prefixes:
   QIV: queue-input-validation
   REF: reference-flat-format
   REI: rerun-incremental-node
-  RPG: relay-provenance-gate
+  RPG: relay-provenance-gate       # all entries deprecated; replacement WPG
   RTI: rerun-topic-integration
   REL: repair-loop
   RES: research-styles
@@ -84,13 +84,13 @@ prefixes:
   SHC: shared-node-content
   SNC: subagent-node-contract
   SOR: schema-core                 # sub-prefix of SCO
-  SRD: subagent-relay-driver
+  SRD: subagent-relay-driver       # all entries deprecated; replacement FRE/DEW
   SRL: subagent-runtime-logging
   STM: seed-topic-materialization
-  SUC: subagent-collect
+  SUC: subagent-collect            # all entries deprecated; replacement DEW/AGQ/AGO
   SUD: subagent-dispatch
-  SUR: subagent-repair
-  SUS: subagent-slots
+  SUR: subagent-repair             # all entries deprecated; replacement DEW/AGQ/REL
+  SUS: subagent-slots              # all entries deprecated; replacement DEW/SDC/SRL
   SWE: silent-wave-execution
   TEF: test-fixtures
   TRT: transition-table
@@ -104,6 +104,7 @@ prefixes:
   WLO: workflow-chain-observability # all entries deprecated; no spec directory
   WML: workflow-manifest-loading   # all entries deprecated; no spec directory
   WNC: workflow-node-contract
+  WPG: work-unit-provenance-gate
   WTS: wave2-synthesis
 
 # agent-command-surface
@@ -127,7 +128,7 @@ AGT-010: agent-testing — Handoff witnessing experiment coverage for phase-entr
 # agentic-queue
 AGQ-001: agentic-queue — Structured machine queue state and task card schema
 AGQ-002: agentic-queue — Queue Manager enqueue, claim, complete, fail, promote, and refill operations
-AGQ-003: agentic-queue — Conservative urgent preemption without hidden current-slot execution
+AGQ-003: agentic-queue — Conservative urgent preemption without hidden in-progress execution
 AGQ-004: agentic-queue — Fail-closed deterministic receipts and structured check/inspect/advice feedback
 AGQ-005: agentic-queue — Markdown projection generated from JSON queue state without mutation authority
 AGQ-006: agentic-queue — Command experiment playbooks for simple, medium, and complex agentic queue cases
@@ -147,12 +148,12 @@ AGQ-019: agentic-queue — Queue v2 active_window, refill_pool, delegated_in_fli
 AGQ-020: agentic-queue — pendingCount exposes active window plus refill pool task total
 
 # agent-output-declaration
-AGO-001: agent-output-declaration — SlotResult output_files declaration with role and source_url rules
-AGO-002: agent-output-declaration — SlotResult leaf cache_trails declaration
-AGO-003: agent-output-declaration — complete writes bundle-level rb_output_declarations.jsonl ledger
+AGO-001: agent-output-declaration — Work-unit result output_files declaration with role and source_url rules
+AGO-002: agent-output-declaration — Work-unit result leaf cache_trails declaration
+AGO-003: agent-output-declaration — Work-unit submit writes bundle-level rb_output_declarations.jsonl ledger
 AGO-004: agent-output-declaration — Engine consumes declaration ledger rather than scanning directories for Agent outputs
 AGO-005: agent-output-declaration — Ledger declarations preserve non-empty creation context for accepted outputs
-AGO-006: agent-output-declaration — cache_trails MUST be populated by Engine (complete() validates filesystem and writes verified trails), not Agent
+AGO-006: agent-output-declaration — cache_trails MUST be populated by Engine during work-unit submit validation, not Agent claims
 # bundle-data-isolation
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 # workflow-directory-contract (BUS-* absorbed)
@@ -259,19 +260,19 @@ QIV-003: queue-input-validation — Queue projection cache includes generated_at
 QIV-004: queue-input-validation — operate-queue repair --remove-stale removes task cards outside topic_registry
 
 # relay-provenance-gate
-RPG-001: relay-provenance-gate — Gate verifies output declaration ledger exists and meets entry threshold
-RPG-002: relay-provenance-gate — Gate verifies submitted work-unit presence and cross-check surfaces
-RPG-003: relay-provenance-gate — Gate detects suspected delegated bypass when artifacts exist without submitted work-unit coverage
-RPG-004: relay-provenance-gate — Provenance checks coexist with structural checks in standard gate definitions
-RPG-005: relay-provenance-gate — Gate verifies scoped output declaration coverage for current phase outputs
-RPG-006: relay-provenance-gate — Wave2 work-unit provenance is conditional on delegated search evidence
-RPG-007: relay-provenance-gate — Gate emits provenance_nonce_mismatch diagnostic when work-unit nonce binding is invalid (advisory only)
-RPG-008: relay-provenance-gate — Gate emits missing work-unit submit diagnostic when delegated attempt lacks submitted coverage (advisory only)
-RPG-009: relay-provenance-gate — Gate emits agent_timestamp_span_suspicious diagnostic when spawnedAt/completedAt span is sub-second (advisory only)
-RPG-010: relay-provenance-gate — Framework ships a provenance-forensics judgment guide (S0–S5 signals + 6-tier decision matrix + write-back, content from plan §10) so a future coding agent can decide from landed evidence
-RPG-011: relay-provenance-gate — Gate emits lifecycle_events_missing diagnostic when evidence-producing work unit lacks nonce-carrying lifecycle events (advisory only; read-side for SRL-004)
-RPG-012: relay-provenance-gate — Gate emits provenance_chain_inconsistency diagnostic when engine-emitted artifact cross-references contradict (advisory only; cross-artifact consistency — primary detector for determined forgery)
-RPG-013: relay-provenance-gate — Gate provenance diagnostics carry work_id, queue_item_id, wave, and kind for aggregation
+RPG-001: relay-provenance-gate — Replaced by work-unit-provenance-gate submitted ledger row checks [DEPRECATED]
+RPG-002: relay-provenance-gate — Replaced by work-unit submission presence and cross-check surfaces [DEPRECATED]
+RPG-003: relay-provenance-gate — Replaced by work-unit delegated bypass detection [DEPRECATED]
+RPG-004: relay-provenance-gate — Replaced by standard work-unit provenance check wiring in gate definitions [DEPRECATED]
+RPG-005: relay-provenance-gate — Replaced by work-unit output coverage checks [DEPRECATED]
+RPG-006: relay-provenance-gate — Replaced by conditional Wave2 work-unit provenance [DEPRECATED]
+RPG-007: relay-provenance-gate — Replaced by work-unit nonce mismatch diagnostics [DEPRECATED]
+RPG-008: relay-provenance-gate — Replaced by missing work-unit submit and ledger coverage diagnostics [DEPRECATED]
+RPG-009: relay-provenance-gate — Old timestamp-span diagnostic folded into work-unit provenance forensics guidance [DEPRECATED]
+RPG-010: relay-provenance-gate — Replaced by work-unit provenance-forensics guidance [DEPRECATED]
+RPG-011: relay-provenance-gate — Replaced by work-unit lifecycle evidence diagnostics [DEPRECATED]
+RPG-012: relay-provenance-gate — Replaced by work-unit cross-surface consistency diagnostics and forensics guidance [DEPRECATED]
+RPG-013: relay-provenance-gate — Replaced by work-unit binding context diagnostics [DEPRECATED]
 
 # repair-loop
 REL-001: repair-loop — Repair checkpoint loopback and deterministic termination
@@ -317,26 +318,36 @@ SCO-007: schema-core-hitl — HITL2UserDecision + FinalReportView enums
 SCO-008: schema-core-hitl — ProfileSchema hitl1/hitl2 field update
 SOR-001: schema-core — Source-of-record invariant marker for schema-core specs
 
-# subagent-system
-SUC-001: subagent-collect — Work-unit submit validates returned result envelopes and records delegated completion
+# subagent-collect
+SUC-001: subagent-collect — Old slot result collection and merge contracts removed; replacement submit semantics live under delegated-work-units and agentic-queue [DEPRECATED]
+SUC-002: subagent-collect — Old per-slot collection and artifact-to-queue bridge contracts removed; replacement validation lives under delegated-work-units, agentic-queue, and agent-output-declaration [DEPRECATED]
+
+# subagent-dispatch
 SUD-001: subagent-dispatch — Work-unit claim creates dispatchable prompt and runtime envelope
-SUR-001: subagent-repair — All-slots-failed repair routing and partial-failure tolerance
-SUS-001: subagent-slots — Replaced production slot lifecycle/path contracts are removed in favor of work-unit runtime contracts
 SUD-002: subagent-dispatch — Queue task card targets.delegates becomes eligible for work-unit claim
 SUD-003: subagent-dispatch — Batched sub-agent dispatch uses work-unit claim --count and submit-by-work-id returns
-SUC-002: subagent-collect — Invalid work-unit submit is a non-terminal rejection with correction path
 SUD-004: subagent-dispatch — Work-unit claim writes beacon metadata with bundle, log CLI, work_id, queue_item_id, kind, and receipt_nonce
 SUD-005: subagent-dispatch — Work-unit index and manifest persist Engine-generated receipt nonce for forensic binding
 SUD-006: subagent-dispatch — buildSpawnPrompt hands sub-agent its work-unit directory plus beacon pointer
 SUD-007: subagent-dispatch — Work-unit claim and submit trace events carry receipt nonce across Engine trace chain
-SRD-001: subagent-relay-driver — Delegated driver production entrypoint is replaced by operate-work-unit lifecycle CLI
-SRD-002: subagent-relay-driver — Driver performs no search, evidence judgment, or routing (deterministic lifecycle only)
-SRD-003: subagent-relay-driver — Work-unit submit passes provided result through Engine validation unchanged
-SRD-004: subagent-relay-driver — Work-unit lifecycle produces Engine trace and persisted UUID nonce evidence
+
+# subagent-relay-driver
+SRD-001: subagent-relay-driver — Old delegated driver production entrypoint replaced by operate-work-unit lifecycle CLI [DEPRECATED]
+SRD-002: subagent-relay-driver — Old driver boundary removed with the relay-slot CLI; replacement deterministic lifecycle semantics live under framework-engine and delegated-work-units [DEPRECATED]
+SRD-003: subagent-relay-driver — Old driver validation-bypass guard removed with the relay-slot CLI; replacement submit validation lives under delegated-work-units [DEPRECATED]
+SRD-004: subagent-relay-driver — Old driver trace-proof contract removed with the relay-slot CLI; replacement work-unit trace and nonce evidence lives under delegated-work-units, subagent-dispatch, and subagent-runtime-logging [DEPRECATED]
+
+# subagent-repair
+SUR-001: subagent-repair — Old all-slots-failed repair routing removed; replacement retry and repair semantics live under delegated-work-units, agentic-queue, and repair-loop [DEPRECATED]
+
+# subagent-runtime-logging
 SRL-001: subagent-runtime-logging — Sub-agent emits lifecycle events via log-event.mjs (search_start/done, fetch_done, file_written, error, work_done)
-SRL-002: subagent-runtime-logging — Lifecycle events carry the slot beacon receipt_nonce (UUID)
-SRL-003: subagent-runtime-logging — Sub-agent reads _beacon.json for bundle_dir/log_cli/nonce as single source of truth
-SRL-004: subagent-runtime-logging — Lifecycle events are the Layer-2 execution-proof signal read by provenance forensics
+SRL-002: subagent-runtime-logging — Lifecycle events carry the work-unit beacon receipt_nonce (UUID)
+SRL-003: subagent-runtime-logging — Sub-agent reads work-unit _beacon.json for bundle_dir/log_cli/work_id/queue_item_id/kind/nonce as single source of truth
+SRL-004: subagent-runtime-logging — Lifecycle events are work-unit provenance-forensics cross-check signals, not independent gate pass coverage
+
+# subagent-slots
+SUS-001: subagent-slots — Replaced production slot lifecycle/path contracts removed in favor of work-unit runtime contracts [DEPRECATED]
 # wave1-intake
 WAI-001: wave1-intake — Wave1 phase uses queue-driven three-stage execution for topic-specific deepening
 WAI-002: wave1-intake — Wave1 deepening task card targets sub-agent via targets.delegates (dpt-evidence-extractor)
@@ -344,7 +355,7 @@ WAI-003: wave1-intake — Sub-agent tool degradation chain with honest failure r
 WAI-004: wave1-intake — Inline per-topic backfill after each deepening task completion
 WAI-005: wave1-intake — Wave1 gate checks deepening artifacts and backfill token replacement
 WAI-006: wave1-intake — Wave1 queue-loop playbooks verify deepening end-to-end
-WAI-007: wave1-intake — Wave1 batch parallel sub-agent execution protocol via relay
+WAI-007: wave1-intake — Wave1 batch parallel sub-agent execution protocol via work-unit claim and submit
 
 # wave2-synthesis
 WTS-001: wave2-synthesis — Wave2 phase queue-driven three-stage execution
@@ -356,6 +367,19 @@ WTS-006: wave2-synthesis — Wave2 sub-agent behavior specification
 WTS-007: wave2-synthesis — Three-artifact Wave2 output with JS feedback integration
 WTS-008: wave2-synthesis — Finding taxonomy with explicit types, decisions, and consistency rules
 WTS-009: wave2-synthesis — Cross-topic scan matrix as process evidence surface
+
+# work-unit-provenance-gate
+WPG-001: work-unit-provenance-gate — Gates verify submitted work-unit ledger rows
+WPG-002: work-unit-provenance-gate — Gates verify work-unit submission presence across binding surfaces
+WPG-003: work-unit-provenance-gate — Gates verify work-unit output coverage
+WPG-004: work-unit-provenance-gate — Gates reject non-work-unit delegated authority surfaces
+WPG-005: work-unit-provenance-gate — Wave2 work-unit provenance is conditional on delegated evidence search
+WPG-006: work-unit-provenance-gate — Work-unit provenance checks are standard gate definition checks
+WPG-007: work-unit-provenance-gate — Gates detect delegated bypass by phase
+WPG-008: work-unit-provenance-gate — Gate diagnostics carry work-unit binding context
+WPG-009: work-unit-provenance-gate — Gates emit work-unit nonce mismatch diagnostics
+WPG-010: work-unit-provenance-gate — Gates emit work-unit lifecycle evidence diagnostics
+WPG-011: work-unit-provenance-gate — Framework ships a work-unit provenance-forensics guide
 
 
 # seg2node
@@ -391,13 +415,13 @@ WML-001: workflow-manifest-loading — Workflow-next runtime initializes without
 FRE-001: framework-engine — DPT_FRAMEWORK/engine/ as canonical directory for 6 production engine modules
 FRE-002: framework-engine — workflow-fsm standalone pure FSM transition resolver (5 exports, 241 lines, zero engine imports) [DEPRECATED]
 FRE-003: framework-engine — Gate helpers shared parseMdFrontmatter and readBundlePlan for YAML 1.2 frontmatter parsing
-FRE-004: framework-engine — subagent-relay internal module layout (5 flat sub-modules + barrel, mirrored tests, zero behavior change)
+FRE-004: framework-engine — Framework internal module layout and release hygiene for delegated-work engine replacement
 FRE-005: framework-engine — Queue Manager internal module layout + companion regression split (5 flat sub-modules + barrel, zero behavior change)
 TRW-001: trace-writer — Unified append-only JSONL trace writer with createTrace factory (3 variants)
 TRW-002: trace-writer — Trace output validates against TraceEntrySchema contract
 TRW-003: trace-writer — Trace entries include bundle field for cross-sink correlation
 TRW-004: trace-writer — Run start trace marker (run_start at bundle creation; run_end terminal marker deferred to Phase 2)
-TRW-005: trace-writer — Single rb_trace.jsonl trace sink for queue, relay, gate, and playbook verdict events
+TRW-005: trace-writer — Single rb_trace.jsonl trace sink for queue, work-unit, gate, and playbook verdict events
 EXS-001: experiment-shared-infra — experiments_env/shared/ directory for experiment-scoped shared infrastructure
 EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_FRAMEWORK/command_experiments_env/scripts/ to experiments_env/shared/"
 EXR-001: experiment-ref-integrity — case-401 verifies positive Agent-Engine boundary path
@@ -520,7 +544,7 @@ LOG-002: "logger — Logger file output via option (createLogger({ file }) → c
 LOG-003: logger — Logger injection pattern in engine (logger = null trailing parameter, silent no-op)
 LOG-004: logger — Run-scoped logger creation at bundle initialization (logToRun for first line, createRunLogger for engines)
 LOG-005: logger — logToRun(bundlePath, level, msg, detail?) one-shot and createRunLogger(bundlePath) factory, encapsulating _logs/run.log path convention and bundle auto-injection
-LOG-006: logger — Engine hot-path accident-grade diagnostics (queue-manager + subagent-relay attempt/outcome/reject/failed/empty/exception events)
+LOG-006: logger — Engine hot-path accident-grade diagnostics for queue-manager, work-unit lifecycle, gate, and provenance mismatch events
 LOG-007: logger — Sub-agent spawn prompt includes diagnostic logging CLI instructions with copyable log-event.mjs examples
 
 # logging-conventions
@@ -529,7 +553,7 @@ LOC-002: logging-conventions — Single diagnostic log file per bundle (_logs/ru
 LOC-003: logging-conventions — Log level conventions (DEBUG/INFO/WARN/ERROR with defined usage for .mjs files)
 LOC-004: logging-conventions — Phase node log convention (## Log section in .md phase nodes declaring required log points)
 LOC-005: logging-conventions — Inspect-bundle observable extension (--summary/--timeline/--log flags for post-mortem diagnosis)
-LOC-006: logging-conventions — Logger activation in engines (queue-manager + subagent-relay use createRunLogger at entry)
+LOC-006: logging-conventions — Logger activation in engines, including queue-manager and work-unit lifecycle helpers using createRunLogger at entry
 LOC-007: logging-conventions — One-shot log API (logToRun(bundlePath, level, msg, detail?) encapsulates path, format, bundle)
 LOC-008: logging-conventions — Run-scoped logger factory (createRunLogger(bundlePath) returns {info,warn,error,debug} bound to _logs/run.log)
 LOC-009: logging-conventions — Agent log CLI (log-event.mjs --bundle --level --msg, bash command for Phase Agent, zero JS knowledge)
@@ -652,5 +676,5 @@ CRC-001: "cache-raw-web-content — Standardized _cache/ directory structure (wa
 CRC-002: "cache-raw-web-content — Cache path delivery via spawn prompt (Cache directory line)"
 CRC-003: "cache-raw-web-content — source-slug consistency between _cache/ and reference/ filenames"
 CRC-004: "cache-raw-web-content — Cache is non-authority and deletable after dependent provenance verdicts; _cache/README.md created at instantiation"
-CRC-005: cache-raw-web-content — cache_trails SHALL be Engine-populated in complete() rather than Agent-declared or empty
+CRC-005: cache-raw-web-content — cache_trails SHALL be Engine-populated during work-unit submit or accepted Engine completion rather than Agent-declared or empty
 CRC-006: cache-raw-web-content — Gate cache_coverage rule cross-validates declaration cache_trails with filesystem

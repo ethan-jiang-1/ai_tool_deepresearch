@@ -100,7 +100,7 @@ The directory path is `_work_units/waveN/{work_id}/`, where `waveN` must match t
 
 `b000` is the initial phase-drain batch. `b001+` opens only after gate failure or explicit refill. Ordinary claims in the same drain increment `claim_index`, not `batch_index`. Timeout retry of the same still-valid demand stays in the current batch by default and receives a new `work_id` with a higher `claim_index` and higher `attempt_index`.
 
-`_work_units/_index.json` stores counters, kind registry, work-unit records, leases, runtime refs, status counts, and inspect projections. Status counts and projections are derived caches; `inspect` fails them if they disagree with `work_units`.
+`_work_units/_index.json` stores counters, the authoritative full-kind to short-`kind_code` registry, work-unit records, leases, runtime refs, status counts, and inspect projections. Full `kind` values remain the semantic contract in queue demand, manifest, result, and ledger rows; `kind_code` is only the short encoded ID segment. Status counts and projections are derived caches; `inspect` fails them if they disagree with `work_units`.
 
 Alternative considered: opaque UUID-only IDs. Rejected because this system benefits from human-readable troubleshooting and batch/kind clues during long Agent runs. The manifest and index remain the structured authority when encoded hints disagree.
 
@@ -254,20 +254,36 @@ The archive-facing capability map is:
 
 | Old capability name | Archive target |
 | --- | --- |
-| `relay-provenance-gate` | Replace with `work-unit-provenance-gate` or an equivalently named work-unit/delegated provenance gate home; do not keep relay as the gate capability name. |
-| `subagent-collect` | Likely retire or rename; "collect" is old slot-return language. Positive submit semantics live in `delegated-work-units`, `agentic-queue`, and `agent-output-declaration`. |
-| `subagent-directory-contract` | May remain if rewritten as the sub-agent work-unit envelope/directory view; old `_subagents/` relay directory authority is removed. |
-| `subagent-dispatch` | May remain if dispatch means Engine work-unit claim creating bounded sub-agent prompts; old relay slot dispatch is removed. |
-| `subagent-node-contract` | May remain if rewritten as sub-agent task/result/receipt contracts over work-unit identity; old relay driver guidance is removed. |
+| `relay-provenance-gate` | Replace with `work-unit-provenance-gate`; do not keep relay as the gate capability name. |
+| `subagent-collect` | Retire as a positive capability; "collect" is old slot-return language. Positive submit semantics live in `delegated-work-units`, `agentic-queue`, and `agent-output-declaration`. |
+| `subagent-directory-contract` | Keep only as the sub-agent work-unit envelope/directory view; old `_subagents/` relay directory authority is removed. |
+| `subagent-dispatch` | Keep only when dispatch means Engine work-unit claim creating bounded sub-agent prompts; old relay slot dispatch is removed. |
+| `subagent-node-contract` | Keep as sub-agent task/result/receipt contracts over work-unit identity; old relay driver guidance is removed. |
 | `subagent-relay-driver` | Retire; positive CLI semantics live in `framework-engine`. |
-| `subagent-repair` | Likely retire or absorb; current content is all-slots repair. Positive retry/repair semantics live in `delegated-work-units`, `agentic-queue`, and `repair-loop`. |
-| `subagent-runtime-logging` | Keep if it remains actor-runtime logging and all relay/slot authority is gone; otherwise absorb into `logging-conventions` and `logger`. |
+| `subagent-repair` | Retire or absorb; current content is all-slots repair. Positive retry/repair semantics live in `delegated-work-units`, `agentic-queue`, and `repair-loop`. |
+| `subagent-runtime-logging` | Keep as actor-runtime logging with all relay/slot authority removed; lifecycle evidence binds work-unit identity and optional runtime refs. |
 | `subagent-slots` | Retire; positive lifecycle semantics live in work-unit attempt state. |
 | `cmd-subagent-environment` | Keep unless it teaches relay/slot authority; the sub-agent actor still exists. |
 
 Alternative considered: retire every `subagent-*` capability. Rejected because it would confuse the surviving actor (`sub-agent`) with the retired transport (`relay/slot`) and would remove useful homes for actor-facing task, prompt, logging, and environment contracts.
 
 Alternative considered: rely on requirement-body cleanup while leaving old relay capability names in place. Rejected because `relay-provenance-gate` preserves a low-signal entry point and makes the replacement look like a variant of the removed relay system.
+
+### Decision 14: Use requirement-block cleanup, not raw term deletion
+
+Old production terms SHALL be removed from main specs through requirement-block deltas, not by ad hoc text edits. The cleanup algorithm is:
+
+1. Scan accepted main specs by `### Requirement:` block for retired mechanism terms.
+2. Classify each hit:
+   - pure old mechanism contract -> `REMOVED Requirements` with the exact old title;
+   - stable contract with old wording -> `MODIFIED Requirements` with the exact old title and work-unit wording;
+   - stable contract with old wording in the title -> `RENAMED Requirements` followed by `MODIFIED Requirements` using the new title;
+   - replacement concept missing from main specs -> `ADDED Requirements` under a positive long-lived capability.
+3. Validate exact-title coverage: every old-bearing main requirement block SHALL be covered by `REMOVED`, `MODIFIED`, or `RENAMED`.
+4. Validate archive-facing cleanliness: `ADDED` and `MODIFIED` blocks SHALL have zero retired mechanism terms, except surviving actor terms such as `sub-agent`.
+5. Keep concrete retired examples only in `REMOVED`, proposal/design context, task cleanup ledgers, and hygiene scripts.
+
+This approach lets OpenSpec archive/sync do the main-spec rewrite while still preventing old production concepts from surviving as future guidance.
 
 ## Risks / Trade-offs
 

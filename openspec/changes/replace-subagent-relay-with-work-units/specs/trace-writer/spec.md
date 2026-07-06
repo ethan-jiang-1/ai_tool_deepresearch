@@ -1,4 +1,4 @@
-> req: TRW-003, TRW-005
+> req: TRW-001, TRW-003, TRW-005
 
 ## ADDED Requirements
 
@@ -13,6 +13,15 @@ The system SHALL define delegated bypass trace diagnostics written by gate or in
 - **AND** the event SHALL include what was found and what work-unit coverage was missing
 
 ## MODIFIED Requirements
+
+### Requirement: Unified trace writer with configurable behavior
+
+The unified trace writer SHALL continue to append JSONL events with configurable behavior. Examples for delegated work SHALL use queue and work-unit lifecycle events as the diagnostic vocabulary.
+
+#### Scenario: work-unit trace example is appended
+
+- **WHEN** `traceEntry('work_unit_submit', { passed: true, detail: 'submitted work unit' })` is called
+- **THEN** a JSON line SHALL be appended with the event, pass state, detail, timestamp, and configured trace fields
 
 ### Requirement: Trace entries include bundle field
 

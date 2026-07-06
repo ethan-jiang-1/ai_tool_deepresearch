@@ -79,6 +79,26 @@ If a queue item has no delegated target and no work-unit binding, `operate-queue
 
 ## MODIFIED Requirements
 
+### Requirement: Receipts fail closed and feedback is structured
+
+The Queue Manager SHALL check deterministic receipts through `checkReceipts()` and `inspect()`. Supported receipt prefixes SHALL include `file:`, `json:`, `queue:`, `trace:`, `work_unit:`, and `none`. Unknown prefixes SHALL fail closed. Feedback SHALL be returned as check/inspect/advice-style structured data.
+
+#### Scenario: work-unit receipt prefix is recognized
+
+- **WHEN** a queue receipt references submitted delegated work
+- **THEN** the receipt SHALL use work-unit identity and submitted ledger evidence
+- **AND** unknown receipt prefixes SHALL fail closed
+
+### Requirement: Queue exposes pending task count
+
+The queue manager SHALL export `pendingCount(queue)` for queue v2. The count SHALL include outstanding queue demand in `active_window` plus `refill_pool` and SHALL report delegated in-flight attempts separately. The count SHALL NOT treat delegated work-unit attempts as unclaimed queue demand.
+
+#### Scenario: pending count separates in-flight attempts
+
+- **WHEN** queue v2 has active demand, refill demand, and delegated in-flight work units
+- **THEN** pending count SHALL count only unclaimed queue demand
+- **AND** inspect/projection SHALL expose in-flight attempt counts separately
+
 ### Requirement: Preemption inserts urgent work without hidden execution
 
 Preemption SHALL operate on queue v2 locations. By default, `preempt(queue, item, { reason, unsafeCurrent })` SHALL insert urgent work at the earliest safe position in `active_window` without interrupting an already claimed delegated attempt or non-delegated current task. When the active window is full, the displaced tail queue item SHALL move to `refill_pool` with restore metadata. Replacing active in-progress work SHALL require `unsafeCurrent=true`.

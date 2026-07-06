@@ -1,5 +1,3 @@
-> req: SUS-001
-
 ## REMOVED Requirements
 
 ### Requirement: Slot lifecycle with four states
@@ -34,4 +32,3 @@
 
 - **WHEN** native runtime metadata is available
 - **THEN** it SHALL be recorded as work-unit diagnostic context without becoming gate authority
-

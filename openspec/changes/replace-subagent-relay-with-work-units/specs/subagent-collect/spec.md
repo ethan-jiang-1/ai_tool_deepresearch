@@ -1,34 +1,10 @@
-> req: SUC-001, SUC-002
-
-## ADDED Requirements
-
-### Requirement: Work-unit submit SHALL be the delegated return path
-
-Delegated return SHALL occur through `operate-work-unit submit <bundle> --work-id <id> --result <result.json>`. Submit SHALL validate the result bundle, receipt, nonce, output files, cache trails, queue binding, and index state before queue completion or ledger append.
-
-#### Scenario: valid submit completes one in-flight demand
-
-- **WHEN** a sub-agent returns a valid result for an in-flight `work_id`
-- **THEN** submit SHALL complete the bound `queue_item_id`
-- **AND** append one work-unit ledger row
-
-### Requirement: Invalid submit SHALL be a non-terminal rejection
-
-Invalid submit SHALL record `last_submit_rejection` and diagnostics while keeping the work unit `claimed`. It SHALL NOT complete queue demand, append ledger, or mark the attempt `failed` automatically.
-
-#### Scenario: corrected submit may retry same attempt
-
-- **WHEN** submit is rejected for a missing output file
-- **AND** the result bundle is corrected for the same claimed `work_id`
-- **THEN** a later submit MAY succeed for that same attempt
-
 ## REMOVED Requirements
 
 ### Requirement: Collect validated result.json from all slots
 
 **Reason**: Slot collection is replaced by per-work-unit submit.
 
-**Migration**: Submit each returned work unit by `work_id`; aggregate success is gate coverage, not a collect-all command.
+**Migration**: Use `delegated-work-units` requirement `Submit SHALL be the only successful delegated completion transition`; aggregate success is gate coverage, not a collect-all command.
 
 #### Scenario: collect-all slots is not production return
 
@@ -39,7 +15,7 @@ Invalid submit SHALL record `last_submit_rejection` and diagnostics while keepin
 
 **Reason**: Timeout is now an explicit per-attempt terminal transition.
 
-**Migration**: Use `operate-work-unit timeout` for attempts that exceed their lease.
+**Migration**: Use `delegated-work-units` requirement `Terminal attempt transitions SHALL fail closed`.
 
 #### Scenario: timeout is per work unit
 
@@ -50,7 +26,7 @@ Invalid submit SHALL record `last_submit_rejection` and diagnostics while keepin
 
 **Reason**: Work-unit submit and ledger append are the deterministic merge boundary for delegated outputs.
 
-**Migration**: Gate aggregation reads submitted ledger rows.
+**Migration**: Use `delegated-work-units` requirement `Gates SHALL read submitted work-unit ledger coverage`.
 
 #### Scenario: merge does not bypass submit
 
@@ -61,7 +37,7 @@ Invalid submit SHALL record `last_submit_rejection` and diagnostics while keepin
 
 **Reason**: Batch execution now uses in-flight work units with arbitrary submit order.
 
-**Migration**: Submit each work unit independently by `work_id`.
+**Migration**: Use `agentic-queue` requirement `Delegated submit completes queue demand by work-id binding`.
 
 #### Scenario: batch return uses work_id
 
@@ -72,7 +48,7 @@ Invalid submit SHALL record `last_submit_rejection` and diagnostics while keepin
 
 **Reason**: Artifact verification now bridges work-unit result to queue demand completion and output ledger.
 
-**Migration**: `operate-work-unit submit` validates artifacts and queue binding in one transaction.
+**Migration**: Use `agentic-queue` requirement `Work-unit submit SHALL validate declared output files`.
 
 #### Scenario: artifact verification is submit-bound
 
