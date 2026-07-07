@@ -32,6 +32,7 @@ Heavy actor-boundary canary. This case must be run with a real native Sub-agent,
 1. Create a disposable Wave0 bundle and enqueue one `wave0_source_intake` demand.
 2. Run `operate-work-unit claim` and hand the generated spawn prompt to a real native Sub-agent.
 3. The Sub-agent performs real search/fetch or explicit degraded capture, writes required files, and returns only after verifying writes.
+   - `result.cache_trails` must declare bundle-relative cache leaf directory paths only, not `websearch.json`, `page.md`, or `meta.json` file paths.
 4. Main Agent runs `operate-work-unit submit`.
 5. Record trace checks:
    - `real-subagent-result-written`

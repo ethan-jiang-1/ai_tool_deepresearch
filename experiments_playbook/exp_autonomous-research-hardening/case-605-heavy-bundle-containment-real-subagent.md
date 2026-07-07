@@ -31,6 +31,7 @@ Heavy actor-boundary containment canary. A real Sub-agent must execute the claim
 1. Create a disposable bundle and claim a write-producing work unit.
 2. Hand `task.md`, `_beacon.json`, and spawn prompt to a real native Sub-agent.
 3. Sub-agent writes declared outputs/cache/result/receipt under `bundle_dir`.
+   - `result.cache_trails` must declare bundle-relative cache leaf directory paths only, not `websearch.json`, `page.md`, or `meta.json` file paths.
 4. Submit through `operate-work-unit submit`.
 5. Run `inspect-bundle <bundle>` from repo root.
 6. Record trace checks:

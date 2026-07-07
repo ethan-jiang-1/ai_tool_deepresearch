@@ -120,6 +120,8 @@ describe('work-unit index and envelope', () => {
       assert.match(task, /Read `_beacon\.json` before writing runtime files/);
       assert.match(task, /Returning research findings in chat without writing the required files is a work-unit failure/);
       assert.match(task, /cache `page\.md` must contain fetched page content or an explicit degraded\/fetch-failure record/);
+      assert.match(task, /declare `cache_trails` as bundle-relative cache leaf directory paths only/);
+      assert.match(task, /do not list `websearch\.json`, `page\.md`, or `meta\.json` file paths/);
       assert.match(task, /work_unit_search_started/);
       assert.match(task, new RegExp(record.work_id));
       assert.match(task, new RegExp(record.queue_item_id));
@@ -148,6 +150,8 @@ describe('work-unit index and envelope', () => {
       assert.match(spawn_prompt, new RegExp(manifest.paths.task_ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
       assert.match(spawn_prompt, /Do not generate a new nonce/);
       assert.match(spawn_prompt, /verify every declared output file/);
+      assert.match(spawn_prompt, /cache_trails must list cache leaf directory paths only/);
+      assert.match(spawn_prompt, /do not list websearch\.json, page\.md, or meta\.json file paths/);
       assert.match(spawn_prompt, /runtime-receipt\.jsonl/);
       assert.match(spawn_prompt, /result\.schema\.json/);
       assert.match(spawn_prompt, /runtime_refs diagnostic metadata/);
