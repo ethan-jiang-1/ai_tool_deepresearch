@@ -1,6 +1,6 @@
 ## MODIFIED Requirements
 
-> req: WAI-002, WAI-004, WAI-005, WAI-006, WAI-007
+> req: WAI-002, WAI-005, WAI-006, WAI-007
 
 ### Requirement: Sub-agent executes deepening search and writes bounded output
 
@@ -8,7 +8,9 @@ The Wave1 sub-agent SHALL execute bounded topic deepening according to the work-
 
 The task SHALL require more than summarizing Wave0. For each assigned topic, the sub-agent SHALL search for topic-specific new evidence, fetch source content, write cache trails, and produce outputs that support mechanism analysis, trend/difficulty/limitation analysis, and profile-required counterexample or cross-verification checks. Wave0 artifacts MAY be used as starting context, but Wave0 URLs SHALL NOT satisfy the Wave1 new-source floor.
 
-The submitted result SHALL expose enough structured fields for the Phase Agent and Engine to compare claimed source URLs against Wave0 source URLs and verified cache trails. At minimum, the result or covered artifacts SHALL make claimed source URLs, output files, and cache trail refs inspectable by `work_id`.
+The submitted result SHALL expose enough structured fields for the Phase Agent and Engine to compare accepted source claims against Wave0 source URLs and verified cache trails. At minimum, the result SHALL expose `source_claims[]` directly in result metadata or through a machine-readable artifact declared by the result, plus output files and cache trail refs inspectable by `work_id`. Phase-owned `depth-review.yaml` MAY aggregate these claims, but SHALL NOT introduce accepted source coverage that lacks submitted `work_id` backing.
+
+Each `source_claims[]` entry SHALL identify `url`, `source_ref`, `acceptance_status`, `is_new_vs_wave0`, `cache_trail_refs`, and optional `degraded_capture_ref`. Only structured claims with an accepted/countable status defined by the current source contract count toward coverage. Prose links in `evidence-summary.md` MAY be reported as diagnostics when absent from `source_claims[]`, but SHALL NOT be the primary authority for accepted source coverage.
 
 #### Scenario: bounded output is submitted
 
@@ -29,9 +31,24 @@ The submitted result SHALL expose enough structured fields for the Phase Agent a
 
 ### Requirement: Wave1 gate checks deepening artifacts
 
-Wave1 gate SHALL check deepening artifacts through submitted work-unit ledger coverage, cross-checks, and deterministic depth-review projections. It SHALL require each topic to have `evidence-summary.md`, `question-list.md`, and `depth-review.yaml` covered by or derived from submitted work-unit outputs.
+Wave1 gate SHALL check deepening artifacts through submitted work-unit ledger coverage, cross-checks, and deterministic depth-review projections. It SHALL require each topic to have `evidence-summary.md` and `question-list.md` covered by submitted work-unit outputs, plus a Phase-owned `depth-review.yaml` derived from submitted work-unit rows rather than filesystem-only artifacts.
 
 The gate SHALL validate deterministic depth-adjacent facts only: source URL novelty by exact URL comparison against Wave0 source URLs, claimed source URL to submitted cache trail mapping, required depth-review keys, profile parameter presence, and supplementary loop coverage. It SHALL NOT judge whether the evidence is insightful or whether the prose quality is sufficient.
+
+`depth-review.yaml` SHALL contain the following minimum structure:
+- `version`
+- `topic_slug`
+- `reviewed_work_unit_refs[]`
+- `wave0_source_urls[]`
+- `source_claims[]` with `url`, `source_ref`, `acceptance_status`, `is_new_vs_wave0`, `cache_trail_refs[]`, and optional `degraded_capture_ref`
+- `new_source_urls[]`
+- `new_source_floor` with `required`, `observed`, and `source`
+- `depth_dimensions` with `mechanism`, `trend_or_difficulty`, and `limitation_or_dispute` statuses and refs
+- `profile_checks` with entries for counterexample search and cross-verification when required
+- `decision` in `accept`, `supplement_required`, or `blocked_contract`
+- `supplementary_queue_item_ids[]`
+
+Missing profile/runtime parameters required to compute the floor SHALL produce `decision: blocked_contract` or a gate diagnostic; the gate SHALL NOT invent hidden default thresholds.
 
 #### Scenario: deepening artifact requires ledger row
 
@@ -43,9 +60,15 @@ The gate SHALL validate deterministic depth-adjacent facts only: source URL nove
 - **WHEN** `depth-review.yaml` records fewer new source URLs than the profile-derived floor
 - **THEN** Wave1 gate SHALL fail with diagnostics naming the topic, observed new-source count, required floor, and repair path through supplementary `wave1_topic_deepening`
 
+#### Scenario: missing profile parameter blocks hidden floor
+
+- **WHEN** the required profile/runtime parameter for `new_source_floor.required` is absent
+- **THEN** `depth-review.yaml` SHALL record `decision: blocked_contract` or Wave1 gate SHALL fail with a `missing_profile_parameter` diagnostic
+- **AND** Wave1 gate SHALL NOT invent a hidden default source floor
+
 #### Scenario: missing cache trail for claimed source fails
 
-- **WHEN** `evidence-summary.md` or a topic reference claims an accepted source URL
+- **WHEN** submitted `source_claims[]`, submitted `accepted_source_urls[]`, or a Phase-owned review/reference projection declares an accepted source URL
 - **AND** no submitted verified cache trail or explicit degraded-capture record maps to that source URL
 - **THEN** Wave1 gate SHALL fail cache/source mapping for that topic
 
@@ -53,7 +76,7 @@ The gate SHALL validate deterministic depth-adjacent facts only: source URL nove
 
 Wave1 playbook SHALL verify deepening end to end through work-unit claim, sub-agent execution, submit, ledger, Phase Agent depth review, supplementary refill when shallow, backfill, and gate.
 
-The playbook SHALL include negative coverage where a structurally valid Wave1 output is shallow: it reuses Wave0 sources, omits depth dimensions, or claims source URLs without cache trails. That fixture-backed negative case SHALL prove Engine/phase contract rejection only; it SHALL NOT claim to prove real Agent research quality.
+The playbook SHALL include negative coverage where a structurally valid Wave1 output is shallow: it reuses Wave0 sources, omits depth dimensions, or declares structured accepted source claims without cache trails. That fixture-backed negative case SHALL prove Engine/phase contract rejection only; it SHALL NOT claim to prove real Agent research quality.
 
 #### Scenario: Wave1 playbook covers out-of-order submit
 

@@ -6,7 +6,7 @@
 
 The Wave1 complete gate definition SHALL include work-unit provenance checks for delegated topic deepening outputs. Wave1 SHALL validate per-topic output coverage through submitted work-unit ledger rows and SHALL reject non-work-unit-only evidence.
 
-The Wave1 gate definition SHALL also include deterministic depth-contract checks for `artifacts/wave1/{topic}/depth-review.yaml`, exact source URL novelty relative to Wave0 accepted source URLs, claimed source URL to submitted cache trail mapping, required depth-review keys, and supplementary queue coverage when depth review records a repair/refill path.
+The Wave1 gate definition SHALL also include deterministic depth-contract checks for `artifacts/wave1/{topic}/depth-review.yaml`, exact source URL novelty relative to Wave0 accepted source URLs, structured source claim to submitted cache trail mapping, required depth-review keys, and supplementary queue coverage when depth review records a repair/refill path.
 
 These checks SHALL remain deterministic process/structure checks. They SHALL NOT score prose quality, source insightfulness, homepage/path depth, Jaccard similarity, or self-reference content.
 
@@ -26,6 +26,12 @@ These checks SHALL remain deterministic process/structure checks. They SHALL NOT
 - **WHEN** a topic's depth review records new source URLs below the profile-derived floor
 - **THEN** Wave1 complete gate SHALL fail
 - **AND** diagnostics SHALL name the topic, required floor, observed new source count, and supplementary work-unit repair path
+
+#### Scenario: Wave1 missing floor parameter blocks hidden defaults
+
+- **WHEN** the active profile/runtime data lacks a required parameter for deriving the Wave1 new-source floor
+- **THEN** Wave1 complete gate SHALL fail with a `missing_profile_parameter` diagnostic
+- **AND** the gate SHALL NOT substitute an unstated default threshold
 
 ### Requirement: Wave2 complete gate rule set
 
@@ -55,7 +61,7 @@ These checks SHALL NOT judge whether the synthesis is profound or whether a find
 
 ### Requirement: Gate CLI evaluates wave1 rules from definition
 
-The Wave1 gate CLI SHALL evaluate work-unit provenance rule types and Wave1 depth-contract rule types from the gate definition. It SHALL use work-unit helper diagnostics for ledger/index/manifest/result/receipt/beacon/hash/cache mismatches and SHALL use deterministic readers for `depth-review.yaml`, Wave0 source URL sets, and submitted cache trail mappings.
+The Wave1 gate CLI SHALL evaluate work-unit provenance rule types and Wave1 depth-contract rule types from the gate definition. It SHALL use work-unit helper diagnostics for ledger/index/manifest/result/receipt/beacon/hash/cache mismatches and SHALL use deterministic readers for `depth-review.yaml`, Wave0 source URL sets, structured source claims, and submitted cache trail mappings.
 
 The Wave1 CLI SHALL not scan non-work-unit delegated directories as a production coverage source, and SHALL not reintroduce retired content heuristics as blocking checks or diagnostic advice.
 

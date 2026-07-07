@@ -31,7 +31,7 @@
 
 Wave1/Wave2 深度恢复不能只写在 prose 里，也不能只靠 gate 的自由文本 advice。Apply 应让 Phase Agent 产生可审查的 projection：
 
-- Wave1: `artifacts/wave1/{topic}/depth-review.yaml`，记录 `topic_slug`、Wave0 URL set、claimed source URLs、new source URLs、required new-source floor、depth dimensions、profile checks、decision、supplementary queue refs。
+- Wave1: `artifacts/wave1/{topic}/depth-review.yaml`，记录 `topic_slug`、reviewed submitted work-unit refs、Wave0 URL set、structured source claims reviewed from submitted results、new source URLs、required new-source floor、depth dimensions、profile checks、decision、supplementary queue refs。
 - Wave2: 扩展现有 `finding-index.yaml` 和 `cross-topic-ledger.md`，记录 scan matrix coverage、confidence/backing、gap status、search decision、targeted search receipt refs、pure synthesis eligibility。
 
 这些 projection 不是 semantic authority。它们是 Agent 判断后的可检查痕迹，供 JS 验证“Agent 是否完成了该做的步骤”。
@@ -50,13 +50,13 @@ Alternative rejected: 让 submit 因“内容浅”直接 reject。这样会把 
 
 Wave1 需要证明新增 evidence。Apply 应使用 exact URL equality 和 submitted source mapping 判断某个 URL 是否相对 Wave0 新增；该判断只用于 new-source floor，不用于 broad content quality judgment。
 
-`required_new_source_floor` 从 profile 派生：`ceil(wave1_per_topic_ref_floor * topic_unique_ratio)`，最小为 1。若 profile 缺少 `topic_unique_ratio`，Phase Agent must record the fallback used in `depth-review.yaml` and gate/inspect should diagnose the missing parameter rather than invent hidden behavior.
+`required_new_source_floor` SHALL be derived only from explicit profile/runtime parameters. The preferred formula is `ceil(wave1_per_topic_ref_floor * topic_unique_ratio)`, minimum 1, when both parameters are present. If the required profile/runtime parameter is missing, the Agent or gate must produce a `missing_profile_parameter` diagnostic and fail or repair through an accepted profile/template path; no hidden fallback is allowed.
 
 Reused Wave0 sources可以被引用为背景，但不能满足 new-source floor。Exact duplicate URL 不等同于恢复 `content_dedup`：这里没有 Jaccard、homepage、path-depth 或 self-reference guess；只是对“新证据”这个 contract 做集合差。
 
 ### 4. Cache depth is enforced per accepted source claim
 
-Wave1 evidence-summary 和 topic references 中被 accepted 的 source URL 必须能映射到 submitted ledger row 的 verified `cache_trails`，或者有 explicit degraded-capture/fetch-failure record。Sparse cache trails 如“7 个 source claim 只有 1 个 cache leaf”必须在 submit/preflight/gate surfaces 暴露为 contract failure。
+Wave1 accepted source URLs must come from submitted structured `source_claims[]` / `accepted_source_urls[]`, not from ad hoc prose scraping or Phase-owned review projection alone. `depth-review.yaml` may aggregate reviewed claims, but it cannot introduce accepted source coverage without a submitted `work_id` binding. Each accepted source claim used by evidence summaries or topic references must map to a submitted ledger row's verified `cache_trails`, or to an explicit degraded-capture/fetch-failure record. Sparse cache trails 如“7 个 accepted source claim 只有 1 个 cache leaf”必须在 submit/preflight/gate surfaces 暴露为 contract failure.
 
 Primary enforcement should be as early as possible:
 
@@ -68,10 +68,10 @@ Primary enforcement should be as early as possible:
 
 Pure synthesis remains main-agent work and still does not require delegated work-unit coverage. But “pure” is legal only when the Agent has completed scan matrix + triage + gap analysis and the resulting finding index says no unresolved search-required finding remains.
 
-If a finding is `exploit_search` or `explore_search`, it must either:
+If triage initially routes a finding to `exploit_search` or `explore_search`, convergence must leave that finding in one of two legal states:
 
-- have submitted `wave2_targeted_evidence` receipt refs and updated backing refs, or
-- be explicitly routed to `defer_hitl2`, `requires_internal_data`, or `record_only` with a reason visible in ledger/index.
+- the search decision remains and has submitted `wave2_targeted_evidence` receipt refs plus updated backing refs; or
+- the finding transitions to `defer_hitl2`, `requires_internal_data`, or `record_only` with a matching `gap_status` and a reason visible in ledger/index.
 
 Alternative rejected: require every Wave2 synthesis to spawn delegated search. That would waste work when existing Wave1 evidence is sufficient and would violate the accepted split between pure synthesis and targeted evidence.
 
@@ -92,7 +92,7 @@ They should not judge insight, prose quality, or source intellectual value. If a
 ## Risks / Trade-offs
 
 - More artifacts can increase Agent workload -> Keep projection schemas small and generated from work the Agent already performs; avoid duplicating full prose in YAML.
-- Source novelty floor may be too strict for narrow topics -> Make the floor profile-driven and allow explicit degraded capture/deferral only through trace-visible degraded handoff or HITL2 routing, not silent pass.
+- Source novelty floor may be too strict for narrow topics -> Make the floor explicit and profile-driven; missing floor inputs fail with diagnostics instead of hidden defaults. Explicit degraded capture can satisfy cache-trail mapping for an otherwise accepted source, but it does not waive source novelty or depth-dimension floors.
 - Gate checks may accidentally become semantic scoring -> Tests should include allowed low-prose/high-structure fixtures and rejected missing-work fixtures, proving the gate checks process evidence rather than “brilliance”.
 - Supplementary Wave1 loops can grow run cost -> Use bounded supplementary tasks and require `supplementary_queue_item_ids` / decision reasons in `depth-review.yaml`.
 - Wave2 can defer too much to HITL2 -> Require unresolved findings and deferrals to appear in synthesis, ledger, and HITL2 handoff so deferral is visible rather than hidden.
@@ -108,6 +108,6 @@ They should not judge insight, prose quality, or source intellectual value. If a
 
 Rollback is ordinary OpenSpec revert before archive: remove the active change or revert apply commits. Runtime bundles produced under the new contract should remain inspectable because new artifacts live under bundle `artifacts/` and do not alter historical ledger authority.
 
-## Open Questions
+## Apply Notes
 
-None for proposal readiness. During apply, if the existing profile template lacks `topic_unique_ratio` in some paths, implementers should either add the explicit parameter through the relevant accepted profile/template surface or make the gate produce a clear missing-profile-parameter diagnostic before proceeding.
+No proposal-blocking open questions remain. During apply, if the existing profile/template surface lacks `wave1_per_topic_ref_floor` or `topic_unique_ratio` in any path, implementers SHALL either add the explicit parameter through the relevant accepted profile/template surface or make the Agent/gate produce a clear `missing_profile_parameter` diagnostic before proceeding. Hidden default thresholds remain out of scope.

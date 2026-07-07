@@ -6,7 +6,7 @@
 
 Iterative triage SHALL enqueue delegated queue demand for targeted search only when the Main Agent judges new evidence is required. Each delegated search SHALL return through the same work-unit submit loop.
 
-Before pure synthesis can complete, the Main Agent SHALL finish cross-topic scan matrix construction, finding confidence triage, gap analysis, and emergent-search decision recording. Convergence SHALL mean every finding has a decision, every search-required finding has submitted targeted evidence or an explicit deferral/record-only decision, and no unresolved P0/P1 evidence gap is silently omitted from ledger/index/synthesis.
+Before pure synthesis can complete, the Main Agent SHALL finish cross-topic scan matrix construction, finding confidence triage, gap analysis, and emergent-search decision recording. Convergence SHALL mean every finding has a decision, every search-required finding has submitted targeted evidence or an explicit deferral/record-only decision, and no unresolved `priority: p0` / `priority: p1` evidence gap is silently omitted from ledger/index/synthesis.
 
 The triage loop SHALL read `rb_profile.yaml` values including `wave2_cross_topic_depth`, `wave2_emergent_search_rounds`, `p0p1_independent_backing`, `quality_min_tier`, and `quality_min_substance`. When a required profile parameter is missing, the Phase Agent SHALL record the missing parameter as a diagnostic or deferral rather than silently applying an unstated threshold.
 
@@ -19,11 +19,11 @@ The triage loop SHALL read `rb_profile.yaml` values including `wave2_cross_topic
 
 - **WHEN** the Main Agent attempts to complete the pure synthesis queue item
 - **THEN** `finding-index.yaml` SHALL show that all findings have decisions
-- **AND** findings with `decision` in `exploit_search` or `explore_search` SHALL have submitted targeted evidence refs or an explicit unresolved/deferred routing decision
+- **AND** findings that require targeted search SHALL either have submitted targeted evidence refs or transition to an explicit `defer_hitl2`, `requires_internal_data`, or `record_only` routing decision with matching `gap_status`
 
 #### Scenario: uncertain finding triggers targeted delegated search
 
-- **WHEN** a P0/P1 candidate finding lacks the required independent backing refs and can be checked with public evidence
+- **WHEN** a finding with `priority: p0` or `priority: p1` lacks the required independent backing refs and can be checked with public evidence
 - **THEN** the Agent SHALL enqueue `wave2_targeted_evidence`
 - **AND** the finding SHALL remain unresolved until the targeted work unit is submitted or explicitly deferred
 
@@ -33,20 +33,31 @@ Wave2 SHALL produce three artifacts as a group, not a single synthesis.md:
 
 - **`artifacts/wave2/synthesis.md`** — narrative projection for human reading. SHALL contain: cross-topic patterns and themes, contradictions/tensions between topic findings, confidence assessment per major claim, explicit Markdown links to Wave0/Wave1 artifacts, references to finding ids (W2F-xxx), and Unresolved Cross-Topic Questions section. SHALL NOT serve as dynamic finding source of truth, carry full scan matrix, or solely decide seed topic backfill.
 - **`artifacts/wave2/cross-topic-ledger.md`** — Agent-readable dynamic ledger. SHALL contain 6 fixed sections: Cross-Topic Scan Matrix, Wave1 Legacy Questions, Cross-Topic Resolutions, Emergent Cross-Topic Questions, Exploration Decisions, HITL2 Handoff. SHALL be dynamically grown (appended/updated per round), not written once at the end.
-- **`artifacts/wave2/finding-index.yaml`** — JS-readable structured shadow index. Each finding SHALL have: `id` (W2F-xxx), `type` (enum), `status` (enum), `decision` (enum), `affected_topics` (array, min 2 for emergent), `origin_refs`, `trigger_refs`, `search_required` (boolean), `subagent_receipt_refs`, `appears_in_synthesis` (boolean), `hitl2_handoff` (boolean), `confidence` (enum), `independent_backing_refs` (array), and `gap_status` (enum). SHALL be parseable YAML.
+- **`artifacts/wave2/finding-index.yaml`** — JS-readable structured shadow index. Each finding SHALL have: `id` (W2F-xxx), `type` (enum), `priority` (enum), `status` (enum), `decision` (enum), `affected_topics` (array, min 2 for emergent), `origin_refs`, `trigger_refs`, `search_required` (boolean), `subagent_receipt_refs`, `appears_in_synthesis` (boolean), `hitl2_handoff` (boolean), `confidence` (enum), `independent_backing_refs` (array), and `gap_status` (enum). SHALL be parseable YAML.
 
 Synthesis narrative SHALL reference finding ids (W2F-xxx) to maintain traceability from narrative back to ledger/index. At least 1 reference to a wave1 `evidence-summary.md` or `question-list.md` SHALL exist.
 
 **Question status tracking across Wave1/Wave2**: Synthesis SHALL read wave1's four-section question-list（Targets → Reconciliation → Emergent Protocol → Exploration/Exploitation Decision）as structured input. Wave2's cross-topic-ledger SHALL serve as the cross-topic continuation of the per-topic question tracking: Wave1 Legacy Questions section imports unresolved items from Wave1 question-lists, Cross-Topic Resolutions section records integration of legacy questions using other topics' evidence, and Emergent Cross-Topic Questions section captures new questions invisible from any single per-topic perspective. Question status labels (`[开放]`, `[部分解答]`, `[涌现]`, `[需内部数据]`, `[已解决]`) flow from Wave1 question-list through Wave2 ledger to backfill projection.
 
-`finding-index.yaml` SHALL also include a top-level synthesis eligibility projection recording scan coverage and unresolved search-required counts, so the gate can distinguish legal pure synthesis from skipped synthesis work.
+`finding-index.yaml` SHALL also include a top-level `synthesis_eligibility` projection recording scan coverage and unresolved search-required counts, so the gate can distinguish legal pure synthesis from skipped synthesis work.
+
+The minimum `synthesis_eligibility` shape SHALL include:
+- `pure_synthesis_eligible` (boolean)
+- `scan_matrix_present` (boolean)
+- `scan_topic_pair_coverage` (object or array with checked topic-pair refs)
+- `unresolved_search_required_count` (integer)
+- `targeted_search_required_count` (integer)
+- `targeted_search_submitted_count` (integer)
+- `explicit_deferral_count` (integer)
+- `profile_params_read[]`
+- `ineligibility_reasons[]`
 
 #### Scenario: Three artifacts exist and are structurally complete
 
 - **WHEN** Phase Agent completes the synthesis task
 - **THEN** `synthesis.md`, `cross-topic-ledger.md`, and `finding-index.yaml` SHALL all exist and be non-empty
 - **AND** `cross-topic-ledger.md` SHALL contain all 6 fixed sections
-- **AND** `finding-index.yaml` SHALL parse as valid YAML with top-level keys `version`, `source_layer`, `ledger`, `synthesis`, `scan`, `findings`
+- **AND** `finding-index.yaml` SHALL parse as valid YAML with top-level keys `version`, `source_layer`, `ledger`, `synthesis`, `scan`, `findings`, `synthesis_eligibility`
 
 #### Scenario: Synthesis narrative references finding ids
 
@@ -83,6 +94,11 @@ Finding type enum values:
 - `cross_topic_resolution`: Legacy question answered by other topics' existing evidence
 - `cross_topic_emergent_question`: New question first visible only after cross-topic alignment
 
+Finding priority enum values:
+- `p0`: Major report claim or must-answer finding
+- `p1`: Important supporting finding or likely HITL2 decision input
+- `p2`: Contextual, low-impact, or record-only finding
+
 Finding status enum values:
 - `resolved`: Fully answered
 - `partial`: Partially answered
@@ -103,6 +119,14 @@ Confidence enum values:
 - `low`: Weak or single-source backing
 - `uncertain`: Requires search, internal data, or HITL2 judgment before use as a major claim
 
+Gap status enum values:
+- `no_gap`: Existing accepted evidence is enough for the finding's current decision
+- `needs_search`: Public targeted evidence search is required and has not yet been submitted
+- `search_submitted`: Targeted evidence search was submitted and linked to the finding
+- `deferred_hitl2`: The gap is intentionally routed to HITL2
+- `requires_internal_data`: The gap cannot be resolved with public evidence
+- `record_only`: The gap is recorded but not pursued within Wave2 budget
+
 JS SHALL enforce these minimum consistency rules deterministically:
 1. Every finding has all required fields
 2. `cross_topic_resolution` has non-empty `origin_refs` AND non-empty `trigger_refs`
@@ -114,6 +138,10 @@ JS SHALL enforce these minimum consistency rules deterministically:
 8. `appears_in_synthesis=false` implies `hitl2_handoff=true` OR `decision=record_only`（prevents orphan finding）
 9. `confidence=high` implies enough `independent_backing_refs` to satisfy the profile-required floor
 10. `search_required=true` with no submitted receipt refs implies the finding is not resolved unless its decision is `defer_hitl2`, `requires_internal_data`, or `record_only`
+11. `gap_status=needs_search` implies `decision in [exploit_search, explore_search]` and blocks pure synthesis eligibility
+12. `gap_status=search_submitted` implies non-empty `subagent_receipt_refs`
+13. `synthesis_eligibility.pure_synthesis_eligible=true` implies `unresolved_search_required_count=0` and no finding with `gap_status=needs_search`
+14. `priority in [p0, p1]` with `confidence in [low, uncertain]` implies pure synthesis eligibility is false unless `gap_status` is `search_submitted`, `deferred_hitl2`, `requires_internal_data`, or `record_only` with matching receipts or routing decision
 
 JS SHALL NOT judge whether a resolution is "smart," an emergent question is "profound," or a research direction is "worth pursuing."
 
@@ -146,6 +174,17 @@ JS SHALL NOT judge whether a resolution is "smart," an emergent question is "pro
 - **WHEN** a finding declares `confidence: high`
 - **THEN** its `independent_backing_refs` SHALL meet the profile-required independent backing floor
 - **AND** if the floor is not met, JS SHALL flag the finding as inconsistent rather than silently downgrading it
+
+#### Scenario: Synthesis eligibility summarizes unresolved search gaps
+
+- **WHEN** `finding-index.yaml` contains a finding with `gap_status: needs_search`
+- **THEN** `synthesis_eligibility.pure_synthesis_eligible` SHALL be false
+- **AND** `synthesis_eligibility.unresolved_search_required_count` SHALL be greater than 0
+
+#### Scenario: Under-backed priority finding blocks pure synthesis until routed
+
+- **WHEN** `finding-index.yaml` contains a finding with `priority: p0`, `confidence: low`, and no submitted targeted evidence receipt or explicit deferral/internal-data/record-only routing
+- **THEN** `synthesis_eligibility.pure_synthesis_eligible` SHALL be false
 
 ### Requirement: Cross-topic scan matrix as process evidence surface
 

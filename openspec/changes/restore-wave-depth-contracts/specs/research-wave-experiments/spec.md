@@ -6,7 +6,7 @@
 
 Wave1 playbooks SHALL verify topic deepening through work units and SHALL reject placeholder, shallow, cache-thin, or non-work-unit delegated artifacts as pass evidence.
 
-Wave1 controlled E2E SHALL include a negative case where structurally present `evidence-summary.md` and `question-list.md` are insufficient because they reuse Wave0 URLs, omit required depth dimensions, or claim source URLs without matching submitted cache trails. The repair path SHALL be supplementary `wave1_topic_deepening` work-unit demand, not force-advance.
+Wave1 controlled E2E SHALL include a negative case where structurally present `evidence-summary.md` and `question-list.md` are insufficient because they reuse Wave0 URLs, omit required depth dimensions, or declare structured accepted source claims without matching submitted cache trails. The repair path SHALL be supplementary `wave1_topic_deepening` work-unit demand, not force-advance.
 
 #### Scenario: Wave1 boundary rejects non-work-unit artifact
 
@@ -21,7 +21,7 @@ Wave1 controlled E2E SHALL include a negative case where structurally present `e
 
 #### Scenario: Wave1 playbook rejects cache-thin source claims
 
-- **WHEN** a Wave1 topic output claims multiple accepted source URLs
+- **WHEN** Wave1 submitted `source_claims[]` / `accepted_source_urls[]` declare multiple accepted source URLs
 - **AND** submitted cache trails cover only a subset of those URLs
 - **THEN** the playbook SHALL observe cache/source mapping failure before Wave1 pass
 
@@ -44,9 +44,9 @@ Wave2 controlled E2E SHALL include negative coverage for skipped synthesis work:
 
 #### Scenario: Wave2 uncertain finding triggers targeted work unit
 
-- **WHEN** the finding index marks a P0/P1 finding as search-required
+- **WHEN** the finding index marks a finding with `priority: p0` or `priority: p1` as search-required
 - **THEN** the playbook SHALL enqueue and submit `wave2_targeted_evidence`
-- **AND** Wave2 SHALL pass only after the finding is resolved or explicitly deferred
+- **AND** Wave2 SHALL pass only after the finding is resolved through submitted evidence or explicitly routed to deferral/internal-data/record-only handling
 
 ### Requirement: Full-chain waves sequential playbook
 

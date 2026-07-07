@@ -8,7 +8,14 @@ Wave1 phase body SHALL describe topic deepening delegated work as work-unit kind
 
 Wave1 phase body SHALL instruct the Phase Agent that Wave0 evidence is foundation context, not completion evidence for Wave1. Each topic deepening task SHALL require topic-specific new source discovery, mechanism analysis, trend/difficulty/limitation analysis, and profile-driven counterexample or cross-verification behavior when enabled by `rb_profile.yaml`.
 
-The phase body SHALL require a per-topic depth review projection at `artifacts/wave1/{topic}/depth-review.yaml` before a topic is treated as done. The review projection SHALL record claimed source URLs, Wave0 source URLs used for novelty comparison, new source URLs, required new-source floor, depth dimensions covered, profile checks, decision, and any supplementary queue item IDs.
+The phase body SHALL require a per-topic depth review projection at `artifacts/wave1/{topic}/depth-review.yaml` before a topic is treated as done. The review projection SHALL record reviewed submitted work-unit refs, structured source claims reviewed from submitted results, Wave0 source URLs used for novelty comparison, new source URLs, required new-source floor, depth dimensions covered, profile checks, decision, and any supplementary queue item IDs.
+
+Depth review decision values SHALL be closed:
+- `accept`: required source novelty, cache mapping, depth dimensions, and profile checks are satisfied.
+- `supplement_required`: shallow output, too few new sources, missing depth dimensions, missing cache mapping, or unmet profile-required checks require supplementary `wave1_topic_deepening`.
+- `blocked_contract`: bounded supplementary attempts are exhausted, required profile/runtime parameters are missing, or the review cannot establish deterministic coverage; this records a visible blocker and SHALL NOT count as topic completion.
+
+Explicit degraded-capture records MAY satisfy cache mapping for a source that could not be fully fetched after the required fetch chain, but SHALL NOT waive source novelty floors, depth dimensions, or profile checks.
 
 #### Scenario: Wave1 deepening uses work-unit kind
 
@@ -19,7 +26,8 @@ The phase body SHALL require a per-topic depth review projection at `artifacts/w
 
 - **WHEN** a Wave1 work unit submits `evidence-summary.md` and `question-list.md`
 - **THEN** the Phase Agent SHALL produce `artifacts/wave1/{topic}/depth-review.yaml`
-- **AND** the topic SHALL NOT be considered complete until the depth review records `decision: accept` or a trace-visible degraded/deferred decision allowed by the active gate contract
+- **AND** the topic SHALL NOT be considered complete until the depth review records `decision: accept`
+- **AND** `supplement_required` or `blocked_contract` SHALL keep the topic incomplete for normal Wave1 pass
 
 #### Scenario: Shallow Wave1 output routes to supplementary work unit
 

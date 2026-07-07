@@ -8,7 +8,7 @@ Change 1 已经稳定 runtime position 和 queue；Change 2 已经把 gate quali
 
 - Wave1 `wave1_topic_deepening` SHALL 明确要求 topic-specific new evidence，而不是复述 Wave0：每个 topic 的 deepening 任务必须覆盖新 source、机制分析、trend/difficulty/limitation 分析，并按 profile 执行 counterexample / cross-verification 要求。
 - Wave1 Phase Agent SHALL review submitted work-unit output before accepting the topic as done. Shallow output, too few genuinely new sources, missing mechanism/trend/limitation analysis, or unresolved profile-required checks SHALL route to repair/retry/supplementary `wave1_topic_deepening` tasks instead of force-advance.
-- Wave1 claimed source URL coverage SHALL be cache-trail-backed: every accepted source URL named in `evidence-summary.md` or topic references must have a submitted, verified cache trail or an explicit degraded-capture record. Sparse cache trails are a failed contract, not a cosmetic warning.
+- Wave1 claimed source URL coverage SHALL be cache-trail-backed: every accepted source URL declared in submitted structured `source_claims[]` / `accepted_source_urls[]` and used by `evidence-summary.md` or topic references must have a submitted, verified cache trail or an explicit degraded-capture record. Sparse cache trails are a failed contract, not a cosmetic warning.
 - Wave1 supplementary loops SHALL use the Change 1 queue behavior: legal `wave1-deepen-{topic}-vN` style queue items with explicit `payload.topic_slug`, work-unit claim/submit, and submitted ledger coverage.
 - Wave2 pure synthesis path SHALL be legal only after the Phase Agent completes a cross-topic scan matrix, confidence triage, gap analysis, and emergent-search decision showing no unresolved evidence gap that requires delegated search.
 - Wave2 findings SHALL carry confidence/backing signals that are structurally checkable: independent backing counts or refs, status/decision consistency, unresolved gap markers, and targeted search receipt refs when search was required.
@@ -32,7 +32,6 @@ None.
 - `cache-raw-web-content`: cache trail coverage is tightened for Wave1 accepted source claims and explicit degraded capture records.
 - `work-unit-provenance-gate`: delegated depth outputs keep submitted work-unit ledger/cache/hash authority, and diagnostics distinguish shallow/depth-contract failures from provenance drift.
 - `research-wave-experiments`: controlled wave playbooks add shallow Wave1, missing cache trail, missing Wave2 scan/triage, targeted search, and non-shallow happy-path coverage.
-- `version-management`: apply updates repo-root `CHANGELOG.md` and `DPT_FRAMEWORK/RUN.md` banner to the proposal-declared `v0.8`.
 
 ## Impact
 
