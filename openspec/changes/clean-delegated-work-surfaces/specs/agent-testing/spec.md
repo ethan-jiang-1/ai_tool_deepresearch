@@ -1,18 +1,40 @@
-> req: AGT-003
+> req: AGT-001, AGT-002, AGT-003, AGT-005
 
 ## MODIFIED Requirements
 
+### Requirement: gate-loop command experiment playbooks (AGT-001)
+
+The gate-loop Agent-assisted command experiment family SHALL use current command-experiment case naming and cost/role taxonomy. Current gate-loop playbooks SHALL be `case-<id>-<cost>-<proof-role>.md` files under `experiments_playbook/exp_gate-loop/`, SHALL create isolated disposable bundles, SHALL write verdict-affecting checks to the bundle trace, and SHALL derive PASS/FAIL from trace JSONL `check` events.
+
+Current main spec Purpose SHALL describe command experiments as case/cost playbooks over real disposable bundles and trace-backed verdicts. It SHALL NOT describe the current testing system as simple/medium/complex `test-*` playbooks when those files no longer exist as current runner surfaces.
+
+#### Scenario: gate-loop cases use current case taxonomy
+
+- **WHEN** current gate-loop experiment guidance names runnable playbooks
+- **THEN** it SHALL name current case/cost files such as the light three-return case, repair-loop case, and full-pipeline case
+- **AND** it SHALL NOT name `test-simple.md`, `test-medium.md`, or `test-complex.md` as current runnable proof
+
+### Requirement: gate-fork command experiment playbooks (AGT-002)
+
+The gate-fork Agent-assisted command experiment family SHALL use current command-experiment case naming and cost/role taxonomy. Current gate-fork playbooks SHALL be `case-<id>-<cost>-<proof-role>.md` files under `experiments_playbook/exp_gate-fork/`, SHALL create isolated disposable bundles, SHALL write verdict-affecting checks to the bundle trace, and SHALL derive PASS/FAIL from trace JSONL `check` events.
+
+#### Scenario: gate-fork cases use current case taxonomy
+
+- **WHEN** current gate-fork experiment guidance names runnable playbooks
+- **THEN** it SHALL name current case/cost files such as the four-return case, repair-retry case, and full-pipeline case
+- **AND** it SHALL NOT name `test-simple.md`, `test-medium.md`, or `test-complex.md` as current runnable proof
+
 ### Requirement: Three-level real subagent test playbooks (AGT-003)
 
-The real subagent test playbook family SHALL exercise sub-agent actor behavior through work-unit claim, bounded prompt execution, submit, submitted ledger coverage, and gate-visible provenance. It SHALL keep light/standard/heavy levels, but production-path assertions SHALL use work-unit artifacts and Engine submit results.
+The real subagent test playbook family SHALL exercise sub-agent actor behavior through work-unit claim, bounded prompt execution, submit, submitted ledger coverage, and gate-visible provenance. It SHALL use current case/cost playbook naming and light/standard/heavy cost labels where applicable; production-path assertions SHALL use work-unit artifacts and Engine submit results.
 
 Current runnable real-subagent playbooks SHALL NOT use retired relay/slot production mechanisms as proof surfaces. Old relay/slot cases SHALL be migrated when they still prove current work-unit behavior, or removed from current experiment surfaces when they no longer have current proof or diagnostic value.
 
 Retired relay/slot proof surfaces include relay slot directories, slot identity fields, relay commit/spawn events, relay dispatch manifests, and old relay helper APIs.
 
-#### Scenario: simple subagent playbook uses work-unit path
+#### Scenario: light or heavy subagent playbook uses work-unit path
 
-- **WHEN** the simple real subagent playbook runs
+- **WHEN** a current real-subagent playbook runs
 - **THEN** it SHALL claim a work unit, spawn a bounded sub-agent task, submit by `work_id`, and verify submitted ledger coverage
 
 #### Scenario: old relay subagent playbook is not current
@@ -49,3 +71,21 @@ Fixture-backed or old relay/slot evidence SHALL NOT satisfy real-agent proof unl
 
 - **WHEN** a claimed work unit lacks matching runtime evidence for its receipt nonce
 - **THEN** the real subagent playbook SHALL NOT claim proof of real sub-agent execution
+
+### Requirement: Playbook frontmatter weight field (AGT-005)
+
+Each command experiment playbook SHALL carry runner-facing cost metadata that matches the current command-experiment convention. Until the accepted frontmatter schema grows a dedicated `standard` value, filename cost labels SHALL map as follows: `light` and `standard` files use `weight: light`, while `heavy` files use `weight: heavy`.
+
+Current specs SHALL NOT describe old simple/medium/complex filenames as the way to infer execution cost. Runner-facing docs MAY explain legacy mappings only as cleanup-control or migration context, not as current authoring guidance.
+
+#### Scenario: cost label and weight remain aligned
+
+- **WHEN** a current playbook is named `case-<id>-standard-<role>.md`
+- **THEN** its frontmatter MAY use `weight: light` until a `standard` weight is accepted
+- **AND** runner guidance SHALL treat the filename cost and frontmatter weight as distinct routing facts
+
+#### Scenario: old filename taxonomy is not current cost metadata
+
+- **WHEN** current specs or runner docs explain experiment cost
+- **THEN** they SHALL use light/standard/heavy cost labels and the accepted `weight` frontmatter convention
+- **AND** they SHALL NOT instruct agents to infer current cost from `test-simple.md`, `test-medium.md`, or `test-complex.md`

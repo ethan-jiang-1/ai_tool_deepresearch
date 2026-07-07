@@ -8,7 +8,7 @@ Runner execution SHALL open the active runner instruction surface, select curren
 
 Accepted `playbook-runner` still defines `experiments_playbook/RUN.md` as runner entry; current repository implementation MAY use `experiments_playbook/RUN_EXPS.md` while this drift is explicit. Active runner surfaces SHALL NOT conflict on health, cleanup, report policy, or current/removed/migrated case classification.
 
-Current runner surfaces SHALL NOT list old relay/slot playbooks as current production proof. A playbook that depends on retired relay/slot production mechanisms SHALL be triaged for current value. If it can still prove or diagnose current work-unit behavior, it SHALL be migrated to the work-unit path. If it cannot, it SHALL be removed from current runner surfaces. A legacy/backlog label MAY be used only as a temporary apply-time review state; it SHALL NOT remain as a permanent runner table or current-surface parking lot for obsolete production examples after this change archives.
+Current runner surfaces SHALL NOT list old relay/slot playbooks, old hand-written delegated ledger fixtures, old queue slot-shape playbooks, or obsolete JS helper cases as current production proof. A playbook that depends on retired relay/slot production mechanisms, invalid non-delegated queue paths, or old delegated ledger rows SHALL be triaged for current value. If it can still prove or diagnose current work-unit or queue v2 behavior, it SHALL be migrated to the current path. If it cannot, it SHALL be removed from current runner surfaces and the obsolete runnable file/helper SHALL be deleted or moved out of current runner-readable locations by this cleanup. A legacy/backlog label MAY be used only as a temporary apply-time review state; it SHALL NOT remain as a permanent runner table or current-surface parking lot for obsolete production examples after this change archives.
 
 Report SHALL include:
 
@@ -46,9 +46,15 @@ Cleanup policy SHALL preserve the disposable bundle by default when verdict is F
 - **AND** it SHALL update the active surface first
 - **AND** if both files remain active, their health, cleanup, report, and removed-case policies SHALL agree
 
-#### Scenario: old relay playbook is migrated or removed
+#### Scenario: old relay or queue-slot playbook is migrated or removed
 
-- **WHEN** a runner surface names a playbook that still depends on retired relay/slot production mechanisms
-- **THEN** the playbook SHALL be migrated to prove a current work-unit behavior or removed from current runner surfaces
+- **WHEN** a runner surface names a playbook that still depends on retired relay/slot production mechanisms, old delegated ledger rows, or old queue slot shape
+- **THEN** the playbook SHALL be migrated to prove current work-unit or queue v2 behavior, or removed from current runner surfaces
 - **AND** it SHALL NOT remain visible as current work-unit production proof
 - **AND** any temporary legacy/backlog classification SHALL be resolved before archive by migration or removal from current runner surfaces
+
+#### Scenario: obsolete runnable files are not left as hidden current examples
+
+- **WHEN** an old relay/slot playbook or JS helper is removed from runner tables because it has no current proof value
+- **THEN** the corresponding current runnable file SHALL also be deleted or moved to an excluded historical archive path
+- **AND** it SHALL NOT remain under `experiments_playbook/` as a runnable-looking current example
