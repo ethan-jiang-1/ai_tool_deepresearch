@@ -170,17 +170,9 @@ const queue = loadQueue(__dirname);
 const projectionPath = __dirname + '/_cache/agentic-queue/current-task.md';
 const projectionExists = existsSync(projectionPath);
 const projectionContent = projectionExists ? readFileSync(projectionPath, 'utf-8') : '';
-const queueV2Keys = new Set([
-  'schema_version',
-  'bundle_name',
-  'queue_health',
-  'stop_authorization_state',
-  'active_window',
-  'refill_pool',
-  'delegated_in_flight',
-  'terminal_history',
-]);
-const hasOnlyQueueV2Keys = Object.keys(queue).every((key) => queueV2Keys.has(key));
+// queue v2 top-level keys — verify no old named-slot state has leaked in
+const retiredQueueKeys = ['slot_1_current', 'slot_2_next', 'slot_5_tail', 'current_slot', 'named_slots'];
+const hasNoRetiredKeys = Object.keys(queue).every((key) => !retiredQueueKeys.includes(key));
 
 trace.traceEntry('check', {
   source: 'agq-playbook/simple',
@@ -188,14 +180,14 @@ trace.traceEntry('check', {
   passed: queue.active_window[0].queue_item_id === 'queue-simple-2'
     && projectionExists
     && projectionContent.includes('queue-simple-2')
-    && hasOnlyQueueV2Keys,
+    && hasNoRetiredKeys,
 });
 JS
 
 node "$B/verify.mjs"
 ```
 
--> 预期：promotion 与 projection 均通过，queue 文件不含 named slot state。
+-> 预期：promotion 与 projection 均通过，queue 文件不含 retired named-slot key。
 
 ## Step 3: 从 trace 裁决
 

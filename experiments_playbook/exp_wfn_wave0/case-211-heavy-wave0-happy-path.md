@@ -113,7 +113,7 @@ Expected real runtime evidence:
 If no real result exists yet, record `NOT_RUN` and stop. This proves the heavy case cannot pass on missing Agent evidence.
 
 ```bash
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-211 --target-dir tests/.test-bundles
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-211 --target-dir tests/.test-bundles
 ```
 
 Expected without `--real-result`: exit `2`, report `verdict: "NOT_RUN"`, and preserve the bundle.
@@ -181,6 +181,6 @@ FAIL and NOT_RUN preserve the bundle.
 ## Optional Automation Smoke
 
 ```bash
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-211
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-211 --real-result <result.json> --cleanup-pass
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-211
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-211 --real-result <result.json> --cleanup-pass
 ```

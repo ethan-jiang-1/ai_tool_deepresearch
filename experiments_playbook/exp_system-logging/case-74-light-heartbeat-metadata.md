@@ -50,10 +50,10 @@ import { join } from 'node:path';
 
 // Import and call createRunLogger — this writes the heartbeat
 const { createRunLogger } = await import('../DPT_FRAMEWORK/engine/logger.mjs');
-const log = createRunLogger(process.argv[1]);
+const log = createRunLogger(process.argv[2]);
 log.info('test_event');
 
-const logPath = join(process.argv[1], '_logs', 'run.log');
+const logPath = join(process.argv[2], '_logs', 'run.log');
 const content = readFileSync(logPath, 'utf-8');
 const lines = content.trim().split('\n');
 
@@ -113,7 +113,7 @@ if (hbLine) {
 }
 
 // Write check events
-const tracePath = join(process.argv[1], '_logs', '_trace.jsonl');
+const tracePath = join(process.argv[2], '_logs', '_trace.jsonl');
 for (const c of checks) {
   writeFileSync(tracePath, JSON.stringify({ ts: new Date().toISOString(), ...c }) + '\n', { flag: 'a' });
 }

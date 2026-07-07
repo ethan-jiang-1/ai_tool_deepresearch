@@ -76,7 +76,7 @@ function parseArgs(argv) {
     else if (!opts.caseId) opts.caseId = arg;
     else throw new Error(`Unknown argument: ${arg}`);
   }
-  if (!opts.caseId) throw new Error('Usage: node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-401');
+  if (!opts.caseId) throw new Error('Usage: node experiments_env/shared/run-fixture-backed-case.mjs --case case-401');
   return opts;
 }
 

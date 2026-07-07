@@ -283,7 +283,7 @@ Expected: `case-224-verdict.json` says `PASS`.
 ## Optional Automation Smoke
 
 ```bash
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-224 --target-dir tests/.test-bundles --cleanup-pass
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-224 --target-dir tests/.test-bundles --cleanup-pass
 ```
 
 The optional runner must only mirror the visible checkpoint sequence above; it is not the normative playbook surface.

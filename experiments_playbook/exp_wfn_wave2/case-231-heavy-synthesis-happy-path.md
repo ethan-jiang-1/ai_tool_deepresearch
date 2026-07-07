@@ -239,7 +239,7 @@ Expected: gate passes and the submitted Wave2 work-unit row count is `0`.
 ## Optional Automation Smoke
 
 ```bash
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-231 --target-dir tests/.test-bundles --cleanup-pass
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-231 --target-dir tests/.test-bundles --cleanup-pass
 ```
 
 The optional runner mirrors the Engine checkpoint path above. It does not prove Agent synthesis quality.

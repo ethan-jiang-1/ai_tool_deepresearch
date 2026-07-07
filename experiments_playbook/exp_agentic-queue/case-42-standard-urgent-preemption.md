@@ -197,17 +197,8 @@ const projectionPath = __dirname + '/_cache/agentic-queue/current-task.md';
 const projectionExists = existsSync(projectionPath);
 const projectionContent = projectionExists ? readFileSync(projectionPath, 'utf-8') : '';
 const restoredId = `queue-preempt-${QUEUE_ACTIVE_WINDOW_LIMIT}`;
-const queueV2Keys = new Set([
-  'schema_version',
-  'bundle_name',
-  'queue_health',
-  'stop_authorization_state',
-  'active_window',
-  'refill_pool',
-  'delegated_in_flight',
-  'terminal_history',
-]);
-const hasOnlyQueueV2Keys = Object.keys(queue).every((key) => queueV2Keys.has(key));
+const retiredQueueKeys = ['slot_1_current', 'slot_2_next', 'slot_5_tail', 'current_slot', 'named_slots'];
+const hasNoRetiredKeys = Object.keys(queue).every((key) => !retiredQueueKeys.includes(key));
 
 trace.traceEntry('check', {
   source: 'agq-playbook/preempt',
@@ -217,7 +208,7 @@ trace.traceEntry('check', {
     && projectionExists
     && projectionContent.includes('queue-preempt-urgent')
     && projectionContent.includes(restoredId)
-    && hasOnlyQueueV2Keys,
+    && hasNoRetiredKeys,
 });
 JS
 

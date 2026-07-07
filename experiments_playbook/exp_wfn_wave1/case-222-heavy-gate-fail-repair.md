@@ -196,7 +196,7 @@ JS
 ## Optional Automation Smoke
 
 ```bash
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-222 --target-dir tests/.test-bundles --cleanup-pass
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-222 --target-dir tests/.test-bundles --cleanup-pass
 ```
 
 The optional runner mirrors the visible checkpoint sequence.

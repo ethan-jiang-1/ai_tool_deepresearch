@@ -495,6 +495,6 @@ FAIL and NOT_RUN preserve the bundle.
 The runner is an optional smoke for the same checkpoints. It must not replace Step 3 with fixture output.
 
 ```bash
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-163 --target-dir tests/.test-bundles
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-163 --real-result <result.json> --cleanup-pass
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-163 --target-dir tests/.test-bundles
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-163 --real-result <result.json> --cleanup-pass
 ```

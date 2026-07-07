@@ -223,5 +223,5 @@ FAIL preserves the disposable bundle for diagnosis.
 The case-local runner may be used after the visible MD-controller path above has been validated. It is a smoke/aggregation convenience, not the normative playbook execution surface:
 
 ```bash
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-401 --cleanup-pass
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-401 --cleanup-pass
 ```

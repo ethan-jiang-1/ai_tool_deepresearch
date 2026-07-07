@@ -340,5 +340,5 @@ rm -rf "$B_INVALID" "$B_FAIL" "$B_TIMEOUT" "$B_ABANDON" "$B_DUP" "$B_STALE" "$B_
 ## Optional Automation Smoke
 
 ```bash
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-153 --target-dir tests/.test-bundles --cleanup-pass
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-153 --target-dir tests/.test-bundles --cleanup-pass
 ```

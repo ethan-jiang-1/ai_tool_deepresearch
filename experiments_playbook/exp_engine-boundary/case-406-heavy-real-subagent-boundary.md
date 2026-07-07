@@ -47,7 +47,7 @@ Run without a real result to verify the heavy case cannot pass on fixture or mis
 
 ```bash
 set +e
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-406
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-406
 sts=$?
 set -e
 test "$sts" -eq 2
@@ -66,7 +66,7 @@ Expected runtime fact: the real actor produces a result JSON whose `work_id`, `q
 After a real project Agent has completed the generated work-unit task and produced a valid result JSON:
 
 ```bash
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-406 --real-result <result.json> --cleanup-pass
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-406 --real-result <result.json> --cleanup-pass
 ```
 
 Expected for a real successful run: command exits `0` and prints `verdict: "PASS"`. A diagnostic run without `--cleanup-pass` also writes `case-406-verdict.json`.

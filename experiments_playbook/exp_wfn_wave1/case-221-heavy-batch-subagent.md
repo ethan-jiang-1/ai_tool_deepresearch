@@ -99,7 +99,7 @@ For each `work_id` in `case-221-claim.json`, hand the generated task prompt to a
 If this surface is unavailable, stop and record `NOT_RUN`:
 
 ```bash
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-221 --target-dir tests/.test-bundles
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-221 --target-dir tests/.test-bundles
 ```
 
 Expected without real results: exit `2`, verdict `NOT_RUN`.
@@ -163,7 +163,7 @@ JS
 ## Optional Automation Smoke
 
 ```bash
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-221 --target-dir tests/.test-bundles
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-221 --target-dir tests/.test-bundles
 ```
 
 Without `--real-result`, expected exit is `2` with verdict `NOT_RUN`.

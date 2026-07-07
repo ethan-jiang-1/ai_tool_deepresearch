@@ -155,7 +155,7 @@ JS
 ## Optional Automation Smoke
 
 ```bash
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-234 --target-dir tests/.test-bundles
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-234 --target-dir tests/.test-bundles
 ```
 
 Expected without `--real-result`: exit `2`, verdict `NOT_RUN`.

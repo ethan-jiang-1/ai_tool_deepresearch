@@ -216,5 +216,5 @@ PASS removes the disposable bundle. FAIL preserves it for diagnosis.
 This smoke command runs the same checkpoints for automation, but it is not the normative MD-controller execution surface:
 
 ```bash
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-402 --cleanup-pass
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-402 --cleanup-pass
 ```

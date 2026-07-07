@@ -148,7 +148,7 @@ JS
 ## Optional Automation Smoke
 
 ```bash
-node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-235 --target-dir tests/.test-bundles --cleanup-pass
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-235 --target-dir tests/.test-bundles --cleanup-pass
 ```
 
 ## Cleanup

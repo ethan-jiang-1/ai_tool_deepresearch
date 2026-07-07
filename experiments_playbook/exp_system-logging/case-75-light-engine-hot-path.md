@@ -49,28 +49,28 @@ import { writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const {
-  loadQueue, saveQueue, createQueue, enqueue, claim, complete, fail, makeItem,
+  loadQueue, saveQueue, enqueue, claim, complete, fail, makeItem,
 } = await import('../DPT_FRAMEWORK/engine/queue-manager.mjs');
 
-const dir = process.argv[1];
+const dir = process.argv[2]; // $B (bundle root), process.argv[1] is the script path
 
 // loadQueue initializes the run-scoped logger
 let q = loadQueue(dir);
 
 // enqueue
-q = enqueue(q, makeItem({ work_id: 'task-1', title: 'Test Task' }));
+q = enqueue(q, makeItem({ queue_item_id: 'task-1', title: 'Test Task' }));
 
 // claim
-const claimed = claim(q);
+const claimed = claim(q, { actor: 'main-agent' });
 q = claimed.queue;
 
 // complete (simple, no receipt required)
-complete(q, { work_id: 'task-1' }, dir);
-
-// enqueue a second task and fail it
-q = enqueue(createQueue(dir), makeItem({ work_id: 'task-2', title: 'Fail Task' }));
-q = claim(q).queue;
-fail(q, { work_id: 'task-2', reason: 'test failure' }, dir);
+complete(q, { queue_item_id: 'task-1' }, dir);
+// complete returns new state; reload before next operation
+q = loadQueue(dir);
+q = enqueue(q, makeItem({ queue_item_id: 'task-2', title: 'Fail Task' }));
+q = claim(q, { actor: 'main-agent' }).queue;
+fail(q, { queue_item_id: 'task-2', reason: 'test failure' }, dir);
 
 // save
 saveQueue(dir, q);
