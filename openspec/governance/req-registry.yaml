@@ -592,6 +592,7 @@ CDP-001: content-delivery-phase-content — phase-hitl2.md 9-section body (decis
 CDP-002: content-delivery-phase-content — phase-readiness.md 9-section body (deterministic precheck, all-prior-gate audit from manifest topology, anti-cheating)
 CDP-003: content-delivery-phase-content — phase-final.md 9-section body (terminal node gate=none, final report from verified bundle state, anti-cheating)
 CDP-004: content-delivery-phase-content — Final delivery is terminal; post-final feedback re-enters through HITL2 repair/rerun, not a Final-owned loop
+CDP-005: content-delivery-phase-content — Final artifacts count as delivery evidence only after legal readiness-to-final handoff and final node entry
 
 # wff-content-delivery — gate implementation
 CDG-001: content-delivery-gate-implementation — gate-hitl2-recorded rule set (decision brief, yaml_parse, field_value enum, trace_event_present, status_value)

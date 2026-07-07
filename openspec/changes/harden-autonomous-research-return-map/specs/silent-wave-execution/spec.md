@@ -6,7 +6,7 @@
 
 During a non-terminal lifecycle phase with `stop: no`, the Agent SHALL NOT ask the user questions, request confirmation, present progress, deliver partial findings, offer A/B choices, or pause for user input. If the Agent nevertheless detects that it is about to surface to the user during such a phase, it SHALL first record a diagnostic `surfacing_intent` trace/log event naming the active node, active bundle, intended surfacing type, and reason, then continue repair, strategy change, degradation, or silent hold according to the silent execution contract.
 
-This requirement is an observability contract for Agent-facing control surfaces. It SHALL NOT claim deterministic interception of every chat message; if the model emits prohibited chat without logging intent, post-run diagnostics MAY report missing surfacing-intent evidence or illegal surfacing suspicion.
+This requirement is an observability contract for Agent-facing control surfaces. `surfacing_intent` SHALL NOT be treated as gate pass evidence, handoff evidence, status synchronization evidence, HITL authorization, or permission to surface. It SHALL NOT claim deterministic interception of every chat message; if the model emits prohibited chat without logging intent, post-run diagnostics MAY report missing surfacing-intent evidence or illegal surfacing suspicion.
 
 #### Scenario: Agent logs known surfacing intent before prohibited pause
 
@@ -28,6 +28,12 @@ This requirement is an observability contract for Agent-facing control surfaces.
 - **AND** no prior `surfacing_intent` event exists
 - **THEN** diagnostics MAY report illegal surfacing suspicion or missing intent evidence
 - **AND** the absence of an event SHALL NOT make the surfacing valid
+
+#### Scenario: Surfacing intent is diagnostic only
+
+- **WHEN** a `surfacing_intent` event exists in `rb_trace.jsonl` or `_logs/run.log`
+- **THEN** the event SHALL be treated as diagnostic observability
+- **AND** it SHALL NOT authorize a phase handoff, HITL interaction, final delivery, or status transition
 
 #### Scenario: HITL and Final exceptions remain narrow
 
