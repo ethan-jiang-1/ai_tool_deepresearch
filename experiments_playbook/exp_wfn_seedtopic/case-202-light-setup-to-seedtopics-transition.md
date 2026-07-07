@@ -101,16 +101,11 @@ echo "setup-ready: passed=$PASSED next=$NEXT"
 
 预期：`passed: true`，`next: phases/phase-seed-topics.md`。
 
-## Step 3: Agent 推进 status + 物化 seed topic
+## Step 3: 物化 seed topic（不推进 status — gate 需要 current_gate 保持来源 gate）
 
-Agent 读 phase-seed-topics.md → 推进 status → 按 registry 创建 seed_topics/<slug>.md。
+按 registry 创建 seed_topics/<slug>.md。status 保持 `setup_ready → seed_topics_ready`，seed-topics-ready gate 检查时需要 current_gate == setup_ready（handoff 来源 gate）。
 
 ```bash
-# Agent 推进 status
-cat > $B/rb_status.json << 'EOF'
-{"current_mode":"execution","state":"in_progress","current_gate":"seed_topics_ready","next_gate":"wave0_complete"}
-EOF
-
 # 物化：文件名 = slug.md，frontmatter slug == 文件名 stem == registry slug
 mkdir -p $B/seed_topics
 cat > $B/seed_topics/01_topic-a.md << 'EOF'
@@ -128,12 +123,11 @@ title: Topic A
 - test
 EOF
 
-
-echo "=== Status ===" && cat $B/rb_status.json
+echo "=== Status（保持 setup_ready） ===" && cat $B/rb_status.json
 echo "=== seed_topics/ ===" && ls -la $B/seed_topics/
 ```
 
-## Step 4: Seed-topics-ready gate → pass
+## Step 4: Seed-topics-ready gate → pass，然后推进 status
 
 ```bash
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)
@@ -141,6 +135,13 @@ echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "seed-topics-ready: passed=$PASSED next=$NEXT"
+
+# gate pass 后才推进 status
+if [ "$PASSED" = "true" ]; then
+  cat > $B/rb_status.json << 'EOF'
+{"current_mode":"execution","state":"in_progress","current_gate":"seed_topics_ready","next_gate":"wave0_complete"}
+EOF
+fi
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'setup→seed-topics transition, next=wave0'})})"
 ```
 

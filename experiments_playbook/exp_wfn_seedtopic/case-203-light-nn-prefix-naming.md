@@ -112,10 +112,18 @@ human_decision_checkpoints:
     final_report_view: not_started
 PROFEOF
 
-# 状态设在 seed_topics_ready（模拟 setup 已完成，准备进入 seed-topics phase）
+# 状态保持 setup_ready → seed_topics_ready（gate 检查时需要 current_gate == handoff 来源 gate）
+# gate pass 后才推进到 seed_topics_ready → wave0_complete
 cat > $B/rb_status.json << 'EOF'
-{"current_mode":"execution","state":"in_progress","current_gate":"seed_topics_ready","next_gate":"wave0_complete"}
+{"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"seed_topics_ready"}
 EOF
+
+# 写入 gate_attempt + load_complete（setup-ready → seed-topics 的 handoff 证据）
+# gate 的 handoff_source_attempt_index 指向 gate_attempt 在 trace 中的 0-based index
+cat > $B/rb_trace.jsonl << 'TRACEOF'
+{"ts":"2026-07-07T10:00:00.000Z","event":"gate_attempt","gate":"setup-ready","passed":true,"currentNodeRef":"phases/phase-setup.md","next":"phases/phase-seed-topics.md"}
+{"ts":"2026-07-07T10:00:01.000Z","event":"load_complete","entry":"phases/phase-seed-topics.md","handoff_source_gate":"setup-ready","handoff_source_node":"phases/phase-setup.md","handoff_target_node":"phases/phase-seed-topics.md","handoff_source_attempt_index":0,"handoff_source_attempt_ts":"2026-07-07T10:00:00.000Z"}
+TRACEOF
 
 echo "=== Plan frontmatter ==="
 head -16 $B/rb_plan.md
