@@ -501,27 +501,27 @@ describe('assessNode contract header injection (WNC-008)', () => {
       'Test shared content.',
     ].join('\n'));
 
-    // Synthetic relay-like surface — NOT in manifest
-    writeFileSync(join(PHASES_DIR, 'synthetic-relay-stop-no.md'), [
+    // Synthetic work-unit task surface — NOT in manifest
+    writeFileSync(join(PHASES_DIR, 'synthetic-work-unit-task-stop-no.md'), [
       '---',
       'node_type: shared',
-      'id: synthetic-relay-stop-no',
+      'id: synthetic-work-unit-task-stop-no',
       'shared_scope: subagent-protocol',
-      'role: synthetic-relay-role',
+      'role: synthetic-work-unit-role',
       'stop: "no"',
       'execution_contract:',
-      '  surface: relay-subagent-role',
+      '  surface: work-unit-subagent-role',
       '  search_policy: subagent_performs_search',
       '  loaded_by: phase-agent',
-      '  delivered_via: relay_task_md',
+      '  delivered_via: work_unit_task_md',
       'requires:',
       '  - shared/shared-subagent-protocol',
       'suggested_context: []',
       '---',
       '',
-      '# Synthetic Relay Surface',
+      '# Synthetic Work-Unit Task Surface',
       '',
-      'Synthetic non-manifest relay-like surface.',
+      'Synthetic non-manifest work-unit task surface.',
     ].join('\n'));
 
     // Phase with no stop field
@@ -604,14 +604,14 @@ describe('assessNode contract header injection (WNC-008)', () => {
     assert.ok(!entry.md.includes('TERMINAL DELIVERY MODE'));
   });
 
-  it('does NOT inject header for relay/sub-agent task surface even with stop:no frontmatter (tested via non-manifest path)', () => {
+  it('does NOT inject header for work-unit sub-agent task surface even with stop:no frontmatter (tested via non-manifest path)', () => {
     const nodesDir = join(WNC_TMP, 'nodes-workflow-chain');
     const runtime = createWorkflowRuntime('test', nodesDir);
     const state = createState();
-    const result = assessNode('phases/synthetic-relay-stop-no.md', state, runtime);
+    const result = assessNode('phases/synthetic-work-unit-task-stop-no.md', state, runtime);
 
     assert.equal(result.status, 'loaded');
-    const entry = runtime.contentCache.get('phases/synthetic-relay-stop-no.md');
+    const entry = runtime.contentCache.get('phases/synthetic-work-unit-task-stop-no.md');
     assert.ok(!entry.md.includes('AUTONOMOUS MODE'));
     assert.ok(!entry.md.includes('TERMINAL DELIVERY MODE'));
   });

@@ -7,7 +7,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import { readOutputDeclarations, listMatchingBundleFiles, getDeclaredReferencePaths, parseMdFrontmatter, readBundlePlan } from './gate-helpers-readers.mjs';
+import {
+  readOutputDeclarations,
+  readSubmittedWorkUnitDeclarations,
+  listMatchingBundleFiles,
+  getDeclaredReferencePaths,
+  parseMdFrontmatter,
+  readBundlePlan,
+} from './gate-helpers-readers.mjs';
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -213,7 +220,7 @@ export function checkContentDedup(bundlePath, threshold = {}) {
     return {
       passed: false,
       inspect: ['rb_output_declarations.jsonl is missing or empty — no completed Agent output declarations available'],
-      advice: ['Run delegated Sub-agent intake through Relay and complete() to populate the declaration ledger.'],
+      advice: ['Submit delegated reference-producing work units through operate-work-unit so rb_output_declarations.jsonl contains Engine-written rows.'],
     };
   }
 
@@ -238,7 +245,7 @@ export function checkContentDedup(bundlePath, threshold = {}) {
     return {
       passed: false,
       inspect: ['rb_output_declarations.jsonl contains no role=reference output declarations'],
-      advice: ['Complete delegated reference-producing tasks through Relay/Queue so reference files are declared in rb_output_declarations.jsonl.'],
+      advice: ['Return delegated reference-producing tasks through work-unit submit so reference files are declared in rb_output_declarations.jsonl.'],
     };
   }
 
@@ -305,7 +312,7 @@ export function checkContentDedup(bundlePath, threshold = {}) {
       if (sim >= jaccardThreshold) {
         passed = false;
         inspect.push(`Jaccard clone (${sim.toFixed(3)} >= ${jaccardThreshold}): "${references[i].path}" vs "${references[j].path}"`);
-        advice.push('Near-duplicate Key Facts detected. This often indicates template or script-generated reference files. Use sub-agent relay (dpt-evidence-extractor) to produce genuinely unique reference files from real WebSearch+WebFetch. Do NOT use template substitution or batch scripts.');
+        advice.push('Near-duplicate Key Facts detected. This often indicates template or script-generated reference files. Use work-unit submit with real WebSearch+WebFetch evidence to produce genuinely unique reference files. Do NOT use template substitution or batch scripts.');
       }
     }
   }
@@ -318,12 +325,30 @@ export function checkContentDedup(bundlePath, threshold = {}) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function checkCacheCoverage(bundlePath) {
-  const declarations = readOutputDeclarations(bundlePath);
+  let declarations;
+  try {
+    declarations = readSubmittedWorkUnitDeclarations(bundlePath);
+  } catch (error) {
+    return {
+      passed: false,
+      inspect: [`[cache_coverage] FAIL: invalid submitted work-unit ledger: ${error.message}`],
+      advice: ['Repair work-unit submit/index/ledger drift before rerunning the gate.'],
+    };
+  }
   const inspect = [];
   const advice = [];
   let passed = true;
 
   if (declarations.length === 0) {
+    const rawDeclarations = readOutputDeclarations(bundlePath);
+    const rawReferenceRows = rawDeclarations.filter((decl) => (decl.output_files || []).some((f) => f.role === 'reference'));
+    if (rawReferenceRows.length > 0) {
+      return {
+        passed: false,
+        inspect: ['[cache_coverage] FAIL: reference output declarations exist but none are submitted work-unit ledger rows'],
+        advice: ['Submit delegated reference outputs through operate-work-unit so cache coverage can validate Engine-written cache trails.'],
+      };
+    }
     return { passed: true, inspect, advice }; // Nothing to check
   }
 
@@ -341,7 +366,7 @@ export function checkCacheCoverage(bundlePath) {
       for (const ref of refOutputs) {
         inspect.push(`[cache_coverage] WARNING (Phase 1): ${declId} has empty cache_trails for reference ${ref.path} — gap will become fail in Phase 2`);
       }
-      advice.push('Empty cache_trails on a reference-producing task — ensure sub-agents write _cache/ leaves and declare cache_trails in slot results.');
+      advice.push('Empty cache_trails on a submitted work-unit reference output — ensure the work-unit result declares verified _cache/ leaves before submit.');
       continue;
     }
 
@@ -370,7 +395,7 @@ export function checkCacheCoverage(bundlePath) {
       for (const mt of missingTrails) {
         inspect.push(`[cache_coverage] FAIL: ${declId}: cache trail ${mt.trail} — ${mt.reason}`);
       }
-      advice.push(`Cache trail(s) missing for ${declId}. Re-run the delegated intake to produce complete cache leaves.`);
+      advice.push(`Cache trail(s) missing for ${declId}. Re-run or repair the work unit so submit records complete cache leaves.`);
     }
 
     // ── Per-reference mapping: each reference must map to at least one valid trail ──
@@ -413,7 +438,7 @@ export function checkCacheCoverage(bundlePath) {
       if (!mapped && validTrails.length > 0) {
         passed = false;
         inspect.push(`[cache_coverage] FAIL: ${declId}: reference ${ref.path} (source_url: ${ref.source_url || 'none'}) not mapped to any valid cache trail`);
-        advice.push(`Reference ${ref.path} has no cache trail mapping. Ensure sub-agent includes a matching _cache/ leaf (via meta.json.url or source_slug).`);
+        advice.push(`Reference ${ref.path} has no cache trail mapping. Ensure the work-unit result includes a matching _cache/ leaf (via meta.json.url or source_slug).`);
       } else if (!mapped && validTrails.length === 0) {
         // Already reported as missing trail above — don't double-report
       }

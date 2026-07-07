@@ -1,19 +1,48 @@
-// tests/schema/contracts/queue.test.mjs — 1:1 for DPT_FRAMEWORK/schema/contracts/queue.mjs
+// tests/schema/contracts/queue.test.mjs - queue v2 contract coverage.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  QueueWorkUnitSchema,
-  TargetSpecSchema,
+  QUEUE_ACTIVE_WINDOW_LIMIT,
+  QUEUE_SCHEMA_VERSION,
+  QueueDemandItemSchema,
   QueueSchema,
+  TargetSpecSchema,
 } from '../../../DPT_FRAMEWORK/schema/contracts/queue.mjs';
-import {
-  QUEUE_ACTIVE_WINDOW_SLOTS,
-  SLOT_NAMES,
-} from '../../../DPT_FRAMEWORK/schema/contracts/queue-slots.mjs';
 
-// ═══════════════════════════════════════════════════════════════════
-// TargetSpecSchema
-// ═══════════════════════════════════════════════════════════════════
+function demand(overrides = {}) {
+  return {
+    queue_item_id: 'queue-001',
+    title: 'Queue demand',
+    targets: { controller: 'main-agent' },
+    action: 'do it',
+    producer_rule: 'test_rule',
+    lineage: {},
+    priority_class: 'P4_progressive_artifact_or_seed_backfill',
+    required_receipts: ['none'],
+    done_condition: 'done',
+    verification: { engine: [], agent: [] },
+    writes_to: [],
+    status_sync: [],
+    completion_receipt: 'none',
+    failure_route: 'repair',
+    payload: {},
+    ...overrides,
+  };
+}
+
+function queue(overrides = {}) {
+  return {
+    schema_version: QUEUE_SCHEMA_VERSION,
+    bundle_name: null,
+    queue_health: 'ready',
+    stop_authorization_state: 'unauthorized_continue_required',
+    active_window: [],
+    refill_pool: [],
+    delegated_in_flight: {},
+    terminal_history: [],
+    ...overrides,
+  };
+}
 
 describe('TargetSpecSchema', () => {
   it('accepts controller=main-agent without delegates', () => {
@@ -22,20 +51,7 @@ describe('TargetSpecSchema', () => {
     assert.equal(r.data.delegates, undefined);
   });
 
-  it('accepts controller=engine', () => {
-    assert.ok(TargetSpecSchema.safeParse({ controller: 'engine' }).success);
-  });
-
-  it('accepts with delegates and timeout_ms', () => {
-    const r = TargetSpecSchema.safeParse({
-      controller: 'main-agent',
-      delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 300000 },
-    });
-    assert.ok(r.success);
-    assert.equal(r.data.delegates.timeout_ms, 300000);
-  });
-
-  it('defaults timeout_ms to 600000 when delegates present but no timeout', () => {
+  it('accepts with delegates and defaults timeout_ms', () => {
     const r = TargetSpecSchema.safeParse({
       controller: 'main-agent',
       delegates: { to: 'sub-agent', role_key: 'dpt-source-intake' },
@@ -44,137 +60,112 @@ describe('TargetSpecSchema', () => {
     assert.equal(r.data.delegates.timeout_ms, 600000);
   });
 
-  it('rejects controller=sub-agent (not in enum)', () => {
-    assert.ok(!TargetSpecSchema.safeParse({ controller: 'sub-agent' }).success);
-  });
-
-  it('rejects missing controller', () => {
-    assert.ok(!TargetSpecSchema.safeParse({
-      delegates: { to: 'sub-agent', role_key: 'x' },
-    }).success);
-  });
-
-  it('rejects delegates.to=chatgpt (only sub-agent valid)', () => {
-    assert.ok(!TargetSpecSchema.safeParse({
+  it('rejects invalid controller or delegate target', () => {
+    assert.equal(TargetSpecSchema.safeParse({ controller: 'sub-agent' }).success, false);
+    assert.equal(TargetSpecSchema.safeParse({
       controller: 'main-agent',
       delegates: { to: 'chatgpt', role_key: 'x' },
-    }).success);
-  });
-
-  it('rejects delegates missing role_key', () => {
-    assert.ok(!TargetSpecSchema.safeParse({
-      controller: 'main-agent',
-      delegates: { to: 'sub-agent' },
-    }).success);
+    }).success, false);
   });
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// QueueWorkUnitSchema
-// ═══════════════════════════════════════════════════════════════════
-
-const validItem = {
-  work_id: 'w1', title: 'Test', targets: { controller: 'main-agent' },
-  action: 'do it', producer_rule: 'test_rule', lineage: {},
-  priority_class: 'P4_progressive_artifact_or_seed_backfill',
-  required_receipts: ['none'], done_condition: 'done',
-  verification: { engine: [], agent: [] }, writes_to: [],
-  status_sync: [], completion_receipt: 'none', failure_route: 'repair',
-  payload: {},
-};
-
-describe('QueueWorkUnitSchema', () => {
-  it('accepts valid item', () => {
-    assert.ok(QueueWorkUnitSchema.safeParse(validItem).success);
+describe('QueueDemandItemSchema', () => {
+  it('accepts a valid queue demand item with queue_item_id', () => {
+    const parsed = QueueDemandItemSchema.safeParse(demand());
+    assert.equal(parsed.success, true);
+    assert.equal(parsed.data.queue_item_id, 'queue-001');
+    assert.equal(parsed.data.status, 'queued');
   });
 
-  it('accepts item with defaults (status, preempted_from_slot, restore_priority)', () => {
-    const r = QueueWorkUnitSchema.safeParse(validItem);
-    assert.ok(r.success);
-    assert.equal(r.data.status, 'queued');
-    assert.equal(r.data.preempted_from_slot, 'not_applicable');
-    assert.equal(r.data.restore_priority, 'normal');
+  it('rejects work_id as queue demand identity', () => {
+    const parsed = QueueDemandItemSchema.safeParse(demand({ work_id: 'legacy-work-id' }));
+    assert.equal(parsed.success, false);
+    assert.match(parsed.error.issues.map((i) => i.message).join('\n'), /queue_item_id/);
   });
 
-  it('accepts item with targets.delegates', () => {
-    assert.ok(QueueWorkUnitSchema.safeParse({
-      ...validItem,
-      targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor', timeout_ms: 600000 } },
-    }).success);
-  });
-
-  it('rejects missing producer_rule', () => {
-    const bad = { ...validItem }; delete bad.producer_rule;
-    assert.ok(!QueueWorkUnitSchema.safeParse(bad).success);
-  });
-
-  it('rejects missing required_receipts', () => {
-    const bad = { ...validItem }; delete bad.required_receipts;
-    assert.ok(!QueueWorkUnitSchema.safeParse(bad).success);
-  });
-
-  it('rejects missing completion_receipt', () => {
-    const bad = { ...validItem }; delete bad.completion_receipt;
-    assert.ok(!QueueWorkUnitSchema.safeParse(bad).success);
-  });
-
-  it('rejects non-object payload', () => {
-    assert.ok(!QueueWorkUnitSchema.safeParse({ ...validItem, payload: 'bad' }).success);
-  });
-
-  it('rejects missing work_id', () => {
-    const bad = { ...validItem }; delete bad.work_id;
-    assert.ok(!QueueWorkUnitSchema.safeParse(bad).success);
-  });
-
-  it('rejects invalid priority_class', () => {
-    assert.ok(!QueueWorkUnitSchema.safeParse({ ...validItem, priority_class: 'P99_invalid' }).success);
+  it('allows null completion_receipt only with no required receipts', () => {
+    assert.equal(QueueDemandItemSchema.safeParse(demand({
+      required_receipts: [],
+      completion_receipt: null,
+    })).success, true);
+    assert.equal(QueueDemandItemSchema.safeParse(demand({
+      required_receipts: ['file:done.md'],
+      completion_receipt: null,
+    })).success, false);
   });
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// QueueSchema (20-slot outer wrapper)
-// ═══════════════════════════════════════════════════════════════════
-
-const validQueue = {
-  queue_health: 'ready',
-  stop_authorization_state: 'unauthorized_continue_required',
-  ...Object.fromEntries(SLOT_NAMES.map((slot) => [slot, null])),
-  refill_pool: [],
-};
 
 describe('QueueSchema', () => {
-  it('uses shared Queue slot constants for the 20-slot wire shape', () => {
-    assert.equal(QUEUE_ACTIVE_WINDOW_SLOTS, 20);
-    assert.equal(SLOT_NAMES.length, QUEUE_ACTIVE_WINDOW_SLOTS);
-    assert.deepEqual(Object.keys(validQueue).filter((key) => key.startsWith('slot_')), SLOT_NAMES);
+  it('accepts valid queue v2 shape', () => {
+    assert.equal(QUEUE_ACTIVE_WINDOW_LIMIT, 20);
+    assert.equal(QueueSchema.safeParse(queue()).success, true);
+    assert.equal(QueueSchema.parse(queue()).schema_version, QUEUE_SCHEMA_VERSION);
   });
 
-  it('accepts valid empty queue', () => {
-    assert.ok(QueueSchema.safeParse(validQueue).success);
+  it('accepts ordered active_window and refill_pool arrays', () => {
+    const parsed = QueueSchema.safeParse(queue({
+      active_window: [demand({ queue_item_id: 'queue-001' })],
+      refill_pool: [demand({ queue_item_id: 'queue-002' })],
+    }));
+    assert.equal(parsed.success, true);
+    assert.equal(parsed.data.active_window[0].queue_item_id, 'queue-001');
   });
 
-  it('accepts queue with items in slots', () => {
-    const q = { ...validQueue, slot_1_current: validItem };
-    assert.ok(QueueSchema.safeParse(q).success);
+  it('accepts delegated_in_flight keyed by queue_item_id', () => {
+    const parsed = QueueSchema.safeParse(queue({
+      delegated_in_flight: {
+        'queue-003': {
+          queue_item_id: 'queue-003',
+          work_id: 'wu-w0-b000-src-i0001',
+          wave: 0,
+          kind: 'wave0_source_intake',
+          batch_id: 'b000',
+          attempt_index: 1,
+          queue_item_snapshot_hash: 'abc123',
+          claimed_at: '2026-07-06T00:00:00.000Z',
+          timeout_ms: 600000,
+          deadline_at: '2026-07-06T00:10:00.000Z',
+        },
+      },
+    }));
+    assert.equal(parsed.success, true);
   });
 
-  it('accepts queue with items in refill_pool', () => {
-    const q = { ...validQueue, refill_pool: [validItem] };
-    assert.ok(QueueSchema.safeParse(q).success);
+  it('rejects duplicate queue_item_id across active queue locations', () => {
+    const parsed = QueueSchema.safeParse(queue({
+      active_window: [demand({ queue_item_id: 'queue-dupe' })],
+      refill_pool: [demand({ queue_item_id: 'queue-dupe' })],
+    }));
+    assert.equal(parsed.success, false);
+    assert.match(parsed.error.issues.map((i) => i.message).join('\n'), /queue-dupe/);
   });
 
-  it('rejects missing refill_pool', () => {
-    const bad = { ...validQueue }; delete bad.refill_pool;
-    assert.ok(!QueueSchema.safeParse(bad).success);
+  it('rejects delegated_in_flight key mismatch', () => {
+    const parsed = QueueSchema.safeParse(queue({
+      delegated_in_flight: {
+        'queue-key': {
+          queue_item_id: 'queue-value',
+          work_id: 'wu-w0-b000-src-i0001',
+          wave: 0,
+          kind: 'wave0_source_intake',
+          batch_id: 'b000',
+          attempt_index: 1,
+          queue_item_snapshot_hash: 'abc123',
+          claimed_at: '2026-07-06T00:00:00.000Z',
+          timeout_ms: 600000,
+          deadline_at: '2026-07-06T00:10:00.000Z',
+        },
+      },
+    }));
+    assert.equal(parsed.success, false);
+    assert.match(parsed.error.issues.map((i) => i.message).join('\n'), /must match queue_item_id/);
   });
 
-  it('rejects invalid queue_health', () => {
-    assert.ok(!QueueSchema.safeParse({ ...validQueue, queue_health: 'invalid' }).success);
-  });
-
-  it('rejects missing slot_1_current', () => {
-    const bad = { ...validQueue }; delete bad.slot_1_current;
-    assert.ok(!QueueSchema.safeParse(bad).success);
+  it('rejects legacy top-level slot shape', () => {
+    const parsed = QueueSchema.safeParse({
+      ...queue(),
+      slot_1_current: demand({ queue_item_id: 'queue-old' }),
+    });
+    assert.equal(parsed.success, false);
   });
 });

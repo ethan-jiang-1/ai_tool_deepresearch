@@ -4,7 +4,7 @@
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert';
 import { z } from 'zod';
-import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -12,7 +12,13 @@ import {
   validateRules,
   zodErrors,
   readOutputDeclarations,
+  readSubmittedWorkUnitDeclarations,
 } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import {
+  claimAndSubmitWorkUnit,
+  cleanupWorkUnitBundle,
+  tempWorkUnitBundle,
+} from '../work-unit-test-helpers.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-gate-helpers-readers-tmp');
@@ -162,6 +168,53 @@ describe('readOutputDeclarations', () => {
       assert.strictEqual(decls[1].work_id, 'w2');
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('reads submitted work-unit declarations only after Engine submit/index cross-checks pass', () => {
+    const dir = tempWorkUnitBundle('gh-reader-submitted-');
+    try {
+      const { record } = claimAndSubmitWorkUnit(dir);
+      const rows = readSubmittedWorkUnitDeclarations(dir);
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].work_id, record.work_id);
+      assert.equal(rows[0].queue_item_id, record.queue_item_id);
+      assert.equal(rows[0].result_ref, record.paths.result_ref);
+      assert.equal(rows[0].runtime_receipt_ref, record.paths.runtime_receipt_ref);
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
+  });
+
+  it('does not treat legacy raw declaration rows as submitted work-unit authority', () => {
+    const dir = join(__dirname, '.test-gh-legacy-raw');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), `${JSON.stringify({
+      work_id: 'w1',
+      output_files: [{ path: 'reference/a.md', role: 'reference', source_url: 'https://a.com/news/1' }],
+      cache_trails: ['_cache/leaf/'],
+    })}\n`);
+    try {
+      assert.deepEqual(readSubmittedWorkUnitDeclarations(dir), []);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('fails closed when a submitted work-unit ledger hash drifts', () => {
+    const dir = tempWorkUnitBundle('gh-reader-drift-');
+    try {
+      claimAndSubmitWorkUnit(dir);
+      const ledgerPath = join(dir, 'rb_output_declarations.jsonl');
+      const row = JSON.parse(readFileSync(ledgerPath, 'utf-8').trim());
+      row.cache_trails = [];
+      writeFileSync(ledgerPath, `${JSON.stringify(row)}\n`);
+      assert.throws(
+        () => readSubmittedWorkUnitDeclarations(dir),
+        /ledger_record_hash mismatch/,
+      );
+    } finally {
+      cleanupWorkUnitBundle(dir);
     }
   });
 });

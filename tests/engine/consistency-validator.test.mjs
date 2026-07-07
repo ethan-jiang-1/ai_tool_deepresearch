@@ -96,11 +96,11 @@ function scaffold(opts = {}) {
         shared_scope: 'subagent-protocol',
         role: 'dpt-source-intake',
         authority: 'guidance-only',
-        execution_contract: { surface: 'relay-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'relay_task_md' },
+        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md' },
         requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
         suggested_context: [],
       },
-      h1: '# Relay Role: dpt-source-intake — Foundation Reference Intake',
+      h1: '# Work-Unit Role: dpt-source-intake - Foundation Reference Intake',
       roleKey: 'dpt-source-intake',
     },
     'phases/subagent-dpt-evidence-extractor.md': {
@@ -110,11 +110,11 @@ function scaffold(opts = {}) {
         shared_scope: 'subagent-protocol',
         role: 'dpt-evidence-extractor',
         authority: 'guidance-only',
-        execution_contract: { surface: 'relay-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'relay_task_md' },
+        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md' },
         requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
         suggested_context: [],
       },
-      h1: '# Relay Role: dpt-evidence-extractor — Topic-Specific Deepening',
+      h1: '# Work-Unit Role: dpt-evidence-extractor - Topic-Specific Deepening',
       roleKey: 'dpt-evidence-extractor',
     },
     'phases/subagent-dpt-topic-scout.md': {
@@ -124,12 +124,40 @@ function scaffold(opts = {}) {
         shared_scope: 'subagent-protocol',
         role: 'dpt-topic-scout',
         authority: 'guidance-only',
-        execution_contract: { surface: 'relay-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'relay_task_md' },
+        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md' },
         requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
         suggested_context: [],
       },
-      h1: '# Relay Role: dpt-topic-scout — Gap-Fill Search',
+      h1: '# Work-Unit Role: dpt-topic-scout - Gap-Fill Search',
       roleKey: 'dpt-topic-scout',
+    },
+    'phases/subagent-dpt-claim-verifier.md': {
+      fm: {
+        node_type: 'shared',
+        id: 'subagent-dpt-claim-verifier',
+        shared_scope: 'subagent-protocol',
+        role: 'dpt-claim-verifier',
+        authority: 'guidance-only',
+        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md' },
+        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
+        suggested_context: [],
+      },
+      h1: '# Work-Unit Role: dpt-claim-verifier - Critical Claim Verification',
+      roleKey: 'dpt-claim-verifier',
+    },
+    'phases/subagent-dpt-source-diagnostic.md': {
+      fm: {
+        node_type: 'shared',
+        id: 'subagent-dpt-source-diagnostic',
+        shared_scope: 'subagent-protocol',
+        role: 'dpt-source-diagnostic',
+        authority: 'guidance-only',
+        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md' },
+        requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
+        suggested_context: [],
+      },
+      h1: '# Work-Unit Role: dpt-source-diagnostic - Source Quality Diagnostic',
+      roleKey: 'dpt-source-diagnostic',
     },
   };
 
@@ -140,10 +168,14 @@ function scaffold(opts = {}) {
     '',
     `- **Role key**: \`${roleKey}\``,
     '- **Used by**: Test phase agent.',
-    '- **Receives**: Relay slot files.',
+    '- **Receives**: Work-unit task, beacon, result schema, and runtime receipt.',
     '- **Produces**: Test outputs.',
     '- **Boundary**: Test role boundary.',
     '- **Handoff**: Test handoff.',
+    '',
+    '## Lifecycle Logging Mandate (always-loaded)',
+    '',
+    'Bind work_id, queue_item_id, kind, and receipt_nonce in lifecycle logs.',
     '',
     '## 1. Purpose',
     '',
@@ -157,9 +189,9 @@ function scaffold(opts = {}) {
     '',
     'Test artifacts.',
     '',
-    '## 4. Execution Within Relay Slot',
+    '## 4. Execution Within Work Unit',
     '',
-    'Test relay execution.',
+    'Test work-unit execution.',
     '',
     '## 5. Page Content Fetching',
     '',
@@ -312,7 +344,7 @@ describe('ValidateWorkflowPackage — gate_binding_mismatch', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'WRONG_GATE_NAME', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'relay_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
+        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'WRONG_GATE_NAME', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'work_unit_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
       },
       gateDefs: {
         'wave0-complete': { gate: 'wave0-complete', rules: [] },
@@ -341,7 +373,7 @@ describe('ValidateWorkflowPackage — gate_binding_mismatch', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'relay_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
+        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'work_unit_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
       },
       // No gate definition file
     });
@@ -393,7 +425,7 @@ describe('ValidateWorkflowPackage — gate definition checks', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'relay_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
+        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'work_unit_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
       },
       gateDefs: {
         'wave0-complete': { gate: 'instantiation-complete', rules: [] },
@@ -425,7 +457,7 @@ describe('ValidateWorkflowPackage — gate definition checks', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'relay_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
+        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'work_unit_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
       },
     });
 
@@ -563,7 +595,7 @@ describe('ValidateWorkflowPackage — dependency resolution', () => {
         shared: [],
       },
       nodes: {
-        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'relay_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-profile', 'shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
+        'phases/phase-wave0.md': { node_type: 'phase', id: 'phase-wave0', phase: 'wave0', gate: 'wave0-complete', stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'work_unit_required', delegated_role_keys: ['dpt-source-intake'] }, requires: ['shared-profile', 'shared-subagent-protocol', 'shared-anti-cheating-rules'], suggested_context: [] },
       },
       gateDefs: {
         'wave0-complete': { gate: 'wave0-complete', rules: [] },
@@ -859,10 +891,10 @@ shared_scope: subagent-protocol
 role: dpt-topic-scout
 authority: guidance-only
 execution_contract:
-  surface: relay-subagent-role
+  surface: work-unit-subagent-role
   search_policy: subagent_performs_search
   loaded_by: phase-agent
-  delivered_via: relay_task_md
+  delivered_via: work_unit_task_md
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas

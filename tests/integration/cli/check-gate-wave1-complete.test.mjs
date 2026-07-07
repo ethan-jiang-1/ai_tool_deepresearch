@@ -2,9 +2,12 @@
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
+import {
+  claimAndSubmitWorkUnit,
+} from '../../engine/work-unit-test-helpers.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs');
@@ -166,43 +169,34 @@ function createBundle(name) {
     '## Key Facts\n- Finding one: Important initial finding.\n- Finding two: Second key insight.\n- Finding three: Third data point.\n- Finding four: Fourth observation.\n- Finding five: Fifth concluding fact.\n\n## Core Content Capture\nThis is a substantive core content capture section that provides meaningful analysis of the topic being researched. It exceeds one hundred characters to satisfy the minimum quality threshold for reference counting.\n' +
     '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- Term.\n## Risks And Limitations\n- None.\n');
 
-  // output declaration ledger (content_dedup + provenance gates read from this)
-  writeFileSync(join(dir, 'rb_output_declarations.jsonl'), JSON.stringify({
-    declared_at: new Date().toISOString(),
-    work_id: 'wave1-deepening-topic-a',
-    producer_rule: 'deepening_intake',
-    slot_result_ref: '_subagents/wave_01/slot_00/result.json',
-    runtime_receipt_ref: '_subagents/wave_01/slot_00/runtime-receipt.jsonl',
-    output_files: [
-      { path: 'reference/01-topic-a-deepening.md', role: 'reference', source_url: 'https://example.com/news/deepening-topic-a' },
-      { path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary' },
-      { path: 'artifacts/wave1/topic-a/question-list.md', role: 'question_list' },
-    ],
-    cache_trails: [],
-  }) + '\n');
-
-  // Subagent slot artifacts for provenance gate (RPG-002)
-  const slotDir = join(dir, '_subagents', 'wave_01', 'slot_00');
-  mkdirSync(slotDir, { recursive: true });
-  writeFileSync(join(slotDir, '_status.json'), JSON.stringify({ status: 'done', updated: new Date().toISOString() }));
-  writeFileSync(join(slotDir, 'result.json'), JSON.stringify({
-    slotKey: 'deepening',
-    roleAgentKey: 'dpt-evidence-extractor',
-    status: 'done',
-    summary: 'Test slot result',
-    evidenceCount: 1,
-    references: [],
-    confidence: 0.8,
-    notes: [],
-    output_files: [
-      { path: 'reference/01-topic-a-deepening.md', role: 'reference', source_url: 'https://example.com/news/deepening-topic-a' },
-      { path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary' },
-      { path: 'artifacts/wave1/topic-a/question-list.md', role: 'question_list' },
-    ],
-    cache_trails: [],
-  }));
-
   return dir;
+}
+
+function submitWave1WorkUnit(dir) {
+  return claimAndSubmitWorkUnit(dir, {
+    phase: 'wave1',
+    queueItemId: 'topic-a',
+    outputs: [
+      {
+        path: 'reference/01-topic-a-deepening.md',
+        role: 'reference',
+        source_url: 'https://example.com/news/deepening-topic-a',
+        source_slug: 'deepening-topic-a',
+      },
+      {
+        path: 'artifacts/wave1/topic-a/evidence-summary.md',
+        role: 'evidence_summary',
+      },
+      {
+        path: 'artifacts/wave1/topic-a/question-list.md',
+        role: 'question_list',
+      },
+    ],
+    cacheTrails: [{
+      path: '_cache/wave1/primary/topic-a/deepening-topic-a',
+      url: 'https://example.com/news/deepening-topic-a',
+    }],
+  });
 }
 
 describe('check-gate-wave1-complete', () => {
@@ -213,6 +207,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitWave1WorkUnit(dir);
     writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -234,6 +229,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), NO_SOURCE_URL_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitWave1WorkUnit(dir);
     writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -246,6 +242,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), EMPTY_FINDINGS_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitWave1WorkUnit(dir);
     writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -258,6 +255,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), STALE_TOKEN_SEED_TOPIC);
+    submitWave1WorkUnit(dir);
     writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -270,6 +268,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitWave1WorkUnit(dir);
     writeWave1Trace(dir);
     const statusPath = join(dir, 'rb_status.json');
     const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
@@ -286,6 +285,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitWave1WorkUnit(dir);
     writeWave1Trace(dir, { completion: false });
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -298,6 +298,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitWave1WorkUnit(dir);
     writeWave1Trace(dir);
     // Write a second reference with placeholder source_url — the first one has a real URL
     writeFileSync(join(dir, 'reference/topic-a-placeholder.md'),
@@ -325,6 +326,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitWave1WorkUnit(dir);
     writeWave1Trace(dir);
     writeFileSync(join(dir, 'reference/topic-a-orphan.md'),
       '# Orphan\n\n' +
@@ -350,6 +352,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitWave1WorkUnit(dir);
     writeWave1Trace(dir);
     writeFileSync(join(dir, 'reference/01-topic-a-deepening.md'),
       '---\nsource_url: https://example.com/news/deepening-topic-a\n---\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n');

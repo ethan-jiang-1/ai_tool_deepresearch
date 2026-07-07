@@ -3,595 +3,498 @@ schema: command-experiment/v1
 experiment: evidence-extraction
 case: case-163-heavy-rerun-add-real-cache-trail
 weight: heavy
-case_goal: "Real Agent/Sub-agent canary: 验证新的 rerun action:add topic 在 wave0 中走全量搜索 → 写入 _cache/ 三文件 leaf → slot result 声明 cache_trails → delegated complete → ledger append → gate cache_coverage 通过。若无可用的 Agent actor surface，记录 NOT RUN 并保留 bundle。"
+case_goal: "Real Agent canary: prove rerun action:add source intake can produce cache leaves, submitted work-unit ledger coverage, Wave0 gate/reentry feedback, and required quality metrics."
 runner: coding-agent
+agent_mode: real-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-163_reruncache
-trace: dpt_disp_case-163_reruncache/rb_trace.jsonl
+bundle: dpt_disp_case-163_eex_real_agent_rerun_add_*
+trace: dpt_disp_case-163_eex_real_agent_rerun_add_*/rb_trace.jsonl
 verdict: trace-jsonl
-agent_mode: real-agent
+req: AGT-009, EEX-003, EEX-004
 ---
 
 ## Execution Contract
 
-本 case 需要真实的 Agent/Sub-agent 外部调用（WebSearch + WebFetch）。由 coding agent 在真实 disposable bundle 中执行。
+Heavy real-Agent canary. PASS requires a real Agent or sub-agent actor to execute the claimed `wave0_source_intake` work-unit task for the rerun `action:add` topic. The actor must perform real source discovery/fetching or an approved fetch degradation chain, write its own runtime receipt, output files, cache leaves, and result JSON, and return that result through `operate-work-unit submit`.
 
-若当前环境没有可用的 Agent actor surface（无 LLM API 或 sub-agent 不可用），runner SHALL:
-1. 在第 3 步检测到 Agent 不可用时，记录 NOT RUN 到 trace
-2. 保留 bundle 不动（不删除）
-3. 退出时报告 NOT RUN 及原因
-
-**禁止从 fixture 标记 PASS。** NOT RUN 不满足 archive/release 质量证明。
+Fixture output, parent-written semantic output, hand-written ledger rows, and missing Agent evidence cannot produce PASS. If no real result is available, record `NOT_RUN`, preserve the bundle, and exit `2`. `NOT_RUN` is deferred real-Agent evidence, not proof of extraction quality.
 
 ## Reality Distance Ledger
 
-| 维度 | 声明 |
-|------|------|
-| **Agent actor** | 真实（需要 LLM API + WebSearch/WebFetch 能力） |
-| **外部调用** | 真实（WebSearch→WebFetch→_cache/ 写入） |
-| **bundle 创建** | `new-disposable-bundle.mjs` 创建真实 bundle |
-| **rerun 状态** | fixture 写入 `hitl2.user_decision: rerun` + `action: add` topic |
-| **gate 验证** | Engine gate CLI + file observability + check-reentry |
-| **verdict 来源** | trace check events + gate JSON + file 检查 |
-| **不证明** | Agent 在所有条件下的 cache 写入完整性；跨 topic 的 cache 一致性 |
-| **质量指标** | 见 Step 6 — cache trail 覆盖率、grounding spot-check、URL 精度、countable rate、gap rate |
+| Dimension | Statement |
+| --- | --- |
+| Runtime context | One real disposable bundle created by shared experiment setup |
+| Framework path | Real queue enqueue, `operate-work-unit claim`, `operate-work-unit submit`, Wave0 gate, file observability, `check-reentry`, and heavy health |
+| Fixture input | Rerun profile/status/seed-topic setup only; no fixture may satisfy PASS |
+| Agent actor | Required for PASS |
+| External calls | Required for PASS unless the actor records an approved fetch degradation chain in cache metadata |
+| Ledger generation | Real Engine-written `rb_output_declarations.jsonl` row from submit |
+| Verdict source | Trace checks derived from submit JSON, gate JSON, reentry JSON, health JSON, submitted ledger rows, and quality metrics |
+| Does not prove | Agent cache behavior across all topics or all source types |
 
 # case-163-heavy-rerun-add-real-cache-trail
 
-## 测试目标
+## Expected Runtime Path
 
-验证 rerun `action: add` 全链路：
-1. Rerun bundle 含新增 topic（`action: add`）
-2. Phase Agent 为该 topic 创建 full-intake task card
-3. Sub-agent 执行真实 WebSearch + WebFetch，写入 `_cache/wave0/primary/{topic}/sNN_*/` 三文件
-4. Sub-agent 在 slot result 的 `cache_trails[]` 中声明 leaf 路径
-5. Queue `complete()` 验证 cache trails，将验证通过的路径写入 `rb_output_declarations.jsonl`
-6. Gate `cache_coverage` 规则验证 trail 存在 + reference-to-cache mapping
-7. 记录质量指标
+1. Create a disposable rerun bundle with two kept topics and one added `economic-impact` topic.
+2. Enqueue the added topic as a Wave0 source-intake demand.
+3. Claim a work unit through `operate-work-unit claim` and read the generated task/prompt refs.
+4. A real Agent executes `_work_units/wave0/$WORK_ID/task.md` and writes result, receipt, output files, and cache leaves.
+5. If no real result exists, record `NOT_RUN`, preserve the bundle, and stop.
+6. Submit the real result by `work_id`.
+7. Run Wave0 gate, file observability, `check-reentry`, heavy health, cache coverage, and reference count checks.
+8. Record required quality metrics: cache trail coverage, grounding spot-check, URL precision, countable rate, and gap rate.
+9. Produce a trace verdict and clean up only on PASS.
 
----
+## Step 1: [MAIN/SHELL] Create Rerun Bundle And Claim Work Unit
 
-## Step 1: 创建 rerun bundle + 搭建 rerun 状态
-
-创建一个含 rerun 上下文的 disposable bundle：已有 2 个 topic + HITL2 rerun 决策，新增第 3 个 topic。
+This step creates only the deterministic rerun control surface and the work-unit envelope. It does not write Agent-produced references, cache leaves, receipts, result JSON, or ledger rows.
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs reruncache --case case-163 --force)
-echo "Bundle: $B"
+B=$(node experiments_env/shared/new-disposable-bundle.mjs eex_real_agent_rerun_add --case case-163 --force)
+node --input-type=module - "$B" <<'JS'
+import { mkdirSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import {
+  claimWorkUnitsViaCli,
+  enqueueWorkUnitTask,
+  queueItemForWorkUnit,
+  writeWave0Scaffold
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-cat > "$B/rb_profile.yaml" << 'EOF'
-plan_basename: reruncache
-research_profile: quick_factual
-root_must_answer_set: ["What is the current state of AI safety research?"]
-research_style_params:
-  wave0_shared_ref_total: 1
-  wave0_per_topic_source_floor: 1
-  wave1_per_topic_ref_floor: 1
-human_decision_checkpoints:
-  hitl1:
-    status: recorded
-    recorded_at: "2026-06-15T10:00:00Z"
-    research_profile: quick_factual
-    root_must_answer_set: ["What is the current state of AI safety research?"]
-  hitl2:
-    status: recorded
-    user_decision: rerun
-    rationale: "Add economic impact analysis to topic coverage."
-    rerun_count: 1
-    recorded_at: "2026-06-28T10:00:00Z"
-EOF
+const bundle = process.argv[2];
 
-cat > "$B/rb_status.json" << 'JSON'
-{"bundle":"reruncache","current_mode":"execution","state":"in_progress","current_gate":"rerun_ready","next_gate":"seed_topics_ready"}
-JSON
-
-# Rerun plan: 2 existing topics + 1 new (action:add)
-cat > "$B/rb_plan.md" << 'MD'
----
-{
-  "plan_basename": "reruncache",
-  "derived_topic_count": 2,
-  "topic_registry": [
-    { "id": "t1", "slug": "ai-regulation", "title": "AI Regulation" },
-    { "id": "t2", "slug": "ai-safety-research", "title": "AI Safety Research" }
+writeWave0Scaffold(bundle, {
+  planBasename: 'eex_real_agent_rerun_add',
+  topics: [
+    { id: 't1', slug: 'ai-regulation', title: 'AI Regulation' },
+    { id: 't2', slug: 'ai-safety-research', title: 'AI Safety Research' },
+    { id: 't3', slug: 'economic-impact', title: 'Economic Impact of AI Safety' }
+  ],
+  referenceRows: [
+    '| 00-shared-economic-impact.md | primary | expert | Tier 2 | economic-impact | wave0_foundation | accepted | 2026-07-06 |'
   ]
-}
----
-# Research Plan: AI Safety & Regulation
-
-## Root Question
-What is the current state of AI safety research?
-
-## Topic Registry (pre-rerun)
-Rerun will add topic: economic-impact
-MD
-
-# Seed topics — two existing + one new (action:add)
-mkdir -p "$B/seed_topics"
-
-cat > "$B/seed_topics/ai-regulation.md" << 'EOF'
----
-id: "t1"
-slug: "ai-regulation"
-title: "AI Regulation"
----
-# AI Regulation
-## 主题定位 Regulatory frameworks for AI safety.
-## must_answer What regulations govern AI safety?
-## 本轮重跑方向
-- **action**: keep
-EOF
-
-cat > "$B/seed_topics/ai-safety-research.md" << 'EOF'
----
-id: "t2"
-slug: "ai-safety-research"
-title: "AI Safety Research"
----
-# AI Safety Research
-## 主题定位 Current state of AI safety research.
-## must_answer What research directions exist?
-## 本轮重跑方向
-- **action**: keep
-EOF
-
-cat > "$B/seed_topics/economic-impact.md" << 'EOF'
----
-id: "t3"
-slug: "economic-impact"
-title: "Economic Impact of AI Safety"
----
-# Economic Impact of AI Safety
-## 主题定位 Economic dimensions of AI safety regulation and research.
-## must_answer What are the economic implications of AI safety measures?
-## 本轮重跑方向
-- **action**: add
-- **new_search_dimensions**: "economic impact of AI safety regulation, cost of compliance, market effects"
-- **rationale_excerpt**: Add economic impact analysis to topic coverage.
-EOF
-
-# Prerequisite files
-cat > "$B/reference/_INDEX.md" << 'EOF'
-| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-EOF
-echo "# Reference Evidence" > "$B/reference/README.md"
-
-echo "=== Rerun bundle ready ==="
-echo "B=$B"
-```
-
----
-
-## Step 2: 检测 Agent 可用性
-
-```bash
-B= # populated from Step 1
-
-# Check if agent tools are available via environment or CLI introspection
-AGENT_AVAILABLE=false
-
-# Check for common agent-availability signals
-if [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -n "${CLAUDE_CODE_AVAILABLE:-}" ]; then
-  AGENT_AVAILABLE=true
-fi
-
-# Also check if the deep research sub-agent types are registered
-if node -e "console.log('ok')" 2>/dev/null; then
-  # Placeholder: actual agent availability check would test sub-agent spawn capability
-  # For now, mark as available if we can eval JS
-  AGENT_AVAILABLE=true
-fi
-
-echo "Agent available: $AGENT_AVAILABLE"
-
-if [ "$AGENT_AVAILABLE" = "false" ]; then
-  echo "NOT RUN: No Agent actor surface available."
-  cat >> "$B/rb_trace.jsonl" << 'EOFT'
-{"ts":"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)","event":"check","source":"case-163","gate":"agent-availability","passed":false,"expected":true,"detail":"NOT RUN: No Agent actor surface available. Cannot execute real-agent canary."}
-EOFT
-  echo "Bundle preserved for inspection: $B"
-  exit 0
-fi
-```
-
-→ 预期：若 Agent 不可用 → NOT RUN + bundle preserved。若可用 → 继续。
-
----
-
-## Step 3: 为新增 topic 创建并排入 queue task card
-
-```bash
-B= # populated from Step 1
-
-# Read new topic from seed_topics
-NEW_TOPIC_SLUG="economic-impact"
-NEW_TOPIC_TITLE="Economic Impact of AI Safety"
-
-# Ensure cache base directory exists
-mkdir -p "$B/_cache/wave0/primary/${NEW_TOPIC_SLUG}"
-
-# Create rb_queue.json
-cat > "$B/rb_queue.json" << 'QJSON'
-{"queue_health":"ready","stop_authorization_state":"unauthorized_continue_required","slot_1_current":null,"slot_2_next":null,"slot_3_pending":null,"slot_4_pending":null,"slot_5_tail":null,"refill_pool":[]}
-QJSON
-
-# Create task card for the new topic (full intake — same as first-run wave0)
-cat > "$B/task_new_topic.json" <<< "{\"work_id\":\"wave0-source-${NEW_TOPIC_SLUG}\",\"title\":\"Source intake for ${NEW_TOPIC_TITLE}\",\"targets\":{\"controller\":\"main-agent\",\"delegates\":{\"to\":\"sub-agent\",\"role_key\":\"dpt-source-intake\",\"timeout_ms\":600000}},\"action\":\"搜索 [${NEW_TOPIC_TITLE}] 的 foundation reference。从 topic.title 和 seed_topics/${NEW_TOPIC_SLUG}.md 的 search_guardrails 派生搜索关键词。使用 WebSearch 找到至少 1 条可信来源，使用 WebFetch 获取每个来源的页面内容。提取并写入 artifacts/wave0/${NEW_TOPIC_SLUG}/source.yaml。将原始 WebSearch 结果、抓取页面和 source 元信息写入 _cache/wave0/primary/${NEW_TOPIC_SLUG}/：每个 source 在 sNN_<source-slug>/ 子目录下保存 websearch.json（原始搜索结果）、page.md（页面内容）、meta.json（11 字段：url, title, source_domain, source_name, fetched_at, fetch_method, fetch_chain, content_type, reliability_tier, reliability_basis, whitelist_status）。NN 从 01 开始递增。<source-slug> 与 reference/ 文件名 qualifier 一致。返回 JSON 必须包含 Agent Output Declaration：output_files[]（每个产出文件声明 path/role/source_url/source_slug，role=reference 时 source_url 必填）和 cache_trails[]（实际写入的 leaf source 目录路径）。\",\"producer_rule\":\"source_intake_fan_in\",\"lineage\":{\"topic_slug\":\"${NEW_TOPIC_SLUG}\",\"rerun_action\":\"add\",\"rerun_rationale\":\"Add economic impact analysis to topic coverage.\"},\"priority_class\":\"P5_new_reference_intake\",\"required_receipts\":[\"none\"],\"done_condition\":\"Files exist.\",\"verification\":{\"engine\":[],\"agent\":[]},\"writes_to\":[\"artifacts/wave0/${NEW_TOPIC_SLUG}/source.yaml\"],\"status_sync\":[],\"completion_receipt\":\"none\",\"failure_route\":\"queue repair work\",\"payload\":{}}"
-
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task "$B/task_new_topic.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
-
-echo "Task enqueued and claimed for topic: $NEW_TOPIC_SLUG"
-```
-
-→ 预期：Task 进入 queue slot_1_current，status=running。
-
----
-
-## Step 4: Sub-agent 执行真实搜索（需要 Agent actor）
-
-> **此步骤需要真实 Agent actor。** Coding agent 在此步骤中：
-> 1. 读取 `_subagents/wave_01/slot_00/task.md` 和 `result.schema.json`
-> 2. 执行真实 WebSearch + WebFetch 搜索 `economic impact of AI safety regulation`
-> 3. 将原始内容写入 `_cache/wave0/primary/economic-impact/s01_<source-slug>/` 三文件
-> 4. 将产出文件写入 `reference/` 和 `artifacts/wave0/economic-impact/source.yaml`
-> 5. 写入 `runtime-receipt.jsonl`
-> 6. 返回符合 schema 的 JSON（含 `output_files[]` 和 `cache_trails[]`）
-
-```bash
-B= # populated from Step 1
-NEW_TOPIC_SLUG="economic-impact"
-
-echo "=== Agent Execution Phase ==="
-echo "Bundle: $B"
-echo "Task: Search for economic impact of AI safety regulation"
-echo ""
-echo "Agent instructions:"
-echo "  1. Read $B/_subagents/wave_01/slot_00/task.md"
-echo "  2. Use WebSearch to find sources about: economic impact of AI safety regulation, cost of compliance, market effects"
-echo "  3. Use WebFetch to retrieve each source page content"
-echo "  4. For each source, write to _cache/wave0/primary/${NEW_TOPIC_SLUG}/s01_<slug>/:"
-echo "     - websearch.json (raw search results)"
-echo "     - page.md (fetched page content)"
-echo "     - meta.json (11 fields: url, title, source_domain, source_name, fetched_at, fetch_method, fetch_chain, content_type, reliability_tier, reliability_basis, whitelist_status)"
-echo "  5. Write artifacts/wave0/${NEW_TOPIC_SLUG}/source.yaml (YAML array)"
-echo "  6. Write a reference file to reference/00-shared-economic-impact.md (rich MD with metadata block + 5 sections)"
-echo "  7. Write runtime-receipt.jsonl with agent_runtime_started + agent_result_ready events"
-echo "  8. Return JSON matching result.schema.json with output_files[] and cache_trails[]"
-echo ""
-echo "=== If you are a coding agent executing this playbook ==="
-echo "Execute steps 1-8 above, then continue to Step 5."
-echo "=== If no Agent actor is available, skip to Step 99 (NOT RUN) ==="
-```
-
-> **Agent 执行指示**: 本步骤需要 coding agent 扮演 Sub-agent 角色，执行真实的 WebSearch + WebFetch。产出必须包括 `_cache/` 三文件 leaf 和正确的 `cache_trails[]` 声明。
-
----
-
-## Step 5: 验证 cache trail 产物 + Queue complete → ledger
-
-Agent 执行完成后，验证文件系统产物并完成 queue。
-
-```bash
-B= # populated from Step 1
-NEW_TOPIC_SLUG="economic-impact"
-
-echo "=== Post-Agent Verification ==="
-
-# Check cache leaves
-CACHE_DIR="$B/_cache/wave0/primary/${NEW_TOPIC_SLUG}"
-if [ -d "$CACHE_DIR" ]; then
-  echo "Cache directory exists: $CACHE_DIR"
-  for leaf in "$CACHE_DIR"/s*/; do
-    [ -d "$leaf" ] || continue
-    leaf_name=$(basename "$leaf")
-    has_ws=$( [ -f "$leaf/websearch.json" ] && echo "✓" || echo "✗" )
-    has_pm=$( [ -f "$leaf/page.md" ] && echo "✓" || echo "✗" )
-    has_mj=$( [ -f "$leaf/meta.json" ] && echo "✓" || echo "✗" )
-    echo "  ${leaf_name}: websearch=${has_ws} page=${has_pm} meta=${has_mj}"
-  done
-else
-  echo "WARNING: Cache directory not found: $CACHE_DIR"
-fi
-
-# Check reference files
-echo "Reference files:"
-ls -la "$B/reference/" 2>/dev/null || echo "  (none)"
-
-# Check source.yaml
-if [ -f "$B/artifacts/wave0/${NEW_TOPIC_SLUG}/source.yaml" ]; then
-  echo "source.yaml entries:"
-  grep -c "url:" "$B/artifacts/wave0/${NEW_TOPIC_SLUG}/source.yaml" 2>/dev/null || echo "  0"
-fi
-
-# Agent must write runtime receipt and result
-echo "Slot files:"
-ls -la "$B/_subagents/wave_01/slot_00/" 2>/dev/null || echo "  (none)"
-```
-
-→ 预期：至少 1 个 cache leaf 含三文件，reference 文件存在，source.yaml 存在。
-
----
-
-## Step 6: Queue complete → ledger → gate cache_coverage
-
-```bash
-B= # populated from Step 1
-NEW_TOPIC_SLUG="economic-impact"
-
-# Check if result.json exists (Agent wrote it)
-if [ ! -f "$B/_subagents/wave_01/slot_00/result.json" ]; then
-  echo "NOT RUN: Agent did not produce result.json — no Agent actor executed Step 4."
-  cat >> "$B/rb_trace.jsonl" << 'EOFT'
-{"ts":"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)","event":"check","source":"case-163","gate":"agent-execution","passed":false,"expected":true,"detail":"NOT RUN: Agent did not produce slot result. No real Agent actor executed Step 4."}
-EOFT
-  echo "Bundle preserved for inspection: $B"
-  exit 0
-fi
-
-# Queue complete with slot result reference
-cat > "$B/result_complete.json" <<< "{\"work_id\":\"wave0-source-${NEW_TOPIC_SLUG}\",\"receipt\":\"none\",\"summary\":\"Completed source intake for ${NEW_TOPIC_SLUG}\",\"writes\":[\"artifacts/wave0/${NEW_TOPIC_SLUG}/source.yaml\"],\"slot_result_ref\":\"_subagents/wave_01/slot_00/result.json\"}"
-
-set +e
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result_complete.json"
-COMPLETE_EXIT=$?
-set -e
-echo "Queue complete exit: $COMPLETE_EXIT"
-
-# Check ledger
-if [ -f "$B/rb_output_declarations.jsonl" ]; then
-  echo "=== Ledger Record ==="
-  cat "$B/rb_output_declarations.jsonl" | node -e "
-    const fs = require('fs');
-    const lines = fs.readFileSync('/dev/stdin', 'utf-8').trim().split('\n').filter(Boolean);
-    for (const line of lines) {
-      const r = JSON.parse(line);
-      console.log('  work_id:', r.work_id);
-      console.log('  output_files:', r.output_files.length, 'files');
-      console.log('  cache_trails:', (r.cache_trails || []).length, 'trails');
-      for (const t of (r.cache_trails || [])) console.log('    -', t);
-    }
-  "
-else
-  echo "WARNING: No ledger produced — complete may have rejected or Agent didn't declare output_files/cache_trails."
-fi
-```
-
-→ 预期：complete 成功，ledger 含 cache_trails。
-
----
-
-## Step 7: Gate + file observability + check-reentry 验证
-
-```bash
-B= # populated from Step 1
-
-# Update status for gate check
-cat > "$B/rb_status.json" << 'JSON'
-{"bundle":"reruncache","current_mode":"execution","state":"in_progress","current_gate":"wave0_complete","next_gate":"wave1_complete"}
-JSON
-
-# Run wave0 gate
-echo "=== Gate wave0-complete ==="
-set +e
-node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/gate-wave0-result.json" 2>&1
-GATE_EXIT=$?
-set -e
-node -e "
-  const fs = require('fs');
-  const r = JSON.parse(fs.readFileSync('$B/gate-wave0-result.json', 'utf-8'));
-  console.log('Gate passed:', r.check?.passed);
-  console.log('Inspect:');
-  for (const line of (r.inspect || [])) console.log('  ', line);
-  // Record gate result
-  fs.appendFileSync('$B/rb_trace.jsonl', JSON.stringify({
-    ts: new Date().toISOString(),
-    event: 'check',
-    source: 'case-163',
-    gate: 'gate-wave0-complete',
-    passed: r.check?.passed === true,
-    expected: true,
-    detail: r.check?.passed ? 'Gate passed with cache_coverage' : 'Gate failed: ' + (r.inspect || []).join('; '),
-  }) + '\n');
-"
-
-# File observability
-echo "=== File Observability ==="
-node -e "
-  import('$PWD/DPT_FRAMEWORK/engine/helpers/file-observability.mjs').then(async m => {
-    const { readOutputDeclarations } = await import('$PWD/DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs');
-    const ledger = readOutputDeclarations('$B');
-    const result = m.auditFileObservability('$B', {
-      topicSlugs: ['ai-regulation', 'ai-safety-research', 'economic-impact'],
-      ledgerDeclarations: ledger.map(l => ({ ...l, declared_at: l.declared_at || '', work_id: l.work_id || '', output_files: l.output_files || [] })),
-      targetPhase: 'wave0',
-    });
-    console.log('Findings:', result.findings.length, 'files classified');
-    const cacheGaps = (result.inspect || []).filter(l => l.includes('[cache_gap]'));
-    console.log('Cache gaps:', cacheGaps.length);
-    for (const gap of cacheGaps) console.log('  ', gap);
-    const fs = await import('fs');
-    fs.appendFileSync('$B/rb_trace.jsonl', JSON.stringify({
-      ts: new Date().toISOString(),
-      event: 'check', source: 'case-163',
-      gate: 'file-observability',
-      passed: cacheGaps.length === 0,
-      expected: true,
-      detail: cacheGaps.length === 0 ? 'No cache gaps detected' : cacheGaps.length + ' cache gaps found',
-    }) + '\n');
-  });
-"
-```
-
-→ 预期：若 Agent 正确写入了 cache，gate cache_coverage 应 pass，file observability 应无 cache gap。
-
----
-
-## Step 8: 质量指标收集
-
-```bash
-B= # populated from Step 1
-
-echo "=== Quality Metrics ==="
-
-# Metric 1: Cache trail coverage
-node -e "
-  const fs = require('fs');
-  const path = require('path');
-  const { readOutputDeclarations } = require('$PWD/DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs');
-  const declarations = readOutputDeclarations('$B');
-  let refCount = 0, mappedCount = 0, emptyTrailCount = 0, totalTrails = 0, validTrails = 0;
-  for (const decl of declarations) {
-    const refs = (decl.output_files || []).filter(f => f.role === 'reference');
-    refCount += refs.length;
-    const trails = decl.cache_trails || [];
-    if (trails.length === 0 && refs.length > 0) emptyTrailCount++;
-    for (const trail of trails) {
-      totalTrails++;
-      const d = path.join('$B', trail);
-      const hasAll = fs.existsSync(path.join(d, 'websearch.json')) && fs.existsSync(path.join(d, 'page.md')) && fs.existsSync(path.join(d, 'meta.json'));
-      if (hasAll) validTrails++;
-      // Check mapping
-      try {
-        const meta = JSON.parse(fs.readFileSync(path.join(d, 'meta.json'), 'utf-8'));
-        for (const ref of refs) {
-          if (meta.url && ref.source_url && meta.url === ref.source_url) mappedCount++;
-        }
-      } catch {}
-    }
-  }
-  console.log('cache_trail_coverage:', { refCount, emptyTrailCount, totalTrails, validTrails, mappedCount });
-  fs.appendFileSync('$B/rb_trace.jsonl', JSON.stringify({
-    ts: new Date().toISOString(), event: 'check', source: 'case-163', gate: 'quality-metrics',
-    passed: refCount > 0 && mappedCount >= refCount,
-    expected: true,
-    detail: JSON.stringify({ refCount, emptyTrailCount, totalTrails, validTrails, mappedCount }),
-  }) + '\n');
-" 2>/dev/null || echo "  (ledger not available)"
-
-# Metric 2: Countable rate
-node -e "
-  import('$PWD/DPT_FRAMEWORK/engine/helpers/ref-count.mjs').then(async m => {
-    const result = m.countReferences('$B', { source: 'ledger' });
-    const total = result.count + result.uncountable.length;
-    const countableRate = total > 0 ? (result.count / total * 100).toFixed(1) : 'N/A';
-    console.log('countable_rate:', countableRate + '%', '(' + result.count + '/' + total + ' countable)');
-    for (const u of result.uncountable) console.log('  uncountable:', u.path, '—', u.reason);
-  });
-"
-
-# Metric 3: URL precision spot-check
-echo "=== URL Precision Spot-Check ==="
-for ref in "$B"/reference/*.md; do
-  [ -f "$ref" ] || continue
-  ref_name=$(basename "$ref")
-  url=$(grep "source_url:" "$ref" 2>/dev/null | head -1 | sed 's/.*source_url: *//' | tr -d '"')
-  if [ -n "$url" ] && [ "$url" != " " ]; then
-    is_homepage=$(node -e "
-      import('$PWD/DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs').then(m => {
-        console.log(m.isHomepageUrl('$url') ? 'HOMEPAGE' : 'ARTICLE');
-      });
-    " 2>/dev/null || echo "UNKNOWN")
-    echo "  $ref_name: $url → $is_homepage"
-  fi
-done
-
-# Metric 4: Gap rate
-echo "=== Gap Rate ==="
-TOTAL_REF=$(ls "$B"/reference/*.md 2>/dev/null | grep -v "_INDEX\|README" | wc -l | tr -d ' ')
-ORPHAN_REF=$(node -e "
-  import('$PWD/DPT_FRAMEWORK/engine/helpers/file-observability.mjs').then(async m => {
-    const { readOutputDeclarations } = await import('$PWD/DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs');
-    const ledger = readOutputDeclarations('$B');
-    const result = m.auditFileObservability('$B', {
-      topicSlugs: ['ai-regulation', 'ai-safety-research', 'economic-impact'],
-      ledgerDeclarations: ledger.map(l => ({ ...l, declared_at: l.declared_at || '', work_id: l.work_id || '', output_files: l.output_files || [] })),
-      targetPhase: 'wave0',
-    });
-    console.log(result.findings.filter(f => f.classification === 'orphan_authority_blocking').length);
-  });
-" 2>/dev/null || echo "0")
-echo "  total_ref_files: $TOTAL_REF"
-echo "  orphan_ref_files: $ORPHAN_REF"
-echo "  empty_trail_gaps: (see quality-metrics trace event)"
-```
-
-→ 预期：输出质量指标摘要。
-
----
-
-## Step 9: 从 Trace 裁决
-
-```bash
-B= # populated from Step 1
-
-cat > "$B/_final_verdict.mjs" << 'JS'
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-const B = process.argv[2];
-const tp = join(B, 'rb_trace.jsonl');
-const raw = readFileSync(tp, 'utf-8').trim();
-if (!raw) { console.log('NO TRACE: verdict impossible'); process.exit(1); }
-const events = raw.split('\n').filter(l => l.trim()).map(l => JSON.parse(l));
-const checks = events.filter(e => e.event === 'check');
-const passed = checks.filter(c => c.passed === (c.expected !== false));
-const failed = checks.filter(c => c.passed !== (c.expected !== false));
-
-console.log('══════ Verdict ══════');
-for (const c of checks) console.log(`  ${c.passed === (c.expected !== false) ? 'PASS' : 'FAIL'}  ${c.gate}: ${c.detail}`);
-console.log('══════════════════════');
-console.log(`PASS: ${passed.length}  FAIL: ${failed.length}`);
-
-// Check for NOT RUN
-const notRun = checks.some(c => c.detail && c.detail.includes('NOT RUN'));
-if (notRun) {
-  console.log('\nNOT RUN — Agent actor surface was not available. Bundle preserved for manual execution.');
-  console.log('This does NOT satisfy archive/release quality proof.');
-  process.exit(0);
-}
-
-if (failed.length > 0) { console.log('\nFAIL'); process.exit(1); }
-console.log('\nPASS — Real Agent cache trail pipeline verified with quality metrics.');
+});
+
+writeFileSync(path.join(bundle, 'rb_profile.yaml'), [
+  'plan_basename: eex_real_agent_rerun_add',
+  'research_profile: quick_factual',
+  'root_must_answer_set:',
+  '  - What are the economic implications of AI safety measures?',
+  'research_style_params:',
+  '  user_visible: false',
+  '  wave0_per_topic_source_floor: 1',
+  '  wave0_shared_ref_total: 1',
+  '  wave1_per_topic_ref_floor: 1',
+  '  quality_min_tier: tier_4',
+  '  quality_min_substance: none',
+  'human_decision_checkpoints:',
+  '  hitl1:',
+  '    status: recorded',
+  '  hitl2:',
+  '    status: recorded',
+  '    user_decision: rerun',
+  '    rerun_count: 1',
+  '    rationale: Add economic impact analysis to topic coverage.',
+  ''
+].join('\n'));
+
+mkdirSync(path.join(bundle, 'seed_topics'), { recursive: true });
+writeFileSync(path.join(bundle, 'seed_topics/ai-regulation.md'), [
+  '---',
+  'id: t1',
+  'slug: ai-regulation',
+  'title: AI Regulation',
+  '---',
+  '',
+  '# AI Regulation',
+  '',
+  '## Rerun Direction',
+  '- action: keep',
+  ''
+].join('\n'));
+writeFileSync(path.join(bundle, 'seed_topics/ai-safety-research.md'), [
+  '---',
+  'id: t2',
+  'slug: ai-safety-research',
+  'title: AI Safety Research',
+  '---',
+  '',
+  '# AI Safety Research',
+  '',
+  '## Rerun Direction',
+  '- action: keep',
+  ''
+].join('\n'));
+writeFileSync(path.join(bundle, 'seed_topics/economic-impact.md'), [
+  '---',
+  'id: t3',
+  'slug: economic-impact',
+  'title: Economic Impact of AI Safety',
+  '---',
+  '',
+  '# Economic Impact of AI Safety',
+  '',
+  '## Rerun Direction',
+  '- action: add',
+  '- new_search_dimensions: economic impact of AI safety regulation, cost of compliance, market effects',
+  '- rationale_excerpt: Add economic impact analysis to topic coverage.',
+  ''
+].join('\n'));
+
+const task = queueItemForWorkUnit({
+  phase: 'wave0',
+  queue_item_id: 'case163-economic-impact',
+  topic_slug: 'economic-impact',
+  title: 'Real Agent rerun action:add source intake for economic-impact'
+});
+enqueueWorkUnitTask(bundle, task, { fileName: 'case-163-economic-impact.json' });
+
+const claim = claimWorkUnitsViaCli(bundle, { phase: 'wave0', count: 1 });
+const workId = claim.claimed_work_ids[0];
+writeFileSync(path.join(bundle, 'case-163-claim.json'), `${JSON.stringify(claim, null, 2)}\n`);
+writeFileSync(path.join(bundle, 'case-163-env.sh'), `WORK_ID=${workId}\n`);
+console.log(JSON.stringify({ bundle, workId, claim }, null, 2));
 JS
-node "$B/_final_verdict.mjs" "$B"
+node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
+node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
+source "$B/case-163-env.sh"
+echo "BUNDLE=$B"
+echo "WORK_ID=$WORK_ID"
 ```
 
-→ 预期：PASS（Agent 正确执行时）或 NOT RUN（无可用的 Agent 时）。
+Expected: one `wave0_source_intake` work unit is claimed. The generated task, manifest, beacon, result schema, and runtime receipt path live under `_work_units/wave0/$WORK_ID/`.
 
----
+## Step 2: [MAIN/SHELL] Read The Work-Unit Envelope
 
-## Step 10: 结果解读
-
-> **若 PASS**: 验证了 rerun `action: add` 全链路——Agent 搜索 → _cache/ 三文件写入 → cache_trails 声明 → Engine validateDelegatedCompletion → ledger append → gate cache_coverage pass → file observability 无 cache gap → check-reentry 通过。质量指标确认 cache trail 覆盖率、URL 精度、countable rate 满足要求。
->
-> **若 NOT RUN**: 当前环境无真实 Agent actor surface。bundle 保留供后续手动执行。NOT RUN 不满足 archive/release 质量证明——需环境具备 LLM API + WebSearch 能力后重新执行。
-
----
-
-## Step HH: Post-Execution Health
+The controller reads the Engine-generated task before handing work to the real Agent. This is the handoff surface; it is not a hidden runner.
 
 ```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile heavy
+source "$B/case-163-env.sh"
+TASK_REF=$(node --input-type=module - "$B" "$WORK_ID" <<'JS'
+import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+const [bundle, workId] = process.argv.slice(2);
+const record = loadWorkUnitIndex(bundle).work_units[workId];
+if (!record) throw new Error(`missing work unit ${workId}`);
+console.log(record.paths.task_ref);
+JS
+)
+echo "TASK_REF=$TASK_REF"
+sed -n '1,220p' "$B/$TASK_REF"
 ```
 
-> 健康检查不改变 verdict。
+Expected: the task names the exact `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, output contract, cache policy, result schema, and runtime receipt path.
 
----
+## Step 3: [MAIN->AGENT] Produce Real Agent Result
 
-## Step 11: PASS-only 清理（NOT RUN 时保留）
+A real Agent actor now executes the generated task from Step 2.
+
+Required Agent evidence:
+
+- Read `_work_units/wave0/$WORK_ID/task.md`, `manifest.json`, `beacon.json`, and `result.schema.json`.
+- Search and fetch source material for economic impact of AI safety regulation, compliance cost, and market effects.
+- Write at least one countable reference under `reference/`.
+- Write `artifacts/wave0/economic-impact/source.yaml`.
+- Write one or more cache leaves under `_cache/wave0/primary/economic-impact/<source-slug>/`, each containing `websearch.json`, `page.md`, and `meta.json`.
+- Append lifecycle receipt events to the claimed runtime receipt path; every event must carry the same `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
+- Write a result JSON that matches the claimed work unit and declares `output_files[]` plus `cache_trails[]`.
+- Return the result JSON path to the main controller.
+
+The main controller must not prewrite the semantic reference, page capture, cache metadata, result JSON, runtime receipt, or ledger row for this step.
+
+## Step 4: [MAIN/SHELL] No-Result Checkpoint
+
+Run this checkpoint if Step 3 did not produce a real result JSON. It records `NOT_RUN`, exits `2`, and preserves the bundle.
 
 ```bash
-if node "$B/_final_verdict.mjs" "$B" && [ "$?" -eq 0 ]; then
-  # Check if it was a real PASS (not NOT RUN)
-  if grep -q "NOT RUN" "$B/rb_trace.jsonl" 2>/dev/null; then
-    echo "NOT RUN — bundle preserved for inspection: $B"
-  else
-    rm -rf "$B"
-    echo "✓ Cleaned up after PASS."
-  fi
-else
-  echo "FAIL preserved for inspection: $B"
+source "$B/case-163-env.sh"
+REAL_RESULT=${REAL_RESULT:-}
+if [ -z "$REAL_RESULT" ] || [ ! -f "$REAL_RESULT" ]; then
+  node --input-type=module - "$B" "$WORK_ID" <<'JS'
+import { writeFileSync } from 'node:fs';
+import { recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const [bundle, workId] = process.argv.slice(2);
+const reason = {
+  case: 'case-163',
+  status: 'NOT_RUN',
+  ok: false,
+  work_id: workId,
+  reason: 'No real Agent result JSON was provided. This heavy case requires real Agent work and cannot PASS from fixtures.',
+  required_metrics: ['cache_trail_coverage', 'grounding_spot_check', 'url_precision', 'countable_rate', 'gap_rate']
+};
+writeFileSync(`${bundle}/case-163-not-run.json`, `${JSON.stringify(reason, null, 2)}\n`);
+writeFileSync(`${bundle}/case-163-verdict.json`, `${JSON.stringify(reason, null, 2)}\n`);
+recordPlaybookCheck(bundle, {
+  gate: 'real-agent-result-required',
+  passed: false,
+  expected: true,
+  detail: `NOT RUN: ${reason.reason}`,
+  extra: { outcome: 'not_run', work_id: workId }
+});
+console.log(JSON.stringify(reason, null, 2));
+process.exit(2);
+JS
 fi
+```
+
+Expected without `REAL_RESULT`: exit `2`, `case-163-verdict.json` has `status: "NOT_RUN"`, and the bundle is preserved for later real-Agent continuation.
+
+## Step 5: [MAIN/SHELL] Submit Real Result By Work ID
+
+Run only after Step 3 has produced a real result JSON.
+
+```bash
+source "$B/case-163-env.sh"
+REAL_RESULT=<path-to-real-agent-result.json>
+SUBMIT_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$REAL_RESULT")
+printf '%s\n' "$SUBMIT_JSON" > "$B/case-163-submit.json"
+printf '%s\n' "$SUBMIT_JSON" | node -e '
+const submit = JSON.parse(require("fs").readFileSync(0, "utf8"));
+console.log(`submit_ok=${submit.ok}`);
+console.log(`submitted_work_id=${submit.work_id || submit.record?.work_id || "see submit JSON"}`);
+process.exit(submit.ok === true ? 0 : 1);
+'
+```
+
+Expected: submit returns `ok: true`, completes the bound queue demand, and appends one submitted work-unit ledger row.
+
+## Step 6: [MAIN/SHELL] Gate, Reentry, Health, And Quality Metrics
+
+This checkpoint reads machine feedback into runtime artifacts and trace checks. It does not infer success from console confidence.
+
+```bash
+node --input-type=module - "$B" "$WORK_ID" <<'JS'
+import { spawnSync } from 'node:child_process';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import {
+  extractSection,
+  isHomepageUrl,
+  parseReferenceMetadata,
+  readOutputDeclarations,
+  readSubmittedWorkUnitDeclarations
+} from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { checkCacheCoverage } from './DPT_FRAMEWORK/engine/helpers/gate-helpers-checks.mjs';
+import { auditFileObservability } from './DPT_FRAMEWORK/engine/helpers/file-observability.mjs';
+import { countReferences } from './DPT_FRAMEWORK/engine/helpers/ref-count.mjs';
+import { recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const [bundle, workId] = process.argv.slice(2);
+const run = (args) => spawnSync(process.execPath, args, {
+  encoding: 'utf8',
+  maxBuffer: 10 * 1024 * 1024
+});
+const writeJson = (relPath, value) => writeFileSync(path.join(bundle, relPath), `${JSON.stringify(value, null, 2)}\n`);
+const parseStdout = (result, label) => {
+  try { return JSON.parse(result.stdout); }
+  catch (error) {
+    throw new Error(`${label} did not emit JSON: ${error.message}\nstdout=${result.stdout}\nstderr=${result.stderr}`);
+  }
+};
+
+const submit = JSON.parse(readFileSync(path.join(bundle, 'case-163-submit.json'), 'utf8'));
+
+writeFileSync(path.join(bundle, 'rb_status.json'), `${JSON.stringify({
+  bundle: path.basename(bundle),
+  current_gate: 'seed_topics_ready',
+  next_gate: 'wave0_complete',
+  current_mode: 'execution',
+  state: 'in_progress'
+}, null, 2)}\n`);
+const gateResult = run(['DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs', '--bundle', bundle, '--current-node', 'phases/phase-wave0.md']);
+writeFileSync(path.join(bundle, 'case-163-gate-wave0.json'), gateResult.stdout || gateResult.stderr || '');
+const gate = parseStdout(gateResult, 'Wave0 gate');
+
+const coverage = checkCacheCoverage(bundle);
+writeJson('case-163-cache-coverage.json', coverage);
+
+const declarations = readOutputDeclarations(bundle);
+const submittedRows = readSubmittedWorkUnitDeclarations(bundle);
+const fileObservability = auditFileObservability(bundle, {
+  topicSlugs: ['ai-regulation', 'ai-safety-research', 'economic-impact'],
+  ledgerDeclarations: declarations,
+  targetPhase: 'wave0'
+});
+writeJson('case-163-file-observability.json', fileObservability);
+
+writeFileSync(path.join(bundle, 'rb_status.json'), `${JSON.stringify({
+  bundle: path.basename(bundle),
+  current_gate: 'wave0_complete',
+  next_gate: 'wave1_complete',
+  current_mode: 'execution',
+  state: 'in_progress'
+}, null, 2)}\n`);
+const reentryResult = run(['DPT_FRAMEWORK/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'wave0_complete']);
+writeFileSync(path.join(bundle, 'case-163-check-reentry.json'), reentryResult.stdout || reentryResult.stderr || '');
+const reentry = parseStdout(reentryResult, 'check-reentry');
+
+const healthResult = run(['experiments_env/shared/verify-bundle-health.mjs', '--bundle', bundle, '--profile', 'heavy', '--json']);
+writeFileSync(path.join(bundle, 'case-163-health.json'), healthResult.stdout || healthResult.stderr || '');
+const health = parseStdout(healthResult, 'heavy health');
+
+const refCount = countReferences(bundle, { source: 'ledger' });
+const submittedForWork = submittedRows.filter((row) => row.work_id === workId);
+const refOutputs = submittedForWork.flatMap((row) => (row.output_files || []).filter((entry) => entry.role === 'reference'));
+const allTrails = [...new Set(submittedForWork.flatMap((row) => row.cache_trails || []))];
+
+function cacheLeafComplete(trail) {
+  return ['websearch.json', 'page.md', 'meta.json'].every((name) => existsSync(path.join(bundle, trail, name)));
+}
+
+function metaUrl(trail) {
+  try {
+    return JSON.parse(readFileSync(path.join(bundle, trail, 'meta.json'), 'utf8')).url || '';
+  } catch {
+    return '';
+  }
+}
+
+function mapsTrailToRef(trail, ref) {
+  const meta = metaUrl(trail);
+  if (meta && ref.source_url && meta === ref.source_url) return true;
+  if (ref.source_slug && trail.includes(ref.source_slug)) return true;
+  const qualifier = path.basename(ref.path || '', '.md').replace(/^00-shared-/, '');
+  return qualifier.length > 0 && trail.includes(qualifier);
+}
+
+const mappedRefs = refOutputs.filter((ref) => allTrails.some((trail) => cacheLeafComplete(trail) && mapsTrailToRef(trail, ref)));
+const emptyTrailRefs = refOutputs.filter((ref) => !allTrails.some((trail) => mapsTrailToRef(trail, ref)));
+const urlPrecision = refOutputs.map((ref) => ({
+  path: ref.path,
+  source_url: ref.source_url || '',
+  article_level: ref.source_url ? !isHomepageUrl(ref.source_url) : false
+}));
+
+function tokens(text) {
+  return new Set(String(text).toLowerCase().match(/[a-z][a-z0-9-]{3,}/g) || []);
+}
+
+const sampledFacts = [];
+for (const ref of refOutputs.slice(0, 3)) {
+  const refPath = path.join(bundle, ref.path);
+  if (!existsSync(refPath)) continue;
+  const refRaw = readFileSync(refPath, 'utf8');
+  const facts = extractSection(refRaw, 'Key Facts')
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*-\s*/, '').trim())
+    .filter(Boolean)
+    .slice(0, 2);
+  const mappedTrail = allTrails.find((trail) => mapsTrailToRef(trail, ref));
+  const pageRaw = mappedTrail && existsSync(path.join(bundle, mappedTrail, 'page.md'))
+    ? readFileSync(path.join(bundle, mappedTrail, 'page.md'), 'utf8')
+    : '';
+  const pageTokens = tokens(pageRaw);
+  for (const fact of facts) {
+    const factTokens = [...tokens(fact)];
+    const overlap = factTokens.filter((token) => pageTokens.has(token)).length;
+    sampledFacts.push({
+      reference: ref.path,
+      fact,
+      mapped_cache_trail: mappedTrail || null,
+      lexical_overlap_tokens: overlap,
+      checked: Boolean(mappedTrail && pageRaw),
+      supported_by_cache_text: Boolean(mappedTrail && pageRaw && overlap >= Math.min(3, Math.max(1, Math.ceil(factTokens.length * 0.2))))
+    });
+  }
+}
+
+const gapFindings = [
+  ...fileObservability.inspect.filter((line) => line.includes('[cache_gap]')),
+  ...fileObservability.findings.filter((finding) => finding.classification === 'orphan_authority_blocking').map((finding) => finding.path),
+  ...emptyTrailRefs.map((ref) => `empty_trail:${ref.path}`)
+];
+
+const metrics = {
+  cache_trail_coverage: {
+    references: refOutputs.length,
+    mapped_references: mappedRefs.length,
+    complete_trails: allTrails.filter(cacheLeafComplete).length,
+    declared_trails: allTrails.length,
+    percent: refOutputs.length > 0 ? Number(((mappedRefs.length / refOutputs.length) * 100).toFixed(1)) : 0
+  },
+  grounding_spot_check: {
+    checked: sampledFacts.filter((fact) => fact.checked).length,
+    supported_by_cache_text: sampledFacts.filter((fact) => fact.supported_by_cache_text).length,
+    samples: sampledFacts
+  },
+  url_precision: {
+    references: refOutputs.length,
+    article_level: urlPrecision.filter((entry) => entry.article_level).length,
+    details: urlPrecision
+  },
+  countable_rate: {
+    declared_references: refOutputs.length,
+    countable_references: refCount.count,
+    percent: refOutputs.length > 0 ? Number(((refCount.count / refOutputs.length) * 100).toFixed(1)) : 0,
+    uncountable: refCount.uncountable
+  },
+  gap_rate: {
+    references: refOutputs.length,
+    gaps: gapFindings.length,
+    percent: refOutputs.length > 0 ? Number(((gapFindings.length / refOutputs.length) * 100).toFixed(1)) : 0,
+    findings: gapFindings
+  }
+};
+writeJson('case-163-quality-metrics.json', metrics);
+
+recordPlaybookCheck(bundle, { gate: 'real-submit', passed: submit.ok === true, detail: workId });
+recordPlaybookCheck(bundle, {
+  gate: 'submitted-ledger-row',
+  passed: submittedForWork.length === 1 && submittedForWork[0].cache_trails?.length > 0,
+  detail: JSON.stringify(submittedForWork.map((row) => ({ work_id: row.work_id, queue_item_id: row.queue_item_id, cache_trails: row.cache_trails })))
+});
+recordPlaybookCheck(bundle, { gate: 'wave0-gate', passed: gateResult.status === 0 && gate.check?.passed === true, detail: JSON.stringify(gate.inspect || []) });
+recordPlaybookCheck(bundle, { gate: 'cache-coverage', passed: coverage.passed === true, detail: JSON.stringify(coverage.inspect || []) });
+recordPlaybookCheck(bundle, { gate: 'check-reentry', passed: reentryResult.status === 0, detail: JSON.stringify(reentry.inspect || reentry.blockers || []) });
+recordPlaybookCheck(bundle, { gate: 'heavy-health', passed: healthResult.status === 0 && health.status === 'clean', detail: JSON.stringify(health.cache_trails || health) });
+recordPlaybookCheck(bundle, { gate: 'cache-trail-coverage-metric', passed: metrics.cache_trail_coverage.references > 0 && metrics.cache_trail_coverage.percent === 100, detail: JSON.stringify(metrics.cache_trail_coverage) });
+recordPlaybookCheck(bundle, { gate: 'grounding-spot-check-metric', passed: metrics.grounding_spot_check.checked > 0 && metrics.grounding_spot_check.supported_by_cache_text > 0, detail: JSON.stringify(metrics.grounding_spot_check) });
+recordPlaybookCheck(bundle, { gate: 'url-precision-metric', passed: metrics.url_precision.references > 0 && metrics.url_precision.article_level === metrics.url_precision.references, detail: JSON.stringify(metrics.url_precision) });
+recordPlaybookCheck(bundle, { gate: 'countable-rate-metric', passed: metrics.countable_rate.declared_references > 0 && metrics.countable_rate.percent === 100, detail: JSON.stringify(metrics.countable_rate) });
+recordPlaybookCheck(bundle, { gate: 'gap-rate-metric', passed: metrics.gap_rate.gaps === 0, detail: JSON.stringify(metrics.gap_rate) });
+
+console.log(JSON.stringify({ gate, reentry, health, metrics }, null, 2));
+JS
+```
+
+Expected: the gate passes from submitted work-unit coverage, reentry and health are clean, cache coverage maps each declared reference to complete cache leaves, countable rate is 100%, URL precision is article-level, grounding spot-check has cache-text support, and gap rate is 0%.
+
+## Step 7: [MAIN/SHELL] Trace Verdict
+
+```bash
+node --input-type=module - "$B" <<'JS'
+import { writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+const bundle = process.argv[2];
+const verdict = writeTraceVerdict(bundle, 'case-163');
+console.log(JSON.stringify(verdict, null, 2));
+process.exit(verdict.ok ? 0 : 1);
+JS
+```
+
+Expected: PASS only when all submit, gate, reentry, health, and quality metric checks match their expected values.
+
+## Step 8: [MAIN] Result Interpretation
+
+PASS means a real Agent completed the rerun `action:add` source-intake path through the production work-unit boundary: claim, Agent result, submit, submitted ledger row, cache trail validation, Wave0 gate, reentry, health, and quality metrics. NOT_RUN means the real-Agent canary remains deferred. FAIL means the preserved bundle contains submit/gate/reentry/health/metric feedback for repair.
+
+## Step 9: [MAIN/SHELL] Cleanup
+
+PASS only:
+
+```bash
+node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-163-verdict.json"
+rm -rf "$B"
+```
+
+FAIL and NOT_RUN preserve the bundle.
+
+## Optional Automation Smoke
+
+The runner is an optional smoke for the same checkpoints. It must not replace Step 3 with fixture output.
+
+```bash
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-163 --target-dir tests/.test-bundles
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-163 --real-result <result.json> --cleanup-pass
 ```

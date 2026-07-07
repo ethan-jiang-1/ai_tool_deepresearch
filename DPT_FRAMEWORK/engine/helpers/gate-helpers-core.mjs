@@ -10,7 +10,6 @@ import { join, dirname, basename, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
-import { SLOT_NAMES } from '../../schema/contracts/queue-slots.mjs';
 import { resolveNodeTransitionDetailed } from '../ask-next.mjs';
 import { parseMdFrontmatter } from './gate-helpers-readers.mjs';
 
@@ -632,12 +631,15 @@ export function writeCheckpointManifest(bundlePath, result) {
       const qp = join(bundlePath, 'rb_queue.json');
       if (existsSync(qp)) {
         const q = JSON.parse(readFileSync(qp, 'utf-8'));
-        const activeCount = SLOT_NAMES.filter(s => q[s] !== null && q[s] !== undefined).length;
+        const activeCount = Array.isArray(q.active_window) ? q.active_window.length : 0;
+        const inFlightCount = q.delegated_in_flight && typeof q.delegated_in_flight === 'object'
+          ? Object.keys(q.delegated_in_flight).length
+          : 0;
         queueSummary = {
           queue_health: q.queue_health || null,
           active_count: activeCount,
+          delegated_in_flight_count: inFlightCount,
           pool_count: Array.isArray(q.refill_pool) ? q.refill_pool.length : 0,
-          slot_1_status: q.slot_1_current?.status || null,
         };
       }
     } catch { /* ignore */ }

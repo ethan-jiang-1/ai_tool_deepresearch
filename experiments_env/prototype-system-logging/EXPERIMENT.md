@@ -10,7 +10,7 @@ After system-logging implementation:
 1. All log lines from `writeGateAttempt`, `log-event.mjs`, `logToRun`, `createRunLogger` conform to the unified envelope.
 2. All trace JSONL entries carry a `bundle` field matching `rb_status.json`.
 3. `inspect-bundle --timeline` stitches all 4 sinks with a single regex.
-4. Engine closed-set events (queue-manager + subagent-relay) produce both log and trace.
+4. Engine closed-set events (queue-manager + work-unit lifecycle) produce both log and trace.
 
 ## Case Groups
 

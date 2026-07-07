@@ -26,10 +26,6 @@ const CLI_CONVENTION_INVENTORY = {
     class: 'non-gate structured utility with code 2 caller/config errors',
     coverage: ['tests/integration/cli/check-reentry.test.mjs', 'this file: missing args exits 2'],
   },
-  'drive-relay-slot.mjs': {
-    class: 'non-gate runtime driver utility',
-    coverage: ['tests/integration/cli/drive-relay-slot.test.mjs', 'this file: missing command exits 1'],
-  },
   'enter-phase.mjs': {
     class: 'non-gate structured handoff utility',
     coverage: ['tests/integration/cli/enter-phase.test.mjs', 'this file: missing args exits 1'],
@@ -62,6 +58,10 @@ const CLI_CONVENTION_INVENTORY = {
     class: 'non-gate queue utility',
     coverage: ['tests/integration/cli/operate-queue.test.mjs', 'tests/integration/cli/operate-queue-validation.test.mjs', 'this file: missing command exits 1'],
   },
+  'operate-work-unit.mjs': {
+    class: 'non-gate delegated work-unit utility',
+    coverage: ['tests/integration/cli/operate-work-unit.test.mjs', 'this file: missing command exits 1'],
+  },
   'validate-bundle.mjs': {
     class: 'non-gate binary validator',
     coverage: ['tests/integration/cli/validate-bundle.test.mjs', 'this file: missing bundle exits 1'],
@@ -74,9 +74,9 @@ const CLI_CONVENTION_INVENTORY = {
     class: 'non-gate binary validator with code 2 invocation errors',
     coverage: ['tests/integration/cli/validate-playbook.test.mjs', 'this file: missing target exits 2'],
   },
-  'validate-subagent-logging-contract.mjs': {
+  'validate-work-unit-hygiene.mjs': {
     class: 'non-gate binary validator',
-    coverage: ['tests/integration/md/subagent-logging-contract.test.mjs', 'this file: shipped framework exits 0'],
+    coverage: ['tests/integration/cli/validate-work-unit-hygiene.test.mjs', 'this file: shipped framework exits 0'],
   },
   'validate-workflow-package.mjs': {
     class: 'non-gate binary validator with documented header/code drift',
@@ -88,7 +88,6 @@ const SAFE_INVOCATION_SAMPLES = [
   { cli: 'advance-status.mjs', args: [], expectedStatus: 1 },
   { cli: 'apply-research-style.mjs', args: [], expectedStatus: 1 },
   { cli: 'check-reentry.mjs', args: [], expectedStatus: 2 },
-  { cli: 'drive-relay-slot.mjs', args: [], expectedStatus: 1 },
   { cli: 'enter-phase.mjs', args: [], expectedStatus: 1 },
   { cli: 'inspect-bundle.mjs', args: [], expectedStatus: 1 },
   { cli: 'inspect-wave0-output.mjs', args: [], expectedStatus: 2 },
@@ -97,10 +96,11 @@ const SAFE_INVOCATION_SAMPLES = [
   { cli: 'instantiate-run-bundle.mjs', args: [], expectedStatus: 1 },
   { cli: 'log-event.mjs', args: ['--level', 'info', '--msg', 'missing bundle'], expectedStatus: 0 },
   { cli: 'operate-queue.mjs', args: [], expectedStatus: 1 },
+  { cli: 'operate-work-unit.mjs', args: [], expectedStatus: 1 },
   { cli: 'validate-bundle.mjs', args: [], expectedStatus: 1 },
   { cli: 'validate-phase-templates.mjs', args: [], expectedStatus: 1 },
   { cli: 'validate-playbook.mjs', args: [], expectedStatus: 2 },
-  { cli: 'validate-subagent-logging-contract.mjs', args: [], expectedStatus: 0 },
+  { cli: 'validate-work-unit-hygiene.mjs', args: [], expectedStatus: 0 },
   { cli: 'validate-workflow-package.mjs', args: [], expectedStatus: 0 },
 ];
 

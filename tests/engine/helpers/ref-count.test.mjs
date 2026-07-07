@@ -7,6 +7,12 @@ import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isCountable, countReferences, QUALITY_THRESHOLDS } from '../../../DPT_FRAMEWORK/engine/helpers/ref-count.mjs';
+import {
+  claimAndSubmitWorkUnit,
+  cleanupWorkUnitBundle,
+  referenceContent,
+  tempWorkUnitBundle,
+} from '../work-unit-test-helpers.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-rc-tmp');
@@ -226,72 +232,80 @@ describe('countReferences', () => {
   });
 
   it('returns zero count when ledger has no role=reference entries', () => {
-    const dir = setupBundle('cr-no-refs', {});
-    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), JSON.stringify({
-      declared_at: '2026-06-15T00:00:00.000Z',
-      work_id: 'w1',
-      producer_rule: 'topic_intake',
-      slot_result_ref: '_subagents/wave_01/slot_00/result.json',
-      runtime_receipt_ref: '_subagents/wave_01/slot_00/runtime-receipt.jsonl',
-      output_files: [
-        { path: 'artifacts/wave0/topic-a/evidence-summary.md', role: 'evidence_summary' },
-      ],
-      cache_trails: [],
-      creation_reason: 'Test',
-    }) + '\n');
-    const result = countReferences(dir);
-    assert.strictEqual(result.count, 0);
+    const dir = tempWorkUnitBundle('cr-no-refs-');
+    try {
+      claimAndSubmitWorkUnit(dir, {
+        outputs: [{
+          path: 'artifacts/wave0/topic-a/evidence-summary.md',
+          role: 'evidence_summary',
+          content: '# Evidence Summary\n',
+        }],
+      });
+      const result = countReferences(dir);
+      assert.strictEqual(result.count, 0);
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
   });
 
   it('counts only declared reference files that pass isCountable', () => {
-    const dir = setupBundle('cr-mixed', {
-      'reference/countable-1.md': refContent({ source_url: 'https://example.com/research/a' }),
-      'reference/countable-2.md': refContent({ source_url: 'https://example.com/research/b' }),
-      'reference/uncountable-homepage.md': refContent({ source_url: 'https://example.com/' }),
-    });
-    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
-      JSON.stringify({
-        declared_at: '2026-06-15T00:00:00.000Z',
-        work_id: 'w1',
-        producer_rule: 'source_intake_fan_in',
-        slot_result_ref: '_subagents/wave_01/slot_00/result.json',
-        runtime_receipt_ref: '_subagents/wave_01/slot_00/runtime-receipt.jsonl',
-        output_files: [
-          { path: 'reference/countable-1.md', role: 'reference', source_url: 'https://example.com/research/a' },
-          { path: 'reference/countable-2.md', role: 'reference', source_url: 'https://example.com/research/b' },
-          { path: 'reference/uncountable-homepage.md', role: 'reference', source_url: 'https://example.com/' },
+    const dir = tempWorkUnitBundle('cr-mixed-');
+    try {
+      claimAndSubmitWorkUnit(dir, {
+        outputs: [
+          {
+            path: 'reference/countable-1.md',
+            role: 'reference',
+            source_url: 'https://example.com/research/a',
+            source_slug: 's01_source',
+            content: referenceContent({ source_url: 'https://example.com/research/a' }),
+          },
+          {
+            path: 'reference/countable-2.md',
+            role: 'reference',
+            source_url: 'https://example.com/research/b',
+            source_slug: 's01_source',
+            content: referenceContent({ source_url: 'https://example.com/research/b' }),
+          },
+          {
+            path: 'reference/uncountable-homepage.md',
+            role: 'reference',
+            source_url: 'https://example.com/',
+            source_slug: 's01_source',
+            content: referenceContent({ source_url: 'https://example.com/' }),
+          },
         ],
-        cache_trails: [],
-        creation_reason: 'Test',
-      }),
-    ].join('\n') + '\n');
-    const result = countReferences(dir);
-    assert.strictEqual(result.count, 2, `Expected 2 countable, got ${result.count}`);
-    assert.strictEqual(result.uncountable.length, 1);
-    assert.ok(result.uncountable[0].reason.includes('source_url_is_homepage'));
+      });
+      const result = countReferences(dir);
+      assert.strictEqual(result.count, 2, `Expected 2 countable, got ${result.count}`);
+      assert.strictEqual(result.uncountable.length, 1);
+      assert.ok(result.uncountable[0].reason.includes('source_url_is_homepage'));
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
   });
 
   it('orphan reference does not affect ledger-mode count', () => {
-    // ref-orphan exists on disk and IS countable, but is NOT in the ledger
-    const dir = setupBundle('cr-orphan', {
-      'reference/declared.md': refContent({ source_url: 'https://example.com/research/declared' }),
-      'reference/orphan.md': refContent({ source_url: 'https://example.com/research/orphan' }),
-    });
-    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), JSON.stringify({
-      declared_at: '2026-06-15T00:00:00.000Z',
-      work_id: 'w1',
-      producer_rule: 'source_intake_fan_in',
-      slot_result_ref: '_subagents/wave_01/slot_00/result.json',
-      runtime_receipt_ref: '_subagents/wave_01/slot_00/runtime-receipt.jsonl',
-      output_files: [
-        { path: 'reference/declared.md', role: 'reference', source_url: 'https://example.com/research/declared' },
-      ],
-      cache_trails: [],
-      creation_reason: 'Test',
-    }) + '\n');
-    const result = countReferences(dir);
-    assert.strictEqual(result.count, 1, 'Orphan ref should not be counted in ledger mode');
-    // The orphan is not even a candidate in ledger mode, so it won't appear in uncountable
+    const dir = tempWorkUnitBundle('cr-orphan-');
+    try {
+      claimAndSubmitWorkUnit(dir, {
+        outputs: [{
+          path: 'reference/declared.md',
+          role: 'reference',
+          source_url: 'https://example.com/research/declared',
+          source_slug: 's01_source',
+          content: referenceContent({ source_url: 'https://example.com/research/declared' }),
+        }],
+      });
+      writeFileSync(
+        join(dir, 'reference/orphan.md'),
+        referenceContent({ source_url: 'https://example.com/research/orphan' }),
+      );
+      const result = countReferences(dir);
+      assert.strictEqual(result.count, 1, 'Orphan ref should not be counted in ledger mode');
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
   });
 
   it('diagnostic filesystem mode discovers all reference/ md files', () => {
@@ -304,95 +318,110 @@ describe('countReferences', () => {
   });
 
   it('targetGlob filters candidates by glob pattern', () => {
-    const dir = setupBundle('cr-glob', {
-      'reference/00-shared-foundation.md': refContent({ source_url: 'https://example.com/research/shared' }),
-      'reference/topic-a-specific.md': refContent({ source_url: 'https://example.com/research/topic-a' }),
-    });
-    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
-      JSON.stringify({
-        declared_at: '2026-06-15T00:00:00.000Z',
-        work_id: 'w1',
-        producer_rule: 'source_intake_fan_in',
-        slot_result_ref: '_subagents/wave_01/slot_00/result.json',
-        runtime_receipt_ref: '_subagents/wave_01/slot_00/runtime-receipt.jsonl',
-        output_files: [
-          { path: 'reference/00-shared-foundation.md', role: 'reference', source_url: 'https://example.com/research/shared' },
-          { path: 'reference/topic-a-specific.md', role: 'reference', source_url: 'https://example.com/research/topic-a' },
+    const dir = tempWorkUnitBundle('cr-glob-');
+    try {
+      claimAndSubmitWorkUnit(dir, {
+        outputs: [
+          {
+            path: 'reference/00-shared-foundation.md',
+            role: 'reference',
+            source_url: 'https://example.com/research/shared',
+            source_slug: 's01_source',
+            content: referenceContent({ source_url: 'https://example.com/research/shared' }),
+          },
+          {
+            path: 'reference/topic-a-specific.md',
+            role: 'reference',
+            source_url: 'https://example.com/research/topic-a',
+            source_slug: 's01_source',
+            content: referenceContent({ source_url: 'https://example.com/research/topic-a' }),
+          },
         ],
-        cache_trails: [],
-        creation_reason: 'Test',
-      }),
-    ].join('\n') + '\n');
-    const result = countReferences(dir, { targetGlob: 'reference/00-shared-*.md' });
-    assert.strictEqual(result.count, 1, `Expected 1 with 00-shared glob, got ${result.count}`);
+      });
+      const result = countReferences(dir, { targetGlob: 'reference/00-shared-*.md' });
+      assert.strictEqual(result.count, 1, `Expected 1 with 00-shared glob, got ${result.count}`);
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
   });
 
   it('per-topic scoped count does not include other topic references', () => {
-    const dir = setupBundle('cr-scoped', {
-      'reference/topic-a-source.md': refContent({
-        source_url: 'https://example.com/research/topic-a',
-        related_topic: 'topic-a',
-      }),
-      'reference/topic-b-source.md': refContent({
-        source_url: 'https://example.com/research/topic-b',
-        related_topic: 'topic-b',
-      }),
-    });
-    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
-      JSON.stringify({
-        declared_at: '2026-06-15T00:00:00.000Z',
-        work_id: 'w1',
-        producer_rule: 'source_intake_fan_in',
-        slot_result_ref: '_subagents/wave_01/slot_00/result.json',
-        runtime_receipt_ref: '_subagents/wave_01/slot_00/runtime-receipt.jsonl',
-        output_files: [
-          { path: 'reference/topic-a-source.md', role: 'reference', source_url: 'https://example.com/research/topic-a' },
-          { path: 'reference/topic-b-source.md', role: 'reference', source_url: 'https://example.com/research/topic-b' },
+    const dir = tempWorkUnitBundle('cr-scoped-');
+    try {
+      claimAndSubmitWorkUnit(dir, {
+        outputs: [
+          {
+            path: 'reference/topic-a-source.md',
+            role: 'reference',
+            source_url: 'https://example.com/research/topic-a',
+            source_slug: 's01_source',
+            content: referenceContent({
+              source_url: 'https://example.com/research/topic-a',
+              related_topic: 'topic-a',
+            }),
+          },
+          {
+            path: 'reference/topic-b-source.md',
+            role: 'reference',
+            source_url: 'https://example.com/research/topic-b',
+            source_slug: 's01_source',
+            content: referenceContent({
+              source_url: 'https://example.com/research/topic-b',
+              related_topic: 'topic-b',
+            }),
+          },
         ],
-        cache_trails: [],
-        creation_reason: 'Test',
-      }),
-    ].join('\n') + '\n');
-    // Use glob scoped to topic-a
-    const result = countReferences(dir, { targetGlob: 'reference/*topic-a*.md', topic: 'topic-a' });
-    assert.strictEqual(result.count, 1, `Expected 1 for topic-a scope, got ${result.count}`);
+      });
+      const result = countReferences(dir, { targetGlob: 'reference/*topic-a*.md', topic: 'topic-a' });
+      assert.strictEqual(result.count, 1, `Expected 1 for topic-a scope, got ${result.count}`);
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
   });
 
   it('returns full audit transparency in uncountable array', () => {
-    const dir = setupBundle('cr-audit', {
-      'reference/good.md': refContent({ source_url: 'https://example.com/research/good' }),
-      'reference/bad-homepage.md': refContent({ source_url: 'https://example.com/' }),
-      'reference/bad-thin.md': refContent({
-        source_url: 'https://example.com/research/thin',
-        coreContent: 'Short.',
-      }),
-    });
-    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
-      JSON.stringify({
-        declared_at: '2026-06-15T00:00:00.000Z',
-        work_id: 'w1',
-        producer_rule: 'source_intake_fan_in',
-        slot_result_ref: '_subagents/wave_01/slot_00/result.json',
-        runtime_receipt_ref: '_subagents/wave_01/slot_00/runtime-receipt.jsonl',
-        output_files: [
-          { path: 'reference/good.md', role: 'reference', source_url: 'https://example.com/research/good' },
-          { path: 'reference/bad-homepage.md', role: 'reference', source_url: 'https://example.com/' },
-          { path: 'reference/bad-thin.md', role: 'reference', source_url: 'https://example.com/research/thin' },
+    const dir = tempWorkUnitBundle('cr-audit-');
+    try {
+      claimAndSubmitWorkUnit(dir, {
+        outputs: [
+          {
+            path: 'reference/good.md',
+            role: 'reference',
+            source_url: 'https://example.com/research/good',
+            source_slug: 's01_source',
+            content: referenceContent({ source_url: 'https://example.com/research/good' }),
+          },
+          {
+            path: 'reference/bad-homepage.md',
+            role: 'reference',
+            source_url: 'https://example.com/',
+            source_slug: 's01_source',
+            content: referenceContent({ source_url: 'https://example.com/' }),
+          },
+          {
+            path: 'reference/bad-thin.md',
+            role: 'reference',
+            source_url: 'https://example.com/research/thin',
+            source_slug: 's01_source',
+            content: referenceContent({
+              source_url: 'https://example.com/research/thin',
+              coreContent: 'Short.',
+            }),
+          },
         ],
-        cache_trails: [],
-        creation_reason: 'Test',
-      }),
-    ].join('\n') + '\n');
-    const result = countReferences(dir);
-    assert.strictEqual(result.count, 1, `Expected 1 countable, got ${result.count}`);
-    assert.strictEqual(result.uncountable.length, 2, `Expected 2 uncountable, got ${result.uncountable.length}`);
-    const reasons = result.uncountable.map(u => u.reason);
-    assert.ok(reasons.some(r => r.includes('source_url_is_homepage')), 'Should report homepage reason');
-    assert.ok(reasons.some(r => r.includes('core_content_capture_too_thin')), 'Should report thin content reason');
-    // All uncountable entries must have path and reason
-    for (const u of result.uncountable) {
-      assert.ok(u.path, 'Each uncountable entry must have path');
-      assert.ok(u.reason, 'Each uncountable entry must have reason');
+      });
+      const result = countReferences(dir);
+      assert.strictEqual(result.count, 1, `Expected 1 countable, got ${result.count}`);
+      assert.strictEqual(result.uncountable.length, 2, `Expected 2 uncountable, got ${result.uncountable.length}`);
+      const reasons = result.uncountable.map(u => u.reason);
+      assert.ok(reasons.some(r => r.includes('source_url_is_homepage')), 'Should report homepage reason');
+      assert.ok(reasons.some(r => r.includes('core_content_capture_too_thin')), 'Should report thin content reason');
+      for (const u of result.uncountable) {
+        assert.ok(u.path, 'Each uncountable entry must have path');
+        assert.ok(u.reason, 'Each uncountable entry must have reason');
+      }
+    } finally {
+      cleanupWorkUnitBundle(dir);
     }
   });
 

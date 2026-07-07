@@ -14,7 +14,9 @@ cli/
     gate-helpers.mjs         ← （位于 engine/helpers/，非此目录）
   instantiate-run-bundle.mjs ← 创建 production run bundle
   inspect-bundle.mjs         ← 审视 bundle 状态
+  operate-work-unit.mjs      ← delegated work-unit claim/submit/terminal/inspect
   validate-bundle.mjs        ← Zod schema 校验 bundle
+  validate-work-unit-hygiene.mjs ← 静态阻止旧 delegated authority surface 回流
   validate-workflow-package.mjs ← 校验整个 workflow package 一致性
 ```
 
@@ -61,6 +63,8 @@ Non-gate current-state inventory:
 
 - Inspect-wave CLIs emit `{ check, inspect, advice }` without `routing`; they use `0` for inspected structure pass, `1` for inspect failure, and `2` for caller invocation errors such as missing bundle input.
 - `check-reentry.mjs` emits structured stdout with `inspect`/`advice`; it uses `0` clean, `1` blockers/drift, and `2` invalid target/args/config/caller request.
+- `operate-work-unit.mjs` is the delegated work-unit lifecycle CLI. Successful `submit` is the Engine boundary that completes the queue demand and appends the submitted ledger row.
+- `validate-work-unit-hygiene.mjs` is a static production-surface hygiene gate. It exits `1` when removed delegated authority tokens, unsupported provenance check names, or queue/index semantic regressions appear in active framework surfaces.
 - Many utility validators are binary `0/1` and do not yet share a common exit helper.
 - `log-event.mjs` always exits `0`, even when a diagnostic log or trace write cannot be completed. This exception keeps logging failure from blocking Agent flow, but it is not evidence that a load-bearing trace event was written.
 - Known doc/code drift: `validate-workflow-package.mjs` header documents code `2` for invocation errors, but current implementation only exits `0` or `1`.

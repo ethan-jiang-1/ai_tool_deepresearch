@@ -103,7 +103,7 @@ When extending command experiments, preserve the stable core and let the variabl
 
 A controlled experiment is valuable only when its distance from production is explicit, bounded, and forced to converge at executable contract boundaries. The experiment may be smaller than production; it must not be a different mechanism with similar prose.
 
-Core rule: **converge at the earliest executable boundary production uses.** If production reaches a fact through `commitSlotResult()`, `complete()`, a gate CLI, a trace writer, an accepted schema validator, or an Agent output declaration, the experiment must reach that fact through the same boundary unless the case explicitly says it is testing a lower-level deterministic helper.
+Core rule: **converge at the earliest executable boundary production uses.** If production reaches a delegated fact through `operate-work-unit claim`, `operate-work-unit submit`, a submitted ledger row, a gate CLI, a trace writer, an accepted schema validator, or an Agent output declaration, the experiment must reach that fact through the same boundary unless the case explicitly says it is testing a lower-level deterministic helper. Non-delegated queue facts may still converge through queue completion.
 
 MUST:
 
@@ -475,19 +475,19 @@ Trace writer rule: every trace event must conform to the canonical format define
 
 ## Agent Output Declaration
 
-This section defines the future-facing, normative **Agent-Engine data contract**: the structured declaration that an Agent (or Sub-agent) must produce alongside its file output, and that the Engine consumes for all downstream checks. It describes the correct target shape for this boundary, not a runtime inventory of whatever happens to exist today. Exact fields, role enums, CLI flags, trace events, schema signatures, and framework APIs remain owned by active/accepted OpenSpec specs and the framework implementation.
+This section defines the normative **Agent-Engine data contract**: the structured declaration that an Agent or Sub-agent must produce alongside file output, and that the Engine consumes for downstream checks. For delegated work, this declaration is accepted only through work-unit submit and then represented as an Engine-written row in `rb_output_declarations.jsonl`. Exact fields, role enums, CLI flags, trace events, schema signatures, and framework APIs remain owned by active/accepted OpenSpec specs and the framework implementation.
 
 ### The Problem
 
 Without a declaration, the Engine has no way to know what files an Agent produced except by scanning the filesystem (`fs.readdir`, glob). This creates three gaps:
 
-- **`complete()` is blind.** It checks only the `completion_receipt` field — it does not know what other files the Sub-agent wrote, or whether cache evidence exists.
+- **Queue completion is not delegated provenance.** Non-delegated queue completion can validate its own receipt, but delegated evidence needs submit-time validation of result, receipt nonce, output files, cache trails, queue binding, and hashes.
 - **Gate `content_dedup` must guess.** It scans `reference/` looking for files, with no way to distinguish Agent-written references from hand-placed fixtures or stale artifacts.
 - **Experiment and production diverge.** Experiment playbooks hand-write fixture paths deterministically; production Agent paths are non-deterministic. The two verify different things.
 
 ### The Mechanism: `output_files` + `cache_trails`
 
-Correct Agent/Sub-agent output surfaces MUST carry a structured declaration. For Sub-agent slots, this declaration belongs in result JSON:
+Correct Agent/Sub-agent output surfaces MUST carry a structured declaration. For delegated work units, this declaration belongs in the result JSON that is submitted by `work_id`:
 
 ```json
 {
@@ -501,7 +501,7 @@ Correct Agent/Sub-agent output surfaces MUST carry a structured declaration. For
 }
 ```
 
-The correct acceptance path schema-validates the declaration through `commitSlotResult()` before the result is accepted. After validation, every downstream consumer reads from the declaration, not from the filesystem shape.
+The correct delegated acceptance path schema-validates the declaration through `operate-work-unit submit` before the result is accepted. Successful submit appends the submitted work-unit row to `rb_output_declarations.jsonl`. After validation, downstream consumers read from the submitted declaration row and its cross-check surfaces, not from filesystem shape alone.
 
 ### Principle 1: Declaration over Directory Scanning
 
@@ -518,22 +518,22 @@ Agent-output-sensitive checks — for example reference count floors, content de
 ```
 Production                                      Experiment
 ────                                            ────
-Sub-agent writes files + declaration            Playbook writes files + declaration (same schema)
+Sub-agent writes files + declaration            Playbook/fixture writes files + declaration (same schema)
         │                                                │
         └────────────────┬───────────────────────────────┘
                          │
                          ▼       ← identical code path from here
-                commitSlotResult() schema validation
-                complete() per-item receipt check
-                gate content_dedup (reads declaration, not directory)
+                operate-work-unit submit validation
+                submitted work-unit ledger row
+                gate checks read submitted declaration coverage
                 trace verdict
 ```
 
-Production declarations MUST come from Sub-agents and pass through `commitSlotResult()`. Experiment declarations MUST come from playbook fixtures using the same JSON schema. After the declaration point, the downstream pipeline — `complete()`, gate rules, trace verdict — is identical. There is no "production path" vs. "experiment path."
+Production delegated declarations MUST come from Sub-agents and pass through `operate-work-unit submit`. Experiment declarations MUST either pass through the same submit boundary or explicitly state that they are testing a lower-level fixture/helper. After the submit boundary, the downstream pipeline — submitted ledger rows, gate rules, trace verdict — is identical. There is no "production path" vs. "experiment path" after submit.
 
 An experiment is valid to the extent that its fixture declaration matches the same schema a real Sub-agent would produce. The experiment tests Engine behavior; it does not claim to test Agent behavior unless a real Agent was spawned.
 
-The diagram shows the concrete Sub-agent slot path because that is the current executable convergence surface. Other Agent-owned output surfaces must provide an equivalent declaration and convergence boundary before Engine consumes their outputs. They do not get a directory-scanning exception merely because they are not Sub-agent slots.
+The diagram shows the concrete work-unit path because that is the current delegated convergence surface. Other Agent-owned output surfaces must provide an equivalent declaration and convergence boundary before Engine consumes their outputs. They do not get a directory-scanning exception merely because they are not delegated work units.
 
 ### Principle 3: The Declaration is the Contract; The Filesystem is Implementation
 
@@ -807,7 +807,7 @@ These criteria are not required for design approval. They apply when deciding wh
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) — architectural constitution for queue-driven phase execution; queue engine (AGQ-001~006) implemented runtime, seed-topics/wave0/wave1/wave2 integrations accepted/current, remaining loop-engineering gaps pending OpenSpec.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — Tier 1 (Chain): phase-to-phase routing.
-- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — architectural constitution for sub-agent dispatch; defines Tier 3 (Relay) within the three-tier execution model.
+- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — architectural constitution for work-unit-mediated Sub-agent execution.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for framework assets versus runtime bundles.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
 - Accepted specs under `openspec/specs/` — capability requirements, including agent-assisted experiment playbooks.

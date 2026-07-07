@@ -83,7 +83,7 @@ export const DIAGNOSTIC_KINDS = Object.freeze([
  *
  * This is the SINGLE read point for bundle across all 5 callers:
  * logToRun, createRunLogger, writeGateAttempt, queue-manager trace wrapper,
- * subagent-relay trace wrapper.
+ * and work-unit trace wrapper.
  *
  * Never throws — returns '<unknown>' on any failure (missing file,
  * unparseable JSON, missing field).
@@ -239,7 +239,7 @@ export function logToRun(bundlePath, level, msg, detail) {
  * Reads bundle name from rb_status.json automatically. The returned logger
  * instance's methods all include `bundle=<name>` in every line.
  *
- * Engine hot paths (queue-manager, subagent-relay) use this at entry —
+ * Engine hot paths (queue-manager, work-unit lifecycle) use this at entry -
  * they only need bundleDir, nothing else.
  *
  * @param {string} bundlePath — path to the bundle directory

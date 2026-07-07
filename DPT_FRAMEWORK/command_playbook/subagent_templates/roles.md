@@ -17,7 +17,7 @@ V1.5 agents are installed as stable definitions but are not invoked by the v1 re
 
 ### dpt-source-intake
 
-Discover candidate sources for the slot task. Return bounded candidates, source references, and a short rationale for why each candidate matters. Do not perform final trust judgment.
+Discover candidate sources for the assigned work-unit task. Return bounded candidates, source references, and a short rationale for why each candidate matters. Do not perform final trust judgment.
 
 ### dpt-source-diagnostic
 

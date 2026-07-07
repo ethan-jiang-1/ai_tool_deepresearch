@@ -53,15 +53,15 @@ Exit codes SHALL NOT encode morale, reassurance, retry strategy, progress pressu
 | 命令 | 文件 | 说明 |
 |------|------|------|
 | setup-real-subagents | command_playbook/setup-real-subagents.md | 设置 Codex/Claude Code 项目级 real subagent 定义 |
-| drive-relay-slot.mjs | cli/drive-relay-slot.mjs | 驱动 relay slot 生命周期（`stage`/`commit`/`merge`，SNC-003 唯一 runtime 路径；replacement 补位用 `stage --slot-index M --role ... --key ... --task ...`） |
-| provenance-forensics-guide | command_playbook/provenance-forensics-guide.md | 事后判定 subagent 证据 provenance 真伪（S0–S5 信号 + 6-tier 矩阵） |
+| operate-work-unit.mjs | cli/operate-work-unit.mjs | delegated work-unit 生命周期（`claim`/`submit`/`fail`/`timeout`/`abandon`/`open-batch`/`inspect`），生产 delegated completion 的唯一 CLI |
+| provenance-forensics-guide | command_playbook/provenance-forensics-guide.md | 事后判定 delegated 证据 provenance 真伪；submitted work-unit ledger 是 gate authority |
 
 ## 质量检查
 | 工具 | 文件 | 说明 |
 |------|------|------|
 | validate-bundle.mjs | cli/validate-bundle.mjs | Zod 校验 bundle 控制文件 |
 | validate-phase-templates.mjs | cli/validate-phase-templates.mjs | 校验 phase MD 模板保持 controller + delegates 合约 |
-| validate-subagent-logging-contract.mjs | cli/validate-subagent-logging-contract.mjs | 校验 phase/role/protocol MD 的 subagent logging 契约与 driver-first 措辞（含直调反模式检测） |
+| validate-work-unit-hygiene.mjs | cli/validate-work-unit-hygiene.mjs | 静态阻止旧 delegated relay/slot authority、旧 gate check 名、queue demand `work_id`、以及 filesystem/index pass-coverage wording 回到 active production surface |
 | inspect-bundle.mjs | cli/inspect-bundle.mjs | bundle 目录结构完整性 |
 
 ## Phase Handoff

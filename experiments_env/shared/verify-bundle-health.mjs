@@ -8,13 +8,13 @@
 //
 // Role:
 //   Read-only health verifier. Reads bundle state files (trace, gate artifacts,
-//   ledger, receipts, cache) and existing CLIs (validate-bundle, inspect-bundle).
+//   work-unit index/ledger/cache) and existing CLIs (validate-bundle, inspect-bundle).
 //   Never executes gate commands. Produces a stable JSON health report and a
 //   concise human-readable terminal summary.
 
 import { parseArgs } from 'node:util';
 import { existsSync, readFileSync, readdirSync, statSync, appendFileSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import {
   SECTION_STATUS,
@@ -25,6 +25,10 @@ import {
   buildHealthReport,
 } from './health-report-schema.mjs';
 import { fileURLToPath } from 'node:url';
+import {
+  inspectWorkUnits,
+  readWorkUnitLedgerRows,
+} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
 
 const __dirname = new URL('.', import.meta.url).pathname;
 
@@ -379,20 +383,15 @@ function inspectLedger(bundlePath, profile) {
     }
 
     const lines = raw.split('\n');
-    let declarations = 0;
+    let rows = [];
     let schemaErrors = 0;
-
-    for (const line of lines) {
-      try {
-        const decl = JSON.parse(line);
-        // Basic structural check: must have output_files and cache_trails
-        if (!Array.isArray(decl.output_files)) schemaErrors++;
-        else declarations++;
-      } catch {
-        schemaErrors++;
-      }
+    try {
+      rows = readWorkUnitLedgerRows(bundlePath);
+    } catch {
+      schemaErrors = lines.length;
     }
 
+    const declarations = rows.length;
     const hasIssues = schemaErrors > 0 || declarations === 0;
     return {
       status: hasIssues ? SECTION_STATUS.ISSUES : SECTION_STATUS.CLEAN,
@@ -413,73 +412,53 @@ function inspectLedger(bundlePath, profile) {
 }
 
 /**
- * Check runtime receipts for subagent slots.
- * Receipt path: <bundle>/relay-<slot>/runtime-receipt.jsonl
+ * Project work-unit lifecycle health without healing state.
+ * Reads the work-unit inspect result and reports lifecycle counters separately
+ * from gate verdicts.
  */
-function inspectReceipts(bundlePath, profile) {
-  const required = isRequiredSection(profile, 'receipts');
-  let slots = 0;
-  let missing = 0;
-  let incomplete = 0;
-
-  // Discover relay-* directories
-  let entries = [];
+function inspectWorkUnitHealth(bundlePath, profile) {
+  const required = isRequiredSection(profile, 'work_units');
   try {
-    entries = readdirSync(bundlePath, { withFileTypes: true });
-  } catch {
+    const result = inspectWorkUnits(bundlePath);
+    const projection = result.projection || {};
+    const diagnostics = result.inspect || [];
+    const hasIssues = result.passed === false;
     return {
-      status: required ? SECTION_STATUS.ISSUES : SECTION_STATUS.NOT_APPLICABLE,
+      status: hasIssues ? SECTION_STATUS.ISSUES : SECTION_STATUS.CLEAN,
       required,
-      sectionIssues: required ? [{ detail: 'Cannot read bundle directory' }] : [],
+      present: (projection.total || 0) > 0,
+      total: projection.total || 0,
+      claimed: projection.claimed || 0,
+      submitted: projection.submitted || 0,
+      failed: projection.failed || 0,
+      timed_out: projection.timed_out || 0,
+      abandoned: projection.abandoned || 0,
+      expired: projection.expired || 0,
+      retries: projection.retries || 0,
+      submit_rejections: projection.submit_rejections || 0,
+      late_submit_rejections: projection.late_submit_rejections || 0,
+      nonterminal: projection.nonterminal || 0,
+      by_wave: projection.by_wave || {},
+      inspect_passed: result.passed === true,
+      inspect_issues: diagnostics.length,
+      diagnostics: diagnostics.slice(0, 20),
+      sectionIssues: hasIssues ? diagnostics.slice(0, 20).map(detail => ({ detail })) : [],
+    };
+  } catch (err) {
+    return {
+      status: required ? SECTION_STATUS.ISSUES : SECTION_STATUS.OBSERVED_OPTIONAL,
+      required,
+      inspect_passed: false,
+      inspect_issues: 1,
+      diagnostics: [`Error inspecting work units: ${err.message}`],
+      sectionIssues: [{ detail: `Error inspecting work units: ${err.message}` }],
     };
   }
-
-  const relayDirs = entries.filter(e => e.isDirectory() && e.name.startsWith('relay-'));
-  slots = relayDirs.length;
-
-  if (slots === 0) {
-    return {
-      status: required ? SECTION_STATUS.ISSUES : SECTION_STATUS.NOT_APPLICABLE,
-      required,
-      slots: 0, missing: 0, incomplete: 0,
-      sectionIssues: required ? [{ detail: 'No relay slot directories found' }] : [],
-    };
-  }
-
-  for (const dir of relayDirs) {
-    const receiptPath = join(bundlePath, dir.name, 'runtime-receipt.jsonl');
-    if (!existsSync(receiptPath)) {
-      missing++;
-      continue;
-    }
-    try {
-      const raw = readFileSync(receiptPath, 'utf-8').trim();
-      if (!raw) { incomplete++; continue; }
-      const lines = raw.split('\n').map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
-      const hasStart = lines.some(l => l.event === 'agent_runtime_started');
-      const hasComplete = lines.some(l => l.event === 'agent_result_ready');
-      if (!hasStart || !hasComplete) incomplete++;
-    } catch {
-      incomplete++;
-    }
-  }
-
-  const hasIssues = missing > 0 || incomplete > 0;
-  return {
-    status: hasIssues ? SECTION_STATUS.ISSUES : SECTION_STATUS.CLEAN,
-    required,
-    slots,
-    missing,
-    incomplete,
-    sectionIssues: hasIssues
-      ? [{ detail: `${slots} slots: ${missing} missing receipts, ${incomplete} incomplete` }]
-      : [],
-  };
 }
 
 /**
- * Check cache trail leaves from ledger declarations.
- * Leaf shape: _cache/.../<slot>/ with websearch.json, page.md, meta.json
+ * Check cache trail leaves from submitted work-unit ledger declarations.
+ * Leaf shape: _cache/.../<work-unit-output>/ with websearch.json, page.md, meta.json
  */
 function inspectCacheTrails(bundlePath, profile) {
   const required = isRequiredSection(profile, 'cache_trails');
@@ -503,13 +482,20 @@ function inspectCacheTrails(bundlePath, profile) {
       };
     }
 
-    const lines = raw.split('\n');
+    let rows;
+    try {
+      rows = readWorkUnitLedgerRows(bundlePath);
+    } catch (error) {
+      return {
+        status: required ? SECTION_STATUS.ISSUES : SECTION_STATUS.ISSUES,
+        required,
+        sectionIssues: [{ detail: `Work-unit ledger invalid for cache trail verification: ${error.message}` }],
+      };
+    }
     let totalLeaves = 0;
     let missingLeaves = 0;
 
-    for (const line of lines) {
-      let decl;
-      try { decl = JSON.parse(line); } catch { continue; }
+    for (const decl of rows) {
       if (!decl.cache_trails || !Array.isArray(decl.cache_trails)) continue;
 
       for (const trail of decl.cache_trails) {
@@ -671,7 +657,7 @@ function printSummary(report) {
   console.log(`Status:  ${report.status === 'clean' ? G + 'CLEAN' + B : R + 'ISSUES' + B}`);
   console.log('');
 
-  const sections = ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline', 'ledger', 'receipts', 'cache_trails', 'dedup'];
+  const sections = ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline', 'work_units', 'ledger', 'cache_trails', 'dedup'];
 
   for (const key of sections) {
     const s = report[key];
@@ -717,8 +703,8 @@ function main() {
   const bundleSchemaResult = inspectBundleSchema(bundlePath, profile);
   const gateAttemptsResult = inspectGateAttempts(bundlePath, profile);
   const timelineResult = inspectTimeline(bundlePath, profile, traceResult.by_event);
+  const workUnitsResult = inspectWorkUnitHealth(bundlePath, profile);
   const ledgerResult = inspectLedger(bundlePath, profile);
-  const receiptsResult = inspectReceipts(bundlePath, profile);
   const cacheTrailsResult = inspectCacheTrails(bundlePath, profile);
   const dedupResult = inspectDedup(bundlePath, profile);
 
@@ -729,8 +715,8 @@ function main() {
     bundle_schema: bundleSchemaResult,
     gate_attempts: gateAttemptsResult,
     timeline: timelineResult,
+    work_units: workUnitsResult,
     ledger: ledgerResult,
-    receipts: receiptsResult,
     cache_trails: cacheTrailsResult,
     dedup: dedupResult,
   };

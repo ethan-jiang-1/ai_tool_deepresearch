@@ -3,323 +3,243 @@ schema: command-experiment/v1
 experiment: wfn-wave0
 case: case-212-heavy-gate-fail-repair
 weight: heavy
-case_goal: "验证 wave0-complete gate 的 count_floor 能检测缺失 source.yaml，inspect 明确指出缺失 topic；repair 后 gate pass；trace 含 fail+pass 两条 gate_attempt"
+case_goal: "验证 Wave0 gate fail 后由 Engine 打开 repair/refill batch，新的 work unit 用 b001 提交后 gate pass。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-212_agql_w0_fail_
-trace: dpt_disp_case-212_agql_w0_fail_*/rb_trace.jsonl
+bundle: dpt_disp_case-212_w0_gate_refill_repair
+trace: dpt_disp_case-212_w0_gate_refill_repair/rb_trace.jsonl
 verdict: trace-jsonl
-req: AGQ-008
+req: RWE-001
 ---
 
 ## Execution Contract
 
-由 coding agent 在真实 disposable experiment bundle 中执行。S2（gate fail）使用 local fixture 数据；S3（repair）在同一个 bundle 上继续以验证连续 trace。所有产出来自实际 CLI 调用和 gate 输出。禁止 mock 返回、手写假 trace。
+Fixture-backed Engine case, no Agent actor, no external calls. The fixtures stand in only for source-intake output after a real work unit has been claimed. Completion authority must come from `operate-work-unit submit`; gate repair authority must come from gate JSON plus `operate-work-unit open-batch`.
+
+## Reality Distance Ledger
+
+| Dimension | Statement |
+| --- | --- |
+| Runtime context | Real disposable bundle from `experiments_env/shared/new-disposable-bundle.mjs` |
+| Framework path | Real `operate-queue enqueue`, `operate-work-unit claim/submit/open-batch`, and Wave0 gate CLI |
+| Fixture input | Controlled reference/source/cache files after claim |
+| Agent actor | None; fixture-backed Engine evidence only |
+| External calls | None |
+| Gate feedback | Full Wave0 gate JSON is captured before repair |
+| Repair path | `open-batch --reason gate_failure_refill`, then new b001 work-unit claim/submit |
+| Verdict source | Trace JSONL checks, gate JSON, work-unit index/ledger state |
+| Does not prove | Agent search quality or repair judgment quality |
 
 # case-212-heavy-gate-fail-repair
 
-两个连续场景验证 gate fail 检测和 repair 闭环，共享同一个 bundle。
-
 ## Expected Runtime Path
 
-1. Scenario A: 创建 bundle + 3 topics, 仅 2 个有 source.yaml → gate fail [MAIN/SHELL]
-2. Scenario B: Repair (补写缺失 source.yaml) → rerun gate → pass [MAIN/SHELL]
-3. Trace 验证: 2 条 gate_attempt (1 fail + 1 pass) + Cleanup
+1. Create a disposable Wave0 bundle with topics `topic-a` and `topic-b`.
+2. Submit fixture-backed work-unit coverage for `topic-a` only.
+3. Run Wave0 gate and read JSON failure for missing `topic-b`.
+4. Open repair/refill batch `b001` with `gate_failure_refill`.
+5. Enqueue and claim `topic-b` repair work unit from the new batch.
+6. Submit fixture-backed repair result through `operate-work-unit submit`.
+7. Rerun Wave0 gate and read JSON pass.
+8. Record fail/pass/repair checks into trace and clean up only on PASS.
 
-## Scenario A: Gate Fail — count_floor 检测缺失 topic
-
-### Step A1: 创建 bundle + 物化 seed_topics（3 topics）
+## Step 1: [MAIN/SHELL] Create Runtime Context
 
 ```bash
-REPO_ROOT=$(pwd)
-B2=$(node experiments_env/shared/new-disposable-bundle.mjs agql_w0_fail --case case-212 --force)
-echo "Bundle: $B2"
-node DPT_FRAMEWORK/cli/validate-bundle.mjs $B2
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w0_gate_refill_repair --case case-212 --force)
+node --input-type=module - "$B" <<'JS'
+import { writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-# 3 topics: topic-x, topic-y, topic-z
-cat > $B2/rb_plan.md << 'PLANEOF'
----
-{
-  "plan_basename": "agql_w0_fail",
-  "derived_topic_count": 3,
-  "topic_registry": [
-    { "id": "t-x", "slug": "topic-x", "title": "Topic X" },
-    { "id": "t-y", "slug": "topic-y", "title": "Topic Y" },
-    { "id": "t-z", "slug": "topic-z", "title": "Topic Z" }
-  ]
-}
----
-# Research Plan: Wave0 Gate Fail + Repair
-PLANEOF
-
-cat > $B2/rb_status.json << 'EOF'
-{
-  "current_mode": "execution",
-  "state": "in_progress",
-  "current_gate": "wave0_complete",
-  "next_gate": "wave1_complete"
-}
-EOF
-
-cat > $B2/rb_profile.yaml << 'PROFEOF'
-root_must_answer_set: ["验证 gate fail 检测 + repair 闭环"]
-research_profile: { depth: foundation, scope: "gate fail + repair test" }
-PROFEOF
-
-mkdir -p $B2/artifacts/wave0/topic-x $B2/artifacts/wave0/topic-y $B2/artifacts/wave0/topic-z
-mkdir -p $B2/seed_topics
+writeWave0Scaffold(process.argv[2], {
+  planBasename: 'w0_gate_refill_repair',
+  topics: [
+    { id: 't1', slug: 'topic-a', title: 'Topic A' },
+    { id: 't2', slug: 'topic-b', title: 'Topic B' }
+  ],
+  referenceRows: ['| 00-shared-topic-a.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |']
+});
+JS
+echo "BUNDLE=$B"
 ```
 
-### Step A2: 物化 3 个 seed topic 文件
+Expected: the bundle contains two Wave0 topics but no submitted work-unit coverage yet.
 
-为 topic-x, topic-y, topic-z 各创建 `seed_topics/{slug}.md`（格式同 happy path，含 search_guardrails 和 `__BACKFILL_WAVE0_EVIDENCE__` 占位符）。topic-z 的 hypothesis 明确标注为 repair target。
+## Step 2: [MAIN/SHELL] Submit Topic A Only
 
 ```bash
-# topic-x, topic-y, topic-z 各一个 seed topic 文件
-cat > $B2/seed_topics/topic-x.md << 'SEEDEOF'
----
-id: "t-x"
-slug: "topic-x"
-title: "Topic X"
-search_guardrails:
-  required_terms: ["topic x research"]
-evidence_route:
-  preferred_sources: ["权威来源"]
----
-# Topic X
+node --input-type=module - "$B" <<'JS'
+import {
+  enqueueWorkUnitTask,
+  queueItemForWorkUnit,
+  referenceContent,
+  sourceYamlExtra,
+  writeFixtureResultForWorkUnit
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-## 主题定位
-Test topic X for wave0 gate fail/repair.
+const bundle = process.argv[2];
+const task = queueItemForWorkUnit({
+  queue_item_id: 'wave0-source-topic-a',
+  topic_slug: 'topic-a',
+  title: 'Wave0 source intake for Topic A'
+});
+enqueueWorkUnitTask(bundle, task, { fileName: 'case212-topic-a.json' });
+JS
 
-## 本轮新增证据
-__BACKFILL_WAVE0_EVIDENCE__
-SEEDEOF
+CLAIM_A=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1)
+printf '%s\n' "$CLAIM_A" > "$B/case-212-topic-a-claim.json"
+WORK_A=$(printf '%s\n' "$CLAIM_A" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.claimed_work_ids[0]);')
+RESULT_A=$(node --input-type=module - "$B" "$WORK_A" <<'JS'
+import {
+  referenceContent,
+  sourceYamlExtra,
+  writeFixtureResultForWorkUnit
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-cat > $B2/seed_topics/topic-y.md << 'SEEDEOF'
----
-id: "t-y"
-slug: "topic-y"
-title: "Topic Y"
-search_guardrails:
-  required_terms: ["topic y research"]
-evidence_route:
-  preferred_sources: ["权威来源"]
----
-# Topic Y
-
-## 主题定位
-Test topic Y for wave0 gate fail/repair.
-
-## 本轮新增证据
-__BACKFILL_WAVE0_EVIDENCE__
-SEEDEOF
-
-cat > $B2/seed_topics/topic-z.md << 'SEEDEOF'
----
-id: "t-z"
-slug: "topic-z"
-title: "Topic Z (repair target)"
-search_guardrails:
-  required_terms: ["topic z research"]
-evidence_route:
-  preferred_sources: ["权威来源"]
----
-# Topic Z
-
-## 主题定位
-Test topic Z — intentionally missing source.yaml, marked as repair target.
-
-## 本轮新增证据
-__BACKFILL_WAVE0_EVIDENCE__
-SEEDEOF
-
-# 验证
-echo "seed_topics:" && ls $B2/seed_topics/
-# 预期: topic-x.md  topic-y.md  topic-z.md
+const [bundle, workId] = process.argv.slice(2);
+const sourceUrl = 'https://research-source.test/topic-a/refill/a';
+const fixture = writeFixtureResultForWorkUnit(bundle, {
+  work_id: workId,
+  output_path: 'reference/00-shared-topic-a.md',
+  source_url: sourceUrl,
+  source_slug: 'topic-a',
+  output_content: referenceContent({ source_url: sourceUrl, topic_slug: 'topic-a', title: 'Topic A Fixture Source' }),
+  extra_output_files: [sourceYamlExtra('topic-a', sourceUrl, 'Topic A Fixture Source')]
+});
+console.log(fixture.resultPath);
+JS
+)
+SUBMIT_A=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_A" --result "$RESULT_A")
+printf '%s\n' "$SUBMIT_A" > "$B/case-212-topic-a-submit.json"
 ```
 
-### Step A3: 只写入 2/3 source.yaml（topic-z 故意缺失）
+Expected: topic-a submit returns `ok: true`, but topic-b remains uncovered.
+
+## Step 3: [MAIN/SHELL] Run Gate And Read Failure
 
 ```bash
-# topic-x source.yaml (fixture)
-cat > $B2/artifacts/wave0/topic-x/source.yaml << 'EOF'
-- url: "https://example.com/topic-x-ref-1"
-  title: "Reference for Topic X"
-  retrieved_date: "2026-06-23"
-  topic_tag: "topic-x"
-EOF
+set +e
+node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-212-gate-before-repair.json"
+GATE_BEFORE_STATUS=$?
+set -e
+printf '%s\n' "$GATE_BEFORE_STATUS" > "$B/case-212-gate-before-repair.status"
 
-# topic-y source.yaml (fixture)
-cat > $B2/artifacts/wave0/topic-y/source.yaml << 'EOF'
-- url: "https://example.com/topic-y-ref-1"
-  title: "Reference for Topic Y"
-  retrieved_date: "2026-06-23"
-  topic_tag: "topic-y"
-EOF
-
-# topic-z: intentionally left empty — no source.yaml
-
-echo "=== reference/ tree ==="
-find $B2/reference -type f | sort
-# 预期: 只有 topic-x/source.yaml 和 topic-y/source.yaml
+node - "$B" <<'JS'
+const fs = require('fs');
+const bundle = process.argv[2];
+const status = Number(fs.readFileSync(`${bundle}/case-212-gate-before-repair.status`, 'utf8'));
+const gate = JSON.parse(fs.readFileSync(`${bundle}/case-212-gate-before-repair.json`, 'utf8'));
+console.log(JSON.stringify({ status, passed: gate.check?.passed, inspect: gate.inspect || [] }, null, 2));
+process.exit(status === 1 && gate.check?.passed === false && JSON.stringify(gate.inspect || []).includes('topic-b') ? 0 : 1);
+JS
 ```
 
-### Step A4: Gate — 预期 fail
+Expected: gate rejects and `inspect[]` points at missing/uncounted `topic-b` coverage.
+
+## Step 4: [MAIN/SHELL] Open Repair Batch And Claim Topic B
 
 ```bash
-cat > $B2/reference/_INDEX.md << 'EOF'
-# Reference Index
-- topic-x: 1 reference
-- topic-y: 1 reference
-EOF
+OPENED=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch "$B" --phase wave0 --reason gate_failure_refill)
+printf '%s\n' "$OPENED" > "$B/case-212-open-batch.json"
 
-# ── Machinery: 00-shared, README, ledger, subagent slots ──
-cat > $B2/reference/README.md << 'READMEEOF'
-# Reference Directory
-Flat reference directory. 00-shared-*.md = cross-topic shared refs.
-READMEEOF
+node --input-type=module - "$B" <<'JS'
+import { enqueueWorkUnitTask, queueItemForWorkUnit } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-cat > "$B2/reference/00-shared-wave0-foundation.md" << 'SHAREDEOF'
-# Wave0 Foundation — Shared Reference
-## Metadata
-- source_url: "https://example.com/research/wave0-foundation"
-- topic_tag: "shared"
-- source_layer: "wave0"
-- trust_tier: "primary"
-- retrieved_date: "2026-07-05"
-- acceptance_status: "accepted"
-- related_topic: "shared"
-- ref_file: "00-shared-wave0-foundation.md"
-## Key Facts
-1. Wave0 foundation collects per-topic source references
-2. Each topic must have at least 1 entry in source.yaml
-3. Shared references live in reference/00-shared-*.md
-4. Gate validates count_floor, schema, trace events
-5. Output declarations track provenance via rb_output_declarations.jsonl
-SHAREDEOF
+const bundle = process.argv[2];
+const task = queueItemForWorkUnit({
+  queue_item_id: 'wave0-source-topic-b',
+  topic_slug: 'topic-b',
+  title: 'Repair Wave0 source intake for Topic B'
+});
+enqueueWorkUnitTask(bundle, task, { fileName: 'case212-topic-b-repair.json' });
+JS
 
-mkdir -p "$B2/_subagents/wave_00/slot_00" "$B2/_subagents/wave_00/slot_01"
-TS=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
-cat > "$B2/rb_output_declarations.jsonl" << LEDGEREOF
-{"declared_at":"$TS","work_id":"wave0-source-topic-x","producer_rule":"source_intake_fan_in","slot_result_ref":"_subagents/wave_00/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_00/slot_00/runtime-receipt.jsonl","output_files":[{"path":"artifacts/wave0/topic-x/source.yaml","role":"source_yaml"},{"path":"reference/00-shared-wave0-foundation.md","role":"reference","source_url":"https://example.com/research/wave0-foundation"}],"cache_trails":[],"creation_reason":"Delegated: source intake topic-x"}
-{"declared_at":"$TS","work_id":"wave0-source-topic-y","producer_rule":"source_intake_fan_in","slot_result_ref":"_subagents/wave_00/slot_01/result.json","runtime_receipt_ref":"_subagents/wave_00/slot_01/runtime-receipt.jsonl","output_files":[{"path":"artifacts/wave0/topic-y/source.yaml","role":"source_yaml"}],"cache_trails":[],"creation_reason":"Delegated: source intake topic-y"}
-LEDGEREOF
-
-# slot_00
-printf '{"status":"done","updated":"%s"}\n' "$TS" > "$B2/_subagents/wave_00/slot_00/_status.json"
-printf '{"slotKey":"source_intake","roleAgentKey":"dpt-source-intake","status":"done","summary":"Source intake complete","evidenceCount":1,"references":[],"confidence":0.8,"notes":[]}\n' > "$B2/_subagents/wave_00/slot_00/result.json"
-printf '{"event":"agent_runtime_started","slotKey":"source_intake","roleAgentKey":"dpt-source-intake","receiptNonce":"nonce-212-slot_00","ts":"%s"}\n{"event":"agent_result_ready","slotKey":"source_intake","roleAgentKey":"dpt-source-intake","receiptNonce":"nonce-212-slot_00","ts":"%s"}\n' "$TS" "$TS" > "$B2/_subagents/wave_00/slot_00/runtime-receipt.jsonl"
-# slot_01
-printf '{"status":"done","updated":"%s"}\n' "$TS" > "$B2/_subagents/wave_00/slot_01/_status.json"
-printf '{"slotKey":"source_intake","roleAgentKey":"dpt-source-intake","status":"done","summary":"Source intake complete","evidenceCount":1,"references":[],"confidence":0.8,"notes":[]}\n' > "$B2/_subagents/wave_00/slot_01/result.json"
-printf '{"event":"agent_runtime_started","slotKey":"source_intake","roleAgentKey":"dpt-source-intake","receiptNonce":"nonce-212-slot_01","ts":"%s"}\n{"event":"agent_result_ready","slotKey":"source_intake","roleAgentKey":"dpt-source-intake","receiptNonce":"nonce-212-slot_01","ts":"%s"}\n' "$TS" "$TS" > "$B2/_subagents/wave_00/slot_01/runtime-receipt.jsonl"
-
-echo "=== Machinery ready ==="
-
-# Phase-agent obligation (phase-wave0.md): write wave0_completion before the wave0-complete gate
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle $B2 --event wave0_completion
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B2 --current-node phases/phase-wave0.md || true)
-echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-
-echo "=== Gate passed? $PASSED (expected: false) ==="
-test "$PASSED" = "false" && echo "SCENARIO A PASS: gate correctly failed" || echo "SCENARIO A FAIL"
-
-# Inspect must identify topic-z
-echo "=== Inspect ==="
-echo "$GATE_OUTPUT" | node -e "const d=require('fs').readFileSync('/dev/stdin','utf-8');const j=JSON.parse(d);j.inspect.forEach(i=>console.log('  -',i))"
-
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B2/rb_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'A: gate fail — 3 topics, only 2 source.yaml, inspect identifies missing topic-z',expected:false})})"
+CLAIM_B=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1)
+printf '%s\n' "$CLAIM_B" > "$B/case-212-topic-b-claim.json"
+WORK_B=$(printf '%s\n' "$CLAIM_B" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.claimed_work_ids[0]);')
+printf '%s\n' "$WORK_B" | grep -- '-b001-'
 ```
 
-预期：
-- `check.passed: false`
-- inspect 含 3 条：`Missing file: artifacts/wave0/topic-z/source.yaml`、`Cannot read or parse YAML array from artifacts/wave0/topic-z/source.yaml`、`Count floor not met for artifacts/wave0/topic-z/source.yaml: 0 entries (threshold: 1)`
-- routing.kind: `no_transition`
+Expected: `open-batch` reports `batch_id: "b001"` and the repair claim work ID contains `-b001-`.
 
----
-
-## Scenario B: Repair — 补写缺失 source.yaml 后 gate pass
-
-### Step B1: 补写 topic-z source.yaml
+## Step 5: [MAIN/SHELL] Submit Repair Result
 
 ```bash
-# Continue from same bundle ($B2)
-cat > $B2/artifacts/wave0/topic-z/source.yaml << 'EOF'
-- url: "https://example.com/topic-z-ref-1"
-  title: "Reference for Topic Z (repaired)"
-  retrieved_date: "2026-06-23"
-  topic_tag: "topic-z"
-EOF
+RESULT_B=$(node --input-type=module - "$B" "$WORK_B" <<'JS'
+import {
+  referenceContent,
+  sourceYamlExtra,
+  writeFixtureResultForWorkUnit
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-cat > $B2/reference/_INDEX.md << 'EOF'
-# Reference Index
-- topic-x: 1 reference
-- topic-y: 1 reference
-- topic-z: 1 reference (repaired)
-EOF
-
-echo "=== reference/ tree (after repair) ==="
-find $B2/reference -type f | sort
-# 预期: 3 个 source.yaml
+const [bundle, workId] = process.argv.slice(2);
+const sourceUrl = 'https://research-source.test/topic-b/refill/b';
+const fixture = writeFixtureResultForWorkUnit(bundle, {
+  work_id: workId,
+  output_path: 'reference/00-shared-topic-b.md',
+  source_url: sourceUrl,
+  source_slug: 'topic-b',
+  output_content: referenceContent({ source_url: sourceUrl, topic_slug: 'topic-b', title: 'Topic B Repair Fixture Source' }),
+  extra_output_files: [sourceYamlExtra('topic-b', sourceUrl, 'Topic B Repair Fixture Source')]
+});
+console.log(fixture.resultPath);
+JS
+)
+SUBMIT_B=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_B" --result "$RESULT_B")
+printf '%s\n' "$SUBMIT_B" > "$B/case-212-topic-b-submit.json"
 ```
 
-### Step B2: Rerun gate — 预期 pass
+Expected: repair submit returns `ok: true`.
+
+## Step 6: [MAIN/SHELL] Rerun Gate And Record Verdict
 
 ```bash
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B2 --current-node phases/phase-wave0.md)
-echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
+node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-212-gate-after-repair.json"
 
-echo "=== Gate passed? $PASSED (expected: true) ==="
-test "$PASSED" = "true" && echo "SCENARIO B PASS: repair closed the loop" || echo "SCENARIO B FAIL"
+node --input-type=module - "$B" "$WORK_B" <<'JS'
+import { readFileSync } from 'node:fs';
+import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { readTrace, recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B2/rb_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'B: repair — added missing topic-z source.yaml, rerun gate pass',expected:true})})"
+const [bundle, repairWorkId] = process.argv.slice(2);
+const failGate = JSON.parse(readFileSync(`${bundle}/case-212-gate-before-repair.json`, 'utf8'));
+const opened = JSON.parse(readFileSync(`${bundle}/case-212-open-batch.json`, 'utf8'));
+const claim = JSON.parse(readFileSync(`${bundle}/case-212-topic-b-claim.json`, 'utf8'));
+const repairSubmit = JSON.parse(readFileSync(`${bundle}/case-212-topic-b-submit.json`, 'utf8'));
+const passGate = JSON.parse(readFileSync(`${bundle}/case-212-gate-after-repair.json`, 'utf8'));
+const repairRecord = loadWorkUnitIndex(bundle).work_units[repairWorkId];
+const gateAttempts = readTrace(bundle).filter((event) => event.event === 'gate_attempt' && event.gate === 'wave0-complete');
+
+recordPlaybookCheck(bundle, { gate: 'initial-gate-fails', passed: failGate.check?.passed === false && JSON.stringify(failGate.inspect || []).includes('topic-b'), detail: JSON.stringify(failGate.inspect || []) });
+recordPlaybookCheck(bundle, { gate: 'repair-batch-opened', passed: opened.ok === true && opened.batch_id === 'b001' && opened.batch_reason === 'gate_failure_refill', detail: `${opened.batch_id}:${opened.batch_reason}` });
+recordPlaybookCheck(bundle, { gate: 'repair-claim-uses-refill-batch', passed: claim.claimed_count === 1 && repairWorkId.includes('-b001-') && repairRecord?.attempt_index === 1, detail: repairWorkId });
+recordPlaybookCheck(bundle, { gate: 'repair-submit', passed: repairSubmit.ok === true, detail: repairWorkId });
+recordPlaybookCheck(bundle, { gate: 'repaired-gate-passes', passed: passGate.check?.passed === true, detail: JSON.stringify(passGate.inspect || []) });
+recordPlaybookCheck(bundle, { gate: 'gate-attempts-fail-then-pass', passed: gateAttempts.some((event) => event.passed === false) && gateAttempts.some((event) => event.passed === true), detail: `${gateAttempts.length} gate_attempt event(s)` });
+
+const verdict = writeTraceVerdict(bundle, 'case-212');
+console.log(JSON.stringify(verdict, null, 2));
+process.exit(verdict.ok ? 0 : 1);
+JS
 ```
 
-预期：`check.passed: true`，`check.next: phases/phase-wave1.md`。
+Expected: final verdict PASS.
 
-### Step B3: Trace 验证 — 2 条 gate_attempt
+## Step 7: [MAIN] Result Interpretation
+
+PASS means Wave0 gate feedback can drive a repair/refill batch: the first gate rejects missing coverage, the Engine opens `b001`, the repair work unit submits ledger coverage, and the second gate passes. FAIL means the preserved bundle contains the gate/open-batch/submit trace needed for repair.
+
+## Step 8: [MAIN/SHELL] Cleanup
+
+PASS only:
 
 ```bash
-echo "=== Trace gate_attempt events ==="
-grep 'gate_attempt' $B2/rb_trace.jsonl | while read line; do
-  echo "$line" | node -e "process.stdin.on('data',d=>{try{console.log(JSON.stringify(JSON.parse(d),null,2))}catch{console.log(d.toString().trim())}})"
-done
-
-GATE_ATTEMPTS=$(grep -c 'gate_attempt' $B2/rb_trace.jsonl)
-echo "Gate attempts: $GATE_ATTEMPTS (expected: 2)"
-test "$GATE_ATTEMPTS" = "2" && echo "TRACE PASS: 2 gate_attempt events (1 fail + 1 pass)" || echo "TRACE FAIL"
+node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-212-verdict.json"
+rm -rf "$B"
 ```
 
-预期：
-- 第一条：`passed: false`, `inspect_count: 3`, `next: null`
-- 第二条：`passed: true`, `inspect_count: 0`, `next: phases/phase-wave1.md`
-
----
-
-## Final Verdict
+## Optional Automation Smoke
 
 ```bash
-# mode=last: 只看每个 gate 的最后一次 check（B 的 repair 替换 A 的 fail）
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B2/rb_trace.jsonl','last')})"
-```
-
-预期：PASS（2 checks: 1 expected-false + 1 expected-true，都匹配）。
-
-
-## 结果解读
-
-> 验证 wave0 gate fail→repair 闭环：
->   Scenario A: 3 topics 只 2 个 source.yaml → gate fail (count_floor/inspect 指出 topic-z)
->   Scenario B: 补写 topic-z/source.yaml → gate pass
->   trace 含 2 条 gate_attempt (1 fail + 1 pass) → PASS。
-
-## Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B2')})"
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-212 --cleanup-pass
 ```

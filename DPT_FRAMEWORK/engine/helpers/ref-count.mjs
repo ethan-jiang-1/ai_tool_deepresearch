@@ -21,7 +21,7 @@ import {
   extractSection,
   isHomepageUrl,
   parseReferenceMetadata,
-  readOutputDeclarations,
+  readSubmittedWorkUnitDeclarations,
 } from './gate-helpers.mjs';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -223,8 +223,19 @@ export function countReferences(bundleDir, {
   let candidatePaths = [];
 
   if (source === 'ledger') {
-    // Authority mode: read ONLY from Engine-written ledger
-    const declarations = readOutputDeclarations(bundleDir);
+    // Authority mode: read ONLY from submitted Engine-written work-unit rows.
+    let declarations;
+    try {
+      declarations = readSubmittedWorkUnitDeclarations(bundleDir);
+    } catch (error) {
+      return {
+        count: 0,
+        uncountable: [{
+          path: 'rb_output_declarations.jsonl',
+          reason: `invalid_submitted_work_unit_ledger: ${error.message}`,
+        }],
+      };
+    }
     const seen = new Set();
     for (const decl of declarations) {
       for (const entry of decl.output_files || []) {

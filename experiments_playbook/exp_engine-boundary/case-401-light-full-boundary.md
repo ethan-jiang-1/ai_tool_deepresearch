@@ -3,318 +3,225 @@ schema: command-experiment/v1
 experiment: engine-boundary
 case: case-401-light-full-boundary
 weight: light
-case_goal: "验证 hardened Agent↔Engine 边界正向全链路：fixture slot result → delegated complete → ledger → validate-bundle → gate content_dedup → trace 统一。"
+case_goal: "验证 hardened Agent↔Engine 边界正向全链路：work-unit claim/submit → ledger → validate-bundle → wave0 gate → trace verdict。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-401_eb_full
-trace: dpt_disp_case-401_eb_full/rb_trace.jsonl
+bundle: dpt_disp_case-401_eb_full_work_unit
+trace: dpt_disp_case-401_eb_full_work_unit/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
 ## Execution Contract
 
-fixture-backed、无 Agent actor、无外部调用。所有场景使用真实 Engine CLI 路径。verdict 来自 `rb_trace.jsonl` + gate JSON。
+Fixture-backed, no Agent actor, no external calls. The fixture may write controlled output, receipt, and cache files, but delegated state transition authority must come from real Engine CLIs:
+
+```text
+operate-queue enqueue -> operate-work-unit claim -> fixture output -> operate-work-unit submit -> ledger -> validate-bundle -> wave0 gate
+```
+
+Verdict sources are the runner verdict JSON, `rb_trace.jsonl`, `rb_output_declarations.jsonl`, `operate-work-unit inspect`, `validate-bundle`, and gate JSON. Filesystem output alone is not a verdict source.
 
 ## Reality Distance Ledger
 
-| 维度 | 声明 |
-|------|------|
-| **Agent actor** | 无（fixture-backed） |
-| **外部调用** | 无（无 WebSearch/WebFetch） |
-| **ledger 生成** | Engine delegated `complete()` |
-| **gate 输入** | `rb_output_declarations.jsonl`（不扫描 reference/） |
-| **trace** | `rb_trace.jsonl`（唯一 sink） |
-| **verdict 来源** | trace + gate JSON + ledger 内容 |
+| Dimension | Statement |
+| --- | --- |
+| Runtime context | Real disposable bundle from `experiments_env/shared/new-disposable-bundle.mjs` |
+| Framework path | Real `operate-queue`, `operate-work-unit`, `validate-bundle`, and Wave0 gate CLIs |
+| Fixture input | Controlled output, runtime receipt, and cache files after claim; Engine-layer evidence only |
+| Agent actor | None; fixture-backed only |
+| External calls | None |
+| Ledger generation | Real `operate-work-unit submit` |
+| Gate input | Submitted work-unit ledger rows plus cross-check surfaces |
+| Verdict source | Trace JSONL `check` events, gate JSON, inspect JSON, and runner report |
+| Does not prove | Agent search, evidence judgment, or research writing quality |
 
 # case-401-light-full-boundary
 
-正向全链路：fixture slot result → delegated complete → ledger append → validate-bundle → gate content_dedup pass → trace 验证。
+## Expected Runtime Path
 
----
+1. Create a disposable `dpt_disp_*` bundle through shared experiment infrastructure.
+2. Validate and inspect the bundle before mechanism execution.
+3. Enqueue one delegated Wave0 source-intake demand.
+4. Claim a work unit through `operate-work-unit claim`.
+5. Stage fixture output, receipt, and cache in the claimed work-unit envelope.
+6. Submit through `operate-work-unit submit`; the Engine appends the submitted ledger row.
+7. Run `validate-bundle`, `operate-work-unit inspect`, and the Wave0 gate.
+8. Record verdict-affecting runtime facts as trace `check` events.
+9. Print PASS/FAIL and clean up only on PASS.
 
-## Step 1: 创建 Run Bundle
+## Step 1: [MAIN/SHELL] Create Runtime Context
+
+Create a disposable bundle, then add only the minimal Wave0 scaffold required for the gate. This setup is deterministic experiment scaffolding; it does not complete delegated work.
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_full --case case-401 --force)
-echo "Bundle: $B"
-```
-
----
-
-## Step 2: 搭建 fixtures
-
-创建有效的 slot result（含 output_files + cache_trails）、runtime receipt、输出文件、cache leaf（含三文件）。
-
-```bash
-cat > "$B/setup.mjs" << 'JS'
-import { writeFileSync, mkdirSync } from 'node:fs';
-import path from 'node:path';
-import { randomUUID } from 'node:crypto';
-
-const B = process.argv[2];
-const slotDir = '_subagents/wave_01/slot_00';
-const nonce = randomUUID();
-mkdirSync(path.join(B, slotDir), { recursive: true });
-
-// Runtime receipt
-writeFileSync(path.join(B, `${slotDir}/runtime-receipt.jsonl`), [
-  JSON.stringify({ event: 'agent_runtime_started', slotKey: 'source_intake', roleAgentKey: 'dpt-source-intake', receiptNonce: nonce }),
-  JSON.stringify({ event: 'agent_result_ready', slotKey: 'source_intake', roleAgentKey: 'dpt-source-intake', receiptNonce: nonce }),
-].join('\n') + '\n');
-
-// Slot status
-writeFileSync(path.join(B, `${slotDir}/_status.json`), JSON.stringify({ status: 'running', updated: new Date().toISOString() }));
-
-// Committed slot result with declaration
-writeFileSync(path.join(B, `${slotDir}/result.json`), JSON.stringify({
-  slotKey: 'source_intake', roleAgentKey: 'dpt-source-intake', status: 'done',
-  summary: 'Completed source intake', evidenceCount: 2,
-  references: [
-    { title: 'AI Safety Overview', url: 'https://fixture-source.test/ai-safety', quote: 'AI safety is critical.', relevance: 'foundational' },
-    { title: 'EV Market 2024', url: 'https://fixture-source.test/ev-market', quote: 'EV sales surpassed 10M.', relevance: 'market data' },
-  ],
-  confidence: 0.9, notes: [],
-  output_files: [
-    { path: 'reference/00-shared-ai-safety.md', role: 'reference', source_url: 'https://fixture-source.test/ai-safety' },
-    { path: 'reference/ev-market.md', role: 'reference', source_url: 'https://fixture-source.test/ev-market' },
-  ],
-  cache_trails: ['_cache/wave0/primary/01_intake/s01_ai_safety/', '_cache/wave0/primary/01_intake/s02_ev_market/'],
-}, null, 2));
-
-// Output files
-mkdirSync(path.join(B, 'reference'), { recursive: true });
-writeFileSync(path.join(B, 'reference/00-shared-ai-safety.md'), '---\nsource_url: https://fixture-source.test/ai-safety\n---\n## Key Facts\nAI safety research focuses on alignment and robustness against adversarial attacks.\n## Core Content Capture\nOverview of AI safety field.\n');
-writeFileSync(path.join(B, 'reference/ev-market.md'), '---\nsource_url: https://fixture-source.test/ev-market\n---\n## Key Facts\n2024 年全球新能源汽车销量突破 1000 万辆，中国市场占比超 60%，比亚迪市场份额领先。\n## Core Content Capture\nEV market analysis.\n');
-
-// Cache leaves with 3 files each
-for (const [i, leaf] of ['s01_ai_safety', 's02_ev_market'].entries()) {
-  const d = path.join(B, '_cache/wave0/primary/01_intake', leaf);
-  mkdirSync(d, { recursive: true });
-  writeFileSync(path.join(d, 'websearch.json'), JSON.stringify([{ title: `R${i+1}`, url: `https://example.com/${i+1}` }]));
-  writeFileSync(path.join(d, 'page.md'), `# Page ${i+1}`);
-  writeFileSync(path.join(d, 'meta.json'), JSON.stringify({ url: `https://example.com/${i+1}`, title: `S${i+1}`, source_domain: 'example.com', source_name: `S${i+1}`, fetched_at: new Date().toISOString(), fetch_method: 'WebFetch', fetch_chain: 'direct', content_type: 'article', reliability_tier: 'Tier 2', reliability_basis: 'practitioner', whitelist_status: 'allowed' }));
-}
-
-// Gate prerequisites
-writeFileSync(path.join(B, 'reference/_INDEX.md'), '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| 00-shared-ai-safety.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-06-15 |\n| ev-market.md | primary | expert | Tier 1 | topic-a | wave0_foundation | accepted | 2026-06-15 |\n');
-writeFileSync(path.join(B, 'reference/README.md'), '# Reference Evidence\n');
-mkdirSync(path.join(B, 'artifacts/wave0/topic-a'), { recursive: true });
-writeFileSync(path.join(B, 'artifacts/wave0/topic-a/source.yaml'), '- url: "https://fixture-source.test/ev-market"\n  title: "EV Market 2024"\n  retrieved_date: "2026-06-15"\n  topic_tag: "topic-a"\n');
-
-// Trace init
-writeFileSync(path.join(B, 'rb_trace.jsonl'), JSON.stringify({ ts: new Date().toISOString(), event: 'run_start', source: 'trace', label: 'case-401' }) + '\n');
-
-console.log('fixtures ready');
+B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_full_work_unit --case case-401 --force)
+node --input-type=module - "$B" <<'JS'
+import { writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+writeWave0Scaffold(process.argv[2], { planBasename: 'eb_full_work_unit' });
 JS
-node "$B/setup.mjs" $B
-: > "$B/outcomes.jsonl"
+node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
+node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
+echo "BUNDLE=$B"
 ```
 
-→ 预期：`fixtures ready`。
+Expected: validate/inspect pass and the shell prints the bundle path.
 
----
+## Step 2: [MAIN/SHELL] Enqueue And Claim
 
-## Step 3: 场景 A — delegated complete 成功 → ledger append
-
-```bash
-# Queue setup
-cat > "$B/rb_status.json" << 'JSON'
-{"current_gate":"wave0_complete","next_gate":"wave1_complete","current_mode":"execution","state":"in_progress"}
-JSON
-
-cat > "$B/rb_plan.md" << 'MD'
----
-{
-  "plan_basename": "eb_full",
-  "derived_topic_count": 1,
-  "topic_registry": [{ "id": "t1", "slug": "topic-a", "title": "Topic A" }]
-}
----
-# Plan
-MD
-
-# Enqueue delegated task
-cat > "$B/task.json" << 'JSON'
-{"work_id":"wave0-source-topic-a","title":"Source intake","targets":{"controller":"main-agent","delegates":{"to":"sub-agent","role_key":"dpt-source-intake","timeout_ms":600000}},"action":"Search and collect references. Return output_files[] and cache_trails[] in result.","producer_rule":"source_intake_fan_in","lineage":{"topic_slug":"topic-a"},"priority_class":"P5_new_reference_intake","required_receipts":["none"],"done_condition":"Files exist.","verification":{"engine":[],"agent":[]},"writes_to":["reference/00-shared-ai-safety.md","reference/ev-market.md"],"status_sync":[],"completion_receipt":"none","failure_route":"queue repair work","payload":{}}
-JSON
-
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task "$B/task.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
-
-cat > "$B/result.json" << 'JSON'
-{"work_id":"wave0-source-topic-a","receipt":"none","summary":"Completed","writes":["reference/00-shared-ai-safety.md","reference/ev-market.md"],"slot_result_ref":"_subagents/wave_01/slot_00/result.json"}
-JSON
-set +e
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/result.json"
-sts=$?
-set -e
-if [ "$sts" -eq 0 ]; then echo "EXPECTED PASS"; else echo "UNEXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" delegated-complete "$sts" 0
-[ "$sts" -eq 0 ]
-```
-
-→ 预期：`EXPECTED PASS`。
-
----
-
-## Step 4: 验证 ledger
+Enqueue one delegated Wave0 source-intake demand, then claim it through the production work-unit CLI. The controller must read the claim JSON before continuing.
 
 ```bash
-cat > "$B/check-ledger.mjs" << 'JS'
-import { readFileSync, existsSync } from 'node:fs';
-import path from 'node:path';
-const B = process.argv[2];
-const lp = path.join(B, 'rb_output_declarations.jsonl');
-if (!existsSync(lp)) { console.log('FAIL: ledger missing'); process.exit(1); }
-const lines = readFileSync(lp, 'utf-8').trim().split('\n').filter(Boolean);
-if (lines.length !== 1) { console.log(`FAIL: expected 1 record, got ${lines.length}`); process.exit(1); }
-const r = JSON.parse(lines[0]);
-const ok = r.work_id === 'wave0-source-topic-a' && r.output_files.length === 2 && r.cache_trails.length === 2 && r.slot_result_ref === '_subagents/wave_01/slot_00/result.json';
-console.log(ok ? '\x1b[32mLEDGER PASS\x1b[0m' : '\x1b[31mLEDGER FAIL\x1b[0m');
-if (!ok) process.exit(1);
+node --input-type=module - "$B" <<'JS'
+import { enqueueWorkUnitTask, queueItemForWorkUnit } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+const bundle = process.argv[2];
+const task = queueItemForWorkUnit({
+  queue_item_id: 'wave0-source-topic-a',
+  topic_slug: 'topic-a',
+  title: 'Wave0 source intake for Topic A'
+});
+const result = enqueueWorkUnitTask(bundle, task, { fileName: 'case401-topic-a.json' });
+console.log(JSON.stringify(result, null, 2));
 JS
-set +e
-node "$B/check-ledger.mjs" $B
-sts=$?
-set -e
-node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" ledger-shape "$sts" 0
-[ "$sts" -eq 0 ]
+
+CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1)
+printf '%s\n' "$CLAIM_JSON" > "$B/case-401-claim.json"
+printf '%s\n' "$CLAIM_JSON" | node -e '
+const j = JSON.parse(require("fs").readFileSync(0, "utf8"));
+console.log(`claimed_count=${j.claimed_count}`);
+console.log(`claimed_work_ids=${j.claimed_work_ids.join(",")}`);
+process.exit(j.claimed_count === 1 ? 0 : 1);
+'
+WORK_ID=$(printf '%s\n' "$CLAIM_JSON" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.claimed_work_ids[0]);')
 ```
 
-→ 预期：`LEDGER PASS`。
+Expected: `claimed_count=1`. If no work unit is claimed, stop here and inspect queue state instead of fabricating output.
 
----
+## Step 3: [MAIN/SHELL] Stage Fixture Result And Submit
 
-## Step 5: 场景 B — validate-bundle
+This is the only fixture-backed part: the fixture writes output, runtime receipt, result JSON, and cache files for the claimed `work_id`. Completion authority still comes from `operate-work-unit submit`.
+
+```bash
+RESULT_PATH=$(node --input-type=module - "$B" "$WORK_ID" <<'JS'
+import {
+  referenceContent,
+  sourceYamlExtra,
+  writeFixtureResultForWorkUnit
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const [bundle, workId] = process.argv.slice(2);
+const sourceUrl = 'https://research-source.test/topic-a/article';
+const fixture = writeFixtureResultForWorkUnit(bundle, {
+  work_id: workId,
+  output_path: 'reference/00-shared-topic-a.md',
+  source_url: sourceUrl,
+  source_slug: 'topic-a',
+  output_content: referenceContent({ source_url: sourceUrl, topic_slug: 'topic-a', title: 'Topic A Fixture Source' }),
+  extra_output_files: [sourceYamlExtra('topic-a', sourceUrl, 'Topic A Fixture Source')]
+});
+console.log(fixture.resultPath);
+JS
+)
+
+SUBMIT_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$RESULT_PATH")
+printf '%s\n' "$SUBMIT_JSON" > "$B/case-401-submit.json"
+printf '%s\n' "$SUBMIT_JSON" | node -e '
+const j = JSON.parse(require("fs").readFileSync(0, "utf8"));
+console.log(`submit_ok=${j.ok}`);
+console.log(`status=${j.status}`);
+process.exit(j.ok === true ? 0 : 1);
+'
+```
+
+Expected: `submit_ok=true` and `status=submitted`. If submit rejects, read `last_submit_rejection` and repair the same claimed work unit instead of moving to the gate.
+
+## Step 4: [MAIN/SHELL] Read Engine Feedback And Gate
+
+Run each deterministic checkpoint separately and keep its JSON/stdout available to the controller.
 
 ```bash
 set +e
-node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
-sts=$?
+node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B" > "$B/case-401-validate.txt" 2>&1
+VALIDATE_STATUS=$?
+node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-401-gate.json"
+GATE_STATUS=$?
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect "$B" > "$B/case-401-inspect.json"
+INSPECT_STATUS=$?
 set -e
-node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" validate-bundle "$sts" 0
-[ "$sts" -eq 0 ]
-```
 
-→ 预期：`rb_output_declarations.jsonl ✓`。
-
----
-
-## Step 6: 场景 C — Gate wave0-complete（content_dedup 从 ledger 读取）
-
-```bash
-set +e
-node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/gate-wave0.json" 2>&1
-gate_status=$?
-set -e
-node - "$B" "$gate_status" <<'JS'
+node - "$B" "$VALIDATE_STATUS" "$GATE_STATUS" "$INSPECT_STATUS" <<'JS'
 const fs = require('fs');
-const path = require('path');
-const [B, gateStatusRaw] = process.argv.slice(2);
-const gateStatus = Number(gateStatusRaw);
-let gatePassed = false;
-let inspect = [];
-try {
-  const d = JSON.parse(fs.readFileSync(path.join(B, 'gate-wave0.json'), 'utf-8'));
-  gatePassed = d?.check?.passed === true;
-  inspect = d?.inspect ?? [];
-} catch (err) {
-  inspect = [`gate output was not JSON: ${err.message}`];
-}
-const status = gateStatus === 0 && gatePassed ? 0 : 1;
-fs.appendFileSync(path.join(B, 'outcomes.jsonl'), JSON.stringify({
-  label: 'gate-wave0-content-dedup',
-  status,
-  expected: 0,
-  cli_status: gateStatus,
-  gate_passed: gatePassed,
-  inspect,
-}) + '\n');
-console.log(status === 0 ? '\x1b[32mGATE PASS\x1b[0m' : '\x1b[31mGATE FAIL\x1b[0m: ' + JSON.stringify(inspect));
-process.exit(status);
+const [bundle, validateStatus, gateStatus, inspectStatus] = process.argv.slice(2);
+const gate = JSON.parse(fs.readFileSync(`${bundle}/case-401-gate.json`, 'utf8'));
+const inspect = JSON.parse(fs.readFileSync(`${bundle}/case-401-inspect.json`, 'utf8'));
+console.log(JSON.stringify({
+  validate_status: Number(validateStatus),
+  gate_status: Number(gateStatus),
+  gate_passed: gate.check?.passed,
+  gate_next: gate.check?.next,
+  work_unit_inspect_status: Number(inspectStatus),
+  work_unit_inspect_passed: inspect.passed
+}, null, 2));
+process.exit(Number(validateStatus) === 0 && gate.check?.passed === true && inspect.passed === true ? 0 : 1);
 JS
 ```
 
-→ 预期：`GATE PASS`。
+Expected: validate exits `0`, gate JSON has `check.passed: true`, and work-unit inspect reports `passed: true`.
 
----
+## Step 5: [MAIN/SHELL] Record Trace Checks
 
-## Step 7: 记录 Trace Check Events
-
-每个场景的结果写入标准 `event: 'check'` trace event。
+Convert the runtime facts the controller just read into trace `check` events, then derive the verdict from trace.
 
 ```bash
-cat > "$B/record.mjs" << 'JS'
-import { appendFileSync, existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-const B = process.argv[2];
-const tp = path.join(B, 'rb_trace.jsonl');
-function check(passed, detail, extra = {}) {
-  appendFileSync(tp, JSON.stringify({
-    ts: new Date().toISOString(), event: 'check', source: 'case-401',
-    gate: 'full-boundary', passed, expected: true, detail, ...extra,
-  }) + '\n');
-}
-const outcomes = readFileSync(path.join(B, 'outcomes.jsonl'), 'utf-8')
-  .trim()
-  .split('\n')
-  .filter(Boolean)
-  .map(JSON.parse);
-for (const o of outcomes) {
-  check(o.status === o.expected, `${o.label} matched expected command outcome`, o);
-}
-const events = readFileSync(tp, 'utf-8').trim().split('\n').map(JSON.parse);
-check(existsSync(path.join(B, 'rb_output_declarations.jsonl')), 'ledger file exists');
-check(events.some(e => e.event === 'queue_completed' && e.work_id === 'wave0-source-topic-a'), 'queue complete event in trace');
-check(events.some(e => e.event === 'ledger_appended' && e.work_id === 'wave0-source-topic-a'), 'ledger appended event in trace');
-check(events.some(e => e.event === 'run_start'), 'run_start event in trace');
+node --input-type=module - "$B" "$WORK_ID" <<'JS'
+import { readFileSync } from 'node:fs';
+import { readWorkUnitLedgerRows, recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const [bundle, workId] = process.argv.slice(2);
+const submit = JSON.parse(readFileSync(`${bundle}/case-401-submit.json`, 'utf8'));
+const gate = JSON.parse(readFileSync(`${bundle}/case-401-gate.json`, 'utf8'));
+const inspect = JSON.parse(readFileSync(`${bundle}/case-401-inspect.json`, 'utf8'));
+const ledgerRows = readWorkUnitLedgerRows(bundle);
+
+recordPlaybookCheck(bundle, { gate: 'work-unit-submit', passed: submit.ok === true, detail: workId });
+recordPlaybookCheck(bundle, { gate: 'ledger-row', passed: ledgerRows.length === 1 && ledgerRows[0].work_id === workId, detail: `${ledgerRows.length} submitted row(s)` });
+recordPlaybookCheck(bundle, { gate: 'wave0-gate', passed: gate.check?.passed === true, detail: JSON.stringify(gate.inspect || []) });
+recordPlaybookCheck(bundle, { gate: 'work-unit-inspect', passed: inspect.passed === true, detail: JSON.stringify(inspect.inspect || []) });
+
+const verdict = writeTraceVerdict(bundle, 'case-401');
+console.log(JSON.stringify(verdict, null, 2));
+process.exit(verdict.ok ? 0 : 1);
 JS
-node "$B/record.mjs" $B
 ```
 
----
+Expected: verdict JSON says `PASS` and `case-401-verdict.json` is written inside the bundle.
 
-## Step 8: 从 Trace 裁决
+## Step 6: [MAIN] Result Interpretation
+
+Expected runtime facts:
+
+- Work-unit submit succeeds and appends exactly one Engine-written ledger row.
+- `validate-bundle` passes against the disposable bundle.
+- `wave0-complete` passes from submitted work-unit coverage, not direct filesystem presence.
+- `operate-work-unit inspect` passes after submit.
+
+PASS means the fixture entered the production delegated path at the earliest executable boundary and downstream authority came from submitted work-unit coverage. FAIL means the Agent must treat the CLI/gate/trace feedback as actionable diagnostic context and repair the failing boundary before rerunning.
+
+## Step 7: [MAIN/SHELL] Cleanup
+
+PASS only:
 
 ```bash
-cat > "$B/verdict.mjs" << 'JS'
-import { appendFileSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-const B = process.argv[2];
-const tp = path.join(B, 'rb_trace.jsonl');
-const events = readFileSync(tp, 'utf-8').trim().split('\n').map(JSON.parse);
-const checks = events.filter(e => e.event === 'check');
-const passed = checks.filter(c => c.passed === (c.expected !== false)).length;
-const failed = checks.filter(c => c.passed !== (c.expected !== false)).length;
-console.log(`checks: ${checks.length} passed: ${passed} failed: ${failed}`);
-const ok = checks.length >= 3 && failed === 0;
-console.log(ok ? '\x1b[32mCASE-401 PASS\x1b[0m' : '\x1b[31mCASE-401 FAIL\x1b[0m');
-if (!ok) process.exit(1);
-JS
-node "$B/verdict.mjs" $B
+node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-401-verdict.json"
+rm -rf "$B"
 ```
 
-→ 预期：`CASE-401 PASS`。
+FAIL preserves the disposable bundle for diagnosis.
 
----
+## Optional Automation Smoke
 
-## Step 8: 结果解读
-
-> 3 个场景验证正向全链路：
->   [A] fixture slot result → delegated complete → ledger append ✓
->   [B] validate-bundle 识别 rb_output_declarations.jsonl ✓
->   [C] gate content_dedup 从 ledger 读取，distinct URLs + distinct Key Facts → pass ✓
->   全部 expected → CASE-401 PASS。
-
-## Step 9: PASS-only 清理
+The case-local runner may be used after the visible MD-controller path above has been validated. It is a smoke/aggregation convenience, not the normative playbook execution surface:
 
 ```bash
-if node "$B/verdict.mjs" "$B"; then
-  rm -rf "$B"
-  echo "✓ Cleaned up after PASS."
-else
-  echo "FAIL preserved for inspection: $B"
-  exit 1
-fi
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-401 --cleanup-pass
 ```

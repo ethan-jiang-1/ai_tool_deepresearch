@@ -222,7 +222,7 @@ describe('Layer 1 regression: universal silent execution coverage (WNC-009)', ()
 
   // Identify all lifecycle stop:no phases from manifest + frontmatter
   const lifecyclePhases = [];
-  const relaySurfaces = [];
+  const workUnitTaskSurfaces = [];
 
   if (manifest) {
     for (const mp of manifest.phases) {
@@ -239,9 +239,9 @@ describe('Layer 1 regression: universal silent execution coverage (WNC-009)', ()
         lifecyclePhases.push({ node: mp.node, gate: mp.gate, fm, body: md });
       }
 
-      // Identify relay/sub-agent surfaces (has role field, no gate, or is explicitly a subagent)
+      // Identify work-unit sub-agent task surfaces (has role field, no gate, or is explicitly a subagent)
       if (fm.role || basename(mp.node).includes('subagent')) {
-        relaySurfaces.push({ node: mp.node, fm });
+        workUnitTaskSurfaces.push({ node: mp.node, fm });
       }
     }
   }
@@ -260,12 +260,12 @@ describe('Layer 1 regression: universal silent execution coverage (WNC-009)', ()
     assert.deepStrictEqual(missing, [], `These stop:no phases are missing shared/shared-silent-execution in requires: ${missing.join(', ')}`);
   });
 
-  it('relay/sub-agent task surfaces are NOT required to have shared/shared-silent-execution', () => {
-    // This is a structural check: relay surfaces exist and are correctly identified
+  it('work-unit sub-agent task surfaces are NOT required to have shared/shared-silent-execution', () => {
+    // This is a structural check: work-unit task surfaces exist and are correctly identified
     // We don't assert them to have silent-execution — we assert they are classified
     // separately from lifecycle phases
-    assert.ok(relaySurfaces.length >= 0, 'Relay surfaces may or may not exist');
-    // No assertion failure for relay surfaces — just confirming they're correctly
+    assert.ok(workUnitTaskSurfaces.length >= 0, 'Work-unit task surfaces may or may not exist');
+    // No assertion failure for work-unit task surfaces — just confirming they're correctly
     // identified and excluded from the lifecycle check above
   });
 });

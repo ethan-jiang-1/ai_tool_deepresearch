@@ -20,7 +20,7 @@ Agent 跑 playbook 时只许忠实执行每个 bash block 和 inline JS，不许
 
 ```
 experiments_playbook/
-  RUN.md                   # 跑 playbook 的行动指令（Agent 读这个）
+  RUN_EXPS.md              # 跑 playbook 的行动指令（Agent 读这个）
   exp_*/                   # 各实验组的 playbook
     case-<NN>-<cost>-<what>.md   # 单个 playbook
   exph_*/                  # 需人类交互的 playbook（Agent 不能自动跑）
@@ -55,6 +55,8 @@ experiments_playbook/
 | Light | 纯 JS/CLI/gate/filesystem，无外部调用 | 改完代码就该跑 |
 | Standard | 真实 bundle 多步骤，无外部调用 | 功能验证 |
 | Heavy | WebSearch/WebFetch/subagent 真实外部调用 | 完整验证 |
+
+`RUN_EXPS.md` 中的 Legacy/backlog 清单默认跳过。那些 case 保留为历史对照或迁移 backlog，不能用来证明当前 work-unit production path。
 
 ## 跟其他目录的关系
 

@@ -14,7 +14,7 @@
 //   All forms normalize to { kind, status_gate, gate_key, node_ref, phase_key }
 
 import { parseArgs } from 'node:util';
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { createHash } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
@@ -26,7 +26,6 @@ import {
   parseMdFrontmatter,
 } from '../engine/helpers/gate-helpers.mjs';
 import { auditFileObservability } from '../engine/helpers/file-observability.mjs';
-import { SLOT_NAMES } from '../schema/contracts/queue-slots.mjs';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Constants
@@ -59,7 +58,7 @@ const { values } = parseArgs({
 });
 
 function emitAndExit(result) {
-  console.log(JSON.stringify(result, null, 2));
+  writeFileSync(1, `${JSON.stringify(result, null, 2)}\n`);
   process.exit(result.check.exit_code);
 }
 
@@ -285,22 +284,34 @@ function auditQueueConflicts(bundlePath, target, manifest) {
   const targetPhaseIdx = PHASE_ORDER.indexOf(target.phase_key);
   if (targetPhaseIdx === -1) return { blockers, warnings };
 
-  // Collect all items
+  // Collect all queue v2 demand items and in-flight bindings.
   const allItems = [];
-  for (const slot of SLOT_NAMES) {
-    if (queue[slot]) allItems.push({ slot, item: queue[slot] });
+  if (Array.isArray(queue.active_window)) {
+    for (const item of queue.active_window) {
+      allItems.push({ location: 'active_window', item });
+    }
   }
   if (Array.isArray(queue.refill_pool)) {
     for (const item of queue.refill_pool) {
-      allItems.push({ slot: 'refill_pool', item });
+      allItems.push({ location: 'refill_pool', item });
+    }
+  }
+  if (queue.delegated_in_flight && typeof queue.delegated_in_flight === 'object') {
+    for (const [queueItemId, binding] of Object.entries(queue.delegated_in_flight)) {
+      allItems.push({
+        location: 'delegated_in_flight',
+        queue_item_id: queueItemId,
+        item: binding?.queue_item || binding,
+      });
     }
   }
 
-  // Derive phase from work_id prefix
+  // Derive phase from queue demand identity or producer rule.
   function derivePhaseKey(item) {
     const prefixes = ['wave0', 'wave1', 'wave2', 'seed-topics', 'setup', 'hitl1', 'hitl2', 'readiness', 'rerun', 'final', 'instantiation'];
+    const identity = item.queue_item_id || '';
     for (const prefix of prefixes) {
-      if ((item.work_id || '').startsWith(prefix)) return prefix;
+      if (identity.startsWith(prefix)) return prefix;
     }
     // Try producer_rule
     const ruleMap = {
@@ -314,17 +325,18 @@ function auditQueueConflicts(bundlePath, target, manifest) {
     return null;
   }
 
-  for (const { slot, item } of allItems) {
+  for (const { location, queue_item_id, item } of allItems) {
     const itemPhase = derivePhaseKey(item);
     const itemPhaseIdx = itemPhase ? PHASE_ORDER.indexOf(itemPhase) : -1;
+    const itemId = item.queue_item_id || queue_item_id || '(unknown queue item)';
 
     // Skip if we can't determine phase
     if (itemPhaseIdx === -1) {
       warnings.push({
         severity: 'warning',
         check: 'queue_conflict',
-        message: `Cannot determine phase for queue item ${item.work_id} (slot: ${slot})`,
-        detail: { work_id: item.work_id, slot, status: item.status },
+        message: `Cannot determine phase for queue item ${itemId} (location: ${location})`,
+        detail: { queue_item_id: itemId, location, status: item.status },
       });
       continue;
     }
@@ -351,22 +363,22 @@ function auditQueueConflicts(bundlePath, target, manifest) {
         blockers.push({
           severity: 'blocker',
           check: 'queue_conflict',
-          message: `Prior-phase queue item ${item.work_id} (phase: ${itemPhase}, status: ${item.status}) affects target gate pass conditions.`,
-          detail: { work_id: item.work_id, slot, phase: itemPhase, status: item.status, writes_to: item.writes_to },
+          message: `Prior-phase queue item ${itemId} (phase: ${itemPhase}, status: ${item.status}) affects target gate pass conditions.`,
+          detail: { queue_item_id: itemId, location, phase: itemPhase, status: item.status, writes_to: item.writes_to },
         });
       } else if (item.status === 'done' || item.status === 'failed' || item.status === 'blocked') {
         warnings.push({
           severity: 'warning',
           check: 'queue_conflict',
-          message: `Prior-phase queue item ${item.work_id} (phase: ${itemPhase}) is ${item.status}.`,
-          detail: { work_id: item.work_id, slot, phase: itemPhase, status: item.status },
+          message: `Prior-phase queue item ${itemId} (phase: ${itemPhase}) is ${item.status}.`,
+          detail: { queue_item_id: itemId, location, phase: itemPhase, status: item.status },
         });
       } else if (isActive) {
         warnings.push({
           severity: 'warning',
           check: 'queue_conflict',
-          message: `Prior-phase queue item ${item.work_id} (phase: ${itemPhase}, status: ${item.status}) is still active.`,
-          detail: { work_id: item.work_id, slot, phase: itemPhase, status: item.status },
+          message: `Prior-phase queue item ${itemId} (phase: ${itemPhase}, status: ${item.status}) is still active.`,
+          detail: { queue_item_id: itemId, location, phase: itemPhase, status: item.status },
         });
       }
     }
@@ -376,8 +388,8 @@ function auditQueueConflicts(bundlePath, target, manifest) {
       warnings.push({
         severity: 'info',
         check: 'queue_conflict',
-        message: `Future-phase queue item ${item.work_id} (phase: ${itemPhase}) present — not a conflict, noted for awareness.`,
-        detail: { work_id: item.work_id, slot, phase: itemPhase, status: item.status },
+        message: `Future-phase queue item ${itemId} (phase: ${itemPhase}) present — not a conflict, noted for awareness.`,
+        detail: { queue_item_id: itemId, location, phase: itemPhase, status: item.status },
       });
     }
   }

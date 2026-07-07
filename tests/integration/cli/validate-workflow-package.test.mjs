@@ -90,10 +90,10 @@ shared_scope: subagent-protocol
 role: ${role}
 authority: guidance-only
 execution_contract:
-  surface: relay-subagent-role
+  surface: work-unit-subagent-role
   search_policy: subagent_performs_search
   loaded_by: phase-agent
-  delivered_via: relay_task_md
+  delivered_via: work_unit_task_md
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
@@ -105,10 +105,14 @@ suggested_context: []
 
 - **Role key**: \`${role}\`
 - **Used by**: Test phase agent.
-- **Receives**: Relay slot files.
+- **Receives**: Work-unit task, beacon, result schema, and runtime receipt.
 - **Produces**: Test outputs.
 - **Boundary**: Test role boundary.
 - **Handoff**: Test handoff.
+
+## Lifecycle Logging Mandate (always-loaded)
+
+Bind work_id, queue_item_id, kind, and receipt_nonce in lifecycle logs.
 
 ## 1. Purpose
 
@@ -122,9 +126,9 @@ Test search focus.
 
 Test artifacts.
 
-## 4. Execution Within Relay Slot
+## 4. Execution Within Work Unit
 
-Test relay execution.
+Test work-unit execution.
 
 ## 5. Page Content Fetching
 
@@ -146,19 +150,31 @@ Test relationship.
         file: 'subagent-dpt-source-intake.md',
         id: 'subagent-dpt-source-intake',
         role: 'dpt-source-intake',
-        h1: 'Relay Role: dpt-source-intake — Foundation Reference Intake',
+        h1: 'Work-Unit Role: dpt-source-intake - Foundation Reference Intake',
       },
       {
         file: 'subagent-dpt-evidence-extractor.md',
         id: 'subagent-dpt-evidence-extractor',
         role: 'dpt-evidence-extractor',
-        h1: 'Relay Role: dpt-evidence-extractor — Topic-Specific Deepening',
+        h1: 'Work-Unit Role: dpt-evidence-extractor - Topic-Specific Deepening',
       },
       {
         file: 'subagent-dpt-topic-scout.md',
         id: 'subagent-dpt-topic-scout',
         role: 'dpt-topic-scout',
-        h1: 'Relay Role: dpt-topic-scout — Gap-Fill Search',
+        h1: 'Work-Unit Role: dpt-topic-scout - Gap-Fill Search',
+      },
+      {
+        file: 'subagent-dpt-claim-verifier.md',
+        id: 'subagent-dpt-claim-verifier',
+        role: 'dpt-claim-verifier',
+        h1: 'Work-Unit Role: dpt-claim-verifier - Critical Claim Verification',
+      },
+      {
+        file: 'subagent-dpt-source-diagnostic.md',
+        id: 'subagent-dpt-source-diagnostic',
+        role: 'dpt-source-diagnostic',
+        h1: 'Work-Unit Role: dpt-source-diagnostic - Source Quality Diagnostic',
       },
     ];
 

@@ -34,10 +34,10 @@ Read in this order:
 1. `project-charter.md` — stable project principles, authority boundaries, and current project surfaces.
 2. `framework-runtime-boundary.md` — directory and authority boundary between read-only framework assets and mutable runtime bundles.
 3. `logging-conventions.md` — runtime continuity and observability: status/queue/trace/log authority after context loss.
-4. `agentic-execution-model.md` — unified execution model and terminology canon: how Chain, Queue, and Relay compose into the three-tier execution system. Start here to understand the overall architecture.
+4. `agentic-execution-model.md` — unified execution model and terminology canon: how Chain, Queue, and Work Units compose into the current execution system. Start here to understand the overall architecture.
 5. `agentic-workflow-mechanism.md` — Tier 1 (Chain): phase-to-phase routing and the Three-Authority Architecture.
 6. `agentic-queue-mechanism.md` — Tier 2 (Queue): within-phase task execution, two nested loops, dispatch rule.
-7. `agentic-subagent-mechanism.md` — Tier 3 (Relay): within-task sub-agent dispatch, noise isolation, slot protocol.
+7. `agentic-subagent-mechanism.md` — Work-unit-mediated Sub-agent execution: noise isolation, bounded tasks, submit provenance.
 8. `command-experiments.md` — guidance for durable command experiment shape and boundaries.
 
 Detailed requirements live in `openspec/specs/`. Project-level OpenSpec rules live in `openspec/config.yaml`.
@@ -88,7 +88,7 @@ This directory cannot decide:
 | Resuming a run after context loss or debugging log/trace confusion | `logging-conventions.md`, then active bundle control files and trace | Infer current state from chat memory, console output, or `_logs/run.log` |
 | Writing or revising a command experiment playbook | `command-experiments.md` and the relevant accepted spec or active OpenSpec change | Invent setup or verdict authority locally |
 | Changing accepted behavior | OpenSpec proposal/spec/tasks | Patch only `guidelines/` |
-| Understanding how the three mechanisms (Chain/Queue/Relay) fit together | `agentic-execution-model.md` | Start from a single mechanism file without the global picture |
+| Understanding how Chain, Queue, and Work Units fit together | `agentic-execution-model.md` | Start from a single mechanism file without the global picture |
 | Modifying transition, gate, or node-loading logic | `agentic-workflow-mechanism.md` and `openspec/specs/transition-table/spec.md` | Add a second transition backend or JS-driven loop |
 | Designing or implementing Agentic Queue behavior | `agentic-queue-mechanism.md` and `openspec/specs/agentic-queue/spec.md` | Implement loop engineering without OpenSpec change |
 | Deciding whether work should go to a sub-agent | `agentic-subagent-mechanism.md` | Let Phase Agent do WebSearch/WebFetch directly |
@@ -117,10 +117,10 @@ Guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`
 | `framework-runtime-boundary.md` | Any Agent or maintainer touching framework/run files | Directory and authority boundary for read-only framework assets vs mutable runtime bundles | Concrete schema fields, CLI flags, or current run truth |
 | `logging-conventions.md` | Any Agent or maintainer resuming/debugging a run | Runtime continuity and observability: status/queue/trace/log authority, diagnostic vs audit boundaries | API contracts, schema fields, or using logs as verdict |
 | `command-experiments.md` | Experiment author/executor | How to prove mechanisms with real runtime contexts and trace-backed verdicts | General project philosophy or concrete capability behavior |
-| `agentic-execution-model.md` | Any Agent or maintainer new to the system | Unified execution model and terminology canon: how Chain, Queue, and Relay compose into the three-tier execution system | Per-tier implementation detail |
+| `agentic-execution-model.md` | Any Agent or maintainer new to the system | Unified execution model and terminology canon: how Chain, Queue, and Work Units compose into the current execution system | Per-tier implementation detail |
 | `agentic-workflow-mechanism.md` | Any Agent executing or modifying workflow logic | Tier 1 (Chain): phase-to-phase routing and Three-Authority Architecture | Alternative transition backends, non-chain routing, JS-driven loops |
 | `agentic-queue-mechanism.md` | Designer or implementer of Agentic Queue behavior | Tier 2 (Queue): within-phase task execution, two nested loops, dispatch rule | Current runtime behavior |
-| `agentic-subagent-mechanism.md` | Designer or implementer of sub-agent dispatch | Tier 3 (Relay): within-task sub-agent dispatch, noise isolation, slot protocol | Current runtime behavior |
+| `agentic-subagent-mechanism.md` | Designer or implementer of Sub-agent execution | Work-unit-mediated Sub-agent execution, noise isolation, bounded task contract, submit provenance | Current runtime behavior |
 
 ## Current / Target / Proposed
 
@@ -129,7 +129,7 @@ Guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`
 | `dpt_rb_*` runtime contexts | Current convention | Yes | Runtime state |
 | `dpt_disp_*` disposable experiment contexts | Current convention | Yes | Runtime state |
 | `experiments_playbook/exp_*` playbooks | Current | Yes — see `experiments_playbook/RUN.md` for current inventory | Agent-readable experiment playbooks |
-| `DPT_FRAMEWORK/engine/` | Current | Yes — 5 engines (queue-manager, gate-loop, gate-fork, subagent-relay, workflow-chain) | Production engine code |
+| `DPT_FRAMEWORK/engine/` | Current | Yes — queue, work-unit, gate, trace, workflow-chain, and supporting helpers | Production engine code |
 | `DPT_FRAMEWORK/engine/trace.mjs` | Current | Yes — unified trace writer, `createTrace` factory | Trace writer for all engines and playbooks |
 | `DPT_FRAMEWORK/` as read-only framework assets | Current convention | Yes | Framework code, definitions, templates, and Agent-facing instructions; not run state |
 | `experiments_env/shared/new-disposable-bundle.mjs` | Current | Yes | Shared experiment disposable-bundle setup |
@@ -138,7 +138,8 @@ Guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`
 | `DPT_FRAMEWORK/schema/gate_definitions/` | Current | Yes | Read-only gate definition JSON; skeleton/content completeness is owned by accepted specs |
 | `DPT_FRAMEWORK/cli/gates/` | Current | Yes | Accepted one-gate-per-CLI skeleton wrappers |
 | `DPT_FRAMEWORK/engine/gates/` | Target | No | Future gate loader/evaluator implementation; directory exists but has no loader/evaluator yet |
-| `DPT_FRAMEWORK/cli/operate-queue.mjs` | Current | Yes — Agentic Queue CLI (check/enqueue/claim/complete/fail/preempt/render) | Queue operations and task dispatch |
+| `DPT_FRAMEWORK/cli/operate-queue.mjs` | Current | Yes — Agentic Queue CLI for non-delegated queue maintenance/completion | Queue operations and non-delegated task completion |
+| `DPT_FRAMEWORK/cli/operate-work-unit.mjs` | Current | Yes — delegated claim/submit/fail/timeout/abandon/inspect lifecycle | Production delegated work boundary |
 | `rb_ledger.jsonl` | Proposed | No runtime use; design input only | Future OpenSpec + implementation required |
 | Queue Markdown projection | Current | Yes — `queue-manager.mjs` render() writes `_cache/agentic-queue/current-task.md` | Queue state projection, not queue authority |
 
@@ -154,10 +155,10 @@ These files are one guidance suite:
 - `framework-runtime-boundary.md` defines the framework/runtime boundary: where read-only definitions and mutable run truth belong.
 - `logging-conventions.md` defines runtime continuity and observability guidance: how status, queue, trace, and log keep a long-running bundle recoverable without chat memory.
 - `command-experiments.md` defines the experiment charter: how mechanisms are proven.
-- `agentic-execution-model.md` defines the unified execution model and terminology canon: the three-tier execution system (Chain → Queue → Relay), how they compose, and the canonical definitions that resolve ambiguity across mechanism files.
+- `agentic-execution-model.md` defines the unified execution model and terminology canon: Chain, Queue, and Work Units, how they compose, and the canonical definitions that resolve ambiguity across mechanism files.
 - `agentic-workflow-mechanism.md` defines Tier 1 (Chain): phase-to-phase routing and the Three-Authority Architecture (MD / Chain / Engine).
 - `agentic-queue-mechanism.md` defines Tier 2 (Queue): within-phase task execution, two nested loops, dispatch rule. Queue engine (AGQ-001~006) is implemented runtime; seed-topics/wave0/wave1/wave2 are accepted/current queue integrations. Remaining loop engineering gaps still require OpenSpec.
-- `agentic-subagent-mechanism.md` defines Tier 3 (Relay): within-task sub-agent dispatch, noise-isolation principles, slot protocol. Relay engine (SUD-001) is implemented runtime; Queue × Relay integration is pending OpenSpec.
+- `agentic-subagent-mechanism.md` defines work-unit-mediated Sub-agent execution: noise-isolation principles, bounded work-unit tasks, runtime receipts, and submit provenance.
 
 Each file has frontmatter declaring its role, scope, authority level, and sibling guidance files.
 
@@ -166,12 +167,12 @@ Each file has frontmatter declaring its role, scope, authority level, and siblin
 | Term | Meaning |
 |------|---------|
 | Agent actor | LLM or human actor that executes work by reading Markdown, structured state, or other instructions. |
-| Phase Agent | Agent actor currently executing phase-level Markdown: reads phase nodes, claims/completes queue tasks, runs gates, handles repair, and bridges Chain/Queue/Relay. This is a runtime role, not a permanent identity. |
-| Sub-agent | Agent actor executing bounded relay-slot task Markdown (`task.md` + `result.schema.json`) and returning structured output. It does not mutate queue, pass gates, or own workflow authority. |
+| Phase Agent | Agent actor currently executing phase-level Markdown: reads phase nodes, claims/completes non-delegated queue tasks, claims/submits work units, runs gates, handles repair, and bridges Chain/Queue/Work Unit boundaries. This is a runtime role, not a permanent identity. |
+| Sub-agent | Agent actor executing bounded work-unit task Markdown (`task.md` + `_beacon.json` + `result.schema.json`) and returning structured output. It does not mutate queue, append ledgers, pass gates, or own workflow authority. |
 | Engine | JavaScript code that enforces deterministic checkpoints and returns structured feedback; not the Agent Flow controller. |
 | CLI | Executable JS surface used for validation, inspection, deterministic checks, feedback, or future scheduling; not the LLM-facing workflow controller. |
 | AGQ | Agentic Queue — the queue engine (`queue-manager.mjs` + `operate-queue.mjs`, AGQ-001~006) that drives task dispatch inside a workflow phase. Implemented as CLI/checkpoints, not an Agent, daemon, or content judge. |
-| Markdown control surface | Agent-readable operating surface: phase node, task card, playbook, slot task, or projection. It carries tasks, constraints, and feedback into Agent context; it is not machine authority. |
+| Markdown control surface | Agent-readable operating surface: phase node, task card, playbook, work-unit task, or projection. It carries tasks, constraints, and feedback into Agent context; it is not machine authority. |
 | MD controller mode | Phase-level Markdown control mode used by the Phase Agent for workflow execution: read phase MD, call deterministic checkpoints, read check/inspect/advice, continue/repair/block. It is a control mode, not an Agent identity. |
 | Markdown | LLM-facing Agent Flow controller/control surface; it drives staged LLM work and receives Engine/CLI feedback, but is not machine verification. See `agentic-execution-model.md` for the terminology canon. |
 | Markdown Projection | Agent-readable Markdown rendered from structured state; operating surface, not authority. |

@@ -98,12 +98,12 @@
       "id": "trace_event_wave2_completion",
       "check": "trace_event_present",
       "target": "wave2_completion",
-      "failure_message": "No wave2_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event per the shared-subagent-protocol."
+      "failure_message": "No wave2_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event before the gate."
     },
     {
-      "_comment": "Wave2 conditional provenance: only triggered when search/evidence/reference outputs exist (reference/00-cross-*.md). Pure synthesis/backfill artifacts (synthesis.md, cross-topic-ledger.md, finding-index.yaml) do NOT require relay provenance.",
-      "id": "wave2_cross_ref_coverage",
-      "check": "output_declaration_coverage",
+      "_comment": "Wave2 conditional provenance: only triggered when search/evidence/reference outputs exist (reference/00-cross-*.md). Pure synthesis/backfill artifacts (synthesis.md, cross-topic-ledger.md, finding-index.yaml) do NOT require delegated work-unit provenance.",
+      "id": "wave2_work_unit_cross_ref_coverage",
+      "check": "work_unit_output_coverage",
       "target": "reference/00-cross-*.md",
       "wave": "wave2",
       "output_selectors": {
@@ -112,7 +112,27 @@
           "reference"
         ]
       },
-      "failure_message": "Wave2 promoted cross references (reference/00-cross-*.md) exist without relay provenance. These must be produced through delegated relay tasks (dpt-topic-scout or dpt-evidence-extractor). Direct-written cross references are not valid."
+      "failure_message": "Wave2 promoted cross references (reference/00-cross-*.md) exist without submitted work-unit provenance. These must be produced through operate-work-unit submit; direct-written cross references are not valid."
+    },
+    {
+      "id": "wave2_work_unit_submission_presence",
+      "check": "work_unit_submission_presence",
+      "target": "reference/00-cross-*.md",
+      "wave": "wave2",
+      "output_selectors": {
+        "glob": "reference/00-cross-*.md",
+        "roles": [
+          "reference"
+        ]
+      },
+      "failure_message": "Wave2 submitted work-unit rows failed index/manifest/result/receipt/beacon/output/cache/hash cross-checks."
+    },
+    {
+      "id": "wave2_delegated_bypass_suspected",
+      "check": "delegated_bypass_suspected",
+      "target": "reference/00-cross-*.md",
+      "wave": "wave2",
+      "failure_message": "Wave2 delegated evidence search artifacts appear without submitted work-unit coverage."
     }
   ]
 }

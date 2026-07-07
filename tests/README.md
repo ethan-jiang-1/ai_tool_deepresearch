@@ -14,7 +14,7 @@ For this command-surface hardening work, `tests/engine/command-contract-docs.tes
 
 ## Directory Map
 
-- `engine/`: engine helpers, queue/relay flow, trace/logging, and static framework-doc contract checks.
+- `engine/`: engine helpers, queue/work-unit flow, trace/logging, and static framework-doc contract checks.
 - `integration/`: executable CLI and Markdown workflow checks against framework surfaces.
 - `schema/`: schema and contract validation for project data shapes.
 - `governance/`: project requirement/spec governance checks.

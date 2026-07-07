@@ -335,10 +335,10 @@ Explore / design
 1. `guidelines/project-charter.md`：稳定原则和权威边界。
 2. `guidelines/framework-runtime-boundary.md`：framework 只读资产与 run bundle 可变状态的目录和权威边界。
 3. `openspec/config.yaml`：项目级 spec-driven 纪律。
-4. `guidelines/agentic-execution-model.md`：统一执行模型与术语正典——Chain/Queue/Relay 如何嵌套为三层执行系统。
+4. `guidelines/agentic-execution-model.md`：统一执行模型与术语正典——Chain、Queue、Work Unit 如何组成当前执行系统。
 5. `guidelines/agentic-workflow-mechanism.md`：Tier 1 (Chain) —— phase 间路由与三层权威架构。
 6. `guidelines/agentic-queue-mechanism.md`：Tier 2 (Queue) —— phase 内 task 编排，两层嵌套循环。
-7. `guidelines/agentic-subagent-mechanism.md`：Tier 3 (Relay) —— task 内 sub-agent 派发，噪声隔离。
+7. `guidelines/agentic-subagent-mechanism.md`：Work-unit-mediated Sub-agent execution —— bounded sub-agent 任务、噪声隔离、submit provenance。
 8. `guidelines/command-experiments.md`：如何写和运行实验 playbook。
 9. 相关 `openspec/specs/<capability>/spec.md`：具体 capability 的需求。
 10. 对应 framework、experiment 或 runtime context 文件。
@@ -367,9 +367,9 @@ Before changing any file in `guidelines/`, check:
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for read-only framework assets versus mutable runtime bundles.
 - [Command Experiments](command-experiments.md) — target guidance for durable command experiment shape and boundaries.
-- [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; defines the three-tier execution system (Chain → Queue → Relay).
+- [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; defines Chain, Queue, and Work Units.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — Tier 1 (Chain): phase-to-phase routing and Three-Authority Architecture.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Tier 2 (Queue): within-phase task execution; queue engine (AGQ-001~006) is implemented runtime, and seed-topics/wave0/wave1/wave2 queue integrations are accepted/current.
-- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — architectural constitution for sub-agent dispatch; defines Tier 3 (Relay) within the three-tier execution model and noise-isolation principles.
+- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — architectural constitution for work-unit-mediated Sub-agent execution and noise-isolation principles.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
 - [Accepted specs](../openspec/specs/) — accepted capability requirements.

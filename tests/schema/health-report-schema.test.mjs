@@ -46,20 +46,21 @@ describe('Profile Table', () => {
     assert.deepStrictEqual(required, ['trace', 'legacy_trace', 'bundle_schema']);
   });
 
-  it('standard requires light checks + gate_attempts + timeline', () => {
+  it('standard requires light checks + gate_attempts + timeline + work_units', () => {
     const required = requiredSectionsFor('standard');
     assert.ok(required.includes('trace'));
     assert.ok(required.includes('legacy_trace'));
     assert.ok(required.includes('bundle_schema'));
     assert.ok(required.includes('gate_attempts'));
     assert.ok(required.includes('timeline'));
-    assert.strictEqual(required.length, 5);
+    assert.ok(required.includes('work_units'));
+    assert.strictEqual(required.length, 6);
   });
 
-  it('heavy requires standard checks + ledger + receipts + cache_trails + dedup', () => {
+  it('heavy requires standard checks + work_units + ledger + cache_trails + dedup', () => {
     const required = requiredSectionsFor('heavy');
+    assert.ok(required.includes('work_units'));
     assert.ok(required.includes('ledger'));
-    assert.ok(required.includes('receipts'));
     assert.ok(required.includes('cache_trails'));
     assert.ok(required.includes('dedup'));
     assert.strictEqual(required.length, 9);
@@ -69,7 +70,9 @@ describe('Profile Table', () => {
     assert.strictEqual(isRequiredSection('light', 'trace'), true);
     assert.strictEqual(isRequiredSection('light', 'ledger'), false);
     assert.strictEqual(isRequiredSection('standard', 'gate_attempts'), true);
+    assert.strictEqual(isRequiredSection('standard', 'work_units'), true);
     assert.strictEqual(isRequiredSection('standard', 'ledger'), false);
+    assert.strictEqual(isRequiredSection('heavy', 'work_units'), true);
     assert.strictEqual(isRequiredSection('heavy', 'ledger'), true);
   });
 
@@ -166,8 +169,8 @@ describe('computeHealthStatus', () => {
       bundle_schema: { status: 'clean', sectionIssues: [] },
       gate_attempts: { status: 'issues', sectionIssues: [{ detail: 'no gate attempts' }] },
       timeline: { status: 'clean', sectionIssues: [] },
+      work_units: { status: 'clean', sectionIssues: [] },
       ledger: { status: 'issues', sectionIssues: [{ detail: 'ledger empty' }] },
-      receipts: { status: 'clean', sectionIssues: [] },
       cache_trails: { status: 'clean', sectionIssues: [] },
       dedup: { status: 'clean', sectionIssues: [] },
     };
@@ -209,8 +212,8 @@ describe('HealthReportSchema', () => {
       status: 'clean',
       gate_attempts: { status: 'clean', required: true, count: 2, pass: 2, fail: 0, by_gate: { 'wave0-complete': 2 }, diagnostics: [] },
       timeline: { status: 'clean', required: true, trace_gate_attempts: 2, log_gate_attempts: 2, mismatches: 0 },
+      work_units: { status: 'clean', required: true, total: 2, claimed: 0, submitted: 2, failed: 0, timed_out: 0, abandoned: 0, expired: 0, retries: 0, late_submit_rejections: 0, nonterminal: 0, inspect_passed: true, inspect_issues: 0 },
       ledger: { status: 'clean', required: true, declarations: 2, schema_errors: 0 },
-      receipts: { status: 'clean', required: true, slots: 2, missing: 0, incomplete: 0 },
       cache_trails: { status: 'clean', required: true, leaves: 2, missing: 0 },
       dedup: { status: 'clean', required: true, checks: 2, issues: 0 },
     });
@@ -269,16 +272,16 @@ describe('buildHealthReport', () => {
     assert.ok('bundle_schema' in report);
     assert.ok('timeline' in report);
     assert.ok('legacy_trace' in report);
+    assert.ok('work_units' in report);
     assert.ok('ledger' in report);
-    assert.ok('receipts' in report);
     assert.ok('cache_trails' in report);
     assert.ok('dedup' in report);
 
-    // Heavy-only sections are not_applicable in light profile
+    // Non-light sections are not_applicable in light profile when not provided
+    assert.strictEqual(report.work_units.status, 'not_applicable');
+    assert.strictEqual(report.work_units.required, false);
     assert.strictEqual(report.ledger.status, 'not_applicable');
     assert.strictEqual(report.ledger.required, false);
-    assert.strictEqual(report.receipts.status, 'not_applicable');
-    assert.strictEqual(report.receipts.required, false);
     assert.strictEqual(report.cache_trails.status, 'not_applicable');
     assert.strictEqual(report.cache_trails.required, false);
     assert.strictEqual(report.dedup.status, 'not_applicable');
@@ -293,9 +296,11 @@ describe('buildHealthReport', () => {
     const light = buildHealthReport({ bundlePath: 'b', profile: 'light', sections: { trace: { status: 'clean' }, legacy_trace: { status: 'clean' }, bundle_schema: { status: 'clean' } } });
     assert.strictEqual(light.trace.required, true);
     assert.strictEqual(light.gate_attempts.required, false);
+    assert.strictEqual(light.work_units.required, false);
     assert.strictEqual(light.ledger.required, false);
 
-    const heavy = buildHealthReport({ bundlePath: 'b', profile: 'heavy', sections: { trace: { status: 'clean' }, legacy_trace: { status: 'clean' }, bundle_schema: { status: 'clean' }, gate_attempts: { status: 'clean' }, timeline: { status: 'clean' }, ledger: { status: 'clean' }, receipts: { status: 'clean' }, cache_trails: { status: 'clean' }, dedup: { status: 'clean' } } });
+    const heavy = buildHealthReport({ bundlePath: 'b', profile: 'heavy', sections: { trace: { status: 'clean' }, legacy_trace: { status: 'clean' }, bundle_schema: { status: 'clean' }, gate_attempts: { status: 'clean' }, timeline: { status: 'clean' }, work_units: { status: 'clean' }, ledger: { status: 'clean' }, cache_trails: { status: 'clean' }, dedup: { status: 'clean' } } });
+    assert.strictEqual(heavy.work_units.required, true);
     assert.strictEqual(heavy.ledger.required, true);
     assert.strictEqual(heavy.cache_trails.required, true);
   });
@@ -330,8 +335,8 @@ describe('Profile Table — standard profile scoping', () => {
     const lightRequired = new Set(PROFILE_TABLE.light.required_sections);
     for (const section of PROFILE_TABLE.standard.required_sections) {
       if (lightRequired.has(section)) continue;
-      // Standard adds gate_attempts + timeline (which are NOT in light)
-      assert.ok(['gate_attempts', 'timeline'].includes(section), `Unexpected standard-only section: ${section}`);
+      // Standard adds gate_attempts + timeline + work_units (which are NOT in light)
+      assert.ok(['gate_attempts', 'timeline', 'work_units'].includes(section), `Unexpected standard-only section: ${section}`);
     }
   });
 
@@ -339,7 +344,7 @@ describe('Profile Table — standard profile scoping', () => {
     const standardRequired = new Set(PROFILE_TABLE.standard.required_sections);
     for (const section of PROFILE_TABLE.heavy.required_sections) {
       if (standardRequired.has(section)) continue;
-      assert.ok(['ledger', 'receipts', 'cache_trails', 'dedup'].includes(section), `Unexpected heavy-only section: ${section}`);
+      assert.ok(['ledger', 'cache_trails', 'dedup'].includes(section), `Unexpected heavy-only section: ${section}`);
     }
   });
 });

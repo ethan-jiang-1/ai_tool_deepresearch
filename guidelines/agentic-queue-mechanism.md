@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: Agentic Queue Mechanism
 status: effective
 created: 2026-06-17
-revised: 2026-06-24
+revised: 2026-07-06
 role: architectural constitution for queue-driven phase execution
 scope: Agentic Queue (AGQ) — queue engine operations and loop-engineering architectural principles
 authority: guidance
@@ -22,7 +22,7 @@ siblings:
 
 # Agentic Queue Mechanism
 
-> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-06-24 | 适用: 所有 queue-driven phase 执行的设计与实现
+> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-06 | 适用: 所有 queue-driven phase 执行的设计与实现
 
 Agentic Queue (AGQ) 是 Engine-side 的任务队列系统：Phase Agent 从队列领取任务、执行、完成、领下一个——在 phase 内部形成自主静默的执行循环。
 
@@ -32,8 +32,9 @@ Agentic Queue (AGQ) 是 Engine-side 的任务队列系统：Phase Agent 从队�
 >
 > | 内容 | 状态 | 说明 |
 > |------|------|------|
-> | Queue engine (`queue-manager.mjs`, `operate-queue.mjs`) | **✅ 已实现** | enqueue / claim / complete / fail / preempt / render / checkReceipts，AGQ-001~006 accepted，3 个 playbook 验证通过 |
-> | Queue 数据结构 (`rb_queue.json`, 20-slot window + refill pool) | **✅ 已实现** | Zod-validated QueueItemSchema，`_cache/agentic-queue/current-task.md` projection |
+> | Queue engine (`queue-manager.mjs`, `operate-queue.mjs`) | **✅ 已实现** | queue v2 state, non-delegated queue completion, projection, repair, and drain checks |
+> | Queue 数据结构 (`rb_queue.json`, active window + refill pool + delegated in-flight + terminal history) | **✅ 已实现** | Queue demand uses `queue_item_id`; delegated attempts use work-unit `work_id` |
+> | Work-unit delegated completion | **✅ 已实现** | Delegated queue demand completes through `operate-work-unit submit`, not through queue completion |
 > | 两层嵌套 loop 架构 | **📐 定调** | 外层 (gate+chain) vs 内层 (queue) 的边界划分已在本文件 §3–§5 定调。内层 loop 的 workflow 集成已部分落地（见下两行） |
 > | Phase node MD 驱动 queue loop | **✅ 部分实现** | `phase-seed-topics.md`、`phase-wave0.md`、`phase-wave1.md`、`phase-wave2.md` 已接入并归档入 accepted specs。readiness 仍不是标准 queue-driven phase。 |
 > | Stop authorization 强制执行 | **❌ 未实现** | Engine 已计算 `stop_authorization_state`，但无任何东西读取它来阻止 Phase Agent 停机。§7.2 |
@@ -96,10 +97,11 @@ The outer loop solves "which phase comes next." It is deterministic, single-step
 
 ### 3.2 The Inner Loop (Within-Phase)
 
-```
-claim task → 执行 task → complete (receipt check + promote + refill)
-→ 读下一 task card → claim → 执行 → complete → ... → queue 空
-权威 = queue-manager.mjs validated structured state + receipt check
+```text
+claim queue demand → execute non-delegated task OR claim work unit for delegated demand
+→ non-delegated complete OR work-unit submit
+→ promote/refill/drain → gate
+权威 = queue-manager validated state + work-unit submit state for delegated demand
 ```
 
 The inner loop solves "within this phase, how do I execute a dozen sub-tasks without stopping to ask what's next." The queue engine is implemented and persists the queue authority to `rb_queue.json`.
@@ -167,7 +169,7 @@ If a later phase discovers a gap from an earlier phase: that is a gate fail or e
 
 ### 5.3 Rule 3: Two Repair Paths, One Per Layer
 
-- **Q-repair** (phase-internal, task-level): `complete()` receipt fails → `makeRepairItem` auto-generates repair task → `preempt` inserts into slot_2. Deterministic, automatic, stays within the phase.
+- **Q-repair** (phase-internal, task-level): non-delegated queue completion or work-unit submit/gate feedback fails → repair/refill demand is inserted into the current phase queue. Deterministic repair stays within the phase.
 - **Gate-repair** (phase-to-phase, phase-level): gate fails → MD "On Gate Fail" + `shared-repair-guidance` → Phase Agent repair, retry 3 times max. Semantic, Phase Agent judgment-driven.
 
 Exactly one contact point between the two: **Q empty + gate fail** (the queue is drained but the gate still doesn't pass). In this case, the gate is the authority. The Phase Agent may optionally re-fill Q as a tool to address specific gaps, but authority does not transfer to Q.
@@ -201,11 +203,11 @@ Which tasks use direct Phase Agent execution vs delegated Sub-agent execution is
 | **Determinism** | High-judgment — requires trade-offs and evaluation | High-execution — search → filter → structured write |
 | **Context release** | Output stays in conversation for downstream decisions | Output writes to `_cache`; Phase Agent reads only render projection |
 
-The Phase Agent owns the task `targets` / delegation assignment while operating through Markdown control surfaces. The engine does not auto-assign. Sub-agents never pass gates, mutate queues, count evidence, or authorize output.
+The Phase Agent owns the task `targets` / delegation assignment while operating through Markdown control surfaces. The engine does not auto-assign research judgment. Sub-agents never pass gates, mutate queues, append ledgers, count evidence, or authorize output.
 
-Queue active window is not the Relay work pool. Queue remains task-level serial: only `slot_1_current` is executable. If a task needs batch parallelism, represent that batch inside the current task payload and let Relay fan out sub-agent slots inside that task.
+Queue active window is not a Sub-agent work pool. Delegated fan-out is created only by `operate-work-unit claim --count N`, which allocates Engine-owned work-unit attempts from the eligible queue-front demand. Sub-agents do not allocate IDs.
 
-> **See also:** [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — the authoritative guideline for *when and why* work goes to sub-agents. This section describes the queue's `targets` field mechanics; that guideline defines the architectural principle (noise isolation, bounded context, structured output) and the three-tier execution model (Chain → Queue → Relay) that frames how sub-agent dispatch fits into the larger execution loop.
+> **See also:** [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — the authoritative guideline for when and why work goes to Sub-agents through work units. This section describes queue demand and target mechanics; that guideline defines noise isolation, bounded result contracts, and submit provenance.
 
 ---
 
@@ -215,7 +217,7 @@ These are not architectural rules (§5) — they are implementation properties t
 
 ### 7.1 Filling: The Weakest Link
 
-Queue starts empty. `createQueue()` produces 5 null slots. `claim()` returns `item: null` when slot_1 is empty. Without filling, the inner loop never starts.
+Queue starts with ordered demand locations. Without filling `active_window` or `refill_pool`, the inner loop has no demand to claim. Without closing non-terminal delegated in-flight work units, the phase is not drained.
 
 The filling mechanism must be cheap enough that it does not defeat the purpose: if creating task cards is more work than just doing the tasks, the queue provides negative value. The Phase Agent is responsible for ensuring the queue is filled at phase entry while operating in MD controller mode. The exact filling mechanism (JS helper derivation from plan artifacts vs Agent template-based generation) is an implementation decision — but the constraint that filling MUST be solved is architectural, not optional.
 
@@ -223,11 +225,11 @@ The filling mechanism must be cheap enough that it does not defeat the purpose: 
 
 The engine already computes `stop_authorization_state` in `claim()`: refill pool non-empty → `unauthorized_continue_required`; refill pool empty → `empty_queue_after_refill`. Valid stop states are `final_delivery`, `decision_blocker`, and `empty_queue_after_refill`. The default is `unauthorized_continue_required` — the Phase Agent must continue.
 
-The gap: **nothing reads this field to prevent the Phase Agent from stopping.** The engine has computed the correct answer; the system lacks the enforcement mechanism. MD-level instructions ("don't stop if unauthorized") are Phase Agent self-governance and violate the project charter. The enforcement must be engine-side: either `complete()`/`claim()` returning a hard "continue required" signal, or the gate CLI refusing to advance when the queue is non-empty and non-blocker. This is the highest-priority gap to close for loop integrity.
+The enforcement point is now phase drain and gate readiness: queue demand, delegated in-flight work units, expired attempts, and repair/refill demand must all be accounted for before the gate can advance. MD-level instructions alone are not enough; Engine/CLI feedback must make continuation or repair visible.
 
 ### 7.3 Context Sustainability: An Unverified Assumption
 
-The claim that queue-driven execution prevents context explosion rests on an unverified assumption: that completing a task via sub-agent + render projection actually releases context rather than accumulating it. If the Phase Agent reads full sub-agent results back into the conversation after every `complete()`, the queue has not reduced context pressure — it has only traded "frequent interruption" for "continuous accumulation."
+The claim that queue-driven execution prevents context explosion rests on a measurable assumption: delegated high-I/O work writes declared outputs/cache and returns bounded result JSON, while Phase Agent reads projections, submit diagnostics, and gate feedback rather than raw search trails. If the Phase Agent reads full Sub-agent results and cache dumps back into the conversation after every submit, the queue has not reduced context pressure.
 
 The intended mechanism is sub-agent isolation (heavy I/O writes to `_cache`, Phase Agent reads only the render projection's done-condition). Whether this keeps context growth sub-linear is unknown and must be experimentally validated — not assumed from queue design.
 
@@ -235,11 +237,11 @@ The intended mechanism is sub-agent isolation (heavy I/O writes to `_cache`, Pha
 
 ### 7.4 Error Recovery: Stale Claims and Crash Resilience
 
-Long-running queue loops must survive interruption. `claim()` currently sets `slot_1_current.status = 'running'` without recording a claim timestamp or detecting stale state. If the Phase Agent crashes between claim and complete, the task stays in `running` — claim is idempotent (re-claiming the same task works), but the system cannot distinguish "actively executing" from "crash residue." Three properties are required:
+Long-running queue loops must survive interruption. Delegated attempts record claim timestamps, deadlines, status, and retry lineage in work-unit state. If the Phase Agent crashes between claim and submit, inspect must reveal non-terminal or expired attempts so the Phase Agent can submit, timeout, fail, abandon, or retry. Three properties are required:
 
-- **Stale claim detection**: `claim()` must detect tasks stuck in `running` beyond a threshold and auto-fail them.
-- **Crash recovery**: `loadQueue()` must handle `running` state on restore. Task cards must be designed for idempotent re-execution.
-- **Queue health visibility**: `inspect()` must report running duration and stale state.
+- **Stale attempt detection**: inspect must report expired or mismatched delegated attempts without silently healing them.
+- **Crash recovery**: queue and work-unit state must let the Phase Agent resume, terminalize, or retry safely.
+- **Queue health visibility**: projection/inspect must report demand location, in-flight attempts, terminal history, and drift.
 
 These are engine-side requirements — they cannot be solved by MD instructions alone.
 
@@ -264,15 +266,16 @@ These are engine-side requirements — they cannot be solved by MD instructions 
 ### Phase Agent Behavior
 
 - MUST complete every claimed task. MUST NOT skip tasks without explicit failure recording via `operate-queue fail`.
-- For tasks with `targets.delegates.to: "sub-agent"`, MUST dispatch through Relay, collect a committed slot result, and call `complete()` with `slot_result_ref`.
+- For tasks delegated to a Sub-agent, MUST claim a work unit, spawn the bounded task, and submit by `work_id` through `operate-work-unit submit`.
 - MUST NOT run WebSearch/WebFetch in Phase Agent context to satisfy delegated search/fetch tasks.
+- MUST NOT call queue completion as delegated success.
 - MUST run gate CLI at phase completion. MUST NOT bypass gate to declare phase complete.
 - MUST NOT let sub-agents pass gates, mutate queues, count evidence, or authorize final output.
 
 ### Context Management
 
 - MUST assign `targets.delegates.to: "sub-agent"` for high-I/O, low-context-dependency tasks.
-- MUST NOT read full sub-agent output into Phase Agent context after completion — read only the render projection.
+- MUST NOT read full Sub-agent output or cache dumps into Phase Agent context after submit — read projections, submit diagnostics, and gate feedback.
 - MUST protect Phase Agent context by routing noisy search/fetch work to bounded sub-agent tasks.
 
 ### Implementation Discipline
@@ -288,7 +291,7 @@ These are engine-side requirements — they cannot be solved by MD instructions 
 
 - **`project-charter.md`** defines the four-layer split (Agent/Markdown/Engine/JSON). This guideline operates entirely within that split: the queue is an Engine-side tool; Markdown controls whether and how the Phase Agent uses it.
 - **`agentic-workflow-mechanism.md`** defines the outer loop (MD → execute → gate → chain → next). This guideline's inner loop nests inside that outer loop. The two are complementary, not competing.
-- **`agentic-subagent-mechanism.md`** defines Tier 3 (Relay): sub-agent dispatch within a single queue task. Queue and Relay are connected by the Phase Agent as bridge; Relay fan-out happens inside the current Queue task, not across pending Queue slots.
+- **`agentic-subagent-mechanism.md`** defines work-unit-mediated Sub-agent execution. Queue demand becomes delegated work only when the Engine claims it into a work unit; fan-out happens through `claim --count N`, not through queue window shape.
 - **`openspec/specs/agentic-queue/spec.md`** defines accepted engine requirements (AGQ-001~006). This guideline describes architectural principles; the spec defines implementable behavior. When they conflict, the spec wins.
 - **`_backlog/queue/agentic-queue-landing-analysis.md`** is the detailed application analysis from which this guideline extracts its constitutional principles. The landing analysis contains scenario enumeration (8 scenarios), current-state inventory, implementation strategy (Path A/B, phased rollout), and concrete templates. When this guideline is silent on an application detail, consult the landing analysis. When they conflict on a principle, this guideline is authority — it is the extracted constitution. The landing analysis remains in `_backlog/` as a historical analysis document; it is not a guideline, not a spec, and not runtime truth.
 
@@ -302,7 +305,7 @@ General rule: when this guideline conflicts with an accepted spec or executable 
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; this file's parent document.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — Tier 1 (Chain): the outer loop this inner loop nests inside.
-- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — architectural constitution for sub-agent dispatch; defines Tier 3 (Relay) within the three-tier execution model.
+- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — architectural constitution for work-unit-mediated Sub-agent execution.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for framework assets versus runtime bundles.
 - [Command Experiments](command-experiments.md) — how to prove mechanisms with real runtime contexts.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.

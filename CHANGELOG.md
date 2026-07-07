@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4
+
+Delegated sub-agent execution is now work-unit mediated: queue demand is claimed through `operate-work-unit`, returned through submit, recorded in the submitted output ledger, and checked by gates through work-unit provenance. Queue demand identity is `queue_item_id`; `work_id` now means one Engine-allocated delegated attempt. Controlled E2E playbooks, regression tests, guidelines, and framework docs were rewritten around the single path `queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate`.
+
 ## v0.3
 
 Agent-facing command surfaces now make the HITL1/HITL2-only interaction boundary, terminal Final delivery, phase-boundary terminology, main-spec bridge deltas, and CLI exit-code convention discoverable and regression-tested.

@@ -6,7 +6,6 @@ import assert from 'node:assert';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SLOT_NAMES } from '../../../DPT_FRAMEWORK/schema/contracts/queue-slots.mjs';
 import {
   writeCheckpointManifest,
   writeGateAttempt,
@@ -46,10 +45,13 @@ function setupMinimalBundle(name, gate = 'wave1-complete', currentGate = 'wave1_
     '# Plan',
   ].join('\n'));
   writeFileSync(join(dir, 'rb_queue.json'), JSON.stringify({
+    schema_version: 'queue.v2',
     queue_health: 'ready',
     stop_authorization_state: 'unauthorized_continue_required',
-    ...Object.fromEntries(SLOT_NAMES.map(s => [s, null])),
+    active_window: [],
     refill_pool: [],
+    delegated_in_flight: {},
+    terminal_history: [],
   }));
   writeFileSync(join(dir, 'rb_profile.yaml'), 'research_style: quick_factual\n');
   writeFileSync(join(dir, 'rb_trace.jsonl'), '');

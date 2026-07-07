@@ -7,6 +7,19 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createQueue } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import {
+  claimWorkUnits,
+  closeWorkUnitAttempt,
+  loadWorkUnitIndex,
+  saveWorkUnitIndex,
+  submitWorkUnit,
+} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import {
+  claimAndSubmitWorkUnit,
+  delegatedQueueItem,
+  seedDelegatedQueue,
+} from '../engine/work-unit-test-helpers.mjs';
 
 const __dirname = new URL('.', import.meta.url).pathname;
 const VERIFIER = join(__dirname, '..', '..', 'experiments_env', 'shared', 'verify-bundle-health.mjs');
@@ -21,27 +34,36 @@ function cleanFixtures() {
   if (existsSync(FIXTURE_BASE)) rmSync(FIXTURE_BASE, { recursive: true, force: true });
 }
 
+function writeBaseBundleFiles(dir, name, {
+  phase = 'test',
+  trace = [
+    { ts: '2026-01-01T00:00:00.000Z', event: 'run_start', source: 'trace', label: 'test' },
+    { ts: '2026-01-01T00:00:01.000Z', event: 'check', source: 'engine', passed: true, detail: 'ok' },
+    { ts: '2026-01-01T00:00:02.000Z', event: 'check', source: 'engine', passed: true, detail: 'ok2' },
+  ],
+} = {}) {
+  writeFileSync(join(dir, 'rb_trace.jsonl'), trace.map(e => JSON.stringify(e)).join('\n') + '\n');
+  writeFileSync(join(dir, 'rb_status.json'), JSON.stringify({ bundle: name, status: 'active', phase }));
+  writeFileSync(join(dir, 'rb_profile.yaml'), 'research_style: quick_factual\ntopics: []\n');
+  writeFileSync(join(dir, 'rb_plan.md'), '---\ntopic_registry: []\n---\n# Plan\n\n## Progress\n');
+  writeFileSync(join(dir, 'rb_queue.json'), JSON.stringify(createQueue(name), null, 2));
+  mkdirSync(join(dir, '_logs'), { recursive: true });
+  writeFileSync(join(dir, '_logs', 'run.log'), '');
+}
+
+function createBundleDir(name) {
+  const dir = join(FIXTURE_BASE, name);
+  if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
+  mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
 /**
  * Create a minimal valid bundle with rb_trace.jsonl and no legacy trace.
  */
 function createMinimalLightBundle(name) {
-  const dir = join(FIXTURE_BASE, name);
-  if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
-  mkdirSync(dir, { recursive: true });
-
-  // rb_trace.jsonl with check events
-  const trace = [
-    { ts: '2026-01-01T00:00:00.000Z', event: 'run_start', source: 'trace', label: 'test' },
-    { ts: '2026-01-01T00:00:01.000Z', event: 'check', source: 'engine', passed: true, detail: 'ok' },
-    { ts: '2026-01-01T00:00:02.000Z', event: 'check', source: 'engine', passed: true, detail: 'ok2' },
-  ];
-  writeFileSync(join(dir, 'rb_trace.jsonl'), trace.map(e => JSON.stringify(e)).join('\n') + '\n');
-  // Also need a basic rb_status.json for validate/inspect to pass
-  writeFileSync(join(dir, 'rb_status.json'), JSON.stringify({ status: 'active', phase: 'test' }));
-  writeFileSync(join(dir, 'rb_profile.yaml'), 'research_style: quick_factual\ntopics: []\n');
-  writeFileSync(join(dir, 'rb_plan.md'), '---\ntopic_registry: []\n---\n# Plan\n\n## Progress\n');
-  writeFileSync(join(dir, 'rb_queue.json'), JSON.stringify([]));
-
+  const dir = createBundleDir(name);
+  writeBaseBundleFiles(dir, name);
   return dir;
 }
 
@@ -49,11 +71,9 @@ function createMinimalLightBundle(name) {
  * Create a bundle with missing rb_trace.jsonl (required artifact absent).
  */
 function createMissingTraceBundle(name) {
-  const dir = join(FIXTURE_BASE, name);
-  if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
-  mkdirSync(dir, { recursive: true });
+  const dir = createBundleDir(name);
   // No rb_trace.jsonl
-  writeFileSync(join(dir, 'rb_status.json'), JSON.stringify({ status: 'active' }));
+  writeFileSync(join(dir, 'rb_status.json'), JSON.stringify({ bundle: name, status: 'active' }));
   return dir;
 }
 
@@ -61,19 +81,15 @@ function createMissingTraceBundle(name) {
  * Create a bundle with gate wrapper artifacts in _observability/gates/.
  */
 function createGateArtifactBundle(name) {
-  const dir = join(FIXTURE_BASE, name);
-  if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
-  mkdirSync(dir, { recursive: true });
-
-  // Minimal trace
+  const dir = createBundleDir(name);
   const trace = [
     { ts: '2026-01-01T00:00:00.000Z', event: 'run_start' },
     { ts: '2026-01-01T00:00:01.000Z', event: 'gate_attempt', gate: 'wave0-complete', passed: true },
     { ts: '2026-01-01T00:00:02.000Z', event: 'check', passed: true },
   ];
-  writeFileSync(join(dir, 'rb_trace.jsonl'), trace.map(e => JSON.stringify(e)).join('\n') + '\n');
+  writeBaseBundleFiles(dir, name, { phase: 'wave0', trace });
+  writeFileSync(join(dir, '_logs', 'run.log'), `${JSON.stringify({ event: 'gate_attempt', gate: 'wave0-complete', passed: true })}\n`);
 
-  // Gate wrapper artifacts
   const gatesDir = join(dir, '_observability', 'gates');
   mkdirSync(gatesDir, { recursive: true });
 
@@ -91,75 +107,80 @@ function createGateArtifactBundle(name) {
   };
   writeFileSync(join(gatesDir, '0001-wave0-complete.json'), JSON.stringify(artifact1, null, 2));
 
-  // Basic bundle files for validate/inspect
-  writeFileSync(join(dir, 'rb_status.json'), JSON.stringify({ status: 'active', phase: 'wave0' }));
-  writeFileSync(join(dir, 'rb_profile.yaml'), 'research_style: quick_factual\ntopics: []\n');
-  writeFileSync(join(dir, 'rb_plan.md'), '---\ntopic_registry: []\n---\n# Plan\n\n## Progress\n');
-  writeFileSync(join(dir, 'rb_queue.json'), JSON.stringify([]));
-
   return dir;
 }
 
 /**
- * Create a Heavy bundle with ledger, receipts, and cache trails.
+ * Create a Heavy bundle with submitted work-unit ledger rows and cache trails.
  */
-function createHeavyProvenanceBundle(name, { validLedger = true, validReceipts = true, validCache = true } = {}) {
-  const dir = join(FIXTURE_BASE, name);
-  if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
-  mkdirSync(dir, { recursive: true });
-
-  // Trace with gate_attempt events
+function createHeavyProvenanceBundle(name, { validLedger = true, validWorkUnit = true, validCache = true } = {}) {
+  const dir = createBundleDir(name);
   const trace = [
     { ts: '2026-01-01T00:00:00.000Z', event: 'run_start' },
     { ts: '2026-01-01T00:00:01.000Z', event: 'gate_attempt', gate: 'wave0-complete', passed: true },
-    { ts: '2026-01-01T00:00:02.000Z', event: 'check', passed: true },
+    { ts: '2026-01-01T00:00:02.000Z', event: 'gate_attempt', gate: 'content_dedup', passed: true },
   ];
-  writeFileSync(join(dir, 'rb_trace.jsonl'), trace.map(e => JSON.stringify(e)).join('\n') + '\n');
+  writeBaseBundleFiles(dir, name, { phase: 'wave0', trace });
+  writeFileSync(join(dir, '_logs', 'run.log'), [
+    JSON.stringify({ event: 'gate_attempt', gate: 'wave0-complete', passed: true }),
+    JSON.stringify({ event: 'gate_attempt', gate: 'content_dedup', passed: true }),
+  ].join('\n') + '\n');
+  const gatesDir = join(dir, '_observability', 'gates');
+  mkdirSync(gatesDir, { recursive: true });
+  writeFileSync(join(gatesDir, '0001-wave0-complete.json'), JSON.stringify({ gate: 'wave0-complete', exit_code: 0 }, null, 2));
+  writeFileSync(join(gatesDir, '0002-content_dedup.json'), JSON.stringify({ gate: 'content_dedup', exit_code: 0 }, null, 2));
 
-  // rb_output_declarations.jsonl
-  if (validLedger) {
-    const declarations = [
-      {
-        slot_key: 'source_intake',
-        output_files: [
-          { path: 'reference/01_topic-source.md', role: 'reference', source_url: 'https://example.com/article' },
-        ],
-        cache_trails: ['_cache/wave0/primary/topic_a/s01_source'],
-      },
-    ];
-    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), declarations.map(d => JSON.stringify(d)).join('\n') + '\n');
-  } else {
-    // Empty or invalid ledger
+  const { record } = claimAndSubmitWorkUnit(dir, {
+    phase: 'wave0',
+    queueItemId: 'topic-a',
+    outputs: [{
+      path: 'reference/01_topic-source.md',
+      role: 'reference',
+      source_url: 'https://example.com/article',
+      source_slug: 's01_source',
+    }],
+    cacheTrails: [{
+      path: '_cache/wave0/primary/topic_a/s01_source',
+      url: 'https://example.com/article',
+    }],
+  });
+
+  if (!validLedger) {
     writeFileSync(join(dir, 'rb_output_declarations.jsonl'), '');
   }
-
-  // Runtime receipts
-  if (validReceipts) {
-    const relayDir = join(dir, 'relay-source_intake');
-    mkdirSync(relayDir, { recursive: true });
-    const receipt = [
-      { ts: '2026-01-01T00:00:00.000Z', event: 'agent_runtime_started', slotKey: 'source_intake', receiptNonce: 'abc123' },
-      { ts: '2026-01-01T00:00:10.000Z', event: 'agent_result_ready', slotKey: 'source_intake' },
-    ];
-    writeFileSync(join(relayDir, 'runtime-receipt.jsonl'), receipt.map(e => JSON.stringify(e)).join('\n') + '\n');
+  if (!validWorkUnit) {
+    rmSync(join(dir, record.paths.runtime_receipt_ref), { force: true });
   }
-
-  // Cache trails
-  if (validCache) {
-    const cacheDir = join(dir, '_cache', 'wave0', 'primary', 'topic_a', 's01_source');
-    mkdirSync(cacheDir, { recursive: true });
-    writeFileSync(join(cacheDir, 'websearch.json'), JSON.stringify({ query: 'test' }));
-    writeFileSync(join(cacheDir, 'page.md'), '# Test Page\nContent.');
-    writeFileSync(join(cacheDir, 'meta.json'), JSON.stringify({ url: 'https://example.com', title: 'Test' }));
+  if (!validCache) {
+    rmSync(join(dir, '_cache', 'wave0', 'primary', 'topic_a', 's01_source'), { recursive: true, force: true });
   }
-
-  // Basic bundle files
-  writeFileSync(join(dir, 'rb_status.json'), JSON.stringify({ status: 'active' }));
-  writeFileSync(join(dir, 'rb_profile.yaml'), 'research_style: quick_factual\ntopics: []\n');
-  writeFileSync(join(dir, 'rb_plan.md'), '---\ntopic_registry: []\n---\n# Plan\n\n## Progress\n');
-  writeFileSync(join(dir, 'rb_queue.json'), JSON.stringify([]));
 
   return dir;
+}
+
+function createLifecycleProjectionBundle(name) {
+  const dir = createBundleDir(name);
+  writeBaseBundleFiles(dir, name, {
+    phase: 'wave0',
+    trace: [{ ts: '2026-01-01T00:00:00.000Z', event: 'run_start' }],
+  });
+  seedDelegatedQueue(dir, [
+    delegatedQueueItem('claimed', { phase: 'wave0' }),
+    delegatedQueueItem('failed', { phase: 'wave0' }),
+    delegatedQueueItem('timed', { phase: 'wave0' }),
+    delegatedQueueItem('abandoned', { phase: 'wave0' }),
+  ]);
+  const claim = claimWorkUnits(dir, { phase: 'wave0', count: 4 });
+  const [claimedId, failedId, timedId, abandonedId] = claim.claimed_work_ids;
+  closeWorkUnitAttempt(dir, { work_id: failedId, status: 'failed', reason: 'test failure' });
+  closeWorkUnitAttempt(dir, { work_id: timedId, status: 'timed_out', reason: 'test timeout' });
+  closeWorkUnitAttempt(dir, { work_id: abandonedId, status: 'abandoned', reason: 'test abandon' });
+  submitWorkUnit(dir, { work_id: timedId, resultPath: join(dir, 'missing-result.json') });
+  const retryClaim = claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+  const index = loadWorkUnitIndex(dir);
+  index.work_units[claimedId].deadline_at = '2026-01-01T00:00:00.000Z';
+  saveWorkUnitIndex(dir, index);
+  return { dir, retryWorkId: retryClaim.claimed_work_ids[0] };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -204,14 +225,14 @@ describe('verify-bundle-health.mjs', () => {
       assert.strictEqual(report.status, 'issues');
     });
 
-    it('marks Heavy-only sections as not_applicable in light profile', () => {
+    it('marks non-light sections as optional in light profile', () => {
       const dir = createMinimalLightBundle('light-na');
       const r = spawnSync('node', [VERIFIER, '--bundle', dir, '--profile', 'light', '--json'], { encoding: 'utf-8', timeout: 30000 });
       const report = JSON.parse(r.stdout.trim());
 
+      assert.strictEqual(report.work_units.required, false);
       assert.strictEqual(report.ledger.required, false);
       assert.strictEqual(report.ledger.status, 'not_applicable');
-      assert.strictEqual(report.receipts.required, false);
       assert.strictEqual(report.cache_trails.required, false);
       assert.strictEqual(report.dedup.required, false);
     });
@@ -239,6 +260,9 @@ describe('verify-bundle-health.mjs', () => {
 
       assert.strictEqual(report.gate_attempts.required, true);
       assert.strictEqual(report.timeline.required, true);
+      assert.strictEqual(report.work_units.required, true);
+      assert.strictEqual(report.work_units.status, 'clean');
+      assert.strictEqual(report.work_units.total, 0);
     });
 
     it('reads gate wrapper artifacts when present', () => {
@@ -256,21 +280,24 @@ describe('verify-bundle-health.mjs', () => {
 
   describe('--profile heavy', () => {
     it('reports clean for a complete Heavy provenance bundle', () => {
-      const dir = createHeavyProvenanceBundle('heavy-clean', { validLedger: true, validReceipts: true, validCache: true });
+      const dir = createHeavyProvenanceBundle('heavy-clean', { validLedger: true, validWorkUnit: true, validCache: true });
       const r = spawnSync('node', [VERIFIER, '--bundle', dir, '--profile', 'heavy', '--json'], { encoding: 'utf-8', timeout: 30000 });
       const report = JSON.parse(r.stdout.trim());
 
+      assert.strictEqual(report.work_units.required, true);
+      assert.strictEqual(report.work_units.status, 'clean');
+      assert.strictEqual(report.work_units.submitted, 1);
+      assert.strictEqual(report.work_units.inspect_passed, true);
       assert.strictEqual(report.ledger.required, true);
       assert.strictEqual(report.ledger.status, 'clean');
       assert.strictEqual(report.ledger.declarations, 1);
-      assert.strictEqual(report.receipts.status, 'clean');
       assert.strictEqual(report.cache_trails.status, 'clean');
       assert.strictEqual(report.cache_trails.leaves, 1);
       assert.strictEqual(report.cache_trails.missing, 0);
     });
 
     it('reports issues when ledger is empty', () => {
-      const dir = createHeavyProvenanceBundle('heavy-empty-ledger', { validLedger: false, validReceipts: true, validCache: true });
+      const dir = createHeavyProvenanceBundle('heavy-empty-ledger', { validLedger: false, validWorkUnit: true, validCache: true });
       const r = spawnSync('node', [VERIFIER, '--bundle', dir, '--profile', 'heavy', '--json'], { encoding: 'utf-8', timeout: 30000 });
       const report = JSON.parse(r.stdout.trim());
 
@@ -278,16 +305,17 @@ describe('verify-bundle-health.mjs', () => {
       assert.strictEqual(report.status, 'issues');
     });
 
-    it('reports issues when receipts are missing', () => {
-      const dir = createHeavyProvenanceBundle('heavy-no-receipt', { validLedger: true, validReceipts: false, validCache: true });
+    it('reports issues when work-unit runtime receipt is missing', () => {
+      const dir = createHeavyProvenanceBundle('heavy-no-work-unit-receipt', { validLedger: true, validWorkUnit: false, validCache: true });
       const r = spawnSync('node', [VERIFIER, '--bundle', dir, '--profile', 'heavy', '--json'], { encoding: 'utf-8', timeout: 30000 });
       const report = JSON.parse(r.stdout.trim());
 
-      assert.strictEqual(report.receipts.status, 'issues');
+      assert.strictEqual(report.work_units.status, 'issues');
+      assert.match(report.work_units.diagnostics.join('\n'), /missing runtime receipt/);
     });
 
     it('reports issues when cache trail leaves are missing', () => {
-      const dir = createHeavyProvenanceBundle('heavy-no-cache', { validLedger: true, validReceipts: true, validCache: false });
+      const dir = createHeavyProvenanceBundle('heavy-no-cache', { validLedger: true, validWorkUnit: true, validCache: false });
       const r = spawnSync('node', [VERIFIER, '--bundle', dir, '--profile', 'heavy', '--json'], { encoding: 'utf-8', timeout: 30000 });
       const report = JSON.parse(r.stdout.trim());
 
@@ -296,10 +324,27 @@ describe('verify-bundle-health.mjs', () => {
       assert.strictEqual(report.cache_trails.missing, 1);
     });
 
+    it('projects work-unit lifecycle states including expired, retries, and late submits', () => {
+      const { dir, retryWorkId } = createLifecycleProjectionBundle('heavy-lifecycle');
+      assert.ok(retryWorkId, 'retry work unit should be claimed');
+      const r = spawnSync('node', [VERIFIER, '--bundle', dir, '--profile', 'standard', '--json'], { encoding: 'utf-8', timeout: 30000 });
+      const report = JSON.parse(r.stdout.trim());
+
+      assert.strictEqual(report.work_units.status, 'issues');
+      assert.strictEqual(report.work_units.claimed, 2);
+      assert.strictEqual(report.work_units.submitted, 0);
+      assert.strictEqual(report.work_units.failed, 1);
+      assert.strictEqual(report.work_units.timed_out, 1);
+      assert.strictEqual(report.work_units.abandoned, 1);
+      assert.strictEqual(report.work_units.expired, 1);
+      assert.strictEqual(report.work_units.retries, 1);
+      assert.strictEqual(report.work_units.late_submit_rejections, 1);
+      assert.strictEqual(report.work_units.nonterminal, 2);
+    });
+
     it('rejects directory scanning as provenance: files without ledger remain issues', () => {
-      // Create bundle with populated _subagents/, reference/, _cache/ but no ledger
-      const dir = createHeavyProvenanceBundle('heavy-dir-scan', { validLedger: false, validReceipts: false, validCache: false });
-      // Manually populate directories that scanner-based cheats would use
+      // Create bundle with populated non-work-unit delegated paths, reference/, _cache/ but no submitted ledger.
+      const dir = createHeavyProvenanceBundle('heavy-dir-scan', { validLedger: false, validWorkUnit: false, validCache: false });
       mkdirSync(join(dir, '_subagents'), { recursive: true });
       writeFileSync(join(dir, '_subagents', 'fake-result.json'), '{"fake":true}');
       mkdirSync(join(dir, 'reference'), { recursive: true });
@@ -312,7 +357,7 @@ describe('verify-bundle-health.mjs', () => {
 
       // Ledger empty → issues. Files in _subagents/ etc. do NOT make it pass
       assert.strictEqual(report.ledger.status, 'issues');
-      assert.strictEqual(report.receipts.status, 'issues');
+      assert.strictEqual(report.work_units.status, 'issues');
       // Cache trail check: ledger empty → no declaration of cache trails → issues
       assert.strictEqual(report.cache_trails.status, 'issues');
       assert.strictEqual(report.status, 'issues');

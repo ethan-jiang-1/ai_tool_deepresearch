@@ -7,7 +7,7 @@
 //   gate-helpers-core.mjs       — Gate CLI lifecycle: args, routing, results, trace, checkpoints
 //   gate-helpers-readers.mjs    — Bundle file readers: plan, profile, frontmatter, declarations
 //   gate-helpers-checks.mjs     — Gate rule checks: reference validation, content_dedup, cache_coverage
-//   gate-helpers-provenance.mjs — Relay provenance checks + bypass detection
+//   gate-helpers-provenance.mjs — Work-unit provenance checks + bypass diagnostics
 //   gate-helpers-serial.mjs     — YAML/JSON safe readers with repair + template scan
 //   handoff-helpers.mjs         — Trace-backed lifecycle handoff validation
 
@@ -38,6 +38,7 @@ export {
   readBundleProfile,
   resolveThreshold,
   readOutputDeclarations,
+  readSubmittedWorkUnitDeclarations,
   listMatchingBundleFiles,
   getDeclaredReferencePaths,
   validateState,
@@ -64,11 +65,11 @@ export {
 
 // Provenance
 export {
-  checkOutputDeclarationLedgerExists,
-  checkOutputDeclarationCoverage,
-  checkSubagentSlotPresence,
-  detectRelayBypassSuspicion,
-  runProvenanceForensics,
+  checkWorkUnitLedgerExists,
+  checkWorkUnitOutputCoverage,
+  checkWorkUnitSubmissionPresence,
+  checkDelegatedBypassSuspected,
+  detectDelegatedBypassSuspicion,
 } from './gate-helpers-provenance.mjs';
 
 // Serial

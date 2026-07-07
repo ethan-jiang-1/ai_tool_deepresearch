@@ -1,6 +1,6 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.5**
+> **DPT_FRAMEWORK v0.4**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
@@ -27,6 +27,8 @@
 从 setup onward，gate pass 后不要直接手读下一 phase：先运行 `enter-phase --bundle <path> --node <check.next>` 写入 route-bound handoff witness，再按 phase §6 用 source-gate `advance-status --to <source_gate_enum>` 同步状态。`enter-phase` / `load_complete` 只证明进入 target Markdown control surface，不证明 target phase work completion。
 
 Interactive in-run checkpoints 只有 `hitl1`（定方向 / profile / topics）和 `hitl2`（审 synthesis）。Final 是 terminal non-interactive delivery，不是第三个交互 checkpoint；post-final feedback 通过 HITL2 repair/rerun 重新进入。其余 phase 均 `stop: no`，Agent 自行推进。
+
+Delegated sub-agent work uses the v0.4 work-unit path only: queue demand item -> `operate-work-unit claim` -> sub-agent task under `_work_units/` -> `operate-work-unit submit` -> submitted ledger row -> gate. Do not use queue completion as delegated success; `operate-queue complete` is for non-delegated queue work.
 
 若已有 active bundle：别重建，打开该 bundle 的 `START_FROM_HERE.md`，读 `rb_status.json` 的 `current_gate` 续跑。
 

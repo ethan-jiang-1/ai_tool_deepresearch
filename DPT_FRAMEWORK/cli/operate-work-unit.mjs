@@ -1,0 +1,100 @@
+#!/usr/bin/env node
+// @impl FRE-005, DEW-002
+// Work-unit CLI. Claim/inspect/submit are wired; terminal commands are added in later apply sections.
+
+import path from 'node:path';
+import { writeFileSync } from 'node:fs';
+import { parseArgs } from 'node:util';
+
+import {
+  claimWorkUnits,
+  closeWorkUnitAttempt,
+  inspectWorkUnits,
+  openWorkUnitBatch,
+  submitWorkUnit,
+} from '../engine/work-unit-core.mjs';
+
+function usage() {
+  console.error(`Usage:
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase waveN [--count N]
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <id> --result <result.json>
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs fail <bundle> --work-id <id> --reason <reason>
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason <reason>
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs abandon <bundle> --work-id <id> --reason <reason>
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch <bundle> --phase waveN --reason <reason>
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>`);
+}
+
+function emit(value) {
+  writeFileSync(1, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+const [command, bundle] = process.argv.slice(2);
+if (!command || !bundle) {
+  usage();
+  process.exit(1);
+}
+
+const bundleDir = path.resolve(bundle);
+const { values } = parseArgs({
+  args: process.argv.slice(4),
+  options: {
+    phase: { type: 'string' },
+    count: { type: 'string', default: '1' },
+    'work-id': { type: 'string' },
+    result: { type: 'string' },
+    reason: { type: 'string' },
+  },
+  allowPositionals: false,
+});
+
+try {
+  if (command === 'claim') {
+    if (!values.phase) throw new Error('--phase is required');
+    const result = claimWorkUnits(bundleDir, { phase: values.phase, count: values.count });
+    emit(result);
+    process.exit(result.claimed_count > 0 ? 0 : 1);
+  }
+  if (command === 'inspect') {
+    const result = inspectWorkUnits(bundleDir, {
+      emitDiagnostics: true,
+      diagnosticSource: 'operate-work-unit',
+    });
+    emit(result);
+    process.exit(result.passed ? 0 : 1);
+  }
+  if (command === 'submit') {
+    if (!values['work-id']) throw new Error('--work-id is required');
+    if (!values.result) throw new Error('--result is required');
+    const result = submitWorkUnit(bundleDir, {
+      work_id: values['work-id'],
+      resultPath: path.resolve(values.result),
+    });
+    emit(result);
+    process.exit(result.ok ? 0 : 1);
+  }
+  if (['fail', 'timeout', 'abandon'].includes(command)) {
+    if (!values['work-id']) throw new Error('--work-id is required');
+    if (!values.reason) throw new Error('--reason is required');
+    const status = command === 'fail' ? 'failed' : command === 'timeout' ? 'timed_out' : 'abandoned';
+    const result = closeWorkUnitAttempt(bundleDir, {
+      work_id: values['work-id'],
+      status,
+      reason: values.reason,
+    });
+    emit(result);
+    process.exit(result.ok ? 0 : 1);
+  }
+  if (command === 'open-batch') {
+    if (!values.phase) throw new Error('--phase is required');
+    if (!values.reason) throw new Error('--reason is required');
+    const result = openWorkUnitBatch(bundleDir, { phase: values.phase, reason: values.reason });
+    emit(result);
+    process.exit(result.ok ? 0 : 1);
+  }
+  usage();
+  process.exit(1);
+} catch (error) {
+  console.error(error.message || String(error));
+  process.exit(1);
+}

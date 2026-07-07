@@ -141,7 +141,7 @@ function tryGetManifestPhase(fileRef, nodesDir) {
 
 /**
  * Inject autonomous contract header into the entry node's cached Markdown content.
- * Only called for manifest lifecycle phases (not relay/sub-agent task surfaces).
+ * Only called for manifest lifecycle phases (not work-unit sub-agent task surfaces).
  *
  * The header is injected after the frontmatter block and before the phase body
  * so that the Agent sees it as the first readable content. The injection is
@@ -650,7 +650,7 @@ export function assessNode(fileRef, state, runtime, trace = null, logger = null)
 
     // WNC-008: Inject autonomous contract header into manifest lifecycle stop:no phases
     // Only triggered for entries listed in manifest.phases[].node — not for
-    // relay/sub-agent task surfaces or test/runtime fixtures.
+    // work-unit sub-agent task surfaces or test/runtime fixtures.
     const manifestPhase = tryGetManifestPhase(ref, runtime.nodesDir);
     if (manifestPhase) {
       const entryCached = runtime.contentCache.get(ref);

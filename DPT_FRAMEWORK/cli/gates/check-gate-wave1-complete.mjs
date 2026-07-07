@@ -26,11 +26,11 @@ import {
   checkReferenceSourceUrls,
   checkReferenceKeyFactsMinLines,
   checkReferenceLedgerCoverage,
-  checkOutputDeclarationLedgerExists,
-  checkOutputDeclarationCoverage,
-  checkSubagentSlotPresence,
-  detectRelayBypassSuspicion,
-  runProvenanceForensics,
+  checkWorkUnitLedgerExists,
+  checkWorkUnitOutputCoverage,
+  checkWorkUnitSubmissionPresence,
+  checkDelegatedBypassSuspected,
+  detectDelegatedBypassSuspicion,
   readTraceEvents,
   scanTemplateNotExpanded,
   readYamlArraySafe,
@@ -418,30 +418,38 @@ for (const rule of definition.rules) {
           rulePassed = false;
           ruleDetail = result.inspect.join('; ');
         }
-      } else if (rule.check === 'output_declaration_ledger_exists') {
-        const ledgerResult = checkOutputDeclarationLedgerExists(bundlePath, rule);
+      } else if (rule.check === 'work_unit_ledger_exists') {
+        const ledgerResult = checkWorkUnitLedgerExists(bundlePath, rule);
         if (!ledgerResult.passed) {
           rulePassed = false;
           ruleDetail = ledgerResult.inspect.join('; ');
         }
         for (const line of ledgerResult.inspect) inspect.push(line);
         for (const a of ledgerResult.advice) advice.push(a);
-      } else if (rule.check === 'output_declaration_coverage') {
-        const coverageResult = checkOutputDeclarationCoverage(bundlePath, rule);
+      } else if (rule.check === 'work_unit_output_coverage') {
+        const coverageResult = checkWorkUnitOutputCoverage(bundlePath, rule);
         if (!coverageResult.passed) {
           rulePassed = false;
           ruleDetail = coverageResult.inspect.join('; ');
         }
         for (const line of coverageResult.inspect) inspect.push(line);
         for (const a of coverageResult.advice) advice.push(a);
-      } else if (rule.check === 'subagent_slot_presence') {
-        const slotResult = checkSubagentSlotPresence(bundlePath, rule);
-        if (!slotResult.passed) {
+      } else if (rule.check === 'work_unit_submission_presence') {
+        const presenceResult = checkWorkUnitSubmissionPresence(bundlePath, rule);
+        if (!presenceResult.passed) {
           rulePassed = false;
-          ruleDetail = slotResult.inspect.join('; ');
+          ruleDetail = presenceResult.inspect.join('; ');
         }
-        for (const line of slotResult.inspect) inspect.push(line);
-        for (const a of slotResult.advice) advice.push(a);
+        for (const line of presenceResult.inspect) inspect.push(line);
+        for (const a of presenceResult.advice) advice.push(a);
+      } else if (rule.check === 'delegated_bypass_suspected') {
+        const bypassCheck = checkDelegatedBypassSuspected(bundlePath, { ...rule, gate: definition.gate });
+        if (!bypassCheck.passed) {
+          rulePassed = false;
+          ruleDetail = bypassCheck.inspect.join('; ');
+        }
+        for (const line of bypassCheck.inspect) inspect.push(line);
+        for (const a of bypassCheck.advice) advice.push(a);
       } else if (rule.check === 'trace_event_present') {
         const events = readTraceEvents(bundlePath, rule.target);
         if (!events || events.length === 0) {
@@ -469,17 +477,11 @@ for (const rule of definition.rules) {
 const outcome = allPassed ? 'passed' : 'failed';
 const routing = resolveRouting(args.transitions, args.currentNode, outcome);
 
-// RPG-005: Always-on bypass suspicion detection
+// Work-unit delegated bypass suspicion detection
 const phase = derivePhaseFromGate(definition.gate);
-const bypassResult = detectRelayBypassSuspicion(bundlePath, phase, definition.gate);
+const bypassResult = detectDelegatedBypassSuspicion(bundlePath, phase, definition.gate);
 if (bypassResult.suspected) {
-  inspect.push(`[relay_bypass_suspected] Phase ${phase} artifacts found without relay provenance: ${(bypassResult.provenanceMissing || []).join('; ')}`);
-}
-
-// RPG-007..013: diagnostic-only provenance forensics (advisory; never changes pass/fail).
-const forensicFindings = runProvenanceForensics(bundlePath, phase, definition.gate);
-for (const f of forensicFindings) {
-  inspect.push(`[provenance_diagnostic:${f.code}] slot=${f.slotKey} wave=${f.wave}: ${f.reason}`);
+  inspect.push(`[delegated_bypass_suspected] Phase ${phase} artifacts found without submitted work-unit provenance: ${(bypassResult.provenanceMissing || []).join('; ')}`);
 }
 
 const result = buildGateResult({

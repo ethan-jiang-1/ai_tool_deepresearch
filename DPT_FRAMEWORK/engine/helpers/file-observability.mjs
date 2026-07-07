@@ -1,4 +1,4 @@
-// file-observability.mjs — Bundle directory audit with 6 file classifications
+// file-observability.mjs — Bundle directory audit with work-unit-aware file classifications
 // @impl FIO-001, FIO-002, FIO-004
 // Canonical engine location: DPT_FRAMEWORK/engine/helpers/file-observability.mjs
 //
@@ -15,7 +15,10 @@
 
 import { existsSync, readdirSync, statSync, readFileSync } from 'node:fs';
 import { join, relative, basename } from 'node:path';
-import { SLOT_NAMES } from '../../schema/contracts/queue-slots.mjs';
+import {
+  readOutputDeclarations,
+  readSubmittedWorkUnitDeclarations,
+} from './gate-helpers-readers.mjs';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Constants
@@ -49,16 +52,7 @@ const KNOWN_ENGINE_DIRS = new Set([
   '_checkpoints',
   '_diagnostics',
   '_cache',
-]);
-
-// Known relay slot files at _subagents/wave_NN/slot_MM/
-const RELAY_SLOT_FILES = new Set([
-  'task.md',
-  'result.schema.json',
-  'result.json',
-  'status.json',
-  '_agent.json',
-  'runtime-receipt.jsonl',
+  '_work_units',
 ]);
 
 // Gate pass-condition artifact patterns per phase
@@ -83,7 +77,7 @@ const PHASE_ARTIFACT_PATTERNS = {
   ],
 };
 
-const RELAY_SLOT_PATH_RE = /^_subagents\/wave_\d+\/slot_\d+\//;
+const NON_WORK_UNIT_DELEGATED_RE = /^_subagents\/wave_(\d+)\/slot_\d+\//;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Internal: directory walking
@@ -146,6 +140,20 @@ function listDir(dir, base) {
  * @param {object[]} opts.ledgerDeclarations — from readOutputDeclarations()
  * @returns {{ expectedPaths: Set<string>, declaredPaths: Set<string>, gatePassPatterns: RegExp[] }}
  */
+function queueItems(queue) {
+  if (!queue || typeof queue !== 'object') return [];
+  const items = [];
+  if (Array.isArray(queue.active_window)) items.push(...queue.active_window);
+  if (Array.isArray(queue.refill_pool)) items.push(...queue.refill_pool);
+  for (const entry of Object.values(queue.delegated_in_flight || {})) {
+    if (entry?.item && typeof entry.item === 'object') items.push(entry.item);
+  }
+  for (const entry of queue.terminal_history || []) {
+    if (entry?.item && typeof entry.item === 'object') items.push(entry.item);
+  }
+  return items;
+}
+
 function buildExpectedSets({ topicSlugs, queue, ledgerDeclarations }) {
   const expectedPaths = new Set();
   const declaredPaths = new Set();
@@ -162,26 +170,14 @@ function buildExpectedSets({ topicSlugs, queue, ledgerDeclarations }) {
     expectedPaths.add(join('artifacts', 'wave1', slug, 'question-list.md'));
   }
 
-  // Queue writes_to and required_receipts
-  if (queue) {
-    const allItems = [];
-    // Active window slots
-    for (const slot of SLOT_NAMES) {
-      if (queue[slot]) allItems.push(queue[slot]);
+  // Queue v2 writes_to and required_receipts
+  for (const item of queueItems(queue)) {
+    for (const w of (item.writes_to || [])) {
+      expectedPaths.add(w);
     }
-    // Refill pool
-    if (Array.isArray(queue.refill_pool)) {
-      allItems.push(...queue.refill_pool);
-    }
-
-    for (const item of allItems) {
-      for (const w of (item.writes_to || [])) {
-        expectedPaths.add(w);
-      }
-      for (const r of (item.required_receipts || [])) {
-        if (r.startsWith('file:')) {
-          expectedPaths.add(r.slice('file:'.length));
-        }
+    for (const r of (item.required_receipts || [])) {
+      if (r.startsWith('file:')) {
+        expectedPaths.add(r.slice('file:'.length));
       }
     }
   }
@@ -199,6 +195,20 @@ function buildExpectedSets({ topicSlugs, queue, ledgerDeclarations }) {
   expectedPaths.add(join('_logs', 'run.log'));
 
   return { expectedPaths, declaredPaths };
+}
+
+function declarationKey(row) {
+  return `${row.work_id || '<no-work-id>'}:${row.ledger_record_hash || '<no-ledger-hash>'}`;
+}
+
+function nonSubmittedDeclarations(rawDeclarations, submittedDeclarations) {
+  const submitted = new Set(submittedDeclarations.map(declarationKey));
+  return rawDeclarations.filter((row) => !submitted.has(declarationKey(row)));
+}
+
+function phaseFromWaveNumber(value) {
+  const n = Number.parseInt(String(value), 10);
+  return Number.isFinite(n) ? `wave${n}` : null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -272,38 +282,28 @@ function classifyFile(relPath, ctx) {
     }
   }
 
-  // 3. In recognized relay slot path → check relay contract
-  const relayMatch = relPath.match(RELAY_SLOT_PATH_RE);
-  if (relayMatch) {
-    const fileName = basename(relPath);
-    if (RELAY_SLOT_FILES.has(fileName)) {
-      return {
-        classification: 'expected',
-        severity: 'info',
-        reason: 'Relay slot file recognized by slot contract',
-        authority_status: 'none',
-        phase: null,
-      };
-    }
-    // File inside relay slot but not in contract → unplanned
+  // 3. Non-work-unit delegated paths are diagnostic only.
+  const oldDelegatedMatch = relPath.match(NON_WORK_UNIT_DELEGATED_RE);
+  if (oldDelegatedMatch) {
     return {
-      classification: 'unplanned_nonblocking',
-      severity: 'info',
-      reason: 'File inside relay slot directory but not in relay contract',
+      classification: 'unplanned_needs_explanation',
+      severity: 'warning',
+      reason: 'Non-work-unit delegated artifact; production delegated runtime path is _work_units/waveN/{work_id}/',
       authority_status: 'none',
-      phase: null,
+      phase: phaseFromWaveNumber(oldDelegatedMatch[1]),
+      required_repair: 'Route delegated work through work-unit claim/submit; remove or explain this non-authoritative artifact.',
     };
   }
 
-  // 4. runtime-receipt.jsonl outside recognized slot path → unplanned
+  // 4. runtime-receipt.jsonl outside work-unit envelopes → unplanned
   if (basename(relPath) === 'runtime-receipt.jsonl') {
     return {
       classification: 'unplanned_needs_explanation',
       severity: 'warning',
-      reason: 'runtime-receipt.jsonl outside recognized relay slot path',
+      reason: 'runtime-receipt.jsonl outside a work-unit envelope',
       authority_status: 'none',
       phase: null,
-      required_repair: 'Move to _subagents/wave_NN/slot_MM/ or explain via log-event.mjs --explain-file',
+      required_repair: 'Use the assigned work-unit runtime_receipt_ref, or explain the file as non-authoritative.',
     };
   }
 
@@ -352,7 +352,7 @@ function classifyFile(relPath, ctx) {
           reason: `File matches ${targetPhase} pass-condition pattern but has no ledger declaration or queue receipt`,
           authority_status: 'none',
           phase: targetPhase,
-          required_repair: 'Complete delegated reference production through Relay/Queue, or explain as non-authoritative via log-event.mjs --explain-file',
+          required_repair: 'Submit the delegated output through operate-work-unit, or explain as non-authoritative via log-event.mjs --explain-file.',
         };
       }
     }
@@ -365,10 +365,10 @@ function classifyFile(relPath, ctx) {
         return {
           classification: 'unplanned_needs_explanation',
           severity: 'warning',
-          reason: `File matches ${phase} pass-condition pattern but is not authoritative — explain or complete via queue`,
+          reason: `File matches ${phase} pass-condition pattern but is not authoritative — explain or submit through work-unit`,
           authority_status: 'none',
           phase,
-          required_repair: 'Explain via log-event.mjs --explain-file or produce through delegated queue completion',
+          required_repair: 'Explain via log-event.mjs --explain-file or produce through work-unit submit.',
         };
       }
     }
@@ -391,9 +391,9 @@ function classifyFile(relPath, ctx) {
 /**
  * Audit bundle directories against expected file patterns.
  *
- * Reads topic_registry, queue writes_to/required_receipts, and ledger
- * declarations to build expected path sets. Walks the bundle and classifies
- * every file. Relay slot files are recognized by path structure.
+ * Reads topic_registry, queue v2 writes_to/required_receipts, and submitted
+ * work-unit declarations to build expected path sets. Walks the bundle and
+ * classifies every file. Non-work-unit delegated paths are diagnostic only.
  *
  * @param {string} bundlePath — absolute path to the bundle directory
  * @param {object} opts
@@ -423,11 +423,33 @@ export function auditFileObservability(bundlePath, {
     };
   }
 
-  // Build expected sets
+  let submittedDeclarations = [];
+  let submittedLedgerError = null;
+  try {
+    submittedDeclarations = readSubmittedWorkUnitDeclarations(bundlePath);
+  } catch (error) {
+    submittedLedgerError = error;
+  }
+
+  let rawDeclarations = ledgerDeclarations;
+  if (!Array.isArray(rawDeclarations) || rawDeclarations.length === 0) {
+    try { rawDeclarations = readOutputDeclarations(bundlePath); } catch { rawDeclarations = []; }
+  }
+  const nonSubmittedRows = nonSubmittedDeclarations(rawDeclarations || [], submittedDeclarations);
+
+  if (submittedLedgerError) {
+    inspect.push(`[work_unit_ledger_invalid] ${submittedLedgerError.message}`);
+  }
+  for (const row of nonSubmittedRows) {
+    if ((row.output_files || []).length === 0) continue;
+    inspect.push(`[non_authoritative_declaration] rb_output_declarations.jsonl:${row.work_id || '<no-work-id>'} is not a submitted work-unit ledger row`);
+  }
+
+  // Build expected sets from authoritative submitted rows only.
   const { expectedPaths, declaredPaths } = buildExpectedSets({
     topicSlugs,
     queue,
-    ledgerDeclarations,
+    ledgerDeclarations: submittedDeclarations,
   });
 
   // Read file explanations from trace
@@ -451,8 +473,8 @@ export function auditFileObservability(bundlePath, {
     allFiles.push(...listDir(dp, bundlePath));
   }
 
-  // Recursive: artifacts/, _cache/, _subagents/, final/
-  for (const dir of ['artifacts', '_cache', '_subagents', 'final']) {
+  // Recursive: artifacts/, _cache/, _work_units/, _subagents/, final/
+  for (const dir of ['artifacts', '_cache', '_work_units', '_subagents', 'final']) {
     const dp = join(bundlePath, dir);
     allFiles.push(...walkDir(dp, bundlePath));
   }
@@ -491,7 +513,7 @@ export function auditFileObservability(bundlePath, {
   // ── Cache gap detection (RTI-006) ──
   // For each declared reference file, check if its cache trail exists.
   // Reported via inspect, NOT as a new FILE_CLASSIFICATIONS value.
-  for (const decl of ledgerDeclarations) {
+  for (const decl of submittedDeclarations) {
     const refOutputs = (decl.output_files || []).filter(f => f.role === 'reference');
     if (refOutputs.length === 0) continue;
 
@@ -556,13 +578,25 @@ export function auditFileObservability(bundlePath, {
   // Aggregate inspect/advice
   const blockers = findings.filter(f => f.severity === 'blocker');
   const warnings = findings.filter(f => f.severity === 'warning');
+  const submittedPhases = new Set(submittedDeclarations.map((decl) => `wave${decl.wave}`));
+  const mixed = findings.filter((f) =>
+    f.phase && submittedPhases.has(f.phase) &&
+    ['orphan_authority_blocking', 'unplanned_needs_explanation'].includes(f.classification));
+
+  if (mixed.length > 0) {
+    inspect.push(`[mixed_delegated_provenance] ${mixed.length} non-authoritative delegated file(s) found in phase(s) with submitted work-unit coverage`);
+    for (const f of mixed) {
+      inspect.push(`  ${f.path}: ${f.reason}`);
+    }
+    advice.push('Remove or explain non-work-unit delegated artifacts; submitted work-unit coverage cannot be mixed with non-authoritative delegated files.');
+  }
 
   if (blockers.length > 0) {
     inspect.push(`${blockers.length} orphan authority blocking file(s) found`);
     for (const b of blockers) {
       inspect.push(`  ${b.path}: ${b.reason}`);
     }
-    advice.push('Orphan files at pass-condition paths must be declared through ledger or explained as non-authoritative.');
+    advice.push('Orphan files at pass-condition paths must be covered by submitted work-unit ledger rows or explained as non-authoritative.');
   }
 
   if (warnings.length > 0) {

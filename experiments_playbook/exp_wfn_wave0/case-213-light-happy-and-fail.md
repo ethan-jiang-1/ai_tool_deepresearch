@@ -3,351 +3,348 @@ schema: command-experiment/v1
 experiment: wfn-wave0
 case: case-213-light-happy-and-fail
 weight: light
-case_goal: "验证 inspect-wave0-output.mjs：happy path 全部通过，fail path 正确检测 3 类结构错误（子目录、缺 metadata、缺 section）。"
+case_goal: "验证 Wave0 多 work-unit source intake、invalid/missing receipt、timeout retry、orphan output rejection，以及 gate pass 均由 submitted ledger coverage 决定。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_213_iw_*
-trace: dpt_disp_213_iw_*/rb_trace.jsonl
+bundle: dpt_disp_case-213_w0_multi_work_unit
+trace: dpt_disp_case-213_w0_multi_work_unit/rb_trace.jsonl
 verdict: trace-jsonl
+req: RWE-001
 ---
 
 ## Execution Contract
 
-由 coding agent 在真实 `dpt_disp_*` bundle 中执行。实验结果必须来自实际文件写入、CLI 调用和 stdout JSON 解析；禁止 mock、手写假结果、伪造 trace，或用 console output 代替裁决。
+Fixture-backed Engine case, no Agent actor, no external calls. Fixture outputs may be written only after work-unit claim and must pass through `operate-work-unit submit`. Invalid submits must be rejected by the production submit boundary and must not append ledger rows. Orphan/direct outputs must be tested in a separate disposable bundle so a prior successful Wave0 handoff cannot mask the provenance failure.
 
-# case-401-light-happy-and-fail
+## Reality Distance Ledger
 
-验证 `inspect-wave0-output.mjs`：合法 wave0 产出全部通过 + 3 类故意错误全部被检测。
+| Dimension | Statement |
+| --- | --- |
+| Runtime context | Real disposable bundles from `experiments_env/shared/new-disposable-bundle.mjs` |
+| Framework path | Real `operate-queue enqueue`, `operate-work-unit claim/submit/timeout`, and Wave0 gate CLI |
+| Fixture input | Controlled reference/source/cache files after claim |
+| Agent actor | None; fixture-backed Engine evidence only |
+| External calls | None |
+| Happy path | Three Wave0 work units claimed together and submitted independently |
+| Negative paths | Missing receipt, invalid result, timeout retry, and orphan output gate rejection |
+| Verdict source | Trace JSONL checks, submit JSON, gate JSON, work-unit index/ledger state |
+| Does not prove | Agent search, source selection, or semantic research quality |
+
+# case-213-light-happy-and-fail
 
 ## Expected Runtime Path
 
-1. 创建 disposable bundle
-2. 构造 happy path artifacts → 跑 inspect → 预期 passed=true
-3. 引入 3 个错误 → 跑 inspect → 预期 passed=false，inspect 含 3 条
-4. 从 trace 裁决
-5. 清理（PASS 才清理，FAIL 保留现场）
+1. Create a disposable Wave0 bundle with three topics.
+2. Enqueue three source-intake queue demands.
+3. Claim all three through one `operate-work-unit claim --count 3`.
+4. Submit fixture-backed outputs through `operate-work-unit submit`.
+5. Run Wave0 gate and confirm pass from three submitted ledger rows.
+6. Run invalid submit checkpoints: missing receipt and invalid result.
+7. Run timeout retry checkpoint and confirm retry uses a new same-batch `work_id`.
+8. In a separate disposable bundle, stage orphan output without submit and confirm Wave0 gate rejects it.
+9. Record all runtime facts as trace checks and clean up only on PASS.
 
----
-
-## Step 1: 创建 disposable bundle
+## Step 1: [MAIN/SHELL] Create Runtime Context
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs iw0 --case case-213 --force)
-node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
-node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w0_multi_work_unit --case case-213 --force)
+node --input-type=module - "$B" <<'JS'
+import { writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const topics = [
+  { id: 't1', slug: 'topic-a', title: 'Topic A' },
+  { id: 't2', slug: 'topic-b', title: 'Topic B' },
+  { id: 't3', slug: 'topic-c', title: 'Topic C' }
+];
+writeWave0Scaffold(process.argv[2], {
+  planBasename: 'w0_multi_work_unit',
+  topics,
+  referenceRows: topics.map((topic) => `| 00-shared-${topic.slug}.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |`)
+});
+JS
 echo "BUNDLE=$B"
 ```
 
----
+Expected: bundle has topic registry for `topic-a`, `topic-b`, and `topic-c`.
 
-## Step 2: Happy path — 构造合法 wave0 产出
-
-创建完整合法的 reference/ 结构：一个 00-shared-*.md（完整 metadata + 5 section）、_INDEX.md、README.md、平铺目录、per-topic thin YAML。
+## Step 2: [MAIN/SHELL] Enqueue And Claim Three Work Units
 
 ```bash
-B=$(echo dpt_disp_213_iw_*)
+node --input-type=module - "$B" <<'JS'
+import { enqueueWorkUnitTask, queueItemForWorkUnit } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-# Create artifacts/wave0/ directory
-mkdir -p "$B/artifacts/wave0/01_test-topic"
+const bundle = process.argv[2];
+const topics = [
+  { slug: 'topic-a', title: 'Topic A' },
+  { slug: 'topic-b', title: 'Topic B' },
+  { slug: 'topic-c', title: 'Topic C' }
+];
+for (const topic of topics) {
+  enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
+    queue_item_id: `wave0-source-${topic.slug}`,
+    topic_slug: topic.slug,
+    title: `Wave0 source intake for ${topic.title}`
+  }), { fileName: `case213-${topic.slug}.json` });
+}
+JS
 
-# Create a valid 00-shared-*.md with complete metadata + 5 sections
-cat > "$B/reference/00-shared-test-taxonomy.md" << 'EOF'
-# Test AI Taxonomy
-
-- source_url: https://arxiv.org/abs/2401.00001
-- acceptance_status: accepted
-- source_type: secondary (synthesis)
-- tier: Tier 2
-- evidence_role: foundation
-- trust_level: practitioner
-- why_it_matters: Provides shared terminology for cross-topic analysis.
-- accessed_at: 2026-06-26
-- related_topic: all
-
-## Key Facts
-
-- Fact 1: AI agents are a distinct category from traditional automation.
-- Fact 2: The market is projected to grow significantly.
-
-## Core Content Capture
-
-This source provides a foundational taxonomy for understanding AI agent capabilities.
-
-## Relevance To This Research
-
-The taxonomy enables consistent comparison across all research topics.
-
-## Quotable Terms / Concepts
-
-- "Agents sense and respond; scripts simply run"
-
-## Risks And Limitations
-
-- Taxonomy is consensus-based, not empirically validated.
-EOF
-
-# Create _INDEX.md with 8-column table
-cat > "$B/reference/_INDEX.md" << 'EOF'
-# Reference Index
-
-Run: inspect-wave0-test
-Last updated: 2026-06-26
-
-| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 00-shared-test-taxonomy.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-06-26 |
-EOF
-
-# Create README.md
-cat > "$B/reference/README.md" << 'EOF'
-# Reference Evidence
-
-Flat reference directory. Naming: 00-shared-*.md / 0N-*.md / 00-cross-*.md.
-See _INDEX.md for canonical inventory.
-EOF
-
-# Create thin YAML per topic
-cat > "$B/artifacts/wave0/01_test-topic/source.yaml" << 'EOF'
-- url: https://example.com/source
-  title: Test Source
-  retrieved_date: "2026-06-26"
-  topic_tag: "01_test-topic"
-  notes: Foundation reference
-EOF
-
-# Set up rb_plan.md with topic_registry so CLI can read it
-cat > "$B/rb_plan.md" << 'EOF'
----
-plan_basename: test-plan
-derived_topic_count: 1
-topic_registry:
-  - id: topic-01
-    slug: 01_test-topic
-    title: Test Topic 01
----
-# Test Plan
-EOF
-
-echo "Happy path artifacts created."
+CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 3)
+printf '%s\n' "$CLAIM_JSON" > "$B/case-213-multi-claim.json"
+printf '%s\n' "$CLAIM_JSON" | node -e '
+const j = JSON.parse(require("fs").readFileSync(0, "utf8"));
+console.log(`claimed_count=${j.claimed_count}`);
+console.log(`claimed_work_ids=${j.claimed_work_ids.join(",")}`);
+process.exit(j.claimed_count === 3 ? 0 : 1);
+'
 ```
 
-→ 预期：所有文件创建成功。
+Expected: one Engine transaction claims three contiguous delegated queue-front items.
 
----
-
-## Step 3: Happy path — 跑 inspect-wave0-output
+## Step 3: [MAIN/SHELL] Submit Three Fixture Results
 
 ```bash
-B=$(echo dpt_disp_213_iw_*)
-OUTPUT=$(node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle "$B" || true)
-echo "$OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed
-echo "$OUTPUT" | node experiments_env/shared/extract-field.mjs check.checks_failed
+node --input-type=module - "$B" <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs';
+import {
+  referenceContent,
+  sourceYamlExtra,
+  submitWorkUnitViaCli,
+  writeFixtureResultForWorkUnit
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const bundle = process.argv[2];
+const claim = JSON.parse(readFileSync(`${bundle}/case-213-multi-claim.json`, 'utf8'));
+const topics = ['topic-a', 'topic-b', 'topic-c'];
+const submissions = [];
+for (const [index, workId] of claim.claimed_work_ids.entries()) {
+  const topicSlug = topics[index];
+  const sourceUrl = `https://research-source.test/${topicSlug}/multi/${index + 1}`;
+  const fixture = writeFixtureResultForWorkUnit(bundle, {
+    work_id: workId,
+    output_path: `reference/00-shared-${topicSlug}.md`,
+    source_url: sourceUrl,
+    source_slug: topicSlug,
+    output_content: referenceContent({ source_url: sourceUrl, topic_slug: topicSlug, title: `${topicSlug} Fixture Source` }),
+    extra_output_files: [sourceYamlExtra(topicSlug, sourceUrl, `${topicSlug} Fixture Source`)]
+  });
+  const submit = submitWorkUnitViaCli(bundle, { work_id: workId, resultPath: fixture.resultPath });
+  submissions.push({ work_id: workId, topic_slug: topicSlug, submit });
+}
+writeFileSync(`${bundle}/case-213-multi-submit.json`, `${JSON.stringify(submissions, null, 2)}\n`);
+console.log(JSON.stringify(submissions, null, 2));
+process.exit(submissions.every((entry) => entry.submit.ok === true) ? 0 : 1);
+JS
 ```
 
-→ 预期：`check.passed = true`，`checks_failed = 0`。
+Expected: all three submits return `ok: true` and append exactly three submitted ledger rows.
 
----
-
-## Step 4: Fail path — 引入 3 个结构错误
-
-1. 创建子目录 `reference/bad_subdir/`
-2. 创建一个 metadata 缺 `trust_level` 的文件
-3. 创建一个缺 `## Risks And Limitations` 的文件
+## Step 4: [MAIN/SHELL] Gate Pass From Ledger Coverage
 
 ```bash
-B=$(echo dpt_disp_213_iw_*)
-
-# Error 1: subdirectory under reference/
-mkdir -p "$B/reference/bad_subdir"
-
-# Error 2: metadata missing trust_level
-cat > "$B/reference/00-shared-no-metadata.md" << 'EOF'
-# Missing Metadata
-
-- source_url: https://example.com/incomplete
-- acceptance_status: accepted
-- tier: Tier 3
-- evidence_role: deepening_reference
-- why_it_matters: Test case for missing metadata.
-- accessed_at: 2026-06-26
-- related_topic: all
-
-## Key Facts
-- Incomplete metadata test.
-
-## Core Content Capture
-This file has incomplete metadata.
-
-## Relevance To This Research
-Testing metadata validation.
-
-## Quotable Terms / Concepts
-- None
-
-## Risks And Limitations
-- Metadata incomplete.
-EOF
-
-# Error 3: missing ## Risks And Limitations section
-cat > "$B/reference/00-shared-no-section.md" << 'EOF'
-# Missing Section
-
-- source_url: https://example.com/nosec
-- acceptance_status: accepted
-- source_type: secondary
-- tier: Tier 3
-- evidence_role: deepening_reference
-- trust_level: caution
-- why_it_matters: Test case for missing section.
-- accessed_at: 2026-06-26
-- related_topic: all
-
-## Key Facts
-- Missing section test.
-
-## Core Content Capture
-This file has a missing Risks And Limitations section.
-
-## Relevance To This Research
-Testing section validation.
-
-## Quotable Terms / Concepts
-- None
-EOF
-
-echo "Fail path artifacts created."
+node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-213-gate-multi-happy.json"
+node - "$B" <<'JS'
+const fs = require('fs');
+const bundle = process.argv[2];
+const gate = JSON.parse(fs.readFileSync(`${bundle}/case-213-gate-multi-happy.json`, 'utf8'));
+console.log(JSON.stringify({ passed: gate.check?.passed, inspect: gate.inspect || [] }, null, 2));
+process.exit(gate.check?.passed === true ? 0 : 1);
+JS
 ```
 
-→ 预期：3 个错误被创建。
+Expected: gate passes from submitted work-unit ledger coverage, not filesystem-only artifacts.
 
----
+## Step 5: [MAIN/SHELL] Invalid Submit Checkpoints
 
-## Step 5: Fail path — 跑 inspect-wave0-output，验证错误检测
+Run two fresh claimed work units and prove submit rejects without ledger rows.
 
 ```bash
-B=$(echo dpt_disp_213_iw_*)
-OUTPUT=$(node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle "$B" || true)
-echo "=== check.passed ==="
-echo "$OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed
-echo "=== inspect count ==="
-INSPECT_COUNT=$(echo "$OUTPUT" | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8');const j=JSON.parse(d);console.log(j.inspect.length)")
-echo "$INSPECT_COUNT"
-echo "=== inspect output ==="
-echo "$OUTPUT" | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8');const j=JSON.parse(d);j.inspect.forEach(x=>console.log('  -',x))"
+node --input-type=module - "$B" <<'JS'
+import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import {
+  claimWorkUnitsViaCli,
+  enqueueWorkUnitTask,
+  queueItemForWorkUnit,
+  writeFixtureResultForWorkUnit
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { spawnSync } from 'node:child_process';
+
+const bundle = process.argv[2];
+const repo = process.cwd();
+const scenarios = [
+  {
+    label: 'missing-receipt',
+    topicSlug: 'topic-a',
+    mutate(fixture) {
+      rmSync(path.join(bundle, fixture.record.paths.runtime_receipt_ref), { force: true });
+    }
+  },
+  {
+    label: 'invalid-result',
+    topicSlug: 'topic-b',
+    mutate(fixture) {
+      const result = JSON.parse(readFileSync(fixture.resultPath, 'utf8'));
+      delete result.kind;
+      writeFileSync(fixture.resultPath, `${JSON.stringify(result, null, 2)}\n`);
+    }
+  }
+];
+
+const outcomes = [];
+for (const scenario of scenarios) {
+  enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
+    queue_item_id: `case213-${scenario.label}`,
+    topic_slug: scenario.topicSlug,
+    title: `Invalid submit scenario ${scenario.label}`
+  }), { fileName: `case213-${scenario.label}.json` });
+  const claim = claimWorkUnitsViaCli(bundle, { phase: 'wave0' });
+  const workId = claim.claimed_work_ids[0];
+  const fixture = writeFixtureResultForWorkUnit(bundle, { work_id: workId, source_url: `https://research-source.test/${scenario.label}/article`, source_slug: scenario.label });
+  scenario.mutate(fixture);
+  const submit = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], {
+    cwd: repo,
+    encoding: 'utf8',
+    maxBuffer: 10 * 1024 * 1024
+  });
+  outcomes.push({
+    label: scenario.label,
+    work_id: workId,
+    status: submit.status,
+    submit: submit.stdout.trim() ? JSON.parse(submit.stdout) : null,
+    stderr: submit.stderr
+  });
+}
+writeFileSync(`${bundle}/case-213-invalid-submit.json`, `${JSON.stringify(outcomes, null, 2)}\n`);
+console.log(JSON.stringify(outcomes, null, 2));
+process.exit(outcomes.every((entry) => entry.status === 1) ? 0 : 1);
+JS
 ```
 
-→ 预期：`check.passed = false`，`inspect.length >= 3`（子目录 + 缺 metadata + 缺 section 各至少一条）。
+Expected: missing receipt returns `reason_code: "missing_receipt"`, invalid result returns `reason_code: "invalid_result"`, and neither appends a ledger row.
 
----
-
-## Step 6: 裁决 — 两个独立 sub-case
-
-先重建 clean 状态跑 happy，再加错误跑 fail。直接用 stdout JSON 判 `check.passed`。
+## Step 6: [MAIN/SHELL] Timeout Retry Checkpoint
 
 ```bash
-B=$(echo dpt_disp_213_iw_*)
+node --input-type=module - "$B" <<'JS'
+import { writeFileSync } from 'node:fs';
+import {
+  claimWorkUnitsViaCli,
+  closeWorkUnitViaCli,
+  enqueueWorkUnitTask,
+  queueItemForWorkUnit
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
 
-cat > "$B/t.mjs" << 'JSTEST'
-import { execSync } from 'node:child_process';
-import { mkdirSync, writeFileSync, rmSync, readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+const bundle = process.argv[2];
+enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
+  queue_item_id: 'case213-timeout-retry',
+  topic_slug: 'topic-c',
+  title: 'Wave0 timeout retry proof'
+}), { fileName: 'case213-timeout-retry.json' });
 
-const B = process.argv[2];
-const t = B + '/rb_trace.jsonl';
-const ref = join(B, 'reference');
-const aw0 = join(B, 'artifacts', 'wave0', '01_test-topic');
+const firstClaim = claimWorkUnitsViaCli(bundle, { phase: 'wave0' });
+const firstWorkId = firstClaim.claimed_work_ids[0];
+const timedOut = closeWorkUnitViaCli(bundle, { command: 'timeout', work_id: firstWorkId, reason: 'playbook-timeout-retry' });
+const retryClaim = claimWorkUnitsViaCli(bundle, { phase: 'wave0' });
+const retryWorkId = retryClaim.claimed_work_ids[0];
+const retryRecord = loadWorkUnitIndex(bundle).work_units[retryWorkId];
+const outcome = { firstWorkId, retryWorkId, timedOut, retryRecord };
+writeFileSync(`${bundle}/case-213-timeout-retry.json`, `${JSON.stringify(outcome, null, 2)}\n`);
+console.log(JSON.stringify(outcome, null, 2));
+process.exit(timedOut.ok === true && retryWorkId !== firstWorkId && retryRecord?.attempt_index === 2 && retryRecord?.batch_id === 'b000' ? 0 : 1);
+JS
+```
 
-// ── Happy path: clean valid artifacts ──
-// Clean up errors from Steps 4-5
-rmSync(join(ref, 'bad_subdir'), { recursive: true, force: true });
-rmSync(join(ref, '00-shared-no-metadata.md'), { force: true });
-rmSync(join(ref, '00-shared-no-section.md'), { force: true });
+Expected: timeout closes the first attempt without ledger coverage and retry claim creates a new same-batch `work_id`.
 
-const happyOut = execSync(`node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle ${B} || true`, { encoding: 'utf8' });
-const happy = JSON.parse(happyOut);
+## Step 7: [MAIN/SHELL] Orphan Output Gate Rejection In Fresh Bundle
 
-const { recordCheck, verdict } = await import('../experiments_env/shared/wff-playbook-utils.mjs');
+Use a separate bundle so the earlier successful Wave0 gate handoff does not mask the orphan-output provenance check.
 
-await recordCheck(t, {
-  gate: 'inspect-wave0-happy', passed: happy.check.passed, expected: true,
-  detail: `checks_run=${happy.check.checks_run} checks_failed=${happy.check.checks_failed}`
+```bash
+OB=$(node experiments_env/shared/new-disposable-bundle.mjs w0_orphan_output --case case-213 --force)
+node --input-type=module - "$OB" <<'JS'
+import { mkdirSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { sourceYamlContent, writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const bundle = process.argv[2];
+writeWave0Scaffold(bundle, {
+  planBasename: 'w0_orphan_output',
+  topics: [{ id: 't4', slug: 'topic-orphan', title: 'Topic Orphan' }],
+  referenceRows: ['| 00-shared-topic-orphan.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |']
 });
-
-// ── Fail path: introduce 3 errors ──
-mkdirSync(join(ref, 'bad_subdir'), { recursive: true });
-
-writeFileSync(join(ref, '00-shared-no-meta.md'), `# No Meta
-- source_url: https://x.com
-- acceptance_status: accepted
-- tier: Tier 3
-- evidence_role: foundation
-- why_it_matters: test
-- accessed_at: 2026-06-26
-- related_topic: all
-
-## Key Facts
-- test
-## Core Content Capture
-test
-## Relevance To This Research
-test
-## Quotable Terms / Concepts
-- test
-## Risks And Limitations
-- test
-`);
-
-writeFileSync(join(ref, '00-shared-no-sec.md'), `# No Section
-- source_url: https://x.com
-- acceptance_status: accepted
-- source_type: secondary
-- tier: Tier 3
-- evidence_role: foundation
-- trust_level: caution
-- why_it_matters: test
-- accessed_at: 2026-06-26
-- related_topic: all
-
-## Key Facts
-- test
-## Core Content Capture
-test
-## Relevance To This Research
-test
-## Quotable Terms / Concepts
-- test
-`);
-
-const failOut = execSync(`node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle ${B} || true`, { encoding: 'utf8' });
-const fail = JSON.parse(failOut);
-
-await recordCheck(t, {
-  gate: 'inspect-wave0-fail', passed: !fail.check.passed, expected: true,
-  detail: `inspect_count=${fail.inspect.length} (expected >=3)`
-});
-
-await verdict(t);
-JSTEST
-
-node "$B/t.mjs" "$B"
+mkdirSync(path.join(bundle, 'artifacts/wave0/topic-orphan'), { recursive: true });
+writeFileSync(path.join(bundle, 'artifacts/wave0/topic-orphan/source.yaml'), sourceYamlContent({
+  source_url: 'https://research-source.test/topic-orphan/direct',
+  topic_slug: 'topic-orphan',
+  title: 'Orphan Direct Source'
+}));
+JS
+set +e
+node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$OB" --current-node phases/phase-wave0.md > "$B/case-213-gate-orphan-output.json"
+ORPHAN_GATE_STATUS=$?
+set -e
+printf '%s\n' "$ORPHAN_GATE_STATUS" > "$B/case-213-gate-orphan-output.status"
 ```
 
-→ 预期：`PASS`。
+Expected: orphan bundle gate rejects because direct source output lacks submitted work-unit coverage.
 
----
-
-## Step 7: 结果解读
-
-> Happy path: inspect-wave0 对合法 wave0 产出返回 passed=true。
-> Fail path: 3 个故意错误全部被 detect——子目录错误、缺失 metadata key (trust_level)、缺失 section (Risks And Limitations)。
-> 两个 sub-case 均通过 → 实验 PASS。
-
-## Step 8: 清理
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
+## Step 8: [MAIN/SHELL] Record Verdict Checks
 
 ```bash
-rm -rf dpt_disp_213_iw_*
-echo "✓ Cleaned up."
+node --input-type=module - "$B" <<'JS'
+import { readFileSync } from 'node:fs';
+import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { readWorkUnitLedgerRows, recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const bundle = process.argv[2];
+const claim = JSON.parse(readFileSync(`${bundle}/case-213-multi-claim.json`, 'utf8'));
+const submissions = JSON.parse(readFileSync(`${bundle}/case-213-multi-submit.json`, 'utf8'));
+const rowsAfterHappy = readWorkUnitLedgerRows(bundle).filter((row) => claim.claimed_work_ids.includes(row.work_id));
+const happyGate = JSON.parse(readFileSync(`${bundle}/case-213-gate-multi-happy.json`, 'utf8'));
+const invalid = JSON.parse(readFileSync(`${bundle}/case-213-invalid-submit.json`, 'utf8'));
+const rejectedWorkIds = invalid.map((entry) => entry.work_id);
+const rejectedRows = readWorkUnitLedgerRows(bundle).filter((row) => rejectedWorkIds.includes(row.work_id));
+const retry = JSON.parse(readFileSync(`${bundle}/case-213-timeout-retry.json`, 'utf8'));
+const orphanStatus = Number(readFileSync(`${bundle}/case-213-gate-orphan-output.status`, 'utf8'));
+const orphanGate = JSON.parse(readFileSync(`${bundle}/case-213-gate-orphan-output.json`, 'utf8'));
+const index = loadWorkUnitIndex(bundle);
+
+recordPlaybookCheck(bundle, { gate: 'multi-claim-count', passed: claim.claimed_count === 3 && claim.claimed_work_ids.length === 3, detail: JSON.stringify(claim.claimed_work_ids) });
+recordPlaybookCheck(bundle, { gate: 'multi-submit', passed: submissions.every((entry) => entry.submit.ok === true), detail: submissions.map((entry) => entry.work_id).join(', ') });
+recordPlaybookCheck(bundle, { gate: 'multi-ledger-rows', passed: rowsAfterHappy.length === 3, detail: `${rowsAfterHappy.length} row(s)` });
+recordPlaybookCheck(bundle, { gate: 'multi-gate-pass', passed: happyGate.check?.passed === true, detail: JSON.stringify(happyGate.inspect || []) });
+recordPlaybookCheck(bundle, { gate: 'missing-receipt-rejected', passed: invalid.find((entry) => entry.label === 'missing-receipt')?.submit?.last_submit_rejection?.reason_code === 'missing_receipt', detail: JSON.stringify(invalid.find((entry) => entry.label === 'missing-receipt')?.submit?.last_submit_rejection || {}) });
+recordPlaybookCheck(bundle, { gate: 'invalid-result-rejected', passed: invalid.find((entry) => entry.label === 'invalid-result')?.submit?.last_submit_rejection?.reason_code === 'invalid_result', detail: JSON.stringify(invalid.find((entry) => entry.label === 'invalid-result')?.submit?.last_submit_rejection || {}) });
+recordPlaybookCheck(bundle, { gate: 'rejected-work-units-no-ledger', passed: rejectedRows.length === 0, detail: `${rejectedRows.length} rejected row(s)` });
+recordPlaybookCheck(bundle, { gate: 'timeout-retry-new-work-id', passed: retry.timedOut.ok === true && retry.retryWorkId !== retry.firstWorkId && index.work_units[retry.retryWorkId]?.attempt_index === 2 && index.work_units[retry.retryWorkId]?.batch_id === 'b000', detail: `${retry.firstWorkId} -> ${retry.retryWorkId}` });
+recordPlaybookCheck(bundle, { gate: 'orphan-output-gate-rejects', passed: orphanStatus === 1 && orphanGate.check?.passed === false && /coverage|bypass|topic-orphan/i.test(JSON.stringify(orphanGate.inspect || [])), detail: JSON.stringify(orphanGate.inspect || []) });
+
+const verdict = writeTraceVerdict(bundle, 'case-213');
+console.log(JSON.stringify(verdict, null, 2));
+process.exit(verdict.ok ? 0 : 1);
+JS
+```
+
+Expected: final verdict PASS.
+
+## Step 9: [MAIN] Result Interpretation
+
+PASS means Wave0 work-unit coverage supports multi-claim/multi-submit gate pass, invalid submit fail-closed behavior, timeout retry with a new work ID, and orphan output rejection. FAIL means the Agent must inspect the preserved bundle(s) and repair the exact submit/gate/queue boundary reported by JSON feedback.
+
+## Step 10: [MAIN/SHELL] Cleanup
+
+PASS only:
+
+```bash
+node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-213-verdict.json"
+rm -rf "$B" "$OB"
+```
+
+## Optional Automation Smoke
+
+```bash
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-213 --cleanup-pass
 ```

@@ -87,7 +87,7 @@ Agent 驱动的 workflow 不是 JS engine 跑循环。它是一个 **Phase Agent
 
 ## Three-Authority Architecture
 
-> 这是权威分工轴（MD / Chain / Engine），与 [三层执行模型](agentic-execution-model.md) 的执行粒度轴（Chain / Queue / Relay）正交。详见该文档 §4.3 和 §6。
+> 这是权威分工轴（MD / Chain / Engine），与 [执行模型](agentic-execution-model.md) 的执行粒度轴（Chain / Queue / Work Unit）正交。详见该文档。
 
 三类权威组件各司其职，边界不可模糊：
 
@@ -199,7 +199,7 @@ Every `fileRef` in `transitions.chain.json` must resolve to a readable Markdown 
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; this file's parent document.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for framework assets versus runtime bundles.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Tier 2 (Queue) for within-phase task execution; defines the inner loop that nests inside this file's outer loop.
-- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — Tier 3 (Relay) for within-task sub-agent dispatch within the three-tier execution model.
+- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — work-unit-mediated Sub-agent execution within the current execution model.
 - [Command Experiments](command-experiments.md) — how to prove mechanisms with real runtime contexts.
 
 ## Relationship to Other Guidelines
@@ -207,7 +207,7 @@ Every `fileRef` in `transitions.chain.json` must resolve to a readable Markdown 
 - **project-charter.md** 定义 Agent/Engine/Markdown 的 authority split。本文件描述这个 split 在 workflow 执行中的具体机制。
 - **framework-runtime-boundary.md** 定义 framework assets vs runtime bundles 的目录边界。本文件假设这个边界已成立，在这个边界之上描述运行时循环。
 - **agentic-queue-mechanism.md** 定义 queue-driven phase execution 的架构宪法：两层嵌套 loop、dispatch rule、结构约束、派生约束。其 queue engine（`queue-manager.mjs` + `operate-queue.mjs`，AGQ-001~006）已实现；seed-topics/wave0/wave1/wave2 integrations 已归档入 accepted specs。stop authorization enforcement 等剩余 loop-engineering gap 仍待 OpenSpec 落地。本文件描述的循环是 AGQ 所依赖的当前运行时基础。
-- **agentic-subagent-mechanism.md** 定义 sub-agent dispatch 的架构宪法：Tier 3 (Relay)、噪声隔离原则、slot 协议、并发模型。本文件描述的 Tier 1 (Chain) 是 sub-agent 执行的上层容器——sub-agent 在单个 phase 内部被 dispatch，不跨 phase。完整嵌套关系见 agentic-execution-model。
+- **agentic-subagent-mechanism.md** 定义 work-unit-mediated Sub-agent execution 的架构宪法：噪声隔离、bounded task、runtime receipt、submit provenance。本文件描述的 Chain 是 Sub-agent 执行的上层 phase 路由容器；Sub-agent work units 在单个 phase 内部被 claimed/submitted，不跨 phase。完整嵌套关系见 agentic-execution-model。
 
 ---
 

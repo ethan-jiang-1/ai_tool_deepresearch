@@ -61,7 +61,7 @@
       "id": "trace_event_wave0_completion",
       "check": "trace_event_present",
       "target": "wave0_completion",
-      "failure_message": "No wave0_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event per the shared-subagent-protocol."
+      "failure_message": "No wave0_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event before the gate."
     },
     {
       "id": "content_dedup",
@@ -82,15 +82,15 @@
       "failure_message": "Cache trail coverage gap detected: role=reference output files must map to verified _cache/ leaf directories. Missing or unmapped cache trails fail coverage; empty cache_trails on a declaration emits a Phase 1 warning."
     },
     {
-      "id": "wave0_ledger_exists",
-      "check": "output_declaration_ledger_exists",
+      "id": "wave0_work_unit_ledger_exists",
+      "check": "work_unit_ledger_exists",
       "target": "rb_output_declarations.jsonl",
       "wave": "wave0",
-      "failure_message": "No wave0-scoped output declaration ledger entries found. Complete delegated relay tasks (dpt-source-intake) through the queue + relay pipeline to populate the output declaration ledger."
+      "failure_message": "No wave0 submitted work-unit ledger rows found. Claim and submit wave0_source_intake work units to populate rb_output_declarations.jsonl."
     },
     {
-      "id": "wave0_output_coverage",
-      "check": "output_declaration_coverage",
+      "id": "wave0_work_unit_output_coverage",
+      "check": "work_unit_output_coverage",
       "target": "rb_output_declarations.jsonl",
       "wave": "wave0",
       "output_selectors": {
@@ -102,14 +102,21 @@
           "source_yaml"
         ]
       },
-      "failure_message": "Wave0 outputs exist on disk but are not covered by output declaration ledger. Files may have been written directly (bypassing relay). Re-run through delegated relay tasks."
+      "failure_message": "Wave0 outputs exist on disk but are not covered by submitted work-unit ledger rows. Submit delegated outputs through operate-work-unit."
     },
     {
-      "id": "wave0_subagent_slots",
-      "check": "subagent_slot_presence",
-      "target": "_subagents/wave_00",
+      "id": "wave0_work_unit_submission_presence",
+      "check": "work_unit_submission_presence",
+      "target": "rb_output_declarations.jsonl",
       "wave": "wave0",
-      "failure_message": "No successful wave0 relay slots found in _subagents/wave_00/. Dispatch and complete relay tasks (dpt-source-intake) through the queue + relay pipeline."
+      "failure_message": "Wave0 submitted work-unit rows failed index/manifest/result/receipt/beacon/output/cache/hash cross-checks."
+    },
+    {
+      "id": "wave0_delegated_bypass_suspected",
+      "check": "delegated_bypass_suspected",
+      "target": "artifacts/wave0",
+      "wave": "wave0",
+      "failure_message": "Wave0 delegated artifacts appear without submitted work-unit coverage."
     }
   ]
 }

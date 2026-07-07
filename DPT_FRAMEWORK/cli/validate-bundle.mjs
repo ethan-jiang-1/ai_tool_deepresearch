@@ -9,9 +9,8 @@ import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import {
   StatusSchema, QueueSchema, ProfileSchema,
-  PlanSchema, TraceSchema,
+  PlanSchema, TraceSchema, WorkUnitLedgerRecordSchema,
 } from '../schema/index.mjs';
-import { OutputDeclarationLedgerRecord } from '../engine/queue-manager.mjs';
 import { parseMdFrontmatter } from '../engine/helpers/gate-helpers.mjs';
 
 function parseJsonl(raw) {
@@ -25,7 +24,7 @@ const CONTROL_FILE_SCHEMAS = new Map([
   ['rb_profile.yaml',            { schema: ProfileSchema,   parse: parseYaml }],
   ['rb_plan.md',                 { schema: PlanSchema,      parse: parseMdFrontmatter }],
   ['rb_trace.jsonl',             { schema: TraceSchema,     parse: parseJsonl }],
-  ['rb_output_declarations.jsonl', { schema: OutputDeclarationLedgerRecord, parse: parseJsonl, optional: true, perLine: true }],
+  ['rb_output_declarations.jsonl', { schema: WorkUnitLedgerRecordSchema, parse: parseJsonl, optional: true, perLine: true }],
 ]);
 
 const bundleDir = process.argv[2];

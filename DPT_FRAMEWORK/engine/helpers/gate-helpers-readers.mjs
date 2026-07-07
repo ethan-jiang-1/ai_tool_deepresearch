@@ -5,9 +5,14 @@
 // Re-exported by gate-helpers.mjs for backward compatibility.
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, basename, dirname } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import { PlanSchema } from '../../schema/index.mjs';
+import {
+  PlanSchema,
+  WorkUnitIndexSchema,
+  WorkUnitLedgerRecordSchema,
+} from '../../schema/index.mjs';
 import { readBundleName } from '../logger.mjs';
 import { z } from 'zod';
 
@@ -210,7 +215,12 @@ export function listMatchingBundleFiles(bundlePath, target) {
 }
 
 export function getDeclaredReferencePaths(bundlePath) {
-  const declarations = readOutputDeclarations(bundlePath);
+  let declarations = [];
+  try {
+    declarations = readSubmittedWorkUnitDeclarations(bundlePath);
+  } catch {
+    declarations = [];
+  }
   const paths = new Set();
   for (const decl of declarations) {
     for (const entry of decl.output_files || []) {
@@ -227,4 +237,100 @@ export function readOutputDeclarations(bundlePath) {
   const raw = readFileSync(file, 'utf-8').trim();
   if (!raw) return [];
   return raw.split('\n').map((line) => JSON.parse(line));
+}
+
+function stableStringify(value) {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function hashValue(value) {
+  return createHash('sha256').update(stableStringify(value)).digest('hex');
+}
+
+function computeWorkUnitLedgerRecordHash(row) {
+  const { ledger_record_hash: _existing, ...base } = row;
+  return hashValue(base);
+}
+
+function loadSubmittedWorkUnitIndex(bundlePath) {
+  const indexPath = join(bundlePath, '_work_units', '_index.json');
+  if (!existsSync(indexPath)) return null;
+  return WorkUnitIndexSchema.parse(JSON.parse(readFileSync(indexPath, 'utf-8')));
+}
+
+function isWorkUnitLikeLedgerRow(row) {
+  return row && typeof row === 'object' && typeof row.work_id === 'string' && row.work_id.startsWith('wu-');
+}
+
+function collectWorkUnitLedgerRowIssues(row, index) {
+  const parsed = WorkUnitLedgerRecordSchema.safeParse(row);
+  if (!parsed.success) {
+    if (!isWorkUnitLikeLedgerRow(row)) return { row: null, issues: [] };
+    return {
+      row: null,
+      issues: [`work-unit declaration schema invalid for ${row.work_id}: ${zodErrors(parsed.error).map((i) => `${i.field || '<root>'} ${i.message}`).join(', ')}`],
+    };
+  }
+
+  const ledgerRow = parsed.data;
+  const issues = [];
+  const expectedHash = computeWorkUnitLedgerRecordHash(ledgerRow);
+  if (ledgerRow.ledger_record_hash !== expectedHash) {
+    issues.push(`ledger_record_hash mismatch for ${ledgerRow.work_id}`);
+  }
+
+  const indexRecord = index?.work_units?.[ledgerRow.work_id];
+  if (!indexRecord) {
+    issues.push(`submitted work-unit declaration missing index record: ${ledgerRow.work_id}`);
+  } else {
+    if (indexRecord.status !== 'submitted') {
+      issues.push(`submitted work-unit declaration index status is ${indexRecord.status}: ${ledgerRow.work_id}`);
+    }
+    for (const field of ['queue_item_id', 'wave', 'kind', 'producer_rule', 'creation_reason', 'receipt_nonce']) {
+      if (ledgerRow[field] !== indexRecord[field]) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: ${field}`);
+    }
+    if (ledgerRow.work_unit_ref !== indexRecord.paths.work_unit_dir) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: work_unit_ref`);
+    if (ledgerRow.result_ref !== indexRecord.paths.result_ref) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: result_ref`);
+    if (ledgerRow.runtime_receipt_ref !== indexRecord.paths.runtime_receipt_ref) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: runtime_receipt_ref`);
+    if (ledgerRow.result_hash !== indexRecord.result_hash) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: result_hash`);
+    if (ledgerRow.ledger_record_hash !== indexRecord.ledger_record_hash) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: ledger_record_hash`);
+  }
+
+  return { row: ledgerRow, issues };
+}
+
+/**
+ * Read Engine-accepted work-unit submission declarations.
+ *
+ * This is the authoritative delegated-output reader for production checks that
+ * need submitted work-unit coverage. The plain readOutputDeclarations() helper
+ * remains a raw JSONL reader while old gate surfaces are being replaced.
+ */
+export function readSubmittedWorkUnitDeclarations(bundlePath) {
+  const rawRows = readOutputDeclarations(bundlePath);
+  if (rawRows.length === 0) return [];
+
+  let index = null;
+  try {
+    index = loadSubmittedWorkUnitIndex(bundlePath);
+  } catch (error) {
+    throw new Error(`work-unit index invalid while reading declarations: ${error.message}`);
+  }
+
+  const submittedRows = [];
+  const issues = [];
+  for (const row of rawRows) {
+    const checked = collectWorkUnitLedgerRowIssues(row, index);
+    issues.push(...checked.issues);
+    if (checked.row && checked.issues.length === 0) submittedRows.push(checked.row);
+  }
+
+  if (issues.length > 0) {
+    throw new Error(`invalid submitted work-unit declaration ledger: ${issues.join('; ')}`);
+  }
+  return submittedRows;
 }

@@ -12,17 +12,17 @@
 
 ## 跑哪些
 
-**默认行为：全跑。一路到底，中间不停。除了 Human 案例全部跑完。**
+**默认行为：跑完当前可运行清单。一路到底，中间不停。除了 Human 和 Legacy/backlog 案例全部跑完。**
 
 这是 MD，没有 CLI 参数——runner 根据**用户的意图**决定跑哪些：
 
-- 默认（用户没明说 / "跑一下" / "跑测试"）→ **Light + Standard + Heavy，除 Human**
+- 默认（用户没明说 / "跑一下" / "跑测试"）→ **Current Light + Standard + Heavy，除 Human 和 Legacy/backlog**
 - "快点 / 跑轻的 / 快速验证" → 只跑 **Light**
 - "跑重的" → 只跑 **Heavy**
 - "跑标准的" → 只跑 **Standard**
 - "跑没过的 / 重跑失败的" → 只重跑上次 **FAIL** 的
 
-**拿不准也跑**——跑错了比漏跑好。全部跑完再出 report，中间不要停下来问。
+**拿不准也跑 current 清单**。Legacy/backlog 只在用户明确点名时跑；它们是迁移/历史对照，不代表当前 production path。全部跑完再出 report，中间不要停下来问。
 
 三档（见下方三张表）：
 
@@ -32,6 +32,8 @@
 
 **Human（`exph_`）**：需要人类交互，自动跑会卡住；runner 跳过，由人类手动跑。
 
+**Legacy/backlog**：旧 relay/slot、旧 queue slot shape、旧 hand-written ledger 或未迁移 playbook。默认不跑，不能用 PASS/FAIL 代表当前 work-unit production path。需要迁移时按 `guidelines/command-experiments.md` 保持 Markdown Agent Flow 与薄 JS checkpoint 交替，不要把多阶段流程压进 JS runner。
+
 ### Light（纯 JS/CLI/gate/filesystem，改完代码就该跑）
 
 | Group | Case ID | Playbook | 验证什么 |
@@ -39,7 +41,6 @@
 | G1 gate-fork | case-11 | `exp_gate-fork/case-11-light-four-returns.md` | Gate 单次 checkpoint 四种返回 |
 | G2 gate-loop | case-21 | `exp_gate-loop/case-21-light-three-returns.md` | Gate 单次 checkpoint 三种返回 |
 | G3 workflow-chain | case-31 | `exp_workflow-chain/case-31-light-lazy-load.md` | Lazy loader 不预读 MD |
-| G4 agentic-queue | case-41 | `exp_agentic-queue/case-41-light-minimal-path.md` | enqueue → claim → complete → promote 最小路径 |
 | G10 pre-research | case-106 | `exp_wff_pre-research/case-106-light-plan-body-gate.md` | plan_body gate：plan body 存在性校验 + missing→fail + 合法→pass |
 | G10 pre-research | case-181 | `exp_wff_topic-rewrite/case-181-light-hitl1-topic-rewrite-vague.md` | 一句话 → topic rewrite → original topic + seed topics（引用 phase-hitl1.md §3a） |
 | G10 pre-research | case-182 | `exp_wff_topic-rewrite/case-182-light-hitl1-topic-rewrite-detailed.md` | 详细 brief → 轻量整理，不越界 rewrite（⚠️ 模拟 Agent 输出） |
@@ -58,14 +59,11 @@
 | G24 wfn-rerun | case-303 | `exp_wfn_rerun/case-303-light-normal-path-unchanged.md` | 回归：证明正常路径 proceed_to_readiness→readiness 在 chain dual-exit 后不变 |
 | G24 wfn-rerun | case-304 | `exp_wfn_rerun/case-304-light-gate-fail-max-count.md` | 边界：rerun_count=3→gate fail+no_transition |
 | G24 wfn-rerun | case-305 | `exp_wfn_rerun/case-305-light-indeterminate-no-transition.md` | 边界：indeterminate outcomes→invalid_input |
-| G25 engine-boundary | case-401 | `exp_engine-boundary/case-401-light-full-boundary.md` | Agent↔Engine 边界正向全链路：delegated complete → ledger → gate → trace |
-| G25 engine-boundary | case-402 | `exp_engine-boundary/case-402-light-complete-reject.md` | delegated complete() reject 场景：缺 ref/receipt、writes 无 declaration、缺文件/缺 cache、nonce mismatch |
+| G25 engine-boundary | case-401 | `exp_engine-boundary/case-401-light-full-boundary.md` | Agent/Engine 正向边界：queue demand → work-unit claim → fixture output/receipt/cache → submit → ledger → gate → trace |
+| G25 engine-boundary | case-402 | `exp_engine-boundary/case-402-light-complete-reject.md` | work-unit submit rejection matrix：missing receipt/output/cache、nonce mismatch、wrong work_id，均无 ledger append |
 | G25 engine-boundary | case-403 | `exp_engine-boundary/case-403-light-gate-content-dedup.md` | content_dedup gate：ledger-generated 输入；URL dup/Jaccard/homepage/self-ref fail；clean pass；orphan cannot help |
 | G25 engine-boundary | case-405 | `exp_engine-boundary/case-405-light-trace-single-sink.md` | trace 单 sink：只存在 bundle 根 rb_trace.jsonl |
-| G27 evidence-extraction | case-161 | `exp_evidence-extraction/case-161-light-complete-cache-trails.md` | cache_trails Engine 三条路径：valid→ledger、incomplete→warning+filter、unsafe→hard-fail |
-| G26 file-observability | case-310 | `exp_file-observability/case-310-light-orphan-reference.md` | orphan reference 检测：未声明文件分类为 orphan_authority_blocking，severity=blocker |
-| G26 file-observability | case-311 | `exp_file-observability/case-311-light-file-explanation.md` | file_explanation 诊断 event：unplanned 文件可通过 trace 解释为非权威 |
-| G26 file-observability | case-312 | `exp_file-observability/case-312-light-wave2-action-add.md` | wave2 action:add 文件可观测性：新增文件正确分类 |
+| G27 evidence-extraction | case-161 | `exp_evidence-extraction/case-161-light-complete-cache-trails.md` | work-unit submit cache_trails：valid→submitted ledger、incomplete→warning+filter、unsafe→non-terminal rejection |
 | G30 reentry-debuggability | case-307 | `exp_reentry-debuggability/case-307-light-clean-reentry.md` | clean reentry：所有 audit 通过，无 blocker |
 | G30 reentry-debuggability | case-308 | `exp_reentry-debuggability/case-308-light-stale-queue-blocker.md` | stale queue blocker 检测：prior-phase active work 阻塞 reentry |
 | G30 reentry-debuggability | case-309 | `exp_reentry-debuggability/case-309-light-drift-detection.md` | checkpoint drift 检测：control file hash 变化 → blocker |
@@ -80,9 +78,6 @@
 | G2 gate-loop | case-23 | `exp_gate-loop/case-23-standard-full-pipeline.md` | 完整端到端 |
 | G3 workflow-chain | case-32 | `exp_workflow-chain/case-32-standard-dep-cache.md` | 依赖去重 + cache hit |
 | G3 workflow-chain | case-33 | `exp_workflow-chain/case-33-standard-error-paths.md` | 错误路径 + 恢复 |
-| G7 system-logging | case-72 | `exp_system-logging/case-72-standard-engine-lifecycle.md` | Engine lifecycle log：enqueue/claim/complete/fail 全生命周期事件记录 |
-| G4 agentic-queue | case-42 | `exp_agentic-queue/case-42-standard-urgent-preemption.md` | 满 active window + urgent preemption |
-| G4 agentic-queue | case-43 | `exp_agentic-queue/case-43-standard-failure-repair.md` | invalid task, missing receipt, failure repair |
 | G5 wff-validation | case-51 | `exp_wff_validation/case-51-standard-happy-path.md` | wff walker 9 phase/8 gate 全部 pass + trace↔log 交叉验证 |
 | G5 wff-validation | case-52 | `exp_wff_validation/case-52-standard-fail-repair.md` | wff walker gate fail → repair → rerun → pass 闭环 |
 | G5 wff-validation | case-53 | `exp_wff_validation/case-53-standard-routing-contract.md` | current-node 绑定 + next / terminal / no_transition / config_error routing contract |
@@ -95,16 +90,11 @@
 | G11 pre-research-repair | case-111 | `exp_wff_pre-research-repair/case-111-standard-repair-loop.md` | gate fail → inspect/advice → repair → rerun → pass |
 | G11 pre-research-repair | case-112 | `exp_wff_pre-research-repair/case-112-standard-fault-tolerance.md` | bad JSON / multi-rule fail / missing bundle — gate 不崩溃 |
 | G11 pre-research-repair | case-113 | `exp_wff_pre-research-repair/case-113-standard-review-surface.md` | HITL 问题面 + AI interpretation sample + human review checklist |
-| G12 wave-gates | case-121 | `exp_wff_wave-gates/case-121-standard-wave0-happy.md` | wave0-complete gate：ReferenceMetadata schema + count_floor + {topic} placeholder + AND |
-| G12 wave-gates | case-122 | `exp_wff_wave-gates/case-122-standard-wave1-boundary.md` | wave1-complete gate：foundation-placeholder marker + false completion claim |
 | G12 wave-gates | case-123 | `exp_wff_wave-gates/case-123-standard-wave2-synthesis.md` | wave2-complete gate：Markdown link 解析 + dead target + cross-artifact reference（RWE-009） |
 | G12 wave-gates | case-124 | `exp_wff_wave-gates/case-124-standard-seed-topics-boundary.md` | seed-topics-ready gate：空目录/缺失 slug/多余 slug + slug_consistency 双向校验 |
-| G12 wave-gates | case-125 | `exp_wff_wave-gates/case-125-light-dynamic-threshold.md` | wave0 gate 动态阈值：research_style_params → threshold=12，不达则 reject，达标则 pass |
-| G12 wave-gates | case-126 | `exp_wff_wave-gates/case-126-light-style-switch.md` | style switch：同一批数据 quick_factual pass → claim_verification fail（阈值驱动 gate 行为变化） |
 | G15 wave-chain | case-151 | `exp_wff_wave-chain/case-151-standard-waves-full-chain.md` | seed-topics→wave0→wave1→wave2 全链路 4 gate 顺序 pass |
 | G15 wave-chain | case-152 | `exp_wff_wave-chain/case-152-standard-wave-repair-loop.md` | wave2 gate fail→repair→pass PDCA 回路 |
 | G15 wave-chain | case-153 | `exp_wff_wave-chain/case-153-standard-wave-fault-tolerance.md` | malformed YAML / partial dead links / status drift — gate 容错 |
-| G15 wave-chain | case-154 | `exp_wff_wave-chain/case-154-standard-wave-review-surface.md` | 3-topic Wave0→Wave2 review surface + human checklist |
 | G13 delivery | case-131 | `exp_wff_delivery/case-131-standard-delivery-full-chain.md` | hitl2→readiness→final 完整 delivery 链 + final terminal semantics |
 | G13 delivery | case-132 | `exp_wff_delivery/case-132-standard-hitl2-decision.md` | HITL2 gate：decision brief + user_decision + trace → pass；缺失/空/非法 → fail |
 | G13 delivery | case-133 | `exp_wff_delivery/case-133-standard-hitl2-rerun.md` | HITL2 rerun：gate pass 但 chain 不编码 rerun 分支（Agent 层 routing） |
@@ -113,7 +103,7 @@
 | G24 wfn-rerun | case-306 | `exp_wfn_rerun/case-306-standard-two-round-delta.md` | Agent-driven：两轮 rerun，验证 rerun_count 递增和 direction section 更新（⚠️ verdict 来自文件系统检查，非 gate） |
 | G25 engine-boundary | case-404 | `exp_engine-boundary/case-404-standard-queue-boundary.md` | Queue 边界合约：non-delegated 不受影响；delegated 强制 provenance；controller:"sub-agent" 被拒 |
 | G27 evidence-extraction | case-162 | `exp_evidence-extraction/case-162-standard-gate-reentry-cache-coverage.md` | gate count_floor（scoped）+ cache_coverage（verified+mapped/missing/empty）+ file observability cache_gap + check-reentry 集成 |
-| G50 handoff-witnessing | case-501 | `exp_handoff-witnessing/case-501-standard-handoff-witnessing.md` | phase handoff witnessing：unwitnessed/old-style status fail closed、route-bound load witness、HITL2 rerun、rerun→seed-topics、superseded pass |
+| G50 handoff-witnessing | case-501 | `exp_handoff-witnessing/case-501-standard-handoff-witnessing.md` | phase handoff witnessing：unwitnessed/old-style status fail closed、route-bound load witness、HITL2 rerun、rerun→seed-topics、superseded pass（MD playbook only；legacy JS helper 见 backlog） |
 
 ### Heavy（真实外部调用：WebSearch/WebFetch/subagent spawn，自动化可跑）
 
@@ -121,7 +111,7 @@
 |-------|---------|----------|---------|
 | G21 wfn-wave0 | case-211 | `exp_wfn_wave0/case-211-heavy-wave0-happy-path.md` | seed_topics→wave0 queue-loop→sub-agent 真实搜索→backfill→gate pass 全链路 |
 | G21 wfn-wave0 | case-212 | `exp_wfn_wave0/case-212-heavy-gate-fail-repair.md` | gate fail（count_floor 检测缺失 source.yaml）→repair→gate pass，trace 含 fail+pass 两条 gate_attempt |
-| G22 wfn-wave1 | case-221 | `exp_wfn_wave1/case-221-heavy-batch-subagent.md` | 2-topic wave1 deepening 批量 sub-agent 并行：enqueue→relay spawn→collect-as-return→backfill→gate pass |
+| G22 wfn-wave1 | case-221 | `exp_wfn_wave1/case-221-heavy-batch-subagent.md` | 2-topic wave1 deepening canary：queue demand → work-unit claim --count → real sub-agent submit → backfill → gate pass；无 real result 时 NOT RUN |
 | G22 wfn-wave1 | case-222 | `exp_wfn_wave1/case-222-heavy-gate-fail-repair.md` | gate fail（缺失 evidence-summary）→repair→gate pass，trace 含 2 条 gate_attempt |
 | G22 wfn-wave1 | case-223 | `exp_wfn_wave1/case-223-heavy-subagent-failure.md` | WebFetch blocked→完整抓取链（curl→node→python3）→partial evidence 不编造→gate 仍 pass |
 | G23 wfn-wave2 | case-231 | `exp_wfn_wave2/case-231-heavy-synthesis-happy-path.md` | post-wave1→wave2 queue-driven synthesis→三件套 artifact→backfill→gate pass 全链路 |
@@ -129,12 +119,32 @@
 | G23 wfn-wave2 | case-233 | `exp_wfn_wave2/case-233-heavy-gate-fail-repair.md` | gate fail（ledger 缺 section + backfill token 残留）→inspect/advice→repair→gate pass，trace 含 fail+pass 两条 gate_attempt |
 | G23 wfn-wave2 | case-234 | `exp_wfn_wave2/case-234-heavy-subagent-search.md` | emergent question→explore_search→spawn dpt-topic-scout 真实搜索→ingest receipt→index 更新→re-synthesize→00_shared promote→gate pass |
 | G11 pre-research-repair | case-114 | `exp_wff_pre-research-repair/case-114-heavy-hitl1-manual-review.md` | HITL1 payload 枚举（auto mode 6 vectors） |
-| G6 subagent | case-61 | `exp_subagent/case-61-heavy-single-intake.md` | 单个 source_intake subagent（**legacy**：直调 `stageSubagentSlots`，无 driver/beacon/forensics） |
-| G6 subagent | case-62 | `exp_subagent/case-62-heavy-drive-relay-provenance-sound.md` | **金路径**：`drive-relay-slot` + beacon + 真 sub-agent + S0–S5 tier-1 silent |
-| G6 subagent | case-66 | `exp_subagent/case-66-standard-drive-relay-staged-not-committed.md` | **负向对照**：driver stage 真跑、不 commit → 仅 RPG-008（tier-4） |
 | G15 ai-judge | case-951 | `exph_workflow-foundation/case-951-heavy-topic-rewrite-ai-judge.md` | AI 扮演真人 dual of 901：真 Agent rewrite + AI reviewer verdict（source: ai-judge，非真人）；9NN +50 对偶 |
-| G25 engine-boundary | case-406 | `exp_engine-boundary/case-406-heavy-real-subagent-boundary.md` | 真实 Sub-agent/WebSearch/WebFetch：output declaration → delegated complete → ledger → content_dedup；无 real-agent surface 时记录 NOT RUN，不算 PASS |
-| G27 evidence-extraction | case-163 | `exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md` | 真实 Agent/Sub-agent canary：rerun action:add → _cache 三文件 leaf → slot result cache_trails → Engine ledger → gate cache_coverage → 质量指标；无 Agent 时 NOT RUN |
+| G25 engine-boundary | case-406 | `exp_engine-boundary/case-406-heavy-real-subagent-boundary.md` | 真实 Sub-agent/WebSearch/WebFetch canary：work-unit task/beacon/receipt/result → submit → ledger → content_dedup；无 real result 时 NOT RUN |
+| G27 evidence-extraction | case-163 | `exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md` | 真实 Agent/Sub-agent canary：rerun action:add → _cache 三文件 leaf → work-unit result cache_trails → submitted ledger → gate/reentry quality metrics；无 Agent 时 NOT RUN |
+
+### Legacy/backlog（默认跳过；明确点名才跑或迁移）
+
+这些 case 仍保留为历史对照、未迁移实验或后续迁移 backlog。它们可能依赖已移除的 relay CLI/engine、旧 queue slot shape、旧 hand-written ledger row，或旧 JS helper。不要把这些 case 的 FAIL 当作当前 work-unit production path 失败；也不要把这些 case 的 PASS 当作当前机制证明。
+
+| Group | Case ID | Playbook | 为什么默认跳过 |
+|-------|---------|----------|----------------|
+| G4 agentic-queue | case-41 | `exp_agentic-queue/case-41-light-minimal-path.md` | 旧 queue demand `work_id` + top-level slot/current projection；待 queue v2 playbook rewrite |
+| G4 agentic-queue | case-42 | `exp_agentic-queue/case-42-standard-urgent-preemption.md` | 旧 active-window slot shape；待 queue v2 preemption playbook rewrite |
+| G4 agentic-queue | case-43 | `exp_agentic-queue/case-43-standard-failure-repair.md` | 旧 slot promotion/repair shape；待 queue v2 repair playbook rewrite |
+| G7 system-logging | case-72 | `exp_system-logging/case-72-standard-engine-lifecycle.md` | imports removed subagent-relay helpers; work-unit lifecycle logging is covered by tests/current E2E |
+| G12 wave-gates | case-121 | `exp_wff_wave-gates/case-121-standard-wave0-happy.md` | hand-written old delegated ledger fields; Wave0 work-unit coverage is covered by `exp_wfn_wave0` |
+| G12 wave-gates | case-122 | `exp_wff_wave-gates/case-122-standard-wave1-boundary.md` | hand-written old delegated ledger fields; Wave1 work-unit coverage is covered by `exp_wfn_wave1` |
+| G12 wave-gates | case-125 | `exp_wff_wave-gates/case-125-light-dynamic-threshold.md` | hand-written old delegated ledger fields; threshold behavior needs work-unit fixture rewrite before rerun |
+| G12 wave-gates | case-126 | `exp_wff_wave-gates/case-126-light-style-switch.md` | hand-written old delegated ledger fields; style-switch gate fixture needs work-unit rewrite |
+| G15 wave-chain | case-154 | `exp_wff_wave-chain/case-154-standard-wave-review-surface.md` | review-surface fixture still has old delegated ledger fields; keep as follow-on rewrite target |
+| G26 file-observability | case-310 | `exp_file-observability/case-310-light-orphan-reference.md` | old delegated ledger row; work-unit file observability is covered by regression tests and current E2E |
+| G26 file-observability | case-311 | `exp_file-observability/case-311-light-file-explanation.md` | old queue control shape; needs v0.4 bundle fixture refresh |
+| G26 file-observability | case-312 | `exp_file-observability/case-312-light-wave2-action-add.md` | old queue control shape; needs v0.4 bundle fixture refresh |
+| G50 handoff-witnessing | case-501 JS | `exp_handoff-witnessing/case-501-standard-handoff-witnessing.mjs` | legacy JS helper writes old delegated ledger/slot artifacts; MD playbook remains the current runner surface |
+| G6 subagent | case-61 | `exp_subagent/case-61-heavy-single-intake.md` | old `stageSubagentSlots` path; replaced by work-unit real-agent canaries |
+| G6 subagent | case-62 | `exp_subagent/case-62-heavy-drive-relay-provenance-sound.md` | old `drive-relay-slot` path; replaced by work-unit claim/submit canaries |
+| G6 subagent | case-66 | `exp_subagent/case-66-standard-drive-relay-staged-not-committed.md` | old relay staged-not-committed negative; replacement diagnostics live in work-unit submit/late/timeout cases |
 
 ### Human（需人类交互/判断，不能自动化，必须手动跑）
 

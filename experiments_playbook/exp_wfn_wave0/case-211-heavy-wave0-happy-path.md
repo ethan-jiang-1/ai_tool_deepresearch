@@ -3,437 +3,184 @@ schema: command-experiment/v1
 experiment: wfn-wave0
 case: case-211-heavy-wave0-happy-path
 weight: heavy
-case_goal: "验证 Agent 从 seed_topics → wave0 queue-loop → sub-agent 真实搜索 → backfill → gate pass 的完整顺利路径"
+case_goal: "验证真实 Wave0 source-intake Agent 结果只能通过 work-unit submit → ledger → Wave0 gate 形成 PASS；无真实结果时记录 NOT_RUN。"
 runner: coding-agent
+agent_mode: native-subagent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-211_agql_w0_happy_
-trace: dpt_disp_case-211_agql_w0_happy_*/rb_trace.jsonl
+bundle: dpt_disp_case-211_w0_real_agent_work_unit
+trace: dpt_disp_case-211_w0_real_agent_work_unit/rb_trace.jsonl
 verdict: trace-jsonl
-req: AGQ-008
+req: RWE-001
 ---
 
 ## Execution Contract
 
-由 coding agent 在真实 disposable experiment bundle 中执行。所有产出必须来自实际的 CLI 调用、文件写入和 gate 输出。禁止 mock 返回、跳过 queue、手写假 trace。
+Heavy real-Agent case. PASS requires a real `dpt-source-intake` actor to execute the generated work-unit task and produce a real result JSON, runtime receipt, declared output files, and cache trails. Fixture output, hand-written ledger rows, and hand-written fake search cache cannot produce PASS.
+
+Without a real Agent result, this case records `NOT_RUN` and exits `2`. `NOT_RUN` is explicit deferred evidence, not PASS.
+
+## Reality Distance Ledger
+
+| Dimension | Statement |
+| --- | --- |
+| Runtime context | Real disposable bundle from `experiments_env/shared/new-disposable-bundle.mjs` |
+| Framework path | Real `operate-queue enqueue`, `operate-work-unit claim`, `operate-work-unit submit`, `operate-work-unit inspect`, and Wave0 gate CLI |
+| Fixture input | None for PASS |
+| Agent actor | Required for PASS |
+| External calls | Required for PASS: real WebSearch/WebFetch or approved fetch degradation chain |
+| Ledger generation | Real `operate-work-unit submit` |
+| Verdict source | Trace JSONL checks, submit JSON, inspect JSON, gate JSON |
+| No-real-agent rule | Record NOT_RUN, preserve bundle, do not mark PASS |
 
 # case-211-heavy-wave0-happy-path
 
-完整顺利路径：bundle → seed_topics 物化 → wave0 enqueue → claim → sub-agent 真实 WebSearch+WebFetch → complete → backfill → gate pass → verify。
-
-
 ## Expected Runtime Path
 
-1. 创建 disposable bundle + 物化 seed_topics [MAIN/SHELL]
-2. Enqueue wave0 source_intake task cards [MAIN/SHELL]
-3. Claim → spawn dpt-source-intake sub-agent 真实搜索 [MAIN→SUBAGENT]
-4. Complete → backfill __BACKFILL_WAVE0_EVIDENCE__ → gate pass [MAIN/SHELL]
-5. 从 trace 裁决 + Cleanup
+1. Create a disposable Wave0 bundle and scaffold one real source-intake topic.
+2. Enqueue one Wave0 delegated queue demand.
+3. Claim one work unit through `operate-work-unit claim` and read the generated task/prompt refs.
+4. A real Agent executes the work-unit task using WebSearch/WebFetch and writes its own result/receipt/output/cache evidence.
+5. Submit the real result through `operate-work-unit submit`.
+6. Run Wave0 gate and `operate-work-unit inspect`.
+7. Record trace checks and produce PASS only from submitted ledger/gate/inspect evidence.
+8. If no real result exists, record `NOT_RUN` and preserve the bundle.
 
-## Phase 1: 创建 bundle + 物化 seed_topics
+## Step 1: [MAIN/SHELL] Create Runtime Context
 
 ```bash
-REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs agql_w0_happy --case case-211 --force)
-echo "Bundle: $B"
-node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w0_real_agent_work_unit --case case-211 --force)
+node --input-type=module - "$B" <<'JS'
+import { writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-# Write rb_plan.md with topic_registry
-cat > $B/rb_plan.md << 'PLANEOF'
----
-{
-  "plan_basename": "agql_w0_happy",
-  "derived_topic_count": 1,
-  "topic_registry": [
-    {
-      "id": "t-claude-code",
-      "slug": "claude-code-cli-tool",
-      "title": "Claude Code CLI 工具"
-    }
-  ]
-}
----
-# Research Plan: Wave0 Happy Path
-PLANEOF
-
-cat > $B/rb_profile.yaml << 'PROFEOF'
-root_must_answer_set:
-  - "Claude Code CLI 的工具能力和使用场景是什么？"
-research_profile:
-  depth: foundation
-  scope: "验证 wave0 queue-loop happy path"
-PROFEOF
-
-cat > $B/rb_status.json << 'EOF'
-{
-  "current_mode": "execution",
-  "state": "in_progress",
-  "current_gate": "wave0_complete",
-  "next_gate": "wave1_complete"
-}
-EOF
-
-mkdir -p $B/artifacts/wave0/claude-code-cli-tool $B/reference $B/seed_topics
+writeWave0Scaffold(process.argv[2], {
+  planBasename: 'w0_real_agent_work_unit',
+  topics: [{ id: 't1', slug: 'agentic-coding-tools', title: 'Agentic coding tools' }],
+  referenceRows: ['| 00-shared-agentic-coding-tools.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |']
+});
+JS
+node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
+node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
+echo "BUNDLE=$B"
 ```
 
-### Materialize seed topic
+Expected: validate/inspect pass and no delegated work is complete.
 
-按 `phase-seed-topics.md` §3.1 文件结构创建 `seed_topics/claude-code-cli-tool.md`（含 search_guardrails 驱动后续搜索）：
+## Step 2: [MAIN/SHELL] Enqueue And Claim Work Unit
 
 ```bash
-cat > $B/seed_topics/claude-code-cli-tool.md << 'SEEDEOF'
----
-id: "t-claude-code"
-slug: "claude-code-cli-tool"
-title: "Claude Code CLI 工具"
-must_answer:
-  - "Claude Code CLI 的核心工具能力和使用场景是什么？"
-hypothesis: "Claude Code 是 Anthropic 面向开发者的终端原生 agentic coding 工具"
-in_scope: "工具能力、使用场景、版本演进、竞品差异"
-out_of_scope: "API 定价、模型训练细节、非 CLI 产品"
-search_guardrails:
-  required_terms:
-    - "Claude Code CLI"
-    - "Anthropic"
-  forbidden_broadening:
-    - "通用 AI 编程工具"
-evidence_route:
-  preferred_sources:
-    - "Anthropic 官方文档"
-    - "权威技术媒体 (DevOps.com, VentureBeat, SitePoint)"
-  noise_to_avoid:
-    - "个人博客"
----
-# Claude Code CLI 工具
+node --input-type=module - "$B" <<'JS'
+import { enqueueWorkUnitTask, queueItemForWorkUnit } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-## 主题定位
-Agentic CLI coding tool by Anthropic。Wave0 foundation reference collection 入口。
+const bundle = process.argv[2];
+const task = queueItemForWorkUnit({
+  queue_item_id: 'wave0-source-agentic-coding-tools',
+  topic_slug: 'agentic-coding-tools',
+  title: 'Real Wave0 source intake'
+});
+const enqueue = enqueueWorkUnitTask(bundle, task, { fileName: 'case211-real-task.json' });
+console.log(JSON.stringify(enqueue, null, 2));
+JS
 
-## must_answer
-1. Claude Code CLI 的核心工具能力和使用场景是什么？
-
-## 初始假设、缺口或张力
-**已知**：终端原生 agentic coding 工具，sub-agent/MCP/hooks。
-**缺口**：版本迭代历史、动态工作流性能、竞品系统对比。
-**张力**：闭源 vs 透明度；token 消耗 vs ROI。
-
-## why now
-- 2026年5月动态工作流发布
-- AI 编程工具市场竞争加剧
-
-## 研究边界与不深挖范围
-**在范围内**：工具能力、使用场景、版本里程碑、竞品差异
-**不深挖**：模型训练细节、企业采购、通用市场趋势
-
-## 证据锚点与优先来源
-- Anthropic 官方文档 — 最高可信度
-- DevOps.com / VentureBeat / SitePoint — 技术媒体
-
-## 为什么对最终交付物重要
-提供 Claude Code CLI 能力边界的事实基座。
-
----
-
-## ═══ 研究轮次追加区 ═══
-
-## 历史摘要
-*(seed-topics: 本 topic 为新建)*
-
-## 本轮新增证据
-__BACKFILL_WAVE0_EVIDENCE__
-
-## 本轮新增机制理解
-__BACKFILL_WAVE1_MECHANISMS__
-
-## 本轮新增趋势与难点
-__BACKFILL_WAVE1_TRENDS__
-
-## 当前判断
-__BACKFILL_WAVE2_JUDGMENT__
-
-## 待验证问题
-__BACKFILL_PENDING_QUESTIONS__
-SEEDEOF
-
-echo "seed_topics materialized: $(ls $B/seed_topics/)"
+CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1)
+printf '%s\n' "$CLAIM_JSON" > "$B/case-211-claim.json"
+WORK_ID=$(printf '%s\n' "$CLAIM_JSON" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.claimed_work_ids[0]);')
+printf '%s\n' "$CLAIM_JSON" | node -e '
+const j = JSON.parse(require("fs").readFileSync(0, "utf8"));
+console.log(`claimed_count=${j.claimed_count}`);
+console.log(`work_id=${j.claimed_work_ids[0]}`);
+console.log(`prompt_ref=${j.claimed?.[0]?.prompt_ref || j.prompt_refs?.[0] || "see work-unit envelope"}`);
+process.exit(j.claimed_count === 1 ? 0 : 1);
+'
 ```
 
-预期：`seed_topics/claude-code-cli-tool.md` 存在，frontmatter 含 id/slug/title/search_guardrails，正文含 `__BACKFILL_WAVE0_EVIDENCE__` 占位符。
+Expected: one `wave0_source_intake` work unit is claimed. The controller must read the claim JSON and generated work-unit envelope before dispatching the Agent.
 
-## Phase 2: Wave0 Queue-Driven Source Intake
+## Step 3: [MAIN->AGENT] Produce Real Agent Result
 
-### Step 1 — Enqueue task card
+A real project Agent must execute the generated work-unit task from `_work_units/wave0/$WORK_ID/task.md`, obey its manifest, beacon, result schema, receipt nonce, output declaration, and cache policy.
+
+Expected real runtime evidence:
+
+- A result JSON matching the claimed `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
+- A runtime receipt event with the same `receipt_nonce`.
+- Declared `output_files[]` including at least the Wave0 reference and per-topic `source.yaml`.
+- Declared `cache_trails[]` with cache metadata that maps to the reference `source_url`.
+- No hand-written ledger row.
+
+## Step 4: [MAIN/SHELL] No-Result Checkpoint
+
+If no real result exists yet, record `NOT_RUN` and stop. This proves the heavy case cannot pass on missing Agent evidence.
 
 ```bash
-cat > /tmp/wfq-task-claude-code-cli-tool.json << 'EOF'
-{
-  "work_id": "wave0-source-claude-code-cli-tool",
-  "title": "Source intake: Claude Code CLI 工具",
-  "targets": { "controller": "main-agent", "delegates": { "to": "sub-agent", "role_key": "dpt-source-intake", "timeout_ms": 600000 } },
-  "action": "搜索 Claude Code CLI 的 foundation reference。从 seed_topics/claude-code-cli-tool.md 的 search_guardrails 派生搜索关键词。使用 WebSearch + WebFetch 获取真实来源。写入 artifacts/wave0/claude-code-cli-tool/source.yaml（YAML 数组，每条含 url/title/retrieved_date/topic_tag）。搜索过程和中间结果写入 relay slot 目录（_cache/wave0/slot_MM/），sub-agent 只写自己的 slot 目录，Phase Agent 通过 relay 收集结果。",
-  "producer_rule": "source_intake_fan_in",
-  "lineage": {"topic_slug": "claude-code-cli-tool", "phase": "wave0"},
-  "priority_class": "P5_new_reference_intake",
-  "required_receipts": ["file:artifacts/wave0/claude-code-cli-tool/source.yaml"],
-  "done_condition": "source.yaml 存在且通过 schema 校验，至少含 1 条 reference",
-  "verification": {"engine": ["receipt_check"], "agent": ["url_accessible", "title_matches_page"]},
-  "writes_to": ["artifacts/wave0/claude-code-cli-tool/source.yaml"],
-  "status_sync": ["wave0_intake"],
-  "completion_receipt": "file:artifacts/wave0/claude-code-cli-tool/source.yaml",
-  "failure_route": "queue_repair",
-  "payload": {"topic_slug": "claude-code-cli-tool", "topic_title": "Claude Code CLI 工具"}
-}
-EOF
-
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task /tmp/wfq-task-claude-code-cli-tool.json
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-211 --target-dir tests/.test-bundles
 ```
 
-### Step 2 — Claim + sub-agent 真实搜索
+Expected without `--real-result`: exit `2`, report `verdict: "NOT_RUN"`, and preserve the bundle.
+
+## Step 5: [MAIN/SHELL] Submit Real Result And Gate
+
+Run only after Step 3 has produced a real Agent result file.
 
 ```bash
-# Claim
-CLAIM=$(node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent)
-echo "$CLAIM" | node -e "const d=require('fs').readFileSync('/dev/stdin','utf-8');const j=JSON.parse(d);console.log('claimed:', j.item.work_id, 'targets.controller:', j.item.targets.controller, 'delegates:', j.item.targets.delegates?.role_key, 'advice.delegates_required:', j.advice?.delegates_required)"
-# 预期: claimed: wave0-source-claude-code-cli-tool targets.controller: main-agent delegates: dpt-source-intake advice.delegates_required: true
+REAL_RESULT=<result.json>
+SUBMIT_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$REAL_RESULT")
+printf '%s\n' "$SUBMIT_JSON" > "$B/case-211-submit.json"
+
+set +e
+node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-211-gate.json"
+GATE_STATUS=$?
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect "$B" > "$B/case-211-inspect.json"
+INSPECT_STATUS=$?
+set -e
+printf '%s\n' "$GATE_STATUS" > "$B/case-211-gate.status"
+printf '%s\n' "$INSPECT_STATUS" > "$B/case-211-inspect.status"
 ```
 
-Agent 通过 `shared-subagent-protocol.md` §3 批量并行协议启动 sub-agent：
-- Sub-agent 收到 relay slot 的 `task.md` + `result.schema.json`（bounded 上下文）
-- 使用 WebSearch 搜索 "Claude Code CLI tool Anthropic features capabilities"
-- 使用 curl/WebFetch 获取至少 1 条可信来源的完整页面
-- 提取 url/title/retrieved_date/topic_tag 写入 source.yaml
-- 搜索中间结果写入 relay slot 目录 `_cache/wave0/slot_MM/`
-- 返回结构化 JSON 给 Phase Agent → Phase Agent 调用 `ingestAgentReceipt` + `commitSlotResult` 验证
-- Phase Agent 只读 result.json，不读 sub-agent 原始搜索 trail
+Expected: submit `ok: true`, gate `check.passed: true`, and inspect `passed: true`.
+
+## Step 6: [MAIN/SHELL] Record Verdict Checks
 
 ```bash
-# Sub-agent 产出验证
-echo "=== source.yaml ===" && cat $B/artifacts/wave0/claude-code-cli-tool/source.yaml
-echo "=== relay slot dirs ===" && ls $B/_subagents/ 2>/dev/null || echo "(slots managed by relay)"
+node --input-type=module - "$B" "$WORK_ID" <<'JS'
+import { readFileSync } from 'node:fs';
+import { recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const [bundle, workId] = process.argv.slice(2);
+const submit = JSON.parse(readFileSync(`${bundle}/case-211-submit.json`, 'utf8'));
+const gate = JSON.parse(readFileSync(`${bundle}/case-211-gate.json`, 'utf8'));
+const inspect = JSON.parse(readFileSync(`${bundle}/case-211-inspect.json`, 'utf8'));
+
+recordPlaybookCheck(bundle, { gate: 'real-submit', passed: submit.ok === true, detail: workId });
+recordPlaybookCheck(bundle, { gate: 'wave0-gate', passed: gate.check?.passed === true, detail: JSON.stringify(gate.inspect || []) });
+recordPlaybookCheck(bundle, { gate: 'work-unit-inspect', passed: inspect.passed === true, detail: JSON.stringify(inspect.inspect || []) });
+
+const verdict = writeTraceVerdict(bundle, 'case-211');
+console.log(JSON.stringify(verdict, null, 2));
+process.exit(verdict.ok ? 0 : 1);
+JS
 ```
 
-### Step 3 — Complete
+Expected: PASS only with real Agent result submitted through the work-unit boundary.
+
+## Step 7: [MAIN] Result Interpretation
+
+PASS means a real Wave0 source-intake actor completed the same claim/submit/ledger/gate path used by production. NOT_RUN means real Agent behavior remains unproven. FAIL means the preserved bundle contains the submit, inspect, gate, and trace feedback needed for repair.
+
+## Step 8: [MAIN/SHELL] Cleanup
+
+PASS only:
 
 ```bash
-cat > /tmp/wfq-result-wave0-source-claude-code-cli-tool.json << 'EOF'
-{
-  "work_id": "wave0-source-claude-code-cli-tool",
-  "status": "done",
-  "receipt": "file:artifacts/wave0/claude-code-cli-tool/source.yaml",
-  "summary": "source intake complete: N real references from WebSearch + WebFetch",
-  "writes": ["artifacts/wave0/claude-code-cli-tool/source.yaml"]
-}
-EOF
-
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result /tmp/wfq-result-wave0-source-claude-code-cli-tool.json
-
-# 验证 queue 空
-node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent | node -e "const d=require('fs').readFileSync('/dev/stdin','utf-8');const j=JSON.parse(d);console.log('item:', j.item ? 'non-null' : 'null (expected)')"
+node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-211-verdict.json"
+rm -rf "$B"
 ```
 
-预期：complete feedback.passed: true，claim 返回 item: null。
+FAIL and NOT_RUN preserve the bundle.
 
-## Phase 3: Backfill — 回填 seed topic
-
-wave0 source intake 完成后，必须回填 seed topic。走 queue：enqueue backfill task → claim → execute（替换 `__BACKFILL_WAVE0_EVIDENCE__` 为实际 ref）→ complete。
+## Optional Automation Smoke
 
 ```bash
-# Enqueue backfill task
-cat > /tmp/wfq-backfill-claude-code-cli-tool.json << 'EOF'
-{
-  "work_id": "backfill-wave0-claude-code-cli-tool",
-  "title": "Backfill wave0 evidence to seed topic: Claude Code CLI 工具",
-  "targets": { "controller": "main-agent" },
-  "action": "读取 artifacts/wave0/claude-code-cli-tool/source.yaml，回填到 seed_topics/claude-code-cli-tool.md 的 ## 本轮新增证据，替换 __BACKFILL_WAVE0_EVIDENCE__。",
-  "producer_rule": "backfill_wave0_evidence",
-  "lineage": {"topic_slug": "claude-code-cli-tool", "phase": "wave0", "trigger": "wave0_complete"},
-  "priority_class": "P2_close_open_loop",
-  "required_receipts": ["trace:gate_attempt"],
-  "done_condition": "__BACKFILL_WAVE0_EVIDENCE__ 已被替换为实际 ref 列表",
-  "verification": {"engine": ["receipt_check"], "agent": ["placeholder_removed", "ref_count_matches"]},
-  "writes_to": ["seed_topics/claude-code-cli-tool.md"],
-  "status_sync": ["wave0_backfill"],
-  "completion_receipt": "none",
-  "failure_route": "queue_repair",
-  "payload": {"topic_slug": "claude-code-cli-tool", "phase": "wave0"}
-}
-EOF
-
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task /tmp/wfq-backfill-claude-code-cli-tool.json
-
-# Claim
-node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent | node -e "const d=require('fs').readFileSync('/dev/stdin','utf-8');const j=JSON.parse(d);console.log('claimed:', j.item.work_id)"
-
-# Execute: 替换占位符为真实 evidence
-# Agent 读取 source.yaml → 替换 __BACKFILL_WAVE0_EVIDENCE__
-
-# Verify 占位符已清除
-grep -q '__BACKFILL_WAVE0_EVIDENCE__' $B/seed_topics/claude-code-cli-tool.md && echo "FAIL: placeholder still present" || echo "PASS: placeholder removed"
-
-# Complete
-cat > /tmp/wfq-result-backfill-claude-code-cli-tool.json << 'EOF'
-{
-  "work_id": "backfill-wave0-claude-code-cli-tool",
-  "status": "done",
-  "receipt": "none",
-  "summary": "backfill complete: __BACKFILL_WAVE0_EVIDENCE__ replaced with refs from source.yaml",
-  "writes": ["seed_topics/claude-code-cli-tool.md"]
-}
-EOF
-
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result /tmp/wfq-result-backfill-claude-code-cli-tool.json
-```
-
-预期：complete feedback.passed: true。
-
-## Phase 4: Gate + Verify
-
-```bash
-# Write reference/_INDEX.md
-cat > $B/reference/_INDEX.md << 'EOF'
-# Reference Index
-
-## claude-code-cli-tool
-- N foundation references (real WebSearch + WebFetch)
-EOF
-
-# ── Machinery: 00-shared reference, README, ledger, subagent slots ──
-
-# reference/README.md (gate: reference_readme_exists)
-cat > $B/reference/README.md << 'READMEEOF'
-# Reference Directory
-
-Flat reference directory for foundation sources collected during Wave0.
-
-## Convention
-- `00-shared-*.md`: cross-topic shared foundation references
-- `_INDEX.md`: canonical Markdown table inventory of all reference files
-- `README.md`: this file
-
-## Source Layers
-- wave0: foundation reference intake (source_intake_fan_in)
-READMEEOF
-
-# reference/00-shared-*.md (gate: shared_ref_count_floor >= 1)
-cat > "$B/reference/00-shared-claude-code.md" << 'SHAREDEOF'
-# Claude Code CLI — Shared Foundation Reference
-
-## Metadata
-- source_url: "https://docs.anthropic.com/en/docs/claude-code/overview"
-- topic_tag: "shared"
-- source_layer: "wave0"
-- trust_tier: "primary"
-- retrieved_date: "2026-07-05"
-- acceptance_status: "accepted"
-- related_topic: "claude-code-cli-tool"
-- ref_file: "00-shared-claude-code.md"
-
-## Key Facts
-1. Claude Code is Anthropic's agentic coding tool, launched as a CLI
-2. Supports sub-agent architecture, MCP integration, and hooks system
-3. Dynamic Workflow feature (May 2026) allows adaptive parallelism 1-5 sub-agents
-4. Terminal-native design distinguishes it from IDE-first competitors
-5. Uses Claude Opus/Sonnet models for agentic coding tasks
-SHAREDEOF
-
-# ── Output declaration ledger (gate: wave0_ledger_exists + wave0_output_coverage) ──
-mkdir -p "$B/_subagents/wave_00/slot_00"
-TS=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
-cat > "$B/rb_output_declarations.jsonl" << LEDGEREOF
-{"declared_at":"$TS","work_id":"wave0-source-claude-code-cli-tool","producer_rule":"source_intake_fan_in","slot_result_ref":"_subagents/wave_00/slot_00/result.json","runtime_receipt_ref":"_subagents/wave_00/slot_00/runtime-receipt.jsonl","output_files":[{"path":"artifacts/wave0/claude-code-cli-tool/source.yaml","role":"source_yaml"},{"path":"reference/00-shared-claude-code.md","role":"reference","source_url":"https://docs.anthropic.com/en/docs/claude-code/overview"}],"cache_trails":[],"creation_reason":"Delegated: Source intake: Claude Code CLI 工具 — source intake complete: N real references from WebSearch + WebFetch"}
-LEDGEREOF
-
-# ── Subagent slot artifacts (gate: wave0_subagent_slots) ──
-cat > "$B/_subagents/wave_00/slot_00/_status.json" << STATEOF
-{"status":"done","updated":"$TS"}
-STATEOF
-cat > "$B/_subagents/wave_00/slot_00/result.json" << RESULTEOF
-{"slotKey":"source_intake","roleAgentKey":"dpt-source-intake","status":"done","summary":"Source intake: 1 real reference from WebSearch + WebFetch","evidenceCount":1,"references":[],"confidence":0.8,"notes":[],"output_files":[{"path":"artifacts/wave0/claude-code-cli-tool/source.yaml","role":"source_yaml"},{"path":"reference/00-shared-claude-code.md","role":"reference","source_url":"https://docs.anthropic.com/en/docs/claude-code/overview"}]}
-RESULTEOF
-cat > "$B/_subagents/wave_00/slot_00/runtime-receipt.jsonl" << RECEIPTEOF
-{"event":"agent_runtime_started","slotKey":"source_intake","roleAgentKey":"dpt-source-intake","receiptNonce":"nonce-211-001","ts":"$TS"}
-{"event":"agent_result_ready","slotKey":"source_intake","roleAgentKey":"dpt-source-intake","receiptNonce":"nonce-211-001","ts":"$TS"}
-RECEIPTEOF
-
-echo "=== Machinery: 00-shared, README, ledger, slot_00 ready ==="
-
-# Run gate
-# Phase-agent obligation (phase-wave0.md): write wave0_completion before the wave0-complete gate
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle $B --event wave0_completion
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave0-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle $B --current-node phases/phase-wave0.md)
-echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "=== PASSED=$PASSED (expected: true) ==="
-test "$PASSED" = "true" && echo "PASS: gate passed" || echo "FAIL"
-
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'wave0-complete',passed:$PASSED,detail:'happy path: seed_topics→wave0 queue-loop→sub-agent real search→backfill→gate pass'})})"
-```
-
-预期：`check.passed: true`，`check.next: phases/phase-wave1.md`。
-
-### Verify outputs
-
-```bash
-echo "=== V1: source.yaml ==="
-test -s $B/artifacts/wave0/claude-code-cli-tool/source.yaml && echo "V1 PASS" || echo "V1 FAIL"
-
-echo "=== V2: ref count ==="
-REF_COUNT=$(grep -c 'url:' $B/artifacts/wave0/claude-code-cli-tool/source.yaml)
-echo "refs: $REF_COUNT"
-test "$REF_COUNT" -ge 1 && echo "V2 PASS" || echo "V2 FAIL"
-
-echo "=== V3: required fields ==="
-for f in url title retrieved_date topic_tag; do
-  grep -q "$f" $B/artifacts/wave0/claude-code-cli-tool/source.yaml && echo "  $f ✓" || echo "  $f ✗"
-done
-
-echo "=== V4-V6: queue trace events ==="
-grep -c 'queue_' $B/rb_trace.jsonl
-
-echo "=== V7: gate_attempt in rb_trace.jsonl ==="
-grep -c 'gate_attempt' $B/rb_trace.jsonl
-
-echo "=== V8: backfill done ==="
-grep -q '__BACKFILL_WAVE0_EVIDENCE__' $B/seed_topics/claude-code-cli-tool.md && echo "V8 FAIL" || echo "V8 PASS"
-
-echo "=== V9: relay slot directories populated ==="
-find $B/_subagents -type d 2>/dev/null | head -10
-echo "=== V9b: cache dirs ==="
-find $B/_cache -type d 2>/dev/null | head -10
-```
-
-全部 V1-V9 应 PASS。
-
-## Final Verdict
-
-```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
-```
-
-预期：PASS。
-
-
-## Step 5: 结果解读
-
-> 验证完整 wave0 链路：
->   sub-agent 真实搜索 → 写入 source.yaml → backfill 替换 __BACKFILL_WAVE0_EVIDENCE__ → gate pass。
->   需要 sub-agent receipt 存在、source.yaml 存在、backfill token 消失、gate check.passed=true。
-
-
-## Step HH: Post-Execution Health
-
-Heavy profile — gate diagnostics, timeline consistency, ledger, receipts, cache trails, dedup evidence.
-
-```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile heavy
-```
-
-> 健康检查不改变 verdict。health status 由 runner report 记录。
-
-## Step 6: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-211
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-211 --real-result <result.json> --cleanup-pass
 ```

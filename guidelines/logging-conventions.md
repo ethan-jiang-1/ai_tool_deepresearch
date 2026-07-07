@@ -45,7 +45,7 @@ siblings:
 |------|------|--------|
 | `createLogger({ file, level, bundle })` | 底层 logger factory | 不直接使用 |
 | `logToRun(bundlePath, level, msg, detail?)` | 一次性写入，永不抛错 | gate CLI, instantiate-run-bundle |
-| `createRunLogger(bundlePath)` | 返回 `{ info, warn, error, debug }` | queue-manager, subagent-relay |
+| `createRunLogger(bundlePath)` | 返回 `{ info, warn, error, debug }` | queue-manager, work-unit lifecycle, gates |
 | `readBundleName(bundlePath)` | 从 `rb_status.json` 读 `bundle` | 所有调用点 |
 
 ### Agent (`.md` phase node)
@@ -69,7 +69,7 @@ Agent 从 `## Log` 段复制命令，不需要知道文件路径或格式。
 
 | Level | 含义 | 典型场景 |
 |-------|------|---------|
-| `DEBUG` | 内部机制 | cache hit, slot refill |
+| `DEBUG` | 内部机制 | cache hit, work-unit retry/refill |
 | `INFO` | 正常运行时 | gate PASS, phase START/END, enqueue |
 | `WARN` | 可恢复异常 | gate FAIL, receipt 缺失, repair |
 | `ERROR` | 非预期故障 | 文件未找到, schema 校验失败 |

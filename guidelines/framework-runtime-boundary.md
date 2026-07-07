@@ -320,5 +320,5 @@ Runtime continuity and logging details live in `guidelines/logging-conventions.m
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; defines the three-tier execution system.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — outer loop (Chain) that phase routing depends on.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Tier 2 (Queue) for within-phase task execution.
-- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — Tier 3 (Relay) for within-task sub-agent dispatch.
+- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — work-unit-mediated Sub-agent execution and submit provenance.
 - [Command Experiments](command-experiments.md) — how to prove mechanisms with real runtime contexts.

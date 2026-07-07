@@ -15,7 +15,14 @@ import {
   listMatchingBundleFiles,
   checkReferenceFormatFiles,
   checkReferenceLedgerCoverage,
+  checkCacheCoverage,
 } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import {
+  claimAndSubmitWorkUnit,
+  cleanupWorkUnitBundle,
+  referenceContent,
+  tempWorkUnitBundle,
+} from '../work-unit-test-helpers.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-gate-helpers-checks-tmp');
@@ -259,6 +266,66 @@ describe('reference file gate helpers', () => {
       assert.ok(result.inspect.some((i) => i.includes('not declared')));
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('cache coverage work-unit authority', () => {
+  it('passes when a submitted work-unit ledger row declares a mapped cache leaf', () => {
+    const dir = tempWorkUnitBundle('gh-cache-pass-');
+    try {
+      claimAndSubmitWorkUnit(dir, {
+        outputs: [{
+          path: 'reference/topic-a-source.md',
+          role: 'reference',
+          source_url: 'https://example.com/research/topic-a',
+          source_slug: 's01_source',
+          content: referenceContent({ source_url: 'https://example.com/research/topic-a' }),
+        }],
+        cacheTrails: [{
+          path: '_cache/wave0/primary/topic-a/s01_source',
+          url: 'https://example.com/research/topic-a',
+        }],
+      });
+      const result = checkCacheCoverage(dir);
+      assert.equal(result.passed, true, result.inspect.join('; '));
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
+  });
+
+  it('fails when raw reference declarations exist without submitted work-unit rows', () => {
+    const dir = join(__dirname, '.test-gh-cache-raw');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'rb_output_declarations.jsonl'), `${JSON.stringify({
+      work_id: 'w1',
+      output_files: [{ path: 'reference/a.md', role: 'reference', source_url: 'https://example.com/research/a' }],
+      cache_trails: ['_cache/wave0/primary/a/s01_source'],
+    })}\n`);
+    try {
+      const result = checkCacheCoverage(dir);
+      assert.equal(result.passed, false);
+      assert.ok(result.inspect.some((line) => line.includes('none are submitted work-unit ledger rows')));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('fails when submitted cache trail files drift after submit', () => {
+    const dir = tempWorkUnitBundle('gh-cache-drift-');
+    try {
+      claimAndSubmitWorkUnit(dir, {
+        cacheTrails: [{
+          path: '_cache/wave0/primary/topic-a/s01_source',
+          url: 'https://example.com/research/article',
+        }],
+      });
+      rmSync(join(dir, '_cache/wave0/primary/topic-a/s01_source/meta.json'), { force: true });
+      const result = checkCacheCoverage(dir);
+      assert.equal(result.passed, false);
+      assert.ok(result.inspect.some((line) => line.includes('missing files: meta.json')));
+    } finally {
+      cleanupWorkUnitBundle(dir);
     }
   });
 });

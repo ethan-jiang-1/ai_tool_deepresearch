@@ -3,346 +3,218 @@ schema: command-experiment/v1
 experiment: engine-boundary
 case: case-402-light-complete-reject
 weight: light
-case_goal: "验证 delegated complete() 拒绝所有缺少 provenance 的场景：缺 slot_result_ref、缺 receipt、writes 无 output_files 声明、缺 cache file、nonce mismatch。"
+case_goal: "验证 invalid work-unit submit fail-closed：缺 receipt、缺 output、缺 cache、nonce mismatch、wrong work_id 均不写 ledger。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-402_eb_reject
-trace: dpt_disp_case-402_eb_reject/rb_trace.jsonl
+bundle: dpt_disp_case-402_eb_reject_work_unit
+trace: dpt_disp_case-402_eb_reject_work_unit/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
 ## Execution Contract
 
-fixture-backed、无 Agent actor、无外部调用。verdict 来自 Engine CLI 返回值和 trace。
+Fixture-backed, no Agent actor, no external calls. Each negative scenario must allocate a real work unit and call real `operate-work-unit submit`; failure is valid only when the CLI rejects the submit without queue completion or ledger append.
 
 ## Reality Distance Ledger
 
-| 维度 | 声明 |
-|------|------|
-| **Agent actor** | 无（fixture-backed） |
-| **外部调用** | 无 |
-| **verdict 来源** | CLI exit code + trace |
+| Dimension | Statement |
+| --- | --- |
+| Runtime context | Real disposable bundle from `experiments_env/shared/new-disposable-bundle.mjs` |
+| Framework path | Real `operate-queue enqueue`, `operate-work-unit claim`, and `operate-work-unit submit` |
+| Fixture input | Mutated fixture result/receipt/output/cache files after claim |
+| Agent actor | None; fixture-backed only |
+| External calls | None |
+| Rejection source | `operate-work-unit submit` JSON/exit code |
+| Ledger rule | Rejected submits must leave `rb_output_declarations.jsonl` empty |
+| Verdict source | Trace JSONL `check` events and runner report |
+| Does not prove | Agent repair quality or semantic research quality |
 
 # case-402-light-complete-reject
 
-6 个 reject 场景，覆盖 delegated `complete()` 的所有边界检查。
+## Expected Runtime Path
 
----
+1. Create a disposable bundle through shared setup.
+2. For each negative submit scenario, enqueue and claim a fresh delegated work unit.
+3. Stage one controlled defect in the claimed work-unit output surface.
+4. Call `operate-work-unit submit` and read its JSON/exit result.
+5. Confirm the attempt remains non-terminal and no submitted ledger row is appended.
+6. Record each rejection and the empty-ledger invariant as trace `check` events.
+7. Print PASS/FAIL and clean up only on PASS.
 
-## Step 1: 创建 Bundle + 公共 fixtures
+## Step 1: [MAIN/SHELL] Create Runtime Context
+
+Create a disposable bundle and Wave0 scaffold exactly as in `case-401`, then keep the bundle open while each negative scenario runs independently.
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_reject --case case-402 --force)
-echo "Bundle: $B"
-
-# Base queue setup
-cat > "$B/rb_status.json" << 'JSON'
-{"current_gate":"wave0_complete","next_gate":"wave1_complete","current_mode":"execution","state":"in_progress"}
-JSON
-cat > "$B/rb_plan.md" << 'MD'
----
-{
-  "plan_basename": "eb_reject",
-  "derived_topic_count": 1,
-  "topic_registry": [{ "id": "t1", "slug": "topic-a", "title": "Topic A" }]
-}
----
-# Plan
-MD
-
-# Common delegated task JSON
-cat > "$B/task.json" << 'JSON'
-{"work_id":"work-del","title":"Delegated","targets":{"controller":"main-agent","delegates":{"to":"sub-agent","role_key":"dpt-source-intake"}},"action":"test","producer_rule":"test","lineage":{},"priority_class":"P5_new_reference_intake","required_receipts":["none"],"done_condition":"test","verification":{"engine":[],"agent":[]},"writes_to":[],"status_sync":[],"completion_receipt":"none","failure_route":"test","payload":{}}
-JSON
-
-# Setup fixtures
-cat > "$B/setup.mjs" << 'JS'
-import { writeFileSync, mkdirSync } from 'node:fs';
-import path from 'node:path';
-const B = process.argv[2];
-
-// ── Slot A: missing receipt ──
-const sA = '_subagents/wave_01/slot_00';
-mkdirSync(path.join(B, sA), { recursive: true });
-writeFileSync(path.join(B, `${sA}/_status.json`), JSON.stringify({ status: 'running', updated: new Date().toISOString() }));
-writeFileSync(path.join(B, `${sA}/result.json`), JSON.stringify({
-  slotKey: 'sA', roleAgentKey: 'dpt-source-intake', status: 'done', summary: '', evidenceCount: 0,
-  references: [], confidence: 0, notes: [],
-  output_files: [{ path: 'reference/a.md', role: 'reference', source_url: 'https://a.com/article-a' }],
-  cache_trails: [],
-}, null, 2));
-mkdirSync(path.join(B, 'reference'), { recursive: true });
-writeFileSync(path.join(B, 'reference/a.md'), '# A');
-
-// ── Slot B: complete but missing declared output file ──
-const sB = '_subagents/wave_01/slot_01';
-mkdirSync(path.join(B, sB), { recursive: true });
-writeFileSync(path.join(B, `${sB}/_status.json`), JSON.stringify({ status: 'running', updated: new Date().toISOString() }));
-writeFileSync(path.join(B, `${sB}/runtime-receipt.jsonl`), [
-  JSON.stringify({ event: 'agent_runtime_started', slotKey: 'sB', roleAgentKey: 'dpt-source-intake', receiptNonce: 'nb' }),
-  JSON.stringify({ event: 'agent_result_ready', slotKey: 'sB', roleAgentKey: 'dpt-source-intake', receiptNonce: 'nb' }),
-].join('\n') + '\n');
-writeFileSync(path.join(B, `${sB}/result.json`), JSON.stringify({
-  slotKey: 'sB', roleAgentKey: 'dpt-source-intake', status: 'done', summary: '', evidenceCount: 0,
-  references: [], confidence: 0, notes: [],
-  output_files: [{ path: 'reference/missing.md', role: 'reference', source_url: 'https://b.com/article-b' }],
-  cache_trails: [],
-}, null, 2));
-
-// ── Slot C: incomplete cache leaf ──
-const sC = '_subagents/wave_01/slot_02';
-mkdirSync(path.join(B, sC), { recursive: true });
-writeFileSync(path.join(B, `${sC}/_status.json`), JSON.stringify({ status: 'running', updated: new Date().toISOString() }));
-writeFileSync(path.join(B, `${sC}/runtime-receipt.jsonl`), [
-  JSON.stringify({ event: 'agent_runtime_started', slotKey: 'sC', roleAgentKey: 'dpt-source-intake', receiptNonce: 'nc' }),
-  JSON.stringify({ event: 'agent_result_ready', slotKey: 'sC', roleAgentKey: 'dpt-source-intake', receiptNonce: 'nc' }),
-].join('\n') + '\n');
-const cDir = '_cache/wave0/primary/01_test/s01_broken';
-mkdirSync(path.join(B, cDir), { recursive: true });
-writeFileSync(path.join(B, `${cDir}/websearch.json`), '[]');
-writeFileSync(path.join(B, `${cDir}/page.md`), '# Page');
-// Intentionally omit meta.json
-writeFileSync(path.join(B, `${sC}/result.json`), JSON.stringify({
-  slotKey: 'sC', roleAgentKey: 'dpt-source-intake', status: 'done', summary: '', evidenceCount: 0,
-  references: [], confidence: 0, notes: [],
-  output_files: [],
-  cache_trails: [cDir + '/'],
-}, null, 2));
-
-// ── Slot D: nonce mismatch ──
-const sD = '_subagents/wave_01/slot_03';
-mkdirSync(path.join(B, sD), { recursive: true });
-writeFileSync(path.join(B, `${sD}/_status.json`), JSON.stringify({ status: 'running', updated: new Date().toISOString() }));
-writeFileSync(path.join(B, `${sD}/runtime-receipt.jsonl`), [
-  JSON.stringify({ event: 'agent_runtime_started', slotKey: 'sD', roleAgentKey: 'dpt-source-intake', receiptNonce: 'wrong-nonce-1' }),
-  JSON.stringify({ event: 'agent_result_ready', slotKey: 'sD', roleAgentKey: 'dpt-source-intake', receiptNonce: 'wrong-nonce-2' }),
-].join('\n') + '\n');
-writeFileSync(path.join(B, `${sD}/result.json`), JSON.stringify({
-  slotKey: 'sD', roleAgentKey: 'dpt-source-intake', status: 'done', summary: '', evidenceCount: 0,
-  references: [], confidence: 0, notes: [],
-  output_files: [],
-  cache_trails: [],
-}, null, 2));
-
-// ── Slot E: missing output_files[] and cache_trails[] ──
-const sE = '_subagents/wave_01/slot_04';
-mkdirSync(path.join(B, sE), { recursive: true });
-writeFileSync(path.join(B, `${sE}/_status.json`), JSON.stringify({ status: 'running', updated: new Date().toISOString() }));
-writeFileSync(path.join(B, `${sE}/runtime-receipt.jsonl`), [
-  JSON.stringify({ event: 'agent_runtime_started', slotKey: 'sE', roleAgentKey: 'dpt-source-intake', receiptNonce: 'ne' }),
-  JSON.stringify({ event: 'agent_result_ready', slotKey: 'sE', roleAgentKey: 'dpt-source-intake', receiptNonce: 'ne' }),
-].join('\n') + '\n');
-// result.json with NO output_files and NO cache_trails
-writeFileSync(path.join(B, `${sE}/result.json`), JSON.stringify({
-  slotKey: 'sE', roleAgentKey: 'dpt-source-intake', status: 'done', summary: '', evidenceCount: 0,
-  references: [], confidence: 0, notes: [],
-}, null, 2));
-
-// Trace
-writeFileSync(path.join(B, 'rb_trace.jsonl'), JSON.stringify({ ts: new Date().toISOString(), event: 'run_start', source: 'trace', label: 'case-402' }) + '\n');
-
-console.log('fixtures ready');
+B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_reject_work_unit --case case-402 --force)
+node --input-type=module - "$B" <<'JS'
+import { writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+writeWave0Scaffold(process.argv[2], { planBasename: 'eb_reject_work_unit' });
 JS
-node "$B/setup.mjs" $B
-: > "$B/outcomes.jsonl"
+echo "BUNDLE=$B"
 ```
 
-→ 预期：`fixtures ready`。
+Expected: the bundle path is printed. No delegated work has completed yet.
 
----
+## Step 2: [MAIN/SHELL] Run Rejection Checkpoints One At A Time
 
-## Step 2: 场景 A — 缺 slot_result_ref
-
-```bash
-# Fresh queue
-rm -f "$B/rb_queue.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task "$B/task.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
-cat > "$B/ra.json" << 'JSON'
-{"work_id":"work-del","receipt":"none"}
-JSON
-set +e
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/ra.json"
-sts=$?
-set -e
-if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" "A: no slot_result_ref" "$sts" 1
-```
-
-→ 预期：`EXPECTED REJECT`。
-
----
-
-## Step 3: 场景 B — 缺 runtime receipt
+Run each boundary scenario as its own claim -> fixture defect -> submit -> JSON feedback checkpoint. The loop below is visible controller flow: after each submit, read the Engine JSON and stop if the rejection reason is not the expected one.
 
 ```bash
-rm -f "$B/rb_queue.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task "$B/task.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
-cat > "$B/rb.json" << 'JSON'
-{"work_id":"work-del","receipt":"none","slot_result_ref":"_subagents/wave_01/slot_00/result.json"}
-JSON
-set +e
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rb.json"
-sts=$?
-set -e
-if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" "B: no receipt" "$sts" 1
-```
+for LABEL in missing-receipt missing-output missing-cache nonce-mismatch wrong-work-id; do
+  case "$LABEL" in
+    missing-receipt) EXPECTED_CODE=missing_receipt ;;
+    missing-output) EXPECTED_CODE=missing_output ;;
+    missing-cache) EXPECTED_CODE=missing_cache ;;
+    nonce-mismatch) EXPECTED_CODE=nonce_mismatch ;;
+    wrong-work-id) EXPECTED_CODE=wrong_work_id ;;
+  esac
 
-→ 预期：`EXPECTED REJECT`。
-
----
-
-## Step 4: 场景 C — writes 无 output_files 声明
-
-```bash
-rm -f "$B/rb_queue.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task "$B/task.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
-cat > "$B/rc.json" << 'JSON'
-{"work_id":"work-del","receipt":"none","writes":["reference/a.md"],"slot_result_ref":"_subagents/wave_01/slot_04/result.json"}
-JSON
-set +e
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rc.json"
-sts=$?
-set -e
-if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" "C: writes without output_files declaration" "$sts" 1
-```
-
-→ 预期：`EXPECTED REJECT`。
-
----
-
-## Step 5: 场景 D — 声明文件不存在
-
-```bash
-rm -f "$B/rb_queue.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task "$B/task.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
-cat > "$B/rd.json" << 'JSON'
-{"work_id":"work-del","receipt":"none","slot_result_ref":"_subagents/wave_01/slot_01/result.json"}
-JSON
-set +e
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rd.json"
-sts=$?
-set -e
-if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" "D: missing output file" "$sts" 1
-```
-
-→ 预期：`EXPECTED REJECT`。
-
----
-
-## Step 6: 场景 E — cache leaf 缺文件
-
-```bash
-rm -f "$B/rb_queue.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task "$B/task.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
-cat > "$B/re.json" << 'JSON'
-{"work_id":"work-del","receipt":"none","slot_result_ref":"_subagents/wave_01/slot_02/result.json"}
-JSON
-set +e
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/re.json"
-sts=$?
-set -e
-if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" "E: incomplete cache" "$sts" 0
-```
-
-→ 预期：`EXPECTED REJECT`。
-
----
-
-## Step 7: 场景 F — nonce mismatch
-
-```bash
-rm -f "$B/rb_queue.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue $B --task "$B/task.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs claim $B --actor main-agent
-cat > "$B/rf.json" << 'JSON'
-{"work_id":"work-del","receipt":"none","slot_result_ref":"_subagents/wave_01/slot_03/result.json"}
-JSON
-set +e
-node DPT_FRAMEWORK/cli/operate-queue.mjs complete $B --result "$B/rf.json"
-sts=$?
-set -e
-if [ "$sts" -eq 0 ]; then echo "UNEXPECTED PASS"; else echo "EXPECTED REJECT"; fi
-node -e "const fs=require('fs'); const [B,label,exitCode,expected]=process.argv.slice(1); fs.appendFileSync(B + '/outcomes.jsonl', JSON.stringify({label,status:Number(exitCode),expected:Number(expected)}) + '\n');" "$B" "F: nonce mismatch" "$sts" 1
-```
-
-→ 预期：`EXPECTED REJECT`。
-
----
-
-## Step 8: 记录 Trace Check Events + 裁决
-
-每个边界场景写入 `event: 'check'`，reject 场景设 `expected: false`（Principle 3）。
-
-```bash
-cat > "$B/verdict.mjs" << 'JS'
-import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
+  STAGE_JSON=$(node --input-type=module - "$B" "$LABEL" <<'JS'
+import { rmSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-const B = process.argv[2];
-const tp = path.join(B, 'rb_trace.jsonl');
+import {
+  claimWorkUnitsViaCli,
+  enqueueWorkUnitTask,
+  queueItemForWorkUnit,
+  writeFixtureResultForWorkUnit
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-const outcomes = readFileSync(path.join(B, 'outcomes.jsonl'), 'utf-8')
-  .trim()
-  .split('\n')
-  .filter(Boolean)
-  .map(JSON.parse);
-for (const s of outcomes) {
-  const rejected = s.status !== 0;
-  appendFileSync(tp, JSON.stringify({
-    ts: new Date().toISOString(), event: 'check', source: 'case-402',
-    gate: 'complete-reject',
-    passed: rejected,
-    expected: true,
-    detail: `${s.label} rejected by delegated complete`,
-    command_status: s.status,
-    expected_status: s.expected,
-  }) + '\n');
+const [bundle, label] = process.argv.slice(2);
+const task = queueItemForWorkUnit({
+  queue_item_id: `case402-${label}`,
+  topic_slug: 'topic-a',
+  title: `Invalid submit boundary: ${label}`
+});
+enqueueWorkUnitTask(bundle, task, { fileName: `${label}.json` });
+
+const claim = claimWorkUnitsViaCli(bundle, { phase: 'wave0' });
+const workId = claim.claimed_work_ids[0];
+if (!workId) throw new Error(`No work unit claimed for ${label}`);
+
+const fixture = writeFixtureResultForWorkUnit(bundle, {
+  work_id: workId,
+  source_url: `https://research-source.test/${label}/article`,
+  source_slug: label
+});
+
+if (label === 'missing-receipt') {
+  rmSync(path.join(bundle, fixture.record.paths.runtime_receipt_ref), { force: true });
+} else if (label === 'missing-output') {
+  rmSync(path.join(bundle, fixture.outputPath), { force: true });
+} else if (label === 'missing-cache') {
+  rmSync(path.join(bundle, fixture.cache_trails[0], 'meta.json'), { force: true });
+} else if (label === 'nonce-mismatch') {
+  const result = JSON.parse(readFileSync(fixture.resultPath, 'utf8'));
+  result.receipt_nonce = 'nonce-mismatch-0000';
+  writeFileSync(fixture.resultPath, `${JSON.stringify(result, null, 2)}\n`);
+} else if (label === 'wrong-work-id') {
+  const result = JSON.parse(readFileSync(fixture.resultPath, 'utf8'));
+  result.work_id = 'wu-w0-b000-src-i9999';
+  writeFileSync(fixture.resultPath, `${JSON.stringify(result, null, 2)}\n`);
 }
 
-const events = readFileSync(tp, 'utf-8').trim().split('\n').map(JSON.parse);
-const checks = events.filter(e => e.event === 'check' && e.source === 'case-402');
-const matched = checks.filter(c => c.passed === (c.expected !== false)).length;
-const ok = outcomes.length === 6 && matched === checks.length && checks.length >= 6;
-writeFileSync(path.join(B, 'case-402-verdict.json'), JSON.stringify({ ok, checks: checks.length, matched, outcomes: outcomes.length }, null, 2));
-console.log(`checks: ${checks.length}, matched: ${matched}, outcomes: ${outcomes.length}`);
-console.log(ok ? '\x1b[32mCASE-402 PASS\x1b[0m' : '\x1b[31mCASE-402 FAIL\x1b[0m');
-if (!ok) process.exit(1);
+console.log(JSON.stringify({
+  label,
+  work_id: workId,
+  result_path: fixture.resultPath,
+  claim
+}, null, 2));
 JS
-node "$B/verdict.mjs" $B
+  )
+  printf '%s\n' "$STAGE_JSON" > "$B/case-402-${LABEL}-stage.json"
+  WORK_ID=$(printf '%s\n' "$STAGE_JSON" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.work_id);')
+  RESULT_PATH=$(printf '%s\n' "$STAGE_JSON" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.result_path);')
+
+  set +e
+  SUBMIT_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$RESULT_PATH")
+  SUBMIT_STATUS=$?
+  set -e
+  printf '%s\n' "$SUBMIT_JSON" > "$B/case-402-${LABEL}-submit.json"
+  printf '%s\n' "$SUBMIT_STATUS" > "$B/case-402-${LABEL}-submit.status"
+
+  node - "$B" "$LABEL" "$EXPECTED_CODE" <<'JS'
+const fs = require('fs');
+const [bundle, label, expectedCode] = process.argv.slice(2);
+const status = Number(fs.readFileSync(`${bundle}/case-402-${label}-submit.status`, 'utf8'));
+const submit = JSON.parse(fs.readFileSync(`${bundle}/case-402-${label}-submit.json`, 'utf8'));
+const reason = submit.last_submit_rejection?.reason_code;
+console.log(JSON.stringify({ label, status, reason, expectedCode }, null, 2));
+process.exit(status === 1 && reason === expectedCode ? 0 : 1);
+JS
+done
 ```
 
-→ 预期：`CASE-402 PASS`，≥6 个真实 reject 事件。
+Expected: every submit exits `1` with the listed `last_submit_rejection.reason_code`. Rejected attempts remain non-terminal; do not call `fail`, `timeout`, `abandon`, or queue completion for them.
 
----
+## Step 3: [MAIN/SHELL] Record Verdict Checks
 
-## Step 8: 结果解读
-
-> 6 个场景 A-F，验证 delegated complete() 拒绝所有缺失 provenance 的情况：
->   [A] 缺 slot_result_ref → complete 拒绝（no provenance anchor）
->   [B] 缺 receipt → complete 拒绝（receipt verification fails）
->   [C] writes 无 output_files 声明 → complete 拒绝（declaration contract violated）
->   [D] 声明的 output file 不存在 → complete 拒绝（declaration-file mismatch）
->   [E] 缺 cache leaf（websearch.json/page.md/meta.json）→ Phase 1 warning + trail 不写入 ledger（complete 不拒绝，incomplete leaf 不再是 hard-fail——见 CRC-005 两阶段策略）
->   [F] nonce mismatch → complete 拒绝（receipt integrity violation）
->   全部 6 个 reject 都是 expected:true — 正确拒绝等于正确行为。
-
-## Step 9: PASS-only 清理
+After all five checkpoints, read the submit JSON files and the submitted ledger. Record trace `check` rows for each expected rejection and one `no-ledger-on-reject` check, then derive the verdict from trace.
 
 ```bash
-if node -e "const fs=require('fs'); const p=process.argv[1] + '/case-402-verdict.json'; process.exit(JSON.parse(fs.readFileSync(p, 'utf8')).ok ? 0 : 1)" "$B"; then
-  rm -rf "$B"
-  echo "✓ Cleaned up after PASS."
-else
-  echo "FAIL preserved for inspection: $B"
-  exit 1
-fi
+node --input-type=module - "$B" <<'JS'
+import { readFileSync } from 'node:fs';
+import {
+  readWorkUnitLedgerRows,
+  recordPlaybookCheck,
+  writeTraceVerdict
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const bundle = process.argv[2];
+const expected = new Map([
+  ['missing-receipt', 'missing_receipt'],
+  ['missing-output', 'missing_output'],
+  ['missing-cache', 'missing_cache'],
+  ['nonce-mismatch', 'nonce_mismatch'],
+  ['wrong-work-id', 'wrong_work_id'],
+]);
+
+for (const [label, expectedCode] of expected) {
+  const status = Number(readFileSync(`${bundle}/case-402-${label}-submit.status`, 'utf8'));
+  const submit = JSON.parse(readFileSync(`${bundle}/case-402-${label}-submit.json`, 'utf8'));
+  const reason = submit.last_submit_rejection?.reason_code;
+  recordPlaybookCheck(bundle, {
+    gate: `reject-${label}`,
+    passed: status === 1 && reason === expectedCode,
+    detail: `status=${status}, reason=${reason}, expected=${expectedCode}`
+  });
+}
+
+const rows = readWorkUnitLedgerRows(bundle);
+recordPlaybookCheck(bundle, {
+  gate: 'no-ledger-on-reject',
+  passed: rows.length === 0,
+  detail: `${rows.length} submitted row(s)`
+});
+
+const verdict = writeTraceVerdict(bundle, 'case-402');
+console.log(JSON.stringify(verdict, null, 2));
+process.exit(verdict.ok ? 0 : 1);
+JS
+```
+
+Expected rejection coverage:
+
+- Missing runtime receipt -> `missing_receipt`.
+- Missing declared output file -> `missing_output`.
+- Incomplete cache trail -> `missing_cache`.
+- Receipt nonce mismatch -> `nonce_mismatch`.
+- Wrong result `work_id` -> `wrong_work_id`.
+- No rejected scenario appends a submitted work-unit ledger row.
+
+## Step 4: [MAIN] Result Interpretation
+
+PASS means invalid work-unit submits fail closed at the production submit boundary and cannot launder delegated success through a ledger row. FAIL means the Agent must treat the preserved bundle as a contract failure and repair the submit validation or ledger mutation boundary.
+
+## Step 5: [MAIN/SHELL] Cleanup
+
+PASS removes the disposable bundle. FAIL preserves it for diagnosis.
+
+## Optional Automation Smoke
+
+This smoke command runs the same checkpoints for automation, but it is not the normative MD-controller execution surface:
+
+```bash
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-402 --cleanup-pass
 ```

@@ -45,7 +45,7 @@ describe('LOG-006 accident-grade diagnostics', () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'test-qm-log-'));
     loadQueue(dir);
     let q = createQueue('test');
-    q = enqueue(q, makeItem({ work_id: 'task-1', title: 'Test' }));
+    q = enqueue(q, makeItem({ queue_item_id: 'task-1', title: 'Test' }));
     const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
     assert.ok(content.includes('queue_enqueue_attempt'));
     assert.ok(content.includes('queue_enqueue_done'));
@@ -70,12 +70,12 @@ describe('LOG-006 accident-grade diagnostics', () => {
     loadQueue(dir);
     let q = createQueue('test');
     q = enqueue(q, makeItem({
-      work_id: 'task-1', title: 'Test',
+      queue_item_id: 'task-1', title: 'Test',
       required_receipts: ['file:nonexistent.md'],
       completion_receipt: 'file:nonexistent.md',
     }));
     claim(q);
-    complete(q, { work_id: 'task-1', receipt: 'file:nonexistent.md' }, dir);
+    complete(q, { queue_item_id: 'task-1', receipt: 'file:nonexistent.md' }, dir);
     const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
     assert.ok(content.includes('queue_complete_attempt'));
     assert.ok(content.includes('queue_complete_receipt_fail'));
@@ -86,9 +86,9 @@ describe('LOG-006 accident-grade diagnostics', () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'test-qm-log-'));
     loadQueue(dir);
     let q = createQueue('test');
-    q = enqueue(q, makeItem({ work_id: 'task-1', title: 'Test' }));
+    q = enqueue(q, makeItem({ queue_item_id: 'task-1', title: 'Test' }));
     claim(q);
-    fail(q, { work_id: 'task-1', reason: 'test failure' }, dir);
+    fail(q, { queue_item_id: 'task-1', reason: 'test failure' }, dir);
     const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
     assert.ok(content.includes('queue_fail_attempt'));
     assert.ok(content.includes('queue_fail_done'));
@@ -100,9 +100,9 @@ describe('LOG-006 accident-grade diagnostics', () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'test-qm-log-'));
     loadQueue(dir);
     let q = createQueue('test');
-    q = enqueue(q, makeItem({ work_id: 'task-1', title: 'Test' }));
+    q = enqueue(q, makeItem({ queue_item_id: 'task-1', title: 'Test' }));
     q = claim(q).queue;
-    complete(q, { work_id: 'task-1' }, dir);
+    complete(q, { queue_item_id: 'task-1' }, dir);
     const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
     assert.ok(content.includes('queue_enqueue_done') && content.includes('"kind":"queue_enqueue"'));
     assert.ok(content.includes('queue_claim_done') && content.includes('"kind":"queue_claim"'));
@@ -113,9 +113,9 @@ describe('LOG-006 accident-grade diagnostics', () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'test-qm-log-'));
     loadQueue(dir);
     let q = createQueue('test');
-    q = enqueue(q, makeItem({ work_id: 'task-1', title: 'Test' }));
-    q = enqueue(q, makeItem({ work_id: 'task-2', title: 'Test 2' }));
-    q = preempt(q, makeItem({ work_id: 'urgent-1', title: 'Urgent' }), { reason: 'test_preempt' });
+    q = enqueue(q, makeItem({ queue_item_id: 'task-1', title: 'Test' }));
+    q = enqueue(q, makeItem({ queue_item_id: 'task-2', title: 'Test 2' }));
+    q = preempt(q, makeItem({ queue_item_id: 'urgent-1', title: 'Urgent' }), { reason: 'test_preempt' });
     const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
     assert.ok(content.includes('queue_preempt_attempt'));
     assert.ok(content.includes('queue_preempt_done'));
@@ -128,40 +128,40 @@ describe('LOG-006 accident-grade diagnostics', () => {
     loadQueue(dir);
     let q = createQueue('test');
     q = enqueue(q, makeItem({
-      work_id: 'task-1', title: 'Delegated',
+      queue_item_id: 'task-1', title: 'Delegated',
       targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-test', timeout_ms: 60000 } },
     }));
     claim(q);
-    // complete without slot_result_ref should trigger reject
-    complete(q, { work_id: 'task-1', receipt: 'none' }, dir);
+    // delegated demand completed through operate-queue should trigger reject
+    complete(q, { queue_item_id: 'task-1', receipt: 'none' }, dir);
     const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
     assert.ok(content.includes('queue_complete_attempt'));
     assert.ok(content.includes('queue_complete_reject'));
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it('complete logs exception on work_id mismatch', () => {
+  it('complete logs exception on queue_item_id mismatch', () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'test-qm-log-'));
     loadQueue(dir);
     let q = createQueue('test');
-    q = enqueue(q, makeItem({ work_id: 'task-1', title: 'Test' }));
+    q = enqueue(q, makeItem({ queue_item_id: 'task-1', title: 'Test' }));
     claim(q);
     assert.throws(() => {
-      complete(q, { work_id: 'wrong-id' }, dir);
+      complete(q, { queue_item_id: 'wrong-id' }, dir);
     });
     const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
     assert.ok(content.includes('queue_complete_exception'));
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it('fail logs exception on work_id mismatch', () => {
+  it('fail logs exception on queue_item_id mismatch', () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'test-qm-log-'));
     loadQueue(dir);
     let q = createQueue('test');
-    q = enqueue(q, makeItem({ work_id: 'task-1', title: 'Test' }));
+    q = enqueue(q, makeItem({ queue_item_id: 'task-1', title: 'Test' }));
     claim(q);
     assert.throws(() => {
-      fail(q, { work_id: 'wrong-id', reason: 'test' }, dir);
+      fail(q, { queue_item_id: 'wrong-id', reason: 'test' }, dir);
     });
     const content = readFileSync(path.join(dir, '_logs', 'run.log'), 'utf-8');
     assert.ok(content.includes('queue_fail_exception'));
@@ -171,7 +171,7 @@ describe('LOG-006 accident-grade diagnostics', () => {
   it('enqueue without logger init writes nothing (pure in-memory)', () => {
     // createQueue() does NOT call ensureTrace, so _log is null
     const q = createQueue('no-logger');
-    const q2 = enqueue(q, makeItem({ work_id: 'task-1', title: 'No Log' }));
+    const q2 = enqueue(q, makeItem({ queue_item_id: 'task-1', title: 'No Log' }));
     // No temp dir, no log file created — just verify it doesn't throw
     assert.ok(q2);
   });

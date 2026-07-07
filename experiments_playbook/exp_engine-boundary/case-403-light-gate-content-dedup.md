@@ -3,362 +3,285 @@ schema: command-experiment/v1
 experiment: engine-boundary
 case: case-403-light-gate-content-dedup
 weight: light
-case_goal: "验证 content_dedup gate 只从 Engine-generated declaration ledger 读取输入：URL dup/Jaccard clone/homepage/self-ref fail；clean pass；missing ledger/orphan fail closed。"
+case_goal: "验证 content_dedup gate 只从 submitted work-unit ledger 读取 delegated coverage：missing ledger/orphan fail，clean pass，URL duplicate/Jaccard/homepage fail。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-403_eb_dedup
-trace: dpt_disp_case-403_eb_dedup/rb_trace.jsonl
+bundle: dpt_disp_case-403_eb_dedup_work_unit
+trace: dpt_disp_case-403_eb_dedup_work_unit/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
 ## Execution Contract
 
-fixture-backed、无 Agent actor、无外部调用。每个非 missing-ledger 场景都走同一条生产 downstream 路径：
-
-fixture SlotResult → `commitSlotResult()` → `operate-queue complete` → Engine append `rb_output_declarations.jsonl` → real wave0 gate。
+Fixture-backed, no Agent actor, no external calls. Positive and negative delegated coverage must be created through real `operate-work-unit submit`; the missing-ledger case intentionally omits submit and must fail closed.
 
 ## Reality Distance Ledger
 
-| 维度 | 声明 |
-|------|------|
-| **Agent actor** | 无（fixture-backed） |
-| **外部调用** | 无 |
-| **ledger 生成** | Engine delegated `complete()` |
-| **gate 输入面** | `rb_output_declarations.jsonl` only |
-| **orphan 处理** | 未声明 reference 不能帮助 gate pass |
-| **verdict 来源** | `rb_trace.jsonl` check events + gate JSON |
+| Dimension | Statement |
+| --- | --- |
+| Runtime context | Real disposable bundle from `experiments_env/shared/new-disposable-bundle.mjs` |
+| Framework path | Real `operate-work-unit submit` and Wave0 gate CLI |
+| Fixture input | Controlled reference/source/cache files for gate-content scenarios |
+| Agent actor | None; fixture-backed only |
+| External calls | None |
+| Gate input | `rb_output_declarations.jsonl` submitted work-unit rows |
+| Orphan handling | Files without submitted work-unit coverage are diagnostics only |
+| Verdict source | Gate JSON, trace JSONL `check` events, and runner report |
+| Does not prove | Agent source selection or content-quality judgment |
 
 # case-403-light-gate-content-dedup
 
-7 个场景覆盖 content_dedup 的输入面和检测维度。
+## Expected Runtime Path
 
----
+1. Create a disposable bundle through shared setup.
+2. Reset per-scenario runtime state explicitly before each gate scenario.
+3. For positive delegated coverage, submit fixture outputs through `operate-work-unit submit`.
+4. For missing-ledger/orphan coverage, intentionally omit the submit boundary.
+5. Run the Wave0 gate and parse its JSON as the primary feedback artifact.
+6. Convert each gate result into trace `check` events with the correct expected outcome.
+7. Print PASS/FAIL and clean up only on PASS.
 
-## Step 1: 创建 Bundle
+## Step 1: [MAIN/SHELL] Create Runtime Context
+
+Create a disposable bundle and Wave0 scaffold. Each gate scenario must explicitly reset its own runtime state before staging files.
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_dedup --case case-403 --force)
-echo "Bundle: $B"
+B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_dedup_work_unit --case case-403 --force)
+echo "BUNDLE=$B"
 ```
 
----
+Expected: the bundle path is printed.
 
-## Step 2: 运行场景 driver
+## Step 2: [MAIN/SHELL] Reset Scenario State
+
+Before each gate checkpoint, reset the queue, work-unit index, ledger, reference, artifact, and cache state. This makes each gate result depend on the current scenario, not stale files from an earlier scenario.
 
 ```bash
-cat > "$B/run-scenarios.mjs" << 'JS'
-import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+reset_case403() {
+  SCENARIO="$1"
+  node --input-type=module - "$B" "$SCENARIO" <<'JS'
+import { rmSync } from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-const B = path.resolve(process.argv[2]);
-const REPO = process.cwd();
-const relay = await import(pathToFileURL(path.join(REPO, 'DPT_FRAMEWORK/engine/subagent-relay.mjs')));
-let slotIndex = 0;
-
-function p(...parts) {
-  return path.join(B, ...parts);
+const [bundle, scenario] = process.argv.slice(2);
+for (const relPath of ['rb_queue.json', 'rb_output_declarations.jsonl', '_work_units', 'reference', 'artifacts', '_cache']) {
+  rmSync(path.join(bundle, relPath), { recursive: true, force: true });
 }
-
-function record(gate, passed, detail) {
-  appendFileSync(p('rb_trace.jsonl'), JSON.stringify({
-    ts: new Date().toISOString(),
-    event: 'check',
-    source: 'case-403',
-    gate,
-    passed,
-    expected: true,
-    detail,
-  }) + '\n');
-}
-
-function runNode(args, opts = {}) {
-  return execFileSync(process.execPath, args, { cwd: REPO, encoding: 'utf-8', stdio: opts.stdio || 'pipe' });
-}
-
-function resetBase() {
-  rmSync(p('reference'), { recursive: true, force: true });
-  rmSync(p('artifacts'), { recursive: true, force: true });
-  rmSync(p('rb_queue.json'), { force: true });
-  rmSync(p('rb_output_declarations.jsonl'), { force: true });
-  mkdirSync(p('reference'), { recursive: true });
-  mkdirSync(p('artifacts/wave0/topic-a'), { recursive: true });
-  mkdirSync(p('artifacts/wave0/topic-b'), { recursive: true });
-
-  writeFileSync(p('rb_status.json'), JSON.stringify({
-    current_gate: 'wave0_complete',
-    next_gate: 'wave1_complete',
-    current_mode: 'execution',
-    state: 'in_progress',
-  }) + '\n');
-  writeFileSync(p('rb_profile.yaml'), 'research_style_params:\n  wave0_shared_ref_total: 1\n  wave0_per_topic_source_floor: 1\n');
-  writeFileSync(p('rb_plan.md'), `---
-{
-  "plan_basename": "eb_dedup",
-  "derived_topic_count": 2,
-  "topic_registry": [
-    { "id": "t1", "slug": "topic-a", "title": "Topic A" },
-    { "id": "t2", "slug": "topic-b", "title": "Topic B" }
+writeWave0Scaffold(bundle, {
+  planBasename: `eb_dedup_${scenario}`,
+  referenceRows: [
+    '| 00-shared-a.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |',
+    '| 00-shared-b.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |'
   ]
-}
----
-# Plan
-`);
-  writeFileSync(p('reference/README.md'), '# Reference Evidence\n');
-  writeFileSync(p('reference/_INDEX.md'), `| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 00-shared-a.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-06-15 |
-| 00-shared-b.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-06-15 |
-`);
-  for (const topic of ['topic-a', 'topic-b']) {
-    writeFileSync(p(`artifacts/wave0/${topic}/source.yaml`), `- url: "https://research-source.test/${topic}"
-  title: "${topic} source"
-  retrieved_date: "2026-06-15"
-  topic_tag: "${topic}"
-`);
-  }
-  if (!existsSync(p('rb_trace.jsonl'))) {
-    writeFileSync(p('rb_trace.jsonl'), JSON.stringify({ ts: new Date().toISOString(), event: 'run_start', source: 'trace', label: 'case-403' }) + '\n');
-  }
-}
-
-function writeReference(relPath, sourceUrl, keyFacts) {
-  writeFileSync(p(relPath), `---
-source_url: ${sourceUrl}
-acceptance_status: accepted
-source_type: secondary
-tier: Tier 2
-trust_level: practitioner
-why_it_matters: Boundary fixture
-accessed_at: 2026-06-15
-related_topic: all
----
-## Key Facts
-${keyFacts}
-## Core Content Capture
-Fixture page capture.
-## Relevance To This Research
-Boundary proof.
-## Quotable Terms / Concepts
-- fixture
-## Risks And Limitations
-- Fixture-backed Engine proof.
-`);
-}
-
-function writeCacheLeaf(id) {
-  const leaf = `_cache/wave0/primary/case403/s${String(id).padStart(2, '0')}_source`;
-  mkdirSync(p(leaf), { recursive: true });
-  writeFileSync(p(leaf, 'websearch.json'), JSON.stringify([{ title: `S${id}`, url: `https://research-source.test/${id}` }]));
-  writeFileSync(p(leaf, 'page.md'), `# Page ${id}\n`);
-  writeFileSync(p(leaf, 'meta.json'), JSON.stringify({
-    url: `https://research-source.test/${id}`,
-    title: `S${id}`,
-    source_domain: 'research-source.test',
-    source_name: `S${id}`,
-    fetched_at: new Date().toISOString(),
-    fetch_method: 'fixture',
-    fetch_chain: 'fixture',
-    content_type: 'article',
-    reliability_tier: 'Tier 2',
-    reliability_basis: 'fixture',
-    whitelist_status: 'allowed',
-  }));
-  return `${leaf}/`;
-}
-
-function commitFixtureSlot(name, refs) {
-  const slot = relay.createSlot({
-    key: `case403-${name}`,
-    slotIndex: slotIndex++,
-    roleAgentKey: 'dpt-source-intake',
-    taskDescription: `case403 ${name}`,
-  }, 1);
-  mkdirSync(p(path.dirname(slot.resultPath)), { recursive: true });
-  relay.writeSlotStatus(slot, 'running', B);
-  writeFileSync(p(slot.receiptPath), [
-    JSON.stringify({ event: 'agent_runtime_started', slotKey: slot.key, roleAgentKey: slot.roleAgentKey, receiptNonce: slot.receiptNonce }),
-    JSON.stringify({ event: 'agent_result_ready', slotKey: slot.key, roleAgentKey: slot.roleAgentKey, receiptNonce: slot.receiptNonce }),
-  ].join('\n') + '\n');
-
-  const cacheTrails = refs.map((_, i) => writeCacheLeaf(slotIndex * 10 + i));
-  const result = relay.commitSlotResult(slot, B, {
-    slotKey: slot.key,
-    roleAgentKey: slot.roleAgentKey,
-    status: 'done',
-    summary: `case403 ${name}`,
-    evidenceCount: refs.length,
-    references: refs.map((r) => ({ title: r.path, url: r.url, quote: '', relevance: 'fixture' })),
-    confidence: 0.9,
-    notes: [],
-    output_files: refs.map((r) => ({ path: r.path, role: 'reference', source_url: r.url })),
-    cache_trails: cacheTrails,
-  }, { platform: 'fixture', runtimeMode: 'unknown', runtimeAgentId: `fixture-${name}` });
-  if (!result.ok) throw new Error(`commitSlotResult failed for ${name}: ${result.result.notes?.join('; ')}`);
-  return slot.resultPath;
-}
-
-function completeThroughQueue(name, refs) {
-  const workId = `case403-${name}`;
-  const slotResultRef = commitFixtureSlot(name, refs);
-  const taskPath = p(`${workId}.task.json`);
-  const resultPath = p(`${workId}.result.json`);
-  writeFileSync(taskPath, JSON.stringify({
-    work_id: workId,
-    title: `case403 ${name}`,
-    targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
-    action: 'Fixture-backed reference declaration. Return output_files[] and cache_trails[].',
-    producer_rule: 'case403_fixture',
-    lineage: {},
-    priority_class: 'P5_new_reference_intake',
-    required_receipts: ['none'],
-    done_condition: 'Fixture references exist.',
-    verification: { engine: [], agent: [] },
-    writes_to: refs.map((r) => r.path),
-    status_sync: [],
-    completion_receipt: 'none',
-    failure_route: 'queue repair',
-    payload: {},
-  }));
-  runNode(['DPT_FRAMEWORK/cli/operate-queue.mjs', 'enqueue', B, '--task', taskPath]);
-  runNode(['DPT_FRAMEWORK/cli/operate-queue.mjs', 'claim', B, '--actor', 'main-agent']);
-  writeFileSync(resultPath, JSON.stringify({
-    work_id: workId,
-    receipt: 'none',
-    summary: `case403 ${name}`,
-    writes: refs.map((r) => r.path),
-    slot_result_ref: slotResultRef,
-  }));
-  runNode(['DPT_FRAMEWORK/cli/operate-queue.mjs', 'complete', B, '--result', resultPath]);
-  if (!existsSync(p('rb_output_declarations.jsonl'))) throw new Error(`ledger missing after ${name}`);
-  const traceEvents = readFileSync(p('rb_trace.jsonl'), 'utf-8').trim().split('\n').filter(Boolean).map(JSON.parse);
-  const ledgerOk = traceEvents.some((e) => e.event === 'ledger_appended' && e.work_id === workId);
-  const completeOk = traceEvents.some((e) => e.event === 'queue_completed' && e.work_id === workId);
-  record(`engine-path-${name}`, ledgerOk && completeOk, `${name}: commitSlotResult plus delegated complete produced Engine ledger and queue completion`);
-}
-
-function runGate() {
-  // EXO-003 exception: gate invoked via runNode() in inline JS — bash wrapper not applicable.
-  // Gate diagnostics captured via writeGateAttempt() trace events and _logs/run.log.
-  try {
-    const raw = runNode(['DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs', '--bundle', B, '--current-node', 'phases/phase-wave0.md']);
-    return JSON.parse(raw);
-  } catch (err) {
-    return JSON.parse(err.stdout.toString());
-  }
-}
-
-function inspectHas(gateResult, fragment) {
-  return gateResult.inspect?.some((line) => line.includes(fragment));
-}
-
-function scenario(name, refs, expected) {
-  resetBase();
-  for (const ref of refs) writeReference(ref.path, ref.url, ref.keyFacts);
-  completeThroughQueue(name, refs);
-  const gateResult = runGate();
-  let ok;
-  if (expected.pass) {
-    ok = gateResult.check.passed === true;
-  } else {
-    ok = gateResult.check.passed === false && inspectHas(gateResult, expected.inspect);
-  }
-  record(`content-dedup-${name}`, ok, `${name}: ${ok ? 'observed expected behavior' : JSON.stringify(gateResult.inspect)}`);
-  if (!ok) throw new Error(`${name} failed expectation: ${JSON.stringify(gateResult.inspect)}`);
-}
-
-resetBase();
-let missing = runGate();
-let ok = missing.check.passed === false && inspectHas(missing, 'missing or empty');
-record('content-dedup-missing-ledger', ok, 'missing ledger fails closed');
-if (!ok) throw new Error(`missing-ledger expectation failed: ${JSON.stringify(missing.inspect)}`);
-
-scenario('clean', [
-  { path: 'reference/00-shared-a.md', url: 'https://auto-source.test/ev-2024', keyFacts: '中国新能源汽车销量突破 1000 万辆，比亚迪市场份额领先，宁德时代电池技术全球领先。' },
-  { path: 'reference/00-shared-b.md', url: 'https://electronics-source.test/japan-2024', keyFacts: '日本电子产业出口额增长 15%，半导体设备需求旺盛，东京电子扩大产能。' },
-], { pass: true });
-
-scenario('url-duplicate', [
-  { path: 'reference/00-shared-a.md', url: 'https://duplicate-source.test/article', keyFacts: 'Source A reports market growth and investment expansion.' },
-  { path: 'reference/00-shared-b.md', url: 'https://duplicate-source.test/article/', keyFacts: 'Source B reports different facts from a duplicate URL fixture.' },
-], { pass: false, inspect: 'URL duplicate' });
-
-scenario('jaccard-clone', [
-  { path: 'reference/00-shared-a.md', url: 'https://clone-a.test/article-1', keyFacts: '年轻人消费平替趋势明显，国潮品牌市场份额增长，新能源汽车销量突破千万。' },
-  { path: 'reference/00-shared-b.md', url: 'https://clone-b.test/article-2', keyFacts: '年轻人消费平替趋势明显，国潮品牌市场份额增长，新能源汽车销量突破千万。' },
-], { pass: false, inspect: 'Jaccard clone' });
-
-scenario('homepage', [
-  { path: 'reference/00-shared-a.md', url: 'https://www.chinanews.com.cn/', keyFacts: 'News data describes macro consumer behavior and policy signals.' },
-], { pass: false, inspect: 'Homepage URL' });
-
-scenario('self-ref', [
-  { path: 'reference/00-shared-a.md', url: 'https://self-ref-source.test/article', keyFacts: 'This reference supplements the wave1 deepening evidence for topic consumer trends.' },
-], { pass: false, inspect: 'Self-referential' });
-
-resetBase();
-writeReference('reference/00-shared-orphan.md', 'https://orphan-source.test/article', 'Orphan source has clean factual content but is not declared.');
-const orphanGate = runGate();
-ok = orphanGate.check.passed === false && inspectHas(orphanGate, 'missing or empty');
-record('content-dedup-orphan-cannot-help', ok, 'orphan reference exists but missing ledger still fails closed');
-if (!ok) throw new Error(`orphan expectation failed: ${JSON.stringify(orphanGate.inspect)}`);
-
-console.log('case-403 scenarios completed');
+});
 JS
-
-node "$B/run-scenarios.mjs" "$B"
+}
 ```
 
-→ 预期：`case-403 scenarios completed`。
+Expected: reset itself does not submit work-unit coverage. The next step must create coverage through `operate-work-unit submit`, or intentionally leave it missing for the boundary case.
 
----
+## Step 3: [MAIN/SHELL] Stage Coverage And Run Gate Feedback
 
-## Step 3: 从 Trace 裁决
+Run each scenario separately. The controller captures the full Wave0 gate JSON into the bundle, reads `check.passed` plus `inspect[]`, and only then proceeds.
 
 ```bash
-cat > "$B/verdict.mjs" << 'JS'
-import { readFileSync } from 'node:fs';
+stage_case403() {
+  SCENARIO="$1"
+  node --input-type=module - "$B" "$SCENARIO" <<'JS'
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-const B = process.argv[2];
-const tp = path.join(B, 'rb_trace.jsonl');
-const events = readFileSync(tp, 'utf-8').trim().split('\n').filter(Boolean).map(JSON.parse);
-const checks = events.filter(e => e.event === 'check' && e.source === 'case-403');
-const failed = checks.filter(c => c.passed !== true);
-console.log(`checks: ${checks.length}, failed: ${failed.length}`);
-for (const f of failed) console.log(`FAIL ${f.gate}: ${f.detail}`);
-const ok = checks.length >= 7 && failed.length === 0;
-console.log(ok ? '\x1b[32mCASE-403 PASS\x1b[0m' : '\x1b[31mCASE-403 FAIL\x1b[0m');
-if (!ok) process.exit(1);
+import {
+  claimWorkUnitsViaCli,
+  enqueueWorkUnitTask,
+  queueItemForWorkUnit,
+  referenceContent,
+  sourceYamlExtra,
+  submitWorkUnitViaCli,
+  writeFixtureResultForWorkUnit
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const [bundle, scenario] = process.argv.slice(2);
+if (scenario === 'missing-ledger') {
+  console.log(JSON.stringify({ scenario, staged: 'no submitted work-unit coverage' }, null, 2));
+  process.exit(0);
+}
+
+const refsByScenario = {
+  clean: [
+    { path: 'reference/00-shared-a.md', url: 'https://research-source.test/clean/a', title: 'Clean A' }
+  ],
+  'url-duplicate': [
+    { path: 'reference/00-shared-a.md', url: 'https://research-source.test/duplicate/article', title: 'Duplicate A' },
+    { path: 'reference/00-shared-b.md', url: 'https://research-source.test/duplicate/article/', title: 'Duplicate B' }
+  ],
+  'jaccard-clone': [
+    { path: 'reference/00-shared-a.md', url: 'https://research-source.test/clone/a', title: 'Clone A' },
+    { path: 'reference/00-shared-b.md', url: 'https://research-source.test/clone/b', title: 'Clone B' }
+  ],
+  homepage: [
+    { path: 'reference/00-shared-a.md', url: 'https://research-source.test/', title: 'Homepage' }
+  ]
+};
+
+const refs = refsByScenario[scenario];
+if (!refs) throw new Error(`Unknown scenario: ${scenario}`);
+
+let cloneContent;
+if (scenario === 'jaccard-clone') {
+  cloneContent = referenceContent({
+    source_url: 'https://research-source.test/clone/a',
+    topic_slug: 'topic-a',
+    title: 'Clone A'
+  });
+  refs[0].content = cloneContent;
+  refs[1].content = cloneContent
+    .replace('https://research-source.test/clone/a', 'https://research-source.test/clone/b')
+    .replace('Clone A', 'Clone B');
+}
+
+enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
+  queue_item_id: `case403-${scenario}`,
+  topic_slug: 'topic-a',
+  title: `Gate content-dedup scenario: ${scenario}`
+}), { fileName: `${scenario}.json` });
+const claim = claimWorkUnitsViaCli(bundle, { phase: 'wave0' });
+const workId = claim.claimed_work_ids[0];
+if (!workId) throw new Error(`No work unit claimed for ${scenario}`);
+
+const [first, ...rest] = refs;
+const cacheTrails = refs.map((ref, index) => `_cache/wave0/primary/case403-${scenario}/${scenario}-${index + 1}`);
+const fixture = writeFixtureResultForWorkUnit(bundle, {
+  work_id: workId,
+  output_path: first.path,
+  source_url: first.url,
+  source_slug: `${scenario}-1`,
+  output_content: first.content || referenceContent({
+    source_url: first.url,
+    topic_slug: 'topic-a',
+    title: first.title
+  }),
+  extra_output_files: rest.map((ref, index) => ({
+    path: ref.path,
+    role: 'reference',
+    source_url: ref.url,
+    source_slug: `${scenario}-${index + 2}`,
+    content: ref.content || referenceContent({
+      source_url: ref.url,
+      topic_slug: 'topic-a',
+      title: ref.title
+    })
+  })).concat([sourceYamlExtra('topic-a', first.url, first.title || `${scenario} source`)]),
+  cache_trails: cacheTrails
+});
+for (const [index, ref] of refs.entries()) {
+  writeFileSync(path.join(bundle, cacheTrails[index], 'meta.json'), `${JSON.stringify({ url: ref.url })}\n`);
+}
+const submit = submitWorkUnitViaCli(bundle, { work_id: workId, resultPath: fixture.resultPath });
+console.log(JSON.stringify({ scenario, work_id: workId, submit_ok: submit.ok }, null, 2));
 JS
-node "$B/verdict.mjs" "$B"
+}
+
+run_case403_gate() {
+  SCENARIO="$1"
+  EXPECTED_PASSED="$2"
+  EXPECTED_TEXT="$3"
+
+  reset_case403 "$SCENARIO"
+  stage_case403 "$SCENARIO" > "$B/case-403-${SCENARIO}-stage.json"
+
+  set +e
+  node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-403-${SCENARIO}-gate.json"
+  GATE_STATUS=$?
+  set -e
+  printf '%s\n' "$GATE_STATUS" > "$B/case-403-${SCENARIO}-gate.status"
+
+  node - "$B" "$SCENARIO" "$EXPECTED_PASSED" "$EXPECTED_TEXT" <<'JS'
+const fs = require('fs');
+const [bundle, scenario, expectedPassedText, expectedText] = process.argv.slice(2);
+const expectedPassed = expectedPassedText === 'true';
+const status = Number(fs.readFileSync(`${bundle}/case-403-${scenario}-gate.status`, 'utf8'));
+const gate = JSON.parse(fs.readFileSync(`${bundle}/case-403-${scenario}-gate.json`, 'utf8'));
+const inspectText = JSON.stringify(gate.inspect || []);
+const matched = gate.check?.passed === expectedPassed && (!expectedText || inspectText.includes(expectedText));
+console.log(JSON.stringify({
+  scenario,
+  status,
+  gate_passed: gate.check?.passed,
+  expected_passed: expectedPassed,
+  expected_text: expectedText,
+  inspect: gate.inspect || []
+}, null, 2));
+process.exit(matched ? 0 : 1);
+JS
+}
+
+run_case403_gate missing-ledger false "No submitted work-unit ledger rows"
+run_case403_gate clean true ""
+run_case403_gate url-duplicate false "URL duplicate"
+run_case403_gate jaccard-clone false "Jaccard clone"
+run_case403_gate homepage false "Homepage URL"
 ```
 
-→ 预期：`CASE-403 PASS`。
+Expected: boundary rejections come from the gate JSON itself; expected failing scenarios are not represented by hardcoded trace success.
 
----
+## Step 4: [MAIN/SHELL] Record Verdict Checks
 
-## Step 3: 结果解读
-
-> 验证 content_dedup gate 只从 `rb_output_declarations.jsonl` 读取输入，不扫描目录：
->   [ledger-generated] gate 从 declaration ledger 获取 reference 列表
->   [URL dup] 相同 URL → gate fail（URL dedup 检测）
->   [Jaccard clone] 高相似度 Key Facts → gate fail（Jaccard ≥ 0.8）
->   [homepage] root-domain-only URL → gate fail（homepage detect）
->   [self-ref] Key Facts 描述自身 → gate fail（self-referential detect）
->   [clean pass] 不重叠 URL + 不相似 Key Facts → gate pass
->   [orphan fails] 无 ledger → gate fail（不扫描 reference/ 目录）
->   证明 gate content_dedup 的输入 source of truth = Engine ledger，不是文件系统扫描。
-
-## Step 4: PASS-only 清理
+Record trace `check` rows for `missing-ledger-fails`, `clean-pass`, `url-duplicate-fails`, `jaccard-clone-fails`, and `homepage-fails`. Boundary-fail scenarios count as PASS only when the gate actually rejects the runtime state for the expected reason.
 
 ```bash
-if node "$B/verdict.mjs" "$B"; then
-  rm -rf "$B"
-  echo "✓ Cleaned up after PASS."
-else
-  echo "FAIL preserved for inspection: $B"
-  exit 1
-fi
+node --input-type=module - "$B" <<'JS'
+import { readFileSync } from 'node:fs';
+import { recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const bundle = process.argv[2];
+const scenarios = [
+  ['missing-ledger', false, 'No submitted work-unit ledger rows', 'missing-ledger-fails'],
+  ['clean', true, '', 'clean-pass'],
+  ['url-duplicate', false, 'URL duplicate', 'url-duplicate-fails'],
+  ['jaccard-clone', false, 'Jaccard clone', 'jaccard-clone-fails'],
+  ['homepage', false, 'Homepage URL', 'homepage-fails'],
+];
+
+for (const [scenario, expectedPassed, expectedText, gateName] of scenarios) {
+  const status = Number(readFileSync(`${bundle}/case-403-${scenario}-gate.status`, 'utf8'));
+  const gate = JSON.parse(readFileSync(`${bundle}/case-403-${scenario}-gate.json`, 'utf8'));
+  const inspectText = JSON.stringify(gate.inspect || []);
+  const matched = gate.check?.passed === expectedPassed && (!expectedText || inspectText.includes(expectedText));
+  recordPlaybookCheck(bundle, {
+    gate: gateName,
+    passed: matched,
+    detail: `status=${status}, gate_passed=${gate.check?.passed}, inspect=${inspectText}`
+  });
+}
+
+const verdict = writeTraceVerdict(bundle, 'case-403');
+console.log(JSON.stringify(verdict, null, 2));
+process.exit(verdict.ok ? 0 : 1);
+JS
+```
+
+Expected gate coverage:
+
+- Missing submitted ledger fails closed.
+- Clean submitted work-unit reference passes `wave0-complete`.
+- Duplicate normalized URL fails.
+- High-overlap Jaccard clone fails.
+- Homepage/shallow URL fails.
+
+## Step 5: [MAIN] Result Interpretation
+
+PASS means Wave0 delegated coverage and content-dedup decisions are driven by submitted work-unit ledger rows and gate JSON, not by directory presence or Agent claims. FAIL means the Agent should repair the provenance/gate boundary and rerun the case from clean state.
+
+## Step 6: [MAIN/SHELL] Cleanup
+
+PASS removes the disposable bundle. FAIL preserves it for diagnosis.
+
+## Optional Automation Smoke
+
+This smoke command runs the same checkpoints for automation, but it is not the normative MD-controller execution surface:
+
+```bash
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-403 --cleanup-pass
 ```

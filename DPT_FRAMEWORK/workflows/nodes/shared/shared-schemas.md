@@ -43,12 +43,14 @@ suggested_context: []
 ### `contracts/queue.mjs` → `rb_queue.json`
 
 - **Schema**：`QueueSchema`
-- **字段**：`queue_health`、`stop_authorization_state`、5 个 slot（nullable）、`refill_pool`
+- **字段**：`queue_health`、`stop_authorization_state`、`active_window[]`、`refill_pool[]`、`delegated_in_flight{}`、`terminal_history[]`
+- **identity**：queue demand uses `queue_item_id`; delegated attempts use Engine-allocated `work_id` under `_work_units/`
+- **delegated completion**：delegated queue demand is completed only by `operate-work-unit submit`, not by queue maintenance commands
 - **位置**：`DPT_FRAMEWORK/schema/contracts/queue.mjs`
 
 ### Trace: `rb_trace.jsonl`
 
-- **`rb_trace.jsonl`**（唯一 trace sink）：位于每个 bundle 根目录，由 queue-manager、subagent-relay、gate CLI、playbook thin driver 统一 append。记录 runtime audit 事件（queue 生命周期、relay slot 生命周期、gate attempt、experiment verdict check）。**这是 runtime audit 与 experiment verdict 的单一 truth surface。**
+- **`rb_trace.jsonl`**（唯一 trace sink）：位于每个 bundle 根目录，由 queue manager、work-unit lifecycle CLI/helper、gate CLI、playbook thin driver 统一 append。记录 runtime audit 事件（queue lifecycle、work-unit claim/submit/fail/timeout/abandon/inspect diagnostics、gate attempt、experiment verdict check）。**这是 runtime audit 与 experiment verdict 的单一 truth surface。**
 - `rb_trace.jsonl` is the only current trace JSONL surface. Older trace JSONL names are not part of the current contract.
 
 ### `contracts/reference.mjs` → `artifacts/wave0/<topic>/source.yaml`
@@ -136,7 +138,7 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 | `origin_refs` | array | Legacy question 来源；emergent 可为空但必须显式 `[]` |
 | `trigger_refs` | array | 触发 finding 的 evidence/question refs |
 | `search_required` | boolean | 是否需要 Sub-agent search |
-| `subagent_receipt_refs` | array | 搜索发生时的 relay/runtime receipt refs |
+| `subagent_receipt_refs` | array | 搜索发生时的 work-unit runtime receipt refs |
 | `appears_in_synthesis` | boolean | 是否已进入 narrative projection |
 | `hitl2_handoff` | boolean | 是否进入 HITL2 handoff |
 
@@ -150,10 +152,10 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 | **status** | `resolved` / `partial` / `open` / `deferred` |
 | **decision** | `use_existing_evidence` / `exploit_search` / `explore_search` / `defer_hitl2` / `requires_internal_data` / `record_only` |
 
-### Wave2 Sub-agent Cache/Slot 路径
+### Wave2 Sub-agent Cache/Work-Unit 路径
 
-- `_cache/wave2/slot_MM/` — 中间产物
-- `_subagents/wave_02/slot_MM/` — slot 目录 + runtime receipt
+- `_cache/wave2/.../` — source cache leaf directories declared in submitted work-unit results
+- `_work_units/wave2/{work_id}/` — work-unit envelope, task, beacon, runtime receipt, result/status, and diagnostic runtime refs
 
 ## Artifacts — HITL2
 
@@ -164,20 +166,20 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 以下目录以 `_` 前缀命名，gate 不检查其内容。它们是运行时暂存区，不属于 authority artifact surface：
 
 - **`_cache/`**：Sub-agent 网络原始内容缓存，四级目录 `{wave}/{batch}/{scope}/{source_dir}/`。每个 source 写 `websearch.json` + `page.md` + `meta.json`（11 字段：url, title, source_domain, source_name, fetched_at, fetch_method, fetch_chain, content_type, reliability_tier, reliability_basis, whitelist_status）。Phase Agent spawn 前 `mkdir -p`，通过 spawn prompt 传递绝对路径。Non-authority，wave 完成后可清理对应 wave 子目录。详见 `_cache/README.md`。
-- **`_subagents/`**：Sub-agent relay slot 目录，由 `subagent-relay.mjs` 自动管理。每个 slot 含 `task.md` / `result.schema.json` / `runtime-receipt.jsonl` / `result.json`。Wave0→`wave_00/`，Wave1→`wave_01/`，Wave2→`wave_02/`。
+- **`_work_units/`**：production delegated work-unit envelopes, allocated by `operate-work-unit claim` and validated by `operate-work-unit submit`. Each envelope contains `manifest.json` / `task.md` / `result.schema.json` / `_beacon.json` / `runtime-receipt.jsonl` / result/status surfaces. Gate coverage still comes from submitted rows in `rb_output_declarations.jsonl`; `_work_units/` is a cross-check and diagnostic surface.
 
 ## Final Delivery
 
 - **`final/`**：Terminal delivery 目录（`gate: null`，无 gate CLI 检查）。Agent 从 verified bundle state 生成 final report artifact(s)，格式自由。Delivery 完成由 `final/` 下存在至少一份报告文件来证明。空目录不代表 delivery 完成。Post-delivery 反馈走 HITL2 `rerun` 路径。
 
-### Relay Role Spec Nodes
+### Work-Unit Role Spec Nodes
 
-每个使用 Sub-agent 的 phase 有独立的 relay role spec 文件（Phase Agent 通过 `suggested_context` 加载，用来构造 relay slot `task.md`）。这些 role specs 不是 manifest lifecycle phase nodes，也不是通过 `manifest.shared[]` 全局加载的 shared guidance。共享 relay 基础设施由 `shared-subagent-protocol.md` 定义。
+每个使用 Sub-agent 的 phase 有独立的 work-unit role spec 文件（Phase Agent 通过 `suggested_context` 加载，用来构造 work-unit `task.md`）。这些 role specs 不是 manifest lifecycle phase nodes，也不是通过 `manifest.shared[]` 全局加载的 shared guidance。共享 work-unit sub-agent 基础设施由 `shared-subagent-protocol.md` 定义。
 
 - **`phases/subagent-dpt-source-intake.md`** — role: `dpt-source-intake`。Wave0 foundation reference 搜索和 `source.yaml` 写入
 - **`phases/subagent-dpt-evidence-extractor.md`** — role: `dpt-evidence-extractor`。Wave1 topic-specific deepening、`evidence-summary.md` + `question-list.md` 成对产出；Wave2 backing supplementary tasks 也可复用
 - **`phases/subagent-dpt-topic-scout.md`** — role: `dpt-topic-scout`。Wave2 targeted gap-fill search，仅在 Phase Agent 对 finding 做 `decision=exploit_search|explore_search` 时 spawn。输入：finding description + keywords + output schema。输出：structured JSON（found_evidence, source_urls, fills_gap, confidence）
-- **`shared/shared-subagent-protocol.md`** — 共享 relay 基础设施：slot 契约、目录 authority boundary、并发控制、禁区清单、页面抓取链
+- **`shared/shared-subagent-protocol.md`** — 共享 work-unit sub-agent 基础设施：envelope 契约、submit authority boundary、fan-out rules、禁区清单、页面抓取链
 
 ### Gate Contract
 

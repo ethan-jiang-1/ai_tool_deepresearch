@@ -1,11 +1,13 @@
-// @impl SCO-002, SCO-009: QueueSchema + QueueWorkUnitSchema for rb_queue.json
+// @impl AGQ-001, AGQ-005, AGQ-017, AGQ-020, SCO-009
 import { z } from 'zod';
 import { QueueHealth, StopAuthorizationState } from '../enums.mjs';
-import { SLOT_NAMES } from './queue-slots.mjs';
 
-// ─── Queue-specific enums ────────────────────────────────────────────────
+export const QUEUE_ACTIVE_WINDOW_LIMIT = 20;
+export const QUEUE_SCHEMA_VERSION = 'queue.v2';
 
-const TargetSpecSchema = z.object({
+const JsonObject = z.record(z.string(), z.unknown());
+
+export const TargetSpecSchema = z.object({
   controller: z.enum(['main-agent', 'engine']),
   delegates: z.object({
     to: z.literal('sub-agent'),
@@ -14,8 +16,8 @@ const TargetSpecSchema = z.object({
   }).optional(),
 });
 
-const ItemStatus = z.enum(['queued', 'running', 'done', 'failed', 'blocked']);
-const PriorityClass = z.enum([
+export const ItemStatus = z.enum(['queued', 'running', 'done', 'failed', 'blocked']);
+export const PriorityClass = z.enum([
   'P0_preempted_restore',
   'P1_state_or_gate_repair',
   'P2_close_open_loop',
@@ -24,23 +26,13 @@ const PriorityClass = z.enum([
   'P5_new_reference_intake',
   'P6_topology_triage',
 ]);
-const RestorePriority = z.enum(['normal', 'next_tail_opening']);
-const JsonObject = z.record(z.string(), z.unknown());
+export const RestorePriority = z.enum(['normal', 'next_tail_opening']);
 
-// ─── QueueWorkUnitSchema ─────────────────────────────────────────────────
-
-/**
- * A single work unit in the agentic queue.
- *
- * Validated by agentic-queue prototype experiments; promoted to the
- * production schema contract.
- *
- * @impl SCO-009
- */
-export const QueueWorkUnitSchema = z.object({
-  work_id: z.string().min(1),
+export const QueueDemandItemSchema = z.object({
+  queue_item_id: z.string().min(1),
   title: z.string().min(1),
   targets: TargetSpecSchema,
+  kind: z.string().min(1).optional(),
   action: z.string().min(1),
   producer_rule: z.string().min(1),
   lineage: JsonObject,
@@ -56,14 +48,18 @@ export const QueueWorkUnitSchema = z.object({
   completion_receipt: z.string().nullable(),
   failure_route: z.string().min(1),
   status: ItemStatus.default('queued'),
-  preempted_from_slot: z.string().default('not_applicable'),
   restore_priority: RestorePriority.default('normal'),
   created_at: z.string().datetime().optional(),
   updated_at: z.string().datetime().optional(),
   payload: JsonObject,
-}).superRefine((data, ctx) => {
-  // AGQ-001: completion_receipt property is required (missing = reject)
-  // AGQ-004: null is valid ONLY when required_receipts is empty
+}).passthrough().superRefine((data, ctx) => {
+  if (Object.prototype.hasOwnProperty.call(data, 'work_id')) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['work_id'],
+      message: 'Queue demand identity is queue_item_id; work_id is reserved for Engine-allocated delegated work-unit attempts.',
+    });
+  }
   if (data.completion_receipt === null && data.required_receipts.length > 0) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -73,17 +69,75 @@ export const QueueWorkUnitSchema = z.object({
   }
 });
 
-// ─── QueueSchema ─────────────────────────────────────────────────────────
+export const DelegatedInFlightSchema = z.object({
+  queue_item_id: z.string().min(1),
+  work_id: z.string().min(1),
+  wave: z.number().int().nonnegative(),
+  kind: z.string().min(1),
+  batch_id: z.string().min(1).default('b000'),
+  attempt_index: z.number().int().nonnegative().default(1),
+  queue_item_snapshot_hash: z.string().min(1),
+  claimed_at: z.string().datetime(),
+  timeout_ms: z.number().int().positive(),
+  deadline_at: z.string().datetime(),
+  last_observed_at: z.string().datetime().optional(),
+});
 
-const QueueSlot = QueueWorkUnitSchema.nullable();
+export const QueueTerminalHistoryRecordSchema = z.object({
+  queue_item_id: z.string().min(1),
+  terminal_status: z.enum(['done', 'failed', 'blocked', 'cancelled']).default('done'),
+  completed_at: z.string().datetime().optional(),
+  work_id: z.string().min(1).optional(),
+  reason: z.string().optional(),
+  item: QueueDemandItemSchema.optional(),
+}).passthrough();
 
-export { TargetSpecSchema };
+function collectQueueLocations(data) {
+  const locations = [];
+  for (const item of data.active_window || []) locations.push(['active_window', item.queue_item_id]);
+  for (const item of data.refill_pool || []) locations.push(['refill_pool', item.queue_item_id]);
+  for (const [key, value] of Object.entries(data.delegated_in_flight || {})) {
+    locations.push(['delegated_in_flight', key]);
+    if (value?.queue_item_id && value.queue_item_id !== key) {
+      locations.push(['delegated_in_flight_value', value.queue_item_id]);
+    }
+  }
+  for (const record of data.terminal_history || []) {
+    if (record?.queue_item_id) locations.push(['terminal_history', record.queue_item_id]);
+  }
+  return locations;
+}
 
-/** @impl SCO-002, SCO-009, QIV-002 */
 export const QueueSchema = z.object({
+  schema_version: z.literal(QUEUE_SCHEMA_VERSION).default(QUEUE_SCHEMA_VERSION),
   bundle_name: z.string().nullable().optional(),
   queue_health: QueueHealth,
   stop_authorization_state: StopAuthorizationState,
-  ...Object.fromEntries(SLOT_NAMES.map((slot) => [slot, QueueSlot])),
-  refill_pool: z.array(QueueWorkUnitSchema),
+  active_window: z.array(QueueDemandItemSchema).default([]),
+  refill_pool: z.array(QueueDemandItemSchema).default([]),
+  delegated_in_flight: z.record(z.string(), DelegatedInFlightSchema).default({}),
+  terminal_history: z.array(QueueTerminalHistoryRecordSchema).default([]),
+}).strict().superRefine((data, ctx) => {
+  for (const [key, value] of Object.entries(data.delegated_in_flight || {})) {
+    if (value.queue_item_id !== key) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['delegated_in_flight', key, 'queue_item_id'],
+        message: `delegated_in_flight key ${key} must match queue_item_id ${value.queue_item_id}`,
+      });
+    }
+  }
+
+  const seen = new Map();
+  for (const [location, queueItemId] of collectQueueLocations(data)) {
+    if (seen.has(queueItemId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [location],
+        message: `queue_item_id ${queueItemId} appears in both ${seen.get(queueItemId)} and ${location}`,
+      });
+    } else {
+      seen.set(queueItemId, location);
+    }
+  }
 });

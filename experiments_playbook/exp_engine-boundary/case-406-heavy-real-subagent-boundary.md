@@ -3,265 +3,96 @@ schema: command-experiment/v1
 experiment: engine-boundary
 case: case-406-heavy-real-subagent-boundary
 weight: heavy
-case_goal: "验证真实 Sub-agent/WebSearch/WebFetch 路径产生 output declaration、cache trail、committed result、delegated complete、Engine ledger，并使 content_dedup gate pass；若当前 runner 无法调用真实 Agent tool，则记录 NOT RUN，不能标 PASS。"
+case_goal: "验证真实 dpt-source-intake Sub-agent/WebSearch/WebFetch 路径通过 work-unit submit 产生 ledger/cache/gate proof；无真实 Agent result 时只记录 NOT RUN。"
 runner: coding-agent
 agent_mode: native-subagent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-406_eb_real
-trace: dpt_disp_case-406_eb_real/rb_trace.jsonl
+bundle: dpt_disp_case-406_eb_real_work_unit
+trace: dpt_disp_case-406_eb_real_work_unit/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
 ## Execution Contract
 
-Heavy case。必须使用真实 `dpt-source-intake` Sub-agent 和真实 WebSearch/WebFetch 或等价抓取链；fixture、手写 ledger、手写 runtime receipt、手写 fake search cache 均不能算 PASS。
+Heavy case. PASS requires a real `dpt-source-intake` actor and real WebSearch/WebFetch or an approved fetch degradation chain. Fixture output, hand-written ledger rows, and hand-written fake search cache cannot produce PASS.
 
-如果当前 runner 没有可调用的 real Agent tool / project subagent surface，执行 Step 4 记录 NOT RUN：写明 unavailable surface、风险和后续复跑条件。NOT RUN 是显式记录，不是 PASS。
+Without a real actor result, the runner must record `NOT_RUN` and exit `2`. `NOT_RUN` is explicit evidence of deferred real-Agent execution; it is not PASS.
 
 ## Reality Distance Ledger
 
-| 维度 | 声明 |
-|------|------|
-| **Agent actor** | 必须有真实 `dpt-source-intake` Sub-agent |
-| **外部调用** | 必须有真实 WebSearch/WebFetch 或抓取链 |
-| **ledger 生成** | 只能由 delegated `operate-queue complete` 追加 |
-| **gate 输入面** | `rb_output_declarations.jsonl` |
-| **not-run 规则** | 无 real-agent surface 时记录 NOT RUN，不得输出 PASS |
+| Dimension | Statement |
+| --- | --- |
+| Agent actor | Required for PASS |
+| External calls | Required for PASS |
+| Ledger generation | Real `operate-work-unit submit` |
+| Gate input | Submitted work-unit ledger rows |
+| No-real-agent rule | Record NOT RUN, preserve bundle, do not mark PASS |
 
 # case-406-heavy-real-subagent-boundary
 
-真实 Agent↔Engine 边界：Sub-agent 产出 declaration/cache → Parent `commitSlotResult()` → delegated `complete()` → Engine ledger → `content_dedup` gate pass。
+## Expected Runtime Path
 
----
+1. Create a disposable bundle through shared setup.
+2. Enqueue and claim a real Wave0 source-intake work unit.
+3. If no real Agent result is provided, write an explicit NOT_RUN report and preserve the bundle.
+4. If a real Agent result is provided, submit it through `operate-work-unit submit`.
+5. Run the Wave0 gate and read gate JSON as structured feedback.
+6. Record real-submit, gate, and work-unit trace checks in root `rb_trace.jsonl`.
+7. Print PASS/FAIL/NOT_RUN and clean up only on PASS.
 
-## Step 1: 创建 Bundle + Queue + Relay Slot
+## Step 1: [MAIN/SHELL] Prove No Fixture PASS
 
-```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_real --case case-406 --force)
-echo "Bundle: $B"
-
-cat > "$B/rb_status.json" << 'JSON'
-{"current_gate":"wave0_complete","next_gate":"wave1_complete","current_mode":"execution","state":"in_progress"}
-JSON
-
-cat > "$B/rb_plan.md" << 'MD'
----
-{
-  "plan_basename": "eb_real",
-  "derived_topic_count": 1,
-  "topic_registry": [{ "id": "t1", "slug": "agentic-coding-tools", "title": "Agentic coding tools" }]
-}
----
-# Plan
-MD
-
-cat > "$B/rb_profile.yaml" << 'YAML'
-research_style_params:
-  wave0_shared_ref_total: 1
-  wave0_per_topic_source_floor: 1
-YAML
-
-mkdir -p "$B/reference" "$B/artifacts/wave0/agentic-coding-tools"
-cat > "$B/reference/README.md" << 'MD'
-# Reference Evidence
-MD
-cat > "$B/reference/_INDEX.md" << 'MD'
-| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-MD
-
-cat > "$B/task.json" << 'JSON'
-{"work_id":"case406-real-source-intake","title":"Real Sub-agent source intake","targets":{"controller":"main-agent","delegates":{"to":"sub-agent","role_key":"dpt-source-intake","timeout_ms":600000}},"action":"Use real WebSearch/WebFetch or the approved fetch degradation chain to collect at least one real source about agentic coding tools. Write reference/00-shared-agentic-coding-tools.md, artifacts/wave0/agentic-coding-tools/source.yaml, and cache leaf directories under _cache/wave0/primary/agentic-coding-tools/sNN_<source-slug> containing websearch.json, page.md, and meta.json. Return strict JSON with output_files[] and cache_trails[] declaring the real files and cache leaves.","producer_rule":"case406_real_source_intake","lineage":{"topic_slug":"agentic-coding-tools","phase":"wave0"},"priority_class":"P5_new_reference_intake","required_receipts":["none"],"done_condition":"Real source files and cache trails exist.","verification":{"engine":[],"agent":["real WebSearch/WebFetch or approved fetch chain used","no placeholder URL"]},"writes_to":["reference/00-shared-agentic-coding-tools.md","artifacts/wave0/agentic-coding-tools/source.yaml"],"status_sync":[],"completion_receipt":"none","failure_route":"record not-run or queue repair","payload":{"topic_slug":"agentic-coding-tools"}}
-JSON
-
-node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue "$B" --task "$B/task.json"
-node DPT_FRAMEWORK/cli/operate-queue.mjs claim "$B" --actor main-agent > "$B/claim.json"
-
-cat > "$B/prepare-slot.mjs" << 'JS'
-import { writeFileSync } from 'node:fs';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-
-const B = process.argv[2];
-const REPO = process.cwd();
-const relay = await import(pathToFileURL(path.join(REPO, 'DPT_FRAMEWORK/engine/subagent-relay.mjs')));
-const slot = relay.createSlot({
-  key: 'case406-real-source-intake',
-  slotIndex: 0,
-  roleAgentKey: 'dpt-source-intake',
-  taskDescription: JSON.parse(await import('node:fs').then(fs => fs.readFileSync(path.join(B, 'task.json'), 'utf-8'))).action,
-  timeoutMs: 600000,
-}, 1);
-const prompt = relay.recordAgentSpawnRequested(slot, B, { platform: 'codex', runtimeMode: 'project-agent' });
-writeFileSync(path.join(B, '_slot.json'), JSON.stringify(slot, null, 2));
-writeFileSync(path.join(B, 'agent-prompt.md'), prompt);
-console.log(path.join(B, 'agent-prompt.md'));
-JS
-node "$B/prepare-slot.mjs" "$B"
-```
-
-→ 预期：`agent-prompt.md` 和 `_slot.json` 存在；trace 有 `agent_spawn_requested`。
-
----
-
-## Step 2: 启动真实 Sub-agent
-
-使用 runner 提供的真实 Agent tool 启动 project agent `dpt-source-intake`，prompt 使用 Step 1 生成的 `$B/agent-prompt.md`。
-
-Sub-agent 必须：
-
-- 读取 `$B/_subagents/wave_01/slot_00/task.md` 与 `result.schema.json`。
-- 在 Sub-agent 上下文开始和结束时写 slot-local `runtime-receipt.jsonl`。
-- 执行真实 WebSearch/WebFetch 或 approved fetch degradation chain。
-- 写真实 `reference/00-shared-agentic-coding-tools.md`、`artifacts/wave0/agentic-coding-tools/source.yaml`、以及 `_cache/.../sNN_*/websearch.json|page.md|meta.json`。
-- 返回 strict JSON；runner 将其保存为 `$B/real-subagent-result.json`。
-
-如果 runner 当前无法调用真实 Agent tool，跳过 Step 3，执行 Step 4 记录 NOT RUN。
-
----
-
-## Step 3: Commit → Delegated Complete → Gate / NOT RUN
+Run without a real result to verify the heavy case cannot pass on fixture or missing actor evidence.
 
 ```bash
-cat > "$B/complete-real-path.mjs" << 'JS'
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
-import { execFileSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
-
-const B = process.argv[2];
-const REPO = process.cwd();
-const relay = await import(pathToFileURL(path.join(REPO, 'DPT_FRAMEWORK/engine/subagent-relay.mjs')));
-const slot = JSON.parse(readFileSync(path.join(B, '_slot.json'), 'utf-8'));
-const resultPath = path.join(B, 'real-subagent-result.json');
-const tracePath = path.join(B, 'rb_trace.jsonl');
-
-function record(passed, detail, extra = {}) {
-  appendFileSync(tracePath, JSON.stringify({
-    ts: new Date().toISOString(),
-    event: 'check',
-    source: 'case-406',
-    gate: 'real-subagent-boundary',
-    passed,
-    expected: true,
-    detail,
-    ...extra,
-  }) + '\n');
-}
-
-if (!existsSync(resultPath)) {
-  const reason = {
-    case: 'case-406-heavy-real-subagent-boundary',
-    status: 'NOT_RUN',
-    unavailable_surface: 'No real-subagent-result.json was produced by a callable real project Agent tool in this run. This heavy case requires runner-mediated dpt-source-intake spawn with WebSearch/WebFetch.',
-    reality_distance_risk: 'Without the real Sub-agent/WebSearch/WebFetch actor, fixture execution would only re-prove case-401/403 and would not cover the Agent boundary.',
-    rerun_condition: 'Run in a Codex/Claude Code environment that can spawn project agent dpt-source-intake, then save its strict JSON as real-subagent-result.json and rerun this step.',
-    recorded_at: new Date().toISOString(),
-  };
-  writeFileSync(path.join(B, 'case-406-not-run.json'), JSON.stringify(reason, null, 2));
-  record(false, reason.unavailable_surface, { status: 'NOT_RUN' });
-  console.log(JSON.stringify(reason, null, 2));
-  process.exit(2);
-}
-
-const agentId = process.env.CASE406_AGENT_ID || 'real-agent-id-not-recorded';
-relay.ingestAgentReceipt(slot, B, { platform: 'codex', runtimeMode: 'project-agent', runtimeAgentId: agentId });
-const result = JSON.parse(readFileSync(resultPath, 'utf-8'));
-const committed = relay.commitSlotResult(slot, B, result, { platform: 'codex', runtimeMode: 'project-agent', runtimeAgentId: agentId });
-record(committed.ok === true, 'commitSlotResult accepted real Sub-agent output');
-if (!committed.ok) throw new Error(committed.result.notes?.join('; ') || 'commitSlotResult failed');
-
-writeFileSync(path.join(B, 'complete-result.json'), JSON.stringify({
-  work_id: 'case406-real-source-intake',
-  receipt: 'none',
-  summary: 'real source intake complete',
-  writes: ['reference/00-shared-agentic-coding-tools.md', 'artifacts/wave0/agentic-coding-tools/source.yaml'],
-  slot_result_ref: slot.resultPath,
-}, null, 2));
-execFileSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-queue.mjs', 'complete', B, '--result', path.join(B, 'complete-result.json')], { cwd: REPO, stdio: 'pipe' });
-record(existsSync(path.join(B, 'rb_output_declarations.jsonl')), 'delegated complete appended Engine ledger');
-
-// EXO-003 exception: gate invoked via execFileSync() in inline JS — bash wrapper not applicable.
-// Gate diagnostics captured via writeGateAttempt() trace events and _logs/run.log.
-const gateRaw = execFileSync(process.execPath, ['DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs', '--bundle', B, '--current-node', 'phases/phase-wave0.md'], { cwd: REPO, encoding: 'utf-8', stdio: 'pipe' });
-writeFileSync(path.join(B, 'gate-wave0.json'), gateRaw);
-const gate = JSON.parse(gateRaw);
-record(gate.check?.passed === true, 'wave0 gate passed from Engine ledger input', { inspect: gate.inspect ?? [] });
-
-console.log('case-406 real path completed');
-JS
-
 set +e
-node "$B/complete-real-path.mjs" "$B"
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-406
 sts=$?
 set -e
-if [ "$sts" -eq 2 ]; then
-  echo "CASE-406 NOT RUN; bundle preserved: $B"
-elif [ "$sts" -ne 0 ]; then
-  exit "$sts"
-fi
+test "$sts" -eq 2
 ```
 
-→ 预期：真实 Sub-agent result 存在时输出 `case-406 real path completed`；否则记录 `case-406-not-run.json` 并以 NOT RUN 退出。
+Expected: command prints `verdict: "NOT_RUN"`, writes `case-406-not-run.json`, and exits `2`.
 
----
+## Step 2: [MAIN->AGENT] Produce Real Actor Result
 
-## Step 4: NOT RUN 记录说明
+A real project Agent must execute the generated work-unit task using the task, manifest, beacon, result schema, and receipt nonce from the claimed work-unit envelope. The Agent may use WebSearch/WebFetch or an approved fetch degradation chain. Do not hand-write a fake result, fake receipt, fake cache, or fake ledger row.
 
-Step 3 自动处理无真实 Agent tool 的情况。若生成 `case-406-not-run.json`，runner 必须把该 case 记录为 NOT RUN；不得继续 Step 5 报 PASS。
+Expected runtime fact: the real actor produces a result JSON whose `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, output files, cache trails, and runtime receipt match the claimed work unit.
 
----
+## Step 3: [MAIN/SHELL] Submit Real Result
 
-## Step 5: 从 Trace 裁决
-
-只在 Step 3 真实路径完成后执行。
+After a real project Agent has completed the generated work-unit task and produced a valid result JSON:
 
 ```bash
-cat > "$B/verdict.mjs" << 'JS'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
-const B = process.argv[2];
-if (existsSync(path.join(B, 'case-406-not-run.json'))) {
-  const reason = JSON.parse(readFileSync(path.join(B, 'case-406-not-run.json'), 'utf-8'));
-  console.log('\x1b[33mCASE-406 NOT RUN\x1b[0m');
-  console.log(reason.unavailable_surface);
-  process.exit(2);
-}
-const events = readFileSync(path.join(B, 'rb_trace.jsonl'), 'utf-8').trim().split('\n').filter(Boolean).map(JSON.parse);
-const checks = events.filter((e) => e.event === 'check' && e.source === 'case-406');
-const failed = checks.filter((c) => c.passed !== true);
-const requiredEvents = ['agent_spawn_requested', 'agent_runtime_started', 'agent_result_ready', 'agent_result_received', 'result_schema_validated', 'ledger_appended'];
-const missing = requiredEvents.filter((name) => !events.some((e) => e.event === name));
-const ok = checks.length >= 3 && failed.length === 0 && missing.length === 0;
-writeFileSync(path.join(B, 'case-406-verdict.json'), JSON.stringify({ ok, checks: checks.length, failed: failed.length, missing }, null, 2));
-console.log(`checks: ${checks.length}, failed: ${failed.length}, missing: ${missing.join(',') || 'none'}`);
-console.log(ok ? '\x1b[32mCASE-406 PASS\x1b[0m' : '\x1b[31mCASE-406 FAIL\x1b[0m');
-if (!ok) process.exit(1);
-JS
-set +e
-node "$B/verdict.mjs" "$B"
-sts=$?
-set -e
-if [ "$sts" -eq 2 ]; then
-  echo "CASE-406 NOT RUN recorded; bundle preserved: $B"
-elif [ "$sts" -ne 0 ]; then
-  exit "$sts"
-fi
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-406 --real-result <result.json> --cleanup-pass
 ```
 
----
+Expected for a real successful run: command exits `0` and prints `verdict: "PASS"`. A diagnostic run without `--cleanup-pass` also writes `case-406-verdict.json`.
 
-## Step 6: PASS-only 清理
+## Step 4: [MAIN] Read Machine Feedback
 
-```bash
-if [ -f "$B/case-406-not-run.json" ]; then
-  echo "NOT RUN preserved for inspection: $B"
-elif node -e "const fs=require('fs'); const p=process.argv[1] + '/case-406-verdict.json'; process.exit(JSON.parse(fs.readFileSync(p, 'utf8')).ok ? 0 : 1)" "$B"; then
-  rm -rf "$B"
-  echo "✓ Cleaned up after PASS."
-else
-  echo "FAIL/NOT RUN preserved for inspection: $B"
-  exit 1
-fi
-```
+Read the runner JSON and, on FAIL or NOT_RUN, inspect the preserved bundle. Gate JSON and trace checks are the authority; the real Agent's narrative summary is not a verdict source by itself.
+
+Expected real-path coverage:
+
+- Work-unit claim creates a real task, manifest, beacon, result schema, and runtime receipt path.
+- Real Agent output can pass only through `operate-work-unit submit`.
+- Gate pass, when achieved, comes from submitted work-unit ledger coverage and cross-checks.
+
+## Step 5: [MAIN/SHELL] Verdict Checks
+
+For PASS, the runner must record trace `check` rows for `real-submit`, `wave0-gate`, and `work-unit-trace`. Without a real result, the case records `NOT_RUN` and exits `2`; this is a preserved deferred-evidence state, not a failure of the fixture-backed boundary cases.
+
+## Step 6: [MAIN] Result Interpretation
+
+PASS means a real sub-agent actor completed the same work-unit submit and gate path used by fixture-backed Engine cases. NOT_RUN means the real Agent behavior remains unproven and must not be counted as production behavior coverage. FAIL means the preserved bundle contains the gate, submit, or trace feedback needed for repair.
+
+## Step 7: [MAIN/SHELL] Cleanup
+
+Normal real-result execution uses `--cleanup-pass`: PASS removes the disposable bundle, while FAIL and NOT_RUN preserve it for diagnosis or later real-Agent continuation.
+
+## Optional Automation Smoke
+
+The no-result and real-result commands above are already step-sized controller checkpoints: Step 1 proves no fixture PASS, Step 2 requires real Agent work, Step 3 submits that real result. A suite runner may aggregate their reports, but it must not convert NOT_RUN into PASS or replace Step 2 with fixture output.

@@ -3,204 +3,277 @@ schema: command-experiment/v1
 experiment: engine-boundary
 case: case-405-light-trace-single-sink
 weight: light
-case_goal: "验证当前 framework/playbook trace 写入路径只写 bundle 根 rb_trace.jsonl，并且 disposable bundle 内不存在旧 trace JSONL sink。"
+case_goal: "验证 framework/playbook trace 写入路径只写 bundle 根 rb_trace.jsonl，并覆盖 trace API、queue CLI、work-unit claim/submit。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-405_eb_trace
-trace: dpt_disp_case-405_eb_trace/rb_trace.jsonl
+bundle: dpt_disp_case-405_eb_trace_work_unit
+trace: dpt_disp_case-405_eb_trace_work_unit/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
 ## Execution Contract
 
-fixture-backed、无 Agent actor、无外部调用。必须触发当前 trace API、Queue CLI trace、Relay commit trace，并从 `rb_trace.jsonl` 与文件系统裁决；禁止写任何非 canonical trace JSONL。
+Fixture-backed, no Agent actor, no external calls. The case must trigger current trace API, non-delegated queue CLI, and work-unit claim/submit trace paths, then scan the disposable bundle for non-canonical trace JSONL sinks.
+
+## Reality Distance Ledger
+
+| Dimension | Statement |
+| --- | --- |
+| Runtime context | Real disposable bundle from `experiments_env/shared/new-disposable-bundle.mjs` |
+| Framework path | Real trace API, `operate-queue`, and `operate-work-unit` trace writers |
+| Fixture input | Controlled queue and work-unit fixture data to trigger trace events |
+| Agent actor | None |
+| External calls | None |
+| Trace authority | Bundle root `rb_trace.jsonl` |
+| Removed sinks | Any non-root trace JSONL sink is a failure |
+| Verdict source | Trace JSONL `check` events, filesystem scan result, and runner report |
+| Does not prove | Agent logging discipline or external runtime logging completeness |
 
 # case-405-light-trace-single-sink
 
-验证 trace 单 sink：所有当前 runtime/playbook trace event 都进入 bundle 根 `rb_trace.jsonl`。
+## Expected Runtime Path
 
----
+1. Create a disposable bundle through shared setup.
+2. Write one trace event through the current framework trace API.
+3. Trigger non-delegated queue CLI trace events.
+4. Trigger work-unit claim and submit trace events.
+5. Walk the disposable bundle and fail if any non-root trace JSONL sink exists.
+6. Record API/queue/work-unit/single-sink checks in root `rb_trace.jsonl`.
+7. Print PASS/FAIL and clean up only on PASS.
 
-## Step 1: 创建 Bundle
+## Step 1: [MAIN/SHELL] Create Runtime Context
+
+Create a disposable bundle. This case then triggers trace writes from three separate production boundaries.
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_trace --case case-405 --force)
-echo "Bundle: $B"
+B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_trace_work_unit --case case-405 --force)
+node --input-type=module - "$B" <<'JS'
+import { writeMinimalPlan, writeMinimalStatus } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+writeMinimalStatus(process.argv[2]);
+writeMinimalPlan(process.argv[2]);
+JS
+echo "BUNDLE=$B"
 ```
 
----
+Expected: the bundle path is printed.
 
-## Step 2: 触发当前 trace 写入路径
+## Step 2: [MAIN/SHELL] Trigger Framework Trace API
+
+Write one trace event through the current framework trace API, then read root `rb_trace.jsonl` before moving on.
 
 ```bash
-cat > "$B/run-trace-paths.mjs" << 'JS'
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+node --input-type=module - "$B" <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
 
-const B = path.resolve(process.argv[2]);
-const REPO = process.cwd();
-const tracePath = path.join(B, 'rb_trace.jsonl');
-const traceMod = await import(pathToFileURL(path.join(REPO, 'DPT_FRAMEWORK/engine/trace.mjs')));
-const relay = await import(pathToFileURL(path.join(REPO, 'DPT_FRAMEWORK/engine/subagent-relay.mjs')));
+const bundle = process.argv[2];
+const trace = createTrace(`${bundle}/rb_trace.jsonl`, { consoleEcho: false });
+trace.traceEntry('check', {
+  source: 'case-405-api',
+  gate: 'trace-api',
+  passed: true,
+  expected: true,
+  detail: 'createTrace writes rb_trace.jsonl'
+});
+JS
+node - "$B" <<'JS'
+const fs = require('fs');
+const bundle = process.argv[2];
+const events = fs.readFileSync(`${bundle}/rb_trace.jsonl`, 'utf8').trim().split(/\r?\n/).map((line) => JSON.parse(line));
+const found = events.some((event) => event.source === 'case-405-api' && event.gate === 'trace-api');
+console.log(JSON.stringify({ trace_api_event_found: found }, null, 2));
+process.exit(found ? 0 : 1);
+JS
+```
 
-function record(passed, detail, extra = {}) {
-  appendFileSync(tracePath, JSON.stringify({
-    ts: new Date().toISOString(),
-    event: 'check',
-    source: 'case-405',
-    gate: 'trace-single-sink',
-    passed,
-    expected: true,
-    detail,
-    ...extra,
-  }) + '\n');
-}
+Expected: root trace contains the API event. No other trace sink is expected at this point.
 
-function runNode(args) {
-  return execFileSync(process.execPath, args, { cwd: REPO, encoding: 'utf-8', stdio: 'pipe' });
-}
+## Step 3: [MAIN/SHELL] Trigger Queue CLI Trace
 
-function walk(dir) {
-  const out = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...walk(full));
-    else out.push(full);
-  }
-  return out;
-}
+Complete a non-delegated queue item through `operate-queue`, then read root trace for the emitted `queue_completed` event.
 
-// Current trace API path.
-const trace = traceMod.createTrace(tracePath, { consoleEcho: false });
-trace.traceEntry('check', { source: 'case-405-api', gate: 'trace-api', passed: true, expected: true, detail: 'createTrace writes rb_trace.jsonl' });
-
-// Queue CLI path.
-writeFileSync(path.join(B, 'rb_status.json'), JSON.stringify({
-  current_gate: 'wave0_complete',
-  next_gate: 'wave1_complete',
-  current_mode: 'execution',
-  state: 'in_progress',
-}) + '\n');
-writeFileSync(path.join(B, 'task.json'), JSON.stringify({
-  work_id: 'case405-queue',
-  title: 'Trace queue path',
+```bash
+node - "$B" <<'JS'
+const fs = require('fs');
+const path = require('path');
+const bundle = process.argv[2];
+const task = {
+  queue_item_id: 'case405-queue',
+  title: 'Trace sink queue task',
   targets: { controller: 'main-agent' },
-  action: 'complete a non-delegated queue item',
-  producer_rule: 'case405',
+  action: 'Trigger queue trace events.',
+  producer_rule: 'case405_trace_queue',
   lineage: {},
   priority_class: 'P5_new_reference_intake',
   required_receipts: ['none'],
-  done_condition: 'done',
+  done_condition: 'operate-queue complete succeeds',
   verification: { engine: [], agent: [] },
   writes_to: [],
   status_sync: [],
   completion_receipt: 'none',
-  failure_route: 'test',
-  payload: {},
-}));
-runNode(['DPT_FRAMEWORK/cli/operate-queue.mjs', 'enqueue', B, '--task', path.join(B, 'task.json')]);
-runNode(['DPT_FRAMEWORK/cli/operate-queue.mjs', 'claim', B, '--actor', 'main-agent']);
-writeFileSync(path.join(B, 'result.json'), JSON.stringify({ work_id: 'case405-queue', receipt: 'none', summary: 'done' }));
-runNode(['DPT_FRAMEWORK/cli/operate-queue.mjs', 'complete', B, '--result', path.join(B, 'result.json')]);
-
-// Relay commit path.
-const slot = relay.createSlot({
-  key: 'case405-relay',
-  slotIndex: 0,
-  roleAgentKey: 'dpt-source-intake',
-  taskDescription: 'trace single sink relay path',
-}, 1);
-mkdirSync(path.join(B, path.dirname(slot.resultPath)), { recursive: true });
-relay.writeSlotStatus(slot, 'running', B);
-writeFileSync(path.join(B, slot.receiptPath), [
-  JSON.stringify({ event: 'agent_runtime_started', slotKey: slot.key, roleAgentKey: slot.roleAgentKey, receiptNonce: slot.receiptNonce }),
-  JSON.stringify({ event: 'agent_result_ready', slotKey: slot.key, roleAgentKey: slot.roleAgentKey, receiptNonce: slot.receiptNonce }),
-].join('\n') + '\n');
-mkdirSync(path.join(B, 'reference'), { recursive: true });
-writeFileSync(path.join(B, 'reference/case405.md'), '---\nsource_url: https://trace-source.test/article\n---\n## Key Facts\nTrace single sink fixture.\n');
-const cacheLeaf = '_cache/wave0/primary/case405/s01_trace';
-mkdirSync(path.join(B, cacheLeaf), { recursive: true });
-writeFileSync(path.join(B, cacheLeaf, 'websearch.json'), '[]');
-writeFileSync(path.join(B, cacheLeaf, 'page.md'), '# Page\n');
-writeFileSync(path.join(B, cacheLeaf, 'meta.json'), JSON.stringify({ url: 'https://trace-source.test/article' }));
-const committed = relay.commitSlotResult(slot, B, {
-  slotKey: slot.key,
-  roleAgentKey: slot.roleAgentKey,
-  status: 'done',
-  summary: 'trace relay path',
-  evidenceCount: 1,
-  references: [{ title: 'Trace', url: 'https://trace-source.test/article', quote: '', relevance: 'fixture' }],
-  confidence: 0.9,
-  notes: [],
-  output_files: [{ path: 'reference/case405.md', role: 'reference', source_url: 'https://trace-source.test/article' }],
-  cache_trails: [`${cacheLeaf}/`],
-}, { platform: 'fixture', runtimeMode: 'unknown', runtimeAgentId: 'case405-fixture' });
-record(committed.ok === true, 'Relay commit writes current trace path');
-
-const events = readFileSync(tracePath, 'utf-8').trim().split('\n').filter(Boolean).map(JSON.parse);
-record(events.some((e) => e.source === 'case-405-api'), 'trace API event found in rb_trace.jsonl');
-record(events.some((e) => e.event === 'queue_completed' && e.work_id === 'case405-queue'), 'Queue CLI event found in rb_trace.jsonl');
-record(events.some((e) => e.event === 'agent_result_received' && e.key === 'case405-relay'), 'Relay event found in rb_trace.jsonl');
-
-const oldTraceName = String.raw`(^|/)_tr` + String.raw`ace(?:[_.-].*)?\.jsonl$`;
-const badTraceFiles = walk(B)
-  .map((file) => path.relative(B, file))
-  .filter((rel) => rel !== 'rb_trace.jsonl')
-  .filter((rel) => new RegExp(`${oldTraceName}|_tr` + `ace_agq_cli|_tr` + `ace_subagent|rbrb_tr` + `ace`).test(rel));
-record(badTraceFiles.length === 0, 'No non-canonical trace JSONL sink exists in disposable bundle', { badTraceFiles });
-console.log('case-405 trace paths completed');
+  failure_route: 'queue repair work',
+  payload: {}
+};
+fs.writeFileSync(path.join(bundle, 'case405-queue.json'), `${JSON.stringify(task, null, 2)}\n`);
+fs.writeFileSync(path.join(bundle, 'case405-queue-result.json'), `${JSON.stringify({
+  queue_item_id: 'case405-queue',
+  receipt: 'none',
+  summary: 'queue trace sink checkpoint'
+}, null, 2)}\n`);
 JS
-
-node "$B/run-trace-paths.mjs" "$B"
+node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue "$B" --task "$B/case405-queue.json" > "$B/case-405-queue-enqueue.json"
+node DPT_FRAMEWORK/cli/operate-queue.mjs claim "$B" --actor main-agent > "$B/case-405-queue-claim.json"
+node DPT_FRAMEWORK/cli/operate-queue.mjs complete "$B" --result "$B/case405-queue-result.json" > "$B/case-405-queue-complete.json"
+node - "$B" <<'JS'
+const fs = require('fs');
+const bundle = process.argv[2];
+const events = fs.readFileSync(`${bundle}/rb_trace.jsonl`, 'utf8').trim().split(/\r?\n/).map((line) => JSON.parse(line));
+const found = events.some((event) => event.event === 'queue_completed' && event.queue_item_id === 'case405-queue');
+console.log(JSON.stringify({ queue_completed_event_found: found }, null, 2));
+process.exit(found ? 0 : 1);
+JS
 ```
 
-→ 预期：`case-405 trace paths completed`。
+Expected: queue CLI emits its trace event into root `rb_trace.jsonl`.
 
----
+## Step 4: [MAIN/SHELL] Trigger Work-Unit Claim And Submit Trace
 
-## Step 3: 从 Trace 裁决
+Claim and submit one fixture-backed work unit through real `operate-work-unit` CLIs, then read root trace for claim and submit events.
 
 ```bash
-cat > "$B/verdict.mjs" << 'JS'
-import { readFileSync, writeFileSync } from 'node:fs';
+node --input-type=module - "$B" <<'JS'
+import { enqueueWorkUnitTask, queueItemForWorkUnit } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+const bundle = process.argv[2];
+const task = queueItemForWorkUnit({
+  queue_item_id: 'wave0-source-topic-a',
+  topic_slug: 'topic-a',
+  title: 'Trace sink work-unit task'
+});
+const result = enqueueWorkUnitTask(bundle, task, { fileName: 'case405-work-unit.json' });
+console.log(JSON.stringify(result, null, 2));
+JS
+CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1)
+printf '%s\n' "$CLAIM_JSON" > "$B/case-405-work-unit-claim.json"
+WORK_ID=$(printf '%s\n' "$CLAIM_JSON" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.claimed_work_ids[0]);')
+RESULT_PATH=$(node --input-type=module - "$B" "$WORK_ID" <<'JS'
+import {
+  referenceContent,
+  sourceYamlExtra,
+  writeFixtureResultForWorkUnit
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const [bundle, workId] = process.argv.slice(2);
+const sourceUrl = 'https://research-source.test/trace/article';
+const fixture = writeFixtureResultForWorkUnit(bundle, {
+  work_id: workId,
+  output_path: 'reference/00-shared-trace.md',
+  source_url: sourceUrl,
+  source_slug: 'trace',
+  output_content: referenceContent({ source_url: sourceUrl, topic_slug: 'topic-a', title: 'Trace Fixture Source' }),
+  extra_output_files: [sourceYamlExtra('topic-a', sourceUrl, 'Trace Fixture Source')]
+});
+console.log(fixture.resultPath);
+JS
+)
+SUBMIT_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$RESULT_PATH")
+printf '%s\n' "$SUBMIT_JSON" > "$B/case-405-work-unit-submit.json"
+
+node - "$B" "$WORK_ID" <<'JS'
+const fs = require('fs');
+const [bundle, workId] = process.argv.slice(2);
+const events = fs.readFileSync(`${bundle}/rb_trace.jsonl`, 'utf8').trim().split(/\r?\n/).map((line) => JSON.parse(line));
+const claimFound = events.some((event) => event.event === 'work_unit_claimed' && event.work_id === workId);
+const submitFound = events.some((event) => event.event === 'work_unit_submitted' && event.work_id === workId);
+console.log(JSON.stringify({ work_id: workId, claimFound, submitFound }, null, 2));
+process.exit(claimFound && submitFound ? 0 : 1);
+JS
+```
+
+Expected: work-unit claim and submit trace events are in root `rb_trace.jsonl`.
+
+## Step 5: [MAIN/SHELL] Scan For Non-Root Trace Sinks And Record Verdict Checks
+
+Record trace `check` rows for `trace-api`, `queue-trace`, `work-unit-claim-trace`, `work-unit-submit-trace`, and `single-sink`. The `single-sink` check must come from a filesystem walk, not from an assumed path list.
+
+```bash
+node --input-type=module - "$B" "$WORK_ID" <<'JS'
+import { readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
-const B = process.argv[2];
-const events = readFileSync(path.join(B, 'rb_trace.jsonl'), 'utf-8').trim().split('\n').filter(Boolean).map(JSON.parse);
-const checks = events.filter((e) => e.event === 'check' && (e.source === 'case-405' || e.source === 'case-405-api'));
-const failed = checks.filter((c) => c.passed !== true);
-const ok = checks.length >= 6 && failed.length === 0;
-writeFileSync(path.join(B, 'case-405-verdict.json'), JSON.stringify({ ok, checks: checks.length, failed: failed.length }, null, 2));
-console.log(`checks: ${checks.length}, failed: ${failed.length}`);
-for (const f of failed) console.log(`FAIL ${f.gate}: ${f.detail}`);
-console.log(ok ? '\x1b[32mCASE-405 PASS\x1b[0m' : '\x1b[31mCASE-405 FAIL\x1b[0m');
-if (!ok) process.exit(1);
+import {
+  readTrace,
+  recordPlaybookCheck,
+  writeTraceVerdict
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const [bundle, workId] = process.argv.slice(2);
+
+function walkFiles(dir) {
+  const out = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...walkFiles(full));
+    else if (entry.isFile()) out.push(full);
+  }
+  return out;
+}
+
+const events = readTrace(bundle);
+const badTraceFiles = walkFiles(bundle)
+  .map((file) => path.relative(bundle, file))
+  .filter((rel) => rel !== 'rb_trace.jsonl')
+  .filter((rel) => /(^|\/)(trace|_trace)(?:[_.-].*)?\.jsonl$/i.test(rel) || /_trace_agq_cli|_trace_subagent|rbrb_trace/i.test(rel));
+
+recordPlaybookCheck(bundle, {
+  gate: 'trace-api',
+  passed: events.some((event) => event.source === 'case-405-api'),
+  detail: 'trace API event in rb_trace.jsonl'
+});
+recordPlaybookCheck(bundle, {
+  gate: 'queue-trace',
+  passed: events.some((event) => event.event === 'queue_completed' && event.queue_item_id === 'case405-queue'),
+  detail: 'queue_completed event in rb_trace.jsonl'
+});
+recordPlaybookCheck(bundle, {
+  gate: 'work-unit-claim-trace',
+  passed: events.some((event) => event.event === 'work_unit_claimed' && event.work_id === workId),
+  detail: workId
+});
+recordPlaybookCheck(bundle, {
+  gate: 'work-unit-submit-trace',
+  passed: events.some((event) => event.event === 'work_unit_submitted' && event.work_id === workId),
+  detail: workId
+});
+recordPlaybookCheck(bundle, {
+  gate: 'single-sink',
+  passed: badTraceFiles.length === 0,
+  detail: JSON.stringify(badTraceFiles)
+});
+
+const verdict = writeTraceVerdict(bundle, 'case-405');
+console.log(JSON.stringify(verdict, null, 2));
+process.exit(verdict.ok ? 0 : 1);
 JS
-node "$B/verdict.mjs" "$B"
 ```
 
-→ 预期：`CASE-405 PASS`。
+Expected trace coverage:
 
----
+- `createTrace()` writes to root `rb_trace.jsonl`.
+- `operate-queue complete` emits queue trace in the same sink.
+- `operate-work-unit claim` and `submit` emit work-unit trace in the same sink.
+- No old or side-channel trace JSONL file exists inside the disposable bundle.
 
-## Step 3: 结果解读
+## Step 6: [MAIN] Result Interpretation
 
-> 验证 trace 单 sink 原则：
->   [single sink] bundle 根只有 `rb_trace.jsonl` 一个 trace 文件 — 无旧版 `_trace_*.jsonl`、`trace.jsonl` 等遗留 sink
->   [unified path] 所有 engine（queue、gate、relay）和 playbook inline script 写入同一 `rb_trace.jsonl`
->   [disposable bundle] `dpt_disp_*` 遵循与 production `dpt_rb_*` 相同的 trace 路径约定
->   证明 AGT-007 (unified trace file naming) 在 disposable experiment 环境下生效。
+PASS means framework and controlled playbook trace writers converge on root `rb_trace.jsonl` for this boundary. FAIL means trace authority has split and the Agent must repair the writer path before relying on experiment verdicts.
 
-## Step 4: PASS-only 清理
+## Step 7: [MAIN/SHELL] Cleanup
+
+PASS removes the disposable bundle. FAIL preserves it for diagnosis.
+
+## Optional Automation Smoke
+
+This smoke command runs the same checkpoints for automation, but it is not the normative MD-controller execution surface:
 
 ```bash
-if node -e "const fs=require('fs'); const p=process.argv[1] + '/case-405-verdict.json'; process.exit(JSON.parse(fs.readFileSync(p, 'utf8')).ok ? 0 : 1)" "$B"; then
-  rm -rf "$B"
-  echo "✓ Cleaned up after PASS."
-else
-  echo "FAIL preserved for inspection: $B"
-  exit 1
-fi
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-405 --cleanup-pass
 ```

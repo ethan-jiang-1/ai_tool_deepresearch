@@ -3,302 +3,227 @@ schema: command-experiment/v1
 experiment: wfn-wave2
 case: case-233-heavy-gate-fail-repair
 weight: heavy
-case_goal: "验证 gate fail（ledger 缺 section + backfill token 残留）→ inspect/advice → repair → gate pass，trace 含 2 条 gate_attempt"
+case_goal: "Verify Wave2 gate failure for uncovered targeted evidence opens a repair/refill batch and passes only after work-unit submit."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-233_agql_w2_repair_
-trace: dpt_disp_case-233_agql_w2_repair_*/rb_trace.jsonl
+bundle: dpt_disp_case-233_w2_gate_refill_repair
+trace: dpt_disp_case-233_w2_gate_refill_repair/rb_trace.jsonl
 verdict: trace-jsonl
-req: RWG-003, RWG-010
+req: RWE-001, RWE-004, RWE-006, WTS-005
 ---
 
 ## Execution Contract
 
-由 coding agent 在真实 disposable experiment bundle 中执行。本 playbook 验证 gate fail → inspect/advice → repair → rerun → pass 的 PDCA 修复回路。
+Fixture-backed Engine repair case. Controlled targeted evidence content may be written only after a Wave2 work unit is claimed. The pass condition is deterministic: initial gate fails for direct `reference/00-cross-*.md`, repair opens `b001`, `operate-work-unit submit` appends the submitted ledger row, and the next Wave2 gate passes.
+
+## Reality Distance Ledger
+
+| Dimension | Statement |
+| --- | --- |
+| Runtime context | Real disposable Wave2 bundle |
+| Framework path | Real Wave2 gate, `operate-work-unit open-batch`, claim, submit, ledger, and inspect |
+| Fixture input | Controlled cross-reference evidence after claim |
+| Agent actor | None in optional smoke |
+| External calls | None in optional smoke |
+| Verdict source | Gate JSON, work-unit index/ledger, trace checks |
+| Does not prove | Real Agent repair judgment or external search quality |
 
 # case-233-heavy-gate-fail-repair
 
-验证：首次 gate fail（ledger 缺 1 个 section + backfill token 残留）→ inspect 定位问题 → 补写 section + 替换 token → rerun gate pass → trace 含 fail + pass 两条 gate_attempt。
-
-
 ## Expected Runtime Path
 
-1. 创建 bundle + 1 topic, ledger 缺 section + stale backfill tokens [MAIN/SHELL]
-2. 第一次 gate: fail, inspect 列出两类 defect [MAIN/SHELL]
-3. Repair: append section → sed 替换 tokens [MAIN/SHELL]
-4. 第二次 gate: pass, trace 含 2 条 gate_attempt [MAIN/SHELL]
-5. 从 trace 裁决 + Cleanup
+1. Create a Wave2-ready bundle.
+2. Write Wave2 artifacts that request targeted evidence and directly place `reference/00-cross-market-shift.md`.
+3. Run Wave2 gate; it must fail for missing submitted work-unit coverage.
+4. Open Wave2 repair/refill batch `b001`.
+5. Enqueue, claim, and submit the targeted evidence through `operate-work-unit`.
+6. Update Wave2 index/ledger/synthesis to reference the submitted receipt.
+7. Rerun Wave2 gate and verify fail-then-pass trace.
 
-## Phase 1: 创建 post-wave1 bundle + 写入有缺陷的 wave2 artifact
+## Step 1: [MAIN/SHELL] Create Bundle And Failing Direct Cross Reference
 
 ```bash
-REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs agql_w2_repair --case case-233 --force)
-echo "Bundle: $B"
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_gate_refill_repair --case case-233 --force)
+node --input-type=module - "$B" <<'JS'
+import { writeFileSync, mkdirSync } from 'node:fs';
+import path from 'node:path';
+import { appendTrace, referenceContent, writeWave2Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-cat > $B/rb_plan.md << 'PLANEOF'
----
-{
-  "plan_basename": "agql_w2_repair",
-  "derived_topic_count": 1,
-  "topic_registry": [
-    { "id": "t1", "slug": "01_test-topic", "title": "Test Topic" }
-  ]
-}
----
-# Research Plan: Wave2 Gate Fail Repair
-PLANEOF
+const bundle = process.argv[2];
+writeWave2Scaffold(bundle, { planBasename: 'w2_gate_refill_repair' });
+mkdirSync(path.join(bundle, 'reference'), { recursive: true });
+mkdirSync(path.join(bundle, 'artifacts/wave2'), { recursive: true });
+writeFileSync(path.join(bundle, 'reference/00-cross-market-shift.md'), referenceContent({
+  source_url: 'https://research-source.test/wave2/market-shift',
+  topic_slug: 'cross-topic',
+  title: 'Direct Cross Reference'
+}));
+writeFileSync(path.join(bundle, 'artifacts/wave2/synthesis.md'), `# Cross-Topic Synthesis
 
-cat > $B/rb_profile.yaml << 'PROFEOF'
-root_must_answer_set: ["Test question"]
-research_profile: quick_factual
-human_decision_checkpoints:
-  hitl1: { status: recorded }
-  hitl2: { status: not_started, answerability_class: not_assessed, user_decision: not_started, final_report_view: not_started }
-PROFEOF
-
-cat > $B/rb_status.json << 'EOF'
-{"current_mode":"execution","state":"in_progress","current_gate":"wave2_complete","next_gate":"hitl2_recorded"}
-EOF
-
-mkdir -p $B/artifacts/wave0/01_test-topic
-mkdir -p $B/artifacts/wave1/01_test-topic $B/artifacts/wave2
-mkdir -p $B/seed_topics
-
-# Minimal post-wave1 data
-cat > $B/artifacts/wave0/01_test-topic/source.yaml << 'REFEOF'
-- url: "https://example.com/test"
-  title: "Test Reference"
-  retrieved_date: "2026-06-20"
-  topic_tag: "01_test-topic"
-REFEOF
-
-cat > $B/reference/_INDEX.md << 'EOF'
-# Reference Index
-- 01_test-topic: 1 reference
-EOF
-
-cat > $B/artifacts/wave1/01_test-topic/evidence-summary.md << 'W1EOF'
-# Test Evidence Summary
-
-## Source URLs
-- [Test](https://example.com/test) — 2026-06-20
-
-## Key Findings
-1. **机制理解**: Test finding
-
-## Open Questions
-1. [部分解答] Test question
-W1EOF
-
-cat > $B/artifacts/wave1/01_test-topic/question-list.md << 'W1EOF'
-# Test Question List
-
-## Topic Investigation Targets
-| target_id | question | origin | status | backing_refs | next_action |
-| t1-q1 | test | must_answer | [部分解答] | source.yaml | done |
-
-## Question Reconciliation
-- t1-q1: [部分解答]
-
-## Emergent Question Protocol
-- new_concept: not_triggered
-- contradiction: not_triggered
-- missing_information_gap: not_triggered
-- noise_pattern: not_triggered
-
-## Exploration / Exploitation Decision
-- decision: continue
-- unresolved_questions: []
-W1EOF
-
-# Seed topic with backfill token (INTENTIONALLY LEFT UNREPLACED for first gate run)
-cat > $B/seed_topics/01_test-topic.md << 'SEEDEOF'
----
-id: "t1"
-slug: "01_test-topic"
-title: "Test Topic"
----
-# Test Topic
-
-## 当前判断
-__BACKFILL_WAVE2_JUDGMENT__
-
-## 待验证问题
-__BACKFILL_PENDING_QUESTIONS__
-SEEDEOF
-
-# Write synthesis.md (valid)
-cat > $B/artifacts/wave2/synthesis.md << 'SYNTHESISEOF'
-# Cross-Topic Synthesis: Test
-
-W2F-001: [Test evidence](../wave1/01_test-topic/evidence-summary.md) shows basic finding.
-SYNTHESISEOF
-
-# Write ledger INTENTIONALLY MISSING one section (no HITL2 Handoff)
-cat > $B/artifacts/wave2/cross-topic-ledger.md << 'LEDGEREOF'
-# Cross-Topic Ledger
+W2F-001 uses [Topic A evidence](../wave1/topic-a/evidence-summary.md) and requires targeted evidence.
+`);
+writeFileSync(path.join(bundle, 'artifacts/wave2/cross-topic-ledger.md'), `# Cross-Topic Ledger
 
 ## Cross-Topic Scan Matrix
 
 | pair_id | topics | checked_dimensions | finding_ids | notes |
-| P01 | 01_test-topic | shared_pattern | none | Single topic - no cross-topic pairs |
+| --- | --- | --- | --- | --- |
+| P01 | topic-a + topic-b | emergent_question | W2F-001 | targeted search required |
 
 ## Wave1 Legacy Questions
 
-(no unresolved legacy questions)
+- topic-a requires a cross-topic update.
 
 ## Cross-Topic Resolutions
 
-(no cross-topic resolutions — single topic)
+- None before repair.
 
 ## Emergent Cross-Topic Questions
 
-(no emergent questions — single topic)
+- W2F-001 requires targeted evidence.
 
 ## Exploration Decisions
 
-(no exploration decisions needed)
-
-(NOTE: HITL2 Handoff section intentionally omitted — this should cause gate to fail)
-LEDGEREOF
-
-# Write index (valid)
-cat > $B/artifacts/wave2/finding-index.yaml << 'INDEXEOF'
-version: "0.1"
-source_layer: wave2_cross_topic
-ledger: artifacts/wave2/cross-topic-ledger.md
-synthesis: artifacts/wave2/synthesis.md
-scan:
-  topic_count: 1
-  pair_count_expected: 0
-  pair_count_checked: 0
-findings: []
-INDEXEOF
-
-
-echo "=== Defective wave2 artifacts ready ==="
-echo "Defects:"
-echo "  1. ledger missing HITL2 Handoff section"
-echo "  2. backfill token __BACKFILL_WAVE2_JUDGMENT__ still present in seed topic"
-echo "  3. backfill token __BACKFILL_PENDING_QUESTIONS__ still present in seed topic"
-```
-
-## Phase 2: First Gate Run — Expected FAIL
-
-```bash
-# Phase-agent obligation (phase-wave2.md): write wave2_completion before the wave2-complete gate
-node DPT_FRAMEWORK/cli/log-event.mjs --bundle $B --event wave2_completion
-GATE1=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
-echo "$GATE1" | node -e "
-const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));
-console.log('Gate#1 passed:', d.check.passed);
-console.log('inspect count:', d.inspect?.length);
-if (d.inspect?.length) { d.inspect.forEach(i => console.log('  inspect:', i)); }
-if (d.advice?.length) { d.advice.forEach(a => console.log('  advice:', a)); }
-"
-
-PASSED1=$(echo "$GATE1" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "=== Gate#1 PASSED=$PASSED1 (expected: false) ==="
-test "$PASSED1" = "false" && echo "PASS: gate correctly failed" || echo "FAIL: gate should have failed"
-
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'wave2-complete',passed:$PASSED1,detail:'gate fail: ledger missing HITL2 Handoff section + backfill tokens unreplaced'})})"
-```
-
-预期：gate fail，inspect 列出 ledger section 缺失 + backfill token 残留。
-
-## Phase 3: Repair — Fix Defects
-
-```bash
-echo "=== Repair Step 1: Add missing HITL2 Handoff section to ledger ==="
-cat >> $B/artifacts/wave2/cross-topic-ledger.md << 'REPAIR1'
+| W2F-001 | explore_search | repair through work-unit submit |
 
 ## HITL2 Handoff
 
-(no findings requiring human review — single topic synthesis)
-REPAIR1
+- None.
+`);
+writeFileSync(path.join(bundle, 'artifacts/wave2/finding-index.yaml'), `version: "0.1"
+source_layer: wave2_cross_topic
+ledger: artifacts/wave2/cross-topic-ledger.md
+synthesis: artifacts/wave2/synthesis.md
+scan: { topics: [topic-a, topic-b], topic_count: 2, pair_count_expected: 1, pair_count_checked: 1 }
+findings:
+  - id: W2F-001
+    type: cross_topic_emergent_question
+    status: open
+    decision: explore_search
+    affected_topics: [topic-a, topic-b]
+    origin_refs: [artifacts/wave1/topic-a/question-list.md]
+    trigger_refs: [artifacts/wave1/topic-b/evidence-summary.md]
+    search_required: true
+    subagent_receipt_refs: []
+    appears_in_synthesis: true
+    hitl2_handoff: false
+`);
+for (const topic of ['topic-a', 'topic-b']) {
+  writeFileSync(path.join(bundle, 'seed_topics', `${topic}.md`), `# ${topic}
 
-echo "=== Repair Step 2: Replace backfill tokens in seed topic ==="
-sed -i '' 's/__BACKFILL_WAVE2_JUDGMENT__/Cross-topic judgment: single topic, no cross-topic findings./' $B/seed_topics/01_test-topic.md
-sed -i '' 's/__BACKFILL_PENDING_QUESTIONS__/- [部分解答] t1-q1: resolved in wave1/' $B/seed_topics/01_test-topic.md
+## Wave2 Judgment
+Targeted evidence repair pending.
 
-echo "=== Verify repairs ==="
-echo "Ledger sections:" && grep "## " $B/artifacts/wave2/cross-topic-ledger.md
-echo "Backfill token check:" && grep -q '__BACKFILL_' $B/seed_topics/01_test-topic.md && echo "  STALE TOKEN STILL PRESENT" || echo "  all tokens replaced ✓"
+## Pending Questions
+- [open] W2F-001
+`);
+}
+appendTrace(bundle, { event: 'wave2_completion', source: 'case-233-before-repair' });
+JS
 ```
 
-## Phase 4: Second Gate Run — Expected PASS
+## Step 2: [MAIN/SHELL] First Gate Must Fail
 
 ```bash
-GATE2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate wave2-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle $B --current-node phases/phase-wave2.md)
-echo "$GATE2" | node -e "
-const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));
-console.log('Gate#2 passed:', d.check.passed);
-console.log('check.next:', d.check.next);
-"
-
-PASSED2=$(echo "$GATE2" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "=== Gate#2 PASSED=$PASSED2 (expected: true) ==="
-test "$PASSED2" = "true" && echo "PASS: gate passed after repair" || echo "FAIL"
-
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'wave2-complete',passed:$PASSED2,detail:'gate pass: after repair (added HITL2 Handoff section + replaced backfill tokens)'})})"
+set +e
+node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-233-gate-before-repair.json"
+GATE_STATUS=$?
+set -e
+node - "$B" "$GATE_STATUS" <<'JS'
+const fs = require('fs');
+const [bundle, status] = process.argv.slice(2);
+const gate = JSON.parse(fs.readFileSync(`${bundle}/case-233-gate-before-repair.json`, 'utf8'));
+console.log(JSON.stringify({ status: Number(status), passed: gate.check?.passed, inspect: gate.inspect || [] }, null, 2));
+process.exit(Number(status) === 1 && gate.check?.passed === false && /work-unit|coverage|bypass/i.test(JSON.stringify(gate.inspect || [])) ? 0 : 1);
+JS
 ```
 
-预期：gate pass，`check.next: phases/phase-hitl2.md`。
+Expected: gate rejects the direct cross-reference as non-authoritative.
 
-## Phase 5: Verify Repair Trace
+## Step 3: [MAIN/SHELL] Open Repair Batch And Submit Targeted Evidence
 
 ```bash
-echo "=== V1: trace has 2 gate_attempt entries ==="
-GATE_COUNT=$(grep -c 'gate_attempt' $B/rb_trace.jsonl)
-echo "gate_attempt count: $GATE_COUNT"
-test "$GATE_COUNT" -ge 2 && echo "V1 PASS: $GATE_COUNT gate_attempts" || echo "V1 FAIL: only $GATE_COUNT"
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch "$B" --phase wave2 --reason gate_failure_refill > "$B/case-233-open-batch.json"
+node --input-type=module - "$B" <<'JS'
+import { writeFileSync } from 'node:fs';
+import {
+  enqueueWorkUnitTask,
+  queueItemForWorkUnit,
+  referenceContent,
+  submitWorkUnitViaCli,
+  writeFixtureResultForWorkUnit
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { spawnSync } from 'node:child_process';
 
-echo "=== V2: first gate_attempt is fail, second is pass ==="
-FIRST_PASSED=$(grep 'gate_attempt' $B/rb_trace.jsonl | head -1 | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));console.log(d.passed)")
-SECOND_PASSED=$(grep 'gate_attempt' $B/rb_trace.jsonl | tail -1 | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8'));console.log(d.passed)")
-echo "first: $FIRST_PASSED, second: $SECOND_PASSED"
-test "$FIRST_PASSED" = "false" -a "$SECOND_PASSED" = "true" && echo "V2 PASS: fail→pass repair loop" || echo "V2 FAIL"
-
-echo "=== V3: ledger has all 6 sections after repair ==="
-for sec in "Cross-Topic Scan Matrix" "Wave1 Legacy Questions" "Cross-Topic Resolutions" "Emergent Cross-Topic Questions" "Exploration Decisions" "HITL2 Handoff"; do
-  grep -q "$sec" $B/artifacts/wave2/cross-topic-ledger.md && echo "  $sec ✓" || echo "  $sec ✗"
-done
-
-echo "=== V4: backfill tokens absent ==="
-grep -r '__BACKFILL_' $B/seed_topics/ && echo "V4 FAIL" || echo "V4 PASS"
+const bundle = process.argv[2];
+enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
+  phase: 'wave2',
+  queue_item_id: 'wave2-targeted-W2F-001',
+  finding_id: 'W2F-001',
+  title: 'Repair targeted evidence for W2F-001',
+  priority_class: 'P1_state_or_gate_repair'
+}), { fileName: 'case233-targeted-repair.json' });
+const claim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave2'], { encoding: 'utf8' }).stdout);
+const workId = claim.claimed_work_ids[0];
+const fixture = writeFixtureResultForWorkUnit(bundle, {
+  work_id: workId,
+  output_path: 'reference/00-cross-market-shift.md',
+  source_url: 'https://research-source.test/wave2/market-shift',
+  source_slug: 'market-shift',
+  output_content: referenceContent({
+    source_url: 'https://research-source.test/wave2/market-shift',
+    topic_slug: 'cross-topic',
+    title: 'Submitted Cross Reference'
+  }),
+  cache_trails: ['_cache/wave2/primary/W2F-001/market-shift']
+});
+const submit = submitWorkUnitViaCli(bundle, { work_id: workId, resultPath: fixture.resultPath });
+const record = loadWorkUnitIndex(bundle).work_units[workId];
+writeFileSync(`${bundle}/case-233-repair-submit.json`, `${JSON.stringify({ claim, submit, record }, null, 2)}\n`);
+console.log(JSON.stringify({ claim, submit, record }, null, 2));
+process.exit(record.batch_id === 'b001' && submit.ok === true ? 0 : 1);
+JS
 ```
 
-## Final Verdict
+## Step 4: [MAIN/SHELL] Rerun Gate And Verdict
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
+node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-233-gate-after-repair.json"
+node --input-type=module - "$B" <<'JS'
+import { readFileSync } from 'node:fs';
+import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { readTrace, recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const bundle = process.argv[2];
+const before = JSON.parse(readFileSync(`${bundle}/case-233-gate-before-repair.json`, 'utf8'));
+const after = JSON.parse(readFileSync(`${bundle}/case-233-gate-after-repair.json`, 'utf8'));
+const opened = JSON.parse(readFileSync(`${bundle}/case-233-open-batch.json`, 'utf8'));
+const index = loadWorkUnitIndex(bundle);
+const repairRows = Object.values(index.work_units).filter((row) => row.batch_id === 'b001');
+const attempts = readTrace(bundle).filter((event) => event.event === 'gate_attempt' && event.gate === 'wave2-complete');
+recordPlaybookCheck(bundle, { gate: 'wave2-initial-gate-fails', passed: before.check?.passed === false, detail: JSON.stringify(before.inspect || []) });
+recordPlaybookCheck(bundle, { gate: 'wave2-repair-batch', passed: opened.batch_id === 'b001' && repairRows.length >= 1, detail: JSON.stringify(repairRows.map((row) => row.work_id)) });
+recordPlaybookCheck(bundle, { gate: 'wave2-repaired-gate-passes', passed: after.check?.passed === true, detail: JSON.stringify(after.inspect || []) });
+recordPlaybookCheck(bundle, { gate: 'wave2-gate-fail-then-pass', passed: attempts.some((event) => event.passed === false) && attempts.some((event) => event.passed === true), detail: `${attempts.length} gate_attempt event(s)` });
+const verdict = writeTraceVerdict(bundle, 'case-233');
+console.log(JSON.stringify(verdict, null, 2));
+process.exit(verdict.ok ? 0 : 1);
+JS
 ```
 
-
-## Step 6: 结果解读
-
-> 验证 wave2 gate 双 defect 检测：
->   Scenario A: ledger 缺 HITL2 Handoff section + stale backfill tokens → gate fail
->   Scenario B: append section → sed 替换 tokens → gate pass
->   trace 含 2 条 gate_attempt (1 fail + 1 pass) → PASS。
-
-
-## Step HH: Post-Execution Health
-
-Heavy profile — gate diagnostics, timeline consistency, ledger, receipts, cache trails, dedup evidence.
+## Optional Automation Smoke
 
 ```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile heavy
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-233 --target-dir tests/.test-bundles --cleanup-pass
 ```
 
-> 健康检查不改变 verdict。health status 由 runner report 记录。
+## Cleanup
 
-## Step 7: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
+PASS only:
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
+node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-233-verdict.json"
+rm -rf "$B"
 ```

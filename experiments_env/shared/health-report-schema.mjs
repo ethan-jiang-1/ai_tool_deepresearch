@@ -84,12 +84,25 @@ const LedgerSectionSchema = z.object({
   schema_errors: z.number().int().nonnegative().optional(),
 });
 
-const ReceiptsSectionSchema = z.object({
+const WorkUnitsSectionSchema = z.object({
   status: SectionStatusSchema,
   required: z.boolean(),
-  slots: z.number().int().nonnegative().optional(),
-  missing: z.number().int().nonnegative().optional(),
-  incomplete: z.number().int().nonnegative().optional(),
+  present: z.boolean().optional(),
+  total: z.number().int().nonnegative().optional(),
+  claimed: z.number().int().nonnegative().optional(),
+  submitted: z.number().int().nonnegative().optional(),
+  failed: z.number().int().nonnegative().optional(),
+  timed_out: z.number().int().nonnegative().optional(),
+  abandoned: z.number().int().nonnegative().optional(),
+  expired: z.number().int().nonnegative().optional(),
+  retries: z.number().int().nonnegative().optional(),
+  submit_rejections: z.number().int().nonnegative().optional(),
+  late_submit_rejections: z.number().int().nonnegative().optional(),
+  nonterminal: z.number().int().nonnegative().optional(),
+  by_wave: z.record(z.string(), z.number().int().nonnegative()).optional(),
+  inspect_passed: z.boolean().optional(),
+  inspect_issues: z.number().int().nonnegative().optional(),
+  diagnostics: z.array(z.string()).optional(),
 });
 
 const CacheTrailsSectionSchema = z.object({
@@ -129,8 +142,8 @@ export const HealthReportSchema = z.object({
   bundle_schema: BundleSchemaSectionSchema,
   timeline: TimelineSectionSchema,
   legacy_trace: LegacyTraceSectionSchema,
+  work_units: WorkUnitsSectionSchema,
   ledger: LedgerSectionSchema,
-  receipts: ReceiptsSectionSchema,
   cache_trails: CacheTrailsSectionSchema,
   dedup: DedupSectionSchema,
   issues: z.array(IssueEntrySchema),
@@ -144,8 +157,9 @@ export const HealthReportSchema = z.object({
  * Profile table: which sections are required for each profile.
  *
  *   light    — trace parse/count, legacy trace absence, bundle validate/inspect
- *   standard — light + gate diagnostics, gate output/trace timeline consistency
- *   heavy    — standard + ledger, runtime receipts, output files, cache trails,
+ *   standard — light + gate diagnostics, gate output/trace timeline consistency,
+ *              work-unit lifecycle projection
+ *   heavy    — standard + submitted ledger, output files, cache trails,
  *              content_dedup evidence
  */
 export const PROFILE_TABLE = {
@@ -153,10 +167,10 @@ export const PROFILE_TABLE = {
     required_sections: ['trace', 'legacy_trace', 'bundle_schema'],
   },
   standard: {
-    required_sections: ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline'],
+    required_sections: ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline', 'work_units'],
   },
   heavy: {
-    required_sections: ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline', 'ledger', 'receipts', 'cache_trails', 'dedup'],
+    required_sections: ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline', 'work_units', 'ledger', 'cache_trails', 'dedup'],
   },
 };
 
@@ -268,7 +282,7 @@ export function sectionIssues(sectionKey, details) {
 export function buildHealthReport({ bundlePath, profile, sections }) {
   const { topLevelStatus, topLevelIssues } = computeHealthStatus(profile, sections);
 
-  const SECTION_KEYS = ['trace', 'gate_attempts', 'bundle_schema', 'timeline', 'legacy_trace', 'ledger', 'receipts', 'cache_trails', 'dedup'];
+  const SECTION_KEYS = ['trace', 'gate_attempts', 'bundle_schema', 'timeline', 'legacy_trace', 'work_units', 'ledger', 'cache_trails', 'dedup'];
 
   /** Build a section result, always injecting the `required` flag. */
   function section(k) {

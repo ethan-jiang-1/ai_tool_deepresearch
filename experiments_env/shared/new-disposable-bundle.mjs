@@ -17,7 +17,6 @@ import {
   QueueSchema,
   ProfileSchema,
   PlanSchema,
-  SLOT_NAMES,
 } from '../../DPT_FRAMEWORK/schema/index.mjs';
 import { parseMdFrontmatter } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 import { createTrace } from '../../DPT_FRAMEWORK/engine/trace.mjs';
@@ -106,10 +105,14 @@ StatusSchema.parse(statusDefault);
 writeFileSync(join(bundleDir, 'rb_status.json'), JSON.stringify(statusDefault, null, 2) + '\n');
 
 const queueDefault = {
+  schema_version: 'queue.v2',
+  bundle_name: null,
   queue_health: 'ready',
   stop_authorization_state: 'unauthorized_continue_required',
-  ...Object.fromEntries(SLOT_NAMES.map(s => [s, null])),
+  active_window: [],
   refill_pool: [],
+  delegated_in_flight: {},
+  terminal_history: [],
 };
 QueueSchema.parse(queueDefault);
 writeFileSync(join(bundleDir, 'rb_queue.json'), JSON.stringify(queueDefault, null, 2) + '\n');

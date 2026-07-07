@@ -14,8 +14,8 @@
 
 | 写入者 | 事件类型 |
 |--------|---------|
-| `queue-manager.mjs` | Queue 生命周期：`enqueue`, `claim`, `complete`, `fail`, `repair`, `ledger_appended` |
-| `subagent-relay.mjs` | Relay slot 生命周期：`slot_create`, `agent_spawn_requested`, `agent_runtime_started`, `agent_result_ready`, `result_schema_validated`, `merge_complete` |
+| `queue-manager.mjs` | Queue 生命周期：`enqueue`, `claim`, `complete`, `fail`, `repair` |
+| `work-unit-core.mjs` / `operate-work-unit.mjs` | Work-unit 生命周期：`work_unit_claimed`, `work_unit_submitted`, `work_unit_ledger_appended`, `work_unit_failed`, `work_unit_timed_out`, `work_unit_abandoned` |
 | gate CLI（`writeGateAttempt`） | Gate pass/fail 判定 |
 | playbook thin driver | Experiment verdict `check` event |
 

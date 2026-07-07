@@ -2,7 +2,7 @@
 // @impl WNC-007
 //
 // Verifies first-load orientation contracts for lifecycle phase nodes and
-// relay role spec nodes.
+// work-unit role spec nodes.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -15,9 +15,8 @@ const WORKFLOWS_DIR = path.join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows');
 const NODES_DIR = path.join(WORKFLOWS_DIR, 'nodes');
 const manifest = JSON.parse(readFileSync(path.join(WORKFLOWS_DIR, 'manifest.json'), 'utf-8'));
 
-const executionBriefFields = ['Objective', 'Start here', 'Path to pass', 'Completion check', 'Failure posture'];
 const roleBriefFields = ['Role key', 'Used by', 'Receives', 'Produces', 'Boundary', 'Handoff'];
-const phaseSections = [
+const defaultPhaseSections = [
   '## 1. Stage Goal',
   '## 2. Required Inputs',
   '## 3. Allowed Actions',
@@ -48,9 +47,25 @@ function orderedFieldCheck(sectionText, fields) {
   }
 }
 
+function orderedExecutionBriefCheck(sectionText) {
+  let cursor = -1;
+  const checks = [
+    { name: 'Objective', pattern: /\*\*Objective\*\*/ },
+    { name: 'Start here', pattern: /\*\*Start here\*\*/ },
+    { name: 'path field', pattern: /\*\*[^*\n]*path[^*\n]*\*\*/i },
+    { name: 'Completion check', pattern: /\*\*Completion check\*\*/ },
+    { name: 'Failure posture', pattern: /\*\*Failure posture\*\*/ },
+  ];
+  for (const check of checks) {
+    const match = sectionText.match(check.pattern);
+    assert.ok(match && match.index > cursor, `${check.name} appears in order`);
+    cursor = match.index;
+  }
+}
+
 describe('Manifest lifecycle phase nodes — Execution Brief', () => {
   for (const phase of manifest.phases) {
-    it(`${phase.node} has ordered Execution Brief before 9-section body`, () => {
+    it(`${phase.node} has ordered Execution Brief before its required body`, () => {
       const md = readNode(phase.node);
       const h1 = md.search(/^# /m);
       const brief = md.indexOf('## 0. Execution Brief');
@@ -59,31 +74,41 @@ describe('Manifest lifecycle phase nodes — Execution Brief', () => {
       assert.ok(h1 >= 0, 'has H1');
       assert.ok(brief > h1, 'Execution Brief follows H1');
       assert.ok(stage > brief, 'Stage Goal follows Execution Brief');
-      orderedFieldCheck(md.slice(brief, stage), executionBriefFields);
+      orderedExecutionBriefCheck(md.slice(brief, stage));
 
-      for (const section of phaseSections) {
+      for (const section of defaultPhaseSections) {
         assert.ok(md.includes(section), `keeps ${section}`);
       }
     });
   }
 });
 
-describe('Relay role spec nodes — Role Brief and manifest boundary', () => {
+describe('Work-unit role spec nodes — Role Brief and manifest boundary', () => {
   const roleSpecs = [
     {
       ref: 'phases/subagent-dpt-source-intake.md',
       roleKey: 'dpt-source-intake',
-      h1: '# Relay Role: dpt-source-intake — Foundation Reference Intake',
+      h1: '# Work-Unit Role: dpt-source-intake - Foundation Reference Intake',
     },
     {
       ref: 'phases/subagent-dpt-evidence-extractor.md',
       roleKey: 'dpt-evidence-extractor',
-      h1: '# Relay Role: dpt-evidence-extractor — Topic-Specific Deepening',
+      h1: '# Work-Unit Role: dpt-evidence-extractor - Topic-Specific Deepening',
     },
     {
       ref: 'phases/subagent-dpt-topic-scout.md',
       roleKey: 'dpt-topic-scout',
-      h1: '# Relay Role: dpt-topic-scout — Gap-Fill Search',
+      h1: '# Work-Unit Role: dpt-topic-scout - Gap-Fill Search',
+    },
+    {
+      ref: 'phases/subagent-dpt-claim-verifier.md',
+      roleKey: 'dpt-claim-verifier',
+      h1: '# Work-Unit Role: dpt-claim-verifier - Critical Claim Verification',
+    },
+    {
+      ref: 'phases/subagent-dpt-source-diagnostic.md',
+      roleKey: 'dpt-source-diagnostic',
+      h1: '# Work-Unit Role: dpt-source-diagnostic - Source Quality Diagnostic',
     },
   ];
 
@@ -98,10 +123,10 @@ describe('Relay role spec nodes — Role Brief and manifest boundary', () => {
       assert.ok(!md.startsWith('# Phase:'), 'not a lifecycle phase H1');
       assert.equal(fm.id, path.basename(spec.ref, '.md'));
       assert.equal(fm.role, spec.roleKey);
-      assert.equal(fm.execution_contract?.surface, 'relay-subagent-role');
+      assert.equal(fm.execution_contract?.surface, 'work-unit-subagent-role');
       assert.equal(fm.execution_contract?.search_policy, 'subagent_performs_search');
       assert.equal(fm.execution_contract?.loaded_by, 'phase-agent');
-      assert.equal(fm.execution_contract?.delivered_via, 'relay_task_md');
+      assert.equal(fm.execution_contract?.delivered_via, 'work_unit_task_md');
       assert.equal('stop' in fm, false, 'real role specs do not add stop');
       assert.equal('phase' in fm, false, 'real role specs do not add phase');
       assert.equal('gate' in fm, false, 'real role specs do not add gate');

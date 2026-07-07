@@ -3,211 +3,159 @@ schema: command-experiment/v1
 experiment: wfn-wave2
 case: case-235-light-happy-and-fail
 weight: light
-case_goal: "验证 inspect-wave2-output.mjs：happy path 全部通过，fail path 正确检测 3 类 wave2 结构错误（00_shared/ 子目录、synthesis.md 为空、残留 backfill token）。"
+case_goal: "Verify Wave2 gate semantics: pure synthesis passes without delegated rows, direct targeted evidence fails, submitted targeted evidence passes."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_235_iw_*
-trace: dpt_disp_235_iw_*/rb_trace.jsonl
+bundle: dpt_disp_case-235_w2_happy_and_fail
+trace: dpt_disp_case-235_w2_happy_and_fail/rb_trace.jsonl
 verdict: trace-jsonl
+req: RWE-001, RWE-004, WTS-001, WTS-005
 ---
 
 ## Execution Contract
 
-由 coding agent 在真实 `dpt_disp_*` bundle 中执行。禁止 mock、手写假结果、伪造 trace。
+Fixture-backed Engine case. It proves Wave2 gate and work-unit provenance boundaries only. Pure synthesis artifacts are controlled fixtures; targeted evidence content is controlled fixture data, but when it is meant to pass, it must be routed through `operate-work-unit claim` and `operate-work-unit submit` by `work_id`.
 
-# case-403-light-happy-and-fail
+## Reality Distance Ledger
 
-验证 `inspect-wave2-output.mjs`：合法 wave2 产出全部通过 + 3 类故意错误全部被检测。
+| Dimension | Statement |
+| --- | --- |
+| Runtime context | Three real disposable Wave2 bundles |
+| Framework path | Real Wave2 gate CLI, real `operate-work-unit claim/submit` for targeted evidence |
+| Fixture input | Controlled Wave2 artifacts and controlled cross-reference evidence |
+| Agent actor | None |
+| External calls | None |
+| Verdict source | Gate JSON, submitted ledger rows, trace checks |
+| Does not prove | Agent synthesis, triage, or real search quality |
+
+# case-235-light-happy-and-fail
 
 ## Expected Runtime Path
 
-1. 创建 disposable bundle
-2. 构造 happy path artifacts（artifacts/wave2/ 三件套 + 可选 00-cross-*.md）
-3. 跑 inspect → 预期 passed=true
-4. 引入 3 个错误 → 跑 inspect → 预期 passed=false
-5. 裁决
-6. 清理
+1. Bundle A: pure synthesis artifacts, no `reference/00-cross-*.md`, no Wave2 work-unit rows, gate passes.
+2. Bundle B: direct `reference/00-cross-*.md` with search-required finding, no work-unit submit, gate fails.
+3. Bundle C: same targeted evidence submitted through `wave2_targeted_evidence` work unit, gate passes.
+4. Record the three outcomes into Bundle A trace and clean all bundles only on PASS.
 
----
-
-## Step 1: 创建 disposable bundle
+## Step 1: [MAIN/SHELL] Pure Synthesis Pass
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs iw2 --case case-235 --force)
-mkdir -p "$B/artifacts/wave2" "$B/seed_topics"
-echo "BUNDLE=$B"
+B_PURE=$(node experiments_env/shared/new-disposable-bundle.mjs w2_pure_gate_pass --case case-235 --force)
+node --input-type=module - "$B_PURE" <<'JS'
+import { writeFileSync } from 'node:fs';
+import { appendTrace, writeWave2Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+const bundle = process.argv[2];
+writeWave2Scaffold(bundle, { planBasename: 'w2_pure_gate_pass' });
+writeFileSync(`${bundle}/artifacts/wave2/synthesis.md`, '# Cross-Topic Synthesis\n\nW2F-001 links [Topic A](../wave1/topic-a/evidence-summary.md) and [Topic B](../wave1/topic-b/question-list.md) using existing evidence only.\n');
+writeFileSync(`${bundle}/artifacts/wave2/cross-topic-ledger.md`, '# Cross-Topic Ledger\n\n## Cross-Topic Scan Matrix\n\n| pair_id | topics | checked_dimensions | finding_ids | notes |\n| --- | --- | --- | --- | --- |\n| P01 | topic-a + topic-b | shared_pattern | W2F-001 | existing evidence only |\n\n## Wave1 Legacy Questions\n\nNone.\n\n## Cross-Topic Resolutions\n\nW2F-001 resolved from existing evidence.\n\n## Emergent Cross-Topic Questions\n\nNone.\n\n## Exploration Decisions\n\nW2F-001: use_existing_evidence.\n\n## HITL2 Handoff\n\nNone.\n');
+writeFileSync(`${bundle}/artifacts/wave2/finding-index.yaml`, 'version: "0.1"\nsource_layer: wave2_cross_topic\nledger: artifacts/wave2/cross-topic-ledger.md\nsynthesis: artifacts/wave2/synthesis.md\nscan: { topics: [topic-a, topic-b], topic_count: 2, pair_count_expected: 1, pair_count_checked: 1 }\nfindings:\n  - id: W2F-001\n    type: cross_topic_resolution\n    status: resolved\n    decision: use_existing_evidence\n    affected_topics: [topic-a, topic-b]\n    origin_refs: [artifacts/wave1/topic-a/question-list.md]\n    trigger_refs: [artifacts/wave1/topic-b/evidence-summary.md]\n    search_required: false\n    subagent_receipt_refs: []\n    appears_in_synthesis: true\n    hitl2_handoff: false\n');
+for (const topic of ['topic-a', 'topic-b']) writeFileSync(`${bundle}/seed_topics/${topic}.md`, `# ${topic}\n\n## Wave2 Judgment\nPure synthesis.\n\n## Pending Questions\n- [resolved]\n`);
+appendTrace(bundle, { event: 'wave2_completion', source: 'case-235-pure' });
+JS
+node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B_PURE" --current-node phases/phase-wave2.md > "$B_PURE/case-235-gate-pure.json"
 ```
 
----
-
-## Step 2: Happy path — 构造合法 wave2 产出
+## Step 2: [MAIN/SHELL] Direct Targeted Evidence Must Fail
 
 ```bash
-B=$(echo dpt_disp_235_iw_*)
-
-# synthesis.md with W2F-xxx references
-cat > "$B/artifacts/wave2/synthesis.md" << 'EOF'
-# Synthesis
-
-Analysis of cross-topic findings. See [Topic A evidence](../wave1/01_test/evidence-summary.md) for details.
-Key finding: W2F-001 confirms cross-topic pattern.
-
-## References
-- [Shared foundation](../../reference/00-shared-test-taxonomy.md)
-EOF
-
-# cross-topic-ledger.md with 6 sections
-cat > "$B/artifacts/wave2/cross-topic-ledger.md" << 'EOF'
-# Cross-Topic Ledger
-
-## Cross-Topic Scan Matrix
-Scanned all topic pairs.
-
-## Wave1 Legacy Questions
-Resolved Q1 from topic 01.
-
-## Cross-Topic Resolutions
-W2F-002: Evidence from topic 01+02 supports conclusion.
-
-## Emergent Cross-Topic Questions
-W2F-003: New question emerged.
-
-## Exploration Decisions
-W2F-003 → exploit_search.
-
-## HITL2 Handoff
-W2F-003 deferred to human review.
-EOF
-
-# finding-index.yaml
-cat > "$B/artifacts/wave2/finding-index.yaml" << 'EOF'
-version: 1
-source_layer: wave2_cross
-ledger: cross-topic-ledger.md
-synthesis: synthesis.md
-scan:
-  pairs_checked: 1
-  dimensions: [shared_pattern]
-findings:
-  - id: W2F-001
-    type: cross_topic_resolution
-    status: resolved
-    decision: use_existing_evidence
-    affected_topics: ["01", "02"]
-    origin_refs: []
-    trigger_refs: []
-    search_required: false
-    subagent_receipt_refs: []
-    appears_in_synthesis: true
-    hitl2_handoff: false
-EOF
-
-# Optional 00-cross-*.md
-cat > "$B/reference/00-cross-scout-discovery.md" << 'EOF'
-# Cross Discovery
-- source_url: https://arxiv.org/abs/2401.00001
-- acceptance_status: accepted
-- source_type: secondary
-- tier: Tier 2
-- evidence_role: deepening_reference
-- trust_level: practitioner
-- why_it_matters: Cross-topic scout found shared pattern.
-- accessed_at: 2026-06-26
-- related_topic: all
-
-## Key Facts
-- Cross-topic pattern discovered.
-
-## Core Content Capture
-Wave2 scout found evidence.
-
-## Relevance To This Research
-Links topics 01 and 02.
-
-## Quotable Terms / Concepts
-- "Cross-topic signal"
-
-## Risks And Limitations
-- Single source.
-EOF
-
-# Seed topic without backfill tokens
-echo "# Test Seed Topic" > "$B/seed_topics/01_test.md"
-
-# _INDEX.md with wave2_cross entry for 00-cross-*.md
-cat > "$B/reference/_INDEX.md" << 'EOF'
-# Reference Index
-| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 00-cross-scout-discovery.md | secondary | practitioner | Tier 2 | all | wave2_cross | accepted | 2026-06-26 |
-EOF
-
-echo "Happy path artifacts created."
+B_DIRECT=$(node experiments_env/shared/new-disposable-bundle.mjs w2_direct_cross_ref --case case-235 --force)
+node --input-type=module - "$B_DIRECT" <<'JS'
+import { writeFileSync } from 'node:fs';
+import { appendTrace, referenceContent, writeWave2Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+const bundle = process.argv[2];
+writeWave2Scaffold(bundle, { planBasename: 'w2_direct_cross_ref' });
+writeFileSync(`${bundle}/reference/00-cross-market-shift.md`, referenceContent({ source_url: 'https://research-source.test/wave2/market-shift', topic_slug: 'cross-topic', title: 'Direct Cross Reference' }));
+writeFileSync(`${bundle}/artifacts/wave2/synthesis.md`, '# Cross-Topic Synthesis\n\nW2F-001 uses [Topic A](../wave1/topic-a/evidence-summary.md) and requests targeted evidence.\n');
+writeFileSync(`${bundle}/artifacts/wave2/cross-topic-ledger.md`, '# Cross-Topic Ledger\n\n## Cross-Topic Scan Matrix\n\n| pair_id | topics | checked_dimensions | finding_ids | notes |\n| --- | --- | --- | --- | --- |\n| P01 | topic-a + topic-b | emergent_question | W2F-001 | targeted evidence required |\n\n## Wave1 Legacy Questions\n\nOne open gap.\n\n## Cross-Topic Resolutions\n\nNone.\n\n## Emergent Cross-Topic Questions\n\nW2F-001 requires search.\n\n## Exploration Decisions\n\nW2F-001: explore_search.\n\n## HITL2 Handoff\n\nNone.\n');
+writeFileSync(`${bundle}/artifacts/wave2/finding-index.yaml`, 'version: "0.1"\nsource_layer: wave2_cross_topic\nledger: artifacts/wave2/cross-topic-ledger.md\nsynthesis: artifacts/wave2/synthesis.md\nscan: { topics: [topic-a, topic-b], topic_count: 2, pair_count_expected: 1, pair_count_checked: 1 }\nfindings:\n  - id: W2F-001\n    type: cross_topic_emergent_question\n    status: open\n    decision: explore_search\n    affected_topics: [topic-a, topic-b]\n    origin_refs: [artifacts/wave1/topic-a/question-list.md]\n    trigger_refs: [artifacts/wave1/topic-b/evidence-summary.md]\n    search_required: true\n    subagent_receipt_refs: []\n    appears_in_synthesis: true\n    hitl2_handoff: false\n');
+for (const topic of ['topic-a', 'topic-b']) writeFileSync(`${bundle}/seed_topics/${topic}.md`, `# ${topic}\n\n## Wave2 Judgment\nDirect targeted evidence should fail.\n\n## Pending Questions\n- [open] W2F-001\n`);
+appendTrace(bundle, { event: 'wave2_completion', source: 'case-235-direct' });
+JS
+set +e
+node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B_DIRECT" --current-node phases/phase-wave2.md > "$B_DIRECT/case-235-gate-direct.json"
+DIRECT_STATUS=$?
+set -e
+test "$DIRECT_STATUS" = "1"
 ```
 
----
-
-## Step 3: 裁决 — happy + fail
+## Step 3: [MAIN/SHELL] Submitted Targeted Evidence Passes
 
 ```bash
-B=$(echo dpt_disp_235_iw_*)
-
-cat > "$B/t.mjs" << 'JSTEST'
-import { execSync } from 'node:child_process';
-import { mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
-
-const B = process.argv[2];
-const t = B + '/rb_trace.jsonl';
-const w2 = join(B, 'artifacts', 'wave2');
-const ref = join(B, 'reference');
-const seed = join(B, 'seed_topics');
-
-const { recordCheck, verdict } = await import('../experiments_env/shared/wff-playbook-utils.mjs');
-
-// ── Happy path ──
-const happyOut = execSync(`node DPT_FRAMEWORK/cli/inspect-wave2-output.mjs --bundle ${B} || true`, { encoding: 'utf8' });
-const happy = JSON.parse(happyOut);
-await recordCheck(t, {
-  gate: 'inspect-wave2-happy', passed: happy.check.passed, expected: true,
-  detail: `checks_run=${happy.check.checks_run} checks_failed=${happy.check.checks_failed}`
+B_SUBMITTED=$(node experiments_env/shared/new-disposable-bundle.mjs w2_submitted_cross_ref --case case-235 --force)
+node --input-type=module - "$B_SUBMITTED" <<'JS'
+import {
+  enqueueWorkUnitTask,
+  queueItemForWorkUnit,
+  referenceContent,
+  submitWorkUnitViaCli,
+  writeFixtureResultForWorkUnit,
+  writeWave2Scaffold,
+  appendTrace
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+const bundle = process.argv[2];
+writeWave2Scaffold(bundle, { planBasename: 'w2_submitted_cross_ref' });
+enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
+  phase: 'wave2',
+  queue_item_id: 'wave2-targeted-W2F-001',
+  finding_id: 'W2F-001',
+  title: 'Submitted targeted evidence for W2F-001'
+}), { fileName: 'case235-targeted.json' });
+const claim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave2'], { encoding: 'utf8' }).stdout);
+const workId = claim.claimed_work_ids[0];
+const fixture = writeFixtureResultForWorkUnit(bundle, {
+  work_id: workId,
+  output_path: 'reference/00-cross-market-shift.md',
+  source_url: 'https://research-source.test/wave2/market-shift',
+  source_slug: 'market-shift',
+  output_content: referenceContent({ source_url: 'https://research-source.test/wave2/market-shift', topic_slug: 'cross-topic', title: 'Submitted Cross Reference' }),
+  cache_trails: ['_cache/wave2/primary/W2F-001/market-shift']
 });
-
-// ── Fail path: introduce 3 errors ──
-// 1. Create reference/00_shared/ subdirectory
-mkdirSync(join(ref, '00_shared'), { recursive: true });
-
-// 2. Empty synthesis.md
-writeFileSync(join(w2, 'synthesis.md'), '');
-
-// 3. Add residual backfill token to seed topic
-writeFileSync(join(seed, '01_test.md'), '# Test\n\n__BACKFILL_WAVE2_JUDGMENT__\n');
-
-const failOut = execSync(`node DPT_FRAMEWORK/cli/inspect-wave2-output.mjs --bundle ${B} || true`, { encoding: 'utf8' });
-const fail = JSON.parse(failOut);
-await recordCheck(t, {
-  gate: 'inspect-wave2-fail', passed: !fail.check.passed, expected: true,
-  detail: `inspect_count=${fail.inspect.length} (expected >=3)`
-});
-
-await verdict(t);
-JSTEST
-
-node "$B/t.mjs" "$B"
+const submit = submitWorkUnitViaCli(bundle, { work_id: workId, resultPath: fixture.resultPath });
+writeFileSync(`${bundle}/case-235-submit.json`, `${JSON.stringify({ claim, submit }, null, 2)}\n`);
+writeFileSync(`${bundle}/artifacts/wave2/synthesis.md`, '# Cross-Topic Synthesis\n\nW2F-001 uses [Topic A](../wave1/topic-a/evidence-summary.md) and submitted targeted evidence.\n');
+writeFileSync(`${bundle}/artifacts/wave2/cross-topic-ledger.md`, '# Cross-Topic Ledger\n\n## Cross-Topic Scan Matrix\n\n| pair_id | topics | checked_dimensions | finding_ids | notes |\n| --- | --- | --- | --- | --- |\n| P01 | topic-a + topic-b | emergent_question | W2F-001 | targeted evidence submitted |\n\n## Wave1 Legacy Questions\n\nOne open gap repaired.\n\n## Cross-Topic Resolutions\n\nW2F-001 resolved after submit.\n\n## Emergent Cross-Topic Questions\n\nW2F-001 required search.\n\n## Exploration Decisions\n\nW2F-001: explore_search submitted.\n\n## HITL2 Handoff\n\nNone.\n');
+writeFileSync(`${bundle}/artifacts/wave2/finding-index.yaml`, `version: "0.1"\nsource_layer: wave2_cross_topic\nledger: artifacts/wave2/cross-topic-ledger.md\nsynthesis: artifacts/wave2/synthesis.md\nscan: { topics: [topic-a, topic-b], topic_count: 2, pair_count_expected: 1, pair_count_checked: 1 }\nfindings:\n  - id: W2F-001\n    type: cross_topic_emergent_question\n    status: resolved\n    decision: explore_search\n    affected_topics: [topic-a, topic-b]\n    origin_refs: [artifacts/wave1/topic-a/question-list.md]\n    trigger_refs: [artifacts/wave1/topic-b/evidence-summary.md]\n    search_required: true\n    subagent_receipt_refs:\n      - ${fixture.record.paths.runtime_receipt_ref}\n    appears_in_synthesis: true\n    hitl2_handoff: false\n`);
+for (const topic of ['topic-a', 'topic-b']) writeFileSync(`${bundle}/seed_topics/${topic}.md`, `# ${topic}\n\n## Wave2 Judgment\nSubmitted targeted evidence supports W2F-001.\n\n## Pending Questions\n- [resolved]\n`);
+appendTrace(bundle, { event: 'wave2_completion', source: 'case-235-submitted' });
+JS
+node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B_SUBMITTED" --current-node phases/phase-wave2.md > "$B_SUBMITTED/case-235-gate-submitted.json"
 ```
 
-→ 预期：`PASS`。
-
----
-
-## Step 4: 结果解读
-
-> Happy path: wave2 合法产出全部通过（三件套 + cross file + 无 token）。Fail path: 3 个错误全部被 detect——00_shared/ 子目录、synthesis 为空、残留 __BACKFILL_WAVE2_JUDGMENT__ token。PASS。
-
-## Step 5: 清理
+## Step 4: [MAIN/SHELL] Record Verdict
 
 ```bash
-rm -rf dpt_disp_235_iw_*
-echo "✓ Cleaned up."
+node --input-type=module - "$B_PURE" "$B_DIRECT" "$B_SUBMITTED" <<'JS'
+import { readFileSync } from 'node:fs';
+import { readWorkUnitLedgerRows, recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+const [pure, direct, submitted] = process.argv.slice(2);
+const pureGate = JSON.parse(readFileSync(`${pure}/case-235-gate-pure.json`, 'utf8'));
+const directGate = JSON.parse(readFileSync(`${direct}/case-235-gate-direct.json`, 'utf8'));
+const submittedGate = JSON.parse(readFileSync(`${submitted}/case-235-gate-submitted.json`, 'utf8'));
+const pureRows = readWorkUnitLedgerRows(pure).filter((row) => row.wave === 2);
+const submittedRows = readWorkUnitLedgerRows(submitted).filter((row) => row.wave === 2);
+recordPlaybookCheck(pure, { gate: 'wave2-pure-pass-no-ledger', passed: pureGate.check?.passed === true && pureRows.length === 0, detail: `${pureRows.length} Wave2 row(s)` });
+recordPlaybookCheck(pure, { gate: 'wave2-direct-cross-ref-fails', passed: directGate.check?.passed === false && /work-unit|coverage|bypass/i.test(JSON.stringify(directGate.inspect || [])), detail: JSON.stringify(directGate.inspect || []) });
+recordPlaybookCheck(pure, { gate: 'wave2-submitted-cross-ref-passes', passed: submittedGate.check?.passed === true && submittedRows.length === 1, detail: JSON.stringify(submittedRows.map((row) => row.work_id)) });
+const verdict = writeTraceVerdict(pure, 'case-235');
+console.log(JSON.stringify(verdict, null, 2));
+process.exit(verdict.ok ? 0 : 1);
+JS
+```
+
+## Optional Automation Smoke
+
+```bash
+node experiments_env/shared/run-work-unit-playbook-case.mjs --case case-235 --target-dir tests/.test-bundles --cleanup-pass
+```
+
+## Cleanup
+
+PASS only:
+
+```bash
+node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B_PURE/case-235-verdict.json"
+rm -rf "$B_PURE" "$B_DIRECT" "$B_SUBMITTED"
 ```

@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
 import {
   claim, complete, enqueue, fail, inspect,
-  loadQueue, pendingCount, preempt, render, saveQueue, QUEUE, SLOT_NAMES,
+  loadQueue, pendingCount, preempt, render, saveQueue, QUEUE,
 } from '../engine/queue-manager.mjs';
 
 function usage() {
@@ -93,8 +93,8 @@ function validateBundleName(queue, bundleDir) {
 // QIV-001: Topic slug resolution and validation
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Known topic-scoped work_id templates for fallback slug extraction
-const TOPIC_SCOPED_WORK_ID_PATTERNS = [
+// Known topic-scoped queue_item_id templates for fallback slug extraction.
+const TOPIC_SCOPED_QUEUE_ITEM_ID_PATTERNS = [
   /^wave0-source-(?<slug>.+)$/,
   /^wave0-suppl-(?<slug>.+)-r\d+$/,
   /^wave1-deepen-(?<slug>.+)$/,
@@ -116,12 +116,12 @@ function resolveTopicSlug(taskCard) {
     return { slug: taskCard.lineage.topic_slug, source: 'lineage' };
   }
 
-  // Priority 3: fallback work_id parsing for known topic-scoped templates
-  if (taskCard.work_id) {
-    for (const pattern of TOPIC_SCOPED_WORK_ID_PATTERNS) {
-      const match = taskCard.work_id.match(pattern);
+  // Priority 3: fallback queue_item_id parsing for known topic-scoped templates.
+  if (taskCard.queue_item_id) {
+    for (const pattern of TOPIC_SCOPED_QUEUE_ITEM_ID_PATTERNS) {
+      const match = taskCard.queue_item_id.match(pattern);
       if (match && match.groups.slug) {
-        return { slug: match.groups.slug, source: 'work_id' };
+        return { slug: match.groups.slug, source: 'queue_item_id' };
       }
     }
   }
@@ -133,10 +133,10 @@ function isTopicScoped(taskCard) {
   // Has explicit topic slug
   if (taskCard.payload?.topic_slug || taskCard.lineage?.topic_slug) return true;
 
-  // Matches a known topic-scoped work_id template
-  if (taskCard.work_id) {
-    for (const pattern of TOPIC_SCOPED_WORK_ID_PATTERNS) {
-      if (pattern.test(taskCard.work_id)) return true;
+  // Matches a known topic-scoped queue_item_id template.
+  if (taskCard.queue_item_id) {
+    for (const pattern of TOPIC_SCOPED_QUEUE_ITEM_ID_PATTERNS) {
+      if (pattern.test(taskCard.queue_item_id)) return true;
     }
   }
 
@@ -206,13 +206,13 @@ function validateTopicSlug(taskCard, bundleDir) {
     };
   }
 
-  // Check payload/work_id mismatch
-  if (taskCard.payload?.topic_slug && taskCard.work_id) {
-    const workIdSlug = resolveTopicSlug({ work_id: taskCard.work_id });
-    if (workIdSlug && taskCard.payload.topic_slug !== workIdSlug.slug) {
+  // Check payload/queue_item_id mismatch.
+  if (taskCard.payload?.topic_slug && taskCard.queue_item_id) {
+    const queueItemSlug = resolveTopicSlug({ queue_item_id: taskCard.queue_item_id });
+    if (queueItemSlug && taskCard.payload.topic_slug !== queueItemSlug.slug) {
       return {
         valid: false,
-        error: `topic_slug mismatch: payload='${taskCard.payload.topic_slug}' vs work_id='${taskCard.work_id}' (derived slug: '${workIdSlug.slug}')`,
+        error: `topic_slug mismatch: payload='${taskCard.payload.topic_slug}' vs queue_item_id='${taskCard.queue_item_id}' (derived slug: '${queueItemSlug.slug}')`,
       };
     }
   }
@@ -220,7 +220,7 @@ function validateTopicSlug(taskCard, bundleDir) {
   if (!resolved) {
     return {
       valid: false,
-      error: `topic-scoped task '${taskCard.work_id}' has no resolvable topic_slug. Add payload.topic_slug or lineage.topic_slug.`,
+      error: `topic-scoped task '${taskCard.queue_item_id || '<missing queue_item_id>'}' has no resolvable topic_slug. Add payload.topic_slug or lineage.topic_slug.`,
     };
   }
 
@@ -265,32 +265,47 @@ function writeProjection(queue, bundleDir) {
     `- queue_health: \`${q.queue_health}\``,
     `- stop_authorization_state: \`${q.stop_authorization_state}\``,
     `- bundle_name: \`${q.bundle_name || 'N/A'}\``,
+    `- active_window_count: \`${q.active_window.length}\``,
+    `- refill_pool_count: \`${q.refill_pool.length}\``,
+    `- delegated_in_flight_count: \`${Object.keys(q.delegated_in_flight || {}).length}\``,
     '',
     '## Active Window',
     '',
   ];
 
-  for (const slot of SLOT_NAMES) {
-    const item = q.active_window[slot];
-    lines.push(`### ${slot}`);
-    if (!item) { lines.push('- empty: `true`', ''); continue; }
-    lines.push(
-      `- work_id: \`${item.work_id}\``,
-      `- title: ${item.title}`,
-      `- targets: \`controller=${item.targets?.controller || 'unknown'}${item.targets?.delegates ? `, delegates.to=${item.targets.delegates.to}, delegates.role_key=${item.targets.delegates.role_key}` : ''}\``,
-      `- status: \`${item.status}\``,
-      `- action: ${item.action}`,
-      `- required_receipts: ${item.required_receipts.map(r => `\`${r}\``).join(', ') || '`none`'}`,
-      `- completion_receipt: \`${item.completion_receipt ?? 'null'}\``,
-      `- writes_to: ${item.writes_to.map(r => `\`${r}\``).join(', ') || '`none`'}`,
-      `- failure_route: ${item.failure_route}`,
-      '',
-    );
+  if (q.active_window.length === 0) {
+    lines.push('- empty', '');
+  } else {
+    for (const [index, item] of q.active_window.entries()) {
+      lines.push(
+        `### ${index + 1}. ${item.queue_item_id}`,
+        `- queue_item_id: \`${item.queue_item_id}\``,
+        `- title: ${item.title}`,
+        `- targets: \`controller=${item.targets?.controller || 'unknown'}${item.targets?.delegates ? `, delegates.to=${item.targets.delegates.to}, delegates.role_key=${item.targets.delegates.role_key}` : ''}\``,
+        `- status: \`${item.status}\``,
+        `- action: ${item.action}`,
+        `- required_receipts: ${item.required_receipts.map(r => `\`${r}\``).join(', ') || '`none`'}`,
+        `- completion_receipt: \`${item.completion_receipt ?? 'null'}\``,
+        `- writes_to: ${item.writes_to.map(r => `\`${r}\``).join(', ') || '`none`'}`,
+        `- failure_route: ${item.failure_route}`,
+        '',
+      );
+    }
+  }
+
+  lines.push('## Delegated In Flight', '');
+  const inFlight = Object.values(q.delegated_in_flight || {});
+  if (inFlight.length === 0) {
+    lines.push('- empty');
+  } else {
+    for (const entry of inFlight) {
+      lines.push(`- \`${entry.queue_item_id}\` -> \`${entry.work_id}\` (${entry.kind}, deadline=${entry.deadline_at})`);
+    }
   }
 
   lines.push('## Refill Pool', '');
   for (const item of q.refill_pool) {
-    lines.push(`- \`${item.work_id}\` ${item.title} (${item.priority_class}, restore=${item.restore_priority})`);
+    lines.push(`- \`${item.queue_item_id}\` ${item.title} (${item.priority_class}, restore=${item.restore_priority})`);
   }
   if (q.refill_pool.length === 0) lines.push('- empty');
 
@@ -330,72 +345,63 @@ function repairRemoveStale(queue, bundleDir) {
   const findingIndex = readFindingIndex(bundleDir);
   const removed = [];
 
-  // Check all active window slots
-  for (const slot of SLOT_NAMES) {
-    const item = queue.active_window[slot];
-    if (!item) continue;
-
+  function staleReason(item) {
     const isFinding = isFindingScoped(item);
     const isTopic = isTopicScoped(item);
 
     if (isFinding) {
-      // Finding-scoped: remove if finding_id not in current finding-index
       if (findingIndex && item.payload?.finding_id) {
         const findingIds = (findingIndex.findings || []).map(f => f.id);
         if (!findingIds.includes(item.payload.finding_id)) {
-          removed.push({ slot, work_id: item.work_id, reason: `finding_id '${item.payload.finding_id}' not in current bundle finding-index` });
-          queue.active_window[slot] = null;
+          return `finding_id '${item.payload.finding_id}' not in current bundle finding-index`;
         }
       }
-      continue;
+      return null;
     }
 
     if (isTopic) {
       const resolved = resolveTopicSlug(item);
       if (resolved && !registry.includes(resolved.slug)) {
-        removed.push({ slot, work_id: item.work_id, reason: `topic_slug '${resolved.slug}' not in current bundle topic_registry` });
-        queue.active_window[slot] = null;
-      } else if (isTopic && !resolved) {
-        // Topic-scoped but unparsable slug — remove as stale
-        removed.push({ slot, work_id: item.work_id, reason: 'topic-scoped task with unparsable topic_slug' });
-        queue.active_window[slot] = null;
+        return `topic_slug '${resolved.slug}' not in current bundle topic_registry`;
       }
+      if (!resolved) {
+        return 'topic-scoped task with unparsable topic_slug';
+      }
+    }
+
+    return null;
+  }
+
+  for (const entry of Object.values(queue.delegated_in_flight || {})) {
+    const synthetic = {
+      queue_item_id: entry.queue_item_id,
+      producer_rule: entry.producer_rule || '',
+      lineage: entry.lineage || {},
+      payload: entry.payload || {},
+    };
+    const reason = staleReason(synthetic);
+    if (reason) {
+      throw new Error(`delegated in-flight queue_item_id '${entry.queue_item_id}' is stale (${reason}); resolve the work-unit attempt before queue repair`);
     }
   }
 
-  // Check refill_pool
-  const keepPool = [];
-  for (const item of queue.refill_pool) {
-    const isFinding = isFindingScoped(item);
-    const isTopic = isTopicScoped(item);
-
-    let shouldRemove = false;
-    let reason = '';
-
-    if (isFinding && findingIndex && item.payload?.finding_id) {
-      const findingIds = (findingIndex.findings || []).map(f => f.id);
-      if (!findingIds.includes(item.payload.finding_id)) {
-        shouldRemove = true;
-        reason = `finding_id '${item.payload.finding_id}' not in current bundle finding-index`;
-      }
-    } else if (isTopic) {
-      const resolved = resolveTopicSlug(item);
-      if (resolved && !registry.includes(resolved.slug)) {
-        shouldRemove = true;
-        reason = `topic_slug '${resolved.slug}' not in current bundle topic_registry`;
-      } else if (!resolved) {
-        shouldRemove = true;
-        reason = 'topic-scoped task with unparsable topic_slug';
-      }
+  queue.active_window = queue.active_window.filter((item, index) => {
+    const reason = staleReason(item);
+    if (reason) {
+      removed.push({ location: 'active_window', index, queue_item_id: item.queue_item_id, reason });
+      return false;
     }
+    return true;
+  });
 
-    if (shouldRemove) {
-      removed.push({ slot: 'refill_pool', work_id: item.work_id, reason });
-    } else {
-      keepPool.push(item);
+  queue.refill_pool = queue.refill_pool.filter((item, index) => {
+    const reason = staleReason(item);
+    if (reason) {
+      removed.push({ location: 'refill_pool', index, queue_item_id: item.queue_item_id, reason });
+      return false;
     }
-  }
-  queue.refill_pool = keepPool;
+    return true;
+  });
 
   return { queue, removed };
 }
@@ -424,11 +430,11 @@ try {
 
   if (command === 'count') {
     validateBundleName(queue, bundleDir);
-    const active = SLOT_NAMES.filter((slot) => queue.active_window[slot] !== null).length;
     emit({
       pending: pendingCount(queue),
-      active_window: active,
+      active_window: queue.active_window.length,
       refill_pool: queue.refill_pool.length,
+      delegated_in_flight: Object.keys(queue.delegated_in_flight || {}).length,
     });
     process.exit(0);
   }
@@ -458,6 +464,7 @@ try {
     const result = claim(queue, { actor: values.actor });
     saveQueue(bundleDir, result.queue);
     emit(result);
+    process.exit(result.item ? 0 : 1);
   } else if (command === 'complete') {
     validateBundleName(queue, bundleDir);
     if (!values.result) throw new Error('--result is required');

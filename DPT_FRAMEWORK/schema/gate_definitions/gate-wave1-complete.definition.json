@@ -59,7 +59,7 @@
       "id": "ledger_coverage",
       "check": "reference_ledger_coverage",
       "target": "reference/*{topic}*.md",
-      "failure_message": "Reference files for {topic} must be declared in rb_output_declarations.jsonl via delegated relay/queue completion."
+      "failure_message": "Reference files for {topic} must be declared by submitted work-unit ledger rows in rb_output_declarations.jsonl."
     },
     {
       "id": "question_list_has_four_sections",
@@ -75,7 +75,7 @@
       "target": "artifacts/wave1/{topic}/evidence-summary.md",
       "pattern": "\\[.+\\]\\(https?://[^)]+\\)",
       "negate": false,
-      "failure_message": "evidence-summary.md for {topic} must contain at least 1 source URL in Markdown link format. Sub-agent must do real WebSearch+WebFetch."
+      "failure_message": "evidence-summary.md for {topic} must contain at least 1 source URL in Markdown link format. The work-unit sub-agent must do real WebSearch+WebFetch."
     },
     {
       "id": "key_findings_non_empty",
@@ -113,7 +113,7 @@
       "id": "trace_event_wave1_completion",
       "check": "trace_event_present",
       "target": "wave1_completion",
-      "failure_message": "No wave1_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event per the shared-subagent-protocol."
+      "failure_message": "No wave1_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event before the gate."
     },
     {
       "id": "content_dedup",
@@ -134,15 +134,15 @@
       "failure_message": "Cache trail coverage gap detected: role=reference output files must map to verified _cache/ leaf directories. Missing or unmapped cache trails fail coverage; empty cache_trails on a declaration emits a Phase 1 warning."
     },
     {
-      "id": "wave1_ledger_exists",
-      "check": "output_declaration_ledger_exists",
+      "id": "wave1_work_unit_ledger_exists",
+      "check": "work_unit_ledger_exists",
       "target": "rb_output_declarations.jsonl",
       "wave": "wave1",
-      "failure_message": "No wave1-scoped output declaration ledger entries found. Complete delegated relay tasks (dpt-evidence-extractor) through the queue + relay pipeline to populate the output declaration ledger."
+      "failure_message": "No wave1 submitted work-unit ledger rows found. Claim and submit wave1_topic_deepening work units to populate rb_output_declarations.jsonl."
     },
     {
-      "id": "wave1_output_coverage",
-      "check": "output_declaration_coverage",
+      "id": "wave1_work_unit_output_coverage",
+      "check": "work_unit_output_coverage",
       "target": "rb_output_declarations.jsonl",
       "wave": "wave1",
       "output_selectors": {
@@ -156,14 +156,21 @@
           "question_list"
         ]
       },
-      "failure_message": "Wave1 outputs exist on disk but are not covered by output declaration ledger. Files may have been written directly (bypassing relay). Re-run through delegated relay tasks."
+      "failure_message": "Wave1 outputs exist on disk but are not covered by submitted work-unit ledger rows. Submit delegated outputs through operate-work-unit."
     },
     {
-      "id": "wave1_subagent_slots",
-      "check": "subagent_slot_presence",
-      "target": "_subagents/wave_01",
+      "id": "wave1_work_unit_submission_presence",
+      "check": "work_unit_submission_presence",
+      "target": "rb_output_declarations.jsonl",
       "wave": "wave1",
-      "failure_message": "No successful wave1 relay slots found in _subagents/wave_01/. Dispatch and complete relay tasks (dpt-evidence-extractor) through the queue + relay pipeline."
+      "failure_message": "Wave1 submitted work-unit rows failed index/manifest/result/receipt/beacon/output/cache/hash cross-checks."
+    },
+    {
+      "id": "wave1_delegated_bypass_suspected",
+      "check": "delegated_bypass_suspected",
+      "target": "artifacts/wave1",
+      "wave": "wave1",
+      "failure_message": "Wave1 delegated artifacts appear without submitted work-unit coverage."
     }
   ]
 }

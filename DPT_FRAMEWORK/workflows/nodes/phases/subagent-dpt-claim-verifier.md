@@ -5,33 +5,33 @@ shared_scope: subagent-protocol
 role: dpt-claim-verifier
 authority: guidance-only
 execution_contract:
-  surface: relay-subagent-role
+  surface: work-unit-subagent-role
   search_policy: subagent_performs_search
   loaded_by: phase-agent
-  delivered_via: relay_task_md
+  delivered_via: work_unit_task_md
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
 suggested_context: []
 ---
 
-# Relay Role: dpt-claim-verifier — Critical Claim Verification
+# Work-Unit Role: dpt-claim-verifier - Critical Claim Verification
 
 ## 0. Role Brief
 
 - **Role key**: `dpt-claim-verifier`
 - **Used by**: Phase Agents dispatching the built-in pass-branch dispatchMap (full stage) or a delegated verification task.
-- **Receives**: Relay slot `task.md`, `result.schema.json`, runtime receipt path, and slot-local/cache paths.
-- **Produces**: Per-claim verification statuses (supported / weakened / contradicted / uncertain) with concise evidence references, cache trails, runtime receipt events, and a bounded SlotResult.
-- **Boundary**: This role verifies the claims named in the task only inside a relay slot; it does not read workflow state, mutate queue/status, run gates, or decide phase completion.
-- **Handoff**: Phase Agent collects via `drive-relay-slot commit` (which ingests the runtime receipt and validates through the engine), then completes the queue item through `operate-queue complete --result` with `slot_result_ref`.
+- **Receives**: Work-unit `task.md`, `_beacon.json`, `result.schema.json`, assigned `runtime-receipt.jsonl`, and the output/cache contract for `_work_units/waveN/{work_id}/`.
+- **Produces**: Per-claim verification statuses (supported / weakened / contradicted / uncertain) with concise evidence references, cache trails, runtime receipt events, and bounded result JSON for `operate-work-unit submit`.
+- **Boundary**: This role verifies the claims named in the task only inside the assigned work-unit contract; it does not read workflow state, mutate queue/status, run gates, append ledgers, or decide phase completion.
+- **Handoff**: Phase Agent submits the result through `operate-work-unit submit --work-id <work_id> --result <result.json>`. Successful submit is the Engine boundary that completes queue demand and appends delegated ledger coverage.
 
 ## Lifecycle Logging Mandate (always-loaded)
 
-This mandate is loaded from the role spec itself — it applies to **every spawn path** (the runtime driver `drive-relay-slot` or a hand-written spawn prompt), not only to the engine-generated spawn prompt.
+This mandate is loaded from the role spec itself. It applies to every native sub-agent spawn that receives a work-unit task, including prompts copied from `operate-work-unit claim` output.
 
-1. **Read your beacon first.** Open `_beacon.json` in your slot directory. It is the single source of truth for `bundle_dir`, `log_cli`, `slot_key`, and `receipt_nonce`. Do NOT use environment variables or inherited cwd for the bundle path.
-2. **Emit lifecycle events via `log-event.mjs`.** Using `log_cli` and `bundle_dir` from the beacon, emit this event set, each carrying the beacon `receipt_nonce` in its `--detail` JSON:
+1. **Read your beacon first.** Open `_beacon.json` in your work-unit directory. It is the single source of truth for `bundle_dir`, `log_cli`, `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, and `runtime_receipt_ref`. Do NOT use environment variables or inherited cwd for the bundle path.
+2. **Emit lifecycle events via `log-event.mjs`.** Using `log_cli` and `bundle_dir` from the beacon, emit this event set, each carrying `work_id`, `queue_item_id`, `kind`, and `receipt_nonce` in its `--detail` JSON:
    - `search_start` / `search_done` — around each bounded search (`search_done` includes `result_count`)
    - `fetch_done` — when a page fetch completes (include `url`)
    - `file_written` — when you write an artifact file (include bundle-relative `path`)
@@ -41,13 +41,13 @@ This mandate is loaded from the role spec itself — it applies to **every spawn
 4. **Never log raw page content, full search result bodies, or private reasoning.** The logging CLI always exits 0; diagnostics must not block your work.
 
 Example:
-  node <log_cli> --bundle <bundle_dir> --level info --msg "work_done" --detail '{"kind":"work_done","slotKey":"<slot_key>","receipt_nonce":"<receipt_nonce>","summary":"<summary>"}'
+  node <log_cli> --bundle <bundle_dir> --level info --msg "work_done" --detail '{"event":"work_done","work_id":"<work_id>","queue_item_id":"<queue_item_id>","kind":"<kind>","receipt_nonce":"<receipt_nonce>","summary":"<summary>"}'
 
 ## 1. Purpose
 
-Define what the claim-verifier Sub-agent checks, produces, and must never do. The Phase Agent reads this role spec to construct bounded relay slot instructions. The Sub-agent actor does not directly load this Markdown node; it receives the generated `task.md`, `result.schema.json`, runtime receipt file, and slot-local/cache paths.
+Define what the claim-verifier Sub-agent checks, produces, and must never do. The Phase Agent reads this role spec to construct bounded work-unit task instructions. The Sub-agent actor does not directly load this Markdown node; it receives the generated `task.md`, `_beacon.json`, `result.schema.json`, runtime receipt file, and work-unit output/cache paths.
 
-The shared relay contract (`shared-subagent-protocol.md`) defines the slot mechanics. This role spec defines what `dpt-claim-verifier` does within that contract.
+The shared work-unit sub-agent contract (`shared-subagent-protocol.md`) defines the envelope and submit mechanics. This role spec defines what `dpt-claim-verifier` does within that contract.
 
 ## 2. Verification Focus
 
@@ -60,9 +60,9 @@ For each critical claim named in the task, determine whether the available evide
 
 Each status must cite the specific source(s) it rests on. Bounded fresh search is allowed when the task's provided evidence does not settle a claim; the search scope is the claim, not the topic at large.
 
-## 3. Execution Within Relay Slot
+## 3. Execution Within Work Unit
 
-The Sub-agent works only inside the relay-assigned slot directory (`_subagents/wave_NN/slot_MM/`). It receives `task.md` and `result.schema.json`; the task text includes the claims to verify, cache directory, action, and required output declarations.
+The Sub-agent works only inside the assigned work-unit directory (`_work_units/waveN/{work_id}/`). It receives `task.md`, `_beacon.json`, and `result.schema.json`; the task text includes the claims to verify, cache directory, action, and required output declarations.
 
 Execution steps:
 
@@ -71,7 +71,7 @@ Execution steps:
 3. Verify each claim against the provided evidence; when needed, search and fetch page content using the fetching chain from `shared-subagent-protocol.md` (built-in tool → `curl` → Node `fetch` → Python `urllib.request`).
 4. Write verification cache leaves under the task's provided cache directory for each fetched source.
 5. Write `agent_result_ready` immediately before returning.
-6. Return JSON matching `result.schema.json`, including per-claim statuses with evidence references and `cache_trails[]` for any fetches performed.
+6. Return JSON matching `result.schema.json`, including `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, per-claim statuses with evidence references, and `cache_trails[]` for any fetches performed.
 
 ## 4. Anti-Cheating Rules
 
@@ -80,23 +80,23 @@ Execution steps:
 - Do not skip the page-fetch degradation chain when a claim needs fresh evidence.
 - Do not mark a claim `supported`/`contradicted` without a citable material source; when in doubt, report `uncertain` honestly.
 - Do not perform source discovery (that is `dpt-source-intake`), source quality assessment (that is `dpt-source-diagnostic`), synthesis, gate evaluation, queue mutation, or status mutation.
-- Do not directly append `rb_output_declarations.jsonl`; delegated `complete()` is the ledger boundary.
+- Do not directly append `rb_output_declarations.jsonl`; `operate-work-unit submit` is the delegated ledger boundary.
 
-Universal relay prohibitions from `shared-subagent-protocol.md` also apply.
+Universal work-unit prohibitions from `shared-subagent-protocol.md` also apply.
 
 ## 5. Relationship to Phase Agent
 
 Phase Agent:
 
 - Loads this role spec as guidance via `suggested_context`
-- Builds queue task cards and relay `task.md`
-- Spawns the Sub-agent through relay
-- Collects the returned result via `drive-relay-slot commit` (engine ingests the runtime receipt and validates the result)
-- Completes the queue item with `operate-queue complete --result <result.json>` and `slot_result_ref`
+- Claims eligible queue demand through `operate-work-unit claim`
+- Spawns the Sub-agent with the generated work-unit task prompt
+- Submits the returned result through `operate-work-unit submit --work-id <work_id> --result <result.json>`
+- Repairs submit rejection, closes terminal attempts, or retries with a new `work_id` when needed
 
 Sub-agent:
 
 - Verifies claims, performs bounded verification searches/fetches, writes cache leaves
 - Emits runtime receipt events
-- Returns bounded SlotResult JSON
+- Returns bounded work-unit result JSON
 - Does not see lifecycle routing, gate pass/fail, queue authority, or unrelated topics

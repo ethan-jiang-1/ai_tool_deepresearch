@@ -66,29 +66,29 @@ suggested_context: []
 
 ### 13. 禁止遗漏 `output_files[]` 和 `cache_trails[]`
 
-Sub-agent 返回的 `result.json` MUST 包含 `output_files[]`（声明每个产出文件的 path/role/source_url）和 `cache_trails[]`（声明实际写入的 leaf source 目录路径）。遗漏声明会使 delegated `complete()` reject。
+Sub-agent 返回给 work-unit submit 的 `result.json` MUST 包含 `work_id`、`queue_item_id`、`kind`、`receipt_nonce`、`output_files[]`（声明每个产出文件的 path/role/source_url）和 `cache_trails[]`（声明实际写入的 leaf source 目录路径）。遗漏声明会使 `operate-work-unit submit` reject。
 
 **正确替代**：Sub-agent 在返回 result JSON 前确认所有产出文件已在 `output_files[]` 中声明，所有 `_cache/` leaf 目录已在 `cache_trails[]` 中声明。
 
 ### 14. 禁止遗漏 `cache_trails[]`
 
-每个 `cache_trails[]` 项必须是 leaf source directory（直接含 `websearch.json`/`page.md`/`meta.json` 三文件），不得声明 parent cache dir。`complete()` 会逐 leaf 验证三文件存在。
+每个 `cache_trails[]` 项必须是 leaf source directory（直接含 `websearch.json`/`page.md`/`meta.json` 三文件），不得声明 parent cache dir。`operate-work-unit submit` 会逐 leaf 验证三文件存在。
 
 **正确替代**：声明 `_cache/wave0/primary/01_test/s01_source/`（leaf）而不是 `_cache/wave0/primary/01_test/`（parent）。
 
-### 15. 禁止绕过 Relay provenance
+### 15. 禁止绕过 work-unit provenance
 
-Delegated task 的 `complete()` MUST 通过 committed slot result + runtime receipt 证明 Sub-agent 确实经 Relay 执行。Phase Agent 不直接执行 WebSearch/WebFetch；不直接写 `rb_output_declarations.jsonl`；不手写 ledger row 冒充 completion。
+Delegated task MUST be claimed as a work unit and accepted through `operate-work-unit submit`. Phase Agent 不直接执行 WebSearch/WebFetch 来冒充 delegated output；不直接写 `rb_output_declarations.jsonl`；不手写 ledger row 冒充 completion。Gate coverage comes from submitted work-unit ledger rows plus cross-checks.
 
 ### 16. 禁止用脚本或模板批量生成 reference 文件
 
-Phase Agent MUST NOT use scripts (Python, bash, node, or any language) or template substitution to batch-generate `reference/*.md` files. Every reference file MUST be produced by a real sub-agent through the Agentic Queue → Sub-agent Relay pipeline, with real WebSearch + WebFetch execution and unique source content. Template-generated files share near-identical Key Facts and will be caught by `content_dedup` Jaccard clone detection (similarity ≥ 0.8), wasting fix cycles and eroding trust.
+Phase Agent MUST NOT use scripts (Python, bash, node, or any language) or template substitution to batch-generate `reference/*.md` files. Every delegated reference file MUST be produced by a real sub-agent through the queue demand -> work unit -> sub-agent -> submit -> ledger -> gate path, with real WebSearch + WebFetch execution and unique source content. Template-generated files share near-identical Key Facts and will be caught by `content_dedup` Jaccard clone detection (similarity >= 0.8), wasting fix cycles and eroding trust.
 
-正确路径：spawn `dpt-evidence-extractor` sub-agent for each topic → sub-agent performs real WebSearch + WebFetch → produces unique `reference/{topic}-<source-slug>.md` files with genuinely different source content → gate `content_dedup` passes naturally.
+正确路径：claim `wave1_topic_deepening` work units → spawn `dpt-evidence-extractor` sub-agent for each claimed task → sub-agent performs real WebSearch + WebFetch → produces unique `reference/{topic}-<source-slug>.md` files with genuinely different source content → submit by `work_id` → gate `content_dedup` passes naturally.
 
 If the Agent finds itself wanting to "create many reference files quickly," the correct answer is queue-driven sub-agent parallel execution, not a script.
 
-**正确替代**：Phase Agent claim delegated task → spawn Sub-agent via Relay → `drive-relay-slot commit`（引擎校验落盘）→ delegated `complete()` → Engine append ledger。
+**正确替代**：Phase Agent claims delegated queue demand via `operate-work-unit claim` → spawns the bounded Sub-agent prompt → Sub-agent writes declared outputs/cache + runtime receipt → Phase Agent runs `operate-work-unit submit --work-id <work_id> --result <result.json>` → Engine validates and appends ledger coverage。
 
 **正确替代**：`setup-ready` gate pass 只确认 structural consistency（文件存在、schema 合法、basename 一致）。它不意味着研究质量过关或可以交付最终报告。`readiness-passed` 是另一个 gate，在 wave0/1/2 + HITL2 之后。
 

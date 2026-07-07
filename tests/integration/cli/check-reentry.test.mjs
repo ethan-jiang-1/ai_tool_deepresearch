@@ -8,7 +8,6 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { SLOT_NAMES } from '../../../DPT_FRAMEWORK/schema/contracts/queue-slots.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-reentry-tmp');
@@ -49,10 +48,13 @@ function setupBundle(name, statusOverrides = {}, queueOverrides = {}, extraFiles
 
   // Default queue (empty)
   const queue = {
+    schema_version: 'queue.v2',
     queue_health: 'ready',
     stop_authorization_state: 'unauthorized_continue_required',
-    ...Object.fromEntries(SLOT_NAMES.map(s => [s, null])),
+    active_window: [],
     refill_pool: [],
+    delegated_in_flight: {},
+    terminal_history: [],
     ...queueOverrides,
   };
   writeFileSync(join(dir, 'rb_queue.json'), JSON.stringify(queue));
@@ -178,8 +180,8 @@ describe('check-reentry CLI', () => {
     it('blocks on prior-phase queued work affecting gate pass conditions', () => {
       const dir = setupBundle('rt-qconflict', { current_gate: 'wave1_complete' }, {
         queue_health: 'ready',
-        slot_1_current: {
-          work_id: 'wave0-source-topic-a',
+        active_window: [{
+          queue_item_id: 'wave0-source-topic-a',
           title: 'Wave0 source intake',
           action: 'Collect shared references',
           targets: { controller: 'main-agent' },
@@ -198,7 +200,7 @@ describe('check-reentry CLI', () => {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           payload: {},
-        },
+        }],
       });
       const res = runCliJson(dir, 'wave1_complete');
       assert.ok(res.stdout.blockers.some(b => b.check === 'queue_conflict'), 'Should have queue conflict blocker');
@@ -208,7 +210,7 @@ describe('check-reentry CLI', () => {
       const dir = setupBundle('rt-qdone', { current_gate: 'wave1_complete' }, {
         queue_health: 'ready',
         refill_pool: [{
-          work_id: 'wave0-source-topic-a',
+          queue_item_id: 'wave0-source-topic-a',
           title: 'Wave0 intake',
           action: 'Collect shared references',
           targets: { controller: 'main-agent' },
@@ -254,7 +256,7 @@ describe('check-reentry CLI', () => {
         normalized_target: { status_gate: 'wave1_complete', gate_key: 'wave1-complete', node_ref: 'phases/phase-wave1.md', phase_key: 'wave1' },
         status_snapshot: { current_gate: 'wave1_complete', next_gate: 'wave2_complete', state: 'in_progress' },
         topic_registry_summary: { count: 2, slugs: ['topic-a', 'topic-b'] },
-        queue_summary: { queue_health: 'ready', active_count: 0, pool_count: 0, slot_1_status: null },
+        queue_summary: { queue_health: 'ready', active_count: 0, delegated_in_flight_count: 0, pool_count: 0 },
         artifact_inventory: { seed_topics: ['seed_topics/topic-a.md', 'seed_topics/topic-b.md'], reference: [] },
         cursors: { ledger_lines: 0, trace_lines: 0, log_lines: 0 },
         hashes: {

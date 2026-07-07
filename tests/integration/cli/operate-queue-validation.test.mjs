@@ -23,7 +23,9 @@ function runOq(bundle, command, ...args) {
 
 function createBundle(name) {
   const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-  const dir = track(r.stdout.trim());
+  assert.equal(r.status, 0, `new-disposable-bundle failed: ${r.stderr || r.stdout}`);
+  const lines = r.stdout.trim().split(/\r?\n/).filter(Boolean);
+  const dir = track(lines.at(-1).replace(/\x1b\[[0-9;]*m/g, ''));
 
   // Setup status
   const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf-8'));
@@ -42,7 +44,7 @@ function createBundle(name) {
 
 function writeTaskFile(filePath, overrides = {}) {
   const task = {
-    work_id: overrides.work_id || 'wave0-source-topic-a',
+    queue_item_id: overrides.queue_item_id || 'wave0-source-topic-a',
     title: overrides.title || 'Test Task',
     targets: overrides.targets || { controller: 'main-agent' },
     action: overrides.action || 'Test action',
@@ -57,7 +59,6 @@ function writeTaskFile(filePath, overrides = {}) {
     completion_receipt: overrides.completion_receipt !== undefined ? overrides.completion_receipt : 'none',
     failure_route: overrides.failure_route || 'queue repair work',
     status: overrides.status || 'queued',
-    preempted_from_slot: 'not_applicable',
     restore_priority: 'normal',
     payload: overrides.payload || {},
   };
@@ -78,7 +79,7 @@ describe('QIV-001 enqueue topic validation', () => {
   it('1. accepts valid topic_slug in payload', () => {
     const dir = createBundle(unique('valid'));
     const taskFile = join(dir, 'task.json');
-    writeTaskFile(taskFile, { work_id: 'wave0-source-topic-a', payload: { topic_slug: 'topic-a' } });
+    writeTaskFile(taskFile, { queue_item_id: 'wave0-source-topic-a', payload: { topic_slug: 'topic-a' } });
     const r = runOq(dir, 'enqueue', '--task', taskFile);
     const out = JSON.parse(r.stdout);
     assert.equal(out.ok, true);
@@ -87,18 +88,18 @@ describe('QIV-001 enqueue topic validation', () => {
   it('2. rejects unknown topic_slug', () => {
     const dir = createBundle(unique('unknown'));
     const taskFile = join(dir, 'task.json');
-    writeTaskFile(taskFile, { work_id: 'wave0-source-clinical-scenarios', payload: { topic_slug: 'clinical-scenarios' } });
+    writeTaskFile(taskFile, { queue_item_id: 'wave0-source-clinical-scenarios', payload: { topic_slug: 'clinical-scenarios' } });
     const r = runOq(dir, 'enqueue', '--task', taskFile);
     const out = JSON.parse(r.stdout);
     assert.equal(out.ok, false);
     assert.ok(out.error.includes('clinical-scenarios'));
   });
 
-  it('3. rejects payload/work_id slug mismatch', () => {
+  it('3. rejects payload/queue_item_id slug mismatch', () => {
     const dir = createBundle(unique('mismatch'));
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, {
-      work_id: 'wave1-deepen-topic-a',
+      queue_item_id: 'wave1-deepen-topic-a',
       payload: { topic_slug: 'topic-b' },
       producer_rule: 'topic_deepening',
     });
@@ -111,7 +112,7 @@ describe('QIV-001 enqueue topic validation', () => {
   it('4. rejects topic-scoped task with no resolvable slug', () => {
     const dir = createBundle(unique('noslug'));
     const taskFile = join(dir, 'task.json');
-    writeTaskFile(taskFile, { work_id: 'mystery-deepen-foo', producer_rule: 'topic_deepening' });
+    writeTaskFile(taskFile, { queue_item_id: 'mystery-deepen-foo', producer_rule: 'topic_deepening' });
     const r = runOq(dir, 'enqueue', '--task', taskFile);
     const out = JSON.parse(r.stdout);
     assert.equal(out.ok, false);
@@ -125,7 +126,7 @@ describe('QIV-001 enqueue topic validation', () => {
     writeFileSync(join(dir, 'artifacts/wave2/finding-index.yaml'), 'findings:\n  - id: W2F-001\n    decision: exploit_search\n');
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, {
-      work_id: 'wave2-suppl-backing-W2F-001-r1',
+      queue_item_id: 'wave2-suppl-backing-W2F-001-r1',
       producer_rule: 'topic_deepening',
       payload: { finding_id: 'W2F-001' },
     });
@@ -140,7 +141,7 @@ describe('QIV-001 enqueue topic validation', () => {
     writeFileSync(join(dir, 'artifacts/wave2/finding-index.yaml'), 'findings:\n  - id: W2F-001\n');
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, {
-      work_id: 'wave2-suppl-backing-W2F-999-r1',
+      queue_item_id: 'wave2-suppl-backing-W2F-999-r1',
       producer_rule: 'topic_deepening',
       payload: { finding_id: 'W2F-999' },
     });
@@ -216,12 +217,12 @@ describe('QIV-004 repair --remove-stale', () => {
     const dir = createBundle(unique('repair'));
     // Enqueue a task with a valid topic first
     const taskFileA = join(dir, 'task_a.json');
-    writeTaskFile(taskFileA, { work_id: 'wave0-source-topic-a', payload: { topic_slug: 'topic-a' } });
+    writeTaskFile(taskFileA, { queue_item_id: 'wave0-source-topic-a', payload: { topic_slug: 'topic-a' } });
     runOq(dir, 'enqueue', '--task', taskFileA);
     // Manually add stale entry to refill_pool
     const q = JSON.parse(readFileSync(join(dir, 'rb_queue.json'), 'utf-8'));
     q.refill_pool.push({
-      work_id: 'seed-topic-clinical-scenarios',
+      queue_item_id: 'seed-topic-clinical-scenarios',
       title: 'Stale task',
       targets: { controller: 'main-agent' },
       action: 'stale',
@@ -236,7 +237,6 @@ describe('QIV-004 repair --remove-stale', () => {
       completion_receipt: 'none',
       failure_route: 'n/a',
       status: 'queued',
-      preempted_from_slot: 'not_applicable',
       restore_priority: 'normal',
       payload: { topic_slug: 'clinical-scenarios' },
     });
@@ -246,7 +246,7 @@ describe('QIV-004 repair --remove-stale', () => {
     const out = JSON.parse(r.stdout);
     assert.equal(out.ok, true);
     assert.ok(out.removed_count > 0);
-    assert.ok(out.removed.some((x) => x.work_id === 'seed-topic-clinical-scenarios'));
+    assert.ok(out.removed.some((x) => x.queue_item_id === 'seed-topic-clinical-scenarios'));
   });
 });
 
@@ -259,7 +259,7 @@ describe('AGQ-001/004 completion_receipt null', () => {
     // Enqueue with completion_receipt: null and required_receipts: []
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, {
-      work_id: 'wave0-suppl-topic-a-r1',
+      queue_item_id: 'wave0-suppl-topic-a-r1',
       payload: { topic_slug: 'topic-a' },
       required_receipts: [],
       completion_receipt: null,
@@ -273,7 +273,7 @@ describe('AGQ-001/004 completion_receipt null', () => {
     const dir = createBundle(unique('badnull'));
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, {
-      work_id: 'wave0-source-topic-a',
+      queue_item_id: 'wave0-source-topic-a',
       payload: { topic_slug: 'topic-a' },
       required_receipts: ['file:artifacts/wave2/synthesis.md'],
       completion_receipt: null,
@@ -287,12 +287,12 @@ describe('AGQ-001/004 completion_receipt null', () => {
     const taskFile = join(dir, 'task.json');
     // Write raw JSON without completion_receipt field
     const raw = {
-      work_id: 'wave0-source-topic-a',
+      queue_item_id: 'wave0-source-topic-a',
       title: 'Test', targets: { controller: 'main-agent' }, action: 'test',
       producer_rule: 'test', lineage: {}, priority_class: 'P5_new_reference_intake',
       required_receipts: [], done_condition: 'test', verification: { engine: [], agent: [] },
       writes_to: [], status_sync: [], failure_route: 'test', status: 'queued',
-      preempted_from_slot: 'not_applicable', restore_priority: 'normal', payload: {},
+      restore_priority: 'normal', payload: {},
     };
     writeFileSync(taskFile, JSON.stringify(raw));
     const r = runOq(dir, 'enqueue', '--task', taskFile);

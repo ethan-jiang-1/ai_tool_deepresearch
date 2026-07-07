@@ -1,15 +1,15 @@
 # setup-real-subagents
 
-Agent command: set up project-local real LLM subagent definitions for the DPT subagent prototype.
+Agent command: set up project-local real LLM sub-agent definitions for DPT work-unit execution.
 
 ## Purpose
 
-Create or update the preset role-agent environment required by the real subagent path:
+Create or update the preset role-agent environment required by the real work-unit sub-agent path:
 
 - Claude Code project agents under `.claude/agents/*.md`
 - Codex project agents under `.codex/agents/*.toml`
 
-This command prepares the agent harness only. It does not run subagent experiments and does not write slot results.
+This command prepares the agent harness only. It does not run sub-agent experiments and does not write work-unit results.
 
 ## Safety Rules
 
@@ -36,15 +36,17 @@ V1.5 agents must be installed as stable definitions but not invoked by the v1 re
 Every generated agent definition MUST include these constraints:
 
 - You are a bounded DPT subagent role.
-- Read the slot's `task.md` and `result.schema.json` when the parent prompt gives paths.
-- Return strict JSON to the parent matching `result.schema.json`.
+- Read the work-unit `task.md`, `_beacon.json`, and `result.schema.json` when the parent prompt gives paths.
+- Preserve `work_id`, `queue_item_id`, `kind`, and `receipt_nonce` exactly in receipt events and returned JSON.
+- Return strict JSON matching `result.schema.json` for the parent to submit through `operate-work-unit submit`.
 - Do not mutate WorkflowState.
 - Do not pass or fail gates.
 - Do not repair queues.
+- Do not append `rb_output_declarations.jsonl` or mark queue demand complete.
 - Do not authorize stopping.
 - Do not include raw search trails, large page dumps, or private reasoning in the returned JSON.
 - Prefer concise evidence summaries and source references.
-- Subagents write only their slot-local `runtime-receipt.jsonl`; Parent Relay writes `result.json`, optional `result.md`, `_status.json`, and `_agent.json`; subagents return result JSON to the parent instead of writing durable result or workflow files directly.
+- Sub-agents write only the assigned `runtime-receipt.jsonl`, declared output files, and declared cache leaves. The Engine accepts durable result/status/ledger state only through `operate-work-unit submit`.
 
 ## Claude Code Files
 
@@ -62,7 +64,7 @@ For each role, write `.codex/agents/<role>.toml` by filling this template:
 DPT_FRAMEWORK/command_playbook/subagent_templates/codex-agent.toml.tmpl
 ```
 
-Codex and Claude Code use the same DPT role-agent taxonomy. If a Codex surface needs an adapter, preserve the role key and per-slot prompt contract; do not replace the role with generic fallback semantics.
+Codex and Claude Code use the same DPT role-agent taxonomy. If a Codex surface needs an adapter, preserve the role key and work-unit prompt contract; do not replace the role with generic fallback semantics.
 
 ## Template Substitution
 

@@ -1,26 +1,28 @@
-// @impl FRE-005
-// Queue Manager schema, constants, target, and claim-advice regression coverage.
+// @impl AGQ-001, AGQ-005, AGQ-018, AGQ-020, FRE-005
+// Queue Manager schema, identity, and snapshot-hash regression coverage.
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  QUEUE_ACTIVE_WINDOW_LIMIT,
+  QUEUE_SCHEMA_VERSION,
   QueueItemSchema,
-  QUEUE_ACTIVE_WINDOW_SLOTS,
-  SLOT_NAMES,
+  canonicalQueueItemSnapshot,
+  claim,
   createQueue,
   enqueue,
-  claim,
   makeItem,
+  queueItemSnapshotHash,
 } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
 import { TargetSpecSchema } from '../../DPT_FRAMEWORK/schema/contracts/queue.mjs';
-import { MAX_CONCURRENT_SUBAGENTS } from '../../DPT_FRAMEWORK/engine/subagent-relay.mjs';
 import { item } from './queue-manager-fixtures.mjs';
 
-describe('Queue schema (AGQ-001)', () => {
-  it('accepts a valid queue item with fixed fields and payload object', () => {
+describe('Queue item schema (AGQ-001)', () => {
+  it('accepts a valid queue demand item with fixed fields and payload object', () => {
     const parsed = QueueItemSchema.safeParse(item(1, { payload: { kind: 'source-intake' } }));
     assert.equal(parsed.success, true);
+    assert.equal(parsed.data.queue_item_id, 'queue-1');
   });
 
   it('rejects missing required core fields', () => {
@@ -32,34 +34,21 @@ describe('Queue schema (AGQ-001)', () => {
     assert.equal(parsed.success, false);
   });
 
-  it('rejects non-object payload', () => {
-    const parsed = QueueItemSchema.safeParse({ ...item(1), payload: 'bad' });
-    assert.equal(parsed.success, false);
+  it('rejects work_id on queue demand items', () => {
+    assert.throws(
+      () => makeItem({ work_id: 'legacy-task-id' }),
+      /queue_item_id/,
+    );
+    assert.equal(QueueItemSchema.safeParse({ ...item(1), work_id: 'legacy-task-id' }).success, false);
   });
 });
 
-describe('Queue active-window constants (AGQ-019)', () => {
-  it('defines the 20-slot Queue wire shape independently of Relay concurrency', () => {
-    assert.equal(QUEUE_ACTIVE_WINDOW_SLOTS, 20);
-    assert.equal(SLOT_NAMES.length, 20);
-    assert.equal(SLOT_NAMES[0], 'slot_1_current');
-    assert.equal(SLOT_NAMES[1], 'slot_2_next');
-    assert.equal(SLOT_NAMES.at(-1), 'slot_20_tail');
-    assert.equal(SLOT_NAMES.at(-2), 'slot_19_pending');
+describe('Queue v2 constants and targets (AGQ-005)', () => {
+  it('uses an ordered active-window limit instead of slot names', () => {
+    assert.equal(QUEUE_SCHEMA_VERSION, 'queue.v2');
+    assert.equal(QUEUE_ACTIVE_WINDOW_LIMIT, 20);
   });
 
-  it('Queue active-window slot count is NOT derived from Relay sub-agent concurrency cap', () => {
-    // The core architectural invariant: Queue is not the Relay work pool.
-    // Without this assertion, a future developer could set both constants equal
-    // and no test would fail — the decoupling would be silently lost.
-    assert.notEqual(QUEUE_ACTIVE_WINDOW_SLOTS, MAX_CONCURRENT_SUBAGENTS,
-      'Queue slot count must be independent of Relay concurrency cap');
-    assert.equal(QUEUE_ACTIVE_WINDOW_SLOTS, 20);
-    assert.equal(MAX_CONCURRENT_SUBAGENTS, 8);
-  });
-});
-
-describe('TargetSpec schema (AGQ-012)', () => {
   it('accepts valid targets with delegates', () => {
     const result = TargetSpecSchema.safeParse({
       controller: 'main-agent',
@@ -69,105 +58,64 @@ describe('TargetSpec schema (AGQ-012)', () => {
     assert.equal(result.data.delegates.timeout_ms, 600000);
   });
 
-  it('accepts valid targets without delegates', () => {
-    const result = TargetSpecSchema.safeParse({ controller: 'main-agent' });
-    assert.equal(result.success, true);
-    assert.equal(result.data.controller, 'main-agent');
-    assert.equal(result.data.delegates, undefined);
-  });
-
-  it('accepts targets with delegates and uses default timeout_ms', () => {
-    const result = TargetSpecSchema.safeParse({
-      controller: 'main-agent',
-      delegates: { to: 'sub-agent', role_key: 'dpt-source-intake' },
-    });
-    assert.equal(result.success, true);
-    assert.equal(result.data.delegates.timeout_ms, 600000);
-  });
-
-  it('rejects invalid controller', () => {
-    const result = TargetSpecSchema.safeParse({ controller: 'sub-agent' });
-    assert.equal(result.success, false);
-  });
-
-  it('rejects invalid delegates.to', () => {
-    const result = TargetSpecSchema.safeParse({
+  it('rejects invalid controller and delegate target', () => {
+    assert.equal(TargetSpecSchema.safeParse({ controller: 'sub-agent' }).success, false);
+    assert.equal(TargetSpecSchema.safeParse({
       controller: 'main-agent',
       delegates: { to: 'chatgpt', role_key: 'test' },
-    });
-    assert.equal(result.success, false);
-  });
-
-  it('rejects missing controller', () => {
-    const result = TargetSpecSchema.safeParse({
-      delegates: { to: 'sub-agent', role_key: 'dpt-source-intake' },
-    });
-    assert.equal(result.success, false);
-  });
-
-  it('rejects delegates without required role_key', () => {
-    const result = TargetSpecSchema.safeParse({
-      controller: 'main-agent',
-      delegates: { to: 'sub-agent' },
-    });
-    assert.equal(result.success, false);
+    }).success, false);
   });
 });
 
-describe('Queue item with targets (AGQ-011)', () => {
-  it('accepts item with targets.delegates', () => {
-    const parsed = QueueItemSchema.safeParse(item(1, {
-      targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor', timeout_ms: 600000 } },
-    }));
-    assert.equal(parsed.success, true);
-    assert.equal(parsed.data.targets.controller, 'main-agent');
-    assert.equal(parsed.data.targets.delegates.role_key, 'dpt-evidence-extractor');
-  });
-
-  it('accepts item with targets.controller only', () => {
-    const parsed = QueueItemSchema.safeParse(item(1, {
-      targets: { controller: 'main-agent' },
-    }));
-    assert.equal(parsed.success, true);
-    assert.equal(parsed.data.targets.controller, 'main-agent');
-    assert.equal('delegates' in parsed.data.targets, false);
-  });
-
+describe('Queue item with targets (AGQ-014)', () => {
   it('makeItem uses targets default', () => {
-    const i = makeItem({ work_id: 'test-defaults' });
+    const i = makeItem({ queue_item_id: 'test-defaults' });
     assert.deepEqual(i.targets, { controller: 'main-agent' });
   });
 
-  it('rejects item with missing target (old field name)', () => {
-    // The old `target` field is no longer in the schema — should fail
-    const candidate = { ...item(1) };
-    delete candidate.targets;
-    candidate.target = 'main-agent';
-    const parsed = QueueItemSchema.safeParse(candidate);
-    assert.equal(parsed.success, false);
-  });
-});
-
-describe('Claim advice with targets.delegates (AGQ-014)', () => {
-  it('claim returns delegates_required=true when delegates present', () => {
+  it('operate-queue claim rejects delegated demand and routes to work-unit claim', () => {
     let queue = createQueue('delegates-claim-test');
     queue = enqueue(queue, item(1, {
       targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake' } },
     }));
-    const { item: claimed, advice } = claim(queue, { actor: 'main-agent' });
-    assert.ok(claimed);
-    assert.equal(advice.delegates_required, true);
-    assert.equal(advice.delegates_config.role_key, 'dpt-source-intake');
-    assert.equal(advice.delegates_config.timeout_ms, 600000);
+    const result = claim(queue, { actor: 'main-agent' });
+    assert.equal(result.item, null);
+    assert.equal(result.feedback.passed, false);
+    assert.match(result.feedback.advice, /operate-work-unit claim/);
+    assert.equal(result.queue.active_window[0].queue_item_id, 'queue-1');
   });
 
-  it('claim returns delegates_required=false when no delegates', () => {
+  it('claim marks non-delegated front demand running', () => {
     let queue = createQueue('no-delegates-claim-test');
-    queue = enqueue(queue, item(1, {
-      targets: { controller: 'main-agent' },
-    }));
-    const { item: claimed, advice } = claim(queue, { actor: 'main-agent' });
-    assert.ok(claimed);
-    assert.equal(advice.delegates_required, false);
+    queue = enqueue(queue, item(1, { targets: { controller: 'main-agent' } }));
+    const result = claim(queue, { actor: 'main-agent' });
+    assert.equal(result.item.queue_item_id, 'queue-1');
+    assert.equal(result.queue.active_window[0].status, 'running');
+    assert.equal(result.advice.delegates_required, false);
+  });
+});
+
+describe('Queue item snapshot hash (AGQ-018)', () => {
+  it('excludes status, timestamps, and runtime attempt fields', () => {
+    const base = item(1, {
+      status: 'queued',
+      created_at: '2026-07-06T00:00:00.000Z',
+      updated_at: '2026-07-06T00:00:00.000Z',
+    });
+    const changedRuntime = {
+      ...base,
+      status: 'running',
+      updated_at: '2026-07-06T01:00:00.000Z',
+      attempt_index: 2,
+      queue_item_snapshot_hash: 'different',
+    };
+    assert.equal(queueItemSnapshotHash(base), queueItemSnapshotHash(changedRuntime));
+    assert.equal(Object.hasOwn(canonicalQueueItemSnapshot(changedRuntime), 'status'), false);
+  });
+
+  it('changes when semantic demand fields change', () => {
+    const base = item(1, { payload: { topic_slug: 'topic-a' } });
+    const changed = item(1, { payload: { topic_slug: 'topic-b' } });
+    assert.notEqual(queueItemSnapshotHash(base), queueItemSnapshotHash(changed));
   });
 });

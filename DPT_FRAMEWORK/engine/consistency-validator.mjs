@@ -101,6 +101,31 @@ export function validateWorkflowPackage(opts = {}) {
     return missing;
   }
 
+  function findOrderedExecutionBriefFields(sectionText) {
+    let cursor = -1;
+    const checks = [
+      { name: 'Objective', pattern: /\*\*Objective\*\*/ },
+      { name: 'Start here', pattern: /\*\*Start here\*\*/ },
+      { name: 'Path field', pattern: /\*\*[^*\n]*path[^*\n]*\*\*/i },
+      { name: 'Completion check', pattern: /\*\*Completion check\*\*/ },
+      { name: 'Failure posture', pattern: /\*\*Failure posture\*\*/ },
+    ];
+    const missing = [];
+    for (const check of checks) {
+      const match = sectionText.match(check.pattern);
+      const idx = match ? match.index : -1;
+      if (idx === -1) {
+        missing.push(check.name);
+        continue;
+      }
+      if (idx <= cursor) {
+        missing.push(`${check.name} (out of order)`);
+      }
+      cursor = idx;
+    }
+    return missing;
+  }
+
   // ── 1. Manifest entries → missing node files ───────────────────────
   for (const phase of manifest.phases || []) {
     const nodePath = join(nodesDir, phase.node);
@@ -287,9 +312,9 @@ export function validateWorkflowPackage(opts = {}) {
     { node: 'phases/phase-hitl1.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
     { node: 'phases/phase-setup.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
     { node: 'phases/phase-seed-topics.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
-    { node: 'phases/phase-wave0.md', surface: 'phase-agent', search_policy: 'relay_required', relay_capable: true },
-    { node: 'phases/phase-wave1.md', surface: 'phase-agent', search_policy: 'relay_required', relay_capable: true },
-    { node: 'phases/phase-wave2.md', surface: 'phase-agent', search_policy: 'relay_required_for_new_evidence', relay_capable: true },
+    { node: 'phases/phase-wave0.md', surface: 'phase-agent', search_policy: 'work_unit_required', work_unit_capable: true },
+    { node: 'phases/phase-wave1.md', surface: 'phase-agent', search_policy: 'work_unit_required', work_unit_capable: true },
+    { node: 'phases/phase-wave2.md', surface: 'phase-agent', search_policy: 'work_unit_required_for_new_evidence', work_unit_capable: true },
     { node: 'phases/phase-hitl2.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
     { node: 'phases/phase-readiness.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
     { node: 'phases/phase-rerun.md', surface: 'phase-agent', search_policy: 'no_search', relay_capable: false },
@@ -301,19 +326,31 @@ export function validateWorkflowPackage(opts = {}) {
       node: 'phases/subagent-dpt-source-intake.md',
       id: 'subagent-dpt-source-intake',
       roleKey: 'dpt-source-intake',
-      h1: '# Relay Role: dpt-source-intake — Foundation Reference Intake',
+      h1: '# Work-Unit Role: dpt-source-intake - Foundation Reference Intake',
     },
     {
       node: 'phases/subagent-dpt-evidence-extractor.md',
       id: 'subagent-dpt-evidence-extractor',
       roleKey: 'dpt-evidence-extractor',
-      h1: '# Relay Role: dpt-evidence-extractor — Topic-Specific Deepening',
+      h1: '# Work-Unit Role: dpt-evidence-extractor - Topic-Specific Deepening',
     },
     {
       node: 'phases/subagent-dpt-topic-scout.md',
       id: 'subagent-dpt-topic-scout',
       roleKey: 'dpt-topic-scout',
-      h1: '# Relay Role: dpt-topic-scout — Gap-Fill Search',
+      h1: '# Work-Unit Role: dpt-topic-scout - Gap-Fill Search',
+    },
+    {
+      node: 'phases/subagent-dpt-claim-verifier.md',
+      id: 'subagent-dpt-claim-verifier',
+      roleKey: 'dpt-claim-verifier',
+      h1: '# Work-Unit Role: dpt-claim-verifier - Critical Claim Verification',
+    },
+    {
+      node: 'phases/subagent-dpt-source-diagnostic.md',
+      id: 'subagent-dpt-source-diagnostic',
+      roleKey: 'dpt-source-diagnostic',
+      h1: '# Work-Unit Role: dpt-source-diagnostic - Source Quality Diagnostic',
     },
   ];
 
@@ -323,11 +360,9 @@ export function validateWorkflowPackage(opts = {}) {
     'shared/shared-anti-cheating-rules.md',
   ];
 
-  const VALID_SURFACES = ['phase-agent', 'relay-subagent-role', 'shared-guidance'];
-  const VALID_SEARCH_POLICIES = ['no_search', 'relay_required', 'relay_required_for_new_evidence', 'subagent_performs_search'];
-  const EXECUTION_BRIEF_FIELDS = ['Objective', 'Start here', 'Path to pass', 'Completion check', 'Failure posture'];
-  const ROLE_BRIEF_FIELDS = ['Role key', 'Used by', 'Receives', 'Produces', 'Boundary', 'Handoff'];
-  const PHASE_BODY_SECTIONS = [
+  const VALID_SURFACES = ['phase-agent', 'work-unit-subagent-role', 'shared-guidance', 'shared-work-unit-subagent-protocol'];
+  const VALID_SEARCH_POLICIES = ['no_search', 'work_unit_required', 'work_unit_required_for_new_evidence', 'subagent_performs_search'];
+  const DEFAULT_PHASE_BODY_SECTIONS = [
     '## 1. Stage Goal',
     '## 2. Required Inputs',
     '## 3. Allowed Actions',
@@ -338,14 +373,10 @@ export function validateWorkflowPackage(opts = {}) {
     '## 8. Stop Behavior',
     '## 9. Anti-Cheating Rules',
   ];
+  const ROLE_BRIEF_FIELDS = ['Role key', 'Used by', 'Receives', 'Produces', 'Boundary', 'Handoff'];
   const ROLE_BODY_SECTIONS = [
+    '## Lifecycle Logging Mandate (always-loaded)',
     '## 1. Purpose',
-    '## 2. Search Focus',
-    '## 3. Artifacts',
-    '## 4. Execution Within Relay Slot',
-    '## 5. Page Content Fetching',
-    '## 6. Anti-Cheating Rules',
-    '## 7. Relationship to Phase Agent',
   ];
 
   // Check lifecycle nodes have valid execution_contract
@@ -403,26 +434,26 @@ export function validateWorkflowPackage(opts = {}) {
       });
     }
 
-    // Relay-capable phases MUST have shared-subagent-protocol + shared-anti-cheating-rules in requires
-    if (entry.relay_capable) {
+    // Work-unit-capable phases MUST have shared-subagent-protocol + shared-anti-cheating-rules in requires
+    if (entry.work_unit_capable) {
       if (!fm.requires || (!fm.requires.includes('shared/shared-subagent-protocol') && !fm.requires.includes('shared/shared-subagent-protocol.md'))) {
         issues.push({
-          class: 'relay_capable_missing_subagent_protocol',
-          detail: `Relay-capable node "${entry.node}" must have shared-subagent-protocol in requires, not only suggested_context`,
+          class: 'work_unit_capable_missing_subagent_protocol',
+          detail: `Work-unit-capable node "${entry.node}" must have shared-subagent-protocol in requires, not only suggested_context`,
           file: nodePath,
         });
       }
       if (!fm.requires || (!fm.requires.includes('shared/shared-anti-cheating-rules') && !fm.requires.includes('shared/shared-anti-cheating-rules.md'))) {
         issues.push({
-          class: 'relay_capable_missing_anti_cheating',
-          detail: `Relay-capable node "${entry.node}" must have shared-anti-cheating-rules in requires, not only suggested_context`,
+          class: 'work_unit_capable_missing_anti_cheating',
+          detail: `Work-unit-capable node "${entry.node}" must have shared-anti-cheating-rules in requires, not only suggested_context`,
           file: nodePath,
         });
       }
     }
 
-    // Check delegated_role_keys for relay_required / relay_required_for_new_evidence
-    if ((ec.search_policy === 'relay_required' || ec.search_policy === 'relay_required_for_new_evidence') && ec.surface === 'phase-agent') {
+    // Check delegated_role_keys for work_unit_required / work_unit_required_for_new_evidence
+    if ((ec.search_policy === 'work_unit_required' || ec.search_policy === 'work_unit_required_for_new_evidence') && ec.surface === 'phase-agent') {
       if (!ec.delegated_role_keys || !Array.isArray(ec.delegated_role_keys) || ec.delegated_role_keys.length === 0) {
         issues.push({
           class: 'execution_contract_missing_delegated_role_keys',
@@ -444,7 +475,7 @@ export function validateWorkflowPackage(opts = {}) {
       });
     } else {
       const briefText = md.slice(briefIdx, stageIdx);
-      const missingFields = findOrderedFields(briefText, EXECUTION_BRIEF_FIELDS);
+      const missingFields = findOrderedExecutionBriefFields(briefText);
       if (missingFields.length > 0) {
         issues.push({
           class: 'lifecycle_execution_brief_fields_invalid',
@@ -454,7 +485,7 @@ export function validateWorkflowPackage(opts = {}) {
       }
     }
 
-    for (const section of PHASE_BODY_SECTIONS) {
+    for (const section of DEFAULT_PHASE_BODY_SECTIONS) {
       if (!md.includes(section)) {
         issues.push({
           class: 'lifecycle_phase_body_section_missing',
@@ -471,7 +502,7 @@ export function validateWorkflowPackage(opts = {}) {
     if (!existsSync(nodePath)) {
       issues.push({
         class: 'missing_role_spec',
-        detail: `Relay role spec "${entry.node}" is missing`,
+        detail: `Work-unit role spec "${entry.node}" is missing`,
         file: nodePath,
       });
       continue;
@@ -627,10 +658,10 @@ export function validateWorkflowPackage(opts = {}) {
       }
     }
 
-    if (ec.surface !== 'relay-subagent-role') {
+    if (ec.surface !== 'work-unit-subagent-role') {
       issues.push({
         class: 'role_spec_wrong_surface',
-        detail: `Role spec "${entry.node}" must have surface: relay-subagent-role, got "${ec.surface}"`,
+        detail: `Role spec "${entry.node}" must have surface: work-unit-subagent-role, got "${ec.surface}"`,
         file: nodePath,
       });
     }
@@ -651,10 +682,10 @@ export function validateWorkflowPackage(opts = {}) {
       });
     }
 
-    if (ec.delivered_via !== 'relay_task_md') {
+    if (ec.delivered_via !== 'work_unit_task_md') {
       issues.push({
         class: 'role_spec_missing_delivered_via',
-        detail: `Role spec "${entry.node}" must have delivered_via: relay_task_md`,
+        detail: `Role spec "${entry.node}" must have delivered_via: work_unit_task_md`,
         file: nodePath,
       });
     }
@@ -664,7 +695,7 @@ export function validateWorkflowPackage(opts = {}) {
     if (inManifestPhases) {
       issues.push({
         class: 'role_spec_in_manifest_phases',
-        detail: `Role spec "${entry.node}" has surface: relay-subagent-role but appears in manifest.phases[] — it must not be a manifest lifecycle phase`,
+        detail: `Role spec "${entry.node}" has surface: work-unit-subagent-role but appears in manifest.phases[] - it must not be a manifest lifecycle phase`,
         file: nodePath,
       });
     }
@@ -711,6 +742,7 @@ export function validateWorkflowPackage(opts = {}) {
 
     const ec = fm.execution_contract;
     if (!ec) {
+      if (fm.surface === 'shared-work-unit-subagent-protocol') continue;
       issues.push({
         class: 'execution_contract_missing',
         detail: `Shared guidance "${sharedRef}" is missing execution_contract`,

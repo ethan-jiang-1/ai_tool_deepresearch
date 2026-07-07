@@ -2,9 +2,13 @@
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
+import {
+  claimAndSubmitWorkUnit,
+  referenceContent,
+} from '../../engine/work-unit-test-helpers.mjs';
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs');
@@ -243,6 +247,28 @@ findings:
 `);
 }
 
+function submitWave2CrossReference(dir) {
+  return claimAndSubmitWorkUnit(dir, {
+    phase: 'wave2',
+    queueItemId: 'cross-market',
+    outputs: [{
+      path: 'reference/00-cross-market-shift.md',
+      role: 'reference',
+      source_url: 'https://example.com/research/market-shift',
+      source_slug: 'market-shift',
+      content: referenceContent({
+        source_url: 'https://example.com/research/market-shift',
+        related_topic: 'cross-topic',
+        evidence_role: 'targeted_evidence',
+      }),
+    }],
+    cacheTrails: [{
+      path: '_cache/wave2/primary/cross-market/market-shift',
+      url: 'https://example.com/research/market-shift',
+    }],
+  });
+}
+
 describe('check-gate-wave2-complete', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
 
@@ -425,5 +451,37 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('trace') || m.includes('Trace event') || m.includes('wave2_completion')), `Expected trace event fail: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('14. fails when targeted cross-reference evidence exists without submitted work-unit coverage', () => {
+    const dir = createBundle(unique('crossdirect'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    createMinIndex(dir);
+    createMinBackfill(dir);
+    writeFileSync(join(dir, 'reference/00-cross-market-shift.md'), referenceContent({
+      source_url: 'https://example.com/research/market-shift',
+      related_topic: 'cross-topic',
+      evidence_role: 'targeted_evidence',
+    }));
+    writeWave2Trace(dir);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('submitted work-unit') || m.includes('delegated_bypass_suspected')),
+      `Expected work-unit provenance failure for direct cross reference: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('15. passes when targeted cross-reference evidence is covered by a submitted work unit', () => {
+    const dir = createBundle(unique('crosswu'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    createMinIndex(dir);
+    createMinBackfill(dir);
+    submitWave2CrossReference(dir);
+    writeWave2Trace(dir);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, true, `Expected submitted cross-reference work-unit pass, got inspect: ${JSON.stringify(output.inspect)}`);
   });
 });

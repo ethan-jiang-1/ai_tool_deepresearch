@@ -1,6 +1,6 @@
 # Logger
 
-> req: LOG-001, LOG-002, LOG-003, LOG-004, LOG-005
+> req: LOG-001, LOG-002, LOG-003, LOG-004, LOG-005, LOG-006, LOG-007
 
 ## Purpose
 
@@ -174,4 +174,3 @@ Relay event set:
 - **WHEN** a sub-agent reads the spawn prompt
 - **THEN** it SHALL know exactly which CLI command shape to use for each event type
 - **AND** it SHALL know the target path (`_logs/run.log` in bundle root)
-
