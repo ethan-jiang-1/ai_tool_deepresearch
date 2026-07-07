@@ -83,6 +83,41 @@ describe('enter-phase CLI', () => {
     assert.equal(load.handoff_source_attempt_index, 0);
   });
 
+  it('accepts degraded source pass and preserves degraded context on load_complete', () => {
+    writeTrace([
+      wave0Pass({
+        degraded: true,
+        degraded_reason: 'fatigue_threshold_reached_with_only_degradation_eligible_quality_rules',
+        degraded_rules: ['shared_ref_count_floor'],
+      }),
+    ]);
+
+    run(['--bundle', dir, '--node', 'phases/phase-wave1.md']);
+
+    const events = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    const load = events.find(e => e.event === 'load_complete' && e.entry === 'phases/phase-wave1.md');
+    assert.ok(load, 'expected load_complete for degraded source pass');
+    assert.equal(load.handoff_source_degraded, true);
+    assert.equal(load.handoff_source_degraded_reason, 'fatigue_threshold_reached_with_only_degradation_eligible_quality_rules');
+    assert.deepEqual(load.handoff_source_degraded_rules, ['shared_ref_count_floor']);
+  });
+
+  it('rejects degraded marker without passed source handoff', () => {
+    writeTrace([
+      wave0Pass({
+        passed: false,
+        next: null,
+        degraded: true,
+        degraded_rules: ['shared_ref_count_floor'],
+      }),
+    ]);
+
+    const out = run(['--bundle', dir, '--node', 'phases/phase-wave1.md'], true);
+    const parsed = JSON.parse(out);
+    assert.equal(parsed.status, 'error');
+    assert.match(parsed.reason, /no latest passed deterministic/);
+  });
+
   it('fails with JSON and no load_complete for unauthorized target', () => {
     const out = run(['--bundle', dir, '--node', 'phases/phase-final.md'], true);
     const parsed = JSON.parse(out);

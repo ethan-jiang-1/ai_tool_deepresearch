@@ -118,17 +118,14 @@ function createHeavyProvenanceBundle(name, { validLedger = true, validWorkUnit =
   const trace = [
     { ts: '2026-01-01T00:00:00.000Z', event: 'run_start' },
     { ts: '2026-01-01T00:00:01.000Z', event: 'gate_attempt', gate: 'wave0-complete', passed: true },
-    { ts: '2026-01-01T00:00:02.000Z', event: 'gate_attempt', gate: 'content_dedup', passed: true },
   ];
   writeBaseBundleFiles(dir, name, { phase: 'wave0', trace });
   writeFileSync(join(dir, '_logs', 'run.log'), [
     JSON.stringify({ event: 'gate_attempt', gate: 'wave0-complete', passed: true }),
-    JSON.stringify({ event: 'gate_attempt', gate: 'content_dedup', passed: true }),
   ].join('\n') + '\n');
   const gatesDir = join(dir, '_observability', 'gates');
   mkdirSync(gatesDir, { recursive: true });
   writeFileSync(join(gatesDir, '0001-wave0-complete.json'), JSON.stringify({ gate: 'wave0-complete', exit_code: 0 }, null, 2));
-  writeFileSync(join(gatesDir, '0002-content_dedup.json'), JSON.stringify({ gate: 'content_dedup', exit_code: 0 }, null, 2));
 
   const { record } = claimAndSubmitWorkUnit(dir, {
     phase: 'wave0',
@@ -234,7 +231,7 @@ describe('verify-bundle-health.mjs', () => {
       assert.strictEqual(report.ledger.required, false);
       assert.strictEqual(report.ledger.status, 'not_applicable');
       assert.strictEqual(report.cache_trails.required, false);
-      assert.strictEqual(report.dedup.required, false);
+      assert.strictEqual(report.source_recoverability.required, false);
     });
 
     it('does not flip top-level status for absent optional sections', () => {
@@ -294,6 +291,12 @@ describe('verify-bundle-health.mjs', () => {
       assert.strictEqual(report.cache_trails.status, 'clean');
       assert.strictEqual(report.cache_trails.leaves, 1);
       assert.strictEqual(report.cache_trails.missing, 0);
+      assert.strictEqual(report.source_recoverability.required, true);
+      assert.strictEqual(report.source_recoverability.status, 'clean');
+      assert.strictEqual(report.source_recoverability.references, 1);
+      assert.strictEqual(report.source_recoverability.parseable_source_urls, 1);
+      assert.strictEqual(report.source_recoverability.mapped_cache_trails, 1);
+      assert.strictEqual(report.source_recoverability.recoverable, 1);
     });
 
     it('reports issues when ledger is empty', () => {
@@ -322,6 +325,8 @@ describe('verify-bundle-health.mjs', () => {
       // Ledger declares cache_trails but files don't exist
       assert.strictEqual(report.cache_trails.status, 'issues');
       assert.strictEqual(report.cache_trails.missing, 1);
+      assert.strictEqual(report.source_recoverability.status, 'issues');
+      assert.strictEqual(report.source_recoverability.recoverable, 0);
     });
 
     it('projects work-unit lifecycle states including expired, retries, and late submits', () => {

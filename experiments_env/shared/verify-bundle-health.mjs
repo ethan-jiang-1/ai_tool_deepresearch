@@ -29,6 +29,9 @@ import {
   inspectWorkUnits,
   readWorkUnitLedgerRows,
 } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import {
+  readSubmittedWorkUnitDeclarations,
+} from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers-readers.mjs';
 
 const __dirname = new URL('.', import.meta.url).pathname;
 
@@ -539,68 +542,100 @@ function inspectCacheTrails(bundlePath, profile) {
   }
 }
 
+function cacheLeafComplete(bundlePath, trail) {
+  return ['websearch.json', 'page.md', 'meta.json'].every((name) => existsSync(join(bundlePath, trail, name)));
+}
+
+function cacheTrailMeta(bundlePath, trail) {
+  try {
+    return JSON.parse(readFileSync(join(bundlePath, trail, 'meta.json'), 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+function parseableUrl(value) {
+  try {
+    if (!value) return false;
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function cacheTrailMapsToReference(bundlePath, trail, ref) {
+  if (!cacheLeafComplete(bundlePath, trail)) return false;
+  const meta = cacheTrailMeta(bundlePath, trail);
+  const metaUrl = meta.url || meta.source_url || meta.final_url || meta.fetched_url || '';
+  if (metaUrl && ref.source_url && metaUrl === ref.source_url) return true;
+  if (ref.source_slug && trail.includes(ref.source_slug)) return true;
+  const leaf = String(ref.path || '').split('/').pop()?.replace(/\.md$/, '') || '';
+  return leaf.length > 0 && trail.includes(leaf);
+}
+
 /**
- * Check dedup evidence from gate wrapper artifacts or gate_attempt trace.
- * Does NOT re-run content_dedup gate — reads existing evidence only.
+ * Check submitted source recoverability from current authority surfaces.
  */
-function inspectDedup(bundlePath, profile) {
-  const required = isRequiredSection(profile, 'dedup');
-  let checks = 0;
-  let dedupIssues = 0;
-
-  // Check gate wrapper artifacts for dedup-related diagnostics
-  const gatesDir = join(bundlePath, '_observability', 'gates');
-  if (existsSync(gatesDir)) {
-    try {
-      const files = readdirSync(gatesDir).filter(f => f.endsWith('.json'));
-      for (const f of files) {
-        try {
-          const raw = readFileSync(join(gatesDir, f), 'utf-8');
-          const artifact = JSON.parse(raw);
-          if (artifact.gate && artifact.gate.includes('dedup')) {
-            checks++;
-            if (artifact.exit_code !== 0) dedupIssues++;
-          }
-        } catch { /* skip */ }
-      }
-    } catch { /* skip */ }
-  }
-
-  // Check trace for content_dedup gate_attempt events
-  const tracePath = join(bundlePath, 'rb_trace.jsonl');
-  if (existsSync(tracePath)) {
-    try {
-      const raw = readFileSync(tracePath, 'utf-8').trim();
-      if (raw) {
-        const events = raw.split('\n').map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
-        for (const e of events) {
-          if (e.event === 'gate_attempt' && e.gate === 'content_dedup') {
-            checks++;
-            if (!e.passed) dedupIssues++;
-          }
-        }
-      }
-    } catch { /* skip */ }
-  }
-
-  if (checks === 0) {
+function inspectSourceRecoverability(bundlePath, profile) {
+  const required = isRequiredSection(profile, 'source_recoverability');
+  let rows;
+  try {
+    rows = readSubmittedWorkUnitDeclarations(bundlePath);
+  } catch (err) {
     return {
       status: required ? SECTION_STATUS.ISSUES : SECTION_STATUS.NOT_APPLICABLE,
       required,
-      checks: 0, issues: 0,
-      sectionIssues: required ? [{ detail: 'No content_dedup gate evidence found (wrapper artifacts or gate_attempt trace)' }] : [],
+      references: 0,
+      recoverable: 0,
+      issues: 1,
+      sectionIssues: required ? [{ detail: `Cannot inspect submitted source recoverability: ${err.message}` }] : [],
     };
   }
 
-  const hasIssues = dedupIssues > 0;
+  const references = rows.flatMap((row) => (row.output_files || [])
+    .filter((entry) => entry.role === 'reference')
+    .map((entry) => ({ ...entry, work_id: row.work_id, cache_trails: row.cache_trails || [] })));
+
+  if (references.length === 0) {
+    return {
+      status: required ? SECTION_STATUS.ISSUES : SECTION_STATUS.NOT_APPLICABLE,
+      required,
+      references: 0,
+      parseable_source_urls: 0,
+      mapped_cache_trails: 0,
+      recoverable: 0,
+      issues: 0,
+      sectionIssues: required ? [{ detail: 'No submitted reference outputs available for source recoverability checks' }] : [],
+    };
+  }
+
+  let parseable = 0;
+  let mapped = 0;
+  let recoverable = 0;
+  const details = [];
+
+  for (const ref of references) {
+    const hasUrl = parseableUrl(ref.source_url);
+    const hasMappedTrail = (ref.cache_trails || []).some((trail) => cacheTrailMapsToReference(bundlePath, trail, ref));
+    if (hasUrl) parseable++;
+    if (hasMappedTrail) mapped++;
+    if (hasUrl && hasMappedTrail) recoverable++;
+    if (!hasUrl || !hasMappedTrail) {
+      details.push(`${ref.path} (${ref.work_id || 'unknown work_id'}): ${!hasUrl ? 'source_url missing/invalid' : 'no complete mapped cache trail'}`);
+    }
+  }
+
+  const hasIssues = details.length > 0;
   return {
     status: hasIssues ? SECTION_STATUS.ISSUES : SECTION_STATUS.CLEAN,
     required,
-    checks,
-    issues: dedupIssues,
-    sectionIssues: hasIssues
-      ? [{ detail: `${dedupIssues}/${checks} content_dedup checks failed` }]
-      : [],
+    references: references.length,
+    parseable_source_urls: parseable,
+    mapped_cache_trails: mapped,
+    recoverable,
+    issues: details.length,
+    sectionIssues: details.map((detail) => ({ detail })),
   };
 }
 
@@ -657,7 +692,7 @@ function printSummary(report) {
   console.log(`Status:  ${report.status === 'clean' ? G + 'CLEAN' + B : R + 'ISSUES' + B}`);
   console.log('');
 
-  const sections = ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline', 'work_units', 'ledger', 'cache_trails', 'dedup'];
+  const sections = ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline', 'work_units', 'ledger', 'cache_trails', 'source_recoverability'];
 
   for (const key of sections) {
     const s = report[key];
@@ -706,7 +741,7 @@ function main() {
   const workUnitsResult = inspectWorkUnitHealth(bundlePath, profile);
   const ledgerResult = inspectLedger(bundlePath, profile);
   const cacheTrailsResult = inspectCacheTrails(bundlePath, profile);
-  const dedupResult = inspectDedup(bundlePath, profile);
+  const sourceRecoverabilityResult = inspectSourceRecoverability(bundlePath, profile);
 
   // Build unified report
   const sections = {
@@ -718,7 +753,7 @@ function main() {
     work_units: workUnitsResult,
     ledger: ledgerResult,
     cache_trails: cacheTrailsResult,
-    dedup: dedupResult,
+    source_recoverability: sourceRecoverabilityResult,
   };
 
   const report = buildHealthReport({ bundlePath, profile, sections });

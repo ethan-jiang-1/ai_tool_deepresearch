@@ -60,20 +60,20 @@ Covers:
 - `BUG-048` — no legal degraded advance path.
 - `BUG-047` — `stop:no` gate fatigue surfaces to user.
 - `BUG-049` — Agent skips Wave1/Wave2/final boundary when stuck.
-- `BUG-050` — `content_dedup` false-positive blocks gate.
+- `BUG-050` — retired content heuristic false-positive blocks gate.
 - `BUG-051` — manual ledger edits trigger cascading distrust.
 - `BUG-053` — gate provenance chain reports symptoms as root failures.
 
 Reasoning:
 
 - This is the quality-control layer. The gate exists to help the MD Controller produce quality; if the gate itself is complex, noisy, and false-positive prone, it becomes the quality risk.
-- Apply KISS: blocking gate checks must be deterministic, low false-positive, independently explainable, and repairable. Complex heuristics become diagnostics.
+- Apply KISS: blocking gate checks must be deterministic, low false-positive, independently explainable, and repairable. Guess-based content heuristics are removed from the quality loop instead of being preserved as diagnostics.
 
 Key behavior:
 
 - Add a legal degraded handoff route for repeated gate failure after required deterministic preconditions are satisfied.
 - Degraded handoff must write a trace-visible witness, for example a gate attempt with `passed: true`, `degraded: true`, `degraded_reason`, `degraded_rules`, and normal `next`.
-- `content_dedup` must stop blocking Wave0/Wave1 gates; keep it as diagnostic/advice only if useful.
+- Retire the historical content heuristic patch from Wave0/Wave1 gates; do not keep it as diagnostic/advice-only output.
 - Gate feedback must identify root causes before symptoms and must not produce long, flat, equally weighted advice lists.
 - Gate advice must never tell the Agent to hand-edit `rb_status.json` or `rb_output_declarations.jsonl`.
 - Existing premature-final/status-drift audit from the archived change remains the protection for `BUG-049`; this change only keeps it covered in the degraded-flow scenarios.
@@ -83,7 +83,7 @@ Tests:
 - A realistic repeated gate failure can legally degrade and enter the next phase.
 - Degraded pass is distinguishable from clean pass in trace/inspect output.
 - `stop:no` fatigue path does not surface to user and does not write final output.
-- `content_dedup` failure is diagnostic-only.
+- Retired content heuristics are absent from the active gate loop.
 - Manual ledger drift produces "do not hand-edit; restore/re-submit through valid path" advice.
 - Gate output groups root cause vs symptom and keeps advice short.
 

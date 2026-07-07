@@ -62,7 +62,7 @@
 | G24 wfn-rerun | case-305 | `exp_wfn_rerun/case-305-light-indeterminate-no-transition.md` | 边界：indeterminate outcomes→invalid_input |
 | G25 engine-boundary | case-401 | `exp_engine-boundary/case-401-light-full-boundary.md` | Agent/Engine 正向边界：queue demand → work-unit claim → fixture output/receipt/cache → submit → ledger → gate → trace |
 | G25 engine-boundary | case-402 | `exp_engine-boundary/case-402-light-complete-reject.md` | work-unit submit rejection matrix：missing receipt/output/cache、nonce mismatch、wrong work_id，均无 ledger append |
-| G25 engine-boundary | case-403 | `exp_engine-boundary/case-403-light-gate-content-dedup.md` | content_dedup gate：ledger-generated 输入；URL dup/Jaccard/homepage/self-ref fail；clean pass；orphan cannot help |
+| G25 engine-boundary | case-403 | `exp_engine-boundary/case-403-light-work-unit-authority.md` | work-unit authority：missing submitted ledger fails；clean submitted coverage passes；root URL remains valid when parseable；cache drift fails via cache_coverage |
 | G25 engine-boundary | case-405 | `exp_engine-boundary/case-405-light-trace-single-sink.md` | trace 单 sink：只存在 bundle 根 rb_trace.jsonl |
 | G27 evidence-extraction | case-161 | `exp_evidence-extraction/case-161-light-complete-cache-trails.md` | work-unit submit cache_trails：valid→submitted ledger、incomplete→warning+filter、unsafe→non-terminal rejection |
 | G26 file-observability | case-310 | `exp_file-observability/case-310-light-orphan-reference.md` | work-unit submitted reference vs filesystem-only orphan reference |
@@ -129,7 +129,7 @@
 | G23 wfn-wave2 | case-234 | `exp_wfn_wave2/case-234-heavy-subagent-search.md` | emergent question→explore_search→spawn dpt-topic-scout 真实搜索→ingest receipt→index 更新→re-synthesize→00_shared promote→gate pass |
 | G11 pre-research-repair | case-114 | `exp_wff_pre-research-repair/case-114-heavy-hitl1-manual-review.md` | HITL1 payload 枚举（auto mode 6 vectors） |
 | G15 ai-judge | case-951 | `exph_workflow-foundation/case-951-heavy-topic-rewrite-ai-judge.md` | AI 扮演真人 dual of 901：真 Agent rewrite + AI reviewer verdict（source: ai-judge，非真人）；9NN +50 对偶 |
-| G25 engine-boundary | case-406 | `exp_engine-boundary/case-406-heavy-real-subagent-boundary.md` | 真实 Sub-agent/WebSearch/WebFetch canary：work-unit task/beacon/receipt/result → submit → ledger → content_dedup；无 real result 时 NOT RUN |
+| G25 engine-boundary | case-406 | `exp_engine-boundary/case-406-heavy-real-subagent-boundary.md` | 真实 Sub-agent/WebSearch/WebFetch canary：work-unit task/beacon/receipt/result → submit → ledger/provenance/cache gate authority；无 real result 时 NOT RUN |
 | G27 evidence-extraction | case-163 | `exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md` | 真实 Agent/Sub-agent canary：rerun action:add → _cache 三文件 leaf → work-unit result cache_trails → submitted ledger → gate/reentry quality metrics；无 Agent 时 NOT RUN |
 | G60 autonomous-research-hardening | case-604 | `exp_autonomous-research-hardening/case-604-heavy-real-subagent-write-before-return.md` | BUG-039/040：真实 Sub-agent 写 result/receipt/output/cache 后才返回，nonce/identity 保持，submit 成功；无 native Sub-agent 时 NOT RUN |
 | G60 autonomous-research-hardening | case-605 | `exp_autonomous-research-hardening/case-605-heavy-bundle-containment-real-subagent.md` | BUG-037：真实 Sub-agent 写入全部留在 active bundle root，repo-root leak inspection clean；无 native Sub-agent 时 NOT RUN |

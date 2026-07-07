@@ -482,7 +482,7 @@ This section defines the normative **Agent-Engine data contract**: the structure
 Without a declaration, the Engine has no way to know what files an Agent produced except by scanning the filesystem (`fs.readdir`, glob). This creates three gaps:
 
 - **Queue completion is not delegated provenance.** Non-delegated queue completion can validate its own receipt, but delegated evidence needs submit-time validation of result, receipt nonce, output files, cache trails, queue binding, and hashes.
-- **Gate `content_dedup` must guess.** It scans `reference/` looking for files, with no way to distinguish Agent-written references from hand-placed fixtures or stale artifacts.
+- **Gate and provenance checks must not guess.** Directory scans alone cannot distinguish Agent-written references from hand-placed fixtures or stale artifacts; submitted work-unit declarations, cache trails, and provenance/hash bindings provide the authority.
 - **Experiment and production diverge.** Experiment playbooks hand-write fixture paths deterministically; production Agent paths are non-deterministic. The two verify different things.
 
 ### The Mechanism: `output_files` + `cache_trails`
@@ -511,7 +511,7 @@ The declaration is the contract. Files not declared do not exist as far as the E
 
 This is a discovery rule, not a blanket ban on deterministic file checks. `fs.readdir`, glob, or directory traversal MAY be used when the source of truth is an explicit deterministic contract, such as a gate definition target, a registry-derived slug set, a static fixture set, or a non-Agent-owned directory invariant. They MUST NOT be used after the declaration point to discover, broaden, substitute, or count Agent-produced outputs.
 
-Agent-output-sensitive checks — for example reference count floors, content dedup, receipt verification, cross-file consistency, and source/artifact pairing — MUST consume the declaration or a declaration-derived index. If a legacy check still scans a directory, the experiment must not treat that scan as proof that Agent output was correctly declared.
+Agent-output-sensitive checks — for example reference count floors, cache coverage, receipt verification, cross-file consistency, and source/artifact pairing — MUST consume the declaration or a declaration-derived index. If a legacy check still scans a directory, the experiment must not treat that scan as proof that Agent output was correctly declared.
 
 ### Principle 2: One Pipeline for Production and Experiment
 

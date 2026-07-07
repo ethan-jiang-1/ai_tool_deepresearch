@@ -132,6 +132,33 @@ describe('advance-status CLI', () => {
     assert.ok(events.some(e => e.event === 'phase_transition' && e.to === 'wave0_complete' && e.next === 'wave1_complete'));
   });
 
+  it('preserves degraded source handoff context during status sync', () => {
+    const statusBefore = JSON.parse(readFileSync(statusPath, 'utf8'));
+    statusBefore.current_node = 'phases/phase-wave1.md';
+    writeFileSync(statusPath, JSON.stringify(statusBefore, null, 2) + '\n');
+    writeTrace([
+      gateAttempt({
+        degraded: true,
+        degraded_reason: 'fatigue_threshold_reached_with_only_degradation_eligible_quality_rules',
+        degraded_rules: ['shared_ref_count_floor'],
+      }),
+      loadComplete(0, {
+        handoff_source_degraded: true,
+        handoff_source_degraded_reason: 'fatigue_threshold_reached_with_only_degradation_eligible_quality_rules',
+        handoff_source_degraded_rules: ['shared_ref_count_floor'],
+      }),
+    ]);
+
+    const result = runAdvance(dir, 'wave0_complete');
+    assert.equal(result.status, 'ok');
+    assert.equal(result.source_handoff_degraded, true);
+
+    const events = readFileSync(tracePath, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    const transition = events.find(e => e.event === 'phase_transition' && e.to === 'wave0_complete');
+    assert.equal(transition.source_handoff_degraded, true);
+    assert.deepEqual(transition.source_handoff_degraded_rules, ['shared_ref_count_floor']);
+  });
+
   it('fails closed and restores status when phase_transition trace append fails', () => {
     writeTrace([gateAttempt(), loadComplete(0)]);
     const before = readFileSync(statusPath, 'utf8');

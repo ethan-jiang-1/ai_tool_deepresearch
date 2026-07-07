@@ -43,10 +43,10 @@
       "failure_message": "Reference files for {topic} must use metadata block format with 9 required fields and the 5 standard sections; YAML frontmatter is not allowed."
     },
     {
-      "id": "source_url_article_level",
-      "check": "reference_source_url_article_level",
+      "id": "reference_source_url_parseable",
+      "check": "reference_source_url_parseable",
       "target": "reference/*{topic}*.md",
-      "failure_message": "Reference files for {topic} must declare a non-empty article-level source_url in metadata block format."
+      "failure_message": "Reference files for {topic} must declare a non-empty URL-parseable source_url in metadata block format."
     },
     {
       "id": "key_facts_min_lines",
@@ -114,18 +114,6 @@
       "check": "trace_event_present",
       "target": "wave1_completion",
       "failure_message": "No wave1_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event before the gate."
-    },
-    {
-      "id": "content_dedup",
-      "check": "content_dedup",
-      "target": "output_declarations",
-      "threshold": {
-        "jaccard": 0.8,
-        "url_dedup": true,
-        "homepage_detect": true,
-        "self_ref_detect": true
-      },
-      "failure_message": "检测到虚假或重复 reference 文件"
     },
     {
       "id": "cache_coverage",

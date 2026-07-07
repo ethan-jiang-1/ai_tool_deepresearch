@@ -18,8 +18,10 @@ const createdDirs = [];
 function track(dir) { createdDirs.push(dir); return dir; }
 function unique(prefix) { return `rt_w0_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
 
-function runGate(bundlePath) {
-  return spawnSync('node', [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-wave0.md'], { encoding: 'utf-8', timeout: 10000 });
+function runGate(bundlePath, { attempt } = {}) {
+  const argv = [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-wave0.md'];
+  if (attempt !== undefined) argv.push('--attempt', String(attempt));
+  return spawnSync('node', argv, { encoding: 'utf-8', timeout: 10000 });
 }
 
 /** Create a bundle with topic_registry and setup. */
@@ -114,6 +116,48 @@ function setupHappyPath(dir) {
   });
 }
 
+function setupWave0WithoutSharedReference(dir, { submitWorkUnit = true } = {}) {
+  writeFileSync(join(dir, 'reference/_INDEX.md'),
+    '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |\n' +
+    '| --- | --- | --- | --- | --- | --- | --- | --- |\n');
+  writeFileSync(join(dir, 'reference/README.md'), '# Reference Evidence\nFlat reference directory.\n');
+
+  mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-a'), { recursive: true });
+  mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-b'), { recursive: true });
+  writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), VALID_REF);
+  writeFileSync(join(dir, 'artifacts/wave0/topic-b/source.yaml'), VALID_REF_B);
+
+  writeTraceEvents(dir, [
+    ...witnessedHandoffEvents({
+      sourceGate: 'seed-topics-ready',
+      phase: 'seed-topics',
+      sourceNode: 'phases/phase-seed-topics.md',
+      targetNode: 'phases/phase-wave0.md',
+    }),
+    { event: 'wave0_completion', ts: new Date().toISOString() },
+  ]);
+
+  if (submitWorkUnit) {
+    claimAndSubmitWorkUnit(dir, {
+      queueItemId: 'topic-a',
+      outputs: [
+        {
+          path: 'artifacts/wave0/topic-a/source.yaml',
+          role: 'source_yaml',
+        },
+        {
+          path: 'artifacts/wave0/topic-b/source.yaml',
+          role: 'source_yaml',
+        },
+      ],
+      cacheTrails: [{
+        path: '_cache/wave0/primary/topic-a/source-yaml',
+        url: 'https://example.com/research/source-yaml',
+      }],
+    });
+  }
+}
+
 describe('check-gate-wave0-complete', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
 
@@ -123,6 +167,39 @@ describe('check-gate-wave0-complete', () => {
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('1b. emits degraded pass for fatigue when only soft count floor fails', () => {
+    const dir = createBundle(unique('degraded'));
+    setupWave0WithoutSharedReference(dir);
+    const result = runGate(dir, { attempt: 3 });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, true, `Expected degraded pass, got inspect: ${JSON.stringify(output.inspect)}`);
+    assert.equal(output.check.degraded, true);
+    assert.equal(output.check.next, 'phases/phase-wave1.md');
+    assert.deepEqual(output.check.degraded_rules, ['shared_ref_count_floor']);
+    assert.ok(output.inspect.some((line) => line.includes('[degraded]')));
+
+    const traceEvents = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf-8')
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line));
+    const lastAttempt = traceEvents.filter((event) => event.event === 'gate_attempt' && event.gate === 'wave0-complete').at(-1);
+    assert.equal(lastAttempt.degraded, true);
+    assert.deepEqual(lastAttempt.degraded_rules, ['shared_ref_count_floor']);
+  });
+
+  it('1c. refuses degraded pass when runtime-truth blockers remain', () => {
+    const dir = createBundle(unique('nodegrade'));
+    setupWave0WithoutSharedReference(dir, { submitWorkUnit: false });
+    const result = runGate(dir, { attempt: 3 });
+    assert.equal(result.status, 1, result.stderr || result.stdout);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.notEqual(output.check.degraded, true);
+    assert.ok(output.check.failed_rule_ids.includes('wave0_work_unit_ledger_exists'));
+    assert.ok(output.inspect.some((line) => line.includes('[degraded_not_eligible]')));
   });
 
   it('2. fails when reference/_INDEX.md is missing', () => {

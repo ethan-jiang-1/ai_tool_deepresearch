@@ -57,12 +57,12 @@ describe('Profile Table', () => {
     assert.strictEqual(required.length, 6);
   });
 
-  it('heavy requires standard checks + work_units + ledger + cache_trails + dedup', () => {
+  it('heavy requires standard checks + work_units + ledger + cache_trails + source recoverability', () => {
     const required = requiredSectionsFor('heavy');
     assert.ok(required.includes('work_units'));
     assert.ok(required.includes('ledger'));
     assert.ok(required.includes('cache_trails'));
-    assert.ok(required.includes('dedup'));
+    assert.ok(required.includes('source_recoverability'));
     assert.strictEqual(required.length, 9);
   });
 
@@ -172,7 +172,7 @@ describe('computeHealthStatus', () => {
       work_units: { status: 'clean', sectionIssues: [] },
       ledger: { status: 'issues', sectionIssues: [{ detail: 'ledger empty' }] },
       cache_trails: { status: 'clean', sectionIssues: [] },
-      dedup: { status: 'clean', sectionIssues: [] },
+      source_recoverability: { status: 'clean', sectionIssues: [] },
     };
     const result = computeHealthStatus('heavy', sections);
     assert.strictEqual(result.topLevelStatus, 'issues');
@@ -215,7 +215,7 @@ describe('HealthReportSchema', () => {
       work_units: { status: 'clean', required: true, total: 2, claimed: 0, submitted: 2, failed: 0, timed_out: 0, abandoned: 0, expired: 0, retries: 0, late_submit_rejections: 0, nonterminal: 0, inspect_passed: true, inspect_issues: 0 },
       ledger: { status: 'clean', required: true, declarations: 2, schema_errors: 0 },
       cache_trails: { status: 'clean', required: true, leaves: 2, missing: 0 },
-      dedup: { status: 'clean', required: true, checks: 2, issues: 0 },
+      source_recoverability: { status: 'clean', required: true, references: 2, parseable_source_urls: 2, mapped_cache_trails: 2, recoverable: 2, issues: 0 },
     });
     assert.doesNotThrow(() => HealthReportSchema.parse(report));
   });
@@ -275,7 +275,7 @@ describe('buildHealthReport', () => {
     assert.ok('work_units' in report);
     assert.ok('ledger' in report);
     assert.ok('cache_trails' in report);
-    assert.ok('dedup' in report);
+    assert.ok('source_recoverability' in report);
 
     // Non-light sections are not_applicable in light profile when not provided
     assert.strictEqual(report.work_units.status, 'not_applicable');
@@ -284,8 +284,8 @@ describe('buildHealthReport', () => {
     assert.strictEqual(report.ledger.required, false);
     assert.strictEqual(report.cache_trails.status, 'not_applicable');
     assert.strictEqual(report.cache_trails.required, false);
-    assert.strictEqual(report.dedup.status, 'not_applicable');
-    assert.strictEqual(report.dedup.required, false);
+    assert.strictEqual(report.source_recoverability.status, 'not_applicable');
+    assert.strictEqual(report.source_recoverability.required, false);
 
     // Top-level is clean
     assert.strictEqual(report.status, 'clean');
@@ -299,7 +299,7 @@ describe('buildHealthReport', () => {
     assert.strictEqual(light.work_units.required, false);
     assert.strictEqual(light.ledger.required, false);
 
-    const heavy = buildHealthReport({ bundlePath: 'b', profile: 'heavy', sections: { trace: { status: 'clean' }, legacy_trace: { status: 'clean' }, bundle_schema: { status: 'clean' }, gate_attempts: { status: 'clean' }, timeline: { status: 'clean' }, work_units: { status: 'clean' }, ledger: { status: 'clean' }, cache_trails: { status: 'clean' }, dedup: { status: 'clean' } } });
+    const heavy = buildHealthReport({ bundlePath: 'b', profile: 'heavy', sections: { trace: { status: 'clean' }, legacy_trace: { status: 'clean' }, bundle_schema: { status: 'clean' }, gate_attempts: { status: 'clean' }, timeline: { status: 'clean' }, work_units: { status: 'clean' }, ledger: { status: 'clean' }, cache_trails: { status: 'clean' }, source_recoverability: { status: 'clean' } } });
     assert.strictEqual(heavy.work_units.required, true);
     assert.strictEqual(heavy.ledger.required, true);
     assert.strictEqual(heavy.cache_trails.required, true);
@@ -344,7 +344,7 @@ describe('Profile Table — standard profile scoping', () => {
     const standardRequired = new Set(PROFILE_TABLE.standard.required_sections);
     for (const section of PROFILE_TABLE.heavy.required_sections) {
       if (standardRequired.has(section)) continue;
-      assert.ok(['ledger', 'cache_trails', 'dedup'].includes(section), `Unexpected heavy-only section: ${section}`);
+      assert.ok(['ledger', 'cache_trails', 'source_recoverability'].includes(section), `Unexpected heavy-only section: ${section}`);
     }
   });
 });

@@ -6,7 +6,7 @@
 // Sub-modules:
 //   gate-helpers-core.mjs       — Gate CLI lifecycle: args, routing, results, trace, checkpoints
 //   gate-helpers-readers.mjs    — Bundle file readers: plan, profile, frontmatter, declarations
-//   gate-helpers-checks.mjs     — Gate rule checks: reference validation, content_dedup, cache_coverage
+//   gate-helpers-checks.mjs     — Gate rule checks: reference validation, cache_coverage
 //   gate-helpers-provenance.mjs — Work-unit provenance checks + bypass diagnostics
 //   gate-helpers-serial.mjs     — YAML/JSON safe readers with repair + template scan
 //   handoff-helpers.mjs         — Trace-backed lifecycle handoff validation
@@ -48,10 +48,7 @@ export {
 
 // Checks
 export {
-  tokenizeForSimilarity,
-  jaccardSimilarity,
   extractSection,
-  isHomepageUrl,
   REQUIRED_REFERENCE_METADATA_FIELDS,
   REQUIRED_REFERENCE_SECTIONS,
   parseReferenceMetadata,
@@ -59,7 +56,6 @@ export {
   checkReferenceSourceUrls,
   checkReferenceKeyFactsMinLines,
   checkReferenceLedgerCoverage,
-  checkContentDedup,
   checkCacheCoverage,
 } from './gate-helpers-checks.mjs';
 

@@ -70,3 +70,16 @@ describe('RWG-016 gate guidance does not advise phase bypass or surfacing', () =
     });
   }
 });
+
+describe('SWE silent execution degraded handoff guidance', () => {
+  it('requires legal degraded handoff or silent hold without final shortcut', () => {
+    const text = readFileSync(join(REPO_ROOT, 'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md'), 'utf-8');
+    assert.match(text, /check\.degraded: true/);
+    assert.match(text, /check\.next/);
+    assert.match(text, /enter-phase --node <check\.next>/);
+    assert.match(text, /advance-status --to <source_gate_enum>/);
+    assert.match(text, /Silent hold/i);
+    assert.match(text, /not a clean quality pass/i);
+    assert.match(text, /cannot.*final|不能提前写 `final\//i);
+  });
+});

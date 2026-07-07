@@ -269,7 +269,7 @@ function wave0ReferenceContent({ source_url, topic_slug, title }) {
     topic_slug,
     title,
     key_facts: keyFacts,
-    core_content: `This controlled Wave0 reference is intentionally specific to ${label}. It gives the gate unique wording for content-dedup while preserving the experiment boundary: the semantic research content is fixture-backed, but queue claim, work-unit submit, ledger coverage, cache validation, and gate verdict all travel through real Engine surfaces.`,
+    core_content: `This controlled Wave0 reference is intentionally specific to ${label}. It preserves the experiment boundary: the semantic research content is fixture-backed, but queue claim, work-unit submit, ledger coverage, cache validation, and gate verdict all travel through real Engine surfaces.`,
   });
 }
 
@@ -394,7 +394,7 @@ function wave1CoreContent(topicSlug, title) {
     return 'Topic A controlled content focuses on safety escalation mechanisms, audit routing, and model-release decisions. It deliberately uses vocabulary about red-team findings, mitigation status, and governance boards so it is not a near clone of other Wave1 fixtures.';
   }
   if (topicSlug === 'topic-b') {
-    return 'Topic B controlled content focuses on procurement obligations, compliance reporting, vendor evidence trails, and regional policy variation. It deliberately uses governance-operations vocabulary so the content-dedup gate sees a separate fixture story.';
+    return 'Topic B controlled content focuses on procurement obligations, compliance reporting, vendor evidence trails, and regional policy variation. It deliberately uses governance-operations vocabulary so the fixture story stays distinct.';
   }
   return `${title} controlled content is fixture-backed Engine evidence. It is intentionally scoped to ${topicSlug}, with distinct wording and declared limitations so the playbook proves work-unit provenance rather than semantic research quality.`;
 }
@@ -678,7 +678,7 @@ function case162(opts) {
         'The overview is intentionally broad enough to satisfy the shared reference floor.',
         'The cache leaf maps directly through meta.json.url to the submitted shared reference.',
       ],
-      core_content: 'The shared Topic A source provides general regulatory baseline evidence: policy timelines, consultation mechanisms, oversight vocabulary, and institutional context. It deliberately avoids the battery, satellite, or orphan vocabularies used elsewhere in this case so content-dedup remains meaningful.',
+      core_content: 'The shared Topic A source provides general regulatory baseline evidence: policy timelines, consultation mechanisms, oversight vocabulary, and institutional context. It deliberately avoids the battery, satellite, or orphan vocabularies used elsewhere in this case so fixture coverage stays easy to inspect.',
     }),
   });
   const submittedA1 = submitCase162Reference(bundleDir, {
@@ -699,7 +699,7 @@ function case162(opts) {
         'Compliance teams use this primary source to decide when evidence must be preserved.',
         'The cache trail is a complete leaf with websearch, page, and meta files.',
       ],
-      core_content: 'Primary Topic A content emphasizes statute-facing obligations: audit boards, incident escalation, public notices, deployment thresholds, and evidence preservation. This text is intentionally different from the secondary market-analysis fixture so the Jaccard clone check sees distinct controlled evidence.',
+      core_content: 'Primary Topic A content emphasizes statute-facing obligations: audit boards, incident escalation, public notices, deployment thresholds, and evidence preservation. This text is intentionally different from the secondary market-analysis fixture so controlled evidence remains easy to inspect.',
     }),
   });
   const submittedA2 = submitCase162Reference(bundleDir, {
@@ -1076,7 +1076,7 @@ function resetCase403Scenario(bundleDir, name) {
     rmSync(path.join(bundleDir, relPath), { recursive: true, force: true });
   }
   writeWave0Scaffold(bundleDir, {
-    planBasename: `eb_dedup_${name}`,
+    planBasename: `eb_authority_${name}`,
     referenceRows: [
       '| 00-shared-a.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |',
       '| 00-shared-b.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |',
@@ -1084,12 +1084,12 @@ function resetCase403Scenario(bundleDir, name) {
   });
 }
 
-function submitDedupPair(bundleDir, name, refs) {
+function submitCase403Coverage(bundleDir, name, refs) {
   const [first, ...rest] = refs;
   const task = queueItemForWorkUnit({
     queue_item_id: `case403-${name}`,
     topic_slug: 'topic-a',
-    title: `Gate content-dedup scenario: ${name}`,
+    title: `Gate authority scenario: ${name}`,
   });
   enqueueWorkUnitTask(bundleDir, task, { fileName: `${name}.json` });
   const claim = claimWorkUnitsViaCli(bundleDir, { phase: 'wave0' });
@@ -1126,7 +1126,7 @@ function submitDedupPair(bundleDir, name, refs) {
 }
 
 function case403(opts) {
-  const bundleDir = newBundle('case-403', 'eb_dedup_work_unit', opts);
+  const bundleDir = newBundle('case-403', 'eb_authority_work_unit', opts);
   const checks = [];
 
   resetCase403Scenario(bundleDir, 'missing-ledger');
@@ -1138,7 +1138,7 @@ function case403(opts) {
   });
 
   resetCase403Scenario(bundleDir, 'clean');
-  submitDedupPair(bundleDir, 'clean', [{
+  submitCase403Coverage(bundleDir, 'clean', [{
     path: 'reference/00-shared-a.md',
     url: 'https://research-source.test/clean/a',
     title: 'Clean A',
@@ -1150,50 +1150,35 @@ function case403(opts) {
     detail: JSON.stringify(gate.json.inspect || []),
   });
 
-  resetCase403Scenario(bundleDir, 'url-duplicate');
-  submitDedupPair(bundleDir, 'url-duplicate', [
-    { path: 'reference/00-shared-a.md', url: 'https://research-source.test/duplicate/article', title: 'Duplicate A' },
-    { path: 'reference/00-shared-b.md', url: 'https://research-source.test/duplicate/article/', title: 'Duplicate B' },
-  ]);
-  gate = runWave0Gate(bundleDir, 'gate-url-duplicate.json');
-  checks.push({
-    label: 'url-duplicate-fails',
-    passed: gate.status === 1 && JSON.stringify(gate.json.inspect || []).includes('URL duplicate'),
-    detail: JSON.stringify(gate.json.inspect || []),
-  });
-
-  resetCase403Scenario(bundleDir, 'jaccard-clone');
-  const cloneContentA = referenceContent({
-    source_url: 'https://research-source.test/clone/a',
-    topic_slug: 'topic-a',
-    title: 'Clone A',
-  });
-  const cloneContentB = cloneContentA.replace('https://research-source.test/clone/a', 'https://research-source.test/clone/b').replace('Clone A', 'Clone B');
-  submitDedupPair(bundleDir, 'jaccard-clone', [
-    { path: 'reference/00-shared-a.md', url: 'https://research-source.test/clone/a', title: 'Clone A', content: cloneContentA },
-    { path: 'reference/00-shared-b.md', url: 'https://research-source.test/clone/b', title: 'Clone B', content: cloneContentB },
-  ]);
-  gate = runWave0Gate(bundleDir, 'gate-jaccard-clone.json');
-  checks.push({
-    label: 'jaccard-clone-fails',
-    passed: gate.status === 1 && JSON.stringify(gate.json.inspect || []).includes('Jaccard clone'),
-    detail: JSON.stringify(gate.json.inspect || []),
-  });
-
-  resetCase403Scenario(bundleDir, 'homepage');
-  submitDedupPair(bundleDir, 'homepage', [{
+  resetCase403Scenario(bundleDir, 'root-url');
+  submitCase403Coverage(bundleDir, 'root-url', [{
     path: 'reference/00-shared-a.md',
     url: 'https://research-source.test/',
-    title: 'Homepage',
+    title: 'Recoverable Root URL Fixture',
   }]);
-  gate = runWave0Gate(bundleDir, 'gate-homepage.json');
+  gate = runWave0Gate(bundleDir, 'gate-root-url.json');
   checks.push({
-    label: 'homepage-fails',
-    passed: gate.status === 1 && JSON.stringify(gate.json.inspect || []).includes('Homepage URL'),
+    label: 'root-url-passes',
+    passed: gate.status === 0 && gate.json?.check?.passed === true,
     detail: JSON.stringify(gate.json.inspect || []),
   });
 
-  for (const check of checks) recordCheck(bundleDir, 'case-403', 'content-dedup', check.passed, check.detail, { label: check.label });
+  resetCase403Scenario(bundleDir, 'cache-drift');
+  const drift = submitCase403Coverage(bundleDir, 'cache-drift', [{
+    path: 'reference/00-shared-a.md',
+    url: 'https://research-source.test/cache/drift',
+    title: 'Cache Drift A',
+  }]);
+  const driftTrail = drift.cache_trails?.[0] || '_cache/wave0/primary/case403-cache-drift/cache-drift-1';
+  rmSync(path.join(bundleDir, driftTrail, 'meta.json'), { force: true });
+  gate = runWave0Gate(bundleDir, 'gate-cache-drift.json');
+  checks.push({
+    label: 'cache-drift-fails',
+    passed: gate.status === 1 && JSON.stringify(gate.json.inspect || []).includes('cache_coverage'),
+    detail: JSON.stringify(gate.json.inspect || []),
+  });
+
+  for (const check of checks) recordCheck(bundleDir, 'case-403', 'work-unit-authority', check.passed, check.detail, { label: check.label });
   const verdict = writeVerdict(bundleDir, 'case-403', checks, { extra: { bundle: bundleDir } });
   maybeCleanup(bundleDir, opts, verdict);
   return { bundleDir, verdict };

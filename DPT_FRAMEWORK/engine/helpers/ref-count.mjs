@@ -19,7 +19,6 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import {
   extractSection,
-  isHomepageUrl,
   parseReferenceMetadata,
   readSubmittedWorkUnitDeclarations,
 } from './gate-helpers.mjs';
@@ -44,7 +43,7 @@ export const QUALITY_THRESHOLDS = Object.freeze({
  *
  *   1. acceptance_status is "accepted"
  *   2. ## Core Content Capture section ≥ 100 characters
- *   3. source_url is article-level (not homepage/shallow)
+ *   3. source_url is present and URL-parseable
  *   4. ## Key Facts section has ≥ 5 bullet lines
  *
  * Unparseable files return { countable: false, reason: "unparseable" }
@@ -107,21 +106,26 @@ export function isCountable(refPath, bundleDir) {
     };
   }
 
-  // ── Condition 3: article-level source_url (not homepage) ──
+  // ── Condition 3: present, URL-parseable source_url ──
   const sourceUrl = metadata.get('source_url') || '';
   if (!sourceUrl.trim()) {
     return { countable: false, reason: 'source_url_missing' };
   }
-  // Support semicolon-delimited multi-URL — if ANY is article-level, passes
+  // Support semicolon-delimited multi-URL — if ANY is parseable, passes.
   const urls = sourceUrl.split(';').map(u => u.trim()).filter(Boolean);
   if (urls.length === 0) {
     return { countable: false, reason: 'source_url_empty' };
   }
-  const allHomepage = urls.every(u => {
-    try { return isHomepageUrl(u); } catch { return true; /* treat parse error as homepage */ }
+  const hasParseableUrl = urls.some((u) => {
+    try {
+      new URL(u);
+      return true;
+    } catch {
+      return false;
+    }
   });
-  if (allHomepage) {
-    return { countable: false, reason: 'source_url_is_homepage' };
+  if (!hasParseableUrl) {
+    return { countable: false, reason: 'source_url_invalid' };
   }
 
   // ── Condition 4: Key Facts ≥ 5 bullet lines ──

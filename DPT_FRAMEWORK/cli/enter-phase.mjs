@@ -70,6 +70,9 @@ const trace = {
         handoff_target_node: handoff.targetNode,
         handoff_source_attempt_index: handoff.index,
         handoff_source_attempt_ts: handoff.sourceAttemptTs,
+        handoff_source_degraded: handoff.degraded === true,
+        handoff_source_degraded_reason: handoff.degradedReason || null,
+        handoff_source_degraded_rules: handoff.degradedRules || [],
       });
       return;
     }

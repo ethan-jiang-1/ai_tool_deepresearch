@@ -268,6 +268,36 @@ export function resolveRouting(transitionsPath, currentNodeRef, outcome, context
  *
  * @impl GSK-002, GSK-006
  */
+function gateMessagePriority(message) {
+  const text = String(message || '').toLowerCase();
+  if (/cache_coverage|cache trail|cache coverage/.test(text)) return 0;
+  if (/ledger_record_hash|hash mismatch|ledger\/index|work-unit binding|submitted result hash|nonce/.test(text)) return 1;
+  if (/submitted work-unit|work-unit ledger|operate-work-unit|declaration ledger|rb_output_declarations/.test(text)) return 2;
+  if (/rb_status|status window|handoff|load_complete|phase_transition|route-bound/.test(text)) return 3;
+  if (/rb_trace|trace|gate_attempt/.test(text)) return 4;
+  if (/schema|yaml|parse_error|metadata|source_url|key facts/.test(text)) return 5;
+  if (/count floor|delegated_bypass|output coverage|filesystem-only|not declared/.test(text)) return 8;
+  return 6;
+}
+
+function prioritizeMessages(messages) {
+  return [...messages].map((message, index) => ({ message, index, priority: gateMessagePriority(message) }))
+    .sort((a, b) => a.priority - b.priority || a.index - b.index)
+    .map((entry) => entry.message);
+}
+
+function uniqueMessages(messages) {
+  const seen = new Set();
+  const result = [];
+  for (const message of messages) {
+    const key = String(message || '').trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(message);
+  }
+  return result;
+}
+
 export function buildGateResult({ passed, gate, currentNodeRef, routing, inspect = [], advice = [], extraCheck = {}, attemptNumber = 0, fatigueThreshold = 3 }) {
   const checkNext = routing.kind === 'next' ? routing.next : null;
 
@@ -279,7 +309,8 @@ export function buildGateResult({ passed, gate, currentNodeRef, routing, inspect
     ...extraCheck,
   };
 
-  let finalAdvice = [...advice];
+  const finalInspect = prioritizeMessages(uniqueMessages(inspect));
+  let finalAdvice = prioritizeMessages(uniqueMessages(advice));
 
   // GSK-006: Fatigue diagnostics — injected when Agent-reported attemptNumber
   // reaches fatigueThreshold AND the gate did not pass. Pass + high attempt
@@ -300,7 +331,7 @@ export function buildGateResult({ passed, gate, currentNodeRef, routing, inspect
   return {
     check: checkFields,
     routing,
-    inspect,
+    inspect: finalInspect,
     advice: finalAdvice,
   };
 }
@@ -509,6 +540,11 @@ export function writeGateAttempt(bundlePath, result, options = {}) {
         inspect_count: inspect.length, advice_count: advice.length,
         phase,
       };
+      if (check.degraded === true) {
+        logDetail.degraded = true;
+        logDetail.degraded_reason = check.degraded_reason || null;
+        logDetail.degraded_rules = check.degraded_rules || [];
+      }
 
       if (passDiagResult.ok) {
         logDetail.diagnostic_path = diagnosticPath;
@@ -535,6 +571,11 @@ export function writeGateAttempt(bundlePath, result, options = {}) {
         inspect_count: inspect.length,
         advice_count: advice.length,
       };
+      if (check.degraded === true) {
+        traceEntry.degraded = true;
+        traceEntry.degraded_reason = check.degraded_reason || null;
+        traceEntry.degraded_rules = check.degraded_rules || [];
+      }
       // TRW-001: Include diagnostic_path when available
       if (logDetail.diagnostic_path) {
         traceEntry.diagnostic_path = logDetail.diagnostic_path;
@@ -720,6 +761,7 @@ export function writeCheckpointManifest(bundlePath, result) {
         passed: check.passed,
         currentNodeRef: check.currentNodeRef,
         next: check.next,
+        degraded: check.degraded === true,
       },
       normalized_target: normalizedTarget,
       status_snapshot: statusSnapshot,
@@ -845,6 +887,8 @@ export function writeGatePassDiagnostic(bundlePath, result, precomputedPath = nu
       gate: check.gate,
       passed: true,
       phase: derivePhaseFromGate(check.gate),
+      degraded: check.degraded === true,
+      check,
       inspect,
       advice,
       rules_summary: {

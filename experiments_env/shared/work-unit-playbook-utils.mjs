@@ -407,7 +407,7 @@ export function referenceContent({
   ],
   core_content,
 } = {}) {
-  const capture = core_content || `This controlled source covers ${topic_slug} with enough topic-specific detail for Engine reference checks while remaining explicit fixture-backed evidence. It is intentionally distinct across topics so content-dedup can detect real clones instead of template reuse.`;
+  const capture = core_content || `This controlled source covers ${topic_slug} with enough topic-specific detail for Engine reference checks while remaining explicit fixture-backed evidence. It is intentionally distinct across topics so count, cache, and provenance checks can validate recoverable submitted references.`;
   return [
     `# ${title}`,
     '',

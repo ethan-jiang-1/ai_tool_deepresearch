@@ -1,6 +1,6 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.6**
+> **DPT_FRAMEWORK v0.7**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。

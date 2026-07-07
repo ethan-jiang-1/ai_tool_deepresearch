@@ -64,18 +64,6 @@
       "failure_message": "No wave0_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event before the gate."
     },
     {
-      "id": "content_dedup",
-      "check": "content_dedup",
-      "target": "output_declarations",
-      "threshold": {
-        "jaccard": 0.8,
-        "url_dedup": true,
-        "homepage_detect": true,
-        "self_ref_detect": true
-      },
-      "failure_message": "检测到虚假或重复 reference 文件"
-    },
-    {
       "id": "cache_coverage",
       "check": "cache_coverage",
       "target": "output_declarations",

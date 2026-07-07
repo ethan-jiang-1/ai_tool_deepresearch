@@ -104,22 +104,29 @@ describe('isCountable', () => {
     assert.ok(result.reason.includes('core_content_capture_too_thin'), `Reason: ${result.reason}`);
   });
 
-  it('returns countable=false when source_url is homepage', () => {
+  it('returns countable=true when source_url looks like a homepage', () => {
     const dir = setupBundle('rc-homepage', {
       'reference/homepage.md': refContent({ source_url: 'https://example.com/' }),
     });
     const result = isCountable('reference/homepage.md', dir);
-    assert.strictEqual(result.countable, false);
-    assert.ok(result.reason.includes('source_url_is_homepage'), `Reason: ${result.reason}`);
+    assert.strictEqual(result.countable, true, `Expected countable but got: ${JSON.stringify(result)}`);
   });
 
-  it('returns countable=false when source_url is shallow (depth < 2)', () => {
+  it('returns countable=true when source_url has a shallow path', () => {
     const dir = setupBundle('rc-shallow', {
       'reference/shallow.md': refContent({ source_url: 'https://example.com/news/' }),
     });
     const result = isCountable('reference/shallow.md', dir);
+    assert.strictEqual(result.countable, true, `Expected countable but got: ${JSON.stringify(result)}`);
+  });
+
+  it('returns countable=false when source_url is invalid', () => {
+    const dir = setupBundle('rc-invalid-url', {
+      'reference/invalid.md': refContent({ source_url: 'not a url' }),
+    });
+    const result = isCountable('reference/invalid.md', dir);
     assert.strictEqual(result.countable, false);
-    assert.ok(result.reason.includes('source_url_is_homepage'), `Reason: ${result.reason}`);
+    assert.ok(result.reason.includes('source_url_invalid'), `Reason: ${result.reason}`);
   });
 
   it('returns countable=false when Key Facts < 5 bullets', () => {
@@ -269,7 +276,7 @@ describe('countReferences', () => {
             content: referenceContent({ source_url: 'https://example.com/research/b' }),
           },
           {
-            path: 'reference/uncountable-homepage.md',
+            path: 'reference/countable-homepage.md',
             role: 'reference',
             source_url: 'https://example.com/',
             source_slug: 's01_source',
@@ -278,9 +285,8 @@ describe('countReferences', () => {
         ],
       });
       const result = countReferences(dir);
-      assert.strictEqual(result.count, 2, `Expected 2 countable, got ${result.count}`);
-      assert.strictEqual(result.uncountable.length, 1);
-      assert.ok(result.uncountable[0].reason.includes('source_url_is_homepage'));
+      assert.strictEqual(result.count, 3, `Expected 3 countable, got ${result.count}`);
+      assert.strictEqual(result.uncountable.length, 0);
     } finally {
       cleanupWorkUnitBundle(dir);
     }
@@ -391,25 +397,39 @@ describe('countReferences', () => {
             path: 'reference/good.md',
             role: 'reference',
             source_url: 'https://example.com/research/good',
-            source_slug: 's01_source',
+            source_slug: 's01_good',
             content: referenceContent({ source_url: 'https://example.com/research/good' }),
           },
           {
-            path: 'reference/bad-homepage.md',
+            path: 'reference/bad-invalid-url.md',
             role: 'reference',
-            source_url: 'https://example.com/',
-            source_slug: 's01_source',
-            content: referenceContent({ source_url: 'https://example.com/' }),
+            source_url: 'https://example.com/research/bad-invalid-url',
+            source_slug: 's02_bad_url',
+            content: referenceContent({ source_url: 'not a url' }),
           },
           {
             path: 'reference/bad-thin.md',
             role: 'reference',
             source_url: 'https://example.com/research/thin',
-            source_slug: 's01_source',
+            source_slug: 's03_thin',
             content: referenceContent({
               source_url: 'https://example.com/research/thin',
               coreContent: 'Short.',
             }),
+          },
+        ],
+        cacheTrails: [
+          {
+            path: '_cache/wave0/primary/queue-a/s01_good',
+            url: 'https://example.com/research/good',
+          },
+          {
+            path: '_cache/wave0/primary/queue-a/s02_bad_url',
+            url: 'https://example.com/research/bad-invalid-url',
+          },
+          {
+            path: '_cache/wave0/primary/queue-a/s03_thin',
+            url: 'https://example.com/research/thin',
           },
         ],
       });
@@ -417,7 +437,7 @@ describe('countReferences', () => {
       assert.strictEqual(result.count, 1, `Expected 1 countable, got ${result.count}`);
       assert.strictEqual(result.uncountable.length, 2, `Expected 2 uncountable, got ${result.uncountable.length}`);
       const reasons = result.uncountable.map(u => u.reason);
-      assert.ok(reasons.some(r => r.includes('source_url_is_homepage')), 'Should report homepage reason');
+      assert.ok(reasons.some(r => r.includes('source_url_invalid')), 'Should report invalid URL reason');
       assert.ok(reasons.some(r => r.includes('core_content_capture_too_thin')), 'Should report thin content reason');
       for (const u of result.uncountable) {
         assert.ok(u.path, 'Each uncountable entry must have path');

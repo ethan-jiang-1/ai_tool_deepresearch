@@ -19,7 +19,6 @@ import {
   readBundlePlan,
   readBundleProfile,
   resolveThreshold,
-  checkContentDedup,
   checkCacheCoverage,
   listMatchingBundleFiles,
   checkReferenceFormatFiles,
@@ -76,6 +75,7 @@ if (!handoffPreflight.ok) {
 const bundlePath = args.bundle;
 const inspect = [];
 const advice = [];
+const failedRuleIds = new Set();
 let allPassed = true;
 
 // ── Cached parsers (lazy) ──
@@ -138,6 +138,99 @@ function expandTopicTarget(target) {
     return topics.map(t => ({ topic: t, resolved: target.replace(/\{topic\}/g, t) }));
   }
   return [{ topic: null, resolved: target }];
+}
+
+function scopedRuleId(ruleId, topic) {
+  return topic ? `${ruleId}:${topic}` : ruleId;
+}
+
+const DEGRADATION_FATIGUE_THRESHOLD = 3;
+const STOP_NO_DEGRADABLE_NODES = new Set([
+  'phases/phase-wave0.md',
+  'phases/phase-wave1.md',
+  'phases/phase-wave2.md',
+]);
+const DEGRADATION_ELIGIBLE_RULE_IDS = new Set([
+  'per_topic_ref_md_count_floor',
+  'key_facts_min_lines',
+]);
+
+function baseRuleId(ruleId) {
+  return String(ruleId || '').split(':')[0];
+}
+
+function engineVisibleAttemptCount() {
+  const events = readTraceEvents(bundlePath);
+  let startIndex = -1;
+  for (let i = events.length - 1; i >= 0; i--) {
+    if (events[i].event === 'load_complete' && events[i].entry === args.currentNode) {
+      startIndex = i;
+      break;
+    }
+  }
+  return events
+    .slice(startIndex + 1)
+    .filter((event) => event.event === 'gate_attempt' && event.gate === definition.gate && event.currentNodeRef === args.currentNode)
+    .length + 1;
+}
+
+function maybeDegradedHandoff() {
+  if (allPassed) return null;
+  if (!STOP_NO_DEGRADABLE_NODES.has(args.currentNode)) return null;
+
+  const effectiveAttemptCount = Math.max(args.attempt ?? 0, engineVisibleAttemptCount());
+  if (effectiveAttemptCount < DEGRADATION_FATIGUE_THRESHOLD) return null;
+
+  const failed = [...failedRuleIds].sort();
+  const ineligible = failed.filter((ruleId) => !DEGRADATION_ELIGIBLE_RULE_IDS.has(baseRuleId(ruleId)));
+  if (failed.length === 0 || ineligible.length > 0) {
+    inspect.push(`[degraded_not_eligible] Fatigue threshold reached, but runtime-truth or structural blocker(s) remain: ${ineligible.join(', ') || 'unclassified failure'}`);
+    return null;
+  }
+
+  const passRouting = resolveRouting(args.transitions, args.currentNode, 'passed');
+  if (passRouting.kind !== 'next' || !passRouting.next) {
+    inspect.push(`[degraded_not_eligible] Normal pass route is unavailable for ${args.currentNode}; cannot emit degraded handoff.`);
+    return null;
+  }
+
+  inspect.push(`[degraded] Fatigue threshold reached; carrying forward degradation-eligible quality rule(s): ${failed.join(', ')}`);
+  advice.push('[degraded] Consume check.next through enter-phase and advance-status. This is a legal handoff witness only, not a clean quality pass or target-phase completion proof.');
+
+  return {
+    routing: passRouting,
+    extraCheck: {
+      degraded: true,
+      degraded_reason: 'fatigue_threshold_reached_with_only_degradation_eligible_quality_rules',
+      degraded_rules: failed,
+      degradation_attempt_count: effectiveAttemptCount,
+    },
+  };
+}
+
+function emitAfterDurableAttempt(result) {
+  try {
+    writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+  } catch (err) {
+    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    const failedRouting = resolveRouting(args.transitions, args.currentNode, 'failed');
+    const failedResult = buildGateResult({
+      passed: false,
+      gate: definition.gate,
+      currentNodeRef: args.currentNode,
+      routing: failedRouting,
+      inspect: [`[trace_durable] FAIL: could not durably append gate_attempt trace event: ${safeMsg}`],
+      advice: ['Fix rb_trace.jsonl trace durability and rerun the gate through the Engine path; do not hand-edit status to simulate handoff.'],
+      extraCheck: {
+        trace_durable: false,
+        gate_attempt_write_failed: true,
+        suppressed_pass_degraded: result.check?.degraded === true,
+      },
+      attemptNumber: args.attempt ?? 0,
+    });
+    try { writeGateAttempt(bundlePath, failedResult); } catch { /* ignore secondary diagnostics */ }
+    emitGateResult(failedResult);
+  }
 }
 
 // ── Pre-rule scan: template_not_expanded diagnostics ──
@@ -374,13 +467,6 @@ for (const rule of definition.rules) {
             if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
           }
         }
-      } else if (rule.check === 'content_dedup') {
-        const dedupResult = checkContentDedup(bundlePath, rule.threshold || {});
-        if (!dedupResult.passed) {
-          rulePassed = false;
-          ruleDetail = dedupResult.inspect.join('; ');
-          for (const a of dedupResult.advice) advice.push(a);
-        }
       } else if (rule.check === 'cache_coverage') {
         const ccResult = checkCacheCoverage(bundlePath);
         if (!ccResult.passed) {
@@ -397,7 +483,7 @@ for (const rule of definition.rules) {
           rulePassed = false;
           ruleDetail = result.inspect.join('; ');
         }
-      } else if (rule.check === 'reference_source_url_article_level') {
+      } else if (rule.check === 'reference_source_url_parseable') {
         const files = listMatchingBundleFiles(bundlePath, resolvedTarget);
         const result = checkReferenceSourceUrls(files);
         if (!result.passed) {
@@ -468,14 +554,17 @@ for (const rule of definition.rules) {
 
     if (!rulePassed) {
       allPassed = false;
+      failedRuleIds.add(scopedRuleId(rule.id, tgt.topic));
       inspect.push(ruleDetail);
       advice.push(tgt.topic ? rule.failure_message.replace(/\{topic\}/g, tgt.topic) : rule.failure_message);
     }
   }
 }
 
-const outcome = allPassed ? 'passed' : 'failed';
-const routing = resolveRouting(args.transitions, args.currentNode, outcome);
+const degradedHandoff = maybeDegradedHandoff();
+const passedForHandoff = allPassed || Boolean(degradedHandoff);
+const outcome = passedForHandoff ? 'passed' : 'failed';
+const routing = degradedHandoff?.routing || resolveRouting(args.transitions, args.currentNode, outcome);
 
 // Work-unit delegated bypass suspicion detection
 const phase = derivePhaseFromGate(definition.gate);
@@ -485,15 +574,19 @@ if (bypassResult.suspected) {
 }
 
 const result = buildGateResult({
-  passed: allPassed,
+  passed: passedForHandoff,
   gate: definition.gate,
   currentNodeRef: args.currentNode,
   routing,
   inspect,
   advice,
+  extraCheck: {
+    failed_rule_ids: [...failedRuleIds],
+    ...(degradedHandoff?.extraCheck || {}),
+  },
   attemptNumber: args.attempt ?? 0,
 });
 
-writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+emitAfterDurableAttempt(result);
 
 emitGateResult(result);

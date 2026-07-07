@@ -36,9 +36,9 @@ You are in a **non-terminal `stop: no` phase**. This means:
 
    `surfacing_intent` is a would-have-surfaced diagnostic only. It is not permission to surface, not HITL authorization, not gate or handoff evidence, not final delivery evidence, and not status synchronization evidence.
 
-4. **Every silent degradation path leads to one of two outcomes:** (a) you fix the issue and pass the gate, or (b) you record the gap via accepted trace/log surface and continue. Neither outcome involves the user.
+4. **Every silent degradation path stays inside the lifecycle contract:** (a) repair deterministic blockers and pass the gate, (b) switch strategy and rerun, (c) consume a legal gate-produced degraded `check.next`, or (d) hold silently with trace/log diagnostics when no legal route exists. None of these outcomes involves the user.
 
-5. **If you are fatigued (3+ gate failures on the same issue):** Pause. Re-read these §0 rules. Switch strategies — do not repeat the same fix. Use `--attempt N` on the gate CLI so the Engine can give you step-back advice. Read that advice. Degradation is not failure — it is the expected behavior when a non-terminal `stop:no` phase cannot achieve perfection.
+5. **If you are fatigued (3+ gate failures on the same issue):** Pause. Re-read these §0 rules. Switch strategies — do not repeat the same fix. Use `--attempt N` on the gate CLI so the Engine can give you step-back or degraded-handoff advice. A degraded pass is legal only when the gate returns `passed: true`, `degraded: true`, and normal `check.next`; it is not a clean quality pass.
 
 6. **Gate-pass objective:** This phase is an active autonomous work loop. Local sub-step completion, an empty active window, or repeated gate failure is not a checkpoint. Continue current-node work, repair, degradation, or silent holding until the current gate passes and returns `check.next`.
 
@@ -101,13 +101,13 @@ If the Agent catches itself preparing any prohibited surfacing, it SHALL log `su
 
 遇错时 Agent SHALL 按以下顺序自行处理，不浮出水面：
 
-1. **重试（Retry）**：网络波动、临时不可用 → 等待后重试（遵循 `shared-repair-guidance.md` 已有修复策略），阻塞消除后自动恢复
-2. **换源（Alternative Source）**：特定 URL 不可访问、爬取被拒 → 搜索替代源（更换 domain、更换搜索策略），不降低 evidence quality tier 要求
-3. **降级方法（Method Degradation）**：当前方法路径全部失败 → 切换到替代方法（如 WebFetch 不可用 → curl → node fetch → python3），记录方法切换链。**替代方法 MUST 保持在 work-unit pipeline 内**：直接执行 WebSearch/WebFetch 并手工写入 artifact（绕过 work-unit claim/submit）不是合法的替代方法。合法的替代方法包括：更换 queue demand、切换 work-unit role/kind、调整 delegate timeout、关闭并 retry 新 `work_id`、或使用不同的 search provider 但仍通过 work-unit task 委托。如果 work-unit pipeline 中的 claim/spawn/submit 路径全部失败，Agent SHALL 进入 mark gap（第四步）而非绕过 submit。
-4. **标记 gap（Mark Gap）**：所有替代方案（包括 work-unit pipeline 内合法替代方法）已穷尽 → 在 `rb_trace.jsonl` 中标记为 `silent_gap`，记录 `gap_impact: none|partial|blocks_must_answer`，继续到下一个 task
-   - `gap_impact: blocks_must_answer` 时 Agent SHALL 在周围 topic 中搜索替代覆盖路径，但不浮出水面
+1. **Repair deterministic blockers**：先修 schema、queue、status、trace、work-unit submit、declaration ledger、provenance/hash、cache coverage/content、route-bound handoff 这类 Engine 能确定的 blocker。按 gate inspect/advice 的 root cause 修，不手改 authority files。
+2. **Change strategy**：如果同一修复不收敛，换 queue demand、搜索角度、delegate timeout、work-unit role/kind、retry/replacement submit 路径，或关闭失败 `work_id` 后重新 claim。替代方法 MUST 保持在 work-unit pipeline 内；直接 WebSearch/WebFetch 并手工写 artifact 不是合法替代方法。
+3. **Consume legal degraded handoff**：只有当 gate CLI 自己返回 `check.passed: true`、`check.degraded: true`、`check.next`、`degraded_reason` 和 `degraded_rules` 时，才可把它当 handoff witness。它只证明可以进入下一 Markdown control surface，不证明 clean quality pass，也不证明目标 phase work completion。
+4. **Continue through the legal chain**：当 clean 或 degraded `check.next` 可用时，运行 `enter-phase --node <check.next>`；只有 `enter-phase` / `load_complete` 负责加载下一 Markdown control surface。随后按 phase 指令运行 source-gate `advance-status --to <source_gate_enum>`，该命令只同步 source-gate status window。继续执行新加载的 phase Markdown。不可跳过 Wave1/Wave2/HITL2/readiness，不能提前写 `final/`。
+5. **Silent hold**：如果 runtime-truth blockers 仍在、trace 不可持久化、route binding 不成立，或 gate 没有返回 legal `check.next`，记录 accepted trace/log diagnostics 后保持当前 phase silent hold。不要浮出、不要自造 pass、不要手改 status。
 
-Agent SHALL 在每个降级步骤记录到 `rb_trace.jsonl`：原问题、已尝试的恢复步骤（按优先级链顺序）、最终降级决策、影响评估（`gap_impact`）。
+Agent SHALL 在每个降级步骤记录到 accepted trace/log surface：原问题、已尝试的恢复步骤、最终决策、影响评估。记录 gap/silent diagnostics 不是 handoff authority。
 
 ### 1.5 终端恢复
 
@@ -215,9 +215,9 @@ The Engine will use this Agent-reported retry hint to return fatigue diagnostics
 
 ### 5.3 Degradation Is Not Failure
 
-Silent degradation (`silent_degradation`, `silent_gap`, `silent_gap_critical`, `silent_unpassable`) is the CORRECT behavior for a non-terminal `stop:no` phase that cannot achieve perfection. Every degradation event recorded via accepted trace/log surface is a successful execution of the contract — the phase is doing exactly what it was designed to do.
+Silent degradation (`silent_degradation`, `silent_gap`, `silent_gap_critical`, `silent_unpassable`) is the CORRECT behavior for a non-terminal `stop:no` phase that cannot achieve perfection, but it is diagnostic unless the gate CLI emits a legal degraded pass with `check.next`. A diagnostic degradation event is not handoff authority and is not permission to skip phases.
 
-When you record a degradation event, you are NOT failing. You are following the contract. Surface to the user would be a contract violation.
+When you record a degradation event, you are following the contract. Surface to the user would be a contract violation.
 
 ---
 

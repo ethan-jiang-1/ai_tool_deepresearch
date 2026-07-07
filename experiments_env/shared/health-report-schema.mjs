@@ -112,10 +112,13 @@ const CacheTrailsSectionSchema = z.object({
   missing: z.number().int().nonnegative().optional(),
 });
 
-const DedupSectionSchema = z.object({
+const SourceRecoverabilitySectionSchema = z.object({
   status: SectionStatusSchema,
   required: z.boolean(),
-  checks: z.number().int().nonnegative().optional(),
+  references: z.number().int().nonnegative().optional(),
+  parseable_source_urls: z.number().int().nonnegative().optional(),
+  mapped_cache_trails: z.number().int().nonnegative().optional(),
+  recoverable: z.number().int().nonnegative().optional(),
   issues: z.number().int().nonnegative().optional(),
 });
 
@@ -145,7 +148,7 @@ export const HealthReportSchema = z.object({
   work_units: WorkUnitsSectionSchema,
   ledger: LedgerSectionSchema,
   cache_trails: CacheTrailsSectionSchema,
-  dedup: DedupSectionSchema,
+  source_recoverability: SourceRecoverabilitySectionSchema,
   issues: z.array(IssueEntrySchema),
 });
 
@@ -160,7 +163,7 @@ export const HealthReportSchema = z.object({
  *   standard — light + gate diagnostics, gate output/trace timeline consistency,
  *              work-unit lifecycle projection
  *   heavy    — standard + submitted ledger, output files, cache trails,
- *              content_dedup evidence
+ *              source recoverability
  */
 export const PROFILE_TABLE = {
   light: {
@@ -170,7 +173,7 @@ export const PROFILE_TABLE = {
     required_sections: ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline', 'work_units'],
   },
   heavy: {
-    required_sections: ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline', 'work_units', 'ledger', 'cache_trails', 'dedup'],
+    required_sections: ['trace', 'legacy_trace', 'bundle_schema', 'gate_attempts', 'timeline', 'work_units', 'ledger', 'cache_trails', 'source_recoverability'],
   },
 };
 
@@ -282,7 +285,7 @@ export function sectionIssues(sectionKey, details) {
 export function buildHealthReport({ bundlePath, profile, sections }) {
   const { topLevelStatus, topLevelIssues } = computeHealthStatus(profile, sections);
 
-  const SECTION_KEYS = ['trace', 'gate_attempts', 'bundle_schema', 'timeline', 'legacy_trace', 'work_units', 'ledger', 'cache_trails', 'dedup'];
+  const SECTION_KEYS = ['trace', 'gate_attempts', 'bundle_schema', 'timeline', 'legacy_trace', 'work_units', 'ledger', 'cache_trails', 'source_recoverability'];
 
   /** Build a section result, always injecting the `required` flag. */
   function section(k) {

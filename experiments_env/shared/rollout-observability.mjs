@@ -153,7 +153,7 @@ function addHealthCheck(filePath) {
   const healthStep = `
 ## Step HH: Post-Execution Health
 
-${profile === 'heavy' ? 'Heavy' : 'Standard'} profile — gate diagnostics, timeline consistency${profile === 'heavy' ? ', ledger, receipts, cache trails, dedup evidence' : ''}.
+${profile === 'heavy' ? 'Heavy' : 'Standard'} profile — gate diagnostics, timeline consistency${profile === 'heavy' ? ', ledger, receipts, cache trails, source recoverability' : ''}.
 
 \`\`\`bash
 node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile ${profile}

@@ -222,7 +222,7 @@ const reason = {
   ok: false,
   work_id: workId,
   reason: 'No real Agent result JSON was provided. This heavy case requires real Agent work and cannot PASS from fixtures.',
-  required_metrics: ['cache_trail_coverage', 'grounding_spot_check', 'url_precision', 'countable_rate', 'gap_rate']
+  required_metrics: ['cache_trail_coverage', 'grounding_spot_check', 'source_recoverability', 'countable_rate', 'gap_rate']
 };
 writeFileSync(`${bundle}/case-163-not-run.json`, `${JSON.stringify(reason, null, 2)}\n`);
 writeFileSync(`${bundle}/case-163-verdict.json`, `${JSON.stringify(reason, null, 2)}\n`);
@@ -271,8 +271,6 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import {
   extractSection,
-  isHomepageUrl,
-  parseReferenceMetadata,
   readOutputDeclarations,
   readSubmittedWorkUnitDeclarations
 } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
@@ -361,11 +359,25 @@ function mapsTrailToRef(trail, ref) {
 
 const mappedRefs = refOutputs.filter((ref) => allTrails.some((trail) => cacheLeafComplete(trail) && mapsTrailToRef(trail, ref)));
 const emptyTrailRefs = refOutputs.filter((ref) => !allTrails.some((trail) => mapsTrailToRef(trail, ref)));
-const urlPrecision = refOutputs.map((ref) => ({
+const sourceRecoverability = refOutputs.map((ref) => {
+  const parseable_source_url = (() => {
+    try {
+      if (!ref.source_url) return false;
+      new URL(ref.source_url);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  const mapped_cache_trail = allTrails.find((trail) => cacheLeafComplete(trail) && mapsTrailToRef(trail, ref)) || null;
+  return {
   path: ref.path,
   source_url: ref.source_url || '',
-  article_level: ref.source_url ? !isHomepageUrl(ref.source_url) : false
-}));
+    parseable_source_url,
+    mapped_cache_trail,
+    recoverable: parseable_source_url && Boolean(mapped_cache_trail)
+  };
+});
 
 function tokens(text) {
   return new Set(String(text).toLowerCase().match(/[a-z][a-z0-9-]{3,}/g) || []);
@@ -419,10 +431,12 @@ const metrics = {
     supported_by_cache_text: sampledFacts.filter((fact) => fact.supported_by_cache_text).length,
     samples: sampledFacts
   },
-  url_precision: {
+  source_recoverability: {
     references: refOutputs.length,
-    article_level: urlPrecision.filter((entry) => entry.article_level).length,
-    details: urlPrecision
+    recoverable: sourceRecoverability.filter((entry) => entry.recoverable).length,
+    parseable_source_urls: sourceRecoverability.filter((entry) => entry.parseable_source_url).length,
+    mapped_cache_trails: sourceRecoverability.filter((entry) => Boolean(entry.mapped_cache_trail)).length,
+    details: sourceRecoverability
   },
   countable_rate: {
     declared_references: refOutputs.length,
@@ -451,7 +465,7 @@ recordPlaybookCheck(bundle, { gate: 'check-reentry', passed: reentryResult.statu
 recordPlaybookCheck(bundle, { gate: 'heavy-health', passed: healthResult.status === 0 && health.status === 'clean', detail: JSON.stringify(health.cache_trails || health) });
 recordPlaybookCheck(bundle, { gate: 'cache-trail-coverage-metric', passed: metrics.cache_trail_coverage.references > 0 && metrics.cache_trail_coverage.percent === 100, detail: JSON.stringify(metrics.cache_trail_coverage) });
 recordPlaybookCheck(bundle, { gate: 'grounding-spot-check-metric', passed: metrics.grounding_spot_check.checked > 0 && metrics.grounding_spot_check.supported_by_cache_text > 0, detail: JSON.stringify(metrics.grounding_spot_check) });
-recordPlaybookCheck(bundle, { gate: 'url-precision-metric', passed: metrics.url_precision.references > 0 && metrics.url_precision.article_level === metrics.url_precision.references, detail: JSON.stringify(metrics.url_precision) });
+recordPlaybookCheck(bundle, { gate: 'source-recoverability-metric', passed: metrics.source_recoverability.references > 0 && metrics.source_recoverability.recoverable === metrics.source_recoverability.references, detail: JSON.stringify(metrics.source_recoverability) });
 recordPlaybookCheck(bundle, { gate: 'countable-rate-metric', passed: metrics.countable_rate.declared_references > 0 && metrics.countable_rate.percent === 100, detail: JSON.stringify(metrics.countable_rate) });
 recordPlaybookCheck(bundle, { gate: 'gap-rate-metric', passed: metrics.gap_rate.gaps === 0, detail: JSON.stringify(metrics.gap_rate) });
 
@@ -459,7 +473,7 @@ console.log(JSON.stringify({ gate, reentry, health, metrics }, null, 2));
 JS
 ```
 
-Expected: the gate passes from submitted work-unit coverage, reentry and health are clean, cache coverage maps each declared reference to complete cache leaves, countable rate is 100%, URL precision is article-level, grounding spot-check has cache-text support, and gap rate is 0%.
+Expected: the gate passes from submitted work-unit coverage, reentry and health are clean, cache coverage maps each declared reference to complete cache leaves, countable rate is 100%, source recoverability is 100%, grounding spot-check has cache-text support, and gap rate is 0%.
 
 ## Step 7: [MAIN/SHELL] Trace Verdict
 

@@ -544,4 +544,27 @@ describe('buildGateResult fatigue diagnostics (GSK-006)', () => {
     assert.ok(joined.includes('idle/no-work summaries'));
     assert.ok(joined.includes('A/B choices'));
   });
+
+  it('orders root-cause diagnostics before downstream symptoms and deduplicates advice', () => {
+    const result = buildGateResult({
+      passed: false,
+      gate: 'wave0-complete',
+      currentNodeRef: 'phases/phase-wave0.md',
+      routing: baseRouting,
+      inspect: [
+        'Count floor not met for reference/00-shared-*.md',
+        '[cache_coverage] FAIL: work-1: cache trail _cache/x — missing files: meta.json',
+        'Delegated output lacks submitted work-unit coverage: artifacts/wave0/topic-a/source.yaml',
+      ],
+      advice: [
+        'Submit delegated outputs through operate-work-unit; filesystem presence and hand-written declarations are diagnostic only.',
+        'Repair work-unit submit/index/ledger drift before rerunning the gate.',
+        'Repair work-unit submit/index/ledger drift before rerunning the gate.',
+      ],
+    });
+
+    assert.match(result.inspect[0], /cache_coverage/);
+    assert.match(result.inspect.at(-1), /Count floor/);
+    assert.equal(result.advice.filter((line) => line.includes('Repair work-unit')).length, 1);
+  });
 });

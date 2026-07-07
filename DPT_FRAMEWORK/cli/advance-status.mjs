@@ -152,6 +152,9 @@ const traceEvent = JSON.stringify({
   from,
   to: targetGateEnum,
   next: nextGateEnum,
+  source_handoff_degraded: handoffCheck.covered ? handoffCheck.handoff.degraded === true : false,
+  source_handoff_degraded_reason: handoffCheck.covered ? handoffCheck.handoff.degradedReason || null : null,
+  source_handoff_degraded_rules: handoffCheck.covered ? handoffCheck.handoff.degradedRules || [] : [],
 });
 
 try {
@@ -185,5 +188,10 @@ try {
   process.exit(1);
 }
 
-console.log(JSON.stringify({ status: 'ok', current_gate: targetGateEnum, next_gate: nextGateEnum }));
+console.log(JSON.stringify({
+  status: 'ok',
+  current_gate: targetGateEnum,
+  next_gate: nextGateEnum,
+  source_handoff_degraded: handoffCheck.covered ? handoffCheck.handoff.degraded === true : false,
+}));
 process.exit(0);

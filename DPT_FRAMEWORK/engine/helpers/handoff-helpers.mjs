@@ -117,6 +117,9 @@ function edgeForAttempt(traceEvent, topology) {
     targetGate: topology.nodeToGate.get(e.next) || null,
     targetGateEnum: topology.nodeToGate.get(e.next) ? gateKeyToEnum(topology.nodeToGate.get(e.next)) : 'none',
     outcome,
+    degraded: e.degraded === true,
+    degradedReason: e.degraded_reason || null,
+    degradedRules: Array.isArray(e.degraded_rules) ? e.degraded_rules : [],
   };
 }
 
@@ -170,6 +173,9 @@ function makeHandoff(traceEvent, edge, events, { requireLoad = false } = {}) {
     targetGate: edge.targetGate,
     targetGateEnum: edge.targetGateEnum,
     outcome: edge.outcome,
+    degraded: edge.degraded === true,
+    degradedReason: edge.degradedReason || null,
+    degradedRules: edge.degradedRules || [],
     sourceAttemptTs: traceEvent.event.ts || null,
     loadComplete: null,
   };
@@ -303,6 +309,9 @@ export function validateSourceGateStatusSync(bundlePath, sourceGateEnum) {
     targetGate: latest.targetGate,
     targetGateEnum: latest.targetGateEnum,
     outcome: latest.outcome,
+    degraded: latest.degraded === true,
+    degradedReason: latest.degradedReason || null,
+    degradedRules: latest.degradedRules || [],
   }, ctx.events, { requireLoad: COVERED_ENTRY_TARGET_NODES.has(latest.targetNode) });
 
   if (!made.ok) {
@@ -356,6 +365,9 @@ export function checkPhaseHandoffPreflight(bundlePath, currentNodeRef) {
     targetGate: latest.targetGate,
     targetGateEnum: latest.targetGateEnum,
     outcome: latest.outcome,
+    degraded: latest.degraded === true,
+    degradedReason: latest.degradedReason || null,
+    degradedRules: latest.degradedRules || [],
   }, ctx.events, { requireLoad: true });
 
   if (!made.ok) {
@@ -378,7 +390,7 @@ export function checkPhaseHandoffPreflight(bundlePath, currentNodeRef) {
   try {
     status = JSON.parse(readFileSync(statusPath, 'utf-8'));
   } catch (err) {
-    return { ok: false, inspect: [`rb_status.json is not valid JSON: ${err.message}`], advice: ['Fix rb_status.json before rerunning this gate.'] };
+    return { ok: false, inspect: [`rb_status.json is not valid JSON: ${err.message}`], advice: ['rb_status.json is Engine-owned. Restore it from checkpoint/rollback or rerun the valid Engine transition path before rerunning this gate; do not hand-edit status authority.'] };
   }
 
   const expectedCurrent = handoff.sourceGateEnum;

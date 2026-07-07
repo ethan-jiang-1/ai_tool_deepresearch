@@ -1,60 +1,21 @@
-// gate-helpers-checks.mjs — Gate rule checks: reference validation, content_dedup, cache_coverage
+// gate-helpers-checks.mjs — Gate rule checks: reference validation and cache_coverage
 // @impl GSK-001, GSK-002, CRC-006
 // Canonical location: DPT_FRAMEWORK/engine/helpers/gate-helpers-checks.mjs
 //
 // Re-exported by gate-helpers.mjs for backward compatibility.
 
 import { existsSync, readFileSync } from 'node:fs';
-import { join, basename } from 'node:path';
-import { parse as parseYaml } from 'yaml';
+import { basename, join } from 'node:path';
 import {
   readOutputDeclarations,
   readSubmittedWorkUnitDeclarations,
-  listMatchingBundleFiles,
   getDeclaredReferencePaths,
-  parseMdFrontmatter,
-  readBundlePlan,
 } from './gate-helpers-readers.mjs';
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Similarity & Text Utilities
+// Markdown Text Utilities
 // ═══════════════════════════════════════════════════════════════════════════
-
-export function tokenizeForSimilarity(text) {
-  if (!text) return [];
-  const tokens = [];
-  const cjk = /\p{Script=Han}/u;
-  let i = 0;
-  while (i < text.length) {
-    if (cjk.test(text[i])) {
-      if (i + 1 < text.length && cjk.test(text[i + 1])) {
-        tokens.push(text[i] + text[i + 1]);
-      }
-      i++;
-    } else if (/[a-zA-Z]/.test(text[i])) {
-      let word = '';
-      while (i < text.length && /[a-zA-Z0-9]/.test(text[i])) {
-        word += text[i].toLowerCase();
-        i++;
-      }
-      if (word.length > 0) tokens.push(word);
-    } else {
-      i++;
-    }
-  }
-  return tokens;
-}
-
-/** Jaccard similarity: |A ∩ B| / |A ∪ B|. */
-export function jaccardSimilarity(tokensA, tokensB) {
-  const setA = new Set(tokensA);
-  const setB = new Set(tokensB);
-  if (setA.size === 0 && setB.size === 0) return 1;
-  const intersect = new Set([...setA].filter((x) => setB.has(x)));
-  const union = new Set([...setA, ...setB]);
-  return intersect.size / union.size;
-}
 
 /** Extract a named Markdown section body. */
 export function extractSection(mdContent, sectionName) {
@@ -62,28 +23,6 @@ export function extractSection(mdContent, sectionName) {
   const re = new RegExp(`##{1,3}\\s+${escaped}\\s*\\n([\\s\\S]*?)(?=\\n##{1,3}\\s|$)`, 'i');
   const match = mdContent.match(re);
   return match ? match[1].trim() : '';
-}
-
-/** Normalize URL: lowercase scheme+host, remove fragment, trim trailing slash. */
-function normalizeUrl(url) {
-  try {
-    const u = new URL(url);
-    u.hash = '';
-    u.pathname = u.pathname.replace(/\/+$/, '');
-    return u.toString().toLowerCase();
-  } catch {
-    return url.toLowerCase().replace(/#.*$/, '').replace(/\/+$/, '');
-  }
-}
-
-export function isHomepageUrl(url) {
-  try {
-    const u = new URL(url);
-    const path = u.pathname.replace(/\/+$/, '');
-    if (path === '' || path === '/' || /\/index\.(html?|php|asp|jsp)$/i.test(path)) return true;
-    const depth = path.split('/').filter(Boolean).length;
-    return depth < 2;
-  } catch { return false; }
 }
 
 
@@ -165,7 +104,11 @@ export function checkReferenceSourceUrls(files) {
       continue;
     }
     for (const url of urls) {
-      if (isHomepageUrl(url)) inspect.push(`Homepage or shallow source_url in ${file.relPath}: ${url}`);
+      try {
+        new URL(url);
+      } catch {
+        inspect.push(`Invalid metadata source_url in ${file.relPath}: ${url}`);
+      }
     }
   }
   return { passed: inspect.length === 0, inspect };
@@ -192,132 +135,6 @@ export function checkReferenceLedgerCoverage(bundlePath, files) {
     passed: missing.length === 0,
     inspect: missing.map((p) => `Reference file is not declared in rb_output_declarations.jsonl: ${p}`),
   };
-}
-
-const SELF_REF_PATTERNS = [
-  /this\s+reference\s+supplements/i,
-  /this\s+document\s+provides/i,
-  /this\s+file\s+contains/i,
-  /本文(件|档)?(用于|提供|补充)/,
-  /本参考(用于|提供|补充)/,
-];
-
-// ═══════════════════════════════════════════════════════════════════════════
-// content_dedup Gate Check
-// ═══════════════════════════════════════════════════════════════════════════
-
-export function checkContentDedup(bundlePath, threshold = {}) {
-  const jaccardThreshold = threshold.jaccard ?? 0.8;
-  const checkUrlDedup = threshold.url_dedup !== false;
-  const checkHomepage = threshold.homepage_detect !== false;
-  const checkSelfRef = threshold.self_ref_detect !== false;
-
-  const inspect = [];
-  const advice = [];
-
-  const declarations = readOutputDeclarations(bundlePath);
-  if (declarations.length === 0) {
-    return {
-      passed: false,
-      inspect: ['rb_output_declarations.jsonl is missing or empty — no completed Agent output declarations available'],
-      advice: ['Submit delegated reference-producing work units through operate-work-unit so rb_output_declarations.jsonl contains Engine-written rows.'],
-    };
-  }
-
-  // Collect reference entries with content
-  const references = [];
-  for (const decl of declarations) {
-    for (const entry of decl.output_files) {
-      if (entry.role === 'reference') {
-        const filePath = join(bundlePath, entry.path);
-        let content = '';
-        if (existsSync(filePath)) content = readFileSync(filePath, 'utf-8');
-        references.push({
-          path: entry.path,
-          source_url: entry.source_url || '',
-          keyFacts: extractSection(content, 'Key Facts'),
-        });
-      }
-    }
-  }
-
-  if (references.length === 0) {
-    return {
-      passed: false,
-      inspect: ['rb_output_declarations.jsonl contains no role=reference output declarations'],
-      advice: ['Return delegated reference-producing tasks through work-unit submit so reference files are declared in rb_output_declarations.jsonl.'],
-    };
-  }
-
-  let passed = true;
-
-  // URL Dedup
-  if (checkUrlDedup) {
-    const urlMap = new Map();
-    for (const ref of references) {
-      if (!ref.source_url) {
-        passed = false;
-        inspect.push(`Missing source_url in declared reference "${ref.path}"`);
-        advice.push('Every declared reference output must include a non-empty source_url.');
-        continue;
-      }
-      const norm = normalizeUrl(ref.source_url);
-      if (urlMap.has(norm)) {
-        passed = false;
-        inspect.push(`URL duplicate: "${ref.path}" and "${urlMap.get(norm)}" share normalized URL ${norm}`);
-        advice.push('Duplicate source URL detected.');
-      } else {
-        urlMap.set(norm, ref.path);
-      }
-    }
-  }
-
-  // Homepage Detection
-  if (checkHomepage) {
-    for (const ref of references) {
-      if (!ref.source_url) continue;
-      const urls = ref.source_url.split(';').map((u) => u.trim()).filter(Boolean);
-      for (const url of urls) {
-        if (isHomepageUrl(url)) {
-          passed = false;
-          inspect.push(`Homepage URL in "${ref.path}": ${url}`);
-          advice.push('Replace homepage URL with a specific article URL.');
-        }
-      }
-    }
-  }
-
-  // Self-Referential Language
-  if (checkSelfRef) {
-    for (const ref of references) {
-      if (!ref.keyFacts) continue;
-      for (const pattern of SELF_REF_PATTERNS) {
-        if (pattern.test(ref.keyFacts)) {
-          passed = false;
-          inspect.push(`Self-referential Key Facts in "${ref.path}"`);
-          advice.push('Key Facts describes the file itself. Rewrite with factual content.');
-          break;
-        }
-      }
-    }
-  }
-
-  // Jaccard Clone Detection
-  for (let i = 0; i < references.length; i++) {
-    for (let j = i + 1; j < references.length; j++) {
-      const kfA = references[i].keyFacts;
-      const kfB = references[j].keyFacts;
-      if (!kfA || !kfB) continue;
-      const sim = jaccardSimilarity(tokenizeForSimilarity(kfA), tokenizeForSimilarity(kfB));
-      if (sim >= jaccardThreshold) {
-        passed = false;
-        inspect.push(`Jaccard clone (${sim.toFixed(3)} >= ${jaccardThreshold}): "${references[i].path}" vs "${references[j].path}"`);
-        advice.push('Near-duplicate Key Facts detected. This often indicates template or script-generated reference files. Use work-unit submit with real WebSearch+WebFetch evidence to produce genuinely unique reference files. Do NOT use template substitution or batch scripts.');
-      }
-    }
-  }
-
-  return { passed, inspect, advice };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

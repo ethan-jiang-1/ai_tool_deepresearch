@@ -28,10 +28,10 @@ describe('framework version management', () => {
     const changelog = read('CHANGELOG.md');
     const latest = latestChangelogEntry(changelog);
 
-    assert.equal(latest.version, 'v0.6');
-    assert.match(latest.body, /current_node/);
-    assert.match(latest.body, /queue postconditions/);
-    assert.match(latest.body, /topic slugs/);
+    assert.equal(latest.version, 'v0.7');
+    assert.match(latest.body, /degraded handoff/);
+    assert.match(latest.body, /runtime-truth blockers/);
+    assert.match(latest.body, /historical content-similarity/);
 
     const nonemptyLines = latest.body.split(/\r?\n/).filter((line) => line.trim());
     assert.ok(nonemptyLines.length <= 2, 'latest changelog entry should stay concise');
@@ -41,7 +41,7 @@ describe('framework version management', () => {
     const latest = latestChangelogEntry(read('CHANGELOG.md'));
     const run = read('DPT_FRAMEWORK/RUN.md');
 
-    assert.match(run, /^# RUN\.md[^\n]*\n\n> \*\*DPT_FRAMEWORK v0\.6\*\*/);
+    assert.match(run, /^# RUN\.md[^\n]*\n\n> \*\*DPT_FRAMEWORK v0\.7\*\*/);
     assert.ok(run.includes(`DPT_FRAMEWORK ${latest.version}`));
     assert.doesNotMatch(run, /v0\.5 work-unit path/);
   });
@@ -51,9 +51,8 @@ describe('framework version management', () => {
   });
 
   it('uses the proposal-declared version target for this change', () => {
-    const proposal = read('openspec/changes/stabilize-runtime-position-and-queue/proposal.md');
-    assert.match(proposal, /target framework version `v0\.6`/);
-    assert.match(proposal, /proposal-declared `v0\.6`/);
+    const proposal = read('openspec/changes/simple-gate-quality-loop/proposal.md');
+    assert.match(proposal, /target framework version is `v0\.7`/);
   });
 
   it('guides future behavior changes to update root changelog and RUN banner', () => {

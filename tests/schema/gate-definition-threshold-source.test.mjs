@@ -41,6 +41,23 @@ describe('Gate definitions with threshold_source', () => {
     }
   });
 
+  it('wave gate definitions omit retired content heuristic rules', () => {
+    for (const filename of ['gate-wave0-complete.definition.json', 'gate-wave1-complete.definition.json']) {
+      const def = loadDef(filename);
+      const checks = def.rules.map((rule) => rule.check);
+      const ids = def.rules.map((rule) => rule.id);
+      assert.equal(checks.includes('content_dedup'), false, `${filename} must not include retired content_dedup`);
+      assert.equal(ids.includes('content_dedup'), false, `${filename} must not include retired content_dedup id`);
+      assert.equal(JSON.stringify(def).includes('jaccard'), false, `${filename} must not include retired Jaccard thresholds`);
+      assert.equal(JSON.stringify(def).includes('homepage_detect'), false, `${filename} must not include retired homepage detection`);
+    }
+
+    const wave1 = loadDef('gate-wave1-complete.definition.json');
+    assert.equal(wave1.rules.some((rule) => rule.check === 'reference_source_url_article_level'), false);
+    assert.equal(wave1.rules.some((rule) => rule.id === 'source_url_article_level'), false);
+    assert.ok(wave1.rules.some((rule) => rule.check === 'reference_source_url_parseable'));
+  });
+
   // 8d.3
   it('all other gate definition JSONs parse without error (8d.3)', () => {
     const allDefs = [

@@ -1920,7 +1920,13 @@ export function inspectWorkUnits(bundleDir, { nowMs = Date.now(), emitDiagnostic
   } catch (error) {
     const invalidIssues = [`work-unit index invalid: ${error.message}`];
     if (emitDiagnostics) emitWorkUnitInspectDiagnostics(bundleDir, { issues: invalidIssues, source: diagnosticSource });
-    return { passed: false, check: false, inspect: invalidIssues, projection: emptyProjection, advice: 'Repair _work_units/_index.json before continuing.' };
+    return {
+      passed: false,
+      check: false,
+      inspect: invalidIssues,
+      projection: emptyProjection,
+      advice: '_work_units/_index.json is Engine-owned. Restore it from a checkpoint or repair through Engine work-unit tooling before continuing; do not hand-edit work-unit authority files.',
+    };
   }
 
   const projection = computeWorkUnitHealthProjection(index.work_units, {

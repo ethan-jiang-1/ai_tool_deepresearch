@@ -82,9 +82,9 @@ Delegated task MUST be claimed as a work unit and accepted through `operate-work
 
 ### 16. 禁止用脚本或模板批量生成 reference 文件
 
-Phase Agent MUST NOT use scripts (Python, bash, node, or any language) or template substitution to batch-generate `reference/*.md` files. Every delegated reference file MUST be produced by a real sub-agent through the queue demand -> work unit -> sub-agent -> submit -> ledger -> gate path, with real WebSearch + WebFetch execution and unique source content. Template-generated files share near-identical Key Facts and will be caught by `content_dedup` Jaccard clone detection (similarity >= 0.8), wasting fix cycles and eroding trust.
+Phase Agent MUST NOT use scripts (bash, node, or any language) or template substitution to batch-generate `reference/*.md` files. Every delegated reference file MUST be produced by a real sub-agent through the queue demand -> work unit -> sub-agent -> submit -> ledger -> gate path, with real WebSearch + WebFetch execution and source-grounded content. Template-generated files are non-authoritative because they lack valid work-unit submit, declaration ledger coverage, cache trails, provenance/hash binding, and accepted source/reference schema evidence.
 
-正确路径：claim `wave1_topic_deepening` work units → spawn `dpt-evidence-extractor` sub-agent for each claimed task → sub-agent performs real WebSearch + WebFetch → produces unique `reference/{topic}-<source-slug>.md` files with genuinely different source content → submit by `work_id` → gate `content_dedup` passes naturally.
+正确路径：claim `wave1_topic_deepening` work units → spawn `dpt-evidence-extractor` sub-agent for each claimed task → sub-agent performs real WebSearch + WebFetch → produces `reference/{topic}-<source-slug>.md` files and `_cache/` leaf trails grounded in fetched source content → submit by `work_id` → Engine validates ledger/provenance/hash/cache authority before the gate can count the outputs.
 
 If the Agent finds itself wanting to "create many reference files quickly," the correct answer is queue-driven sub-agent parallel execution, not a script.
 

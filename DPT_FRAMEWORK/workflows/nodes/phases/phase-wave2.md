@@ -251,5 +251,5 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 - 禁止保留 `__BACKFILL_WAVE2_JUDGMENT__` or `__BACKFILL_PENDING_QUESTIONS__` after completed backfill.
 - 禁止从 synthesis prose alone 回填 Wave2; backfill must preserve W2F ids, return-map fields, and ledger/index/source refs.
 - 禁止 inventing references when targeted search fails; record limitation or route to HITL2.
-- 禁止 using duplicate URLs as independent backing for P0/P1 findings.
+- 禁止 treating the same submitted reference/cache trail as independent backing for P0/P1 findings.
 - 禁止 bypassing gate JSON `inspect`/`advice`; repair, refill, defer, or record limitation from real feedback.

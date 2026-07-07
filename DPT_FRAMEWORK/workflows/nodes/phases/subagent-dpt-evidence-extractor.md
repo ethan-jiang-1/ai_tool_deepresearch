@@ -191,7 +191,7 @@ Rules:
 - Metadata lines use `- key: value`; `---` frontmatter is forbidden.
 - The 9 metadata fields are required exactly as shown.
 - The 5 section headers are required exactly as shown.
-- `source_url` must be the specific source page, not a homepage.
+- `source_url` must be present, URL-parseable, and recoverable through submitted cache/source trails.
 - `## Key Facts` must contain at least 5 concrete bullet facts from the fetched page.
 
 **Output serialization:** All structured output files MUST be written via standard library serialization, never hand-concatenated:
