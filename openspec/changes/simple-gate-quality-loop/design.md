@@ -37,7 +37,7 @@ Change 1 已经先处理 runtime position 和 queue durability。本 change 处�
 | `BUG-048` | Gate 重复失败时必须有合法、trace-durable 的 degraded advance path，避免死锁或手改状态。 | `gate-skeleton` degraded pass; `cli-phase-transition` degraded handoff witness; tasks 3.1-3.3, 5.4. | 只允许软质量/profile mismatch 类规则降级；runtime-truth blockers fail closed。 |
 | `BUG-049` | 降级也必须沿 phase chain 继续，不能跳 Wave1/Wave2/HITL2 直接写 `final/`。 | `silent-wave-execution` no phase skip/final shortcut; `cli-phase-transition` route-bound enter-phase; proposal regression coverage; tasks 3.4, 5.5. | Wave1/Wave2 深度恢复属于后续 `restore-wave-depth-contracts`，但跳 phase 保护在本 change 保持覆盖。 |
 | `BUG-050` | `content_dedup` homepage/path-depth false positive 不应阻塞 gate 或产生修复噪声。 | `gate-content-dedup` REMOVED; `research-wave-gate-implementation` RWG-015 removal; `evidence-extraction` and `rerun-topic-integration` URL parse-only rules; tasks 2.1-2.8, 5.1-5.3. | 本 change 采纳比原计划更简单的处理：直接 retire，不保留 diagnostic-only。 |
-| `BUG-051` | 手改 ledger 触发级联 distrust；gate feedback 必须阻止手工修 authority files 并指向有效路径。 | `work-unit-provenance-gate` root-cause diagnostics; `gate-skeleton` manual-edit prohibition; `research-wave-gate-implementation` repair-targeted diagnostics; tasks 4.2-4.4, 5.6. | 不把 JSONL 注释头作为硬要求；避免为防手改引入无效文件格式。 |
+| `BUG-051` | 手改 ledger 触发级联 distrust；gate feedback 必须阻止手工修 authority files 并指向有效路径。 | `work-unit-provenance-gate` root-cause diagnostics; `gate-skeleton` manual-edit prohibition; `research-wave-gate-implementation` repair-targeted diagnostics; tasks 4.2-4.5, 5.6. | 不把 JSONL 注释头作为硬要求；避免为防手改引入无效文件格式。 |
 | `BUG-053` | Provenance/cache/ledger 级联失败要分清 root cause 和 symptom；gate 自身必须 KISS，不能成为质量风险源。 | `check-inspect-feedback` root-cause-first feedback; `gate-skeleton` KISS quality loop; `work-unit-provenance-gate` cache vs ledger/hash separation; tasks 4.1-4.4, 5.6. | Rebuild/recompute 工具不是默认新增目标；只有 Engine-mediated 且 authority-preserving 时才可进入实现。 |
 
 ## Decisions
@@ -54,7 +54,7 @@ Alternative rejected: keep brittle checks as diagnostic-only advice. Gate feedba
 
 `gate-content-dedup` is treated as a historical patch capability. Apply should remove active helper exports, gate definition entries, CLI dispatch branches, positive tests, current docs, current playbooks, runner entries, health checks, schemas, fixtures, JSON/YAML metadata, and current planning/backlog guidance that present it as current proof.
 
-`GAC-*` IDs remain in `openspec/governance/req-registry.yaml` only if required by RET-005's no-delete registry rule. If retained, they are tombstones: every `GAC-*` entry is marked `[DEPRECATED]`, the `GAC` prefix is marked `no spec directory`, and there is no current main spec, implementation, test, playbook, health check, schema/fixture/runner metadata, current backlog guidance, or Agent-facing guidance that treats `gate-content-dedup` as active.
+`GAC-*` IDs remain in `openspec/governance/req-registry.yaml` only if required by RET-005's no-delete registry rule. If retained, they are tombstones: every `GAC-*` entry is marked `[DEPRECATED]`, the `GAC` prefix is marked `no spec directory`, and there is no current main spec, implementation, test, playbook, health check, schema/fixture/runner metadata, current backlog guidance, or Agent-facing guidance that treats `gate-content-dedup` as active. This tombstoning must be sequenced in archive/sync after the active delta no longer declares `GAC-*`, or as an atomic archive step that keeps `check-project-reqs.mjs` free of `reusedRetired` failures.
 
 Alternative rejected: move `checkContentDedup()` to an inspect command. That would keep the historical patch alive as a source of MD Controller repair pressure and make future regressions easier.
 
@@ -85,7 +85,7 @@ Gate output should separate root causes from cascade symptoms. For example, cach
 - Degraded pass can be mistaken for clean quality pass -> preserve `degraded: true` in trace/inspect/status consumers and test downstream behavior.
 - Retiring `content_dedup` touches many stale docs/tests/playbooks -> add static/hygiene coverage so no current surface still teaches it as proof.
 - Reference countability change may increase counts for shallow-looking URLs -> acceptable because cache/source recoverability and provenance checks are the real authority.
-- Registry deprecation can create governance churn -> keep `GAC-*` IDs in their original group, mark `[DEPRECATED]`, and run governance checks before archive.
+- Registry deprecation can create governance churn -> keep retired IDs such as `GAC-*`, `RWG-015`, `RTI-004`, and `EXR-003` in their original groups, mark `[DEPRECATED]` only during archive/sync when the active delta declarations are gone, and run governance checks before archive completes.
 
 ## Migration Plan
 
@@ -95,7 +95,7 @@ Gate output should separate root causes from cascade symptoms. For example, cach
 - Remove current playbook/runner/health expectations that require `content_dedup` evidence.
 - Remove current non-code metadata and fixtures that require or demonstrate `content_dedup`, duplicate URL, homepage/shallow URL, Jaccard, self-reference, or `source_url_article_level` as current proof.
 - Update Agent-facing docs that currently promise `content_dedup` will catch template-generated or duplicate references; replace with work-unit submit, cache, ledger, and provenance authority guidance.
-- Mark retired requirement IDs as deprecated tombstones and remove the active `gate-content-dedup` main spec during apply/archive per OpenSpec governance.
+- Mark retired requirement IDs as deprecated tombstones and remove the active `gate-content-dedup` main spec during archive/sync per OpenSpec governance, not while the active delta still declares those IDs.
 - Update repo-root `CHANGELOG.md` and `DPT_FRAMEWORK/RUN.md` to target `v0.7`.
 
 ## Open Questions

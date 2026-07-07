@@ -14,7 +14,7 @@
 - [ ] 2.5 Implement RTI-003/RTI-004: remove `source_url_article_level` and retired `content_dedup` expectations from rerun topic gate guidance and any related gate/check surfaces.
 - [ ] 2.6 Implement EXR-003/AGT-009: remove or rewrite `experiments_playbook/exp_engine-boundary/case-403-light-gate-content-dedup.md`, runner table entries, shared fixture helpers, and health-report checks so no current experiment requires content_dedup, duplicate URL, homepage, Jaccard, or self-reference failures.
 - [ ] 2.7 Implement GSK-008/GSK-009: update Agent-facing anti-cheating / quality guidance that currently says `content_dedup` will catch generated or duplicate references; replace it with work-unit submit, ledger, cache, provenance, and hash authority guidance.
-- [ ] 2.8 Implement GSK-008/GSK-009/GAC-001..GAC-009: add or run a current-surface hygiene scan that fails positive current references to retired content heuristics outside `openspec/changes/archive/` and registry tombstones.
+- [ ] 2.8 Implement GSK-008/GSK-009/GAC-001..GAC-009: add or run a current-surface hygiene scan that fails positive current references to retired content heuristics outside `openspec/changes/archive/`, this change's REMOVED/migration wording, and registry tombstones.
 
 ## 3. Degraded Handoff Contract
 
@@ -41,11 +41,11 @@
 - [ ] 5.6 Add root-cause-first diagnostic tests for CHI-001/GSK-008/RWG-016/WPG-008 proving cache/provenance/ledger/hash cascades identify the root cause and avoid manual authority edit advice.
 - [ ] 5.7 Add experiment runner/health tests for EXR-003/AGT-009 proving current runner surfaces no longer require `content_dedup` evidence and evidence-extraction metrics report source recoverability instead of homepage/shallow URL heuristics.
 
-## 6. Registry, Version, And Current Surface Cleanup
+## 6. Registry, Version, And Archive-Ready Cleanup
 
-- [ ] 6.1 Update `openspec/governance/req-registry.yaml` for GAC-001 through GAC-009, EXR-003, and RTI-004 according to RET-005 deprecation rules; keep IDs in their original groups and append `[DEPRECATED]`.
-- [ ] 6.2 Remove active `openspec/specs/gate-content-dedup/` during archive/apply flow so `gate-content-dedup` is no longer a current accepted capability after this change is complete.
-- [ ] 6.3 Update current main specs/docs/playbooks/JSON/YAML/schema fixtures/runner metadata outside `openspec/changes/archive/` so no active surface presents retired content heuristics as gate, advice, experiment proof, health evidence, or implementation guidance.
+- [ ] 6.1 Prepare `openspec/governance/req-registry.yaml` retirement sequencing for GAC-001 through GAC-009, RWG-015, EXR-003, and RTI-004 according to RET-005; do not append `[DEPRECATED]` while this active delta still declares those IDs. The actual tombstone update SHALL happen during archive/sync after active delta declarations are removed, or as an atomic archive step that keeps `check-project-reqs.mjs` free of `reusedRetired` failures.
+- [ ] 6.2 During archive/sync, remove active `openspec/specs/gate-content-dedup/` so `gate-content-dedup` is no longer a current accepted capability after this change is complete.
+- [ ] 6.3 During apply, clean current code/docs/playbooks/JSON/YAML/schema fixtures/runner metadata outside `openspec/changes/archive/`; during archive/sync, clean accepted main specs so no active surface presents retired content heuristics as gate, advice, experiment proof, health evidence, or implementation guidance.
 - [ ] 6.4 Implement VEM-002/VEM-003/VEM-004: update repo-root `CHANGELOG.md` with target version `v0.7` and update `DPT_FRAMEWORK/RUN.md` banner to `DPT_FRAMEWORK v0.7`.
 
 ## 7. Verification

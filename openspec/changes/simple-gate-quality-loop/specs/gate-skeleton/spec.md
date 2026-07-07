@@ -2,7 +2,18 @@
 
 > req: GSK-006, GSK-007, GSK-008, GSK-009
 
-### Requirement: Gate CLI SHALL support trace-durable degraded pass for eligible repeated failures
+### Requirement: Gate CLI accepts agent-reported attempt hint for fatigue diagnostics
+
+Lifecycle gate CLIs MAY use an Agent-reported or Engine-derived attempt count as one input to degraded-pass eligibility, but the attempt count alone SHALL NOT change gate truth or authorize handoff. A degraded pass MAY be considered only after the configured fatigue threshold has been reached and the gate can still prove the runtime-truth preconditions required by the lifecycle handoff contract.
+
+#### Scenario: Attempt hint does not bypass runtime truth
+
+- **WHEN** a wave gate is invoked with an attempt count at or above fatigue threshold
+- **AND** the gate has a missing submitted work-unit ledger row, stale `delegated_in_flight`, invalid status window, failed handoff preflight, hash drift, nonce mismatch, or non-durable trace write
+- **THEN** the gate SHALL NOT emit a degraded pass
+- **AND** inspect/advice SHALL name the runtime-truth blocker
+
+### Requirement: Lifecycle gate handoff preflight (GSK-007)
 
 Lifecycle gate CLIs SHALL support a degraded pass outcome for eligible repeated gate failures. A degraded pass is a pass for phase handoff purposes only; it SHALL be distinguishable from a clean pass and SHALL NOT assert that all normal quality rules passed.
 
@@ -27,12 +38,6 @@ A degraded pass SHALL set `check.passed: true`, `check.degraded: true`, and `che
 - **AND** `check.next` SHALL name the normal next lifecycle node
 - **AND** `rb_trace.jsonl` SHALL contain a matching degraded `gate_attempt`
 
-#### Scenario: Runtime-truth failure cannot degrade
-
-- **WHEN** a wave gate has a missing submitted work-unit ledger row, stale `delegated_in_flight`, invalid status window, failed handoff preflight, hash drift, or nonce mismatch
-- **THEN** the gate SHALL NOT emit a degraded pass
-- **AND** the gate SHALL fail closed with inspect/advice naming the runtime-truth blocker
-
 #### Scenario: Degraded pass is not clean quality evidence
 
 - **WHEN** a downstream tool reads a degraded `gate_attempt`
@@ -40,7 +45,7 @@ A degraded pass SHALL set `check.passed: true`, `check.degraded: true`, and `che
 - **AND** it SHALL preserve `degraded: true` and the degraded rule details as quality risk context
 - **AND** it SHALL NOT report the source phase as a clean quality pass
 
-### Requirement: Gate feedback SHALL separate root causes from symptoms
+### Requirement: Cascade-masked diagnostics remain non-authority (GSK-008)
 
 Gate quality-control loops SHALL stay KISS: blocking checks MUST be deterministic, low false-positive, independently explainable, and repairable through accepted Engine or Agent workflow paths. A gate SHALL NOT add broad heuristic patches that themselves require extra quality-control logic, diagnostic-only exceptions, or repeated false-positive handling to be usable.
 
@@ -54,9 +59,8 @@ At minimum:
 - brittle content heuristics SHALL NOT be patched into phase-boundary gates as blocking rules or diagnostic-only gate advice;
 - blocking root causes SHALL be identified before symptom/cascade diagnostics;
 - symptom diagnostics SHALL name their upstream cause when known;
-- advice SHALL avoid duplicate repair instructions for failures that will resolve when the root cause is repaired;
-- advice SHALL stay concise enough for an Agent to act without losing the phase context; and
-- advice SHALL NOT tell the Agent to hand-edit runtime authority files such as `rb_status.json`, `rb_output_declarations.jsonl`, `_work_units/_index.json`, or hash-bound work-unit result surfaces.
+- advice SHALL avoid duplicate repair instructions for failures that will resolve when the root cause is repaired; and
+- advice SHALL stay concise enough for an Agent to act without losing the phase context.
 
 #### Scenario: Brittle heuristic is removed instead of patched again
 
@@ -70,6 +74,12 @@ At minimum:
 - **THEN** inspect SHALL identify cache coverage as the root cause
 - **AND** downstream provenance symptoms SHALL be marked as symptoms or cascade details
 - **AND** advice SHALL give one Engine-mediated repair target rather than separate manual edits for every symptom
+
+### Requirement: Gate CLI exit-code behavior aligns with framework convention
+
+Gate CLI exit codes SHALL continue to express coarse pass/fail/invocation status only. Fatigue, degraded continuation, high-friction reassurance, root-cause ordering, and manual-edit prohibitions SHALL be expressed through structured `check`, `inspect`, `advice`, durable diagnostics, or Agent-readable Markdown rather than by inventing new exit-code meanings.
+
+Advice SHALL NOT tell the Agent to hand-edit runtime authority files such as `rb_status.json`, `rb_output_declarations.jsonl`, `_work_units/_index.json`, or hash-bound work-unit result surfaces.
 
 #### Scenario: Advice does not recommend manual authority edits
 

@@ -28,8 +28,8 @@ None.
 - `gate-skeleton`: degraded pass contract, degradation eligibility boundaries, and root-cause-first gate feedback behavior.
 - `cli-phase-transition`: degraded pass trace events are consumable by `enter-phase` and source-gate `advance-status` only when route-bound and trace-durable.
 - `silent-wave-execution`: `stop: no` fatigue behavior uses silent degraded continuation without surfacing or skipping required phases.
-- `research-wave-gate-implementation`: Wave0/Wave1 gates remove `content_dedup` entirely from active gate definitions and CLI evaluation; degraded-flow scenarios keep premature-final/status-drift protections covered.
-- `gate-content-dedup`: retire this historical patch capability. Apply removes the active helper/rule/tests/docs and marks `GAC-*` requirement IDs deprecated while preserving registry history.
+- `research-wave-gate-implementation`: Wave0/Wave1 gates remove `content_dedup` entirely from active gate definitions and CLI evaluation; archive/sync retires `RWG-015`; degraded-flow scenarios keep premature-final/status-drift protections covered.
+- `gate-content-dedup`: retire this historical patch capability. Apply removes active helper/rule/tests/docs surfaces; archive/sync removes the accepted main spec and marks `GAC-*` requirement IDs deprecated while preserving registry history.
 - `evidence-extraction`: reference countability removes homepage/shallow URL, duplicate URL, Jaccard, self-reference, and retired `content_dedup` heuristics; countability stays grounded in ledger, parseable metadata, accepted status, Core Content Capture, and Key Facts structure.
 - `rerun-topic-integration`: rerun Wave1 gate quality rules remove `source_url_article_level` and retired `content_dedup` requirements; source URL checks only validate presence/parseability while cache/ledger/provenance own authority.
 - `experiment-ref-integrity`: retire current `case-403` content_dedup proof and remove content_dedup expectations from current runner/health surfaces.

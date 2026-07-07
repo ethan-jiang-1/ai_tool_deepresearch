@@ -2,7 +2,7 @@
 
 > req: CHI-001
 
-### Requirement: Inspect feedback SHALL distinguish root causes from cascade symptoms
+### Requirement: Inspect diagnoses Check failures and generates feedback
 
 When Inspect reports multiple failures from the same checkpoint, it SHALL distinguish root causes from downstream symptoms whenever the Engine can determine the dependency. Root-cause diagnostics SHALL appear before symptom diagnostics in the Agent-facing feedback surface.
 

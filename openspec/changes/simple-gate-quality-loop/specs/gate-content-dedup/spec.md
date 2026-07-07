@@ -6,7 +6,7 @@
 
 **Reason**: `content_dedup` was a historical patch for earlier delegated-output bugs. Current quality authority belongs to work-unit submit, declaration ledger coverage, cache trail validation, provenance/hash checks, source/reference schema checks, and phase handoff witnesses. Keeping a separate dedup patch would add second-order quality logic to the quality loop itself.
 
-**Migration**: Remove `checkContentDedup()` as an active gate helper and remove all current production guidance that treats `content_dedup` as a gate, diagnostic, or advice surface. Ledger input authority remains covered by `agent-output-declaration`, `work-unit-provenance-gate`, and `research-wave-gate-implementation`. If registry entries must remain for no-delete traceability, they SHALL be `[DEPRECATED]` tombstones only; `gate-content-dedup` SHALL have no current main spec directory after archive.
+**Migration**: Remove `checkContentDedup()` as an active gate helper and remove all current production guidance that treats `content_dedup` as a gate, diagnostic, or advice surface. Ledger input authority remains covered by `agent-output-declaration`, `work-unit-provenance-gate`, and `research-wave-gate-implementation`. If registry entries must remain for no-delete traceability, they SHALL be `[DEPRECATED]` tombstones only after archive/sync removes this active delta declaration path; `gate-content-dedup` SHALL have no current main spec directory after archive.
 
 #### Scenario: content_dedup input discovery is no longer an active contract
 
