@@ -4,7 +4,7 @@
 
 ### Requirement: Work-unit pipeline SHALL be the sole production delegated-work path
 
-Production delegated work SHALL use the path `queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate`. A work unit SHALL mean one Engine-allocated delegated execution attempt for one queue demand item. A wave, phase, queue item, runtime thread, or filesystem artifact SHALL NOT be called a work unit unless it is the Engine-allocated attempt envelope.
+Production delegated work SHALL use the path `queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate` inside the active runtime bundle root. A work unit SHALL mean one Engine-allocated delegated execution attempt for one queue demand item. A wave, phase, queue item, runtime thread, or filesystem artifact SHALL NOT be called a work unit unless it is the Engine-allocated attempt envelope. Bare work-unit paths such as `_work_units/waveN/{work_id}/` SHALL resolve under the active bundle root.
 
 Current production-facing surfaces outside `openspec/changes/archive/` SHALL NOT describe old relay/slot mechanisms, old delegated ledger rows, or invalid old queue slot shapes as active delegated-work paths. This applies to active main specs, active change deltas, framework docs, runtime docs, tests, guidelines, current runner surfaces, and runnable experiment playbooks. Archived OpenSpec changes are historical record and SHALL NOT be cleaned or treated as current drift.
 
@@ -36,7 +36,7 @@ Old delegated-work mechanisms include retired relay commands and modules, old re
 
 ### Requirement: Gates SHALL read submitted work-unit ledger coverage
 
-Delegated gate coverage SHALL come only from Engine-written work-unit rows in `rb_output_declarations.jsonl`. `_work_units/_index.json`, manifest, result, receipt, beacon, cache, and output files SHALL be cross-check surfaces, not independent pass coverage.
+Delegated gate coverage SHALL come only from Engine-written work-unit rows in bundle-root `rb_output_declarations.jsonl`. Bundle-root `_work_units/_index.json`, manifest, result, receipt, beacon, cache, and output files SHALL be cross-check surfaces, not independent pass coverage.
 
 Current specs, docs, tests, and playbooks SHALL NOT present relay slot files, old slot result references, old relay commit/merge events, or old delegated queue completion as alternate gate coverage.
 

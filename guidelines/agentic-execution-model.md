@@ -40,7 +40,9 @@ The surviving actor is the **Sub-agent**. The retired delegated transport is no 
 
 1. **Chain**: phase 间路由。Gate pass 后从 `transitions.chain.json` 得到 next phase。
 2. **Queue**: phase 内 demand 编排。Queue records say what work is needed and where each demand lives.
-3. **Work Unit**: delegated attempt execution。The Engine claims a queue demand into `_work_units/waveN/{work_id}/`, a bounded Sub-agent performs the task, and `operate-work-unit submit` is the successful completion boundary.
+3. **Work Unit**: delegated attempt execution。The Engine claims a queue demand into bundle-root `_work_units/waveN/{work_id}/`, a bounded Sub-agent performs the task, and `operate-work-unit submit` is the successful completion boundary.
+
+All bare runtime paths in this execution model are active bundle-root relative. `_work_units/...`, `rb_queue.json`, `rb_output_declarations.jsonl`, `_cache/...`, and `_logs/...` refer to the selected `dpt_rb_*` or `dpt_disp_*` bundle, not repo root or `DPT_FRAMEWORK/`.
 
 This document answers the cross-layer questions:
 
@@ -89,8 +91,8 @@ Delegated attempt layer: Work Unit
 | Layer | Authority | Does | Does not do |
 | --- | --- | --- | --- |
 | Chain | Gate verdict + transition table | Selects the next phase after a pass | Does not inspect queue or allocate work |
-| Queue | `rb_queue.json` through queue Engine/CLI | Tracks phase-local demand, locations, non-delegated completion, and delegated in-flight bindings | Does not accept delegated results as coverage |
-| Work Unit | `_work_units/_index.json` plus `operate-work-unit` transactions | Allocates delegated attempts, validates submit, writes result/status, appends submitted ledger row | Does not choose phase transitions or replace gate judgment |
+| Queue | bundle-root `rb_queue.json` through queue Engine/CLI | Tracks phase-local demand, locations, non-delegated completion, and delegated in-flight bindings | Does not accept delegated results as coverage |
+| Work Unit | bundle-root `_work_units/_index.json` plus `operate-work-unit` transactions | Allocates delegated attempts, validates submit, writes result/status, appends submitted ledger row | Does not choose phase transitions or replace gate judgment |
 | Gate | Gate definition JSON + gate CLI output | Aggregates structural and provenance checks for phase completion | Does not infer delegated coverage from filesystem presence alone |
 
 ### 3.2 Delegated Flow
@@ -99,7 +101,7 @@ Delegated attempt layer: Work Unit
 Phase Agent reads phase Markdown
   -> queue demand is eligible for delegation
   -> operate-work-unit claim <bundle> --phase waveN [--count N]
-  -> Engine creates _work_units/waveN/{work_id}/
+  -> Engine creates bundle-root _work_units/waveN/{work_id}/
   -> Phase Agent spawns native Sub-agent with task.md prompt
   -> Sub-agent writes declared outputs/cache and lifecycle receipt
   -> operate-work-unit submit <bundle> --work-id <id> --result <result.json>
@@ -129,7 +131,7 @@ Sub-agents do not allocate IDs, mutate queue state, append ledgers, or pass gate
 | **Sub-agent** | A bounded Agent actor executing a work-unit `task.md` and returning schema-valid result JSON | worker, child agent |
 | **Queue demand item** | A phase-local demand record identified by `queue_item_id` | using `work_id` for demand identity |
 | **Work unit** | One Engine-allocated delegated execution attempt identified by `work_id` | wave, topic, task card, runtime thread |
-| **Work-unit envelope** | `_work_units/waveN/{work_id}/` directory with manifest, task, schema, beacon, receipt, result/status surfaces | non-work-unit delegated directories |
+| **Work-unit envelope** | bundle-root `_work_units/waveN/{work_id}/` directory with manifest, task, schema, beacon, receipt, result/status surfaces | non-work-unit delegated directories |
 | **Submit** | `operate-work-unit submit`; the only successful delegated completion transaction | delegated queue complete |
 | **Submitted ledger row** | Engine-written row in bundle-root `rb_output_declarations.jsonl` created by successful work-unit submit | filesystem-only output, hand-written declaration |
 | **Markdown control surface** | Agent-readable phase node, task, playbook, projection, or work-unit task | machine authority |
@@ -146,7 +148,7 @@ For a Wave1 topic-deepening queue demand:
 1. Phase Agent reads `phase-wave1.md`.
 2. Queue state contains a `wave1_topic_deepening` demand with `queue_item_id`.
 3. Phase Agent runs `operate-work-unit claim <bundle> --phase wave1`.
-4. Engine allocates `work_id`, moves the demand into `delegated_in_flight`, writes `_work_units/wave1/{work_id}/`, and returns prompt refs.
+4. Engine allocates `work_id`, moves the demand into `delegated_in_flight`, writes bundle-root `_work_units/wave1/{work_id}/`, and returns prompt refs.
 5. Phase Agent spawns `dpt-evidence-extractor` with the work-unit task.
 6. Sub-agent reads `task.md`, `_beacon.json`, and `result.schema.json`, then writes declared outputs/cache and lifecycle receipt events carrying `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
 7. Phase Agent runs `operate-work-unit submit <bundle> --work-id <work_id> --result <result.json>`.

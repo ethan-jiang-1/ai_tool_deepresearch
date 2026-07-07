@@ -105,7 +105,7 @@ This directory cannot decide:
 | Command experiment execution pattern | `command-experiments.md` plus the relevant accepted spec or active change when normative | Avoid local one-off verdict rules |
 | Agentic workflow loop (who drives, routes, validates) | `guidelines/agentic-workflow-mechanism.md` | Read before modifying transition, gate, or node-loading behavior |
 | Agentic Queue loop engineering | `agentic-queue-mechanism.md` | Follow architectural constitution; route new implementation through OpenSpec |
-| Current runtime/run state | The active runtime context, currently `dpt_rb_*` or `dpt_disp_*` | Reload files; do not rely on chat memory |
+| Current runtime/run state | The active runtime bundle root, currently a selected `dpt_rb_*` or `dpt_disp_*` directory | Reload files; do not rely on chat memory |
 
 ## Guidance Map
 
@@ -126,8 +126,8 @@ Guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`
 
 | Surface | Status | Use Today | Authority |
 |---------|--------|-----------|-----------|
-| `dpt_rb_*` runtime contexts | Current convention | Yes | Runtime state |
-| `dpt_disp_*` disposable experiment contexts | Current convention | Yes | Runtime state |
+| `dpt_rb_*` runtime bundle roots | Current convention | Yes | Production run state |
+| `dpt_disp_*` disposable experiment bundle roots | Current convention | Yes | Disposable experiment state |
 | `experiments_playbook/exp_*` playbooks | Current | Yes — see `experiments_playbook/RUN.md` for current inventory | Agent-readable experiment playbooks |
 | `DPT_FRAMEWORK/engine/` | Current | Yes — queue, work-unit, gate, trace, workflow-chain, and supporting helpers | Production engine code |
 | `DPT_FRAMEWORK/engine/trace.mjs` | Current | Yes — unified trace writer, `createTrace` factory | Trace writer for all engines and playbooks |
@@ -143,7 +143,7 @@ Guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`
 | `rb_ledger.jsonl` | Proposed | No runtime use; design input only | Future OpenSpec + implementation required |
 | Queue Markdown projection | Current | Yes — `queue-manager.mjs` render() writes `_cache/agentic-queue/current-task.md` | Queue state projection, not queue authority |
 
-Current rows can be used as runtime facts only after reloading the active runtime context. Target rows can be used only when the active OpenSpec change or implementation provides the named surface. Proposed rows are design input only.
+Current rows can be used as runtime facts only after reloading the active runtime bundle root. Bare runtime paths such as `rb_queue.json`, `reference/`, `artifacts/`, `_cache/`, `_logs/`, and `_work_units/...` resolve under that active bundle root. Target rows can be used only when the active OpenSpec change or implementation provides the named surface. Proposed rows are design input only.
 
 When a target or proposed surface becomes accepted/current, update this table in the same change that updates `openspec/specs/`, `DPT_FRAMEWORK/`, and any affected guideline. Do not leave a surface marked Proposed or Target after it has accepted executable support, and do not mark a surface Current before the accepted spec and implementation exist.
 
@@ -188,8 +188,10 @@ Each file has frontmatter declaring its role, scope, authority level, and siblin
 | Work completion | Target-phase artifacts and accepted gate/content rules prove the target phase's work is done; `enter-phase` / `load_complete` alone do not. |
 | Witnessing | Engine-written evidence binding a deterministic gate route to later handoff entry, such as `gate_attempt(passed=true,next=...)` plus route-bound `load_complete`. |
 | Autonomous continuation | Non-terminal `stop: no` behavior where the Agent continues silently through gate-driven work and handoff rather than surfacing, waiting, or delivering early chat output. |
-| Runtime context | Run or disposable experiment directory containing current control files, evidence, receipts, trace, and artifacts. |
-| Bundle | Current project convention for a runtime context, such as `dpt_rb_*` or `dpt_disp_*`. |
+| Runtime context | Conceptual run or disposable experiment context containing current control files, evidence, receipts, trace, and artifacts. In the current filesystem convention this is a bundle. |
+| Bundle / active bundle root | Current project convention for a runtime context, such as `dpt_rb_*` or `dpt_disp_*`. When selected for a run, CLI invocation, task card, or playbook, it is the root for all bare runtime paths, including `rb_queue.json`, `reference/`, `artifacts/`, `_cache/`, `_logs/`, and `_work_units/...`. |
+| Repo command root | Repository root used to invoke `node DPT_FRAMEWORK/...`; it is a command location, not runtime truth. |
+| Framework root | `DPT_FRAMEWORK/`, the read-only reusable framework asset root. |
 | Prototype | Experiment-specific fixtures, notes, or proof scaffold; not the production Engine source. |
 | Playbook | Agent-readable Markdown experiment or command under `DPT_FRAMEWORK/`. |
 | Source of Record | The one authoritative surface for a class of truth. |

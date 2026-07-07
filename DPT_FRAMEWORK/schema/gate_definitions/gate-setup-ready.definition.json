@@ -63,6 +63,12 @@
       "failure_message": "Missing scaffold directory: final/."
     },
     {
+      "id": "work_units_exists",
+      "check": "dir_exists",
+      "target": "_work_units",
+      "failure_message": "Missing runtime directory: _work_units/."
+    },
+    {
       "id": "plan_schema_valid",
       "check": "schema_valid",
       "target": "rb_plan.md",

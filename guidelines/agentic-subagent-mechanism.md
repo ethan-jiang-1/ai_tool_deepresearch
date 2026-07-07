@@ -38,8 +38,8 @@ The old delegated transport is retired as production guidance. Do not use this g
 
 | Surface | Status | Current guidance |
 | --- | --- | --- |
-| `operate-work-unit claim` | Current | Engine allocates `work_id`, binds `queue_item_id`, writes `_work_units/waveN/{work_id}/`, and returns task prompt refs |
-| `_work_units/_index.json` | Current | Allocation and attempt-state registry, not gate pass coverage |
+| `operate-work-unit claim` | Current | Engine allocates `work_id`, binds `queue_item_id`, writes bundle-root `_work_units/waveN/{work_id}/`, and returns task prompt refs |
+| `_work_units/_index.json` | Current | Bundle-root allocation and attempt-state registry, not gate pass coverage |
 | Work-unit envelope | Current | `manifest.json`, `task.md`, `result.schema.json`, `_beacon.json`, `runtime-receipt.jsonl`, result/status surfaces, optional runtime refs |
 | Native Sub-agent actor | Current | Reads the bounded work-unit task and returns schema-valid result JSON |
 | `operate-work-unit submit` | Current | Only successful delegated completion transaction |
@@ -53,6 +53,8 @@ The old delegated transport is retired as production guidance. Do not use this g
 Phase Agent context is scarce. Web search, page fetching, source diagnostics, claim verification, and evidence extraction can flood the main context with low-density information. Sub-agents protect the Phase Agent by doing bounded high-I/O work and returning concise structured results.
 
 The Engine protects provenance by turning delegated work into work units. The Phase Agent may spawn a native sub-agent, but the Engine alone allocates `work_id`, records attempt state, validates submit, completes the bound queue demand, and appends delegated ledger coverage.
+
+All bare runtime paths in this guideline are active bundle-root relative. `_work_units/...`, `rb_output_declarations.jsonl`, `_cache/...`, and `_logs/...` refer to the selected `dpt_rb_*` or `dpt_disp_*` bundle, not repo root or `DPT_FRAMEWORK/`.
 
 ---
 

@@ -75,6 +75,12 @@
       "failure_message": "Missing scaffold directory: final/. Create it."
     },
     {
+      "id": "work_units_exists",
+      "check": "dir_exists",
+      "target": "_work_units",
+      "failure_message": "Missing runtime directory: _work_units/. Re-instantiate or restore the active bundle root structure."
+    },
+    {
       "id": "bundle_name_valid",
       "check": "pattern_match",
       "target": ".",

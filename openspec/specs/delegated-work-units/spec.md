@@ -4,13 +4,13 @@
 
 ## Purpose
 
-Define the Engine-owned work-unit lifecycle for delegated work: queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate. A work unit is the Engine-allocated execution attempt envelope, and submitted work-unit ledger rows are the only production delegated completion authority.
+Define the Engine-owned work-unit lifecycle for delegated work inside the active runtime bundle root: queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate. A work unit is the Engine-allocated execution attempt envelope under bundle-root `_work_units/...`, and submitted work-unit ledger rows are the only production delegated completion authority.
 
 ## Requirements
 
 ### Requirement: Work-unit pipeline SHALL be the sole production delegated-work path
 
-Production delegated work SHALL use the path `queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate`. A work unit SHALL mean one Engine-allocated delegated execution attempt for one queue demand item. A wave, phase, queue item, runtime thread, or filesystem artifact SHALL NOT be called a work unit unless it is the Engine-allocated attempt envelope.
+Production delegated work SHALL use the path `queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate` inside the active runtime bundle root. A work unit SHALL mean one Engine-allocated delegated execution attempt for one queue demand item. A wave, phase, queue item, runtime thread, or filesystem artifact SHALL NOT be called a work unit unless it is the Engine-allocated attempt envelope.
 
 Current production-facing surfaces outside `openspec/changes/archive/` SHALL describe delegated work through work-unit claim/submit only. Retired delegated transport, hand-written delegated ledger rows, and invalid old queue shapes SHALL NOT be presented as active production paths.
 
@@ -40,9 +40,9 @@ Current production-facing surfaces outside `openspec/changes/archive/` SHALL des
 
 ### Requirement: Work-unit identity SHALL be Engine-allocated and index-backed
 
-The Engine SHALL allocate every `work_id` and record it in `_work_units/_index.json`. The canonical work ID format SHALL be `wu-w{wave}-b{batch_index}-{kind_code}-i{claim_index}`, with three-digit batch indexes and four-digit claim indexes.
+The Engine SHALL allocate every `work_id` and record it in bundle-root `_work_units/_index.json`. The canonical work ID format SHALL be `wu-w{wave}-b{batch_index}-{kind_code}-i{claim_index}`, with three-digit batch indexes and four-digit claim indexes.
 
-`kind` SHALL be the stable full work-unit kind used by queue demand, manifests, results, and ledger rows, such as `wave0_source_intake`, `wave1_topic_deepening`, or `wave2_targeted_evidence`. `kind_code` SHALL be a short Engine-registered code used only inside `work_id`. `_work_units/_index.json` SHALL contain the authoritative kind registry mapping each full `kind` to exactly one `kind_code`, and each `kind_code` back to exactly one full `kind`. Encoded fields SHALL match the index, directory path, manifest, result, and ledger row.
+`kind` SHALL be the stable full work-unit kind used by queue demand, manifests, results, and ledger rows, such as `wave0_source_intake`, `wave1_topic_deepening`, or `wave2_targeted_evidence`. `kind_code` SHALL be a short Engine-registered code used only inside `work_id`. Bundle-root `_work_units/_index.json` SHALL contain the authoritative kind registry mapping each full `kind` to exactly one `kind_code`, and each `kind_code` back to exactly one full `kind`. Encoded fields SHALL match the index, directory path, manifest, result, and ledger row.
 
 #### Scenario: malformed work ID is rejected
 
@@ -94,7 +94,7 @@ Each work-unit envelope SHALL include the manifest, task, result schema, beacon,
 
 ### Requirement: Submit SHALL be the only successful delegated completion transition
 
-Successful delegated completion SHALL occur only through file-based `operate-work-unit submit`. Submit SHALL validate the result, runtime receipt, nonce, output files, cache trails, queue binding, snapshot hash, index state, and idempotency fingerprint before it completes queue demand or appends the bundle-root output declaration ledger.
+Successful delegated completion SHALL occur only through file-based `operate-work-unit submit` against an explicit active bundle path. Submit SHALL validate the result, runtime receipt, nonce, output files, cache trails, queue binding, snapshot hash, index state, and idempotency fingerprint before it completes queue demand or appends the bundle-root output declaration ledger.
 
 #### Scenario: successful submit completes one queue demand
 

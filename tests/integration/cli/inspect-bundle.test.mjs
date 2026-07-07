@@ -11,7 +11,7 @@ const INSPECT = join(FIXTURE, 'cli/inspect-bundle.mjs');
 function makeBundle(baseDir, name, { traceEntries = [], logLines = [] } = {}) {
   const bundleDir = join(baseDir, `dpt_rb_${name}`);
   mkdirSync(bundleDir, { recursive: true });
-  const dirs = ['seed_topics', 'reference', 'artifacts/wave0', 'artifacts/wave1', 'artifacts/wave2', '_cache', 'final', '_logs'];
+  const dirs = ['seed_topics', 'reference', 'artifacts/wave0', 'artifacts/wave1', 'artifacts/wave2', '_cache', 'final', '_logs', '_work_units'];
   for (const d of dirs) mkdirSync(join(bundleDir, d), { recursive: true });
   const topFiles = ['START_FROM_HERE.md', 'rb_plan.md', 'rb_profile.yaml', 'rb_status.json', 'rb_queue.json', 'rb_trace.jsonl'];
   for (const f of topFiles) writeFileSync(join(bundleDir, f), '');
@@ -123,4 +123,3 @@ describe('inspect-bundle.mjs integration', () => {
     if (result.status !== 0) throw new Error(`--timeline on empty sinks should exit 0, got ${result.status}`);
   });
 });
-

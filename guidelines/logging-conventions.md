@@ -35,6 +35,8 @@ siblings:
 | Log | 诊断解释，人读 | 自由文本（统一信封） | `_logs/run.log` |
 | Trace | 审计真相，机器校验 | JSONL | `rb_trace.jsonl` |
 
+Both files are active bundle-root relative. `_logs/run.log` and `rb_trace.jsonl` refer to the selected `dpt_rb_*` or `dpt_disp_*` bundle for the current run or experiment, not repo root and not `DPT_FRAMEWORK/`.
+
 **Trace 是真相，Log 是解释。** 裁决（pass/fail）只能从 trace JSONL 来，log 自由文本不参与裁决。两个通道通过 `bundle` 字段缝合为单一时间线。
 
 ## API Surface

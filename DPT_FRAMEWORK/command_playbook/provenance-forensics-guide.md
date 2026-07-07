@@ -10,9 +10,11 @@ Before judging provenance, confirm the bundle/framework is using the work-unit m
 
 - Delegated task allocation is driven by `DPT_FRAMEWORK/cli/operate-work-unit.mjs claim`.
 - Delegated task acceptance is driven by `DPT_FRAMEWORK/cli/operate-work-unit.mjs submit`.
-- Work-unit envelopes live under `_work_units/waveN/{work_id}/`.
+- Work-unit envelopes live under the active bundle root at `_work_units/waveN/{work_id}/`.
 - The bundle-root `rb_output_declarations.jsonl` contains Engine-written submitted work-unit rows.
 - Wave gate definitions use `work_unit_ledger_exists`, `work_unit_output_coverage`, `work_unit_submission_presence`, and `delegated_bypass_suspected`.
+
+In this guide, bare runtime paths such as `_work_units/...`, `rb_trace.jsonl`, `_logs/`, `_cache/`, `reference/`, and `artifacts/` are relative to the bundle being inspected.
 
 If any of these surfaces are absent, treat the bundle as pre-replacement or incomplete. Do not infer delegated coverage from files alone.
 

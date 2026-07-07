@@ -58,7 +58,16 @@ MD
 echo "research_style: quick_factual" > "$B/rb_profile.yaml"
 
 cat > "$B/rb_queue.json" << 'JSON'
-{"queue_health":"ready","stop_authorization_state":"unauthorized_continue_required","slot_1_current":null,"slot_2_next":null,"slot_3_pending":null,"slot_4_pending":null,"slot_5_tail":null,"refill_pool":[]}
+{
+  "schema_version": "queue.v2",
+  "bundle_name": null,
+  "queue_health": "ready",
+  "stop_authorization_state": "unauthorized_continue_required",
+  "active_window": [],
+  "refill_pool": [],
+  "delegated_in_flight": {},
+  "terminal_history": []
+}
 JSON
 
 touch "$B/rb_trace.jsonl"
@@ -131,18 +140,29 @@ echo "Delta Synthesis result (exit=$EXIT1):"
 echo "$RESULT1" | grep -E '"passed"|"rerun_add"|"Delta"' | head -5
 
 cat > "$B/_verdict.mjs" << 'JS'
-import { execSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const __dirname = process.argv[2];
 
 const checks = [];
+function runWave2Gate() {
+  const result = spawnSync('node', [
+    'DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs',
+    '--bundle', __dirname,
+    '--current-node', 'phases/phase-wave2.md',
+  ], { encoding: 'utf-8', cwd: process.cwd() });
+  if (!result.stdout.trim()) {
+    throw new Error(`gate produced no stdout; stderr=${result.stderr}`);
+  }
+  return JSON.parse(result.stdout);
+}
 
 // Test 1: Delta Synthesis should fail
-const r1 = JSON.parse(execSync(`node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "${__dirname}" --current-node phases/phase-wave2.md`, { encoding: 'utf-8', stdio: 'pipe' }));
+const r1 = runWave2Gate();
 checks.push({
   ts: new Date().toISOString(), event: 'check',
-  gate: 'delta-synthesis-fails', passed: r1.check?.passed === false, expected: false,
+  gate: 'delta-synthesis-fails', passed: r1.check?.passed, expected: false,
   detail: `Delta synthesis gate: ${r1.check?.passed}`
 });
 
@@ -155,19 +175,17 @@ checks.push({
 
 // Test 2: Fix by removing Delta header, but keep slug-only coverage → should still fail (missing pair-scan)
 const synthesisPath = join(__dirname, 'artifacts/wave2/synthesis.md');
-const { readFileSync, writeFileSync } = await import('node:fs');
 let synthesis = readFileSync(synthesisPath, 'utf-8');
 synthesis = synthesis.replace('## Delta Synthesis (Rerun 1)', '## Full Cross-Topic Synthesis (Rerun 1)');
 writeFileSync(synthesisPath, synthesis);
 
-const r2 = JSON.parse(execSync(`node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "${__dirname}" --current-node phases/phase-wave2.md`, { encoding: 'utf-8', stdio: 'pipe' }));
+const r2 = runWave2Gate();
 // Note: current gate may pass delta check but still fail on other rules (like link resolution or section presence)
 // For this test, we only verify the rerun_add rule itself
 const rerunRuleResult = (r2.inspect || []).filter(i => i.includes('rerun') || i.includes('action:add'));
 console.log('After fix — rerun-related issues:', rerunRuleResult.length);
 
 // Test 3: Properly populate finding-index with scan object to provide matchable coverage
-const index = { scan: { topics: ['topic-a', 'topic-b'] }, findings: [] };
 writeFileSync(join(__dirname, 'artifacts/wave2/finding-index.yaml'),
   `scan:\n  topics:\n    - topic-a\n    - topic-b\nfindings: []\n`);
 writeFileSync(join(__dirname, 'artifacts/wave2/synthesis.md'), [
@@ -189,7 +207,7 @@ writeFileSync(join(__dirname, 'artifacts/wave1/topic-a/question-list.md'), '# Qu
 writeFileSync(join(__dirname, 'artifacts/wave1/topic-b/evidence-summary.md'), '# Evidence B\n');
 writeFileSync(join(__dirname, 'artifacts/wave1/topic-b/question-list.md'), '# Questions B\n');
 
-const r3 = JSON.parse(execSync(`node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "${__dirname}" --current-node phases/phase-wave2.md`, { encoding: 'utf-8', stdio: 'pipe' }));
+const r3 = runWave2Gate();
 const rerunRelated = (r3.inspect || []).filter(i => /rerun|action:add|Delta|scan.*coverage|cross.*topic.*slug/i.test(i));
 checks.push({
   ts: new Date().toISOString(), event: 'check',
@@ -197,7 +215,7 @@ checks.push({
   detail: `Rerun-related issues after full coverage fix: ${rerunRelated.length}`
 });
 
-const tracePath = join(__dirname, '_logs', '_trace.jsonl');
+const tracePath = join(__dirname, 'rb_trace.jsonl');
 for (const c of checks) writeFileSync(tracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 console.log(JSON.stringify(checks.map(c => ({ gate: c.gate, passed: c.passed }))));
 JS
@@ -217,17 +235,20 @@ cat > "$B/_final_verdict.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 const __dirname = process.argv[2];
-const tracePath = join(__dirname, '_logs', '_trace.jsonl');
+const tracePath = join(__dirname, 'rb_trace.jsonl');
 const raw = readFileSync(tracePath, 'utf-8').trim();
 if (!raw) { console.log('FAIL: No trace events'); process.exit(1); }
 const lines = raw.split('\n').filter(l => l.trim());
 const events = lines.map(l => JSON.parse(l));
 const checks = events.filter(e => e.event === 'check');
-const failed = checks.filter(c => !c.passed);
-const passed = checks.filter(c => c.passed);
+const failed = checks.filter(c => c.passed !== (c.expected ?? true));
+const passed = checks.filter(c => c.passed === (c.expected ?? true));
 
 console.log('══════ Verdict ══════');
-for (const c of checks) console.log(`  ${c.passed ? 'PASS' : 'FAIL'}  ${c.gate}: ${c.detail}`);
+for (const c of checks) {
+  const ok = c.passed === (c.expected ?? true);
+  console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${c.gate}: ${c.detail}`);
+}
 console.log('══════════════════════');
 console.log(`PASS: ${passed.length}  FAIL: ${failed.length}`);
 
@@ -242,6 +263,8 @@ node "$B/_final_verdict.mjs" "$B"
 ---
 
 ## Cleanup
+
+PASS 才执行。FAIL 时保留 bundle 现场供排查。
 
 ```bash
 B= # populated from Step 1

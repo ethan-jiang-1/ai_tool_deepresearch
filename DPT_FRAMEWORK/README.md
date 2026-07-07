@@ -33,6 +33,16 @@ Deep Research Framework (`DPT_FRAMEWORK/`) 的运行时入口说明。
 
 ## 运行时边界
 
+Active bundle root 是本次 run、CLI invocation、task card 或实验明确选中的 `dpt_rb_*` / `dpt_disp_*` 目录。它是 runtime truth 的根。裸 runtime path（如 `rb_queue.json`、`rb_trace.jsonl`、`rb_output_declarations.jsonl`、`reference/`、`artifacts/`、`_cache/`、`_logs/`、`final/`、`_work_units/...`）都相对于 active bundle root，不相对于 repo root，也不相对于 `DPT_FRAMEWORK/`。
+
+例如，如果 active bundle root 是 `dpt_rb_climate-policy/`，那么 `_work_units/wave1/wu-w1-b000-deep-i0001/` 指的是 `dpt_rb_climate-policy/_work_units/wave1/wu-w1-b000-deep-i0001/`。
+
+运行时有三种坐标，不要混用：
+
+- `repo_command_root`：执行 `node DPT_FRAMEWORK/...` 的仓库根，只是命令位置。
+- `framework_root`：`DPT_FRAMEWORK/`，只读 reusable framework assets。
+- `active_bundle_root`：当前选中的 `dpt_rb_*` / `dpt_disp_*`，唯一 runtime truth 根。
+
 运行 workflow 时，不要把这些内容写入 `DPT_FRAMEWORK/`：
 
 - HITL answer / profile decision
@@ -75,7 +85,7 @@ dpt_rb_<name>/
 - 当前 production 实例化入口接收显式 `<name>`，创建 `dpt_rb_<name>/`；Agent-facing playbooks derive this name from the research request unless a name was already supplied before framework execution.
 - 如果目标目录已存在，必须报错停止；不能覆盖或复用旧 bundle。
 - 自动英文 slug 和 collision suffix 是 workflow-foundation target，不是当前 production CLI 行为。
-- Disposable experiment bundle 使用 `dpt_disp_*`，也是 mutable runtime context。
+- Disposable experiment bundle 使用 `dpt_disp_*`，也是 mutable runtime bundle root when selected.
 
 当前 canonical run bundle 目录外形：
 
@@ -94,10 +104,12 @@ dpt_rb_<name>/
   seed_topics/
   reference/
   artifacts/
+    wave0/
     wave1/
     wave2/
   final/
   _cache/
+  _work_units/
 ```
 
 `_cache/gate-results/` 和 `_cache/projections/` 是 workflow-foundation target/cache convention，不是当前 `inspect-bundle.mjs` required shape。

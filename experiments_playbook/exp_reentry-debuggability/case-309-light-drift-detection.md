@@ -54,7 +54,16 @@ topic_registry:
 MD
 
 cat > "$B/rb_queue.json" << 'JSON'
-{"queue_health":"ready","stop_authorization_state":"unauthorized_continue_required","slot_1_current":null,"slot_2_next":null,"slot_3_pending":null,"slot_4_pending":null,"slot_5_tail":null,"refill_pool":[]}
+{
+  "schema_version": "queue.v2",
+  "bundle_name": null,
+  "queue_health": "ready",
+  "stop_authorization_state": "unauthorized_continue_required",
+  "active_window": [],
+  "refill_pool": [],
+  "delegated_in_flight": {},
+  "terminal_history": []
+}
 JSON
 
 echo "research_style: quick_factual" > "$B/rb_profile.yaml"

@@ -28,17 +28,25 @@ siblings:
 
 ## Purpose
 
-本文件定义 `DPT_FRAMEWORK/` 和 `dpt_rb_*` / `dpt_disp_*` 的目录和权威边界。它只说明东西应该放在哪里、谁是只读定义、谁是运行时真相，不定义具体 schema 字段、CLI flags、状态机或 gate 规则。
+本文件定义 `DPT_FRAMEWORK/` 和 `dpt_rb_*` / `dpt_disp_*` 的目录和权威边界。它只说明东西应该放在哪里、谁是只读定义、谁是运行时真相，以及 active runtime bundle root 如何锚定 runtime path；不定义具体 schema 字段、CLI flags、状态机或 gate 规则。
 
 核心规则：
 
 ```text
 DPT_FRAMEWORK/ = read-only framework assets
-dpt_rb_*/      = mutable production run state/data/evidence/results
-dpt_disp_*/    = mutable disposable experiment state/data/evidence/results
+dpt_rb_*/      = mutable production run bundle root
+dpt_disp_*/    = mutable disposable experiment bundle root
 ```
 
-同一套 `DPT_FRAMEWORK/` 可以服务多个 run bundle。运行中发生的用户输入、gate attempt、pass/fail、repair、waiting/block、trace、artifact 和 final output 都必须写入 active runtime context，不能写回 framework。
+Active runtime bundle root（简称 active bundle root）是当前 run、CLI invocation 或 controlled experiment 明确选中的那一个 `dpt_rb_*` / `dpt_disp_*` 目录。运行中发生的用户输入、gate attempt、pass/fail、repair、waiting/block、trace、artifact、delegated work-unit attempt 和 final output 都必须写入 active bundle root，不能写回 framework。
+
+裸 runtime path 默认以 active bundle root 为根：`rb_queue.json`、`rb_trace.jsonl`、`rb_output_declarations.jsonl`、`reference/`、`artifacts/`、`_cache/`、`_logs/`、`final/`、`_work_units/...` 都不是 repo-root path，也不是 `DPT_FRAMEWORK/` path，除非文本显式写出其他根。
+
+三种 coordinate 必须分开理解：
+
+- `repo_command_root`：执行 `node DPT_FRAMEWORK/...` 的仓库根。它只是命令位置，可能同时包含多个 bundle，不承载某次 run 的 truth。
+- `framework_root`：`DPT_FRAMEWORK/`。它是 reusable framework assets 根，包含 schema、CLI、engine、workflow nodes、templates 和 command playbooks，运行时只读。
+- `active_bundle_root`：本次 run、CLI invocation、task card 或实验选中的 `dpt_rb_*` / `dpt_disp_*`。它是唯一 mutable runtime truth 根。
 
 当前 v1 只有一个 canonical Deep Research workflow package，因此 workflow-foundation 路由使用 `DPT_FRAMEWORK/workflows/manifest.json` 和 `DPT_FRAMEWORK/workflows/nodes/`，不使用 `workflows/<workflow-name>/` namespace。这不限制 run bundle 数量；同一套 framework 仍必须支持多个互相隔离的 `dpt_rb_*`。
 
@@ -131,7 +139,9 @@ DPT_FRAMEWORK/
 
 ## Runtime Bundles
 
-Every `dpt_rb_*` production run and `dpt_disp_*` disposable experiment is a mutable runtime context. It contains that run's current truth.
+Every `dpt_rb_*` production run and `dpt_disp_*` disposable experiment is a mutable runtime bundle. When selected for the current step, that directory is the active runtime bundle root and contains that run's current truth.
+
+The active bundle root is selected explicitly: by a CLI bundle argument, by the run entry, by the playbook setup, or by the current task card. It must not be inferred from repository root, `DPT_FRAMEWORK/`, chat memory, process working directory, or the last bundle mentioned in conversation.
 
 Current production bundle routing:
 
@@ -143,14 +153,18 @@ dpt_rb_<name>/
   rb_status.json
   rb_queue.json
   rb_trace.jsonl
+  rb_output_declarations.jsonl
 
+  _logs/
   seed_topics/
   reference/
   artifacts/
+    wave0/
     wave1/
     wave2/
   final/
   _cache/
+  _work_units/
 ```
 
 Workflow-foundation target cache convention:
@@ -171,6 +185,7 @@ Runtime ownership:
 | `rb_status.json` | Current workflow/phase/gate status summary for this run. |
 | `rb_queue.json` | Runtime queue state for this run; canonical queue authority validated by setup and bundle gates. |
 | `rb_trace.jsonl` | Append-only event history and audit trail for this run. |
+| `rb_output_declarations.jsonl` | Engine-written submitted work-unit ledger rows; delegated gate coverage authority. |
 | `seed_topics/` | Initial topic / seed-topic instance data. |
 | `reference/` | Reference artifacts and metadata for this run. |
 | `artifacts/` | Phase outputs, synthesis artifacts, decision briefs, readiness artifacts. |
@@ -178,6 +193,8 @@ Runtime ownership:
 | `_cache/` | Rebuildable diagnostic/projection space; not primary authority. |
 | `_cache/gate-results/` | Target optional gate output snapshots; diagnostic cache only. |
 | `_cache/projections/` | Target generated projections; rebuildable and not authority. |
+| `_logs/` | Human-readable diagnostic logs; not verdict authority. |
+| `_work_units/` | Production delegated work-unit envelopes and Engine-owned attempt index; cross-check and diagnostic surfaces tied to submitted ledger coverage. |
 
 ---
 
@@ -191,9 +208,9 @@ Gate files have three different meanings and must not be mixed:
 | Gate definition target | `DPT_FRAMEWORK/schema/gate_definitions/gate-*.definition.json` | read-only | Defines what a gate checks. |
 | Gate engine target | `DPT_FRAMEWORK/engine/gates/` | read-only | Loads/evaluates definitions against a bundle. |
 | Gate CLI wrapper target | `DPT_FRAMEWORK/cli/gates/check-gate-*.mjs` | read-only | Runs one gate against an explicit bundle. |
-| Gate runtime status | `dpt_rb_*/rb_status.json` | mutable | Records current run's phase/gate state summary. |
-| Gate attempt history | `dpt_rb_*/rb_trace.jsonl` | append-only | Records gate attempts, pass/fail, repair, waiting/block events. |
-| Gate output snapshot | `dpt_rb_*/_cache/gate-results/` | mutable cache | Optional latest CLI output; not main authority. |
+| Gate runtime status | `<active-bundle-root>/rb_status.json` | mutable | Records current run's phase/gate state summary. |
+| Gate attempt history | `<active-bundle-root>/rb_trace.jsonl` | append-only | Records gate attempts, pass/fail, repair, waiting/block events. |
+| Gate output snapshot | `<active-bundle-root>/_cache/gate-results/` | mutable cache | Optional latest CLI output; not main authority. |
 
 Gate CLI commands MUST accept an explicit bundle path. The workflow-foundation target examples use `--bundle`, but the concrete flag shape belongs to the executable command contract:
 
@@ -271,12 +288,13 @@ Runtime continuity and logging details live in `guidelines/logging-conventions.m
 ## MUST
 
 - MUST treat `DPT_FRAMEWORK/` as read-only during run execution.
-- MUST store mutable runtime truth inside the active `dpt_rb_*` or `dpt_disp_*` context.
+- MUST store mutable runtime truth inside the active runtime bundle root, currently an explicit `dpt_rb_*` or `dpt_disp_*` directory.
 - MUST distinguish framework definition from runtime state.
 - MUST put read-only gate definitions under `DPT_FRAMEWORK/schema/gate_definitions/` when gate definitions are implemented.
 - MUST put current run phase/gate status in `rb_status.json`.
 - MUST put gate attempts, pass/fail events, repair events, waiting/block events, and audit history in `rb_trace.jsonl`.
 - MUST require gate CLIs to receive an explicit bundle path.
+- MUST resolve bare runtime paths such as `rb_queue.json`, `reference/`, `_cache/`, `_logs/`, and `_work_units/...` under the active bundle root.
 - MUST treat `_cache/` as rebuildable diagnostic/projection space, not primary authority.
 
 ## MUST NOT
@@ -304,11 +322,15 @@ Runtime continuity and logging details live in `guidelines/logging-conventions.m
 | Gate shared helper code target | `DPT_FRAMEWORK/engine/helpers/` |
 | Gate CLI wrapper target | `DPT_FRAMEWORK/cli/gates/check-gate-*.mjs` |
 | Bundle initial template | `DPT_FRAMEWORK/rb_templates/` |
-| Current run profile / HITL data | `dpt_rb_*/rb_profile.yaml` |
-| Current run workflow status | `dpt_rb_*/rb_status.json` |
-| Current run trace/audit history | `dpt_rb_*/rb_trace.jsonl` |
-| Current run artifacts | `dpt_rb_*/artifacts/` or `dpt_rb_*/final/` |
-| Rebuildable projection/cache | `dpt_rb_*/_cache/` |
+| Current run profile / HITL data | `<active-bundle-root>/rb_profile.yaml` |
+| Current run workflow status | `<active-bundle-root>/rb_status.json` |
+| Current run queue state | `<active-bundle-root>/rb_queue.json` |
+| Current run trace/audit history | `<active-bundle-root>/rb_trace.jsonl` |
+| Submitted work-unit ledger | `<active-bundle-root>/rb_output_declarations.jsonl` |
+| Current run artifacts | `<active-bundle-root>/artifacts/` or `<active-bundle-root>/final/` |
+| Rebuildable projection/cache | `<active-bundle-root>/_cache/` |
+| Diagnostic logs | `<active-bundle-root>/_logs/` |
+| Delegated work-unit attempt surfaces | `<active-bundle-root>/_work_units/` |
 
 ---
 

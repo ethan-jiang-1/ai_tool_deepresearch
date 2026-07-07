@@ -65,90 +65,41 @@ Hits under this active cleanup change are expected while the change is in propos
 
 `_original_*` archives are excluded from these commands because repo instructions forbid reading them unless explicitly requested. Current `_backlog/bugs`, `_backlog/plans`, and `_backlog/todos` are not excluded: backlog, bug, TODO, or planning notes can remain only when their old relay/slot wording is explicit past-failure history or removed-design context. `_backlog/_done` is already a closed-history area and is not part of the current planning/bug/todo cleanup surface for this change.
 
-## Apply Audit Refresh 2026-07-07
+## Final Closure 2026-07-07
 
-The first apply audit used the focused commands above after confirming apply approval. It found these open current-surface classes:
+Final hygiene result:
 
-| Class | Current hits | Close state |
-|-------|--------------|-------------|
-| Active cleanup change artifacts | `openspec/changes/clean-delegated-work-surfaces/{proposal,design,tasks,surface-inventory,specs/**}` name retired tokens to define removal requirements | `cleanup-control`: keep only while active; after archive these files move under the excluded archive path |
-| Deprecated registry metadata | `openspec/governance/req-registry.yaml` deprecated relay/slot prefixes and IDs | `deprecated-registry`: keep `[DEPRECATED]` entries with no active spec-directory implication |
-| Main specs stale wording | `openspec/specs/{delegated-work-units,work-unit-provenance-gate,agentic-queue,agent-testing,subagent-directory-contract,subagent-dispatch,subagent-node-contract,agent-output-declaration,repair-loop,framework-engine,file-observability}/spec.md` | `migrate`: sync the active deltas into main specs before archive |
-| Hygiene checker vocabulary | `DPT_FRAMEWORK/cli/validate-work-unit-hygiene.mjs` and `tests/integration/cli/validate-work-unit-hygiene.test.mjs` | `checker-self-reference`: extend scan roots and classification so stale positive wording fails |
-| Current work-unit implementation | `DPT_FRAMEWORK/engine/work-unit-core.mjs` local `receiptNonce` | `current-work-unit-context`: keep as current work-unit `receipt_nonce` source |
-| File observability old path detection | `DPT_FRAMEWORK/engine/helpers/file-observability.mjs`, `tests/engine/helpers/file-observability.test.mjs`, `tests/schema/verify-bundle-health.test.mjs` | `negative`: keep only as explicit non-authority / bypass diagnostic, or migrate fixture wording |
-| Queue rejection/projection tests | `tests/schema/contracts/queue.test.mjs`, `tests/engine/queue-manager-receipts-cli-render.test.mjs` | `negative`: keep only as rejection/absence tests for old queue shape |
-| Release history | `DPT_FRAMEWORK/CHANGELOG.md` | `release-history-minimized`: rewrite old relay details so they cannot be read as current command guidance |
-| Current runner docs | `experiments_playbook/RUN_EXPS.md`, `experiments_playbook/README.md` | `remove` / `migrate`: no permanent Legacy/backlog table; current tables list only current proof |
-| Queue playbooks | `experiments_playbook/exp_agentic-queue/case-41`, `case-42`, `case-43` | `migrate`: rewrite to queue v2 ordered `active_window` / `refill_pool` and `queue_item_id` assertions |
-| Reentry playbooks | `experiments_playbook/exp_reentry-debuggability/case-307`, `case-308`, `case-309` | `migrate`: update staged queue fixtures to queue v2 |
-| File observability playbooks | `experiments_playbook/exp_file-observability/case-310`, `case-311`, `case-312` | `migrate` or `remove`: migrate only if current work-unit/file-observability proof remains useful; otherwise delete current runnable files |
-| Old relay subagent/system-logging playbooks | `experiments_playbook/exp_subagent/case-61`, `case-62`, `case-66`, `experiments_playbook/exp_system-logging/case-72`, `case-76`, `case-77`, `case-79` | `remove` unless migrated to current work-unit canaries; existing current work-unit canaries cover the production path |
-| Old delegated ledger fixture playbooks | `experiments_playbook/exp_wff_wave-gates/case-121`, `case-122`, `case-125`, `case-126`, `exp_wff_wave-chain/case-154`, `exp_handoff-witnessing/case-501-standard-handoff-witnessing.mjs` | `remove` obsolete current runnable files or migrate fixture rows through work-unit submit |
-| Current backlog bugs | `_backlog/bugs/BUG-032`, `BUG-034`, `BUG-035`, `BUG-036`, `_backlog/bugs/README.md` | `past-failure-history` or `remove`: keep only if framed as removed relay failure history, not current repair guidance |
-| Current backlog plans | `_backlog/plans/unified-delegated-work-unit-pipeline.md`, `unified-work-unit-replacement-impact-map.md`, `why-relay-grew-complex-history.md` | `past-failure-history` or `remove`: retain only as explicit removed-design analysis that defers to accepted work-unit specs |
-| Current backlog TODOs | `_backlog/todos/todo-coding-agent-setup-ux.md`, `todo-evidence-extraction.md`, `todo-evidence-quality.md`, `todo-explore-exploit.md`, `todo-final-output-eval.md`, `todo-hooks-deferral.md`, `todo-phase-recover.md` | `migrate` or `remove`: update actionable anchors to current work-unit/queue mechanisms or delete obsolete TODO wording |
+```text
+node DPT_FRAMEWORK/cli/validate-work-unit-hygiene.mjs --json
+passed true, issue_count 0
+```
 
-## Known Current Hits To Close
+The focused stale-token audit outside `openspec/changes/archive/` and `_original_*` archives has no unclassified current-surface failures. Remaining literal retired-token hits are only allowed close states:
 
-| Surface | Known stale signal | Apply treatment |
-|---------|--------------------|-----------------|
-| `openspec/specs/delegated-work-units/spec.md` | Purpose says it came from archived relay replacement change | `migrate`: replace Purpose with durable work-unit capability wording through OpenSpec sync/archive |
-| `openspec/changes/clean-delegated-work-surfaces/**` | cleanup artifacts name retired relay/slot and old queue tokens to define the cleanup target | `cleanup-control`: keep only as active change control-plane wording; it must not be copied into current production guidance |
-| `openspec/specs/agentic-queue/spec.md` | Purpose says "five-slot active window"; AGQ-006 still names simple/medium/complex `test-*` cases; seed/topic task-card tables use `work_id` as queue demand field | `migrate`: queue v2 Purpose with ordered `active_window`, executable capacity semantics (`QUEUE_ACTIVE_WINDOW_LIMIT = 20`), current case/cost taxonomy, and `queue_item_id` demand examples |
-| `openspec/specs/work-unit-provenance-gate/spec.md` | Purpose says it came from archived relay replacement change | `migrate`: replace Purpose with durable work-unit provenance wording through OpenSpec sync/archive |
-| `openspec/specs/subagent-directory-contract/spec.md` | `_subagents/wave_NN/slot_MM`, relay-managed slot Purpose | `migrate`: work-unit directory/envelope Purpose and requirements |
-| `openspec/specs/subagent-node-contract/spec.md` | `taskMarkdownForSlot`, `drive-relay-slot`, relay driver Purpose | `migrate`: work-unit task/result/receipt/submit actor contract |
-| `openspec/specs/subagent-dispatch/spec.md` | bounded slots, slot task/result schema Purpose | `migrate`: work-unit claim and prompt handoff dispatch wording |
-| `openspec/specs/agent-output-declaration/spec.md` | relay slot results and delegated queue completion as ledger authority | `migrate`: work-unit submit ledger authority only |
-| `openspec/specs/repair-loop/spec.md` | `subagent-relay.mjs` implementation anchor | `migrate`: deterministic checkpoint semantics without retired transport module |
-| `openspec/specs/framework-engine/spec.md` | Purpose still says deterministic modules include "subagent relay mechanisms" | `migrate`: queue/gate/loader/work-unit/hygiene Purpose |
-| `openspec/specs/agent-testing/spec.md` | Purpose and AGT-001/002/005 still describe older simple/medium/complex `test-*` experiment taxonomy | `migrate`: current case/cost/run-bundle experiment taxonomy and frontmatter cost wording |
-| `openspec/specs/file-observability/spec.md` | Purpose still says `TBD`; diagnostic requirements mention non-work-unit delegated dirs without durable Purpose | `migrate`: durable work-unit file observability Purpose through OpenSpec sync/archive |
-| `openspec/governance/req-registry.yaml` | deprecated relay/slot prefixes and IDs | `deprecated-registry`: keep only `[DEPRECATED]` metadata with no active spec-directory implication |
-| `DPT_FRAMEWORK/cli/validate-work-unit-hygiene.mjs` | retired token patterns | `checker-self-reference`: keep only as rejection patterns and extend scan roots |
-| `tests/integration/cli/validate-work-unit-hygiene.test.mjs` | retired token fixtures | `checker-self-reference`: keep only as hygiene failure fixtures |
-| `DPT_FRAMEWORK/engine/work-unit-core.mjs` | local `receiptNonce` variable | `current-work-unit-context`: keep if it only populates current work-unit `receipt_nonce` and is not paired with old relay identity |
-| `tests/engine/helpers/file-observability.test.mjs` | `_subagents/wave_01/slot_01` fixture | `negative` or `migrate`: prefer work-unit diagnostic fixture unless old path is required to prove non-authority rejection |
-| `DPT_FRAMEWORK/engine/helpers/file-observability.mjs` | recursive scan comment lists `_subagents/` | `negative` or `remove`: keep only if implementation intentionally detects old non-authority artifacts |
-| `tests/schema/verify-bundle-health.test.mjs` | negative test writes `_subagents/fake-result.json` | `negative`: ensure wording proves directory scanning cannot pass provenance |
-| `tests/schema/contracts/queue.test.mjs` | old top-level queue slot shape fixtures | `negative`: keep only as schema rejection tests |
-| `tests/engine/queue-manager-receipts-cli-render.test.mjs` | old `slot_1_current` projection absence assertion | `negative`: keep only as proof current queue projection does not expose old slot shape |
-| `DPT_FRAMEWORK/CHANGELOG.md` | old relay command/path release details | `release-history-minimized` or `remove`: do not leave command-like current guidance |
-| `_backlog/bugs/BUG-032-relay-slots-uncommitted-provenance-broken.md` | old relay failure analysis names `drive-relay-slot`, `_subagents`, `relay_commit_missing` | `past-failure-history` or `remove`: keep only if unmistakably past failure analysis and not current instructions |
-| `_backlog/bugs/BUG-034-wave0-gate-impassable-relay-ledger-chain-too-brittle.md` | old relay pipeline and `slot_result_ref` failure analysis | `past-failure-history` or `remove`: keep only if explicit removed-design/failure context |
-| `_backlog/bugs/BUG-035-cross-wave-repeated-relay-failure-pattern.md` | old relay repeat-failure analysis | `past-failure-history` or `remove`: keep only if explicit removed-design/failure context |
-| `_backlog/bugs/BUG-036-run-log-trace-reveal-systemic-workflow-failure.md` | old relay log diagnostics | `past-failure-history` or `remove`: keep only if explicit removed-design/failure context |
-| `_backlog/bugs/README.md` | current backlog index names relay-slot bug | `past-failure-history` or `remove`: index wording must not look like current production guidance |
-| `_backlog/todos/*.md` | multiple TODOs still cite `subagent-relay.mjs` / relay helper internals as implementation anchors | `migrate` or `remove`: update to work-unit/current mechanism if still actionable, otherwise remove obsolete TODO wording |
-| `_backlog/plans/unified-delegated-work-unit-pipeline.md` | plan contains old-token impact map and replacement intent | `past-failure-history` or `remove`: keep only if clearly historical/removed-design; do not let it outrank accepted specs |
-| `_backlog/plans/unified-work-unit-replacement-impact-map.md` | plan inventories old relay/slot surfaces and replacement mapping | `past-failure-history` or `remove`: keep only if clearly historical/removed-design; do not let it read as active plan after archive |
-| `_backlog/plans/why-relay-grew-complex-history.md` | historical explanation of relay complexity | `past-failure-history` or `remove`: keep only as explicit history, never current mechanism guidance |
-| `experiments_playbook/README.md` | says the Legacy/backlog table is a permanent skipped surface | `remove` or `migrate`: align overview with no permanent legacy/backlog runner table |
-| `experiments_playbook/RUN_EXPS.md` | permanent Legacy/backlog table | `remove` or `migrate`: no permanent legacy/backlog runner table after archive |
-| `experiments_playbook/exp_agentic-queue/case-41-light-minimal-path.md` | old top-level queue slot/current projection | `migrate` to queue v2 active_window/refill_pool array semantics with `queue_item_id` assertions, or `remove` if current queue v2 playbooks/tests cover it |
-| `experiments_playbook/exp_agentic-queue/case-42-standard-urgent-preemption.md` | old active-window slot shape; valid proof intent may still be refill/preemption across multiple queued items | `migrate` to queue v2 preemption semantics using `active_window[index].queue_item_id` / `refill_pool[index].queue_item_id`, or `remove` if no current proof value remains |
-| `experiments_playbook/exp_agentic-queue/case-43-standard-failure-repair.md` | old slot promotion/repair shape; valid proof intent may still be fail-closed receipt and repair/preemption behavior | `migrate` to queue v2 failure/repair semantics using ordered arrays and `queue_item_id`, or `remove` if no current proof value remains |
-| `experiments_playbook/exp_system-logging/case-76-light-spawn-prompt-logging.md` | `drive-relay-slot`, `subagent-relay`, `recordAgentSpawnRequested` production path | `migrate` if it still proves work-unit spawn prompt/logging; otherwise `remove` |
-| `experiments_playbook/exp_system-logging/case-77-standard-subagent-logging.md` | `drive-relay-slot`, relay slots, `_subagents/wave_01` | `migrate` if it still proves work-unit lifecycle logging; otherwise `remove` |
-| `experiments_playbook/exp_system-logging/case-79-standard-provenance-forensics.md` | `_subagents/wave_00`, relay forensics matrix | `migrate` to work-unit provenance-forensics signals if valuable; otherwise `remove` |
-| `experiments_playbook/exp_system-logging/case-72-standard-engine-lifecycle.md` | `subagent-relay` helper imports | `remove` unless a work-unit lifecycle logging migration has current value |
-| `experiments_playbook/exp_subagent/case-61-heavy-single-intake.md` | `stageSubagentSlots`, `commitSlotResult`, `ingestAgentReceipt`, `recordAgentSpawnRequested`, `slotKey`, `_subagents/wave_01` | `remove` unless migrated to current work-unit real-agent canary |
-| `experiments_playbook/exp_subagent/case-62-heavy-drive-relay-provenance-sound.md` | `drive-relay-slot`, `runProvenanceForensics`, `relay_commit_*`, `slotKey`, `dispatch.json`, `_subagents/wave_01` | `remove` unless migrated to current work-unit claim/submit canary |
-| `experiments_playbook/exp_subagent/case-66-standard-drive-relay-staged-not-committed.md` | `drive-relay-slot stage`, `runProvenanceForensics`, `relay_commit_missing`, `dispatch.json` | `remove` unless migrated to work-unit terminal/late-submit diagnostics |
-| `experiments_playbook/exp_wff_wave-gates/case-121-standard-wave0-happy.md` | hand-written `slot_result_ref` ledger fixture | `migrate` fixture through work-unit submit or `remove` if covered by current wave0 work-unit E2E |
-| `experiments_playbook/exp_wff_wave-gates/case-122-standard-wave1-boundary.md` | hand-written `slot_result_ref` ledger fixture | `migrate` fixture through work-unit submit or `remove` if covered by current wave1 work-unit E2E |
-| `experiments_playbook/exp_wff_wave-gates/case-125-light-dynamic-threshold.md` | hand-written `slot_result_ref` ledger fixtures | `migrate` threshold fixture through work-unit submit or `remove` |
-| `experiments_playbook/exp_wff_wave-gates/case-126-light-style-switch.md` | hand-written `slot_result_ref` ledger fixture | `migrate` style-switch fixture through work-unit submit or `remove` |
-| `experiments_playbook/exp_wff_wave-chain/case-154-standard-wave-review-surface.md` | hand-written `slot_result_ref` ledger fixture | `migrate` review-surface fixture through work-unit submit or `remove` |
-| `experiments_playbook/exp_file-observability/case-310-light-orphan-reference.md` | old delegated ledger row with slot refs | `migrate` to work-unit file-observability fixture or `remove` if regression/current E2E covers it |
-| `experiments_playbook/exp_file-observability/case-311-light-file-explanation.md` | old queue control shape fixture | `migrate` to queue v2/current file-observability fixture or `remove` if current coverage supersedes it |
-| `experiments_playbook/exp_file-observability/case-312-light-wave2-action-add.md` | old queue control shape fixture | `migrate` to queue v2/current wave2 action-add fixture or `remove` if current coverage supersedes it |
-| `experiments_playbook/exp_reentry-debuggability/case-307-light-clean-reentry.md` | old empty queue slot JSON fixture | `migrate` to queue v2 empty fixture or `remove` if current reentry coverage supersedes it |
-| `experiments_playbook/exp_reentry-debuggability/case-308-light-stale-queue-blocker.md` | old `slot_1_current` stale queue fixture and `work_id` blocker identity | `migrate` to queue v2 stale queue fixture using `queue_item_id` |
-| `experiments_playbook/exp_reentry-debuggability/case-309-light-drift-detection.md` | old empty queue slot JSON fixture | `migrate` to queue v2 empty fixture or `remove` if current reentry coverage supersedes it |
-| `experiments_playbook/exp_handoff-witnessing/case-501-standard-handoff-witnessing.mjs` | JS helper writes old slot artifacts and ledger refs | `remove`: current MD playbook is the runner surface |
+| Surface class | Final close state |
+|---------------|-------------------|
+| Active cleanup change artifacts under `openspec/changes/clean-delegated-work-surfaces/` | `cleanup-control`: these files define the cleanup vocabulary and will move under the excluded archive path when archived |
+| Deprecated governance registry entries | `deprecated-registry`: `[DEPRECATED]` metadata only, no active spec-directory implication |
+| Hygiene checker and hygiene tests | `checker-self-reference`: rejection vocabulary and failure fixtures |
+| Current work-unit implementation locals such as code-local `receiptNonce` | `current-work-unit-context`: valid work-unit nonce handling |
+| File-observability and health-verifier old path fixtures | `negative`: non-authority / bypass diagnostic only |
+| Queue old-shape tests | `negative`: schema rejection or absence-of-old-projection coverage only |
+| Main specs, framework docs, and current guidance | `migrate`: synced to current work-unit / queue v2 / active-bundle-root wording |
+| Current runner docs and playbooks | `migrate` / `remove`: current tables list current proof only; old relay/slot runnable playbooks were deleted or migrated |
+| Current backlog bugs/plans/todos | `migrate` / `remove`: old relay incident reports and migration plans were removed from current backlog; still-useful TODOs now point to work-unit, declaration, and active-bundle-root surfaces |
+
+Final current-surface outcomes:
+
+| Area | Closure |
+|------|---------|
+| `openspec/specs/**` | Purpose and requirement wording now describe work-unit delegated flow, queue v2, submitted ledger authority, and active bundle-root runtime paths |
+| `openspec/governance/req-registry.yaml` | Retired relay/slot prefixes remain only as deprecated metadata |
+| `DPT_FRAMEWORK/` docs/code | Old production guidance removed or confined to checker/negative diagnostic contexts |
+| `tests/` | Old tokens remain only in negative/checker tests that prove rejection or absence |
+| `experiments_playbook/` | Focused retired-token audit is clean; current runner no longer has a Legacy/backlog table or relay/slot proof entries |
+| `experiments_env/shared/` | Focused retired-token audit is clean |
+| `_backlog/bugs`, `_backlog/plans`, `_backlog/todos` | Focused retired-token audit is clean; obsolete old relay reports/plans removed, useful TODOs migrated |
 
 ## Archive-Readiness Rule
 
-Before archive, rerun the focused audit. Every remaining hit outside `openspec/changes/archive/` must be explainable by an allowed close state. Current runnable playbooks, runner tables, docs, or specs must not retain old relay/slot production instructions merely because they are historical.
+Before archive, rerun hygiene and the focused audit. Any new hit outside `openspec/changes/archive/` must either match the allowed close states above or be fixed before archive. Current runnable playbooks, runner tables, docs, or specs must not retain old relay/slot production instructions merely because they are historical.

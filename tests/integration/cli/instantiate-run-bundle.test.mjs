@@ -44,6 +44,7 @@ describe('instantiate-run-bundle.mjs integration', () => {
       '_cache/README.md',
       '_logs/README.md',
       'final',
+      '_work_units',
     ]) {
       assert.equal(existsSync(join(dir, entry)), true, `missing ${entry}`);
     }

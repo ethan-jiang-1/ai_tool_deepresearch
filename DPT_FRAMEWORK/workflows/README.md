@@ -2,7 +2,9 @@
 
 ## Role
 
-此目录定义 workflow-foundation 的生命周期拓扑和 Agent 指令。所有文件是 **read-only framework assets**（git tracked），不是 run state。Run state 在 `dpt_rb_*` bundle 中。
+此目录定义 workflow-foundation 的生命周期拓扑和 Agent 指令。所有文件是 **read-only framework assets**（git tracked），不是 run state。Run state 在 active bundle root 中：production 为选中的 `dpt_rb_*`，disposable experiment 为选中的 `dpt_disp_*`。
+
+Workflow node 中的裸 runtime path（如 `rb_queue.json`、`rb_trace.jsonl`、`reference/`、`artifacts/`、`_cache/`、`_logs/`、`_work_units/...`）都以 active bundle root 为根，不以 repo root 或 `DPT_FRAMEWORK/` 为根。
 
 ## Structure
 

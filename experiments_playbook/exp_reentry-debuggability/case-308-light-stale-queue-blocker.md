@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: reentry-debuggability
 case: case-308-light-stale-queue-blocker
 weight: light
-case_goal: "验证 queue conflict 检测: hitl2_recorded 状态下存在 stale prior-phase queue work 时，check-reentry 返回 blocker + exit 1。"
+case_goal: "验证 queue conflict 检测: hitl2_recorded 状态下存在 stale prior-phase queue v2 active_window demand 时，check-reentry 返回 blocker + exit 1。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -11,7 +11,7 @@ bundle: dpt_disp_case-308_queue_blocker
 trace: dpt_disp_case-308_queue_blocker/rb_trace.jsonl
 verdict: trace-jsonl
 production_distance: >
-  本实验 fixture 写入预制的 rb_queue.json（含 stale wave0 queued 项）。文件由脚本生成，不涉及 Agent 搜索/判断。实验证明 Engine 的 queue conflict audit 能正确识别 prior-phase active work 并分类为 blocker。
+  本实验 fixture 写入预制的 queue.v2 rb_queue.json（含 stale wave0 queued active_window 项）。文件由脚本生成，不涉及 Agent 搜索/判断。实验证明 Engine 的 queue conflict audit 能正确识别 prior-phase active demand 并分类为 blocker。
 ---
 
 ## Execution Contract
@@ -20,13 +20,13 @@ production_distance: >
 
 # case-308-light-stale-queue-blocker
 
-验证 `check-reentry --at hitl2_recorded` 在队列中存在 stale wave0 `queued` 项时产生 blocker + exit 1。
+验证 `check-reentry --at hitl2_recorded` 在 queue.v2 `active_window` 中存在 stale wave0 `queued` 项时产生 blocker + exit 1。
 
 ## Expected Runtime Path
 
-1. 创建 disposable bundle，状态为 `hitl2_recorded`，队列含 stale `queued` wave0 项 `[MAIN/SHELL]`
+1. 创建 disposable bundle，状态为 `hitl2_recorded`，queue.v2 `active_window[0]` 含 stale `queued` wave0 项 `[MAIN/SHELL]`
 2. 跑 `check-reentry --at hitl2_recorded` `[MAIN/SHELL]`
-3. 验证 exit 1 + blocker 含 stale work id `[MAIN/SHELL]`
+3. 验证 exit 1 + blocker 含 stale `queue_item_id` `[MAIN/SHELL]`
 4. 从 trace 裁决 `[MAIN/SHELL]`
 5. 清理 `[MAIN/SHELL]`
 
@@ -53,35 +53,39 @@ topic_registry:
 # Plan
 MD
 
-# Queue — 含 stale wave0 queued 项 (writes_to 影响 gate pass condition)
+# Queue v2 — 含 stale wave0 queued active_window 项 (writes_to 影响 gate pass condition)
 cat > "$B/rb_queue.json" << 'JSON'
 {
+  "schema_version": "queue.v2",
+  "bundle_name": null,
   "queue_health": "ready",
   "stop_authorization_state": "unauthorized_continue_required",
-  "slot_1_current": {
-    "work_id": "wave0-source-topic-a",
-    "title": "Wave0 shared reference intake",
-    "action": "Collect shared references for topic-a",
-    "targets": { "controller": "main-agent" },
-    "producer_rule": "shared_reference_intake",
-    "lineage": { "topic_slug": "topic-a", "phase": "wave0" },
-    "priority_class": "P3_current_gate_gap",
-    "required_receipts": [],
-    "done_condition": "Sources collected",
-    "verification": { "engine": [], "agent": [] },
-    "writes_to": ["reference/00-shared-foo.md", "artifacts/wave0/topic-a/source.yaml"],
-    "status_sync": [],
-    "completion_receipt": "none",
-    "failure_route": "queue_repair",
-    "status": "queued",
-    "preempted_from_slot": "not_applicable",
-    "restore_priority": "normal",
-    "created_at": "2026-01-01T00:00:00.000Z",
-    "updated_at": "2026-01-01T00:00:00.000Z",
-    "payload": {}
-  },
-  "slot_2_next": null, "slot_3_pending": null, "slot_4_pending": null, "slot_5_tail": null,
-  "refill_pool": []
+  "active_window": [
+    {
+      "queue_item_id": "wave0-source-topic-a",
+      "title": "Wave0 shared reference intake",
+      "action": "Collect shared references for topic-a",
+      "targets": { "controller": "main-agent" },
+      "producer_rule": "shared_reference_intake",
+      "lineage": { "topic_slug": "topic-a", "phase": "wave0" },
+      "priority_class": "P3_current_gate_gap",
+      "required_receipts": [],
+      "done_condition": "Sources collected",
+      "verification": { "engine": [], "agent": [] },
+      "writes_to": ["reference/00-shared-foo.md", "artifacts/wave0/topic-a/source.yaml"],
+      "status_sync": [],
+      "completion_receipt": null,
+      "failure_route": "queue_repair",
+      "status": "queued",
+      "restore_priority": "normal",
+      "created_at": "2026-01-01T00:00:00.000Z",
+      "updated_at": "2026-01-01T00:00:00.000Z",
+      "payload": {}
+    }
+  ],
+  "refill_pool": [],
+  "delegated_in_flight": {},
+  "terminal_history": []
 }
 JSON
 
@@ -93,7 +97,7 @@ mkdir -p "$B/seed_topics" && echo "# Topic A" > "$B/seed_topics/topic-a.md"
 echo "B=$B"
 ```
 
-→ 预期：bundle 创建，queue 含 stale wave0 queued 项。
+→ 预期：bundle 创建，queue.v2 `active_window[0].queue_item_id` 为 stale wave0 queued 项。
 
 ---
 
@@ -133,12 +137,12 @@ checks.push({
 });
 
 const blockerForWave0 = (result.blockers || []).some(b =>
-  b.check === 'queue_conflict' && b.detail?.phase === 'wave0' && b.detail?.work_id === 'wave0-source-topic-a'
+  b.check === 'queue_conflict' && b.detail?.phase === 'wave0' && b.detail?.queue_item_id === 'wave0-source-topic-a'
 );
 checks.push({
   ts: new Date().toISOString(), event: 'check',
-  gate: 'correct-work-id', passed: blockerForWave0, expected: true,
-  detail: `Blocker names wave0-source-topic-a: ${blockerForWave0}`
+  gate: 'correct-queue-item-id', passed: blockerForWave0, expected: true,
+  detail: `Blocker names queue_item_id wave0-source-topic-a: ${blockerForWave0}`
 });
 
 checks.push({
@@ -164,35 +168,39 @@ node "$B/_verdict.mjs" "$B" "$RESULT" "$EXIT"
 ```bash
 B= # populated from Step 1
 
-# 把 stale 项改为 done
+# 把 stale active_window 项改为 done
 cat > "$B/rb_queue.json" << 'JSON'
 {
+  "schema_version": "queue.v2",
+  "bundle_name": null,
   "queue_health": "ready",
   "stop_authorization_state": "unauthorized_continue_required",
-  "slot_1_current": {
-    "work_id": "wave0-source-topic-a",
-    "title": "Wave0 shared reference intake",
-    "action": "Collect shared references",
-    "targets": { "controller": "main-agent" },
-    "producer_rule": "shared_reference_intake",
-    "lineage": { "topic_slug": "topic-a", "phase": "wave0" },
-    "priority_class": "P3_current_gate_gap",
-    "required_receipts": [],
-    "done_condition": "Done",
-    "verification": { "engine": [], "agent": [] },
-    "writes_to": ["reference/00-shared-foo.md"],
-    "status_sync": [],
-    "completion_receipt": "none",
-    "failure_route": "queue_repair",
-    "status": "done",
-    "preempted_from_slot": "not_applicable",
-    "restore_priority": "normal",
-    "created_at": "2026-01-01T00:00:00.000Z",
-    "updated_at": "2026-01-01T00:00:00.000Z",
-    "payload": {}
-  },
-  "slot_2_next": null, "slot_3_pending": null, "slot_4_pending": null, "slot_5_tail": null,
-  "refill_pool": []
+  "active_window": [
+    {
+      "queue_item_id": "wave0-source-topic-a",
+      "title": "Wave0 shared reference intake",
+      "action": "Collect shared references",
+      "targets": { "controller": "main-agent" },
+      "producer_rule": "shared_reference_intake",
+      "lineage": { "topic_slug": "topic-a", "phase": "wave0" },
+      "priority_class": "P3_current_gate_gap",
+      "required_receipts": [],
+      "done_condition": "Done",
+      "verification": { "engine": [], "agent": [] },
+      "writes_to": ["reference/00-shared-foo.md"],
+      "status_sync": [],
+      "completion_receipt": null,
+      "failure_route": "queue_repair",
+      "status": "done",
+      "restore_priority": "normal",
+      "created_at": "2026-01-01T00:00:00.000Z",
+      "updated_at": "2026-01-01T00:00:00.000Z",
+      "payload": {}
+    }
+  ],
+  "refill_pool": [],
+  "delegated_in_flight": {},
+  "terminal_history": []
 }
 JSON
 

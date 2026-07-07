@@ -3,116 +3,105 @@ schema: command-experiment/v1
 experiment: agentic-queue
 case: case-41-light-minimal-path
 weight: light
-case_goal: "验证 enqueue → claim → complete → promote → projection 的最小 Queue Manager 路径。"
+case_goal: "验证 enqueue -> claim -> complete -> promote -> projection 的最小 queue v2 路径。"
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-41_agq_simple
-trace: dpt_disp_case-41_agq_simple/rb_trace.jsonl
+bundle: dpt_disp_case-41_agq_simple_*
+trace: dpt_disp_case-41_agq_simple_*/rb_trace.jsonl
 verdict: trace-jsonl
-req: AGQ-006
+req: AGQ-006, AGQ-019
 ---
 
 ## Execution Contract
 
-由 coding agent 在真实 `dpt_disp_*` bundle 中执行。实验结果必须来自实际文件写入、Queue Manager API/CLI 调用和 trace event；允许读取文件系统中间产物；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
+由 coding agent 在真实 `dpt_disp_*` bundle 中逐步执行。实验结果必须来自实际 Queue Manager API/CLI 调用、bundle-root `rb_queue.json`、projection 文件和 trace `check` events；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
 
 ## Reality Distance Ledger
 
 | 维度 | 声明 |
 |------|------|
-| **Runtime context** | disposable bundle，`new-disposable-bundle.mjs` 创建 |
-| **Framework path** | `queue-manager.mjs` API（`createQueue`, `enqueue`, `claim`, `complete`, `saveQueue`），`operate-queue.mjs` CLI |
-| **Fixture input** | task card JSON 在 playbook 内构造 — Engine-layer fixture |
-| **Agent actor** | 无（fixture-backed）— 不证明 Agent 能生成 task/claim/complete |
-| **External calls** | 无 |
-| **Verdict source** | `rb_trace.jsonl` `check` events |
-| **不证明** | Agent 队列决策、repair 策略、delegated complete — 仅证明 queue 基本生命周期 |
-
-
+| Runtime context | disposable bundle，`new-disposable-bundle.mjs` 创建 |
+| Framework path | `queue-manager.mjs` API：`createQueue`, `enqueue`, `claim`, `complete`, `saveQueue`, `loadQueue` |
+| Fixture input | task card JSON 在 playbook 内构造，使用 queue v2 `queue_item_id` |
+| Agent actor | 无，fixture-backed Engine case |
+| External calls | 无 |
+| Verdict source | bundle-root `rb_trace.jsonl` `check` events |
+| 不证明 | Agent 队列决策、delegated work-unit submit、真实内容生产 |
 
 # case-41-light-minimal-path
 
-验证三个任务入队后，只有 `slot_1_current` 可 claim；完成当前任务后 slot 2 promotion 到 slot 1，并生成 Markdown projection。
+验证三个 queue demand 入队后，queue front 可以 claim；完成 front item 后，ordered `active_window[1]` promotion 到 `active_window[0]`，并生成 Markdown projection。
 
 ## Expected Runtime Path
 
 1. 创建 disposable bundle，validate + inspect
-2. 四段 MD-controlled 脚本：
-   - 2.1 Enqueue：初始化队列并入队三个任务，持久化 `rb_queue.json`
-   - 2.2 Claim：加载队列，claim `slot_1_current`，验证只有 `simple-1` 可被 claim
-   - 2.3 Complete：完成 `simple-1`，receipt 校验，内部 promote + refill + render
-   - 2.4 Verify：验证 `simple-2` 已 promotion 到 `slot_1_current`，projection 文件存在
-3. 从 trace JSONL 裁决
-4. 清理
+2. Enqueue：初始化 queue v2 并入队三个 task cards
+3. Claim：认领 ordered `active_window[0]`
+4. Complete：完成 `queue-simple-1`，receipt 校验，内部 promote + render
+5. Verify：验证 `queue-simple-2` 已 promotion 到 `active_window[0]`
+6. 从 bundle-root trace 裁决
+7. PASS 后清理
 
----
-
-## Step 1: 创建 Run Bundle
+## Step 1: 创建 disposable runtime context
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs agq_simple --case case-41 --nodes=experiments_env/prototype-agentic-queue/nodes-agentic-queue --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs agq_simple --case case-41 --force)
 node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
 node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 ```
 
-→ 预期：validate 5/5 passed，inspect directory structure complete。
+-> 预期：bundle 创建成功，control files 有效。
 
----
+## Step 2.1: Enqueue
 
-## Step 2.1: Enqueue — 初始化队列并入队三个任务
-
-创建空队列，按序入队 `simple-1`、`simple-2`、`simple-3`，写入 receipt 文件，持久化到 `rb_queue.json`。
+创建 queue v2，按序入队 `queue-simple-1`、`queue-simple-2`、`queue-simple-3`，持久化到 bundle-root `rb_queue.json`。
 
 ```bash
-
 cat > "$B/enqueue.mjs" << 'JS'
 import { writeFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import {
-  createQueue,
-  enqueue,
-  saveQueue,
-  makeItem,
-} from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
-
+import { createQueue, enqueue, saveQueue, makeItem } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
+
 const __dirname = esmDirname(import.meta.url);
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 trace.traceInit('agq-playbook/simple', { source: 'agq-playbook/simple' });
 
 writeFileSync(__dirname + '/done-1.json', '{"ok":true}\n');
 let queue = createQueue('agq-simple');
-queue = enqueue(queue, makeItem({ work_id: 'simple-1', title: 'Task 1', completion_receipt: 'json:done-1.json' }));
-queue = enqueue(queue, makeItem({ work_id: 'simple-2', title: 'Task 2' }));
-queue = enqueue(queue, makeItem({ work_id: 'simple-3', title: 'Task 3' }));
+queue = enqueue(queue, makeItem({ queue_item_id: 'queue-simple-1', title: 'Task 1', completion_receipt: 'json:done-1.json' }));
+queue = enqueue(queue, makeItem({ queue_item_id: 'queue-simple-2', title: 'Task 2' }));
+queue = enqueue(queue, makeItem({ queue_item_id: 'queue-simple-3', title: 'Task 3' }));
 saveQueue(__dirname, queue);
+
+trace.traceEntry('check', {
+  source: 'agq-playbook/simple',
+  step: 'enqueue_ordered_window',
+  passed: queue.active_window.length === 3
+    && queue.active_window[0].queue_item_id === 'queue-simple-1'
+    && queue.active_window[1].queue_item_id === 'queue-simple-2'
+    && queue.active_window[2].queue_item_id === 'queue-simple-3'
+    && queue.refill_pool.length === 0,
+});
 JS
 
 node "$B/enqueue.mjs"
 ```
 
-→ 预期：3 个 `queue_enqueue` trace event，`rb_queue.json` 写入 bundle，`slot_1_current`=`simple-1`，`slot_2_next`=`simple-2`，`slot_3_pending`=`simple-3`，`slot_4`/`slot_5` 为空。
+-> 预期：ordered `active_window` 三个元素顺序正确，无 named slot fields。
 
----
+## Step 2.2: Claim
 
-## Step 2.2: Claim — 认领当前任务
-
-从持久化队列加载，claim `slot_1_current`。验证只有 `simple-1` 可被 claim，且 `simple-2` 状态仍为 `queued`（不可越级 claim）。
+从持久化 queue 加载并 claim front item。验证只有 `active_window[0]` 被认领，后续 item 仍为 `queued`。
 
 ```bash
-
 cat > "$B/claim.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import {
-  loadQueue,
-  claim,
-  saveQueue,
-} from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
-
+import { loadQueue, claim, saveQueue } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
-const __dirname = esmDirname(import.meta.url);
 
+const __dirname = esmDirname(import.meta.url);
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 
 let queue = loadQueue(__dirname);
@@ -121,39 +110,34 @@ saveQueue(__dirname, result.queue);
 
 trace.traceEntry('check', {
   source: 'agq-playbook/simple',
-  step: 'claim_current_only',
-  passed: result.item.work_id === 'simple-1' && result.queue.active_window.slot_2_next.status === 'queued',
+  step: 'claim_front_only',
+  passed: result.item.queue_item_id === 'queue-simple-1'
+    && result.queue.active_window[0].status === 'running'
+    && result.queue.active_window[1].queue_item_id === 'queue-simple-2'
+    && result.queue.active_window[1].status === 'queued',
 });
 JS
 
 node "$B/claim.mjs"
 ```
 
-→ 预期：`claim.item.work_id === 'simple-1'`，`slot_2_next` 状态仍为 `queued`，`queue_claimed` trace event 已写入。
+-> 预期：claim 返回 `queue-simple-1`，`queue-simple-2` 仍 queued。
 
----
+## Step 2.3: Complete
 
-## Step 2.3: Complete — 完成当前任务 + receipt 校验
-
-完成 `simple-1`，校验 `json:done-1.json` receipt。`complete` 内部执行 promote → refill → render。
+完成 `queue-simple-1`，校验 `json:done-1.json` receipt。
 
 ```bash
-
 cat > "$B/complete.mjs" << 'JS'
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import {
-  loadQueue,
-  complete,
-  saveQueue,
-} from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
-
+import { loadQueue, complete, saveQueue } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
-const __dirname = esmDirname(import.meta.url);
 
+const __dirname = esmDirname(import.meta.url);
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 
 let queue = loadQueue(__dirname);
-const completed = complete(queue, { work_id: 'simple-1', receipt: 'json:done-1.json' }, __dirname);
+const completed = complete(queue, { queue_item_id: 'queue-simple-1', receipt: 'json:done-1.json' }, __dirname);
 saveQueue(__dirname, completed.queue);
 
 trace.traceEntry('check', {
@@ -166,64 +150,68 @@ JS
 node "$B/complete.mjs"
 ```
 
-→ 预期：receipt 校验通过，`queue_completed` + `queue_promoted` trace event，projection 已渲染到 `_cache/agentic-queue/current-task.md`。
+-> 预期：receipt 校验通过，front item 完成并 promotion。
 
----
+## Step 2.4: Verify
 
-## Step 2.4: Verify — 验证 promotion 与最终队列状态
-
-加载完成后的队列，验证 `simple-2` 已 promotion 到 `slot_1_current`，projection 文件存在且内容正确。
+验证 `queue-simple-2` 已成为 `active_window[0]`，projection 文件存在且来自 current queue。
 
 ```bash
-
 cat > "$B/verify.mjs" << 'JS'
 import { existsSync, readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
 import { loadQueue } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
-
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
-const __dirname = esmDirname(import.meta.url);
 
+const __dirname = esmDirname(import.meta.url);
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 
 const queue = loadQueue(__dirname);
 const projectionPath = __dirname + '/_cache/agentic-queue/current-task.md';
 const projectionExists = existsSync(projectionPath);
 const projectionContent = projectionExists ? readFileSync(projectionPath, 'utf-8') : '';
+const queueV2Keys = new Set([
+  'schema_version',
+  'bundle_name',
+  'queue_health',
+  'stop_authorization_state',
+  'active_window',
+  'refill_pool',
+  'delegated_in_flight',
+  'terminal_history',
+]);
+const hasOnlyQueueV2Keys = Object.keys(queue).every((key) => queueV2Keys.has(key));
 
 trace.traceEntry('check', {
   source: 'agq-playbook/simple',
   step: 'promote_projection',
-  passed: queue.active_window.slot_1_current.work_id === 'simple-2'
+  passed: queue.active_window[0].queue_item_id === 'queue-simple-2'
     && projectionExists
-    && projectionContent.includes('simple-2'),
+    && projectionContent.includes('queue-simple-2')
+    && hasOnlyQueueV2Keys,
 });
 JS
 
 node "$B/verify.mjs"
 ```
 
-→ 预期：`slot_1_current.work_id === 'simple-2'`，projection 文件存在且包含 `simple-2`。
+-> 预期：promotion 与 projection 均通过，queue 文件不含 named slot state。
 
----
-
-## Step 3: 从 Trace 裁决
+## Step 3: 从 trace 裁决
 
 ```bash
-
 cat > "$B/verdict.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-
 import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
-const __dirname = esmDirname(import.meta.url);
 
+const __dirname = esmDirname(import.meta.url);
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 const events = readFileSync(trace.traceFilePath(), 'utf-8').trim().split('\n').map(JSON.parse);
-const checks = events.filter((event) => event.event === 'check');
-const pass = checks.length >= 3 && checks.every((event) => event.passed === true);
+const checks = events.filter((event) => event.event === 'check' && event.source === 'agq-playbook/simple');
+const pass = checks.length >= 4 && checks.every((event) => event.passed === true);
 console.log('checks:' + checks.length + ' total:' + events.length);
-console.log(pass ? '\x1b[32mSIMPLE PASS\x1b[0m' : '\x1b[31mSIMPLE FAIL\x1b[0m');
+console.log(pass ? '\x1b[32mCASE-41 PASS\x1b[0m' : '\x1b[31mCASE-41 FAIL\x1b[0m');
 if (!pass) process.exit(1);
 trace.traceCleanup();
 JS
@@ -231,24 +219,15 @@ JS
 node "$B/verdict.mjs"
 ```
 
-→ 预期：所有 `check` events 通过，SIMPLE PASS。
-
----
-
+-> 预期：4 个 playbook check 全部通过。
 
 ## Step 4: 结果解读
 
-> 3 个 check，验证 queue 最小路径：
->   [claim_current_only] claim 返回 simple-1，slot_2 仍 queued
->   [completion_feedback] complete 后 receipt 校验通过
->   [promote_projection] simple-2 已 promotion 到 slot_1，projection 文件存在
->   全部 expected:true → 3/3 PASS 即通过。
+PASS 证明 queue v2 的 ordered active-window 最小 lifecycle 成立：enqueue 保序、claim 只认领 front、complete 通过 receipt 后 promotion、projection 来自 bundle-root `rb_queue.json`。
 
-## Step 5: 清理
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
+## Cleanup
 
 ```bash
-rm -rf dpt_disp_case-41_agq_*
-echo "Cleaned up."
+rm -rf "$B"
+echo "Cleaned up $B"
 ```

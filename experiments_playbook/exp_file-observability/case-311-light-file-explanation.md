@@ -52,7 +52,16 @@ topic_registry:
 # Plan
 MD
 cat > "$B/rb_queue.json" << 'JSON'
-{"queue_health":"ready","stop_authorization_state":"unauthorized_continue_required","slot_1_current":null,"slot_2_next":null,"slot_3_pending":null,"slot_4_pending":null,"slot_5_tail":null,"refill_pool":[]}
+{
+  "schema_version": "queue.v2",
+  "bundle_name": null,
+  "queue_health": "ready",
+  "stop_authorization_state": "unauthorized_continue_required",
+  "active_window": [],
+  "refill_pool": [],
+  "delegated_in_flight": {},
+  "terminal_history": []
+}
 JSON
 echo "research_style: quick_factual" > "$B/rb_profile.yaml"
 touch "$B/rb_trace.jsonl"
@@ -62,7 +71,7 @@ echo "# Topic A" > "$B/seed_topics/topic-a.md"
 
 # 未声明的文件
 mkdir -p "$B/reference"
-echo "# Extra file — Agent knows about it but it was not produced through Queue/Relay" > "$B/reference/topic-a-extra.md"
+echo "# Extra file — Agent knows about it but it was not produced through work-unit submit" > "$B/reference/topic-a-extra.md"
 
 echo "B=$B"
 ```
@@ -96,7 +105,7 @@ checks.push({
   detail: `Before explanation: ${f?.classification}`
 });
 
-const tracePath = join(__dirname, '_logs', '_trace.jsonl');
+const tracePath = join(__dirname, 'rb_trace.jsonl');
 for (const c of checks) writeFileSync(tracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 console.log(JSON.stringify({ classification: f?.classification, severity: f?.severity }));
 JS
@@ -117,7 +126,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs \
   --bundle "$B" \
   --explain-file "reference/topic-a-extra.md" \
   --status "explained_non_authoritative" \
-  --reason "Agent created this file during manual inspection — it was not produced through delegated Queue/Relay completion" \
+  --reason "Agent created this file during manual inspection — it was not produced through work-unit submit" \
   --phase "wave1" \
   --topic-slug "topic-a"
 
@@ -179,7 +188,7 @@ checks.push({
   detail: `authority_status stays non-authoritative: ${f?.authority_status}`
 });
 
-const expTracePath = join(__dirname, '_logs', '_trace.jsonl');
+const expTracePath = join(__dirname, 'rb_trace.jsonl');
 for (const c of checks) writeFileSync(expTracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 console.log(JSON.stringify(checks.map(c => ({ gate: c.gate, passed: c.passed }))));
 JS
@@ -220,7 +229,7 @@ const checks = [{
   detail: `declared_authoritative rejected: ${!hasBadExplanation}`
 }];
 
-const expTracePath = join(__dirname, '_logs', '_trace.jsonl');
+const expTracePath = join(__dirname, 'rb_trace.jsonl');
 for (const c of checks) writeFileSync(expTracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 console.log(JSON.stringify({ rejected: !hasBadExplanation }));
 JS
@@ -240,7 +249,7 @@ cat > "$B/_final_verdict.mjs" << 'JS'
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 const __dirname = process.argv[2];
-const tracePath = join(__dirname, '_logs', '_trace.jsonl');
+const tracePath = join(__dirname, 'rb_trace.jsonl');
 const raw = readFileSync(tracePath, 'utf-8').trim();
 if (!raw) { console.log('FAIL: No trace events'); process.exit(1); }
 const lines = raw.split('\n').filter(l => l.trim());
@@ -265,6 +274,8 @@ node "$B/_final_verdict.mjs" "$B"
 ---
 
 ## Cleanup
+
+PASS 才执行。FAIL 时保留 bundle 现场供排查。
 
 ```bash
 B= # populated from Step 1

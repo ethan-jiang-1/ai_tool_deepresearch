@@ -154,6 +154,8 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 
 ### Wave2 Sub-agent Cache/Work-Unit 路径
 
+Bare runtime paths in this node are active bundle-root relative. If the active bundle root is `dpt_rb_example/`, `_work_units/wave2/{work_id}/` means `dpt_rb_example/_work_units/wave2/{work_id}/`.
+
 - `_cache/wave2/.../` — source cache leaf directories declared in submitted work-unit results
 - `_work_units/wave2/{work_id}/` — work-unit envelope, task, beacon, runtime receipt, result/status, and diagnostic runtime refs
 
@@ -166,7 +168,7 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 以下目录以 `_` 前缀命名，gate 不检查其内容。它们是运行时暂存区，不属于 authority artifact surface：
 
 - **`_cache/`**：Sub-agent 网络原始内容缓存，四级目录 `{wave}/{batch}/{scope}/{source_dir}/`。每个 source 写 `websearch.json` + `page.md` + `meta.json`（11 字段：url, title, source_domain, source_name, fetched_at, fetch_method, fetch_chain, content_type, reliability_tier, reliability_basis, whitelist_status）。Phase Agent spawn 前 `mkdir -p`，通过 spawn prompt 传递绝对路径。Non-authority，wave 完成后可清理对应 wave 子目录。详见 `_cache/README.md`。
-- **`_work_units/`**：production delegated work-unit envelopes, allocated by `operate-work-unit claim` and validated by `operate-work-unit submit`. Each envelope contains `manifest.json` / `task.md` / `result.schema.json` / `_beacon.json` / `runtime-receipt.jsonl` / result/status surfaces. Gate coverage still comes from submitted rows in `rb_output_declarations.jsonl`; `_work_units/` is a cross-check and diagnostic surface.
+- **`_work_units/`**：bundle-root production delegated work-unit envelopes, allocated by `operate-work-unit claim` and validated by `operate-work-unit submit`. Each envelope contains `manifest.json` / `task.md` / `result.schema.json` / `_beacon.json` / `runtime-receipt.jsonl` / result/status surfaces. Gate coverage still comes from submitted rows in `rb_output_declarations.jsonl`; `_work_units/` is a cross-check and diagnostic surface.
 
 ## Final Delivery
 

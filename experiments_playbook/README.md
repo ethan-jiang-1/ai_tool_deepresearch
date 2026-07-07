@@ -56,7 +56,7 @@ experiments_playbook/
 | Standard | 真实 bundle 多步骤，无外部调用 | 功能验证 |
 | Heavy | WebSearch/WebFetch/subagent 真实外部调用 | 完整验证 |
 
-`RUN_EXPS.md` 中的 Legacy/backlog 清单默认跳过。那些 case 保留为历史对照或迁移 backlog，不能用来证明当前 work-unit production path。
+`RUN_EXPS.md` 只列当前可运行 proof surfaces。旧 relay/slot、旧 queue slot shape、旧手写 delegated ledger 不能作为当前 production path 证明；有价值的 case 应迁移到 current work-unit / queue v2 路径，否则移出当前 playbook surface。
 
 ## 跟其他目录的关系
 

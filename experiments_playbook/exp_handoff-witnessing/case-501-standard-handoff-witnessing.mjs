@@ -15,6 +15,11 @@ import {
 } from 'node:fs';
 import { basename, join } from 'node:path';
 
+import {
+  claimAndSubmitFixtureWorkUnit,
+  readWorkUnitLedgerRows,
+} from '../../experiments_env/shared/work-unit-playbook-utils.mjs';
+
 const REPO_ROOT = process.cwd();
 const CASE_ID = 'case-501-standard-handoff-witnessing';
 const bundles = [];
@@ -61,6 +66,46 @@ function traceEvents(bundle) {
 
 function appendTrace(bundle, event) {
   appendFileSync(tracePath(bundle), JSON.stringify({ ts: new Date().toISOString(), ...event }) + '\n');
+}
+
+function submittedWorkUnitCovers(bundle, outputPath) {
+  return readWorkUnitLedgerRows(bundle)
+    .some((row) => row.output_files?.some((entry) => entry.path === outputPath));
+}
+
+function submitExistingFixtureWorkUnitOnce(bundle, {
+  phase,
+  queue_item_id,
+  topic_slug = 'topic-a',
+  title,
+  output_path,
+  role = 'reference',
+  source_url,
+  source_slug,
+  extra_output_files = [],
+}) {
+  if (submittedWorkUnitCovers(bundle, output_path)) return null;
+  const outputFile = join(bundle, output_path);
+  const extraFiles = extra_output_files.map((entry) => ({
+    ...entry,
+    content: readFileSync(join(bundle, entry.path), 'utf8'),
+  }));
+  const result = claimAndSubmitFixtureWorkUnit(bundle, {
+    phase,
+    queue_item_id,
+    topic_slug,
+    title,
+    output_path,
+    role,
+    source_url,
+    source_slug,
+    output_content: readFileSync(outputFile, 'utf8'),
+    extra_output_files: extraFiles,
+  });
+  if (result.submit?.ok !== true) {
+    throw new Error(`work-unit fixture submit failed for ${queue_item_id}: ${JSON.stringify(result.submit)}`);
+  }
+  return result;
 }
 
 function recordCheck(bundle, gate, passed, detail, expected = true) {
@@ -252,6 +297,14 @@ This seed topic is deterministic fixture content for gate validation.
 `);
 }
 
+function wave0SourceYamlContent() {
+  return `- url: "https://research.example.org/articles/handoff-witnessing-study-2026"
+  title: "Handoff Witnessing Reference"
+  retrieved_date: "2026-07-05"
+  topic_tag: "topic-a"
+`;
+}
+
 function ensureWave0Scaffold(bundle) {
   mkdirSync(join(bundle, 'artifacts/wave0/topic-a'), { recursive: true });
   writeFileSync(join(bundle, 'reference/_INDEX.md'),
@@ -281,38 +334,19 @@ function ensureWave0Scaffold(bundle) {
     '## Quotable Terms / Concepts\n- route-bound load witness\n\n' +
     '## Risks And Limitations\n- Fixture evidence only.\n');
 
-  writeFileSync(join(bundle, 'rb_output_declarations.jsonl'), JSON.stringify({
-    declared_at: new Date().toISOString(),
-    work_id: 'wave0-source-topic-a',
-    producer_rule: 'source_intake_fan_in',
-    slot_result_ref: '_subagents/wave_00/slot_00/result.json',
-    runtime_receipt_ref: '_subagents/wave_00/slot_00/runtime-receipt.jsonl',
-    output_files: [
-      { path: 'reference/00-shared-handoff.md', role: 'reference', source_url: 'https://research.example.org/articles/handoff-witnessing-study-2026' },
+  writeFileSync(join(bundle, 'artifacts/wave0/topic-a/source.yaml'), wave0SourceYamlContent());
+  submitExistingFixtureWorkUnitOnce(bundle, {
+    phase: 'wave0',
+    queue_item_id: 'wave0-source-topic-a',
+    topic_slug: 'topic-a',
+    title: 'Handoff witnessing Wave0 source intake',
+    output_path: 'reference/00-shared-handoff.md',
+    source_url: 'https://research.example.org/articles/handoff-witnessing-study-2026',
+    source_slug: 'handoff-witnessing-study',
+    extra_output_files: [
       { path: 'artifacts/wave0/topic-a/source.yaml', role: 'source_yaml' },
     ],
-    cache_trails: [],
-    creation_reason: 'Fixture-backed wave0 reference declaration for handoff witnessing E2E.',
-  }) + '\n');
-
-  const slotDir = join(bundle, '_subagents/wave_00/slot_00');
-  mkdirSync(slotDir, { recursive: true });
-  writeFileSync(join(slotDir, '_status.json'), JSON.stringify({ status: 'done', updated: new Date().toISOString() }));
-  writeFileSync(join(slotDir, 'result.json'), JSON.stringify({
-    slotKey: 'source_intake',
-    roleAgentKey: 'dpt-source-intake',
-    status: 'done',
-    summary: 'Fixture slot result for standard E2E.',
-    evidenceCount: 1,
-    references: [],
-    confidence: 0.8,
-    notes: [],
-    output_files: [
-      { path: 'reference/00-shared-handoff.md', role: 'reference', source_url: 'https://research.example.org/articles/handoff-witnessing-study-2026' },
-      { path: 'artifacts/wave0/topic-a/source.yaml', role: 'source_yaml' },
-    ],
-    cache_trails: [],
-  }));
+  });
 }
 
 function stageWave0ParseFailure(bundle) {
@@ -327,29 +361,8 @@ function stageWave0CountFailure(bundle) {
 
 function stageWave0Pass(bundle) {
   ensureWave0Scaffold(bundle);
-  writeFileSync(join(bundle, 'artifacts/wave0/topic-a/source.yaml'), `- url: "https://research.example.org/articles/handoff-witnessing-study-2026"
-  title: "Handoff Witnessing Reference"
-  retrieved_date: "2026-07-05"
-  topic_tag: "topic-a"
-`);
+  writeFileSync(join(bundle, 'artifacts/wave0/topic-a/source.yaml'), wave0SourceYamlContent());
   appendTrace(bundle, { event: 'wave0_completion', source: 'playbook-fixture' });
-}
-
-function appendWave1Ledger(bundle) {
-  appendFileSync(join(bundle, 'rb_output_declarations.jsonl'), JSON.stringify({
-    declared_at: new Date().toISOString(),
-    work_id: 'wave1-deepening-topic-a',
-    producer_rule: 'deepening_intake',
-    slot_result_ref: '_subagents/wave_01/slot_00/result.json',
-    runtime_receipt_ref: '_subagents/wave_01/slot_00/runtime-receipt.jsonl',
-    output_files: [
-      { path: 'reference/topic-a-deepening.md', role: 'reference', source_url: 'https://research.example.org/articles/topic-a-deepening-analysis-2026' },
-      { path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary' },
-      { path: 'artifacts/wave1/topic-a/question-list.md', role: 'question_list' },
-    ],
-    cache_trails: [],
-    creation_reason: 'Fixture-backed wave1 reference declaration for handoff witnessing E2E.',
-  }) + '\n');
 }
 
 function stageWave1Pass(bundle) {
@@ -415,26 +428,19 @@ title: Topic A
 ## 待验证问题
 1. [部分解答] How can stale handoffs be detected?
 `);
-  const slotDir = join(bundle, '_subagents/wave_01/slot_00');
-  mkdirSync(slotDir, { recursive: true });
-  writeFileSync(join(slotDir, '_status.json'), JSON.stringify({ status: 'done', updated: new Date().toISOString() }));
-  writeFileSync(join(slotDir, 'result.json'), JSON.stringify({
-    slotKey: 'deepening',
-    roleAgentKey: 'dpt-evidence-extractor',
-    status: 'done',
-    summary: 'Fixture wave1 slot result.',
-    evidenceCount: 1,
-    references: [],
-    confidence: 0.8,
-    notes: [],
-    output_files: [
-      { path: 'reference/topic-a-deepening.md', role: 'reference', source_url: 'https://research.example.org/articles/topic-a-deepening-analysis-2026' },
+  submitExistingFixtureWorkUnitOnce(bundle, {
+    phase: 'wave1',
+    queue_item_id: 'wave1-deepening-topic-a',
+    topic_slug: 'topic-a',
+    title: 'Handoff witnessing Wave1 topic deepening',
+    output_path: 'reference/topic-a-deepening.md',
+    source_url: 'https://research.example.org/articles/topic-a-deepening-analysis-2026',
+    source_slug: 'topic-a-deepening-analysis',
+    extra_output_files: [
       { path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary' },
       { path: 'artifacts/wave1/topic-a/question-list.md', role: 'question_list' },
     ],
-    cache_trails: [],
-  }));
-  appendWave1Ledger(bundle);
+  });
   appendTrace(bundle, { event: 'wave1_completion', source: 'playbook-fixture' });
 }
 

@@ -10,10 +10,12 @@ authority: agent-facing-guidance
 This shared node defines the only production path for delegated sub-agent work:
 
 ```text
-queue demand item -> operate-work-unit claim -> _work_units/waveN/{work_id}/ envelope
+queue demand item -> operate-work-unit claim -> bundle-root _work_units/waveN/{work_id}/ envelope
   -> native sub-agent execution -> work-unit result + runtime receipt + outputs/cache
   -> operate-work-unit submit -> rb_output_declarations.jsonl -> gate
 ```
+
+All bare runtime paths in this node are active bundle-root relative. `_work_units/waveN/{work_id}/`, `rb_output_declarations.jsonl`, `_cache/...`, and `_logs/...` refer to the selected `dpt_rb_*` or `dpt_disp_*` bundle, not repo root or `DPT_FRAMEWORK/`.
 
 The surviving concept is the **Sub-agent actor**: a bounded Agent instance that performs search, fetch, extraction, or verification work. The retired concept is the old delegated channel mechanism. Production guidance MUST NOT route delegated work through non-work-unit runtime paths.
 

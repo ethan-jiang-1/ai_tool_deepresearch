@@ -4,15 +4,23 @@
 
 ### Requirement: Work units SHALL be the sole production delegated runtime directory
 
-Production delegated work SHALL write one directory per `work_id` under `_work_units/waveN/{work_id}/`. The `waveN` segment SHALL match the encoded wave in `work_id`, the manifest `wave`, and the submitted ledger row.
+Production delegated work SHALL write one directory per `work_id` under the active runtime bundle root at `_work_units/waveN/{work_id}/`. The `waveN` segment SHALL match the encoded wave in `work_id`, the manifest `wave`, and the submitted ledger row.
+
+Bare `_work_units/...` paths SHALL always be read as active bundle-root relative. They SHALL NOT be created, inspected, or described as repository-root or `DPT_FRAMEWORK/` paths.
 
 This capability SHALL be read as the sub-agent's work-unit envelope and directory contract. Current main spec Purpose and Requirements text SHALL NOT describe `_subagents/` relay slot directories as canonical production paths. Old relay/slot directory names may appear only in explicit removed, deprecated, checker self-reference, minimized release-history, or negative diagnostic contexts outside `openspec/changes/archive/`.
 
 #### Scenario: work-unit directory path matches encoded wave
 
 - **WHEN** the Engine creates `wu-w1-b000-deep-i0001`
-- **THEN** the production directory SHALL be `_work_units/wave1/wu-w1-b000-deep-i0001/`
+- **THEN** the production directory SHALL be bundle-root `_work_units/wave1/wu-w1-b000-deep-i0001/`
 - **AND** malformed work-unit paths or non-work-unit delegated paths SHALL NOT be accepted as the canonical production path
+
+#### Scenario: work-unit directory is not repository-root state
+
+- **WHEN** a spec, playbook, or prompt names `_work_units/waveN/{work_id}/`
+- **THEN** the path SHALL resolve under the active `dpt_rb_*` or `dpt_disp_*` bundle root
+- **AND** the Agent SHALL NOT create `_work_units/` at repository root or under `DPT_FRAMEWORK/`
 
 #### Scenario: stale relay directory wording is not current contract
 

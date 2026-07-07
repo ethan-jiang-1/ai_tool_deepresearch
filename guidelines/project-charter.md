@@ -74,9 +74,9 @@ This file cannot decide:
 - MUST read JS/CLI feedback back into the conversation context before the next Markdown-driven action.
 - MUST treat check / inspect / advice outputs as structured JS/CLI feedback, not as chat noise.
 - MUST make evidence, receipts, and trace entries come from real execution.
-- MUST keep runtime state in the active runtime context, not in chat memory.
+- MUST keep runtime state in the active runtime bundle root, not in chat memory.
 - MUST treat `DPT_FRAMEWORK/` as reusable framework assets, not as a per-run workspace.
-- MUST keep per-run state, HITL answers, gate attempts, trace, artifacts, and final output inside the active `dpt_rb_*` or `dpt_disp_*` context.
+- MUST keep per-run state, HITL answers, gate attempts, trace, artifacts, delegated work-unit attempts, and final output inside the active bundle root, currently an explicit `dpt_rb_*` or `dpt_disp_*` directory.
 - MUST pass the active bundle path explicitly to framework commands that operate on a run.
 - MUST keep `guidelines/` aligned with accepted specs and clearly separate stable principles from current repository conventions.
 
@@ -104,7 +104,7 @@ This file cannot decide:
 | Project rules and constraints | `AGENTS.md`, `openspec/config.yaml` | 技术栈、OpenSpec 纪律、repo-wide hard rules |
 | Accepted capability behavior | `openspec/specs/`, `openspec/governance/` | 已接受需求、invariant、requirement registry |
 | Executable contracts | `DPT_FRAMEWORK/`, `tests/` | schema、CLI verdict、状态检查、回归验证、框架实现 |
-| Runtime/run state | active runtime context, currently `dpt_rb_*` or `dpt_disp_*` | 每个 run 或实验自己的当前控制文件和数据 |
+| Runtime/run state | active runtime bundle root, currently a selected `dpt_rb_*` or `dpt_disp_*` directory | 每个 run 或实验自己的当前控制文件和数据 |
 | Human/Agent guidance | `guidelines/` | 工作原则、操作规范、架构宪法、阅读路线 |
 
 `guidelines/` 的作用是降低理解成本，不做新的 Source of Record。需要新增或改变系统行为时，走 OpenSpec change，再落到 accepted specs、`DPT_FRAMEWORK/`、实验基础设施或测试里。
@@ -118,7 +118,7 @@ When deciding where something belongs, route by authority:
 | User-facing task flow, stage instructions, handoff, or feedback context | Markdown playbooks / task cards |
 | Semantic judgment, evidence choice, synthesis, or repair reasoning | LLM Agent |
 | Schema, state transition, deterministic checkpoint, receipt, trace, or deterministic verdict | JS/CLI/Engine + accepted specs |
-| Current run state, queue contents, profile, evidence files, or trace history | The active runtime context, currently a `dpt_rb_*` or `dpt_disp_*` bundle |
+| Current run state, queue contents, profile, evidence files, work-unit attempts, or trace history | The active runtime bundle root, currently a selected `dpt_rb_*` or `dpt_disp_*` bundle |
 | New or changed accepted behavior | OpenSpec change before implementation |
 | Future mechanism direction | `guidelines/` as design guidance only |
 
@@ -128,7 +128,15 @@ When deciding where something belongs, route by authority:
 
 `DPT_FRAMEWORK/` 是 framework，不是 run bundle。它可以包含 workflow nodes、schema contracts、gate definitions、engine code、CLI wrappers、bundle templates 和 command playbooks；它不保存某一次 run 的结果。
 
-同一套 `DPT_FRAMEWORK/` 必须能够服务多个 active runtime context。当前约定中，production run 使用 `dpt_rb_*`，disposable experiment 使用 `dpt_disp_*`。这些 runtime context 承载当前 truth：profile、HITL answer、queue/status、gate attempt、trace、repair state、reference、artifact 和 final output。
+同一套 `DPT_FRAMEWORK/` 必须能够服务多个 active runtime bundle root。当前约定中，production run 使用 `dpt_rb_*`，disposable experiment 使用 `dpt_disp_*`。被本次 run、CLI invocation 或 controlled experiment 明确选中的那个目录就是 active bundle root，承载当前 truth：profile、HITL answer、queue/status、gate attempt、trace、repair state、reference、artifact、delegated work-unit attempt 和 final output。
+
+裸 runtime path 都以 active bundle root 为根。`rb_queue.json`、`rb_trace.jsonl`、`rb_output_declarations.jsonl`、`reference/`、`artifacts/`、`_cache/`、`_logs/`、`final/`、`_work_units/...` 不是 repo-root path，也不是 `DPT_FRAMEWORK/` path，除非文本显式写出其他根。
+
+三个坐标必须分清：
+
+- `repo_command_root`：执行 `node DPT_FRAMEWORK/...` 的仓库根，只是命令位置，不是 runtime truth。
+- `framework_root`：`DPT_FRAMEWORK/` reusable framework assets 根，运行时只读。
+- `active_bundle_root`：当前选中的 `dpt_rb_*` / `dpt_disp_*` runtime bundle root，唯一 mutable runtime truth 根。
 
 当前 v1 只有一个 canonical Deep Research workflow package；这不限制 run bundle 数量。一套 framework 必须能服务多个互相隔离的 `dpt_rb_*`。
 
@@ -138,7 +146,7 @@ When deciding where something belongs, route by authority:
 - `DPT_FRAMEWORK/schema/contracts/` 定义 executable contract，不保存当前 run 的状态。
 - `DPT_FRAMEWORK/engine/` 和 `DPT_FRAMEWORK/cli/` 执行 deterministic checkpoint，不拥有研究判断，也不把结果写回 framework。
 - `DPT_FRAMEWORK/rb_templates/` 只放会被实例化到 bundle 的初始模板，不放某个 run 的运行产物。
-- `rb_status.json`、`rb_profile.yaml`、`rb_trace.jsonl` 等 active bundle 文件才是当前 run 的 runtime truth。
+- `rb_status.json`、`rb_profile.yaml`、`rb_trace.jsonl`、`rb_queue.json`、`rb_output_declarations.jsonl`、`_work_units/` 等 active bundle root 下的文件才是当前 run 的 runtime truth。
 
 如果不确定某个文件应该放在 framework 还是 bundle，先读 `guidelines/framework-runtime-boundary.md`。本 Charter 固定 authority boundary；具体目录路由由该 guideline、accepted specs 和 executable framework contracts 进一步细化。
 
@@ -246,7 +254,7 @@ If you are about to do one of these, stop and switch to the required path:
 |------------------------|-----------------|
 | Hand-write trace, receipt, or result files to satisfy a check | Run the real Engine/Agent path that produces them |
 | Treat `console.log` output as pass/fail proof | Read the trace JSONL, CLI exit result, or accepted verdict source |
-| Use chat memory as run state | Reload control files from the active runtime context |
+| Use chat memory as run state | Reload control files from the active bundle root |
 | Add behavior only in guidance prose | Create or update an OpenSpec change/spec |
 | Put multi-stage Agent Flow into a JS controller because it is easier to test | Keep the flow in Markdown/playbooks/task cards; use JS only for deterministic checkpoints |
 | Need to decide where a rule belongs | Use the Quick Router and Authority Map before editing |
@@ -268,13 +276,13 @@ The project charter should not become a directory manifest. Treat these paths as
 | Agent-facing guidance | `guidelines/` | principles, reading routes, mechanism guidance, quality bars |
 | Experiments and fixtures | `experiments_env/` and `experiments_playbook/` | prototype fixtures, shared experiment setup, command experiment playbooks |
 | Regression checks | `tests/` | executable tests for accepted behavior |
-| Runtime contexts | currently `dpt_rb_*` and `dpt_disp_*` | active run/experiment state, evidence, receipts, trace, artifacts |
+| Runtime bundle roots | currently `dpt_rb_*` and `dpt_disp_*` | active run/experiment state, evidence, receipts, trace, artifacts, work-unit attempts |
 
 The stable rule is ownership, not a specific tree snapshot:
 
 - OpenSpec owns accepted behavior.
 - Framework code owns deterministic implementation.
-- Runtime contexts own current run state.
+- Runtime bundle roots own current run state.
 - Markdown/guidance owns Agent-facing flow and explanation.
 - Experiments own evidence for mechanism viability before or during acceptance.
 
@@ -292,7 +300,7 @@ All capability or behavior changes follow OpenSpec discipline:
 Explore / design
   -> OpenSpec proposal/spec/tasks
   -> focused experiment, prototype, or framework implementation
-  -> real runtime context / real trace validation
+  -> real runtime bundle / real trace validation
   -> archive accepted change
 ```
 
@@ -324,7 +332,7 @@ Explore / design
 6. 裁决只从真实文件、schema 校验、receipt、trace JSONL 或 accepted verdict source 来。
 7. 不读 `_original_*` 归档，除非用户明确要求分析历史版本。
 8. `DPT_FRAMEWORK/` 是纯框架目录，可发行，运行时视为 read-only framework assets。不放测试文件、实验 fixture、实验 playbook，也不放 per-run runtime state。测试统一在 root `tests/`。
-9. `dpt_rb_*` 和 `dpt_disp_*` 是 mutable runtime context；HITL、gate attempt、trace、repair、artifact、final output 等运行时事实必须写在 active bundle。
+9. `dpt_rb_*` 和 `dpt_disp_*` 是 mutable runtime bundle root；HITL、gate attempt、trace、repair、artifact、delegated work-unit attempt、final output 等运行时事实必须写在 active bundle root。裸 runtime path 一律按 active bundle-root relative 解析。
 
 ---
 
@@ -341,7 +349,7 @@ Explore / design
 7. `guidelines/agentic-subagent-mechanism.md`：Work-unit-mediated Sub-agent execution —— bounded sub-agent 任务、噪声隔离、submit provenance。
 8. `guidelines/command-experiments.md`：如何写和运行实验 playbook。
 9. 相关 `openspec/specs/<capability>/spec.md`：具体 capability 的需求。
-10. 对应 framework、experiment 或 runtime context 文件。
+10. 对应 framework、experiment 或 active bundle root 文件。
 
 ---
 

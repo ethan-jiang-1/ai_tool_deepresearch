@@ -28,7 +28,7 @@
 
 Interactive in-run checkpoints 只有 `hitl1`（定方向 / profile / topics）和 `hitl2`（审 synthesis）。Final 是 terminal non-interactive delivery，不是第三个交互 checkpoint；post-final feedback 通过 HITL2 repair/rerun 重新进入。其余 phase 均 `stop: no`，Agent 自行推进。
 
-Delegated sub-agent work uses the v0.4 work-unit path only: queue demand item -> `operate-work-unit claim` -> sub-agent task under `_work_units/` -> `operate-work-unit submit` -> submitted ledger row -> gate. Do not use queue completion as delegated success; `operate-queue complete` is for non-delegated queue work.
+Delegated sub-agent work uses the v0.4 work-unit path only: queue demand item -> `operate-work-unit claim` -> sub-agent task under bundle-root `_work_units/` -> `operate-work-unit submit` -> submitted ledger row -> gate. Do not use queue completion as delegated success; `operate-queue complete` is for non-delegated queue work. Bare runtime paths such as `_work_units/...`, `rb_queue.json`, `reference/`, `artifacts/`, `_cache/`, and `_logs/` resolve under the active bundle root selected above, not repo root or `DPT_FRAMEWORK/`.
 
 若已有 active bundle：别重建，打开该 bundle 的 `START_FROM_HERE.md`，读 `rb_status.json` 的 `current_gate` 续跑。
 

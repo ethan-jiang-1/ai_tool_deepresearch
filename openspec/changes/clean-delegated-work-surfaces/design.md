@@ -117,6 +117,7 @@ Because OpenSpec delta specs primarily describe requirements, this change record
 - `agentic-queue`: queue v2 demand lifecycle with ordered `active_window`, `refill_pool`, delegated in-flight attempt binding, queue demand `queue_item_id`, and work-unit-only `work_id`.
 - `work-unit-provenance-gate`: gate checks and diagnostics that prove delegated output coverage through submitted work-unit ledger and cross-surface binding.
 - `subagent-directory-contract`: work-unit envelope directory contract under `_work_units/waveN/{work_id}/`.
+- `workflow-directory-contract`: active runtime bundle roots own runtime paths and data; `DPT_FRAMEWORK/` remains reusable framework assets, not per-run storage.
 - `subagent-dispatch`: Engine claim creates work-unit prompts for sub-agent actors.
 - `subagent-node-contract`: sub-agent task/result/lifecycle contracts bind to work-unit identity, receipt nonce, and submit.
 - `agent-output-declaration`: submitted work-unit ledger rows declare Agent-produced outputs and cache trails.

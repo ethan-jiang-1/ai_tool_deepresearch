@@ -18,7 +18,7 @@ const REQUIRED = [
   '_logs/run.log',
   'seed_topics/', 'reference/_INDEX.md', 'reference/README.md',
   'artifacts/wave0/', 'artifacts/wave1/', 'artifacts/wave2/',
-  '_cache/', 'final/',
+  '_cache/', 'final/', '_work_units/',
 ];
 
 const SINK_LABELS = {
