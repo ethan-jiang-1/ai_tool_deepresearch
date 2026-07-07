@@ -8,201 +8,69 @@
 ## Requirements
 ### Requirement: Wave0 complete gate rule set
 
-`gate-wave0-complete.definition.json` SHALL 定义当前 contract 下的 Wave0 rules，与 `DPT_FRAMEWORK/schema/gate_definitions/gate-wave0-complete.definition.json` 及 `phase-wave0.md` 一致。
+The Wave0 complete gate definition SHALL include work-unit provenance checks for delegated source intake outputs: `work_unit_ledger_exists`, `work_unit_output_coverage`, `work_unit_submission_presence`, and `delegated_bypass_suspected`. Wave0 SHALL NOT accept non-work-unit delegated artifacts or direct/orphan source files as delegated coverage.
 
-规则 SHALL 覆盖：
-- `reference/_INDEX.md` 存在（`file_exists`）
-- `reference/README.md` 存在（`file_exists`）
-- `reference/` 目录存在（`dir_exists`）
-- 至少 1 个 `reference/00-shared-*.md` 共享 foundation reference（`count_floor`，threshold 来自 `rb_profile.yaml#/research_style_params/wave0_shared_ref_total`）
-- 每个 topic 的 `artifacts/wave0/{topic}/source.yaml` 存在且通过 ReferenceMetadata schema 校验（`schema_valid`，schema 见 `DPT_FRAMEWORK/schema/contracts/reference.mjs`）
-- per-topic reference metadata 数量 ≥ foundation floor（`count_floor`，threshold 来自 `rb_profile.yaml#/research_style_params/wave0_per_topic_source_floor`）
-- `content_dedup`、`cache_coverage`（target: `output_declarations`）
-- wave0 output declaration ledger 存在且 coverage 完整（`output_declaration_ledger_exists`、`output_declaration_coverage`）
-- wave0 successful relay slot binding（`subagent_slot_presence`，target: `_subagents/wave_00`）
-- trace 中有 `wave0_completion` event（`trace_event_present` check type）
-- `rb_status.json#/current_gate == wave0_complete`
-- `rb_status.json#/next_gate == wave1_complete`
+#### Scenario: Wave0 source intake requires submitted work-unit coverage
 
-Foundation floor SHALL 定义为每个 topic 至少 1 条 reference metadata entry in `artifacts/wave0/{topic}/source.yaml`（`count_floor` threshold = 1，或 profile 覆盖值）。`count_floor` SHALL 统计 YAML 数组条目；`schema_valid` 独立校验每条 schema。
-
-Topic 集合的 source of truth SHALL 为 `rb_plan.md` frontmatter 的 `topic_registry`。
-
-#### Scenario: All Wave0 rules pass
-
-- **WHEN** `reference/_INDEX.md` 存在、每个 topic 的 `artifacts/wave0/{topic}/source.yaml` 至少 1 条 schema-valid entry、trace 有 `wave0_completion` event
-- **THEN** `check-gate-wave0-complete.mjs` SHALL return `passed: true`
-
-#### Scenario: Missing per-topic thin YAML fails
-
-- **WHEN** 某个 topic 缺少 `artifacts/wave0/{topic}/source.yaml`
-- **THEN** gate SHALL return `passed: false`
-
-#### Scenario: Missing wave0_completion trace fails
-
-- **WHEN** `rb_trace.jsonl` 中无 `wave0_completion` event
-- **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL 指向缺失的 trace event
-
-#### Scenario: Empty topic registry fails
-
-- **WHEN** `rb_plan.md` 的 `topic_registry` 为空数组或不存在
-- **THEN** gate SHALL return `passed: false`
+- **WHEN** Wave0 source files exist but no submitted work-unit ledger row covers them
+- **THEN** Wave0 complete gate SHALL fail
+- **AND** the diagnostics SHALL report missing work-unit coverage
 
 ### Requirement: Wave1 complete gate rule set
 
-`gate-wave1-complete.definition.json` SHALL 定义当前 contract 下的 Wave1 rules，与 gate JSON 实际内容一致。
+The Wave1 complete gate definition SHALL include work-unit provenance checks for delegated topic deepening outputs. Wave1 SHALL validate per-topic output coverage through submitted work-unit ledger rows and SHALL reject non-work-unit-only evidence.
 
-规则 SHALL 覆盖（除下列外，还包括 gate JSON 中的 provenance/quality 规则）：
-- `artifacts/wave1/` 目录存在（`dir_exists`）
-- 每个 topic 的 `artifacts/wave1/{topic}/evidence-summary.md` 存在（`file_exists`）
-- 每个 topic 的 `artifacts/wave1/{topic}/question-list.md` 存在（`file_exists`）
-- 每个 topic 至少 1 个 `reference/*{topic}*.md` rich MD reference（`count_floor`）
-- reference quality rules：`no_example_com_ref_url`、`reference_format`、`source_url_article_level`、`key_facts_min_lines`
-- evidence-summary / question-list 结构 checks（`pattern_match`）
-- backfill token 清除（`pattern_match`，`negate: true`）
-- `content_dedup`、`cache_coverage`
-- wave1 output declaration ledger + coverage + subagent slot presence（`_subagents/wave_01`）
-- trace 中有 `wave1_completion` event（`trace_event_present`）
-- status 值
+#### Scenario: Wave1 deepening coverage is ledger-first
 
-#### Scenario: Missing question-list fails
-
-- **WHEN** 某 topic 有 `evidence-summary.md` 但无 `question-list.md`
-- **THEN** gate SHALL return `passed: false`
-
-#### Scenario: Missing wave1_completion trace fails
-
-- **WHEN** `rb_trace.jsonl` 中无 `wave1_completion` event
-- **THEN** gate SHALL return `passed: false`
+- **WHEN** a topic deepening file exists without a matching submitted Wave1 work-unit ledger row
+- **THEN** Wave1 complete gate SHALL fail delegated provenance
 
 ### Requirement: Wave2 complete gate rule set
 
-`gate-wave2-complete.definition.json` SHALL 定义当前 contract 下的 Wave2 rules，与 gate JSON 实际内容一致。
+The Wave2 complete gate definition SHALL distinguish pure main-agent synthesis from delegated targeted evidence search. Delegated Wave2 targeted evidence outputs SHALL require submitted work-unit ledger rows; pure synthesis artifact checks SHALL continue to use synthesis artifact rules.
 
-规则 SHALL 覆盖：
-- 三件套存在性与结构（`synthesis.md`、`cross-topic-ledger.md`、`finding-index.yaml`）
-- section/YAML/link checks
-- `rerun_add_full_synthesis`（rerun action:add 场景）
-- conditional output declaration coverage + Wave2 slot binding for new search/evidence/reference outputs
-- `wave2_cross_ref_coverage`（`reference/00-cross-*.md` 须有 relay provenance）
-- trace 中有 `wave2_completion` event（`trace_event_present`）
-- status 值
+#### Scenario: delegated Wave2 targeted search requires work-unit row
 
-#### Scenario: Missing wave2_completion trace fails
-
-- **WHEN** `rb_trace.jsonl` 中无 `wave2_completion` event
-- **THEN** gate SHALL return `passed: false`
-
-#### Scenario: Cross-ref without relay provenance fails
-
-- **WHEN** `reference/00-cross-*.md` 存在但无对应 Wave2 relay slot provenance
-- **THEN** `wave2_cross_ref_coverage` rule SHALL fail
+- **WHEN** Wave2 targeted evidence search creates new evidence outputs
+- **THEN** Wave2 complete gate SHALL require submitted work-unit coverage for those outputs
 
 ### Requirement: Gate CLI evaluates wave0 rules from definition
 
-`check-gate-wave0-complete.mjs` SHALL 从 placeholder pass 升级为 definition-driven rule evaluation。
+The Wave0 gate CLI SHALL evaluate work-unit provenance rule types from the gate definition and SHALL use work-unit helper diagnostics for ledger/index/manifest/result/receipt/beacon/hash mismatches.
 
-实现 SHALL 支持：
-- `file_exists`
-- `dir_exists`
-- `schema_valid`（ReferenceMetadata contract）
-- `count_floor`
-- `trace_event_present`（target: `wave0_completion`）
-- `status_value`
+#### Scenario: Wave0 CLI rejects stale index
 
-实现 SHALL 复用 `gate-helpers.mjs` 的标准 pipeline。`count_floor` check type SHALL 在 wave0 CLI 的 rule iteration 中实现（单 CLI 专用，不进 helpers）。`pattern_match` SHALL 支持 `negate` 字段（反向匹配）。
-
-实现 SHALL 支持 `{topic}` 占位符展开（design D5）：CLI 在 rule iteration 阶段读取 `rb_plan.md` 的 `topic_registry`，对每条 `target` 含 `{topic}` 占位符的 rule，为 registry 中的每个 topic key 展开为独立 check 实例。`topic_registry` 为空时所有含 `{topic}` 的 rule 直接 fail。
-
-#### Scenario: Wave0 CLI no longer hardcoded pass
-
-- **WHEN** reference 不满足所有 rules
-- **THEN** CLI SHALL return `passed: false` with inspect/advice
-- **AND** CLI SHALL NOT return `passed: true` without evaluating all rules
+- **WHEN** Wave0 gate finds a ledger row whose work-unit index entry is not `submitted`
+- **THEN** the CLI SHALL fail the work-unit provenance check
 
 ### Requirement: Gate CLI evaluates wave1 rules from definition
 
-`check-gate-wave1-complete.mjs` SHALL 为 definition-driven rule evaluation。
+The Wave1 gate CLI SHALL evaluate work-unit provenance rule types from the gate definition and SHALL not scan non-work-unit delegated directories as a production coverage source.
 
-实现 SHALL 支持：
-- `file_exists`
-- `dir_exists`
-- `count_floor`（`per_topic_ref_md_count_floor`：统计与 `reference/*{topic}*.md` glob 匹配的文件数，threshold ≥ 1；支持 `{topic}` 占位符展开）
-- `pattern_match`（含 `negate` 字段，用于 evidence-summary source URL 检测、question-list 四节结构检测、backfill token 残留检测）
-- `status_value`
-- `trace_event_present`（target: `wave1_completion`）
+#### Scenario: Wave1 CLI ignores non-work-unit coverage
 
-实现 SHALL 复用 `gate-helpers.mjs` 的标准 pipeline。`{topic}` 占位符展开 SHALL 使用 topic.slug（含 `NN_` 前缀），而非 topic.id。
-
-#### Scenario: Wave1 CLI evaluates count_floor with topic.slug expansion
-
-- **WHEN** topic_registry 含 topic slug = `01_meal-timing-...`
-- **THEN** CLI SHALL 展开 `{topic}` → topic.slug（NOT topic.id）
-- **AND** glob `reference/*01_meal-timing-...*.md` SHALL 匹配该 topic 的所有 reference 文件
-- **AND** SHALL NOT return `passed: true` without evaluating all rules
+- **WHEN** non-work-unit delegated directories contain Wave1-looking result files
+- **AND** no submitted work-unit ledger rows cover the outputs
+- **THEN** Wave1 gate CLI SHALL fail delegated provenance
 
 ### Requirement: Gate CLI evaluates wave2 rules from definition
 
-`check-gate-wave2-complete.mjs` SHALL 从 placeholder pass 升级为 definition-driven rule evaluation。
+The Wave2 gate CLI SHALL evaluate work-unit provenance rule types for delegated targeted evidence and SHALL preserve existing artifact-reference checks for pure synthesis artifacts.
 
-实现 SHALL 支持：
-- `file_exists`
-- `field_non_empty`
-- `pattern_match`（含 `negate` 字段，并支持 `{topic}` 占位符展开）
-- `yaml_parse`
-- `cross_field`（`mode: "markdown_link_resolution"`：解析 Markdown links → 验证目标文件存在）
-- `status_value`
-- `trace_event_present`（target: `wave2_completion`）
+#### Scenario: Wave2 synthesis artifact check remains separate
 
-`cross_field` check SHALL：1) 读取 `artifacts/wave2/synthesis.md` 内容；2) 用正则提取所有 Markdown link `[text](relative/path.md)`；3) 将每个 path 解析为相对于 `artifacts/wave2/` 的绝对路径；4) 验证每个目标文件存在；5) ≥1 个有效引用时 pass；0 个时 fail。
-
-`pattern_match` check SHALL support both normal and negated matching:
-- `negate: false`（default）：pattern 在目标文件内容中找到至少 1 处匹配时 pass，0 处匹配时 fail
-- `negate: true`：pattern 在目标文件内容中找到时 fail，找不到时 pass
-- `target` SHALL support single file paths and `{topic}` expansion from `rb_plan.md` topic_registry
-
-#### Scenario: Wave2 CLI no longer hardcoded pass
-
-- **WHEN** synthesis 为空或引用链不满足（0 有效引用）
-- **THEN** CLI SHALL return `passed: false` with inspect/advice
-- **AND** CLI SHALL NOT return `passed: true` without evaluating all rules
-
-#### Scenario: Pattern_match with negate detects unreplaced backfill token
-
-- **WHEN** seed topic 文件 `seed_topics/X.md` 中仍包含 `__BACKFILL_WAVE2_JUDGMENT__` 字面字符串
-- **AND** gate definition has rule `{ check: "pattern_match", pattern: "__BACKFILL_WAVE2_JUDGMENT__", target: "seed_topics/{topic}.md", negate: true }`
-- **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL identify the affected seed topic
-
-#### Scenario: Pattern_match detects wave1 evidence reference
-
-- **WHEN** `synthesis.md` 包含 `[topic-a evidence](../wave1/topic-a/evidence-summary.md)`
-- **AND** gate definition has rule `{ check: "pattern_match", pattern: "\\[.*\\]\\(\\.\\./wave1/.*/(evidence-summary|question-list)\\.md\\)", target: "artifacts/wave2/synthesis.md" }`
-- **THEN** gate SHALL return `passed: true`
-
-#### Scenario: Pattern_match fails when no wave1 evidence reference
-
-- **WHEN** `synthesis.md` 的所有 Markdown links 都指向 `../../reference/` or unrelated files, with no match for wave1 evidence-summary/question-list format
-- **THEN** gate SHALL return `passed: false`
-- **AND** `inspect` SHALL 指出缺少 wave1 deepening artifact 引用
+- **WHEN** Wave2 has no delegated targeted evidence work
+- **THEN** Wave2 gate CLI SHALL evaluate synthesis artifact rules without requiring a work-unit row for pure synthesis
 
 ### Requirement: Wave2 phase-internal feedback checks are distinct from phase boundary gate
 
-Wave2 phase-internal feedback wording SHALL preserve the distinction between advisory in-phase checks and the phase-boundary gate while using canonical phase-boundary terminology.
+Wave2 phase-internal feedback checks SHALL remain distinct from the phase boundary gate, but any delegated Wave2 evidence work created by those checks SHALL enter the same work-unit claim/submit loop before gate coverage can pass.
 
-Phase-internal feedback checks SHALL continue to return `{ check, inspect, advice }` for Phase Agent repair, SHALL NOT block phase advancement by themselves, and SHALL NOT automatically drive workflow, spawn sub-agents, mutate queue state, load another phase, or synchronize `rb_status.json`.
+#### Scenario: feedback-created evidence work enters loop
 
-The `wave2-complete` gate remains the phase-boundary gate. Its pass/fail result controls whether the Agent may proceed to the accepted handoff path: a pass may emit `check.next`, after which the Phase Agent must consume that target through `enter-phase` or another accepted loader/check path before source-gate status synchronization. A failing gate blocks phase handoff and status synchronization until repaired and rerun.
-
-Existing wording such as "Gate check controls phase transition" SHALL be revised to distinguish gate pass, phase handoff, and status synchronization rather than using `phase transition` as a broad synonym for all boundary movement.
-
-#### Scenario: Gate check controls boundary authorization, not hidden movement
-
-- **WHEN** Phase Agent runs `check-gate-wave2-complete.mjs` at phase end
-- **THEN** a passing gate MAY emit `check.next` for the accepted handoff path
-- **AND** `passed: false` SHALL block phase handoff and source-gate status synchronization
-- **AND** docs SHALL NOT describe the gate as directly loading the next phase or completing HITL2 work
+- **WHEN** Wave2 feedback identifies a missing evidence gap requiring delegated search
+- **THEN** the Engine SHALL enqueue delegated queue demand
+- **AND** the gap SHALL be resolved through a new work-unit claim/submit before gate pass
 
 ### Requirement: Wave gate CLIs follow established double trace convention
 
@@ -317,3 +185,14 @@ Gate CLIs (`check-gate-wave0-complete.mjs`, `check-gate-wave1-complete.mjs`) SHA
 - **WHEN** gate CLI iteration sees `check: "content_dedup"`
 - **THEN** it SHALL call `checkContentDedup(bundlePath, rule.threshold)`
 - **AND** `checkContentDedup()` SHALL read `rb_output_declarations.jsonl` itself
+
+### Requirement: Wave gates reject mixed delegated provenance paths
+
+Wave gate CLIs SHALL fail when the same phase mixes submitted work-unit coverage with non-work-unit authority for delegated outputs. Non-work-unit delegated artifacts may be reported for cleanup, but SHALL NOT supplement missing work-unit coverage.
+
+#### Scenario: mixed path fails hygiene
+
+- **WHEN** a wave has one submitted work-unit output and one non-work-unit-only delegated output
+- **THEN** the gate SHALL fail for the non-work-unit-only output
+- **AND** the diagnostic SHALL identify mixed delegated provenance
+

@@ -68,7 +68,7 @@ prefixes:
   QIV: queue-input-validation
   REF: reference-flat-format
   REI: rerun-incremental-node
-  RPG: relay-provenance-gate       # all entries deprecated; replacement WPG
+  RPG: relay-provenance-gate       # all entries deprecated; no spec directory; replacement WPG
   RTI: rerun-topic-integration
   REL: repair-loop
   RES: research-styles
@@ -84,13 +84,13 @@ prefixes:
   SHC: shared-node-content
   SNC: subagent-node-contract
   SOR: schema-core                 # sub-prefix of SCO
-  SRD: subagent-relay-driver       # all entries deprecated; replacement FRE/DEW
+  SRD: subagent-relay-driver       # all entries deprecated; no spec directory; replacement FRE/DEW
   SRL: subagent-runtime-logging
   STM: seed-topic-materialization
-  SUC: subagent-collect            # all entries deprecated; replacement DEW/AGQ/AGO
+  SUC: subagent-collect            # all entries deprecated; no spec directory; replacement DEW/AGQ/AGO
   SUD: subagent-dispatch
-  SUR: subagent-repair             # all entries deprecated; replacement DEW/AGQ/REL
-  SUS: subagent-slots              # all entries deprecated; replacement DEW/SDC/SRL
+  SUR: subagent-repair             # all entries deprecated; no spec directory; replacement DEW/AGQ/REL
+  SUS: subagent-slots              # all entries deprecated; no spec directory; replacement DEW/SDC/SRL
   SWE: silent-wave-execution
   TEF: test-fixtures
   TRT: transition-table

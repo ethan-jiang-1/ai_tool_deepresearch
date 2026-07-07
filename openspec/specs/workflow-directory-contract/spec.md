@@ -5,9 +5,7 @@
 ## Purpose
 
 定义 Workflow Foundation 所有 artifact 的目录归属、命名约定和禁止混放规则。为后续 wff change（contract skeleton、content migration 等）提供无歧义的文件落点，消除需求/runtime/实验/CLI/schema 混放的问题。
-
 ## Requirements
-
 ### Requirement: Read-only framework assets boundary
 
 `DPT_FRAMEWORK/` SHALL 是 read-only framework assets 目录。运行中发生的用户输入、gate attempt、pass/fail、repair、waiting/block、trace event、artifact、final output MUST 只写入 active `dpt_rb_*` run bundle，MUST NOT 写回 `DPT_FRAMEWORK/`。
@@ -75,44 +73,19 @@ Current gate transition-table contract SHALL be represented by `DPT_FRAMEWORK/sc
 
 ### Requirement: Runtime bundle canonical structure
 
-Active `dpt_rb_*` run bundle 的初始模板 SHALL 放置在 `DPT_FRAMEWORK/rb_templates/`。实例化时从模板 copy 到新 bundle，模板本身 MUST NOT 被直接修改。
+Active `dpt_rb_*` run bundles SHALL contain canonical control files and data directories for runtime truth. Production delegated work SHALL use `_work_units/` as the work-unit runtime directory tree. `_work_units/_index.json` SHALL be Engine-owned allocation and attempt-state truth, while submitted delegated output coverage SHALL remain in bundle-root `rb_output_declarations.jsonl`.
 
-Active `dpt_rb_*` run bundle SHALL 包含以下 canonical control files 和 data directories：
+#### Scenario: work-units directory is part of delegated runtime structure
 
-Control files:
-- `rb_plan.md` — 本 run 的 plan/topic registry
-- `rb_profile.yaml` — HITL1/HITL2 用户输入、profile、decision、retry config
-- `rb_status.json` — 当前 workflow/phase/gate 状态摘要
-- `rb_queue.json` — runtime queue state
-- `rb_trace.jsonl` — append-only runtime history/audit trail
+- **WHEN** a bundle has executed delegated work-unit claim for a wave
+- **THEN** `_work_units/waveN/{work_id}/` SHALL contain the claimed work-unit envelope
+- **AND** `_work_units/_index.json` SHALL contain the corresponding allocation record
 
-Data directories:
-- `seed_topics/` — initial topic / seed-topic data
-- `reference/` — 本地 evidence
-- `artifacts/` — 阶段产物（如 `wave1/`、`wave2/`）
-- `final/` — 最终报告
+#### Scenario: runtime truth is in bundle not chat memory
 
-Relay directory:
-- `_subagents/` — relay-managed sub-agent slot tree (`wave_NN/slot_MM/` per SDC-001 / SUS-001); created on first relay staging, not necessarily present in the empty template
-
-Cache directory:
-- `_cache/` — 可重建 cache/projection，NOT runtime truth
-
-#### Scenario: `_subagents/` is part of the bundle skeleton
-
-- **WHEN** a bundle has executed relay staging for a wave
-- **THEN** `_subagents/wave_NN/` SHALL exist with `dispatch.json` and per-slot directories under `slot_MM/`
-- **AND** provenance forensics and slot presence checks SHALL scan only this tree for relay slot artifacts (SDC-002)
-
-#### Scenario: Runtime truth is in bundle not chat memory
-
-- **WHEN** agent 需要恢复当前 run 状态
-- **THEN** agent MUST 从 active `dpt_rb_*` 的 control files reload，MUST NOT 依赖 chat memory 或 console summary 作为 state
-
-#### Scenario: Cache is not authority
-
-- **WHEN** `_cache/` 内容与 canonical control files 冲突
-- **THEN** canonical control files 的值为 authoritative truth
+- **WHEN** an Agent needs to recover current run state
+- **THEN** the Agent MUST reload active bundle control files and work-unit state
+- **AND** it MUST NOT rely on chat memory or console summary as runtime state
 
 ### Requirement: Test and experiment boundary
 

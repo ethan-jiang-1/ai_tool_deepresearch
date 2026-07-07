@@ -4,9 +4,7 @@
 ## Purpose
 
 Provide a post-run observability layer for experiment playbooks: structured health reports, gate diagnostic capture, non-verdict trace events, Heavy provenance inspection, and runner report protocol. The layer reads bundle runtime facts without re-running gates, does not change playbook verdict semantics, and distinguishes verdict from health.
-
 ## Requirements
-
 ### Requirement: Stable post-run health report
 
 The experiment observability layer SHALL provide a post-run bundle health report with a stable machine-readable JSON contract and a concise human-readable summary. The report SHALL include `schema_version`, `bundle_path`, `profile`, `status`, `trace`, `gate_attempts`, `bundle_schema`, `timeline`, `legacy_trace`, `ledger`, `receipts`, `cache_trails`, `dedup`, and `issues`. Each section SHALL include a `required` flag and a `status` using `clean`, `issues`, `not_applicable`, or `observed_optional`; top-level `status` SHALL be `issues` only when a required section reports `issues`. Top-level `issues` SHALL summarize only required-section issues that affect top-level `status`. Optional sections MAY report `issues` when an optional artifact is present but invalid, but those optional issues SHALL NOT flip top-level `status` and SHALL remain visible in section-level `issues` and the diagnostic summary. The JSON contract SHALL be validated by a Zod schema implemented in experiment shared infrastructure.
@@ -60,92 +58,48 @@ The health verifier SHALL use explicit profile definitions for `light`, `standar
 
 ### Requirement: Gate monitor wrapper preserves outcome and diagnostics
 
-The experiment observability layer SHALL provide a gate monitor wrapper that runs a gate command, captures stdout/stderr, preserves the wrapped command's exit code, stores the raw gate JSON output under the bundle, and extracts `inspect[]` and `advice[]` diagnostics when present.
+The gate monitor wrapper SHALL preserve work-unit provenance diagnostics, including mismatches across ledger, index, manifest, result, receipt, beacon, output files, and hashes.
 
-#### Scenario: Wrapper preserves failing gate exit code
+#### Scenario: monitor keeps work-unit failure detail
 
-- **WHEN** `run-gate-with-monitor.mjs --bundle <bundlePath> --gate wave0-complete -- <gate command>` wraps a gate command that exits non-zero
-- **THEN** the wrapper process SHALL exit with the same non-zero code
-- **AND** it SHALL still preserve parseable gate diagnostics from stdout when available
-
-#### Scenario: Wrapper preserves passing gate exit code
-
-- **WHEN** the wrapped gate command exits with code `0`
-- **THEN** the wrapper process SHALL exit with code `0`
-- **AND** it SHALL store the raw gate output and extracted diagnostics for health reporting
-
-#### Scenario: Wrapper stores raw output in a stable bundle path
-
-- **WHEN** the gate monitor wrapper captures a gate invocation
-- **THEN** it SHALL write a bundle-local artifact under `_observability/gates/`
-- **AND** the artifact filename SHALL use a stable monotonic sequence prefix such as `0001-<gate>.json`, `0002-<gate>.json`
-- **AND** the artifact SHALL include `sequence`, gate name, wrapped command, exit code, stdout, stderr, parsed gate JSON when parseable, extracted diagnostics, and capture timestamp
-- **AND** the health verifier SHALL discover gate artifacts via `_observability/gates/*.json`, sort by `sequence` and filename, and read these artifacts rather than re-running the gate command
-
-#### Scenario: Wrapper survives repeated gate invocation
-
-- **WHEN** the same gate is wrapped more than once during a single playbook execution, for example on a repair retry
-- **THEN** each invocation SHALL produce a separate artifact with its own monotonic sequence number, such as `0001-wave0-complete.json` and `0002-wave0-complete.json`
-- **AND** the health verifier SHALL discover both artifacts, sorted by sequence
-- **AND** the most recent invocation's outcome SHALL NOT overwrite or hide the earlier invocation's artifact
+- **WHEN** a gate fails because a work-unit receipt nonce mismatches
+- **THEN** the monitor report SHALL preserve that diagnostic
 
 ### Requirement: Diagnostic trace events are non-verdict events
 
-Observability diagnostics written to `rb_trace.jsonl` SHALL use the canonical trace writer/contract and a non-verdict event shape, such as `event: "diagnostic"` with `source: "experiment-observability"`. Diagnostic events SHALL NOT be written as playbook verdict `check` events and SHALL NOT be counted by existing verdict logic as PASS/FAIL checks.
+Work-unit diagnostics such as `work_unit_claimed`, `work_unit_submit_rejected`, `work_unit_failed`, `work_unit_timed_out`, `work_unit_abandoned`, `work_unit_retry_claimed`, `work_unit_late_submit_rejected`, and `work_unit_inspect_failed` SHALL be diagnostic events. Experiment verdicts SHALL still be explicit playbook verdicts or gate outcomes.
 
-#### Scenario: Gate diagnostics enter trace without changing verdict
+#### Scenario: diagnostic event does not imply pass
 
-- **WHEN** the gate monitor wrapper extracts `inspect[]` or `advice[]` from a gate result
-- **THEN** it SHALL append a diagnostic trace event containing the gate name and diagnostic details
-- **AND** the event SHALL NOT use `event: "check"`
-- **AND** a verdict step that counts `check` events SHALL produce the same verdict with or without the diagnostic event
-
-#### Scenario: Health diagnostics identify their source
-
-- **WHEN** the health verifier appends a diagnostic event
-- **THEN** the event SHALL include `source: "experiment-observability"`
-- **AND** it SHALL include enough detail for the runner report to summarize the issue without re-running the gate command
+- **WHEN** a `work_unit_claimed` event exists
+- **THEN** the experiment SHALL NOT treat it as evidence of delegated completion
 
 ### Requirement: Heavy provenance inspection is ledger-driven
 
-Heavy provenance checks SHALL start from `rb_output_declarations.jsonl` as the authority for Agent outputs. The health verifier SHALL validate declaration schema, `slot_result_ref`, declared `output_files`, declared `cache_trails`, runtime receipt completeness, and evidence that relevant gates consumed the ledger. It SHALL NOT treat directory scanning alone as proof of Agent output provenance, and it SHALL NOT re-run gates to create missing evidence.
+Heavy provenance inspection SHALL be driven by work-unit submission ledger rows and their cross-checks. It SHALL NOT inspect non-work-unit delegated directories as coverage authority.
 
-#### Scenario: Declaration points to complete Heavy artifacts
+#### Scenario: heavy inspection starts from ledger
 
-- **WHEN** a Heavy bundle contains a valid output declaration with declared output files, cache trails, slot result reference, runtime receipt, and ledger-consuming gate evidence
-- **THEN** the Heavy health report SHALL mark `ledger`, `receipts`, `cache_trails`, and `dedup` as clean
-
-#### Scenario: Files exist but ledger is empty
-
-- **WHEN** a Heavy bundle contains files under `_subagents/`, `reference/`, or `_cache/` but `rb_output_declarations.jsonl` is missing or empty
-- **THEN** the Heavy health report SHALL mark ledger-driven provenance as an issue
-- **AND** it SHALL NOT mark Heavy provenance clean based only on scanned files
-
-#### Scenario: Heavy gate-consumption evidence is read-only
-
-- **WHEN** Heavy health checks need to determine whether a gate consumed ledger-derived provenance
-- **THEN** the health verifier SHALL inspect existing wrapper raw gate artifacts, existing `gate_attempt` trace events, or existing diagnostic events
-- **AND** it SHALL NOT execute a gate command during health verification
+- **WHEN** heavy provenance inspection audits a wave
+- **THEN** it SHALL start from `rb_output_declarations.jsonl` work-unit rows
+- **AND** use `_work_units/_index.json` and files only as cross-check surfaces
 
 ### Requirement: Runner report includes health separately from verdict
 
-The playbook runner protocol SHALL record post-run health separately from playbook verdict. For each executed case, the runner report SHALL include `verdict`, `health`, optional `not_run_reason`, and `bundle_preserved`. Health SHALL be collected after verdict and before cleanup. Cleanup policy SHALL preserve bundles when verdict or health has issues unless the playbook explicitly documents a safe cleanup exception.
+Runner reports SHALL show work-unit health separately from final verdict, including unresolved in-flight attempts and mixed-provenance blockers.
 
-#### Scenario: Passing verdict with health issues is visible
+#### Scenario: unresolved in-flight appears in health
 
-- **WHEN** a playbook verdict is PASS but the post-run health report has `status: "issues"`
-- **THEN** the runner report SHALL show verdict PASS and health ISSUES as separate fields
-- **AND** the report SHALL include a concise summary of the health issues
+- **WHEN** a playbook stops with one unresolved claimed work unit
+- **THEN** the runner report SHALL show health as blocked even if no gate was run
 
-#### Scenario: Cleanup preserves evidence for failure analysis
+### Requirement: Reports SHALL include work-unit lifecycle projection
 
-- **WHEN** verdict is FAIL or health is ISSUES
-- **THEN** runner protocol SHALL preserve the disposable bundle by default
-- **AND** the report SHALL set `bundle_preserved` to true with the bundle path
+Experiment observability reports SHALL project work-unit lifecycle state, including claimed, submitted, failed, timed_out, abandoned, expired in-flight attempts, retries, and late-submit rejections.
 
-#### Scenario: Runner source drift is handled explicitly
+#### Scenario: report shows expired attempt
 
-- **WHEN** implementation updates the runner health protocol
-- **THEN** it SHALL first identify the active runner instruction surface such as `experiments_playbook/RUN_EXPS.md`
-- **AND** it SHALL update the active surface before or together with any `RUN.md` synchronization
-- **AND** it SHALL NOT leave two runner instruction files with conflicting health or cleanup policy
+- **WHEN** an experiment bundle contains an expired claimed work unit
+- **THEN** the health report SHALL show the expired attempt
+- **AND** the report SHALL not mark the phase as drained
+

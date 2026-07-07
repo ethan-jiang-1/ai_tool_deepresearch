@@ -42,57 +42,19 @@ The schema SHALL define 11 Zod enums: the original 10 plus `rerun_ready` added t
 
 ### Requirement: Six Zod contracts
 
-The system SHALL provide six Zod contracts for bundle control file validation:
+The system SHALL provide Zod contracts for bundle control file validation. The Queue contract SHALL validate queue v2 `rb_queue.json` with queue demand items keyed by `queue_item_id`, ordered `active_window`, ordered `refill_pool`, `delegated_in_flight`, and `terminal_history`. Work-unit attempt state SHALL be validated through work-unit index, manifest, result, receipt, and ledger schemas rather than queue demand item schema.
 
-| Contract | Target File | Schema |
-|----------|------------|--------|
-| Gate contract | `rb_status.json` | Gate state machine schema |
-| Plan contract | `rb_plan.md` | Topic plan schema |
-| Profile contract | `rb_profile.yaml` | Research profile schema |
-| Queue contract | `rb_queue.json` | Queue state schema with structured `QueueWorkUnitSchema` |
-| Status contract | `rb_status.json` | Run state schema |
-| Trace contract | `rb_trace.jsonl` | Trace entry schema |
-
-The ProfileSchema SHALL add `rerun_count` to the HITL2 section. HITL2 section SHALL include `answerability_class` (AnswerabilityClass), `user_decision` (HITL2UserDecision), `final_report_view` (FinalReportView), optional `custom_slug` (string), and optional `rerun_count` (non-negative integer, default 0). The Queue contract SHALL use `QueueWorkUnitSchema` for structured queue slot validation, replacing the previous skeleton placeholder slots.
-
-#### Scenario: ProfileSchema accepts valid hitl2 skeleton
-- **WHEN** `ProfileSchema.safeParse({ plan_basename: 'test', research_profile: 'quick_factual', root_must_answer_set: [], human_decision_checkpoints: { hitl1: { status: 'recorded' }, hitl2: { status: 'not_started', answerability_class: 'not_assessed', user_decision: 'not_started', final_report_view: 'not_started' } } })` is called
-- **THEN** it returns `{ success: true }`
-
-#### Scenario: ProfileSchema rejects invalid hitl2 status
-- **WHEN** hitl2 status is `'invalid'`
-- **THEN** it returns `{ success: false }`
-
-#### Scenario: ProfileSchema accepts rerun_count
-
-- **WHEN** `ProfileSchema.safeParse({ plan_basename: 'test', research_profile: 'quick_factual', root_must_answer_set: [], human_decision_checkpoints: { hitl1: { status: 'recorded' }, hitl2: { status: 'recorded', answerability_class: 'ready_substantive', user_decision: 'rerun', final_report_view: 'profile_default', rerun_count: 1 } } })` is called
-- **THEN** it returns `{ success: true }`
-
-#### Scenario: ProfileSchema rejects negative rerun_count
-
-- **WHEN** `rerun_count` is `-1`
-- **THEN** it returns `{ success: false }`
-
-#### Scenario: Queue contract validates structured slots
+#### Scenario: Queue contract validates queue v2
 
 - **WHEN** `validate-bundle.mjs` checks `rb_queue.json`
-- **THEN** each of the 20 active window slots (`slot_1_current` through `slot_20_tail`) SHALL validate against `QueueWorkUnitSchema` (nullable)
-- **AND** `refill_pool` SHALL validate as `z.array(QueueWorkUnitSchema)`
+- **THEN** queue demand items SHALL validate with `queue_item_id`
+- **AND** delegated in-flight entries SHALL bind to Engine-allocated `work_id` values
 
-#### Scenario: QueueWorkUnitSchema validates a complete task card
+#### Scenario: queue demand identity is distinct from work-unit identity
 
-- **WHEN** a queue item with all required fields (`work_id`, `title`, `targets`, `action`, `producer_rule`, `required_receipts`, `completion_receipt`, `status`) is validated
-- **THEN** it SHALL pass Zod validation
-
-#### Scenario: QueueWorkUnitSchema rejects missing required fields
-
-- **WHEN** a queue item missing `producer_rule` or `required_receipts` is validated
-- **THEN** Zod validation SHALL throw
-
-#### Scenario: Backward compatible with null slots
-
-- **WHEN** a bundle has `null` values in queue slots (e.g., empty queue)
-- **THEN** Zod validation SHALL pass (slots are `.nullable()`)
+- **WHEN** a queue demand item uses `work_id` as its demand identifier
+- **THEN** queue v2 validation SHALL fail
+- **AND** the diagnostic SHALL require `queue_item_id`
 
 ### Requirement: Rerun tracking field in HITL2 profile
 

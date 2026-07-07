@@ -5,131 +5,33 @@
 ## Purpose
 
 Define wave2 cross-topic synthesis via queue-driven iterative finding triage + targeted search loop. Wave2 takes all topic evidence-summary and question-list from wave1, produces a three-artifact group (synthesis.md narrative projection, cross-topic-ledger.md dynamic ledger, finding-index.yaml JS-readable index), classifies findings into three types with six explicit exploration/exploitation decisions, records a cross-topic scan matrix as process evidence, runs JS feedback checks at semantic boundaries, and backfills seed topic files as projection from the ledger/index. This is the last research phase before HITL2 human review.
-
 ## Requirements
-
 ### Requirement: Wave2 phase uses queue-driven three-stage execution
 
-`phase-wave2.md` SHALL guide the Phase Agent through queue-driven three-stage execution: filling (灌料), execution loop, and closeout+gate.
+Wave2 SHALL keep queue-driven execution, but delegated targeted evidence search SHALL use work-unit claim/submit. Pure cross-topic synthesis SHALL remain main-agent work.
 
-§3 Allowed Actions SHALL be structured as:
-- **§3.1 Filling**: On first entry (queue empty), create 1 synthesis task card + N per-topic backfill task cards, enqueue all
-- **§3.2 Execution Loop**: Claim → execute → complete cycle. Synthesis task executes first (with embedded finding triage + targeted search loop), then backfill tasks
-- **§3.3 Closeout + Gate**: Verify all artifacts, run gate CLI, pass → chain to next phase
+#### Scenario: pure synthesis has no delegated work-unit requirement
 
-The synthesis task card SHALL use `targets: { controller: "main-agent" }` and `producer_rule: cross_topic_synthesis`. Backfill task cards SHALL use `targets: { controller: "main-agent" }` and `producer_rule: seed_topic_backfill_wave2`. Here `main-agent` is the current Queue schema wire value for Phase Agent execution, not the conceptual actor term.
-
-#### Scenario: Phase Agent enters wave2 with empty queue
-
-- **WHEN** Phase Agent loads `phase-wave2.md` and queue is empty
-- **THEN** Phase Agent SHALL create 1 synthesis task card + N backfill task cards (one per topic in topic_registry)
-- **AND** Phase Agent SHALL enqueue all task cards before beginning execution
-
-#### Scenario: Synthesis task executes with finding triage loop
-
-- **WHEN** Phase Agent claims the synthesis task card
-- **THEN** Phase Agent SHALL read all topic evidence-summary and question-list from wave1 artifacts
-- **AND** Phase Agent SHALL build cross-topic scan matrix and inventory findings into ledger/index
-- **AND** Phase Agent SHALL classify each finding and assign exploration/exploitation decision
-- **AND** Phase Agent SHALL spawn gap-fill sub-agents only for findings with decision exploit_search/explore_search
-- **AND** Phase Agent SHALL iterate until no new findings or max iteration reached
-- **AND** Phase Agent SHALL write synthesis.md as narrative projection referencing W2F-xxx finding ids
-- **AND** Phase Agent SHALL complete the synthesis task with `file:` receipt verification for `artifacts/wave2/synthesis.md`, `artifacts/wave2/cross-topic-ledger.md`, and `artifacts/wave2/finding-index.yaml`
-
-#### Scenario: Backfill tasks execute after synthesis completes
-
-- **WHEN** synthesis task is complete and finding triage loop has converged
-- **THEN** Phase Agent SHALL claim backfill tasks in order
-- **AND** for each backfill task, Phase Agent SHALL replace `__BACKFILL_WAVE2_JUDGMENT__` and `__BACKFILL_PENDING_QUESTIONS__` tokens in the corresponding seed topic file
-- **AND** Phase Agent SHALL complete each backfill task after replacing the token line; deterministic token absence is verified by the wave2 gate
+- **WHEN** Wave2 performs synthesis using existing accepted evidence
+- **THEN** it SHALL not require a work-unit row for that synthesis step
 
 ### Requirement: Gap-fill sub-agent dispatch for targeted evidence search
 
-During synthesis, after the Phase Agent has classified a finding and assigned decision `exploit_search` or `explore_search`, the Phase Agent SHALL stage the sub-agent slot via `drive-relay-slot stage`, spawn from the emitted prompt, and collect via `drive-relay-slot commit`. The Phase Agent SHALL NOT spawn sub-agents for findings with decision `use_existing_evidence`, `defer_hitl2`, `requires_internal_data`, or `record_only`. The Phase Agent SHALL NOT "directly spawn" without driver staging, and SHALL NOT hand-orchestrate `ingestAgentReceipt` / `commitSlotResult`.
+Gap-fill sub-agent dispatch SHALL be represented as queue demand claimed into work-unit kind `wave2_targeted_evidence`. The result SHALL be submitted by `work_id` before any gate coverage can pass.
 
-The gap-fill sub-agent SHALL:
-- Receive a bounded task description with the specific finding to search for
-- Use WebSearch + WebFetch to find targeted evidence
-- Return structured JSON result (found_evidence, source_urls, fills_gap, confidence)
-- Write intermediate products to `_cache/wave2/{backing|depth|emergent}-r{N}/{finding_id}/sNN_{source-slug}/` (non-authority cache per `shared-subagent-protocol.md` §2)
-- Write `runtime-receipt.jsonl` to its relay slot directory
-- NOT write to WorkflowState, queue, or gate artifacts
-- NOT make cross-topic synthesis judgments（that is Phase Agent work）
+#### Scenario: gap-fill creates evidence work unit
 
-Gap-fill dispatch SHALL NOT go through queue delegates — findings are identified sequentially during synthesis and cannot be pre-enumerated at filling time.
-
-#### Scenario: Phase Agent identifies gap and spawns sub-agent via driver
-
-- **WHEN** during synthesis, Phase Agent finds that a cross-topic claim lacks independent verification
-- **THEN** Phase Agent SHALL invoke `drive-relay-slot stage` before spawn
-- **AND** SHALL spawn a `dpt-topic-scout` sub-agent with a bounded task description targeting that specific gap
-- **AND** SHALL invoke `drive-relay-slot commit` on return
-- **AND** Phase Agent SHALL incorporate verified findings into synthesis.md
-
-#### Scenario: No gaps found — synthesis completes without gap-fill spawn
-
-- **WHEN** Phase Agent drafts synthesis.md and identifies no evidence gaps requiring search
-- **THEN** Phase Agent SHALL complete synthesis without spawning any gap-fill sub-agents
-
-#### Scenario: Gap-fill sub-agent returns no useful evidence
-
-- **WHEN** gap-fill sub-agent searches but finds no verifiable evidence for the gap
-- **THEN** sub-agent SHALL record the search attempt and honest failure
-- **AND** Phase Agent SHALL note the unresolved gap in synthesis.md under "Unresolved Cross-Topic Questions"
+- **WHEN** Wave2 triage identifies a delegated evidence gap
+- **THEN** the Engine SHALL allocate a `wave2_targeted_evidence` work unit
 
 ### Requirement: Iterative finding triage + targeted search loop with convergence criteria
 
-The wave2 synthesis task (`producer_rule: cross_topic_synthesis`) SHALL execute as a **single-pass** Phase Agent task per `phase-wave2.md` §3.2: inventory Wave1 artifacts → build scan matrix → classify findings into ledger/index → make exploration/exploitation decision per finding → run JS feedback check → spawn sub-agent only for `exploit_search`/`explore_search` via `drive-relay-slot` → ingest receipt → run JS feedback check → project synthesis narrative → run JS feedback check → complete the queue task. The synthesis task SHALL NOT embed a multi-round internal convergence loop.
+Iterative triage SHALL enqueue delegated queue demand for targeted search only when the Main Agent judges new evidence is required. Each delegated search SHALL return through the same work-unit submit loop.
 
-Quality and convergence gaps identified during gate inspection or §3.3 Quality Self-Check SHALL be addressed via §3.3.2 Quality Re-Fill Loop — supplementary task cards enqueued and executed through the normal queue + relay protocol. Iteration limits and quality thresholds (`max_supplementary_rounds`, backing/cross-topic/emergent quality params, etc.) SHALL be read from `rb_profile.yaml#/research_style_params`, not from phase node frontmatter.
+#### Scenario: triage-created search is submitted
 
-The pass SHALL classify each finding into one of three types:
-- `wave1_legacy_question`: unresolved/partially-resolved question from Wave1 question-list
-- `cross_topic_resolution`: a legacy question answered by other topics' existing evidence
-- `cross_topic_emergent_question`: a new question first visible only after cross-topic alignment
-
-Each finding SHALL receive one of six decisions before any search action:
-- `use_existing_evidence` (resolution only, no search)
-- `exploit_search` (targeted supplementary search for legacy questions)
-- `explore_search` (limited exploration for emergent questions)
-- `defer_hitl2` (needs human prioritization/tradeoffs)
-- `requires_internal_data` (needs proprietary/non-public data)
-- `record_only` (low impact or exceeds Wave2 budget)
-
-After the single pass completes, unresolved searchable findings MAY be addressed by supplementary re-fill tasks; backfill seed-topic tasks SHALL execute only after the synthesis queue task completes.
-
-#### Scenario: Synthesis completes in one queue task pass
-
-- **WHEN** Phase Agent claims the `cross_topic_synthesis` task
-- **THEN** Phase Agent SHALL produce the three-artifact group in one execution pass
-- **AND** SHALL NOT re-enter an internal multi-round gap-fill loop inside the same task card action
-
-#### Scenario: Gate fail or quality gap triggers supplementary re-fill
-
-- **WHEN** wave2 gate fails on quality/convergence rules after synthesis, or §3.3 Quality Self-Check marks gaps
-- **THEN** Phase Agent SHALL enqueue supplementary task cards per §3.3.2
-- **AND** supplementary search tasks SHALL use `drive-relay-slot stage/commit` for relay-backed gap-fill
-
-#### Scenario: All remaining findings are non-searchable type
-
-- **WHEN** after the single pass, remaining findings all have decision `requires_internal_data`, `defer_hitl2`, or `record_only`
-- **THEN** the synthesis task MAY complete
-- **AND** `requires_internal_data` findings SHALL be documented with `[需内部数据]` label in ledger and handoff
-
-#### Scenario: Cross-topic emergent findings are processed with distinct labels
-
-- **WHEN** synthesis identifies a finding that was NOT present in any wave1 question-list（cross-topic pattern, contradiction, or uncovered dimension first visible only after pulling together multiple topic evidence）
-- **THEN** the finding SHALL be classified as `cross_topic_emergent_question` in ledger/index
-- **AND** the finding SHALL receive an exploration decision（`explore_search`, `defer_hitl2`, `requires_internal_data`, or `record_only`）
-- **AND** emergent findings that remain unresolved SHALL be documented with `[涌现]` label, distinct from wave1-legacy `[开放]` questions
-
-#### Scenario: Resolution finding does not trigger search
-
-- **WHEN** a Wave1 legacy question from topic A is answered by existing evidence in topic B's evidence-summary
-- **THEN** the finding SHALL be classified as `cross_topic_resolution`
-- **AND** decision SHALL be `use_existing_evidence`
-- **AND** `search_required` SHALL be false
-- **AND** no sub-agent SHALL be spawned for this finding
+- **WHEN** triage creates delegated targeted search demand
+- **THEN** gate coverage SHALL require successful work-unit submit
 
 ### Requirement: Wave2 three-artifact group with verified references
 
@@ -203,63 +105,21 @@ Backfill execution SHALL use the standard claim→execute→complete queue loop.
 
 ### Requirement: Wave2 sub-agent behavior specification
 
-`phase-wave2-subagent.md` SHALL define the behavior contract for gap-fill sub-agents (`dpt-topic-scout` role).
+Wave2 sub-agent behavior SHALL be specified through work-unit task/result/receipt contracts and SHALL bind `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
 
-The sub-agent instructions SHALL specify:
-- **Receives**: Bounded gap description + search keywords + target output schema from Phase Agent (via relay slot `task.md`)
-- **Produces**: Structured JSON with found_evidence, source_urls, fills_gap (boolean), confidence (low/medium/high)
-- **Writes**: Intermediate products to `_cache/wave2/{backing|depth|emergent}-r{N}/{finding_id}/sNN_{source-slug}/`, runtime receipt to relay slot directory
-- **Must NOT**: Write to WorkflowState, modify queue, pass/fail gate, make cross-topic claims (works on ONE gap)
-- **Must**: Use tool degradation chain (WebFetch → curl → node → python3), record honest failures, never fabricate
+#### Scenario: Wave2 sub-agent result binds nonce
 
-#### Scenario: Sub-agent receives bounded gap-fill task
-
-- **WHEN** Phase Agent spawns a gap-fill sub-agent via `drive-relay-slot`
-- **THEN** sub-agent SHALL receive only the gap description, search keywords, and output schema
-- **AND** sub-agent SHALL NOT receive WorkflowState, queue content, or other topic results
-
-#### Scenario: Sub-agent exhausts fetch chain before reporting failure
-
-- **WHEN** WebFetch is blocked or unavailable
-- **THEN** sub-agent SHALL try curl, then node fetch, then python3 before reporting a source as inaccessible
-- **AND** sub-agent SHALL record each tier attempt in runtime-receipt
+- **WHEN** a Wave2 targeted evidence result is submitted
+- **THEN** submit SHALL verify the receipt nonce across result, receipt, beacon, and manifest
 
 ### Requirement: Three-artifact Wave2 output with JS feedback integration
 
-Wave2 SHALL produce a three-artifact group as defined in WTS-004（synthesis.md narrative projection, cross-topic-ledger.md dynamic ledger, finding-index.yaml JS-readable index）. JS engine SHALL provide layered feedback at semantic boundaries on this artifact group.
+Three-artifact Wave2 synthesis output SHALL continue to use JS feedback for structural/reference checks. Delegated evidence supporting those artifacts SHALL be work-unit ledger covered when it was produced by sub-agent search.
 
-The artifact contents and structure are specified in WTS-004（three artifacts and their roles）、WTS-008（finding fields, enum values）、and WTS-009（scan matrix）. This requirement defines the JS feedback integration on top of those artifacts.
+#### Scenario: artifact reference uses delegated evidence row
 
-JS feedback SHALL operate at three levels:
-- **L0** (local parse/shape): After Phase Agent writes stable YAML/ledger chunks — catch malformed YAML, missing fixed sections, broken links
-- **L1** (lifecycle consistency): After semantic boundaries — catch decision/receipt/handoff/projection consistency (see WTS-008 consistency rules)
-- **L2** (phase gate): Once, after all artifacts complete and queue is drained — decide whether Wave2 can advance to HITL2
-
-JS feedback SHALL return `{ check, inspect, advice }` format. JS SHALL NOT judge semantic quality of findings, synthesis insight, or research direction merit.
-
-#### Scenario: Three artifacts pass L0 check after initial creation
-
-- **WHEN** Phase Agent writes initial ledger and index
-- **THEN** JS L0 check SHALL verify: all three files exist and are non-empty, ledger has 6 fixed sections, index parses as valid YAML, index findings have all required fields
-- **AND** if L0 fails, Phase Agent SHALL repair immediately and rerun
-
-#### Scenario: L1 check catches decision/receipt inconsistency
-
-- **WHEN** a finding has `decision=explore_search` but `subagent_receipt_refs` is empty after search was supposed to complete
-- **THEN** L1 check SHALL return `check: failed` with `inspect` pointing to the specific finding id
-- **AND** `advice` SHALL suggest attaching receipt or changing decision to `defer_hitl2`/`record_only`
-
-#### Scenario: L1 check catches orphan finding
-
-- **WHEN** a finding has `appears_in_synthesis=false` AND `hitl2_handoff=false`
-- **THEN** L1 check SHALL flag it as orphan finding
-- **AND** `advice` SHALL suggest projecting to synthesis, adding to HITL2 Handoff, or marking `decision=record_only`
-
-#### Scenario: Phase Agent escalates after 2 failed L1 repair attempts
-
-- **WHEN** the same finding fails L1 check 3 times (2 repair attempts exhausted)
-- **THEN** Phase Agent SHALL escalate: change finding decision to `defer_hitl2` or `record_only` with reason recorded in ledger
-- **AND** this SHALL NOT block synthesis completion
+- **WHEN** a Wave2 artifact references newly delegated evidence
+- **THEN** the evidence SHALL be covered by a submitted work-unit ledger row
 
 ### Requirement: Finding taxonomy with explicit types, decisions, and consistency rules
 
@@ -322,38 +182,10 @@ JS SHALL NOT judge whether a resolution is "smart," an emergent question is "pro
 
 ### Requirement: Cross-topic scan matrix as process evidence surface
 
-The `cross-topic-ledger.md` SHALL contain a Cross-Topic Scan Matrix section that records which topic pairs/groups were examined for cross-topic relationships.
+The cross-topic scan matrix remains process evidence for synthesis. It SHALL NOT substitute for work-unit ledger coverage when new delegated targeted evidence search was performed.
 
-For `topic_count <= 5`, the scan SHALL default to checking all topic pairs. The scan matrix SHALL record each checked pair even when no finding emerged.
+#### Scenario: scan matrix cannot cover delegated search
 
-Each scan row SHALL include:
-- `pair_id`: Stable identifier (e.g., P01, P02)
-- `topics`: Which topics were compared
-- `checked_dimensions`: Which dimensions were examined（`shared_pattern`, `contradiction`, `resolution_opportunity`, `emergent_question`）
-- `finding_ids`: Resulting finding ids, or "none" if no material relation found
-- `notes`: Brief context on what was found or why nothing emerged
+- **WHEN** delegated targeted evidence search produced a file
+- **THEN** the scan matrix SHALL NOT make that file gate-authoritative without submitted work-unit coverage
 
-The `finding-index.yaml` top-level `scan` object SHALL record `topic_count`, `pair_count_expected`, and `pair_count_checked` to enable JS feedback on scan coverage.
-
-JS SHALL check that a scan accounting exists but SHALL NOT force every pair when `topic_count > 5` or profile explicitly scopes cross-topic synthesis.
-
-#### Scenario: All pairs checked for small topic count
-
-- **WHEN** topic_count is 3 and all 3 pairs are checked
-- **THEN** scan matrix SHALL have 3 rows
-- **AND** `pair_count_checked` SHALL equal `pair_count_expected`
-- **AND** pairs with no findings SHALL still have rows with `finding_ids: "none"`
-
-#### Scenario: Scan matrix exists even when no findings emerged
-
-- **WHEN** all topic pairs were checked but no cross-topic findings emerged
-- **THEN** scan matrix SHALL still exist with rows documenting the checks
-- **AND** `finding_ids` column SHALL contain "none"
-- **AND** `pair_count_checked` SHALL demonstrate that scan was performed
-
-#### Scenario: Large topic count uses clustering, not full pairwise
-
-- **WHEN** topic_count is 8 (exceeds 5)
-- **THEN** scan SHALL cluster by shared dimension first, then scan most relevant pairs/groups per cluster
-- **AND** JS SHALL NOT require `pair_count_checked == pair_count_expected`
-- **AND** JS SHALL still require scan accounting to exist

@@ -5,9 +5,7 @@
 ## Purpose
 
 Queue entry validation — verify task card consistency with bundle at enqueue time, preventing cross-bundle contamination. Queue schema includes bundle identity, and projection cache includes staleness detection.
-
 ## Requirements
-
 ### Requirement: Enqueue SHALL validate topic_slug against topic_registry
 
 `operate-queue enqueue` SHALL, before writing a task card to the queue, read `rb_plan.md` frontmatter's `topic_registry` and verify that the task card's topic slug exists in the registry whenever the task declares or implies topic scope.
@@ -121,21 +119,16 @@ All `operate-queue` operations SHALL validate that `bundle_name` in the queue fi
 
 ### Requirement: Queue repair SHALL remove stale task cards
 
-`operate-queue repair --remove-stale` SHALL read `rb_plan.md` topic_registry, iterate all slots and refill_pool, resolve each task card's topic slug using the same deterministic resolver as enqueue, and remove task cards whose resolved topic slug is not in the registry. Finding-scoped Wave2 task cards without topic slug SHALL NOT be removed by topic repair solely for lacking `topic_slug`; if a current finding-index is available and their `finding_id` is absent, repair SHALL remove them and report them as stale finding-scoped cards in the JSON summary.
+`operate-queue repair --remove-stale` SHALL read `rb_plan.md` topic_registry and inspect queue v2 locations: `active_window`, `refill_pool`, and eligible non-terminal queue demand references. It SHALL resolve each queue item's topic slug using the same deterministic resolver as enqueue and remove task cards whose resolved topic slug is not in the registry. Delegated attempts already claimed into `delegated_in_flight` SHALL require work-unit terminal handling before queue repair mutates their demand binding.
 
-The repair command SHALL output a JSON summary of changes: which task cards were removed, from which slots, and why. It SHALL NOT modify task cards whose topic slugs ARE in the registry.
+#### Scenario: stale active-window task card removed
 
-Repair SHALL NOT run while an add-topic or rerun instantiation flow is in progress, as the topic_registry may be in a transitional state. The caller SHALL gate repair on stable bundle phase/status (e.g., between waves, not during active topic addition). If repair detects an in-progress instantiation marker, it SHALL exit with a diagnostic message rather than risk removing legitimate in-flight task cards.
+- **WHEN** `active_window` contains a queue item whose topic slug is absent from `topic_registry`
+- **THEN** repair SHALL remove that queue item
+- **AND** the summary SHALL identify the removed `queue_item_id`
 
-#### Scenario: Stale task card removed
+#### Scenario: in-flight delegated demand is not silently removed
 
-- **WHEN** `slot_3_pending` contains a task card with `work_id: "seed-topic-03_clinical-scenarios"`
-- **AND** `topic_registry` does NOT contain `03_clinical-scenarios`
-- **THEN** `repair --remove-stale` SHALL remove the task card from `slot_3_pending`
-- **AND** the slot SHALL be set to `null`
-- **AND** summary SHALL list the removal
+- **WHEN** a stale topic is bound to a non-terminal work unit in `delegated_in_flight`
+- **THEN** repair SHALL fail closed with advice to resolve the work-unit attempt first
 
-#### Scenario: Valid task card preserved
-
-- **WHEN** `slot_1_current` contains a task card with slug in `topic_registry`
-- **THEN** `repair --remove-stale` SHALL NOT remove or modify it

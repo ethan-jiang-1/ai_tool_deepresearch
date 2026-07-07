@@ -5,9 +5,7 @@
 ## Purpose
 
 The real subagent path requires project-level agent definitions before the native Codex / Claude Code experiments run. A DPT command playbook prepares those definitions without running the experiments.
-
 ## Requirements
-
 ### Requirement: Command playbook prepares real subagent environment
 The `DPT_FRAMEWORK/command_playbook/setup-real-subagents.md` playbook SHALL instruct an agent to create or update project-local Codex and Claude Code role-agent definitions for the DPT real subagent taxonomy.
 
@@ -43,8 +41,11 @@ The setup command SHALL only overwrite files that contain the marker `DPT manage
 - **THEN** the setup command stops and reports a collision
 
 ### Requirement: Setup does not run experiments
-The setup command SHALL NOT spawn native subagents, run real test playbooks, write slot result files, or edit the deferred experiment directories.
 
-#### Scenario: Setup is environment-only
-- **WHEN** the setup command completes
-- **THEN** no `result.json`, `_status.json`, or `_agent.json` slot files are produced by the setup command
+The setup command SHALL NOT spawn native sub-agents, run real test playbooks, write work-unit result/status/agent files, or edit deferred experiment directories. It SHALL prepare project-level real sub-agent environment definitions only.
+
+#### Scenario: setup is environment-only
+
+- **WHEN** the setup command runs
+- **THEN** no work-unit result, status, or runtime-agent output files are produced by the setup command
+

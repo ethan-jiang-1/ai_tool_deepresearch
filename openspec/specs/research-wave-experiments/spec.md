@@ -7,141 +7,60 @@
 定义 workflow-foundation research wave experiments 的 runner-facing acceptance surface。实验必须展示 wave0/1/2 的完整闭环、全链路串联、Wave1 boundary enforcement、repair loop、fault tolerance 和 cross-topic synthesis 的可审查性，同时保持 deterministic verdict 只来自真实 trace JSONL。
 
 **Requirement 与 playbook 映射**：RWE-001~007 各对应一个 playbook 文件（7 个 wave playbook）。RWE-008 和 RWE-009 是横切约束（不产生独立 playbook）：RWE-008 要求所有 Wave1 相关 playbook 在 body 中显式说明 foundation placeholder boundary；RWE-009 要求 wave2 synthesis playbook 的 thin driver 独立验证 cross-artifact reference。seed-topics boundary playbook（test-simple-seed-topics-boundary.md）在 seed-topic-materialization capability 中定义，不属于 RWE capability。
-
 ## Requirements
-
 ### Requirement: Wave0 happy-path + fail playbook
 
-`experiments_playbook/exp_wfn_wave0/case-211-heavy-wave0-happy-path.md`（或同目录 successor case）SHALL 提供 playbook，验证 Wave0 的 foundation reference collection 路径（包含 pass 和 fail 分支）。
+Wave0 playbooks SHALL verify work-unit source intake happy path and failure cases: missing ledger, missing receipt, invalid result, orphan output, non-work-unit delegated artifact, timeout retry, and gate-failure refill.
 
-该 playbook SHALL：
-- 通过 `experiments_env/shared/new-disposable-bundle.mjs` 创建 disposable bundle
-- 前置运行 validate-bundle 和 inspect-bundle
-- 写入 fixed seed topics 到 `rb_plan.md` 的 topic registry
-- 通过 queue + relay driver 写 schema-valid reference metadata 到 `artifacts/wave0/{topic}/source.yaml`，更新 `reference/_INDEX.md`
-- 运行 `check-gate-wave0-complete.mjs` → 验证 pass
-- 再故意移除一个 topic 的 metadata → 验证 gate fail（inspect 指向缺失 topic）
-- 再清空 `rb_plan.md` 的 `topic_registry` → 验证 gate fail（inspect 指向空 registry），证明 topic 集合 source of truth = registry 而非磁盘扫描
-- 再写入数量达标但 schema 不合格的 reference metadata（如缺少必填字段 `url`）→ 验证 `count_floor` pass 但 `schema_valid` fail，gate 整体 fail——证明 count_floor ⊕ schema_valid 的 AND 交互
-- 再写入 registry 有 3 个 topic 但故意漏写 1 个 topic 的 `artifacts/wave0/{topic}/source.yaml` → 验证 `{topic}` 占位符展开后精确指出缺失的 topic
-- 从 `_trace.jsonl` 给出最终 verdict
+#### Scenario: Wave0 happy path drains multiple work units
 
-#### Scenario: Wave0 pass and fail both trace-backed
-
-- **WHEN** the Wave0 playbook completes all branches
-- **THEN** each branch SHALL record verdict evidence in `_trace.jsonl`
-- **AND** pass and fail outcomes SHALL be distinguishable from trace alone
-
-#### Scenario: Malformed YAML fails schema_valid
-
-- **WHEN** `artifacts/wave0/{topic}/source.yaml` 中存在无法 parse 的 YAML
-- **THEN** `schema_valid` rule fail，inspect 给出 parse error detail
+- **WHEN** Wave0 has three source-intake queue items
+- **THEN** the playbook SHALL claim and submit multiple work units before gate pass
 
 ### Requirement: Wave1 happy-path + boundary enforcement playbook
 
-`experiments_playbook/exp_workflow-foundation/test-simple-wave1-boundary.md` SHALL 提供 light playbook，验证 Wave1 的 placeholder skeleton 路径和 boundary enforcement。
+Wave1 playbooks SHALL verify topic deepening through work units and SHALL reject placeholder or non-work-unit delegated artifacts as pass evidence.
 
-该 playbook SHALL：
-- 前置完成 Wave0（使用 pre-seeded reference）
-- 写入 topic-scoped skeleton artifact 并标记 `capability: foundation-placeholder`
-- 运行 `check-gate-wave1-complete.mjs` → 验证 pass
-- 再写 unmarked skeleton（缺 marker）→ 验证 gate fail（inspect 指向缺失 marker）
-- 再写含 false completion claim 的 skeleton → 验证 gate fail
-- 展示 human review checklist：marker 是否清楚、skeleton 是否避免了 false completion claim
-- 显式列出 foundation 阶段 DO 和 DON'T
+#### Scenario: Wave1 boundary rejects non-work-unit artifact
 
-#### Scenario: Wave1 skeleton passes gate when properly marked
-
-- **WHEN** skeleton artifact 包含 `capability: foundation-placeholder` marker 且无 false completion claim
-- **THEN** `wave1-complete` gate SHALL pass
-- **AND** verdict SHALL PASS
-
-#### Scenario: Wave1 skeleton fails gate when unmarked or false-claimed
-
-- **WHEN** skeleton artifact 缺失 marker
-- **THEN** `wave1-complete` gate SHALL return `passed: false`
-- **AND WHEN** skeleton 包含 "full subagent coverage completed"
-- **THEN** gate SHALL return `passed: false`
+- **WHEN** a Wave1 delegated artifact exists without work-unit ledger coverage
+- **THEN** the playbook gate SHALL fail
 
 ### Requirement: Wave2 happy-path + artifact reference verification playbook
 
-`experiments_playbook/exp_workflow-foundation/test-simple-wave2-synthesis.md` SHALL 提供 light playbook，验证 Wave2 的 cross-topic synthesis 路径和引用链检查。
+Wave2 playbooks SHALL verify pure synthesis artifact references separately from optional delegated targeted evidence work-unit coverage.
 
-该 playbook SHALL：
-- 前置完成 Wave0 和 Wave1（pre-seeded）
-- 写入 synthesis artifact，用 Markdown links 引用具体 Wave0/Wave1 artifacts
-- 运行 `check-gate-wave2-complete.mjs` → 验证 pass
-- 再写无 Markdown link 的 synthesis → 验证 gate fail
-- 再写有 links 但目标全部不存在的 synthesis → 验证 gate fail
-- 展示 synthesis 内容和引用链
-- 展示 human review checklist：引用是否准确、synthesis 是否从 artifacts 派生
+#### Scenario: Wave2 delegated evidence is submitted
 
-#### Scenario: Wave2 synthesis passes gate with valid references
-
-- **WHEN** synthesis 引用的所有 Markdown link 目标存在且非空
-- **THEN** `wave2-complete` gate SHALL pass
-
-#### Scenario: Wave2 synthesis fails when all references invalid
-
-- **WHEN** synthesis 无 Markdown links 或所有 link 目标不存在
-- **THEN** `wave2-complete` gate SHALL return `passed: false`
+- **WHEN** Wave2 targeted evidence search is used
+- **THEN** the playbook SHALL submit the delegated result by `work_id`
 
 ### Requirement: Full-chain waves sequential playbook
 
-`experiments_playbook/exp_workflow-foundation/test-simple-waves-full-chain.md` SHALL 提供 light playbook，验证 seed-topics → wave0 → wave1 → wave2 四个 gate 可以顺序 pass，证明从 setup 到 wave2 的完整 artifact 依赖链。
+The full-chain playbook SHALL prove work-unit handoff across Wave0, Wave1, and Wave2 where delegated work is used, and SHALL run gates only after phase queue drain.
 
-该 playbook SHALL：
-- 使用 post-setup bundle
-- 物化 seed_topics（运行 `seed-topics-ready` gate → pass → 记录 trace）
-- 写入 Wave0 reference metadata
-- 运行 `wave0-complete` gate → pass → 记录 trace
-- 用 Wave0 产出写入 Wave1 skeleton artifacts
-- 运行 `wave1-complete` gate → pass → 记录 trace
-- 用 Wave0 + Wave1 产出写入 Wave2 synthesis
-- 运行 `wave2-complete` gate → pass → 记录 trace
-- 从 `_trace.jsonl` 给出最终 verdict（4 条 `check` event，全部 pass：seed-topics + wave0 + wave1 + wave2）
+#### Scenario: full chain gates after drain
 
-#### Scenario: Four phases chain sequentially
-
-- **WHEN** seed-topics → wave0 → wave1 → wave2 顺序执行
-- **THEN** trace SHALL 记录 4 条 `check` event
-- **AND** 全部 check SHALL 返回 `passed: true`
-- **AND** verdict SHALL PASS
+- **WHEN** a wave still has in-flight work units
+- **THEN** the playbook SHALL not run the wave gate as a pass attempt
 
 ### Requirement: Wave repair-loop playbook
 
-`experiments_playbook/exp_workflow-foundation/test-medium-wave-repair-loop.md` SHALL 提供 light repair-loop playbook，验证 wave gate fail → inspect/advice → repair → rerun → pass 的闭环。
+The repair-loop playbook SHALL prove gate failure creates repair/refill queue demand and new work-unit attempts with explicit batch reason.
 
-该 playbook SHALL 演示：
-- 选择 Wave2 gate（引用链检查最容易演示 fail→repair→pass 闭环）
-- 初始 synthesis 不包含任何有效 Markdown links → gate fail
-- 读取 `inspect` / `advice`
-- repair：在 synthesis 中追加合法的 artifact references
-- 展示 repair 前后 surface diff（至少展示引用链变化）
-- rerun same gate → pass
-- 若需要，Wave0 和 Wave1 的 repair 路径通过集成测试覆盖（不单独建 playbook）
+#### Scenario: gate failure opens repair batch
 
-#### Scenario: Wave repair loop is trace-backed
-
-- **WHEN** repair loop playbook 执行
-- **THEN** trace SHALL 同时记录 failed 和 passed 的 `check` events
-- **AND** final verdict SHALL 仅基于 trace
+- **WHEN** the gate fails for missing delegated coverage
+- **THEN** the repair run SHALL open `b001+` with a repair/refill reason
 
 ### Requirement: Wave fault-tolerance playbook
 
-`experiments_playbook/exp_workflow-foundation/test-medium-wave-fault-tolerance.md` SHALL 提供 light fault-tolerance playbook，验证畸形数据和边界条件下的 gate 行为。
+The fault-tolerance playbook SHALL include invalid submit, terminal fail, timeout, abandon, duplicate submit, stale manifest/index mismatch, and late submit rejection.
 
-该 playbook SHALL 至少覆盖：
-- **Malformed YAML**：`reference/<topic>/source.yaml` 中存在无法 parse 的 YAML → `schema_valid` rule fail，inspect 给出 parse error detail
-- **Missing artifact reference target**：synthesis 引用不存在的文件路径 → `cross_field` rule 记录 individual fail，但若其他引用有效仍 pass
-- **Status drift**：`rb_status.json` 中 `current_gate` 或 `next_gate` 与预期值不一致 → `status_value` rule fail，inspect 指出 expected vs actual
+#### Scenario: late submit after timeout fails
 
-#### Scenario: Fault-tolerance playbook proves gate graceful degradation
-
-- **WHEN** bundle 包含畸形或漂移的 data
-- **THEN** gate SHALL return `passed: false` with actionable inspect/advice（不是 crash 或 silent pass）
-- **AND** trace SHALL 记录 fail event
-- **AND** playbook SHALL 不修正错误（只证明 gate 检测到错误）
+- **WHEN** a timed-out work unit submits after a retry has been claimed
+- **THEN** the playbook SHALL verify late submit rejection
 
 ### Requirement: Wave review-surface playbook
 
@@ -212,3 +131,13 @@ Heavy wave 实验 playbook（`exp_wfn_wave0/` 下的 case-211/212、`exp_wfn_wav
 - **WHEN** playbook driver 解析 synthesis 中的 Markdown links
 - **THEN** driver SHALL 在 `_trace.jsonl` 中追加 `cross_field_check` event
 - **AND** gate CLI 的 `cross_field` rule 与 driver 的 `cross_field_check` event SHALL 一致（两者都基于同一 bundle 状态）
+
+### Requirement: Wave experiments SHALL prove work-unit-only delegated execution
+
+Controlled wave E2E playbooks SHALL use only `operate-work-unit` for delegated work. They SHALL cover multi-work-unit phase drain, out-of-order submit, timeout retry, gate-failure refill, and no mixed provenance pass.
+
+#### Scenario: no mixed provenance path passes
+
+- **WHEN** a playbook creates one work-unit output and one non-work-unit delegated output
+- **THEN** the gate SHALL fail for mixed provenance
+

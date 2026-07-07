@@ -10,102 +10,54 @@
 ## Requirements
 ### Requirement: Run ID generation and propagation
 
-系统 SHALL 使用 bundle 名称作为 `bundle`——即 `dpt_rb_<name>` 中的 `<name>`，持久化在 `rb_status.json` 的 `bundle` 字段。Bundle 名称本就唯一、人可读、直接对应目录名。
+The system SHALL use the bundle name as `bundle`, persisted in `rb_status.json`. All entries written to `rb_trace.jsonl` and `_logs/run.log` SHALL include the bundle field so diagnostic sinks can be stitched into a single timeline by `bundle` and `ts`.
 
-所有写入 `rb_trace.jsonl`、`_logs/run.log` 的入口 SHALL 包含 `bundle` 字段，使四个 sink 可按 `bundle` + `ts` 缝合为单条时间线。
-
-`bundle` SHALL 从 bundle 的 `rb_status.json` 读取——不靠进程内存、环境变量或命令行参数传递。
+`bundle` SHALL be read from active bundle state, normally `rb_status.json`, not from chat memory, process memory, environment variables, or implicit shell state.
 
 #### Scenario: Run ID is the bundle name
 
-- **WHEN** `instantiate-run-bundle.mjs my-research` 创建新 bundle
-- **THEN** `rb_status.json` SHALL 包含 `"bundle": "my-research"`
-- **AND** bundle 目录为 `dpt_rb_my-research/`——`bundle` 直接对应目录名
-
-#### Scenario: Gate attempt includes bundle
-
-- **WHEN** `writeGateAttempt(bundlePath, result)` 被调用
-- **THEN** 写入 `rb_trace.jsonl` 的 JSONL 入口 SHALL 包含 `bundle` 字段
-- **AND** 写入 `_logs/run.log` 的 log 行 SHALL 包含 `bundle`
-- **AND** `bundle` 的值 SHALL 与 `rb_status.json` 中的一致
+- **WHEN** `instantiate-run-bundle.mjs my-research` creates a new bundle
+- **THEN** `rb_status.json` SHALL contain `"bundle": "my-research"`
+- **AND** bundle directory naming SHALL remain consistent with that bundle identifier
 
 #### Scenario: Engine trace entries include bundle
 
-- **WHEN** `queue-manager.mjs` 或 `subagent-relay.mjs` 写入 trace 入口
-- **THEN** 每个 JSONL 行 SHALL 包含 `bundle` 字段
+- **WHEN** queue, work-unit, or gate Engine code writes trace entries
+- **THEN** each JSONL row SHALL include the bundle identifier
 
 ### Requirement: Single diagnostic log file per bundle
 
-每个 run bundle SHALL 有一个唯一的诊断日志文件 `<bundle>/_logs/run.log`。所有 `.mjs` 和 `.md` 来源的诊断记录 SHALL append 到同一文件，按时间戳顺序排列。
+Each run bundle SHALL have one diagnostic log file at `<bundle>/_logs/run.log`. All `.mjs` and `.md` diagnostic records SHALL append to that file in timestamp order.
 
-该文件 SHALL 为自由文本格式（`[ISO8601] LEVEL message bundle=<name> {optional JSON detail}`），不要求 schema 校验——但行信封（前导 `[ISO8601] LEVEL` 与 `bundle=`）SHALL 机器可解析，因为 `inspect-bundle --timeline` 靠它按 ts 缝合；只有 `message` 体与 detail JSON 是自由文本。信封由 `logToRun`/`createRunLogger`/`log-event.mjs` 统一生成，caller 不手写。
-
-该文件 SHALL NOT 作为 pass/fail 裁决依据——裁决只从 `rb_trace.jsonl` 来。
+The file SHALL be free-text with a machine-parseable envelope. It SHALL NOT be a pass/fail verdict source; verdicts come from `rb_trace.jsonl`, gate output, or accepted verdict artifacts.
 
 #### Scenario: All gate attempts appear in one log file
 
-- **WHEN** 一次 run 中多个 gate CLI 依次执行
-- **THEN** 所有 gate attempt 的日志行 SHALL 出现在同一个 `_logs/run.log` 中，按时间戳排序
+- **WHEN** multiple gate CLIs run in one bundle
+- **THEN** all gate attempt log lines SHALL appear in the same `_logs/run.log`
 
-#### Scenario: Engine and gate log entries coexist
+#### Scenario: Engine and Agent log entries coexist
 
-- **WHEN** `queue-manager.mjs` 写入 enqueue/claim 事件，`subagent-relay.mjs` 写入 slot 事件，gate CLI 写入 gate_attempt 事件
-- **THEN** 所有三种来源的 log 行 SHALL 在同一个 `_logs/run.log` 文件中，按时间戳排序
+- **WHEN** queue, work-unit, gate, and phase-doc logging all occur in one run
+- **THEN** their diagnostic log lines SHALL append to the same bundle log file
 
 ### Requirement: Log level conventions
 
-系统 SHALL 使用四级日志，含义如下：
+Log levels SHALL preserve their existing meanings for runtime diagnostics. Examples SHALL use work-unit, queue, gate, cache, and file-observability events when describing delegated work. Delegated examples SHALL identify `work_id`, `queue_item_id`, `kind`, or `receipt_nonce` instead of non-work-unit channel fields.
 
-| Level | 含义 | 典型场景 |
-|-------|------|---------|
-| `DEBUG` | 引擎内部机制，对运行时诊断不重要 | cache hit, slot refill, 文件读取 |
-| `INFO` | 正常运行时事件，值得记录 | gate PASS, phase START/END, enqueue, dispatch |
-| `WARN` | 可恢复异常，需关注但不阻塞运行 | gate FAIL, receipt 缺失, repair 触发 |
-| `ERROR` | 非预期故障，可能阻塞运行 | 文件未找到, schema 校验失败, 加载失败 |
+#### Scenario: delegated debug example uses work-unit context
 
-默认 level 为 `INFO`——正常运行时事件全量记录。`DEBUG` 仅在显式指定时启用。
-
-#### Scenario: Normal gate pass logged at INFO
-
-- **WHEN** gate CLI 调用 `writeGateAttempt()` 且 `check.passed === true`
-- **THEN** 日志行 SHALL 以 `INFO` 级别记录
-
-#### Scenario: Gate fail logged at WARN
-
-- **WHEN** gate CLI 调用 `writeGateAttempt()` 且 `check.passed === false`
-- **THEN** 日志行 SHALL 以 `WARN` 级别记录
-
-#### Scenario: Engine error logged at ERROR
-
-- **WHEN** engine 函数加载文件失败（如 `readFileSync` 抛出）
-- **THEN** logger SHALL 以 `ERROR` 级别记录，包含文件路径和错误消息
+- **WHEN** a delegated diagnostic is logged at DEBUG
+- **THEN** the example detail SHALL name work-unit binding context
 
 ### Requirement: One-shot log API
 
-系统 SHALL 提供 `logToRun(bundlePath, level, msg, detail?)` 函数作为一次性日志写入接口。
+`logToRun(bundlePath, level, msg, detail?)` SHALL remain the one-shot bundle log helper. Delegated examples SHALL use work-unit detail fields and SHALL NOT teach non-work-unit delegated channels as production logging context.
 
-该函数 SHALL：
-- 自动从 `rb_status.json` 读取 `bundle`
-- 自动构造目标路径 `<bundlePath>/_logs/run.log`，目录不存在时自动创建
-- 按标准格式 `[ISO8601] LEVEL msg bundle=<name> {optional JSON detail}` 写入
-- 不抛错——写失败时静默返回，不影响 caller
+#### Scenario: one-shot log records work-unit detail
 
-`bundlePath` SHALL 是该函数唯一需要的上下文参数——caller 不需要知道日志文件路径、格式或 bundle。
-
-#### Scenario: One-shot log writes to run.log
-
-- **WHEN** `logToRun(bundlePath, 'info', 'phase:wave0 START')` 被调用
-- **THEN** `_logs/run.log` SHALL append 一行 `[ISO8601] INFO phase:wave0 START bundle=<name>`
-
-#### Scenario: One-shot log with detail
-
-- **WHEN** `logToRun(bundlePath, 'warn', 'repair triggered', { slot: '03', reason: 'schema fail' })` 被调用
-- **THEN** 日志行 SHALL 包含 `{"slot":"03","reason":"schema fail"}` JSON detail
-
-#### Scenario: One-shot log never throws
-
-- **WHEN** `_logs/` 目录不可写
-- **THEN** `logToRun()` SHALL 静默返回，不抛错
+- **WHEN** `logToRun()` is used for delegated repair or submit diagnostics
+- **THEN** the detail object SHALL carry work-unit identity where available
 
 ### Requirement: Run-scoped logger for engine hot paths
 
@@ -128,30 +80,12 @@
 
 ### Requirement: Agent log CLI
 
-系统 SHALL 提供 `DPT_FRAMEWORK/cli/log-event.mjs` CLI，使 Agent 能通过 bash 命令写入 `_logs/run.log`，无需内联 JS。
+The Agent-facing log CLI SHALL allow Phase Agents and sub-agents to write bundle diagnostic records without inline JavaScript. Delegated examples SHALL bind work-unit identity and accepted log levels.
 
-CLI 参数：
-- `--bundle <path>` (必选) — active bundle 路径
-- `--level <debug|info|warn|error>` (必选) — 日志级别
-- `--msg <string>` (必选) — 日志消息
-- `--detail <json>` (可选) — JSON 格式的附加详情
+#### Scenario: sub-agent log CLI uses work-unit fields
 
-成功时 exit(0)，失败时静默 exit(0)（不抛错，诊断不阻塞 agent flow）。
-
-#### Scenario: Agent logs phase start via CLI
-
-- **WHEN** Phase Agent 执行 `node DPT_FRAMEWORK/cli/log-event.mjs --bundle dpt_rb_x --level info --msg "phase:wave0 START — 5 topics"`
-- **THEN** `_logs/run.log` SHALL append 一行含 `INFO phase:wave0 START — 5 topics` 和 `bundle`
-
-#### Scenario: Agent logs with detail via CLI
-
-- **WHEN** Phase Agent 执行 `node DPT_FRAMEWORK/cli/log-event.mjs --bundle dpt_rb_x --level warn --msg "repair" --detail '{"slot":"03","reason":"schema fail"}'`
-- **THEN** 日志行 SHALL 包含 JSON detail
-
-#### Scenario: CLI never fails the agent
-
-- **WHEN** `--bundle` 指向的目录不存在
-- **THEN** CLI SHALL exit(0)，不抛错阻塞 agent
+- **WHEN** a sub-agent writes a diagnostic event
+- **THEN** the CLI detail JSON SHALL include assigned work-unit identity and receipt nonce where available
 
 ### Requirement: Phase node log convention
 
@@ -176,33 +110,14 @@ CLI 参数：
 
 ### Requirement: Logger activation in engines
 
-Engine modules `queue-manager.mjs` and `subagent-relay.mjs` SHALL activate `createRunLogger` at bundle-aware entrypoints and SHALL emit accident-grade attempt/outcome diagnostics for public hot-path functions. Non-success paths SHALL include the reason before returning or throwing when a run-scoped logger is available.
-
-This requirement replaces the previous LOC-006 engine closed-set summary. The new closed-set is the accident-grade event set defined by the logger specification. Engine trace points outside that accident-grade set still SHALL NOT automatically create log lines.
-
-The historical `guidelines/logging-conventions.md` principles remain in force, but its old LOC-006 summary event list SHALL be considered superseded once this change is accepted. Any later guideline update SHALL preserve the trace/log authority boundary while replacing the old summary event names with the accepted accident-grade diagnostic set.
+Engine modules for queue, work-unit lifecycle, ledger append, gate provenance, and file observability SHALL activate `createRunLogger` at bundle-aware entrypoints and SHALL emit accident-grade attempt/outcome diagnostics for public hot-path functions. Non-success paths SHALL include the reason before returning or throwing when a run-scoped logger is available.
 
 Gate CLIs SHALL use `writeGateAttempt()` as the only gate logging entrypoint for pass/fail results. Early invalid input/config errors SHALL also be logged when a bundle path is available. Failure diagnostic artifact paths SHALL be discoverable from run.log detail.
 
-#### Scenario: Queue operations log at function granularity
-- **WHEN** any accident-grade public queue hot-path function is called
-- **THEN** attempt SHALL be logged with work_id and relevant parameters when a run-scoped logger is available
-- **AND** success/reject/empty/exception outcomes SHALL be logged with reason where applicable
-- **AND** unexpected validation or IO failures SHALL log function-specific `*_exception` events before rethrowing when a run-scoped logger is available
+#### Scenario: Work-unit operations log at function granularity
 
-#### Scenario: Gate attempts are logged
-- **WHEN** a gate CLI executes and produces a result
-- **THEN** the result SHALL be logged as a `gate_attempt` event with gate name, passed status, and inspect/advice counts
-- **AND** failed gate log detail SHALL include `diagnostic_path` only when the diagnostic artifact write succeeds
-- **AND** the same `diagnostic_path` SHALL be used by the detailed diagnostic artifact and trace diagnostic pointer
-- **AND** if the diagnostic artifact write fails, failed gate log detail SHALL include `diagnostic_write_failed: true` and SHALL NOT include `diagnostic_path`
-
-#### Scenario: Early gate errors are logged when bundle is known
-- **WHEN** a gate CLI detects missing `--bundle`
-- **THEN** no run.log write SHALL be required because the target bundle is unknown
-- **WHEN** a gate CLI detects missing `--current-node`, config error, or node/gate binding error after `--bundle` is known
-- **THEN** `emitGateResult(result, { bundlePath })` SHALL call `writeGateAttempt()` before exiting
-- **AND** `parseGateCliArgs()` error returns SHALL preserve the provided bundle path when one was supplied
+- **WHEN** a work-unit claim, submit, fail, timeout, abandon, retry, inspect, or late-submit rejection occurs
+- **THEN** run log diagnostics SHALL identify the operation, result, and available work-unit binding context
 
 ### Requirement: Inspect-bundle observable extension
 
@@ -236,22 +151,13 @@ Gate CLIs SHALL use `writeGateAttempt()` as the only gate logging entrypoint for
 
 ### Requirement: Long-running phases SHALL leave enough log and diagnostic evidence for post-mortem debugging
 
-Sub-agent execution and Agent-side repair loops SHALL be included in the long-running phase diagnostic scope. The sub-agent spawn prompt SHALL contain explicit logging instructions naming specific events to log (search start, search done, fetch done, file written, error, work complete) with concrete, copyable `log-event.mjs` examples. Sub-agents are not required to log but strongly encouraged with clear, actionable instructions.
+Sub-agent execution and Agent-side repair loops SHALL be included in the long-running phase diagnostic scope. Work-unit task and spawn prompts SHALL contain explicit logging instructions naming specific events to log, including search start, search done, fetch done, file written, error, and work complete. Delegated logging examples SHALL bind `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
 
 #### Scenario: Sub-agent spawn prompt includes logging instructions
-- **WHEN** a sub-agent is spawned via `buildSpawnPrompt()`
-- **THEN** the spawn prompt SHALL include a "Diagnostic logging" section with 6 event types and `log-event.mjs` examples
-- **AND** the instructions SHALL specify level conventions and what not to log
-- **AND** command examples SHALL use lowercase `--level info|warn|error` values accepted by `log-event.mjs`
-- **AND** command examples SHALL use `--msg <event>` and `--detail` JSON containing `kind`, `slotKey`, and `roleAgentKey`
-- **AND** command examples SHALL use the absolute path to `DPT_FRAMEWORK/cli/log-event.mjs`
 
-#### Scenario: Repair loops leave reconstructable log evidence
-- **WHEN** any phase enters an autonomous repair, retry, or supplementary loop after a gate failure
-- **THEN** the phase instructions SHALL require `repair_loop_start`, `repair_action`, and `repair_loop_done` log events
-- **AND** escalation or degradation SHALL log `repair_escalated` or `repair_degraded` with reason
-- **AND** terminal gate failures that do not enter a repair loop SHALL still log `repair_escalated` or `repair_degraded` before stopping when a bundle path is available
-- **AND** the affected phase set SHALL include every phase node with autonomous repair/retry behavior, at minimum instantiation, setup, hitl1, hitl2 repair branch, seed-topics, wave0, wave1, wave2, readiness, and terminal/degraded rerun handling
+- **WHEN** a work-unit prompt is generated
+- **THEN** the prompt SHALL include diagnostic logging examples that bind the assigned work unit
+- **AND** command examples SHALL use accepted log levels and the bundle's log-event CLI path
 
 ### Requirement: log-event always-zero behavior is a documented exit-code exception
 
@@ -272,3 +178,4 @@ This exception SHALL NOT authorize hand-writing trace, faking load-bearing gate 
 - **WHEN** the Agent reads the framework CLI exit-code convention
 - **THEN** it SHALL see `log-event.mjs` listed as an always-zero diagnostic exception
 - **AND** the docs SHALL distinguish that exception from gate, handoff, and status synchronization evidence
+

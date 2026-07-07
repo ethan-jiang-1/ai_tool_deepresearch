@@ -5,9 +5,7 @@
 ## Purpose
 
 定义 5 个 shared node 的完整 Agent-readable 内容要求。每个 shared node 只提供 guidance 或 generated summary，不是 deterministic rule authority。内容必须贴合当前 accepted schema / CLI surface，帮助 Agent 在 pre-research 阶段正确理解 profile、gate、schema、repair posture 和 anti-cheating 边界。
-
 ## Requirements
-
 ### Requirement: Shared profile content completeness
 
 `shared-profile.md` SHALL 说明 `rb_profile.yaml` 的当前字段、类型、填写时机、示例值和 Source of Record。
@@ -51,66 +49,22 @@ Body SHALL 包含 Authority Boundary section，明确说明 schema authority 在
 
 ### Requirement: Shared gate rules content as generated summary
 
-`shared-gate-rules.md` SHALL 为 Agent 提供 9 个 gate 的用途和大致检查方向摘要。内容 SHALL 标注 `authority: generated-summary`，并声明 gate definition JSON 和 gate CLI output 才是 deterministic rule authority。
-
-当前覆盖的 9 个 gate 为：
-- `instantiation-complete`：bundle 创建和 scaffold 完整性
-- `hitl1-recorded`：HITL1 写入 profile 的 completeness
-- `setup-ready`：pre-wave0 structural consistency
-- `seed-topics-ready`：seed topic 物化的结构、数量和 slug 一致性
-- `wave0-complete`：relay-backed foundation source intake（reference/_INDEX.md, reference/README.md, reference/00-shared-*.md, artifacts/wave0/{topic}/source.yaml, relay provenance + count/cache/dedup checks）
-- `wave1-complete`：relay-backed topic deepening（artifacts/wave1/{topic.slug}/evidence-summary.md, question-list.md, reference/{topic.slug}-*.md, relay provenance checks）
-- `wave2-complete`：cross-topic synthesis with conditional relay provenance（only for new search/evidence/reference or promoted cross references, not unconditional whole-phase hard gate）
-- `hitl2-recorded`：HITL2 delivery 决策记录
-- `readiness-passed`：delivery 前的最终 deterministic precheck，reference index 为 `reference/_INDEX.md`
-
-对每个 gate，内容 SHALL 包含：
-- 该 gate 保护什么（一句话）
-- 大致检查方向（文件存在性、schema、字段值、状态、trace、cross-file consistency）
-- gate fail 后的 repair posture
-
-Shared gate summary SHALL NOT 复制完整 rule-by-rule 列表。
+`shared-gate-rules.md` SHALL provide Agent-facing summaries of gate purpose and check direction. Content SHALL mark itself `authority: generated-summary` and SHALL state that gate definition JSON and gate CLI output are deterministic rule authority. Wave gate summaries SHALL describe delegated source/evidence coverage as work-unit ledger coverage plus cross-checks.
 
 #### Scenario: Agent reads gate summary before running gate
 
-- **WHEN** Agent 准备运行 `setup-ready` gate 但不确定检查范围
-- **THEN** Agent SHOULD 加载 `shared-gate-rules.md` 获取 purpose 和检查方向摘要
-- **AND** body SHALL 声明 deterministic truth 以后续 CLI output 为准
+- **WHEN** an Agent prepares to run a wave gate
+- **THEN** the summary SHALL explain that delegated output coverage is based on submitted work-unit rows
+- **AND** the body SHALL state that deterministic truth comes from gate CLI output
 
 ### Requirement: Shared schemas content matches current executable surface
 
-`shared-schemas.md` SHALL summarize the current executable schema surface without duplicating full Zod definitions. It SHALL cover:
+Shared schema guidance SHALL describe current executable surfaces for profile, status, queue v2, plan, trace, gate definitions, work-unit manifests/results/receipts, output declarations, cache trails, and wave artifacts. Delegated Wave1/Wave2 schema examples SHALL describe work-unit-backed evidence/reference outputs.
 
-- `rb_profile.yaml`, `rb_status.json`, `rb_queue.json`, `rb_plan.md`, `rb_trace.jsonl` field summaries
-- gate definition JSON location under `DPT_FRAMEWORK/schema/gate_definitions/`
-- transition / gate state contract in `DPT_FRAMEWORK/schema/contracts/gate.mjs`
-- ReferenceMetadata schema summary (`DPT_FRAMEWORK/schema/contracts/reference.mjs`)
-- wave artifact directory structure:
-  - `artifacts/wave0/{topic}/source.yaml` → Wave0 per-topic reference metadata（YAML array，每项满足 ReferenceMetadata schema）
-  - `artifacts/wave1/<topic>/evidence-summary.md` → Wave1 relay-backed evidence summary
-  - `artifacts/wave1/<topic>/question-list.md` → Wave1 relay-backed question list
-  - `reference/{topic.slug}-*.md` → Wave1 relay-backed rich reference files
-  - `reference/_INDEX.md` → canonical flat reference inventory
-  - `artifacts/wave2/synthesis.md` → Wave2 cross-topic synthesis
-  - `artifacts/wave2/cross-topic-ledger.md` → Wave2 Agent-readable finding ledger
-  - `artifacts/wave2/finding-index.yaml` → Wave2 JS-readable shadow index
-- `final/` terminal delivery output directory distinction
-- runtime audit trace `rb_trace.jsonl` vs experiment verdict trace `_trace.jsonl`
+#### Scenario: shared schemas name work-unit-backed outputs
 
-Shared schemas SHALL NOT 复制完整 Zod schema 定义。
-
-#### Scenario: Agent understands wave artifact directory and schema
-
-- **WHEN** Agent 需要理解 wave artifacts 应放在哪些目录、metadata 用什么格式
-- **THEN** `shared-schemas.md` SHALL 摘要 `reference/`、`artifacts/wave0/`、`artifacts/wave1/`、`artifacts/wave2/` 的用途、schema 和引用格式
-- **AND** body SHALL 指向完整 contract 文件位置
-
-#### Scenario: Agent distinguishes runtime trace from experiment verdict trace
-
-- **WHEN** Agent 读取 trace schema 摘要
-- **THEN** `shared-schemas.md` SHALL explain that `rb_trace.jsonl` is active bundle runtime audit
-- **AND** SHALL explain that `_trace.jsonl` is command experiment verdict evidence
-- **AND** SHALL NOT treat `_trace.jsonl` as production runtime truth
+- **WHEN** shared schema guidance lists delegated evidence artifacts
+- **THEN** those artifacts SHALL be described as covered by submitted work-unit declarations
 
 ### Requirement: Shared repair guidance content
 
@@ -175,3 +129,4 @@ Shared nodes remain Agent-readable guidance or generated summaries, not lifecycl
 - **WHEN** the Agent loads any shared node
 - **THEN** the body SHALL NOT instruct phase handoff, status synchronization, or target work completion
 - **AND** frontmatter SHALL remain `node_type: shared`
+

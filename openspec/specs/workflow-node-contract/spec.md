@@ -8,40 +8,12 @@
 ## Requirements
 ### Requirement: Phase node metadata contract
 
-所有 phase node SHALL 包含以下 frontmatter 字段，字段值 MUST 与 `manifest.json` 中的对应 entry 一致。`gate` 使用 hyphen 形式；phase frontmatter SHALL NOT 声明 `next`。routing identity SHALL 是 node fileRef（例如 `phases/phase-wave0.md`），而不是 frontmatter `id`。
+Phase node metadata SHALL describe lifecycle phase nodes, shared guidance, and work-unit sub-agent task guidance without using removed delegated mechanism names as production surfaces. `execution_contract` SHALL remain Agent-readable and validator-enforceable guidance, but deterministic authority SHALL come from queue state, submitted work-unit ledger rows, trace, and gate CLI verdicts.
 
-| Field | Required | Meaning |
-|-------|----------|---------|
-| `node_type` | yes | `"phase"` |
-| `id` | yes | Stable diagnostic label，与文件名语义一致（如 `phase-wave0`） |
-| `phase` | yes | 当前 phase key（如 `wave0`） |
-| `gate` | yes | Phase work 后要运行的 gate key；`final` 为 `null` |
-| `stop` | yes | `"yes"` 或 `"no"` |
-| `requires` | yes | Mandatory shared Markdown dependency 的 id 数组；无则为 `[]` |
-| `suggested_context` | yes | Optional reference 的 id 数组；无则为 `[]` |
-| `subagent` | no | 标记该 phase 未来使用 subagent mechanics；值为 `true` 或不出现 |
-| `execution_contract` | yes (lifecycle phases, relay role specs, shared nodes touched by this change) | Object declaring `surface` (`phase-agent` / `relay-subagent-role` / `shared-guidance`), `search_policy` (`no_search` / `relay_required` / `relay_required_for_new_evidence` / `subagent_performs_search`), and conditional fields `delegated_role_keys`, `loaded_by`, `delivered_via` |
+#### Scenario: delegated metadata names work-unit guidance
 
-`execution_contract` is Agent-readable + validator-enforceable guidance. It SHALL NOT replace relay receipts, `rb_output_declarations.jsonl`, slot markers, or gate provenance checks as deterministic authority.
-
-`surface: phase-agent` means the Markdown is a manifest lifecycle node. `surface: relay-subagent-role` means it is a Phase-Agent-loaded role spec delivered via relay `task.md`. `surface: shared-guidance` means it is shared context/guidance only.
-
-`search_policy: relay_required` means any WebSearch/WebFetch task SHALL delegate through relay with `targets.controller: "main-agent"` + `targets.delegates.to: "sub-agent"`. `relay_required_for_new_evidence` allows main-agent synthesis but requires relay delegation for new search/evidence/reference outputs. `no_search` prohibits WebSearch/WebFetch. `subagent_performs_search` describes role-spec search behavior.
-
-`stop: "yes"` SHALL 仅出现在 HITL nodes（`phase-hitl1`、`phase-hitl2`）。
-
-#### Scenario: Agent reads phase node metadata
-
-- **WHEN** agent 加载 `phase-wave0.md`
-- **THEN** agent MUST 能从 frontmatter 确定当前 phase 是 `wave0`、gate 是 `wave0-complete`、stop 是 `no`
-- **AND** routing MUST use the node fileRef `phases/phase-wave0.md`
-
-#### Scenario: Phase node metadata matches manifest
-
-- **WHEN** `phase-wave0.md` 的 frontmatter 声明 `gate: wave0-complete`
-- **THEN** `manifest.json` 中 phase `wave0` 的 `gate` MUST 也是 `wave0-complete`
-- **AND** 该 phase 的位置 MUST 可由 `phases` 数组顺序识别，NOT 由 `next` 字段决定
-- **AND** runtime next-node lookup MUST NOT be inferred from phase frontmatter
+- **WHEN** a phase node references delegated guidance
+- **THEN** the metadata SHALL identify work-unit sub-agent task guidance and submitted coverage requirements
 
 ### Requirement: Shared node metadata contract
 
@@ -153,146 +125,30 @@ Body SHALL NOT 重复整个 lifecycle 或在 prose 里复制 gate rules。Gate d
 
 ### Requirement: Workflow package consistency validation
 
-The system SHALL provide workflow package consistency validation that checks the package as a whole, not just one file type. The validator SHALL compare manifest phase entries, phase/shared node frontmatter, gate definition JSON, transition tables, and loader runtime cache / dependency plan.
+Workflow package consistency validation SHALL check manifest membership, frontmatter, gate definitions, transition tables, loader cache, dependency plans, and work-unit sub-agent guidance references. Validation SHALL reject delegated guidance that claims production authority without work-unit task, submit, and gate coverage contracts.
 
-The validator SHALL report at least these mismatch classes:
+#### Scenario: delegated guidance is validated through work-unit contracts
 
-- manifest entry points to a missing node file
-- node frontmatter `gate` disagrees with manifest or gate definition
-- gate definition `gate` disagrees with the node binding
-- transition table references a missing current node or next node
-- loader-resolved dependency ref cannot be resolved under the configured node directory
-- missing `execution_contract` on lifecycle phase nodes, shared nodes, or relay role specs
-- unknown `surface` or `search_policy` value
-- `surface: relay-subagent-role` listed in `manifest.phases[]`
-- relay role spec missing `loaded_by: phase-agent` or `delivered_via: relay_task_md`
-- `search_policy: relay_required` task template performs WebSearch/WebFetch without `targets.delegates.to: "sub-agent"`
-- relay-capable lifecycle node keeps subagent/anti-cheating rules only in `suggested_context` instead of `requires`
-- missing `Execution Brief` on lifecycle phase nodes or `Role Brief` on relay role specs
-- sub-agent role spec artifact instructions using template literal, heredoc, or string interpolation patterns (serialization contract violation)
-
-#### Scenario: Consistent package passes validation
-
-- **WHEN** manifest, node frontmatter, gate definitions, transition tables, and resolvable file refs all agree
-- **THEN** the validator SHALL pass
-
-#### Scenario: Gate binding mismatch fails validation
-
-- **WHEN** a phase node frontmatter `gate` differs from its manifest entry or gate definition
-- **THEN** the validator SHALL fail and report the mismatch
-
-#### Scenario: Missing transition target fails validation
-
-- **WHEN** a transition table references a current node or next node that does not exist on disk
-- **THEN** the validator SHALL fail and report the missing file ref
-
-#### Scenario: Unresolvable loader ref fails validation
-
-- **WHEN** a loader-resolved node file ref cannot be resolved under the configured workflow node directory
-- **THEN** the validator SHALL fail and report the unresolved ref
+- **WHEN** workflow validation sees delegated guidance
+- **THEN** it SHALL require work-unit-compatible metadata and dependency wiring
 
 ### Requirement: Autonomous contract header injection for lifecycle stop:no phases
 
-`assessNode()` SHALL, for manifest lifecycle entry nodes when `stop` is `"no"`, inject a mode contract header into the node's Markdown content after frontmatter parsing and before the first phase body section. The injection SHALL be the first body content the Agent reads after frontmatter, ensuring the Agent cannot miss the autonomous execution contract.
+Autonomous contract header injection SHALL apply only to manifest lifecycle phases with `stop: "no"`. Work-unit sub-agent task guidance and other non-lifecycle task surfaces SHALL NOT receive lifecycle autonomous or terminal-delivery headers solely because their frontmatter resembles a phase node.
 
-Manifest lifecycle membership SHALL be determined only from `DPT_FRAMEWORK/workflows/manifest.json` (or the manifest colocated with the active `runtime.nodesDir` in tests): a node is lifecycle-covered only when its fileRef exactly matches an entry in `manifest.phases[].node`. Frontmatter fields (`node_type`, `phase`, `gate`, `stop`) are necessary for selecting the header variant, but they SHALL NOT by themselves make a file a lifecycle phase. Filename patterns such as `phase-*.md` SHALL NOT be used as lifecycle authority.
+#### Scenario: work-unit sub-agent guidance does not receive lifecycle header
 
-For non-terminal manifest lifecycle phase nodes with `stop: "no"` and `gate` not `null`, the injected header SHALL be an autonomous-mode header and SHALL include:
-
-- A prominent "AUTONOMOUS MODE" declaration
-- An explicit statement that this is a non-terminal `stop: no` phase
-- Absolute prohibitions: SHALL NOT surface to user, SHALL NOT ask questions, SHALL NOT request confirmation, SHALL NOT report progress, SHALL NOT report idle/no-work state
-- Guidance that the phase objective is to complete the current node by repairing/draining/degrading as needed, running the gate, and following gate CLI `check.next`
-- Guidance on gate failure: repair and retry autonomously, do not ask the user
-- A reference to `shared-silent-execution.md` as the governing behavioral contract
-
-The injected header is a principle-level guardrail. It SHALL NOT replace the phase body's node-specific Stop Behavior, quality rules, queue rules, or gate-fail repair instructions. Each lifecycle node MAY phrase its §8 Stop Behavior differently as long as it preserves the shared autonomous invariants.
-
-For the terminal Final phase (`phase: "final"`, `stop: "no"`, and `gate: null`), the injected header SHALL be a terminal-delivery header and SHALL include:
-
-- A prominent "TERMINAL DELIVERY MODE" declaration
-- An explicit statement that this is the terminal Final phase (`stop: no` + `gate: null`)
-- A prohibition on questions, confirmation requests, progress reports, A/B choices, and post-delivery feedback loops
-- Permission to deliver the final report only after final artifacts have been written to `final/`
-- A statement that user feedback after delivery belongs to the HITL2 repair/rerun path, not the Final node
-
-The injection SHALL be separated from the phase body by a horizontal rule (`---`) for visual distinction.
-
-The injection SHALL NOT modify `entry.frontmatter` (already parsed). The injection SHALL target `entry.md` in the content cache, affecting only the Agent-readable Markdown content.
-
-The injection SHALL be deterministic and idempotent — repeated `assessNode` calls on the same node SHALL produce the same result.
-
-If no workflow manifest is available for the active `runtime.nodesDir`, `assessNode()` SHALL skip lifecycle header injection rather than infer lifecycle membership from filename or frontmatter alone. Phases with `stop: "yes"` or without a `stop` field SHALL NOT receive the injection. Markdown relay/sub-agent task surfaces that are not manifest lifecycle phase entries, including `phase-wave2-subagent.md`, SHALL NOT receive the lifecycle autonomous or terminal-delivery header solely because they contain `stop: "no"`.
-
-#### Scenario: non-terminal stop:no phase receives autonomous contract header
-
-- **WHEN** `assessNode()` loads a manifest lifecycle phase node with `stop: "no"` and `gate` not `null`
-- **THEN** the returned Markdown content SHALL contain an "AUTONOMOUS MODE" header immediately after the frontmatter block
-- **AND** the header SHALL precede the first `# Phase:` heading
-- **AND** the header SHALL include explicit prohibitions against surfacing to the user
-- **AND** the header SHALL prohibit progress/idle reports and point the Agent back to gate-driven completion
-
-#### Scenario: autonomous header preserves node-specific stop behavior
-
-- **WHEN** a manifest lifecycle `stop: "no"` phase has phase-specific §8 Stop Behavior
-- **THEN** the injected header SHALL act as a shared guardrail rather than a replacement template
-- **AND** the implementation SHALL NOT require all phase bodies to use identical Stop Behavior wording
-- **AND** phase-specific quality, queue, and gate repair instructions SHALL remain authoritative within the autonomous boundary
-
-#### Scenario: final phase receives terminal delivery header
-
-- **WHEN** `assessNode()` loads the Final phase with `phase: "final"`, `stop: "no"`, and `gate: null`
-- **THEN** the returned Markdown content SHALL contain a "TERMINAL DELIVERY MODE" header immediately after the frontmatter block
-- **AND** the header SHALL precede the first `# Phase:` heading
-- **AND** the header SHALL permit final report delivery after final artifacts are written
-- **AND** the header SHALL prohibit questions, confirmation requests, A/B choices, and post-delivery feedback handling
-
-#### Scenario: stop:yes phase does not receive injection
-
-- **WHEN** `assessNode()` loads a `stop: "yes"` phase node
-- **THEN** the returned Markdown content SHALL NOT contain the autonomous or terminal-delivery contract header
-- **AND** the content SHALL be the unmodified phase body
-
-#### Scenario: relay sub-agent surface does not receive lifecycle header
-
-- **WHEN** `assessNode()` or a future loader reads `phase-wave2-subagent.md`
-- **THEN** the returned Markdown content SHALL NOT contain the lifecycle autonomous or terminal-delivery contract header
-- **AND** lifecycle stop:no coverage SHALL NOT be inferred from filename alone
-
-#### Scenario: manifest is the lifecycle membership source
-
-- **WHEN** a Markdown file has phase-like frontmatter including `stop: "no"` but its fileRef is absent from `manifest.phases[].node`
-- **THEN** `assessNode()` SHALL NOT inject the lifecycle autonomous or terminal-delivery contract header
-- **AND** the implementation SHALL NOT infer lifecycle membership from filename, directory, `phase`, `gate`, or `stop` fields alone
+- **WHEN** `assessNode()` loads work-unit sub-agent task guidance
+- **THEN** it SHALL NOT inject the lifecycle autonomous header unless the file is a manifest lifecycle phase
 
 ### Requirement: Universal silent execution dependency for lifecycle stop:no phases
 
-Every manifest lifecycle phase node with `stop: "no"` in its frontmatter SHALL include `shared/shared-silent-execution` in its `requires` array. Manifest lifecycle phase nodes are exactly the fileRefs listed in `manifest.phases[].node`; relay/sub-agent task surfaces and other phase-like Markdown files outside that manifest set are not lifecycle phase nodes for this requirement. This ensures the full silent execution behavioral contract is loaded into the Phase Agent's context before the phase body is read, via the existing dependency resolution closure mechanism in `resolveDependencyClosure()`.
+Every manifest lifecycle phase node with `stop: "no"` in its frontmatter SHALL include `shared/shared-silent-execution` in its `requires` array. Work-unit sub-agent task guidance and other phase-like files outside manifest lifecycle membership are outside this requirement.
 
-The `requires` array SHALL be used for this dependency — `suggested_context` is insufficient because it does not guarantee the dependency is loaded before the phase body.
+#### Scenario: sub-agent task guidance is outside lifecycle dependency rule
 
-Lifecycle phases covered: instantiation, setup, seed-topics, wave0, wave1, wave2, readiness, rerun, final. Final is covered by the dependency requirement but uses terminal delivery semantics in the injected header. Relay/sub-agent task surfaces such as `subagent-dpt-topic-scout.md` are outside this requirement even if their frontmatter contains `stop: "no"`; their behavior is governed by relay/sub-agent contracts.
-
-#### Scenario: Every lifecycle stop:no phase requires shared-silent-execution
-
-- **WHEN** a manifest lifecycle phase node frontmatter declares `stop: "no"`
-- **THEN** its `requires` array SHALL include `shared/shared-silent-execution`
-- **AND** `resolveDependencyClosure()` SHALL include `shared-silent-execution.md` in the load plan before the phase body
-
-### Requirement: Self-documenting lifecycle and relay role nodes
-
-Workflow Markdown nodes SHALL expose their execution identity at first load without changing runtime authority.
-
-Every manifest lifecycle phase node SHALL contain `## 0. Execution Brief` immediately after the H1 and before `## 1. Stage Goal`. The brief fields in order: `Objective`, `Start here`, `Path to pass`, `Completion check`, `Failure posture`. Lifecycle phase nodes SHALL retain the existing 9-section body after the brief.
-
-Every relay role spec SHALL contain `## 0. Role Brief` immediately after the H1. Fields in order: `Role key`, `Used by`, `Receives`, `Produces`, `Boundary`, `Handoff`. Role specs SHALL use a role-oriented body structure and SHALL NOT use lifecycle-primary headings.
-
-`Execution Brief` and `Role Brief` are Agent orientation layers only. They SHALL NOT replace schemas, queue state, relay receipts, output declarations, trace, transition routing, or gate CLI verdicts as deterministic authority.
-
-#### Scenario: Lifecycle phase has ordered execution brief
-
-- **WHEN** workflow package validation reads any `manifest.phases[].node`
-- **THEN** the node SHALL contain `## 0. Execution Brief` with five required fields in order before `## 1. Stage Goal`
+- **WHEN** dependency closure evaluates a work-unit sub-agent task guidance file
+- **THEN** it SHALL NOT treat that file as a manifest lifecycle phase
 
 ### Requirement: Sub-agent role specs SHALL mandate standard library output serialization
 
@@ -310,15 +166,12 @@ Standard library serialization prevents parse failures from unescaped special ch
 
 ### Requirement: Header injection uses manifest membership and execution_contract surface
 
-Header injection SHALL use manifest lifecycle membership as authority. `execution_contract.surface` SHALL reinforce this boundary:
-- `surface: phase-agent` MAY receive autonomous or terminal-delivery header injection when the file is a manifest lifecycle phase
-- `surface: relay-subagent-role` SHALL NOT receive lifecycle header injection
-- `surface: shared-guidance` SHALL NOT receive lifecycle header injection
+Header injection SHALL use manifest lifecycle membership as authority. `execution_contract.surface` SHALL reinforce that lifecycle phase surfaces and work-unit sub-agent task guidance surfaces are different execution surfaces.
 
-#### Scenario: Relay role surface does not receive lifecycle header
+#### Scenario: work-unit guidance surface does not receive lifecycle header
 
-- **WHEN** `assessNode()` loads a role spec with `execution_contract.surface: relay-subagent-role`
-- **THEN** the returned content SHALL NOT contain a lifecycle autonomous or terminal-delivery contract header
+- **WHEN** `assessNode()` loads a guidance file with a work-unit sub-agent task surface
+- **THEN** lifecycle header injection SHALL be skipped unless manifest lifecycle membership also applies
 
 ### Requirement: Lifecycle phase handoff consumes check.next through enter-phase (WNC-010)
 
@@ -420,3 +273,13 @@ Lifecycle Markdown SHALL NOT describe `advance-status` as entering/loading/execu
 - **WHEN** a lifecycle node or shared workflow Markdown says that `advance-status` enters the next phase or that `enter-phase` completes the target phase
 - **THEN** the docs validator or regression SHALL fail
 - **AND** the failure SHALL identify the file and boundary term that overclaims
+
+### Requirement: Self-documenting lifecycle and work-unit sub-agent guidance nodes
+
+Every work-unit sub-agent guidance file SHALL contain a concise role or task brief immediately after the H1. The brief SHALL orient the sub-agent to assigned work-unit identity, inputs, outputs, boundary, and return contract. Orientation text SHALL NOT replace schemas, queue state, submitted output declarations, trace, transition routing, or gate CLI verdicts as deterministic authority.
+
+#### Scenario: work-unit sub-agent guidance has task brief
+
+- **WHEN** a sub-agent receives work-unit guidance
+- **THEN** the guidance SHALL state assigned identity, boundary, expected outputs, and return contract
+

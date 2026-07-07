@@ -5,82 +5,26 @@
 ## Purpose
 
 TBD — see delta spec in change harden-rerun-topic-integration.
-
 ## Requirements
-
 ### Requirement: Engine SHALL audit phase-owned directories against expected file patterns
 
-Engine SHALL provide a file observability helper that audits at least:
-- bundle root control files and known runtime directories
-- `reference/`
-- `seed_topics/`
-- `artifacts/wave0/`
-- `artifacts/wave1/`
-- `artifacts/wave2/`
-- `_cache/`
-- `_subagents/` slot structure, including slot-scoped `task.md`, `result.schema.json`, `runtime-receipt.jsonl`, and committed `result.json`
+File observability SHALL treat `_work_units/waveN/{work_id}/` as the production delegated runtime path. It SHALL audit work-unit directories, result files, output files, cache trails, and ledger declarations for consistency. Non-work-unit delegated directories SHALL be reported only as removal/bypass diagnostics.
 
-Known relay runtime files such as `_subagents/**/runtime-receipt.jsonl` SHALL be classified by their slot path and relay contract. They SHALL NOT be treated as unexplained new root-level artifacts merely because they were created during a run.
+#### Scenario: non-work-unit delegated file is diagnostic
 
-A `runtime-receipt.jsonl` file outside a recognized relay slot path SHALL NOT be silently accepted as a known runtime receipt. Unless another accepted contract declares that path, file observability SHALL report it as an unplanned file and request explanation or cleanup.
-
-The audit SHALL use directory shape, filename patterns, topic registry, queue `writes_to` / `required_receipts`, declaration ledger paths, and cache leaf structure rather than fixed file counts.
-
-Each finding SHALL include a stable classification:
-- `expected`: file matches a known runtime/control/artifact pattern or deterministic receipt
-- `declared_authoritative`: file is covered by a ledger declaration or accepted receipt and may participate in relevant gate conditions
-- `unplanned_nonblocking`: file is unexpected but does not affect the requested phase/gate pass conditions
-- `unplanned_needs_explanation`: file is unexpected and should be explained before reentry is considered clean
-- `orphan_authority_blocking`: file matches a pass-condition artifact pattern, such as `reference/*{topic}*.md`, but lacks required ledger/receipt authority
-- `explained_non_authoritative`: file has a durable explanation diagnostic but still lacks ledger/receipt authority
-
-Each finding SHALL include at least:
-- `path`
-- `classification`
-- `severity`: `info`, `warning`, or `blocker`
-- `phase` when derivable
-- `reason`
-- `authority_status`
-- `required_repair` when severity is `warning` or `blocker`
-
-Only `declared_authoritative` files SHALL be allowed to satisfy ledger-backed gate pass conditions.
-
-#### Scenario: Unexpected wave1 scratch file is detected
-
-- **WHEN** `artifacts/wave1/topic-a/scratch.md` exists
-- **AND** it is not an expected artifact, receipt, declared output, or known diagnostic
-- **THEN** file observability SHALL report it as `unplanned_needs_explanation` or `unplanned_nonblocking` depending on the requested target
-
-#### Scenario: Slot runtime receipt is expected
-
-- **WHEN** `_subagents/wave_01/slot_01/runtime-receipt.jsonl` exists
-- **AND** the slot shape matches the relay contract for an active or completed delegated task
-- **THEN** file observability SHALL classify the runtime receipt as `expected`
-- **AND** it SHALL NOT request an Agent explanation for the receipt file itself
-
-#### Scenario: Root-level runtime receipt is unplanned
-
-- **WHEN** `runtime-receipt.jsonl` exists at the bundle root
-- **AND** no accepted contract declares that root-level path
-- **THEN** file observability SHALL classify it as `unplanned_needs_explanation` or `unplanned_nonblocking` according to the requested target
-- **AND** inspect/advice SHALL explain that recognized relay runtime receipts are slot-scoped under `_subagents/`
+- **WHEN** file observability finds a delegated result file outside submitted work-unit coverage
+- **THEN** it SHALL classify the path as a non-authoritative delegated artifact
+- **AND** it SHALL NOT treat the file as production coverage
 
 ### Requirement: Unplanned files SHALL produce inspect/advice requesting explanation
 
-Unplanned files SHALL produce check/inspect/advice feedback. Files that affect gate pass conditions, such as orphan reference files, SHALL block the relevant gate. Non-blocking files MAY be reported as diagnostics or health issues.
+Unplanned delegated files SHALL produce inspect/advice that identifies whether the file is outside a submitted work-unit ledger row, outside the claimed work-unit directory, or outside the production delegated runtime path. Advice SHALL route repair through work-unit submit, fail, timeout, abandon, or refill.
 
-For reentry and gate checks:
-- `orphan_authority_blocking` findings SHALL be blockers
-- `unplanned_needs_explanation` findings SHALL be warnings or blockers according to the target's required artifact set
-- `unplanned_nonblocking` findings SHALL NOT fail the check but SHALL remain visible in inspect output
-- `explained_non_authoritative` findings SHALL NOT satisfy gate authority and SHALL remain visible until declared or removed
+#### Scenario: orphan output requests work-unit repair
 
-#### Scenario: Orphan reference blocks authority
-
-- **WHEN** `reference/topic-a-orphan.md` exists
-- **AND** it has no `role === "reference"` ledger declaration
-- **THEN** the audit SHALL classify it as `orphan_authority_blocking`
-- **AND** advice SHALL request delegated completion or an explicit non-authoritative explanation
+- **WHEN** an expected output exists but no submitted work-unit ledger row declares it
+- **THEN** inspect SHALL report the file as orphaned
+- **AND** advice SHALL direct the Agent to submit or refill through work-unit mechanisms
 
 ### Requirement: Agent explanations SHALL be recorded as diagnostic trace/log entries
 
@@ -111,10 +55,20 @@ File explanations SHALL be append-only. If multiple explanation diagnostics exis
 
 ### Requirement: Explained files SHALL remain non-authoritative unless declared through ledger or receipt
 
-An explanation records why a file exists. It SHALL NOT make the file count toward gate pass conditions. Files become authoritative only through the relevant deterministic contract, such as delegated `complete()` appending `rb_output_declarations.jsonl`, queue receipt success, or an accepted phase artifact rule.
+Agent explanations SHALL remain diagnostic only. Delegated output files SHALL become gate-authoritative only when covered by a successful work-unit submit ledger row and passing cross-checks.
 
-#### Scenario: Explained orphan still cannot pass gate
+#### Scenario: explanation does not create coverage
 
-- **WHEN** an orphan reference has a file explanation
-- **AND** no ledger declaration covers it
-- **THEN** the reference SHALL NOT count as a valid reference input for gate pass
+- **WHEN** an Agent explains an orphan delegated file in logs
+- **THEN** that explanation SHALL NOT make the file count as gate coverage
+
+### Requirement: File observability SHALL detect mixed delegated provenance
+
+File observability SHALL detect bundles that contain submitted work-unit artifacts alongside non-work-unit delegated artifacts for the same delegated output scope and SHALL report mixed delegated provenance as a blocker.
+
+#### Scenario: mixed provenance is a blocker
+
+- **WHEN** a wave contains a submitted work-unit output and a non-work-unit-only delegated output
+- **THEN** inspect SHALL report mixed delegated provenance
+- **AND** the non-work-unit-only output SHALL remain non-authoritative
+

@@ -8,74 +8,49 @@ Define the JS-owned Agentic Queue Manager: a structured, Zod-validated queue sys
 ## Requirements
 ### Requirement: Queue Manager exposes enqueue, claim, complete, and fail operations
 
-The Queue Manager SHALL expose JS APIs for `enqueue`, `claim`, `complete`, and `fail`. `enqueue` SHALL fill open active slots before using `refill_pool`. `claim` SHALL only expose `slot_1_current`. `complete` SHALL verify completion receipts before promotion. `fail` SHALL record failure and create repair/refill work instead of authorizing chat progress.
+The Queue Manager SHALL keep deterministic queue operations for non-delegated main-agent work and queue demand maintenance. Delegated sub-agent completion SHALL NOT use `operate-queue complete`; delegated completion SHALL use `operate-work-unit submit`, which validates result/receipt/output/cache, updates work-unit state, completes the bound queue demand, and appends the ledger in one Engine transition.
 
-#### Scenario: Enqueue fills active window before refill pool
+#### Scenario: non-delegated queue completion remains available
 
-- **WHEN** 21 valid items are enqueued into an empty queue
-- **THEN** 20 items occupy active window slots and the 21st is stored in `refill_pool`
+- **WHEN** a queue item is assigned to main-agent work with no delegated work-unit binding
+- **THEN** `operate-queue complete` SHALL remain a valid deterministic completion path
+- **AND** no work-unit ledger row SHALL be required for that non-delegated queue item
 
-#### Scenario: Claim returns current slot only
+#### Scenario: delegated queue completion rejects operate-queue complete
 
-- **WHEN** `claim(queue, { actor })` is called
-- **THEN** it returns `slot_1_current` and does not expose pending slots as executable work
-
-#### Scenario: Complete promotes next work
-
-- **WHEN** `complete()` succeeds for `slot_1_current`
-- **THEN** slot 2 promotes to slot 1 and the tail refills from the highest-priority pool item when available
-
-#### Scenario: Failure creates repair work
-
-- **WHEN** `fail()` is called with a structured failure
-- **THEN** the queue records failure trace data and adds concrete repair work to the active window or refill pool
+- **WHEN** a queue item is present in `delegated_in_flight`
+- **THEN** `operate-queue complete` SHALL fail closed for that queue item
+- **AND** the diagnostic SHALL instruct completion through `operate-work-unit submit`
 
 ### Requirement: Preemption inserts urgent work without hidden execution
 
-The Queue Manager SHALL expose `preempt(queue, item, { reason, unsafeCurrent })`. By default, preemption SHALL insert urgent work into the earliest pending slot and SHALL NOT interrupt `slot_1_current`. When the active window is full, the configured tail slot SHALL move to the top of `refill_pool` with restore metadata. Replacing `slot_1_current` SHALL require `unsafeCurrent=true`.
+Preemption SHALL operate on queue v2 locations. By default, `preempt(queue, item, { reason, unsafeCurrent })` SHALL insert urgent work at the earliest safe position in `active_window` without interrupting an already claimed delegated attempt or non-delegated current task. When the active window is full, the displaced tail queue item SHALL move to `refill_pool` with restore metadata. Replacing active in-progress work SHALL require `unsafeCurrent=true`.
 
-#### Scenario: Preempt inserts into pending slot
+#### Scenario: preempt preserves in-flight work
 
-- **WHEN** urgent work preempts a queue with current and pending work
-- **THEN** the urgent item is inserted into the earliest pending slot and current work remains unchanged
-
-#### Scenario: Full window displacement is preserved
-
-- **WHEN** urgent work preempts a full active window
-- **THEN** the previous configured tail slot appears in `refill_pool` with `preempted_from_slot` set to the configured tail slot name and `restore_priority=next_tail_opening`
-
-#### Scenario: Current slot replacement requires unsafe flag
-
-- **WHEN** `preempt()` is asked to replace current work without `unsafeCurrent=true`
-- **THEN** it rejects the operation
+- **WHEN** urgent work preempts a queue with delegated work in `delegated_in_flight`
+- **THEN** the in-flight work-unit binding SHALL remain unchanged
+- **AND** the urgent work SHALL enter `active_window` or `refill_pool` according to preemption rules
 
 ### Requirement: Receipts fail closed and feedback is structured
 
-The Queue Manager SHALL check deterministic receipts through `checkReceipts()` and `inspect()`. Supported receipt prefixes SHALL include `file:`, `json:`, `queue:`, `slot:`, `trace:`, and `none`. Unknown prefixes SHALL fail closed. Feedback SHALL be returned as check/inspect/advice-style structured data.
+The Queue Manager SHALL check deterministic receipts through `checkReceipts()` and `inspect()`. Supported receipt prefixes SHALL include `file:`, `json:`, `queue:`, `trace:`, `work_unit:`, and `none`. Unknown prefixes SHALL fail closed. Feedback SHALL be returned as check/inspect/advice-style structured data.
 
-#### Scenario: Unknown receipt prefix fails
+#### Scenario: work-unit receipt prefix is recognized
 
-- **WHEN** a queue item contains `chat:trust_me` as a receipt
-- **THEN** receipt validation fails and reports the unsupported prefix
-
-#### Scenario: Missing completion receipt blocks promotion
-
-- **WHEN** `complete()` is called but the item completion receipt is missing
-- **THEN** the current item is not promoted and feedback explains the missing receipt
+- **WHEN** a queue receipt references submitted delegated work
+- **THEN** the receipt SHALL use work-unit identity and submitted ledger evidence
+- **AND** unknown receipt prefixes SHALL fail closed
 
 ### Requirement: Projection is generated from queue JSON
 
-The Queue Manager SHALL render an Agent-readable Markdown task card/window from JSON queue state via `render()`. The projection SHALL describe current work, pending previews, receipts, writes, and failure route. The projection SHALL NOT be a mutation input or machine authority.
+Queue projection SHALL be generated from queue v2 JSON and SHALL include delegated in-flight counts, expired attempt diagnostics, blocked queue-front item diagnostics, and phase-drain status. Projection SHALL remain read-only derived output and SHALL NOT be authority for queue or work-unit state.
 
-#### Scenario: Render projection writes Markdown
+#### Scenario: projection reports in-flight delegated work
 
-- **WHEN** `render(queue, bundleDir)` is called
-- **THEN** a Markdown projection file is written at the queue projection path
-
-#### Scenario: Projection drift cannot mutate state
-
-- **WHEN** the projection file is edited manually
-- **THEN** Queue Manager decisions still use JSON queue state and ignore projection content as authority
+- **WHEN** queue v2 contains two active queue items and three delegated in-flight attempts
+- **THEN** the projection SHALL show both unclaimed demand and in-flight delegated attempts
+- **AND** the projection SHALL derive its counts from `rb_queue.json` and `_work_units/_index.json`
 
 ### Requirement: Command experiments prove queue manager mechanics
 
@@ -98,41 +73,14 @@ The Queue Manager engine SHALL include simple, medium, and complex experiment pl
 
 ### Requirement: Wave0 queue-loop simple playbook
 
-An experiment playbook SHALL exist at `experiments_playbook/exp_wfn_wave0/case-211-heavy-wave0-happy-path.md` (or successor case in the same exp directory) that verifies the wave0 queue-driven execution loop end-to-end on a disposable bundle.
+The Wave0 queue-loop playbook SHALL verify the work-unit queue loop end-to-end on a disposable bundle. It SHALL use real framework CLIs, work-unit claim/submit for delegated source intake, gate failure diagnostics, and repair/refill through new queue demand. Verdicts SHALL be read from trace JSONL or gate outcomes, not console confidence.
 
-The playbook SHALL cover three scenarios, with distinct data strategies:
+#### Scenario: real search uses work-unit loop
 
-- **Scenario 1 — Real search (1 topic):** Uses real WebSearch + WebFetch to verify the queue-loop + relay driver + search integration works end-to-end.
-- **Scenario 2 — Gate fail (3 topics, local fixture):** Pre-seeded bundle with 3 topics but only 2 `artifacts/wave0/{topic}/source.yaml` files produced — verifies gate correctly identifies the missing topic via `count_floor` rule.
-- **Scenario 3 — Repair (continues from S2 state, local fixture):** Creates the missing `artifacts/wave0/{topic}/source.yaml` → reruns gate → verifies repair loop in queue-driven context.
-
-The playbook SHALL use a disposable bundle (`dpt_disp_*`), import real framework CLIs (`operate-queue.mjs`, `drive-relay-slot.mjs`, `check-gate-wave0-complete.mjs`), and read verdict from trace JSONL.
-
-#### Scenario: Real search — full queue-loop from filling to gate pass
-
-- **WHEN** the playbook pre-seeds a post-seed-topics bundle with 1 topic in `topic_registry`
-- **AND** Phase Agent executes §3.1 灌料 → §3.2 执行循环 → §3.3 收尾+gate
-- **THEN** Phase Agent SHALL `operate-queue claim` → `drive-relay-slot stage` → spawn sub-agent → sub-agent produces `artifacts/wave0/{topic}/source.yaml` and cache under `_cache/wave0/primary/{topic.slug}/` → `drive-relay-slot commit` → `operate-queue complete` with `slot_result_ref`
-- **AND** Phase Agent SHALL update `reference/_INDEX.md` → run gate
-- **AND** gate SHALL pass (exit code 0)
-- **AND** verdict SHALL be PASS
-
-#### Scenario: Gate fail identifies missing topic
-
-- **WHEN** the playbook pre-seeds a bundle with 3 topics but only 2 `artifacts/wave0/{topic}/source.yaml` files after execution
-- **AND** Phase Agent runs gate
-- **THEN** gate SHALL fail (exit code 1) — `count_floor` rule reports missing reference
-- **AND** inspect SHALL reference the missing topic by key
-- **AND** verdict SHALL be FAIL (gate fail is expected behavior for this negative case)
-
-#### Scenario: Repair after gate fail closes the loop
-
-- **WHEN** the playbook continues from the gate-fail state (3 topics, 2 source.yaml, inspect points to missing topic)
-- **AND** Phase Agent creates the missing `artifacts/wave0/{topic}/source.yaml` for the reported topic
-- **AND** reruns gate
-- **THEN** gate SHALL pass (exit code 0)
-- **AND** trace SHALL contain two `gate_attempt` events: first with `passed: false`, second with `passed: true`
-- **AND** verdict SHALL be PASS — confirming the repair loop works in queue-driven wave0 context
+- **WHEN** the playbook runs a real Wave0 source-intake case
+- **THEN** the Phase Agent SHALL claim queue demand through `operate-work-unit claim`
+- **AND** each delegated result SHALL return through `operate-work-unit submit`
+- **AND** the Wave0 gate SHALL pass only after submitted ledger coverage exists
 
 ### Requirement: Seed-topics queue-loop simple playbook
 
@@ -160,83 +108,36 @@ The playbook SHALL use local fixture data for topic_registry entries (pre-writte
 
 ### Requirement: Queue state and item schema are structured
 
-The Queue Manager SHALL define Zod-validated `QueueState` and `QueueItem` schemas. `QueueState` SHALL contain a 20-slot active window (`slot_1_current` through `slot_20_tail`), a `refill_pool`, queue health, stop authorization state, and a trace path. `QueueItem` SHALL contain fixed executable work fields (`work_id`, `title`, `targets`, `action`, `producer_rule`, `lineage`, `priority_class`, `required_receipts`, `done_condition`, `verification`, `writes_to`, `status_sync`, `completion_receipt`, `failure_route`, `status`, `created_at`, `updated_at`) plus a flexible JSON `payload`. The `targets` field SHALL be a `TargetSpec` object with `controller` (enum: `main-agent` | `engine`) and optional `delegates` (object with `to`: `sub-agent`, `role_key`: string, `timeout_ms`: number). The schema SHALL reject items missing `producer_rule`, `required_receipts`, or `completion_receipt`.
+The target `rb_queue.json` schema SHALL be queue v2 with nested `active_window`, `refill_pool`, `delegated_in_flight`, and `terminal_history`. Queue demand identity SHALL be `queue_item_id`. `work_id` SHALL mean only an Engine-allocated delegated execution attempt and SHALL NOT be used as queue demand identity.
 
-#### Scenario: Valid queue item passes schema
+Each `delegated_in_flight` entry SHALL be keyed by `queue_item_id` and SHALL include `work_id`, `wave`, `batch_id`, `kind`, `attempt_index`, `queue_item_snapshot_hash`, `claimed_at`, `timeout_ms`, `deadline_at`, and optional `last_observed_at`.
 
-- **WHEN** a queue item has all fixed core fields and `payload` is an object
-- **THEN** `QueueItemSchema.safeParse()` succeeds
+#### Scenario: queue item identity is unique across active locations
 
-#### Scenario: Valid queue item with targets.delegates passes schema
+- **WHEN** the same `queue_item_id` appears in more than one of `active_window`, `refill_pool`, `delegated_in_flight`, or `terminal_history`
+- **THEN** queue validation SHALL fail closed
+- **AND** inspect SHALL identify every conflicting location
 
-- **WHEN** a queue item has `targets: { controller: "main-agent", delegates: { to: "sub-agent", role_key: "dpt-evidence-extractor", timeout_ms: 600000 } }`
-- **THEN** `QueueItemSchema.safeParse()` succeeds
+#### Scenario: work_id is not queue demand identity
 
-#### Scenario: Valid queue item with targets.controller only passes schema
-
-- **WHEN** a queue item has `targets: { controller: "main-agent" }` (no delegates)
-- **THEN** `QueueItemSchema.safeParse()` succeeds
-
-#### Scenario: Missing controller is rejected
-
-- **WHEN** a queue item has `targets: { delegates: { to: "sub-agent", role_key: "dpt-source-intake" } }` without `controller`
-- **THEN** validation fails
-
-#### Scenario: Invalid delegates.to is rejected
-
-- **WHEN** a queue item has `targets: { controller: "main-agent", delegates: { to: "chatgpt" } }`
-- **THEN** validation fails (only `sub-agent` is a valid delegate target)
-
-#### Scenario: Missing core field is rejected
-
-- **WHEN** a queue item is missing `producer_rule`, `required_receipts`, or `completion_receipt`
-- **THEN** validation fails
+- **WHEN** a queue item lacks `queue_item_id` but has a field named `work_id`
+- **THEN** queue v2 validation SHALL fail
+- **AND** the diagnostic SHALL require migration to `queue_item_id`
 
 ### Requirement: Producer rule source_intake_fan_in
 
-The Agentic Queue system SHALL recognize `source_intake_fan_in` as a valid `producer_rule` value. This producer rule governs the generation of source-intake task cards during wave0 (foundation reference collection).
+The Agentic Queue system SHALL recognize `source_intake_fan_in` as a valid `producer_rule` for Wave0 source-intake queue demand. Queue items generated by this producer rule SHALL use `queue_item_id` as demand identity, SHALL include delegated target metadata and output contracts sufficient for `operate-work-unit claim`, and SHALL route successful delegated completion through work-unit submit.
 
-A task card with `producer_rule: source_intake_fan_in` SHALL have the following default field values:
+#### Scenario: source-intake queue item uses queue identity
 
-| Field | Required | Default / Derived From |
-|-------|----------|------------------------|
-| `work_id` | yes | `"wave0-source-{topic.slug}"` |
-| `title` | yes | `"Source intake: {topic.title}"` |
-| `targets` | yes | `{ controller: "main-agent", delegates: { to: "sub-agent", role_key: "dpt-source-intake", timeout_ms: 600000 } }` |
-| `action` | yes | 自然语言描述：搜索 topic、找到可信来源、获取页面、提取 url/title/retrieved_date/topic_tag、写入 `artifacts/wave0/{topic.slug}/source.yaml`（满足 ReferenceMetadata schema）；跨 topic 共享 foundation reference 写入 `reference/00-shared-<slug>.md`；原始搜索/抓取内容写入 `_cache/wave0/primary/{topic.slug}/sNN_{source-slug}/` |
-| `producer_rule` | yes | `"source_intake_fan_in"` |
-| `priority_class` | yes | `"P5_new_reference_intake"` |
-| `required_receipts` | yes | `["file:artifacts/wave0/{topic.slug}/source.yaml"]` |
-| `done_condition` | yes | `"artifacts/wave0/{topic.slug}/source.yaml` 存在且通过 ReferenceMetadata schema 校验" |
-| `verification.engine` | yes | `["receipt_check"]` |
-| `writes_to` | yes | `["artifacts/wave0/{topic.slug}/source.yaml", "reference/00-shared-<slug>.md（可选）"]` |
+- **WHEN** `topic_registry` contains three topics
+- **THEN** the Phase Agent SHALL generate three queue demand items with distinct `queue_item_id` values
+- **AND** claiming those items SHALL allocate distinct work-unit `work_id` values
 
-The task card template in `phase-wave0.md` §3.1 SHALL set `targets.delegates` with `to: "sub-agent"` and `role_key: "dpt-source-intake"`. After Sub-agent completion, Phase Agent SHALL collect via `drive-relay-slot commit` (SNC-003 / SRD-001), verify the artifact receipt, and complete the queue task with `slot_result_ref`.
+#### Scenario: source-intake output is submitted
 
-Filling (灌料) for wave0 SHALL follow this pattern: the Phase Agent reads `rb_plan.md` frontmatter `topic_registry` and generates one task card per topic, using `operate-queue enqueue` CLI with the fields above. All task cards SHALL be enqueued at once (one-shot fill) before entering the queue-driven execution loop.
-
-#### Scenario: Task card derived from topic registry
-
-- **WHEN** `topic_registry` contains 3 topics
-- **THEN** Phase Agent SHALL generate 3 task cards, each with `producer_rule: source_intake_fan_in`
-- **AND** each task card's `work_id` SHALL contain the topic slug
-- **AND** each task card's `required_receipts` SHALL reference `artifacts/wave0/{topic.slug}/source.yaml`
-
-#### Scenario: Task card delegates Sub-agent through targets
-
-- **WHEN** a `source_intake_fan_in` task card is claimed
-- **THEN** `targets.delegates.to` SHALL be `"sub-agent"`
-- **AND** `targets.delegates.role_key` SHALL be `"dpt-source-intake"`
-- **AND** search/retrieval intermediate products SHALL be written to `_cache/wave0/primary/{topic.slug}/sNN_{source-slug}/`
-- **AND** structured metadata SHALL be written to `artifacts/wave0/{topic.slug}/source.yaml`
-
-#### Scenario: Phase Agent reads render projection only
-
-- **WHEN** Sub-agent completes a source-intake task and writes result
-- **THEN** Phase Agent SHALL read `_cache/agentic-queue/current-task.md` projection to confirm done-condition
-- **AND** Phase Agent SHALL NOT read full search results back into conversation context
-
-> **Enforcement gap (Path A limitation):** This constraint is MD-instruction-level only. Under Path A, there is no JS-enforced mechanism to detect or prevent the Phase Agent from reading full search results back. No metric, warning, or gate failure signals a violation. Formal verification of this constraint is deferred to Path B (stop authorization enforcement) or a future context-sustainability measurement change.
+- **WHEN** a source-intake sub-agent produces the required source metadata and cache trail
+- **THEN** `operate-work-unit submit` SHALL validate the output contract and cache trail before ledger append
 
 ### Requirement: Producer rule seed_topic_materialize
 
@@ -361,175 +262,88 @@ The Queue Manager SHALL continue to define `targets.controller` as enum `main-ag
 - **WHEN** a task uses `targets.controller: "sub-agent"`
 - **THEN** queue schema validation SHALL fail
 
-### Requirement: Claim advice reports delegates config for relay dispatch
+### Requirement: Queue exposes pending task count
 
-When `claim()` returns a task card with `targets.delegates`, the returned advice SHALL indicate that the Phase Agent must dispatch Sub-agent work via Relay using the declared `role_key` and `timeout_ms`.
+The queue manager SHALL export `pendingCount(queue)` for queue v2. The count SHALL include outstanding queue demand in `active_window` plus `refill_pool` and SHALL report delegated in-flight attempts separately. The count SHALL NOT treat delegated work-unit attempts as unclaimed queue demand.
 
-`claim()` SHALL NOT treat a `--actor` string as proof that the Sub-agent executed the work. Actor strings MAY be logged for audit/advice, but delegated task enforcement SHALL occur at `complete()` using relay provenance.
+#### Scenario: pending count separates in-flight attempts
 
-#### Scenario: Claim advice signals relay dispatch needed
+- **WHEN** queue v2 has active demand, refill demand, and delegated in-flight work units
+- **THEN** pending count SHALL count only unclaimed queue demand
+- **AND** inspect/projection SHALL expose in-flight attempt counts separately
 
-- **WHEN** `claim()` returns a task with `targets.delegates.to: "sub-agent"`
-- **THEN** the advice SHALL contain `delegates_required: true`
-- **AND** the advice SHALL include the delegate `role_key` and `timeout_ms`
+### Requirement: Work-unit claim moves delegated demand into in-flight state
 
-### Requirement: Shared subagent protocol defines batch execution contract
+The Agentic Queue system SHALL expose delegated queue demand through `operate-work-unit claim`, not through queue completion or any non-work-unit delegated channel. A claim SHALL allocate one Engine-owned work unit for each claimed queue demand item, move the bound `queue_item_id` into `delegated_in_flight`, and write the allocation to `_work_units/_index.json`.
 
-A shared node SHALL exist at `DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md`. This node SHALL define: (1) communication contract between the Phase Agent and Sub-agent via relay slot files (`task.md`, `result.schema.json`, `runtime-receipt.jsonl`, `_beacon.json`), (2) directory structure with authority boundary — `_subagents/wave_NN/slot_MM/` for relay-managed structured output (authority: `result.json`, `_status.json`) and `_cache/{wave}/{batch}/{scope}/sNN_{source-slug}/` for intermediate Sub-agent work products (non-authority, organized by work not by slot index), (3) batch parallel execution protocol driven by `drive-relay-slot stage/commit/merge` (fill → stage → parallel spawn → collect-as-return → refill → merge), (4) concurrency control (`MAX_CONCURRENT_SUBAGENTS`, negative = unlimited), (5) parameterized interface (role_key, artifact_template, artifact_schema, backfill_tokens, search_focus) so each phase MD declares only its differences, (6) forbidden authority list for all Sub-agent roles.
+#### Scenario: claim allocates delegated attempt
 
-#### Scenario: Protocol node is referenced by phase nodes using sub-agents
+- **WHEN** the active queue front contains an eligible delegated queue item for Wave0
+- **THEN** `operate-work-unit claim` SHALL allocate a `work_id`
+- **AND** the queue item SHALL move from `active_window` to `delegated_in_flight`
+- **AND** `_work_units/_index.json` SHALL contain the same `queue_item_id` and `work_id` binding
 
-- **WHEN** a phase node uses `targets.delegates` in task cards
-- **THEN** the phase node frontmatter `suggested_context` SHALL include `shared/shared-subagent-protocol.md`
+### Requirement: Delegated submit completes queue demand by work-id binding
 
-#### Scenario: Protocol defines relay-based isolation, not MD convention
+The Agentic Queue system SHALL complete delegated queue demand only through `operate-work-unit submit`. Submit SHALL complete the bound `queue_item_id` by validating the `work_id` binding in `delegated_in_flight`; it SHALL NOT depend on queue-front aliases or return order.
 
-- **WHEN** `shared-subagent-protocol.md` is read
-- **THEN** it SHALL define that Sub-agents operate within relay-assigned slot directories for relay-managed files
-- **AND** Sub-agents SHALL receive only bounded context (`task.md` + `result.schema.json`)
-- **AND** Phase Agent SHALL collect results via `drive-relay-slot commit`, not by hand-orchestrating engine functions
+#### Scenario: out-of-order submit completes correct demand
 
-### Requirement: delegated complete() SHALL validate relay provenance
+- **WHEN** three delegated work units are in flight for the same wave
+- **AND** the third work unit submits before the first
+- **THEN** the queue SHALL complete the `queue_item_id` bound to the submitted `work_id`
+- **AND** the other in-flight queue items SHALL remain in `delegated_in_flight`
 
-For a task whose `targets.delegates.to` is `"sub-agent"`, `complete()` SHALL require evidence that the task result came through Relay. The evidence SHALL include:
+### Requirement: Phase drain includes queue demand and in-flight attempts
 
-- a committed slot result reference
-- a valid SlotResult containing `output_files[]` and `cache_trails[]`
-- a runtime receipt reference from the same slot
-- receipt events proving at least `agent_runtime_started` and `agent_result_ready`
+The Agentic Queue system SHALL report a phase as drained only when the phase has no unclaimed queue demand and no non-terminal or expired delegated in-flight attempt.
 
-Runtime receipt validation SHALL be a pure validation step that checks the existing slot receipt file and nonce binding. `complete()` SHALL NOT depend on `ingestAgentReceipt()` side effects that require a runtimeAgentId or rewrite agent metadata.
+#### Scenario: expired attempt blocks drain
 
-If any required provenance is missing or invalid, `complete()` SHALL reject and SHALL NOT mark the queue item done.
+- **WHEN** a wave has no remaining unclaimed delegated queue items
+- **AND** `delegated_in_flight` contains a claimed work unit whose `deadline_at` has passed
+- **THEN** queue inspect SHALL report the phase as not drained
+- **AND** the Main Agent SHALL resolve the attempt through submit, fail, timeout, or abandon before the wave gate may be run
 
-#### Scenario: Missing slot result rejects delegated completion
+### Requirement: Work-unit submit SHALL validate delegated cache trails
 
-- **WHEN** a delegated task calls `complete()` without a committed slot result reference
-- **THEN** `complete()` SHALL reject
-- **AND** feedback SHALL state that delegated completion requires relay slot result provenance
+Delegated cache trail validation SHALL occur during `operate-work-unit submit`, not queue completion. Submit SHALL validate candidate `cache_trails[]` from the work-unit result against the kind-specific cache policy, filter or reject paths according to that policy, and write only verified cache trails to the submitted ledger row.
 
-#### Scenario: Missing runtime receipt rejects delegated completion
+#### Scenario: valid cache leaf is ledger-written
 
-- **WHEN** a delegated task has a slot result but no valid runtime receipt
-- **THEN** `complete()` SHALL reject
-- **AND** feedback SHALL identify the missing or invalid runtime receipt
+- **WHEN** a work-unit result declares a valid leaf cache trail required by its kind
+- **THEN** submit SHALL write the verified cache trail to the ledger row
 
-#### Scenario: Valid relay provenance allows further completion checks
+#### Scenario: unsafe cache trail rejects submit
 
-- **WHEN** a delegated task provides a committed slot result and matching runtime receipt
-- **AND** both pass schema/event validation
-- **THEN** `complete()` SHALL proceed to declaration, file, and cache checks
+- **WHEN** a work-unit result declares a cache trail outside the bundle cache policy
+- **THEN** submit SHALL reject the result as non-terminal
+- **AND** no ledger row SHALL be appended
 
-### Requirement: delegated complete() SHALL validate declared output files
+### Requirement: Work-unit submit SHALL validate declared output files
 
-For delegated tasks, `complete()` SHALL validate `output_files[]` from the committed SlotResult. It SHALL verify each declared `path` is bundle-relative, does not escape the bundle, and exists on disk. Standard completion receipt/writes checks SHALL be consistent with the declared output files.
+For delegated tasks, `operate-work-unit submit` SHALL validate `output_files[]` from the work-unit result. It SHALL verify each declared `path` is bundle-relative, does not escape the bundle, and exists on disk. Standard completion receipt and writes checks SHALL be consistent with the declared output files.
 
-If `output_files[]` is missing, invalid, or declares missing files, `complete()` SHALL reject.
+#### Scenario: declared output file exists
 
-#### Scenario: Declared output file exists
-
-- **WHEN** a delegated SlotResult declares `output_files: [{ path: "reference/source.md", role: "reference", source_url: "https://example.com/article" }]`
+- **WHEN** a work-unit result declares `output_files: [{ path: "reference/source.md", role: "reference", source_url: "https://example.com/article" }]`
 - **AND** `reference/source.md` exists in the bundle
 - **THEN** output file validation SHALL pass for that entry
 
-#### Scenario: Missing declared file rejects completion
+#### Scenario: missing declared file rejects submit
 
-- **WHEN** a delegated SlotResult declares `output_files: [{ path: "reference/missing.md", role: "reference", source_url: "https://example.com/article" }]`
+- **WHEN** a work-unit result declares `output_files: [{ path: "reference/missing.md", role: "reference", source_url: "https://example.com/article" }]`
 - **AND** that file does not exist
-- **THEN** `complete()` SHALL reject
+- **THEN** `operate-work-unit submit` SHALL reject the result as non-terminal
 - **AND** feedback SHALL identify the missing declared output file
 
-### Requirement: delegated complete() SHALL validate leaf cache trails
+### Requirement: Non-delegated queue completion SHALL skip work-unit checks
 
-For delegated tasks, `complete()` SHALL validate `cache_trails[]` from the committed SlotResult. Each path SHALL be a bundle-relative `_cache/` leaf source directory. Structurally unsafe paths SHALL remain hard failures:
+If a queue item has no delegated target and no work-unit binding, `operate-queue complete` SHALL skip delegated work-unit receipt, ledger, cache trail, and submission checks. It SHALL retain standard non-delegated receipt behavior for direct Phase Agent or engine tasks.
 
-- absolute paths
-- paths that escape the bundle
-- paths outside `_cache/`
-- parent cache directories that are not leaf source directories
+#### Scenario: non-delegated task skips work-unit checks
 
-During the evidence-extraction Phase 1 transition, a candidate leaf that is missing or does not directly contain all of `websearch.json`, `page.md`, and `meta.json` SHALL be filtered from ledger `cache_trails` and reported as a warning rather than rejecting delegated `complete()` by itself. The warning does not make the candidate trail authoritative. Downstream `cache_coverage` and file observability SHALL surface the provenance gap according to their enforcement policy.
-
-`complete()` SHALL still reject delegated completion when required relay provenance, runtime receipt, schema validation, or declared output file validation fails.
-
-#### Scenario: Complete cache leaf passes completion
-
-- **WHEN** delegated SlotResult declares `cache_trails: ["_cache/wave0/primary/01_test/s01_source/"]`
-- **AND** that directory directly contains `websearch.json`, `page.md`, and `meta.json`
-- **THEN** cache trail validation SHALL pass
-
-#### Scenario: Missing cache leaf is filtered during Phase 1
-
-- **WHEN** delegated SlotResult declares `cache_trails: ["_cache/wave0/primary/01_test/s01_source/"]`
-- **AND** that directory does not exist
-- **THEN** delegated `complete()` SHALL emit a warning such as `cache trail missing: directory not found`
-- **AND** the missing trail SHALL NOT be written to ledger `cache_trails`
-- **AND** delegated `complete()` MAY continue if all other delegated provenance, receipt, schema, and declared output checks pass
-
-#### Scenario: Missing meta.json is filtered during Phase 1
-
-- **WHEN** delegated SlotResult declares a cache leaf that contains `websearch.json` and `page.md` but not `meta.json`
-- **THEN** delegated `complete()` SHALL emit a warning identifying the missing `meta.json`
-- **AND** the incomplete trail SHALL NOT be written to ledger `cache_trails`
-- **AND** downstream `cache_coverage` / file observability SHALL report the provenance gap
-
-#### Scenario: Unsafe cache trail still rejects completion
-
-- **WHEN** delegated SlotResult declares `cache_trails: ["../outside/"]`
-- **THEN** delegated `complete()` SHALL reject
-- **AND** no ledger record SHALL be appended for that delegated completion
-
-### Requirement: non-delegated complete() SHALL skip relay-specific checks
-
-If a task has no `targets.delegates`, `complete()` SHALL NOT require relay slot result provenance or `cache_trails[]`. It SHALL retain the standard receipt behavior for direct Phase Agent or engine tasks.
-
-#### Scenario: Non-delegated task skips relay provenance
-
-- **WHEN** a `seed_topic_materialize` task with `targets.controller: "main-agent"` and no delegates calls `complete()`
-- **THEN** relay slot result and runtime receipt checks SHALL be skipped
+- **WHEN** a direct Phase Agent task with no delegated target calls `operate-queue complete`
+- **THEN** work-unit result and runtime receipt checks SHALL be skipped
 - **AND** standard completion receipt checks SHALL still run
 
-### Requirement: Queue active window has an explicit slot-shape SSOT
-
-The Queue active window slot count SHALL be defined as `QUEUE_ACTIVE_WINDOW_SLOTS = 20`, and the active-window wire keys SHALL be defined by `SLOT_NAMES` (expanded to `slot_1_current`, `slot_2_next`, `slot_3_pending` through `slot_19_pending`, `slot_20_tail`). Both Queue schema validation and Queue engine operations SHALL use the same `SLOT_NAMES` source of truth. Queue slot count SHALL NOT be derived from Relay sub-agent concurrency (`MAX_CONCURRENT_SUBAGENTS = 8`).
-
-When a legacy 5-slot `rb_queue.json` is encountered, the first `operate-queue` operation SHALL migrate it: `slot_5_tail` SHALL be renamed to `slot_5_pending` with its value preserved, and `slot_6_pending` through `slot_20_tail` SHALL be initialized to `null`.
-
-#### Scenario: Queue slot constants define the 20-slot wire shape
-
-- **WHEN** Queue code imports the active-window constants
-- **THEN** `QUEUE_ACTIVE_WINDOW_SLOTS` SHALL equal 20
-- **AND** `SLOT_NAMES` SHALL include `slot_1_current`, `slot_2_next`, `slot_3_pending` through `slot_19_pending`, `slot_20_tail`
-
-#### Scenario: Promote shifts the configured active window left
-
-- **WHEN** `promote()` is called after a completion
-- **THEN** every configured slot in `SLOT_NAMES` SHALL shift one position left
-- **AND** the configured tail slot SHALL become `null`
-
-#### Scenario: Preempt displaces the configured tail slot
-
-- **WHEN** a default preempt inserts at `slot_2_next`
-- **AND** all configured Queue active-window slots are occupied
-- **THEN** the configured tail slot SHALL be displaced to `refill_pool`
-- **AND** the displaced item SHALL record `preempted_from_slot` using the configured tail slot name
-
-### Requirement: Queue exposes pending task count
-
-The queue manager SHALL export a `pendingCount(queue)` function that returns the total number of outstanding Queue tasks: the count of non-null active-window slots plus the length of `refill_pool`. The count SHALL NOT include Relay sub-agent slots. The CLI SHALL expose this via `operate-queue.mjs count <bundle>`.
-
-#### Scenario: Pending count reflects active window and pool
-
-- **WHEN** a queue has 3 non-null slots in the active window and 5 items in the refill pool
-- **THEN** `pendingCount(queue)` SHALL return 8
-
-#### Scenario: Pending count is zero for empty queue
-
-- **WHEN** a queue has all null slots and an empty refill pool
-- **THEN** `pendingCount(queue)` SHALL return 0
-
-#### Scenario: CLI count command reports Queue task depth
-
-- **WHEN** `node DPT_FRAMEWORK/cli/operate-queue.mjs count <bundle>` is executed
-- **THEN** it SHALL print a JSON object with `pending`, `active_window`, and `refill_pool` counts
-- **AND** exit 0

@@ -8,46 +8,13 @@ Define the canonical location and import contract for production engine modules 
 ## Requirements
 ### Requirement: Engine code canonical location
 
-Six production engine modules SHALL reside at `DPT_FRAMEWORK/engine/` as their single canonical location:
+Production work-unit Engine code SHALL live under `DPT_FRAMEWORK/engine/` and production CLI entrypoints SHALL live under `DPT_FRAMEWORK/cli/`. Runtime bundle state SHALL live in the active bundle under `rb_queue.json`, `rb_output_declarations.jsonl`, and `_work_units/`; `DPT_FRAMEWORK/` SHALL remain reusable framework assets, not run state.
 
-| Module | Canonical Path |
-|--------|---------------|
-| Queue Manager | `DPT_FRAMEWORK/engine/queue-manager.mjs` |
-| Gate Loop | `DPT_FRAMEWORK/engine/gate-loop.mjs` |
-| Gate Fork | `DPT_FRAMEWORK/engine/gate-fork.mjs` |
-| Subagent Relay | `DPT_FRAMEWORK/engine/subagent-relay.mjs` |
-| Workflow Chain | `DPT_FRAMEWORK/engine/workflow-chain.mjs` |
-| Trace Writer | `DPT_FRAMEWORK/engine/trace.mjs` |
+#### Scenario: work-unit state is written to bundle
 
-No engine module SHALL exist as a copy in `experiments_env/prototype-*/`. Experiment playbooks and production run bundles SHALL import engines from their canonical paths.
-
-Workflow Chain is an MD loader + dependency resolver: it parses frontmatter, resolves dependency closures, reads and caches MD files, and returns results for the Agent to read. It SHALL NOT execute JS code blocks from MD nodes — MD content is Agent-readable, not engine-executable.
-
-#### Scenario: Experiment playbook imports engine from framework
-
-- **WHEN** an experiment playbook inline script executes an engine function
-- **THEN** the import statement SHALL reference `../DPT_FRAMEWORK/engine/<module>.mjs`
-
-#### Scenario: Production run bundle imports engine from framework
-
-- **WHEN** a production run bundle script calls an engine function
-- **THEN** the import statement SHALL reference `../DPT_FRAMEWORK/engine/<module>.mjs` (same relative path)
-
-#### Scenario: No FSM engine modules
-
-- **WHEN** listing `DPT_FRAMEWORK/engine/`
-- **THEN** `workflow-fsm.mjs` SHALL NOT exist
-- **AND** `transition-fsm.mjs` SHALL NOT exist
-
-#### Scenario: Integrity via validate-workflow-package
-
-- **WHEN** `DPT_FRAMEWORK/cli/validate-workflow-package.mjs` runs
-- **THEN** it SHALL validate the workflow package without requiring a `.fsm.json` file
-
-#### Scenario: No engine copy remains in experiments
-
-- **WHEN** the change is complete
-- **THEN** no `experiments_env/prototype-*/` directory SHALL contain an engine `.mjs` file that duplicates a module in `DPT_FRAMEWORK/engine/`
+- **WHEN** `operate-work-unit claim` runs against a bundle
+- **THEN** work-unit envelope files SHALL be written under the bundle `_work_units/`
+- **AND** no run-specific state SHALL be written under `DPT_FRAMEWORK/`
 
 ### Requirement: Gate helpers provide shared frontmatter parsing
 
@@ -91,129 +58,59 @@ This test acts as an automated guardrail: new gate CLIs or bundle tools that cop
 - **WHEN** a gate CLI or bundle tool source file contains `JSON.parse` on a frontmatter regex match result
 - **THEN** the anti-regression scan SHALL fail with a message pointing to the file and line
 
-### Requirement: Subagent relay internal module layout
-
-The Subagent Relay engine SHALL remain importable at its canonical barrel path `DPT_FRAMEWORK/engine/subagent-relay.mjs`. Implementation logic MAY be split across **five** internal flat sub-modules at `DPT_FRAMEWORK/engine/subagent-relay-{suffix}.mjs` (same directory as the barrel, no subdirectory) provided that:
-
-1. The barrel re-exports every public symbol previously exported from the monolithic file (**32** exports per `rg '^export ' subagent-relay.mjs` at apply baseline).
-2. External consumers (`queue-manager.mjs`, `drive-relay-slot.mjs`, tests, experiment playbooks) SHALL continue importing from `subagent-relay.mjs` only — they SHALL NOT import sub-module paths directly. Gate CLIs do not import this engine.
-3. Sub-module boundaries SHALL follow the relay pipeline domains (schemas/trace → fork/dispatch → stage → slot runtime → collect/pipeline). A **200–800 line range per sub-module is advisory only**; logical cohesion and a cycle-free dependency graph take precedence over line count.
-4. Trace/logger bundle singleton state (`ensureTrace`, `traceEntry`, `logEvent`) SHALL exist in exactly one sub-module; other sub-modules SHALL import it rather than duplicate module-level state.
-5. The split SHALL NOT change runtime behavior, export signatures, Zod schema semantics, trace event names, or on-disk slot path conventions.
-6. Workflow phase Markdown nodes SHALL NOT require edits: they drive relay through `drive-relay-slot.mjs` (SNC-003).
-
-Internal sub-modules:
-
-| Sub-module | Responsibility | Approx. lines |
-|------------|----------------|---------------|
-| `subagent-relay-schemas-trace.mjs` | Zod schemas, trace/logger init, path helpers | ~209 |
-| `subagent-relay-fork-dispatch.mjs` | Fork/dispatch map, converge repair, validation diagnostics | ~294 |
-| `subagent-relay-stage.mjs` | Slot staging, task.md / schema / manifest / spawn prompt | ~446 |
-| `subagent-relay-slot-runtime.mjs` | Slot status transitions, runtime receipt validation, result commit | ~464 |
-| `subagent-relay-collect-pipeline.mjs` | Result collection, merge, pipeline orchestrators, `resolveSlotFromResultRef` | ~242 |
-
-#### Scenario: External import path unchanged
-
-- **WHEN** `queue-manager.mjs` imports `SlotResult` from `../subagent-relay.mjs`
-- **THEN** the import SHALL resolve without path changes
-- **AND** `SlotResult.parse()` behavior SHALL be identical to pre-split
-
-#### Scenario: Sub-module boundaries follow pipeline domains
-
-- **WHEN** the split is complete
-- **THEN** fork/dispatch and repair diagnostics SHALL reside in `subagent-relay-fork-dispatch.mjs`
-- **AND** trace/logger singletons SHALL reside in `subagent-relay-schemas-trace.mjs`
-- **AND** no sub-module file SHALL exceed ~1000 lines without a documented reason
-
-#### Scenario: Trace singleton not duplicated
-
-- **WHEN** `stageSubagentSlots()` and `commitSlotResult()` run in the same bundle within one process
-- **THEN** both SHALL write to the same `rb_trace.jsonl` via the shared trace singleton
-
-#### Scenario: Regression tests pass unchanged
-
-- **WHEN** `node --test tests/engine/subagent-relay.test.mjs` runs after the split
-- **THEN** all tests SHALL pass without modifying test assertions
-
-#### Scenario: Two-argument stage call still works
-
-- **WHEN** `drive-relay-slot.mjs` calls `stageSubagentSlots(state, bundleDir)` with no third argument
-- **THEN** the built-in dispatch map SHALL still resolve via `getDispatchMap()` inside `stageSubagentSlots`
-
-#### Scenario: Workflow MD requires no import path edits
-
-- **WHEN** grep runs over `DPT_FRAMEWORK/workflows/**/*.md` for inline engine imports
-- **THEN** zero matches SHALL import `subagent-relay.mjs` or `subagent-relay-*.mjs` directly
-
-#### Scenario: Sub-module paths are not external import surfaces
-
-- **WHEN** grep for `from '.*subagent-relay-` runs over `DPT_FRAMEWORK/`, `tests/`, and `experiments_playbook/`
-- **THEN** matches SHALL appear only under `DPT_FRAMEWORK/engine/subagent-relay*.mjs`
-
 ### Requirement: Queue manager internal module and regression layout
 
-The Queue Manager engine SHALL remain importable at its canonical barrel path `DPT_FRAMEWORK/engine/queue-manager.mjs`. Implementation logic MAY be split across five internal flat sub-modules at `DPT_FRAMEWORK/engine/queue-manager-{suffix}.mjs` provided that:
+Queue Manager internals SHALL be updated from single-current-item delegated completion to queue v2 and work-unit binding helpers while preserving the public framework boundary for non-delegated queue operations. Regression coverage SHALL move from non-work-unit delegated completion to work-unit claim/submit state transitions.
 
-1. The barrel re-exports every public symbol previously exported from the monolithic file: `QUEUE_ACTIVE_WINDOW_SLOTS`, `SLOT_NAMES`, `QueueItemSchema`, `QUEUE`, `OutputDeclarationLedgerRecord`, `checkReceipts`, `createQueue`, `loadQueue`, `saveQueue`, `enqueue`, `claim`, `complete`, `fail`, `preempt`, `inspect`, `pendingCount`, `render`, and `makeItem`.
-2. External consumers SHALL continue importing from `queue-manager.mjs` only. This includes production CLIs, regression tests, integration tests, experiment playbooks with inline JS, and workflow/playbook code that reaches the engine through `operate-queue.mjs`.
-3. Sub-module boundaries SHALL follow queue responsibility domains: core schema/trace/logger helpers, active-window mechanics, delegated provenance/ledger, lifecycle API, and projection rendering.
-4. Trace/logger bundle singleton state SHALL exist in exactly one sub-module; other sub-modules SHALL import shared helpers rather than duplicate module-level state.
-5. The split SHALL NOT change runtime behavior, public export signatures, Zod schema semantics, trace/log event names, queue file shape, output declaration ledger shape, projection path, or workflow/playbook queue invocation semantics.
-6. The companion regression test monolith `tests/engine/queue-manager.test.mjs` SHALL be split into topic-focused test files under `tests/engine/`, with any shared fixtures kept under `tests/`. These tests SHALL continue validating the public barrel path rather than importing Queue Manager internal sub-modules directly.
+#### Scenario: queue manager rejects non-work-unit delegated completion
 
-Internal sub-modules:
+- **WHEN** Queue Manager receives a delegated completion request that lacks a work-unit submit transaction
+- **THEN** it SHALL reject the request
+- **AND** it SHALL not append output declarations
 
-| Sub-module | Responsibility |
-|------------|----------------|
-| `queue-manager-core.mjs` | Trace/logger init, Queue constants, Zod schemas, queue validation and shared helpers |
-| `queue-manager-window.mjs` | Active-window mechanics, pool sorting, promote/refill, urgent preemption |
-| `queue-manager-ledger.mjs` | Delegated completion provenance, output declaration ledger, cache trail validation |
-| `queue-manager-lifecycle.mjs` | Public queue lifecycle API and receipt checking |
-| `queue-manager-render.mjs` | Markdown projection rendering |
+### Requirement: operate-work-unit owns delegated execution attempts
 
-Regression test files:
+The Framework Engine SHALL provide `operate-work-unit` as the only production delegated-work CLI. It SHALL implement `claim`, `submit`, `fail`, `timeout`, `abandon`, and `inspect` against an explicit bundle path. All configuration SHALL be passed through CLI flags, file arguments, or bundle state; environment variables SHALL NOT be required.
 
-| Test file | Coverage |
-|-----------|----------|
-| `queue-manager-schema.test.mjs` | Queue item schema, TargetSpec, active-window constants, makeItem defaults |
-| `queue-manager-window-lifecycle.test.mjs` | enqueue, claim, pendingCount, complete/fail promotion and refill, preempt |
-| `queue-manager-receipts-cli-render.test.mjs` | checkReceipts, projection rendering, save/load, operate-queue CLI smoke |
-| `queue-manager-delegated.test.mjs` | delegated complete, Queue↔Relay pipeline, ledger, gate handoff |
-| `queue-manager-logging.test.mjs` | LOG-006 Queue Manager diagnostics |
+#### Scenario: delegated claim command creates envelope
 
-#### Scenario: External import path unchanged
+- **WHEN** `operate-work-unit claim <bundle> --phase wave0 --count 2` runs against two eligible queue-front delegated items
+- **THEN** the Engine SHALL create two work-unit envelopes
+- **AND** the command output SHALL include both generated prompts and both `work_id` values
 
-- **WHEN** `DPT_FRAMEWORK/cli/operate-queue.mjs` imports Queue Manager functions
-- **THEN** the import SHALL reference `../engine/queue-manager.mjs`
-- **AND** queue lifecycle behavior SHALL match pre-split behavior
+### Requirement: Work-unit index is Engine-owned allocation registry
 
-#### Scenario: Regression tests protect the barrel contract
+The Framework Engine SHALL maintain `_work_units/_index.json` as the allocation and attempt-state registry. The index SHALL store wave/batch counters, kind registry, work-unit entries, lease/deadline fields, optional runtime refs, status counts, and inspect projection. Agents and sub-agents SHALL NOT edit `_work_units/_index.json`.
 
-- **WHEN** `node --test tests/engine/queue-manager*.test.mjs` runs
-- **THEN** the split regression tests SHALL pass
-- **AND** test files SHALL import Queue Manager public API from `../../DPT_FRAMEWORK/engine/queue-manager.mjs`
-- **AND** they SHALL NOT import `queue-manager-*.mjs` internal sub-modules directly
+#### Scenario: index projection mismatch fails inspect
 
-#### Scenario: Workflow Markdown requires no edits
+- **WHEN** `_work_units/_index.json` status counts disagree with the `work_units` records
+- **THEN** `operate-work-unit inspect` SHALL fail closed
+- **AND** it SHALL identify the mismatched projection fields
 
-- **WHEN** workflow phase Markdown calls Queue operations
-- **THEN** it SHALL continue using `DPT_FRAMEWORK/cli/operate-queue.mjs`
-- **AND** no workflow phase Markdown SHALL import `queue-manager.mjs` or `queue-manager-*.mjs` directly
+### Requirement: Work-unit transaction journal protects multi-file mutations
 
-#### Scenario: Experiment playbooks keep real queue paths
+The Framework Engine SHALL acquire a bundle-scoped lock before mutating queue, index, work-unit files, or ledger. Multi-file work-unit mutations SHALL write `_work_units/_transactions/{tx_id}.json` before mutation and mark it committed only after all authority surfaces agree.
 
-- **WHEN** experiment playbooks exercise Queue behavior through inline JS or CLI commands
-- **THEN** inline JS imports SHALL continue targeting `../DPT_FRAMEWORK/engine/queue-manager.mjs`
-- **AND** CLI examples SHALL continue invoking `DPT_FRAMEWORK/cli/operate-queue.mjs`
-- **AND** no experiment playbook SHALL import Queue Manager internal sub-module paths
+#### Scenario: uncommitted transaction blocks authority
 
-#### Scenario: Trace and logger singleton not duplicated
+- **WHEN** inspect finds an uncommitted work-unit transaction journal
+- **THEN** inspect SHALL fail closed
+- **AND** it SHALL not silently heal queue, index, or ledger state
 
-- **WHEN** `loadQueue()`, `enqueue()`, `complete()`, and `render()` run against the same bundle in one process
-- **THEN** trace and run-log events SHALL be written through the shared Queue Manager trace/logger helpers
-- **AND** the split SHALL NOT create multiple independent Queue Manager trace/logger singleton states
+### Requirement: Work-unit ID validation is deterministic
 
-#### Scenario: Queue artifacts remain stable
+The Framework Engine SHALL validate `work_id` with `^wu-w[0-9]+-b[0-9]{3}-[a-z][a-z0-9]{1,7}-i[0-9]{4}$` and SHALL reject IDs whose encoded fields disagree with directory path, manifest, index, result, or ledger fields. The encoded kind segment is `kind_code`; validation SHALL resolve it through the Engine-owned kind registry before comparing it with the full `kind` field on queue demand, manifest, result, and ledger surfaces.
 
-- **WHEN** Queue operations persist runtime state or projections after the split
-- **THEN** `rb_queue.json`, `_cache/agentic-queue/current-task.md`, `rb_output_declarations.jsonl`, and `rb_trace.jsonl` SHALL retain their existing paths and shapes
+#### Scenario: two-digit batch is invalid
+
+- **WHEN** a work-unit path or result uses `wu-w0-b00-src-i0001`
+- **THEN** Engine validation SHALL reject the ID
+- **AND** `wu-w0-b000-src-i0001` SHALL pass format validation before cross-field checks
+
+#### Scenario: unregistered kind code is invalid
+
+- **WHEN** a work-unit ID contains kind code `deep`
+- **AND** `_work_units/_index.json` has no kind registry entry mapping `deep` to the manifest's full `kind`
+- **THEN** Engine validation SHALL reject the work-unit binding
+

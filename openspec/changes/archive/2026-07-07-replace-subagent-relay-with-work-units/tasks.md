@@ -175,4 +175,4 @@ Note: 3.7-3.10 are rolling section-exit guards for sections 4-14. Keep them unch
 
 ## 18. Archive/Sync Gate (Do Not Run During Apply)
 
-- [ ] 18.1 @impl DEW-008, RET-005: After archive/sync applies the delta specs to main specs, verify retired old capability directories are absent from active main specs or have no production requirements, then update governance prefixes/groups to the deprecated `no spec directory` form only after the corresponding requirements are removed.
+- [x] 18.1 @impl DEW-008, RET-005: After archive/sync applies the delta specs to main specs, verify retired old capability directories are absent from active main specs or have no production requirements, then update governance prefixes/groups to the deprecated `no spec directory` form only after the corresponding requirements are removed.

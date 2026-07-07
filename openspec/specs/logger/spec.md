@@ -83,94 +83,32 @@ Engine 公共函数 SHALL 接受 `logger = null` optional trailing parameter。
 - **THEN** `log.info('enqueue', { work_id })` SHALL 写入含 bundle 的日志行
 - **AND** caller SHALL NOT 需要传入 `bundle` 或构造文件路径
 
-### Requirement: Engine hot-path SHALL emit accident-grade diagnostics (LOG-006)
+### Requirement: Engine hot-path SHALL emit accident-grade diagnostics
 
-Public functions in `queue-manager.mjs` and `subagent-relay.mjs` SHALL emit `logEvent()` for the stable accident-grade diagnostic event set defined below. Non-success exits SHALL include a reason before returning or throwing when a run-scoped logger is available.
+Engine hot paths SHALL emit accident-grade diagnostics for work-unit claim, submit, submit rejection, ledger append, fail, timeout, abandon, retry claim, late submit rejection, inspect failure, transaction mismatch, and gate provenance mismatch.
 
-Queue functions covered: `enqueue`, `claim`, `complete`, `fail`, `preempt`, `saveQueue`, `loadQueue`.
-Relay functions covered: `stageSubagentSlots`, `recordAgentSpawnRequested`, `ingestAgentReceipt`, `commitSlotResult`, `collectAndMergeSubagentResults`, and bundle-aware callers of `forkRouter` / `convergeRepair`.
+#### Scenario: invalid submit is logged with rejection detail
 
-Log message/event name SHALL be the fine-grained event name, such as `queue_enqueue_attempt`. `detail.kind` SHALL be the broad diagnostic kind from `DIAGNOSTIC_KINDS` when one exists, such as `queue_enqueue`; if no broad diagnostic kind exists, `detail.kind` SHALL equal the fine-grained event name.
+- **WHEN** work-unit submit rejects a result as invalid
+- **THEN** run log SHALL include `work_id`, `queue_item_id`, reason code, and the inspected result/receipt hash when available
 
-Implementations SHALL keep the fine-grained event name and broad `detail.kind` distinct where a broad kind exists. Tests SHALL assert representative mappings, for example `queue_enqueue_attempt` with `kind:"queue_enqueue"` and `queue_complete_receipt_fail` with `kind:"receipt_check"` or another documented broad compatibility kind.
+### Requirement: Sub-agent spawn prompt SHALL include diagnostic logging CLI instructions
 
-Exception events SHALL be emitted before rethrowing unexpected validation or IO failures when a run-scoped logger is available. Because exceptions may occur before schema parsing succeeds, identifiers such as `work_id`, `queue_id`, `slotKey`, and `roleAgentKey` MAY be omitted on exception events, but a sanitized `reason` SHALL be included.
+Sub-agent spawn prompts SHALL include diagnostic logging instructions bound to work-unit identity and receipt nonce. The instructions SHALL avoid non-work-unit command examples as production guidance.
 
-Queue functions that do not receive `bundleDir` (`enqueue`, `claim`, `preempt`) SHALL emit these events when a run-scoped logger has already been initialized through a bundle-aware entrypoint. Pure in-memory calls without an initialized logger SHALL NOT be required to write `run.log`.
+#### Scenario: spawn prompt includes work-unit log example
 
-Queue event set:
+- **WHEN** a work-unit prompt is generated
+- **THEN** it SHALL include copyable logging instructions that carry `work_id` and `receipt_nonce`
+- **AND** it SHALL not instruct the sub-agent to log against a non-work-unit delegated channel
 
-| Event | Level | Required detail |
-|-------|-------|-----------------|
-| `queue_enqueue_attempt`, `queue_enqueue_done`, `queue_enqueue_exception` | INFO/ERROR | `kind`, `work_id?`, `slot?`, `target?`, `reason?` |
-| `queue_claim_attempt`, `queue_claim_done`, `queue_claim_empty`, `queue_claim_exception` | INFO/WARN/ERROR | `kind`, `actor?`, `work_id?`, `queue_health?`, `stop_authorization_state?`, `reason?` |
-| `queue_complete_attempt`, `queue_complete_reject`, `queue_complete_receipt_fail`, `queue_complete_done`, `queue_complete_exception` | INFO/WARN/ERROR | `kind`, `work_id?`, `delegated?`, `receipt?`, `reason?` |
-| `queue_fail_attempt`, `queue_fail_reject`, `queue_fail_done`, `queue_fail_exception` | INFO/WARN/ERROR | `kind`, `work_id?`, `reason?` |
-| `queue_preempt_attempt`, `queue_preempt_reject`, `queue_preempt_done`, `queue_preempt_exception` | INFO/WARN/ERROR | `kind`, `work_id?`, `slot?`, `reason?`, `unsafeCurrent?` |
-| `queue_save_attempt`, `queue_save_done`, `queue_save_exception` | INFO/ERROR | `kind`, `queue_id?`, `queue_health?`, `reason?` |
-| `queue_load_attempt`, `queue_load_done`, `queue_load_exception` | INFO/ERROR | `kind`, `queue_id?`, `existed?`, `reason?` |
-| `ledger_append_attempt`, `ledger_append_done`, `ledger_append_exception` | INFO/ERROR | `kind`, `work_id?`, `slot_result_ref?`, `reason?` |
+### Requirement: Timeout recovery SHALL record operator-visible diagnostics
 
-Relay event set:
+Timeout recovery SHALL write run log and trace diagnostics that explain the closed attempt, deadline, timeout reason, runtime refs when available, and replacement/requeue action.
 
-| Event | Level | Required detail |
-|-------|-------|-----------------|
-| `relay_stage_attempt`, `relay_stage_empty`, `relay_stage_done`, `relay_stage_exception` | INFO/WARN/ERROR | `kind`, `branch?`, `slotCount?`, `waveIndex?`, `reason?` |
-| `relay_spawn_attempt`, `relay_spawn_requested`, `relay_spawn_exception` | INFO/ERROR | `kind`, `slotKey?`, `roleAgentKey?`, `platform?`, `runtimeMode?`, `reason?` |
-| `relay_receipt_ingest_attempt`, `relay_receipt_ingest_done`, `relay_receipt_ingest_failed`, `relay_receipt_ingest_exception` | INFO/WARN/ERROR | `kind`, `slotKey?`, `roleAgentKey?`, `receiptPath?`, `reason?` |
-| `relay_commit_attempt`, `relay_commit_schema_fail`, `relay_commit_path_escape`, `relay_commit_done`, `relay_commit_exception` | INFO/WARN/ERROR | `kind`, `slotKey?`, `roleAgentKey?`, `status?`, `reason?`, `path?` |
-| `relay_collect_attempt`, `relay_collect_empty`, `relay_all_failed`, `relay_merge_done`, `relay_refork_done`, `relay_collect_exception` | INFO/WARN/ERROR | `kind`, `slotCount?`, `ref_count?`, `branch?`, `reason?` |
-| `relay_fork_attempt`, `relay_fork_done`, `relay_fork_exception` | INFO/ERROR | `kind`, `branch?`, `ref_count?`, `ref_floor?`, `reason?` |
-| `repair_attempt`, `repair_stalled`, `repair_done`, `repair_exception` | INFO/WARN/ERROR | `kind`, `outcome?`, `iterations?`, `reason?` |
+#### Scenario: timeout log names replacement path
 
-`forkRouter()` and `convergeRepair()` SHALL remain pure unless a future change explicitly modifies their APIs. This change SHALL log their decisions from bundle-aware relay callers rather than making pure functions discover bundle state.
+- **WHEN** `operate-work-unit timeout` closes an attempt and requeues the demand
+- **THEN** the log SHALL identify the timed-out `work_id`
+- **AND** it SHALL identify whether the same `queue_item_id` was requeued or a replacement was created
 
-#### Scenario: Queue operations log entry and outcome
-- **WHEN** any LOG-006-covered public queue hot-path function is called after a run-scoped logger has been initialized
-- **THEN** attempt SHALL be logged with work_id (or queue_id for save/load)
-- **AND** success SHALL log the outcome
-- **AND** non-success exits SHALL include the reason
-- **AND** representative events SHALL preserve fine-grained message names while using the documented broad `detail.kind`
-
-#### Scenario: Pure in-memory queue calls are not forced to log
-- **WHEN** `enqueue`, `claim`, or `preempt` is called before any bundle-aware entrypoint initializes a run-scoped logger
-- **THEN** the function SHALL preserve existing no-throw/no-log behavior
-- **AND** lack of a run.log entry SHALL NOT be a contract failure for that pure in-memory call
-
-#### Scenario: complete() logs all three paths
-- **WHEN** `complete()` is called
-- **THEN** attempt SHALL log `queue_complete_attempt`
-- **AND** delegated validation failure SHALL log `queue_complete_reject` with reason
-- **AND** receipt check failure SHALL log `queue_complete_receipt_fail`
-- **AND** success SHALL log `queue_complete_done` and delegated ledger append SHALL log `ledger_append_done`
-- **AND** unexpected parse or IO failure SHALL log `queue_complete_exception` before rethrowing
-
-#### Scenario: Relay operations log slot lifecycle
-- **WHEN** any relay function is called
-- **THEN** attempt SHALL be logged with slotKey, waveIndex, or slotCount as applicable
-- **AND** schema validation failure, path escape, missing receipt/result, or all-subagents-failed SHALL log the specific failure reason
-- **AND** unexpected validation or IO failure SHALL log the function-specific `*_exception` event before rethrowing
-
-#### Scenario: Fork and repair log branch decisions
-- **WHEN** bundle-aware relay callers invoke `forkRouter()` or `convergeRepair()`
-- **THEN** the branch, ref_count, and repair outcome SHALL be logged
-- **AND** pure `forkRouter()` / `convergeRepair()` calls without bundle context SHALL NOT be required to write run.log
-
-### Requirement: Sub-agent spawn prompt SHALL include diagnostic logging CLI instructions (LOG-007)
-
-`buildSpawnPrompt()` SHALL include a "Diagnostic logging" section with concrete event types, absolute `log-event.mjs` command examples, and level conventions — not vague suggestions. Sub-agents are not required to log but SHALL receive clear, actionable instructions that use the existing Agent log CLI instead of hand-written log envelope strings.
-
-#### Scenario: Spawn prompt lists concrete events
-- **WHEN** `buildSpawnPrompt()` generates the spawn prompt
-- **THEN** the prompt SHALL name 6 event types: search_start, search_done, fetch_done, file_written, error, work_done
-- **AND** each SHALL include a `log-event.mjs` command example
-- **AND** command examples SHALL use the absolute bundle root and the absolute path to `DPT_FRAMEWORK/cli/log-event.mjs`
-- **AND** command examples SHALL use lowercase `--level info|warn|error` values accepted by `log-event.mjs`
-- **AND** each `--detail` JSON example SHALL include `kind`, `slotKey`, and `roleAgentKey`
-- **AND** the prompt SHALL specify `info` for progress, `warn` for degraded, and `error` for failure
-- **AND** the prompt SHALL state what NOT to log (raw page content, full search bodies, private reasoning)
-
-#### Scenario: Sub-agent can follow logging instructions
-- **WHEN** a sub-agent reads the spawn prompt
-- **THEN** it SHALL know exactly which CLI command shape to use for each event type
-- **AND** it SHALL know the target path (`_logs/run.log` in bundle root)

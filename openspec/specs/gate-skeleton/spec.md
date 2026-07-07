@@ -8,35 +8,13 @@
 ## Requirements
 ### Requirement: Gate definition JSON skeleton structure
 
-每个 `gate-<name>.definition.json` SHALL 包含以下顶层字段：
+Gate definition JSON SHALL preserve the existing skeleton shape while allowing work-unit provenance rules to name wave, kind, output scope, and required coverage. Rule targets for delegated outputs SHALL be ledger-first and SHALL NOT target non-work-unit delegated directories as coverage authority.
 
-| Field | Required | Meaning |
-|-------|----------|---------|
-| `gate` | yes | Gate key，MUST 匹配 phase metadata 中的 `gate` 值（如 `wave0-complete`） |
-| `description` | yes | 该 gate 保护什么的简短说明 |
-| `rules` | yes | 有序 deterministic check 数组；骨架阶段至少包含 1 个占位 rule |
+#### Scenario: work-unit rule target is accepted
 
-每个 rule SHALL 包含：
-
-| Field | Required | Meaning |
-|-------|----------|---------|
-| `id` | yes | 稳定 rule identifier（如 `wave0_artifact_index`） |
-| `check` | yes | Check type；合法值包括 `file_exists`、`yaml_parse`、`jsonl_parse`、`field_non_empty`、`field_value`、`trace_event_present`、`trace_has_events`、`status_value`、`dir_non_empty`、`count_min`、`placeholder`、`output_declaration_ledger_exists`、`output_declaration_coverage`、`subagent_slot_presence` |
-| `target` | yes | 被检查的 file/state path、field、glob 或 trace query |
-| `threshold` | no | Count 或 ratio 的 comparison value；不适用时为 `null` |
-| `failure_message` | yes | 指向 Agent 的 repair guidance |
-
-Gate definition JSON SHALL 不编码只有 Agent 能做的 semantic research judgment。
-
-#### Scenario: Gate definition is parseable
-
-- **WHEN** `JSON.parse` 读取 `gate-wave0-complete.definition.json`
-- **THEN** result MUST 包含 `gate`、`description`、`rules` 三个 key，`rules` MUST 是数组且长度 ≥ 1
-
-#### Scenario: Gate definition has correct gate key
-
-- **WHEN** `gate-wave0-complete.definition.json` 被加载
-- **THEN** `gate` 字段的值 MUST 为 `wave0-complete`
+- **WHEN** a gate definition includes `check: "work_unit_output_coverage"` for Wave1 topic deepening
+- **THEN** gate definition validation SHALL accept the rule shape
+- **AND** the rule SHALL identify the required wave/kind/output scope
 
 ### Requirement: Gate CLI skeleton shape
 
@@ -106,6 +84,12 @@ CLI SHALL NOT 通过统一入口加 subcommand 区分 gate。内部 shared helpe
 
 Before the deterministic rule loop, Wave0/Wave1/Wave2 gate CLIs SHALL scan `source_url` field values in source YAML and reference artifacts. If any `source_url` value contains `${` (indicating an unexpanded template variable), the gate SHALL emit a `template_not_expanded` diagnostic identifying the affected file and field. This diagnostic SHALL NOT by itself fail the gate but SHALL appear in inspect output.
 
+#### Scenario: Template placeholder is reported before rule evaluation
+
+- **WHEN** a Wave gate CLI reads a source or reference artifact whose `source_url` contains `${`
+- **THEN** the gate output SHALL include a `template_not_expanded` diagnostic identifying the affected file and field
+- **AND** that diagnostic SHALL NOT by itself fail the gate
+
 ### Requirement: Gate helpers SHALL provide actionable parse error diagnostics and deterministic repair
 
 When gate helpers read YAML or JSON files, parse failures SHALL produce diagnostics that distinguish "file does not exist" from "file exists but cannot be parsed," SHALL include the file path, and SHALL include the parser error message with line/position. Generic "Cannot read or parse" messages SHALL be replaced.
@@ -116,69 +100,21 @@ For YAML files, gate helpers SHALL attempt deterministic repair for unescaped AS
 
 > **Write-side complement:** `workflow-node-contract` WNC-009 mandates `yaml.stringify()` / `JSON.stringify()` for all sub-agent outputs, eliminating malformations at the source. These read-side repairs handle legacy data and edge cases.
 
+#### Scenario: Parse failure exposes repairable diagnostics
+
+- **WHEN** a gate helper reads an existing YAML or JSON file that cannot be parsed
+- **THEN** the diagnostic SHALL include the file path and parser error detail
+- **AND** supported deterministic repairs SHALL be attempted before returning a final parse failure
+
 ### Requirement: Gate CLI evaluates rules from definition
 
-每个 gate CLI SHALL 加载 gate definition JSON，遍历 rules，并在 `currentNodeRef` 与 gate 绑定校验通过后执行 deterministic check。规则执行结果 SHALL 决定 `passed` 或 `failed`，并且该 outcome SHALL 被送入详细 router 生成 `routing` 与 `check.next`。
+Gate CLIs SHALL evaluate work-unit provenance checks from definitions through shared gate helpers. They SHALL preserve exit-code conventions and double trace/audit behavior while refusing gate pass from filesystem-only work-unit artifacts or non-work-unit delegated artifacts.
 
-当前 GSK-004 的覆盖范围包括 9 个已实现的 gate CLI：
-- `check-gate-instantiation-complete.mjs`：完整 rule set（~11 条），支持 `dir_exists`、`pattern_match`、`status_value` check type
-- `check-gate-hitl1-recorded.mjs`：definition-driven rule evaluation（~6 条），支持 `field_non_empty`、`field_value` check type
-- `check-gate-setup-ready.mjs`：definition-driven rule evaluation（~7 条），支持 `cross_field` check type
-- `check-gate-seed-topics-ready.mjs`（新增）：definition-driven rule evaluation（~7 条），新增 `dir_non_empty` check type 和 `cross_field` 的 `slug_consistency` mode
-- `check-gate-wave0-complete.mjs`：从 placeholder pass 升级为完整 rule evaluation（~7 条），新增 `count_floor`、`trace_event_present` check type
-- `check-gate-wave1-complete.mjs`：从 placeholder pass 升级为完整 rule evaluation（~7 条），新增 `pattern_match` check type（用于 false completion claim 检测）
-- `check-gate-wave2-complete.mjs`：从 placeholder pass 升级为完整 rule evaluation（~6 条），新增 `cross_field` 引用链验证
+#### Scenario: filesystem-only output fails gate rule
 
-所有 CLI SHALL 复用 `DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs` 的 `parseGateCliArgs`、`validateNodeGateBinding`、`resolveRouting`、`buildGateResult`、`emitGateResult`。
-
-#### Scenario: All seven pre-research and wave gate CLIs evaluate real rules
-
-- **WHEN** 任一 pre-research 或 wave gate CLI（instantiation-complete, hitl1-recorded, setup-ready, seed-topics-ready, wave0-complete, wave1-complete, wave2-complete）被调用
-- **THEN** CLI SHALL 加载对应的 gate definition JSON
-- **AND** CLI SHALL 遍历 definition 中的 rules 数组
-- **AND** CLI SHALL NOT 在无规则时恒返回 `passed: true`
-
-#### Scenario: Wave0 gate CLI no longer hardcoded pass
-
-- **WHEN** `check-gate-wave0-complete.mjs` 被调用且 reference 不满足所有 rules
-- **THEN** CLI SHALL return `passed: false` with inspect/advice
-- **AND** CLI SHALL NOT return `passed: true` without evaluating all rules
-
-#### Scenario: Wave1 gate CLI no longer hardcoded pass
-
-- **WHEN** `check-gate-wave1-complete.mjs` 被调用且 skeleton marker 缺失或存在 false claim
-- **THEN** CLI SHALL return `passed: false` with inspect/advice
-- **AND** CLI SHALL NOT return `passed: true` without evaluating all rules
-
-#### Scenario: Wave2 gate CLI no longer hardcoded pass
-
-- **WHEN** `check-gate-wave2-complete.mjs` 被调用且 synthesis 为空或引用链不满足
-- **THEN** CLI SHALL return `passed: false` with inspect/advice
-- **AND** CLI SHALL NOT return `passed: true` without evaluating all rules
-
-#### Scenario: Gate CLI queries router for next
-
-- **WHEN** `check-gate-instantiation-complete.mjs --bundle dpt_rb_x --current-node phases/phase-instantiation.md` 被调用且所有 rule pass
-- **THEN** output 的 `routing` SHALL 由详细 router 提供
-- **AND** output 的 `check.next` SHALL mirror `routing.next` when `routing.kind === 'next'`
-- **AND** SHALL NOT 通过 CLI flag 注入 next
-
-#### Scenario: Gate CLI returns next=null when router has no match
-
-- **WHEN** gate CLI 调用详细 router 且 transition table 中无匹配 entry
-- **THEN** output 的 `routing.kind` SHALL be `no_transition`
-- **AND** output 的 `check.next` SHALL 为 `null`
-
-#### Scenario: Terminal routing is preserved
-
-- **WHEN** gate CLI 调用详细 router 且 transition table 返回终态
-- **THEN** output 的 `routing.kind` SHALL be `terminal`
-- **AND** output 的 `check.next` SHALL 为 `null`
-
-#### Scenario: Binding mismatch is rejected
-
-- **WHEN** `current-node` 与 gate definition / manifest 声明的绑定不一致
-- **THEN** CLI SHALL 以 exit(2) 退出，并 SHOULD 返回 inspect/advice 说明 mismatch
+- **WHEN** a gate rule evaluates delegated output coverage
+- **AND** only filesystem output exists without submitted work-unit ledger coverage
+- **THEN** the gate CLI SHALL fail that rule
 
 ### Requirement: Gate CLI accepts agent-reported attempt hint for fatigue diagnostics
 
@@ -427,53 +363,6 @@ The same validator or companion regression SHALL fail if a covered gate definiti
 - **THEN** the validator SHALL fail
 - **AND** the failure SHALL name the stale rule or gate definition
 
-### Requirement: Engine-derived gate attempt diagnostics (GSK-008)
-
-Gate result construction SHALL include Engine-derived attempt diagnostics based on trace and diagnostic artifacts, not solely on Agent-reported `--attempt`.
-
-The diagnostics SHALL include:
-
-- `attempt_count`: count of relevant attempts for the current gate in the current phase context;
-- `attempt_trend`: one of `first`, `converging`, `stalled`, or `regressed`;
-- `newly_passing`: rule IDs that failed in the previous comparable attempt and now pass;
-- `still_failing`: rule IDs that failed in both previous and current comparable attempts;
-- `regressed`: rule IDs that previously passed and now fail.
-
-`attempt_count` SHALL be scoped to the current node entry: it counts comparable attempts for the same gate/currentNodeRef after the latest relevant `load_complete(entry=<currentNodeRef>)`. Historical attempts before a later node re-entry SHALL NOT inflate a fresh phase attempt count.
-
-Delta diagnostics SHALL prefer stable rule identifiers from `failed_rule_ids` in the current result or prior diagnostic artifact. Human-readable `inspect` prose MAY be used only as a legacy fallback; new rule-level diagnostics SHOULD expose stable IDs so wording changes do not corrupt `newly_passing`, `still_failing`, or `regressed`.
-
-When a gate passes after the fatigue threshold, the gate result SHALL include stop-mode-safe autonomous continuation advice: `check.next` must be consumed through `enter-phase`, final delivery happens at `phase-final`, and high gate friction does not authorize premature chat synthesis.
-
-The existing `--attempt N` flag SHALL remain accepted as an Agent-reported hint, but it SHALL NOT be the authoritative source for the Engine-derived attempt diagnostics.
-
-#### Scenario: High-attempt pass emits autonomous continuation advice
-
-- **WHEN** a gate passes after the Engine-derived attempt count reaches the fatigue threshold
-- **THEN** the gate result SHALL include advice telling the Agent to consume `check.next` through `enter-phase`
-- **AND** the advice SHALL state that final report delivery occurs at `phase-final`
-- **AND** the advice SHALL NOT ask the user whether to continue
-
-#### Scenario: Delta diagnostics report converging repair
-
-- **WHEN** the current gate attempt fixes at least one rule that failed in the previous comparable attempt
-- **THEN** the gate result or diagnostic artifact SHALL list that rule ID under `newly_passing`
-- **AND** `attempt_trend` SHALL be `converging` unless other regressions dominate
-
-#### Scenario: Attempt count resets after node re-entry
-
-- **WHEN** trace contains older attempts for a gate before the latest `load_complete(entry=<currentNodeRef>)`
-- **AND** the current gate is run after that node re-entry
-- **THEN** `attempt_count` SHALL exclude the older pre-entry attempts
-- **AND** fatigue advice SHALL be based on the current entry window rather than stale historical friction
-
-#### Scenario: Delta diagnostics use stable failed rule IDs
-
-- **WHEN** a prior diagnostic artifact contains `failed_rule_ids`
-- **AND** the current gate result contains `failed_rule_ids`
-- **THEN** `newly_passing`, `still_failing`, and `regressed` SHALL be computed from those stable IDs
-- **AND** changes to `inspect` prose SHALL NOT change the delta classification
-
 ### Requirement: Cascade-masked diagnostics remain non-authority (GSK-008)
 
 Wave0 gate diagnostics SHALL mark downstream rule failures as masked when an upstream per-topic parse or schema failure makes those downstream checks non-independent.
@@ -516,3 +405,24 @@ Gate CLIs SHALL NOT encode morale, fatigue, reassurance, or continuation encoura
 - **WHEN** a gate passes after many attempts and emits autonomous-continuation advice
 - **THEN** the process exit code SHALL remain the normal pass code
 - **AND** advice SHALL carry the continuation reminder that `check.next` must be consumed through the accepted handoff path
+
+### Requirement: Gate definitions expose work-unit provenance check types
+
+Gate definitions SHALL support the production check types `work_unit_ledger_exists`, `work_unit_output_coverage`, `work_unit_submission_presence`, and `delegated_bypass_suspected`. Active production gate definitions SHALL NOT use unsupported delegated-provenance check names.
+
+#### Scenario: unsupported delegated provenance check fails definition hygiene
+
+- **WHEN** an active gate definition contains an unsupported delegated-provenance check name
+- **THEN** gate definition validation SHALL fail
+- **AND** the diagnostic SHALL require `work_unit_submission_presence`
+
+### Requirement: Engine-derived gate attempt diagnostics
+
+Engine-derived diagnostics SHALL include work-unit mismatch details for failed provenance checks, including `work_id`, `queue_item_id`, wave, kind, ledger ref, index ref, manifest ref, result ref, receipt ref, beacon ref, and hash mismatch details when available.
+
+#### Scenario: diagnostic includes binding refs
+
+- **WHEN** `work_unit_submission_presence` fails because a receipt nonce differs
+- **THEN** the gate diagnostic SHALL identify the conflicting work-unit surfaces
+- **AND** it SHALL not require non-work-unit delegated channel keys
+

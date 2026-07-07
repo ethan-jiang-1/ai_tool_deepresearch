@@ -4,12 +4,10 @@
 ## Purpose
 
 Gate 失败 -> repair checkpoint 更新结构化状态 -> 重回 Gate 重判。含防无限循环机制。Repair loop 逻辑实现在 `subagent-relay.mjs` 的 `convergeRepair()` 中；`gate-loop.mjs` 和 `gate-fork.mjs` 是单一函数导出（`checkGate` / `forkGate`），不包含 repair loop。
-
 ## Requirements
-
 ### Requirement: Repair checkpoint updates state and loops back to gate
 
-After repair checkpoint execution via `convergeRepair()` in `subagent-relay.mjs`, the workflow state SHALL re-enter the gate for deterministic re-evaluation. The repair checkpoint MAY apply the currently accepted deterministic state transform, but it SHALL NOT execute an Agent-facing workflow node body or own semantic repair strategy.
+After repair checkpoint execution via `convergeRepair()`, the workflow state SHALL re-enter the gate for deterministic re-evaluation. The repair checkpoint MAY apply the currently accepted deterministic state transform, but it SHALL NOT execute an Agent-facing workflow node body, own semantic repair strategy, or act as delegated-work transport.
 
 #### Scenario: Repair checkpoint fixes the issue on first attempt
 
@@ -36,3 +34,4 @@ After repair checkpoint execution via `convergeRepair()` in `subagent-relay.mjs`
 
 - **WHEN** repair produces the same state hash as a previous iteration
 - **THEN** `convergeRepair()` returns an explicit stalled outcome and terminates early
+

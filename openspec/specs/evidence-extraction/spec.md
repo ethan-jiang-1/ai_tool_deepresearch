@@ -5,9 +5,7 @@
 ## Purpose
 
 Define the Engine-side evidence extraction capabilities for assessing reference quality, counting references, and validating cache trails through the output declaration ledger.
-
 ## Requirements
-
 ### Requirement: isCountable reference判定
 
 Engine SHALL 实现 `isCountable(ref)` 函数，返回 `{ countable: boolean, reason?: string }` 对象。当 `countable: true` 时表示该 reference 满足最低计数条件。满足以下全部条件方可计数：
@@ -78,59 +76,47 @@ Engine SHALL 实现 `countReferences(baseDir, options?)` 函数，用于 Engine 
 
 ### Requirement: ref_count 改为 Engine 计算
 
-`subagent-relay.mjs` 的 `mergeResults()` 函数 SHALL 使用 Engine-verifiable declared references to compute `ref_count`, MUST NOT 累加 Agent 的 `evidenceCount` 字段。生产路径中的 `ref_count` SHALL be derived from committed SlotResult declarations after schema validation and/or the Engine-written ledger, not from untrusted Agent numeric claims.
+Work-unit result processing SHALL use Engine-verifiable declared references to compute `ref_count` and MUST NOT accumulate an Agent-provided `evidenceCount` field. Production `ref_count` SHALL be derived from submitted work-unit result declarations after schema validation and/or the Engine-written ledger, not from untrusted Agent numeric claims.
 
-Gate 的 `count_floor` 规则 SHALL 通过 `countReferences()` 获取实际 reference 数，MUST NOT 仅依赖 filesystem glob（glob 数所有文件，不区分是否可计数）。
+Gate `count_floor` rules SHALL use `countReferences()` to obtain actual reference counts and MUST NOT rely only on filesystem globbing.
 
-Gate checks that need authoritative Agent-produced content inputs, including `content_dedup`, SHALL continue to consume `rb_output_declarations.jsonl` rather than switching to directory scan. `count_floor` using Engine count does not change ledger as the Source of Record for declared outputs; it only changes how declared references are filtered for countability.
+Gate checks that need authoritative Agent-produced content inputs, including `content_dedup`, SHALL continue to consume `rb_output_declarations.jsonl` rather than switching to directory scans. `count_floor` using Engine count does not change ledger as the Source of Record for declared outputs; it only changes how declared references are filtered for countability.
 
-#### Scenario: mergeResults uses Engine-computed ref_count
-- **WHEN** Sub-agent relay 完成 wave0 source intake
-- **AND** committed SlotResult / ledger declares 8 reference 文件但只有 6 个 `isCountable()`
-- **THEN** `mergeResults()` 返回的 `ref_count` SHALL 为 `6`
+#### Scenario: work-unit submit path uses Engine-computed ref_count
+
+- **WHEN** Wave0 source intake submits a work-unit result and ledger row declaring 8 reference files but only 6 are `isCountable()`
+- **THEN** the Engine-computed `ref_count` SHALL be `6`
 
 #### Scenario: Agent evidenceCount is ignored even when larger
-- **WHEN** Sub-agent result declares `evidenceCount: 99`
-- **AND** committed declarations contain only 3 countable references
-- **THEN** `mergeResults()` SHALL return `ref_count: 3`
+
+- **WHEN** a sub-agent result declares `evidenceCount: 99`
+- **AND** submitted declarations contain only 3 countable references
+- **THEN** Engine-derived `ref_count` SHALL be `3`
 - **AND** the Agent numeric claim SHALL NOT affect branch routing
 
 ### Requirement: cache_trails 文件系统验证
 
-Engine SHALL 在 `validateDelegatedCompletion()` 中验证 `slotResult.cache_trails` 数组中的每个路径：
-1. 路径在 bundle 内（不 escape）
-2. 路径位于 `_cache/`
-3. 路径是 leaf source directory（不是仅包含 `sNN_*` children 的 parent）
-4. 目录存在
-5. 目录含 `websearch.json`、`page.md`、`meta.json` 三个文件
+Engine SHALL validate every path in a submitted work-unit result `cache_trails` array:
 
-验证通过的路径 SHALL 写入 `OutputDeclarationLedgerRecord.cache_trails`（保持 `z.array(z.string())` 格式——只存路径字符串）。unsafe / non-leaf paths SHALL hard-fail delegated `complete()`。missing/incomplete leaf contents SHALL NOT 写入 ledger，Engine SHALL emit warning 到 trace/log during Phase 1.
+1. Path is inside the bundle and does not escape.
+2. Path is under `_cache/`.
+3. Path is a leaf source directory rather than a parent collection directory.
+4. Directory exists.
+5. Directory contains `websearch.json`, `page.md`, and `meta.json`.
 
-Gate `cache_coverage` 规则在门控时动态检查文件系统中路径是否仍然存在且完整——不依赖 ledger 中存储的验证状态。For each role=`reference` output file, `cache_coverage` SHALL also verify that at least one declared cache leaf plausibly maps to that reference by matching `meta.json.url` to the reference `source_url` and/or matching the cache leaf slug to `output_files[].source_slug` / reference filename qualifier. A declaration-level non-empty `cache_trails` array alone SHALL NOT prove per-reference provenance.
+Validated paths SHALL be written to `OutputDeclarationLedgerRecord.cache_trails` as `z.array(z.string())` path strings. Unsafe or non-leaf paths SHALL fail submit closed. Missing or incomplete leaf contents SHALL NOT be written to the ledger, and Engine SHALL emit warning diagnostics to trace/log during the staged enforcement period.
 
-#### Scenario: Valid cache trail written to ledger
-- **WHEN** slot result 的 `cache_trails` 含 `_cache/wave1/primary/topic-a/s01_source/`
-- **AND** 该目录存在且含 `websearch.json`、`page.md`、`meta.json`
-- **THEN** `OutputDeclarationLedgerRecord.cache_trails` SHALL 包含该路径字符串
+Gate `cache_coverage` rules SHALL dynamically check at gate time whether ledger cache trail paths still exist and remain complete. For each role=`reference` output file, `cache_coverage` SHALL also verify that at least one declared cache leaf plausibly maps to that reference by matching `meta.json.url` to the reference `source_url` and/or matching the cache leaf slug to `output_files[].source_slug` or reference filename qualifier. A declaration-level non-empty `cache_trails` array alone SHALL NOT prove per-reference provenance.
 
-#### Scenario: Incomplete cache trail not written to ledger, warning emitted
-- **WHEN** slot result 的 `cache_trails` 含路径但目录缺少 `page.md`
-- **THEN** 该路径 SHALL NOT 写入 `OutputDeclarationLedgerRecord.cache_trails`
-- **AND** Engine SHALL emit warning 到 trace/log，包含路径和缺失文件
+#### Scenario: valid cache trail written to ledger
 
-#### Scenario: Unsafe cache trail rejects completion
-- **WHEN** slot result 的 `cache_trails` 含绝对路径、bundle escape、非 `_cache/` 路径、或 parent cache directory
-- **THEN** delegated `complete()` SHALL reject the completion
-- **AND** Engine SHALL NOT append ledger output for that delegated completion
+- **WHEN** a work-unit result `cache_trails` entry names `_cache/wave1/primary/topic-a/s01_source/`
+- **AND** the leaf directory passes cache trail validation
+- **THEN** submit SHALL write that path string to `OutputDeclarationLedgerRecord.cache_trails`
 
-#### Scenario: Reference maps to its raw cache leaf
-- **WHEN** ledger declares `output_files: [{ path: "reference/topic-a-source-x.md", role: "reference", source_url: "https://example.com/a", source_slug: "source-x" }]`
-- **AND** `cache_trails` contains `_cache/wave1/primary/topic-a/s01_source-x/`
-- **AND** `_cache/wave1/primary/topic-a/s01_source-x/meta.json` has `url: "https://example.com/a"`
-- **THEN** `cache_coverage` SHALL treat that reference as cache-covered
+#### Scenario: unsafe cache trail rejects submit
 
-#### Scenario: Non-empty cache_trails without per-reference mapping fails coverage
-- **WHEN** ledger declares a role=`reference` output file with `source_url: "https://example.com/a"`
-- **AND** the same ledger record has non-empty verified `cache_trails`
-- **AND** none of those cache leaves has matching `meta.json.url`, `source_slug`, or filename qualifier for that reference
-- **THEN** `cache_coverage` SHALL fail or report a blocking coverage gap for that reference
+- **WHEN** a work-unit result declares a cache trail outside the bundle
+- **THEN** submit SHALL fail closed
+- **AND** no ledger row SHALL be appended
+

@@ -16,31 +16,14 @@ The `DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md` playbook SHALL in
 - **THEN** the playbook instructs the agent to report error and stop, not overwrite
 
 ### Requirement: Template files define minimal valid content
-The `DPT_FRAMEWORK/rb_templates/` directory SHALL contain template files with `{{name}}` placeholders. The agent SHALL replace `{{name}}` with the bundle name during instantiation.
 
-#### Scenario: Template for START_FROM_HERE.md
-- **WHEN** `DPT_FRAMEWORK/rb_templates/START_FROM_HERE.md.tmpl` is read
-- **THEN** it contains markdown with `{{name}}` placeholder, framework path reference, control file list, data directory map, and stop authorization rules
-
-#### Scenario: Template for rb_plan.md
-- **WHEN** `DPT_FRAMEWORK/rb_templates/rb_plan.md.tmpl` is read
-- **THEN** it contains JSON frontmatter with `"plan_basename": "{{name}}"`, `"derived_topic_count": 0`, `"topic_registry": []`, and a markdown body with placeholder sections
-
-#### Scenario: Template for rb_status.json
-- **WHEN** `DPT_FRAMEWORK/rb_templates/rb_status.json.tmpl` is read
-- **THEN** it contains valid JSON with `"current_mode": "execution"`, `"state": "not_started"`, `"current_gate": "setup_ready"`, `"next_gate": "seed_topics_ready"`
+The `DPT_FRAMEWORK/rb_templates/` directory SHALL contain template files with `{{name}}` placeholders. The Agent SHALL replace `{{name}}` with the bundle name during instantiation. The `rb_queue.json` template SHALL use the queue v2 shape with `schema_version`, ordered `active_window`, ordered `refill_pool`, `delegated_in_flight`, and `terminal_history`.
 
 #### Scenario: Template for rb_queue.json
+
 - **WHEN** `DPT_FRAMEWORK/rb_templates/rb_queue.json.tmpl` is read
-- **THEN** it contains valid JSON with `"queue_health": "ready"`, `"stop_authorization_state": "unauthorized_continue_required"`, 20 null slots (`slot_1_current` through `slot_20_tail`), and an empty `"refill_pool": []`
-
-#### Scenario: Template for rb_profile.yaml
-- **WHEN** `DPT_FRAMEWORK/rb_templates/rb_profile.yaml.tmpl` is read
-- **THEN** it contains valid YAML with `plan_basename: {{name}}`, `research_profile: not_selected`, empty `root_must_answer_set: []`, and `human_decision_checkpoints` with hitl1 `status: not_started` and hitl2 `status: not_started, answerability_class: not_assessed, user_decision: not_started, final_report_view: not_started` (matching ProfileSchema post schema-core-hitl)
-
-#### Scenario: Template for rb_trace.jsonl
-- **WHEN** `DPT_FRAMEWORK/rb_templates/rb_trace.jsonl` is read
-- **THEN** it is an empty file (0 bytes)
+- **THEN** it SHALL contain valid queue v2 JSON
+- **AND** it SHALL NOT expose the legacy top-level delegated queue shape as production queue authority
 
 ### Requirement: JS helper validate-bundle.mjs validates all control files
 The `DPT_FRAMEWORK/cli/validate-bundle.mjs` script SHALL read each control file, validate against its Zod schema, and exit with code 0 (PASS) or 1 (FAIL). The agent SHALL call it via `node DPT_FRAMEWORK/cli/validate-bundle.mjs <bundleDir>`.
@@ -84,3 +67,4 @@ The Agent MAY derive a kebab-case bundle name from the research request, use a n
 - **WHEN** a bundle name was supplied before framework execution begins
 - **THEN** the playbook MAY use that name as the command input
 - **AND** it SHALL still treat subsequent instantiation commands as Agent-run framework commands
+

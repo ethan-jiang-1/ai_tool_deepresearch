@@ -4,14 +4,12 @@
 ## Purpose
 
 Branch capability 表达 deterministic branch classification、state transform 和 repair checkpoint。它不是 Agent-facing workflow node execution；多阶段 Agent Flow 仍由 Markdown/Agent 承接。
-
 ## Requirements
-
 ### Requirement: Branch checkpoints apply deterministic state transforms
 
 Each branch checkpoint SHALL represent a deterministic state transform or feedback outcome. Branch logic MAY update structured state fields needed for checkpoint repair or dispatch, but SHALL NOT execute Agent-facing workflow node bodies or own multi-stage Agent Flow.
 
-Current `ForkStep` / `sharedRepairStep` names in `subagent-relay.mjs` are accepted implementation names for this deterministic checkpoint layer. They SHALL NOT be interpreted as workflow node bodies, Markdown node execution, or semantic repair strategy authority.
+Current fork/repair checkpoint helper names are accepted implementation names for this deterministic checkpoint layer. They SHALL NOT be interpreted as workflow node bodies, Markdown node execution, delegated-work transport, or semantic repair strategy authority.
 
 #### Scenario: Pass branch records next gate state
 
@@ -27,19 +25,6 @@ Current `ForkStep` / `sharedRepairStep` names in `subagent-relay.mjs` are accept
 
 - **WHEN** `fail_b` branch transform is applied
 - **THEN** state increments `ref_count` by 1 without changing `topicReadiness`
-
-#### Scenario: Blocked branch records HITL boundary
-
-- **WHEN** `blocked` branch transform is applied
-- **THEN** state records the blocked/HITL marker required by the branch contract, such as `current_gate: 'blocked_hitl'`
-
-#### Scenario: Shared repair transform handles both failure types
-
-- **WHEN** shared repair transform is applied
-- **AND** state has `ref_count < ref_floor`
-- **THEN** shared repair increases `ref_count` toward `ref_floor`
-- **AND** when state has `topicReadiness === 'not_ready'`, shared repair sets `topicReadiness` to `'ready'`
-- **AND** when state has `topicReadiness === 'blocked'`, shared repair does not override the human-required boundary
 
 ### Requirement: Branch transforms are independently testable
 
@@ -63,3 +48,4 @@ A branch map in the deterministic Engine layer SHALL allow resolving branch iden
 
 - **WHEN** an unrecognized branch identifier is encountered
 - **THEN** an error is thrown with the message containing the unknown branch key
+

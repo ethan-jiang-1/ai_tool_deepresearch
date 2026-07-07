@@ -8,49 +8,12 @@ Define a unified append-only JSONL trace writer at `DPT_FRAMEWORK/engine/trace.m
 ## Requirements
 ### Requirement: Unified trace writer with configurable behavior
 
-The system SHALL provide a single trace writer module at `DPT_FRAMEWORK/engine/trace.mjs` that replaces all per-prototype copies. It SHALL expose a `createTrace(filePath, options?)` factory accepting:
+The unified trace writer SHALL continue to append JSONL events with configurable behavior. Examples for delegated work SHALL use queue and work-unit lifecycle events as the diagnostic vocabulary.
 
-- `consoleEcho` (boolean, default `true`): whether `traceEntry()` echoes colored output to console
-- `icons` (object, optional): custom icon set for log prefix formatting; if omitted, a default set SHALL be used
+#### Scenario: work-unit trace example is appended
 
-The returned trace object SHALL expose the API:
-- `traceFilePath()` — return the bound file path (set at creation time)
-- `traceInit(label, detail?)` — create/clear the trace file and write a `run_start` event
-- `traceEntry(event, detail?)` — append a JSONL line with `ts`, `event`, and optional `detail`; may echo colored output to console (controlled by `consoleEcho` option)
-- `traceSummary()` — read the file and return `{ events: Array, passed: number, failed: number }`
-- `traceCleanup()` — delete the trace file
-
-#### Scenario: Create trace with default options
-
-- **WHEN** calling `createTrace(path)` without options
-- **THEN** `traceEntry()` SHALL echo colored `[trace]` output to console
-- **AND** a default icon set SHALL be used for log prefix formatting
-
-#### Scenario: Create trace with console echo disabled
-
-- **WHEN** calling `createTrace(path, { consoleEcho: false })`
-- **THEN** `traceEntry()` SHALL silently append to the JSONL file without console output
-
-#### Scenario: Create trace with custom icons
-
-- **WHEN** calling `createTrace(path, { icons: { node_start: '▶', node_complete: '✓' } })`
-- **THEN** `traceEntry()` SHALL use the custom icons for log prefix formatting
-
-#### Scenario: traceInit writes run_start event
-
-- **WHEN** `traceInit(label, detail?)` is called on a trace instance created via `createTrace(path)`
-- **THEN** the trace file SHALL be created/cleared
-- **AND** a `run_start` event SHALL be written as the first line, with the given label and detail
-
-#### Scenario: traceEntry appends valid JSONL
-
-- **WHEN** `traceEntry('check', { passed: true, detail: 'slot_2 promoted' })` is called
-- **THEN** a JSON line SHALL be appended containing `{"ts":"...","event":"check","passed":true,"detail":"slot_2 promoted"}` (plus any extra fields from `detail`)
-
-#### Scenario: traceSummary aggregates check events
-
-- **WHEN** `traceSummary()` is called after writing multiple `check` events (some passed, some failed)
-- **THEN** it SHALL return `{ events: <all trace entries as Array>, passed: <count of passed=true>, failed: <count of passed=false> }`
+- **WHEN** `traceEntry('work_unit_submit', { passed: true, detail: 'submitted work unit' })` is called
+- **THEN** a JSON line SHALL be appended with the event, pass state, detail, timestamp, and configured trace fields
 
 ### Requirement: Trace writer paired with schema validation
 
@@ -71,28 +34,18 @@ When `writeGateAttempt()` writes a `gate_attempt` event to `rb_trace.jsonl`, the
 - **WHEN** a gate fails and `writeGateAttempt()` is called
 - **THEN** the `rb_trace.jsonl` `gate_attempt` entry SHALL include `diagnostic_path` and `phase`
 
-### Requirement: Trace SHALL capture relay bypass suspicion
-
-The system SHALL define a `relay_bypass_suspected` trace event written automatically by gate CLI when phase artifacts indicate evidence/search work but matching phase-scoped relay provenance markers are absent. Detection is phase-aware: Wave0/Wave1 trigger on current-wave artifacts without provenance; Wave2 only triggers on search/evidence/reference outputs. The event is diagnostic only and SHALL NOT cause filesystem-only artifacts to count toward gate pass.
-
-#### Scenario: Relay bypass suspicion recorded in trace
-
-- **WHEN** gate evaluation detects artifacts without relay provenance
-- **THEN** a `relay_bypass_suspected` event SHALL be appended to `rb_trace.jsonl`
-- **AND** the event SHALL include what was found and what was missing
-
 ### Requirement: Trace entries include bundle field
 
 All modules writing to `rb_trace.jsonl` SHALL include `bundle` where the existing trace contract requires it. The value SHALL be derived from active bundle state, normally `rb_status.json`, not from chat memory.
 
 #### Scenario: Queue trace includes bundle
 
-- **WHEN** `queue-manager.mjs` writes a queue lifecycle event
+- **WHEN** queue Engine code writes a queue lifecycle event
 - **THEN** the JSONL entry SHALL include the bundle identifier
 
-#### Scenario: Subagent trace includes bundle
+#### Scenario: Work-unit trace includes bundle
 
-- **WHEN** `subagent-relay.mjs` writes a relay lifecycle event
+- **WHEN** work-unit lifecycle code writes claim, submit, terminal, inspect, or provenance events
 - **THEN** the JSONL entry SHALL include the bundle identifier
 
 #### Scenario: Independent CLI processes agree on bundle
@@ -117,30 +70,12 @@ All modules writing to `rb_trace.jsonl` SHALL include `bundle` where the existin
 
 System SHALL use bundle root `rb_trace.jsonl` as the only trace JSONL sink for runtime audit events and command experiment verdict check events.
 
-All trace writers SHALL append to `rb_trace.jsonl`:
+All trace writers SHALL append to `rb_trace.jsonl`, including bundle creation, gate attempt writing, Agent log events that also need trace, status advancement, queue lifecycle, work-unit lifecycle, provenance diagnostics, and playbook check/verdict utilities.
 
-- bundle creation `traceInit()`
-- gate attempt writing
-- `log-event.mjs`
-- `advance-status.mjs`
-- `queue-manager.mjs`
-- `subagent-relay.mjs`
-- `wff-playbook-utils.mjs` `recordCheck()` / `verdict()`
+#### Scenario: Work-unit events use bundle trace
 
-No code path SHALL write, read, require, or document another trace JSONL as trace truth. `inspect-bundle.mjs --timeline` SHALL read trace events only from `rb_trace.jsonl`; it MAY read `_logs/run.log` as process log context, but not as trace truth.
-
-#### Scenario: All touched writers append to rb_trace.jsonl
-
-- **WHEN** a bundle executes queue operations, relay operations, gate checks, and playbook verdict checks
-- **THEN** updated trace events SHALL appear in bundle root `rb_trace.jsonl`
-- **AND** updated code SHALL NOT create any other trace JSONL
-
-#### Scenario: inspect-bundle timeline uses rb_trace as trace truth
-
-- **WHEN** `inspect-bundle.mjs --timeline` runs
-- **THEN** trace events SHALL come from `rb_trace.jsonl`
-- **AND** `_logs/run.log` MAY provide process log context only
-- **AND** no trace sink labels such as `[queue]` or `[subagent]` SHALL be required
+- **WHEN** a work-unit claim or submit event is recorded
+- **THEN** it SHALL be appended to bundle-root `rb_trace.jsonl`
 
 ### Requirement: Trace path unification SHALL update specs and playbook infrastructure
 
@@ -161,3 +96,14 @@ Command experiment verdict events SHALL use `event: "check"` with boolean `passe
 - **WHEN** playbook schema/tests validate trace path references
 - **THEN** they SHALL expect `rb_trace.jsonl`
 - **AND** they SHALL reject any other trace JSONL references in updated playbooks
+
+### Requirement: Trace SHALL capture delegated bypass suspicion
+
+The system SHALL define delegated bypass trace diagnostics written by gate or inspect CLIs when phase artifacts indicate evidence/search work but matching submitted work-unit coverage is absent. The diagnostic event name SHALL be `delegated_bypass_suspected`. Detection SHALL be phase-aware and SHALL remain diagnostic only; filesystem-only artifacts SHALL NOT count toward gate pass.
+
+#### Scenario: delegated bypass suspicion recorded in trace
+
+- **WHEN** gate evaluation detects delegated artifacts without submitted work-unit coverage
+- **THEN** a `delegated_bypass_suspected` event SHALL be appended to `rb_trace.jsonl`
+- **AND** the event SHALL include what was found and what work-unit coverage was missing
+
