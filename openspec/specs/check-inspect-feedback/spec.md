@@ -19,11 +19,22 @@ Every state mutation SHALL be validated with a Zod schema before being persisted
 - **THEN** Check returns `{ ok: false, error: "..." }` and the state is NOT persisted
 
 ### Requirement: Inspect diagnoses Check failures and generates feedback
-When Check fails, the Inspect step SHALL generate a structured diagnostic report describing what failed and why, suitable as feedback to the LLM.
 
-#### Scenario: Diagnostic report from Check failure
-- **WHEN** Zod validation fails on a QueueWorkUnit missing `producer_rule`
-- **THEN** Inspect produces a diagnostic: `{ field: "producer_rule", issue: "required field missing", fix: "add producer_rule value" }`
+When Inspect reports multiple failures from the same checkpoint, it SHALL distinguish root causes from downstream symptoms whenever the Engine can determine the dependency. Root-cause diagnostics SHALL appear before symptom diagnostics in the Agent-facing feedback surface.
+
+Feedback SHALL preserve complete diagnostic detail in durable artifacts when available, but the primary `inspect[]` and `advice[]` surfaces SHALL give the Agent concise next repair targets. Advice SHALL avoid telling the Agent to perform manual edits to deterministic authority files when a valid Engine path is required.
+
+#### Scenario: Root cause is listed before symptoms
+
+- **WHEN** a cache coverage failure causes downstream provenance coverage symptoms
+- **THEN** Inspect SHALL present cache coverage as the root cause first
+- **AND** downstream symptoms SHALL identify their upstream cause when known
+
+#### Scenario: Advice stays actionable
+
+- **WHEN** a checkpoint returns many related failures
+- **THEN** advice SHALL group related symptoms under a small number of repair targets
+- **AND** advice SHALL NOT contain multiple conflicting manual repair instructions for authority files
 
 ### Requirement: Feedback drives reflection and correction
 The diagnostic from Inspect SHALL be returned to the repair checkpoint or LLM as structured feedback. After correction, the state SHALL re-enter Check.

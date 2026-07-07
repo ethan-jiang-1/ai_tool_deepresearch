@@ -1,6 +1,6 @@
 # Research Wave Gate Implementation
 
-> req: RWG-001, RWG-002, RWG-003, RWG-004, RWG-005, RWG-006, RWG-007, RWG-008, RWG-009, RWG-010, RWG-011, RWG-012, RWG-013, RWG-014, RWG-015, RWG-016
+> req: RWG-001, RWG-002, RWG-003, RWG-004, RWG-005, RWG-006, RWG-007, RWG-008, RWG-009, RWG-010, RWG-011, RWG-012, RWG-013, RWG-014, RWG-016
 
 ## Purpose
 
@@ -140,67 +140,13 @@ Gate rules added:
 - **WHEN** `rb_plan.md` body contains `(待 HITL1 填充 — …)` or `(由 Engine — …)` but NO `(待填充 — …)` or `(尚无话题 — …)` markers
 - **THEN** `plan_body_no_unfilled_marker` rule SHALL pass
 
-### Requirement: content_dedup rule SHALL be added to wave0 and wave1 gate definitions
-
-`gate-wave0-complete.definition.json` and `gate-wave1-complete.definition.json` SHALL each include a `content_dedup` rule.
-
-The rule SHALL target declaration ledger inputs, not a reference directory:
-
-```json
-{
-  "id": "content_dedup",
-  "check": "content_dedup",
-  "target": "output_declarations",
-  "threshold": {
-    "jaccard": 0.8,
-    "url_dedup": true,
-    "homepage_detect": true,
-    "self_ref_detect": true
-  },
-  "failure_message": "检测到虚假或重复 reference 文件"
-}
-```
-
-Gate CLIs (`check-gate-wave0-complete.mjs`, `check-gate-wave1-complete.mjs`) SHALL dispatch `content_dedup` to `checkContentDedup(bundlePath, rule.threshold)`. They SHALL NOT pass `referenceDir` as the input discovery surface.
-
-#### Scenario: Wave0 gate includes content_dedup in rule set
-
-- **WHEN** `check-gate-wave0-complete.mjs` evaluates the wave0 gate definition
-- **THEN** the `content_dedup` rule SHALL be evaluated alongside existing rules
-- **AND** a `content_dedup` failure SHALL cause the gate to fail
-
-#### Scenario: Wave1 gate includes content_dedup in rule set
-
-- **WHEN** `check-gate-wave1-complete.mjs` evaluates the wave1 gate definition
-- **THEN** the `content_dedup` rule SHALL be evaluated alongside existing rules
-- **AND** a `content_dedup` failure SHALL cause the gate to fail
-
-#### Scenario: content_dedup rule definition survives schema validation
-
-- **WHEN** `DPT_FRAMEWORK/cli/validate-bundle.mjs` validates gate definitions
-- **THEN** the `content_dedup` rule with `target: "output_declarations"` and `threshold` object SHALL pass schema validation
-
-#### Scenario: CLI dispatches content_dedup by bundle path
-
-- **WHEN** gate CLI iteration sees `check: "content_dedup"`
-- **THEN** it SHALL call `checkContentDedup(bundlePath, rule.threshold)`
-- **AND** `checkContentDedup()` SHALL read `rb_output_declarations.jsonl` itself
-
-### Requirement: Wave gates reject mixed delegated provenance paths
-
-Wave gate CLIs SHALL fail when the same phase mixes submitted work-unit coverage with non-work-unit authority for delegated outputs. Non-work-unit delegated artifacts may be reported for cleanup, but SHALL NOT supplement missing work-unit coverage.
-
-#### Scenario: mixed path fails hygiene
-
-- **WHEN** a wave has one submitted work-unit output and one non-work-unit-only delegated output
-- **THEN** the gate SHALL fail for the non-work-unit-only output
-- **AND** the diagnostic SHALL identify mixed delegated provenance
-
 ### Requirement: Wave gates SHALL return repair-targeted diagnostics for YAML shape, ledger-only counting, cache coverage, and hash drift
 
 Wave gate diagnostics SHALL identify the deterministic surface that failed and the next repair target. Diagnostics SHALL be specific enough for an Agent to repair the current phase without bypassing status or weakening gate authority.
 
-At minimum, wave gates SHALL distinguish YAML parse errors, top-level YAML object-vs-array errors, missing source fields, ledger-only reference counting gaps, cache trail mapping gaps, delegated bypass suspicion, and submitted work-unit hash drift.
+At minimum, wave gates SHALL distinguish YAML parse errors, top-level YAML object-vs-array errors, missing source fields, ledger-only reference counting gaps, cache trail mapping gaps, delegated bypass suspicion, submitted work-unit hash drift, and degraded-pass eligibility.
+
+Diagnostics SHALL classify known cascade symptoms under their root cause when the Engine can determine the dependency. The gate SHALL preserve full detail in diagnostic artifacts, but primary advice SHALL remain root-cause-first and SHALL NOT instruct manual edits to authority files.
 
 #### Scenario: YAML object wrapper receives shape-specific diagnostic
 
@@ -233,6 +179,7 @@ At minimum, wave gates SHALL distinguish YAML parse errors, top-level YAML objec
 - **WHEN** a submitted work-unit row fails index, manifest, result, receipt, beacon, output, cache, or hash cross-check
 - **THEN** the wave gate SHALL fail before pass
 - **AND** diagnostics SHALL name the `work_id`, failed binding surface, and repair path
+- **AND** advice SHALL not tell the Agent to hand-edit ledger or hash-bound result files
 
 #### Scenario: Gate friction does not advise phase bypass
 

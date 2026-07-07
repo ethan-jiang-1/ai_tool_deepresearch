@@ -1,6 +1,6 @@
 # Rerun Topic Integration
 
-> req: RTI-001, RTI-002, RTI-003, RTI-004, RTI-005, RTI-006
+> req: RTI-001, RTI-002, RTI-003, RTI-005, RTI-006
 
 ## Purpose
 
@@ -59,30 +59,35 @@ When `action: supplement` (adding dimensions to existing topic), maintain the cu
 
 ### Requirement: Gate content quality rules for reference files
 
-The wave1-complete gate SHALL include the following content quality rules providing semantic quality verification on top of structural checks:
+The wave1-complete gate SHALL include deterministic reference-file checks on top of structural checks. These checks SHALL avoid guess-based content and URL heuristics that can feed noisy repair instructions back to the Markdown Controller.
 
-1. **`source_url_article_level`**: reference file `source_url` SHALL point to article-level URL (path depth >= 2), SHALL NOT be homepage or shallow section URL (path is `/`, empty, `/index.*` only, or single segment like `/news/`). Detection scope: all `reference/*{topic}*.md` files on filesystem, independent of declaration ledger.
+The current gate-owned checks are:
 
-2. **`key_facts_min_lines`**: reference file `## Key Facts` section SHALL contain at least 5 lines starting with `- ` with substantive entries. Detection scope: all `reference/*{topic}*.md` files on filesystem.
+1. **`source_url_present` / parseable source metadata**: reference files SHALL include a non-empty, URL-parseable `source_url` metadata value. The gate SHALL NOT classify homepage-looking, shallow-path, duplicate-looking, or one-segment URLs as uncountable or invalid based on path-depth heuristics.
+
+2. **`key_facts_min_lines`**: reference file `## Key Facts` section SHALL contain at least 5 lines starting with `- ` with substantive entries. Detection scope: ledger-declared reference files for the current target.
 
 3. **`reference_format`**: reference files SHALL use metadata block (`- key: value`) and include 9 required metadata fields and 5 standard sections; YAML frontmatter SHALL fail.
 
 4. **`ledger_coverage`**: every `reference/*{topic}*.md` file on filesystem SHALL have a `role === 'reference'` declaration in `rb_output_declarations.jsonl`. If a filesystem reference file is not declared in the ledger, the gate SHALL fail. Filesystem is used only for orphan detection, not as provenance authority.
 
-#### Scenario: Homepage URL rejected by article-level check
+The gate SHALL NOT include `source_url_article_level`, `content_dedup`, duplicate URL, homepage/shallow URL, Jaccard similarity, or self-reference heuristics as blocking checks or diagnostic advice.
 
-- **WHEN** a reference file contains `source_url: https://m-en.yna.co.kr/`
-- **THEN** the `source_url_article_level` rule SHALL fail
-- **AND** inspect SHALL list the file path and homepage URL
+#### Scenario: Homepage-looking URL is not rejected by path depth
 
-#### Scenario: Article URL passes article-level check
+- **WHEN** a reference file contains URL-parseable `source_url: https://m-en.yna.co.kr/`
+- **AND** the file otherwise satisfies required metadata, section, ledger, cache, and provenance checks
+- **THEN** no `source_url_article_level` or homepage/shallow heuristic SHALL fail the gate
 
-- **WHEN** a reference file contains `source_url: https://m-en.yna.co.kr/view/AEN20260113007053315`
-- **THEN** the `source_url_article_level` rule SHALL pass
+#### Scenario: Invalid source URL is rejected as metadata shape
+
+- **WHEN** a reference file omits `source_url` or contains a value that is not URL-parseable
+- **THEN** the source metadata rule SHALL fail
+- **AND** inspect SHALL list the file path and source_url issue
 
 #### Scenario: Thin Key Facts section fails min-lines check
 
-- **WHEN** a reference file `## Key Facts` section contains only 3 lines with `- ` entries
+- **WHEN** a declared reference file `## Key Facts` section contains only 3 lines with `- ` entries
 - **THEN** the `key_facts_min_lines` rule SHALL fail
 - **AND** inspect SHALL list the file path and actual line count
 
@@ -92,30 +97,6 @@ The wave1-complete gate SHALL include the following content quality rules provid
 - **AND** `rb_output_declarations.jsonl` has only 3 `role === 'reference'` declarations pointing to that topic
 - **THEN** the `ledger_coverage` rule SHALL fail
 - **AND** inspect SHALL list undeclared file paths
-
-### Requirement: Gate shall not vacuously pass empty reference declarations
-
-`checkContentDedup()` SHALL NOT vacuously pass when the declaration ledger contains no `role === "reference"` entries.
-
-This check SHALL maintain ledger authority:
-- Use only `rb_output_declarations.jsonl` `role === "reference"` entries as dedup input
-- If ledger is missing or empty, fail closed
-- If ledger exists but has no reference declaration, fail closed
-- SHALL NOT scan filesystem and treat orphan reference files as valid dedup input
-- Filesystem orphan references SHALL be failed by the `ledger_coverage` rule
-
-#### Scenario: Empty reference declarations fail closed
-
-- **WHEN** `rb_output_declarations.jsonl` exists but contains no `role === 'reference'` declaration
-- **THEN** `content_dedup` SHALL fail
-- **AND** inspect SHALL explain that no completed reference declarations are available
-
-#### Scenario: Orphan reference is caught by ledger coverage
-
-- **WHEN** filesystem contains a matching `reference/*{topic}*.md` file
-- **AND** no declaration ledger entry declares that path
-- **THEN** `ledger_coverage` SHALL fail
-- **AND** `content_dedup` SHALL still not use the orphan file as a dedup input
 
 ### Requirement: Rerun-produced files SHALL be traceable to rerun intent or declared provenance
 

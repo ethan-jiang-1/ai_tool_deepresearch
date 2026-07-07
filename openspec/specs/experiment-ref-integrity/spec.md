@@ -1,6 +1,6 @@
 # experiment-ref-integrity Specification
 
-> req: EXR-001, EXR-002, EXR-003, EXR-004, EXR-005, EXR-006
+> req: EXR-001, EXR-002, EXR-004, EXR-005, EXR-006
 
 ## Purpose
 
@@ -14,15 +14,6 @@ case-401 SHALL verify the positive work-unit Agent-Engine boundary path: queue d
 
 - **WHEN** case-401 runs
 - **THEN** its delegated completion SHALL use `operate-work-unit submit`
-
-### Requirement: case-403 SHALL verify content_dedup via Engine-generated ledger
-
-case-403 SHALL verify content checks through Engine-generated work-unit ledger rows and SHALL reject direct/orphan files without submitted coverage.
-
-#### Scenario: content check uses submitted ledger
-
-- **WHEN** duplicate content is present only in orphan files
-- **THEN** the case SHALL not treat those files as accepted delegated coverage
 
 ### Requirement: case-404 SHALL verify queue boundary contract
 

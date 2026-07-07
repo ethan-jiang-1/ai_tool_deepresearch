@@ -102,6 +102,8 @@ Current diagnostics SHALL NOT use retired channel keys, non-work-unit paths, or 
 
 Current provenance identity SHALL prefer `work_id`, `queue_item_id`, `kind`, work-unit receipt nonce, submitted ledger row, and work-unit binding surfaces.
 
+When provenance drift is detected, the gate SHALL preserve valid submitted-row context where it can do so independently. A cache coverage failure SHALL NOT by itself make every otherwise hash-valid submitted ledger row unreadable. If a ledger row hash mismatch or manual row edit is detected, diagnostics SHALL distinguish that root cause from downstream missing-coverage symptoms.
+
 #### Scenario: mismatch diagnostic identifies work unit
 
 - **WHEN** a result hash mismatch is found for a submitted work unit
@@ -119,6 +121,20 @@ Current provenance identity SHALL prefer `work_id`, `queue_item_id`, `kind`, wor
 - **WHEN** a current provenance playbook or diagnostic mentions a retired delegated event
 - **THEN** that event SHALL be framed as retired or non-authoritative
 - **AND** submitted work-unit ledger and binding surfaces SHALL remain the only delegated provenance authority
+
+#### Scenario: manual ledger drift receives root-cause repair advice
+
+- **WHEN** a submitted ledger row fails hash verification or does not bind to `_work_units/_index.json`
+- **THEN** diagnostics SHALL identify ledger/manual-edit drift as the root cause
+- **AND** advice SHALL direct restoration, retry/replacement submit, or Engine-mediated ledger repair if available
+- **AND** advice SHALL NOT tell the Agent to edit `rb_output_declarations.jsonl` by hand
+
+#### Scenario: cache coverage failure does not erase valid ledger context
+
+- **WHEN** a submitted work-unit ledger row is hash-valid but one declared cache trail leaf is missing
+- **THEN** the gate SHALL report cache coverage as its own failure
+- **AND** it SHALL preserve the ledger row's work-unit identity in diagnostics
+- **AND** it SHALL NOT report all submitted rows as absent solely because a cache file is missing
 
 ### Requirement: Gate SHALL emit work-unit nonce mismatch diagnostics
 

@@ -70,7 +70,9 @@ The existing `log-event.mjs` CLI SHALL be extended with a `--event` parameter fo
 
 ### Requirement: Enter phase CLI witnesses lifecycle node entry (CPT-003)
 
-The framework SHALL provide an Agent-facing `enter-phase.mjs` CLI for consuming a gate CLI `check.next` fileRef and rendering the next lifecycle node through the existing workflow loader.
+`enter-phase` SHALL treat a trace-durable degraded gate pass as a legal deterministic handoff witness when it has the same route-binding fields required for a clean pass: source gate, source node, target node, `passed: true`, non-null `next`, and durable trace position.
+
+The tooling SHALL preserve the degraded marker in diagnostics and SHALL NOT reinterpret degraded handoff as clean phase completion. A degraded handoff SHALL authorize loading the next Markdown control surface, but SHALL NOT prove target-phase work completion and SHALL NOT erase degraded quality context.
 
 Usage:
 
@@ -90,6 +92,19 @@ node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>
 - On successful `current_node` write, the CLI SHALL render the loaded dependency closure in plan order as Agent-readable Markdown on stdout so the Phase Agent can read that Markdown into conversation context and continue the Agent-driven loop. The Markdown SHALL use stable file-boundary markers for each rendered file and SHALL NOT mix JSON status into successful stdout.
 - On failure, including failure to write `current_node`, the CLI SHALL print diagnostic JSON, exit non-zero, and SHALL NOT report the phase entry as successful. If `load_complete` was already appended before a `current_node` write failure, diagnostics SHALL name the partial status-write failure and advise Engine-mediated retry or repair.
 - The CLI SHALL NOT choose the next node, mutate `rb_status.json#/current_gate`, mutate `rb_status.json#/next_gate`, append `phase_transition`, run gate checks, drive the lifecycle loop, execute Markdown instructions, execute research work, or write phase artifacts.
+
+#### Scenario: Enter phase accepts degraded source pass
+
+- **WHEN** the latest deterministic source gate attempt has `passed: true`, `degraded: true`, and `next: "phases/phase-wave1.md"`
+- **AND** `enter-phase --bundle <bundle> --node phases/phase-wave1.md` is called
+- **THEN** `enter-phase` SHALL accept the route if all normal predecessor binding checks pass
+- **AND** the resulting `load_complete` SHALL remain bound to the degraded source attempt index
+
+#### Scenario: Degraded marker alone is insufficient for entry
+
+- **WHEN** trace contains a degraded-looking event without `passed: true`, without non-null `next`, without route-bound source metadata, or without durable latest-source status
+- **THEN** `enter-phase` SHALL reject it
+- **AND** advice SHALL require rerunning the gate through the Engine path
 
 #### Scenario: Enter phase emits load complete witness
 
@@ -156,7 +171,9 @@ node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>
 
 ### Requirement: Advance status refuses unwitnessed or unpassed phase handoffs (CPT-004)
 
-`advance-status.mjs` SHALL fail closed before mutating `rb_status.json` when the requested status synchronization cannot be backed by trace evidence.
+Source-gate `advance-status` SHALL treat a trace-durable degraded gate pass as a legal deterministic handoff witness only when all normal source-gate, target-node, and route-bound `load_complete` checks pass.
+
+Successful status synchronization after a degraded handoff SHALL establish the normal source-gate status window for the target lifecycle phase. It SHALL preserve the degraded marker in diagnostics or trace context and SHALL NOT reinterpret degraded handoff as clean phase completion.
 
 `--to <gate>` SHALL name the just-passed source gate being synchronized into `rb_status.json`. It SHALL NOT name the next phase's gate. For example, after `wave0-complete` passes and returns `check.next: "phases/phase-wave1.md"`, the correct status sync is:
 
@@ -186,6 +203,19 @@ Downstream lifecycle gates SHALL NOT require `current_gate` to already equal the
 The bootstrap compatibility exception for setup is narrow. Legacy/bootstrap status may establish `current_gate: "setup_ready"` and `next_gate: "seed_topics_ready"` as setup's pre-pass status window, because setup inbound is not migrated by this change. That same status pair SHALL NOT be treated as proof that setup→seed-topics has been witnessed. After the `setup-ready` gate itself passes, the covered setup→seed-topics handoff still requires the real `gate_attempt.next`, `enter-phase --node phases/phase-seed-topics.md`, and source-gate `advance-status --to setup_ready` path.
 
 For multi-outcome source nodes such as HITL2, status synchronization SHALL be tied to the actual deterministic target emitted into `gate_attempt.next`. A HITL2 proceed handoff and a HITL2 rerun handoff are distinct witnessed routes; `advance-status` SHALL NOT infer one from profile fields or hardcoded outcome preference. The HITL2 gate CLI SHALL be responsible for emitting the selected deterministic route into `gate_attempt.next`; tests SHALL NOT satisfy this requirement by hand-writing a `gate_attempt` trace event.
+
+#### Scenario: Advance status preserves degraded handoff context
+
+- **WHEN** `advance-status --bundle <bundle> --to wave0_complete` synchronizes after a route-bound degraded wave0 pass and target-node load
+- **THEN** it SHALL write the normal source-gate status window
+- **AND** it SHALL NOT clear `rb_status.json.current_node`
+- **AND** diagnostics or trace context SHALL preserve that the source handoff was degraded
+
+#### Scenario: Degraded marker alone is insufficient for status sync
+
+- **WHEN** trace contains a degraded-looking event without `passed: true`, without non-null `next`, without route-bound source metadata, or without a matching later `load_complete`
+- **THEN** `advance-status` SHALL reject it
+- **AND** advice SHALL require rerunning the gate and consuming `check.next` through `enter-phase`
 
 #### Scenario: Advance status rejects source gate that is not the latest handoff
 
@@ -338,13 +368,20 @@ The audit SHALL expose a closed diagnostic outcome vocabulary so downstream advi
 
 ### Requirement: current_node records active loaded lifecycle control surface
 
-The phase transition tooling SHALL maintain `rb_status.json#/current_node` as the canonical bundle-relative workflow node ref for the lifecycle control surface most recently loaded by a successful route-bound `enter-phase` call.
-
-`current_node` SHALL answer "which phase Markdown should the Agent continue from?" It SHALL NOT replace `current_gate` / `next_gate`, SHALL NOT prove target phase work completion, and SHALL NOT authorize gate pass by itself.
+`current_node` SHALL continue to record the most recently loaded lifecycle control surface after a clean or degraded source-gate handoff. It SHALL NOT prove target-phase work completion, SHALL NOT convert a degraded handoff into clean quality evidence, and SHALL NOT erase degraded quality context.
 
 Before any lifecycle node has been successfully loaded by `enter-phase`, `current_node` MAY be `null` or absent for legacy bundles. New bundle templates SHALL use `current_node: null`.
 
 `advance-status` SHALL preserve `current_node` when synchronizing `current_gate` / `next_gate`. It SHALL NOT clear `current_node` after source-gate status sync, because accepted handoff order loads the target node before synchronizing the source-gate status window.
+
+#### Scenario: Current node survives degraded source-gate status sync
+
+- **WHEN** Wave0 emits a degraded pass with `check.next: "phases/phase-wave1.md"`
+- **AND** `enter-phase --bundle <bundle> --node phases/phase-wave1.md` succeeds
+- **AND** `advance-status --bundle <bundle> --to wave0_complete` succeeds
+- **THEN** `rb_status.json` SHALL contain `current_node: "phases/phase-wave1.md"`
+- **AND** the source-gate status window SHALL be synchronized normally
+- **AND** degraded quality context SHALL remain available to downstream diagnostics
 
 #### Scenario: Current node survives source-gate status sync
 

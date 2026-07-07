@@ -1,12 +1,6 @@
-# silent-wave-execution
+## MODIFIED Requirements
 
 > req: SWE-001, SWE-002, SWE-003, SWE-004, SWE-005
-
-## Purpose
-
-Silent Wave Execution 定义了 Agent 在用户缺席（静默自主阶段）时的行为契约——在 wave0/1/2 执行期间完全自主、不浮出水面、遇错按降级优先级链自行处理、将 escalation 改写为降级并完整 trace、到达合法浮出水面点（HITL2）时汇总报告静默期积累的降级。
-
-## Requirements
 
 ### Requirement: Silent wave execution contract
 

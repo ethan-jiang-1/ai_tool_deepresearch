@@ -118,69 +118,14 @@ Gate CLIs SHALL evaluate work-unit provenance checks from definitions through sh
 
 ### Requirement: Gate CLI accepts agent-reported attempt hint for fatigue diagnostics
 
-Gate CLI wrappers SHALL accept an optional `--attempt N` flag (integer, N ≥ 0). The flag is an Agent-reported retry hint for the current gate invocation. When provided, the attempt number SHALL be passed through to `buildGateResult()` as `attemptNumber`. When omitted, `attemptNumber` SHALL default to 0 (meaning no fatigue hint is active for this invocation).
+Lifecycle gate CLIs MAY use an Agent-reported or Engine-derived attempt count as one input to degraded-pass eligibility, but the attempt count alone SHALL NOT change gate truth or authorize handoff. A degraded pass MAY be considered only after the configured fatigue threshold has been reached and the gate can still prove the runtime-truth preconditions required by the lifecycle handoff contract.
 
-The Engine SHALL NOT treat `--attempt` as Engine-verified consecutive failure state. The Engine does not track, verify, persist, or assert the true number of consecutive gate failures for this change. It only uses the Agent-reported hint to enrich diagnostic output.
+#### Scenario: Attempt hint does not bypass runtime truth
 
-`buildGateResult()` SHALL, when `attemptNumber >= fatigueThreshold` (default 3) and the gate has failed (`passed: false`), inject fatigue diagnostic signals into the gate result:
-
-- `check.fatigue_warning` SHALL be `true`
-- `check.step_back` SHALL be `true`
-- `advice` SHALL include three additional entries:
-  1. A message stating the Agent reported retry attempt `attemptNumber` for this gate
-  2. A "step back" instruction: re-read the phase instructions for the current node
-  3. A stop-mode-safe reminder: if the current node is `stop:no`, do NOT ask the user; follow the degradation priority chain in `shared-silent-execution.md`. The advice SHALL NOT assert that the current node is `stop:no` unless the implementation has verified that fact from accepted node metadata.
-
-When `attemptNumber < fatigueThreshold` or the gate passes, `fatigue_warning` and `step_back` SHALL NOT appear in the result.
-
-`parseGateCliArgs()` SHALL accept `--attempt` as an optional string argument, parse it as a base-10 integer, require it to be non-negative, and include `attempt` in the returned args object. The value SHALL default to 0 when absent, unparseable, negative, non-integer, or present without a value. When `--attempt` is present without a value immediately before another option token, the parser SHALL NOT consume that following option as the attempt value.
-
-The `--attempt` flag SHALL NOT affect gate rule evaluation or routing — it only affects the diagnostic output (advice). The gate's pass/fail determination is independent of the attempt hint.
-
-#### Scenario: Gate CLI returns fatigue warning on agent-reported high attempt
-
-- **WHEN** a gate CLI is invoked with `--attempt 3` and the gate evaluates to fail
-- **THEN** the JSON output SHALL include `"fatigue_warning": true` in `check`
-- **AND** the JSON output SHALL include `"step_back": true` in `check`
-- **AND** `advice` SHALL include a fatigue alert message with the Agent-reported attempt count
-- **AND** `advice` SHALL include a conditional stop:no reminder rather than asserting every gate invocation is stop:no
-- **AND** `advice` SHALL NOT claim that the Engine verified the true consecutive failure count
-
-#### Scenario: Gate CLI does not return fatigue warning below threshold
-
-- **WHEN** a gate CLI is invoked with `--attempt 1` and the gate fails
-- **THEN** `fatigue_warning` and `step_back` SHALL NOT appear in the JSON output
-- **AND** the standard failure advice SHALL still be present
-
-#### Scenario: Gate CLI does not return fatigue warning on pass
-
-- **WHEN** a gate CLI is invoked with `--attempt 5` and the gate passes
-- **THEN** `fatigue_warning` and `step_back` SHALL NOT appear in the JSON output
-
-#### Scenario: Gate CLI defaults attempt to 0 when omitted
-
-- **WHEN** a gate CLI is invoked without `--attempt`
-- **THEN** the gate SHALL evaluate normally
-- **AND** no fatigue diagnostic signals SHALL appear in the output
-
-#### Scenario: Missing --attempt value does not consume the next option
-
-- **WHEN** a gate CLI is invoked with bare `--attempt` or `--attempt --transitions <path>`
-- **THEN** `parseGateCliArgs()` SHALL return `attempt: 0`
-- **AND** any following valid option token, such as `--transitions`, SHALL remain parsed as that option rather than being consumed as the attempt value
-- **AND** the gate SHALL evaluate normally without fatigue signals
-
-#### Scenario: Invalid --attempt value treated as 0
-
-- **WHEN** a gate CLI is invoked with `--attempt notanumber`
-- **THEN** `parseGateCliArgs()` SHALL return `attempt: 0`
-- **AND** the gate SHALL evaluate normally without fatigue signals
-
-#### Scenario: Negative or non-integer --attempt value treated as 0
-
-- **WHEN** a gate CLI is invoked with `--attempt -1` or `--attempt 3.5`
-- **THEN** `parseGateCliArgs()` SHALL return `attempt: 0`
-- **AND** the gate SHALL evaluate normally without fatigue signals
+- **WHEN** a wave gate is invoked with an attempt count at or above fatigue threshold
+- **AND** the gate has a missing submitted work-unit ledger row, stale `delegated_in_flight`, invalid status window, failed handoff preflight, hash drift, nonce mismatch, or non-durable trace write
+- **THEN** the gate SHALL NOT emit a degraded pass
+- **AND** inspect/advice SHALL name the runtime-truth blocker
 
 ### Requirement: Shared gate attempt audit helper
 
@@ -246,6 +191,36 @@ For deterministic lifecycle gates covered by this change, gate status validation
 If preflight fails, the gate CLI SHALL return normal gate failure output (`passed: false`, exit 1) with `inspect` and `advice` naming the missing trace evidence. It SHALL NOT change routing authority or select a next node.
 
 For a covered deterministic gate success that emits a non-null `check.next`, the `gate_attempt(passed=true,next=<target>)` trace event is authoritative handoff evidence. The gate CLI SHALL NOT report a successful covered route if that required trace append cannot be made durable. Non-routing failures or legacy failed attempts MAY continue to tolerate audit write failures as diagnostics-only, but a non-durable covered pass MUST fail closed or produce explicit diagnostics instead of certifying a route the later helper cannot witness.
+
+Lifecycle gate CLIs SHALL support a degraded pass outcome for eligible repeated gate failures. A degraded pass is a pass for phase handoff purposes only; it SHALL be distinguishable from a clean pass and SHALL NOT assert that all normal quality rules passed.
+
+A gate MAY emit a degraded pass only when all of the following deterministic preconditions are satisfied:
+
+- the gate belongs to a non-bootstrap lifecycle phase whose node is `stop: no`;
+- the Agent-reported or Engine-derived attempt count has reached the configured fatigue threshold;
+- lifecycle handoff/status preflight for the current node is satisfied;
+- required structural, schema, trace, queue, work-unit submit, work-unit provenance, and hash/nonce integrity checks that protect runtime truth have passed;
+- every failing rule is explicitly classified as degradation-eligible, such as an accepted soft profile-derived threshold that does not protect runtime truth; and
+- the gate can append a durable `gate_attempt` trace event containing `passed: true`, `degraded: true`, `degraded_reason`, `degraded_rules`, `currentNodeRef`, and normal `next`.
+
+A degraded pass SHALL set `check.passed: true`, `check.degraded: true`, and `check.next` to the normal deterministic next node. It SHALL include inspect/advice explaining which rules were degraded and which quality risks carry forward. If the trace event cannot be written durably, the gate SHALL fail closed and SHALL NOT report handoff success.
+
+#### Scenario: Eligible repeated failure degrades with trace witness
+
+- **WHEN** a Wave0 gate has reached fatigue threshold
+- **AND** structural, status, queue, work-unit, provenance, and hash checks pass
+- **AND** the only remaining failures are degradation-eligible quality thresholds
+- **THEN** the gate SHALL emit `check.passed: true`
+- **AND** `check.degraded` SHALL be `true`
+- **AND** `check.next` SHALL name the normal next lifecycle node
+- **AND** `rb_trace.jsonl` SHALL contain a matching degraded `gate_attempt`
+
+#### Scenario: Degraded pass is not clean quality evidence
+
+- **WHEN** a downstream tool reads a degraded `gate_attempt`
+- **THEN** it SHALL treat the event as legal handoff evidence
+- **AND** it SHALL preserve `degraded: true` and the degraded rule details as quality risk context
+- **AND** it SHALL NOT report the source phase as a clean quality pass
 
 #### Scenario: Gate fails when prior gate pass is missing
 
@@ -365,16 +340,33 @@ The same validator or companion regression SHALL fail if a covered gate definiti
 
 ### Requirement: Cascade-masked diagnostics remain non-authority (GSK-008)
 
-Wave0 gate diagnostics SHALL mark downstream rule failures as masked when an upstream per-topic parse or schema failure makes those downstream checks non-independent.
+Gate quality-control loops SHALL stay KISS: blocking checks MUST be deterministic, low false-positive, independently explainable, and repairable through accepted Engine or Agent workflow paths. A gate SHALL NOT add broad heuristic patches that themselves require extra quality-control logic, diagnostic-only exceptions, or repeated false-positive handling to be usable.
 
-Masked diagnostics SHALL clarify root cause and reduce duplicate failure noise. They SHALL NOT count as passing rules, SHALL NOT hide the upstream failure, and SHALL NOT change gate pass/fail truth.
+Because gate feedback drives the Markdown Controller's next actions, noisy gate feedback is not harmless. A gate SHALL NOT send guess-based advice that asks the Controller to repair duplicate URLs, homepage-looking URLs, Jaccard overlap, self-referential prose, or other brittle content heuristics. These signals SHALL be removed from the phase-boundary quality loop unless they are restated as deterministic authority checks over accepted surfaces.
 
-#### Scenario: Downstream count is masked by schema failure
+Gate output SHALL organize diagnostics so the Agent can identify the next repair target without reading a long flat list of equally weighted failures. The structured output SHALL preserve full diagnostics, but the primary `inspect[]` and `advice[]` surfaces SHALL prefer root causes before downstream symptoms.
 
-- **WHEN** a topic source file cannot be parsed or fails schema validation
-- **AND** a downstream count-floor check for the same topic cannot be meaningfully evaluated
-- **THEN** the diagnostic artifact SHALL mark the downstream count-floor result as `masked: true`
-- **AND** the gate SHALL still fail because the upstream schema/parse rule failed
+At minimum:
+
+- blocking rules SHALL be limited to deterministic authority surfaces such as schema, queue, status, trace, work-unit ledger, provenance, hash, cache coverage/content, and route-bound handoff checks;
+- brittle content heuristics SHALL NOT be patched into phase-boundary gates as blocking rules or diagnostic-only gate advice;
+- blocking root causes SHALL be identified before symptom/cascade diagnostics;
+- symptom diagnostics SHALL name their upstream cause when known;
+- advice SHALL avoid duplicate repair instructions for failures that will resolve when the root cause is repaired; and
+- advice SHALL stay concise enough for an Agent to act without losing the phase context.
+
+#### Scenario: Brittle heuristic is removed instead of patched again
+
+- **WHEN** a gate rule produces repeated false positives and can only be kept by adding diagnostic-only mode, broad degradation exceptions, or special advice suppressions
+- **THEN** the rule SHALL be removed from the phase-boundary gate unless it can be restated as a deterministic authority check
+- **AND** the useful deterministic concern SHALL be moved to its proper schema, ledger, provenance, cache, trace, queue, or handoff check
+
+#### Scenario: Cache drift does not bury the root cause
+
+- **WHEN** a gate detects cache coverage drift that causes downstream output coverage symptoms
+- **THEN** inspect SHALL identify cache coverage as the root cause
+- **AND** downstream provenance symptoms SHALL be marked as symptoms or cascade details
+- **AND** advice SHALL give one Engine-mediated repair target rather than separate manual edits for every symptom
 
 ### Requirement: Gate CLI exit-code behavior aligns with framework convention
 
@@ -387,6 +379,8 @@ For gate CLIs, structured stdout `{ check, routing, inspect, advice }` SHALL be 
 - `2` for routing contract, configuration, binding, or invocation errors such as invalid input, config error, missing required flags, or caller misuse.
 
 Gate CLIs SHALL NOT encode morale, fatigue, reassurance, or continuation encouragement in the numeric exit code. High-friction pass/fail guidance, repair strategy, final-delivery reassurance, and autonomous-continuation reminders SHALL be expressed through `advice[]`, diagnostic artifacts, or Agent-readable Markdown without changing the numeric code for the underlying condition.
+
+Advice SHALL NOT tell the Agent to hand-edit runtime authority files such as `rb_status.json`, `rb_output_declarations.jsonl`, `_work_units/_index.json`, or hash-bound work-unit result surfaces.
 
 #### Scenario: Gate caller reads stdout before deciding
 
@@ -405,6 +399,12 @@ Gate CLIs SHALL NOT encode morale, fatigue, reassurance, or continuation encoura
 - **WHEN** a gate passes after many attempts and emits autonomous-continuation advice
 - **THEN** the process exit code SHALL remain the normal pass code
 - **AND** advice SHALL carry the continuation reminder that `check.next` must be consumed through the accepted handoff path
+
+#### Scenario: Advice does not recommend manual authority edits
+
+- **WHEN** a gate detects status drift, ledger drift, hash drift, or provenance mismatch
+- **THEN** advice SHALL direct the Agent to valid Engine repair, retry, rollback, terminal/retry, or resubmit paths
+- **AND** advice SHALL NOT instruct the Agent to edit authority files by hand
 
 ### Requirement: Gate definitions expose work-unit provenance check types
 

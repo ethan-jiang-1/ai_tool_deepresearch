@@ -193,9 +193,11 @@ The heavy canary case SHALL report these minimum quality metrics when it runs:
 
 - cache trail coverage: percentage of new rerun `action:add` references with non-empty verified and mapped cache trails
 - grounding spot-check: sampled Key Facts supported by cached page/source text
-- URL precision: counted references use article-level URLs, not homepage/shallow URLs
+- source recoverability: submitted references have parseable source URLs and cache/source trails that let a future Agent recover the evidence
 - countable rate: produced declared references versus `isCountable()` pass count
 - gap rate: `cache_gap`, orphan, and empty-trail findings for the new run
+
+These metrics SHALL NOT use homepage/shallow URL, duplicate URL, Jaccard, self-reference, or retired `content_dedup` heuristics as pass/fail evidence.
 
 #### Scenario: fixture case uses work-unit submit
 
@@ -206,7 +208,8 @@ The heavy canary case SHALL report these minimum quality metrics when it runs:
 #### Scenario: real canary reports work-unit evidence quality
 
 - **WHEN** the real Agent canary runs
-- **THEN** it SHALL report cache, grounding, URL precision, countable-rate, and gap-rate metrics from submitted work-unit outputs
+- **THEN** it SHALL report cache, grounding, source recoverability, countable-rate, and gap-rate metrics from submitted work-unit outputs
+- **AND** it SHALL NOT report homepage/shallow URL heuristics as a quality gate
 
 ### Requirement: Handoff witnessing experiment coverage (AGT-010)
 
