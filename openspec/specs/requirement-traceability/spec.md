@@ -132,13 +132,13 @@ Every change SHALL run the project governance checks before archive:
 
 For delegated-work cleanup changes, the hard gate SHALL also include the work-unit hygiene check over current production-facing surfaces. The hygiene check SHALL scan active main specs, active deltas, framework surfaces, shared experiment infrastructure, tests, guidelines, governance metadata, top-level docs, current `_backlog` planning/bug/todo notes, `experiments_env/shared`, and `experiments_playbook`. It SHALL exclude `openspec/changes/archive/` as historical OpenSpec record and SHALL NOT read `_original_*` archives.
 
-The hygiene check SHALL fail stale positive production wording for retired relay/slot mechanisms, old delegated ledger fixtures, and old queue slot shapes unless the occurrence is explicitly negative, deprecated, checker/test self-reference, cleanup-control for this active cleanup change, current work-unit context for context-sensitive tokens, past-failure-history for current backlog/bug/planning notes, or minimized release-history wording that cannot be interpreted as command guidance. Allowed contexts SHALL NOT be interpreted as production authority. A legacy/backlog table or label SHALL NOT be an archive-ready allowlist context.
+The hygiene check SHALL fail stale positive production wording for retired delegated transport mechanisms, old delegated ledger fixtures, and old queue position shapes unless the occurrence is explicitly negative, deprecated, checker/test self-reference, cleanup-control for an active cleanup change, current work-unit context for context-sensitive tokens, past-failure-history for current backlog/bug/planning notes, or minimized release-history wording that cannot be interpreted as command guidance. Allowed contexts SHALL NOT be interpreted as production authority. A legacy/backlog table or label SHALL NOT be an archive-ready allowlist context.
 
-The hygiene check SHALL distinguish retired-only tokens from context-sensitive work-unit fields. Retired-only tokens include old relay commands, modules, helper APIs, slot identity fields, relay event names, old provenance check names, old relay directory or dispatch surfaces, old delegated ledger fields, and old queue slot control fields such as `slot_1_current`, `slot_2_next`, `slot_5_tail`, and `slot_*_pending`. Stale queue wording also includes fixed five-slot active-window prose or task-card examples that use `work_id` as queue demand identity. Current queue v2 may describe an ordered `active_window` array, `QUEUE_ACTIVE_WINDOW_LIMIT`, capacity of 20, or a case that stages at least five items, but it SHALL NOT imply named slots, fixed five-slot state shape, or `work_id` demand identity. Context-sensitive fields such as `runtime_receipt_ref`, `receipt_nonce`, `_beacon.json`, lifecycle event wording, and code-local `receiptNonce` SHALL remain allowed in current work-unit contexts, but SHALL fail when paired with old relay/slot examples, old relay trace/log identity, old delegated ledger fixtures, old queue slot shape, or production instructions for retired paths.
+The hygiene check SHALL distinguish retired-only tokens from context-sensitive work-unit fields. Retired-only tokens include old delegated commands, modules, helper APIs, identity fields, event names, provenance check names, dispatch surfaces, old delegated ledger fields, and old queue position fields. Stale queue wording also includes fixed small active-window prose or task-card examples that use `work_id` as queue demand identity. Current queue v2 may describe an ordered `active_window` array, `QUEUE_ACTIVE_WINDOW_LIMIT`, capacity of 20, or a case that stages at least five items, but it SHALL NOT imply named positions, fixed small state shape, or `work_id` demand identity. Context-sensitive fields such as `runtime_receipt_ref`, `receipt_nonce`, `_beacon.json`, lifecycle event wording, and code-local `receiptNonce` SHALL remain allowed in current work-unit contexts, but SHALL fail when paired with old delegated examples, old trace/log identity, old delegated ledger fixtures, old queue position shape, or production instructions for retired paths.
 
 Cleanup-control allowance is narrow. It MAY apply to active change artifacts whose purpose is to define the retired-token vocabulary, inventory current hits, or state negative delta requirements for this cleanup. It SHALL NOT apply to active main specs, framework docs, current runner tables, runnable playbooks, production command guidance, or tests that present the old surface as success behavior.
 
-Historical/planning wording outside `openspec/changes/archive/` SHALL be treated by readability risk, not folder name. A current backlog, bug, TODO, or planning note may keep old relay/slot terms only when the note clearly frames them as past failure analysis, removed design, or non-authoritative history; it SHALL NOT present retired commands, slot paths, old queue shape, or old ledger fields as actionable current implementation guidance. If that distinction cannot be made clear cheaply, the note SHALL be removed from current surfaces or moved under an excluded archive path by an OpenSpec-governed cleanup.
+Historical/planning wording outside `openspec/changes/archive/` SHALL be treated by readability risk, not folder name. A current backlog, bug, TODO, or planning note may keep old delegated-transport terms only when the note clearly frames them as past failure analysis, removed design, or non-authoritative history; it SHALL NOT present retired commands, non-work-unit paths, old queue shape, or old ledger fields as actionable current implementation guidance. If that distinction cannot be made clear cheaply, the note SHALL be removed from current surfaces or moved under an excluded archive path by an OpenSpec-governed cleanup.
 
 Checks SHALL be hard gates. Any failure SHALL block archive until resolved.
 
@@ -180,11 +180,11 @@ Checks SHALL be hard gates. Any failure SHALL block archive until resolved.
 
 - **WHEN** current work-unit guidance names `runtime_receipt_ref` or `receipt_nonce` in a work-unit manifest, beacon, result, or ledger context
 - **THEN** delegated-work hygiene SHALL NOT fail that occurrence solely because the token also appeared in old relay examples
-- **AND** it SHALL still fail the occurrence if it is paired with retired relay/slot paths, fields, helpers, or events
+- **AND** it SHALL still fail the occurrence if it is paired with retired delegated paths, fields, helpers, or events
 
-#### Scenario: Old queue slot shape is not valid current queue proof
+#### Scenario: Old queue position shape is not valid current queue proof
 
-- **WHEN** a current runner, playbook, framework surface, or fixture presents `slot_1_current`, `slot_2_next`, `slot_*_pending`, fixed five-slot active-window wording, or top-level queue `work_id` demand identity as a runnable queue path
+- **WHEN** a current runner, playbook, framework surface, or fixture presents legacy named queue-position fields, fixed small active-window wording, or top-level queue `work_id` demand identity as a runnable queue path
 - **THEN** delegated-work hygiene SHALL fail or the surface SHALL be removed from current runner guidance
 - **AND** negative schema tests MAY name the shape only to prove rejection
 
@@ -192,11 +192,10 @@ Checks SHALL be hard gates. Any failure SHALL block archive until resolved.
 
 - **WHEN** a current queue spec, implementation, test, or playbook describes `active_window` as an ordered array with a current capacity limit or stages five or more items to exercise refill/preemption
 - **THEN** delegated-work hygiene SHALL NOT fail solely because the case mentions `active_window` capacity, `QUEUE_ACTIVE_WINDOW_LIMIT`, a maximum of 20 entries, or at least five items
-- **AND** it SHALL still fail if the same surface presents named slot fields, fixed five-slot state shape, or queue demand `work_id` as current proof
+- **AND** it SHALL still fail if the same surface presents named queue-position fields, fixed small state shape, or queue demand `work_id` as current proof
 
 #### Scenario: Active cleanup-control artifacts can name retired terms
 
-- **WHEN** this active cleanup change names retired relay, slot, ledger, or old queue terms in its proposal, design, task list, inventory, or negative delta requirements
+- **WHEN** an active cleanup change names retired delegated, ledger, or old queue terms in its proposal, design, task list, inventory, or negative delta requirements
 - **THEN** delegated-work hygiene MAY classify those occurrences as cleanup-control
 - **AND** that allowance SHALL NOT permit the same wording in current production guidance, current runner surfaces, or runnable playbooks
-

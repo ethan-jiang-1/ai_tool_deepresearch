@@ -10,7 +10,7 @@ Define the sub-agent task/result/lifecycle contract for Engine-claimed work unit
 
 Sub-agent role specs SHALL mandate lifecycle logging through work-unit receipt/logging instructions. Lifecycle events SHALL be associated with the work-unit receipt nonce rather than a non-work-unit beacon nonce.
 
-Current node, role, and prompt guidance SHALL NOT tell the Phase Agent to drive delegated work through retired relay drivers or slot task generators. It SHALL bind lifecycle logging to work-unit task, beacon, receipt, and submit surfaces.
+Current node, role, and prompt guidance SHALL NOT tell the Phase Agent to drive delegated work through retired drivers or old task generators. It SHALL bind lifecycle logging to work-unit task, beacon, receipt, and submit surfaces.
 
 #### Scenario: lifecycle event binds work unit
 
@@ -22,13 +22,13 @@ Current node, role, and prompt guidance SHALL NOT tell the Phase Agent to drive 
 
 - **WHEN** generated sub-agent guidance describes lifecycle logging
 - **THEN** it SHALL identify the assigned work unit and work-unit beacon
-- **AND** it SHALL NOT require a retired relay driver as the production logging path
+- **AND** it SHALL NOT require a retired delegated driver as the production logging path
 
 ### Requirement: Sub-agent task contract SHALL bind work-unit identity
 
 Generated sub-agent task Markdown and spawn prompts SHALL bind `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, work-unit directory, result schema, output contract, lease deadline, and receipt/logging instructions.
 
-The task contract SHALL refer to generated work-unit task Markdown, not old slot task generation.
+The task contract SHALL refer to generated work-unit task Markdown, not old delegated task generation.
 
 #### Scenario: task contains nonce and deadline
 
@@ -36,17 +36,17 @@ The task contract SHALL refer to generated work-unit task Markdown, not old slot
 - **THEN** the task SHALL include the work-unit receipt nonce and deadline
 - **AND** the sub-agent SHALL be instructed to preserve those fields in receipts and result
 
-#### Scenario: task contract excludes slot task wording
+#### Scenario: task contract excludes old delegated task wording
 
 - **WHEN** current specs or playbooks describe a generated delegated task
 - **THEN** they SHALL describe a work-unit task bound to `work_id`
-- **AND** they SHALL NOT describe a relay slot task as production authority
+- **AND** they SHALL NOT describe a retired delegated task as production authority
 
 ### Requirement: Sub-agent result contract SHALL bind receipt nonce
 
 Sub-agent result files and runtime receipt events SHALL include `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`. Submit SHALL reject mismatches across result, receipt, beacon, manifest, index, and ledger row.
 
-The result contract SHALL be validated by `operate-work-unit submit`. A result that only matches an old slot result shape SHALL NOT be accepted as delegated completion.
+The result contract SHALL be validated by `operate-work-unit submit`. A result that only matches an old delegated result shape SHALL NOT be accepted as delegated completion.
 
 #### Scenario: nonce mismatch rejects submit
 
@@ -75,4 +75,3 @@ The directive SHALL route completion back through work-unit submit and SHALL NOT
 - **WHEN** a generated task describes how work returns to the main run
 - **THEN** it SHALL identify the submit contract for the assigned work unit
 - **AND** it SHALL NOT name a retired relay commit or merge path as production completion
-

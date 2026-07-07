@@ -46,31 +46,31 @@ The Queue Manager SHALL check deterministic receipts through `checkReceipts()` a
 
 Queue projection SHALL be generated from queue v2 JSON and SHALL include delegated in-flight counts, expired attempt diagnostics, blocked queue-front item diagnostics, and phase-drain status. Projection SHALL remain read-only derived output and SHALL NOT be authority for queue or work-unit state.
 
-Projection, docs, and tests MAY discuss ordered `active_window` capacity, `QUEUE_ACTIVE_WINDOW_LIMIT`, the queue front, the displaced tail, insertion indexes, or a case that stages at least five queue items to prove refill/preemption/restore behavior. These positional terms SHALL remain derived from array order. They SHALL NOT be reintroduced as named queue slots such as current/next/pending/tail, and they SHALL NOT imply that five fixed slots are the production queue shape.
+Projection, docs, and tests MAY discuss ordered `active_window` capacity, `QUEUE_ACTIVE_WINDOW_LIMIT`, the queue front, the displaced tail, insertion indexes, or a case that stages at least five queue items to prove refill/preemption/restore behavior. These positional terms SHALL remain derived from array order. They SHALL NOT be reintroduced as named queue positions such as current/next/pending/tail, and they SHALL NOT imply that a fixed small position set is the production queue shape.
 
-#### Scenario: projection avoids old slot shape
+#### Scenario: projection avoids old queue position shape
 
 - **WHEN** current projection guidance or tests describe queue v2 state
 - **THEN** they SHALL describe ordered `active_window` entries by `queue_item_id`
-- **AND** they SHALL NOT present `slot_1_current`, `slot_2_next`, `slot_5_tail`, or fixed five-slot wording as the current projection contract
+- **AND** they SHALL NOT present legacy named queue-position fields or fixed small-window wording as the current projection contract
 
 #### Scenario: front and tail are derived positions
 
 - **WHEN** queue guidance refers to the front item, displaced tail, or an insertion point
 - **THEN** those terms SHALL be explained as positions in the ordered `active_window` array
-- **AND** they SHALL NOT be modeled as stable named fields or separate slot roles
+- **AND** they SHALL NOT be modeled as stable named fields or separate queue-position roles
 
-#### Scenario: multi-item queue tests are not old slot proof
+#### Scenario: multi-item queue tests are not old queue-position proof
 
 - **WHEN** a queue experiment or test stages five or more queue items to exercise refill, restore, or preemption
 - **THEN** it SHALL assert array locations by `active_window[index].queue_item_id` and `refill_pool[index].queue_item_id`
-- **AND** it SHALL NOT assert named slot fields or use `work_id` as queue demand identity
+- **AND** it SHALL NOT assert named queue-position fields or use `work_id` as queue demand identity
 
 ### Requirement: Command experiments prove queue manager mechanics
 
 Queue Manager command experiments SHALL use current command-experiment case naming and cost/role taxonomy. Current runner-facing playbooks SHALL be named and reported as `case-<id>-<cost>-<proof-role>` or another currently accepted case surface, not as the old simple/medium/complex `test-*` taxonomy unless the old wording is being removed or explicitly mapped during this cleanup.
 
-Each current playbook SHALL create a real disposable bundle, validate and inspect it, exercise the current engine JS API or CLI, derive verdict from trace JSONL `check` events, and clean up on success. Old queue-control playbooks that still depend on fixed slot shape SHALL be migrated to queue v2 or removed from current runner surfaces.
+Each current playbook SHALL create a real disposable bundle, validate and inspect it, exercise the current engine JS API or CLI, derive verdict from trace JSONL `check` events, and clean up on success. Old queue-control playbooks that still depend on fixed queue-position shape SHALL be migrated to queue v2 or removed from current runner surfaces.
 
 #### Scenario: current queue experiments use case taxonomy
 
@@ -115,16 +115,16 @@ The playbook SHALL use local fixture data for topic_registry entries (pre-writte
 
 ### Requirement: Queue state and item schema are structured
 
-The target `rb_queue.json` schema SHALL be queue v2 with ordered `active_window`, `refill_pool`, `delegated_in_flight`, and `terminal_history`. Queue demand identity SHALL be `queue_item_id`. `work_id` SHALL mean only an Engine-allocated delegated execution attempt and SHALL NOT be used as queue demand identity, task-card identity, or old queue slot identity.
+The target `rb_queue.json` schema SHALL be queue v2 with ordered `active_window`, `refill_pool`, `delegated_in_flight`, and `terminal_history`. Queue demand identity SHALL be `queue_item_id`. `work_id` SHALL mean only an Engine-allocated delegated execution attempt and SHALL NOT be used as queue demand identity, task-card identity, or old queue-position identity.
 
-Current main spec Purpose SHALL describe queue v2 as an ordered active-window queue with refill and delegated in-flight binding. The accepted active-window capacity SHALL be expressed through the current queue v2 schema/constant, currently `QUEUE_ACTIVE_WINDOW_LIMIT = 20`. It SHALL NOT describe the current state model as a fixed five-slot window, named queue slots, or top-level slot/current projection.
+Current main spec Purpose SHALL describe queue v2 as an ordered active-window queue with refill and delegated in-flight binding. The accepted active-window capacity SHALL be expressed through the current queue v2 schema/constant, currently `QUEUE_ACTIVE_WINDOW_LIMIT = 20`. It SHALL NOT describe the current state model as a fixed small window, named queue positions, or top-level current/next projection.
 
 #### Scenario: queue v2 purpose names ordered active window
 
 - **WHEN** active main specs are synced after this change
 - **THEN** `agentic-queue` Purpose SHALL describe ordered `active_window`, its current capacity semantics, `refill_pool`, delegated in-flight attempts, deterministic receipts, and Markdown projection
-- **AND** it SHALL NOT describe a fixed five-slot active window as the current state model
-- **AND** if it mentions capacity, it SHALL refer to the queue v2 schema/constant rather than a historical five-slot shape
+- **AND** it SHALL NOT describe a fixed small active window as the current state model
+- **AND** if it mentions capacity, it SHALL refer to the queue v2 schema/constant rather than a historical fixed-position shape
 
 #### Scenario: work_id is not queue demand identity
 
@@ -348,4 +348,3 @@ If a queue item has no delegated target and no work-unit binding, `operate-queue
 - **WHEN** a direct Phase Agent task with no delegated target calls `operate-queue complete`
 - **THEN** work-unit result and runtime receipt checks SHALL be skipped
 - **AND** standard completion receipt checks SHALL still run
-

@@ -10,7 +10,7 @@ Define work-unit-aware file observability for active run bundles. The Engine aud
 
 File observability SHALL treat `_work_units/waveN/{work_id}/` as the production delegated runtime path. It SHALL audit work-unit directories, result files, output files, cache trails, and ledger declarations for consistency. Non-work-unit delegated directories SHALL be reported only as removal/bypass diagnostics.
 
-Current main spec Purpose SHALL describe file observability as work-unit-aware file audit and non-authority diagnostics. It SHALL NOT remain `TBD`, and it SHALL NOT describe old `_subagents/` relay slot directories or old queue slot shapes as production observability paths.
+Current main spec Purpose SHALL describe file observability as work-unit-aware file audit and non-authority diagnostics. It SHALL NOT remain `TBD`, and it SHALL NOT describe old non-work-unit delegated directories or old queue-position shapes as production observability paths.
 
 #### Scenario: non-work-unit delegated file is diagnostic
 
@@ -28,7 +28,7 @@ Current main spec Purpose SHALL describe file observability as work-unit-aware f
 
 Unplanned delegated files SHALL produce inspect/advice that identifies whether the file is outside a submitted work-unit ledger row, outside the claimed work-unit directory, or outside the production delegated runtime path. Advice SHALL route repair through work-unit submit, fail, timeout, abandon, or refill.
 
-Current file-observability playbooks and fixtures SHALL use current work-unit or queue v2 surfaces for positive proof. Old queue slot control fixtures and old relay/slot delegated artifacts SHALL be migrated or removed unless the case explicitly proves non-authority diagnostics.
+Current file-observability playbooks and fixtures SHALL use current work-unit or queue v2 surfaces for positive proof. Old queue-position control fixtures and old delegated artifacts SHALL be migrated or removed unless the case explicitly proves non-authority diagnostics.
 
 #### Scenario: orphan output requests work-unit repair
 
@@ -38,7 +38,7 @@ Current file-observability playbooks and fixtures SHALL use current work-unit or
 
 #### Scenario: old fixture is not current proof
 
-- **WHEN** a file-observability playbook uses old relay/slot delegated artifacts or old queue slot control shape
+- **WHEN** a file-observability playbook uses old delegated artifacts or old queue-position control shape
 - **THEN** the playbook SHALL be migrated to current work-unit or queue v2 surfaces, or removed from current runner surfaces
 - **AND** its old fixture verdict SHALL NOT count as current file-observability proof
 
@@ -73,7 +73,7 @@ File explanations SHALL be append-only. If multiple explanation diagnostics exis
 
 Agent explanations SHALL remain diagnostic only. Delegated output files SHALL become gate-authoritative only when covered by a successful work-unit submit ledger row and passing cross-checks.
 
-Current tests that name `_subagents/` or old delegated directories SHALL frame those paths only as non-authoritative rejection or bypass diagnostics. If a test cannot be read that way, it SHALL be migrated to a work-unit fixture or removed.
+Current tests that name old delegated directories SHALL frame those paths only as non-authoritative rejection or bypass diagnostics. If a test cannot be read that way, it SHALL be migrated to a work-unit fixture or removed.
 
 #### Scenario: explanation does not create coverage
 
@@ -82,7 +82,7 @@ Current tests that name `_subagents/` or old delegated directories SHALL frame t
 
 #### Scenario: old delegated diagnostic cannot become authority
 
-- **WHEN** a file-observability test or health verifier fixture writes an old `_subagents/` path
+- **WHEN** a file-observability test or health verifier fixture writes an old delegated path
 - **THEN** the assertion SHALL prove the path remains non-authoritative
 - **AND** it SHALL NOT describe the path as a production delegated runtime location
 
@@ -90,7 +90,7 @@ Current tests that name `_subagents/` or old delegated directories SHALL frame t
 
 File observability SHALL detect bundles that contain submitted work-unit artifacts alongside non-work-unit delegated artifacts for the same delegated output scope and SHALL report mixed delegated provenance as a blocker.
 
-Mixed-provenance diagnostics MAY name old delegated artifact families such as `_subagents/` only to explain rejection, cleanup, or bypass suspicion. They SHALL NOT provide an alternate success path around submitted work-unit ledger authority.
+Mixed-provenance diagnostics MAY name old delegated artifact families only to explain rejection, cleanup, or bypass suspicion. They SHALL NOT provide an alternate success path around submitted work-unit ledger authority.
 
 #### Scenario: mixed provenance is a blocker
 
@@ -103,4 +103,3 @@ Mixed-provenance diagnostics MAY name old delegated artifact families such as `_
 - **WHEN** mixed-provenance diagnostics mention an old delegated path
 - **THEN** the diagnostic SHALL frame it as cleanup, rejection, or bypass evidence
 - **AND** submitted work-unit coverage SHALL remain the only positive delegated authority
-

@@ -10,7 +10,7 @@ Define the Agent output declaration contract for Engine-submitted work-unit ledg
 
 The Engine and gates SHALL consume submitted work-unit rows in `rb_output_declarations.jsonl` as the production evidence of delegated outputs. Filesystem scanning MAY produce diagnostics for orphaned or bypass artifacts, but SHALL NOT create gate pass coverage without a matching Engine-written ledger row.
 
-Current output declaration guidance SHALL describe work-unit submit rows as delegated output authority. It SHALL NOT describe relay slot results, slot result references, or queue completion as delegated ledger authority.
+Current output declaration guidance SHALL describe work-unit submit rows as delegated output authority. It SHALL NOT describe retired delegated results, old result references, or queue completion as delegated ledger authority.
 
 #### Scenario: orphan output is diagnostic only
 
@@ -93,4 +93,3 @@ The ledger row SHALL use work-unit provenance fields such as `work_id`, `queue_i
 - **WHEN** current specs or playbooks show a delegated output declaration row
 - **THEN** the row SHALL use work-unit provenance fields
 - **AND** it SHALL NOT use retired relay/slot fields as current schema examples
-

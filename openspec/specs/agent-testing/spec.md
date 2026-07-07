@@ -15,7 +15,7 @@ Current main spec Purpose SHALL describe command experiments as case/cost playbo
 
 - **WHEN** current gate-loop experiment guidance names runnable playbooks
 - **THEN** it SHALL name current case/cost files such as the light three-return case, repair-loop case, and full-pipeline case
-- **AND** it SHALL NOT name `test-simple.md`, `test-medium.md`, or `test-complex.md` as current runnable proof
+- **AND** it SHALL NOT name obsolete simple/medium/complex test filenames as current runnable proof
 
 ### Requirement: Trace 系统支持独立 trace 实例 (AGT-001)
 `DPT_FRAMEWORK/engine/trace.mjs` 模块 SHALL 提供 `createTrace(filePath, options?)` 工厂函数，每次调用返回独立的 trace 实例（无共享状态）。每个测试脚本 SHALL 调用 `createTrace()` 创建自己的 trace 实例。Node SHALL 通过 `trace.traceEntry()` 自动 trace, 不硬编码文件名。
@@ -32,38 +32,38 @@ The gate-fork Agent-assisted command experiment family SHALL use current command
 
 - **WHEN** current gate-fork experiment guidance names runnable playbooks
 - **THEN** it SHALL name current case/cost files such as the four-return case, repair-retry case, and full-pipeline case
-- **AND** it SHALL NOT name `test-simple.md`, `test-medium.md`, or `test-complex.md` as current runnable proof
+- **AND** it SHALL NOT name obsolete simple/medium/complex test filenames as current runnable proof
 
 ### Requirement: Three-level real subagent test playbooks (AGT-003)
 
 The real subagent test playbook family SHALL exercise sub-agent actor behavior through work-unit claim, bounded prompt execution, submit, submitted ledger coverage, and gate-visible provenance. It SHALL use current case/cost playbook naming and light/standard/heavy cost labels where applicable; production-path assertions SHALL use work-unit artifacts and Engine submit results.
 
-Current runnable real-subagent playbooks SHALL NOT use retired relay/slot production mechanisms as proof surfaces. Old relay/slot cases SHALL be migrated when they still prove current work-unit behavior, or removed from current experiment surfaces when they no longer have current proof or diagnostic value.
+Current runnable real-subagent playbooks SHALL NOT use retired delegated transport mechanisms as proof surfaces. Old delegated transport cases SHALL be migrated when they still prove current work-unit behavior, or removed from current experiment surfaces when they no longer have current proof or diagnostic value.
 
-Retired relay/slot proof surfaces include relay slot directories, slot identity fields, relay commit/spawn events, relay dispatch manifests, and old relay helper APIs.
+Retired delegated proof surfaces include non-work-unit directories, retired channel identity fields, retired commit/spawn events, retired dispatch manifests, and old helper APIs.
 
 #### Scenario: light or heavy subagent playbook uses work-unit path
 
 - **WHEN** a current real-subagent playbook runs
 - **THEN** it SHALL claim a work unit, spawn a bounded sub-agent task, submit by `work_id`, and verify submitted ledger coverage
 
-#### Scenario: old relay subagent playbook is not current
+#### Scenario: old delegated subagent playbook is not current
 
-- **WHEN** a real-subagent playbook still requires a retired relay/slot production command or path
+- **WHEN** a real-subagent playbook still requires a retired delegated production command or path
 - **THEN** it SHALL NOT be listed as a current runnable proof case
 - **AND** it SHALL be migrated to work-unit proof or removed from current experiment surfaces
 
-#### Scenario: old relay identity fields are not current proof
+#### Scenario: old delegated identity fields are not current proof
 
-- **WHEN** a real-subagent playbook proves execution using `slotKey`, `roleAgentKey`, relay commit/spawn events, `dispatch.json`, or `_subagents/` paths
+- **WHEN** a real-subagent playbook proves execution using retired delegated channel identity, retired dispatch manifests, or non-work-unit delegated paths
 - **THEN** it SHALL be migrated to work-unit identity and submit evidence or removed from current experiment surfaces
-- **AND** its old relay verdict SHALL NOT count as current work-unit proof
+- **AND** its old delegated verdict SHALL NOT count as current work-unit proof
 
 ### Requirement: Runtime-agent trace events prove real execution path (AGT-003)
 
 Runtime-agent trace evidence SHALL bind to work-unit lifecycle events and submitted work-unit identity. The playbook SHALL prove that the sub-agent actor actually ran by checking Engine and runtime evidence associated with `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
 
-Trace, log, and receipt assertions SHALL NOT depend on unsubmitted relay/slot artifacts as current production evidence.
+Trace, log, and receipt assertions SHALL NOT depend on unsubmitted retired delegated artifacts as current production evidence.
 
 #### Scenario: runtime evidence binds work unit
 
@@ -75,7 +75,7 @@ Trace, log, and receipt assertions SHALL NOT depend on unsubmitted relay/slot ar
 
 The real subagent test suite SHALL require sub-agent-written runtime receipts and Engine-validated work-unit submit output for real LLM sub-agent acceptance.
 
-Fixture-backed or old relay/slot evidence SHALL NOT satisfy real-agent proof unless it is routed through the accepted work-unit submit and ledger path. Obsolete evidence fixtures with no current diagnostic value SHALL be removed rather than kept as current examples.
+Fixture-backed or old delegated evidence SHALL NOT satisfy real-agent proof unless it is routed through the accepted work-unit submit and ledger path. Obsolete evidence fixtures with no current diagnostic value SHALL be removed rather than kept as current examples.
 
 #### Scenario: missing runtime evidence fails real-agent proof
 
@@ -98,7 +98,7 @@ Current specs SHALL NOT describe old simple/medium/complex filenames as the way 
 
 - **WHEN** current specs or runner docs explain experiment cost
 - **THEN** they SHALL use light/standard/heavy cost labels and the accepted `weight` frontmatter convention
-- **AND** they SHALL NOT instruct agents to infer current cost from `test-simple.md`, `test-medium.md`, or `test-complex.md`
+- **AND** they SHALL NOT instruct agents to infer current cost from obsolete simple/medium/complex test filenames
 
 ### Requirement: Disposable bundle names include random suffix (AGT-006)
 
@@ -329,4 +329,3 @@ The heavy canary SHALL NOT be required for archive, and `NOT RUN` SHALL NOT be c
 - **THEN** it SHALL record `NOT RUN` with diagnostic context
 - **AND** the change MAY still archive if the standard E2E and regression tests pass
 - **AND** the archive notes SHALL NOT claim real Agent high-friction replay passed
-

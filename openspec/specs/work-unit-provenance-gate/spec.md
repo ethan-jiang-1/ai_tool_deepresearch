@@ -60,7 +60,7 @@ Current forensics experiments, docs, and tests SHALL use work-unit signals for c
 
 - **WHEN** a current playbook proves provenance forensics
 - **THEN** it SHALL use submitted work-unit provenance signals
-- **AND** it SHALL NOT present relay slot artifacts or relay commit events as the production proof matrix
+- **AND** it SHALL NOT present retired delegated artifacts or retired commit events as the production proof matrix
 
 ### Requirement: Wave2 work-unit provenance SHALL be conditional on delegated evidence search
 
@@ -98,9 +98,9 @@ Work-unit provenance gates SHALL detect suspected delegated bypass by phase usin
 
 Work-unit provenance diagnostics SHALL carry `work_id` when available, `queue_item_id` when available, `wave`, `kind`, check name, and mismatched surface refs. Diagnostics SHALL use work-unit binding context rather than non-work-unit channel keys.
 
-Current diagnostics SHALL NOT use retired slot keys, relay slot paths, or old result-reference fields as the primary identity for delegated provenance. If a retired token is named, it SHALL be framed only as rejected, non-authoritative, or removed.
+Current diagnostics SHALL NOT use retired channel keys, non-work-unit paths, or old result-reference fields as the primary identity for delegated provenance. If a retired token is named, it SHALL be framed only as rejected, non-authoritative, or removed.
 
-Retired relay provenance identifiers include `slotKey`, `roleAgentKey`, relay commit/spawn events, relay `dispatch.json`, and relay slot result references. Current provenance identity SHALL prefer `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, submitted ledger row, and work-unit binding surfaces.
+Current provenance identity SHALL prefer `work_id`, `queue_item_id`, `kind`, work-unit receipt nonce, submitted ledger row, and work-unit binding surfaces.
 
 #### Scenario: mismatch diagnostic identifies work unit
 
@@ -110,13 +110,13 @@ Retired relay provenance identifiers include `slotKey`, `roleAgentKey`, relay co
 
 #### Scenario: retired identity is not primary context
 
-- **WHEN** a provenance diagnostic mentions a retired relay/slot artifact
+- **WHEN** a provenance diagnostic mentions a retired delegated artifact
 - **THEN** the diagnostic SHALL identify it as rejected or non-authoritative
 - **AND** the diagnostic SHALL use work-unit binding context for current delegated provenance whenever available
 
-#### Scenario: relay event is not provenance authority
+#### Scenario: retired event is not provenance authority
 
-- **WHEN** a current provenance playbook or diagnostic mentions a relay commit or relay spawn event
+- **WHEN** a current provenance playbook or diagnostic mentions a retired delegated event
 - **THEN** that event SHALL be framed as retired or non-authoritative
 - **AND** submitted work-unit ledger and binding surfaces SHALL remain the only delegated provenance authority
 
@@ -167,4 +167,3 @@ Current forensics guidance SHALL NOT present retired relay/slot tiers as the cur
 - **WHEN** current forensics guidance names provenance decision tiers
 - **THEN** those tiers SHALL be expressed in submitted work-unit signal terms
 - **AND** retired relay/slot tiers SHALL NOT appear as current proof instructions
-
