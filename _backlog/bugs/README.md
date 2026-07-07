@@ -35,14 +35,6 @@
 
 - [BUG-031](BUG-031-silent-autonomous-execution-stops-agent-idles.md) — 自主静默长程执行失败：Agent 在 stop:no phase spawn sub-agents 后停止，需用户手动"继续"才能恢复（P0）
 
-- [BUG-032](BUG-032-relay-slots-uncommitted-provenance-broken.md) — Relay slots 未 commit：sub-agent 完成但 provenance 链断裂，log 充满 relay_commit_missing，gate 拒绝 pass（P0）
-
 - [BUG-033](BUG-033-phase-isolation-broken-wave0-gate-fail-jumps-to-final.md) — Phase 隔离被破坏：Wave0 gate fail 后 Agent 直接跳到 final report，跳过 wave1/wave2/hitl2/final（P0）
-
-- [BUG-034](BUG-034-wave0-gate-impassable-relay-ledger-chain-too-brittle.md) — Wave0 gate 结构性无法通过：relay→ledger→gate 链 5+ 步骤任一断裂全局阻塞（P0）← **元 BUG——BUG-031/032/033 的根因**
-
-- [BUG-035](BUG-035-cross-wave-repeated-relay-failure-pattern.md) — 每个 relay-based phase 重复同一失败模式：wave0/1/2 共享完全相同的脆弱 relay→ledger→gate 基础设施，无学习效应（P0）← **BUG-034 的乘法效应**
-
-- [BUG-036](BUG-036-run-log-trace-reveal-systemic-workflow-failure.md) — run.log 26.5% WARN rate + rb_trace 19.3% provenance 诊断揭示了系统性 workflow 失败——给后续 AI Coding Agent 的完整根因诊断（P0）
 
 **Next available bug ID: BUG-037**

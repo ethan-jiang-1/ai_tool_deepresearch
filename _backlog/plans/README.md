@@ -15,4 +15,4 @@
 
 ## 活跃列表
 
-- [unified-delegated-work-unit-pipeline](unified-delegated-work-unit-pipeline.md) — 统一 delegated work unit 信封，收缩 queue/relay/ledger 手工桥接，保留 wave-specific sub-agent contracts
+当前无活跃 plan。

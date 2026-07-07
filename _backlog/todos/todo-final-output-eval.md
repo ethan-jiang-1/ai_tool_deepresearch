@@ -129,7 +129,7 @@ explore-exploit 判断**搜索**够不够。final-output eval 判断**产物**�
 | HITL2 5 个 decision | `phase-hitl2.md:46-52` | auto_rerun 复用 `rerun` decision 的语义（增量重跑），但触发者从用户切到系统 |
 | HITL2 enum | `DPT_FRAMEWORK/schema/enums.mjs:53` | `HITL2UserDecision`（6 值，含 sentinel `not_started`）已有 `rerun`——auto_rerun 复用它，只是触发者从用户切到系统 |
 | rerun-incremental-node 概念 | `todo-rerun-incremental-node.md` | auto_rerun 触发后进入 rerun node——final-output eval 是 rerun 的**上游决策者** |
-| convergeRepair 的 retry limit | `subagent-relay.mjs:929` | maxIterations=3 + stall detection——auto_rerun 轮数上限的直接模板 |
+| bounded retry limit | existing repair/rerun guard patterns | maxIterations-style hard cap——auto_rerun 轮数上限的直接模板 |
 | wave2 最终产出文件 | `artifacts/wave2/synthesis.md`, `cross-topic-ledger.md`, `finding-index.yaml` | final-output eval 的检查对象（注意：`question-list.md` 是 wave1 产物，不在 wave2） |
 | evidence-quality 的 QualityReport | `todo-evidence-quality.md` | per-source quality 的聚合统计是 final-output eval 的输入之一 |
 

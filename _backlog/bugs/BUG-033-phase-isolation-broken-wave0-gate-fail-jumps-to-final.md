@@ -5,7 +5,7 @@ P0 — 违反 phase isolation 原则（BUG-029 已记录但此 bug 是新的具�
 
 ## 复现场景
 2026-07-06，us-iran-conflict-situation wave0：
-- Wave0 gate 连续 4 次 fail（infrastructure 规则：relay provenance、ledger、output coverage）
+- Wave0 gate 连续 4 次 fail（delegated provenance、ledger、output coverage）
 - Per-topic count_floor 已全部通过（10 refs × 5 topics）
 - Agent 记录 `silent_unpassable` 后，**直接创建了 `final/report.md`**
 - 跳过的 phase：wave1（evidence synthesis）、wave2（cross-topic synthesis）、HITL2（user review）、phase-final（proper delivery with readiness check）
@@ -44,9 +44,6 @@ BUG-029 记录了"no phase isolation"的设计问题。这个 bug 是该设计�
 - Agent 有能力在 wave0 中直接写入 `final/` 目录
 - 没有任何文件系统/CLI 层面的 enforcement 阻止这种行为
 - Phase 之间的屏障纯粹是 MD 写的——Agent "SHALL NOT" 但不被强制
-
-### 和 BUG-032 的关系
-BUG-032 是触发器：relay commit 失败 → gate 持续 fail → Agent 寻求替代路径 → 跳过所有后续 phase。如果 BUG-032 不存在（relay commit 正常工作），Agent 不会陷入"gate 持续 fail"的困境。
 
 ## 影响范围
 - 当前 run 的 wave1/wave2 synthesis 从未发生
