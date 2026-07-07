@@ -55,15 +55,15 @@ This change intentionally hardens several adjacent surfaces at once. During impl
 
 ## Validation Strategy
 
-The apply phase should treat `_backlog/bugs/BUG-033` and `BUG-037` through `BUG-043` as bug-probe seeds, not just background reading. Each bug-probe should become a minimal replay asset that preserves the failure's important shape: the status window, trace witnesses, ledger row, work-unit envelope, cache leaf, source YAML shape, or Agent-facing prompt surface that made the historical run fail.
+The apply phase should treat `_backlog/bugs/BUG-033` and `BUG-037` through `BUG-043` as bug-probe seeds, not just background reading. Each bug-probe should become a minimal replay asset that preserves the failure's important shape: the status window, trace witnesses, ledger row, work-unit envelope, cache leaf, source YAML shape, Agent-facing prompt, or MD-controller decision point that made the historical run fail.
 
-Use the lightest proof boundary that still exercises the real authority layer:
+Use the proof boundary where the bug actually failed:
 
 - Unit tests for deterministic classifiers, parsers, diagnostics, wording validators, return-map shape checks, hash/binding comparisons, and phase-audit outcome selection.
 - Integration tests for production CLIs, gates, submit paths, inspections, and bundle-shaped fixtures where the behavior depends on cross-file runtime state.
-- Controlled `experiments_playbook/` cases only when the question is Agent-facing behavior: whether a Markdown-driven Phase Agent reads Engine feedback and continues, whether a real Sub-agent writes files before returning, whether `stop: no` surfacing intent is logged and aborted, or whether a playbook-level feedback loop remains silent and phase-bound.
+- Controlled `experiments_playbook/` cases as primary proof when the question is Agent-facing behavior: whether a Markdown-driven Phase Agent reads Engine feedback and continues, whether a real Sub-agent writes files before returning, whether `stop: no` surfacing intent is logged and aborted, or whether a playbook-level feedback loop remains silent and phase-bound.
 
-Fixture-backed regression tests must be honest about what they prove. They can prove that the Engine rejects a malformed result, diagnoses a missing ledger row, or refuses an impossible status window. They do not prove real Agent search, writing, synthesis, or compliance unless a controlled experiment actually exercises that actor path through the same production boundary.
+Fixture-backed regression tests must be honest about what they prove. They can prove that the Engine rejects a malformed result, diagnoses a missing ledger row, or refuses an impossible status window. They do not prove real Agent search, writing, synthesis, silence, feedback-following, or compliance unless a controlled experiment actually exercises that actor path through the same production boundary. In particular, BUG-033, BUG-039, BUG-042, and BUG-043 require playbook-level evidence before the change can claim the historical failure mode is closed.
 
 ## Decisions
 
