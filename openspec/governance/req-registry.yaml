@@ -147,6 +147,7 @@ AGQ-017: agentic-queue — Delegated task TargetSpec keeps controller main-agent
 AGQ-018: agentic-queue — Delegated completion is work-unit submit with declaration, output file, and cache trail validation
 AGQ-019: agentic-queue — Queue v2 active_window, refill_pool, delegated_in_flight, and terminal_history state model
 AGQ-020: agentic-queue — pendingCount exposes active window plus refill pool task total
+AGQ-021: agentic-queue — Supplementary queue demand IDs may carry iteration labels when explicit topic identity is valid
 
 # agent-output-declaration
 AGO-001: agent-output-declaration — Work-unit result output_files declaration with role and source_url rules
@@ -167,6 +168,7 @@ CMI-002: cmd-bundle-instantiation — JS helper validate-bundle.mjs (Zod validat
 CMI-003: cmd-bundle-instantiation — JS helper inspect-bundle.mjs (structure check)
 CMI-004: cmd-bundle-instantiation — Template files (rb_templates/)
 CMI-005: cmd-bundle-instantiation — Bundle naming is Agent-derived or already-supplied, not a mid-pipeline user dependency
+CMI-006: cmd-bundle-instantiation — rb_status.json template includes current_node reentry coordinate
 
 # check-inspect-feedback
 CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
@@ -183,6 +185,7 @@ DEW-007: delegated-work-units — Submitted work-unit ledger rows are delegated 
 DEW-008: delegated-work-units — Non-work-unit delegated artifacts are cleanup diagnostics only
 DEW-009: delegated-work-units — Work-unit tasks expose bundle-root absolute paths and write-before-return verification
 DEW-010: delegated-work-units — Submitted result and ledger hashes detect post-submit drift before gate pass
+DEW-011: delegated-work-units — Successful work-unit submit verifies durable queue postconditions before reporting success
 
 # conditional-nodes
 COS-001: conditional-nodes — Deterministic branch checkpoint transforms
@@ -194,6 +197,7 @@ CPT-003: cli-phase-transition — Enter phase CLI witnesses lifecycle node entry
 CPT-004: cli-phase-transition — Advance status refuses unwitnessed or unpassed phase handoffs
 CPT-005: cli-phase-transition — Phase-boundary terminology separates status transition, Agent handoff, work completion, and witnessing
 CPT-006: cli-phase-transition — Phase status drift audit detects impossible current_gate/next_gate windows and manual bypass suspicion
+CPT-007: cli-phase-transition — current_node records active loaded lifecycle control surface without replacing gate window authority
 
 # cli-exit-code-conventions
 CLE-001: cli-exit-code-conventions — Discoverable framework CLI exit-code contract in top-level command docs
@@ -304,6 +308,7 @@ RRD-003: runtime-reentry-debuggability — Queue state cannot conflict with life
 RRD-004: runtime-reentry-debuggability — Failed gates preserve full post-mortem diagnostic detail
 RRD-005: runtime-reentry-debuggability — Reentry tooling derives facts from bundle truth without chat memory
 RRD-006: runtime-reentry-debuggability — Reentry CLI exit-code semantics align with the documented framework convention
+RRD-007: runtime-reentry-debuggability — Reentry diagnostics use rb_status current_node as the current phase coordinate when present
 
 # run-entry
 RUE-001: run-entry — RUN.md entry point announces the framework version banner
@@ -658,6 +663,7 @@ IOC-004: cli-inspect-output-conventions — Inspect CLIs are documented non-gate
 
 # bundle-start-from-here (delta)
 BUS-002: bundle-start-from-here — START_FROM_HERE.md documents flat reference/ and artifacts/wave0/
+BUS-003: bundle-start-from-here — START_FROM_HERE.md documents rb_status current_node as the resume phase coordinate
 
 # schema-core (delta)
 SCO-010: schema-core — _INDEX.md light validation (header completeness + at least 1 row)

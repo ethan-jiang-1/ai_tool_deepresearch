@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-07-05 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-07-08 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -15,4 +15,4 @@
 
 ## 活跃列表
 
-当前无活跃 plan。
+- [formal-run-bugfix-change-split](formal-run-bugfix-change-split.md) — active BUG-044 through BUG-058 split into four focused OpenSpec changes
