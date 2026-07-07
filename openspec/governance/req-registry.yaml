@@ -156,6 +156,7 @@ AGO-005: agent-output-declaration — Ledger declarations preserve non-empty cre
 AGO-006: agent-output-declaration — cache_trails MUST be populated by Engine during work-unit submit validation, not Agent claims
 # bundle-data-isolation
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
+BUI-002: bundle-data-isolation — Runtime output paths stay under active bundle root and repo-root leaks are diagnosed
 # workflow-directory-contract (BUS-* absorbed)
 BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry
 
@@ -179,6 +180,8 @@ DEW-005: delegated-work-units — Submit transaction is the only successful dele
 DEW-006: delegated-work-units — Terminal attempts and timeout retry allocate replacement work IDs
 DEW-007: delegated-work-units — Submitted work-unit ledger rows are delegated gate coverage authority
 DEW-008: delegated-work-units — Non-work-unit delegated artifacts are cleanup diagnostics only
+DEW-009: delegated-work-units — Work-unit tasks expose bundle-root absolute paths and write-before-return verification
+DEW-010: delegated-work-units — Submitted result and ledger hashes detect post-submit drift before gate pass
 
 # conditional-nodes
 COS-001: conditional-nodes — Deterministic branch checkpoint transforms
@@ -189,6 +192,7 @@ CPT-002: "cli-phase-transition — Log event CLI extension (--event flag): write
 CPT-003: cli-phase-transition — Enter phase CLI witnesses lifecycle node entry through assessNode and load_complete trace
 CPT-004: cli-phase-transition — Advance status refuses unwitnessed or unpassed phase handoffs
 CPT-005: cli-phase-transition — Phase-boundary terminology separates status transition, Agent handoff, work completion, and witnessing
+CPT-006: cli-phase-transition — Phase status drift audit detects impossible current_gate/next_gate windows and manual bypass suspicion
 
 # cli-exit-code-conventions
 CLE-001: cli-exit-code-conventions — Discoverable framework CLI exit-code contract in top-level command docs
@@ -398,6 +402,7 @@ SWE-001: silent-wave-execution — Silent wave execution contract with degradati
 SWE-002: silent-wave-execution — Fatigue resistance guidance (self-check protocol, structural vs fixable failure, step-back), universal scope extension to all stop:no phases
 SWE-003: silent-wave-execution — Positive continuation contract and terminal delivery visibility for autonomous phases
 SWE-004: silent-wave-execution — Autonomous silent execution has no implicit human co-runner outside HITL1/HITL2
+SWE-005: silent-wave-execution — Stop:no surfacing intent is recorded as trace before any prohibited user-facing pause
 
 # test-fixtures
 TEF-001: test-fixtures — Fixture framework for integration tests
@@ -534,6 +539,7 @@ WNC-011: workflow-node-contract — Lifecycle node wording uses canonical phase-
 SNC-001: subagent-node-contract — Sub-agent role specs SHALL mandate lifecycle logging (read beacon, emit events with nonce, always-loaded)
 SNC-002: subagent-node-contract — Work-unit task Markdown includes lifecycle logging directives
 SNC-003: subagent-node-contract — Phase workflow nodes direct the Phase Agent through the work-unit claim/submit loop
+SNC-004: subagent-node-contract — Sub-agent role specs require beacon-first absolute path resolution and file existence verification before return
 GSK-001: gate-skeleton — Gate definition JSON skeleton structure (gate, description, rules[] with id/check/target/threshold/failure_message)
 GSK-002: "gate-skeleton — Gate CLI skeleton shape (parseArgs, --bundle/--current-node required, check/inspect/advice JSON output, exit codes)"
 GSK-003: gate-skeleton — One gate per CLI (8 independent CLI wrappers, no generic runner with subcommand)
@@ -607,6 +613,7 @@ REF-003: reference-flat-format — _INDEX.md as canonical reference inventory wi
 REF-004: reference-flat-format — README.md as human navigation for reference directory
 REF-005: reference-flat-format — Phase nodes enforce reference file naming convention
 REF-006: reference-flat-format — Wave1 sub-agent reference file format specification
+REF-007: reference-flat-format — Agent-facing source.yaml and reference metadata formats are complete and parser-aligned
 
 # version-management
 VEM-001: version-management — CHANGELOG is concise and human-readable at project root
@@ -631,6 +638,7 @@ RWP-014: research-wave-phase-content — Rerun action:add SHALL include full cac
 RWG-011: research-wave-gate-implementation — Wave0 gate checks for 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
 RWG-012: research-wave-gate-implementation — Wave1 gate checks for reference/*{topic}*.md per topic
 RWG-013: research-wave-gate-implementation — Wave2 gate removes reference/00_shared/ checks, 00-cross-* is optional
+RWG-016: research-wave-gate-implementation — Wave gates return repair-targeted diagnostics for YAML shape, ledger-only reference counting, cache coverage, and hash drift
 
 # workflow-directory-contract (delta)
 WDC-009: workflow-directory-contract — Bundle canonical structure includes artifacts/wave0/ and flat reference/
