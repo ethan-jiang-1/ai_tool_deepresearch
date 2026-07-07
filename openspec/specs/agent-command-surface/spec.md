@@ -106,9 +106,12 @@ The terminology canon SHALL define:
 - `phase transition`: synchronization of runtime status such as `rb_status.json` current/next gate state;
 - `phase handoff`: the Phase Agent consuming gate CLI `check.next` through the accepted loader/check path and entering the next Markdown control surface;
 - `work completion`: target-phase artifacts and gate/content rules proving the target phase's work is done; and
-- `witnessing`: Engine-written evidence that binds a deterministic gate output to the subsequent handoff, such as the ordered `gate_attempt(passed=true,next=<target>)` and route-bound `load_complete(entry=<target>)` pair.
+- `witnessing`: Engine-written evidence that binds a deterministic gate output to the subsequent handoff, such as the ordered `gate_attempt(passed=true,next=<target>)` and route-bound `load_complete(entry=<target>)` pair; and
+- `current_node`: when non-null, the durable `rb_status.json` coordinate for the lifecycle Markdown control surface most recently loaded by successful route-bound `enter-phase`.
 
 The docs SHALL state that `enter-phase` / `load_complete` proves entry into the target node, not target-phase work completion. Existing machine names such as `phase_transition`, `advance-status`, `enter-phase`, `load_complete`, `stop: no`, and capability names SHALL remain stable unless a separate migration changes them.
+
+Agent-facing resume guidance, including command playbooks for an already-existing active bundle, SHALL prefer non-null `rb_status.json.current_node` as the phase Markdown coordinate. It SHALL NOT tell the Agent to infer the active phase from `current_gate` alone. If `current_node` is `null` or absent, guidance SHALL direct the Agent to existing `START_FROM_HERE.md`, trace, and reentry diagnostics rather than guessing the phase from the gate window.
 
 #### Scenario: Terminology canon names the boundary layers
 
@@ -121,3 +124,16 @@ The docs SHALL state that `enter-phase` / `load_complete` proves entry into the 
 - **WHEN** command docs describe `enter-phase`
 - **THEN** they SHALL describe it as consuming `check.next` and witnessing entry/loading of the next control surface
 - **AND** they SHALL NOT describe it as completing the target phase's work
+
+#### Scenario: Existing active bundle guidance uses current node
+
+- **WHEN** an Agent-facing command playbook describes resuming an already-existing bundle
+- **THEN** it SHALL tell the Agent to use non-null `rb_status.json.current_node` as the preferred phase Markdown coordinate
+- **AND** it SHALL distinguish `current_node` from `current_gate` and `next_gate`
+- **AND** it SHALL NOT tell the Agent to judge the current phase from `current_gate` alone
+
+#### Scenario: Missing current node falls back to diagnostics
+
+- **WHEN** an existing bundle has `rb_status.json.current_node: null` or no `current_node`
+- **THEN** resume guidance SHALL direct the Agent to existing `START_FROM_HERE.md`, trace, and reentry diagnostics
+- **AND** it SHALL NOT guess the phase from `current_gate` alone

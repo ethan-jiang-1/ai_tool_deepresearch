@@ -1,6 +1,6 @@
 # CLI Phase Transition
 
-> req: CPT-001, CPT-002, CPT-003, CPT-004, CPT-005, CPT-006
+> req: CPT-001, CPT-002, CPT-003, CPT-004, CPT-005, CPT-006, CPT-007
 
 ## Purpose
 
@@ -78,7 +78,7 @@ Usage:
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>
 ```
 
-- `--bundle` SHALL point to an existing runtime bundle containing `rb_trace.jsonl`.
+- `--bundle` SHALL point to an existing runtime bundle containing `rb_trace.jsonl` and `rb_status.json`.
 - `--node` SHALL be a workflow node fileRef such as `phases/phase-wave1.md`.
 - `--node` SHALL match the `next` value from the latest passed deterministic `gate_attempt` trace event that has a non-null `next`. The CLI SHALL derive legal predecessor edges from `manifest.json` and `transitions.chain.json`, and that latest passed gate attempt SHALL name the predecessor gate and predecessor `currentNodeRef`.
 - The CLI SHALL NOT accept older historical `gate_attempt.next` matches when a later passed deterministic gate attempt points elsewhere.
@@ -86,9 +86,10 @@ node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>
 - The CLI SHALL call the existing `assessNode()` loader path with a trace bound to `<bundle>/rb_trace.jsonl`.
 - The CLI SHALL preserve the existing loader trace events including `load_start`, `dependency_resolved`, and `load_complete`.
 - The successful `load_complete` event SHALL include route-bound metadata naming the authorizing source gate, source node, target node, `handoff_source_attempt_index`, and `handoff_source_attempt_ts`. `handoff_source_attempt_index` SHALL be the zero-based JSONL event index of the authorizing `gate_attempt`; timestamp alone SHALL NOT be the primary reference for status/preflight validation.
-- On success, the CLI SHALL render the loaded dependency closure in plan order as Agent-readable Markdown on stdout so the Phase Agent can read that Markdown into conversation context and continue the Agent-driven loop. The Markdown SHALL use stable file-boundary markers for each rendered file and SHALL NOT mix JSON status into successful stdout.
-- On failure, the CLI SHALL print diagnostic JSON, exit non-zero, and SHALL NOT append `load_complete`.
-- The CLI SHALL NOT choose the next node, mutate `rb_status.json`, run gate checks, drive the lifecycle loop, execute Markdown instructions, execute research work, or write phase artifacts.
+- After the successful route-bound load and `load_complete` witness, the CLI SHALL update `rb_status.json#/current_node` to the loaded target node.
+- On successful `current_node` write, the CLI SHALL render the loaded dependency closure in plan order as Agent-readable Markdown on stdout so the Phase Agent can read that Markdown into conversation context and continue the Agent-driven loop. The Markdown SHALL use stable file-boundary markers for each rendered file and SHALL NOT mix JSON status into successful stdout.
+- On failure, including failure to write `current_node`, the CLI SHALL print diagnostic JSON, exit non-zero, and SHALL NOT report the phase entry as successful. If `load_complete` was already appended before a `current_node` write failure, diagnostics SHALL name the partial status-write failure and advise Engine-mediated retry or repair.
+- The CLI SHALL NOT choose the next node, mutate `rb_status.json#/current_gate`, mutate `rb_status.json#/next_gate`, append `phase_transition`, run gate checks, drive the lifecycle loop, execute Markdown instructions, execute research work, or write phase artifacts.
 
 #### Scenario: Enter phase emits load complete witness
 
@@ -96,8 +97,9 @@ node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>
 - **AND** `enter-phase.mjs --bundle <bundle> --node phases/phase-wave1.md` is called
 - **THEN** `rb_trace.jsonl` SHALL contain a `load_complete` event with `entry: "phases/phase-wave1.md"`
 - **AND** that `load_complete` event SHALL include `handoff_source_gate: "wave0-complete"`, `handoff_source_node: "phases/phase-wave0.md"`, `handoff_target_node: "phases/phase-wave1.md"`, `handoff_source_attempt_index`, and `handoff_source_attempt_ts`
+- **AND** `rb_status.json` SHALL contain `current_node: "phases/phase-wave1.md"`
 - **AND** stdout SHALL include the rendered Markdown content loaded by `assessNode()`
-- **AND** `rb_status.json` SHALL NOT be modified
+- **AND** `rb_status.json#/current_gate` and `rb_status.json#/next_gate` SHALL NOT be modified by `enter-phase`
 
 #### Scenario: Enter phase rejects nodes not produced by gate routing
 
@@ -105,6 +107,7 @@ node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>
 - **AND** `rb_trace.jsonl` has no prior `gate_attempt(passed=true)` whose `next` is `phases/phase-final.md`
 - **THEN** the CLI SHALL exit non-zero with a diagnostic error
 - **AND** it SHALL NOT append `load_complete` for `phases/phase-final.md`
+- **AND** it SHALL NOT update `rb_status.json.current_node`
 
 #### Scenario: Enter phase rejects stale route match
 
@@ -113,6 +116,7 @@ node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>
 - **AND** `enter-phase.mjs --bundle <bundle> --node phases/phase-wave1.md` is called when the latest passed deterministic handoff does not authorize that node
 - **THEN** the CLI SHALL exit non-zero
 - **AND** it SHALL NOT append a new `load_complete` for `phases/phase-wave1.md`
+- **AND** it SHALL NOT update `rb_status.json.current_node`
 
 #### Scenario: Enter phase rejects superseded pass
 
@@ -121,6 +125,7 @@ node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>
 - **AND** `enter-phase.mjs --bundle <bundle> --node phases/phase-wave1.md` is called
 - **THEN** the CLI SHALL exit non-zero
 - **AND** it SHALL NOT append a new `load_complete` for `phases/phase-wave1.md`
+- **AND** it SHALL NOT update `rb_status.json.current_node`
 
 #### Scenario: Enter phase separates Markdown success from JSON failure
 
@@ -128,7 +133,14 @@ node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <fileRef>
 - **THEN** stdout SHALL be Agent-readable Markdown with stable file-boundary markers and no mixed JSON status envelope
 - **WHEN** `enter-phase.mjs` fails
 - **THEN** stdout SHALL be diagnostic JSON
-- **AND** no handoff witness SHALL be written
+- **AND** no handoff witness or `current_node` update SHALL be reported as successful
+
+#### Scenario: Current node write failure is partial entry failure
+
+- **WHEN** `enter-phase.mjs` has loaded the target node and appended `load_complete`
+- **AND** updating `rb_status.json.current_node` fails
+- **THEN** stdout SHALL be diagnostic JSON rather than successful Markdown
+- **AND** diagnostics SHALL name the failed `current_node` status write
 
 #### Scenario: Enter phase preserves autonomous continuation header injection
 
@@ -323,3 +335,34 @@ The audit SHALL expose a closed diagnostic outcome vocabulary so downstream advi
 - **WHEN** the audit accepts a bootstrap compatibility status window
 - **THEN** the result SHALL use outcome `bootstrap_exception`
 - **AND** diagnostics SHALL name the exact exception rather than treating arbitrary missing witnesses as acceptable
+
+### Requirement: current_node records active loaded lifecycle control surface
+
+The phase transition tooling SHALL maintain `rb_status.json#/current_node` as the canonical bundle-relative workflow node ref for the lifecycle control surface most recently loaded by a successful route-bound `enter-phase` call.
+
+`current_node` SHALL answer "which phase Markdown should the Agent continue from?" It SHALL NOT replace `current_gate` / `next_gate`, SHALL NOT prove target phase work completion, and SHALL NOT authorize gate pass by itself.
+
+Before any lifecycle node has been successfully loaded by `enter-phase`, `current_node` MAY be `null` or absent for legacy bundles. New bundle templates SHALL use `current_node: null`.
+
+`advance-status` SHALL preserve `current_node` when synchronizing `current_gate` / `next_gate`. It SHALL NOT clear `current_node` after source-gate status sync, because accepted handoff order loads the target node before synchronizing the source-gate status window.
+
+#### Scenario: Current node survives source-gate status sync
+
+- **WHEN** Wave0 passes with `check.next: "phases/phase-wave1.md"`
+- **AND** `enter-phase --bundle <bundle> --node phases/phase-wave1.md` succeeds
+- **AND** `advance-status --bundle <bundle> --to wave0_complete` succeeds
+- **THEN** `rb_status.json` SHALL contain `current_node: "phases/phase-wave1.md"`
+- **AND** `current_gate` SHALL be `wave0_complete`
+- **AND** `next_gate` SHALL be `wave1_complete`
+
+#### Scenario: Current node is not phase completion evidence
+
+- **WHEN** `rb_status.json.current_node` is `phases/phase-wave1.md`
+- **THEN** tools SHALL treat it as the loaded control surface only
+- **AND** they SHALL NOT treat it as evidence that Wave1 work or the Wave1 gate has completed
+
+#### Scenario: Initial current node may be null
+
+- **WHEN** a new bundle has not yet loaded a lifecycle control surface through `enter-phase`
+- **THEN** `rb_status.json.current_node` MAY be `null`
+- **AND** tools SHALL NOT infer the current phase solely from that null value

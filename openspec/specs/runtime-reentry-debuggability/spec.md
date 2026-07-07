@@ -1,10 +1,10 @@
 # Runtime Reentry Debuggability
 
-> req: RRD-001, RRD-002, RRD-003, RRD-004, RRD-005, RRD-006
+> req: RRD-001, RRD-002, RRD-003, RRD-004, RRD-005, RRD-006, RRD-007
 
 ## Purpose
 
-TBD — see delta spec in change harden-rerun-topic-integration.
+Define reentry checkpoint manifests, reentry checking, queue-state/lifecycle consistency validation, gate diagnostic preservation, and reentry coordinate tooling. Reentry tooling derives all facts from bundle files and deterministic helpers; it does not rely on chat memory.
 
 ## Requirements
 
@@ -223,3 +223,22 @@ The command's code `2` semantics SHALL be documented as caller/configuration err
 - **WHEN** a known target fails because runtime files drifted
 - **THEN** stdout SHALL describe the drift severity and repair direction
 - **AND** the numeric exit code SHALL remain a coarse branch signal only
+
+### Requirement: Reentry diagnostics SHALL use current_node as the current phase coordinate
+
+Runtime reentry and diagnostic tooling SHALL treat `rb_status.json#/current_node`, when present, as the current loaded lifecycle phase node coordinate. This coordinate SHALL be used to explain where an Agent should resume reading Markdown, while existing gate/checkpoint validation remains responsible for deciding whether the runtime state is consistent.
+
+If `current_node` is `null` or absent in a legacy bundle, reentry tooling MAY fall back to existing trace/checkpoint inference, but it SHALL report that status lacks a populated current phase coordinate.
+
+#### Scenario: Reentry reports current loaded phase
+
+- **WHEN** `rb_status.json` contains `current_node: "phases/phase-hitl2.md"`
+- **AND** reentry or audit tooling reports the current runtime position
+- **THEN** the output SHALL include `current_node: "phases/phase-hitl2.md"` or equivalent current phase coordinate
+- **AND** it SHALL distinguish this from `current_gate` and `next_gate`
+
+#### Scenario: Legacy or initial bundle without populated current node remains readable
+
+- **WHEN** `rb_status.json` has no `current_node` or has `current_node: null`
+- **THEN** reentry tooling SHALL NOT fail solely for that absence
+- **AND** diagnostics SHALL advise that the next successful `enter-phase` will populate `current_node`

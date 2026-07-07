@@ -16,7 +16,7 @@ The version banner format SHALL be `> **DPT_FRAMEWORK v<major>.<minor>**`. The c
 
 - **WHEN** an agent reads `DPT_FRAMEWORK/RUN.md`
 - **THEN** the first content after the title is a blockquote banner in the format `DPT_FRAMEWORK v<major>.<minor>`
-- **AND** for this change's apply target, the banner SHALL state `DPT_FRAMEWORK v0.5`
+- **AND** for this change's apply target, the banner SHALL state `DPT_FRAMEWORK v0.6`
 - **AND** the banner appears before the trigger-context blockquote and before Section 0
 
 ### Requirement: Entry point instructs agents not to use built-in research shortcuts

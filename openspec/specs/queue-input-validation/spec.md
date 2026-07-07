@@ -14,9 +14,9 @@ Topic slug resolution SHALL be deterministic:
 
 - If `payload.topic_slug` is present, it is the preferred explicit topic declaration and SHALL be validated against `topic_registry`.
 - If `lineage.topic_slug` is present, it SHALL match `payload.topic_slug` when both are present and SHALL be validated.
-- `work_id` SHALL be parsed only as a fallback for known topic-scoped producer/work_id templates, such as `wave0-source-{topic.slug}`, `wave0-suppl-{topic.slug}-r{N}`, `wave1-deepen-{topic.slug}`, `wave1-suppl-{topic.slug}-r{N}`, `seed-topic-{topic.slug}`, `wave2-backfill-{topic.slug}`, `wave2-suppl-cross-{topic.slug}-r{N}`, and `wave2-suppl-emergent-{topic.slug}-r{N}`.
-- If both explicit payload/lineage slug and derived `work_id` slug are available, they SHALL match. A mismatch SHALL reject the task.
-- Topic scope SHALL be determined from explicit topic fields or known topic-scoped work_id templates, not from `producer_rule` alone. For example, `producer_rule: "topic_deepening"` can be topic-scoped for Wave1/Wave2 per-topic tasks, but Wave2 backing gap tasks such as `wave2-suppl-backing-{finding_id}-r{N}` are finding-scoped when they declare `payload.finding_id` or `lineage.finding_id` and no topic slug.
+- `queue_item_id` SHALL be parsed only as a fallback for known topic-scoped queue item templates when no explicit payload or lineage topic slug is present. Known fallback templates include `wave0-source-{topic.slug}`, `wave0-suppl-{topic.slug}-r{N}`, `wave1-deepen-{topic.slug}`, `wave1-suppl-{topic.slug}-r{N}`, `seed-topic-{topic.slug}`, `wave2-backfill-{topic.slug}`, `wave2-suppl-cross-{topic.slug}-r{N}`, and `wave2-suppl-emergent-{topic.slug}-r{N}`.
+- If explicit payload/lineage slug is available and valid, a different slug that could be derived from `queue_item_id` SHALL NOT reject the task. The ID-derived slug MAY be reported as advisory naming drift, but it SHALL NOT override explicit topic identity.
+- Topic scope SHALL be determined from explicit topic fields, known topic-scoped queue item templates, or declared output shape. It SHALL NOT depend on `producer_rule` alone. For example, `producer_rule: "topic_deepening"` can be topic-scoped for Wave1/Wave2 per-topic tasks, but Wave2 backing gap tasks such as `wave2-suppl-backing-{finding_id}-r{N}` are finding-scoped when they declare `payload.finding_id` or `lineage.finding_id` and no topic slug.
 - If a task is topic-scoped but no slug can be resolved, enqueue SHALL reject the task rather than skip validation.
 - Non-topic task cards SHALL skip topic_registry validation when they have no explicit topic slug and no topic-scoped work_id template. Finding-scoped Wave2 search tasks SHALL skip topic_registry validation when they declare a `finding_id`; if `artifacts/wave2/finding-index.yaml` exists, enqueue SHALL validate that `finding_id` is present in the current bundle's finding index.
 
@@ -24,36 +24,37 @@ If the topic slug is not found in `topic_registry`, enqueue SHALL reject the tas
 
 #### Scenario: Valid topic slug passes validation
 
-- **WHEN** a task card has `work_id: "wave0-source-01_chinese-professional-league"`
+- **WHEN** a task card has `queue_item_id: "wave0-source-01_chinese-professional-league"`
 - **AND** `topic_registry` contains a topic with slug `01_chinese-professional-league`
 - **THEN** enqueue SHALL accept the task card and write to queue
 
 #### Scenario: Unknown topic slug is rejected
 
-- **WHEN** a task card has `work_id: "wave0-source-03_clinical-scenarios"`
+- **WHEN** a task card has `queue_item_id: "wave0-source-03_clinical-scenarios"`
 - **AND** `topic_registry` does NOT contain a topic with slug `03_clinical-scenarios`
 - **THEN** enqueue SHALL reject with error: `topic_slug '03_clinical-scenarios' not found in bundle topic_registry`
 - **AND** the task card SHALL NOT be written to `rb_queue.json`
 - **AND** exit code SHALL be 1
 
-#### Scenario: Payload slug and work_id slug mismatch is rejected
+#### Scenario: Conflicting payload and lineage topic slugs are rejected
 
 - **WHEN** a task card has `producer_rule: "topic_deepening"`
-- **AND** `work_id: "wave1-deepen-01_chinese-professional-league"`
-- **AND** `payload.topic_slug: "03_clinical-scenarios"`
+- **AND** `queue_item_id: "wave1-deepen-01_chinese-professional-league"`
+- **AND** `payload.topic_slug: "01_chinese-professional-league"`
+- **AND** `lineage.topic_slug: "03_clinical-scenarios"`
 - **THEN** enqueue SHALL reject before writing queue state
 - **AND** error SHALL identify the conflicting slug sources
 
 #### Scenario: Topic-scoped task missing slug is rejected
 
 - **WHEN** a task card has `producer_rule: "topic_deepening"`
-- **AND** its `work_id` or declared outputs imply a topic-scoped task
-- **AND** it has no `payload.topic_slug`, no `lineage.topic_slug`, and no recognized topic slug in `work_id`
+- **AND** its `queue_item_id` or declared outputs imply a topic-scoped task
+- **AND** it has no `payload.topic_slug`, no `lineage.topic_slug`, and no recognized topic slug in `queue_item_id`
 - **THEN** enqueue SHALL reject with a structured unresolved topic slug error
 
 #### Scenario: Wave2 finding-scoped backing task is not forced through topic_registry
 
-- **WHEN** a task card has `work_id: "wave2-suppl-backing-W2F-001-r1"`
+- **WHEN** a task card has `queue_item_id: "wave2-suppl-backing-W2F-001-r1"`
 - **AND** `producer_rule: "topic_deepening"`
 - **AND** `payload.finding_id: "W2F-001"`
 - **AND** it has no topic slug because the backing search is finding-scoped
@@ -68,8 +69,8 @@ If the topic slug is not found in `topic_registry`, enqueue SHALL reject the tas
 
 #### Scenario: Non-topic task cards skip topic validation
 
-- **WHEN** a task card does NOT contain a derivable topic slug in its `work_id`, `payload.topic_slug`, or `lineage.topic_slug`
-- **AND** no known topic-scoped work_id template or declared output implies topic scope
+- **WHEN** a task card does NOT contain a derivable topic slug in its `queue_item_id`, `payload.topic_slug`, or `lineage.topic_slug`
+- **AND** no known topic-scoped queue item template or declared output implies topic scope
 - **THEN** enqueue SHALL skip topic_registry validation
 - **AND** the task card SHALL still pass queue schema validation
 

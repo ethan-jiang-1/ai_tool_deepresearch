@@ -8,13 +8,28 @@
 
 ### Requirement: CHANGELOG is concise and human-readable
 
-The project SHALL maintain a `CHANGELOG.md` file at the repository root as the project-level source of truth for version history.
+The project SHALL maintain a `CHANGELOG.md` file at the repository root as the framework version-history source of truth for DPT_FRAMEWORK behavior and Agent-facing framework contracts.
 
 CHANGELOG entries SHALL be written for humans scanning version history. Each entry SHALL consist of a version header and a short summary of what changed. Verbose capability lists, file enumerations, requirement IDs, and implementation details SHALL NOT appear in CHANGELOG — those belong in OpenSpec change artifacts.
 
+`DPT_FRAMEWORK/CHANGELOG.md` SHALL NOT be retained as a separate version-history authority. If a stale copy exists under `DPT_FRAMEWORK/`, this change SHALL remove it rather than update both files.
+
+#### Scenario: Root changelog is the version source
+
+- **WHEN** a developer looks for DPT_FRAMEWORK version history
+- **THEN** repo-root `CHANGELOG.md` exists
+- **AND** its latest entry is the source used by the `DPT_FRAMEWORK/RUN.md` version banner
+
+#### Scenario: Stale framework-local changelog is removed
+
+- **WHEN** the repository contains a stale `DPT_FRAMEWORK/CHANGELOG.md`
+- **THEN** the stale framework-local changelog SHALL be removed during apply
+- **AND** version history SHALL remain in repo-root `CHANGELOG.md`
+
 #### Scenario: Changelog entry is concise
-- **WHEN** a developer reads any CHANGELOG entry
-- **THEN** the entry consists of the version header and one to two lines summarizing what changed
+
+- **WHEN** a developer reads any DPT_FRAMEWORK changelog entry
+- **THEN** the entry consists of the version header and one to two concise bullets or lines summarizing what changed
 - **AND** does not enumerate files, requirement IDs, or implementation details
 
 #### Scenario: Changelog is project root
