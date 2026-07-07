@@ -159,8 +159,11 @@ AGO-006: agent-output-declaration — cache_trails MUST be populated by Engine d
 # bundle-data-isolation
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 BUI-002: bundle-data-isolation — Runtime output paths stay under active bundle root and repo-root leaks are diagnosed
-# workflow-directory-contract (BUS-* absorbed)
+
+# bundle-start-from-here
 BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry
+BUS-002: bundle-start-from-here — START_FROM_HERE.md documents flat reference/ and artifacts/wave0/
+BUS-003: bundle-start-from-here — START_FROM_HERE.md documents rb_status current_node as the resume phase coordinate
 
 # cmd-bundle-instantiation
 CMI-001: cmd-bundle-instantiation — Command playbook for bundle production
@@ -660,10 +663,6 @@ IOC-001: cli-inspect-output-conventions — inspect-wave0-output.mjs (flat dir, 
 IOC-002: cli-inspect-output-conventions — inspect-wave1-output.mjs ({topic.slug}*.md per topic, metadata/sections, evidence-summary, question-list, _INDEX.md wave1 entries)
 IOC-003: cli-inspect-output-conventions — inspect-wave2-output.mjs (no 00_shared/, 00-cross-* format, artifacts/wave2/ triple, no backfill tokens)
 IOC-004: cli-inspect-output-conventions — Inspect CLIs are documented non-gate structured-output commands with invocation-error code 2
-
-# bundle-start-from-here (delta)
-BUS-002: bundle-start-from-here — START_FROM_HERE.md documents flat reference/ and artifacts/wave0/
-BUS-003: bundle-start-from-here — START_FROM_HERE.md documents rb_status current_node as the resume phase coordinate
 
 # schema-core (delta)
 SCO-010: schema-core — _INDEX.md light validation (header completeness + at least 1 row)

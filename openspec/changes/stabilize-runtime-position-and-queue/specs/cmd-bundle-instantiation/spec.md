@@ -4,14 +4,14 @@
 
 ### Requirement: rb_status template SHALL include current_node
 
-Bundle instantiation templates SHALL include `current_node` in `rb_status.json` so newly created bundles expose the current loaded lifecycle node coordinate from the start of the run.
+Bundle instantiation templates SHALL include `current_node` in `rb_status.json` so newly created bundles expose the current loaded lifecycle node coordinate field from the start of the run.
 
-The initial value SHALL be a valid workflow lifecycle node ref for the first Agent-readable runtime phase loaded by the bundle bootstrap path, or `null` only if no lifecycle node has yet been loaded. The status schema SHALL accept the chosen initial value.
+The initial value SHALL be `null`, meaning no lifecycle node has yet been loaded through `enter-phase`. The status schema SHALL accept `current_node` as a workflow node string, `null`, or absent for legacy compatibility.
 
 #### Scenario: New bundle status includes current node
 
 - **WHEN** a new run bundle is instantiated
-- **THEN** its `rb_status.json` SHALL include a `current_node` field
+- **THEN** its `rb_status.json` SHALL include `current_node: null`
 - **AND** `validate-bundle.mjs` SHALL accept the status file
 
 #### Scenario: Legacy status remains compatible

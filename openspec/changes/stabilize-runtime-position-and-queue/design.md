@@ -27,7 +27,7 @@
 
 ### `current_node` means active loaded control surface
 
-`rb_status.json.current_node` SHALL store the canonical workflow node ref most recently loaded by an authorized successful `enter-phase`, such as `phases/phase-wave1.md`.
+`rb_status.json.current_node` SHALL store the canonical workflow node ref most recently loaded by an authorized successful `enter-phase`, such as `phases/phase-wave1.md`. Before any lifecycle control surface has been loaded through `enter-phase`, the field SHALL be `null` in new bundle templates. Legacy bundles may omit the field until their next successful `enter-phase`.
 
 Rationale: after `enter-phase --node phases/phase-wave1.md` and `advance-status --to wave0_complete`, the Agent is executing Wave1 even though `current_gate` is `wave0_complete`. Clearing `current_node` during `advance-status` would recreate the ambiguity from `BUG-057`.
 
@@ -36,6 +36,8 @@ Alternative rejected: derive current node from `next_gate`. This is lossy for mu
 ### `enter-phase` updates status narrowly
 
 `enter-phase` SHALL update only `current_node` after successful route-bound node load. It SHALL NOT update `current_gate` or `next_gate`, SHALL NOT append `phase_transition`, and SHALL NOT claim the target phase's work is complete.
+
+If the loader has already appended `load_complete` but the `current_node` write fails, the CLI should not print successful Markdown output. It should return diagnostic JSON that names the partial status-write failure and advises rerunning/repairing through Engine tooling. The trace witness may already exist; the failure is that `rb_status.json` was not brought into sync.
 
 Rationale: accepted handoff semantics already distinguish handoff (`enter-phase`) from status synchronization (`advance-status`) and work completion (target gate). This design adds one status coordinate without collapsing those boundaries.
 
@@ -50,7 +52,7 @@ Alternative rejected: make `advance-status` compute and write `current_node`. Th
 - `rb_queue.json.terminal_history` contains a terminal record for that queue item/work unit; and
 - refill behavior remains valid under queue schema.
 
-If this postcondition cannot be proven, submit SHALL return failure/diagnostic rather than silently reporting success.
+If this postcondition cannot be proven, submit SHALL either roll back to the prior durable state or return failure/diagnostic that marks the bundle's work-unit/queue completion as suspect. It must not silently report success.
 
 Alternative rejected: rely on later gate/reentry diagnostics. That leaves the Agent with a success signal followed by a stuck queue, which is the failure shape in `BUG-044`.
 
@@ -64,6 +66,20 @@ Rationale: `queue_item_id` is queue demand identity and may contain iteration la
 
 Alternative rejected: add more ID patterns for every supplementary naming shape. That keeps the brittle convention as authority and will fail again when a new valid suffix appears.
 
+## Test Asset Strategy
+
+This change should primarily stay in repo-root regression tests under `tests/`. It does not require new `experiments_playbook/` cases or real-environment E2E, but existing controlled playbook helpers that create status fixtures or drive real `enter-phase` / `advance-status` should be audited and updated when they depend on the changed state shape. The regression asset map should follow existing ownership:
+
+- status schema/template: `tests/schema/contracts/status.test.mjs`, `tests/integration/cli/instantiate-run-bundle.test.mjs`, and `tests/integration/cli/validate-bundle.test.mjs`;
+- handoff/status synchronization: `tests/integration/cli/enter-phase.test.mjs` and `tests/integration/cli/advance-status.test.mjs`;
+- reentry and Agent-facing guidance: `tests/integration/cli/check-reentry.test.mjs` and `tests/engine/command-contract-docs.test.mjs`;
+- work-unit submit durability: `tests/engine/work-unit-submit.test.mjs` for core transaction/postcondition behavior and `tests/integration/cli/operate-work-unit.test.mjs` for CLI response behavior;
+- queue topic identity: `tests/integration/cli/operate-queue-validation.test.mjs`;
+- controlled playbook compatibility: `experiments_env/shared/new-disposable-bundle.mjs`, `experiments_env/shared/work-unit-playbook-utils.mjs`, `experiments_env/shared/run-fixture-backed-case.mjs`, and `experiments_playbook/exp_handoff-witnessing/case-501-standard-handoff-witnessing.mjs` should remain compatible with `current_node: null` templates and `enter-phase` writing `current_node`; and
+- version banner/changelog consistency: `tests/engine/version-management.test.mjs` should assert repo-root `CHANGELOG.md` and `DPT_FRAMEWORK/RUN.md` remain aligned for `v0.6`, and that stale `DPT_FRAMEWORK/CHANGELOG.md` is not retained as a competing version-history file.
+
+The tests should assert durable files after commands return, not just returned in-memory objects. Failure-path tests should check structured diagnostics and absence of false-success output.
+
 ## Risks / Trade-offs
 
 - `current_node` could drift from trace if a write partially fails -> update status only after `load_complete` succeeds, and test failure rollback/no partial gate-window mutation.
@@ -73,10 +89,10 @@ Alternative rejected: add more ID patterns for every supplementary naming shape.
 
 ## Migration Plan
 
-- New bundles SHALL include `current_node` in `rb_status.json` template.
+- New bundles SHALL include `current_node: null` in `rb_status.json` template.
 - Existing bundles without `current_node` remain readable; schema accepts absence for backward compatibility until the next successful `enter-phase` populates it.
-- `START_FROM_HERE.md` and reentry diagnostics should tell Agents to prefer `rb_status.json.current_node` when present, and otherwise fall back to existing trace/reentry checks.
-- Apply phase updates `DPT_FRAMEWORK/CHANGELOG.md` and `DPT_FRAMEWORK/RUN.md` banner to target version `v0.6`.
+- `START_FROM_HERE.md`, Agent-facing command surfaces such as `command_playbook/start-research.md`, and reentry diagnostics should tell Agents to prefer non-null `rb_status.json.current_node` when present, and otherwise fall back to existing trace/reentry checks.
+- Apply phase updates repo-root `CHANGELOG.md` and `DPT_FRAMEWORK/RUN.md` banner to target version `v0.6`, and removes stale `DPT_FRAMEWORK/CHANGELOG.md`.
 
 ## Open Questions
 

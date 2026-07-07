@@ -10,7 +10,7 @@ Topic slug resolution SHALL be deterministic:
 
 - If `payload.topic_slug` is present, it is the preferred explicit topic declaration and SHALL be validated against `topic_registry`.
 - If `lineage.topic_slug` is present, it SHALL match `payload.topic_slug` when both are present and SHALL be validated.
-- `queue_item_id` SHALL be parsed only as a fallback for known topic-scoped queue item templates when no explicit payload or lineage topic slug is present.
+- `queue_item_id` SHALL be parsed only as a fallback for known topic-scoped queue item templates when no explicit payload or lineage topic slug is present. Known fallback templates include `wave0-source-{topic.slug}`, `wave0-suppl-{topic.slug}-r{N}`, `wave1-deepen-{topic.slug}`, `wave1-suppl-{topic.slug}-r{N}`, `seed-topic-{topic.slug}`, `wave2-backfill-{topic.slug}`, `wave2-suppl-cross-{topic.slug}-r{N}`, and `wave2-suppl-emergent-{topic.slug}-r{N}`.
 - If explicit payload/lineage slug is available and valid, a different slug that could be derived from `queue_item_id` SHALL NOT reject the task. The ID-derived slug MAY be reported as advisory naming drift, but it SHALL NOT override explicit topic identity.
 - Topic scope SHALL be determined from explicit topic fields, known topic-scoped queue item templates, or declared output shape. It SHALL NOT depend on `producer_rule` alone. For example, `producer_rule: "topic_deepening"` can be topic-scoped for Wave1/Wave2 per-topic tasks, but Wave2 backing gap tasks such as `wave2-suppl-backing-{finding_id}-r{N}` are finding-scoped when they declare `payload.finding_id` or `lineage.finding_id` and no topic slug.
 - If a task is topic-scoped but no slug can be resolved, enqueue SHALL reject the task rather than skip validation.
@@ -39,6 +39,16 @@ If the topic slug is not found in `topic_registry`, enqueue SHALL reject the tas
 - **AND** `lineage.topic_slug: "01_chinese-professional-league"`
 - **THEN** enqueue SHALL reject before writing queue state
 - **AND** error SHALL identify the conflicting explicit slug sources
+
+#### Scenario: Lineage slug can provide explicit topic identity
+
+- **WHEN** a task card has `producer_rule: "topic_deepening"`
+- **AND** `queue_item_id: "wave1-suppl-01_chinese-professional-league-r2"`
+- **AND** `lineage.topic_slug: "01_chinese-professional-league"`
+- **AND** it has no `payload.topic_slug`
+- **AND** `topic_registry` contains `01_chinese-professional-league`
+- **THEN** enqueue SHALL accept the task card
+- **AND** it SHALL validate the lineage slug against `topic_registry`
 
 #### Scenario: Explicit payload slug overrides queue item suffix
 
