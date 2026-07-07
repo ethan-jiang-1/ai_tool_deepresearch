@@ -6,7 +6,7 @@
 
 Production delegated work SHALL write one directory per `work_id` under `_work_units/waveN/{work_id}/`. The `waveN` segment SHALL match the encoded wave in `work_id`, the manifest `wave`, and the submitted ledger row.
 
-This capability SHALL be read as the sub-agent's work-unit envelope and directory contract. Current main spec Purpose and Requirements text SHALL NOT describe `_subagents/` relay slot directories as canonical production paths. Old relay/slot directory names may appear only in explicit removed, deprecated, legacy/backlog, or negative diagnostic contexts outside `openspec/changes/archive/`.
+This capability SHALL be read as the sub-agent's work-unit envelope and directory contract. Current main spec Purpose and Requirements text SHALL NOT describe `_subagents/` relay slot directories as canonical production paths. Old relay/slot directory names may appear only in explicit removed, deprecated, checker self-reference, minimized release-history, or negative diagnostic contexts outside `openspec/changes/archive/`.
 
 #### Scenario: work-unit directory path matches encoded wave
 

@@ -18,7 +18,7 @@ Current output declaration guidance SHALL describe work-unit submit rows as dele
 
 - **WHEN** a delegated output declaration lacks submitted work-unit provenance
 - **THEN** the Engine SHALL NOT count it as delegated output authority
-- **AND** any retired result reference SHALL be diagnostic or legacy evidence only
+- **AND** any retired result reference SHALL be removed from current proof surfaces or treated as rejected diagnostic evidence only
 
 ### Requirement: Production and experiments SHALL converge at schema-validated declaration
 

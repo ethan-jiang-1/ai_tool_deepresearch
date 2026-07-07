@@ -8,6 +8,8 @@ The real subagent test playbook family SHALL exercise sub-agent actor behavior t
 
 Current runnable real-subagent playbooks SHALL NOT use retired relay/slot production mechanisms as proof surfaces. Old relay/slot cases SHALL be migrated when they still prove current work-unit behavior, or removed from current experiment surfaces when they no longer have current proof or diagnostic value.
 
+Retired relay/slot proof surfaces include relay slot directories, slot identity fields, relay commit/spawn events, relay dispatch manifests, and old relay helper APIs.
+
 #### Scenario: simple subagent playbook uses work-unit path
 
 - **WHEN** the simple real subagent playbook runs
@@ -18,6 +20,12 @@ Current runnable real-subagent playbooks SHALL NOT use retired relay/slot produc
 - **WHEN** a real-subagent playbook still requires a retired relay/slot production command or path
 - **THEN** it SHALL NOT be listed as a current runnable proof case
 - **AND** it SHALL be migrated to work-unit proof or removed from current experiment surfaces
+
+#### Scenario: old relay identity fields are not current proof
+
+- **WHEN** a real-subagent playbook proves execution using `slotKey`, `roleAgentKey`, relay commit/spawn events, `dispatch.json`, or `_subagents/` paths
+- **THEN** it SHALL be migrated to work-unit identity and submit evidence or removed from current experiment surfaces
+- **AND** its old relay verdict SHALL NOT count as current work-unit proof
 
 ### Requirement: Runtime-agent trace events prove real execution path (AGT-003)
 

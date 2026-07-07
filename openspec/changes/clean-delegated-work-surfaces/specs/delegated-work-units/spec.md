@@ -8,11 +8,19 @@ Production delegated work SHALL use the path `queue demand item -> work unit -> 
 
 Current production-facing surfaces outside `openspec/changes/archive/` SHALL NOT describe old relay/slot mechanisms as active delegated-work paths. This applies to active main specs, active change deltas, framework docs, runtime docs, tests, guidelines, current runner surfaces, and runnable experiment playbooks. Archived OpenSpec changes are historical record and SHALL NOT be cleaned or treated as current drift.
 
+Old relay/slot mechanisms include retired commands and modules, old relay helper APIs, old slot result fields, old slot identity fields, old relay event names, old dispatch files, and `_subagents/` relay directory paths when used as production authority.
+
 #### Scenario: production delegated path is singular
 
 - **WHEN** active specs, framework docs, phase docs, tests, or playbooks describe delegated completion
 - **THEN** they SHALL describe queue demand claimed into a work unit and returned through submit
 - **AND** they SHALL NOT describe any alternate production delegated-work mechanism
+
+#### Scenario: retired relay identity is not current work identity
+
+- **WHEN** a current surface identifies delegated work by `slotKey`, `roleAgentKey`, relay commit events, relay spawn events, `dispatch.json`, or `_subagents/` paths
+- **THEN** that surface SHALL be migrated to work-unit identity or removed from current production-facing guidance
+- **AND** it SHALL NOT count as current delegated-work proof
 
 #### Scenario: archived changes are historical only
 
@@ -32,8 +40,8 @@ Current specs, docs, tests, and playbooks SHALL NOT present relay slot files, ol
 - **THEN** the gate SHALL fail delegated coverage
 - **AND** the file MAY be reported as cleanup or bypass diagnostic evidence only
 
-#### Scenario: old delegated surface is diagnostic only
+#### Scenario: old delegated surface is rejected or removed
 
 - **WHEN** a current diagnostic names a retired relay/slot artifact outside `openspec/changes/archive/`
-- **THEN** the diagnostic SHALL frame it as rejected, removed, deprecated, or legacy/backlog evidence
+- **THEN** the diagnostic SHALL frame it as rejected, removed, deprecated, or non-authoritative evidence
 - **AND** it SHALL NOT describe that artifact as a production success path

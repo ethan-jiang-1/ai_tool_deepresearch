@@ -9,9 +9,11 @@ Every change SHALL run the project governance checks before archive:
 1. `node openspec/governance/check-project-reqs.mjs` -- 0 duplicate, 0 unregistered, 0 orphan, 0 reusedRetired
 2. `node openspec/governance/check-project-specs.mjs` -- 0 deltaHeaderInMain, 0 missingPurpose, 0 missingRequirements, 0 missingReqHeader
 
-For delegated-work cleanup changes, the hard gate SHALL also include the work-unit hygiene check over current production-facing surfaces. The hygiene check SHALL scan active main specs, active deltas, framework surfaces, tests, guidelines, and `experiments_playbook`, and SHALL exclude `openspec/changes/archive/` as historical OpenSpec record.
+For delegated-work cleanup changes, the hard gate SHALL also include the work-unit hygiene check over current production-facing surfaces. The hygiene check SHALL scan active main specs, active deltas, framework surfaces, tests, guidelines, governance metadata, and `experiments_playbook`, and SHALL exclude `openspec/changes/archive/` as historical OpenSpec record.
 
-The hygiene check SHALL fail stale positive production wording for retired relay/slot mechanisms unless the occurrence is explicitly negative, deprecated, legacy/backlog, or historical. Allowed contexts SHALL NOT be interpreted as production authority.
+The hygiene check SHALL fail stale positive production wording for retired relay/slot mechanisms unless the occurrence is explicitly negative, deprecated, checker/test self-reference, or minimized release-history wording that cannot be interpreted as command guidance. Allowed contexts SHALL NOT be interpreted as production authority. A legacy/backlog table or label SHALL NOT be an archive-ready allowlist context.
+
+The hygiene check SHALL distinguish retired-only tokens from context-sensitive work-unit fields. Retired-only tokens include old relay commands, modules, helper APIs, slot identity fields, relay event names, old provenance check names, and old relay directory or dispatch surfaces. Context-sensitive fields such as `runtime_receipt_ref`, `receipt_nonce`, `_beacon.json`, and lifecycle event wording SHALL remain allowed in current work-unit contexts, but SHALL fail when paired with old relay/slot examples or production instructions.
 
 Checks SHALL be hard gates. Any failure SHALL block archive until resolved.
 
@@ -34,3 +36,9 @@ Checks SHALL be hard gates. Any failure SHALL block archive until resolved.
 - **WHEN** stale relay/slot production terms appear under `openspec/changes/archive/`
 - **THEN** delegated-work hygiene SHALL ignore those occurrences
 - **AND** it SHALL continue scanning current surfaces outside the archive directory
+
+#### Scenario: Current work-unit field is not falsely rejected
+
+- **WHEN** current work-unit guidance names `runtime_receipt_ref` or `receipt_nonce` in a work-unit manifest, beacon, result, or ledger context
+- **THEN** delegated-work hygiene SHALL NOT fail that occurrence solely because the token also appeared in old relay examples
+- **AND** it SHALL still fail the occurrence if it is paired with retired relay/slot paths, fields, helpers, or events

@@ -6,7 +6,7 @@
 
 Production work-unit Engine code SHALL live under `DPT_FRAMEWORK/engine/` and production CLI entrypoints SHALL live under `DPT_FRAMEWORK/cli/`. Runtime bundle state SHALL live in the active bundle under `rb_queue.json`, `rb_output_declarations.jsonl`, and `_work_units/`; `DPT_FRAMEWORK/` SHALL remain reusable framework assets, not run state.
 
-Framework import and location guidance SHALL describe deterministic queue, gate, loader, and work-unit mechanisms. It SHALL NOT describe retired relay/slot engine modules as production mechanisms outside explicit negative, deprecated, legacy/backlog, or historical contexts.
+Framework import and location guidance SHALL describe deterministic queue, gate, loader, and work-unit mechanisms. It SHALL NOT describe retired relay/slot engine modules as production mechanisms outside explicit negative, deprecated, checker self-reference, or minimized release-history contexts.
 
 #### Scenario: work-unit state is written to bundle
 
