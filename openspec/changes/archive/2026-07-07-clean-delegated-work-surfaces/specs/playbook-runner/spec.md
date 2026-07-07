@@ -2,7 +2,7 @@
 
 ## MODIFIED Requirements
 
-### Requirement: Runner execution contract and report
+### Requirement: Runner execution contract and report (PLR-003)
 
 Runner execution SHALL open the active runner instruction surface, select current playbooks, execute each selected playbook step by step, run every bash block and verdict, collect post-run health before cleanup, and report verdict and health status.
 

@@ -173,42 +173,23 @@ Agent-driven controlled E2E experiments SHALL 放置在 `experiments_playbook/ex
 
 ### Requirement: Naming conventions
 
-所有 workflow foundation artifact SHALL 遵循以下命名约定：
+All workflow foundation artifacts SHALL follow the accepted naming conventions. Runtime bundle naming SHALL distinguish production run bundles from disposable experiment bundles without changing the runtime authority boundary.
 
-| Artifact | Naming | Example |
-|----------|--------|---------|
-| Phase node | `phase-<phase>.md` | `phase-wave0.md` |
-| Shared node | `shared-<scope>.md` | `shared-profile.md` |
-| Gate definition JSON | `gate-<gate-name-kebab>.definition.json` | `gate-wave0-complete.definition.json` |
-| Gate CLI | `check-gate-<gate-name-kebab>.mjs` | `check-gate-wave0-complete.mjs` |
-| Runtime bundle | `dpt_rb_<english-slug>[_collision]` for production runs; `dpt_disp_<short>_<case>_<hex>` for disposable experiments | `dpt_rb_climate-policy`, `dpt_disp_agq_case42_a` |
-| Experiment family | `experiments_playbook/exp_<component>/` | `experiments_playbook/exp_workflow-foundation/` |
+#### Scenario: Runtime bundle names identify runtime context type
 
-#### Scenario: Consistent gate naming
-
-- **WHEN** reviewer 需要找到 `wave0_complete` gate 的所有相关文件
-- **THEN** gate definition JSON MUST 在 `gate-wave0-complete.definition.json`，gate CLI MUST 在 `check-gate-wave0-complete.mjs`
+- **WHEN** a current spec or playbook names a production runtime context
+- **THEN** it SHALL use `dpt_rb_<english-slug>[_collision]`
+- **AND** when it names a disposable experiment runtime context, it SHALL use `dpt_disp_<short>_<case>_<hex>`
 
 ### Requirement: Anti-mixing rules
 
-Framework artifact types SHALL NOT be mixed into each other's directories.
+Framework artifact types SHALL NOT be mixed into each other's directories. Runtime state, runtime choices, gate result, trace, work-unit attempt data, receipts, artifacts, logs, cache projections, and repair attempt data MUST NOT be written back to `DPT_FRAMEWORK/`.
 
-The anti-mixing rules SHALL include:
+#### Scenario: Runtime data is not framework data
 
-- Gate definition JSON MUST NOT be placed in `DPT_FRAMEWORK/workflows/nodes/` or `dpt_rb_*`.
-- Phase/shared node Markdown MUST NOT be placed in `_backlog/workflow/` as a runtime surface.
-- Experiment playbooks MUST NOT be treated as production workflow nodes.
-- `DPT_FRAMEWORK/command_playbook/` contains Agent-facing command instructions and diagnostic/maintenance playbooks; it MUST NOT contain lifecycle phase nodes and MUST NOT be described as a human or operator co-runner surface for autonomous pipeline execution.
-- Runtime state, runtime choices, gate result, trace, work-unit attempt data, receipts, artifacts, logs, cache projections, and repair attempt data MUST NOT be written back to `DPT_FRAMEWORK/`.
-- `_cache/` projections MUST NOT be treated as runtime truth.
-- Fake evidence, fake receipts, and fake trace MUST NOT appear in any directory.
-
-#### Scenario: Command playbook is not a lifecycle node
-
-- **WHEN** docs describe `DPT_FRAMEWORK/command_playbook/`
-- **THEN** they SHALL describe it as Agent-facing command guidance or diagnostic/maintenance playbooks
-- **AND** they SHALL NOT describe it as operator and Agent co-runner instructions for normal autonomous lifecycle execution
-- **AND** lifecycle phase nodes SHALL remain under `DPT_FRAMEWORK/workflows/nodes/phases/`
+- **WHEN** an Agent, CLI, gate, or playbook produces runtime state or evidence
+- **THEN** it SHALL write under the active `dpt_rb_*` or `dpt_disp_*` bundle root
+- **AND** it SHALL NOT write that runtime output under `DPT_FRAMEWORK/`
 
 ### Requirement: Single canonical workflow package
 
@@ -258,3 +239,4 @@ Framework directory docs SHALL NOT use unqualified `Agent/operator` or equivalen
 - **WHEN** a command playbook describes post-run forensics, diagnostic inspection, or maintainer review
 - **THEN** operator wording MAY appear if it is explicitly out-of-band
 - **AND** the wording SHALL NOT imply the operator runs normal lifecycle commands during `stop: no` execution
+

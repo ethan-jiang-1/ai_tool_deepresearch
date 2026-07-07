@@ -9,7 +9,7 @@ Define deterministic repair checkpoint loopback: after a gate failure, repair up
 
 After repair checkpoint execution, the workflow state SHALL re-enter the gate for deterministic re-evaluation. The repair checkpoint MAY apply the currently accepted deterministic state transform, but it SHALL NOT execute an Agent-facing workflow node body, own semantic repair strategy, or act as delegated-work transport.
 
-Current repair-loop specs and docs SHALL describe the deterministic repair checkpoint behavior without naming retired delegated implementation modules as the production anchor.
+Current repair-loop specs and docs SHALL describe the deterministic repair checkpoint behavior without naming retired relay/slot implementation modules as the production anchor.
 
 #### Scenario: Repair checkpoint fixes the issue on first attempt
 
@@ -27,7 +27,7 @@ Current repair-loop specs and docs SHALL describe the deterministic repair check
 
 - **WHEN** current specs or docs explain deterministic repair checkpoint behavior
 - **THEN** they SHALL describe state repair and gate re-evaluation
-- **AND** they SHALL NOT describe a retired delegated module as the production repair-loop implementation
+- **AND** they SHALL NOT describe a retired delegated relay module as the production repair-loop implementation
 
 ### Requirement: Repair checkpoint loop terminates deterministically
 
@@ -44,3 +44,4 @@ Implementation names MAY vary, but current specs SHALL anchor the behavior in de
 
 - **WHEN** repair produces the same state hash as a previous iteration
 - **THEN** the repair loop returns an explicit stalled outcome and terminates early
+

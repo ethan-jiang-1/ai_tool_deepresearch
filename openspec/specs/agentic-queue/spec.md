@@ -46,19 +46,13 @@ The Queue Manager SHALL check deterministic receipts through `checkReceipts()` a
 
 Queue projection SHALL be generated from queue v2 JSON and SHALL include delegated in-flight counts, expired attempt diagnostics, blocked queue-front item diagnostics, and phase-drain status. Projection SHALL remain read-only derived output and SHALL NOT be authority for queue or work-unit state.
 
-Projection, docs, and tests MAY discuss ordered `active_window` capacity, `QUEUE_ACTIVE_WINDOW_LIMIT`, the queue front, the displaced tail, insertion indexes, or a case that stages at least five queue items to prove refill/preemption/restore behavior. These positional terms SHALL remain derived from array order. They SHALL NOT be reintroduced as named queue slots such as current/next/pending/tail, and they SHALL NOT imply that five fixed positions are the production queue shape.
-
-#### Scenario: projection reports in-flight delegated work
-
-- **WHEN** queue v2 contains two active queue items and three delegated in-flight attempts
-- **THEN** the projection SHALL show both unclaimed demand and in-flight delegated attempts
-- **AND** the projection SHALL derive its counts from `rb_queue.json` and `_work_units/_index.json`
+Projection, docs, and tests MAY discuss ordered `active_window` capacity, `QUEUE_ACTIVE_WINDOW_LIMIT`, the queue front, the displaced tail, insertion indexes, or a case that stages at least five queue items to prove refill/preemption/restore behavior. These positional terms SHALL remain derived from array order. They SHALL NOT be reintroduced as named queue slots such as current/next/pending/tail, and they SHALL NOT imply that five fixed slots are the production queue shape.
 
 #### Scenario: projection avoids old slot shape
 
 - **WHEN** current projection guidance or tests describe queue v2 state
 - **THEN** they SHALL describe ordered `active_window` entries by `queue_item_id`
-- **AND** they SHALL NOT present named slot fields or fixed five-position wording as the current projection contract
+- **AND** they SHALL NOT present `slot_1_current`, `slot_2_next`, `slot_5_tail`, or fixed five-slot wording as the current projection contract
 
 #### Scenario: front and tail are derived positions
 
@@ -74,13 +68,15 @@ Projection, docs, and tests MAY discuss ordered `active_window` capacity, `QUEUE
 
 ### Requirement: Command experiments prove queue manager mechanics
 
-Queue Manager command experiments SHALL use current command-experiment case naming and cost/role taxonomy. Current runner-facing playbooks SHALL be named and reported as `case-<id>-<cost>-<proof-role>` or another currently accepted case surface. Each current playbook SHALL create a real disposable bundle, validate and inspect it, exercise the current engine JS API or CLI, derive verdict from trace JSONL `check` events, and clean up on success. Old queue-control playbooks that still depend on fixed position fields SHALL be migrated to queue v2 or removed from current runner surfaces.
+Queue Manager command experiments SHALL use current command-experiment case naming and cost/role taxonomy. Current runner-facing playbooks SHALL be named and reported as `case-<id>-<cost>-<proof-role>` or another currently accepted case surface, not as the old simple/medium/complex `test-*` taxonomy unless the old wording is being removed or explicitly mapped during this cleanup.
+
+Each current playbook SHALL create a real disposable bundle, validate and inspect it, exercise the current engine JS API or CLI, derive verdict from trace JSONL `check` events, and clean up on success. Old queue-control playbooks that still depend on fixed slot shape SHALL be migrated to queue v2 or removed from current runner surfaces.
 
 #### Scenario: current queue experiments use case taxonomy
 
 - **WHEN** runner docs list queue-manager experiment cases
 - **THEN** they SHALL use current case/cost proof roles
-- **AND** they SHALL NOT list retired complexity-named playbooks as current production proof unless those files have been migrated and renamed or explicitly mapped as current cases
+- **AND** they SHALL NOT list old simple/medium/complex `test-*` playbooks as current production proof unless those files have been migrated and renamed or explicitly mapped as current cases
 
 ### Requirement: Wave0 queue-loop simple playbook
 
@@ -119,32 +115,18 @@ The playbook SHALL use local fixture data for topic_registry entries (pre-writte
 
 ### Requirement: Queue state and item schema are structured
 
-The target `rb_queue.json` schema SHALL be queue v2 with ordered `active_window`, `refill_pool`, `delegated_in_flight`, and `terminal_history`. Queue demand identity SHALL be `queue_item_id`. `work_id` SHALL mean only an Engine-allocated delegated execution attempt and SHALL NOT be used as queue demand identity, task-card identity, or old queue position identity.
+The target `rb_queue.json` schema SHALL be queue v2 with ordered `active_window`, `refill_pool`, `delegated_in_flight`, and `terminal_history`. Queue demand identity SHALL be `queue_item_id`. `work_id` SHALL mean only an Engine-allocated delegated execution attempt and SHALL NOT be used as queue demand identity, task-card identity, or old queue slot identity.
 
-Current main spec Purpose SHALL describe queue v2 as an ordered active-window queue with refill and delegated in-flight binding. The accepted active-window capacity SHALL be expressed through the current queue v2 schema/constant, currently `QUEUE_ACTIVE_WINDOW_LIMIT = 20`. It SHALL NOT describe the current state model as a fixed five-position window, named queue positions, or top-level position/current projection.
-
-Each `delegated_in_flight` entry SHALL be keyed by `queue_item_id` and SHALL include `work_id`, `wave`, `batch_id`, `kind`, `attempt_index`, `queue_item_snapshot_hash`, `claimed_at`, `timeout_ms`, `deadline_at`, and optional `last_observed_at`.
-
-#### Scenario: queue item identity is unique across active locations
-
-- **WHEN** the same `queue_item_id` appears in more than one of `active_window`, `refill_pool`, `delegated_in_flight`, or `terminal_history`
-- **THEN** queue validation SHALL fail closed
-- **AND** inspect SHALL identify every conflicting location
-
-#### Scenario: work_id is not queue demand identity
-
-- **WHEN** a queue item lacks `queue_item_id` but has a field named `work_id`
-- **THEN** queue v2 validation SHALL fail
-- **AND** the diagnostic SHALL require migration to `queue_item_id`
+Current main spec Purpose SHALL describe queue v2 as an ordered active-window queue with refill and delegated in-flight binding. The accepted active-window capacity SHALL be expressed through the current queue v2 schema/constant, currently `QUEUE_ACTIVE_WINDOW_LIMIT = 20`. It SHALL NOT describe the current state model as a fixed five-slot window, named queue slots, or top-level slot/current projection.
 
 #### Scenario: queue v2 purpose names ordered active window
 
 - **WHEN** active main specs are synced after this change
 - **THEN** `agentic-queue` Purpose SHALL describe ordered `active_window`, its current capacity semantics, `refill_pool`, delegated in-flight attempts, deterministic receipts, and Markdown projection
-- **AND** it SHALL NOT describe a fixed small active window as the current state model
-- **AND** if it mentions capacity, it SHALL refer to the queue v2 schema/constant rather than a historical fixed-position shape
+- **AND** it SHALL NOT describe a fixed five-slot active window as the current state model
+- **AND** if it mentions capacity, it SHALL refer to the queue v2 schema/constant rather than a historical five-slot shape
 
-#### Scenario: work_id is not task-card demand identity
+#### Scenario: work_id is not queue demand identity
 
 - **WHEN** a queue item or task-card example identifies queue demand
 - **THEN** it SHALL use `queue_item_id`
@@ -176,38 +158,23 @@ A task card with `producer_rule: seed_topic_materialize` SHALL have the followin
 | `queue_item_id` | yes | `"seed-topic-{topic.slug}"` |
 | `title` | yes | `"Materialize seed topic: {topic.title}"` |
 | `targets` | yes | `{ controller: "main-agent" }` |
-| `action` | yes | 自然语言描述：从 topic_registry 和 rb_profile.yaml 提取信息，按 seed topic 文件结构创建 `seed_topics/{topic.slug}.md`（YAML frontmatter 含 must_answer/hypothesis/scope/search_guardrails/evidence_route） |
+| `action` | yes | Natural-language instruction to derive seed topic fields from `topic_registry` and `rb_profile.yaml`, then create `seed_topics/{topic.slug}.md` with the required YAML frontmatter and original-context body block |
 | `producer_rule` | yes | `"seed_topic_materialize"` |
 | `priority_class` | yes | `"P3_current_gate_gap"` |
 | `required_receipts` | yes | `["file:seed_topics/{topic.slug}.md"]` |
-| `done_condition` | yes | `seed_topics/{topic.slug}.md` 存在，YAML frontmatter 含 id/slug/title（均非空），slug 与文件名 stem 一致，正文含研究骨架 + 原始语境约束 block |
+| `done_condition` | yes | `seed_topics/{topic.slug}.md` exists; YAML frontmatter includes non-empty `id`, `slug`, and `title`; slug matches filename stem; body contains research skeleton and original-context block |
 | `writes_to` | yes | `["seed_topics/{topic.slug}.md"]` |
-| `payload` | yes | `{ topic_slug: "<slug>", topic_title: "<title>" }` — 用于 Phase Agent 在 execute 阶段定位 registry 条目和生成文件 |
+| `payload` | yes | `{ topic_slug: "<slug>", topic_title: "<title>" }` for Phase Agent lookup during execute |
 
-Seed topic materialization uses `targets: { controller: "main-agent" }` because it involves structured writing from existing registry data — no external web search is required. The `main-agent` value is the current schema wire value for direct Phase Agent execution. The Phase Agent reads `topic_registry` and `rb_profile.yaml`, fills in the YAML-frontmatter seed topic template, and writes the file.
+Seed topic materialization uses `targets: { controller: "main-agent" }` because it involves structured writing from existing registry data and does not require external web search. The `main-agent` value is the current schema wire value for direct Phase Agent execution. The queue manager validates `targets`; it does not infer producer-rule-to-controller policy from this table.
 
 Task cards with `producer_rule: seed_topic_materialize` SHALL NOT use `work_id` as a task-card field. Any delegated execution attempt created later from a queue demand SHALL receive its own Engine-allocated `work_id` through work-unit claim.
-
-**Enforcement boundary:** The `targets` field shape is JS-enforced (Zod schema). The mapping `producer_rule: seed_topic_materialize → targets: { controller: "main-agent" }` is an MD-template-level constraint (Path A) — the queue manager validates `targets` but does not infer producer_rule-to-controller policy.
-
-#### Scenario: Task card for seed topic materialization
-
-- **WHEN** `topic_registry` contains 3 topics
-- **THEN** Phase Agent SHALL generate 3 task cards, each with `producer_rule: seed_topic_materialize`
-- **AND** each task card's `targets.controller` SHALL be `"main-agent"`
-- **AND** each task card's `priority_class` SHALL be `P3_current_gate_gap`
 
 #### Scenario: seed topic materialization card uses queue identity
 
 - **WHEN** the Phase Agent generates seed-topic materialization task cards
 - **THEN** each task card SHALL include a distinct `queue_item_id`
 - **AND** it SHALL NOT include `work_id` as the queue demand identifier
-
-#### Scenario: Seed topic file contains required fields
-
-- **WHEN** a `seed_topic_materialize` task is executed
-- **THEN** the produced `seed_topics/<slug>.md` SHALL contain frontmatter fields: id, slug, title, must_answer, hypothesis, in_scope, out_of_scope, search_guardrails, evidence_route
-- **AND** the body SHALL contain 原始语境约束 block
 
 ### Requirement: Producer rule topic_deepening
 
@@ -220,20 +187,13 @@ A task card with `producer_rule: topic_deepening` SHALL have the following defau
 | `queue_item_id` | yes | `"wave1-deepen-{topic.slug}"` |
 | `title` | yes | `"Deepen topic: {topic.title}"` |
 | `targets` | yes | `{ controller: "main-agent", delegates: { to: "sub-agent", role_key: "dpt-evidence-extractor", timeout_ms: 600000 } }` |
-| `action` | yes | 自然语言描述：从 `seed_topics/{topic.slug}.md` 的 search_guardrails 和 open questions 派生搜索关键词；WebSearch + WebFetch；写入 paired `artifacts/wave1/{topic.slug}/evidence-summary.md` 和 `artifacts/wave1/{topic.slug}/question-list.md`；cache trails under `_cache/wave1/primary/{topic.slug}/sNN_{source-slug}/` |
+| `action` | yes | Natural-language instruction to derive search terms from `seed_topics/{topic.slug}.md`, use WebSearch/WebFetch, write paired wave1 artifacts, declared references, and cache trails |
 | `producer_rule` | yes | `"topic_deepening"` |
 | `priority_class` | yes | `"P4_progressive_artifact_or_seed_backfill"` |
 | `required_receipts` | yes | `["file:artifacts/wave1/{topic.slug}/evidence-summary.md", "file:artifacts/wave1/{topic.slug}/question-list.md"]` |
-| `done_condition` | yes | paired evidence-summary + question-list 存在且通过 wave1 gate 结构要求 |
+| `done_condition` | yes | Paired evidence-summary and question-list exist and can be validated later by the wave1 gate structure requirements |
 | `writes_to` | yes | `["artifacts/wave1/{topic.slug}/evidence-summary.md", "artifacts/wave1/{topic.slug}/question-list.md", "reference/{topic.slug}-*.md"]` |
 | `payload` | yes | `{ topic_slug: "<slug>", topic_title: "<title>" }` |
-
-#### Scenario: Task card for topic deepening
-
-- **WHEN** `topic_registry` contains 3 topics in wave1 phase
-- **THEN** Phase Agent SHALL generate 3 task cards, each with `producer_rule: topic_deepening`
-- **AND** each task card's `targets.delegates.role_key` SHALL be `dpt-evidence-extractor`
-- **AND** each task card's `priority_class` SHALL be `P4_progressive_artifact_or_seed_backfill`
 
 Task cards with `producer_rule: topic_deepening` SHALL NOT predeclare `work_id`; the Engine SHALL allocate `work_id` only when the delegated demand is claimed through `operate-work-unit claim`.
 
@@ -388,3 +348,4 @@ If a queue item has no delegated target and no work-unit binding, `operate-queue
 - **WHEN** a direct Phase Agent task with no delegated target calls `operate-queue complete`
 - **THEN** work-unit result and runtime receipt checks SHALL be skipped
 - **AND** standard completion receipt checks SHALL still run
+

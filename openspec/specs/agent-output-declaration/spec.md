@@ -10,7 +10,7 @@ Define the Agent output declaration contract for Engine-submitted work-unit ledg
 
 The Engine and gates SHALL consume submitted work-unit rows in `rb_output_declarations.jsonl` as the production evidence of delegated outputs. Filesystem scanning MAY produce diagnostics for orphaned or bypass artifacts, but SHALL NOT create gate pass coverage without a matching Engine-written ledger row.
 
-Current output declaration guidance SHALL describe work-unit submit rows as delegated output authority. It SHALL NOT describe retired result references or queue completion as delegated ledger authority.
+Current output declaration guidance SHALL describe work-unit submit rows as delegated output authority. It SHALL NOT describe relay slot results, slot result references, or queue completion as delegated ledger authority.
 
 #### Scenario: orphan output is diagnostic only
 
@@ -80,7 +80,7 @@ Each Engine-written output declaration ledger row for delegated work SHALL inclu
 
 For delegated work, `operate-work-unit submit` SHALL write the bundle-level `rb_output_declarations.jsonl` ledger. Queue completion SHALL NOT write delegated work ledger rows. The ledger SHALL remain the single production submission ledger and SHALL use work-unit-only provenance fields.
 
-The ledger row SHALL use work-unit provenance fields such as `work_id`, `queue_item_id`, `work_unit_ref`, `result_ref`, `runtime_receipt_ref`, `receipt_nonce`, `output_files`, and `cache_trails`. Current production guidance SHALL NOT use retired delegated fields as the delegated ledger contract.
+The ledger row SHALL use work-unit provenance fields such as `work_id`, `queue_item_id`, `work_unit_ref`, `result_ref`, `runtime_receipt_ref`, `receipt_nonce`, `output_files`, and `cache_trails`. Current production guidance SHALL NOT use retired relay/slot ledger fields as the delegated ledger contract.
 
 #### Scenario: successful submit appends one ledger row
 
@@ -92,4 +92,5 @@ The ledger row SHALL use work-unit provenance fields such as `work_id`, `queue_i
 
 - **WHEN** current specs or playbooks show a delegated output declaration row
 - **THEN** the row SHALL use work-unit provenance fields
-- **AND** it SHALL NOT use retired delegated fields as current schema examples
+- **AND** it SHALL NOT use retired relay/slot fields as current schema examples
+

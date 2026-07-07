@@ -10,7 +10,9 @@ Define the production sub-agent work-unit envelope directory contract under the 
 
 Production delegated work SHALL write one directory per `work_id` under the active runtime bundle root at `_work_units/waveN/{work_id}/`. The `waveN` segment SHALL match the encoded wave in `work_id`, the manifest `wave`, and the submitted ledger row.
 
-This capability SHALL be read as the sub-agent's work-unit envelope and directory contract. Current main spec Purpose and Requirements text SHALL NOT describe non-work-unit delegated directories as canonical production paths. Old delegated directory names may appear only in explicit removed, deprecated, checker self-reference, minimized release-history, or negative diagnostic contexts outside `openspec/changes/archive/`.
+Bare `_work_units/...` paths SHALL always be read as active bundle-root relative. They SHALL NOT be created, inspected, or described as repository-root or `DPT_FRAMEWORK/` paths.
+
+This capability SHALL be read as the sub-agent's work-unit envelope and directory contract. Current main spec Purpose and Requirements text SHALL NOT describe `_subagents/` relay slot directories as canonical production paths. Old relay/slot directory names may appear only in explicit removed, deprecated, checker self-reference, minimized release-history, or negative diagnostic contexts outside `openspec/changes/archive/`.
 
 #### Scenario: work-unit directory path matches encoded wave
 
@@ -24,17 +26,17 @@ This capability SHALL be read as the sub-agent's work-unit envelope and director
 - **THEN** the path SHALL resolve under the active `dpt_rb_*` or `dpt_disp_*` bundle root
 - **AND** the Agent SHALL NOT create `_work_units/` at repository root or under `DPT_FRAMEWORK/`
 
-#### Scenario: stale directory wording is not current contract
+#### Scenario: stale relay directory wording is not current contract
 
 - **WHEN** active main specs are synced after this change
 - **THEN** the sub-agent directory contract SHALL describe `_work_units/waveN/{work_id}/` as the production delegated runtime envelope
-- **AND** it SHALL NOT describe a non-work-unit delegated directory as the standard production structure
+- **AND** it SHALL NOT describe a relay slot directory as the standard production structure
 
 ### Requirement: Work-unit directory SHALL contain binding surfaces
 
 Each work-unit directory SHALL contain the binding surfaces needed for submit and gate cross-checks: `manifest.json`, `task.md`, `result.schema.json`, `_beacon.json`, `runtime-receipt.jsonl`, `result.json` when submitted, `result.md` when produced, `_status.json`, and `_agent.json`.
 
-These surfaces SHALL be validated as work-unit binding surfaces. They SHALL NOT be described as old delegated artifacts, old task files, or old result files in current production-facing guidance.
+These surfaces SHALL be validated as work-unit binding surfaces. They SHALL NOT be described as relay slot artifacts, slot task files, or slot result files in current production-facing guidance.
 
 #### Scenario: missing beacon blocks submit
 
@@ -46,4 +48,5 @@ These surfaces SHALL be validated as work-unit binding surfaces. They SHALL NOT 
 
 - **WHEN** a current playbook or spec describes delegated runtime files
 - **THEN** it SHALL name the work-unit directory and binding surfaces
-- **AND** it SHALL NOT frame them as retired delegated artifacts
+- **AND** it SHALL NOT frame them as relay slot artifacts
+
