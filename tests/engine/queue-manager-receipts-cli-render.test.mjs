@@ -89,6 +89,7 @@ describe('Receipts, projection, and CLI (AGQ-004, AGQ-005, AGQ-006)', () => {
       assert.equal(savedQueue.active_window[0].queue_item_id, 'queue-1');
       assert.equal(QueueSchema.safeParse(persisted).success, true);
       assert.equal(persisted.active_window[0].queue_item_id, 'queue-1');
+      // Negative regression: the old named queue slot field must stay absent.
       assert.equal(Object.hasOwn(persisted, 'slot_1_current'), false);
 
       const loaded = loadQueue(dir);

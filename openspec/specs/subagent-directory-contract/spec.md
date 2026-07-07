@@ -4,15 +4,13 @@
 
 ## Purpose
 
-Formalize `_subagents/` as the canonical directory for **relay-managed sub-agent slot artifacts** within the run bundle. The `_subagents/wave_NN/slot_MM/` convention is the relay communication directory between the main Phase Agent and sub-agents.
-
-**Scope boundary:** SDC governs the relay slot channel only (`task.md`, beacon, receipts, dispatch, result, status, agent metadata). Sub-agent writes to `_cache/`, `reference/`, and `artifacts/` remain governed by WDC / task-card / output-declaration contracts — they are **not** relay slot artifacts and are outside SDC.
-
-Experiments SHALL use the standard `_subagents/wave_NN/slot_MM/` structure so provenance evidence is at a predictable location.
+Define the production sub-agent work-unit envelope directory contract under `_work_units/waveN/{work_id}/`. The directory binds Engine-allocated work identity, task, manifest, result schema, beacon, runtime receipt, status, Agent metadata, and submitted result surfaces for claim/submit/gate cross-checks.
 ## Requirements
 ### Requirement: Work units SHALL be the sole production delegated runtime directory
 
 Production delegated work SHALL write one directory per `work_id` under `_work_units/waveN/{work_id}/`. The `waveN` segment SHALL match the encoded wave in `work_id`, the manifest `wave`, and the submitted ledger row.
+
+This capability SHALL be read as the sub-agent's work-unit envelope and directory contract. Current main spec Purpose and Requirements text SHALL NOT describe non-work-unit delegated directories as canonical production paths. Old delegated directory names may appear only in explicit removed, deprecated, checker self-reference, minimized release-history, or negative diagnostic contexts outside `openspec/changes/archive/`.
 
 #### Scenario: work-unit directory path matches encoded wave
 
@@ -20,9 +18,17 @@ Production delegated work SHALL write one directory per `work_id` under `_work_u
 - **THEN** the production directory SHALL be `_work_units/wave1/wu-w1-b000-deep-i0001/`
 - **AND** malformed work-unit paths or non-work-unit delegated paths SHALL NOT be accepted as the canonical production path
 
+#### Scenario: stale directory wording is not current contract
+
+- **WHEN** active main specs are synced after this change
+- **THEN** the sub-agent directory contract SHALL describe `_work_units/waveN/{work_id}/` as the production delegated runtime envelope
+- **AND** it SHALL NOT describe a non-work-unit delegated directory as the standard production structure
+
 ### Requirement: Work-unit directory SHALL contain binding surfaces
 
 Each work-unit directory SHALL contain the binding surfaces needed for submit and gate cross-checks: `manifest.json`, `task.md`, `result.schema.json`, `_beacon.json`, `runtime-receipt.jsonl`, `result.json` when submitted, `result.md` when produced, `_status.json`, and `_agent.json`.
+
+These surfaces SHALL be validated as work-unit binding surfaces. They SHALL NOT be described as old delegated artifacts, old task files, or old result files in current production-facing guidance.
 
 #### Scenario: missing beacon blocks submit
 
@@ -30,3 +36,8 @@ Each work-unit directory SHALL contain the binding surfaces needed for submit an
 - **THEN** `operate-work-unit submit` SHALL reject the result
 - **AND** no ledger row SHALL be appended
 
+#### Scenario: binding surfaces are work-unit surfaces
+
+- **WHEN** a current playbook or spec describes delegated runtime files
+- **THEN** it SHALL name the work-unit directory and binding surfaces
+- **AND** it SHALL NOT frame them as retired delegated artifacts

@@ -917,7 +917,7 @@ Test.
 
 ## 2. Search Focus
 ## 3. Artifacts
-## 4. Execution Within Relay Slot
+## 4. Execution Within Retired Delegated Channel
 ## 5. Page Content Fetching
 ## 6. Anti-Cheating Rules
 ## 7. Relationship to Phase Agent

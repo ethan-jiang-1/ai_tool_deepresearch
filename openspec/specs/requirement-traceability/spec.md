@@ -132,6 +132,16 @@ SHALL NOT 将废弃 ID 移到单独的 "deprecated" 合成组——废弃是 ID 
 1. `node openspec/governance/check-project-reqs.mjs`——0 duplicate、0 unregistered、0 orphan、0 reusedRetired
 2. `node openspec/governance/check-project-specs.mjs`——0 deltaHeaderInMain、0 missingPurpose、0 missingRequirements、0 missingReqHeader
 
+For delegated-work cleanup changes, the hard gate SHALL also include the work-unit hygiene check over current production-facing surfaces. The hygiene check SHALL scan active main specs, active deltas, framework surfaces, shared experiment infrastructure, tests, guidelines, governance metadata, top-level docs, current `_backlog` planning/bug/todo notes, `experiments_env/shared`, and `experiments_playbook`. It SHALL exclude `openspec/changes/archive/` as historical OpenSpec record and SHALL NOT read `_original_*` archives.
+
+The hygiene check SHALL fail stale positive production wording for retired delegated mechanisms, old delegated ledger fixtures, and old queue position shapes unless the occurrence is explicitly negative, deprecated, checker/test self-reference, cleanup-control for an active cleanup change, current work-unit context for context-sensitive tokens, past-failure-history for current backlog/bug/planning notes, or minimized release-history wording that cannot be interpreted as command guidance. Allowed contexts SHALL NOT be interpreted as production authority. A legacy/backlog table or label SHALL NOT be an archive-ready allowlist context.
+
+The hygiene check SHALL distinguish retired-only tokens from context-sensitive work-unit fields. Retired-only tokens include old delegated commands, modules, helper APIs, identity fields, event names, provenance check names, dispatch surfaces, old delegated ledger fields, and old queue position fields. Stale queue wording also includes fixed small active-window prose or task-card examples that use `work_id` as queue demand identity. Current queue v2 may describe an ordered `active_window` array, `QUEUE_ACTIVE_WINDOW_LIMIT`, capacity of 20, or a case that stages at least five items, but it SHALL NOT imply named positions, fixed small state shape, or `work_id` demand identity. Context-sensitive fields such as `runtime_receipt_ref`, `receipt_nonce`, `_beacon.json`, lifecycle event wording, and code-local `receiptNonce` SHALL remain allowed in current work-unit contexts, but SHALL fail when paired with old delegated examples, old trace/log identity, old delegated ledger fixtures, old queue position shape, or production instructions for retired paths.
+
+Cleanup-control allowance is narrow. It MAY apply to active change artifacts whose purpose is to define the retired-token vocabulary, inventory current hits, or state negative delta requirements for this cleanup. It SHALL NOT apply to active main specs, framework docs, current runner tables, runnable playbooks, production command guidance, or tests that present the old surface as success behavior.
+
+Historical/planning wording outside `openspec/changes/archive/` SHALL be treated by readability risk, not folder name. A current backlog, bug, TODO, or planning note may keep old delegated terms only when the note clearly frames them as past failure analysis, removed design, or non-authoritative history; it SHALL NOT present retired commands, old paths, old queue shape, or old ledger fields as actionable current implementation guidance. If that distinction cannot be made clear cheaply, the note SHALL be removed from current surfaces or moved under an excluded archive path by an OpenSpec-governed cleanup.
+
 检查 SHALL 是硬性 gate——任一 FAIL 则 SHALL NOT 归档 change。
 
 `check-project-reqs.mjs` SHALL 保持与 registry 重组兼容——它通过 `[A-Z]{3}-\d{3}` 正则过滤 YAML key，`prefixes:` 块的 key 和组头注释 SHALL NOT 影响检查结果。
@@ -140,6 +150,7 @@ SHALL NOT 将废弃 ID 移到单独的 "deprecated" 合成组——废弃是 ID 
 - **WHEN** change 的所有 task 完成
 - **THEN** SHALL 运行 `check-project-reqs.mjs`
 - **AND** SHALL 运行 `check-project-specs.mjs`
+- **AND** delegated-work hygiene SHALL pass when the change touches delegated production surfaces
 - **AND** 两者均 PASS 后 SHALL 才能归档
 
 #### Scenario: Check script fails on registry inconsistency
@@ -147,3 +158,38 @@ SHALL NOT 将废弃 ID 移到单独的 "deprecated" 合成组——废弃是 ID 
 - **THEN** `check-project-reqs.mjs` SHALL 报告 `unregistered: <ID>`
 - **AND** SHALL exit(1)
 - **AND** change SHALL NOT 归档直到注册完成
+
+#### Scenario: Archived OpenSpec changes are excluded from stale-token hygiene
+- **WHEN** stale delegated production terms appear under `openspec/changes/archive/`
+- **THEN** delegated-work hygiene SHALL ignore those occurrences
+- **AND** it SHALL continue scanning current surfaces outside the archive directory
+
+#### Scenario: Original archives are not read
+- **WHEN** stale delegated terms appear under an `_original_*` archive path
+- **THEN** delegated-work hygiene SHALL not read or scan that path
+- **AND** this exclusion SHALL NOT exempt any copied current-surface wording outside `_original_*`
+
+#### Scenario: Current backlog cannot teach old production paths
+- **WHEN** a current backlog, bug, TODO, or planning note outside excluded archives describes retired delegated production behavior
+- **THEN** hygiene SHALL allow it only if the wording is explicit past-tense failure analysis or removed-design context
+- **AND** it SHALL fail or require cleanup if the note can be read as current implementation guidance for delegated work
+
+#### Scenario: Current work-unit field is not falsely rejected
+- **WHEN** current work-unit guidance names `runtime_receipt_ref` or `receipt_nonce` in a work-unit manifest, beacon, result, or ledger context
+- **THEN** delegated-work hygiene SHALL NOT fail that occurrence solely because the token also appeared in old examples
+- **AND** it SHALL still fail the occurrence if it is paired with retired delegated paths, fields, helpers, or events
+
+#### Scenario: Old queue position shape is not valid current queue proof
+- **WHEN** a current runner, playbook, framework surface, or fixture presents named queue positions, fixed small active-window wording, or top-level queue `work_id` demand identity as a runnable queue path
+- **THEN** delegated-work hygiene SHALL fail or the surface SHALL be removed from current runner guidance
+- **AND** negative schema tests MAY name the shape only to prove rejection
+
+#### Scenario: Queue v2 capacity wording is allowed
+- **WHEN** a current queue spec, implementation, test, or playbook describes `active_window` as an ordered array with a current capacity limit or stages five or more items to exercise refill/preemption
+- **THEN** delegated-work hygiene SHALL NOT fail solely because the case mentions `active_window` capacity, `QUEUE_ACTIVE_WINDOW_LIMIT`, a maximum of 20 entries, or at least five items
+- **AND** it SHALL still fail if the same surface presents named position fields, fixed small state shape, or queue demand `work_id` as current proof
+
+#### Scenario: Active cleanup-control artifacts can name retired terms
+- **WHEN** an active cleanup change names retired delegated, ledger, or old queue terms in its proposal, design, task list, inventory, or negative delta requirements
+- **THEN** delegated-work hygiene MAY classify those occurrences as cleanup-control
+- **AND** that allowance SHALL NOT permit the same wording in current production guidance, current runner surfaces, or runnable playbooks

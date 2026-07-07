@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Accepted requirements for delegated-work-units after archiving replace-subagent-relay-with-work-units.
+Define the Engine-owned work-unit lifecycle for delegated work: queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate. A work unit is the Engine-allocated execution attempt envelope, and submitted work-unit ledger rows are the only production delegated completion authority.
 
 ## Requirements
 
@@ -12,11 +12,31 @@ Accepted requirements for delegated-work-units after archiving replace-subagent-
 
 Production delegated work SHALL use the path `queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate`. A work unit SHALL mean one Engine-allocated delegated execution attempt for one queue demand item. A wave, phase, queue item, runtime thread, or filesystem artifact SHALL NOT be called a work unit unless it is the Engine-allocated attempt envelope.
 
+Current production-facing surfaces outside `openspec/changes/archive/` SHALL describe delegated work through work-unit claim/submit only. Retired delegated transport, hand-written delegated ledger rows, and invalid old queue shapes SHALL NOT be presented as active production paths.
+
 #### Scenario: production delegated path is singular
 
 - **WHEN** active specs, framework docs, phase docs, tests, or playbooks describe delegated completion
 - **THEN** they SHALL describe queue demand claimed into a work unit and returned through submit
 - **AND** they SHALL NOT describe any alternate production delegated-work mechanism
+
+#### Scenario: retired delegated identity is not current work identity
+
+- **WHEN** a current surface identifies delegated work with non-work-unit channel identity
+- **THEN** that surface SHALL be migrated to `work_id`, `queue_item_id`, kind, receipt, and submitted ledger identity or removed from current production-facing guidance
+- **AND** it SHALL NOT count as current delegated-work proof
+
+#### Scenario: old queue shape is not a delegated-work fallback
+
+- **WHEN** a current surface uses an old queue shape or queue demand `work_id` identity to bypass work-unit claim/submit for delegated work
+- **THEN** that surface SHALL be migrated to queue v2 plus work-unit submit or removed from current production-facing guidance
+- **AND** it SHALL NOT count as a valid non-delegated queue path
+
+#### Scenario: archived changes are historical only
+
+- **WHEN** stale delegated-work terms appear under `openspec/changes/archive/`
+- **THEN** the terms SHALL be treated as historical OpenSpec record
+- **AND** current-surface hygiene SHALL NOT require editing that archive path
 
 ### Requirement: Work-unit identity SHALL be Engine-allocated and index-backed
 
@@ -106,8 +126,16 @@ Invalid submit SHALL leave the attempt `claimed`, record `last_submit_rejection`
 
 Delegated gate coverage SHALL come only from Engine-written work-unit rows in `rb_output_declarations.jsonl`. `_work_units/_index.json`, manifest, result, receipt, beacon, cache, and output files SHALL be cross-check surfaces, not independent pass coverage.
 
+Current specs, docs, tests, and playbooks SHALL NOT present non-work-unit delegated files, old result references, old commit/merge events, or delegated queue completion as alternate gate coverage.
+
 #### Scenario: filesystem-only delegated output cannot pass
 
 - **WHEN** a delegated output file exists without submitted work-unit ledger coverage
 - **THEN** the gate SHALL fail delegated coverage
 - **AND** the file MAY be reported as cleanup or bypass diagnostic evidence only
+
+#### Scenario: old delegated surface is rejected or removed
+
+- **WHEN** a current diagnostic names a retired delegated artifact outside `openspec/changes/archive/`
+- **THEN** the diagnostic SHALL frame it as rejected, removed, deprecated, or non-authoritative evidence
+- **AND** it SHALL NOT describe that artifact as a production success path

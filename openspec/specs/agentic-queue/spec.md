@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Define the JS-owned Agentic Queue Manager: a structured, Zod-validated queue system with a five-slot active window, refill pool, deterministic receipts, and Markdown projection. The Queue Manager owns all queue mutation; the Agent actor does semantic work but does not self-govern queue state. This capability provides machine-enforced scheduling, receipt checking, promotion, preemption, and trace.
+Define the JS-owned Agentic Queue Manager: a structured, Zod-validated queue v2 system with ordered `active_window`, `refill_pool`, `delegated_in_flight`, deterministic receipts, and Markdown projection. The Queue Manager owns all queue mutation; the Agent actor does semantic work but does not self-govern queue state. Queue demand identity is `queue_item_id`; `work_id` is reserved for Engine-allocated delegated work-unit attempts.
 ## Requirements
 ### Requirement: Queue Manager exposes enqueue, claim, complete, and fail operations
 
@@ -46,30 +46,41 @@ The Queue Manager SHALL check deterministic receipts through `checkReceipts()` a
 
 Queue projection SHALL be generated from queue v2 JSON and SHALL include delegated in-flight counts, expired attempt diagnostics, blocked queue-front item diagnostics, and phase-drain status. Projection SHALL remain read-only derived output and SHALL NOT be authority for queue or work-unit state.
 
+Projection, docs, and tests MAY discuss ordered `active_window` capacity, `QUEUE_ACTIVE_WINDOW_LIMIT`, the queue front, the displaced tail, insertion indexes, or a case that stages at least five queue items to prove refill/preemption/restore behavior. These positional terms SHALL remain derived from array order. They SHALL NOT be reintroduced as named queue slots such as current/next/pending/tail, and they SHALL NOT imply that five fixed positions are the production queue shape.
+
 #### Scenario: projection reports in-flight delegated work
 
 - **WHEN** queue v2 contains two active queue items and three delegated in-flight attempts
 - **THEN** the projection SHALL show both unclaimed demand and in-flight delegated attempts
 - **AND** the projection SHALL derive its counts from `rb_queue.json` and `_work_units/_index.json`
 
+#### Scenario: projection avoids old slot shape
+
+- **WHEN** current projection guidance or tests describe queue v2 state
+- **THEN** they SHALL describe ordered `active_window` entries by `queue_item_id`
+- **AND** they SHALL NOT present named slot fields or fixed five-position wording as the current projection contract
+
+#### Scenario: front and tail are derived positions
+
+- **WHEN** queue guidance refers to the front item, displaced tail, or an insertion point
+- **THEN** those terms SHALL be explained as positions in the ordered `active_window` array
+- **AND** they SHALL NOT be modeled as stable named fields or separate slot roles
+
+#### Scenario: multi-item queue tests are not old slot proof
+
+- **WHEN** a queue experiment or test stages five or more queue items to exercise refill, restore, or preemption
+- **THEN** it SHALL assert array locations by `active_window[index].queue_item_id` and `refill_pool[index].queue_item_id`
+- **AND** it SHALL NOT assert named slot fields or use `work_id` as queue demand identity
+
 ### Requirement: Command experiments prove queue manager mechanics
 
-The Queue Manager engine SHALL include simple, medium, and complex experiment playbooks under `experiments_playbook/exp_agentic-queue/`. Each playbook SHALL create a real disposable bundle, validate and inspect it, exercise the engine JS API or CLI, derive verdict from trace JSONL `check` events, and clean up on success.
+Queue Manager command experiments SHALL use current command-experiment case naming and cost/role taxonomy. Current runner-facing playbooks SHALL be named and reported as `case-<id>-<cost>-<proof-role>` or another currently accepted case surface. Each current playbook SHALL create a real disposable bundle, validate and inspect it, exercise the current engine JS API or CLI, derive verdict from trace JSONL `check` events, and clean up on success. Old queue-control playbooks that still depend on fixed position fields SHALL be migrated to queue v2 or removed from current runner surfaces.
 
-#### Scenario: Simple playbook proves enqueue claim complete promotion
+#### Scenario: current queue experiments use case taxonomy
 
-- **WHEN** `test-simple.md` is executed
-- **THEN** it proves enqueue, claim, complete, promotion, projection, and trace verdict
-
-#### Scenario: Medium playbook proves preemption and restore
-
-- **WHEN** `test-medium.md` is executed
-- **THEN** it proves full-window preemption, displaced tail restore metadata, refill, and trace verdict
-
-#### Scenario: Complex playbook proves fail-closed behavior
-
-- **WHEN** `test-complex.md` is executed
-- **THEN** it proves invalid task rejection, missing receipt blocking, unsafe-current guard, and empty queue after refill/blocker handling without fake pass evidence
+- **WHEN** runner docs list queue-manager experiment cases
+- **THEN** they SHALL use current case/cost proof roles
+- **AND** they SHALL NOT list retired complexity-named playbooks as current production proof unless those files have been migrated and renamed or explicitly mapped as current cases
 
 ### Requirement: Wave0 queue-loop simple playbook
 
@@ -108,7 +119,9 @@ The playbook SHALL use local fixture data for topic_registry entries (pre-writte
 
 ### Requirement: Queue state and item schema are structured
 
-The target `rb_queue.json` schema SHALL be queue v2 with nested `active_window`, `refill_pool`, `delegated_in_flight`, and `terminal_history`. Queue demand identity SHALL be `queue_item_id`. `work_id` SHALL mean only an Engine-allocated delegated execution attempt and SHALL NOT be used as queue demand identity.
+The target `rb_queue.json` schema SHALL be queue v2 with ordered `active_window`, `refill_pool`, `delegated_in_flight`, and `terminal_history`. Queue demand identity SHALL be `queue_item_id`. `work_id` SHALL mean only an Engine-allocated delegated execution attempt and SHALL NOT be used as queue demand identity, task-card identity, or old queue position identity.
+
+Current main spec Purpose SHALL describe queue v2 as an ordered active-window queue with refill and delegated in-flight binding. The accepted active-window capacity SHALL be expressed through the current queue v2 schema/constant, currently `QUEUE_ACTIVE_WINDOW_LIMIT = 20`. It SHALL NOT describe the current state model as a fixed five-position window, named queue positions, or top-level position/current projection.
 
 Each `delegated_in_flight` entry SHALL be keyed by `queue_item_id` and SHALL include `work_id`, `wave`, `batch_id`, `kind`, `attempt_index`, `queue_item_snapshot_hash`, `claimed_at`, `timeout_ms`, `deadline_at`, and optional `last_observed_at`.
 
@@ -123,6 +136,19 @@ Each `delegated_in_flight` entry SHALL be keyed by `queue_item_id` and SHALL inc
 - **WHEN** a queue item lacks `queue_item_id` but has a field named `work_id`
 - **THEN** queue v2 validation SHALL fail
 - **AND** the diagnostic SHALL require migration to `queue_item_id`
+
+#### Scenario: queue v2 purpose names ordered active window
+
+- **WHEN** active main specs are synced after this change
+- **THEN** `agentic-queue` Purpose SHALL describe ordered `active_window`, its current capacity semantics, `refill_pool`, delegated in-flight attempts, deterministic receipts, and Markdown projection
+- **AND** it SHALL NOT describe a fixed small active window as the current state model
+- **AND** if it mentions capacity, it SHALL refer to the queue v2 schema/constant rather than a historical fixed-position shape
+
+#### Scenario: work_id is not task-card demand identity
+
+- **WHEN** a queue item or task-card example identifies queue demand
+- **THEN** it SHALL use `queue_item_id`
+- **AND** it SHALL reserve `work_id` for delegated work-unit attempts allocated by `operate-work-unit claim`
 
 ### Requirement: Producer rule source_intake_fan_in
 
@@ -147,7 +173,7 @@ A task card with `producer_rule: seed_topic_materialize` SHALL have the followin
 
 | Field | Required | Default / Derived From |
 |-------|----------|------------------------|
-| `work_id` | yes | `"seed-topic-{topic.slug}"` |
+| `queue_item_id` | yes | `"seed-topic-{topic.slug}"` |
 | `title` | yes | `"Materialize seed topic: {topic.title}"` |
 | `targets` | yes | `{ controller: "main-agent" }` |
 | `action` | yes | 自然语言描述：从 topic_registry 和 rb_profile.yaml 提取信息，按 seed topic 文件结构创建 `seed_topics/{topic.slug}.md`（YAML frontmatter 含 must_answer/hypothesis/scope/search_guardrails/evidence_route） |
@@ -160,6 +186,8 @@ A task card with `producer_rule: seed_topic_materialize` SHALL have the followin
 
 Seed topic materialization uses `targets: { controller: "main-agent" }` because it involves structured writing from existing registry data — no external web search is required. The `main-agent` value is the current schema wire value for direct Phase Agent execution. The Phase Agent reads `topic_registry` and `rb_profile.yaml`, fills in the YAML-frontmatter seed topic template, and writes the file.
 
+Task cards with `producer_rule: seed_topic_materialize` SHALL NOT use `work_id` as a task-card field. Any delegated execution attempt created later from a queue demand SHALL receive its own Engine-allocated `work_id` through work-unit claim.
+
 **Enforcement boundary:** The `targets` field shape is JS-enforced (Zod schema). The mapping `producer_rule: seed_topic_materialize → targets: { controller: "main-agent" }` is an MD-template-level constraint (Path A) — the queue manager validates `targets` but does not infer producer_rule-to-controller policy.
 
 #### Scenario: Task card for seed topic materialization
@@ -168,6 +196,12 @@ Seed topic materialization uses `targets: { controller: "main-agent" }` because 
 - **THEN** Phase Agent SHALL generate 3 task cards, each with `producer_rule: seed_topic_materialize`
 - **AND** each task card's `targets.controller` SHALL be `"main-agent"`
 - **AND** each task card's `priority_class` SHALL be `P3_current_gate_gap`
+
+#### Scenario: seed topic materialization card uses queue identity
+
+- **WHEN** the Phase Agent generates seed-topic materialization task cards
+- **THEN** each task card SHALL include a distinct `queue_item_id`
+- **AND** it SHALL NOT include `work_id` as the queue demand identifier
 
 #### Scenario: Seed topic file contains required fields
 
@@ -183,7 +217,7 @@ A task card with `producer_rule: topic_deepening` SHALL have the following defau
 
 | Field | Required | Default / Derived From |
 |-------|----------|------------------------|
-| `work_id` | yes | `"wave1-deepen-{topic.slug}"` |
+| `queue_item_id` | yes | `"wave1-deepen-{topic.slug}"` |
 | `title` | yes | `"Deepen topic: {topic.title}"` |
 | `targets` | yes | `{ controller: "main-agent", delegates: { to: "sub-agent", role_key: "dpt-evidence-extractor", timeout_ms: 600000 } }` |
 | `action` | yes | 自然语言描述：从 `seed_topics/{topic.slug}.md` 的 search_guardrails 和 open questions 派生搜索关键词；WebSearch + WebFetch；写入 paired `artifacts/wave1/{topic.slug}/evidence-summary.md` 和 `artifacts/wave1/{topic.slug}/question-list.md`；cache trails under `_cache/wave1/primary/{topic.slug}/sNN_{source-slug}/` |
@@ -200,6 +234,14 @@ A task card with `producer_rule: topic_deepening` SHALL have the following defau
 - **THEN** Phase Agent SHALL generate 3 task cards, each with `producer_rule: topic_deepening`
 - **AND** each task card's `targets.delegates.role_key` SHALL be `dpt-evidence-extractor`
 - **AND** each task card's `priority_class` SHALL be `P4_progressive_artifact_or_seed_backfill`
+
+Task cards with `producer_rule: topic_deepening` SHALL NOT predeclare `work_id`; the Engine SHALL allocate `work_id` only when the delegated demand is claimed through `operate-work-unit claim`.
+
+#### Scenario: topic deepening card waits for Engine work_id allocation
+
+- **WHEN** the Phase Agent generates topic-deepening task cards
+- **THEN** each task card SHALL identify demand by `queue_item_id`
+- **AND** `operate-work-unit claim` SHALL allocate the delegated `work_id` later when the demand enters `delegated_in_flight`
 
 ### Requirement: Producer rule cross_topic_synthesis for wave2 synthesis task cards
 
@@ -346,4 +388,3 @@ If a queue item has no delegated target and no work-unit binding, `operate-queue
 - **WHEN** a direct Phase Agent task with no delegated target calls `operate-queue complete`
 - **THEN** work-unit result and runtime receipt checks SHALL be skipped
 - **AND** standard completion receipt checks SHALL still run
-

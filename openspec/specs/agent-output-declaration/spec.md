@@ -4,11 +4,13 @@
 
 ## Purpose
 
-Define the Agent output declaration contract that lets Relay slot results, delegated queue completion, the bundle-level output ledger, and downstream gates share one authoritative record of Agent-produced files and cache trails.
+Define the Agent output declaration contract for Engine-submitted work-unit ledger rows. The bundle-level output ledger and downstream gates share one authoritative record of Agent-produced files and cache trails through `operate-work-unit submit`.
 ## Requirements
 ### Requirement: Engine SHALL consume declaration ledger, not scan directories to discover Agent outputs
 
 The Engine and gates SHALL consume submitted work-unit rows in `rb_output_declarations.jsonl` as the production evidence of delegated outputs. Filesystem scanning MAY produce diagnostics for orphaned or bypass artifacts, but SHALL NOT create gate pass coverage without a matching Engine-written ledger row.
+
+Current output declaration guidance SHALL describe work-unit submit rows as delegated output authority. It SHALL NOT describe retired result references or queue completion as delegated ledger authority.
 
 #### Scenario: orphan output is diagnostic only
 
@@ -16,9 +18,17 @@ The Engine and gates SHALL consume submitted work-unit rows in `rb_output_declar
 - **THEN** gate provenance SHALL treat it as bypass-suspected diagnostic evidence
 - **AND** the file SHALL NOT satisfy delegated output coverage
 
+#### Scenario: old result reference is not output authority
+
+- **WHEN** a delegated output declaration lacks submitted work-unit provenance
+- **THEN** the Engine SHALL NOT count it as delegated output authority
+- **AND** any retired result reference SHALL be removed from current proof surfaces or treated as rejected diagnostic evidence only
+
 ### Requirement: Production and experiments SHALL converge at schema-validated declaration
 
 Production SHALL obtain declarations from real work-unit submit results. Engine-layer experiments MAY use fixture work-unit results, but those fixtures SHALL pass the same work-unit result schema and enter the same submit / ledger / gate path as production after the declaration point.
+
+Current experiment fixtures SHALL NOT hand-write old delegated ledger rows as current gate proof. Fixture-backed delegated evidence SHALL converge through work-unit result schema validation, submit, ledger append, and gate checks. Old fixture rows that cannot be migrated to this path and no longer diagnose current behavior SHALL be removed from current playbooks/tests.
 
 #### Scenario: Experiment fixture uses same downstream pipeline
 
@@ -30,6 +40,12 @@ Production SHALL obtain declarations from real work-unit submit results. Engine-
 
 - **WHEN** a real sub-agent submits a work-unit result with declarations
 - **THEN** `operate-work-unit submit` SHALL validate and ledger it using the same code path used by fixture-backed Engine tests
+
+#### Scenario: old ledger fixture is not current proof
+
+- **WHEN** an experiment uses a hand-written delegated ledger row that does not come from work-unit submit
+- **THEN** the experiment SHALL be migrated to work-unit submit or removed from current experiment surfaces
+- **AND** its verdict SHALL NOT count as current delegated production proof while it remains unmigrated
 
 ### Requirement: Ledger declarations SHALL preserve enough creation context for accepted outputs
 
@@ -64,9 +80,16 @@ Each Engine-written output declaration ledger row for delegated work SHALL inclu
 
 For delegated work, `operate-work-unit submit` SHALL write the bundle-level `rb_output_declarations.jsonl` ledger. Queue completion SHALL NOT write delegated work ledger rows. The ledger SHALL remain the single production submission ledger and SHALL use work-unit-only provenance fields.
 
+The ledger row SHALL use work-unit provenance fields such as `work_id`, `queue_item_id`, `work_unit_ref`, `result_ref`, `runtime_receipt_ref`, `receipt_nonce`, `output_files`, and `cache_trails`. Current production guidance SHALL NOT use retired delegated fields as the delegated ledger contract.
+
 #### Scenario: successful submit appends one ledger row
 
 - **WHEN** a delegated work unit submits successfully
 - **THEN** the Engine SHALL append exactly one `rb_output_declarations.jsonl` row for that `work_id`
 - **AND** the row SHALL include `work_id`, `queue_item_id`, `work_unit_ref`, `result_ref`, `runtime_receipt_ref`, `receipt_nonce`, `output_files`, and `cache_trails`
 
+#### Scenario: ledger fields are work-unit fields
+
+- **WHEN** current specs or playbooks show a delegated output declaration row
+- **THEN** the row SHALL use work-unit provenance fields
+- **AND** it SHALL NOT use retired delegated fields as current schema examples

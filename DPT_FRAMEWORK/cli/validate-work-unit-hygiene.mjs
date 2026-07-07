@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// @impl DEW-008, WPG-004, FIO-004, AGQ-005, SCO-009, WDC-004
-// Static hygiene gate for the work-unit delegated path.
+// @impl RET-006, DEW-001, DEW-008, AGQ-019, FRE-005
+// Static hygiene gate for the current work-unit delegated path.
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
@@ -16,58 +16,48 @@ const { values } = parseArgs({
 const repoRoot = values.root;
 
 const SCAN_ROOTS = [
-  'DPT_FRAMEWORK/cli',
-  'DPT_FRAMEWORK/engine',
-  'DPT_FRAMEWORK/schema',
-  'DPT_FRAMEWORK/rb_templates',
-  'DPT_FRAMEWORK/workflows',
-  'DPT_FRAMEWORK/command_playbook',
+  'openspec/specs',
+  'openspec/changes',
+  'openspec/governance',
+  'DPT_FRAMEWORK',
+  'tests',
   'guidelines',
   'experiments_env/shared',
-  'tests',
+  'experiments_playbook',
+  '_backlog/bugs',
+  '_backlog/plans',
+  '_backlog/todos',
+  'README.md',
+  'AGENTS.md',
 ];
-
-const EXCLUDED_PATHS = new Set([
-  'DPT_FRAMEWORK/CHANGELOG.md',
-  'DPT_FRAMEWORK/cli/validate-work-unit-hygiene.mjs',
-  'tests/integration/cli/validate-work-unit-hygiene.test.mjs',
-]);
-
-const DIAGNOSTIC_ONLY_PATHS = new Set([
-  'DPT_FRAMEWORK/engine/helpers/file-observability.mjs',
-  'tests/engine/helpers/file-observability.test.mjs',
-  'tests/schema/contracts/queue.test.mjs',
-  'tests/engine/queue-manager-receipts-cli-render.test.mjs',
-  'tests/schema/verify-bundle-health.test.mjs',
-]);
 
 const TEXT_EXTENSIONS = new Set([
   '.js', '.mjs', '.json', '.jsonl', '.md', '.yaml', '.yml', '.tmpl', '.toml',
 ]);
 
-const REMOVED_AUTHORITY_PATTERNS = [
+const ACTIVE_CLEANUP_PREFIX = 'openspec/changes/clean-delegated-work-surfaces/';
+
+const RETIRED_PATTERNS = [
   { pattern: /\bdrive-relay-slot\b/, code: 'removed_cli_drive_relay_slot' },
   { pattern: /\bvalidate-subagent-logging-contract\b/, code: 'removed_cli_validate_subagent_logging_contract' },
-  { pattern: /\bsubagent-relay\b/, code: 'removed_engine_subagent_relay' },
+  { pattern: /\bsubagent-relay(?:\.mjs)?\b/, code: 'removed_engine_subagent_relay' },
   { pattern: /\bqueue-slots\b/, code: 'removed_schema_queue_slots' },
   { pattern: /\bSLOT_NAMES\b|\bQUEUE_ACTIVE_WINDOW_SLOTS\b/, code: 'removed_queue_slot_exports' },
   { pattern: /\bSlotResult\b|\bSubagentWorkflowState\b/, code: 'removed_slot_result_schema' },
   { pattern: /\bstageSubagentSlots\b|\bcommitSlotResult\b|\bcollectAndMergeSubagentResults\b/, code: 'removed_relay_engine_call' },
-  { pattern: /\bresolveSlotFromResultRef\b|\bvalidateRuntimeReceipt\b/, code: 'removed_slot_receipt_helper' },
+  { pattern: /\brecordAgentSpawnRequested\b|\bingestAgentReceipt\b|\brunProvenanceForensics\b/, code: 'removed_relay_engine_call' },
+  { pattern: /\bresolveSlotFromResultRef\b|\bvalidateRuntimeReceipt\b|\btaskMarkdownForSlot\b/, code: 'removed_slot_receipt_helper' },
   { pattern: /\bslot_result_ref\b/, code: 'removed_slot_result_ref' },
+  { pattern: /\bsubagent_slot_presence\b/, code: 'removed_subagent_slot_presence' },
   { pattern: /\bslotKey\b/, code: 'removed_slot_key_logging_context' },
+  { pattern: /\broleAgentKey\b/, code: 'removed_role_agent_key_logging_context' },
   { pattern: /\bMAX_CONCURRENT_SUBAGENTS\b/, code: 'removed_relay_concurrency_cap' },
-  { pattern: /\brelay_commit_done\b|\brelay_commit_missing\b|\brelay_spawn_requested\b/, code: 'removed_relay_log_event' },
-  { pattern: /\brelay_required\b|\brelay_required_for_new_evidence\b|\brelay_task_md\b|\brelay-subagent-role\b/, code: 'removed_relay_execution_contract' },
+  { pattern: /\brelay_commit_done\b|\brelay_commit_missing\b|\brelay_spawn_requested\b|\brelay_commit_[a-z0-9_]*\b|\brelay_spawn_[a-z0-9_]*\b/, code: 'removed_relay_log_event' },
+  { pattern: /\brelay_required\b|\brelay_required_for_new_evidence\b|\brelay_task_md\b|\brelay-subagent-role\b|\brelay-managed\b/, code: 'removed_relay_execution_contract' },
   { pattern: /_subagents\//, code: 'removed_subagents_path' },
-  { pattern: /\bslot_1_current\b|\bslot_2_next\b|\bslot_[0-9]+_pending\b|\bslot_20_tail\b/, code: 'removed_queue_slot_shape' },
-];
-
-const UNSUPPORTED_PROVENANCE_CHECKS = [
-  'output_declaration_ledger_exists',
-  'output_declaration_coverage',
-  'subagent_slot_presence',
-  'relay_bypass_suspected',
+  { pattern: /\bdispatch\.json\b/, code: 'removed_dispatch_manifest' },
+  { pattern: /\bbounded slots\b|\brelay slots?\b|\brelay-slot\b|\bslot task\b|\bslot result\b|\bslot artifact\b/i, code: 'removed_slot_wording' },
+  { pattern: /\bslot_1_current\b|\bslot_2_next\b|\bslot_[0-9]+_pending\b|\bslot_5_tail\b|\bslot_20_tail\b/, code: 'removed_queue_slot_shape' },
 ];
 
 const SEMANTIC_PATTERNS = [
@@ -86,6 +76,35 @@ const SEMANTIC_PATTERNS = [
     code: 'index_pass_coverage_wording',
     detail: 'Work-unit index presence must be cross-check only, not pass coverage.',
   },
+  {
+    pattern: /five-slot active window|fixed five-slot|5-slot active window|five named slots/i,
+    code: 'old_queue_fixed_active_window',
+    detail: 'Queue v2 uses ordered active_window with QUEUE_ACTIVE_WINDOW_LIMIT, not a fixed five-slot state model.',
+  },
+  {
+    pattern: /test-simple\.md|test-medium\.md|test-complex\.md|simple, medium, and complex experiment playbooks/i,
+    code: 'old_experiment_taxonomy',
+    detail: 'Current command experiments use case/cost playbook naming, not old test-simple/test-medium/test-complex runner guidance.',
+  },
+  {
+    pattern: /\|\s*`work_id`\s*\|\s*yes\s*\|/,
+    code: 'queue_demand_work_id_table',
+    detail: 'Queue demand task-card tables must use queue_item_id; work_id is Engine-allocated only when claimed.',
+  },
+];
+
+const CONTEXT_SENSITIVE_PATTERNS = [
+  { pattern: /\bruntime_receipt_ref\b/, code: 'runtime_receipt_ref_context' },
+  { pattern: /\breceipt_nonce\b/, code: 'receipt_nonce_context' },
+  { pattern: /\breceiptNonce\b/, code: 'receipt_nonce_camel_context' },
+  { pattern: /_beacon\.json\b/, code: 'beacon_context' },
+];
+
+const UNSUPPORTED_PROVENANCE_CHECKS = [
+  'output_declaration_ledger_exists',
+  'output_declaration_coverage',
+  'subagent_slot_presence',
+  'relay_bypass_suspected',
 ];
 
 function normalizeRel(absPath) {
@@ -97,9 +116,14 @@ function extensionOf(file) {
   return match ? match[1] : '';
 }
 
+function isOriginalArchive(relPath) {
+  return relPath.split('/').some((part) => part.startsWith('_original_'));
+}
+
 function shouldSkip(relPath) {
-  if (EXCLUDED_PATHS.has(relPath)) return true;
-  if (relPath.split('/').some((part) => part.startsWith('_original_'))) return true;
+  if (relPath === '') return true;
+  if (relPath.startsWith('openspec/changes/archive/')) return true;
+  if (isOriginalArchive(relPath)) return true;
   if (relPath.includes('/.git/')) return true;
   return false;
 }
@@ -140,19 +164,105 @@ function lineNumber(text, index) {
   return text.slice(0, index).split('\n').length;
 }
 
+function lineAt(text, index) {
+  const lines = text.split(/\r?\n/);
+  return lines[lineNumber(text, index) - 1] || '';
+}
+
+function windowAround(text, index, radius = 220) {
+  return text.slice(Math.max(0, index - radius), Math.min(text.length, index + radius));
+}
+
+function isCheckerSelfReference(rel) {
+  return rel === 'DPT_FRAMEWORK/cli/validate-work-unit-hygiene.mjs'
+    || rel === 'tests/integration/cli/validate-work-unit-hygiene.test.mjs';
+}
+
+function isDeprecatedRegistry(rel, line) {
+  return rel === 'openspec/governance/req-registry.yaml' && /\[DEPRECATED\]|no spec directory|all entries deprecated/i.test(line);
+}
+
+function isCleanupControl(rel) {
+  return rel.startsWith(ACTIVE_CLEANUP_PREFIX);
+}
+
+function isReleaseHistoryMinimized(rel, line) {
+  return rel === 'DPT_FRAMEWORK/CHANGELOG.md'
+    && /\b(v0\.[0-3]|prior|previously|replaced|removed|retired|old|legacy|deprecated)\b/i.test(line);
+}
+
+function isCurrentWorkUnitContext(rel, context) {
+  if (!/(work-unit|work_unit|_work_units|operate-work-unit|receipt_nonce|runtime_receipt_ref|_beacon\.json)/i.test(context)) return false;
+  if (/(drive-relay-slot|subagent-relay|_subagents\/|slot_result_ref|subagent_slot_presence|slotKey|roleAgentKey|relay_commit|relay_spawn|dispatch\.json|slot_1_current|slot_2_next|slot_5_tail)/i.test(context)) return false;
+  return /(^openspec\/specs\/|^openspec\/changes\/clean-delegated-work-surfaces\/|^DPT_FRAMEWORK\/|^tests\/|^experiments_playbook\/)/.test(rel);
+}
+
+function isNegativeContext(rel, context) {
+  return /(reject|rejected|rejects|fail(?:s|ed)? closed|non-authoritative|diagnostic only|bypass|orphan|cannot pass|do not use|must not|shall not|not current|removed|retired|deprecated|negative|hygiene failure|not output authority|does NOT make it pass|absence)/i.test(context)
+    && !/(golden path|happy path|production path|current proof|current production proof|use .* as proof)/i.test(context);
+}
+
+function hasRetiredContext(context) {
+  return /(drive-relay-slot|subagent-relay|_subagents\/|slot_result_ref|subagent_slot_presence|slotKey|roleAgentKey|relay_commit|relay_spawn|dispatch\.json|stageSubagentSlots|commitSlotResult|collectAndMergeSubagentResults|recordAgentSpawnRequested|ingestAgentReceipt|runProvenanceForensics|slot_1_current|slot_2_next|slot_5_tail|slot_[0-9]+_pending)/i.test(context);
+}
+
+function isPastFailureHistory(rel, context) {
+  if (!/^_backlog\/(bugs|plans|todos)\//.test(rel)) return false;
+  return /(past|history|historical|removed design|retired|old|legacy|failure analysis|failed|brittle|broken|impassable|why .* grew complex|replacement|superseded|do not use|no longer current)/i.test(context);
+}
+
+function isAllowedOccurrence(rel, line, context, { contextSensitive = false } = {}) {
+  if (isCheckerSelfReference(rel)) return { allowed: true, reason: 'checker-self-reference' };
+  if (isCleanupControl(rel)) return { allowed: true, reason: 'cleanup-control' };
+  if (isDeprecatedRegistry(rel, line)) return { allowed: true, reason: 'deprecated-registry' };
+  if (isReleaseHistoryMinimized(rel, line)) return { allowed: true, reason: 'release-history-minimized' };
+  if (isNegativeContext(rel, context)) return { allowed: true, reason: 'negative' };
+  if (isPastFailureHistory(rel, context)) return { allowed: true, reason: 'past-failure-history' };
+  if (contextSensitive && isCurrentWorkUnitContext(rel, context)) return { allowed: true, reason: 'current-work-unit-context' };
+  return { allowed: false, reason: null };
+}
+
+function addIssue(issues, issue) {
+  issues.push(issue);
+}
+
 function addPatternIssues(issues, rel, text, rules, category) {
-  if (DIAGNOSTIC_ONLY_PATHS.has(rel)) return;
   for (const rule of rules) {
-    const match = rule.pattern.exec(text);
-    rule.pattern.lastIndex = 0;
-    if (!match) continue;
-    issues.push({
-      category,
-      code: rule.code,
-      file: rel,
-      line: lineNumber(text, match.index),
-      detail: rule.detail || `Removed work-unit replacement token matched: ${match[0]}`,
-    });
+    const flags = rule.pattern.flags.includes('g') ? rule.pattern.flags : `${rule.pattern.flags}g`;
+    const pattern = new RegExp(rule.pattern.source, flags);
+    for (const match of text.matchAll(pattern)) {
+      const line = lineAt(text, match.index);
+      const context = windowAround(text, match.index);
+      const allowed = isAllowedOccurrence(rel, line, context);
+      if (allowed.allowed) continue;
+      addIssue(issues, {
+        category,
+        code: rule.code,
+        file: rel,
+        line: lineNumber(text, match.index),
+        detail: rule.detail || `Retired work-unit replacement token matched: ${match[0]}`,
+      });
+    }
+  }
+}
+
+function addContextSensitiveIssues(issues, rel, text) {
+  for (const rule of CONTEXT_SENSITIVE_PATTERNS) {
+    const pattern = new RegExp(rule.pattern.source, `${rule.pattern.flags.includes('i') ? 'i' : ''}g`);
+    for (const match of text.matchAll(pattern)) {
+      const line = lineAt(text, match.index);
+      const context = windowAround(text, match.index);
+      if (!hasRetiredContext(context)) continue;
+      const allowed = isAllowedOccurrence(rel, line, context, { contextSensitive: true });
+      if (allowed.allowed) continue;
+      addIssue(issues, {
+        category: 'context_sensitive',
+        code: rule.code,
+        file: rel,
+        line: lineNumber(text, match.index),
+        detail: `Context-sensitive work-unit field "${match[0]}" is not in an allowed work-unit, negative, deprecated, cleanup, release-history, or past-failure context.`,
+      });
+    }
   }
 }
 
@@ -166,12 +276,12 @@ function checkGateDefinitions(issues) {
     try {
       parsed = JSON.parse(readFileSync(file, 'utf-8'));
     } catch (error) {
-      issues.push({ category: 'gate_definition', code: 'gate_definition_unparseable', file: rel, line: 1, detail: error.message });
+      addIssue(issues, { category: 'gate_definition', code: 'gate_definition_unparseable', file: rel, line: 1, detail: error.message });
       continue;
     }
     for (const [idx, rule] of (parsed.rules || []).entries()) {
       if (UNSUPPORTED_PROVENANCE_CHECKS.includes(rule.check)) {
-        issues.push({
+        addIssue(issues, {
           category: 'gate_definition',
           code: 'unsupported_delegated_provenance_check',
           file: rel,
@@ -191,7 +301,7 @@ function checkQueueTemplate(issues) {
   for (const token of ['"work_id"', 'slot_1_current', 'slot_2_next', 'slot_20_tail']) {
     const idx = raw.indexOf(token);
     if (idx !== -1) {
-      issues.push({
+      addIssue(issues, {
         category: 'queue_semantics',
         code: 'queue_template_old_identity_or_slot_shape',
         file: rel,
@@ -204,28 +314,43 @@ function checkQueueTemplate(issues) {
 
 function checkRequiredWiring(issues) {
   const gateHelperRel = 'DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs';
-  const gateHelper = readFileSync(join(repoRoot, gateHelperRel), 'utf-8');
+  const gateHelperAbs = join(repoRoot, gateHelperRel);
+  if (!existsSync(gateHelperAbs)) {
+    addIssue(issues, { category: 'wiring', code: 'missing_work_unit_gate_helper_file', file: gateHelperRel, line: 1, detail: `${gateHelperRel} is missing.` });
+    return;
+  }
+  const gateHelper = readFileSync(gateHelperAbs, 'utf-8');
   for (const exported of ['checkWorkUnitLedgerExists', 'checkWorkUnitOutputCoverage', 'checkWorkUnitSubmissionPresence', 'checkDelegatedBypassSuspected']) {
     if (!gateHelper.includes(`export function ${exported}`)) {
-      issues.push({ category: 'wiring', code: 'missing_work_unit_gate_helper', file: gateHelperRel, line: 1, detail: `${exported} is not exported from gate provenance helpers.` });
+      addIssue(issues, { category: 'wiring', code: 'missing_work_unit_gate_helper', file: gateHelperRel, line: 1, detail: `${exported} is not exported from gate provenance helpers.` });
     }
   }
 
   for (const gate of ['wave0', 'wave1', 'wave2']) {
     const rel = `DPT_FRAMEWORK/cli/gates/check-gate-${gate}-complete.mjs`;
-    const text = readFileSync(join(repoRoot, rel), 'utf-8');
+    const abs = join(repoRoot, rel);
+    if (!existsSync(abs)) {
+      addIssue(issues, { category: 'wiring', code: 'missing_gate_cli', file: rel, line: 1, detail: `${rel} is missing.` });
+      continue;
+    }
+    const text = readFileSync(abs, 'utf-8');
     for (const required of ['checkWorkUnitLedgerExists', 'checkWorkUnitOutputCoverage', 'checkWorkUnitSubmissionPresence', 'checkDelegatedBypassSuspected']) {
       if (!text.includes(required)) {
-        issues.push({ category: 'wiring', code: 'gate_cli_missing_work_unit_helper', file: rel, line: 1, detail: `${rel} does not reference ${required}.` });
+        addIssue(issues, { category: 'wiring', code: 'gate_cli_missing_work_unit_helper', file: rel, line: 1, detail: `${rel} does not reference ${required}.` });
       }
     }
   }
 
   const operateRel = 'DPT_FRAMEWORK/cli/operate-work-unit.mjs';
-  const operate = readFileSync(join(repoRoot, operateRel), 'utf-8');
+  const operateAbs = join(repoRoot, operateRel);
+  if (!existsSync(operateAbs)) {
+    addIssue(issues, { category: 'wiring', code: 'operate_work_unit_missing_cli', file: operateRel, line: 1, detail: `${operateRel} is missing.` });
+    return;
+  }
+  const operate = readFileSync(operateAbs, 'utf-8');
   for (const required of ['claimWorkUnits', 'submitWorkUnit', 'closeWorkUnitAttempt', 'openWorkUnitBatch', 'inspectWorkUnits']) {
     if (!operate.includes(required)) {
-      issues.push({ category: 'wiring', code: 'operate_work_unit_missing_helper', file: operateRel, line: 1, detail: `${operateRel} does not reference ${required}.` });
+      addIssue(issues, { category: 'wiring', code: 'operate_work_unit_missing_helper', file: operateRel, line: 1, detail: `${operateRel} does not reference ${required}.` });
     }
   }
 }
@@ -233,8 +358,9 @@ function checkRequiredWiring(issues) {
 const issues = [];
 for (const file of candidateFiles()) {
   const text = readFileSync(file.abs, 'utf-8');
-  addPatternIssues(issues, file.rel, text, REMOVED_AUTHORITY_PATTERNS, 'removed_authority');
+  addPatternIssues(issues, file.rel, text, RETIRED_PATTERNS, 'removed_authority');
   addPatternIssues(issues, file.rel, text, SEMANTIC_PATTERNS, 'semantic_hygiene');
+  addContextSensitiveIssues(issues, file.rel, text);
 }
 checkGateDefinitions(issues);
 checkQueueTemplate(issues);

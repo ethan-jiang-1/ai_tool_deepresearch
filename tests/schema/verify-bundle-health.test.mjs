@@ -355,7 +355,7 @@ describe('verify-bundle-health.mjs', () => {
       const r = spawnSync('node', [VERIFIER, '--bundle', dir, '--profile', 'heavy', '--json'], { encoding: 'utf-8', timeout: 30000 });
       const report = JSON.parse(r.stdout.trim());
 
-      // Ledger empty → issues. Files in _subagents/ etc. do NOT make it pass
+      // Negative regression: ledger empty -> issues. Old delegated dirs do NOT make it pass.
       assert.strictEqual(report.ledger.status, 'issues');
       assert.strictEqual(report.work_units.status, 'issues');
       // Cache trail check: ledger empty → no declaration of cache trails → issues

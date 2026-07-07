@@ -3,22 +3,17 @@
 
 ## Purpose
 
-Agent 辅助的半自动测试体系。每个 engine（位于 `DPT_FRAMEWORK/engine/`）通过 `experiments_playbook/exp_<component>/` 的三级 playbook (simple/medium/complex) 验证, 每级使用独立 `dpt_disp_*` disposable bundle 与独立 trace 隔离。trace 统一由 `DPT_FRAMEWORK/engine/trace.mjs` 的 `createTrace()` 工厂创建，每个 playbook 持有自己的 trace 实例。Playbook trace verdict event SHALL use `check`.
+Agent-assisted command experiment system. Current playbooks live under `experiments_playbook/exp_*/` as `case-<id>-<cost>-<proof-role>.md`, create isolated `dpt_disp_*` disposable bundles, execute real framework commands or thin deterministic checkpoints, and derive PASS/FAIL from root `rb_trace.jsonl` `check` events.
 ## Requirements
-### Requirement: gate-loop 三级测试 playbook (AGT-001)
-gate-loop 的 Agent 辅助测试 playbook SHALL 为三级: simple (Gate + 1 node)、medium (Gate + Repair + 2 nodes)、complex (完整端到端)。每级 SHALL 使用独立 disposable bundle 目录 (`dpt_disp_gl_<level>/`) 和独立 trace 文件 (`_trace_gl_<level>.jsonl`) 实现完全隔离。
+### Requirement: gate-loop command experiment playbooks (AGT-001)
+The gate-loop Agent-assisted command experiment family SHALL use current command-experiment case naming and cost/role taxonomy. Current gate-loop playbooks SHALL be `case-<id>-<cost>-<proof-role>.md` files under `experiments_playbook/exp_gate-loop/`, SHALL create isolated disposable bundles, SHALL write verdict-affecting checks to the bundle trace, and SHALL derive PASS/FAIL from trace JSONL `check` events.
 
-#### Scenario: Simple test runs independently
-- **WHEN** 测试者运行 `experiments_playbook/exp_gate-loop/test-simple.md`
-- **THEN** 创建 `dpt_disp_gl_simple/`, 写入 `rb_trace.jsonl`, 基于 `check` events 验证 PASS (~4 events)
+Current main spec Purpose SHALL describe command experiments as case/cost playbooks over real disposable bundles and trace-backed verdicts. It SHALL NOT describe the current testing system as old complexity-named files when those files no longer exist as current runner surfaces.
 
-#### Scenario: Medium test runs independently
-- **WHEN** 测试者运行 `experiments_playbook/exp_gate-loop/test-medium.md`
-- **THEN** 使用 `dpt_disp_gl_medium/` 和 `rb_trace.jsonl`, 与 simple 隔离
-
-#### Scenario: Complex test runs independently
-- **WHEN** 测试者运行 `experiments_playbook/exp_gate-loop/test-complex.md`
-- **THEN** 含 Check, Gate, Repair, 4 nodes, C&I, 全在独立 bundle 和 trace
+#### Scenario: gate-loop cases use current case taxonomy
+- **WHEN** current gate-loop experiment guidance names runnable playbooks
+- **THEN** it SHALL name current case/cost files such as the light three-return case, repair-loop case, and full-pipeline case
+- **AND** it SHALL NOT name retired complexity-named files as current runnable proof
 
 ### Requirement: Trace 系统支持独立 trace 实例 (AGT-001)
 `DPT_FRAMEWORK/engine/trace.mjs` 模块 SHALL 提供 `createTrace(filePath, options?)` 工厂函数，每次调用返回独立的 trace 实例（无共享状态）。每个测试脚本 SHALL 调用 `createTrace()` 创建自己的 trace 实例。Node SHALL 通过 `trace.traceEntry()` 自动 trace, 不硬编码文件名。
@@ -27,33 +22,42 @@ gate-loop 的 Agent 辅助测试 playbook SHALL 为三级: simple (Gate + 1 node
 - **WHEN** simple test 设 `const trace = createTrace('dpt_disp_gl_simple/rb_trace.jsonl')` 且 medium test 设 `const trace = createTrace('dpt_disp_gl_medium/rb_trace.jsonl')`
 - **THEN** simple test 的 event 只写其 bundle root `rb_trace.jsonl`, medium 只写其 bundle root `rb_trace.jsonl`, 无交叉污染
 
-### Requirement: gate-fork 三级测试 playbook (AGT-002)
-gate-fork 的 Agent 辅助测试 playbook SHALL 为三级 (simple/medium/complex), 每级使用独立 disposable bundle (`dpt_disp_gf_<level>/`) 和独立 trace (`_trace_gf_<level>.jsonl`)。SHALL 复用 `DPT_FRAMEWORK/engine/trace.mjs` 的 `createTrace()` 工厂 API。
+### Requirement: gate-fork command experiment playbooks (AGT-002)
+The gate-fork Agent-assisted command experiment family SHALL use current command-experiment case naming and cost/role taxonomy. Current gate-fork playbooks SHALL be `case-<id>-<cost>-<proof-role>.md` files under `experiments_playbook/exp_gate-fork/`, SHALL create isolated disposable bundles, SHALL write verdict-affecting checks to the bundle trace, and SHALL derive PASS/FAIL from trace JSONL `check` events.
 
-#### Scenario: Simple gate-fork test 验证单分支路由
-- **WHEN** 测试者运行 `experiments_playbook/exp_gate-fork/test-simple.md`
-- **THEN** 创建 `dpt_disp_gf_simple/`, 写入 `rb_trace.jsonl`, 基于 `check` events 验证 Gate 单分支路由 PASS (~4 events)
-
-#### Scenario: Medium gate-fork test 验证分叉 + 汇聚修复
-- **WHEN** 测试者运行 `experiments_playbook/exp_gate-fork/test-medium.md`
-- **THEN** 使用 `dpt_disp_gf_medium/` 和 `rb_trace.jsonl`, 验证 Fork 多路分发 + Converge 共享修复, 与 simple 隔离 (~9 events)
-
-#### Scenario: Complex gate-fork test 覆盖完整 pipeline + C&I
-- **WHEN** 测试者运行 `experiments_playbook/exp_gate-fork/test-complex.md`
-- **THEN** 使用 `dpt_disp_gf_complex/`, 验证 Fork → Converge → C&I 反馈 → 动态加载全流程 (~17 events)
+#### Scenario: gate-fork cases use current case taxonomy
+- **WHEN** current gate-fork experiment guidance names runnable playbooks
+- **THEN** it SHALL name current case/cost files such as the four-return case, repair-retry case, and full-pipeline case
+- **AND** it SHALL NOT name retired complexity-named files as current runnable proof
 
 ### Requirement: Three-level real subagent test playbooks (AGT-003)
 
 The real subagent test playbook family SHALL exercise sub-agent actor behavior through work-unit claim, bounded prompt execution, submit, submitted ledger coverage, and gate-visible provenance. It SHALL keep light/standard/heavy levels, but production-path assertions SHALL use work-unit artifacts and Engine submit results.
 
-#### Scenario: simple subagent playbook uses work-unit path
+Current runnable real-subagent playbooks SHALL NOT use retired delegated production mechanisms as proof surfaces. Old delegated cases SHALL be migrated when they still prove current work-unit behavior, or removed from current experiment surfaces when they no longer have current proof or diagnostic value.
+
+#### Scenario: light or heavy subagent playbook uses work-unit path
 
 - **WHEN** the simple real subagent playbook runs
 - **THEN** it SHALL claim a work unit, spawn a bounded sub-agent task, submit by `work_id`, and verify submitted ledger coverage
 
+#### Scenario: old delegated subagent playbook is not current
+
+- **WHEN** a real-subagent playbook still requires a retired delegated production command or path
+- **THEN** it SHALL NOT be listed as a current runnable proof case
+- **AND** it SHALL be migrated to work-unit proof or removed from current experiment surfaces
+
+#### Scenario: old delegated identity fields are not current proof
+
+- **WHEN** a real-subagent playbook proves execution using retired identity fields, events, dispatch manifests, or non-work-unit paths
+- **THEN** it SHALL be migrated to work-unit identity and submit evidence or removed from current experiment surfaces
+- **AND** its old verdict SHALL NOT count as current work-unit proof
+
 ### Requirement: Runtime-agent trace events prove real execution path (AGT-003)
 
 Runtime-agent trace evidence SHALL bind to work-unit lifecycle events and submitted work-unit identity. The playbook SHALL prove that the sub-agent actor actually ran by checking Engine and runtime evidence associated with `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
+
+Trace, log, and receipt assertions SHALL NOT depend on unsubmitted retired delegated artifacts as current production evidence.
 
 #### Scenario: runtime evidence binds work unit
 
@@ -65,6 +69,8 @@ Runtime-agent trace evidence SHALL bind to work-unit lifecycle events and submit
 
 The real subagent test suite SHALL require sub-agent-written runtime receipts and Engine-validated work-unit submit output for real LLM sub-agent acceptance.
 
+Fixture-backed or old delegated evidence SHALL NOT satisfy real-agent proof unless it is routed through the accepted work-unit submit and ledger path. Obsolete evidence fixtures with no current diagnostic value SHALL be removed rather than kept as current examples.
+
 #### Scenario: missing runtime evidence fails real-agent proof
 
 - **WHEN** a claimed work unit lacks matching runtime evidence for its receipt nonce
@@ -72,22 +78,23 @@ The real subagent test suite SHALL require sub-agent-written runtime receipts an
 
 ### Requirement: Playbook frontmatter weight field (AGT-005)
 
-每个 command experiment playbook 的 YAML frontmatter SHALL 包含 `weight` 字段，值为 `light` 或 `heavy`。
+Each command experiment playbook SHALL carry runner-facing cost metadata that matches the current command-experiment convention. Until the accepted frontmatter schema grows a dedicated `standard` value, filename cost labels SHALL map as follows: `light` and `standard` files use `weight: light`, while `heavy` files use `weight: heavy`.
 
-- `light`: 纯 JS engine 执行——playbook 不启动真实 LLM subagent。适合频繁跑（改完 framework 代码后）。
-- `heavy`: 启动真实 Claude Code subagent 或等效 LLM agent actor——playbook 消耗 token 且耗时显著长于 light。适合选择性跑（subagent 机制变更时）。
+Current specs SHALL NOT describe old filename taxonomy as the way to infer execution cost. Runner-facing docs MAY explain old mappings only as cleanup-control or migration context, not as current authoring guidance.
 
 weight 字段 SHALL 在 frontmatter 中紧接 `case` 字段之后。未显式指定 weight 的 playbook SHALL 被 AI 视为 heavy（保守默认）。
 
-#### Scenario: Light playbook frontmatter
+#### Scenario: cost label and weight remain aligned
 
-- **WHEN** 打开 `experiments_playbook/exp_gate-fork/test-simple.md`
-- **THEN** frontmatter 包含 `weight: light`
+- **WHEN** a current playbook is named `case-<id>-standard-<role>.md`
+- **THEN** its frontmatter MAY use `weight: light` until a `standard` weight is accepted
+- **AND** runner guidance SHALL treat the filename cost and frontmatter weight as distinct routing facts
 
-#### Scenario: Heavy playbook frontmatter
+#### Scenario: old filename taxonomy is not current cost metadata
 
-- **WHEN** 打开 `experiments_playbook/exp_subagent/test-simple.md`
-- **THEN** frontmatter 包含 `weight: heavy`
+- **WHEN** current specs or runner docs explain experiment cost
+- **THEN** they SHALL use light/standard/heavy cost labels and the accepted `weight` frontmatter convention
+- **AND** they SHALL NOT instruct agents to infer current cost from retired complexity-named files
 
 #### Scenario: AI distinguishes light from heavy by frontmatter
 
@@ -336,4 +343,3 @@ The heavy canary SHALL NOT be required for archive, and `NOT RUN` SHALL NOT be c
 - **THEN** it SHALL record `NOT RUN` with diagnostic context
 - **AND** the change MAY still archive if the standard E2E and regression tests pass
 - **AND** the archive notes SHALL NOT claim real Agent high-friction replay passed
-

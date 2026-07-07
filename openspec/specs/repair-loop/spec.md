@@ -3,11 +3,13 @@
 
 ## Purpose
 
-Gate 失败 -> repair checkpoint 更新结构化状态 -> 重回 Gate 重判。含防无限循环机制。Repair loop 逻辑实现在 `subagent-relay.mjs` 的 `convergeRepair()` 中；`gate-loop.mjs` 和 `gate-fork.mjs` 是单一函数导出（`checkGate` / `forkGate`），不包含 repair loop。
+Define deterministic repair checkpoint loopback: after a gate failure, repair updates structured state, returns to the gate for re-evaluation, and terminates through explicit max-iteration or stalled-state outcomes.
 ## Requirements
 ### Requirement: Repair checkpoint updates state and loops back to gate
 
-After repair checkpoint execution via `convergeRepair()`, the workflow state SHALL re-enter the gate for deterministic re-evaluation. The repair checkpoint MAY apply the currently accepted deterministic state transform, but it SHALL NOT execute an Agent-facing workflow node body, own semantic repair strategy, or act as delegated-work transport.
+After repair checkpoint execution, the workflow state SHALL re-enter the gate for deterministic re-evaluation. The repair checkpoint MAY apply the currently accepted deterministic state transform, but it SHALL NOT execute an Agent-facing workflow node body, own semantic repair strategy, or act as delegated-work transport.
+
+Current repair-loop specs and docs SHALL describe the deterministic repair checkpoint behavior without naming retired delegated implementation modules as the production anchor.
 
 #### Scenario: Repair checkpoint fixes the issue on first attempt
 
@@ -21,17 +23,24 @@ After repair checkpoint execution via `convergeRepair()`, the workflow state SHA
 - **THEN** the next deterministic checkpoint is gate re-evaluation
 - **AND** the workflow SHALL NOT directly advance past the gate without re-evaluation
 
+#### Scenario: repair loop wording avoids retired delegated transport
+
+- **WHEN** current specs or docs explain deterministic repair checkpoint behavior
+- **THEN** they SHALL describe state repair and gate re-evaluation
+- **AND** they SHALL NOT describe a retired delegated module as the production repair-loop implementation
+
 ### Requirement: Repair checkpoint loop terminates deterministically
 
-`convergeRepair()` SHALL enforce a `maxIterations` limit (default 3) and SHALL detect when state stops changing by comparing state hashes across iterations. The loop SHALL terminate with an explicit outcome rather than hiding another repair attempt or relying on chat/prose escalation.
+The repair checkpoint loop SHALL enforce a `maxIterations` limit and SHALL detect when state stops changing by comparing state hashes across iterations. The loop SHALL terminate with an explicit outcome rather than hiding another repair attempt or relying on chat/prose escalation.
+
+Implementation names MAY vary, but current specs SHALL anchor the behavior in deterministic checkpoint semantics rather than retired delegated-work transport modules.
 
 #### Scenario: Max iterations exhausted
 
 - **WHEN** repair has been attempted `maxIterations` times and gate still does not pass
-- **THEN** `convergeRepair()` returns an explicit non-pass outcome for caller inspection instead of attempting another repair
+- **THEN** the repair loop returns an explicit non-pass outcome for caller inspection instead of attempting another repair
 
 #### Scenario: State unchanged across iterations
 
 - **WHEN** repair produces the same state hash as a previous iteration
-- **THEN** `convergeRepair()` returns an explicit stalled outcome and terminates early
-
+- **THEN** the repair loop returns an explicit stalled outcome and terminates early

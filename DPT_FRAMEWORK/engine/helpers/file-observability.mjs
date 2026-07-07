@@ -473,7 +473,7 @@ export function auditFileObservability(bundlePath, {
     allFiles.push(...listDir(dp, bundlePath));
   }
 
-  // Recursive: artifacts/, _cache/, _work_units/, _subagents/, final/
+  // Recursive: artifacts/, _cache/, _work_units/, old delegated artifact dir, final/
   for (const dir of ['artifacts', '_cache', '_work_units', '_subagents', 'final']) {
     const dp = join(bundlePath, dir);
     allFiles.push(...walkDir(dp, bundlePath));

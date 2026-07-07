@@ -4,17 +4,25 @@
 
 ## Purpose
 
-Define the canonical location and import contract for production engine modules under `DPT_FRAMEWORK/engine/`. These engines are the single source of truth for deterministic queue, gate, loader, and subagent relay mechanisms — shared by both production run bundles and experiment playbooks.
+Define the canonical location and import contract for production engine modules under `DPT_FRAMEWORK/engine/`. These engines are the single source of truth for deterministic queue, gate, loader, work-unit, and hygiene mechanisms shared by production run bundles and experiment playbooks.
 ## Requirements
 ### Requirement: Engine code canonical location
 
 Production work-unit Engine code SHALL live under `DPT_FRAMEWORK/engine/` and production CLI entrypoints SHALL live under `DPT_FRAMEWORK/cli/`. Runtime bundle state SHALL live in the active bundle under `rb_queue.json`, `rb_output_declarations.jsonl`, and `_work_units/`; `DPT_FRAMEWORK/` SHALL remain reusable framework assets, not run state.
+
+Framework import and location guidance SHALL describe deterministic queue, gate, loader, and work-unit mechanisms. It SHALL NOT describe retired delegated engine modules as production mechanisms outside explicit negative, deprecated, checker self-reference, or minimized release-history contexts.
 
 #### Scenario: work-unit state is written to bundle
 
 - **WHEN** `operate-work-unit claim` runs against a bundle
 - **THEN** work-unit envelope files SHALL be written under the bundle `_work_units/`
 - **AND** no run-specific state SHALL be written under `DPT_FRAMEWORK/`
+
+#### Scenario: framework guidance avoids retired engine authority
+
+- **WHEN** a current framework doc describes delegated production engine modules
+- **THEN** it SHALL identify work-unit helpers and CLIs
+- **AND** it SHALL NOT name a retired delegated engine as production authority
 
 ### Requirement: Gate helpers provide shared frontmatter parsing
 
@@ -62,21 +70,37 @@ This test acts as an automated guardrail: new gate CLIs or bundle tools that cop
 
 Queue Manager internals SHALL be updated from single-current-item delegated completion to queue v2 and work-unit binding helpers while preserving the public framework boundary for non-delegated queue operations. Regression coverage SHALL move from non-work-unit delegated completion to work-unit claim/submit state transitions.
 
+Regression coverage SHALL keep negative tests for retired delegated tokens only as rejection or hygiene cases. Such tests SHALL NOT read as production usage examples.
+
 #### Scenario: queue manager rejects non-work-unit delegated completion
 
 - **WHEN** Queue Manager receives a delegated completion request that lacks a work-unit submit transaction
 - **THEN** it SHALL reject the request
 - **AND** it SHALL not append output declarations
 
+#### Scenario: old token regression is negative
+
+- **WHEN** a regression test mentions a retired delegated token
+- **THEN** the test SHALL assert rejection, hygiene failure, or diagnostic classification
+- **AND** it SHALL NOT use that token as a successful delegated production path
+
 ### Requirement: operate-work-unit owns delegated execution attempts
 
 The Framework Engine SHALL provide `operate-work-unit` as the only production delegated-work CLI. It SHALL implement `claim`, `submit`, `fail`, `timeout`, `abandon`, and `inspect` against an explicit bundle path. All configuration SHALL be passed through CLI flags, file arguments, or bundle state; environment variables SHALL NOT be required.
+
+No current production CLI or documentation SHALL present a retired delegated command as delegated execution authority.
 
 #### Scenario: delegated claim command creates envelope
 
 - **WHEN** `operate-work-unit claim <bundle> --phase wave0 --count 2` runs against two eligible queue-front delegated items
 - **THEN** the Engine SHALL create two work-unit envelopes
 - **AND** the command output SHALL include both generated prompts and both `work_id` values
+
+#### Scenario: delegated CLI surface is singular
+
+- **WHEN** current command docs list delegated production operations
+- **THEN** they SHALL list `operate-work-unit` lifecycle commands
+- **AND** they SHALL NOT list retired delegated commands as production operations
 
 ### Requirement: Work-unit index is Engine-owned allocation registry
 
@@ -113,4 +137,3 @@ The Framework Engine SHALL validate `work_id` with `^wu-w[0-9]+-b[0-9]{3}-[a-z][
 - **WHEN** a work-unit ID contains kind code `deep`
 - **AND** `_work_units/_index.json` has no kind registry entry mapping `deep` to the manifest's full `kind`
 - **THEN** Engine validation SHALL reject the work-unit binding
-
