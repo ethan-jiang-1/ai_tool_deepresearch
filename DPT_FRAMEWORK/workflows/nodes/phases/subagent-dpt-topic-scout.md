@@ -9,6 +9,12 @@ execution_contract:
   search_policy: subagent_performs_search
   loaded_by: phase-agent
   delivered_via: work_unit_task_md
+  filesystem_write: required
+  required_write_tools:
+    - read_file
+    - write_file
+    - append_file
+    - mkdir
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
@@ -23,6 +29,7 @@ suggested_context: []
 - **Used by**: Wave2 lifecycle Phase Agent for gap-fill, cross-topic, and emergent search tasks.
 - **Receives**: Work-unit `task.md`, `_beacon.json`, `result.schema.json`, assigned `runtime-receipt.jsonl`, and the output/cache contract for `_work_units/wave2/{work_id}/`.
 - **Produces**: Search evidence JSON, source URLs, optional promoted cross-reference inputs, cache trails, runtime receipt events, and bounded result JSON for `operate-work-unit submit`.
+- **Write capability**: Requires filesystem read/write/append and directory creation under `bundle_dir`; before return it verifies `result.json`, `runtime-receipt.jsonl`, declared outputs, and required cache leaf files exist under the active bundle root.
 - **Boundary**: This role searches and extracts for a specific finding or topic gap; it does not make cross-topic synthesis judgments, update final ledger state, run gates, or mutate workflow state.
 - **Handoff**: Phase Agent submits the result through `operate-work-unit submit --work-id <work_id> --result <result.json>`. Successful submit is the Engine boundary that completes queue demand and appends delegated ledger coverage.
 
@@ -96,7 +103,7 @@ If the task asks the Sub-agent to write source files directly, declared output p
 
 - Return JSON → `JSON.stringify(result, null, 2)` matching `result.schema.json`
 - JSON files (e.g. `meta.json`) → `JSON.stringify(data, null, 2)`
-- YAML content (e.g. `reference/00-cross-*.md` YAML frontmatter, `source.yaml`) → `yaml.stringify(data)` from the `yaml` npm package
+- YAML content such as `source.yaml` → `yaml.stringify(data)` from the `yaml` npm package. Reference Markdown uses bullet metadata blocks, not YAML frontmatter.
 
 Construct a plain JavaScript object, serialize it, then write the result. NEVER hand-concatenate structured formats with template literals, string interpolation, or shell heredocs. Values containing double quotes, colons, newlines, emoji, or CJK characters will produce malformed output when hand-concatenated.
 

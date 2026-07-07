@@ -151,6 +151,34 @@ function readYamlArray(filePath) {
   return Array.isArray(result.data) ? result.data : null;
 }
 
+function readSourceYamlForSchema(filePath, resolvedTarget) {
+  const result = readYamlArraySafe(filePath, bundlePath);
+  if (!result.ok) {
+    return { ok: false, detail: `[parse_error] ${result.error}` };
+  }
+  if (!Array.isArray(result.data)) {
+    const keys = result.data && typeof result.data === 'object'
+      ? Object.keys(result.data)
+      : [];
+    const found = keys.length > 0 ? ` Found object keys: ${keys.join(', ')}` : ` Found ${result.data === null ? 'null' : typeof result.data}.`;
+    return {
+      ok: false,
+      detail: `source.yaml must be a top-level YAML array at ${resolvedTarget}.${found} Entries must start at the document top level with "- ". Wrappers such as sources:, wave:, or topic: are invalid for this parser.`,
+    };
+  }
+  if (result.repaired) {
+    inspect.push(`[yaml_repaired] ${filePath}: ${result.repairDetail}`);
+  }
+  return { ok: true, data: result.data };
+}
+
+function sourceSchemaIssues(error) {
+  return error.issues.map((issue) => {
+    const path = issue.path.length > 0 ? issue.path.join('.') : '<root>';
+    return `[${path}] ${issue.message}`;
+  }).join('; ');
+}
+
 // ── Pre-rule scan: template_not_expanded diagnostics ──
 const templateScanFindings = scanTemplateNotExpanded(bundlePath);
 if (templateScanFindings.findings.length > 0) {
@@ -195,17 +223,17 @@ for (const rule of definition.rules) {
         }
       } else if (rule.check === 'schema_valid') {
         const filePath = join(bundlePath, resolvedTarget);
-        const arr = readYamlArray(filePath);
-        if (arr === null) {
+        const sourceYaml = readSourceYamlForSchema(filePath, resolvedTarget);
+        if (!sourceYaml.ok) {
           rulePassed = false;
-          ruleDetail = `Cannot read or parse YAML array from ${resolvedTarget}`;
+          ruleDetail = sourceYaml.detail;
           if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
           if (exp.topic) schemaFailedTopics.add(exp.topic);
         } else {
-          const parsed = ReferenceMetadataArraySchema.safeParse(arr);
+          const parsed = ReferenceMetadataArraySchema.safeParse(sourceYaml.data);
           if (!parsed.success) {
             rulePassed = false;
-            const issues = parsed.error.issues.map(i => `[${i.path.join('.')}] ${i.message}`).join('; ');
+            const issues = sourceSchemaIssues(parsed.error);
             ruleDetail = `Schema validation failed for ${resolvedTarget}: ${issues}`;
             if (exp.topic) ruleDetail += ` (topic: ${exp.topic})`;
             if (exp.topic) schemaFailedTopics.add(exp.topic);

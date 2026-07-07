@@ -594,7 +594,7 @@ export function writeFixtureResultForWorkUnit(bundleDir, {
   for (const trailPath of trailPaths) {
     mkdirSync(path.join(bundleDir, trailPath), { recursive: true });
     writeFileSync(path.join(bundleDir, trailPath, 'websearch.json'), '[]\n');
-    writeFileSync(path.join(bundleDir, trailPath, 'page.md'), '# Cached Page\n');
+    writeFileSync(path.join(bundleDir, trailPath, 'page.md'), `# Captured Page\n\nFetched content capture for ${source_url}. This body preserves the source text used by the work unit.\n`);
     writeFileSync(path.join(bundleDir, trailPath, 'meta.json'), `${JSON.stringify({ url: source_url })}\n`);
   }
 

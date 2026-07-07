@@ -1,5 +1,15 @@
 # Changelog — DPT_FRAMEWORK
 
+## v0.5
+
+- **breaking (autonomous work-unit hardening):** work-unit tasks and spawn prompts now expose absolute `bundle_dir` paths, exact identity fields, beacon-first reads, write-before-return verification, cache leaf requirements, and chat-only return failure semantics.
+- **provenance/gates:** submitted work-unit rows now carry stronger binding cross-checks for result, manifest, beacon, receipt, outputs, cache trails, and ledger hash drift. Gate advice remains repair-targeted and does not recommend hand-written ledger/status repair.
+- **cache content:** declared cache leaves must contain recoverable fetched `page.md` content or explicit degraded/fetch-failure records with URL/source mapping; empty, placeholder-only, or unmapped cache leaves are incomplete.
+- **return maps:** Wave0/Wave1/Wave2 guidance and inspect tools now use diagnostic-only return-map fields (`evidence_meaning`, `relationship`, `refs`, `status`, `next_hop`) so future Agents can trace evidence meaning without treating the map as authority.
+- **phase drift/final boundary:** added diagnostic-only `audit-phase-status.mjs` for impossible status windows, missing witnesses, failed-gate downstream status, manual bypass suspicion, explicit bootstrap exceptions, and premature `final/` output.
+- **silent execution:** `log-event.mjs --surfacing-intent` records would-have-surfaced diagnostics with bundle/node/intent/reason and abort semantics; the event is not HITL, handoff, gate, status, or delivery evidence.
+- **experiments/tests:** added deterministic regression coverage for return-map diagnostics, phase status audit outcomes, surfacing-intent shape, parser-aligned guidance, cache content, ledger-only gaps, and controlled playbook assets for BUG-033/039/040/042/043/037.
+
 ## v0.4
 
 - **breaking (delegated work-unit pipeline):** delegated sub-agent execution now uses one production path: queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate. `operate-work-unit claim/submit/fail/timeout/abandon/inspect` replaces the prior delegated completion path, while `operate-queue complete` remains for non-delegated queue work only.

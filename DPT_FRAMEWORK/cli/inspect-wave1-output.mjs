@@ -6,6 +6,11 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { readBundlePlan } from '../engine/helpers/gate-helpers.mjs';
+import {
+  inspectReferenceReturnMaps,
+  inspectSeedTopicReturnMaps,
+  inspectWaveArtifactReturnMaps,
+} from '../engine/helpers/return-map.mjs';
 
 const BUNDLE = process.argv[3] || process.argv[2];
 const bundlePath = BUNDLE;
@@ -124,8 +129,24 @@ if (registry.length === 0) {
   }
 }
 
+// ---- 6. Diagnostic-only return map shape ----
+inc();
+const topicSlugs = registry.map((topic) => topic.slug);
+const seedMap = inspectSeedTopicReturnMaps(bundlePath, { wave: 'wave1', topicSlugs });
+const artifactMap = inspectWaveArtifactReturnMaps(bundlePath, 'wave1', topicSlugs);
+let referenceInspect = { passed: true, inspect: [], advice: [] };
+for (const topic of topicSlugs) {
+  const result = inspectReferenceReturnMaps(bundlePath, topic);
+  referenceInspect.inspect.push(...result.inspect);
+  referenceInspect.advice.push(...result.advice);
+  if (!result.passed) referenceInspect.passed = false;
+}
+for (const line of [...seedMap.inspect, ...artifactMap.inspect, ...referenceInspect.inspect]) inspect.push(line);
+for (const line of [...seedMap.advice, ...artifactMap.advice, ...referenceInspect.advice]) advice.push(line);
+if (!seedMap.passed || !artifactMap.passed || !referenceInspect.passed) checksFailed++;
+
 console.log(JSON.stringify({
-  check: { passed: checksFailed === 0, wave: 'wave1', checks_run: checksRun, checks_failed: checksFailed },
+  check: { passed: checksFailed === 0, wave: 'wave1', checks_run: checksRun, checks_failed: checksFailed, return_map_diagnostic_only: true },
   inspect,
   advice,
 }, null, 2));

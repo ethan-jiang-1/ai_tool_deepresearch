@@ -114,6 +114,12 @@ describe('work-unit index and envelope', () => {
       const task = readFileSync(path.join(dir, manifest.paths.task_ref), 'utf-8');
       assert.match(task, /## Output Contract/);
       assert.match(task, /## Cache Policy/);
+      assert.match(task, /## Absolute Runtime Paths/);
+      assert.match(task, /## Write-Before-Return Checklist/);
+      assert.match(task, new RegExp(path.join(dir, manifest.paths.result_ref).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.match(task, /Read `_beacon\.json` before writing runtime files/);
+      assert.match(task, /Returning research findings in chat without writing the required files is a work-unit failure/);
+      assert.match(task, /cache `page\.md` must contain fetched page content or an explicit degraded\/fetch-failure record/);
       assert.match(task, /work_unit_search_started/);
       assert.match(task, new RegExp(record.work_id));
       assert.match(task, new RegExp(record.queue_item_id));
@@ -138,7 +144,10 @@ describe('work-unit index and envelope', () => {
     try {
       const { record, manifest, spawn_prompt } = createWorkUnit(dir, { queueItem: queueItem(), wave: 0 });
       assert.match(spawn_prompt, new RegExp(record.work_id));
+      assert.match(spawn_prompt, new RegExp(dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
       assert.match(spawn_prompt, new RegExp(manifest.paths.task_ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.match(spawn_prompt, /Do not generate a new nonce/);
+      assert.match(spawn_prompt, /verify every declared output file/);
       assert.match(spawn_prompt, /runtime-receipt\.jsonl/);
       assert.match(spawn_prompt, /result\.schema\.json/);
       assert.match(spawn_prompt, /runtime_refs diagnostic metadata/);

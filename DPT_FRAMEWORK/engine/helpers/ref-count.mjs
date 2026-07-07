@@ -183,6 +183,18 @@ function matchesTarget(filePath, targetGlob, topic = null) {
   return regex.test(filePath);
 }
 
+function listReferenceFiles(bundleDir) {
+  const refDir = join(bundleDir, 'reference');
+  if (!existsSync(refDir)) return [];
+  try {
+    return readdirSync(refDir, { withFileTypes: true })
+      .filter(e => e.isFile() && e.name.endsWith('.md') && e.name !== '_INDEX.md' && e.name !== 'README.md')
+      .map(e => `reference/${e.name}`);
+  } catch {
+    return [];
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // countReferences — Engine reference counting
 // ═══════════════════════════════════════════════════════════════════════════
@@ -247,17 +259,7 @@ export function countReferences(bundleDir, {
     }
   } else {
     // Diagnostic-only filesystem mode: scan reference/ directory
-    const refDir = join(bundleDir, 'reference');
-    if (existsSync(refDir)) {
-      try {
-        const entries = readdirSync(refDir, { withFileTypes: true });
-        candidatePaths = entries
-          .filter(e => e.isFile() && e.name.endsWith('.md') && e.name !== '_INDEX.md' && e.name !== 'README.md')
-          .map(e => `reference/${e.name}`);
-      } catch {
-        // Directory unreadable — return zero
-      }
-    }
+    candidatePaths = listReferenceFiles(bundleDir);
   }
 
   // ── Apply target glob + topic scope filter ──
@@ -273,6 +275,18 @@ export function countReferences(bundleDir, {
       count++;
     } else {
       uncountable.push({ path: refPath, reason: result.reason || 'unknown' });
+    }
+  }
+
+  if (source === 'ledger') {
+    const declared = new Set(candidatePaths);
+    for (const fsPath of listReferenceFiles(bundleDir)) {
+      if (declared.has(fsPath)) continue;
+      if (targetGlob && !matchesTarget(fsPath, targetGlob, topic)) continue;
+      uncountable.push({
+        path: fsPath,
+        reason: 'filesystem_only_not_ledger_declared: reference file exists but has no submitted work-unit ledger row and does not count as delegated coverage',
+      });
     }
   }
 

@@ -28,6 +28,14 @@ You are in a **non-terminal `stop: no` phase**. This means:
 
 3. **User-facing surfacing is the prohibited behavior.** You may retry, switch strategies, degrade gracefully, record gaps, inspect queue/status/artifacts, run the gate, or hold in place. You may NOT ask the user for help, confirmation, or direction, and you may NOT send progress, idle, "nothing left", "没事做", "做到这里", or "done so far" updates. If you are about to write a mid-phase user-facing message — STOP. That message is forbidden.
 
+   If you can identify the intent before surfacing, record a diagnostic `surfacing_intent` event and abort the user-facing path:
+
+   ```bash
+   node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --surfacing-intent --node phases/<phase>.md --intent-type <ask_user|progress_report|partial_delivery|user_choice|wait_for_input|other> --reason "<why you almost surfaced>"
+   ```
+
+   `surfacing_intent` is a would-have-surfaced diagnostic only. It is not permission to surface, not HITL authorization, not gate or handoff evidence, not final delivery evidence, and not status synchronization evidence.
+
 4. **Every silent degradation path leads to one of two outcomes:** (a) you fix the issue and pass the gate, or (b) you record the gap via accepted trace/log surface and continue. Neither outcome involves the user.
 
 5. **If you are fatigued (3+ gate failures on the same issue):** Pause. Re-read these §0 rules. Switch strategies — do not repeat the same fix. Use `--attempt N` on the gate CLI so the Engine can give you step-back advice. Read that advice. Degradation is not failure — it is the expected behavior when a non-terminal `stop:no` phase cannot achieve perfection.
@@ -80,6 +88,8 @@ Agent 在静默阶段 SHALL NOT：
 - 报告 idle/no-work 状态或声称 "nothing left" / "没事做" / "done so far"
 - 发送类似 "继续吗？"、"已完成 XX，是否继续？"、"遇到错误，是否重试？" 的消息
 - 提供 A/B 选项或要求用户做任何决策
+
+If the Agent catches itself preparing any prohibited surfacing, it SHALL log `surfacing_intent` through `log-event.mjs --surfacing-intent`, then abort the user-facing message and continue repair, strategy change, degradation, or silent holding. If no trace/log tool is available, the Agent still SHALL NOT surface; lack of logging never creates permission to ask the user.
 
 ### 1.3 Active Work Loop
 

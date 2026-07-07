@@ -480,6 +480,25 @@ function jsonBlock(value) {
   return JSON.stringify(value, null, 2);
 }
 
+function absolutePathMap(manifest, bundleDir) {
+  const refs = {
+    bundle_dir: path.resolve(bundleDir),
+    work_unit_dir: manifest.paths.work_unit_dir,
+    manifest_ref: manifest.paths.manifest_ref,
+    task_ref: manifest.paths.task_ref,
+    result_schema_ref: manifest.paths.result_schema_ref,
+    beacon_ref: manifest.paths.beacon_ref,
+    runtime_receipt_ref: manifest.paths.runtime_receipt_ref,
+    status_ref: manifest.paths.status_ref,
+    result_ref: manifest.paths.result_ref,
+    agent_ref: manifest.paths.agent_ref,
+  };
+  return Object.fromEntries(Object.entries(refs).map(([key, value]) => [
+    key,
+    key === 'bundle_dir' ? value : path.join(path.resolve(bundleDir), value),
+  ]));
+}
+
 function lifecycleReceiptExample(manifest, event) {
   return {
     schema_version: 'work-unit.receipt-event.v1',
@@ -504,6 +523,7 @@ function logDetailExample(manifest, lifecycleEvent) {
 
 function taskMarkdown(manifest, bundleDir) {
   const logCli = logCliPath();
+  const abs = absolutePathMap(manifest, bundleDir);
   const workStartedReceipt = lifecycleReceiptExample(manifest, 'work_started');
   const fileWrittenReceipt = lifecycleReceiptExample(manifest, 'file_written');
   const workDoneReceipt = lifecycleReceiptExample(manifest, 'work_done');
@@ -521,6 +541,7 @@ function taskMarkdown(manifest, bundleDir) {
     `- queue_item_id: \`${manifest.queue_item_id}\``,
     `- kind: \`${manifest.kind}\``,
     `- receipt_nonce: \`${manifest.receipt_nonce}\``,
+    `- bundle_dir: \`${path.resolve(bundleDir)}\``,
     `- deadline_at: \`${manifest.deadline_at}\``,
     `- work_unit_dir: \`${manifest.paths.work_unit_dir}\``,
     `- beacon: \`${manifest.paths.beacon_ref}\``,
@@ -529,6 +550,26 @@ function taskMarkdown(manifest, bundleDir) {
     `- runtime_receipt: \`${manifest.paths.runtime_receipt_ref}\``,
     '',
     'Preserve these identity fields exactly in every lifecycle receipt event and in `result.json`.',
+    'Read `_beacon.json` before writing runtime files. Resolve every runtime write by joining the beacon `bundle_dir` with the bundle-relative path from this task.',
+    'Returning research findings in chat without writing the required files is a work-unit failure, not completion.',
+    '',
+    '## Absolute Runtime Paths',
+    '',
+    'Use these absolute paths for file I/O; keep bundle-relative refs in result JSON and ledger-facing fields.',
+    '',
+    '```json',
+    jsonBlock(abs),
+    '```',
+    '',
+    '## Write-Before-Return Checklist',
+    '',
+    '- Verify `_beacon.json`, `task.md`, and `result.schema.json` were read from the active `bundle_dir`.',
+    '- Write every declared output file under `bundle_dir` only.',
+    '- Write required cache leaves under `bundle_dir`; cache `page.md` must contain fetched page content or an explicit degraded/fetch-failure record, not an empty or placeholder header.',
+    '- In written research outputs, include return-map cues for important evidence: `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`. These cues are diagnostic navigation only; submitted ledger rows and gate outputs remain authority.',
+    '- Append `runtime-receipt.jsonl` lifecycle events carrying the exact `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.',
+    '- Write `result.json` at the declared result path and verify it preserves the exact identity fields.',
+    '- If any required write or verification fails, return a failure summary and do not claim success.',
     '',
     '## Output Contract',
     '',
@@ -566,21 +607,33 @@ function taskMarkdown(manifest, bundleDir) {
     '',
     'Coding-agent runtime IDs, thread IDs, session IDs, spawn request IDs, and cancel refs are optional diagnostic `runtime_refs` only. They are not queue, submit, ledger, or gate authority.',
     '',
-    'Write the assigned result to the declared result path and preserve the identity fields exactly.',
+    'Write the assigned result to the declared result path, verify all declared files exist under the active bundle root, and preserve the identity fields exactly.',
     'Completion is accepted only when the main Agent submits this work unit through `operate-work-unit submit`.',
     '',
   ].join('\n');
 }
 
-export function spawnPromptForWorkUnit(manifest) {
+export function spawnPromptForWorkUnit(manifest, bundleDir = null) {
   const parsed = WorkUnitManifestSchema.parse(manifest);
+  const resolvedBundleDir = bundleDir ? path.resolve(bundleDir) : null;
+  const absResult = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.result_ref) : parsed.paths.result_ref;
+  const absReceipt = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.runtime_receipt_ref) : parsed.paths.runtime_receipt_ref;
+  const absBeacon = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.beacon_ref) : parsed.paths.beacon_ref;
+  const absTask = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.task_ref) : parsed.paths.task_ref;
+  const absSchema = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.result_schema_ref) : parsed.paths.result_schema_ref;
   return [
     `You are executing delegated work unit ${parsed.work_id}.`,
     '',
-    `Open ${parsed.paths.task_ref} and ${parsed.paths.beacon_ref} before doing the task.`,
-    `Use exactly these identity fields in lifecycle receipts and result.json: work_id=${parsed.work_id}, queue_item_id=${parsed.queue_item_id}, kind=${parsed.kind}, receipt_nonce=${parsed.receipt_nonce}.`,
-    `Write lifecycle JSONL events to ${parsed.paths.runtime_receipt_ref}.`,
-    `Write the final result JSON to ${parsed.paths.result_ref} using schema ${parsed.paths.result_schema_ref}.`,
+    resolvedBundleDir ? `Active bundle_dir: ${resolvedBundleDir}` : 'Read bundle_dir from the assigned _beacon.json before writing files.',
+    `Open task.md first: ${absTask}`,
+    `Open _beacon.json first: ${absBeacon}`,
+    `Open result schema: ${absSchema}`,
+    `Use exactly these identity fields in lifecycle receipts and result.json: work_id=${parsed.work_id}, queue_item_id=${parsed.queue_item_id}, kind=${parsed.kind}, receipt_nonce=${parsed.receipt_nonce}. Do not generate a new nonce.`,
+    `Write lifecycle JSONL events to ${absReceipt}.`,
+    `Write the final result JSON to ${absResult}.`,
+    'Before returning, verify every declared output file, required cache leaf, runtime receipt, and result JSON exists under the active bundle_dir.',
+    'When writing evidence summaries, source notes, or backfill-ready content, include return-map fields: evidence_meaning, relationship, refs, status, next_hop.',
+    'If you cannot write or verify the files, return a failure summary instead of research text.',
     `Keep any coding-agent runtime IDs only under optional runtime_refs diagnostic metadata; they are not authority.`,
     'Do not mutate queue, work-unit index, output ledger, or gate state. Return the result path to the main Agent for operate-work-unit submit.',
   ].join('\n');
@@ -756,7 +809,7 @@ export function createWorkUnit(bundleDir, options = {}) {
     const index = loadWorkUnitIndex(bundleDir, { createIfMissing: true });
     const { record, manifest } = createWorkUnitInIndex(bundleDir, index, options);
     const saved = saveWorkUnitIndex(bundleDir, index);
-    return { index: saved, record: saved.work_units[record.work_id], manifest, spawn_prompt: spawnPromptForWorkUnit(manifest) };
+  return { index: saved, record: saved.work_units[record.work_id], manifest, spawn_prompt: spawnPromptForWorkUnit(manifest, bundleDir) };
   });
 }
 
@@ -846,7 +899,47 @@ function validateCacheTrails(bundleDir, result, cachePolicy) {
     const missing = (cachePolicy?.leaf_files || ['websearch.json', 'page.md', 'meta.json'])
       .filter((entry) => !directFiles.has(entry));
     if (missing.length > 0) throw new Error(`cache trail ${trail} missing ${missing.join(', ')}`);
+    validateCacheTrailContent(full, trail);
   }
+}
+
+function readOptionalJson(filePath) {
+  try {
+    return JSON.parse(readFileSync(filePath, 'utf-8'));
+  } catch {
+    return null;
+  }
+}
+
+function hasExplicitDegradedCapture(pageText, meta) {
+  const text = String(pageText || '').toLowerCase();
+  const reason = [
+    meta?.capture_status,
+    meta?.fetch_status,
+    meta?.degraded_capture,
+    meta?.failure_reason,
+    meta?.reason,
+  ].filter((value) => value !== undefined && value !== null).join(' ').toLowerCase();
+  return /degraded|fetch[-_ ]?failure|access[-_ ]?failure|blocked|unavailable|failed/.test(`${text} ${reason}`);
+}
+
+function validateCacheTrailContent(cacheDir, trail) {
+  const pagePath = path.join(cacheDir, 'page.md');
+  const metaPath = path.join(cacheDir, 'meta.json');
+  const pageText = existsSync(pagePath) ? readFileSync(pagePath, 'utf-8') : '';
+  const meta = existsSync(metaPath) ? readOptionalJson(metaPath) : null;
+  const trimmed = pageText.trim();
+  if (!trimmed) throw new Error(`cache trail ${trail} has incomplete cache content: page.md is empty`);
+  const nonEmptyLines = trimmed.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const placeholderOnly = nonEmptyLines.length <= 2 && nonEmptyLines.every((line) => /^#*\s*(cache page for|page|placeholder|todo|tbd)\b/i.test(line));
+  if (placeholderOnly && !hasExplicitDegradedCapture(trimmed, meta)) {
+    throw new Error(`cache trail ${trail} has incomplete cache content: page.md is placeholder-only`);
+  }
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) {
+    throw new Error(`cache trail ${trail} has incomplete cache content: meta.json is missing or invalid`);
+  }
+  const urlLike = meta.url || meta.source_url || meta.final_url || meta.fetched_url || meta.source_slug;
+  if (!urlLike) throw new Error(`cache trail ${trail} has incomplete cache content: meta.json lacks url/source mapping`);
 }
 
 function validateQueueBindingForSubmit(bundleDir, record, manifest) {
@@ -1470,7 +1563,7 @@ export function claimWorkUnits(bundleDir, { phase, count = 1, batchReason = 'ini
         beacon_ref: manifest.paths.beacon_ref,
         result_schema_ref: manifest.paths.result_schema_ref,
         runtime_receipt_ref: manifest.paths.runtime_receipt_ref,
-        spawn_prompt: spawnPromptForWorkUnit(manifest),
+        spawn_prompt: spawnPromptForWorkUnit(manifest, bundleDir),
       })),
     };
     traceWorkUnitEvent(bundleDir, claimed.length > 0 ? 'work_unit_batch_claimed' : 'work_unit_claim_rejected', {
@@ -1660,6 +1753,12 @@ function ledgerIssues(bundleDir, index) {
       const full = path.join(bundleDir, trail);
       if (!isSafeBundleRelative(trail) || !trail.startsWith('_cache/') || !existsSync(full) || !statSync(full).isDirectory()) {
         issues.push(`ledger cache trail missing or unsafe for ${workId}: ${trail}`);
+        continue;
+      }
+      try {
+        validateCacheTrailContent(full, trail);
+      } catch (error) {
+        issues.push(`ledger cache trail incomplete for ${workId}: ${error.message}`);
       }
     }
   }

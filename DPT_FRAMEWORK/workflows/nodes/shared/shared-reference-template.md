@@ -29,6 +29,8 @@ Agent 创建 `reference/*.md` 文件时必须遵循此模板。一个 source 一
 
 Metadata block 位于文件头部——首个 `## ` header 之前。每行格式：`- key: value`（第一个 `: ` 后的部分为 value）。
 
+This metadata block is the accepted parser contract. It is not YAML frontmatter: do not put metadata between `---` fences, do not write `source_url:` as bare YAML keys, and do not use `sources:` wrappers. `parseReferenceMetadata()` reads only bullet metadata lines before the first section.
+
 **必填字段**（inspect CLI 会检查这些 key 是否存在）：
 
 | Key | 类型 | 说明 |

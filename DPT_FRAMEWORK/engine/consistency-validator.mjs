@@ -126,6 +126,16 @@ export function validateWorkflowPackage(opts = {}) {
     return missing;
   }
 
+  function declaresFilesystemWriteCapability(ec) {
+    if (!ec || typeof ec !== 'object') return false;
+    if (ec.filesystem_write === 'required' || ec.write_capability === 'filesystem_write') return true;
+    const writeTools = [
+      ...(Array.isArray(ec.required_write_tools) ? ec.required_write_tools : []),
+      ...(Array.isArray(ec.write_tools) ? ec.write_tools : []),
+    ].map((tool) => String(tool).toLowerCase());
+    return writeTools.some((tool) => /write|append|mkdir|filesystem/.test(tool));
+  }
+
   // ── 1. Manifest entries → missing node files ───────────────────────
   for (const phase of manifest.phases || []) {
     const nodePath = join(nodesDir, phase.node);
@@ -373,7 +383,7 @@ export function validateWorkflowPackage(opts = {}) {
     '## 8. Stop Behavior',
     '## 9. Anti-Cheating Rules',
   ];
-  const ROLE_BRIEF_FIELDS = ['Role key', 'Used by', 'Receives', 'Produces', 'Boundary', 'Handoff'];
+  const ROLE_BRIEF_FIELDS = ['Role key', 'Used by', 'Receives', 'Produces', 'Write capability', 'Boundary', 'Handoff'];
   const ROLE_BODY_SECTIONS = [
     '## Lifecycle Logging Mandate (always-loaded)',
     '## 1. Purpose',
@@ -686,6 +696,14 @@ export function validateWorkflowPackage(opts = {}) {
       issues.push({
         class: 'role_spec_missing_delivered_via',
         detail: `Role spec "${entry.node}" must have delivered_via: work_unit_task_md`,
+        file: nodePath,
+      });
+    }
+
+    if (!declaresFilesystemWriteCapability(ec)) {
+      issues.push({
+        class: 'role_write_capability_missing',
+        detail: `Write-producing role spec "${entry.node}" must declare filesystem_write: required or required_write_tools capable of writing result, receipt, outputs, and cache leaves`,
         file: nodePath,
       });
     }

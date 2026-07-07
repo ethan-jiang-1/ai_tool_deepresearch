@@ -15,7 +15,7 @@ const WORKFLOWS_DIR = path.join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows');
 const NODES_DIR = path.join(WORKFLOWS_DIR, 'nodes');
 const manifest = JSON.parse(readFileSync(path.join(WORKFLOWS_DIR, 'manifest.json'), 'utf-8'));
 
-const roleBriefFields = ['Role key', 'Used by', 'Receives', 'Produces', 'Boundary', 'Handoff'];
+const roleBriefFields = ['Role key', 'Used by', 'Receives', 'Produces', 'Write capability', 'Boundary', 'Handoff'];
 const defaultPhaseSections = [
   '## 1. Stage Goal',
   '## 2. Required Inputs',
@@ -127,6 +127,8 @@ describe('Work-unit role spec nodes — Role Brief and manifest boundary', () =>
       assert.equal(fm.execution_contract?.search_policy, 'subagent_performs_search');
       assert.equal(fm.execution_contract?.loaded_by, 'phase-agent');
       assert.equal(fm.execution_contract?.delivered_via, 'work_unit_task_md');
+      assert.equal(fm.execution_contract?.filesystem_write, 'required');
+      assert.deepEqual(fm.execution_contract?.required_write_tools, ['read_file', 'write_file', 'append_file', 'mkdir']);
       assert.equal('stop' in fm, false, 'real role specs do not add stop');
       assert.equal('phase' in fm, false, 'real role specs do not add phase');
       assert.equal('gate' in fm, false, 'real role specs do not add gate');

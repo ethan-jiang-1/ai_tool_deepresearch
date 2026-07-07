@@ -57,7 +57,8 @@ suggested_context: []
 
 - **Schema**：`ReferenceMetadataSchema`（单条）、`ReferenceMetadataArraySchema`（YAML 数组）
 - **字段**：`url`（string, 必填）、`title`（string, 必填）、`retrieved_date`（YYYY-MM-DD string, 必填）、`topic_tag`（string, 必填）、`notes`（string, 可选）
-- **格式**：YAML array，每项为一条 reference metadata
+- **格式**：top-level YAML array，每项为一条 reference metadata。文件第一层必须直接是 `- url: ...` entries；不要包在 `sources:`, `wave:`, or `topic:` object wrapper 下。
+- **序列化**：用 `yaml.stringify([{ url, title, retrieved_date, topic_tag, notes }])` 写入，避免手拼 YAML。含冒号、分号、箭头、括号、长句、CJK 或 emoji 的值必须由 serializer 引号或 block-string 处理。
 - **位置**：`DPT_FRAMEWORK/schema/contracts/reference.mjs`
 - **新增**：`validateIndexMD(content)` — _INDEX.md Markdown table 结构校验（8 列表头 + ≥1 行数据）
 
@@ -73,6 +74,8 @@ Reference evidence 存放在平铺的 `reference/` 目录下（无子目录）�
 - **`artifacts/wave0/<topic>/source.yaml`**：Thin YAML source 列表。Per topic，每条满足 `ReferenceMetadataSchema`（url/title/retrieved_date/topic_tag/notes）。来自 `topic_registry` 的 slug。Foundation floor：每个 topic ≥ 1 条。
 - **不再存在**：`reference/<topic>/` 嵌套子目录、`reference/00_shared/` 目录、`reference/<topic>/source.yaml`（thin YAML 迁至 `artifacts/wave0/`）。
 
+Reference rich MD metadata is the project metadata block format: lines such as `- source_url: ...` before the first `## ` section. It is not YAML frontmatter. Do not wrap reference metadata in `---` fences.
+
 ## Seed Topics
 
 `seed_topics/` 位于 bundle root，与 `reference/`、`artifacts/` 同级。每个 topic 一个 `{slug}.md` 文件，`slug` 含 `NN_` 编号前缀（如 `01_meal-timing-...`），`NN` 取自 `topic_registry` 数组 1-based 位置（两位零填充）。文件内含 `__BACKFILL_*__` token，由各 wave 在完成时替换。
@@ -81,13 +84,43 @@ Reference evidence 存放在平铺的 `reference/` 目录下（无子目录）�
 
 | Token | 替换阶段 | 替换内容 |
 |-------|---------|---------|
-| `__BACKFILL_WAVE0_EVIDENCE__` | Wave0 complete 后 | source intake 产出的 reference 摘要列表 |
-| `__BACKFILL_WAVE1_MECHANISMS__` | Wave1 complete 前 | evidence-summary 提取的机制理解 |
-| `__BACKFILL_WAVE1_TRENDS__` | Wave1 complete 前 | evidence-summary 提取的趋势与难点 |
-| `__BACKFILL_WAVE2_JUDGMENT__` | Wave2 complete 前 | 从 ledger/index 投影的跨 topic 判断 |
-| `__BACKFILL_PENDING_QUESTIONS__` | Wave1→Wave2 两阶段 | Wave1 写入初始问题状态，Wave2 从 ledger/index 投影更新 |
+| `__BACKFILL_WAVE0_EVIDENCE__` | Wave0 complete 后 | source/reference return-map entries with meaning, relationship, refs, status, and next hop |
+| `__BACKFILL_WAVE1_MECHANISMS__` | Wave1 complete 前 | mechanism return-map entries from `evidence-summary.md` |
+| `__BACKFILL_WAVE1_TRENDS__` | Wave1 complete 前 | trend/limitation return-map entries from `evidence-summary.md` |
+| `__BACKFILL_WAVE2_JUDGMENT__` | Wave2 complete 前 | W2F finding return-map entries projected from ledger/index |
+| `__BACKFILL_PENDING_QUESTIONS__` | Wave1→Wave2 两阶段 | question-status return-map entries updated from question-list then ledger/index |
 
 Gate 通过 `pattern_match`（`negate: true`）验证 `__BACKFILL_WAVE*_*__` token 已被替换。`__BACKFILL_PENDING_QUESTIONS__` 的检查在 wave1-complete gate 和 wave2-complete gate 中均执行。
+
+## Research Return Map
+
+Wave return/backfill content is an Agent-readable navigation layer over existing evidence authority. It helps the next Agent reload what the evidence means and where to read it; it does not replace submitted work-unit ledger rows, reference files, cache leaves, gate attempts, handoff witnesses, readiness evidence, or final delivery evidence.
+
+Every important source, mechanism update, pending-question update, or finding projection should include the same minimum fields:
+
+```markdown
+- evidence_meaning: One or two sentences saying what this evidence/finding changes.
+  relationship: supports | refutes | partial | opens | defers | context
+  refs:
+    - reference/<file>.md
+    - artifacts/wave0/<topic>/source.yaml
+    - artifacts/wave1/<topic>/evidence-summary.md
+    - artifacts/wave1/<topic>/question-list.md
+    - artifacts/wave2/cross-topic-ledger.md
+    - artifacts/wave2/finding-index.yaml
+    - _cache/<wave>/<batch>/<scope>/<leaf>/
+    - _work_units/<phase>/<work_id>/result.json
+  status: supported | refuted | partial | open | emergent | deferred
+  next_hop: Read or repair the named path/action next.
+```
+
+Wave-specific projection:
+
+- Wave0 backfill connects each important source/reference to the topic must-answer or initial hypothesis, and says whether the source supports, refutes, partially answers, opens, defers, or provides context.
+- Wave1 backfill connects mechanisms, trends, limits, and pending-question status to `evidence-summary.md`, `question-list.md`, topic references, cache leaves, and work-unit surfaces.
+- Wave2 backfill preserves `W2F-xxx` finding ids and links them to `artifacts/wave2/cross-topic-ledger.md`, `artifacts/wave2/finding-index.yaml`, and source artifacts used by the finding.
+
+Return-map inspectors are diagnostic only. Missing `evidence_meaning`, `relationship`, `refs`, `status`, or `next_hop` should trigger repair-targeted inspect/advice, not gate bypass, delegated coverage substitution, phase handoff, readiness, final delivery, or HITL authorization.
 
 ## Artifacts — Wave1 (Per-Topic Deepening)
 

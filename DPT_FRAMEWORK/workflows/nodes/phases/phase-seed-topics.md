@@ -162,14 +162,14 @@ evidence_route:
 >
 > | 触发 Phase | 追加内容 | 写入 Section |
 > |-----------|---------|-------------|
-> | wave0 complete | 每条 ref 的 url/title/tier/trust/key data | `## 本轮新增证据` |
-> | wave1 complete | 学到的机制理解、涌现的趋势和难点 | `## 本轮新增机制理解` `## 本轮新增趋势与难点` |
-> | wave2 complete | 综合后的最终判断 | `## 当前判断` |
-> | 每轮 complete 后 | 更新问题状态标签 | `## 待验证问题` |
+> | wave0 complete | source/reference return-map entries: evidence meaning, relationship, refs, status, next hop | `## 本轮新增证据` |
+> | wave1 complete | mechanism/trend/question return-map entries with refs to evidence-summary/question-list/reference/cache/work-unit surfaces | `## 本轮新增机制理解` `## 本轮新增趋势与难点` |
+> | wave2 complete | W2F finding return-map entries with ledger/index/source refs | `## 当前判断` |
+> | 每轮 complete 后 | 更新问题状态标签 and next-hop return-map entries | `## 待验证问题` |
 >
 > **不遵守此规则的后果**: gate 不检查正文完整性，但 wave2 synthesis 质量严重依赖回填。
 >
-> **回填方式**: 每个 section 下的 `__BACKFILL_*__` 是唯一占位 token。Agent 回填时 grep 定位 token → **直接替换该行为实际内容**（不追加，不保留 token）。例如 wave0 回填 `__BACKFILL_WAVE0_EVIDENCE__` → `- **ref-01-01**: ...`。
+> **回填方式**: 每个 section 下的 `__BACKFILL_*__` 是唯一占位 token。Agent 回填时 grep 定位 token → **直接替换该行为 return-map entry**（不追加，不保留 token）。每条重要 entry 至少包含 `evidence_meaning`、`relationship`、`refs`、`status`、`next_hop`。
 
 ## 历史摘要
 *(seed-topics: 本 topic 为新建，无历史轮次)*

@@ -9,6 +9,12 @@ execution_contract:
   search_policy: subagent_performs_search
   loaded_by: phase-agent
   delivered_via: work_unit_task_md
+  filesystem_write: required
+  required_write_tools:
+    - read_file
+    - write_file
+    - append_file
+    - mkdir
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
@@ -23,6 +29,7 @@ suggested_context: []
 - **Used by**: Phase Agents dispatching the built-in pass-branch dispatchMap (full stage) or a delegated diagnostic task.
 - **Receives**: Work-unit `task.md`, `_beacon.json`, `result.schema.json`, assigned `runtime-receipt.jsonl`, and the output/cache contract for `_work_units/waveN/{work_id}/`.
 - **Produces**: Per-source quality assessments (trust tier, materiality, marketing risk, cross-verification need), cache trails, runtime receipt events, and bounded result JSON for `operate-work-unit submit`.
+- **Write capability**: Requires filesystem read/write/append and directory creation under `bundle_dir`; before return it verifies `result.json`, `runtime-receipt.jsonl`, declared outputs, and required cache leaf files exist under the active bundle root.
 - **Boundary**: This role assesses sources only inside the assigned work-unit contract; it does not read workflow state, mutate queue/status, run gates, append ledgers, or decide phase completion.
 - **Handoff**: Phase Agent submits the result through `operate-work-unit submit --work-id <work_id> --result <result.json>`. Successful submit is the Engine boundary that completes queue demand and appends delegated ledger coverage.
 

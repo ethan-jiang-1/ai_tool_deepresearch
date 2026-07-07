@@ -6,6 +6,11 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
+import {
+  inspectReferenceReturnMaps,
+  inspectSeedTopicReturnMaps,
+  inspectWaveArtifactReturnMaps,
+} from '../engine/helpers/return-map.mjs';
 
 const BUNDLE = process.argv[3] || process.argv[2];
 const bundlePath = BUNDLE;
@@ -137,8 +142,17 @@ if (existsSync(seedPath)) {
   }
 }
 
+// ---- 5. Diagnostic-only return map shape ----
+inc();
+const seedMap = inspectSeedTopicReturnMaps(bundlePath, { wave: 'wave2' });
+const artifactMap = inspectWaveArtifactReturnMaps(bundlePath, 'wave2');
+const referenceMap = inspectReferenceReturnMaps(bundlePath, '00-cross-');
+for (const line of [...seedMap.inspect, ...artifactMap.inspect, ...referenceMap.inspect]) inspect.push(line);
+for (const line of [...seedMap.advice, ...artifactMap.advice, ...referenceMap.advice]) advice.push(line);
+if (!seedMap.passed || !artifactMap.passed || !referenceMap.passed) checksFailed++;
+
 console.log(JSON.stringify({
-  check: { passed: checksFailed === 0, wave: 'wave2', checks_run: checksRun, checks_failed: checksFailed },
+  check: { passed: checksFailed === 0, wave: 'wave2', checks_run: checksRun, checks_failed: checksFailed, return_map_diagnostic_only: true },
   inspect,
   advice,
 }, null, 2));

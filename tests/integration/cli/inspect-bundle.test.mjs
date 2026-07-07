@@ -52,6 +52,26 @@ describe('inspect-bundle.mjs integration', () => {
     if (result.status !== 1) throw new Error(`Expected exit 1, got ${result.status}\n${result.stdout}`);
   });
 
+  it('reports unassociated repo-root runtime debris without blocking active bundle', () => {
+    const bundleDir = makeBundle(tmpDir, 'cleanup-debris');
+    mkdirSync(join(tmpDir, '_cache', 'old-run'), { recursive: true });
+    const result = spawnSync('node', [INSPECT, bundleDir], { encoding: 'utf-8', timeout: 5000 });
+    rmSync(join(tmpDir, '_cache'), { recursive: true, force: true });
+    if (result.status !== 0) throw new Error(`Expected cleanup debris to exit 0, got ${result.status}\n${result.stdout}`);
+    if (!result.stdout.includes('cleanup_debris')) throw new Error(`Expected cleanup_debris diagnostic\n${result.stdout}`);
+  });
+
+  it('fails on repo-root runtime leak associated with current work-unit authority', () => {
+    const bundleDir = makeBundle(tmpDir, 'active-leak');
+    const workId = 'wu-w0-b000-src-i0001';
+    writeFileSync(join(bundleDir, '_work_units', '_index.json'), JSON.stringify({ work_units: { [workId]: {} } }));
+    mkdirSync(join(tmpDir, '_work_units', 'wave0', workId), { recursive: true });
+    const result = spawnSync('node', [INSPECT, bundleDir], { encoding: 'utf-8', timeout: 5000 });
+    rmSync(join(tmpDir, '_work_units'), { recursive: true, force: true });
+    if (result.status !== 1) throw new Error(`Expected active leak to exit 1, got ${result.status}\n${result.stdout}`);
+    if (!result.stdout.includes('active_bundle_blocker')) throw new Error(`Expected active_bundle_blocker diagnostic\n${result.stdout}`);
+  });
+
   // ── --log flag ──
 
   it('--log outputs _logs/run.log content', () => {

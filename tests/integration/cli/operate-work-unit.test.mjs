@@ -47,7 +47,7 @@ function writeValidSubmitFiles(dir, record) {
   const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
   mkdirSync(path.join(dir, cacheTrail), { recursive: true });
   writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
-  writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Page\n');
+  writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nFetched content capture for https://example.com/source. This body preserves the source text used by the work unit.\n');
   writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/source"}\n');
 
   writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({

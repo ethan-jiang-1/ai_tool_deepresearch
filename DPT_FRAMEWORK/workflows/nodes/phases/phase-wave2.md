@@ -159,6 +159,14 @@ Wave2 gate fails if targeted evidence/reference outputs exist without submitted 
 
 Backfill seed topics from `cross-topic-ledger.md` and `finding-index.yaml`. Do not backfill from synthesis prose alone.
 
+Each Wave2 backfill replacement must preserve finding lineage as return-map entries:
+
+- `evidence_meaning`: what the finding changed for this seed topic.
+- `relationship`: `supports`, `refutes`, `partial`, `opens`, `defers`, or `context`.
+- `refs`: include relevant `W2F-xxx` ids plus bundle-relative refs to `artifacts/wave2/cross-topic-ledger.md`, `artifacts/wave2/finding-index.yaml`, Wave1/Wave0 source artifacts, references, cache leaves, and work-unit surfaces where available.
+- `status`: `supported`, `refuted`, `partial`, `open`, `emergent`, or `deferred`.
+- `next_hop`: the next read/repair/handoff path for a future Agent.
+
 ### 3.3 Closeout + Gate Readiness
 
 Before gate, ensure `cross-topic-ledger.md` contains the fixed synthesis control sections:
@@ -195,6 +203,7 @@ These checks are Agent discipline. The gate verifies structural artifacts, refer
 - `artifacts/wave2/finding-index.yaml`
 - `reference/00-cross-*.md` only when real targeted evidence exists
 - Submitted work-unit rows for delegated targeted evidence outputs and cache trails
+- Seed-topic Wave2 backfill entries preserving `W2F-xxx` finding ids and refs to `cross-topic-ledger.md`, `finding-index.yaml`, and source artifacts used by each finding.
 - `rb_trace.jsonl` records the `wave2_completion` event/check surface required by the Wave2 gate definition.
 
 ## 5. Gate Command
@@ -240,6 +249,7 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 - 禁止把 queue/index/filesystem presence treated as delegated evidence authority without submitted ledger rows.
 - 禁止把 unresolved P0/P1 findings silently dropped from `finding-index.yaml`.
 - 禁止保留 `__BACKFILL_WAVE2_JUDGMENT__` or `__BACKFILL_PENDING_QUESTIONS__` after completed backfill.
+- 禁止从 synthesis prose alone 回填 Wave2; backfill must preserve W2F ids, return-map fields, and ledger/index/source refs.
 - 禁止 inventing references when targeted search fails; record limitation or route to HITL2.
 - 禁止 using duplicate URLs as independent backing for P0/P1 findings.
 - 禁止 bypassing gate JSON `inspect`/`advice`; repair, refill, defer, or record limitation from real feedback.

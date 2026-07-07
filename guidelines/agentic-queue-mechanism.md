@@ -165,7 +165,7 @@ This is the structural consequence of the dispatch rule: the outer loop's verifi
 
 Queue is filled at phase entry, drained before the gate runs. A task does not cross phase boundaries — its receipt is satisfied within the current phase, or it fails. The task's impact flows to later phases through artifacts (reference, skeleton, evidence), not through the queue itself.
 
-If a later phase discovers a gap from an earlier phase: that is a gate fail or escalation (`rb_status.json` → `blocked`). It is not a task crossing phases through Q.
+If a later phase discovers a gap from an earlier phase: that is gate/audit feedback that returns the Agent to the latest legal phase target or records a diagnostic gap through accepted trace/log surfaces. It is not a task crossing phases through Q, and it is not a reason to hand-edit `rb_status.json`.
 
 ### 5.3 Rule 3: Two Repair Paths, One Per Layer
 
@@ -176,7 +176,7 @@ Exactly one contact point between the two: **Q empty + gate fail** (the queue is
 
 ### 5.4 Rule 4: No Phase Rollback
 
-`transitions.chain.json` contains only `passed` edges. No fail edges, no repair edges, no backward edges. A later phase cannot push a task backward into an earlier phase through Q. Backward gaps discovered later escalate via `rb_status.json` → `blocked`, not via Q. This prevents the pathology of "stuff anything into the queue and the queue crosses any boundary."
+`transitions.chain.json` contains only `passed` edges. No fail edges, no repair edges, no backward edges. A later phase cannot push a task backward into an earlier phase through Q. Backward gaps discovered later are handled by gate/audit diagnostics and legal re-entry/repair from the latest authorized phase target, not by queue cross-boundary work or status edits. This prevents the pathology of "stuff anything into the queue and the queue crosses any boundary."
 
 ---
 

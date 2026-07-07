@@ -90,4 +90,22 @@ describe('log-event.mjs CLI (LOC-009)', () => {
     assert.ok(content.includes('WARN msg-warn'));
     assert.ok(content.includes('ERROR msg-error'));
   });
+
+  it('writes diagnostic-only surfacing_intent to trace and log', () => {
+    const b = setupBundle('test-surfacing-intent');
+    execSync(`node "${LOG_EVENT_CLI}" --bundle "${b}" --surfacing-intent --node phases/phase-wave1.md --intent-type ask_user --reason "would ask whether to continue"`, {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+    });
+    const trace = readFileSync(join(b, 'rb_trace.jsonl'), 'utf-8').trim().split('\n').map((line) => JSON.parse(line));
+    const event = trace.find((entry) => entry.event === 'surfacing_intent');
+    assert.ok(event);
+    assert.equal(event.node, 'phases/phase-wave1.md');
+    assert.equal(event.intent_type, 'ask_user');
+    assert.equal(event.action, 'abort_user_facing_surfacing');
+    assert.equal(event.authority_status, 'diagnostic_only');
+    const log = readFileSync(join(b, '_logs', 'run.log'), 'utf-8');
+    assert.match(log, /surfacing_intent/);
+    assert.match(log, /diagnostic_only/);
+  });
 });

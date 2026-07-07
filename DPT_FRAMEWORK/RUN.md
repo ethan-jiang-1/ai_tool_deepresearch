@@ -1,6 +1,6 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.4**
+> **DPT_FRAMEWORK v0.5**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
@@ -28,7 +28,9 @@
 
 Interactive in-run checkpoints 只有 `hitl1`（定方向 / profile / topics）和 `hitl2`（审 synthesis）。Final 是 terminal non-interactive delivery，不是第三个交互 checkpoint；post-final feedback 通过 HITL2 repair/rerun 重新进入。其余 phase 均 `stop: no`，Agent 自行推进。
 
-Delegated sub-agent work uses the v0.4 work-unit path only: queue demand item -> `operate-work-unit claim` -> sub-agent task under bundle-root `_work_units/` -> `operate-work-unit submit` -> submitted ledger row -> gate. Do not use queue completion as delegated success; `operate-queue complete` is for non-delegated queue work. Bare runtime paths such as `_work_units/...`, `rb_queue.json`, `reference/`, `artifacts/`, `_cache/`, and `_logs/` resolve under the active bundle root selected above, not repo root or `DPT_FRAMEWORK/`.
+Delegated sub-agent work uses the v0.5 work-unit path only: queue demand item -> `operate-work-unit claim` -> sub-agent task under bundle-root `_work_units/` -> verified files/cache/result/receipt under active `bundle_dir` -> `operate-work-unit submit` -> submitted ledger row -> gate. Do not use queue completion as delegated success; `operate-queue complete` is for non-delegated queue work. Bare runtime paths such as `_work_units/...`, `rb_queue.json`, `reference/`, `artifacts/`, `_cache/`, and `_logs/` resolve under the active bundle root selected above, not repo root or `DPT_FRAMEWORK/`.
+
+If status or terminal output looks suspicious, run `node DPT_FRAMEWORK/cli/audit-phase-status.mjs --bundle <path>`. The audit is diagnostic-only: it reports drift, missing witnesses, failed-gate downstream status, or premature `final/` output; it does not repair status. In non-terminal `stop: no`, a caught would-have-surfaced moment is recorded with `log-event.mjs --surfacing-intent` and then aborted; the event is diagnostic-only and never permission to surface.
 
 若已有 active bundle：别重建，打开该 bundle 的 `START_FROM_HERE.md`，读 `rb_status.json` 的 `current_gate` 续跑。
 

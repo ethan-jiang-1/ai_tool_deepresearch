@@ -200,6 +200,64 @@ describe('check-gate-wave0-complete', () => {
     assert.ok(hasSchemaFail, `Expected schema_valid fail in AND scenario: ${JSON.stringify(output.inspect)}`);
   });
 
+  it('6b. diagnoses source.yaml object wrappers with found keys', () => {
+    const dir = createBundle(unique('objectshape'));
+    setupHappyPath(dir);
+    writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `wave: 0
+topic: topic-a
+sources:
+  - url: "https://example.com/wrapped"
+    title: "Wrapped"
+    retrieved_date: "2026-06-15"
+    topic_tag: "topic-a"
+`);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    const joined = output.inspect.join('\n');
+    assert.match(joined, /top-level YAML array/);
+    assert.match(joined, /Found object keys: wave, topic, sources/);
+  });
+
+  it('6c. names missing source.yaml fields by entry path', () => {
+    const dir = createBundle(unique('missingfields'));
+    setupHappyPath(dir);
+    writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `- url: "https://example.com/no-fields"
+  title: "Missing fields"
+`);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    const joined = output.inspect.join('\n');
+    assert.match(joined, /\[0\.retrieved_date\]/);
+    assert.match(joined, /\[0\.topic_tag\]/);
+  });
+
+  it('6d. fails delegated coverage when submitted result.json drifts after ledger append', () => {
+    const dir = createBundle(unique('resultdrift'));
+    setupHappyPath(dir);
+    const index = JSON.parse(readFileSync(join(dir, '_work_units/_index.json'), 'utf-8'));
+    const record = Object.values(index.work_units).find((entry) => entry.status === 'submitted');
+    assert.ok(record, 'expected setupHappyPath to submit one work unit');
+    const resultPath = join(dir, record.paths.result_ref);
+    const resultJson = JSON.parse(readFileSync(resultPath, 'utf-8'));
+    resultJson.summary = 'mutated after submit';
+    writeFileSync(resultPath, `${JSON.stringify(resultJson, null, 2)}\n`);
+
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    const joinedInspect = output.inspect.join('\n');
+    const joinedAdvice = output.advice.join('\n');
+    assert.match(joinedInspect, /work-unit binding cross-check failed/);
+    assert.match(joinedInspect, new RegExp(record.work_id));
+    assert.match(joinedInspect, /submitted result hash mismatch/);
+    assert.match(joinedAdvice, /valid work-unit retry|replacement submit|terminal\/retry operation/);
+    assert.match(joinedAdvice, /do not hand-edit rb_output_declarations\.jsonl or rb_status\.json/);
+    assert.doesNotMatch(joinedAdvice, /edit rb_output_declarations\.jsonl by hand/i);
+    assert.doesNotMatch(joinedAdvice, /edit rb_status\.json by hand/i);
+  });
+
   it('7. fails when topic_registry is empty', () => {
     const dir = createBundle(unique('emptyreg'));
     setupHappyPath(dir);

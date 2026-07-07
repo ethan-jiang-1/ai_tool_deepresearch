@@ -110,6 +110,9 @@
 | G24 wfn-rerun | case-306 | `exp_wfn_rerun/case-306-standard-two-round-delta.md` | Agent-driven：两轮 rerun，验证 rerun_count 递增和 direction section 更新（⚠️ verdict 来自文件系统检查，非 gate） |
 | G25 engine-boundary | case-404 | `exp_engine-boundary/case-404-standard-queue-boundary.md` | Queue 边界合约：non-delegated 不受影响；delegated 强制 provenance；controller:"sub-agent" 被拒 |
 | G27 evidence-extraction | case-162 | `exp_evidence-extraction/case-162-standard-gate-reentry-cache-coverage.md` | gate count_floor（scoped）+ cache_coverage（verified+mapped/missing/empty）+ file observability cache_gap + check-reentry 集成 |
+| G60 autonomous-research-hardening | case-601 | `exp_autonomous-research-hardening/case-601-standard-wave0-fail-stays-in-phase.md` | BUG-033：Wave0 gate fail 后保持 phase-bound repair，premature final 只作为诊断 |
+| G60 autonomous-research-hardening | case-602 | `exp_autonomous-research-hardening/case-602-standard-status-drift-return-to-legal-phase.md` | BUG-042：status drift audit 检测手改/跳 phase，并指回 latest legal target |
+| G60 autonomous-research-hardening | case-603 | `exp_autonomous-research-hardening/case-603-standard-surfacing-intent-abort.md` | BUG-043：stop:no would-have-surfaced 记录 `surfacing_intent` 并保持 diagnostic-only |
 
 ### Heavy（真实外部调用：WebSearch/WebFetch/subagent spawn，自动化可跑）
 
@@ -128,6 +131,8 @@
 | G15 ai-judge | case-951 | `exph_workflow-foundation/case-951-heavy-topic-rewrite-ai-judge.md` | AI 扮演真人 dual of 901：真 Agent rewrite + AI reviewer verdict（source: ai-judge，非真人）；9NN +50 对偶 |
 | G25 engine-boundary | case-406 | `exp_engine-boundary/case-406-heavy-real-subagent-boundary.md` | 真实 Sub-agent/WebSearch/WebFetch canary：work-unit task/beacon/receipt/result → submit → ledger → content_dedup；无 real result 时 NOT RUN |
 | G27 evidence-extraction | case-163 | `exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md` | 真实 Agent/Sub-agent canary：rerun action:add → _cache 三文件 leaf → work-unit result cache_trails → submitted ledger → gate/reentry quality metrics；无 Agent 时 NOT RUN |
+| G60 autonomous-research-hardening | case-604 | `exp_autonomous-research-hardening/case-604-heavy-real-subagent-write-before-return.md` | BUG-039/040：真实 Sub-agent 写 result/receipt/output/cache 后才返回，nonce/identity 保持，submit 成功；无 native Sub-agent 时 NOT RUN |
+| G60 autonomous-research-hardening | case-605 | `exp_autonomous-research-hardening/case-605-heavy-bundle-containment-real-subagent.md` | BUG-037：真实 Sub-agent 写入全部留在 active bundle root，repo-root leak inspection clean；无 native Sub-agent 时 NOT RUN |
 
 ### Human（需人类交互/判断，不能自动化，必须手动跑）
 

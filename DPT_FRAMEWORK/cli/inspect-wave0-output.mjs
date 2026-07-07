@@ -7,6 +7,10 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { readBundlePlan } from '../engine/helpers/gate-helpers.mjs';
+import {
+  inspectReferenceReturnMaps,
+  inspectSeedTopicReturnMaps,
+} from '../engine/helpers/return-map.mjs';
 
 const BUNDLE = process.argv[3] || process.argv[2]; // handle --bundle <path> or just <path>
 const bundlePath = BUNDLE;
@@ -173,9 +177,22 @@ try {
     'Ensure rb_plan.md has valid YAML frontmatter with topic_registry array.');
 }
 
+// ---- 8. Diagnostic-only return map shape ----
+inc();
+let topicSlugs = [];
+try {
+  const plan = readBundlePlan(bundlePath);
+  topicSlugs = Array.isArray(plan?.topic_registry) ? plan.topic_registry.map((topic) => topic.slug) : [];
+} catch { /* covered above */ }
+const seedMap = inspectSeedTopicReturnMaps(bundlePath, { wave: 'wave0', topicSlugs });
+const refMap = inspectReferenceReturnMaps(bundlePath, '00-shared-');
+for (const line of [...seedMap.inspect, ...refMap.inspect]) inspect.push(line);
+for (const line of [...seedMap.advice, ...refMap.advice]) advice.push(line);
+if (!seedMap.passed || !refMap.passed) checksFailed++;
+
 // ---- Output ----
 console.log(JSON.stringify({
-  check: { passed: checksFailed === 0, wave: 'wave0', checks_run: checksRun, checks_failed: checksFailed },
+  check: { passed: checksFailed === 0, wave: 'wave0', checks_run: checksRun, checks_failed: checksFailed, return_map_diagnostic_only: true },
   inspect,
   advice,
 }, null, 2));

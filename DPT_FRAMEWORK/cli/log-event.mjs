@@ -12,6 +12,9 @@
 // Usage (explain-file mode — write file explanation diagnostic):
 //   node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --explain-file <path> --status <authority_status> --reason "<text>" [--phase <phase_key>] [--work-id <id>] [--topic-slug <slug>] [--rerun-action <action>]
 //
+// Usage (surfacing intent mode — write would-have-surfaced diagnostic):
+//   node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --surfacing-intent --node <node_ref> --intent-type <ask_user|progress_report|partial_delivery|user_choice|wait_for_input|other> --reason "<text>"
+//
 // Always exits 0 — diagnostics must not block agent flow.
 // On failure (missing args, unwritable file), silently exits 0.
 
@@ -34,8 +37,63 @@ const { values } = parseArgs({
     'work-id': { type: 'string' },
     'topic-slug': { type: 'string' },
     'rerun-action': { type: 'string' },
+    'surfacing-intent': { type: 'boolean' },
+    node: { type: 'string' },
+    'intent-type': { type: 'string' },
   },
 });
+
+// ── Surfacing-intent mode: diagnostic-only would-have-surfaced trace event ──
+if (values['surfacing-intent']) {
+  if (!values.bundle || !values.node || !values['intent-type'] || !values.reason) {
+    process.exit(0);
+  }
+
+  const ALLOWED_INTENTS = ['ask_user', 'progress_report', 'partial_delivery', 'user_choice', 'wait_for_input', 'other'];
+  if (!ALLOWED_INTENTS.includes(values['intent-type'])) {
+    process.exit(0);
+  }
+
+  const tracePath = join(values.bundle, 'rb_trace.jsonl');
+  const logsDir = join(values.bundle, '_logs');
+  if (!existsSync(logsDir)) {
+    try { mkdirSync(logsDir, { recursive: true }); } catch { process.exit(0); }
+  }
+
+  const bundle = values.bundle.split('/').pop();
+  const traceEntry = {
+    ts: new Date().toISOString(),
+    event: 'surfacing_intent',
+    kind: 'diagnostic',
+    bundle,
+    node: values.node,
+    intent_type: values['intent-type'],
+    reason: values.reason,
+    action: 'abort_user_facing_surfacing',
+    authority_status: 'diagnostic_only',
+  };
+
+  try {
+    writeFileSync(tracePath, JSON.stringify(traceEntry) + '\n', { flag: 'a' });
+  } catch {
+    // Silently exit — trace write failure must not block agent
+  }
+
+  try {
+    logToRun(values.bundle, 'warn', 'surfacing_intent', {
+      kind: 'diagnostic',
+      node: values.node,
+      intent_type: values['intent-type'],
+      reason: values.reason,
+      action: 'abort_user_facing_surfacing',
+      authority_status: 'diagnostic_only',
+    });
+  } catch {
+    // Silently exit
+  }
+
+  process.exit(0);
+}
 
 // ── Explain-file mode: --explain-file is present → write file_explanation diagnostic ──
 if (values['explain-file']) {

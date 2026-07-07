@@ -9,8 +9,9 @@
 
 const G = '\x1b[32m', R = '\x1b[31m', Y = '\x1b[33m', C = '\x1b[36m', B = '\x1b[0m';
 
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const REQUIRED = [
   'START_FROM_HERE.md', 'rb_plan.md', 'rb_profile.yaml',
@@ -27,6 +28,10 @@ const SINK_LABELS = {
 };
 
 const SINK_FILES = Object.keys(SINK_LABELS);
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const FRAMEWORK_ROOT = resolve(__dirname, '..');
+const DEFAULT_REPO_ROOT = resolve(FRAMEWORK_ROOT, '..');
+const RUNTIME_LOOKING_ROOTS = ['_work_units', 'artifacts', '_cache', 'reference', 'final'];
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Parse args
@@ -39,6 +44,103 @@ const bundleDir = args.find(a => !a.startsWith('--'));
 if (!bundleDir) {
   console.error('Usage: node inspect-bundle.mjs <bundleDir> [--summary|--timeline|--log]');
   process.exit(1);
+}
+
+function readJsonSafe(pathname) {
+  try {
+    return JSON.parse(readFileSync(pathname, 'utf-8'));
+  } catch {
+    return null;
+  }
+}
+
+function readJsonlSafe(pathname) {
+  if (!existsSync(pathname)) return [];
+  try {
+    return readFileSync(pathname, 'utf-8').split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+  } catch {
+    return [];
+  }
+}
+
+function collectActiveBundleRefs(activeBundleDir) {
+  const refs = {
+    workIds: new Set(),
+    outputPaths: new Set(),
+    cacheTrails: new Set(),
+  };
+  const index = readJsonSafe(join(activeBundleDir, '_work_units', '_index.json'));
+  for (const workId of Object.keys(index?.work_units || {})) refs.workIds.add(workId);
+  for (const row of readJsonlSafe(join(activeBundleDir, 'rb_output_declarations.jsonl'))) {
+    if (row.work_id) refs.workIds.add(row.work_id);
+    for (const output of row.output_files || []) {
+      if (output?.path) refs.outputPaths.add(output.path);
+    }
+    for (const trail of row.cache_trails || []) refs.cacheTrails.add(trail);
+  }
+  return refs;
+}
+
+function repoRootForBundle(activeBundleDir) {
+  let cursor = dirname(resolve(activeBundleDir));
+  while (cursor && cursor !== dirname(cursor)) {
+    if (existsSync(join(cursor, 'DPT_FRAMEWORK'))) return cursor;
+    cursor = dirname(cursor);
+  }
+  return DEFAULT_REPO_ROOT;
+}
+
+function leakContainsActiveRef(repoRoot, leakPath, rootName, refs) {
+  if (rootName === '_work_units') {
+    const names = [];
+    const walk = (dir, depth = 0) => {
+      if (depth > 3) return;
+      try {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          names.push(entry.name);
+          if (entry.isDirectory()) walk(join(dir, entry.name), depth + 1);
+        }
+      } catch { /* ignore unreadable debris */ }
+    };
+    walk(leakPath);
+    return names.some((name) => refs.workIds.has(name));
+  }
+  const expected = rootName === '_cache' ? refs.cacheTrails : refs.outputPaths;
+  for (const ref of expected) {
+    if (ref === rootName || ref.startsWith(`${rootName}/`)) {
+      const candidate = join(repoRoot, ref);
+      if (existsSync(candidate)) return true;
+    }
+  }
+  return false;
+}
+
+function repoRootRuntimeLeakDiagnostics(activeBundleDir) {
+  const active = resolve(activeBundleDir);
+  const repoRoot = repoRootForBundle(active);
+  const refs = collectActiveBundleRefs(active);
+  const diagnostics = [];
+  for (const rootName of RUNTIME_LOOKING_ROOTS) {
+    const leakPath = join(repoRoot, rootName);
+    if (!existsSync(leakPath)) continue;
+    const relToActive = relative(active, leakPath);
+    if (!relToActive.startsWith('..') && relToActive !== '') continue;
+    let isDir = false;
+    try { isDir = statSync(leakPath).isDirectory(); } catch { continue; }
+    if (!isDir) continue;
+    const activeBundleBlocker = leakContainsActiveRef(repoRoot, leakPath, rootName, refs);
+    diagnostics.push({
+      path: relative(repoRoot, leakPath) || rootName,
+      severity: activeBundleBlocker ? 'active_bundle_blocker' : 'cleanup_debris',
+      message: activeBundleBlocker
+        ? `Repo-root runtime leak is associated with current active bundle authority: ${rootName}`
+        : `Repo-root runtime-looking directory appears to be unassociated cleanup debris: ${rootName}`,
+    });
+  }
+  return diagnostics;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -185,8 +287,20 @@ if (flag === '--summary') {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const missing = REQUIRED.filter(f => !existsSync(join(bundleDir, f)));
+const leakDiagnostics = repoRootRuntimeLeakDiagnostics(bundleDir);
+const activeLeakDiagnostics = leakDiagnostics.filter((diag) => diag.severity === 'active_bundle_blocker');
 if (missing.length > 0) {
   console.log(`${R}Inspect bundle: missing ${missing.join(', ')}${B}`);
+  process.exit(1);
+}
+if (leakDiagnostics.length > 0) {
+  for (const diag of leakDiagnostics) {
+    const color = diag.severity === 'active_bundle_blocker' ? R : Y;
+    console.log(`${color}Bundle isolation diagnostic [${diag.severity}]: ${diag.path} — ${diag.message}${B}`);
+  }
+}
+if (activeLeakDiagnostics.length > 0) {
+  console.log(`${R}Inspect bundle: repo-root runtime leak associated with active bundle${B}`);
   process.exit(1);
 }
 console.log(`${G}Inspect bundle: directory structure complete${B}`);

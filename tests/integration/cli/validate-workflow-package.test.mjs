@@ -94,6 +94,12 @@ execution_contract:
   search_policy: subagent_performs_search
   loaded_by: phase-agent
   delivered_via: work_unit_task_md
+  filesystem_write: required
+  required_write_tools:
+    - read_file
+    - write_file
+    - append_file
+    - mkdir
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
@@ -107,6 +113,7 @@ suggested_context: []
 - **Used by**: Test phase agent.
 - **Receives**: Work-unit task, beacon, result schema, and runtime receipt.
 - **Produces**: Test outputs.
+- **Write capability**: Requires filesystem read/write/append and directory creation under bundle_dir.
 - **Boundary**: Test role boundary.
 - **Handoff**: Test handoff.
 

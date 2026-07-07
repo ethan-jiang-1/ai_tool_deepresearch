@@ -130,9 +130,10 @@ Rejected submit does not finish the attempt. Repair the same claimed `work_id` w
 
 After each successful submit, before claiming another work unit, update the corresponding seed topic:
 
-1. Replace `__BACKFILL_WAVE1_MECHANISMS__` with mechanism findings from the submitted `evidence-summary.md`.
-2. Replace `__BACKFILL_WAVE1_TRENDS__` with trend and limitation observations.
-3. Replace `__BACKFILL_PENDING_QUESTIONS__` with canonical status labels only: `[开放]`, `[部分解答]`, `[涌现]`.
+1. Replace `__BACKFILL_WAVE1_MECHANISMS__` with mechanism return-map entries from the submitted `evidence-summary.md`.
+2. Replace `__BACKFILL_WAVE1_TRENDS__` with trend/limitation return-map entries.
+3. Replace `__BACKFILL_PENDING_QUESTIONS__` with canonical status labels only: `[开放]`, `[部分解答]`, `[涌现]`, plus return-map entries that name the question, status, evidence meaning, refs, and next hop.
+4. Each Wave1 return-map entry includes `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`, with refs to `artifacts/wave1/{topic}/evidence-summary.md`, `artifacts/wave1/{topic}/question-list.md`, supporting `reference/`, `_cache/`, and `_work_units/` surfaces where available.
 
 Do not append below the token; replace the token line.
 
@@ -158,6 +159,7 @@ These are Agent discipline checks. The gate enforces structural and provenance c
 - `artifacts/wave1/{topic}/question-list.md`.
 - `reference/{topic}-*.md` with complete metadata and source content capture.
 - Submitted work-unit ledger rows covering delegated outputs and cache trails.
+- Seed-topic Wave1 backfill entries that preserve mechanism/trend/question meaning and refs to evidence summaries, question lists, references, cache leaves, and work-unit surfaces.
 - `rb_trace.jsonl` records the `wave1_completion` event/check surface required by the Wave1 gate definition.
 
 ## 5. Gate Command
@@ -202,6 +204,7 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 - 禁止把 search snippets, titles, or summaries without fetched source content treated as evidence.
 - 禁止让 duplicate source URLs satisfy per-topic reference floors.
 - 禁止保留 `__BACKFILL_WAVE1_MECHANISMS__`, `__BACKFILL_WAVE1_TRENDS__`, or `__BACKFILL_PENDING_QUESTIONS__` after submitted-output backfill.
+- 禁止把 Wave1 backfill 写成裸 evidence list, unsupported prose, or count summary; include return-map fields and refs.
 - 禁止把 Agent numeric claims about ref counts used as gate evidence.
 - 禁止修改 `_work_units/_index.json` or queue state by hand to repair submit rejection.
 - 禁止跳过 gate JSON `inspect`/`advice` when a rule fails.

@@ -96,7 +96,7 @@ function scaffold(opts = {}) {
         shared_scope: 'subagent-protocol',
         role: 'dpt-source-intake',
         authority: 'guidance-only',
-        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md' },
+        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md', filesystem_write: 'required', required_write_tools: ['read_file', 'write_file', 'append_file', 'mkdir'] },
         requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
         suggested_context: [],
       },
@@ -110,7 +110,7 @@ function scaffold(opts = {}) {
         shared_scope: 'subagent-protocol',
         role: 'dpt-evidence-extractor',
         authority: 'guidance-only',
-        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md' },
+        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md', filesystem_write: 'required', required_write_tools: ['read_file', 'write_file', 'append_file', 'mkdir'] },
         requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
         suggested_context: [],
       },
@@ -124,7 +124,7 @@ function scaffold(opts = {}) {
         shared_scope: 'subagent-protocol',
         role: 'dpt-topic-scout',
         authority: 'guidance-only',
-        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md' },
+        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md', filesystem_write: 'required', required_write_tools: ['read_file', 'write_file', 'append_file', 'mkdir'] },
         requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
         suggested_context: [],
       },
@@ -138,7 +138,7 @@ function scaffold(opts = {}) {
         shared_scope: 'subagent-protocol',
         role: 'dpt-claim-verifier',
         authority: 'guidance-only',
-        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md' },
+        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md', filesystem_write: 'required', required_write_tools: ['read_file', 'write_file', 'append_file', 'mkdir'] },
         requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
         suggested_context: [],
       },
@@ -152,7 +152,7 @@ function scaffold(opts = {}) {
         shared_scope: 'subagent-protocol',
         role: 'dpt-source-diagnostic',
         authority: 'guidance-only',
-        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md' },
+        execution_contract: { surface: 'work-unit-subagent-role', search_policy: 'subagent_performs_search', loaded_by: 'phase-agent', delivered_via: 'work_unit_task_md', filesystem_write: 'required', required_write_tools: ['read_file', 'write_file', 'append_file', 'mkdir'] },
         requires: ['shared/shared-subagent-protocol', 'shared/shared-schemas'],
         suggested_context: [],
       },
@@ -170,6 +170,7 @@ function scaffold(opts = {}) {
     '- **Used by**: Test phase agent.',
     '- **Receives**: Work-unit task, beacon, result schema, and runtime receipt.',
     '- **Produces**: Test outputs.',
+    '- **Write capability**: Requires filesystem read/write/append and directory creation under bundle_dir.',
     '- **Boundary**: Test role boundary.',
     '- **Handoff**: Test handoff.',
     '',
@@ -895,6 +896,12 @@ execution_contract:
   search_policy: subagent_performs_search
   loaded_by: phase-agent
   delivered_via: work_unit_task_md
+  filesystem_write: required
+  required_write_tools:
+    - read_file
+    - write_file
+    - append_file
+    - mkdir
 requires:
   - shared/shared-subagent-protocol
   - shared/shared-schemas
@@ -908,6 +915,7 @@ suggested_context: []
 - **Used by**: Test.
 - **Receives**: Test.
 - **Produces**: Test.
+- **Write capability**: Requires filesystem writes.
 - **Boundary**: Test.
 - **Handoff**: Test.
 
@@ -931,6 +939,60 @@ Test.
     assert.strictEqual(report.passed, false);
     assert.ok(report.issues.some(i => i.class === 'role_spec_h1_mismatch'), 'Expected role_spec_h1_mismatch issue');
     assert.ok(report.issues.some(i => i.class === 'role_spec_phase_h1'), 'Expected role_spec_phase_h1 issue');
+    cleanup();
+  });
+
+  it('reports write-producing role specs without filesystem write capability', () => {
+    const { nd } = scaffold({
+      manifest: { phases: [], shared: [] },
+    });
+
+    writeFileSync(join(nd, 'phases/subagent-dpt-source-intake.md'), `---
+node_type: shared
+id: subagent-dpt-source-intake
+shared_scope: subagent-protocol
+role: dpt-source-intake
+authority: guidance-only
+execution_contract:
+  surface: work-unit-subagent-role
+  search_policy: subagent_performs_search
+  loaded_by: phase-agent
+  delivered_via: work_unit_task_md
+requires:
+  - shared/shared-subagent-protocol
+  - shared/shared-schemas
+suggested_context: []
+---
+# Work-Unit Role: dpt-source-intake - Foundation Reference Intake
+
+## 0. Role Brief
+
+- **Role key**: \`dpt-source-intake\`
+- **Used by**: Test.
+- **Receives**: Test.
+- **Produces**: Test outputs.
+- **Write capability**: This role claims a write-producing work unit but omits the machine-readable capability declaration.
+- **Boundary**: Test.
+- **Handoff**: Test.
+
+## Lifecycle Logging Mandate (always-loaded)
+
+Bind work_id, queue_item_id, kind, and receipt_nonce in lifecycle logs.
+
+## 1. Purpose
+
+Test.
+`);
+
+    const report = validateWorkflowPackage({
+      workflowsDir: join(TMP, 'workflows'),
+      gateDefsDir: join(TMP, 'gate_defs'),
+    });
+
+    assert.strictEqual(report.passed, false);
+    const issue = report.issues.find(i => i.class === 'role_write_capability_missing');
+    assert.ok(issue, 'Expected role_write_capability_missing issue');
+    assert.ok(issue.detail.includes('result, receipt, outputs, and cache leaves'));
     cleanup();
   });
 

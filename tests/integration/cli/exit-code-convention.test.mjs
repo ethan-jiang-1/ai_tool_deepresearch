@@ -18,6 +18,10 @@ const CLI_CONVENTION_INVENTORY = {
     class: 'non-gate structured utility',
     coverage: ['tests/integration/cli/advance-status.test.mjs', 'this file: missing args exits 1'],
   },
+  'audit-phase-status.mjs': {
+    class: 'non-gate diagnostic structured utility with code 2 caller/config errors',
+    coverage: ['tests/integration/cli/audit-phase-status.test.mjs', 'this file: missing bundle exits 2'],
+  },
   'apply-research-style.mjs': {
     class: 'non-gate binary utility',
     coverage: ['tests/schema/research-styles-computation.test.mjs', 'this file: missing args exits 1'],
@@ -86,6 +90,7 @@ const CLI_CONVENTION_INVENTORY = {
 
 const SAFE_INVOCATION_SAMPLES = [
   { cli: 'advance-status.mjs', args: [], expectedStatus: 1 },
+  { cli: 'audit-phase-status.mjs', args: [], expectedStatus: 2 },
   { cli: 'apply-research-style.mjs', args: [], expectedStatus: 1 },
   { cli: 'check-reentry.mjs', args: [], expectedStatus: 2 },
   { cli: 'enter-phase.mjs', args: [], expectedStatus: 1 },

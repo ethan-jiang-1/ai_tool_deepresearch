@@ -339,6 +339,44 @@ export function checkCacheCoverage(bundlePath) {
   const advice = [];
   let passed = true;
 
+  function readMeta(trail) {
+    try {
+      const metaPath = join(bundlePath, trail, 'meta.json');
+      if (!existsSync(metaPath)) return null;
+      return JSON.parse(readFileSync(metaPath, 'utf-8'));
+    } catch {
+      return null;
+    }
+  }
+
+  function hasExplicitDegradedCapture(pageText, meta) {
+    const text = String(pageText || '').toLowerCase();
+    const reason = [
+      meta?.capture_status,
+      meta?.fetch_status,
+      meta?.degraded_capture,
+      meta?.failure_reason,
+      meta?.reason,
+    ].filter((value) => value !== undefined && value !== null).join(' ').toLowerCase();
+    return /degraded|fetch[-_ ]?failure|access[-_ ]?failure|blocked|unavailable|failed/.test(`${text} ${reason}`);
+  }
+
+  function cacheContentIssue(trail) {
+    const pagePath = join(bundlePath, trail, 'page.md');
+    const pageText = existsSync(pagePath) ? readFileSync(pagePath, 'utf-8') : '';
+    const meta = readMeta(trail);
+    const trimmed = pageText.trim();
+    if (!trimmed) return 'page.md is empty';
+    const lines = trimmed.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const placeholderOnly = lines.length <= 2 && lines.every((line) => /^#*\s*(cache page for|page|placeholder|todo|tbd)\b/i.test(line));
+    if (placeholderOnly && !hasExplicitDegradedCapture(trimmed, meta)) return 'page.md is placeholder-only';
+    if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return 'meta.json is missing or invalid';
+    if (!(meta.url || meta.source_url || meta.final_url || meta.fetched_url || meta.source_slug)) {
+      return 'meta.json lacks url/source mapping';
+    }
+    return null;
+  }
+
   if (declarations.length === 0) {
     const rawDeclarations = readOutputDeclarations(bundlePath);
     const rawReferenceRows = rawDeclarations.filter((decl) => (decl.output_files || []).some((f) => f.role === 'reference'));
@@ -387,6 +425,11 @@ export function checkCacheCoverage(bundlePath) {
         missingTrails.push({ trail, reason: `missing files: ${missingFiles.join(', ')}` });
         continue;
       }
+      const contentIssue = cacheContentIssue(trail);
+      if (contentIssue) {
+        missingTrails.push({ trail, reason: `incomplete cache content: ${contentIssue}` });
+        continue;
+      }
       validTrails.push(trail);
     }
 
@@ -407,7 +450,8 @@ export function checkCacheCoverage(bundlePath) {
           const metaPath = join(bundlePath, trail, 'meta.json');
           if (existsSync(metaPath)) {
             const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
-            if (meta.url && ref.source_url && normalizeUrl(meta.url) === normalizeUrl(ref.source_url)) {
+            const metaUrl = meta.url || meta.source_url || meta.final_url || meta.fetched_url;
+            if (metaUrl && ref.source_url && normalizeUrl(metaUrl) === normalizeUrl(ref.source_url)) {
               mapped = true;
               break;
             }
@@ -437,8 +481,9 @@ export function checkCacheCoverage(bundlePath) {
 
       if (!mapped && validTrails.length > 0) {
         passed = false;
-        inspect.push(`[cache_coverage] FAIL: ${declId}: reference ${ref.path} (source_url: ${ref.source_url || 'none'}) not mapped to any valid cache trail`);
-        advice.push(`Reference ${ref.path} has no cache trail mapping. Ensure the work-unit result includes a matching _cache/ leaf (via meta.json.url or source_slug).`);
+        const required = 'websearch.json, page.md, meta.json';
+        inspect.push(`[cache_coverage] FAIL: ${declId}: reference ${ref.path} (source_url: ${ref.source_url || 'none'}) not mapped to any valid cache trail. Mapping uses meta.json.url/source_url/final_url/fetched_url or source_slug. Required cache leaf files: ${required}.`);
+        advice.push(`Reference ${ref.path} has no cache trail mapping. Ensure the submitted work-unit result includes a matching _cache/ leaf via meta.json.url/source_url/final_url/fetched_url or source_slug, with websearch.json, page.md, and meta.json.`);
       } else if (!mapped && validTrails.length === 0) {
         // Already reported as missing trail above — don't double-report
       }

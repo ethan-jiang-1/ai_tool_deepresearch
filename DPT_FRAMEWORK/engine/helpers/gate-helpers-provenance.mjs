@@ -62,6 +62,16 @@ function readScopedSubmittedWorkUnitRows(bundlePath, rule) {
   });
 }
 
+function bindingFailureInspect(lines) {
+  return (lines || []).map((line) => `work-unit binding cross-check failed: ${line}`);
+}
+
+function bindingFailureAdvice() {
+  return [
+    'Repair delegated coverage through a valid work-unit retry, replacement submit, or explicit terminal/retry operation; do not hand-edit rb_output_declarations.jsonl or rb_status.json.',
+  ];
+}
+
 function outputEntryAllowedBySelectors(entry, selectors = {}) {
   if (!selectors.roles || selectors.roles.length === 0) return true;
   return selectors.roles.includes(entry.role);
@@ -96,7 +106,7 @@ export function checkWorkUnitLedgerExists(bundlePath, rule) {
     return {
       passed: false,
       inspect: [`Submitted work-unit ledger invalid: ${error.message}`],
-      advice: ['Repair work-unit submit/index/ledger drift before rerunning the gate.'],
+      advice: bindingFailureAdvice(),
       records: [],
     };
   }
@@ -144,7 +154,7 @@ export function checkWorkUnitOutputCoverage(bundlePath, rule) {
     return {
       passed: false,
       inspect: [`Submitted work-unit ledger invalid: ${error.message}`],
-      advice: ['Repair work-unit submit/index/ledger drift before rerunning the gate.'],
+      advice: bindingFailureAdvice(),
       orphans: [...expectedPaths],
       records: [],
     };
@@ -200,8 +210,8 @@ export function checkWorkUnitSubmissionPresence(bundlePath, rule) {
   if (!inspectResult.passed) {
     return {
       passed: false,
-      inspect: (inspectResult.inspect || []).map((line) => `work-unit submission presence failed: ${line}`),
-      advice: ['Repair work-unit index, manifest, result, receipt, beacon, output, cache, or hash drift before rerunning the gate.'],
+      inspect: bindingFailureInspect(inspectResult.inspect || []),
+      advice: bindingFailureAdvice(),
       records: ledgerResult.records || [],
     };
   }

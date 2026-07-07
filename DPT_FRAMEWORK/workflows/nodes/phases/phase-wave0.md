@@ -137,8 +137,9 @@ After each successful submit, before claiming the next item:
 
 1. Open `seed_topics/{topic.slug}.md`.
 2. Locate `__BACKFILL_WAVE0_EVIDENCE__`.
-3. Replace the token line with concise reference summaries pointing to submitted output files.
-4. Do not leave the token in place.
+3. Replace the token line with concise return-map entries, not only URLs or prose. Each important source/reference entry includes `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`.
+4. Explain what the source says, which must-answer or initial hypothesis it supports/refutes/opens/defers, and where to read submitted source/reference/cache/work-unit evidence.
+5. Do not leave the token in place.
 
 ## 4. Expected Artifacts
 
@@ -146,6 +147,7 @@ After each successful submit, before claiming the next item:
 - `reference/00-shared-*.md` when shared foundation references exist.
 - `reference/_INDEX.md` summarizing available references.
 - Submitted work-unit rows in `rb_output_declarations.jsonl` covering delegated outputs and cache trails.
+- Seed-topic Wave0 backfill entries with return-map fields and bundle-relative refs to `source.yaml`, `reference/`, `_cache/`, and `_work_units/` surfaces.
 - `rb_trace.jsonl` records the `wave0_completion` event/check surface required by the Wave0 gate definition.
 
 ## 5. Gate Command
@@ -190,6 +192,7 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 - 禁止把 search snippets 当作 fetched source evidence.
 - 禁止 claim 后跳过 Sub-agent task instructions and submit a fabricated result.
 - 禁止保留 `__BACKFILL_WAVE0_EVIDENCE__` after successful submit-backed backfill.
+- 禁止把 Wave0 backfill 写成 naked URL/evidence list or unsupported prose; include return-map fields and refs.
 - 禁止让 orphan `reference/00-shared-*.md` satisfy gate coverage.
 - 禁止修改 `_work_units/_index.json` to repair submit or inspect failures.
 - 禁止把 gate console confidence当作 verdict；read gate JSON and trace/check artifacts.

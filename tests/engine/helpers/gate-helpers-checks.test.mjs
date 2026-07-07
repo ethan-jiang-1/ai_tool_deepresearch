@@ -328,4 +328,51 @@ describe('cache coverage work-unit authority', () => {
       cleanupWorkUnitBundle(dir);
     }
   });
+
+  it('fails when submitted cache trail content is placeholder-only', () => {
+    const dir = tempWorkUnitBundle('gh-cache-placeholder-');
+    try {
+      claimAndSubmitWorkUnit(dir, {
+        cacheTrails: [{
+          path: '_cache/wave0/primary/topic-a/s01_source',
+          url: 'https://example.com/research/article',
+        }],
+      });
+      writeFileSync(join(dir, '_cache/wave0/primary/topic-a/s01_source/page.md'), '# Page\n');
+      const result = checkCacheCoverage(dir);
+      assert.equal(result.passed, false);
+      assert.ok(result.inspect.some((line) => line.includes('incomplete cache content')));
+      assert.ok(result.inspect.some((line) => line.includes('placeholder-only')));
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
+  });
+
+  it('names cache mapping rules and required leaf files when references do not map', () => {
+    const dir = tempWorkUnitBundle('gh-cache-map-');
+    try {
+      claimAndSubmitWorkUnit(dir, {
+        outputs: [{
+          path: 'reference/topic-a-source.md',
+          role: 'reference',
+          source_url: 'https://example.com/research/topic-a',
+          source_slug: 'topic-a-source',
+          content: referenceContent({ source_url: 'https://example.com/research/topic-a' }),
+        }],
+        cacheTrails: [{
+          path: '_cache/wave0/primary/topic-a/unrelated',
+          url: 'https://example.com/research/other',
+        }],
+      });
+      const result = checkCacheCoverage(dir);
+      assert.equal(result.passed, false);
+      const joined = result.inspect.join('\n');
+      assert.match(joined, /reference\/topic-a-source\.md/);
+      assert.match(joined, /source_url: https:\/\/example\.com\/research\/topic-a/);
+      assert.match(joined, /meta\.json\.url\/source_url\/final_url\/fetched_url or source_slug/);
+      assert.match(joined, /websearch\.json, page\.md, meta\.json/);
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
+  });
 });

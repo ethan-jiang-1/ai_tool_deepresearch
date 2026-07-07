@@ -228,7 +228,8 @@ describe('countReferences', () => {
     });
     const result = countReferences(dir);
     assert.strictEqual(result.count, 0);
-    assert.strictEqual(result.uncountable.length, 0);
+    assert.strictEqual(result.uncountable.length, 1);
+    assert.match(result.uncountable[0].reason, /filesystem_only_not_ledger_declared/);
   });
 
   it('returns zero count when ledger has no role=reference entries', () => {
@@ -303,6 +304,8 @@ describe('countReferences', () => {
       );
       const result = countReferences(dir);
       assert.strictEqual(result.count, 1, 'Orphan ref should not be counted in ledger mode');
+      assert.ok(result.uncountable.some((entry) => entry.path === 'reference/orphan.md'));
+      assert.ok(result.uncountable.some((entry) => entry.reason.includes('filesystem_only_not_ledger_declared')));
     } finally {
       cleanupWorkUnitBundle(dir);
     }

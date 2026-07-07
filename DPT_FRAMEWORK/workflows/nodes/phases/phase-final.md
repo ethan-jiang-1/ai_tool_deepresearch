@@ -30,7 +30,9 @@ suggested_context:
 
 从 verified bundle state 生成 final report artifact(s)。Final 是 delivery 动作——把已验证的研究产出打包为可交付的报告——不是 gate checkpoint，也不是下一阶段的输入。
 
-Delivery completion 的 evidence 是 `final/` 目录下存在至少一份报告文件。Final 是 terminal node（`gate: none`），没有 gate CLI 写 `final_delivery` trace event——delivery 事实由文件存在证明，不由 trace event 证明。
+Delivery completion 的 evidence 是 legally entered Final node 中 `final/` 目录下存在至少一份报告文件。Final 是 terminal node（`gate: none`），没有 gate CLI 写 `final_delivery` trace event——delivery 事实由文件存在证明，不由 trace event 证明。
+
+`final/` 文件只有在 readiness gate passed、`enter-phase --node phases/phase-final.md` 写入 route-bound Final `load_complete`、且 `advance-status --to readiness_passed` 同步后才可算 delivery evidence。任何 wave0/wave1/wave2/setup/seed-topics/HITL2/readiness-before-pass/rerun context 写出的 `final/` 文件都是 premature terminal output：可用于诊断，不授权用户可见 final delivery，也不替代 readiness 或 handoff evidence。
 
 ## 2. Required Inputs
 
@@ -94,6 +96,7 @@ Post-delivery 用户反馈入口：用户反馈写入 `rb_profile.yaml` 的 HITL
 - **MUST NOT 在 `final/` 为空时声称 delivery 完成**——至少 1 份报告文件必须真实存在
 - **用户 final 后反馈 MUST NOT 通过 final node 处理**——走 HITL2 repair/rerun（`phase-hitl2.md` §7）
 - **MUST NOT 写 `final_delivery` trace event 并声称它来自 gate CLI**——final 无 gate CLI，charter 禁止手写 trace event。delivery 由 `final/` 文件存在证明
+- **MUST NOT 把 premature `final/` 文件当成 delivery**——没有 readiness-to-final handoff 和 Final entry witness 时，`final/` 只是 phase-boundary violation diagnostic
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
 
 ## Log

@@ -149,8 +149,11 @@ export function claimAndSubmitWorkUnit(dir, {
   for (const trail of cacheTrails) {
     mkdirSync(path.join(dir, trail.path), { recursive: true });
     writeFileSync(path.join(dir, trail.path, 'websearch.json'), '[]\n');
-    writeFileSync(path.join(dir, trail.path, 'page.md'), '# Page\n');
-    writeFileSync(path.join(dir, trail.path, 'meta.json'), `${JSON.stringify({ url: trail.url })}\n`);
+    writeFileSync(path.join(dir, trail.path, 'page.md'), trail.page_content || `# Captured Page\n\nFetched content capture for ${trail.url}. This body preserves the source text used by the work unit.\n`);
+    writeFileSync(path.join(dir, trail.path, 'meta.json'), `${JSON.stringify({
+      url: trail.url,
+      ...(trail.meta || {}),
+    })}\n`);
   }
 
   writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({

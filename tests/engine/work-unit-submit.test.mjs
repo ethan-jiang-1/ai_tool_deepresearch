@@ -61,7 +61,7 @@ function writeValidSubmitFiles(dir, record, { summary = 'done' } = {}) {
   const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
   mkdirSync(path.join(dir, cacheTrail), { recursive: true });
   writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
-  writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Page\n');
+  writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nFetched content capture for https://example.com/source. This body preserves the source text used by the work unit.\n');
   writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/source"}\n');
 
   writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
@@ -86,6 +86,10 @@ function writeValidSubmitFiles(dir, record, { summary = 'done' } = {}) {
     cache_trails: [cacheTrail],
   }, null, 2)}\n`);
   return resultPath;
+}
+
+function cacheTrailPath(record) {
+  return `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
 }
 
 function readResult(pathname) {
@@ -326,6 +330,90 @@ describe('submitWorkUnit', () => {
       } finally {
         cleanup(dir);
       }
+    }
+  });
+
+  it('rejects placeholder, empty, and unmapped cache pages before ledger append', () => {
+    const cases = [
+      {
+        name: 'placeholder page',
+        mutate(dir, record) {
+          writeFileSync(path.join(dir, cacheTrailPath(record), 'page.md'), '# Page\n');
+        },
+      },
+      {
+        name: 'empty page',
+        mutate(dir, record) {
+          writeFileSync(path.join(dir, cacheTrailPath(record), 'page.md'), '');
+        },
+      },
+      {
+        name: 'missing url mapping',
+        mutate(dir, record) {
+          writeFileSync(path.join(dir, cacheTrailPath(record), 'meta.json'), '{"title":"No URL"}\n');
+        },
+      },
+    ];
+
+    for (const testCase of cases) {
+      const dir = tempBundle();
+      try {
+        saveSeedQueue(dir, [delegated('queue-a')]);
+        claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+        const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+        const resultPath = writeValidSubmitFiles(dir, record);
+        testCase.mutate(dir, record);
+
+        const rejected = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+        assert.equal(rejected.ok, false, testCase.name);
+        assert.equal(rejected.status, 'claimed', testCase.name);
+        assert.equal(rejected.last_submit_rejection.reason_code, 'missing_cache', testCase.name);
+        assert.match(rejected.inspect.join('\n'), /incomplete cache content/, testCase.name);
+        assert.throws(() => ledgerRows(dir), /ENOENT/, testCase.name);
+      } finally {
+        cleanup(dir);
+      }
+    }
+  });
+
+  it('accepts explicit degraded cache capture while preserving submit authority', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      writeFileSync(path.join(dir, cacheTrailPath(record), 'page.md'), '# Cache page for blocked source\n\nDegraded capture: fetch-failure after HTTP 403 from source URL.\n');
+      writeFileSync(path.join(dir, cacheTrailPath(record), 'meta.json'), JSON.stringify({
+        url: 'https://example.com/source',
+        capture_status: 'degraded',
+        failure_reason: 'HTTP 403',
+      }, null, 2));
+
+      const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      assert.equal(ledgerRows(dir).length, 1);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('inspect catches submitted cache content drift', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      writeFileSync(path.join(dir, cacheTrailPath(record), 'page.md'), '# Page\n');
+
+      const inspected = inspectWorkUnits(dir);
+      assert.equal(inspected.passed, false);
+      assert.match(inspected.inspect.join('\n'), /ledger cache trail incomplete/);
+      assert.match(inspected.inspect.join('\n'), /placeholder-only/);
+    } finally {
+      cleanup(dir);
     }
   });
 });
