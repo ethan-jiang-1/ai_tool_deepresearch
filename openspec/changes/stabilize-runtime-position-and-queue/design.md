@@ -75,7 +75,7 @@ This change should primarily stay in repo-root regression tests under `tests/`. 
 - reentry and Agent-facing guidance: `tests/integration/cli/check-reentry.test.mjs` and `tests/engine/command-contract-docs.test.mjs`;
 - work-unit submit durability: `tests/engine/work-unit-submit.test.mjs` for core transaction/postcondition behavior and `tests/integration/cli/operate-work-unit.test.mjs` for CLI response behavior;
 - queue topic identity: `tests/integration/cli/operate-queue-validation.test.mjs`;
-- controlled playbook compatibility: `experiments_env/shared/new-disposable-bundle.mjs`, `experiments_env/shared/work-unit-playbook-utils.mjs`, `experiments_env/shared/run-fixture-backed-case.mjs`, and `experiments_playbook/exp_handoff-witnessing/case-501-standard-handoff-witnessing.mjs` should remain compatible with `current_node: null` templates and `enter-phase` writing `current_node`; and
+- lifecycle integration compatibility: `tests/integration/cli/handoff-witnessing-lifecycle.test.mjs`, `experiments_env/shared/new-disposable-bundle.mjs`, `experiments_env/shared/work-unit-playbook-utils.mjs`, and `experiments_env/shared/run-fixture-backed-case.mjs` should remain compatible with `current_node: null` templates and `enter-phase` writing `current_node`; and
 - version banner/changelog consistency: `tests/engine/version-management.test.mjs` should assert repo-root `CHANGELOG.md` and `DPT_FRAMEWORK/RUN.md` remain aligned for `v0.6`, and that stale `DPT_FRAMEWORK/CHANGELOG.md` is not retained as a competing version-history file.
 
 The tests should assert durable files after commands return, not just returned in-memory objects. Failure-path tests should check structured diagnostics and absence of false-success output.

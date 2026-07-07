@@ -181,6 +181,8 @@ describe('Agent-facing command contract docs', () => {
       '`phase handoff`',
       '`work completion`',
       '`witnessing`',
+      '`current_node`',
+      'resume coordinate',
     ]) {
       assert.ok(commands.includes(marker), `COMMANDS.md missing marker: ${marker}`);
     }
@@ -203,6 +205,22 @@ describe('Agent-facing command contract docs', () => {
     assert.ok(instantiate.includes('不要在 autonomous execution 中要求用户提供名称'));
     assert.ok(start.includes('从 research question 生成 kebab-case bundle name'));
     assert.ok(start.includes('不要把 bundle naming 变成 autonomous execution 中的 mid-pipeline dependency'));
+  });
+
+  it('active bundle resume guidance prefers current_node over current_gate-only inference', () => {
+    const start = read('DPT_FRAMEWORK/command_playbook/start-research.md');
+    const run = read('DPT_FRAMEWORK/RUN.md');
+    const startHere = read('DPT_FRAMEWORK/rb_templates/START_FROM_HERE.md.tmpl');
+
+    for (const [label, text] of [
+      ['start-research', start],
+      ['RUN.md', run],
+      ['START_FROM_HERE template', startHere],
+    ]) {
+      assert.ok(text.includes('current_node'), `${label} must mention current_node`);
+      assert.ok(text.includes('current_gate'), `${label} must distinguish current_gate`);
+      assert.ok(/不要只凭 `current_gate`|不要只凭 current_gate|not guess/i.test(text), `${label} must reject current_gate-only phase inference`);
+    }
   });
 
   it('CLI exit-code convention and exception inventory are discoverable', () => {

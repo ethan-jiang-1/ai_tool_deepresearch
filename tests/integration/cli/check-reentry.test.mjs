@@ -174,6 +174,35 @@ describe('check-reentry CLI', () => {
       const res = runCliJson(dir, 'wave1_complete');
       assert.strictEqual(res.stdout.blockers.length, 0);
     });
+
+    it('reports populated current_node as the current phase coordinate', () => {
+      const dir = setupBundle('rt-current-node-present', { current_node: 'phases/phase-wave1.md' });
+      const res = runCliJson(dir, 'wave1_complete');
+      assert.strictEqual(res.exitCode, 0);
+      assert.strictEqual(res.stdout.runtime_position.current_node, 'phases/phase-wave1.md');
+      assert.strictEqual(res.stdout.runtime_position.current_node_status, 'populated');
+      assert.strictEqual(res.stdout.runtime_position.current_gate, 'wave1_complete');
+      assert.strictEqual(res.stdout.runtime_position.next_gate, 'wave2_complete');
+    });
+
+    it('keeps initial current_node null non-blocking and advises diagnostics', () => {
+      const dir = setupBundle('rt-current-node-null', { current_node: null });
+      const res = runCliJson(dir, 'wave1_complete');
+      assert.strictEqual(res.exitCode, 0);
+      assert.strictEqual(res.stdout.runtime_position.current_node, null);
+      assert.strictEqual(res.stdout.runtime_position.current_node_status, 'null');
+      assert.ok(res.stdout.warnings.some(w => w.check === 'status_current_node'));
+      assert.ok(res.stdout.advice.some(a => a.includes('next successful enter-phase')));
+    });
+
+    it('keeps legacy status without current_node readable', () => {
+      const dir = setupBundle('rt-current-node-absent');
+      const res = runCliJson(dir, 'wave1_complete');
+      assert.strictEqual(res.exitCode, 0);
+      assert.strictEqual(res.stdout.runtime_position.current_node, null);
+      assert.strictEqual(res.stdout.runtime_position.current_node_present, false);
+      assert.strictEqual(res.stdout.runtime_position.current_node_status, 'absent');
+    });
   });
 
   describe('queue conflict audit', () => {

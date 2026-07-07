@@ -18,8 +18,9 @@ Short operating note only; deeper terminology canon lives in `guidelines/agentic
 - `phase handoff`: Phase Agent consumes gate CLI `check.next` through `enter-phase` or another accepted loader/check path and receives the next Markdown control surface.
 - `work completion`: target phase artifacts plus that phase's own gate/content rules prove the target work is done.
 - `witnessing`: Engine-written evidence binding the gate route to later entry, such as `gate_attempt(passed=true,next=...)` plus route-bound `load_complete`.
+- `current_node`: when non-null, the durable `rb_status.json` coordinate for the lifecycle Markdown control surface most recently loaded by successful route-bound `enter-phase`.
 
-`enter-phase` / `load_complete` prove target-node entry/loading, not target-phase work completion. `advance-status` synchronizes the just-passed source gate; it does not enter, load, or execute the next phase.
+`enter-phase` / `load_complete` prove target-node entry/loading, not target-phase work completion. `advance-status` synchronizes the just-passed source gate; it does not enter, load, or execute the next phase. `current_node` is a resume coordinate, not gate pass evidence.
 
 ## CLI Exit-Code Convention
 
@@ -67,5 +68,5 @@ Exit codes SHALL NOT encode morale, reassurance, retry strategy, progress pressu
 ## Phase Handoff
 | 工具 | 文件 | 说明 |
 |------|------|------|
-| enter-phase.mjs | cli/enter-phase.mjs | 消费 gate CLI 返回的 `check.next`，调用 workflow loader 渲染下一 node Markdown，并写入 route-bound `load_complete` handoff witness；不证明 target phase work completion |
+| enter-phase.mjs | cli/enter-phase.mjs | 消费 gate CLI 返回的 `check.next`，调用 workflow loader 渲染下一 node Markdown，并写入 route-bound `load_complete` handoff witness 和 `rb_status.json.current_node`；不证明 target phase work completion |
 | advance-status.mjs | cli/advance-status.mjs | 在 `enter-phase` witness 存在后同步 just-passed source gate；covered handoff 使用真实 `gate_attempt.next`，不是默认 `passed` target |

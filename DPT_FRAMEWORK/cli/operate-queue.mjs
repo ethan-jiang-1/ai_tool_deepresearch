@@ -140,8 +140,8 @@ function isTopicScoped(taskCard) {
     }
   }
 
-  // producer_rule can indicate topic scope
-  if (taskCard.producer_rule === 'topic_deepening' && !taskCard.payload?.finding_id) return true;
+  // producer_rule can indicate topic scope when the card is not explicitly finding-scoped.
+  if (taskCard.producer_rule === 'topic_deepening' && !isFindingScoped(taskCard)) return true;
 
   return false;
 }
@@ -176,8 +176,18 @@ function validateTopicSlug(taskCard, bundleDir) {
   const topicScoped = isTopicScoped(taskCard);
   const findingScoped = isFindingScoped(taskCard);
 
-  // Finding-scoped tasks: skip topic_registry validation, validate finding_id if index exists
-  if (findingScoped) {
+  // Check for conflicting explicit slug sources before any fallback parsing.
+  if (taskCard.payload?.topic_slug && taskCard.lineage?.topic_slug &&
+      taskCard.payload.topic_slug !== taskCard.lineage.topic_slug) {
+    return {
+      valid: false,
+      error: `topic_slug conflict: payload='${taskCard.payload.topic_slug}' vs lineage='${taskCard.lineage.topic_slug}'`,
+    };
+  }
+
+  // Finding-scoped tasks with no topic identity skip topic_registry validation
+  // and validate finding_id if an index exists.
+  if (findingScoped && !topicScoped) {
     const findingIndex = readFindingIndex(bundleDir);
     if (findingIndex && taskCard.payload?.finding_id) {
       const findingIds = (findingIndex.findings || []).map(f => f.id);
@@ -196,26 +206,6 @@ function validateTopicSlug(taskCard, bundleDir) {
 
   // Topic-scoped: resolve slug and validate against topic_registry
   const resolved = resolveTopicSlug(taskCard);
-
-  // Check for conflicting slug sources
-  if (taskCard.payload?.topic_slug && taskCard.lineage?.topic_slug &&
-      taskCard.payload.topic_slug !== taskCard.lineage.topic_slug) {
-    return {
-      valid: false,
-      error: `topic_slug conflict: payload='${taskCard.payload.topic_slug}' vs lineage='${taskCard.lineage.topic_slug}'`,
-    };
-  }
-
-  // Check payload/queue_item_id mismatch.
-  if (taskCard.payload?.topic_slug && taskCard.queue_item_id) {
-    const queueItemSlug = resolveTopicSlug({ queue_item_id: taskCard.queue_item_id });
-    if (queueItemSlug && taskCard.payload.topic_slug !== queueItemSlug.slug) {
-      return {
-        valid: false,
-        error: `topic_slug mismatch: payload='${taskCard.payload.topic_slug}' vs queue_item_id='${taskCard.queue_item_id}' (derived slug: '${queueItemSlug.slug}')`,
-      };
-    }
-  }
 
   if (!resolved) {
     return {

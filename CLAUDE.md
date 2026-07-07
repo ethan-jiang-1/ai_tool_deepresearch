@@ -29,8 +29,8 @@ Use `guidelines/` when the right direction, layer boundary, or experiment path i
 
 ## Hard Rules
 
-- Do not read `_original_*` archives unless explicitly asked.
-- Use Node.js >=20, pure JavaScript ESM (`.mjs`). No TypeScript.
+- Do not read `_old_topics` archives unless explicitly asked.
+- Use Node.js >=20, pure JavaScript ESM (`.mjs`). No TypeScript. **Absolutely no Python.** Not for scripts, not for one-liners, not for prototyping — use Node.js for everything.
 - Do not add dependencies. Approved npm deps only: `zod`, `yaml`; otherwise use Node built-ins.
 - Use `node:test` + `node:assert` for regression tests.
 - **Tests always under `tests/` at repo root, never inside `DPT_FRAMEWORK/`.** `DPT_FRAMEWORK/` is the distributable framework — framework code only, no test files, no experiment fixtures. Test dirs mirror framework dirs: `tests/engine/`, `tests/engine/`, `tests/schema/`, etc.

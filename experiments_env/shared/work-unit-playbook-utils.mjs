@@ -50,12 +50,14 @@ export function writeMinimalPlan(bundleDir, {
 export function writeMinimalStatus(bundleDir, {
   current_gate = 'wave0_complete',
   next_gate = 'wave1_complete',
+  current_node = null,
   state = 'in_progress',
 } = {}) {
   writeFileSync(path.join(bundleDir, 'rb_status.json'), `${JSON.stringify({
     bundle: path.basename(bundleDir),
     current_gate,
     next_gate,
+    current_node,
     current_mode: 'execution',
     state,
   }, null, 2)}\n`);
@@ -148,7 +150,7 @@ export function writeWave0Scaffold(bundleDir, {
   topics = [{ id: 't1', slug: 'topic-a', title: 'Topic A' }],
   referenceRows = ['| 00-shared-topic-a.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |'],
 } = {}) {
-  writeMinimalStatus(bundleDir, { current_gate: 'seed_topics_ready', next_gate: 'wave0_complete' });
+  writeMinimalStatus(bundleDir, { current_gate: 'seed_topics_ready', next_gate: 'wave0_complete', current_node: 'phases/phase-wave0.md' });
   writeMinimalPlan(bundleDir, { planBasename, topics });
   writeFileSync(path.join(bundleDir, 'rb_profile.yaml'), [
     `plan_basename: ${planBasename}`,
@@ -193,7 +195,7 @@ export function writeWave1Scaffold(bundleDir, {
   planBasename = path.basename(bundleDir),
   topics = [{ id: 't1', slug: 'topic-a', title: 'Topic A' }],
 } = {}) {
-  writeMinimalStatus(bundleDir, { current_gate: 'wave0_complete', next_gate: 'wave1_complete' });
+  writeMinimalStatus(bundleDir, { current_gate: 'wave0_complete', next_gate: 'wave1_complete', current_node: 'phases/phase-wave1.md' });
   writeMinimalPlan(bundleDir, { planBasename, topics });
   writeFileSync(path.join(bundleDir, 'rb_profile.yaml'), [
     `plan_basename: ${planBasename}`,
@@ -244,7 +246,7 @@ export function writeWave2Scaffold(bundleDir, {
   ],
   staleWave2Backfill = false,
 } = {}) {
-  writeMinimalStatus(bundleDir, { current_gate: 'wave1_complete', next_gate: 'wave2_complete' });
+  writeMinimalStatus(bundleDir, { current_gate: 'wave1_complete', next_gate: 'wave2_complete', current_node: 'phases/phase-wave2.md' });
   writeMinimalPlan(bundleDir, { planBasename, topics });
   writeFileSync(path.join(bundleDir, 'rb_profile.yaml'), [
     `plan_basename: ${planBasename}`,

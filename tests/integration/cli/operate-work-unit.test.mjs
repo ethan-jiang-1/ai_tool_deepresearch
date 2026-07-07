@@ -118,6 +118,8 @@ describe('operate-work-unit inspect', () => {
       const out = JSON.parse(submitStdout);
       assert.equal(out.ok, true);
       assert.equal(out.status, 'submitted');
+      assert.equal(out.queue.delegated_in_flight[record.queue_item_id], undefined);
+      assert.equal(out.queue.terminal_history.some((entry) => entry.queue_item_id === record.queue_item_id && entry.work_id === workId), true);
       const rows = readFileSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER), 'utf-8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
       assert.equal(rows.length, 1);
       assert.equal(rows[0].work_id, workId);

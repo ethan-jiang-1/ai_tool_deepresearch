@@ -36,8 +36,8 @@ suggested_context: []
 ### `contracts/status.mjs` → `rb_status.json`
 
 - **Schema**：`StatusSchema`
-- **字段**：`current_mode`（必须为 `"execution"`）、`state`（`RunState` enum）、`current_gate`（`CurrentGate` enum）、`next_gate`（`CurrentGate` enum）
-- **注意**：`rb_status.json` **没有** `phases.*` 树。当前 gate tracking 通过 `current_gate`/`next_gate` 两个字段完成
+- **字段**：`current_mode`（必须为 `"execution"`）、`state`（`RunState` enum）、`current_gate`（`CurrentGate` enum）、`next_gate`（`CurrentGate` enum）、`current_node`（workflow node ref 或 `null`）
+- **注意**：`rb_status.json` **没有** `phases.*` 树。gate window tracking 通过 `current_gate`/`next_gate` 两个字段完成；当前已加载 phase Markdown coordinate 通过非空 `current_node` 表示
 - **位置**：`DPT_FRAMEWORK/schema/contracts/status.mjs`
 
 ### `contracts/queue.mjs` → `rb_queue.json`

@@ -65,12 +65,14 @@ describe('enter-phase CLI', () => {
     };
   }
 
-  it('renders markdown and writes route-bound load_complete without changing status', () => {
-    const beforeStatus = readFileSync(join(dir, 'rb_status.json'), 'utf8');
+  it('renders markdown and writes route-bound load_complete plus current_node without changing gate window', () => {
     const out = run(['--bundle', dir, '--node', 'phases/phase-wave1.md']);
 
     assert.doesNotMatch(out.trimStart(), /^\{/);
-    assert.equal(readFileSync(join(dir, 'rb_status.json'), 'utf8'), beforeStatus);
+    const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf8'));
+    assert.equal(status.current_node, 'phases/phase-wave1.md');
+    assert.equal(status.current_gate, 'wave0_complete');
+    assert.equal(status.next_gate, 'wave1_complete');
 
     const events = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
     const load = events.find(e => e.event === 'load_complete' && e.entry === 'phases/phase-wave1.md');
@@ -146,5 +148,22 @@ describe('enter-phase CLI', () => {
 
     const events = readFileSync(tracePath, 'utf8').trim().split('\n').map(line => JSON.parse(line));
     assert.equal(events.some(e => e.event === 'load_complete' && e.entry === 'phases/phase-wave1.md'), false);
+  });
+
+  it('fails with JSON instead of Markdown when current_node cannot be written after load_complete', () => {
+    const statusPath = join(dir, 'rb_status.json');
+    chmodSync(statusPath, 0o444);
+    try {
+      const out = run(['--bundle', dir, '--node', 'phases/phase-wave1.md'], true);
+      const parsed = JSON.parse(out);
+      assert.equal(parsed.status, 'error');
+      assert.match(parsed.reason, /current_node/);
+      assert.doesNotMatch(out, /DPT_LOADED_FILE_START/);
+    } finally {
+      chmodSync(statusPath, 0o644);
+    }
+
+    const events = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    assert.equal(events.some(e => e.event === 'load_complete' && e.entry === 'phases/phase-wave1.md'), true);
   });
 });

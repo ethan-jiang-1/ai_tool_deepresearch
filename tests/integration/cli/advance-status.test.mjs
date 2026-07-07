@@ -37,6 +37,7 @@ describe('advance-status CLI', () => {
       state: 'in_progress',
       current_gate: 'hitl1_recorded',
       next_gate: 'setup_ready',
+      current_node: null,
     }, null, 2) + '\n');
   });
 
@@ -113,6 +114,9 @@ describe('advance-status CLI', () => {
   });
 
   it('succeeds after witnessed handoff and writes phase_transition', () => {
+    const statusBefore = JSON.parse(readFileSync(statusPath, 'utf8'));
+    statusBefore.current_node = 'phases/phase-wave1.md';
+    writeFileSync(statusPath, JSON.stringify(statusBefore, null, 2) + '\n');
     writeTrace([gateAttempt(), loadComplete(0)]);
     const result = runAdvance(dir, 'wave0_complete');
     assert.equal(result.status, 'ok');
@@ -122,6 +126,7 @@ describe('advance-status CLI', () => {
     const status = JSON.parse(readFileSync(statusPath, 'utf8'));
     assert.equal(status.current_gate, 'wave0_complete');
     assert.equal(status.next_gate, 'wave1_complete');
+    assert.equal(status.current_node, 'phases/phase-wave1.md');
 
     const events = readFileSync(tracePath, 'utf8').trim().split('\n').map(line => JSON.parse(line));
     assert.ok(events.some(e => e.event === 'phase_transition' && e.to === 'wave0_complete' && e.next === 'wave1_complete'));

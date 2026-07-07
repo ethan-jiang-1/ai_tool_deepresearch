@@ -111,7 +111,7 @@ Agent SHALL 在每个降级步骤记录到 `rb_trace.jsonl`：原问题、已尝
 
 ### 1.5 终端恢复
 
-用户可以在静默阶段关闭终端。系统 SHALL 能从 durable state（`rb_status.json`、`rb_profile.yaml`、`rb_trace.jsonl`）恢复。Agent 恢复时 SHALL 通过 `rb_status.json` 定位当前 phase 继续执行，SHALL NOT 重新开始已完成的工作。
+用户可以在静默阶段关闭终端。系统 SHALL 能从 durable state（`rb_status.json`、`rb_profile.yaml`、`rb_trace.jsonl`）恢复。Agent 恢复时 SHALL 优先通过非空 `rb_status.json.current_node` 定位当前 phase Markdown 继续执行；若该字段为 `null` 或缺失，SHALL 使用 trace/reentry diagnostics，不得只凭 `current_gate` 猜测当前 phase，且 SHALL NOT 重新开始已完成的工作。
 
 ---
 

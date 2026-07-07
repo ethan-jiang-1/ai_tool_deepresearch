@@ -1,6 +1,7 @@
 // @impl INT-001: validate-bundle.mjs integration test
 import { describe, it, before, after } from 'node:test';
 import { spawnSync } from 'node:child_process';
+import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, mkdirSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
@@ -23,6 +24,34 @@ describe('validate-bundle.mjs integration', () => {
     mkdirSync(bundleDir, { recursive: true });
     copyTemplates(bundleDir, 'valid');
     writeFileSync(join(bundleDir, 'rb_trace.jsonl'), '');
+    const result = spawnSync('node', [VALIDATE, bundleDir], { encoding: 'utf-8', timeout: 5000 });
+    if (result.status !== 0) throw new Error(`Expected exit 0, got ${result.status}\n${result.stdout}`);
+    const status = JSON.parse(readFileSync(join(bundleDir, 'rb_status.json'), 'utf-8'));
+    assert.equal(status.current_node, null);
+  });
+
+  it('passes with populated current_node', () => {
+    const bundleDir = join(tmpDir, 'dpt_rb_current_node_populated');
+    mkdirSync(bundleDir, { recursive: true });
+    copyTemplates(bundleDir, 'current-node-populated');
+    writeFileSync(join(bundleDir, 'rb_trace.jsonl'), '');
+    const statusPath = join(bundleDir, 'rb_status.json');
+    const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
+    status.current_node = 'phases/phase-wave1.md';
+    writeFileSync(statusPath, JSON.stringify(status));
+    const result = spawnSync('node', [VALIDATE, bundleDir], { encoding: 'utf-8', timeout: 5000 });
+    if (result.status !== 0) throw new Error(`Expected exit 0, got ${result.status}\n${result.stdout}`);
+  });
+
+  it('passes with legacy status missing current_node', () => {
+    const bundleDir = join(tmpDir, 'dpt_rb_legacy_current_node_absent');
+    mkdirSync(bundleDir, { recursive: true });
+    copyTemplates(bundleDir, 'legacy-current-node-absent');
+    writeFileSync(join(bundleDir, 'rb_trace.jsonl'), '');
+    const statusPath = join(bundleDir, 'rb_status.json');
+    const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
+    delete status.current_node;
+    writeFileSync(statusPath, JSON.stringify(status));
     const result = spawnSync('node', [VALIDATE, bundleDir], { encoding: 'utf-8', timeout: 5000 });
     if (result.status !== 0) throw new Error(`Expected exit 0, got ${result.status}\n${result.stdout}`);
   });

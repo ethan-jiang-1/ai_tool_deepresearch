@@ -172,7 +172,11 @@ function writeWave0Scaffold(bundleDir, {
   topics = [{ id: 't1', slug: 'topic-a', title: 'Topic A' }],
   referenceRows = ['| 00-shared-topic-a.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |'],
 } = {}) {
-  writeMinimalStatus(bundleDir, { current_gate: 'seed_topics_ready', next_gate: 'wave0_complete' });
+  writeMinimalStatus(bundleDir, {
+    current_gate: 'seed_topics_ready',
+    next_gate: 'wave0_complete',
+    current_node: 'phases/phase-wave0.md',
+  });
   writeMinimalPlan(bundleDir, { planBasename, topics });
   writeFileSync(path.join(bundleDir, 'rb_profile.yaml'), [
     `plan_basename: ${planBasename}`,

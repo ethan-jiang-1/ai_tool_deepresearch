@@ -227,6 +227,50 @@ function selectCheckpoint(bundlePath, target) {
 
 const { checkpoint, warnings: checkpointWarnings } = selectCheckpoint(bundlePath, target);
 
+function readStatusPosition(bundlePath) {
+  const statusPath = join(bundlePath, 'rb_status.json');
+  if (!existsSync(statusPath)) {
+    return {
+      readable: false,
+      current_gate: null,
+      next_gate: null,
+      current_node: null,
+      current_node_present: false,
+      current_node_status: 'missing_status',
+      error: 'rb_status.json not found',
+    };
+  }
+
+  try {
+    const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
+    const currentNodePresent = Object.prototype.hasOwnProperty.call(status, 'current_node');
+    const currentNode = currentNodePresent ? status.current_node : null;
+    return {
+      readable: true,
+      current_gate: status.current_gate || null,
+      next_gate: status.next_gate || null,
+      current_node: currentNode ?? null,
+      current_node_present: currentNodePresent,
+      current_node_status: typeof currentNode === 'string' && currentNode.length > 0
+        ? 'populated'
+        : (currentNodePresent ? 'null' : 'absent'),
+      error: null,
+    };
+  } catch (err) {
+    return {
+      readable: false,
+      current_gate: null,
+      next_gate: null,
+      current_node: null,
+      current_node_present: false,
+      current_node_status: 'unparseable_status',
+      error: err.message,
+    };
+  }
+}
+
+const statusPosition = readStatusPosition(bundlePath);
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Audit: status compatibility
 // ═══════════════════════════════════════════════════════════════════════════
@@ -723,6 +767,16 @@ allWarnings.push(...driftAudit.warnings);
 // 6. Checkpoint selection warnings
 allWarnings.push(...checkpointWarnings.map(m => ({ severity: 'info', check: 'checkpoint_selection', message: m })));
 
+if (statusPosition.current_node_status === 'null' || statusPosition.current_node_status === 'absent') {
+  allWarnings.push({
+    severity: 'info',
+    check: 'status_current_node',
+    message: 'rb_status.json lacks a populated current_node; falling back to target/status/trace diagnostics.',
+    detail: { current_node_status: statusPosition.current_node_status },
+  });
+  allAdvice.push('rb_status.json.current_node is not populated; the next successful enter-phase will populate it. Until then, use START_FROM_HERE.md, trace, and reentry diagnostics rather than guessing from current_gate alone.');
+}
+
 // 7. File observability
 let topicSlugs = [];
 try {
@@ -797,6 +851,15 @@ const result = {
     gate: checkpoint.gate_result_ref?.gate,
     passed: checkpoint.gate_result_ref?.passed,
   } : null,
+  runtime_position: {
+    current_node: statusPosition.current_node,
+    current_node_present: statusPosition.current_node_present,
+    current_node_status: statusPosition.current_node_status,
+    current_gate: statusPosition.current_gate,
+    next_gate: statusPosition.next_gate,
+    status_readable: statusPosition.readable,
+    status_error: statusPosition.error,
+  },
   blockers: allBlockers,
   warnings: allWarnings,
   drift: allDrift,

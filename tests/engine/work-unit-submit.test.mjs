@@ -1,6 +1,6 @@
 // @impl DEW-005, AGQ-002, AGO-002, AGO-003, WPG-002, FRE-005
 
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
@@ -113,6 +113,8 @@ describe('submitWorkUnit', () => {
       const submitted = submitWorkUnit(dir, { work_id: second.work_id, resultPath });
       assert.equal(submitted.ok, true);
       assert.equal(submitted.duplicate, false);
+      assert.equal(submitted.queue.delegated_in_flight['queue-b'], undefined);
+      assert.equal(submitted.queue.terminal_history.some((entry) => entry.queue_item_id === 'queue-b' && entry.work_id === second.work_id), true);
 
       const queue = loadQueue(dir);
       assert.ok(queue.delegated_in_flight['queue-a']);
@@ -141,6 +143,69 @@ describe('submitWorkUnit', () => {
       assert.equal(rows[0].work_unit_ref, second.paths.work_unit_dir);
       assert.equal(existsSync(path.join(workUnitsRoot(dir), '_ledger.jsonl')), false);
       assert.equal(readWorkUnitLedgerRows(dir).length, 1);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('fails closed and rolls back when durable queue postcondition is missing', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(dir, record);
+
+      const failed = submitWorkUnit(dir, {
+        work_id: record.work_id,
+        resultPath,
+        afterQueueSave({ bundleDir }) {
+          const queuePath = path.join(bundleDir, 'rb_queue.json');
+          const queue = JSON.parse(readFileSync(queuePath, 'utf-8'));
+          queue.terminal_history = [];
+          writeFileSync(queuePath, `${JSON.stringify(queue, null, 2)}\n`);
+        },
+      });
+
+      assert.equal(failed.ok, false);
+      assert.equal(failed.reason_code, 'queue_postcondition_failed');
+      assert.equal(failed.rollback.restored, true);
+      assert.equal(failed.suspect_state, false);
+      assert.ok(failed.missing_postconditions.some((item) => item.includes('terminal_history')));
+      assert.equal(loadQueue(dir).delegated_in_flight['queue-a'].work_id, record.work_id);
+      assert.equal(loadWorkUnitIndex(dir).work_units[record.work_id].status, 'claimed');
+      assert.throws(() => ledgerRows(dir), /ENOENT/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('marks work-unit and queue completion suspect when rollback cannot be proven', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      const queuePath = path.join(dir, 'rb_queue.json');
+
+      const failed = submitWorkUnit(dir, {
+        work_id: record.work_id,
+        resultPath,
+        afterQueueSave({ bundleDir }) {
+          const queue = JSON.parse(readFileSync(queuePath, 'utf-8'));
+          queue.terminal_history = [];
+          writeFileSync(queuePath, `${JSON.stringify(queue, null, 2)}\n`);
+          chmodSync(queuePath, 0o444);
+        },
+      });
+
+      assert.equal(failed.ok, false);
+      assert.equal(failed.reason_code, 'queue_postcondition_failed');
+      assert.equal(failed.rollback.restored, false);
+      assert.equal(failed.suspect_state, true);
+      assert.match(failed.inspect.join('\n'), /suspect/);
+      chmodSync(queuePath, 0o644);
     } finally {
       cleanup(dir);
     }

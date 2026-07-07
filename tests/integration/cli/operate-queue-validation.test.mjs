@@ -95,21 +95,35 @@ describe('QIV-001 enqueue topic validation', () => {
     assert.ok(out.error.includes('clinical-scenarios'));
   });
 
-  it('3. rejects payload/queue_item_id slug mismatch', () => {
-    const dir = createBundle(unique('mismatch'));
+  it('3. accepts explicit payload topic_slug when queue_item_id has iteration suffix', () => {
+    const dir = createBundle(unique('suffix'));
+    const taskFile = join(dir, 'task.json');
+    writeTaskFile(taskFile, {
+      queue_item_id: 'wave1-deepen-topic-a-v2',
+      payload: { topic_slug: 'topic-a' },
+      producer_rule: 'topic_deepening',
+    });
+    const r = runOq(dir, 'enqueue', '--task', taskFile);
+    const out = JSON.parse(r.stdout);
+    assert.equal(out.ok, true, `Expected explicit topic_slug to override ID suffix, got: ${JSON.stringify(out)}`);
+  });
+
+  it('4. rejects conflicting explicit payload and lineage topic_slug', () => {
+    const dir = createBundle(unique('explicit-conflict'));
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, {
       queue_item_id: 'wave1-deepen-topic-a',
-      payload: { topic_slug: 'topic-b' },
+      payload: { topic_slug: 'topic-a' },
+      lineage: { topic_slug: 'topic-b' },
       producer_rule: 'topic_deepening',
     });
     const r = runOq(dir, 'enqueue', '--task', taskFile);
     const out = JSON.parse(r.stdout);
     assert.equal(out.ok, false);
-    assert.ok(out.error.includes('mismatch'));
+    assert.ok(out.error.includes('conflict'));
   });
 
-  it('4. rejects topic-scoped task with no resolvable slug', () => {
+  it('5. rejects topic-scoped task with no resolvable slug', () => {
     const dir = createBundle(unique('noslug'));
     const taskFile = join(dir, 'task.json');
     writeTaskFile(taskFile, { queue_item_id: 'mystery-deepen-foo', producer_rule: 'topic_deepening' });
@@ -119,7 +133,20 @@ describe('QIV-001 enqueue topic validation', () => {
     assert.ok(out.error.includes('no resolvable topic_slug'));
   });
 
-  it('5. accepts Wave2 finding-scoped backing task without topic_slug', () => {
+  it('6. accepts valid lineage topic_slug without payload topic_slug', () => {
+    const dir = createBundle(unique('lineage'));
+    const taskFile = join(dir, 'task.json');
+    writeTaskFile(taskFile, {
+      queue_item_id: 'wave1-deepen-topic-a-v2',
+      lineage: { topic_slug: 'topic-a' },
+      producer_rule: 'topic_deepening',
+    });
+    const r = runOq(dir, 'enqueue', '--task', taskFile);
+    const out = JSON.parse(r.stdout);
+    assert.equal(out.ok, true, `Expected lineage topic_slug to validate, got: ${JSON.stringify(out)}`);
+  });
+
+  it('7. accepts Wave2 finding-scoped backing task without topic_slug', () => {
     const dir = createBundle(unique('finding'));
     // Create finding-index.yaml so validation checks finding_id
     mkdirSync(join(dir, 'artifacts', 'wave2'), { recursive: true });
@@ -135,7 +162,7 @@ describe('QIV-001 enqueue topic validation', () => {
     assert.equal(out.ok, true);
   });
 
-  it('6. rejects Wave2 finding-scoped task when finding_id not in index', () => {
+  it('8. rejects Wave2 finding-scoped task when finding_id not in index', () => {
     const dir = createBundle(unique('badfinding'));
     mkdirSync(join(dir, 'artifacts', 'wave2'), { recursive: true });
     writeFileSync(join(dir, 'artifacts/wave2/finding-index.yaml'), 'findings:\n  - id: W2F-001\n');

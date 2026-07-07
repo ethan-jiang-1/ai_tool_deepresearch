@@ -16,7 +16,7 @@
 ## 控制文件
 - rb_plan.md       — 话题设计 (Markdown + JSON frontmatter)
 - rb_profile.yaml  — 用户意图 (YAML)
-- rb_status.json   — 运行时状态 (JSON)
+- rb_status.json   — 运行时状态 (JSON)。非空 `current_node` 是当前已加载 lifecycle Markdown control surface；`current_gate`/`next_gate` 是 gate window。
 - rb_queue.json    — 执行队列 (JSON)
 - rb_trace.jsonl   — runtime audit trace (JSON Lines, append-only)
 - rb_output_declarations.jsonl — submitted work-unit output declaration ledger（由 `operate-work-unit submit` 写入，gate 读取 delegated Agent 产物的唯一发现面）
@@ -44,7 +44,7 @@
 
 ## 规则
 - 当前 run 的 truth 只来自本 bundle 的控制文件、declaration ledger、数据目录和 trace。
-- 续跑口诀: 先读 `START_FROM_HERE.md`、`rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`；用 repo root 执行框架命令，用 bundle path 定位 runtime truth；`_logs/run.log` 只用于排障，不能靠聊天记忆或 log 推断当前状态。
+- 续跑口诀: 先读 `START_FROM_HERE.md`、`rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`；若 `rb_status.json.current_node` 非空，优先从该 phase Markdown node 续跑；若为 `null` 或缺失，运行 reentry/trace 诊断，不要只凭 `current_gate` 猜 phase；用 repo root 执行框架命令，用 bundle path 定位 runtime truth；`_logs/run.log` 只用于排障，不能靠聊天记忆或 log 推断当前状态。
 - Delegated Agent 产物进入 gate 前必须经过 work-unit result + runtime receipt → `operate-work-unit submit` → `rb_output_declarations.jsonl`；未提交声明文件不能帮助 gate pass。
 - 不要把 HITL answer、gate result、repair state、trace、artifact 或 final output 写回 `../DPT_FRAMEWORK/`。
 - 停止授权: 仅 final_delivery / decision_blocker / empty_queue_after_refill

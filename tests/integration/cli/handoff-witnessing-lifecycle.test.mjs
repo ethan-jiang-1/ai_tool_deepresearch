@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-// AGT-010 standard E2E for harden-phase-handoff-witnessing.
+// Integration lifecycle coverage for harden-phase-handoff-witnessing.
 // Uses real disposable bundles and real framework CLIs. Fixture writes stage
 // Agent-produced artifacts only; gate_attempt/load_complete/phase_transition
 // evidence must be emitted by the production CLIs under test.
 
 import { spawnSync } from 'node:child_process';
+import { describe, it } from 'node:test';
 import {
   appendFileSync,
   existsSync,
@@ -18,10 +19,9 @@ import { basename, join } from 'node:path';
 import {
   claimAndSubmitFixtureWorkUnit,
   readWorkUnitLedgerRows,
-} from '../../experiments_env/shared/work-unit-playbook-utils.mjs';
+} from '../../../experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const REPO_ROOT = process.cwd();
-const CASE_ID = 'case-501-standard-handoff-witnessing';
 const bundles = [];
 const checks = [];
 const healthReports = [];
@@ -62,6 +62,17 @@ function tracePath(bundle) {
 function traceEvents(bundle) {
   const raw = readFileSync(tracePath(bundle), 'utf8').trim();
   return raw ? raw.split('\n').filter(Boolean).map(line => JSON.parse(line)) : [];
+}
+
+function readStatus(bundle) {
+  return JSON.parse(readFileSync(join(bundle, 'rb_status.json'), 'utf8'));
+}
+
+function assertCurrentNode(bundle, expected, context) {
+  const status = readStatus(bundle);
+  if (status.current_node !== expected) {
+    throw new Error(`${context}: expected rb_status.current_node=${expected}, got ${status.current_node}`);
+  }
 }
 
 function appendTrace(bundle, event) {
@@ -241,6 +252,7 @@ function enterPhase(bundle, nodeRef, { expectSuccess = true } = {}) {
     if (result.status !== 0) {
       throw new Error(`enter-phase ${nodeRef} failed\n${result.stdout}\n${result.stderr}`);
     }
+    assertCurrentNode(bundle, nodeRef, `enter-phase ${nodeRef}`);
     return { status: result.status, stdout: result.stdout, json: null };
   }
 
@@ -250,6 +262,7 @@ function enterPhase(bundle, nodeRef, { expectSuccess = true } = {}) {
 }
 
 function advanceStatus(bundle, gateEnum, { expectSuccess = true } = {}) {
+  const priorCurrentNode = expectSuccess ? readStatus(bundle).current_node : undefined;
   const result = runNode([
     'DPT_FRAMEWORK/cli/advance-status.mjs',
     '--bundle',
@@ -262,6 +275,9 @@ function advanceStatus(bundle, gateEnum, { expectSuccess = true } = {}) {
     json = JSON.parse(result.stdout.trim());
   } catch (err) {
     throw new Error(`advance-status ${gateEnum} did not emit JSON: ${err.message}\n${result.stdout}\n${result.stderr}`);
+  }
+  if (expectSuccess) {
+    assertCurrentNode(bundle, priorCurrentNode, `advance-status ${gateEnum}`);
   }
   return { status: result.status, json };
 }
@@ -749,36 +765,10 @@ function runHealthChecks() {
   }
 }
 
-function recordVerdict(pass) {
-  mkdirSync(join(REPO_ROOT, '_temp'), { recursive: true });
-  appendFileSync(join(REPO_ROOT, '_temp/exp_verdicts.jsonl'), JSON.stringify({
-    ts: new Date().toISOString(),
-    case: CASE_ID,
-    verdict: pass ? 'PASS' : 'FAIL',
-    bundles: bundles.map(b => basename(b)),
-    health: healthReports.map(h => ({
-      bundle: basename(h.bundle),
-      status: h.status,
-      exit_code: h.exit_code,
-      issues: h.issues.slice(0, 10),
-    })),
-    checks: checks.map(c => ({
-      bundle: basename(c.bundle),
-      gate: c.gate,
-      passed: c.passed,
-      expected: c.expected,
-    })),
-  }) + '\n');
-}
-
-function cleanupOnPass(pass) {
-  if (!pass) {
-    console.log(`Preserved bundles for diagnosis:\n${bundles.join('\n')}`);
-    return;
-  }
+function cleanupAfterTest(pass) {
   const healthIssue = healthReports.some(h => h.status !== 'clean');
-  if (healthIssue) {
-    console.log(`Preserved bundles because post-run health reported ISSUES:\n${bundles.join('\n')}`);
+  if (!pass || healthIssue) {
+    console.log(`Preserved bundles for diagnosis:\n${bundles.join('\n')}`);
     return;
   }
   for (const bundle of bundles) {
@@ -787,20 +777,23 @@ function cleanupOnPass(pass) {
   console.log(`Cleaned ${bundles.length} disposable bundle(s).`);
 }
 
-try {
-  continueMainLifecycle();
-  runRerunBranch();
-  runSupersededBranch();
-  const pass = finalVerdict();
-  runHealthChecks();
-  recordVerdict(pass);
-  cleanupOnPass(pass);
-  process.exit(pass ? 0 : 1);
-} catch (err) {
-  console.error(err.stack || err.message);
-  const pass = finalVerdict();
-  runHealthChecks();
-  recordVerdict(false);
-  cleanupOnPass(false);
-  process.exit(pass ? 0 : 1);
-}
+describe('handoff witnessing lifecycle integration', { timeout: 180000 }, () => {
+  it('prevents status laundering across normal, HITL2 rerun, and superseded-pass paths', () => {
+    let pass = false;
+    let thrown = null;
+    try {
+      continueMainLifecycle();
+      runRerunBranch();
+      runSupersededBranch();
+      pass = finalVerdict();
+    } catch (err) {
+      thrown = err;
+      finalVerdict();
+    } finally {
+      runHealthChecks();
+      cleanupAfterTest(pass && !thrown);
+    }
+    if (thrown) throw thrown;
+    if (!pass) throw new Error('handoff witnessing lifecycle checks failed');
+  });
+});

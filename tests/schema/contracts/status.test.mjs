@@ -46,6 +46,19 @@ describe('StatusSchema', () => {
     assert.ok(StatusSchema.safeParse(valid).success);
   });
 
+  it('accepts initial current_node null', () => {
+    assert.ok(StatusSchema.safeParse({ ...valid, current_node: null }).success);
+  });
+
+  it('accepts populated current_node workflow node refs', () => {
+    assert.ok(StatusSchema.safeParse({ ...valid, current_node: 'phases/phase-wave1.md' }).success);
+  });
+
+  it('rejects invalid current_node values', () => {
+    assert.ok(!StatusSchema.safeParse({ ...valid, current_node: '../phase-wave1.md' }).success);
+    assert.ok(!StatusSchema.safeParse({ ...valid, current_node: 'phase-wave1' }).success);
+  });
+
   it('accepts and preserves bundle field', () => {
     const result = StatusSchema.safeParse({ ...valid, bundle: 'my-research' });
     assert.ok(result.success);

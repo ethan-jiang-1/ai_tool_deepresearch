@@ -57,6 +57,8 @@ describe('instantiate-run-bundle.mjs integration', () => {
     const logsReadme = readFileSync(join(dir, '_logs/README.md'), 'utf-8');
     assert.ok(logsReadme.includes('run.log') && logsReadme.includes('rb_trace.jsonl'),
       '_logs/README.md should explain the log and trace file inventory');
+    const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf-8'));
+    assert.equal(status.current_node, null);
   });
 
   it('fails on name collision without overwriting existing content', () => {

@@ -2,7 +2,7 @@
 // enter-phase.mjs — Agent-facing lifecycle node entry witness
 // @impl CPT-003
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -47,6 +47,11 @@ if (!existsSync(tracePath)) {
   fail(`rb_trace.jsonl not found in ${bundlePath}`);
 }
 
+const statusPath = join(bundlePath, 'rb_status.json');
+if (!existsSync(statusPath)) {
+  fail(`rb_status.json not found in ${bundlePath}`);
+}
+
 const authorization = validateEnterPhaseTarget(bundlePath, targetNode);
 if (!authorization.ok) {
   fail(authorization.reason, authorization.advice || []);
@@ -85,6 +90,17 @@ if (!result || result.status !== 'loaded') {
   fail(`Failed to load node "${targetNode}": ${result?.error || 'unknown loader error'}`);
 }
 
+try {
+  const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
+  status.current_node = targetNode;
+  writeFileSync(statusPath, JSON.stringify(status, null, 2) + '\n');
+} catch (err) {
+  fail(
+    `Failed to write rb_status.json current_node after load_complete: ${err.message}`,
+    ['Treat this as a partial phase-entry failure; repair or retry through Engine tooling before continuing.'],
+  );
+}
+
 const sections = [];
 for (const fileRef of result.plan || []) {
   const entry = runtime.contentCache.get(fileRef);
@@ -96,4 +112,3 @@ for (const fileRef of result.plan || []) {
 
 console.log(sections.join('\n\n'));
 process.exit(0);
-

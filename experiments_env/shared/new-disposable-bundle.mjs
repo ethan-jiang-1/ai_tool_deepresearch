@@ -100,6 +100,7 @@ const statusDefault = {
   state: 'not_started',
   current_gate: 'setup_ready',
   next_gate: 'seed_topics_ready',
+  current_node: null,
 };
 StatusSchema.parse(statusDefault);
 writeFileSync(join(bundleDir, 'rb_status.json'), JSON.stringify(statusDefault, null, 2) + '\n');

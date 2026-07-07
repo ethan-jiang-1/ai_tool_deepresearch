@@ -954,6 +954,116 @@ function validateQueueBindingForSubmit(bundleDir, record, manifest) {
   return queue;
 }
 
+function captureFileSnapshot(filePath) {
+  return existsSync(filePath)
+    ? { exists: true, content: readFileSync(filePath) }
+    : { exists: false, content: null };
+}
+
+function restoreFileSnapshot(filePath, snapshot) {
+  if (snapshot.exists) {
+    writeFileSync(filePath, snapshot.content);
+  } else {
+    rmSync(filePath, { force: true });
+  }
+}
+
+function captureSubmitSnapshot(bundleDir, record) {
+  const files = [
+    workUnitIndexPath(bundleDir),
+    path.join(bundleDir, 'rb_queue.json'),
+    ledgerPath(bundleDir),
+    path.join(bundleDir, record.paths.result_ref),
+    path.join(bundleDir, record.paths.status_ref),
+  ];
+  return files.map((filePath) => ({ filePath, snapshot: captureFileSnapshot(filePath) }));
+}
+
+function restoreSubmitSnapshot(snapshot) {
+  const failures = [];
+  for (const entry of snapshot.slice().reverse()) {
+    try {
+      restoreFileSnapshot(entry.filePath, entry.snapshot);
+    } catch (err) {
+      failures.push({ path: entry.filePath, reason: err.message || String(err) });
+    }
+  }
+  return { ok: failures.length === 0, failures };
+}
+
+function verifySubmitDurablePostcondition(bundleDir, record) {
+  const missing = [];
+  let queue = null;
+  let index = null;
+
+  try {
+    queue = loadQueue(bundleDir);
+  } catch (err) {
+    missing.push(`rb_queue.json reload failed: ${err.message || String(err)}`);
+  }
+
+  if (queue) {
+    if (queue.delegated_in_flight?.[record.queue_item_id]) {
+      missing.push(`rb_queue.json delegated_in_flight still contains ${record.queue_item_id}`);
+    }
+    const hasTerminal = (queue.terminal_history || []).some((entry) => (
+      entry.queue_item_id === record.queue_item_id &&
+      entry.work_id === record.work_id &&
+      entry.terminal_status === 'done'
+    ));
+    if (!hasTerminal) {
+      missing.push(`rb_queue.json terminal_history lacks done record for ${record.queue_item_id}/${record.work_id}`);
+    }
+  }
+
+  try {
+    index = loadWorkUnitIndex(bundleDir, { createIfMissing: false });
+    if (index.work_units?.[record.work_id]?.status !== 'submitted') {
+      missing.push(`_work_units/_index.json does not mark ${record.work_id} submitted`);
+    }
+  } catch (err) {
+    missing.push(`_work_units/_index.json reload failed: ${err.message || String(err)}`);
+  }
+
+  try {
+    const ledgerRow = findSubmittedLedgerRow(bundleDir, record.work_id);
+    if (!ledgerRow || ledgerRow.queue_item_id !== record.queue_item_id) {
+      missing.push(`rb_output_declarations.jsonl lacks submitted ledger row for ${record.work_id}`);
+    }
+  } catch (err) {
+    missing.push(`rb_output_declarations.jsonl reload failed: ${err.message || String(err)}`);
+  }
+
+  return { ok: missing.length === 0, missing, queue, index };
+}
+
+function buildSubmitDurabilityFailure(prepared, error, rollback) {
+  const missing = error.missing_postconditions || [error.message || String(error)];
+  const rollbackFailures = rollback?.failures || [];
+  return {
+    ok: false,
+    work_id: prepared.record.work_id,
+    queue_item_id: prepared.record.queue_item_id,
+    status: rollback?.ok ? 'claimed' : 'suspect',
+    reason_code: 'queue_postcondition_failed',
+    reason: `Submit durable queue postcondition failed: ${missing.join('; ')}`,
+    missing_postconditions: missing,
+    rollback: {
+      attempted: true,
+      restored: Boolean(rollback?.ok),
+      failures: rollbackFailures,
+    },
+    suspect_state: !rollback?.ok,
+    inspect: [
+      ...missing.map((item) => `Missing submit postcondition: ${item}`),
+      ...(rollback?.ok
+        ? ['Submit writes were rolled back to the prior durable state.']
+        : ['Submit rollback could not be proven; work-unit/queue completion state is suspect.']),
+    ],
+    advice: 'Repair through Engine queue/work-unit tooling; do not hand-edit rb_queue.json or work-unit ledgers.',
+  };
+}
+
 function buildLedgerRow({ record, result, resultHash, declaredAt }) {
   const base = {
     declared_at: declaredAt,
@@ -1146,7 +1256,7 @@ function prepareWorkUnitSubmit(bundleDir, { work_id, resultPath }) {
   return { duplicate: false, index, record, manifest, queue, result, result_hash: resultHash, ledger_row: ledgerRow, ledger_record_hash: ledgerRow.ledger_record_hash };
 }
 
-export function submitWorkUnit(bundleDir, { work_id, resultPath } = {}) {
+export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave = null } = {}) {
   let prepared;
   try {
     prepared = prepareWorkUnitSubmit(bundleDir, { work_id, resultPath });
@@ -1165,91 +1275,113 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath } = {}) {
     };
   }
 
-  return withWorkUnitTransaction(bundleDir, 'submit_work_unit', ({ tx_id }) => {
-    const index = prepared.index;
-    let queue = prepared.queue;
-    const record = index.work_units[prepared.record.work_id];
-    const submittedAt = now();
+  try {
+    return withWorkUnitTransaction(bundleDir, 'submit_work_unit', ({ tx_id }) => {
+      const index = prepared.index;
+      let queue = prepared.queue;
+      const record = index.work_units[prepared.record.work_id];
+      const submittedAt = now();
+      const snapshot = captureSubmitSnapshot(bundleDir, record);
 
-    writeJson(path.join(bundleDir, record.paths.result_ref), prepared.result);
-    writeJson(path.join(bundleDir, record.paths.status_ref), WorkUnitStatusFileSchema.parse({
-      work_id: record.work_id,
-      status: 'submitted',
-      result_hash: prepared.result_hash,
-      ledger_record_hash: prepared.ledger_record_hash,
-      updated_at: submittedAt,
-    }));
+      try {
+        writeJson(path.join(bundleDir, record.paths.result_ref), prepared.result);
+        writeJson(path.join(bundleDir, record.paths.status_ref), WorkUnitStatusFileSchema.parse({
+          work_id: record.work_id,
+          status: 'submitted',
+          result_hash: prepared.result_hash,
+          ledger_record_hash: prepared.ledger_record_hash,
+          updated_at: submittedAt,
+        }));
 
-    record.status = 'submitted';
-    record.result_hash = prepared.result_hash;
-    record.ledger_record_hash = prepared.ledger_record_hash;
-    record.terminal_at = submittedAt;
-    index.work_units[record.work_id] = record;
+        record.status = 'submitted';
+        record.result_hash = prepared.result_hash;
+        record.ledger_record_hash = prepared.ledger_record_hash;
+        record.terminal_at = submittedAt;
+        index.work_units[record.work_id] = record;
 
-    delete queue.delegated_in_flight[record.queue_item_id];
-    queue.terminal_history.push({
-      queue_item_id: record.queue_item_id,
-      terminal_status: 'done',
-      completed_at: submittedAt,
-      work_id: record.work_id,
-      reason: prepared.result.summary || undefined,
-      item: prepared.manifest.queue_item,
+        delete queue.delegated_in_flight[record.queue_item_id];
+        queue.terminal_history.push({
+          queue_item_id: record.queue_item_id,
+          terminal_status: 'done',
+          completed_at: submittedAt,
+          work_id: record.work_id,
+          reason: prepared.result.summary || undefined,
+          item: prepared.manifest.queue_item,
+        });
+        queue = refill(queue);
+
+        appendLedgerRow(bundleDir, prepared.ledger_row);
+        const savedIndex = saveWorkUnitIndex(bundleDir, index);
+        const savedQueue = saveQueue(bundleDir, queue);
+        if (typeof afterQueueSave === 'function') {
+          afterQueueSave({ bundleDir, record: clone(record), savedQueue: clone(savedQueue), savedIndex: clone(savedIndex) });
+        }
+
+        const postcondition = verifySubmitDurablePostcondition(bundleDir, record);
+        if (!postcondition.ok) {
+          const err = new Error(`submit durable queue postcondition failed: ${postcondition.missing.join('; ')}`);
+          err.missing_postconditions = postcondition.missing;
+          throw err;
+        }
+
+        traceWorkUnitEvent(bundleDir, 'work_unit_ledger_appended', {
+          tx_id,
+          work_id: record.work_id,
+          queue_item_id: record.queue_item_id,
+          ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
+          ledger_record_hash: prepared.ledger_record_hash,
+          output_count: (prepared.ledger_row.output_files || []).length,
+          cache_trail_count: (prepared.ledger_row.cache_trails || []).length,
+        });
+        logToRun(bundleDir, 'info', 'work_unit_ledger_appended', {
+          kind: 'ledger_append',
+          tx_id,
+          work_id: record.work_id,
+          queue_item_id: record.queue_item_id,
+          ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
+          ledger_record_hash: prepared.ledger_record_hash,
+        });
+        traceWorkUnitEvent(bundleDir, 'work_unit_submitted', {
+          tx_id,
+          work_id: record.work_id,
+          queue_item_id: record.queue_item_id,
+          wave: record.wave,
+          kind: record.kind,
+          receipt_nonce: record.receipt_nonce,
+          result_hash: prepared.result_hash,
+          ledger_record_hash: prepared.ledger_record_hash,
+        });
+        logToRun(bundleDir, 'info', 'work_unit_submitted', {
+          kind: 'work_unit_submit',
+          tx_id,
+          work_id: record.work_id,
+          queue_item_id: record.queue_item_id,
+          result_hash: prepared.result_hash,
+          ledger_record_hash: prepared.ledger_record_hash,
+        });
+
+        return {
+          ok: true,
+          duplicate: false,
+          work_id: record.work_id,
+          queue_item_id: record.queue_item_id,
+          status: 'submitted',
+          result_hash: prepared.result_hash,
+          ledger_record_hash: prepared.ledger_record_hash,
+          ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
+          queue: postcondition.queue,
+          index: postcondition.index,
+        };
+      } catch (error) {
+        const rollback = restoreSubmitSnapshot(snapshot);
+        error.submit_failure_payload = buildSubmitDurabilityFailure(prepared, error, rollback);
+        throw error;
+      }
     });
-    queue = refill(queue);
-
-    appendLedgerRow(bundleDir, prepared.ledger_row);
-    traceWorkUnitEvent(bundleDir, 'work_unit_ledger_appended', {
-      tx_id,
-      work_id: record.work_id,
-      queue_item_id: record.queue_item_id,
-      ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
-      ledger_record_hash: prepared.ledger_record_hash,
-      output_count: (prepared.ledger_row.output_files || []).length,
-      cache_trail_count: (prepared.ledger_row.cache_trails || []).length,
-    });
-    logToRun(bundleDir, 'info', 'work_unit_ledger_appended', {
-      kind: 'ledger_append',
-      tx_id,
-      work_id: record.work_id,
-      queue_item_id: record.queue_item_id,
-      ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
-      ledger_record_hash: prepared.ledger_record_hash,
-    });
-    const savedIndex = saveWorkUnitIndex(bundleDir, index);
-    const savedQueue = saveQueue(bundleDir, queue);
-
-    traceWorkUnitEvent(bundleDir, 'work_unit_submitted', {
-      tx_id,
-      work_id: record.work_id,
-      queue_item_id: record.queue_item_id,
-      wave: record.wave,
-      kind: record.kind,
-      receipt_nonce: record.receipt_nonce,
-      result_hash: prepared.result_hash,
-      ledger_record_hash: prepared.ledger_record_hash,
-    });
-    logToRun(bundleDir, 'info', 'work_unit_submitted', {
-      kind: 'work_unit_submit',
-      tx_id,
-      work_id: record.work_id,
-      queue_item_id: record.queue_item_id,
-      result_hash: prepared.result_hash,
-      ledger_record_hash: prepared.ledger_record_hash,
-    });
-
-    return {
-      ok: true,
-      duplicate: false,
-      work_id: record.work_id,
-      queue_item_id: record.queue_item_id,
-      status: 'submitted',
-      result_hash: prepared.result_hash,
-      ledger_record_hash: prepared.ledger_record_hash,
-      ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
-      queue: savedQueue,
-      index: savedIndex,
-    };
-  });
+  } catch (error) {
+    if (error.submit_failure_payload) return error.submit_failure_payload;
+    throw error;
+  }
 }
 
 function statusToEvent(status) {
