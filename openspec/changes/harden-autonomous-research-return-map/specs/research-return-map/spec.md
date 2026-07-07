@@ -8,6 +8,8 @@ Wave0, Wave1, and Wave2 return/backfill surfaces SHALL include an Agent-readable
 
 The return map is a navigation and interpretation layer over existing authority surfaces. It SHALL NOT replace submitted work-unit ledger rows, `reference/*.md`, `artifacts/waveN/...`, `_cache/...`, or `finding-index.yaml`, and it SHALL NOT make filesystem-only or undeclared evidence count for gate coverage.
 
+Return-map shape checks SHALL be implemented as Agent-facing guidance, task/backfill validation, inspect output, or advice. Missing or malformed return-map fields SHALL NOT by themselves establish or revoke delegated gate coverage, phase handoff evidence, readiness evidence, final delivery evidence, or submitted work-unit authority.
+
 Each important return-map entry SHALL include at least:
 
 - a short evidence meaning or claim summary;
@@ -28,6 +30,12 @@ Each important return-map entry SHALL include at least:
 - **WHEN** a return-map entry links to a filesystem-only reference that lacks submitted work-unit ledger coverage
 - **THEN** the map MAY describe it as cleanup or forensic context
 - **AND** it SHALL NOT make that reference count as delegated gate coverage
+
+#### Scenario: Return-map validation is diagnostic only
+
+- **WHEN** an inspect/advice command reports missing `evidence_meaning`, `relationship`, `refs`, `status`, or `next_hop`
+- **THEN** the diagnostic SHALL direct the Agent to repair the map or backfill shape
+- **AND** it SHALL NOT treat the map shape as a substitute for submitted work-unit rows, gate attempts, phase handoff witnesses, or final delivery evidence
 
 ### Requirement: Seed-topic backfill SHALL preserve traceable meaning, not only evidence lists or conclusions
 
@@ -60,5 +68,5 @@ Agent-facing workflow/shared docs, work-unit tasks, and wave phase instructions 
 #### Scenario: Missing map receives repair-targeted feedback
 
 - **WHEN** a seed-topic backfill or wave artifact contains only unsupported prose or only an evidence list
-- **THEN** inspect/advice SHOULD name the missing return-map fields
-- **AND** advice SHOULD direct the Agent to add meaning, relationship, refs, status, and next-hop entries rather than bypassing the gate or surfacing to the user
+- **THEN** inspect/advice SHALL name the missing return-map fields
+- **AND** advice SHALL direct the Agent to add meaning, relationship, refs, status, and next-hop entries rather than bypassing the gate or surfacing to the user

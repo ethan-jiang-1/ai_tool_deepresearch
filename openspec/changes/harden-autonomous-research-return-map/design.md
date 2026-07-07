@@ -35,9 +35,35 @@ The important design constraint is not to make gate authority softer. Ledger-onl
 - No old relay/slot compatibility.
 - No filesystem/hybrid fallback that lets undeclared reference files count for delegated gate coverage.
 - No change that makes the return map a new evidence authority; it is Agent navigation/projection over existing reference, cache, work-unit ledger, and finding artifacts.
+- No gate pass/fail semantic change from return-map shape alone; return-map checks are inspect/advice or task-shape diagnostics unless a separate accepted gate contract later says otherwise.
 - No JS lifecycle walker that takes over multi-phase Agent Flow.
 - No claim that the engine can intercept every future chat message before the LLM emits it.
+- No status auto-repair, status rewrite, or degradation route invented by the phase drift audit.
+- No interpretation that `surfacing_intent` grants permission to surface during `stop: no`.
 - No direct repair of the historical `dpt_rb_aidlc-investigation/` bundle as part of proposal; it is evidence for implementation, not the source of accepted behavior.
+
+## Authority Guardrails During Apply
+
+This change intentionally hardens several adjacent surfaces at once. During implementation, keep these authority boundaries load-bearing:
+
+- Work-unit submit and `rb_output_declarations.jsonl` remain the only delegated gate coverage authority. Filesystem-only outputs, cache leaves, and return-map links can support diagnostics or repair context, but cannot pass delegated coverage.
+- Return-map validators or inspectors may report missing shape, unsupported prose, naked evidence lists, stale refs, or poor re-entry pointers. They must not treat return-map entries as evidence authority, ledger substitutes, gate handoff evidence, or readiness/final delivery evidence.
+- Cache content checks strengthen declared cache trails only after the normal work-unit ledger and binding path exists. They must not make undeclared `_cache/` files count.
+- Phase status drift audit derives and reports the legal window. It must not mutate `rb_status.json`, repair trace, choose a next phase, or create a degradation bypass.
+- `surfacing_intent` is a diagnostic "would-have-surfaced" record followed by aborting the user-facing surfacing path. It is not a permission token, HITL authorization, final delivery evidence, or gate/handoff evidence.
+- Repo-root leak diagnostics should name leaks and their suspected active-bundle association. Old unrelated debris may be diagnostic noise; it becomes a blocker only when it can affect the active bundle's current work-unit/output/cache/status authority.
+
+## Validation Strategy
+
+The apply phase should treat `_backlog/bugs/BUG-033` and `BUG-037` through `BUG-043` as bug-probe seeds, not just background reading. Each bug-probe should become a minimal replay asset that preserves the failure's important shape: the status window, trace witnesses, ledger row, work-unit envelope, cache leaf, source YAML shape, or Agent-facing prompt surface that made the historical run fail.
+
+Use the lightest proof boundary that still exercises the real authority layer:
+
+- Unit tests for deterministic classifiers, parsers, diagnostics, wording validators, return-map shape checks, hash/binding comparisons, and phase-audit outcome selection.
+- Integration tests for production CLIs, gates, submit paths, inspections, and bundle-shaped fixtures where the behavior depends on cross-file runtime state.
+- Controlled `experiments_playbook/` cases only when the question is Agent-facing behavior: whether a Markdown-driven Phase Agent reads Engine feedback and continues, whether a real Sub-agent writes files before returning, whether `stop: no` surfacing intent is logged and aborted, or whether a playbook-level feedback loop remains silent and phase-bound.
+
+Fixture-backed regression tests must be honest about what they prove. They can prove that the Engine rejects a malformed result, diagnoses a missing ledger row, or refuses an impossible status window. They do not prove real Agent search, writing, synthesis, or compliance unless a controlled experiment actually exercises that actor path through the same production boundary.
 
 ## Decisions
 
@@ -115,7 +141,7 @@ If an Agent writes `final/report.md` from wave0, wave1, wave2, or any other non-
 
 ### Surface-intent logging is observability, not interception
 
-The user’s wish is useful: when the Agent knows it is about to ask the user, present progress, or stop for input during `stop: no`, the framework should have a way to record that intent. The realistic contract is Agent-facing: shared silent guidance tells the Agent to log `surfacing_intent` through an Engine trace/log CLI before any prohibited surfacing attempt, then continue/repair/hold silently instead of surfacing.
+The user’s wish is useful: when the Agent knows it is about to ask the user, present progress, or stop for input during `stop: no`, the framework should have a way to record that intent. The realistic contract is Agent-facing: shared silent guidance tells the Agent to log `surfacing_intent` through an Engine trace/log CLI as a would-have-surfaced diagnostic, then abort the user-facing surfacing path and continue/repair/hold silently instead.
 
 If the Agent lacks tool access or the model is already emitting the chat response, the engine may not be able to intercept it. Diagnostics can flag missing/illegal surfacing evidence after the fact, but must not overclaim.
 

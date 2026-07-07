@@ -72,6 +72,7 @@ prefixes:
   RTI: rerun-topic-integration
   REL: repair-loop
   RES: research-styles
+  RRM: research-return-map
   RET: requirement-traceability
   RRD: runtime-reentry-debuggability
   RUE: run-entry
@@ -680,6 +681,11 @@ RES-004: research-styles — Phase MD references style-specific targets from pro
 RES-005: "research-styles — Debug style (user_visible: false) hidden from HITL1, available for dev/testing"
 RES-006: research-styles — Supplementary task cards SHALL NOT produce placeholder references (three-layer defense)
 
+# research-return-map
+RRM-001: research-return-map — Research wave returns include Agent-readable evidence-to-claim maps
+RRM-002: research-return-map — Seed-topic backfill preserves traceable meaning rather than only evidence lists or conclusions
+RRM-003: research-return-map — Shared guidance teaches the same return-map shape across waves
+
 # cache-raw-web-content
 CRC-001: "cache-raw-web-content — Standardized _cache/ directory structure (wave/batch/scope/source four levels)"
 CRC-002: "cache-raw-web-content — Cache path delivery via spawn prompt (Cache directory line)"
@@ -687,3 +693,4 @@ CRC-003: "cache-raw-web-content — source-slug consistency between _cache/ and 
 CRC-004: "cache-raw-web-content — Cache is non-authority and deletable after dependent provenance verdicts; _cache/README.md created at instantiation"
 CRC-005: cache-raw-web-content — cache_trails SHALL be Engine-populated during work-unit submit or accepted Engine completion rather than Agent-declared or empty
 CRC-006: cache-raw-web-content — Gate cache_coverage rule cross-validates declaration cache_trails with filesystem
+CRC-007: cache-raw-web-content — Declared cache trails preserve fetched content or explicit degraded-capture records

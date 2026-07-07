@@ -4,17 +4,17 @@
 
 ### Requirement: Stop:no surfacing intent SHALL be recorded before any prohibited user-facing pause when the Agent can identify the intent
 
-During a non-terminal lifecycle phase with `stop: no`, the Agent SHALL NOT ask the user questions, request confirmation, present progress, deliver partial findings, offer A/B choices, or pause for user input. If the Agent nevertheless detects that it is about to surface to the user during such a phase, it SHALL first record a diagnostic `surfacing_intent` trace/log event naming the active node, active bundle, intended surfacing type, and reason, then continue repair, strategy change, degradation, or silent hold according to the silent execution contract.
+During a non-terminal lifecycle phase with `stop: no`, the Agent SHALL NOT ask the user questions, request confirmation, present progress, deliver partial findings, offer A/B choices, or pause for user input. If the Agent nevertheless detects that it is about to surface to the user during such a phase, it SHALL record a diagnostic `surfacing_intent` trace/log event naming the active node, active bundle, intended surfacing type, and reason, then abort the user-facing surfacing path and continue repair, strategy change, degradation, or silent hold according to the silent execution contract.
 
 This requirement is an observability contract for Agent-facing control surfaces. `surfacing_intent` SHALL NOT be treated as gate pass evidence, handoff evidence, status synchronization evidence, HITL authorization, or permission to surface. It SHALL NOT claim deterministic interception of every chat message; if the model emits prohibited chat without logging intent, post-run diagnostics MAY report missing surfacing-intent evidence or illegal surfacing suspicion.
 
-#### Scenario: Agent logs known surfacing intent before prohibited pause
+#### Scenario: Agent logs known surfacing intent and aborts prohibited pause
 
 - **WHEN** the Agent is in a non-terminal `stop: no` phase
 - **AND** it intends to ask the user whether to continue, present partial findings, or wait for input
-- **THEN** it SHALL write a diagnostic `surfacing_intent` event before surfacing
+- **THEN** it SHALL write a diagnostic `surfacing_intent` event as a would-have-surfaced record
 - **AND** the event SHALL include active bundle, node, intent type, and reason
-- **AND** the Agent SHALL follow the silent execution contract instead of pausing for user input
+- **AND** the Agent SHALL abort the user-facing surfacing path and follow the silent execution contract instead of pausing for user input
 
 #### Scenario: No tool access does not create permission to surface
 

@@ -10,18 +10,21 @@ Zero-byte `page.md`, placeholder-only content such as `# Cache page for ...`, or
 
 `meta.json` SHALL map the cache leaf back to the source/reference URL using a URL field, source slug, or equivalent mapping already accepted by cache coverage diagnostics. Cache content checks SHALL preserve ledger-only authority: undeclared filesystem cache leaves still do not count for delegated coverage.
 
+The primary enforcement point for delegated cache content SHALL be `operate-work-unit submit` before a ledger row is appended. Wave gates and preflight/audit commands SHALL re-check submitted ledger cache bindings and fail or diagnose drift/incomplete cache content before delegated coverage can pass.
+
 #### Scenario: Placeholder cache page fails content coverage
 
 - **WHEN** a submitted work-unit result declares a cache trail for an accepted reference
 - **AND** the leaf `page.md` contains only a placeholder header or is empty
-- **THEN** submit, gate, or preflight diagnostics SHALL report incomplete cache content
+- **THEN** `operate-work-unit submit` SHALL reject or record incomplete cache content before ledger append
+- **AND** later gate or preflight diagnostics SHALL report incomplete cache content if an already-submitted binding drifts or was accepted by an older path
 - **AND** the diagnostic SHALL name the cache leaf and source/reference path when available
 
 #### Scenario: Fetched content capture satisfies cache content coverage
 
 - **WHEN** `page.md` contains non-empty fetched page text, cleaned page content, or captured excerpts tied to the source URL
 - **AND** `meta.json` maps the leaf to the same source URL or source slug
-- **THEN** the cache leaf MAY satisfy cache content coverage after normal ledger and binding checks pass
+- **THEN** the cache leaf SHALL be eligible to satisfy cache content coverage after normal ledger and binding checks pass
 
 #### Scenario: Degraded capture is explicit
 

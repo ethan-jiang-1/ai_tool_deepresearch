@@ -34,7 +34,7 @@
 - **新增 research return map 契约**：wave0、wave1、wave2 的回填和返回物必须把 evidence-to-claim 关系写成 Agent-readable 地图；每条重要证据/判断要有简短含义、问题/假设/finding 关联、可追踪路径和下一跳阅读线索。
 - **强化 wave gate repair diagnostics**：针对 YAML object-vs-array、missing fields、ledger-only counting、cache trail 映射、hash drift 给出可修复诊断，减少 Agent 用手工状态跳跃“绕过”摩擦。
 - **新增 phase status drift audit**：从 trace、manifest、transition chain、`rb_status.json` 识别 impossible current_gate/next_gate window 和手动 bypass 嫌疑；审计只诊断，不替 Agent 推进状态。
-- **记录 stop:no surfacing intent**：当 Agent 打算在非 HITL `stop: no` 阶段向用户发问、汇报、展示进度或等待输入时，若它知道该时机，必须先写入 trace 级 `surfacing_intent` 诊断；若无法可靠拦截模型输出，则 contract 明确这是 Agent-facing observability，不声称能魔法拦截所有 chat。
+- **记录 stop:no surfacing intent**：当 Agent 识别到自己将要在非 HITL `stop: no` 阶段向用户发问、汇报、展示进度或等待输入时，必须写入 trace/log 级 `surfacing_intent` 作为 would-have-surfaced 诊断，然后中止用户可见浮出并继续修复、换策略、降级或静默 hold；若无法可靠拦截模型输出，则 contract 明确这是 Agent-facing observability，不声称能魔法拦截所有 chat。
 - **BREAKING**：不保留旧 relay/slot 或 hand-written delegated ledger fallback；也不接受为了兼容历史 run 而弱化 work-unit/ledger/gate authority。
 
 ## Capabilities
@@ -58,7 +58,7 @@
 
 ## Impact
 
-- Affected OpenSpec/governance: `openspec/governance/req-registry.yaml`，本 change 的 delta specs 和 tasks；新增 `research-return-map` requirement IDs during apply/governance sync.
+- Affected OpenSpec/governance: `openspec/governance/req-registry.yaml`，本 change 的 delta specs 和 tasks；新增并注册 `research-return-map` requirement IDs。
 - Affected framework implementation during apply: `DPT_FRAMEWORK/engine/work-unit-core.mjs`, `DPT_FRAMEWORK/cli/operate-work-unit.mjs`, `DPT_FRAMEWORK/cli/advance-status.mjs`, `DPT_FRAMEWORK/cli/enter-phase.mjs`, gate helper / wave/readiness gate CLIs, reference/cache helpers, trace/log CLIs, workflow shared/phase Markdown, and seed-topic/wave return-map guidance.
 - Affected tests: root `tests/` regression coverage for work-unit task generation, submit/gate hash drift, bundle leak diagnostics, source/reference format diagnostics, research return-map/backfill structure, phase status drift audit, silent surfacing wording/trace contract.
 - Affected controlled playbooks only after apply review: update or add focused playbook coverage where it can provide real trace-backed PASS without turning into mock execution.

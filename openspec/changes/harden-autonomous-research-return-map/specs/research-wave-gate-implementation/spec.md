@@ -13,7 +13,7 @@ At minimum, wave gates SHALL distinguish YAML parse errors, top-level YAML objec
 - **WHEN** a `source.yaml` file parses as an object with keys such as `wave`, `topic`, or `sources`
 - **THEN** the wave gate SHALL fail the source schema rule
 - **AND** inspect/advice SHALL state that `source.yaml` must be a top-level YAML array
-- **AND** diagnostics SHOULD name the object keys that were found
+- **AND** diagnostics SHALL name the object keys that were found
 
 #### Scenario: Missing source fields receive entry-specific diagnostic
 

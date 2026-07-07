@@ -8,6 +8,8 @@ The phase transition tooling SHALL provide an audit that compares `rb_status.jso
 
 The audit SHALL be diagnostic and fail-closed. It SHALL NOT mutate `rb_status.json`, invent a degradation route, or treat manual edits as valid handoff evidence.
 
+The audit SHALL expose a closed diagnostic outcome vocabulary so downstream advice and tests do not infer ad-hoc meanings. At minimum, outcomes SHALL include `passed`, `status_drift`, `manual_bypass_suspected`, `missing_witness`, `failed_gate_downstream_status`, and `bootstrap_exception`. `bootstrap_exception` SHALL name the explicit compatibility exception that was applied; it SHALL NOT be a generic escape hatch.
+
 #### Scenario: Status claims later phase without trace authorization
 
 - **WHEN** `rb_status.json` claims `current_gate: "hitl2_recorded"` or `next_gate: "readiness_passed"`
@@ -33,3 +35,9 @@ The audit SHALL be diagnostic and fail-closed. It SHALL NOT mutate `rb_status.js
 - **WHEN** trace contains a passed source gate with non-null `next`, a later route-bound `load_complete` for that target, and a matching `phase_transition`
 - **AND** `rb_status.json` reflects the corresponding source-gate status window
 - **THEN** the audit SHALL pass without drift diagnostics
+
+#### Scenario: Bootstrap exception is explicit and narrow
+
+- **WHEN** the audit accepts a bootstrap compatibility status window
+- **THEN** the result SHALL use outcome `bootstrap_exception`
+- **AND** diagnostics SHALL name the exact exception rather than treating arbitrary missing witnesses as acceptable
