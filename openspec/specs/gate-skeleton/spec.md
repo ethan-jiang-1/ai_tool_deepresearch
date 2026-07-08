@@ -1,6 +1,6 @@
 # Gate Skeleton
 
-> req: GSK-001, GSK-002, GSK-003, GSK-004, GSK-005, GSK-006, GSK-007, GSK-008, GSK-009
+> req: GSK-001, GSK-002, GSK-003, GSK-004, GSK-005, GSK-006, GSK-007, GSK-008, GSK-009, GSK-010
 
 ## Purpose
 
@@ -473,4 +473,3 @@ If that evidence is missing, stale, superseded, failed, or unbound, the gate SHA
 - **WHEN** a downstream gate sees both missing handoff evidence and missing/partial downstream artifacts
 - **THEN** the primary inspect/advice output SHALL identify the missing handoff as the root cause
 - **AND** downstream artifact findings MAY appear as cascade details but SHALL NOT obscure the required Engine-mediated repair path
-

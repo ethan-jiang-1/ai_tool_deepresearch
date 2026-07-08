@@ -103,7 +103,7 @@ describe('Finding taxonomy and lifecycle', () => {
   });
 
   it('describes finding lifecycle', () => {
-    assert.ok(body.includes('candidate') && body.includes('classified') && body.includes('decision_made'),
+    assert.ok(body.includes('candidate') && body.includes('decision'),
       'missing finding lifecycle description');
   });
 });

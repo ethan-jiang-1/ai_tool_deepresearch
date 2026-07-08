@@ -1,6 +1,6 @@
 # Queue Input Validation
 
-> req: QIV-001, QIV-002, QIV-003, QIV-004
+> req: QIV-001, QIV-002, QIV-003, QIV-004, QIV-005
 
 ## Purpose
 
@@ -172,4 +172,3 @@ Top-level `--help` or `-h` SHALL print usage and exit 0. Subcommand help such as
 - **WHEN** `operate-queue` or `operate-work-unit` receives a valid explicit bundle path and valid subcommand arguments
 - **THEN** the CLI SHALL continue to execute the existing queue or work-unit operation
 - **AND** the help/suspicious-argument guard SHALL NOT weaken existing schema, bundle identity, or queue validation
-

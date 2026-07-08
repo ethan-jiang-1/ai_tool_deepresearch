@@ -1,6 +1,6 @@
 # CLI Phase Transition
 
-> req: CPT-001, CPT-002, CPT-003, CPT-004, CPT-005, CPT-006, CPT-007
+> req: CPT-001, CPT-002, CPT-003, CPT-004, CPT-005, CPT-006, CPT-007, CPT-008
 
 ## Purpose
 
@@ -453,4 +453,3 @@ Degraded passes SHALL be accepted only when they satisfy the existing degraded h
 - **WHEN** a caller attempts to bypass missing source-gate or route-bound entry evidence through a force-style status transition
 - **THEN** transition tooling SHALL reject the invocation or treat it as unsupported
 - **AND** no downstream lifecycle status SHALL be written by that bypass path
-

@@ -1,6 +1,6 @@
 # Delegated Work Units
 
-> req: DEW-001, DEW-002, DEW-003, DEW-004, DEW-005, DEW-006, DEW-007, DEW-008, DEW-009, DEW-010, DEW-011, SUR-001
+> req: DEW-001, DEW-002, DEW-003, DEW-004, DEW-005, DEW-006, DEW-007, DEW-008, DEW-009, DEW-010, DEW-011, DEW-012, SUR-001
 
 ## Purpose
 
@@ -323,4 +323,3 @@ This requirement SHALL NOT remove the existing ability to submit a candidate `re
 - **AND** all other result, receipt, output, cache, queue, hash, and ledger validations pass
 - **THEN** submit MAY accept the candidate result using the existing submit path semantics
 - **AND** the Engine SHALL persist the canonical accepted result to the assigned work-unit `result_ref`
-
