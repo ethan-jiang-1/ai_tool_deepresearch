@@ -12,7 +12,7 @@
 
 **Reason**: Detailed stop authorization belongs in lifecycle phase/shared Markdown and accepted Agent command guidance, not in a passive bundle map that could be mistaken for a controller.
 
-**Migration**: `BUNDLE_MAP.md` may point readers to status, trace, queue, phase nodes, and command guidance, but it SHALL NOT duplicate detailed stop/control rules as primary operating instructions.
+**Migration**: `BUNDLE_MAP.md` can point readers to status, trace, queue, phase nodes, and command guidance, but it SHALL NOT duplicate detailed stop/control rules as primary operating instructions.
 
 ### Requirement: START_FROM_HERE.md SHALL document current_node as the resume phase coordinate
 

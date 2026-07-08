@@ -36,7 +36,7 @@ The template set SHALL include `BUNDLE_MAP.md.tmpl` and SHALL NOT use `START_FRO
 
 The `DPT_FRAMEWORK/cli/inspect-bundle.mjs` script SHALL check all required files and directories exist, and exit with code 0 (PASS) or 1 (FAIL). The agent SHALL call it via `node DPT_FRAMEWORK/cli/inspect-bundle.mjs <bundleDir>`.
 
-For current new bundles, the required root map file SHALL be `BUNDLE_MAP.md`. For legacy bundles that contain `START_FROM_HERE.md` but not `BUNDLE_MAP.md`, inspect MAY continue with a deprecation warning if all other required surfaces are present.
+For current new bundles, the required root map file SHALL be `BUNDLE_MAP.md`. For legacy bundles that contain `START_FROM_HERE.md` but not `BUNDLE_MAP.md`, inspect SHALL exit 0 with a deprecation warning if all other required surfaces are present.
 
 #### Scenario: inspect-bundle.mjs catches missing directory
 - **WHEN** `final/` directory was not created
@@ -49,5 +49,13 @@ For current new bundles, the required root map file SHALL be `BUNDLE_MAP.md`. Fo
 
 #### Scenario: inspect-bundle.mjs reports legacy map
 - **WHEN** a legacy bundle contains `START_FROM_HERE.md` but not `BUNDLE_MAP.md`
-- **THEN** inspect MAY exit 0 with deprecation advice
+- **AND** all other required bundle surfaces are present
+- **THEN** inspect SHALL exit 0 with deprecation advice
 - **AND** output SHALL identify `START_FROM_HERE.md` as legacy compatibility rather than current primary structure
+
+#### Scenario: inspect-bundle.mjs reports both map names
+- **WHEN** a bundle contains both `BUNDLE_MAP.md` and `START_FROM_HERE.md`
+- **AND** all other required bundle surfaces are present
+- **THEN** inspect SHALL exit 0
+- **AND** output SHALL identify `BUNDLE_MAP.md` as the current root map
+- **AND** output SHALL identify `START_FROM_HERE.md` as deprecated compatibility debris or cleanup advice

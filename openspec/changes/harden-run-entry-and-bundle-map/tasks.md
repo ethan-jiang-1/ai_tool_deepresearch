@@ -14,7 +14,7 @@
 
 - [ ] 2.1 Implement BUM-001/BUM-003/CMI-004: rename `DPT_FRAMEWORK/rb_templates/START_FROM_HERE.md.tmpl` to `DPT_FRAMEWORK/rb_templates/BUNDLE_MAP.md.tmpl`; done when the old template path is no longer used by new instantiation.
 - [ ] 2.2 Implement BUM-001/BUM-002/BUM-003: rewrite `BUNDLE_MAP.md.tmpl` as a passive map with Research Content Map, Runtime Control Map, Diagnostics Map, and Reentry Pointers; done when it avoids detailed lifecycle command duplication and points to authority surfaces instead of becoming a controller.
-- [ ] 2.3 Implement BUM-004: decide whether to leave no `START_FROM_HERE.md.tmpl` template at all or keep a clearly deprecated legacy note only if tests require it; done when new bundle generation cannot accidentally choose the legacy template.
+- [ ] 2.3 Implement BUM-004: remove `START_FROM_HERE.md.tmpl` from the production instantiation template mapping; if a legacy fixture is still needed, keep it only as a clearly named non-instantiation legacy fixture outside production mapping; done when new bundle generation cannot accidentally choose the legacy template.
 - [ ] 2.4 Implement BUM-003 for disposable bundles: update `experiments_env/shared/new-disposable-bundle.mjs` so disposable bundles use `BUNDLE_MAP.md` unless a specific legacy test fixture overrides it; done when controlled experiment setup matches current bundle shape.
 
 ## 3. CLI, Gate, Reentry, And Observability
@@ -28,7 +28,7 @@
 ## 4. Agent-Facing Framework Docs
 
 - [ ] 4.1 Implement PRP-001: update `DPT_FRAMEWORK/workflows/nodes/phases/phase-instantiation.md` expected artifacts and repair wording to use `BUNDLE_MAP.md`; done when instantiation phase no longer presents `START_FROM_HERE.md` as a current artifact.
-- [ ] 4.2 Implement ACS-004/RRD-007/BUM-001: update `DPT_FRAMEWORK/RUN.md`, `DPT_FRAMEWORK/README.md`, `DPT_FRAMEWORK/COMMANDS.md`, and `DPT_FRAMEWORK/command_playbook/start-research.md` to use `BUNDLE_MAP.md` for active bundle reload guidance; done when legacy `START_FROM_HERE.md` appears only as legacy/deprecated compatibility where intentionally needed.
+- [ ] 4.2 Implement ACS-004/RRD-007/BUM-001: update `DPT_FRAMEWORK/RUN.md`, `DPT_FRAMEWORK/README.md`, `DPT_FRAMEWORK/COMMANDS.md`, `DPT_FRAMEWORK/command_playbook/start-research.md`, and `DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md` to use `BUNDLE_MAP.md` for active bundle reload guidance; done when legacy `START_FROM_HERE.md` appears only as legacy/deprecated compatibility where intentionally needed.
 - [ ] 4.3 Implement WDC-004/BUM-001: update current docs/spec-facing directory maps that list bundle-root surfaces so canonical runtime structure names `BUNDLE_MAP.md`; done when `rg 'START_FROM_HERE.md' DPT_FRAMEWORK openspec/specs tests experiments_env experiments_playbook` leaves only intentional legacy/deprecation or archived references.
 - [ ] 4.4 Implement BUS removal migration: ensure active guidance no longer teaches `START_FROM_HERE.md` as the first file an Agent reads; done when `bundle-start-from-here` has no current positive behavior outside legacy deprecation.
 
@@ -40,7 +40,7 @@
 - [ ] 5.4 Add or update check-reentry coverage for RRD-007: assert advice names `BUNDLE_MAP.md` for missing/null `current_node` and names `START_FROM_HERE.md` only as deprecated legacy fallback.
 - [ ] 5.5 Add or update file-observability coverage for FIO-005: assert `BUNDLE_MAP.md` is expected, legacy-only map is diagnostic compatibility, and both names do not create two authority surfaces.
 - [ ] 5.6 Update static docs regression for BUM-003/ACS-004/RUE-004: require current docs/tests to prefer `BUNDLE_MAP.md` and root behavior files to suppress built-in research shortcuts.
-- [ ] 5.7 Update `tests/integration/cli/validate-bundle.test.mjs` and any helper bundle factories that copy root map templates so they use `BUNDLE_MAP.md.tmpl`; done when tests do not create new valid bundles with the old primary map name.
+- [ ] 5.7 Update `tests/integration/cli/validate-bundle.test.mjs`, `tests/integration/cli/operate-queue.test.mjs`, and any helper bundle factories that copy root map templates so they use `BUNDLE_MAP.md.tmpl`; done when tests do not create new valid bundles with the old primary map name.
 
 ## 6. Version And Changelog
 
@@ -51,8 +51,8 @@
 
 - [ ] 7.1 Run `openspec validate harden-run-entry-and-bundle-map --strict`; done when it passes.
 - [ ] 7.2 Run targeted regression tests: `node --test tests/integration/cli/instantiate-run-bundle.test.mjs tests/integration/cli/inspect-bundle.test.mjs tests/integration/cli/validate-bundle.test.mjs tests/engine/command-contract-docs.test.mjs tests/engine/version-management.test.mjs`; done when all pass.
-- [ ] 7.3 Run additional touched-surface tests if present: instantiation gate, check-reentry, file-observability, and static regression slices; done when every test named by changed files passes or the task notes why a slice does not exist.
+- [ ] 7.3 Run additional touched-surface tests: `node --test tests/integration/cli/check-gate-instantiation-complete.test.mjs tests/integration/cli/check-reentry.test.mjs tests/engine/helpers/file-observability.test.mjs tests/engine/static-regression.test.mjs`; done when all pass.
 - [ ] 7.4 Run `rg 'START_FROM_HERE.md' DPT_FRAMEWORK openspec/specs tests experiments_env experiments_playbook` and review every remaining hit; done when each hit is legacy/deprecation, historical archive exclusion, or intentional test coverage.
 - [ ] 7.5 Run `node openspec/governance/check-project-reqs.mjs`; done when it reports 0 duplicate / 0 orphan / 0 unregistered / 0 reusedRetired.
 - [ ] 7.6 Run `node openspec/governance/check-project-specs.mjs`; done when it reports 0 deltaHeaderInMain / 0 missingPurpose / 0 missingRequirements / 0 missingReqHeader.
-- [ ] 7.7 Run `npm test` if time permits after targeted tests; if skipped, record the reason and targeted coverage run.
+- [ ] 7.7 Run `npm test` after targeted tests; done when it passes, or when a pre-existing unrelated failure is recorded with the failing test name and why it is outside this change.

@@ -30,7 +30,7 @@ It SHALL include:
 - Diagnostics Map for `_logs/`, `_diagnostics/`, `_checkpoints/`, and rebuildable diagnostic cache/projection areas when present.
 - Reentry Pointers explaining that non-null `rb_status.json.current_node` is the current loaded lifecycle Markdown coordinate, while trace/reentry diagnostics are used when that field is absent.
 
-The map MAY point to `DPT_FRAMEWORK/RUN.md`, command playbooks, phase nodes, and accepted diagnostics. It SHALL NOT duplicate detailed lifecycle commands that belong in those control surfaces.
+The map can point to `DPT_FRAMEWORK/RUN.md`, command playbooks, phase nodes, and accepted diagnostics. It SHALL NOT duplicate detailed lifecycle commands that belong in those control surfaces.
 
 #### Scenario: Reader finds research artifacts
 - **WHEN** an Agent or human opens `BUNDLE_MAP.md`
@@ -60,16 +60,17 @@ Framework docs, phase docs, instantiation gates, inspect output, reentry advice,
 
 ### Requirement: Legacy START_FROM_HERE.md is diagnostic compatibility only
 
-Existing historical or active bundles MAY contain `START_FROM_HERE.md` without `BUNDLE_MAP.md`. Framework inspection and reentry guidance SHALL treat such bundles as legacy compatibility when they keep those bundles readable, and SHALL report deprecation advice.
+Existing historical or active bundles can contain `START_FROM_HERE.md` without `BUNDLE_MAP.md`. Framework inspection and reentry guidance SHALL treat such bundles as legacy compatibility when all other required bundle surfaces are present, and SHALL report deprecation advice.
 
-Legacy compatibility SHALL NOT make `START_FROM_HERE.md` the primary file for newly instantiated bundles. If both `BUNDLE_MAP.md` and `START_FROM_HERE.md` exist, tooling SHALL prefer `BUNDLE_MAP.md` as the current map and MAY advise removing or migrating the legacy file.
+Legacy compatibility SHALL NOT make `START_FROM_HERE.md` the primary file for newly instantiated bundles. If both `BUNDLE_MAP.md` and `START_FROM_HERE.md` exist, tooling SHALL prefer `BUNDLE_MAP.md` as the current map and SHALL report the legacy file as deprecated compatibility debris with removal or migration advice.
 
 #### Scenario: Legacy bundle remains inspectable
 - **WHEN** an existing bundle contains `START_FROM_HERE.md` but no `BUNDLE_MAP.md`
-- **THEN** diagnostic tooling MAY continue with a deprecation warning
+- **AND** all other required bundle surfaces are present
+- **THEN** diagnostic tooling SHALL keep the bundle readable with a deprecation warning
 - **AND** the warning SHALL tell the reader that new bundles use `BUNDLE_MAP.md`
 
 #### Scenario: Both map files exist
 - **WHEN** a bundle contains both `BUNDLE_MAP.md` and `START_FROM_HERE.md`
 - **THEN** tooling SHALL treat `BUNDLE_MAP.md` as the current map
-- **AND** tooling SHOULD report the legacy file as deprecated compatibility debris rather than as a second authority surface
+- **AND** tooling SHALL report the legacy file as deprecated compatibility debris rather than as a second authority surface

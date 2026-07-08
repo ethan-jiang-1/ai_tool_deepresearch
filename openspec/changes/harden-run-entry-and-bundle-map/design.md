@@ -13,7 +13,7 @@ Current state:
 Guideline constraints that shape this design:
 
 - `DPT_FRAMEWORK/` remains reusable framework assets; active bundle root owns runtime truth.
-- Markdown controls Agent Flow, but only phase nodes, command playbooks, task cards, and explicit projections should act as operating surfaces.
+- Markdown controls Agent Flow, but only phase nodes, command playbooks, task cards, and explicit projections act as operating surfaces.
 - `BUNDLE_MAP.md` must not become a second phase node, route authority, or deterministic state source.
 - JS/CLI must continue deriving deterministic facts from explicit bundle paths and runtime files, not chat memory.
 
@@ -42,34 +42,34 @@ Guideline constraints that shape this design:
 
 New bundle instantiation SHALL copy `DPT_FRAMEWORK/rb_templates/BUNDLE_MAP.md.tmpl` to `<bundle>/BUNDLE_MAP.md`.
 
-Rationale: `START_FROM_HERE.md` implies "execute this file first." In the current architecture, the first active execution surface is `RUN.md` and then phase nodes loaded through gate/chain handoff. A bundle root file should help a human or Agent reload the bundle, not compete with lifecycle Markdown.
+Rationale: `START_FROM_HERE.md` implies "execute this file first." In the current architecture, the first active execution surface is `RUN.md` and then phase nodes loaded through gate/chain handoff. A bundle root file exists to help a human or Agent reload the bundle, not compete with lifecycle Markdown.
 
 Alternative considered: keep the old file name and rewrite content. Rejected because the name itself preserves the wrong mental model and caused BUG-061.
 
 ### D2: Legacy compatibility is diagnostic, not primary
 
-New bundles require `BUNDLE_MAP.md`. Existing bundles that only have `START_FROM_HERE.md` MAY remain readable by inspect/reentry tooling, but tools SHALL surface deprecation/migration advice.
+New bundles require `BUNDLE_MAP.md`. Existing legacy bundles that only have `START_FROM_HERE.md` SHALL remain readable by inspect/reentry diagnostics when all other required bundle surfaces are present, and tools SHALL surface deprecation/migration advice.
 
 Implementation posture:
 
 - `instantiate-run-bundle.mjs` writes only `BUNDLE_MAP.md` for new bundles.
 - `gate-instantiation-complete.definition.json` requires `BUNDLE_MAP.md` for the new instantiation contract.
 - `inspect-bundle.mjs` accepts a legacy-only `START_FROM_HERE.md` bundle with warning/advice only if all other required surfaces are present.
-- If both files exist, `BUNDLE_MAP.md` is authoritative for the map name. Divergence is not a gate authority question, but inspect should report that both exist and advise removing or migrating the legacy file.
-- File-observability should classify `BUNDLE_MAP.md` as the expected root map. Legacy `START_FROM_HERE.md` should be nonblocking deprecated root debris unless an accepted legacy mode explicitly needs it for forensics.
+- If both files exist, `BUNDLE_MAP.md` is authoritative for the map name. Divergence is not a gate authority question, but inspect SHALL report that both exist and advise removing or migrating the legacy file.
+- File-observability SHALL classify `BUNDLE_MAP.md` as the expected root map. Legacy `START_FROM_HERE.md` SHALL be nonblocking deprecated root debris unless an accepted legacy mode explicitly needs it for forensics.
 
 Alternative considered: accept both names forever. Rejected because that makes the rename cosmetic and keeps docs/tests ambiguous.
 
 ### D3: `BUNDLE_MAP.md` content is a map, not an operating playbook
 
-`BUNDLE_MAP.md` should contain four sections:
+`BUNDLE_MAP.md` SHALL contain four sections:
 
 1. Research Content Map: `seed_topics/`, `reference/`, `artifacts/wave0/`, `artifacts/wave1/`, `artifacts/wave2/`, `final/`, `_cache/`.
 2. Runtime Control Map: `rb_status.json`, `rb_queue.json`, `rb_trace.jsonl`, `rb_output_declarations.jsonl`, `_work_units/`.
 3. Diagnostics Map: `_logs/`, `_diagnostics/`, `_checkpoints/`, `_cache/gate-results/`, `_cache/projections/` where present.
 4. Reentry Pointers: use non-null `rb_status.json.current_node` as loaded phase coordinate, read trace/diagnostics, run reentry check if current node is absent, and do not infer phase completion from this map file.
 
-It SHALL NOT duplicate detailed run commands from `RUN.md`, command playbooks, or phase nodes. It MAY point to those surfaces by name.
+It SHALL NOT duplicate detailed run commands from `RUN.md`, command playbooks, or phase nodes. It can point to those surfaces by name.
 
 Alternative considered: leave stop authorization and delegated ledger rules in the map because they are useful reminders. Rejected in their current form because rule lists turn the map into a pseudo-controller. The map can name the authority surfaces and point to canonical docs, but detailed operating rules stay in phase/shared nodes and command playbooks.
 
@@ -97,6 +97,18 @@ Spec migration shape:
 
 Alternative considered: implement code/doc rename and rely on archive sync later. Rejected because this repo treats OpenSpec as the execution backbone; target behavior must be visible before apply.
 
+### D6: Legacy diagnostics stay in the existing inspect output channel
+
+This change SHALL express legacy `START_FROM_HERE.md` deprecation through the current inspect/reentry diagnostic output shape. It SHALL NOT add a new structured inspect JSON contract or machine-readable warning mode.
+
+Rationale: the bug is a routing and bundle-map contract problem. Adding a new inspect output contract would widen the change into a tooling interface migration without evidence that downstream tooling needs it.
+
+### D7: Disposable bundles migrate with production bundles
+
+Disposable experiment bundle creation SHALL use `BUNDLE_MAP.md` for newly created bundles, matching production bundle shape. Legacy `START_FROM_HERE.md` SHALL appear only in explicit legacy fixtures or tests that are proving compatibility behavior.
+
+Rationale: controlled experiments exercise the current framework contract by default. Keeping disposable setup on the old name would preserve a second de facto primary bundle shape.
+
 ## Risks / Trade-offs
 
 - [Risk] Legacy bundles fail hard when inspected after the rename. -> Mitigation: inspect/reentry provide legacy fallback and deprecation advice; only new instantiation gate requires `BUNDLE_MAP.md`.
@@ -120,5 +132,4 @@ Rollback strategy:
 
 ## Open Questions
 
-- Should `inspect-bundle.mjs` expose legacy deprecation as plain text only, or should it gain a structured warning mode for tooling? Recommended default: plain text warning for default inspect, because this change does not introduce a new inspect JSON contract.
-- Should `experiments_env/shared/new-disposable-bundle.mjs` switch to `BUNDLE_MAP.md` immediately? Recommended default: yes, because disposable bundles should mirror current canonical bundle shape unless a playbook explicitly tests legacy behavior.
+None. Apply follows D1-D7 unless implementation discovers an executable contradiction; if that happens, update this design before continuing.

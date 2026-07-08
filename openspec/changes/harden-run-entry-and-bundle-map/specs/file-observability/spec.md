@@ -6,7 +6,7 @@
 
 File observability SHALL classify `BUNDLE_MAP.md` as the expected current root bundle map file for active bundles. It SHALL NOT require `START_FROM_HERE.md` for new-bundle root-control-file expectations.
 
-If `START_FROM_HERE.md` appears without `BUNDLE_MAP.md`, file observability MAY report it as legacy deprecated compatibility. If both files appear, file observability SHALL prefer `BUNDLE_MAP.md` and report `START_FROM_HERE.md` as deprecated compatibility debris or a non-authoritative legacy file.
+If `START_FROM_HERE.md` appears without `BUNDLE_MAP.md`, file observability SHALL report it as legacy deprecated compatibility. If both files appear, file observability SHALL prefer `BUNDLE_MAP.md` and report `START_FROM_HERE.md` as deprecated compatibility debris or a non-authoritative legacy file.
 
 This classification SHALL NOT affect gate pass authority for research artifacts, submitted work-unit ledger coverage, or queue state. It is a file-observability diagnostic about root map naming only.
 
@@ -17,7 +17,7 @@ This classification SHALL NOT affect gate pass authority for research artifacts,
 
 #### Scenario: Legacy map is diagnostic compatibility
 - **WHEN** file observability audits a bundle containing `START_FROM_HERE.md` but no `BUNDLE_MAP.md`
-- **THEN** it MAY report a legacy compatibility diagnostic
+- **THEN** it SHALL report a legacy compatibility diagnostic
 - **AND** it SHALL NOT treat the legacy file as submitted evidence, gate authority, or current primary map
 
 #### Scenario: Both map names do not create two authorities

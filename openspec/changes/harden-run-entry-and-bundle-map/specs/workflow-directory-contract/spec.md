@@ -10,7 +10,7 @@ The active runtime bundle root (short form: active bundle root) SHALL be the sin
 
 Current specs, framework docs, workflow nodes, bundle templates, and Agent-facing playbooks SHALL use this coordinate vocabulary:
 
-- `repo_command_root`: the repository root used to invoke framework commands. It may contain `DPT_FRAMEWORK/` and many runtime bundles, but it is not runtime truth.
+- `repo_command_root`: the repository root used to invoke framework commands. It can contain `DPT_FRAMEWORK/` and many runtime bundles, but it is not runtime truth.
 - `framework_root`: the `DPT_FRAMEWORK/` reusable framework asset root. It contains schemas, CLIs, engines, workflow nodes, templates, and command playbooks; it is read-only during workflow execution.
 - `active_bundle_root`: the selected `dpt_rb_*` or `dpt_disp_*` runtime bundle root. It is the only root for mutable runtime truth.
 
@@ -22,7 +22,7 @@ Unless a path is explicitly rooted in `DPT_FRAMEWORK/`, runtime paths in accepte
 
 Bundle-root runtime surfaces include `BUNDLE_MAP.md`, `rb_plan.md`, `rb_profile.yaml`, `rb_status.json`, `rb_queue.json`, `rb_trace.jsonl`, `rb_output_declarations.jsonl`, `seed_topics/`, `reference/`, `artifacts/`, `_cache/`, `_logs/`, `final/`, and `_work_units/`. Production delegated work SHALL use bundle-root `_work_units/` as the work-unit runtime directory tree. Bundle-root `_work_units/_index.json` SHALL be Engine-owned allocation and attempt-state truth, while submitted delegated output coverage SHALL remain in bundle-root `rb_output_declarations.jsonl`.
 
-Legacy bundles MAY contain `START_FROM_HERE.md`; that file SHALL be treated as deprecated bundle-map compatibility, not as a new-bundle canonical runtime surface.
+Legacy bundles can contain `START_FROM_HERE.md`; that file SHALL be treated as deprecated bundle-map compatibility, not as a new-bundle canonical runtime surface.
 
 Runtime choices and runtime data SHALL be persisted in the active runtime bundle. Framework definitions, schemas, workflow nodes, CLIs, reusable engine code, templates, and command playbooks SHALL remain under `DPT_FRAMEWORK/` and SHALL NOT become per-run storage.
 
@@ -34,7 +34,7 @@ Runtime choices and runtime data SHALL be persisted in the active runtime bundle
 
 #### Scenario: command root is not runtime root
 - **WHEN** an Agent runs `node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim dpt_rb_climate-policy`
-- **THEN** the repository root MAY be the process working directory
+- **THEN** the repository root can be the process working directory
 - **AND** all runtime state written by the command SHALL resolve under `dpt_rb_climate-policy/`
 - **AND** no runtime state SHALL be written to `./_work_units/`, `./rb_queue.json`, or other repository-root runtime-looking paths
 

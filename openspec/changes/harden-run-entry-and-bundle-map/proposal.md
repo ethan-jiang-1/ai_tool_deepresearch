@@ -8,7 +8,7 @@ FOSE run 之后的 bug triage 显示两个入口/导航问题还没有真正闭�
 - 保持 root、`DPT_FRAMEWORK/CLAUDE.md`、`DPT_FRAMEWORK/AGENTS.md`、`DPT_FRAMEWORK/README.md`、`DPT_FRAMEWORK/RUN.md` 的入口路由措辞一致，避免旧 change 只保护读到 `RUN.md` 之后的路径。
 - **BREAKING for new bundle shape**: 新实例化 bundle 使用 `BUNDLE_MAP.md`，不再生成 `START_FROM_HERE.md` 作为 primary bundle root file。
 - 新增 `bundle-map` capability：`BUNDLE_MAP.md` 是被动知识/运行时地图，说明研究内容、控制文件、诊断面、reentry 指针；它不是 phase node、不是命令 playbook、不是续跑控制器。
-- 迁移旧 `bundle-start-from-here` capability：旧 `START_FROM_HERE.md` primary-entry 语义废弃；legacy bundle 可以被 inspect/reentry 读懂并收到 deprecation advice，但新 bundle/gate/template contract 以 `BUNDLE_MAP.md` 为准。
+- 迁移旧 `bundle-start-from-here` capability：旧 `START_FROM_HERE.md` primary-entry 语义废弃；legacy bundle 可以被 inspect/reentry/file-observability 作为 diagnostic compatibility 读懂并收到 deprecation advice，但新 bundle/gate/template contract 以 `BUNDLE_MAP.md` 为准。
 - 更新实例化、instantiation gate、phase-instantiation expected artifacts、inspect/reentry/file-observability/docs/tests 中的 root bundle file contract。
 - 更新 CHANGELOG 与 `DPT_FRAMEWORK/RUN.md` 版本横幅到 `v0.11`。
 
@@ -65,7 +65,8 @@ FOSE run 之后的 bug triage 显示两个入口/导航问题还没有真正闭�
 - Affected tests:
   - `tests/integration/cli/instantiate-run-bundle.test.mjs`
   - `tests/integration/cli/inspect-bundle.test.mjs`
-  - `tests/integration/cli/check-reentry.test.mjs` if present or new targeted coverage
+  - `tests/integration/cli/check-reentry.test.mjs`
+  - `tests/integration/cli/operate-queue.test.mjs`
   - `tests/integration/cli/validate-bundle.test.mjs`
   - `tests/engine/command-contract-docs.test.mjs`
   - `tests/engine/static-regression.test.mjs` if it owns root entry doc scanning
