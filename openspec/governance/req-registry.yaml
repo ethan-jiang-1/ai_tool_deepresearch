@@ -189,6 +189,7 @@ DEW-008: delegated-work-units — Non-work-unit delegated artifacts are cleanup 
 DEW-009: delegated-work-units — Work-unit tasks expose bundle-root absolute paths and write-before-return verification
 DEW-010: delegated-work-units — Submitted result and ledger hashes detect post-submit drift before gate pass
 DEW-011: delegated-work-units — Successful work-unit submit verifies durable queue postconditions before reporting success
+DEW-012: delegated-work-units — Work-unit submit performs narrow canonicalization for predictable LLM-shaped result, receipt, cache, and nonce drift
 
 # conditional-nodes
 COS-001: conditional-nodes — Deterministic branch checkpoint transforms
@@ -201,6 +202,7 @@ CPT-004: cli-phase-transition — Advance status refuses unwitnessed or unpassed
 CPT-005: cli-phase-transition — Phase-boundary terminology separates status transition, Agent handoff, work completion, and witnessing
 CPT-006: cli-phase-transition — Phase status drift audit detects impossible current_gate/next_gate windows and manual bypass suspicion
 CPT-007: cli-phase-transition — current_node records active loaded lifecycle control surface without replacing gate window authority
+CPT-008: cli-phase-transition — Failed or missing source-gate handoffs cannot authorize downstream status or final lifecycle state
 
 # cli-exit-code-conventions
 CLE-001: cli-exit-code-conventions — Discoverable framework CLI exit-code contract in top-level command docs
@@ -270,6 +272,7 @@ QIV-001: queue-input-validation — Enqueue validates task card topic_slug again
 QIV-002: queue-input-validation — Queue schema includes bundle identity and operate-queue validates bundle_name
 QIV-003: queue-input-validation — Queue projection cache includes generated_at and source_queue_sha256 staleness detection
 QIV-004: queue-input-validation — operate-queue repair --remove-stale removes task cards outside topic_registry
+QIV-005: queue-input-validation — Queue and work-unit runtime CLIs reject help and suspicious bundle arguments before side effects
 
 # relay-provenance-gate
 RPG-001: relay-provenance-gate — Replaced by work-unit-provenance-gate submitted ledger row checks [DEPRECATED]
@@ -585,6 +588,7 @@ GSK-006: gate-skeleton — Gate CLI accepts --attempt N; buildGateResult injects
 GSK-007: gate-skeleton — Lifecycle gate handoff preflight verifies prior gate pass and current load_complete witness
 GSK-008: gate-skeleton — Engine-derived gate attempt delta and pass-side fatigue diagnostics
 GSK-009: gate-skeleton — Gate CLI exit-code behavior and high-friction continuation advice align with the framework convention
+GSK-010: gate-skeleton — Lifecycle gate and final-readiness preflight rejects status-only or artifact-only downstream authorization
 
 # wff-state-chain
 TRT-001: transition-table — File naming convention transitions.chain.json
