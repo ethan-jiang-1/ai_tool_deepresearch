@@ -57,7 +57,7 @@ A contract is not aligned if any one of these is missing or contradicts another.
 
 ### Judgment-Layer Authorities
 
-When surfaces disagree, apply should resolve by truth type rather than by whichever wording is newest:
+When surfaces disagree, apply SHALL resolve by truth type rather than by whichever wording is newest:
 
 | Truth type | Source of record in this change | Notes |
 | --- | --- | --- |
@@ -69,9 +69,24 @@ When surfaces disagree, apply should resolve by truth type rather than by whiche
 | Diagnostic severity | The command/gate pass-fail computation | A finding counted into failure cannot be diagnostic-only |
 | Producer guidance | Active phase docs, task cards, generated work-unit surfaces | Guidance must teach the checker-consumed shape but is not pass/fail authority by itself |
 
+### Return-Map Activation And Classification
+
+Return-map validation has two different jobs that must not be collapsed:
+
+| Check family | Applies to | Classification |
+| --- | --- | --- |
+| Consumer navigation | Evidence-bearing `seed_topics/*.md` return-map entries after Wave0/Wave1/Wave2 materialization | Blocking for `inspect-wave*-output` and any active gate/check that declares return-map navigation readiness |
+| Concrete reference existence | Extracted `reference/*.md` refs in evidence-bearing return-map entries | Blocking when the command is checking consumer navigation |
+| Glob/count summary rejection | Any ref used as consumer navigation, such as `reference/topic-*.md (8 files)` | Blocking when the entry is evidence-bearing |
+| Internal-only provenance | Evidence-bearing entries with only `artifacts/`, `_cache/`, or `_work_units/` refs | Blocking; internal refs may supplement but not satisfy navigation |
+| Map-shape hygiene | Missing optional fields, awkward prose, or helper hints that do not affect current command pass/fail | Advisory or diagnostic-only, but only when not counted into `check.passed: false` |
+| Evidence authority | Whether evidence counts for delegated coverage or research quality | Not decided by return maps; submitted ledgers/backing checks remain authority |
+
+This means a non-gate inspect command may still return `check.passed: false`; for that command, the counted finding is blocking even if it is not itself a gate definition rule. A field such as `return_map_diagnostic_only: true` is invalid when return-map findings are included in `checks_failed`.
+
 ### Contract Families To Audit
 
-The apply-time audit should look for drift by family, not by bug id:
+The apply-time audit SHALL look for drift by family, not by bug id:
 
 | Family | Examples | Drift smell |
 | --- | --- | --- |
@@ -81,6 +96,21 @@ The apply-time audit should look for drift by family, not by bug id:
 | Coverage/backing | Submitted coverage, reference ledger backing, cache coverage, cross-reference coverage | Gate consumes a projection without a clear authority or backing rule |
 | Diagnostic classification | `blocking`, `advisory`, `diagnostic-only`, `diagnosticOnly` fields | CLI fails but wording says the finding cannot affect pass/fail |
 | Static hygiene | Gate definition rule ids, check names, helper dispatch, phase examples | A rule/check exists without implementation or producer/diagnostic inventory |
+
+### Code-Alignment Guardrails
+
+This change is code-grounded. Apply SHALL audit and adjust the current judgment layer; it SHALL NOT replace it with a parallel mechanism.
+
+Use the existing implementation surfaces as the starting authority map:
+
+- `recordSubmitNormalization` / work-unit submit path for narrow submit-time role normalization;
+- `checkWave1DepthReviewContract()` for Wave1 depth-review submitted-ref comparison;
+- `return-map.mjs` and `inspect-wave*-output.mjs` for seed-topic and reference return-map classification;
+- `classifyReferenceAuthority()` and work-unit provenance helpers for reference backing and Phase-owned projection authority;
+- `checkWave2FindingIndexContract()`, `finding_index_contract`, `wave2_cross_reference_index_coverage`, `wave2_work_unit_cross_ref_coverage`, `wave2_work_unit_submission_presence`, and `wave2_delegated_bypass_suspected` for Wave2 `00-cross` authority closure;
+- active phase docs and generated work-unit contracts for producer-facing instructions.
+
+The apply implementation SHALL prefer small alignment edits on these surfaces. It SHALL NOT add a replacement gate engine, a broad ledger amend path, a second evidence-authority layer, or a rule that treats `source_layer` / index metadata as enough to establish evidence authority.
 
 ### Normalization Policy
 
@@ -177,6 +207,7 @@ For grouped design rows below, the apply-time inventory may keep a shared implem
 2. `per_topic_depth_review_contract` uses exact submitted refs, while `phase-wave1.md` example includes a trailing slash.
 3. Return-map helpers and inspect output mark return-map findings `diagnosticOnly`, but BUG-070 shows concrete `reference/*.md` navigation is part of the consumer map contract and should block when evidence-bearing map entries have only internal refs or globs.
 4. No static guard proves all active gate rule ids have a known implementation and artifact contract.
+5. Wave2 `reference/00-cross-*.md` authority is a same-family contract surface: new fetched evidence must bind to submitted `wave2_targeted_evidence`, while existing-backed Phase-owned projections must bind to prior accepted evidence plus W2F/finding-index/cross-topic-ledger/prior submitted backing. The audit must preserve this split across gate definitions, helpers, phase docs, inspect diagnostics, and tests.
 
 ### Apply-Time Audit Expansion Rule
 
@@ -185,6 +216,7 @@ The apply phase SHALL treat the above matrix as a starting audit, not as an exha
 - gate selectors and output selectors;
 - submitted ledger role/path expectations;
 - depth-review, finding-index, source-claim, cache, and reference-backing helpers;
+- Wave2 `00-cross` targeted-evidence vs existing-backed projection helpers and diagnostics;
 - seed-topic return-map validation and inspect output;
 - active phase docs and sub-agent/task instructions that tell the Agent what to write;
 - validators and static hygiene that claim to guard these contracts.
@@ -198,6 +230,22 @@ If this second-pass audit finds an additional deterministic mismatch in the same
 - it can be verified by focused regression/static tests without broad architectural redesign.
 
 If a finding is only a research-quality desire, speculative future mechanism, or unrelated lifecycle/queue/routing issue, record it as deferred evidence in `implementation-evidence.md` and do not silently expand implementation scope.
+
+### Implementation Evidence Shape
+
+During apply, `implementation-evidence.md` SHALL be structured enough to prove the change rather than merely narrate it. Use these sections:
+
+1. Scope read before target-code edits.
+2. Judgment-layer Source-of-Record decisions.
+3. Rule/output contract closure inventory.
+4. Drift found and classification.
+5. Normalization decisions and diagnostics.
+6. Touched surfaces by family: submit, gate definitions, helpers, inspect CLIs, phase docs, static audit, tests.
+7. Verification log with exact commands and PASS/FAIL.
+8. Deferred findings with explicit out-of-scope reason.
+9. Final consistency review across proposal, design, specs, tasks, implementation, diagnostics, and tests.
+
+The evidence SHALL make it possible for a reviewer to answer: "for each blocking deterministic contract, which producer instruction creates it, where is truth stored, what checker consumes it, what feedback repairs it, and what guard prevents drift?"
 
 ### Scope Classification Rule
 
@@ -236,7 +284,7 @@ artifacts/wave1/{topic}/evidence-summary.md -> evidence_summary
 artifacts/wave1/{topic}/question-list.md    -> question_list
 ```
 
-The gate helper may rely on submit normalization so future valid rows are canonical. Tests still SHALL prove the gate fails when required paths are absent from canonical submitted coverage.
+The gate helper MAY rely on submit normalization so future valid rows are canonical. Tests still SHALL prove the gate fails when required paths are absent from canonical submitted coverage.
 
 ### Decision 3: Depth-review refs canonicalize safe trailing slash only
 
@@ -277,11 +325,13 @@ Gate and inspect outputs SHALL describe finding severity accurately:
 
 Helpers SHALL NOT return `diagnosticOnly: true` for findings that the CLI counts toward `check.passed: false`. Inspect CLIs may remain non-gate commands, but their own `check.passed` must match the findings they count as failures.
 
+Return-map output SHALL remove or narrow diagnostic-only wording instead of carrying contradictory summary fields. If a command fails because return-map navigation failed, the command output must not simultaneously claim that return-map findings are diagnostic-only.
+
 ### Decision 6: Stop:no diagnostics must be self-sufficient
 
 BUG-069's gate/systemic lesson is that a stop:no phase is not autonomous if the Agent must read Engine helper source to discover the required path, role, ref spelling, or blocking classification. For every in-scope deterministic mismatch fixed by this change, the repaired producer instruction and CLI diagnostic SHALL be enough for the Agent to repair the artifact without source-code archaeology.
 
-Self-sufficient diagnostics SHOULD name:
+Self-sufficient blocking diagnostics SHALL name:
 
 - the failing gate/command and rule or finding id;
 - the bundle-relative artifact, ledger declaration, ref, or field that failed;
@@ -301,7 +351,7 @@ Implementation SHALL add a static audit test or validator that reads active gate
 - no unsupported delegated-provenance check names;
 - no diagnostic-only label for a rule that affects pass/fail.
 
-The validator should fail closed for unknown check names in active gate definitions. It should not require editing archived OpenSpec changes. If implementation discovers repeated drift outside gate definition JSON but inside the same output contract family, the validator or companion tests SHALL be extended to cover that class.
+The validator SHALL fail closed for unknown check names in active gate definitions. It SHALL NOT require editing archived OpenSpec changes. If implementation discovers repeated drift outside gate definition JSON but inside the same output contract family, the validator or companion tests SHALL be extended to cover that class.
 
 ## Risks / Trade-offs
 
@@ -316,19 +366,21 @@ The validator should fail closed for unknown check names in active gate definiti
 ## Migration Plan
 
 1. Register pending IDs in `openspec/governance/req-registry.yaml`.
-2. Record an apply-time gate/output-alignment matrix update before target-code edits, including contract closure state and any newly discovered same-family deterministic drift.
-3. Resolve Source-of-Record conflicts according to the judgment-layer authorities table before changing code.
-4. Implement Wave1 submit role normalization and diagnostics.
-5. Update Wave1 output coverage helper/tests for required canonical roles.
-6. Canonicalize safe depth-review refs and update phase examples.
-7. Implement concrete `reference/*.md` extraction/existence/glob rejection in return-map helper.
-8. Update phase docs to teach reference-first return-map navigation.
-9. Update inspect/gate output classification wording.
-10. Make blocking diagnostics self-sufficient for stop:no deterministic repair.
-11. Add static gate-rule audit coverage.
-12. Add focused regression and fixture-level gate tests.
-13. Update `CHANGELOG.md` and `DPT_FRAMEWORK/RUN.md` to `v0.13`.
-14. Run focused tests, static hygiene, governance checks, and OpenSpec validation before archive.
+2. Run governance checks early enough to distinguish this change's pending IDs from pre-existing registry/spec drift; record and resolve any blocker before final verification.
+3. Record an apply-time gate/output-alignment matrix update before target-code edits, including contract closure state and any newly discovered same-family deterministic drift.
+4. Resolve Source-of-Record conflicts according to the judgment-layer authorities table before changing code.
+5. Audit Wave2 `reference/00-cross-*.md` authority closure against existing helpers and docs, preserving the targeted-evidence / existing-backed projection split.
+6. Implement Wave1 submit role normalization and diagnostics.
+7. Update Wave1 output coverage helper/tests for required canonical roles.
+8. Canonicalize safe depth-review refs and update phase examples.
+9. Implement concrete `reference/*.md` extraction/existence/glob rejection in return-map helper.
+10. Update phase docs to teach reference-first return-map navigation and Wave2 `00-cross` authority repair shape.
+11. Update inspect/gate output classification wording.
+12. Make blocking diagnostics self-sufficient for stop:no deterministic repair.
+13. Add static gate-rule audit coverage.
+14. Add focused regression and fixture-level gate tests.
+15. Update `CHANGELOG.md` and `DPT_FRAMEWORK/RUN.md` to `v0.13`.
+16. Run focused tests, static hygiene, governance checks, and OpenSpec validation before archive.
 
 Rollback is code-level revert before archive. No runtime migration is required for newly submitted rows. Historical bad ledgers are intentionally not amended by this change.
 
@@ -344,6 +396,8 @@ This change is apply-ready when implementation can show:
 - seed-topic return-map entries with only `artifacts/` / `_cache/` / `_work_units/` fail when evidence-bearing;
 - globbed/count-summary `reference/` refs fail;
 - concrete existing `reference/*.md` refs pass;
+- Wave2 `reference/00-cross-*.md` checks preserve the distinction between submitted targeted evidence for new fetched sources and existing-backed Phase-owned projections for prior-backed synthesis;
+- `source_layer: wave2_cross` / index coverage alone never establishes evidence authority for `00-cross` references;
 - gate/inspect wording accurately labels blocking, advisory, diagnostic-only findings;
 - blocking diagnostics name the failed deterministic surface, expected shape, and repair target without requiring helper-source reading;
 - static audit proves active gate rule ids have known implementation and documented artifact contract;

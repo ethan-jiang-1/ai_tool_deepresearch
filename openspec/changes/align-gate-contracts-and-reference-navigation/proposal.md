@@ -13,6 +13,7 @@
 - Wave1 required outputs `artifacts/wave1/{topic}/evidence-summary.md` 和 `question-list.md` 可以被 work-unit result 以 `role: "other"` 合法提交，但 `wave1_work_unit_output_coverage` 只接受 `reference` / `evidence_summary` / `question_list`，导致 gate 下游失败。
 - `phase-wave1.md` 的 `reviewed_work_unit_refs` 示例使用 `_work_units/wave1/<work_id>/` 尾斜杠，但 `depth_review_contract` helper 对 submitted ledger refs 做 exact set comparison，照文档写会 fail。
 - `seed_topics/*.md` return-map `refs` 本应是 consumer navigation map，却允许只指向 `artifacts/`、`_cache/`、`_work_units/`，或者使用 `reference/topic-*.md (N files)` / `reference/topic-*.md（N 个）` 这种 glob/count summary，无法按图索骥到具体 `reference/*.md` 文件。
+- Wave2 `reference/00-cross-*.md` 已经有两类合法 authority：new fetched evidence 必须由 submitted `wave2_targeted_evidence` work-unit backing；existing-backed pure-synthesis projection 则必须由 prior accepted backing、`W2F-xxx`、`finding-index.yaml` / `cross-topic-ledger.md` refs 和 concrete prior submitted backing 闭合。proposal/design/tasks/specs 必须保护这一区分，不能把所有 `00-cross` 都粗暴要求新 Wave2 row，也不能只凭 `source_layer: wave2_cross` 放行。
 - `return-map.mjs`、inspect CLIs、gate output 的 wording 对 blocking / advisory / diagnostic-only 的分类不清：一些会影响 pass/fail 的 ref backing / projection drift 被看起来像 diagnostic-only 的文字覆盖。
 - 没有一个静态审计能证明 active gate rule id、helper/check implementation、artifact shape、Agent-facing producer instruction 和 pass/fail consequence 已对齐。
 
@@ -38,6 +39,11 @@
   - glob/count summaries such as `reference/topic-*.md (8 files)` 和 `reference/topic-*.md（8 个）` 必须 fail。
   - helper 必须验证 concrete `reference/*.md` refs 存在于 active bundle root。
   - phase docs 必须明确 `reference/` 是 primary consumer navigation layer，internal build surfaces 是 secondary provenance。
+- Wave2 cross-reference projection/backing contract 对齐：
+  - `reference/00-cross-*.md` 的 `source_layer` / index coverage 是 navigation metadata，不是 evidence authority。
+  - newly fetched Wave2 cross references 必须绑定 submitted `wave2_targeted_evidence` coverage / receipts / accepted URLs。
+  - existing-backed Phase-owned projections 可以不需要新的 Wave2 work-unit row，但必须绑定 prior accepted evidence、`W2F-xxx` finding、`finding-index.yaml` / `cross-topic-ledger.md` refs 和 concrete prior submitted backing。
+  - diagnostics/tests 必须防止两种错误简化：all-`00-cross` always requires new Wave2 row；or `source_layer: wave2_cross` alone passes provenance。
 - Gate / inspect diagnostics 要明确 classification：blocking、advisory、diagnostic-only；不得把会影响 pass/fail 的 finding 打成 diagnostic-only。
 - 增加 static audit test：每个 active gate rule id 必须有已知 check implementation / helper route，并在 change design 或 apply evidence 中有 artifact contract 说明。
 - 增加 focused regression / fixture tests：
@@ -56,8 +62,8 @@
 
 ### Modified Capabilities
 
-- `research-wave-gate-implementation`: wave gates、helpers、definition rules 和 diagnostics 必须作为一个 coherent judgment layer；Wave1 role/path coverage、depth-review ref canonicalization、return-map reference navigation blocking rules，以及 apply 审计中发现的同类 pass/fail drift 都要与 implementation 对齐。
-- `work-unit-provenance-gate`: work-unit output coverage 必须区分 required delegated outputs、extra outputs、Phase-owned projections 和 submitted ledger authority；canonical required path roles 是 coverage contract 的一部分。
+- `research-wave-gate-implementation`: wave gates、helpers、definition rules 和 diagnostics 必须作为一个 coherent judgment layer；Wave1 role/path coverage、depth-review ref canonicalization、return-map reference navigation blocking rules、Wave2 `00-cross` targeted-evidence vs existing-backed projection authority split，以及 apply 审计中发现的同类 pass/fail drift 都要与 implementation 对齐。
+- `work-unit-provenance-gate`: work-unit output coverage 必须区分 required delegated outputs、extra outputs、Phase-owned projections 和 submitted ledger authority；canonical required path roles 是 coverage contract 的一部分，Wave2 `00-cross` provenance 必须保持 submitted targeted evidence 与 existing-backed Phase-owned projection 的 authority 区分。
 - `agent-output-declaration`: work-unit submit / ledger append 必须对 Wave1 required paths 做 narrow role normalization，并记录 normalization diagnostic。
 - `research-return-map`: seed-topic return-map refs 必须可作为 consumer navigation，evidence-bearing entries 至少指向 concrete existing `reference/*.md`。
 - `research-wave-phase-content`: phase docs 必须教 Agent 写 canonical role、canonical work-unit refs、reference-first return-map refs。
@@ -67,6 +73,6 @@
 ## Impact
 
 - 预计 implementation 面包括 `DPT_FRAMEWORK/engine/work-unit-submit.mjs`、`DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs`、`DPT_FRAMEWORK/engine/helpers/wave-depth-contracts.mjs`、`DPT_FRAMEWORK/engine/helpers/return-map.mjs`、`DPT_FRAMEWORK/cli/inspect-wave*-output.mjs`、`DPT_FRAMEWORK/cli/gates/check-gate-*.mjs`、`DPT_FRAMEWORK/schema/gate_definitions/gate-*.definition.json`、`DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md`、`phase-wave1.md`、`phase-wave2.md`、`phase-seed-topics.md`、static hygiene / validation helpers。实际 apply 只应修改审计证明相关且影响 deterministic judgment/output contract 的 surfaces。
-- 预计测试面包括 `tests/engine/helpers/`、`tests/engine/work-unit-submit.test.mjs`、`tests/integration/cli/check-gate-wave1-complete.test.mjs`、`tests/integration/cli/inspect-wave-return-map.test.mjs`、fixture-level gate tests，以及 static regression tests。
+- 预计测试面包括 `tests/engine/helpers/`、`tests/engine/work-unit-submit.test.mjs`、`tests/integration/cli/check-gate-wave1-complete.test.mjs`、Wave2 `00-cross` provenance / projection focused tests、`tests/integration/cli/inspect-wave-return-map.test.mjs`、fixture-level gate tests，以及 static regression tests。
 - Requirement registry 同步需要在 apply 开始时完成：本 proposal 暂在 change-local specs 中使用 pending IDs `AGO-007`、`GSK-011`、`IOC-005`、`RRM-004`、`RWG-018`、`RWP-016`、`WPG-013`；apply 阶段必须登记到 `openspec/governance/req-registry.yaml` 后再运行治理检查。
 - 技术约束保持不变：Node.js >=20，纯 JavaScript ESM，`node:test` + `node:assert`，不新增依赖，不使用 Python。

@@ -14,6 +14,8 @@ This requirement does not make return maps evidence authority. Submitted work-un
 
 Implementation SHALL use a deterministic evidence-bearing predicate instead of broad prose interpretation. At minimum, entries with relationship/status values that claim support, refutation, partial support, emergent evidence, or contextual evidence SHALL be treated as evidence-bearing. Entries may be treated as limitation/non-materialized only when their return-map fields explicitly mark deferral/open/no materializable evidence and do not claim existing evidence support through refs or status.
 
+Concrete reference validation for evidence-bearing seed-topic return-map entries SHALL be blocking for `inspect-wave0-output`, `inspect-wave1-output`, `inspect-wave2-output`, and any active gate/check that declares return-map navigation readiness. It SHALL NOT be described as diagnostic-only when the command includes the finding in `check.passed: false`.
+
 #### Scenario: concrete existing reference ref passes
 
 - **WHEN** an evidence-bearing return-map entry contains `refs: reference/01_topic-source.md`
@@ -25,6 +27,7 @@ Implementation SHALL use a deterministic evidence-bearing predicate instead of b
 - **WHEN** an evidence-bearing return-map entry contains refs only to `artifacts/wave1/01_topic/evidence-summary.md`, `_cache/wave1/...`, or `_work_units/wave1/...`
 - **THEN** return-map concrete reference validation SHALL fail
 - **AND** advice SHALL ask the Agent to add concrete `reference/*.md` navigation or record an explicit limitation
+- **AND** wave inspect output SHALL classify the finding as blocking when it contributes to command failure
 
 #### Scenario: globbed reference ref fails
 

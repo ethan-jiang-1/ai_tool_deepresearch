@@ -82,16 +82,16 @@ Unsafe refs and refs that cannot bind to submitted work-unit rows SHALL continue
 - **THEN** `depth_review_contract` SHALL fail
 - **AND** diagnostics SHALL identify that the ref is not submitted
 
-### Requirement: Return-map reference navigation SHALL block concrete-ref drift where configured
+### Requirement: Return-map reference navigation SHALL block concrete-ref drift when navigation readiness is checked
 
-Wave gate and inspect implementations that validate seed-topic return maps SHALL distinguish consumer navigation failures from advisory map-shape diagnostics. For evidence-bearing seed-topic return-map entries, concrete existing `reference/*.md` refs SHALL be required when the command or gate is checking consumer navigation readiness.
+Wave gate and inspect implementations that validate seed-topic return maps SHALL distinguish consumer navigation failures from advisory map-shape diagnostics. For evidence-bearing seed-topic return-map entries, concrete existing `reference/*.md` refs SHALL be required when `inspect-wave0-output`, `inspect-wave1-output`, `inspect-wave2-output`, or an active gate/check is checking consumer navigation readiness.
 
 Internal surfaces such as `artifacts/`, `_cache/`, and `_work_units/` MAY be reported as secondary provenance, but they SHALL NOT satisfy the concrete reference navigation requirement by themselves.
 
 #### Scenario: seed-topic entry with only internal refs fails navigation
 
 - **WHEN** an evidence-bearing seed-topic return-map entry includes only `artifacts/`, `_cache/`, or `_work_units/` refs
-- **THEN** the configured return-map navigation check SHALL fail
+- **THEN** the command/gate return-map navigation check SHALL fail
 - **AND** diagnostics SHALL request a concrete existing `reference/*.md` ref or explicit limitation state
 
 #### Scenario: concrete existing reference ref passes navigation
@@ -99,6 +99,34 @@ Internal surfaces such as `artifacts/`, `_cache/`, and `_work_units/` MAY be rep
 - **WHEN** an evidence-bearing seed-topic return-map entry includes `reference/01_topic-source.md`
 - **AND** that file exists under the active bundle root
 - **THEN** the concrete reference navigation check SHALL pass for that entry
+
+### Requirement: Wave2 cross-reference backing SHALL preserve targeted-evidence and existing-backed projection authorities
+
+Wave2 `reference/00-cross-*.md` gate and inspect checks SHALL preserve the existing authority split between newly fetched evidence and existing-backed Phase-owned projections. A new fetched Wave2 cross reference SHALL require submitted `wave2_targeted_evidence` authority. An existing-backed pure-synthesis `00-cross` projection MAY pass without a new Wave2 submitted row only when it is backed by prior accepted evidence and the deterministic Wave2 process refs that make the projection auditable.
+
+`source_layer: wave2_cross`, reference index coverage, or filesystem presence SHALL NOT by itself establish evidence authority for a `00-cross` reference.
+
+#### Scenario: submitted targeted evidence backs a new Wave2 cross reference
+
+- **WHEN** `reference/00-cross-new-gap.md` uses a source URL introduced by Wave2 targeted search
+- **AND** a submitted `wave2_targeted_evidence` work-unit row declares the reference output or otherwise binds the accepted source URL and receipt authority
+- **THEN** Wave2 provenance checks MAY classify the reference as delegated fetched evidence
+- **AND** the reference SHALL NOT be rejected merely because it is also indexed with `source_layer: wave2_cross`
+
+#### Scenario: existing-backed projection passes without a new Wave2 row
+
+- **WHEN** `reference/00-cross-existing-backed.md` uses a prior accepted source URL
+- **AND** its body includes `W2F-xxx` plus refs to `finding-index.yaml` and `cross-topic-ledger.md`
+- **AND** the referenced prior backing resolves to concrete prior submitted evidence or accepted backing surfaces
+- **THEN** Wave2 provenance checks MAY classify the reference as a Phase-owned projection
+- **AND** `wave2_work_unit_submission_presence` SHALL NOT require a new Wave2 work-unit row for that projection
+
+#### Scenario: source layer alone does not establish authority
+
+- **WHEN** a `reference/00-cross-*.md` file has `source_layer: wave2_cross` or a matching `reference/_INDEX.md` row
+- **AND** it has neither submitted `wave2_targeted_evidence` backing nor existing prior submitted backing with W2F/finding-index/cross-topic-ledger refs
+- **THEN** Wave2 provenance checks SHALL fail
+- **AND** diagnostics SHALL explain whether the repair is submitted targeted evidence or existing-backed projection backing
 
 ### Requirement: Blocking diagnostics SHALL not be labeled diagnostic-only
 

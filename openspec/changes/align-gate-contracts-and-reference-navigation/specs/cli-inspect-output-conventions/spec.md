@@ -14,11 +14,14 @@ A finding SHALL NOT be labeled `diagnosticOnly: true` or described as diagnostic
 
 For blocking deterministic contract findings, inspect output SHALL also be self-sufficient enough for repair: it SHALL name the failing artifact/ref/field or rule, the expected deterministic shape or canonical value, and the nearest repair surface. Inspect output SHALL NOT force the Agent to read Engine helper source to discover why the command failed.
 
+Inspect summary fields SHALL not contradict the command result. If return-map findings contribute to `checks_failed` or `check.passed: false`, the output SHALL NOT include a summary flag such as `return_map_diagnostic_only: true` for those findings.
+
 #### Scenario: failed inspect command does not call its blocker diagnostic-only
 
 - **WHEN** `inspect-wave1-output.mjs` fails because an evidence-bearing seed-topic return map has no concrete existing `reference/*.md`
 - **THEN** the output SHALL classify that finding as blocking for the inspect command
 - **AND** it SHALL NOT label that finding diagnostic-only
+- **AND** its summary metadata SHALL NOT claim return-map findings are diagnostic-only
 
 #### Scenario: advisory map-shape issue remains advisory
 

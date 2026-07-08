@@ -1,7 +1,7 @@
 ## 1. Gate / Output Contract Audit And Registry
 
-- [ ] 1.1 @impl RWG-018, GSK-011: Register pending requirement IDs `AGO-007`, `GSK-011`, `IOC-005`, `RRM-004`, `RWG-018`, `RWP-016`, and `WPG-013` in `openspec/governance/req-registry.yaml` before target-code edits; keep groups sorted and run the registry checker after edits.
-- [ ] 1.2 @impl RWG-018, GSK-011: Create change-local `implementation-evidence.md` under `openspec/changes/align-gate-contracts-and-reference-navigation/`; read proposal, design, delta specs, tasks, BUG-068, BUG-069 gate portions, BUG-070, and archived `2026-07-08-stabilize-agent-facing-work-unit-contracts/implementation-evidence.md`.
+- [ ] 1.1 @impl RWG-018, GSK-011: Register pending requirement IDs `AGO-007`, `GSK-011`, `IOC-005`, `RRM-004`, `RWG-018`, `RWP-016`, and `WPG-013` in `openspec/governance/req-registry.yaml` before target-code edits; keep groups sorted, run the registry checker after edits, and record any pre-existing governance drift separately from this change's IDs.
+- [ ] 1.2 @impl RWG-018, GSK-011: Create change-local `implementation-evidence.md` under `openspec/changes/align-gate-contracts-and-reference-navigation/` using the design evidence shape; read proposal, design, delta specs, tasks, BUG-068, BUG-069 gate portions, BUG-070, and archived `2026-07-08-stabilize-agent-facing-work-unit-contracts/implementation-evidence.md`.
 - [ ] 1.3 @impl RWG-018, GSK-011: Create an apply-time rule/output inventory using the design columns: gate/command, rule/check id, implementation route, runtime surface, producer instruction, diagnostic/advice wording, pass/fail consequence, drift status, and test guard; explicitly mark contract closure state across producer instruction, runtime authority, checker implementation, diagnostic feedback, and regression guard.
 - [ ] 1.4 @impl RWG-018, GSK-011: Expand or confirm the design gate/output-alignment audit against current active gate definitions before framework edits; enumerate every active rule id even when a design row groups related rules.
 - [ ] 1.5 @impl RWG-018, WPG-013, RRM-004, IOC-005: Audit adjacent output contract surfaces beyond the named bugs: gate selectors/output selectors, submitted ledger role/path expectations, depth-review refs, reference projection/backing helpers, return-map refs, inspect CLIs, phase docs, static hygiene, Source-of-Record conflicts, normalization boundaries, and stop:no diagnostic self-sufficiency.
@@ -32,19 +32,27 @@
 - [ ] 4.2 @impl RRM-004: Add helper extraction for concrete bundle-relative `reference/*.md` refs from evidence-bearing seed-topic return-map entries.
 - [ ] 4.3 @impl RRM-004: Reject refs containing `*` globs and count summaries such as `reference/topic-*.md (8 files)` or `reference/topic-*.md（8 个）`.
 - [ ] 4.4 @impl RRM-004: Validate that each extracted concrete `reference/*.md` ref exists under the active bundle root and is safe.
-- [ ] 4.5 @impl RRM-004, IOC-005: Fail evidence-bearing entries that have only `artifacts/`, `_cache/`, or `_work_units/` refs without any concrete existing `reference/*.md`, unless they match the deterministic limitation / no materializable evidence predicate.
+- [ ] 4.5 @impl RRM-004, IOC-005: Fail evidence-bearing entries that have only `artifacts/`, `_cache/`, or `_work_units/` refs without any concrete existing `reference/*.md`, unless they match the deterministic limitation / no materializable evidence predicate; classify these failures as blocking in wave inspect output when they contribute to command failure.
 - [ ] 4.6 @impl RRM-004, RWP-016: Update `phase-seed-topics.md`, `phase-wave0.md`, `phase-wave1.md`, and `phase-wave2.md` so return-map refs teach `reference/` as the primary consumer navigation layer, internal build surfaces as secondary provenance, and limitation entries as explicit deterministic states.
 - [ ] 4.7 @impl RRM-004: Preserve the rule that return maps do not create evidence authority; submitted ledgers and backing checks still own delegated coverage.
 
 ## 5. Diagnostic Classification And Static Gate Audit
 
 - [ ] 5.1 @impl IOC-005: Update inspect CLIs and shared return-map helpers so `blocking`, `advisory`, and `diagnostic-only` wording matches each command's `check.passed` behavior.
-- [ ] 5.2 @impl IOC-005: Rename or remove `diagnosticOnly` labels where the finding contributes to a non-gate inspect command failure or a gate failure.
+- [ ] 5.2 @impl IOC-005: Rename or remove `diagnosticOnly` labels and summary flags such as `return_map_diagnostic_only` where the finding contributes to a non-gate inspect command failure or a gate failure.
 - [ ] 5.3 @impl IOC-005, RWG-018: Make blocking deterministic diagnostics self-sufficient for stop:no repair by naming failing rule/finding id, bundle-relative surface, expected shape/canonical value, classification, and nearest repair target.
 - [ ] 5.4 @impl GSK-011: Add a static audit test or validator that reads active gate definition JSON and fails on unknown `check` names or unsupported delegated-provenance check names.
 - [ ] 5.5 @impl GSK-011, RWG-018: Ensure the static audit or companion mapping proves every active gate rule id has a known helper/CLI dispatch, documented artifact contract category, producer instruction surface or explicit exemption, runtime authority surface, diagnostic/pass-fail classification, and test guard.
 - [ ] 5.6 @impl GSK-011, RWG-018: Extend static or focused regression coverage for any additional output-contract drift classes discovered by the apply-time audit.
 - [ ] 5.7 @impl GSK-011: Keep archives out of the static audit scope; only active gate definitions and current framework CLIs/helpers are checked.
+
+## 5A. Wave2 Cross-Reference Projection Alignment
+
+- [ ] 5A.1 @impl RWG-018, WPG-013: Audit current Wave2 `00-cross` authority surfaces before editing: `classifyReferenceAuthority()`, `checkWave2FindingIndexContract()`, `finding_index_contract`, `wave2_cross_reference_index_coverage`, `wave2_work_unit_cross_ref_coverage`, `wave2_work_unit_submission_presence`, `wave2_delegated_bypass_suspected`, `phase-wave2.md`, and `inspect-wave2-output.mjs`.
+- [ ] 5A.2 @impl RWG-018, WPG-013: Preserve the existing authority split: new fetched `reference/00-cross-*.md` evidence requires submitted `wave2_targeted_evidence`; existing-backed Phase-owned projections may pass without a new Wave2 row only when prior accepted backing plus W2F/finding-index/cross-topic-ledger/concrete prior submitted refs close the contract.
+- [ ] 5A.3 @impl RWG-018, WPG-013: Do not replace the split with an all-`00-cross`-requires-new-work-unit rule, and do not allow `source_layer: wave2_cross`, `reference/_INDEX.md`, or filesystem presence to establish evidence authority by itself.
+- [ ] 5A.4 @impl RWG-018, WPG-013, IOC-005: Update Wave2 diagnostics/docs/tests where the audit finds drift so the repair target says whether the missing authority is submitted targeted evidence or existing-backed projection backing.
+- [ ] 5A.5 @impl RWG-018: Record any Wave2 `00-cross` findings in implementation evidence as aligned, fixed, or deferred with reason; do not turn advisory synthesis-quality preferences into blocking provenance gates.
 
 ## 6. Regression And Fixture Tests
 
@@ -53,9 +61,10 @@
 - [ ] 6.3 @impl RWG-018: Add depth-review tests proving trailing slash refs pass after canonicalization, while unsafe refs and unsubmitted refs fail.
 - [ ] 6.4 @impl RRM-004, IOC-005: Add return-map helper / inspect tests proving deterministic evidence-bearing entries with internal-only refs fail, glob/count `reference/` refs fail, missing concrete refs fail, concrete existing `reference/*.md` refs pass, and explicit limitation entries may omit concrete references.
 - [ ] 6.5 @impl IOC-005, RWG-018: Add diagnostic classification and self-sufficiency tests proving blocking/advisory/diagnostic-only labels match pass/fail behavior and blocking findings include repair coordinates.
-- [ ] 6.6 @impl GSK-011: Add static gate-rule audit tests covering active gate definitions.
-- [ ] 6.7 @impl RWG-018: Add or update tests for every additional in-scope deterministic mismatch found during the apply-time audit.
-- [ ] 6.8 @impl RWG-018: Run focused gate/helper tests and fixture-level gate tests; fix failures rather than weakening contracts.
+- [ ] 6.6 @impl RWG-018, WPG-013: Add Wave2 focused tests proving submitted targeted evidence can back new `00-cross` refs, existing-backed projections can pass without new Wave2 rows, and `source_layer` / index coverage alone cannot establish authority.
+- [ ] 6.7 @impl GSK-011: Add static gate-rule audit tests covering active gate definitions.
+- [ ] 6.8 @impl RWG-018: Add or update tests for every additional in-scope deterministic mismatch found during the apply-time audit.
+- [ ] 6.9 @impl RWG-018: Run focused gate/helper tests and fixture-level gate tests; fix failures rather than weakening contracts.
 
 ## 7. Release And Governance
 
