@@ -22,8 +22,9 @@
 - [BUG-061](BUG-061-start-from-here-misleading-name-and-positioning.md) — START_FROM_HERE.md 名字（应为 BUNDLE_MAP.md）和定位（应为被动知识地图而非动作入口）都有误导性
 - [BUG-062](BUG-062-phase-agent-passive-waiting-no-polling.md) — Phase Agent spawn sub-agent 后被动等待 task-notification 推送，不主动轮询文件系统，导致 sub-agent 已完成但 Agent 空等，需用户敲"继续"才推进
 - [BUG-063](BUG-063-gate-failure-cascade-skips-phase-wave2.md) — Gate failure 手动修复级联：wave0 gate 失败 → 手动改 status → handoff chain 断裂 → wave1 gate 无法运行 → 再次手动改 → wave2 被完全跳过（cross-topic synthesis 丢失）
+- [BUG-064](BUG-064-wave1-reference-files-not-produced.md) — Wave1 sub-agent 不产出 topic-specific reference 文件：5 个 topic 只有 1 个写了 reference，其余 4 个 reference/ 为空。消费者从 seed_topics → reference/ 的消费路径在第一跳就断了
 
-**Next available bug ID: BUG-064**
+**Next available bug ID: BUG-065**
 
 ---
 
