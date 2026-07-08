@@ -1,13 +1,13 @@
 ## 1. Entrance Contract Audit
 
-- [ ] 1.1 @impl SNC-006, AGQ-023: Read `proposal.md`, `design.md`, delta specs, `_backlog/bugs/BUG-066*`, `_backlog/bugs/BUG-067*`, and the non-gate portions of `_backlog/bugs/BUG-069*`; record the entrance-contract audit scope in implementation evidence before target-code edits.
-- [ ] 1.2 @impl SNC-006, AGQ-023: Build an entrance-contract matrix for every Agent-facing entrance surface: phase queue task-card examples, non-delegated queue complete result examples, work-unit `manifest.json`, `task.md`, spawn prompt, `_beacon.json`, `result.schema.json`, kind output/cache contracts, submit validators, and ledger append preconditions.
-- [ ] 1.3 @impl SNC-006, AGQ-023: For each matrix row, record producer, Agent reader, executable schema/helper validator, source-of-truth contract field, failure boundary, and regression/static guard before fixing.
-- [ ] 1.4 @impl SNC-006: Compare generated work-unit schema shape against submit-time validation for registered wave0/wave1/wave2 work-unit kinds; record every drift in implementation evidence before fixing.
-- [ ] 1.5 @impl SNC-006: Compare generated `manifest.json`, `task.md`, spawn prompt, `_beacon.json`, and `result.schema.json` for the same claimed work unit; record contradictions in identity, output/cache contract, source-claim capability, and required/default wording before fixing.
-- [ ] 1.6 @impl SNC-006: Compare `output_contract.required_result_fields`, generated JSON Schema `required`, and `WorkUnitResultSchema` default/required behavior; choose and record one consistent semantics for each field: schema+submit require it, or the output contract stops calling it required.
-- [ ] 1.7 @impl AGQ-023: Compare phase Markdown queue task-card/result examples against `QueueDemandItemSchema` and `QueueResultSchema`; record every drift before fixing.
-- [ ] 1.8 @impl SNC-006, AGQ-023: Classify any discovered mismatch as entrance-contract scope or gate-alignment scope; fix entrance-contract mismatches in this change and record gate-only findings for `align-gate-contracts-and-reference-navigation`.
+- [x] 1.1 @impl SNC-006, AGQ-023: Create change-local `implementation-evidence.md` or equivalent apply ledger under `openspec/changes/stabilize-agent-facing-work-unit-contracts/`; read `proposal.md`, `design.md`, delta specs, `_backlog/bugs/BUG-066*`, `_backlog/bugs/BUG-067*`, and the non-gate portions of `_backlog/bugs/BUG-069*`; record the entrance-contract audit scope before target-code edits.
+- [x] 1.2 @impl SNC-006, AGQ-023: Build an entrance-contract matrix for every Agent-facing entrance surface: phase queue task-card examples, non-delegated queue complete result examples, work-unit `manifest.json`, `task.md`, spawn prompt, `_beacon.json`, `result.schema.json`, kind output/cache contracts, submit validators, and ledger append preconditions.
+- [x] 1.3 @impl SNC-006, AGQ-023: For each matrix row, record producer, Agent reader, executable schema/helper validator, source-of-truth contract field, failure boundary, and regression/static guard before fixing.
+- [x] 1.4 @impl SNC-006: Compare generated work-unit schema shape against submit-time validation for registered wave0/wave1/wave2 work-unit kinds; record every drift in implementation evidence before fixing.
+- [x] 1.5 @impl SNC-006: Compare generated `manifest.json`, `task.md`, spawn prompt, `_beacon.json`, and `result.schema.json` for the same claimed work unit; record contradictions in identity, output/cache contract, source-claim capability, and required/default wording before fixing.
+- [x] 1.6 @impl SNC-006: Compare `output_contract.required_result_fields`, generated JSON Schema `required`, and `WorkUnitResultSchema` default/required behavior; choose and record one consistent semantics for each field: schema+submit require it, or the output contract stops calling it required.
+- [x] 1.7 @impl AGQ-023: Compare phase Markdown queue task-card/result examples against `QueueDemandItemSchema` and `QueueResultSchema`; record every drift before fixing.
+- [x] 1.8 @impl SNC-006, AGQ-023: Classify any discovered mismatch as entrance-contract scope or gate-alignment scope; fix entrance-contract mismatches in this change and record gate-only findings for `align-gate-contracts-and-reference-navigation` in the change-local implementation evidence.
 - [ ] 1.9 @impl SNC-006, AGQ-023: Do not change gate selector semantics, Wave1 required path-to-role policy, return-map reference policy, depth-review reference navigation, or historical submitted-ledger rows in this change.
 
 ## 2. Work-Unit Result Schema Projection
@@ -55,3 +55,4 @@
 - [ ] 6.4 @impl SNC-006, AGQ-023: Run `node openspec/governance/check-project-reqs.mjs` and require PASS.
 - [ ] 6.5 @impl SNC-006, AGQ-023: Run `node openspec/governance/check-project-specs.mjs` and require PASS.
 - [ ] 6.6 @impl SNC-006, AGQ-023: Run OpenSpec validation for `stabilize-agent-facing-work-unit-contracts` if available; record the command and outcome.
+- [ ] 6.7 @impl SNC-006, AGQ-023: Before declaring apply complete, update the change-local implementation evidence with final touched surfaces, test commands, PASS/FAIL outcomes, deferred gate-only findings, and residual risks.

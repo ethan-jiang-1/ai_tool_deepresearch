@@ -78,7 +78,7 @@ Implementation SHALL create or record an entrance-contract matrix before target-
 - the failure boundary (`enqueue`, `operate-queue complete`, `operate-work-unit submit`, or ledger append);
 - the regression or static hygiene guard that will keep it aligned.
 
-The matrix is not a new runtime artifact. It is implementation evidence for this change so apply does not collapse back into symptom repair.
+The matrix is not a runtime artifact. During apply, record it in `openspec/changes/stabilize-agent-facing-work-unit-contracts/implementation-evidence.md` or in an equivalently named change-local apply ledger. That evidence file SHALL stay under this change directory and SHALL include the matrix, the drift/fix decision for each row, the tests or hygiene guard that covers it, and any gate-only findings deferred to `align-gate-contracts-and-reference-navigation`.
 
 Alternative considered: rely on broad task wording like “audit entrance surfaces”. Rejected because the current failure mode came from broad wording and scattered terminology not forcing one-to-one mapping between declared contract and executable validator.
 
@@ -195,6 +195,19 @@ These tests belong under root `tests/`, not under `DPT_FRAMEWORK/`.
 10. Run focused tests, governance checks, and OpenSpec validation before archive/apply completion.
 
 Rollback is code-level revert of the implementation change before archive. No runtime bundle migration is required.
+
+## Apply Readiness / Definition of Done
+
+This change is apply-ready when the approved implementation can show:
+
+- change-local implementation evidence records the entrance-contract matrix, fixed entrance mismatches, and deferred gate-only findings;
+- generated work-unit schemas and submit validation agree for wave0, wave1, and wave2 registered kinds;
+- generated `manifest.json`, `task.md`, spawn prompt, `_beacon.json`, and `result.schema.json` agree for representative claimed work units;
+- active phase queue task-card/result examples parse against the same schemas used by `operate-queue enqueue` and `operate-queue complete`;
+- focused regression tests and `validate-work-unit-hygiene` pass;
+- governance checks and strict OpenSpec validation pass;
+- `CHANGELOG.md` and `DPT_FRAMEWORK/RUN.md` publish the `v0.12` framework version;
+- no gate selector, Wave1 path-role policy, return-map reference policy, depth-review navigation, or historical ledger-row amend sneaks into this change.
 
 ## Open Questions
 

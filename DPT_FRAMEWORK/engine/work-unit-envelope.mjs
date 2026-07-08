@@ -46,24 +46,80 @@ export function refsForWorkUnit(bundleDir, { wave, work_id }) {
   };
 }
 
+const BASE_RESULT_REQUIRED_FIELDS = Object.freeze(['work_id', 'queue_item_id', 'kind', 'receipt_nonce']);
+const DEFAULT_RESULT_REQUIRED_FIELDS = Object.freeze([...BASE_RESULT_REQUIRED_FIELDS, 'output_files', 'cache_trails']);
+
+function uniqueStrings(values) {
+  return [...new Set((Array.isArray(values) ? values : [])
+    .filter((value) => typeof value === 'string' && value.length > 0))];
+}
+
+function requiredResultFields(outputContract) {
+  const fromContract = uniqueStrings(outputContract?.required_result_fields);
+  return fromContract.length > 0 ? fromContract : [...DEFAULT_RESULT_REQUIRED_FIELDS];
+}
+
+function outputFileItemSchema(outputContract) {
+  const roles = uniqueStrings(outputContract?.output_files?.allowed_roles);
+  const roleSchema = roles.length > 0
+    ? { type: 'string', enum: roles }
+    : { type: 'string', minLength: 1 };
+  return {
+    type: 'object',
+    required: ['path', 'role'],
+    properties: {
+      path: { type: 'string', minLength: 1 },
+      role: roleSchema,
+      source_url: { type: 'string', format: 'uri' },
+      source_slug: { type: 'string', minLength: 1 },
+    },
+    additionalProperties: false,
+  };
+}
+
+function sourceClaimItemSchema() {
+  return {
+    type: 'object',
+    required: ['url', 'source_ref', 'acceptance_status', 'is_new_vs_wave0'],
+    properties: {
+      url: { type: 'string', format: 'uri' },
+      source_ref: { type: 'string', minLength: 1 },
+      acceptance_status: { type: 'string', minLength: 1 },
+      is_new_vs_wave0: { type: 'boolean' },
+      cache_trail_refs: { type: 'array', items: { type: 'string', minLength: 1 }, default: [] },
+      degraded_capture_ref: {
+        anyOf: [
+          { type: 'string', minLength: 1 },
+          { type: 'null' },
+        ],
+      },
+    },
+    additionalProperties: false,
+  };
+}
+
 function resultSchemaDocument(manifest) {
+  const outputContract = manifest.output_contract || {};
+  const properties = {
+    schema_version: { const: 'work-unit.result.v1', default: 'work-unit.result.v1' },
+    work_id: { const: manifest.work_id },
+    queue_item_id: { const: manifest.queue_item_id },
+    kind: { const: manifest.kind },
+    receipt_nonce: { const: manifest.receipt_nonce },
+    summary: { type: 'string', default: '' },
+    output_files: { type: 'array', items: outputFileItemSchema(outputContract), default: [] },
+    cache_trails: { type: 'array', items: { type: 'string', minLength: 1 }, default: [] },
+  };
+  if (outputContract?.source_claims?.allowed === true) {
+    properties.source_claims = { type: 'array', items: sourceClaimItemSchema(), default: [] };
+    properties.accepted_source_urls = { type: 'array', items: { type: 'string', format: 'uri' }, default: [] };
+  }
   return {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
     title: `Work-unit result for ${manifest.kind}`,
     type: 'object',
-    required: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce', 'output_files', 'cache_trails'],
-    properties: {
-      schema_version: { const: 'work-unit.result.v1' },
-      work_id: { const: manifest.work_id },
-      queue_item_id: { const: manifest.queue_item_id },
-      kind: { const: manifest.kind },
-      receipt_nonce: { const: manifest.receipt_nonce },
-      summary: { type: 'string' },
-      output_files: { type: 'array', items: { type: 'object' } },
-      source_claims: { type: 'array', items: { type: 'object' } },
-      accepted_source_urls: { type: 'array', items: { type: 'string', format: 'uri' } },
-      cache_trails: { type: 'array', items: { type: 'string' } },
-    },
+    required: requiredResultFields(outputContract),
+    properties,
     additionalProperties: false,
   };
 }

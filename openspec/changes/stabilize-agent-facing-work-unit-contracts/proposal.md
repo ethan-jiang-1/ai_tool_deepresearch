@@ -17,7 +17,7 @@
 
 ## What Changes
 
-- 先做入口合同审计矩阵：系统性盘点 Agent 在 enqueue、non-delegated complete、work-unit claim/submit 前会读到的 entrance contract surfaces，并为每个 surface 标明 producer、Agent reader、Engine validator/check、source of truth、failure boundary、test/static guard；在 implementation evidence 中记录发现，不能只按 BUG-066/067 的已知实例修补。
+- 先做入口合同审计矩阵：系统性盘点 Agent 在 enqueue、non-delegated complete、work-unit claim/submit 前会读到的 entrance contract surfaces，并为每个 surface 标明 producer、Agent reader、Engine validator/check、source of truth、failure boundary、test/static guard；在 change-local implementation evidence 中记录发现，不能只按 BUG-066/067 的已知实例修补。
 - `operate-work-unit claim` 生成的 work-unit envelope 必须是同一份 manifest/output/cache contract 的多种投影；`task.md`、spawn prompt、`_beacon.json`、`result.schema.json` 不得各自维护互相矛盾的字段列表或能力暗示。
 - 生成的 `_work_units/.../result.schema.json` 必须成为 submit-time validator 和 kind output contract 的真实 Agent-facing 投影：
   - identity fields 必须 const-bind `work_id`、`queue_item_id`、`kind`、`receipt_nonce`。
@@ -47,5 +47,5 @@
 
 - 影响的未来 implementation 面预计包括 `DPT_FRAMEWORK/engine/work-unit-envelope.mjs`、`DPT_FRAMEWORK/engine/work-unit-validation.mjs`、`DPT_FRAMEWORK/schema/contracts/work-unit.mjs`、`DPT_FRAMEWORK/schema/contracts/queue.mjs`、`DPT_FRAMEWORK/workflows/nodes/phases/phase-seed-topics.md`、其他包含 queue task-card/result examples 的 active phase Markdown、`DPT_FRAMEWORK/cli/validate-work-unit-hygiene.mjs` 或 `DPT_FRAMEWORK/cli/validate-phase-templates.mjs`。
 - 影响的未来测试面包括 `tests/engine/` 或 `tests/schema/` 中的 generated result schema consistency / submit validator consistency 测试，queue phase template hygiene 测试，以及 seed-topics queue example schema 测试。
-- 需要更新 `openspec/governance/req-registry.yaml`，为 `subagent-node-contract` 和 `agentic-queue` 各登记新的 requirement ID。
+- `openspec/governance/req-registry.yaml` 已登记 `SNC-006` 和 `AGQ-023`；apply 阶段需保持 registry、delta specs、implementation `@impl` 标记和治理检查一致。
 - 技术约束保持不变：Node.js >=20，纯 JavaScript ESM，`node:test` + `node:assert`，不新增依赖，不使用 Python。
