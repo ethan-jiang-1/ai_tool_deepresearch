@@ -194,6 +194,19 @@ Use deterministic fixture artifacts to exercise real framework gates.
 research_profile: quick_factual
 root_must_answer_set:
   - "How does handoff witnessing prevent status laundering?"
+research_style_params:
+  user_visible: false
+  wave0_per_topic_source_floor: 1
+  wave0_shared_ref_total: 1
+  wave1_per_topic_ref_floor: 1
+  topic_unique_ratio: 1
+  counterexample_search: false
+  cross_verification: false
+  p0p1_independent_backing: 1
+  quality_min_tier: tier_4
+  quality_min_substance: none
+  wave2_cross_topic_depth: 0
+  wave2_emergent_search_rounds: 0
 human_decision_checkpoints:
   hitl1:
     status: recorded
@@ -504,9 +517,32 @@ scan:
 findings:
   - id: W2F-001
     type: cross_topic_resolution
+    priority: p2
     status: resolved
     decision: use_existing_evidence
     affected_topics: [topic-a]
+    origin_refs:
+      - artifacts/wave1/topic-a/evidence-summary.md
+    trigger_refs:
+      - artifacts/wave1/topic-a/question-list.md
+    search_required: false
+    subagent_receipt_refs: []
+    appears_in_synthesis: true
+    hitl2_handoff: false
+    confidence: medium
+    independent_backing_refs: []
+    gap_status: no_gap
+synthesis_eligibility:
+  pure_synthesis_eligible: true
+  scan_matrix_present: true
+  scan_topic_pair_coverage: []
+  unresolved_search_required_count: 0
+  targeted_search_required_count: 0
+  targeted_search_submitted_count: 0
+  explicit_deferral_count: 0
+  profile_params_read:
+    - p0p1_independent_backing
+  ineligibility_reasons: []
 `);
   writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `---
 id: t1

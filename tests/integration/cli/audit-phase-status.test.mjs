@@ -126,12 +126,48 @@ describe('audit-phase-status CLI', () => {
     assert.match(output.inspect.join('\n'), /failed with next:null/);
   });
 
+  it('reports failed source-gate status laundering without mutating status', () => {
+    const bundle = makeBundle('phase-audit-failed-source-window', { current_gate: 'wave0_complete', next_gate: 'wave1_complete' });
+    writeTrace(bundle, [{
+      ts: '2026-01-01T00:00:00.000Z',
+      event: 'gate_attempt',
+      gate: 'wave0-complete',
+      phase: 'wave0',
+      passed: false,
+      currentNodeRef: 'phases/phase-wave0.md',
+      next: null,
+    }]);
+    const before = readFileSync(join(bundle, 'rb_status.json'), 'utf-8');
+
+    const { output } = runAudit(bundle);
+    assert.equal(output.outcome, 'failed_gate_downstream_status');
+    assert.match(output.inspect.join('\n'), /wave0-complete failed with next:null/);
+    assert.match(output.advice.join('\n'), /do not hand-edit rb_status\.json/);
+    assert.equal(readFileSync(join(bundle, 'rb_status.json'), 'utf-8'), before);
+  });
+
   it('reports manual bypass suspicion for skipped wave windows', () => {
     const bundle = makeBundle('phase-audit-manual', { current_gate: 'wave2_complete', next_gate: 'hitl2_recorded' });
     writeTrace(bundle, witnessed());
+    const before = readFileSync(join(bundle, 'rb_status.json'), 'utf-8');
     const { output } = runAudit(bundle);
     assert.equal(output.outcome, 'manual_bypass_suspected');
     assert.match(output.inspect.join('\n'), /latest legal handoff target/);
+    assert.equal(readFileSync(join(bundle, 'rb_status.json'), 'utf-8'), before);
+  });
+
+  it('reports premature final-adjacent status as diagnostic-only without mutating status', () => {
+    const bundle = makeBundle('phase-audit-premature-final-status', { current_gate: 'readiness_passed', next_gate: 'none', current_node: 'phases/phase-final.md' });
+    writeTrace(bundle, witnessed());
+    writeFileSync(join(bundle, 'final/report.md'), '# Premature final report\n');
+    const before = readFileSync(join(bundle, 'rb_status.json'), 'utf-8');
+
+    const { output } = runAudit(bundle);
+    assert.equal(output.outcome, 'status_drift');
+    assert.equal(output.diagnostic_only, true);
+    assert.match(output.inspect.join('\n'), /readiness-to-final handoff|premature final output/);
+    assert.match(output.advice.join('\n'), /do not hand-edit rb_status\.json/);
+    assert.equal(readFileSync(join(bundle, 'rb_status.json'), 'utf-8'), before);
   });
 
   it('reports premature final output as diagnostic-only non-delivery', () => {

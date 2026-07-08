@@ -25,6 +25,7 @@ import {
   WORK_UNIT_ID_PATTERN,
   WORK_UNIT_INDEX_SCHEMA_VERSION,
   WORK_UNIT_MANIFEST_SCHEMA_VERSION,
+  WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION,
   WorkUnitBeaconSchema,
   WorkUnitAgentFileSchema,
   WorkUnitIndexSchema,
@@ -176,6 +177,22 @@ function appendLedgerRow(bundleDir, row) {
 function isSafeBundleRelative(ref) {
   if (!ref || path.isAbsolute(ref)) return false;
   return !ref.split(/[\\/]+/).includes('..');
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isPathInsideDir(candidatePath, rootDir) {
+  const relative = path.relative(path.resolve(rootDir), path.resolve(candidatePath));
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function recordSubmitNormalization(normalizations, detail) {
+  normalizations.push({
+    ...detail,
+    normalized_at: now(),
+  });
 }
 
 function logCliPath() {
@@ -859,17 +876,63 @@ function readAndValidateBeacon(bundleDir, record, manifest) {
   return beacon;
 }
 
-function readAndValidateResult(resultPath, record) {
+function readAndValidateResult(bundleDir, resultPath, record, { normalizations = [] } = {}) {
   if (!resultPath) throw new Error('--result is required');
   if (!existsSync(resultPath)) throw new Error(`Result file not found: ${resultPath}`);
-  const result = WorkUnitResultSchema.parse(readJson(resultPath));
+  const raw = readJson(resultPath);
+  let candidate = raw;
+  if (isPlainObject(raw) && Object.hasOwn(raw, 'result')) {
+    const keys = Object.keys(raw);
+    if (keys.length !== 1) {
+      throw new Error(`unsafe result wrapper for ${record.work_id}: result has sibling keys ${keys.filter((key) => key !== 'result').join(', ')}`);
+    }
+    if (!isPlainObject(raw.result)) throw new Error(`unsafe result wrapper for ${record.work_id}: result value must be an object`);
+    candidate = raw.result;
+    recordSubmitNormalization(normalizations, {
+      kind: 'result_wrapper_unwrapped',
+      work_id: record.work_id,
+      queue_item_id: record.queue_item_id,
+      surface_ref: record.paths.result_ref,
+      candidate_result_path: path.resolve(resultPath),
+    });
+  }
+  if (!isPlainObject(candidate)) throw new Error(`result must be a JSON object for ${record.work_id}`);
+
+  const normalized = { ...candidate };
+  for (const field of ['work_id', 'queue_item_id', 'kind']) {
+    if (normalized[field] !== undefined && normalized[field] !== record[field]) {
+      throw new Error(`result/index mismatch for ${record.work_id}: ${field}`);
+    }
+  }
+  if (normalized.receipt_nonce !== undefined && normalized.receipt_nonce !== record.receipt_nonce) {
+    const hasCompleteBinding = normalized.work_id === record.work_id
+      && normalized.queue_item_id === record.queue_item_id
+      && normalized.kind === record.kind;
+    const insideAssignedDir = isPathInsideDir(resultPath, path.join(bundleDir, record.paths.work_unit_dir));
+    if (!hasCompleteBinding || !insideAssignedDir) {
+      throw new Error(`result/index mismatch for ${record.work_id}: receipt_nonce`);
+    }
+    recordSubmitNormalization(normalizations, {
+      kind: 'nonce_normalized_from_record',
+      work_id: record.work_id,
+      queue_item_id: record.queue_item_id,
+      surface_ref: record.paths.result_ref,
+      candidate_result_path: path.resolve(resultPath),
+      field: 'receipt_nonce',
+      from: String(normalized.receipt_nonce),
+      to: record.receipt_nonce,
+    });
+    normalized.receipt_nonce = record.receipt_nonce;
+  }
+
+  const result = WorkUnitResultSchema.parse(normalized);
   for (const field of ['work_id', 'queue_item_id', 'kind', 'receipt_nonce']) {
     if (result[field] !== record[field]) throw new Error(`result/index mismatch for ${record.work_id}: ${field}`);
   }
   return result;
 }
 
-function validateSubmitRuntimeReceipt(bundleDir, record) {
+function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations = [], allowNonceNormalization = false } = {}) {
   const receiptPath = path.join(bundleDir, record.paths.runtime_receipt_ref);
   if (!existsSync(receiptPath)) throw new Error(`Missing runtime receipt: ${record.paths.runtime_receipt_ref}`);
   const raw = readFileSync(receiptPath, 'utf-8');
@@ -877,13 +940,81 @@ function validateSubmitRuntimeReceipt(bundleDir, record) {
   if (lines.length === 0) throw new Error(`Runtime receipt has no lifecycle events: ${record.paths.runtime_receipt_ref}`);
   const events = [];
   lines.forEach((line, index) => {
-    const event = WorkUnitRuntimeReceiptEventSchema.parse(JSON.parse(line));
+    let parsed;
+    try {
+      parsed = JSON.parse(line);
+    } catch (error) {
+      throw new Error(`Runtime receipt line ${index + 1} is invalid JSONL: ${error.message || String(error)}`);
+    }
+    if (!isPlainObject(parsed)) throw new Error(`Runtime receipt line ${index + 1} must be a JSON object`);
+    const eventCandidate = { ...parsed };
+    if (eventCandidate.schema_version === undefined) {
+      eventCandidate.schema_version = WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION;
+      recordSubmitNormalization(normalizations, {
+        kind: 'receipt_schema_defaulted',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        surface_ref: record.paths.runtime_receipt_ref,
+        line: index + 1,
+        field: 'schema_version',
+        to: WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION,
+      });
+    } else if (eventCandidate.schema_version !== WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION) {
+      throw new Error(`runtime receipt schema_version mismatch for ${record.work_id} line ${index + 1}`);
+    }
+
+    const autofilled = [];
+    for (const field of ['work_id', 'queue_item_id', 'kind']) {
+      if (eventCandidate[field] === undefined) {
+        eventCandidate[field] = record[field];
+        autofilled.push(field);
+      } else if (eventCandidate[field] !== record[field]) {
+        throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: ${field}`);
+      }
+    }
+    if (eventCandidate.receipt_nonce === undefined) {
+      eventCandidate.receipt_nonce = record.receipt_nonce;
+      autofilled.push('receipt_nonce');
+    } else if (eventCandidate.receipt_nonce !== record.receipt_nonce) {
+      const receiptHasCompleteBinding = parsed.work_id === record.work_id
+        && parsed.queue_item_id === record.queue_item_id
+        && parsed.kind === record.kind;
+      if (!allowNonceNormalization || !receiptHasCompleteBinding) {
+        throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: receipt_nonce`);
+      }
+      recordSubmitNormalization(normalizations, {
+        kind: 'nonce_normalized_from_record',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        surface_ref: record.paths.runtime_receipt_ref,
+        line: index + 1,
+        field: 'receipt_nonce',
+        from: String(eventCandidate.receipt_nonce),
+        to: record.receipt_nonce,
+      });
+      eventCandidate.receipt_nonce = record.receipt_nonce;
+    }
+    if (autofilled.length > 0) {
+      recordSubmitNormalization(normalizations, {
+        kind: 'receipt_binding_identity_autofilled',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        surface_ref: record.paths.runtime_receipt_ref,
+        line: index + 1,
+        fields: autofilled,
+      });
+    }
+
+    const event = WorkUnitRuntimeReceiptEventSchema.parse(eventCandidate);
     for (const field of WORK_UNIT_REQUIRED_RECEIPT_FIELDS) {
       if (event[field] !== record[field]) throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: ${field}`);
     }
     events.push(event);
   });
-  return events;
+  return {
+    events,
+    canonical_content: `${events.map((event) => JSON.stringify(event)).join('\n')}\n`,
+  };
 }
 
 function validateOutputFiles(bundleDir, result, outputContract) {
@@ -900,7 +1031,33 @@ function validateOutputFiles(bundleDir, result, outputContract) {
   }
 }
 
-function validateCacheTrails(bundleDir, result, cachePolicy) {
+function canonicalizeCacheLeafPage(cacheDir, trail, record, normalizations) {
+  const pagePath = path.join(cacheDir, 'page.md');
+  const pageContentPath = path.join(cacheDir, 'page-content.md');
+  const hasPage = existsSync(pagePath) && statSync(pagePath).isFile();
+  const hasPageContent = existsSync(pageContentPath) && statSync(pageContentPath).isFile();
+  if (!hasPageContent) return;
+
+  const sidecar = readFileSync(pageContentPath, 'utf-8');
+  if (hasPage) {
+    const page = readFileSync(pagePath, 'utf-8');
+    if (page !== sidecar) {
+      throw new Error(`cache trail ${trail} has divergent page.md and page-content.md`);
+    }
+    return;
+  }
+
+  writeFileSync(pagePath, sidecar);
+  recordSubmitNormalization(normalizations, {
+    kind: 'cache_page_content_canonicalized',
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    surface_ref: `${trail}/page.md`,
+    sidecar_ref: `${trail}/page-content.md`,
+  });
+}
+
+function validateCacheTrails(bundleDir, result, cachePolicy, { record = null, normalizations = [] } = {}) {
   const trails = result.cache_trails || [];
   if (cachePolicy?.required && trails.length === 0) throw new Error('cache_trails[] is required by the work-unit cache policy');
   for (const trail of trails) {
@@ -909,6 +1066,7 @@ function validateCacheTrails(bundleDir, result, cachePolicy) {
     const full = path.join(bundleDir, trail);
     if (!existsSync(full)) throw new Error(`cache trail directory missing: ${trail}`);
     if (!statSync(full).isDirectory()) throw new Error(`cache_trails path is not a directory: ${trail}`);
+    if (record) canonicalizeCacheLeafPage(full, trail, record, normalizations);
     const directFiles = new Set(readdirSync(full).filter((entry) => {
       try { return statSync(path.join(full, entry)).isFile(); } catch { return false; }
     }));
@@ -1072,6 +1230,7 @@ function captureSubmitSnapshot(bundleDir, record) {
     path.join(bundleDir, 'rb_queue.json'),
     ledgerPath(bundleDir),
     path.join(bundleDir, record.paths.result_ref),
+    path.join(bundleDir, record.paths.runtime_receipt_ref),
     path.join(bundleDir, record.paths.status_ref),
   ];
   return files.map((filePath) => ({ filePath, snapshot: captureFileSnapshot(filePath) }));
@@ -1332,29 +1491,46 @@ function recordSubmitRejection(bundleDir, { work_id, resultPath, reason }) {
 function prepareWorkUnitSubmit(bundleDir, { work_id, resultPath }) {
   const index = loadWorkUnitIndex(bundleDir, { createIfMissing: false });
   const record = requireWorkUnitRecord(index, work_id);
+  const normalizations = [];
 
   if (record.status === 'submitted') {
-    const result = readAndValidateResult(resultPath, record);
+    const result = readAndValidateResult(bundleDir, resultPath, record, { normalizations });
     const resultHash = hashValue(result);
     const ledgerRow = findSubmittedLedgerRow(bundleDir, record.work_id);
     if (record.result_hash === resultHash && ledgerRow?.ledger_record_hash === record.ledger_record_hash) {
-      return { duplicate: true, index, record, result, result_hash: resultHash, ledger_record_hash: record.ledger_record_hash, ledger_row: ledgerRow };
+      return { duplicate: true, index, record, result, result_hash: resultHash, ledger_record_hash: record.ledger_record_hash, ledger_row: ledgerRow, normalizations };
     }
     throw new Error(`different-content duplicate submit rejected for ${record.work_id}`);
   }
   if (record.status !== 'claimed') throw new Error(`work_id ${record.work_id} is ${record.status}; submit requires claimed`);
 
-  const result = readAndValidateResult(resultPath, record);
+  const resultPathInsideAssignedDir = isPathInsideDir(resultPath, path.join(bundleDir, record.paths.work_unit_dir));
+  const result = readAndValidateResult(bundleDir, resultPath, record, { normalizations });
   const resultHash = hashValue(result);
   const manifest = readAndValidateManifest(bundleDir, index, record);
   readAndValidateBeacon(bundleDir, record, manifest);
-  validateSubmitRuntimeReceipt(bundleDir, record);
+  const runtimeReceipt = validateSubmitRuntimeReceipt(bundleDir, record, {
+    normalizations,
+    allowNonceNormalization: resultPathInsideAssignedDir,
+  });
   const queue = validateQueueBindingForSubmit(bundleDir, record, manifest);
   validateOutputFiles(bundleDir, result, manifest.output_contract);
-  validateCacheTrails(bundleDir, result, manifest.cache_policy);
+  validateCacheTrails(bundleDir, result, manifest.cache_policy, { record, normalizations });
   validateSourceClaims(bundleDir, result, manifest.output_contract);
   const ledgerRow = buildLedgerRow({ record, result, resultHash, declaredAt: now() });
-  return { duplicate: false, index, record, manifest, queue, result, result_hash: resultHash, ledger_row: ledgerRow, ledger_record_hash: ledgerRow.ledger_record_hash };
+  return {
+    duplicate: false,
+    index,
+    record,
+    manifest,
+    queue,
+    result,
+    result_hash: resultHash,
+    runtime_receipt_content: runtimeReceipt.canonical_content,
+    normalizations,
+    ledger_row: ledgerRow,
+    ledger_record_hash: ledgerRow.ledger_record_hash,
+  };
 }
 
 export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave = null } = {}) {
@@ -1373,6 +1549,7 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
       status: 'submitted',
       result_hash: prepared.result_hash,
       ledger_record_hash: prepared.ledger_record_hash,
+      normalizations: prepared.normalizations,
     };
   }
 
@@ -1386,6 +1563,7 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
 
       try {
         writeJson(path.join(bundleDir, record.paths.result_ref), prepared.result);
+        writeFileSync(path.join(bundleDir, record.paths.runtime_receipt_ref), prepared.runtime_receipt_content);
         writeJson(path.join(bundleDir, record.paths.status_ref), WorkUnitStatusFileSchema.parse({
           work_id: record.work_id,
           status: 'submitted',
@@ -1442,6 +1620,24 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
           ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
           ledger_record_hash: prepared.ledger_record_hash,
         });
+        if (prepared.normalizations.length > 0) {
+          traceWorkUnitEvent(bundleDir, 'work_unit_submit_normalized', {
+            tx_id,
+            work_id: record.work_id,
+            queue_item_id: record.queue_item_id,
+            kind: record.kind,
+            normalization_count: prepared.normalizations.length,
+            normalizations: prepared.normalizations,
+          });
+          logToRun(bundleDir, 'info', 'work_unit_submit_normalized', {
+            kind: 'work_unit_submit',
+            tx_id,
+            work_id: record.work_id,
+            queue_item_id: record.queue_item_id,
+            normalization_count: prepared.normalizations.length,
+            normalizations: prepared.normalizations,
+          });
+        }
         traceWorkUnitEvent(bundleDir, 'work_unit_submitted', {
           tx_id,
           work_id: record.work_id,
@@ -1472,6 +1668,7 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
           ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
           queue: postcondition.queue,
           index: postcondition.index,
+          normalizations: prepared.normalizations,
         };
       } catch (error) {
         const rollback = restoreSubmitSnapshot(snapshot);

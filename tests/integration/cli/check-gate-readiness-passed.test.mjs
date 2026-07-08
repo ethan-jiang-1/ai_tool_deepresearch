@@ -8,6 +8,8 @@ import { setStatusWindow, witnessedHandoffEvents } from './handoff-fixtures.mjs'
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs');
+const WAVE2_GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs');
+const HITL2_GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
@@ -17,6 +19,31 @@ function unique(prefix) { return `rt_rd_${prefix}_${Date.now()}_${Math.random().
 
 function runGate(bundlePath) {
   return spawnSync('node', [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-readiness.md'], { encoding: 'utf-8', timeout: 10000 });
+}
+
+function runSpecificGate(cli, bundlePath, currentNode) {
+  return spawnSync('node', [cli, '--bundle', bundlePath, '--current-node', currentNode], { encoding: 'utf-8', timeout: 10000 });
+}
+
+function createPreflightBundle(name, {
+  currentGate,
+  nextGate,
+  currentNode,
+  traceEvents = [],
+} = {}) {
+  mkdirSync(BUNDLES_DIR, { recursive: true });
+  const dir = track(join(BUNDLES_DIR, unique(name)));
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'rb_status.json'), JSON.stringify({
+    bundle: name,
+    current_mode: 'execution',
+    state: 'in_progress',
+    current_gate: currentGate,
+    next_gate: nextGate,
+    current_node: currentNode,
+  }, null, 2));
+  writeFileSync(join(dir, 'rb_trace.jsonl'), traceEvents.map((event) => JSON.stringify(event)).join('\n') + (traceEvents.length > 0 ? '\n' : ''));
+  return dir;
 }
 
 const VALID_PROFILE = `
@@ -204,5 +231,117 @@ describe('check-gate-readiness-passed', () => {
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('next_gate')),
       `Expected status drift fail: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('11. Wave2 gate rejects artifact-only entry before artifact-level diagnostics', () => {
+    const dir = createPreflightBundle('wave2-artifact-only', {
+      currentGate: 'wave1_complete',
+      nextGate: 'wave2_complete',
+      currentNode: 'phases/phase-wave2.md',
+      traceEvents: [],
+    });
+    mkdirSync(join(dir, 'artifacts/wave2'), { recursive: true });
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), '# Synthesis\n');
+    writeFileSync(join(dir, 'artifacts/wave2/cross-topic-ledger.md'), '# Ledger\n');
+    writeFileSync(join(dir, 'artifacts/wave2/finding-index.yaml'), 'findings: []\n');
+
+    const result = runSpecificGate(WAVE2_GATE_CLI, dir, 'phases/phase-wave2.md');
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.equal(output.check.handoff_preflight, false);
+    assert.match(output.inspect.join('\n'), /Missing witnessed handoff into phases\/phase-wave2\.md/);
+    assert.doesNotMatch(output.inspect.join('\n'), /synthesis\.md|finding-index\.yaml/);
+  });
+
+  it('12. HITL2 and readiness gates reject skipped Wave2 handoff despite status/current_node edits', () => {
+    const traceEvents = witnessedHandoffEvents({
+      sourceGate: 'wave1-complete',
+      phase: 'wave1',
+      sourceNode: 'phases/phase-wave1.md',
+      targetNode: 'phases/phase-wave2.md',
+    });
+
+    const hitl2Dir = createPreflightBundle('hitl2-skipped-wave2', {
+      currentGate: 'wave2_complete',
+      nextGate: 'hitl2_recorded',
+      currentNode: 'phases/phase-hitl2.md',
+      traceEvents,
+    });
+    mkdirSync(join(hitl2Dir, 'artifacts/hitl2'), { recursive: true });
+    writeFileSync(join(hitl2Dir, 'artifacts/hitl2/decision-brief.md'), '# Decision\n');
+    const hitl2 = runSpecificGate(HITL2_GATE_CLI, hitl2Dir, 'phases/phase-hitl2.md');
+    const hitl2Output = JSON.parse(hitl2.stdout);
+    assert.equal(hitl2Output.check.passed, false);
+    assert.equal(hitl2Output.check.handoff_preflight, false);
+    assert.match(hitl2Output.inspect.join('\n'), /Latest deterministic handoff targets phases\/phase-wave2\.md, not current node phases\/phase-hitl2\.md/);
+
+    const readinessDir = createPreflightBundle('readiness-skipped-wave2', {
+      currentGate: 'hitl2_recorded',
+      nextGate: 'readiness_passed',
+      currentNode: 'phases/phase-readiness.md',
+      traceEvents,
+    });
+    writeFileSync(join(readinessDir, 'rb_profile.yaml'), VALID_PROFILE);
+    mkdirSync(join(readinessDir, 'final'), { recursive: true });
+    writeFileSync(join(readinessDir, 'final/report.md'), '# Draft\n');
+    const readiness = runSpecificGate(GATE_CLI, readinessDir, 'phases/phase-readiness.md');
+    const readinessOutput = JSON.parse(readiness.stdout);
+    assert.equal(readinessOutput.check.passed, false);
+    assert.equal(readinessOutput.check.handoff_preflight, false);
+    assert.match(readinessOutput.inspect.join('\n'), /Latest deterministic handoff targets phases\/phase-wave2\.md, not current node phases\/phase-readiness\.md/);
+  });
+
+  it('13. failed predecessor supersedes older pass, while legal degraded handoff clears preflight', () => {
+    const failedDir = createPreflightBundle('wave2-failed-predecessor', {
+      currentGate: 'wave1_complete',
+      nextGate: 'wave2_complete',
+      currentNode: 'phases/phase-wave2.md',
+      traceEvents: [
+        ...witnessedHandoffEvents({
+          sourceGate: 'wave1-complete',
+          phase: 'wave1',
+          sourceNode: 'phases/phase-wave1.md',
+          targetNode: 'phases/phase-wave2.md',
+        }),
+        {
+          ts: '2026-01-01T00:00:02.000Z',
+          event: 'gate_attempt',
+          gate: 'wave1-complete',
+          phase: 'wave1',
+          passed: false,
+          currentNodeRef: 'phases/phase-wave1.md',
+          next: null,
+        },
+      ],
+    });
+    const failed = runSpecificGate(WAVE2_GATE_CLI, failedDir, 'phases/phase-wave2.md');
+    const failedOutput = JSON.parse(failed.stdout);
+    assert.equal(failedOutput.check.passed, false);
+    assert.equal(failedOutput.check.handoff_preflight, false);
+    assert.match(failedOutput.inspect.join('\n'), /Missing witnessed handoff into phases\/phase-wave2\.md/);
+
+    const degradedEvents = witnessedHandoffEvents({
+      sourceGate: 'wave1-complete',
+      phase: 'wave1',
+      sourceNode: 'phases/phase-wave1.md',
+      targetNode: 'phases/phase-wave2.md',
+    });
+    degradedEvents[0].degraded = true;
+    degradedEvents[0].degraded_reason = 'fatigue_threshold_reached_with_only_degradation_eligible_quality_rules';
+    degradedEvents[0].degraded_rules = ['topic_depth_floor'];
+    degradedEvents[1].handoff_source_degraded = true;
+    degradedEvents[1].handoff_source_degraded_reason = degradedEvents[0].degraded_reason;
+    degradedEvents[1].handoff_source_degraded_rules = degradedEvents[0].degraded_rules;
+    const degradedDir = createPreflightBundle('wave2-degraded-preflight', {
+      currentGate: 'wave1_complete',
+      nextGate: 'wave2_complete',
+      currentNode: 'phases/phase-wave2.md',
+      traceEvents: degradedEvents,
+    });
+    const degraded = runSpecificGate(WAVE2_GATE_CLI, degradedDir, 'phases/phase-wave2.md');
+    const degradedOutput = JSON.parse(degraded.stdout);
+    assert.equal(degradedOutput.check.passed, false);
+    assert.notEqual(degradedOutput.check.handoff_preflight, false);
+    assert.doesNotMatch(degradedOutput.inspect.join('\n'), /Missing witnessed handoff|Latest deterministic handoff targets/);
   });
 });

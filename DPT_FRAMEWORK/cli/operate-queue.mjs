@@ -34,13 +34,42 @@ function emit(value) {
   console.log(JSON.stringify(value, null, 2));
 }
 
-const [command, bundle] = process.argv.slice(2);
+function isHelpToken(value) {
+  return value === '--help' || value === '-h';
+}
+
+function guardInvocation(args) {
+  const [maybeCommand, maybeBundle] = args;
+  if (isHelpToken(maybeCommand)) {
+    usage();
+    process.exit(0);
+  }
+  if (!maybeCommand || !maybeBundle) {
+    usage();
+    process.exit(1);
+  }
+  if (isHelpToken(maybeBundle)) {
+    console.error(`Subcommand '${maybeCommand}' requires a bundle path before help flags.`);
+    usage();
+    process.exit(1);
+  }
+  if (String(maybeBundle).startsWith('-')) {
+    console.error(`Suspicious bundle argument '${maybeBundle}': positional bundle paths must not start with '-'.`);
+    usage();
+    process.exit(1);
+  }
+}
+
+const rawArgs = process.argv.slice(2);
+guardInvocation(rawArgs);
+
+const [command, bundle] = rawArgs;
 if (!command || !bundle) {
   usage();
   process.exit(1);
 }
 
-const rest = process.argv.slice(4);
+const rest = rawArgs.slice(2);
 const { values } = parseArgs({
   args: rest,
   options: {

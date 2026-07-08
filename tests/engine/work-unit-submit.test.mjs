@@ -168,6 +168,21 @@ function writeResult(pathname, value) {
   writeFileSync(pathname, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+function receiptEvents(dir, record) {
+  return readFileSync(path.join(dir, record.paths.runtime_receipt_ref), 'utf-8')
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
+function assignedResult(dir, record) {
+  return readResult(path.join(dir, record.paths.result_ref));
+}
+
+function assertNoLedger(dir) {
+  assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
+}
+
 describe('submitWorkUnit', () => {
   it('submits an out-of-order work unit and completes only the bound queue demand', () => {
     const dir = tempBundle();
@@ -343,6 +358,305 @@ describe('submitWorkUnit', () => {
       assert.equal(ledgerRows(dir).length, 1);
     } finally {
       cleanup(dir);
+    }
+  });
+
+  it('canonicalizes a single result wrapper and rejects wrapper siblings before ledger append', () => {
+    const acceptedDir = tempBundle();
+    try {
+      saveSeedQueue(acceptedDir, [delegated('queue-a')]);
+      claimWorkUnits(acceptedDir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(acceptedDir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(acceptedDir, record);
+      const flatResult = readResult(resultPath);
+      writeResult(resultPath, { result: flatResult });
+
+      const submitted = submitWorkUnit(acceptedDir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      assert.equal(submitted.normalizations.some((item) => item.kind === 'result_wrapper_unwrapped'), true);
+      const persisted = assignedResult(acceptedDir, record);
+      assert.equal(Object.hasOwn(persisted, 'result'), false);
+      assert.equal(persisted.work_id, record.work_id);
+      const [row] = ledgerRows(acceptedDir);
+      assert.equal(Object.hasOwn(row, 'result'), false);
+      assert.equal(row.work_id, record.work_id);
+      assert.equal(row.receipt_nonce, record.receipt_nonce);
+    } finally {
+      cleanup(acceptedDir);
+    }
+
+    const rejectedDir = tempBundle();
+    try {
+      saveSeedQueue(rejectedDir, [delegated('queue-a')]);
+      claimWorkUnits(rejectedDir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(rejectedDir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(rejectedDir, record);
+      writeResult(resultPath, { result: readResult(resultPath), note: 'unsafe sibling' });
+
+      const rejected = submitWorkUnit(rejectedDir, { work_id: record.work_id, resultPath });
+      assert.equal(rejected.ok, false);
+      assert.match(rejected.inspect.join('\n'), /unsafe result wrapper/);
+      assertNoLedger(rejectedDir);
+    } finally {
+      cleanup(rejectedDir);
+    }
+  });
+
+  it('canonicalizes missing receipt schema and binding identity while rejecting receipt conflicts', () => {
+    const acceptedDir = tempBundle();
+    try {
+      saveSeedQueue(acceptedDir, [delegated('queue-a')]);
+      claimWorkUnits(acceptedDir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(acceptedDir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(acceptedDir, record);
+      writeFileSync(path.join(acceptedDir, record.paths.runtime_receipt_ref), `${JSON.stringify({
+        event: 'work_done',
+        ts: '2026-07-06T00:00:00.000Z',
+        detail: { preserved: true },
+      })}\n`);
+
+      const submitted = submitWorkUnit(acceptedDir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      assert.equal(submitted.normalizations.some((item) => item.kind === 'receipt_schema_defaulted'), true);
+      assert.equal(submitted.normalizations.some((item) => (
+        item.kind === 'receipt_binding_identity_autofilled'
+          && item.fields.includes('work_id')
+          && item.fields.includes('receipt_nonce')
+      )), true);
+      const [event] = receiptEvents(acceptedDir, record);
+      assert.equal(event.schema_version, 'work-unit.receipt-event.v1');
+      assert.equal(event.work_id, record.work_id);
+      assert.equal(event.queue_item_id, record.queue_item_id);
+      assert.equal(event.kind, record.kind);
+      assert.equal(event.receipt_nonce, record.receipt_nonce);
+      assert.deepEqual(event.detail, { preserved: true });
+    } finally {
+      cleanup(acceptedDir);
+    }
+
+    const cases = [
+      {
+        name: 'schema conflict',
+        event(record) {
+          return {
+            schema_version: 'work-unit.receipt-event.v999',
+            event: 'work_done',
+            work_id: record.work_id,
+            queue_item_id: record.queue_item_id,
+            kind: record.kind,
+            receipt_nonce: record.receipt_nonce,
+          };
+        },
+        pattern: /schema_version mismatch/,
+      },
+      {
+        name: 'binding conflict',
+        event(record) {
+          return {
+            event: 'work_done',
+            work_id: record.work_id,
+            queue_item_id: 'wrong-queue',
+            kind: record.kind,
+            receipt_nonce: record.receipt_nonce,
+          };
+        },
+        pattern: /runtime receipt mismatch/,
+      },
+      {
+        name: 'invalid jsonl',
+        raw: '{"event":"work_done"\n',
+        pattern: /invalid JSONL/,
+      },
+    ];
+
+    for (const testCase of cases) {
+      const dir = tempBundle();
+      try {
+        saveSeedQueue(dir, [delegated('queue-a')]);
+        claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+        const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+        const resultPath = writeValidSubmitFiles(dir, record);
+        const raw = testCase.raw ?? `${JSON.stringify(testCase.event(record))}\n`;
+        writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), raw);
+
+        const rejected = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+        assert.equal(rejected.ok, false, testCase.name);
+        assert.match(rejected.inspect.join('\n'), testCase.pattern, testCase.name);
+        assertNoLedger(dir);
+      } finally {
+        cleanup(dir);
+      }
+    }
+  });
+
+  it('canonicalizes page-content.md cache leaves and rejects divergent or missing authority files', () => {
+    const acceptedDir = tempBundle();
+    try {
+      saveSeedQueue(acceptedDir, [delegated('queue-a')]);
+      claimWorkUnits(acceptedDir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(acceptedDir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(acceptedDir, record);
+      const cacheDir = path.join(acceptedDir, cacheTrailPath(record));
+      const pageText = readFileSync(path.join(cacheDir, 'page.md'), 'utf-8');
+      rmSync(path.join(cacheDir, 'page.md'), { force: true });
+      writeFileSync(path.join(cacheDir, 'page-content.md'), pageText);
+
+      const submitted = submitWorkUnit(acceptedDir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      assert.equal(submitted.normalizations.some((item) => item.kind === 'cache_page_content_canonicalized'), true);
+      assert.equal(readFileSync(path.join(cacheDir, 'page.md'), 'utf-8'), pageText);
+    } finally {
+      cleanup(acceptedDir);
+    }
+
+    const sidecarDir = tempBundle();
+    try {
+      saveSeedQueue(sidecarDir, [delegated('queue-a')]);
+      claimWorkUnits(sidecarDir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(sidecarDir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(sidecarDir, record);
+      const cacheDir = path.join(sidecarDir, cacheTrailPath(record));
+      writeFileSync(path.join(cacheDir, 'page-content.md'), readFileSync(path.join(cacheDir, 'page.md'), 'utf-8'));
+
+      const submitted = submitWorkUnit(sidecarDir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      assert.equal(ledgerRows(sidecarDir).length, 1);
+    } finally {
+      cleanup(sidecarDir);
+    }
+
+    const cases = [
+      {
+        name: 'divergent page sidecar',
+        mutate(dir, record) {
+          writeFileSync(path.join(dir, cacheTrailPath(record), 'page-content.md'), '# Different captured page\n');
+        },
+        pattern: /divergent page\.md and page-content\.md/,
+      },
+      {
+        name: 'missing websearch',
+        mutate(dir, record) {
+          rmSync(path.join(dir, cacheTrailPath(record), 'websearch.json'), { force: true });
+        },
+        pattern: /missing websearch\.json/,
+      },
+      {
+        name: 'missing meta',
+        mutate(dir, record) {
+          rmSync(path.join(dir, cacheTrailPath(record), 'meta.json'), { force: true });
+        },
+        pattern: /missing meta\.json/,
+      },
+      {
+        name: 'missing page authority',
+        mutate(dir, record) {
+          rmSync(path.join(dir, cacheTrailPath(record), 'page.md'), { force: true });
+          rmSync(path.join(dir, cacheTrailPath(record), 'page-content.md'), { force: true });
+        },
+        pattern: /missing page\.md/,
+      },
+    ];
+
+    for (const testCase of cases) {
+      const dir = tempBundle();
+      try {
+        saveSeedQueue(dir, [delegated('queue-a')]);
+        claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+        const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+        const resultPath = writeValidSubmitFiles(dir, record);
+        testCase.mutate(dir, record);
+
+        const rejected = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+        assert.equal(rejected.ok, false, testCase.name);
+        assert.match(rejected.inspect.join('\n'), testCase.pattern, testCase.name);
+        assertNoLedger(dir);
+      } finally {
+        cleanup(dir);
+      }
+    }
+  });
+
+  it('normalizes stale nonce only for complete binding inside the assigned work-unit directory', () => {
+    const acceptedDir = tempBundle();
+    try {
+      saveSeedQueue(acceptedDir, [delegated('queue-a')]);
+      claimWorkUnits(acceptedDir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(acceptedDir).work_units['wu-w0-b000-src-i0001'];
+      const tmpResultPath = writeValidSubmitFiles(acceptedDir, record);
+      const assignedResultPath = path.join(acceptedDir, record.paths.result_ref);
+      const staleNonce = 'wu-11111111-1111-1111-1111-111111111111';
+      const result = readResult(tmpResultPath);
+      result.receipt_nonce = staleNonce;
+      writeResult(assignedResultPath, result);
+      writeFileSync(path.join(acceptedDir, record.paths.runtime_receipt_ref), `${JSON.stringify({
+        event: 'work_done',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        kind: record.kind,
+        receipt_nonce: staleNonce,
+        ts: '2026-07-06T00:00:00.000Z',
+      })}\n`);
+
+      const submitted = submitWorkUnit(acceptedDir, { work_id: record.work_id, resultPath: assignedResultPath });
+      assert.equal(submitted.ok, true);
+      assert.equal(submitted.normalizations.filter((item) => item.kind === 'nonce_normalized_from_record').length, 2);
+      assert.equal(assignedResult(acceptedDir, record).receipt_nonce, record.receipt_nonce);
+      assert.equal(receiptEvents(acceptedDir, record)[0].receipt_nonce, record.receipt_nonce);
+    } finally {
+      cleanup(acceptedDir);
+    }
+
+    const escapedDir = tempBundle();
+    try {
+      saveSeedQueue(escapedDir, [delegated('queue-a')]);
+      claimWorkUnits(escapedDir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(escapedDir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(escapedDir, record);
+      const result = readResult(resultPath);
+      result.receipt_nonce = 'wu-22222222-2222-2222-2222-222222222222';
+      writeResult(resultPath, result);
+
+      const rejected = submitWorkUnit(escapedDir, { work_id: record.work_id, resultPath });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.last_submit_rejection.reason_code, 'nonce_mismatch');
+      assertNoLedger(escapedDir);
+    } finally {
+      cleanup(escapedDir);
+    }
+
+    const wrongIdentityDir = tempBundle();
+    try {
+      saveSeedQueue(wrongIdentityDir, [delegated('queue-a')]);
+      claimWorkUnits(wrongIdentityDir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(wrongIdentityDir).work_units['wu-w0-b000-src-i0001'];
+      const tmpResultPath = writeValidSubmitFiles(wrongIdentityDir, record);
+      const assignedResultPath = path.join(wrongIdentityDir, record.paths.result_ref);
+      const result = readResult(tmpResultPath);
+      result.queue_item_id = 'wrong-queue';
+      result.receipt_nonce = 'wu-33333333-3333-3333-3333-333333333333';
+      writeResult(assignedResultPath, result);
+
+      const rejected = submitWorkUnit(wrongIdentityDir, { work_id: record.work_id, resultPath: assignedResultPath });
+      assert.equal(rejected.ok, false);
+      assert.match(rejected.inspect.join('\n'), /queue_item_id/);
+      assertNoLedger(wrongIdentityDir);
+    } finally {
+      cleanup(wrongIdentityDir);
+    }
+
+    const exactIdentityDir = tempBundle();
+    try {
+      saveSeedQueue(exactIdentityDir, [delegated('queue-a')]);
+      claimWorkUnits(exactIdentityDir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(exactIdentityDir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(exactIdentityDir, record);
+
+      const submitted = submitWorkUnit(exactIdentityDir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      assert.equal(assignedResult(exactIdentityDir, record).receipt_nonce, record.receipt_nonce);
+      assert.equal(ledgerRows(exactIdentityDir).length, 1);
+    } finally {
+      cleanup(exactIdentityDir);
     }
   });
 

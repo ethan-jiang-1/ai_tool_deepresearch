@@ -32,6 +32,26 @@ function nodeForGateEnum(topology, gateEnum) {
   return topology.gateToNode.get(String(gateEnum || '').replace(/_/g, '-')) || null;
 }
 
+function phaseOrderIndex(topology, node) {
+  return (topology.manifest.phases || []).findIndex((phase) => phase.node === node);
+}
+
+function statusClaimsAtOrAfterFailedSource(topology, status, failedAttempt) {
+  const sourceNode = topology.gateToNode.get(failedAttempt.gate);
+  if (!sourceNode) return false;
+  const sourceIndex = phaseOrderIndex(topology, sourceNode);
+  if (sourceIndex < 0) return false;
+
+  const currentNode = nodeForGateEnum(topology, status.current_gate);
+  const nextNode = nodeForGateEnum(topology, status.next_gate);
+  const currentIndex = currentNode ? phaseOrderIndex(topology, currentNode) : -1;
+  const nextIndex = status.next_gate === 'none'
+    ? Number.POSITIVE_INFINITY
+    : (nextNode ? phaseOrderIndex(topology, nextNode) : -1);
+
+  return currentIndex >= sourceIndex || nextIndex > sourceIndex;
+}
+
 function latestStatusTransition(events) {
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i].event;
@@ -202,8 +222,10 @@ export function auditPhaseStatus(bundlePath) {
     latestAttempt?.event?.event === 'gate_attempt' &&
     latestAttempt.event.passed === false &&
     latestAttempt.event.next == null &&
-    latestWindow &&
-    status.current_gate !== latestWindow.currentGate
+    (
+      statusClaimsAtOrAfterFailedSource(topology, status, latestAttempt.event) ||
+      (latestWindow && status.current_gate !== latestWindow.currentGate)
+    )
   ) {
     inspect.push(`Latest gate_attempt for ${latestAttempt.event.gate} failed with next:null, but rb_status.json claims downstream window ${status.current_gate}/${status.next_gate}.`);
     return {

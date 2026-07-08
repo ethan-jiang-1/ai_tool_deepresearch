@@ -4,7 +4,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import { spawnSync } from 'node:child_process';
-import { writeFileSync, cpSync } from 'node:fs';
+import { existsSync, writeFileSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
@@ -47,6 +47,12 @@ function makeEmptyQueue(overrides = {}) {
   };
 }
 
+function assertNoFlagRuntimeDirs(parentDir) {
+  for (const name of ['--help', '--bundle']) {
+    assert.equal(existsSync(join(parentDir, name)), false, `${name}/ should not be created`);
+  }
+}
+
 describe('operate-queue.mjs integration', () => {
   let bundleDir;
 
@@ -58,6 +64,46 @@ describe('operate-queue.mjs integration', () => {
   });
 
   after(cleanupAll);
+
+  it('handles help and suspicious bundle arguments before runtime side effects', () => {
+    const parentDir = createTempDir('operate-queue-help-guard');
+
+    const topHelp = spawnSync('node', [CLI, '--help'], {
+      cwd: parentDir,
+      encoding: 'utf-8',
+      timeout: 5000,
+    });
+    assert.strictEqual(topHelp.status, 0);
+    assert.match(topHelp.stderr, /Usage:/);
+    assertNoFlagRuntimeDirs(parentDir);
+
+    const subHelp = spawnSync('node', [CLI, 'enqueue', '--help'], {
+      cwd: parentDir,
+      encoding: 'utf-8',
+      timeout: 5000,
+    });
+    assert.notStrictEqual(subHelp.status, 0);
+    assert.match(subHelp.stderr, /Usage:|help/i);
+    assertNoFlagRuntimeDirs(parentDir);
+
+    const suspiciousBundle = spawnSync('node', [CLI, 'claim', '--bundle', '--actor', 'main-agent'], {
+      cwd: parentDir,
+      encoding: 'utf-8',
+      timeout: 5000,
+    });
+    assert.notStrictEqual(suspiciousBundle.status, 0);
+    assert.match(suspiciousBundle.stderr, /suspicious bundle argument/i);
+    assertNoFlagRuntimeDirs(parentDir);
+
+    const unsupportedBundleFlag = spawnSync('node', [CLI, '--bundle', '--help'], {
+      cwd: parentDir,
+      encoding: 'utf-8',
+      timeout: 5000,
+    });
+    assert.notStrictEqual(unsupportedBundleFlag.status, 0);
+    assert.match(unsupportedBundleFlag.stderr, /Usage:|help|bundle/i);
+    assertNoFlagRuntimeDirs(parentDir);
+  });
 
   it('check - inspects queue', () => {
     const r = spawnSync('node', [CLI, 'check', bundleDir], { encoding: 'utf-8', timeout: 5000 });

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.9
+
+- Work-unit submit now canonicalizes bounded LLM-shaped drift for result wrappers, runtime receipts, cache `page-content.md`, and constrained nonce repair while keeping ledger/receipt authority fail-closed.
+- `operate-queue.mjs` and `operate-work-unit.mjs` now handle help and suspicious positional bundle arguments before runtime side effects, avoiding flag-named bundle directories.
+- Phase handoff auditing and lifecycle gate coverage were hardened so failed or missing source-gate handoffs, manual status edits, and premature final files cannot authorize downstream delivery.
+
 ## v0.8
 
 - Restored Wave1 depth contracts with per-topic depth reviews, exact new-source floors, structured source claims, supplementary repair loops, and cache-backed accepted source coverage.

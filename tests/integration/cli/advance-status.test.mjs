@@ -101,7 +101,26 @@ describe('advance-status CLI', () => {
     const result = runAdvance(dir, 'wave0_complete');
     assert.equal(result.status, 'error');
     assert.match(result.reason, /missing route-bound load_complete/);
+    assert.ok(result.advice.some((item) => item.includes('enter-phase') && item.includes('phases/phase-wave1.md')));
     assert.equal(readFileSync(statusPath, 'utf8'), before);
+  });
+
+  it('fails a failed source gate without mutating status or appending phase_transition', () => {
+    const before = readFileSync(statusPath, 'utf8');
+    writeTrace([
+      gateAttempt({
+        passed: false,
+        next: null,
+      }),
+    ]);
+
+    const result = runAdvance(dir, 'wave0_complete');
+    assert.equal(result.status, 'error');
+    assert.match(result.reason, /no latest passed deterministic/);
+    assert.ok(result.advice.some((item) => item.includes('Rerun the source gate') && item.includes('wave0-complete')));
+    assert.equal(readFileSync(statusPath, 'utf8'), before);
+    const events = readFileSync(tracePath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    assert.equal(events.some((event) => event.event === 'phase_transition'), false);
   });
 
   it('fails covered source gate when load_complete is not bound to the source attempt index', () => {

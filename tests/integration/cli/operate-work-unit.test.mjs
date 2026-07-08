@@ -1,7 +1,7 @@
 // @impl DEW-002, FRE-005
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
@@ -19,6 +19,12 @@ function tempBundle() {
 
 function cleanup(dir) {
   rmSync(dir, { recursive: true, force: true });
+}
+
+function assertNoFlagRuntimeDirs(parentDir) {
+  for (const name of ['--help', '--bundle']) {
+    assert.equal(existsSync(path.join(parentDir, name)), false, `${name}/ should not be created`);
+  }
 }
 
 function queueItem(overrides = {}) {
@@ -75,6 +81,49 @@ function writeValidSubmitFiles(dir, record) {
 }
 
 describe('operate-work-unit inspect', () => {
+  it('handles help and suspicious bundle arguments before runtime side effects', () => {
+    const parentDir = tempBundle();
+    try {
+      const topHelp = spawnSync(process.execPath, [CLI, '--help'], {
+        cwd: parentDir,
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(topHelp.status, 0);
+      assert.match(topHelp.stderr, /Usage:/);
+      assertNoFlagRuntimeDirs(parentDir);
+
+      const subHelp = spawnSync(process.execPath, [CLI, 'claim', '--help'], {
+        cwd: parentDir,
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.notEqual(subHelp.status, 0);
+      assert.match(subHelp.stderr, /Usage:|help/i);
+      assertNoFlagRuntimeDirs(parentDir);
+
+      const suspiciousBundle = spawnSync(process.execPath, [CLI, 'claim', '--bundle', '--phase', 'wave0'], {
+        cwd: parentDir,
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.notEqual(suspiciousBundle.status, 0);
+      assert.match(suspiciousBundle.stderr, /suspicious bundle argument/i);
+      assertNoFlagRuntimeDirs(parentDir);
+
+      const unsupportedBundleFlag = spawnSync(process.execPath, [CLI, '--bundle', '--help'], {
+        cwd: parentDir,
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.notEqual(unsupportedBundleFlag.status, 0);
+      assert.match(unsupportedBundleFlag.stderr, /Usage:|help|bundle/i);
+      assertNoFlagRuntimeDirs(parentDir);
+    } finally {
+      cleanup(parentDir);
+    }
+  });
+
   it('claim allocates a delegated queue-front work unit', () => {
     const dir = tempBundle();
     try {
