@@ -18,3 +18,4 @@
 | Plan | 简述 |
 |------|------|
 | [martin-fowler-run-bugfix-change-split](martin-fowler-run-bugfix-change-split.md) | 将 BUG-066 至 BUG-070 切成 2 个 OpenSpec change：先修 Agent-facing work-unit contract，再集中修 gate/reference navigation 对齐。 |
+| [martin-fowler-run-performance-tuning](martin-fowler-run-performance-tuning.md) | 性能角度复盘同一 run（~128min，"卡"占 ~25–30min）：emitted schema 从 output_contract 派生 + dry-submit 预检 + phase-doc 一致性测试 + 抓取并行。**与上一份重叠，review 时决定合并或独立。** |

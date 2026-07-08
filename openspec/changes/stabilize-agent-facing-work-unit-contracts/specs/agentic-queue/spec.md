@@ -4,9 +4,9 @@
 
 ### Requirement: Phase task-card examples SHALL preserve queue demand identity
 
-Agent-facing phase Markdown task-card and result examples for queue demand SHALL use `queue_item_id` as queue demand identity. They SHALL NOT use `work_id` as queue demand identity, task-card identity, or old queue-position identity.
+Agent-facing phase Markdown task-card and result examples for queue demand SHALL use `queue_item_id` as queue demand identity. They SHALL NOT use `work_id` as queue demand identity, task-card identity, non-delegated queue completion identity, or old queue-position identity.
 
-Static hygiene checks SHALL scan active phase Markdown queue task-card/result examples for retired queue identity drift, not only the queue JSON template or work-unit generated surfaces. `work_id` SHALL remain valid only when a surface explicitly describes an Engine-allocated delegated work-unit attempt, such as work-unit claim/submit, work-unit result, runtime receipt, or submitted ledger context.
+Static hygiene checks SHALL scan active phase Markdown queue task-card/result examples for retired queue identity drift, not only the queue JSON template or work-unit generated surfaces. Queue task-card examples SHALL validate against the active queue demand schema. Non-delegated `operate-queue complete --result` examples SHALL validate against the active queue result schema. `work_id` SHALL remain valid only when a surface explicitly describes an Engine-allocated delegated work-unit attempt, such as work-unit claim/submit, work-unit result, runtime receipt, or submitted ledger context.
 
 #### Scenario: seed-topic materialization example uses queue item identity
 
@@ -19,6 +19,18 @@ Static hygiene checks SHALL scan active phase Markdown queue task-card/result ex
 - **WHEN** an active phase Markdown queue task-card or queue result example uses `work_id` where the queue demand identity is required
 - **THEN** static hygiene SHALL fail
 - **AND** the diagnostic SHALL require `queue_item_id`
+
+#### Scenario: seed-topic queue complete result uses queue item identity
+
+- **WHEN** the Agent reads the seed-topics phase `operate-queue complete --result` example
+- **THEN** the example SHALL identify the completed non-delegated queue item with `queue_item_id`
+- **AND** the example SHALL NOT use `work_id` as the completion result identity
+
+#### Scenario: phase examples match queue schemas
+
+- **WHEN** static hygiene scans active phase Markdown queue task-card and non-delegated queue result JSON examples
+- **THEN** task-card examples SHALL parse against the queue demand schema
+- **AND** non-delegated complete result examples SHALL parse against the queue result schema
 
 #### Scenario: work-unit attempt contexts may still use work_id
 
