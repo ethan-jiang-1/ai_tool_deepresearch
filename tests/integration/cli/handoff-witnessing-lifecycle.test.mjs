@@ -440,6 +440,11 @@ function stageWave1Pass(bundle) {
     '## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n' +
     '## Core Content Capture\nThis section is long enough to satisfy the reference quality gate and describes how route-bound witnesses connect source gate outputs to target phase entry.\n' +
     '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- witness\n## Risks And Limitations\n- Fixture.\n');
+  writeFileSync(join(bundle, 'reference/_INDEX.md'),
+    '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |\n' +
+    '| --- | --- | --- | --- | --- | --- | --- | --- |\n' +
+    '| 00-shared-handoff.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-05 |\n' +
+    '| topic-a-deepening.md | secondary | practitioner | Tier 2 | topic-a | wave1_topic | accepted | 2026-07-05 |\n');
   writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `---
 id: t1
 slug: topic-a
