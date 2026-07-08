@@ -35,11 +35,11 @@ The format specification SHALL be available to the Phase Agent materialization g
 
 ### Requirement: Phase-owned reference materializations SHALL preserve submitted source backing
 
-Phase-owned reference files SHALL be consumer-facing projections, not alternate delegated evidence authority. A Phase-owned reference SHALL identify concrete backing from submitted source claims, accepted source URLs, cache trails, explicit degraded-capture records, work-unit refs, prior-wave artifacts, or Wave2 ledger/index findings. It SHALL NOT introduce accepted fetched-source evidence that lacks submitted work-unit or prior accepted backing.
+Phase-owned reference files SHALL be consumer-facing projections, not alternate delegated evidence authority. A Phase-owned reference SHALL identify concrete backing from submitted source claims, accepted source URLs, cache trails, explicit degraded-capture records, work-unit refs, prior-wave artifacts that themselves bind to submitted/prior accepted backing, or Wave2 ledger/index findings. It SHALL NOT introduce accepted fetched-source evidence that lacks submitted work-unit or prior accepted backing.
 
-For Wave1 topic references, backing SHALL come from submitted `wave1_topic_deepening` rows and their source/cache claims. For Wave2 existing-backed cross references, backing SHALL come from already submitted Wave0/Wave1 evidence plus Wave2 `W2F-xxx` ledger/index process evidence. For Wave2 new external evidence, backing SHALL come from submitted `wave2_targeted_evidence` rows.
+For Wave1 topic references, backing SHALL come from submitted `wave1_topic_deepening` rows and their source/cache/degraded-capture claims. For Wave2 existing-backed cross references, backing SHALL ultimately bind to already submitted Wave0/Wave1 source/cache/degraded-capture/work-unit evidence plus Wave2 `W2F-xxx` ledger/index process evidence. For Wave2 new external evidence, backing SHALL come from submitted `wave2_targeted_evidence` rows.
 
-This change SHALL NOT require a new required reference metadata key or a new required `_INDEX.md` column to classify Phase-owned projections. Classification SHALL use the existing reference metadata block, `_INDEX.md` rows and `source_layer`, submitted source/cache/work-unit ledgers, output declarations, and Wave2 `W2F-xxx` ledger/index refs. `source_layer` is a navigation label and SHALL NOT be sufficient authority by itself.
+This change SHALL NOT require a new required reference metadata key or a new required `_INDEX.md` column to classify Phase-owned projections. Classification SHALL use the existing reference metadata block, `_INDEX.md` rows and `source_layer`, submitted source claims, accepted source URL surfaces, cache/degraded-capture/work-unit ledgers, output declarations, and Wave2 `W2F-xxx` ledger/index refs. `source_layer` is a navigation label and SHALL NOT be sufficient authority by itself.
 
 For existing-backed Wave2 `00-cross` references, the required `source_url` metadata field SHALL point to a primary already accepted backing source URL when the current reference format requires a single URL. It SHALL NOT introduce a novel external URL. Additional prior-wave backing sources, work-unit refs, cache refs, and `W2F-xxx` refs SHALL be listed in the reference body using bundle-relative refs or Markdown links that gates/inspectors can scan. If no single accepted primary source URL exists, the Phase Agent SHALL split the finding into source-backed references, repair backing/index records, or record a limitation rather than inventing a synthetic public URL.
 
@@ -72,6 +72,6 @@ For existing-backed Wave2 `00-cross` references, the required `source_url` metad
 #### Scenario: source layer is not authority by itself
 
 - **WHEN** `_INDEX.md` lists a reference row with `source_layer: wave2_cross` or another legal navigation layer
-- **AND** the reference lacks deterministic backing through submitted source/cache/work-unit ledgers or Wave2 finding refs
+- **AND** the reference lacks deterministic backing through submitted source claims, accepted source URL surfaces, cache/degraded-capture/work-unit ledgers, or Wave2 finding refs
 - **THEN** the row SHALL NOT make the reference accepted evidence
 - **AND** gates or inspectors SHALL diagnose missing backing rather than infer authority from the layer label

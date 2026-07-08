@@ -4,7 +4,7 @@
 
 ### Requirement: Wave2 SHALL materialize existing-backed cross references without weakening targeted evidence provenance
 
-Wave2 pure synthesis SHALL materialize `reference/00-cross-*.md` files for accepted consumer-facing cross-topic findings when those findings have concrete existing backing from submitted Wave0/Wave1 evidence, backed references, cache trails, evidence summaries, question lists, or work-unit ledger rows. These existing-backed cross references are Phase-owned consumer projections. They SHALL cite `W2F-xxx` finding ids and bundle-relative backing refs to `cross-topic-ledger.md`, `finding-index.yaml`, and the submitted prior-wave evidence surfaces that support the finding. A prior reference file MAY be one backing ref only when that prior reference itself binds to submitted/prior accepted evidence; reference-to-reference chains without underlying submitted backing SHALL NOT be sufficient.
+Wave2 pure synthesis SHALL materialize `reference/00-cross-*.md` files for accepted consumer-facing cross-topic findings when those findings have concrete existing backing that ultimately binds to submitted Wave0/Wave1 source claims, accepted source URL surfaces, cache trails, explicit degraded-capture records, or work-unit ledger rows. Backed references, evidence summaries, question lists, and synthesis artifacts MAY be locator refs only when they resolve to that underlying submitted backing. These existing-backed cross references are Phase-owned consumer projections. They SHALL cite `W2F-xxx` finding ids and bundle-relative backing refs to `cross-topic-ledger.md`, `finding-index.yaml`, and the submitted prior-wave evidence surfaces that support the finding. A prior reference file MAY be one backing ref only when that prior reference itself binds to submitted/prior accepted evidence; reference-to-reference chains without underlying submitted backing SHALL NOT be sufficient.
 
 Wave2 MAY omit a `00-cross` reference only for findings explicitly marked as process-only, internal, deferred, not sufficiently source-backed, or intentionally not consumer-facing. Such omission SHALL be visible in Wave2 artifacts or diagnostics, not hidden by silence.
 
@@ -15,7 +15,7 @@ Wave2 SHALL NOT use synthesis prose alone as backing for `00-cross` references. 
 #### Scenario: pure synthesis writes existing-backed cross reference
 
 - **WHEN** Wave2 identifies finding `W2F-001` from already submitted Wave0/Wave1 evidence
-- **AND** the finding has concrete backing refs in `finding-index.yaml` or `cross-topic-ledger.md`
+- **AND** the finding has concrete backing refs in `finding-index.yaml` or `cross-topic-ledger.md` that resolve to submitted prior-wave source/cache/degraded-capture/work-unit backing
 - **AND** the finding is accepted and consumer-facing
 - **THEN** the Phase Agent SHALL write `reference/00-cross-w2f-001-<slug>.md`
 - **AND** the reference SHALL cite the finding id and prior-wave backing refs

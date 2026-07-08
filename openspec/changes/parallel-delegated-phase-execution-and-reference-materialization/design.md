@@ -14,20 +14,36 @@ FOSE run 里的四个 bug 暴露了同一条运行链上的两个缺口：
 - Engine owns claim/submit/ledger/gate/provenance authority.
 - Runtime truth lives under the active bundle root.
 
+## Requirement Ownership Map
+
+The change intentionally touches several specs, but each spec has one primary job:
+
+| Requirement | Primary question it answers | Must not own |
+| --- | --- | --- |
+| AGQ-022 | How many independent delegated work units should the Phase Agent claim now? | Work-unit ID allocation or submit authority |
+| SWE-006 | What does a silent delegated loop do after background spawn? | A new blocking wait daemon or notification authority |
+| RWP-015 | How do phase bodies teach the end-to-end batch-poll-submit-materialize-gate loop? | Low-level provenance classification rules |
+| SNC-005 | What must Sub-agent roles return? | Canonical consumer reference presentation |
+| WAI-008 | When and how are Wave1 topic references materialized? | Wave2 cross-reference policy |
+| WTS-010 | When and how are Wave2 `00-cross` references materialized? | Wave1 topic-reference count or format checks |
+| REF-006 / REF-008 | What format and backing semantics do reference files carry? | Gate pass/fail routing |
+| WPG-003 / WPG-005 / WPG-012 | What counts as delegated output coverage vs projection backing? | Reference prose quality judgment |
+| RWG-017 | How do Wave gates apply the split and report diagnostics? | Search/fetch/synthesis authority |
+
 ## Goals / Non-Goals
 
 **Goals:**
 
 - 让 Wave0/Wave1 phase guidance 对独立 work units 使用 bounded batched claim，而不是默认 serial `--count 1`。
 - 让 stop:no delegated loops 在 background Sub-agent spawn 后主动 polling work-unit result/receipt/output readiness，ready 即 submit/repair/terminalize。
-- 把 Wave1 topic reference materialization 移到 Phase Agent successful-submit 后执行，源数据来自 submitted `source_claims[]`、cache trails、ledger rows、evidence summaries。
+- 把 Wave1 topic reference materialization 移到 Phase Agent successful-submit 后执行，源数据来自 submitted `source_claims[]`、accepted source URL surfaces、cache/degraded-capture trails、ledger rows、evidence summaries。
 - 让 Wave2 pure synthesis path 在 concrete existing backing 存在时物化 `reference/00-cross-*.md`，同时保持 new external evidence 必须走 `wave2_targeted_evidence`。
 - 修改 gate/provenance/anti-cheating 语义，区分 fetched-source delegated evidence 与 Phase-owned consumer reference projection。
 - 提供 focused Markdown/static/gate tests，防止未来 guidance 回到 serial claim、passive wait、或 filesystem-only reference authority。
 
 **Non-Goals:**
 
-- 不修改 `operate-work-unit claim` 的 CLI 默认 `--count 1`；Phase Agent 必须显式传入计算后的 cap。
+- 不修改 `operate-work-unit claim` 的 CLI 默认 `--count 1`；Phase Agent 必须显式传入计算后的 claim count。
 - 不新增 `operate-work-unit wait` 作为必需能力。本 change 先把 active polling 作为 Markdown/Agent loop contract；如果后续发现 CLI helper 必要，另走 change。
 - 不让 Engine 做 search、fetch、reference prose writing、cross-topic synthesis judgment。
 - 不允许 Phase Agent direct-search 新 Wave1/Wave2 evidence 来绕过 Sub-agent/work-unit path。
@@ -40,10 +56,10 @@ FOSE run 里的四个 bug 暴露了同一条运行链上的两个缺口：
 
 `operate-work-unit claim --count N` 和 `delegated_in_flight` 多 entry 已经存在。BUG-046 的缺口是 Phase Agent strategy，不是 Engine allocation 能力缺失。
 
-本 change 要求 Wave0/Wave1 phase docs 显式计算 bounded cap 并调用：
+本 change 要求 Wave0/Wave1 phase docs 显式计算 bounded claim count 并调用：
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase waveN --count <cap>
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase waveN --count <claim-count>
 ```
 
 cap 来源顺序：
@@ -96,10 +112,10 @@ Alternative considered: add `reference/{topic}-*.md` to required Sub-agent recei
 
 There are two legal Wave2 reference paths:
 
-- **existing-backed cross reference**: Phase Agent writes `reference/00-cross-*.md` from concrete submitted Wave0/Wave1 backing and Wave2 ledger/index/synthesis refs. It does not require a new Wave2 work-unit row because no new external evidence was fetched.
+- **existing-backed cross reference**: Phase Agent writes `reference/00-cross-*.md` from concrete submitted Wave0/Wave1 backing plus Wave2 ledger/index/synthesis refs. Any intermediate reference, evidence summary, question list, or synthesis artifact is only a locator unless it resolves to submitted source/cache/degraded-capture/work-unit backing. It does not require a new Wave2 work-unit row because no new external evidence was fetched.
 - **new fetched-source cross reference**: Phase Agent or Sub-agent promotes a new source found through `wave2_targeted_evidence`. It requires submitted Wave2 work-unit coverage and cache trails.
 
-The gate/provenance layer must distinguish these instead of treating every `00-cross` file as delegated targeted evidence. The distinction is represented through existing reference metadata plus deterministic refs to `finding-index.yaml`, `cross-topic-ledger.md`, submitted source claims, cache trails, and work-unit rows, not through chat memory.
+The gate/provenance layer must distinguish these instead of treating every `00-cross` file as delegated targeted evidence. The distinction is represented through existing reference metadata plus deterministic refs to `finding-index.yaml`, `cross-topic-ledger.md`, submitted source claims, accepted source URL surfaces, degraded-capture records, cache trails, output declarations, and work-unit rows, not through chat memory.
 
 For an accepted consumer-facing `W2F-xxx` finding that appears in synthesis, seed-topic backfill, or final-report evidence maps and has concrete prior submitted backing, the Phase Agent materializes a `00-cross` reference unless it records why the finding is process-only, deferred, not source-backed enough, or intentionally not consumer-facing. This keeps pure synthesis from becoming invisible while avoiding reference spam for internal notes.
 
@@ -111,12 +127,12 @@ Alternative considered: keep `00-cross` only for targeted evidence and never wri
 
 Wave gates should continue to be deterministic:
 
-- They check that references exist when required, follow metadata/section format, have parseable URLs, appear in `_INDEX.md`, and bind their source URLs/backing refs to submitted source claims, verified cache trails, explicit degraded-capture records, or explicit Wave2 targeted evidence rows.
+- They check that references exist when required, follow metadata/section format, have parseable URLs, appear in `_INDEX.md`, and bind their source URLs/backing refs to submitted source claims, accepted source URL surfaces, verified cache trails, explicit degraded-capture records, work-unit rows, or explicit Wave2 targeted evidence rows.
 - They must not judge whether the reference prose is insightful.
 - They must not count filesystem-only files as delegated evidence.
 - They must not flag legitimate Phase-owned references as delegated bypass when they are backed by existing submitted evidence.
 
-This likely requires small changes in provenance helpers and gate definition selectors: output coverage should target delegated outputs, while Phase-owned projection checks should verify backing refs and metadata.
+This requires provenance helpers and gate definition selectors to separate two checks: output coverage targets delegated outputs, while Phase-owned projection checks verify backing refs, metadata, index rows, and classification diagnostics.
 
 ### Decision 6: Anti-cheating rules become more precise
 
@@ -146,7 +162,7 @@ Classification is two-step:
 - **Bind the source/backing**: every reference source URL or `W2F-xxx` claim must bind to submitted/prior accepted bundle evidence.
 - **Classify the authority path**: backed Wave1 topic references and existing-backed Wave2 `00-cross` files are Phase-owned projections; references that claim newly fetched public evidence require submitted delegated work-unit coverage.
 
-Ambiguity is not success. If a reference cannot be deterministically classified from bundle files, gates and inspectors should fail closed or report repair-targeted backing drift. Chat memory, console summaries, and file presence alone are never classification authority.
+Ambiguity is not success. If a reference cannot be deterministically classified from bundle files, gates and inspectors must fail closed or report repair-targeted backing drift. Chat memory, console summaries, and file presence alone are never classification authority.
 
 Optional parser-compatible metadata may be added later if it proves useful, but this change should first use the smallest existing-surface convention that can be checked deterministically.
 
@@ -167,7 +183,7 @@ Optional parser-compatible metadata may be added later if it proves useful, but 
 3. Update Wave1 phase and `dpt-evidence-extractor` role guidance to move topic reference materialization to Phase Agent after submit.
 4. Update Wave2 phase and `dpt-topic-scout` role guidance to distinguish existing-backed `00-cross` projections from new targeted evidence.
 5. Update anti-cheating/reference template/shared schema wording.
-6. Update gate definitions/provenance helpers/inspectors/file observability where needed so Phase-owned projections do not trigger delegated bypass while unbacked fetched evidence still fails.
+6. Update gate definitions/provenance helpers/inspectors/file observability that classify references so Phase-owned projections do not trigger delegated bypass while unbacked fetched evidence still fails.
 7. Add focused gate/provenance tests for Wave1 Phase-owned topic refs and Wave2 pure-synthesis `00-cross` refs.
 8. Update `CHANGELOG.md` and `DPT_FRAMEWORK/RUN.md` to `v0.10`.
 9. Run targeted `node:test` suites and OpenSpec governance checks.
@@ -179,3 +195,4 @@ Rollback strategy: batching/polling guidance can be reverted independently of re
 - Phase-owned references do not require a new `materialization_role` metadata key in this change.
 - `_INDEX.md` does not require a new authority-classification column in this change; `source_layer` remains a navigation label and one input to deterministic classification.
 - A blocking `operate-work-unit wait` helper remains out of scope. Active polling is an Agent loop contract for this change.
+- A prior reference, evidence summary, question list, or synthesis artifact can help locate Wave2 backing only when the chain resolves to submitted source/cache/degraded-capture/work-unit evidence.

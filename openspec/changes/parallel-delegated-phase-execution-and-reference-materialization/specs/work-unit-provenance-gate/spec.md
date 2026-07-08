@@ -10,7 +10,7 @@ For Wave1 topic deepening, required delegated output coverage SHALL include subm
 
 A depth-review or topic reference projection MAY be written by the Phase Agent after submit, but it SHALL name or be traceable to the submitted work-unit rows and source/cache refs it used. Filesystem-only Wave1 outputs SHALL NOT become coverage authority, and Phase-owned projections SHALL NOT create delegated coverage absent submitted backing.
 
-For Wave2 targeted evidence, output coverage remains conditional on delegated search or evidence work. Pure synthesis artifacts and existing-backed `reference/00-cross-*.md` projections do not require delegated Wave2 rows when they cite concrete already submitted Wave0/Wave1 backing. Any `reference/00-cross-*.md`, finding-index receipt ref, or artifact claim that represents new delegated evidence search SHALL bind to submitted `wave2_targeted_evidence` rows.
+For Wave2 targeted evidence, output coverage remains conditional on delegated search or evidence work. Pure synthesis artifacts and existing-backed `reference/00-cross-*.md` projections do not require delegated Wave2 rows when they cite concrete already submitted Wave0/Wave1 source/cache/degraded-capture/work-unit backing. Any `reference/00-cross-*.md`, finding-index receipt ref, or artifact claim that represents new delegated evidence search SHALL bind to submitted `wave2_targeted_evidence` rows.
 
 #### Scenario: missing submitted delegated output coverage fails
 
@@ -46,7 +46,7 @@ For Wave2 targeted evidence, output coverage remains conditional on delegated se
 
 ### Requirement: Wave2 work-unit provenance SHALL be conditional on delegated evidence search
 
-Wave2 work-unit provenance SHALL be conditional on delegated search or evidence work. Pure cross-topic synthesis remains main-agent work and SHALL NOT require a work-unit row. Existing-backed `reference/00-cross-*.md` files materialized during pure synthesis SHALL be treated as Phase-owned projections when they cite concrete already submitted Wave0/Wave1 backing and Wave2 finding refs. Wave2 targeted evidence search SHALL require submitted work-unit coverage.
+Wave2 work-unit provenance SHALL be conditional on delegated search or evidence work. Pure cross-topic synthesis remains main-agent work and SHALL NOT require a work-unit row. Existing-backed `reference/00-cross-*.md` files materialized during pure synthesis SHALL be treated as Phase-owned projections when they cite concrete already submitted Wave0/Wave1 source/cache/degraded-capture/work-unit backing and Wave2 finding refs. Wave2 targeted evidence search SHALL require submitted work-unit coverage.
 
 #### Scenario: pure synthesis does not require delegated coverage
 

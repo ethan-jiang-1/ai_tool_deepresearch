@@ -4,7 +4,7 @@
 
 ### Requirement: Wave delegated queue loops SHALL prefer bounded batched claims for independent demand
 
-Wave0 and Wave1 queue-loop guidance SHALL instruct the Phase Agent to claim independent eligible delegated demand in bounded batches rather than treating `--count 1` as the normal drain strategy. The Phase Agent SHALL compute an explicit claim count from an accepted profile/runtime cap when available, otherwise from the currently available independent delegated demand, capped by a conservative documented default no higher than 5.
+Wave0 and Wave1 queue-loop guidance SHALL instruct the Phase Agent to claim independent eligible delegated demand in bounded batches rather than treating `--count 1` as the normal drain strategy. The Phase Agent SHALL compute an explicit claim count from an accepted profile/runtime cap when available, the currently available independent delegated demand, and a conservative documented default no higher than 5 when no explicit cap exists.
 
 The explicit claim count SHALL top up available parallel capacity rather than blindly claim all remaining demand. It SHALL be bounded by independent eligible demand, the accepted/default cap, and remaining free delegated in-flight capacity for that wave. If reconstructed in-flight work already reaches the cap, phase guidance SHALL poll/submit/terminalize existing attempts before claiming more.
 
@@ -15,7 +15,7 @@ The Engine SHALL remain the sole allocator of work-unit IDs. Batched execution S
 #### Scenario: Wave0 claims independent source-intake work in a batch
 
 - **WHEN** Wave0 has multiple independent `wave0_source_intake` queue items eligible at the queue front
-- **THEN** phase guidance SHALL instruct the Phase Agent to compute a bounded cap and call `operate-work-unit claim --count <cap>`
+- **THEN** phase guidance SHALL instruct the Phase Agent to compute a bounded effective claim count and call `operate-work-unit claim --count <claim-count>`
 - **AND** the returned prompts SHALL be fanned out as distinct Engine-allocated work units
 
 #### Scenario: Wave1 claims independent topic-deepening work in a batch

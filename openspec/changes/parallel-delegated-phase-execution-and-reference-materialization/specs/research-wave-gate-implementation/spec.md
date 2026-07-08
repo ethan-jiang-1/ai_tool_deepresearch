@@ -4,7 +4,7 @@
 
 ### Requirement: Wave gates SHALL implement Phase-owned reference projection and delegated evidence split
 
-Wave gate definitions and CLIs SHALL distinguish Phase-owned reference projections from delegated fetched evidence. Wave1 gates SHALL continue to require topic reference files for consumer navigation and SHALL validate their format, index entries, parseable source URLs, and submitted backing. They SHALL NOT require the topic reference file itself to be a delegated output when it is Phase-owned and backed by submitted Wave1 source claims, accepted source URL surfaces, verified cache trails, or explicit degraded-capture records.
+Wave gate definitions and CLIs SHALL distinguish Phase-owned reference projections from delegated fetched evidence. Wave1 gates SHALL continue to require topic reference files for accepted submitted sources suitable for consumer navigation, or an explicit limitation/repair diagnostic when no materializable submitted source exists. They SHALL validate reference format, index entries, parseable source URLs, and submitted backing. They SHALL NOT require the topic reference file itself to be a delegated output when it is Phase-owned and backed by submitted Wave1 source claims, accepted source URL surfaces, verified cache trails, or explicit degraded-capture records.
 
 Wave2 gates SHALL allow pure-synthesis `reference/00-cross-*.md` files when they are existing-backed projections with concrete Wave0/Wave1 submitted evidence and Wave2 `W2F-xxx` ledger/index refs. Wave2 gates SHALL still require submitted `wave2_targeted_evidence` coverage for any `00-cross` reference or finding that claims newly fetched external evidence.
 
