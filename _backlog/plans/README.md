@@ -15,4 +15,4 @@
 
 ## 活跃列表
 
-- [formal-run-bugfix-change-split](formal-run-bugfix-change-split.md) — active BUG-044 through BUG-058 split into four focused OpenSpec changes
+（暂无活跃 plan）

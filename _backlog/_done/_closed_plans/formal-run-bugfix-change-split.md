@@ -1,6 +1,6 @@
 # Formal Run Bugfix Change Split Plan
 
-> Status: active | Created: 2026-07-08 | Purpose: split active formal-run bugs into focused OpenSpec changes
+> Status: closed | Created: 2026-07-08 | Closed: 2026-07-08 | Purpose: split active formal-run bugs into focused OpenSpec changes
 
 ## Summary
 
@@ -160,3 +160,13 @@ Tests:
 - `BUG-049` is treated as a regression scenario under degraded handoff, not as a fresh standalone redesign.
 - `BUG-056` is intentionally split: minimal queue identity fix in Change 1, iterative deepening usage in Change 3.
 - Gate KISS is a governing principle for Change 2: JS gates should be simple, deterministic quality checkpoints that assist the MD Controller, not complex controllers that require their own quality-control loop.
+
+## Completion Notes (2026-07-08)
+
+Changes 1-3 delivered, each archived or applied:
+
+- **Change 1** `stabilize-runtime-position-and-queue` → archived, framework v0.6. Resolved BUG-044, BUG-056, BUG-057.
+- **Change 2** `simple-gate-quality-loop` → archived, framework v0.7. Resolved BUG-047, BUG-048, BUG-049, BUG-050, BUG-051, BUG-053.
+- **Change 3** `restore-wave-depth-contracts` → applied (pending archive), framework v0.8. Resolved BUG-054, BUG-055, BUG-058.
+
+Change 4 (`harden-run-entry-and-agent-discipline`, covering BUG-045, BUG-046, BUG-052) remains as a standalone future change — the three remaining bugs are queued in `_backlog/bugs/`.

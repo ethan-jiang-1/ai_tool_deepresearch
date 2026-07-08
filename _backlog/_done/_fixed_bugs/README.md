@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-07-07 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-07-08 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -53,8 +53,20 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-041 | 2026-07-07 | Shared refs not in ledger — gate blind to direct-written files (P2) |
 | BUG-042 | 2026-07-07 | Phase Agent bypasses wave1/wave2, skips to HITL2 (P0) |
 | BUG-043 | 2026-07-07 | Phase Agent surfaces at non-HITL phase to show findings (P0) |
+| BUG-044 | 2026-07-08 | work-unit submit 成功后 queue.delegated_in_flight 残留，后续 item 无法 claim |
+| BUG-047 | 2026-07-08 | stop:no phase 在 gate fatigue 后浮出水面，违反静默自主执行合约 |
+| BUG-048 | 2026-07-08 | Gate 不可通过时框架无降级推进路径，stop:no 与 gate contract 死锁 |
+| BUG-049 | 2026-07-08 | Phase Agent 在 gate 卡住后跳过 wave1/wave2 直接合成 final report |
+| BUG-050 | 2026-07-08 | content_dedup gate rule 对合法文章 URL 产生假阳性 |
+| BUG-051 | 2026-07-08 | 手动修改 ledger 触发 gate 级联 distrust，越修越坏 |
+| BUG-053 | 2026-07-08 | Gate provenance chain 过于脆弱，单一文件缺失触发全链 distrust |
+| BUG-054 | 2026-07-08 | Wave1 sub-agent 只做数据综合不做深度发掘，Phase Agent 照单全收 |
+| BUG-055 | 2026-07-08 | Wave2 Phase Agent 跳过 cross-topic synthesis 计算，直接产出浅层报告 |
+| BUG-056 | 2026-07-08 | Queue slug derivation 阻止同一 topic 创建补充 task |
+| BUG-057 | 2026-07-08 | rb_status.json 缺少 current_node 字段，无法确定当前执行的 phase node |
+| BUG-058 | 2026-07-08 | Wave1 cache trails 太薄，每个 topic 只有 1-2 个 cache dir |
 
-**Next available bug ID: BUG-044**
+**Next available bug ID: BUG-059**
 
 ---
 
