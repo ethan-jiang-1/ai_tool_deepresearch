@@ -1,4 +1,6 @@
-> req: BUS-001, BUS-002, BUS-003
+> req: BUM-004
+
+Note: `BUS-001..BUS-003` are retired in the requirement registry. This delta removes their old positive behavior but does not redeclare retired IDs in the active change header.
 
 ## REMOVED Requirements
 

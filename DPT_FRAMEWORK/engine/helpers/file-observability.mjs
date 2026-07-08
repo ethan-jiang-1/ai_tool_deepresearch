@@ -1,5 +1,5 @@
 // file-observability.mjs — Bundle directory audit with work-unit-aware file classifications
-// @impl FIO-001, FIO-002, FIO-004, REF-008, WPG-012, RWG-017
+// @impl FIO-001, FIO-002, FIO-004, FIO-005, REF-008, WPG-012, RWG-017
 // Canonical engine location: DPT_FRAMEWORK/engine/helpers/file-observability.mjs
 //
 // ## Role
@@ -42,7 +42,7 @@ export const SEVERITY_LEVELS = Object.freeze(['info', 'warning', 'blocker']);
 
 // Known control files at bundle root — always expected
 const ROOT_CONTROL_FILES = new Set([
-  'START_FROM_HERE.md',
+  'BUNDLE_MAP.md',
   'rb_plan.md',
   'rb_profile.yaml',
   'rb_status.json',
@@ -269,6 +269,18 @@ function readFileExplanations(bundlePath) {
 function classifyFile(relPath, ctx) {
   const { bundlePath, expectedPaths, declaredPaths, explanations, targetPhase } = ctx;
 
+  if (relPath === 'START_FROM_HERE.md') {
+    return {
+      classification: 'unplanned_nonblocking',
+      severity: 'info',
+      reason: existsSync(join(bundlePath, 'BUNDLE_MAP.md'))
+        ? 'Deprecated legacy bundle map compatibility debris; BUNDLE_MAP.md is current'
+        : 'Deprecated legacy bundle map compatibility; migrate old bundles to BUNDLE_MAP.md',
+      authority_status: 'none',
+      phase: null,
+    };
+  }
+
   // 1. Known control file → expected
   if (ROOT_CONTROL_FILES.has(relPath)) {
     return {
@@ -480,6 +492,16 @@ export function auditFileObservability(bundlePath, {
     try { rawDeclarations = readOutputDeclarations(bundlePath); } catch { rawDeclarations = []; }
   }
   const nonSubmittedRows = nonSubmittedDeclarations(rawDeclarations || [], submittedDeclarations);
+  const hasBundleMap = existsSync(join(bundlePath, 'BUNDLE_MAP.md'));
+  const hasLegacyStartHere = existsSync(join(bundlePath, 'START_FROM_HERE.md'));
+
+  if (hasLegacyStartHere && !hasBundleMap) {
+    inspect.push('[legacy_bundle_map] START_FROM_HERE.md is deprecated compatibility; new bundles use BUNDLE_MAP.md.');
+    advice.push('Migrate legacy bundle root map to BUNDLE_MAP.md; do not treat START_FROM_HERE.md as current authority.');
+  } else if (hasLegacyStartHere && hasBundleMap) {
+    inspect.push('[legacy_bundle_map] START_FROM_HERE.md is deprecated compatibility debris; BUNDLE_MAP.md is the current map.');
+    advice.push('Remove START_FROM_HERE.md after confirming BUNDLE_MAP.md covers passive navigation needs.');
+  }
 
   if (submittedLedgerError) {
     inspect.push(`[work_unit_ledger_invalid] ${submittedLedgerError.message}`);

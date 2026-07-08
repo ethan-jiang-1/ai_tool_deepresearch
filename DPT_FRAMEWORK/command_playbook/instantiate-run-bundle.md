@@ -19,6 +19,8 @@ B=$(node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs <name>)
 ```
 若目录已存在，报错退出。Production run bundle 不允许覆盖；Agent 派生新的 collision-safe 名称后重试，或使用 entry 前已提供的替代名称。
 
+新 bundle 会包含 `BUNDLE_MAP.md` passive bundle map、5 个 `rb_*` control files、canonical scaffold directories、reference/cache/log scaffolds。`BUNDLE_MAP.md` 只用于 reload/navigation；它不是 lifecycle phase node、`RUN.md` 替代品、command playbook 或 gate authority。
+
 ### 3. 报告
 ```bash
 echo "Bundle created: $B"

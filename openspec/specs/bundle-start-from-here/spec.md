@@ -2,47 +2,53 @@
 > req: BUS-001, BUS-002, BUS-003
 
 ## Purpose
-Bundle 启动入口 START_FROM_HERE.md: 告知 Agent 框架位置、控制文件清单、数据目录映射与停止授权规则。
+Deprecated legacy compatibility spec for historical `START_FROM_HERE.md` bundles. New bundles use the `bundle-map` capability and `BUNDLE_MAP.md`.
 ## Requirements
-### Requirement: START_FROM_HERE.md is the first file an agent reads
-The boot entry SHALL provide: framework location (`../DPT_FRAMEWORK/`), control file list with `rb_` prefixed names, data directory map, and stop authorization rules. The data directory map SHALL document:
+### Requirement: START_FROM_HERE.md legacy boot-entry behavior is deprecated
+
+`START_FROM_HERE.md` SHALL NOT be required, generated, or taught as the first file an Agent reads for new bundles. Historical bundles that still contain it MAY be read by diagnostic tooling as deprecated compatibility only. Current bundle-root map behavior lives in `BUNDLE_MAP.md` under the `bundle-map` capability.
+
+The old boot-entry behavior is retained here only to preserve the retired BUS requirement history:
 
 - `reference/` — flat evidence directory (`00-shared-*.md` / `00-cross-*.md` / `0N-*.md`, `_INDEX.md` as canonical inventory), no subdirectories
 - `artifacts/` — phase output organized by wave (`wave0/` thin YAML, `wave1/` topic synthesis, `wave2/` cross-topic synthesis)
 - `seed_topics/` — seed topic files
 - `final/` — final report
 
-#### Scenario: Agent reads boot entry on first entry
-- **WHEN** an agent opens a bundle directory for the first time
-- **THEN** `START_FROM_HERE.md` tells it to load `rb_plan.md`, `rb_profile.yaml`, `rb_status.json`, `rb_queue.json`, `rb_trace.jsonl`
+#### Scenario: New bundle does not use legacy boot entry
+- **WHEN** a new bundle is instantiated
+- **THEN** `START_FROM_HERE.md` SHALL NOT be required as the current first-read surface
+- **AND** current guidance SHALL use `BUNDLE_MAP.md`
 
-#### Scenario: Boot entry declares framework as read-only
-- **WHEN** an agent reads `START_FROM_HERE.md`
-- **THEN** it knows `../DPT_FRAMEWORK/` is shared and must not be modified
+#### Scenario: Legacy bundle remains readable
+- **WHEN** diagnostic tooling sees `START_FROM_HERE.md` without `BUNDLE_MAP.md`
+- **THEN** it MAY keep the old bundle readable with deprecation advice
+- **AND** it SHALL NOT treat the legacy file as current gate, queue, handoff, or state authority
 
-#### Scenario: Agent reads updated boot entry data directory map
-- **WHEN** an agent opens a bundle directory for the first time
-- **THEN** `START_FROM_HERE.md` tells it `reference/` is a flat directory with `_INDEX.md` as canonical inventory
-- **AND** tells it `artifacts/wave0/` exists alongside `artifacts/wave1/` and `artifacts/wave2/`
+#### Scenario: Legacy data directory map is superseded
+- **WHEN** current docs describe bundle-root navigation
+- **THEN** they SHALL use `BUNDLE_MAP.md` and current bundle-map requirements
+- **AND** they SHALL NOT describe `START_FROM_HERE.md` as current positive guidance
 
 #### Scenario: Boot entry no longer references nested reference directories
 - **WHEN** an agent reads `START_FROM_HERE.md`
 - **THEN** it SHALL NOT see references to `reference/<topic>/` subdirectories or `reference/00_shared/source.yaml`
 
-### Requirement: Boot entry documents stop authorization
-`START_FROM_HERE.md` SHALL state: only `final_delivery`, `decision_blocker`, or `empty_queue_after_refill` authorize user-visible output.
+### Requirement: Legacy boot-entry stop authorization behavior is retired
 
-#### Scenario: Agent follows stop authorization from boot entry
-- **WHEN** an agent considers stopping mid-wave
-- **THEN** `START_FROM_HERE.md` tells it to continue unless one of three authorized states is reached
+Detailed stop authorization belongs in lifecycle phase/shared Markdown and accepted Agent command guidance, not in a passive bundle map or deprecated legacy file.
 
-### Requirement: START_FROM_HERE.md SHALL document current_node as the resume phase coordinate
+#### Scenario: Current docs do not source stop authority from legacy boot entry
+- **WHEN** an Agent needs stop authorization guidance
+- **THEN** current docs SHALL route it to lifecycle phase/shared Markdown, command guidance, status, trace, and Engine checks
+- **AND** they SHALL NOT rely on `START_FROM_HERE.md` as current stop authority
 
-The bundle boot entry SHALL explain that non-null `rb_status.json.current_node`, when present, identifies the lifecycle phase Markdown node the Agent should resume from. The boot entry SHALL preserve the existing instruction to read `rb_status.json`, `rb_queue.json`, and `rb_trace.jsonl`; it SHALL clarify that `current_gate` / `next_gate` are gate-window fields, while `current_node` is the active loaded control surface. If `current_node` is `null` or absent, the Agent SHALL fall back to existing trace/reentry checks instead of guessing from `current_gate` alone.
+### Requirement: Legacy current_node resume guidance is superseded
 
-#### Scenario: Agent sees current node resume guidance
+Current resume guidance SHALL live in `BUNDLE_MAP.md`, Agent-facing command docs, reentry diagnostics, and runtime status/trace surfaces. Legacy `START_FROM_HERE.md` MAY be mentioned only as deprecated fallback for old bundles.
 
-- **WHEN** an Agent reads `START_FROM_HERE.md`
-- **THEN** it SHALL learn that non-null `rb_status.json.current_node` is the preferred current phase node coordinate when present
-- **AND** it SHALL still read queue and trace before continuing work
+#### Scenario: Current resume guidance names bundle map
 
+- **WHEN** current docs explain resume or reentry
+- **THEN** they SHALL name `BUNDLE_MAP.md`, `rb_status.json.current_node`, trace, and reentry diagnostics
+- **AND** they SHALL name `START_FROM_HERE.md` only as deprecated legacy fallback where compatibility is intentionally discussed

@@ -210,17 +210,38 @@ describe('Agent-facing command contract docs', () => {
   it('active bundle resume guidance prefers current_node over current_gate-only inference', () => {
     const start = read('DPT_FRAMEWORK/command_playbook/start-research.md');
     const run = read('DPT_FRAMEWORK/RUN.md');
-    const startHere = read('DPT_FRAMEWORK/rb_templates/START_FROM_HERE.md.tmpl');
+    const bundleMap = read('DPT_FRAMEWORK/rb_templates/BUNDLE_MAP.md.tmpl');
 
     for (const [label, text] of [
       ['start-research', start],
       ['RUN.md', run],
-      ['START_FROM_HERE template', startHere],
+      ['BUNDLE_MAP template', bundleMap],
     ]) {
       assert.ok(text.includes('current_node'), `${label} must mention current_node`);
       assert.ok(text.includes('current_gate'), `${label} must distinguish current_gate`);
       assert.ok(/不要只凭 `current_gate`|不要只凭 current_gate|not guess/i.test(text), `${label} must reject current_gate-only phase inference`);
     }
+  });
+
+  it('new bundle map docs treat BUNDLE_MAP.md as passive navigation', () => {
+    const template = read('DPT_FRAMEWORK/rb_templates/BUNDLE_MAP.md.tmpl');
+    const instantiate = read('DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md');
+    const readme = read('DPT_FRAMEWORK/README.md');
+
+    for (const marker of [
+      'Research Content Map',
+      'Runtime Control Map',
+      'Diagnostics Map',
+      'Reentry Pointers',
+      'passive bundle map',
+      'not infer gate pass',
+    ]) {
+      assert.ok(template.includes(marker), `BUNDLE_MAP.md.tmpl missing marker: ${marker}`);
+    }
+    assert.ok(instantiate.includes('BUNDLE_MAP.md'));
+    assert.ok(instantiate.includes('passive bundle map'));
+    assert.ok(readme.includes('BUNDLE_MAP.md'));
+    assert.ok(readme.includes('passive map'));
   });
 
   it('CLI exit-code convention and exception inventory are discoverable', () => {

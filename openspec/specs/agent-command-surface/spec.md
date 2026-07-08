@@ -111,7 +111,7 @@ The terminology canon SHALL define:
 
 The docs SHALL state that `enter-phase` / `load_complete` proves entry into the target node, not target-phase work completion. Existing machine names such as `phase_transition`, `advance-status`, `enter-phase`, `load_complete`, `stop: no`, and capability names SHALL remain stable unless a separate migration changes them.
 
-Agent-facing resume guidance, including command playbooks for an already-existing active bundle, SHALL prefer non-null `rb_status.json.current_node` as the phase Markdown coordinate. It SHALL NOT tell the Agent to infer the active phase from `current_gate` alone. If `current_node` is `null` or absent, guidance SHALL direct the Agent to existing `START_FROM_HERE.md`, trace, and reentry diagnostics rather than guessing the phase from the gate window.
+Agent-facing resume guidance, including command playbooks for an already-existing active bundle, SHALL prefer non-null `rb_status.json.current_node` as the phase Markdown coordinate. It SHALL NOT tell the Agent to infer the active phase from `current_gate` alone. If `current_node` is `null` or absent, guidance SHALL direct the Agent to existing `BUNDLE_MAP.md`, trace, and reentry diagnostics rather than guessing the phase from the gate window. Legacy `START_FROM_HERE.md` SHALL be named only as deprecated fallback for old bundles.
 
 #### Scenario: Terminology canon names the boundary layers
 
@@ -135,5 +135,5 @@ Agent-facing resume guidance, including command playbooks for an already-existin
 #### Scenario: Missing current node falls back to diagnostics
 
 - **WHEN** an existing bundle has `rb_status.json.current_node: null` or no `current_node`
-- **THEN** resume guidance SHALL direct the Agent to existing `START_FROM_HERE.md`, trace, and reentry diagnostics
+- **THEN** resume guidance SHALL direct the Agent to existing `BUNDLE_MAP.md`, trace, and reentry diagnostics
 - **AND** it SHALL NOT guess the phase from `current_gate` alone

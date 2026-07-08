@@ -14,7 +14,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REQUIRED = [
-  'START_FROM_HERE.md', 'rb_plan.md', 'rb_profile.yaml',
+  'rb_plan.md', 'rb_profile.yaml',
   'rb_status.json', 'rb_queue.json', 'rb_trace.jsonl',
   '_logs/run.log',
   'seed_topics/', 'reference/_INDEX.md', 'reference/README.md',
@@ -287,6 +287,11 @@ if (flag === '--summary') {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const missing = REQUIRED.filter(f => !existsSync(join(bundleDir, f)));
+const hasBundleMap = existsSync(join(bundleDir, 'BUNDLE_MAP.md'));
+const hasLegacyStartHere = existsSync(join(bundleDir, 'START_FROM_HERE.md'));
+if (!hasBundleMap && !hasLegacyStartHere) {
+  missing.unshift('BUNDLE_MAP.md');
+}
 const leakDiagnostics = repoRootRuntimeLeakDiagnostics(bundleDir);
 const activeLeakDiagnostics = leakDiagnostics.filter((diag) => diag.severity === 'active_bundle_blocker');
 if (missing.length > 0) {
@@ -302,6 +307,11 @@ if (leakDiagnostics.length > 0) {
 if (activeLeakDiagnostics.length > 0) {
   console.log(`${R}Inspect bundle: repo-root runtime leak associated with active bundle${B}`);
   process.exit(1);
+}
+if (hasBundleMap && hasLegacyStartHere) {
+  console.log(`${Y}Inspect bundle: BUNDLE_MAP.md is current; START_FROM_HERE.md is deprecated compatibility debris.${B}`);
+} else if (!hasBundleMap && hasLegacyStartHere) {
+  console.log(`${Y}Inspect bundle: START_FROM_HERE.md is deprecated legacy compatibility; new bundles use BUNDLE_MAP.md.${B}`);
 }
 console.log(`${G}Inspect bundle: directory structure complete${B}`);
 

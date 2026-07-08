@@ -20,7 +20,7 @@ Deep Research Framework (`DPT_FRAMEWORK/`) 的运行时入口说明。
 
 **想做什么事？打开 `COMMANDS.md` 找到对应的命令。** 不要凭记忆工作。
 
-运行具体 bundle 时，先打开 active bundle 里的 `START_FROM_HERE.md` 和控制文件。
+运行具体 bundle 时，先打开 active bundle 里的 `BUNDLE_MAP.md` 和控制文件。旧 bundle 只有 `START_FROM_HERE.md` 时，把它当作 deprecated fallback。
 
 ## 目录性质
 
@@ -91,7 +91,7 @@ dpt_rb_<name>/
 
 ```text
 dpt_rb_<name>/
-  START_FROM_HERE.md
+  BUNDLE_MAP.md
   rb_plan.md
   rb_profile.yaml
   rb_status.json
@@ -114,7 +114,7 @@ dpt_rb_<name>/
 
 `_cache/gate-results/` 和 `_cache/projections/` 是 workflow-foundation target/cache convention，不是当前 `inspect-bundle.mjs` required shape。
 
-运行时优先读取 active bundle 里的 `START_FROM_HERE.md` 和控制文件。`rb_profile.yaml` 承载 HITL/user decisions；`rb_status.json` 承载 phase/gate 状态摘要；`rb_trace.jsonl` 是 append-only audit。
+运行时优先读取 active bundle 里的 `BUNDLE_MAP.md` 和控制文件；旧 `START_FROM_HERE.md` 只作 deprecated fallback。`BUNDLE_MAP.md` 是 passive map，不是 phase node、command playbook 或 gate authority。`rb_profile.yaml` 承载 HITL/user decisions；`rb_status.json` 承载 phase/gate 状态摘要；`rb_trace.jsonl` 是 append-only audit。
 
 ## 执行模式
 

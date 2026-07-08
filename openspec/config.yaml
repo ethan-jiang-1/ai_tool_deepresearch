@@ -167,7 +167,7 @@ context: |
 
     Bundle — 可多个、彼此隔离的运行时目录:
       dpt_rb_{name}/              — production Runtime Bundle，通过 ../DPT_FRAMEWORK/ 引用同一套 framework
-        START_FROM_HERE.md        — 启动入口
+        BUNDLE_MAP.md            — passive bundle map
         rb_plan.md                — 话题设计 (Markdown + JSON frontmatter)
         rb_profile.yaml           — 用户意图 / HITL profile
         rb_status.json            — phase/gate 状态摘要

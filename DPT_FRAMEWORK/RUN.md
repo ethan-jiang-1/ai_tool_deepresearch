@@ -1,6 +1,6 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.10**
+> **DPT_FRAMEWORK v0.11**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
@@ -32,11 +32,11 @@ Delegated sub-agent work uses the Engine-mediated work-unit path only: queue dem
 
 If status or terminal output looks suspicious, run `node DPT_FRAMEWORK/cli/audit-phase-status.mjs --bundle <path>`. The audit is diagnostic-only: it reports drift, missing witnesses, failed-gate downstream status, or premature `final/` output; it does not repair status. In non-terminal `stop: no`, a caught would-have-surfaced moment is recorded with `log-event.mjs --surfacing-intent` and then aborted; the event is diagnostic-only and never permission to surface.
 
-若已有 active bundle：别重建，打开该 bundle 的 `START_FROM_HERE.md`，读 `rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`。若 `rb_status.json.current_node` 非空，从该 phase Markdown node 续跑；不要只凭 `current_gate` 推断当前 phase。
+若已有 active bundle：别重建，打开该 bundle 的 `BUNDLE_MAP.md`（旧 bundle 只有 `START_FROM_HERE.md` 时，把它当作 deprecated fallback），读 `rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`。若 `rb_status.json.current_node` 非空，从该 phase Markdown node 续跑；不要只凭 `current_gate` 推断当前 phase。若 `current_node` 为 `null` 或缺失，先运行 reentry/trace 诊断。
 
 ## 3. 规则与边界在哪
 - 触发规则、运行时边界：`README.md`
 - 命令索引：`COMMANDS.md`
 - 行为规则：`CLAUDE.md`（Claude Code）/ `AGENTS.md`（Codex、Cursor、Windsurf 等读 `AGENTS.md` 的 agent）
 
-跑某 bundle 时，以该 bundle 的 `START_FROM_HERE.md` + `rb_status.json` + `rb_trace.jsonl` 为准，别靠 chat memory。
+跑某 bundle 时，以该 bundle 的 `BUNDLE_MAP.md` + `rb_status.json` + `rb_trace.jsonl` 为 reload context，旧 `START_FROM_HERE.md` 只作 deprecated fallback；别靠 chat memory。

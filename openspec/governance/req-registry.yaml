@@ -30,6 +30,7 @@ prefixes:
   AGQ: agentic-queue
   AGT: agent-testing
   BUI: bundle-data-isolation
+  BUM: bundle-map
   BUS: bundle-start-from-here
   CDE: content-delivery-experiments
   CDG: content-delivery-gate-implementation
@@ -161,10 +162,16 @@ AGO-006: agent-output-declaration — cache_trails MUST be populated by Engine d
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 BUI-002: bundle-data-isolation — Runtime output paths stay under active bundle root and repo-root leaks are diagnosed
 
+# bundle-map
+BUM-001: bundle-map — BUNDLE_MAP.md is the canonical passive bundle map
+BUM-002: bundle-map — Bundle map content is organized as maps
+BUM-003: bundle-map — BUNDLE_MAP.md replaces START_FROM_HERE.md for new bundles
+BUM-004: bundle-map — Legacy START_FROM_HERE.md is diagnostic compatibility only
+
 # bundle-start-from-here
-BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry
-BUS-002: bundle-start-from-here — START_FROM_HERE.md documents flat reference/ and artifacts/wave0/
-BUS-003: bundle-start-from-here — START_FROM_HERE.md documents rb_status current_node as the resume phase coordinate
+BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry [DEPRECATED]
+BUS-002: bundle-start-from-here — START_FROM_HERE.md documents flat reference/ and artifacts/wave0/ [DEPRECATED]
+BUS-003: bundle-start-from-here — START_FROM_HERE.md documents rb_status current_node as the resume phase coordinate [DEPRECATED]
 
 # cmd-bundle-instantiation
 CMI-001: cmd-bundle-instantiation — Command playbook for bundle production
@@ -236,6 +243,7 @@ FIO-001: file-observability — Engine audits phase-owned directories with stabl
 FIO-002: file-observability — Unplanned files produce inspect/advice and authority blockers when relevant
 FIO-003: file-observability — Agent file explanations are diagnostic trace/log entries only
 FIO-004: file-observability — Explained files remain non-authoritative until ledger or receipt authority exists
+FIO-005: file-observability — Root bundle map files follow canonical map policy
 
 # fork-repair-converge
 FOR-001: fork-repair-converge — Multi-fail shared repair checkpoint convergence

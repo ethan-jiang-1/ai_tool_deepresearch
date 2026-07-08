@@ -59,7 +59,7 @@ describe('operate-queue.mjs integration', () => {
   before(() => {
     bundleDir = createTempDir('operate-queue');
     writeFileSync(join(bundleDir, 'rb_queue.json'), JSON.stringify(makeEmptyQueue(), null, 2));
-    writeFileSync(join(bundleDir, 'START_FROM_HERE.md'), '# Queue Test\n');
+    writeFileSync(join(bundleDir, 'BUNDLE_MAP.md'), '# Queue Test\n');
     cpSync(FIXTURE_FW, join(bundleDir, 'DPT_FRAMEWORK'), { recursive: true });
   });
 
@@ -145,7 +145,7 @@ describe('operate-queue.mjs integration', () => {
       },
     });
     writeFileSync(join(countDir, 'rb_queue.json'), JSON.stringify(testQueue, null, 2));
-    writeFileSync(join(countDir, 'START_FROM_HERE.md'), '# Count\n');
+    writeFileSync(join(countDir, 'BUNDLE_MAP.md'), '# Count\n');
     cpSync(FIXTURE_FW, join(countDir, 'DPT_FRAMEWORK'), { recursive: true });
 
     const r = spawnSync('node', [CLI, 'count', countDir], { encoding: 'utf-8', timeout: 5000 });
@@ -174,7 +174,7 @@ describe('operate-queue.mjs integration', () => {
   it('claim - fails when queue is empty on fresh queue', () => {
     const freshDir = createTempDir('operate-queue-fresh');
     writeFileSync(join(freshDir, 'rb_queue.json'), JSON.stringify(makeEmptyQueue(), null, 2));
-    writeFileSync(join(freshDir, 'START_FROM_HERE.md'), '# Fresh\n');
+    writeFileSync(join(freshDir, 'BUNDLE_MAP.md'), '# Fresh\n');
     cpSync(FIXTURE_FW, join(freshDir, 'DPT_FRAMEWORK'), { recursive: true });
 
     const r = spawnSync('node', [CLI, 'claim', freshDir, '--actor', 'main-agent'],

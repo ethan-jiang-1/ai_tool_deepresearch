@@ -1,4 +1,4 @@
-// @impl CMI-004: new-bundle.mjs — Create a disposable DPT run bundle at repo root
+// @impl CMI-004, BUM-003: new-bundle.mjs — Create a disposable DPT run bundle at repo root
 // @impl EXS-002: Canonical location experiments_env/shared/new-disposable-bundle.mjs
 // Usage: node new-bundle.mjs <bundleName> [--nodes <dir>] [--force]
 // Always creates the bundle at $REPO_ROOT/dpt_disp_<name>/
@@ -177,6 +177,7 @@ writeFileSync(join(bundleDir, 'rb_plan.md'), planMd);
 // ── Scaffold files (same templates as production) ──
 // These are expected by inspect-bundle and by gates that check for artifact existence.
 const scaffoldTemplates = [
+  { tmpl: 'BUNDLE_MAP.md.tmpl', dest: 'BUNDLE_MAP.md' },
   { tmpl: 'reference/_INDEX.md.tmpl', dest: 'reference/_INDEX.md' },
   { tmpl: 'reference/README.md.tmpl', dest: 'reference/README.md' },
   { tmpl: 'artifacts/README.md.tmpl',    dest: 'artifacts/README.md' },
@@ -194,8 +195,6 @@ for (const s of scaffoldTemplates) {
 const trace = createTrace(join(bundleDir, 'rb_trace.jsonl'), { consoleEcho: false });
 trace.traceInit(basename, { source: 'new-disposable-bundle' });
 logToRun(bundleDir, 'info', 'run_start', { source: 'new-disposable-bundle' });
-
-writeFileSync(join(bundleDir, 'START_FROM_HERE.md'), `# Start from here — ${basename}\n\n本目录是一个 Deep Research Disposable Experiment Bundle。\n`);
 
 // ── Validate + inspect (same as production) ──
 const validatePath = join(repoRoot, 'DPT_FRAMEWORK', 'cli', 'validate-bundle.mjs');

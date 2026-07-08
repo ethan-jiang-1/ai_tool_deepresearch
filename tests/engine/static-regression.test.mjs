@@ -19,6 +19,10 @@ const NODES_DIR = join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows', 'nodes');
 const MANIFEST_PATH = join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows', 'manifest.json');
 const WORKFLOW_CHAIN_PATH = join(REPO_ROOT, 'DPT_FRAMEWORK', 'engine', 'workflow-chain.mjs');
 
+function readRepo(relPath) {
+  return readFileSync(join(REPO_ROOT, relPath), 'utf-8');
+}
+
 // Leakage patterns that must NOT appear in stop:no phase bodies
 const LEAKAGE_PATTERNS = [
   { pattern: /state:\s*["']?blocked["']?/i, name: 'state: blocked' },
@@ -327,4 +331,17 @@ describe('Layer 9 regression: gate-pass / no-idle contract polish', () => {
     const violations = collectLeakageViolations(header);
     assert.deepStrictEqual(violations, [], 'AUTONOMOUS_MODE_HEADER has residual leakage patterns');
   });
+});
+
+describe('Repo-root Deep Research routing regression (RUE-004)', () => {
+  for (const relPath of ['CLAUDE.md', 'AGENTS.md']) {
+    it(`${relPath} suppresses built-in research shortcuts for DPT_FRAMEWORK runs`, () => {
+      const text = readRepo(relPath);
+      assert.ok(text.includes('DPT_FRAMEWORK/'), `${relPath} must name DPT_FRAMEWORK`);
+      assert.ok(text.includes('DPT_FRAMEWORK/RUN.md'), `${relPath} must route to DPT_FRAMEWORK/RUN.md`);
+      assert.match(text, /deep-research/i, `${relPath} must mention deep-research shortcut suppression`);
+      assert.match(text, /research shortcut|one-shot research shortcut|equivalent one-shot/i, `${relPath} must mention equivalent shortcut suppression`);
+      assert.match(text, /do not invoke|SHALL NOT invoke|不要调用/i, `${relPath} must forbid invoking the shortcut`);
+    });
+  }
 });

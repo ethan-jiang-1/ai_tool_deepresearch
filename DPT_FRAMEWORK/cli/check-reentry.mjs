@@ -774,7 +774,14 @@ if (statusPosition.current_node_status === 'null' || statusPosition.current_node
     message: 'rb_status.json lacks a populated current_node; falling back to target/status/trace diagnostics.',
     detail: { current_node_status: statusPosition.current_node_status },
   });
-  allAdvice.push('rb_status.json.current_node is not populated; the next successful enter-phase will populate it. Until then, use START_FROM_HERE.md, trace, and reentry diagnostics rather than guessing from current_gate alone.');
+  const hasBundleMap = existsSync(join(bundlePath, 'BUNDLE_MAP.md'));
+  const hasLegacyStartHere = existsSync(join(bundlePath, 'START_FROM_HERE.md'));
+  const mapAdvice = hasBundleMap
+    ? 'use BUNDLE_MAP.md, trace, and reentry diagnostics'
+    : hasLegacyStartHere
+      ? 'use legacy START_FROM_HERE.md only as deprecated bundle-map compatibility, then migrate to BUNDLE_MAP.md; also use trace and reentry diagnostics'
+      : 'restore BUNDLE_MAP.md, then use trace and reentry diagnostics';
+  allAdvice.push(`rb_status.json.current_node is not populated; the next successful enter-phase will populate it. Until then, ${mapAdvice} rather than guessing from current_gate alone.`);
 }
 
 // 7. File observability

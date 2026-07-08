@@ -42,7 +42,7 @@ suggested_context: []
 ## 4. Expected Artifacts
 
 - 新建 bundle 目录（`dpt_rb_<name>` 或 disposable experiment 的 `dpt_disp_<name>_<hex>`）
-- `START_FROM_HERE.md`
+- `BUNDLE_MAP.md` passive bundle map
 - 5 个 `rb_*` control files（`rb_plan.md`、`rb_profile.yaml`、`rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`）
 - Canonical scaffold directories：`seed_topics/`、`reference/`、`artifacts/`、`final/`、`_cache/`
 

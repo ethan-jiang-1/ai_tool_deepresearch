@@ -91,7 +91,9 @@ The active runtime bundle root SHALL NOT be inferred from repository root, `DPT_
 
 Unless a path is explicitly rooted in `DPT_FRAMEWORK/`, runtime paths in accepted specs and Agent-facing guidance SHALL be read as relative to the active runtime bundle root, not the repository root and not `DPT_FRAMEWORK/`. This includes bare paths such as `rb_queue.json`, `rb_trace.jsonl`, `rb_output_declarations.jsonl`, `reference/`, `artifacts/`, `_cache/`, `_logs/`, `final/`, and `_work_units/...`.
 
-Bundle-root runtime surfaces include `START_FROM_HERE.md`, `rb_plan.md`, `rb_profile.yaml`, `rb_status.json`, `rb_queue.json`, `rb_trace.jsonl`, `rb_output_declarations.jsonl`, `seed_topics/`, `reference/`, `artifacts/`, `_cache/`, `_logs/`, `final/`, and `_work_units/`. Production delegated work SHALL use bundle-root `_work_units/` as the work-unit runtime directory tree. Bundle-root `_work_units/_index.json` SHALL be Engine-owned allocation and attempt-state truth, while submitted delegated output coverage SHALL remain in bundle-root `rb_output_declarations.jsonl`.
+Bundle-root runtime surfaces include `BUNDLE_MAP.md`, `rb_plan.md`, `rb_profile.yaml`, `rb_status.json`, `rb_queue.json`, `rb_trace.jsonl`, `rb_output_declarations.jsonl`, `seed_topics/`, `reference/`, `artifacts/`, `_cache/`, `_logs/`, `final/`, and `_work_units/`. Production delegated work SHALL use bundle-root `_work_units/` as the work-unit runtime directory tree. Bundle-root `_work_units/_index.json` SHALL be Engine-owned allocation and attempt-state truth, while submitted delegated output coverage SHALL remain in bundle-root `rb_output_declarations.jsonl`.
+
+Legacy bundles can contain `START_FROM_HERE.md`; that file SHALL be treated as deprecated bundle-map compatibility, not as a new-bundle canonical runtime surface.
 
 Runtime choices and runtime data SHALL be persisted in the active runtime bundle. Framework definitions, schemas, workflow nodes, CLIs, reusable engine code, templates, and command playbooks SHALL remain under `DPT_FRAMEWORK/` and SHALL NOT become per-run storage.
 
@@ -114,6 +116,12 @@ Runtime choices and runtime data SHALL be persisted in the active runtime bundle
 - **WHEN** a bundle has executed delegated work-unit claim for a wave
 - **THEN** bundle-root `_work_units/waveN/{work_id}/` SHALL contain the claimed work-unit envelope
 - **AND** bundle-root `_work_units/_index.json` SHALL contain the corresponding allocation record
+
+#### Scenario: bundle map is canonical root map
+
+- **WHEN** a new bundle is instantiated
+- **THEN** `BUNDLE_MAP.md` SHALL be part of the canonical bundle-root surface
+- **AND** `START_FROM_HERE.md` SHALL NOT be required as a current canonical surface
 
 #### Scenario: active runtime bundle root is explicit
 
@@ -239,4 +247,3 @@ Framework directory docs SHALL NOT use unqualified `Agent/operator` or equivalen
 - **WHEN** a command playbook describes post-run forensics, diagnostic inspection, or maintainer review
 - **THEN** operator wording MAY appear if it is explicitly out-of-band
 - **AND** the wording SHALL NOT imply the operator runs normal lifecycle commands during `stop: no` execution
-

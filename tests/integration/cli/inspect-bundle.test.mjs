@@ -8,13 +8,15 @@ import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 const FIXTURE = join(process.cwd(), 'tests/fixtures/DPT_FRAMEWORK');
 const INSPECT = join(FIXTURE, 'cli/inspect-bundle.mjs');
 
-function makeBundle(baseDir, name, { traceEntries = [], logLines = [] } = {}) {
+function makeBundle(baseDir, name, { traceEntries = [], logLines = [], map = 'current' } = {}) {
   const bundleDir = join(baseDir, `dpt_rb_${name}`);
   mkdirSync(bundleDir, { recursive: true });
   const dirs = ['seed_topics', 'reference', 'artifacts/wave0', 'artifacts/wave1', 'artifacts/wave2', '_cache', 'final', '_logs', '_work_units'];
   for (const d of dirs) mkdirSync(join(bundleDir, d), { recursive: true });
-  const topFiles = ['START_FROM_HERE.md', 'rb_plan.md', 'rb_profile.yaml', 'rb_status.json', 'rb_queue.json', 'rb_trace.jsonl'];
+  const topFiles = ['rb_plan.md', 'rb_profile.yaml', 'rb_status.json', 'rb_queue.json', 'rb_trace.jsonl'];
   for (const f of topFiles) writeFileSync(join(bundleDir, f), '');
+  if (map === 'current' || map === 'both') writeFileSync(join(bundleDir, 'BUNDLE_MAP.md'), '# Bundle Map\n');
+  if (map === 'legacy' || map === 'both') writeFileSync(join(bundleDir, 'START_FROM_HERE.md'), '# Legacy Map\n');
   writeFileSync(join(bundleDir, '_logs', 'run.log'), '');
   writeFileSync(join(bundleDir, 'reference/_INDEX.md'), '');
   writeFileSync(join(bundleDir, 'reference/README.md'), '');
@@ -43,6 +45,30 @@ describe('inspect-bundle.mjs integration', () => {
     const bundleDir = makeBundle(tmpDir, 'complete');
     const result = spawnSync('node', [INSPECT, bundleDir], { encoding: 'utf-8', timeout: 5000 });
     if (result.status !== 0) throw new Error(`Expected exit 0, got ${result.status}\n${result.stdout}`);
+    if (result.stdout.includes('START_FROM_HERE.md')) throw new Error(`Current bundle should not require START_FROM_HERE.md\n${result.stdout}`);
+  });
+
+  it('accepts legacy-only START_FROM_HERE.md with deprecation advice', () => {
+    const bundleDir = makeBundle(tmpDir, 'legacy-only', { map: 'legacy' });
+    const result = spawnSync('node', [INSPECT, bundleDir], { encoding: 'utf-8', timeout: 5000 });
+    if (result.status !== 0) throw new Error(`Expected legacy map compatibility to exit 0, got ${result.status}\n${result.stdout}`);
+    if (!result.stdout.includes('deprecated legacy compatibility')) throw new Error(`Expected legacy deprecation advice\n${result.stdout}`);
+    if (!result.stdout.includes('BUNDLE_MAP.md')) throw new Error(`Expected advice to name BUNDLE_MAP.md\n${result.stdout}`);
+  });
+
+  it('reports both map files with BUNDLE_MAP.md current', () => {
+    const bundleDir = makeBundle(tmpDir, 'both-maps', { map: 'both' });
+    const result = spawnSync('node', [INSPECT, bundleDir], { encoding: 'utf-8', timeout: 5000 });
+    if (result.status !== 0) throw new Error(`Expected both map names to exit 0, got ${result.status}\n${result.stdout}`);
+    if (!result.stdout.includes('BUNDLE_MAP.md is current')) throw new Error(`Expected current-map diagnostic\n${result.stdout}`);
+    if (!result.stdout.includes('deprecated compatibility debris')) throw new Error(`Expected legacy debris diagnostic\n${result.stdout}`);
+  });
+
+  it('fails when neither current nor legacy map exists', () => {
+    const bundleDir = makeBundle(tmpDir, 'missing-map', { map: 'none' });
+    const result = spawnSync('node', [INSPECT, bundleDir], { encoding: 'utf-8', timeout: 5000 });
+    if (result.status !== 1) throw new Error(`Expected missing map to exit 1, got ${result.status}\n${result.stdout}`);
+    if (!result.stdout.includes('BUNDLE_MAP.md')) throw new Error(`Expected missing BUNDLE_MAP.md diagnostic\n${result.stdout}`);
   });
 
   it('fails on missing directory', () => {

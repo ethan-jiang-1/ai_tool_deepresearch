@@ -15,7 +15,7 @@
 规则 SHALL 覆盖：
 - bundle dir 存在
 - bundle 目录名合法，且可用于 production run (`dpt_rb_*`) 或 disposable experiment (`dpt_disp_*`)
-- `START_FROM_HERE.md`
+- `BUNDLE_MAP.md`
 - `rb_plan.md`
 - `rb_profile.yaml`
 - `rb_status.json`
@@ -29,6 +29,8 @@
 - `rb_status.json#/current_mode == execution`
 - `rb_status.json#/current_gate == setup_ready`
 - `rb_status.json#/next_gate == seed_topics_ready`
+
+The instantiation gate SHALL require `BUNDLE_MAP.md` for newly instantiated bundles and SHALL NOT require `START_FROM_HERE.md` as part of the current new-bundle gate contract.
 
 命名 contract SHALL 明确：
 - production logical name `<name>` 匹配 `[a-z0-9][a-z0-9-]*`
@@ -45,6 +47,12 @@
 - **WHEN** bundle 缺少 `rb_profile.yaml`
 - **THEN** gate SHALL return `passed: false`
 - **AND** `inspect` / `advice` SHALL 指向缺失文件
+
+#### Scenario: Missing bundle map fails
+
+- **WHEN** a newly instantiated bundle lacks `BUNDLE_MAP.md`
+- **THEN** gate SHALL return `passed: false`
+- **AND** inspect/advice SHALL identify the missing bundle map
 
 #### Scenario: Invalid bundle name fails
 

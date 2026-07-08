@@ -24,6 +24,7 @@ function setupBundle(name, extraFiles = {}) {
   mkdirSync(dir, { recursive: true });
 
   // Control files
+  writeFileSync(join(dir, 'BUNDLE_MAP.md'), '# Bundle Map\n');
   writeFileSync(join(dir, 'rb_status.json'), JSON.stringify({ bundle: name, current_gate: 'wave1_complete' }));
   writeFileSync(join(dir, 'rb_plan.md'), [
     '---',
@@ -69,10 +70,48 @@ describe('file observability', () => {
     const dir = setupBundle('fo-control');
     const result = auditFileObservability(dir, { topicSlugs: ['topic-a'] });
 
+    const bundleMap = result.findings.find(f => f.path === 'BUNDLE_MAP.md');
+    assert.ok(bundleMap, 'BUNDLE_MAP.md should be found');
+    assert.strictEqual(bundleMap.classification, 'expected');
+    assert.strictEqual(bundleMap.authority_status, 'none');
+
     const rbStatus = result.findings.find(f => f.path === 'rb_status.json');
     assert.ok(rbStatus, 'rb_status.json should be found');
     assert.strictEqual(rbStatus.classification, 'expected');
     assert.strictEqual(rbStatus.severity, 'info');
+  });
+
+  it('reports legacy START_FROM_HERE.md as diagnostic compatibility only', () => {
+    const dir = setupBundle('fo-legacy-map');
+    rmSync(join(dir, 'BUNDLE_MAP.md'));
+    writeFileSync(join(dir, 'START_FROM_HERE.md'), '# Legacy Map\n');
+
+    const result = auditFileObservability(dir, { topicSlugs: ['topic-a'] });
+
+    const legacy = result.findings.find(f => f.path === 'START_FROM_HERE.md');
+    assert.ok(legacy, 'START_FROM_HERE.md should be found');
+    assert.strictEqual(legacy.classification, 'unplanned_nonblocking');
+    assert.strictEqual(legacy.authority_status, 'none');
+    assert.ok(result.inspect.some(i => i.includes('legacy_bundle_map')));
+    assert.ok(result.advice.some(a => a.includes('BUNDLE_MAP.md')));
+  });
+
+  it('does not create two map authorities when both map names exist', () => {
+    const dir = setupBundle('fo-both-maps', {
+      'START_FROM_HERE.md': '# Legacy Map\n',
+    });
+
+    const result = auditFileObservability(dir, { topicSlugs: ['topic-a'] });
+
+    const bundleMap = result.findings.find(f => f.path === 'BUNDLE_MAP.md');
+    const legacy = result.findings.find(f => f.path === 'START_FROM_HERE.md');
+    assert.ok(bundleMap);
+    assert.ok(legacy);
+    assert.strictEqual(bundleMap.classification, 'expected');
+    assert.strictEqual(legacy.classification, 'unplanned_nonblocking');
+    assert.strictEqual(bundleMap.authority_status, 'none');
+    assert.strictEqual(legacy.authority_status, 'none');
+    assert.ok(result.inspect.some(i => i.includes('deprecated compatibility debris')));
   });
 
   it('classifies ledger-declared files as declared_authoritative', () => {

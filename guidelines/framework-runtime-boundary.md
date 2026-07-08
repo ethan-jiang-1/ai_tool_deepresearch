@@ -147,7 +147,7 @@ Current production bundle routing:
 
 ```text
 dpt_rb_<name>/
-  START_FROM_HERE.md
+  BUNDLE_MAP.md
   rb_plan.md
   rb_profile.yaml
   rb_status.json

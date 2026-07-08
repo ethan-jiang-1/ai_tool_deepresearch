@@ -74,4 +74,4 @@ Interactive in-run checkpoints：`hitl1`（`stop: yes`，确认研究方向、�
 
 ## 如果已有 Active Bundle
 
-不要重新创建。打开 `<bundle>/START_FROM_HERE.md` 了解 bundle 布局，读 `rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`。若 `rb_status.json.current_node` 非空，把它作为当前应加载的 phase Markdown coordinate；`current_gate` / `next_gate` 只是 gate window，不要只凭 `current_gate` 推断当前 phase。若 `current_node` 为 `null` 或缺失，先运行 reentry/trace 诊断再继续。
+不要重新创建。打开 `<bundle>/BUNDLE_MAP.md` 了解 bundle 布局；旧 bundle 只有 `START_FROM_HERE.md` 时，把它当作 deprecated fallback。读 `rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`。若 `rb_status.json.current_node` 非空，把它作为当前应加载的 phase Markdown coordinate；`current_gate` / `next_gate` 只是 gate window，不要只凭 `current_gate` 推断当前 phase。若 `current_node` 为 `null` 或缺失，先运行 reentry/trace 诊断再继续。

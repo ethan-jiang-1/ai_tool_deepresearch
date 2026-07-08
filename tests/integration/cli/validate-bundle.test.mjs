@@ -70,7 +70,7 @@ describe('validate-bundle.mjs integration', () => {
 function copyTemplates(bundleDir, prefix) {
   const templates = join(FIXTURE, 'rb_templates');
   const profile = prefix === 'invalid' ? 'rb_profile.yaml.tmpl' : null;
-  for (const f of ['START_FROM_HERE.md.tmpl', 'rb_plan.md.tmpl', 'rb_profile.yaml.tmpl', 'rb_status.json.tmpl', 'rb_queue.json.tmpl']) {
+  for (const f of ['BUNDLE_MAP.md.tmpl', 'rb_plan.md.tmpl', 'rb_profile.yaml.tmpl', 'rb_status.json.tmpl', 'rb_queue.json.tmpl']) {
     const content = readFileSync(join(templates, f), 'utf-8').replace(/\{\{name\}\}/g, `${prefix}_test`);
     const dest = join(bundleDir, f.replace('.tmpl', ''));
     writeFileSync(dest, content);

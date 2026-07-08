@@ -26,7 +26,7 @@ describe('instantiate-run-bundle.mjs integration', () => {
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout.trim(), dir);
     for (const entry of [
-      'START_FROM_HERE.md',
+      'BUNDLE_MAP.md',
       'rb_plan.md',
       'rb_profile.yaml',
       'rb_status.json',
@@ -48,6 +48,15 @@ describe('instantiate-run-bundle.mjs integration', () => {
     ]) {
       assert.equal(existsSync(join(dir, entry)), true, `missing ${entry}`);
     }
+    assert.equal(existsSync(join(dir, 'START_FROM_HERE.md')), false, 'fresh bundles must not generate START_FROM_HERE.md');
+    const bundleMap = readFileSync(join(dir, 'BUNDLE_MAP.md'), 'utf-8');
+    assert.ok(bundleMap.includes('passive bundle map'), 'BUNDLE_MAP.md should identify itself as passive');
+    assert.ok(bundleMap.includes('Research Content Map'), 'BUNDLE_MAP.md should include Research Content Map');
+    assert.ok(bundleMap.includes('Runtime Control Map'), 'BUNDLE_MAP.md should include Runtime Control Map');
+    assert.ok(bundleMap.includes('Diagnostics Map'), 'BUNDLE_MAP.md should include Diagnostics Map');
+    assert.ok(bundleMap.includes('Reentry Pointers'), 'BUNDLE_MAP.md should include Reentry Pointers');
+    assert.match(result.stderr, /BUNDLE_MAP/);
+    assert.doesNotMatch(result.stderr, /START_FROM_HERE/);
     // Verify README content is non-empty
     const cacheReadme = readFileSync(join(dir, '_cache/README.md'), 'utf-8');
     assert.ok(cacheReadme.includes('_cache/') && cacheReadme.includes('{wave}/{batch}/{scope}/{source_dir}'),

@@ -50,6 +50,8 @@ Exit codes SHALL NOT encode morale, reassurance, retry strategy, progress pressu
 | instantiate-run-bundle | command_playbook/instantiate-run-bundle.md | 生产新的 Runtime Bundle |
 | start-research | command_playbook/start-research.md | 从零开始一次完整的 Deep Research（创建 bundle → 写问题 → 加载第一个 phase） |
 
+Existing active bundle reload uses `<bundle>/BUNDLE_MAP.md` plus `rb_status.json`, `rb_queue.json`, and `rb_trace.jsonl`. Prefer non-null `rb_status.json.current_node` as the lifecycle Markdown coordinate; if it is missing, use reentry diagnostics rather than `current_gate` guessing. Legacy `START_FROM_HERE.md` is deprecated fallback only for old bundles.
+
 ## Subagent 环境
 | 命令 | 文件 | 说明 |
 |------|------|------|

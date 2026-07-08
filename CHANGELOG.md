@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.11
+
+- Repo-root agent behavior files now suppress built-in research shortcuts when `DPT_FRAMEWORK/` is the selected or relevant research entry path.
+- New production and disposable bundles now use `BUNDLE_MAP.md` as the passive root map; legacy `START_FROM_HERE.md` is diagnostic compatibility only.
+- Instantiation gate, inspect/reentry advice, file-observability, docs, and tests now use the bundle-map contract.
+
 ## v0.10
 
 - Wave0/Wave1 delegated execution guidance now uses bounded top-up batch claims, active polling, submit/repair/terminalize loops, and drain-before-gate ordering for independent work units.

@@ -61,6 +61,7 @@ function setupBundle(name, statusOverrides = {}, queueOverrides = {}, extraFiles
 
   writeFileSync(join(dir, 'rb_profile.yaml'), 'research_style: quick_factual\n');
   writeFileSync(join(dir, 'rb_trace.jsonl'), '');
+  writeFileSync(join(dir, 'BUNDLE_MAP.md'), '# Bundle Map\n');
   mkdirSync(join(dir, '_logs'), { recursive: true });
   writeFileSync(join(dir, '_logs', 'run.log'), '');
 
@@ -193,6 +194,8 @@ describe('check-reentry CLI', () => {
       assert.strictEqual(res.stdout.runtime_position.current_node_status, 'null');
       assert.ok(res.stdout.warnings.some(w => w.check === 'status_current_node'));
       assert.ok(res.stdout.advice.some(a => a.includes('next successful enter-phase')));
+      assert.ok(res.stdout.advice.some(a => a.includes('BUNDLE_MAP.md')));
+      assert.ok(!res.stdout.advice.some(a => a.includes('START_FROM_HERE.md')));
     });
 
     it('keeps legacy status without current_node readable', () => {
@@ -202,6 +205,19 @@ describe('check-reentry CLI', () => {
       assert.strictEqual(res.stdout.runtime_position.current_node, null);
       assert.strictEqual(res.stdout.runtime_position.current_node_present, false);
       assert.strictEqual(res.stdout.runtime_position.current_node_status, 'absent');
+    });
+
+    it('uses legacy START_FROM_HERE.md only as deprecated fallback advice', () => {
+      const dir = setupBundle('rt-legacy-start-here', { current_node: null });
+      rmSync(join(dir, 'BUNDLE_MAP.md'));
+      writeFileSync(join(dir, 'START_FROM_HERE.md'), '# Legacy Map\n');
+
+      const res = runCliJson(dir, 'wave1_complete');
+
+      assert.strictEqual(res.exitCode, 0);
+      assert.ok(res.stdout.advice.some(a => a.includes('legacy START_FROM_HERE.md')));
+      assert.ok(res.stdout.advice.some(a => a.includes('deprecated')));
+      assert.ok(res.stdout.advice.some(a => a.includes('BUNDLE_MAP.md')));
     });
   });
 

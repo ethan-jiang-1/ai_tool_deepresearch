@@ -34,7 +34,7 @@ The disposable bundle creation script SHALL reside at `experiments_env/shared/ne
 
 - **WHEN** `node experiments_env/shared/new-disposable-bundle.mjs agq_simple --nodes=experiments_env/prototype-agentic-queue/nodes-agentic-queue --force` is executed
 - **THEN** a directory `dpt_disp_agq_simple/` SHALL be created at repo root
-- **AND** it SHALL contain all standard bundle control files (`rb_status.json`, `rb_queue.json`, `rb_profile.yaml`, `rb_plan.md`, `rb_trace.jsonl`, `START_FROM_HERE.md`)
+- **AND** it SHALL contain all standard bundle control files (`rb_status.json`, `rb_queue.json`, `rb_profile.yaml`, `rb_plan.md`, `rb_trace.jsonl`, `BUNDLE_MAP.md`)
 - **AND** the control files SHALL pass `validate-bundle.mjs` and `inspect-bundle.mjs`
 - **AND** node MD files from the `--nodes` source SHALL be copied into the bundle
 

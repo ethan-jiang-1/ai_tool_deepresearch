@@ -9,10 +9,10 @@
       "failure_message": "Bundle directory does not exist. Run instantiate-run-bundle.mjs to create it."
     },
     {
-      "id": "start_from_here_exists",
+      "id": "bundle_map_exists",
       "check": "file_exists",
-      "target": "START_FROM_HERE.md",
-      "failure_message": "Missing START_FROM_HERE.md. Create it from the template."
+      "target": "BUNDLE_MAP.md",
+      "failure_message": "Missing BUNDLE_MAP.md. Create it from the template."
     },
     {
       "id": "rb_plan_exists",

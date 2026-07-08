@@ -50,6 +50,22 @@ describe('check-gate-instantiation-complete', () => {
     assert.ok(output.inspect.some(m => m.includes('rb_profile.yaml')), `Expected inspect to mention rb_profile.yaml, got: ${JSON.stringify(output.inspect)}`);
   });
 
+  it('fails when BUNDLE_MAP.md is missing even if legacy START_FROM_HERE.md exists', () => {
+    const name = unique('missing-map');
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    const bundleDir = track(r.stdout.trim());
+
+    rmSync(join(bundleDir, 'BUNDLE_MAP.md'));
+    writeFileSync(join(bundleDir, 'START_FROM_HERE.md'), '# Legacy only\n');
+
+    const result = runGate(bundleDir);
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('BUNDLE_MAP.md')), `Expected inspect to mention BUNDLE_MAP.md, got: ${JSON.stringify(output.inspect)}`);
+    assert.ok(output.advice.some(m => m.includes('BUNDLE_MAP.md')), `Expected advice to mention BUNDLE_MAP.md, got: ${JSON.stringify(output.advice)}`);
+  });
+
   it('fails on illegal bundle name (spaces)', () => {
     const illegalName = join(BUNDLES_DIR, 'dpt_rb_bad name');
     const bundleDir = track(illegalName);

@@ -14,6 +14,10 @@ Core split: the LLM Agent searches, reads, writes evidence, and synthesizes. The
 
 Use `guidelines/` when the right direction, layer boundary, or experiment path is unclear. Start with `guidelines/project-charter.md`.
 
+## Deep Research Routing
+
+If the user expresses research, deep-research, investigation, or report intent and this repo's `DPT_FRAMEWORK/` is the selected or relevant entry path, do not invoke built-in `deep-research` or equivalent one-shot research shortcuts. Use `DPT_FRAMEWORK/RUN.md` and the framework workflow.
+
 ## Where To Look
 
 - Project philosophy, error tolerance, rules: `guidelines/`
