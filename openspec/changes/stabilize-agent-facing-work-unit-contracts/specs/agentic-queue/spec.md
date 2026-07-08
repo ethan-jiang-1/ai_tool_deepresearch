@@ -8,6 +8,8 @@ Agent-facing phase Markdown task-card and result examples for queue demand SHALL
 
 Static hygiene checks SHALL scan active phase Markdown queue task-card/result examples for retired queue identity drift, not only the queue JSON template or work-unit generated surfaces. Queue task-card examples SHALL validate against the active queue demand schema. Non-delegated `operate-queue complete --result` examples SHALL validate against the active queue result schema. `work_id` SHALL remain valid only when a surface explicitly describes an Engine-allocated delegated work-unit attempt, such as work-unit claim/submit, work-unit result, runtime receipt, or submitted ledger context.
 
+The validation surface SHALL be example-driven, not token-only: when active phase Markdown presents a JSON object as an Agent-copyable task card or complete result, static hygiene or regression tests SHALL extract and parse that JSON against the same queue schemas that `operate-queue enqueue` or `operate-queue complete` uses.
+
 #### Scenario: seed-topic materialization example uses queue item identity
 
 - **WHEN** the Agent reads the seed-topics phase task-card template for `producer_rule: seed_topic_materialize`
@@ -31,6 +33,12 @@ Static hygiene checks SHALL scan active phase Markdown queue task-card/result ex
 - **WHEN** static hygiene scans active phase Markdown queue task-card and non-delegated queue result JSON examples
 - **THEN** task-card examples SHALL parse against the queue demand schema
 - **AND** non-delegated complete result examples SHALL parse against the queue result schema
+
+#### Scenario: token-only hygiene is insufficient for Agent-copyable JSON
+
+- **WHEN** an active phase Markdown JSON example avoids retired `work_id` wording but still violates the active queue demand or queue result schema
+- **THEN** static hygiene or regression tests SHALL fail
+- **AND** the diagnostic SHALL identify the example surface and the schema mismatch
 
 #### Scenario: work-unit attempt contexts may still use work_id
 

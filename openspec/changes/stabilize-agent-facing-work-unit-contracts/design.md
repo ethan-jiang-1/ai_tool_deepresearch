@@ -6,6 +6,15 @@
 
 当前实现里，`DPT_FRAMEWORK/engine/work-unit-envelope.mjs` 生成的 `result.schema.json` 对 `output_files[]`、`source_claims[]` 过宽；而 `DPT_FRAMEWORK/engine/work-unit-validation.mjs` 和 `DPT_FRAMEWORK/schema/contracts/work-unit.mjs` 在 submit 时按严格 shape、kind output contract、cache/source-claim policy 验收。另一个 drift 点在 `DPT_FRAMEWORK/workflows/nodes/phases/phase-seed-topics.md`：seed-topic task-card 模板和 complete result 示例仍使用 retired queue demand `work_id`，但 accepted queue contract 和 `QueueResultSchema` 已将 queue demand identity 固定为 `queue_item_id`，`work_id` 只属于 Engine-allocated delegated attempt。
 
+第二轮审计确认，根本问题不是单个字段名，而是入口合同没有被当成一条链管理。同一份 truth 同时出现在：
+
+- Markdown phase examples: Agent 照着写 queue task cards / complete results。
+- Claim-generated work-unit envelope: `manifest.json`、`task.md`、spawn prompt、`_beacon.json`、`result.schema.json` 给 Sub-agent 和 Phase Agent 复制身份、路径、output/cache contract。
+- Engine validators: `QueueDemandItemSchema`、`QueueResultSchema`、`WorkUnitResultSchema`、submit helpers、cache/source/output validators 决定是否进入 queue transition 或 ledger append。
+- Static hygiene: 试图阻止旧术语和旧 authority surface 回流。
+
+只修一个面会继续留下“Agent 合理相信 A、Engine 实际要求 B”的空间。入口合同审计因此必须按 surface-by-surface matrix 做，而不是 grep 到两个 bug 行号就结束。
+
 入口合同审计还暴露出两个更根的同族风险：
 
 - `output_contract.output_files.allowed_roles` 已经作为 kind contract 展示给 Agent，但 submit validator 当前没有把 role enum 当作 ledger append 前的硬约束执行。这样会产生 schema/contract 广告了限制、submit 放过不匹配输入、gate 后续再失败的错位。
@@ -17,7 +26,7 @@
 
 **Goals:**
 
-1. 对入口合同做一次有边界的全面审计：phase queue examples、generated work-unit task/prompt/beacon/schema、kind output/cache contract、submit validator、static hygiene。
+1. 对入口合同做一次有边界的全面审计：phase queue examples、generated work-unit manifest/task/prompt/beacon/schema、kind output/cache contract、queue and submit validators、static hygiene。
 2. 让 generated work-unit `result.schema.json` 成为 submit-time validation 的 truthful Agent-facing projection。
 3. 让 unsupported fields 从 generated schema 中消失，而不是以 optional 字段误导 Agent。
 4. 让 `source_claims[]` 和 `output_files[]` 的 JSON Schema shape 与 Zod / submit helper 的可接受字段保持一致。
@@ -48,7 +57,7 @@
 ```text
 phase Markdown queue examples
   -> operate-queue enqueue/complete schemas
-  -> operate-work-unit claim generated task/prompt/beacon/schema
+  -> operate-work-unit claim generated manifest/task/prompt/beacon/schema
   -> work-unit result/output/cache/source-claim submit validators
   -> submitted ledger append preconditions
 ```
@@ -56,6 +65,22 @@ phase Markdown queue examples
 如果一个 mismatch 会让 Agent 写出不能 enqueue、不能 non-delegated complete、不能 submit，或 submit 后立刻携带一个入口合同已能发现的结构错误，它属于本 change。Gate-specific artifact semantics、Wave1 required path-role coverage、reference navigation、depth-review exact-match policy、return-map concrete-reference policy 留给 `align-gate-contracts-and-reference-navigation`。
 
 Alternative considered: 只修 BUG-066/067 的具体文本。拒绝，因为 BUG-069 的根因是入口 contract surfaces 漂移；只修两个症状会继续让下一次 run 踩到同族问题。
+
+### Decision 0A: 用入口合同矩阵驱动 apply 审计
+
+Implementation SHALL create or record an entrance-contract matrix before target-code edits. Each row SHALL include:
+
+- the Agent-facing surface (`phase-seed-topics.md` JSON example, generated `task.md`, spawn prompt, `_beacon.json`, `result.schema.json`, etc.);
+- the producer that writes or templates it;
+- the Agent reader expected to copy or obey it;
+- the Engine schema/helper that validates the submitted input;
+- the source-of-truth contract field, when one exists;
+- the failure boundary (`enqueue`, `operate-queue complete`, `operate-work-unit submit`, or ledger append);
+- the regression or static hygiene guard that will keep it aligned.
+
+The matrix is not a new runtime artifact. It is implementation evidence for this change so apply does not collapse back into symptom repair.
+
+Alternative considered: rely on broad task wording like “audit entrance surfaces”. Rejected because the current failure mode came from broad wording and scattered terminology not forcing one-to-one mapping between declared contract and executable validator.
 
 ### Decision 1: 在本地 JS 中手写窄 JSON Schema emitter
 
@@ -65,9 +90,11 @@ Alternative considered: 只修 BUG-066/067 的具体文本。拒绝，因为 BUG
 
 Alternative considered: 继续从宽泛 object schema 出发，靠 task prose 解释字段。拒绝，因为这正是 BUG-066 的失败模式：Agent 看到机器可读 schema 后会合理地信任它。
 
-### Decision 2: Generated result schema 跟随 `manifest.output_contract`
+### Decision 2: Claim-generated envelope 跟随同一份 manifest/output contract
 
-`result.schema.json` 的基础 identity fields SHALL const-bind `work_id`、`queue_item_id`、`kind`、`receipt_nonce`。`output_files[]`、`source_claims[]`、`accepted_source_urls[]` 是否出现，以及 roles 是否可用，均 SHALL 来自当前 work-unit `output_contract`。
+`operate-work-unit claim` writes multiple Agent-facing surfaces for the same work unit: `manifest.json`, `task.md`, spawn prompt, `_beacon.json`, and `result.schema.json`. These SHALL be treated as projections of one assigned manifest/output/cache contract, not independent prose/schema surfaces.
+
+`result.schema.json` 的基础 identity fields SHALL const-bind `work_id`、`queue_item_id`、`kind`、`receipt_nonce`。`output_files[]`、`source_claims[]`、`accepted_source_urls[]` 是否出现，以及 roles 是否可用，均 SHALL 来自当前 work-unit `output_contract`。`task.md` / spawn prompt / `_beacon.json` SHALL not advertise fields, required outputs, source-claim capability, cache semantics, or identity behavior that contradict the generated schema or submit validator.
 
 当 `source_claims.allowed !== true` 时，generated schema SHALL omit `source_claims` 和 `accepted_source_urls`。这两个字段不应作为 optional 出现，因为 submit validator 会在非允许 contract 下拒绝非空 source claims / accepted URLs。
 
@@ -122,7 +149,7 @@ Alternative considered: treat `required_result_fields` as loose prose metadata. 
 
 ### Decision 7: Phase Markdown hygiene 覆盖 queue task-card/result examples
 
-Implementation SHALL update existing static hygiene surface, currently `validate-work-unit-hygiene.mjs` or the closest active template validator, to scan phase Markdown examples that define queue demand task cards or queue result examples. The check SHALL fail when a queue demand task-card or non-delegated queue result example uses `work_id` instead of `queue_item_id`.
+Implementation SHALL update existing static hygiene surface, currently `validate-work-unit-hygiene.mjs` or the closest active template validator, to scan active phase Markdown examples that define queue demand task cards or queue result examples. The check SHALL fail when a queue demand task-card or non-delegated queue result example uses `work_id` instead of `queue_item_id`. Where the Markdown contains machine-readable JSON examples intended for Agent copy/paste, hygiene or tests SHALL parse those examples against `QueueDemandItemSchema` or `QueueResultSchema` rather than only checking text tokens.
 
 The check SHALL still allow `work_id` in work-unit-specific contexts: generated work-unit task/result docs, `operate-work-unit submit` examples, delegated attempt receipts, and prose explicitly describing Engine-allocated attempts.
 
@@ -138,6 +165,8 @@ Tests SHALL cover generated schema and submit validator behavior together. At mi
 - submit rejects an `output_files[].role` outside the kind output contract allowed roles.
 - `required_result_fields` and schema/submit required/default behavior are asserted for registered work-unit kinds.
 - phase template hygiene catches retired queue demand `work_id` in task-card/result examples.
+- generated `task.md`, spawn prompt, `_beacon.json`, and `result.schema.json` all expose the same identity and kind output/cache contract for the same claimed work unit.
+- active phase queue examples parse against the same queue schemas that `operate-queue` uses.
 
 These tests belong under root `tests/`, not under `DPT_FRAMEWORK/`.
 
@@ -149,11 +178,12 @@ These tests belong under root `tests/`, not under `DPT_FRAMEWORK/`.
 - Omitted unsupported fields may surprise Agents that previously copied the broad schema -> Mitigation: generated task prose already names kind-specific output contract; schema omission is the correct machine-readable signal.
 - Enforcing allowed role enum in submit can reveal existing fixture drift -> Mitigation: update fixtures to use the same roles the kind contract already advertised; do not broaden submit to preserve invalid historical rows.
 - Reconciling `required_result_fields` may require choosing between stricter submit and corrected output contract metadata -> Mitigation: prefer the existing submit behavior only when tests prove the default is intentional and Agent-facing contract text no longer calls the field required.
+- Matrix work can become busywork if it is too broad -> Mitigation: include only Agent-facing surfaces that are copied or obeyed before queue transition, work-unit submit, or ledger append.
 - Scope can slide into the second gate-alignment change -> Mitigation: record gate-only findings separately and only fix mismatches that affect enqueue, non-delegated complete, submit, or ledger append preconditions.
 
 ## Migration Plan
 
-1. Perform the entrance-contract audit and record any extra entrance drift found during apply in the task evidence.
+1. Perform the entrance-contract matrix audit and record any extra entrance drift found during apply in the task evidence.
 2. Implement the schema emitter helper around the current work-unit manifest/output contract surfaces.
 3. Update `result.schema.json` generation for wave0, wave1, and wave2 work-unit kinds.
 4. Enforce `output_contract.output_files.allowed_roles` during submit before ledger append.

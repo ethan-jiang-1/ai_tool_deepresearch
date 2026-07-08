@@ -6,6 +6,8 @@
 
 Generated work-unit `result.schema.json` SHALL be an Agent-facing projection of the same work-unit result contract enforced by submit-time validation and the assigned kind output contract. Submit-time validation SHALL enforce any kind-level output constraint that the generated schema advertises before submitted-ledger append.
 
+The generated work-unit envelope (`manifest.json`, `task.md`, spawn prompt, `_beacon.json`, and `result.schema.json`) SHALL expose one coherent projection of the assigned manifest/output/cache contract. These surfaces SHALL NOT disagree about identity fields, required result fields, source-claim capability, accepted URL capability, output file item shape, output role set, or cache trail expectations.
+
 The generated schema SHALL const-bind `work_id`, `queue_item_id`, `kind`, and `receipt_nonce` for the assigned work unit. It SHALL expose `output_files[]` items with required `path` and `role`, optional `source_url`, and optional `source_slug`, with `additionalProperties: false`; `role` SHALL be constrained to the assigned work unit output contract's `output_files.allowed_roles`. Submit-time validation SHALL enforce the same allowed role set before ledger append. This requirement does not define gate-specific path-to-role coverage policy unless that policy is already encoded in the assigned kind output contract.
 
 When the assigned output contract does not allow source claims, the generated schema SHALL omit `source_claims` and `accepted_source_urls`. When the assigned output contract allows source claims, the generated schema SHALL expose `source_claims[]` items with exactly `url`, `source_ref`, `acceptance_status`, `is_new_vs_wave0`, `cache_trail_refs`, and optional nullable `degraded_capture_ref`, with `additionalProperties: false`; it SHALL also expose `accepted_source_urls[]`.
@@ -43,6 +45,12 @@ For every field listed by `output_contract.required_result_fields`, the generate
 - **WHEN** the Engine generates a `result.schema.json` for a claimed work unit
 - **THEN** `work_id`, `queue_item_id`, `kind`, and `receipt_nonce` SHALL be const-bound to the manifest values
 - **AND** an Agent reading only the generated task and result schema SHALL have the exact identity values needed for a submit-ready result
+
+#### Scenario: generated envelope surfaces agree
+
+- **WHEN** `operate-work-unit claim` generates a work-unit envelope
+- **THEN** `manifest.json`, `task.md`, spawn prompt, `_beacon.json`, and `result.schema.json` SHALL expose the same `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`
+- **AND** they SHALL expose source-claim, output-file, cache, and required-result expectations that do not contradict the assigned output/cache contract or submit validator
 
 #### Scenario: required result fields have one entrance meaning
 

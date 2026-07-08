@@ -63,16 +63,20 @@ A emit `role.enum` 后，在 schema + `taskMarkdown`（:173-178）+ `subagent-dp
 
 ## Work item C — 修文档漂移 + phase-doc 一致性测试
 
-- **C1** `phase-seed-topics.md`：task card(:61) + result 模板(:223-224) `"work_id"`→`"queue_item_id"`（BUG-067）。
-- **C2** `phase-wave1.md:158`：depth-review 例去尾斜杠（`wave-depth-contracts.mjs:378` 精确匹配 ledger `work_unit_ref`——BUG-068）。
-- **C3** 新 `cli/validate-phase-contracts.mjs`：解析 `workflows/nodes/phases/*.md` 内联 json/yaml 例块，占位替换后 `safeParse` 到 `QueueDemandItemSchema`/`QueueResultSchema`/`WorkUnitResultSchema`/depth-review/finding-index（BUG-069 要的回归网）。测试 `tests/integration/cli/validate-phase-contracts.test.mjs`。
+- **C1** `phase-seed-topics.md`：task card(:61) + result 模板(:223-224) `"work_id"`→`"queue_item_id"`（BUG-067）。**（✅ 全覆盖 — C1）**
+- **C2** `phase-wave1.md:158`：depth-review 例去尾斜杠（`wave-depth-contracts.mjs:378` 精确匹配 ledger `work_unit_ref`——BUG-068）。**（✅ 全覆盖 — C2，depth-review ref 规范化）**
+- **C3** 新 `cli/validate-phase-contracts.mjs`：解析 `workflows/nodes/phases/*.md` 内联 json/yaml 例块，占位替换后 `safeParse` 到 `QueueDemandItemSchema`/`QueueResultSchema`/`WorkUnitResultSchema`/depth-review/finding-index（BUG-069 要的回归网）。测试 `tests/integration/cli/validate-phase-contracts.test.mjs`。**（🟡 半覆盖 — 意图散在 C1 hygiene 扫描 + C2 static audit；perf 版想要的独立全-schema safeParse CLI 两者都没强制）**
 
 ## Work item D — dry-submit 预检
+
+> **覆盖**：❌ 未覆盖 — 两 change 均无 preflight/dry-submit 能力，纯性能增量。
 
 - **D1** 新 `engine/work-unit-preflight.mjs` → `dryValidateWorkUnitResult()`：**只读**、累积**全部**违规（`readAndValidateResult`、`validateOutputFiles`、`validateSourceClaims`、`validateCacheTrails(...,{record:null})`——`record:null` 保证不写 `page.md`），复用 `reasonCodeForSubmit`。
 - **D2** `cli/operate-work-unit.mjs` 加 `dry-submit` 子命令（barrel re-export）→ 一次报全违规，N 次 gate 往返压成一次批量修。测试 `tests/integration/cli/operate-work-unit-dry-submit.test.mjs`。
 
 ## Work item E — 机制提速抓取（只提速不降覆盖）
+
+> **覆盖**：❌ 未覆盖 — 两 change 全在契约/gate/reference 范围，无一字涉及抓取性能，纯性能增量。
 
 **不动** `schema/research-styles/exploratory_map.json` floors。只改散文：
 - `subagent-dpt-source-intake.md` §5(:149-158)、`subagent-dpt-evidence-extractor.md` §5(:256-264)：降级链是**单 URL 内**逐级 fallback；**不同 URL 并行/分批抓**（当前串行是每 agent 12–15 页顺序抓的直接原因）。
