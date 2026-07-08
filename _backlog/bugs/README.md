@@ -20,8 +20,10 @@
 - [BUG-059](BUG-059-cli-positional-help-creates-junk-directory.md) — operate-queue/operate-work-unit CLI 把 `--help` 当 bundle 名，在 repo root 创建垃圾目录
 - [BUG-060](BUG-060-subagent-output-contract-mismatch-systematic.md) — Sub-agent 产出物与 Engine contract 之间的系统性 mismatch：5 个独立 gap（result.json 包装、receipt 字段缺失、cache 命名、nonce 双源、source_claims contract/gate 矛盾）导致 gate 反复卡在格式问题而非研究质量
 - [BUG-061](BUG-061-start-from-here-misleading-name-and-positioning.md) — START_FROM_HERE.md 名字（应为 BUNDLE_MAP.md）和定位（应为被动知识地图而非动作入口）都有误导性
+- [BUG-062](BUG-062-phase-agent-passive-waiting-no-polling.md) — Phase Agent spawn sub-agent 后被动等待 task-notification 推送，不主动轮询文件系统，导致 sub-agent 已完成但 Agent 空等，需用户敲"继续"才推进
+- [BUG-063](BUG-063-gate-failure-cascade-skips-phase-wave2.md) — Gate failure 手动修复级联：wave0 gate 失败 → 手动改 status → handoff chain 断裂 → wave1 gate 无法运行 → 再次手动改 → wave2 被完全跳过（cross-topic synthesis 丢失）
 
-**Next available bug ID: BUG-062**
+**Next available bug ID: BUG-064**
 
 ---
 
