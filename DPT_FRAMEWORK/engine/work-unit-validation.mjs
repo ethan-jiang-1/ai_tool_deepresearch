@@ -63,7 +63,7 @@ export function readAndValidateBeacon(bundleDir, record, manifest) {
   return beacon;
 }
 
-export function readAndValidateResult(bundleDir, resultPath, record, { normalizations = [] } = {}) {
+export function readAndValidateResult(bundleDir, resultPath, record, { normalizations = [], outputContract = null } = {}) {
   if (!resultPath) throw new Error('--result is required');
   if (!existsSync(resultPath)) throw new Error(`Result file not found: ${resultPath}`);
   const raw = readJson(resultPath);
@@ -84,6 +84,7 @@ export function readAndValidateResult(bundleDir, resultPath, record, { normaliza
     });
   }
   if (!isPlainObject(candidate)) throw new Error(`result must be a JSON object for ${record.work_id}`);
+  validateRequiredResultFields(candidate, outputContract);
 
   const normalized = { ...candidate };
   for (const field of ['work_id', 'queue_item_id', 'kind']) {
@@ -117,6 +118,16 @@ export function readAndValidateResult(bundleDir, resultPath, record, { normaliza
     if (result[field] !== record[field]) throw new Error(`result/index mismatch for ${record.work_id}: ${field}`);
   }
   return result;
+}
+
+export function validateRequiredResultFields(rawResult, outputContract) {
+  const required = Array.isArray(outputContract?.required_result_fields)
+    ? outputContract.required_result_fields.filter((field) => typeof field === 'string' && field.length > 0)
+    : [];
+  const missing = required.filter((field) => !Object.hasOwn(rawResult, field));
+  if (missing.length > 0) {
+    throw new Error(`result missing required field(s) from work-unit output contract: ${missing.join(', ')}`);
+  }
 }
 
 export function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations = [], allowNonceNormalization = false } = {}) {
@@ -209,7 +220,16 @@ export function validateOutputFiles(bundleDir, result, outputContract) {
   if (outputContract?.output_files?.required && outputFiles.length === 0) {
     throw new Error('output_files[] is required by the work-unit output contract');
   }
+  const allowedRoles = Array.isArray(outputContract?.output_files?.allowed_roles)
+    ? new Set(outputContract.output_files.allowed_roles)
+    : null;
+  if (outputFiles.length > 0 && (!allowedRoles || allowedRoles.size === 0)) {
+    throw new Error('output_files[].role cannot be accepted because this work-unit output contract has no allowed_roles');
+  }
   for (const entry of outputFiles) {
+    if (allowedRoles && !allowedRoles.has(entry.role)) {
+      throw new Error(`output_files role '${entry.role}' is not allowed by this work-unit output contract; allowed roles: ${[...allowedRoles].join(', ')}`);
+    }
     if (!isSafeBundleRelative(entry.path)) throw new Error(`output_files path escapes bundle: ${entry.path}`);
     if (!existsSync(path.join(bundleDir, entry.path))) throw new Error(`declared output file missing: ${entry.path}`);
     if (entry.role === 'reference' && outputContract?.output_files?.reference_requires_source_url && !entry.source_url) {

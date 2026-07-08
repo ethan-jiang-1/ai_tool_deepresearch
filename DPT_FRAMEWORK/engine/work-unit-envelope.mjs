@@ -63,7 +63,7 @@ function outputFileItemSchema(outputContract) {
   const roles = uniqueStrings(outputContract?.output_files?.allowed_roles);
   const roleSchema = roles.length > 0
     ? { type: 'string', enum: roles }
-    : { type: 'string', minLength: 1 };
+    : { not: {} };
   return {
     type: 'object',
     required: ['path', 'role'],

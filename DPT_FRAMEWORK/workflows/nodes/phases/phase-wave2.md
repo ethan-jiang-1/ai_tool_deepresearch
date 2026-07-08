@@ -66,12 +66,24 @@ If queue is empty, enqueue:
   "targets": { "controller": "main-agent" },
   "producer_rule": "cross_topic_synthesis",
   "priority_class": "P2_close_open_loop",
+  "action": "Read existing Wave0/Wave1 evidence, build cross-topic scan matrix, triage findings, record gap_status and synthesis_eligibility, write synthesis.md, cross-topic-ledger.md, and finding-index.yaml. Do not perform new external search inside this task.",
   "required_receipts": [
     "file:artifacts/wave2/synthesis.md",
     "file:artifacts/wave2/cross-topic-ledger.md",
     "file:artifacts/wave2/finding-index.yaml"
   ],
-  "action": "Read existing Wave0/Wave1 evidence, build cross-topic scan matrix, triage findings, record gap_status and synthesis_eligibility, write synthesis.md, cross-topic-ledger.md, and finding-index.yaml. Do not perform new external search inside this task."
+  "done_condition": "synthesis.md, cross-topic-ledger.md, and finding-index.yaml exist and contain structured finding triage grounded in submitted Wave0/Wave1 backing",
+  "verification": {"engine": ["receipt_check"], "agent": ["finding_index_readable", "cross_topic_refs_present"]},
+  "writes_to": [
+    "artifacts/wave2/synthesis.md",
+    "artifacts/wave2/cross-topic-ledger.md",
+    "artifacts/wave2/finding-index.yaml"
+  ],
+  "status_sync": ["wave2_synthesis_materialized"],
+  "completion_receipt": "file:artifacts/wave2/finding-index.yaml",
+  "failure_route": "queue_repair",
+  "lineage": {"phase": "wave2"},
+  "payload": {"wave": 2}
 }
 ```
 
@@ -85,7 +97,15 @@ If queue is empty, enqueue:
   "producer_rule": "seed_topic_backfill_wave2",
   "priority_class": "P4_progressive_artifact_or_seed_backfill",
   "required_receipts": ["file:seed_topics/{topic.slug}.md"],
-  "action": "Backfill seed topic tokens from cross-topic-ledger.md and finding-index.yaml projections, not from narrative prose alone."
+  "action": "Backfill seed topic tokens from cross-topic-ledger.md and finding-index.yaml projections, not from narrative prose alone.",
+  "done_condition": "seed_topics/{topic.slug}.md has Wave2 return-map backfill replacing the pending Wave2 placeholder when evidence exists or records an explicit limitation",
+  "verification": {"engine": ["receipt_check"], "agent": ["backfill_refs_present", "placeholder_handled"]},
+  "writes_to": ["seed_topics/{topic.slug}.md"],
+  "status_sync": ["wave2_seed_topic_backfilled"],
+  "completion_receipt": "file:seed_topics/{topic.slug}.md",
+  "failure_route": "queue_repair",
+  "lineage": {"topic_slug": "{topic.slug}", "phase": "wave2"},
+  "payload": {"topic_slug": "{topic.slug}", "wave": 2}
 }
 ```
 
@@ -107,7 +127,18 @@ If queue is empty, enqueue:
   "producer_rule": "targeted_evidence_search",
   "priority_class": "P1_state_or_gate_repair",
   "required_receipts": [],
-  "action": "Search only the assigned finding gap. Return bounded targeted evidence, source_urls, fills_gap, confidence, source claims when available, and leaf cache trails for work-unit submit. The Phase Agent updates finding-index.yaml, cross-topic-ledger.md, synthesis/backfill, and any reference/00-cross-*.md projection after submitted evidence is accepted.",
+  "action": "Search only the assigned finding gap. Return bounded targeted evidence, source_urls, fills_gap, confidence, declared output files, and leaf cache trails for work-unit submit. The Phase Agent updates finding-index.yaml, cross-topic-ledger.md, synthesis/backfill, and any reference/00-cross-*.md projection after submitted evidence is accepted.",
+  "done_condition": "targeted evidence work-unit submit succeeds or records a terminal explicit limitation for the finding",
+  "verification": {"engine": ["work_unit_submit"], "agent": ["fills_gap_evaluated", "cache_trails_complete"]},
+  "writes_to": [
+    "artifacts/wave2/finding-index.yaml",
+    "artifacts/wave2/cross-topic-ledger.md",
+    "reference/00-cross-<slug>.md"
+  ],
+  "status_sync": ["wave2_targeted_evidence_submitted"],
+  "completion_receipt": "work_unit:submitted-ledger",
+  "failure_route": "work_unit_repair",
+  "lineage": {"finding_id": "{finding_id}", "phase": "wave2"},
   "payload": {
     "finding_id": "{finding_id}",
     "wave": 2
@@ -156,7 +187,7 @@ Targeted evidence Sub-agents must:
 
 - Search/fetch only the assigned gap.
 - Avoid duplicate source URLs.
-- Return bounded evidence payloads, source URLs, `fills_gap`, confidence, source claims when available, and cache trails.
+- Return bounded evidence payloads, source URLs, `fills_gap`, confidence, declared output files, and cache trails.
 - Write cache trails under an assigned `_cache/wave2/...` leaf directory.
 - Bind receipt/result identity to `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
 

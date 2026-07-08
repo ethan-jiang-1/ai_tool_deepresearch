@@ -110,7 +110,7 @@ export function defaultKindContract(kind) {
   return clone(DEFAULT_KIND_CONTRACTS[kind] || {
     task_brief: 'Complete the assigned delegated work and return only through the work-unit result contract.',
     output_contract: {
-      required_result_fields: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce', 'summary', 'output_files', 'cache_trails'],
+      required_result_fields: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce', 'output_files', 'cache_trails'],
       output_files: {
         required: true,
         allowed_roles: ['reference', 'evidence_summary', 'source_yaml', 'question_list', 'other'],

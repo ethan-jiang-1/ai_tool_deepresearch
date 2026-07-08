@@ -61,9 +61,51 @@ function writeMinimalWiring(root) {
   mkdirSync(path.join(root, 'DPT_FRAMEWORK/schema/gate_definitions'), { recursive: true });
 }
 
+function queueTaskCard(overrides = {}) {
+  return {
+    queue_item_id: 'seed-topic-topic-a',
+    title: 'Materialize seed topic: Topic A',
+    targets: { controller: 'main-agent' },
+    action: 'Write seed_topics/topic-a.md from topic registry.',
+    producer_rule: 'seed_topic_materialize',
+    lineage: { topic_slug: 'topic-a', phase: 'seed-topics' },
+    priority_class: 'P3_current_gate_gap',
+    required_receipts: ['file:seed_topics/topic-a.md'],
+    done_condition: 'seed_topics/topic-a.md exists',
+    verification: { engine: ['receipt_check'], agent: ['frontmatter_completeness'] },
+    writes_to: ['seed_topics/topic-a.md'],
+    status_sync: ['seed_topics_materialized'],
+    completion_receipt: 'file:seed_topics/topic-a.md',
+    failure_route: 'queue_repair',
+    payload: { topic_slug: 'topic-a' },
+    ...overrides,
+  };
+}
+
+function writePhaseExample(root, name, taskCard, result = {
+  queue_item_id: 'seed-topic-topic-a',
+  receipt: 'file:seed_topics/topic-a.md',
+  summary: 'done',
+  writes: ['seed_topics/topic-a.md'],
+}) {
+  writeFixture(root, `DPT_FRAMEWORK/workflows/nodes/phases/${name}.md`, [
+    '# Phase Example',
+    '',
+    '```json',
+    JSON.stringify(taskCard, null, 2),
+    '```',
+    '',
+    '```json',
+    JSON.stringify(result, null, 2),
+    '```',
+    '',
+  ].join('\n'));
+}
+
 function cleanRepo(name) {
   const root = fixtureRepo(name);
   writeMinimalWiring(root);
+  writePhaseExample(root, 'phase-seed-topics.md', queueTaskCard());
   return root;
 }
 
@@ -155,6 +197,45 @@ describe('validate-work-unit-hygiene CLI', () => {
     const found = codes(result);
     assert.ok(found.has('old_queue_fixed_active_window'));
     assert.ok(found.has('queue_demand_work_id_table'));
+  });
+
+  it('parses active phase task-card and queue result examples against queue schemas', () => {
+    const root = cleanRepo('phase-queue-schema-drift');
+    writePhaseExample(root, 'phase-bad.md', queueTaskCard({
+      required_receipts: undefined,
+    }), {
+      queue_item_id: 'seed-topic-topic-a',
+      receipt: 'file:seed_topics/topic-a.md',
+      summary: 'done',
+      writes: ['seed_topics/topic-a.md'],
+      unexpected: true,
+    });
+
+    const result = run(root);
+    assert.equal(result.status, 1);
+    const found = codes(result);
+    assert.ok(found.has('phase_queue_task_card_schema_mismatch'));
+    assert.ok(found.has('phase_queue_result_schema_mismatch'));
+  });
+
+  it('fails phase queue examples that use retired work_id as queue identity', () => {
+    const root = cleanRepo('phase-queue-work-id');
+    const badCard = queueTaskCard();
+    badCard.work_id = 'seed-topic-topic-a';
+    delete badCard.queue_item_id;
+    writePhaseExample(root, 'phase-bad-work-id.md', badCard, {
+      work_id: 'seed-topic-topic-a',
+      receipt: 'file:seed_topics/topic-a.md',
+      summary: 'done',
+      writes: ['seed_topics/topic-a.md'],
+    });
+
+    const result = run(root);
+    assert.equal(result.status, 1);
+    const found = codes(result);
+    assert.ok(found.has('phase_queue_task_card_schema_mismatch'));
+    assert.ok(found.has('phase_queue_result_schema_mismatch'));
+    assert.ok(found.has('phase_queue_result_uses_work_id'));
   });
 
   it('fails context-sensitive fields when paired with retired delegated examples', () => {

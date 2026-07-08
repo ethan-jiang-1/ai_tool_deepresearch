@@ -31,7 +31,7 @@ function cleanup(dir) {
   rmSync(dir, { recursive: true, force: true });
 }
 
-function delegated(id) {
+function delegated(id, overrides = {}) {
   return makeItem({
     queue_item_id: id,
     title: `Delegated ${id}`,
@@ -39,6 +39,7 @@ function delegated(id) {
     kind: 'wave0_source_intake',
     producer_rule: 'source_intake_fan_in',
     payload: { topic_slug: id },
+    ...overrides,
   });
 }
 
@@ -50,6 +51,17 @@ function delegatedWave1(id, topicSlug = 'topic-a') {
     kind: 'wave1_topic_deepening',
     producer_rule: 'wave1_topic_deepening_dispatch',
     payload: { topic_slug: topicSlug },
+  });
+}
+
+function delegatedWave2(id, findingId = 'W2F-001') {
+  return makeItem({
+    queue_item_id: id,
+    title: `Delegated ${id}`,
+    targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-topic-scout', timeout_ms: 600000 } },
+    kind: 'wave2_targeted_evidence',
+    producer_rule: 'targeted_evidence_search',
+    payload: { finding_id: findingId, wave: 2 },
   });
 }
 
@@ -151,6 +163,47 @@ function writeValidWave1SubmitFiles(dir, record, {
       cache_trail_refs: includeClaimCacheRefs ? [cacheTrail] : [],
     }],
     accepted_source_urls: acceptedSourceUrls,
+    cache_trails: [cacheTrail],
+  }, null, 2)}\n`);
+  return resultPath;
+}
+
+function writeValidWave2SubmitFiles(dir, record, {
+  findingId = 'W2F-001',
+  sourceUrl = 'https://example.com/wave2-targeted-source',
+  role = 'evidence_summary',
+} = {}) {
+  const outputPath = `artifacts/wave2/targeted/${findingId}.md`;
+  mkdirSync(path.dirname(path.join(dir, outputPath)), { recursive: true });
+  writeFileSync(path.join(dir, outputPath), `# Targeted evidence ${findingId}\n\nEvidence for ${findingId}.\n`);
+
+  const cacheTrail = `_cache/wave2/primary/${record.queue_item_id}/targeted-source`;
+  mkdirSync(path.join(dir, cacheTrail), { recursive: true });
+  writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
+  writeFileSync(path.join(dir, cacheTrail, 'page.md'), `# Captured Page\n\nFetched content capture for ${sourceUrl}. This body preserves the source text used by the Wave2 work unit.\n`);
+  writeFileSync(path.join(dir, cacheTrail, 'meta.json'), `${JSON.stringify({ url: sourceUrl }, null, 2)}\n`);
+
+  writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
+    event: 'work_done',
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    ts: '2026-07-06T00:00:00.000Z',
+  })}\n`);
+
+  const resultPath = path.join(dir, '_tmp', `${record.work_id}.result.json`);
+  mkdirSync(path.dirname(resultPath), { recursive: true });
+  writeFileSync(resultPath, `${JSON.stringify({
+    schema_version: 'work-unit.result.v1',
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    summary: 'wave2 done',
+    output_files: [
+      { path: outputPath, role },
+    ],
     cache_trails: [cacheTrail],
   }, null, 2)}\n`);
   return resultPath;
@@ -929,6 +982,128 @@ describe('submitWorkUnit', () => {
       assert.throws(() => ledgerRows(dir), /ENOENT/);
     } finally {
       cleanup(dir);
+    }
+  });
+
+  it('rejects source claim extra keys before ledger append', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegatedWave1('wave1-topic-a')]);
+      claimWorkUnits(dir, { phase: 'wave1', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
+      const resultPath = writeValidWave1SubmitFiles(dir, record);
+      const result = readResult(resultPath);
+      result.source_claims[0].capture_note = 'not part of WorkUnitSourceClaimSchema';
+      writeResult(resultPath, result);
+
+      const rejected = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.status, 'claimed');
+      assert.equal(rejected.last_submit_rejection.reason_code, 'invalid_result');
+      assert.match(rejected.inspect.join('\n'), /capture_note|unrecognized/i);
+      assert.throws(() => ledgerRows(dir), /ENOENT/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('enforces kind output role enums before ledger append', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      const result = readResult(resultPath);
+      result.output_files[0].role = 'question_list';
+      writeResult(resultPath, result);
+
+      const rejected = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.status, 'claimed');
+      assert.match(rejected.inspect.join('\n'), /role 'question_list'.*allowed roles/i);
+      assert.throws(() => ledgerRows(dir), /ENOENT/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('honors output_contract.required_result_fields before parser defaults', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a', {
+        output_contract: {
+          required_result_fields: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce', 'summary', 'output_files', 'cache_trails'],
+          output_files: {
+            required: true,
+            allowed_roles: ['reference', 'source_yaml', 'other'],
+            reference_requires_source_url: true,
+          },
+        },
+      })]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      const result = readResult(resultPath);
+      delete result.summary;
+      writeResult(resultPath, result);
+
+      const rejected = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.status, 'claimed');
+      assert.match(rejected.inspect.join('\n'), /missing required field.*summary/i);
+      assert.throws(() => ledgerRows(dir), /ENOENT/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('accepts registered kind output roles still allowed by each output contract', () => {
+    const wave0Dir = tempBundle();
+    try {
+      saveSeedQueue(wave0Dir, [delegated('queue-a')]);
+      claimWorkUnits(wave0Dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(wave0Dir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(wave0Dir, record);
+      const result = readResult(resultPath);
+      result.output_files[0].role = 'source_yaml';
+      delete result.output_files[0].source_url;
+      delete result.output_files[0].source_slug;
+      writeResult(resultPath, result);
+
+      const submitted = submitWorkUnit(wave0Dir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      assert.equal(ledgerRows(wave0Dir)[0].output_files[0].role, 'source_yaml');
+    } finally {
+      cleanup(wave0Dir);
+    }
+
+    const wave1Dir = tempBundle();
+    try {
+      saveSeedQueue(wave1Dir, [delegatedWave1('wave1-topic-a')]);
+      claimWorkUnits(wave1Dir, { phase: 'wave1', count: 1 });
+      const record = loadWorkUnitIndex(wave1Dir).work_units['wu-w1-b000-deep-i0001'];
+      const resultPath = writeValidWave1SubmitFiles(wave1Dir, record);
+
+      const submitted = submitWorkUnit(wave1Dir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      assert.deepEqual(ledgerRows(wave1Dir)[0].output_files.map((entry) => entry.role), ['reference', 'evidence_summary', 'question_list']);
+    } finally {
+      cleanup(wave1Dir);
+    }
+
+    const wave2Dir = tempBundle();
+    try {
+      saveSeedQueue(wave2Dir, [delegatedWave2('wave2-targeted-a')]);
+      claimWorkUnits(wave2Dir, { phase: 'wave2', count: 1 });
+      const record = loadWorkUnitIndex(wave2Dir).work_units['wu-w2-b000-targ-i0001'];
+      const resultPath = writeValidWave2SubmitFiles(wave2Dir, record);
+
+      const submitted = submitWorkUnit(wave2Dir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      assert.equal(ledgerRows(wave2Dir)[0].output_files[0].role, 'evidence_summary');
+    } finally {
+      cleanup(wave2Dir);
     }
   });
 

@@ -86,12 +86,55 @@ Record for `align-gate-contracts-and-reference-navigation`:
 
 ## Implementation Log
 
-Pending target-code edits.
+- `DPT_FRAMEWORK/engine/work-unit-envelope.mjs`
+  - Added local JSON Schema projection helpers with no new dependency.
+  - Generated `result.schema.json` now const-binds `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
+  - Generated `output_files[]` items now expose only `path`, `role`, optional `source_url`, optional `source_slug`, with `additionalProperties: false` and role enum from the assigned output contract.
+  - Generated `source_claims` and `accepted_source_urls` now appear only when `output_contract.source_claims.allowed === true`.
+  - Generated source claim items now expose the submit-accepted strict key set.
+- `DPT_FRAMEWORK/engine/work-unit-validation.mjs` and `DPT_FRAMEWORK/engine/work-unit-submit.mjs`
+  - Submit now checks `output_contract.required_result_fields` against the raw Agent result before parser defaults.
+  - Submit now rejects `output_files[].role` outside `output_contract.output_files.allowed_roles` before ledger append.
+  - Submit fails closed when a result declares output files but the assigned output contract has no allowed role set.
+- `DPT_FRAMEWORK/engine/work-unit-constants.mjs` and `DPT_FRAMEWORK/engine/work-unit-utils.mjs`
+  - Removed defaulted `summary` from default/fallback `required_result_fields`; it remains optional/defaulted result metadata.
+- `DPT_FRAMEWORK/workflows/nodes/phases/phase-seed-topics.md`
+  - Replaced task-card and non-delegated queue complete examples with `queue_item_id`.
+- `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md`, `phase-wave1.md`, `phase-wave2.md`
+  - Completed Agent-copyable queue task-card JSON examples so they parse against `QueueDemandItemSchema`.
+  - Removed Wave2 targeted-evidence wording that implied source claims in a kind contract that does not allow them.
+- `DPT_FRAMEWORK/cli/validate-work-unit-hygiene.mjs`
+  - Added active phase Markdown JSON extraction and schema parsing against `QueueDemandItemSchema` and `QueueResultSchema`.
+  - Added explicit diagnostics for queue complete examples using `work_id`.
+  - Kept work-unit attempt `work_id` contexts allowed.
+- `tests/engine/work-unit-lifecycle.test.mjs`
+  - Added wave0/wave1/wave2 generated schema and envelope consistency coverage.
+- `tests/engine/work-unit-submit.test.mjs`
+  - Added source-claim extra-key rejection, unsupported source fields rejection coverage, invalid role rejection, valid role acceptance, and raw required-field coverage.
+- `tests/integration/cli/validate-work-unit-hygiene.test.mjs`
+  - Added phase task-card/result schema parsing positive and negative cases.
+- `CHANGELOG.md` and `DPT_FRAMEWORK/RUN.md`
+  - Published framework `v0.12`.
+
+No gate selector semantics, Wave1 required path-to-role policy, return-map reference policy, depth-review reference navigation, or historical submitted-ledger rows were changed.
 
 ## Verification Log
 
-Pending.
+- PASS: `node --check DPT_FRAMEWORK/engine/work-unit-envelope.mjs`
+- PASS: `node --check DPT_FRAMEWORK/engine/work-unit-validation.mjs`
+- PASS: `node --check DPT_FRAMEWORK/engine/work-unit-submit.mjs`
+- PASS: `node --check DPT_FRAMEWORK/cli/validate-work-unit-hygiene.mjs`
+- PASS: `node --check tests/engine/work-unit-lifecycle.test.mjs && node --check tests/engine/work-unit-submit.test.mjs && node --check tests/integration/cli/validate-work-unit-hygiene.test.mjs`
+- PASS: `node --test tests/engine/work-unit-lifecycle.test.mjs tests/engine/work-unit-submit.test.mjs tests/integration/cli/operate-work-unit.test.mjs`
+- PASS: `node --test tests/schema/contracts/queue.test.mjs tests/integration/cli/validate-work-unit-hygiene.test.mjs`
+- PASS: `node DPT_FRAMEWORK/cli/validate-work-unit-hygiene.mjs`
+- PASS: `node openspec/governance/check-project-reqs.mjs`
+- PASS: `node openspec/governance/check-project-specs.mjs`
+- PASS: `openspec validate stabilize-agent-facing-work-unit-contracts --strict`
+- PASS: `git diff --check`
 
 ## Residual Risks
 
-Pending final verification.
+- Historical bad submitted-ledger rows were not amended by design.
+- Gate-level drift remains intentionally deferred to `align-gate-contracts-and-reference-navigation`, especially Wave1 required path-to-role policy, depth-review ref canonicalization, and seed-topic return-map reference policy.
+- No new dependencies were added; JSON Schema projection is hand-written and protected by paired generated-schema/submit tests.

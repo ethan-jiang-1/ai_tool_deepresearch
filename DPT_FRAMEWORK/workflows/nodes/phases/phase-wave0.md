@@ -81,6 +81,9 @@ Task card template:
     "engine": ["work_unit_submit"],
     "agent": ["url_accessible", "title_matches_page", "cache_trails_complete"]
   },
+  "status_sync": ["wave0_source_intake_submitted"],
+  "completion_receipt": "work_unit:submitted-ledger",
+  "failure_route": "work_unit_repair",
   "payload": {
     "topic_slug": "{topic.slug}",
     "topic_title": "{topic.title}",

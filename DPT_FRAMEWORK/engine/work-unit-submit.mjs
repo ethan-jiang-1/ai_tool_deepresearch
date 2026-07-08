@@ -324,9 +324,12 @@ function prepareWorkUnitSubmit(bundleDir, { work_id, resultPath }) {
   if (record.status !== 'claimed') throw new Error(`work_id ${record.work_id} is ${record.status}; submit requires claimed`);
 
   const resultPathInsideAssignedDir = isPathInsideDir(resultPath, path.join(bundleDir, record.paths.work_unit_dir));
-  const result = readAndValidateResult(bundleDir, resultPath, record, { normalizations });
-  const resultHash = hashValue(result);
   const manifest = readAndValidateManifest(bundleDir, index, record);
+  const result = readAndValidateResult(bundleDir, resultPath, record, {
+    normalizations,
+    outputContract: manifest.output_contract,
+  });
+  const resultHash = hashValue(result);
   readAndValidateBeacon(bundleDir, record, manifest);
   const runtimeReceipt = validateSubmitRuntimeReceipt(bundleDir, record, {
     normalizations,

@@ -88,6 +88,9 @@ Task card template:
     "engine": ["work_unit_submit"],
     "agent": ["url_accessible", "source_claims_structured", "question_list_four_sections", "depth_dimensions_covered", "reference_materialization_backing_available"]
   },
+  "status_sync": ["wave1_topic_deepening_submitted"],
+  "completion_receipt": "work_unit:submitted-ledger",
+  "failure_route": "work_unit_repair",
   "payload": {
     "topic_slug": "{topic.slug}",
     "topic_title": "{topic.title}",

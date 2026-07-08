@@ -6,6 +6,13 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 
+import {
+  QueueDemandItemSchema,
+} from '../schema/contracts/queue.mjs';
+import {
+  QueueResultSchema,
+} from '../engine/queue-manager-core.mjs';
+
 const { values } = parseArgs({
   options: {
     root: { type: 'string', default: process.cwd() },
@@ -62,7 +69,7 @@ const RETIRED_PATTERNS = [
 
 const SEMANTIC_PATTERNS = [
   {
-    pattern: /(?:use|run|route)[\s\S]{0,80}operate-queue\s+complete[\s\S]{0,80}delegated|delegated successful completion[\s\S]{0,80}operate-queue\s+complete/i,
+    pattern: /(?:use|run|route)[\s\S]{0,80}operate-queue\s+complete[\s\S]{0,80}(?<!non-)delegated|delegated successful completion[\s\S]{0,80}operate-queue\s+complete/i,
     code: 'delegated_operate_queue_complete',
     detail: 'Delegated successful completion must use operate-work-unit submit, not operate-queue complete.',
   },
@@ -208,7 +215,7 @@ function hasRetiredContext(context) {
 
 function isPastFailureHistory(rel, context) {
   if (!/^_backlog\/(bugs|plans|todos)\//.test(rel)) return false;
-  return /(past|history|historical|removed design|retired|old|legacy|failure analysis|failed|brittle|broken|impassable|why .* grew complex|replacement|superseded|do not use|no longer current)/i.test(context);
+  return /(past|history|historical|removed design|retired|old|legacy|failure analysis|failed|brittle|broken|impassable|why .* grew complex|replacement|superseded|do not use|no longer current|bug-|drift|first failed|首次失败|废弃|已废弃|守卫存在但覆盖不到)/i.test(context);
 }
 
 function isAllowedOccurrence(rel, line, context, { contextSensitive = false } = {}) {
@@ -312,6 +319,115 @@ function checkQueueTemplate(issues) {
   }
 }
 
+function jsonErrorDetail(error) {
+  if (error?.issues) {
+    return error.issues.map((issue) => {
+      const at = issue.path?.length ? issue.path.join('.') : '<root>';
+      return `${at}: ${issue.message}`;
+    }).join('; ');
+  }
+  return error?.message || String(error);
+}
+
+function extractJsonFences(text) {
+  const blocks = [];
+  const pattern = /```json\s*\n(?<body>[\s\S]*?)\n```/g;
+  for (const match of text.matchAll(pattern)) {
+    blocks.push({
+      body: match.groups.body,
+      index: match.index,
+    });
+  }
+  return blocks;
+}
+
+function extractBoxedQueueResultExamples(text) {
+  const examples = [];
+  const pattern = /\{\s*"(?<identity>work_id|queue_item_id)"\s*:\s*"(?<id>[^"]*)"\s*,\s*"receipt"\s*:\s*"(?<receipt>[^"]*)"\s*,\s*"summary"\s*:\s*"(?<summary>[^"]*)"\s*,\s*"writes"\s*:\s*\[(?<writes>[^\]]*)\]\s*\}/g;
+  for (const match of text.matchAll(pattern)) {
+    const writes = [...match.groups.writes.matchAll(/"([^"]+)"/g)].map((item) => item[1]);
+    examples.push({
+      index: match.index,
+      value: {
+        [match.groups.identity]: match.groups.id,
+        receipt: match.groups.receipt,
+        summary: match.groups.summary,
+        writes,
+      },
+    });
+  }
+  return examples;
+}
+
+function checkQueueDemandExample(issues, rel, line, value) {
+  const parsed = QueueDemandItemSchema.safeParse(value);
+  if (!parsed.success) {
+    addIssue(issues, {
+      category: 'queue_phase_examples',
+      code: 'phase_queue_task_card_schema_mismatch',
+      file: rel,
+      line,
+      detail: `Phase task-card JSON example must parse as QueueDemandItemSchema: ${jsonErrorDetail(parsed.error)}`,
+    });
+  }
+}
+
+function checkQueueResultExample(issues, rel, line, value) {
+  const parsed = QueueResultSchema.safeParse(value);
+  if (!parsed.success) {
+    addIssue(issues, {
+      category: 'queue_phase_examples',
+      code: 'phase_queue_result_schema_mismatch',
+      file: rel,
+      line,
+      detail: `Phase queue complete result example must parse as QueueResultSchema: ${jsonErrorDetail(parsed.error)}`,
+    });
+  }
+  if (Object.hasOwn(value, 'work_id')) {
+    addIssue(issues, {
+      category: 'queue_phase_examples',
+      code: 'phase_queue_result_uses_work_id',
+      file: rel,
+      line,
+      detail: 'Queue complete result examples must use queue_item_id; work_id is reserved for delegated work-unit attempts.',
+    });
+  }
+}
+
+function checkPhaseQueueExamples(issues) {
+  const phasesDir = join(repoRoot, 'DPT_FRAMEWORK/workflows/nodes/phases');
+  if (!existsSync(phasesDir)) return;
+  for (const file of walk(phasesDir)) {
+    const rel = normalizeRel(file);
+    if (!rel.endsWith('.md')) continue;
+    const text = readFileSync(file, 'utf-8');
+    for (const block of extractJsonFences(text)) {
+      let parsed;
+      try {
+        parsed = JSON.parse(block.body);
+      } catch (error) {
+        addIssue(issues, {
+          category: 'queue_phase_examples',
+          code: 'phase_json_example_unparseable',
+          file: rel,
+          line: lineNumber(text, block.index),
+          detail: `JSON example is not parseable: ${error.message || String(error)}`,
+        });
+        continue;
+      }
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Object.hasOwn(parsed, 'producer_rule')) {
+        checkQueueDemandExample(issues, rel, lineNumber(text, block.index), parsed);
+      }
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && (Object.hasOwn(parsed, 'queue_item_id') || Object.hasOwn(parsed, 'work_id')) && (Object.hasOwn(parsed, 'receipt') || Object.hasOwn(parsed, 'writes'))) {
+        checkQueueResultExample(issues, rel, lineNumber(text, block.index), parsed);
+      }
+    }
+    for (const example of extractBoxedQueueResultExamples(text)) {
+      checkQueueResultExample(issues, rel, lineNumber(text, example.index), example.value);
+    }
+  }
+}
+
 function checkRequiredWiring(issues) {
   const gateHelperRel = 'DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs';
   const gateHelperAbs = join(repoRoot, gateHelperRel);
@@ -364,6 +480,7 @@ for (const file of candidateFiles()) {
 }
 checkGateDefinitions(issues);
 checkQueueTemplate(issues);
+checkPhaseQueueExamples(issues);
 checkRequiredWiring(issues);
 
 const result = {

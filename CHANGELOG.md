@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.12
+
+- Work-unit claim now emits truthful `result.schema.json` projections for wave0/wave1/wave2, including const-bound identity, strict output/source item shapes, role enums, and omitted unsupported source fields.
+- Submit now enforces assigned kind output-role contracts and required-result metadata before ledger append while preserving existing receipt/output/cache/source validation.
+- Phase queue examples and hygiene now use schema-parsed `queue_item_id` task-card/result contracts, covering seed-topics and active phase Markdown drift.
+
 ## v0.11
 
 - Repo-root agent behavior files now suppress built-in research shortcuts when `DPT_FRAMEWORK/` is the selected or relevant research entry path.
