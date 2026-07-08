@@ -152,6 +152,8 @@ function createBundle(label) {
     name,
     '--case',
     'case-501',
+    '--target-dir',
+    'tests/.test-bundles',
     '--force',
   ]);
   const bundle = result.stdout.trim().split('\n').filter(Boolean).at(-1);

@@ -1,0 +1,77 @@
+// @impl DEW-002, SDC-001
+
+import { mkdtempSync, rmSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+
+import { makeItem } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import {
+  createWorkUnit,
+  loadWorkUnitIndex,
+  parseWorkId,
+  validateWorkIdBinding,
+} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+
+function tempBundle() {
+  return mkdtempSync(path.join(os.tmpdir(), 'wu-'));
+}
+
+function cleanup(dir) {
+  rmSync(dir, { recursive: true, force: true });
+}
+
+function queueItem(overrides = {}) {
+  return makeItem({
+    queue_item_id: 'queue-source-topic-a',
+    title: 'Source intake topic A',
+    targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
+    kind: 'wave0_source_intake',
+    producer_rule: 'source_intake_fan_in',
+    payload: { topic_slug: 'topic-a' },
+    ...overrides,
+  });
+}
+
+describe('work_id parsing and binding', () => {
+  it('parses canonical work IDs', () => {
+    assert.deepEqual(parseWorkId('wu-w1-b002-deep-i0007'), {
+      work_id: 'wu-w1-b002-deep-i0007',
+      wave: 1,
+      batch_id: 'b002',
+      batch_index: 2,
+      kind_code: 'deep',
+      claim_index: 7,
+    });
+  });
+
+  it('rejects malformed work IDs', () => {
+    assert.throws(() => parseWorkId('wu-w0-b00-src-i0001'), /Invalid work_id/);
+    assert.throws(() => parseWorkId('wave0-source-topic-a'), /Invalid work_id/);
+  });
+
+  it('validates encoded fields against kind registry and manifest fields', () => {
+    const dir = tempBundle();
+    try {
+      const { manifest } = createWorkUnit(dir, { queueItem: queueItem(), wave: 0 });
+      assert.equal(validateWorkIdBinding({
+        work_id: manifest.work_id,
+        kindRegistry: loadWorkUnitIndex(dir).kind_registry,
+        wave: manifest.wave,
+        batch_id: manifest.batch_id,
+        batch_index: manifest.batch_index,
+        claim_index: manifest.claim_index,
+        kind: manifest.kind,
+        kind_code: manifest.kind_code,
+      }).kind, 'wave0_source_intake');
+      assert.throws(() => validateWorkIdBinding({
+        work_id: manifest.work_id,
+        kindRegistry: loadWorkUnitIndex(dir).kind_registry,
+        kind: 'wave1_topic_deepening',
+      }), /kind mismatch/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+});
