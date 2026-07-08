@@ -148,6 +148,7 @@ AGQ-018: agentic-queue — Delegated completion is work-unit submit with declara
 AGQ-019: agentic-queue — Queue v2 active_window, refill_pool, delegated_in_flight, and terminal_history state model
 AGQ-020: agentic-queue — pendingCount exposes active window plus refill pool task total
 AGQ-021: agentic-queue — Supplementary queue demand IDs may carry iteration labels when explicit topic identity is valid
+AGQ-022: agentic-queue — Wave delegated queue loops prefer bounded batched claims for independent demand
 
 # agent-output-declaration
 AGO-001: agent-output-declaration — Work-unit result output_files declaration with role and source_url rules
@@ -372,6 +373,7 @@ WAI-004: wave1-intake — Inline per-topic backfill after each deepening task co
 WAI-005: wave1-intake — Wave1 gate checks deepening artifacts and backfill token replacement
 WAI-006: wave1-intake — Wave1 queue-loop playbooks verify deepening end-to-end
 WAI-007: wave1-intake — Wave1 batch parallel sub-agent execution protocol via work-unit claim and submit
+WAI-008: wave1-intake — Wave1 topic references are Phase-owned materializations after successful submit
 
 # wave2-synthesis
 WTS-001: wave2-synthesis — Wave2 phase queue-driven three-stage execution
@@ -383,6 +385,7 @@ WTS-006: wave2-synthesis — Wave2 sub-agent behavior specification
 WTS-007: wave2-synthesis — Three-artifact Wave2 output with JS feedback integration
 WTS-008: wave2-synthesis — Finding taxonomy with explicit types, decisions, and consistency rules
 WTS-009: wave2-synthesis — Cross-topic scan matrix as process evidence surface
+WTS-010: wave2-synthesis — Wave2 materializes existing-backed cross references without weakening targeted evidence provenance
 
 # work-unit-provenance-gate
 WPG-001: work-unit-provenance-gate — Gates verify submitted work-unit ledger rows
@@ -396,6 +399,7 @@ WPG-008: work-unit-provenance-gate — Gate diagnostics carry work-unit binding 
 WPG-009: work-unit-provenance-gate — Gates emit work-unit nonce mismatch diagnostics
 WPG-010: work-unit-provenance-gate — Gates emit work-unit lifecycle evidence diagnostics
 WPG-011: work-unit-provenance-gate — Framework ships a work-unit provenance-forensics guide
+WPG-012: work-unit-provenance-gate — Provenance gates distinguish Phase-owned reference projections from delegated fetched evidence
 
 
 # seg2node
@@ -415,6 +419,7 @@ SWE-002: silent-wave-execution — Fatigue resistance guidance (self-check proto
 SWE-003: silent-wave-execution — Positive continuation contract and terminal delivery visibility for autonomous phases
 SWE-004: silent-wave-execution — Autonomous silent execution has no implicit human co-runner outside HITL1/HITL2
 SWE-005: silent-wave-execution — Stop:no surfacing intent is recorded as trace before any prohibited user-facing pause
+SWE-006: silent-wave-execution — Stop:no delegated phases actively poll work-unit readiness after background spawn
 
 # test-fixtures
 TEF-001: test-fixtures — Fixture framework for integration tests
@@ -552,6 +557,7 @@ SNC-001: subagent-node-contract — Sub-agent role specs SHALL mandate lifecycle
 SNC-002: subagent-node-contract — Work-unit task Markdown includes lifecycle logging directives
 SNC-003: subagent-node-contract — Phase workflow nodes direct the Phase Agent through the work-unit claim/submit loop
 SNC-004: subagent-node-contract — Sub-agent role specs require beacon-first absolute path resolution and file existence verification before return
+SNC-005: subagent-node-contract — Sub-agent role contracts return source backing instead of owning consumer reference presentation
 GSK-001: gate-skeleton — Gate definition JSON skeleton structure (gate, description, rules[] with id/check/target/threshold/failure_message)
 GSK-002: "gate-skeleton — Gate CLI skeleton shape (parseArgs, --bundle/--current-node required, check/inspect/advice JSON output, exit codes)"
 GSK-003: gate-skeleton — One gate per CLI (8 independent CLI wrappers, no generic runner with subcommand)
@@ -628,6 +634,7 @@ REF-004: reference-flat-format — README.md as human navigation for reference d
 REF-005: reference-flat-format — Phase nodes enforce reference file naming convention
 REF-006: reference-flat-format — Wave1 sub-agent reference file format specification
 REF-007: reference-flat-format — Agent-facing source.yaml and reference metadata formats are complete and parser-aligned
+REF-008: reference-flat-format — Phase-owned reference materializations preserve submitted source backing
 
 # version-management
 VEM-001: version-management — CHANGELOG is concise and human-readable at project root
@@ -647,12 +654,14 @@ RWP-011: research-wave-phase-content — Wave2 phase produces 00-cross-*.md (opt
 RWP-012: research-wave-phase-content — Wave2 rerun action:add full re-synthesis with gate coverage
 RWP-013: research-wave-phase-content — Wave2 gate rerun action:add check forbids delta-only synthesis and requires scan/index full topic slug coverage
 RWP-014: research-wave-phase-content — Rerun action:add SHALL include full cache trail（新增topic的source intake与首次运行一致，含_cache/写入）
+RWP-015: research-wave-phase-content — Wave phase bodies teach batch-poll-submit loops and Phase-owned reference materialization
 
 # research-wave-gate-implementation (delta)
 RWG-011: research-wave-gate-implementation — Wave0 gate checks for 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
 RWG-012: research-wave-gate-implementation — Wave1 gate checks for reference/*{topic}*.md per topic
 RWG-013: research-wave-gate-implementation — Wave2 gate removes reference/00_shared/ checks, 00-cross-* is optional
 RWG-016: research-wave-gate-implementation — Wave gates return repair-targeted diagnostics for YAML shape, ledger-only reference counting, cache coverage, and hash drift
+RWG-017: research-wave-gate-implementation — Wave gates implement Phase-owned reference projection and delegated evidence split
 
 # workflow-directory-contract (delta)
 WDC-009: workflow-directory-contract — Bundle canonical structure includes artifacts/wave0/ and flat reference/
