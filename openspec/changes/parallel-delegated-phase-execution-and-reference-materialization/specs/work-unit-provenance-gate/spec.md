@@ -6,7 +6,7 @@
 
 Work-unit provenance gates SHALL verify delegated output coverage from submitted work-unit ledger rows for the target wave, kind, scope, and required delegated output contract. The check name SHALL be `work_unit_output_coverage`.
 
-For Wave1 topic deepening, required delegated output coverage SHALL include submitted `evidence-summary.md`, submitted `question-list.md`, structured source-claim surfaces, accepted source URL surfaces for accepted sources, explicit degraded-capture records when used, and verified cache trails for fetched sources. Empty or absent source claims are legal only when the submitted work unit records an explicit no-source/limitation state that the phase can repair or surface as a limitation. Topic reference Markdown files and `depth-review.yaml` are Phase-owned projections written after submit. Gates MAY validate those projections as consistency and consumer-navigation surfaces, but work-unit provenance checks SHALL use them only to cross-check that every reviewed/reference source URL binds back to submitted work-unit ledger rows, source claims, explicit degraded-capture records, or verified cache trails.
+For Wave1 topic deepening, required delegated output coverage SHALL include submitted `evidence-summary.md`, submitted `question-list.md`, structured source-claim surfaces, accepted source URL surfaces for accepted sources, explicit degraded-capture records when used, and verified cache trails for fetched sources. Empty or absent source claims are legal only when the submitted work unit records an explicit no-source/limitation state that the phase can repair or surface as a limitation. Topic reference Markdown files and `depth-review.yaml` are Phase-owned projections written after submit. Gates MAY validate those projections as consistency and consumer-navigation surfaces, but work-unit provenance checks SHALL use them only to cross-check that every reviewed/reference source URL binds back to submitted work-unit ledger rows, source claims, accepted source URL surfaces, explicit degraded-capture records, or verified cache trails.
 
 A depth-review or topic reference projection MAY be written by the Phase Agent after submit, but it SHALL name or be traceable to the submitted work-unit rows and source/cache refs it used. Filesystem-only Wave1 outputs SHALL NOT become coverage authority, and Phase-owned projections SHALL NOT create delegated coverage absent submitted backing.
 
@@ -21,14 +21,14 @@ For Wave2 targeted evidence, output coverage remains conditional on delegated se
 #### Scenario: Wave1 Phase-owned reference cannot create delegated coverage
 
 - **WHEN** a Wave1 topic reference records a source URL
-- **AND** no submitted Wave1 work-unit ledger row, source claim, verified cache trail, or explicit degraded-capture record backs that URL
+- **AND** no submitted Wave1 work-unit ledger row, source claim, accepted source URL surface, verified cache trail, or explicit degraded-capture record backs that URL
 - **THEN** work-unit output coverage or projection consistency SHALL fail
 - **AND** diagnostics SHALL direct repair through work-unit submit or supplementary `wave1_topic_deepening`
 
 #### Scenario: Wave1 Phase-owned reference with submitted backing is not delegated bypass
 
 - **WHEN** `reference/{topic_slug}-<source-slug>.md` exists
-- **AND** its source URL binds to submitted Wave1 source claims and cache trails
+- **AND** its source URL binds to submitted Wave1 source claims, accepted source URL surfaces, verified cache trails, or explicit degraded-capture records
 - **THEN** work-unit provenance SHALL NOT require the reference file itself to appear as a delegated output file
 - **AND** the gate MAY validate the reference format and index entry as Phase-owned projection checks
 
@@ -78,7 +78,7 @@ If a reference cannot be deterministically classified as either backed Phase-own
 
 #### Scenario: Phase-owned projection is backed by submitted source claims
 
-- **WHEN** a Phase-owned reference points to a source URL present in submitted source claims and cache trails
+- **WHEN** a Phase-owned reference points to a source URL present in submitted source claims, accepted source URL surfaces, verified cache trails, or explicit degraded-capture records
 - **THEN** provenance diagnostics SHALL treat it as a backed projection
 - **AND** it SHALL not require the reference file path itself to be listed as delegated output coverage
 

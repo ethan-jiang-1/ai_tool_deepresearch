@@ -4,7 +4,9 @@
 
 ### Requirement: Wave2 SHALL materialize existing-backed cross references without weakening targeted evidence provenance
 
-Wave2 pure synthesis SHALL be allowed to materialize `reference/00-cross-*.md` files when a cross-topic finding has concrete existing backing from submitted Wave0/Wave1 evidence, backed references, cache trails, evidence summaries, question lists, or work-unit ledger rows. These existing-backed cross references are Phase-owned consumer projections. They SHALL cite `W2F-xxx` finding ids and bundle-relative backing refs to `cross-topic-ledger.md`, `finding-index.yaml`, and the submitted prior-wave evidence surfaces that support the finding. A prior reference file MAY be one backing ref only when that prior reference itself binds to submitted/prior accepted evidence; reference-to-reference chains without underlying submitted backing SHALL NOT be sufficient.
+Wave2 pure synthesis SHALL materialize `reference/00-cross-*.md` files for accepted consumer-facing cross-topic findings when those findings have concrete existing backing from submitted Wave0/Wave1 evidence, backed references, cache trails, evidence summaries, question lists, or work-unit ledger rows. These existing-backed cross references are Phase-owned consumer projections. They SHALL cite `W2F-xxx` finding ids and bundle-relative backing refs to `cross-topic-ledger.md`, `finding-index.yaml`, and the submitted prior-wave evidence surfaces that support the finding. A prior reference file MAY be one backing ref only when that prior reference itself binds to submitted/prior accepted evidence; reference-to-reference chains without underlying submitted backing SHALL NOT be sufficient.
+
+Wave2 MAY omit a `00-cross` reference only for findings explicitly marked as process-only, internal, deferred, not sufficiently source-backed, or intentionally not consumer-facing. Such omission SHALL be visible in Wave2 artifacts or diagnostics, not hidden by silence.
 
 When Wave2 requires new public evidence, it SHALL enqueue and drain `wave2_targeted_evidence` work units. A `reference/00-cross-*.md` that claims newly fetched evidence, targeted search, or source discovery beyond existing submitted backing SHALL require submitted Wave2 work-unit coverage and cache trails before it can count as resolved evidence.
 
@@ -14,8 +16,15 @@ Wave2 SHALL NOT use synthesis prose alone as backing for `00-cross` references. 
 
 - **WHEN** Wave2 identifies finding `W2F-001` from already submitted Wave0/Wave1 evidence
 - **AND** the finding has concrete backing refs in `finding-index.yaml` or `cross-topic-ledger.md`
-- **THEN** the Phase Agent MAY write `reference/00-cross-w2f-001-<slug>.md`
+- **AND** the finding is accepted and consumer-facing
+- **THEN** the Phase Agent SHALL write `reference/00-cross-w2f-001-<slug>.md`
 - **AND** the reference SHALL cite the finding id and prior-wave backing refs
+
+#### Scenario: non-consumer finding omission is explicit
+
+- **WHEN** Wave2 does not materialize a `00-cross` reference for a backed `W2F-xxx` finding
+- **THEN** Wave2 artifacts or diagnostics SHALL record that the finding is process-only, internal, deferred, not sufficiently source-backed, or intentionally not consumer-facing
+- **AND** the omission SHALL NOT be treated as silent successful materialization
 
 #### Scenario: new external evidence still requires targeted work unit
 

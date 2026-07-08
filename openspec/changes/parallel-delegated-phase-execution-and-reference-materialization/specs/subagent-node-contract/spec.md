@@ -14,7 +14,7 @@ When a Sub-agent is explicitly assigned a fetched-source reference output, norma
 
 - **WHEN** a `dpt-evidence-extractor` work unit completes
 - **THEN** its result SHALL expose source claims, accepted source URLs when available, output files for evidence-summary/question-list, and cache trails
-- **AND** canonical topic reference Markdown MAY be materialized later by the Phase Agent from that submitted substrate
+- **AND** canonical topic reference Markdown SHALL be materialized by the Phase Agent after successful submit and before Wave1 gate for accepted submitted sources suitable for consumer navigation
 
 #### Scenario: Wave2 topic scout does not update synthesis authority files
 

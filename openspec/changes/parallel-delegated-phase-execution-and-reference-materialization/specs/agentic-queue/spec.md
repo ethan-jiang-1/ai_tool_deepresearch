@@ -6,6 +6,8 @@
 
 Wave0 and Wave1 queue-loop guidance SHALL instruct the Phase Agent to claim independent eligible delegated demand in bounded batches rather than treating `--count 1` as the normal drain strategy. The Phase Agent SHALL compute an explicit claim count from an accepted profile/runtime cap when available, otherwise from the currently available independent delegated demand, capped by a conservative documented default no higher than 5.
 
+The explicit claim count SHALL top up available parallel capacity rather than blindly claim all remaining demand. It SHALL be bounded by independent eligible demand, the accepted/default cap, and remaining free delegated in-flight capacity for that wave. If reconstructed in-flight work already reaches the cap, phase guidance SHALL poll/submit/terminalize existing attempts before claiming more.
+
 The Engine SHALL remain the sole allocator of work-unit IDs. Batched execution SHALL still use `operate-work-unit claim --count <N>`, one Engine-created work unit per delegated queue demand, and successful completion through `operate-work-unit submit`. The queue active window, refill pool, and delegated in-flight bindings remain the authority; batching SHALL NOT introduce another scheduler or let Sub-agents allocate IDs.
 
 `--count 1` MAY be used when only one eligible item remains, when dependency/queue-front ordering blocks a larger batch, when an accepted cap is 1, or for a narrow repair attempt. Phase guidance SHALL NOT present serial `--count 1` as the default strategy for independent topic source intake or topic deepening.
@@ -21,6 +23,13 @@ The Engine SHALL remain the sole allocator of work-unit IDs. Batched execution S
 - **WHEN** Wave1 has multiple independent `wave1_topic_deepening` queue items eligible at the queue front
 - **THEN** phase guidance SHALL instruct the Phase Agent to claim a bounded batch before waiting for the first topic to submit
 - **AND** out-of-order submit SHALL remain valid because each attempt is bound by `work_id`
+
+#### Scenario: claim count tops up available capacity
+
+- **WHEN** a phase has 5 as its effective cap and already has 3 delegated attempts in flight
+- **AND** more independent eligible demand remains
+- **THEN** phase guidance SHALL instruct the Phase Agent to claim at most 2 additional work units before polling/submitting again
+- **AND** it SHALL NOT claim a full cap-sized batch while in-flight work is already occupying capacity
 
 #### Scenario: batching does not change CLI default authority
 

@@ -10,6 +10,8 @@ The active polling loop SHALL periodically inspect claimed work-unit directories
 
 Polling SHALL be bounded by each work-unit deadline and phase guidance. A lack of task notification SHALL NOT be a continuation blocker, and a received task notification SHALL NOT be treated as authority without submit/gate validation.
 
+The polling loop SHALL be reconstructable from runtime bundle truth. A scratch list of spawned work IDs MAY be used for convenience, but loss of chat memory or task notification SHALL NOT orphan in-flight attempts. Phase guidance SHALL teach the Phase Agent to recover the in-flight set from work-unit directories, queue delegated-in-flight state, work-unit indexes/manifests, or inspect output before deciding whether to submit, terminalize, claim more, or run a gate.
+
 #### Scenario: completed background work is submitted without user nudge
 
 - **WHEN** a background Sub-agent has written a candidate result, runtime receipt, declared outputs, and cache trails for a claimed work unit
@@ -22,6 +24,13 @@ Polling SHALL be bounded by each work-unit deadline and phase guidance. A lack o
 - **AND** bundle-root work-unit files show that a claimed attempt may be ready
 - **THEN** the Phase Agent SHALL inspect and submit from runtime truth
 - **AND** it SHALL NOT hold solely for a notification event
+
+#### Scenario: in-flight polling survives chat memory loss
+
+- **WHEN** the Phase Agent re-enters a delegated stop:no phase without a reliable scratch list of spawned work IDs
+- **AND** runtime bundle files show delegated attempts still in flight
+- **THEN** the Phase Agent SHALL reconstruct the in-flight set from bundle truth or inspect output
+- **AND** it SHALL continue poll/submit/repair/terminalize work rather than asking the user what was spawned
 
 #### Scenario: rejected submit stays inside the silent loop
 

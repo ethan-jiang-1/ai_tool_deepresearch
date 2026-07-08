@@ -52,19 +52,23 @@ cap 来源顺序：
 2. current independent eligible delegated demand count from queue/claim diagnostics;
 3. conservative documented cap, default no higher than 5 when no explicit value exists.
 
+The effective claim count is a top-up, not a firehose: it is no greater than independent eligible demand, the accepted/default cap, and the remaining free delegated in-flight capacity for that wave. After submissions or terminalization free capacity, the Phase Agent can claim another bounded batch. It does not repeatedly claim new work while the current in-flight count is already at cap.
+
 `--count 1` 仍可用于 single remaining item、repair task、dependency-blocked front item、or constrained profile cap = 1，但不能作为独立 topic drain 的 normal strategy。
 
 Alternative considered: change CLI default from `1` to active-window count. Rejected because CLI defaults are broad runtime behavior; explicit phase guidance is safer, easier to review, and keeps existing scripts/tests predictable.
 
 ### Decision 2: Active polling stays in the Phase Agent loop
 
-After spawn, Phase Agent should keep a small in-memory/ref list of claimed `work_id`, `task_ref`, `runtime_receipt_ref`, candidate result path, and deadline. It then loops:
+After spawn, Phase Agent may keep a small scratch list of claimed `work_id`, `task_ref`, `runtime_receipt_ref`, candidate result path, and deadline. That scratch list is convenience only. The authoritative in-flight set must be reconstructable from runtime bundle truth such as queue delegated-in-flight state, work-unit directories, work-unit indexes/manifests, and `operate-work-unit inspect` output. The loop therefore survives chat truncation, task notification loss, or a Phase Agent reentry into the same node.
+
+The Phase Agent then loops:
 
 1. inspect work-unit directories or run `operate-work-unit inspect <bundle>`;
 2. if result/receipt/declared outputs are ready, submit immediately;
 3. if submit rejects, repair same attempt when possible;
 4. if expired/unrecoverable, call `fail`, `timeout`, or `abandon`;
-5. claim more only when cap has room and independent demand remains;
+5. claim more only when reconstructed in-flight count is below cap and independent demand remains;
 6. run gate only after unclaimed delegated count is zero and in-flight count is zero.
 
 This remains Markdown-driven Agent Flow. JS/CLI supplies deterministic feedback; it does not become a daemon, watcher, workflow walker, or notification system.
@@ -84,7 +88,7 @@ Wave1 Sub-agent output should be bounded around noisy I/O:
 
 The Phase Agent, after successful submit, materializes `reference/{topic_slug}-<source-slug>.md` from submitted backing. This avoids repeating BUG-060 by adding another formatting-heavy required receipt to Sub-agent tasks.
 
-Reference materialization is not new delegated authority. It is a consumer-facing projection that must cite submitted evidence/cache/work-unit surfaces. If the Phase Agent wants to include a source URL absent from submitted source claims/cache trails, it must enqueue supplementary `wave1_topic_deepening` rather than invent the reference.
+Reference materialization is not new delegated authority. It is a consumer-facing projection that must cite submitted evidence/cache/work-unit surfaces using body refs or links that gates/inspectors can scan. If the Phase Agent wants to include a source URL absent from submitted source claims, verified cache trails, accepted source URL surfaces, or explicit degraded-capture backing, it must enqueue supplementary `wave1_topic_deepening` rather than invent the reference.
 
 Alternative considered: add `reference/{topic}-*.md` to required Sub-agent receipts. Rejected because it pushes exact rich Markdown formatting into the noisiest actor and creates more submit/gate friction without improving provenance authority.
 
@@ -95,7 +99,11 @@ There are two legal Wave2 reference paths:
 - **existing-backed cross reference**: Phase Agent writes `reference/00-cross-*.md` from concrete submitted Wave0/Wave1 backing and Wave2 ledger/index/synthesis refs. It does not require a new Wave2 work-unit row because no new external evidence was fetched.
 - **new fetched-source cross reference**: Phase Agent or Sub-agent promotes a new source found through `wave2_targeted_evidence`. It requires submitted Wave2 work-unit coverage and cache trails.
 
-The gate/provenance layer must distinguish these instead of treating every `00-cross` file as delegated targeted evidence. The distinction should be represented through reference metadata and/or deterministic refs to `finding-index.yaml` / submitted source claims, not through chat memory.
+The gate/provenance layer must distinguish these instead of treating every `00-cross` file as delegated targeted evidence. The distinction is represented through existing reference metadata plus deterministic refs to `finding-index.yaml`, `cross-topic-ledger.md`, submitted source claims, cache trails, and work-unit rows, not through chat memory.
+
+For an accepted consumer-facing `W2F-xxx` finding that appears in synthesis, seed-topic backfill, or final-report evidence maps and has concrete prior submitted backing, the Phase Agent materializes a `00-cross` reference unless it records why the finding is process-only, deferred, not source-backed enough, or intentionally not consumer-facing. This keeps pure synthesis from becoming invisible while avoiding reference spam for internal notes.
+
+Because the flat reference format currently has a single required `source_url`, an existing-backed `00-cross` reference uses a primary already accepted backing source URL in that metadata field. Additional source/backing refs appear in the reference body as bundle-relative refs or Markdown links to Wave0/Wave1 evidence, cache trails, work-unit rows, `finding-index.yaml`, and `cross-topic-ledger.md`. If no primary accepted source URL exists, the Phase Agent repairs backing records, splits the finding into source-backed references, or records a limitation instead of inventing a synthetic URL.
 
 Alternative considered: keep `00-cross` only for targeted evidence and never write it during pure synthesis. Rejected because BUG-065 is precisely the consumer-path gap for pure synthesis findings with concrete existing backing.
 
@@ -103,7 +111,7 @@ Alternative considered: keep `00-cross` only for targeted evidence and never wri
 
 Wave gates should continue to be deterministic:
 
-- They may check that references exist, follow metadata/section format, have parseable URLs, appear in `_INDEX.md`, and bind their source URLs/backing refs to submitted source claims/cache trails or explicit Wave2 targeted evidence rows.
+- They check that references exist when required, follow metadata/section format, have parseable URLs, appear in `_INDEX.md`, and bind their source URLs/backing refs to submitted source claims, verified cache trails, explicit degraded-capture records, or explicit Wave2 targeted evidence rows.
 - They must not judge whether the reference prose is insightful.
 - They must not count filesystem-only files as delegated evidence.
 - They must not flag legitimate Phase-owned references as delegated bypass when they are backed by existing submitted evidence.
@@ -119,7 +127,7 @@ The old blanket "Phase Agent MUST NOT generate `reference/*.md`" rule prevented 
 - references using unsubmitted source URLs/cache trails;
 - pure synthesis references that pretend to be newly fetched source evidence.
 
-It should allow Phase Agent to materialize references manually from submitted source claims/cache/ledger rows and Wave2 ledger/index backing.
+It allows Phase Agent to materialize references manually from submitted source claims, accepted source URL surfaces, verified cache trails, explicit degraded-capture records, ledger rows, and Wave2 ledger/index backing.
 
 ### Decision 7: Reference classification uses existing bundle surfaces and fails closed
 
@@ -131,7 +139,7 @@ Gate/provenance classification should be derived from existing deterministic bun
 2. `_INDEX.md` row presence and `source_layer`;
 3. submitted source claims, accepted source URLs, degraded-capture records, cache trails, output declarations, and work-unit ledger rows;
 4. Wave2 `W2F-xxx` refs in `finding-index.yaml` and `cross-topic-ledger.md`;
-5. concrete bundle-relative refs to prior Wave0/Wave1 backing when the reference claims existing-backed synthesis.
+5. concrete bundle-relative refs or Markdown links in the reference body to prior Wave0/Wave1 backing when the reference claims existing-backed synthesis.
 
 Classification is two-step:
 
@@ -146,10 +154,10 @@ Optional parser-compatible metadata may be added later if it proves useful, but 
 
 - **Risk: batch claim increases simultaneous Sub-agent load** -> Mitigation: bounded cap, profile/runtime override, conservative default cap no higher than 5, and explicit terminalization for expired attempts.
 - **Risk: polling loop becomes noisy or infinite** -> Mitigation: bounded interval, deadline awareness, `inspect`/submit feedback, terminal commands, and tests that forbid waiting on user/task notification as continuation.
-- **Risk: Phase-owned references become unsourced summaries** -> Mitigation: require concrete submitted backing refs, index updates, cache/source-claim mapping, and gate diagnostics for unbacked source URLs.
+- **Risk: Phase-owned references become unsourced summaries** -> Mitigation: require concrete submitted backing refs, index updates, source/cache/degraded-capture mapping, and gate diagnostics for unbacked source URLs.
 - **Risk: Gate changes accidentally weaken delegated provenance** -> Mitigation: keep fetched-source delegated evidence ledger-first; only Phase-owned projections from already submitted backing avoid new Wave2 ledger requirement.
 - **Risk: reference classification becomes another schema migration** -> Mitigation: do not add required metadata keys or `_INDEX.md` columns in this change; derive classification from existing metadata, index rows, ledgers, cache trails, and Wave2 finding refs.
-- **Risk: Existing tests expect Sub-agent reference output** -> Mitigation: update tests to check Sub-agent submitted source claims/cache and Phase Agent post-submit materialization separately.
+- **Risk: Existing tests expect Sub-agent reference output** -> Mitigation: update tests to check Sub-agent submitted source/cache/degraded-capture backing and Phase Agent post-submit materialization separately.
 - **Risk: More spec surfaces are touched than code diff seems to need** -> Mitigation: this is intentional because current specs conflict across reference format, provenance gate, phase content, and anti-cheating guidance.
 
 ## Migration Plan

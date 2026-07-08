@@ -35,16 +35,19 @@ The format specification SHALL be available to the Phase Agent materialization g
 
 ### Requirement: Phase-owned reference materializations SHALL preserve submitted source backing
 
-Phase-owned reference files SHALL be consumer-facing projections, not alternate delegated evidence authority. A Phase-owned reference SHALL identify concrete backing from submitted source claims, accepted source URLs, cache trails, work-unit refs, prior-wave artifacts, or Wave2 ledger/index findings. It SHALL NOT introduce accepted fetched-source evidence that lacks submitted work-unit or prior accepted backing.
+Phase-owned reference files SHALL be consumer-facing projections, not alternate delegated evidence authority. A Phase-owned reference SHALL identify concrete backing from submitted source claims, accepted source URLs, cache trails, explicit degraded-capture records, work-unit refs, prior-wave artifacts, or Wave2 ledger/index findings. It SHALL NOT introduce accepted fetched-source evidence that lacks submitted work-unit or prior accepted backing.
 
 For Wave1 topic references, backing SHALL come from submitted `wave1_topic_deepening` rows and their source/cache claims. For Wave2 existing-backed cross references, backing SHALL come from already submitted Wave0/Wave1 evidence plus Wave2 `W2F-xxx` ledger/index process evidence. For Wave2 new external evidence, backing SHALL come from submitted `wave2_targeted_evidence` rows.
 
 This change SHALL NOT require a new required reference metadata key or a new required `_INDEX.md` column to classify Phase-owned projections. Classification SHALL use the existing reference metadata block, `_INDEX.md` rows and `source_layer`, submitted source/cache/work-unit ledgers, output declarations, and Wave2 `W2F-xxx` ledger/index refs. `source_layer` is a navigation label and SHALL NOT be sufficient authority by itself.
 
+For existing-backed Wave2 `00-cross` references, the required `source_url` metadata field SHALL point to a primary already accepted backing source URL when the current reference format requires a single URL. It SHALL NOT introduce a novel external URL. Additional prior-wave backing sources, work-unit refs, cache refs, and `W2F-xxx` refs SHALL be listed in the reference body using bundle-relative refs or Markdown links that gates/inspectors can scan. If no single accepted primary source URL exists, the Phase Agent SHALL split the finding into source-backed references, repair backing/index records, or record a limitation rather than inventing a synthetic public URL.
+
 #### Scenario: Wave1 topic reference cites submitted backing
 
 - **WHEN** the Phase Agent writes `reference/{topic_slug}-<source-slug>.md`
-- **THEN** the reference SHALL cite or be traceable to submitted Wave1 source claims and cache trails for its `source_url`
+- **THEN** the reference SHALL cite submitted Wave1 source claims, accepted source URL surfaces, cache trails, explicit degraded-capture records, or work-unit refs for its `source_url`
+- **AND** those backing refs SHALL appear as bundle-relative refs or Markdown links in the reference body where gates or inspectors can scan them
 - **AND** `_INDEX.md` SHALL include a row for the reference
 
 #### Scenario: Wave2 existing-backed cross reference cites prior evidence
@@ -52,6 +55,13 @@ This change SHALL NOT require a new required reference metadata key or a new req
 - **WHEN** the Phase Agent writes `reference/00-cross-*.md` during pure synthesis
 - **THEN** the reference SHALL cite a `W2F-xxx` id and concrete Wave0/Wave1 backing refs
 - **AND** it SHALL NOT claim new fetched-source discovery unless targeted evidence was submitted
+
+#### Scenario: cross reference source_url is prior accepted backing
+
+- **WHEN** the Phase Agent writes an existing-backed `reference/00-cross-*.md`
+- **THEN** its `source_url` metadata SHALL identify a primary prior accepted backing source URL when a single source URL is required by the flat reference format
+- **AND** any additional backing sources or work-unit refs SHALL appear as bundle-relative refs or Markdown links in the reference body
+- **AND** a synthetic or newly searched public URL SHALL NOT be used to satisfy `source_url`
 
 #### Scenario: unbacked reference is diagnostic, not authority
 
