@@ -19,8 +19,9 @@
 - [BUG-046](BUG-046-wave0-serial-claim-no-parallelism.md) — Wave0 source intake 串行执行，5 个独立 topic 无法并行加速
 - [BUG-052](BUG-052-agent-defaults-to-python-instead-of-node.md) — Agent 在纯 Node.js 项目中默认使用 Python 做数据操作
 - [BUG-059](BUG-059-cli-positional-help-creates-junk-directory.md) — operate-queue/operate-work-unit CLI 把 `--help` 当 bundle 名，在 repo root 创建垃圾目录
+- [BUG-060](BUG-060-subagent-output-contract-mismatch-systematic.md) — Sub-agent 产出物与 Engine contract 之间的系统性 mismatch：5 个独立 gap（result.json 包装、receipt 字段缺失、cache 命名、nonce 双源、source_claims contract/gate 矛盾）导致 gate 反复卡在格式问题而非研究质量
 
-**Next available bug ID: BUG-060**
+**Next available bug ID: BUG-061**
 
 ---
 
