@@ -5,6 +5,9 @@
 > 用户已定方向：① 优先「治卡（contract）」；② 研究成本「只提速不降覆盖」。
 > **与 [`martin-fowler-run-bugfix-change-split.md`](martin-fowler-run-bugfix-change-split.md) 有重叠**：那份从 bug 修复角度切分 BUG-066~070；本份从**性能**角度切入同一批根因，并额外加 `dry-submit` 预检、抓取并行、phase-doc 一致性测试、"floor+余量"抓取策略。**建议 review 时二选一合并**：要么把本份的性能增量并入 bugfix-split 的 Change 1，要么单独成一个 change。下文按"单独一个 change"写。
 
+> **覆盖标注图例**（相对 [`bugfix-change-split`](martin-fowler-run-bugfix-change-split.md) 两 change）：✅ 全覆盖 ｜ 🟡 半覆盖（点名缺口）｜ ❌ 未覆盖。**C1**=`stabilize-agent-facing-work-unit-contracts`，**C2**=`align-gate-contracts-and-reference-navigation`。
+> **一句话结论**：真正的性能差集 = **D（dry-submit）、E（抓取并行）、以及 B(i)/C3 的更强预防/回归网**；A/C1/C2 已被 bugfix-split 全覆盖，B(ii) 被两 change 显式排除。
+
 ---
 
 ## Context — 为什么做这个
@@ -31,6 +34,8 @@
 
 ## Work item A — emitted schema 从 contract 派生（最高 ROI）
 
+> **覆盖**：✅ 全覆盖 — **C1** `stabilize-agent-facing-work-unit-contracts`。emitted schema 从 `output_contract` 派生正是 C1 核心：wave0/2 省略 `source_claims`/`accepted_source_urls`、wave1 严格 6-key item、`output_files[].role` enum 对齐 allowed_roles，逐条对应。A 的「共享常量单一真相源」是本份的实现选择，C1 只要求结果不要求该结构。
+
 `engine/work-unit-envelope.mjs` → `resultSchemaDocument(manifest)`（:49-69）重写为读 `manifest.output_contract`：
 - **source_claims / accepted_source_urls**：仅 `oc.source_claims?.allowed === true`（wave1）才作 property；wave0/wave2 **省略**（顶层 `additionalProperties:false` → 遵循 schema 的 sub-agent 不会 emit → 满足 `validateSourceClaims`（`engine/work-unit-validation.mjs:303-305`）禁令）。允许时 `source_claims.items` = 严格 6-key。
 - **output_files.items**：从 `oc.output_files` 派生 → `required:[path,role]`、`role:{enum: allowed_roles}`、`reference_requires_source_url` 用 `if/then`。**不能比 engine 更严**（engine item 是非 strict `z.object`）——`additionalProperties` 保持宽松。
@@ -44,9 +49,17 @@
 
 ## Work item B — 关闭 Wave1 role 陷阱
 
-**B(i)（主）**：A emit `role.enum` 后，在 schema + `taskMarkdown`（:173-178）+ `subagent-dpt-evidence-extractor.md`（:228、:230-243）明写 **path→role 绑定**：`evidence-summary.md→evidence_summary`、`question-list.md→question_list`、`reference/*.md→reference`，`other` 仅留无类型附件 → 首次 submit 满足 gate coverage selector `[reference,evidence_summary,question_list]`。**不要**把 `other` 加进 selector。
+**B(i)（主）**：
 
-**B(ii)（可选，有 ledger-rewrite 风险，标 optional）**：`engine/work-unit-submit.mjs:315-323` 放松为允许**仅 role 变化**的 `metadata_only_relabel` 重提（其余 byte-identical、事务化、发 `work_unit_submit_relabeled`）。不做则回退"新开 supplementary unit"。
+> **覆盖**：🟡 半覆盖 — 目标（Wave1 必需产出以 gate 可见 role 落 ledger）由 **C2** 的 Wave1 output coverage 覆盖，但**机制不同**：C2 用 submit 时确定性 role 归一化兜底，本份走预防（emit `role.enum` + 文档绑定 path→role 让首次 submit 就对）。缺：emission/文档侧 path→role 绑定与 `subagent-dpt-evidence-extractor.md` 改动 C2 未点名；且依赖 A（C1）先 emit role.enum。
+
+A emit `role.enum` 后，在 schema + `taskMarkdown`（:173-178）+ `subagent-dpt-evidence-extractor.md`（:228、:230-243）明写 **path→role 绑定**：`evidence-summary.md→evidence_summary`、`question-list.md→question_list`、`reference/*.md→reference`，`other` 仅留无类型附件 → 首次 submit 满足 gate coverage selector `[reference,evidence_summary,question_list]`。**不要**把 `other` 加进 selector。
+
+**B(ii)（可选，有 ledger-rewrite 风险，标 optional）**：
+
+> **覆盖**：❌ 未覆盖 — **C1 与 C2 均显式排除** submitted-ledger 元数据改写（C1 out-of-scope、C2「Do not add a general submitted-ledger amend path」）。
+
+`engine/work-unit-submit.mjs:315-323` 放松为允许**仅 role 变化**的 `metadata_only_relabel` 重提（其余 byte-identical、事务化、发 `work_unit_submit_relabeled`）。不做则回退"新开 supplementary unit"。
 
 ## Work item C — 修文档漂移 + phase-doc 一致性测试
 

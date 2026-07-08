@@ -1,6 +1,6 @@
 ## Context
 
-`dpt_rb_martin-fowler-ai-sdlc-retreats` 暴露的是一类 Agent-facing contract 漂移：Agent 先读到的 generated `result.schema.json`、phase task-card 示例、generated task/prompt/output contract，与 Engine 在 queue transition、work-unit submit、ledger append 前后验收的真实合同不一致。结果是一个按文档或 generated schema 诚实执行的 Agent，仍可能第一次 enqueue、non-delegated complete 或 submit 就失败。
+`dpt_rb_martin-fowler-ai-sdlc-retreats` 暴露的是一类 Agent-facing contract 漂移：Agent 先读到的 generated `result.schema.json`、phase task-card 示例、generated task/prompt/output contract，与 Engine 在 queue transition、work-unit submit、ledger append 前实际验收的真实合同不一致。结果是一个按文档或 generated schema 诚实执行的 Agent，仍可能第一次 enqueue、non-delegated complete 或 submit 就失败。
 
 本 design 把这类 surface 统称为 **入口合同（entrance contract / Agent-facing pre-submit and pre-transition contract）**。它不是 gate 判断层；它覆盖的是 Agent 产生结构化输入之前能看到、也必须能信任的 contract surface，以及 Engine 在 queue transition / ledger append 前执行的对应 validator。
 
@@ -27,7 +27,7 @@
 8. 修正 seed-topic phase task-card/result 示例中的 queue demand identity，使用 `queue_item_id`。
 9. 扩展 static hygiene，使 phase Markdown task-card/result examples 也能被扫描到 queue identity drift。
 10. 增加回归测试证明 wave0/wave1/wave2 generated schema 与 submit validator 对允许/禁止字段、extra keys、role enum、identity const、required/default 字段语义的判断一致。
-10. 在 implementation 阶段发布为 framework `v0.12`，更新 `CHANGELOG.md` 和 `DPT_FRAMEWORK/RUN.md`。
+11. 在 implementation 阶段发布为 framework `v0.12`，更新 `CHANGELOG.md` 和 `DPT_FRAMEWORK/RUN.md`。
 
 **Non-Goals:**
 
@@ -47,13 +47,13 @@
 
 ```text
 phase Markdown queue examples
-  -> operate-queue enqueue/claim/complete schemas
+  -> operate-queue enqueue/complete schemas
   -> operate-work-unit claim generated task/prompt/beacon/schema
   -> work-unit result/output/cache/source-claim submit validators
   -> submitted ledger append preconditions
 ```
 
-如果一个 mismatch 会让 Agent 写出不能 enqueue、不能 non-delegated complete、不能 submit，或 submit 后立刻携带一个入口合同已能发现的结构错误，它属于本 change。Gate-specific artifact semantics、Wave1 required path-role coverage, reference navigation、depth-review exact-match policy、return-map concrete-reference policy 留给 `align-gate-contracts-and-reference-navigation`。
+如果一个 mismatch 会让 Agent 写出不能 enqueue、不能 non-delegated complete、不能 submit，或 submit 后立刻携带一个入口合同已能发现的结构错误，它属于本 change。Gate-specific artifact semantics、Wave1 required path-role coverage、reference navigation、depth-review exact-match policy、return-map concrete-reference policy 留给 `align-gate-contracts-and-reference-navigation`。
 
 Alternative considered: 只修 BUG-066/067 的具体文本。拒绝，因为 BUG-069 的根因是入口 contract surfaces 漂移；只修两个症状会继续让下一次 run 踩到同族问题。
 
