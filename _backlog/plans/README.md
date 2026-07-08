@@ -15,4 +15,6 @@
 
 ## 活跃列表
 
-**当前无活跃 plan。** 🎉
+| Plan | 简述 |
+|------|------|
+| [martin-fowler-run-bugfix-change-split](martin-fowler-run-bugfix-change-split.md) | 将 BUG-066 至 BUG-070 切成 2 个 OpenSpec change：先修 Agent-facing work-unit contract，再集中修 gate/reference navigation 对齐。 |

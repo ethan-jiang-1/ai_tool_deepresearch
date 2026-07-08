@@ -150,6 +150,7 @@ AGQ-019: agentic-queue — Queue v2 active_window, refill_pool, delegated_in_fli
 AGQ-020: agentic-queue — pendingCount exposes active window plus refill pool task total
 AGQ-021: agentic-queue — Supplementary queue demand IDs may carry iteration labels when explicit topic identity is valid
 AGQ-022: agentic-queue — Wave delegated queue loops prefer bounded batched claims for independent demand
+AGQ-023: agentic-queue — Phase task-card examples preserve queue_item_id as queue demand identity
 
 # agent-output-declaration
 AGO-001: agent-output-declaration — Work-unit result output_files declaration with role and source_url rules
@@ -566,6 +567,7 @@ SNC-002: subagent-node-contract — Work-unit task Markdown includes lifecycle l
 SNC-003: subagent-node-contract — Phase workflow nodes direct the Phase Agent through the work-unit claim/submit loop
 SNC-004: subagent-node-contract — Sub-agent role specs require beacon-first absolute path resolution and file existence verification before return
 SNC-005: subagent-node-contract — Sub-agent role contracts return source backing instead of owning consumer reference presentation
+SNC-006: subagent-node-contract — Generated work-unit result schema matches submit-time result contract
 GSK-001: gate-skeleton — Gate definition JSON skeleton structure (gate, description, rules[] with id/check/target/threshold/failure_message)
 GSK-002: "gate-skeleton — Gate CLI skeleton shape (parseArgs, --bundle/--current-node required, check/inspect/advice JSON output, exit codes)"
 GSK-003: gate-skeleton — One gate per CLI (8 independent CLI wrappers, no generic runner with subcommand)
