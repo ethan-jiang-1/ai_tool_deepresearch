@@ -64,6 +64,7 @@ Valid dispatch contexts include:
 
 - `decision=exploit_search` for a finding needing targeted backing evidence
 - `decision=explore_search` for a finding needing broader exploratory evidence
+- `gap_status=needs_search` for a public evidence gap that must be resolved before pure synthesis eligibility
 - supplementary cross-topic depth search
 - supplementary emergent search rounds
 
@@ -97,7 +98,7 @@ Expected meanings:
 | `fills_gap` | Whether the search found evidence that helps the assigned gap |
 | `confidence` | Low/medium/high confidence in the evidence quality |
 
-If the task asks the Sub-agent to write source files directly, declared output paths must be included in `output_files[]`; otherwise, the Phase Agent promotes suitable sources to `reference/00-cross-*.md` during ingestion. In both cases, cache trails for real fetched sources must be returned when available.
+If the task asks the Sub-agent to write source files directly, declared output paths must be included in `output_files[]`; otherwise, the Phase Agent promotes suitable sources to `reference/00-cross-*.md` during ingestion. In both cases, cache trails for real fetched sources must be returned when available. The Phase Agent, not the Sub-agent, updates `finding-index.yaml` after submit with `subagent_receipt_refs[]`, `gap_status`, confidence, and backing refs.
 
 **Output serialization:** All structured output files MUST be written via standard library serialization, never hand-concatenated:
 
@@ -140,7 +141,6 @@ Use the full chain from `shared-subagent-protocol.md`.
 - Built-in page-fetching tool or browser if available
 - `curl -L <url>`
 - Node `fetch`
-- Python `urllib.request`
 
 Only after all tiers fail may the Sub-agent record a source as inaccessible. Honest failure is allowed: return `fills_gap: false` with attempted keywords/URLs when search does not find useful evidence.
 
@@ -152,6 +152,7 @@ Only after all tiers fail may the Sub-agent record a source as inaccessible. Hon
 - Do not update `finding-index.yaml`, `cross-topic-ledger.md`, `synthesis.md`, queue state, status, profile, or plan unless the work-unit task explicitly declares a bounded output path and schema.
 - Do not run gates or decide pass/fail.
 - Do not skip WebSearch and jump straight to unsupported claims.
+- Do not mark a finding resolved, pure-synthesis-eligible, or HITL2-ready; return bounded evidence only.
 - Do not directly append `rb_output_declarations.jsonl`; `operate-work-unit submit` is the delegated ledger boundary.
 
 Universal work-unit prohibitions from `shared-subagent-protocol.md` also apply.

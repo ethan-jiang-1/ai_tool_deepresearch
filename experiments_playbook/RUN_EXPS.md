@@ -48,8 +48,8 @@
 | G7 system-logging | case-74 | `exp_system-logging/case-74-light-heartbeat-metadata.md` | logger_ready heartbeat 元数据：node/platform/framework_root，不用 pid |
 | G7 system-logging | case-75 | `exp_system-logging/case-75-light-engine-hot-path.md` | queue-manager hot path log events 与 detail.kind 映射 |
 | G21 wfn-wave0 | case-213 | `exp_wfn_wave0/case-213-light-happy-and-fail.md` | Light gate-only 版 wave0 happy + fail path |
-| G22 wfn-wave1 | case-224 | `exp_wfn_wave1/case-224-light-happy-and-fail.md` | Light gate-only 版 wave1 happy + fail path |
-| G23 wfn-wave2 | case-235 | `exp_wfn_wave2/case-235-light-happy-and-fail.md` | Light gate-only 版 wave2 happy + fail path |
+| G22 wfn-wave1 | case-224 | `exp_wfn_wave1/case-224-light-happy-and-fail.md` | Light gate-only 版 wave1 happy + shallow/cache-thin/depth-review fail path |
+| G23 wfn-wave2 | case-235 | `exp_wfn_wave2/case-235-light-happy-and-fail.md` | Light gate-only 版 wave2 pure synthesis + search-required + targeted receipt path |
 | G20 wfn-seedtopic | case-202 | `exp_wfn_seedtopic/case-202-light-setup-to-seedtopics-transition.md` | setup→seed-topics transition 最小路径 |
 | G20 wfn-seedtopic | case-203 | `exp_wfn_seedtopic/case-203-light-nn-prefix-naming.md` | NN_ 前缀命名约定：registry 1-based 位置推导、gate 三重一致、ls 自然排序、reference {slug}-<qualifier>.md 模式 |
 | G14 hitl2-branch | case-140 | `exp_wff_hitl2-branch/case-140-light-hitl2-decision-capture.md` | HITL2 decision capture：Agent 捕获 user_decision + rationale，chain 路由到正确节点。Trace 证明两个节点都经过 |
@@ -99,7 +99,7 @@
 | G11 pre-research-repair | case-113 | `exp_wff_pre-research-repair/case-113-standard-review-surface.md` | HITL 问题面 + AI interpretation sample + human review checklist |
 | G12 wave-gates | case-123 | `exp_wff_wave-gates/case-123-standard-wave2-synthesis.md` | wave2-complete gate：Markdown link 解析 + dead target + cross-artifact reference（RWE-009） |
 | G12 wave-gates | case-124 | `exp_wff_wave-gates/case-124-standard-seed-topics-boundary.md` | seed-topics-ready gate：空目录/缺失 slug/多余 slug + slug_consistency 双向校验 |
-| G15 wave-chain | case-151 | `exp_wff_wave-chain/case-151-standard-waves-full-chain.md` | seed-topics→wave0→wave1→wave2 全链路 4 gate 顺序 pass |
+| G15 wave-chain | case-151 | `exp_wff_wave-chain/case-151-standard-waves-full-chain.md` | seed-topics→wave0→wave1 depth-review→wave2 scan/eligibility 全链路 4 gate 顺序 pass |
 | G15 wave-chain | case-152 | `exp_wff_wave-chain/case-152-standard-wave-repair-loop.md` | wave2 gate fail→repair→pass PDCA 回路 |
 | G15 wave-chain | case-153 | `exp_wff_wave-chain/case-153-standard-wave-fault-tolerance.md` | malformed YAML / partial dead links / status drift — gate 容错 |
 | G13 delivery | case-131 | `exp_wff_delivery/case-131-standard-delivery-full-chain.md` | hitl2→readiness→final 完整 delivery 链 + final terminal semantics |

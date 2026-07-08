@@ -541,6 +541,65 @@ export function writeWave1TopicArtifacts(bundleDir, {
   writeFileSync(path.join(bundleDir, 'seed_topics', `${topic_slug}.md`), wave1SeedTopicContent({ id, topic_slug, title, stale: staleBackfill }));
 }
 
+function inferTopicSlug({ record, outputPath, extraOutputFiles = [] } = {}) {
+  const fromArtifact = extraOutputFiles
+    .map((entry) => entry.path || '')
+    .map((entryPath) => entryPath.match(/^artifacts\/wave1\/([^/]+)\//)?.[1])
+    .find(Boolean);
+  if (fromArtifact) return fromArtifact;
+  const fromReference = String(outputPath || '').match(/^reference\/(?:[0-9]+-)?(.+?)-deepening\.md$/)?.[1];
+  if (fromReference) return fromReference;
+  const fromQueue = String(record?.queue_item_id || '').match(/(topic-[a-z0-9-]+)/)?.[1];
+  return fromQueue || record?.queue_item_id || 'topic-a';
+}
+
+export function writeWave1DepthReview(bundleDir, {
+  topic_slug = 'topic-a',
+  work_unit_ref,
+  result_ref,
+  source_ref,
+  source_url,
+  cache_trails = [],
+  wave0_source_urls = [`https://research-source.test/${topic_slug}/wave0/foundation`],
+  is_new_vs_wave0 = true,
+  decision = 'accept',
+  supplementary_queue_item_ids = [],
+} = {}) {
+  const artifactDir = path.join(bundleDir, 'artifacts', 'wave1', topic_slug);
+  mkdirSync(artifactDir, { recursive: true });
+  const observed = is_new_vs_wave0 && !wave0_source_urls.includes(source_url) ? 1 : 0;
+  writeFileSync(path.join(artifactDir, 'depth-review.yaml'), `${JSON.stringify({
+    version: 'depth-review.v1',
+    topic_slug,
+    reviewed_work_unit_refs: [work_unit_ref],
+    wave0_source_urls,
+    source_claims: [{
+      url: source_url,
+      source_ref,
+      acceptance_status: 'accepted',
+      is_new_vs_wave0,
+      cache_trail_refs: cache_trails,
+    }],
+    new_source_urls: observed > 0 ? [source_url] : [],
+    new_source_floor: {
+      required: 1,
+      observed,
+      source: 'ceil(wave1_per_topic_ref_floor * topic_unique_ratio)',
+    },
+    depth_dimensions: {
+      mechanism: { status: 'covered', refs: [result_ref] },
+      trend_or_difficulty: { status: 'covered', refs: [result_ref] },
+      limitation_or_dispute: { status: 'covered', refs: [result_ref] },
+    },
+    profile_checks: {
+      counterexample_search: { status: 'not_required', refs: [] },
+      cross_verification: { status: 'not_required', refs: [] },
+    },
+    decision,
+    supplementary_queue_item_ids,
+  }, null, 2)}\n`);
+}
+
 export function sourceYamlContent({
   source_url = 'https://research-source.test/research/article',
   topic_slug = 'topic-a',
@@ -573,6 +632,7 @@ export function writeFixtureResultForWorkUnit(bundleDir, {
   extra_output_files = [],
   cache_trails,
   result_overrides = {},
+  write_depth_review = true,
 } = {}) {
   const record = loadWorkUnitIndex(bundleDir).work_units[work_id];
   if (!record) throw new Error(`No work unit in index: ${work_id}`);
@@ -609,6 +669,21 @@ export function writeFixtureResultForWorkUnit(bundleDir, {
     ts: '2026-07-06T00:00:00.000Z',
   })}\n`);
 
+  const isWave1Deepening = record.kind === 'wave1_topic_deepening';
+  const topicSlug = inferTopicSlug({ record, outputPath, extraOutputFiles: extra_output_files });
+  const wave1SourceClaims = isWave1Deepening
+    ? {
+        source_claims: [{
+          url: source_url,
+          source_ref: outputPath,
+          acceptance_status: 'accepted',
+          is_new_vs_wave0: true,
+          cache_trail_refs: trailPaths,
+        }],
+        accepted_source_urls: [source_url],
+      }
+    : {};
+
   const resultPath = path.join(bundleDir, '_tmp', `${record.work_id}.result.json`);
   mkdirSync(path.dirname(resultPath), { recursive: true });
   writeFileSync(resultPath, `${JSON.stringify({
@@ -620,8 +695,22 @@ export function writeFixtureResultForWorkUnit(bundleDir, {
     summary: 'fixture-backed controlled output',
     output_files: outputFiles,
     cache_trails: trailPaths,
+    ...wave1SourceClaims,
     ...result_overrides,
   }, null, 2)}\n`);
+
+  const hasWave1TopicOutputs = extra_output_files.some((entry) => entry.role === 'evidence_summary') &&
+    extra_output_files.some((entry) => entry.role === 'question_list');
+  if (isWave1Deepening && write_depth_review && hasWave1TopicOutputs) {
+    writeWave1DepthReview(bundleDir, {
+      topic_slug: topicSlug,
+      work_unit_ref: record.paths.work_unit_dir,
+      result_ref: record.paths.result_ref,
+      source_ref: outputPath,
+      source_url,
+      cache_trails: trailPaths,
+    });
+  }
   return { record, resultPath, outputPath, cache_trails: trailPaths };
 }
 

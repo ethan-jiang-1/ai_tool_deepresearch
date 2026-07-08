@@ -198,6 +198,15 @@ export const WorkUnitRuntimeReceiptEventSchema = z.object({
   detail: JsonObject.optional(),
 }).passthrough();
 
+export const WorkUnitSourceClaimSchema = z.object({
+  url: z.string().url(),
+  source_ref: z.string().min(1),
+  acceptance_status: z.string().min(1),
+  is_new_vs_wave0: z.boolean(),
+  cache_trail_refs: z.array(z.string().min(1)).default([]),
+  degraded_capture_ref: z.string().min(1).nullable().optional(),
+}).strict();
+
 export const WorkUnitResultSchema = z.object({
   schema_version: z.literal('work-unit.result.v1').default('work-unit.result.v1'),
   work_id: z.string().regex(WORK_UNIT_ID_PATTERN),
@@ -211,6 +220,8 @@ export const WorkUnitResultSchema = z.object({
     source_url: z.string().url().optional(),
     source_slug: z.string().min(1).optional(),
   })).default([]),
+  source_claims: z.array(WorkUnitSourceClaimSchema).default([]),
+  accepted_source_urls: z.array(z.string().url()).default([]),
   cache_trails: z.array(z.string().min(1)).default([]),
 }).strict();
 
@@ -227,6 +238,8 @@ export const WorkUnitLedgerRecordSchema = z.object({
   runtime_receipt_ref: z.string().min(1),
   receipt_nonce: z.string().min(16),
   output_files: WorkUnitResultSchema.shape.output_files,
+  source_claims: WorkUnitResultSchema.shape.source_claims,
+  accepted_source_urls: WorkUnitResultSchema.shape.accepted_source_urls,
   cache_trails: WorkUnitResultSchema.shape.cache_trails,
   result_hash: z.string().min(1),
   ledger_record_hash: z.string().min(1),

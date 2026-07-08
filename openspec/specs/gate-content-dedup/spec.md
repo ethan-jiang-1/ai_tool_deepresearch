@@ -1,6 +1,6 @@
 # gate-content-dedup Specification
 
-> req: [DEPRECATED]
+> req: GAC-001, GAC-002, GAC-003, GAC-004, GAC-005, GAC-006, GAC-007, GAC-008, GAC-009
 
 ## Purpose
 

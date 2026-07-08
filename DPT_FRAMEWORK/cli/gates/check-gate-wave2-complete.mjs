@@ -23,6 +23,7 @@ import {
   checkWorkUnitSubmissionPresence,
   checkDelegatedBypassSuspected,
   detectDelegatedBypassSuspicion,
+  checkWave2FindingIndexContract,
   readTraceEvents,
   scanTemplateNotExpanded,
 } from '../../engine/helpers/gate-helpers.mjs';
@@ -332,6 +333,14 @@ for (const rule of definition.rules) {
           rulePassed = false;
           ruleDetail = result.inspect.join('; ');
         }
+      } else if (rule.check === 'finding_index_contract') {
+        const indexResult = checkWave2FindingIndexContract(bundlePath);
+        if (!indexResult.passed) {
+          rulePassed = false;
+          ruleDetail = indexResult.inspect.join('; ');
+        }
+        for (const line of indexResult.inspect) inspect.push(line);
+        for (const a of indexResult.advice) advice.push(a);
       } else if (rule.check === 'work_unit_ledger_exists') {
         const ledgerResult = checkWorkUnitLedgerExists(bundlePath, rule);
         if (!ledgerResult.passed) {

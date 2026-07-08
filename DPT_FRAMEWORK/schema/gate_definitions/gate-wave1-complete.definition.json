@@ -21,6 +21,12 @@
       "failure_message": "Missing question-list file: artifacts/wave1/{topic}/question-list.md. Every topic must have a paired question-list.md alongside evidence-summary.md."
     },
     {
+      "id": "per_topic_depth_review_contract",
+      "check": "depth_review_contract",
+      "target": "artifacts/wave1/{topic}/depth-review.yaml",
+      "failure_message": "Depth-review contract failed for {topic}. Review submitted work-unit rows, exact-new source claims, cache mappings, profile checks, and repair through supplementary wave1_topic_deepening work units."
+    },
+    {
       "id": "per_topic_ref_md_count_floor",
       "check": "count_floor",
       "target": "reference/*{topic}*.md",

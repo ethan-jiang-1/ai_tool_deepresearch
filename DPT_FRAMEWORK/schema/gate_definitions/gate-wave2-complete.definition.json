@@ -47,6 +47,12 @@
       "failure_message": "finding-index.yaml is not valid YAML. Fix syntax errors."
     },
     {
+      "id": "finding_index_contract",
+      "check": "finding_index_contract",
+      "target": "artifacts/wave2/finding-index.yaml",
+      "failure_message": "finding-index.yaml must prove scan matrix coverage, confidence/backing consistency, gap_status convergence, synthesis eligibility, and targeted-evidence receipt or explicit deferral consistency."
+    },
+    {
       "id": "synthesis_finding_id_ref",
       "check": "pattern_match",
       "target": "artifacts/wave2/synthesis.md",

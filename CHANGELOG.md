@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.8
+
+- Restored Wave1 depth contracts with per-topic depth reviews, exact new-source floors, structured source claims, supplementary repair loops, and cache-backed accepted source coverage.
+- Restored Wave2 synthesis depth contracts with scan matrix, confidence triage, gap analysis, finding-index eligibility, and targeted evidence receipt checks before synthesis pass.
+
 ## v0.7
 
 - Wave gates now support trace-durable degraded handoff for eligible repeated quality-threshold failures while runtime-truth blockers still fail closed.

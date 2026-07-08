@@ -1803,6 +1803,59 @@ function case224(opts) {
   appendTrace(orphanBundleDir, { event: 'wave1_completion', source: 'case-224-orphan' });
   const orphanGate = runWave1Gate(orphanBundleDir, 'gate-orphan.json');
 
+  const shallowBundleDir = newBundle('case-224', 'w1_shallow_depth_review', opts);
+  writeWave1Scaffold(shallowBundleDir, {
+    planBasename: 'w1_shallow_depth_review',
+    topics: [{ id: 'ts', slug: 'topic-shallow', title: 'Topic Shallow' }],
+  });
+  enqueueWorkUnitTask(shallowBundleDir, queueItemForWorkUnit({
+    phase: 'wave1',
+    queue_item_id: 'wave1-deepen-topic-shallow',
+    topic_slug: 'topic-shallow',
+    title: 'Shallow Wave1 fixture',
+  }), { fileName: 'case224-shallow.json' });
+  const shallowClaim = claimWorkUnitsViaCli(shallowBundleDir, { phase: 'wave1' });
+  const shallow = submitClaimedWave1Fixture(shallowBundleDir, {
+    workId: shallowClaim.claimed_work_ids[0],
+    topicSlug: 'topic-shallow',
+    topicId: 'ts',
+    title: 'Topic Shallow',
+    sourceUrl: 'https://research-source.test/topic-shallow/reused-wave0',
+  });
+  const shallowReviewPath = path.join(shallowBundleDir, 'artifacts/wave1/topic-shallow/depth-review.yaml');
+  const shallowReview = JSON.parse(readFileSync(shallowReviewPath, 'utf8'));
+  shallowReview.wave0_source_urls = ['https://research-source.test/topic-shallow/reused-wave0'];
+  shallowReview.source_claims[0].is_new_vs_wave0 = false;
+  shallowReview.new_source_urls = [];
+  shallowReview.new_source_floor.observed = 0;
+  shallowReview.decision = 'supplement_required';
+  shallowReview.supplementary_queue_item_ids = ['wave1-deepen-topic-shallow-v2'];
+  writeJson(shallowReviewPath, shallowReview);
+  appendTrace(shallowBundleDir, { event: 'wave1_completion', source: 'case-224-shallow' });
+  const shallowGate = runWave1Gate(shallowBundleDir, 'gate-shallow.json');
+
+  const cacheThinBundleDir = newBundle('case-224', 'w1_cache_thin', opts);
+  writeWave1Scaffold(cacheThinBundleDir, {
+    planBasename: 'w1_cache_thin',
+    topics: [{ id: 'tc', slug: 'topic-cache', title: 'Topic Cache' }],
+  });
+  enqueueWorkUnitTask(cacheThinBundleDir, queueItemForWorkUnit({
+    phase: 'wave1',
+    queue_item_id: 'wave1-deepen-topic-cache',
+    topic_slug: 'topic-cache',
+    title: 'Cache-thin Wave1 fixture',
+  }), { fileName: 'case224-cache-thin.json' });
+  const cacheClaim = claimWorkUnitsViaCli(cacheThinBundleDir, { phase: 'wave1' });
+  const cacheThin = submitClaimedWave1Fixture(cacheThinBundleDir, {
+    workId: cacheClaim.claimed_work_ids[0],
+    topicSlug: 'topic-cache',
+    topicId: 'tc',
+    title: 'Topic Cache',
+  });
+  writeFileSync(path.join(cacheThinBundleDir, cacheThin.cache_trails[0], 'page.md'), '# Page\n');
+  appendTrace(cacheThinBundleDir, { event: 'wave1_completion', source: 'case-224-cache-thin' });
+  const cacheThinGate = runWave1Gate(cacheThinBundleDir, 'gate-cache-thin.json');
+
   const checks = [
     { label: 'multi-claim-count', passed: claim.claimed_count === 2 && claim.claimed_work_ids.length === 2, detail: JSON.stringify(claim.claimed_work_ids) },
     { label: 'out-of-order-submit', passed: submissions.every((entry) => entry.submit.ok === true) && submissions[0].record.work_id === claim.claimed_work_ids[1], detail: submissions.map((entry) => entry.record.work_id).join(', ') },
@@ -1819,12 +1872,26 @@ function case224(opts) {
       passed: orphanGate.status === 1 && orphanGate.json?.check?.passed === false && /coverage|bypass|topic-orphan/i.test(JSON.stringify(orphanGate.json.inspect || [])),
       detail: JSON.stringify(orphanGate.json.inspect || []),
     },
+    {
+      label: 'shallow-depth-review-gate-rejects',
+      passed: shallow.submit.ok === true && shallowGate.status === 1 && shallowGate.json?.check?.passed === false && /source_novelty_floor|supplement_required/i.test(JSON.stringify(shallowGate.json.inspect || [])),
+      detail: JSON.stringify(shallowGate.json.inspect || []),
+    },
+    {
+      label: 'cache-thin-source-claim-gate-rejects',
+      passed: cacheThin.submit.ok === true && cacheThinGate.status === 1 && cacheThinGate.json?.check?.passed === false && /source_claim_cache_mapping|placeholder-only|cache_coverage/i.test(JSON.stringify(cacheThinGate.json.inspect || [])),
+      detail: JSON.stringify(cacheThinGate.json.inspect || []),
+    },
   ];
   for (const check of checks) recordCheck(bundleDir, 'case-224', 'wave1-happy-and-fail', check.passed, check.detail, { label: check.label });
-  const verdict = writeVerdict(bundleDir, 'case-224', checks, { extra: { bundle: bundleDir, orphan_bundle: orphanBundleDir } });
+  const verdict = writeVerdict(bundleDir, 'case-224', checks, {
+    extra: { bundle: bundleDir, orphan_bundle: orphanBundleDir, shallow_bundle: shallowBundleDir, cache_thin_bundle: cacheThinBundleDir },
+  });
   maybeCleanup(bundleDir, opts, verdict);
   if (opts.cleanupPass && verdict.ok) {
     rmSync(orphanBundleDir, { recursive: true, force: true });
+    rmSync(shallowBundleDir, { recursive: true, force: true });
+    rmSync(cacheThinBundleDir, { recursive: true, force: true });
   }
   return { bundleDir, verdict };
 }
@@ -1937,6 +2004,11 @@ function writeWave2Artifacts(bundleDir, {
   receiptRefs = [],
 } = {}) {
   const [first, second = first] = topics;
+  const expectedPairs = topics.length > 1 ? (topics.length * (topics.length - 1)) / 2 : 0;
+  const gapStatus = searchRequired ? (receiptRefs.length > 0 ? 'search_submitted' : 'needs_search') : 'no_gap';
+  const unresolvedSearchRequiredCount = gapStatus === 'needs_search' ? 1 : 0;
+  const targetedSearchRequiredCount = searchRequired ? 1 : 0;
+  const targetedSearchSubmittedCount = gapStatus === 'search_submitted' ? 1 : 0;
   mkdirSync(path.join(bundleDir, 'artifacts', 'wave2'), { recursive: true });
   mkdirSync(path.join(bundleDir, 'seed_topics'), { recursive: true });
 
@@ -1995,12 +2067,13 @@ function writeWave2Artifacts(bundleDir, {
     'scan:',
     `  topics: [${topics.map((topic) => topic.slug).join(', ')}]`,
     `  topic_count: ${topics.length}`,
-    '  pair_count_expected: 1',
-    '  pair_count_checked: 1',
+    `  pair_count_expected: ${expectedPairs}`,
+    `  pair_count_checked: ${expectedPairs}`,
     'findings:',
     '  - id: W2F-001',
     searchRequired ? '    type: cross_topic_emergent_question' : '    type: cross_topic_resolution',
-    searchRequired ? '    status: resolved' : '    status: resolved',
+    '    priority: p1',
+    searchRequired && receiptRefs.length === 0 ? '    status: open' : '    status: resolved',
     searchRequired ? '    decision: explore_search' : '    decision: use_existing_evidence',
     `    affected_topics: [${topics.map((topic) => topic.slug).join(', ')}]`,
     `    origin_refs: [artifacts/wave1/${first.slug}/question-list.md]`,
@@ -2010,6 +2083,23 @@ function writeWave2Artifacts(bundleDir, {
     ...(receiptRefs.length > 0 ? [receiptLines] : []),
     '    appears_in_synthesis: true',
     '    hitl2_handoff: false',
+    searchRequired ? '    confidence: medium' : '    confidence: high',
+    searchRequired && receiptRefs.length > 0
+      ? '    independent_backing_refs: [reference/00-cross-market-shift.md]'
+      : `    independent_backing_refs: [artifacts/wave1/${first.slug}/evidence-summary.md]`,
+    `    gap_status: ${gapStatus}`,
+    'synthesis_eligibility:',
+    `  pure_synthesis_eligible: ${unresolvedSearchRequiredCount === 0 ? 'true' : 'false'}`,
+    '  scan_matrix_present: true',
+    '  scan_topic_pair_coverage:',
+    `    - pair: [${topics.map((topic) => topic.slug).join(', ')}]`,
+    '      refs: [artifacts/wave2/cross-topic-ledger.md]',
+    `  unresolved_search_required_count: ${unresolvedSearchRequiredCount}`,
+    `  targeted_search_required_count: ${targetedSearchRequiredCount}`,
+    `  targeted_search_submitted_count: ${targetedSearchSubmittedCount}`,
+    '  explicit_deferral_count: 0',
+    '  profile_params_read: [p0p1_independent_backing]',
+    `  ineligibility_reasons: ${unresolvedSearchRequiredCount > 0 ? '[unresolved_search_required]' : '[]'}`,
     '',
   ].join('\n'));
 

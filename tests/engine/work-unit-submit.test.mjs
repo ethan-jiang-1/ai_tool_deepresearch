@@ -42,6 +42,17 @@ function delegated(id) {
   });
 }
 
+function delegatedWave1(id, topicSlug = 'topic-a') {
+  return makeItem({
+    queue_item_id: id,
+    title: `Delegated ${id}`,
+    targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-evidence-extractor', timeout_ms: 600000 } },
+    kind: 'wave1_topic_deepening',
+    producer_rule: 'wave1_topic_deepening_dispatch',
+    payload: { topic_slug: topicSlug },
+  });
+}
+
 function saveSeedQueue(dir, items) {
   let queue = createQueue(path.basename(dir));
   for (const item of items) queue = enqueue(queue, item);
@@ -83,6 +94,63 @@ function writeValidSubmitFiles(dir, record, { summary = 'done' } = {}) {
     receipt_nonce: record.receipt_nonce,
     summary,
     output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }],
+    cache_trails: [cacheTrail],
+  }, null, 2)}\n`);
+  return resultPath;
+}
+
+function writeValidWave1SubmitFiles(dir, record, {
+  topicSlug = 'topic-a',
+  sourceUrl = 'https://example.com/wave1-new-source',
+  includeClaimCacheRefs = true,
+  acceptedSourceUrls = [sourceUrl],
+  claimStatus = 'accepted',
+} = {}) {
+  const referencePath = `artifacts/wave1/${topicSlug}/reference/00-new-source.md`;
+  const evidencePath = `artifacts/wave1/${topicSlug}/evidence-summary.md`;
+  const questionPath = `artifacts/wave1/${topicSlug}/question-list.md`;
+  for (const outputPath of [referencePath, evidencePath, questionPath]) {
+    mkdirSync(path.dirname(path.join(dir, outputPath)), { recursive: true });
+    writeFileSync(path.join(dir, outputPath), `# ${path.basename(outputPath)}\n\nEvidence for ${topicSlug}.\n`);
+  }
+
+  const cacheTrail = `_cache/wave1/primary/${record.queue_item_id}/new-source`;
+  mkdirSync(path.join(dir, cacheTrail), { recursive: true });
+  writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
+  writeFileSync(path.join(dir, cacheTrail, 'page.md'), `# Captured Page\n\nFetched content capture for ${sourceUrl}. This body preserves the source text used by the Wave1 work unit.\n`);
+  writeFileSync(path.join(dir, cacheTrail, 'meta.json'), `${JSON.stringify({ url: sourceUrl }, null, 2)}\n`);
+
+  writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
+    event: 'work_done',
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    ts: '2026-07-06T00:00:00.000Z',
+  })}\n`);
+
+  const resultPath = path.join(dir, '_tmp', `${record.work_id}.result.json`);
+  mkdirSync(path.dirname(resultPath), { recursive: true });
+  writeFileSync(resultPath, `${JSON.stringify({
+    schema_version: 'work-unit.result.v1',
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    summary: 'wave1 done',
+    output_files: [
+      { path: referencePath, role: 'reference', source_url: sourceUrl, source_slug: 'new-source' },
+      { path: evidencePath, role: 'evidence_summary' },
+      { path: questionPath, role: 'question_list' },
+    ],
+    source_claims: [{
+      url: sourceUrl,
+      source_ref: referencePath,
+      acceptance_status: claimStatus,
+      is_new_vs_wave0: true,
+      cache_trail_refs: includeClaimCacheRefs ? [cacheTrail] : [],
+    }],
+    accepted_source_urls: acceptedSourceUrls,
     cache_trails: [cacheTrail],
   }, null, 2)}\n`);
   return resultPath;
@@ -458,6 +526,93 @@ describe('submitWorkUnit', () => {
       const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
       assert.equal(submitted.ok, true);
       assert.equal(ledgerRows(dir).length, 1);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('accepts Wave1 structured source claims backed by submitted cache trails', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegatedWave1('wave1-topic-a')]);
+      claimWorkUnits(dir, { phase: 'wave1', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
+      const resultPath = writeValidWave1SubmitFiles(dir, record);
+
+      const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      const [row] = readWorkUnitLedgerRows(dir);
+      assert.equal(row.source_claims.length, 1);
+      assert.deepEqual(row.accepted_source_urls, ['https://example.com/wave1-new-source']);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('rejects accepted_source_urls without matching accepted Wave1 source claims', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegatedWave1('wave1-topic-a')]);
+      claimWorkUnits(dir, { phase: 'wave1', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
+      const resultPath = writeValidWave1SubmitFiles(dir, record, {
+        acceptedSourceUrls: ['https://example.com/wave1-new-source', 'https://example.com/unclaimed'],
+      });
+
+      const rejected = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.status, 'claimed');
+      assert.equal(rejected.last_submit_rejection.reason_code, 'invalid_result');
+      assert.match(rejected.inspect.join('\n'), /no matching accepted source_claims/);
+      assert.throws(() => ledgerRows(dir), /ENOENT/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('rejects accepted Wave1 source claims without cache refs or degraded capture', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegatedWave1('wave1-topic-a')]);
+      claimWorkUnits(dir, { phase: 'wave1', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
+      const resultPath = writeValidWave1SubmitFiles(dir, record, { includeClaimCacheRefs: false });
+
+      const rejected = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.status, 'claimed');
+      assert.equal(rejected.last_submit_rejection.reason_code, 'missing_cache');
+      assert.match(rejected.inspect.join('\n'), /requires cache_trail_refs/);
+      assert.throws(() => ledgerRows(dir), /ENOENT/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('rejects source claims for work-unit kinds whose output contract disallows them', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      const result = readResult(resultPath);
+      result.source_claims = [{
+        url: 'https://example.com/source',
+        source_ref: result.output_files[0].path,
+        acceptance_status: 'accepted',
+        is_new_vs_wave0: true,
+        cache_trail_refs: result.cache_trails,
+      }];
+      result.accepted_source_urls = ['https://example.com/source'];
+      writeResult(resultPath, result);
+
+      const rejected = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.status, 'claimed');
+      assert.equal(rejected.last_submit_rejection.reason_code, 'invalid_result');
+      assert.match(rejected.inspect.join('\n'), /not allowed by this work-unit output contract/);
+      assert.throws(() => ledgerRows(dir), /ENOENT/);
     } finally {
       cleanup(dir);
     }

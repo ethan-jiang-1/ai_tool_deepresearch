@@ -88,6 +88,10 @@ export const DEFAULT_KIND_CONTRACTS = Object.freeze({
         allowed_roles: ['reference', 'evidence_summary', 'question_list', 'other'],
         reference_requires_source_url: true,
       }),
+      source_claims: Object.freeze({
+        allowed: true,
+        accepted_requires_cache_or_degraded: true,
+      }),
     }),
     cache_policy: Object.freeze({
       required: true,
@@ -192,6 +196,10 @@ function defaultKindContract(kind) {
         required: true,
         allowed_roles: ['reference', 'evidence_summary', 'source_yaml', 'question_list', 'other'],
         reference_requires_source_url: true,
+      },
+      source_claims: {
+        allowed: kind === 'wave1_topic_deepening',
+        accepted_requires_cache_or_degraded: kind === 'wave1_topic_deepening',
       },
     },
     cache_policy: {
@@ -470,6 +478,8 @@ function resultSchemaDocument(manifest) {
       receipt_nonce: { const: manifest.receipt_nonce },
       summary: { type: 'string' },
       output_files: { type: 'array', items: { type: 'object' } },
+      source_claims: { type: 'array', items: { type: 'object' } },
+      accepted_source_urls: { type: 'array', items: { type: 'string', format: 'uri' } },
       cache_trails: { type: 'array', items: { type: 'string' } },
     },
     additionalProperties: false,
@@ -577,6 +587,10 @@ function taskMarkdown(manifest, bundleDir) {
     '```json',
     jsonBlock(manifest.output_contract),
     '```',
+    '',
+    ...(manifest.kind === 'wave1_topic_deepening'
+      ? ['For Wave1 topic deepening, include structured `source_claims[]` and `accepted_source_urls[]` in `result.json`; prose links alone are not accepted source coverage.']
+      : []),
     '',
     '## Cache Policy',
     '',
@@ -905,6 +919,90 @@ function validateCacheTrails(bundleDir, result, cachePolicy) {
   }
 }
 
+const ACCEPTED_SOURCE_CLAIM_STATUSES = new Set(['accepted', 'countable', 'accepted_countable']);
+
+function acceptedClaimStatus(status) {
+  return ACCEPTED_SOURCE_CLAIM_STATUSES.has(String(status || '').trim().toLowerCase());
+}
+
+function normalizeUrlForSourceCache(url) {
+  try {
+    const parsed = new URL(String(url || '').trim());
+    parsed.hash = '';
+    return parsed.toString();
+  } catch {
+    return String(url || '').trim();
+  }
+}
+
+function cacheTrailMapping(bundleDir, trail) {
+  const cacheDir = path.join(bundleDir, trail);
+  const pageText = readFileSync(path.join(cacheDir, 'page.md'), 'utf-8');
+  const meta = readOptionalJson(path.join(cacheDir, 'meta.json'));
+  const urls = [meta?.url, meta?.source_url, meta?.final_url, meta?.fetched_url]
+    .filter(Boolean)
+    .map(normalizeUrlForSourceCache);
+  return {
+    degraded: hasExplicitDegradedCapture(pageText, meta),
+    urls,
+    source_slug: meta?.source_slug || null,
+  };
+}
+
+function validateSourceClaims(bundleDir, result, outputContract) {
+  const claims = result.source_claims || [];
+  const acceptedUrls = result.accepted_source_urls || [];
+  if (claims.length === 0 && acceptedUrls.length === 0) return;
+
+  const contract = outputContract?.source_claims || {};
+  if (contract.allowed !== true) {
+    throw new Error('source_claims[] / accepted_source_urls[] are not allowed by this work-unit output contract');
+  }
+
+  const outputPaths = new Set((result.output_files || []).map((entry) => entry.path));
+  const cacheTrails = new Set(result.cache_trails || []);
+  const acceptedClaimUrls = new Set();
+
+  for (const claim of claims) {
+    if (!acceptedClaimStatus(claim.acceptance_status)) continue;
+    acceptedClaimUrls.add(claim.url);
+
+    if (!isSafeBundleRelative(claim.source_ref)) {
+      throw new Error(`accepted source claim has unsafe source_ref: ${claim.source_ref}`);
+    }
+    if (!outputPaths.has(claim.source_ref)) {
+      throw new Error(`accepted source claim source_ref is not declared in output_files[]: ${claim.source_ref}`);
+    }
+
+    const refs = Array.isArray(claim.cache_trail_refs) ? claim.cache_trail_refs.filter(Boolean) : [];
+    const degradedRef = claim.degraded_capture_ref || null;
+    if (contract.accepted_requires_cache_or_degraded === true && refs.length === 0 && !degradedRef) {
+      throw new Error(`accepted source claim requires cache_trail_refs[] or degraded_capture_ref: ${claim.url}`);
+    }
+
+    const allRefs = [...refs, ...(degradedRef ? [degradedRef] : [])];
+    for (const trail of allRefs) {
+      if (!cacheTrails.has(trail)) {
+        throw new Error(`accepted source claim cache/degraded ref is not declared in cache_trails[]: ${trail}`);
+      }
+      const mapping = cacheTrailMapping(bundleDir, trail);
+      if (trail === degradedRef && !mapping.degraded) {
+        throw new Error(`degraded_capture_ref lacks explicit degraded/fetch-failure record: ${trail}`);
+      }
+      const normalizedClaimUrl = normalizeUrlForSourceCache(claim.url);
+      if (mapping.urls.length > 0 && !mapping.urls.includes(normalizedClaimUrl)) {
+        throw new Error(`accepted source claim cache trail maps to a different URL for ${claim.url}: ${trail}`);
+      }
+    }
+  }
+
+  for (const url of acceptedUrls) {
+    if (!acceptedClaimUrls.has(url)) {
+      throw new Error(`accepted_source_urls[] entry has no matching accepted source_claims[] entry: ${url}`);
+    }
+  }
+}
+
 function readOptionalJson(filePath) {
   try {
     return JSON.parse(readFileSync(filePath, 'utf-8'));
@@ -1078,6 +1176,8 @@ function buildLedgerRow({ record, result, resultHash, declaredAt }) {
     runtime_receipt_ref: record.paths.runtime_receipt_ref,
     receipt_nonce: record.receipt_nonce,
     output_files: result.output_files || [],
+    source_claims: result.source_claims || [],
+    accepted_source_urls: result.accepted_source_urls || [],
     cache_trails: result.cache_trails || [],
     result_hash: resultHash,
   };
@@ -1095,7 +1195,7 @@ export function computeWorkUnitLedgerRecordHash(row) {
 export function readWorkUnitLedgerRows(bundleDir) {
   return readLedgerRows(bundleDir).map((row) => {
     const parsed = WorkUnitLedgerRecordSchema.parse(row);
-    const expected = computeWorkUnitLedgerRecordHash(parsed);
+    const expected = computeWorkUnitLedgerRecordHash(row);
     if (parsed.ledger_record_hash !== expected) {
       throw new Error(`ledger_record_hash mismatch for ${parsed.work_id}`);
     }
@@ -1112,7 +1212,7 @@ function reasonCodeForSubmit(message) {
   if (/receipt_nonce|nonce|receipt mismatch/i.test(message)) return 'nonce_mismatch';
   if (/result\/index mismatch.*work_id|Unknown work_id|work_id/i.test(message)) return 'wrong_work_id';
   if (/output_files|declared output file/i.test(message)) return 'missing_output';
-  if (/cache_trails|cache trail/i.test(message)) return 'missing_cache';
+  if (/cache_trails|cache trail|degraded_capture_ref|cache\/degraded ref/i.test(message)) return 'missing_cache';
   if (/snapshot hash|stale/i.test(message)) return 'stale_snapshot';
   if (/duplicate submit/i.test(message)) return 'duplicate_content_mismatch';
   return 'invalid_result';
@@ -1252,6 +1352,7 @@ function prepareWorkUnitSubmit(bundleDir, { work_id, resultPath }) {
   const queue = validateQueueBindingForSubmit(bundleDir, record, manifest);
   validateOutputFiles(bundleDir, result, manifest.output_contract);
   validateCacheTrails(bundleDir, result, manifest.cache_policy);
+  validateSourceClaims(bundleDir, result, manifest.output_contract);
   const ledgerRow = buildLedgerRow({ record, result, resultHash, declaredAt: now() });
   return { duplicate: false, index, record, manifest, queue, result, result_hash: resultHash, ledger_row: ledgerRow, ledger_record_hash: ledgerRow.ledger_record_hash };
 }

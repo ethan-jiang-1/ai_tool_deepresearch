@@ -39,7 +39,7 @@ Create the Wave2 artifact group:
 - `artifacts/wave2/cross-topic-ledger.md`
 - `artifacts/wave2/finding-index.yaml`
 
-Wave2 is cross-topic cognition, not just prose. It triages findings, records search decisions, and routes new evidence gaps through work units.
+Wave2 is cross-topic cognition, not just prose. It first builds scan/triage/gap-analysis process evidence, then writes synthesis as a projection of that work. It triages findings, records search decisions, and routes new evidence gaps through work units.
 
 ## 2. Required Inputs
 
@@ -69,7 +69,7 @@ If queue is empty, enqueue:
     "file:artifacts/wave2/cross-topic-ledger.md",
     "file:artifacts/wave2/finding-index.yaml"
   ],
-  "action": "Read existing Wave0/Wave1 evidence, build cross-topic scan matrix, triage findings, write synthesis.md, cross-topic-ledger.md, and finding-index.yaml. Do not perform new external search inside this task."
+  "action": "Read existing Wave0/Wave1 evidence, build cross-topic scan matrix, triage findings, record gap_status and synthesis_eligibility, write synthesis.md, cross-topic-ledger.md, and finding-index.yaml. Do not perform new external search inside this task."
 }
 ```
 
@@ -105,7 +105,7 @@ If queue is empty, enqueue:
   "producer_rule": "targeted_evidence_search",
   "priority_class": "P1_state_or_gate_repair",
   "required_receipts": [],
-  "action": "Search only the assigned finding gap. Write reference/00-cross-<slug>.md and leaf cache trails when new evidence is found. Update finding-index.yaml refs/status. Return output_files[] and cache_trails[] for work-unit submit.",
+  "action": "Search only the assigned finding gap. Write reference/00-cross-<slug>.md and leaf cache trails when new evidence is found. Return output_files[] and cache_trails[] for work-unit submit. The Phase Agent updates finding-index.yaml refs/status/gap_status after submitted evidence is accepted.",
   "payload": {
     "finding_id": "{finding_id}",
     "wave": 2
@@ -121,7 +121,7 @@ L0 checkpoint: schema/file readiness. Use local parsing and gate/queue/check out
 
 L1 checkpoint: provenance and targeted-evidence coverage. Use `operate-work-unit submit`, Wave2 gate JSON, and work-unit inspection feedback to confirm delegated targeted evidence is covered by submitted ledger rows.
 
-Convergence criteria: no P0/P1 finding remains without a decision, no finding marked `exploit_search` or `explore_search` lacks either submitted targeted evidence or explicit deferral, and all gate `inspect` items are repaired or consciously routed to HITL2/final limitations.
+Convergence criteria: every finding has a decision, no `priority: p0` or `priority: p1` finding remains under-backed without submitted evidence or explicit routing, no finding marked `exploit_search` or `explore_search` lacks either submitted targeted evidence or a transition to explicit deferral/internal-data/record-only routing, `synthesis_eligibility.pure_synthesis_eligible` is true only when unresolved search gaps are zero, and all gate `inspect` items are repaired or consciously routed to HITL2/final limitations.
 
 #### 3.2.1 Pure Synthesis
 
@@ -131,8 +131,9 @@ For the synthesis queue item, the Phase Agent:
 2. Builds a cross-topic scan matrix with dimensions such as `shared_pattern`, `contradiction`, `resolution_opportunity`, and `emergent_question`.
 3. Writes all findings into `cross-topic-ledger.md` and `finding-index.yaml`.
 4. Sets each finding decision to one of: `use_existing_evidence`, `exploit_search`, `explore_search`, `defer_hitl2`, `requires_internal_data`, `record_only`.
-5. Writes `synthesis.md` as a narrative projection grounded in existing references, citing `W2F-xxx` finding ids.
-6. Completes the non-delegated queue item through the normal queue path.
+5. Sets `priority`, `confidence`, `independent_backing_refs`, `gap_status`, and top-level `synthesis_eligibility`.
+6. Writes `synthesis.md` as a narrative projection grounded in existing references, citing `W2F-xxx` finding ids.
+7. Completes the non-delegated queue item through the normal queue path only after scan/triage/gap analysis is represented in ledger/index.
 
 No delegated ledger row is required for pure synthesis artifacts.
 
@@ -153,7 +154,13 @@ Targeted evidence Sub-agents must:
 - Write cache trails under an assigned `_cache/wave2/...` leaf directory.
 - Bind receipt/result identity to `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
 
-Wave2 gate fails if targeted evidence/reference outputs exist without submitted work-unit coverage.
+After submit, update the finding:
+
+- keep `decision: exploit_search` or `decision: explore_search` only when `subagent_receipt_refs[]` is non-empty and `gap_status: search_submitted`;
+- otherwise transition to `decision: defer_hitl2`, `requires_internal_data`, or `record_only` with matching `gap_status`;
+- never leave `gap_status: needs_search` while declaring pure synthesis eligible.
+
+Wave2 gate fails if targeted evidence/reference outputs exist without submitted work-unit coverage, or if search-required findings lack receipts or explicit routing.
 
 #### 3.2.3 Backfill
 
@@ -178,7 +185,24 @@ Before gate, ensure `cross-topic-ledger.md` contains the fixed synthesis control
 - Exploration Decisions
 - HITL2 Handoff
 
-Ensure `finding-index.yaml` records at least `id`, `type`, `status`, `decision`, and refs/origin fields. Finding ids use `W2F-xxx`; finding types include `wave1_legacy_question`, `cross_topic_resolution`, and `cross_topic_emergent_question`. Finding lifecycle status should move through `candidate`, `classified`, and `decision_made` instead of jumping from raw prose to final synthesis.
+Ensure `finding-index.yaml` records at least `id`, `type`, `priority`, `status`, `decision`, `affected_topics`, `origin_refs`, `trigger_refs`, `search_required`, `subagent_receipt_refs`, `appears_in_synthesis`, `hitl2_handoff`, `confidence`, `independent_backing_refs`, and `gap_status` per finding. Finding ids use `W2F-xxx`; finding types include `wave1_legacy_question`, `cross_topic_resolution`, and `cross_topic_emergent_question`.
+
+Also include top-level `synthesis_eligibility`:
+
+```yaml
+synthesis_eligibility:
+  pure_synthesis_eligible: true
+  scan_matrix_present: true
+  scan_topic_pair_coverage: []
+  unresolved_search_required_count: 0
+  targeted_search_required_count: 0
+  targeted_search_submitted_count: 0
+  explicit_deferral_count: 0
+  profile_params_read: []
+  ineligibility_reasons: []
+```
+
+`gap_status` values are closed: `no_gap`, `needs_search`, `search_submitted`, `deferred_hitl2`, `requires_internal_data`, `record_only`.
 
 Backfill placeholders expected to be replaced before gate include `__BACKFILL_WAVE2_JUDGMENT__` and `__BACKFILL_PENDING_QUESTIONS__`.
 
@@ -194,7 +218,7 @@ Before gate, the Phase Agent checks the five Wave2 profile parameters:
 | 4 | `wave2_cross_topic_depth` | Each topic has enough cross-topic scan connections. |
 | 5 | `wave2_emergent_search_rounds` | Required emergent search rounds are completed or explicitly deferred. |
 
-These checks are Agent discipline. The gate verifies structural artifacts, references, links, trace expectations, and submitted work-unit coverage for delegated targeted evidence.
+These checks are Agent discipline. The gate verifies structural artifacts, references, links, trace expectations, `finding-index.yaml` consistency, pure-synthesis eligibility, and submitted work-unit coverage for delegated targeted evidence.
 
 ## 4. Expected Artifacts
 
@@ -234,7 +258,7 @@ If quality self-check or gate output identifies a search/evidence gap:
 3. Update `finding-index.yaml` and `cross-topic-ledger.md`.
 4. Rerun self-check and gate.
 
-If a gap cannot be resolved after bounded attempts, record the limitation and route it to HITL2 or final limitations. Do not invent references.
+If a gap cannot be resolved after bounded attempts, record the limitation and route it to HITL2, internal-data handling, or record-only handling. Do not invent references. Do not declare `pure_synthesis_eligible: true` until `gap_status` and counts are consistent.
 
 ## 8. Stop Behavior
 
@@ -248,6 +272,8 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 - 禁止手写 result JSON, runtime receipts, ledger rows, or trace events.
 - 禁止把 queue/index/filesystem presence treated as delegated evidence authority without submitted ledger rows.
 - 禁止把 unresolved P0/P1 findings silently dropped from `finding-index.yaml`.
+- 禁止把 under-backed `priority: p0` / `priority: p1` finding declared pure-synthesis-eligible without submitted evidence or explicit routing.
+- 禁止让 `gap_status: needs_search` coexist with `synthesis_eligibility.pure_synthesis_eligible: true`.
 - 禁止保留 `__BACKFILL_WAVE2_JUDGMENT__` or `__BACKFILL_PENDING_QUESTIONS__` after completed backfill.
 - 禁止从 synthesis prose alone 回填 Wave2; backfill must preserve W2F ids, return-map fields, and ledger/index/source refs.
 - 禁止 inventing references when targeted search fails; record limitation or route to HITL2.

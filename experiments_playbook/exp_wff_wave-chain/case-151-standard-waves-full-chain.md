@@ -3,14 +3,14 @@ schema: command-experiment/v1
 experiment: wff-wave-chain
 case: case-151-standard-waves-full-chain
 weight: light
-case_goal: "Prove seed-topics -> Wave0 -> Wave1 -> Wave2 gates pass sequentially only after delegated phases are drained through work-unit claim/submit."
+case_goal: "Prove seed-topics -> Wave0 -> Wave1 depth review -> Wave2 scan/eligibility gates pass sequentially only after delegated phases are drained through work-unit claim/submit."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-151_waves_full_chain_*
 trace: dpt_disp_case-151_waves_full_chain_*/rb_trace.jsonl
 verdict: trace-jsonl
-req: RWE-001, RWE-005, AGQ-014
+req: RWE-001, RWE-004, RWE-005, AGQ-014
 ---
 
 ## Execution Contract
@@ -315,7 +315,7 @@ run(['DPT_FRAMEWORK/cli/operate-queue.mjs', 'claim', bundle, '--actor', 'main-ag
 mkdirSync(path.join(bundle, 'artifacts/wave2'), { recursive: true });
 writeFileSync(path.join(bundle, 'artifacts/wave2/synthesis.md'), '# Cross-Topic Synthesis\n\nW2F-001 uses [Topic A evidence](../wave1/topic-a/evidence-summary.md). No delegated Wave2 targeted evidence is needed.\n');
 writeFileSync(path.join(bundle, 'artifacts/wave2/cross-topic-ledger.md'), '# Cross-Topic Ledger\n\n## Cross-Topic Scan Matrix\n\n| pair_id | topics | checked_dimensions | finding_ids | notes |\n| --- | --- | --- | --- | --- |\n| P01 | topic-a | shared_pattern | W2F-001 | Pure synthesis |\n\n## Wave1 Legacy Questions\n\n- topic-a controlled question.\n\n## Cross-Topic Resolutions\n\n- Existing evidence is enough.\n\n## Emergent Cross-Topic Questions\n\n- None.\n\n## Exploration Decisions\n\n| W2F-001 | use_existing_evidence | no delegated row needed |\n\n## HITL2 Handoff\n\n- None.\n');
-writeFileSync(path.join(bundle, 'artifacts/wave2/finding-index.yaml'), 'version: "0.1"\nsource_layer: wave2_cross_topic\nledger: artifacts/wave2/cross-topic-ledger.md\nsynthesis: artifacts/wave2/synthesis.md\nscan:\n  topics: [topic-a]\n  topic_count: 1\n  pair_count_expected: 1\n  pair_count_checked: 1\nfindings:\n  - id: W2F-001\n    type: cross_topic_resolution\n    status: resolved\n    decision: use_existing_evidence\n    affected_topics: [topic-a]\n    origin_refs: [artifacts/wave1/topic-a/question-list.md]\n    trigger_refs: [artifacts/wave1/topic-a/evidence-summary.md]\n    search_required: false\n    subagent_receipt_refs: []\n    appears_in_synthesis: true\n    hitl2_handoff: false\n');
+writeFileSync(path.join(bundle, 'artifacts/wave2/finding-index.yaml'), 'version: "0.1"\nsource_layer: wave2_cross_topic\nledger: artifacts/wave2/cross-topic-ledger.md\nsynthesis: artifacts/wave2/synthesis.md\nscan:\n  topics: [topic-a]\n  topic_count: 1\n  pair_count_expected: 0\n  pair_count_checked: 0\nfindings:\n  - id: W2F-001\n    type: cross_topic_resolution\n    priority: p2\n    status: resolved\n    decision: use_existing_evidence\n    affected_topics: [topic-a]\n    origin_refs: [artifacts/wave1/topic-a/question-list.md]\n    trigger_refs: [artifacts/wave1/topic-a/evidence-summary.md]\n    search_required: false\n    subagent_receipt_refs: []\n    appears_in_synthesis: true\n    hitl2_handoff: false\n    confidence: medium\n    independent_backing_refs: [artifacts/wave1/topic-a/evidence-summary.md]\n    gap_status: no_gap\nsynthesis_eligibility:\n  pure_synthesis_eligible: true\n  scan_matrix_present: true\n  scan_topic_pair_coverage: []\n  unresolved_search_required_count: 0\n  targeted_search_required_count: 0\n  targeted_search_submitted_count: 0\n  explicit_deferral_count: 0\n  profile_params_read: [p0p1_independent_backing]\n  ineligibility_reasons: []\n');
 writeFileSync(path.join(bundle, 'seed_topics/topic-a.md'), '# Topic A\n\n## Wave2 Judgment\nExisting Wave1 evidence resolves W2F-001.\n\n## Pending Questions\n- [resolved] Controlled full-chain question.\n');
 writeFileSync(path.join(bundle, 'case-151-wave2-synthesis-result.json'), JSON.stringify({ queue_item_id: 'wave2-synthesis', receipt: 'file:artifacts/wave2/synthesis.md', summary: 'pure synthesis complete' }, null, 2));
 run(['DPT_FRAMEWORK/cli/operate-queue.mjs', 'complete', bundle, '--result', path.join(bundle, 'case-151-wave2-synthesis-result.json')]);

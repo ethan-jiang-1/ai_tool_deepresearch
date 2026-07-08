@@ -56,6 +56,9 @@ function createBundle(name) {
 
   // Create wave2 directory
   mkdirSync(join(dir, 'artifacts', 'wave2'), { recursive: true });
+  writeFileSync(join(dir, 'rb_profile.yaml'), `research_style_params:
+  p0p1_independent_backing: 2
+`);
 
   // Create seed_topics with backfill tokens pre-embedded
   mkdirSync(join(dir, 'seed_topics'), { recursive: true });
@@ -143,6 +146,17 @@ scan:
   pair_count_expected: 0
   pair_count_checked: 0
 findings: []
+synthesis_eligibility:
+  pure_synthesis_eligible: true
+  scan_matrix_present: true
+  scan_topic_pair_coverage: []
+  unresolved_search_required_count: 0
+  targeted_search_required_count: 0
+  targeted_search_submitted_count: 0
+  explicit_deferral_count: 0
+  profile_params_read:
+    - p0p1_independent_backing
+  ineligibility_reasons: []
 `);
 }
 
@@ -241,9 +255,36 @@ scan:
 findings:
   - id: W2F-001
     type: cross_topic_resolution
+    priority: p1
     status: resolved
     decision: use_existing_evidence
     affected_topics: [topic-a, topic-b]
+    origin_refs:
+      - artifacts/wave1/topic-a/question-list.md
+    trigger_refs:
+      - artifacts/wave1/topic-b/evidence-summary.md
+    search_required: false
+    subagent_receipt_refs: []
+    appears_in_synthesis: true
+    hitl2_handoff: false
+    confidence: high
+    independent_backing_refs:
+      - artifacts/wave1/topic-a/evidence-summary.md
+      - artifacts/wave1/topic-b/evidence-summary.md
+    gap_status: no_gap
+synthesis_eligibility:
+  pure_synthesis_eligible: true
+  scan_matrix_present: true
+  scan_topic_pair_coverage:
+    - pair: [topic-a, topic-b]
+      refs: [artifacts/wave2/cross-topic-ledger.md]
+  unresolved_search_required_count: 0
+  targeted_search_required_count: 0
+  targeted_search_submitted_count: 0
+  explicit_deferral_count: 0
+  profile_params_read:
+    - p0p1_independent_backing
+  ineligibility_reasons: []
 `);
 }
 
@@ -266,6 +307,67 @@ function submitWave2CrossReference(dir) {
       path: '_cache/wave2/primary/cross-market/market-shift',
       url: 'https://example.com/research/market-shift',
     }],
+  });
+}
+
+function writeIndexObject(dir, value) {
+  writeFileSync(join(dir, 'artifacts/wave2/finding-index.yaml'), `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function wave2Finding(overrides = {}) {
+  return {
+    id: 'W2F-001',
+    type: 'cross_topic_emergent_question',
+    priority: 'p1',
+    status: 'open',
+    decision: 'explore_search',
+    affected_topics: ['topic-a', 'topic-b'],
+    origin_refs: ['artifacts/wave1/topic-a/question-list.md'],
+    trigger_refs: ['artifacts/wave1/topic-a/evidence-summary.md'],
+    search_required: true,
+    subagent_receipt_refs: [],
+    appears_in_synthesis: true,
+    hitl2_handoff: false,
+    confidence: 'medium',
+    independent_backing_refs: ['artifacts/wave1/topic-a/evidence-summary.md'],
+    gap_status: 'needs_search',
+    ...overrides,
+  };
+}
+
+function writeWave2ContractIndex(dir, {
+  scanMatrixPresent = true,
+  pairCountChecked = 0,
+  findings = [],
+  eligibility = {},
+} = {}) {
+  const needsSearchCount = findings.filter((finding) => finding.gap_status === 'needs_search').length;
+  const targetedRequiredCount = findings.filter((finding) => ['exploit_search', 'explore_search'].includes(finding.decision)).length;
+  const targetedSubmittedCount = findings.filter((finding) => finding.gap_status === 'search_submitted').length;
+  const explicitDeferralCount = findings.filter((finding) => ['defer_hitl2', 'requires_internal_data', 'record_only'].includes(finding.decision)).length;
+  writeIndexObject(dir, {
+    version: '0.1',
+    source_layer: 'wave2_cross_topic',
+    ledger: 'artifacts/wave2/cross-topic-ledger.md',
+    synthesis: 'artifacts/wave2/synthesis.md',
+    scan: {
+      topic_count: 1,
+      pair_count_expected: 0,
+      pair_count_checked: pairCountChecked,
+    },
+    findings,
+    synthesis_eligibility: {
+      pure_synthesis_eligible: needsSearchCount === 0,
+      scan_matrix_present: scanMatrixPresent,
+      scan_topic_pair_coverage: pairCountChecked > 0 ? [{ pair: ['topic-a', 'topic-b'], refs: ['artifacts/wave2/cross-topic-ledger.md'] }] : [],
+      unresolved_search_required_count: needsSearchCount,
+      targeted_search_required_count: targetedRequiredCount,
+      targeted_search_submitted_count: targetedSubmittedCount,
+      explicit_deferral_count: explicitDeferralCount,
+      profile_params_read: ['p0p1_independent_backing'],
+      ineligibility_reasons: needsSearchCount > 0 ? ['unresolved_search_required'] : [],
+      ...eligibility,
+    },
   });
 }
 
@@ -483,5 +585,65 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected submitted cross-reference work-unit pass, got inspect: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('16. fails when synthesis exists but scan/triage projection is missing', () => {
+    const dir = createBundle(unique('noscan'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    writeWave2ContractIndex(dir, { scanMatrixPresent: false });
+    createMinBackfill(dir);
+    writeWave2Trace(dir);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('scan_matrix_present') || m.includes('scan/triage')),
+      `Expected missing scan/triage failure: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('17. fails when search-required finding has no receipt or explicit deferral', () => {
+    const dir = createBundle(unique('searchrequired'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    writeWave2ContractIndex(dir, { findings: [wave2Finding()] });
+    createMinBackfill(dir);
+    writeWave2Trace(dir);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('search_required') || m.includes('needs_search') || m.includes('delegated evidence search')),
+      `Expected unresolved search-required failure: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('18. passes targeted evidence receipt when backed by submitted work-unit row', () => {
+    const dir = createBundle(unique('targetreceipt'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    const { record, submitted } = submitWave2CrossReference(dir);
+    assert.equal(submitted.ok, true);
+    writeWave2ContractIndex(dir, {
+      findings: [wave2Finding({
+        status: 'resolved',
+        subagent_receipt_refs: [record.paths.runtime_receipt_ref],
+        gap_status: 'search_submitted',
+      })],
+    });
+    createMinBackfill(dir);
+    writeWave2Trace(dir);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, true, `Expected targeted receipt pass, got inspect: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('19. passes legal pure synthesis with zero delegated targeted rows', () => {
+    const dir = createBundle(unique('pure'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    writeWave2ContractIndex(dir, { findings: [] });
+    createMinBackfill(dir);
+    writeWave2Trace(dir);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, true, `Expected pure synthesis pass, got inspect: ${JSON.stringify(output.inspect)}`);
   });
 });

@@ -12,6 +12,15 @@ import {
   getDeclaredReferencePaths,
 } from './gate-helpers-readers.mjs';
 
+function normalizeUrl(url) {
+  try {
+    const parsed = new URL(String(url || '').trim());
+    parsed.hash = '';
+    return parsed.toString();
+  } catch {
+    return String(url || '').trim();
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Markdown Text Utilities

@@ -126,8 +126,9 @@ Return-map inspectors are diagnostic only. Missing `evidence_meaning`, `relation
 
 Wave1 为每个 topic 产出 paired artifacts。Gate 通过 `pattern_match` 规则验证 structure（section 标题、source URL、key finding pattern、backfill token absence）。
 
-- **`artifacts/wave1/<topic>/evidence-summary.md`**：Per-topic evidence summary（Markdown）。§Source URLs（Markdown link + retrieved date）、§Key Findings（编号条目，bold prefix 必须是 `**机制理解**:` 或 `**趋势观察**:`）、§Open Questions（编号条目，状态标签必须是 `[开放]` / `[部分解答]` / `[涌现]`——不允许 topic-descriptor 标签如 `[Bridge gap]`）。**Schema**：模板级约束（无独立 Zod contract）；structure 由 `subagent-dpt-evidence-extractor.md` §3.1 定义。
+- **`artifacts/wave1/<topic>/evidence-summary.md`**：Per-topic evidence summary（Markdown）。§Source URLs（Markdown link + retrieved date）、§Key Findings（编号条目，bold prefix 必须是 `**机制理解**:` 或 `**趋势观察**:`）、§Open Questions（编号条目，状态标签必须是 `[开放]` / `[部分解答]` / `[涌现]`——不允许 topic-descriptor 标签如 `[Bridge gap]`）。**Schema**：模板级约束（无独立 Zod contract）；structure 由 `subagent-dpt-evidence-extractor.md` §3.1 定义。Markdown links are reader-facing; accepted source coverage comes from submitted structured `source_claims[]`.
 - **`artifacts/wave1/<topic>/question-list.md`**：Per-topic exploration ledger（Markdown，四节结构，顺序固定）。§1 Topic Investigation Targets（表：target_id / question / origin / status / backing_refs / next_action）。§2 Question Reconciliation（用 `[已解决]` / `[部分进展]` / `[仍开放]` / `[需内部数据]` 标记状态变化）。§3 Emergent Question Protocol（4 项检查：new_concept / contradiction / missing_information_gap / noise_pattern，每项 checked + trigger_refs）。§4 Exploration / Exploitation Decision（decision + trigger_refs + unresolved_questions + queue_consequence + next_action）。详见 `subagent-dpt-evidence-extractor.md` §3.2 和 `phase-wave1.md` §3.2.1。
+- **`artifacts/wave1/<topic>/depth-review.yaml`**：Phase-owned deterministic projection written after successful submit. It records reviewed submitted work-unit refs, Wave0 source URLs, submitted structured source claims, new source URLs, `new_source_floor`, depth dimensions, profile checks, closed `decision` (`accept` / `supplement_required` / `blocked_contract`), and supplementary queue ids. It cannot create delegated coverage; every reviewed ref must bind back to submitted work-unit rows.
 
 ## Artifacts — Wave2 (Cross-Topic Synthesis)
 
@@ -157,7 +158,7 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 
 - **角色**：Ledger 的结构化影子，让 JS engine 能做确定性反馈（不承载长篇 reasoning）
 - **格式**：YAML
-- **Top-level keys**：`version`（"0.1"）/ `source_layer`（"wave2_cross_topic"）/ `ledger` / `synthesis` / `scan` / `findings`
+- **Top-level keys**：`version`（"0.1"）/ `source_layer`（"wave2_cross_topic"）/ `ledger` / `synthesis` / `scan` / `findings` / `synthesis_eligibility`
 - **`scan` object**：`topic_count` / `pair_count_expected` / `pair_count_checked`
 - **Per-finding required fields（11 个）**：
 
@@ -165,6 +166,7 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 |-------|------|-------------|
 | `id` | string | W2F-xxx |
 | `type` | enum | `wave1_legacy_question` / `cross_topic_resolution` / `cross_topic_emergent_question` |
+| `priority` | enum | `p0` / `p1` / `p2` |
 | `status` | enum | `resolved` / `partial` / `open` / `deferred` |
 | `decision` | enum | `use_existing_evidence` / `exploit_search` / `explore_search` / `defer_hitl2` / `requires_internal_data` / `record_only` |
 | `affected_topics` | array | ≥2 for `cross_topic_emergent_question` |
@@ -174,6 +176,11 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 | `subagent_receipt_refs` | array | 搜索发生时的 work-unit runtime receipt refs |
 | `appears_in_synthesis` | boolean | 是否已进入 narrative projection |
 | `hitl2_handoff` | boolean | 是否进入 HITL2 handoff |
+| `confidence` | enum | `high` / `medium` / `low` / `uncertain` |
+| `independent_backing_refs` | array | Independent evidence refs for confidence/backing checks |
+| `gap_status` | enum | `no_gap` / `needs_search` / `search_submitted` / `deferred_hitl2` / `requires_internal_data` / `record_only` |
+
+`synthesis_eligibility` records `pure_synthesis_eligible`, `scan_matrix_present`, `scan_topic_pair_coverage`, `unresolved_search_required_count`, `targeted_search_required_count`, `targeted_search_submitted_count`, `explicit_deferral_count`, `profile_params_read[]`, and `ineligibility_reasons[]`.
 
 - **Optional v1 extension fields**：`backfill_topics` / `synthesis_refs` / `handoff_refs` / `last_checked_at` / `repair_attempts`
 
@@ -182,8 +189,10 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 | Enum | Values |
 |------|--------|
 | **type** | `wave1_legacy_question` / `cross_topic_resolution` / `cross_topic_emergent_question` |
+| **priority** | `p0` / `p1` / `p2` |
 | **status** | `resolved` / `partial` / `open` / `deferred` |
 | **decision** | `use_existing_evidence` / `exploit_search` / `explore_search` / `defer_hitl2` / `requires_internal_data` / `record_only` |
+| **gap_status** | `no_gap` / `needs_search` / `search_submitted` / `deferred_hitl2` / `requires_internal_data` / `record_only` |
 
 ### Wave2 Sub-agent Cache/Work-Unit 路径
 

@@ -57,15 +57,15 @@ suggested_context:
   | `wave0_per_topic_source_floor` | `positive integer` | Wave0 `count_floor` gate threshold — 每 topic foundation reference 的最低数量 |
   | `wave0_shared_ref_total` | `integer` | Wave0 跨 topic 共享 foundation reference 的全局总量（**computed by `apply-research-style.mjs`** — base + per_topic × topic_count） |
   | `wave1_per_topic_ref_floor` | `positive integer` | Wave1 `count_floor` gate threshold — 每 topic rich MD reference 的最低数量 |
-  | `topic_unique_ratio` | `number [0,1]` | Topic-unique reference 的最低比例（Agent guidance，非 gate enforced） |
+  | `topic_unique_ratio` | `number [0,1]` | Wave1 new-source floor 的比例参数；`ceil(wave1_per_topic_ref_floor * topic_unique_ratio)`，minimum 1 |
   | `counterexample_search` | `boolean` | Wave1 Stop Condition 5 是否强制搜索 disconfirming evidence |
   | `cross_verification` | `boolean` | Wave1 Stop Condition 6 是否强制 cross-check claims |
-  | `p0p1_independent_backing` | `positive integer` | P0/P1 findings 需要的最低独立 backing source 数量（Agent guidance，非 gate enforced） |
+  | `p0p1_independent_backing` | `positive integer` | P0/P1 findings 需要的最低独立 backing source 数量 |
   | `quality_min_tier` | `enum: tier_1..tier_4` | 最低 source quality tier（Agent guidance，非 gate enforced） |
   | `quality_min_substance` | `enum: substantive/thin/none` | 最低 source substance level（Agent guidance，非 gate enforced） |
   | `wave2_cross_topic_depth` | `integer` | Wave2 cross-topic scan matrix 中每 topic 至少连接的 topic 数（Agent guidance） |
   | `wave2_emergent_search_rounds` | `integer` | Wave2 每 topic emergent search 轮数（Agent guidance） |
-- **gate 行为**：`hitl1-recorded` gate **不检查**此字段——内容正确性依赖 Agent discipline。但下游 gate CLI（wave0/wave1）通过 `threshold_source` → `resolveThreshold()` 从此字段读取 `wave0_per_topic_source_floor` / `wave1_per_topic_ref_floor` 做 `count_floor` 动态阈值
+- **gate 行为**：`hitl1-recorded` gate **不检查**此字段——内容正确性依赖 Agent discipline。但下游 gate CLI 读取这些 explicit params 做确定性检查：wave0/wave1 `count_floor` 动态阈值、Wave1 `new_source_floor`、Wave2 finding-index consistency / pure-synthesis eligibility。缺失 required parameter 必须诊断为 `missing_profile_parameter`，不得使用 hidden default。
 - **示例**：
   ```yaml
   research_style_params:

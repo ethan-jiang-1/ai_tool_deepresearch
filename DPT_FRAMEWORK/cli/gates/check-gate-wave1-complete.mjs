@@ -30,6 +30,8 @@ import {
   checkWorkUnitSubmissionPresence,
   checkDelegatedBypassSuspected,
   detectDelegatedBypassSuspicion,
+  checkWave1DepthReviewContract,
+  topicSlugFromDepthReviewTarget,
   readTraceEvents,
   scanTemplateNotExpanded,
   readYamlArraySafe,
@@ -504,6 +506,15 @@ for (const rule of definition.rules) {
           rulePassed = false;
           ruleDetail = result.inspect.join('; ');
         }
+      } else if (rule.check === 'depth_review_contract') {
+        const topic = tgt.topic || rule.topic || topicSlugFromDepthReviewTarget(resolvedTarget);
+        const depthResult = checkWave1DepthReviewContract(bundlePath, { topic });
+        if (!depthResult.passed) {
+          rulePassed = false;
+          ruleDetail = depthResult.inspect.join('; ');
+        }
+        for (const line of depthResult.inspect) inspect.push(line);
+        for (const a of depthResult.advice) advice.push(a);
       } else if (rule.check === 'work_unit_ledger_exists') {
         const ledgerResult = checkWorkUnitLedgerExists(bundlePath, rule);
         if (!ledgerResult.passed) {

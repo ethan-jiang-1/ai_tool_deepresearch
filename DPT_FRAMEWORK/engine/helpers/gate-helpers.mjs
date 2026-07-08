@@ -89,3 +89,15 @@ export {
   validateSourceGateStatusSync,
   checkPhaseHandoffPreflight,
 } from './handoff-helpers.mjs';
+
+// Wave depth contracts
+export {
+  checkSourceClaimCacheMapping,
+  checkWave1DepthReviewContract,
+  checkWave2FindingIndexContract,
+  deriveWave1NewSourceFloor,
+  exactUrlKey,
+  normalizeUrlForCacheMapping,
+  readWave0SourceUrls,
+  topicSlugFromDepthReviewTarget,
+} from './wave-depth-contracts.mjs';

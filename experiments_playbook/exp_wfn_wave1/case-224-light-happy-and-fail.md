@@ -3,14 +3,14 @@ schema: command-experiment/v1
 experiment: wfn-wave1
 case: case-224-light-happy-and-fail
 weight: light
-case_goal: "Verify Wave1 topic deepening through work-unit claim/submit: out-of-order submit, successful seed backfill, invalid-submit rejection, and non-work-unit artifact gate rejection."
+case_goal: "Verify Wave1 depth contracts through work-unit claim/submit: out-of-order submit, depth-review pass, shallow/cache-thin failures, invalid-submit rejection, and non-work-unit artifact gate rejection."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-224_w1_happy_and_fail
 trace: dpt_disp_case-224_w1_happy_and_fail/rb_trace.jsonl
 verdict: trace-jsonl
-req: RWE-001, RWE-003, WAI-006
+req: RWE-001, RWE-002, WAI-006
 ---
 
 ## Execution Contract

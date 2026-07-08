@@ -91,6 +91,10 @@ function outputDeclarationTouchesWave(row, phase) {
   return false;
 }
 
+function isPhaseOwnedProjection(filePath, phase) {
+  return phase === 'wave1' && /^artifacts\/wave1\/[^/]+\/depth-review\.yaml$/.test(filePath);
+}
+
 function nonSubmittedDeclarationRows(rawDeclarations, submittedDeclarations, phase) {
   const submittedKeys = new Set(submittedDeclarations.map((row) => `${row.work_id}:${row.ledger_record_hash}`));
   return rawDeclarations
@@ -267,7 +271,7 @@ export function detectDelegatedBypassSuspicion(bundlePath, phase, gate) {
           if (row.wave !== phaseWave) continue;
           for (const entry of row.output_files || []) covered.add(entry.path);
         }
-        const uncovered = waveFiles.filter((file) => !covered.has(file));
+        const uncovered = waveFiles.filter((file) => !covered.has(file) && !isPhaseOwnedProjection(file, phase));
         if (uncovered.length > 0) {
           provenanceMissing.push(`No submitted work-unit ledger coverage for ${uncovered.length} ${phase} artifact(s)`);
         }

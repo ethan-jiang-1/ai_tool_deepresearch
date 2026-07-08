@@ -153,6 +153,12 @@ function createBundle(name) {
   // Scaffold
   mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-a'), { recursive: true });
   mkdirSync(join(dir, 'seed_topics'), { recursive: true });
+  writeFileSync(join(dir, 'rb_profile.yaml'), `research_style_params:
+  wave1_per_topic_ref_floor: 1
+  topic_unique_ratio: 1
+  counterexample_search: false
+  cross_verification: false
+`);
 
   // Reference: flat format with topic-prefixed files (required by count_floor)
   writeFileSync(join(dir, 'reference', '01-topic-a-deepening.md'),
@@ -172,15 +178,20 @@ function createBundle(name) {
   return dir;
 }
 
-function submitWave1WorkUnit(dir) {
+function submitWave1WorkUnit(dir, {
+  queueItemId = 'topic-a',
+  sourceUrl = 'https://example.com/news/deepening-topic-a',
+  isNewVsWave0 = true,
+  cacheTrail = `_cache/wave1/primary/${queueItemId}/deepening-topic-a`,
+} = {}) {
   return claimAndSubmitWorkUnit(dir, {
     phase: 'wave1',
-    queueItemId: 'topic-a',
+    queueItemId,
     outputs: [
       {
         path: 'reference/01-topic-a-deepening.md',
         role: 'reference',
-        source_url: 'https://example.com/news/deepening-topic-a',
+        source_url: sourceUrl,
         source_slug: 'deepening-topic-a',
       },
       {
@@ -193,10 +204,73 @@ function submitWave1WorkUnit(dir) {
       },
     ],
     cacheTrails: [{
-      path: '_cache/wave1/primary/topic-a/deepening-topic-a',
-      url: 'https://example.com/news/deepening-topic-a',
+      path: cacheTrail,
+      url: sourceUrl,
     }],
+    resultOverrides: {
+      source_claims: [{
+        url: sourceUrl,
+        source_ref: 'reference/01-topic-a-deepening.md',
+        acceptance_status: 'accepted',
+        is_new_vs_wave0: isNewVsWave0,
+        cache_trail_refs: [cacheTrail],
+      }],
+      accepted_source_urls: [sourceUrl],
+    },
   });
+}
+
+function writeDepthReview(dir, {
+  submission,
+  sourceUrl = 'https://example.com/news/deepening-topic-a',
+  isNewVsWave0 = true,
+  wave0Urls = ['https://example.com/news/wave0-foundation'],
+  decision = 'accept',
+  supplementary = [],
+  cacheTrail = '_cache/wave1/primary/topic-a/deepening-topic-a',
+} = {}) {
+  const observed = isNewVsWave0 && !wave0Urls.includes(sourceUrl) ? 1 : 0;
+  writeFileSync(join(dir, 'artifacts/wave1/topic-a/depth-review.yaml'), `${JSON.stringify({
+    version: 'depth-review.v1',
+    topic_slug: 'topic-a',
+    reviewed_work_unit_refs: [submission.record.paths.work_unit_dir],
+    wave0_source_urls: wave0Urls,
+    source_claims: [{
+      url: sourceUrl,
+      source_ref: 'reference/01-topic-a-deepening.md',
+      acceptance_status: 'accepted',
+      is_new_vs_wave0: isNewVsWave0,
+      cache_trail_refs: [cacheTrail],
+    }],
+    new_source_urls: observed > 0 ? [sourceUrl] : [],
+    new_source_floor: {
+      required: 1,
+      observed,
+      source: 'ceil(wave1_per_topic_ref_floor * topic_unique_ratio)',
+    },
+    depth_dimensions: {
+      mechanism: { status: 'covered', refs: [submission.record.paths.result_ref] },
+      trend_or_difficulty: { status: 'covered', refs: [submission.record.paths.result_ref] },
+      limitation_or_dispute: { status: 'covered', refs: [submission.record.paths.result_ref] },
+    },
+    profile_checks: {
+      counterexample_search: { status: 'not_required', refs: [] },
+      cross_verification: { status: 'not_required', refs: [] },
+    },
+    decision,
+    supplementary_queue_item_ids: supplementary,
+  }, null, 2)}\n`);
+}
+
+function submitAndReviewWave1WorkUnit(dir, options = {}) {
+  const submission = submitWave1WorkUnit(dir, options);
+  assert.equal(submission.submitted.ok, true, JSON.stringify(submission.submitted));
+  writeDepthReview(dir, {
+    submission,
+    ...options,
+    cacheTrail: options.cacheTrail || `_cache/wave1/primary/${options.queueItemId || 'topic-a'}/deepening-topic-a`,
+  });
+  return submission;
 }
 
 describe('check-gate-wave1-complete', () => {
@@ -207,7 +281,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitWave1WorkUnit(dir);
+    submitAndReviewWave1WorkUnit(dir);
     writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -229,7 +303,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), NO_SOURCE_URL_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitWave1WorkUnit(dir);
+    submitAndReviewWave1WorkUnit(dir);
     writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -242,7 +316,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), EMPTY_FINDINGS_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitWave1WorkUnit(dir);
+    submitAndReviewWave1WorkUnit(dir);
     writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -255,7 +329,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), STALE_TOKEN_SEED_TOPIC);
-    submitWave1WorkUnit(dir);
+    submitAndReviewWave1WorkUnit(dir);
     writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -268,7 +342,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitWave1WorkUnit(dir);
+    submitAndReviewWave1WorkUnit(dir);
     writeWave1Trace(dir);
     const statusPath = join(dir, 'rb_status.json');
     const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
@@ -285,7 +359,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitWave1WorkUnit(dir);
+    submitAndReviewWave1WorkUnit(dir);
     writeWave1Trace(dir, { completion: false });
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -298,12 +372,12 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitWave1WorkUnit(dir);
+    submitAndReviewWave1WorkUnit(dir);
     writeWave1Trace(dir);
     // Write a second reference with placeholder source_url — the first one has a real URL
     writeFileSync(join(dir, 'reference/topic-a-placeholder.md'),
       '# Placeholder\n\n' +
-      '- source_url: https://example.com\n' +
+      '- source_url: "https://example.com"\n' +
       '- acceptance_status: accepted\n' +
       '- source_type: secondary\n' +
       '- tier: Tier 3\n' +
@@ -326,7 +400,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitWave1WorkUnit(dir);
+    submitAndReviewWave1WorkUnit(dir);
     writeWave1Trace(dir);
     writeFileSync(join(dir, 'reference/topic-a-orphan.md'),
       '# Orphan\n\n' +
@@ -352,7 +426,7 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitWave1WorkUnit(dir);
+    submitAndReviewWave1WorkUnit(dir);
     writeWave1Trace(dir);
     writeFileSync(join(dir, 'reference/01-topic-a-deepening.md'),
       '---\nsource_url: https://example.com/news/deepening-topic-a\n---\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n');
@@ -360,5 +434,69 @@ describe('check-gate-wave1-complete', () => {
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('YAML frontmatter')), `Expected YAML format fail: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('11. fails when depth-review.yaml is missing', () => {
+    const dir = createBundle(unique('missingreview'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    const submission = submitWave1WorkUnit(dir);
+    assert.equal(submission.submitted.ok, true);
+    writeWave1Trace(dir);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('depth-review.yaml')), `Expected missing depth review fail: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('12. fails when depth review has too few exact-new source URLs', () => {
+    const dir = createBundle(unique('shallow'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(dir, {
+      sourceUrl: 'https://example.com/news/deepening-topic-a',
+      isNewVsWave0: false,
+      wave0Urls: ['https://example.com/news/deepening-topic-a'],
+      decision: 'supplement_required',
+      supplementary: ['wave1-deepen-topic-a-v2'],
+    });
+    writeWave1Trace(dir);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('source_novelty_floor') || m.includes('supplement_required')),
+      `Expected shallow depth-review failure: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('13. fails when accepted source claims lose cache content coverage', () => {
+    const dir = createBundle(unique('cachethin'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(dir);
+    writeFileSync(join(dir, '_cache/wave1/primary/topic-a/deepening-topic-a/page.md'), '# Page\n');
+    writeWave1Trace(dir);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('source_claim_cache_mapping') || m.includes('placeholder-only')),
+      `Expected cache mapping failure: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('14. passes after supplementary Wave1 repair is submitted and reviewed', () => {
+    const dir = createBundle(unique('supplement'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(dir, {
+      queueItemId: 'wave1-deepen-topic-a-v2',
+      supplementary: ['wave1-deepen-topic-a-v2'],
+    });
+    writeWave1Trace(dir);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, true, `Expected supplementary repair pass, got inspect: ${JSON.stringify(output.inspect)}`);
   });
 });

@@ -278,7 +278,7 @@ function collectWorkUnitLedgerRowIssues(row, index) {
 
   const ledgerRow = parsed.data;
   const issues = [];
-  const expectedHash = computeWorkUnitLedgerRecordHash(ledgerRow);
+  const expectedHash = computeWorkUnitLedgerRecordHash(row);
   if (ledgerRow.ledger_record_hash !== expectedHash) {
     issues.push(`ledger_record_hash mismatch for ${ledgerRow.work_id}`);
   }

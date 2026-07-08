@@ -238,15 +238,15 @@ FIO-004: file-observability — Explained files remain non-authoritative until l
 FOR-001: fork-repair-converge — Multi-fail shared repair checkpoint convergence
 
 # gate-content-dedup
-GAC-001: gate-content-dedup — content_dedup reads reference inputs from declaration ledger
-GAC-002: gate-content-dedup — Jaccard similarity detects near-duplicate reference content
-GAC-003: gate-content-dedup — URL dedup detects duplicate source URLs
-GAC-004: gate-content-dedup — Homepage URL detection flags root-domain-only references
-GAC-005: gate-content-dedup — Self-referential language detection and standard gate check result
-GAC-006: gate-content-dedup — Reference declaration coverage prevents filesystem orphan pass-through
-GAC-007: gate-content-dedup — Homepage URL detection includes shallow path heuristic and empty URL failure
-GAC-008: gate-content-dedup — Ledger coverage rule detects filesystem reference files missing from declaration ledger
-GAC-009: gate-content-dedup — Orphan reference diagnostics are durable in trace/log and diagnostic artifacts
+GAC-001: gate-content-dedup — content_dedup reads reference inputs from declaration ledger [DEPRECATED]
+GAC-002: gate-content-dedup — Jaccard similarity detects near-duplicate reference content [DEPRECATED]
+GAC-003: gate-content-dedup — URL dedup detects duplicate source URLs [DEPRECATED]
+GAC-004: gate-content-dedup — Homepage URL detection flags root-domain-only references [DEPRECATED]
+GAC-005: gate-content-dedup — Self-referential language detection and standard gate check result [DEPRECATED]
+GAC-006: gate-content-dedup — Reference declaration coverage prevents filesystem orphan pass-through [DEPRECATED]
+GAC-007: gate-content-dedup — Homepage URL detection includes shallow path heuristic and empty URL failure [DEPRECATED]
+GAC-008: gate-content-dedup — Ledger coverage rule detects filesystem reference files missing from declaration ledger [DEPRECATED]
+GAC-009: gate-content-dedup — Orphan reference diagnostics are durable in trace/log and diagnostic artifacts [DEPRECATED]
 
 # gate-fork-router
 GAF-001: gate-fork-router — Gate branch classification and explicit resolver
@@ -300,7 +300,7 @@ REI-005: rerun-incremental-node — Rerun loop protection with max iterations (r
 RTI-001: rerun-topic-integration — Sub-agent reference format is explicit in rerun topic integration
 RTI-002: rerun-topic-integration — Wave2 action:add rerun performs full re-synthesis
 RTI-003: rerun-topic-integration — Gate detects rerun topic reference quality and provenance escape
-RTI-004: rerun-topic-integration — content_dedup SHALL NOT vacuously pass when ledger contains no reference declarations
+RTI-004: rerun-topic-integration — content_dedup SHALL NOT vacuously pass when ledger contains no reference declarations [DEPRECATED]
 RTI-005: rerun-topic-integration — Rerun-produced files remain traceable to rerun intent or declared provenance
 RTI-006: rerun-topic-integration — Rerun-produced reference files SHALL have traceable cache trails（cache_coverage gate对rerun路径与首次运行一视同仁）
 
@@ -440,7 +440,7 @@ EXS-001: experiment-shared-infra — experiments_env/shared/ directory for exper
 EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_FRAMEWORK/command_experiments_env/scripts/ to experiments_env/shared/"
 EXR-001: experiment-ref-integrity — case-401 verifies positive Agent-Engine boundary path
 EXR-002: experiment-ref-integrity — case-402 verifies delegated complete rejection matrix
-EXR-003: experiment-ref-integrity — case-403 verifies content_dedup via Engine-generated ledger
+EXR-003: experiment-ref-integrity — case-403 verifies content_dedup via Engine-generated ledger [DEPRECATED]
 EXR-004: experiment-ref-integrity — case-404 verifies queue boundary contract
 EXR-005: experiment-ref-integrity — case-405 verifies rb_trace.jsonl is the only trace sink
 EXR-006: experiment-ref-integrity — case-406 verifies real Sub-agent boundary path
@@ -495,7 +495,7 @@ RWG-007: research-wave-gate-implementation — Wave gate CLIs follow established
 RWG-008: research-wave-gate-implementation — Wave2 gate cross_field verifies Markdown link artifact references
 RWG-009: research-wave-gate-implementation — Wave2 gate CLI supports pattern_match check type with negate and topic expansion
 RWG-010: research-wave-gate-implementation — Wave2 phase-internal feedback checks are distinct from phase boundary gate
-RWG-015: research-wave-gate-implementation — Wave0 and wave1 gate definitions include content_dedup rule from output declarations
+RWG-015: research-wave-gate-implementation — Wave0 and wave1 gate definitions include content_dedup rule from output declarations [DEPRECATED]
 
 # requirement-traceability
 RET-001: requirement-traceability — Prefix abbreviation registry as self-documenting source of truth
