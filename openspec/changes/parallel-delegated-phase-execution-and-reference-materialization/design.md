@@ -121,12 +121,34 @@ The old blanket "Phase Agent MUST NOT generate `reference/*.md`" rule prevented 
 
 It should allow Phase Agent to materialize references manually from submitted source claims/cache/ledger rows and Wave2 ledger/index backing.
 
+### Decision 7: Reference classification uses existing bundle surfaces and fails closed
+
+This change will not introduce a new required reference metadata key such as `materialization_role`, nor a required new `_INDEX.md` column. The existing reference metadata block and `_INDEX.md source_layer` remain consumer/navigation surfaces; they are useful hints but not authority by themselves.
+
+Gate/provenance classification should be derived from existing deterministic bundle surfaces:
+
+1. reference path and existing metadata fields, especially `source_url`, `evidence_role`, `acceptance_status`, and `related_topic`;
+2. `_INDEX.md` row presence and `source_layer`;
+3. submitted source claims, accepted source URLs, degraded-capture records, cache trails, output declarations, and work-unit ledger rows;
+4. Wave2 `W2F-xxx` refs in `finding-index.yaml` and `cross-topic-ledger.md`;
+5. concrete bundle-relative refs to prior Wave0/Wave1 backing when the reference claims existing-backed synthesis.
+
+Classification is two-step:
+
+- **Bind the source/backing**: every reference source URL or `W2F-xxx` claim must bind to submitted/prior accepted bundle evidence.
+- **Classify the authority path**: backed Wave1 topic references and existing-backed Wave2 `00-cross` files are Phase-owned projections; references that claim newly fetched public evidence require submitted delegated work-unit coverage.
+
+Ambiguity is not success. If a reference cannot be deterministically classified from bundle files, gates and inspectors should fail closed or report repair-targeted backing drift. Chat memory, console summaries, and file presence alone are never classification authority.
+
+Optional parser-compatible metadata may be added later if it proves useful, but this change should first use the smallest existing-surface convention that can be checked deterministically.
+
 ## Risks / Trade-offs
 
 - **Risk: batch claim increases simultaneous Sub-agent load** -> Mitigation: bounded cap, profile/runtime override, conservative default cap no higher than 5, and explicit terminalization for expired attempts.
 - **Risk: polling loop becomes noisy or infinite** -> Mitigation: bounded interval, deadline awareness, `inspect`/submit feedback, terminal commands, and tests that forbid waiting on user/task notification as continuation.
 - **Risk: Phase-owned references become unsourced summaries** -> Mitigation: require concrete submitted backing refs, index updates, cache/source-claim mapping, and gate diagnostics for unbacked source URLs.
 - **Risk: Gate changes accidentally weaken delegated provenance** -> Mitigation: keep fetched-source delegated evidence ledger-first; only Phase-owned projections from already submitted backing avoid new Wave2 ledger requirement.
+- **Risk: reference classification becomes another schema migration** -> Mitigation: do not add required metadata keys or `_INDEX.md` columns in this change; derive classification from existing metadata, index rows, ledgers, cache trails, and Wave2 finding refs.
 - **Risk: Existing tests expect Sub-agent reference output** -> Mitigation: update tests to check Sub-agent submitted source claims/cache and Phase Agent post-submit materialization separately.
 - **Risk: More spec surfaces are touched than code diff seems to need** -> Mitigation: this is intentional because current specs conflict across reference format, provenance gate, phase content, and anti-cheating guidance.
 
@@ -144,8 +166,8 @@ It should allow Phase Agent to materialize references manually from submitted so
 
 Rollback strategy: batching/polling guidance can be reverted independently of reference provenance if load proves too high. Reference materialization should not be partially reverted without also restoring old WPG/RWG semantics, because mixed wording would reintroduce responsibility gaps.
 
-## Open Questions
+## Settled Questions
 
-- Should Phase-owned references use an explicit metadata key such as `materialization_role: phase_owned_projection` or rely on existing fields plus backing refs? Recommended default: use the smallest parser-compatible metadata/ref convention that gate helpers can check deterministically.
-- Should `reference/_INDEX.md` include a column that distinguishes fetched-source references from existing-backed projections? Recommended default: keep `source_layer` and add prose/metadata guidance unless gate implementation needs a structured column.
-- Should a later change add `operate-work-unit wait`? Recommended default: defer until after this guidance-first change has been applied and observed.
+- Phase-owned references do not require a new `materialization_role` metadata key in this change.
+- `_INDEX.md` does not require a new authority-classification column in this change; `source_layer` remains a navigation label and one input to deterministic classification.
+- A blocking `operate-work-unit wait` helper remains out of scope. Active polling is an Agent loop contract for this change.

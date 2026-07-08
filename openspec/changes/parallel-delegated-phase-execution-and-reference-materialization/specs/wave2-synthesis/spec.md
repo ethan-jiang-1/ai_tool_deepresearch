@@ -4,7 +4,7 @@
 
 ### Requirement: Wave2 SHALL materialize existing-backed cross references without weakening targeted evidence provenance
 
-Wave2 pure synthesis SHALL be allowed to materialize `reference/00-cross-*.md` files when a cross-topic finding has concrete existing backing from submitted Wave0/Wave1 evidence, references, cache trails, evidence summaries, question lists, or work-unit ledger rows. These existing-backed cross references are Phase-owned consumer projections. They SHALL cite `W2F-xxx` finding ids and bundle-relative backing refs to `cross-topic-ledger.md`, `finding-index.yaml`, and the submitted prior-wave evidence surfaces that support the finding.
+Wave2 pure synthesis SHALL be allowed to materialize `reference/00-cross-*.md` files when a cross-topic finding has concrete existing backing from submitted Wave0/Wave1 evidence, backed references, cache trails, evidence summaries, question lists, or work-unit ledger rows. These existing-backed cross references are Phase-owned consumer projections. They SHALL cite `W2F-xxx` finding ids and bundle-relative backing refs to `cross-topic-ledger.md`, `finding-index.yaml`, and the submitted prior-wave evidence surfaces that support the finding. A prior reference file MAY be one backing ref only when that prior reference itself binds to submitted/prior accepted evidence; reference-to-reference chains without underlying submitted backing SHALL NOT be sufficient.
 
 When Wave2 requires new public evidence, it SHALL enqueue and drain `wave2_targeted_evidence` work units. A `reference/00-cross-*.md` that claims newly fetched evidence, targeted search, or source discovery beyond existing submitted backing SHALL require submitted Wave2 work-unit coverage and cache trails before it can count as resolved evidence.
 
@@ -28,6 +28,13 @@ Wave2 SHALL NOT use synthesis prose alone as backing for `00-cross` references. 
 - **WHEN** `synthesis.md` makes a cross-topic statement but `finding-index.yaml` and `cross-topic-ledger.md` do not identify concrete existing source backing
 - **THEN** the Phase Agent SHALL NOT materialize an accepted `reference/00-cross-*.md` from that prose alone
 - **AND** it SHALL repair the ledger/index backing, run targeted evidence, or defer the finding
+
+#### Scenario: reference chain alone cannot back cross reference
+
+- **WHEN** a proposed `reference/00-cross-*.md` cites another reference file
+- **AND** that prior reference cannot itself be bound to submitted/prior accepted source backing
+- **THEN** the cross reference SHALL NOT count as existing-backed
+- **AND** the Phase Agent SHALL repair backing refs, run targeted evidence, or record a limitation
 
 #### Scenario: cross references update consumer navigation
 

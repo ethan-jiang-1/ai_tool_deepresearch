@@ -10,10 +10,12 @@ Wave2 gates SHALL allow pure-synthesis `reference/00-cross-*.md` files when they
 
 Delegated bypass diagnostics SHALL be precise: unbacked fetched-source references remain blocking, but legitimate Phase-owned projections SHALL NOT be reported as bypass solely because the Phase Agent wrote them.
 
+When classification is ambiguous, Wave gates SHALL prefer blocking backing diagnostics over permissive inference. A legal file name, valid reference format, or `_INDEX.md` row SHALL NOT be enough for pass if the gate cannot bind the reference to submitted/prior accepted backing or to submitted targeted-evidence coverage.
+
 #### Scenario: Wave1 gate accepts backed Phase-owned topic reference
 
 - **WHEN** a Wave1 topic reference file exists, passes reference format checks, appears in `_INDEX.md`, and its source URL binds to submitted Wave1 source claims/cache trails
-- **THEN** the Wave1 gate MAY pass reference projection checks without requiring that reference path in delegated `output_files[]`
+- **THEN** the Wave1 gate SHALL treat the reference projection as backed without requiring that reference path in delegated `output_files[]`
 - **AND** delegated evidence coverage SHALL still require submitted evidence-summary/question-list/source/cache backing
 
 #### Scenario: Wave1 gate rejects unbacked topic reference
@@ -40,3 +42,10 @@ Delegated bypass diagnostics SHALL be precise: unbacked fetched-source reference
 - **WHEN** Wave1 or Wave2 materializes reference files
 - **THEN** `reference/_INDEX.md` SHALL include matching rows with the correct source layer
 - **AND** missing index rows SHALL be reported as reference navigation drift, not as delegated work-unit evidence by themselves
+
+#### Scenario: gate refuses ambiguous reference authority
+
+- **WHEN** a reference has valid format and appears in `_INDEX.md`
+- **AND** the gate cannot determine whether it is a backed Phase-owned projection or a submitted fetched-source evidence surface from bundle files
+- **THEN** the gate SHALL fail or emit blocking diagnostics
+- **AND** advice SHALL name the missing submitted backing, missing targeted evidence row, or missing prior-wave refs needed for repair

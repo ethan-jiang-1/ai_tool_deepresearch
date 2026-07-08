@@ -39,6 +39,8 @@ Phase-owned reference files SHALL be consumer-facing projections, not alternate 
 
 For Wave1 topic references, backing SHALL come from submitted `wave1_topic_deepening` rows and their source/cache claims. For Wave2 existing-backed cross references, backing SHALL come from already submitted Wave0/Wave1 evidence plus Wave2 `W2F-xxx` ledger/index process evidence. For Wave2 new external evidence, backing SHALL come from submitted `wave2_targeted_evidence` rows.
 
+This change SHALL NOT require a new required reference metadata key or a new required `_INDEX.md` column to classify Phase-owned projections. Classification SHALL use the existing reference metadata block, `_INDEX.md` rows and `source_layer`, submitted source/cache/work-unit ledgers, output declarations, and Wave2 `W2F-xxx` ledger/index refs. `source_layer` is a navigation label and SHALL NOT be sufficient authority by itself.
+
 #### Scenario: Wave1 topic reference cites submitted backing
 
 - **WHEN** the Phase Agent writes `reference/{topic_slug}-<source-slug>.md`
@@ -56,3 +58,10 @@ For Wave1 topic references, backing SHALL come from submitted `wave1_topic_deepe
 - **WHEN** a reference file exists with a source URL or claim that cannot be tied to submitted or prior accepted backing
 - **THEN** gates or inspectors SHALL report it as unbacked drift or repair input
 - **AND** it SHALL NOT count as delegated fetched-source coverage
+
+#### Scenario: source layer is not authority by itself
+
+- **WHEN** `_INDEX.md` lists a reference row with `source_layer: wave2_cross` or another legal navigation layer
+- **AND** the reference lacks deterministic backing through submitted source/cache/work-unit ledgers or Wave2 finding refs
+- **THEN** the row SHALL NOT make the reference accepted evidence
+- **AND** gates or inspectors SHALL diagnose missing backing rather than infer authority from the layer label

@@ -13,6 +13,7 @@ FOSE Europe Engelberg 2026 run bundle 显示 delegated waves 已经能跑出真�
 - Gate/provenance/anti-cheating 语义区分两类 reference：
   - fetched-source delegated evidence：必须有 submitted work-unit ledger/cache/source-claim backing；
   - Phase-owned consumer reference projection：必须引用 existing submitted backing，不能自己扩展 delegated coverage authority。
+- Reference classification 使用现有 deterministic bundle surfaces：reference metadata、`_INDEX.md source_layer`、submitted source/cache/work-unit ledgers、output declarations、Wave2 `W2F-xxx` ledger/index refs；本 change 不新增 required metadata key 或 `_INDEX.md` authority column，无法分类时 fail closed。
 - Seed topic backfill 和 reference index guidance 改为使用 Phase-owned references、Wave2 `W2F-xxx` ids、ledger/index/source refs；禁止从 synthesis prose alone 或 filesystem-only files 扩展 evidence authority。
 - 不产出：不新增 JS-driven workflow walker；不把 search/synthesis judgment 移入 Engine；不新增 `operate-work-unit wait` 作为必须能力；不新增依赖、不使用 Python；不允许脚本/模板批量伪造 references；不让 pure synthesis 的 `00-cross` 文件伪装成新 fetched source。
 - 版本：需要 version bump，target version 为 `v0.10`。implementation 阶段需要更新 `CHANGELOG.md` 和 `DPT_FRAMEWORK/RUN.md` 版本横幅。

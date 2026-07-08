@@ -6,7 +6,7 @@
 
 Work-unit provenance gates SHALL verify delegated output coverage from submitted work-unit ledger rows for the target wave, kind, scope, and required delegated output contract. The check name SHALL be `work_unit_output_coverage`.
 
-For Wave1 topic deepening, required delegated output coverage SHALL include submitted `evidence-summary.md`, submitted `question-list.md`, submitted structured source claims or accepted source URL surfaces when present, and verified cache trails. Topic reference Markdown files and `depth-review.yaml` are Phase-owned projections written after submit. Gates MAY validate those projections as consistency and consumer-navigation surfaces, but work-unit provenance checks SHALL use them only to cross-check that every reviewed/reference source URL binds back to submitted work-unit ledger rows, source claims, or verified cache trails.
+For Wave1 topic deepening, required delegated output coverage SHALL include submitted `evidence-summary.md`, submitted `question-list.md`, structured source-claim surfaces, accepted source URL surfaces for accepted sources, explicit degraded-capture records when used, and verified cache trails for fetched sources. Empty or absent source claims are legal only when the submitted work unit records an explicit no-source/limitation state that the phase can repair or surface as a limitation. Topic reference Markdown files and `depth-review.yaml` are Phase-owned projections written after submit. Gates MAY validate those projections as consistency and consumer-navigation surfaces, but work-unit provenance checks SHALL use them only to cross-check that every reviewed/reference source URL binds back to submitted work-unit ledger rows, source claims, explicit degraded-capture records, or verified cache trails.
 
 A depth-review or topic reference projection MAY be written by the Phase Agent after submit, but it SHALL name or be traceable to the submitted work-unit rows and source/cache refs it used. Filesystem-only Wave1 outputs SHALL NOT become coverage authority, and Phase-owned projections SHALL NOT create delegated coverage absent submitted backing.
 
@@ -72,7 +72,9 @@ Wave2 work-unit provenance SHALL be conditional on delegated search or evidence 
 
 Provenance gates SHALL classify reference artifacts by their authority claim before deciding whether work-unit output coverage is required. A reference that claims newly fetched delegated evidence SHALL require submitted work-unit coverage. A reference that projects existing submitted evidence for consumer navigation SHALL require deterministic backing to already submitted or accepted surfaces, but SHALL NOT be treated as delegated bypass merely because the reference file itself was written by the Phase Agent.
 
-This distinction SHALL be derived from deterministic bundle surfaces such as reference metadata, `_INDEX.md`, `finding-index.yaml`, submitted source claims, cache trails, output declarations, and work-unit refs. It SHALL NOT depend on chat memory or console summaries.
+This distinction SHALL be derived from deterministic bundle surfaces such as reference metadata, `_INDEX.md`, `finding-index.yaml`, `cross-topic-ledger.md`, submitted source claims, accepted source URL surfaces, degraded-capture records, cache trails, output declarations, and work-unit refs. It SHALL NOT depend on chat memory or console summaries. `source_layer`, path shape, or file presence MAY help locate a candidate classification, but none of them SHALL be sufficient authority without submitted/prior accepted backing.
+
+If a reference cannot be deterministically classified as either backed Phase-owned projection or ledger-backed fetched-source evidence, provenance gates SHALL fail closed or emit blocking diagnostics rather than passing the reference as accepted evidence.
 
 #### Scenario: Phase-owned projection is backed by submitted source claims
 
@@ -92,3 +94,10 @@ This distinction SHALL be derived from deterministic bundle surfaces such as ref
 - **WHEN** the gate decides whether a reference is Phase-owned projection or delegated fetched evidence
 - **THEN** it SHALL use structured bundle files and submitted ledgers
 - **AND** it SHALL ignore chat summaries, progress reports, or file presence alone as authority
+
+#### Scenario: ambiguous reference classification fails closed
+
+- **WHEN** a reference has a legal path and `_INDEX.md` row
+- **AND** the gate cannot bind its source URL, `W2F-xxx` claim, or backing refs to submitted/prior accepted bundle evidence
+- **THEN** provenance SHALL fail closed or report blocking backing drift
+- **AND** the reference SHALL NOT count as accepted evidence until repaired
