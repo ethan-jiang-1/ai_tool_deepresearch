@@ -80,15 +80,19 @@ Sub-agent 返回给 work-unit submit 的 `result.json` MUST 包含 `work_id`、`
 
 Delegated task MUST be claimed as a work unit and accepted through `operate-work-unit submit`. Phase Agent 不直接执行 WebSearch/WebFetch 来冒充 delegated output；不直接写 `rb_output_declarations.jsonl`；不手写 ledger row 冒充 completion。Gate coverage comes from submitted work-unit ledger rows plus cross-checks.
 
-### 16. 禁止用脚本或模板批量生成 reference 文件
+### 16. 禁止伪造 reference authority；允许有 submitted backing 的 Phase-owned projection
 
-Phase Agent MUST NOT use scripts (bash, node, or any language) or template substitution to batch-generate `reference/*.md` files. Every delegated reference file MUST be produced by a real sub-agent through the queue demand -> work unit -> sub-agent -> submit -> ledger -> gate path, with real WebSearch + WebFetch execution and source-grounded content. Template-generated files are non-authoritative because they lack valid work-unit submit, declaration ledger coverage, cache trails, provenance/hash binding, and accepted source/reference schema evidence.
+Phase Agent MUST NOT use scripts (bash, node, or any language) or template substitution to batch-generate `reference/*.md` files. Script/template files, filesystem-only references, unsubmitted source URLs, hand-written ledger rows, and authority inferred from `source_layer` alone are non-authoritative. `source_layer` is not authority.
 
-正确路径：claim `wave1_topic_deepening` work units → spawn `dpt-evidence-extractor` sub-agent for each claimed task → sub-agent performs real WebSearch + WebFetch → produces `reference/{topic}-<source-slug>.md` files and `_cache/` leaf trails grounded in fetched source content → submit by `work_id` → Engine validates ledger/provenance/hash/cache authority before the gate can count the outputs.
+Phase Agent MAY manually materialize Phase-owned consumer reference projections after successful submit when the body cites deterministic backing: submitted source claims, accepted source URL surfaces, verified cache trails, explicit degraded-capture records, submitted work-unit refs, or existing Wave2 ledger/index refs that resolve to submitted prior evidence. A Phase-owned consumer reference projection is a reader/navigation surface, not new delegated evidence authority.
 
-If the Agent finds itself wanting to "create many reference files quickly," the correct answer is queue-driven sub-agent parallel execution, not a script.
+Correct Wave1 path: claim `wave1_topic_deepening` work units in bounded batches → spawn `dpt-evidence-extractor` Sub-agents → Sub-agents perform real search/fetch and submit `evidence-summary.md`, `question-list.md`, `source_claims[]`, `accepted_source_urls[]`, cache trails, result, and receipt → Phase Agent materializes `reference/{topic}-<source-slug>.md` from submitted backing and updates `_INDEX.md`.
 
-**正确替代**：Phase Agent claims delegated queue demand via `operate-work-unit claim` → spawns the bounded Sub-agent prompt → Sub-agent writes declared outputs/cache + runtime receipt → Phase Agent runs `operate-work-unit submit --work-id <work_id> --result <result.json>` → Engine validates and appends ledger coverage。
+Correct Wave2 path: existing-backed `reference/00-cross-*.md` projections may be Phase-owned when they cite `W2F-xxx`, `finding-index.yaml`, `cross-topic-ledger.md`, and prior submitted Wave0/Wave1 backing. New fetched evidence still requires submitted `wave2_targeted_evidence` work-unit coverage.
+
+If the Agent wants to "create many reference files quickly," the correct answer is bounded queue-driven Sub-agent execution plus post-submit projection from submitted backing, not a script or filesystem-only shortcut.
+
+**正确替代**：Phase Agent claims delegated queue demand via `operate-work-unit claim` → spawns the bounded Sub-agent prompt → Sub-agent writes declared outputs/cache + runtime receipt → Phase Agent runs `operate-work-unit submit --work-id <work_id> --result <result.json>` → Engine validates and appends ledger coverage → Phase Agent writes only backed consumer projections。
 
 **正确替代**：`setup-ready` gate pass 只确认 structural consistency（文件存在、schema 合法、basename 一致）。它不意味着研究质量过关或可以交付最终报告。`readiness-passed` 是另一个 gate，在 wave0/1/2 + HITL2 之后。
 

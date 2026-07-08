@@ -102,10 +102,19 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 
 ### 3.2 Delegated Drain Loop
 
-Repeat until the phase is drained:
+Repeat the shared batch-poll-submit loop until the queue and delegated in-flight work are drained. Before claiming, reconstruct in-flight Wave0 work from `operate-work-unit inspect <bundle>`, queue delegated-in-flight state, and `_work_units/wave0/*` status/result/receipt surfaces.
+
+Compute a bounded top-up `claim-count` from:
+
+- independent eligible Wave0 source-intake demand;
+- the accepted/default cap for the run, conservatively no higher than 5 when no accepted profile/runtime cap exists;
+- remaining free delegated in-flight capacity after reconstructed in-flight work is counted.
+
+If reconstructed in-flight work already reaches the accepted/default cap, poll, submit, repair, or terminalize those attempts before claiming more. Use `--count 1` only for a single remaining item, dependency-blocked front item, accepted cap of 1, or a narrow repair.
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase wave0 --count 1
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase wave0 --count <claim-count>
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>
 ```
 
 For each claimed work unit:
@@ -115,13 +124,14 @@ For each claimed work unit:
 3. Require real WebSearch plus page fetch. If the preferred fetch tool is unavailable, use the fetch chain in the work-unit task. Do not use search snippets as evidence.
 4. Ensure the Sub-agent writes declared output files and leaf cache trails.
 5. Ensure `runtime-receipt.jsonl` events carry `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
-6. Submit:
+6. Actively poll result/receipt/output/cache readiness without waiting for user continuation or task notification.
+7. Submit ready attempts:
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
 ```
 
-If submit rejects, repair the same claimed attempt when possible. If the attempt cannot continue, close it explicitly:
+If submit rejects, repair the same claimed attempt when possible. If the attempt cannot continue, close it explicitly before claiming replacement work:
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs fail <bundle> --work-id <work_id> --reason "<reason>"
@@ -152,7 +162,7 @@ After each successful submit, before claiming the next item:
 
 ## 5. Gate Command
 
-When claim returns `phase_drained: true`, run the Wave0 gate and read the JSON output before deciding the next action:
+Run the Wave0 gate only after queue demand is drained and reconstructed delegated in-flight work is zero. Then read the JSON output before deciding the next action:
 
 ```bash
 node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --current-node phases/phase-wave0.md

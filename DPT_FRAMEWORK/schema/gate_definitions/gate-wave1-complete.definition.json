@@ -55,6 +55,13 @@
       "failure_message": "Reference files for {topic} must declare a non-empty URL-parseable source_url in metadata block format."
     },
     {
+      "id": "reference_index_coverage",
+      "check": "reference_index_coverage",
+      "target": "reference/*{topic}*.md",
+      "source_layer": "wave1_topic",
+      "failure_message": "Reference files for {topic} must have matching reference/_INDEX.md rows with source_layer wave1_topic. Missing index rows are reference navigation drift; source_layer is not evidence authority without submitted backing."
+    },
+    {
       "id": "key_facts_min_lines",
       "check": "reference_key_facts_min_lines",
       "target": "reference/*{topic}*.md",
@@ -65,7 +72,7 @@
       "id": "ledger_coverage",
       "check": "reference_ledger_coverage",
       "target": "reference/*{topic}*.md",
-      "failure_message": "Reference files for {topic} must be declared by submitted work-unit ledger rows in rb_output_declarations.jsonl."
+      "failure_message": "Reference files for {topic} must either be submitted delegated reference outputs or Phase-owned projections backed by submitted Wave1 source claims, accepted source URL surfaces, verified cache trails, explicit degraded-capture records, and scannable body backing refs."
     },
     {
       "id": "question_list_has_four_sections",
@@ -150,7 +157,7 @@
           "question_list"
         ]
       },
-      "failure_message": "Wave1 outputs exist on disk but are not covered by submitted work-unit ledger rows. Submit delegated outputs through operate-work-unit."
+      "failure_message": "Wave1 delegated evidence-summary/question-list/source/cache outputs must be covered by submitted work-unit ledger rows. Topic reference files may be Phase-owned projections only when their source URLs and body refs bind back to submitted backing."
     },
     {
       "id": "wave1_work_unit_submission_presence",
@@ -164,7 +171,7 @@
       "check": "delegated_bypass_suspected",
       "target": "artifacts/wave1",
       "wave": "wave1",
-      "failure_message": "Wave1 delegated artifacts appear without submitted work-unit coverage."
+      "failure_message": "Wave1 delegated artifacts appear without submitted work-unit coverage or valid Phase-owned projection backing. Repair through work-unit submit, supplementary wave1_topic_deepening, or reference backing/index repair."
     }
   ]
 }

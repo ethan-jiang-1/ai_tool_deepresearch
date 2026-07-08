@@ -13,6 +13,7 @@ import {
 import {
   claimAndSubmitWorkUnit,
   cleanupWorkUnitBundle,
+  referenceContent,
   tempWorkUnitBundle,
 } from '../work-unit-test-helpers.mjs';
 
@@ -26,6 +27,51 @@ function tempDir(prefix) {
   const dir = tempWorkUnitBundle(prefix);
   dirs.push(dir);
   return dir;
+}
+
+function submitWave1SourceBacking(dir, {
+  sourceUrl = 'https://example.com/research/topic-a-source',
+  topic = 'topic-a',
+} = {}) {
+  const cacheTrail = `_cache/wave1/primary/${topic}/s01_source`;
+  const evidencePath = `artifacts/wave1/${topic}/evidence-summary.md`;
+  const questionPath = `artifacts/wave1/${topic}/question-list.md`;
+  return claimAndSubmitWorkUnit(dir, {
+    phase: 'wave1',
+    queueItemId: topic,
+    outputs: [
+      {
+        path: evidencePath,
+        role: 'evidence_summary',
+        content: `# Evidence\n\n[Source](${sourceUrl})\n`,
+      },
+      {
+        path: questionPath,
+        role: 'question_list',
+        content: '# Questions\n',
+      },
+    ],
+    cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
+    resultOverrides: {
+      source_claims: [{
+        url: sourceUrl,
+        acceptance_status: 'accepted',
+        is_new_vs_wave0: true,
+        source_ref: evidencePath,
+        cache_trail_refs: [cacheTrail],
+      }],
+      accepted_source_urls: [sourceUrl],
+    },
+  });
+}
+
+function writeIndex(dir, rows) {
+  mkdirSync(join(dir, 'reference'), { recursive: true });
+  writeFileSync(join(dir, 'reference', '_INDEX.md'), [
+    '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- |',
+    ...rows,
+  ].join('\n') + '\n');
 }
 
 describe('work-unit provenance gate helpers', () => {
@@ -80,8 +126,60 @@ describe('work-unit provenance gate helpers', () => {
     });
 
     assert.equal(result.passed, false);
-    assert.deepEqual(result.orphans, ['reference/topic-a-orphan.md']);
+    assert.equal(result.orphans.length, 1);
+    assert.match(result.orphans[0], /reference\/topic-a-orphan\.md/);
+    assert.match(result.orphans[0], /projection_backing_drift/);
     assert.match(result.inspect.join('\n'), /lacks submitted work-unit coverage/);
+  });
+
+  it('accepts a Wave1 Phase-owned topic reference backed by submitted source claims', () => {
+    const dir = tempDir('wpg-wave1-projection-');
+    const sourceUrl = 'https://example.com/research/topic-a-source';
+    submitWave1SourceBacking(dir, { sourceUrl, topic: 'topic-a' });
+    writeIndex(dir, [
+      '| reference/topic-a-source.md | primary | expert | Tier 2 | topic-a | wave1_topic | accepted | 2026-07-06 |',
+    ]);
+    writeFileSync(join(dir, 'reference', 'topic-a-source.md'), referenceContent({
+      source_url: sourceUrl,
+      related_topic: 'topic-a',
+      coreContent: 'This Phase-owned topic reference cites artifacts/wave1/topic-a/evidence-summary.md and _cache/wave1/primary/topic-a/s01_source as submitted backing for the source URL.',
+    }));
+
+    const coverage = checkWorkUnitOutputCoverage(dir, {
+      wave: 'wave1',
+      kind: 'wave1_topic_deepening',
+      output_selectors: { glob: 'reference/topic-a*.md', roles: ['reference'] },
+    });
+    const presence = checkWorkUnitSubmissionPresence(dir, {
+      wave: 'wave1',
+      kind: 'wave1_topic_deepening',
+      output_selectors: { glob: 'reference/topic-a*.md', roles: ['reference'] },
+    });
+
+    assert.equal(coverage.passed, true, coverage.inspect.join('; '));
+    assert.equal(presence.passed, true, presence.inspect.join('; '));
+  });
+
+  it('rejects a Wave1 topic reference whose source URL has no submitted backing', () => {
+    const dir = tempDir('wpg-wave1-unbacked-');
+    writeIndex(dir, [
+      '| reference/topic-a-source.md | primary | expert | Tier 2 | topic-a | wave1_topic | accepted | 2026-07-06 |',
+    ]);
+    writeFileSync(join(dir, 'reference', 'topic-a-source.md'), referenceContent({
+      source_url: 'https://example.com/research/unsubmitted',
+      related_topic: 'topic-a',
+      coreContent: 'This reference names artifacts/wave1/topic-a/evidence-summary.md, but the URL is absent from submitted source claims, accepted URL surfaces, cache trails, and degraded capture backing.',
+    }));
+
+    const coverage = checkWorkUnitOutputCoverage(dir, {
+      wave: 'wave1',
+      kind: 'wave1_topic_deepening',
+      output_selectors: { glob: 'reference/*.md', roles: ['reference'] },
+    });
+
+    assert.equal(coverage.passed, false);
+    assert.match(coverage.inspect.join('\n'), /projection_backing_drift/);
+    assert.match(coverage.advice.join('\n'), /supplement|repair|Submit delegated outputs|Phase-owned reference backing/i);
   });
 
   it('passes output coverage and submission presence for a real submit', () => {
@@ -133,5 +231,106 @@ describe('work-unit provenance gate helpers', () => {
 
     const result = detectDelegatedBypassSuspicion(dir, 'wave2', 'wave2-complete');
     assert.equal(result.suspected, false);
+  });
+
+  it('accepts an existing-backed Wave2 00-cross projection without a new Wave2 row', () => {
+    const dir = tempDir('wpg-wave2-existing-backed-');
+    const sourceUrl = 'https://example.com/research/prior-source';
+    submitWave1SourceBacking(dir, { sourceUrl, topic: 'topic-a' });
+    mkdirSync(join(dir, 'artifacts', 'wave2'), { recursive: true });
+    writeFileSync(join(dir, 'artifacts', 'wave2', 'finding-index.yaml'), [
+      'version: "0.1"',
+      'findings:',
+      '  - id: W2F-001',
+      '    decision: use_existing_evidence',
+      '    search_required: false',
+    ].join('\n'));
+    writeFileSync(join(dir, 'artifacts', 'wave2', 'cross-topic-ledger.md'), '# Ledger\n\nW2F-001\n');
+    writeIndex(dir, [
+      '| reference/00-cross-w2f-001-topic-a.md | primary | expert | Tier 2 | cross-topic | wave2_cross | accepted | 2026-07-06 |',
+    ]);
+    writeFileSync(join(dir, 'reference', '00-cross-w2f-001-topic-a.md'), referenceContent({
+      source_url: sourceUrl,
+      related_topic: 'cross-topic',
+      evidence_role: 'cross_topic_projection',
+      coreContent: 'W2F-001 is linked to artifacts/wave2/finding-index.yaml, artifacts/wave2/cross-topic-ledger.md, artifacts/wave1/topic-a/evidence-summary.md, and _cache/wave1/primary/topic-a/s01_source as prior submitted backing.',
+    }));
+
+    const coverage = checkWorkUnitOutputCoverage(dir, {
+      wave: 'wave2',
+      kind: 'wave2_targeted_evidence',
+      output_selectors: { glob: 'reference/00-cross-*.md', roles: ['reference'] },
+    });
+    const presence = checkWorkUnitSubmissionPresence(dir, {
+      wave: 'wave2',
+      kind: 'wave2_targeted_evidence',
+      output_selectors: { glob: 'reference/00-cross-*.md', roles: ['reference'] },
+    });
+    const bypass = detectDelegatedBypassSuspicion(dir, 'wave2', 'wave2-complete');
+
+    assert.equal(coverage.passed, true, coverage.inspect.join('; '));
+    assert.equal(presence.passed, true, presence.inspect.join('; '));
+    assert.equal(bypass.suspected, false, bypass.provenanceMissing?.join('; '));
+  });
+
+  it('rejects a Wave2 00-cross reference that claims new evidence without targeted coverage', () => {
+    const dir = tempDir('wpg-wave2-new-unsubmitted-');
+    const priorUrl = 'https://example.com/research/prior-source';
+    submitWave1SourceBacking(dir, { sourceUrl: priorUrl, topic: 'topic-a' });
+    mkdirSync(join(dir, 'artifacts', 'wave2'), { recursive: true });
+    writeFileSync(join(dir, 'artifacts', 'wave2', 'finding-index.yaml'), 'findings:\n  - id: W2F-002\n    decision: use_existing_evidence\n    search_required: false\n');
+    writeFileSync(join(dir, 'artifacts', 'wave2', 'cross-topic-ledger.md'), '# Ledger\n\nW2F-002\n');
+    writeIndex(dir, [
+      '| reference/00-cross-w2f-002-new.md | primary | expert | Tier 2 | cross-topic | wave2_cross | accepted | 2026-07-06 |',
+    ]);
+    writeFileSync(join(dir, 'reference', '00-cross-w2f-002-new.md'), referenceContent({
+      source_url: 'https://example.com/research/new-wave2-source',
+      related_topic: 'cross-topic',
+      evidence_role: 'cross_topic_projection',
+      coreContent: 'W2F-002 cites artifacts/wave2/finding-index.yaml, artifacts/wave2/cross-topic-ledger.md, artifacts/wave1/topic-a/evidence-summary.md, and _cache/wave1/primary/topic-a/s01_source, but the metadata source_url is newly introduced.',
+    }));
+
+    const coverage = checkWorkUnitOutputCoverage(dir, {
+      wave: 'wave2',
+      kind: 'wave2_targeted_evidence',
+      output_selectors: { glob: 'reference/00-cross-*.md', roles: ['reference'] },
+    });
+    const bypass = detectDelegatedBypassSuspicion(dir, 'wave2', 'wave2-complete');
+
+    assert.equal(coverage.passed, false);
+    assert.match(coverage.inspect.join('\n'), /source_url is not a prior accepted backing URL/);
+    assert.equal(bypass.suspected, true);
+  });
+
+  it('rejects a Wave2 00-cross reference backed only by another unbacked reference', () => {
+    const dir = tempDir('wpg-wave2-ref-chain-');
+    const sourceUrl = 'https://example.com/research/prior-source';
+    submitWave1SourceBacking(dir, { sourceUrl, topic: 'topic-a' });
+    mkdirSync(join(dir, 'artifacts', 'wave2'), { recursive: true });
+    writeFileSync(join(dir, 'artifacts', 'wave2', 'finding-index.yaml'), 'findings:\n  - id: W2F-003\n    decision: use_existing_evidence\n    search_required: false\n');
+    writeFileSync(join(dir, 'artifacts', 'wave2', 'cross-topic-ledger.md'), '# Ledger\n\nW2F-003\n');
+    writeIndex(dir, [
+      '| reference/topic-b-unbacked.md | primary | expert | Tier 2 | topic-b | wave1_topic | accepted | 2026-07-06 |',
+      '| reference/00-cross-w2f-003-chain.md | primary | expert | Tier 2 | cross-topic | wave2_cross | accepted | 2026-07-06 |',
+    ]);
+    writeFileSync(join(dir, 'reference', 'topic-b-unbacked.md'), referenceContent({
+      source_url: 'https://example.com/research/unbacked-chain-source',
+      related_topic: 'topic-b',
+    }));
+    writeFileSync(join(dir, 'reference', '00-cross-w2f-003-chain.md'), referenceContent({
+      source_url: sourceUrl,
+      related_topic: 'cross-topic',
+      evidence_role: 'cross_topic_projection',
+      coreContent: 'W2F-003 cites artifacts/wave2/finding-index.yaml, artifacts/wave2/cross-topic-ledger.md, and reference/topic-b-unbacked.md, but no concrete prior-wave source/cache/work-unit backing ref appears in the body.',
+    }));
+
+    const coverage = checkWorkUnitOutputCoverage(dir, {
+      wave: 'wave2',
+      kind: 'wave2_targeted_evidence',
+      output_selectors: { glob: 'reference/00-cross-*.md', roles: ['reference'] },
+    });
+
+    assert.equal(coverage.passed, false);
+    assert.match(coverage.inspect.join('\n'), /locator refs do not resolve to submitted prior-wave backing/);
   });
 });

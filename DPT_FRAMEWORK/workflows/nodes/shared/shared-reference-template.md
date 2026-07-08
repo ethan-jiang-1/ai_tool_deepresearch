@@ -17,9 +17,17 @@ Agent 创建 `reference/*.md` 文件时必须遵循此模板。一个 source 一
 |------|------|-----------|
 | `00-shared-<slug>.md` | 共享基础 reference，覆盖 ≥2 个 topic 的跨领域知识 | Wave 0 |
 | `0N-<slug>.md` | Topic 专属 reference，N = topic_registry 中的 topic 序号 | Wave 1 |
-| `00-cross-<slug>.md` | 跨 topic 发现 reference，cross-topic scan 时涌现的新共享 source | Wave 2 |
+| `00-cross-<slug>.md` | 跨 topic finding 的 reference projection；可以是 existing-backed pure-synthesis projection，也可以是 submitted targeted evidence 的 fetched source | Wave 2 |
 
 `<slug>` 为 kebab-case 标识符，描述该 source 的核心内容。
+
+## Authority And Backing
+
+Reference files are consumer-facing navigation artifacts. They do not gain delegated evidence authority from file presence, `_INDEX.md` presence, or `source_layer`. `source_layer` is not authority; it is only a navigation label.
+
+Phase-owned materialization is legal only after submitted backing exists. The reference body must include scannable body refs or Markdown links to submitted source claims, accepted source URL surfaces, cache trails, explicit degraded-capture records, work-unit refs, prior-wave artifacts that themselves resolve to submitted backing, or Wave2 `W2F-xxx` ledger/index refs. Do not use a new metadata key or `_INDEX.md` column as the authority shortcut.
+
+Wave1 topic references use `source_url` from submitted `wave1_topic_deepening` backing. Existing-backed `00-cross` references use a primary prior accepted backing source URL in `source_url`, then list additional prior-wave source/cache/work-unit refs plus `finding-index.yaml` and `cross-topic-ledger.md` refs in the body. If a `00-cross` reference claims a newly fetched public source, it must bind to submitted `wave2_targeted_evidence` coverage.
 
 ## File Format
 

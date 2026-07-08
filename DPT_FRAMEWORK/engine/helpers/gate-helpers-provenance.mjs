@@ -1,5 +1,5 @@
 // gate-helpers-provenance.mjs - Work-unit provenance gate checks and bypass diagnostics
-// @impl WPG-001, WPG-002, WPG-003, WPG-004, WPG-006, WPG-007, WPG-008
+// @impl WPG-001, WPG-002, WPG-003, WPG-004, WPG-005, WPG-006, WPG-007, WPG-008, WPG-012, RWG-017
 // Canonical location: DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs
 
 import { existsSync, readFileSync, readdirSync, statSync, appendFileSync } from 'node:fs';
@@ -11,6 +11,7 @@ import {
   readBundlePlan,
   listMatchingBundleFiles,
 } from './gate-helpers-readers.mjs';
+import { classifyReferenceAuthority } from './gate-helpers-checks.mjs';
 import { readBundleName, logToRun } from '../logger.mjs';
 import { inspectWorkUnits } from '../work-unit-core.mjs';
 
@@ -95,6 +96,10 @@ function isPhaseOwnedProjection(filePath, phase) {
   return phase === 'wave1' && /^artifacts\/wave1\/[^/]+\/depth-review\.yaml$/.test(filePath);
 }
 
+function isReferenceArtifact(filePath) {
+  return typeof filePath === 'string' && /^reference\/[^/]+\.md$/.test(filePath);
+}
+
 function nonSubmittedDeclarationRows(rawDeclarations, submittedDeclarations, phase) {
   const submittedKeys = new Set(submittedDeclarations.map((row) => `${row.work_id}:${row.ledger_record_hash}`));
   return rawDeclarations
@@ -173,14 +178,21 @@ export function checkWorkUnitOutputCoverage(bundlePath, rule) {
 
   const orphans = [];
   for (const expected of expectedPaths) {
-    if (!declaredPaths.has(expected)) orphans.push(expected);
+    if (declaredPaths.has(expected)) continue;
+    if (isReferenceArtifact(expected)) {
+      const classification = classifyReferenceAuthority(bundlePath, expected);
+      if (classification.passed && classification.authority === 'phase_owned_projection') continue;
+      orphans.push(`${expected}: ${classification.reason}`);
+    } else {
+      orphans.push(expected);
+    }
   }
 
   if (orphans.length > 0) {
     return {
       passed: false,
-      inspect: orphans.map((path) => `Delegated output lacks submitted work-unit coverage: ${path}`),
-      advice: ['Submit delegated outputs through operate-work-unit; filesystem presence and hand-written declarations are diagnostic only.'],
+      inspect: orphans.map((path) => `Delegated output lacks submitted work-unit coverage or projection backing: ${path}`),
+      advice: ['Submit delegated outputs through operate-work-unit or repair Phase-owned reference backing; filesystem presence and hand-written declarations are diagnostic only.'],
       orphans,
       records: scoped,
     };
@@ -202,6 +214,19 @@ export function checkWorkUnitSubmissionPresence(bundlePath, rule) {
     return {
       passed: true,
       inspect: ['No delegated output files matched this work-unit submission-presence rule.'],
+      advice: [],
+      records: [],
+    };
+  }
+
+  const projectionBacked = [...expectedPaths].filter((expected) => {
+    const classification = classifyReferenceAuthority(bundlePath, expected);
+    return classification.passed && classification.authority === 'phase_owned_projection';
+  });
+  if (expectedPaths.size > 0 && projectionBacked.length === expectedPaths.size) {
+    return {
+      passed: true,
+      inspect: [`All ${projectionBacked.length} reference projection(s) are backed by submitted prior evidence; no new targeted work-unit row is required.`],
       advice: [],
       records: [],
     };
@@ -312,8 +337,12 @@ export function detectDelegatedBypassSuspicion(bundlePath, phase, gate) {
         }
         const uncoveredRefs = searchIndicators
           .filter((item) => item.startsWith('reference/'))
-          .filter((item) => !covered.has(item));
-        if (uncoveredRefs.length > 0) provenanceMissing.push(`No submitted work-unit ledger coverage for ${uncoveredRefs.length} Wave2 reference artifact(s)`);
+          .filter((item) => !covered.has(item))
+          .filter((item) => {
+            const classification = classifyReferenceAuthority(bundlePath, item);
+            return !(classification.passed && classification.authority === 'phase_owned_projection');
+          });
+        if (uncoveredRefs.length > 0) provenanceMissing.push(`No submitted work-unit ledger coverage or prior-evidence backing for ${uncoveredRefs.length} Wave2 reference artifact(s)`);
         if (!declarations.some((row) => row.wave === 2) && searchIndicators.some((item) => item.startsWith('finding:'))) {
           provenanceMissing.push('Wave2 finding-index requests delegated evidence search but no submitted Wave2 work-unit row exists');
         }

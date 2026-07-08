@@ -145,6 +145,22 @@ function writeWave2Index(dir, data) {
   writeJson(path.join(dir, 'artifacts', 'wave2', 'finding-index.yaml'), data);
 }
 
+function writeWave2CrossReference(dir, {
+  id = 'W2F-001',
+  sourceUrl = 'https://example.com/topic-a/new-source',
+  slug = 'resolved-finding',
+} = {}) {
+  const refPath = path.join(dir, 'reference', `00-cross-${id.toLowerCase()}-${slug}.md`);
+  mkdirSync(path.dirname(refPath), { recursive: true });
+  writeFileSync(refPath, referenceContent({
+    source_url: sourceUrl,
+    related_topic: 'cross-topic',
+    evidence_role: 'cross_topic_projection',
+    coreContent: `${id} cites artifacts/wave2/finding-index.yaml, artifacts/wave2/cross-topic-ledger.md, artifacts/wave1/topic-a/evidence-summary.md, and artifacts/wave1/topic-b/evidence-summary.md as concrete prior backing.`,
+  }));
+  return refPath;
+}
+
 function validFinding(overrides = {}) {
   return {
     id: 'W2F-001',
@@ -306,10 +322,29 @@ describe('wave depth contract helpers', () => {
 
   it('passes Wave2 pure synthesis eligibility when scan, confidence, and gap projections converge', () => {
     const dir = setupBundle({ topicCount: 2 });
+    writeWave2CrossReference(dir);
     writeWave2Index(dir, validWave2Index());
 
     const result = checkWave2FindingIndexContract(dir);
     assert.equal(result.passed, true, result.inspect.join('\n'));
+  });
+
+  it('requires consumer-facing backed W2F findings to materialize 00-cross references or record omission reasons', () => {
+    const missingDir = setupBundle({ topicCount: 2 });
+    writeWave2Index(missingDir, validWave2Index());
+    const missing = checkWave2FindingIndexContract(missingDir);
+    assert.equal(missing.passed, false);
+    assert.match(missing.inspect.join('\n'), /cross_reference_materialization/);
+    assert.match(missing.inspect.join('\n'), /reference\/00-cross-\*\.md/);
+
+    const omittedDir = setupBundle({ topicCount: 2 });
+    writeWave2Index(omittedDir, validWave2Index({
+      findings: [validFinding({
+        consumer_reference_omission_reason: 'limitation: not source-backed enough for a consumer reference projection',
+      })],
+    }));
+    const omitted = checkWave2FindingIndexContract(omittedDir);
+    assert.equal(omitted.passed, true, omitted.inspect.join('\n'));
   });
 
   it('fails Wave2 skipped scan and unresolved search-required findings', () => {

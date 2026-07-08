@@ -1,11 +1,11 @@
 // ref-count.mjs — Engine reference counting with quality filtering
-// @impl EEX-001, EEX-002
+// @impl EEX-001, EEX-002, REF-008, WPG-012
 // Canonical engine location: DPT_FRAMEWORK/engine/helpers/ref-count.mjs
 //
 // ## Role
 // Engine-owned quality filter for reference counting. Determines whether a
-// declared reference file meets minimum quality thresholds (countable), then
-// computes the countable reference count from the Engine-written ledger.
+// submitted or deterministically backed projection reference meets minimum
+// quality thresholds (countable), then computes the countable reference count.
 //
 // Gate pass/fail decisions use ledger-mode counting only. Filesystem scan is
 // diagnostic-only and SHALL NOT influence gate pass / fork branch decisions.
@@ -19,9 +19,12 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import {
   extractSection,
+  classifyReferenceAuthority,
   parseReferenceMetadata,
+} from './gate-helpers-checks.mjs';
+import {
   readSubmittedWorkUnitDeclarations,
-} from './gate-helpers.mjs';
+} from './gate-helpers-readers.mjs';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Constants
@@ -204,11 +207,13 @@ function listReferenceFiles(bundleDir) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Count declared reference files that meet quality thresholds.
+ * Count submitted or backed-projection reference files that meet quality thresholds.
  *
  * Default mode (source: "ledger"): reads role=reference output paths from
- * rb_output_declarations.jsonl, filters each through isCountable(), and returns
- * the Engine-computed count. Orphan files on disk are NOT included.
+ * submitted rb_output_declarations.jsonl rows, adds legal Phase-owned
+ * projections whose backing can be classified from deterministic bundle
+ * surfaces, filters each through isCountable(), and returns the Engine-computed
+ * count. Unbacked filesystem-only files are NOT included.
  *
  * Diagnostic mode (source: "filesystem"): scans reference/ directory for .md
  * files excluding _INDEX.md and README.md. SHALL NOT be used for gate pass
@@ -239,7 +244,8 @@ export function countReferences(bundleDir, {
   let candidatePaths = [];
 
   if (source === 'ledger') {
-    // Authority mode: read ONLY from submitted Engine-written work-unit rows.
+    // Authority mode: read submitted Engine-written work-unit rows and backed
+    // Phase-owned projections.
     let declarations;
     try {
       declarations = readSubmittedWorkUnitDeclarations(bundleDir);
@@ -259,6 +265,14 @@ export function countReferences(bundleDir, {
         if (seen.has(entry.path)) continue;
         seen.add(entry.path);
         candidatePaths.push(entry.path);
+      }
+    }
+    for (const fsPath of listReferenceFiles(bundleDir)) {
+      if (seen.has(fsPath)) continue;
+      const classification = classifyReferenceAuthority(bundleDir, fsPath);
+      if (classification.passed && classification.authority === 'phase_owned_projection') {
+        seen.add(fsPath);
+        candidatePaths.push(fsPath);
       }
     }
   } else {
@@ -287,9 +301,12 @@ export function countReferences(bundleDir, {
     for (const fsPath of listReferenceFiles(bundleDir)) {
       if (declared.has(fsPath)) continue;
       if (targetGlob && !matchesTarget(fsPath, targetGlob, topic)) continue;
+      const classification = classifyReferenceAuthority(bundleDir, fsPath);
       uncountable.push({
         path: fsPath,
-        reason: 'filesystem_only_not_ledger_declared: reference file exists but has no submitted work-unit ledger row and does not count as delegated coverage',
+        reason: classification.passed
+          ? 'reference_not_in_count_scope'
+          : `filesystem_only_not_backed: ${classification.reason}`,
       });
     }
   }

@@ -97,6 +97,14 @@ If the Agent catches itself preparing any prohibited surfacing, it SHALL log `su
 
 当本地工作看似完成、queue 暂时为空、active window 为空、质量缺口尚未补齐、或同一 gate 多次失败时，Agent SHALL 将这些状态视为继续工作的信号，而不是中途汇报理由。下一步必须是 node-specific work/repair/degradation、gate rerun，或 §6.3 定义的 silent holding。
 
+### 1.3.1 Delegated Work Polling
+
+For delegated work-unit phases, autonomous continuation includes an active poll-submit-repair-terminalize loop. After background Sub-agent spawn, notifications are hints only; absence of a task notification is not a continuation blocker, and a received notification is not authority without submit/gate validation.
+
+The Phase Agent SHALL reconstruct in-flight work from bundle truth before claiming or gating: queue delegated-in-flight state, `_work_units/waveN/{work_id}/` manifests/status/result surfaces, runtime receipts, output/cache files, and `operate-work-unit inspect <bundle>` output. A scratch list of spawned work IDs may help, but loss of chat memory does not orphan work.
+
+For every reconstructed in-flight attempt, poll readiness by inspecting result, receipt, output, cache, status, and deadline signals. When ready, run `operate-work-unit submit` without waiting for user continuation. If submit rejects, repair the same attempt when possible; otherwise close it explicitly with `fail`, `timeout`, or `abandon` before claiming replacement work. Do not run a phase gate while delegated queue demand or reconstructed in-flight work remains.
+
 ### 1.4 降级优先级链（Degradation Priority Chain）
 
 遇错时 Agent SHALL 按以下顺序自行处理，不浮出水面：

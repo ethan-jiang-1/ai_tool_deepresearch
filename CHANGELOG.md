@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.10
+
+- Wave0/Wave1 delegated execution guidance now uses bounded top-up batch claims, active polling, submit/repair/terminalize loops, and drain-before-gate ordering for independent work units.
+- Wave1 topic references and Wave2 existing-backed `00-cross` references are now Phase-owned consumer projections backed by submitted source/cache/degraded/work-unit evidence, while new fetched evidence remains ledger-bound.
+- Gate, provenance, inspect, and file-observability diagnostics now distinguish projection backing drift, delegated bypass, missing index rows, and cache/source-claim mismatches.
+
 ## v0.9
 
 - Work-unit submit now canonicalizes bounded LLM-shaped drift for result wrappers, runtime receipts, cache `page-content.md`, and constrained nonce repair while keeping ledger/receipt authority fail-closed.

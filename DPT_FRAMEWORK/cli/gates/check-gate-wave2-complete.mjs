@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-gate-wave2-complete.mjs — evaluates gate-wave2-complete rules
-// @impl GSK-001, GSK-002, GSK-004, RWG-006, RWG-007, RWG-008
+// @impl GSK-001, GSK-002, GSK-004, RWG-006, RWG-007, RWG-008, RWG-017
 // Usage: node check-gate-wave2-complete.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import { existsSync, readFileSync, statSync } from 'node:fs';
@@ -18,6 +18,8 @@ import {
   derivePhaseFromGate,
   stripMdFrontmatter,
   readBundlePlan,
+  listMatchingBundleFiles,
+  checkReferenceIndexCoverage,
   checkWorkUnitLedgerExists,
   checkWorkUnitOutputCoverage,
   checkWorkUnitSubmissionPresence,
@@ -341,6 +343,14 @@ for (const rule of definition.rules) {
         }
         for (const line of indexResult.inspect) inspect.push(line);
         for (const a of indexResult.advice) advice.push(a);
+      } else if (rule.check === 'reference_index_coverage') {
+        const files = listMatchingBundleFiles(bundlePath, resolvedTarget);
+        const indexResult = checkReferenceIndexCoverage(bundlePath, files, { sourceLayer: rule.source_layer || null });
+        if (!indexResult.passed) {
+          rulePassed = false;
+          ruleDetail = indexResult.inspect.join('; ');
+        }
+        for (const a of indexResult.advice || []) advice.push(a);
       } else if (rule.check === 'work_unit_ledger_exists') {
         const ledgerResult = checkWorkUnitLedgerExists(bundlePath, rule);
         if (!ledgerResult.passed) {

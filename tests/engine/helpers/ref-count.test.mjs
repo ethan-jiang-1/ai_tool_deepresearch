@@ -236,7 +236,7 @@ describe('countReferences', () => {
     const result = countReferences(dir);
     assert.strictEqual(result.count, 0);
     assert.strictEqual(result.uncountable.length, 1);
-    assert.match(result.uncountable[0].reason, /filesystem_only_not_ledger_declared/);
+    assert.match(result.uncountable[0].reason, /filesystem_only_not_backed/);
   });
 
   it('returns zero count when ledger has no role=reference entries', () => {
@@ -311,7 +311,55 @@ describe('countReferences', () => {
       const result = countReferences(dir);
       assert.strictEqual(result.count, 1, 'Orphan ref should not be counted in ledger mode');
       assert.ok(result.uncountable.some((entry) => entry.path === 'reference/orphan.md'));
-      assert.ok(result.uncountable.some((entry) => entry.reason.includes('filesystem_only_not_ledger_declared')));
+      assert.ok(result.uncountable.some((entry) => entry.reason.includes('filesystem_only_not_backed')));
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
+  });
+
+  it('counts a backed Phase-owned Wave1 topic projection without delegated reference output', () => {
+    const dir = tempWorkUnitBundle('cr-backed-projection-');
+    try {
+      const sourceUrl = 'https://example.com/research/topic-a-projection';
+      const cacheTrail = '_cache/wave1/primary/topic-a/s01_source';
+      const evidencePath = 'artifacts/wave1/topic-a/evidence-summary.md';
+      claimAndSubmitWorkUnit(dir, {
+        phase: 'wave1',
+        queueItemId: 'topic-a',
+        outputs: [
+          {
+            path: evidencePath,
+            role: 'evidence_summary',
+            content: `# Evidence\n\n[Source](${sourceUrl})\n`,
+          },
+          {
+            path: 'artifacts/wave1/topic-a/question-list.md',
+            role: 'question_list',
+            content: '# Questions\n',
+          },
+        ],
+        cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
+        resultOverrides: {
+          source_claims: [{
+            url: sourceUrl,
+            acceptance_status: 'accepted',
+            is_new_vs_wave0: true,
+            source_ref: evidencePath,
+            cache_trail_refs: [cacheTrail],
+          }],
+          accepted_source_urls: [sourceUrl],
+        },
+      });
+      mkdirSync(join(dir, 'reference'), { recursive: true });
+      writeFileSync(join(dir, 'reference/topic-a-source.md'), referenceContent({
+        source_url: sourceUrl,
+        related_topic: 'topic-a',
+        coreContent: `This Phase-owned projection cites ${evidencePath} and ${cacheTrail} as submitted backing. The capture remains long enough to satisfy countable quality thresholds for the consumer reference.`,
+      }));
+
+      const result = countReferences(dir);
+      assert.strictEqual(result.count, 1, `Expected backed projection to count, got ${result.count}`);
+      assert.deepEqual(result.uncountable, []);
     } finally {
       cleanupWorkUnitBundle(dir);
     }

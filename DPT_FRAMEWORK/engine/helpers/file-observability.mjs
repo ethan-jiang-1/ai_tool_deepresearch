@@ -1,5 +1,5 @@
 // file-observability.mjs — Bundle directory audit with work-unit-aware file classifications
-// @impl FIO-001, FIO-002, FIO-004
+// @impl FIO-001, FIO-002, FIO-004, REF-008, WPG-012, RWG-017
 // Canonical engine location: DPT_FRAMEWORK/engine/helpers/file-observability.mjs
 //
 // ## Role
@@ -19,6 +19,11 @@ import {
   readOutputDeclarations,
   readSubmittedWorkUnitDeclarations,
 } from './gate-helpers-readers.mjs';
+import {
+  checkReferenceIndexCoverage,
+  classifyReferenceAuthority,
+} from './gate-helpers-checks.mjs';
+import { checkSourceClaimCacheMapping } from './wave-depth-contracts.mjs';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Constants
@@ -211,6 +216,12 @@ function phaseFromWaveNumber(value) {
   return Number.isFinite(n) ? `wave${n}` : null;
 }
 
+function isReferenceMarkdown(relPath) {
+  return /^reference\/[^/]+\.md$/.test(relPath) &&
+    relPath !== 'reference/_INDEX.md' &&
+    relPath !== 'reference/README.md';
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Internal: file explanation reader
 // ═══════════════════════════════════════════════════════════════════════════
@@ -256,7 +267,7 @@ function readFileExplanations(bundlePath) {
  * @returns {{ classification: string, severity: string, reason: string, authority_status: string, phase: string|null }}
  */
 function classifyFile(relPath, ctx) {
-  const { expectedPaths, declaredPaths, explanations, targetPhase } = ctx;
+  const { bundlePath, expectedPaths, declaredPaths, explanations, targetPhase } = ctx;
 
   // 1. Known control file → expected
   if (ROOT_CONTROL_FILES.has(relPath)) {
@@ -341,18 +352,46 @@ function classifyFile(relPath, ctx) {
     };
   }
 
+  const referenceAuthority = isReferenceMarkdown(relPath)
+    ? classifyReferenceAuthority(bundlePath, relPath)
+    : null;
+  if (referenceAuthority?.passed && referenceAuthority.authority === 'phase_owned_projection') {
+    return {
+      classification: 'expected',
+      severity: 'info',
+      reason: `Phase-owned reference projection has submitted/prior backing: ${referenceAuthority.reason}`,
+      authority_status: 'phase_owned_projection',
+      phase: relPath.startsWith('reference/00-cross-') ? 'wave2' : 'wave1',
+    };
+  }
+  if (referenceAuthority && !referenceAuthority.passed && referenceAuthority.authority === 'delegated_bypass') {
+    return {
+      classification: 'unplanned_needs_explanation',
+      severity: 'warning',
+      reason: referenceAuthority.reason,
+      authority_status: 'none',
+      phase: null,
+      required_repair: 'Submit delegated fetched evidence through work-unit claim/submit, or remove/explain the non-authoritative reference.',
+    };
+  }
+
   // 8. Matches gate pass-condition pattern for target phase → orphan
   if (targetPhase) {
     const patterns = PHASE_ARTIFACT_PATTERNS[targetPhase] || [];
     for (const pat of patterns) {
       if (pat.test(relPath)) {
+        const reason = referenceAuthority && !referenceAuthority.passed
+          ? referenceAuthority.reason
+          : `File matches ${targetPhase} pass-condition pattern but has no ledger declaration or queue receipt`;
         return {
           classification: 'orphan_authority_blocking',
           severity: 'blocker',
-          reason: `File matches ${targetPhase} pass-condition pattern but has no ledger declaration or queue receipt`,
+          reason,
           authority_status: 'none',
           phase: targetPhase,
-          required_repair: 'Submit the delegated output through operate-work-unit, or explain as non-authoritative via log-event.mjs --explain-file.',
+          required_repair: referenceAuthority?.authority === 'delegated_bypass'
+            ? 'Submit newly fetched evidence through operate-work-unit; filesystem-only delegated evidence is not authority.'
+            : 'Repair projection backing, add submitted source/cache/degraded/work-unit refs, or explain as non-authoritative via log-event.mjs --explain-file.',
         };
       }
     }
@@ -362,13 +401,18 @@ function classifyFile(relPath, ctx) {
   for (const [phase, patterns] of Object.entries(PHASE_ARTIFACT_PATTERNS)) {
     for (const pat of patterns) {
       if (pat.test(relPath)) {
+        const reason = referenceAuthority && !referenceAuthority.passed
+          ? referenceAuthority.reason
+          : `File matches ${phase} pass-condition pattern but is not authoritative — explain or submit through work-unit`;
         return {
           classification: 'unplanned_needs_explanation',
           severity: 'warning',
-          reason: `File matches ${phase} pass-condition pattern but is not authoritative — explain or submit through work-unit`,
+          reason,
           authority_status: 'none',
           phase,
-          required_repair: 'Explain via log-event.mjs --explain-file or produce through work-unit submit.',
+          required_repair: referenceAuthority?.authority === 'delegated_bypass'
+            ? 'Submit delegated fetched evidence through work-unit claim/submit.'
+            : 'Explain via log-event.mjs --explain-file or repair submitted projection backing.',
         };
       }
     }
@@ -500,7 +544,7 @@ export function auditFileObservability(bundlePath, {
   });
 
   // Classify each file
-  const ctx = { expectedPaths, declaredPaths, explanations, targetPhase };
+  const ctx = { bundlePath, expectedPaths, declaredPaths, explanations, targetPhase };
 
   for (const relPath of uniqueFiles) {
     const classification = classifyFile(relPath, ctx);
@@ -508,6 +552,15 @@ export function auditFileObservability(bundlePath, {
       path: relPath,
       ...classification,
     });
+  }
+
+  const referenceFiles = uniqueFiles
+    .filter(isReferenceMarkdown)
+    .map((relPath) => ({ relPath, absPath: join(bundlePath, relPath) }));
+  const referenceIndex = checkReferenceIndexCoverage(bundlePath, referenceFiles);
+  if (!referenceIndex.passed) {
+    for (const line of referenceIndex.inspect) inspect.push(line);
+    for (const fix of referenceIndex.advice || []) advice.push(fix);
   }
 
   // ── Cache gap detection (RTI-006) ──
@@ -572,6 +625,18 @@ export function auditFileObservability(bundlePath, {
       if (!mapped && cacheTrails.length > 0) {
         inspect.push(`[cache_gap] declaration ${decl.work_id}: reference ${ref.path} not mapped to any cache trail`);
       }
+    }
+  }
+
+  for (const decl of submittedDeclarations) {
+    const claims = Array.isArray(decl.source_claims) ? decl.source_claims : [];
+    if (claims.length === 0) continue;
+    const claimResult = checkSourceClaimCacheMapping(bundlePath, claims, {
+      topic: typeof decl.queue_item_id === 'string' ? decl.queue_item_id : null,
+    });
+    if (!claimResult.passed) {
+      for (const line of claimResult.inspect) inspect.push(`[cache_source_claim_mismatch] ${line}`);
+      for (const fix of claimResult.advice || []) advice.push(fix);
     }
   }
 

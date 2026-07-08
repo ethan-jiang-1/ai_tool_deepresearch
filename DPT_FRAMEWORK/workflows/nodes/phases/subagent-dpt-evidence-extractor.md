@@ -28,7 +28,7 @@ suggested_context: []
 - **Role key**: `dpt-evidence-extractor`
 - **Used by**: Wave1 lifecycle Phase Agent for topic deepening; Wave2 may reuse it for backing supplementary tasks.
 - **Receives**: Work-unit `task.md`, `_beacon.json`, `result.schema.json`, assigned `runtime-receipt.jsonl`, and the output/cache contract for `_work_units/waveN/{work_id}/`.
-- **Produces**: `evidence-summary.md`, `question-list.md`, topic rich reference files, structured source claims, cache trails, runtime receipt events, and bounded result JSON for `operate-work-unit submit`.
+- **Produces**: `evidence-summary.md`, `question-list.md`, structured source claims, accepted source URLs when available, cache trails, source-candidate notes, runtime receipt events, and bounded result JSON for `operate-work-unit submit`.
 - **Write capability**: Requires filesystem read/write/append and directory creation under `bundle_dir`; before return it verifies `result.json`, `runtime-receipt.jsonl`, declared outputs, and required cache leaf files exist under the active bundle root.
 - **Boundary**: This role performs delegated search/fetch/extraction only; it does not run lifecycle phases, mutate queue/status, evaluate gates, or make final synthesis decisions.
 - **Handoff**: Phase Agent submits the result through `operate-work-unit submit --work-id <work_id> --result <result.json>`. Successful submit is the Engine boundary that completes queue demand and appends delegated ledger coverage.
@@ -78,7 +78,7 @@ Minimum output: at least one fetched source with real page content per delegated
 
 ## 3. Artifacts
 
-This role produces paired topic artifacts and source-specific rich references.
+This role produces paired topic artifacts and submitted source backing. Canonical topic reference Markdown is Phase-owned: the Phase Agent materializes `reference/{topic.slug}-<source-slug>.md` after successful submit unless a future accepted work-unit task explicitly assigns rich reference output to the Sub-agent.
 
 ### 3.1 evidence-summary.md
 
@@ -144,9 +144,18 @@ last_updated: YYYY-MM-DD
 
 Question Reconciliation labels are `[已解决]`, `[部分进展]`, `[仍开放]`, or `[需内部数据]`. These describe what changed. Evidence-summary Open Questions labels describe current state; do not mix the two sets.
 
-### 3.3 reference/{topic.slug}-<source-slug>.md
+### 3.3 Source Backing For Phase-Owned References
 
-Each fetched source page gets one rich reference file in `reference/` using metadata block format, not YAML frontmatter.
+For each accepted fetched source, return enough source substrate for the Phase Agent to materialize a consumer reference:
+
+- source URL and title;
+- source claim with `source_ref`, `acceptance_status`, `is_new_vs_wave0`, `cache_trail_refs[]`, and optional `degraded_capture_ref`;
+- accepted source URL surface in `accepted_source_urls[]` when the source is countable;
+- cache leaf path and page/meta content;
+- evidence-summary/question-list refs where the source is discussed;
+- concise source-candidate note if the source is suitable for `reference/{topic.slug}-<source-slug>.md`.
+
+If and only if the task explicitly assigns rich reference Markdown as a delegated output, the file uses the same format below and must be declared in `output_files[]`. Otherwise do not treat omission of a rich reference file as Sub-agent failure.
 
 ```markdown
 # <Source-specific title>
@@ -213,7 +222,7 @@ Execution steps:
 3. Search for topic-specific evidence using seed-topic guardrails.
 4. Fetch page content using the fetching chain in §5.
 5. Extract mechanisms, trends, contradictions, and open questions.
-6. Write `evidence-summary.md`, `question-list.md`, and source-specific `reference/{topic.slug}-*.md` files.
+6. Write `evidence-summary.md`, `question-list.md`, source-candidate notes when useful, and any explicitly assigned reference output. Do not write canonical topic reference Markdown unless the task assigns it.
 7. Write cache leaf directories for each source, including `websearch.json`, `page.md`, and `meta.json`.
 8. Write `agent_result_ready` immediately before returning.
 9. Return JSON matching `result.schema.json`, including `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, `output_files[]`, `source_claims[]`, `accepted_source_urls[]`, and `cache_trails[]`.
@@ -223,7 +232,7 @@ For every accepted source, include a structured claim:
 ```json
 {
   "url": "https://example.com/source",
-  "source_ref": "reference/{topic.slug}-source.md",
+  "source_ref": "artifacts/wave1/{topic.slug}/evidence-summary.md",
   "acceptance_status": "accepted",
   "is_new_vs_wave0": true,
   "cache_trail_refs": ["_cache/wave1/primary/{topic.slug}/s01_source"],
@@ -263,6 +272,7 @@ Only after all tiers fail may the Sub-agent record an access failure. Do not use
 - Do not claim comprehensive coverage; Wave1 is single-pass deepening.
 - Do not count Wave0 URLs as new Wave1 source evidence.
 - Do not return accepted source coverage without `source_claims[]` and matching `cache_trails[]` or explicit degraded-capture refs.
+- Do not claim canonical topic reference Markdown as a delegated receipt unless the task explicitly assigns that output.
 - Do not use placeholder-only cache pages as fetched content.
 - Do not modify queue/status, run gates, or decide lifecycle completion.
 - Do not directly append `rb_output_declarations.jsonl`; `operate-work-unit submit` is the delegated ledger boundary.
@@ -277,6 +287,7 @@ Phase Agent:
 - Claims eligible queue demand through `operate-work-unit claim`
 - Spawns the Sub-agent with the generated work-unit task prompt
 - Submits the returned result through `operate-work-unit submit --work-id <work_id> --result <result.json>`
+- Materializes canonical topic references from submitted source backing after submit
 - Repairs submit rejection, closes terminal attempts, or retries with a new `work_id` when needed
 - Performs seed-topic backfill and gate execution
 

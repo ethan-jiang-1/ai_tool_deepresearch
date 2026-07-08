@@ -23,7 +23,7 @@ suggested_context:
 
 ## 0. Execution Brief
 
-- **Objective**: produce submitted `evidence-summary.md`, `question-list.md`, topic-scoped reference files, and Phase-owned `depth-review.yaml` for every topic.
+- **Objective**: produce submitted `evidence-summary.md`, `question-list.md`, source backing, Phase-owned topic reference projections, and Phase-owned `depth-review.yaml` for every topic.
 - **Start here**: load Wave0 outputs, seed topics, queue state, profile thresholds, and `dpt-evidence-extractor` role guidance.
 - **Delegated path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit submit` -> submitted ledger row -> gate.
 - **Completion check**: `check-gate-wave1-complete.mjs` passes for `phases/phase-wave1.md`.
@@ -35,7 +35,7 @@ For each topic:
 
 - Write `artifacts/wave1/{topic}/evidence-summary.md`.
 - Write `artifacts/wave1/{topic}/question-list.md`.
-- Write rich reference files at `reference/{topic}-<source-slug>.md`.
+- Phase Agent materializes rich reference files at `reference/{topic.slug}-<source-slug>.md` after successful submit.
 - Review submitted source/depth evidence into `artifacts/wave1/{topic}/depth-review.yaml`.
 - Immediately backfill seed topic tokens from the submitted outputs.
 
@@ -74,20 +74,19 @@ Task card template:
   "kind": "wave1_topic_deepening",
   "producer_rule": "topic_deepening",
   "priority_class": "P4_progressive_artifact_or_seed_backfill",
-  "action": "Use seed topic guardrails, Wave0 source URLs as context only, and open questions to search topic-specific new evidence. Fetch page content, write evidence-summary.md, question-list.md, reference/{topic.slug}-<source-slug>.md, structured source_claims[], and leaf cache trails under _cache/wave1/primary/{topic.slug}/. Cover mechanism, trend/difficulty, limitation/dispute/failure-mode, and profile-required counterexample/cross-verification checks. Return output_files[], source_claims[], accepted_source_urls[], and cache_trails[] for work-unit submit.",
+  "action": "Use seed topic guardrails, Wave0 source URLs as context only, and open questions to search topic-specific new evidence. Fetch page content, write evidence-summary.md and question-list.md, return structured source_claims[], accepted_source_urls[], evidence summaries, source candidates, and leaf cache trails under _cache/wave1/primary/{topic.slug}/. Cover mechanism, trend/difficulty, limitation/dispute/failure-mode, and profile-required counterexample/cross-verification checks. Phase Agent materializes reference/{topic.slug}-<source-slug>.md after successful submit from submitted backing.",
   "writes_to": [
     "artifacts/wave1/{topic.slug}/evidence-summary.md",
-    "artifacts/wave1/{topic.slug}/question-list.md",
-    "reference/{topic.slug}-<source-slug>.md"
+    "artifacts/wave1/{topic.slug}/question-list.md"
   ],
   "required_receipts": [
     "file:artifacts/wave1/{topic.slug}/evidence-summary.md",
     "file:artifacts/wave1/{topic.slug}/question-list.md"
   ],
-  "done_condition": "submitted paired artifacts exist, contain real new source URLs and depth findings, expose structured accepted source claims, and at least one topic reference exists",
+  "done_condition": "submitted paired artifacts exist, contain real new source URLs and depth findings, expose structured accepted source claims, and accepted source backing is suitable for Phase-owned reference materialization or explicit limitation",
   "verification": {
     "engine": ["work_unit_submit"],
-    "agent": ["url_accessible", "source_claims_structured", "reference_metadata_9_fields", "reference_5_sections", "question_list_four_sections", "depth_dimensions_covered"]
+    "agent": ["url_accessible", "source_claims_structured", "question_list_four_sections", "depth_dimensions_covered", "reference_materialization_backing_available"]
   },
   "payload": {
     "topic_slug": "{topic.slug}",
@@ -110,26 +109,43 @@ node DPT_FRAMEWORK/cli/operate-queue.mjs check <bundle>
 
 ### 3.2 Delegated Drain Loop
 
-Claim and submit delegated work units until drained:
+Claim and submit delegated work units until queue and delegated in-flight work are drained. Before claiming, reconstruct Wave1 in-flight work from `operate-work-unit inspect <bundle>`, queue delegated-in-flight state, `_work_units/wave1/*` status/result/receipt surfaces, and submitted ledger rows.
+
+Compute a bounded top-up `claim-count` from independent eligible topics, the accepted/default cap, and remaining free delegated in-flight capacity. The conservative default cap is no higher than 5 when no accepted profile/runtime cap exists. If reconstructed in-flight work already reaches cap, poll/submit/terminalize before claiming more.
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase wave1 --count 1
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase wave1 --count <claim-count>
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
 ```
 
 Sub-agent execution requirements:
 
 - Use real search and fetch; do not treat snippets as evidence.
-- Reference files must follow `shared-reference-template.md`: metadata block, no YAML frontmatter, nine required metadata fields, five standard sections, concrete source URLs, and at least five key facts.
 - `question-list.md` must include the four sections: Topic Investigation Targets, Question Reconciliation, Emergent Question Protocol, Exploration / Exploitation Decision.
 - `evidence-summary.md` or the submitted result must cover mechanism, trend/difficulty, and limitation/dispute/failure-mode dimensions.
 - `result.json` must expose `source_claims[]` directly or through a declared machine-readable output, plus `accepted_source_urls[]` when available. Each accepted claim names `url`, `source_ref`, `acceptance_status`, `is_new_vs_wave0`, `cache_trail_refs[]`, and optional `degraded_capture_ref`.
 - Receipt events must bind `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
-- Output files and cache trails must appear in the submitted result.
+- Output files and cache trails must appear in the submitted result. Canonical topic reference Markdown is not required as delegated output unless a future accepted task explicitly assigns it.
 
-Rejected submit does not finish the attempt. Repair the same claimed `work_id` when possible, or close it with `fail`, `timeout`, or `abandon`.
+Actively poll result/receipt/output/cache readiness without waiting for user continuation or task notification. Rejected submit does not finish the attempt. Repair the same claimed `work_id` when possible, or close it with `fail`, `timeout`, or `abandon` before claiming replacement work.
 
-### 3.2.1 Depth Review
+### 3.2.1 Topic Reference Materialization
+
+After each successful Wave1 submit, the Phase Agent materializes `reference/{topic.slug}-<source-slug>.md` for every accepted submitted source suitable for consumer navigation, then updates `reference/_INDEX.md`.
+
+Each Phase-owned reference must:
+
+- follow `shared-reference-template.md`: metadata block, no YAML frontmatter, nine required metadata fields, five standard sections, concrete source URLs, and at least five key facts;
+- use `source_url` from submitted `source_claims[]`, `accepted_source_urls[]`, verified cache trails, or explicit degraded-capture records;
+- include body refs/links to submitted backing such as `artifacts/wave1/{topic}/evidence-summary.md`, `artifacts/wave1/{topic}/question-list.md`, `_cache/wave1/...`, and `_work_units/wave1/{work_id}/`;
+- never introduce an accepted source URL absent from submitted backing. If a needed source is absent, enqueue supplementary `wave1_topic_deepening` instead of direct-searching or inventing a reference.
+
+Diagnostics should be able to scan the phrase submitted source_claims[] and accepted_source_urls[] in this materialization path.
+
+If no submitted source is materializable, record an explicit limitation or repair diagnostic in Wave1 artifacts before gate.
+
+### 3.2.2 Depth Review
 
 After each successful Wave1 submit, the Phase Agent writes or updates `artifacts/wave1/{topic}/depth-review.yaml`. This review is Phase-owned process evidence; it does not create delegated coverage. Every reviewed source/cache/file ref must bind back to submitted work-unit ledger rows.
 
@@ -143,7 +159,7 @@ reviewed_work_unit_refs:
 wave0_source_urls: []
 source_claims:
   - url: "https://example.com/source"
-    source_ref: "reference/{topic.slug}-source.md"
+    source_ref: "artifacts/wave1/{topic.slug}/evidence-summary.md"
     acceptance_status: "accepted"
     is_new_vs_wave0: true
     cache_trail_refs:
@@ -178,7 +194,7 @@ After each successful submit, before claiming another work unit, update the corr
 1. Replace `__BACKFILL_WAVE1_MECHANISMS__` with mechanism return-map entries from the submitted `evidence-summary.md`.
 2. Replace `__BACKFILL_WAVE1_TRENDS__` with trend/limitation return-map entries.
 3. Replace `__BACKFILL_PENDING_QUESTIONS__` with canonical status labels only: `[开放]`, `[部分解答]`, `[涌现]`, plus return-map entries that name the question, status, evidence meaning, refs, and next hop.
-4. Each Wave1 return-map entry includes `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`, with refs to `artifacts/wave1/{topic}/evidence-summary.md`, `artifacts/wave1/{topic}/question-list.md`, supporting `reference/`, `_cache/`, and `_work_units/` surfaces where available.
+4. Each Wave1 return-map entry includes `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`, with refs to submitted source claims, `accepted_source_urls[]`, `artifacts/wave1/{topic}/evidence-summary.md`, `artifacts/wave1/{topic}/question-list.md`, Phase-owned `reference/` projections, `_cache/`, and `_work_units/` surfaces where available.
 
 Do not append below the token; replace the token line.
 
@@ -205,7 +221,7 @@ If the depth review records `decision: supplement_required`, enqueue a supplemen
 - `artifacts/wave1/{topic}/evidence-summary.md`.
 - `artifacts/wave1/{topic}/question-list.md`.
 - `artifacts/wave1/{topic}/depth-review.yaml`.
-- `reference/{topic}-*.md` with complete metadata and source content capture.
+- Phase-owned `reference/{topic}-*.md` with complete metadata, source content capture, `_INDEX.md` rows, and body refs to submitted backing.
 - Submitted work-unit ledger rows covering delegated outputs and cache trails.
 - Submitted structured source claims where every accepted source URL maps to a verified cache trail or explicit degraded-capture record.
 - Seed-topic Wave1 backfill entries that preserve mechanism/trend/question meaning and refs to evidence summaries, question lists, references, cache leaves, and work-unit surfaces.
@@ -213,7 +229,7 @@ If the depth review records `decision: supplement_required`, enqueue a supplemen
 
 ## 5. Gate Command
 
-When `claim` reports `phase_drained: true`, run:
+Run the Wave1 gate only after queue demand is drained, reconstructed delegated in-flight work is zero, and Phase-owned references/depth reviews/backfill have been materialized from submitted backing:
 
 ```bash
 node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle <path> --current-node phases/phase-wave1.md
@@ -235,9 +251,10 @@ Continue from the Markdown rendered by `enter-phase`. `advance-status` only reco
 If the gate reports a `per_topic_ref_md_count_floor` gap:
 
 1. Identify the topic and missing count from gate `inspect`.
-2. Enqueue a supplementary delegated queue item with `kind: "wave1_topic_deepening"` and `priority_class: "P1_state_or_gate_repair"`.
-3. Require the Sub-agent to avoid duplicate source URLs and append only real new references.
-4. Drain via work-unit claim/submit and rerun the gate.
+2. If submitted source backing exists, repair the Phase-owned `reference/{topic}-*.md` projection and `_INDEX.md` row with body refs to submitted source/cache/work-unit surfaces.
+3. If submitted source backing is absent, enqueue a supplementary delegated queue item with `kind: "wave1_topic_deepening"` and `priority_class: "P1_state_or_gate_repair"`.
+4. Require the Sub-agent to avoid duplicate source URLs and return real new source backing.
+5. Drain via work-unit claim/submit, materialize projections, and rerun the gate.
 
 If all count floors pass but another rule fails, repair that rule directly and rerun the gate.
 
@@ -260,6 +277,7 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 - 禁止让 duplicate source URLs satisfy per-topic reference floors.
 - 禁止让 duplicate Wave0 URLs satisfy the Wave1 new-source floor.
 - 禁止让 prose-only links in `evidence-summary.md` become accepted source coverage without submitted structured source claims.
+- 禁止让 Phase-owned `reference/{topic}-*.md` 扩展 delegated coverage beyond submitted `source_claims[]`, `accepted_source_urls[]`, cache trails, degraded-capture records, or work-unit refs.
 - 禁止让 `depth-review.yaml` create delegated coverage that is not backed by submitted work-unit rows.
 - 禁止 inventing a hidden default when `wave1_per_topic_ref_floor` or `topic_unique_ratio` is missing.
 - 禁止保留 `__BACKFILL_WAVE1_MECHANISMS__`, `__BACKFILL_WAVE1_TRENDS__`, or `__BACKFILL_PENDING_QUESTIONS__` after submitted-output backfill.

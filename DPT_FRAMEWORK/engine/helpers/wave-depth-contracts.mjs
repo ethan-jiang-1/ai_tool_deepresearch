@@ -1,7 +1,7 @@
 // wave-depth-contracts.mjs — deterministic Wave1/Wave2 depth-adjacent checks
-// @impl WAI-005, RWG-002, RWG-003, WTS-004, WTS-008, WTS-009, CRC-007, WPG-003
+// @impl WAI-005, WAI-008, RWG-002, RWG-003, RWG-017, WTS-004, WTS-008, WTS-009, WTS-010, CRC-007, WPG-003, WPG-005, WPG-012
 
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 
@@ -20,6 +20,7 @@ const W2_STATUSES = new Set(['resolved', 'partial', 'open', 'deferred']);
 const W2_DECISIONS = new Set(['use_existing_evidence', 'exploit_search', 'explore_search', 'defer_hitl2', 'requires_internal_data', 'record_only']);
 const W2_CONFIDENCE = new Set(['high', 'medium', 'low', 'uncertain']);
 const W2_GAP_STATUS = new Set(['no_gap', 'needs_search', 'search_submitted', 'deferred_hitl2', 'requires_internal_data', 'record_only']);
+const W2_CROSS_REF_OMISSION_RE = /(?:non[-_ ]?consumer|not[-_ ]?consumer[-_ ]?facing|process[-_ ]?only|internal|defer(?:red)?|limitation|not[-_ ]?source[-_ ]?backed)/i;
 
 function safeRel(ref) {
   return typeof ref === 'string' && ref.length > 0 && !ref.startsWith('/') && !ref.split(/[\\/]+/).includes('..');
@@ -409,6 +410,44 @@ function submittedWave2ReceiptRefs(bundlePath) {
   }
 }
 
+function crossReferenceRefsForFinding(bundlePath, findingId) {
+  const referenceDir = join(bundlePath, 'reference');
+  if (!existsSync(referenceDir) || !statSync(referenceDir).isDirectory()) return [];
+  const id = String(findingId || '').toLowerCase();
+  const refs = [];
+  for (const entry of readdirSync(referenceDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.startsWith('00-cross-') || !entry.name.endsWith('.md')) continue;
+    const relPath = `reference/${entry.name}`;
+    if (entry.name.toLowerCase().includes(id)) {
+      refs.push(relPath);
+      continue;
+    }
+    try {
+      const content = readFileSync(join(referenceDir, entry.name), 'utf-8');
+      if (content.includes(findingId)) refs.push(relPath);
+    } catch { /* ignore unreadable candidate */ }
+  }
+  return refs;
+}
+
+function explicitCrossReferenceOmissionReason(finding) {
+  const candidates = [
+    finding?.consumer_reference_omission_reason,
+    finding?.cross_reference_omission_reason,
+    finding?.omission_reason,
+    finding?.limitation_reason,
+  ].filter((value) => typeof value === 'string' && value.trim());
+  return candidates.find((value) => W2_CROSS_REF_OMISSION_RE.test(value)) || null;
+}
+
+function consumerFacingBackedFindingNeedsCrossRef(finding, backingRefs) {
+  if (finding?.appears_in_synthesis !== true) return false;
+  if (!Array.isArray(backingRefs) || backingRefs.length === 0) return false;
+  if (['defer_hitl2', 'requires_internal_data', 'record_only'].includes(finding?.decision)) return false;
+  if (['needs_search', 'deferred_hitl2', 'requires_internal_data', 'record_only'].includes(finding?.gap_status)) return false;
+  return true;
+}
+
 export function checkWave2FindingIndexContract(bundlePath) {
   const loaded = readFindingIndex(bundlePath);
   if (!loaded.ok) return { passed: false, inspect: loaded.inspect, advice: ['Repair finding-index.yaml before rerunning Wave2 gate.'] };
@@ -508,6 +547,12 @@ export function checkWave2FindingIndexContract(bundlePath) {
     }
     for (const ref of receiptRefs) {
       if (!submittedReceipts.has(ref)) inspect.push(`[finding_index_contract] FAIL: finding ${id} subagent receipt ref is not backed by a submitted Wave2 work-unit row: ${ref}`);
+    }
+    if (consumerFacingBackedFindingNeedsCrossRef(finding, backingRefs)) {
+      const crossRefs = crossReferenceRefsForFinding(bundlePath, id);
+      if (crossRefs.length === 0 && !explicitCrossReferenceOmissionReason(finding)) {
+        inspect.push(`[cross_reference_materialization] FAIL: finding ${id} is consumer-facing and backed but lacks reference/00-cross-*.md projection or explicit non-consumer/deferred/limitation omission reason`);
+      }
     }
     if (['p0', 'p1'].includes(finding?.priority) && ['low', 'uncertain'].includes(finding?.confidence)) {
       const routed = ['search_submitted', 'deferred_hitl2', 'requires_internal_data', 'record_only'].includes(finding?.gap_status);

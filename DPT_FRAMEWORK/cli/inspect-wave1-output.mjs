@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 // inspect-wave1-output.mjs — wave 1 structural lint
-// @impl IOC-002, REF-001
+// @impl IOC-002, REF-001, REF-008, WPG-012, RWG-017
 // Usage: node inspect-wave1-output.mjs --bundle <path>
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { readBundlePlan } from '../engine/helpers/gate-helpers.mjs';
+import {
+  checkReferenceIndexCoverage,
+  classifyReferenceAuthority,
+  readBundlePlan,
+} from '../engine/helpers/gate-helpers.mjs';
 import {
   inspectReferenceReturnMaps,
   inspectSeedTopicReturnMaps,
@@ -49,6 +53,12 @@ function parseMetadataBlock(content) {
 const REQUIRED_META = ['source_url','acceptance_status','source_type','tier','evidence_role','trust_level','why_it_matters','accessed_at','related_topic'];
 const REQUIRED_SECTIONS = ['## Key Facts','## Core Content Capture','## Relevance To This Research','## Quotable Terms / Concepts','## Risks And Limitations'];
 
+function referenceDiagnosticLabel(classification) {
+  return classification?.authority === 'delegated_bypass' || /^delegated_bypass\b/.test(classification?.reason || '')
+    ? 'delegated_bypass'
+    : 'projection_backing_drift';
+}
+
 // ---- Get topic registry ----
 let registry = [];
 try {
@@ -62,6 +72,7 @@ if (registry.length === 0) {
   addIssue('topic_registry: empty or missing — cannot verify per-topic wave1 artifacts.');
 } else {
   const refPath = join(bundlePath, 'reference');
+  const discoveredTopicRefs = [];
 
   for (const topic of registry) {
 
@@ -79,6 +90,7 @@ if (registry.length === 0) {
       const fp = join(refPath, f);
       const content = readMdFile(fp);
       if (!content) continue;
+      discoveredTopicRefs.push({ relPath: `reference/${f}`, absPath: fp });
 
       inc();
       const meta = parseMetadataBlock(content);
@@ -103,6 +115,13 @@ if (registry.length === 0) {
           addIssue(`reference/${f}: missing section '${sec}'`);
         }
       }
+
+      inc();
+      const classification = classifyReferenceAuthority(bundlePath, `reference/${f}`);
+      if (!classification.passed) {
+        addIssue(`[${referenceDiagnosticLabel(classification)}] reference/${f}: ${classification.reason}`,
+          'Repair through submitted wave1_topic_deepening source/cache/degraded backing, or remove the unbacked reference projection.');
+      }
     }
 
     // 3. evidence-summary per topic
@@ -120,12 +139,12 @@ if (registry.length === 0) {
     }
   }
 
-  // 5. _INDEX.md has wave1_topic entries
+  // 5. _INDEX.md has matching wave1_topic rows for consumer navigation
   inc();
-  const indexContent = readMdFile(join(bundlePath, 'reference', '_INDEX.md'));
-  if (indexContent && !indexContent.includes('wave1_topic')) {
-    addIssue('_INDEX.md: no row with source_layer: wave1_topic',
-      'Add entries for wave1-produced reference files with source_layer column value "wave1_topic".');
+  const indexResult = checkReferenceIndexCoverage(bundlePath, discoveredTopicRefs, { sourceLayer: 'wave1_topic' });
+  if (!indexResult.passed) {
+    for (const line of indexResult.inspect) addIssue(line);
+    for (const fix of indexResult.advice || []) advice.push(fix);
   }
 }
 

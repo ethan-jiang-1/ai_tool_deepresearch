@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 // inspect-wave2-output.mjs — wave 2 structural lint
-// @impl IOC-003
+// @impl IOC-003, REF-008, WPG-012, RWG-017
 // Usage: node inspect-wave2-output.mjs --bundle <path>
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
+import {
+  checkReferenceIndexCoverage,
+  classifyReferenceAuthority,
+} from '../engine/helpers/gate-helpers.mjs';
 import {
   inspectReferenceReturnMaps,
   inspectSeedTopicReturnMaps,
@@ -49,6 +53,12 @@ const REQUIRED_SECTIONS = ['## Key Facts','## Core Content Capture','## Relevanc
 const LEDGER_SECTIONS = ['## Cross-Topic Scan Matrix','## Wave1 Legacy Questions','## Cross-Topic Resolutions','## Emergent Cross-Topic Questions','## Exploration Decisions','## HITL2 Handoff'];
 const BACKFILL_TOKENS = ['__BACKFILL_WAVE2_JUDGMENT__','__BACKFILL_PENDING_QUESTIONS__'];
 
+function referenceDiagnosticLabel(classification) {
+  return classification?.authority === 'delegated_bypass' || /^delegated_bypass\b/.test(classification?.reason || '')
+    ? 'delegated_bypass'
+    : 'projection_backing_drift';
+}
+
 // ---- 1. No 00_shared/ subdirectory ----
 inc();
 const refPath = join(bundlePath, 'reference');
@@ -65,10 +75,12 @@ if (existsSync(refPath)) {
 inc();
 if (existsSync(refPath)) {
   const crossFiles = readdirSync(refPath).filter(f => f.startsWith('00-cross-') && f.endsWith('.md'));
+  const crossRefRecords = [];
   for (const f of crossFiles) {
     const fp = join(refPath, f);
     const content = readMdFile(fp);
     if (!content) continue;
+    crossRefRecords.push({ relPath: `reference/${f}`, absPath: fp });
 
     inc();
     const meta = parseMetadataBlock(content);
@@ -80,14 +92,21 @@ if (existsSync(refPath)) {
     for (const sec of REQUIRED_SECTIONS) {
       if (!content.includes(sec)) addIssue(`reference/${f}: missing section '${sec}'`);
     }
+
+    inc();
+    const classification = classifyReferenceAuthority(bundlePath, `reference/${f}`);
+    if (!classification.passed) {
+      addIssue(`[${referenceDiagnosticLabel(classification)}] reference/${f}: ${classification.reason}`,
+        'Repair to a prior accepted source_url plus W2F/finding-index/cross-topic-ledger/body backing refs, or submit wave2_targeted_evidence for new fetched evidence.');
+    }
   }
 
   // _INDEX.md cross entries
   inc();
-  const indexContent = readMdFile(join(refPath, '_INDEX.md'));
-  if (crossFiles.length > 0 && indexContent && !indexContent.includes('wave2_cross')) {
-    addIssue('_INDEX.md: no row with source_layer: wave2_cross for 00-cross-*.md files',
-      'Add entries for 00-cross-*.md files with source_layer column value "wave2_cross".');
+  const indexResult = checkReferenceIndexCoverage(bundlePath, crossRefRecords, { sourceLayer: 'wave2_cross' });
+  if (!indexResult.passed) {
+    for (const line of indexResult.inspect) addIssue(line);
+    for (const fix of indexResult.advice || []) advice.push(fix);
   }
 }
 

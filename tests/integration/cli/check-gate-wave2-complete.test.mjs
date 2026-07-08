@@ -271,6 +271,7 @@ findings:
     independent_backing_refs:
       - artifacts/wave1/topic-a/evidence-summary.md
       - artifacts/wave1/topic-b/evidence-summary.md
+    consumer_reference_omission_reason: "limitation: integration fixture has no submitted prior-wave backing suitable for a consumer 00-cross projection"
     gap_status: no_gap
 synthesis_eligibility:
   pure_synthesis_eligible: true
@@ -289,7 +290,7 @@ synthesis_eligibility:
 }
 
 function submitWave2CrossReference(dir) {
-  return claimAndSubmitWorkUnit(dir, {
+  const submitted = claimAndSubmitWorkUnit(dir, {
     phase: 'wave2',
     queueItemId: 'cross-market',
     outputs: [{
@@ -301,6 +302,7 @@ function submitWave2CrossReference(dir) {
         source_url: 'https://example.com/research/market-shift',
         related_topic: 'cross-topic',
         evidence_role: 'targeted_evidence',
+        coreContent: 'W2F-001 targeted evidence was submitted through wave2_targeted_evidence and is backed by the work-unit cache trail for market-shift.',
       }),
     }],
     cacheTrails: [{
@@ -308,6 +310,12 @@ function submitWave2CrossReference(dir) {
       url: 'https://example.com/research/market-shift',
     }],
   });
+  writeFileSync(join(dir, 'reference', '_INDEX.md'), [
+    '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- |',
+    '| reference/00-cross-market-shift.md | secondary | practitioner | Tier 2 | cross-topic | wave2_cross | accepted | 2026-07-06 |',
+  ].join('\n') + '\n');
+  return submitted;
 }
 
 function writeIndexObject(dir, value) {

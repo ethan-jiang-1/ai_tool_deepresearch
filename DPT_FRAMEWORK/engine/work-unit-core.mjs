@@ -1,4 +1,4 @@
-// @impl DEW-002, DEW-004, FRE-005, SDC-001, SDC-002, SDC-003, EXO-001, FIO-001
+// @impl DEW-002, DEW-004, FRE-005, SDC-001, SDC-002, SDC-003, EXO-001, FIO-001, SNC-005, REF-006, WAI-008, WTS-010
 // Work-unit core: ID/index/envelope/transaction/inspect helpers.
 
 import {
@@ -81,7 +81,7 @@ export const DEFAULT_KIND_CONTRACTS = Object.freeze({
     }),
   }),
   wave1_topic_deepening: Object.freeze({
-    task_brief: 'Deepen the assigned topic with bounded evidence work, declared outputs, and submit-ready cache trails.',
+    task_brief: 'Deepen the assigned topic with bounded evidence work, submitted source backing, declared evidence/question outputs, and submit-ready cache trails. Canonical topic reference Markdown is Phase-owned after submit unless this task explicitly assigns a reference output.',
     output_contract: Object.freeze({
       required_result_fields: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce', 'summary', 'output_files', 'cache_trails'],
       output_files: Object.freeze({
@@ -102,7 +102,7 @@ export const DEFAULT_KIND_CONTRACTS = Object.freeze({
     }),
   }),
   wave2_targeted_evidence: Object.freeze({
-    task_brief: 'Perform only the assigned targeted evidence search and return declared evidence outputs for submit validation.',
+    task_brief: 'Perform only the assigned targeted evidence search and return bounded source evidence, source URLs, confidence/fills_gap signals, declared outputs when assigned, and cache trails for submit validation. Final finding status and 00-cross projections are Phase-owned after submit.',
     output_contract: Object.freeze({
       required_result_fields: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce', 'summary', 'output_files', 'cache_trails'],
       output_files: Object.freeze({
@@ -606,7 +606,15 @@ function taskMarkdown(manifest, bundleDir) {
     '```',
     '',
     ...(manifest.kind === 'wave1_topic_deepening'
-      ? ['For Wave1 topic deepening, include structured `source_claims[]` and `accepted_source_urls[]` in `result.json`; prose links alone are not accepted source coverage.']
+      ? [
+          'For Wave1 topic deepening, include structured `source_claims[]`, `accepted_source_urls[]`, evidence-summary output, question-list output, and cache trails in `result.json`; prose links alone are not accepted source coverage.',
+          'Do not treat canonical `reference/{topic}-<source>.md` Markdown as a required delegated receipt unless this task explicitly names that reference path in its output contract.',
+        ]
+      : []),
+    ...(manifest.kind === 'wave2_targeted_evidence'
+      ? [
+          'For Wave2 targeted evidence, return bounded evidence/source URLs/cache trails and confidence/fills_gap payloads for the assigned finding. The Phase Agent updates finding-index.yaml, cross-topic-ledger.md, synthesis/backfill, and any `reference/00-cross-*.md` projection after submit.',
+        ]
       : []),
     '',
     '## Cache Policy',

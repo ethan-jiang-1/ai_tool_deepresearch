@@ -13,7 +13,9 @@ import {
   checkReferenceFormatFiles,
   checkReferenceSourceUrls,
   checkReferenceLedgerCoverage,
+  checkReferenceIndexCoverage,
   checkCacheCoverage,
+  classifyReferenceAuthority,
 } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 import {
   claimAndSubmitWorkUnit,
@@ -123,7 +125,7 @@ describe('reference file gate helpers', () => {
     }
   });
 
-  it('detects filesystem reference files missing from ledger declarations', () => {
+  it('detects filesystem reference files with no submitted backing', () => {
     const dir = join(__dirname, '.test-gh-ref-orphan');
     mkdirSync(join(dir, 'reference'), { recursive: true });
     writeFileSync(join(dir, 'reference', 'topic-a-orphan.md'), '# Ref\n');
@@ -134,9 +136,107 @@ describe('reference file gate helpers', () => {
       const files = listMatchingBundleFiles(dir, 'reference/*topic-a*.md');
       const result = checkReferenceLedgerCoverage(dir, files);
       assert.equal(result.passed, false);
-      assert.ok(result.inspect.some((i) => i.includes('not declared')));
+      assert.ok(result.inspect.some((i) => i.includes('projection_backing_drift')));
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('classifies a Wave1 topic reference as a backed Phase-owned projection', () => {
+    const dir = tempWorkUnitBundle('gh-ref-wave1-backed-');
+    try {
+      const sourceUrl = 'https://example.com/research/topic-a-source';
+      const cacheTrail = '_cache/wave1/primary/topic-a/s01_source';
+      const evidencePath = 'artifacts/wave1/topic-a/evidence-summary.md';
+      claimAndSubmitWorkUnit(dir, {
+        phase: 'wave1',
+        queueItemId: 'topic-a',
+        outputs: [
+          {
+            path: evidencePath,
+            role: 'evidence_summary',
+            content: `# Evidence\n\n[Source](${sourceUrl})\n`,
+          },
+          {
+            path: 'artifacts/wave1/topic-a/question-list.md',
+            role: 'question_list',
+            content: '# Questions\n',
+          },
+        ],
+        cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
+        resultOverrides: {
+          source_claims: [{
+            url: sourceUrl,
+            acceptance_status: 'accepted',
+            is_new_vs_wave0: true,
+            source_ref: evidencePath,
+            cache_trail_refs: [cacheTrail],
+          }],
+          accepted_source_urls: [sourceUrl],
+        },
+      });
+      mkdirSync(join(dir, 'reference'), { recursive: true });
+      writeFileSync(join(dir, 'reference', 'topic-a-source.md'), referenceContent({
+        source_url: sourceUrl,
+        related_topic: 'topic-a',
+        coreContent: `This Phase-owned projection cites submitted backing ${evidencePath} and ${cacheTrail}. The capture text is long enough to satisfy the countable reference threshold while preserving source provenance.`,
+      }));
+
+      const classification = classifyReferenceAuthority(dir, 'reference/topic-a-source.md');
+      assert.equal(classification.passed, true, classification.reason);
+      assert.equal(classification.authority, 'phase_owned_projection');
+
+      const files = listMatchingBundleFiles(dir, 'reference/*topic-a*.md');
+      const result = checkReferenceLedgerCoverage(dir, files);
+      assert.equal(result.passed, true, result.inspect.join('; '));
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
+  });
+
+  it('fails closed when _INDEX.md names a Wave1 reference with no submitted backing', () => {
+    const dir = tempWorkUnitBundle('gh-ref-wave1-index-only-');
+    try {
+      mkdirSync(join(dir, 'reference'), { recursive: true });
+      writeFileSync(join(dir, 'reference', '_INDEX.md'), [
+        '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
+        '| --- | --- | --- | --- | --- | --- | --- | --- |',
+        '| reference/topic-a-source.md | primary | expert | Tier 2 | topic-a | wave1_topic | accepted | 2026-07-06 |',
+      ].join('\n'));
+      writeFileSync(join(dir, 'reference', 'topic-a-source.md'), referenceContent({
+        source_url: 'https://example.com/research/unsubmitted',
+        related_topic: 'topic-a',
+        coreContent: 'This legal-looking reference has an index row, but no submitted source claim, cache trail, degraded capture, or accepted source URL backs it.',
+      }));
+
+      const classification = classifyReferenceAuthority(dir, 'reference/topic-a-source.md');
+      assert.equal(classification.passed, false);
+      assert.equal(classification.authority, 'unbacked_projection');
+      assert.match(classification.reason, /projection_backing_drift/);
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
+  });
+
+  it('reports missing reference index rows separately from backing authority', () => {
+    const dir = tempWorkUnitBundle('gh-ref-missing-index-');
+    try {
+      mkdirSync(join(dir, 'reference'), { recursive: true });
+      writeFileSync(join(dir, 'reference', '_INDEX.md'), [
+        '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
+        '| --- | --- | --- | --- | --- | --- | --- | --- |',
+      ].join('\n'));
+      writeFileSync(join(dir, 'reference', 'topic-a-source.md'), referenceContent({
+        source_url: 'https://example.com/research/source',
+        related_topic: 'topic-a',
+      }));
+
+      const files = listMatchingBundleFiles(dir, 'reference/*topic-a*.md');
+      const result = checkReferenceIndexCoverage(dir, files, { sourceLayer: 'wave1_topic' });
+      assert.equal(result.passed, false);
+      assert.match(result.inspect.join('\n'), /\[missing_index_row\]/);
+    } finally {
+      cleanupWorkUnitBundle(dir);
     }
   });
 });

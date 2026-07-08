@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-gate-wave1-complete.mjs — evaluates gate-wave1-complete rules
-// @impl GSK-001, GSK-002, GSK-004, RWG-005, RWG-007, FRE-003
+// @impl GSK-001, GSK-002, GSK-004, RWG-005, RWG-007, RWG-017, FRE-003
 // Usage: node check-gate-wave1-complete.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import { existsSync, statSync, readFileSync, readdirSync } from 'node:fs';
@@ -25,6 +25,7 @@ import {
   checkReferenceSourceUrls,
   checkReferenceKeyFactsMinLines,
   checkReferenceLedgerCoverage,
+  checkReferenceIndexCoverage,
   checkWorkUnitLedgerExists,
   checkWorkUnitOutputCoverage,
   checkWorkUnitSubmissionPresence,
@@ -506,6 +507,14 @@ for (const rule of definition.rules) {
           rulePassed = false;
           ruleDetail = result.inspect.join('; ');
         }
+      } else if (rule.check === 'reference_index_coverage') {
+        const files = listMatchingBundleFiles(bundlePath, resolvedTarget);
+        const result = checkReferenceIndexCoverage(bundlePath, files, { sourceLayer: rule.source_layer || null });
+        if (!result.passed) {
+          rulePassed = false;
+          ruleDetail = result.inspect.join('; ');
+        }
+        for (const a of result.advice || []) advice.push(a);
       } else if (rule.check === 'depth_review_contract') {
         const topic = tgt.topic || rule.topic || topicSlugFromDepthReviewTarget(resolvedTarget);
         const depthResult = checkWave1DepthReviewContract(bundlePath, { topic });

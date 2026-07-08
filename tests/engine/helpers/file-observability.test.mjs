@@ -121,6 +121,54 @@ describe('file observability', () => {
     assert.ok(result.inspect.some(i => i.includes('orphan')), 'Inspect should mention orphan');
   });
 
+  it('treats backed Phase-owned reference projections as expected, not orphan blockers', () => {
+    const dir = setupBundle('fo-backed-projection');
+    const sourceUrl = 'https://example.com/news/phase-owned';
+    const evidencePath = 'artifacts/wave1/topic-a/evidence-summary.md';
+    const questionPath = 'artifacts/wave1/topic-a/question-list.md';
+    const cacheTrail = '_cache/wave1/primary/topic-a/phase-owned';
+    claimAndSubmitWorkUnit(dir, {
+      phase: 'wave1',
+      queueItemId: 'topic-a',
+      outputs: [
+        { path: evidencePath, role: 'evidence_summary', content: `# Evidence\n\n[Source](${sourceUrl})\n` },
+        { path: questionPath, role: 'question_list', content: '# Questions\n' },
+      ],
+      cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
+      resultOverrides: {
+        source_claims: [{
+          url: sourceUrl,
+          acceptance_status: 'accepted',
+          is_new_vs_wave0: true,
+          source_ref: evidencePath,
+          cache_trail_refs: [cacheTrail],
+        }],
+        accepted_source_urls: [sourceUrl],
+      },
+    });
+    writeFileSync(join(dir, 'reference', '_INDEX.md'), [
+      '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
+      '| --- | --- | --- | --- | --- | --- | --- | --- |',
+      '| reference/topic-a-phase-owned.md | primary | expert | Tier 2 | topic-a | wave1_topic | accepted | 2026-07-06 |',
+    ].join('\n'));
+    writeFileSync(join(dir, 'reference', 'topic-a-phase-owned.md'), referenceContent({
+      source_url: sourceUrl,
+      related_topic: 'topic-a',
+      coreContent: `This Phase-owned projection cites ${evidencePath} and ${cacheTrail} as submitted source/cache backing.`,
+    }));
+
+    const result = auditFileObservability(dir, {
+      topicSlugs: ['topic-a'],
+      targetPhase: 'wave1',
+    });
+
+    const ref = result.findings.find(f => f.path === 'reference/topic-a-phase-owned.md');
+    assert.ok(ref);
+    assert.strictEqual(ref.classification, 'expected');
+    assert.strictEqual(ref.authority_status, 'phase_owned_projection');
+    assert.ok(!result.inspect.some(line => line.includes('reference/topic-a-phase-owned.md') && line.includes('orphan')));
+  });
+
   it('classifies non-work-unit delegated artifacts as diagnostic only', () => {
     const dir = setupBundle('fo-old-delegated', {
       '_subagents/wave_01/slot_01/task.md': '# Task\n',
@@ -232,6 +280,58 @@ describe('file observability', () => {
     const orphan = result.findings.find(f => f.path === 'reference/topic-a-orphan.md');
     assert.ok(orphan);
     assert.strictEqual(orphan.classification, 'orphan_authority_blocking');
+  });
+
+  it('labels projection drift, delegated bypass, missing index rows, and source-claim cache mismatches distinctly', () => {
+    const dir = setupBundle('fo-diagnostics', {
+      'reference/topic-a-unbacked.md': referenceContent({
+        source_url: 'https://example.com/news/unbacked',
+        related_topic: 'topic-a',
+        coreContent: 'This reference cites no submitted source/cache/work-unit backing.',
+      }),
+      'reference/loose.md': referenceContent({
+        source_url: 'https://example.com/news/loose',
+        related_topic: 'topic-a',
+      }),
+    });
+    claimAndSubmitWorkUnit(dir, {
+      phase: 'wave1',
+      queueItemId: 'topic-a',
+      outputs: [{
+        path: 'artifacts/wave1/topic-a/evidence-summary.md',
+        role: 'evidence_summary',
+        content: '# Evidence\n',
+      }, {
+        path: 'artifacts/wave1/topic-a/question-list.md',
+        role: 'question_list',
+        content: '# Questions\n',
+      }],
+      cacheTrails: [{
+        path: '_cache/wave1/primary/topic-a/source',
+        url: 'https://example.com/news/source',
+      }],
+      resultOverrides: {
+        source_claims: [{
+          url: 'https://example.com/news/source',
+          acceptance_status: 'accepted',
+          is_new_vs_wave0: true,
+          source_ref: 'artifacts/wave1/topic-a/evidence-summary.md',
+          cache_trail_refs: ['_cache/wave1/primary/topic-a/source'],
+        }],
+        accepted_source_urls: ['https://example.com/news/source'],
+      },
+    });
+    writeFileSync(join(dir, '_cache/wave1/primary/topic-a/source/page.md'), '# Page\n');
+
+    const result = auditFileObservability(dir, {
+      topicSlugs: ['topic-a'],
+      targetPhase: 'wave1',
+    });
+    const text = result.inspect.concat(result.findings.map(f => f.reason)).join('\n');
+    assert.match(text, /projection_backing_drift/);
+    assert.match(text, /delegated_bypass/);
+    assert.match(text, /\[missing_index_row\]/);
+    assert.match(text, /\[cache_source_claim_mismatch\]/);
   });
 
   it('creates findings with stable schema (path, classification, severity, phase, reason, authority_status)', () => {

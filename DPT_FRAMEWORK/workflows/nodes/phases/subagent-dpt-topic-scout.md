@@ -28,7 +28,7 @@ suggested_context: []
 - **Role key**: `dpt-topic-scout`
 - **Used by**: Wave2 lifecycle Phase Agent for gap-fill, cross-topic, and emergent search tasks.
 - **Receives**: Work-unit `task.md`, `_beacon.json`, `result.schema.json`, assigned `runtime-receipt.jsonl`, and the output/cache contract for `_work_units/wave2/{work_id}/`.
-- **Produces**: Search evidence JSON, source URLs, optional promoted cross-reference inputs, cache trails, runtime receipt events, and bounded result JSON for `operate-work-unit submit`.
+- **Produces**: bounded targeted evidence payloads, source URLs, `fills_gap`, confidence, cache trails, runtime receipt events, and bounded result JSON for `operate-work-unit submit`.
 - **Write capability**: Requires filesystem read/write/append and directory creation under `bundle_dir`; before return it verifies `result.json`, `runtime-receipt.jsonl`, declared outputs, and required cache leaf files exist under the active bundle root.
 - **Boundary**: This role searches and extracts for a specific finding or topic gap; it does not make cross-topic synthesis judgments, update final ledger state, run gates, or mutate workflow state.
 - **Handoff**: Phase Agent submits the result through `operate-work-unit submit --work-id <work_id> --result <result.json>`. Successful submit is the Engine boundary that completes queue demand and appends delegated ledger coverage.
@@ -71,14 +71,14 @@ Valid dispatch contexts include:
 Search for:
 
 - Evidence that supports, falsifies, or narrows the specific finding
-- Source pages with enough substance to be promoted to `reference/00-cross-*.md` by the Phase Agent
+- Source pages with enough substance to be promoted to `reference/00-cross-*.md` by the Phase Agent after submit
 - Concrete URLs and snippets that explain whether the gap was filled
 
 Do not search broadly beyond the finding. Do not decide final finding status.
 
 ## 3. Artifacts
 
-The role returns structured JSON through the work-unit result contract. The exact schema comes from `result.schema.json`, but the semantic payload includes:
+The role returns bounded targeted evidence through the work-unit result contract. The exact schema comes from `result.schema.json`, but the semantic payload includes:
 
 ```json
 {
@@ -98,7 +98,9 @@ Expected meanings:
 | `fills_gap` | Whether the search found evidence that helps the assigned gap |
 | `confidence` | Low/medium/high confidence in the evidence quality |
 
-If the task asks the Sub-agent to write source files directly, declared output paths must be included in `output_files[]`; otherwise, the Phase Agent promotes suitable sources to `reference/00-cross-*.md` during ingestion. In both cases, cache trails for real fetched sources must be returned when available. The Phase Agent, not the Sub-agent, updates `finding-index.yaml` after submit with `subagent_receipt_refs[]`, `gap_status`, confidence, and backing refs.
+If the task asks the Sub-agent to write source files directly, declared output paths must be included in `output_files[]`; otherwise, the Phase Agent promotes suitable sources to `reference/00-cross-*.md` during ingestion. In both cases, cache_trails[] for real fetched sources must be returned when available. The Phase Agent, not the Sub-agent, updates `finding-index.yaml` after submit with `subagent_receipt_refs[]`, `gap_status`, confidence, and backing refs.
+
+The Phase Agent, not the Sub-agent, updates `cross-topic-ledger.md`, `synthesis.md`, seed-topic backfill, final finding status, and any `reference/00-cross-*.md` projection. The Sub-agent does not update `cross-topic-ledger.md`. A Sub-agent may provide source candidates and declared fetched-source files only when the task explicitly assigns those outputs.
 
 **Output serialization:** All structured output files MUST be written via standard library serialization, never hand-concatenated:
 
@@ -150,6 +152,7 @@ Only after all tiers fail may the Sub-agent record a source as inaccessible. Hon
 - Do not claim search happened if it did not.
 - Do not make cross-topic synthesis judgments or final finding decisions.
 - Do not update `finding-index.yaml`, `cross-topic-ledger.md`, `synthesis.md`, queue state, status, profile, or plan unless the work-unit task explicitly declares a bounded output path and schema.
+- Do not write or decide `reference/00-cross-*.md` as canonical consumer projection unless the task explicitly assigns a fetched-source reference output.
 - Do not run gates or decide pass/fail.
 - Do not skip WebSearch and jump straight to unsupported claims.
 - Do not mark a finding resolved, pure-synthesis-eligible, or HITL2-ready; return bounded evidence only.
@@ -166,7 +169,7 @@ Phase Agent:
 - Spawns the Sub-agent with the generated work-unit task prompt
 - Submits the returned result through `operate-work-unit submit --work-id <work_id> --result <result.json>`
 - Repairs submit rejection, closes terminal attempts, or retries with a new `work_id` when needed
-- Updates `finding-index.yaml`, `cross-topic-ledger.md`, `synthesis.md`, seed-topic backfill, and gate execution
+- Updates `finding-index.yaml`, `cross-topic-ledger.md`, `synthesis.md`, seed-topic backfill, Phase-owned `reference/00-cross-*.md` projections, and gate execution
 
 Sub-agent:
 

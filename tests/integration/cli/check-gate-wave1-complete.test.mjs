@@ -174,6 +174,11 @@ function createBundle(name) {
     '- related_topic: topic-a\n\n' +
     '## Key Facts\n- Finding one: Important initial finding.\n- Finding two: Second key insight.\n- Finding three: Third data point.\n- Finding four: Fourth observation.\n- Finding five: Fifth concluding fact.\n\n## Core Content Capture\nThis is a substantive core content capture section that provides meaningful analysis of the topic being researched. It exceeds one hundred characters to satisfy the minimum quality threshold for reference counting.\n' +
     '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- Term.\n## Risks And Limitations\n- None.\n');
+  writeFileSync(join(dir, 'reference', '_INDEX.md'), [
+    '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- |',
+    '| reference/01-topic-a-deepening.md | secondary | practitioner | Tier 2 | topic-a | wave1_topic | accepted | 2026-06-15 |',
+  ].join('\n') + '\n');
 
   return dir;
 }
@@ -418,7 +423,7 @@ describe('check-gate-wave1-complete', () => {
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
-    assert.ok(output.inspect.some(m => m.includes('not declared')), `Expected orphan fail: ${JSON.stringify(output.inspect)}`);
+    assert.ok(output.inspect.some(m => m.includes('projection_backing_drift') || m.includes('submitted backing')), `Expected orphan/backing fail: ${JSON.stringify(output.inspect)}`);
   });
 
   it('10. rejects YAML frontmatter reference files', () => {

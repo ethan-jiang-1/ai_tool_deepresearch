@@ -52,10 +52,12 @@ export {
   REQUIRED_REFERENCE_METADATA_FIELDS,
   REQUIRED_REFERENCE_SECTIONS,
   parseReferenceMetadata,
+  classifyReferenceAuthority,
   checkReferenceFormatFiles,
   checkReferenceSourceUrls,
   checkReferenceKeyFactsMinLines,
   checkReferenceLedgerCoverage,
+  checkReferenceIndexCoverage,
   checkCacheCoverage,
 } from './gate-helpers-checks.mjs';
 

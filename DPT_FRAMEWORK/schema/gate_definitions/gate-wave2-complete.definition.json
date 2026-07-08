@@ -107,7 +107,14 @@
       "failure_message": "No wave2_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event before the gate."
     },
     {
-      "_comment": "Wave2 conditional provenance: only triggered when search/evidence/reference outputs exist (reference/00-cross-*.md). Pure synthesis/backfill artifacts (synthesis.md, cross-topic-ledger.md, finding-index.yaml) do NOT require delegated work-unit provenance.",
+      "id": "wave2_cross_reference_index_coverage",
+      "check": "reference_index_coverage",
+      "target": "reference/00-cross-*.md",
+      "source_layer": "wave2_cross",
+      "failure_message": "Wave2 00-cross references must have matching reference/_INDEX.md rows with source_layer wave2_cross. Missing index rows are reference navigation drift; source_layer is not evidence authority without submitted or prior-wave backing."
+    },
+    {
+      "_comment": "Wave2 conditional provenance: new fetched evidence requires submitted wave2_targeted_evidence coverage. Existing-backed pure-synthesis reference/00-cross-*.md files may pass as Phase-owned projections when concrete prior Wave0/Wave1 backing and W2F ledger/index refs exist.",
       "id": "wave2_work_unit_cross_ref_coverage",
       "check": "work_unit_output_coverage",
       "target": "reference/00-cross-*.md",
@@ -118,7 +125,7 @@
           "reference"
         ]
       },
-      "failure_message": "Wave2 promoted cross references (reference/00-cross-*.md) exist without submitted work-unit provenance. These must be produced through operate-work-unit submit; direct-written cross references are not valid."
+      "failure_message": "Wave2 00-cross references must either bind to submitted wave2_targeted_evidence coverage for new fetched evidence or classify as existing-backed Phase-owned projections with W2F-xxx, finding-index/cross-topic-ledger refs, and concrete prior-wave submitted backing. Synthetic or newly searched source_url values without targeted evidence are invalid."
     },
     {
       "id": "wave2_work_unit_submission_presence",
@@ -131,14 +138,14 @@
           "reference"
         ]
       },
-      "failure_message": "Wave2 submitted work-unit rows failed index/manifest/result/receipt/beacon/output/cache/hash cross-checks."
+      "failure_message": "Wave2 submitted work-unit rows failed index/manifest/result/receipt/beacon/output/cache/hash cross-checks. Existing-backed 00-cross projections do not need a new Wave2 row; new fetched evidence does."
     },
     {
       "id": "wave2_delegated_bypass_suspected",
       "check": "delegated_bypass_suspected",
       "target": "reference/00-cross-*.md",
       "wave": "wave2",
-      "failure_message": "Wave2 delegated evidence search artifacts appear without submitted work-unit coverage."
+      "failure_message": "Wave2 delegated evidence search artifacts appear without submitted targeted-evidence coverage, or a 00-cross reference cannot be classified as an existing-backed Phase-owned projection."
     }
   ]
 }

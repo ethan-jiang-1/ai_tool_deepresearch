@@ -34,7 +34,7 @@ Files under `_work_units/waveN/{work_id}/` are runtime/check surfaces. They are 
 
 ## 2. Work-Unit Envelope
 
-`operate-work-unit claim <bundle> --phase waveN [--count N]` allocates eligible delegated queue-front demand into `_work_units/waveN/{work_id}/`.
+`operate-work-unit claim <bundle> --phase waveN --count <claim-count>` allocates eligible delegated queue-front demand into `_work_units/waveN/{work_id}/`. The CLI remains the allocator of `work_id`; the Phase Agent computes only the bounded top-up count for independent demand.
 
 Each envelope contains:
 
@@ -53,15 +53,27 @@ Each envelope contains:
 
 For delegated queue demand:
 
-1. Run `node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase waveN [--count N]`.
-2. For each returned `prompt_refs[]`, open the `task_ref`, `beacon_ref`, and `result_schema_ref`.
-3. Spawn a native sub-agent with the generated prompt. The prompt includes the work-unit identity and output/cache contract.
-4. The Sub-agent performs real search/fetch/extraction and writes declared output files plus cache trails.
-5. The Sub-agent writes lifecycle receipt events to the assigned `runtime_receipt_ref`.
-6. The Sub-agent prepares a result JSON matching `result.schema.json`.
-7. Run `node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>`.
-8. If submit rejects, repair the same claimed attempt when possible. Use `fail`, `timeout`, or `abandon` only for explicit terminal closure.
-9. When `claim` reports `phase_drained: true`, run the phase gate.
+0. Reconstruct delegated in-flight work from bundle truth before claiming: `operate-work-unit inspect <bundle>`, queue delegated-in-flight state, `_work_units/waveN/*/_status.json`, work-unit manifests, and submitted ledger rows. A scratch list from chat is convenience only.
+1. Compute a bounded top-up `claim-count` for independent eligible demand. Bound it by the independent eligible demand count, the accepted/default cap, and the remaining free delegated in-flight capacity for that wave. Use an explicit profile/runtime cap when accepted; otherwise use the documented conservative default cap for the phase, no higher than 5.
+2. If reconstructed in-flight work already reaches the accepted/default cap, poll/submit/terminalize existing attempts before claiming more. `--count 1` is legal for a single remaining item, dependency-blocked front item, accepted cap of 1, or a narrow repair; it is not the normal drain strategy for independent demand.
+3. Claim a bounded batch:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase waveN --count <claim-count>
+```
+
+4. For each returned `prompt_refs[]`, open the `task_ref`, `beacon_ref`, and `result_schema_ref`.
+5. Spawn one native Sub-agent per returned `work_id`. Each prompt includes the work-unit identity and output/cache contract.
+6. Actively poll runtime readiness with `operate-work-unit inspect <bundle>` or direct bundle-file inspection. Check result, receipt, output, cache, status, and deadline signals for every in-flight attempt.
+7. When a work unit is ready, submit promptly:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
+```
+
+8. If submit rejects, repair the same claimed attempt when possible. Use `fail`, `timeout`, or `abandon` for explicit terminal closure before claiming replacement work.
+9. After successful submit, perform any Phase-owned projection materialization required by the phase, such as Wave1 topic references or existing-backed Wave2 `00-cross` references. These projections must cite submitted backing; they are not delegated evidence authority by themselves.
+10. Continue in this order: fill demand, reconstruct in-flight, claim batch, spawn, poll, submit, repair or terminalize, materialize projections, then gate only after queue demand and delegated in-flight work are both drained.
 
 Queue completion commands are for non-delegated queue maintenance/completion only. Delegated success is `operate-work-unit submit`.
 
