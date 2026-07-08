@@ -15,4 +15,4 @@
 
 ## 活跃列表
 
-- [fose-run-bugfix-batch-plan](fose-run-bugfix-batch-plan.md) — FOSE run 后 BUG-045/046/059-065 的 3-change 修复切分、顺序、验收与测试计划
+**当前无活跃 plan。** 🎉

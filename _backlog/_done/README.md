@@ -25,10 +25,10 @@ _done/
 
 | 归档目录 | 数量 | Next ID |
 |---------|------|---------|
-| `_fixed_bugs/` | 47 个已修复 bug（BUG-001~058，有间隔） | BUG-059 |
+| `_fixed_bugs/` | 56 个已修复 bug（BUG-001~065，有间隔） | BUG-066 |
 | `_suspened_bugs/` | 3 个悬挂 bug（BUG-026, 028, 030） | — |
 | `_done_todos/` | 14 个已完成 todo（DONE-001~014） | DONE-015 |
-| `_closed_plans/` | 11 个已完成 plan（CLS-001~011） | CLS-012 |
+| `_closed_plans/` | 12 个已完成 plan（CLS-001~012） | CLS-013 |
 | `_old_topics/` | 历史归档：`_v12-migration/`（6 个 OpenSpec change 全 DONE）、`_workflow/`（8 个 OpenSpec change 全 ARCHIVED）、`_original_dpt_requirement/`、`_original_dpt_v12/`、`_guideline/`、`_trainsistion/` | — |
 
 关键完成项（按完成日期）：

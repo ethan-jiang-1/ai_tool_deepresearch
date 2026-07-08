@@ -30,7 +30,8 @@ plan 完成后从 `_backlog/plans/` 通过 `git mv` 移入本目录：
 | CLS-009 | 2026-07-05 | cli-exit-code-contract.md | Absorbed by autonomous-command-contract-hardening: top-level and CLI docs now expose canonical `0/1/2`, gate/non-gate classes, `log-event.mjs` always-0 exception, and known doc/code drift |
 | CLS-010 | 2026-07-05 | no-implicit-human-interaction.md | Absorbed by autonomous-command-contract-hardening: commands are Agent-facing; HITL1/HITL2 are the only interactive in-run checkpoints; Final is terminal non-interactive delivery with post-final feedback routed through HITL2 repair/rerun |
 | CLS-011 | 2026-07-08 | formal-run-bugfix-change-split.md | BUG-044~058 split into 4 OpenSpec changes: changes 1-3 delivered (12 bugs resolved, v0.6→v0.8), change 4 deferred (BUG-045/046/052) |
+| CLS-012 | 2026-07-08 | fose-run-bugfix-batch-plan.md | FOSE run bugfix batch: 9 bugs (045, 046, 059-065) split into 3 changes — stabilize-work-unit-submit-and-gate-handoff, parallel-delegated-phase-execution-and-reference-materialization, harden-run-entry-and-bundle-map |
 
 Closure boundary for CLS-007..010: this change did not implement runtime exit-helper unification, code-2 semantic migration, a JS lifecycle walker, chat interceptor, environment-variable control, same-turn chat halt prevention, or fake evidence/trace handling.
 
-**Next available plan ID: CLS-012**
+**Next available plan ID: CLS-013**

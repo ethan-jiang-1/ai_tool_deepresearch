@@ -66,8 +66,17 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-057 | 2026-07-08 | rb_status.json 缺少 current_node 字段，无法确定当前执行的 phase node |
 | BUG-058 | 2026-07-08 | Wave1 cache trails 太薄，每个 topic 只有 1-2 个 cache dir |
 | BUG-052 | 2026-07-08 | Agent 在纯 Node.js 项目中默认使用 Python 做数据操作 |
+| BUG-045 | 2026-07-08 | Agent 优先调用内置 deep-research skill 而非 DPT_FRAMEWORK，无视 CLAUDE.md 抑制指令 |
+| BUG-046 | 2026-07-08 | Wave0 source intake 串行执行，5 个独立 topic 无法并行加速 |
+| BUG-059 | 2026-07-08 | operate-queue/operate-work-unit CLI 把 `--help` 当 bundle 名，在 repo root 创建垃圾目录 |
+| BUG-060 | 2026-07-08 | Sub-agent 产出物与 Engine contract 之间的系统性 mismatch：5 个独立 gap |
+| BUG-061 | 2026-07-08 | START_FROM_HERE.md 名字和定位误导性，迁移到 BUNDLE_MAP.md |
+| BUG-062 | 2026-07-08 | Phase Agent spawn sub-agent 后被动等待，不主动轮询文件系统 |
+| BUG-063 | 2026-07-08 | Gate failure 手动修复级联导致 wave2 被完全跳过 |
+| BUG-064 | 2026-07-08 | Wave1 sub-agent 不产出 topic-specific reference 文件 |
+| BUG-065 | 2026-07-08 | Wave2 cross-topic reference 文件从未被产出 |
 
-**Next available bug ID: BUG-059**
+**Next available bug ID: BUG-066**
 
 ---
 

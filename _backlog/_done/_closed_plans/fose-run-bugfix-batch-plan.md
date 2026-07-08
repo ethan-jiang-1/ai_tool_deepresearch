@@ -1,6 +1,6 @@
 # FOSE Run Bugfix Batch Plan
 
-> Status: active plan
+> Status: closed — all 3 changes archived, all 9 bugs fixed and moved to `_done/_fixed_bugs/`
 > Created: 2026-07-08
 > Source run: `dpt_rb_fose-europe-engelberg-2026`
 > Scope: triage and implementation ordering for active bugs BUG-045, BUG-046, BUG-059, BUG-060, BUG-061, BUG-062, BUG-063, BUG-064, BUG-065
