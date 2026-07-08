@@ -37,5 +37,34 @@ P2 — 吞吐量限制。Wave0 的 5 个 topic source intake 完全独立（搜�
 
 4. **注意**：Wave1（per-topic deepening）的 item 也是按 topic 独立的，同样可受益于并行。但 wave2（cross-topic synthesis）必须等 wave1 全部完成，不能并行。
 
+## 最新观测 (2026-07-08, fose-europe-engelberg-2026 run)
+
+从 `rb_trace.jsonl` 提取的 Wave0 claim/submit 时序：
+
+```
+00:52:42  claim topic-01 (fose-retreat)           ← solo，孤零零
+01:03:24  submit topic-01 ✅                       ← 10分42秒后才完
+
+01:04:23  claim topic-02 (deer-valley)    ┐
+01:04:50  claim topic-03 (engelberg)      │ 4 个在一分钟内
+01:05:09  claim topic-04 (technical)      │ 快速发出
+01:05:25  claim topic-05 (industry)       ┘
+
+01:11:50  submit topic-04 ✅（后 claim 的先完成 — 并行特征）
+01:13:38  submit topic-05 ✅
+01:14:12  submit topic-03 ✅
+01:16:15  submit topic-02 ✅
+```
+
+**状态：半并行，bug 未完全消除。**
+
+改善的地方：
+- topic 02-05 在 **sub-agent 层面并行执行**了——submit 时间交错，04 比 03 晚 claim 却先完成，证明子 agent 同时在跑
+
+仍然存在的问题：
+1. **Agent 不用 `claim --count N`**：每次 `requested_count: 1`，一个一个发 claim 命令，而不是一次 `claim --count 5`
+2. **首轮串行浪费**：topic-01 孤零零跑了 10 分钟才轮到 02-05。如果一开始就 5 个一起 claim，总耗时可以砍到 ~7 分钟（最长那个 sub-agent 的耗时），而不是 23 分钟（01 的 10min + 02-05 的 13min）
+3. **这仍然是 Phase Agent 调用策略问题**，不是框架能力问题——`claim --count N`、`delegated_in_flight` 多 entry 都已经支持
+
 ## 发现时间
 2026-07-07，engelberg-tech-retreat-2026 run，Wave0 阶段观察到 topic 02-05 在队列中 idle 等待

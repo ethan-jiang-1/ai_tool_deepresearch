@@ -40,7 +40,13 @@ import json, os, hashlib
 ## 发现时间
 2026-07-07，engelberg-tech-retreat-2026 run，整个 session 期间
 
-## 影响
-- 环境依赖：CI/其他开发者环境可能没有 Python 3.12 + pyyaml
-- 可维护性：Python 内联脚本和 Node.js CLI 混在一起，调试困难
-- 合约违反：项目明确是 "pure JavaScript ESM"，混入 Python 违反了项目宪章
+## 验证通过 (2026-07-08, fose-europe-engelberg-2026 run)
+
+**已修好。** 两个证据：
+
+1. **Root `CLAUDE.md` line 33 已加 Python 禁止令**：
+   > "Absolutely no Python. Not for scripts, not for one-liners, not for prototyping — use Node.js for everything."
+
+2. **本次 run 零 Python 调用**：`_logs/run.log` 全文搜索 `python` 返回 0 结果。
+
+修复日期：2026-07-08 (Change 4 前置 via root CLAUDE.md 修订)

@@ -65,6 +65,7 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-056 | 2026-07-08 | Queue slug derivation 阻止同一 topic 创建补充 task |
 | BUG-057 | 2026-07-08 | rb_status.json 缺少 current_node 字段，无法确定当前执行的 phase node |
 | BUG-058 | 2026-07-08 | Wave1 cache trails 太薄，每个 topic 只有 1-2 个 cache dir |
+| BUG-052 | 2026-07-08 | Agent 在纯 Node.js 项目中默认使用 Python 做数据操作 |
 
 **Next available bug ID: BUG-059**
 

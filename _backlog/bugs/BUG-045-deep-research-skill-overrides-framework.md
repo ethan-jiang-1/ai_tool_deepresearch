@@ -53,3 +53,18 @@ P1 — UX 故障。用户将 `DPT_FRAMEWORK/RUN.md` 拖入对话表达"用本框
 
 ## 发现时间
 2026-07-07，用户启动 engelberg-tech-retreat-2026 research 时，Agent 第一次错误调用了内置 `deep-research` skill
+
+## 最新验证 (2026-07-08, fose-europe-engelberg-2026 run)
+
+**本次 run 走了正确路径**：`instantiate-run-bundle` → instantiation → hitl1 → setup → seed-topics → wave0 → wave1，未触发 deep-research skill。
+
+**但 bug 未修好。** 防御只完成了一部分：
+
+| 建议修复 | 状态 |
+|----------|------|
+| Root `CLAUDE.md` 加 skill 抑制 | ❌ 没做——root CLAUDE.md 至今无 `deep-research` 字样 |
+| `DPT_FRAMEWORK/CLAUDE.md` 标题强化（加 `BLOCK` 关键词） | ❌ 没做——仍是原文 |
+| `DPT_FRAMEWORK/RUN.md` Section 0 加警告 | ✅ 已做——line 11/15 明确写 "不要调用 deep-research skill" |
+| `settings.json` hook 抑制 | ❌ 没做 |
+
+核心漏洞仍在：root CLAUDE.md 是 session 最先加载的指令，缺乏 skill 抑制意味着新 session 中 research intent 仍可能先触发 skill 匹配。这次没用 `deep-research` skill 不代表下次不会——取决于 Agent 的 skill-matching 和 CLAUDE.md 的加载时序。
