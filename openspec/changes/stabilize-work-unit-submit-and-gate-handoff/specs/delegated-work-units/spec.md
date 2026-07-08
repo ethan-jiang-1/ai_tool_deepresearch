@@ -9,11 +9,13 @@
 Allowed canonicalization is limited to:
 
 - unwrapping a submitted JSON object whose only top-level key is `result`;
-- filling missing receipt identity fields from the claimed work-unit record when the receipt event is otherwise valid JSON and has no conflicting identity values;
-- canonicalizing `page-content.md` to `page.md` inside the same declared cache leaf when the canonical page file is missing or identical;
+- filling missing receipt schema version with the current receipt-event schema literal, and filling missing receipt binding identity fields from the claimed work-unit record when the receipt event is otherwise valid JSON and has no conflicting identity values;
+- materializing `page-content.md` as canonical `page.md` inside the same declared cache leaf when the canonical page file is missing, or accepting an identical non-authority sidecar when both files exist;
 - replacing a stale result/receipt `receipt_nonce` with the Engine record nonce only when `work_id`, `queue_item_id`, and `kind` all match the claimed record and the submitted result path resolves inside that work unit's assigned directory.
 
-Accepted submit transactions SHALL store canonical result and ledger data. Any normalization SHALL be visible through structured diagnostics in submit output, trace, log, or an equivalent Engine diagnostic surface. Invalid submit SHALL remain non-terminal and SHALL NOT append a ledger row or complete queue demand.
+Accepted submit transactions SHALL persist canonical authority surfaces before reporting success: assigned `result.json` SHALL contain the canonical flat result, assigned `runtime-receipt.jsonl` SHALL contain canonical receipt events, declared cache leaves SHALL contain canonical `page.md`, and ledger rows SHALL be built from canonical data. Any normalization SHALL be visible through structured diagnostics in submit output, trace, log, or an equivalent Engine diagnostic surface. Invalid submit SHALL remain non-terminal and SHALL NOT append a ledger row or complete queue demand.
+
+This requirement SHALL NOT remove the existing ability to submit a candidate `resultPath` from a temporary or caller-provided location when all identity fields already match. The stricter assigned-directory containment check applies only to nonce correction. In every successful case, the Engine SHALL still persist the accepted canonical result to the assigned work-unit `result_ref`.
 
 #### Scenario: single result wrapper is unwrapped
 
@@ -29,15 +31,22 @@ Accepted submit transactions SHALL store canonical result and ledger data. Any n
 - **THEN** submit SHALL reject the result before ledger append
 - **AND** diagnostics SHALL identify the unsafe wrapper shape
 
-#### Scenario: missing receipt identity is autofilled from record
+#### Scenario: missing receipt schema or binding identity is canonicalized
 
-- **WHEN** `runtime-receipt.jsonl` contains parseable JSON events that omit one or more of `schema_version`, `work_id`, `queue_item_id`, `kind`, or `receipt_nonce`
-- **AND** the missing fields can be filled from the claimed work-unit record
+- **WHEN** `runtime-receipt.jsonl` contains parseable JSON events that omit the current receipt-event `schema_version` or one or more binding identity fields: `work_id`, `queue_item_id`, `kind`, or `receipt_nonce`
+- **AND** the missing binding identity fields can be filled from the claimed work-unit record
 - **AND** no present identity field conflicts with that record
-- **THEN** submit SHALL validate the canonical receipt events with the filled identity fields
-- **AND** diagnostics SHALL identify the receipt line numbers and autofilled fields
+- **THEN** submit SHALL validate the canonical receipt events with the filled schema version and binding identity fields
+- **AND** the assigned `runtime-receipt.jsonl` SHALL be persisted in canonical JSONL form before submit reports success
+- **AND** diagnostics SHALL identify the receipt line numbers and autofilled schema or identity fields
 
-#### Scenario: conflicting receipt identity is rejected
+#### Scenario: conflicting receipt schema version is rejected
+
+- **WHEN** a receipt event contains a `schema_version` that is not the current receipt-event schema literal
+- **THEN** submit SHALL reject the receipt through normal schema validation
+- **AND** schema version autofill SHALL NOT be used to rewrite a conflicting version
+
+#### Scenario: conflicting receipt binding identity is rejected
 
 - **WHEN** a receipt event contains a `work_id`, `queue_item_id`, `kind`, or `receipt_nonce` that conflicts with the claimed work-unit record
 - **THEN** submit SHALL reject the receipt
@@ -47,15 +56,22 @@ Accepted submit transactions SHALL store canonical result and ledger data. Any n
 
 - **WHEN** `runtime-receipt.jsonl` is empty or contains invalid JSONL
 - **THEN** submit SHALL reject the receipt
-- **AND** identity autofill SHALL NOT be used to synthesize missing events or repair malformed JSON
+- **AND** receipt canonicalization SHALL NOT be used to synthesize missing events or repair malformed JSON
 
 #### Scenario: page-content cache leaf is canonicalized
 
 - **WHEN** a declared cache leaf contains `websearch.json`, `meta.json`, and `page-content.md`
 - **AND** `page.md` is absent in that same leaf directory
-- **THEN** submit MAY rename, copy, or otherwise canonicalize `page-content.md` to canonical `page.md`
+- **THEN** submit SHALL materialize canonical `page.md` with the `page-content.md` content before cache validation reports success
 - **AND** cache validation SHALL continue against `page.md`
 - **AND** diagnostics SHALL identify the cache leaf canonicalization
+
+#### Scenario: identical page sidecar is accepted as non-authority
+
+- **WHEN** a declared cache leaf contains both `page.md` and `page-content.md`
+- **AND** their content is identical
+- **THEN** submit SHALL validate `page.md` as the canonical authority file
+- **AND** `page-content.md` SHALL NOT be treated as an additional fetched-source authority surface
 
 #### Scenario: divergent page files are rejected
 
@@ -76,6 +92,7 @@ Accepted submit transactions SHALL store canonical result and ledger data. Any n
 - **AND** `work_id`, `queue_item_id`, and `kind` match the claimed work-unit record
 - **AND** the submitted result path resolves inside that work unit's assigned directory
 - **THEN** submit MAY normalize the nonce to the Engine record nonce before strict validation
+- **AND** assigned `result.json` and `runtime-receipt.jsonl` SHALL persist the canonical record nonce before submit reports success
 - **AND** diagnostics SHALL record the nonce normalization
 
 #### Scenario: nonce mismatch with unsafe binding is rejected
@@ -84,3 +101,11 @@ Accepted submit transactions SHALL store canonical result and ledger data. Any n
 - **AND** any other identity field differs or the result path resolves outside the assigned work-unit directory
 - **THEN** submit SHALL reject the submission
 - **AND** no ledger row SHALL be written
+
+#### Scenario: exact-identity candidate result may come from temporary path
+
+- **WHEN** a submitted candidate result path is outside the assigned work-unit directory
+- **AND** `work_id`, `queue_item_id`, `kind`, and `receipt_nonce` already match the claimed work-unit record
+- **AND** all other result, receipt, output, cache, queue, hash, and ledger validations pass
+- **THEN** submit MAY accept the candidate result using the existing submit path semantics
+- **AND** the Engine SHALL persist the canonical accepted result to the assigned work-unit `result_ref`
