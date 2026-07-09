@@ -202,6 +202,7 @@ DEW-011: delegated-work-units — Successful work-unit submit verifies durable q
 DEW-012: delegated-work-units — Work-unit submit performs narrow canonicalization for predictable LLM-shaped result, receipt, cache, and nonce drift
 DEW-013: delegated-work-units — Work-unit dry-submit preflights submit validation without side effects
 DEW-014: delegated-work-units — Timeout terminalization is guarded by progress-aware preflight
+DEW-015: delegated-work-units — Audited late-submit recovers eligible timed-out work units without identity rewrite
 
 # conditional-nodes
 COS-001: conditional-nodes — Deterministic branch checkpoint transforms
@@ -413,6 +414,7 @@ WPG-010: work-unit-provenance-gate — Gates emit work-unit lifecycle evidence d
 WPG-011: work-unit-provenance-gate — Framework ships a work-unit provenance-forensics guide
 WPG-012: work-unit-provenance-gate — Provenance gates distinguish Phase-owned reference projections from delegated fetched evidence
 WPG-013: work-unit-provenance-gate — Wave1 required output coverage and Wave2 cross-reference provenance preserve authority contracts
+WPG-014: work-unit-provenance-gate — Gates count audited late-accepted work-unit ledger rows
 
 
 # seg2node
@@ -548,6 +550,7 @@ RWE-008: "research-wave-experiments — Wave1 placeholder not mistaken for full 
 RWE-009: "research-wave-experiments — Cross-artifact reference verification in wave2 synthesis — cross-cutting constraint, no standalone playbook"
 RWE-010: "research-wave-experiments — Wave experiment playbook SHALL write wave{N}_completion trace event before its wave-complete gate (phase-wave{0,1,2}.md completion obligation)"
 RWE-011: research-wave-experiments — Wave timeout-preflight and progress-lease coverage
+RWE-012: research-wave-experiments — Wave audited late-accept coverage for timed-out work units
 
 # wff-research-waves / seed-topic-materialization
 STM-001: seed-topic-materialization — Seed topic materialization phase node (9-section body, forces topic_registry→seed_topics/ materialization, seed_topics_completion trace event)
