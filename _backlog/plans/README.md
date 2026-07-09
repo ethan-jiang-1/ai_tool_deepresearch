@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-07-08 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-07-09 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,5 +17,4 @@
 
 | Plan | 简述 |
 |------|------|
-| [martin-fowler-run-bugfix-change-split](martin-fowler-run-bugfix-change-split.md) | 将 BUG-066 至 BUG-070 切成 2 个 OpenSpec change：先修 Agent-facing work-unit contract，再集中修 gate/reference navigation 对齐。 |
-| [martin-fowler-run-performance-tuning](martin-fowler-run-performance-tuning.md) | 性能角度复盘同一 run（~128min，"卡"占 ~25–30min）：emitted schema 从 output_contract 派生 + dry-submit 预检 + phase-doc 一致性测试 + 抓取并行。**与上一份重叠，review 时决定合并或独立。** |
+| [delegated-attempt-timeout-and-redo-postmortem](delegated-attempt-timeout-and-redo-postmortem.md) | Delegated work-unit 的 timeout/REDO 机制复盘（pragmatic-summit run 触发）。fetch 降级链部分已由 v0.14 落地；**核心 timeout 修复（心跳续期 / late-accept / 产出继承 / pause-aware）未实施，待另起独立 change**。 |

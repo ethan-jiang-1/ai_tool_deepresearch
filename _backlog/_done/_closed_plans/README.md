@@ -31,7 +31,9 @@ plan 完成后从 `_backlog/plans/` 通过 `git mv` 移入本目录：
 | CLS-010 | 2026-07-05 | no-implicit-human-interaction.md | Absorbed by autonomous-command-contract-hardening: commands are Agent-facing; HITL1/HITL2 are the only interactive in-run checkpoints; Final is terminal non-interactive delivery with post-final feedback routed through HITL2 repair/rerun |
 | CLS-011 | 2026-07-08 | formal-run-bugfix-change-split.md | BUG-044~058 split into 4 OpenSpec changes: changes 1-3 delivered (12 bugs resolved, v0.6→v0.8), change 4 deferred (BUG-045/046/052) |
 | CLS-012 | 2026-07-08 | fose-run-bugfix-batch-plan.md | FOSE run bugfix batch: 9 bugs (045, 046, 059-065) split into 3 changes — stabilize-work-unit-submit-and-gate-handoff, parallel-delegated-phase-execution-and-reference-materialization, harden-run-entry-and-bundle-map |
+| CLS-013 | 2026-07-09 | martin-fowler-run-bugfix-change-split.md | BUG-066~070 切成 2 个 change：stabilize-agent-facing-work-unit-contracts (v0.12) + align-gate-contracts-and-reference-navigation (v0.13)，均已 apply+archive。（BUG-066~070 卡片仍在 `../../bugs/`，待移入 `_fixed_bugs/`） |
+| CLS-014 | 2026-07-09 | martin-fowler-run-performance-tuning.md | martin-fowler run 性能调优（128min，~25–30min 契约漂移卡）：A/C1/C2 由 bugfix-split 两 change 覆盖；D(dry-submit)/E(抓取并行)/preflight 由 harden-delegated-preflight-and-fetch-hygiene (v0.14) 落地；B(ii) ledger-relabel 显式放弃。作为独立 change superseded，内容全实现。 |
 
 Closure boundary for CLS-007..010: this change did not implement runtime exit-helper unification, code-2 semantic migration, a JS lifecycle walker, chat interceptor, environment-variable control, same-turn chat halt prevention, or fake evidence/trace handling.
 
-**Next available plan ID: CLS-013**
+**Next available plan ID: CLS-015**
