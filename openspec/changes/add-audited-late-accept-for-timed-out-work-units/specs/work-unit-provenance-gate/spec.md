@@ -6,7 +6,7 @@
 
 Work-unit provenance gates SHALL continue to read Engine-written rows in bundle-root `rb_output_declarations.jsonl` as delegated coverage authority.
 
-Audited late-accepted rows SHALL count as submitted work-unit ledger rows only when the row is schema-valid, hash-valid, marked with valid late-accept audit fields, bound to a submitted original work-unit index record, and not in conflict with any submitted replacement for the same `queue_item_id`.
+Audited late-accepted rows SHALL count as submitted work-unit ledger rows only when the row is schema-valid, hash-valid, marked with valid late-accept audit fields, bound to the submitted targeted work-unit index record, and not in conflict with any submitted replacement for the same `queue_item_id`. Valid audit fields require `late_accept: true`, a non-empty reason, `terminal_status_before_accept: "timed_out"`, and unique non-self `superseded_retry_work_ids`.
 
 #### Scenario: audited late-accepted row can count
 

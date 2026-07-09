@@ -1,15 +1,16 @@
 ## 1. Readback
 
-- [ ] 1.1 @impl DEW-015, AGQ-018, AGQ-019, AGO-003, AGO-005, WPG-014, RWE-012: Read proposal/design/tasks, the five delta specs, `_backlog/plans/delegated-attempt-timeout-and-redo-postmortem-修复计划.md`, and Change A artifacts; record the simple recovery chain before target-code edits.
-- [ ] 1.2 @impl DEW-015, WPG-014, RWE-012: Confirm registry entries remain present and `SRL-005` is not part of this change.
+- [x] 1.1 @impl DEW-015, AGQ-018, AGQ-019, AGO-003, AGO-005, WPG-014, RWE-012: Read proposal/design/tasks, the five delta specs, `_backlog/plans/delegated-attempt-timeout-and-redo-postmortem-修复计划.md`, and Change A artifacts; done when implementation evidence records the simple recovery chain and non-goals before target-code edits.
+- [x] 1.2 @impl DEW-015, WPG-014, RWE-012: Confirm registry entries for `DEW-015`, `WPG-014`, and `RWE-012` remain present; done when no logging/file/subagent/observability delta is listed for this change.
 
 ## 2. Engine Path
 
-- [ ] 2.1 @impl DEW-015: Add `late-submit` preparation that reuses normal submit validation while admitting only `timed_out` originals.
-- [ ] 2.2 @impl DEW-015: Reject `failed`, `abandoned`, normal `submitted`, identity mismatch, invalid output/cache/receipt, submitted replacement, and ambiguous retry state without authority mutation.
-- [ ] 2.3 @impl DEW-015, AGO-003, AGO-005: Append exactly one audited submitted ledger row for accepted originals and include audit fields in the ledger hash.
-- [ ] 2.4 @impl DEW-015, AGQ-018, AGQ-019: Remove queued retry demand or abandon claimed retry before writing the original queue `done` row; leave exactly one queue location for the completed `queue_item_id`.
+- [ ] 2.1 @impl DEW-015: Add side-effect-free `late-submit` preparation that reuses normal submit validation while admitting only `timed_out` targeted records.
+- [ ] 2.2 @impl DEW-015: Reject `failed`, `abandoned`, normal `submitted`, identity mismatch, invalid output/cache/receipt, submitted replacement, and ambiguous retry state without queue/index/status/result/receipt/cache/ledger authority mutation.
+- [ ] 2.3 @impl DEW-015, AGO-003, AGO-005: Append exactly one audited submitted ledger row for accepted targeted work units and include audit fields in the ledger hash.
+- [ ] 2.4 @impl DEW-015, AGQ-018, AGQ-019: Remove queued retry demand or abandon claimed retry before writing the targeted queue `done` row; leave exactly one queue location for the completed `queue_item_id`.
 - [ ] 2.5 @impl DEW-015: Add `operate-work-unit late-submit <bundle> --work-id <id> --result <result.json> --reason <reason>`.
+- [ ] 2.6 @impl DEW-015: Update work-unit command guidance; done when Agent-facing docs name `late-submit` as the explicit timeout recovery command and keep normal `submit` fail-closed for terminal attempts.
 
 ## 3. Gate And Coverage
 
@@ -19,7 +20,7 @@
 
 ## 4. Tests
 
-- [ ] 4.1 @impl DEW-015: Add focused engine/CLI tests for success, failed/abandoned rejection, normal submitted rejection, same-result audited idempotency, identity mismatch, reason required, and no-mutation rejection.
+- [ ] 4.1 @impl DEW-015: Add focused engine/CLI tests for success, failed/abandoned rejection, normal submitted rejection, same-result audited idempotency with durable postconditions, broken-postcondition idempotency rejection, identity mismatch, reason required, and no-mutation rejection.
 - [ ] 4.2 @impl DEW-015, AGQ-018, AGQ-019: Add queue transaction tests for queued retry removal, claimed retry abandon, submitted replacement rejection, and durable postconditions.
 - [ ] 4.3 @impl AGO-003, AGO-005, WPG-014: Add ledger/gate tests for hash-covered audit fields, malformed audit rejection, and submitted replacement conflict.
 - [ ] 4.4 @impl RWE-012: Run the controlled playbook coverage and record fixture distance.
