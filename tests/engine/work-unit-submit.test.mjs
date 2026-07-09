@@ -916,6 +916,48 @@ describe('submitWorkUnit', () => {
     }
   });
 
+  it('normalizes Wave1 required output roles before ledger append while preserving extra other outputs', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegatedWave1('wave1-topic-a')]);
+      claimWorkUnits(dir, { phase: 'wave1', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
+      const resultPath = writeValidWave1SubmitFiles(dir, record);
+      const extraPath = 'artifacts/wave1/topic-a/notes.md';
+      mkdirSync(path.dirname(path.join(dir, extraPath)), { recursive: true });
+      writeFileSync(path.join(dir, extraPath), '# Extra notes\n\nNon-blocking notes.\n');
+
+      const result = readResult(resultPath);
+      result.output_files = result.output_files.map((entry) => {
+        if (entry.path.endsWith('/evidence-summary.md') || entry.path.endsWith('/question-list.md')) {
+          return { ...entry, role: 'other' };
+        }
+        return entry;
+      });
+      result.output_files.push({ path: extraPath, role: 'other' });
+      writeResult(resultPath, result);
+
+      const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      const roleNormalizations = submitted.normalizations.filter((item) => item.kind === 'wave1_required_output_role_normalized');
+      assert.equal(roleNormalizations.length, 2);
+      assert.deepEqual(roleNormalizations.map((item) => item.to).sort(), ['evidence_summary', 'question_list']);
+      assert.ok(roleNormalizations.every((item) => item.from === 'other' && item.surface_ref.startsWith('artifacts/wave1/topic-a/')));
+
+      const [row] = ledgerRows(dir);
+      assert.deepEqual(row.output_files.map((entry) => entry.role), ['reference', 'evidence_summary', 'question_list', 'other']);
+      assert.deepEqual(assignedResult(dir, record).output_files.map((entry) => entry.role), ['reference', 'evidence_summary', 'question_list', 'other']);
+
+      const duplicate = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(duplicate.ok, true);
+      assert.equal(duplicate.duplicate, true);
+      assert.equal(duplicate.result_hash, submitted.result_hash);
+      assert.equal(ledgerRows(dir).length, 1);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('rejects accepted_source_urls without matching accepted Wave1 source claims', () => {
     const dir = tempBundle();
     try {

@@ -110,12 +110,13 @@ function writeDepthReview(dir, {
   wave0Urls = ['https://example.com/topic-a/wave0-foundation'],
   decision = 'accept',
   supplementary = [],
+  reviewedRefs = null,
   omitKey = null,
 } = {}) {
   const review = {
     version: 'depth-review.v1',
     topic_slug: topic,
-    reviewed_work_unit_refs: [record.paths.work_unit_dir],
+    reviewed_work_unit_refs: reviewedRefs || [record.paths.work_unit_dir],
     wave0_source_urls: wave0Urls,
     source_claims: claim ? [claim] : [],
     new_source_urls: sourceUrl ? [sourceUrl] : [],
@@ -237,6 +238,49 @@ describe('wave depth contract helpers', () => {
 
     const result = checkWave1DepthReviewContract(dir, { topic: 'topic-a' });
     assert.equal(result.passed, true, result.inspect.join('\n'));
+  });
+
+  it('canonicalizes harmless trailing slash reviewed work-unit refs before submitted-row comparison', () => {
+    const dir = setupBundle();
+    const submitted = submitWave1Source(dir, { sourceUrl: 'https://example.com/topic-a/trailing-slash' });
+    writeDepthReview(dir, {
+      record: submitted.record,
+      claim: submitted.claim,
+      sourceUrl: submitted.sourceUrl,
+      reviewedRefs: [`${submitted.record.paths.work_unit_dir}/`],
+    });
+
+    const result = checkWave1DepthReviewContract(dir, { topic: 'topic-a' });
+    assert.equal(result.passed, true, result.inspect.join('\n'));
+    assert.match((result.diagnostics || []).join('\n'), /canonicalized.*reviewed_work_unit_refs/i);
+    assert.match((result.diagnostics || []).join('\n'), new RegExp(`${submitted.record.paths.work_unit_dir}/`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  });
+
+  it('keeps unsafe and unsubmitted reviewed work-unit refs fail-closed', () => {
+    const unsafeDir = setupBundle();
+    const unsafeSubmitted = submitWave1Source(unsafeDir, { sourceUrl: 'https://example.com/topic-a/unsafe' });
+    writeDepthReview(unsafeDir, {
+      record: unsafeSubmitted.record,
+      claim: unsafeSubmitted.claim,
+      sourceUrl: unsafeSubmitted.sourceUrl,
+      reviewedRefs: ['/tmp/not-a-bundle-ref'],
+    });
+    const unsafe = checkWave1DepthReviewContract(unsafeDir, { topic: 'topic-a' });
+    assert.equal(unsafe.passed, false);
+    assert.match(unsafe.inspect.join('\n'), /reviewed work-unit ref is unsafe/);
+
+    const missingDir = setupBundle();
+    const missingSubmitted = submitWave1Source(missingDir, { sourceUrl: 'https://example.com/topic-a/missing' });
+    writeDepthReview(missingDir, {
+      record: missingSubmitted.record,
+      claim: missingSubmitted.claim,
+      sourceUrl: missingSubmitted.sourceUrl,
+      reviewedRefs: ['_work_units/wave1/not-submitted/'],
+    });
+    const missing = checkWave1DepthReviewContract(missingDir, { topic: 'topic-a' });
+    assert.equal(missing.passed, false);
+    assert.match(missing.inspect.join('\n'), /not submitted.*canonical: _work_units\/wave1\/not-submitted/);
+    assert.match((missing.diagnostics || []).join('\n'), /canonicalized/);
   });
 
   it('fails missing required keys, non-closed decisions, and missing profile parameters', () => {

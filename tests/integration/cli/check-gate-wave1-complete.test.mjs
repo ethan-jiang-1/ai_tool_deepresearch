@@ -188,26 +188,36 @@ function submitWave1WorkUnit(dir, {
   sourceUrl = 'https://example.com/news/deepening-topic-a',
   isNewVsWave0 = true,
   cacheTrail = `_cache/wave1/primary/${queueItemId}/deepening-topic-a`,
+  evidenceRole = 'evidence_summary',
+  questionRole = 'question_list',
+  includeEvidenceOutput = true,
+  includeQuestionOutput = true,
 } = {}) {
+  const outputs = [
+    {
+      path: 'reference/01-topic-a-deepening.md',
+      role: 'reference',
+      source_url: sourceUrl,
+      source_slug: 'deepening-topic-a',
+    },
+  ];
+  if (includeEvidenceOutput) {
+    outputs.push({
+      path: 'artifacts/wave1/topic-a/evidence-summary.md',
+      role: evidenceRole,
+    });
+  }
+  if (includeQuestionOutput) {
+    outputs.push({
+      path: 'artifacts/wave1/topic-a/question-list.md',
+      role: questionRole,
+    });
+  }
+
   return claimAndSubmitWorkUnit(dir, {
     phase: 'wave1',
     queueItemId,
-    outputs: [
-      {
-        path: 'reference/01-topic-a-deepening.md',
-        role: 'reference',
-        source_url: sourceUrl,
-        source_slug: 'deepening-topic-a',
-      },
-      {
-        path: 'artifacts/wave1/topic-a/evidence-summary.md',
-        role: 'evidence_summary',
-      },
-      {
-        path: 'artifacts/wave1/topic-a/question-list.md',
-        role: 'question_list',
-      },
-    ],
+    outputs,
     cacheTrails: [{
       path: cacheTrail,
       url: sourceUrl,
@@ -233,12 +243,13 @@ function writeDepthReview(dir, {
   decision = 'accept',
   supplementary = [],
   cacheTrail = '_cache/wave1/primary/topic-a/deepening-topic-a',
+  reviewedRefs = null,
 } = {}) {
   const observed = isNewVsWave0 && !wave0Urls.includes(sourceUrl) ? 1 : 0;
   writeFileSync(join(dir, 'artifacts/wave1/topic-a/depth-review.yaml'), `${JSON.stringify({
     version: 'depth-review.v1',
     topic_slug: 'topic-a',
-    reviewed_work_unit_refs: [submission.record.paths.work_unit_dir],
+    reviewed_work_unit_refs: reviewedRefs || [submission.record.paths.work_unit_dir],
     wave0_source_urls: wave0Urls,
     source_claims: [{
       url: sourceUrl,
@@ -291,6 +302,56 @@ describe('check-gate-wave1-complete', () => {
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('1a. passes when Wave1 required outputs were submitted as other and normalized before ledger coverage', () => {
+    const dir = createBundle(unique('otherrole'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(dir, {
+      evidenceRole: 'other',
+      questionRole: 'other',
+    });
+    writeWave1Trace(dir);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, true, `Expected normalized required role pass, got inspect: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('1b. fails when a required artifact exists but canonical submitted coverage is missing', () => {
+    const dir = createBundle(unique('missingcoverage'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    const submission = submitWave1WorkUnit(dir, { includeQuestionOutput: false });
+    assert.equal(submission.submitted.ok, true);
+    writeDepthReview(dir, { submission });
+    writeWave1Trace(dir);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false, `Expected missing canonical submitted coverage failure, got inspect: ${JSON.stringify(output.inspect)}`);
+    assert.ok(output.inspect.some((line) => /artifacts\/wave1\/topic-a\/question-list\.md/.test(line) && /submitted work-unit coverage/i.test(line)),
+      `Expected missing question_list coverage diagnostic, got: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('1c. passes and reports canonicalization when depth-review reviewed refs have harmless trailing slash', () => {
+    const dir = createBundle(unique('slashref'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    const submission = submitWave1WorkUnit(dir);
+    assert.equal(submission.submitted.ok, true);
+    writeDepthReview(dir, {
+      submission,
+      reviewedRefs: [`${submission.record.paths.work_unit_dir}/`],
+    });
+    writeWave1Trace(dir);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, true, `Expected trailing slash canonicalization pass, got inspect: ${JSON.stringify(output.inspect)}`);
+    assert.ok(output.inspect.some((line) => /canonicalized.*reviewed_work_unit_refs/i.test(line)),
+      `Expected canonicalization diagnostic, got: ${JSON.stringify(output.inspect)}`);
   });
 
   it('2. fails when per-topic evidence-summary is missing', () => {

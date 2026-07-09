@@ -158,7 +158,7 @@ Minimum shape:
 version: "0.1"
 topic_slug: "{topic.slug}"
 reviewed_work_unit_refs:
-  - "_work_units/wave1/<work_id>/"
+  - "_work_units/wave1/<work_id>"
 wave0_source_urls: []
 source_claims:
   - url: "https://example.com/source"
@@ -197,7 +197,8 @@ After each successful submit, before claiming another work unit, update the corr
 1. Replace `__BACKFILL_WAVE1_MECHANISMS__` with mechanism return-map entries from the submitted `evidence-summary.md`.
 2. Replace `__BACKFILL_WAVE1_TRENDS__` with trend/limitation return-map entries.
 3. Replace `__BACKFILL_PENDING_QUESTIONS__` with canonical status labels only: `[开放]`, `[部分解答]`, `[涌现]`, plus return-map entries that name the question, status, evidence meaning, refs, and next hop.
-4. Each Wave1 return-map entry includes `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`, with refs to submitted source claims, `accepted_source_urls[]`, `artifacts/wave1/{topic}/evidence-summary.md`, `artifacts/wave1/{topic}/question-list.md`, Phase-owned `reference/` projections, `_cache/`, and `_work_units/` surfaces where available.
+4. Each Wave1 return-map entry includes `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`. Evidence-bearing entries must list concrete existing `reference/{topic.slug}-<source-slug>.md` files as primary consumer navigation; `artifacts/wave1/{topic}/evidence-summary.md`, `artifacts/wave1/{topic}/question-list.md`, submitted source claims, `accepted_source_urls[]`, `_cache/`, and `_work_units/` surfaces are secondary provenance.
+5. Do not use `reference/{topic.slug}-*.md` globs or count summaries. If no consumer reference can be materialized, write an explicit limitation entry with `relationship: defers`, `status: deferred`, `refs: none`, and a `next_hop` limitation reason.
 
 Do not append below the token; replace the token line.
 
@@ -227,7 +228,7 @@ If the depth review records `decision: supplement_required`, enqueue a supplemen
 - Phase-owned `reference/{topic}-*.md` with complete metadata, source content capture, `_INDEX.md` rows, and body refs to submitted backing.
 - Submitted work-unit ledger rows covering delegated outputs and cache trails.
 - Submitted structured source claims where every accepted source URL maps to a verified cache trail or explicit degraded-capture record.
-- Seed-topic Wave1 backfill entries that preserve mechanism/trend/question meaning and refs to evidence summaries, question lists, references, cache leaves, and work-unit surfaces.
+- Seed-topic Wave1 backfill entries that preserve mechanism/trend/question meaning and refs to concrete existing `reference/{topic.slug}-<source-slug>.md` files as primary consumer navigation, with evidence summaries, question lists, cache leaves, and work-unit surfaces as secondary provenance.
 - `rb_trace.jsonl` records the `wave1_completion` event/check surface required by the Wave1 gate definition.
 
 ## 5. Gate Command

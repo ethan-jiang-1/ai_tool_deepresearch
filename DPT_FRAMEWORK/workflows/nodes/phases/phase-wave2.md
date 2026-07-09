@@ -208,7 +208,8 @@ Each Wave2 backfill replacement must preserve finding lineage as return-map entr
 
 - `evidence_meaning`: what the finding changed for this seed topic.
 - `relationship`: `supports`, `refutes`, `partial`, `opens`, `defers`, or `context`.
-- `refs`: include relevant `W2F-xxx` ids plus bundle-relative refs to `artifacts/wave2/cross-topic-ledger.md`, `artifacts/wave2/finding-index.yaml`, Wave1/Wave0 source artifacts, references, cache leaves, and work-unit surfaces where available.
+- `refs`: include relevant `W2F-xxx` ids plus concrete existing `reference/00-cross-*.md` refs for consumer-facing materialized findings. Also include `artifacts/wave2/cross-topic-ledger.md`, `artifacts/wave2/finding-index.yaml`, Wave1/Wave0 source artifacts, cache leaves, and work-unit surfaces as secondary provenance where available.
+- If a finding has no materializable consumer reference, write an explicit limitation/no-materializable-evidence entry instead of a glob or internal-only refs.
 - `status`: `supported`, `refuted`, `partial`, `open`, `emergent`, or `deferred`.
 - `next_hop`: the next read/repair/handoff path for a future Agent.
 
@@ -267,7 +268,7 @@ These checks are Agent discipline. The gate verifies structural artifacts, refer
 - `artifacts/wave2/finding-index.yaml`
 - Existing-backed `reference/00-cross-*.md` projections for accepted consumer-facing backed `W2F-xxx` findings, plus targeted-evidence `00-cross` references only when submitted `wave2_targeted_evidence` backs new fetched evidence
 - Submitted work-unit rows for delegated targeted evidence outputs and cache trails
-- Seed-topic Wave2 backfill entries preserving `W2F-xxx` finding ids and refs to `cross-topic-ledger.md`, `finding-index.yaml`, and source artifacts used by each finding.
+- Seed-topic Wave2 backfill entries preserving `W2F-xxx` finding ids and concrete `reference/00-cross-*.md` refs for consumer-facing materialized findings, with `cross-topic-ledger.md`, `finding-index.yaml`, and source artifacts as secondary provenance.
 - `rb_trace.jsonl` records the `wave2_completion` event/check surface required by the Wave2 gate definition.
 
 ## 5. Gate Command

@@ -76,6 +76,30 @@ function referenceWithReturnMap(extra = '') {
   ].join('\n');
 }
 
+function canonicalWave1ReturnMap(ref = 'reference/topic-a-a.md') {
+  return [
+    '- evidence_meaning: Mechanism evidence clarifies the trend.',
+    '  relationship: partial',
+    '  refs:',
+    '    - artifacts/wave1/topic-a/evidence-summary.md',
+    '    - artifacts/wave1/topic-a/question-list.md',
+    `    - ${ref}`,
+    '  status: partial',
+    '  next_hop: Reconcile remaining open question.',
+  ].join('\n');
+}
+
+function limitationReturnMap() {
+  return [
+    '- evidence_meaning: No materializable source evidence is available yet.',
+    '  relationship: defers',
+    '  refs:',
+    '    - none',
+    '  status: deferred',
+    '  next_hop: limitation: no materializable evidence; defer to HITL2.',
+  ].join('\n');
+}
+
 describe('wave inspect return-map diagnostics', () => {
   it('wave0 flags naked seed backfill evidence lists without changing gate authority', () => {
     const bundle = createTempDir('inspect-w0-rmap');
@@ -86,7 +110,8 @@ describe('wave inspect return-map diagnostics', () => {
 
     const { status, output } = runInspect('inspect-wave0-output.mjs', bundle);
     assert.equal(status, 1);
-    assert.equal(output.check.return_map_diagnostic_only, true);
+    assert.equal(output.check.return_map_classification, 'blocking');
+    assert.equal(Object.hasOwn(output.check, 'return_map_diagnostic_only'), false);
     assert.match(output.inspect.join('\n'), /return_map_missing_fields/);
     assert.match(output.advice.join('\n'), /do not bypass phase status or user-surface/);
   });
@@ -94,24 +119,56 @@ describe('wave inspect return-map diagnostics', () => {
   it('wave1 accepts canonical return-map refs in seed and artifacts', () => {
     const bundle = createTempDir('inspect-w1-rmap');
     writeCommon(bundle);
-    const rmap = [
-      '- evidence_meaning: Mechanism evidence clarifies the trend.',
-      '  relationship: partial',
-      '  refs:',
-      '    - artifacts/wave1/topic-a/evidence-summary.md',
-      '    - artifacts/wave1/topic-a/question-list.md',
-      '    - reference/topic-a-a.md',
-      '  status: partial',
-      '  next_hop: Reconcile remaining open question.',
-    ].join('\n');
+    const rmap = canonicalWave1ReturnMap();
     writeFileSync(join(bundle, 'reference/topic-a-a.md'), referenceWithReturnMap());
     writeFileSync(join(bundle, 'artifacts/wave1/topic-a/evidence-summary.md'), `# Evidence\n\n${rmap}\n`);
     writeFileSync(join(bundle, 'artifacts/wave1/topic-a/question-list.md'), `# Questions\n\n${rmap}\n`);
     writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `# Topic\n\n${rmap}\n`);
 
     const { output } = runInspect('inspect-wave1-output.mjs', bundle);
-    assert.equal(output.check.return_map_diagnostic_only, true);
+    assert.equal(output.check.return_map_classification, 'diagnostic-only');
+    assert.equal(Object.hasOwn(output.check, 'return_map_diagnostic_only'), false);
     assert.equal(output.inspect.some((line) => line.includes('return_map_missing_fields')), false, output.inspect.join('\n'));
+  });
+
+  it('wave1 blocks evidence-bearing seed maps that only point to internal provenance refs', () => {
+    const bundle = createTempDir('inspect-w1-rmap-internal');
+    writeCommon(bundle);
+    const rmap = canonicalWave1ReturnMap();
+    const internalOnly = [
+      '- evidence_meaning: Mechanism evidence clarifies the trend.',
+      '  relationship: supports',
+      '  refs:',
+      '    - artifacts/wave1/topic-a/evidence-summary.md',
+      '    - _cache/wave1/primary/topic-a/a/',
+      '    - _work_units/wave1/wu-w1-b000-deep-i0001/',
+      '  status: supported',
+      '  next_hop: Read the concrete reference file.',
+    ].join('\n');
+    writeFileSync(join(bundle, 'reference/topic-a-a.md'), referenceWithReturnMap());
+    writeFileSync(join(bundle, 'artifacts/wave1/topic-a/evidence-summary.md'), `# Evidence\n\n${rmap}\n`);
+    writeFileSync(join(bundle, 'artifacts/wave1/topic-a/question-list.md'), `# Questions\n\n${rmap}\n`);
+    writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `# Topic\n\n${internalOnly}\n`);
+
+    const { status, output } = runInspect('inspect-wave1-output.mjs', bundle);
+    assert.equal(status, 1);
+    assert.equal(output.check.return_map_classification, 'blocking');
+    assert.match(output.inspect.join('\n'), /return_map_missing_concrete_reference/);
+    assert.match(output.inspect.join('\n'), /found only internal provenance refs/);
+  });
+
+  it('wave1 allows explicit limitation seed-map entries without concrete references', () => {
+    const bundle = createTempDir('inspect-w1-rmap-limitation');
+    writeCommon(bundle);
+    const rmap = canonicalWave1ReturnMap();
+    writeFileSync(join(bundle, 'reference/topic-a-a.md'), referenceWithReturnMap());
+    writeFileSync(join(bundle, 'artifacts/wave1/topic-a/evidence-summary.md'), `# Evidence\n\n${rmap}\n`);
+    writeFileSync(join(bundle, 'artifacts/wave1/topic-a/question-list.md'), `# Questions\n\n${rmap}\n`);
+    writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `# Topic\n\n${limitationReturnMap()}\n`);
+
+    const { output } = runInspect('inspect-wave1-output.mjs', bundle);
+    assert.equal(output.check.return_map_classification, 'diagnostic-only');
+    assert.equal(output.inspect.some((line) => line.includes('return_map_missing_concrete_reference')), false, output.inspect.join('\n'));
   });
 
   it('wave2 flags backfill that omits finding ids and ledger/index refs', () => {
@@ -124,8 +181,10 @@ describe('wave inspect return-map diagnostics', () => {
 
     const { status, output } = runInspect('inspect-wave2-output.mjs', bundle);
     assert.equal(status, 1);
+    assert.equal(output.check.return_map_classification, 'blocking');
     const joined = output.inspect.join('\n');
     assert.match(joined, /return_map_missing_finding_id/);
     assert.match(joined, /return_map_missing_wave2_refs/);
+    assert.match(joined, /return_map_missing_concrete_reference/);
   });
 });

@@ -100,6 +100,17 @@ function issueResult(inspect, advice = []) {
   return { passed: inspect.length === 0, inspect, advice };
 }
 
+function canonicalizeSubmittedWorkUnitRef(ref) {
+  if (!safeRel(ref)) return { safe: false, original: ref, canonical: null, changed: false };
+  const canonical = String(ref).replace(/\/+$/g, '');
+  return {
+    safe: true,
+    original: ref,
+    canonical,
+    changed: canonical !== ref,
+  };
+}
+
 export function readWave0SourceUrls(bundlePath, topicSlug, review = null) {
   const urls = new Set();
   for (const url of Array.isArray(review?.wave0_source_urls) ? review.wave0_source_urls : []) {
@@ -364,6 +375,7 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
   const refs = Array.isArray(review.reviewed_work_unit_refs) ? review.reviewed_work_unit_refs : [];
   if (refs.length === 0) inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed_work_unit_refs[] must name submitted work-unit rows`);
   let submittedRefs = new Set();
+  const diagnostics = [];
   try {
     for (const row of readSubmittedWorkUnitDeclarations(bundlePath)) {
       submittedRefs.add(row.work_id);
@@ -374,11 +386,20 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
     inspect.push(`[depth_review_contract] FAIL: invalid submitted work-unit ledger while checking reviewed_work_unit_refs: ${error.message}`);
   }
   for (const ref of refs) {
-    if (!safeRel(ref)) inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed work-unit ref is unsafe: ${ref}`);
-    else if (submittedRefs.size > 0 && !submittedRefs.has(ref)) inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed work-unit ref is not submitted: ${ref}`);
+    const canonical = canonicalizeSubmittedWorkUnitRef(ref);
+    if (!canonical.safe) {
+      inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed work-unit ref is unsafe: ${ref}`);
+      continue;
+    }
+    if (canonical.changed) {
+      diagnostics.push(`[depth_review_contract] canonicalized ${relPath} reviewed_work_unit_refs[] from "${canonical.original}" to "${canonical.canonical}" before submitted-row comparison.`);
+    }
+    if (submittedRefs.size > 0 && !submittedRefs.has(canonical.canonical)) {
+      inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed work-unit ref is not submitted on accepted work-unit surfaces: ${canonical.original}${canonical.changed ? ` (canonical: ${canonical.canonical})` : ''}`);
+    }
   }
 
-  return issueResult(inspect, advice);
+  return { ...issueResult(inspect, advice), diagnostics };
 }
 
 function readFindingIndex(bundlePath) {

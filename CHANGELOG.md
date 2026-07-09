@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.13
+
+- Judgment-layer contracts now align Wave1 required-output role coverage, submit-time normalization diagnostics, and depth-review work-unit ref canonicalization across submit, gate, phase docs, and tests.
+- Return-map navigation now requires evidence-bearing entries to enumerate concrete existing `reference/*.md` refs, keeps internal refs as secondary provenance, and labels inspect failures according to command pass/fail.
+- Wave2 `00-cross` authority now has focused guards for submitted targeted evidence versus existing-backed Phase-owned projections, while active gate definitions are covered by a static rule-id audit.
+
 ## v0.12
 
 - Work-unit claim now emits truthful `result.schema.json` projections for wave0/wave1/wave2, including const-bound identity, strict output/source item shapes, role enums, and omitted unsupported source fields.

@@ -162,10 +162,11 @@ for (const topic of topicSlugs) {
 }
 for (const line of [...seedMap.inspect, ...artifactMap.inspect, ...referenceInspect.inspect]) inspect.push(line);
 for (const line of [...seedMap.advice, ...artifactMap.advice, ...referenceInspect.advice]) advice.push(line);
-if (!seedMap.passed || !artifactMap.passed || !referenceInspect.passed) checksFailed++;
+const returnMapPassed = seedMap.passed && artifactMap.passed && referenceInspect.passed;
+if (!returnMapPassed) checksFailed++;
 
 console.log(JSON.stringify({
-  check: { passed: checksFailed === 0, wave: 'wave1', checks_run: checksRun, checks_failed: checksFailed, return_map_diagnostic_only: true },
+  check: { passed: checksFailed === 0, wave: 'wave1', checks_run: checksRun, checks_failed: checksFailed, return_map_classification: returnMapPassed ? 'diagnostic-only' : 'blocking' },
   inspect,
   advice,
 }, null, 2));

@@ -4,6 +4,10 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
+  checkReferenceIndexCoverage,
+  classifyReferenceAuthority,
+} from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers-checks.mjs';
+import {
   checkDelegatedBypassSuspected,
   checkWorkUnitLedgerExists,
   checkWorkUnitOutputCoverage,
@@ -273,7 +277,48 @@ describe('work-unit provenance gate helpers', () => {
     assert.equal(bypass.suspected, false, bypass.provenanceMissing?.join('; '));
   });
 
-  it('rejects a Wave2 00-cross reference that claims new evidence without targeted coverage', () => {
+  it('accepts a submitted Wave2 targeted-evidence row for a new 00-cross reference', () => {
+    const dir = tempDir('wpg-wave2-targeted-');
+    const sourceUrl = 'https://example.com/research/new-wave2-targeted-source';
+    claimAndSubmitWorkUnit(dir, {
+      phase: 'wave2',
+      queueItemId: 'w2-targeted',
+      outputs: [{
+        path: 'reference/00-cross-w2f-004-new.md',
+        role: 'reference',
+        source_url: sourceUrl,
+        source_slug: 's01_targeted',
+        content: referenceContent({
+          source_url: sourceUrl,
+          related_topic: 'cross-topic',
+          evidence_role: 'cross_topic_projection',
+          coreContent: 'W2F-004 targeted evidence was fetched by a Wave2 work unit and materialized as a submitted reference output.',
+        }),
+      }],
+    });
+    writeIndex(dir, [
+      '| reference/00-cross-w2f-004-new.md | primary | expert | Tier 2 | cross-topic | wave2_cross | accepted | 2026-07-06 |',
+    ]);
+
+    const classification = classifyReferenceAuthority(dir, 'reference/00-cross-w2f-004-new.md');
+    const coverage = checkWorkUnitOutputCoverage(dir, {
+      wave: 'wave2',
+      kind: 'wave2_targeted_evidence',
+      output_selectors: { glob: 'reference/00-cross-*.md', roles: ['reference'] },
+    });
+    const presence = checkWorkUnitSubmissionPresence(dir, {
+      wave: 'wave2',
+      kind: 'wave2_targeted_evidence',
+      output_selectors: { glob: 'reference/00-cross-*.md', roles: ['reference'] },
+    });
+
+    assert.equal(classification.passed, true, classification.reason);
+    assert.equal(classification.authority, 'delegated_fetched_evidence');
+    assert.equal(coverage.passed, true, coverage.inspect.join('; '));
+    assert.equal(presence.passed, true, presence.inspect.join('; '));
+  });
+
+  it('rejects a Wave2 00-cross reference when source_layer and index coverage are the only authority', () => {
     const dir = tempDir('wpg-wave2-new-unsubmitted-');
     const priorUrl = 'https://example.com/research/prior-source';
     submitWave1SourceBacking(dir, { sourceUrl: priorUrl, topic: 'topic-a' });
@@ -290,6 +335,10 @@ describe('work-unit provenance gate helpers', () => {
       coreContent: 'W2F-002 cites artifacts/wave2/finding-index.yaml, artifacts/wave2/cross-topic-ledger.md, artifacts/wave1/topic-a/evidence-summary.md, and _cache/wave1/primary/topic-a/s01_source, but the metadata source_url is newly introduced.',
     }));
 
+    const indexCoverage = checkReferenceIndexCoverage(dir, [{
+      relPath: 'reference/00-cross-w2f-002-new.md',
+      absPath: join(dir, 'reference', '00-cross-w2f-002-new.md'),
+    }], { sourceLayer: 'wave2_cross' });
     const coverage = checkWorkUnitOutputCoverage(dir, {
       wave: 'wave2',
       kind: 'wave2_targeted_evidence',
@@ -297,6 +346,7 @@ describe('work-unit provenance gate helpers', () => {
     });
     const bypass = detectDelegatedBypassSuspicion(dir, 'wave2', 'wave2-complete');
 
+    assert.equal(indexCoverage.passed, true, indexCoverage.inspect.join('; '));
     assert.equal(coverage.passed, false);
     assert.match(coverage.inspect.join('\n'), /source_url is not a prior accepted backing URL/);
     assert.equal(bypass.suspected, true);

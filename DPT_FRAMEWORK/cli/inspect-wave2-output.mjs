@@ -168,10 +168,11 @@ const artifactMap = inspectWaveArtifactReturnMaps(bundlePath, 'wave2');
 const referenceMap = inspectReferenceReturnMaps(bundlePath, '00-cross-');
 for (const line of [...seedMap.inspect, ...artifactMap.inspect, ...referenceMap.inspect]) inspect.push(line);
 for (const line of [...seedMap.advice, ...artifactMap.advice, ...referenceMap.advice]) advice.push(line);
-if (!seedMap.passed || !artifactMap.passed || !referenceMap.passed) checksFailed++;
+const returnMapPassed = seedMap.passed && artifactMap.passed && referenceMap.passed;
+if (!returnMapPassed) checksFailed++;
 
 console.log(JSON.stringify({
-  check: { passed: checksFailed === 0, wave: 'wave2', checks_run: checksRun, checks_failed: checksFailed, return_map_diagnostic_only: true },
+  check: { passed: checksFailed === 0, wave: 'wave2', checks_run: checksRun, checks_failed: checksFailed, return_map_classification: returnMapPassed ? 'diagnostic-only' : 'blocking' },
   inspect,
   advice,
 }, null, 2));

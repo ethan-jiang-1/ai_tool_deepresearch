@@ -1,6 +1,6 @@
 # Subagent Node Contract
 
-> req: SNC-001, SNC-002, SNC-003, SNC-004, SNC-005
+> req: SNC-001, SNC-002, SNC-003, SNC-004, SNC-005, SNC-006
 
 ## Purpose
 
@@ -205,4 +205,3 @@ For every field listed by `output_contract.required_result_fields`, the generate
 - **THEN** each declared field SHALL be required by both generated `result.schema.json` and submit validation
 - **OR** the kind output contract SHALL remove that field from `required_result_fields` when submit intentionally supplies a default
 - **AND** tests SHALL prove the generated schema, output contract, and submit validator agree for that field
-

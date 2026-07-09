@@ -185,6 +185,36 @@ function buildLedgerRow({ record, result, resultHash, declaredAt }) {
   });
 }
 
+function canonicalWave1RequiredOutputRole(outputPath) {
+  if (/^artifacts\/wave1\/[^/]+\/evidence-summary\.md$/.test(outputPath || '')) return 'evidence_summary';
+  if (/^artifacts\/wave1\/[^/]+\/question-list\.md$/.test(outputPath || '')) return 'question_list';
+  return null;
+}
+
+function normalizeWave1RequiredOutputRoles(result, record, normalizations, resultPath) {
+  if (record.kind !== 'wave1_topic_deepening' && record.wave !== 1) return result;
+  const outputFiles = Array.isArray(result.output_files) ? result.output_files : [];
+  let changed = false;
+  const normalizedOutputFiles = outputFiles.map((entry) => {
+    const canonicalRole = canonicalWave1RequiredOutputRole(entry?.path);
+    if (!canonicalRole || entry.role !== 'other') return entry;
+    changed = true;
+    recordSubmitNormalization(normalizations, {
+      kind: 'wave1_required_output_role_normalized',
+      work_id: record.work_id,
+      queue_item_id: record.queue_item_id,
+      surface_ref: entry.path,
+      candidate_result_path: resultPath ? path.resolve(resultPath) : null,
+      field: 'output_files[].role',
+      from: entry.role,
+      to: canonicalRole,
+      reason: 'Wave1 required output paths are gate-consumed by canonical role selectors before submitted-ledger coverage.',
+    });
+    return { ...entry, role: canonicalRole };
+  });
+  return changed ? { ...result, output_files: normalizedOutputFiles } : result;
+}
+
 function reasonCodeForSubmit(message) {
   if (/runtime receipt|lifecycle events/i.test(message)) return 'missing_receipt';
   if (/receipt_nonce|nonce|receipt mismatch/i.test(message)) return 'nonce_mismatch';
@@ -313,7 +343,8 @@ function prepareWorkUnitSubmit(bundleDir, { work_id, resultPath }) {
   const normalizations = [];
 
   if (record.status === 'submitted') {
-    const result = readAndValidateResult(bundleDir, resultPath, record, { normalizations });
+    const parsedResult = readAndValidateResult(bundleDir, resultPath, record, { normalizations });
+    const result = normalizeWave1RequiredOutputRoles(parsedResult, record, normalizations, resultPath);
     const resultHash = hashValue(result);
     const ledgerRow = findSubmittedLedgerRow(bundleDir, record.work_id);
     if (record.result_hash === resultHash && ledgerRow?.ledger_record_hash === record.ledger_record_hash) {
@@ -329,24 +360,25 @@ function prepareWorkUnitSubmit(bundleDir, { work_id, resultPath }) {
     normalizations,
     outputContract: manifest.output_contract,
   });
-  const resultHash = hashValue(result);
+  const normalizedResult = normalizeWave1RequiredOutputRoles(result, record, normalizations, resultPath);
+  const resultHash = hashValue(normalizedResult);
   readAndValidateBeacon(bundleDir, record, manifest);
   const runtimeReceipt = validateSubmitRuntimeReceipt(bundleDir, record, {
     normalizations,
     allowNonceNormalization: resultPathInsideAssignedDir,
   });
   const queue = validateQueueBindingForSubmit(bundleDir, record, manifest);
-  validateOutputFiles(bundleDir, result, manifest.output_contract);
-  validateCacheTrails(bundleDir, result, manifest.cache_policy, { record, normalizations });
-  validateSourceClaims(bundleDir, result, manifest.output_contract);
-  const ledgerRow = buildLedgerRow({ record, result, resultHash, declaredAt: now() });
+  validateOutputFiles(bundleDir, normalizedResult, manifest.output_contract);
+  validateCacheTrails(bundleDir, normalizedResult, manifest.cache_policy, { record, normalizations });
+  validateSourceClaims(bundleDir, normalizedResult, manifest.output_contract);
+  const ledgerRow = buildLedgerRow({ record, result: normalizedResult, resultHash, declaredAt: now() });
   return {
     duplicate: false,
     index,
     record,
     manifest,
     queue,
-    result,
+    result: normalizedResult,
     result_hash: resultHash,
     runtime_receipt_content: runtimeReceipt.canonical_content,
     normalizations,

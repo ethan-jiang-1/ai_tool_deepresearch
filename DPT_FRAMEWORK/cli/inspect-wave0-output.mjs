@@ -188,11 +188,12 @@ const seedMap = inspectSeedTopicReturnMaps(bundlePath, { wave: 'wave0', topicSlu
 const refMap = inspectReferenceReturnMaps(bundlePath, '00-shared-');
 for (const line of [...seedMap.inspect, ...refMap.inspect]) inspect.push(line);
 for (const line of [...seedMap.advice, ...refMap.advice]) advice.push(line);
-if (!seedMap.passed || !refMap.passed) checksFailed++;
+const returnMapPassed = seedMap.passed && refMap.passed;
+if (!returnMapPassed) checksFailed++;
 
 // ---- Output ----
 console.log(JSON.stringify({
-  check: { passed: checksFailed === 0, wave: 'wave0', checks_run: checksRun, checks_failed: checksFailed, return_map_diagnostic_only: true },
+  check: { passed: checksFailed === 0, wave: 'wave0', checks_run: checksRun, checks_failed: checksFailed, return_map_classification: returnMapPassed ? 'diagnostic-only' : 'blocking' },
   inspect,
   advice,
 }, null, 2));

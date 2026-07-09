@@ -159,6 +159,7 @@ AGO-003: agent-output-declaration — Work-unit submit writes bundle-level rb_ou
 AGO-004: agent-output-declaration — Engine consumes declaration ledger rather than scanning directories for Agent outputs
 AGO-005: agent-output-declaration — Ledger declarations preserve non-empty creation context for accepted outputs
 AGO-006: agent-output-declaration — cache_trails MUST be populated by Engine during work-unit submit validation, not Agent claims
+AGO-007: agent-output-declaration — Wave1 submitted ledger canonicalizes required output roles
 # bundle-data-isolation
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 BUI-002: bundle-data-isolation — Runtime output paths stay under active bundle root and repo-root leaks are diagnosed
@@ -409,6 +410,7 @@ WPG-009: work-unit-provenance-gate — Gates emit work-unit nonce mismatch diagn
 WPG-010: work-unit-provenance-gate — Gates emit work-unit lifecycle evidence diagnostics
 WPG-011: work-unit-provenance-gate — Framework ships a work-unit provenance-forensics guide
 WPG-012: work-unit-provenance-gate — Provenance gates distinguish Phase-owned reference projections from delegated fetched evidence
+WPG-013: work-unit-provenance-gate — Wave1 required output coverage and Wave2 cross-reference provenance preserve authority contracts
 
 
 # seg2node
@@ -605,6 +607,7 @@ GSK-007: gate-skeleton — Lifecycle gate handoff preflight verifies prior gate 
 GSK-008: gate-skeleton — Engine-derived gate attempt delta and pass-side fatigue diagnostics
 GSK-009: gate-skeleton — Gate CLI exit-code behavior and high-friction continuation advice align with the framework convention
 GSK-010: gate-skeleton — Lifecycle gate and final-readiness preflight rejects status-only or artifact-only downstream authorization
+GSK-011: gate-skeleton — Active gate rule audit is executable and maps rules to current helper or CLI dispatch
 
 # wff-state-chain
 TRT-001: transition-table — File naming convention transitions.chain.json
@@ -665,6 +668,7 @@ RWP-012: research-wave-phase-content — Wave2 rerun action:add full re-synthesi
 RWP-013: research-wave-phase-content — Wave2 gate rerun action:add check forbids delta-only synthesis and requires scan/index full topic slug coverage
 RWP-014: research-wave-phase-content — Rerun action:add SHALL include full cache trail（新增topic的source intake与首次运行一致，含_cache/写入）
 RWP-015: research-wave-phase-content — Wave phase bodies teach batch-poll-submit loops and Phase-owned reference materialization
+RWP-016: research-wave-phase-content — Wave phase bodies teach canonical gate-consumable refs, roles, and return-map navigation
 
 # research-wave-gate-implementation (delta)
 RWG-011: research-wave-gate-implementation — Wave0 gate checks for 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
@@ -672,6 +676,7 @@ RWG-012: research-wave-gate-implementation — Wave1 gate checks for reference/*
 RWG-013: research-wave-gate-implementation — Wave2 gate removes reference/00_shared/ checks, 00-cross-* is optional
 RWG-016: research-wave-gate-implementation — Wave gates return repair-targeted diagnostics for YAML shape, ledger-only reference counting, cache coverage, and hash drift
 RWG-017: research-wave-gate-implementation — Wave gates implement Phase-owned reference projection and delegated evidence split
+RWG-018: research-wave-gate-implementation — Blocking judgment contracts close across producer instruction, runtime authority, checker diagnostics, and guard
 
 # workflow-directory-contract (delta)
 WDC-009: workflow-directory-contract — Bundle canonical structure includes artifacts/wave0/ and flat reference/
@@ -686,6 +691,7 @@ IOC-001: cli-inspect-output-conventions — inspect-wave0-output.mjs (flat dir, 
 IOC-002: cli-inspect-output-conventions — inspect-wave1-output.mjs ({topic.slug}*.md per topic, metadata/sections, evidence-summary, question-list, _INDEX.md wave1 entries)
 IOC-003: cli-inspect-output-conventions — inspect-wave2-output.mjs (no 00_shared/, 00-cross-* format, artifacts/wave2/ triple, no backfill tokens)
 IOC-004: cli-inspect-output-conventions — Inspect CLIs are documented non-gate structured-output commands with invocation-error code 2
+IOC-005: cli-inspect-output-conventions — Inspect output classifies blocking, advisory, and diagnostic-only findings according to pass/fail behavior
 
 # schema-core (delta)
 SCO-010: schema-core — _INDEX.md light validation (header completeness + at least 1 row)
@@ -713,6 +719,7 @@ RES-006: research-styles — Supplementary task cards SHALL NOT produce placehol
 RRM-001: research-return-map — Research wave returns include Agent-readable evidence-to-claim maps
 RRM-002: research-return-map — Seed-topic backfill preserves traceable meaning rather than only evidence lists or conclusions
 RRM-003: research-return-map — Shared guidance teaches the same return-map shape across waves
+RRM-004: research-return-map — Evidence-bearing return-map refs include concrete existing reference files
 
 # cache-raw-web-content
 CRC-001: "cache-raw-web-content — Standardized _cache/ directory structure (wave/batch/scope/source four levels)"

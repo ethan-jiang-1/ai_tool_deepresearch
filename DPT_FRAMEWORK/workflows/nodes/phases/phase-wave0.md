@@ -151,8 +151,9 @@ After each successful submit, before claiming the next item:
 1. Open `seed_topics/{topic.slug}.md`.
 2. Locate `__BACKFILL_WAVE0_EVIDENCE__`.
 3. Replace the token line with concise return-map entries, not only URLs or prose. Each important source/reference entry includes `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`.
-4. Explain what the source says, which must-answer or initial hypothesis it supports/refutes/opens/defers, and where to read submitted source/reference/cache/work-unit evidence.
-5. Do not leave the token in place.
+4. For evidence-bearing entries, make `refs` point first to concrete existing `reference/00-shared-*.md` files. Add `artifacts/wave0/{topic}/source.yaml`, `_cache/`, and `_work_units/` refs only as secondary provenance.
+5. Explain what the source says, which must-answer or initial hypothesis it supports/refutes/opens/defers, and where to read submitted source/reference/cache/work-unit evidence.
+6. Do not leave the token in place.
 
 ## 4. Expected Artifacts
 
@@ -160,7 +161,7 @@ After each successful submit, before claiming the next item:
 - `reference/00-shared-*.md` when shared foundation references exist.
 - `reference/_INDEX.md` summarizing available references.
 - Submitted work-unit rows in `rb_output_declarations.jsonl` covering delegated outputs and cache trails.
-- Seed-topic Wave0 backfill entries with return-map fields and bundle-relative refs to `source.yaml`, `reference/`, `_cache/`, and `_work_units/` surfaces.
+- Seed-topic Wave0 backfill entries with return-map fields and concrete existing `reference/00-shared-*.md` refs as primary consumer navigation; `source.yaml`, `_cache/`, and `_work_units/` refs may appear only as secondary provenance.
 - `rb_trace.jsonl` records the `wave0_completion` event/check surface required by the Wave0 gate definition.
 
 ## 5. Gate Command

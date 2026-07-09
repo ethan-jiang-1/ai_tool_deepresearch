@@ -518,6 +518,7 @@ for (const rule of definition.rules) {
       } else if (rule.check === 'depth_review_contract') {
         const topic = tgt.topic || rule.topic || topicSlugFromDepthReviewTarget(resolvedTarget);
         const depthResult = checkWave1DepthReviewContract(bundlePath, { topic });
+        for (const line of depthResult.diagnostics || []) inspect.push(line);
         if (!depthResult.passed) {
           rulePassed = false;
           ruleDetail = depthResult.inspect.join('; ');

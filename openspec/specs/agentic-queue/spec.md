@@ -1,6 +1,6 @@
 # Agentic Queue
 
-> req: AGQ-001, AGQ-002, AGQ-003, AGQ-004, AGQ-005, AGQ-006, AGQ-007, AGQ-008, AGQ-009, AGQ-010, AGQ-011, AGQ-012, AGQ-013, AGQ-014, AGQ-015, AGQ-016, AGQ-017, AGQ-018, AGQ-019, AGQ-020, AGQ-021, AGQ-022
+> req: AGQ-001, AGQ-002, AGQ-003, AGQ-004, AGQ-005, AGQ-006, AGQ-007, AGQ-008, AGQ-009, AGQ-010, AGQ-011, AGQ-012, AGQ-013, AGQ-014, AGQ-015, AGQ-016, AGQ-017, AGQ-018, AGQ-019, AGQ-020, AGQ-021, AGQ-022, AGQ-023
 
 ## Purpose
 
@@ -447,4 +447,3 @@ The validation surface SHALL be example-driven, not token-only: when active phas
 - **WHEN** active documentation or generated task text explicitly describes `operate-work-unit claim`, `operate-work-unit submit`, work-unit result JSON, work-unit runtime receipts, or submitted ledger rows
 - **THEN** `work_id` SHALL remain valid as the Engine-allocated delegated attempt identity
 - **AND** queue hygiene SHALL NOT require replacing that work-unit attempt identity with `queue_item_id`
-
