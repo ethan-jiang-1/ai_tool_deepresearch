@@ -375,6 +375,7 @@ SRL-001: subagent-runtime-logging — Sub-agent emits lifecycle events via log-e
 SRL-002: subagent-runtime-logging — Lifecycle events carry the work-unit beacon receipt_nonce (UUID)
 SRL-003: subagent-runtime-logging — Sub-agent reads work-unit _beacon.json for bundle_dir/log_cli/work_id/queue_item_id/kind/nonce as single source of truth
 SRL-004: subagent-runtime-logging — Lifecycle events are work-unit provenance-forensics cross-check signals, not independent gate pass coverage
+SRL-005: subagent-runtime-logging — Explicit audited late-submit diagnostics distinguish normal terminal submit rejection from late-accept recovery [DEPRECATED]
 
 # subagent-slots
 SUS-001: subagent-slots — Replaced production slot lifecycle/path contracts removed in favor of work-unit runtime contracts [DEPRECATED]
