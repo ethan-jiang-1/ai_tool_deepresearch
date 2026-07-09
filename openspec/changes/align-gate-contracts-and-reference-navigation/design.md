@@ -201,13 +201,13 @@ For grouped design rows below, the apply-time inventory may keep a shared implem
 | readiness-passed | `seed_topics_non_empty`, `reference_index_exists`, `wave2_synthesis_exists`, `hitl2_decision_brief_exists`, `all_prior_gates_passed`, `profile_yaml_parseable`, `trace_jsonl_parseable` | readiness gate file/dir/trace/YAML/JSONL checks | required final preconditions and trace history | readiness phase | blocking; final entry not authorized |
 | rerun-ready | `rerun_rationale_present`, `rerun_count_valid`, `bundle_structure_valid` | rerun gate field/count/structural checks | HITL2 rerun request and surviving bundle structure | rerun phase | blocking; rerun branch not authorized |
 
-### Drift Found In This Audit
+### Drift And High-Risk Surfaces Found In This Audit
 
 1. `wave1_work_unit_output_coverage` checks required paths through role-filtered submitted ledger rows, while the work-unit output contract permits `other` and phase/subagent guidance does not bind required paths to `evidence_summary` / `question_list`.
 2. `per_topic_depth_review_contract` uses exact submitted refs, while `phase-wave1.md` example includes a trailing slash.
 3. Return-map helpers and inspect output mark return-map findings `diagnosticOnly`, but BUG-070 shows concrete `reference/*.md` navigation is part of the consumer map contract and should block when evidence-bearing map entries have only internal refs or globs.
 4. No static guard proves all active gate rule ids have a known implementation and artifact contract.
-5. Wave2 `reference/00-cross-*.md` authority is a same-family contract surface: new fetched evidence must bind to submitted `wave2_targeted_evidence`, while existing-backed Phase-owned projections must bind to prior accepted evidence plus W2F/finding-index/cross-topic-ledger/prior submitted backing. The audit must preserve this split across gate definitions, helpers, phase docs, inspect diagnostics, and tests.
+5. Wave2 `reference/00-cross-*.md` authority is a same-family high-risk surface, not a mandate for broad Wave2 rewrite: new fetched evidence must bind to submitted `wave2_targeted_evidence`, while existing-backed Phase-owned projections must bind to prior accepted evidence plus W2F/finding-index/cross-topic-ledger/prior submitted backing. The audit must verify or preserve this split across gate definitions, helpers, phase docs, inspect diagnostics, and tests.
 
 ### Apply-Time Audit Expansion Rule
 
@@ -259,6 +259,22 @@ Use this rule when the audit discovers new drift beyond BUG-068 and BUG-070:
 | Existing historical bundle rows are wrong but the current contract is aligned | Defer; do not add broad amend tooling |
 | Research quality preference, ranking heuristic, style guidance, or semantic judgment not already part of deterministic gate truth | Defer/backlog |
 | Queue scheduling, lifecycle routing, HITL UX, or unrelated framework architecture drift | Out of scope for this change |
+
+### Apply Stop Lines
+
+Apply SHALL stop expansion at these lines:
+
+- If a high-risk surface is already aligned, record the evidence and add or keep the smallest useful guard; do not edit framework code just to show activity.
+- If Wave2 `00-cross` already preserves the split `new fetched evidence -> submitted wave2_targeted_evidence` and `existing-backed projection -> prior backing + W2F/finding-index/cross-topic-ledger`, keep it aligned; do not replace it with an all-new-row rule or `source_layer`-alone acceptance.
+- If a finding is a research-quality preference, ranking heuristic, style issue, or semantic judgment, record it as deferred/backlog rather than promoting it to a blocking deterministic gate.
+- If a finding concerns historical bad submitted rows while the current contract is aligned, do not add amend tooling in this change.
+- If a finding concerns queue scheduling, lifecycle routing, HITL UX, or unrelated architecture, mark it out of scope.
+
+### Governance Baseline Rule
+
+Apply SHALL make governance failures unambiguous before target-code edits. The current known `check-project-reqs` blockers are this change's pending IDs plus pre-existing orphan IDs `AGQ-023` and `SNC-006`.
+
+Pending IDs from this change SHALL be registered as part of this change. Pre-existing orphan IDs SHALL be resolved or explicitly reported as governance baseline blockers separately from judgment-layer implementation evidence. Final verification still requires governance PASS; unrelated governance cleanup must not be described as judgment-layer drift.
 
 ## Decisions
 
@@ -366,7 +382,7 @@ The validator SHALL fail closed for unknown check names in active gate definitio
 ## Migration Plan
 
 1. Register pending IDs in `openspec/governance/req-registry.yaml`.
-2. Run governance checks early enough to distinguish this change's pending IDs from pre-existing registry/spec drift; record and resolve any blocker before final verification.
+2. Run governance checks after registering pending IDs and before target-code edits; resolve or explicitly block on pre-existing orphan IDs separately from judgment-layer implementation.
 3. Record an apply-time gate/output-alignment matrix update before target-code edits, including contract closure state and any newly discovered same-family deterministic drift.
 4. Resolve Source-of-Record conflicts according to the judgment-layer authorities table before changing code.
 5. Audit Wave2 `reference/00-cross-*.md` authority closure against existing helpers and docs, preserving the targeted-evidence / existing-backed projection split.
@@ -401,6 +417,7 @@ This change is apply-ready when implementation can show:
 - gate/inspect wording accurately labels blocking, advisory, diagnostic-only findings;
 - blocking diagnostics name the failed deterministic surface, expected shape, and repair target without requiring helper-source reading;
 - static audit proves active gate rule ids have known implementation and documented artifact contract;
+- governance baseline blockers are resolved or explicitly recorded before target-code edits, and unrelated governance cleanup is not classified as judgment-layer drift;
 - focused regression / fixture tests and governance checks pass;
 - `CHANGELOG.md` and `DPT_FRAMEWORK/RUN.md` publish `v0.13`.
 
