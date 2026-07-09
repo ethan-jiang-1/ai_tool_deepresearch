@@ -1,4 +1,4 @@
-// @impl DEW-006, AGQ-001, AGQ-014, SRL-004, LOG-006, FRE-005
+// @impl DEW-006, DEW-014, AGQ-001, AGQ-014, SRL-004, LOG-006, FRE-005
 
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
@@ -19,6 +19,7 @@ import {
   loadWorkUnitIndex,
   openWorkUnitBatch,
   submitWorkUnit,
+  timeoutPreflightWorkUnit,
 } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
 
 function tempBundle() {
@@ -44,6 +45,10 @@ function saveSeedQueue(dir, items) {
   let queue = createQueue(path.basename(dir));
   for (const item of items) queue = enqueue(queue, item);
   saveQueue(dir, queue);
+}
+
+function afterDeadline(record, offsetMs = 1) {
+  return Date.parse(record.deadline_at) + offsetMs;
 }
 
 function writeLateResult(dir, record) {
@@ -95,7 +100,12 @@ describe('work-unit terminal attempts', () => {
       claimWorkUnits(dir, { phase: 'wave0', count: 1 });
       const first = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
 
-      const timedOut = closeWorkUnitAttempt(dir, { work_id: first.work_id, status: 'timed_out', reason: 'deadline-expired' });
+      const timedOut = closeWorkUnitAttempt(dir, {
+        work_id: first.work_id,
+        status: 'timed_out',
+        reason: 'deadline-expired',
+        nowMs: afterDeadline(first),
+      });
       assert.equal(timedOut.ok, true);
       assert.equal(timedOut.retry_requeued, true);
       assert.equal(loadQueue(dir).active_window[0].queue_item_id, 'queue-a');
@@ -107,6 +117,50 @@ describe('work-unit terminal attempts', () => {
       assert.equal(second.batch_id, 'b000');
       const trace = readFileSync(path.join(dir, 'rb_trace.jsonl'), 'utf-8');
       assert.match(trace, /work_unit_retry_claimed/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('default timeout refuses a not-yet-idle claimed attempt without terminal side effects', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+
+      const refused = closeWorkUnitAttempt(dir, {
+        work_id: record.work_id,
+        status: 'timed_out',
+        reason: 'too-soon',
+        nowMs: Date.parse(record.claimed_at) + 1,
+      });
+      assert.equal(refused.ok, false);
+      assert.equal(refused.recommended_action, 'wait');
+      assert.equal(loadWorkUnitIndex(dir).work_units[record.work_id].status, 'claimed');
+      assert.equal(loadQueue(dir).delegated_in_flight['queue-a'].work_id, record.work_id);
+      assert.equal(loadQueue(dir).terminal_history.length, 0);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('timeout-preflight reports no-progress eligibility without reporting claimed_at as observed progress', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+
+      const preflight = timeoutPreflightWorkUnit(dir, {
+        work_id: record.work_id,
+        nowMs: afterDeadline(record),
+      });
+      assert.equal(preflight.timeout_eligible, true);
+      assert.equal(preflight.check, true);
+      assert.equal(preflight.recommended_action, 'timeout');
+      assert.equal(preflight.lease_anchor_at, record.claimed_at);
+      assert.equal(preflight.progress.latest_engine_observed_progress_at, null);
     } finally {
       cleanup(dir);
     }
@@ -149,7 +203,12 @@ describe('work-unit terminal attempts', () => {
       saveSeedQueue(dir, [delegated('queue-a')]);
       claimWorkUnits(dir, { phase: 'wave0', count: 1 });
       const first = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
-      closeWorkUnitAttempt(dir, { work_id: first.work_id, status: 'timed_out', reason: 'gate-refill-needed' });
+      closeWorkUnitAttempt(dir, {
+        work_id: first.work_id,
+        status: 'timed_out',
+        reason: 'gate-refill-needed',
+        nowMs: afterDeadline(first),
+      });
       const opened = openWorkUnitBatch(dir, { phase: 'wave0', reason: 'gate_failure_refill' });
       assert.equal(opened.batch_id, 'b001');
 

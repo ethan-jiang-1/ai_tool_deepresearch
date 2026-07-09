@@ -1,4 +1,4 @@
-// @impl DEW-002, DEW-004, FRE-005, SDC-001, SDC-002, SDC-003
+// @impl DEW-002, DEW-004, DEW-014, FRE-005, SDC-001, SDC-002, SDC-003
 import { z } from 'zod';
 
 export const WORK_UNIT_INDEX_SCHEMA_VERSION = 'work-unit.index.v1';
@@ -244,3 +244,49 @@ export const WorkUnitLedgerRecordSchema = z.object({
   result_hash: z.string().min(1),
   ledger_record_hash: z.string().min(1),
 }).strict();
+
+export const WorkUnitTimeoutRecommendedAction = z.enum(['submit', 'repair', 'wait', 'timeout', 'inspect', 'block']);
+
+export const WorkUnitTimeoutProgressSourceSchema = z.object({
+  source_type: z.enum(['result_file', 'receipt_file', 'output_file', 'cache_leaf', 'engine_event']),
+  observed_at: z.string().datetime().nullable().default(null),
+  path_ref: z.string().min(1).nullable().optional(),
+  event_ref: z.string().min(1).nullable().optional(),
+  identity_verified: z.boolean(),
+  extends_idle_lease: z.boolean(),
+  suspicious_timestamp: z.boolean().default(false),
+}).strict();
+
+export const WorkUnitTimeoutProgressSchema = z.object({
+  latest_engine_observed_progress_at: z.string().datetime().nullable().default(null),
+  candidate_result_present: z.boolean().default(false),
+  receipt_nonempty: z.boolean().default(false),
+  output_or_cache_progress: z.boolean().default(false),
+  dry_submit_expected: z.enum(['pass', 'fail', 'not_run']).default('not_run'),
+  sources: z.array(WorkUnitTimeoutProgressSourceSchema).default([]),
+}).strict();
+
+export const WorkUnitTimeoutPreflightSchema = z.object({
+  ok: z.boolean(),
+  work_id: z.string().min(1),
+  queue_item_id: z.string().min(1).nullable().default(null),
+  status: z.union([WorkUnitStatus, z.literal('unknown')]),
+  timeout_eligible: z.boolean(),
+  check: z.boolean(),
+  recommended_action: WorkUnitTimeoutRecommendedAction,
+  initial_deadline_at: z.string().datetime().nullable().default(null),
+  lease_anchor_at: z.string().datetime().nullable().default(null),
+  idle_timeout_ms: z.number().int().positive().nullable().default(null),
+  effective_timeout_at: z.string().datetime().nullable().default(null),
+  progress: WorkUnitTimeoutProgressSchema,
+  inspect: z.array(z.string()).default([]),
+  advice: z.array(z.string()).default([]),
+}).strict().superRefine((data, ctx) => {
+  if (data.timeout_eligible !== data.check) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['check'],
+      message: 'check must equal timeout_eligible',
+    });
+  }
+});

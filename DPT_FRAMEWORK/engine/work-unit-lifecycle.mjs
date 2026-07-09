@@ -1,4 +1,4 @@
-// @impl DEW-002, DEW-004, EXO-001
+// @impl DEW-002, DEW-004, DEW-014, EXO-001
 // Work-unit lifecycle: create, parse phase, eligibility, claim, close, batch open.
 
 import path from 'node:path';
@@ -35,6 +35,9 @@ import {
 import {
   readAndValidateManifest,
 } from './work-unit-validation.mjs';
+import {
+  timeoutPreflightWorkUnit,
+} from './work-unit-timeout-preflight.mjs';
 
 import { queueItemSnapshotHash } from './queue-manager-core.mjs';
 import { loadQueue, saveQueue } from './queue-manager-lifecycle.mjs';
@@ -335,7 +338,7 @@ function statusToQueueTerminal(status) {
   return 'blocked';
 }
 
-export function closeWorkUnitAttempt(bundleDir, { work_id, status, reason } = {}) {
+export function closeWorkUnitAttempt(bundleDir, { work_id, status, reason, force = false, nowMs = Date.now() } = {}) {
   if (!['failed', 'timed_out', 'abandoned'].includes(status)) throw new Error(`unsupported terminal status: ${status}`);
   if (!reason) throw new Error('--reason is required');
 
@@ -362,6 +365,23 @@ export function closeWorkUnitAttempt(bundleDir, { work_id, status, reason } = {}
       status: record.status,
       inspect: [`work_id ${record.work_id} is already ${record.status}`],
       advice: 'A terminal attempt can only be repeated idempotently with the same status and reason.',
+    };
+  }
+
+  const timeoutPreflight = status === 'timed_out'
+    ? timeoutPreflightWorkUnit(bundleDir, { work_id: record.work_id, nowMs })
+    : null;
+  if (status === 'timed_out' && !force && !timeoutPreflight.timeout_eligible) {
+    return {
+      ok: false,
+      work_id: record.work_id,
+      queue_item_id: record.queue_item_id,
+      status: record.status,
+      timeout_preflight: timeoutPreflight,
+      recommended_action: timeoutPreflight.recommended_action,
+      progress: timeoutPreflight.progress,
+      inspect: timeoutPreflight.inspect,
+      advice: timeoutPreflight.advice,
     };
   }
 
@@ -413,6 +433,17 @@ export function closeWorkUnitAttempt(bundleDir, { work_id, status, reason } = {}
     const savedIndex = saveWorkUnitIndex(bundleDir, index);
     const savedQueue = saveQueue(bundleDir, queue);
     const event = statusToEvent(status);
+    const forcedTimeoutAudit = status === 'timed_out' && force ? {
+      forced_timeout: true,
+      force_reason: reason,
+      preflight_timeout_eligible: Boolean(timeoutPreflight?.timeout_eligible),
+      preflight_recommended_action: timeoutPreflight?.recommended_action || null,
+      default_timeout_would_refuse: !timeoutPreflight?.timeout_eligible,
+      effective_timeout_at: timeoutPreflight?.effective_timeout_at || null,
+      latest_engine_observed_progress_at: timeoutPreflight?.progress?.latest_engine_observed_progress_at || null,
+      lease_anchor_at: timeoutPreflight?.lease_anchor_at || null,
+      progress_sources: timeoutPreflight?.progress?.sources || [],
+    } : {};
     traceWorkUnitEvent(bundleDir, event, {
       tx_id,
       work_id: record.work_id,
@@ -421,7 +452,20 @@ export function closeWorkUnitAttempt(bundleDir, { work_id, status, reason } = {}
       kind: record.kind,
       receipt_nonce: record.receipt_nonce,
       reason,
+      ...forcedTimeoutAudit,
     });
+    if (status === 'timed_out' && force && !timeoutPreflight?.timeout_eligible) {
+      traceWorkUnitEvent(bundleDir, 'work_unit_forced_timeout', {
+        tx_id,
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        wave: record.wave,
+        kind: record.kind,
+        receipt_nonce: record.receipt_nonce,
+        reason,
+        ...forcedTimeoutAudit,
+      });
+    }
     logToRun(bundleDir, status === 'timed_out' ? 'warn' : 'info', event, {
       kind: 'work_unit_terminal',
       tx_id,
@@ -430,6 +474,7 @@ export function closeWorkUnitAttempt(bundleDir, { work_id, status, reason } = {}
       status,
       reason,
       runtime_refs: record.runtime_refs || {},
+      ...forcedTimeoutAudit,
     });
     return {
       ok: true,
@@ -439,6 +484,8 @@ export function closeWorkUnitAttempt(bundleDir, { work_id, status, reason } = {}
       status,
       reason,
       retry_requeued: status === 'timed_out',
+      ...(timeoutPreflight ? { timeout_preflight: timeoutPreflight } : {}),
+      ...forcedTimeoutAudit,
       queue: savedQueue,
       index: savedIndex,
     };

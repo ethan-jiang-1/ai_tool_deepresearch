@@ -201,6 +201,7 @@ DEW-010: delegated-work-units — Submitted result and ledger hashes detect post
 DEW-011: delegated-work-units — Successful work-unit submit verifies durable queue postconditions before reporting success
 DEW-012: delegated-work-units — Work-unit submit performs narrow canonicalization for predictable LLM-shaped result, receipt, cache, and nonce drift
 DEW-013: delegated-work-units — Work-unit dry-submit preflights submit validation without side effects
+DEW-014: delegated-work-units — Timeout terminalization is guarded by progress-aware preflight
 
 # conditional-nodes
 COS-001: conditional-nodes — Deterministic branch checkpoint transforms
@@ -503,6 +504,16 @@ RWP-005: research-wave-phase-content — Wave1 future expansion tracks documenta
 RWP-006: research-wave-phase-content — Wave2 synthesis artifact references verified artifacts via Markdown links
 RWP-007: research-wave-phase-content — Anti-cheating rules in wave phase bodies (≥10 phase-specific bans for wave2)
 RWP-008: research-wave-phase-content — Wave2 gap-fill sub-agent phase file behavior specification
+RWP-009: research-wave-phase-content — Wave0 phase produces 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
+RWP-010: research-wave-phase-content — Wave1 phase produces reference/{topic_slug}-<qualifier>.md rich MD per topic
+RWP-011: research-wave-phase-content — Wave2 phase produces 00-cross-*.md (optional), synthesis stays in artifacts/wave2/
+RWP-012: research-wave-phase-content — Wave2 rerun action:add full re-synthesis with gate coverage
+RWP-013: research-wave-phase-content — Wave2 gate rerun action:add check forbids delta-only synthesis and requires scan/index full topic slug coverage
+RWP-014: research-wave-phase-content — Rerun action:add SHALL include full cache trail（新增topic的source intake与首次运行一致，含_cache/写入）
+RWP-015: research-wave-phase-content — Wave phase bodies teach batch-poll-submit loops and Phase-owned reference materialization
+RWP-016: research-wave-phase-content — Wave phase bodies teach canonical gate-consumable refs, roles, and return-map navigation
+RWP-017: research-wave-phase-content — Wave0 and Wave1 fetch targets follow profile floors plus conservative margin
+RWP-018: research-wave-phase-content — Wave delegated drain loops route timeout through progress-aware preflight
 
 # wff-research-waves / research-wave-gate-implementation
 RWG-001: research-wave-gate-implementation — Wave0 complete gate rule set (file_exists, dir_exists, schema_valid ReferenceMetadata, count_floor, trace_event_present, status_value)
@@ -536,6 +547,7 @@ RWE-007: "research-wave-experiments — Wave review-surface playbook (Wave0 refe
 RWE-008: "research-wave-experiments — Wave1 placeholder not mistaken for full subagent research — cross-cutting constraint, no standalone playbook"
 RWE-009: "research-wave-experiments — Cross-artifact reference verification in wave2 synthesis — cross-cutting constraint, no standalone playbook"
 RWE-010: "research-wave-experiments — Wave experiment playbook SHALL write wave{N}_completion trace event before its wave-complete gate (phase-wave{0,1,2}.md completion obligation)"
+RWE-011: research-wave-experiments — Wave timeout-preflight and progress-lease coverage
 
 # wff-research-waves / seed-topic-materialization
 STM-001: seed-topic-materialization — Seed topic materialization phase node (9-section body, forces topic_registry→seed_topics/ materialization, seed_topics_completion trace event)
@@ -572,6 +584,7 @@ SNC-004: subagent-node-contract — Sub-agent role specs require beacon-first ab
 SNC-005: subagent-node-contract — Sub-agent role contracts return source backing instead of owning consumer reference presentation
 SNC-006: subagent-node-contract — Generated work-unit result schema matches submit-time result contract
 SNC-007: subagent-node-contract — Sub-agent fetch guidance distinguishes per-URL fallback, multi-URL batching, and JS/Node-first fetch tiers
+SNC-008: subagent-node-contract — Sub-agent slow work emits observable progress before timeout risk
 GSK-001: gate-skeleton — Gate definition JSON skeleton structure (gate, description, rules[] with id/check/target/threshold/failure_message)
 GSK-002: "gate-skeleton — Gate CLI skeleton shape (parseArgs, --bundle/--current-node required, check/inspect/advice JSON output, exit codes)"
 GSK-003: gate-skeleton — One gate per CLI (8 independent CLI wrappers, no generic runner with subcommand)
@@ -661,17 +674,6 @@ VEM-004: version-management — Version number decided at proposal time, not ad-
 WAD-001: wave0-artifacts-directory — Bundle structure includes artifacts/wave0/ directory
 WAD-002: wave0-artifacts-directory — Wave0 thin YAML source lists use ReferenceMetadata schema
 WAD-003: wave0-artifacts-directory — instantiate-run-bundle.mjs creates artifacts/wave0/ directory
-
-# research-wave-phase-content (delta)
-RWP-009: research-wave-phase-content — Wave0 phase produces 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
-RWP-010: research-wave-phase-content — Wave1 phase produces reference/{topic_slug}-<qualifier>.md rich MD per topic
-RWP-011: research-wave-phase-content — Wave2 phase produces 00-cross-*.md (optional), synthesis stays in artifacts/wave2/
-RWP-012: research-wave-phase-content — Wave2 rerun action:add full re-synthesis with gate coverage
-RWP-013: research-wave-phase-content — Wave2 gate rerun action:add check forbids delta-only synthesis and requires scan/index full topic slug coverage
-RWP-014: research-wave-phase-content — Rerun action:add SHALL include full cache trail（新增topic的source intake与首次运行一致，含_cache/写入）
-RWP-015: research-wave-phase-content — Wave phase bodies teach batch-poll-submit loops and Phase-owned reference materialization
-RWP-016: research-wave-phase-content — Wave phase bodies teach canonical gate-consumable refs, roles, and return-map navigation
-RWP-017: research-wave-phase-content — Wave0 and Wave1 fetch targets follow profile floors plus conservative margin
 
 # research-wave-gate-implementation (delta)
 RWG-011: research-wave-gate-implementation — Wave0 gate checks for 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @impl FRE-005, DEW-002, DEW-013
+// @impl FRE-005, DEW-002, DEW-013, DEW-014
 // Work-unit CLI. Claim/inspect/submit are wired; terminal commands are added in later apply sections.
 
 import path from 'node:path';
@@ -13,15 +13,17 @@ import {
   inspectWorkUnits,
   openWorkUnitBatch,
   submitWorkUnit,
+  timeoutPreflightWorkUnit,
 } from '../engine/work-unit-core.mjs';
 
 function usage() {
   console.error(`Usage:
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase waveN [--count N]
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit <bundle> --work-id <id> --result <result.json>
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-id <id> [--result <result.json>]
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <id> --result <result.json>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs fail <bundle> --work-id <id> --reason <reason>
-  node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason <reason>
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason <reason> [--force]
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs abandon <bundle> --work-id <id> --reason <reason>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch <bundle> --phase waveN --reason <reason>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>`);
@@ -75,6 +77,7 @@ const { values } = parseArgs({
     'work-id': { type: 'string' },
     result: { type: 'string' },
     reason: { type: 'string' },
+    force: { type: 'boolean', default: false },
   },
   allowPositionals: false,
 });
@@ -114,6 +117,15 @@ try {
     emit(result);
     process.exit(result.ok ? 0 : 1);
   }
+  if (command === 'timeout-preflight') {
+    if (!values['work-id']) throw new Error('--work-id is required');
+    const result = timeoutPreflightWorkUnit(bundleDir, {
+      work_id: values['work-id'],
+      resultPath: values.result ? path.resolve(values.result) : null,
+    });
+    emit(result);
+    process.exit(result.timeout_eligible ? 0 : 1);
+  }
   if (['fail', 'timeout', 'abandon'].includes(command)) {
     if (!values['work-id']) throw new Error('--work-id is required');
     if (!values.reason) throw new Error('--reason is required');
@@ -122,6 +134,7 @@ try {
       work_id: values['work-id'],
       status,
       reason: values.reason,
+      force: command === 'timeout' ? Boolean(values.force) : false,
     });
     emit(result);
     process.exit(result.ok ? 0 : 1);
