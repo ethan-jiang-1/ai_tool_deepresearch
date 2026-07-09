@@ -1,3 +1,5 @@
+// @impl SNC-008, RWP-018
+
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
@@ -51,6 +53,68 @@ describe('parallel delegated phase execution guidance', () => {
       assert.match(text, /poll[\s\S]*submit[\s\S]*terminalize/i, relPath);
       assert.doesNotMatch(around(text, /Delegated Drain Loop/i), /--count 1\b/, relPath);
     }
+  });
+
+  it('Wave phases route terminal timeout through timeout-preflight advice', () => {
+    for (const relPath of [
+      'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md',
+      'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md',
+      'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md',
+    ]) {
+      const text = read(relPath);
+      assert.match(text, /timeout-preflight/i, relPath);
+      assert.match(text, /structured stdout/i, relPath);
+      assert.match(text, /non-zero/i, relPath);
+      for (const branch of ['submit', 'repair', 'wait', 'inspect', 'block', 'timeout']) {
+        assert.match(text, new RegExp(`\\b${branch}\\b`, 'i'), `${relPath} missing ${branch}`);
+      }
+      assert.match(text, /timeout --force --reason <reason>[\s\S]*exceptional|exceptional[\s\S]*timeout --force --reason <reason>/i, relPath);
+      assert.match(text, /not.*drained|undrained|do not run.*gate/i, relPath);
+    }
+  });
+
+  it('shared protocol keeps timeout-preflight before terminal timeout and force exceptional', () => {
+    const text = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md');
+    assert.match(text, /timeout-preflight/i);
+    assert.match(text, /recommended_action/i);
+    assert.match(text, /submit[\s\S]*repair[\s\S]*wait[\s\S]*inspect[\s\S]*block[\s\S]*timeout/i);
+    assert.match(text, /Default `timeout` is valid only after timeout preflight reports `timeout_eligible: true`/);
+    assert.match(text, /Force timeout is an audited escape hatch/i);
+  });
+});
+
+describe('Sub-agent observable progress guidance', () => {
+  it('active sub-agent roles emit batch-level progress and keep it diagnostic-only', () => {
+    for (const relPath of [
+      'DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-source-intake.md',
+      'DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-evidence-extractor.md',
+      'DPT_FRAMEWORK/workflows/nodes/phases/subagent-dpt-topic-scout.md',
+    ]) {
+      const text = read(relPath);
+      for (const eventName of [
+        'search_batch_started',
+        'search_batch_done',
+        'fetch_batch_started',
+        'fetch_batch_done',
+        'cache_written',
+        'result_draft_written',
+        'work_done',
+      ]) {
+        assert.match(text, new RegExp(eventName), `${relPath} missing ${eventName}`);
+      }
+      assert.match(text, /work_id[\s\S]*queue_item_id[\s\S]*kind[\s\S]*receipt_nonce/i, relPath);
+      assert.match(text, /Progress is diagnostic only/i, relPath);
+      assert.match(text, /Progress never replaces `operate-work-unit submit`/i, relPath);
+      assert.doesNotMatch(text, /\bpython\b|\.py\b/i, relPath);
+    }
+  });
+
+  it('shared protocol describes progress receipts as timeout-preflight diagnostics only', () => {
+    const text = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-subagent-protocol.md');
+    assert.match(text, /batch-level progress/i);
+    assert.match(text, /timeout preflight distinguish no progress from slow progress/i);
+    assert.match(text, /do not append ledger rows, satisfy source claims, count gate coverage, or replace formal `operate-work-unit submit`/i);
+    assert.doesNotMatch(text, /\bpython\b|\.py\b/i);
   });
 });
 

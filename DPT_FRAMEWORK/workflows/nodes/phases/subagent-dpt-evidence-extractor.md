@@ -39,13 +39,15 @@ This mandate is loaded from the role spec itself. It applies to every native sub
 
 1. **Read your beacon first.** Open `_beacon.json` in your work-unit directory. It is the single source of truth for `bundle_dir`, `log_cli`, `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, and `runtime_receipt_ref`. Do NOT use environment variables or inherited cwd for the bundle path.
 2. **Emit lifecycle events via `log-event.mjs`.** Using `log_cli` and `bundle_dir` from the beacon, emit this event set, each carrying `work_id`, `queue_item_id`, `kind`, and `receipt_nonce` in its `--detail` JSON:
-   - `search_start` / `search_done` — around each bounded search (`search_done` includes `result_count`)
-   - `fetch_done` — when a page fetch completes (include `url`)
-   - `file_written` — when you write an artifact file (include bundle-relative `path`)
+   - `search_batch_started` / `search_batch_done` — before and after each bounded search batch (`search_batch_done` includes `result_count`)
+   - `fetch_batch_started` / `fetch_batch_done` — before and after each bounded fetch batch (include URL/count context)
+   - `cache_write_started` / `cache_written` — before and after a bounded cache write batch (include bundle-relative cache path)
+   - `result_draft_started` / `result_draft_written` — before and after result/output drafting (include bundle-relative path)
    - `error` — when a fetch is blocked or the result degrades (include `reason`)
    - `work_done` — once, when all work is complete (include `summary`)
 3. **Never fabricate a nonce.** If `_beacon.json` is missing or unreadable, emit an `error` event noting the missing beacon and proceed without lifecycle logging — do NOT invent a `receipt_nonce`.
 4. **Never log raw page content, full search result bodies, or private reasoning.** The logging CLI always exits 0; diagnostics must not block your work.
+5. **Progress is diagnostic only.** Keep long operations bounded and write progress as soon as the bundle-root receipt/log surface is available. Progress never replaces `operate-work-unit submit`, source claims, cache validation, ledger coverage, or gate coverage.
 
 Example:
   node <log_cli> --bundle <bundle_dir> --level info --msg "work_done" --detail '{"event":"work_done","work_id":"<work_id>","queue_item_id":"<queue_item_id>","kind":"wave1_topic_deepening","receipt_nonce":"<receipt_nonce>","summary":"<summary>"}'

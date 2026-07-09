@@ -183,6 +183,10 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
 ```
 
+Actively poll targeted-evidence result/receipt/output/cache readiness without waiting for user continuation or task notification. For every expired or stale claimed attempt, run `operate-work-unit timeout-preflight <bundle> --work-id <work_id> [--result <result.json>]` and parse structured stdout even when the command exits non-zero. Follow the closed advice branches: formal `submit`, same-`work_id` `repair`, active-poll `wait`, authority `inspect`, deterministic `block`, or normal terminal `timeout`. A `submit`, `repair`, `wait`, `inspect`, or `block` recommendation means delegated in-flight work is not drained.
+
+`timeout --force --reason <reason>` is exceptional and audited, not the normal response to recent progress, repairable candidates, or invalid binding. This preflight loop does not change the Wave2 authority split: pure synthesis continues from existing accepted backing, while newly fetched targeted evidence counts only after successful `wave2_targeted_evidence` submit. Phase-owned finding-index, cross-topic ledger, synthesis, backfill, and `00-cross` materialization remain downstream of accepted evidence.
+
 Targeted evidence Sub-agents must:
 
 - Search/fetch only the assigned gap.

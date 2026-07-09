@@ -134,7 +134,15 @@ Sub-agent execution requirements:
 - Receipt events must bind `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
 - Output files and cache trails must appear in the submitted result. Canonical topic reference Markdown is not required as delegated output unless a future accepted task explicitly assigns it.
 
-Actively poll result/receipt/output/cache readiness without waiting for user continuation or task notification. Rejected submit does not finish the attempt. Repair the same claimed `work_id` when possible, or close it with `fail`, `timeout`, or `abandon` before claiming replacement work.
+Actively poll result/receipt/output/cache readiness without waiting for user continuation or task notification. Rejected submit does not finish the attempt. Repair the same claimed `work_id` when possible. For every expired or stale claimed attempt, run:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-id <work_id> [--result <result.json>]
+```
+
+Parse structured stdout even when timeout preflight exits non-zero. Follow all advice branches: `submit` uses formal submit; `repair` keeps the same claimed `work_id`; `wait` continues active polling; `inspect` repairs candidate/Engine authority; `block` leaves the phase undrained and surfaces the blocker; only `timeout` permits normal terminal timeout. `fail` and `abandon` remain explicit non-timeout closures. `timeout --force --reason <reason>` is exceptional and audited, never the normal drain action for progress-positive or invalid-binding attempts.
+
+Do not run depth review, supplementary-demand convergence, Phase-owned reference materialization, or the Wave1 gate as though the attempt were drained while preflight recommends `submit`, `repair`, `wait`, `inspect`, or `block`. After accepted submit, preserve the existing depth-review and reference-materialization boundaries; when depth remains insufficient, enqueue supplementary `wave1_topic_deepening` demand instead of bypassing the work-unit path.
 
 ### 3.2.1 Topic Reference Materialization
 

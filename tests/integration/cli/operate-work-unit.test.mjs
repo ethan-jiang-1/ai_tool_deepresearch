@@ -80,6 +80,66 @@ function writeValidSubmitFiles(dir, record) {
   return resultPath;
 }
 
+function expireClaimedWorkUnit(dir, workId) {
+  const index = loadWorkUnitIndex(dir);
+  const record = index.work_units[workId];
+  const claimedMs = Date.now() - record.timeout_ms - 60000;
+  record.claimed_at = new Date(claimedMs).toISOString();
+  record.deadline_at = new Date(claimedMs + record.timeout_ms).toISOString();
+  index.work_units[workId] = record;
+  writeFileSync(workUnitIndexPath(dir), `${JSON.stringify(index, null, 2)}\n`);
+
+  const queuePath = path.join(dir, 'rb_queue.json');
+  const queue = JSON.parse(readFileSync(queuePath, 'utf-8'));
+  if (queue.delegated_in_flight?.[record.queue_item_id]) {
+    queue.delegated_in_flight[record.queue_item_id] = {
+      ...queue.delegated_in_flight[record.queue_item_id],
+      claimed_at: record.claimed_at,
+      timeout_ms: record.timeout_ms,
+      deadline_at: record.deadline_at,
+    };
+    writeFileSync(queuePath, `${JSON.stringify(queue, null, 2)}\n`);
+  }
+  return record;
+}
+
+function writeReceiptProgress(dir, record) {
+  writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
+    schema_version: 'work-unit.receipt-event.v1',
+    event: 'fetch_batch_done',
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    ts: new Date().toISOString(),
+  })}\n`);
+}
+
+function writeAssignedSubmitReadyResult(dir, record) {
+  const tmpResultPath = writeValidSubmitFiles(dir, record);
+  const assignedPath = path.join(dir, record.paths.result_ref);
+  mkdirSync(path.dirname(assignedPath), { recursive: true });
+  writeFileSync(assignedPath, readFileSync(tmpResultPath, 'utf-8'));
+  return assignedPath;
+}
+
+function writeAssignedRepairableResult(dir, record) {
+  const assignedPath = path.join(dir, record.paths.result_ref);
+  mkdirSync(path.dirname(assignedPath), { recursive: true });
+  writeFileSync(assignedPath, `${JSON.stringify({
+    schema_version: 'work-unit.result.v1',
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    summary: 'repairable draft',
+    output_files: [],
+    cache_trails: [],
+  }, null, 2)}\n`);
+  writeReceiptProgress(dir, record);
+  return assignedPath;
+}
+
 describe('operate-work-unit inspect', () => {
   it('handles help and suspicious bundle arguments before runtime side effects', () => {
     const parentDir = tempBundle();
@@ -268,6 +328,7 @@ describe('operate-work-unit inspect', () => {
       saveQueueWith(dir, [queueItem()]);
       const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
       const workId = JSON.parse(claimStdout).claimed_work_ids[0];
+      expireClaimedWorkUnit(dir, workId);
 
       const timeoutStdout = execFileSync(process.execPath, [CLI, 'timeout', dir, '--work-id', workId, '--reason', 'deadline-expired'], { encoding: 'utf-8' });
       const timeoutOut = JSON.parse(timeoutStdout);
@@ -279,6 +340,154 @@ describe('operate-work-unit inspect', () => {
       assert.deepEqual(retryOut.claimed_work_ids, ['wu-w0-b000-src-i0002']);
     } finally {
       cleanup(dir);
+    }
+  });
+
+  it('timeout-preflight CLI emits structured eligible and guard-refusal JSON', () => {
+    const eligibleDir = tempBundle();
+    const refusedDir = tempBundle();
+    try {
+      saveQueueWith(eligibleDir, [queueItem()]);
+      const eligibleClaim = execFileSync(process.execPath, [CLI, 'claim', eligibleDir, '--phase', 'wave0'], { encoding: 'utf-8' });
+      const eligibleWorkId = JSON.parse(eligibleClaim).claimed_work_ids[0];
+      expireClaimedWorkUnit(eligibleDir, eligibleWorkId);
+      const eligible = spawnSync(process.execPath, [CLI, 'timeout-preflight', eligibleDir, '--work-id', eligibleWorkId], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(eligible.status, 0, eligible.stderr || eligible.stdout);
+      const eligibleOut = JSON.parse(eligible.stdout);
+      assert.equal(eligibleOut.timeout_eligible, true);
+      assert.equal(eligibleOut.check, true);
+      assert.equal(eligibleOut.recommended_action, 'timeout');
+
+      saveQueueWith(refusedDir, [queueItem()]);
+      const refusedClaim = execFileSync(process.execPath, [CLI, 'claim', refusedDir, '--phase', 'wave0'], { encoding: 'utf-8' });
+      const refusedWorkId = JSON.parse(refusedClaim).claimed_work_ids[0];
+      const refusedRecord = loadWorkUnitIndex(refusedDir).work_units[refusedWorkId];
+      writeReceiptProgress(refusedDir, refusedRecord);
+      const beforeIndex = readFileSync(workUnitIndexPath(refusedDir), 'utf-8');
+      const beforeQueue = readFileSync(path.join(refusedDir, 'rb_queue.json'), 'utf-8');
+      const refused = spawnSync(process.execPath, [CLI, 'timeout-preflight', refusedDir, '--work-id', refusedWorkId], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(refused.status, 1);
+      const refusedOut = JSON.parse(refused.stdout);
+      assert.equal(refusedOut.timeout_eligible, false);
+      assert.equal(['wait', 'repair', 'submit', 'inspect', 'block'].includes(refusedOut.recommended_action), true);
+      assert.equal(readFileSync(workUnitIndexPath(refusedDir), 'utf-8'), beforeIndex);
+      assert.equal(readFileSync(path.join(refusedDir, 'rb_queue.json'), 'utf-8'), beforeQueue);
+    } finally {
+      cleanup(eligibleDir);
+      cleanup(refusedDir);
+    }
+  });
+
+  it('default timeout refuses progress-positive attempts and force records audit diagnostics', () => {
+    const refusedDir = tempBundle();
+    const forcedDir = tempBundle();
+    try {
+      saveQueueWith(refusedDir, [queueItem()]);
+      const refusedClaim = execFileSync(process.execPath, [CLI, 'claim', refusedDir, '--phase', 'wave0'], { encoding: 'utf-8' });
+      const refusedWorkId = JSON.parse(refusedClaim).claimed_work_ids[0];
+      const refusedRecord = loadWorkUnitIndex(refusedDir).work_units[refusedWorkId];
+      writeReceiptProgress(refusedDir, refusedRecord);
+      const beforeQueue = readFileSync(path.join(refusedDir, 'rb_queue.json'), 'utf-8');
+      const refused = spawnSync(process.execPath, [CLI, 'timeout', refusedDir, '--work-id', refusedWorkId, '--reason', 'too-soon'], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(refused.status, 1);
+      const refusedOut = JSON.parse(refused.stdout);
+      assert.equal(refusedOut.ok, false);
+      assert.equal(refusedOut.timeout_preflight.timeout_eligible, false);
+      assert.equal(loadWorkUnitIndex(refusedDir).work_units[refusedWorkId].status, 'claimed');
+      assert.equal(readFileSync(path.join(refusedDir, 'rb_queue.json'), 'utf-8'), beforeQueue);
+
+      saveQueueWith(forcedDir, [queueItem()]);
+      const forcedClaim = execFileSync(process.execPath, [CLI, 'claim', forcedDir, '--phase', 'wave0'], { encoding: 'utf-8' });
+      const forcedWorkId = JSON.parse(forcedClaim).claimed_work_ids[0];
+      const forcedRecord = loadWorkUnitIndex(forcedDir).work_units[forcedWorkId];
+      writeReceiptProgress(forcedDir, forcedRecord);
+      const forced = spawnSync(process.execPath, [CLI, 'timeout', forcedDir, '--work-id', forcedWorkId, '--reason', 'operator-forced', '--force'], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(forced.status, 0, forced.stderr || forced.stdout);
+      const forcedOut = JSON.parse(forced.stdout);
+      assert.equal(forcedOut.forced_timeout, true);
+      assert.equal(forcedOut.preflight_timeout_eligible, false);
+      assert.equal(forcedOut.default_timeout_would_refuse, true);
+      assert.equal(Array.isArray(forcedOut.progress_sources), true);
+      const trace = readFileSync(path.join(forcedDir, 'rb_trace.jsonl'), 'utf-8');
+      assert.match(trace, /work_unit_forced_timeout/);
+      assert.match(trace, /progress_sources/);
+    } finally {
+      cleanup(refusedDir);
+      cleanup(forcedDir);
+    }
+  });
+
+  it('default timeout CLI refuses submit-ready, repairable, and invalid-binding attempts', () => {
+    const submitDir = tempBundle();
+    const repairDir = tempBundle();
+    const bindingDir = tempBundle();
+    try {
+      saveQueueWith(submitDir, [queueItem()]);
+      const submitClaim = execFileSync(process.execPath, [CLI, 'claim', submitDir, '--phase', 'wave0'], { encoding: 'utf-8' });
+      const submitWorkId = JSON.parse(submitClaim).claimed_work_ids[0];
+      const submitRecord = loadWorkUnitIndex(submitDir).work_units[submitWorkId];
+      writeAssignedSubmitReadyResult(submitDir, submitRecord);
+      const submitBeforeQueue = readFileSync(path.join(submitDir, 'rb_queue.json'), 'utf-8');
+      const submitRefused = spawnSync(process.execPath, [CLI, 'timeout', submitDir, '--work-id', submitWorkId, '--reason', 'submit-ready-must-not-timeout'], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(submitRefused.status, 1);
+      const submitOut = JSON.parse(submitRefused.stdout);
+      assert.equal(submitOut.recommended_action, 'submit');
+      assert.equal(loadWorkUnitIndex(submitDir).work_units[submitWorkId].status, 'claimed');
+      assert.equal(readFileSync(path.join(submitDir, 'rb_queue.json'), 'utf-8'), submitBeforeQueue);
+
+      saveQueueWith(repairDir, [queueItem()]);
+      const repairClaim = execFileSync(process.execPath, [CLI, 'claim', repairDir, '--phase', 'wave0'], { encoding: 'utf-8' });
+      const repairWorkId = JSON.parse(repairClaim).claimed_work_ids[0];
+      const repairRecord = loadWorkUnitIndex(repairDir).work_units[repairWorkId];
+      writeAssignedRepairableResult(repairDir, repairRecord);
+      const repairBeforeQueue = readFileSync(path.join(repairDir, 'rb_queue.json'), 'utf-8');
+      const repairRefused = spawnSync(process.execPath, [CLI, 'timeout', repairDir, '--work-id', repairWorkId, '--reason', 'repairable-must-not-timeout'], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(repairRefused.status, 1);
+      const repairOut = JSON.parse(repairRefused.stdout);
+      assert.equal(repairOut.recommended_action, 'repair');
+      assert.equal(loadWorkUnitIndex(repairDir).work_units[repairWorkId].status, 'claimed');
+      assert.equal(readFileSync(path.join(repairDir, 'rb_queue.json'), 'utf-8'), repairBeforeQueue);
+
+      saveQueueWith(bindingDir, [queueItem()]);
+      const bindingClaim = execFileSync(process.execPath, [CLI, 'claim', bindingDir, '--phase', 'wave0'], { encoding: 'utf-8' });
+      const bindingWorkId = JSON.parse(bindingClaim).claimed_work_ids[0];
+      const bindingRecord = loadWorkUnitIndex(bindingDir).work_units[bindingWorkId];
+      const queuePath = path.join(bindingDir, 'rb_queue.json');
+      const queue = JSON.parse(readFileSync(queuePath, 'utf-8'));
+      delete queue.delegated_in_flight[bindingRecord.queue_item_id];
+      writeFileSync(queuePath, `${JSON.stringify(queue, null, 2)}\n`);
+      const bindingBeforeQueue = readFileSync(queuePath, 'utf-8');
+      const bindingRefused = spawnSync(process.execPath, [CLI, 'timeout', bindingDir, '--work-id', bindingWorkId, '--reason', 'binding-must-not-timeout'], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(bindingRefused.status, 1);
+      const bindingOut = JSON.parse(bindingRefused.stdout);
+      assert.equal(bindingOut.recommended_action, 'inspect');
+      assert.equal(loadWorkUnitIndex(bindingDir).work_units[bindingWorkId].status, 'claimed');
+      assert.equal(readFileSync(queuePath, 'utf-8'), bindingBeforeQueue);
+    } finally {
+      cleanup(submitDir);
+      cleanup(repairDir);
+      cleanup(bindingDir);
     }
   });
 

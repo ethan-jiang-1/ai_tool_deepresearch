@@ -137,7 +137,13 @@ For each claimed work unit:
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
 ```
 
-If submit rejects, repair the same claimed attempt when possible. If the attempt cannot continue, close it explicitly before claiming replacement work:
+If submit rejects, repair the same claimed attempt when possible. For every expired or stale claimed attempt, run timeout preflight before terminal timeout:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-id <work_id> [--result <result.json>]
+```
+
+Parse structured stdout even when timeout preflight exits non-zero. Follow `recommended_action` exactly: `submit` runs formal submit; `repair` repairs the same `work_id`; `wait` continues active polling; `inspect` inspects and repairs candidate or Engine binding; `block` surfaces a deterministic blocker without treating the phase as drained; `timeout` permits normal terminal timeout. Only after that decision may the Phase Agent use an explicit close command:
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs fail <bundle> --work-id <work_id> --reason "<reason>"
@@ -145,7 +151,7 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <work_id
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs abandon <bundle> --work-id <work_id> --reason "<reason>"
 ```
 
-Do not use queue completion commands for delegated success.
+`timeout --force --reason <reason>` is an exceptional audited operator choice after inspection, not the normal response to progress, repairable candidates, or invalid binding. Do not use queue completion commands for delegated success, and do not run the Wave0 gate while preflight recommends `submit`, `repair`, `wait`, `inspect`, or `block` for any in-flight attempt.
 
 ### 3.3 Immediate Seed Backfill
 

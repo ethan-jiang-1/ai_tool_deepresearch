@@ -71,9 +71,16 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase waveN --coun
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
 ```
 
-8. If submit rejects, repair the same claimed attempt when possible. Use `fail`, `timeout`, or `abandon` for explicit terminal closure before claiming replacement work.
-9. After successful submit, perform any Phase-owned projection materialization required by the phase, such as Wave1 topic references or existing-backed Wave2 `00-cross` references. These projections must cite submitted backing; they are not delegated evidence authority by themselves.
-10. Continue in this order: fill demand, reconstruct in-flight, claim batch, spawn, poll, submit, repair or terminalize, materialize projections, then gate only after queue demand and delegated in-flight work are both drained.
+8. If submit rejects, repair the same claimed attempt when possible. For expired or stale claimed attempts, run progress-aware timeout preflight before terminal timeout:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-id <work_id> [--result <result.json>]
+```
+
+Parse structured stdout even when `timeout-preflight` exits non-zero. Follow the closed `recommended_action` branch: `submit` means run formal submit, `repair` means repair the same claimed `work_id`, `wait` means continue polling recent progress, `inspect` means inspect/repair Engine binding or candidate authority, `block` means surface a deterministic blocker, and `timeout` means default terminal timeout is allowed. A progress-positive attempt is not drained until it is submitted, repaired, waited on, inspected/blocked, or explicitly terminalized after preflight allows timeout.
+9. Use `fail`, `timeout`, or `abandon` for explicit terminal closure before claiming replacement work. Default `timeout` is valid only after timeout preflight reports `timeout_eligible: true`; `timeout --force --reason <reason>` is exceptional, audited, and not the normal drain path.
+10. After successful submit, perform any Phase-owned projection materialization required by the phase, such as Wave1 topic references or existing-backed Wave2 `00-cross` references. These projections must cite submitted backing; they are not delegated evidence authority by themselves.
+11. Continue in this order: fill demand, reconstruct in-flight, claim batch, spawn, poll, submit, repair or timeout-preflight, terminalize only when the selected branch allows it, materialize projections, then gate only after queue demand and delegated in-flight work are both drained.
 
 Queue completion commands are for non-delegated queue maintenance/completion only. Delegated success is `operate-work-unit submit`.
 
@@ -85,6 +92,7 @@ The Sub-agent actor MUST:
 - Use the exact `work_id`, `queue_item_id`, `kind`, and `receipt_nonce` from the beacon in receipt events and result JSON.
 - Produce only the output paths and cache trails allowed by the task/result contract.
 - Use real search/fetch/read actions for evidence. Search snippets alone are not evidence.
+- Emit concise batch-level progress before and after slow search, fetch, cache, output, and result-draft work. Suitable receipt/log events include `work_started`, `search_batch_started`, `search_batch_done`, `fetch_batch_started`, `fetch_batch_done`, `cache_written`, `result_draft_written`, and `work_done`.
 - Keep optional platform thread/session/spawn/cancel IDs only under `runtime_refs` diagnostic metadata when requested.
 - Return concise structured result JSON. Do not dump raw search trails into the result.
 
@@ -116,6 +124,8 @@ Minimum identity fields:
 
 Diagnostic logs go through `DPT_FRAMEWORK/cli/log-event.mjs` when useful. They are useful for forensics, but submit/gate authority still comes from Engine validation and the submitted ledger row.
 
+For slow work, write progress before and after each bounded batch. Every progress line must carry `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`. Progress receipts help timeout preflight distinguish no progress from slow progress; they do not append ledger rows, satisfy source claims, count gate coverage, or replace formal `operate-work-unit submit`.
+
 ## 6. Cache And Output Declarations
 
 Every delegated result that writes reference/evidence output SHOULD include:
@@ -130,14 +140,16 @@ Submit validates that declared outputs and cache trails exist before appending t
 Use the work-unit lifecycle commands:
 
 ```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-id <id> [--result <result.json>]
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs fail <bundle> --work-id <id> --reason "<reason>"
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason "<reason>"
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason "<reason>" --force
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs abandon <bundle> --work-id <id> --reason "<reason>"
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch <bundle> --phase waveN --reason "<reason>"
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>
 ```
 
-Timeout retry allocates a new `work_id` for the same queue demand. Late submits against terminal attempts are rejected and logged.
+Timeout retry allocates a new `work_id` for the same queue demand. Late submits against terminal attempts are rejected and logged. Force timeout is an audited escape hatch for exceptional operator decisions after preflight, not a routine response to progress, repairable candidates, or invalid binding.
 
 ## 8. Non-Work-Unit Artifacts
 

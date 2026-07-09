@@ -1,6 +1,6 @@
 // @impl DEW-006, DEW-014, AGQ-001, AGQ-014, SRL-004, LOG-006, FRE-005
 
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
@@ -49,6 +49,120 @@ function saveSeedQueue(dir, items) {
 
 function afterDeadline(record, offsetMs = 1) {
   return Date.parse(record.deadline_at) + offsetMs;
+}
+
+function iso(ms) {
+  return new Date(ms).toISOString();
+}
+
+function setFileMtime(filePath, ms) {
+  const date = new Date(ms);
+  utimesSync(filePath, date, date);
+}
+
+function writeReceiptProgress(dir, record, { event = 'fetch_batch_done', observedMs = Date.parse(record.claimed_at) + 1000 } = {}) {
+  const receiptPath = path.join(dir, record.paths.runtime_receipt_ref);
+  writeFileSync(receiptPath, `${JSON.stringify({
+    schema_version: 'work-unit.receipt-event.v1',
+    event,
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    ts: iso(observedMs),
+  })}\n`);
+  setFileMtime(receiptPath, observedMs);
+  return receiptPath;
+}
+
+function writeMismatchedReceipt(dir, record, { observedMs = Date.parse(record.claimed_at) + 1000 } = {}) {
+  const receiptPath = path.join(dir, record.paths.runtime_receipt_ref);
+  writeFileSync(receiptPath, `${JSON.stringify({
+    schema_version: 'work-unit.receipt-event.v1',
+    event: 'fetch_batch_done',
+    work_id: record.work_id,
+    queue_item_id: 'wrong-queue-item',
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    ts: iso(observedMs),
+  })}\n`);
+  setFileMtime(receiptPath, observedMs);
+}
+
+function writeSubmitReadyCandidate(dir, record, { resultPath = path.join(dir, record.paths.result_ref), observedMs = Date.parse(record.claimed_at) + 1000 } = {}) {
+  const outputPath = `reference/${record.work_id}.md`;
+  mkdirSync(path.join(dir, 'reference'), { recursive: true });
+  writeFileSync(path.join(dir, outputPath), '# Source\n\nKey facts from a real fetched page.\n');
+
+  const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
+  mkdirSync(path.join(dir, cacheTrail), { recursive: true });
+  writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
+  writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nFetched content for https://example.com/source.\n');
+  writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/source"}\n');
+  writeReceiptProgress(dir, record, { event: 'work_done', observedMs });
+
+  mkdirSync(path.dirname(resultPath), { recursive: true });
+  writeFileSync(resultPath, `${JSON.stringify({
+    schema_version: 'work-unit.result.v1',
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    summary: 'ready',
+    output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }],
+    cache_trails: [cacheTrail],
+  }, null, 2)}\n`);
+  setFileMtime(resultPath, observedMs);
+  return resultPath;
+}
+
+function writeRepairableCandidate(dir, record) {
+  const resultPath = path.join(dir, record.paths.result_ref);
+  mkdirSync(path.dirname(resultPath), { recursive: true });
+  writeFileSync(resultPath, `${JSON.stringify({
+    schema_version: 'work-unit.result.v1',
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    summary: 'draft',
+    output_files: [],
+    cache_trails: [],
+  }, null, 2)}\n`);
+  return resultPath;
+}
+
+function writeWrongIdentityCandidate(dir, record) {
+  const resultPath = path.join(dir, record.paths.result_ref);
+  mkdirSync(path.dirname(resultPath), { recursive: true });
+  writeFileSync(resultPath, `${JSON.stringify({
+    schema_version: 'work-unit.result.v1',
+    work_id: 'wu-w0-b000-src-i9999',
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    summary: 'wrong identity',
+    output_files: [],
+    cache_trails: [],
+  }, null, 2)}\n`);
+  return resultPath;
+}
+
+function snapshotPath(filePath) {
+  if (!existsSync(filePath)) return { exists: false };
+  const stat = statSync(filePath);
+  if (stat.isDirectory()) {
+    return {
+      exists: true,
+      type: 'dir',
+      entries: Object.fromEntries(readdirSync(filePath).sort().map((entry) => [entry, snapshotPath(path.join(filePath, entry))])),
+    };
+  }
+  return { exists: true, type: 'file', content: readFileSync(filePath, 'utf-8') };
+}
+
+function authoritySnapshot(dir) {
+  return JSON.stringify(snapshotPath(dir));
 }
 
 function writeLateResult(dir, record) {
@@ -129,6 +243,7 @@ describe('work-unit terminal attempts', () => {
       claimWorkUnits(dir, { phase: 'wave0', count: 1 });
       const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
 
+      const before = authoritySnapshot(dir);
       const refused = closeWorkUnitAttempt(dir, {
         work_id: record.work_id,
         status: 'timed_out',
@@ -137,6 +252,7 @@ describe('work-unit terminal attempts', () => {
       });
       assert.equal(refused.ok, false);
       assert.equal(refused.recommended_action, 'wait');
+      assert.equal(authoritySnapshot(dir), before);
       assert.equal(loadWorkUnitIndex(dir).work_units[record.work_id].status, 'claimed');
       assert.equal(loadQueue(dir).delegated_in_flight['queue-a'].work_id, record.work_id);
       assert.equal(loadQueue(dir).terminal_history.length, 0);
@@ -161,6 +277,250 @@ describe('work-unit terminal attempts', () => {
       assert.equal(preflight.recommended_action, 'timeout');
       assert.equal(preflight.lease_anchor_at, record.claimed_at);
       assert.equal(preflight.progress.latest_engine_observed_progress_at, null);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('timeout-preflight is read-only for eligible and recent-progress refusal cases', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+
+      const beforeEligible = authoritySnapshot(dir);
+      const eligible = timeoutPreflightWorkUnit(dir, {
+        work_id: record.work_id,
+        nowMs: afterDeadline(record),
+      });
+      assert.equal(eligible.timeout_eligible, true);
+      assert.equal(authoritySnapshot(dir), beforeEligible);
+
+      const observedMs = Date.parse(record.claimed_at) + 1000;
+      writeReceiptProgress(dir, record, { observedMs });
+      const beforeProgress = authoritySnapshot(dir);
+      const refused = timeoutPreflightWorkUnit(dir, {
+        work_id: record.work_id,
+        nowMs: observedMs + 1000,
+      });
+      assert.equal(refused.timeout_eligible, false);
+      assert.equal(refused.recommended_action, 'wait');
+      assert.equal(refused.progress.receipt_nonempty, true);
+      assert.equal(refused.progress.sources.some((source) => source.source_type === 'receipt_file' && source.extends_idle_lease), true);
+      assert.equal(authoritySnapshot(dir), beforeProgress);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('timeout-preflight routes candidate results to submit, repair, or inspect', () => {
+    const submitDir = tempBundle();
+    const repairDir = tempBundle();
+    const inspectDir = tempBundle();
+    const externalDir = tempBundle();
+    try {
+      saveSeedQueue(submitDir, [delegated('queue-a')]);
+      claimWorkUnits(submitDir, { phase: 'wave0', count: 1 });
+      const submitRecord = loadWorkUnitIndex(submitDir).work_units['wu-w0-b000-src-i0001'];
+      writeSubmitReadyCandidate(submitDir, submitRecord);
+      const submitAdvice = timeoutPreflightWorkUnit(submitDir, {
+        work_id: submitRecord.work_id,
+        nowMs: afterDeadline(submitRecord),
+      });
+      assert.equal(submitAdvice.timeout_eligible, false);
+      assert.equal(submitAdvice.recommended_action, 'submit');
+      assert.equal(submitAdvice.progress.dry_submit_expected, 'pass');
+      assert.equal(submitAdvice.progress.sources.some((source) => source.source_type === 'output_file'), true);
+      assert.equal(submitAdvice.progress.sources.some((source) => source.source_type === 'cache_leaf'), true);
+      const submitBeforeTimeout = authoritySnapshot(submitDir);
+      const submitRefused = closeWorkUnitAttempt(submitDir, {
+        work_id: submitRecord.work_id,
+        status: 'timed_out',
+        reason: 'submit-ready-must-not-timeout',
+        nowMs: afterDeadline(submitRecord),
+      });
+      assert.equal(submitRefused.ok, false);
+      assert.equal(submitRefused.recommended_action, 'submit');
+      assert.equal(authoritySnapshot(submitDir), submitBeforeTimeout);
+
+      saveSeedQueue(repairDir, [delegated('queue-a')]);
+      claimWorkUnits(repairDir, { phase: 'wave0', count: 1 });
+      const repairRecord = loadWorkUnitIndex(repairDir).work_units['wu-w0-b000-src-i0001'];
+      writeRepairableCandidate(repairDir, repairRecord);
+      const repairAdvice = timeoutPreflightWorkUnit(repairDir, {
+        work_id: repairRecord.work_id,
+        nowMs: afterDeadline(repairRecord),
+      });
+      assert.equal(repairAdvice.timeout_eligible, false);
+      assert.equal(repairAdvice.recommended_action, 'repair');
+      assert.equal(repairAdvice.progress.dry_submit_expected, 'fail');
+      const repairBeforeTimeout = authoritySnapshot(repairDir);
+      const repairRefused = closeWorkUnitAttempt(repairDir, {
+        work_id: repairRecord.work_id,
+        status: 'timed_out',
+        reason: 'repairable-must-not-timeout',
+        nowMs: afterDeadline(repairRecord),
+      });
+      assert.equal(repairRefused.ok, false);
+      assert.equal(repairRefused.recommended_action, 'repair');
+      assert.equal(authoritySnapshot(repairDir), repairBeforeTimeout);
+
+      saveSeedQueue(inspectDir, [delegated('queue-a')]);
+      claimWorkUnits(inspectDir, { phase: 'wave0', count: 1 });
+      const inspectRecord = loadWorkUnitIndex(inspectDir).work_units['wu-w0-b000-src-i0001'];
+      writeWrongIdentityCandidate(inspectDir, inspectRecord);
+      const inspectAdvice = timeoutPreflightWorkUnit(inspectDir, {
+        work_id: inspectRecord.work_id,
+        nowMs: afterDeadline(inspectRecord),
+      });
+      assert.equal(inspectAdvice.timeout_eligible, false);
+      assert.equal(inspectAdvice.recommended_action, 'inspect');
+      const inspectBeforeTimeout = authoritySnapshot(inspectDir);
+      const inspectRefused = closeWorkUnitAttempt(inspectDir, {
+        work_id: inspectRecord.work_id,
+        status: 'timed_out',
+        reason: 'wrong-identity-must-not-timeout',
+        nowMs: afterDeadline(inspectRecord),
+      });
+      assert.equal(inspectRefused.ok, false);
+      assert.equal(inspectRefused.recommended_action, 'inspect');
+      assert.equal(authoritySnapshot(inspectDir), inspectBeforeTimeout);
+
+      saveSeedQueue(externalDir, [delegated('queue-a')]);
+      claimWorkUnits(externalDir, { phase: 'wave0', count: 1 });
+      const externalRecord = loadWorkUnitIndex(externalDir).work_units['wu-w0-b000-src-i0001'];
+      const externalPath = path.join(externalDir, '_tmp', 'external-result.json');
+      writeSubmitReadyCandidate(externalDir, externalRecord, { resultPath: externalPath });
+      const externalNowMs = afterDeadline(externalRecord);
+      setFileMtime(externalPath, externalNowMs + 60000);
+      const externalAdvice = timeoutPreflightWorkUnit(externalDir, {
+        work_id: externalRecord.work_id,
+        resultPath: externalPath,
+        nowMs: externalNowMs,
+      });
+      assert.equal(externalAdvice.recommended_action, 'submit');
+      const resultSource = externalAdvice.progress.sources.find((source) => source.source_type === 'result_file');
+      assert.equal(resultSource?.extends_idle_lease, false);
+      assert.equal(resultSource?.suspicious_timestamp, true);
+      assert.notEqual(externalAdvice.lease_anchor_at, resultSource?.observed_at);
+    } finally {
+      cleanup(submitDir);
+      cleanup(repairDir);
+      cleanup(inspectDir);
+      cleanup(externalDir);
+    }
+  });
+
+  it('timeout-preflight fails closed for status drift, missing queue binding, and ambiguous receipt identity', () => {
+    const statusDir = tempBundle();
+    const queueDir = tempBundle();
+    const receiptDir = tempBundle();
+    try {
+      saveSeedQueue(statusDir, [delegated('queue-a')]);
+      claimWorkUnits(statusDir, { phase: 'wave0', count: 1 });
+      const statusRecord = loadWorkUnitIndex(statusDir).work_units['wu-w0-b000-src-i0001'];
+      const statusPath = path.join(statusDir, statusRecord.paths.status_ref);
+      const statusFile = JSON.parse(readFileSync(statusPath, 'utf-8'));
+      statusFile.status = 'failed';
+      writeFileSync(statusPath, `${JSON.stringify(statusFile, null, 2)}\n`);
+      const statusAdvice = timeoutPreflightWorkUnit(statusDir, { work_id: statusRecord.work_id, nowMs: afterDeadline(statusRecord) });
+      assert.equal(statusAdvice.timeout_eligible, false);
+      assert.equal(statusAdvice.recommended_action, 'inspect');
+      assert.match(statusAdvice.inspect.join('\n'), /status\/index mismatch/);
+
+      saveSeedQueue(queueDir, [delegated('queue-a')]);
+      claimWorkUnits(queueDir, { phase: 'wave0', count: 1 });
+      const queueRecord = loadWorkUnitIndex(queueDir).work_units['wu-w0-b000-src-i0001'];
+      const queue = loadQueue(queueDir);
+      delete queue.delegated_in_flight[queueRecord.queue_item_id];
+      saveQueue(queueDir, queue);
+      const queueBeforeTimeout = authoritySnapshot(queueDir);
+      const queueRefused = closeWorkUnitAttempt(queueDir, {
+        work_id: queueRecord.work_id,
+        status: 'timed_out',
+        reason: 'missing-binding-must-not-timeout',
+        nowMs: afterDeadline(queueRecord),
+      });
+      assert.equal(queueRefused.ok, false);
+      assert.equal(queueRefused.recommended_action, 'inspect');
+      assert.equal(authoritySnapshot(queueDir), queueBeforeTimeout);
+
+      saveSeedQueue(receiptDir, [delegated('queue-a')]);
+      claimWorkUnits(receiptDir, { phase: 'wave0', count: 1 });
+      const receiptRecord = loadWorkUnitIndex(receiptDir).work_units['wu-w0-b000-src-i0001'];
+      writeMismatchedReceipt(receiptDir, receiptRecord);
+      const receiptBeforeTimeout = authoritySnapshot(receiptDir);
+      const receiptRefused = closeWorkUnitAttempt(receiptDir, {
+        work_id: receiptRecord.work_id,
+        status: 'timed_out',
+        reason: 'ambiguous-receipt-must-not-timeout',
+        nowMs: afterDeadline(receiptRecord),
+      });
+      assert.equal(receiptRefused.ok, false);
+      assert.equal(receiptRefused.recommended_action, 'inspect');
+      assert.match(receiptRefused.inspect.join('\n'), /no identity-matched progress event/);
+      assert.equal(authoritySnapshot(receiptDir), receiptBeforeTimeout);
+    } finally {
+      cleanup(statusDir);
+      cleanup(queueDir);
+      cleanup(receiptDir);
+    }
+  });
+
+  it('timeout-preflight diagnoses future mtimes without overextending the lease', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const nowMs = Date.parse(record.claimed_at) + 2000;
+      writeReceiptProgress(dir, record, { observedMs: nowMs + 60000 });
+
+      const preflight = timeoutPreflightWorkUnit(dir, { work_id: record.work_id, nowMs });
+      const receiptSource = preflight.progress.sources.find((source) => source.source_type === 'receipt_file');
+      assert.equal(receiptSource?.suspicious_timestamp, true);
+      assert.equal(preflight.progress.latest_engine_observed_progress_at, iso(nowMs));
+      assert.equal(preflight.effective_timeout_at, iso(nowMs + record.timeout_ms));
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('force timeout records durable audit fields for progress-positive attempts', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const observedMs = Date.parse(record.claimed_at) + 1000;
+      writeReceiptProgress(dir, record, { observedMs });
+
+      const forced = closeWorkUnitAttempt(dir, {
+        work_id: record.work_id,
+        status: 'timed_out',
+        reason: 'operator-forced-after-inspection',
+        force: true,
+        nowMs: observedMs + 1000,
+      });
+      assert.equal(forced.ok, true);
+      assert.equal(forced.forced_timeout, true);
+      assert.equal(forced.preflight_timeout_eligible, false);
+      assert.equal(forced.preflight_recommended_action, 'wait');
+      assert.equal(forced.default_timeout_would_refuse, true);
+      assert.equal(Array.isArray(forced.progress_sources), true);
+      assert.equal(forced.progress_sources.some((source) => source.source_type === 'receipt_file'), true);
+
+      const traceRows = readFileSync(path.join(dir, 'rb_trace.jsonl'), 'utf-8')
+        .trim().split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
+      const forcedEvent = traceRows.find((row) => row.event === 'work_unit_forced_timeout');
+      assert.equal(forcedEvent?.forced_timeout, true);
+      assert.equal(forcedEvent?.default_timeout_would_refuse, true);
+      assert.equal(Array.isArray(forcedEvent?.progress_sources), true);
+
+      const late = submitWorkUnit(dir, { work_id: record.work_id, resultPath: writeLateResult(dir, record) });
+      assert.equal(late.ok, false);
+      assert.equal(late.status, 'timed_out');
     } finally {
       cleanup(dir);
     }

@@ -1,4 +1,4 @@
-// @impl DEW-002, WAI-008, WTS-010
+// @impl DEW-002, SNC-008, WAI-008, WTS-010
 // Work-unit envelope: file refs, result schema, task markdown, spawn prompt, envelope write.
 
 import {
@@ -217,6 +217,7 @@ function taskMarkdown(manifest, bundleDir) {
     '- In `result.json`, declare `cache_trails` as bundle-relative cache leaf directory paths only, for example `_cache/wave0/primary/<queue_item_id>/<source_slug>`; do not list `websearch.json`, `page.md`, or `meta.json` file paths.',
     '- In written research outputs, include return-map cues for important evidence: `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`. These cues are diagnostic navigation only; submitted ledger rows and gate outputs remain authority.',
     '- Append `runtime-receipt.jsonl` lifecycle events carrying the exact `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.',
+    '- Before and after every slow bounded search, fetch, cache-write, output-write, or result-draft batch, append a concise progress event with those exact identity fields. Progress is diagnostic only and never replaces formal submit.',
     '- Write `result.json` at the declared result path and verify it preserves the exact identity fields.',
     '- If any required write or verification fails, return a failure summary and do not claim success.',
     '',
@@ -247,6 +248,8 @@ function taskMarkdown(manifest, bundleDir) {
     '## Lifecycle Receipt',
     '',
     `Append JSONL events to \`${manifest.paths.runtime_receipt_ref}\`. Every event must carry \`work_id\`, \`queue_item_id\`, \`kind\`, and \`receipt_nonce\`.`,
+    'For slow work, emit paired batch-level progress such as `search_batch_started` / `search_batch_done`, `fetch_batch_started` / `fetch_batch_done`, `cache_write_started` / `cache_written`, and `result_draft_started` / `result_draft_written`. Keep batches bounded if the receipt surface is temporarily unavailable.',
+    'These progress events are timeout-preflight diagnostics only; they do not satisfy output, cache, source-claim, ledger, or gate authority.',
     '',
     '```jsonl',
     JSON.stringify(workStartedReceipt),
@@ -291,6 +294,7 @@ export function spawnPromptForWorkUnit(manifest, bundleDir = null) {
     `Open result schema: ${absSchema}`,
     `Use exactly these identity fields in lifecycle receipts and result.json: work_id=${parsed.work_id}, queue_item_id=${parsed.queue_item_id}, kind=${parsed.kind}, receipt_nonce=${parsed.receipt_nonce}. Do not generate a new nonce.`,
     `Write lifecycle JSONL events to ${absReceipt}.`,
+    'Before and after slow bounded search, fetch, cache, output, or result-draft batches, write concise progress events with the exact assigned identity fields. These events are diagnostic only; completion still requires formal submit.',
     `Write the final result JSON to ${absResult}.`,
     'Before returning, verify every declared output file, required cache leaf, runtime receipt, and result JSON exists under the active bundle_dir.',
     'In result.json, cache_trails must list cache leaf directory paths only; do not list websearch.json, page.md, or meta.json file paths.',

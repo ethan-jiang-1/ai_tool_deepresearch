@@ -10,6 +10,7 @@ import path from 'node:path';
 
 import {
   WorkUnitRuntimeReceiptEventSchema,
+  WorkUnitStatusFileSchema,
   WorkUnitTimeoutPreflightSchema,
 } from '../schema/contracts/work-unit.mjs';
 import {
@@ -141,12 +142,12 @@ function pushSource(progress, source) {
 
 function receiptIdentityProgress(bundleDir, record, { nowMs, claimedMs }) {
   const receiptPath = path.join(bundleDir, record.paths.runtime_receipt_ref);
-  if (!existsSync(receiptPath)) return { nonempty: false, matched: false, issue: null, source: null };
+  if (!existsSync(receiptPath)) return { nonempty: false, matched: false, issues: [], source: null };
   const raw = readFileSync(receiptPath, 'utf-8');
   const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  if (lines.length === 0) return { nonempty: false, matched: false, issue: null, source: null };
+  if (lines.length === 0) return { nonempty: false, matched: false, issues: [], source: null };
   let matched = false;
-  let issue = null;
+  const issues = [];
   for (const line of lines) {
     try {
       const parsed = WorkUnitRuntimeReceiptEventSchema.parse(JSON.parse(line));
@@ -157,16 +158,18 @@ function receiptIdentityProgress(bundleDir, record, { nowMs, claimedMs }) {
         parsed.receipt_nonce === record.receipt_nonce
       ) {
         matched = true;
-        break;
       }
     } catch (error) {
-      issue = issue || `runtime receipt has unparseable progress event: ${error.message || String(error)}`;
+      issues.push(`runtime receipt has unparseable progress event: ${error.message || String(error)}`);
     }
+  }
+  if (!matched) {
+    issues.push(`runtime receipt has no identity-matched progress event for ${record.work_id}`);
   }
   return {
     nonempty: true,
     matched,
-    issue,
+    issues,
     source: statProgressSource(bundleDir, {
       filePath: receiptPath,
       pathRef: record.paths.runtime_receipt_ref,
@@ -177,6 +180,20 @@ function receiptIdentityProgress(bundleDir, record, { nowMs, claimedMs }) {
       claimedMs,
     }),
   };
+}
+
+function validateStatusSurface(bundleDir, record) {
+  const statusPath = path.join(bundleDir, record.paths.status_ref);
+  if (!existsSync(statusPath)) return [`Missing status file: ${record.paths.status_ref}`];
+  try {
+    const status = WorkUnitStatusFileSchema.parse(readJson(statusPath));
+    const issues = [];
+    if (status.work_id !== record.work_id) issues.push(`status/index mismatch for ${record.work_id}: work_id`);
+    if (status.status !== record.status) issues.push(`status/index mismatch for ${record.work_id}: status`);
+    return issues;
+  } catch (error) {
+    return [`Invalid status file ${record.paths.status_ref}: ${error.message || String(error)}`];
+  }
 }
 
 function traceProgressSources(bundleDir, record, { nowMs, claimedMs }) {
@@ -345,6 +362,7 @@ export function timeoutPreflightWorkUnit(bundleDir, { work_id, resultPath = null
   } catch (error) {
     invalidBinding.push(error.message || String(error));
   }
+  invalidBinding.push(...validateStatusSurface(bundleDir, record));
   try {
     queue = readQueueReadOnly(bundleDir);
     const inFlight = queue.delegated_in_flight?.[record.queue_item_id];
@@ -390,7 +408,7 @@ export function timeoutPreflightWorkUnit(bundleDir, { work_id, resultPath = null
 
   const receipt = receiptIdentityProgress(bundleDir, record, { nowMs, claimedMs });
   progress.receipt_nonempty = receipt.nonempty;
-  if (receipt.issue) base.inspect.push(receipt.issue);
+  base.inspect.push(...receipt.issues);
   pushSource(progress, receipt.source);
   for (const source of traceProgressSources(bundleDir, record, { nowMs, claimedMs })) pushSource(progress, source);
 
@@ -437,6 +455,16 @@ export function timeoutPreflightWorkUnit(bundleDir, { work_id, resultPath = null
         ...(dry.violations || []).map((violation) => violation.message),
       ],
       advice: ['Inspect candidate identity, queue binding, and terminal status; do not treat this as same-attempt repair.'],
+    });
+  }
+
+  if (receipt.issues.length > 0) {
+    return finalizePreflight({
+      ...base,
+      ...timeoutMetadata,
+      recommended_action: 'inspect',
+      inspect: base.inspect,
+      advice: ['Repair or remove ambiguous runtime receipt events through the assigned work-unit surface before terminal timeout.'],
     });
   }
 

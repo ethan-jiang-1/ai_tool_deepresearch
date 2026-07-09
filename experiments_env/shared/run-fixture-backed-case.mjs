@@ -13,6 +13,7 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
@@ -29,7 +30,9 @@ import {
   claimAndSubmitFixtureWorkUnit,
   claimWorkUnitsViaCli,
   closeWorkUnitViaCli,
+  closeWorkUnitViaCliLoose,
   enqueueWorkUnitTask,
+  expireClaimedWorkUnit,
   inspectWorkUnitsViaCli,
   openWorkUnitBatchViaCli,
   queueItemForWorkUnit,
@@ -37,6 +40,7 @@ import {
   referenceContent,
   sourceYamlContent,
   submitWorkUnitViaCli,
+  timeoutPreflightViaCli,
   writeFixtureResultForWorkUnit,
   writeMinimalPlan,
   writeMinimalStatus,
@@ -1020,6 +1024,60 @@ function prepareRejectedSubmit(bundleDir, label, mutate, { prefix = 'case402', t
   return { label, workId, result };
 }
 
+function setFileMtime(filePath, ms) {
+  const date = new Date(ms);
+  utimesSync(filePath, date, date);
+}
+
+function writeProgressReceipt(bundleDir, record, {
+  event = 'fetch_batch_done',
+  ts = new Date().toISOString(),
+} = {}) {
+  const receiptPath = path.join(bundleDir, record.paths.runtime_receipt_ref);
+  mkdirSync(path.dirname(receiptPath), { recursive: true });
+  writeFileSync(receiptPath, `${JSON.stringify({
+    schema_version: 'work-unit.receipt-event.v1',
+    event,
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    ts,
+  })}\n`);
+  return receiptPath;
+}
+
+function readFileOrNull(filePath) {
+  return existsSync(filePath) ? readFileSync(filePath, 'utf-8') : null;
+}
+
+function timeoutAuthoritySnapshot(bundleDir, workId) {
+  const record = loadWorkUnitIndex(bundleDir).work_units[workId];
+  return JSON.stringify({
+    index: readFileOrNull(path.join(bundleDir, '_work_units/_index.json')),
+    queue: readFileOrNull(path.join(bundleDir, 'rb_queue.json')),
+    status: record ? readFileOrNull(path.join(bundleDir, record.paths.status_ref)) : null,
+    ledger: readFileOrNull(path.join(bundleDir, 'rb_output_declarations.jsonl')),
+    trace: readFileOrNull(path.join(bundleDir, 'rb_trace.jsonl')),
+  });
+}
+
+function writeExternalCandidate(bundleDir, record, { label = 'candidate', overrides = {} } = {}) {
+  const resultPath = path.join(bundleDir, '_tmp', `${record.work_id}-${label}.json`);
+  writeJson(resultPath, {
+    schema_version: 'work-unit.result.v1',
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    summary: `${label} fixture`,
+    output_files: [],
+    cache_trails: [],
+    ...overrides,
+  });
+  return resultPath;
+}
+
 function case402(opts) {
   const bundleDir = newBundle('case-402', 'eb_reject_work_unit', opts);
   writeWave0Scaffold(bundleDir, { planBasename: 'eb_reject_work_unit' });
@@ -1518,6 +1576,7 @@ function case213(opts) {
   enqueueWorkUnitTask(bundleDir, timeoutTask, { fileName: 'case213-timeout-retry.json' });
   const timeoutClaim = claimWorkUnitsViaCli(bundleDir, { phase: 'wave0' });
   const firstTimeoutWorkId = timeoutClaim.claimed_work_ids[0];
+  expireClaimedWorkUnit(bundleDir, firstTimeoutWorkId);
   const timedOut = closeWorkUnitViaCli(bundleDir, { command: 'timeout', work_id: firstTimeoutWorkId, reason: 'playbook-timeout-retry' });
   const retryClaim = claimWorkUnitsViaCli(bundleDir, { phase: 'wave0' });
   const retryWorkId = retryClaim.claimed_work_ids[0];
@@ -1571,6 +1630,158 @@ function case213(opts) {
   if (opts.cleanupPass && verdict.ok) {
     rmSync(orphanBundleDir, { recursive: true, force: true });
   }
+  return { bundleDir, verdict };
+}
+
+function claimTimeoutProbe(bundleDir, label, { topicSlug = 'topic-a', prefix = 'case214' } = {}) {
+  enqueueWorkUnitTask(bundleDir, queueItemForWorkUnit({
+    queue_item_id: `${prefix}-${label}`,
+    topic_slug: topicSlug,
+    title: `Timeout preflight probe: ${label}`,
+  }), { fileName: `${prefix}-${label}.json` });
+  const claim = claimWorkUnitsViaCli(bundleDir, { phase: 'wave0' });
+  const workId = claim.claimed_work_ids[0];
+  const record = loadWorkUnitIndex(bundleDir).work_units[workId];
+  return { claim, workId, record };
+}
+
+function case214(opts) {
+  const bundleDir = newBundle('case-214', 'w0_timeout_progress_lease', opts);
+  writeWave0Scaffold(bundleDir, {
+    planBasename: 'w0_timeout_progress_lease',
+    topics: [{ id: 't1', slug: 'topic-a', title: 'Topic A' }],
+  });
+
+  const noProgress = claimTimeoutProbe(bundleDir, 'no-progress-timeout');
+  const expiredNoProgress = expireClaimedWorkUnit(bundleDir, noProgress.workId);
+  const noProgressPreflight = timeoutPreflightViaCli(bundleDir, { work_id: noProgress.workId });
+  const noProgressTimeout = closeWorkUnitViaCli(bundleDir, {
+    command: 'timeout',
+    work_id: noProgress.workId,
+    reason: 'case214-no-progress-expired',
+  });
+  const retryClaim = claimWorkUnitsViaCli(bundleDir, { phase: 'wave0' });
+  const retryWorkId = retryClaim.claimed_work_ids[0];
+  const retryRecord = loadWorkUnitIndex(bundleDir).work_units[retryWorkId];
+
+  const progress = claimTimeoutProbe(bundleDir, 'progress-refusal');
+  const expiredProgress = expireClaimedWorkUnit(bundleDir, progress.workId);
+  writeProgressReceipt(bundleDir, expiredProgress, { event: 'fetch_batch_done' });
+  const progressPreflight = timeoutPreflightViaCli(bundleDir, { work_id: progress.workId, expectStatus: 1 });
+  const progressBeforeTimeout = timeoutAuthoritySnapshot(bundleDir, progress.workId);
+  const progressRefusal = closeWorkUnitViaCliLoose(bundleDir, {
+    command: 'timeout',
+    work_id: progress.workId,
+    reason: 'case214-progress-must-not-timeout',
+  });
+  const progressAfterTimeout = timeoutAuthoritySnapshot(bundleDir, progress.workId);
+
+  const submitReady = claimTimeoutProbe(bundleDir, 'submit-ready-candidate');
+  expireClaimedWorkUnit(bundleDir, submitReady.workId);
+  const submitFixture = writeFixtureResultForWorkUnit(bundleDir, {
+    work_id: submitReady.workId,
+    output_path: `reference/${submitReady.workId}.md`,
+    source_url: 'https://research-source.test/case214/submit-ready',
+    source_slug: 'submit-ready',
+  });
+  const submitAdvice = timeoutPreflightViaCli(bundleDir, {
+    work_id: submitReady.workId,
+    resultPath: submitFixture.resultPath,
+    expectStatus: 1,
+  });
+
+  const repairable = claimTimeoutProbe(bundleDir, 'repairable-external-candidate');
+  const expiredRepairable = expireClaimedWorkUnit(bundleDir, repairable.workId);
+  const repairPath = writeExternalCandidate(bundleDir, expiredRepairable, { label: 'repairable' });
+  setFileMtime(repairPath, Date.now() + 60000);
+  const repairAdvice = timeoutPreflightViaCli(bundleDir, {
+    work_id: repairable.workId,
+    resultPath: repairPath,
+    expectStatus: 1,
+  });
+  const repairResultSource = repairAdvice.progress.sources.find((source) => source.source_type === 'result_file');
+
+  const invalid = claimTimeoutProbe(bundleDir, 'wrong-identity-candidate');
+  const expiredInvalid = expireClaimedWorkUnit(bundleDir, invalid.workId);
+  const invalidPath = writeExternalCandidate(bundleDir, expiredInvalid, {
+    label: 'wrong-identity',
+    overrides: { work_id: 'wu-w0-b000-src-i9999' },
+  });
+  const invalidAdvice = timeoutPreflightViaCli(bundleDir, {
+    work_id: invalid.workId,
+    resultPath: invalidPath,
+    expectStatus: 1,
+  });
+
+  const forced = claimTimeoutProbe(bundleDir, 'forced-timeout');
+  const expiredForced = expireClaimedWorkUnit(bundleDir, forced.workId);
+  writeProgressReceipt(bundleDir, expiredForced, { event: 'cache_written' });
+  const forcedTimeout = closeWorkUnitViaCliLoose(bundleDir, {
+    command: 'timeout',
+    work_id: forced.workId,
+    reason: 'case214-operator-forced-after-inspection',
+    force: true,
+    expectStatus: 0,
+  });
+  const lateResultPath = writeExternalCandidate(bundleDir, expiredForced, { label: 'late-after-timeout' });
+  const lateSubmit = runNodeLoose([OPERATE_WORK_UNIT, 'submit', bundleDir, '--work-id', forced.workId, '--result', lateResultPath]);
+  const traceText = readFileSync(path.join(bundleDir, 'rb_trace.jsonl'), 'utf-8');
+
+  const checks = [
+    {
+      label: 'no-progress-preflight-timeout-eligible',
+      passed: noProgressPreflight.timeout_eligible === true && noProgressPreflight.recommended_action === 'timeout' && noProgressPreflight.lease_anchor_at === expiredNoProgress.claimed_at,
+      detail: JSON.stringify({ work_id: noProgress.workId, action: noProgressPreflight.recommended_action }),
+    },
+    {
+      label: 'no-progress-timeout-requeues-retry',
+      passed: noProgressTimeout.ok === true && noProgressTimeout.retry_requeued === true && retryWorkId !== noProgress.workId && retryRecord?.attempt_index === 2,
+      detail: `${noProgress.workId} -> ${retryWorkId}`,
+    },
+    {
+      label: 'progress-preflight-refuses-timeout',
+      passed: progressPreflight.timeout_eligible === false && progressPreflight.recommended_action === 'wait' && progressPreflight.progress.sources.some((source) => source.source_type === 'receipt_file' && source.extends_idle_lease),
+      detail: JSON.stringify(progressPreflight.progress.sources),
+    },
+    {
+      label: 'progress-default-timeout-no-side-effect',
+      passed: progressRefusal.ok === false && progressRefusal.recommended_action === 'wait' && progressBeforeTimeout === progressAfterTimeout,
+      detail: JSON.stringify({ action: progressRefusal.recommended_action }),
+    },
+    {
+      label: 'submit-ready-candidate-routes-submit',
+      passed: submitAdvice.timeout_eligible === false && submitAdvice.recommended_action === 'submit' && submitAdvice.progress.dry_submit_expected === 'pass',
+      detail: JSON.stringify({ work_id: submitReady.workId, action: submitAdvice.recommended_action }),
+    },
+    {
+      label: 'repairable-external-candidate-routes-repair',
+      passed: repairAdvice.timeout_eligible === false && repairAdvice.recommended_action === 'repair' && repairAdvice.progress.dry_submit_expected === 'fail',
+      detail: JSON.stringify({ inspect: repairAdvice.inspect }),
+    },
+    {
+      label: 'external-candidate-mtime-does-not-extend-lease',
+      passed: repairResultSource?.extends_idle_lease === false && repairResultSource?.suspicious_timestamp === true && repairAdvice.lease_anchor_at === expiredRepairable.claimed_at,
+      detail: JSON.stringify(repairResultSource || {}),
+    },
+    {
+      label: 'wrong-identity-candidate-routes-inspect',
+      passed: invalidAdvice.timeout_eligible === false && ['inspect', 'block'].includes(invalidAdvice.recommended_action),
+      detail: JSON.stringify({ action: invalidAdvice.recommended_action, inspect: invalidAdvice.inspect }),
+    },
+    {
+      label: 'force-timeout-records-audit',
+      passed: forcedTimeout.ok === true && forcedTimeout.forced_timeout === true && forcedTimeout.preflight_timeout_eligible === false && Array.isArray(forcedTimeout.progress_sources) && /work_unit_forced_timeout/.test(traceText) && /progress_sources/.test(traceText),
+      detail: JSON.stringify({ work_id: forced.workId, action: forcedTimeout.preflight_recommended_action }),
+    },
+    {
+      label: 'late-submit-after-timeout-remains-rejected',
+      passed: lateSubmit.status === 1 && lateSubmit.json?.status === 'timed_out',
+      detail: JSON.stringify(lateSubmit.json || {}),
+    },
+  ];
+  for (const check of checks) recordCheck(bundleDir, 'case-214', 'timeout-progress-lease', check.passed, check.detail, { label: check.label });
+  const verdict = writeVerdict(bundleDir, 'case-214', checks, { extra: { bundle: bundleDir } });
+  maybeCleanup(bundleDir, opts, verdict);
   return { bundleDir, verdict };
 }
 
@@ -2407,8 +2618,9 @@ function case153(opts) {
 
   const timeoutBundle = newBundle('case-153', 'wft_timeout_retry', opts);
   writeWave0Scaffold(timeoutBundle, { planBasename: 'wft_timeout_retry' });
-  const timeoutFixture = claimedWave0Fixture(timeoutBundle, { queueItemId: 'case153-timeout-retry' });
-  const timedOut = closeWorkUnitViaCli(timeoutBundle, { command: 'timeout', work_id: timeoutFixture.workId, reason: 'deadline-expired' });
+  const timeoutProbe = claimTimeoutProbe(timeoutBundle, 'timeout-retry', { prefix: 'case153' });
+  expireClaimedWorkUnit(timeoutBundle, timeoutProbe.workId);
+  const timedOut = closeWorkUnitViaCli(timeoutBundle, { command: 'timeout', work_id: timeoutProbe.workId, reason: 'deadline-expired' });
   const retryClaim = claimWorkUnitsViaCli(timeoutBundle, { phase: 'wave0' });
   const retryWorkId = retryClaim.claimed_work_ids[0];
   const retryRecord = loadWorkUnitIndex(timeoutBundle).work_units[retryWorkId];
@@ -2487,8 +2699,8 @@ function case153(opts) {
     },
     {
       label: 'timeout-retry-new-work-id',
-      passed: timedOut.ok === true && timedOut.retry_requeued === true && retryWorkId !== timeoutFixture.workId && retryRecord?.attempt_index === 2 && retryRecord?.batch_id === 'b000',
-      detail: `${timeoutFixture.workId} -> ${retryWorkId}`,
+      passed: timedOut.ok === true && timedOut.retry_requeued === true && retryWorkId !== timeoutProbe.workId && retryRecord?.attempt_index === 2 && retryRecord?.batch_id === 'b000',
+      detail: `${timeoutProbe.workId} -> ${retryWorkId}`,
     },
     {
       label: 'abandon-idempotent-and-mismatch-rejected',
@@ -2712,6 +2924,7 @@ const runners = {
   'case-211': case211,
   'case-212': case212,
   'case-213': case213,
+  'case-214': case214,
   'case-221': case221,
   'case-222': case222,
   'case-223': case223,

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.15
+
+- Delegated work-unit timeout now runs progress-aware `timeout-preflight` before terminalizing, using Engine-observed progress, dry-submit advice, and effective idle leases to recommend submit, repair, wait, inspect, block, or timeout.
+- Default timeout refuses progress-positive or candidate-ready attempts without queue/index/status/ledger side effects; explicit forced timeout requires a reason and records durable audit diagnostics.
+- Wave phase and Sub-agent guidance now route stale/expired delegated attempts through timeout-preflight and require concise batch-level progress receipts for slow search/fetch/cache work.
+
 ## v0.14
 
 - Work-unit submit now has a read-only `operate-work-unit dry-submit` preflight that reports structured repair diagnostics and planned normalizations without ledger, queue, status, receipt, trace, log, transaction, or cache alias side effects.

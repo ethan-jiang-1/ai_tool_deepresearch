@@ -41,7 +41,7 @@ Fixture-backed Engine case, no Agent actor, no external calls. Fixture outputs m
 4. Submit fixture-backed outputs through `operate-work-unit submit`.
 5. Run Wave0 gate and confirm pass from three submitted ledger rows.
 6. Run invalid submit checkpoints: missing receipt and invalid result.
-7. Run timeout retry checkpoint and confirm retry uses a new same-batch `work_id`.
+7. Run no-progress expired timeout retry checkpoint and confirm retry uses a new same-batch `work_id`.
 8. In a separate disposable bundle, stage orphan output without submit and confirm Wave0 gate rejects it.
 9. Record all runtime facts as trace checks and clean up only on PASS.
 
@@ -223,7 +223,7 @@ JS
 
 Expected: missing receipt returns `reason_code: "missing_receipt"`, invalid result returns `reason_code: "invalid_result"`, and neither appends a ledger row.
 
-## Step 6: [MAIN/SHELL] Timeout Retry Checkpoint
+## Step 6: [MAIN/SHELL] No-Progress Timeout Retry Checkpoint
 
 ```bash
 node --input-type=module - "$B" <<'JS'
@@ -232,6 +232,7 @@ import {
   claimWorkUnitsViaCli,
   closeWorkUnitViaCli,
   enqueueWorkUnitTask,
+  expireClaimedWorkUnit,
   queueItemForWorkUnit
 } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
@@ -245,6 +246,7 @@ enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
 
 const firstClaim = claimWorkUnitsViaCli(bundle, { phase: 'wave0' });
 const firstWorkId = firstClaim.claimed_work_ids[0];
+expireClaimedWorkUnit(bundle, firstWorkId);
 const timedOut = closeWorkUnitViaCli(bundle, { command: 'timeout', work_id: firstWorkId, reason: 'playbook-timeout-retry' });
 const retryClaim = claimWorkUnitsViaCli(bundle, { phase: 'wave0' });
 const retryWorkId = retryClaim.claimed_work_ids[0];
@@ -256,7 +258,7 @@ process.exit(timedOut.ok === true && retryWorkId !== firstWorkId && retryRecord?
 JS
 ```
 
-Expected: timeout closes the first attempt without ledger coverage and retry claim creates a new same-batch `work_id`.
+Expected: after explicitly aging the no-progress claim past its idle lease, timeout closes the first attempt without ledger coverage and retry claim creates a new same-batch `work_id`.
 
 ## Step 7: [MAIN/SHELL] Orphan Output Gate Rejection In Fresh Bundle
 

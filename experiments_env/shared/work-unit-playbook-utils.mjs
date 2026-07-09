@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import {
   WORK_UNIT_OUTPUT_LEDGER,
   loadWorkUnitIndex,
+  workUnitIndexPath,
 } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -382,8 +383,83 @@ export function claimWorkUnitsViaCli(bundleDir, { phase = 'wave0', count = 1 } =
   return runJsonCli([OPERATE_WORK_UNIT, 'claim', bundleDir, '--phase', phase, '--count', String(count)]);
 }
 
+export function expireClaimedWorkUnit(bundleDir, workId, { ageMs = null } = {}) {
+  const index = loadWorkUnitIndex(bundleDir);
+  const record = index.work_units[workId];
+  if (!record) throw new Error(`No work unit in index: ${workId}`);
+  const claimedMs = Date.now() - (ageMs ?? (record.timeout_ms + 60000));
+  const claimedAt = new Date(claimedMs).toISOString();
+  const deadlineAt = new Date(claimedMs + record.timeout_ms).toISOString();
+  record.claimed_at = claimedAt;
+  record.deadline_at = deadlineAt;
+  index.work_units[workId] = record;
+  writeFileSync(workUnitIndexPath(bundleDir), `${JSON.stringify(index, null, 2)}\n`);
+
+  const queueFile = path.join(bundleDir, 'rb_queue.json');
+  if (existsSync(queueFile)) {
+    const queue = JSON.parse(readFileSync(queueFile, 'utf-8'));
+    const inFlight = queue.delegated_in_flight?.[record.queue_item_id];
+    if (inFlight?.work_id === workId) {
+      queue.delegated_in_flight[record.queue_item_id] = {
+        ...inFlight,
+        claimed_at: claimedAt,
+        timeout_ms: record.timeout_ms,
+        deadline_at: deadlineAt,
+      };
+      writeFileSync(queueFile, `${JSON.stringify(queue, null, 2)}\n`);
+    }
+  }
+
+  const manifestFile = path.join(bundleDir, record.paths.manifest_ref);
+  if (existsSync(manifestFile)) {
+    const manifest = JSON.parse(readFileSync(manifestFile, 'utf-8'));
+    manifest.claimed_at = claimedAt;
+    manifest.deadline_at = deadlineAt;
+    writeFileSync(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`);
+  }
+
+  const beaconFile = path.join(bundleDir, record.paths.beacon_ref);
+  if (existsSync(beaconFile)) {
+    const beacon = JSON.parse(readFileSync(beaconFile, 'utf-8'));
+    beacon.deadline_at = deadlineAt;
+    writeFileSync(beaconFile, `${JSON.stringify(beacon, null, 2)}\n`);
+  }
+
+  return record;
+}
+
 export function closeWorkUnitViaCli(bundleDir, { command = 'timeout', work_id, reason = 'playbook-controlled-close' } = {}) {
   return runJsonCli([OPERATE_WORK_UNIT, command, bundleDir, '--work-id', work_id, '--reason', reason]);
+}
+
+export function closeWorkUnitViaCliLoose(bundleDir, {
+  command = 'timeout',
+  work_id,
+  reason = 'playbook-controlled-close',
+  force = false,
+  expectStatus = force ? 0 : 1,
+} = {}) {
+  return runJsonCli([
+    OPERATE_WORK_UNIT,
+    command,
+    bundleDir,
+    '--work-id',
+    work_id,
+    '--reason',
+    reason,
+    ...(force ? ['--force'] : []),
+  ], { expectStatus });
+}
+
+export function timeoutPreflightViaCli(bundleDir, { work_id, resultPath = null, expectStatus = 0 } = {}) {
+  return runJsonCli([
+    OPERATE_WORK_UNIT,
+    'timeout-preflight',
+    bundleDir,
+    '--work-id',
+    work_id,
+    ...(resultPath ? ['--result', resultPath] : []),
+  ], { expectStatus });
 }
 
 export function openWorkUnitBatchViaCli(bundleDir, { phase = 'wave0', reason = 'gate_failure_refill' } = {}) {
