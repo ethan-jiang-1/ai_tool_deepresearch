@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-07-08 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-07-09 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -75,8 +75,12 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-063 | 2026-07-08 | Gate failure 手动修复级联导致 wave2 被完全跳过 |
 | BUG-064 | 2026-07-08 | Wave1 sub-agent 不产出 topic-specific reference 文件 |
 | BUG-065 | 2026-07-08 | Wave2 cross-topic reference 文件从未被产出 |
+| BUG-066 | 2026-07-08 | work-unit envelope `result.schema.json` 与 submit `.strict()` validator 矛盾：wave0 广告禁用字段、wave1 source_claims.items 零约束，delegated 首次 submit 系统性失败 |
+| BUG-067 | 2026-07-08 | `phase-seed-topics.md` task-card/result 模板用废弃 `work_id` 队列身份；hygiene 守卫存在但只扫 `rb_queue.json.tmpl`、覆盖不到 phase MD |
+| BUG-068 | 2026-07-08 | Wave1 `output_contract.allowed_roles` 含 `other` 但 coverage gate 拒绝（且 submitted 后不可修正）；depth-review ref 文档示例带尾斜杠与 exact-match validator 冲突 |
+| BUG-070 | 2026-07-08 | seed_topics 信息地图 `refs` 无法解析到 `reference/` 具体文件：指向内部 build 产物 / glob 通配 / 零 reference 引用；`return-map.mjs` 校验过宽松且 diagnosticOnly |
 
-**Next available bug ID: BUG-066**
+**Next available bug ID: BUG-071**
 
 ---
 

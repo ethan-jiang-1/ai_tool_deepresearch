@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-07-08 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-07-09 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -17,13 +17,9 @@
 
 | Bug | 严重级别 | 简述 |
 |-----|---------|------|
-| [BUG-066](BUG-066-work-unit-result-schema-contradicts-strict-validator.md) | P1 | work-unit envelope `result.schema.json` 与 submit `.strict()` validator 矛盾（wave0 广告禁用字段 / wave1 `source_claims.items` 零约束），delegated 首次 submit 系统性失败；BUG-060 残留 |
-| [BUG-067](BUG-067-phase-seed-topics-work-id-template-drift.md) | P2 | `phase-seed-topics.md` task-card/result 模板仍用废弃的 `work_id` 队列身份；hygiene 守卫存在但只扫 `rb_queue.json.tmpl`，覆盖不到 phase MD |
-| [BUG-068](BUG-068-wave1-role-set-inconsistency-and-depth-review-ref-drift.md) | P1 | Wave1：`output_contract.allowed_roles` 含 `other` 但 coverage gate 拒绝它，且 submitted 后 role 不可修正（须整只 supplementary work unit）；depth-review ref 文档示例带多余尾斜杠与 exact-match validator 冲突 |
-| [BUG-069](BUG-069-silent-autonomous-execution-unreachable-contract-not-self-sufficient.md) | P1 | "静默自主执行"不可达：Agent-facing 契约（phase MD + emitted schema）不自洽/不完整，每个 wave 首过失败都要读 Engine 源码逆向才能修；BUG-066/067/068 均为其症状 |
-| [BUG-070](BUG-070-seed-topic-map-refs-not-resolvable-to-reference-files.md) | P1 | seed_topics 信息地图的 `refs` 无法按图索骥到 `reference/` 具体文件：回填指向 `artifacts/`/`_cache/`/`_work_units/` 内部产物、`reference/` 引用用 glob 通配（`-*.md（N 个）`）、大量条目零 reference 引用；`return-map.mjs` 校验把 reference 仅当可接受面之一、不强制不枚举不校验存在性 |
+| [BUG-069](BUG-069-silent-autonomous-execution-unreachable-contract-not-self-sufficient.md) | P1 | "静默自主执行"不可达（根因 meta-bug）：Agent-facing 契约（phase MD + emitted schema）不自洽/不完整，每个 wave 首过失败都要读 Engine 源码逆向才能修 |
 
-> 四者同源：**契约/文档形状 ≠ gate/validator 要求，且无一致性测试拦截**（BUG-069 为根因，066/067/068 为症状实例）。均发现于 `dpt_rb_martin-fowler-ai-sdlc-retreats` 正式 run（2026-07-08，exploratory_map，5 topics）。BUG-070 同 run 复盘产出，属「reference 层作为一等导航目标未被契约强制」族（与 BUG-064/065 呼应）。
+> **2026-07-09 复核**：症状实例 BUG-066 / 067 / 068 / 070 已逐条对照代码核实**已修**并移入 `_done/_fixed_bugs/`（见各 bug 文件 + 对应 OpenSpec change：`stabilize-agent-facing-work-unit-contracts` v0.12、`align-gate-contracts-and-reference-navigation` v0.13、`harden-delegated-preflight-and-fetch-hygiene` v0.14）。**BUG-069 作为根因 meta-bug 留在活跃列表**：其「Agent 必须读引擎源码」的核心症状已被 `operate-work-unit dry-submit` preflight（一次性批量返回所有违规）+ submit 侧 auto-normalize（`normalizations[]`）大幅缓解；但根因的**结构性收口未完成**——`result.schema.json` 仍是手写、未从 `.strict()` Zod 生成（无 single source）、且 phase-doc ↔ validator 一致性测试只覆盖 queue 面、未覆盖 work-unit envelope 面（`WorkUnitResultSchema`/`output_contract`/`source_claims`）。即「下一次同类漂移无测试拦截」的根因面仍敞开。是否视为已修、或拆成更窄的 follow-up，待定。
 
 **Next available bug ID: BUG-071**
 
