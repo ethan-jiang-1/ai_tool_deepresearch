@@ -1,3 +1,43 @@
+# TODO: 让系统成为"靠谱的同事"而非"工具"（北星 — 已收窄/延后实施）
+
+> 状态: 北星保留 / 实施延后 | 优先级: 低–中（人格层） | 更新: 2026-07-09  
+> 直接依赖: `DONE-hitl-ux` ✅（环机制已就位）  
+> **硬前置（新增）:** BUG-069 有进展 + `todo-coding-agent-setup-ux` — 静默跑不通时谈「同事感」是化妆
+
+## Why（北星仍成立）
+
+用户感知仍偏「操作机器」而非「研究员同事」。四根支柱：记忆、主动、沟通、同频 — 工程骨架对，面向用户的皮肤偏机器。
+
+## 地基对齐（2026-07-09）
+
+| 旧期望 | 现状 |
+|--------|------|
+| 依赖活跃 `todo-hitl-ux` / `establish-hitl-ux` | ✅ **已 DONE/归档** — 用 `brief/hitl1.md`、`brief/hitl2.md`、`shared-agent-ux-guidance.md` |
+| `shared-hitl-prompt-templates.md` | ❌ **已拆** — 现为 `brief/hitl*.md` |
+| 全表面中文硬契约 + 改 wave 提示词 | ❌ **过重** — 见 `_backlog/plans/ux-user-facing-chinese-first-outside-waves.md`：内部 instruction 继续英语；只对漏给用户的输出 **prefer Chinese 软提示** |
+| `shared-agent-persona.md` + `~/.dpt/user-memory` + CLI | ❌ 均未建 — 仍属本北星，但勿在 launch 阻塞项之前开工 |
+| 静默阶段「同事自己干活」 | ⚠️ BUG-069 — 契约不自洽时无人值守不成立 |
+
+## 收窄后的实施顺序（若抬起）
+
+1. **极轻：** 在已有 UX shared 加 user-facing prefer-Chinese 软提示（可与 chinese-first plan 合并，甚至不单独立项）
+2. **轻：** `shared-agent-persona.md` 只定义口吻/边界，**不改** wave/setup 等内部逻辑 instruction
+3. **重（另开 change）：** cross-run user-memory — 等静默 run 真能关终端再做
+
+## Non-Goals（强调）
+
+- 不为「同事感」翻译/改写内部 phase instruction 或 gate 逻辑
+- 不把本 todo 排在 coding-agent-setup-ux / BUG-069 之前
+- 不一次上齐记忆 CLI + 全 phase 主动性埋点
+
+## Next Step
+
+保持北星文档；**不要**现在 `/opsx:propose` 大人格 change。先 setup-ux + 069。
+
+---
+
+以下为历史长文设计（归档对照；实施以「收窄后」为准，勿按全文 Phase 1–5 开干）。
+
 # TODO: 让系统成为"靠谱的同事"而非"工具"
 
 > 状态: 待设计 | 优先级: 最高（UX 层的北星） | 创建: 2026-06-27
@@ -65,276 +105,13 @@
 
 问题是：**这个骨架面向用户的"皮肤"是机器语言。**
 
-```
-同一个骨架，不同的"人格层"：
-
-当前（工具）:                              目标（同事）:
-  "请选择 research profile:                 "我看了你的问题——'这部电影为什么能成为票房
-   A. quick_factual                         黑马'。你想挖的方向更多是：A. 快速查一下票房
-   B. exploratory_map                       数据和口碑，知道结论就行；B. 把它的宣发策略、
-   C. claim_verification"                   受众定位、档期选择都扫一遍，摸清全貌；还是
-                                            C. 有具体的说法要我去验证真伪？你告诉我大致
-                                            方向就行，我来选具体策略。"
-```
-
 **两个版本的信息相同（A/B/C 三选一），但前者是问卷，后者是对话。**
 
 ### 核心挑战不是文案——是让 Agent 能持续扮演这个角色
 
-文案可以写一次（prompt template）。挑战在于：
+1. **角色一致性**
+2. **记忆持久化**
+3. **主动性的边界**
+4. **同频的机制**
 
-1. **角色一致性**：Agent 在 10 个 phase、3 个浮出水面点、静默阶段内部的各种动作里，能不能始终保持同一个"同事"的口吻？不是 HITL1 像同事、wave1 像机器。
-2. **记忆持久化**："上一次 run 用户选了 exploratory_map、偏好中文源、关心政策角度"——这些存在哪里？下次 run 怎么 reload？不是一个 hardcode 的用户 profile，而是逐 run 积累、可更新、可覆盖的**活记忆**。
-3. **主动性的边界**：什么时候主动建议是"靠谱同事的担当"？什么时候主动建议是"越界替用户做决定"？两者界限在哪？
-4. **同频的机制**：Agent 如何判断用户"真正想问什么"？不是做一次 topic rewrite（`seed-topics` 阶段已经做了），而是在整个 run 的每个阶段都保持对"用户为什么关心这个问题"的理解。
-
----
-
-## 设计空间
-
-### 支柱一：记忆（Memory）
-
-**不是跑一次就忘——是逐 run 积累的活记忆。**
-
-```
-记忆分三层：
-
-Layer 1: Per-run memory（当前已有）
-  - rb_profile.yaml（research_profile + must_answer + search_preference）
-  - rb_plan.md（topic_registry + decision 记录）
-  - rb_trace.jsonl（执行历史）
-  - 这些是当前 run 的 durable state —— ✅ 已就位
-
-Layer 2: Cross-run user memory（缺失）
-  - 用户的研究偏好画像——不是 per-run，是 per-user
-    · 用户更关心"政策"还是"商业"还是"技术"角度？历史 run 的偏好分布
-    · 用户喜欢深度还是广度？历史 run 的 profile 选择分布
-    · 用户的语言/来源偏好是否稳定？
-  - 存储位置：`~/.dpt/user-memory.json` 或类似 user-level 路径
-  - Agent 在 HITL1 时可引用："上次你选的 B 模式，那次是……这次也一样吗？"
-  - 用户可以在 HITL 里随时覆盖——记忆是助理的参考，不是监狱
-
-Layer 3: Cross-run topic memory（缺失）
-  - 同一 topic 的跨 run 追踪："你三个月前研究过类似话题 X，当时的结论是 Y。
-    这次是同一个方向的新进展，还是换个角度？"
-  - 这是更长期的能力——当前先设计数据结构，不要求所有 Agent 立刻能用
-```
-
-**关键设计问题：**
-
-| 问题 | 初始方向 |
-|------|---------|
-| 用户记忆存在哪？ | 项目级（`dpt_rb_*/user-memory.json`）还是系统级（`~/.dpt/`）？→ 倾向系统级 `~/.dpt/`——跨项目共享 |
-| Agent 怎么读记忆？ | HITL1 入口时作为隐含上下文注入；Agent 可以在对话中引用 |
-| 用户能随时删记忆吗？ | `dpt memory clear` / 在 HITL 里说"忽略我之前的所有偏好" |
-| 用户能纠正记忆吗？ | "别记我这次选 C，这次是特殊情况，下次还是默认 B" |
-
-### 支柱二：主动（Initiative）
-
-**不是等用户说完所有话才动——是靠谱地多想一步。**
-
-```
-主动性的三个层次：
-
-Level 1: 问题层面的主动（HITL1~HITL2）
-  - "你问'这部电影为什么火'——我注意到市场上同期有两部同类型片子扑了。
-     要不要我把它们也纳入对比范围？这样能看出差异因素。"
-  - "你说的'火'是指票房还是话题度？这两个的数据源和分析路径不太一样。"
-  - 这是靠谱同事的基本动作——在开始干活前确认方向
-
-Level 2: 执行层面的主动（静默自主阶段）
-  - source 层面：预设的主源没信息 → 主动换源，不卡住
-  - evidence 层面：发现了一个跟用户问题高度相关但用户没提到的角度 →
-     主动采证，标注"agent-discovered angle"
-  - claim 层面：搜索中碰到了跟用户问题相反的证据 →
-     不忽略、不隐藏，主动记录为"发现矛盾证据"
-  - 这些都是当前静默自主阶段已经在做的（repair/降级/retry）→ 但缺的是
-     "主动扩展视野"而非"被动处理故障"
-
-Level 3: 交付层面的主动（HITL2 → Final）
-  - "报告出来了。但我标了 3 处我觉得证据最弱的地方——如果你要对外用，
-     这 3 处建议再补。"
-  - "还有一个角度我没来得及深挖——XX 方向可能对理解你的问题很关键，
-     但目前的公开材料太少。如果你想追，我可以再跑一圈。"
-  - 这是靠谱同事的交付习惯——不美化，不隐瞒，主动指出不足 + 给出下一步选项
-```
-
-**主动 ≠ 越界。主动性的铁律：**
-
-| 主动可以做 | 主动不可以做 |
-|----------|------------|
-| 建议、标注、提醒、提供选项 | 替用户决定 |
-| "我发现一个可能相关的角度，要不要？" | "我帮你加了这个角度，已经跑完了" |
-| "报告里这 3 处证据最弱" | "我把这 3 处删了" |
-| "上次你偏好 X，这次默认 X？" | "按上次的来，不问了" |
-
-**开关：** 用户应该可以在 HITL1 里说"这次别主动扩展，严格按我给的 topic 来"——关闭 Level 1/2 的主动性。这是一个 user-controllable dial，不是 hardcode。
-
-### 支柱三：沟通（Communication）
-
-**说话像人不像机器。每句话是同事在跟你说话，不是一个系统在输出。**
-
-```
-沟通的三个维度：
-
-维度 1: 语气与人格
-  - 不是一个"友好的机器人"——是一个有判断力的同事
-  - 不卖萌、不讨好、不装专家。准确、坦诚、有分寸
-  - 知道什么该说、什么不该说："这个我不太确定" 好过假装确定
-  - 能找到好东西时能感觉到："这个角度很关键——我找到了几份直接佐证"
-
-维度 2: 中文优先（已有原则，需系统化）
-  - V12 的铁律（AGENT-GUIDE.md）：用户可见交互全部中文优先
-  - enum/key/文件路径/CLI 命令保留英文 canonical form —— 用户不看这些
-  - "exploratory_map" 对用户是噪音；"全景探索"对用户是信息
-
-维度 3: 透明度与诚实
-  - 不编造信心："这个领域我的材料不够全面，以下结论基于有限来源"
-  - 不隐藏不确定："这个主张证据支持度中等——有你该知道的 caveat"
-  - 不夸大成果："找到了 37 份材料，但其中 22 份质量不高，有效的是 15 份"
-  - 交付时主动标弱项（见"主动"支柱 Level 3）——这是沟通也是主动
-
-具体落地：
-  - shared-hitl-prompt-templates.md（已在 todo-hitl-ux 设计）给出 HITL1/HITL2/Final 的
-    精确文案——这些文案必须是"同事口吻"的第一批样板
-  - 但沟通不是只靠模板——它必须在 Agent 系统的 system prompt / phase MD / shared 文件里
-    作为"人格约束"持续生效
-```
-
-**沟通的铁律：**
-
-| 角色 | 口吻 |
-|------|------|
-| HITL1 介绍选项 | "我看了你的问题——你想挖什么方向？大致告诉我，我来选具体策略。" |
-| HITL2 语境叙事 | "目前证据足够支撑的是 XX。仍然模糊的是 YY。如果你让我补，我会优先补 ZZ。" |
-| 静默阶段出口 | "接下来我去干活。期间我不会打扰你——遇错我自己处理。你可以关终端。下次见面是确认阶段。" |
-| Final 交付 | "报告在这里。我特别标了 3 处证据偏弱的地方——如果你要用在外面，这 3 处建议再补一下。" |
-| 遇到错误自己处理了 | （不说话——静默处理，记 trace。如果用户问起再汇报） |
-| 遇到错误自己处理不了 | （仍在静默阶段内部处理——降级、标记、记 trace、继续。不浮出水面） |
-| 用户问了 BTW 问题 | 回答之后轻推："还有其他问题吗？还是可以先定了？" |
-
-### 支柱四：同频（Alignment）
-
-**不是字面执行——是理解用户真正关心什么，并持续校验自己有没有跑偏。**
-
-```
-同频的三个阶段：
-
-阶段 1: 初始对齐（HITL1）
-  - 不是"请填写以下 5 个参数"
-  - 是"让我理解你真正想问什么"的对话
-  - Agent 可以反馈："你的问题听起来像是关心 X。但如果是关心 Y，那研究路径会完全不同。"
-  - 用户确认后，Agent 写入 must-answer 的不仅是用户原话——还是 Agent 理解后的重述
-    （标注 "Agent 重述，用户确认" 还是 "用户原文"）
-
-阶段 2: 持续校验（静默自主阶段内部）
-  - 每到关键节点（source 评估、claim 判断、wave 边界），Agent 自问：
-    "这个证据跟用户的真实关切对齐吗？还是在回答一个更简单/更安全的问题？"
-  - 这是 Agent 的内部纪律——写在 phase MD 或 shared guidance 里
-  - 不是每次都问用户——是在 Agent 内部做一次 alignment check
-
-阶段 3: 交付校验（HITL2 / Final）
-  - HITL2 语境叙事 → 用户确认 "你回答的是我关心的" or "方向偏了，重跑"
-  - 如果用户说 "方向偏了"：这不是 fail，是同事之间的正常沟通。
-    Agent 记录偏差点 → 重跑相关 wave → 不从头来
-```
-
-**同频的核心机制：**
-
-- `root_must_answer_set` 是北星——但 Agent 需要在整个 run 中保持对它的**深度理解**，不是字面引用
-- 当前 `seed-topics` 阶段已经做了 topic rewrite——这是同频的第一步（✅ 已就位）
-- 缺的是：后续 phase 中没有 "我还在对齐这个目标吗？" 的自检
-- 实现方式：在 `shared-agent-ux-guidance.md` 里增加 "持续性对齐自检" 一节
-
----
-
-## 实现路径
-
-### Phase 1: 人格定义——创建 `shared-agent-persona.md`
-
-新建一个 shared 文件，定义"这个同事是谁"——不是 phase 逻辑，不是 prompt 模板，是**所有用户可见交互的底层人格约束**。
-
-内容：
-- **角色定义**：一个靠谱的研究同事——有判断力、坦诚、有分寸、能主动思考
-- **四根支柱的具体约束**：记忆怎么用、主动的边界在哪、沟通的铁律、同频的自检
-- **语气指南**：什么该说、什么不该说、什么语气用什么时候
-- **中文优先规则**：用户可见全中文；enum/key/路径/命令保留英文；代码块和文件引用按原样
-- **诚实与不确定性**：不确定就说"不确定"——不加 confidence score，不用 "I think" 糊过去，用自然语言说清楚
-
-这个文件是所有用户交互的"人格 root"。phase MD、prompt 模板、HITL guidance 都引用它。
-
-### Phase 2: 记忆基础设施——设计 user-memory 数据层
-
-1. **设计 `~/.dpt/user-memory.json` schema**：
-   - 用户长期偏好画像（研究风格偏好分布、语言/来源习惯、活跃 topic 领域）
-   - 历史 run 摘要列表（run_id、topic、时间、profile 选择、最终 gate 结果）
-   - 记忆的更新策略：每次 run 结束后自动追加摘要，用户可在 HITL 里要求"忽略/修正"
-
-2. **创建 `DPT_FRAMEWORK/cli/user-memory.mjs`**（轻量 CLI）：
-   - `dpt memory show` — 显示当前记忆
-   - `dpt memory clear` — 清除所有记忆
-   - `dpt memory forget <run_id>` — 清除某条 run 记忆
-   - `dpt memory update` — 交互式编辑偏好
-
-3. **更新 HITL1 phase MD**：
-   - 入口时尝试读取 user-memory
-   - 如果有历史记忆 → Agent 引用："上次你选的 B 模式，关注的是营销策略角度。这次呢？"
-   - 如果用户说"跟上次一样" → 快速出口
-
-### Phase 3: 升级 HITL 交互文案——同事口吻替换问卷口吻
-
-1. **更新 `shared-hitl-prompt-templates.md`**（当前在 `todo-hitl-ux` 范围内——与它协同）：
-   - HITL1 入口：从 "请选择 research profile ①-⑤" → 以同事口吻展示选项 + 给建议
-   - HITL2 入口：保证语境叙事中的诚实标注（"以下是我的判断，你可以纠正"）
-   - HITL 出口语：静默阶段告知 + "下次见面是 XX" + 诚实的时间预期
-
-2. **更新 `shared-agent-ux-guidance.md`**（当前在 OpenSpec `establish-hitl-ux` 范围内——协同）：
-   - 加上人格约束的引用（`requires: shared/shared-agent-persona`）
-   - 环内行为规则中加上"沟通铁律"参照
-
-### Phase 4: 主动性的实践——在 phase MD 中埋入"多想一步"指令
-
-1. **更新 `phase-seed-topics.md`**：
-   - topic rewrite 后，加一个步骤："基于你对用户真实关切的理解，有没有用户没提到但高度相关的角度？如果有，列出来标注 `agent-suggested`，HITL1 时作为选填项展示给用户。"
-
-2. **更新 wave0/wave1 MD**：
-   - 搜索策略中加："如果在搜索过程中发现了一个跟用户必须回答的问题高度相关、但用户没有提到的角度——主动采证并标注 `agent-discovered`。"
-
-3. **更新 HITL2 MD + 语境叙事模板**：
-   - 报告中加的"弱项标注"——如果 `agent-discovered` 的 angle 证据不足，也要坦诚说出来
-
-4. **更新 Final MD + 交付话术**：
-   - 交付时主动标注弱项——不是 HITL2 的重复，而是 Final 报告本身的一个 section
-
-### Phase 5: 注册 + 验证
-
-- `manifest.json` 加入 `shared-agent-persona.md`
-- 用真实 bundle 做一次完整 run，评估"同事感"——不只是功能对不对，是**用户读这些文字时有没有感觉在跟一个人对话**
-- 验证四根支柱各有 manifestation：记忆（是否有跨 run 引用能力）、主动（是否在 HITL1 给了 angle 建议）、沟通（HITL 文案是否同事口吻）、同频（语境叙事是否准确反映了用户初衷）
-
----
-
-## 相关文件
-
-| 路径 | 角色 |
-|------|------|
-| `_backlog/todo-hitl-ux.md` | HITL 环机制设计（本 TODO 的"交互结构"基础——本 TODO 是在其上加"人格层"） |
-| `_backlog/todo-context-reground.md` | 长上下文重锚（与本 TODO 的"同频"支柱互补——reground 是机制，同频是目标） |
-| `_backlog/todo-coding-agent-setup-ux.md` | 用户手册（与本 TODO 的"同事感"正交——那是 setup，这是体验） |
-| `openspec/changes/establish-hitl-ux/` | 活跃 change——`shared-agent-ux-guidance.md` 和 `shared-hitl-prompt-templates.md` 在此落地 |
-| `DPT_FRAMEWORK/workflows/nodes/shared/` | 本 TODO 产出的 `shared-agent-persona.md` 的位置 |
-| `DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl1.md` | HITL1 phase MD（待更新——引用 persona + 同事口吻的 prompt 入口） |
-| `DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl2.md` | HITL2 phase MD（待更新——引用 persona + 诚实交付话术） |
-| `DPT_FRAMEWORK/workflows/nodes/phases/phase-final.md` | Final phase MD（待更新——交付口吻 + 弱项标注） |
-| `DPT_FRAMEWORK/schema/contracts/profile.mjs` | Profile schema（不改——但 user-memory 设计需参考其字段） |
-
-## 与 `todo-hitl-ux.md` 的分工
-
-| | `todo-hitl-ux` | 本 TODO |
-|---|---|---|
-| **关注层** | 交互结构——环的入口/环内/出口/防无限环 | 人格层——环里的那个人是谁 |
-| **主要产物** | `shared-hitl-prompt-templates.md`、`shared-agent-ux-guidance.md`、更新 phase MD | `shared-agent-persona.md`、user-memory CLI、升级 prompt 模板和 phase MD 的"口吻" |
-| **核心问题** | "HITL 不应该是一张问卷——它是一个用户可以探索的房间" | "这个房间里的对话者不应该是一个机器——它是一个靠谱的同事" |
-| **关系** | 直接依赖——环机制是底层 | 上层——在环机制上赋予人格 |
-
-`todo-hitl-ux` 是**让用户不再填表**；本 TODO 是**让用户觉得在跟人说话**。
+（完整 Phase 1–5 设计见 git 历史 2026-06-27 原文；2026-07-09 起以文首「收窄后」为准，避免按过时路径改 brief 文件名与 wave instruction。）

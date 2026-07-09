@@ -18,3 +18,4 @@
 | Plan | 简述 |
 |------|------|
 | [delegated-attempt-timeout-and-redo-postmortem](delegated-attempt-timeout-and-redo-postmortem.md) | Delegated work-unit 的 timeout/REDO 机制复盘（pragmatic-summit run 触发）。fetch 降级链部分已由 v0.14 落地；**核心 timeout 修复（心跳续期 / late-accept / 产出继承 / pause-aware）未实施，待另起独立 change**。 |
+| [ux-user-facing-chinese-first-outside-waves](ux-user-facing-chinese-first-outside-waves.md) | UX 试探（已收窄）：内部 instruction 继续英语、逻辑不碰；只对「漏给用户」的输出加 prefer-Chinese **软提示**。可不立项。 |

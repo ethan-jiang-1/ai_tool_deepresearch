@@ -1,36 +1,38 @@
-# TODO: workflow boundary hooks
+# TODO: workflow boundary hooks（延后）
 
-> 状态: 延后 | 优先级: 低 | 更新: 2026-07-07
+> 状态: 延后 / parked | 优先级: 低 | 更新: 2026-07-09
 
 ## Why
 
-Boundary hooks are optional workflow checks that may run between major phase transitions, such as setup to wave0, wave0 to wave1, wave1 to wave2, and readiness to final delivery.
+Boundary hooks 是可选的、phase 间确定性检查（如 setup→wave0、wave0→wave1、readiness→final）。
 
-They remain deferred because the current priority is to stabilize:
+## 地基对齐（2026-07-09）
 
-- work-unit submitted output declarations
-- evidence extraction and quality projections
-- rerun and recovery behavior
-- final delivery readiness
+| 旧 deferral 理由 | 现状 |
+|------------------|------|
+| evidence ownership 未干净 | ✅ **大体已干净** — ledger + ref-count + work-unit 已落地 |
+| `workflows/hooks/` | ❌ **目录仍不存在** — 正确未开工 |
+| README 链 `schema-core → prototype-start-from-here → …` | ❌ 过时 — 前驱已 DONE，hooks 从未创建 |
+
+**仍延后的真实理由（更新后）：** 先稳住 BUG-069 契约自洽、phase-recover、delegated timeout 策略；不要在 Agent-facing 契约仍漂移时再加一层 checkpoint 家族。
 
 ## Current Direction
 
-When hooks become active, they should be framework-level deterministic checkpoints that read active bundle-root state and submitted declarations. They should not become another Agent flow controller and should not discover Agent output by scanning arbitrary directories.
+将来 hooks 应是 framework 级确定性检查：读 bundle-root + submitted declarations；不是又一个 Agent flow controller；不靠扫任意目录发现产出。
 
-Potential first hook:
+候选首 hook：`wave0_closeout_to_wave1_start`（声明 / reference inventory / queue 一致性 → trace diagnostics，不做最终语义判决）。
 
-- `wave0_closeout_to_wave1_start`
-- validates that wave0 submitted declarations, reference inventory, and queue state are coherent before wave1 demand is created
-- writes trace diagnostics and advice, not final semantic judgment
+## 与 coding-agent hooks 的区别
 
-## Design Questions
-
-- Should hooks be represented as gate-like CLIs, phase-node advice, or a separate checkpoint family?
-- Which hook results are blocking versus diagnostic?
-- How should hook outputs return to the Agent as actionable feedback?
+本 todo = **Engine/workflow Boundary Hooks**。  
+`todo-coding-agent-setup-ux` 里的 PreToolUse/PostToolUse = **宿主 coding agent 权限钩子**。两码事，勿混。
 
 ## Non-Goals
 
-- Do not add hooks before evidence ownership is clean.
-- Do not turn hooks into a hidden workflow runner.
-- Do not write runtime data to `DPT_FRAMEWORK/`.
+- 不在 recover / BUG-069 收口前加 hooks
+- 不把 hooks 做成隐藏 workflow runner
+- 不写 runtime 数据进 `DPT_FRAMEWORK/`
+
+## Next Step
+
+保持延后。解锁条件改为：BUG-069 结构性收口有进展 + phase-recover 方向清楚。

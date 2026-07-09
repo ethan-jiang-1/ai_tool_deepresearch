@@ -1,3 +1,30 @@
+# DONE: evidence-extraction（核心已落地）
+
+> 状态: ✅ DONE（核心） | 完成归档: 2026-07-09 | DONE-015  
+> 落地 change: `openspec/changes/archive/2026-07-02-implement-evidence-extraction/`  
+> 后续语义层: 见活跃 [`../../todos/todo-evidence-quality.md`](../../todos/todo-evidence-quality.md)
+
+## 已落地（不再作为活跃 todo）
+
+- work-unit `operate-work-unit submit` → `rb_output_declarations.jsonl` ledger 权威
+- Engine `countReferences()` / `isCountable()`（`DPT_FRAMEWORK/engine/helpers/ref-count.mjs`）
+- CCC + Key Facts 结构门槛、`cache_coverage`、file-observability diagnostic
+- `shared-reference-template.md` 与 wave0/1 gate 的 ledger-mode 计数
+
+## 明确不再做（地基已变）
+
+- **CandidateCard schema / cache→card→promote** — V12 路径；当前是 work-unit → reference materialization，不是 CandidateCard 流水线
+- **subagent-relay / mergeResults** — 已退役，由 work-unit 取代
+
+## 残余（并入 evidence-quality，不单独立项）
+
+- 语义质量字段（substance / tier / commercial / retention）— 结构可数 ≠ 语义够格
+- 非 delegated 主 Agent reference 与 ledger 路径的完全对等（若仍有缺口）
+
+---
+
+以下为归档前原文（保留供对照；期望以「已落地 / 不再做」为准）。
+
 # TODO: evidence-extraction
 
 > 状态: 待设计 | 优先级: 高 | 更新: 2026-07-07

@@ -1,6 +1,6 @@
 # _backlog — 项目待办与决策记录
 
-> 最后更新: 2026-07-02 | 本目录追踪项目的工作项、设计决策、依赖分析。
+> 最后更新: 2026-07-09 | 本目录追踪项目的工作项、设计决策、依赖分析。
 > 活跃工作走 OpenSpec（`openspec/changes/`）；本目录是 **上游分析与决策记录**，不是运行时真相。
 >
 > **本文件是 `_backlog` 的规矩手册。** 搬迁流程在下面定死，今后大家都遵循这里头定的规矩。
@@ -15,9 +15,9 @@ _backlog/
 │
 ├── _done/                             # ✅ 已完成/已归档
 │   ├── README.md                      #   状态总览、DONE 列表、快速查阅指南
-│   ├── _fixed_bugs/                   #   已修复 Bug（13，BUG-001~013）
-│   ├── _done_todos/                   #   已完成 TODO（14）
-│   ├── _closed_plans/                 #   已完成 Plan（3）
+│   ├── _fixed_bugs/                   #   已修复 Bug（计数见 _done/README）
+│   ├── _done_todos/                   #   已完成 TODO（15，DONE-001~015）
+│   ├── _closed_plans/                 #   已完成 Plan（计数见 _done/README）
 │   └── _old_topics/                   #   历史归档（⚠️ 勿读）
 │
 ├── bugs/                              # 🐛 活跃 bug → 修完移入 _done/_fixed_bugs/
@@ -33,9 +33,9 @@ _backlog/
 
 | 类型 | 活跃（当前工作） | 归档（已完成） | 编号方式 |
 |------|-----------------|---------------|---------|
-| 🐛 **Bug** | [`bugs/`](bugs/) — 活跃 bug 列表 | [`_done/_fixed_bugs/`](_done/_fixed_bugs/) — 已修复（13 个，BUG-001~013） | BUG-NNN 递增，权威在 `_fixed_bugs/` |
-| 📋 **Todo** | [`todos/`](todos/) — 活跃 todo + PENDING 表 + 依赖链 + 执行顺序 | [`_done/_done_todos/`](_done/_done_todos/) — 已完成（14 个，DONE-001~014） | DONE-NNN 递增，移入时分配 |
-| 📐 **Plan** | [`plans/`](plans/) — 活跃 plan 列表 | [`_done/_closed_plans/`](_done/_closed_plans/) — 已完成（3 个，CLS-001~003） | CLS-NNN 递增，移入时分配 |
+| 🐛 **Bug** | [`bugs/`](bugs/) — 活跃 bug 列表 | [`_done/_fixed_bugs/`](_done/_fixed_bugs/) — 已修复（见 `_done/README`） | BUG-NNN 递增，权威在 `_fixed_bugs/` |
+| 📋 **Todo** | [`todos/`](todos/) — 活跃 todo + PENDING 表 + 依赖链 + 执行顺序 | [`_done/_done_todos/`](_done/_done_todos/) — 已完成（15 个，DONE-001~015） | DONE-NNN 递增，移入时分配 |
+| 📐 **Plan** | [`plans/`](plans/) — 活跃 plan 列表 | [`_done/_closed_plans/`](_done/_closed_plans/) — 已完成（见 `_done/README`） | CLS-NNN 递增，移入时分配 |
 
 > 📖 **想看全局状态、历史决策、查阅指南** → [`_done/README.md`](_done/README.md)
 >

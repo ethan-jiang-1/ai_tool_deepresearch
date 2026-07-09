@@ -27,7 +27,7 @@ _done/
 |---------|------|---------|
 | `_fixed_bugs/` | 64 个已修复 bug（BUG-001~070，有间隔） | BUG-071 |
 | `_suspened_bugs/` | 3 个悬挂 bug（BUG-026, 028, 030） | — |
-| `_done_todos/` | 14 个已完成 todo（DONE-001~014） | DONE-015 |
+| `_done_todos/` | 15 个已完成 todo（DONE-001~015） | DONE-016 |
 | `_closed_plans/` | 14 个已完成 plan（CLS-001~014） | CLS-015 |
 | `_old_topics/` | 历史归档：`_v12-migration/`（6 个 OpenSpec change 全 DONE）、`_workflow/`（8 个 OpenSpec change 全 ARCHIVED）、`_original_dpt_requirement/`、`_original_dpt_v12/`、`_guideline/`、`_trainsistion/` | — |
 
@@ -44,7 +44,7 @@ _done/
 - **HITL UX**（2026-06-27）：HITL 环机制——3 个浮出水面点 + 静默自主契约 + 预设 prompt 模板。详见 `_done_todos/DONE-hitl-ux.md`
 - **BUG-007 修复 — harden-rerun-topic-integration**（2026-06-29）：3 条独立根因链 → 多个新基础设施。详见 `_fixed_bugs/BUG-007-rerun-incremental-topic.md`
 - **harden-stop-contract**（2026-07-02）：五层防御 stop:no 合约。详见 OpenSpec archive `2026-07-02-harden-stop-contract`
-- **evidence-extraction 核心计数**（2026-07-02）：countReferences() + isCountable() + Engine-computed ref_count 已实现在 `ref-count.mjs`（269 行，完整测试），ref_count 不再由 Agent 声明。详见 `DPT_FRAMEWORK/engine/helpers/ref-count.mjs`
+- **evidence-extraction 核心计数**（2026-07-02 落地 / 2026-07-09 todo 归档 DONE-015）：countReferences() + isCountable() + Engine-computed ref_count 已在 `ref-count.mjs`；todo 活跃项关闭，语义层并入 evidence-quality。详见 `_done_todos/todo-evidence-extraction.md`
 
 > 📋 **PENDING 待办、依赖链分析、推荐执行顺序** → 见 [`../todos/README.md`](../todos/README.md)
 
@@ -53,14 +53,14 @@ _done/
 ## 快速查阅指南
 
 ### 想看"现在该做什么"
-→ [`../todos/README.md`](../todos/README.md) 的"推荐执行顺序"——**当前：evidence-quality 走**
+→ [`../todos/README.md`](../todos/README.md) 的"推荐执行顺序"——**当前：BUG-069 + coding-agent-setup-ux，其次收窄后的 evidence-quality**
 
 ### 想看 _backlog 的规矩
 → `../README.md` — 三套搬迁 ritual（todo / bug / plan）
 
 ### 想看历史决策
 → `_old_topics/_v12-migration/decisions.md`（7 个架构决策）
-→ `_done_todos/` 下 14 个 DONE 文件（按文件名主题查阅）
+→ `_done_todos/` 下 15 个 DONE 文件（按文件名主题查阅）
 
 ### 想看技术深度
 - **queue loop 怎么设计** → `_done_todos/DONE-agentic-queue-landing-analysis.md`（59KB，最详细）
