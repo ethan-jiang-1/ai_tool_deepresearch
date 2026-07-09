@@ -1,5 +1,5 @@
-// @impl DEW-005, FRE-005, EXO-001
-// Work-unit submit: snapshot/rollback, durability, ledger row building, rejection, prepare and submit.
+// @impl DEW-005, DEW-013, FRE-005, EXO-001
+// Work-unit submit and dry-submit preflight: validation planning, durability, ledger row building, rejection, prepare and submit.
 
 import {
   existsSync,
@@ -215,7 +215,7 @@ function normalizeWave1RequiredOutputRoles(result, record, normalizations, resul
   return changed ? { ...result, output_files: normalizedOutputFiles } : result;
 }
 
-function reasonCodeForSubmit(message) {
+export function reasonCodeForSubmit(message) {
   if (/runtime receipt|lifecycle events/i.test(message)) return 'missing_receipt';
   if (/receipt_nonce|nonce|receipt mismatch/i.test(message)) return 'nonce_mismatch';
   if (/result\/index mismatch.*work_id|Unknown work_id|work_id/i.test(message)) return 'wrong_work_id';
@@ -337,7 +337,28 @@ function recordSubmitRejection(bundleDir, { work_id, resultPath, reason }) {
   });
 }
 
-function prepareWorkUnitSubmit(bundleDir, { work_id, resultPath }) {
+function violationForError(error, { phase = 'submit_validation' } = {}) {
+  const message = error?.message || String(error);
+  return {
+    code: reasonCodeForSubmit(message),
+    message,
+    phase,
+    repair_target: repairTargetForReason(message),
+  };
+}
+
+function repairTargetForReason(message) {
+  if (/runtime receipt|lifecycle events|receipt/i.test(message)) return 'runtime_receipt';
+  if (/output_files|declared output file|role/i.test(message)) return 'output_files';
+  if (/cache_trails|cache trail|degraded_capture_ref|cache\/degraded ref/i.test(message)) return 'cache_trails';
+  if (/source_claims|accepted_source_urls|source claim/i.test(message)) return 'source_claims';
+  if (/queue|snapshot hash|stale/i.test(message)) return 'queue_binding';
+  if (/manifest|beacon/i.test(message)) return 'work_unit_envelope';
+  if (/work_id|queue_item_id|kind|receipt_nonce|result/i.test(message)) return 'result';
+  return 'candidate';
+}
+
+function validateSubmitPlan(bundleDir, { work_id, resultPath, dryRun = false } = {}) {
   const index = loadWorkUnitIndex(bundleDir, { createIfMissing: false });
   const record = requireWorkUnitRecord(index, work_id);
   const normalizations = [];
@@ -354,7 +375,9 @@ function prepareWorkUnitSubmit(bundleDir, { work_id, resultPath }) {
   }
   if (record.status !== 'claimed') throw new Error(`work_id ${record.work_id} is ${record.status}; submit requires claimed`);
 
-  const resultPathInsideAssignedDir = isPathInsideDir(resultPath, path.join(bundleDir, record.paths.work_unit_dir));
+  const resultPathInsideAssignedDir = resultPath
+    ? isPathInsideDir(resultPath, path.join(bundleDir, record.paths.work_unit_dir))
+    : false;
   const manifest = readAndValidateManifest(bundleDir, index, record);
   const result = readAndValidateResult(bundleDir, resultPath, record, {
     normalizations,
@@ -369,8 +392,14 @@ function prepareWorkUnitSubmit(bundleDir, { work_id, resultPath }) {
   });
   const queue = validateQueueBindingForSubmit(bundleDir, record, manifest);
   validateOutputFiles(bundleDir, normalizedResult, manifest.output_contract);
-  validateCacheTrails(bundleDir, normalizedResult, manifest.cache_policy, { record, normalizations });
-  validateSourceClaims(bundleDir, normalizedResult, manifest.output_contract);
+  const cacheValidation = validateCacheTrails(bundleDir, normalizedResult, manifest.cache_policy, {
+    record,
+    normalizations,
+    writeCanonicalCache: !dryRun,
+  });
+  validateSourceClaims(bundleDir, normalizedResult, manifest.output_contract, {
+    virtualCachePages: cacheValidation.virtualCachePages,
+  });
   const ledgerRow = buildLedgerRow({ record, result: normalizedResult, resultHash, declaredAt: now() });
   return {
     duplicate: false,
@@ -382,9 +411,170 @@ function prepareWorkUnitSubmit(bundleDir, { work_id, resultPath }) {
     result_hash: resultHash,
     runtime_receipt_content: runtimeReceipt.canonical_content,
     normalizations,
+    virtual_cache_pages: cacheValidation.virtualCachePages,
     ledger_row: ledgerRow,
     ledger_record_hash: ledgerRow.ledger_record_hash,
   };
+}
+
+function prepareWorkUnitSubmit(bundleDir, { work_id, resultPath }) {
+  return validateSubmitPlan(bundleDir, { work_id, resultPath, dryRun: false });
+}
+
+function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
+  const violations = [];
+  let index = null;
+  let record = null;
+  let manifest = null;
+  let result = null;
+  let normalizedResult = null;
+  let queue = null;
+  let runtimeReceipt = null;
+  const normalizations = [];
+  let resultHash = null;
+  let cacheValidation = { virtualCachePages: new Map() };
+
+  try {
+    index = loadWorkUnitIndex(bundleDir, { createIfMissing: false });
+  } catch (error) {
+    violations.push(violationForError(error, { phase: 'work_unit_index' }));
+    return { index, record, violations, normalizations };
+  }
+
+  try {
+    record = requireWorkUnitRecord(index, work_id);
+  } catch (error) {
+    violations.push(violationForError(error, { phase: 'work_unit_record' }));
+    return { index, record, violations, normalizations };
+  }
+
+  if (record.status === 'submitted') {
+    violations.push({
+      code: 'duplicate_content_mismatch',
+      message: `work_id ${record.work_id} is already submitted; dry-submit only preflights claimed attempts`,
+      phase: 'work_unit_status',
+      repair_target: 'work_unit_status',
+    });
+    return { index, record, violations, normalizations };
+  }
+
+  if (record.status !== 'claimed') {
+    violations.push(violationForError(new Error(`work_id ${record.work_id} is ${record.status}; submit requires claimed`), { phase: 'work_unit_status' }));
+    return { index, record, violations, normalizations };
+  }
+
+  const resultPathInsideAssignedDir = resultPath
+    ? isPathInsideDir(resultPath, path.join(bundleDir, record.paths.work_unit_dir))
+    : false;
+
+  try {
+    manifest = readAndValidateManifest(bundleDir, index, record);
+  } catch (error) {
+    violations.push(violationForError(error, { phase: 'manifest' }));
+  }
+
+  try {
+    result = readAndValidateResult(bundleDir, resultPath, record, {
+      normalizations,
+      outputContract: manifest?.output_contract || null,
+    });
+    normalizedResult = normalizeWave1RequiredOutputRoles(result, record, normalizations, resultPath);
+    resultHash = hashValue(normalizedResult);
+  } catch (error) {
+    violations.push(violationForError(error, { phase: 'result' }));
+  }
+
+  if (manifest) {
+    try {
+      readAndValidateBeacon(bundleDir, record, manifest);
+    } catch (error) {
+      violations.push(violationForError(error, { phase: 'beacon' }));
+    }
+
+    try {
+      queue = validateQueueBindingForSubmit(bundleDir, record, manifest, { sideEffects: false });
+    } catch (error) {
+      violations.push(violationForError(error, { phase: 'queue_binding' }));
+    }
+  }
+
+  try {
+    runtimeReceipt = validateSubmitRuntimeReceipt(bundleDir, record, {
+      normalizations,
+      allowNonceNormalization: resultPathInsideAssignedDir,
+    });
+  } catch (error) {
+    violations.push(violationForError(error, { phase: 'runtime_receipt' }));
+  }
+
+  if (manifest && normalizedResult) {
+    try {
+      validateOutputFiles(bundleDir, normalizedResult, manifest.output_contract);
+    } catch (error) {
+      violations.push(violationForError(error, { phase: 'output_files' }));
+    }
+
+    try {
+      cacheValidation = validateCacheTrails(bundleDir, normalizedResult, manifest.cache_policy, {
+        record,
+        normalizations,
+        writeCanonicalCache: false,
+      });
+    } catch (error) {
+      violations.push(violationForError(error, { phase: 'cache_trails' }));
+    }
+
+    try {
+      validateSourceClaims(bundleDir, normalizedResult, manifest.output_contract, {
+        virtualCachePages: cacheValidation.virtualCachePages,
+      });
+    } catch (error) {
+      violations.push(violationForError(error, { phase: 'source_claims' }));
+    }
+  }
+
+  return {
+    index,
+    record,
+    manifest,
+    queue,
+    result: normalizedResult,
+    result_hash: resultHash,
+    runtime_receipt_content: runtimeReceipt?.canonical_content || null,
+    normalizations,
+    virtual_cache_pages: cacheValidation.virtualCachePages,
+    violations,
+  };
+}
+
+function publicNormalizations(normalizations) {
+  return normalizations.map((item) => ({ ...item }));
+}
+
+export function drySubmitWorkUnit(bundleDir, { work_id, resultPath } = {}) {
+  const plan = collectDrySubmitPlan(bundleDir, { work_id, resultPath });
+  const reasonCodes = [...new Set((plan.violations || []).map((item) => item.code))];
+  const base = {
+    ok: (plan.violations || []).length === 0,
+    dry_run: true,
+    side_effects: false,
+    work_id: plan.record?.work_id || work_id,
+    queue_item_id: plan.record?.queue_item_id || null,
+    status: plan.record?.status || 'unknown',
+    expected_submit: (plan.violations || []).length === 0 ? 'pass' : 'fail',
+    reason_codes: reasonCodes,
+    violations: plan.violations || [],
+    normalizations: publicNormalizations(plan.normalizations || []),
+    candidate_result_path: resultPath ? path.resolve(resultPath) : null,
+    advice: (plan.violations || []).length === 0
+      ? 'Dry-submit passed. Run formal operate-work-unit submit to persist ledger, queue, result, receipt, trace, and cache authority.'
+      : 'Repair the reported candidate result, receipt, output, cache, source-claim, or queue-binding issues, then rerun dry-submit or formal submit.',
+  };
+  if (base.ok) {
+    base.result_hash = plan.result_hash;
+    base.virtual_cache_pages = [...(plan.virtual_cache_pages || new Map()).keys()];
+  }
+  return base;
 }
 
 export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave = null } = {}) {

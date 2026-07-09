@@ -1,4 +1,4 @@
-// @impl DEW-002, DEW-004, FRE-005, SDC-001, SDC-002, SDC-003, EXO-001, FIO-001, SNC-005, REF-006, WAI-008, WTS-010
+// @impl DEW-002, DEW-004, DEW-013, FRE-005, SDC-001, SDC-002, SDC-003, EXO-001, FIO-001, SNC-005, REF-006, WAI-008, WTS-010
 // Work-unit core barrel: re-exports from submodules. All public API preserved.
 
 // Constants (5)
@@ -41,8 +41,9 @@ export {
   claimWorkUnits,
 } from './work-unit-lifecycle.mjs';
 
-// Submit (2)
+// Submit (3)
 export {
+  drySubmitWorkUnit,
   submitWorkUnit,
 } from './work-unit-submit.mjs';
 

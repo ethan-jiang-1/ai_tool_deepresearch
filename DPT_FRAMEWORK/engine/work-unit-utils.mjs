@@ -213,12 +213,12 @@ export function findSubmittedLedgerRow(bundleDir, workId) {
   return readWorkUnitLedgerRows(bundleDir).find((row) => row.work_id === workId);
 }
 
-export function validateCacheTrailContent(cacheDir, trail) {
+export function validateCacheTrailContent(cacheDir, trail, { pageText = null } = {}) {
   const pagePath = path.join(cacheDir, 'page.md');
   const metaPath = path.join(cacheDir, 'meta.json');
-  const pageText = existsSync(pagePath) ? readFileSync(pagePath, 'utf-8') : '';
+  const resolvedPageText = pageText ?? (existsSync(pagePath) ? readFileSync(pagePath, 'utf-8') : '');
   const meta = existsSync(metaPath) ? readOptionalJson(metaPath) : null;
-  const trimmed = pageText.trim();
+  const trimmed = resolvedPageText.trim();
   if (!trimmed) throw new Error(`cache trail ${trail} has incomplete cache content: page.md is empty`);
   const nonEmptyLines = trimmed.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const placeholderOnly = nonEmptyLines.length <= 2 && nonEmptyLines.every((line) => /^#*\s*(cache page for|page|placeholder|todo|tbd)\b/i.test(line));

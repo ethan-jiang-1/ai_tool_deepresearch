@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.14
+
+- Work-unit submit now has a read-only `operate-work-unit dry-submit` preflight that reports structured repair diagnostics and planned normalizations without ledger, queue, status, receipt, trace, log, transaction, or cache alias side effects.
+- Wave0/Wave1 Sub-agent fetch guidance now separates per-URL fallback from multi-URL small-batch or bounded-parallel fetching, uses JS/Node-first tiers, and removes Python fetch fallback.
+- Wave0/Wave1 phase guidance now derives delegated candidate targets from explicit profile/runtime floors plus a conservative planning margin, with gate repair/refill handling remaining gaps.
+
 ## v0.13
 
 - Judgment-layer contracts now align Wave1 required-output role coverage, submit-time normalization diagnostics, and depth-review work-unit ref canonicalization across submit, gate, phase docs, and tests.

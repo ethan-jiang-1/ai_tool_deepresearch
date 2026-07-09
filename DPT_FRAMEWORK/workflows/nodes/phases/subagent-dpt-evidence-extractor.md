@@ -257,11 +257,16 @@ _cache/wave1/.../{topic.slug}/sNN_<source-slug>/
 
 Use the full chain from `shared-subagent-protocol.md`.
 
-- Built-in page-fetching tool or browser if available
-- `curl -L <url>`
-- Node `fetch`
+Apply fallback per URL. For one candidate URL, try each allowed tier in order until real page content is fetched or every allowed tier for that URL fails:
 
-Only after all tiers fail may the Sub-agent record an access failure. Do not use search snippets as page content, and do not fabricate titles, facts, or URLs.
+- Built-in page-fetching tool if available
+- Browser fetch if available
+- Node.js `fetch`
+- Existing CLI fallback: `curl -L <url>`
+
+Across different candidate URLs, do not force the full fallback chain to run serially for all URLs. Fetch candidates in small batches when the task has several URLs to evaluate. Use bounded parallel fetching only when the native tool or runtime already supports it and site politeness, timeout, and context budget permit it.
+
+Only after all JS/Node-first tiers and the existing CLI fallback fail for that specific URL may the Sub-agent record an access failure. Small-batch or bounded-parallel fetching does not reduce cache trail, structured source claim, accepted source URL, receipt, or lifecycle requirements. Do not use search snippets as page content, and do not fabricate titles, facts, or URLs.
 
 ## 6. Anti-Cheating Rules
 

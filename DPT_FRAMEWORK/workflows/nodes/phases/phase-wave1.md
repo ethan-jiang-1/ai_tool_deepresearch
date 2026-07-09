@@ -41,6 +41,8 @@ For each topic:
 
 Wave1 output is real topic-specific deepening, not placeholder skeletons or a Wave0 recap. Wave0 URLs are allowed as context but never count toward the Wave1 new-source floor.
 
+For each delegated topic-deepening task, derive the initial candidate URL/source target from explicit profile/runtime floors plus a conservative small margin. Use `wave1_per_topic_ref_floor`, `topic_unique_ratio`, and the depth-review `new_source_floor` semantics as the floor basis. The margin is only a planning buffer for inaccessible pages, duplicate URLs, Wave0 duplicates, and non-countable sources; it is not a gate threshold, profile field, quality override, or permission to lower coverage.
+
 ## 2. Required Inputs
 
 - Active bundle that passed `wave0-complete`.
@@ -125,6 +127,7 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id>
 Sub-agent execution requirements:
 
 - Use real search and fetch; do not treat snippets as evidence.
+- Plan candidate URLs from explicit `rb_profile.yaml#/research_style_params.wave1_per_topic_ref_floor`, `topic_unique_ratio`, and the depth-review new-source floor formula plus a conservative small margin for failed fetches, duplicates, and non-countable pages. Do not use a fixed hard-coded fetch aim unless it is written as `profile/runtime floor + named margin`.
 - `question-list.md` must include the four sections: Topic Investigation Targets, Question Reconciliation, Emergent Question Protocol, Exploration / Exploitation Decision.
 - `evidence-summary.md` or the submitted result must cover mechanism, trend/difficulty, and limitation/dispute/failure-mode dimensions.
 - `result.json` must expose `source_claims[]` directly or through a declared machine-readable output, plus `accepted_source_urls[]` when available. Each accepted claim names `url`, `source_ref`, `acceptance_status`, `is_new_vs_wave0`, `cache_trail_refs[]`, and optional `degraded_capture_ref`.
@@ -267,6 +270,8 @@ If the gate reports a `depth_review_contract`, `source_novelty_floor`, or `sourc
 1. Read the topic-specific diagnostic; note observed/required new-source counts and missing source/cache refs.
 2. If the issue is missing profile/runtime data, repair the accepted profile/template surface or leave `blocked_contract`; never invent a local default.
 3. Otherwise enqueue supplementary `wave1_topic_deepening` for that `payload.topic_slug`, require genuinely new source URLs, drain through work-unit claim/submit, update `depth-review.yaml`, and rerun the gate.
+
+Gate repair/refill handles remaining floor gaps. Do not treat the planning margin as pass authority, do not silently lower floors, and do not create a new numeric threshold outside the accepted profile/runtime surfaces.
 
 ## 8. Stop Behavior
 

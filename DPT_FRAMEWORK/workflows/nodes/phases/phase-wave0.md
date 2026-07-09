@@ -35,6 +35,8 @@ Create `artifacts/wave0/{topic}/source.yaml` for each topic and shared foundatio
 
 Wave0 is foundation evidence collection, not comprehensive research. Exact floors come from `rb_profile.yaml#/research_style_params`, especially `wave0_per_topic_source_floor` and `wave0_shared_ref_total`.
 
+For each delegated source-intake task, derive the initial candidate URL/source target from explicit profile/runtime floors plus a conservative small margin. Use `wave0_per_topic_source_floor` as the per-topic floor basis and `wave0_shared_ref_total` or other accepted shared-reference target surfaces when planning shared references. The margin is only a planning buffer for inaccessible pages, duplicates, and non-countable sources; it is not a gate threshold, profile field, quality override, or permission to lower coverage.
+
 ## 2. Required Inputs
 
 - Active bundle that passed `seed-topics-ready`.
@@ -125,10 +127,11 @@ For each claimed work unit:
 1. Read `prompt_refs[].task_ref`, `beacon_ref`, and `result_schema_ref`.
 2. Spawn the Sub-agent with the generated prompt.
 3. Require real WebSearch plus page fetch. If the preferred fetch tool is unavailable, use the fetch chain in the work-unit task. Do not use search snippets as evidence.
-4. Ensure the Sub-agent writes declared output files and leaf cache trails.
-5. Ensure `runtime-receipt.jsonl` events carry `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
-6. Actively poll result/receipt/output/cache readiness without waiting for user continuation or task notification.
-7. Submit ready attempts:
+4. Plan candidate URLs from the explicit `rb_profile.yaml#/research_style_params.wave0_per_topic_source_floor` plus a conservative small margin for fetch failures, duplicates, and non-countable pages. When shared foundation references are assigned, bind the shared-reference target to `wave0_shared_ref_total` or another explicit runtime/profile surface plus the same conservative margin. Do not use a fixed hard-coded fetch aim unless it is written as `profile/runtime floor + named margin`.
+5. Ensure the Sub-agent writes declared output files and leaf cache trails.
+6. Ensure `runtime-receipt.jsonl` events carry `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
+7. Actively poll result/receipt/output/cache readiness without waiting for user continuation or task notification.
+8. Submit ready attempts:
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
@@ -193,6 +196,8 @@ If gate fails because `per_topic_count_floor` or `shared_ref_count_floor` is bel
 4. Rerun the gate.
 
 Supplementary tasks must append or add real sources only. They must not overwrite existing `source.yaml`, create placeholder URLs, or fabricate `reference/00-shared-*.md`.
+
+Gate repair/refill handles remaining floor gaps. Do not treat the planning margin as pass authority, do not silently lower floors, and do not create a new numeric threshold outside the accepted profile/runtime surfaces.
 
 ## 8. Stop Behavior
 

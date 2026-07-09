@@ -1,6 +1,6 @@
-// @impl DEW-005, AGQ-002, AGO-002, AGO-003, WPG-002, FRE-005
+// @impl DEW-005, DEW-013, AGQ-002, AGO-002, AGO-003, WPG-002, FRE-005
 
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
@@ -16,10 +16,13 @@ import {
 import {
   WORK_UNIT_OUTPUT_LEDGER,
   claimWorkUnits,
+  drySubmitWorkUnit,
   inspectWorkUnits,
   loadWorkUnitIndex,
   readWorkUnitLedgerRows,
   submitWorkUnit,
+  transactionDir,
+  workUnitIndexPath,
   workUnitsRoot,
 } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
 
@@ -236,7 +239,186 @@ function assertNoLedger(dir) {
   assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
 }
 
+function snapshotPath(targetPath) {
+  if (!existsSync(targetPath)) return { type: 'missing' };
+  const stats = statSync(targetPath);
+  if (stats.isDirectory()) {
+    return {
+      type: 'dir',
+      entries: Object.fromEntries(readdirSync(targetPath).sort().map((entry) => [
+        entry,
+        snapshotPath(path.join(targetPath, entry)),
+      ])),
+    };
+  }
+  if (stats.isFile()) {
+    return { type: 'file', content: readFileSync(targetPath, 'utf-8') };
+  }
+  return { type: 'other' };
+}
+
+function authoritySnapshot(dir, record, extraRefs = []) {
+  const refs = [
+    workUnitIndexPath(dir),
+    path.join(dir, 'rb_queue.json'),
+    path.join(dir, WORK_UNIT_OUTPUT_LEDGER),
+    path.join(dir, record.paths.status_ref),
+    path.join(dir, record.paths.result_ref),
+    path.join(dir, record.paths.runtime_receipt_ref),
+    transactionDir(dir),
+    path.join(dir, 'rb_trace.jsonl'),
+    path.join(dir, '_logs'),
+    ...extraRefs.map((ref) => path.join(dir, ref)),
+  ];
+  return Object.fromEntries(refs.map((ref) => [path.relative(dir, ref), snapshotPath(ref)]));
+}
+
+function assertSnapshotEqual(actual, expected, message) {
+  assert.deepEqual(actual, expected, message);
+}
+
 describe('submitWorkUnit', () => {
+  it('dry-submits a valid claimed result without ledger, queue, status, result, receipt, trace, log, or transaction side effects', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      const before = authoritySnapshot(dir, record, [
+        path.join(cacheTrailPath(record), 'page.md'),
+        path.join(cacheTrailPath(record), 'page-content.md'),
+      ]);
+
+      const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(dry.ok, true);
+      assert.equal(dry.dry_run, true);
+      assert.equal(dry.side_effects, false);
+      assert.equal(dry.expected_submit, 'pass');
+      assert.deepEqual(dry.reason_codes, []);
+      assert.deepEqual(dry.violations, []);
+      assert.equal(dry.work_id, record.work_id);
+      assert.equal(dry.queue_item_id, record.queue_item_id);
+
+      assertSnapshotEqual(authoritySnapshot(dir, record, [
+        path.join(cacheTrailPath(record), 'page.md'),
+        path.join(cacheTrailPath(record), 'page-content.md'),
+      ]), before, 'dry-submit must not mutate authority surfaces');
+      assertNoLedger(dir);
+      assert.equal(loadQueue(dir).delegated_in_flight['queue-a'].work_id, record.work_id);
+      assert.equal(loadWorkUnitIndex(dir).work_units[record.work_id].status, 'claimed');
+
+      const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      assert.equal(loadWorkUnitIndex(dir).work_units[record.work_id].status, 'submitted');
+      assert.equal(ledgerRows(dir).length, 1);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('dry-submit reports multiple independently evaluable violations without recording submit rejection', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      const result = readResult(resultPath);
+      result.output_files[0].role = 'question_list';
+      writeResult(resultPath, result);
+      rmSync(path.join(dir, cacheTrailPath(record), 'websearch.json'), { force: true });
+      const before = authoritySnapshot(dir, record, [path.join(cacheTrailPath(record), 'websearch.json')]);
+
+      const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(dry.ok, false);
+      assert.equal(dry.expected_submit, 'fail');
+      assert.equal(dry.dry_run, true);
+      assert.equal(dry.side_effects, false);
+      assert.ok(dry.violations.some((item) => item.phase === 'output_files' && /role 'question_list'.*allowed roles/i.test(item.message)));
+      assert.ok(dry.violations.some((item) => item.phase === 'cache_trails' && /missing websearch\.json/i.test(item.message)));
+      assert.ok(dry.reason_codes.includes('missing_output'));
+      assert.ok(dry.reason_codes.includes('missing_cache'));
+      assertSnapshotEqual(authoritySnapshot(dir, record, [path.join(cacheTrailPath(record), 'websearch.json')]), before, 'failed dry-submit must be read-only');
+      assert.equal(loadWorkUnitIndex(dir).work_units[record.work_id].last_submit_rejection, undefined);
+      assertNoLedger(dir);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('dry-submit reports canonicalizations through a virtual cache page without persisting result, receipt, or cache aliases', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      writeResult(resultPath, { result: readResult(resultPath) });
+      writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
+        event: 'work_done',
+        ts: '2026-07-06T00:00:00.000Z',
+      })}\n`);
+      const cacheDir = path.join(dir, cacheTrailPath(record));
+      const pageText = readFileSync(path.join(cacheDir, 'page.md'), 'utf-8');
+      rmSync(path.join(cacheDir, 'page.md'), { force: true });
+      writeFileSync(path.join(cacheDir, 'page-content.md'), pageText);
+      const before = authoritySnapshot(dir, record, [
+        path.join(cacheTrailPath(record), 'page.md'),
+        path.join(cacheTrailPath(record), 'page-content.md'),
+      ]);
+
+      const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(dry.ok, true);
+      assert.ok(dry.normalizations.some((item) => item.kind === 'result_wrapper_unwrapped'));
+      assert.ok(dry.normalizations.some((item) => item.kind === 'receipt_schema_defaulted'));
+      assert.ok(dry.normalizations.some((item) => item.kind === 'receipt_binding_identity_autofilled'));
+      assert.ok(dry.normalizations.some((item) => item.kind === 'cache_page_content_canonicalized'));
+      assert.deepEqual(dry.virtual_cache_pages, [cacheTrailPath(record)]);
+      assertSnapshotEqual(authoritySnapshot(dir, record, [
+        path.join(cacheTrailPath(record), 'page.md'),
+        path.join(cacheTrailPath(record), 'page-content.md'),
+      ]), before, 'dry-submit must not persist planned canonicalizations');
+      assert.equal(existsSync(path.join(cacheDir, 'page.md')), false);
+      assert.equal(existsSync(path.join(dir, record.paths.result_ref)), false);
+      assert.equal(readFileSync(path.join(dir, record.paths.runtime_receipt_ref), 'utf-8'), before[record.paths.runtime_receipt_ref].content);
+
+      const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      assert.equal(readFileSync(path.join(cacheDir, 'page.md'), 'utf-8'), pageText);
+      assert.equal(assignedResult(dir, record).work_id, record.work_id);
+      assert.equal(receiptEvents(dir, record)[0].receipt_nonce, record.receipt_nonce);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('dry-submit mirrors caller-provided result path semantics when identity already matches', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      const outsidePath = path.join(os.tmpdir(), `${record.work_id}-external-result.json`);
+      writeFileSync(outsidePath, readFileSync(resultPath));
+      try {
+        const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath: outsidePath });
+        assert.equal(dry.ok, true);
+        assert.equal(dry.candidate_result_path, path.resolve(outsidePath));
+        assert.equal(existsSync(path.join(dir, record.paths.result_ref)), false);
+
+        const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath: outsidePath });
+        assert.equal(submitted.ok, true);
+        assert.equal(ledgerRows(dir).length, 1);
+      } finally {
+        rmSync(outsidePath, { force: true });
+      }
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('submits an out-of-order work unit and completes only the bound queue demand', () => {
     const dir = tempBundle();
     try {

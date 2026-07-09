@@ -1,4 +1,4 @@
-// @impl DEW-002, FRE-005
+// @impl DEW-002, DEW-013, FRE-005
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -173,6 +173,64 @@ describe('operate-work-unit inspect', () => {
       assert.equal(rows.length, 1);
       assert.equal(rows[0].work_id, workId);
       assert.equal(rows[0].queue_item_id, record.queue_item_id);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('dry-submits a valid claimed work unit through the CLI without completing it', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
+      const workId = JSON.parse(claimStdout).claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+      const resultPath = writeValidSubmitFiles(dir, record);
+
+      const result = spawnSync(process.execPath, [CLI, 'dry-submit', dir, '--work-id', workId, '--result', resultPath], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(result.status, 0, result.stderr || result.stdout);
+      const out = JSON.parse(result.stdout);
+      assert.equal(out.ok, true);
+      assert.equal(out.dry_run, true);
+      assert.equal(out.side_effects, false);
+      assert.equal(out.expected_submit, 'pass');
+      assert.deepEqual(out.violations, []);
+      assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
+      assert.equal(loadWorkUnitIndex(dir).work_units[workId].status, 'claimed');
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('dry-submit failure exits 1 with structured JSON on stdout and no submit rejection', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
+      const workId = JSON.parse(claimStdout).claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      const resultJson = JSON.parse(readFileSync(resultPath, 'utf-8'));
+      resultJson.output_files[0].role = 'question_list';
+      writeFileSync(resultPath, `${JSON.stringify(resultJson, null, 2)}\n`);
+
+      const result = spawnSync(process.execPath, [CLI, 'dry-submit', dir, '--work-id', workId, '--result', resultPath], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(result.status, 1);
+      const out = JSON.parse(result.stdout);
+      assert.equal(out.ok, false);
+      assert.equal(out.dry_run, true);
+      assert.equal(out.side_effects, false);
+      assert.equal(out.expected_submit, 'fail');
+      assert.ok(out.reason_codes.includes('missing_output'));
+      assert.ok(out.violations.some((item) => item.phase === 'output_files' && /role 'question_list'.*allowed roles/i.test(item.message)));
+      assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
+      assert.equal(loadWorkUnitIndex(dir).work_units[workId].last_submit_rejection, undefined);
     } finally {
       cleanup(dir);
     }

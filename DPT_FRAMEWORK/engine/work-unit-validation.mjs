@@ -36,8 +36,8 @@ import {
   WorkUnitRuntimeReceiptEventSchema,
 } from '../schema/contracts/work-unit.mjs';
 
-import { queueItemSnapshotHash } from './queue-manager-core.mjs';
-import { loadQueue } from './queue-manager-lifecycle.mjs';
+import { queueItemSnapshotHash, queuePath, queueStateFromFile } from './queue-manager-core.mjs';
+import { createQueue, loadQueue } from './queue-manager-lifecycle.mjs';
 
 export function readAndValidateManifest(bundleDir, index, record) {
   const manifestPath = path.join(bundleDir, record.paths.manifest_ref);
@@ -238,12 +238,12 @@ export function validateOutputFiles(bundleDir, result, outputContract) {
   }
 }
 
-export function canonicalizeCacheLeafPage(cacheDir, trail, record, normalizations) {
+export function canonicalizeCacheLeafPage(cacheDir, trail, record, normalizations, { writeCanonicalCache = true } = {}) {
   const pagePath = path.join(cacheDir, 'page.md');
   const pageContentPath = path.join(cacheDir, 'page-content.md');
   const hasPage = existsSync(pagePath) && statSync(pagePath).isFile();
   const hasPageContent = existsSync(pageContentPath) && statSync(pageContentPath).isFile();
-  if (!hasPageContent) return;
+  if (!hasPageContent) return null;
 
   const sidecar = readFileSync(pageContentPath, 'utf-8');
   if (hasPage) {
@@ -251,10 +251,10 @@ export function canonicalizeCacheLeafPage(cacheDir, trail, record, normalization
     if (page !== sidecar) {
       throw new Error(`cache trail ${trail} has divergent page.md and page-content.md`);
     }
-    return;
+    return null;
   }
 
-  writeFileSync(pagePath, sidecar);
+  if (writeCanonicalCache) writeFileSync(pagePath, sidecar);
   recordSubmitNormalization(normalizations, {
     kind: 'cache_page_content_canonicalized',
     work_id: record.work_id,
@@ -262,26 +262,32 @@ export function canonicalizeCacheLeafPage(cacheDir, trail, record, normalization
     surface_ref: `${trail}/page.md`,
     sidecar_ref: `${trail}/page-content.md`,
   });
+  return sidecar;
 }
 
-export function validateCacheTrails(bundleDir, result, cachePolicy, { record = null, normalizations = [] } = {}) {
+export function validateCacheTrails(bundleDir, result, cachePolicy, { record = null, normalizations = [], writeCanonicalCache = true } = {}) {
   const trails = result.cache_trails || [];
   if (cachePolicy?.required && trails.length === 0) throw new Error('cache_trails[] is required by the work-unit cache policy');
+  const virtualCachePages = new Map();
   for (const trail of trails) {
     if (!isSafeBundleRelative(trail)) throw new Error(`cache_trails path escapes bundle: ${trail}`);
     if (!trail.startsWith(`${cachePolicy?.root || '_cache/'}`)) throw new Error(`cache_trails path not under ${cachePolicy?.root || '_cache/'}: ${trail}`);
     const full = path.join(bundleDir, trail);
     if (!existsSync(full)) throw new Error(`cache trail directory missing: ${trail}`);
     if (!statSync(full).isDirectory()) throw new Error(`cache_trails path is not a directory: ${trail}`);
-    if (record) canonicalizeCacheLeafPage(full, trail, record, normalizations);
+    const virtualPage = record
+      ? canonicalizeCacheLeafPage(full, trail, record, normalizations, { writeCanonicalCache })
+      : null;
+    if (virtualPage !== null) virtualCachePages.set(trail, virtualPage);
     const directFiles = new Set(readdirSync(full).filter((entry) => {
       try { return statSync(path.join(full, entry)).isFile(); } catch { return false; }
     }));
     const missing = (cachePolicy?.leaf_files || ['websearch.json', 'page.md', 'meta.json'])
-      .filter((entry) => !directFiles.has(entry));
+      .filter((entry) => !(directFiles.has(entry) || (entry === 'page.md' && virtualCachePages.has(trail))));
     if (missing.length > 0) throw new Error(`cache trail ${trail} missing ${missing.join(', ')}`);
-    validateCacheTrailContent(full, trail);
+    validateCacheTrailContent(full, trail, { pageText: virtualCachePages.get(trail) ?? null });
   }
+  return { virtualCachePages };
 }
 
 const ACCEPTED_SOURCE_CLAIM_STATUSES = new Set(['accepted', 'countable', 'accepted_countable']);
@@ -300,9 +306,11 @@ export function normalizeUrlForSourceCache(url) {
   }
 }
 
-export function cacheTrailMapping(bundleDir, trail) {
+export function cacheTrailMapping(bundleDir, trail, { virtualCachePages = new Map() } = {}) {
   const cacheDir = path.join(bundleDir, trail);
-  const pageText = readFileSync(path.join(cacheDir, 'page.md'), 'utf-8');
+  const pageText = virtualCachePages.has(trail)
+    ? virtualCachePages.get(trail)
+    : readFileSync(path.join(cacheDir, 'page.md'), 'utf-8');
   const meta = readOptionalJson(path.join(cacheDir, 'meta.json'));
   const urls = [meta?.url, meta?.source_url, meta?.final_url, meta?.fetched_url]
     .filter(Boolean)
@@ -314,7 +322,7 @@ export function cacheTrailMapping(bundleDir, trail) {
   };
 }
 
-export function validateSourceClaims(bundleDir, result, outputContract) {
+export function validateSourceClaims(bundleDir, result, outputContract, { virtualCachePages = new Map() } = {}) {
   const claims = result.source_claims || [];
   const acceptedUrls = result.accepted_source_urls || [];
   if (claims.length === 0 && acceptedUrls.length === 0) return;
@@ -350,7 +358,7 @@ export function validateSourceClaims(bundleDir, result, outputContract) {
       if (!cacheTrails.has(trail)) {
         throw new Error(`accepted source claim cache/degraded ref is not declared in cache_trails[]: ${trail}`);
       }
-      const mapping = cacheTrailMapping(bundleDir, trail);
+      const mapping = cacheTrailMapping(bundleDir, trail, { virtualCachePages });
       if (trail === degradedRef && !mapping.degraded) {
         throw new Error(`degraded_capture_ref lacks explicit degraded/fetch-failure record: ${trail}`);
       }
@@ -368,8 +376,15 @@ export function validateSourceClaims(bundleDir, result, outputContract) {
   }
 }
 
-export function validateQueueBindingForSubmit(bundleDir, record, manifest) {
-  const queue = loadQueue(bundleDir);
+function readQueueForSubmit(bundleDir, { sideEffects = true } = {}) {
+  if (sideEffects) return loadQueue(bundleDir);
+  const file = queuePath(bundleDir);
+  if (!existsSync(file)) return createQueue(path.basename(bundleDir));
+  return queueStateFromFile(JSON.parse(readFileSync(file, 'utf-8')), { queueId: path.basename(bundleDir) });
+}
+
+export function validateQueueBindingForSubmit(bundleDir, record, manifest, { sideEffects = true } = {}) {
+  const queue = readQueueForSubmit(bundleDir, { sideEffects });
   const inFlight = queue.delegated_in_flight?.[record.queue_item_id];
   if (!inFlight) throw new Error(`queue_item_id ${record.queue_item_id} is not delegated in flight`);
   if (inFlight.work_id !== record.work_id) throw new Error(`queue in-flight binding mismatch for ${record.queue_item_id}: ${inFlight.work_id}`);
