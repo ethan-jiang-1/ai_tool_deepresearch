@@ -1,6 +1,6 @@
 # Research Return Map
 
-> req: RRM-001, RRM-002, RRM-003
+> req: RRM-001, RRM-002, RRM-003, RRM-004
 
 ## Purpose
 

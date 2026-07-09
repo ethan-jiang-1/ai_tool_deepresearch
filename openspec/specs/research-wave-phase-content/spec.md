@@ -1,6 +1,6 @@
 # Research Wave Phase Content
 
-> req: RWP-001, RWP-002, RWP-003, RWP-004, RWP-005, RWP-006, RWP-007, RWP-008, RWP-009, RWP-010, RWP-011, RWP-012, RWP-013, RWP-014, RWP-015
+> req: RWP-001, RWP-002, RWP-003, RWP-004, RWP-005, RWP-006, RWP-007, RWP-008, RWP-009, RWP-010, RWP-011, RWP-012, RWP-013, RWP-014, RWP-015, RWP-016
 
 ## Purpose
 
@@ -281,4 +281,3 @@ Wave2 phase docs SHALL state that:
 - **WHEN** a stop:no Phase Agent reads the active wave guidance
 - **THEN** the required gate-consumed roles, refs, paths, and return-map navigation expectations SHALL be visible in the phase docs or generated task instructions
 - **AND** the Agent SHALL NOT need Engine helper source to know the deterministic producer shape
-

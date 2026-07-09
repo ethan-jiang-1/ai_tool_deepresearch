@@ -1,6 +1,6 @@
 # agent-output-declaration Specification
 
-> req: AGO-001, AGO-002, AGO-003, AGO-004, AGO-005, AGO-006
+> req: AGO-001, AGO-002, AGO-003, AGO-004, AGO-005, AGO-006, AGO-007
 
 ## Purpose
 

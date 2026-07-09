@@ -1,6 +1,6 @@
 # CLI Inspect Output Conventions
 
-> req: IOC-001, IOC-002, IOC-003, IOC-004
+> req: IOC-001, IOC-002, IOC-003, IOC-004, IOC-005
 
 ## Purpose
 

@@ -1,6 +1,6 @@
 # Research Wave Gate Implementation
 
-> req: RWG-001, RWG-002, RWG-003, RWG-004, RWG-005, RWG-006, RWG-007, RWG-008, RWG-009, RWG-010, RWG-011, RWG-012, RWG-013, RWG-014, RWG-016, RWG-017
+> req: RWG-001, RWG-002, RWG-003, RWG-004, RWG-005, RWG-006, RWG-007, RWG-008, RWG-009, RWG-010, RWG-011, RWG-012, RWG-013, RWG-014, RWG-016, RWG-017, RWG-018
 
 ## Purpose
 
@@ -451,4 +451,3 @@ Blocking diagnostics SHALL identify the failing rule or finding id, the bundle-r
 - **WHEN** a return-map navigation check fails because only internal refs or glob/count summaries are present
 - **THEN** diagnostics SHALL name the offending seed-topic entry or ref
 - **AND** diagnostics SHALL ask for enumerated existing `reference/*.md` refs or an explicit limitation state
-
