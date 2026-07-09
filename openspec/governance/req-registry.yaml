@@ -200,6 +200,7 @@ DEW-009: delegated-work-units — Work-unit tasks expose bundle-root absolute pa
 DEW-010: delegated-work-units — Submitted result and ledger hashes detect post-submit drift before gate pass
 DEW-011: delegated-work-units — Successful work-unit submit verifies durable queue postconditions before reporting success
 DEW-012: delegated-work-units — Work-unit submit performs narrow canonicalization for predictable LLM-shaped result, receipt, cache, and nonce drift
+DEW-013: delegated-work-units — Work-unit dry-submit preflights submit validation without side effects
 
 # conditional-nodes
 COS-001: conditional-nodes — Deterministic branch checkpoint transforms
@@ -570,6 +571,7 @@ SNC-003: subagent-node-contract — Phase workflow nodes direct the Phase Agent 
 SNC-004: subagent-node-contract — Sub-agent role specs require beacon-first absolute path resolution and file existence verification before return
 SNC-005: subagent-node-contract — Sub-agent role contracts return source backing instead of owning consumer reference presentation
 SNC-006: subagent-node-contract — Generated work-unit result schema matches submit-time result contract
+SNC-007: subagent-node-contract — Sub-agent fetch guidance distinguishes per-URL fallback, multi-URL batching, and JS/Node-first fetch tiers
 GSK-001: gate-skeleton — Gate definition JSON skeleton structure (gate, description, rules[] with id/check/target/threshold/failure_message)
 GSK-002: "gate-skeleton — Gate CLI skeleton shape (parseArgs, --bundle/--current-node required, check/inspect/advice JSON output, exit codes)"
 GSK-003: gate-skeleton — One gate per CLI (8 independent CLI wrappers, no generic runner with subcommand)
@@ -669,6 +671,7 @@ RWP-013: research-wave-phase-content — Wave2 gate rerun action:add check forbi
 RWP-014: research-wave-phase-content — Rerun action:add SHALL include full cache trail（新增topic的source intake与首次运行一致，含_cache/写入）
 RWP-015: research-wave-phase-content — Wave phase bodies teach batch-poll-submit loops and Phase-owned reference materialization
 RWP-016: research-wave-phase-content — Wave phase bodies teach canonical gate-consumable refs, roles, and return-map navigation
+RWP-017: research-wave-phase-content — Wave0 and Wave1 fetch targets follow profile floors plus conservative margin
 
 # research-wave-gate-implementation (delta)
 RWG-011: research-wave-gate-implementation — Wave0 gate checks for 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
