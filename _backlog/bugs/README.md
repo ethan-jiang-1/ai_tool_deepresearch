@@ -18,10 +18,11 @@
 | Bug | 严重级别 | 简述 |
 |-----|---------|------|
 | [BUG-069](BUG-069-silent-autonomous-execution-unreachable-contract-not-self-sufficient.md) | P1 | "静默自主执行"不可达（根因 meta-bug）：Agent-facing 契约（phase MD + emitted schema）不自洽/不完整，每个 wave 首过失败都要读 Engine 源码逆向才能修 |
+| [BUG-071](BUG-071-missing-search-capability-contract-and-graceful-degradation.md) | P1 | 研究波次无"检索能力契约"：框架假设实时联网检索却从不预检，离线/沙箱/代理环境下 wave0 静默卡死、无 fail-fast、无降级、无阻塞交还面（共发现 bootstrap `current_gate` 协议漂移次生缺陷） |
 
 > **2026-07-09 复核**：症状实例 BUG-066 / 067 / 068 / 070 已逐条对照代码核实**已修**并移入 `_done/_fixed_bugs/`（见各 bug 文件 + 对应 OpenSpec change：`stabilize-agent-facing-work-unit-contracts` v0.12、`align-gate-contracts-and-reference-navigation` v0.13、`harden-delegated-preflight-and-fetch-hygiene` v0.14）。**BUG-069 作为根因 meta-bug 留在活跃列表**：其「Agent 必须读引擎源码」的核心症状已被 `operate-work-unit dry-submit` preflight（一次性批量返回所有违规）+ submit 侧 auto-normalize（`normalizations[]`）大幅缓解；但根因的**结构性收口未完成**——`result.schema.json` 仍是手写、未从 `.strict()` Zod 生成（无 single source）、且 phase-doc ↔ validator 一致性测试只覆盖 queue 面、未覆盖 work-unit envelope 面（`WorkUnitResultSchema`/`output_contract`/`source_claims`）。即「下一次同类漂移无测试拦截」的根因面仍敞开。是否视为已修、或拆成更窄的 follow-up，待定。
 
-**Next available bug ID: BUG-071**
+**Next available bug ID: BUG-072**
 
 ---
 
