@@ -186,4 +186,39 @@ wave1 gate attempt 9: 39 rules failing
 Structural blockers: reference_format, source_url_parseable, key_facts_min_lines, 
   ledger_coverage, reference_index_coverage, key_findings_non_empty (all 5 topics)
 Agent output: "Gate stalled at attempt 5——经典的 BUG-069 墙..."
+
+---
+
+## 10. 第三实例：wave2 gate stall → HITL2 提前呈现（同日同 run）
+
+### 症状
+
 ```
+Phase: wave2 → gate fail (attempt 25, 55 rules failing, trend: stalled)
+→ Agent 呈现 HITL2，但 gate 未 pass
+→ 用户在 HITL2 选择 proceed，Agent 推进到 final
+```
+
+### 与前两实例的关键区别
+
+前两实例是 Agent 在 gate 状态明确（pass/fail）时主动浮出水面。第三实例中 Agent 正确地推进到了 HITL2（`stop: yes`），因为 HITL2 就是下一个合法 checkpoint。但 wave2 gate 未 pass——55 个 finding-index contract 格式错误仍未修复。HITL2 作为 checkpoint 是合法的，但 gate 未 pass 意味着最终交付物的结构完整性未经验证。
+
+### 第三实例现场
+
+```
+wave2 gate attempt 25: 55 rules failing
+Core issue: finding-index.yaml contract — hitl2_handoff (boolean), appears_in_synthesis, 
+  search_required, independent_backing_refs fields; cross-topic-ledger 6 sections; 
+  cross refs without wave2 work-unit backing
+```
+```
+
+---
+
+## 11. 第四实例：spawn sub-agent 后空闲等待（同日同 run，rerun wave0）
+
+### 症状
+Rerun wave0: 2 sub-agents spawned → Agent 呈现状态表 → 停下来等 task notification。`phase-wave0.md` §3.2: "Actively poll...without waiting for user continuation or task notification."
+
+### 与前例区别
+前三实例是 gate 状态变化时浮出水面。第四实例是委托执行期间空闲——不是"停下来问用户"，而是"停下来等系统"。同一根因：Agent 把自主执行理解为"spawn 然后等着"，而非"spawn → poll → submit → gate → continue"的驱动循环。
