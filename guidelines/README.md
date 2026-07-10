@@ -12,6 +12,7 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
+  - guidelines/simple-reliable-control.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/logging-conventions.md
   - guidelines/command-experiments.md
@@ -32,13 +33,14 @@ Authority flows only from upstream: `AGENTS.md` and `openspec/config.yaml`. A gu
 Read in this order:
 
 1. `project-charter.md` — stable project principles, authority boundaries, and current project surfaces.
-2. `framework-runtime-boundary.md` — directory and authority boundary between read-only framework assets and mutable runtime bundles.
-3. `logging-conventions.md` — runtime continuity and observability: status/queue/trace/log authority after context loss.
-4. `agentic-execution-model.md` — unified execution model and terminology canon: how Chain, Queue, and Work Units compose into the current execution system. Start here to understand the overall architecture.
-5. `agentic-workflow-mechanism.md` — Tier 1 (Chain): phase-to-phase routing and the Three-Authority Architecture.
-6. `agentic-queue-mechanism.md` — Tier 2 (Queue): within-phase task execution, two nested loops, dispatch rule.
-7. `agentic-subagent-mechanism.md` — Work-unit-mediated Sub-agent execution: noise isolation, bounded tasks, submit provenance.
-8. `command-experiments.md` — guidance for durable command experiment shape and boundaries.
+2. `simple-reliable-control.md` — short decision chains, simple quality controls, and Agent-readable root-cause feedback.
+3. `framework-runtime-boundary.md` — directory and authority boundary between read-only framework assets and mutable runtime bundles.
+4. `logging-conventions.md` — runtime continuity and observability: status/queue/trace/log authority after context loss.
+5. `agentic-execution-model.md` — unified execution model and terminology canon: how Chain, Queue, and Work Units compose into the current execution system. Start here to understand the overall architecture.
+6. `agentic-workflow-mechanism.md` — Tier 1 (Chain): phase-to-phase routing and the Three-Authority Architecture.
+7. `agentic-queue-mechanism.md` — Tier 2 (Queue): within-phase task execution, two nested loops, dispatch rule.
+8. `agentic-subagent-mechanism.md` — Work-unit-mediated Sub-agent execution: noise isolation, bounded tasks, submit provenance.
+9. `command-experiments.md` — guidance for durable command experiment shape and boundaries.
 
 Detailed requirements live in `openspec/specs/`. Project-level OpenSpec rules live in `openspec/config.yaml`.
 
@@ -84,6 +86,7 @@ This directory cannot decide:
 | If you are... | Read / update | Do not do |
 |---------------|---------------|-----------|
 | Starting repo work | `project-charter.md`, then relevant specs | Start from a draft mechanism document |
+| A design is accumulating checks, fallbacks, or derived state | `simple-reliable-control.md` | Assume more logic automatically means more reliability |
 | Unsure whether something belongs in `DPT_FRAMEWORK/` or a bundle | `framework-runtime-boundary.md` | Decide by file extension or chat habit |
 | Resuming a run after context loss or debugging log/trace confusion | `logging-conventions.md`, then active bundle control files and trace | Infer current state from chat memory, console output, or `_logs/run.log` |
 | Writing or revising a command experiment playbook | `command-experiments.md` and the relevant accepted spec or active OpenSpec change | Invent setup or verdict authority locally |
@@ -114,6 +117,7 @@ Guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`
 | File | Reader | Purpose | Not For |
 |------|--------|---------|---------|
 | `project-charter.md` | Any Agent or maintainer | Repo-wide charter, authority order, hard boundaries | Detailed capability behavior |
+| `simple-reliable-control.md` | Proposal author, reviewer, Engine/CLI designer | Short decision chains, direct quality checks, smallest actionable root-cause feedback | Concrete schema fields, CLI flags, or weakening deterministic authority |
 | `framework-runtime-boundary.md` | Any Agent or maintainer touching framework/run files | Directory and authority boundary for read-only framework assets vs mutable runtime bundles | Concrete schema fields, CLI flags, or current run truth |
 | `logging-conventions.md` | Any Agent or maintainer resuming/debugging a run | Runtime continuity and observability: status/queue/trace/log authority, diagnostic vs audit boundaries | API contracts, schema fields, or using logs as verdict |
 | `command-experiments.md` | Experiment author/executor | How to prove mechanisms with real runtime contexts and trace-backed verdicts | General project philosophy or concrete capability behavior |
@@ -152,6 +156,7 @@ When a target or proposed surface becomes accepted/current, update this table in
 These files are one guidance suite:
 
 - `project-charter.md` defines the repo-wide charter: what must always be true.
+- `simple-reliable-control.md` defines the default complexity posture: short control loops, direct checks, and quality-control logic that is simpler than the work it validates.
 - `framework-runtime-boundary.md` defines the framework/runtime boundary: where read-only definitions and mutable run truth belong.
 - `logging-conventions.md` defines runtime continuity and observability guidance: how status, queue, trace, and log keep a long-running bundle recoverable without chat memory.
 - `command-experiments.md` defines the experiment charter: how mechanisms are proven.

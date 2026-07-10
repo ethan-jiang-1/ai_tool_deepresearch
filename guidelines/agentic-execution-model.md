@@ -13,6 +13,7 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
+  - guidelines/simple-reliable-control.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-workflow-mechanism.md
@@ -65,6 +66,25 @@ This file cannot decide:
 - Concrete schema fields, CLI flags, state transitions, receipt grammar, trace event names, or gate rule definitions.
 - Current run state, queue contents, gate outcomes, or evidence counts.
 - Implementation permission for new behavior without an OpenSpec change.
+
+---
+
+## Reliability Posture Across Tiers
+
+The three-tier model follows [`simple-reliable-control.md`](simple-reliable-control.md). Each tier should expose one direct authority and each boundary crossing should be one explicit operation.
+
+```text
+Chain: gate verdict -> route lookup
+Queue: demand state -> claim/complete decision
+Work Unit: attempt facts -> submit or explicit terminal closure
+```
+
+- Do not make one tier infer another tier's truth through a long derived chain.
+- Do not add a cross-tier controller merely to hide simple failures from the Phase Agent.
+- Quality checks should stop at the earliest actionable root cause and let the Agent repair/retry the same visible checkpoint.
+- When a design needs several new statuses, recovery branches, or projections to cross one boundary, first ask whether the boundary can instead read a direct existing Source of Record.
+
+This posture does not weaken deterministic authority. It keeps authority explicit enough that the MD controller can understand and act on it without reconstructing Engine internals.
 
 ---
 
@@ -201,9 +221,11 @@ Both axes must agree. A Markdown instruction can tell the Phase Agent to claim w
 - MUST treat submitted ledger rows as delegated gate coverage authority.
 - MUST treat `_work_units/`, receipts, output files, cache trails, and runtime refs as cross-check or diagnostic surfaces unless tied to submitted ledger coverage.
 - MUST use "Sub-agent" for the surviving bounded actor.
+- MUST keep every cross-tier handoff explicit and short, with one direct authority and one actionable checkpoint result.
 - MUST NOT describe the retired delegated transport as a production path.
 - MUST NOT teach delegated queue completion, filesystem presence, or hand-written ledger rows as production coverage.
 - MUST NOT let a sub-agent mutate queue state, append ledgers, run gates, or authorize phase completion.
+- MUST NOT add hidden cross-tier inference, duplicate completion paths, or cascading diagnostics when the direct tier authority can answer the checkpoint.
 
 ---
 
@@ -211,6 +233,7 @@ Both axes must agree. A Markdown instruction can tell the Phase Agent to claim w
 
 - [Guidelines Index](README.md) - guidance suite index and reading order.
 - [Project Charter](project-charter.md) - repo-wide charter and authority map.
+- [Simple Reliable Control](simple-reliable-control.md) - complexity posture for short tier boundaries and reliable quality-control feedback.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) - Chain and phase handoff.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) - queue demand and phase-local drain.
 - [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) - work-unit-mediated Sub-agent execution.

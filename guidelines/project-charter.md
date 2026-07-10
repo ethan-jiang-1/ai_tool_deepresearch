@@ -11,6 +11,7 @@ defers_to:
   - AGENTS.md
   - openspec/config.yaml
 siblings:
+  - guidelines/simple-reliable-control.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-execution-model.md
@@ -73,6 +74,7 @@ This file cannot decide:
 - MUST keep multi-stage agentic flow in Markdown, playbooks, or task cards by default.
 - MUST read JS/CLI feedback back into the conversation context before the next Markdown-driven action.
 - MUST treat check / inspect / advice outputs as structured JS/CLI feedback, not as chat noise.
+- MUST prefer the shortest correct control loop: direct runtime fact -> deterministic check -> smallest actionable root cause -> one clear next action. Use `guidelines/simple-reliable-control.md` as the design-review complexity brake.
 - MUST make evidence, receipts, and trace entries come from real execution.
 - MUST keep runtime state in the active runtime bundle root, not in chat memory.
 - MUST treat `DPT_FRAMEWORK/` as reusable framework assets, not as a per-run workspace.
@@ -87,6 +89,7 @@ This file cannot decide:
 - MUST NOT invent implementation behavior in this file without an OpenSpec change.
 - MUST NOT move LLM-facing multi-stage flow into JS just because JS is easier to test or feels like a controller.
 - MUST NOT let JS/CLI orchestrate search, judgment, writing, repair, synthesis, or native subagent semantics as a substitute for Agent Flow.
+- MUST NOT make quality control more fragile than the work it validates: avoid long derived-check chains, duplicate validators, cascading symptoms after a prerequisite failure, or blocking presentation-format preferences when direct structured authority exists.
 - MUST NOT fake trace, result files, receipts, subagent output, or runtime validation.
 - MUST NOT treat progress summaries, console output, or chat confidence as evidence.
 - MUST NOT write runtime state, gate results, HITL answers, repair attempts, artifacts, or final output into `DPT_FRAMEWORK/`.
@@ -121,6 +124,7 @@ When deciding where something belongs, route by authority:
 | Current run state, queue contents, profile, evidence files, work-unit attempts, or trace history | The active runtime bundle root, currently a selected `dpt_rb_*` or `dpt_disp_*` bundle |
 | New or changed accepted behavior | OpenSpec change before implementation |
 | Future mechanism direction | `guidelines/` as design guidance only |
+| Control-loop or quality-check complexity | `guidelines/simple-reliable-control.md` plus the relevant accepted specs and executable Source of Record |
 
 ---
 
@@ -258,6 +262,7 @@ If you are about to do one of these, stop and switch to the required path:
 | Add behavior only in guidance prose | Create or update an OpenSpec change/spec |
 | Put multi-stage Agent Flow into a JS controller because it is easier to test | Keep the flow in Markdown/playbooks/task cards; use JS only for deterministic checkpoints |
 | Need to decide where a rule belongs | Use the Quick Router and Authority Map before editing |
+| Add more checks, fallbacks, derived state, or repair branches to improve reliability | Read `simple-reliable-control.md`; first delete brittle blockers, reuse direct checks, short-circuit cascades, and move feedback to the decision point |
 | Copy historical prototype paths or queue rules into current docs | Extract the underlying principle, then check current OpenSpec sources and framework conventions |
 | Read `_original_*` for inspiration | Confirm the user explicitly asked for historical analysis |
 | Let Markdown decide a deterministic transition | Move the rule into schema/CLI/Engine design |
@@ -341,15 +346,16 @@ Explore / design
 新 Agent 或新维护者按这个顺序读：
 
 1. `guidelines/project-charter.md`：稳定原则和权威边界。
-2. `guidelines/framework-runtime-boundary.md`：framework 只读资产与 run bundle 可变状态的目录和权威边界。
-3. `openspec/config.yaml`：项目级 spec-driven 纪律。
-4. `guidelines/agentic-execution-model.md`：统一执行模型与术语正典——Chain、Queue、Work Unit 如何组成当前执行系统。
-5. `guidelines/agentic-workflow-mechanism.md`：Tier 1 (Chain) —— phase 间路由与三层权威架构。
-6. `guidelines/agentic-queue-mechanism.md`：Tier 2 (Queue) —— phase 内 task 编排，两层嵌套循环。
-7. `guidelines/agentic-subagent-mechanism.md`：Work-unit-mediated Sub-agent execution —— bounded sub-agent 任务、噪声隔离、submit provenance。
-8. `guidelines/command-experiments.md`：如何写和运行实验 playbook。
-9. 相关 `openspec/specs/<capability>/spec.md`：具体 capability 的需求。
-10. 对应 framework、experiment 或 active bundle root 文件。
+2. `guidelines/simple-reliable-control.md`：短判断链、简单质量控制、最小根因反馈和复杂度刹车。
+3. `guidelines/framework-runtime-boundary.md`：framework 只读资产与 run bundle 可变状态的目录和权威边界。
+4. `openspec/config.yaml`：项目级 spec-driven 纪律。
+5. `guidelines/agentic-execution-model.md`：统一执行模型与术语正典——Chain、Queue、Work Unit 如何组成当前执行系统。
+6. `guidelines/agentic-workflow-mechanism.md`：Tier 1 (Chain) —— phase 间路由与三层权威架构。
+7. `guidelines/agentic-queue-mechanism.md`：Tier 2 (Queue) —— phase 内 task 编排，两层嵌套循环。
+8. `guidelines/agentic-subagent-mechanism.md`：Work-unit-mediated Sub-agent execution —— bounded sub-agent 任务、噪声隔离、submit provenance。
+9. `guidelines/command-experiments.md`：如何写和运行实验 playbook。
+10. 相关 `openspec/specs/<capability>/spec.md`：具体 capability 的需求。
+11. 对应 framework、experiment 或 active bundle root 文件。
 
 ---
 
@@ -373,6 +379,7 @@ Before changing any file in `guidelines/`, check:
 ## Related Guidance
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
+- [Simple Reliable Control](simple-reliable-control.md) — short decision chains, direct Source-of-Record checks, root-cause short-circuiting, and quality-control complexity limits.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for read-only framework assets versus mutable runtime bundles.
 - [Command Experiments](command-experiments.md) — target guidance for durable command experiment shape and boundaries.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; defines Chain, Queue, and Work Units.

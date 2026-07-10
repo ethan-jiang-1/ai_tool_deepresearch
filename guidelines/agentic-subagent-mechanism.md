@@ -13,6 +13,7 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
+  - guidelines/simple-reliable-control.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-execution-model.md
@@ -72,6 +73,22 @@ This file cannot decide:
 - Concrete schemas, CLI flags, receipt event grammar, gate rule definitions, or ledger row fields.
 - Current runtime state, current queue contents, or whether a specific run has passed a gate.
 - New production delegated mechanisms without OpenSpec.
+
+---
+
+## Simple Work-Unit Posture
+
+This mechanism follows [`simple-reliable-control.md`](simple-reliable-control.md). Delegated reliability comes from one bounded path, not from a tree of retries, fallbacks, watchers, and inferred completion states.
+
+```text
+queue demand -> one Engine-allocated attempt -> bounded Sub-agent work -> one submit check -> submitted ledger or explicit terminal closure
+```
+
+- Submit validation should inspect direct envelope/result/receipt/output/cache facts and return the smallest actionable root cause.
+- If a prerequisite such as identity or receipt binding fails, dependent provenance checks should not flood the Phase Agent with cascading symptoms.
+- Retry remains an explicit new attempt or a narrowly accepted audited exception; it should not become a hidden lineage-recovery controller.
+- Prefer repairing the same visible attempt or closing it explicitly over adding background state that guesses whether work is done.
+- A new delegated mechanism should remove an existing branch or duplicated contract; adding another completion path by itself is a reliability regression.
 
 ---
 
@@ -197,6 +214,7 @@ Retry allocates a new `work_id`. Late submit against a terminal attempt fails cl
 - MUST treat `rb_output_declarations.jsonl` submitted work-unit rows as delegated coverage authority.
 - MUST treat `_work_units/` and receipts as cross-check/diagnostic surfaces unless tied to submitted coverage.
 - MUST reject or diagnose direct/orphan delegated artifacts that lack submitted coverage.
+- MUST prefer direct submit facts, prerequisite short-circuiting, and one actionable repair target over cascading validation output.
 
 ---
 
@@ -207,6 +225,7 @@ Retry allocates a new `work_id`. Late submit against a terminal attempt fails cl
 - `agentic-workflow-mechanism.md` defines phase handoff and gate routing.
 - `framework-runtime-boundary.md` defines framework assets versus mutable run bundle state.
 - `command-experiments.md` defines how experiments prove the same production boundaries.
+- `simple-reliable-control.md` defines the complexity brake for submit checks, retry paths, and Agent-facing diagnostics.
 
 General rule: accepted specs and executable contracts win over this guideline. If they conflict, fix the guideline through an OpenSpec-aligned change.
 
@@ -216,6 +235,7 @@ General rule: accepted specs and executable contracts win over this guideline. I
 
 - [Guidelines Index](README.md) - guidance suite index and reading order.
 - [Agentic Execution Model](agentic-execution-model.md) - global execution model and terminology canon.
+- [Simple Reliable Control](simple-reliable-control.md) - short delegated paths, direct checks, and smallest actionable root-cause feedback.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) - queue demand and phase-local drain.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) - gate, chain, and phase handoff.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) - framework assets versus runtime bundles.

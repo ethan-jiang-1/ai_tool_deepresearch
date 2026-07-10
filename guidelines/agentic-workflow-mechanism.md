@@ -12,6 +12,7 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
+  - guidelines/simple-reliable-control.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-execution-model.md
@@ -46,6 +47,23 @@ This file cannot decide:
 - Concrete schema fields, CLI flags, gate rule definitions, or trace event contracts.
 - Current run state, bundle contents, or gate outcomes.
 - Future mechanisms that have not passed OpenSpec acceptance.
+
+---
+
+## Simple Control Posture
+
+This Tier 1 mechanism follows [`simple-reliable-control.md`](simple-reliable-control.md): Chain reliability comes from a short explicit handoff, not from adding a smarter workflow controller.
+
+The preferred path stays one hop at each boundary:
+
+```text
+current phase artifact/state -> gate check -> one chain lookup -> one check.next -> one target-node load
+```
+
+- Gate rules should read direct Source-of-Record facts and return the smallest actionable root-cause set.
+- A missing prerequisite should short-circuit dependent checks instead of producing a cascade of routing or quality symptoms.
+- `transitions.chain.json` should remain a passive direct mapping; do not add fallback routers, inferred cursors, shadow lifecycle state, or multi-stage auto-recovery.
+- If a proposed workflow mechanism needs several derived decisions before it can tell the Phase Agent what to do next, simplify or split the change before implementation.
 
 ---
 
@@ -149,6 +167,7 @@ Node 按需加载，不预加载。
 - MUST keep JS Engine stateless and passive: validate, look up, write trace — never drive the loop.
 - MUST encode deterministic outcomes in chain. A deterministic outcome is one with a fixed, context-independent next-node target. Currently: `passed` (all phases) and `rerun` (HITL2). Indeterminate branches (`request_view_revision`, `repair`, `stop_blocked`) whose target depends on Agent runtime judgment SHALL NOT have chain entries — they return `no_transition`.
 - MUST load nodes on demand, driven by `check.next` and the accepted handoff loader/check — never preload the whole graph.
+- MUST keep each phase boundary as a short explicit chain: direct gate facts -> one verdict -> one route lookup -> one target-node load.
 
 Concrete function and file names referenced above (e.g. the current `resolveNodeTransitionDetailed()` entry point and `assessNode()` node loader) are descriptive anchors for the current implementation, not part of this normative contract. They may be renamed, wrapped, or relocated by an accepted OpenSpec change; the principles above must hold either way. For the authoritative function contract, file naming, and backend dispatch rules, see `openspec/specs/transition-table/spec.md` and `openspec/specs/framework-engine/spec.md`.
 
@@ -161,6 +180,7 @@ Concrete function and file names referenced above (e.g. the current `resolveNode
 - MUST NOT let JS Engine decide which node to load next or when to advance.
 - MUST NOT reintroduce FSM as a transition mechanism. Chain is the only backend.
 - MUST NOT use manifest as the source of transition truth — manifest is inventory, chain is routing.
+- MUST NOT add layered fallback routing, derived lifecycle controllers, or cascading gate diagnostics when a direct check and one `check.next` are sufficient.
 
 ---
 
@@ -196,6 +216,7 @@ Every `fileRef` in `transitions.chain.json` must resolve to a readable Markdown 
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
+- [Simple Reliable Control](simple-reliable-control.md) — short decision chains, root-cause short-circuiting, and quality-control complexity limits.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; this file's parent document.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for framework assets versus runtime bundles.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Tier 2 (Queue) for within-phase task execution; defines the inner loop that nests inside this file's outer loop.
@@ -205,6 +226,7 @@ Every `fileRef` in `transitions.chain.json` must resolve to a readable Markdown 
 ## Relationship to Other Guidelines
 
 - **project-charter.md** 定义 Agent/Engine/Markdown 的 authority split。本文件描述这个 split 在 workflow 执行中的具体机制。
+- **simple-reliable-control.md** 定义本机制的复杂度上限：一跳路由、直接 gate facts、最小根因反馈，不把 Chain 扩成隐藏 controller。
 - **framework-runtime-boundary.md** 定义 framework assets vs runtime bundles 的目录边界。本文件假设这个边界已成立，在这个边界之上描述运行时循环。
 - **agentic-queue-mechanism.md** 定义 queue-driven phase execution 的架构宪法：两层嵌套 loop、dispatch rule、结构约束、派生约束。其 queue engine（`queue-manager.mjs` + `operate-queue.mjs`，AGQ-001~006）已实现；seed-topics/wave0/wave1/wave2 integrations 已归档入 accepted specs。stop authorization enforcement 等剩余 loop-engineering gap 仍待 OpenSpec 落地。本文件描述的循环是 AGQ 所依赖的当前运行时基础。
 - **agentic-subagent-mechanism.md** 定义 work-unit-mediated Sub-agent execution 的架构宪法：噪声隔离、bounded task、runtime receipt、submit provenance。本文件描述的 Chain 是 Sub-agent 执行的上层 phase 路由容器；Sub-agent work units 在单个 phase 内部被 claimed/submitted，不跨 phase。完整嵌套关系见 agentic-execution-model。
