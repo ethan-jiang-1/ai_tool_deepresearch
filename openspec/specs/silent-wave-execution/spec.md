@@ -10,21 +10,43 @@ Silent Wave Execution 定义了 Agent 在用户缺席（静默自主阶段）时
 
 ### Requirement: Silent wave execution contract
 
-During a non-terminal lifecycle `stop: no` phase, repeated gate failure or fatigue SHALL NOT authorize user-facing surfacing, progress reporting, partial report delivery, waiting for unrelated background workflows, or skipping required lifecycle phases.
+During a non-terminal lifecycle `stop: no` phase, repeated gate failure, gate pass, local completion, scope pressure, or fatigue SHALL NOT authorize user-facing surfacing, progress reporting, partial delivery, waiting for unrelated background workflows, or skipping required lifecycle phases.
 
-The silent execution contract SHALL direct the Agent through this priority chain:
+At Agent decision points, deterministic checkpoint output SHALL expose a short continuation cue derived from the current node `stop` contract and direct checkpoint outcome. For stop:no gate results:
 
-1. repair deterministic blockers that have clear Engine feedback;
-2. change strategy when the same repair is not converging;
-3. request or consume a legal degraded gate handoff when deterministic runtime-truth preconditions are satisfied and only degradation-eligible quality rules remain;
-4. continue through `enter-phase` and `advance-status` when a clean or degraded `check.next` is available; or
-5. hold silently with trace/log diagnostics when no legal repair or degraded route exists.
+- pass with non-null `check.next` SHALL state `interaction: prohibited` and `next_action: consume_check_next`;
+- fail SHALL state `interaction: prohibited` and `next_action: repair_and_rerun_gate`;
+- the cue SHALL not authorize routing, status mutation, completion, degraded handoff, or root-cause classification beyond the existing gate result.
 
-#### Scenario: No legal route means silent hold
+When emitted in gate JSON, the cue SHALL be a top-level `continuation` object with required `interaction` and `next_action` fields and direct locator fields such as `node_ref` and `gate`. It SHALL NOT be nested inside `check` or `routing`, and SHALL NOT include confidence, policy decisions, retry trees, context estimates, or alternate route choices.
+
+The cue SHALL read only direct outcome and node-frontmatter facts; it SHALL NOT derive a second verdict from `failed_rule_ids`, `masked_rule_ids`, inspect classifications, chat state, token pressure, or Agent intent. Stop:yes gate failures, including HITL capability failures, SHALL NOT be converted into autonomous stop:no continuation cues.
+
+The silent execution priority chain remains repair, strategy change, legal degraded handoff, consume clean/degraded `check.next`, or silent hold. `surfacing_intent` remains diagnostic only.
+
+#### Scenario: stop:no gate failure returns repair cue
+
+- **WHEN** a stop:no gate fails
+- **THEN** gate output SHALL say user interaction is prohibited
+- **AND** the immediate next action SHALL be repair the named root cause and rerun the same gate
+
+#### Scenario: stop:yes gate failure does not receive autonomous cue
+
+- **WHEN** a stop:yes gate fails, including a missing or unavailable research-access observation
+- **THEN** gate output SHALL NOT state `interaction: prohibited`
+- **AND** it SHALL preserve the existing user/HITL repair boundary
+
+#### Scenario: stop:no gate pass returns continuation cue
+
+- **WHEN** a stop:no gate passes with non-null `check.next`
+- **THEN** gate output SHALL say user interaction is prohibited
+- **AND** the immediate next action SHALL be consume `check.next` through the accepted handoff path
+
+#### Scenario: no legal route means silent hold
 
 - **WHEN** a gate remains blocked by runtime-truth failures and no degraded route is legal
-- **THEN** the Agent SHALL NOT write final artifacts
-- **AND** it SHALL leave diagnostics in accepted trace/log surfaces or hold silently according to the silent execution contract
+- **THEN** the Agent SHALL NOT write final artifacts or ask the user for a decision
+- **AND** it SHALL leave diagnostics or hold silently according to the contract
 
 ### Requirement: Fatigue resistance in silent execution contract
 
@@ -78,40 +100,34 @@ If the Agent can identify that it is about to surface during a non-terminal `sto
 
 During non-terminal `stop: no` phases with delegated work units in flight, the Phase Agent SHALL actively poll runtime work-unit surfaces after spawning background Sub-agents. It SHALL NOT wait for user continuation, background task notification, unrelated workflow state, or chat context changes when bundle-root work-unit files can be inspected.
 
-The active polling loop SHALL periodically inspect claimed work-unit directories or `operate-work-unit inspect` output for result, receipt, output, cache, status, and deadline signals. When a claimed attempt is ready, the Phase Agent SHALL run `operate-work-unit submit` promptly. If submit rejects, it SHALL repair the same attempt when possible or explicitly close it with `fail`, `timeout`, or `abandon` before retrying or claiming replacements.
+Successful work-unit claim output SHALL include a short static continuation cue with `interaction: prohibited` and `next_action: inspect_and_poll_claimed_work`. The cue SHALL not infer readiness or complete work; it only puts the existing polling obligation at the immediate post-claim decision point.
 
-Polling SHALL be bounded by each work-unit deadline and phase guidance. A lack of task notification SHALL NOT be a continuation blocker, and a received task notification SHALL NOT be treated as authority without submit/gate validation.
-
-The polling loop SHALL be reconstructable from runtime bundle truth. A scratch list of spawned work IDs MAY be used for convenience, but loss of chat memory or task notification SHALL NOT orphan in-flight attempts. Phase guidance SHALL teach the Phase Agent to recover the in-flight set from work-unit directories, queue delegated-in-flight state, work-unit indexes/manifests, or inspect output before deciding whether to submit, terminalize, claim more, or run a gate.
+The polling loop SHALL inspect result, receipt, output, cache, status, and deadline signals; submit ready attempts; repair or explicitly terminalize rejected attempts; and reconstruct in-flight work from bundle truth after context loss.
 
 #### Scenario: completed background work is submitted without user nudge
 
-- **WHEN** a background Sub-agent has written a candidate result, runtime receipt, declared outputs, and cache trails for a claimed work unit
-- **THEN** the Phase Agent SHALL detect readiness through active polling or inspect feedback
-- **AND** it SHALL submit the work unit without waiting for the user to say "continue"
+- **WHEN** bundle-root work-unit files show a claimed attempt is ready
+- **THEN** the Phase Agent SHALL submit it without waiting for the user or notification
+
+#### Scenario: claim output points directly to polling
+
+- **WHEN** one or more work units are successfully claimed in a stop:no phase
+- **THEN** claim output SHALL state that user interaction is prohibited
+- **AND** `next_action` SHALL direct immediate inspect/poll of the claimed work units
 
 #### Scenario: task notification is not a continuation condition
 
-- **WHEN** a Sub-agent notification has not appeared in chat context
-- **AND** bundle-root work-unit files show that a claimed attempt may be ready
-- **THEN** the Phase Agent SHALL inspect and submit from runtime truth
-- **AND** it SHALL NOT hold solely for a notification event
-
-#### Scenario: in-flight polling survives chat memory loss
-
-- **WHEN** the Phase Agent re-enters a delegated stop:no phase without a reliable scratch list of spawned work IDs
-- **AND** runtime bundle files show delegated attempts still in flight
-- **THEN** the Phase Agent SHALL reconstruct the in-flight set from bundle truth or inspect output
-- **AND** it SHALL continue poll/submit/repair/terminalize work rather than asking the user what was spawned
+- **WHEN** a Sub-agent notification has not appeared but work-unit files exist
+- **THEN** the Phase Agent SHALL inspect runtime truth
+- **AND** it SHALL NOT hold solely for notification
 
 #### Scenario: rejected submit stays inside the silent loop
 
-- **WHEN** active polling finds a result and `operate-work-unit submit` rejects it
-- **THEN** the Phase Agent SHALL use submit diagnostics to repair the same attempt when possible
-- **AND** if the attempt cannot continue, it SHALL close the attempt explicitly before claiming replacement work
+- **WHEN** active polling finds a result and submit rejects it
+- **THEN** the Phase Agent SHALL repair the same attempt when possible or explicitly close it before replacement
 
 #### Scenario: polling does not authorize surfacing
 
-- **WHEN** polling finds no ready result yet but deadlines have not expired
-- **THEN** the Phase Agent SHALL continue polling or work on other eligible in-flight attempts
-- **AND** it SHALL NOT send a progress report, idle report, or continuation question during the non-terminal `stop: no` phase
+- **WHEN** no result is ready and deadlines have not expired
+- **THEN** the Phase Agent SHALL continue polling or other eligible work
+- **AND** it SHALL NOT send progress, idle, or continuation questions
