@@ -12,7 +12,7 @@
 - `enter-phase` 成功 Markdown 输出重申当前已加载 target node 的 `stop`/terminal contract 与立即下一动作，避免 loaded Markdown 之后最后缺少短 cue。
 - `advance-status` 只在 covered trace-backed handoff 已由 `enter-phase` 写入 `rb_status.current_node` 且 current node 与 handoff target 一致时输出 loaded-node cue；bootstrap compatibility status sync 不得凭 manifest/chain 猜测已加载 node。
 - Work-unit claim 输出增加静态 continuation cue：立即 inspect/poll claimed work units，不等待用户或 task notification。
-- Cue 只读取 node frontmatter、current command outcome、route-bound handoff/current-node fact 和直接 claim result；不写新持久状态，不推断 token/context/Agent intent。
+- Cue 只读取 node frontmatter、current command outcome、route-bound handoff/current-node fact 和直接 claim result；JSON 输出使用顶层最小 `continuation` object，Markdown 输出使用末端 marker block；不写新持久状态，不推断 token/context/Agent intent。
 - `surfacing_intent` 只作为“想浮出时记录并取消消息”的诊断入口，不成为许可或路由系统。
 - 不拦截 chat、不新增 session manager、watcher、daemon、stop state machine 或自动上下文路由。
 - Framework behavior changes require a version bump; target version: `v0.19`.
@@ -26,7 +26,7 @@
 ### Modified Capabilities
 
 - `silent-wave-execution`: stop:no 的 interaction prohibition 与立即 continuation cue 在 checkpoint 输出中可达。
-- `cli-phase-transition`: phase entry/status sync 输出 target node 的 stop contract 与继续动作，但不替 Agent 执行 phase。
+- `cli-phase-transition`: `enter-phase` 输出 loaded target node 的 stop contract；covered `advance-status` 只在 current-node/handoff 一致时输出 loaded-node continuation，不替 Agent 执行 phase。
 - `delegated-work-units`: claim 成功后给出静态 poll/inspect cue，不把 notification 当继续条件。
 
 ## Impact

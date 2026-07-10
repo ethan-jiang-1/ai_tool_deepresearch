@@ -6,7 +6,7 @@
 
 Claim SHALL bind one `queue_item_id` to one non-terminal work-unit attempt, move queue demand into `delegated_in_flight`, write effective lease fields, and store the queue item snapshot hash. Claim MAY allocate a contiguous queue-front batch with `--count N`, but Sub-agents SHALL NOT allocate IDs or mutate queue/index authority.
 
-Successful claim stdout SHALL include a static Agent-facing continuation cue for the immediate post-claim decision point: `interaction: prohibited` and `next_action: inspect_and_poll_claimed_work`. The cue SHALL list or bind to the claimed `work_id` values already returned by claim, SHALL NOT infer readiness, and SHALL NOT add persistent work-unit state.
+Successful claim stdout SHALL include a static Agent-facing top-level `continuation` object for the immediate post-claim decision point: `interaction: prohibited` and `next_action: inspect_and_poll_claimed_work`. The cue SHALL include `work_ids` equal to the already returned `claimed_work_ids`, SHALL NOT be nested inside queue/index authority objects, SHALL NOT infer readiness, SHALL NOT complete work, and SHALL NOT add persistent work-unit state. Empty or failed claims SHALL NOT emit a successful continuation cue.
 
 #### Scenario: claim creates in-flight attempt
 
@@ -19,3 +19,9 @@ Successful claim stdout SHALL include a static Agent-facing continuation cue for
 - **WHEN** claim succeeds for one or more work units
 - **THEN** stdout SHALL identify the claimed work ids
 - **AND** continuation SHALL direct the Phase Agent to inspect/poll them without waiting for user input or task notification
+
+#### Scenario: empty claim does not emit successful continuation
+
+- **WHEN** claim returns `claimed_count: 0`
+- **THEN** stdout SHALL NOT include a continuation cue that says claimed work should be inspected or polled
+- **AND** queue/index authority SHALL remain the source of truth for why no work was claimed

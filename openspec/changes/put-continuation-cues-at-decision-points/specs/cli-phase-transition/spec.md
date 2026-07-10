@@ -12,9 +12,11 @@ For covered trace-backed handoffs, before mutating `rb_status.json` or appending
 - `stop: yes`: `interaction: required`, `next_action: wait_for_user_in_loaded_node`;
 - terminal Final: `interaction: terminal_delivery`, `next_action: deliver_final_artifacts`.
 
+The JSON `continuation` object SHALL be top-level, contain required `interaction` and `next_action` fields and a direct `node_ref` locator. It MAY include the synchronized source gate as `gate`, but SHALL NOT be nested inside status fields and SHALL NOT include confidence, policy decisions, retry trees, context estimates, or alternate route choices.
+
 The cue SHALL NOT choose a node, execute Markdown, mutate additional state, or prove target-phase completion. If a covered handoff's `current_node` is missing, mismatched with the witnessed target, or has unreadable frontmatter, the CLI SHALL fail closed before mutation rather than guess.
 
-For explicit bootstrap compatibility source sync where existing rules do not require a route-bound handoff, the CLI SHALL preserve current status synchronization behavior. It SHALL emit a loaded-node continuation cue only if `rb_status.json#/current_node` is non-null, matches the computed target node, and has readable frontmatter; otherwise it SHALL omit `continuation` or include an explicit continuation diagnostic, and SHALL NOT infer loaded-node execution from manifest/chain lookup alone.
+For explicit bootstrap compatibility source sync where existing rules do not require a route-bound handoff, the CLI SHALL preserve current status synchronization behavior. It SHALL emit a loaded-node continuation cue only if `rb_status.json#/current_node` is non-null, matches the computed target node, and has readable frontmatter; otherwise it SHALL omit `continuation`, MAY include an explicit `continuation_diagnostic`, and SHALL NOT infer loaded-node execution from manifest/chain lookup alone.
 
 #### Scenario: Advance into Wave1 returns execute cue
 
@@ -65,7 +67,15 @@ Successful stdout SHALL remain Agent-readable Markdown with stable file-boundary
 - stop:yes: user interaction required; follow the loaded HITL prompt;
 - Final: terminal delivery only.
 
-The generated block SHALL be a feedback projection, not a new authority surface, and SHALL not duplicate the full silent-execution contract.
+The generated block SHALL be a feedback projection, not a new authority surface, and SHALL not duplicate the full silent-execution contract. It SHALL be the final stdout content and use stable markers with short key/value lines:
+
+```markdown
+<!-- DPT_CONTINUATION_CUE_START -->
+interaction: prohibited
+next_action: execute_loaded_node
+node_ref: phases/phase-wave1.md
+<!-- DPT_CONTINUATION_CUE_END -->
+```
 
 #### Scenario: Enter phase accepts degraded source pass
 

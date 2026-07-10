@@ -12,6 +12,25 @@ Change2 (`v0.18`) 已经把“是否具备真实研究访问能力”前移到 H
 
 当前 `handoff-helpers.mjs` 还保留 bootstrap compatibility：`phase-instantiation` / `phase-hitl1` / `phase-setup` 是特殊入口，covered trace-backed handoff 从 setup onward 才要求 route-bound `enter-phase` + `load_complete`。因此 `advance-status` cue 必须区分 covered handoff 和 bootstrap-compatible source sync；不能把 manifest/chain 推导出来的 next node 当作“已加载 node”。
 
+### Simple Reliable Control fit
+
+本 change 的复杂度预算只有一个 projection，不允许变成 controller：
+
+```text
+direct checkpoint fact -> one continuation projection -> one immediate next action
+```
+
+具体对应 `guidelines/simple-reliable-control.md`：
+
+- Direct facts first: gate cue 只读 node frontmatter + `check.passed` + `check.next`；phase cue 只读 loaded target frontmatter；claim cue 只读 claim result。
+- One truth path: routing、status、degraded、queue、lease、submit readiness 仍由原 Engine authority 决定，cue 不产生第二份 pass/fail truth。
+- State must own irreplaceable truth: cue 没有新持久状态，因为它完全可由当前 checkpoint stdout 直接重建。
+- One next action: 每个 cue 只给一个 `next_action`；不列 strategy menu、不做 hidden fallback tree。
+- Decision-point proximity: cue 只放在 Agent 正要决定下一步的输出末端，不再扩写远处的长规则。
+- Recovery stays explicit: gate fail 仍是 repair same gate；claim 后仍是 inspect/poll/submit/terminalize；status mismatch 仍 fail before mutation。
+
+如果实现时发现需要 watcher、session manager、retry controller、derived continuation state、chat interception 或新 routing branch，说明本 change 已经越界，应退回 Explore/Proposal 缩 scope，而不是在 apply 中继续补逻辑。
+
 ## Goals / Non-Goals
 
 **Goals:**
@@ -43,7 +62,30 @@ Change2 (`v0.18`) 已经把“是否具备真实研究访问能力”前移到 H
 }
 ```
 
-Helper 不读 conversation、不写 bundle、不循环执行。各 CLI 负责提供它已经拥有的直接事实。对象可以带当前 node、gate 或 claimed work ids 作为定位信息，但这些字段不成为 authority。
+Helper 不读 conversation、不写 bundle、不循环执行。各 CLI 负责提供它已经拥有的直接事实。对象可以带少量定位字段，但只能是直接事实：
+
+```json
+{
+  "continuation": {
+    "interaction": "prohibited",
+    "next_action": "execute_loaded_node",
+    "node_ref": "phases/phase-wave1.md"
+  }
+}
+```
+
+`interaction` 与 `next_action` 是必需字段；`node_ref`、`gate`、`work_ids` 按输出边界可选，且不得被下游当成新的 authority。不要增加 `schema_version`、confidence、reason tree、retry count、estimated context、policy decision 或 recovery menu。
+
+JSON command outputs SHALL put this object at top-level as `continuation`, not inside `check`, `routing`, `status`, `queue`, `index`, or work-unit authority objects. This keeps cue visibly separate from the existing Source of Record fields.
+
+| Boundary | Required locators | Notes |
+|---|---|---|
+| Gate JSON | `node_ref`, `gate` | `node_ref` mirrors `check.currentNodeRef`; `gate` mirrors `check.gate` |
+| `advance-status` JSON | `node_ref` | `gate` MAY mirror the synchronized source gate |
+| `enter-phase` Markdown block | `node_ref` | marker block only, no JSON status envelope |
+| work-unit claim JSON | `work_ids` | exactly mirrors `claimed_work_ids` |
+
+如果事实不足以生成 cue，则不要猜。对于 gate result 这类既有 authority 已经成立的输出，可省略 `continuation` 并附加一个短 `continuation_diagnostic`；对于 covered `advance-status` 的 loaded-node mismatch，必须按本 design fail before mutation。
 
 替代方案是增加持久 `continuation_state` 或统一 workflow controller；这会复制 gate/transition/queue authority并拉长链路，因此不采用。
 
@@ -51,7 +93,7 @@ Helper 不读 conversation、不写 bundle、不循环执行。各 CLI 负责提
 
 ### 2. Gate cue 在共享 result construction/projection 边界由 current node 与 outcome 推导
 
-Gate result 保持现有 `check`、`routing`、`inspect`、`advice`。在 emit 前读取 `check.currentNodeRef` 对应 node frontmatter：
+Gate result 保持现有 `check`、`routing`、`inspect`、`advice`。在 shared result construction/projection 阶段，由调用方提供或读取 `check.currentNodeRef` 对应 framework node frontmatter：
 
 - `stop: no` + pass + non-null `check.next` → `prohibited / consume_check_next`；
 - `stop: no` + fail → `prohibited / repair_and_rerun_gate`；
@@ -71,6 +113,18 @@ Cue 不改变 exit code、routing、attempt durability、checkpoint 或 diagnost
 
 当前 `workflow-chain.mjs` 的 `NodeFrontmatter` schema 只校验 `requires`，但 `parseFrontmatter()` 会保留额外 keys，phase frontmatter 已包含 `stop` 和 `gate`。Apply 可读取 cached `entry.frontmatter.stop/gate`；不要为了 cue 扩大 workflow loader 的 schema authority。
 
+成功 Markdown stdout 的 cue block 使用稳定 marker，保持短 key/value 形式，位于所有 `DPT_LOADED_FILE_END` section 之后并作为 stdout 最后内容：
+
+```markdown
+<!-- DPT_CONTINUATION_CUE_START -->
+interaction: prohibited
+next_action: execute_loaded_node
+node_ref: phases/phase-wave1.md
+<!-- DPT_CONTINUATION_CUE_END -->
+```
+
+这个 block 是 Markdown feedback projection，不是 JSON status envelope；失败 stdout 仍只能是 diagnostic JSON。
+
 ### 4. `advance-status` 只对 covered loaded-node status sync 输出 cue
 
 Covered source-gate status sync 的 cue target 是现有 `rb_status.json#/current_node`，而不是重新从 transition table 选择 node。写 status/trace 前先读取并验证：
@@ -84,7 +138,7 @@ Covered source-gate status sync 的 cue target 是现有 `rb_status.json#/curren
 
 如果 covered handoff 的 `current_node` 缺失、与 witnessed handoff target 不一致或 frontmatter 不可读，则在 mutation 前失败；不通过 fallback 名称推断，也不把 `advance-status` 当作 entry/loader。
 
-当 `validateSourceGateStatusSync()` 返回 `covered: false`（现有 bootstrap compatibility）时，保留当前 status sync 行为，但不能凭 manifest/chain next node 输出“execute loaded node”。只有当 `rb_status.current_node` 已经非空且等于本次 computed next node，且 frontmatter 可读时，才可输出同样的 loaded-node cue；否则输出明确 `continuation_diagnostic` 或省略 cue。这样保留旧 bundle/入口兼容，同时避免把未加载 node 伪装成已加载。
+当 `validateSourceGateStatusSync()` 返回 `covered: false`（现有 bootstrap compatibility）时，保留当前 status sync 行为，但不能凭 manifest/chain next node 输出“execute loaded node”。只有当 `rb_status.current_node` 已经非空且等于本次 computed target node，且 frontmatter 可读时，才可输出同样的 loaded-node cue；否则必须省略 `continuation`，并 MAY 输出短 `continuation_diagnostic`。这样保留旧 bundle/入口兼容，同时避免把未加载 node 伪装成已加载。
 
 ### 5. Work-unit claim 使用固定 post-claim cue
 
