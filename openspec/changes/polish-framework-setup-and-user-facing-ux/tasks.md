@@ -27,5 +27,5 @@
 
 - [ ] 4.1 验证 ACS-002、HIU-004、CDP-004、SWE-004、VEM-003：运行新增/修改的 setup、command-surface、HITL、silent、Final 和 version focused tests，至少覆盖 `tests/engine/command-contract-docs.test.mjs`、`tests/engine/static-regression.test.mjs`、`tests/engine/version-management.test.mjs` 以及本 change 修改到的 `tests/integration/md/` 文件，必须全部 PASS。
 - [ ] 4.2 验证 ACS-002、HIU-004、CDP-004、SWE-004：运行 `npm test` 全量回归，确认 Engine、gate、schema、transition、work-unit 与现有 command audience contract 无退化。
-- [ ] 4.3 治理 ACS-002、HIU-004、CDP-004、SWE-004：核对 delta 与实现标注只复用已登记 requirement ID 后，运行 `node openspec/governance/check-project-reqs.mjs`，必须达到 0 duplicate / 0 orphan / 0 unregistered / 0 reusedRetired。
-- [ ] 4.4 治理 ACS-002、HIU-004、CDP-004、SWE-004：运行 `node openspec/governance/check-project-specs.mjs`，必须达到 0 deltaHeaderInMain / 0 missingPurpose / 0 missingRequirements / 0 missingReqHeader。
+- [ ] 4.3 治理 ACS-002、HIU-004、CDP-004、SWE-004、VEM-002、VEM-003、VEM-004、RUE-001：核对 delta、tasks 与实现标注只复用已登记 requirement ID 后，运行 `node openspec/governance/check-project-reqs.mjs`，必须达到 0 duplicate / 0 orphan / 0 unregistered / 0 reusedRetired。
+- [ ] 4.4 治理 ACS-002、HIU-004、CDP-004、SWE-004、VEM-002、VEM-003、VEM-004、RUE-001：运行 `node openspec/governance/check-project-specs.mjs`，必须达到 0 deltaHeaderInMain / 0 missingPurpose / 0 missingRequirements / 0 missingReqHeader。

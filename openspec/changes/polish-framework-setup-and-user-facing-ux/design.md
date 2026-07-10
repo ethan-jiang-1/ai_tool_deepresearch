@@ -49,7 +49,7 @@
 
 `dry-submit` 只作为 work-unit submit 前的契约预检被提及；它不能验证网络、Bash、文件写入或宿主 approval policy。
 
-Apply 时如果写入具体 Claude Code 或 Codex 配置键名，必须基于当前官方文档或本仓库已提交配置核实；若无法稳定核实，文档应降级为能力类别与风险边界，不猜测键名。当前 explore 核实到的稳定事实是：Claude Code 有 allow/ask/deny permission rules、项目/本地 settings 层级和 bypass/auto 等高风险模式；Codex 有 project `.codex/config.toml` 层、`approval_policy` 与 `sandbox_mode`，且 full access 语义不是本 repo 当前 `on-request + danger-full-access` 配置能单独保证的。
+Apply 时如果写入具体 Claude Code 或 Codex 配置键名，必须基于当前官方文档或本仓库已提交配置核实；若无法稳定核实，文档应降级为能力类别与风险边界，不猜测键名。优先核实来源：Claude Code settings/permissions docs（`https://code.claude.com/docs/en/settings`、`https://code.claude.com/docs/en/permissions`）和 Codex config/sandbox/approvals docs（`https://developers.openai.com/codex/config-basic`、`https://developers.openai.com/codex/config-reference`、`https://developers.openai.com/codex/concepts/sandboxing`、`https://developers.openai.com/codex/agent-approvals-security`）。当前 explore 核实到的稳定事实是：Claude Code 有 allow/ask/deny permission rules、项目/本地 settings 层级和 bypass/auto 等高风险模式；Codex 有 project `.codex/config.toml` 层、`approval_policy` 与 `sandbox_mode`，且 full access 语义不是本 repo 当前 `on-request + danger-full-access` 配置能单独保证的。
 
 ### 3. 安装 plan 作为 baseline lock，不制造重复 diff
 
