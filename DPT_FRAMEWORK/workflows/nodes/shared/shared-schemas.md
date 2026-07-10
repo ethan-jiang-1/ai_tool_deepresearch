@@ -45,7 +45,7 @@ suggested_context: []
 - **Schema**：`QueueSchema`
 - **字段**：`queue_health`、`stop_authorization_state`、`active_window[]`、`refill_pool[]`、`delegated_in_flight{}`、`terminal_history[]`
 - **identity**：queue demand uses `queue_item_id`; delegated attempts use Engine-allocated `work_id` under `_work_units/`
-- **delegated completion**：delegated queue demand is completed only by `operate-work-unit submit`, not by queue maintenance commands
+- **delegated completion**：delegated queue demand is completed by `operate-work-unit submit` for claimed attempts, with explicit audited `operate-work-unit late-submit` as the only eligible `timed_out` recovery exception; never by queue maintenance commands
 - **位置**：`DPT_FRAMEWORK/schema/contracts/queue.mjs`
 
 ### Trace: `rb_trace.jsonl`

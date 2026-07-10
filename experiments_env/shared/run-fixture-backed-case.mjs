@@ -123,6 +123,10 @@ function writeJson(filePath, value) {
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+function readJson(filePath) {
+  return JSON.parse(readFileSync(filePath, 'utf-8'));
+}
+
 function appendTrace(bundleDir, event) {
   appendFileSync(path.join(bundleDir, 'rb_trace.jsonl'), `${JSON.stringify({
     ts: new Date().toISOString(),
@@ -2616,6 +2620,141 @@ function case153(opts) {
   const lateSubmit = runNodeLoose([OPERATE_WORK_UNIT, 'submit', failBundle, '--work-id', failFixture.workId, '--result', failFixture.resultPath]);
   const failTrace = readFileSync(path.join(failBundle, 'rb_trace.jsonl'), 'utf-8');
 
+  const auditedBundle = newBundle('case-153', 'wft_audited_late_submit', opts);
+  writeWave0Scaffold(auditedBundle, { planBasename: 'wft_audited_late_submit' });
+  const auditedProbe = claimTimeoutProbe(auditedBundle, 'audited-late', { prefix: 'case153' });
+  expireClaimedWorkUnit(auditedBundle, auditedProbe.workId);
+  const auditedTimedOut = closeWorkUnitViaCli(auditedBundle, {
+    command: 'timeout',
+    work_id: auditedProbe.workId,
+    reason: 'deadline-expired-before-result-arrived',
+  });
+  const auditedFixture = writeFixtureResultForWorkUnit(auditedBundle, {
+    work_id: auditedProbe.workId,
+    output_path: 'reference/00-shared-topic-a.md',
+    source_url: 'https://research-source.test/topic-a/audited-late',
+    source_slug: 'audited-late',
+    output_content: referenceContent({
+      source_url: 'https://research-source.test/topic-a/audited-late',
+      topic_slug: 'topic-a',
+      title: 'Audited Late Topic A Source',
+    }),
+    extra_output_files: [
+      sourceYamlExtra('topic-a', 'https://research-source.test/topic-a/audited-late', 'Audited Late Topic A Source'),
+    ],
+  });
+  const auditedNormalSubmit = runNodeLoose([
+    OPERATE_WORK_UNIT,
+    'submit',
+    auditedBundle,
+    '--work-id',
+    auditedProbe.workId,
+    '--result',
+    auditedFixture.resultPath,
+  ]);
+  const auditedLateSubmit = runNodeLoose([
+    OPERATE_WORK_UNIT,
+    'late-submit',
+    auditedBundle,
+    '--work-id',
+    auditedProbe.workId,
+    '--result',
+    auditedFixture.resultPath,
+    '--reason',
+    'late result arrived after timeout before retry submitted',
+  ]);
+  const auditedRows = readWorkUnitLedgerRows(auditedBundle);
+  const auditedQueue = readJson(path.join(auditedBundle, 'rb_queue.json'));
+  const auditedGate = runWave0Gate(auditedBundle, 'case-153-gate-audited-late.json');
+
+  const claimedRetryBundle = newBundle('case-153', 'wft_claimed_retry_cleanup', opts);
+  writeWave0Scaffold(claimedRetryBundle, { planBasename: 'wft_claimed_retry_cleanup' });
+  const claimedRetryProbe = claimTimeoutProbe(claimedRetryBundle, 'claimed-retry-cleanup', { prefix: 'case153' });
+  expireClaimedWorkUnit(claimedRetryBundle, claimedRetryProbe.workId);
+  const claimedRetryTimedOut = closeWorkUnitViaCli(claimedRetryBundle, {
+    command: 'timeout',
+    work_id: claimedRetryProbe.workId,
+    reason: 'deadline-expired-before-claimed-retry',
+  });
+  const claimedRetryClaim = claimWorkUnitsViaCli(claimedRetryBundle, { phase: 'wave0' });
+  const claimedRetryWorkId = claimedRetryClaim.claimed_work_ids[0];
+  const claimedRetryFixture = writeFixtureResultForWorkUnit(claimedRetryBundle, {
+    work_id: claimedRetryProbe.workId,
+    output_path: 'reference/00-shared-topic-a.md',
+    source_url: 'https://research-source.test/topic-a/claimed-retry-cleanup',
+    source_slug: 'claimed-retry-cleanup',
+    output_content: referenceContent({
+      source_url: 'https://research-source.test/topic-a/claimed-retry-cleanup',
+      topic_slug: 'topic-a',
+      title: 'Claimed Retry Cleanup Topic A Source',
+    }),
+    extra_output_files: [
+      sourceYamlExtra('topic-a', 'https://research-source.test/topic-a/claimed-retry-cleanup', 'Claimed Retry Cleanup Topic A Source'),
+    ],
+  });
+  const claimedRetryLateSubmit = runNodeLoose([
+    OPERATE_WORK_UNIT,
+    'late-submit',
+    claimedRetryBundle,
+    '--work-id',
+    claimedRetryProbe.workId,
+    '--result',
+    claimedRetryFixture.resultPath,
+    '--reason',
+    'late result supersedes unsubmitted claimed retry',
+  ]);
+  const claimedRetryIndex = loadWorkUnitIndex(claimedRetryBundle);
+  const claimedRetryQueue = readJson(path.join(claimedRetryBundle, 'rb_queue.json'));
+  const claimedRetryRows = readWorkUnitLedgerRows(claimedRetryBundle);
+
+  const replacementBundle = newBundle('case-153', 'wft_replacement_blocks_late', opts);
+  writeWave0Scaffold(replacementBundle, { planBasename: 'wft_replacement_blocks_late' });
+  const replacementProbe = claimTimeoutProbe(replacementBundle, 'replacement-blocks-late', { prefix: 'case153' });
+  expireClaimedWorkUnit(replacementBundle, replacementProbe.workId);
+  const replacementTimedOut = closeWorkUnitViaCli(replacementBundle, {
+    command: 'timeout',
+    work_id: replacementProbe.workId,
+    reason: 'deadline-expired-before-replacement',
+  });
+  const replacementClaim = claimWorkUnitsViaCli(replacementBundle, { phase: 'wave0' });
+  const replacementWorkId = replacementClaim.claimed_work_ids[0];
+  const replacementFixture = writeFixtureResultForWorkUnit(replacementBundle, {
+    work_id: replacementWorkId,
+    output_path: 'reference/00-shared-topic-a.md',
+    source_url: 'https://research-source.test/topic-a/replacement',
+    source_slug: 'replacement',
+    output_content: referenceContent({
+      source_url: 'https://research-source.test/topic-a/replacement',
+      topic_slug: 'topic-a',
+      title: 'Submitted Replacement Topic A Source',
+    }),
+    extra_output_files: [
+      sourceYamlExtra('topic-a', 'https://research-source.test/topic-a/replacement', 'Submitted Replacement Topic A Source'),
+    ],
+  });
+  const replacementSubmit = submitWorkUnitViaCli(replacementBundle, {
+    work_id: replacementWorkId,
+    resultPath: replacementFixture.resultPath,
+  });
+  const blockedTargetFixture = writeFixtureResultForWorkUnit(replacementBundle, {
+    work_id: replacementProbe.workId,
+    output_path: 'reference/case153-late-target-after-replacement.md',
+    source_url: 'https://research-source.test/topic-a/late-target-after-replacement',
+    source_slug: 'late-target-after-replacement',
+  });
+  const replacementLateSubmit = runNodeLoose([
+    OPERATE_WORK_UNIT,
+    'late-submit',
+    replacementBundle,
+    '--work-id',
+    replacementProbe.workId,
+    '--result',
+    blockedTargetFixture.resultPath,
+    '--reason',
+    'late result arrived after replacement submitted',
+  ]);
+  const replacementRows = readWorkUnitLedgerRows(replacementBundle);
+
   const timeoutBundle = newBundle('case-153', 'wft_timeout_retry', opts);
   writeWave0Scaffold(timeoutBundle, { planBasename: 'wft_timeout_retry' });
   const timeoutProbe = claimTimeoutProbe(timeoutBundle, 'timeout-retry', { prefix: 'case153' });
@@ -2698,6 +2837,49 @@ function case153(opts) {
       detail: JSON.stringify({ failed, late: lateSubmit.json }),
     },
     {
+      label: 'audited-late-submit-accepted-and-gate-covered',
+      passed: auditedTimedOut.ok === true &&
+        auditedTimedOut.retry_requeued === true &&
+        auditedNormalSubmit.status === 1 &&
+        auditedNormalSubmit.json?.status === 'timed_out' &&
+        auditedLateSubmit.status === 0 &&
+        auditedLateSubmit.json?.late_accept === true &&
+        auditedRows.length === 1 &&
+        auditedRows[0]?.late_accept === true &&
+        auditedRows[0]?.terminal_status_before_accept === 'timed_out' &&
+        auditedRows[0]?.superseded_retry_work_ids?.length === 0 &&
+        !(auditedQueue.active_window || []).some((item) => item.queue_item_id === auditedProbe.record.queue_item_id) &&
+        !(auditedQueue.refill_pool || []).some((item) => item.queue_item_id === auditedProbe.record.queue_item_id) &&
+        (auditedQueue.terminal_history || []).filter((entry) => entry.queue_item_id === auditedProbe.record.queue_item_id && entry.work_id === auditedProbe.workId && entry.terminal_status === 'done').length === 1 &&
+        auditedGate.status === 0 &&
+        auditedGate.json?.check?.passed === true,
+      detail: JSON.stringify({ normalSubmit: auditedNormalSubmit.json, lateSubmit: auditedLateSubmit.json, row: auditedRows[0], gate: auditedGate.json?.check }),
+    },
+    {
+      label: 'late-submit-abandons-claimed-retry',
+      passed: claimedRetryTimedOut.ok === true &&
+        claimedRetryTimedOut.retry_requeued === true &&
+        claimedRetryLateSubmit.status === 0 &&
+        claimedRetryLateSubmit.json?.late_accept === true &&
+        claimedRetryLateSubmit.json?.superseded_retry_work_ids?.includes(claimedRetryWorkId) &&
+        claimedRetryIndex.work_units?.[claimedRetryWorkId]?.status === 'abandoned' &&
+        claimedRetryIndex.work_units?.[claimedRetryWorkId]?.terminal_reason === 'superseded_by_late_accept' &&
+        !claimedRetryQueue.delegated_in_flight?.[claimedRetryProbe.record.queue_item_id] &&
+        claimedRetryRows.length === 1 &&
+        claimedRetryRows[0]?.work_id === claimedRetryProbe.workId,
+      detail: JSON.stringify({ retryWorkId: claimedRetryWorkId, lateSubmit: claimedRetryLateSubmit.json, retryRecord: claimedRetryIndex.work_units?.[claimedRetryWorkId] }),
+    },
+    {
+      label: 'submitted-replacement-blocks-late-submit',
+      passed: replacementTimedOut.ok === true &&
+        replacementSubmit.ok === true &&
+        replacementLateSubmit.status === 1 &&
+        replacementLateSubmit.json?.reason_code === 'submitted_replacement_conflict' &&
+        replacementRows.length === 1 &&
+        replacementRows[0]?.work_id === replacementWorkId,
+      detail: JSON.stringify({ replacementWorkId, replacementSubmit, lateSubmit: replacementLateSubmit.json, rows: replacementRows.map((row) => row.work_id) }),
+    },
+    {
       label: 'timeout-retry-new-work-id',
       passed: timedOut.ok === true && timedOut.retry_requeued === true && retryWorkId !== timeoutProbe.workId && retryRecord?.attempt_index === 2 && retryRecord?.batch_id === 'b000',
       detail: `${timeoutProbe.workId} -> ${retryWorkId}`,
@@ -2725,7 +2907,7 @@ function case153(opts) {
   ];
 
   for (const check of checks) recordCheck(invalidBundle, 'case-153', 'wave-fault-tolerance', check.passed, check.detail, { label: check.label });
-  const bundles = [invalidBundle, failBundle, timeoutBundle, abandonBundle, duplicateBundle, staleBundle, mixedBundle];
+  const bundles = [invalidBundle, failBundle, auditedBundle, claimedRetryBundle, replacementBundle, timeoutBundle, abandonBundle, duplicateBundle, staleBundle, mixedBundle];
   const verdict = writeVerdict(invalidBundle, 'case-153', checks, { extra: { bundle: invalidBundle, bundles } });
   if (opts.cleanupPass && verdict.ok) {
     for (const bundle of bundles) rmSync(bundle, { recursive: true, force: true });

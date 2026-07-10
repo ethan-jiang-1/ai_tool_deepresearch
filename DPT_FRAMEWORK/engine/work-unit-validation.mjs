@@ -383,12 +383,14 @@ function readQueueForSubmit(bundleDir, { sideEffects = true } = {}) {
   return queueStateFromFile(JSON.parse(readFileSync(file, 'utf-8')), { queueId: path.basename(bundleDir) });
 }
 
-export function validateQueueBindingForSubmit(bundleDir, record, manifest, { sideEffects = true } = {}) {
+export function validateQueueBindingForSubmit(bundleDir, record, manifest, { sideEffects = true, requireInFlight = true } = {}) {
   const queue = readQueueForSubmit(bundleDir, { sideEffects });
+  if (queueItemSnapshotHash(manifest.queue_item) !== record.queue_item_snapshot_hash) throw new Error(`manifest queue item snapshot hash is stale for ${record.work_id}`);
+  if (!requireInFlight) return queue;
+
   const inFlight = queue.delegated_in_flight?.[record.queue_item_id];
   if (!inFlight) throw new Error(`queue_item_id ${record.queue_item_id} is not delegated in flight`);
   if (inFlight.work_id !== record.work_id) throw new Error(`queue in-flight binding mismatch for ${record.queue_item_id}: ${inFlight.work_id}`);
   if (inFlight.queue_item_snapshot_hash !== record.queue_item_snapshot_hash) throw new Error(`queue snapshot hash mismatch for ${record.queue_item_id}`);
-  if (queueItemSnapshotHash(manifest.queue_item) !== record.queue_item_snapshot_hash) throw new Error(`manifest queue item snapshot hash is stale for ${record.work_id}`);
   return queue;
 }

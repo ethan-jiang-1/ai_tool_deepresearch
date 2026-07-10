@@ -170,7 +170,7 @@ function createLifecycleProjectionBundle(name) {
   const claim = claimWorkUnits(dir, { phase: 'wave0', count: 4 });
   const [claimedId, failedId, timedId, abandonedId] = claim.claimed_work_ids;
   closeWorkUnitAttempt(dir, { work_id: failedId, status: 'failed', reason: 'test failure' });
-  closeWorkUnitAttempt(dir, { work_id: timedId, status: 'timed_out', reason: 'test timeout' });
+  closeWorkUnitAttempt(dir, { work_id: timedId, status: 'timed_out', reason: 'test timeout', force: true });
   closeWorkUnitAttempt(dir, { work_id: abandonedId, status: 'abandoned', reason: 'test abandon' });
   submitWorkUnit(dir, { work_id: timedId, resultPath: join(dir, 'missing-result.json') });
   const retryClaim = claimWorkUnits(dir, { phase: 'wave0', count: 1 });

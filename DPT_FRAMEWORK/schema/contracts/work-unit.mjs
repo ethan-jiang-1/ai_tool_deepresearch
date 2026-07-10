@@ -242,8 +242,66 @@ export const WorkUnitLedgerRecordSchema = z.object({
   accepted_source_urls: WorkUnitResultSchema.shape.accepted_source_urls,
   cache_trails: WorkUnitResultSchema.shape.cache_trails,
   result_hash: z.string().min(1),
+  late_accept: z.literal(true).optional(),
+  late_accept_reason: z.string().trim().min(1).optional(),
+  terminal_status_before_accept: z.literal('timed_out').optional(),
+  superseded_retry_work_ids: z.array(z.string().regex(WORK_UNIT_ID_PATTERN)).optional(),
   ledger_record_hash: z.string().min(1),
-}).strict();
+}).strict().superRefine((data, ctx) => {
+  if (data.late_accept === true) {
+    if (!data.late_accept_reason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['late_accept_reason'],
+        message: 'late_accept_reason is required when late_accept is true',
+      });
+    }
+    if (data.terminal_status_before_accept !== 'timed_out') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['terminal_status_before_accept'],
+        message: 'terminal_status_before_accept must be timed_out when late_accept is true',
+      });
+    }
+    if (!Array.isArray(data.superseded_retry_work_ids)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['superseded_retry_work_ids'],
+        message: 'superseded_retry_work_ids is required when late_accept is true',
+      });
+    } else {
+      const seen = new Set();
+      data.superseded_retry_work_ids.forEach((retryWorkId, index) => {
+        if (retryWorkId === data.work_id) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['superseded_retry_work_ids', index],
+            message: 'superseded_retry_work_ids must not include the accepted work_id',
+          });
+        }
+        if (seen.has(retryWorkId)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['superseded_retry_work_ids', index],
+            message: 'superseded_retry_work_ids must be unique',
+          });
+        }
+        seen.add(retryWorkId);
+      });
+    }
+    return;
+  }
+
+  for (const field of ['late_accept_reason', 'terminal_status_before_accept', 'superseded_retry_work_ids']) {
+    if (Object.prototype.hasOwnProperty.call(data, field)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [field],
+        message: `${field} is only allowed when late_accept is true`,
+      });
+    }
+  }
+});
 
 export const WorkUnitTimeoutRecommendedAction = z.enum(['submit', 'repair', 'wait', 'timeout', 'inspect', 'block']);
 

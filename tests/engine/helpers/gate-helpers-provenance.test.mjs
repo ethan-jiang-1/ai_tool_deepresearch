@@ -4,6 +4,18 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
+  createQueue,
+  enqueue,
+  makeItem,
+  saveQueue,
+} from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import {
+  claimWorkUnits,
+  closeWorkUnitAttempt,
+  lateSubmitWorkUnit,
+  loadWorkUnitIndex,
+} from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import {
   checkReferenceIndexCoverage,
   classifyReferenceAuthority,
 } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers-checks.mjs';
@@ -31,6 +43,55 @@ function tempDir(prefix) {
   const dir = tempWorkUnitBundle(prefix);
   dirs.push(dir);
   return dir;
+}
+
+function delegatedWave0Item(id = 'queue-a') {
+  return makeItem({
+    queue_item_id: id,
+    title: `Delegated ${id}`,
+    targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
+    kind: 'wave0_source_intake',
+    producer_rule: 'source_intake_fan_in',
+    payload: { topic_slug: id },
+  });
+}
+
+function seedWave0Queue(dir) {
+  let queue = createQueue('wpg-late');
+  queue = enqueue(queue, delegatedWave0Item());
+  saveQueue(dir, queue);
+}
+
+function writeLateSubmitFixture(dir, record) {
+  const outputPath = `reference/${record.work_id}.md`;
+  mkdirSync(join(dir, 'reference'), { recursive: true });
+  writeFileSync(join(dir, outputPath), '# Source\n\nLate accepted source.\n');
+  const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
+  mkdirSync(join(dir, cacheTrail), { recursive: true });
+  writeFileSync(join(dir, cacheTrail, 'websearch.json'), '[]\n');
+  writeFileSync(join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nFetched content capture for https://example.com/source.\n');
+  writeFileSync(join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/source"}\n');
+  writeFileSync(join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
+    event: 'work_done',
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    ts: '2026-07-10T00:00:00.000Z',
+  })}\n`);
+  const resultPath = join(dir, '_tmp', `${record.work_id}.result.json`);
+  mkdirSync(join(dir, '_tmp'), { recursive: true });
+  writeFileSync(resultPath, `${JSON.stringify({
+    schema_version: 'work-unit.result.v1',
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    summary: 'late done',
+    output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }],
+    cache_trails: [cacheTrail],
+  }, null, 2)}\n`);
+  return resultPath;
 }
 
 function submitWave1SourceBacking(dir, {
@@ -92,6 +153,37 @@ describe('work-unit provenance gate helpers', () => {
     assert.equal(result.passed, true);
     assert.equal(result.records.length, 1);
     assert.match(result.records[0].work_id, /^wu-w0-b000-src-i0001$/);
+  });
+
+  it('counts audited late-accepted rows as submitted coverage after normal provenance checks pass', () => {
+    const dir = tempDir('wpg-late-coverage-');
+    seedWave0Queue(dir);
+    claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+    const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+    closeWorkUnitAttempt(dir, {
+      work_id: record.work_id,
+      status: 'timed_out',
+      reason: 'deadline-expired',
+      nowMs: Date.parse(record.deadline_at) + 1,
+    });
+    const resultPath = writeLateSubmitFixture(dir, record);
+    const accepted = lateSubmitWorkUnit(dir, {
+      work_id: record.work_id,
+      resultPath,
+      reason: 'late result arrived before retry submitted',
+    });
+    assert.equal(accepted.ok, true);
+
+    const result = checkWorkUnitLedgerExists(dir, {
+      wave: 'wave0',
+      kind: 'wave0_source_intake',
+      role: 'reference',
+    });
+
+    assert.equal(result.passed, true, result.inspect.join('; '));
+    assert.equal(result.records.length, 1);
+    assert.equal(result.records[0].late_accept, true);
+    assert.equal(result.records[0].terminal_status_before_accept, 'timed_out');
   });
 
   it('rejects work-unit-looking hand-written rows without submit/index fingerprints', () => {

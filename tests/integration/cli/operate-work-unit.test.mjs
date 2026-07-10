@@ -343,6 +343,44 @@ describe('operate-work-unit inspect', () => {
     }
   });
 
+  it('late-submits a timed-out work unit through the CLI', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
+      const workId = JSON.parse(claimStdout).claimed_work_ids[0];
+      const agedRecord = expireClaimedWorkUnit(dir, workId);
+      const timeoutStdout = execFileSync(process.execPath, [CLI, 'timeout', dir, '--work-id', workId, '--reason', 'deadline-expired'], { encoding: 'utf-8' });
+      assert.equal(JSON.parse(timeoutStdout).status, 'timed_out');
+
+      const resultPath = writeValidSubmitFiles(dir, agedRecord);
+      const missingReason = spawnSync(process.execPath, [CLI, 'late-submit', dir, '--work-id', workId, '--result', resultPath], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(missingReason.status, 1);
+      assert.equal(JSON.parse(missingReason.stdout).reason_code, 'late_accept_reason_required');
+
+      const late = spawnSync(process.execPath, [CLI, 'late-submit', dir, '--work-id', workId, '--result', resultPath, '--reason', 'late result arrived'], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(late.status, 0, late.stderr || late.stdout);
+      const out = JSON.parse(late.stdout);
+      assert.equal(out.ok, true);
+      assert.equal(out.late_accept, true);
+      assert.equal(out.status, 'submitted');
+      assert.equal(out.queue.delegated_in_flight[agedRecord.queue_item_id], undefined);
+      assert.equal(out.queue.terminal_history.length, 1);
+      const rows = readFileSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER), 'utf-8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].late_accept, true);
+      assert.equal(rows[0].terminal_status_before_accept, 'timed_out');
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('timeout-preflight CLI emits structured eligible and guard-refusal JSON', () => {
     const eligibleDir = tempBundle();
     const refusedDir = tempBundle();

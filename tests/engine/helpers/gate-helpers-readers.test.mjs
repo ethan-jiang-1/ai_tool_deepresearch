@@ -19,6 +19,22 @@ import {
   cleanupWorkUnitBundle,
   tempWorkUnitBundle,
 } from '../work-unit-test-helpers.mjs';
+import {
+  createQueue,
+  enqueue,
+  makeItem,
+  saveQueue,
+} from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import {
+  claimWorkUnits,
+  closeWorkUnitAttempt,
+  computeWorkUnitLedgerRecordHash,
+  lateSubmitWorkUnit,
+  loadWorkUnitIndex,
+  readWorkUnitLedgerRows,
+  saveWorkUnitIndex,
+  submitWorkUnit,
+} from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-gate-helpers-readers-tmp');
@@ -28,6 +44,61 @@ after(() => {
 });
 
 const CALLER = 'testFn';
+
+function readerQueueItem(id = 'queue-a') {
+  return makeItem({
+    queue_item_id: id,
+    title: `Delegated ${id}`,
+    targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
+    kind: 'wave0_source_intake',
+    producer_rule: 'source_intake_fan_in',
+    payload: { topic_slug: id },
+  });
+}
+
+function seedReaderQueue(dir, id = 'queue-a') {
+  let queue = createQueue('gate-reader');
+  queue = enqueue(queue, readerQueueItem(id));
+  saveQueue(dir, queue);
+}
+
+function afterDeadline(record) {
+  return Date.parse(record.deadline_at) + 1;
+}
+
+function writeReaderSubmitFiles(dir, record) {
+  const outputPath = `reference/${record.work_id}.md`;
+  mkdirSync(join(dir, 'reference'), { recursive: true });
+  writeFileSync(join(dir, outputPath), '# Source\n\nGate reader fixture source.\n');
+
+  const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
+  mkdirSync(join(dir, cacheTrail), { recursive: true });
+  writeFileSync(join(dir, cacheTrail, 'websearch.json'), '[]\n');
+  writeFileSync(join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nFetched content capture for https://example.com/source.\n');
+  writeFileSync(join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/source"}\n');
+  writeFileSync(join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
+    event: 'work_done',
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    ts: '2026-07-10T00:00:00.000Z',
+  })}\n`);
+
+  const resultPath = join(dir, '_tmp', `${record.work_id}.result.json`);
+  mkdirSync(dirname(resultPath), { recursive: true });
+  writeFileSync(resultPath, `${JSON.stringify({
+    schema_version: 'work-unit.result.v1',
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    kind: record.kind,
+    receipt_nonce: record.receipt_nonce,
+    summary: 'done',
+    output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }],
+    cache_trails: [cacheTrail],
+  }, null, 2)}\n`);
+  return resultPath;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // validateState
@@ -212,6 +283,128 @@ describe('readOutputDeclarations', () => {
       assert.throws(
         () => readSubmittedWorkUnitDeclarations(dir),
         /ledger_record_hash mismatch/,
+      );
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
+  });
+
+  it('reads audited late-submit rows and hashes audit fields', () => {
+    const dir = tempWorkUnitBundle('gh-reader-late-');
+    try {
+      seedReaderQueue(dir);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      closeWorkUnitAttempt(dir, {
+        work_id: record.work_id,
+        status: 'timed_out',
+        reason: 'deadline-expired',
+        nowMs: afterDeadline(record),
+      });
+      const resultPath = writeReaderSubmitFiles(dir, record);
+      const accepted = lateSubmitWorkUnit(dir, {
+        work_id: record.work_id,
+        resultPath,
+        reason: 'late result arrived',
+      });
+      assert.equal(accepted.ok, true);
+
+      const rows = readSubmittedWorkUnitDeclarations(dir);
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].late_accept, true);
+      assert.equal(rows[0].terminal_status_before_accept, 'timed_out');
+
+      const ledgerPath = join(dir, 'rb_output_declarations.jsonl');
+      const row = JSON.parse(readFileSync(ledgerPath, 'utf-8').trim());
+      row.late_accept_reason = 'changed audit reason';
+      writeFileSync(ledgerPath, `${JSON.stringify(row)}\n`);
+      assert.throws(
+        () => readSubmittedWorkUnitDeclarations(dir),
+        /ledger_record_hash mismatch/,
+      );
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
+  });
+
+  it('fails closed for half-audit normal rows', () => {
+    const dir = tempWorkUnitBundle('gh-reader-half-audit-');
+    try {
+      claimAndSubmitWorkUnit(dir);
+      const ledgerPath = join(dir, 'rb_output_declarations.jsonl');
+      const row = JSON.parse(readFileSync(ledgerPath, 'utf-8').trim());
+      row.late_accept_reason = 'not allowed without late_accept true';
+      row.ledger_record_hash = computeWorkUnitLedgerRecordHash(row);
+      writeFileSync(ledgerPath, `${JSON.stringify(row)}\n`);
+
+      assert.throws(
+        () => readSubmittedWorkUnitDeclarations(dir),
+        /work-unit declaration schema invalid/,
+      );
+    } finally {
+      cleanupWorkUnitBundle(dir);
+    }
+  });
+
+  it('fails closed when a late-accepted row conflicts with a submitted replacement', () => {
+    const dir = tempWorkUnitBundle('gh-reader-late-conflict-');
+    try {
+      seedReaderQueue(dir);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const first = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      closeWorkUnitAttempt(dir, {
+        work_id: first.work_id,
+        status: 'timed_out',
+        reason: 'deadline-expired',
+        nowMs: afterDeadline(first),
+      });
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const retry = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0002'];
+      const retryResult = writeReaderSubmitFiles(dir, retry);
+      const replacement = submitWorkUnit(dir, { work_id: retry.work_id, resultPath: retryResult });
+      assert.equal(replacement.ok, true);
+
+      let index = loadWorkUnitIndex(dir);
+      const target = index.work_units[first.work_id];
+      const forgedLateRowBase = {
+        declared_at: '2026-07-10T00:00:00.000Z',
+        work_id: target.work_id,
+        queue_item_id: target.queue_item_id,
+        wave: target.wave,
+        kind: target.kind,
+        producer_rule: target.producer_rule,
+        creation_reason: target.creation_reason,
+        work_unit_ref: target.paths.work_unit_dir,
+        result_ref: target.paths.result_ref,
+        runtime_receipt_ref: target.paths.runtime_receipt_ref,
+        receipt_nonce: target.receipt_nonce,
+        output_files: [],
+        source_claims: [],
+        accepted_source_urls: [],
+        cache_trails: [],
+        result_hash: 'forged-target-result-hash',
+        late_accept: true,
+        late_accept_reason: 'forged conflict row',
+        terminal_status_before_accept: 'timed_out',
+        superseded_retry_work_ids: [],
+      };
+      const forgedLateRow = {
+        ...forgedLateRowBase,
+        ledger_record_hash: computeWorkUnitLedgerRecordHash(forgedLateRowBase),
+      };
+      target.status = 'submitted';
+      target.result_hash = forgedLateRow.result_hash;
+      target.ledger_record_hash = forgedLateRow.ledger_record_hash;
+      index.work_units[target.work_id] = target;
+      saveWorkUnitIndex(dir, index);
+      writeFileSync(join(dir, 'rb_output_declarations.jsonl'), [
+        ...readWorkUnitLedgerRows(dir).map((row) => JSON.stringify(row)),
+        JSON.stringify(forgedLateRow),
+      ].join('\n') + '\n');
+
+      assert.throws(
+        () => readSubmittedWorkUnitDeclarations(dir),
+        /late-accept conflict/,
       );
     } finally {
       cleanupWorkUnitBundle(dir);

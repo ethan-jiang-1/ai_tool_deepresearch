@@ -28,6 +28,7 @@ The surviving concept is the **Sub-agent actor**: a bounded Agent instance that 
 | Work-unit envelope | Bounded task, manifest, beacon, result schema, status, runtime receipt, optional runtime refs. |
 | Sub-agent actor | Performs the bounded task and writes only the files named by the work-unit task/result contract. |
 | `operate-work-unit submit` | Deterministic submit boundary: validates result, receipt, output files, cache trails, queue binding, hashes, and ledger append. |
+| `operate-work-unit late-submit` | Explicit audited recovery boundary for eligible `timed_out` attempts only; it validates the original work-unit identity and refuses submitted replacements. |
 | `rb_output_declarations.jsonl` | Production delegated submission ledger. Gates use submitted work-unit rows, not filesystem presence. |
 
 Files under `_work_units/waveN/{work_id}/` are runtime/check surfaces. They are necessary for inspection, but they do not satisfy gate coverage by themselves. Gate coverage comes from the submitted ledger row written by Engine submit.
@@ -65,11 +66,13 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase waveN --coun
 4. For each returned `prompt_refs[]`, open the `task_ref`, `beacon_ref`, and `result_schema_ref`.
 5. Spawn one native Sub-agent per returned `work_id`. Each prompt includes the work-unit identity and output/cache contract.
 6. Actively poll runtime readiness with `operate-work-unit inspect <bundle>` or direct bundle-file inspection. Check result, receipt, output, cache, status, and deadline signals for every in-flight attempt.
-7. When a work unit is ready, submit promptly:
+7. When a claimed work unit is ready, submit promptly:
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
 ```
+
+Normal `submit` is intentionally fail-closed for terminal attempts. If a `timed_out` target later produces a valid result, do not retry normal submit and do not rewrite it into a retry identity; use the explicit audited recovery command in §7 only when no replacement has submitted.
 
 8. If submit rejects, repair the same claimed attempt when possible. For expired or stale claimed attempts, run progress-aware timeout preflight before terminal timeout:
 
@@ -82,7 +85,7 @@ Parse structured stdout even when `timeout-preflight` exits non-zero. Follow the
 10. After successful submit, perform any Phase-owned projection materialization required by the phase, such as Wave1 topic references or existing-backed Wave2 `00-cross` references. These projections must cite submitted backing; they are not delegated evidence authority by themselves.
 11. Continue in this order: fill demand, reconstruct in-flight, claim batch, spawn, poll, submit, repair or timeout-preflight, terminalize only when the selected branch allows it, materialize projections, then gate only after queue demand and delegated in-flight work are both drained.
 
-Queue completion commands are for non-delegated queue maintenance/completion only. Delegated success is `operate-work-unit submit`.
+Queue completion commands are for non-delegated queue maintenance/completion only. Delegated success is normal `operate-work-unit submit` for claimed attempts, or explicit audited `operate-work-unit late-submit` for the narrow eligible `timed_out` recovery path.
 
 ## 4. Sub-Agent Rules
 
@@ -144,12 +147,13 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-i
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs fail <bundle> --work-id <id> --reason "<reason>"
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason "<reason>"
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason "<reason>" --force
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs late-submit <bundle> --work-id <timed_out_id> --result <result.json> --reason "<reason>"
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs abandon <bundle> --work-id <id> --reason "<reason>"
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch <bundle> --phase waveN --reason "<reason>"
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>
 ```
 
-Timeout retry allocates a new `work_id` for the same queue demand. Late submits against terminal attempts are rejected and logged. Force timeout is an audited escape hatch for exceptional operator decisions after preflight, not a routine response to progress, repairable candidates, or invalid binding.
+Timeout retry allocates a new `work_id` for the same queue demand. Normal late `submit` against terminal attempts is rejected and logged. Explicit `late-submit` may recover only an eligible command-targeted `timed_out` attempt with a non-empty reason, normal submit-valid result/receipt/output/cache/source surfaces, and no submitted replacement. Accepted `late-submit` writes an audited submitted ledger row and removes queued retry demand or abandons an unsubmitted claimed retry. It never recovers `failed` or `abandoned` attempts and never rewrites old output into a retry work-unit identity. Force timeout is an audited escape hatch for exceptional operator decisions after preflight, not a routine response to progress, repairable candidates, or invalid binding.
 
 ## 8. Non-Work-Unit Artifacts
 

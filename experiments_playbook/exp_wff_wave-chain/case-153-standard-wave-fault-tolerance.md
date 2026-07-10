@@ -3,14 +3,14 @@ schema: command-experiment/v1
 experiment: wff-wave-chain
 case: case-153-standard-wave-fault-tolerance
 weight: light
-case_goal: "Prove work-unit fault tolerance across invalid submit, fail, timeout, abandon, duplicate submit, stale binding, late submit rejection, and mixed provenance gate rejection."
+case_goal: "Prove work-unit fault tolerance across invalid submit, fail, timeout, audited late-submit recovery, retry cleanup, replacement rejection, abandon, duplicate submit, stale binding, and mixed provenance gate rejection."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-153_wft_*
 trace: dpt_disp_case-153_wft_*/rb_trace.jsonl
 verdict: trace-jsonl
-req: RWE-001, RWE-007, RWE-008, RWE-009, RWE-010
+req: RWE-001, RWE-007, RWE-008, RWE-009, RWE-010, RWE-012
 ---
 
 ## Execution Contract
@@ -22,7 +22,7 @@ Fixture-backed Engine fault-tolerance case. Each scenario uses a real disposable
 | Dimension | Statement |
 | --- | --- |
 | Runtime context | Multiple real disposable bundles, one per fault family |
-| Framework path | Real `operate-work-unit claim/submit/fail/timeout/abandon`, real Wave1 gate for mixed provenance |
+| Framework path | Real `operate-work-unit claim/submit/late-submit/fail/timeout/abandon`, real Wave0 gate for audited late-submit coverage, real Wave1 gate for mixed provenance |
 | Fixture input | Controlled output/result/cache files written after claim |
 | Agent actor | None; this proves Engine boundary behavior |
 | External calls | None |
@@ -34,13 +34,16 @@ Fixture-backed Engine fault-tolerance case. Each scenario uses a real disposable
 ## Expected Runtime Path
 
 1. Invalid submit bundle: missing receipt and invalid result reject non-terminally and append no ledger rows.
-2. Fail/late-submit bundle: explicit fail closes the attempt; late submit rejects and logs `work_unit_late_submit_rejected`.
-3. Timeout bundle: timeout requeues the same demand; retry claim allocates a new same-batch `work_id`.
-4. Abandon bundle: abandon closes idempotently without retry; mismatched terminal repeat rejects.
-5. Duplicate bundle: same-content duplicate submit is idempotent; changed duplicate content rejects with one ledger row preserved.
-6. Stale binding bundle: stale manifest/snapshot submit rejects non-terminally with no ledger append.
-7. Mixed provenance bundle: submitted Wave1 topic plus direct Wave1 artifact cannot pass the Wave1 gate.
-8. Record one trace-backed verdict and clean up all bundles only on PASS.
+2. Fail/normal-late-submit bundle: explicit fail closes the attempt; normal `submit` after terminal fail rejects and logs `work_unit_late_submit_rejected`.
+3. Audited late-submit bundle: timed-out target first rejects normal `submit`, then explicit `late-submit` accepts, removes queued retry demand, writes an audited row, and passes Wave0 gate coverage from that row.
+4. Claimed retry cleanup bundle: accepted `late-submit` abandons an unsubmitted claimed retry with `superseded_by_late_accept`.
+5. Replacement submitted bundle: a submitted retry/replacement blocks `late-submit` for the original timed-out target.
+6. Timeout bundle: timeout requeues the same demand; retry claim allocates a new same-batch `work_id`.
+7. Abandon bundle: abandon closes idempotently without retry; mismatched terminal repeat rejects.
+8. Duplicate bundle: same-content duplicate submit is idempotent; changed duplicate content rejects with one ledger row preserved.
+9. Stale binding bundle: stale manifest/snapshot submit rejects non-terminally with no ledger append.
+10. Mixed provenance bundle: submitted Wave1 topic plus direct Wave1 artifact cannot pass the Wave1 gate.
+11. Record one trace-backed verdict and clean up all bundles only on PASS.
 
 ## Step 1: [MAIN/SHELL] Invalid Submit Rejections
 
@@ -112,7 +115,152 @@ process.exit(JSON.parse(failed.stdout).status === 'failed' && JSON.parse(late.st
 JS
 ```
 
-## Step 3: [MAIN/SHELL] Timeout Retry Allocates New Same-Batch Work ID
+## Step 3: [MAIN/SHELL] Audited Late Submit Accepts Timed-Out Target
+
+```bash
+B_AUDITED=$(node experiments_env/shared/new-disposable-bundle.mjs wft_audited_late_submit --case case-153 --force)
+node --input-type=module - "$B_AUDITED" <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import {
+  enqueueWorkUnitTask,
+  expireClaimedWorkUnit,
+  queueItemForWorkUnit,
+  readWorkUnitLedgerRows,
+  sourceYamlExtra,
+  writeFixtureResultForWorkUnit,
+  writeWave0Scaffold
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const bundle = process.argv[2];
+writeWave0Scaffold(bundle, { planBasename: 'wft_audited_late_submit' });
+enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ queue_item_id: 'case153-audited-late', topic_slug: 'topic-a' }), { fileName: 'audited-late.json' });
+const claim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const workId = claim.claimed_work_ids[0];
+expireClaimedWorkUnit(bundle, workId);
+const timedOut = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'timeout', bundle, '--work-id', workId, '--reason', 'deadline-expired-before-result-arrived'], { encoding: 'utf8' }).stdout);
+const fixture = writeFixtureResultForWorkUnit(bundle, {
+  work_id: workId,
+  output_path: 'reference/00-shared-topic-a.md',
+  source_url: 'https://research-source.test/topic-a/audited-late',
+  source_slug: 'audited-late',
+  extra_output_files: [
+    sourceYamlExtra('topic-a', 'https://research-source.test/topic-a/audited-late', 'Audited Late Topic A Source')
+  ]
+});
+const normal = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'submit', bundle, '--work-id', workId, '--result', fixture.resultPath], { encoding: 'utf8' });
+const late = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'late-submit', bundle, '--work-id', workId, '--result', fixture.resultPath, '--reason', 'late result arrived after timeout before retry submitted'], { encoding: 'utf8' });
+const gate = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs', '--bundle', bundle, '--current-node', 'phases/phase-wave0.md'], { encoding: 'utf8' });
+writeFileSync(`${bundle}/case-153-gate-audited-late.json`, gate.stdout);
+const rows = readWorkUnitLedgerRows(bundle);
+const queue = JSON.parse(readFileSync(`${bundle}/rb_queue.json`, 'utf8'));
+const out = { timedOut, normal: JSON.parse(normal.stdout), late: JSON.parse(late.stdout), rows, queue, gate: JSON.parse(gate.stdout) };
+writeFileSync(`${bundle}/case-153-audited-late.json`, `${JSON.stringify(out, null, 2)}\n`);
+console.log(JSON.stringify({ normalStatus: normal.status, lateStatus: late.status, row: rows[0], gateStatus: gate.status, gatePassed: out.gate.check?.passed }, null, 2));
+process.exit(timedOut.retry_requeued === true && normal.status === 1 && late.status === 0 && out.late.late_accept === true && rows.length === 1 && rows[0].late_accept === true && rows[0].terminal_status_before_accept === 'timed_out' && gate.status === 0 && out.gate.check?.passed === true && !(queue.active_window || []).some((item) => item.queue_item_id === fixture.record.queue_item_id) ? 0 : 1);
+JS
+```
+
+## Step 4: [MAIN/SHELL] Late Submit Abandons Claimed Retry
+
+```bash
+B_CLAIMED_RETRY=$(node experiments_env/shared/new-disposable-bundle.mjs wft_claimed_retry_cleanup --case case-153 --force)
+node --input-type=module - "$B_CLAIMED_RETRY" <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import {
+  enqueueWorkUnitTask,
+  expireClaimedWorkUnit,
+  queueItemForWorkUnit,
+  readWorkUnitLedgerRows,
+  sourceYamlExtra,
+  writeFixtureResultForWorkUnit,
+  writeWave0Scaffold
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
+
+const bundle = process.argv[2];
+writeWave0Scaffold(bundle, { planBasename: 'wft_claimed_retry_cleanup' });
+enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ queue_item_id: 'case153-claimed-retry-cleanup', topic_slug: 'topic-a' }), { fileName: 'claimed-retry-cleanup.json' });
+const firstClaim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const targetWorkId = firstClaim.claimed_work_ids[0];
+expireClaimedWorkUnit(bundle, targetWorkId);
+const timedOut = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'timeout', bundle, '--work-id', targetWorkId, '--reason', 'deadline-expired-before-claimed-retry'], { encoding: 'utf8' }).stdout);
+const retryClaim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const retryWorkId = retryClaim.claimed_work_ids[0];
+const fixture = writeFixtureResultForWorkUnit(bundle, {
+  work_id: targetWorkId,
+  output_path: 'reference/00-shared-topic-a.md',
+  source_url: 'https://research-source.test/topic-a/claimed-retry-cleanup',
+  source_slug: 'claimed-retry-cleanup',
+  extra_output_files: [
+    sourceYamlExtra('topic-a', 'https://research-source.test/topic-a/claimed-retry-cleanup', 'Claimed Retry Cleanup Topic A Source')
+  ]
+});
+const late = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'late-submit', bundle, '--work-id', targetWorkId, '--result', fixture.resultPath, '--reason', 'late result supersedes unsubmitted claimed retry'], { encoding: 'utf8' }).stdout);
+const index = loadWorkUnitIndex(bundle);
+const queue = JSON.parse(readFileSync(`${bundle}/rb_queue.json`, 'utf8'));
+const rows = readWorkUnitLedgerRows(bundle);
+const out = { timedOut, retryWorkId, late, retryRecord: index.work_units[retryWorkId], queue, rows };
+writeFileSync(`${bundle}/case-153-claimed-retry-cleanup.json`, `${JSON.stringify(out, null, 2)}\n`);
+console.log(JSON.stringify({ late, retryRecord: index.work_units[retryWorkId], rows: rows.length }, null, 2));
+process.exit(timedOut.retry_requeued === true && late.late_accept === true && late.superseded_retry_work_ids.includes(retryWorkId) && index.work_units[retryWorkId].status === 'abandoned' && index.work_units[retryWorkId].terminal_reason === 'superseded_by_late_accept' && !queue.delegated_in_flight?.[fixture.record.queue_item_id] && rows.length === 1 && rows[0].work_id === targetWorkId ? 0 : 1);
+JS
+```
+
+## Step 5: [MAIN/SHELL] Submitted Replacement Blocks Late Submit
+
+```bash
+B_REPLACEMENT=$(node experiments_env/shared/new-disposable-bundle.mjs wft_replacement_blocks_late --case case-153 --force)
+node --input-type=module - "$B_REPLACEMENT" <<'JS'
+import { writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import {
+  enqueueWorkUnitTask,
+  expireClaimedWorkUnit,
+  queueItemForWorkUnit,
+  readWorkUnitLedgerRows,
+  sourceYamlExtra,
+  submitWorkUnitViaCli,
+  writeFixtureResultForWorkUnit,
+  writeWave0Scaffold
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const bundle = process.argv[2];
+writeWave0Scaffold(bundle, { planBasename: 'wft_replacement_blocks_late' });
+enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ queue_item_id: 'case153-replacement-blocks-late', topic_slug: 'topic-a' }), { fileName: 'replacement-blocks-late.json' });
+const firstClaim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const targetWorkId = firstClaim.claimed_work_ids[0];
+expireClaimedWorkUnit(bundle, targetWorkId);
+const timedOut = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'timeout', bundle, '--work-id', targetWorkId, '--reason', 'deadline-expired-before-replacement'], { encoding: 'utf8' }).stdout);
+const retryClaim = JSON.parse(spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'claim', bundle, '--phase', 'wave0'], { encoding: 'utf8' }).stdout);
+const replacementWorkId = retryClaim.claimed_work_ids[0];
+const replacementFixture = writeFixtureResultForWorkUnit(bundle, {
+  work_id: replacementWorkId,
+  output_path: 'reference/00-shared-topic-a.md',
+  source_url: 'https://research-source.test/topic-a/replacement',
+  source_slug: 'replacement',
+  extra_output_files: [
+    sourceYamlExtra('topic-a', 'https://research-source.test/topic-a/replacement', 'Submitted Replacement Topic A Source')
+  ]
+});
+const replacementSubmit = submitWorkUnitViaCli(bundle, { work_id: replacementWorkId, resultPath: replacementFixture.resultPath });
+const lateTargetFixture = writeFixtureResultForWorkUnit(bundle, {
+  work_id: targetWorkId,
+  output_path: 'reference/case153-late-target-after-replacement.md',
+  source_url: 'https://research-source.test/topic-a/late-target-after-replacement',
+  source_slug: 'late-target-after-replacement'
+});
+const late = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/operate-work-unit.mjs', 'late-submit', bundle, '--work-id', targetWorkId, '--result', lateTargetFixture.resultPath, '--reason', 'late result arrived after replacement submitted'], { encoding: 'utf8' });
+const rows = readWorkUnitLedgerRows(bundle);
+const out = { timedOut, replacementWorkId, replacementSubmit, late: JSON.parse(late.stdout), rows };
+writeFileSync(`${bundle}/case-153-replacement-blocks-late.json`, `${JSON.stringify(out, null, 2)}\n`);
+console.log(JSON.stringify({ replacementSubmit, late: JSON.parse(late.stdout), rows: rows.map((row) => row.work_id) }, null, 2));
+process.exit(timedOut.retry_requeued === true && replacementSubmit.ok === true && late.status === 1 && JSON.parse(late.stdout).reason_code === 'submitted_replacement_conflict' && rows.length === 1 && rows[0].work_id === replacementWorkId ? 0 : 1);
+JS
+```
+
+## Step 6: [MAIN/SHELL] Timeout Retry Allocates New Same-Batch Work ID
 
 ```bash
 B_TIMEOUT=$(node experiments_env/shared/new-disposable-bundle.mjs wft_timeout_retry --case case-153 --force)
@@ -139,7 +287,7 @@ process.exit(timedOut.retry_requeued === true && retryWorkId !== firstWorkId && 
 JS
 ```
 
-## Step 4: [MAIN/SHELL] Abandon Is Idempotent And Mismatched Terminal Repeat Rejects
+## Step 7: [MAIN/SHELL] Abandon Is Idempotent And Mismatched Terminal Repeat Rejects
 
 ```bash
 B_ABANDON=$(node experiments_env/shared/new-disposable-bundle.mjs wft_abandon --case case-153 --force)
@@ -161,7 +309,7 @@ process.exit(abandoned.status === 'abandoned' && duplicate.duplicate === true &&
 JS
 ```
 
-## Step 5: [MAIN/SHELL] Duplicate Submit Idempotency And Content Mismatch
+## Step 8: [MAIN/SHELL] Duplicate Submit Idempotency And Content Mismatch
 
 ```bash
 B_DUP=$(node experiments_env/shared/new-disposable-bundle.mjs wft_duplicate_submit --case case-153 --force)
@@ -194,7 +342,7 @@ process.exit(first.ok === true && duplicate.duplicate === true && mismatch.reaso
 JS
 ```
 
-## Step 6: [MAIN/SHELL] Stale Binding Rejects Non-Terminally
+## Step 9: [MAIN/SHELL] Stale Binding Rejects Non-Terminally
 
 ```bash
 B_STALE=$(node experiments_env/shared/new-disposable-bundle.mjs wft_stale_binding --case case-153 --force)
@@ -226,7 +374,7 @@ process.exit(submit.last_submit_rejection?.reason_code === 'stale_snapshot' && i
 JS
 ```
 
-## Step 7: [MAIN/SHELL] Mixed Provenance Cannot Pass Gate
+## Step 10: [MAIN/SHELL] Mixed Provenance Cannot Pass Gate
 
 ```bash
 B_MIXED=$(node experiments_env/shared/new-disposable-bundle.mjs wft_mixed_provenance --case case-153 --force)
@@ -292,19 +440,22 @@ process.exit(Number(status) === 1 && gate.check?.passed === false && /coverage|b
 JS
 ```
 
-## Step 8: [MAIN/SHELL] Record Aggregated Verdict
+## Step 11: [MAIN/SHELL] Record Aggregated Verdict
 
 ```bash
-node --input-type=module - "$B_INVALID" "$B_FAIL" "$B_TIMEOUT" "$B_ABANDON" "$B_DUP" "$B_STALE" "$B_MIXED" <<'JS'
+node --input-type=module - "$B_INVALID" "$B_FAIL" "$B_AUDITED" "$B_CLAIMED_RETRY" "$B_REPLACEMENT" "$B_TIMEOUT" "$B_ABANDON" "$B_DUP" "$B_STALE" "$B_MIXED" <<'JS'
 import { readFileSync } from 'node:fs';
 import { recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-const [invalid, fail, timeout, abandon, dup, stale, mixed] = process.argv.slice(2);
+const [invalid, fail, audited, claimedRetry, replacement, timeout, abandon, dup, stale, mixed] = process.argv.slice(2);
 const missing = JSON.parse(readFileSync(`${invalid}/case-153-missing-receipt-submit.json`, 'utf8'));
 const invalidResult = JSON.parse(readFileSync(`${invalid}/case-153-invalid-result-submit.json`, 'utf8'));
 const failed = JSON.parse(readFileSync(`${fail}/case-153-fail.json`, 'utf8'));
 const late = JSON.parse(readFileSync(`${fail}/case-153-late-submit.json`, 'utf8'));
 const failTrace = readFileSync(`${fail}/rb_trace.jsonl`, 'utf8');
+const auditedLate = JSON.parse(readFileSync(`${audited}/case-153-audited-late.json`, 'utf8'));
+const claimedRetryLate = JSON.parse(readFileSync(`${claimedRetry}/case-153-claimed-retry-cleanup.json`, 'utf8'));
+const replacementBlocked = JSON.parse(readFileSync(`${replacement}/case-153-replacement-blocks-late.json`, 'utf8'));
 const timeoutResult = JSON.parse(readFileSync(`${timeout}/case-153-timeout-retry.json`, 'utf8'));
 const abandonResult = JSON.parse(readFileSync(`${abandon}/case-153-abandon.json`, 'utf8'));
 const duplicateResult = JSON.parse(readFileSync(`${dup}/case-153-duplicate-submit.json`, 'utf8'));
@@ -313,6 +464,9 @@ const mixedGate = JSON.parse(readFileSync(`${mixed}/case-153-gate-mixed-provenan
 
 recordPlaybookCheck(invalid, { gate: 'invalid-submit-rejected', passed: missing.last_submit_rejection?.reason_code === 'missing_receipt' && invalidResult.last_submit_rejection?.reason_code === 'invalid_result', detail: JSON.stringify({ missing: missing.last_submit_rejection, invalid: invalidResult.last_submit_rejection }) });
 recordPlaybookCheck(invalid, { gate: 'fail-late-submit-rejected', passed: failed.status === 'failed' && late.status === 'failed' && failTrace.includes('work_unit_late_submit_rejected'), detail: JSON.stringify({ failed, late }) });
+recordPlaybookCheck(invalid, { gate: 'audited-late-submit-covered', passed: auditedLate.normal.status === 'timed_out' && auditedLate.late.late_accept === true && auditedLate.rows.length === 1 && auditedLate.rows[0].late_accept === true && auditedLate.gate.check?.passed === true, detail: JSON.stringify({ late: auditedLate.late, row: auditedLate.rows[0], gate: auditedLate.gate.check }) });
+recordPlaybookCheck(invalid, { gate: 'claimed-retry-superseded-by-late-submit', passed: claimedRetryLate.late.late_accept === true && claimedRetryLate.retryRecord?.status === 'abandoned' && claimedRetryLate.retryRecord?.terminal_reason === 'superseded_by_late_accept' && claimedRetryLate.rows.length === 1, detail: JSON.stringify({ late: claimedRetryLate.late, retryRecord: claimedRetryLate.retryRecord }) });
+recordPlaybookCheck(invalid, { gate: 'submitted-replacement-blocks-late-submit', passed: replacementBlocked.replacementSubmit?.ok === true && replacementBlocked.late?.reason_code === 'submitted_replacement_conflict' && replacementBlocked.rows.length === 1 && replacementBlocked.rows[0].work_id === replacementBlocked.replacementWorkId, detail: JSON.stringify({ replacementWorkId: replacementBlocked.replacementWorkId, late: replacementBlocked.late }) });
 recordPlaybookCheck(invalid, { gate: 'timeout-retry-verified', passed: timeoutResult.timedOut?.retry_requeued === true && timeoutResult.retryWorkId !== timeoutResult.firstWorkId && timeoutResult.retryRecord?.attempt_index === 2 && timeoutResult.retryRecord?.batch_id === 'b000', detail: JSON.stringify(timeoutResult) });
 recordPlaybookCheck(invalid, { gate: 'abandon-idempotent-verified', passed: abandonResult.abandoned?.status === 'abandoned' && abandonResult.duplicate?.duplicate === true && abandonResult.mismatch?.ok === false, detail: JSON.stringify(abandonResult) });
 recordPlaybookCheck(invalid, { gate: 'duplicate-submit-verified', passed: duplicateResult.first?.ok === true && duplicateResult.duplicate?.duplicate === true && duplicateResult.mismatch?.reason_code === 'duplicate_content_mismatch' && duplicateResult.rows === 1, detail: JSON.stringify(duplicateResult) });
@@ -324,17 +478,17 @@ process.exit(verdict.ok ? 0 : 1);
 JS
 ```
 
-## Step 9: [MAIN] Result Interpretation
+## Step 12: [MAIN] Result Interpretation
 
 PASS means every work-unit fault family is fail-closed or idempotent as designed, and mixed direct/submitted delegated provenance cannot pass a wave gate. The playbook proves Engine boundaries only; it does not prove that a real sub-agent can recover from these faults without additional Agent work.
 
-## Step 10: [MAIN/SHELL] Cleanup
+## Step 13: [MAIN/SHELL] Cleanup
 
 PASS only:
 
 ```bash
 node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B_INVALID/case-153-verdict.json"
-rm -rf "$B_INVALID" "$B_FAIL" "$B_TIMEOUT" "$B_ABANDON" "$B_DUP" "$B_STALE" "$B_MIXED"
+rm -rf "$B_INVALID" "$B_FAIL" "$B_AUDITED" "$B_CLAIMED_RETRY" "$B_REPLACEMENT" "$B_TIMEOUT" "$B_ABANDON" "$B_DUP" "$B_STALE" "$B_MIXED"
 ```
 
 ## Optional Automation Smoke

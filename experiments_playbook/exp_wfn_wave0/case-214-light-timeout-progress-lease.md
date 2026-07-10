@@ -38,7 +38,7 @@ Fixture-backed Engine case, no Agent actor, no external calls. Fixture result, r
 3. For a no-progress expired claim, prove timeout-preflight permits timeout and normal timeout requeues retry.
 4. For a recent-progress claim, prove timeout-preflight and default timeout refuse terminalization without authority side effects.
 5. For candidate result cases, prove dry-submit pass routes to `submit`, repairable failure routes to same-`work_id` repair, wrong identity routes to inspect/block, and external candidate mtime does not extend the idle lease.
-6. Force timeout a progress-positive claim and prove durable forced-timeout diagnostics plus normal late-submit rejection.
+6. Force timeout a progress-positive claim and prove durable forced-timeout diagnostics plus normal `submit` after timeout still rejects.
 7. Record all runtime facts as trace `check` events; clean up only on PASS.
 
 ## Step 1: [MAIN/SHELL] Run Controlled Checkpoints
@@ -47,11 +47,11 @@ Fixture-backed Engine case, no Agent actor, no external calls. Fixture result, r
 node experiments_env/shared/run-fixture-backed-case.mjs --case case-214 --cleanup-pass
 ```
 
-Expected: command exits `0`, prints `verdict: "PASS"`, and removes the disposable bundle. The runner writes trace `check` rows for no-progress timeout eligibility, retry requeue, progress refusal no-side-effect, submit/repair/inspect advice, external-candidate mtime non-extension, force audit, and late-submit fail-closed.
+Expected: command exits `0`, prints `verdict: "PASS"`, and removes the disposable bundle. The runner writes trace `check` rows for no-progress timeout eligibility, retry requeue, progress refusal no-side-effect, submit/repair/inspect advice, external-candidate mtime non-extension, force audit, and normal submit-after-timeout fail-closed behavior.
 
 ## Step 2: [MAIN] Result Interpretation
 
-PASS means progress-aware timeout preflight protects progress-positive delegated attempts, keeps no-progress REDO valid, routes candidate results through submit/repair/inspect advice, records explicit forced-timeout audit fields, and preserves terminal late-submit fail-closed behavior. FAIL means the preserved bundle contains the exact CLI JSON, work-unit index, queue state, trace rows, and candidate files needed for repair.
+PASS means progress-aware timeout preflight protects progress-positive delegated attempts, keeps no-progress REDO valid, routes candidate results through submit/repair/inspect advice, records explicit forced-timeout audit fields, and preserves normal submit fail-closed behavior after timeout. FAIL means the preserved bundle contains the exact CLI JSON, work-unit index, queue state, trace rows, and candidate files needed for repair.
 
 ## Step 3: [MAIN/SHELL] Cleanup
 

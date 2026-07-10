@@ -16,8 +16,11 @@ import {
 import {
   WORK_UNIT_OUTPUT_LEDGER,
   claimWorkUnits,
+  closeWorkUnitAttempt,
+  computeWorkUnitLedgerRecordHash,
   drySubmitWorkUnit,
   inspectWorkUnits,
+  lateSubmitWorkUnit,
   loadWorkUnitIndex,
   readWorkUnitLedgerRows,
   submitWorkUnit,
@@ -25,6 +28,9 @@ import {
   workUnitIndexPath,
   workUnitsRoot,
 } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import {
+  readSubmittedWorkUnitDeclarations,
+} from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers-readers.mjs';
 
 function tempBundle() {
   return mkdtempSync(path.join(os.tmpdir(), 'wu-submit-'));
@@ -77,6 +83,28 @@ function saveSeedQueue(dir, items) {
 function ledgerRows(dir) {
   const file = path.join(dir, WORK_UNIT_OUTPUT_LEDGER);
   return readFileSync(file, 'utf-8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
+}
+
+function writeLedgerRows(dir, rows) {
+  writeFileSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER), `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`);
+}
+
+function claimOneWave0(dir, queueItemId = 'queue-a') {
+  saveSeedQueue(dir, [delegated(queueItemId)]);
+  claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+  return loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+}
+
+function forceTimeout(dir, record, reason = 'deadline-expired') {
+  const closed = closeWorkUnitAttempt(dir, {
+    work_id: record.work_id,
+    status: 'timed_out',
+    reason,
+    force: true,
+  });
+  assert.equal(closed.ok, true);
+  assert.equal(closed.status, 'timed_out');
+  return loadWorkUnitIndex(dir).work_units[record.work_id];
 }
 
 function writeValidSubmitFiles(dir, record, { summary = 'done' } = {}) {
@@ -1345,6 +1373,350 @@ describe('submitWorkUnit', () => {
       assert.equal(inspected.passed, false);
       assert.match(inspected.inspect.join('\n'), /ledger cache trail incomplete/);
       assert.match(inspected.inspect.join('\n'), /placeholder-only/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('normal submit rejects timed-out work units without ledger append or queue completion', () => {
+    const dir = tempBundle();
+    try {
+      const record = claimOneWave0(dir);
+      const resultPath = writeValidSubmitFiles(dir, record);
+      forceTimeout(dir, record);
+
+      const rejected = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.status, 'timed_out');
+      assert.match(rejected.inspect.join('\n'), /terminal status timed_out/);
+      assert.equal(loadWorkUnitIndex(dir).work_units[record.work_id].status, 'timed_out');
+      assert.equal(loadQueue(dir).terminal_history.some((entry) => entry.queue_item_id === record.queue_item_id), false);
+      assert.throws(() => ledgerRows(dir), /ENOENT/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('late-submit accepts an eligible timed-out work unit and removes queued retry demand', () => {
+    const dir = tempBundle();
+    try {
+      const record = claimOneWave0(dir);
+      const resultPath = writeValidSubmitFiles(dir, record);
+      forceTimeout(dir, record);
+
+      const accepted = lateSubmitWorkUnit(dir, {
+        work_id: record.work_id,
+        resultPath,
+        reason: 'late result arrived after timeout',
+      });
+      assert.equal(accepted.ok, true);
+      assert.equal(accepted.late_accept, true);
+      assert.equal(accepted.status, 'submitted');
+      assert.deepEqual(accepted.superseded_retry_work_ids, []);
+
+      const index = loadWorkUnitIndex(dir);
+      assert.equal(index.work_units[record.work_id].status, 'submitted');
+      const queue = loadQueue(dir);
+      assert.equal(queue.delegated_in_flight[record.queue_item_id], undefined);
+      assert.equal([...queue.active_window, ...queue.refill_pool].some((item) => item.queue_item_id === record.queue_item_id), false);
+      assert.equal(queue.terminal_history.filter((entry) => entry.queue_item_id === record.queue_item_id).length, 1);
+      assert.equal(queue.terminal_history[0].work_id, record.work_id);
+
+      const [row] = ledgerRows(dir);
+      assert.equal(row.work_id, record.work_id);
+      assert.equal(row.late_accept, true);
+      assert.equal(row.late_accept_reason, 'late result arrived after timeout');
+      assert.equal(row.terminal_status_before_accept, 'timed_out');
+      assert.deepEqual(row.superseded_retry_work_ids, []);
+      assert.equal(row.ledger_record_hash, computeWorkUnitLedgerRecordHash(row));
+      assert.equal(readSubmittedWorkUnitDeclarations(dir).length, 1);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('late-submit requires a reason and rejects invalid identity without authority mutation', () => {
+    const reasonDir = tempBundle();
+    try {
+      const record = claimOneWave0(reasonDir);
+      const resultPath = writeValidSubmitFiles(reasonDir, record);
+      forceTimeout(reasonDir, record);
+      const beforeIndex = readFileSync(workUnitIndexPath(reasonDir), 'utf-8');
+      const beforeQueue = readFileSync(path.join(reasonDir, 'rb_queue.json'), 'utf-8');
+
+      const rejected = lateSubmitWorkUnit(reasonDir, { work_id: record.work_id, resultPath, reason: '   ' });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.reason_code, 'late_accept_reason_required');
+      assert.equal(readFileSync(workUnitIndexPath(reasonDir), 'utf-8'), beforeIndex);
+      assert.equal(readFileSync(path.join(reasonDir, 'rb_queue.json'), 'utf-8'), beforeQueue);
+      assert.equal(existsSync(path.join(reasonDir, WORK_UNIT_OUTPUT_LEDGER)), false);
+      assert.equal(existsSync(path.join(reasonDir, record.paths.result_ref)), false);
+    } finally {
+      cleanup(reasonDir);
+    }
+
+    const identityDir = tempBundle();
+    try {
+      const record = claimOneWave0(identityDir);
+      const resultPath = writeValidSubmitFiles(identityDir, record);
+      const result = readResult(resultPath);
+      result.work_id = 'wu-w0-b000-src-i9999';
+      writeResult(resultPath, result);
+      forceTimeout(identityDir, record);
+      const beforeIndex = readFileSync(workUnitIndexPath(identityDir), 'utf-8');
+      const beforeQueue = readFileSync(path.join(identityDir, 'rb_queue.json'), 'utf-8');
+
+      const rejected = lateSubmitWorkUnit(identityDir, {
+        work_id: record.work_id,
+        resultPath,
+        reason: 'bad candidate should not mutate',
+      });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.reason_code, 'wrong_work_id');
+      assert.equal(readFileSync(workUnitIndexPath(identityDir), 'utf-8'), beforeIndex);
+      assert.equal(readFileSync(path.join(identityDir, 'rb_queue.json'), 'utf-8'), beforeQueue);
+      assert.equal(existsSync(path.join(identityDir, WORK_UNIT_OUTPUT_LEDGER)), false);
+      assert.equal(existsSync(path.join(identityDir, record.paths.result_ref)), false);
+    } finally {
+      cleanup(identityDir);
+    }
+  });
+
+  it('late-submit rejects failed, abandoned, and normal submitted work units', () => {
+    for (const terminalStatus of ['failed', 'abandoned']) {
+      const dir = tempBundle();
+      try {
+        const record = claimOneWave0(dir);
+        const resultPath = writeValidSubmitFiles(dir, record);
+        const closed = closeWorkUnitAttempt(dir, {
+          work_id: record.work_id,
+          status: terminalStatus,
+          reason: `${terminalStatus}-terminal`,
+        });
+        assert.equal(closed.ok, true);
+
+        const rejected = lateSubmitWorkUnit(dir, {
+          work_id: record.work_id,
+          resultPath,
+          reason: 'should not recover this terminal status',
+        });
+        assert.equal(rejected.ok, false, terminalStatus);
+        assert.equal(rejected.reason_code, 'terminal_status_not_recoverable', terminalStatus);
+        assert.equal(loadWorkUnitIndex(dir).work_units[record.work_id].status, terminalStatus);
+        assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
+      } finally {
+        cleanup(dir);
+      }
+    }
+
+    const submittedDir = tempBundle();
+    try {
+      const record = claimOneWave0(submittedDir);
+      const resultPath = writeValidSubmitFiles(submittedDir, record);
+      const submitted = submitWorkUnit(submittedDir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+
+      const rejected = lateSubmitWorkUnit(submittedDir, {
+        work_id: record.work_id,
+        resultPath,
+        reason: 'normal submitted must use normal idempotency',
+      });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.reason_code, 'normal_submitted_rejects_late_submit');
+      assert.equal(ledgerRows(submittedDir).length, 1);
+    } finally {
+      cleanup(submittedDir);
+    }
+  });
+
+  it('late-submit is idempotent for same audited result and refuses broken postconditions without repair', () => {
+    const idempotentDir = tempBundle();
+    try {
+      const record = claimOneWave0(idempotentDir);
+      const resultPath = writeValidSubmitFiles(idempotentDir, record);
+      forceTimeout(idempotentDir, record);
+      const first = lateSubmitWorkUnit(idempotentDir, {
+        work_id: record.work_id,
+        resultPath,
+        reason: 'late result accepted',
+      });
+      assert.equal(first.ok, true);
+
+      const second = lateSubmitWorkUnit(idempotentDir, {
+        work_id: record.work_id,
+        resultPath,
+        reason: 'repeat same late result',
+      });
+      assert.equal(second.ok, true);
+      assert.equal(second.duplicate, true);
+      assert.equal(second.idempotent, true);
+      assert.equal(second.result_hash, first.result_hash);
+      assert.equal(ledgerRows(idempotentDir).length, 1);
+    } finally {
+      cleanup(idempotentDir);
+    }
+
+    const brokenDir = tempBundle();
+    try {
+      const record = claimOneWave0(brokenDir);
+      const resultPath = writeValidSubmitFiles(brokenDir, record);
+      forceTimeout(brokenDir, record);
+      const first = lateSubmitWorkUnit(brokenDir, {
+        work_id: record.work_id,
+        resultPath,
+        reason: 'late result accepted',
+      });
+      assert.equal(first.ok, true);
+      const queuePath = path.join(brokenDir, 'rb_queue.json');
+      const queue = JSON.parse(readFileSync(queuePath, 'utf-8'));
+      queue.terminal_history = [];
+      writeFileSync(queuePath, `${JSON.stringify(queue, null, 2)}\n`);
+
+      const rejected = lateSubmitWorkUnit(brokenDir, {
+        work_id: record.work_id,
+        resultPath,
+        reason: 'repeat should inspect broken state',
+      });
+      assert.equal(rejected.ok, false);
+      assert.match(rejected.inspect.join('\n'), /postconditions are broken|terminal_history/);
+      assert.equal(ledgerRows(brokenDir).length, 1);
+      assert.equal(loadQueue(brokenDir).terminal_history.length, 0);
+    } finally {
+      cleanup(brokenDir);
+    }
+  });
+
+  it('late-submit abandons claimed retry and rejects submitted replacement coverage', () => {
+    const claimedRetryDir = tempBundle();
+    try {
+      const record = claimOneWave0(claimedRetryDir);
+      const resultPath = writeValidSubmitFiles(claimedRetryDir, record);
+      forceTimeout(claimedRetryDir, record);
+      const retry = claimWorkUnits(claimedRetryDir, { phase: 'wave0', count: 1 });
+      const retryWorkId = retry.claimed_work_ids[0];
+
+      const accepted = lateSubmitWorkUnit(claimedRetryDir, {
+        work_id: record.work_id,
+        resultPath,
+        reason: 'original result arrived after retry claim',
+      });
+      assert.equal(accepted.ok, true);
+      assert.deepEqual(accepted.superseded_retry_work_ids, [retryWorkId]);
+      const index = loadWorkUnitIndex(claimedRetryDir);
+      assert.equal(index.work_units[record.work_id].status, 'submitted');
+      assert.equal(index.work_units[retryWorkId].status, 'abandoned');
+      assert.equal(index.work_units[retryWorkId].terminal_reason, 'superseded_by_late_accept');
+      assert.equal(loadQueue(claimedRetryDir).delegated_in_flight[record.queue_item_id], undefined);
+      assert.equal(ledgerRows(claimedRetryDir).length, 1);
+    } finally {
+      cleanup(claimedRetryDir);
+    }
+
+    const replacementDir = tempBundle();
+    try {
+      const record = claimOneWave0(replacementDir);
+      const originalResultPath = writeValidSubmitFiles(replacementDir, record);
+      forceTimeout(replacementDir, record);
+      const retry = claimWorkUnits(replacementDir, { phase: 'wave0', count: 1 });
+      const retryRecord = loadWorkUnitIndex(replacementDir).work_units[retry.claimed_work_ids[0]];
+      const retryResultPath = writeValidSubmitFiles(replacementDir, retryRecord);
+      const replacement = submitWorkUnit(replacementDir, { work_id: retryRecord.work_id, resultPath: retryResultPath });
+      assert.equal(replacement.ok, true);
+
+      const rejected = lateSubmitWorkUnit(replacementDir, {
+        work_id: record.work_id,
+        resultPath: originalResultPath,
+        reason: 'replacement already submitted',
+      });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.reason_code, 'submitted_replacement_conflict');
+      assert.equal(ledgerRows(replacementDir).length, 1);
+      assert.equal(loadWorkUnitIndex(replacementDir).work_units[record.work_id].status, 'timed_out');
+    } finally {
+      cleanup(replacementDir);
+    }
+  });
+
+  it('rejects malformed audit rows and hash-covered audit drift', () => {
+    const lateDir = tempBundle();
+    try {
+      const record = claimOneWave0(lateDir);
+      const resultPath = writeValidSubmitFiles(lateDir, record);
+      forceTimeout(lateDir, record);
+      const accepted = lateSubmitWorkUnit(lateDir, {
+        work_id: record.work_id,
+        resultPath,
+        reason: 'audit hash coverage',
+      });
+      assert.equal(accepted.ok, true);
+
+      const [drifted] = ledgerRows(lateDir);
+      drifted.late_accept_reason = 'changed after append';
+      writeLedgerRows(lateDir, [drifted]);
+      assert.throws(() => readWorkUnitLedgerRows(lateDir), /ledger_record_hash mismatch/);
+
+      drifted.ledger_record_hash = computeWorkUnitLedgerRecordHash(drifted);
+      delete drifted.late_accept_reason;
+      drifted.ledger_record_hash = computeWorkUnitLedgerRecordHash(drifted);
+      writeLedgerRows(lateDir, [drifted]);
+      assert.throws(() => readWorkUnitLedgerRows(lateDir), /late_accept_reason/);
+    } finally {
+      cleanup(lateDir);
+    }
+
+    const normalDir = tempBundle();
+    try {
+      const record = claimOneWave0(normalDir);
+      const resultPath = writeValidSubmitFiles(normalDir, record);
+      const submitted = submitWorkUnit(normalDir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true);
+      const [row] = ledgerRows(normalDir);
+      row.late_accept_reason = 'half audit is invalid';
+      row.ledger_record_hash = computeWorkUnitLedgerRecordHash(row);
+      writeLedgerRows(normalDir, [row]);
+      assert.throws(() => readWorkUnitLedgerRows(normalDir), /late_accept_reason/);
+    } finally {
+      cleanup(normalDir);
+    }
+  });
+
+  it('gate reader rejects late-accepted rows when a submitted replacement ledger row exists', () => {
+    const dir = tempBundle();
+    try {
+      const record = claimOneWave0(dir);
+      const resultPath = writeValidSubmitFiles(dir, record);
+      forceTimeout(dir, record);
+      const accepted = lateSubmitWorkUnit(dir, {
+        work_id: record.work_id,
+        resultPath,
+        reason: 'gate conflict coverage',
+      });
+      assert.equal(accepted.ok, true);
+
+      const [lateRow] = ledgerRows(dir);
+      const replacementWorkId = 'wu-w0-b000-src-i0002';
+      const replacementRow = { ...lateRow, work_id: replacementWorkId };
+      delete replacementRow.late_accept;
+      delete replacementRow.late_accept_reason;
+      delete replacementRow.terminal_status_before_accept;
+      delete replacementRow.superseded_retry_work_ids;
+      replacementRow.ledger_record_hash = computeWorkUnitLedgerRecordHash(replacementRow);
+
+      const indexPath = workUnitIndexPath(dir);
+      const index = JSON.parse(readFileSync(indexPath, 'utf-8'));
+      index.work_units[replacementWorkId] = {
+        ...index.work_units[record.work_id],
+        work_id: replacementWorkId,
+        status: 'submitted',
+        ledger_record_hash: replacementRow.ledger_record_hash,
+      };
+      writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
+      writeLedgerRows(dir, [lateRow, replacementRow]);
+
+      assert.throws(
+        () => readSubmittedWorkUnitDeclarations(dir),
+        /late-accept conflict/,
+      );
     } finally {
       cleanup(dir);
     }

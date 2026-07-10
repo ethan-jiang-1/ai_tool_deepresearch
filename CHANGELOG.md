@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.16
+
+- Work-unit timeout recovery now has explicit audited `operate-work-unit late-submit` for eligible `timed_out` attempts whose original result validates after timeout.
+- Late-submit preserves the original work-unit identity, records hash-covered audit fields, removes queued retry demand or abandons unsubmitted claimed retries, and rejects submitted replacements.
+- Provenance gates and controlled fault-tolerance coverage now count audited late-accepted rows only through normal submitted-ledger validation while normal `submit` stays fail-closed for terminal attempts.
+
 ## v0.15
 
 - Delegated work-unit timeout now runs progress-aware `timeout-preflight` before terminalizing, using Engine-observed progress, dry-submit advice, and effective idle leases to recommend submit, repair, wait, inspect, block, or timeout.

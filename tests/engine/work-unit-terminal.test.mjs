@@ -16,8 +16,10 @@ import {
 import {
   claimWorkUnits,
   closeWorkUnitAttempt,
+  lateSubmitWorkUnit,
   loadWorkUnitIndex,
   openWorkUnitBatch,
+  readWorkUnitLedgerRows,
   submitWorkUnit,
   timeoutPreflightWorkUnit,
 } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
@@ -165,6 +167,14 @@ function authoritySnapshot(dir) {
   return JSON.stringify(snapshotPath(dir));
 }
 
+function coreAuthoritySnapshot(dir) {
+  return JSON.stringify({
+    queue: snapshotPath(path.join(dir, 'rb_queue.json')),
+    ledger: snapshotPath(path.join(dir, 'rb_output_declarations.jsonl')),
+    workUnits: snapshotPath(path.join(dir, '_work_units')),
+  });
+}
+
 function writeLateResult(dir, record) {
   const resultPath = path.join(dir, '_tmp', `${record.work_id}.late.json`);
   mkdirSync(path.dirname(resultPath), { recursive: true });
@@ -231,6 +241,266 @@ describe('work-unit terminal attempts', () => {
       assert.equal(second.batch_id, 'b000');
       const trace = readFileSync(path.join(dir, 'rb_trace.jsonl'), 'utf-8');
       assert.match(trace, /work_unit_retry_claimed/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('late-submit accepts a timed-out target and removes queued retry demand', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const first = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      closeWorkUnitAttempt(dir, {
+        work_id: first.work_id,
+        status: 'timed_out',
+        reason: 'deadline-expired',
+        nowMs: afterDeadline(first),
+      });
+      assert.equal(loadQueue(dir).active_window[0].queue_item_id, 'queue-a');
+
+      const resultPath = writeSubmitReadyCandidate(dir, first);
+      const normalSubmit = submitWorkUnit(dir, { work_id: first.work_id, resultPath });
+      assert.equal(normalSubmit.ok, false);
+      assert.equal(normalSubmit.status, 'timed_out');
+
+      const accepted = lateSubmitWorkUnit(dir, {
+        work_id: first.work_id,
+        resultPath,
+        reason: 'late result arrived after timeout but before retry submitted',
+      });
+      assert.equal(accepted.ok, true);
+      assert.equal(accepted.late_accept, true);
+      assert.equal(accepted.status, 'submitted');
+      assert.deepEqual(accepted.superseded_retry_work_ids, []);
+
+      const queue = loadQueue(dir);
+      assert.equal(queue.active_window.some((item) => item.queue_item_id === 'queue-a'), false);
+      assert.equal(queue.refill_pool.some((item) => item.queue_item_id === 'queue-a'), false);
+      assert.equal(queue.delegated_in_flight['queue-a'], undefined);
+      assert.equal(queue.terminal_history.length, 1);
+      assert.equal(queue.terminal_history[0].terminal_status, 'done');
+      assert.equal(queue.terminal_history[0].work_id, first.work_id);
+
+      const index = loadWorkUnitIndex(dir);
+      assert.equal(index.work_units[first.work_id].status, 'submitted');
+      const rows = readWorkUnitLedgerRows(dir);
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].work_id, first.work_id);
+      assert.equal(rows[0].late_accept, true);
+      assert.equal(rows[0].late_accept_reason, 'late result arrived after timeout but before retry submitted');
+      assert.equal(rows[0].terminal_status_before_accept, 'timed_out');
+      assert.deepEqual(rows[0].superseded_retry_work_ids, []);
+
+      const replay = lateSubmitWorkUnit(dir, {
+        work_id: first.work_id,
+        resultPath,
+        reason: 'late result arrived after timeout but before retry submitted',
+      });
+      assert.equal(replay.ok, true);
+      assert.equal(replay.idempotent, true);
+      assert.equal(readWorkUnitLedgerRows(dir).length, 1);
+      assert.equal(loadQueue(dir).terminal_history.length, 1);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('late-submit abandons a claimed retry without adding retry ledger coverage', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const first = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      closeWorkUnitAttempt(dir, {
+        work_id: first.work_id,
+        status: 'timed_out',
+        reason: 'deadline-expired',
+        nowMs: afterDeadline(first),
+      });
+      const retryClaim = claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const retryWorkId = retryClaim.claimed_work_ids[0];
+      assert.equal(retryWorkId, 'wu-w0-b000-src-i0002');
+
+      const resultPath = writeSubmitReadyCandidate(dir, first);
+      const accepted = lateSubmitWorkUnit(dir, {
+        work_id: first.work_id,
+        resultPath,
+        reason: 'target completed before claimed retry submitted',
+      });
+      assert.equal(accepted.ok, true);
+      assert.deepEqual(accepted.superseded_retry_work_ids, [retryWorkId]);
+
+      const index = loadWorkUnitIndex(dir);
+      assert.equal(index.work_units[first.work_id].status, 'submitted');
+      assert.equal(index.work_units[retryWorkId].status, 'abandoned');
+      assert.equal(index.work_units[retryWorkId].terminal_reason, 'superseded_by_late_accept');
+      assert.equal(loadQueue(dir).delegated_in_flight['queue-a'], undefined);
+      assert.equal(loadQueue(dir).terminal_history.length, 1);
+      const rows = readWorkUnitLedgerRows(dir);
+      assert.equal(rows.length, 1);
+      assert.deepEqual(rows[0].superseded_retry_work_ids, [retryWorkId]);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('late-submit rejects submitted replacements without mutating target authority', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const first = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      closeWorkUnitAttempt(dir, {
+        work_id: first.work_id,
+        status: 'timed_out',
+        reason: 'deadline-expired',
+        nowMs: afterDeadline(first),
+      });
+      const retryClaim = claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const retryWorkId = retryClaim.claimed_work_ids[0];
+      const retry = loadWorkUnitIndex(dir).work_units[retryWorkId];
+      const retryResult = writeSubmitReadyCandidate(dir, retry);
+      const replacement = submitWorkUnit(dir, { work_id: retryWorkId, resultPath: retryResult });
+      assert.equal(replacement.ok, true);
+
+      const targetResult = writeSubmitReadyCandidate(dir, first);
+      const before = coreAuthoritySnapshot(dir);
+      const rejected = lateSubmitWorkUnit(dir, {
+        work_id: first.work_id,
+        resultPath: targetResult,
+        reason: 'target returned after replacement submitted',
+      });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.reason_code, 'submitted_replacement_conflict');
+      assert.equal(loadWorkUnitIndex(dir).work_units[first.work_id].status, 'timed_out');
+      assert.equal(readWorkUnitLedgerRows(dir).length, 1);
+      assert.equal(readWorkUnitLedgerRows(dir)[0].work_id, retryWorkId);
+      assert.equal(coreAuthoritySnapshot(dir), before);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('late-submit rejects non-timed-out statuses, missing reason, and identity mismatch without authority mutation', () => {
+    const failedDir = tempBundle();
+    const abandonedDir = tempBundle();
+    const submittedDir = tempBundle();
+    const claimedDir = tempBundle();
+    const mismatchDir = tempBundle();
+    try {
+      saveSeedQueue(failedDir, [delegated('queue-a')]);
+      claimWorkUnits(failedDir, { phase: 'wave0', count: 1 });
+      const failed = loadWorkUnitIndex(failedDir).work_units['wu-w0-b000-src-i0001'];
+      closeWorkUnitAttempt(failedDir, { work_id: failed.work_id, status: 'failed', reason: 'sub-agent-error' });
+      assert.equal(lateSubmitWorkUnit(failedDir, {
+        work_id: failed.work_id,
+        resultPath: writeLateResult(failedDir, failed),
+        reason: 'should not recover failed',
+      }).ok, false);
+
+      saveSeedQueue(abandonedDir, [delegated('queue-a')]);
+      claimWorkUnits(abandonedDir, { phase: 'wave0', count: 1 });
+      const abandoned = loadWorkUnitIndex(abandonedDir).work_units['wu-w0-b000-src-i0001'];
+      closeWorkUnitAttempt(abandonedDir, { work_id: abandoned.work_id, status: 'abandoned', reason: 'operator-cancelled' });
+      assert.equal(lateSubmitWorkUnit(abandonedDir, {
+        work_id: abandoned.work_id,
+        resultPath: writeLateResult(abandonedDir, abandoned),
+        reason: 'should not recover abandoned',
+      }).ok, false);
+
+      saveSeedQueue(submittedDir, [delegated('queue-a')]);
+      claimWorkUnits(submittedDir, { phase: 'wave0', count: 1 });
+      const submitted = loadWorkUnitIndex(submittedDir).work_units['wu-w0-b000-src-i0001'];
+      const submittedResult = writeSubmitReadyCandidate(submittedDir, submitted);
+      submitWorkUnit(submittedDir, { work_id: submitted.work_id, resultPath: submittedResult });
+      const submittedLate = lateSubmitWorkUnit(submittedDir, {
+        work_id: submitted.work_id,
+        resultPath: submittedResult,
+        reason: 'normal submitted work should reject late-submit',
+      });
+      assert.equal(submittedLate.ok, false);
+      assert.match(submittedLate.reason, /normally submitted/);
+
+      saveSeedQueue(claimedDir, [delegated('queue-a')]);
+      claimWorkUnits(claimedDir, { phase: 'wave0', count: 1 });
+      const claimed = loadWorkUnitIndex(claimedDir).work_units['wu-w0-b000-src-i0001'];
+      const claimedLate = lateSubmitWorkUnit(claimedDir, {
+        work_id: claimed.work_id,
+        resultPath: writeSubmitReadyCandidate(claimedDir, claimed),
+        reason: 'claimed should use normal submit',
+      });
+      assert.equal(claimedLate.ok, false);
+      assert.equal(claimedLate.reason_code, 'claimed_requires_normal_submit');
+
+      saveSeedQueue(mismatchDir, [delegated('queue-a')]);
+      claimWorkUnits(mismatchDir, { phase: 'wave0', count: 1 });
+      const mismatch = loadWorkUnitIndex(mismatchDir).work_units['wu-w0-b000-src-i0001'];
+      closeWorkUnitAttempt(mismatchDir, {
+        work_id: mismatch.work_id,
+        status: 'timed_out',
+        reason: 'deadline-expired',
+        nowMs: afterDeadline(mismatch),
+      });
+      const noReason = lateSubmitWorkUnit(mismatchDir, {
+        work_id: mismatch.work_id,
+        resultPath: writeSubmitReadyCandidate(mismatchDir, mismatch),
+      });
+      assert.equal(noReason.ok, false);
+      assert.equal(noReason.reason_code, 'late_accept_reason_required');
+
+      const badResult = writeWrongIdentityCandidate(mismatchDir, mismatch);
+      const before = coreAuthoritySnapshot(mismatchDir);
+      const identityMismatch = lateSubmitWorkUnit(mismatchDir, {
+        work_id: mismatch.work_id,
+        resultPath: badResult,
+        reason: 'bad identity should not mutate authority',
+      });
+      assert.equal(identityMismatch.ok, false);
+      assert.equal(identityMismatch.reason_code, 'wrong_work_id');
+      assert.equal(coreAuthoritySnapshot(mismatchDir), before);
+    } finally {
+      cleanup(failedDir);
+      cleanup(abandonedDir);
+      cleanup(submittedDir);
+      cleanup(claimedDir);
+      cleanup(mismatchDir);
+    }
+  });
+
+  it('late-submit idempotency rejects when durable postconditions are broken', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const first = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      closeWorkUnitAttempt(dir, {
+        work_id: first.work_id,
+        status: 'timed_out',
+        reason: 'deadline-expired',
+        nowMs: afterDeadline(first),
+      });
+      const resultPath = writeSubmitReadyCandidate(dir, first);
+      const accepted = lateSubmitWorkUnit(dir, {
+        work_id: first.work_id,
+        resultPath,
+        reason: 'late result accepted once',
+      });
+      assert.equal(accepted.ok, true);
+
+      const queue = loadQueue(dir);
+      queue.terminal_history = [];
+      saveQueue(dir, queue);
+
+      const replay = lateSubmitWorkUnit(dir, {
+        work_id: first.work_id,
+        resultPath,
+        reason: 'late result accepted once',
+      });
+      assert.equal(replay.ok, false);
+      assert.match(replay.reason, /postconditions are broken/);
+      assert.equal(readWorkUnitLedgerRows(dir).length, 1);
     } finally {
       cleanup(dir);
     }

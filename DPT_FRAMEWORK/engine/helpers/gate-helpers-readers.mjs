@@ -298,6 +298,13 @@ function collectWorkUnitLedgerRowIssues(row, index) {
     if (ledgerRow.runtime_receipt_ref !== indexRecord.paths.runtime_receipt_ref) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: runtime_receipt_ref`);
     if (ledgerRow.result_hash !== indexRecord.result_hash) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: result_hash`);
     if (ledgerRow.ledger_record_hash !== indexRecord.ledger_record_hash) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: ledger_record_hash`);
+    if (ledgerRow.late_accept === true) {
+      const submittedReplacements = Object.values(index?.work_units || {})
+        .filter((record) => record.queue_item_id === ledgerRow.queue_item_id && record.work_id !== ledgerRow.work_id && record.status === 'submitted');
+      if (submittedReplacements.length > 0) {
+        issues.push(`late-accept conflict for ${ledgerRow.queue_item_id}: submitted replacement ${submittedReplacements.map((record) => record.work_id).join(', ')}`);
+      }
+    }
   }
 
   return { row: ledgerRow, issues };
@@ -322,11 +329,25 @@ export function readSubmittedWorkUnitDeclarations(bundlePath) {
   }
 
   const submittedRows = [];
+  const validRows = [];
   const issues = [];
   for (const row of rawRows) {
     const checked = collectWorkUnitLedgerRowIssues(row, index);
     issues.push(...checked.issues);
+    if (checked.row) validRows.push(checked.row);
     if (checked.row && checked.issues.length === 0) submittedRows.push(checked.row);
+  }
+
+  const rowsByQueueItem = new Map();
+  for (const row of validRows) {
+    const rows = rowsByQueueItem.get(row.queue_item_id) || [];
+    rows.push(row);
+    rowsByQueueItem.set(row.queue_item_id, rows);
+  }
+  for (const [queueItemId, rows] of rowsByQueueItem.entries()) {
+    if (rows.length > 1 && rows.some((row) => row.late_accept === true)) {
+      issues.push(`late-accept conflict for ${queueItemId}: multiple submitted ledger rows ${rows.map((row) => row.work_id).join(', ')}`);
+    }
   }
 
   if (issues.length > 0) {

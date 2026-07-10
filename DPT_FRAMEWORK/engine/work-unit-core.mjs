@@ -41,9 +41,10 @@ export {
   claimWorkUnits,
 } from './work-unit-lifecycle.mjs';
 
-// Submit (3)
+// Submit (4)
 export {
   drySubmitWorkUnit,
+  lateSubmitWorkUnit,
   submitWorkUnit,
 } from './work-unit-submit.mjs';
 

@@ -11,6 +11,7 @@ import {
   closeWorkUnitAttempt,
   drySubmitWorkUnit,
   inspectWorkUnits,
+  lateSubmitWorkUnit,
   openWorkUnitBatch,
   submitWorkUnit,
   timeoutPreflightWorkUnit,
@@ -22,6 +23,7 @@ function usage() {
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit <bundle> --work-id <id> --result <result.json>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-id <id> [--result <result.json>]
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <id> --result <result.json>
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs late-submit <bundle> --work-id <timed_out_id> --result <result.json> --reason <reason>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs fail <bundle> --work-id <id> --reason <reason>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason <reason> [--force]
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs abandon <bundle> --work-id <id> --reason <reason>
@@ -113,6 +115,17 @@ try {
     const result = drySubmitWorkUnit(bundleDir, {
       work_id: values['work-id'],
       resultPath: path.resolve(values.result),
+    });
+    emit(result);
+    process.exit(result.ok ? 0 : 1);
+  }
+  if (command === 'late-submit') {
+    if (!values['work-id']) throw new Error('--work-id is required');
+    if (!values.result) throw new Error('--result is required');
+    const result = lateSubmitWorkUnit(bundleDir, {
+      work_id: values['work-id'],
+      resultPath: path.resolve(values.result),
+      reason: values.reason,
     });
     emit(result);
     process.exit(result.ok ? 0 : 1);
