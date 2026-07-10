@@ -2,6 +2,14 @@
 
 Spec-driven rewrite of a Deep Research Tool: broad question in, evidence-backed gated research report out.
 
+## Setup
+
+```bash
+git clone <repo-url>
+cd ai_tool_deepresearch
+npm install
+```
+
 ## Start Here
 
 - **⚠️ This is an agent engineering project, not a traditional program.** Read `guidelines/project-charter.md` first, especially when direction or layer ownership is unclear.

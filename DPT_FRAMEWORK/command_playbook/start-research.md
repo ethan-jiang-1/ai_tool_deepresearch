@@ -5,7 +5,7 @@ Agent 命令：从零开始一次完整的 Deep Research。
 ## 前置条件
 
 - `DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs` 存在
-- npm 依赖已安装 (zod, yaml)
+- 已运行 `npm install`（依赖 zod, yaml）
 - 用户在 git repository 中
 
 ## 步骤

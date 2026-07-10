@@ -6,7 +6,7 @@ Agent 命令：从 DPT_FRAMEWORK 生产一个新的 Runtime Bundle。
 - `DPT_FRAMEWORK/schema/` 存在
 - `DPT_FRAMEWORK/rb_templates/` 存在
 - `DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs` 存在
-- npm 依赖已安装 (zod, yaml)
+- 已运行 `npm install`（依赖 zod, yaml）
 
 ## 步骤
 

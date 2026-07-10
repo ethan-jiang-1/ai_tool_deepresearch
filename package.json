@@ -5,5 +5,9 @@
   "type": "module",
   "scripts": {
     "test": "find tests/ -name '*.test.mjs' -print0 | xargs -0 node --test"
+  },
+  "dependencies": {
+    "zod": "^3.0.0",
+    "yaml": "^2.0.0"
   }
 }
