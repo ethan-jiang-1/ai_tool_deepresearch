@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-07-09 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-07-11 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -78,9 +78,15 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-066 | 2026-07-08 | work-unit envelope `result.schema.json` 与 submit `.strict()` validator 矛盾：wave0 广告禁用字段、wave1 source_claims.items 零约束，delegated 首次 submit 系统性失败 |
 | BUG-067 | 2026-07-08 | `phase-seed-topics.md` task-card/result 模板用废弃 `work_id` 队列身份；hygiene 守卫存在但只扫 `rb_queue.json.tmpl`、覆盖不到 phase MD |
 | BUG-068 | 2026-07-08 | Wave1 `output_contract.allowed_roles` 含 `other` 但 coverage gate 拒绝（且 submitted 后不可修正）；depth-review ref 文档示例带尾斜杠与 exact-match validator 冲突 |
+| BUG-069 | 2026-07-10 | 静默自主执行不可达（根因 meta-bug）：Agent-facing 契约不自洽、wave 首过失败需读 Engine 源码逆向；由 `simplify-and-reuse-wave-contract-checks` (v0.17) 用同源 side-effect-free inspect 预检 Phase-owned artifact 契约收口 |
 | BUG-070 | 2026-07-08 | seed_topics 信息地图 `refs` 无法解析到 `reference/` 具体文件：指向内部 build 产物 / glob 通配 / 零 reference 引用；`return-map.mjs` 校验过宽松且 diagnosticOnly |
+| BUG-071 | 2026-07-11 | 研究波次无检索能力契约，离线/沙箱/代理环境下 wave0 静默卡死；由 `fail-fast-on-missing-research-access` (v0.18) 在 HITL1 用 `research_access` probe fail-fast（§4.1 bootstrap `current_gate` 协议漂移次生缺陷另记 deferred → 未来 `normalize-bootstrap-gate-window`） |
+| BUG-072 | 2026-07-11 | Agent 在 gate pass 后因上下文压力浮出、提议跳过剩余 phase，违反 `stop: no`；由 `put-continuation-cues-at-decision-points` (v0.19) 在决策点追加极短 continuation cue（机制落地；LLM 实际是否浮出待真实 run 观察裁决） |
+| BUG-073 | 2026-07-10 | Wave2 finding-index 契约需读 Engine 源码；随 `simplify-and-reuse-wave-contract-checks` (v0.17) 用同源 inspect 返回最小根因 + 修正 `shared-schemas.md` 字段数漂移 |
+| BUG-074 | 2026-07-11 | BUG-072 的 wave0 clean gate pass 复现（`anatomy` bundle）+ `surfacing-intent` 逃生口不可达；随 `put-continuation-cues-at-decision-points` (v0.19) 关闭（机制落地；行为待真实 run 观察） |
+| BUG-075 | 2026-07-10 | Wave1 gate contract 墙（19 规则全为 provenance/format/floor 技术性失败）；随 `simplify-and-reuse-wave-contract-checks` (v0.17) 削减为必要 blocker + 同源 preflight 可达 |
 
-**Next available bug ID: BUG-071**
+**Next available bug ID: BUG-076**
 
 ---
 
