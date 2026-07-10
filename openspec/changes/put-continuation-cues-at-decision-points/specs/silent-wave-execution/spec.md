@@ -10,7 +10,9 @@ At Agent decision points, deterministic checkpoint output SHALL expose a short c
 
 - pass with non-null `check.next` SHALL state `interaction: prohibited` and `next_action: consume_check_next`;
 - fail SHALL state `interaction: prohibited` and `next_action: repair_and_rerun_gate`;
-- the cue SHALL not authorize routing, status mutation, or completion beyond the existing gate result.
+- the cue SHALL not authorize routing, status mutation, completion, degraded handoff, or root-cause classification beyond the existing gate result.
+
+The cue SHALL read only direct outcome and node-frontmatter facts; it SHALL NOT derive a second verdict from `failed_rule_ids`, `masked_rule_ids`, inspect classifications, chat state, token pressure, or Agent intent. Stop:yes gate failures, including HITL capability failures, SHALL NOT be converted into autonomous stop:no continuation cues.
 
 The silent execution priority chain remains repair, strategy change, legal degraded handoff, consume clean/degraded `check.next`, or silent hold. `surfacing_intent` remains diagnostic only.
 
@@ -19,6 +21,12 @@ The silent execution priority chain remains repair, strategy change, legal degra
 - **WHEN** a stop:no gate fails
 - **THEN** gate output SHALL say user interaction is prohibited
 - **AND** the immediate next action SHALL be repair the named root cause and rerun the same gate
+
+#### Scenario: stop:yes gate failure does not receive autonomous cue
+
+- **WHEN** a stop:yes gate fails, including a missing or unavailable research-access observation
+- **THEN** gate output SHALL NOT state `interaction: prohibited`
+- **AND** it SHALL preserve the existing user/HITL repair boundary
 
 #### Scenario: stop:no gate pass returns continuation cue
 
