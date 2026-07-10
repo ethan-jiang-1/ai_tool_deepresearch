@@ -128,6 +128,7 @@
 | G23 wfn-wave2 | case-233 | `exp_wfn_wave2/case-233-heavy-gate-fail-repair.md` | gate fail（ledger 缺 section + backfill token 残留）→inspect/advice→repair→gate pass，trace 含 fail+pass 两条 gate_attempt |
 | G23 wfn-wave2 | case-234 | `exp_wfn_wave2/case-234-heavy-subagent-search.md` | emergent question→explore_search→spawn dpt-topic-scout 真实搜索→ingest receipt→index 更新→re-synthesize→00_shared promote→gate pass |
 | G11 pre-research-repair | case-114 | `exp_wff_pre-research-repair/case-114-heavy-hitl1-manual-review.md` | HITL1 payload 枚举（auto mode 6 vectors） |
+| G11 pre-research-repair | case-115 | `exp_wff_pre-research-repair/case-115-heavy-hitl1-research-access-probe.md` | HITL1 real search/fetch capability probe：available→gate pass；honest unavailable→fail closed/no Setup；无 evidence leakage |
 | G15 ai-judge | case-951 | `exph_workflow-foundation/case-951-heavy-topic-rewrite-ai-judge.md` | AI 扮演真人 dual of 901：真 Agent rewrite + AI reviewer verdict（source: ai-judge，非真人）；9NN +50 对偶 |
 | G25 engine-boundary | case-406 | `exp_engine-boundary/case-406-heavy-real-subagent-boundary.md` | 真实 Sub-agent/WebSearch/WebFetch canary：work-unit task/beacon/receipt/result → submit → ledger/provenance/cache gate authority；无 real result 时 NOT RUN |
 | G27 evidence-extraction | case-163 | `exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md` | 真实 Agent/Sub-agent canary：rerun action:add → _cache 三文件 leaf → work-unit result cache_trails → submitted ledger → gate/reentry quality metrics；无 Agent 时 NOT RUN |

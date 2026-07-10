@@ -119,12 +119,19 @@ grep -c 'Agent 未添加' $B/rb_plan.md
 REPO_ROOT=$(pwd)
 B=$(cat /tmp/pb_bundle)
 
+# Synthetic research_access below keeps this deterministic topic-rewrite case
+# focused on gate mechanics; it does not prove real Agent capability.
 cat > $B/rb_profile.yaml << 'EOF'
 plan_basename: wff_rwd
 research_profile: quick_factual
 root_must_answer_set:
   - "What are the estimated compliance costs for SMEs under the EU AI Act in 2025-2026?"
   - "Which specific exemptions or simplified procedures does the AI Act provide for SMEs?"
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/deterministic-hitl1-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded

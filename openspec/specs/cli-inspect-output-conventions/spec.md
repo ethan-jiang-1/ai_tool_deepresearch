@@ -10,121 +10,199 @@
 
 ### Requirement: inspect-wave0-output.mjs structural checks
 
-`inspect-wave0-output.mjs` SHALL 检查 wave 0 产出物结构约定：
+`inspect-wave0-output.mjs` SHALL evaluate Wave0 gate-consumable artifact and provenance contracts through the same pure evaluator result used by `wave0-complete`. It SHALL also continue to inspect the existing Wave0-only structure conventions:
 
-1. **Flat directory**: `reference/` SHALL 无子目录（`readdirSync` + `isDirectory()` 过滤，忽略 `.DS_Store` 等隐藏文件）
-2. **File naming**: 所有 `reference/*.md`（不含 `_INDEX.md`、`README.md`）SHALL 匹配 `00-shared-<slug>.md` 前缀
-3. **Metadata block**: 每个 `00-shared-*.md` SHALL 在首个 `## ` header 之前包含以下必填 key：`source_url`、`acceptance_status`、`source_type`、`tier`、`evidence_role`、`trust_level`、`why_it_matters`、`accessed_at`、`related_topic`
-4. **Standard sections**: 每个 `00-shared-*.md` SHALL 包含全部 5 个 `## ` section header：`## Key Facts`、`## Core Content Capture`、`## Relevance To This Research`、`## Quotable Terms / Concepts`、`## Risks And Limitations`
-5. **_INDEX.md**: 存在，含完整 8 列表头（`ref_file`、`source_type`、`trust_level`、`tier`、`related_topic`、`source_layer`、`acceptance_status`、`date_landed`），至少 1 行数据
-6. **README.md**: 存在且非空
-7. **Thin YAML per topic**: `artifacts/wave0/<topic>/source.yaml` 存在 per `topic_registry`，每条通过 ReferenceMetadata schema 校验
+1. `reference/` has no non-hidden subdirectory;
+2. non-index/readme Markdown files use `00-shared-<slug>.md` naming;
+3. each `00-shared-*.md` exposes the required metadata keys before its first semantic section;
+4. each `00-shared-*.md` exposes the five standard semantic sections;
+5. `reference/_INDEX.md` exists and inspect can diagnose the expected eight columns and data-row shape;
+6. `reference/README.md` exists and inspect can diagnose empty content; and
+7. `artifacts/wave0/<topic>/source.yaml` exists for every `topic_registry` topic and satisfies the accepted ReferenceMetadata array contract.
 
-CLI usage: `node inspect-wave0-output.mjs --bundle <path>`。输出 `{ check, inspect, advice }` JSON，不输出 routing，不写 trace。Exit code: 0 = pass，1 = fail，2 = 参数错误。
+The shared blocking evaluator SHALL cover the current formal Wave0 artifact/provenance rules: `reference/`、`_INDEX.md`、`README.md` existence, shared-reference count floor, placeholder `source_url`, per-topic source YAML existence/schema/count, cache coverage, submitted ledger/output/submission presence, and delegated-bypass provenance. A formal condition SHALL use the same rule id and direct checker result in inspect and gate modes.
+
+Wave0 flat-directory, filename, non-formal metadata/section, `_INDEX.md` presentation, and README non-empty conventions SHALL remain visible but SHALL be advisory unless an accepted formal rule directly consumes that shape. Missing formal artifacts remain blocking. Existing evidence-bearing return-map navigation checks SHALL preserve their accepted current-command classification and SHALL NOT be mislabeled as formal gate rules.
+
+Inspect SHALL return `{ check, inspect, advice }` JSON without routing. It SHALL preserve exit code `0` for pass, `1` for known contract failure, and `2` for invocation/configuration error. It SHALL NOT execute node binding, lifecycle handoff preflight, routing, degraded handoff, gate-attempt counting, trace/log/checkpoint writes, status mutation, or completion-only `trace_event_*` checks.
 
 #### Scenario: Flat directory check passes
 
-- **WHEN** `reference/` 下仅有 `.md` 文件（`_INDEX.md`、`README.md`、`00-shared-*.md`），无任何子目录
-- **THEN** flat directory 检查 SHALL pass
+- **WHEN** `reference/` contains only Markdown files and no non-hidden subdirectory
+- **THEN** the flat-directory convention SHALL pass without advisory
 
 #### Scenario: Flat directory check reports subdirectory
 
-- **WHEN** `reference/` 下存在子目录（如 `reference/01_topic/`）
-- **THEN** inspect SHALL 报告 "reference/: contains subdirectory '01_topic/' — directory must be flat"
-- **AND** advice SHALL 指示将所有 `.md` 文件移至 `reference/` 平铺、删除空子目录
+- **WHEN** `reference/` contains a subdirectory such as `reference/01_topic/`
+- **THEN** inspect SHALL report `reference/: contains subdirectory '01_topic/' — directory must be flat`
+- **AND** advice SHALL direct the Agent to flatten the files and remove the empty subdirectory
+- **AND** this inspect-only maintenance convention SHALL NOT independently fail the shared gate-contract result
 
 #### Scenario: Naming check reports unexpected file
 
-- **WHEN** `reference/` 包含 `notes.md`（不以 `00-shared-` 开头）
-- **THEN** inspect SHALL 报告 "reference/notes.md: filename does not match expected pattern '00-shared-<slug>.md'"
-- **AND** advice SHALL 指示重命名或移出 `reference/`
+- **WHEN** `reference/` contains `notes.md` rather than a `00-shared-<slug>.md` name
+- **THEN** inspect SHALL report the unexpected filename and nearest rename/move repair
+- **AND** filename preference alone SHALL be advisory when no formal rule consumes it
 
 #### Scenario: Metadata check reports missing key
 
-- **WHEN** `reference/00-shared-ai-landscape.md` 的 metadata block 缺少 `trust_level` 字段
-- **THEN** inspect SHALL 报告 "reference/00-shared-ai-landscape.md: metadata block missing required key 'trust_level'"
+- **WHEN** `reference/00-shared-ai-landscape.md` lacks metadata key `trust_level`
+- **THEN** inspect SHALL name the file and missing key
+- **AND** the finding SHALL be advisory when that key is not part of a formal Wave0 pass/fail rule
 
 #### Scenario: Section check reports missing header
 
-- **WHEN** `reference/00-shared-ai-landscape.md` 缺少 `## Risks And Limitations` section
-- **THEN** inspect SHALL 报告 "reference/00-shared-ai-landscape.md: missing section '## Risks And Limitations'"
+- **WHEN** `reference/00-shared-ai-landscape.md` lacks the `Risks And Limitations` semantic section
+- **THEN** inspect SHALL name the file and missing section
+- **AND** equivalent harmless heading presentation SHALL be accepted or advisory rather than a shared blocker
 
 #### Scenario: _INDEX.md header validation
 
-- **WHEN** `reference/_INDEX.md` 存在但 table header 缺少 `source_layer` 列
-- **THEN** inspect SHALL 报告 "_INDEX.md: table header missing required column 'source_layer'"
+- **WHEN** `reference/_INDEX.md` exists but its table header lacks `source_layer`
+- **THEN** inspect SHALL report the missing expected column
+- **AND** the formal existence rule SHALL remain distinct from this inspect-only presentation diagnostic
 
 #### Scenario: README.md missing or empty
 
-- **WHEN** `reference/README.md` 不存在或内容为空
-- **THEN** inspect SHALL 报告 "reference/README.md: file is missing or empty"
+- **WHEN** `reference/README.md` is missing
+- **THEN** inspect SHALL fail the shared formal existence rule
+- **WHEN** the file exists but is empty
+- **THEN** inspect SHALL report the non-empty convention as advisory unless the formal rule is intentionally changed by a future spec
+
+#### Scenario: Wave0 inspect reuses gate contract without side effects
+
+- **WHEN** Wave0 inspect evaluates a bundle with a shared artifact/provenance failure
+- **THEN** the blocking finding SHALL use the same rule id and direct checker result as `wave0-complete`
+- **AND** a recursive before/after bundle snapshot SHALL show no file creation, deletion, or content change
+
+#### Scenario: Wave0 inspect preserves command output contract
+
+- **WHEN** `inspect-wave0-output.mjs --bundle <bundle>` completes
+- **THEN** stdout SHALL contain `{ check, inspect, advice }` without routing
+- **AND** the command SHALL use exit code `0`, `1`, or `2` according to the documented non-gate convention
 
 ### Requirement: inspect-wave1-output.mjs structural checks
 
-`inspect-wave1-output.mjs` SHALL 检查 wave 1 产出物结构约定（仅 wave 1 专属，不重复 wave 0 检查）：
+`inspect-wave1-output.mjs` SHALL evaluate Wave1 phase-owned artifacts, structured depth-review, references, ledger/cache backing, submitted provenance, and explicit floors through the same pure evaluator result used by `wave1-complete`. It SHALL continue to check only Wave1-owned output conventions, including:
 
-1. **Per-topic rich MD**: 每个 topic（来自 `topic_registry`）至少 1 个 `reference/<topic-id>-*.md` 文件存在。`topic-id` 从 `topic_registry` 条目的 `id` 字段提取数字后缀（如 `"topic-03"` → `"03"`），或以 `slug` 的数字前缀提取（如 `"03_china-sponsorship..."` → `"03"`）。CLI SHALL 从 `rb_plan.md` frontmatter 读取 `topic_registry`（复用 `readBundlePlan()`）。
-2. **0N-*.md metadata**: 每个 `reference/0N-*.md` 文件 SHALL 在首个 `## ` header 之前包含全部 9 个必填 metadata key（同 IOC-001 规则 3）
-3. **0N-*.md sections**: 每个 `reference/0N-*.md` 文件 SHALL 包含全部 5 个 `## ` section header（同 IOC-001 规则 4）
-4. **evidence-summary per topic**: `artifacts/wave1/<topic>/evidence-summary.md` 存在 per topic
-5. **question-list per topic**: `artifacts/wave1/<topic>/question-list.md` 存在 per topic
-6. **_INDEX.md wave1 entries**: `reference/_INDEX.md` table SHALL 至少包含 1 行 `source_layer` 列值为 `wave1_topic` 的条目
+1. at least one per-topic `reference/<topic-prefix>-*.md` file derived from `topic_registry`;
+2. required metadata on each Wave1 topic reference;
+3. the five required semantic reference sections;
+4. `artifacts/wave1/<topic>/evidence-summary.md`;
+5. `artifacts/wave1/<topic>/question-list.md`; and
+6. matching `reference/_INDEX.md` rows with `source_layer: wave1_topic`.
 
-CLI usage: `node inspect-wave1-output.mjs --bundle <path>`。输出格式和 exit code 同 IOC-001。
+The shared blocking evaluator SHALL retain per-topic artifact/reference presence, parseable source URL, required semantic structure, reference index/backing, depth-review authority, cache/submitted provenance, explicit profile floors, backfill-token absence, work-unit submission integrity, and delegated-bypass provenance. Existing evidence-bearing return-map navigation checks SHALL preserve their accepted current-command classification.
+
+Presentation parsing SHALL be tolerant without weakening direct contracts:
+
+- `question_list_has_four_sections` SHALL require the four semantic sections but SHALL tolerate harmless heading whitespace/case/list-marker differences and SHALL NOT fail solely on presentation order/style;
+- `source_url_present` SHALL accept a parseable bare `http(s)` URL or Markdown link while submitted source/backing rules remain blocking;
+- `key_findings_non_empty` SHALL accept common bullet, numbered, or non-empty paragraph content under the semantic Key Findings section; and
+- `key_facts_min_lines` SHALL remain an explicit blocking floor while accepting equivalent common list markers and spacing.
+
+When a prerequisite parent or field is missing, inspect SHALL short-circuit only checks that depend on it. Missing or unparseable `depth-review.yaml` SHALL not generate novelty, cache-mapping, floor, profile, or decision symptoms. Missing `source_claims`, `new_source_floor`, or `decision` SHALL mask only the checks that consume that field; independent root causes SHALL remain visible.
+
+Inspect SHALL preserve `{ check, inspect, advice }`, exit code `0/1/2`, and the no-routing non-gate contract. It SHALL not execute formal lifecycle or durability behavior.
 
 #### Scenario: Detects missing topic reference files
 
-- **WHEN** topic_registry 有 topic id=03
-- **AND** `reference/` 没有任何 `03-*.md` 文件
-- **THEN** inspect SHALL 报告 "topic 03: no reference/03-*.md files found"
+- **WHEN** `topic_registry` contains topic id `03`
+- **AND** `reference/` contains no matching `03-*.md` or canonical topic-slug-prefixed reference
+- **THEN** inspect SHALL report that topic `03` has no Wave1 reference file
 
 #### Scenario: Checks 0N-*.md metadata completeness
 
-- **WHEN** `reference/03-block-goose.md` 存在但 metadata block 缺少 `why_it_matters`
-- **THEN** inspect SHALL 报告 "reference/03-block-goose.md: metadata block missing required key 'why_it_matters'"
+- **WHEN** `reference/03-block-goose.md` exists but lacks metadata key `why_it_matters`
+- **THEN** inspect SHALL name the file and missing required metadata key
 
 #### Scenario: Checks 0N-*.md section completeness
 
-- **WHEN** `reference/03-block-goose.md` 存在但缺少 `## Core Content Capture`
-- **THEN** inspect SHALL 报告 "reference/03-block-goose.md: missing section '## Core Content Capture'"
+- **WHEN** `reference/03-block-goose.md` exists but lacks the `Core Content Capture` semantic section
+- **THEN** inspect SHALL name the file and missing semantic section
+
+#### Scenario: Wave1 inspect exposes formal gate root cause before gate
+
+- **WHEN** a Phase Agent runs Wave1 inspect after phase-owned artifacts are materialized
+- **AND** a required depth-review field or submitted provenance binding is missing
+- **THEN** inspect SHALL fail with the same root rule id used by `wave1-complete`
+- **AND** advice SHALL name the bundle-relative repair surface without requiring Engine source reading
+
+#### Scenario: equivalent Markdown presentation does not block
+
+- **WHEN** Wave1 Markdown contains the required semantic sections and direct structured backing but uses equivalent harmless whitespace, heading, or list style
+- **THEN** the tolerant parser SHALL accept it or report advisory feedback
+- **AND** the presentation difference SHALL NOT independently fail the shared Wave1 result
+
+#### Scenario: Source URL parser accepts equivalent direct URL forms
+
+- **WHEN** `evidence-summary.md` contains a parseable bare `https://` URL rather than a Markdown link
+- **THEN** `source_url_present` SHALL treat the URL marker as present
+- **AND** independent submitted-source and backing checks SHALL still apply
+
+#### Scenario: Missing depth review short-circuits derivative checks
+
+- **WHEN** `artifacts/wave1/<topic>/depth-review.yaml` is missing or unparseable
+- **THEN** primary inspect output SHALL report that parent failure
+- **AND** dependent novelty, cache mapping, profile, floor, and decision rules SHALL be listed as masked or omitted from primary failures
 
 ### Requirement: inspect-wave2-output.mjs structural checks
 
-`inspect-wave2-output.mjs` SHALL 检查 wave 2 产出物结构约定（仅 wave 2 专属，不重复 wave 0/wave 1 检查）：
+`inspect-wave2-output.mjs` SHALL evaluate Wave2 triple artifacts, finding-index contract, semantic ledger sections, synthesis references, backfill, reference index/backing, cross-reference authority, and submitted targeted-evidence provenance through the same pure evaluator result used by `wave2-complete`. It SHALL continue to inspect the existing Wave2-only conventions:
 
-1. **No 00_shared/ subdirectory**: `reference/` SHALL NOT 存在名为 `00_shared` 的目录
-2. **00-cross-*.md format**: 如有 `reference/00-cross-*.md` 文件，每个 SHALL 通过 metadata block 完整性（9 key）和 5 section 检查
-3. **00-cross-*.md index entries**: 如有 `reference/00-cross-*.md` 文件，`reference/_INDEX.md` SHALL 有对应的 `source_layer: wave2_cross` 条目
-4. **Wave2 triple artifacts**: `artifacts/wave2/synthesis.md` 存在且非空、`cross-topic-ledger.md`（含 6 个固定 section header）存在、`finding-index.yaml`（可 parse YAML）存在
-5. **No backfill tokens**: 所有 `seed_topics/*.md` 文件 SHALL NOT 包含 `__BACKFILL_WAVE2_JUDGMENT__` 或 `__BACKFILL_PENDING_QUESTIONS__` 残留 token
+1. absence of legacy `reference/00_shared/` layout;
+2. metadata and semantic-section shape of optional `reference/00-cross-*.md` files;
+3. matching `reference/_INDEX.md` rows for materialized `00-cross` files;
+4. non-empty `synthesis.md`, six-section `cross-topic-ledger.md`, and parseable/contract-valid `finding-index.yaml`; and
+5. absence of Wave2 backfill tokens in `seed_topics/*.md`.
 
-CLI usage: `node inspect-wave2-output.mjs --bundle <path>`。输出格式和 exit code 同 IOC-001。
+Triple artifacts, finding structured fields, six semantic ledger sections, synthesis/backfill/cross-artifact contracts, reference navigation/backing, explicit floors, and targeted-evidence/submitted provenance SHALL remain blocking where they are formal rules. Heading marker, spacing, and equivalent case differences SHALL be parsed tolerantly while semantic sections remain required.
+
+Legacy `00_shared/` layout and `00-cross` metadata/standard-section presentation that is not consumed by direct authority SHALL remain visible as advisory. `source_url`, prior/submitted backing refs, index coverage, and provenance needed to classify a cross reference SHALL remain blocking.
+
+A missing required finding field SHALL be reported before and SHALL short-circuit only implications that consume that field. The primary output SHALL not expand one missing field into repeated enum, handoff, eligibility, backing, and synthesis symptoms. Missing/unparseable finding-index parent or non-array `findings` SHALL mask dependent per-finding and derived-count checks.
+
+Inspect SHALL preserve `{ check, inspect, advice }`, exit code `0/1/2`, no routing, and full bundle no-write behavior. Formal gate and inspect SHALL agree on shared rule ids; only formal gate may evaluate lifecycle checks, apply degraded behavior, or write durable evidence.
 
 #### Scenario: Detects 00_shared/ subdirectory
 
-- **WHEN** `reference/` 下存在 `00_shared/` 目录
-- **THEN** inspect SHALL 报告 "reference/00_shared/: subdirectory must be removed — cross-topic sources use reference/00-cross-*.md flat files"
-- **AND** advice SHALL 指示将内容转为 `00-cross-*.md`
+- **WHEN** `reference/00_shared/` exists
+- **THEN** inspect SHALL report the legacy layout and advise flat `reference/00-cross-*.md` files
+- **AND** layout preference alone SHALL be advisory when direct authority/provenance remains valid
 
 #### Scenario: Passes with no cross files
 
-- **WHEN** `reference/` 没有任何 `00-cross-*.md` 文件
-- **THEN** 00-cross 相关检查 SHALL pass（cross files 是可选产出）
+- **WHEN** `reference/` contains no `00-cross-*.md` files
+- **THEN** optional cross-file format/index checks SHALL pass
+- **AND** other Wave2 artifact and provenance rules SHALL still run
 
 #### Scenario: Detects missing wave2 artifacts
 
-- **WHEN** `artifacts/wave2/synthesis.md` 不存在
-- **THEN** inspect SHALL 报告 "artifacts/wave2/synthesis.md: file not found"
+- **WHEN** `artifacts/wave2/synthesis.md` is missing
+- **THEN** inspect SHALL report the missing formal artifact and fail the shared rule
 
 #### Scenario: Detects unreplaced backfill token
 
-- **WHEN** `seed_topics/03_*.md` 中仍包含 `__BACKFILL_WAVE2_JUDGMENT__` 字面字符串
-- **THEN** inspect SHALL 报告 "seed_topics/03_*.md: unreplaced backfill token '__BACKFILL_WAVE2_JUDGMENT__'"
+- **WHEN** a `seed_topics/*.md` file contains `__BACKFILL_WAVE2_JUDGMENT__`
+- **THEN** inspect SHALL report the exact file and token as a blocking shared failure
 
 #### Scenario: Detects missing ledger sections
 
-- **WHEN** `artifacts/wave2/cross-topic-ledger.md` 存在但缺少 "HITL2 Handoff" section
-- **THEN** inspect SHALL 报告 missing section
+- **WHEN** `cross-topic-ledger.md` lacks the HITL2 Handoff semantic section
+- **THEN** inspect SHALL report the missing section
+- **AND** harmless heading whitespace or marker differences SHALL not be the sole cause of failure
+
+#### Scenario: missing finding field produces one root repair target
+
+- **WHEN** `finding-index.yaml` contains a finding missing `hitl2_handoff`
+- **THEN** Wave2 inspect SHALL report the finding, missing field, expected shape, and bundle-relative artifact as the primary root cause
+- **AND** dependent handoff/eligibility/synthesis/backing implications SHALL be masked or retained only as non-primary detail
+
+#### Scenario: Wave2 inspect and formal gate agree
+
+- **WHEN** the same unchanged bundle is evaluated by Wave2 inspect and then by the formal Wave2 gate
+- **THEN** shared artifact/provenance failed rule ids SHALL agree
+- **AND** only formal gate SHALL add lifecycle-only failures or write gate attempt, bypass diagnostic, checkpoint, and routing evidence
 
 ### Requirement: Inspect CLIs are documented non-gate structured-output commands
 
@@ -152,24 +230,34 @@ Inspect CLIs SHALL NOT be documented as phase-routing gates, SHALL NOT emit or r
 
 ### Requirement: Inspect output SHALL classify blocking, advisory, and diagnostic-only findings accurately
 
-Inspect CLIs and shared inspect helpers SHALL classify findings according to the command result they affect:
+Inspect CLIs and shared inspect helpers SHALL classify findings according to the current command result:
 
-- `blocking`: contributes to `check.passed: false` for the current command or names a gate failure condition.
-- `advisory`: does not fail the current command but recommends repair or follow-up.
+- `blocking`: contributes to `check.passed: false` for the current inspect command or names a formal gate failure condition;
+- `advisory`: does not fail the current command and covers repair suggestions or presentation/maintenance preferences that are not authority blockers; and
 - `diagnostic-only`: cannot by itself establish or revoke gate coverage and does not contribute to current command failure.
 
-A finding SHALL NOT be labeled `diagnosticOnly: true` or described as diagnostic-only when the CLI counts it toward `check.passed: false`. Gate and inspect output MAY still explain that a return map does not create evidence authority, but that wording SHALL be separate from whether the current navigation check is blocking.
+A finding SHALL NOT be labeled `diagnosticOnly: true` or described as diagnostic-only when the CLI counts it toward `check.passed: false`. Gate and inspect output MAY explain that a return map does not establish evidence authority, but that statement SHALL remain separate from whether the current consumer-navigation check is blocking.
 
-For blocking deterministic contract findings, inspect output SHALL also be self-sufficient enough for repair: it SHALL name the failing artifact/ref/field or rule, the expected deterministic shape or canonical value, and the nearest repair surface. Inspect output SHALL NOT force the Agent to read Engine helper source to discover why the command failed.
+For blocking deterministic findings, inspect SHALL name the failing artifact/ref/field or rule, expected deterministic shape/canonical value, and one nearest repair surface. When a prerequisite failure makes downstream checks non-actionable, primary `inspect[]` SHALL contain the prerequisite root and SHALL mask, omit, or group dependent symptoms outside the primary repair list.
 
-Inspect summary fields SHALL not contradict the command result. If return-map findings contribute to `checks_failed` or `check.passed: false`, the output SHALL NOT include a summary flag such as `return_map_diagnostic_only: true` for those findings.
+Inspect SHALL preserve `check.passed`, `check.wave`, `check.checks_run`, `check.checks_failed`, `check.return_map_classification`, `inspect[]`, and `advice[]`. It SHALL add `check.failed_rule_ids` and:
+
+```text
+check.finding_classification = {
+  blocking: [...ids],
+  advisory: [...ids],
+  diagnostic_only: [...ids]
+}
+```
+
+`check.passed` SHALL be false exactly when the current command has one or more blocking findings. `check.failed_rule_ids` SHALL match blocking shared/command rule ids, and advisory/diagnostic-only ids SHALL NOT contribute to `checks_failed`. Summary fields SHALL not contradict the command result.
 
 #### Scenario: failed inspect command does not call its blocker diagnostic-only
 
 - **WHEN** `inspect-wave1-output.mjs` fails because an evidence-bearing seed-topic return map has no concrete existing `reference/*.md`
 - **THEN** the output SHALL classify that finding as blocking for the inspect command
 - **AND** it SHALL NOT label that finding diagnostic-only
-- **AND** its summary metadata SHALL NOT claim return-map findings are diagnostic-only
+- **AND** `return_map_classification` SHALL NOT claim the failed return-map check is diagnostic-only
 
 #### Scenario: advisory map-shape issue remains advisory
 
@@ -187,4 +275,16 @@ Inspect summary fields SHALL not contradict the command result. If return-map fi
 
 - **WHEN** an inspect command fails because a deterministic output contract is not satisfied
 - **THEN** the finding SHALL name the failing bundle-relative surface and expected shape
-- **AND** the advice SHALL name the nearest repair surface, such as a seed-topic return-map entry, work-unit result declaration, depth-review ref, or concrete `reference/*.md` file
+- **AND** advice SHALL name the nearest repair surface, such as a seed-topic return-map entry, work-unit result declaration, depth-review ref, finding field, or concrete `reference/*.md` file
+
+#### Scenario: prerequisite failure short-circuits symptoms
+
+- **WHEN** a required structured parent object or artifact cannot be parsed
+- **THEN** primary inspect output SHALL report that root cause first
+- **AND** checks requiring the missing parent SHALL not emit independent primary failures
+
+#### Scenario: summary fields agree with classifications
+
+- **WHEN** inspect output contains blocking, advisory, and diagnostic-only findings
+- **THEN** every `check.failed_rule_ids` entry SHALL appear in `check.finding_classification.blocking`
+- **AND** `check.passed` and `checks_failed` SHALL ignore advisory and diagnostic-only findings

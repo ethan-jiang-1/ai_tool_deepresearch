@@ -11,7 +11,7 @@ import { parseArgs } from 'node:util';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parse as parseYaml } from 'yaml';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { parseMdFrontmatter } from '../engine/helpers/gate-helpers.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -97,7 +97,7 @@ const raw = readFileSync(profilePath, 'utf-8');
 const profile = parseYaml(raw);
 profile.research_profile = styleName;
 profile.research_style_params = params;
-writeFileSync(profilePath, stringifyProfile(profile));
+writeFileSync(profilePath, stringifyYaml(profile));
 
 // ── 6. Output result ──
 console.log(JSON.stringify({
@@ -105,49 +105,3 @@ console.log(JSON.stringify({
   topic_count: topicCount,
   wave0_shared_ref_total: wave0SharedRefTotal,
 }));
-
-// ── Helpers ──
-
-/**
- * Minimal YAML serializer for rb_profile.yaml.
- * Preserves the existing structure: flat keys, nested human_decision_checkpoints.
- */
-function stringifyProfile(profile) {
-  const lines = [];
-  lines.push(`plan_basename: ${profile.plan_basename || ''}`);
-  lines.push(`research_profile: ${profile.research_profile || 'not_selected'}`);
-  lines.push('root_must_answer_set:');
-  if (Array.isArray(profile.root_must_answer_set)) {
-    for (const item of profile.root_must_answer_set) {
-      lines.push(`  - "${item}"`);
-    }
-  } else {
-    lines.push('  []');
-  }
-  lines.push('research_style_params:');
-  if (profile.research_style_params) {
-    for (const [key, value] of Object.entries(profile.research_style_params)) {
-      if (typeof value === 'boolean') {
-        lines.push(`  ${key}: ${value}`);
-      } else if (typeof value === 'string') {
-        lines.push(`  ${key}: ${value}`);
-      } else {
-        lines.push(`  ${key}: ${value}`);
-      }
-    }
-  }
-  lines.push('human_decision_checkpoints:');
-  const hdc = profile.human_decision_checkpoints || {};
-  lines.push('  hitl1:');
-  lines.push(`    status: ${hdc.hitl1?.status || 'not_started'}`);
-  if (hdc.hitl1?.recorded_at) lines.push(`    recorded_at: ${hdc.hitl1.recorded_at}`);
-  lines.push('  hitl2:');
-  lines.push(`    status: ${hdc.hitl2?.status || 'not_started'}`);
-  lines.push(`    answerability_class: ${hdc.hitl2?.answerability_class || 'not_assessed'}`);
-  lines.push(`    user_decision: ${hdc.hitl2?.user_decision || 'not_started'}`);
-  lines.push(`    final_report_view: ${hdc.hitl2?.final_report_view || 'not_started'}`);
-  if (hdc.hitl2?.custom_slug) lines.push(`    custom_slug: ${hdc.hitl2.custom_slug}`);
-  if (hdc.hitl2?.rerun_count !== undefined) lines.push(`    rerun_count: ${hdc.hitl2.rerun_count}`);
-  if (hdc.hitl2?.rationale) lines.push(`    rationale: ${hdc.hitl2.rationale}`);
-  return lines.join('\n') + '\n';
-}

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.18
+
+- HITL1 now performs a bounded real search/fetch capability probe before silent waves; unavailable or unprobed research access fails closed at HITL1 instead of drifting into Wave0.
+- `rb_profile.yaml` now records a strict `research_access` observation, and `ProfileSchema` validates available/unavailable/unprobed branches without treating probe output as research evidence.
+- `apply-research-style.mjs` now preserves unrelated profile sections, including HITL decisions, rerun context, and research-access observations, while replacing only style fields.
+- `hitl1-recorded` reuses the existing `field_value` rule path to require `research_access.status: available`, with deterministic tests and a real-Agent canary covering the new fail-fast boundary.
+
 ## v0.17
 
 - Wave0/Wave1/Wave2 formal gates and inspect commands now reuse one explicit pure evaluator per wave for artifact, provenance, reference, and accepted floor checks; lifecycle, routing, degraded handoff, attempts, checkpoints, and durable diagnostics remain formal-only.

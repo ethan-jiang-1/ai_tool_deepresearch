@@ -22,11 +22,22 @@ function writeProfileYaml(bundleDir, yaml) {
   writeFileSync(join(bundleDir, 'rb_profile.yaml'), yaml);
 }
 
+function advanceHitl1(bundleDir) {
+  return spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli/advance-status.mjs'), '--bundle', bundleDir, '--to', 'hitl1_recorded'], { encoding: 'utf-8', timeout: 10000 });
+}
+
+const AVAILABLE_ACCESS = `research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/"
+  fetch_outcome: success
+`;
+
 const VALID_PROFILE = `plan_basename: test
 research_profile: quick_factual
 root_must_answer_set:
   - "What is the answer?"
-human_decision_checkpoints:
+${AVAILABLE_ACCESS}human_decision_checkpoints:
   hitl1:
     status: recorded
     recorded_at: "2026-06-21T00:00:00.000Z"
@@ -47,7 +58,7 @@ describe('check-gate-hitl1-recorded', () => {
     writeProfileYaml(bundleDir, VALID_PROFILE);
 
     // Advance status to hitl1_recorded (gate now checks current_gate/next_gate per PRG-009)
-    spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli/advance-status.mjs'), '--bundle', bundleDir, '--to', 'hitl1_recorded'], { encoding: 'utf-8', timeout: 10000 });
+    advanceHitl1(bundleDir);
 
     const result = runGate(bundleDir);
     const output = JSON.parse(result.stdout);
@@ -100,7 +111,7 @@ describe('check-gate-hitl1-recorded', () => {
     writeProfileYaml(bundleDir, `plan_basename: test
 research_profile: exploratory_map
 root_must_answer_set: []
-human_decision_checkpoints:
+${AVAILABLE_ACCESS}human_decision_checkpoints:
   hitl1:
     status: recorded
     recorded_at: "2026-06-21T00:00:00.000Z"
@@ -126,7 +137,7 @@ human_decision_checkpoints:
 research_profile: claim_verification
 root_must_answer_set:
   - "Q"
-human_decision_checkpoints:
+${AVAILABLE_ACCESS}human_decision_checkpoints:
   hitl1:
     status: pending_user
   hitl2:
@@ -151,7 +162,7 @@ human_decision_checkpoints:
 research_profile: quick_factual
 root_must_answer_set:
   - "Q"
-human_decision_checkpoints:
+${AVAILABLE_ACCESS}human_decision_checkpoints:
   hitl1:
     status: recorded
   hitl2:
@@ -166,5 +177,67 @@ human_decision_checkpoints:
 
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('recorded_at')), `Expected recorded_at missing fail: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('fails legacy profile without research_access and points to the real probe', () => {
+    const name = unique('legacy-access');
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    const bundleDir = track(r.stdout.trim());
+    writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, ''));
+    advanceHitl1(bundleDir);
+
+    const output = JSON.parse(runGate(bundleDir).stdout);
+
+    assert.equal(output.check.passed, false);
+    assert.equal(output.check.next, null);
+    assert.ok(output.inspect.some((message) => message.includes('research_access/status')));
+    assert.ok(output.advice.some((message) => message.includes('real HITL1 search/fetch probe')));
+  });
+
+  it('fails unprobed research_access without authorizing Setup', () => {
+    const name = unique('unprobed-access');
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    const bundleDir = track(r.stdout.trim());
+    writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, 'research_access:\n  status: unprobed\n'));
+    advanceHitl1(bundleDir);
+
+    const output = JSON.parse(runGate(bundleDir).stdout);
+
+    assert.equal(output.check.passed, false);
+    assert.equal(output.check.next, null);
+    assert.notEqual(output.routing.kind, 'next');
+  });
+
+  it('fails unavailable research_access and points to the recorded reason path', () => {
+    const name = unique('unavailable-access');
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    const bundleDir = track(r.stdout.trim());
+    writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, `research_access:
+  status: unavailable
+  probed_at: "2026-07-10T00:00:00.000Z"
+  fetch_outcome: blocked
+  reason: "Fetch surface blocked"
+`));
+    advanceHitl1(bundleDir);
+
+    const output = JSON.parse(runGate(bundleDir).stdout);
+
+    assert.equal(output.check.passed, false);
+    assert.equal(output.check.next, null);
+    assert.ok(output.advice.some((message) => message.includes('research_access.reason')));
+  });
+
+  it('fails fake available research_access through ProfileSchema', () => {
+    const name = unique('fake-available');
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    const bundleDir = track(r.stdout.trim());
+    writeProfileYaml(bundleDir, VALID_PROFILE.replace('https://example.com/', 'ftp://example.com/file'));
+    advanceHitl1(bundleDir);
+
+    const output = JSON.parse(runGate(bundleDir).stdout);
+
+    assert.equal(output.check.passed, false);
+    assert.equal(output.check.next, null);
+    assert.ok(output.inspect.some((message) => message.includes('ProfileSchema validation failed')));
   });
 });

@@ -2,6 +2,36 @@
 import { z } from 'zod';
 import { ResearchProfile, HumanCheckpointStatus, AnswerabilityClass, HITL2UserDecision, FinalReportView } from '../enums.mjs';
 
+const TrimmedNonEmptyString = z.string().trim().min(1);
+const IsoTimestamp = z.string().datetime({ offset: true });
+const HttpUrl = z.string().url().refine((value) => {
+  const protocol = new URL(value).protocol;
+  return protocol === 'http:' || protocol === 'https:';
+}, 'Expected an HTTP(S) URL');
+
+const ResearchAccessSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('unprobed'),
+  }).strict(),
+  z.object({
+    status: z.literal('available'),
+    probed_at: IsoTimestamp,
+    result_url: HttpUrl,
+    fetch_outcome: z.literal('success'),
+    search_surface: TrimmedNonEmptyString.optional(),
+    fetch_surface: TrimmedNonEmptyString.optional(),
+  }).strict(),
+  z.object({
+    status: z.literal('unavailable'),
+    probed_at: IsoTimestamp,
+    fetch_outcome: z.enum(['failed', 'blocked', 'not_attempted']),
+    reason: TrimmedNonEmptyString,
+    result_url: HttpUrl.optional(),
+    search_surface: TrimmedNonEmptyString.optional(),
+    fetch_surface: TrimmedNonEmptyString.optional(),
+  }).strict(),
+]);
+
 // @impl RES-002: Research style params schema (13 fields)
 export const ResearchStyleParamsSchema = z.object({
   user_visible: z.boolean(),
@@ -27,6 +57,7 @@ export const ProfileSchema = z.object({
   research_profile: ResearchProfile,
   root_must_answer_set: z.array(z.string()),
   research_style_params: ResearchStyleParamsSchema.nullable().optional(),
+  research_access: ResearchAccessSchema.optional(),
   human_decision_checkpoints: z.object({
     hitl1: z.object({
       status: HumanCheckpointStatus,

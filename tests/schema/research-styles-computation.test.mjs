@@ -8,7 +8,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ResearchStyleParamsSchema } from '../../DPT_FRAMEWORK/schema/index.mjs';
-import { parse as parseYaml } from 'yaml';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STYLES_DIR = join(__dirname, '..', '..', 'DPT_FRAMEWORK', 'schema', 'research-styles');
@@ -340,5 +340,62 @@ describe('apply-research-style.mjs CLI integration', () => {
     assert.strictEqual(profile.research_style_params.wave1_per_topic_ref_floor, 8);
     assert.strictEqual(profile.research_style_params.wave2_cross_topic_depth, 1);
     assert.strictEqual(profile.research_style_params.wave2_emergent_search_rounds, 1);
+  });
+
+  it('preserves available research_access and HITL fields across apply and rerun recompute', () => {
+    const dir = createBundleWithTopics(2);
+    const profilePath = join(dir, 'rb_profile.yaml');
+    const profile = parseYaml(readFileSync(profilePath, 'utf-8'));
+    profile.root_must_answer_set = ['Keep this must-answer'];
+    profile.human_decision_checkpoints.hitl1 = {
+      status: 'recorded',
+      recorded_at: '2026-07-10T00:00:00.000Z',
+    };
+    profile.human_decision_checkpoints.hitl2.rerun_count = 2;
+    profile.human_decision_checkpoints.hitl2.rationale = 'Preserve rerun context';
+    profile.research_access = {
+      status: 'available',
+      probed_at: '2026-07-10T00:00:00.000Z',
+      result_url: 'https://example.com/',
+      fetch_outcome: 'success',
+      search_surface: 'WebSearch',
+      fetch_surface: 'WebFetch',
+    };
+    writeFileSync(profilePath, stringifyYaml(profile));
+
+    let result = runApply(dir, 'quick_factual');
+    assert.equal(result.status, 0, result.stderr);
+
+    const updatedPlan = `---\n{\n  "plan_basename": "test",\n  "derived_topic_count": 4,\n  "topic_registry": ${JSON.stringify(Array.from({ length: 4 }, (_, index) => ({ id: String(index + 1), slug: `${String(index + 1).padStart(2, '0')}_topic-${index + 1}`, title: `Topic ${index + 1}` })))}\n}\n---`;
+    writeFileSync(join(dir, 'rb_plan.md'), updatedPlan);
+    result = runApply(dir, 'quick_factual');
+    assert.equal(result.status, 0, result.stderr);
+
+    const after = parseYaml(readFileSync(profilePath, 'utf-8'));
+    assert.deepEqual(after.root_must_answer_set, ['Keep this must-answer']);
+    assert.deepEqual(after.human_decision_checkpoints.hitl1, profile.human_decision_checkpoints.hitl1);
+    assert.equal(after.human_decision_checkpoints.hitl2.rerun_count, 2);
+    assert.equal(after.human_decision_checkpoints.hitl2.rationale, 'Preserve rerun context');
+    assert.deepEqual(after.research_access, profile.research_access);
+    assert.equal(after.research_style_params.wave0_shared_ref_total, 7);
+  });
+
+  it('preserves unavailable research_access while changing style', () => {
+    const dir = createBundleWithTopics(1);
+    const profilePath = join(dir, 'rb_profile.yaml');
+    const profile = parseYaml(readFileSync(profilePath, 'utf-8'));
+    profile.research_access = {
+      status: 'unavailable',
+      probed_at: '2026-07-10T00:00:00.000Z',
+      fetch_outcome: 'not_attempted',
+      reason: 'Search surface is unavailable',
+    };
+    writeFileSync(profilePath, stringifyYaml(profile));
+
+    const result = runApply(dir, 'claim_verification');
+    assert.equal(result.status, 0, result.stderr);
+
+    const after = parseYaml(readFileSync(profilePath, 'utf-8'));
+    assert.deepEqual(after.research_access, profile.research_access);
   });
 });

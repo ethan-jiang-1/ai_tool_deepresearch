@@ -132,6 +132,11 @@ research_profile: quick_factual
 root_must_answer_set:
   - "Does the instantiation gate pass with correct initial status?"
   - "Does the seed-topics-ready gate pass after materialization?"
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/gate-chain-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded

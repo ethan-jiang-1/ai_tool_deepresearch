@@ -24,7 +24,7 @@ verdict: trace-jsonl
 2. 故意让 profile 处于默认状态（`research_profile: not_selected`）
 3. 运行 hitl1-recorded gate → **预期 fail**
 4. 展示 gate JSON output，解释 inspect/advice
-5. 修复 profile（改 `research_profile` 为 `quick_factual`），展示 diff
+5. 修复 profile（填写 user choices，并加入 synthetic valid research-access observation），展示 diff
 6. Rerun same gate → **预期 pass**
 7. 从 trace 裁决（trace 中同时有 failed 和 passed 的 check event）
 8. Cleanup
@@ -47,14 +47,14 @@ echo "Bundle: $B"
 
 ## Step 2: 故意让 profile 处于默认状态
 
-`new-disposable-bundle.mjs` 创建的 `rb_profile.yaml` 默认 `research_profile: not_selected`、`root_must_answer_set: []`、`hitl1.status: not_started`。**我们不做任何修改**，模拟"用户尚未回答 HITL1"的状态。
+`new-disposable-bundle.mjs` 创建的 `rb_profile.yaml` 默认 `research_profile: not_selected`、`root_must_answer_set: []`、`research_access.status: unprobed`、`hitl1.status: not_started`。**我们不做任何修改**，模拟"用户尚未回答 HITL1 且尚未 probe"的状态。
 
 ```bash
 echo "=== Current profile (default — simulating unanswered HITL1) ==="
 grep -E 'research_profile|root_must_answer|status' $B/rb_profile.yaml
 ```
 
-展示：`research_profile: not_selected`、`root_must_answer_set: []`、`hitl1.status: not_started`。
+展示：`research_profile: not_selected`、`root_must_answer_set: []`、`research_access.status: unprobed`、`hitl1.status: not_started`。
 
 ## Step 3: 运行 hitl1-recorded gate — 预期 FAIL
 
@@ -87,7 +87,7 @@ import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
 
 ## Step 4: 修复 profile
 
-Agent 读到了 inspect/advice。现在执行修复：把 `research_profile` 改成 `quick_factual`，填写 `root_must_answer_set`，写入 HITL1 marker。
+Agent 读到了 inspect/advice。现在执行修复：把 `research_profile` 改成 `quick_factual`，填写 `root_must_answer_set`，写入 HITL1 marker，并加入 synthetic valid `research_access`。该 observation 只证明 gate repair mechanics，不证明真实外部能力。
 
 ```bash
 echo "=== Before repair ==="
@@ -98,6 +98,11 @@ plan_basename: wff_repair
 research_profile: quick_factual
 root_must_answer_set:
   - "What are the key risks in AI development?"
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/deterministic-hitl1-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded

@@ -172,6 +172,7 @@ const GATE_RULE_INVENTORY_GROUPS = [
     rules: ruleKeys('hitl1-recorded', [
       'profile_exists',
       'profile_schema_valid',
+      'research_access_available',
       'research_profile_not_default',
       'must_answer_non_empty',
       'hitl1_status_recorded',
@@ -179,8 +180,8 @@ const GATE_RULE_INVENTORY_GROUPS = [
       'status_current_gate',
       'status_next_gate',
     ]),
-    artifactCategory: 'HITL1 profile checkpoint and lifecycle status',
-    producerInstruction: 'HITL1/profile collection workflow',
+    artifactCategory: 'HITL1 profile, research-access checkpoint, and lifecycle status',
+    producerInstruction: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl1.md',
     runtimeAuthority: 'rb_profile.yaml plus rb_status.json',
     diagnosticSurface: 'gate definition failure_message plus check-gate-hitl1-recorded inspect/advice',
     classification: 'blocking',

@@ -1,16 +1,16 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.17**
+> **DPT_FRAMEWORK v0.18**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 
-## Current Release: v0.17
+## Current Release: v0.18
 
-- Wave0/Wave1/Wave2 inspect 与 formal gate 复用同一 pure evaluator；inspect 只读、non-routing、返回 raw contract result，formal wrapper 独占 lifecycle、degraded handoff 和 durable evidence。
-- 结构 parent/field 缺失时优先返回最小根因并短路依赖症状；等价 Markdown presentation 使用宽容解析或 advisory。
-- Wave inspect/gate 输出增量提供 failed/masked rule ids 与 finding classification；Phase 在 completion evidence 和 formal gate 前先运行对应 inspect，修复 named surface 后重跑同一 inspect。
+- HITL1 在进入 silent waves 前执行一次 bounded real search/fetch capability probe；missing、unprobed 或 unavailable research access 留在 HITL1，不能授权 Setup/Wave0。
+- `rb_profile.yaml#/research_access` 记录 strict direct observation；`ProfileSchema` 校验 available/unavailable/unprobed 分支，probe URL/content 不属于 research evidence。
+- `apply-research-style.mjs` 只替换 style 字段并保留 HITL decisions、rerun context 与 research-access observation；`hitl1-recorded` 复用现有 `field_value` rule 要求 `research_access.status: available`。
 
 ## 0. 禁用内置捷径（最高优先）
 

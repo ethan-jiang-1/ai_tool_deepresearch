@@ -69,6 +69,9 @@ echo "Bundle: $B"
 | `root_must_answer_set[2]` | "What are the most cited AI safety concerns in recent literature?" | 覆盖主要风险维度 |
 
 **AI 准备写入的 payload：**
+
+`research_access` 是 synthetic review fixture，只证明字段落点与 gate mechanics，不证明真实 Agent capability。
+
 ```yaml
 plan_basename: wff_review
 research_profile: exploratory_map
@@ -76,6 +79,11 @@ root_must_answer_set:
   - "What are the main AI safety research directions in 2025-2026?"
   - "Which organizations are leading AI safety work?"
   - "What are the most cited AI safety concerns in recent literature?"
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/deterministic-hitl1-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded
@@ -94,6 +102,7 @@ human_decision_checkpoints:
 - [ ] **Profile 选择是否贴切？** `exploratory_map` 是否匹配用户 "现状全景" 的需求？还是应该用 `quick_factual`？
 - [ ] **Must-answer 是否覆盖关键维度？** 3 个问题是否覆盖了研究方向、参与者、风险？是否遗漏了"时间线"或"监管动态"？
 - [ ] **Payload 写入路径是否正确？** 所有字段是否写入 `rb_profile.yaml` 的 `human_decision_checkpoints.hitl1.*` 路径？有没有误写入 `rb_status.json`？
+- [ ] **Capability fixture 是否诚实标注？** `research_access` 是否明确只是 deterministic gate fixture，而不是外部能力证明？
 - [ ] **`plan_basename` 是否未被误改？** 确认 AI 没有修改 bundle 创建时设定的 `plan_basename`
 
 ## Step 5: 写入 sample payload 并验证
@@ -108,6 +117,11 @@ root_must_answer_set:
   - "What are the main AI safety research directions in 2025-2026?"
   - "Which organizations are leading AI safety work?"
   - "What are the most cited AI safety concerns in recent literature?"
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/deterministic-hitl1-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded

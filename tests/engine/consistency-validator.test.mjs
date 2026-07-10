@@ -282,6 +282,61 @@ describe('ValidateWorkflowPackage — happy path', () => {
     assert.deepStrictEqual(report.issues, []);
     cleanup();
   });
+
+  it('accepts capability_probe_only as the expected HITL1 search policy', () => {
+    scaffold({
+      manifest: {
+        phases: [
+          { key: 'hitl1', node: 'phases/phase-hitl1.md', gate: 'hitl1-recorded' },
+          { key: 'final', node: 'phases/phase-final.md', gate: null },
+        ],
+        shared: [],
+      },
+      nodes: {
+        'phases/phase-hitl1.md': { node_type: 'phase', id: 'phase-hitl1', phase: 'hitl1', gate: 'hitl1-recorded', stop: 'yes', execution_contract: { surface: 'phase-agent', search_policy: 'capability_probe_only' }, requires: [], suggested_context: [] },
+        'phases/phase-final.md': { node_type: 'phase', id: 'phase-final', phase: 'final', gate: null, stop: 'no', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: [], suggested_context: [] },
+      },
+      gateDefs: {
+        'hitl1-recorded': { gate: 'hitl1-recorded', rules: [] },
+      },
+      chain: {
+        'phases/phase-hitl1.md': { passed: 'phases/phase-final.md' },
+      },
+    });
+
+    const report = validateWorkflowPackage({
+      workflowsDir: join(TMP, 'workflows'),
+      gateDefsDir: join(TMP, 'gate_defs'),
+    });
+
+    assert.strictEqual(report.passed, true, JSON.stringify(report.issues));
+    cleanup();
+  });
+
+  it('reports no_search as a HITL1 execution-contract mismatch', () => {
+    scaffold({
+      manifest: {
+        phases: [
+          { key: 'hitl1', node: 'phases/phase-hitl1.md', gate: 'hitl1-recorded' },
+        ],
+        shared: [],
+      },
+      nodes: {
+        'phases/phase-hitl1.md': { node_type: 'phase', id: 'phase-hitl1', phase: 'hitl1', gate: 'hitl1-recorded', stop: 'yes', execution_contract: { surface: 'phase-agent', search_policy: 'no_search' }, requires: [], suggested_context: [] },
+      },
+      gateDefs: {
+        'hitl1-recorded': { gate: 'hitl1-recorded', rules: [] },
+      },
+    });
+
+    const report = validateWorkflowPackage({
+      workflowsDir: join(TMP, 'workflows'),
+      gateDefsDir: join(TMP, 'gate_defs'),
+    });
+
+    assert.ok(report.issues.some((issue) => issue.class === 'execution_contract_search_policy_mismatch' && issue.detail.includes('capability_probe_only')));
+    cleanup();
+  });
 });
 
 // ─── 1. Manifest → missing node files ──────────────────────────────────────

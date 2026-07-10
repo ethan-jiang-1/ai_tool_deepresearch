@@ -39,6 +39,8 @@ echo "$B" > /tmp/pb_bundle
 
 ## Step 2: 写入 quick_factual payload
 
+`research_access` 使用 synthetic valid observation，只证明 deterministic gate mechanics，不证明真实 search/fetch capability。
+
 ```bash
 REPO_ROOT=$(pwd)
 B=$(cat /tmp/pb_bundle)
@@ -48,6 +50,11 @@ research_profile: quick_factual
 root_must_answer_set:
   - "What are the key differences in AI regulation between the EU, US, and China?"
   - "Which regulatory approach has the strongest enforcement mechanism?"
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/deterministic-hitl1-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded

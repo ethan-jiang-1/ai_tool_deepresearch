@@ -74,6 +74,11 @@ research_style_params:
   quality_min_substance: none
   wave2_cross_topic_depth: 0
   wave2_emergent_search_rounds: 0
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/case-151-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded

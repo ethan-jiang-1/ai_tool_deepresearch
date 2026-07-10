@@ -195,12 +195,19 @@ grep -c '\*\*待定：\*\*' $B/rb_plan.md && echo "OK: 待定 substructure"
 REPO_ROOT=$(pwd)
 B=$(cat /tmp/pb_bundle)
 
+# Synthetic research_access below keeps this deterministic topic-rewrite case
+# focused on gate mechanics; it does not prove real Agent capability.
 cat > $B/rb_profile.yaml << 'EOF'
 plan_basename: wff_rw
 research_profile: exploratory_map
 root_must_answer_set:
   - "What are the most effective AI alignment techniques based on current evidence?"
   - "How do EU, US, and China AI regulations differ in enforcement and scope?"
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/deterministic-hitl1-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded

@@ -6,7 +6,7 @@ gate: hitl1-recorded
 stop: "yes"
 execution_contract:
   surface: phase-agent
-  search_policy: no_search
+  search_policy: capability_probe_only
 requires:
   - shared/shared-profile
   - shared/shared-agent-ux-guidance
@@ -18,15 +18,15 @@ suggested_context:
 
 ## 0. Execution Brief
 
-- **Objective**: Collect the user's research profile, root must-answer set, and HITL1 constraints into durable bundle state.
+- **Objective**: Collect the user's research profile, root must-answer set, and HITL1 constraints, then confirm current research access before silent execution.
 - **Start here**: Read `brief/hitl1.md`, the original question, `rb_plan.md`, and `rb_profile.yaml`.
-- **Path to pass**: Present the HITL1 prompt, wait for the user's answer, write profile decisions and style parameters, then run the HITL1 gate.
-- **Completion check**: User input is recorded in `rb_profile.yaml` and `check-gate-hitl1-recorded.mjs` passes.
-- **Failure posture**: Because `stop: yes`, do not invent missing user choices; ask/repair only around real user input and gate feedback.
+- **Path to pass**: Present the HITL1 prompt, wait for the user's answer, write profile decisions, apply style parameters, run one bounded real research-access probe, then run the HITL1 gate.
+- **Completion check**: User input and a schema-valid available research-access observation are recorded in `rb_profile.yaml`, and `check-gate-hitl1-recorded.mjs` passes.
+- **Failure posture**: Do not invent user choices or capability success. If access is unavailable, preserve recorded choices, explain the blocker, and rerun the same probe and gate only after the environment is repaired or the user requests another attempt.
 
 ## 1. Stage Goal
 
-向用户提出结构化问题，收集 research profile、root must-answer set 和用户约束，并将回答持久化写入 active bundle 的 `rb_profile.yaml`。
+向用户提出结构化问题，收集 research profile、root must-answer set 和用户约束，将回答持久化写入 active bundle 的 `rb_profile.yaml`，并在进入 silent waves 前确认当前 Agent 环境具备一次真实 search + fetch 能力。
 
 ## 2. Required Inputs
 
@@ -113,6 +113,43 @@ topic_registry:
 
 **参数不被 gate 二次验证**：`research_style_params` 的正确性依赖 CLI 的确定性计算——HITL1 gate 只验证 `research_profile ≠ not_selected`，不对比 JSON 源文件与 profile 内容是否一致。`apply-research-style.mjs` 是参数 computation 的 trust root，其输出由测试保证正确性。
 
+### 3d. Research Access Probe（进入 silent waves 前的能力确认）
+
+Research style CLI 成功后，Agent MUST 使用当前环境的实际 search/fetch surfaces 执行一个短而固定的 capability probe。`execution_contract.search_policy: capability_probe_only` 只授权这个 probe；它不授权 research evidence collection、work-unit delegation 或 Wave work。
+
+**固定顺序：**
+
+1. 使用实际 search surface 发起**至多一次 neutral capability-only search**。Query 只用于确认工具可用，不用于当前 research topic 的证据收集。
+2. 按 search surface 返回顺序取**第一个 usable HTTP(S) result**。不评价来源质量，不跳到第二个站点，不建立候选 URL 列表。
+3. 若有 usable URL，使用实际 fetch surface 对该 URL 发起**至多一次 fetch**。只有返回真实 page content 才算 success；snippet、搜索摘要、mock response 或手写文本都不算。
+4. 将直接 observation 写入 `rb_profile.yaml#/research_access`，然后运行同一个 `hitl1-recorded` gate。
+
+**Observation branches：**
+
+- Search surface 缺失、search 调用失败/被阻止、无 usable HTTP(S) result，或 fetch surface 在调用前缺失：
+  ```yaml
+  research_access:
+    status: unavailable
+    probed_at: <ISO 8601 timestamp>
+    fetch_outcome: not_attempted
+    reason: <direct non-empty reason>
+  ```
+- Search 返回 usable URL，但实际 fetch 被阻止或失败：写 `status: unavailable`、该 `result_url`、`fetch_outcome: blocked | failed` 和直接 `reason`。
+- Search 返回 usable URL 且实际 fetch 返回 page content：
+  ```yaml
+  research_access:
+    status: available
+    probed_at: <ISO 8601 timestamp>
+    result_url: <HTTP(S) URL from this search>
+    fetch_outcome: success
+  ```
+
+`search_surface` / `fetch_surface` MAY 记录当前工具名称作 audit label，但不是 gate-required facts。不要记录 query history、response body、HTTP status matrix、retry list 或 derived gate verdict。
+
+**Unavailable recovery：** 保留已记录的 `research_profile`、`root_must_answer_set`、style params 和 `hitl1.status: recorded`。明确告诉用户当前环境无法启动 evidence-backed waves；修复/切换环境或用户要求再次尝试后，重跑本节同一 bounded probe 和同一 gate，不要求用户重复回答 HITL1 choices。
+
+**Evidence boundary：** Probe URL、page content 和 tool output SHALL NOT 写入或计入 `reference/`、`_cache/`、`artifacts/`、work-unit output/result/receipt、`rb_work_unit_ledger.jsonl`、`rb_output_declarations.jsonl` 或任何 Wave coverage/count floor。
+
 ## 4. Expected Artifacts
 
 `rb_profile.yaml` 中以下字段已写入：
@@ -125,8 +162,13 @@ topic_registry:
 | `research_profile` | `rb_profile.yaml#/research_profile` | ≠ `not_selected`；用户从 `quick_factual`、`exploratory_map`、`claim_verification` 中选择 |
 | `root_must_answer_set` | `rb_profile.yaml#/root_must_answer_set` | 非空字符串数组 |
 | `research_style_params` | `rb_profile.yaml#/research_style_params` | 由 `apply-research-style.mjs` CLI 写入（见 §3c 步骤 1-3），Agent 不手写参数。CLI 后验证 stdout 中的 `applied`、`topic_count`、`wave0_shared_ref_total` 值 |
+| `research_access.status` | `rb_profile.yaml#/research_access/status` | `available` 才能通过 HITL1 gate；`unprobed` / `unavailable` 留在 HITL1 |
+| available path | `rb_profile.yaml#/research_access/{probed_at,result_url,fetch_outcome}` | ISO timestamp + HTTP(S) URL + `fetch_outcome: success` |
+| unavailable path | `rb_profile.yaml#/research_access/{probed_at,fetch_outcome,reason}` | ISO timestamp + `failed | blocked | not_attempted` + 非空直接原因 |
 | `hitl1.status` | `rb_profile.yaml#/human_decision_checkpoints/hitl1/status` | = `recorded` |
 | `hitl1.recorded_at` | `rb_profile.yaml#/human_decision_checkpoints/hitl1/recorded_at` | 非空 ISO 8601 timestamp |
+
+Optional `research_access.search_surface` / `fetch_surface` 只作 audit label，不是 gate-required facts。该 checklist 是 review surface；`ProfileSchema` 和 gate definition 仍是 machine authority。
 
 ## 5. Gate Command
 
@@ -145,6 +187,9 @@ node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle <path> --cur
 - `research_profile` 仍为 `not_selected` → 确认用户选择后写入
 - `root_must_answer_set` 为空 → 确认用户 must-answer 问题后写入
 - `research_style_params` 缺失或不完整 → 重新运行 `apply-research-style.mjs` CLI
+- `research_access` 缺失或仍为 `unprobed` → 按 §3d 运行真实 bounded probe
+- `research_access.status` 为 `unavailable` → 读取 `research_access.reason`，保留用户 choices，修复/切换环境后重跑同一 probe 和 gate；不得进入 Setup
+- `research_access.status` 为 `available` 但 schema invalid → 修正 timestamp/HTTP(S) URL/fetch outcome 的直接 observation；不得伪造 success
 - `hitl1.status` 不是 `recorded` → 写入 `recorded`
 - `hitl1.recorded_at` 缺失 → 写入当前时间戳
 
@@ -154,12 +199,17 @@ node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle <path> --cur
 
 `stop: yes` 只意味着等待用户输入，不意味着豁免 deterministic check。用户回答后，仍必须运行 `hitl1-recorded` gate。
 
+若 probe 记录 `unavailable`，Agent 保持 HITL1，向用户暴露 blocker；用户 choices 保留，后续只重跑同一 bounded probe 和 gate。
+
 ## 9. Anti-Cheating Rules
 
 - **用户回答 MUST 写入 `rb_profile.yaml`**，不能只停留在 chat memory
 - **禁止在用户未回答时填写 placeholder 或假数据**：不能编造 `research_profile`、`root_must_answer_set` 等内容让 gate pass
 - **禁止跳过 HITL1 直接进入 setup**：`stop: yes` 意味着必须等待用户
 - **禁止写入不存在的字段路径**：HITL1 结果写入 `rb_profile.yaml` 的 `human_decision_checkpoints.hitl1.*`；不要写入不存在的 `rb_status.json#/phases/hitl1/*`
+- **禁止用 mock/fixed URL/搜索摘要/手写 page content 声称 `research_access.status: available`**：available 只能来自当次实际 search 返回的 URL 和实际 fetch page content
+- **禁止把 probe 当 research evidence**：Probe URL/content/tool output 不得进入 reference、cache、artifact、work-unit、ledger、output declaration 或 Wave coverage
+- **禁止自动 retry tree**：一次 attempt 至多一次 search 和一次 fetch；失败后只在环境修复或用户要求再次尝试时重跑同一 probe
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
 
 ## Log

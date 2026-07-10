@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { parse as parseYaml } from 'yaml';
 
 const REPO_ROOT = process.cwd();
 const INSTANTIATE = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs');
@@ -68,6 +69,8 @@ describe('instantiate-run-bundle.mjs integration', () => {
       '_logs/README.md should explain the log and trace file inventory');
     const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf-8'));
     assert.equal(status.current_node, null);
+    const profile = parseYaml(readFileSync(join(dir, 'rb_profile.yaml'), 'utf-8'));
+    assert.deepEqual(profile.research_access, { status: 'unprobed' });
   });
 
   it('fails on name collision without overwriting existing content', () => {

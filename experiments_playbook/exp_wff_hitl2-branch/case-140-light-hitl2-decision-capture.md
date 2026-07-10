@@ -63,6 +63,12 @@ title: "Test Topic"
 EOF
 
 cat > $B/rb_profile.yaml << 'EOF'
+# Synthetic deterministic fixture only; not proof of real Agent research capability.
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/case-140-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded

@@ -54,6 +54,12 @@ function setupBundle(name, overrides = {}) {
     plan_basename: name,
     research_profile: 'quick_factual',
     root_must_answer_set: ['test question'],
+    research_access: {
+      status: 'available',
+      probed_at: '2026-07-10T00:00:00.000Z',
+      result_url: 'https://example.com/rerun-ready-fixture',
+      fetch_outcome: 'success',
+    },
     human_decision_checkpoints: {
       hitl1: { status: 'recorded' },
       hitl2: {
@@ -74,6 +80,11 @@ function setupBundle(name, overrides = {}) {
     `research_profile: ${profile.research_profile}`,
     'root_must_answer_set:',
     ...profile.root_must_answer_set.map(s => `  - "${s}"`),
+    'research_access:',
+    `  status: ${profile.research_access.status}`,
+    `  probed_at: "${profile.research_access.probed_at}"`,
+    `  result_url: "${profile.research_access.result_url}"`,
+    `  fetch_outcome: ${profile.research_access.fetch_outcome}`,
     'human_decision_checkpoints:',
     '  hitl1:',
     `    status: ${profile.human_decision_checkpoints.hitl1.status}`,

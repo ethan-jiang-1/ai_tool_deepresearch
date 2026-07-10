@@ -57,6 +57,8 @@ node DPT_FRAMEWORK/cli/validate-bundle.mjs $B 2>&1 | tail -1
 
 每个 vector 是一个 HITL1 payload 变体。写入 → 跑 gate → 记录 check。
 
+所有 vector 的 `research_access` 都是 synthetic gate fixture，用于隔离各 profile rule；它们不证明真实 Agent search/fetch capability。
+
 ### Vector A: `quick_factual`（expect: pass）
 
 ```bash
@@ -68,6 +70,11 @@ research_profile: quick_factual
 root_must_answer_set:
   - "What are the key differences in AI regulation between the EU, US, and China?"
   - "Which regulatory approach has the strongest enforcement mechanism?"
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/deterministic-hitl1-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded
@@ -96,6 +103,11 @@ root_must_answer_set:
   - "What is the full landscape of AI governance frameworks worldwide?"
   - "Which jurisdictions are planning new AI legislation in 2026?"
   - "How do different regulatory philosophies affect innovation timelines?"
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/deterministic-hitl1-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded
@@ -122,6 +134,11 @@ plan_basename: wff_manual
 research_profile: claim_verification
 root_must_answer_set:
   - "Is the claim that 'the EU AI Act will stifle innovation' supported by evidence?"
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/deterministic-hitl1-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded
@@ -148,6 +165,11 @@ plan_basename: wff_manual
 research_profile: not_selected
 root_must_answer_set:
   - "Some question"
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/deterministic-hitl1-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded
@@ -175,6 +197,11 @@ cat > $B/rb_profile.yaml << 'EOF'
 plan_basename: wff_manual
 research_profile: quick_factual
 root_must_answer_set: []
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/deterministic-hitl1-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded
@@ -201,6 +228,11 @@ plan_basename: wff_manual
 research_profile: quick_factual
 root_must_answer_set:
   - "Some question"
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/deterministic-hitl1-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: not_started

@@ -32,7 +32,7 @@ verdict: trace-jsonl
 1. Agent 创建 disposable bundle
 2. Agent 加载 `phase-hitl1.md`，读 §3a
 3. Agent 读用户输入（一句话）→ 按 §3a 执行 topic rewrite → 写入 `rb_plan.md` 的 `## Goal` section
-4. Agent 按 §3b 写入 HITL1 profile（AI 扮演用户的 profile 选择）
+4. Agent 按 §3b–§3d 写入 HITL1 profile、应用 style，并执行真实 bounded research-access probe
 5. Agent 运行 `hitl1-recorded` gate
 6. AI reviewer 按 901 Step 7 的 checklist 审查 rewrite 质量 → 给 verdict（标 `source: ai-judge`）
 7. 从 trace 裁决 + cleanup
@@ -86,14 +86,16 @@ Agent，将 rewrite 结果写入 `$B/rb_plan.md` 的 `## Goal` section：
 
 > **Agent 执行此步骤后，继续 Step 5。**
 
-## Step 5: Agent 按 §3b 写入 HITL1 profile（AI 扮演用户）
+## Step 5: Agent 按 §3b–§3d 完成 HITL1 profile 与真实 capability probe
 
-Agent，按 `phase-hitl1.md` §3b（AI 扮演用户做选择）：
+Agent，按 `phase-hitl1.md` §3b–§3d（AI 扮演用户做选择）：
 - 选择合适的 `research_profile`
 - 写 1-3 个 `root_must_answer`
 - 写 `human_decision_checkpoints.hitl1.status: recorded` 和 `recorded_at`
+- 运行 `apply-research-style.mjs`
+- 使用当前实际 search/fetch surfaces 执行 bounded probe，并诚实写 available 或 unavailable observation
 
-写入 `$B/rb_profile.yaml`。
+写入 `$B/rb_profile.yaml`。禁止 mock、fixed URL 或 synthetic available；环境 unavailable 时保留 blocker 现场，本 case 不得伪造 capability pass。
 
 ## Step 6: Agent 运行 hitl1-recorded gate
 
@@ -113,6 +115,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 > - §3a 步骤 1 覆盖度（背景/范围/维度/前提/不确定项）
 > - §3a 步骤 3 seed topics 粒度
 > - §3b profile 选择是否匹配输入
+> - §3d capability probe 是否真实、bounded、诚实并与 evidence 隔离
 > - Gate 是否 pass
 > - 整体判断
 >

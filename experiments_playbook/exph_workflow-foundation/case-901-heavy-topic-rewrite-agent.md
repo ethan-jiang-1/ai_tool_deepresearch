@@ -29,7 +29,7 @@ verdict: trace-jsonl
 2. Agent 加载 `DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl1.md`
 3. Agent 读取用户输入（一句话）
 4. Agent 按 §3a 执行 topic rewrite → 写入 `rb_plan.md` 的 `## Goal` section
-5. Agent 按 §3b 收集 HITL1 决策 → 写入 `rb_profile.yaml`
+5. Agent 按 §3b–§3d 收集 HITL1 决策、应用 style，并执行真实 bounded research-access probe → 写入 `rb_profile.yaml`
 6. Agent 运行 `hitl1-recorded` gate
 7. Human reviewer 审查 Agent 的 rewrite 质量
 8. 从 trace 裁决 + cleanup
@@ -94,14 +94,16 @@ Agent，将你的 rewrite 结果写入 `$B/rb_plan.md` 的 `## Goal` section：
 
 > **Agent 执行此步骤后，继续 Step 5。**
 
-## Step 5: Agent 按 §3b 写入 HITL1 profile
+## Step 5: Agent 按 §3b–§3d 完成 HITL1 profile 与真实 capability probe
 
-Agent，按 `phase-hitl1.md` §3b 的要求：
+Agent，按 `phase-hitl1.md` §3b–§3d 的要求：
 - 基于你对用户输入的理解，选择一个合适的 `research_profile`
 - 写出 1-3 个 `root_must_answer` 问题
 - 写入 `human_decision_checkpoints.hitl1.status: recorded` 和 `recorded_at`
+- 运行 `apply-research-style.mjs`
+- 使用当前实际 search/fetch surfaces 执行一次 bounded probe，并诚实写入 available 或 unavailable observation
 
-写入 `$B/rb_profile.yaml`。
+写入 `$B/rb_profile.yaml`。禁止 mock、fixed URL 或 synthetic available；若环境 unavailable，保留 blocker 现场，本 case 不得伪造 gate pass。
 
 ## Step 6: Agent 运行 hitl1-recorded gate
 
@@ -122,6 +124,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 - [ ] **§3a 步骤 1 覆盖度**：Agent 的 original topic 是否覆盖了背景、范围、关键维度、已知前提、不确定项？有没有漏掉某个必需维度？
 - [ ] **§3a 步骤 3 seed topics 粒度**：3-5 个 seed topics 是否可独立研究？会不会太粗或太细？
 - [ ] **§3b profile 选择**：Agent 选的 `research_profile` 是否匹配输入？一句话 "帮我研究 AI 安全" 选 `exploratory_map` 合理吗？
+- [ ] **§3d capability probe**：Agent 是否真实执行 bounded search/fetch，诚实记录 available/unavailable，并保持 probe 与 research evidence 隔离？
 - [ ] **Gate 是否 pass**：hitl1-recorded gate 是否 pass？如果 fail，inspect 指向什么问题？
 - [ ] **整体判断**：如果你是这个用户，你会接受 Agent 的 rewrite 结果吗？如果不接受，你会让 Agent 改什么？
 

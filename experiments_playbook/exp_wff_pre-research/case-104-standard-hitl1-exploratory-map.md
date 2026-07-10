@@ -39,6 +39,8 @@ echo "$B" > /tmp/pb_bundle
 
 ## Step 2: 写入 exploratory_map payload
 
+`research_access` 使用 synthetic valid observation，只证明 deterministic gate mechanics，不证明真实 search/fetch capability。
+
 ```bash
 REPO_ROOT=$(pwd)
 B=$(cat /tmp/pb_bundle)
@@ -49,6 +51,11 @@ root_must_answer_set:
   - "What is the full landscape of AI governance frameworks worldwide?"
   - "Which jurisdictions are planning new AI legislation in 2026?"
   - "How do different regulatory philosophies affect innovation timelines?"
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/deterministic-hitl1-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded

@@ -60,7 +60,7 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 
 ## Step 3: 写入 fixed HITL1 payload
 
-模拟用户在 HITL1 阶段的完整回答。写入 `rb_profile.yaml`。
+模拟用户在 HITL1 阶段的完整回答。写入 `rb_profile.yaml`。下方 `research_access` 是 deterministic gate fixture，只证明 schema/gate mechanics，不证明真实 Agent 外部能力。
 
 ```bash
 cat > $B/rb_profile.yaml << 'EOF'
@@ -68,6 +68,11 @@ plan_basename: wff_happy
 research_profile: quick_factual
 root_must_answer_set:
   - "What is the current state of AI safety research?"
+research_access:
+  status: available
+  probed_at: "2026-07-10T00:00:00.000Z"
+  result_url: "https://example.com/deterministic-hitl1-fixture"
+  fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded
@@ -82,7 +87,7 @@ echo "=== Profile written ==="
 grep -E 'research_profile|root_must_answer|status:|recorded_at' $B/rb_profile.yaml
 ```
 
-展示：profile 中 `research_profile: quick_factual`、`root_must_answer_set` 非空、`hitl1.status: recorded`、`hitl1.recorded_at` 已填写。
+展示：profile 中 `research_profile: quick_factual`、`root_must_answer_set` 非空、synthetic `research_access.status: available`、`hitl1.status: recorded`、`hitl1.recorded_at` 已填写。
 
 ## Step 4: Gate 1 — instantiation-complete
 
