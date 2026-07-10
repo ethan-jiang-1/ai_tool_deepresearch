@@ -2,6 +2,8 @@
 
 > req: AGQ-001, AGQ-002, AGQ-003, AGQ-004, AGQ-005, AGQ-006, AGQ-007, AGQ-008, AGQ-009, AGQ-010, AGQ-011, AGQ-012, AGQ-013, AGQ-014, AGQ-015, AGQ-016, AGQ-017, AGQ-018, AGQ-019, AGQ-020, AGQ-021, AGQ-022, AGQ-023
 
+> delta-synced: add-audited-late-accept-for-timed-out-work-units (AGQ-018, AGQ-019)
+
 ## Purpose
 
 Define the JS-owned Agentic Queue Manager: a structured, Zod-validated queue v2 system with ordered `active_window`, `refill_pool`, `delegated_in_flight`, deterministic receipts, and Markdown projection. The Queue Manager owns all queue mutation; the Agent actor does semantic work but does not self-govern queue state. Queue demand identity is `queue_item_id`; `work_id` is reserved for Engine-allocated delegated work-unit attempts.
@@ -118,6 +120,14 @@ The playbook SHALL use local fixture data for topic_registry entries (pre-writte
 The target `rb_queue.json` schema SHALL be queue v2 with ordered `active_window`, `refill_pool`, `delegated_in_flight`, and `terminal_history`. Queue demand identity SHALL be `queue_item_id`. `work_id` SHALL mean only an Engine-allocated delegated execution attempt and SHALL NOT be used as queue demand identity, task-card identity, or old queue-position identity.
 
 Current main spec Purpose SHALL describe queue v2 as an ordered active-window queue with refill and delegated in-flight binding. The accepted active-window capacity SHALL be expressed through the current queue v2 schema/constant, currently `QUEUE_ACTIVE_WINDOW_LIMIT = 20`. It SHALL NOT describe the current state model as a fixed small window, named queue positions, or top-level current/next projection.
+
+For audited late-submit success, the completed `queue_item_id` SHALL appear in exactly one durable queue location: the targeted work unit's `done` entry in `terminal_history`. Queued retry demand for that queue item SHALL be removed. Claimed retry attempts for that queue item SHALL be cleared from `delegated_in_flight` and terminalized through work-unit status, not through a second queue terminal-history row.
+
+#### Scenario: late-submit leaves one queue location
+
+- **WHEN** late-submit accepts a targeted timed-out work unit
+- **THEN** `rb_queue.json` SHALL validate
+- **AND** the completed `queue_item_id` SHALL appear only in the targeted terminal-history `done` row
 
 #### Scenario: queue v2 purpose names ordered active window
 
@@ -287,7 +297,9 @@ The Agentic Queue system SHALL expose delegated queue demand through `operate-wo
 
 ### Requirement: Delegated submit completes queue demand by work-id binding
 
-The Agentic Queue system SHALL complete delegated queue demand only through `operate-work-unit submit`. Submit SHALL complete the bound `queue_item_id` by validating the `work_id` binding in `delegated_in_flight`; it SHALL NOT depend on queue-front aliases or return order.
+The Agentic Queue system SHALL complete delegated queue demand only through Engine-owned work-unit completion commands. Normal `operate-work-unit submit` SHALL complete a claimed attempt by validating the `work_id` binding in `delegated_in_flight`.
+
+Explicit audited `operate-work-unit late-submit` is the only terminal recovery completion path. Because the targeted timed-out attempt is no longer expected in `delegated_in_flight`, late-submit SHALL complete queue demand only after validating the targeted work-unit identity, rejecting submitted replacement coverage, and cleaning up any non-submitted retry state for the same `queue_item_id`.
 
 #### Scenario: out-of-order submit completes correct demand
 
@@ -295,6 +307,12 @@ The Agentic Queue system SHALL complete delegated queue demand only through `ope
 - **AND** the third work unit submits before the first
 - **THEN** the queue SHALL complete the `queue_item_id` bound to the submitted `work_id`
 - **AND** the other in-flight queue items SHALL remain in `delegated_in_flight`
+
+#### Scenario: late-submit does not use queue-complete
+
+- **WHEN** an eligible timed-out targeted work unit is recovered
+- **THEN** queue completion SHALL happen through `operate-work-unit late-submit`
+- **AND** `operate-queue complete` SHALL remain invalid for delegated work
 
 ### Requirement: Phase drain includes queue demand and in-flight attempts
 

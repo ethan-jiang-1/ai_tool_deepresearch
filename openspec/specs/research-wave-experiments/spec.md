@@ -1,6 +1,8 @@
 # Research Wave Experiments
 
-> req: RWE-001, RWE-002, RWE-003, RWE-004, RWE-005, RWE-006, RWE-007, RWE-008, RWE-009, RWE-010, RWE-011
+> req: RWE-001, RWE-002, RWE-003, RWE-004, RWE-005, RWE-006, RWE-007, RWE-008, RWE-009, RWE-010, RWE-011, RWE-012
+
+> delta-synced: add-audited-late-accept-for-timed-out-work-units (RWE-012)
 
 ## Purpose
 
@@ -89,14 +91,29 @@ The repair-loop playbook SHALL prove gate failure creates repair/refill queue de
 - **WHEN** the gate fails for missing delegated coverage
 - **THEN** the repair run SHALL open `b001+` with a repair/refill reason
 
-### Requirement: Wave fault-tolerance playbook
+### Requirement: Wave fault-tolerance playbook SHALL cover work-unit timeout and submit boundaries
 
-The fault-tolerance playbook SHALL include invalid submit, terminal fail, timeout, abandon, duplicate submit, stale manifest/index mismatch, and late submit rejection.
+The controlled wave fault-tolerance coverage SHALL distinguish normal submit from explicit audited late-submit:
 
-#### Scenario: late submit after timeout fails
+- normal submit after timeout still rejects;
+- explicit late-submit may accept an eligible targeted timed-out work unit;
+- submitted replacement blocks late-submit;
+- queued or claimed retry state can be cleaned up by accepted late-submit;
+- failed and abandoned attempts still reject late-submit.
 
-- **WHEN** a timed-out work unit submits after a retry has been claimed
-- **THEN** the playbook SHALL verify late submit rejection
+The playbook MAY use fixture-backed result, receipt, output, or cache surfaces to exercise Engine-layer behavior, but verdicts SHALL come from CLI JSON, bundle authority files, gate output, and trace/check entries.
+
+#### Scenario: explicit late-submit is covered
+
+- **WHEN** a controlled case has a targeted timed-out work unit with valid targeted result surfaces
+- **THEN** the playbook SHALL verify explicit `operate-work-unit late-submit` success
+- **AND** SHALL verify gate coverage comes from the audited submitted ledger row
+
+#### Scenario: replacement submitted still rejects
+
+- **WHEN** a replacement for the same `queue_item_id` already submitted
+- **THEN** explicit late-submit for the targeted work unit SHALL reject
+- **AND** the playbook SHALL verify no double ledger coverage exists
 
 ### Requirement: Wave review-surface playbook
 

@@ -1,6 +1,8 @@
 # Work Unit Provenance Gate
 
-> req: WPG-001, WPG-002, WPG-003, WPG-004, WPG-005, WPG-006, WPG-007, WPG-008, WPG-009, WPG-010, WPG-011, WPG-012, WPG-013
+> req: WPG-001, WPG-002, WPG-003, WPG-004, WPG-005, WPG-006, WPG-007, WPG-008, WPG-009, WPG-010, WPG-011, WPG-012, WPG-013, WPG-014
+
+> delta-synced: add-audited-late-accept-for-timed-out-work-units (WPG-014)
 
 ## Purpose
 
@@ -10,6 +12,8 @@ Define the work-unit provenance gate contract. Gates verify delegated output cov
 
 Work-unit provenance gates SHALL read Engine-written rows in bundle-root `rb_output_declarations.jsonl` as the delegated coverage authority. The check name SHALL be `work_unit_ledger_exists`. A row SHALL count only when its work-unit fields are schema-valid, its `ledger_record_hash` verifies, and it binds to a submitted work-unit attempt.
 
+Audited late-accepted rows SHALL count as submitted work-unit ledger rows only when the row is schema-valid, hash-valid, marked with valid late-accept audit fields, bound to the submitted targeted work-unit index record, and not in conflict with any submitted replacement for the same `queue_item_id`. Valid audit fields require `late_accept: true`, a non-empty reason, `terminal_status_before_accept: "timed_out"`, and unique non-self `superseded_retry_work_ids`.
+
 Current main spec Purpose and guidance SHALL describe this capability as the work-unit provenance gate contract. It SHALL NOT describe the capability as an artifact of archiving the retired relay/slot replacement change.
 
 #### Scenario: hand-written ledger row is rejected
@@ -17,6 +21,19 @@ Current main spec Purpose and guidance SHALL describe this capability as the wor
 - **WHEN** a ledger row contains work-unit-looking fields but lacks a valid submit fingerprint or matching submitted index entry
 - **THEN** `work_unit_ledger_exists` SHALL fail
 - **AND** the row SHALL NOT count as coverage
+
+#### Scenario: audited late-accepted row can count
+
+- **WHEN** an audited late-accepted row passes normal row hash, result, receipt, output, cache, nonce, and index checks
+- **AND** no submitted replacement exists for the same `queue_item_id`
+- **THEN** work-unit provenance SHALL count the row as submitted delegated coverage
+
+#### Scenario: malformed or double-submitted late accept fails
+
+- **WHEN** a late-accepted row has malformed audit fields
+- **OR** another work unit for the same `queue_item_id` is submitted
+- **THEN** work-unit provenance SHALL fail closed
+- **AND** diagnostics SHALL identify the late-accept conflict
 
 #### Scenario: purpose text is durable
 
