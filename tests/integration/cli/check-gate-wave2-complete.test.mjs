@@ -12,6 +12,7 @@ import {
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs');
+const INSPECT_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave2-output.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
@@ -21,6 +22,10 @@ function unique(prefix) { return `rt_w2_${prefix}_${Date.now()}_${Math.random().
 
 function runGate(bundlePath) {
   return spawnSync('node', [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-wave2.md'], { encoding: 'utf-8', timeout: 10000 });
+}
+
+function runInspect(bundlePath) {
+  return spawnSync('node', [INSPECT_CLI, '--bundle', bundlePath], { encoding: 'utf-8', timeout: 10000 });
 }
 
 function writeWave2Trace(dir, { completion = true } = {}) {
@@ -394,6 +399,42 @@ describe('check-gate-wave2-complete', () => {
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
+    assert.deepEqual(output.check.failed_rule_ids, []);
+    assert.deepEqual(output.check.masked_rule_ids, []);
+  });
+
+  it('1b. accepts harmless ledger heading marker, case, and spacing differences', () => {
+    const dir = createBundle(unique('ledger-tolerant'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    const ledgerPath = join(dir, 'artifacts/wave2/cross-topic-ledger.md');
+    writeFileSync(ledgerPath, readFileSync(ledgerPath, 'utf8')
+      .replace('## Cross-Topic Scan Matrix', '### cross-topic scan matrix')
+      .replace('## Wave1 Legacy Questions', '#### WAVE1 LEGACY QUESTIONS')
+      .replace('## HITL2 Handoff', '### hitl2 handoff'));
+    createMinIndex(dir);
+    createMinBackfill(dir);
+    writeWave2Trace(dir);
+    const output = JSON.parse(runGate(dir).stdout);
+    assert.equal(output.check.passed, true, output.inspect.join('\n'));
+  });
+
+  it('1c. Wave2 inspect reports missing hitl2_handoff without derivative handoff failures', () => {
+    const dir = createBundle(unique('missing-hitl-field'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    createFullCoverageIndex(dir);
+    const indexPath = join(dir, 'artifacts/wave2/finding-index.yaml');
+    writeFileSync(indexPath, readFileSync(indexPath, 'utf8')
+      .replace('decision: use_existing_evidence', 'decision: defer_hitl2')
+      .replace('    appears_in_synthesis: true\n    hitl2_handoff: false\n', '    appears_in_synthesis: false\n')
+      .replace('gap_status: no_gap', 'gap_status: deferred_hitl2')
+      .replace('explicit_deferral_count: 0', 'explicit_deferral_count: 1'));
+    createMinBackfill(dir);
+    const output = JSON.parse(runInspect(dir).stdout);
+    assert.equal(output.check.passed, false);
+    assert.equal(output.inspect.filter((line) => line.includes('missing field: hitl2_handoff')).length, 1);
+    assert.equal(output.inspect.some((line) => /implies hitl2_handoff|must be hitl2_handoff/.test(line)), false);
   });
 
   it('2. fails when synthesis.md is missing', () => {
@@ -406,6 +447,10 @@ describe('check-gate-wave2-complete', () => {
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('synthesis.md')), `Expected missing file fail: ${JSON.stringify(output.inspect)}`);
+    const inspectOutput = JSON.parse(runInspect(dir).stdout);
+    const sharedGateIds = output.check.failed_rule_ids.filter((id) => id !== 'trace_event_wave2_completion').sort();
+    assert.deepEqual(inspectOutput.check.failed_rule_ids.filter((id) => sharedGateIds.includes(id)).sort(), sharedGateIds);
+    assert.equal(output.check.masked_rule_ids.includes('synthesis_non_empty'), true);
   });
 
   it('3. fails when synthesis is empty', () => {
@@ -580,6 +625,10 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('submitted work-unit') || m.includes('delegated_bypass_suspected')),
       `Expected work-unit provenance failure for direct cross reference: ${JSON.stringify(output.inspect)}`);
+    const traceEvents = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
+    assert.equal(traceEvents.filter((event) => event.event === 'delegated_bypass_suspected').length, 1);
+    const runLog = readFileSync(join(dir, '_logs/run.log'), 'utf8');
+    assert.equal(runLog.split('\n').filter((line) => /\] WARN delegated_bypass_suspected\b/.test(line)).length, 1);
   });
 
   it('15. passes when targeted cross-reference evidence is covered by a submitted work unit', () => {

@@ -16,7 +16,7 @@ const CHECK_IMPLEMENTATION_ROUTES = new Map([
   ['cross_field', 'gate CLI cross_field dispatch'],
   ['cross_field:markdown_link_resolution', 'wave2 gate markdown link resolver'],
   ['cross_field:slug_consistency', 'seed-topics gate slug consistency dispatch'],
-  ['delegated_bypass_suspected', 'shared helper: checkDelegatedBypassSuspected()'],
+  ['delegated_bypass_suspected', 'shared evaluator: scanDelegatedBypassSuspicion()'],
   ['depth_review_contract', 'shared helper: checkWave1DepthReviewContract()'],
   ['dir_exists', 'gate CLI dir_exists dispatch'],
   ['dir_non_empty', 'gate CLI dir_non_empty dispatch'],
@@ -54,8 +54,11 @@ const SUPPORTED_DELEGATED_PROVENANCE_CHECKS = new Set([
 const REQUIRED_INVENTORY_FIELDS = [
   'artifactCategory',
   'producerInstruction',
+  'producerClosure',
   'runtimeAuthority',
+  'checkerRoute',
   'diagnosticSurface',
+  'commandPartition',
   'classification',
   'testGuards',
 ];
@@ -64,6 +67,71 @@ const ALLOWED_CLASSIFICATIONS = new Set([
   'blocking',
   'blocking_or_degradation_eligible',
 ]);
+
+const ALLOWED_COMMAND_PARTITIONS = new Set([
+  'formal_only',
+  'shared_evaluator',
+]);
+
+const ALLOWED_PRODUCER_CLOSURES = new Set([
+  'agent_instruction',
+  'non_agent_produced_exemption',
+]);
+
+const WAVE_EVALUATOR_ROUTES = new Map([
+  ['wave0-complete', {
+    evaluator: 'evaluateWave0Contract',
+    evaluatorFile: 'DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs',
+    gateFile: 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs',
+    inspectFile: 'DPT_FRAMEWORK/cli/inspect-wave0-output.mjs',
+  }],
+  ['wave1-complete', {
+    evaluator: 'evaluateWave1Contract',
+    evaluatorFile: 'DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs',
+    gateFile: 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs',
+    inspectFile: 'DPT_FRAMEWORK/cli/inspect-wave1-output.mjs',
+  }],
+  ['wave2-complete', {
+    evaluator: 'evaluateWave2Contract',
+    evaluatorFile: 'DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs',
+    gateFile: 'DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs',
+    inspectFile: 'DPT_FRAMEWORK/cli/inspect-wave2-output.mjs',
+  }],
+]);
+
+const FORMAL_ONLY_LIFECYCLE_SURFACES = [
+  'validateNodeGateBinding',
+  'checkPhaseHandoffPreflight',
+  'readTraceEvents',
+  'resolveRouting',
+  'writeGateAttempt',
+  'emitDelegatedBypassDiagnostic',
+];
+
+const INSPECT_ONLY_SURFACES = [
+  {
+    inspectFile: 'DPT_FRAMEWORK/cli/inspect-wave0-output.mjs',
+    advisoryRuleIds: [
+      'reference_flat_directory',
+      'reference_filename',
+      'reference_metadata',
+      'reference_section',
+      'reference_index_columns',
+      'reference_readme_non_empty',
+    ],
+    navigationHelpers: ['inspectSeedTopicReturnMaps', 'inspectReferenceReturnMaps'],
+  },
+  {
+    inspectFile: 'DPT_FRAMEWORK/cli/inspect-wave1-output.mjs',
+    advisoryRuleIds: [],
+    navigationHelpers: ['inspectSeedTopicReturnMaps', 'inspectWaveArtifactReturnMaps', 'inspectReferenceReturnMaps'],
+  },
+  {
+    inspectFile: 'DPT_FRAMEWORK/cli/inspect-wave2-output.mjs',
+    advisoryRuleIds: ['legacy_00_shared_directory', 'cross_reference_presentation'],
+    navigationHelpers: ['inspectSeedTopicReturnMaps', 'inspectWaveArtifactReturnMaps', 'inspectReferenceReturnMaps'],
+  },
+];
 
 function ruleKeys(gate, ids) {
   return ids.map((id) => `${gate}:${id}`);
@@ -186,8 +254,28 @@ const GATE_RULE_INVENTORY_GROUPS = [
     artifactCategory: 'Wave0 reference inventory and per-topic source metadata',
     producerInstruction: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md',
     runtimeAuthority: 'reference/ and artifacts/wave0/{topic}/source.yaml',
-    diagnosticSurface: 'gate definition failure_message plus check-gate-wave0-complete inspect/advice',
+    checkerRoute: 'evaluateWave0Contract() in DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs',
+    diagnosticSurface: 'shared evaluator findings projected by inspect-wave0-output and check-gate-wave0-complete',
+    commandPartition: 'shared_evaluator',
     classification: 'blocking_or_degradation_eligible',
+    testGuards: [
+      'tests/integration/cli/check-gate-wave0-complete.test.mjs',
+      'tests/integration/cli/inspect-wave-contract-output.test.mjs',
+      'tests/schema/wave-inspect-purity-static.test.mjs',
+      'tests/schema/gate-rule-audit.test.mjs',
+    ],
+  },
+  {
+    rules: ruleKeys('wave0-complete', [
+      'trace_event_wave0_completion',
+    ]),
+    artifactCategory: 'Wave0 formal completion trace witness',
+    producerInstruction: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md completion evidence before formal gate',
+    runtimeAuthority: 'rb_trace.jsonl',
+    checkerRoute: 'formal check-gate-wave0-complete trace_event_present loop',
+    diagnosticSurface: 'formal gate failure_message plus lifecycle inspect/advice',
+    commandPartition: 'formal_only',
+    classification: 'blocking',
     testGuards: [
       'tests/integration/cli/check-gate-wave0-complete.test.mjs',
       'tests/schema/gate-rule-audit.test.mjs',
@@ -195,7 +283,6 @@ const GATE_RULE_INVENTORY_GROUPS = [
   },
   {
     rules: ruleKeys('wave0-complete', [
-      'trace_event_wave0_completion',
       'cache_coverage',
       'wave0_work_unit_ledger_exists',
       'wave0_work_unit_output_coverage',
@@ -204,12 +291,16 @@ const GATE_RULE_INVENTORY_GROUPS = [
     ]),
     artifactCategory: 'Wave0 delegated work-unit provenance and cache backing',
     producerInstruction: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md delegated drain loop and operate-work-unit submit contract',
-    runtimeAuthority: 'rb_trace.jsonl, rb_output_declarations.jsonl, _work_units/, _cache/, and declared outputs',
-    diagnosticSurface: 'gate definition failure_message plus provenance helper inspect/advice',
+    runtimeAuthority: 'rb_output_declarations.jsonl, _work_units/, _cache/, and declared outputs',
+    checkerRoute: 'evaluateWave0Contract() with pure delegated-bypass scan in DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs',
+    diagnosticSurface: 'shared evaluator findings; formal wrapper alone may emit one durable bypass diagnostic',
+    commandPartition: 'shared_evaluator',
     classification: 'blocking',
     testGuards: [
       'tests/engine/helpers/gate-helpers-provenance.test.mjs',
       'tests/integration/cli/check-gate-wave0-complete.test.mjs',
+      'tests/integration/cli/inspect-wave-contract-output.test.mjs',
+      'tests/schema/wave-inspect-purity-static.test.mjs',
       'tests/schema/gate-rule-audit.test.mjs',
     ],
   },
@@ -228,11 +319,15 @@ const GATE_RULE_INVENTORY_GROUPS = [
     artifactCategory: 'Wave1 topic artifacts and seed-topic backfill tokens',
     producerInstruction: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md',
     runtimeAuthority: 'artifacts/wave1/{topic}/ and seed_topics/{topic}.md',
-    diagnosticSurface: 'gate definition failure_message plus check-gate-wave1-complete inspect/advice',
+    checkerRoute: 'evaluateWave1Contract() in DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs',
+    diagnosticSurface: 'shared evaluator findings projected by inspect-wave1-output and check-gate-wave1-complete',
+    commandPartition: 'shared_evaluator',
     classification: 'blocking',
     testGuards: [
       'tests/integration/cli/check-gate-wave1-complete.test.mjs',
+      'tests/integration/cli/inspect-wave-contract-output.test.mjs',
       'tests/integration/md/wave-depth-contract-guidance.test.mjs',
+      'tests/schema/wave-inspect-purity-static.test.mjs',
       'tests/schema/gate-rule-audit.test.mjs',
     ],
   },
@@ -243,11 +338,15 @@ const GATE_RULE_INVENTORY_GROUPS = [
     artifactCategory: 'Wave1 depth-review submitted work-unit refs',
     producerInstruction: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md',
     runtimeAuthority: 'artifacts/wave1/{topic}/depth-review.yaml plus submitted work-unit rows',
-    diagnosticSurface: 'depth_review_contract inspect/advice and canonicalization diagnostics',
+    checkerRoute: 'evaluateWave1Contract() -> checkWave1DepthReviewContract() with local prerequisite guards',
+    diagnosticSurface: 'shared evaluator root finding plus masked dependent rule ids and nearest repair advice',
+    commandPartition: 'shared_evaluator',
     classification: 'blocking',
     testGuards: [
       'tests/engine/wave-depth-contracts.test.mjs',
       'tests/integration/cli/check-gate-wave1-complete.test.mjs',
+      'tests/integration/cli/inspect-wave-contract-output.test.mjs',
+      'tests/schema/wave-inspect-purity-static.test.mjs',
       'tests/schema/gate-rule-audit.test.mjs',
     ],
   },
@@ -264,17 +363,36 @@ const GATE_RULE_INVENTORY_GROUPS = [
     artifactCategory: 'Wave1 reference format, count, index, and backing',
     producerInstruction: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md',
     runtimeAuthority: 'reference/{topic}-*.md, reference/_INDEX.md, submitted ledgers, and cache backing',
-    diagnosticSurface: 'reference helper inspect/advice plus gate failure_message',
+    checkerRoute: 'evaluateWave1Contract() with shared reference/count/backing helpers',
+    diagnosticSurface: 'shared evaluator findings projected by inspect and formal gate',
+    commandPartition: 'shared_evaluator',
     classification: 'blocking_or_degradation_eligible',
     testGuards: [
       'tests/engine/helpers/gate-helpers-provenance.test.mjs',
       'tests/integration/cli/check-gate-wave1-complete.test.mjs',
+      'tests/integration/cli/inspect-wave-contract-output.test.mjs',
+      'tests/schema/wave-inspect-purity-static.test.mjs',
       'tests/schema/gate-rule-audit.test.mjs',
     ],
   },
   {
     rules: ruleKeys('wave1-complete', [
       'trace_event_wave1_completion',
+    ]),
+    artifactCategory: 'Wave1 formal completion trace witness',
+    producerInstruction: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md completion evidence before formal gate',
+    runtimeAuthority: 'rb_trace.jsonl',
+    checkerRoute: 'formal check-gate-wave1-complete trace_event_present loop',
+    diagnosticSurface: 'formal gate failure_message plus lifecycle inspect/advice',
+    commandPartition: 'formal_only',
+    classification: 'blocking',
+    testGuards: [
+      'tests/integration/cli/check-gate-wave1-complete.test.mjs',
+      'tests/schema/gate-rule-audit.test.mjs',
+    ],
+  },
+  {
+    rules: ruleKeys('wave1-complete', [
       'cache_coverage',
       'wave1_work_unit_ledger_exists',
       'wave1_work_unit_output_coverage',
@@ -283,13 +401,17 @@ const GATE_RULE_INVENTORY_GROUPS = [
     ]),
     artifactCategory: 'Wave1 delegated work-unit provenance and required output coverage',
     producerInstruction: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md delegated drain loop and operate-work-unit submit contract',
-    runtimeAuthority: 'rb_trace.jsonl, rb_output_declarations.jsonl, _work_units/, _cache/, artifacts/wave1/, and reference/',
-    diagnosticSurface: 'gate definition failure_message plus provenance helper inspect/advice',
+    runtimeAuthority: 'rb_output_declarations.jsonl, _work_units/, _cache/, artifacts/wave1/, and reference/',
+    checkerRoute: 'evaluateWave1Contract() with pure delegated-bypass scan in DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs',
+    diagnosticSurface: 'shared evaluator findings; formal wrapper alone may emit one durable bypass diagnostic',
+    commandPartition: 'shared_evaluator',
     classification: 'blocking',
     testGuards: [
       'tests/engine/work-unit-submit.test.mjs',
       'tests/engine/helpers/gate-helpers-provenance.test.mjs',
       'tests/integration/cli/check-gate-wave1-complete.test.mjs',
+      'tests/integration/cli/inspect-wave-contract-output.test.mjs',
+      'tests/schema/wave-inspect-purity-static.test.mjs',
       'tests/schema/gate-rule-audit.test.mjs',
     ],
   },
@@ -313,18 +435,37 @@ const GATE_RULE_INVENTORY_GROUPS = [
     artifactCategory: 'Wave2 synthesis, ledger, finding index, links, rerun, and backfill',
     producerInstruction: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md',
     runtimeAuthority: 'artifacts/wave2/ and seed_topics/{topic}.md',
-    diagnosticSurface: 'gate definition failure_message plus check-gate-wave2-complete inspect/advice',
+    checkerRoute: 'evaluateWave2Contract() in DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs',
+    diagnosticSurface: 'shared evaluator root findings, masked dependent ids, and nearest repair projected by inspect and formal gate',
+    commandPartition: 'shared_evaluator',
     classification: 'blocking',
     testGuards: [
       'tests/engine/wave-depth-contracts.test.mjs',
       'tests/integration/cli/check-gate-wave2-complete.test.mjs',
+      'tests/integration/cli/inspect-wave-contract-output.test.mjs',
       'tests/integration/md/phase-wave2-md-structure.test.mjs',
+      'tests/schema/wave-inspect-purity-static.test.mjs',
       'tests/schema/gate-rule-audit.test.mjs',
     ],
   },
   {
     rules: ruleKeys('wave2-complete', [
       'trace_event_wave2_completion',
+    ]),
+    artifactCategory: 'Wave2 formal completion trace witness',
+    producerInstruction: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md completion evidence before formal gate',
+    runtimeAuthority: 'rb_trace.jsonl',
+    checkerRoute: 'formal check-gate-wave2-complete trace_event_present loop',
+    diagnosticSurface: 'formal gate failure_message plus lifecycle inspect/advice',
+    commandPartition: 'formal_only',
+    classification: 'blocking',
+    testGuards: [
+      'tests/integration/cli/check-gate-wave2-complete.test.mjs',
+      'tests/schema/gate-rule-audit.test.mjs',
+    ],
+  },
+  {
+    rules: ruleKeys('wave2-complete', [
       'wave2_cross_reference_index_coverage',
       'wave2_work_unit_cross_ref_coverage',
       'wave2_work_unit_submission_presence',
@@ -332,12 +473,16 @@ const GATE_RULE_INVENTORY_GROUPS = [
     ]),
     artifactCategory: 'Wave2 cross-reference navigation and provenance authority',
     producerInstruction: 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md targeted evidence and existing-backed projection guidance',
-    runtimeAuthority: 'reference/00-cross-*.md, reference/_INDEX.md, submitted Wave2 rows, prior accepted backing, and rb_trace.jsonl',
-    diagnosticSurface: 'gate definition failure_message plus reference/provenance helper inspect/advice',
+    runtimeAuthority: 'reference/00-cross-*.md, reference/_INDEX.md, submitted Wave2 rows, and prior accepted backing',
+    checkerRoute: 'evaluateWave2Contract() with shared reference/provenance helpers and pure delegated-bypass scan',
+    diagnosticSurface: 'shared evaluator findings; formal wrapper alone may emit one durable bypass diagnostic',
+    commandPartition: 'shared_evaluator',
     classification: 'blocking',
     testGuards: [
       'tests/engine/helpers/gate-helpers-provenance.test.mjs',
       'tests/integration/cli/check-gate-wave2-complete.test.mjs',
+      'tests/integration/cli/inspect-wave-contract-output.test.mjs',
+      'tests/schema/wave-inspect-purity-static.test.mjs',
       'tests/schema/gate-rule-audit.test.mjs',
     ],
   },
@@ -412,16 +557,26 @@ function loadDefinitions() {
     });
 }
 
+function readRepo(relativePath) {
+  return readFileSync(join(REPO_ROOT, relativePath), 'utf-8');
+}
+
 function buildInventory() {
   const inventory = new Map();
   for (const group of GATE_RULE_INVENTORY_GROUPS) {
     for (const ruleKey of group.rules) {
       assert.equal(inventory.has(ruleKey), false, `duplicate static audit inventory row for ${ruleKey}`);
+      const producerClosure = group.producerInstruction.startsWith('non-Agent-produced:')
+        ? 'non_agent_produced_exemption'
+        : 'agent_instruction';
       inventory.set(ruleKey, {
         artifactCategory: group.artifactCategory,
         producerInstruction: group.producerInstruction,
+        producerClosure,
         runtimeAuthority: group.runtimeAuthority,
+        checkerRoute: group.checkerRoute || 'formal gate CLI dispatch via CHECK_IMPLEMENTATION_ROUTES',
         diagnosticSurface: group.diagnosticSurface,
+        commandPartition: group.commandPartition || 'formal_only',
         classification: group.classification,
         testGuards: group.testGuards,
       });
@@ -492,6 +647,8 @@ describe('active gate rule audit', () => {
           assert.ok(row[field], `${ruleKey} inventory missing ${field}`);
         }
         assert.ok(ALLOWED_CLASSIFICATIONS.has(row.classification), `${ruleKey} has unsupported classification ${row.classification}`);
+        assert.ok(ALLOWED_PRODUCER_CLOSURES.has(row.producerClosure), `${ruleKey} has unsupported producer closure ${row.producerClosure}`);
+        assert.ok(ALLOWED_COMMAND_PARTITIONS.has(row.commandPartition), `${ruleKey} has unsupported command partition ${row.commandPartition}`);
         assert.notEqual(row.classification, 'diagnostic-only', `${ruleKey} cannot be diagnostic-only because active gate rules affect pass/fail`);
         assert.ok(row.testGuards.some((guard) => existsSync(join(REPO_ROOT, guard))), `${ruleKey} inventory must name at least one existing test guard`);
       }
@@ -499,6 +656,76 @@ describe('active gate rule audit', () => {
 
     for (const inventoryKey of inventory.keys()) {
       assert.ok(activeRuleKeys.has(inventoryKey), `${inventoryKey} appears in static audit inventory but no active gate definition declares it`);
+    }
+  });
+
+  it('partitions Wave rules between shared evaluators and formal-only lifecycle checks', () => {
+    const inventory = buildInventory();
+    for (const { definition } of loadDefinitions().filter(({ definition }) => WAVE_EVALUATOR_ROUTES.has(definition.gate))) {
+      const route = WAVE_EVALUATOR_ROUTES.get(definition.gate);
+      const producerPath = `DPT_FRAMEWORK/workflows/nodes/phases/phase-${definition.gate.replace('-complete', '')}.md`;
+      for (const rule of definition.rules) {
+        const ruleKey = `${definition.gate}:${rule.id}`;
+        const row = inventory.get(ruleKey);
+        const expectedPartition = rule.check === 'trace_event_present' ? 'formal_only' : 'shared_evaluator';
+        assert.equal(row.commandPartition, expectedPartition, `${ruleKey} partition drift`);
+        if (expectedPartition === 'shared_evaluator') {
+          assert.match(row.checkerRoute, new RegExp(route.evaluator), `${ruleKey} must route through ${route.evaluator}`);
+          assert.ok(row.testGuards.includes('tests/integration/cli/inspect-wave-contract-output.test.mjs'), `${ruleKey} must name inspect agreement/no-write coverage`);
+          assert.ok(row.testGuards.includes('tests/schema/wave-inspect-purity-static.test.mjs'), `${ruleKey} must name inspect purity coverage`);
+        }
+        assert.equal(row.producerClosure, 'agent_instruction', `${ruleKey} must have an Agent producer instruction`);
+        assert.ok(row.producerInstruction.includes(producerPath), `${ruleKey} must identify ${producerPath}`);
+      }
+    }
+  });
+
+  it('keeps formal Wave wrappers and inspect commands on the same explicit evaluator route', () => {
+    for (const route of WAVE_EVALUATOR_ROUTES.values()) {
+      const evaluator = readRepo(route.evaluatorFile);
+      const gate = readRepo(route.gateFile);
+      const inspect = readRepo(route.inspectFile);
+      const evaluatorPattern = new RegExp(`\\b${route.evaluator}\\b`);
+
+      assert.match(evaluator, new RegExp(`export function ${route.evaluator}\\b`), `${route.evaluatorFile} must export ${route.evaluator}`);
+      assert.match(gate, evaluatorPattern, `${route.gateFile} must import/call ${route.evaluator}`);
+      assert.match(inspect, evaluatorPattern, `${route.inspectFile} must import/call ${route.evaluator}`);
+
+      for (const lifecycleSurface of FORMAL_ONLY_LIFECYCLE_SURFACES) {
+        assert.ok(gate.includes(lifecycleSurface), `${route.gateFile} must retain formal lifecycle owner ${lifecycleSurface}`);
+        assert.equal(inspect.includes(lifecycleSurface), false, `${route.inspectFile} must not own ${lifecycleSurface}`);
+        assert.equal(evaluator.includes(lifecycleSurface), false, `${route.evaluatorFile} must not own ${lifecycleSurface}`);
+      }
+    }
+  });
+
+  it('keeps inspect-only presentation advisory and return-map navigation outside formal gate rules', () => {
+    const formalRuleIds = new Set(loadDefinitions().flatMap(({ definition }) => definition.rules.map((rule) => rule.id)));
+    for (const surface of INSPECT_ONLY_SURFACES) {
+      const inspect = readRepo(surface.inspectFile);
+      const route = [...WAVE_EVALUATOR_ROUTES.values()].find((candidate) => candidate.inspectFile === surface.inspectFile);
+      const gate = readRepo(route.gateFile);
+
+      for (const ruleId of surface.advisoryRuleIds) {
+        assert.equal(formalRuleIds.has(ruleId), false, `${ruleId} must remain outside formal gate definitions`);
+        const index = inspect.indexOf(ruleId);
+        assert.ok(index >= 0, `${surface.inspectFile} must declare inspect-only ${ruleId}`);
+        assert.match(inspect.slice(index, index + 320), /classification:\s*'advisory'/, `${ruleId} must remain advisory`);
+      }
+
+      for (const helper of surface.navigationHelpers) {
+        assert.ok(inspect.includes(helper), `${surface.inspectFile} must keep inspect-only navigation helper ${helper}`);
+        assert.equal(gate.includes(helper), false, `${route.gateFile} must not import inspect-only navigation helper ${helper}`);
+      }
+      assert.match(inspect, /returnMapClassification[\s\S]*\? 'diagnostic-only' : 'blocking'/, `${surface.inspectFile} must preserve current-command return-map classification`);
+    }
+  });
+
+  it('records explicit non-Agent-produced exemptions instead of inventing producer prose', () => {
+    const exemptions = [...buildInventory().values()].filter((row) => row.producerClosure === 'non_agent_produced_exemption');
+    assert.ok(exemptions.length > 0, 'static inventory must retain at least one explicit non-Agent-produced exemption');
+    for (const row of exemptions) {
+      assert.match(row.producerInstruction, /^non-Agent-produced:\s*\S/, 'non-Agent-produced exemption must name the real writer');
     }
   });
 

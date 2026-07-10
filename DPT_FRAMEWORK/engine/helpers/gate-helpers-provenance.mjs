@@ -1,5 +1,5 @@
 // gate-helpers-provenance.mjs - Work-unit provenance gate checks and bypass diagnostics
-// @impl WPG-001, WPG-002, WPG-003, WPG-004, WPG-005, WPG-006, WPG-007, WPG-008, WPG-012, RWG-017
+// @impl WPG-001, WPG-002, WPG-003, WPG-004, WPG-005, WPG-006, WPG-007, WPG-008, WPG-012, RWG-017, RWG-018
 // Canonical location: DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs
 
 import { existsSync, readFileSync, readdirSync, statSync, appendFileSync } from 'node:fs';
@@ -253,7 +253,7 @@ export function checkWorkUnitSubmissionPresence(bundlePath, rule) {
   };
 }
 
-export function detectDelegatedBypassSuspicion(bundlePath, phase, gate) {
+export function scanDelegatedBypassSuspicion(bundlePath, phase) {
   try {
     const artifactsFound = [];
     const provenanceMissing = [];
@@ -350,42 +350,56 @@ export function detectDelegatedBypassSuspicion(bundlePath, phase, gate) {
       }
     }
 
-    if (suspected) {
-      try {
-        const tracePath = join(bundlePath, 'rb_trace.jsonl');
-        const bundle = (() => {
-          try { return readBundleName(bundlePath); } catch { return basename(bundlePath); }
-        })();
-        const ts = new Date().toISOString();
-        appendFileSync(tracePath, JSON.stringify({
-          ts,
-          bundle,
-          event: 'delegated_bypass_suspected',
-          kind: 'delegated_bypass_suspected',
-          gate,
-          phase,
-          artifacts_found: artifactsFound,
-          provenance_missing: provenanceMissing,
-        }) + '\n');
-      } catch { /* trace write failure silently ignored */ }
-
-      logToRun(bundlePath, 'warn', 'delegated_bypass_suspected', {
-        gate,
-        phase,
-        artifacts_found: artifactsFound.slice(0, 10),
-        provenance_missing: provenanceMissing,
-      });
-    }
-
-    return { suspected, artifactsFound, provenanceMissing };
+    return { suspected, phase, artifactsFound, provenanceMissing };
   } catch {
-    return { suspected: false };
+    return { suspected: false, phase, artifactsFound: [], provenanceMissing: [] };
   }
+}
+
+export function detectDelegatedBypassSuspicion(bundlePath, phase) {
+  return scanDelegatedBypassSuspicion(bundlePath, phase);
+}
+
+export function emitDelegatedBypassDiagnostic(bundlePath, gate, result) {
+  if (!result?.suspected) return { emitted: false };
+  const phase = result.phase || null;
+  let traceWritten = false;
+  let logWritten = false;
+
+  try {
+    const tracePath = join(bundlePath, 'rb_trace.jsonl');
+    const bundle = (() => {
+      try { return readBundleName(bundlePath); } catch { return basename(bundlePath); }
+    })();
+    appendFileSync(tracePath, JSON.stringify({
+      ts: new Date().toISOString(),
+      bundle,
+      event: 'delegated_bypass_suspected',
+      kind: 'delegated_bypass_suspected',
+      gate,
+      phase,
+      artifacts_found: result.artifactsFound || [],
+      provenance_missing: result.provenanceMissing || [],
+    }) + '\n');
+    traceWritten = true;
+  } catch { /* formal diagnostic remains best-effort */ }
+
+  try {
+    logToRun(bundlePath, 'warn', 'delegated_bypass_suspected', {
+      gate,
+      phase,
+      artifacts_found: (result.artifactsFound || []).slice(0, 10),
+      provenance_missing: result.provenanceMissing || [],
+    });
+    logWritten = true;
+  } catch { /* formal diagnostic remains best-effort */ }
+
+  return { emitted: traceWritten || logWritten, traceWritten, logWritten };
 }
 
 export function checkDelegatedBypassSuspected(bundlePath, rule) {
   const phase = rule.wave || rule.phase || null;
-  const result = detectDelegatedBypassSuspicion(bundlePath, phase, rule.gate || phase || 'unknown-gate');
+  const result = scanDelegatedBypassSuspicion(bundlePath, phase);
   if (result.suspected) {
     return {
       passed: false,

@@ -162,16 +162,16 @@ evidence_route:
 >
 > | 触发 Phase | 追加内容 | 写入 Section |
 > |-----------|---------|-------------|
-> | wave0 complete | source/reference return-map entries: evidence meaning, relationship, concrete `reference/*.md` refs, status, next hop | `## 本轮新增证据` |
-> | wave1 complete | mechanism/trend/question return-map entries with concrete `reference/*.md` refs as primary consumer navigation and artifacts/cache/work-unit refs only as secondary provenance | `## 本轮新增机制理解` `## 本轮新增趋势与难点` |
-> | wave2 complete | W2F finding return-map entries with concrete `reference/00-cross-*.md` refs when consumer-facing evidence is materialized, plus ledger/index refs | `## 当前判断` |
-> | 每轮 complete 后 | 更新问题状态标签 and next-hop return-map entries | `## 待验证问题` |
+> | Wave0 inspect/formal gate 前 | source/reference return-map entries: evidence meaning, relationship, concrete `reference/*.md` refs, status, next hop | `## 本轮新增证据` |
+> | Wave1 inspect/formal gate 前 | mechanism/trend/question return-map entries with concrete `reference/*.md` refs as primary consumer navigation and artifacts/cache/work-unit refs only as secondary provenance | `## 本轮新增机制理解` `## 本轮新增趋势与难点` |
+> | Wave2 inspect/formal gate 前 | W2F finding return-map entries with concrete `reference/00-cross-*.md` refs when consumer-facing evidence is materialized, plus ledger/index refs | `## 当前判断` |
+> | 每轮 inspect/formal gate 前 | 更新问题状态标签 and next-hop return-map entries | `## 待验证问题` |
 >
 > **不遵守此规则的后果**: gate 不检查正文完整性，但 wave2 synthesis 质量严重依赖回填。
 >
 > **回填方式**: 每个 section 下的 `__BACKFILL_*__` 是唯一占位 token。Agent 回填时 grep 定位 token → **直接替换该行为 return-map entry**（不追加，不保留 token）。每条重要 entry 至少包含 `evidence_meaning`、`relationship`、`refs`、`status`、`next_hop`。
 >
-> **refs 合同**: evidence-bearing entry 的 `refs` 必须至少枚举一个真实存在的 bundle-relative concrete `reference/*.md` 文件，禁止 `reference/topic-*.md` glob 或 `reference/topic-*.md (8 files)` / `reference/topic-*.md（8 个）` count summary。`artifacts/`、`_cache/`、`_work_units/` 可补充 provenance，但不能单独作为 consumer navigation。若没有可 materialize 的 evidence，entry 必须显式写成 limitation/no-materializable-evidence 状态，例如 `relationship: defers`、`status: deferred`、`refs: none`、`next_hop: limitation: no materializable evidence; defer to HITL2`。
+> **refs 合同**: evidence-bearing entry 的 `refs` 必须至少枚举一个真实存在的 bundle-relative concrete `reference/*.md` 文件，禁止 `reference/topic-*.md` glob 或 `reference/topic-*.md (8 files)` / `reference/topic-*.md（8 个）` count summary。`artifacts/`、`_cache/`、`_work_units/` 可补充 provenance，但不能单独作为 consumer navigation。`reference/_INDEX.md` 和 `source_layer` 也只是导航/index metadata，不建立 evidence authority；authority 仍来自 prior accepted submitted backing 或 submitted `wave2_targeted_evidence`。若没有可 materialize 的 evidence，entry 必须显式写成 limitation/no-materializable-evidence 状态，例如 `relationship: defers`、`status: deferred`、`refs: none`、`next_hop: limitation: no materializable evidence; defer to HITL2`。
 
 ## 历史摘要
 *(seed-topics: 本 topic 为新建，无历史轮次)*

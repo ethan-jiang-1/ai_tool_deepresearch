@@ -1,0 +1,571 @@
+// @impl IOC-001, IOC-002, IOC-003, CHI-001, RWG-018
+
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { basename, dirname, join, resolve as resolvePath } from 'node:path';
+import { parse as parseYaml } from 'yaml';
+
+import { ReferenceMetadataArraySchema } from '../../schema/index.mjs';
+import { countReferences } from './ref-count.mjs';
+import {
+  checkCacheCoverage,
+  checkReferenceFormatFiles,
+  checkReferenceIndexCoverage,
+  checkReferenceKeyFactsMinLines,
+  checkReferenceLedgerCoverage,
+  checkReferenceSourceUrls,
+} from './gate-helpers-checks.mjs';
+import {
+  checkWorkUnitLedgerExists,
+  checkWorkUnitOutputCoverage,
+  checkWorkUnitSubmissionPresence,
+  scanDelegatedBypassSuspicion,
+} from './gate-helpers-provenance.mjs';
+import {
+  listMatchingBundleFiles,
+  readBundlePlan,
+  readBundleProfile,
+  resolveThreshold,
+  stripMdFrontmatter,
+} from './gate-helpers-readers.mjs';
+import { readYamlArraySafe } from './gate-helpers-serial.mjs';
+import {
+  checkWave1DepthReviewContract,
+  checkWave2FindingIndexContract,
+  topicSlugFromDepthReviewTarget,
+} from './wave-depth-contracts.mjs';
+import {
+  buildContractEvaluation,
+  makeContractFinding,
+} from './wave-contract-findings.mjs';
+
+function safeMessage(error) {
+  return (error?.message || String(error)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+}
+
+function scopedRuleId(ruleId, topic) {
+  return topic ? `${ruleId}:${topic}` : ruleId;
+}
+
+function failureFinding(rule, { topic = null, surface = null, detail, expected = null, repair = null, id = null } = {}) {
+  const ruleId = scopedRuleId(rule.id, topic);
+  return makeContractFinding({
+    id: id || ruleId,
+    ruleId,
+    surface: surface || rule.target || null,
+    expected: expected || rule.failure_message || null,
+    repair: repair || (topic ? rule.failure_message?.replace(/\{topic\}/g, topic) : rule.failure_message) || null,
+    detail,
+  });
+}
+
+function advisoryFinding(rule, detail, index = 0) {
+  return makeContractFinding({
+    id: `${rule.id}:advisory:${index + 1}`,
+    ruleId: rule.id,
+    classification: 'advisory',
+    surface: rule.target || null,
+    detail,
+  });
+}
+
+function topicSlugs(bundlePath) {
+  const plan = readBundlePlan(bundlePath);
+  return Array.isArray(plan?.topic_registry) ? plan.topic_registry.map((topic) => topic.slug) : [];
+}
+
+function expandRuleTargets(bundlePath, rule) {
+  if (!String(rule.target || '').includes('{topic}')) return [{ topic: null, resolved: rule.target }];
+  return topicSlugs(bundlePath).map((topic) => ({ topic, resolved: rule.target.replace(/\{topic\}/g, topic) }));
+}
+
+function globRegex(pattern) {
+  return new RegExp(`^${basename(pattern).replace(/\./g, '\\.').replace(/\*/g, '[^/]*')}$`);
+}
+
+function readStatus(bundlePath) {
+  const path = join(bundlePath, 'rb_status.json');
+  if (!existsSync(path)) return null;
+  return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+function readJsonPath(value, path) {
+  return String(path || '').split('/').filter(Boolean).reduce((current, key) => current?.[key], value);
+}
+
+function evaluatePattern(bundlePath, rule, resolvedTarget, topic, { stripFrontmatter = false } = {}) {
+  const files = resolvedTarget.includes('*')
+    ? listMatchingBundleFiles(bundlePath, resolvedTarget)
+    : [{ relPath: resolvedTarget, absPath: join(bundlePath, resolvedTarget) }];
+  if (files.length === 0) {
+    return rule.negate
+      ? { passed: true }
+      : { passed: false, detail: `No files matching glob ${resolvedTarget} for pattern_match${topic ? ` (topic: ${topic})` : ''}` };
+  }
+
+  const regex = new RegExp(rule.pattern, 'i');
+  let anyMatched = false;
+  for (const file of files) {
+    if (!existsSync(file.absPath)) {
+      return { passed: false, detail: `Cannot read file for pattern_match: ${file.relPath}${topic ? ` (topic: ${topic})` : ''}` };
+    }
+    const raw = readFileSync(file.absPath, 'utf8');
+    const content = stripFrontmatter ? stripMdFrontmatter(raw) : raw;
+    const matched = regex.test(content);
+    anyMatched = anyMatched || matched;
+    if (rule.negate && matched) {
+      return { passed: false, detail: `Forbidden content in ${file.relPath}: ${(rule.failure_message || rule.pattern).replace(/\{topic\}/g, topic || '{topic}')}${topic ? ` (topic: ${topic})` : ''}` };
+    }
+  }
+  if (!rule.negate && !anyMatched) {
+    const label = files.length > 1 ? `any file matching ${resolvedTarget}` : resolvedTarget;
+    return { passed: false, detail: `Required marker not found in ${label}: ${(rule.failure_message || rule.pattern).replace(/\{topic\}/g, topic || '{topic}')}${topic ? ` (topic: ${topic})` : ''}` };
+  }
+  return { passed: true };
+}
+
+function evaluateCountFloor(bundlePath, rule, resolvedTarget, topic) {
+  const threshold = resolveThreshold(rule, readBundleProfile(bundlePath));
+  if (resolvedTarget.includes('*') && resolvedTarget.startsWith('reference/')) {
+    const result = countReferences(bundlePath, { source: 'ledger', targetGlob: resolvedTarget, topic: topic || undefined });
+    if (result.count >= threshold) return { passed: true };
+    const uncountable = result.uncountable.length > 0
+      ? ` [${result.uncountable.length} uncountable: ${result.uncountable.map((item) => item.reason).join('; ')}]`
+      : '';
+    return { passed: false, detail: `Count floor not met for ${resolvedTarget}: ${result.count} countable references (threshold: ${threshold})${uncountable}${topic ? ` (topic: ${topic})` : ''}` };
+  }
+  if (resolvedTarget.includes('*')) {
+    const files = listMatchingBundleFiles(bundlePath, resolvedTarget);
+    if (files.length >= threshold) return { passed: true };
+    return { passed: false, detail: `Count floor not met for ${resolvedTarget}: ${files.length} files (threshold: ${threshold})${topic ? ` (topic: ${topic})` : ''}` };
+  }
+
+  const yaml = readYamlArraySafe(join(bundlePath, resolvedTarget));
+  const count = yaml.ok && Array.isArray(yaml.data) ? yaml.data.length : 0;
+  if (count >= threshold) return { passed: true, yaml };
+  return { passed: false, detail: `Count floor not met for ${resolvedTarget}: ${count} entries (threshold: ${threshold})${topic ? ` (topic: ${topic})` : ''}`, yaml };
+}
+
+function normalizedHeading(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s*\/\s*/g, ' / ')
+    .replace(/\s+/g, ' ');
+}
+
+function markdownSections(content) {
+  const result = new Map();
+  const matches = [...String(content || '').matchAll(/^#{1,6}\s+(.+?)\s*$/gm)];
+  for (let index = 0; index < matches.length; index++) {
+    const start = matches[index].index + matches[index][0].length;
+    const end = matches[index + 1]?.index ?? content.length;
+    result.set(normalizedHeading(matches[index][1]), content.slice(start, end).trim());
+  }
+  return result;
+}
+
+function checkQuestionListSections(content) {
+  const sections = markdownSections(content);
+  const required = [
+    'topic investigation targets',
+    'question reconciliation',
+    'emergent question protocol',
+    'exploration / exploitation decision',
+  ];
+  const missing = required.filter((section) => !sections.has(section));
+  return missing.length === 0 ? { passed: true } : { passed: false, detail: `Missing semantic question-list section(s): ${missing.join(', ')}` };
+}
+
+function checkSourceUrlMarker(content) {
+  return /https?:\/\/[^\s)>]+/i.test(content)
+    ? { passed: true }
+    : { passed: false, detail: 'No parseable http(s) source URL found in evidence-summary.md' };
+}
+
+function checkKeyFindingsContent(content) {
+  const section = markdownSections(content).get('key findings') || '';
+  return section.split(/\r?\n/).some((line) => line.trim() && !/^<!--/.test(line.trim()))
+    ? { passed: true }
+    : { passed: false, detail: 'Key Findings section is missing or empty' };
+}
+
+function checkLedgerSections(content) {
+  const sections = markdownSections(content);
+  const required = [
+    'cross-topic scan matrix',
+    'wave1 legacy questions',
+    'cross-topic resolutions',
+    'emergent cross-topic questions',
+    'exploration decisions',
+    'hitl2 handoff',
+  ];
+  const missing = required.filter((section) => !sections.has(section));
+  return missing.length === 0 ? { passed: true } : { passed: false, detail: `cross-topic-ledger.md missing semantic section(s): ${missing.join(', ')}` };
+}
+
+function checkRerunAddFullSynthesis(bundlePath) {
+  const topics = topicSlugs(bundlePath);
+  const addTopics = topics.filter((topic) => {
+    const seedPath = join(bundlePath, 'seed_topics', `${topic}.md`);
+    if (!existsSync(seedPath)) return false;
+    const content = readFileSync(seedPath, 'utf8');
+    const match = content.match(/##\s*本轮重跑方向[\s\S]*?(?=\n##\s+|$)/);
+    return /action\s*:\s*add\b/i.test(match ? match[0] : content);
+  });
+  if (addTopics.length === 0) return { passed: true };
+
+  const synthesisPath = join(bundlePath, 'artifacts/wave2/synthesis.md');
+  const ledgerPath = join(bundlePath, 'artifacts/wave2/cross-topic-ledger.md');
+  const indexPath = join(bundlePath, 'artifacts/wave2/finding-index.yaml');
+  const inspect = [];
+  const synthesis = existsSync(synthesisPath) ? readFileSync(synthesisPath, 'utf8') : '';
+  if (/^##\s+Delta Synthesis\b/m.test(synthesis)) inspect.push(`Rerun action:add topic(s) ${addTopics.join(', ')} cannot use Delta Synthesis mode`);
+
+  const ledger = existsSync(ledgerPath) ? readFileSync(ledgerPath, 'utf8') : '';
+  const indexText = existsSync(indexPath) ? readFileSync(indexPath, 'utf8') : '';
+  let indexData = null;
+  try { indexData = indexText ? parseYaml(indexText) : null; } catch { indexData = null; }
+  const covered = new Set(topics.filter((topic) => ledger.includes(topic) || indexText.includes(topic)));
+  for (const topic of indexData?.scan?.topics || []) covered.add(topic);
+  const missing = topics.filter((topic) => !covered.has(topic));
+  if (missing.length > 0) inspect.push(`Rerun action:add scan/index coverage missing topic slug(s): ${missing.join(', ')}`);
+  return { passed: inspect.length === 0, detail: inspect.join('; ') };
+}
+
+function checkMarkdownLinkResolution(bundlePath, rule, resolvedTarget) {
+  const filePath = join(bundlePath, resolvedTarget);
+  if (!existsSync(filePath)) return { passed: false, detail: `Synthesis file not found: ${resolvedTarget}` };
+  const links = [...readFileSync(filePath, 'utf8').matchAll(/\[([^\]]+)\]\(([^)]+)\)/g)]
+    .map((match) => match[2])
+    .filter((path) => path.endsWith('.md'));
+  if (links.length === 0) return { passed: false, detail: `No Markdown links to .md artifacts found in ${resolvedTarget}` };
+  const baseDir = join(bundlePath, rule.resolve_relative_to || 'artifacts/wave2');
+  const valid = links.filter((path) => existsSync(resolvePath(baseDir, path)));
+  const dead = links.filter((path) => !existsSync(resolvePath(baseDir, path)));
+  const minimum = rule.min_valid_refs || 1;
+  if (valid.length < minimum) return { passed: false, detail: `Only ${valid.length} valid artifact reference(s) found (need ≥${minimum}). Dead links: ${dead.join(', ')}` };
+  return { passed: true, advisory: dead.length > 0 ? `Note: ${dead.length} dead link(s) found but ${valid.length} valid — gate passes. Dead links: ${dead.join(', ')}` : null };
+}
+
+function evaluateStatusRule(bundlePath, rule) {
+  const [file, path] = String(rule.target || '').split('#/');
+  if (file !== 'rb_status.json') return { passed: false, detail: `Unsupported status target: ${rule.target}` };
+  const status = readStatus(bundlePath);
+  if (!status) return { passed: false, detail: 'rb_status.json not found' };
+  const value = readJsonPath(status, path);
+  if (rule.check === 'status_value' && value !== rule.expected) return { passed: false, detail: `${rule.target}: expected "${rule.expected}", got "${value}"` };
+  if (rule.check === 'field_value' && rule.operator === 'equal' && value !== rule.value) return { passed: false, detail: `${rule.target}: expected "${rule.value}", got "${value}"` };
+  if (rule.check === 'field_non_empty' && (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0))) return { passed: false, detail: `${rule.target} is empty or missing` };
+  return { passed: true };
+}
+
+export function evaluateWave0Contract(bundlePath, definition) {
+  const findings = [];
+  const maskedRuleIds = [];
+  const sourceStates = new Map();
+  const sourceData = new Map();
+  const bypassSuspicion = scanDelegatedBypassSuspicion(bundlePath, 'wave0');
+  let checksRun = 0;
+
+  for (const rule of definition.rules) {
+    if (rule.check === 'placeholder' || rule.check === 'trace_event_present') continue;
+    let targets;
+    try { targets = expandRuleTargets(bundlePath, rule); } catch (error) {
+      findings.push(failureFinding(rule, { surface: 'rb_plan.md', detail: `Cannot read topic_registry for rule ${rule.id}: ${safeMessage(error)}` }));
+      continue;
+    }
+    if (targets.length === 0 && rule.target.includes('{topic}')) {
+      findings.push(failureFinding(rule, { surface: 'rb_plan.md', detail: `Empty topic_registry: cannot expand "{topic}" placeholder in rule ${rule.id}. Complete HITL1 to populate topic_registry.` }));
+      continue;
+    }
+
+    for (const target of targets) {
+      const id = scopedRuleId(rule.id, target.topic);
+      if (rule.id === 'per_topic_reference_schema_valid' && sourceStates.get(target.topic) === 'missing') {
+        maskedRuleIds.push(id);
+        continue;
+      }
+      if (rule.id === 'per_topic_count_floor' && sourceStates.has(target.topic) && sourceStates.get(target.topic) !== 'valid') {
+        maskedRuleIds.push(id);
+        continue;
+      }
+      checksRun += 1;
+      let result = { passed: true };
+      try {
+        if (rule.check === 'file_exists') {
+          result.passed = existsSync(join(bundlePath, target.resolved));
+          if (!result.passed) result.detail = `Missing file: ${target.resolved}${target.topic ? ` (topic: ${target.topic})` : ''}`;
+          if (rule.id === 'per_topic_source_yaml_exists') sourceStates.set(target.topic, result.passed ? 'present' : 'missing');
+        } else if (rule.check === 'dir_exists') {
+          const path = join(bundlePath, target.resolved);
+          result.passed = existsSync(path) && statSync(path).isDirectory();
+          if (!result.passed) result.detail = `Missing directory: ${target.resolved}`;
+        } else if (rule.check === 'schema_valid') {
+          const yaml = readYamlArraySafe(join(bundlePath, target.resolved));
+          if (!yaml.ok || !Array.isArray(yaml.data)) {
+            const keys = yaml.data && typeof yaml.data === 'object' ? Object.keys(yaml.data) : [];
+            result = { passed: false, detail: yaml.ok
+              ? `source.yaml must be a top-level YAML array at ${target.resolved}.${keys.length > 0 ? ` Found object keys: ${keys.join(', ')}` : ''}`
+              : `[parse_error] ${yaml.error}` };
+            sourceStates.set(target.topic, 'invalid');
+          } else {
+            const parsed = ReferenceMetadataArraySchema.safeParse(yaml.data);
+            if (!parsed.success) {
+              result = { passed: false, detail: `Schema validation failed for ${target.resolved}: ${parsed.error.issues.map((issue) => `[${issue.path.join('.') || '<root>'}] ${issue.message}`).join('; ')}` };
+              sourceStates.set(target.topic, 'invalid');
+            } else {
+              sourceStates.set(target.topic, 'valid');
+              sourceData.set(target.topic, yaml.data);
+            }
+          }
+        } else if (rule.check === 'count_floor' && rule.id === 'per_topic_count_floor' && sourceData.has(target.topic)) {
+          const threshold = resolveThreshold(rule, readBundleProfile(bundlePath));
+          const count = sourceData.get(target.topic).length;
+          result = count >= threshold ? { passed: true } : { passed: false, detail: `Count floor not met for ${target.resolved}: ${count} entries (threshold: ${threshold}) (topic: ${target.topic})` };
+        } else if (rule.check === 'count_floor') {
+          result = evaluateCountFloor(bundlePath, rule, target.resolved, target.topic);
+        } else if (rule.check === 'pattern_match') {
+          result = evaluatePattern(bundlePath, rule, target.resolved, target.topic);
+        } else if (rule.check === 'status_value') {
+          result = evaluateStatusRule(bundlePath, rule);
+        } else if (rule.check === 'cache_coverage') {
+          const check = checkCacheCoverage(bundlePath);
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
+          if (check.passed) check.inspect.forEach((line, index) => findings.push(advisoryFinding(rule, line, index)));
+        } else if (rule.check === 'work_unit_ledger_exists') {
+          const check = checkWorkUnitLedgerExists(bundlePath, rule);
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+        } else if (rule.check === 'work_unit_output_coverage') {
+          const check = checkWorkUnitOutputCoverage(bundlePath, rule);
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+        } else if (rule.check === 'work_unit_submission_presence') {
+          const check = checkWorkUnitSubmissionPresence(bundlePath, rule);
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+        } else if (rule.check === 'delegated_bypass_suspected') {
+          result = bypassSuspicion.suspected
+            ? { passed: false, detail: `delegated_bypass_suspected: ${(bypassSuspicion.provenanceMissing || []).join('; ')}`, repair: 'Route delegated artifacts through work-unit claim/submit; direct files and hand-written declarations cannot satisfy gate provenance.' }
+            : { passed: true };
+        } else {
+          result = { passed: false, detail: `Unknown check type: ${rule.check} — must fail (check type not implemented)` };
+        }
+      } catch (error) {
+        result = { passed: false, detail: `Error evaluating rule ${rule.id} (${target.resolved}): ${safeMessage(error)}` };
+      }
+      if (!result.passed) findings.push(failureFinding(rule, { topic: target.topic, surface: target.resolved, detail: result.detail, repair: result.repair }));
+    }
+  }
+
+  return buildContractEvaluation({ checksRun, findings, maskedRuleIds, bypassSuspicion });
+}
+
+export function evaluateWave1Contract(bundlePath, definition) {
+  const findings = [];
+  const maskedRuleIds = [];
+  const missingFiles = new Set();
+  const bypassSuspicion = scanDelegatedBypassSuspicion(bundlePath, 'wave1');
+  let checksRun = 0;
+
+  for (const rule of definition.rules) {
+    if (rule.check === 'placeholder' || rule.check === 'trace_event_present') continue;
+    let targets;
+    try { targets = expandRuleTargets(bundlePath, rule); } catch (error) {
+      findings.push(failureFinding(rule, { surface: 'rb_plan.md', detail: `Cannot read topic_registry for rule ${rule.id}: ${safeMessage(error)}` }));
+      continue;
+    }
+    if (targets.length === 0 && rule.target.includes('{topic}')) {
+      findings.push(failureFinding(rule, { surface: 'rb_plan.md', detail: `Empty topic_registry: cannot expand "{topic}" placeholder in rule ${rule.id}.` }));
+      continue;
+    }
+
+    for (const target of targets) {
+      const id = scopedRuleId(rule.id, target.topic);
+      if (rule.check === 'pattern_match' && missingFiles.has(target.resolved)) {
+        maskedRuleIds.push(id);
+        continue;
+      }
+      checksRun += 1;
+      let result = { passed: true };
+      try {
+        if (rule.check === 'file_exists') {
+          result.passed = existsSync(join(bundlePath, target.resolved));
+          if (!result.passed) {
+            missingFiles.add(target.resolved);
+            result.detail = `Missing file: ${target.resolved}${target.topic ? ` (topic: ${target.topic})` : ''}`;
+          }
+        } else if (rule.check === 'dir_exists') {
+          const path = join(bundlePath, target.resolved);
+          result.passed = existsSync(path) && statSync(path).isDirectory();
+          if (!result.passed) result.detail = `Missing directory: ${target.resolved}`;
+        } else if (['field_value', 'field_non_empty', 'status_value'].includes(rule.check)) {
+          result = evaluateStatusRule(bundlePath, rule);
+        } else if (rule.check === 'pattern_match') {
+          if (['question_list_has_four_sections', 'source_url_present', 'key_findings_non_empty'].includes(rule.id)) {
+            const content = readFileSync(join(bundlePath, target.resolved), 'utf8');
+            if (rule.id === 'question_list_has_four_sections') result = checkQuestionListSections(content);
+            else if (rule.id === 'source_url_present') result = checkSourceUrlMarker(content);
+            else result = checkKeyFindingsContent(content);
+          } else {
+            result = evaluatePattern(bundlePath, rule, target.resolved, target.topic);
+          }
+        } else if (rule.check === 'count_floor') {
+          result = evaluateCountFloor(bundlePath, rule, target.resolved, target.topic);
+        } else if (rule.check === 'cache_coverage') {
+          const check = checkCacheCoverage(bundlePath);
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
+          if (check.passed) check.inspect.forEach((line, index) => findings.push(advisoryFinding(rule, line, index)));
+        } else if (rule.check === 'reference_format') {
+          const check = checkReferenceFormatFiles(listMatchingBundleFiles(bundlePath, target.resolved));
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
+        } else if (rule.check === 'reference_source_url_parseable') {
+          const check = checkReferenceSourceUrls(listMatchingBundleFiles(bundlePath, target.resolved));
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
+        } else if (rule.check === 'reference_key_facts_min_lines') {
+          const check = checkReferenceKeyFactsMinLines(listMatchingBundleFiles(bundlePath, target.resolved), rule.min_lines || 5);
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
+        } else if (rule.check === 'reference_ledger_coverage') {
+          const check = checkReferenceLedgerCoverage(bundlePath, listMatchingBundleFiles(bundlePath, target.resolved));
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
+        } else if (rule.check === 'reference_index_coverage') {
+          const check = checkReferenceIndexCoverage(bundlePath, listMatchingBundleFiles(bundlePath, target.resolved), { sourceLayer: rule.source_layer || null });
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+        } else if (rule.check === 'depth_review_contract') {
+          const topic = target.topic || rule.topic || topicSlugFromDepthReviewTarget(target.resolved);
+          const check = checkWave1DepthReviewContract(bundlePath, { topic });
+          maskedRuleIds.push(...(check.masked_rule_ids || []).map((masked) => scopedRuleId(rule.id, `${topic}:${masked}`)));
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+          (check.diagnostics || []).forEach((line, index) => findings.push(advisoryFinding(rule, line, index)));
+        } else if (rule.check === 'work_unit_ledger_exists') {
+          const check = checkWorkUnitLedgerExists(bundlePath, rule);
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+        } else if (rule.check === 'work_unit_output_coverage') {
+          const check = checkWorkUnitOutputCoverage(bundlePath, rule);
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+        } else if (rule.check === 'work_unit_submission_presence') {
+          const check = checkWorkUnitSubmissionPresence(bundlePath, rule);
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+        } else if (rule.check === 'delegated_bypass_suspected') {
+          result = bypassSuspicion.suspected
+            ? { passed: false, detail: `delegated_bypass_suspected: ${(bypassSuspicion.provenanceMissing || []).join('; ')}`, repair: 'Route delegated artifacts through work-unit claim/submit or repair valid Phase-owned projection backing.' }
+            : { passed: true };
+        } else {
+          result = { passed: false, detail: `Unknown check type: ${rule.check} — must fail (check type not implemented)` };
+        }
+      } catch (error) {
+        result = { passed: false, detail: `Error evaluating rule ${rule.id} (${target.resolved}): ${safeMessage(error)}` };
+      }
+      if (!result.passed) findings.push(failureFinding(rule, { topic: target.topic, surface: target.resolved, detail: result.detail, repair: result.repair }));
+    }
+  }
+
+  return buildContractEvaluation({ checksRun, findings, maskedRuleIds, bypassSuspicion });
+}
+
+export function evaluateWave2Contract(bundlePath, definition) {
+  const findings = [];
+  const maskedRuleIds = [];
+  const missingFiles = new Set();
+  const invalidYaml = new Set();
+  const bypassSuspicion = scanDelegatedBypassSuspicion(bundlePath, 'wave2');
+  let checksRun = 0;
+
+  for (const rule of definition.rules) {
+    if (rule.check === 'placeholder' || rule.check === 'trace_event_present') continue;
+    let targets;
+    try { targets = expandRuleTargets(bundlePath, rule); } catch (error) {
+      findings.push(failureFinding(rule, { surface: 'rb_plan.md', detail: `Cannot read topic_registry for rule ${rule.id}: ${safeMessage(error)}` }));
+      continue;
+    }
+    if (targets.length === 0 && rule.target.includes('{topic}')) {
+      findings.push(failureFinding(rule, { surface: 'rb_plan.md', detail: `Empty topic_registry: cannot expand "{topic}" placeholder in rule ${rule.id}.` }));
+      continue;
+    }
+
+    for (const target of targets) {
+      const id = scopedRuleId(rule.id, target.topic);
+      if (rule.id === 'index_yaml_parse' && missingFiles.has(target.resolved)) {
+        maskedRuleIds.push(id);
+        continue;
+      }
+      if (rule.id === 'finding_index_contract' && (missingFiles.has(target.resolved) || invalidYaml.has(target.resolved))) {
+        maskedRuleIds.push(id);
+        continue;
+      }
+      if (['synthesis_non_empty', 'synthesis_finding_id_ref', 'cross_artifact_references', 'wave1_evidence_ref'].includes(rule.id) && missingFiles.has(target.resolved)) {
+        maskedRuleIds.push(id);
+        continue;
+      }
+      if (['ledger_non_empty', 'ledger_fixed_sections'].includes(rule.id) && missingFiles.has(target.resolved)) {
+        maskedRuleIds.push(id);
+        continue;
+      }
+      checksRun += 1;
+      let result = { passed: true };
+      try {
+        if (rule.check === 'file_exists') {
+          result.passed = existsSync(join(bundlePath, target.resolved));
+          if (!result.passed) {
+            missingFiles.add(target.resolved);
+            result.detail = `Missing file: ${target.resolved}${target.topic ? ` (topic: ${target.topic})` : ''}`;
+          }
+        } else if (rule.check === 'field_non_empty') {
+          const path = join(bundlePath, target.resolved);
+          const content = existsSync(path) ? stripMdFrontmatter(readFileSync(path, 'utf8')) : '';
+          result = content.length > 0 ? { passed: true } : { passed: false, detail: `${target.resolved} is empty (no content after frontmatter)` };
+        } else if (rule.check === 'pattern_match') {
+          if (rule.id === 'ledger_fixed_sections') result = checkLedgerSections(readFileSync(join(bundlePath, target.resolved), 'utf8'));
+          else result = evaluatePattern(bundlePath, rule, target.resolved, target.topic, { stripFrontmatter: true });
+        } else if (rule.check === 'yaml_parse') {
+          const path = join(bundlePath, target.resolved);
+          try { parseYaml(readFileSync(path, 'utf8')); }
+          catch (error) {
+            invalidYaml.add(target.resolved);
+            result = { passed: false, detail: `YAML parse error in ${target.resolved}: ${safeMessage(error)}` };
+          }
+        } else if (rule.check === 'cross_field' && rule.mode === 'markdown_link_resolution') {
+          result = checkMarkdownLinkResolution(bundlePath, rule, target.resolved);
+          if (result.advisory) {
+            findings.push(makeContractFinding({
+              id: `${rule.id}:dead_links`,
+              ruleId: rule.id,
+              classification: 'advisory',
+              surface: target.resolved,
+              detail: result.advisory,
+              repair: result.advisory,
+            }));
+          }
+        } else if (rule.check === 'status_value') {
+          result = evaluateStatusRule(bundlePath, rule);
+        } else if (rule.check === 'rerun_add_full_synthesis') {
+          result = checkRerunAddFullSynthesis(bundlePath);
+        } else if (rule.check === 'finding_index_contract') {
+          const check = checkWave2FindingIndexContract(bundlePath);
+          maskedRuleIds.push(...(check.masked_rule_ids || []).map((masked) => `${rule.id}:${masked}`));
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+        } else if (rule.check === 'reference_index_coverage') {
+          const check = checkReferenceIndexCoverage(bundlePath, listMatchingBundleFiles(bundlePath, target.resolved), { sourceLayer: rule.source_layer || null });
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+        } else if (rule.check === 'work_unit_ledger_exists') {
+          const check = checkWorkUnitLedgerExists(bundlePath, rule);
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+        } else if (rule.check === 'work_unit_output_coverage') {
+          const check = checkWorkUnitOutputCoverage(bundlePath, rule);
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+        } else if (rule.check === 'work_unit_submission_presence') {
+          const check = checkWorkUnitSubmissionPresence(bundlePath, rule);
+          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+        } else if (rule.check === 'delegated_bypass_suspected') {
+          result = bypassSuspicion.suspected
+            ? { passed: false, detail: `delegated_bypass_suspected: ${(bypassSuspicion.provenanceMissing || []).join('; ')}`, repair: 'Submit Wave2 targeted evidence or repair existing-backed projection authority.' }
+            : { passed: true };
+        } else {
+          result = { passed: false, detail: `Unknown check type: ${rule.check} (mode: ${rule.mode || 'n/a'}) — must fail (check type not implemented)` };
+        }
+      } catch (error) {
+        result = { passed: false, detail: `Error evaluating rule ${rule.id}: ${safeMessage(error)}` };
+      }
+      if (!result.passed) findings.push(failureFinding(rule, { topic: target.topic, surface: target.resolved, detail: result.detail, repair: result.repair }));
+    }
+  }
+
+  return buildContractEvaluation({ checksRun, findings, maskedRuleIds, bypassSuspicion });
+}

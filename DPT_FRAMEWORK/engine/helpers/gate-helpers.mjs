@@ -68,6 +68,8 @@ export {
   checkWorkUnitSubmissionPresence,
   checkDelegatedBypassSuspected,
   detectDelegatedBypassSuspicion,
+  emitDelegatedBypassDiagnostic,
+  scanDelegatedBypassSuspicion,
 } from './gate-helpers-provenance.mjs';
 
 // Serial

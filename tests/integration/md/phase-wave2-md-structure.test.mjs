@@ -5,7 +5,7 @@
 //   - 9-section body completeness
 //   - §4 Expected Artifacts describes three-artifact group
 //   - Ledger 6 fixed sections are documented
-//   - Index 11 required fields are documented
+//   - Index 15 required fields are documented
 //   - §9 Anti-Cheating Rules has ≥10 phase-specific prohibitions
 
 import { readFileSync } from 'node:fs';

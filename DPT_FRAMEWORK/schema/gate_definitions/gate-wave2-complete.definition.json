@@ -38,7 +38,7 @@
       "id": "index_exists",
       "check": "file_exists",
       "target": "artifacts/wave2/finding-index.yaml",
-      "failure_message": "Missing file: artifacts/wave2/finding-index.yaml. Write the JS-readable shadow index with 11 required fields per finding."
+      "failure_message": "Missing file: artifacts/wave2/finding-index.yaml. Write the JS-readable shadow index with all 15 required fields per finding."
     },
     {
       "id": "index_yaml_parse",

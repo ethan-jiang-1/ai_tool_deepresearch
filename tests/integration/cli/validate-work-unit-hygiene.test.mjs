@@ -1,3 +1,4 @@
+// @impl RWG-018
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -32,17 +33,20 @@ function writeMinimalWiring(root) {
     'export function checkWorkUnitLedgerExists() {}',
     'export function checkWorkUnitOutputCoverage() {}',
     'export function checkWorkUnitSubmissionPresence() {}',
-    'export function checkDelegatedBypassSuspected() {}',
+    'export function scanDelegatedBypassSuspicion() {}',
+    'export function emitDelegatedBypassDiagnostic() {}',
   ].join('\n');
   writeFixture(root, 'DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs', helper);
-  const gateCli = [
+  const evaluator = [
     'checkWorkUnitLedgerExists();',
     'checkWorkUnitOutputCoverage();',
     'checkWorkUnitSubmissionPresence();',
-    'checkDelegatedBypassSuspected();',
+    'scanDelegatedBypassSuspicion();',
   ].join('\n');
+  writeFixture(root, 'DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs', evaluator);
   for (const wave of ['wave0', 'wave1', 'wave2']) {
-    writeFixture(root, `DPT_FRAMEWORK/cli/gates/check-gate-${wave}-complete.mjs`, gateCli);
+    const evaluatorName = `evaluate${wave[0].toUpperCase()}${wave.slice(1)}Contract`;
+    writeFixture(root, `DPT_FRAMEWORK/cli/gates/check-gate-${wave}-complete.mjs`, `${evaluatorName}();\nemitDelegatedBypassDiagnostic();\n`);
   }
   writeFixture(root, 'DPT_FRAMEWORK/cli/operate-work-unit.mjs', [
     'claimWorkUnits();',
@@ -121,6 +125,18 @@ describe('validate-work-unit-hygiene CLI', () => {
     const result = run(root);
     assert.equal(result.status, 0, result.stdout || result.stderr);
     assert.equal(JSON.parse(result.stdout).passed, true);
+  });
+
+  it('requires Wave gates to route provenance through the shared evaluator', () => {
+    const root = cleanRepo('shared-evaluator-wiring');
+    writeFixture(root, 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs', 'checkWorkUnitLedgerExists();\nemitDelegatedBypassDiagnostic();\n');
+    writeFixture(root, 'DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs', 'checkWorkUnitLedgerExists();\n');
+
+    const result = run(root);
+    assert.equal(result.status, 1);
+    const found = codes(result);
+    assert.ok(found.has('gate_cli_missing_wave_contract_evaluator'));
+    assert.ok(found.has('wave_contract_evaluator_missing_work_unit_helper'));
   });
 
   it('fails closed on removed authority tokens, old gate checks, and old queue shape', () => {

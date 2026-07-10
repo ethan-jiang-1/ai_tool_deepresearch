@@ -28,7 +28,7 @@ suggested_context:
 - **Start here**: load Wave1 artifacts, `finding-index.yaml` expectations, queue state, profile thresholds, and Wave2 role guidance.
 - **Pure synthesis path**: Phase Agent reads existing submitted evidence and writes synthesis artifacts.
 - **Delegated evidence path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit submit` -> submitted ledger row -> gate.
-- **Completion check**: `check-gate-wave2-complete.mjs` passes for `phases/phase-wave2.md`.
+- **Completion check**: side-effect-free `inspect-wave2-output.mjs` passes first, then `check-gate-wave2-complete.mjs` passes for `phases/phase-wave2.md`.
 - **Failure posture**: do not direct-search new evidence from the Phase Agent. Use targeted work units, explicit HITL2 deferral, or bounded refill.
 
 ## 1. Stage Goal
@@ -171,7 +171,9 @@ For the synthesis queue item, the Phase Agent:
 
 No delegated ledger row is required for pure synthesis artifacts.
 
-Existing-backed `00-cross` projections use a primary prior accepted backing source URL in `source_url`, cite `W2F-xxx`, and list bundle-relative refs to `finding-index.yaml`, `cross-topic-ledger.md`, Wave0/Wave1 evidence summaries/question lists/references, cache trails, degraded-capture records, or work-unit surfaces. A prior reference is only a locator unless it resolves to submitted prior backing.
+Existing-backed `00-cross` projections use a primary prior accepted backing source URL in `source_url`, cite `W2F-xxx`, and list bundle-relative refs to `finding-index.yaml`, `cross-topic-ledger.md`, plus concrete prior Wave0/Wave1 reference/artifact/cache/work-unit backing. They do not need a new Wave2 work-unit row, but a prior reference is only a locator unless it resolves to accepted submitted prior backing.
+
+Newly fetched evidence follows the other authority path: it is not accepted until a `wave2_targeted_evidence` work unit is submitted with matching result/receipt/cache/source backing. A resulting `reference/00-cross-*.md` may then be a submitted reference output or a Phase-owned projection that binds back to those submitted Wave2 surfaces. `reference/_INDEX.md` and its `source_layer: wave2_cross` row are navigation metadata only; they never prove either authority path.
 
 #### 3.2.2 Targeted Evidence
 
@@ -228,7 +230,7 @@ Before gate, ensure `cross-topic-ledger.md` contains the fixed synthesis control
 - Exploration Decisions
 - HITL2 Handoff
 
-Ensure `finding-index.yaml` records at least `id`, `type`, `priority`, `status`, `decision`, `affected_topics`, `origin_refs`, `trigger_refs`, `search_required`, `subagent_receipt_refs`, `appears_in_synthesis`, `hitl2_handoff`, `confidence`, `independent_backing_refs`, and `gap_status` per finding. Finding ids use `W2F-xxx`; finding types include `wave1_legacy_question`, `cross_topic_resolution`, and `cross_topic_emergent_question`.
+Use the single canonical finding contract in `shared/shared-schemas.md` under `finding-index.yaml — JS-Readable Shadow Index`. It defines all 15 required per-finding fields and their types. Canonical enums are: `type` = `wave1_legacy_question` / `cross_topic_resolution` / `cross_topic_emergent_question`; `priority` = `p0` / `p1` / `p2`; `status` = `resolved` / `partial` / `open` / `deferred`; `decision` = `use_existing_evidence` / `exploit_search` / `explore_search` / `defer_hitl2` / `requires_internal_data` / `record_only`; `confidence` = `high` / `medium` / `low` / `uncertain`; `gap_status` = `no_gap` / `needs_search` / `search_submitted` / `deferred_hitl2` / `requires_internal_data` / `record_only`. Do not maintain a shortened local field count or infer missing values from Engine source; run Wave2 inspect for exact deterministic feedback.
 
 For a backed finding that appears in synthesis and is consumer-facing, ensure there is a matching `reference/00-cross-*.md` projection or a field such as `consumer_reference_omission_reason` explaining `process-only`, `internal`, `deferred`, `not sufficiently source-backed`, or intentionally not consumer-facing status.
 
@@ -277,7 +279,15 @@ These checks are Agent discipline. The gate verifies structural artifacts, refer
 
 ## 5. Gate Command
 
-Run gate only after queue demand is drained, reconstructed delegated in-flight work is zero, non-delegated queue work is done, and accepted consumer-facing backed findings have either `00-cross` projections or explicit omission reasons:
+After queue demand is drained, reconstructed delegated in-flight work is zero, non-delegated queue work is done, and accepted consumer-facing backed findings have either `00-cross` projections or explicit omission reasons, run the Wave2 inspect before recording completion evidence or invoking the formal gate:
+
+```bash
+node DPT_FRAMEWORK/cli/inspect-wave2-output.mjs --bundle <path>
+```
+
+This inspect is side-effect-free and non-routing. If it fails, repair the smallest named finding field, ledger section, reference/backing surface, or explicit limitation and rerun this same inspect; do not read Engine helper source or build a second validator.
+
+Only after inspect passes, record or refresh the existing `wave2_completion` evidence through the normal phase logging path, then run the formal gate:
 
 ```bash
 node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle <path> --current-node phases/phase-wave2.md
@@ -301,7 +311,7 @@ If quality self-check or gate output identifies a search/evidence gap:
 1. Enqueue targeted delegated queue items with `kind: "wave2_targeted_evidence"`.
 2. Drain through work-unit claim/submit.
 3. Update `finding-index.yaml` and `cross-topic-ledger.md`.
-4. Rerun self-check and gate.
+4. Rerun self-check, Wave2 inspect, and then the gate.
 
 If a gap cannot be resolved after bounded attempts, record the limitation and route it to HITL2, internal-data handling, or record-only handling. Do not invent references. Do not declare `pure_synthesis_eligible: true` until `gap_status` and counts are consistent.
 

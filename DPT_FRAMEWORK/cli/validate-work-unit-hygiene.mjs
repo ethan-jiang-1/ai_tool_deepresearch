@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @impl RET-006, DEW-001, DEW-008, AGQ-019, FRE-005
+// @impl RET-006, DEW-001, DEW-008, AGQ-019, FRE-005, RWG-018
 // Static hygiene gate for the current work-unit delegated path.
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
@@ -436,9 +436,22 @@ function checkRequiredWiring(issues) {
     return;
   }
   const gateHelper = readFileSync(gateHelperAbs, 'utf-8');
-  for (const exported of ['checkWorkUnitLedgerExists', 'checkWorkUnitOutputCoverage', 'checkWorkUnitSubmissionPresence', 'checkDelegatedBypassSuspected']) {
+  for (const exported of ['checkWorkUnitLedgerExists', 'checkWorkUnitOutputCoverage', 'checkWorkUnitSubmissionPresence', 'scanDelegatedBypassSuspicion', 'emitDelegatedBypassDiagnostic']) {
     if (!gateHelper.includes(`export function ${exported}`)) {
       addIssue(issues, { category: 'wiring', code: 'missing_work_unit_gate_helper', file: gateHelperRel, line: 1, detail: `${exported} is not exported from gate provenance helpers.` });
+    }
+  }
+
+  const evaluatorRel = 'DPT_FRAMEWORK/engine/helpers/wave-contract-evaluators.mjs';
+  const evaluatorAbs = join(repoRoot, evaluatorRel);
+  if (!existsSync(evaluatorAbs)) {
+    addIssue(issues, { category: 'wiring', code: 'missing_wave_contract_evaluator_file', file: evaluatorRel, line: 1, detail: `${evaluatorRel} is missing.` });
+    return;
+  }
+  const evaluator = readFileSync(evaluatorAbs, 'utf-8');
+  for (const required of ['checkWorkUnitLedgerExists', 'checkWorkUnitOutputCoverage', 'checkWorkUnitSubmissionPresence', 'scanDelegatedBypassSuspicion']) {
+    if (!evaluator.includes(required)) {
+      addIssue(issues, { category: 'wiring', code: 'wave_contract_evaluator_missing_work_unit_helper', file: evaluatorRel, line: 1, detail: `${evaluatorRel} does not reference ${required}.` });
     }
   }
 
@@ -450,10 +463,12 @@ function checkRequiredWiring(issues) {
       continue;
     }
     const text = readFileSync(abs, 'utf-8');
-    for (const required of ['checkWorkUnitLedgerExists', 'checkWorkUnitOutputCoverage', 'checkWorkUnitSubmissionPresence', 'checkDelegatedBypassSuspected']) {
-      if (!text.includes(required)) {
-        addIssue(issues, { category: 'wiring', code: 'gate_cli_missing_work_unit_helper', file: rel, line: 1, detail: `${rel} does not reference ${required}.` });
-      }
+    const evaluatorName = `evaluate${gate[0].toUpperCase()}${gate.slice(1)}Contract`;
+    if (!text.includes(evaluatorName)) {
+      addIssue(issues, { category: 'wiring', code: 'gate_cli_missing_wave_contract_evaluator', file: rel, line: 1, detail: `${rel} does not reference ${evaluatorName}.` });
+    }
+    if (!text.includes('emitDelegatedBypassDiagnostic')) {
+      addIssue(issues, { category: 'wiring', code: 'gate_cli_missing_formal_bypass_emitter', file: rel, line: 1, detail: `${rel} does not retain formal-only emitDelegatedBypassDiagnostic ownership.` });
     }
   }
 

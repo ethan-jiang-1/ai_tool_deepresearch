@@ -26,7 +26,7 @@ suggested_context:
 - **Objective**: collect foundation source metadata and shared reference evidence for every topic.
 - **Start here**: load `rb_queue.json`, `rb_plan.md` topic registry, seed topic files, profile thresholds, and `dpt-source-intake` role guidance.
 - **Delegated path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit submit` -> submitted ledger row -> gate.
-- **Completion check**: `check-gate-wave0-complete.mjs` passes for `phases/phase-wave0.md`.
+- **Completion check**: side-effect-free `inspect-wave0-output.mjs` passes first, then `check-gate-wave0-complete.mjs` passes for `phases/phase-wave0.md`.
 - **Failure posture**: do not direct-search from the Phase Agent as a substitute for delegated evidence. Use submit rejection, terminal attempt closure, refill, and gate feedback.
 
 ## 1. Stage Goal
@@ -175,7 +175,15 @@ After each successful submit, before claiming the next item:
 
 ## 5. Gate Command
 
-Run the Wave0 gate only after queue demand is drained and reconstructed delegated in-flight work is zero. Then read the JSON output before deciding the next action:
+After queue demand is drained, reconstructed delegated in-flight work is zero, and Wave0 artifacts/backfill are materialized, run the Wave0 inspect before recording completion evidence or invoking the formal gate:
+
+```bash
+node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle <path>
+```
+
+This inspect is side-effect-free and non-routing. If it fails, repair the smallest named bundle-relative surface and rerun this same inspect; do not create a second local validator or treat an internal artifact/cache ref as a substitute for concrete consumer navigation.
+
+Only after inspect passes, record or refresh the existing `wave0_completion` evidence through the normal phase logging path, then run the formal gate and read its JSON output before deciding the next action:
 
 ```bash
 node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle <path> --current-node phases/phase-wave0.md
@@ -199,7 +207,7 @@ If gate fails because `per_topic_count_floor` or `shared_ref_count_floor` is bel
 1. Read gate `inspect` and identify the exact topic/shared gap.
 2. Enqueue supplementary delegated queue items with `kind: "wave0_source_intake"` and `priority_class: "P1_state_or_gate_repair"`.
 3. Drain through the same work-unit claim/submit path.
-4. Rerun the gate.
+4. Rerun Wave0 inspect, then rerun the gate.
 
 Supplementary tasks must append or add real sources only. They must not overwrite existing `source.yaml`, create placeholder URLs, or fabricate `reference/00-shared-*.md`.
 

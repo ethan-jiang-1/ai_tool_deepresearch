@@ -300,6 +300,23 @@ describe('wave depth contract helpers', () => {
     assert.match(result.inspect.join('\n'), /missing_profile_parameter/);
   });
 
+  it('masks Wave1 cache and novelty implications when source_claims is missing', () => {
+    const dir = setupBundle();
+    const submitted = submitWave1Source(dir);
+    writeDepthReview(dir, {
+      record: submitted.record,
+      claim: submitted.claim,
+      omitKey: 'source_claims',
+    });
+
+    const result = checkWave1DepthReviewContract(dir, { topic: 'topic-a' });
+    assert.equal(result.passed, false);
+    assert.match(result.inspect.join('\n'), /missing required key: source_claims/);
+    assert.doesNotMatch(result.inspect.join('\n'), /source_claim_cache_mapping|accepted exact-new claim count/);
+    assert.ok(result.masked_rule_ids.includes('source_claim_cache_mapping'));
+    assert.ok(result.masked_rule_ids.includes('source_novelty_floor'));
+  });
+
   it('uses exact URL equality for novelty and does not revive retired heuristics', () => {
     const dir = setupBundle();
     const submitted = submitWave1Source(dir, { sourceUrl: 'https://example.com/topic-a/same' });
@@ -371,6 +388,37 @@ describe('wave depth contract helpers', () => {
 
     const result = checkWave2FindingIndexContract(dir);
     assert.equal(result.passed, true, result.inspect.join('\n'));
+  });
+
+  it('reports one missing hitl2_handoff root without derivative handoff symptoms', () => {
+    const dir = setupBundle({ topicCount: 2 });
+    const finding = validFinding({
+      decision: 'defer_hitl2',
+      appears_in_synthesis: false,
+      gap_status: 'deferred_hitl2',
+    });
+    delete finding.hitl2_handoff;
+    writeWave2Index(dir, validWave2Index({
+      findings: [finding],
+      synthesis_eligibility: {
+        pure_synthesis_eligible: true,
+        scan_matrix_present: true,
+        scan_topic_pair_coverage: [{ pair: ['topic-a', 'topic-b'], refs: ['artifacts/wave2/cross-topic-ledger.md'] }],
+        unresolved_search_required_count: 0,
+        targeted_search_required_count: 0,
+        targeted_search_submitted_count: 0,
+        explicit_deferral_count: 1,
+        profile_params_read: ['p0p1_independent_backing'],
+        ineligibility_reasons: [],
+      },
+    }));
+
+    const result = checkWave2FindingIndexContract(dir);
+    const text = result.inspect.join('\n');
+    assert.equal(result.passed, false);
+    assert.equal(result.inspect.filter((line) => line.includes('missing field: hitl2_handoff')).length, 1);
+    assert.doesNotMatch(text, /implies hitl2_handoff|must be hitl2_handoff/);
+    assert.ok(result.masked_rule_ids.some((id) => id.includes('hitl2_handoff')));
   });
 
   it('requires consumer-facing backed W2F findings to materialize 00-cross references or record omission reasons', () => {

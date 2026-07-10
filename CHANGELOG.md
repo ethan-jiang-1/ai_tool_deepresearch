@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.17
+
+- Wave0/Wave1/Wave2 formal gates and inspect commands now reuse one explicit pure evaluator per wave for artifact, provenance, reference, and accepted floor checks; lifecycle, routing, degraded handoff, attempts, checkpoints, and durable diagnostics remain formal-only.
+- Delegated-bypass handling now uses a pure shared scan with at-most-once formal trace/log emission, while inspect remains full-bundle no-write and always reports the raw contract result without degraded pass.
+- Wave1 depth-review and Wave2 finding-index checks now short-circuit dependent symptoms at the nearest missing parent/field, and harmless Markdown heading/list/URL presentation is tolerated or advisory instead of becoming a separate blocker.
+- Inspect output keeps its existing `{ check, inspect, advice }` contract and adds `failed_rule_ids` plus blocking/advisory/diagnostic classification; formal Wave gate results expose additive failed/masked rule ids.
+- Wave producer guidance now names canonical roles, refs, finding fields/enums, authority splits, concrete `reference/*.md` navigation, and runs the corresponding side-effect-free inspect before completion evidence and the formal gate.
+
 ## v0.16
 
 - Work-unit timeout recovery now has explicit audited `operate-work-unit late-submit` for eligible `timed_out` attempts whose original result validates after timeout.

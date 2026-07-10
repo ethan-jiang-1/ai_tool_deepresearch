@@ -68,8 +68,8 @@ Reference evidence 存放在平铺的 `reference/` 目录下（无子目录）�
 
 - **`reference/00-shared-<slug>.md`**：Wave 0 产出。共享基础 reference（rich MD），覆盖 ≥2 个 topic 的跨领域知识。每个文件含 metadata block（9 必填字段）+ 5 个标准 section。Foundation floor：≥ 1 个。
 - **`reference/{topic_slug}-<qualifier>.md`**：Wave 1 产出。Topic 专属 reference（rich MD），`{topic_slug}` 为 topic 的完整 slug（已含 `NN_` 前缀，如 `01_meal-timing-...`），`<qualifier>` 为 source 短标识。每个文件含 metadata block + 5 个 section。Per topic ≥ 1 个。
-- **`reference/00-cross-<slug>.md`**：Wave 2 产出（可选）。跨 topic 发现的新共享 reference（rich MD），cross-topic scan 时涌现。非 gate pass 硬条件。
-- **`reference/_INDEX.md`**：Canonical reference inventory table。8 列：`ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed`。每个 wave 完成时更新。`source_layer` 取值：`wave0_foundation` / `wave1_topic` / `wave2_cross`。
+- **`reference/00-cross-<slug>.md`**：Wave 2 consumer reference（可选）。它只能走两条 authority path：existing-backed Phase-owned projection 必须引用 `W2F-xxx`、finding-index/ledger 和 concrete prior accepted submitted backing；newly fetched evidence 必须先由 submitted `wave2_targeted_evidence` work unit 提供 result/receipt/cache/source backing。文件存在本身不建立 authority。
+- **`reference/_INDEX.md`**：Canonical reference inventory table。8 列：`ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed`。每个 wave 完成时更新。`source_layer` 取值：`wave0_foundation` / `wave1_topic` / `wave2_cross`。Index row 和 `source_layer` 是 consumer navigation metadata，不是 evidence authority。
 - **`reference/README.md`**：人类导航——命名约定、`_INDEX.md` 指向、模板格式简述。
 - **`artifacts/wave0/<topic>/source.yaml`**：Thin YAML source 列表。Per topic，每条满足 `ReferenceMetadataSchema`（url/title/retrieved_date/topic_tag/notes）。来自 `topic_registry` 的 slug。Foundation floor：每个 topic ≥ 1 条。
 - **不再存在**：`reference/<topic>/` 嵌套子目录、`reference/00_shared/` 目录、`reference/<topic>/source.yaml`（thin YAML 迁至 `artifacts/wave0/`）。
@@ -84,7 +84,7 @@ Reference rich MD metadata is the project metadata block format: lines such as `
 
 | Token | 替换阶段 | 替换内容 |
 |-------|---------|---------|
-| `__BACKFILL_WAVE0_EVIDENCE__` | Wave0 complete 后 | source/reference return-map entries with meaning, relationship, refs, status, and next hop |
+| `__BACKFILL_WAVE0_EVIDENCE__` | Wave0 inspect/formal gate 前 | source/reference return-map entries with meaning, relationship, refs, status, and next hop |
 | `__BACKFILL_WAVE1_MECHANISMS__` | Wave1 complete 前 | mechanism return-map entries from `evidence-summary.md` |
 | `__BACKFILL_WAVE1_TRENDS__` | Wave1 complete 前 | trend/limitation return-map entries from `evidence-summary.md` |
 | `__BACKFILL_WAVE2_JUDGMENT__` | Wave2 complete 前 | W2F finding return-map entries projected from ledger/index |
@@ -114,21 +114,25 @@ Every important source, mechanism update, pending-question update, or finding pr
   next_hop: Read or repair the named path/action next.
 ```
 
+Evidence-bearing `refs` must enumerate concrete existing bundle-relative `reference/*.md` files as the primary consumer navigation layer when those files are materialized. `artifacts/`, `_cache/`, `_work_units/`, finding ids, and index rows are secondary provenance/context. If no consumer reference can be materialized, record an explicit limitation with `refs: none`; do not use a glob or count summary.
+
 Wave-specific projection:
 
-- Wave0 backfill connects each important source/reference to the topic must-answer or initial hypothesis, and says whether the source supports, refutes, partially answers, opens, defers, or provides context.
-- Wave1 backfill connects mechanisms, trends, limits, and pending-question status to `evidence-summary.md`, `question-list.md`, topic references, cache leaves, and work-unit surfaces.
-- Wave2 backfill preserves `W2F-xxx` finding ids and links them to `artifacts/wave2/cross-topic-ledger.md`, `artifacts/wave2/finding-index.yaml`, and source artifacts used by the finding.
+- Wave0 backfill connects each important source/reference to the topic must-answer or initial hypothesis, leads with concrete existing `reference/00-shared-*.md` navigation, and says whether the source supports, refutes, partially answers, opens, defers, or provides context.
+- Wave1 backfill connects mechanisms, trends, limits, and pending-question status to concrete existing topic `reference/*.md` navigation, with `evidence-summary.md`, `question-list.md`, cache leaves, and work-unit surfaces as secondary provenance.
+- Wave2 backfill preserves `W2F-xxx` finding ids and leads with concrete existing `reference/00-cross-*.md` navigation for consumer-facing materialized findings, with `artifacts/wave2/cross-topic-ledger.md`, `artifacts/wave2/finding-index.yaml`, and source backing as secondary provenance.
 
-Return-map inspectors are diagnostic only. Missing `evidence_meaning`, `relationship`, `refs`, `status`, or `next_hop` should trigger repair-targeted inspect/advice, not gate bypass, delegated coverage substitution, phase handoff, readiness, final delivery, or HITL authorization.
+Return-map navigation is not evidence authority. A Wave inspect may still classify missing concrete consumer navigation as blocking for that inspect command; that does not turn the return map into delegated coverage, a formal gate rule, phase handoff, readiness, final delivery, or HITL authority.
 
 ## Artifacts — Wave1 (Per-Topic Deepening)
 
-Wave1 为每个 topic 产出 paired artifacts。Gate 通过 `pattern_match` 规则验证 structure（section 标题、source URL、key finding pattern、backfill token absence）。
+Wave1 为每个 topic 产出 paired artifacts。Formal gate 与 `inspect-wave1-output.mjs` 复用同一份 artifact/provenance evaluator：required semantic sections、可解析 source URL、submitted roles/backing 和 explicit floors 保持 blocking；等价 heading、常见列表 marker、bare `http(s)` URL 与非空 Key Findings 段落使用宽容解析，不把展示样式变成第二份 authority。
 
-- **`artifacts/wave1/<topic>/evidence-summary.md`**：Per-topic evidence summary（Markdown）。§Source URLs（Markdown link + retrieved date）、§Key Findings（编号条目，bold prefix 必须是 `**机制理解**:` 或 `**趋势观察**:`）、§Open Questions（编号条目，状态标签必须是 `[开放]` / `[部分解答]` / `[涌现]`——不允许 topic-descriptor 标签如 `[Bridge gap]`）。**Schema**：模板级约束（无独立 Zod contract）；structure 由 `subagent-dpt-evidence-extractor.md` §3.1 定义。Markdown links are reader-facing; accepted source coverage comes from submitted structured `source_claims[]`.
-- **`artifacts/wave1/<topic>/question-list.md`**：Per-topic exploration ledger（Markdown，四节结构，顺序固定）。§1 Topic Investigation Targets（表：target_id / question / origin / status / backing_refs / next_action）。§2 Question Reconciliation（用 `[已解决]` / `[部分进展]` / `[仍开放]` / `[需内部数据]` 标记状态变化）。§3 Emergent Question Protocol（4 项检查：new_concept / contradiction / missing_information_gap / noise_pattern，每项 checked + trigger_refs）。§4 Exploration / Exploitation Decision（decision + trigger_refs + unresolved_questions + queue_consequence + next_action）。详见 `subagent-dpt-evidence-extractor.md` §3.2 和 `phase-wave1.md` §3.2.1。
-- **`artifacts/wave1/<topic>/depth-review.yaml`**：Phase-owned deterministic projection written after successful submit. It records reviewed submitted work-unit refs, Wave0 source URLs, submitted structured source claims, new source URLs, `new_source_floor`, depth dimensions, profile checks, closed `decision` (`accept` / `supplement_required` / `blocked_contract`), and supplementary queue ids. It cannot create delegated coverage; every reviewed ref must bind back to submitted work-unit rows.
+- **`artifacts/wave1/<topic>/evidence-summary.md`**：Per-topic evidence summary（Markdown），submitted `output_files[]` role 必须是 `evidence_summary`。Canonical authoring surface 包含 Source URLs、Key Findings 和 Open Questions；source URL 可写 Markdown link 或 bare `http(s)` URL，Key Findings 可用常见 bullet、numbered list 或非空段落。Reader-facing links 不建立 accepted source coverage；coverage 来自 submitted structured `source_claims[]` 及其 cache/degraded backing。Role `other` 只用于额外非 blocking output，不能代替此 required role。
+- **`artifacts/wave1/<topic>/question-list.md`**：Per-topic exploration ledger（Markdown），submitted `output_files[]` role 必须是 `question_list`。它必须提供 Topic Investigation Targets、Question Reconciliation、Emergent Question Protocol、Exploration / Exploitation Decision 四个语义区块；canonical template 的表格、状态标签和字段见 `subagent-dpt-evidence-extractor.md` §3.2。Equivalent heading case/spacing/list presentation is tolerated，四个语义区块本身仍 required。Role `other` 不能代替此 required role。
+- **`artifacts/wave1/<topic>/depth-review.yaml`**：Phase-owned deterministic projection written after successful submit. `reviewed_work_unit_refs[]` 使用 `_work_units/wave1/<work_id>` 且无 trailing slash，并绑定 submitted work-unit rows。Novelty 从 accepted submitted `source_claims[]` 与 `wave0_source_urls[]` 的直接 URL 差集得到；accepted claim 必须由 submitted row + `cache_trail_refs[]` 或 explicit `degraded_capture_ref` 支撑。它同时记录 `new_source_urls[]`、`new_source_floor`、depth dimensions、profile checks、closed `decision`（`accept` / `supplement_required` / `blocked_contract`）和 supplementary queue ids，但不能自行创建 delegated coverage。
+
+Producer 顺序固定为：materialize Wave1-owned artifacts → 运行 side-effect-free、non-routing `node DPT_FRAMEWORK/cli/inspect-wave1-output.mjs --bundle <path>` → 修复 inspect 指向的最小 surface 并重跑同一 inspect → 记录 completion evidence → 调用 formal Wave1 gate。不要复制 evaluator 逻辑到 Markdown 或另写本地 validator。
 
 ## Artifacts — Wave2 (Cross-Topic Synthesis)
 
@@ -138,14 +142,14 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 
 - **角色**：面向人类阅读的 cross-topic narrative，不作为动态 finding source of truth
 - **格式**：Markdown，用 `[label](relative/path.md)` 引用 Wave0/Wave1 artifact
-- **引用路径**：相对于 `artifacts/wave2/`（`../wave1/<topic>/evidence-summary.md` 指向 Wave1、`../../reference/<topic>/source.yaml` 指向 Wave0）
+- **引用路径**：相对于 `artifacts/wave2/`（`../wave1/<topic>/evidence-summary.md` 指向 Wave1、`../wave0/<topic>/source.yaml` 指向 Wave0；consumer reference 使用 `../../reference/<concrete-file>.md`）
 - **必须包含**：至少 1 个 wave1 evidence-summary 或 question-list 引用、W2F-xxx finding id 引用、Unresolved Cross-Topic Questions section
 - **不得包含**：完整 scan matrix（那是 ledger 的职责）、作为 backfill 的 sole source（那是 ledger/index 的职责）
 
 ### cross-topic-ledger.md — Dynamic Ledger
 
 - **角色**：Agent-readable source of truth，动态增长（每轮追加/更新，不是最后写一次）
-- **格式**：Markdown，6 个固定 section，按顺序：
+- **格式**：Markdown，使用下列 6 个 canonical semantic sections；inspect/gate 对 harmless heading marker、spacing 和 case 差异宽容，但六个语义区块都必须存在：
   1. **Cross-Topic Scan Matrix** — 记录 topic pair 检查情况（pair_id / topics / checked_dimensions / finding_ids / notes）
   2. **Wave1 Legacy Questions** — 从 Wave1 question-list 汇入未完全解决的问题
   3. **Cross-Topic Resolutions** — 用其他 topic evidence 回答 legacy question（不搜索）
@@ -160,7 +164,7 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 - **格式**：YAML
 - **Top-level keys**：`version`（"0.1"）/ `source_layer`（"wave2_cross_topic"）/ `ledger` / `synthesis` / `scan` / `findings` / `synthesis_eligibility`
 - **`scan` object**：`topic_count` / `pair_count_expected` / `pair_count_checked`
-- **Per-finding required fields（11 个）**：
+- **Per-finding required fields（15 个）**：
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -192,7 +196,15 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 | **priority** | `p0` / `p1` / `p2` |
 | **status** | `resolved` / `partial` / `open` / `deferred` |
 | **decision** | `use_existing_evidence` / `exploit_search` / `explore_search` / `defer_hitl2` / `requires_internal_data` / `record_only` |
+| **confidence** | `high` / `medium` / `low` / `uncertain` |
 | **gap_status** | `no_gap` / `needs_search` / `search_submitted` / `deferred_hitl2` / `requires_internal_data` / `record_only` |
+
+### Wave2 Cross-Reference Authority
+
+- Existing-backed projection: `reference/00-cross-*.md` uses a primary prior accepted backing URL and cites `W2F-xxx`, `artifacts/wave2/finding-index.yaml`, `artifacts/wave2/cross-topic-ledger.md`, and concrete prior Wave0/Wave1 submitted backing refs. It does not require a new Wave2 row.
+- Targeted-evidence projection: any newly fetched source requires a submitted `wave2_targeted_evidence` row with matching result/receipt/cache/source backing before the Phase Agent may materialize or accept the `00-cross` reference.
+- `reference/_INDEX.md` with `source_layer: wave2_cross` and `finding-index.yaml#source_layer: wave2_cross_topic` classify navigation/structured layers only. Neither value proves source authority by itself.
+- Producer sequence for Wave0 and Wave2 is the same short loop: materialize phase-owned outputs/backfill → run the corresponding side-effect-free, non-routing Wave inspect → repair the named root and rerun the same inspect → record completion evidence → invoke the formal gate. Do not copy evaluator logic into Markdown.
 
 ### Wave2 Sub-agent Cache/Work-Unit 路径
 

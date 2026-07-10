@@ -131,7 +131,7 @@ export function isCountable(refPath, bundleDir) {
     return { countable: false, reason: 'source_url_invalid' };
   }
 
-  // ── Condition 4: Key Facts ≥ 5 bullet lines ──
+  // ── Condition 4: Key Facts ≥ 5 common list items ──
   let keyFacts;
   try {
     keyFacts = extractSection(content, 'Key Facts');
@@ -141,13 +141,13 @@ export function isCountable(refPath, bundleDir) {
   if (!keyFacts || keyFacts.trim().length === 0) {
     return { countable: false, reason: 'key_facts_section_missing' };
   }
-  const bulletCount = keyFacts
+  const factCount = keyFacts
     .split(/\r?\n/)
-    .filter(line => /^\s*-\s+\S/.test(line)).length;
-  if (bulletCount < QUALITY_THRESHOLDS.key_facts_min_bullets) {
+    .filter(line => /^\s*(?:[-+*]|\d+[.)])\s+\S/.test(line)).length;
+  if (factCount < QUALITY_THRESHOLDS.key_facts_min_bullets) {
     return {
       countable: false,
-      reason: `key_facts_insufficient: ${bulletCount} bullets, need ${QUALITY_THRESHOLDS.key_facts_min_bullets}`,
+      reason: `key_facts_insufficient: ${factCount} fact items, need ${QUALITY_THRESHOLDS.key_facts_min_bullets}`,
     };
   }
 

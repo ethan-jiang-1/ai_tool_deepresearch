@@ -26,7 +26,7 @@ suggested_context:
 - **Objective**: produce submitted `evidence-summary.md`, `question-list.md`, source backing, Phase-owned topic reference projections, and Phase-owned `depth-review.yaml` for every topic.
 - **Start here**: load Wave0 outputs, seed topics, queue state, profile thresholds, and `dpt-evidence-extractor` role guidance.
 - **Delegated path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit submit` -> submitted ledger row -> gate.
-- **Completion check**: `check-gate-wave1-complete.mjs` passes for `phases/phase-wave1.md`.
+- **Completion check**: side-effect-free `inspect-wave1-output.mjs` passes first, then `check-gate-wave1-complete.mjs` passes for `phases/phase-wave1.md`.
 - **Failure posture**: do not direct-search new Wave1 evidence from the Phase Agent. Repair rejected submits, produce a visible `blocked_contract`, or refill with supplementary work units.
 
 ## 1. Stage Goal
@@ -76,7 +76,7 @@ Task card template:
   "kind": "wave1_topic_deepening",
   "producer_rule": "topic_deepening",
   "priority_class": "P4_progressive_artifact_or_seed_backfill",
-  "action": "Use seed topic guardrails, Wave0 source URLs as context only, and open questions to search topic-specific new evidence. Fetch page content, write evidence-summary.md and question-list.md, return structured source_claims[], accepted_source_urls[], evidence summaries, source candidates, and leaf cache trails under _cache/wave1/primary/{topic.slug}/. Cover mechanism, trend/difficulty, limitation/dispute/failure-mode, and profile-required counterexample/cross-verification checks. Phase Agent materializes reference/{topic.slug}-<source-slug>.md after successful submit from submitted backing.",
+  "action": "Use seed topic guardrails, Wave0 source URLs as context only, and open questions to search topic-specific new evidence. Fetch page content, write evidence-summary.md and question-list.md, declare them in output_files[] with roles evidence_summary and question_list, and return structured source_claims[], accepted_source_urls[], source candidates, and leaf cache trails under _cache/wave1/primary/{topic.slug}/. Reserve role other for extra non-blocking outputs. Cover mechanism, trend/difficulty, limitation/dispute/failure-mode, and profile-required counterexample/cross-verification checks. Phase Agent materializes reference/{topic.slug}-<source-slug>.md after successful submit from submitted backing.",
   "writes_to": [
     "artifacts/wave1/{topic.slug}/evidence-summary.md",
     "artifacts/wave1/{topic.slug}/question-list.md"
@@ -130,6 +130,7 @@ Sub-agent execution requirements:
 - Plan candidate URLs from explicit `rb_profile.yaml#/research_style_params.wave1_per_topic_ref_floor`, `topic_unique_ratio`, and the depth-review new-source floor formula plus a conservative small margin for failed fetches, duplicates, and non-countable pages. Do not use a fixed hard-coded fetch aim unless it is written as `profile/runtime floor + named margin`.
 - `question-list.md` must include the four sections: Topic Investigation Targets, Question Reconciliation, Emergent Question Protocol, Exploration / Exploitation Decision.
 - `evidence-summary.md` or the submitted result must cover mechanism, trend/difficulty, and limitation/dispute/failure-mode dimensions.
+- `result.json#/output_files[]` must declare `artifacts/wave1/{topic.slug}/evidence-summary.md` with role `evidence_summary` and `artifacts/wave1/{topic.slug}/question-list.md` with role `question_list`. Role `other` is only for extra non-blocking outputs; it does not cover either required artifact.
 - `result.json` must expose `source_claims[]` directly or through a declared machine-readable output, plus `accepted_source_urls[]` when available. Each accepted claim names `url`, `source_ref`, `acceptance_status`, `is_new_vs_wave0`, `cache_trail_refs[]`, and optional `degraded_capture_ref`.
 - Receipt events must bind `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
 - Output files and cache trails must appear in the submitted result. Canonical topic reference Markdown is not required as delegated output unless a future accepted task explicitly assigns it.
@@ -161,7 +162,9 @@ If no submitted source is materializable, record an explicit limitation or repai
 
 ### 3.2.2 Depth Review
 
-After each successful Wave1 submit, the Phase Agent writes or updates `artifacts/wave1/{topic}/depth-review.yaml`. This review is Phase-owned process evidence; it does not create delegated coverage. Every reviewed source/cache/file ref must bind back to submitted work-unit ledger rows.
+After each successful Wave1 submit, the Phase Agent writes or updates `artifacts/wave1/{topic}/depth-review.yaml`. This review is Phase-owned process evidence; it does not create delegated coverage. `reviewed_work_unit_refs[]` uses canonical `_work_units/wave1/<work_id>` refs without a trailing slash and every ref must resolve to a submitted work-unit row.
+
+Novelty is a direct comparison: start from accepted submitted `source_claims[]`, normalize their URLs, and compare them with the Wave0 URL set recorded in `wave0_source_urls[]`. Only accepted claims absent from that Wave0 set belong in `new_source_urls[]` or count toward `new_source_floor.observed`. Every accepted claim must remain bound to submitted authority through its work-unit row plus `cache_trail_refs[]`, or an explicit `degraded_capture_ref`; prose links and the Phase-owned depth review do not create source coverage.
 
 Minimum shape:
 
@@ -179,7 +182,8 @@ source_claims:
     cache_trail_refs:
       - "_cache/wave1/primary/{topic.slug}/s01_source"
     degraded_capture_ref: null
-new_source_urls: []
+new_source_urls:
+  - "https://example.com/source"
 new_source_floor:
   required: 1
   observed: 1
@@ -244,7 +248,15 @@ If the depth review records `decision: supplement_required`, enqueue a supplemen
 
 ## 5. Gate Command
 
-Run the Wave1 gate only after queue demand is drained, reconstructed delegated in-flight work is zero, and Phase-owned references/depth reviews/backfill have been materialized from submitted backing:
+After queue demand is drained, reconstructed delegated in-flight work is zero, and Phase-owned references/depth reviews/backfill have been materialized from submitted backing, run the Wave1 inspect before recording completion evidence or invoking the formal gate:
+
+```bash
+node DPT_FRAMEWORK/cli/inspect-wave1-output.mjs --bundle <path>
+```
+
+This inspect is side-effect-free and non-routing. If it fails, repair the smallest named bundle-relative surface and rerun this same command; do not build a second local validator or bypass submitted authority.
+
+Only after inspect passes, record or refresh the existing `wave1_completion` evidence through the normal phase logging path, then run the formal gate:
 
 ```bash
 node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle <path> --current-node phases/phase-wave1.md
@@ -271,13 +283,13 @@ If the gate reports a `per_topic_ref_md_count_floor` gap:
 4. Require the Sub-agent to avoid duplicate source URLs and return real new source backing.
 5. Drain via work-unit claim/submit, materialize projections, and rerun the gate.
 
-If all count floors pass but another rule fails, repair that rule directly and rerun the gate.
+If all count floors pass but another rule fails, repair that rule directly, rerun Wave1 inspect, then rerun the gate.
 
 If the gate reports a `depth_review_contract`, `source_novelty_floor`, or `source_claim_cache_mapping` gap:
 
 1. Read the topic-specific diagnostic; note observed/required new-source counts and missing source/cache refs.
 2. If the issue is missing profile/runtime data, repair the accepted profile/template surface or leave `blocked_contract`; never invent a local default.
-3. Otherwise enqueue supplementary `wave1_topic_deepening` for that `payload.topic_slug`, require genuinely new source URLs, drain through work-unit claim/submit, update `depth-review.yaml`, and rerun the gate.
+3. Otherwise enqueue supplementary `wave1_topic_deepening` for that `payload.topic_slug`, require genuinely new source URLs, drain through work-unit claim/submit, update `depth-review.yaml`, rerun Wave1 inspect, and then rerun the gate.
 
 Gate repair/refill handles remaining floor gaps. Do not treat the planning margin as pass authority, do not silently lower floors, and do not create a new numeric threshold outside the accepted profile/runtime surfaces.
 

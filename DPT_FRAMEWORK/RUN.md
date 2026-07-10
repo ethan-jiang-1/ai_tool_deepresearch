@@ -1,10 +1,16 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.16**
+> **DPT_FRAMEWORK v0.17**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
+
+## Current Release: v0.17
+
+- Wave0/Wave1/Wave2 inspect 与 formal gate 复用同一 pure evaluator；inspect 只读、non-routing、返回 raw contract result，formal wrapper 独占 lifecycle、degraded handoff 和 durable evidence。
+- 结构 parent/field 缺失时优先返回最小根因并短路依赖症状；等价 Markdown presentation 使用宽容解析或 advisory。
+- Wave inspect/gate 输出增量提供 failed/masked rule ids 与 finding classification；Phase 在 completion evidence 和 formal gate 前先运行对应 inspect，修复 named surface 后重跑同一 inspect。
 
 ## 0. 禁用内置捷径（最高优先）
 

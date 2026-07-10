@@ -1,62 +1,45 @@
 #!/usr/bin/env node
 // check-gate-wave2-complete.mjs — evaluates gate-wave2-complete rules
-// @impl GSK-001, GSK-002, GSK-004, RWG-006, RWG-007, RWG-008, RWG-017
+// @impl GSK-001, GSK-002, GSK-004, RWG-006, RWG-007, RWG-008, RWG-017, RWG-018
 // Usage: node check-gate-wave2-complete.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { join, resolve as resolvePath, basename } from 'node:path';
-import { parse as parseYaml } from 'yaml';
 import {
+  buildGateResult,
+  checkPhaseHandoffPreflight,
+  emitDelegatedBypassDiagnostic,
+  emitGateResult,
   parseGateCliArgs,
+  readTraceEvents,
+  resolveRouting,
+  scanTemplateNotExpanded,
   tryLoadGateDefinition,
   validateNodeGateBinding,
-  resolveRouting,
-  buildGateResult,
-  emitGateResult,
   writeGateAttempt,
-  checkPhaseHandoffPreflight,
-  derivePhaseFromGate,
-  stripMdFrontmatter,
-  readBundlePlan,
-  listMatchingBundleFiles,
-  checkReferenceIndexCoverage,
-  checkWorkUnitLedgerExists,
-  checkWorkUnitOutputCoverage,
-  checkWorkUnitSubmissionPresence,
-  checkDelegatedBypassSuspected,
-  detectDelegatedBypassSuspicion,
-  checkWave2FindingIndexContract,
-  readTraceEvents,
-  scanTemplateNotExpanded,
 } from '../../engine/helpers/gate-helpers.mjs';
+import { evaluateWave2Contract } from '../../engine/helpers/wave-contract-evaluators.mjs';
 
 const args = parseGateCliArgs();
-if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
+if (args.error) emitGateResult(args.error, { bundlePath: args.bundle });
+const { definition, error: definitionError } = tryLoadGateDefinition('wave2-complete', args.currentNode || null);
+if (definitionError) emitGateResult(definitionError, { bundlePath: args.bundle });
 
-// Load gate definition
-const { definition, error: defError } = tryLoadGateDefinition('wave2-complete', args.currentNode || null);
-if (defError) { emitGateResult(defError, { bundlePath: args.bundle }); }
-
-// Validate node/gate binding
 const bindingError = validateNodeGateBinding(args.currentNode, definition.gate);
 if (bindingError) {
-  const result = {
+  emitGateResult({
     check: { passed: false, gate: definition.gate, currentNodeRef: args.currentNode, next: null },
     routing: { kind: 'invalid_input', next: null, detail: bindingError },
     inspect: [bindingError],
     advice: ['Verify --current-node matches the phase for this gate.'],
-  };
-  emitGateResult(result, { bundlePath: args.bundle });
+  }, { bundlePath: args.bundle });
 }
 
 const handoffPreflight = checkPhaseHandoffPreflight(args.bundle, args.currentNode);
 if (!handoffPreflight.ok) {
-  const routing = resolveRouting(args.transitions, args.currentNode, 'failed');
   const result = buildGateResult({
     passed: false,
     gate: definition.gate,
     currentNodeRef: args.currentNode,
-    routing,
+    routing: resolveRouting(args.transitions, args.currentNode, 'failed'),
     inspect: handoffPreflight.inspect || [handoffPreflight.reason || 'Lifecycle handoff preflight failed'],
     advice: handoffPreflight.advice || ['Follow the handoff remedy and rerun this gate.'],
     extraCheck: { handoff_preflight: false },
@@ -67,366 +50,37 @@ if (!handoffPreflight.ok) {
 }
 
 const bundlePath = args.bundle;
+const evaluation = evaluateWave2Contract(bundlePath, definition);
 const inspect = [];
-const advice = [];
-let allPassed = true;
+const advice = [...evaluation.advice];
+const failedRuleIds = new Set(evaluation.failed_rule_ids);
+const maskedRuleIds = new Set(evaluation.masked_rule_ids);
+for (const finding of scanTemplateNotExpanded(bundlePath).findings) inspect.push(`[template_not_expanded] ${finding.file}: ${finding.field} contains unexpanded template variable: ${finding.value}`);
+inspect.push(...evaluation.inspect);
 
-// ── Cached parsers (lazy) ──
-let _statusCache = null;
-function getStatus() {
-  if (_statusCache) return _statusCache;
-  const p = join(bundlePath, 'rb_status.json');
-  if (!existsSync(p)) return null;
-  _statusCache = JSON.parse(readFileSync(p, 'utf-8'));
-  return _statusCache;
-}
-
-let _planCache = null;
-function getPlan() {
-  if (_planCache) return _planCache;
-  const p = join(bundlePath, 'rb_plan.md');
-  if (!existsSync(p)) return null;
-  const raw = readFileSync(p, 'utf-8');
-  const fmMatch = raw.match(/^---\n([\s\S]*?)\n---/);
-  if (!fmMatch) return null;
-  try {
-    _planCache = parseYaml(fmMatch[1]);
-  } catch {
-    _planCache = null;
-  }
-  return _planCache;
-}
-
-/**
- * Get topic keys from topic_registry. Returns [] if registry is empty or missing.
- */
-function getTopicKeys() {
-  const plan = getPlan();
-  if (!plan || !Array.isArray(plan.topic_registry) || plan.topic_registry.length === 0) return [];
-  return plan.topic_registry.map(t => t.slug);
-}
-
-/**
- * Expand {topic} placeholder in target string.
- */
-function expandTopicTarget(target) {
-  const topics = getTopicKeys();
-  if (target.includes('{topic}')) {
-    if (topics.length === 0) return [];
-    return topics.map(t => ({ topic: t, resolved: target.replace(/\{topic\}/g, t) }));
-  }
-  return [{ topic: null, resolved: target }];
-}
-
-/**
- * Parse Markdown links from content.
- * Returns array of { label, path } objects for all [label](path) matches.
- */
-function extractMarkdownLinks(content) {
-  const links = [];
-  const re = /\[([^\]]+)\]\(([^)]+)\)/g;
-  let m;
-  while ((m = re.exec(content)) !== null) {
-    links.push({ label: m[1], path: m[2] });
-  }
-  return links;
-}
-
-/**
- * Resolve a relative link path against a base directory (the synthesis file location).
- */
-function resolveLinkTarget(linkPath, baseDir) {
-  return resolvePath(baseDir, linkPath);
-}
-
-function seedTopicHasActionAdd(topicSlug) {
-  const seedPath = join(bundlePath, 'seed_topics', `${topicSlug}.md`);
-  if (!existsSync(seedPath)) return false;
-  const content = readFileSync(seedPath, 'utf-8');
-  const rerunMatch = content.match(/##\s*本轮重跑方向[\s\S]*?(?=\n##\s+|$)/);
-  const scope = rerunMatch ? rerunMatch[0] : content;
-  return /action\s*:\s*add\b/i.test(scope);
-}
-
-function checkRerunAddFullSynthesis() {
-  const topics = getTopicKeys();
-  const addTopics = topics.filter((topic) => seedTopicHasActionAdd(topic));
-  if (addTopics.length === 0) return { passed: true, inspect: [] };
-
-  const synthesisPath = join(bundlePath, 'artifacts/wave2/synthesis.md');
-  const ledgerPath = join(bundlePath, 'artifacts/wave2/cross-topic-ledger.md');
-  const indexPath = join(bundlePath, 'artifacts/wave2/finding-index.yaml');
-  const inspect = [];
-
-  const synthesis = existsSync(synthesisPath) ? readFileSync(synthesisPath, 'utf-8') : '';
-  if (/^##\s+Delta Synthesis\b/m.test(synthesis)) {
-    inspect.push(`Rerun action:add topic(s) ${addTopics.join(', ')} cannot use Delta Synthesis mode`);
-  }
-
-  const ledger = existsSync(ledgerPath) ? readFileSync(ledgerPath, 'utf-8') : '';
-  let indexText = '';
-  let indexData = null;
-  if (existsSync(indexPath)) {
-    indexText = readFileSync(indexPath, 'utf-8');
-    try { indexData = parseYaml(indexText); } catch { indexData = null; }
-  }
-
-  const covered = new Set();
-  for (const topic of topics) {
-    if (ledger.includes(topic) || indexText.includes(topic)) covered.add(topic);
-  }
-  if (indexData?.scan?.topics && Array.isArray(indexData.scan.topics)) {
-    for (const topic of indexData.scan.topics) covered.add(topic);
-  }
-
-  const missing = topics.filter((topic) => !covered.has(topic));
-  if (missing.length > 0) {
-    inspect.push(`Rerun action:add scan/index coverage missing topic slug(s): ${missing.join(', ')}`);
-  }
-
-  return { passed: inspect.length === 0, inspect };
-}
-
-// ── Rule evaluation ──
-// ── Pre-rule scan: template_not_expanded diagnostics ──
-const templateScanFindings = scanTemplateNotExpanded(bundlePath);
-if (templateScanFindings.findings.length > 0) {
-  for (const f of templateScanFindings.findings) {
-    inspect.push(`[template_not_expanded] ${f.file}: ${f.field} contains unexpanded template variable: ${f.value}`);
-  }
-}
-
-for (const rule of definition.rules) {
-  if (rule.check === 'placeholder') continue;
-
-  // Expand {topic} placeholder in target string (for file_exists, pattern_match, etc.)
-  const targets = expandTopicTarget(rule.target);
-
-  if (targets.length === 0) {
-    allPassed = false;
-    inspect.push(`Empty topic_registry: cannot expand "{topic}" placeholder in rule ${rule.id}.`);
+for (const rule of definition.rules.filter((candidate) => candidate.check === 'trace_event_present')) {
+  if (readTraceEvents(bundlePath, rule.target).length === 0) {
+    failedRuleIds.add(rule.id);
+    inspect.push(`Trace event "${rule.target}" not found in rb_trace.jsonl`);
     advice.push(rule.failure_message);
-    continue;
-  }
-
-  for (const tgt of targets) {
-    const resolvedTarget = tgt.resolved;
-    let rulePassed = true;
-    let ruleDetail = null;
-
-    try {
-      if (rule.check === 'file_exists') {
-        const targetPath = join(bundlePath, resolvedTarget);
-        if (!existsSync(targetPath)) {
-          rulePassed = false;
-          ruleDetail = `Missing file: ${resolvedTarget}`;
-          if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
-        }
-      } else if (rule.check === 'field_non_empty') {
-        const filePath = join(bundlePath, resolvedTarget);
-        if (!existsSync(filePath)) {
-          rulePassed = false;
-          ruleDetail = `File not found: ${resolvedTarget}`;
-          if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
-        } else {
-          const content = readFileSync(filePath, 'utf-8');
-          const bodyContent = stripMdFrontmatter(content);
-          if (bodyContent.length === 0) {
-            rulePassed = false;
-            ruleDetail = `${resolvedTarget} is empty (no content after frontmatter)`;
-            if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
-          }
-        }
-      } else if (rule.check === 'pattern_match') {
-        const filePath = join(bundlePath, resolvedTarget);
-        if (!existsSync(filePath)) {
-          rulePassed = false;
-          ruleDetail = `Cannot read file for pattern_match: ${resolvedTarget}`;
-          if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
-        } else {
-          const content = readFileSync(filePath, 'utf-8');
-          const bodyContent = stripMdFrontmatter(content);
-          const re = new RegExp(rule.pattern);
-          const matched = re.test(bodyContent);
-
-          if (rule.negate) {
-            if (matched) {
-              rulePassed = false;
-              const cleanDesc = (rule.failure_message || rule.pattern).replace(/\{topic\}/g, tgt.topic || '{topic}');
-              ruleDetail = `Forbidden content in ${resolvedTarget}: ${cleanDesc}`;
-              if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
-            }
-          } else {
-            if (!matched) {
-              rulePassed = false;
-              const cleanDesc = (rule.failure_message || rule.pattern).replace(/\{topic\}/g, tgt.topic || '{topic}');
-              ruleDetail = `Required marker not found in ${resolvedTarget}: ${cleanDesc}`;
-              if (tgt.topic) ruleDetail += ` (topic: ${tgt.topic})`;
-            }
-          }
-        }
-      } else if (rule.check === 'yaml_parse') {
-        const filePath = join(bundlePath, resolvedTarget);
-        if (!existsSync(filePath)) {
-          rulePassed = false;
-          ruleDetail = `File not found: ${resolvedTarget}`;
-        } else {
-          try {
-            parseYaml(readFileSync(filePath, 'utf-8'));
-          } catch (err) {
-            rulePassed = false;
-            ruleDetail = `YAML parse error in ${resolvedTarget}: ${err.message}`;
-          }
-        }
-      } else if (rule.check === 'cross_field' && rule.mode === 'markdown_link_resolution') {
-        const synthesisPath = join(bundlePath, resolvedTarget);
-        if (!existsSync(synthesisPath)) {
-          rulePassed = false;
-          ruleDetail = `Synthesis file not found: ${resolvedTarget}`;
-        } else {
-          const content = readFileSync(synthesisPath, 'utf-8');
-          const links = extractMarkdownLinks(content);
-          const mdLinks = links.filter(l => l.path.endsWith('.md'));
-
-          if (mdLinks.length === 0) {
-            rulePassed = false;
-            ruleDetail = `No Markdown links to .md artifacts found in ${resolvedTarget}`;
-          } else {
-            const synthesisDir = join(bundlePath, rule.resolve_relative_to || 'artifacts/wave2');
-            const validLinks = [];
-            const deadLinks = [];
-
-            for (const link of mdLinks) {
-              const resolved = resolveLinkTarget(link.path, synthesisDir);
-              if (existsSync(resolved)) {
-                validLinks.push(link.path);
-              } else {
-                deadLinks.push(link.path);
-              }
-            }
-
-            const minValid = rule.min_valid_refs || 1;
-            if (validLinks.length >= minValid) {
-              if (deadLinks.length > 0) {
-                advice.push(`Note: ${deadLinks.length} dead link(s) found but ${validLinks.length} valid — gate passes. Dead links: ${deadLinks.join(', ')}`);
-              }
-            } else {
-              rulePassed = false;
-              ruleDetail = `Only ${validLinks.length} valid artifact reference(s) found (need ≥${minValid}). Dead links: ${deadLinks.join(', ')}`;
-            }
-          }
-        }
-      } else if (rule.check === 'status_value') {
-        const [file, jsonPath] = rule.target.split('#/');
-        const status = getStatus();
-        if (!status) {
-          rulePassed = false;
-          ruleDetail = 'rb_status.json not found';
-        } else {
-          const value = jsonPath.split('/').reduce((obj, key) => obj?.[key], status);
-          if (value !== rule.expected) {
-            rulePassed = false;
-            ruleDetail = `${rule.target}: expected "${rule.expected}", got "${value}"`;
-          }
-        }
-      } else if (rule.check === 'rerun_add_full_synthesis') {
-        const result = checkRerunAddFullSynthesis();
-        if (!result.passed) {
-          rulePassed = false;
-          ruleDetail = result.inspect.join('; ');
-        }
-      } else if (rule.check === 'finding_index_contract') {
-        const indexResult = checkWave2FindingIndexContract(bundlePath);
-        if (!indexResult.passed) {
-          rulePassed = false;
-          ruleDetail = indexResult.inspect.join('; ');
-        }
-        for (const line of indexResult.inspect) inspect.push(line);
-        for (const a of indexResult.advice) advice.push(a);
-      } else if (rule.check === 'reference_index_coverage') {
-        const files = listMatchingBundleFiles(bundlePath, resolvedTarget);
-        const indexResult = checkReferenceIndexCoverage(bundlePath, files, { sourceLayer: rule.source_layer || null });
-        if (!indexResult.passed) {
-          rulePassed = false;
-          ruleDetail = indexResult.inspect.join('; ');
-        }
-        for (const a of indexResult.advice || []) advice.push(a);
-      } else if (rule.check === 'work_unit_ledger_exists') {
-        const ledgerResult = checkWorkUnitLedgerExists(bundlePath, rule);
-        if (!ledgerResult.passed) {
-          rulePassed = false;
-          ruleDetail = ledgerResult.inspect.join('; ');
-        }
-        for (const line of ledgerResult.inspect) inspect.push(line);
-        for (const a of ledgerResult.advice) advice.push(a);
-      } else if (rule.check === 'work_unit_output_coverage') {
-        const coverageResult = checkWorkUnitOutputCoverage(bundlePath, rule);
-        if (!coverageResult.passed) {
-          rulePassed = false;
-          ruleDetail = coverageResult.inspect.join('; ');
-        }
-        for (const line of coverageResult.inspect) inspect.push(line);
-        for (const a of coverageResult.advice) advice.push(a);
-      } else if (rule.check === 'work_unit_submission_presence') {
-        const presenceResult = checkWorkUnitSubmissionPresence(bundlePath, rule);
-        if (!presenceResult.passed) {
-          rulePassed = false;
-          ruleDetail = presenceResult.inspect.join('; ');
-        }
-        for (const line of presenceResult.inspect) inspect.push(line);
-        for (const a of presenceResult.advice) advice.push(a);
-      } else if (rule.check === 'delegated_bypass_suspected') {
-        const bypassCheck = checkDelegatedBypassSuspected(bundlePath, { ...rule, gate: definition.gate });
-        if (!bypassCheck.passed) {
-          rulePassed = false;
-          ruleDetail = bypassCheck.inspect.join('; ');
-        }
-        for (const line of bypassCheck.inspect) inspect.push(line);
-        for (const a of bypassCheck.advice) advice.push(a);
-      } else if (rule.check === 'trace_event_present') {
-        const events = readTraceEvents(bundlePath, rule.target);
-        if (!events || events.length === 0) {
-          rulePassed = false;
-          ruleDetail = `Trace event "${rule.target}" not found in rb_trace.jsonl`;
-        }
-      } else {
-        rulePassed = false;
-        ruleDetail = `Unknown check type: ${rule.check} (mode: ${rule.mode || 'n/a'}) — must fail (check type not implemented)`;
-      }
-    } catch (err) {
-      rulePassed = false;
-      const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
-      ruleDetail = `Error evaluating rule ${rule.id}: ${safeMsg}`;
-    }
-
-    if (!rulePassed) {
-      allPassed = false;
-      inspect.push(ruleDetail);
-      advice.push(rule.failure_message);
-    }
   }
 }
 
-const outcome = allPassed ? 'passed' : 'failed';
-const routing = resolveRouting(args.transitions, args.currentNode, outcome);
-
-// Work-unit delegated bypass suspicion detection (Wave2: only for search/reference outputs)
-const phase = derivePhaseFromGate(definition.gate);
-const bypassResult = detectDelegatedBypassSuspicion(bundlePath, phase, definition.gate);
-if (bypassResult.suspected) {
-  inspect.push(`[delegated_bypass_suspected] Phase ${phase} search/evidence outputs found without submitted work-unit provenance: ${(bypassResult.provenanceMissing || []).join('; ')}`);
-}
-
+const passed = failedRuleIds.size === 0;
+const routing = resolveRouting(args.transitions, args.currentNode, passed ? 'passed' : 'failed');
+emitDelegatedBypassDiagnostic(bundlePath, definition.gate, evaluation.bypass_suspicion);
 const result = buildGateResult({
-  passed: allPassed,
+  passed,
   gate: definition.gate,
   currentNodeRef: args.currentNode,
   routing,
   inspect,
   advice,
+  extraCheck: {
+    failed_rule_ids: [...failedRuleIds],
+    masked_rule_ids: [...maskedRuleIds],
+  },
   attemptNumber: args.attempt ?? 0,
 });
-
 writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
-
 emitGateResult(result);

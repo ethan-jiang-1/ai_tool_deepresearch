@@ -11,6 +11,7 @@ import {
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs');
+const INSPECT_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave0-output.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
@@ -22,6 +23,10 @@ function runGate(bundlePath, { attempt } = {}) {
   const argv = [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-wave0.md'];
   if (attempt !== undefined) argv.push('--attempt', String(attempt));
   return spawnSync('node', argv, { encoding: 'utf-8', timeout: 10000 });
+}
+
+function runInspect(bundlePath) {
+  return spawnSync('node', [INSPECT_CLI, '--bundle', bundlePath], { encoding: 'utf-8', timeout: 10000 });
 }
 
 /** Create a bundle with topic_registry and setup. */
@@ -167,11 +172,17 @@ describe('check-gate-wave0-complete', () => {
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
+    assert.deepEqual(output.check.failed_rule_ids, []);
+    assert.deepEqual(output.check.masked_rule_ids, []);
   });
 
   it('1b. emits degraded pass for fatigue when only soft count floor fails', () => {
     const dir = createBundle(unique('degraded'));
     setupWave0WithoutSharedReference(dir);
+    const rawInspect = JSON.parse(runInspect(dir).stdout);
+    assert.equal(rawInspect.check.passed, false);
+    assert.equal(Object.hasOwn(rawInspect, 'routing'), false);
+    assert.notEqual(rawInspect.check.degraded, true);
     const result = runGate(dir, { attempt: 3 });
     assert.equal(result.status, 0, result.stderr || result.stdout);
     const output = JSON.parse(result.stdout);
@@ -200,6 +211,10 @@ describe('check-gate-wave0-complete', () => {
     assert.notEqual(output.check.degraded, true);
     assert.ok(output.check.failed_rule_ids.includes('wave0_work_unit_ledger_exists'));
     assert.ok(output.inspect.some((line) => line.includes('[degraded_not_eligible]')));
+    const traceEvents = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
+    assert.equal(traceEvents.filter((event) => event.event === 'delegated_bypass_suspected').length, 1);
+    const runLog = readFileSync(join(dir, '_logs/run.log'), 'utf8');
+    assert.equal(runLog.split('\n').filter((line) => /\] WARN delegated_bypass_suspected\b/.test(line)).length, 1);
   });
 
   it('2. fails when reference/_INDEX.md is missing', () => {
@@ -210,6 +225,11 @@ describe('check-gate-wave0-complete', () => {
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('reference/_INDEX.md')), `Expected missing index fail: ${JSON.stringify(output.inspect)}`);
+    const inspectOutput = JSON.parse(runInspect(dir).stdout);
+    assert.deepEqual(
+      inspectOutput.check.failed_rule_ids.filter((id) => output.check.failed_rule_ids.includes(id)).sort(),
+      output.check.failed_rule_ids.filter((id) => id !== 'trace_event_wave0_completion').sort(),
+    );
   });
 
   it('3. fails when per-topic source.yaml is missing', () => {
@@ -249,11 +269,10 @@ describe('check-gate-wave0-complete', () => {
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
-    assert.ok(output.inspect.some(m => m.includes('masked:true upstream_schema_failure')),
-      `Expected masked upstream schema diagnostic: ${JSON.stringify(output.inspect)}`);
     assert.ok(output.check.failed_rule_ids.includes('per_topic_reference_schema_valid:topic-a'));
-    assert.ok(output.check.failed_rule_ids.includes('per_topic_count_floor:topic-a'));
+    assert.equal(output.check.failed_rule_ids.includes('per_topic_count_floor:topic-a'), false);
     assert.ok(output.check.masked_rule_ids.includes('per_topic_count_floor:topic-a'));
+    assert.equal(output.inspect.some((line) => line.includes('Count floor not met for artifacts/wave0/topic-a/source.yaml')), false);
   });
 
   it('6. fails when count_floor passes but schema_valid fails (AND interaction)', () => {

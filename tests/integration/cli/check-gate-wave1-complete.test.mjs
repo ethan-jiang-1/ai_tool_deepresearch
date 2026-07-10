@@ -11,6 +11,7 @@ import {
 
 const REPO_ROOT = process.cwd();
 const GATE_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs');
+const INSPECT_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave1-output.mjs');
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
@@ -18,8 +19,14 @@ const createdDirs = [];
 function track(dir) { createdDirs.push(dir); return dir; }
 function unique(prefix) { return `rt_w1_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
 
-function runGate(bundlePath) {
-  return spawnSync('node', [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-wave1.md'], { encoding: 'utf-8', timeout: 10000 });
+function runGate(bundlePath, { attempt } = {}) {
+  const args = [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-wave1.md'];
+  if (attempt !== undefined) args.push('--attempt', String(attempt));
+  return spawnSync('node', args, { encoding: 'utf-8', timeout: 10000 });
+}
+
+function runInspect(bundlePath) {
+  return spawnSync('node', [INSPECT_CLI, '--bundle', bundlePath], { encoding: 'utf-8', timeout: 10000 });
 }
 
 function writeWave1Trace(dir, { completion = true } = {}) {
@@ -302,6 +309,47 @@ describe('check-gate-wave1-complete', () => {
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
+    assert.deepEqual(output.check.failed_rule_ids, []);
+    assert.deepEqual(output.check.masked_rule_ids, []);
+  });
+
+  it('1d. tolerates equivalent headings, bare URLs, paragraph findings, and numbered Key Facts', () => {
+    const dir = createBundle(unique('tolerant'));
+    const referencePath = join(dir, 'reference/01-topic-a-deepening.md');
+    writeFileSync(referencePath, readFileSync(referencePath, 'utf8')
+      .replace(/- Finding one:/, '1. Finding one:')
+      .replace(/- Finding two:/, '2) Finding two:')
+      .replace(/- Finding three:/, '* Finding three:')
+      .replace(/- Finding four:/, '+ Finding four:')
+      .replace(/- Finding five:/, '5. Finding five:'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), `# Evidence Summary\n\n## Source URLs\nhttps://example.com/news/deepening-topic-a\n\n### key findings\nA substantive finding expressed as a paragraph.\n`);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), `# Questions\n\n### topic investigation targets\nTargets.\n\n## QUESTION RECONCILIATION\nReconciled.\n\n#### Emergent Question Protocol\nChecked.\n\n## Exploration/Exploitation Decision\ncontinue\n`);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(dir);
+    writeWave1Trace(dir);
+    const output = JSON.parse(runGate(dir).stdout);
+    assert.equal(output.check.passed, true, output.inspect.join('\n'));
+  });
+
+  it('1e. formal degraded handoff does not change raw inspect failure', () => {
+    const dir = createBundle(unique('degraded'));
+    const referencePath = join(dir, 'reference/01-topic-a-deepening.md');
+    writeFileSync(referencePath, readFileSync(referencePath, 'utf8').replace(/- Finding five: Fifth concluding fact\.\n/, ''));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(dir);
+    writeWave1Trace(dir);
+
+    const inspectOutput = JSON.parse(runInspect(dir).stdout);
+    assert.equal(inspectOutput.check.passed, false);
+    assert.equal(Object.hasOwn(inspectOutput, 'routing'), false);
+    assert.notEqual(inspectOutput.check.degraded, true);
+
+    const gateOutput = JSON.parse(runGate(dir, { attempt: 3 }).stdout);
+    assert.equal(gateOutput.check.passed, true, gateOutput.inspect.join('\n'));
+    assert.equal(gateOutput.check.degraded, true);
+    assert.deepEqual(gateOutput.check.degraded_rules.sort(), ['key_facts_min_lines:topic-a', 'per_topic_ref_md_count_floor:topic-a']);
   });
 
   it('1a. passes when Wave1 required outputs were submitted as other and normalized before ledger coverage', () => {
@@ -362,6 +410,22 @@ describe('check-gate-wave1-complete', () => {
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('evidence-summary') || m.includes('Missing file')), `Expected missing evidence-summary fail: ${JSON.stringify(output.inspect)}`);
+    const inspectOutput = JSON.parse(runInspect(dir).stdout);
+    const sharedGateIds = output.check.failed_rule_ids.filter((id) => id !== 'trace_event_wave1_completion').sort();
+    assert.deepEqual(inspectOutput.check.failed_rule_ids.filter((id) => sharedGateIds.includes(id)).sort(), sharedGateIds);
+  });
+
+  it('2b. emits delegated bypass diagnostics once per formal invocation', () => {
+    const dir = createBundle(unique('bypass-once'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    writeWave1Trace(dir);
+    runGate(dir);
+    const traceEvents = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
+    assert.equal(traceEvents.filter((event) => event.event === 'delegated_bypass_suspected').length, 1);
+    const runLog = readFileSync(join(dir, '_logs/run.log'), 'utf8');
+    assert.equal(runLog.split('\n').filter((line) => /\] WARN delegated_bypass_suspected\b/.test(line)).length, 1);
   });
 
   it('3. fails when source URL is missing from evidence-summary', () => {
@@ -514,6 +578,8 @@ describe('check-gate-wave1-complete', () => {
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('depth-review.yaml')), `Expected missing depth review fail: ${JSON.stringify(output.inspect)}`);
+    assert.equal(output.inspect.some((line) => /source_novelty_floor|source_claim_cache_mapping|profile check/.test(line)), false);
+    assert.ok(output.check.masked_rule_ids.some((id) => id.includes('source_novelty_floor')));
   });
 
   it('12. fails when depth review has too few exact-new source URLs', () => {

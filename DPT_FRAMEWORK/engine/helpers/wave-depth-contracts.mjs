@@ -271,11 +271,13 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
   const filePath = join(bundlePath, relPath);
   const inspect = [];
   const advice = [];
+  const maskedRuleIds = [];
   if (!existsSync(filePath)) {
     return {
       passed: false,
       inspect: [`[depth_review_contract] FAIL: missing ${relPath}`],
       advice: [`Create ${relPath} after successful Wave1 work-unit submit; review must bind to submitted work-unit rows.`],
+      masked_rule_ids: ['source_claim_cache_mapping', 'source_novelty_floor', 'new_source_floor_comparison', 'depth_dimensions', 'profile_checks', 'decision_implications', 'reviewed_work_unit_refs_binding'],
     };
   }
 
@@ -288,24 +290,45 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
       passed: false,
       inspect: [`[depth_review_contract] FAIL: YAML parse error in ${relPath}: ${error.message}`],
       advice: [`Repair ${relPath} as parseable YAML.`],
+      masked_rule_ids: ['source_claim_cache_mapping', 'source_novelty_floor', 'new_source_floor_comparison', 'depth_dimensions', 'profile_checks', 'decision_implications', 'reviewed_work_unit_refs_binding'],
     };
   }
-  if (!review) return issueResult(inspect, advice);
+  if (!review) {
+    return {
+      ...issueResult(inspect, advice),
+      masked_rule_ids: ['source_claim_cache_mapping', 'source_novelty_floor', 'new_source_floor_comparison', 'depth_dimensions', 'profile_checks', 'decision_implications', 'reviewed_work_unit_refs_binding'],
+    };
+  }
 
-  for (const key of ['version', 'topic_slug', 'reviewed_work_unit_refs', 'wave0_source_urls', 'source_claims', 'new_source_urls', 'new_source_floor', 'depth_dimensions', 'profile_checks', 'decision', 'supplementary_queue_item_ids']) {
-    if (!(key in review)) inspect.push(`[depth_review_contract] FAIL: ${relPath} missing required key: ${key}`);
+  const requiredKeys = ['version', 'topic_slug', 'reviewed_work_unit_refs', 'wave0_source_urls', 'source_claims', 'new_source_urls', 'new_source_floor', 'depth_dimensions', 'profile_checks', 'decision', 'supplementary_queue_item_ids'];
+  const missingKeys = new Set();
+  for (const key of requiredKeys) {
+    if (!(key in review)) {
+      missingKeys.add(key);
+      inspect.push(`[depth_review_contract] FAIL: ${relPath} missing required key: ${key}`);
+    }
   }
+  const invalidArrays = new Set();
   for (const key of ['reviewed_work_unit_refs', 'wave0_source_urls', 'source_claims', 'new_source_urls', 'supplementary_queue_item_ids']) {
-    if (key in review && !Array.isArray(review[key])) inspect.push(`[depth_review_contract] FAIL: ${relPath} ${key} must be an array`);
+    if (key in review && !Array.isArray(review[key])) {
+      invalidArrays.add(key);
+      inspect.push(`[depth_review_contract] FAIL: ${relPath} ${key} must be an array`);
+    }
   }
-  if (review.topic_slug !== topic) inspect.push(`[depth_review_contract] FAIL: ${relPath} topic_slug mismatch: expected ${topic}, got ${review.topic_slug}`);
-  if (!DEPTH_DECISIONS.has(review.decision)) inspect.push(`[depth_review_contract] FAIL: ${relPath} decision must be one of ${[...DEPTH_DECISIONS].join(', ')}`);
-  if (review.decision !== 'accept') {
-    inspect.push(`[depth_review_contract] FAIL: ${relPath} decision is ${review.decision}; Wave1 topic is not complete until decision: accept`);
-    advice.push(`Repair ${topic} through supplementary wave1_topic_deepening or record a visible blocker.`);
-  }
-  if (review.decision === 'supplement_required' && (!Array.isArray(review.supplementary_queue_item_ids) || review.supplementary_queue_item_ids.length === 0)) {
-    inspect.push(`[depth_review_contract] FAIL: ${relPath} decision=supplement_required must name supplementary_queue_item_ids[] repair work`);
+  if (!missingKeys.has('topic_slug') && review.topic_slug !== topic) inspect.push(`[depth_review_contract] FAIL: ${relPath} topic_slug mismatch: expected ${topic}, got ${review.topic_slug}`);
+  if (missingKeys.has('decision')) {
+    maskedRuleIds.push('decision_implications');
+  } else if (!DEPTH_DECISIONS.has(review.decision)) {
+    inspect.push(`[depth_review_contract] FAIL: ${relPath} decision must be one of ${[...DEPTH_DECISIONS].join(', ')}`);
+    maskedRuleIds.push('decision_implications');
+  } else {
+    if (review.decision !== 'accept') {
+      inspect.push(`[depth_review_contract] FAIL: ${relPath} decision is ${review.decision}; Wave1 topic is not complete until decision: accept`);
+      advice.push(`Repair ${topic} through supplementary wave1_topic_deepening or record a visible blocker.`);
+    }
+    if (review.decision === 'supplement_required' && !missingKeys.has('supplementary_queue_item_ids') && !invalidArrays.has('supplementary_queue_item_ids') && review.supplementary_queue_item_ids.length === 0) {
+      inspect.push(`[depth_review_contract] FAIL: ${relPath} decision=supplement_required must name supplementary_queue_item_ids[] repair work`);
+    }
   }
 
   const profile = readBundleProfile(bundlePath);
@@ -313,6 +336,8 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
   if (!floor.ok) {
     inspect.push(...floor.inspect);
     advice.push('Run the accepted profile/template path or emit missing_profile_parameter; do not use hidden source-floor defaults.');
+  } else if (missingKeys.has('new_source_floor') || !review.new_source_floor || typeof review.new_source_floor !== 'object') {
+    maskedRuleIds.push('new_source_floor_comparison');
   } else {
     const required = Number(review.new_source_floor?.required);
     if (required !== floor.required) {
@@ -320,60 +345,70 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
     }
   }
 
-  const claims = Array.isArray(review.source_claims) ? review.source_claims : [];
-  const mapping = checkSourceClaimCacheMapping(bundlePath, claims, { topic });
-  if (!mapping.passed) inspect.push(...mapping.inspect);
-  advice.push(...mapping.advice);
+  const claimsUsable = !missingKeys.has('source_claims') && !invalidArrays.has('source_claims');
+  const newUrlsUsable = !missingKeys.has('new_source_urls') && !invalidArrays.has('new_source_urls');
+  if (!claimsUsable) {
+    maskedRuleIds.push('source_claim_cache_mapping', 'source_novelty_floor');
+  } else {
+    const claims = review.source_claims;
+    const mapping = checkSourceClaimCacheMapping(bundlePath, claims, { topic });
+    if (!mapping.passed) inspect.push(...mapping.inspect);
+    advice.push(...mapping.advice);
 
-  const wave0Urls = readWave0SourceUrls(bundlePath, topic, review);
-  const acceptedClaims = claims.filter(isAcceptedSourceClaim);
-  const seenNew = new Set();
-  for (const claim of acceptedClaims) {
-    const url = sourceClaimUrl(claim);
-    if (!url) continue;
-    const exactNew = !wave0Urls.has(url);
-    if (claim.is_new_vs_wave0 === true && !exactNew) {
-      inspect.push(`[source_novelty_floor] FAIL: ${topic} claim marks Wave0 URL as new: ${url}`);
+    const wave0Urls = readWave0SourceUrls(bundlePath, topic, review);
+    const acceptedClaims = claims.filter(isAcceptedSourceClaim);
+    const seenNew = new Set();
+    for (const claim of acceptedClaims) {
+      const url = sourceClaimUrl(claim);
+      if (!url) continue;
+      const exactNew = !wave0Urls.has(url);
+      if (claim.is_new_vs_wave0 === true && !exactNew) inspect.push(`[source_novelty_floor] FAIL: ${topic} claim marks Wave0 URL as new: ${url}`);
+      if (claim.is_new_vs_wave0 !== true && exactNew) inspect.push(`[source_novelty_floor] FAIL: ${topic} claim omits is_new_vs_wave0=true for exact-new URL: ${url}`);
+      if (exactNew && claim.is_new_vs_wave0 === true) seenNew.add(url);
     }
-    if (claim.is_new_vs_wave0 !== true && exactNew) {
-      inspect.push(`[source_novelty_floor] FAIL: ${topic} claim omits is_new_vs_wave0=true for exact-new URL: ${url}`);
+    const observed = seenNew.size;
+    if (!newUrlsUsable) {
+      maskedRuleIds.push('new_source_urls_comparison');
+    } else {
+      const reviewedNew = new Set(review.new_source_urls.map(exactUrlKey).filter(Boolean));
+      for (const url of seenNew) {
+        if (!reviewedNew.has(url)) inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_urls[] omits accepted exact-new URL: ${url}`);
+      }
+      for (const url of reviewedNew) {
+        if (!seenNew.has(url)) inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_urls[] contains URL not backed by accepted exact-new source_claims[]: ${url}`);
+      }
     }
-    if (exactNew && claim.is_new_vs_wave0 === true) seenNew.add(url);
-  }
-  const observed = seenNew.size;
-  const reviewedNew = new Set((Array.isArray(review.new_source_urls) ? review.new_source_urls : [])
-    .map(exactUrlKey)
-    .filter(Boolean));
-  for (const url of seenNew) {
-    if (!reviewedNew.has(url)) inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_urls[] omits accepted exact-new URL: ${url}`);
-  }
-  for (const url of reviewedNew) {
-    if (!seenNew.has(url)) inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_urls[] contains URL not backed by accepted exact-new source_claims[]: ${url}`);
-  }
-  if (Number(review.new_source_floor?.observed) !== observed) {
-    inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_floor.observed=${review.new_source_floor?.observed} but accepted exact-new claim count is ${observed}`);
-  }
-  if (floor.ok && observed < floor.required) {
-    inspect.push(`[source_novelty_floor] FAIL: ${topic} observed ${observed} new accepted source URL(s), required ${floor.required}`);
-    advice.push(`Enqueue supplementary wave1_topic_deepening for ${topic} with genuinely new source URLs.`);
+    if (missingKeys.has('new_source_floor') || !review.new_source_floor || typeof review.new_source_floor !== 'object') {
+      maskedRuleIds.push('new_source_floor_observed');
+    } else if (Number(review.new_source_floor.observed) !== observed) {
+      inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_floor.observed=${review.new_source_floor.observed} but accepted exact-new claim count is ${observed}`);
+    }
+    if (floor.ok && observed < floor.required) {
+      inspect.push(`[source_novelty_floor] FAIL: ${topic} observed ${observed} new accepted source URL(s), required ${floor.required}`);
+      advice.push(`Enqueue supplementary wave1_topic_deepening for ${topic} with genuinely new source URLs.`);
+    }
   }
 
-  const dims = review.depth_dimensions || {};
-  for (const key of ['mechanism', 'trend_or_difficulty', 'limitation_or_dispute']) {
-    if (!depthDimensionCovered(dims[key])) inspect.push(`[depth_review_contract] FAIL: ${relPath} depth_dimensions.${key} must have covered status and refs[]`);
+  if (missingKeys.has('depth_dimensions') || !review.depth_dimensions || typeof review.depth_dimensions !== 'object') {
+    maskedRuleIds.push('depth_dimensions');
+  } else {
+    for (const key of ['mechanism', 'trend_or_difficulty', 'limitation_or_dispute']) {
+      if (!depthDimensionCovered(review.depth_dimensions[key])) inspect.push(`[depth_review_contract] FAIL: ${relPath} depth_dimensions.${key} must have covered status and refs[]`);
+    }
   }
 
   const params = profile?.research_style_params || {};
-  const checks = review.profile_checks || {};
-  if (!profileCheckSatisfied(checks.counterexample_search, Boolean(params.counterexample_search))) {
-    inspect.push(`[depth_review_contract] FAIL: ${relPath} missing satisfied counterexample_search profile check`);
-  }
-  if (!profileCheckSatisfied(checks.cross_verification, Boolean(params.cross_verification))) {
-    inspect.push(`[depth_review_contract] FAIL: ${relPath} missing satisfied cross_verification profile check`);
+  if (missingKeys.has('profile_checks') || !review.profile_checks || typeof review.profile_checks !== 'object') {
+    maskedRuleIds.push('profile_checks');
+  } else {
+    if (!profileCheckSatisfied(review.profile_checks.counterexample_search, Boolean(params.counterexample_search))) inspect.push(`[depth_review_contract] FAIL: ${relPath} missing satisfied counterexample_search profile check`);
+    if (!profileCheckSatisfied(review.profile_checks.cross_verification, Boolean(params.cross_verification))) inspect.push(`[depth_review_contract] FAIL: ${relPath} missing satisfied cross_verification profile check`);
   }
 
-  const refs = Array.isArray(review.reviewed_work_unit_refs) ? review.reviewed_work_unit_refs : [];
-  if (refs.length === 0) inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed_work_unit_refs[] must name submitted work-unit rows`);
+  const refsUsable = !missingKeys.has('reviewed_work_unit_refs') && !invalidArrays.has('reviewed_work_unit_refs');
+  const refs = refsUsable ? review.reviewed_work_unit_refs : [];
+  if (!refsUsable) maskedRuleIds.push('reviewed_work_unit_refs_binding');
+  else if (refs.length === 0) inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed_work_unit_refs[] must name submitted work-unit rows`);
   let submittedRefs = new Set();
   const diagnostics = [];
   try {
@@ -399,7 +434,7 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
     }
   }
 
-  return { ...issueResult(inspect, advice), diagnostics };
+  return { ...issueResult(inspect, advice), diagnostics, masked_rule_ids: [...new Set(maskedRuleIds)] };
 }
 
 function readFindingIndex(bundlePath) {
@@ -475,28 +510,46 @@ export function checkWave2FindingIndexContract(bundlePath) {
   const { data, relPath } = loaded;
   const inspect = [];
   const advice = [];
+  const maskedRuleIds = [];
 
+  const missingTopLevel = new Set();
   for (const key of ['version', 'source_layer', 'ledger', 'synthesis', 'scan', 'findings', 'synthesis_eligibility']) {
-    if (!(key in data)) inspect.push(`[finding_index_contract] FAIL: ${relPath} missing top-level key: ${key}`);
+    if (!(key in data)) {
+      missingTopLevel.add(key);
+      inspect.push(`[finding_index_contract] FAIL: ${relPath} missing top-level key: ${key}`);
+    }
   }
 
-  const eligibility = data.synthesis_eligibility || {};
-  for (const key of ['pure_synthesis_eligible', 'scan_matrix_present', 'scan_topic_pair_coverage', 'unresolved_search_required_count', 'targeted_search_required_count', 'targeted_search_submitted_count', 'explicit_deferral_count', 'profile_params_read', 'ineligibility_reasons']) {
-    if (!(key in eligibility)) inspect.push(`[synthesis_eligibility] FAIL: ${relPath} synthesis_eligibility missing key: ${key}`);
+  const eligibilityUsable = !missingTopLevel.has('synthesis_eligibility') && data.synthesis_eligibility && typeof data.synthesis_eligibility === 'object';
+  const eligibility = eligibilityUsable ? data.synthesis_eligibility : {};
+  const missingEligibility = new Set();
+  if (!eligibilityUsable) {
+    maskedRuleIds.push('synthesis_eligibility');
+  } else {
+    for (const key of ['pure_synthesis_eligible', 'scan_matrix_present', 'scan_topic_pair_coverage', 'unresolved_search_required_count', 'targeted_search_required_count', 'targeted_search_submitted_count', 'explicit_deferral_count', 'profile_params_read', 'ineligibility_reasons']) {
+      if (!(key in eligibility)) {
+        missingEligibility.add(key);
+        inspect.push(`[synthesis_eligibility] FAIL: ${relPath} synthesis_eligibility missing key: ${key}`);
+      }
+    }
   }
 
-  if (eligibility.scan_matrix_present !== true) {
+  if (eligibilityUsable && !missingEligibility.has('scan_matrix_present') && eligibility.scan_matrix_present !== true) {
     inspect.push('[synthesis_eligibility] FAIL: scan_matrix_present must be true before Wave2 pass');
   }
 
-  const expectedPairs = countExpectedPairs(bundlePath, data);
-  const checkedPairs = Number(data.scan?.pair_count_checked ?? 0);
-  if (expectedPairs > 0 && checkedPairs <= 0) {
-    inspect.push(`[synthesis_eligibility] FAIL: scan.pair_count_checked=${data.scan?.pair_count_checked ?? '<missing>'}; expected scan matrix coverage for topic pairs`);
+  if (missingTopLevel.has('scan') || !data.scan || typeof data.scan !== 'object') {
+    maskedRuleIds.push('scan_pair_coverage');
+  } else {
+    const expectedPairs = countExpectedPairs(bundlePath, data);
+    const checkedPairs = Number(data.scan.pair_count_checked ?? 0);
+    if (expectedPairs > 0 && checkedPairs <= 0) inspect.push(`[synthesis_eligibility] FAIL: scan.pair_count_checked=${data.scan.pair_count_checked ?? '<missing>'}; expected scan matrix coverage for topic pairs`);
   }
 
-  const findings = Array.isArray(data.findings) ? data.findings : [];
-  if (!Array.isArray(data.findings)) inspect.push(`[finding_index_contract] FAIL: ${relPath} findings must be an array`);
+  const findingsUsable = !missingTopLevel.has('findings') && Array.isArray(data.findings);
+  const findings = findingsUsable ? data.findings : [];
+  if (!missingTopLevel.has('findings') && !Array.isArray(data.findings)) inspect.push(`[finding_index_contract] FAIL: ${relPath} findings must be an array`);
+  if (!findingsUsable) maskedRuleIds.push('per_finding_contract', 'derived_finding_counts');
 
   const profile = readBundleProfile(bundlePath);
   const independentBackingFloor = Number(profile?.research_style_params?.p0p1_independent_backing);
@@ -511,71 +564,90 @@ export function checkWave2FindingIndexContract(bundlePath) {
   let targetedSubmittedCount = 0;
   let explicitDeferralCount = 0;
 
+  let canCountNeedsSearch = findingsUsable;
+  let canCountTargetedRequired = findingsUsable;
+  let canCountTargetedSubmitted = findingsUsable;
+  let canCountExplicitDeferral = findingsUsable;
+
   for (const finding of findings) {
     const id = finding?.id || '<missing-id>';
-    for (const key of ['id', 'type', 'priority', 'status', 'decision', 'affected_topics', 'origin_refs', 'trigger_refs', 'search_required', 'subagent_receipt_refs', 'appears_in_synthesis', 'hitl2_handoff', 'confidence', 'independent_backing_refs', 'gap_status']) {
-      if (!(key in (finding || {}))) inspect.push(`[finding_index_contract] FAIL: finding ${id} missing field: ${key}`);
+    const requiredFields = ['id', 'type', 'priority', 'status', 'decision', 'affected_topics', 'origin_refs', 'trigger_refs', 'search_required', 'subagent_receipt_refs', 'appears_in_synthesis', 'hitl2_handoff', 'confidence', 'independent_backing_refs', 'gap_status'];
+    const missingFields = new Set();
+    for (const key of requiredFields) {
+      if (!(key in (finding || {}))) {
+        missingFields.add(key);
+        inspect.push(`[finding_index_contract] FAIL: finding ${id} missing field: ${key}`);
+      }
     }
-    if (!/^W2F-[0-9]{3}$/.test(String(finding?.id || ''))) inspect.push(`[finding_index_contract] FAIL: finding ${id} id must match W2F-xxx`);
-    if (!W2_TYPES.has(finding?.type)) inspect.push(`[finding_index_contract] FAIL: finding ${id} invalid type: ${finding?.type}`);
-    if (!W2_PRIORITIES.has(finding?.priority)) inspect.push(`[finding_index_contract] FAIL: finding ${id} invalid priority: ${finding?.priority}`);
-    if (!W2_STATUSES.has(finding?.status)) inspect.push(`[finding_index_contract] FAIL: finding ${id} invalid status: ${finding?.status}`);
-    if (!W2_DECISIONS.has(finding?.decision)) inspect.push(`[finding_index_contract] FAIL: finding ${id} invalid decision: ${finding?.decision}`);
-    if (!W2_CONFIDENCE.has(finding?.confidence)) inspect.push(`[finding_index_contract] FAIL: finding ${id} invalid confidence: ${finding?.confidence}`);
-    if (!W2_GAP_STATUS.has(finding?.gap_status)) inspect.push(`[finding_index_contract] FAIL: finding ${id} invalid gap_status: ${finding?.gap_status}`);
+    if (!missingFields.has('id') && !/^W2F-[0-9]{3}$/.test(String(finding.id))) inspect.push(`[finding_index_contract] FAIL: finding ${id} id must match W2F-xxx`);
+    if (!missingFields.has('type') && !W2_TYPES.has(finding.type)) inspect.push(`[finding_index_contract] FAIL: finding ${id} invalid type: ${finding.type}`);
+    if (!missingFields.has('priority') && !W2_PRIORITIES.has(finding.priority)) inspect.push(`[finding_index_contract] FAIL: finding ${id} invalid priority: ${finding.priority}`);
+    if (!missingFields.has('status') && !W2_STATUSES.has(finding.status)) inspect.push(`[finding_index_contract] FAIL: finding ${id} invalid status: ${finding.status}`);
+    if (!missingFields.has('decision') && !W2_DECISIONS.has(finding.decision)) inspect.push(`[finding_index_contract] FAIL: finding ${id} invalid decision: ${finding.decision}`);
+    if (!missingFields.has('confidence') && !W2_CONFIDENCE.has(finding.confidence)) inspect.push(`[finding_index_contract] FAIL: finding ${id} invalid confidence: ${finding.confidence}`);
+    if (!missingFields.has('gap_status') && !W2_GAP_STATUS.has(finding.gap_status)) inspect.push(`[finding_index_contract] FAIL: finding ${id} invalid gap_status: ${finding.gap_status}`);
 
-    const affected = Array.isArray(finding?.affected_topics) ? finding.affected_topics : [];
-    const originRefs = Array.isArray(finding?.origin_refs) ? finding.origin_refs : [];
-    const triggerRefs = Array.isArray(finding?.trigger_refs) ? finding.trigger_refs : [];
-    const receiptRefs = Array.isArray(finding?.subagent_receipt_refs) ? finding.subagent_receipt_refs : [];
-    const backingRefs = Array.isArray(finding?.independent_backing_refs) ? finding.independent_backing_refs : [];
+    const affected = !missingFields.has('affected_topics') && Array.isArray(finding.affected_topics) ? finding.affected_topics : [];
+    const originRefs = !missingFields.has('origin_refs') && Array.isArray(finding.origin_refs) ? finding.origin_refs : [];
+    const triggerRefs = !missingFields.has('trigger_refs') && Array.isArray(finding.trigger_refs) ? finding.trigger_refs : [];
+    const receiptRefs = !missingFields.has('subagent_receipt_refs') && Array.isArray(finding.subagent_receipt_refs) ? finding.subagent_receipt_refs : [];
+    const backingRefs = !missingFields.has('independent_backing_refs') && Array.isArray(finding.independent_backing_refs) ? finding.independent_backing_refs : [];
 
     if (finding?.type === 'cross_topic_resolution') {
-      if (originRefs.length === 0) inspect.push(`[finding_index_contract] FAIL: cross_topic_resolution ${id} requires origin_refs[]`);
-      if (triggerRefs.length === 0) inspect.push(`[finding_index_contract] FAIL: cross_topic_resolution ${id} requires trigger_refs[]`);
-      if (finding.search_required !== false) inspect.push(`[finding_index_contract] FAIL: cross_topic_resolution ${id} must have search_required: false`);
+      if (!missingFields.has('origin_refs') && originRefs.length === 0) inspect.push(`[finding_index_contract] FAIL: cross_topic_resolution ${id} requires origin_refs[]`);
+      if (!missingFields.has('trigger_refs') && triggerRefs.length === 0) inspect.push(`[finding_index_contract] FAIL: cross_topic_resolution ${id} requires trigger_refs[]`);
+      if (!missingFields.has('search_required') && finding.search_required !== false) inspect.push(`[finding_index_contract] FAIL: cross_topic_resolution ${id} must have search_required: false`);
     }
-    if (finding?.type === 'cross_topic_emergent_question' && affected.length < 2) {
+    if (finding?.type === 'cross_topic_emergent_question' && !missingFields.has('affected_topics') && affected.length < 2) {
       inspect.push(`[finding_index_contract] FAIL: cross_topic_emergent_question ${id} requires affected_topics.length >= 2`);
     }
-    if (['exploit_search', 'explore_search'].includes(finding?.decision)) {
+    if (missingFields.has('decision')) canCountTargetedRequired = canCountExplicitDeferral = false;
+    if (missingFields.has('gap_status')) canCountNeedsSearch = canCountTargetedSubmitted = false;
+    if (!missingFields.has('decision') && ['exploit_search', 'explore_search'].includes(finding.decision)) {
       targetedRequiredCount += 1;
-      if (finding.search_required !== true) inspect.push(`[finding_index_contract] FAIL: finding ${id} decision=${finding.decision} implies search_required=true`);
+      if (missingFields.has('search_required')) maskedRuleIds.push(`${id}:decision_search_required`);
+      else if (finding.search_required !== true) inspect.push(`[finding_index_contract] FAIL: finding ${id} decision=${finding.decision} implies search_required=true`);
     }
-    if (['defer_hitl2', 'requires_internal_data'].includes(finding?.decision)) {
+    if (!missingFields.has('decision') && ['defer_hitl2', 'requires_internal_data'].includes(finding.decision)) {
       explicitDeferralCount += 1;
-      if (finding.hitl2_handoff !== true) inspect.push(`[finding_index_contract] FAIL: finding ${id} decision=${finding.decision} implies hitl2_handoff=true`);
+      if (missingFields.has('hitl2_handoff')) maskedRuleIds.push(`${id}:decision_hitl2_handoff`);
+      else if (finding.hitl2_handoff !== true) inspect.push(`[finding_index_contract] FAIL: finding ${id} decision=${finding.decision} implies hitl2_handoff=true`);
     }
-    if (finding?.decision === 'record_only') explicitDeferralCount += 1;
-    if (finding?.appears_in_synthesis === false && finding?.hitl2_handoff !== true && finding?.decision !== 'record_only') {
+    if (!missingFields.has('decision') && finding.decision === 'record_only') explicitDeferralCount += 1;
+    if (!missingFields.has('appears_in_synthesis') && finding.appears_in_synthesis === false && !missingFields.has('decision')) {
+      if (missingFields.has('hitl2_handoff')) maskedRuleIds.push(`${id}:synthesis_hitl2_handoff`);
+      else if (finding.hitl2_handoff !== true && finding.decision !== 'record_only') {
       inspect.push(`[finding_index_contract] FAIL: finding ${id} appears_in_synthesis=false must be hitl2_handoff=true or decision=record_only`);
+      }
     }
-    if (finding?.confidence === 'high' && Number.isFinite(independentBackingFloor) && backingRefs.length < independentBackingFloor) {
+    if (!missingFields.has('confidence') && finding.confidence === 'high' && Number.isFinite(independentBackingFloor) && !missingFields.has('independent_backing_refs') && backingRefs.length < independentBackingFloor) {
       inspect.push(`[finding_index_contract] FAIL: finding ${id} confidence=high has ${backingRefs.length} independent_backing_refs, required ${independentBackingFloor}`);
     }
-    if (finding?.search_required === true && receiptRefs.length === 0 && !['defer_hitl2', 'requires_internal_data', 'record_only'].includes(finding?.decision)) {
+    if (!missingFields.has('search_required') && finding.search_required === true && !missingFields.has('decision') && !missingFields.has('subagent_receipt_refs') && receiptRefs.length === 0 && !['defer_hitl2', 'requires_internal_data', 'record_only'].includes(finding.decision)) {
       inspect.push(`[finding_index_contract] FAIL: finding ${id} search_required=true lacks submitted receipt refs or explicit routing decision`);
     }
-    if (finding?.gap_status === 'needs_search') {
+    if (!missingFields.has('gap_status') && finding.gap_status === 'needs_search') {
       needsSearchCount += 1;
-      if (!['exploit_search', 'explore_search'].includes(finding?.decision)) {
+      if (missingFields.has('decision')) maskedRuleIds.push(`${id}:gap_status_decision`);
+      else if (!['exploit_search', 'explore_search'].includes(finding.decision)) {
         inspect.push(`[finding_index_contract] FAIL: finding ${id} gap_status=needs_search requires decision exploit_search/explore_search`);
       }
     }
-    if (finding?.gap_status === 'search_submitted') {
+    if (!missingFields.has('gap_status') && finding.gap_status === 'search_submitted') {
       targetedSubmittedCount += 1;
-      if (receiptRefs.length === 0) inspect.push(`[finding_index_contract] FAIL: finding ${id} gap_status=search_submitted requires subagent_receipt_refs[]`);
+      if (missingFields.has('subagent_receipt_refs')) maskedRuleIds.push(`${id}:search_submitted_receipts`);
+      else if (receiptRefs.length === 0) inspect.push(`[finding_index_contract] FAIL: finding ${id} gap_status=search_submitted requires subagent_receipt_refs[]`);
     }
     for (const ref of receiptRefs) {
       if (!submittedReceipts.has(ref)) inspect.push(`[finding_index_contract] FAIL: finding ${id} subagent receipt ref is not backed by a submitted Wave2 work-unit row: ${ref}`);
     }
-    if (consumerFacingBackedFindingNeedsCrossRef(finding, backingRefs)) {
+    if (![...missingFields].some((field) => ['appears_in_synthesis', 'independent_backing_refs', 'decision', 'gap_status'].includes(field)) && consumerFacingBackedFindingNeedsCrossRef(finding, backingRefs)) {
       const crossRefs = crossReferenceRefsForFinding(bundlePath, id);
       if (crossRefs.length === 0 && !explicitCrossReferenceOmissionReason(finding)) {
         inspect.push(`[cross_reference_materialization] FAIL: finding ${id} is consumer-facing and backed but lacks reference/00-cross-*.md projection or explicit non-consumer/deferred/limitation omission reason`);
       }
     }
-    if (['p0', 'p1'].includes(finding?.priority) && ['low', 'uncertain'].includes(finding?.confidence)) {
+    if (!missingFields.has('priority') && !missingFields.has('confidence') && !missingFields.has('gap_status') && ['p0', 'p1'].includes(finding.priority) && ['low', 'uncertain'].includes(finding.confidence)) {
       const routed = ['search_submitted', 'deferred_hitl2', 'requires_internal_data', 'record_only'].includes(finding?.gap_status);
       if (!routed) {
         inspect.push(`[synthesis_eligibility] FAIL: under-backed priority finding ${id} must be submitted, deferred, internal-data routed, or record-only before pure synthesis eligibility`);
@@ -583,31 +655,31 @@ export function checkWave2FindingIndexContract(bundlePath) {
     }
   }
 
-  if (eligibility.pure_synthesis_eligible === true) {
-    if (Number(eligibility.unresolved_search_required_count) !== 0) {
+  if (eligibilityUsable && !missingEligibility.has('pure_synthesis_eligible') && eligibility.pure_synthesis_eligible === true) {
+    if (!missingEligibility.has('unresolved_search_required_count') && Number(eligibility.unresolved_search_required_count) !== 0) {
       inspect.push(`[synthesis_eligibility] FAIL: pure_synthesis_eligible=true but unresolved_search_required_count=${eligibility.unresolved_search_required_count}`);
     }
-    if (needsSearchCount > 0) {
+    if (canCountNeedsSearch && needsSearchCount > 0) {
       inspect.push(`[synthesis_eligibility] FAIL: pure_synthesis_eligible=true but ${needsSearchCount} finding(s) have gap_status=needs_search`);
     }
   }
-  if (Number.isFinite(Number(eligibility.unresolved_search_required_count)) && Number(eligibility.unresolved_search_required_count) !== needsSearchCount) {
+  if (eligibilityUsable && canCountNeedsSearch && !missingEligibility.has('unresolved_search_required_count') && Number.isFinite(Number(eligibility.unresolved_search_required_count)) && Number(eligibility.unresolved_search_required_count) !== needsSearchCount) {
     inspect.push(`[synthesis_eligibility] FAIL: unresolved_search_required_count=${eligibility.unresolved_search_required_count} but observed needs_search count is ${needsSearchCount}`);
-  }
-  if (Number.isFinite(Number(eligibility.targeted_search_required_count)) && Number(eligibility.targeted_search_required_count) !== targetedRequiredCount) {
+  } else if (!canCountNeedsSearch) maskedRuleIds.push('unresolved_search_required_count');
+  if (eligibilityUsable && canCountTargetedRequired && !missingEligibility.has('targeted_search_required_count') && Number.isFinite(Number(eligibility.targeted_search_required_count)) && Number(eligibility.targeted_search_required_count) !== targetedRequiredCount) {
     inspect.push(`[synthesis_eligibility] FAIL: targeted_search_required_count=${eligibility.targeted_search_required_count} but observed targeted-search decision count is ${targetedRequiredCount}`);
-  }
-  if (Number.isFinite(Number(eligibility.targeted_search_submitted_count)) && Number(eligibility.targeted_search_submitted_count) !== targetedSubmittedCount) {
+  } else if (!canCountTargetedRequired) maskedRuleIds.push('targeted_search_required_count');
+  if (eligibilityUsable && canCountTargetedSubmitted && !missingEligibility.has('targeted_search_submitted_count') && Number.isFinite(Number(eligibility.targeted_search_submitted_count)) && Number(eligibility.targeted_search_submitted_count) !== targetedSubmittedCount) {
     inspect.push(`[synthesis_eligibility] FAIL: targeted_search_submitted_count=${eligibility.targeted_search_submitted_count} but observed search_submitted count is ${targetedSubmittedCount}`);
-  }
-  if (Number.isFinite(Number(eligibility.explicit_deferral_count)) && Number(eligibility.explicit_deferral_count) !== explicitDeferralCount) {
+  } else if (!canCountTargetedSubmitted) maskedRuleIds.push('targeted_search_submitted_count');
+  if (eligibilityUsable && canCountExplicitDeferral && !missingEligibility.has('explicit_deferral_count') && Number.isFinite(Number(eligibility.explicit_deferral_count)) && Number(eligibility.explicit_deferral_count) !== explicitDeferralCount) {
     inspect.push(`[synthesis_eligibility] FAIL: explicit_deferral_count=${eligibility.explicit_deferral_count} but observed explicit routing count is ${explicitDeferralCount}`);
-  }
+  } else if (!canCountExplicitDeferral) maskedRuleIds.push('explicit_deferral_count');
 
   if (inspect.length > 0) {
     advice.push('Complete Wave2 scan/triage/gap analysis, submit targeted evidence or route gaps explicitly, then update finding-index.yaml synthesis_eligibility.');
   }
-  return issueResult(inspect, advice);
+  return { ...issueResult(inspect, advice), masked_rule_ids: [...new Set(maskedRuleIds)] };
 }
 
 export function topicSlugFromDepthReviewTarget(target) {

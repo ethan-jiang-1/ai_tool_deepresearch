@@ -294,9 +294,9 @@ export function checkReferenceKeyFactsMinLines(files, minLines = 5) {
   for (const file of files) {
     const content = readFileSync(file.absPath, 'utf-8');
     const keyFacts = extractSection(content, 'Key Facts');
-    const bulletCount = keyFacts.split(/\r?\n/).filter((line) => /^\s*-\s+\S/.test(line)).length;
-    if (bulletCount < minLines) {
-      inspect.push(`Key Facts in ${file.relPath} has ${bulletCount} bullet line(s), expected at least ${minLines}`);
+    const factCount = keyFacts.split(/\r?\n/).filter((line) => /^\s*(?:[-+*]|\d+[.)])\s+\S/.test(line)).length;
+    if (factCount < minLines) {
+      inspect.push(`Key Facts in ${file.relPath} has ${factCount} fact item(s), expected at least ${minLines}`);
     }
   }
   return { passed: inspect.length === 0, inspect };

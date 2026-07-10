@@ -1,174 +1,53 @@
 #!/usr/bin/env node
-// inspect-wave1-output.mjs — wave 1 structural lint
-// @impl IOC-002, REF-001, REF-008, WPG-012, RWG-017
-// Usage: node inspect-wave1-output.mjs --bundle <path>
+// inspect-wave1-output.mjs — side-effect-free Wave1 contract inspect
+// @impl IOC-002, IOC-005, REF-001, REF-008, WPG-012, RWG-017, RWG-018
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
-import {
-  checkReferenceIndexCoverage,
-  classifyReferenceAuthority,
-  readBundlePlan,
-} from '../engine/helpers/gate-helpers.mjs';
+import { tryLoadGateDefinition, readBundlePlan } from '../engine/helpers/gate-helpers.mjs';
+import { findingsFromCheckResult, projectInspectContract } from '../engine/helpers/wave-contract-findings.mjs';
+import { evaluateWave1Contract } from '../engine/helpers/wave-contract-evaluators.mjs';
 import {
   inspectReferenceReturnMaps,
   inspectSeedTopicReturnMaps,
   inspectWaveArtifactReturnMaps,
 } from '../engine/helpers/return-map.mjs';
 
-const BUNDLE = process.argv[3] || process.argv[2];
-const bundlePath = BUNDLE;
-
+const bundleFlag = process.argv.indexOf('--bundle');
+const bundlePath = bundleFlag >= 0 ? process.argv[bundleFlag + 1] : process.argv[2];
 if (!bundlePath) {
   console.error('Usage: node inspect-wave1-output.mjs --bundle <path>');
   process.exit(2);
 }
 
-const inspect = [];
-const advice = [];
-let checksRun = 0;
-let checksFailed = 0;
-
-function addIssue(msg, fix) { inspect.push(msg); if (fix) advice.push(fix); checksFailed++; }
-function inc() { checksRun++; }
-
-function readMdFile(path) {
-  if (!existsSync(path)) return null;
-  return readFileSync(path, 'utf-8');
+const { definition, error } = tryLoadGateDefinition('wave1-complete', null);
+if (error) {
+  console.log(JSON.stringify({
+    check: { passed: false, wave: 'wave1', checks_run: 0, checks_failed: 0, return_map_classification: 'diagnostic-only', failed_rule_ids: [], finding_classification: { blocking: [], advisory: [], diagnostic_only: [] } },
+    inspect: error.inspect || ['Wave1 gate definition could not be loaded.'],
+    advice: error.advice || ['Repair the Wave1 gate definition and rerun inspect.'],
+  }, null, 2));
+  process.exit(2);
 }
 
-function parseMetadataBlock(content) {
-  // Parses bullet-list metadata: `- key: value` lines before the first `## ` header.
-  // Format per shared-reference-template.md.
-  const keys = {};
-  const lines = content.split('\n');
-  for (const line of lines) {
-    if (line.trim().startsWith('## ')) break;
-    const m = line.match(/^-\s+([^:]+):\s*(.*)$/);
-    if (m) keys[m[1].trim()] = m[2];
-  }
-  return keys;
-}
-
-const REQUIRED_META = ['source_url','acceptance_status','source_type','tier','evidence_role','trust_level','why_it_matters','accessed_at','related_topic'];
-const REQUIRED_SECTIONS = ['## Key Facts','## Core Content Capture','## Relevance To This Research','## Quotable Terms / Concepts','## Risks And Limitations'];
-
-function referenceDiagnosticLabel(classification) {
-  return classification?.authority === 'delegated_bypass' || /^delegated_bypass\b/.test(classification?.reason || '')
-    ? 'delegated_bypass'
-    : 'projection_backing_drift';
-}
-
-// ---- Get topic registry ----
-let registry = [];
-try {
-  const plan = readBundlePlan(bundlePath);
-  registry = plan?.topic_registry || [];
-} catch (e) {
-  addIssue(`rb_plan.md: cannot read topic_registry: ${e.message}`);
-}
-
-if (registry.length === 0) {
-  addIssue('topic_registry: empty or missing — cannot verify per-topic wave1 artifacts.');
-} else {
-  const refPath = join(bundlePath, 'reference');
-  const discoveredTopicRefs = [];
-
-  for (const topic of registry) {
-
-    // 1. Per-topic reference/{topic.slug}*.md existence
-    inc();
-    const allFiles = existsSync(refPath) ? readdirSync(refPath) : [];
-    const topicRefs = allFiles.filter(f => f.startsWith(topic.slug) && f.endsWith('.md'));
-    if (topicRefs.length === 0) {
-      addIssue(`topic ${topic.slug}: no reference/${topic.slug}*.md files found`,
-        `Create at least one reference/${topic.slug}-<qualifier>.md per shared-reference-template.md.`);
-    }
-
-    // 2. Metadata + sections on each {topic.slug}*.md
-    for (const f of topicRefs) {
-      const fp = join(refPath, f);
-      const content = readMdFile(fp);
-      if (!content) continue;
-      discoveredTopicRefs.push({ relPath: `reference/${f}`, absPath: fp });
-
-      inc();
-      const meta = parseMetadataBlock(content);
-      for (const key of REQUIRED_META) {
-        if (!(key in meta)) {
-          addIssue(`reference/${f}: metadata block missing required key '${key}'`);
-        }
-      }
-
-      // Check for placeholder source_url
-      inc();
-      const srcUrl = (meta.source_url || '').toLowerCase().trim();
-      const placeholderDomains = ['example.com', 'placeholder.com', 'fake-url.com', 'test.com'];
-      if (placeholderDomains.some(d => srcUrl.includes(d))) {
-        addIssue(`reference/${f}: placeholder source_url detected ("${meta.source_url || '(empty)'}") — file does not reference a real web source`,
-          `Delete reference/${f} and either find a real source with WebSearch+WebFetch, or write artifacts/wave1/${topic.slug}/suppl-failure-r{N}.md documenting why no new sources could be found.`);
-      }
-
-      inc();
-      for (const sec of REQUIRED_SECTIONS) {
-        if (!content.includes(sec)) {
-          addIssue(`reference/${f}: missing section '${sec}'`);
-        }
-      }
-
-      inc();
-      const classification = classifyReferenceAuthority(bundlePath, `reference/${f}`);
-      if (!classification.passed) {
-        addIssue(`[${referenceDiagnosticLabel(classification)}] reference/${f}: ${classification.reason}`,
-          'Repair through submitted wave1_topic_deepening source/cache/degraded backing, or remove the unbacked reference projection.');
-      }
-    }
-
-    // 3. evidence-summary per topic
-    inc();
-    const evPath = join(bundlePath, 'artifacts', 'wave1', topic.slug, 'evidence-summary.md');
-    if (!existsSync(evPath)) {
-      addIssue(`artifacts/wave1/${topic.slug}/evidence-summary.md: file not found`);
-    }
-
-    // 4. question-list per topic
-    inc();
-    const qlPath = join(bundlePath, 'artifacts', 'wave1', topic.slug, 'question-list.md');
-    if (!existsSync(qlPath)) {
-      addIssue(`artifacts/wave1/${topic.slug}/question-list.md: file not found`);
-    }
-  }
-
-  // 5. _INDEX.md has matching wave1_topic rows for consumer navigation
-  inc();
-  const indexResult = checkReferenceIndexCoverage(bundlePath, discoveredTopicRefs, { sourceLayer: 'wave1_topic' });
-  if (!indexResult.passed) {
-    for (const line of indexResult.inspect) addIssue(line);
-    for (const fix of indexResult.advice || []) advice.push(fix);
-  }
-}
-
-// ---- 6. Diagnostic-only return map shape ----
-inc();
-const topicSlugs = registry.map((topic) => topic.slug);
+const evaluation = evaluateWave1Contract(bundlePath, definition);
+let topicSlugs = [];
+try { topicSlugs = (readBundlePlan(bundlePath)?.topic_registry || []).map((topic) => topic.slug); } catch { /* evaluator reports plan failure */ }
 const seedMap = inspectSeedTopicReturnMaps(bundlePath, { wave: 'wave1', topicSlugs });
 const artifactMap = inspectWaveArtifactReturnMaps(bundlePath, 'wave1', topicSlugs);
-let referenceInspect = { passed: true, inspect: [], advice: [] };
+const referenceMap = { passed: true, inspect: [], advice: [], classification: 'diagnostic-only' };
 for (const topic of topicSlugs) {
   const result = inspectReferenceReturnMaps(bundlePath, topic);
-  referenceInspect.inspect.push(...result.inspect);
-  referenceInspect.advice.push(...result.advice);
-  if (!result.passed) referenceInspect.passed = false;
+  referenceMap.inspect.push(...result.inspect);
+  referenceMap.advice.push(...result.advice);
+  if (!result.passed) referenceMap.passed = false;
 }
-for (const line of [...seedMap.inspect, ...artifactMap.inspect, ...referenceInspect.inspect]) inspect.push(line);
-for (const line of [...seedMap.advice, ...artifactMap.advice, ...referenceInspect.advice]) advice.push(line);
-const returnMapPassed = seedMap.passed && artifactMap.passed && referenceInspect.passed;
-if (!returnMapPassed) checksFailed++;
+referenceMap.classification = referenceMap.passed ? 'diagnostic-only' : 'blocking';
 
-console.log(JSON.stringify({
-  check: { passed: checksFailed === 0, wave: 'wave1', checks_run: checksRun, checks_failed: checksFailed, return_map_classification: returnMapPassed ? 'diagnostic-only' : 'blocking' },
-  inspect,
-  advice,
-}, null, 2));
-
-process.exit(checksFailed === 0 ? 0 : 1);
+const additionalFindings = [
+  ...findingsFromCheckResult(seedMap, { defaultId: 'wave1_seed_return_map' }),
+  ...findingsFromCheckResult(artifactMap, { defaultId: 'wave1_artifact_return_map' }),
+  ...findingsFromCheckResult(referenceMap, { defaultId: 'wave1_reference_return_map' }),
+];
+const returnMapClassification = seedMap.passed && artifactMap.passed && referenceMap.passed ? 'diagnostic-only' : 'blocking';
+const output = projectInspectContract({ wave: 'wave1', evaluation, additionalFindings, additionalChecksRun: 1, returnMapClassification });
+console.log(JSON.stringify(output, null, 2));
+process.exit(output.check.passed ? 0 : 1);

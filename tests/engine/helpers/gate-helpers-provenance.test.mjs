@@ -1,6 +1,6 @@
 import { describe, it, afterEach } from 'node:test';
 import assert from 'node:assert';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
@@ -25,6 +25,8 @@ import {
   checkWorkUnitOutputCoverage,
   checkWorkUnitSubmissionPresence,
   detectDelegatedBypassSuspicion,
+  emitDelegatedBypassDiagnostic,
+  scanDelegatedBypassSuspicion,
 } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs';
 import {
   claimAndSubmitWorkUnit,
@@ -318,6 +320,26 @@ describe('work-unit provenance gate helpers', () => {
     assert.equal(result.suspected, true);
     assert.equal(check.passed, false);
     assert.match(check.inspect.join('\n'), /delegated_bypass_suspected/);
+  });
+
+  it('keeps bypass scanning pure and emits durable diagnostics only when asked', () => {
+    const dir = tempDir('wpg-bypass-pure-');
+    mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-a'), { recursive: true });
+    writeFileSync(join(dir, 'artifacts', 'wave1', 'topic-a', 'evidence-summary.md'), '# Evidence\n');
+    writeFileSync(join(dir, 'rb_status.json'), JSON.stringify({ bundle: 'wpg-bypass-pure' }));
+    writeFileSync(join(dir, 'rb_trace.jsonl'), '');
+
+    const beforeTrace = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8');
+    const result = scanDelegatedBypassSuspicion(dir, 'wave1');
+    assert.equal(result.suspected, true);
+    assert.equal(readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8'), beforeTrace);
+    assert.equal(existsSync(join(dir, '_logs', 'run.log')), false);
+
+    const emitted = emitDelegatedBypassDiagnostic(dir, 'wave1-complete', result);
+    assert.equal(emitted.traceWritten, true);
+    assert.equal(emitted.logWritten, true);
+    assert.equal(readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').length, 1);
+    assert.match(readFileSync(join(dir, '_logs', 'run.log'), 'utf8'), /delegated_bypass_suspected/);
   });
 
   it('does not require Wave2 work-unit rows for pure synthesis artifacts', () => {
