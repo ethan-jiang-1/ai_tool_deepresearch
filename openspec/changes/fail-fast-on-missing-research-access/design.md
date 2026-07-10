@@ -1,92 +1,155 @@
 ## Context
 
-Canonical research waves 依赖 Agent 环境提供真实 search 与 fetch，但当前框架直到 silent Wave0 才会碰到该依赖。JavaScript Engine 无法调用或证明宿主 Agent 的外部工具能力；继续让 Engine 猜测会形成虚假的可用性证明。
+Canonical research waves 依赖当前 Agent 环境提供真实 search 与 fetch，但现有 framework 直到 silent Wave0 才会碰到该依赖。JavaScript Engine 无法调用或证明宿主 Agent 的外部工具能力；让 Engine 探测 `curl`、网络或工具名会把“某个底层通道存在”误当成“当前 Agent 能通过实际 surface 搜索并抓取证据”，形成虚假的可用性证明。
 
-HITL1 是进入 silent execution 前最后一个用户本来就在场的 checkpoint，因此能力确认应放在这里：Agent 做一次真实、有限的 search+fetch；Engine 只校验记录的直接 observation 是否自洽，并在 observation 不可用时阻止进入 Setup。
+HITL1 是进入 silent execution 前最后一个用户本来就在场的 checkpoint，因此能力确认应放在这里。Change1 (`v0.17`) 已建立 shortest control path 与 one authority path 的基线，本 change 继续采用同一纪律：Agent 做一次真实、有限的 search+fetch；profile 保存直接 observation；ProfileSchema 校验结构；现有 HITL1 gate rule 只判断 status 是否 available；失败后回到同一 probe/gate。
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- 在 silent waves 前确认当前 Agent 环境确实能搜索并抓取一个真实结果页面。
-- 用 `rb_profile.yaml#/research_access` 保存最小、可审计的直接 observation。
-- 对 missing、unprobed、unavailable 和伪 available 状态 fail closed。
-- 在 HITL1 给出一个明确 blocker 和同一 probe 的重试路径。
+- 在 silent waves 前确认当前 Agent 环境能搜索并抓取一个真实 HTTP(S) 页面。
+- 用 `rb_profile.yaml#/research_access` 保存最小、可审计、不可由现有 bundle state 重建的直接 observation。
+- 对 missing、unprobed、unavailable 和结构伪造的 available 状态 fail closed。
+- 让 Agent 从一次 gate 输出得到一个最近动作：修复/切换环境后重跑同一 probe 和同一 gate。
+- 保留用户已经完成的 HITL1 profile/must-answer 决策，避免环境问题迫使用户重复回答。
 
 **Non-Goals:**
 
 - 不实现 offline research、无证据报告或用户素材 ingestion。
-- 不建立 generalized capability registry、工具矩阵或 runtime capability daemon。
-- 不把 probe 结果计入 reference、cache、ledger 或 Wave coverage。
-- 不用 fake WebSearch/WebFetch、mock URL 或固定 fixture 声称外部研究能力可用。
+- 不建立 generalized capability registry、工具矩阵、runtime daemon、watcher 或 retry controller。
+- 不把 probe 结果计入 reference、cache、ledger、work-unit output 或 Wave coverage。
+- 不用 fake WebSearch/WebFetch、mock URL、固定 fixture URL 或手写 fetch success 声称外部研究能力可用。
+- 不追溯阻断已经越过 HITL1 的 legacy bundle。
 
 ## Decisions
 
-### 1. Probe 由 HITL1 Agent 执行，Engine 不代替工具调用
+### 1. HITL1 使用一个短而固定的 probe/gate 回路
 
-`phase-hitl1.md` 允许一个 `capability_probe_only` 例外：执行一次真实搜索，从结果中选一个正常 URL，再用实际 fetch surface 获取页面内容。成功标准只包含两个直接事实：搜索返回真实 URL，fetch 返回页面内容。
+HITL1 的顺序固定为：
 
-Probe 不评价来源质量，不选择研究策略，不做多站点重试树。失败时记录当次直接原因并停留 HITL1；环境修复后重跑同一 bounded probe。
+```text
+用户确认 HITL1 choices
+  -> 写入 choices 并运行 apply-research-style
+  -> 至多一次 neutral capability-only search
+  -> 对第一个 usable HTTP(S) result 做至多一次 fetch
+  -> 写 research_access observation
+  -> 运行现有 hitl1-recorded gate
+```
 
-替代方案是在 JS CLI 中探测 `curl`、网络或工具名；这无法证明 Agent 的 WebSearch/WebFetch surface 可用，并会制造错误信心，因此不采用。
+Successful probe 恰好执行一次搜索和一次抓取；失败路径至多调用一次 search 和一次 fetch：
 
-### 2. `research_access` 使用最小判别状态
+- search surface 缺失、search 调用失败/被阻止、没有 usable result、没有 HTTP(S) URL，或 search 成功但 fetch surface 在调用前即缺失：记录 `unavailable`，`fetch_outcome: not_attempted`；
+- search 返回 usable URL，但 fetch 被阻止或失败：记录 `unavailable`，outcome 为 `blocked` 或 `failed`；
+- search 返回真实 URL 且 fetch 返回页面内容：记录 `available` 与 `fetch_outcome: success`。
 
-Profile 增加 optional legacy-compatible observation，新模板初始化为：
+不评估来源质量；只取 search 返回的第一个 usable HTTP(S) result。不做自动第二站点、不做工具 fallback matrix、不做指数退避。若 unavailable，HITL1 向用户说明 evidence-backed waves 当前不能启动；保留 `hitl1.status: recorded` 和用户 choices，环境修复或用户决定再次尝试后，重跑同一 probe 和同一 gate。
+
+### 2. `research_access` 使用 strict discriminated branches
+
+新 bundle template 初始化为：
 
 ```yaml
 research_access:
   status: unprobed
 ```
 
-Agent probe 后只写以下直接字段：
+Schema 使用 `status` 判别的严格分支，而不是一组层层叠加的 post-validation：
 
-- `status`: `available | unavailable`；
-- `probed_at`: ISO 8601 timestamp；
-- `search_tool`、`fetch_tool`: 实际使用的工具 surface 名称，工具缺失时可省略对应字段；
-- `result_url`: 搜索返回并尝试抓取的 URL，可用路径必填；
-- `fetch_outcome`: `success | failed | blocked | not_attempted`；
-- `reason`: unavailable 路径必填的直接失败原因。
+```text
+unprobed
+  required: status
+  allowed:  no success fields
 
-Schema 使用 status 分支做直接一致性校验：available 要求 tool names、parseable URL 和 `fetch_outcome: success`；unavailable 要求 timestamp、非空 reason，且不得声明 success；unprobed 不携带成功事实。旧 profile 缺少整个字段时仍可解析，但 gate 按 unprobed 处理。
+available
+  required: status, probed_at, result_url, fetch_outcome=success
+  optional: search_surface, fetch_surface
 
-不记录 response body、搜索 query 历史、HTTP 状态矩阵或多次尝试列表，避免 profile 变成 capability log system。
+unavailable
+  required: status, probed_at, fetch_outcome=failed|blocked|not_attempted, reason
+  optional: result_url, search_surface, fetch_surface
+```
 
-### 3. HITL1 gate 增加一个专用 availability rule
+`probed_at` 必须是 ISO 8601 timestamp；任何出现的 `result_url` 都必须是 HTTP(S) URL；`reason` 和 optional surface labels 必须是 trim 后非空字符串。`search_surface` / `fetch_surface` 只是 optional audit labels；真实 gate facts 是 schema-valid observation 与 `status: available`，不因运行环境无法提供稳定工具名而误阻塞。
 
-在现有 HITL1 gate definition 增加一个直接的 `research_access_available` rule。该 rule 先依赖 `ProfileSchema` 通过，再读取 `research_access`：
+旧 profile 缺少整个 `research_access` 字段时仍可解析，但 gate 读取缺失 status 时按 not available 失败。Profile 不记录 response body、query history、HTTP 状态矩阵、多次尝试列表或 derived gate verdict。
 
-- missing/unprobed：返回“运行真实 HITL1 probe”；
-- unavailable：返回已记录 reason，并要求修复环境后重跑；
-- available：由 schema 已保证 URL/fetch observation 自洽。
+### 3. 复用 ProfileSchema + existing `field_value`，不新增 checker
 
-该 check 只存在于 HITL1 gate，不抽象成通用 capability framework，也不提供 degraded pass。现有 profile/user-decision checks 保持原职责。
+HITL1 gate definition 在 `profile_schema_valid` 后增加一条普通 rule：
 
-### 4. Probe observation 与 research evidence 明确隔离
+```json
+{
+  "id": "research_access_available",
+  "check": "field_value",
+  "target": "rb_profile.yaml#/research_access/status",
+  "operator": "equal",
+  "value": "available"
+}
+```
 
-Phase guidance 和 payload checklist 明确禁止把 probe URL、内容或工具结果写入 reference、cache、work-unit output、ledger 或 artifact。Engine 不需要新增“删除 probe evidence”的复杂清理逻辑；受控实验和静态文档 guard 只验证 guidance 与 bundle 写入边界。
+这条 rule 只回答一个问题：status 是否 available。Available 所需的 timestamp、URL 与 fetch success 已由 `ProfileSchema` 的单一分支定义，不在 gate CLI 再写一份近似 validator。
 
-### 5. 真实能力只由 Agent-controlled experiment 验证
+Failure message 只给一个动作：读取 `rb_profile.yaml#/research_access/reason`（若存在），修复/切换环境，重跑同一 HITL1 probe 和 gate。Gate 不动态拼接 reason，不新增 `research_access_available` check type，不新增 inspect command，也不产生 degraded Setup route。
 
-Schema unit test 和 HITL1 gate integration test 只证明 observation 结构与 fail-fast routing。另用 controlled Agent playbook 在具备真实工具的环境执行 probe，记录真实 URL/fetch outcome；若环境没有工具，预期 verdict 是正确停在 HITL1，而不是伪造 PASS。
+### 4. Style writer 必须做语义保真更新
+
+当前 `apply-research-style.mjs` parse 后通过手写 allowlist 重建整个 `rb_profile.yaml`。任何新 profile section 都会被静默删除；即使 HITL1 正确写入 `research_access`，后续 style apply/rerun 也可能把它抹掉。
+
+本 change 将 writer 收敛为：读取完整 profile object，只替换 `research_profile` 与 `research_style_params`，再用 approved `yaml.stringify` 写回完整 object。它必须保留 root must-answer、HITL decisions、rerun fields 和 `research_access` 的语义值；不承诺保留空格、引号或注释等 presentation formatting。
+
+这是局部简化而非额外保护层：删除字段 allowlist serializer，减少未来新增 profile 字段时的重复写入逻辑。
+
+### 5. HITL1 metadata 明确声明 `capability_probe_only`
+
+`phase-hitl1.md` 不能一边声明 `execution_contract.search_policy: no_search`，一边在正文要求真实 search。Frontmatter 改为 `capability_probe_only`；现有 consistency validator 将该值加入合法 policy，并将其设为 HITL1 的唯一 expected policy。
+
+该 policy 只允许当前 phase Agent 执行上述一次 capability probe，不授权 research evidence collection、work-unit delegation 或 silent wave search。其他 lifecycle phase 的 expected policy 不变，不新增第二个执行 surface。
+
+### 6. Probe observation 与 research evidence 通过写入边界隔离
+
+Phase guidance 和 controlled playbook 明确禁止把 probe URL、页面内容或工具结果写入：
+
+- `reference/`
+- `_cache/`
+- `artifacts/`
+- work-unit output/result/receipt
+- submitted ledger 或 output declarations
+- Wave coverage/count floors
+
+Engine 不新增“清理 probe evidence”的二次控制器。静态 Markdown test 验证规则可见，controlled playbook 在 gate verdict 前检查上述 surface 没有 probe leakage。
+
+### 7. 真实能力由一个 Agent-controlled canary 观察
+
+新增 `experiments_playbook/exp_wff_pre-research-repair/case-115-heavy-hitl1-research-access-probe.md` 并登记到 `RUN_EXPS.md`。
+
+Canary 必须由当前 Agent 实际执行 search/fetch，URL 必须来自当次动态搜索结果：
+
+- 若工具可用，写入 available observation，HITL1 gate 应 pass；
+- 若工具缺失或调用失败，写入 unavailable observation，HITL1 gate 应 fail 且不得给出 Setup next；
+- 两条环境观察都必须检查 probe 未进入 evidence surfaces；
+- case verdict 来自 profile + gate JSON + trace checks 的一致性，不来自硬编码 `passed: true`。
+
+Deterministic schema/gate fixtures 可以写 synthetic valid observation，但必须明确只证明 Engine contract，不得作为真实 Agent capability evidence。
 
 ## Risks / Trade-offs
 
-- [Risk] Agent 错报 available → schema 只能校验 observation 自洽，不能独立证明外部调用；通过 HITL1 明确步骤、真实 controlled run 和禁止 mock 降低风险。
-- [Risk] 单站点暂时失败造成 unavailable → 允许环境修复或选择另一个真实搜索结果后重跑同一 bounded probe，不增加自动重试树。
-- [Risk] 旧 bundle 缺字段 → schema 保持可读，HITL1 gate 明确按 unprobed 阻止，不静默放行。
+- [Risk] Agent 错报 available → Schema 只能校验 observation 自洽，不能独立证明外部调用；通过明确 phase contract、真实 canary 和禁止 fixed URL/mock 降低风险。
+- [Risk] 单次 fetch 遇到临时站点故障 → 接受 conservative unavailable；用户仍在 HITL1，可决定修复/重试同一 probe，避免自动 retry tree。
+- [Risk] Legacy profile 缺字段 → Schema 保持可读；仅在 HITL1 gate 被评估时按 unprobed 阻止，不对已越过 HITL1 的 bundle 做大范围迁移。
+- [Risk] Existing deterministic fixtures 大量依赖旧 HITL1 pass shape → 系统性更新所有 pass fixtures，统一写 synthetic valid observation，并保留一个 missing legacy negative case。
 - [Trade-off] 该设计没有离线降级能力 → 接受早失败，优先避免生成无证据或伪证据报告。
 
 ## Migration Plan
 
-1. 增加 ProfileSchema observation 分支及 schema regression tests。
-2. 更新新 bundle profile template，默认写入 `status: unprobed`。
-3. 更新 HITL1 phase execution contract、probe 步骤和 payload checklist。
-4. 增加 HITL1 专用 gate rule、失败诊断和 integration tests。
-5. 增加真实 Agent-controlled probe playbook，更新 CHANGELOG 与 `DPT_FRAMEWORK/RUN.md`，版本提升到 `v0.18`。
+1. 增加 strict `research_access` branches、profile template 默认值与 schema regressions。
+2. 将 style writer 改为完整 profile 保真写回，并增加 HITL1/rerun preservation regressions。
+3. 更新 HITL1 `capability_probe_only` metadata、phase probe/checklist/no-evidence wording 与 consistency tests。
+4. 在 HITL1 gate definition 复用 `field_value` rule，更新 gate-rule audit、gate tests 与所有 deterministic pass fixtures。
+5. 增加 real Agent-controlled case-115，更新 `RUN_EXPS.md`、CHANGELOG 与 `DPT_FRAMEWORK/RUN.md`，版本提升到 `v0.18`。
 
-回滚时删除新模板字段和 gate rule即可；旧 bundle 中额外的 `research_access` 字段不会影响旧 ProfileSchema 的其他 authority surface。
+回滚时删除新 template 字段、schema branch、HITL1 field-value rule 与 probe guidance，并恢复 HITL1 `no_search` expected policy。Style writer 的完整-object 保真写入是独立简化，可安全保留，不需要恢复字段 allowlist serializer。
 
 ## Open Questions
 
-无。工具 surface 的具体名称按运行环境原样记录，不建立预注册枚举。
+无。工具 surface 名称按运行环境原样选择性记录，不建立预注册枚举。

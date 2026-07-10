@@ -6,13 +6,13 @@
 
 The system SHALL provide Zod contracts for bundle control file validation. The Queue contract SHALL validate queue v2 `rb_queue.json` with queue demand items keyed by `queue_item_id`, ordered `active_window`, ordered `refill_pool`, `delegated_in_flight`, and `terminal_history`. Work-unit attempt state SHALL be validated through work-unit index, manifest, result, receipt, and ledger schemas rather than queue demand item schema.
 
-The Profile contract SHALL support an optional legacy-compatible `research_access` observation. New bundle templates SHALL initialize it with `status: unprobed`. The observation SHALL use a closed status enum `unprobed | available | unavailable` and SHALL validate only direct recorded facts:
+The Profile contract SHALL support an optional legacy-compatible `research_access` observation. New bundle templates SHALL initialize it with `status: unprobed`. The observation SHALL use strict status-discriminated branches and validate only direct recorded facts:
 
-- `available` requires a non-empty probe timestamp, named search/fetch tool surface, URL-parseable `result_url`, and `fetch_outcome: success`;
-- `unavailable` requires a non-empty probe timestamp, `fetch_outcome` other than success or an absent tool, and a non-empty `reason`;
-- `unprobed` SHALL NOT claim successful URL/fetch evidence.
+- `unprobed` SHALL contain only `status: unprobed` and SHALL NOT carry URL, fetch success, timestamp, reason, or tool-surface claims;
+- `available` SHALL require an ISO 8601 `probed_at`, an HTTP(S) `result_url`, and `fetch_outcome: success`; optional trim-non-empty `search_surface` and `fetch_surface` strings MAY record audit labels;
+- `unavailable` SHALL require an ISO 8601 `probed_at`, `fetch_outcome: failed | blocked | not_attempted`, and a trim-non-empty `reason`; optional `result_url` SHALL be HTTP(S) when present, and optional `search_surface` / `fetch_surface` SHALL be trim-non-empty when present.
 
-Missing `research_access` in a legacy profile SHALL remain schema-readable and SHALL be treated by pre-research checks as unprobed, not as available.
+Missing `research_access` in a legacy profile SHALL remain schema-readable and SHALL be treated by HITL1 checks as unprobed, not as available. The Profile contract SHALL NOT store a derived gate verdict, response body, query history, retry list, or HTTP status matrix for this observation.
 
 #### Scenario: Queue contract validates queue v2
 
@@ -29,16 +29,22 @@ Missing `research_access` in a legacy profile SHALL remain schema-readable and S
 #### Scenario: available research access is internally consistent
 
 - **WHEN** `research_access.status` is `available`
-- **THEN** ProfileSchema SHALL require a parseable result URL and successful fetch outcome
-- **AND** incomplete available observations SHALL fail validation
+- **THEN** ProfileSchema SHALL require an ISO probe timestamp, HTTP(S) result URL, and `fetch_outcome: success`
+- **AND** missing or contradictory available observations SHALL fail validation
 
-#### Scenario: unavailable research access carries a reason
+#### Scenario: unavailable research access carries direct failure facts
 
 - **WHEN** `research_access.status` is `unavailable`
-- **THEN** ProfileSchema SHALL require a non-empty reason and probe timestamp
+- **THEN** ProfileSchema SHALL require an ISO probe timestamp, non-success fetch outcome, and non-empty reason
+- **AND** a success claim in the unavailable branch SHALL fail validation
+
+#### Scenario: unprobed cannot claim success
+
+- **WHEN** `research_access.status` is `unprobed` with timestamp, URL, outcome, reason, or tool-surface fields
+- **THEN** ProfileSchema SHALL fail validation rather than silently accepting contradictory fields
 
 #### Scenario: legacy profile is unprobed rather than available
 
 - **WHEN** an existing profile has no `research_access` field
 - **THEN** ProfileSchema SHALL remain readable for compatibility
-- **AND** HITL1/pre-research checks SHALL treat the capability as unprobed
+- **AND** HITL1 checks SHALL treat the capability as unprobed
