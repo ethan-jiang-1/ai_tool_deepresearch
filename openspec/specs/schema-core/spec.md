@@ -44,6 +44,14 @@ The schema SHALL define 11 Zod enums: the original 10 plus `rerun_ready` added t
 
 The system SHALL provide Zod contracts for bundle control file validation. The Queue contract SHALL validate queue v2 `rb_queue.json` with queue demand items keyed by `queue_item_id`, ordered `active_window`, ordered `refill_pool`, `delegated_in_flight`, and `terminal_history`. Work-unit attempt state SHALL be validated through work-unit index, manifest, result, receipt, and ledger schemas rather than queue demand item schema.
 
+The Profile contract SHALL support an optional legacy-compatible `research_access` observation. New bundle templates SHALL initialize it with `status: unprobed`. The observation SHALL use strict status-discriminated branches and validate only direct recorded facts:
+
+- `unprobed` SHALL contain only `status: unprobed` and SHALL NOT carry URL, fetch success, timestamp, reason, or tool-surface claims;
+- `available` SHALL require an ISO 8601 `probed_at`, an HTTP(S) `result_url`, and `fetch_outcome: success`; optional trim-non-empty `search_surface` and `fetch_surface` strings MAY record audit labels;
+- `unavailable` SHALL require an ISO 8601 `probed_at`, `fetch_outcome: failed | blocked | not_attempted`, and a trim-non-empty `reason`; optional `result_url` SHALL be HTTP(S) when present, and optional `search_surface` / `fetch_surface` SHALL be trim-non-empty when present.
+
+Missing `research_access` in a legacy profile SHALL remain schema-readable and SHALL be treated by HITL1 checks as unprobed, not as available. The Profile contract SHALL NOT store a derived gate verdict, response body, query history, retry list, or HTTP status matrix for this observation.
+
 #### Scenario: Queue contract validates queue v2
 
 - **WHEN** `validate-bundle.mjs` checks `rb_queue.json`
@@ -55,6 +63,29 @@ The system SHALL provide Zod contracts for bundle control file validation. The Q
 - **WHEN** a queue demand item uses `work_id` as its demand identifier
 - **THEN** queue v2 validation SHALL fail
 - **AND** the diagnostic SHALL require `queue_item_id`
+
+#### Scenario: available research access is internally consistent
+
+- **WHEN** `research_access.status` is `available`
+- **THEN** ProfileSchema SHALL require an ISO probe timestamp, HTTP(S) result URL, and `fetch_outcome: success`
+- **AND** missing or contradictory available observations SHALL fail validation
+
+#### Scenario: unavailable research access carries direct failure facts
+
+- **WHEN** `research_access.status` is `unavailable`
+- **THEN** ProfileSchema SHALL require an ISO probe timestamp, non-success fetch outcome, and non-empty reason
+- **AND** a success claim in the unavailable branch SHALL fail validation
+
+#### Scenario: unprobed cannot claim success
+
+- **WHEN** `research_access.status` is `unprobed` with timestamp, URL, outcome, reason, or tool-surface fields
+- **THEN** ProfileSchema SHALL fail validation rather than silently accepting contradictory fields
+
+#### Scenario: legacy profile is unprobed rather than available
+
+- **WHEN** an existing profile has no `research_access` field
+- **THEN** ProfileSchema SHALL remain readable for compatibility
+- **AND** HITL1 checks SHALL treat the capability as unprobed
 
 ### Requirement: Rerun tracking field in HITL2 profile
 
