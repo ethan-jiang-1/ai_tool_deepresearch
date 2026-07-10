@@ -4,8 +4,8 @@ suite: deep-research-guidelines
 title: Agentic Subagent Mechanism
 status: effective
 created: 2026-06-24
-revised: 2026-07-06
-role: architectural constitution for work-unit-mediated sub-agent execution
+revised: 2026-07-10
+role: mechanism guidance for work-unit-mediated sub-agent execution
 scope: Sub-agent actor behavior through Engine-allocated work units, noise isolation, and submit provenance
 authority: guidance
 defers_to:
@@ -23,15 +23,15 @@ siblings:
 
 # Agentic Subagent Mechanism
 
-> 状态: 生效 | 创建: 2026-06-24 | 修订: 2026-07-06 | 适用: 所有涉及 Sub-agent 派发、执行、提交、取证的设计与实现
+> 状态: 生效 | 创建: 2026-06-24 | 修订: 2026-07-10 | 适用: 所有涉及 Sub-agent 派发、执行、提交、取证的设计与实现
 
-Sub-agent 仍然存在。它是一个 bounded Agent actor，用来隔离高噪声 I/O 工作。生产机制已经统一为 work units:
+Sub-agent 仍然存在。它是一个 bounded Agent actor，用来隔离高噪声 I/O 工作。正常生产机制已经统一为 work units:
 
 ```text
 queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate
 ```
 
-The old delegated transport is retired as production guidance. Do not use this guideline to revive any alternate delegated completion path.
+The old delegated transport is retired as production guidance. The only terminal completion exception is explicit audited `operate-work-unit late-submit` for an eligible targeted `timed_out` attempt; it uses the same work-unit, validation, queue, and ledger authorities and is not an alternate transport.
 
 ---
 
@@ -43,7 +43,8 @@ The old delegated transport is retired as production guidance. Do not use this g
 | `_work_units/_index.json` | Current | Bundle-root allocation and attempt-state registry, not gate pass coverage |
 | Work-unit envelope | Current | `manifest.json`, `task.md`, `result.schema.json`, `_beacon.json`, `runtime-receipt.jsonl`, result/status surfaces, optional runtime refs |
 | Native Sub-agent actor | Current | Reads the bounded work-unit task and returns schema-valid result JSON |
-| `operate-work-unit submit` | Current | Only successful delegated completion transaction |
+| `operate-work-unit submit` | Current | Normal successful delegated completion transaction for eligible claimed attempts |
+| `operate-work-unit late-submit` | Current narrow exception | Explicit audited completion only for an eligible targeted `timed_out` attempt when replacement coverage does not already exist |
 | `rb_output_declarations.jsonl` | Current | Bundle-root submitted work-unit ledger used by gates |
 | Runtime refs | Diagnostic | Platform thread/session/spawn/cancel IDs may help debugging but are never authority |
 
@@ -87,6 +88,7 @@ queue demand -> one Engine-allocated attempt -> bounded Sub-agent work -> one su
 - Submit validation should inspect direct envelope/result/receipt/output/cache facts and return the smallest actionable root cause.
 - If a prerequisite such as identity or receipt binding fails, dependent provenance checks should not flood the Phase Agent with cascading symptoms.
 - Retry remains an explicit new attempt or a narrowly accepted audited exception; it should not become a hidden lineage-recovery controller.
+- Normal completion remains `submit`; `late-submit` is one command-targeted audited exception, not a second general success path.
 - Prefer repairing the same visible attempt or closing it explicitly over adding background state that guesses whether work is done.
 - A new delegated mechanism should remove an existing branch or duplicated contract; adding another completion path by itself is a reliability regression.
 
@@ -182,7 +184,15 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --r
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs abandon <bundle> --work-id <id> --reason "<reason>"
 ```
 
-Retry allocates a new `work_id`. Late submit against a terminal attempt fails closed.
+Retry normally allocates a new `work_id`. Normal `submit` against any terminal attempt fails closed.
+
+The only terminal completion exception is explicit audited:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs late-submit <bundle> --work-id <timed_out_id> --result <result.json> --reason "<reason>"
+```
+
+`late-submit` targets one eligible `timed_out` attempt, reuses normal submit validation, rejects `failed`/`abandoned` attempts and submitted replacement coverage, and cleans up only the conflicting non-submitted retry state required by the accepted contract. It must not grow into automatic late acceptance, lineage guessing, or a general terminal recovery controller.
 
 ---
 
@@ -194,6 +204,7 @@ Retry allocates a new `work_id`. Late submit against a terminal attempt fails cl
 - MUST spawn Sub-agents only with bounded work-unit task prompts.
 - MUST submit returned result JSON through `operate-work-unit submit`.
 - MUST repair submit rejection or explicitly close terminal attempts.
+- MAY invoke explicit audited `late-submit` only for a command-targeted eligible `timed_out` attempt under the accepted contract; MUST NOT treat it as the default retry path.
 - MUST run wave gates after phase drain.
 - MUST NOT hand-write submitted ledger rows.
 - MUST NOT use filesystem presence as delegated coverage.
@@ -215,6 +226,7 @@ Retry allocates a new `work_id`. Late submit against a terminal attempt fails cl
 - MUST treat `_work_units/` and receipts as cross-check/diagnostic surfaces unless tied to submitted coverage.
 - MUST reject or diagnose direct/orphan delegated artifacts that lack submitted coverage.
 - MUST prefer direct submit facts, prerequisite short-circuiting, and one actionable repair target over cascading validation output.
+- MUST keep normal submit and audited late-submit on the same validation/ledger authority path; MUST NOT create another delegated completion authority.
 
 ---
 

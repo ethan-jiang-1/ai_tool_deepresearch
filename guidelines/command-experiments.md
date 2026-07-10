@@ -4,6 +4,7 @@ suite: deep-research-guidelines
 title: Command Experiments Guideline
 status: effective
 created: 2026-06-17
+revised: 2026-07-10
 role: guidance for durable command experiment shape and boundaries
 scope: experiments_playbook/*, experiments
 authority: guidance
@@ -12,6 +13,7 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
+  - guidelines/simple-reliable-control.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/agentic-execution-model.md
   - guidelines/agentic-queue-mechanism.md
@@ -21,7 +23,7 @@ siblings:
 
 # Guideline: command_experiments Current Guidance
 
-> 状态: 生效 | 创建: 2026-06-17 | 适用于: `experiments_playbook/exp_*`, `experiments_playbook/exph_*`
+> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-10 | 适用于: `experiments_playbook/exp_*`, `experiments_playbook/exph_*`
 
 ---
 
@@ -97,6 +99,25 @@ Variable surface:
 
 When extending command experiments, preserve the stable core and let the variable surface be mechanism-specific. Do not copy the shape of the current experiment families unless that shape answers the new mechanism's proof question.
 
+## Minimal Proof Surface
+
+Command experiments follow [`simple-reliable-control.md`](simple-reliable-control.md). The experiment harness is itself a quality-control mechanism, so it must be simpler than the behavior it claims to prove.
+
+Default shape:
+
+```text
+one mechanism question
+  -> smallest real production boundary
+  -> smallest sufficient runtime assertions
+  -> trace-backed verdict
+```
+
+- One case should answer one proof question. Do not combine unrelated happy path, recovery, Agent behavior, schema drift, and performance claims merely to make a case look comprehensive.
+- Reuse production validators and trace writers. A playbook-local checker may inspect case-specific facts, but it must not become a second implementation of the mechanism.
+- Assert only facts needed for the claim and anti-cheating boundary. More checks are not automatically stronger evidence; dependent symptoms should not be repeated as separate verdict conditions.
+- Heavy Agent/external-tool cases are required only when the claim depends on real Agent or external behavior. Do not add heavy cases to prove deterministic Engine facts already covered by focused tests.
+- If the harness needs several layers of fixture translation, state synchronization, result rewriting, or custom recovery to reach the verdict, reduce the claim or move the proof to the correct test layer.
+
 ---
 
 ## Experiment-Production Convergence Contract
@@ -157,6 +178,8 @@ A playbook is not complete until a coding agent has executed it from a clean rep
 
 This applies regardless of how confident the author is in the logic. Mechanism-under-test failures, stale state from earlier steps, gate output format drift, and shell-escaping bugs all surface only at execution time.
 
+PASS is meaningful only for the declared proof question. It does not justify adding more cases, more verdict checks, or a broader production claim when the smallest real case already answers the question.
+
 ---
 
 ## Experiment Charter
@@ -177,6 +200,7 @@ The safety rules below always apply. Concrete path or helper names refer to the 
 - MUST keep inline `.mjs` code, when present, as a thin deterministic driver/checkpoint.
 - MUST let Engine/CLI output return to the LLM as actionable context.
 - MUST design case-specific runtime assertions from the case goal: which trace events, receipts, files, state, content markers, queue status, or artifacts prove the run did the intended thing.
+- MUST keep verdict-affecting assertions to the smallest independent set that proves the case goal and anti-cheating boundary.
 - MUST record critical runtime artifact assertions as trace `check` events so the final verdict includes them.
 - MUST make the final verdict come from trace JSONL.
 - MUST end every playbook with a reportable PASS/FAIL verdict that a higher-level runner can aggregate.
@@ -199,6 +223,8 @@ The safety rules below always apply. Concrete path or helper names refer to the 
 - MUST NOT leave important runtime file/content verification as console-only `PASS`/`FAIL` text if that verification is part of the case's pass condition.
 - MUST NOT let an outer runner combine multiple playbooks, rewrite their steps into an "equivalent" script, skip slow Agent work, or infer success by reading instead of running.
 - MUST NOT leave a successful experiment bundle behind.
+- MUST NOT create a playbook-local validator, recovery controller, or fixture transformation chain that duplicates the production authority being tested.
+- MUST NOT treat repeated dependent checks as stronger evidence after one prerequisite failure already decides the case.
 
 判断标准：**这个事件是真实发生的，还是脚本/人写出来假装发生的？**
 
@@ -804,10 +830,11 @@ These criteria are not required for design approval. They apply when deciding wh
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
-- [Agentic Queue Mechanism](agentic-queue-mechanism.md) — architectural constitution for queue-driven phase execution; queue engine (AGQ-001~006) implemented runtime, seed-topics/wave0/wave1/wave2 integrations accepted/current, remaining loop-engineering gaps pending OpenSpec.
+- [Simple Reliable Control](simple-reliable-control.md) — minimal proof surfaces, real authority paths, and quality-control complexity limits.
+- [Agentic Queue Mechanism](agentic-queue-mechanism.md) — mechanism guidance for queue-driven phase execution; current queue integrations remain authoritative, while future stop/context/recovery work must choose the smallest OpenSpec-approved control shape.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — Tier 1 (Chain): phase-to-phase routing.
-- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — architectural constitution for work-unit-mediated Sub-agent execution.
+- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — mechanism guidance for work-unit-mediated Sub-agent execution.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for framework assets versus runtime bundles.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
 - Accepted specs under `openspec/specs/` — capability requirements, including agent-assisted experiment playbooks.

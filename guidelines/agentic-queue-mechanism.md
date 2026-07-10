@@ -4,8 +4,8 @@ suite: deep-research-guidelines
 title: Agentic Queue Mechanism
 status: effective
 created: 2026-06-17
-revised: 2026-07-06
-role: architectural constitution for queue-driven phase execution
+revised: 2026-07-10
+role: mechanism guidance for queue-driven phase execution
 scope: Agentic Queue (AGQ) — queue engine operations and loop-engineering architectural principles
 authority: guidance
 defers_to:
@@ -13,6 +13,7 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
+  - guidelines/simple-reliable-control.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-execution-model.md
@@ -22,13 +23,13 @@ siblings:
 
 # Agentic Queue Mechanism
 
-> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-06 | 适用: 所有 queue-driven phase 执行的设计与实现
+> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-10 | 适用: 所有 queue-driven phase 执行的设计与实现
 
 Agentic Queue (AGQ) 是 Engine-side 的任务队列系统：Phase Agent 从队列领取任务、执行、完成、领下一个——在 phase 内部形成自主静默的执行循环。
 
 > ## Implementation Status
 >
-> **这份 guideline 描述的内容有两层：架构原则已定调，queue engine 与部分 phase 集成已实现，但部分行为尚未实现。读之前先看清楚：**
+> **这份 guideline 描述的内容有两层：Queue/Chain/Work Unit 边界与部分 runtime 已实现；若干剩余问题只表示结果义务已知，不代表复杂实现已经预批准。读之前先看清楚：**
 >
 > | 内容 | 状态 | 说明 |
 > |------|------|------|
@@ -37,12 +38,12 @@ Agentic Queue (AGQ) 是 Engine-side 的任务队列系统：Phase Agent 从队�
 > | Work-unit delegated completion | **✅ 已实现** | Delegated queue demand completes through `operate-work-unit submit`, not through queue completion |
 > | 两层嵌套 loop 架构 | **📐 定调** | 外层 (gate+chain) vs 内层 (queue) 的边界划分已在本文件 §3–§5 定调。内层 loop 的 workflow 集成已部分落地（见下两行） |
 > | Phase node MD 驱动 queue loop | **✅ 部分实现** | `phase-seed-topics.md`、`phase-wave0.md`、`phase-wave1.md`、`phase-wave2.md` 已接入并归档入 accepted specs。readiness 仍不是标准 queue-driven phase。 |
-> | Stop authorization 强制执行 | **❌ 未实现** | Engine 已计算 `stop_authorization_state`，但无任何东西读取它来阻止 Phase Agent 停机。§7.2 |
-> | 灌料机制（filling） | **✅ 已实现** | 两个已接入 phase 都有 task card JSON 模板——Phase Agent 从 `topic_registry` 派生 task card → 写 JSON → `operate-queue enqueue --task`。仍为手写模板+CLI，未做 JS helper（§7.1） |
-> | Error recovery（stale claim / crash） | **❌ 未实现** | `claim()` 不检测 stale running 状态。§7.4 |
+> | Stop authorization 强制执行 | **❌ 未形成统一 runtime contract** | Phase/gate/drain 已有部分继续义务；若后续补强，应优先使用 decision-point cue 或直接 drain fact，不因此预设 chat interceptor/watchdog。§7.2 |
+> | 灌料机制（filling） | **✅ 已实现** | seed-topics/wave0/wave1/wave2 使用 phase guidance + CLI 写入 queue demand。当前直接路径可用；不存在“必须再做 JS task-card factory”的目标。§7.1 |
+> | Error recovery（stale claim / crash） | **✅ 基础显式恢复；无通用自动恢复** | work-unit inspect、submit rejection repair、timeout/fail/abandon、replacement retry 与狭窄 audited late-submit 已存在；queue-level stale auto-healing/watcher 不是当前默认目标。§7.4 |
 > | Context sustainability 验证 | **❌ 未验证** | Sub-agent + render projection 隔离能否控制上下文增长——未经过实验测量。§7.3 |
 >
-> **这份文件是指导（guidance），不是运行时事实。** 它告诉你架构怎么设计、边界在哪里、规则是什么。queue engine 已实现，seed-topics/wave0/wave1/wave2 的 queue 集成已落地并进入 accepted specs；但 stop authorization 强制执行、error recovery、context sustainability 验证仍未实现。新的 queue 集成或 queue contract 变更必须先走 OpenSpec proposal → spec → tasks。
+> **这份文件是指导（guidance），不是运行时事实。** 它告诉你边界和最小设计姿态。queue engine 与 seed-topics/wave0/wave1/wave2 集成已落地；剩余 gap 必须先证明现有 direct authority 不足，再通过 OpenSpec 增加最小机制。不要从“需要 recovery/stop/context 保障”直接跳到 watcher、daemon、controller、自动 retry tree 或新状态层。
 
 ---
 
@@ -52,7 +53,7 @@ The hard part of working with a phase-running Agent actor is not task complexity
 
 The Agentic Queue is the mechanism that makes this possible. A self-contained task card gives the Phase Agent a clear target, done-condition, and receipt to produce. The Engine-side checkpoint validates completed work, advances state, and renders the next card — so the Phase Agent keeps moving through the queue in one continuous run instead of stopping to ask "what's next?"
 
-This file establishes the architectural constitution for queue-driven phase execution: the two-loop model (§3), the dispatch rule (§4), structural constraints (§5), task card principles (§6), and derived constraints that must be solved for loop engineering to work (§7). The queue engine and seed-topics/wave0/wave1/wave2 queue integrations are accepted/current. Remaining loop engineering, especially engine-enforced stop authorization and crash/error recovery, is settled architectural direction — implementation requires OpenSpec change.
+This file establishes mechanism guidance for queue-driven phase execution: the two-loop model (§3), the dispatch rule (§4), structural constraints (§5), task card principles (§6), and unresolved result obligations (§7). The queue engine and seed-topics/wave0/wave1/wave2 queue integrations are accepted/current. A result obligation such as recovery or stop visibility does not pre-approve a particular implementation; any behavior change requires an OpenSpec change and must follow the smallest reliable control path.
 
 This file inherits the project charter split: **LLM owns judgment, Markdown controls Agent Flow, Engine owns deterministic checkpoints.** The queue is an Engine-side tool; it does not drive the Agent, replace content judgment, or control phase-to-phase routing.
 
@@ -66,7 +67,7 @@ This file can decide:
 - The dispatch rule that classifies every piece of work by its verifier and routes it accordingly.
 - Structural constraints on how queue, gate, chain, and repair paths interact.
 - Task card principles: verification split between engine and agent, target separation between direct Phase Agent execution and delegated Sub-agent execution.
-- Derived constraints that must be solved for loop engineering to work: filling, stop authorization enforcement, context sustainability, error recovery.
+- Result obligations that queue-based execution must satisfy where applicable: filling, stop visibility, context sustainability, and explicit recovery.
 - Behavioral MUST / MUST NOT for queue operations, Phase Agent behavior, context management, and implementation discipline.
 
 This file cannot decide:
@@ -75,6 +76,22 @@ This file cannot decide:
 - Current run state, queue contents, gate outcomes, or evidence counts.
 - Implementation permission for new queue behavior without an OpenSpec change.
 - Whether a specific phase uses Q — this file gives the decision framework; the Phase Agent decides while operating in MD controller mode.
+
+---
+
+## Simple Queue Control Posture
+
+This Tier 2 mechanism follows [`simple-reliable-control.md`](simple-reliable-control.md). Queue reliability comes from direct queue/work-unit facts and explicit operations, not from hiding failures behind more loop machinery.
+
+```text
+queue demand fact -> one claim/complete/submit check -> one repair or terminal action -> rerun the same visible operation
+```
+
+- `rb_queue.json` and Engine-owned work-unit state remain the direct authorities; projections and logs do not become a second queue truth.
+- Queue, Work Unit, and Gate may cross-check different authority types, but SHALL NOT each reimplement the same completion fact.
+- A missing prerequisite or invalid attempt identity should stop dependent queue/coverage diagnostics before they cascade.
+- Recovery should expose one explicit action: repair the same attempt, submit it, wait on a still-valid lease, terminalize it, or claim one replacement. Do not build hidden retry choreography.
+- Existing accepted queue behavior remains current. Future changes should simplify locally and must not turn §7 problem statements into generalized controllers without separate evidence.
 
 ---
 
@@ -213,37 +230,37 @@ Queue active window is not a Sub-agent work pool. Delegated fan-out is created o
 
 ## 7. Derived Constraints
 
-These are not architectural rules (§5) — they are implementation properties that must hold for loop engineering to actually work. Each is a "the loop cannot function without solving this" constraint, not an open question.
+These are not pre-approved mechanisms. They are result obligations or risks that must be handled only when the applicable phase/runtime path needs them. Each subsection states the simplest acceptable posture first; a more complex implementation needs separate OpenSpec evidence.
 
 ### 7.1 Filling: The Weakest Link
 
 Queue starts with ordered demand locations. Without filling `active_window` or `refill_pool`, the inner loop has no demand to claim. Without closing non-terminal delegated in-flight work units, the phase is not drained.
 
-The filling mechanism must be cheap enough that it does not defeat the purpose: if creating task cards is more work than just doing the tasks, the queue provides negative value. The Phase Agent is responsible for ensuring the queue is filled at phase entry while operating in MD controller mode. The exact filling mechanism (JS helper derivation from plan artifacts vs Agent template-based generation) is an implementation decision — but the constraint that filling MUST be solved is architectural, not optional.
+The filling mechanism must be cheap enough that it does not defeat the purpose: if creating task cards is more work than just doing the tasks, the queue provides negative value. The Phase Agent is responsible for ensuring the queue is filled when a queue-driven phase requires demand. Prefer the current direct phase-guidance + CLI path. Do not add a task-card generator, derived planning state, or auto-refill controller unless a concrete repeated failure proves the direct path insufficient.
 
 ### 7.2 Stop Authorization: Computed But Not Enforced
 
 The engine already computes `stop_authorization_state` in `claim()`: refill pool non-empty → `unauthorized_continue_required`; refill pool empty → `empty_queue_after_refill`. Valid stop states are `final_delivery`, `decision_blocker`, and `empty_queue_after_refill`. The default is `unauthorized_continue_required` — the Phase Agent must continue.
 
-The enforcement point is now phase drain and gate readiness: queue demand, delegated in-flight work units, expired attempts, and repair/refill demand must all be accounted for before the gate can advance. MD-level instructions alone are not enough; Engine/CLI feedback must make continuation or repair visible.
+The enforcement point is phase drain and gate readiness: queue demand, delegated in-flight work units, expired attempts, and repair/refill demand must all be accounted for before the gate can advance. The preferred reinforcement is a short Engine/CLI continuation or repair cue at the decision point. This requirement does not authorize chat interception, a session watcher, or a new stop state machine.
 
 ### 7.3 Context Sustainability: An Unverified Assumption
 
 The claim that queue-driven execution prevents context explosion rests on a measurable assumption: delegated high-I/O work writes declared outputs/cache and returns bounded result JSON, while Phase Agent reads projections, submit diagnostics, and gate feedback rather than raw search trails. If the Phase Agent reads full Sub-agent results and cache dumps back into the conversation after every submit, the queue has not reduced context pressure.
 
-The intended mechanism is sub-agent isolation (heavy I/O writes to `_cache`, Phase Agent reads only the render projection's done-condition). Whether this keeps context growth sub-linear is unknown and must be experimentally validated — not assumed from queue design.
+The intended mechanism is sub-agent isolation (heavy I/O writes to declared outputs/cache, Phase Agent reads bounded projections and diagnostics). Whether this keeps context growth manageable is unknown and must be experimentally validated — not assumed from queue design. If context pressure remains, first reduce what is read; do not create a stack of summaries, memory mirrors, or inferred context states.
 
 > **See also:** [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) §4（噪声隔离）和 §4（不给全貌只给结论）——定义了 sub-agent 如何通过 bounded context + structured output 在机制上保护 Phase Agent 上下文。Context sustainability 的验证是 queue loop 能否长程运行的关键实验，但噪声隔离本身是已定调的结构性原则。
 
 ### 7.4 Error Recovery: Stale Claims and Crash Resilience
 
-Long-running queue loops must survive interruption. Delegated attempts record claim timestamps, deadlines, status, and retry lineage in work-unit state. If the Phase Agent crashes between claim and submit, inspect must reveal non-terminal or expired attempts so the Phase Agent can submit, timeout, fail, abandon, or retry. Three properties are required:
+Long-running queue loops must survive interruption through bundle truth. Delegated attempts record claim timestamps, deadlines, status, and retry lineage in work-unit state. After interruption, inspect should reveal the earliest actionable state so the Phase Agent can submit, repair, wait, timeout, fail, abandon, use a narrowly accepted audited exception, or claim one replacement.
 
 - **Stale attempt detection**: inspect must report expired or mismatched delegated attempts without silently healing them.
-- **Crash recovery**: queue and work-unit state must let the Phase Agent resume, terminalize, or retry safely.
-- **Queue health visibility**: projection/inspect must report demand location, in-flight attempts, terminal history, and drift.
+- **Crash recovery**: queue and work-unit state must let the Phase Agent choose one explicit resume, terminalize, audited exception, or replacement action safely.
+- **Queue health visibility**: projection/inspect should present the direct root state and nearest action; it need not flatten every derived symptom into primary output.
 
-These are engine-side requirements — they cannot be solved by MD instructions alone.
+These are deterministic checkpoint obligations where direct bundle facts exist. They do not require background monitoring or silent auto-healing; explicit inspect plus explicit mutation is the default.
 
 ---
 
@@ -283,7 +300,9 @@ These are engine-side requirements — they cannot be solved by MD instructions 
 - MUST route new AGQ behavior through OpenSpec proposal/spec/tasks before implementation.
 - MUST NOT implement loop-engineering behavior directly from this guideline without an accepted OpenSpec change.
 - MUST treat the queue engine (AGQ-001~006) as implemented runtime truth.
-- MUST treat loop-engineering integration as settled architectural direction: queue engine + seed-topics/wave0/wave1/wave2 queue integrations are accepted runtime truth; remaining gaps such as engine-enforced stop authorization, error recovery, and context sustainability validation are pending OpenSpec — not as currently implemented.
+- MUST treat queue engine + seed-topics/wave0/wave1/wave2 integrations as accepted runtime truth.
+- MUST treat remaining stop/context/recovery gaps as problem statements, not as approval for a specific mechanism; proposals SHALL start with the shortest direct-authority solution and explain any added state or branch.
+- MUST NOT add a watcher, daemon, hidden retry loop, duplicate queue truth, or projection-of-projection merely because a historical subsection names a reliability risk.
 
 ---
 
@@ -292,9 +311,8 @@ These are engine-side requirements — they cannot be solved by MD instructions 
 - **`project-charter.md`** defines the four-layer split (Agent/Markdown/Engine/JSON). This guideline operates entirely within that split: the queue is an Engine-side tool; Markdown controls whether and how the Phase Agent uses it.
 - **`agentic-workflow-mechanism.md`** defines the outer loop (MD → execute → gate → chain → next). This guideline's inner loop nests inside that outer loop. The two are complementary, not competing.
 - **`agentic-subagent-mechanism.md`** defines work-unit-mediated Sub-agent execution. Queue demand becomes delegated work only when the Engine claims it into a work unit; fan-out happens through `claim --count N`, not through queue window shape.
+- **`simple-reliable-control.md`** governs the complexity posture of filling, stop visibility, recovery, repair, and queue diagnostics. This file defines Queue boundaries; it does not override that complexity brake.
 - **`openspec/specs/agentic-queue/spec.md`** defines accepted engine requirements (AGQ-001~006). This guideline describes architectural principles; the spec defines implementable behavior. When they conflict, the spec wins.
-- **`_backlog/queue/agentic-queue-landing-analysis.md`** is the detailed application analysis from which this guideline extracts its constitutional principles. The landing analysis contains scenario enumeration (8 scenarios), current-state inventory, implementation strategy (Path A/B, phased rollout), and concrete templates. When this guideline is silent on an application detail, consult the landing analysis. When they conflict on a principle, this guideline is authority — it is the extracted constitution. The landing analysis remains in `_backlog/` as a historical analysis document; it is not a guideline, not a spec, and not runtime truth.
-
 General rule: when this guideline conflicts with an accepted spec or executable contract, the spec/contract wins. Fix the guideline.
 
 ---
@@ -303,11 +321,11 @@ General rule: when this guideline conflicts with an accepted spec or executable 
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
+- [Simple Reliable Control](simple-reliable-control.md) — complexity brake for direct queue facts, explicit recovery, and minimal diagnostics.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; this file's parent document.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — Tier 1 (Chain): the outer loop this inner loop nests inside.
-- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — architectural constitution for work-unit-mediated Sub-agent execution.
+- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — mechanism guidance for work-unit-mediated Sub-agent execution.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for framework assets versus runtime bundles.
 - [Command Experiments](command-experiments.md) — how to prove mechanisms with real runtime contexts.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
 - [Accepted specs](../openspec/specs/) — accepted capability requirements.
-- [`_backlog/queue/agentic-queue-landing-analysis.md`](../_backlog/queue/agentic-queue-landing-analysis.md) — detailed application analysis; constitutional companion to this guideline.

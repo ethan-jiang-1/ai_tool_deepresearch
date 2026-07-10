@@ -4,6 +4,7 @@ suite: deep-research-guidelines
 title: Framework Runtime Boundary
 status: effective
 created: 2026-06-19
+revised: 2026-07-10
 role: directory and authority boundary for framework assets versus run bundle runtime state
 scope: DPT_FRAMEWORK/, dpt_rb_*/, dpt_disp_*/
 authority: guidance
@@ -12,6 +13,7 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
+  - guidelines/simple-reliable-control.md
   - guidelines/logging-conventions.md
   - guidelines/command-experiments.md
   - guidelines/agentic-execution-model.md
@@ -22,7 +24,7 @@ siblings:
 
 # Framework Runtime Boundary
 
-> 状态: 生效 | 创建: 2026-06-19 | 用途: 固定 framework 只读资产与 run bundle 可变状态的边界
+> 状态: 生效 | 创建: 2026-06-19 | 修订: 2026-07-10 | 用途: 固定 framework 只读资产与 run bundle 可变状态的边界
 
 ---
 
@@ -65,6 +67,21 @@ This file cannot decide:
 - Accepted capability behavior, schema fields, CLI flags, state transitions, receipt grammar, or trace event contracts.
 - Current run state, queue contents, gate status, evidence counts, or verdict truth.
 - Implementation permission for future surfaces that have not passed OpenSpec and executable validation.
+
+---
+
+## Authority Path Simplicity
+
+This boundary follows [`simple-reliable-control.md`](simple-reliable-control.md). Directory separation is valuable because it keeps the truth path short:
+
+```text
+framework definition -> explicit CLI/check -> active bundle authority -> Agent-facing feedback
+```
+
+- Runtime checks should read the direct bundle authority for the truth type they validate.
+- `_cache/`, Markdown projections, logs, and console output may explain or render authority; they SHALL NOT become an intermediate truth chain when the direct JSON/YAML/JSONL/ledger surface is available.
+- A new projection should reduce Agent reading cost, not create another state that must be synchronized, recovered, and validated.
+- Framework/runtime compatibility should be handled at explicit schema/CLI boundaries, not by copying mutable state into `DPT_FRAMEWORK/` or maintaining shadow bundle roots.
 
 ---
 
@@ -296,6 +313,7 @@ Runtime continuity and logging details live in `guidelines/logging-conventions.m
 - MUST require gate CLIs to receive an explicit bundle path.
 - MUST resolve bare runtime paths such as `rb_queue.json`, `reference/`, `_cache/`, `_logs/`, and `_work_units/...` under the active bundle root.
 - MUST treat `_cache/` as rebuildable diagnostic/projection space, not primary authority.
+- MUST keep runtime quality checks on the shortest direct authority path available for the truth type.
 
 ## MUST NOT
 
@@ -305,6 +323,7 @@ Runtime continuity and logging details live in `guidelines/logging-conventions.m
 - MUST NOT put framework definitions in `_cache/`.
 - MUST NOT treat chat memory, progress summaries, or console output as runtime truth.
 - MUST NOT use guideline prose to override accepted specs, executable schema, CLI verdicts, or active bundle state.
+- MUST NOT validate a projection of a projection or use cache/log/console as a substitute for direct bundle authority when that authority is readable.
 
 ---
 
@@ -338,6 +357,7 @@ Runtime continuity and logging details live in `guidelines/logging-conventions.m
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
+- [Simple Reliable Control](simple-reliable-control.md) — direct authority paths and limits on projection/state complexity.
 - [Logging Conventions](logging-conventions.md) — runtime continuity, trace/log authority boundaries, and diagnostic log usage.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; defines the three-tier execution system.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — outer loop (Chain) that phase routing depends on.

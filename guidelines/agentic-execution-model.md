@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: Agentic Execution Model
 status: effective
 created: 2026-06-24
-revised: 2026-07-06
+revised: 2026-07-10
 role: unified execution model and terminology canon for the agentic execution system
 scope: the complete agentic execution loop, including Chain, Queue, and Work Unit execution
 authority: guidance
@@ -23,15 +23,15 @@ siblings:
 
 # Agentic Execution Model
 
-> 状态: 生效 | 创建: 2026-06-24 | 修订: 2026-07-06 | 适用: 所有涉及 agentic execution 的设计、实现与阅读
+> 状态: 生效 | 创建: 2026-06-24 | 修订: 2026-07-10 | 适用: 所有涉及 agentic execution 的设计、实现与阅读
 
-本文档是执行模型的术语正典。当前生产 delegated work 只有一条路径:
+本文档是执行模型的术语正典。当前生产 delegated work 的正常路径只有一条:
 
 ```text
 queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate
 ```
 
-The surviving actor is the **Sub-agent**. The retired delegated transport is no longer production guidance. Future guidance must teach one delegated path only.
+The surviving actor is the **Sub-agent**. The retired delegated transport is no longer production guidance. Future guidance must teach one delegated transport and authority path only. Explicit audited `late-submit` for one eligible timed-out attempt is a narrow transaction on that same path, not a second transport.
 
 ---
 
@@ -41,7 +41,7 @@ The surviving actor is the **Sub-agent**. The retired delegated transport is no 
 
 1. **Chain**: phase 间路由。Gate pass 后从 `transitions.chain.json` 得到 next phase。
 2. **Queue**: phase 内 demand 编排。Queue records say what work is needed and where each demand lives.
-3. **Work Unit**: delegated attempt execution。The Engine claims a queue demand into bundle-root `_work_units/waveN/{work_id}/`, a bounded Sub-agent performs the task, and `operate-work-unit submit` is the successful completion boundary.
+3. **Work Unit**: delegated attempt execution。The Engine claims a queue demand into bundle-root `_work_units/waveN/{work_id}/`, a bounded Sub-agent performs the task, and `operate-work-unit submit` is the normal successful completion boundary. Explicit audited `late-submit` is the only terminal exception accepted by current specs.
 
 All bare runtime paths in this execution model are active bundle-root relative. `_work_units/...`, `rb_queue.json`, `rb_output_declarations.jsonl`, `_cache/...`, and `_logs/...` refer to the selected `dpt_rb_*` or `dpt_disp_*` bundle, not repo root or `DPT_FRAMEWORK/`.
 
@@ -129,7 +129,7 @@ Phase Agent reads phase Markdown
   -> gate reads submitted ledger coverage plus cross-checks
 ```
 
-Do not route delegated success through queue completion. `operate-queue` remains for queue maintenance and non-delegated completion. Delegated success is `operate-work-unit submit`.
+Do not route delegated success through queue completion. `operate-queue` remains for queue maintenance and non-delegated completion. Delegated success normally uses `operate-work-unit submit`; the only terminal exception is explicit audited `operate-work-unit late-submit`, which still completes through work-unit validation and submitted ledger authority.
 
 ### 3.3 Concurrency
 
@@ -152,7 +152,8 @@ Sub-agents do not allocate IDs, mutate queue state, append ledgers, or pass gate
 | **Queue demand item** | A phase-local demand record identified by `queue_item_id` | using `work_id` for demand identity |
 | **Work unit** | One Engine-allocated delegated execution attempt identified by `work_id` | wave, topic, task card, runtime thread |
 | **Work-unit envelope** | bundle-root `_work_units/waveN/{work_id}/` directory with manifest, task, schema, beacon, receipt, result/status surfaces | non-work-unit delegated directories |
-| **Submit** | `operate-work-unit submit`; the only successful delegated completion transaction | delegated queue complete |
+| **Submit** | `operate-work-unit submit`; the normal successful delegated completion transaction for claimed attempts | delegated queue complete |
+| **Late-submit** | Explicit audited completion for one eligible targeted `timed_out` attempt through the same validation/ledger authority | generic terminal recovery, automatic late acceptance |
 | **Submitted ledger row** | Engine-written row in bundle-root `rb_output_declarations.jsonl` created by successful work-unit submit | filesystem-only output, hand-written declaration |
 | **Markdown control surface** | Agent-readable phase node, task, playbook, projection, or work-unit task | machine authority |
 | **MD controller mode** | Phase-level Markdown execution mode used by the Phase Agent | Agent identity |
@@ -217,13 +218,14 @@ Both axes must agree. A Markdown instruction can tell the Phase Agent to claim w
 
 - MUST describe production delegated work as `queue demand item -> work unit -> sub-agent -> submit -> ledger -> gate`.
 - MUST reserve `queue_item_id` for demand identity and `work_id` for delegated attempt identity.
-- MUST treat `operate-work-unit submit` as the only delegated success boundary.
+- MUST treat `operate-work-unit submit` as the normal delegated success boundary and explicit audited `operate-work-unit late-submit` as the only terminal completion exception.
 - MUST treat submitted ledger rows as delegated gate coverage authority.
 - MUST treat `_work_units/`, receipts, output files, cache trails, and runtime refs as cross-check or diagnostic surfaces unless tied to submitted ledger coverage.
 - MUST use "Sub-agent" for the surviving bounded actor.
 - MUST keep every cross-tier handoff explicit and short, with one direct authority and one actionable checkpoint result.
 - MUST NOT describe the retired delegated transport as a production path.
 - MUST NOT teach delegated queue completion, filesystem presence, or hand-written ledger rows as production coverage.
+- MUST NOT describe audited late-submit as a second delegated transport, default retry route, or generalized terminal recovery controller.
 - MUST NOT let a sub-agent mutate queue state, append ledgers, run gates, or authorize phase completion.
 - MUST NOT add hidden cross-tier inference, duplicate completion paths, or cascading diagnostics when the direct tier authority can answer the checkpoint.
 

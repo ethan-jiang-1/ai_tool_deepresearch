@@ -4,6 +4,7 @@ suite: deep-research-guidelines
 title: Agentic Workflow Mechanism
 status: effective
 created: 2026-06-23
+revised: 2026-07-10
 role: normative mechanism description of the Agent-driven dynamic-loading workflow loop
 scope: all Agent-driven workflow execution across DPT_FRAMEWORK/, dpt_rb_*/, and dpt_disp_*/
 authority: guidance
@@ -22,7 +23,7 @@ siblings:
 
 # Agentic Workflow Mechanism
 
-> 状态: 生效 | 创建: 2026-06-23 | 适用: 所有 Agent 驱动的 workflow 执行
+> 状态: 生效 | 创建: 2026-06-23 | 修订: 2026-07-10 | 适用: 所有 Agent 驱动的 workflow 执行
 
 ---
 
@@ -228,8 +229,8 @@ Every `fileRef` in `transitions.chain.json` must resolve to a readable Markdown 
 - **project-charter.md** 定义 Agent/Engine/Markdown 的 authority split。本文件描述这个 split 在 workflow 执行中的具体机制。
 - **simple-reliable-control.md** 定义本机制的复杂度上限：一跳路由、直接 gate facts、最小根因反馈，不把 Chain 扩成隐藏 controller。
 - **framework-runtime-boundary.md** 定义 framework assets vs runtime bundles 的目录边界。本文件假设这个边界已成立，在这个边界之上描述运行时循环。
-- **agentic-queue-mechanism.md** 定义 queue-driven phase execution 的架构宪法：两层嵌套 loop、dispatch rule、结构约束、派生约束。其 queue engine（`queue-manager.mjs` + `operate-queue.mjs`，AGQ-001~006）已实现；seed-topics/wave0/wave1/wave2 integrations 已归档入 accepted specs。stop authorization enforcement 等剩余 loop-engineering gap 仍待 OpenSpec 落地。本文件描述的循环是 AGQ 所依赖的当前运行时基础。
-- **agentic-subagent-mechanism.md** 定义 work-unit-mediated Sub-agent execution 的架构宪法：噪声隔离、bounded task、runtime receipt、submit provenance。本文件描述的 Chain 是 Sub-agent 执行的上层 phase 路由容器；Sub-agent work units 在单个 phase 内部被 claimed/submitted，不跨 phase。完整嵌套关系见 agentic-execution-model。
+- **agentic-queue-mechanism.md** 定义 queue-driven phase execution 的机制边界：两层嵌套 loop、dispatch rule、结构约束和结果义务。queue engine 与 seed-topics/wave0/wave1/wave2 integrations 已进入 accepted runtime；未来 stop/context/recovery work 仍需 OpenSpec，并受 simple-reliable-control 的最小实现纪律约束。
+- **agentic-subagent-mechanism.md** 定义 work-unit-mediated Sub-agent execution 的机制指导：噪声隔离、bounded task、runtime receipt、submit provenance。本文件描述的 Chain 是 Sub-agent 执行的上层 phase 路由容器；Sub-agent work units 在单个 phase 内部被 claimed/submitted，不跨 phase。完整嵌套关系见 agentic-execution-model。
 
 ---
 

@@ -4,6 +4,7 @@ suite: deep-research-guidelines
 title: Guidelines Index
 status: effective
 created: 2026-06-17
+revised: 2026-07-10
 role: index for the guidance suite
 scope: guidelines/
 authority: guidance
@@ -24,7 +25,7 @@ siblings:
 
 # Guidelines Index
 
-> 状态: 生效 | 创建: 2026-06-17
+> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-10
 
 `guidelines/` is the charter layer for this repo. It explains how to think and work here, but it is not the spec authority.
 
@@ -45,6 +46,19 @@ Read in this order:
 Detailed requirements live in `openspec/specs/`. Project-level OpenSpec rules live in `openspec/config.yaml`.
 
 When a guideline conflicts with accepted specs or executable schema, fix the guideline or create an OpenSpec change. Do not use guidance prose to override machine-verifiable contracts.
+
+## Guidance Precedence And Compatibility
+
+Within this suite, `project-charter.md` defines authority/layer boundaries and `simple-reliable-control.md` defines the default complexity posture inside those boundaries. Mechanism files explain their domains; they do not pre-approve a complex implementation merely by naming a problem such as recovery, stop authorization, context sustainability, or comprehensive validation.
+
+Use this interpretation order:
+
+1. Upstream rules, accepted specs, executable contracts, and current runtime truth decide actual behavior.
+2. `project-charter.md` decides which layer may own the behavior.
+3. `simple-reliable-control.md` decides the simplest admissible control shape.
+4. The relevant mechanism guideline supplies domain-specific boundaries and terminology.
+
+This is a convergence rule, not a big-bang rewrite order. Existing accepted implementation remains valid until changed through OpenSpec. New work must not add avoidable layers; work that touches an older complex surface should simplify locally where safe by reusing a checker, removing duplicate truth, short-circuiting dependent symptoms, downgrading presentation-only blockers, or moving one next action closer to the decision point.
 
 ## Directory Position
 
@@ -71,6 +85,8 @@ This directory cannot decide:
 - MUST keep check / inspect / advice feedback visible to the next conversation turn when CLI/Engine output is part of the loop.
 - MUST keep JS/CLI as the checkpoint/feedback layer, not the LLM-facing workflow controller.
 - MUST use `MUST` / `MUST NOT` language when a rule is safety-critical for Agent actor behavior.
+- MUST treat quality-control complexity as safety-critical: the control path should be simpler than the work it validates and should expose direct authority, earliest root cause, and one next action.
+- MUST interpret historical mechanism goals as result obligations, not automatic approval for watchers, controllers, fallback trees, duplicate validators, or derived-state stacks.
 
 ### MUST NOT
 
@@ -80,6 +96,7 @@ This directory cannot decide:
 - MUST NOT duplicate detailed requirements already owned by `openspec/specs/`.
 - MUST NOT list a downstream spec, framework module, or bundle path under `defers_to`; guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`). `scope` may name concrete directories — that is the space this guidance governs, not a dependency.
 - MUST NOT revive Agent self-governance for deterministic runtime authority under new names.
+- MUST NOT use `simple-reliable-control.md` to bypass accepted behavior or trigger an unscoped full-system rewrite; convergence happens through focused OpenSpec changes.
 
 ## Decision Routes
 
@@ -107,7 +124,7 @@ This directory cannot decide:
 | Schema, state machine, receipt, gate, or trace contract | `DPT_FRAMEWORK/`, `tests/`, and accepted specs via OpenSpec | Do not define it only in prose |
 | Command experiment execution pattern | `command-experiments.md` plus the relevant accepted spec or active change when normative | Avoid local one-off verdict rules |
 | Agentic workflow loop (who drives, routes, validates) | `guidelines/agentic-workflow-mechanism.md` | Read before modifying transition, gate, or node-loading behavior |
-| Agentic Queue loop engineering | `agentic-queue-mechanism.md` | Follow architectural constitution; route new implementation through OpenSpec |
+| Agentic Queue loop engineering | `agentic-queue-mechanism.md` | Preserve its boundaries, then use `simple-reliable-control.md` to choose the smallest implementation; route behavior changes through OpenSpec |
 | Current runtime/run state | The active runtime bundle root, currently a selected `dpt_rb_*` or `dpt_disp_*` directory | Reload files; do not rely on chat memory |
 
 ## Guidance Map
@@ -117,7 +134,7 @@ Guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`
 | File | Reader | Purpose | Not For |
 |------|--------|---------|---------|
 | `project-charter.md` | Any Agent or maintainer | Repo-wide charter, authority order, hard boundaries | Detailed capability behavior |
-| `simple-reliable-control.md` | Proposal author, reviewer, Engine/CLI designer | Short decision chains, direct quality checks, smallest actionable root-cause feedback | Concrete schema fields, CLI flags, or weakening deterministic authority |
+| `simple-reliable-control.md` | Proposal author, reviewer, Engine/CLI designer | Charter-level complexity discipline: short decision chains, direct quality checks, smallest actionable root-cause feedback, gradual convergence | Concrete schema fields, CLI flags, weakening deterministic authority, or unscoped rewrites |
 | `framework-runtime-boundary.md` | Any Agent or maintainer touching framework/run files | Directory and authority boundary for read-only framework assets vs mutable runtime bundles | Concrete schema fields, CLI flags, or current run truth |
 | `logging-conventions.md` | Any Agent or maintainer resuming/debugging a run | Runtime continuity and observability: status/queue/trace/log authority, diagnostic vs audit boundaries | API contracts, schema fields, or using logs as verdict |
 | `command-experiments.md` | Experiment author/executor | How to prove mechanisms with real runtime contexts and trace-backed verdicts | General project philosophy or concrete capability behavior |
@@ -156,7 +173,7 @@ When a target or proposed surface becomes accepted/current, update this table in
 These files are one guidance suite:
 
 - `project-charter.md` defines the repo-wide charter: what must always be true.
-- `simple-reliable-control.md` defines the default complexity posture: short control loops, direct checks, and quality-control logic that is simpler than the work it validates.
+- `simple-reliable-control.md` is the charter companion for complexity posture: short control loops, direct checks, quality-control logic simpler than the work it validates, and gradual compatibility-safe convergence.
 - `framework-runtime-boundary.md` defines the framework/runtime boundary: where read-only definitions and mutable run truth belong.
 - `logging-conventions.md` defines runtime continuity and observability guidance: how status, queue, trace, and log keep a long-running bundle recoverable without chat memory.
 - `command-experiments.md` defines the experiment charter: how mechanisms are proven.

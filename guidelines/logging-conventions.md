@@ -4,6 +4,7 @@ suite: deep-research-guidelines
 title: Logging Conventions
 status: effective
 created: 2026-06-26
+revised: 2026-07-10
 role: system-level logging conventions for .mjs and .md diagnostic recording
 scope: DPT_FRAMEWORK/engine/logger.mjs, DPT_FRAMEWORK/engine/trace.mjs, DPT_FRAMEWORK/cli/log-event.mjs, DPT_FRAMEWORK/cli/inspect-bundle.mjs, DPT_FRAMEWORK/workflows/nodes/phases/*.md
 authority: guidance
@@ -12,6 +13,7 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
+  - guidelines/simple-reliable-control.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/agentic-execution-model.md
   - guidelines/agentic-queue-mechanism.md
@@ -22,7 +24,7 @@ siblings:
 
 # Guideline: logging_conventions — Current Guidance
 
-> 状态: 生效 | 创建: 2026-06-26 | 适用于: `DPT_FRAMEWORK/engine/`, `DPT_FRAMEWORK/cli/`, `DPT_FRAMEWORK/workflows/nodes/phases/`
+> 状态: 生效 | 创建: 2026-06-26 | 修订: 2026-07-10 | 适用于: `DPT_FRAMEWORK/engine/`, `DPT_FRAMEWORK/cli/`, `DPT_FRAMEWORK/workflows/nodes/phases/`
 
 ## Purpose
 
@@ -38,6 +40,15 @@ siblings:
 Both files are active bundle-root relative. `_logs/run.log` and `rb_trace.jsonl` refer to the selected `dpt_rb_*` or `dpt_disp_*` bundle for the current run or experiment, not repo root and not `DPT_FRAMEWORK/`.
 
 **Trace 是真相，Log 是解释。** 裁决（pass/fail）只能从 trace JSONL 来，log 自由文本不参与裁决。两个通道通过 `bundle` 字段缝合为单一时间线。
+
+## Simple Observability Posture
+
+Logging follows [`simple-reliable-control.md`](simple-reliable-control.md). Observability must shorten diagnosis, not become another controller or authority layer.
+
+- One external operation should emit the smallest useful success/failure/rejection/exception facts; internal helper chatter stays out of log by default.
+- Trace records accepted machine-verifiable events; log explains incidents. Do not require log + trace + cache projection to agree before a valid operation can pass.
+- Recovery reads direct bundle state and trace first. Log may explain why, but SHALL NOT hold a hidden cursor, retry counter, completion state, or permission.
+- A log write failure remains non-blocking. Adding observability must not lengthen the quality-control chain or create a new failure prerequisite.
 
 ## API Surface
 
@@ -105,16 +116,19 @@ Engine 模块的 log 输出遵循事故级诊断原则：**每个对外入口函
 - MUST `writeGateAttempt()` 内部调用 `logToRun()` 使用统一信封
 - MUST 每个 phase node 包含 `## Log` 段
 - MUST 写失败时静默，不阻塞调用者
+- MUST 让 log 只解释 direct operation outcome，不成为额外 pass/fail prerequisite
 
 **MUST NOT**:
 - MUST NOT 从 log 做 pass/fail 裁决
 - MUST NOT 为所有 trace 点自动生成 log 行（只 closed-set 双写）
 - MUST NOT 要求 log 行通过 schema 校验
 - MUST NOT 让 log 失败影响正常执行路径
+- MUST NOT 用 log 保存隐藏恢复状态、路由状态、retry authority 或 completion authority
 
 ## Related Guidance
 
 - [Guidelines Index](README.md)
 - [Project Charter](project-charter.md)
+- [Simple Reliable Control](simple-reliable-control.md)
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — "Trace 是真相，Log 是解释"
 - [Command Experiments](command-experiments.md)

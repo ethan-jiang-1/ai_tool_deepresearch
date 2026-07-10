@@ -4,6 +4,7 @@ suite: deep-research-guidelines
 title: Project Charter
 status: effective
 created: 2026-06-17
+revised: 2026-07-10
 role: repo-wide charter and entrypoint
 scope: all work in this repository
 authority: guidance
@@ -22,7 +23,7 @@ siblings:
 
 # Project Charter
 
-> 状态: 生效 | 创建: 2026-06-17 | 用途: 项目入口指导
+> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-10 | 用途: 项目入口指导
 
 ---
 
@@ -75,6 +76,8 @@ This file cannot decide:
 - MUST read JS/CLI feedback back into the conversation context before the next Markdown-driven action.
 - MUST treat check / inspect / advice outputs as structured JS/CLI feedback, not as chat noise.
 - MUST prefer the shortest correct control loop: direct runtime fact -> deterministic check -> smallest actionable root cause -> one clear next action. Use `guidelines/simple-reliable-control.md` as the design-review complexity brake.
+- MUST treat quality-control complexity as safety-critical: a checker, gate, recovery path, or diagnostic chain must be easier to reason about and test than the work it validates.
+- MUST interpret mechanism-level goals such as recovery, stop authorization, context sustainability, or comprehensive validation as required outcomes, not as pre-approval for a particular controller, watcher, retry tree, or derived-state stack.
 - MUST make evidence, receipts, and trace entries come from real execution.
 - MUST keep runtime state in the active runtime bundle root, not in chat memory.
 - MUST treat `DPT_FRAMEWORK/` as reusable framework assets, not as a per-run workspace.
@@ -90,6 +93,7 @@ This file cannot decide:
 - MUST NOT move LLM-facing multi-stage flow into JS just because JS is easier to test or feels like a controller.
 - MUST NOT let JS/CLI orchestrate search, judgment, writing, repair, synthesis, or native subagent semantics as a substitute for Agent Flow.
 - MUST NOT make quality control more fragile than the work it validates: avoid long derived-check chains, duplicate validators, cascading symptoms after a prerequisite failure, or blocking presentation-format preferences when direct structured authority exists.
+- MUST NOT use a new guideline to invalidate accepted implementation by prose or justify an unscoped full-system rewrite; behavior converges through focused OpenSpec changes and compatibility-safe local simplification.
 - MUST NOT fake trace, result files, receipts, subagent output, or runtime validation.
 - MUST NOT treat progress summaries, console output, or chat confidence as evidence.
 - MUST NOT write runtime state, gate results, HITL answers, repair attempts, artifacts, or final output into `DPT_FRAMEWORK/`.
@@ -108,9 +112,20 @@ This file cannot decide:
 | Accepted capability behavior | `openspec/specs/`, `openspec/governance/` | 已接受需求、invariant、requirement registry |
 | Executable contracts | `DPT_FRAMEWORK/`, `tests/` | schema、CLI verdict、状态检查、回归验证、框架实现 |
 | Runtime/run state | active runtime bundle root, currently a selected `dpt_rb_*` or `dpt_disp_*` directory | 每个 run 或实验自己的当前控制文件和数据 |
-| Human/Agent guidance | `guidelines/` | 工作原则、操作规范、架构宪法、阅读路线 |
+| Human/Agent guidance | `guidelines/` | 项目宪章、复杂度纪律、操作规范、机制指导、阅读路线 |
 
 `guidelines/` 的作用是降低理解成本，不做新的 Source of Record。需要新增或改变系统行为时，走 OpenSpec change，再落到 accepted specs、`DPT_FRAMEWORK/`、实验基础设施或测试里。
+
+### Guidance Conflict Resolution
+
+当 `guidelines/` 内部出现历史机制表述与新原则的张力时：
+
+1. accepted specs、可执行 contract 和 runtime truth 决定当前行为；不能用新 prose 越权修改。
+2. 本 Charter 决定 Agent / Markdown / Engine / runtime state 的 ownership boundary。
+3. `simple-reliable-control.md` 决定控制复杂度上限：直接 authority、短路派生症状、一个最近动作、无隐藏恢复树。
+4. mechanism guideline 只在上述边界内解释领域结构；“问题必须解决”不等于“复杂机制已经定案”。
+
+既有实现与新原则存在差距时，把差距视为渐进 design debt：停止继续叠加，后续触碰该 surface 时局部收敛；不要为了形式一致性一次性重写整个系统。
 
 ### Quick Router
 
@@ -319,7 +334,7 @@ Explore / design
 
 因此，Apply 阶段默认按已批准的 `tasks.md` 顺序执行。若实施中发现任务顺序本身会导致假验证、漏实现或错误依赖，必须显式说明原因，再调整执行顺序或补充 task section；不要静默跳步。Tasks 是 apply 审计面，不是事后装饰。
 
-真实 bug 不是孤立补丁入口，而是 contract-class probe。一个具体缺口若暴露某类 contract drift，应横向检查同一 contract 的所有权威面：delta/main specs、schema/definitions、CLI/runtime implementation、shared helper、Agent-facing Markdown、validators、regression tests、controlled E2E 和 archive wording。单点修复不能替代类问题审计。
+真实 bug 不是孤立补丁入口，而是 contract-class probe。一个具体缺口若暴露某类 contract drift，应横向识别同一 contract 的必要权威面：delta/main specs、direct schema/definition、唯一 checker path、Agent-facing producer guidance、focused regression/controlled evidence 和 archive wording。横向审计的目的首先是找到重复 truth、漂移和最小闭环，不是默认修改所有 surface；只触碰关闭该 contract 所必需的面，避免把一个 bug 扩成 mega-change。
 
 实施中发现的高信噪比规则要回写到 active delta spec；归档后再进入 main specs。不要让“这次才想明白的边界”只留在聊天、测试名、一次性复盘或某个实现注释里。若旧 spec/guideline wording 会误导未来 Agent，优先用当前 change 的 delta spec 或同轮 guideline 更新清理它，而不是依赖记忆。
 
@@ -372,6 +387,9 @@ Before changing any file in `guidelines/`, check:
 - Does this keep multi-stage LLM-facing flow visible in Markdown/playbooks/task cards?
 - Does this duplicate a definition that should instead live in `README.md` glossary or this project charter?
 - Does this add enough `MUST` / `MUST NOT` clarity for an Agent to act safely?
+- Does this make quality control simpler than the work it validates, or merely add another layer?
+- If it names recovery, stop, context, or validation obligations, does it avoid pre-approving a complex mechanism?
+- Does it preserve current accepted behavior while giving future work a focused convergence path?
 - Should this be an OpenSpec change instead of guidance prose?
 
 ---
@@ -385,6 +403,6 @@ Before changing any file in `guidelines/`, check:
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; defines Chain, Queue, and Work Units.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — Tier 1 (Chain): phase-to-phase routing and Three-Authority Architecture.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Tier 2 (Queue): within-phase task execution; queue engine (AGQ-001~006) is implemented runtime, and seed-topics/wave0/wave1/wave2 queue integrations are accepted/current.
-- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — architectural constitution for work-unit-mediated Sub-agent execution and noise-isolation principles.
+- [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — mechanism guidance for work-unit-mediated Sub-agent execution and noise-isolation principles.
 - [OpenSpec config](../openspec/config.yaml) — project-level OpenSpec rules.
 - [Accepted specs](../openspec/specs/) — accepted capability requirements.
