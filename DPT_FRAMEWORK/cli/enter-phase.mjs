@@ -9,6 +9,7 @@ import { parseArgs } from 'node:util';
 import { createTrace } from '../engine/trace.mjs';
 import { createState, createWorkflowRuntime, assessNode } from '../engine/workflow-chain.mjs';
 import { validateEnterPhaseTarget } from '../engine/helpers/handoff-helpers.mjs';
+import { continuationForLoadedNode, renderContinuationBlock } from '../engine/helpers/continuation-cue.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const NODES_DIR = join(__dirname, '..', 'workflows', 'nodes');
@@ -93,6 +94,18 @@ if (!result || result.status !== 'loaded') {
   fail(`Failed to load node "${targetNode}": ${result?.error || 'unknown loader error'}`);
 }
 
+const targetEntry = runtime.contentCache.get(targetNode);
+const continuation = continuationForLoadedNode({
+  frontmatter: targetEntry?.frontmatter,
+  nodeRef: targetNode,
+});
+if (!continuation) {
+  fail(
+    `Failed to derive continuation cue for loaded node "${targetNode}"`,
+    ['Verify the target phase frontmatter includes a supported stop/gate contract.'],
+  );
+}
+
 try {
   const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
   status.current_node = targetNode;
@@ -112,6 +125,7 @@ for (const fileRef of result.plan || []) {
   }
   sections.push(`<!-- DPT_LOADED_FILE_START ${fileRef} -->\n\n${entry.md.trimEnd()}\n\n<!-- DPT_LOADED_FILE_END ${fileRef} -->`);
 }
+sections.push(renderContinuationBlock(continuation));
 
-console.log(sections.join('\n\n'));
+writeFileSync(1, `${sections.join('\n\n')}\n`);
 process.exit(0);

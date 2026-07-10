@@ -190,6 +190,7 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
 
     assert.equal(output.check.passed, false);
     assert.equal(output.check.next, null);
+    assert.equal(output.continuation, undefined);
     assert.ok(output.inspect.some((message) => message.includes('research_access/status')));
     assert.ok(output.advice.some((message) => message.includes('real HITL1 search/fetch probe')));
   });

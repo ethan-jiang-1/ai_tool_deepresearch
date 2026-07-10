@@ -174,6 +174,12 @@ describe('check-gate-wave0-complete', () => {
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
     assert.deepEqual(output.check.failed_rule_ids, []);
     assert.deepEqual(output.check.masked_rule_ids, []);
+    assert.deepEqual(output.continuation, {
+      interaction: 'prohibited',
+      next_action: 'consume_check_next',
+      node_ref: 'phases/phase-wave0.md',
+      gate: 'wave0-complete',
+    });
   });
 
   it('1b. emits degraded pass for fatigue when only soft count floor fails', () => {
@@ -209,6 +215,12 @@ describe('check-gate-wave0-complete', () => {
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
     assert.notEqual(output.check.degraded, true);
+    assert.deepEqual(output.continuation, {
+      interaction: 'prohibited',
+      next_action: 'repair_and_rerun_gate',
+      node_ref: 'phases/phase-wave0.md',
+      gate: 'wave0-complete',
+    });
     assert.ok(output.check.failed_rule_ids.includes('wave0_work_unit_ledger_exists'));
     assert.ok(output.inspect.some((line) => line.includes('[degraded_not_eligible]')));
     const traceEvents = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.19
+
+- Gate results, `enter-phase`, covered `advance-status`, and successful work-unit claims now expose short Agent-facing continuation cues at decision points.
+- Continuation cues are direct projections only: they add no persistent state and do not replace routing, status, entry/load witnesses, work-unit submit, gate authority, or final delivery evidence.
+- `enter-phase` successful Markdown stdout is now written synchronously so the final cue block is durable even for large loaded-node output.
+
 ## v0.18
 
 - HITL1 now performs a bounded real search/fetch capability probe before silent waves; unavailable or unprobed research access fails closed at HITL1 instead of drifting into Wave0.

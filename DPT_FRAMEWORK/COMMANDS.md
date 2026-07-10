@@ -22,6 +22,8 @@ Short operating note only; deeper terminology canon lives in `guidelines/agentic
 
 `enter-phase` / `load_complete` prove target-node entry/loading, not target-phase work completion. `advance-status` synchronizes the just-passed source gate; it does not enter, load, or execute the next phase. `current_node` is a resume coordinate, not gate pass evidence.
 
+`continuation` cues are Agent-facing decision-point projections. Gate and work-unit JSON emit them as top-level objects; `enter-phase` emits a final `DPT_CONTINUATION_CUE` Markdown block. A cue tells the Agent the one immediate next action already implied by direct Engine facts. It is not permission, not a new status field, not routing authority, not completion proof, and not an entry/status/submit witness.
+
 ## CLI Exit-Code Convention
 
 Exit codes are a canonical interpretation and target convention for Agent callers, not proof that every current CLI shares one runtime helper. Use them for coarse shell/runner branching; always read stdout JSON or documented structured output before deciding the next action.
@@ -56,7 +58,7 @@ Existing active bundle reload uses `<bundle>/BUNDLE_MAP.md` plus `rb_status.json
 | 命令 | 文件 | 说明 |
 |------|------|------|
 | setup-real-subagents | command_playbook/setup-real-subagents.md | 设置 Codex/Claude Code 项目级 real subagent 定义 |
-| operate-work-unit.mjs | cli/operate-work-unit.mjs | delegated work-unit 生命周期（`claim`/`submit`/`late-submit`/`fail`/`timeout`/`abandon`/`open-batch`/`inspect`），生产 delegated completion 的唯一 CLI；普通 `submit` 只接受 claimed，`late-submit` 是 timed_out 的显式审计恢复入口 |
+| operate-work-unit.mjs | cli/operate-work-unit.mjs | delegated work-unit 生命周期（`claim`/`submit`/`late-submit`/`fail`/`timeout`/`abandon`/`open-batch`/`inspect`），生产 delegated completion 的唯一 CLI；成功 `claim` 输出 poll/inspect continuation cue，普通 `submit` 只接受 claimed，`late-submit` 是 timed_out 的显式审计恢复入口 |
 | provenance-forensics-guide | command_playbook/provenance-forensics-guide.md | 事后判定 delegated 证据 provenance 真伪；submitted work-unit ledger 是 gate authority |
 
 ## 质量检查
@@ -70,5 +72,5 @@ Existing active bundle reload uses `<bundle>/BUNDLE_MAP.md` plus `rb_status.json
 ## Phase Handoff
 | 工具 | 文件 | 说明 |
 |------|------|------|
-| enter-phase.mjs | cli/enter-phase.mjs | 消费 gate CLI 返回的 `check.next`，调用 workflow loader 渲染下一 node Markdown，并写入 route-bound `load_complete` handoff witness 和 `rb_status.json.current_node`；不证明 target phase work completion |
-| advance-status.mjs | cli/advance-status.mjs | 在 `enter-phase` witness 存在后同步 just-passed source gate；covered handoff 使用真实 `gate_attempt.next`，不是默认 `passed` target |
+| enter-phase.mjs | cli/enter-phase.mjs | 消费 gate CLI 返回的 `check.next`，调用 workflow loader 渲染下一 node Markdown，写入 route-bound `load_complete` handoff witness 和 `rb_status.json.current_node`，并在成功 Markdown 末端输出 loaded-node continuation block；不证明 target phase work completion |
+| advance-status.mjs | cli/advance-status.mjs | 在 `enter-phase` witness 存在后同步 just-passed source gate；covered handoff 使用真实 `gate_attempt.next` 和 `current_node` 输出 continuation cue；does not enter, load, or execute the next phase |

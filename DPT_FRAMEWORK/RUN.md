@@ -1,16 +1,16 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.18**
+> **DPT_FRAMEWORK v0.19**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 
-## Current Release: v0.18
+## Current Release: v0.19
 
-- HITL1 在进入 silent waves 前执行一次 bounded real search/fetch capability probe；missing、unprobed 或 unavailable research access 留在 HITL1，不能授权 Setup/Wave0。
-- `rb_profile.yaml#/research_access` 记录 strict direct observation；`ProfileSchema` 校验 available/unavailable/unprobed 分支，probe URL/content 不属于 research evidence。
-- `apply-research-style.mjs` 只替换 style 字段并保留 HITL decisions、rerun context 与 research-access observation；`hitl1-recorded` 复用现有 `field_value` rule 要求 `research_access.status: available`。
+- Gate JSON, `enter-phase`, covered `advance-status`, and successful work-unit claim now emit short decision-point continuation cues.
+- Cues are immediate Agent-facing projections from direct checkpoint facts; they do not create status, routing, completion, readiness, or permission authority.
+- `enter-phase` writes large successful Markdown stdout synchronously so the final continuation block is not lost under pipe/process-exit truncation.
 
 ## 0. 禁用内置捷径（最高优先）
 
@@ -31,6 +31,8 @@
 4. 加载 `workflows/nodes/phases/phase-instantiation.md`，按 instruction 执行，之后靠 gate 的 `check.next` 自驱动到 `phase-final`
 
 从 setup onward，gate pass 后不要直接手读下一 phase：先运行 `enter-phase --bundle <path> --node <check.next>` 写入 route-bound handoff witness，再按 phase §6 用 source-gate `advance-status --to <source_gate_enum>` 同步状态。`enter-phase` / `load_complete` 只证明进入 target Markdown control surface，不证明 target phase work completion。
+
+At decision points, read any emitted `continuation` cue immediately: gate pass/fail, successful `enter-phase`, covered `advance-status`, and successful `operate-work-unit claim` now restate one next action. A cue is feedback projection only; it never replaces `check.next`, `load_complete`, `rb_status.current_node`, work-unit submit, gate pass, or Final delivery evidence.
 
 Interactive in-run checkpoints 只有 `hitl1`（定方向 / profile / topics）和 `hitl2`（审 synthesis）。Final 是 terminal non-interactive delivery，不是第三个交互 checkpoint；post-final feedback 通过 HITL2 repair/rerun 重新进入。其余 phase 均 `stop: no`，Agent 自行推进。
 

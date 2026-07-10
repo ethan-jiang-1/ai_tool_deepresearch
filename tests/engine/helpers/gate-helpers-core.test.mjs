@@ -568,3 +568,88 @@ describe('buildGateResult fatigue diagnostics (GSK-006)', () => {
     assert.equal(result.advice.filter((line) => line.includes('Repair work-unit')).length, 1);
   });
 });
+
+describe('buildGateResult continuation projection (SWE-001)', () => {
+  it('adds top-level consume_check_next cue for stop:no pass with check.next', () => {
+    const result = buildGateResult({
+      passed: true,
+      gate: 'wave0-complete',
+      currentNodeRef: 'phases/phase-wave0.md',
+      routing: { kind: 'next', next: 'phases/phase-wave1.md' },
+      inspect: [],
+      advice: [],
+    });
+
+    assert.deepEqual(result.continuation, {
+      interaction: 'prohibited',
+      next_action: 'consume_check_next',
+      node_ref: 'phases/phase-wave0.md',
+      gate: 'wave0-complete',
+    });
+    assert.equal(Object.prototype.hasOwnProperty.call(result.check, 'continuation'), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(result.routing, 'continuation'), false);
+  });
+
+  it('adds top-level repair_and_rerun_gate cue for stop:no failure without deriving from rule ids', () => {
+    const result = buildGateResult({
+      passed: false,
+      gate: 'wave0-complete',
+      currentNodeRef: 'phases/phase-wave0.md',
+      routing: { kind: 'retry', next: null },
+      inspect: ['masked rule ids should remain diagnostic only'],
+      advice: [],
+      extraCheck: {
+        failed_rule_ids: ['irrelevant-to-continuation'],
+        masked_rule_ids: ['also-irrelevant'],
+      },
+    });
+
+    assert.deepEqual(result.continuation, {
+      interaction: 'prohibited',
+      next_action: 'repair_and_rerun_gate',
+      node_ref: 'phases/phase-wave0.md',
+      gate: 'wave0-complete',
+    });
+  });
+
+  it('does not add autonomous cue for stop:yes failure', () => {
+    const result = buildGateResult({
+      passed: false,
+      gate: 'hitl1-recorded',
+      currentNodeRef: 'phases/phase-hitl1.md',
+      routing: { kind: 'retry', next: null },
+      inspect: ['research_access.status is not available'],
+      advice: ['Ask the user for real research access.'],
+    });
+
+    assert.equal(result.continuation, undefined);
+    assert.equal(result.continuation_diagnostic, undefined);
+  });
+
+  it('does not add pass cue when check.next is null', () => {
+    const result = buildGateResult({
+      passed: true,
+      gate: 'readiness-passed',
+      currentNodeRef: 'phases/phase-readiness.md',
+      routing: { kind: 'terminal', next: null },
+      inspect: [],
+      advice: [],
+    });
+
+    assert.equal(result.continuation, undefined);
+  });
+
+  it('omits continuation and reports diagnostic when node frontmatter is unreadable', () => {
+    const result = buildGateResult({
+      passed: false,
+      gate: 'missing-node-gate',
+      currentNodeRef: 'phases/phase-does-not-exist.md',
+      routing: { kind: 'retry', next: null },
+      inspect: [],
+      advice: [],
+    });
+
+    assert.equal(result.continuation, undefined);
+    assert.match(result.continuation_diagnostic, /cannot read current node frontmatter/);
+  });
+});

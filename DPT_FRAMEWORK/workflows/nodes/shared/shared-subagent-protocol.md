@@ -37,6 +37,8 @@ Files under `_work_units/waveN/{work_id}/` are runtime/check surfaces. They are 
 
 `operate-work-unit claim <bundle> --phase waveN --count <claim-count>` allocates eligible delegated queue-front demand into `_work_units/waveN/{work_id}/`. The CLI remains the allocator of `work_id`; the Phase Agent computes only the bounded top-up count for independent demand.
 
+On successful claim, stdout includes a top-level `continuation` cue with `next_action: inspect_and_poll_claimed_work` and `work_ids` exactly matching `claimed_work_ids`. This is an immediate polling reminder, not readiness evidence, not queue/index authority, and not persistent work-unit state. Empty claim output has no successful continuation cue.
+
 Each envelope contains:
 
 | File | Role |
@@ -62,6 +64,8 @@ For delegated queue demand:
 ```bash
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase waveN --count <claim-count>
 ```
+
+Read the returned `continuation` before doing anything else: if work was claimed, inspect and poll those exact `work_ids` without waiting for a user message or task notification.
 
 4. For each returned `prompt_refs[]`, open the `task_ref`, `beacon_ref`, and `result_schema_ref`.
 5. Spawn one native Sub-agent per returned `work_id`. Each prompt includes the work-unit identity and output/cache contract.

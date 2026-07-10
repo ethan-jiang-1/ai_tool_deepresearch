@@ -1,4 +1,4 @@
-// @impl DEW-002, DEW-004, DEW-014, EXO-001
+// @impl DEW-002, DEW-003, DEW-004, DEW-014, EXO-001, SWE-006
 // Work-unit lifecycle: create, parse phase, eligibility, claim, close, batch open.
 
 import path from 'node:path';
@@ -38,6 +38,7 @@ import {
 import {
   timeoutPreflightWorkUnit,
 } from './work-unit-timeout-preflight.mjs';
+import { continuationForClaimedWork } from './helpers/continuation-cue.mjs';
 
 import { queueItemSnapshotHash } from './queue-manager-core.mjs';
 import { loadQueue, saveQueue } from './queue-manager-lifecycle.mjs';
@@ -314,6 +315,8 @@ export function claimWorkUnits(bundleDir, { phase, count = 1, batchReason = 'ini
         spawn_prompt: spawnPromptForWorkUnit(manifest, bundleDir),
       })),
     };
+    const continuation = continuationForClaimedWork({ claimedWorkIds: response.claimed_work_ids });
+    if (continuation) response.continuation = continuation;
     traceWorkUnitEvent(bundleDir, claimed.length > 0 ? 'work_unit_batch_claimed' : 'work_unit_claim_rejected', {
       tx_id,
       requested_count: requestedCount,

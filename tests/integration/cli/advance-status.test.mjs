@@ -22,7 +22,7 @@ function runAdvance(bundlePath, toGate) {
   }
 }
 
-describe('advance-status CLI', () => {
+describe('advance-status CLI', { concurrency: false }, () => {
   let dir;
   let statusPath;
   let tracePath;
@@ -78,11 +78,19 @@ describe('advance-status CLI', () => {
     };
   }
 
+  function writeCurrentNode(nodeRef) {
+    const status = JSON.parse(readFileSync(statusPath, 'utf8'));
+    status.current_node = nodeRef;
+    writeFileSync(statusPath, JSON.stringify(status, null, 2) + '\n');
+  }
+
   it('allows explicit bootstrap source gates without handoff witness', () => {
     const result = runAdvance(dir, 'hitl1_recorded');
     assert.equal(result.status, 'ok');
     assert.equal(result.current_gate, 'hitl1_recorded');
     assert.equal(result.next_gate, 'setup_ready');
+    assert.equal(result.continuation, undefined);
+    assert.match(result.continuation_diagnostic, /bootstrap-compatible status sync/);
     assert.ok(existsSync(tracePath));
   });
 
@@ -132,15 +140,35 @@ describe('advance-status CLI', () => {
     assert.equal(readFileSync(statusPath, 'utf8'), before);
   });
 
+  it('fails covered source gate before mutation when current_node does not match witnessed target', () => {
+    const before = readFileSync(statusPath, 'utf8');
+    writeCurrentNode('phases/phase-wave2.md');
+    const beforeWithMismatch = readFileSync(statusPath, 'utf8');
+    writeTrace([gateAttempt(), loadComplete(0)]);
+
+    const result = runAdvance(dir, 'wave0_complete');
+    assert.equal(result.status, 'error');
+    assert.match(result.reason, /current_node/);
+    assert.match(result.reason, /phases\/phase-wave1\.md/);
+    assert.equal(readFileSync(statusPath, 'utf8'), beforeWithMismatch);
+
+    const events = readFileSync(tracePath, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    assert.equal(events.some(e => e.event === 'phase_transition'), false);
+    assert.notEqual(readFileSync(statusPath, 'utf8'), before);
+  });
+
   it('succeeds after witnessed handoff and writes phase_transition', () => {
-    const statusBefore = JSON.parse(readFileSync(statusPath, 'utf8'));
-    statusBefore.current_node = 'phases/phase-wave1.md';
-    writeFileSync(statusPath, JSON.stringify(statusBefore, null, 2) + '\n');
+    writeCurrentNode('phases/phase-wave1.md');
     writeTrace([gateAttempt(), loadComplete(0)]);
     const result = runAdvance(dir, 'wave0_complete');
     assert.equal(result.status, 'ok');
     assert.equal(result.current_gate, 'wave0_complete');
     assert.equal(result.next_gate, 'wave1_complete');
+    assert.deepEqual(result.continuation, {
+      interaction: 'prohibited',
+      next_action: 'execute_loaded_node',
+      node_ref: 'phases/phase-wave1.md',
+    });
 
     const status = JSON.parse(readFileSync(statusPath, 'utf8'));
     assert.equal(status.current_gate, 'wave0_complete');
@@ -152,9 +180,7 @@ describe('advance-status CLI', () => {
   });
 
   it('preserves degraded source handoff context during status sync', () => {
-    const statusBefore = JSON.parse(readFileSync(statusPath, 'utf8'));
-    statusBefore.current_node = 'phases/phase-wave1.md';
-    writeFileSync(statusPath, JSON.stringify(statusBefore, null, 2) + '\n');
+    writeCurrentNode('phases/phase-wave1.md');
     writeTrace([
       gateAttempt({
         degraded: true,
@@ -179,6 +205,7 @@ describe('advance-status CLI', () => {
   });
 
   it('fails closed and restores status when phase_transition trace append fails', () => {
+    writeCurrentNode('phases/phase-wave1.md');
     writeTrace([gateAttempt(), loadComplete(0)]);
     const before = readFileSync(statusPath, 'utf8');
     chmodSync(tracePath, 0o444);
@@ -220,6 +247,7 @@ describe('advance-status CLI', () => {
   });
 
   it('uses actual HITL2 rerun target instead of default passed target', () => {
+    writeCurrentNode('phases/phase-rerun.md');
     writeTrace([
       gateAttempt({
         gate: 'hitl2-recorded',
@@ -237,9 +265,42 @@ describe('advance-status CLI', () => {
     const result = runAdvance(dir, 'hitl2_recorded');
     assert.equal(result.status, 'ok');
     assert.equal(result.next_gate, 'rerun_ready');
+    assert.deepEqual(result.continuation, {
+      interaction: 'prohibited',
+      next_action: 'execute_loaded_node',
+      node_ref: 'phases/phase-rerun.md',
+    });
+  });
+
+  it('returns required-interaction cue for witnessed Wave2 to HITL2 handoff', () => {
+    writeCurrentNode('phases/phase-hitl2.md');
+    writeTrace([
+      gateAttempt({
+        gate: 'wave2-complete',
+        phase: 'wave2',
+        currentNodeRef: 'phases/phase-wave2.md',
+        next: 'phases/phase-hitl2.md',
+      }),
+      loadComplete(0, {
+        entry: 'phases/phase-hitl2.md',
+        handoff_source_gate: 'wave2-complete',
+        handoff_source_node: 'phases/phase-wave2.md',
+        handoff_target_node: 'phases/phase-hitl2.md',
+      }),
+    ]);
+
+    const result = runAdvance(dir, 'wave2_complete');
+    assert.equal(result.status, 'ok');
+    assert.equal(result.next_gate, 'hitl2_recorded');
+    assert.deepEqual(result.continuation, {
+      interaction: 'required',
+      next_action: 'wait_for_user_in_loaded_node',
+      node_ref: 'phases/phase-hitl2.md',
+    });
   });
 
   it('sets next_gate none for witnessed readiness to final handoff', () => {
+    writeCurrentNode('phases/phase-final.md');
     writeTrace([
       gateAttempt({
         gate: 'readiness-passed',
@@ -257,5 +318,10 @@ describe('advance-status CLI', () => {
     const result = runAdvance(dir, 'readiness_passed');
     assert.equal(result.status, 'ok');
     assert.equal(result.next_gate, 'none');
+    assert.deepEqual(result.continuation, {
+      interaction: 'terminal_delivery',
+      next_action: 'deliver_final_artifacts',
+      node_ref: 'phases/phase-final.md',
+    });
   });
 });

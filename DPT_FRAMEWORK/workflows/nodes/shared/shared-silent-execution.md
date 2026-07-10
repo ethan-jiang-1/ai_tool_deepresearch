@@ -44,6 +44,8 @@ You are in a **non-terminal `stop: no` phase**. This means:
 
 7. **Gate boundary:** Silent degradation does not bypass the gate. You may not self-load the next phase. The next phase comes ONLY from the gate CLI's `check.next`.
 
+8. **Decision-point continuation cues are projections, not authority.** Gate JSON, `enter-phase` Markdown, `advance-status` JSON, and successful work-unit claim JSON may include a short `continuation` cue at the exact point where you decide what to do next. Read it immediately. It restates one next action from already-valid direct facts; it does not grant permission, prove completion, mutate status, replace `check.next`, replace `load_complete`, replace `rb_status.current_node`, or make work-unit readiness true.
+
 ---
 
 ## Purpose
@@ -104,6 +106,8 @@ For delegated work-unit phases, autonomous continuation includes an active poll-
 The Phase Agent SHALL reconstruct in-flight work from bundle truth before claiming or gating: queue delegated-in-flight state, `_work_units/waveN/{work_id}/` manifests/status/result surfaces, runtime receipts, output/cache files, and `operate-work-unit inspect <bundle>` output. A scratch list of spawned work IDs may help, but loss of chat memory does not orphan work.
 
 For every reconstructed in-flight attempt, poll readiness by inspecting result, receipt, output, cache, status, and deadline signals. When ready, run `operate-work-unit submit` without waiting for user continuation. If submit rejects, repair the same attempt when possible; otherwise close it explicitly with `fail`, `timeout`, or `abandon` before claiming replacement work. Do not run a phase gate while delegated queue demand or reconstructed in-flight work remains.
+
+When `operate-work-unit claim` returns a successful top-level `continuation` cue, treat `work_ids` as exactly the claimed attempts to inspect/poll next. The cue does not mean any result is ready; it only puts the existing active polling obligation at the immediate post-claim decision point.
 
 ### 1.4 降级优先级链（Degradation Priority Chain）
 

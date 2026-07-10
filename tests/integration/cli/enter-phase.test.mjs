@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 
 const REPO_ROOT = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
 
-describe('enter-phase CLI', () => {
+describe('enter-phase CLI', { concurrency: false }, () => {
   let dir;
 
   beforeEach(() => {
@@ -65,10 +65,30 @@ describe('enter-phase CLI', () => {
     };
   }
 
+  function assertFinalCue(out, expected) {
+    const marker = '<!-- DPT_CONTINUATION_CUE_START -->';
+    const idx = out.lastIndexOf(marker);
+    assert.notEqual(idx, -1, `expected final continuation cue marker; stdout tail:\n${out.slice(-500)}`);
+    const block = out.slice(idx).trim();
+    assert.equal(block, [
+      '<!-- DPT_CONTINUATION_CUE_START -->',
+      `interaction: ${expected.interaction}`,
+      `next_action: ${expected.next_action}`,
+      `node_ref: ${expected.node_ref}`,
+      '<!-- DPT_CONTINUATION_CUE_END -->',
+    ].join('\n'));
+    assert.equal(out.trimEnd().endsWith('<!-- DPT_CONTINUATION_CUE_END -->'), true);
+  }
+
   it('renders markdown and writes route-bound load_complete plus current_node without changing gate window', () => {
     const out = run(['--bundle', dir, '--node', 'phases/phase-wave1.md']);
 
     assert.doesNotMatch(out.trimStart(), /^\{/);
+    assertFinalCue(out, {
+      interaction: 'prohibited',
+      next_action: 'execute_loaded_node',
+      node_ref: 'phases/phase-wave1.md',
+    });
     const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf8'));
     assert.equal(status.current_node, 'phases/phase-wave1.md');
     assert.equal(status.current_gate, 'wave0_complete');
@@ -102,6 +122,42 @@ describe('enter-phase CLI', () => {
     assert.deepEqual(load.handoff_source_degraded_rules, ['shared_ref_count_floor']);
   });
 
+  it('renders stop:yes target with required-interaction continuation cue', () => {
+    writeTrace([
+      wave0Pass({
+        gate: 'wave2-complete',
+        phase: 'wave2',
+        currentNodeRef: 'phases/phase-wave2.md',
+        next: 'phases/phase-hitl2.md',
+      }),
+    ]);
+
+    const out = run(['--bundle', dir, '--node', 'phases/phase-hitl2.md']);
+    assertFinalCue(out, {
+      interaction: 'required',
+      next_action: 'wait_for_user_in_loaded_node',
+      node_ref: 'phases/phase-hitl2.md',
+    });
+  });
+
+  it('renders Final target with terminal delivery continuation cue', () => {
+    writeTrace([
+      wave0Pass({
+        gate: 'readiness-passed',
+        phase: 'readiness',
+        currentNodeRef: 'phases/phase-readiness.md',
+        next: 'phases/phase-final.md',
+      }),
+    ]);
+
+    const out = run(['--bundle', dir, '--node', 'phases/phase-final.md']);
+    assertFinalCue(out, {
+      interaction: 'terminal_delivery',
+      next_action: 'deliver_final_artifacts',
+      node_ref: 'phases/phase-final.md',
+    });
+  });
+
   it('rejects degraded marker without passed source handoff', () => {
     writeTrace([
       wave0Pass({
@@ -116,12 +172,14 @@ describe('enter-phase CLI', () => {
     const parsed = JSON.parse(out);
     assert.equal(parsed.status, 'error');
     assert.match(parsed.reason, /no latest passed deterministic/);
+    assert.doesNotMatch(out, /DPT_CONTINUATION_CUE/);
   });
 
   it('fails with JSON and no load_complete for unauthorized target', () => {
     const out = run(['--bundle', dir, '--node', 'phases/phase-final.md'], true);
     const parsed = JSON.parse(out);
     assert.equal(parsed.status, 'error');
+    assert.doesNotMatch(out, /DPT_CONTINUATION_CUE/);
 
     const events = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
     assert.equal(events.some(e => e.event === 'load_complete' && e.entry === 'phases/phase-final.md'), false);
@@ -145,6 +203,7 @@ describe('enter-phase CLI', () => {
     const parsed = JSON.parse(out);
     assert.equal(parsed.status, 'error');
     assert.match(parsed.reason, /not authorized by latest deterministic handoff/);
+    assert.doesNotMatch(out, /DPT_CONTINUATION_CUE/);
 
     const events = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
     assert.equal(events.some(e => e.event === 'load_complete' && e.entry === 'phases/phase-wave1.md'), false);
@@ -163,6 +222,7 @@ describe('enter-phase CLI', () => {
     const out = run(['--bundle', dir, '--node', 'phases/phase-wave1.md'], true);
     const parsed = JSON.parse(out);
     assert.equal(parsed.status, 'error');
+    assert.doesNotMatch(out, /DPT_CONTINUATION_CUE/);
 
     const events = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
     assert.equal(events.some(e => e.event === 'load_complete' && e.entry === 'phases/phase-wave1.md'), false);
@@ -177,6 +237,7 @@ describe('enter-phase CLI', () => {
       assert.equal(parsed.status, 'error');
       assert.match(parsed.reason, /Failed to load node/);
       assert.doesNotMatch(out, /DPT_LOADED_FILE_START/);
+      assert.doesNotMatch(out, /DPT_CONTINUATION_CUE/);
     } finally {
       chmodSync(tracePath, 0o644);
     }
@@ -194,6 +255,7 @@ describe('enter-phase CLI', () => {
       assert.equal(parsed.status, 'error');
       assert.match(parsed.reason, /current_node/);
       assert.doesNotMatch(out, /DPT_LOADED_FILE_START/);
+      assert.doesNotMatch(out, /DPT_CONTINUATION_CUE/);
     } finally {
       chmodSync(statusPath, 0o644);
     }

@@ -1,5 +1,5 @@
 // gate-helpers-core.mjs — Gate CLI lifecycle: args, loading, routing, results, trace, checkpoints
-// @impl GSK-001, GSK-002, GSK-004
+// @impl GSK-001, GSK-002, GSK-004, SWE-001
 // Canonical location: DPT_FRAMEWORK/engine/helpers/gate-helpers-core.mjs
 //
 // Re-exported by gate-helpers.mjs for backward compatibility.
@@ -12,8 +12,10 @@ import { createHash } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
 import { resolveNodeTransitionDetailed } from '../ask-next.mjs';
 import { parseMdFrontmatter } from './gate-helpers-readers.mjs';
+import { continuationForGateResult } from './continuation-cue.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const WORKFLOW_NODES_DIR = join(__dirname, '..', '..', 'workflows', 'nodes');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Gate CLI Shared Utilities
@@ -328,12 +330,54 @@ export function buildGateResult({ passed, gate, currentNodeRef, routing, inspect
     );
   }
 
-  return {
+  const result = {
     check: checkFields,
     routing,
     inspect: finalInspect,
     advice: finalAdvice,
   };
+
+  const gateContinuation = projectGateContinuation({
+    passed,
+    gate,
+    currentNodeRef,
+    next: checkNext,
+  });
+  if (gateContinuation.continuation) result.continuation = gateContinuation.continuation;
+  if (gateContinuation.diagnostic) result.continuation_diagnostic = gateContinuation.diagnostic;
+
+  return result;
+}
+
+function readWorkflowNodeFrontmatter(nodeRef) {
+  if (typeof nodeRef !== 'string' || nodeRef.length === 0) {
+    return { ok: false, reason: 'missing currentNodeRef' };
+  }
+  try {
+    const raw = readFileSync(join(WORKFLOW_NODES_DIR, nodeRef), 'utf-8');
+    return { ok: true, frontmatter: parseMdFrontmatter(raw) };
+  } catch (err) {
+    return { ok: false, reason: err.message || String(err) };
+  }
+}
+
+function projectGateContinuation({ passed, gate, currentNodeRef, next }) {
+  if (typeof currentNodeRef !== 'string' || currentNodeRef.length === 0) return {};
+  const frontmatterResult = readWorkflowNodeFrontmatter(currentNodeRef);
+  if (!frontmatterResult.ok) {
+    return {
+      diagnostic: `continuation omitted: cannot read current node frontmatter for ${currentNodeRef}: ${frontmatterResult.reason}`,
+    };
+  }
+
+  const continuation = continuationForGateResult({
+    frontmatter: frontmatterResult.frontmatter,
+    passed,
+    next,
+    nodeRef: currentNodeRef,
+    gate,
+  });
+  return continuation ? { continuation } : {};
 }
 
 // ─── Output and Exit ───────────────────────────────────────────────────────

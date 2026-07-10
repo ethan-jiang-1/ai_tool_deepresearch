@@ -15,10 +15,13 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { parseMdFrontmatter } from '../engine/helpers/gate-helpers-readers.mjs';
 import { validateSourceGateStatusSync } from '../engine/helpers/handoff-helpers.mjs';
+import { continuationForLoadedNode } from '../engine/helpers/continuation-cue.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKFLOWS_DIR = join(__dirname, '..', 'workflows');
+const NODES_DIR = join(WORKFLOWS_DIR, 'nodes');
 
 // ── Helpers ──
 
@@ -51,6 +54,20 @@ function loadManifest() {
 function loadChain() {
   const raw = readFileSync(join(WORKFLOWS_DIR, 'transitions.chain.json'), 'utf-8');
   return JSON.parse(raw);
+}
+
+function readLoadedNodeContinuation(nodeRef) {
+  try {
+    const raw = readFileSync(join(NODES_DIR, nodeRef), 'utf-8');
+    const frontmatter = parseMdFrontmatter(raw);
+    const continuation = continuationForLoadedNode({ frontmatter, nodeRef });
+    if (!continuation) {
+      return { ok: false, reason: `loaded node "${nodeRef}" has no supported stop/gate continuation contract` };
+    }
+    return { ok: true, continuation };
+  } catch (err) {
+    return { ok: false, reason: `cannot read loaded node frontmatter for "${nodeRef}": ${err.message}` };
+  }
 }
 
 // ── Main ──
@@ -135,6 +152,39 @@ const nextGateKey = nodeToGate.get(nextNode);
 // not JavaScript null (which serializes to JSON null ≠ "none").
 const nextGateEnum = nextGateKey ? gateKeyToEnum(nextGateKey) : 'none';
 
+let continuation = null;
+let continuationDiagnostic = null;
+if (handoffCheck.covered) {
+  if (status.current_node !== nextNode) {
+    console.log(JSON.stringify({
+      status: 'error',
+      reason: `rb_status.json#/current_node must equal witnessed handoff target "${nextNode}" before syncing covered source gate "${targetGateEnum}", got ${JSON.stringify(status.current_node ?? null)}`,
+      advice: [`Run enter-phase with the source gate check.next before status sync: node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node ${nextNode}`],
+    }));
+    process.exit(1);
+  }
+
+  const cueResult = readLoadedNodeContinuation(nextNode);
+  if (!cueResult.ok) {
+    console.log(JSON.stringify({
+      status: 'error',
+      reason: cueResult.reason,
+      advice: ['Repair the framework node frontmatter before syncing this covered handoff; advance-status must not guess loaded-node continuation.'],
+    }));
+    process.exit(1);
+  }
+  continuation = cueResult.continuation;
+} else if (status.current_node === nextNode) {
+  const cueResult = readLoadedNodeContinuation(nextNode);
+  if (cueResult.ok) {
+    continuation = cueResult.continuation;
+  } else {
+    continuationDiagnostic = `continuation omitted: ${cueResult.reason}`;
+  }
+} else {
+  continuationDiagnostic = `continuation omitted: bootstrap-compatible status sync did not have loaded current_node "${nextNode}"`;
+}
+
 const from = status.current_gate || 'unknown';
 const previousStatusRaw = readFileSync(statusPath, 'utf-8');
 const nextStatus = {
@@ -188,10 +238,14 @@ try {
   process.exit(1);
 }
 
-console.log(JSON.stringify({
+const output = {
   status: 'ok',
   current_gate: targetGateEnum,
   next_gate: nextGateEnum,
   source_handoff_degraded: handoffCheck.covered ? handoffCheck.handoff.degraded === true : false,
-}));
+};
+if (continuation) output.continuation = continuation;
+if (!continuation && continuationDiagnostic) output.continuation_diagnostic = continuationDiagnostic;
+
+console.log(JSON.stringify(output));
 process.exit(0);

@@ -192,10 +192,38 @@ describe('operate-work-unit inspect', () => {
       const out = JSON.parse(stdout);
       assert.equal(out.claimed_count, 1);
       assert.deepEqual(out.claimed_work_ids, ['wu-w0-b000-src-i0001']);
+      assert.deepEqual(out.continuation, {
+        interaction: 'prohibited',
+        next_action: 'inspect_and_poll_claimed_work',
+        work_ids: out.claimed_work_ids,
+      });
       assert.match(JSON.stringify(out.prompt_refs), /_work_units\/wave0\/wu-w0-b000-src-i0001\/task\.md/);
       assert.match(out.prompt_refs[0].spawn_prompt, /runtime-receipt\.jsonl/);
       assert.match(out.prompt_refs[0].spawn_prompt, /result\.schema\.json/);
       assert.match(out.prompt_refs[0].spawn_prompt, /runtime_refs diagnostic metadata/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('claim omits continuation when no work unit is claimed', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem({
+        queue_item_id: 'queue-direct',
+        title: 'Direct work',
+        targets: { controller: 'main-agent' },
+        kind: 'main_agent_followup',
+        producer_rule: 'manual',
+      })]);
+      const result = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0', '--count', '1'], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(result.status, 1);
+      const out = JSON.parse(result.stdout);
+      assert.equal(out.claimed_count, 0);
+      assert.equal(out.continuation, undefined);
     } finally {
       cleanup(dir);
     }

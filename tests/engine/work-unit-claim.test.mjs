@@ -66,6 +66,11 @@ describe('claimWorkUnits', () => {
       const result = claimWorkUnits(dir, { phase: 'wave0', count: 2 });
       assert.equal(result.claimed_count, 2);
       assert.deepEqual(result.claimed_work_ids, ['wu-w0-b000-src-i0001', 'wu-w0-b000-src-i0002']);
+      assert.deepEqual(result.continuation, {
+        interaction: 'prohibited',
+        next_action: 'inspect_and_poll_claimed_work',
+        work_ids: result.claimed_work_ids,
+      });
       assert.equal(result.in_flight_count, 2);
       assert.equal(result.unclaimed_delegated_count, 1);
       assert.equal(result.phase_drained, false);
@@ -91,6 +96,11 @@ describe('claimWorkUnits', () => {
       saveSeedQueue(dir, [delegated('queue-a'), direct('queue-direct'), delegated('queue-b')]);
       const result = claimWorkUnits(dir, { phase: 'wave0', count: 3 });
       assert.equal(result.claimed_count, 1);
+      assert.deepEqual(result.continuation, {
+        interaction: 'prohibited',
+        next_action: 'inspect_and_poll_claimed_work',
+        work_ids: result.claimed_work_ids,
+      });
       assert.equal(result.blocked_by_queue_item_id, 'queue-direct');
       const queue = loadQueue(dir);
       assert.equal(queue.active_window[0].queue_item_id, 'queue-direct');
@@ -107,6 +117,7 @@ describe('claimWorkUnits', () => {
       saveSeedQueue(dir, [direct('queue-direct'), delegated('queue-a')]);
       const result = claimWorkUnits(dir, { phase: 'wave0', count: 2 });
       assert.equal(result.claimed_count, 0);
+      assert.equal(result.continuation, undefined);
       assert.equal(result.blocked_by_queue_item_id, 'queue-direct');
       assert.equal(existsSync(workUnitIndexPath(dir)), false);
       const queue = loadQueue(dir);
