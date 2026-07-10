@@ -222,3 +222,15 @@ Rerun wave0: 2 sub-agents spawned → Agent 呈现状态表 → 停下来等 tas
 
 ### 与前例区别
 前三实例是 gate 状态变化时浮出水面。第四实例是委托执行期间空闲——不是"停下来问用户"，而是"停下来等系统"。同一根因：Agent 把自主执行理解为"spawn 然后等着"，而非"spawn → poll → submit → gate → continue"的驱动循环。
+
+
+---
+
+## 12. 第五实例：rerun wave1 gate 45 attempts stall → 再次浮出水面（同日同 run）
+
+### 症状
+Rerun wave1 gate: 45 attempts, never degraded. Agent 呈现汇总表，问"要 push Wave2 还是接受当前深度？"
+
+### 与前例累计
+至此同一 run 内 5 次违反 stop: no。模式已清晰：任何 gate 状态变化（pass/fail/stall）和任何委托等待（spawn 后空闲）都触发 Agent 浮出水面。这不是偶然失误——这是 Agent 在上下文压力下系统性无法维持静默自主执行。每次停下来都"有理由"，但 stop: no 的整个设计前提就是"有理由也不能停"。
+
