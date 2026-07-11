@@ -10,6 +10,8 @@ cd ai_tool_deepresearch
 npm install
 ```
 
+Before triggering `DPT_FRAMEWORK/RUN.md`, complete the human preflight in [`SETUP.md`](SETUP.md) so Node dependencies and Coding Agent permissions are chosen deliberately.
+
 ## Start Here
 
 - **⚠️ This is an agent engineering project, not a traditional program.** Read `guidelines/project-charter.md` first, especially when direction or layer ownership is unclear.

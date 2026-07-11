@@ -83,8 +83,9 @@ Agent SHALL NOT 设置硬性最大轮数导致强制退出。如果用户继续 
 
 所有用户可见的 HITL 交互 SHALL 使用中文：
 - 选项描述和引导文字 SHALL 为中文
+- Agent 动态填入的 topic rewrite、topic preview、decision-brief summary、证据缺口、建议和确认文案 SHALL 使用中文
 - 英文 canonical name SHALL 只在括号中作为辅助参考出现
-- 内部 enum 值、文件路径、字段名、CLI 命令 SHALL 保持英文 canonical form
+- 内部 enum 值、文件路径、字段名、CLI 命令和需要保留原文的来源标题 SHALL 保持英文或来源的 canonical form
 
 例：
 - ✅ 用户看到："A: 快速事实核查（quick_factual）"

@@ -34,7 +34,10 @@ plan 完成后从 `_backlog/plans/` 通过 `git mv` 移入本目录：
 | CLS-013 | 2026-07-09 | martin-fowler-run-bugfix-change-split.md | BUG-066~070 切成 2 个 change：stabilize-agent-facing-work-unit-contracts (v0.12) + align-gate-contracts-and-reference-navigation (v0.13)，均已 apply+archive。（BUG-066~070 卡片仍在 `../../bugs/`，待移入 `_fixed_bugs/`） |
 | CLS-014 | 2026-07-09 | martin-fowler-run-performance-tuning.md | martin-fowler run 性能调优（128min，~25–30min 契约漂移卡）：A/C1/C2 由 bugfix-split 两 change 覆盖；D(dry-submit)/E(抓取并行)/preflight 由 harden-delegated-preflight-and-fetch-hygiene (v0.14) 落地；B(ii) ledger-relabel 显式放弃。作为独立 change superseded，内容全实现。 |
 | CLS-015 | 2026-07-11 | bugs-069-075-openspec-change-slicing.md | BUG-069/071/072/073/074/075 切成 3 个 change：simplify-and-reuse-wave-contract-checks (v0.17) + fail-fast-on-missing-research-access (v0.18) + put-continuation-cues-at-decision-points (v0.19)，均已 apply。遗留：BUG-071 §4.1 bootstrap current_gate 统一 deferred（future normalize-bootstrap-gate-window）；BUG-072/074 LLM 行为待真实 run 观察。 |
+| CLS-016 | 2026-07-11 | ux-onboarding-install-setup.md | 安装 baseline 已由现有 package/lockfile/.nvmrc/README/playbook 前置条件锁定，并在 polish-framework-setup-and-user-facing-ux 中加入静态回归保护。 |
+| CLS-017 | 2026-07-11 | ux-coding-agent-permissions-setup.md | Human-facing setup/permission UX 落地到 root SETUP.md；Claude Code/Codex 权限说明保持 pre-trigger、risk/opt-in、no command-playbook co-runner 边界。 |
+| CLS-018 | 2026-07-11 | ux-user-facing-chinese-first-outside-waves.md | 收窄后的中文用户可见软提示落地：HITL 动态内容、Final terminal delivery、silent non-authorization guard；不改 gate/schema/routing/locale。 |
 
 Closure boundary for CLS-007..010: this change did not implement runtime exit-helper unification, code-2 semantic migration, a JS lifecycle walker, chat interceptor, environment-variable control, same-turn chat halt prevention, or fake evidence/trace handling.
 
-**Next available plan ID: CLS-016**
+**Next available plan ID: CLS-019**

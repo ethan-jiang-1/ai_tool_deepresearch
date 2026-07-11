@@ -46,6 +46,8 @@ You are in a **non-terminal `stop: no` phase**. This means:
 
 8. **Decision-point continuation cues are projections, not authority.** Gate JSON, `enter-phase` Markdown, `advance-status` JSON, and successful work-unit claim JSON may include a short `continuation` cue at the exact point where you decide what to do next. Read it immediately. It restates one next action from already-valid direct facts; it does not grant permission, prove completion, mutate status, replace `check.next`, replace `load_complete`, replace `rb_status.current_node`, or make work-unit readiness true.
 
+9. **Language preference is not surfacing permission.** Any Chinese-first or prefer-Chinese guidance applies only after another accepted contract already authorizes user-facing output. It never authorizes status replies, acknowledgements, progress, partial delivery, approval requests, or questions in a non-terminal `stop: no` phase.
+
 ---
 
 ## Purpose
@@ -172,20 +174,15 @@ Agent SHALL NOT 因 escalation 条件满足而浮出水面。只有在到达下�
 
 用户在静默阶段主动发送消息时的处理规则：
 
-**允许的响应**：
-- Agent MAY 以单轮、陈述式状态回复（如 "正在执行 Wave1 证据采集。完成后会在 HITL2 与你见面。"）
-- 回复 SHALL 以句号结尾（不以问号结尾）
-- 回复 SHALL NOT 邀请进一步对话
-- 回复 SHALL NOT 提供选项
-
-**禁止的行为**：
-- Agent SHALL NOT 因用户消息而停止等待——回复后继续执行
+**核心规则**：
+- 用户消息、approval prompt、harness notification、prefer-Chinese guidance 都不是 surfacing permission
+- Agent SHALL NOT 因用户消息而停止等待、发送 acknowledgement、发送状态回复、发送进度回复、请求 approval、提问或提供选项
 - Agent SHALL NOT 将用户消息当作 HITL 交互——不进入环模型，不询问决策
-- 即使用户连续发送多条消息，Agent SHALL 仅做单轮状态告知（不展开对话环），重复回复后继续执行
+- 即使用户连续发送多条消息，Agent SHALL 保持 non-terminal `stop: no` 静默纪律，继续 repair、strategy change、legal degraded handoff 或 silent hold
 
 **补充信息处理**：
-- 如果用户消息包含研究相关的补充信息（如 "对了，也帮我看看 X"），Agent SHALL 记录到 `rb_trace.jsonl` 但不立即处理
-- 在 HITL2 时提醒用户该补充信息尚未纳入当前研究
+- 如果用户消息包含研究相关的补充信息（如 "对了，也帮我看看 X"），Agent MAY 通过 accepted runtime truth/diagnostic surface 记录待处理事实，但不得用 chat acknowledgement 确认
+- 在 HITL2 时提醒用户该补充信息尚未纳入当前研究，并由 HITL2 repair/rerun 决策处理
 
 ---
 

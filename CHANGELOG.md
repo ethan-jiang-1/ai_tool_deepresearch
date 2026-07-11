@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.20
+
+- Added a human pre-trigger setup path for install, Claude Code/Codex permission posture, verification, and DPT_FRAMEWORK entry without turning the autonomous pipeline into a human co-runner flow.
+- Tightened user-facing language guidance for HITL dynamic content and Final delivery while preserving silent `stop:no`, Final evidence, and host-permission authority boundaries.
+
 ## v0.19
 
 - Gate results, `enter-phase`, covered `advance-status`, and successful work-unit claims now expose short Agent-facing continuation cues at decision points.

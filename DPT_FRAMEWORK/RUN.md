@@ -1,16 +1,16 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.19**
+> **DPT_FRAMEWORK v0.20**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
+> 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.19
+## Current Release: v0.20
 
-- Gate JSON, `enter-phase`, covered `advance-status`, and successful work-unit claim now emit short decision-point continuation cues.
-- Cues are immediate Agent-facing projections from direct checkpoint facts; they do not create status, routing, completion, readiness, or permission authority.
-- `enter-phase` writes large successful Markdown stdout synchronously so the final continuation block is not lost under pipe/process-exit truncation.
+- Human pre-trigger setup now covers install, Claude Code/Codex permission posture, verification, and DPT_FRAMEWORK entry without turning the autonomous pipeline into a human co-runner flow.
+- User-facing language guidance now covers HITL dynamic content and Final delivery while preserving silent `stop:no`, Final evidence, and host-permission authority boundaries.
 
 ## 0. 禁用内置捷径（最高优先）
 
