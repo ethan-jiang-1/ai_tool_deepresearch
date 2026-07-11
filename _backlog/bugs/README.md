@@ -15,7 +15,14 @@
 
 ## 活跃列表
 
-当前无活跃 bug。
+| Bug | 简述 | 状态 |
+|-----|------|------|
+| [BUG-076](BUG-076-webfetch-domain-verification-blocks-research-fetch.md) | `WebFetch` 对所有外部域名报 "Unable to verify if domain is safe to fetch"，HITL1 research access probe 无法达到 `available` | Active — `curl` workaround 已确认可用；框架级修复待定 |
+| [BUG-077](BUG-077-subagent-api-402-and-cache-trail-schema-opaque.md) | Wave0 delegated subagent 全部 402（balance>0 限制）；且 `operate-work-unit submit` 的 cache-trail schema 未文档化、校验报错不透明 | Active — 阻塞 delegated work-unit 提交路径 |
+| [BUG-078](BUG-078-post-final-hitl2-rerun-reentry-blocked.md) | Final 交付后无法回到 HITL2 做 rerun：`enter-phase`/gate `handoff_preflight` 只认 trace 最新 handoff（单向棘轮），而手写 trace event 被禁止——文档承诺的 post-final rerun 无 CLI 可达 | Active — 需框架级 reopen 机制 |
+| [BUG-079](BUG-079-out-of-gate-addendum-no-canonical-footprint.md) | Out-of-gate addendum 新增 topic 无 canonical footprint：数据落 `_cache/addendum/` 私有命名空间，`artifacts/wave0\|1`、registry、trace 全无记录，gate/audit/recovery 看不见；gate advice 还给出被棘轮挡回的死循环建议 | Active — BUG-078 的下游结构后果；需 gated rerun 或 addendum 正式化 + 一致性审计 |
+
+**Next available bug ID: BUG-080**
 
 > **2026-07-11 批量修复**：BUG-069 / 071 / 072 / 073 / 074 / 075 已按 [`bugs-069-075-openspec-change-slicing`](../_done/_closed_plans/bugs-069-075-openspec-change-slicing.md) 聚成 3 个 OpenSpec change 修复并移入 `_done/_fixed_bugs/`：
 > - **A** `simplify-and-reuse-wave-contract-checks` (v0.17) → BUG-069 / 073 / 075（同源 side-effect-free inspect 预检 Wave contract）

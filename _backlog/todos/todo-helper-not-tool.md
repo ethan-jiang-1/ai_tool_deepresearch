@@ -22,7 +22,7 @@
 
 1. **极轻：** 在已有 UX shared 加 user-facing prefer-Chinese 软提示（可与 chinese-first plan 合并，甚至不单独立项）
 2. **轻：** `shared-agent-persona.md` 只定义口吻/边界，**不改** wave/setup 等内部逻辑 instruction
-3. **重（另开 change）：** cross-run user-memory — 等静默 run 真能关终端再做
+3. **重（另开 change）：** cross-run user-memory — 等静默 run 真能关终端再做（细化见下文「记忆支柱细化：跨 run 双记忆」）
 
 ## Non-Goals（强调）
 
@@ -33,6 +33,97 @@
 ## Next Step
 
 保持北星文档；**不要**现在 `/opsx:propose` 大人格 change。先 setup-ux + 069。
+
+## 记忆支柱细化：跨 run 双记忆（Preference + Experience）— 北星细化
+
+> 本节只细化四支柱之首「记忆」；仍属北星，**实施延后**（BUG-069 + setup-ux 未缓解前不抬）。正式行程计划回头落到 `_backlog/plans/`，本节不 propose。
+
+### 词汇对齐（先钉死，防误解）
+
+用户口中的「宽度 / 深度 / 综合 13 层 / wave 0·1·52」不是新参数，而是**现有 shape 面**的口语说法：
+
+- **profile A/B/C** = `rb_profile.yaml#/research_profile`
+- **综合 13 层 / 深度** = `research_style_params`（13 字段 Zod schema，`schema/contracts/profile.mjs`）
+- **宽度** = `rb_plan.md#/topic_registry` 长度（topic 数）
+- **wave 数**今天固定 3（wave0/1/2 硬编码）；「wave 52」是「想更深」的口语，落到 profile + style params，不是可变 wave 数
+
+记忆记的是**这张 shape 面**。若将来 shape 面长大（如可变 wave 数），记忆 schema 跟着长，不另起炉灶。
+
+### 两类记忆
+
+| | Type A · 偏好 / 画像 | Type B · 经验 / 失败教训 |
+|--|--|--|
+| **记什么** | 默认 profile、`research_style_params` 覆盖、宽度胃口、语言、源口味 | `{ when, trigger（哪个 gate/phase/源类型/topic 形态）, 失败了什么, 有效的修法, tags }` |
+| **像什么** | 「你一般要多深多广」 | 「上次这类事栽在哪、怎么翻过去的」 |
+| **怎么学** | **确认后**写回（不静默改 profile） | **自动蒸馏**、advisory、可裁剪 |
+| **今天缺口** | 每 run 从 `not_selected` 重来，跑完蒸发 | 零；同类失败每次重新踩 |
+
+Type B 才是「像同事」的关键：agentic workflow 应该记住栽过的跟头，下回遇到同类情形主动借鉴、努力翻过去——而不是每个 run 都从零踩雷。
+
+### 与 charter 的边界和解（核心 —— 这段是本节存在的理由）
+
+跨 run 记忆**看起来**违宪：`project-charter.md` MUST「runtime state 只在 active bundle，不在 chat memory」；anti-cheating 规则 #4 禁止拿 chat memory 当 run state；system-logging design 禁止跨 run 聚合。
+
+**和解点：charter 禁的是记忆当「真相 / 证据 / gate 权威」，不禁记忆当「用户已确认的默认 + advisory 提示」。** 记忆是 **Layer-1 advisory 输入，永不是 Layer-2 权威**：
+
+- **永不算证据**：不能 back 报告里任何 claim，不能替代 bundle 内的验证
+- **永不喂 gate**：gate 只读 bundle control files，确定性判定；记忆不进 gate 输入，不偏移 gate 结果
+- **只 seed 提案**：在 HITL1 浮出「上次你选 C / 惯用中文，这次也这样？」由用户确认或改；**bundle 记录的是实际决定**（bundle 仍是唯一 run-truth）
+- **provenance 标注**：任何被记忆 seed 的值在 bundle 里带来源标记（`seeded_from: global_pref` / `experience#<id>`），使该 run **仅凭 bundle 即可审计、复现**
+
+这样四条 charter 不变量全保住——记忆是「把更准的输入放回 LLM 判断」，不是「让 Markdown/记忆夺取确定性权威」。本设计**尊重** charter MUST 与 anti-cheating #4，不是绕过它们。
+
+### 存储形态（建议，非枚举）
+
+全局根 `~/.dpt/`（XDG-aware：`$XDG_CONFIG_HOME/dpt`，否则 `~/.dpt`）：
+
+| 文件 | 内容 | 读写 |
+|--|--|--|
+| `preferences.yaml` | Type A，结构化、schema 校验，镜像 shape 面 | 机器读 + **确认后**写回 |
+| `experience.jsonl` | Type B，蒸馏 lesson，**append-only**（并发安全，参照 `run.log` 设计原则） | 自动追加、advisory 读、可裁剪 |
+| `taste.md` | 人写的「找/鉴/写」口味包 | **归 [[user-knowledge-hang]]**，此处只引用不重复 |
+
+### 读写路径 + 学习姿态（split：auto-experience / confirm-preference）
+
+- **读**：`start-research` / HITL1 时读 `preferences.yaml` seed 默认（替代 `not_selected`）；在各决策点浮出**匹配 trigger** 的 Type-B lesson
+- **写（分裂）**：
+  - **Type B 自动**——当 repair/rerun 把某 gate 由 fail→pass，蒸馏一条 lesson 自动 append，带 trigger 上下文供将来匹配
+  - **Type A 确认**——run 末提议「记住这个偏好？」，用户确认才写回，**杜绝 profile 静默漂移**
+
+### 护栏清单
+
+- advisory-only；永远 HITL 可确认可覆盖
+- provenance 标注，run 可仅凭 bundle 复现
+- 带时间戳，浮出时说「**上次**你…」而非「你**总是**…」（staleness：记忆反映写入当时）
+- 写回：Type A 需同意、Type B 可裁剪
+- append-only + 并发安全（多 run 并行）
+- **domain-scoped**：`医疗政策` 的 lesson 不泄漏进 `竞品调研`
+- 永不当证据、永不进 gate
+- **没有 `~/.dpt/` 时，行为与今天完全一致**（纯增量、可选、零回归）
+
+### 分期路径（可增量抬起）
+
+1. **Phase 1**：只读 seeding + advisory recall（无写回）——最轻、charter 风险最低
+2. **Phase 2**：确认式 preference 写回
+3. **Phase 3**：自动 experience 蒸馏
+
+每期独立有价值、可独立 gate、可独立走一个 OpenSpec change。
+
+### 与 [[user-knowledge-hang]] 的边界
+
+| | user-knowledge-hang | 本记忆支柱 |
+|--|--|--|
+| 形态 | 静态、人写、**单次挂载** | 自动、**跨 run**、结构化 |
+| 内容 | 找/鉴/写 口味 Markdown | shape 偏好 + 失败经验 |
+
+边界那份 todo 已声明（其 line 24/139/152：「自动跨 run 学习那是 helper-not-tool 记忆层」）；此处复述以防漂移。两者可共存：`taste.md` 是人写口味，本层是机器学的偏好 + 经验。
+
+### Non-Goals（本节补充）
+
+- 不做向量库 / RAG / embeddings
+- 不静默改偏好；不让记忆进 gate 输入或当证据源
+- 不在 BUG-069 + setup-ux 前抬起
+- 不做全局 telemetry / 跨 run trace 聚合（trace 仍 per-bundle，charter 要求）
 
 ---
 
