@@ -2,6 +2,7 @@
 // @impl CPT-003, CPT-004, GSK-007
 
 import { existsSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -83,7 +84,13 @@ export function readTraceEventsWithIndex(bundlePath) {
     const line = lines[i].trim();
     if (!line) continue;
     try {
-      events.push({ index: events.length, lineNumber: i + 1, event: JSON.parse(line) });
+      events.push({
+        index: events.length,
+        lineNumber: i + 1,
+        rawLine: line,
+        lineSha256: createHash('sha256').update(Buffer.from(line, 'utf8')).digest('hex'),
+        event: JSON.parse(line),
+      });
     } catch (err) {
       return {
         ok: false,
@@ -94,6 +101,18 @@ export function readTraceEventsWithIndex(bundlePath) {
   }
 
   return { ok: true, events };
+}
+
+export function findLatestLegalHandoff(bundlePath, { targetNode = null, sourceNode = null, requireLoad = false } = {}) {
+  const ctx = contextFor(bundlePath);
+  if (!ctx.ok) return { ok: false, reason: ctx.reason };
+  const handoff = latestLegalPassedHandoff(
+    ctx.events,
+    ctx.topology,
+    (edge) => (!targetNode || edge.targetNode === targetNode) && (!sourceNode || edge.sourceNode === sourceNode),
+    { requireLoad },
+  );
+  return handoff ? { ok: true, handoff, events: ctx.events, topology: ctx.topology } : { ok: false, reason: 'no matching legal passed handoff was found', events: ctx.events, topology: ctx.topology };
 }
 
 function edgeForAttempt(traceEvent, topology) {

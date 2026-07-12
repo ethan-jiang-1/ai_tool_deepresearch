@@ -1,8 +1,8 @@
 ## 1. Governance And Characterization
 
-- [ ] 1.1 登记新 capability `post-final-recovery` 的 `POF` prefix 与 `POF-001..003`，并核对 `CPT-003..006/008`、`RRD-002/008..010`、`CDP-003..004`、`REI-002`、`CTS-003..004`、`ACS-001` 的 main spec/delta映射。Done condition：registry按capability字母序与组内数字序更新，0 duplicate/orphan/unregistered/reusedRetired，MODIFIED旧场景覆盖完整。
-- [ ] 1.2 为 `CPT-003` / `RRD-008` 建立 BUG-078 terminal Final characterization。Done condition：真实最小bundle证明latest readiness→Final handoff/load存在、旧 predecessor gate/enter-phase hitl2不可达、当前 `check-reentry` 返回 missing contract且fixture不手写成功authority。
-- [ ] 1.3 建立 apply target manifest 并 paired-review 两条 Evolution Directions。Done condition：review确认one `post-final-recovery` capability/module、one operation helper/CLI/workspace/event class与existing trace append owner；明确不新增generic override/state-seed、auth token/service、Final loop、lifecycle mode、second topic owner或parallel addendum success path。
+- [x] 1.1 登记新 capability `post-final-recovery` 的 `POF` prefix 与 `POF-001..003`，并核对 `CPT-003..006/008`、`RRD-002/008..010`、`CDP-003..004`、`REI-002`、`CTS-003..004`、`ACS-001` 的 main spec/delta映射。Done condition：registry按capability字母序与组内数字序更新，0 duplicate/orphan/unregistered/reusedRetired，MODIFIED旧场景覆盖完整。
+- [x] 1.2 为 `CPT-003` / `RRD-008` 建立 BUG-078 terminal Final characterization。Done condition：真实最小bundle证明latest readiness→Final handoff/load存在、旧 predecessor gate/enter-phase hitl2不可达、当前 `check-reentry` 返回 missing contract且fixture不手写成功authority。
+- [x] 1.3 建立 apply target manifest 并 paired-review 两条 Evolution Directions。Done condition：review确认one `post-final-recovery` capability/module、one operation helper/CLI/workspace/event class与existing trace append owner；明确不新增generic override/state-seed、auth token/service、Final loop、lifecycle mode、second topic owner或parallel addendum success path。
 - [ ] 1.4 定义 `CPT-003` / `CDP-004` threat-model assertions。Done condition：tests/docs明确request metadata不是verified identity/permission；host permission是外部边界；same-principal malicious actor不被虚假宣称为可防御。
 
 ## 2. Post-Final Recovery Evaluator And Contract

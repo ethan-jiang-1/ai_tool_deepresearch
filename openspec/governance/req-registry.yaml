@@ -65,6 +65,7 @@ prefixes:
   LOG: logger
   PHS: plan-hostfile-sections
   PLR: playbook-runner
+  POF: post-final-recovery
   PRE: pre-research-experiments
   PRG: pre-research-gate-implementation
   PRP: pre-research-phase-content
@@ -497,6 +498,9 @@ EXR-006: experiment-ref-integrity — case-406 verifies real Sub-agent boundary 
 SCO-009: schema-core — Queue v2 contract separates queue_item_id demand identity from work_id attempt identity
 PLR-001: playbook-runner — RUN.md as unified runner entry with playbook manifest and execution instructions
 PLR-003: playbook-runner — Runner execution contract and summary report
+POF-001: post-final-recovery — Terminal Final eligibility, retained post-final rerun request, owner precedence, and accepted-lineage replay
+POF-002: post-final-recovery — Prepared profile/event transaction uses event-last exact roll-forward recovery
+POF-003: post-final-recovery — Engine-written Final-lineage-bound exceptional handoff reuses existing HITL2 rerun owners
 PRE-001: pre-research-experiments — Workflow-foundation happy-path pre-research playbook (simple, light, fixed HITL payload, 3 gates pass)
 PRE-002: pre-research-experiments — Workflow-foundation repair-loop playbook (medium, light, gate fail→inspect/advice→repair→rerun→pass)
 PRE-003: pre-research-experiments — Workflow-foundation review-surface playbook (complex, light, fixed AI interpretation sample + review checklist)

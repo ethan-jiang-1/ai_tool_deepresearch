@@ -13,7 +13,8 @@
 //   const summary = trace.traceSummary();
 //   trace.traceCleanup();
 
-import { appendFileSync, existsSync, mkdirSync, readFileSync, unlinkSync } from 'node:fs';
+import { appendFileSync, closeSync, constants, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, unlinkSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 const DEFAULT_ICONS = {
@@ -32,6 +33,67 @@ const ANSI = {
   C: '\x1b[36m',
   B: '\x1b[0m',
 };
+
+function sha256(value) {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function fsyncPath(filePath) {
+  const descriptor = openSync(filePath, constants.O_RDONLY);
+  try {
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+export function appendExactTraceLine({ tracePath, lineBytes, expectedPrefixByteLength, expectedPrefixSha256, eventId, validateSuffix = null }) {
+  const staged = Buffer.isBuffer(lineBytes) ? lineBytes : Buffer.from(String(lineBytes), 'utf8');
+  if (staged.includes(0x0a) || staged.includes(0x0d)) throw new Error('exact trace object line must not contain CR or LF bytes');
+  const current = existsSync(tracePath) ? readFileSync(tracePath) : Buffer.alloc(0);
+  if (!Number.isInteger(expectedPrefixByteLength) || expectedPrefixByteLength < 0 || current.length < expectedPrefixByteLength) {
+    return { ok: false, reason_code: 'trace_prefix_truncated', reason: 'Trace is shorter than the accepted prefix.' };
+  }
+  const prefix = current.subarray(0, expectedPrefixByteLength);
+  if (sha256(prefix) !== expectedPrefixSha256) {
+    return { ok: false, reason_code: 'trace_prefix_drift', reason: 'Accepted trace prefix bytes changed.' };
+  }
+  const suffix = current.subarray(expectedPrefixByteLength);
+  const parsedSuffix = [];
+  if (suffix.length > 0) {
+    const suffixText = suffix.toString('utf8');
+    if (!suffixText.endsWith('\n')) return { ok: false, reason_code: 'trace_suffix_malformed', reason: 'Trace suffix is not LF-terminated.' };
+    for (const rawLine of suffixText.slice(0, -1).split('\n')) {
+      if (!rawLine) continue;
+      try {
+        parsedSuffix.push({ rawLine, event: JSON.parse(rawLine) });
+      } catch (error) {
+        return { ok: false, reason_code: 'trace_suffix_malformed', reason: `Trace suffix contains invalid JSON: ${error.message}` };
+      }
+    }
+  }
+  const stagedSha256 = sha256(staged);
+  const currentLines = current.toString('utf8').split('\n').filter(Boolean);
+  for (let index = 0; index < currentLines.length; index += 1) {
+    let event;
+    try { event = JSON.parse(currentLines[index]); } catch { continue; }
+    if (event?.event_id !== eventId) continue;
+    const existingSha256 = sha256(Buffer.from(currentLines[index], 'utf8'));
+    return existingSha256 === stagedSha256
+      ? { ok: true, appended: false, index, line_sha256: stagedSha256 }
+      : { ok: false, reason_code: 'trace_event_conflict', reason: `Trace event_id ${eventId} exists with different exact bytes.` };
+  }
+  if (typeof validateSuffix === 'function') {
+    const baseIndex = currentLines.length - parsedSuffix.length;
+    const validation = validateSuffix(parsedSuffix.map((item, offset) => ({ index: baseIndex + offset, ...item })));
+    if (!validation?.ok) return validation;
+  }
+  mkdirSync(path.dirname(tracePath), { recursive: true });
+  appendFileSync(tracePath, Buffer.concat([staged, Buffer.from('\n')]));
+  fsyncPath(tracePath);
+  fsyncPath(path.dirname(tracePath));
+  return { ok: true, appended: true, index: currentLines.length, line_sha256: stagedSha256 };
+}
 
 /**
  * Create a trace writer instance bound to a specific trace file.

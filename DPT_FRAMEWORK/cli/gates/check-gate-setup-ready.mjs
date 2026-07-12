@@ -25,6 +25,7 @@ import {
   QueueSchema,
   PlanSchema,
 } from '../../schema/index.mjs';
+import { normalizeBundleBasename } from '../../engine/helpers/bundle-identity.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
@@ -95,18 +96,6 @@ function getPlan() {
 
 function resolvePath(obj, pathStr) {
   return pathStr.split('/').reduce((o, k) => o?.[k], obj);
-}
-
-// ── Normalize bundle basename ──
-function normalizeBundleBasename(dirName) {
-  // Production: dpt_rb_<name> → <name>
-  const prodMatch = dirName.match(/^dpt_rb_(.+)$/);
-  if (prodMatch) return prodMatch[1];
-  // Disposable: dpt_disp_<name>_<hex> → <name>
-  // Strip optional case-NNN_ prefix (test infrastructure, not part of research basename)
-  const dispMatch = dirName.match(/^dpt_disp_(.+)_[0-9a-f]+$/);
-  if (dispMatch) return dispMatch[1].replace(/^case-\d+_/, '');
-  return null; // illegal name
 }
 
 // ── Rule evaluation ──
