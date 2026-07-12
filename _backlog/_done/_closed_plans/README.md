@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-07-11 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-07-12 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -37,7 +37,9 @@ plan 完成后从 `_backlog/plans/` 通过 `git mv` 移入本目录：
 | CLS-016 | 2026-07-11 | ux-onboarding-install-setup.md | 安装 baseline 已由现有 package/lockfile/.nvmrc/README/playbook 前置条件锁定，并在 polish-framework-setup-and-user-facing-ux 中加入静态回归保护。 |
 | CLS-017 | 2026-07-11 | ux-coding-agent-permissions-setup.md | Human-facing setup/permission UX 落地到 root SETUP.md；Claude Code/Codex 权限说明保持 pre-trigger、risk/opt-in、no command-playbook co-runner 边界。 |
 | CLS-018 | 2026-07-11 | ux-user-facing-chinese-first-outside-waves.md | 收窄后的中文用户可见软提示落地：HITL 动态内容、Final terminal delivery、silent non-authorization guard；不改 gate/schema/routing/locale。 |
+| CLS-019 | 2026-07-12 | delegated-attempt-timeout-and-redo-postmortem.md | Timeout/REDO 现场复盘完成；主要修复由 v0.14 dry-submit、v0.15 progress-aware timeout preflight、v0.16 audited late-submit 落地。 |
+| CLS-020 | 2026-07-12 | delegated-attempt-timeout-and-redo-postmortem-修复计划.md | 两阶段修复切片完成：防误杀与误杀后 audited recovery 已分别由 v0.15/v0.16 落地；pause-aware wall-clock suspension 未纳入该闭环。 |
 
 Closure boundary for CLS-007..010: this change did not implement runtime exit-helper unification, code-2 semantic migration, a JS lifecycle walker, chat interceptor, environment-variable control, same-turn chat halt prevention, or fake evidence/trace handling.
 
-**Next available plan ID: CLS-019**
+**Next available plan ID: CLS-021**

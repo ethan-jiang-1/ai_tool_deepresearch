@@ -1,9 +1,10 @@
 # 修复计划:Delegated Work-Unit 的 Timeout / REDO 机制
 
-**来源:** `_backlog/plans/delegated-attempt-timeout-and-redo-postmortem.md`  
+**来源:** `_backlog/_done/_closed_plans/delegated-attempt-timeout-and-redo-postmortem.md`
 **生成时间:** 2026-07-09  
 **性质:** OpenSpec change 拆分建议;不修改原 postmortem  
 **推荐结论:** 用 **2 个 change** 修,不要拆成 3 个以上;其中第 1 个防误杀,第 2 个处理已经误杀后的补救。
+**归档状态（2026-07-12）:** Closed — Change A 已由 v0.15 progress-aware timeout preflight 落地；Change B 已由 v0.16 audited `late-submit` 落地。下文“仍未修复”保留为当时切片依据，不代表当前实现状态。
 
 ## 0. 先校准:哪些已经被最近 change 修掉
 

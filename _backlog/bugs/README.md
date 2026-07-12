@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-07-11 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-07-12 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -17,10 +17,9 @@
 
 | Bug | 简述 | 状态 |
 |-----|------|------|
-| [BUG-076](BUG-076-webfetch-domain-verification-blocks-research-fetch.md) | `WebFetch` 对所有外部域名报 "Unable to verify if domain is safe to fetch"，HITL1 research access probe 无法达到 `available` | Active — `curl` workaround 已确认可用；框架级修复待定 |
-| [BUG-077](BUG-077-subagent-api-402-and-cache-trail-schema-opaque.md) | Wave0 delegated subagent 全部 402（balance>0 限制）；且 `operate-work-unit submit` 的 cache-trail schema 未文档化、校验报错不透明 | Active — 阻塞 delegated work-unit 提交路径 |
-| [BUG-078](BUG-078-post-final-hitl2-rerun-reentry-blocked.md) | Final 交付后无法回到 HITL2 做 rerun：`enter-phase`/gate `handoff_preflight` 只认 trace 最新 handoff（单向棘轮），而手写 trace event 被禁止——文档承诺的 post-final rerun 无 CLI 可达 | Active — 需框架级 reopen 机制 |
-| [BUG-079](BUG-079-out-of-gate-addendum-no-canonical-footprint.md) | Out-of-gate addendum 新增 topic 无 canonical footprint：数据落 `_cache/addendum/` 私有命名空间，`artifacts/wave0\|1`、registry、trace 全无记录，gate/audit/recovery 看不见；gate advice 还给出被棘轮挡回的死循环建议 | Active — BUG-078 的下游结构后果；需 gated rerun 或 addendum 正式化 + 一致性审计 |
+| [BUG-077](BUG-077-subagent-api-402-and-cache-trail-schema-opaque.md) | Wave0 delegated subagent 遇到 host API 402；原卡同时记录 cache/reference/source contract 不透明 | Partial — contract docs、`dry-submit`、degraded capture 已落地；402 fallback、inspect H1 split、bold return-map 仍开放 |
+| [BUG-078](BUG-078-post-final-hitl2-rerun-reentry-blocked.md) | Final 交付后无法通过 sanctioned CLI 回到 HITL2 做 rerun | Active — v0.21 已澄清当前边界；runtime reopen/reentry 能力仍缺失 |
+| [BUG-079](BUG-079-out-of-gate-addendum-no-canonical-footprint.md) | Out-of-gate addendum 新增 topic 无 canonical footprint，gate/audit/recovery 不可见 | Active — v0.21 已落 helper/canonical-or-blocked 基础；正式 footprint、integrity audit、可达 rerun 仍缺失 |
 
 **Next available bug ID: BUG-080**
 
@@ -32,8 +31,6 @@
 > **两个遗留项（未混入本批，另行跟踪）**：
 > - BUG-071 §4.1 bootstrap `current_gate` 语义统一 → deferred，见 plan §6，未来独立小 change `normalize-bootstrap-gate-window`。
 > - BUG-072 / 074 的 LLM 行为闭环需真实 disposable run 观察，静态测试只证明 cue 可达与取值正确。
-
-**Next available bug ID: BUG-076**
 
 ---
 

@@ -146,6 +146,5 @@ flowchart LR
 |------|------|------|
 | `_done/_old_topics/_guideline/terminology-gap-audit.md` | ~253 处术语 gap | 无执行计划；低优先 |
 | `_done/_old_topics/_trainsistion/` | Transition 层清理 | 发现但未建 change；多数 FSM 问题可能已随 WFF 归档消化 — 启用前先核对 |
-| `_backlog/plans/delegated-attempt-timeout-and-redo-postmortem.md` | timeout / late-accept | **plan**，非 todo；核心修复未实施 |
 | `_backlog/plans/ux-user-facing-chinese-first-outside-waves.md` | prefer-Chinese 软提示 | 可并入 helper 极轻步或独立小 change；可不立项 |
 | `todo-user-knowledge-hang.md` | 用户「找/鉴/写」口味包挂载 | 活跃 todo；比 helper 记忆简单，可先于人格层 |

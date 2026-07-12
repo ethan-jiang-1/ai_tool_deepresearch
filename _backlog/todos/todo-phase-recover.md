@@ -14,7 +14,7 @@
 | `check-reentry.mjs` | ✅ 已有（诊断 + file-observability） |
 | `operate-work-unit dry-submit` | ✅ **新增** — 恢复前可批量预检契约 |
 | Engine 自动路由回正确 phase | ❌ 仍禁止 — Engine 不做隐藏 phase router |
-| 与 timeout/REDO | ⚠️ 见 `_backlog/plans/delegated-attempt-timeout-and-redo-postmortem.md` — orchestrator 超时策略与 bundle 真相恢复是两层 |
+| 与 timeout/REDO | ✅ 见 `_backlog/_done/_closed_plans/delegated-attempt-timeout-and-redo-postmortem.md` — v0.14–v0.16 已落防误杀与 audited late recovery；bundle 真相恢复仍是本 todo 的独立层 |
 
 ## Current Direction
 

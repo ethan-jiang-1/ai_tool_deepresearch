@@ -3,7 +3,7 @@
 **触发 bundle:** `dpt_rb_pragmatic-summit-2026-ai-impact`
 **取证时间:** 2026-07-09(现场跨越 03:09–04:08 UTC / 本地 11:09–12:08)
 **性质:** 只读现场取证(bundle 磁盘 + `rb_trace.jsonl` + runtime receipt + cache meta + 引擎代码)
-**状态:** 诊断结论已从推断坐实为证据;修复方向为建议,未实施
+**状态:** Closed — 诊断完成；主要修复已由 v0.14 `dry-submit`、v0.15 progress-aware timeout preflight、v0.16 audited `late-submit` 落地。绝对 `deadline_at` 仍保留为 initial lease hint，pause-aware suspension 不在已落闭环内。
 
 ## TL;DR
 

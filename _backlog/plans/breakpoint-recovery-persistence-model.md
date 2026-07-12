@@ -1,11 +1,11 @@
 # Plan: 断点恢复的三条持久化义务（Breakpoint-Recovery Persistence Model）
 
 **性质:** 复盘 + 能力立项前设计计划（pre-OpenSpec）
-**状态:** 草案，待切成 OpenSpec change（2026-07-11）
+**状态:** Partial — v0.21 已吸收 `materialize-before-work` 与 helper-oriented 指导基础；P1/P2/P3 runtime slices 仍待切成 OpenSpec change（2026-07-12）
 **触发:** `dpt_rb_ai-era-bpm-process-disruption` 的 post-final addendum 在 Molex 采证半途机器死掉；人工恢复现场（seed 06–11 建立、Molex 补齐、06/07 综合补齐）后复盘"为什么有的恢复得干净、有的只能靠 chat 记忆重建"。
 **范围:** DPT_FRAMEWORK 的崩溃/中断恢复语义——数据落盘、状态落盘、用户输入落盘。**不含** BUG-078 的 reopen 机制本身（另案），本 plan 只解决"中断后还能不能知道从哪续"。
 **设计原则:** [`guidelines/project-charter.md`](../../guidelines/project-charter.md)、[`guidelines/evolution-simple-reliable-control.md`](../../guidelines/evolution-simple-reliable-control.md)、[`guidelines/evolution-helper-oriented-agent.md`](../../guidelines/evolution-helper-oriented-agent.md)
-**相关:** [BUG-078](../bugs/BUG-078-post-final-hitl2-rerun-reentry-blocked.md)（rerun 无 CLI 可达）、[BUG-077](../bugs/BUG-077-subagent-api-402-and-cache-trail-schema-opaque.md)（work-unit 路径）、[`delegated-attempt-timeout-and-redo-postmortem`](delegated-attempt-timeout-and-redo-postmortem.md)（in-flight attempt 存活）
+**相关:** [BUG-078](../bugs/BUG-078-post-final-hitl2-rerun-reentry-blocked.md)（rerun 无 CLI 可达）、[BUG-077](../bugs/BUG-077-subagent-api-402-and-cache-trail-schema-opaque.md)（work-unit 路径）、[`delegated-attempt-timeout-and-redo-postmortem`](../_done/_closed_plans/delegated-attempt-timeout-and-redo-postmortem.md)（in-flight attempt 存活；v0.14–v0.16 已落主要修复）
 
 ---
 

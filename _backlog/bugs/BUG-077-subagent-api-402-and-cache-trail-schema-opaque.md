@@ -5,6 +5,25 @@
 **Phase:** Wave0 (source intake)
 **Severity:** High — blocks formal work-unit submission path; requires ~2 hours of manual recovery per wave
 **Reporter:** Claude Code main agent
+**Current status (2026-07-12):** Partial — the original card combines an unresolved host/subagent availability failure with contract-opacity issues that are now mostly fixed.
+
+## Current status
+
+### Landed
+
+- v0.12 generates truthful strict `result.schema.json` projections.
+- v0.14 adds read-only `operate-work-unit dry-submit` diagnostics.
+- `shared-subagent-protocol.md` documents leaf `cache_trails[]` directories and the required `websearch.json` / `page.md` / `meta.json` files.
+- `shared-reference-template.md` explicitly lists the nine metadata keys and five standard sections.
+- `shared-schemas.md` documents the flat `source.yaml` array shape.
+- Explicit degraded capture can satisfy placeholder-page validation when it records a real fetch failure.
+
+### Still open
+
+- The host/API 402 condition has no framework-sanctioned availability preflight or main-agent execution fallback.
+- `inspect-wave0-output.mjs` still splits metadata on any Markdown heading, so an H1 title can cause false missing-metadata diagnostics.
+- Bold-wrapped return-map keys such as `**evidence_meaning**:` are still not parsed, and the formatting restriction is not explicitly documented at the decision point.
+- Cache validation and its human-readable contract still do not come from one shared source of truth.
 
 ## Environment
 
@@ -12,7 +31,7 @@
 - Node.js: v20.19.6
 - Bundle: `/Users/bowhead/ai_tool_deepresearch/dpt_rb_ai-era-sdlc-aidlc-bpm-information-industries-disruption`
 - Research profile: `exploratory_map` (5 topics, `wave0_shared_ref_total: 9`)
-- Related bugs: `BUG-076-webfetch-domain-verification-blocks-research-fetch.md`
+- Related bugs: `../_done/_fixed_bugs/BUG-076-webfetch-domain-verification-blocks-research-fetch.md`
 
 ## Symptom 1: Subagent API 402
 
@@ -108,7 +127,7 @@ Total recovery time for Wave0: approximately 2 hours of manual bookkeeping.
 
 ## Related
 
-- `_backlog/bugs/BUG-076-webfetch-domain-verification-blocks-research-fetch.md`
+- `_backlog/_done/_fixed_bugs/BUG-076-webfetch-domain-verification-blocks-research-fetch.md`
 - `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md`
 - `DPT_FRAMEWORK/workflows/nodes/shared/shared-reference-template.md`
 - `DPT_FRAMEWORK/schema/contracts/reference.mjs`

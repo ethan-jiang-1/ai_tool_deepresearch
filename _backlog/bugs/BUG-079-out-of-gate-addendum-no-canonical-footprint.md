@@ -4,6 +4,7 @@
 **Bundle:** `dpt_rb_ai-era-bpm-process-disruption`
 **Phase:** Final (terminal) → post-final out-of-gate addendum（BUG-078 workaround 的下游后果）
 **Severity:** High — 新增 topic 的证据真实且保存了，但对 canonical 结构、gate/audit/recovery 工具**完全不可见**；bundle 结构自相矛盾
+**Current status (2026-07-12):** Active — v0.21 established canonical-or-blocked/helper-oriented guidance and dependency bands only; no canonical addendum footprint, integrity audit, or sanctioned post-final rerun implementation landed.
 
 ## Symptom
 
@@ -86,7 +87,7 @@
 ## Related
 
 - [BUG-078](BUG-078-post-final-hitl2-rerun-reentry-blocked.md)（上游根因：rerun 重入被单向棘轮堵死；本 bug 是其下游结构后果）
-- [BUG-076](BUG-076-webfetch-domain-verification-blocks-research-fetch.md)（addendum 采证走 curl 的原因）
+- [BUG-076](../_done/_fixed_bugs/BUG-076-webfetch-domain-verification-blocks-research-fetch.md)（addendum 采证走 curl 的原因；框架侧已接受替代 fetch surface）
 - Plan [`breakpoint-recovery-persistence-model`](../plans/breakpoint-recovery-persistence-model.md)（P2 状态落盘 / P3 意图落盘——本 bug 是"数据落在非 canonical 位置"的活样本）
 - `DPT_FRAMEWORK/engine/helpers/handoff-helpers.mjs`、`DPT_FRAMEWORK/cli/audit-phase-status.mjs`、`DPT_FRAMEWORK/rb_templates/`
 - Bundle: `/Users/bowhead/ai_tool_deepresearch/dpt_rb_ai-era-bpm-process-disruption`
