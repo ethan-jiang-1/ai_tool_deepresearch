@@ -20,6 +20,11 @@ When topic-state apply renders a new plan and the body contains the recognized s
 - **WHEN** a wave completes for a specific topic
 - **THEN** the Agent MAY update the Status column for that topic's row (frontmatter remains authoritative for identity)
 
+#### Scenario: Body table out of sync with frontmatter does not block gate
+- **WHEN** the `## Topic Registry` body table is missing or has different slugs than the frontmatter `topic_registry`
+- **THEN** gates and topic-state operations SHALL use frontmatter as authority and SHALL NOT fail solely for body projection drift
+- **AND** topic-state apply MAY preserve the non-standard body with advisory feedback
+
 #### Scenario: Non-standard body table does not block authority mutation
 - **WHEN** the `## Topic Registry` body table is missing, non-standard or has different slugs than frontmatter
 - **THEN** topic-state apply/gates SHALL preserve or tolerate the body, use frontmatter as authority and MAY return advisory feedback

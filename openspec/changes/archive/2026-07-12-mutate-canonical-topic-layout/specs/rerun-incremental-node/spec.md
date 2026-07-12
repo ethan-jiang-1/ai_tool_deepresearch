@@ -1,4 +1,4 @@
-> req: REI-006
+> req: REI-004, REI-006
 
 ## MODIFIED Requirements
 
@@ -71,3 +71,19 @@ Topic-state apply in rerun SHALL be authorized only when `rb_status.json#/curren
 #### Scenario: Existing artifacts remain preserved
 - **WHEN** rerun add/refine or layout preparation executes
 - **THEN** existing `reference/`, `artifacts/`, submitted ledger and work-unit history SHALL NOT be deleted, renamed or rewritten by topic-state operations
+
+#### Scenario: Remove or layout mutation remains blocked
+> **@deprecated** — Direct multi-file or imperative layout mutation remains blocked; C3B now provides one complete sanctioned `mutate_layout` target.
+
+- **WHEN** the rationale requests remove, rename or renumber
+- **THEN** the Agent SHALL use the complete topic-state layout target rather than direct edits or a parallel namespace
+- **AND** if Engine history, dependency, quiescence or lifecycle checks reject that target, the layout SHALL remain unchanged and the Agent SHALL follow the single returned owner/boundary action
+
+### Requirement: Chain routes HITL2 rerun as a deterministic outcome
+
+The chain routing rules for the `rerun` outcome SHALL remain defined in the `transition-table` spec. An explicit HITL2 rerun decision SHALL resolve one fixed next node, while context-dependent revision/repair outcomes SHALL remain outside deterministic chain routing unless another accepted contract defines a fixed route.
+
+#### Scenario: Deterministic rerun decision resolves one fixed node
+- **WHEN** HITL2 records `user_decision: rerun` and the chain resolves outcome `rerun`
+- **THEN** the resolved next node SHALL be `phases/phase-rerun.md`
+- **AND** context-dependent `request_view_revision`, `repair`, and `stop_blocked` outcomes SHALL remain `no_transition` unless another accepted contract defines a deterministic route

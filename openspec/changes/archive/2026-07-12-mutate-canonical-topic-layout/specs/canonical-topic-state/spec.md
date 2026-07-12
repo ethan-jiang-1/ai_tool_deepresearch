@@ -10,6 +10,11 @@ The Engine SHALL derive per-topic/per-wave `not_started|in_progress|complete|blo
 - **WHEN** a canonical topic and current seed exist with no matching current or historical submitted work/artifact fact for a wave
 - **THEN** inspect SHALL report `not_started`
 
+#### Scenario: Submitted facts prove completion
+- **WHEN** accepted submitted ledger plus required artifact facts bind a canonical UID through its current slug or one unique previous slug
+- **THEN** inspect SHALL report that wave `complete` with exact recorded fact refs and current UID/slug context
+- **AND** no mutable progress row, file move or ledger rewrite SHALL be required
+
 #### Scenario: Historical submitted facts survive layout rename
 - **WHEN** accepted submitted ledger plus required artifact facts use one unique previous slug for the canonical UID
 - **THEN** inspect SHALL report that wave `complete` with exact recorded fact refs and current UID/slug context
@@ -45,6 +50,13 @@ The prepared manifest SHALL record the originally proven authorization facts. `r
 - **THEN** inspect SHALL return the exact recover command and recover SHALL resume the prepared bytes/cleanup or block on direct drift
 - **AND** new topic work SHALL remain blocked while the accepted workspace exists
 
+#### Scenario: Crash after plan replacement resumes exact seed bytes
+> **@deprecated** — This pre-C3B scenario name is retained for archive compatibility. Current operations publish new/current seeds before replacing the registry.
+
+- **WHEN** a current accepted operation reaches `rb_plan.md` replacement and then crashes before seed cleanup or workspace cleanup
+- **THEN** every staged current seed replacement SHALL already match its prepared bytes
+- **AND** recovery SHALL complete only remaining hash-bound seed cleanup/workspace cleanup or block on direct drift
+
 #### Scenario: Multi-topic approval is one accepted change set
 - **WHEN** HITL1/rerun apply contains multiple add-topic/update-intent actions or one complete multi-topic layout target
 - **THEN** the Engine SHALL validate and stage the final registry plus every touched current seed before prepared publication
@@ -68,6 +80,11 @@ The prepared manifest SHALL record the originally proven authorization facts. `r
 - **WHEN** a touched plan/seed or listed cleanup seed matches neither accepted expected-old nor staged-new/absent form
 - **THEN** recovery/apply SHALL return blocked with that path and leave its bytes untouched
 
+#### Scenario: Late drift is not overwritten
+- **WHEN** a replacement target or listed cleanup seed no longer matches its prepared expected-old/staged-new contract
+- **THEN** recovery/apply SHALL block on that direct path without overwriting replacement bytes
+- **AND** SHALL NOT delete a drifted cleanup seed
+
 #### Scenario: Registry-external topic requires explicit adoption
 - **WHEN** C1 reports a registry-external topic slug and migration input explicitly supplies its title, intent, scope role, dependencies and seed binding choice
 - **THEN** `apply` action `migrate_legacy` MAY add one canonical UID-bound registry/seed identity for that slug
@@ -78,6 +95,11 @@ The prepared manifest SHALL record the originally proven authorization facts. `r
 - **THEN** apply SHALL reject without changing plan, seed, queue or work-unit state
 - **AND** the Agent SHALL drain, submit, repair or terminalize through the existing owner and rerun apply
 
+#### Scenario: Active work blocks semantic mutation
+- **WHEN** migrate-legacy or update-intent touches a UID with queued, delegated-in-flight or nonterminal work
+- **THEN** apply SHALL reject without changing plan, seed, queue or work-unit state
+- **AND** the same quiescence owner SHALL also govern an affected UID in mutate-layout
+
 #### Scenario: Legal HITL1 window authorizes initial materialization
 - **WHEN** add-topic is invoked with current node `phases/phase-hitl1.md` and the existing `hitl1_recorded` → `setup_ready` status window
 - **THEN** apply MAY prepare the approved initial canonical registry and seeds
@@ -86,6 +108,11 @@ The prepared manifest SHALL record the originally proven authorization facts. `r
 #### Scenario: Sanctioned rerun authorizes canonical mutation forms
 - **WHEN** current node is `phases/phase-rerun.md`, the latest route-bound HITL2→rerun witness is valid and non-superseded, and the incoming rerun status window is intact
 - **THEN** apply MAY accept migrate-legacy, add-topic/update-intent or one complete mutate-layout target subject to their semantic, history and active-work checks
+
+#### Scenario: Sanctioned rerun authorizes migration and refinement
+- **WHEN** current node is `phases/phase-rerun.md`, the latest route-bound HITL2→rerun witness is valid and non-superseded, and the incoming rerun status window is intact
+- **THEN** apply MAY accept migrate-legacy, add-topic or update-intent subject to their semantic and active-work checks
+- **AND** the same sanctioned window MAY accept one complete mutate-layout target subject to its layout, history and quiescence checks
 
 #### Scenario: Layout mutation preserves historical content coordinates
 - **WHEN** rename or renumber changes current id/slug for a UID with submitted historical outputs
@@ -112,6 +139,13 @@ The only layout operation SHALL be `apply` action `mutate_layout`: one complete 
 - **WHEN** a sanctioned rerun submits a valid complete mutate-layout target
 - **THEN** the existing topic-state apply/recover path SHALL own registry/current-seed mutation
 - **AND** it SHALL NOT create a second CLI, workspace, filesystem migration service or direct multi-file Agent edit path
+
+#### Scenario: Layout mutation reports missing C3B capability
+> **@deprecated** — C3B is implemented by one complete `mutate_layout` target; only legacy imperative action shapes remain unsupported.
+
+- **WHEN** apply input uses an imperative remove, rename or renumber action instead of one complete target
+- **THEN** the command SHALL reject that shape before workspace creation and point to the sanctioned `inspect` → `mutate_layout` path
+- **AND** path-move requests SHALL remain outside C3B without claiming that bounded layout mutation itself is missing
 
 #### Scenario: Historical topic removal remains blocked
 - **WHEN** remove targets a UID with dependency, queue, work-unit, ledger, artifact or reference history

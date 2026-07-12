@@ -1,6 +1,6 @@
 # Seed Topic Materialization
 
-> req: STM-001, STM-002, STM-003, STM-004, STM-005, STM-006, STM-007
+> req: STM-001, STM-002, STM-003, STM-004, STM-005, STM-006, STM-007, STM-008
 
 ## Purpose
 
@@ -9,9 +9,7 @@
 **存在的理由**：`wff-pre-research` 的 HITL1 只把 seed topics 写进 `rb_plan.md` 的 `topic_registry` frontmatter，从不物化到 `seed_topics/` 目录。`setup-ready` gate 只检查 `seed_topics/` 目录存在（空目录也 pass），导致 Phase Agent 可带着空 `seed_topics/` 进入 Wave0 研究。虽然 `wff-research-waves` 的 `wave0-complete` gate 已设计"topic_registry 为空时 fail"的防线，但该防线位置过晚（在 Wave0），且只检查 registry 非空，不检查物化一致性或数量 floor。本阶段把这道防线前移并加固为独立确定性 gate。
 
 Gate 只做 deterministic 结构/数量/一致性检查；seed topic 的语义质量（topic 是否"好"、是否与研究问题对齐）由人类在 HITL1（`stop: yes`）审查，本阶段不新增 stop 点。
-
 ## Requirements
-
 ### Requirement: Seed topic materialization phase node
 
 `phase-seed-topics.md` SHALL 提供完整的 9-section body，位于 setup 与 wave0 之间。§3 Allowed Actions SHALL 采用 queue-driven 三阶段模式（灌料 → 执行循环 → 收尾+gate）。
@@ -88,6 +86,7 @@ Allowed Actions SHALL 覆盖三阶段：
 - **THEN** Phase Agent SHALL 标注为显式 gap（如 `hypothesis: "pending — ..."`）
 - **AND** Phase Agent SHALL NOT 编造信息以通过 gate
 - **AND** gate SHALL still pass（gap 本身是有效信息——告诉 wave0 该 topic 搜索范围较宽）
+
 ### Requirement: Seed topics ready gate rule set
 
 `DPT_FRAMEWORK/schema/gate_definitions/gate-seed-topics-ready.definition.json` SHALL 定义当前 contract 下的 deterministic rules。
@@ -236,3 +235,23 @@ For canonical plans, seed readiness SHALL validate exact UID/slug/intent binding
 - **WHEN** a resumed legacy bundle follows its existing slug-only seed path before sanctioned rerun migration
 - **THEN** existing compatibility behavior MAY continue
 - **AND** no UID, topic addition or intent mutation SHALL be inferred from seed filename or prose
+
+### Requirement: Seed projection SHALL follow committed current topic layout
+
+After successful layout mutation, every remaining canonical topic SHALL have exactly one UID-bound `seed_topics/<current-slug>.md` projection with current id/slug/title and unchanged semantic intent unless the explicit layout target changed title. Previous seed filenames SHALL not remain as aliases. Safe remove MAY delete only the seed of a topic already proven to have no durable history or dependency.
+
+A generated new current seed path SHALL be created only when absent or when it is the same UID's existing current seed path being replaced. An unexplained existing target SHALL block rather than be adopted or overwritten.
+
+#### Scenario: Renumber replaces and rebinds seed
+- **WHEN** a topic keeps its UID but receives a new ordinal slug
+- **THEN** recovery SHALL leave one seed at the current path with matching current metadata
+- **AND** no old-path seed alias SHALL remain
+
+#### Scenario: Seed replacement crash exposes exact recovery
+- **WHEN** the process stops after the new current seed is written but before registry replacement or old-seed cleanup
+- **THEN** topic-state inspect SHALL report the accepted workspace and exact recover command
+- **AND** seed/gate checks SHALL short-circuit downstream mismatch noise
+
+#### Scenario: Orphan target seed is not overwritten
+- **WHEN** the target current seed filename already exists without binding to the same UID's current projection
+- **THEN** layout apply SHALL reject before prepared publication and preserve that file

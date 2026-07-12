@@ -1,13 +1,11 @@
 # research-styles Specification
 
-> req: RES-001, RES-002, RES-003, RES-004, RES-005, RES-006, RES-007
+> req: RES-001, RES-002, RES-003, RES-004, RES-005, RES-006, RES-007, RES-008
 
 ## Purpose
 
 Define research style profiles that control deep research depth and breadth parameters. Each style is a JSON file consumed by the JS engine. The system applies the selected style via CLI, stores resolved parameters in `rb_profile.yaml`, and enforces numeric thresholds through gate `count_floor` rules with dynamic threshold resolution. Quality parameters are enforced by Agent checklist + Queue re-fill loops.
-
 ## Requirements
-
 ### Requirement: Research style JSON files define per-style parameters
 
 The system SHALL provide one JSON file per research style under `DPT_FRAMEWORK/schema/research-styles/`. Each file SHALL be consumed exclusively by JS (`apply-research-style.mjs` CLI) — Agent and MD SHALL NOT read these files. Adding a new style SHALL require only adding a new JSON file.
@@ -127,3 +125,12 @@ When topic-state add commits and changes registry length, its structured result 
 #### Scenario: Add recomputes style after commit
 - **WHEN** add-topic commits successfully
 - **THEN** the Agent SHALL run the existing research-style CLI using the committed registry before the active HITL1 or rerun readiness gate
+
+### Requirement: Safe topic removal SHALL reuse the existing research-style owner
+
+When a committed layout operation safely removes an unstarted topic and changes registry length, its structured result SHALL identify the existing `apply-research-style.mjs` follow-up. Topic-state code SHALL not write profile fields, and rename/reorder without count change SHALL not trigger style recomputation.
+
+#### Scenario: Safe remove recomputes style once
+- **WHEN** layout commit reduces canonical registry length
+- **THEN** the Agent SHALL run the existing style CLI before the rerun-ready gate
+- **AND** topic-state helper SHALL leave unrelated profile sections untouched

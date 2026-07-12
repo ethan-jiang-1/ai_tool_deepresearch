@@ -1,6 +1,6 @@
 # Agentic Queue
 
-> req: AGQ-001, AGQ-002, AGQ-003, AGQ-004, AGQ-005, AGQ-006, AGQ-007, AGQ-008, AGQ-009, AGQ-010, AGQ-011, AGQ-012, AGQ-013, AGQ-014, AGQ-015, AGQ-016, AGQ-017, AGQ-018, AGQ-019, AGQ-020, AGQ-021, AGQ-022, AGQ-023, AGQ-024
+> req: AGQ-001, AGQ-002, AGQ-003, AGQ-004, AGQ-005, AGQ-006, AGQ-007, AGQ-008, AGQ-009, AGQ-010, AGQ-011, AGQ-012, AGQ-013, AGQ-014, AGQ-015, AGQ-016, AGQ-017, AGQ-018, AGQ-019, AGQ-020, AGQ-021, AGQ-022, AGQ-023, AGQ-024, AGQ-025
 
 > delta-synced: add-audited-late-accept-for-timed-out-work-units (AGQ-018, AGQ-019)
 
@@ -497,3 +497,16 @@ Fallback SHALL be attempt-level execution metadata, not a queue-demand rewrite. 
 - **WHEN** a prior unavailable preflight allocated no work and a later current observation reports the delegated actor available
 - **THEN** the Agent MAY rerun normal claim against the same queue demand without hand-editing queue/index/ledger state
 - **AND** work IDs SHALL be allocated only by that later successful claim
+
+### Requirement: New topic-scoped demand SHALL bind canonical UID and current slug
+
+New topic-scoped queue demand SHALL store canonical `payload.topic_uid` together with current `payload.topic_slug`. The Engine SHALL derive and persist UID from a valid current slug when the caller omits UID; a caller-supplied UID and any lineage topic projection SHALL match. Queue schema version SHALL remain unchanged. Existing terminal history SHALL remain immutable; nonterminal topic demand SHALL block layout mutation and SHALL be drained, submitted, repaired or terminalized through the existing queue/work-unit owner before retry.
+
+#### Scenario: Current UID and slug enqueue together
+- **WHEN** enqueue targets a committed canonical topic using its current slug
+- **THEN** the Engine SHALL persist matching topic UID and current slug binding without requiring the Agent to calculate UID
+
+#### Scenario: Nonterminal demand blocks layout mutation
+- **WHEN** a target UID has queued, running or delegated-in-flight demand
+- **THEN** topic-state apply SHALL return the existing owner and one nearest drain or terminalization action
+- **AND** SHALL NOT rewrite queue state itself

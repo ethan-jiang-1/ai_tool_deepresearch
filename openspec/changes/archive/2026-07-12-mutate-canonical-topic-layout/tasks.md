@@ -70,8 +70,20 @@
 
 - [x] 8.1 运行CTS/SCO/AGQ/DEW/QIV/PHS/STM/FIO/RWG/REI/RES/RRD focused unit/integration/static regressions。Done condition：全部PASS且`git diff --check`无错误。
 - [x] 8.2 运行受影响gate/reentry/queue/work-unit/provenance回归。Done condition：current behavior无退化；historical slug coverage与workspace short-circuit通过。
-- [ ] 8.3 运行完整`node --test tests`。Done condition：全量PASS；不修无关failure。
-- [ ] 8.4 运行`openspec validate mutate-canonical-topic-layout --strict`。Done condition：strict PASS。
-- [ ] 8.5 运行`node openspec/governance/check-project-reqs.mjs`。Done condition：0 duplicate/orphan/unregistered/reusedRetired。
-- [ ] 8.6 运行`node openspec/governance/check-project-specs.mjs`。Done condition：0 deltaHeaderInMain/missingPurpose/missingRequirements/missingReqHeader。
-- [ ] 8.7 最终scope audit。Done condition：一个registry、one pure resolver、existing helper/CLI/plan+seed workspace/playbook；无artifact/reference/final move、link rewrite、result/ledger topic fields、retired/tombstone state、second registry/progress state、queue mutation during layout、ledger/receipt/trace rewrite、post-final mutation、force/generic transaction/controller；apply evidence记录全部验证结果。
+- [x] 8.3 运行完整`node --test tests`。Done condition：全量PASS；不修无关failure。
+- [x] 8.4 运行`openspec validate mutate-canonical-topic-layout --strict`。Done condition：strict PASS。
+- [x] 8.5 运行`node openspec/governance/check-project-reqs.mjs`。Done condition：0 duplicate/orphan/unregistered/reusedRetired。
+- [x] 8.6 运行`node openspec/governance/check-project-specs.mjs`。Done condition：0 deltaHeaderInMain/missingPurpose/missingRequirements/missingReqHeader。
+- [x] 8.7 最终scope audit。Done condition：一个registry、one pure resolver、existing helper/CLI/plan+seed workspace/playbook；无artifact/reference/final move、link rewrite、result/ledger topic fields、retired/tombstone state、second registry/progress state、queue mutation during layout、ledger/receipt/trace rewrite、post-final mutation、force/generic transaction/controller；apply evidence记录全部验证结果。
+
+### Apply Verification Evidence (2026-07-12)
+
+- Focused CTS/SCO/AGQ/DEW/QIV/PHS/STM/FIO/RWG/REI/RES/RRD regressions: 193 pass, 0 fail; case-316 playbook validation: 1 pass, 0 fail; `git diff --check` clean.
+- Full regression: `node --test tests` reports 1501 pass, 0 fail.
+- Governance: `openspec validate mutate-canonical-topic-layout --strict` passed; requirement registry reports 527 registered with 0 orphan; spec governance reports 73 main spec files with 0 violations.
+- Scope: `canonical-topic-state-contract.test.mjs` reports 4 pass; audit of `000f15cc1..HEAD` plus worktree covers 33 change files and confirms one resolver, one topic CLI, plan+seed-only mutation, and unchanged result/ledger topic schemas.
+
+## 9. Post-Apply Archive Refresh
+
+- [x] 9.1 Refresh every `MODIFIED` delta requirement so archive preserves each existing main-spec scenario or explicitly deprecates superseded pre-C3B wording. Done condition: scenario coverage audit reports zero missing main scenarios, strict validation passes, and governance reports no requirement/spec violations.
+- [x] 9.2 Repair the pre-existing `REI-004` zero-scenario main-spec structure through the active delta without changing chain semantics. Done condition: all 12 in-memory rebuilt specs pass the native OpenSpec validator, including one deterministic rerun-routing scenario for `REI-004`.
