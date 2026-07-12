@@ -14,6 +14,10 @@ When a direct prerequisite blocks progress, Agent-facing guidance SHALL direct t
 
 The helper-oriented execution posture SHALL NOT override an Engine verdict, silently change user intent, expand permission, or fabricate evidence, receipt, trace, or runtime state.
 
+`Human-directed` SHALL describe the source of a decision or authorization, not transfer ordinary command execution back to the human. A human statement SHALL NOT by itself expand host permission, override an Engine verdict, or create a missing capability. For action responsibility, an accepted human-directed decision means the relevant contract-required decision/confirmation has been explicitly provided or recorded, current host permissions allow the action, and an existing legal Engine path supports it.
+
+When such a decision authorizes a destructive or irreversible action, the Agent SHALL execute the remaining authorized mechanical steps. If host policy requires a non-delegable human action, guidance SHALL request only that action and SHALL resume Agent execution afterward.
+
 The discoverable command index SHALL contain a top-level audience statement before command tables. The statement SHALL say:
 
 - commands are Agent-facing;
@@ -21,6 +25,8 @@ The discoverable command index SHALL contain a top-level audience statement befo
 - a blocked Agent reports the direct prerequisite and nearest legal action, executes an existing legal repair path itself, and does not create ad-hoc authority when no path exists;
 - HITL1 and HITL2 are the only interactive in-run checkpoints, except for the one-time pre-pipeline trigger/entry selection that transfers control to the Agent;
 - human-directed decisions at HITL1/HITL2 are distinct from autonomous execution, while out-of-band maintenance/debug is distinct from both an in-run checkpoint and an accepted mutation/reentry capability;
+- human-directed identifies who decided, while ordinary command execution remains assigned to the Agent except for a host-required non-delegable human action;
+- a human request does not by itself expand host permission, override an Engine verdict, or create a missing mutation/reentry capability;
 - terminal non-interactive Final delivery is allowed after final artifacts exist, but Final is not an interactive decision checkpoint, progress report, confirmation loop, or post-delivery repair surface;
 - post-final feedback, when supported by content-delivery specs, re-enters through HITL2 repair/rerun rather than through a Final-owned loop;
 - non-terminal `stop: no` phases run autonomously and silently; and
@@ -54,12 +60,25 @@ Agent-facing framework docs SHALL NOT use `Agent/operator` or equivalent slash w
 
 #### Scenario: Autonomous and human-directed authority remain distinct
 
-- **WHEN** command docs describe autonomous execution, an HITL decision, or explicit human maintenance, recovery, or debug collaboration
+- **WHEN** command docs describe autonomous execution, a HITL decision, or explicit human maintenance, recovery, or debug collaboration
 - **THEN** they SHALL distinguish Agent-driven autonomous action from a human-directed decision
 - **AND** they SHALL identify HITL1/HITL2 as the only in-run placements for human-directed interaction
 - **AND** they SHALL distinguish out-of-band maintenance/debug from an additional lifecycle checkpoint
 - **AND** they SHALL NOT describe it as a Final-owned repair loop
 - **AND** they SHALL NOT claim arbitrary override, mutation, or reentry exists without an accepted Engine contract
+
+#### Scenario: Human decision returns execution to the Agent
+
+- **WHEN** the required human decision/confirmation is explicit or recorded, current host permission allows the action, and an existing legal Engine path supports it
+- **THEN** the Agent SHALL execute the remaining authorized mechanical steps
+- **AND** guidance SHALL NOT turn the human into the ordinary command runner
+- **AND** if host policy requires one non-delegable human action, guidance SHALL request only that action and resume Agent execution afterward
+
+#### Scenario: Human direction does not create authority by itself
+
+- **WHEN** a human requests a mutation or reentry that has no accepted Engine path or exceeds current host permission
+- **THEN** the Agent SHALL explain the missing permission or capability boundary
+- **AND** it SHALL NOT treat the request alone as authority to hand-write runtime state or bypass the Engine verdict
 
 #### Scenario: Operator wording is not a co-runner audience
 
@@ -80,7 +99,7 @@ The validator SHALL scan at least:
 - `DPT_FRAMEWORK/command_playbook/*.md`
 - lifecycle and shared workflow Markdown touched by this change
 
-For `DPT_FRAMEWORK/COMMANDS.md`, it SHALL verify required positive markers for Agent-facing audience, Agent-owned ordinary authorized execution and reversible repair, autonomous versus human-directed authority, HITL1/HITL2 as the only in-run placements for human-directed interaction, out-of-band maintenance/debug as non-lifecycle collaboration, terminal non-interactive Final delivery, post-final HITL2 repair/rerun routing, one-time trigger framing, and no mid-pipeline progress/confirmation framing. Across all scanned surfaces, it SHALL reject known drift phrases unless allowlisted with an explicit diagnostic/post-run meaning. The positive-marker contract SHALL NOT require every command playbook to repeat the top-level audience statement.
+For `DPT_FRAMEWORK/COMMANDS.md`, it SHALL verify required positive markers for Agent-facing audience, Agent-owned ordinary authorized execution and repair, human-directed decision source without human command-runner transfer, human direction not creating host permission or missing capability, autonomous versus human-directed authority, HITL1/HITL2 as the only in-run placements for human-directed interaction, out-of-band maintenance/debug as non-lifecycle collaboration, terminal non-interactive Final delivery, post-final HITL2 repair/rerun routing, one-time trigger framing, and no mid-pipeline progress/confirmation framing. Across all scanned surfaces, it SHALL reject known drift phrases unless allowlisted with an explicit diagnostic/post-run meaning. The positive-marker contract SHALL NOT require every command playbook to repeat the top-level audience statement.
 
 Allowlist entries SHALL be explicit and reviewable: file or glob, phrase class, allowed context, and reason. Operator wording MAY be allowlisted only for post-run diagnostics, maintenance, or out-of-band review, never for command co-runner audience during autonomous lifecycle execution.
 
@@ -94,7 +113,7 @@ The validator SHALL reuse the existing command-contract documentation regression
 
 #### Scenario: Static validation requires helper-oriented audience markers
 
-- **WHEN** `DPT_FRAMEWORK/COMMANDS.md` omits Agent-owned ordinary execution, autonomous/human-directed authority distinction, or HITL/out-of-band placement distinction
+- **WHEN** `DPT_FRAMEWORK/COMMANDS.md` omits Agent-owned ordinary execution, human-directed decision-source semantics, the no-permission/no-capability-by-request boundary, autonomous/human-directed authority distinction, or HITL/out-of-band placement distinction
 - **THEN** the existing command-contract documentation regression SHALL fail
 - **AND** the failure SHALL name the missing stable marker
 - **AND** individual command playbooks SHALL NOT be required to duplicate the full top-level audience statement
