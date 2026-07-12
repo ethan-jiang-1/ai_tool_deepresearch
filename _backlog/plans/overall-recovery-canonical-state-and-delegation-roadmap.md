@@ -1,7 +1,7 @@
 # Overall Plan: Recovery、Canonical State 与 Delegated Reliability 五 Change 总控路线
 
 **性质:** 跨 plan / bug 的 OpenSpec change 总路线（pre-OpenSpec）
-**状态:** Active — C1 已 archive（v0.22）；C2 已 apply、验证通过、待 archive（v0.23）；C3/C4/C5 待按依赖顺序推进（更新于 2026-07-12）
+**状态:** Active — C1 已 archive（v0.22）；C2 已 archive（v0.23）；C3 `establish-canonical-topic-state` 进入 propose，C4/C5 待按依赖顺序推进（更新于 2026-07-12）
 **当前进度速览:** 见文末 [§12 Change 进度总览](#12-change-进度总览live-tracker)——每推进一个 change 就更新那张表，避免跟踪断线。
 **前置基础:** `align-recovery-with-simple-helper-posture`（v0.21）已建立 helper-oriented、`materialize-before-work`、`canonical-or-blocked` 与依赖带，但未实现本计划的核心 runtime 能力。
 
@@ -83,7 +83,7 @@ direct observation and contract transparency
 
 ## 3. C1 — `harden-recovery-observability-and-contracts`
 
-**Status (2026-07-12): Applied.** Canonical incident detection、root-grouped recovery summary、reachable/missing-contract feedback、Wave0/return-map repair 与 shared cache contract 已落地。下一批可独立 propose/apply 的工作是 C2 crash-safe persistence 与 C4 delegated actor availability；C3/C5 仍按依赖顺序等待。
+**Status (2026-07-12): Archived.** Canonical incident detection、root-grouped recovery summary、reachable/missing-contract feedback、Wave0/return-map repair 与 shared cache contract 已落地。C2 也已归档；当前推进 C3 canonical topic state，C4 delegated actor availability 仍是独立 lane，C5 继续等待 C3。
 
 ### 3.1 覆盖来源
 
@@ -129,7 +129,7 @@ direct observation and contract transparency
 
 ## 4. C2 — `make-artifact-persistence-crash-safe`
 
-**Status (2026-07-12): Applied, ready to archive (v0.23).** 已落一个 workspace、一个 helper、一个 `persist|sweep` CLI 与 controlled case-314。范围刻意收窄为 completed staging 的 sanctioned content persistence；没有 FIO/trace/control mutation、discard/quarantine、global journal、watcher 或 lock service。
+**Status (2026-07-12): Archived (v0.23).** `archive/2026-07-12-make-artifact-persistence-crash-safe` 已同步 main spec。已落一个 workspace、一个 helper、一个 `persist|sweep` CLI 与 controlled case-314。范围刻意收窄为 completed staging 的 sanctioned content persistence；没有 FIO/trace/control mutation、discard/quarantine、global journal、watcher 或 lock service。
 
 ### 4.1 覆盖来源
 
@@ -371,16 +371,16 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 | # | Change | 依赖 | 状态 | Version | 归档 slug / 备注 |
 |---|---|---|---|---|---|
 | C1 | `harden-recovery-observability-and-contracts` | — | ✅ Archived | v0.22 | `archive/2026-07-12-harden-recovery-observability-and-contracts` |
-| C2 | `make-artifact-persistence-crash-safe` | C1 | ✅ Applied（待 archive）| v0.23 | 33 tasks implementation/verification closure；active change 等待 archive |
-| C3 | `establish-canonical-topic-state` | C1（吸收 C2 durability 边界）| ⏳ Not started | TBD | 若 propose 阶段无法保持单一 Source of Record，可拆 C3A identity/rename + C3B intent/progress |
+| C2 | `make-artifact-persistence-crash-safe` | C1 | ✅ Archived | v0.23 | `archive/2026-07-12-make-artifact-persistence-crash-safe`；main spec 已同步 |
+| C3 | `establish-canonical-topic-state` | C1 + C2 durability boundary | 📝 Proposing（当前） | TBD | 优先保持单一 Source of Record；只有 propose 证明无法自洽时才拆 C3A/C3B |
 | C4 | `handle-unavailable-delegated-actors` | C1（独立执行 lane，可与 C2 并行）| ⏳ Not started | TBD | 关闭 BUG-077 的 actor availability 尾巴 |
 | C5 | `restore-audited-post-final-recovery` | C1 + C3（消费 C2 crash-safe primitive）| ⏳ Not started | TBD | 最高风险 authority change，必须最后做 |
 
 **推进顺序提醒：**
 
 1. C1 ✅ → 已提供只读安全网。
-2. C2 已 apply；C4 仍可独立推进。
-3. C3 依赖 C1，设计时必须吸收 C2 的 durability boundary。
+2. C2 ✅ 已 archive；C4 仍可独立推进。
+3. **C3（当前）** 依赖 C1，并消费已归档 C2 的 durability boundary。
 4. C5 最后，依赖 C1 + C3，并复用 C2 crash-safe primitive。
 
 **来源关闭追踪（与 §11 关闭条件对齐）：**
