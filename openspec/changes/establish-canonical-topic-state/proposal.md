@@ -1,35 +1,42 @@
 ## Why
 
-来源 `_backlog/plans/breakpoint-recovery-persistence-model.md` P2/P3、`_backlog/plans/human-override-and-state-mutability.md` A/B 与 `BUG-079-out-of-gate-addendum-no-canonical-footprint.md` 的共同缺口是：topic intent、identity 与当前工作事实散落在 `rb_plan.md`、`seed_topics/`、queue、work-unit、artifact 路径和 chat 中，新增/改名/重编号时没有一条 sanctioned canonical-or-blocked 路径。C1 已能检测 drift，C2 已保护 completed content staging；现在需要在内容工作开始前建立唯一 topic identity/intent owner，并让恢复进度从现有 direct facts 计算，而不是再堆一份进度台账。
+来源 `_backlog/plans/breakpoint-recovery-persistence-model.md` P2/P3、`_backlog/plans/human-override-and-state-mutability.md` A 与 `BUG-079-out-of-gate-addendum-no-canonical-footprint.md` 的共同缺口是：新增 topic 的 identity、minimum intent 与当前 wave work fact 不能只凭 disk truth稳定恢复。C1 已能检测 registry-external drift，C2 已保护 completed content staging；现在需要在内容工作前建立唯一 canonical topic owner，而不是让 registry、seed、queue、artifact 与 chat 各自暗示 topic 真相。
+
+首次 proposal 将 add、remove、rename、renumber、全路径迁移和 crash transaction 全塞进一个 change，形成第二套通用 filesystem recovery controller。Explore 后按 overall roadmap 的 split trigger 收敛为 **C3A canonical identity / intent / direct-fact progress**：本 change 只处理 legacy migration、new-topic registration、existing intent update 与 read-only inspect；remove/rename/renumber/layout mutation 留给后续 C3B。
 
 ## What Changes
 
-- 将 `rb_plan.md#/topic_registry` 明确为 topic identity + minimum durable intent 的唯一 Source of Record；entry 增加 Engine-generated stable `topic_uid`、`must_answer`、`scope_role` 与 `depends_on_topic_uids`，现有序号/slug/title 保持 Agent-readable projection。
-- 新增一个窄 `operate-topic-state.mjs` Agent-facing CLI，提供 `register`、`rename`、`renumber`、`inspect` 四个显式操作；所有 mutation 使用一个 Engine-owned operation workspace，失败保持旧 canonical state 或返回一个 blocked workspace，不提供 arbitrary patch/status/trace override。
-- `register` 先原子物化 registry intent 与 seed skeleton，再允许 queue/content work；未注册或未物化 topic 进入 canonical-or-blocked，而不是创建平行 addendum namespace。
-- `inspect` 从 canonical registry、seed projection、queue/work-unit/submitted ledger 与 wave artifacts 的直接事实计算 per-topic/per-wave `not_started|in_progress|complete|deferred|blocked` read model，不新增竞争性的 durable progress ledger，也不把 trace/chat/mtime 当 progress authority。
-- `rename`/`renumber` 以 stable `topic_uid` 绑定 identity，原子更新 registry 与 accepted derived topic paths/refs；遇到未知引用或 transaction owner 外 surface 时 fail closed，不做全仓字符串替换。
-- HITL1 与 HITL2 rerun 的新 scope 必须先走 topic-state registration/materialization；用户决定语义，Agent 执行普通命令，Engine 校验并提交 deterministic mutation。`human-directed` 不创造 permission，post-final reentry 与 arbitrary human override 仍留给 C5。
+- `rb_plan.md` 增加 `topic_registry_version: "2"` 作为 canonical/legacy discriminator；`topic_registry` 继续作为唯一 topic Source of Record，entry 增加 Engine-generated immutable `topic_uid` 与 minimum durable intent：`must_answer[]`、`scope_role`、`depends_on_topic_uids[]`。现有 `id/slug/title` 保持当前 layout coordinate，本 change 不修改既有 id/slug/path。
+- 新增一个窄 `operate-topic-state.mjs`，只提供 `inspect`、`apply`、`recover`：
+  - `apply` 接受 `migrate_legacy`、`add_topic`、`update_intent`；legacy reconciliation由Agent明确提供，可显式adopt C1检测出的external slug，不从artifact/seed prose/chat猜语义；new topic分配下一个ordinal/slug并物化registry+seed；
+  - `recover` 只恢复一个inspect明确报告的accepted operation id，确定性完成exact staged plan/seed或blocked；
+  - `inspect` 从registry/seed、slug-bound queue/work-unit/submitted ledger与accepted artifact facts计算read model，并给出唯一最近命令。
+- 新 scope 必须先 commit canonical registry + seed projection，才可进入 topic-scoped queue/content work。Registry-external/seed-only/parallel addendum identity 一律 canonical-or-blocked。
+- progress 仅 side-effect-free 投影为 `not_started|in_progress|complete|blocked`，返回 direct fact refs、一个原因和最多一个最近动作；不新增 progress 文件、event store、cache 或 reconciliation loop。
+- HITL1/HITL2 rerun 的 add/refine 先走 topic-state apply；用户决定语义，Agent执行普通命令，Engine验证并提交。remove/rename/renumber、post-final reentry与arbitrary override明确保持 missing capability/boundary，不以 direct multi-file edit 冒充支持。
+- `apply` 不信任调用者自报的 `human-directed` 或 context flag：new-run HITL1复用现有`current_node`+bootstrap-compatible status window，rerun复用`current_node`+route-bound HITL2 handoff/status window。Legacy migration/adoption仅能在 sanctioned rerun提交；post-final legacy incident继续等待C5。`recover`只完成已记录authorized context的prepared manifest，可在崩溃重入时执行。
+- Agent 在用户批准后先写 caller-owned retained apply-input file，再立即调用 apply；prepared manifest 是 Engine accepted recovery boundary。prepared 前崩溃不被过度描述为已接受，但 retained input 可用于fresh retry，不建设 chat interceptor。
 - 需要 version bump，目标 `v0.24`。
 
-Net simplification：不新增 progress database、event-sourced topic ledger、watcher、background reconciler、双向同步 daemon 或第二套 topic registry；合并当前“registry 是 owner 但 seed/path/queue 各自推断 identity”的漂移，恢复闭环缩短为 `inspect direct facts → one blocked root or one next action → Agent repair/rerun inspect`。
+最短闭环：`inspect direct facts → recover <operation-id> 或 apply <plan> → existing style follow-up if needed → inspect`。Agent执行普通恢复命令；只有缺失/冲突的语义或权限才回到用户。Net simplification 是用 stable UID + registry owner消除 seed/path自发成为 identity 的歧义，同时避免第二 registry、持久 progress truth、隐藏 recovery、全路径 transaction、watcher、daemon 或 background reconciler。
 
 ## Capabilities
 
 ### New Capabilities
-- `canonical-topic-state`: 定义 stable topic identity、minimum durable intent、canonical registration/materialization、direct-fact progress projection，以及原子 rename/renumber 的边界与结果契约。Requirement prefix 预留为 `CTS`，在 apply governance task 登记。
+- `canonical-topic-state`: stable identity、minimum durable intent、explicit legacy migration/adoption、add/update apply、explicit recover、seed projection与direct-fact progress inspection。Requirement prefix 预留 `CTS`，apply时登记。
 
 ### Modified Capabilities
-- `schema-core`: 扩展 `PlanSchema.topic_registry[]` 的 canonical identity/intent 字段，同时提供受控 legacy migration/diagnostic boundary。
-- `seed-topic-materialization`: seed topic 从独立 identity 表面收敛为 canonical registry 的 materialized projection，新增 scope 必须在 research work 前完成 registration + seed materialization。
-- `queue-input-validation`: topic-scoped queue demand 优先绑定 stable `topic_uid`，slug 作为人类可读 projection；unknown/unmaterialized identity fail closed。
-- `rerun-incremental-node`: HITL2 rerun 的 add/remove/rename scope plan 改为调用 canonical topic-state operation，不再直接多面编辑 registry/seed paths。
-- `research-styles`: topic count 与 style recomputation 只消费成功提交后的 canonical registry，不读取半完成 mutation workspace。
-- `runtime-reentry-debuggability`: canonical recovery summary 消费 topic-state inspect read model，把 identity/materialization/progress drift 聚成一个最近根因，而不新增修复 authority。
+- `schema-core`: 保留 legacy-compatible `PlanSchema` read path，新增 strict `CanonicalPlanSchema`/canonical topic entry invariants；新run HITL1与topic mutation要求canonical，legacy bundle在未进入sanctioned rerun前继续旧read/gate兼容路径。
+- `pre-research-phase-content`: HITL1 在用户批准 topic semantics 后由Agent调用topic-state apply原子写registry+seed，再调用existing style owner；不再直接写frontmatter registry并把intent materialization推迟到seed phase。
+- `seed-topic-materialization`: seed file成为 UID-bound registry projection；register/migrate成功前不得开始topic work。
+- `queue-input-validation`: 不改变queue schema；topic-scoped enqueue在topic-state workspace存在、seed缺失或UID binding不一致时no-write reject。
+- `rerun-incremental-node`: sanctioned rerun add/refine 使用 canonical topic-state plan；remove/rename/renumber不再由direct edits假装支持。
+- `research-styles`: topic-state add commit后复用既有 profile owner按 committed registry length recompute。
+- `runtime-reentry-debuggability`: 消费 topic-state inspect，将同一 UID 的 identity/materialization/progress drift聚成一个root，不新增mutation authority。
 
 ## Impact
 
-- 预计影响 `DPT_FRAMEWORK/schema/contracts/plan.mjs`、topic/plan 解析 helpers、一个新的 topic-state helper 与 CLI、seed/rerun/queue/reentry integration points、Agent-facing command/phase guidance，以及 root `tests/` 与现有 reentry/rerun controlled experiment family。
-- 新增 bundle-local `_diagnostics/topic-state/<operation-id>/` 仅用于 accepted multi-file mutation recovery；不复用 C2 content workspace 去越权修改 control/identity surfaces，也不新增全局 journal。
-- 不新增依赖；Node.js ESM + `zod`/`yaml` 与 built-ins。
-- 不改变 work-unit submit、queue completion、gate、handoff、status、trace、artifact persistence 或 Final delivery authority；不实现 post-final reentry、state jump 或 audited human override。
+- 预计影响 PlanSchema/readers、HITL1、一个 topic-state helper + CLI、seed materialization/gate、queue preflight、rerun guidance、research-style follow-up、reentry adapter、Agent command guidance及 root tests/controlled experiment。
+- 新增 `_diagnostics/topic-state/<operation-id>/` 只绑定 `rb_plan.md` 与本次 migrate/add/update 明确触及的 `seed_topics/*.md`；不迁移artifact/cache/reference/final paths，不成为通用 transaction framework。
+- 不新增依赖；queue只增加direct eligibility preflight，不改变schema/contents owner；不改变work-unit submit、status、trace、handoff、C2 artifact persistence或Final delivery authority。
+- 后续 C3B（建议 `mutate-canonical-topic-layout`）单独处理 remove/rename/renumber/path/reference migration；C5继续处理post-final reentry与audited override。

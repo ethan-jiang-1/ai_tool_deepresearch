@@ -2,11 +2,10 @@
 
 ## ADDED Requirements
 
-### Requirement: Research style recomputation SHALL consume committed canonical topic count
+### Requirement: Topic-state add SHALL reuse the existing research-style owner
 
-Research-style parameter recomputation SHALL read topic count only from a successfully committed canonical registry and SHALL run after register/renumber commit when count changes. It SHALL ignore prepared/blocked topic-state workspaces and SHALL preserve unrelated profile sections through the existing profile owner.
+When topic-state add commits and changes registry length, its structured result SHALL identify the existing `apply-research-style.mjs` path as the one required follow-up. Research-style computation SHALL read only committed registry length and preserve unrelated profile sections under its existing contract. Prepared/blocked topic-state workspaces SHALL NOT affect profile calculation, and topic-state code SHALL NOT directly mutate profile fields.
 
-#### Scenario: Register updates style count after commit
-- **WHEN** a new topic registration commits and increases canonical registry length
-- **THEN** research style parameters SHALL be recomputed from the new committed count
-- **AND** no half-prepared mutation SHALL affect the profile
+#### Scenario: Add recomputes style after commit
+- **WHEN** add-topic commits successfully
+- **THEN** the Agent SHALL run the existing research-style CLI using the committed registry before the active HITL1 or rerun readiness gate
