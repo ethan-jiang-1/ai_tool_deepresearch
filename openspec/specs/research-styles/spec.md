@@ -1,6 +1,6 @@
 # research-styles Specification
 
-> req: RES-001, RES-002, RES-003, RES-004, RES-005, RES-006
+> req: RES-001, RES-002, RES-003, RES-004, RES-005, RES-006, RES-007
 
 ## Purpose
 
@@ -119,3 +119,11 @@ The system SHALL support a `debug` research style with `user_visible: false`. HI
 #### Scenario: Debug style usable internally
 - **WHEN** a developer manually sets `research_profile: debug` and writes the corresponding `research_style_params` into `rb_profile.yaml`
 - **THEN** the gate system SHALL use the debug parameters (lowest floor=1, all quality thresholds at minimum) for that run
+
+### Requirement: Topic-state add SHALL reuse the existing research-style owner
+
+When topic-state add commits and changes registry length, its structured result SHALL identify the existing `apply-research-style.mjs` path as the one required follow-up. Research-style computation SHALL read only committed registry length and preserve unrelated profile sections under its existing contract. Prepared/blocked topic-state workspaces SHALL NOT affect profile calculation, and topic-state code SHALL NOT directly mutate profile fields.
+
+#### Scenario: Add recomputes style after commit
+- **WHEN** add-topic commits successfully
+- **THEN** the Agent SHALL run the existing research-style CLI using the committed registry before the active HITL1 or rerun readiness gate

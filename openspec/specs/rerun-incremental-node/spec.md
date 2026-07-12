@@ -1,6 +1,6 @@
 # Rerun Incremental Node
 
-> req: REI-001, REI-002, REI-003, REI-004, REI-005
+> req: REI-001, REI-002, REI-003, REI-004, REI-005, REI-006
 
 ## Purpose
 
@@ -38,57 +38,67 @@ Routing identity SHALL 为 node fileRef `phases/phase-rerun.md`。
 
 ### Requirement: Rerun node analyzes rationale vs seed_topics and produces topic adjustment plan
 
-`phase-rerun.md` body SHALL instruct the Agent to perform semantic analysis:
+`phase-rerun.md` body SHALL instruct the Agent to:
 
-1. **Read inputs**: `rb_profile.yaml#/human_decision_checkpoints/hitl2/rationale` (user intent) and current `seed_topics/` state (existing topic list, each topic's depth/direction)
-2. **Compare and infer**: analyze what the user wants to change vs what already exists, then produce a topic adjustment plan:
-   - Topics to **keep** as-is (not mentioned in rationale, work still valid)
-   - Topics to **supplement** with new dimensions/directions (rationale asks for deeper/more specific angle on existing topic)
-   - Topics to **add** (rationale mentions new areas not covered)
-   - Topics to **remove** (rationale explicitly rejects or contradicts)
-3. **Write direction hints**: for each affected topic, write a `## 本轮重跑方向` section into `seed_topics/{slug}.md` containing:
-   - `action`: `supplement` (add dimensions to existing topic), `add` (new topic), or `remove` (deprecate topic)
-   - `new_search_dimensions`: additional search angles for wave0
-   - `adjusted_depth`: modified research depth if changed
-   - `search_guardrails`: any new constraints for source intake
-   - `rationale_excerpt`: relevant quote from HITL2 rationale
+1. Read `rb_profile.yaml#/human_decision_checkpoints/hitl2/rationale`, canonical `rb_plan.md#/topic_registry`, current `seed_topics/`, and `operate-topic-state inspect`.
+2. Produce a semantic adjustment plan that distinguishes topics to keep, existing topics whose intent needs refinement, new topics to add, and requested remove/rename/renumber operations that require the deferred C3B capability.
+3. For add/refine only, prepare explicit topic-state apply JSON:
+   - `add_topic` contains title, descriptive slug stem, non-empty must-answer set, scope role and dependency UIDs;
+   - `update_intent` identifies immutable topic UID and may change title, must-answer set, scope role and dependency UIDs, but not id/slug.
+4. Run topic-state apply before queueing new work. Consume structured blockers and rerun the same operation after repair.
+5. For each successfully added/refined topic, write or update the UID-bound seed `## 本轮重跑方向` section with the existing Agent-facing content: `action`, new search dimensions, adjusted depth, search guardrails and rationale excerpt. These labels remain guidance content, not a second machine state.
+6. Increment `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count` through the existing profile path. If registry length changed, run the existing `apply-research-style.mjs` owner before the rerun-ready gate.
+7. Preserve the incoming HITL2→rerun status window until `check-gate-rerun-ready.mjs` passes. After pass, consume `check.next` through `enter-phase`, then run source-gate `advance-status --to rerun_ready`.
 
-   The section format is Agent-facing Markdown prose — the field labels above describe **required content**, not prescribed literal key names. Downstream phases (also Agent-driven) read this section as natural language guidance, not as structured data.
-4. **Record rerun context**: increment `rerun_count` in profile. Gate preconditions SHALL keep the incoming HITL2→rerun status window (`current_gate: hitl2_recorded`, `next_gate: rerun_ready`) until the `rerun-ready` gate itself passes. The Agent SHALL NOT write `current_gate: rerun_ready` before the `rerun-ready` gate has passed.
-5. **Run gate**: execute `check-gate-rerun-ready.mjs`; if pass, consume the gate CLI `check.next` through `enter-phase --bundle <path> --node <check.next>`, then synchronize the just-passed source gate with `advance-status --bundle <path> --to rerun_ready`. If fail, follow gate inspect/advice and do not route forward without `check.next`.
+Requested remove/rename/renumber SHALL NOT fall back to direct multi-file edits, deletion or a parallel addendum namespace. Existing artifacts/references SHALL remain untouched. Direction guidance for successfully added/refined topics MAY continue in their UID-bound seed files after canonical apply.
 
-The Agent SHALL NOT delete existing artifacts or references. Downstream phases (seed-topics, wave0, wave1, wave2) SHALL read `rerun_count > 0` and the `## 本轮重跑方向` section in each seed topic to operate in delta mode.
+If update-intent is blocked by queued or claimed work, the Agent SHALL use the existing queue/work-unit inspect, submit, repair or terminalization path and rerun topic-state apply. This mechanical blocker SHALL NOT be pushed to the user unless a new semantic conflict remains after the direct owner is resolved.
+
+Topic-state apply in rerun SHALL be authorized only when `rb_status.json#/current_node` is `phases/phase-rerun.md`, the latest non-superseded HITL2 gate handoff has a route-bound load witness for that node, and the incoming `current_gate: hitl2_recorded` / `next_gate: rerun_ready` window remains intact. A caller-declared rerun context or HITL2 rationale alone SHALL NOT authorize mutation. `migrate_legacy` SHALL be unavailable outside this sanctioned rerun context.
 
 #### Scenario: Rerun preserves incoming HITL2 status window before gate pass
-
-- **WHEN** HITL2 has selected the deterministic rerun branch and `enter-phase --node phases/phase-rerun.md` has loaded the rerun node
-- **AND** source-gate status synchronization has written `current_gate: "hitl2_recorded"` and `next_gate: "rerun_ready"`
-- **THEN** `phase-rerun.md` SHALL instruct the Agent to run `check-gate-rerun-ready.mjs` under that incoming status window
-- **AND** it SHALL NOT instruct `advance-status --to rerun_ready` before the rerun gate passes
+- **WHEN** HITL2 has selected rerun and loaded `phase-rerun.md`
+- **THEN** the Agent SHALL keep `current_gate: hitl2_recorded` and `next_gate: rerun_ready` while preparing/applying topic intent
+- **AND** it SHALL NOT advance status before the rerun-ready gate passes
 
 #### Scenario: Rerun status sync happens only after rerun-ready pass
+- **WHEN** rerun-ready passes with `check.next: phases/phase-seed-topics.md`
+- **THEN** the Agent SHALL enter that node first and then run `advance-status --to rerun_ready`
 
-- **WHEN** `check-gate-rerun-ready.mjs` passes and emits `check.next: "phases/phase-seed-topics.md"`
-- **THEN** the Agent SHALL first run `enter-phase --bundle <bundle> --node phases/phase-seed-topics.md`
-- **AND** only after that route-bound entry witness exists, run `advance-status --bundle <bundle> --to rerun_ready`
-- **AND** the resulting status window SHALL be `current_gate: "rerun_ready"` and `next_gate: "seed_topics_ready"`
+#### Scenario: Route-bound rerun entry authorizes topic apply
+- **WHEN** HITL2 emitted the rerun target, `enter-phase` recorded the matching route-bound load witness, and the incoming rerun status window is current
+- **THEN** rerun topic-state apply MAY migrate legacy state or add/refine canonical intent
 
-#### Scenario: First rerun sets rerun_count and writes direction hints
+#### Scenario: Missing or superseded rerun witness blocks apply
+- **WHEN** current-node/context claims rerun but the matching HITL2→rerun witness is missing or superseded by a newer route decision
+- **THEN** apply SHALL reject before workspace creation and point to the existing lifecycle route repair
+- **AND** the Agent SHALL NOT ask the user to approve a mechanical bypass
 
-- **WHEN** `rerun_count` is absent or 0 and Agent executes phase-rerun
-- **THEN** Agent SHALL write `rerun_count: 1` in `rb_profile.yaml#/human_decision_checkpoints/hitl2/`
-- **AND** Agent SHALL write `## 本轮重跑方向` sections into affected `seed_topics/{slug}.md` files
+#### Scenario: New rerun topic materializes before work
+- **WHEN** the rationale requires a new topic
+- **THEN** the Agent SHALL commit add-topic registry+seed intent before enqueueing Wave0/Wave1 work
 
-#### Scenario: Second rerun increments rerun_count and updates hints
+#### Scenario: Existing topic intent update preserves layout
+- **WHEN** the rationale refines an existing topic
+- **THEN** update-intent SHALL preserve its UID/id/slug and existing artifacts
 
-- **WHEN** `rerun_count` is 1 and Agent executes phase-rerun again
-- **THEN** Agent SHALL write `rerun_count: 2`
-- **AND** Agent SHALL update `## 本轮重跑方向` sections in affected seed topic files reflecting new rationale
+#### Scenario: First rerun increments count and writes guidance
+- **WHEN** rerun_count is absent or 0 and topic-state preparation succeeds
+- **THEN** the Agent SHALL write rerun_count 1 through the existing profile path
+- **AND** affected UID-bound seeds SHALL contain updated rerun direction guidance
 
-#### Scenario: Existing artifacts are preserved
+#### Scenario: Second rerun preserves existing loop protection
+- **WHEN** rerun_count is 1 and another sanctioned rerun preparation succeeds
+- **THEN** the Agent SHALL write rerun_count 2 and update affected direction guidance
 
-- **WHEN** Agent executes phase-rerun
-- **THEN** existing `reference/` and `artifacts/` SHALL NOT be deleted
+#### Scenario: Existing artifacts remain preserved
+- **WHEN** rerun add/refine preparation executes
+- **THEN** existing `reference/` and `artifacts/` SHALL NOT be deleted or rewritten by topic-state operations
+
+#### Scenario: Remove or layout mutation remains blocked
+- **WHEN** the rationale requests remove, rename or renumber
+- **THEN** the Agent SHALL report/retain the C3B missing-capability blocker
+- **AND** SHALL NOT directly edit multiple runtime surfaces to simulate success
 
 ### Requirement: Rerun-ready gate validates legal rerun state
 

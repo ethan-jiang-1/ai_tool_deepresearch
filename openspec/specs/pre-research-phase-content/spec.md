@@ -1,6 +1,6 @@
 # Pre-Research Phase Content
 
-> req: PRP-001, PRP-002, PRP-003, PRP-004, PRP-005, PRP-006, PRP-007, PRP-008, PRP-009, PRP-010
+> req: PRP-001, PRP-002, PRP-003, PRP-004, PRP-005, PRP-006, PRP-007, PRP-008, PRP-009, PRP-010, PRP-011
 
 ## Purpose
 
@@ -45,56 +45,69 @@ Section 内容要求：
 
 `phase-hitl1.md` SHALL contain the complete 9-section body, retain `stop: yes`, and declare `execution_contract.search_policy: capability_probe_only`.
 
-Section 内容要求：
-- **Stage Goal**: 收集用户对 pre-research 的明确输入，确认当前 Agent research access，并写入 `rb_profile.yaml`
-- **Required Inputs**: 已实例化 bundle、`shared-profile.md`
+Section requirements:
+
+- **Stage Goal**: collect explicit pre-research input, confirm actual research access, and commit approved canonical topic intent.
+- **Required Inputs**: instantiated bundle and `shared-profile.md`.
 - **Allowed Actions**:
-  - 读取用户原始 research question / brief
-  - 判断用户输入详细程度：一句话还是详细 brief？
-  - **一句话场景 → topic rewrite**：Agent 将模糊输入展开为 structured original topic（背景、范围、关键维度、已知前提、不确定项），写入 `rb_plan.md` 正文
-  - 从 original topic 推导初始 seed topics → 写入 `rb_plan.md` frontmatter 的 `topic_registry`
-  - 将 original topic + seed topics + 建议的 `research_profile` 一起展示给用户审查
-  - 向用户展示结构化 HITL1 问题面
-  - 基于用户回答选择 `research_profile` enum
-  - 写入 `root_must_answer_set`
-  - 写入 `human_decision_checkpoints.hitl1.status`
-  - 写入 `human_decision_checkpoints.hitl1.recorded_at`
-  - 运行 `apply-research-style.mjs`
-  - 使用当前 Agent 的实际 search surface 执行至多一次 neutral capability-only search，并对第一个 usable HTTP(S) result 使用实际 fetch surface 执行至多一次 fetch
-  - 将直接 observation 写入 `rb_profile.yaml#/research_access`
-- **Expected Artifacts**: `rb_profile.yaml` 中用户选择、style params 与 research-access observation 已写入
-- **Gate Command**: `node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle <path> --current-node phases/phase-hitl1.md`
-- **On Gate Pass**: 读取 `check.next`
-- **On Gate Fail**: 读取 `inspect` / `advice`；若 access 不可用，保留用户 choices，修复/切换环境后重跑同一 probe 和同一 gate
-- **Stop Behavior**: `stop: yes`，Agent MUST 等待用户输入；access unavailable 时仍停留 HITL1
-- **Anti-Cheating Rules**: 禁止把回答留在 chat memory；禁止伪造用户答案；禁止跳过 HITL1；禁止用 mock/fixed URL 声称 available；禁止把 probe 当 research evidence
+  - read the original research question/brief and decide whether topic rewrite is needed;
+  - write structured original-topic narrative to `rb_plan.md` body without inventing missing user constraints;
+  - derive an Agent-facing preview of initial topics and suggested research profile;
+  - show original topic + topic preview + structured HITL1 question surface to the user and wait for the answer;
+  - consume the existing HITL1 entry path and establish `current_node: phases/phase-hitl1.md`, `current_gate: hitl1_recorded`, `next_gate: setup_ready` before topic mutation;
+  - after user approval, write a retained topic-state input file containing `add_topic` entries with title, descriptive slug stem, must-answer set, scope role and dependencies;
+  - run one `operate-topic-state apply` change set so the approved canonical registry and all UID-bound seed skeletons commit together; do not directly write registry frontmatter or defer approved intent to the seed phase;
+  - select the `research_profile` enum and write `root_must_answer_set`;
+  - write `human_decision_checkpoints.hitl1.status` and `.recorded_at`;
+  - run `apply-research-style.mjs` using committed registry count;
+  - execute at most one neutral capability-only search and at most one fetch of the first usable HTTP(S) result, then record direct `research_access` observation.
+- **Expected Artifacts**: canonical `rb_plan.md` registry, matching UID-bound seeds, and `rb_profile.yaml` containing user choices, style parameters, HITL1 marker and research-access observation.
+- **Gate Command**: existing `check-gate-hitl1-recorded.mjs` under the current node.
+- **On Gate Pass**: read `check.next`.
+- **On Gate Fail**: read inspect/advice, repair the one direct blocker and rerun the same command/gate; if access is unavailable, preserve choices, repair/switch environment, and rerun the same bounded probe and gate.
+- **Stop Behavior**: wait for user input at HITL1; after the decision, Agent executes ordinary apply/style/probe commands.
+- **Anti-Cheating Rules**: no chat-only answers, fake probe, direct registry edit, seed-only identity, mock access, parallel status tree or automatic retry tree.
 
-Probe SHALL be bounded to at most one search invocation and at most one fetch invocation. It SHALL answer only whether the first usable HTTP(S) result from a neutral capability-only search can be fetched as page content. Search unavailable/failed/blocked/no usable result, or a missing fetch surface before fetch invocation, SHALL record `unavailable` with `fetch_outcome: not_attempted`; an attempted fetch that is blocked or fails SHALL record the corresponding non-success outcome; only real fetched page content SHALL permit `available`.
+Probe SHALL remain bounded to one search invocation and one fetch invocation. It SHALL answer only whether the first usable HTTP(S) result from a neutral capability-only search can be fetched as page content. Search unavailable/failed/blocked/no usable result, or a missing fetch surface before invocation, SHALL record `unavailable` with `fetch_outcome: not_attempted`; an attempted blocked/failed fetch SHALL record the corresponding non-success outcome; only real fetched page content permits `available`.
 
-Probe URL/content SHALL NOT be cited, cached as research evidence, declared in output ledgers, written to work-unit outputs, or counted toward any wave gate. HITL1 SHALL NOT create offline research artifacts, evidence-free report skeletons, fake probe receipts, automatic retry trees, or a new interactive checkpoint.
+Probe URL/content SHALL NOT become research evidence, cache, submitted output, receipt or gate coverage. HITL1 SHALL NOT create offline research artifacts, fake probe receipts, evidence-free report skeletons, automatic retry trees or another interactive checkpoint. User choices and research access SHALL remain in the accepted profile surface, not a parallel status tree.
 
-HITL1 body SHALL show the question dimensions but MUST write to the current accepted profile surface rather than a parallel status tree.
+HITL1 gate SHALL require `CanonicalPlanSchema`, exact UID-bound seed projection and completed topic-state workspace state. Legacy-compatible plan readability SHALL not count as HITL1 completion. The Agent SHALL run the existing gate after user input; `stop: yes` does not waive deterministic checks.
 
-#### Scenario: HITL1 records available access after one real probe
+Initial topic-state apply SHALL run only after `enter-phase` has populated `rb_status.json#/current_node: phases/phase-hitl1.md` and the existing bootstrap-compatible status synchronization has established `current_gate: hitl1_recorded` / `next_gate: setup_ready`. The apply context argument is descriptive only; it SHALL NOT authorize mutation when those direct lifecycle facts are absent or stale.
 
-- **WHEN** the actual Agent search returns a real HTTP(S) URL and the actual fetch surface retrieves page content
-- **THEN** the Phase Agent SHALL record `research_access.status: available` with the direct available-branch fields
-- **AND** it SHALL run the existing HITL1 gate
-- **AND** the probe output SHALL NOT become research evidence
+#### Scenario: User approves initial topics and Agent materializes them
+- **WHEN** the user answers HITL1 with approved or revised topic semantics
+- **THEN** the Agent SHALL write retained apply input and immediately run topic-state apply
+- **AND** canonical registry plus UID-bound seeds SHALL commit before style computation and gate pass
 
-#### Scenario: HITL1 exposes unavailable access before silent execution
+#### Scenario: HITL1 keeps user responsibility semantic
+- **WHEN** topic intent is clear from the user's answer
+- **THEN** the Agent SHALL run apply/style/probe/gate without asking the user to execute commands
+- **AND** it SHALL ask again only for genuinely unresolved semantics, risk or permission
 
-- **WHEN** search/fetch tools are absent, search returns no usable result, or fetch is blocked/failed
-- **THEN** the Phase Agent SHALL record `research_access.status: unavailable` with direct failure fields
-- **AND** it SHALL tell the user that evidence-backed waves cannot start in the current environment
-- **AND** it SHALL preserve recorded user choices and remain in HITL1 rather than entering Setup/Wave0
-- **AND** recovery SHALL rerun the same bounded probe and gate without an automatic retry tree
+#### Scenario: Declared HITL1 context is not mutation authority
+- **WHEN** an apply request declares HITL1 but `current_node` or the accepted HITL1 status window does not match
+- **THEN** apply SHALL reject before workspace creation without changing plan, seed, profile, status or trace
+- **AND** the Agent SHALL restore or re-enter the existing legal lifecycle path rather than request a bypass
 
-#### Scenario: HITL1 writes to bundle not status tree
+#### Scenario: Plan-first crash fails at one prerequisite
+- **WHEN** an accepted topic-state workspace remains after plan replacement and before seed completion
+- **THEN** HITL1 gate SHALL report the workspace/seed prerequisite and exact recover action
+- **AND** SHALL short-circuit derivative profile/count/seed-floor symptoms
 
-- **WHEN** HITL1 records user input and capability observation
-- **THEN** it SHALL write them to `rb_profile.yaml`
-- **AND** it SHALL NOT create `rb_status.json#/phases/hitl1/*` or another research-access status tree
+#### Scenario: Available access uses real probe only
+- **WHEN** actual search returns a usable HTTP(S) URL and actual fetch returns page content
+- **THEN** HITL1 SHALL record the accepted available observation and SHALL NOT count probe output as evidence
+
+#### Scenario: Unavailable access remains at HITL1
+- **WHEN** search/fetch is absent, blocked, fails or returns no usable page
+- **THEN** HITL1 SHALL record the unavailable observation, preserve user choices and remain in HITL1
+
+#### Scenario: HITL1 writes accepted surfaces not status tree
+- **WHEN** HITL1 records topic intent, user choices and capability observation
+- **THEN** identity/intent SHALL be in canonical plan+seed and choices/access SHALL be in `rb_profile.yaml`
+- **AND** HITL1 SHALL NOT create `rb_status.json#/phases/hitl1/*` or another research-access/topic status tree
 
 ### Requirement: Phase setup body completeness and stop semantics
 
