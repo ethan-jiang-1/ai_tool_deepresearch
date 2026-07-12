@@ -165,7 +165,7 @@ Historical surfaces intentionally left unchanged:
 2. 旧 basename 只能在 compatibility notice、closed/archive historical text，以及本 change 对 rename/notice 的 migration-contract 说明中出现；这些出现不得成为 active reading route、sibling 或 active design-principle canonical link。
 3. Closed plan 与两个 archive design 保持 byte-for-byte 未修改，并继续通过旧路径文件找到 canonical target。
 4. `project-charter.md` 与 `guidelines/README.md` 必须只把两个 canonical `evolution-*` 文件列为 Evolution Directions；notice 不进入 reading order 或 Guidance Map。
-5. Apply 后的搜索必须使用能区分旧 basename 与 `evolution-simple-reliable-control.md` 的表达式，例如 `rg -P '(?<!evolution-)simple-reliable-control\\.md'`；普通 substring 搜索会把新文件名误报成旧引用。
+5. Apply 后的搜索必须使用能区分旧 basename 与 `evolution-simple-reliable-control.md` 的表达式，例如 `rg --pcre2 '(?<!evolution-)simple-reliable-control\.md'`；普通 substring 搜索会把新文件名误报成旧引用。
 
 ### 4. 用三个轴统一系统模型
 
@@ -292,14 +292,14 @@ Guideline 只指方向；accepted behavior 只能由 capability delta 改变。�
 | `content-delivery-gate-implementation` | HITL2 gate 接受的 enum、definition rule set 与 deterministic handoff output | **MODIFIED** CDG-001/003：对齐现行 definition/CLI；`repair` / `rerun` 合法，移除 stale blocking `hitl2_recorded` rule，只有 `proceed_to_readiness` / `rerun` 产生 fixed handoff |
 | `schema-core` | `HITL2UserDecision` schema enum 是 `not_started` sentinel 加五个 recorded action values；SCO-001 已要求 current 11-value `CurrentGate` | **MODIFIED** SCO-007：修正 accepted spec/test 描述中的“5 values”，明确 sentinel 不等于 gate-pass decision；同时补齐 SCO-001 现有 11-value enum regression coverage；schema implementation 不变 |
 | `shared-node-content` | `shared-profile.md` 解释 profile enum/route；`shared-gate-rules.md` 是 definition/CLI 的 generated summary | **MODIFIED** SHC-001/002：把旧四枚举改为现行 five-enum，明确 `rerun` 经 `phase-rerun`；generated summary 删除 stale blocking `hitl2_recorded` trace rule，并保留 source-window preflight 与 diagnostic event 的边界 |
-| `content-delivery-experiments` | delivery controlled E2E 的 canonical case paths、fixtures、gate verdict 与 rerun branch proof | **MODIFIED** CDE-001..005：指向现有 `exp_wff_delivery/case-131` 至 `case-135`；所有 HITL2 case 使用真实 predecessor handoff/source window，case-133 验证 gate 直接产生 `phase-rerun` target，不再证明旧 Agent-level restart route |
+| `content-delivery-experiments` | delivery controlled E2E 的 canonical case paths 与 delivery-specific scenario assertions | **MODIFIED** CDE-001..005：指向现有 `exp_wff_delivery/case-131` 至 `case-135`；case-133 验证 gate 直接产生 `phase-rerun` target；通用 fixture/runner/health/cleanup/report 纪律继续由 AGT/PLR 与 command-experiments 拥有，不在 CDE 复制 |
 | `hitl-ux` | HITL1/HITL2 人在环对话；HIU-003 已规定用户决定、Agent 写 profile、Agent repair/rerun | **REVIEWED, UNCHANGED**：已经满足 human decision -> Agent execution；本 change 不复制 ACS 术语，不扩展 HITL placement |
 | `silent-wave-execution` | `stop:no` 用户缺席时禁止 surfacing，并要求 Agent repair/continue/hold | **REVIEWED, UNCHANGED**：helper posture 不能把 human-directed 语义带入 autonomous lane；SWE invariants 原样保留 |
 | `check-inspect-feedback` | 最小根因、一个最近 repair target、避免 manual authority edit、修复后回同一 Check | **REVIEWED, UNCHANGED**：反馈形状已经兼容；ACS 决定 ordinary command executor，CHI 不重复 audience ownership |
 | `runtime-reentry-debuggability` | `check-reentry` 是 read-only consistency/diagnostic surface，能报告 blocker/drift，但不能 mutation | **REVIEWED, DEFERRED**：本 change 只要求 Agent 读取其输出并解释合法边界；impossible advice、state-seed 和 authorized mutation 分别留给 Visibility / Authorized Repair delta |
-| `rerun-incremental-node` + `transition-table` | 现行 truth 已有 `repair` / `rerun` 分离、`rerun` fixed edge、incoming rerun status window 与 max-rerun behavior | **REVIEWED, UNCHANGED**：作为 reconciliation anchor；修正 G14/G24 active playbook consumers，不新增 rerun route 或 requirement |
+| `rerun-incremental-node` + `transition-table` | 现行 truth 已有 `repair` / `rerun` 分离、`rerun` fixed edge、incoming rerun status window 与 max-rerun behavior | **REVIEWED, UNCHANGED**：作为 reconciliation anchor；G24 只修实际调用 affected gate/path 的 mechanism consumers，不把 pure chain case 升级成 full-chain proof |
 | `gate-skeleton` + `cli-phase-transition` + `workflow-node-contract` | branch-sensitive gate output、route-bound handoff witness 与 source-gate status synchronization 的现行 shared contract | **REVIEWED, UNCHANGED**：CDE cases 必须复用这些 contract，不在 delivery capability 另造 handoff/preflight 语义 |
-| `agent-testing` + `playbook-runner` | standard E2E 已要求 HITL2 proceed/rerun 使用 real gate output；runner manifest 必须与 current/migrated case truth 一致 | **REVIEWED, UNCHANGED**：作为 G5/G13/G14/G24 的 proof/index anchor；更新 active consumers 与 `RUN_EXPS.md`，不复制 AGT/PLR requirement |
+| `agent-testing` + `playbook-runner` | standard E2E 已要求 HITL2 proceed/rerun 使用 real gate output；runner manifest 必须与 current/migrated case truth 一致；PLR-003 已要求无当前证明价值的重复 case 退役 | **REVIEWED, UNCHANGED**：G5 保留 canonical standard handoff proof；G13 保留 delivery proof；G24 保留 rerun mechanism proof；重复 G14 退役并在 `RUN_EXPS.md` 记录 replacement map，不复制 AGT/PLR requirement |
 | `rerun-topic-integration` + `seed-topic-materialization` | rerun output provenance、topic registry 与 seed materialization 的现有 canonical contracts | **REVIEWED, DEFERRED**：本轮不实现 P2/P3、single-source identity 或 post-final materialization |
 | `repair-loop` | deterministic repair checkpoint transform，不拥有 Agent semantic repair strategy | **REVIEWED, UNCHANGED**：helper responsibility 不得把 REL 扩成 generic Agent helper controller |
 | `version-management` | Agent-facing framework behavior 变化必须更新 CHANGELOG 与 RUN banner，版本在 proposal 决定 | **REVIEWED, EXISTING CONTRACT APPLIES**：不修改 VEM spec；按现有 VEM-002/003/004 bump 到 `v0.21` |
@@ -310,23 +310,37 @@ Guideline 只指方向；accepted behavior 只能由 capability delta 改变。�
 2. 既有 main spec 已经表达所需 invariant，则记录 reviewed/unchanged，不复制一份近似 requirement。
 3. 目标需要 runtime capability 但本轮明确不实现，则记录 reviewed/deferred，并点名未来 delta owner；guideline 不得假装已经影响该 capability。
 
-本次审计还发现同一组 2026-06-23 旧 contract 散落在六个 capability：CDP-001/CDG-001/CDG-003 保留 `repair_and_rerun`、blocking `hitl2_recorded` rule 或 incomplete routing；SCO-007 把实际六值的 `HITL2UserDecision` 写成五值；SHC-001/002 仍描述旧 profile fields/enum 与旧 generated gate summary；CDE-001..005 仍指向已迁移的 playbook paths，其中 CDE-004 和 `case-133` 继续证明“chain 只到 readiness、Agent restart from instantiation”。现行 schema、gate definition/CLI、HIU-003、REI、transition chain 与标准 E2E 已使用 `not_started` sentinel 加五个 recorded decisions，并由 gate CLI 为 `rerun` 直接产生 `phase-rerun` handoff。`phase-hitl2.md` 主体已基本使用该模型，但顶部和失败表仍有旧 wording；`shared-profile.md`、`shared-gate-rules.md` 与 `RUN_EXPS.md` 也有相应 projection drift。因此本 change 以现行 executable truth 为 anchor，同步六个 capability delta、修正所有已识别的 active consumer surface 并重新执行既有 delivery cases；不修改 Engine runtime logic。
+本次审计还发现同一组 2026-06-23 旧 contract 散落在六个 capability：CDP-001/CDG-001/CDG-003 保留 `repair_and_rerun`、blocking `hitl2_recorded` rule 或 incomplete routing；SCO-007 把实际六值的 `HITL2UserDecision` 写成五值；SHC-001/002 仍描述旧 profile fields/enum 与旧 generated gate summary；CDE-001..005 仍指向已迁移的 playbook paths，其中 CDE-004 和 `case-133` 继续证明“chain 只到 readiness、Agent restart from instantiation”。现行 schema、gate definition/CLI、HIU-003、REI、transition chain 与标准 E2E 已使用 `not_started` sentinel 加五个 recorded decisions，并由 gate CLI 为 `rerun` 直接产生 `phase-rerun` handoff。`phase-hitl2.md` 主体已基本使用该模型，但顶部和失败表仍有旧 wording；`shared-profile.md`、`shared-gate-rules.md` 与 `RUN_EXPS.md` 也有相应 projection drift。因此本 change 以现行 executable truth 为 anchor，同步六个 capability delta、修正 canonical delivery proof，并对相邻 current consumers 采用“保留唯一 proof owner、删除重复 family、只修实际受影响 case”的收敛规则；不修改 Engine runtime logic。
 
 ### 11. ACS、CDP、CDG、SCO、SHC 与 CDE 一起修改
 
-ACS-001 定义 Agent-facing audience 与 action responsibility；ACS-003 已要求 static regression 验证 Agent-facing positive markers。SCO 拥有 schema enum，CDP/CDG 拥有 HITL2 phase 与 gate behavior，SHC 拥有 Agent 实际会读取的 shared projection，CDE 拥有受控 E2E 对该 contract 的证明。只修改 ACS 或只修 CDP/CDG，会让新的 helper 语言、schema description、shared guidance 和 experiments 继续互相矛盾。
+ACS-001 定义 Agent-facing audience 与 action responsibility；ACS-003 只负责少量稳定 discoverability markers 和已知 drift phrase。SCO 拥有 schema enum，CDP/CDG 拥有 HITL2 phase 与 gate behavior，SHC 拥有 Agent 实际会读取的 shared projection，CDE 只拥有 delivery-specific controlled-E2E scenarios；通用实验机制仍由 AGT/PLR 拥有。只修改 ACS 或只修 CDP/CDG，会让新的 helper 语言、schema description、shared guidance 和 canonical delivery proof 继续互相矛盾。
 
 因此本 change：
 
 - 在 ACS-001 中加入 Agent-owned ordinary execution、repairable blocker、autonomous/human-directed authority distinction、HITL/out-of-band placement distinction 与 no-ad-hoc-authority 边界；
-- 在 ACS-003 中要求现有 validator/test 只在顶层 `COMMANDS.md` audience contract 验证这些新增 positive markers；其他 scanned surfaces 继续只做 drift/phrase-class 检查，避免复制整段原则；
+- 在 ACS-003 中只增加三组稳定 markers：Agent-owned ordinary execution、human-directed 不转移 command-runner/不创造权限能力、HITL 与 out-of-band/mutation capability 的区分；其他细节不逐句编码成 substring assertion；
 - 在 CDP-001 中恢复现行五枚举和两种不同动作：`repair` 由 Agent 就地修复并 rerun HITL2 gate，`rerun` 由 gate/chain 固定路由到 `phase-rerun`；同步修正 `phase-hitl2.md` 顶部 stale summary；
 - 在 CDG-001 中把 definition rule set 与当前 implementation 对齐，删除已移除的 blocking `hitl2_recorded` event rule；在 CDG-003 中明确 five-enum 到 deterministic outcome 的映射，并保留 CLI 自己写 `gate_attempt` 的 contract；
 - 在 SCO-007 中明确 `HITL2UserDecision` 的六个 schema values 与五个 recorded gate decisions 的关系，并修正现有 enum test 名称；
 - 在 SHC-001 中把 shared profile 的 HITL2 enum/route 改为现行 five-enum；在 SHC-002 中要求 generated summary 准确投影 definition/CLI，不再把 diagnostic `hitl2_recorded` event 写成 blocking rule；
-- 在 CDE-001..005 中迁移到现有 `exp_wff_delivery/case-131` 至 `case-135` paths，并要求所有 HITL2 fixtures 建立真实 predecessor handoff/source window；case-133 必须消费 gate CLI 的真实 `phase-rerun` target，禁止手写 rerun `gate_attempt` 或证明旧 Agent-level readiness override；
-- 扩展 `tests/engine/command-contract-docs.test.mjs` 的现有 marker list，并复跑现有 enum/profile/HITL2 gate/transition tests；不增加 validator、phrase class 或新的 test harness。
+- 在 CDE-001..005 中迁移到现有 `exp_wff_delivery/case-131` 至 `case-135` paths，只定义 delivery scenario 与 tested-gate assertions；case-133 必须消费 gate CLI 的真实 `phase-rerun` target，禁止手写被测 gate result 或证明旧 Agent-level readiness override；
+- 扩展 `tests/engine/command-contract-docs.test.mjs` 的现有 marker list，但只新增上述三组稳定入口 marker；复跑现有 enum/profile/HITL2 gate/transition tests，不增加 validator、phrase class 或新的 test harness。
 - 更新并逐个执行既有五个 delivery playbooks；这不是新 experiment family，而是让 accepted controlled E2E 恢复为可运行的现行 contract proof。
+
+#### Experiment ownership and retirement
+
+G14 `exp_wff_hitl2-branch` 是历史上为 rerun node 新增的过渡 family，但当前三条 proof 已完全被更直接的 owner 覆盖：
+
+| Retired case | Existing canonical replacement | Reason |
+|---|---|---|
+| `case-140` decision capture + two branches in one bundle | G13 `case-132` + `case-133` | 两条互斥 branch 不应通过同一 bundle 来回改状态证明；分别测试更接近真实 decision boundary |
+| `case-141` HITL2 rerun full path | G13 `case-133` + G24 rerun-ready mechanism case | delivery branch 与 rerun-node mechanism 各有 owner，不需要第三份组合 proof |
+| `case-142` HITL2 readiness full path | G13 `case-131` | delivery tail 已完整覆盖 proceed-to-readiness 到 final |
+
+Apply 删除这三个 current runnable files，并从 active runner table 移除；`RUN_EXPS.md` 保留简短 migration map，历史 archived change 仍可通过 case ID 与 git history 定位原 proof。这里不保留同名 tombstone playbook，因为 runnable-looking redirect 会继续成为第三套 current surface。
+
+G24 保持 mechanism family：pure chain cases 可以直接检查 chain，不强迫执行完整 lifecycle；调用真实 HITL2/rerun gate 的 cases 才需要建立足以通过 shared preflight 的 direct fixture 或 witnessed handoff，且不得手写被测 gate attempt。G5 `case-51`/`case-52` 继续承担 AGT-010 standard full-chain/handoff proof，因此必须走 real gate output、`enter-phase` 和 source-gate `advance-status`。
 
 Requirement traceability 也保持边界清楚：ACS-001/ACS-003 的 normative implementation 是 `COMMANDS.md` 与现有 static regression；SCO/CDP/CDG/SHC 是 main-spec 与 schema/phase/shared projections 的 reconciliation；CDE 由现有 delivery playbooks 和真实执行结果证明。Guideline/Charter/index tasks 只标为“支持”相关 requirements 的设计上下文，不声称 net simplification 本身已经成为新的 accepted capability，也不因此分配新 ID。Registry 中 13 个 modified requirement 的稳定描述同步更新，但不分配新 ID。
 
@@ -337,7 +351,7 @@ Requirement traceability 也保持边界清楚：ACS-001/ACS-003 的 normative i
 | Evolution guidance | 两个 canonical `guidelines/evolution-*.md`、旧路径 notice、Project Charter、Guidelines Index、7 个 active mechanism/support guideline references、2 个 active source-plan links | closed plan 与 `openspec/changes/archive/` 保持不变 |
 | Agent-facing contract/projections | `DPT_FRAMEWORK/COMMANDS.md`、`phase-hitl2.md`、`shared-profile.md`、`shared-gate-rules.md` | `schema/enums.mjs`、profile schema、gate definition/CLI、transition chain、handoff/status Engine logic 只作 truth anchor，不修改 |
 | Regression | `tests/schema/enums.test.mjs`、`tests/engine/command-contract-docs.test.mjs`、`tests/integration/cli/check-gate-hitl2-recorded.test.mjs` | 不新增 test harness、validator 或 prose classifier |
-| Controlled E2E | G13 `case-131` 至 `case-135`、G14 `case-140` 至 `case-142`、G24 `case-301` 至 `case-306`、G5 `case-51`/`case-52`、`experiments_playbook/RUN_EXPS.md` | 不新增 experiment family、runner 或 helper subsystem；逐 case 执行，不能用批量等价脚本替代 |
+| Controlled E2E | G13 `case-131` 至 `case-135`、G5 `case-51`/`case-52`、实际受影响的 G24 cases、删除 G14 `case-140` 至 `case-142`、`experiments_playbook/RUN_EXPS.md` migration map | 不新增 experiment family、runner 或 helper subsystem；G13/G5 与修改过的 G24 case 逐 case 执行，G14 不再执行 |
 | Governance/release | requirement registry 中 13 个既有 ID 的描述、repo-root `CHANGELOG.md`、`DPT_FRAMEWORK/RUN.md` | 不分配新 ID，不修改 capability ID，不关闭两个 plan 或 BUG-079 |
 
 这个 manifest 是 scope fence，不是新的 registry。它只把 proposal、delta 与 tasks 已经要求的 target 汇总到一处，避免 apply 时再次靠搜索猜影响面。
@@ -370,7 +384,7 @@ Requirement traceability 也保持边界清楚：ACS-001/ACS-003 的 normative i
 - [两个 focused review 过度删减安全检查] -> Simplicity Admission Test 不替代其 detailed disciplines，Helper Direction Review 不替代 authority/escalation/truthfulness boundaries；两者只提供短入口。
 - [只改 ACS 导致其他 capability 仍然漂移] -> Cross-capability audit 明确 modified/reviewed/deferred；本轮补 SCO/CDP/CDG/SHC/CDE delta 清理同一 HITL2 contract 的已确认漂移，其余 capability 不复制 requirement。
 - [只修 main gate spec，shared guidance/experiments 继续过时] -> 同步 SHC-001/002 与 CDE-001..005，更新现有 shared projections、delivery cases 和 RUN_EXPS index，并逐个真实执行 cases。
-- [experiment reconciliation 扩成无边界重写] -> 只纳入当前 runner 中直接消费 HITL2/rerun/readiness affected contract 的 G5/G13/G14/G24 cases；不改其他 experiment family，不新增 runner/helper，并用 Apply target manifest 锁定文件清单。
+- [experiment reconciliation 扩成无边界重写] -> CDE 只拥有 G13 delivery scenarios；G5 只保留 AGT-010 canonical standard proof；G24 只修实际受影响 mechanism cases；重复 G14 直接退役，不再维护四套近似 proof。
 - [借 spec reconciliation 偷带 runtime behavior] -> SCO/CDP/CDG/SHC/CDE delta 只能描述当前 schema/gate/chain、phase/shared projections 与 real experiment path 已证明的行为；apply 只修正已确认的 spec/prose/test/playbook drift，若 Engine logic 不满足则停止并另立行为 change。
 - [staged roadmap 变成永久不落地] -> Proposal/design 的 Source Coverage 固定每个 obligation 的 follow-up slice；后续 proposal 必须引用对应来源与依赖，不得宣布无关。
 - [existing static test 变得更脆] -> 只检查少量稳定 audience markers，不增加 prose-quality regex 或 blocking phrase taxonomy。
@@ -384,7 +398,7 @@ Requirement traceability 也保持边界清楚：ACS-001/ACS-003 的 normative i
 3. 更新 Project Charter、Guidelines Index、active sibling lists、active prose links 和两个 active backlog design-principle links；closed plan/archive 保持不变并通过 compatibility notice 可达。
 4. 通过 SCO-007/CDP-001/CDG-001/CDG-003/SHC-001/SHC-002 delta 将 stale schema/content-delivery main specs、phase/shared projections 对齐现行 HITL2 sentinel/action enum、repair、rerun 与 gate rule contract；不改 Engine logic。
 5. 更新 `DPT_FRAMEWORK/COMMANDS.md` 的 audience contract，区分 autonomous 与 human-directed authority，并区分 human-directed decision 位于 HITL 还是 out-of-band maintenance/debug，同时明确 Agent-owned mechanical action。
-6. 通过 CDE-001..005 delta 更新 G13 `case-131` 至 `case-135`；按既有 REI/CPT/WNC/AGT/PLR contract 同步 G14 `case-140` 至 `case-142`、G24 `case-301` 至 `case-306`、G5 `case-51`/`case-52` 和 `RUN_EXPS.md`，使 fixtures、handoff/status window、verdict 与 rerun route 使用现行真实 gate output；逐 case 执行并从 trace 判定。
+6. 通过 CDE-001..005 delta 更新并逐个执行 G13 `case-131` 至 `case-135`；按既有 AGT-010 更新并执行 G5 `case-51`/`case-52`；按 REI/CPT/WNC 只修并执行实际受影响的 G24 cases，pure chain case 保持轻量；删除重复 G14 `case-140` 至 `case-142`，在 `RUN_EXPS.md` 记录 replacement map。
 7. 扩展现有 command-contract docs 与 HITL2 gate regression assertions，并复跑 enum/profile/gate/routing tests。
 8. 同步 requirement registry 中 13 个 modified requirement 的稳定描述；不新增 ID。
 9. 按 VEM-002/003/004 更新 `CHANGELOG.md` 与 `DPT_FRAMEWORK/RUN.md` 到 `v0.21`。

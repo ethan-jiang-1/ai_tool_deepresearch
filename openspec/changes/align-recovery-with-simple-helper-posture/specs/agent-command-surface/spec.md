@@ -99,7 +99,13 @@ The validator SHALL scan at least:
 - `DPT_FRAMEWORK/command_playbook/*.md`
 - lifecycle and shared workflow Markdown touched by this change
 
-For `DPT_FRAMEWORK/COMMANDS.md`, it SHALL verify required positive markers for Agent-facing audience, Agent-owned ordinary authorized execution and repair, human-directed decision source without human command-runner transfer, human direction not creating host permission or missing capability, autonomous versus human-directed authority, HITL1/HITL2 as the only in-run placements for human-directed interaction, out-of-band maintenance/debug as non-lifecycle collaboration, terminal non-interactive Final delivery, post-final HITL2 repair/rerun routing, one-time trigger framing, and no mid-pipeline progress/confirmation framing. Across all scanned surfaces, it SHALL reject known drift phrases unless allowlisted with an explicit diagnostic/post-run meaning. The positive-marker contract SHALL NOT require every command playbook to repeat the top-level audience statement.
+For `DPT_FRAMEWORK/COMMANDS.md`, it SHALL keep the existing audience/HITL/Final/trigger markers and add only three stable helper-oriented marker groups:
+
+- ordinary authorized command execution and reversible mechanical repair remain Agent-owned;
+- human-directed identifies the decision source without transferring the command-runner role or creating host permission/Engine capability; and
+- in-run HITL decisions are distinct from out-of-band maintenance/debug collaboration and from any accepted mutation/reentry capability.
+
+Across all scanned surfaces, the validator SHALL continue to reject known drift phrases unless allowlisted with an explicit diagnostic/post-run meaning. The positive-marker contract SHALL NOT require every command playbook to repeat the top-level audience statement or encode every ACS-001 sentence as an exact substring assertion.
 
 Allowlist entries SHALL be explicit and reviewable: file or glob, phrase class, allowed context, and reason. Operator wording MAY be allowlisted only for post-run diagnostics, maintenance, or out-of-band review, never for command co-runner audience during autonomous lifecycle execution.
 
@@ -111,12 +117,13 @@ The validator SHALL reuse the existing command-contract documentation regression
 - **THEN** the static validation SHALL fail
 - **AND** the failure SHALL name the file and phrase class
 
-#### Scenario: Static validation requires helper-oriented audience markers
+#### Scenario: Static validation requires a small stable helper contract
 
-- **WHEN** `DPT_FRAMEWORK/COMMANDS.md` omits Agent-owned ordinary execution, human-directed decision-source semantics, the no-permission/no-capability-by-request boundary, autonomous/human-directed authority distinction, or HITL/out-of-band placement distinction
+- **WHEN** `DPT_FRAMEWORK/COMMANDS.md` omits one of the three helper-oriented marker groups
 - **THEN** the existing command-contract documentation regression SHALL fail
 - **AND** the failure SHALL name the missing stable marker
 - **AND** individual command playbooks SHALL NOT be required to duplicate the full top-level audience statement
+- **AND** the regression SHALL NOT grow a phrase class or exact marker for every normative sentence in ACS-001
 
 #### Scenario: Static validation accepts diagnostic operator inspection
 
