@@ -6,7 +6,7 @@
 
 The framework SHALL provide one Engine-owned persistence contract for supported content-bearing targets under `reference/`, `artifacts/`, `final/`, and `_cache/` in the selected bundle. The contract SHALL begin when the caller supplies a completed non-symlink regular staging file and a safe bundle-relative target whose real parent directory already exists.
 
-Each operation SHALL use one Engine-generated exclusive directory under `_diagnostics/artifact-persistence/<operation-id>/` containing a pending payload and one Zod discriminated-union operation sidecar. The `preparing` state SHALL identify schema version, operation id, diagnostic staging-source path, safe target, expected prior target condition, and creation time before payload copy begins. The `prepared` state SHALL preserve those fields and add payload size and payload SHA-256 after the payload is fsynced. The expected prior condition SHALL be either `absent` or a concrete prior SHA-256. The workspace and target parent SHALL be on the same filesystem device before preparation so final rename can remain atomic.
+Each operation SHALL use one Engine-generated exclusive directory under `_diagnostics/artifact-persistence/<operation-id>/` containing a pending payload and one Zod discriminated-union operation sidecar. The `preparing` state SHALL identify schema version, operation id, diagnostic staging-source path, safe target, expected prior target condition, and creation time before payload copy begins. The `prepared` state SHALL preserve those fields and add payload size and payload SHA256 after the payload is fsynced. The expected prior condition SHALL be either `absent` or a concrete prior SHA256. The workspace and target parent SHALL be on the same filesystem device before preparation so final rename can remain atomic.
 
 Persist SHALL durably publish `preparing` before payload copy; successful canonical publication is the boundary at which the Engine accepts the operation for recovery. It SHALL then copy and fsync the payload, atomically replace the sidecar with `prepared`, recheck path safety and expected target bytes, atomically rename the payload to the target, fsync the target parent, and remove the completed workspace. A crash before accepted `preparing` SHALL NOT be described as a recoverable accepted operation, and the staging source SHALL remain untouched. Persist SHALL reject traversal, absolute targets, missing/non-directory parent, symlink traversal, source/target aliasing, cross-device commit, unsupported roots, and authority/control targets. It SHALL never provide unconditional force overwrite. The caller-owned staging source SHALL not be deleted by default and SHALL remain available until successful commit.
 
@@ -31,7 +31,7 @@ Persist SHALL durably publish `preparing` before payload copy; successful canoni
 
 #### Scenario: Compare-and-swap replacement rejects drift
 
-- **WHEN** persist receives an expected prior target SHA-256
+- **WHEN** persist receives an expected prior target SHA256
 - **AND** the current target does not match that digest before preparation or commit
 - **THEN** persist SHALL return `blocked` without overwriting the target
 - **AND** an initial mismatch SHALL create no operation workspace
@@ -84,7 +84,7 @@ Sweep SHALL be idempotent. Re-running after `finalized` or `cleaned` SHALL not d
 
 ### Requirement: Persistence results SHALL remain mechanical and non-authoritative
 
-Persist and sweep results SHALL be validated by Engine-owned Zod schemas. Results SHALL report schema version, operation id when available, target, `committed|finalized|cleaned|blocked` verdict, direct reason code/message, workspace path, and run-log write status. Persist/sweep SHALL use `_logs/run.log` for best-effort operator-visible diagnostics and SHALL not create a new trace event family. Log failure SHALL not fabricate or reverse the filesystem verdict.
+Persist and sweep results SHALL be validated by Engine-owned Zod schemas. Results SHALL report schema version, operation id when available, target, `committed|finalized|cleaned|blocked` verdict, direct reason code/message, and workspace path. Persist/sweep SHALL call the existing best-effort `_logs/run.log` owner for operator-visible diagnostics and SHALL not create a new trace event family or a second logging contract. Log presence or failure SHALL not determine, fabricate, or reverse the filesystem verdict.
 
 Persistence results SHALL remain mechanical durability facts, not business completion, evidence provenance, gate pass, lifecycle progress, delivery, topic identity, or post-final reentry authority. The Agent SHALL select real content and an accepted target, execute legal cleanup/retry, and consume Engine feedback. A user SHALL be asked only for genuinely new semantics, irreversible overwrite risk, or permission; `human-directed` SHALL NOT authorize unknown temp promotion, arbitrary overwrite, or control-state mutation.
 

@@ -137,6 +137,8 @@ For each claimed work unit:
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
 ```
 
+When a producer writes assigned `artifacts/`, `reference/`, or `_cache/` content through a completed staging file, it may use `operate-artifact-persistence.mjs persist` before submit and must retain staging until `committed`. This does not replace `operate-work-unit submit`, its cache normalization, or submitted-ledger authority.
+
 If submit rejects, repair the same claimed attempt when possible. For every expired or stale claimed attempt, run timeout preflight before terminal timeout:
 
 ```bash

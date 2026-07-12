@@ -1,7 +1,7 @@
 # Overall Plan: Recovery、Canonical State 与 Delegated Reliability 五 Change 总控路线
 
 **性质:** 跨 plan / bug 的 OpenSpec change 总路线（pre-OpenSpec）
-**状态:** Active — C1 已 apply/archive（v0.22）；C2 propose/apply 进行中；C3/C4/C5 待按依赖顺序推进（更新于 2026-07-12）
+**状态:** Active — C1 已 archive（v0.22）；C2 已 apply、验证通过、待 archive（v0.23）；C3/C4/C5 待按依赖顺序推进（更新于 2026-07-12）
 **当前进度速览:** 见文末 [§12 Change 进度总览](#12-change-进度总览live-tracker)——每推进一个 change 就更新那张表，避免跟踪断线。
 **前置基础:** `align-recovery-with-simple-helper-posture`（v0.21）已建立 helper-oriented、`materialize-before-work`、`canonical-or-blocked` 与依赖带，但未实现本计划的核心 runtime 能力。
 
@@ -129,25 +129,24 @@ direct observation and contract transparency
 
 ## 4. C2 — `make-artifact-persistence-crash-safe`
 
+**Status (2026-07-12): Applied, ready to archive (v0.23).** 已落一个 workspace、一个 helper、一个 `persist|sweep` CLI 与 controlled case-314。范围刻意收窄为 completed staging 的 sanctioned content persistence；没有 FIO/trace/control mutation、discard/quarantine、global journal、watcher 或 lock service。
+
 ### 4.1 覆盖来源
 
-- Breakpoint plan P1：数据过手即存、crash-safe、orphan finalize/discard
+- Breakpoint plan P1：completed staging 的 crash-safe commit 与 accepted workspace recovery
 - BUG-079：非 canonical recovery 现场中已经抓取但未 finalize 的真实数据
 
 ### 4.2 目标
 
-任何已经取得或完成生成的数据，在 acquisition/write boundary 进入统一的 crash-safe durable path；进程在最终 rename 前死亡时，恢复工具可以确定性判断保留还是丢弃。
+Agent 将完成的 staging content 显式交给统一 crash-safe durable path；进程在 final rename 周边死亡时，recovery 能基于 accepted operation sidecar 确定性 finalize、clean 或 block，而不猜任意 temp 文件。
 
 ### 4.3 In Scope
 
-- 盘点现有 artifact/cache/control writer，选择一个共享 atomic-write primitive。
-- 定义临时文件、目标路径、内容 hash、完成标志和必要 fsync 顺序。
-- 提供窄 `sweep`/recovery operation：
-  - 完整且 hash 匹配的 orphan write → finalize；
-  - 不完整、无可信 sidecar 或 hash 不匹配 → discard/quarantine；
-  - 每个动作写入既有 audit/log surface。
-- 覆盖 fetched page、reference/evidence card、dossier/交付 artifact；控制文件是否复用同一 primitive 由 propose audit 决定。
-- 明确重复执行、崩溃重入和 sweep 幂等性。
+- 一个 `_diagnostics/artifact-persistence/<operation-id>/` workspace 与 `preparing|prepared` sidecar。
+- 一个 helper 和一个仅含 `persist|sweep` 的 CLI；目标仅限 `reference/`、`artifacts/`、`final/`、producer-owned `_cache/`。
+- completed staging source 保留到 commit；create/replace 使用 absent/SHA-256 compare-and-swap。
+- quiescent sweep 只枚举 accepted workspace：prepared → `finalized`，target 已等于 payload → `cleaned`，invalid/incomplete/conflict → `blocked`。
+- `_logs/run.log` 只作 best-effort projection；work-unit submit/cache normalization 与 control/state/trace/ledger owners 不迁移。
 
 ### 4.4 Out Of Scope
 
@@ -155,14 +154,14 @@ direct observation and contract transparency
 - 不决定 post-final rerun route。
 - 不把 filesystem mtime 当业务完成 authority。
 - 不为每种 artifact 建立独立 journal subsystem。
+- 不扫描或 promote 任意历史 `.tmp`，不自动 discard/quarantine，不拦截 persist invocation 前 host write。
 
 ### 4.5 验收
 
-- 注入“内容写完但 rename 未发生”的崩溃，sweep 后目标文件正确出现且无重复。
-- 注入半截内容或 hash mismatch，sweep 不得把它认证为正式 artifact。
-- sweep 重复运行结果稳定。
-- 正常写入路径没有遗留 sidecar/tmp。
-- audit/log 能说明 finalize/discard 的直接原因。
+- case-314 证明 prepared-before-rename → `finalized`、committed-before-cleanup → `cleaned`。
+- incomplete/hash mismatch/target conflict → `blocked` 且 no mutation/no deletion。
+- Agent cleanup/retry 后 sweep 为空；重复 sweep verdict 稳定。
+- recursive snapshot 证明 control authority 不变；run.log 只投影直接原因。
 
 ## 5. C3 — `establish-canonical-topic-state`
 
@@ -372,7 +371,7 @@ direct observation and contract transparency
 | # | Change | 依赖 | 状态 | Version | 归档 slug / 备注 |
 |---|---|---|---|---|---|
 | C1 | `harden-recovery-observability-and-contracts` | — | ✅ Archived | v0.22 | `archive/2026-07-12-harden-recovery-observability-and-contracts` |
-| C2 | `make-artifact-persistence-crash-safe` | C1 | 🔨 In progress（当前）| TBD | active in `openspec/changes/make-artifact-persistence-crash-safe` |
+| C2 | `make-artifact-persistence-crash-safe` | C1 | ✅ Applied（待 archive）| v0.23 | 33 tasks implementation/verification closure；active change 等待 archive |
 | C3 | `establish-canonical-topic-state` | C1（吸收 C2 durability 边界）| ⏳ Not started | TBD | 若 propose 阶段无法保持单一 Source of Record，可拆 C3A identity/rename + C3B intent/progress |
 | C4 | `handle-unavailable-delegated-actors` | C1（独立执行 lane，可与 C2 并行）| ⏳ Not started | TBD | 关闭 BUG-077 的 actor availability 尾巴 |
 | C5 | `restore-audited-post-final-recovery` | C1 + C3（消费 C2 crash-safe primitive）| ⏳ Not started | TBD | 最高风险 authority change，必须最后做 |
@@ -380,7 +379,7 @@ direct observation and contract transparency
 **推进顺序提醒：**
 
 1. C1 ✅ → 已提供只读安全网。
-2. **C2（当前）** 与 C4 可在 C1 之后并行，二者互不依赖。
+2. C2 已 apply；C4 仍可独立推进。
 3. C3 依赖 C1，设计时必须吸收 C2 的 durability boundary。
 4. C5 最后，依赖 C1 + C3，并复用 C2 crash-safe primitive。
 
@@ -388,10 +387,10 @@ direct observation and contract transparency
 
 | 活跃来源 | 由哪些 change 关闭 | 当前状态 |
 |---|---|---|
-| `breakpoint-recovery-persistence-model.md` | C2 + C3 | Open — 等 C2/C3 |
+| `breakpoint-recovery-persistence-model.md` | C2 + C3 | Partial — C2 完成 sanctioned content durability；P2/P3 与 persist 前 host write 待 C3/后续边界 |
 | `human-override-and-state-mutability.md` | C1 + C3 + C5 | Partial — C1 已落 audit（Human D 的诊断面）；A/B/C 待 C3/C5 |
 | BUG-077 | C1（contract-opacity）+ C4（actor availability）| Partial — C1 已收 contract-opacity 尾巴；actor availability 待 C4 |
 | BUG-078 | C5 | Open — 等 C5 |
-| BUG-079 | C1（检测）+ C3/C5（canonical-or-blocked）| Partial — C1 已能检测旧 incident；根治待 C3/C5 |
+| BUG-079 | C1（检测）+ C2（content durability）+ C3/C5（canonical-or-blocked）| Partial — C1 可检测、C2 可保护 sanctioned staging；canonical footprint/reentry 根治待 C3/C5 |
 
 > 提示：当某个来源的所有关联 change 都 Archived 且 controlled proof 通过时，才把来源从 Partial 改为 Closed，并把条目 move 下去——plan → `_backlog/_done/_closed_plans/`，bug → `_backlog/_done/_fixed_bugs/`，同时从 `_backlog/plans/README.md` / `_backlog/bugs/README.md` 索引移除；只完成 guidance/spec 不算关闭（见 §11）。5 个来源全部 Closed 后，本 overall plan 自身也 move 到 `_backlog/_done/_closed_plans/`。

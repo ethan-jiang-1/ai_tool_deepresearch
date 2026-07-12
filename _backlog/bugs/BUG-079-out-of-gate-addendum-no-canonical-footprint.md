@@ -4,7 +4,7 @@
 **Bundle:** `dpt_rb_ai-era-bpm-process-disruption`
 **Phase:** Final (terminal) → post-final out-of-gate addendum（BUG-078 workaround 的下游后果）
 **Severity:** High — 新增 topic 的证据真实且保存了，但对 canonical 结构、gate/audit/recovery 工具**完全不可见**；bundle 结构自相矛盾
-**Current status (2026-07-12):** Active / detectable — C1 file observability and `check-reentry` now group registry-external durable topic output, dangling metadata, and parallel namespaces into canonical recovery findings without granting authority. Canonical materialization/progress and sanctioned post-final reentry remain open for C3/C5.
+**Current status (2026-07-12):** Active / detectable / durability partial — C1 groups registry-external durable topic output, dangling metadata, and parallel namespaces into canonical recovery findings. C2 v0.23 adds crash-safe persistence for sanctioned content roots, so completed staging can survive rename-boundary crashes without unknown-temp promotion. Canonical materialization/progress and sanctioned post-final reentry remain open for C3/C5; C2 does not authorize the historical addendum namespace.
 
 ## Symptom
 

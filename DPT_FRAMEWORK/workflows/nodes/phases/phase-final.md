@@ -47,6 +47,7 @@ Delivery completion 的 evidence 是 legally entered Final node 中 `final/` 目
 - 读取所有 verified bundle state：wave artifacts、profile、status、trace
 - 根据用户 `final_report_view` 偏好（来自 `rb_profile.yaml` HITL2 字段）组织报告结构和侧重点
 - 从 verified bundle state 生成至少 1 份 final report artifact 到 `final/` 目录
+- 先把完整报告写到 retained staging file，再用 `operate-artifact-persistence.mjs persist` 提交到 `final/`；只有 `committed` 后才消费该文件，崩溃恢复使用无并发 persist 的 quiescent `sweep`
 - 报告格式自由（Markdown、研究摘要、executive brief 等），内容必须引用 bundle 中真实存在的 source artifact
 - 用户未指定其他输出语言时，final report narrative 和 terminal delivery summary 优先使用中文；citations、source titles、paths、commands、field names、enum values 保持 canonical/source form
 - Report 中的声明使用标准 Markdown link `[label](relative/path.md)` 引用来源
@@ -60,6 +61,7 @@ Delivery completion 的 evidence 是 legally entered Final node 中 `final/` 目
 - 用户未指定其他输出语言时，用户可见报告叙述和 terminal delivery summary 优先中文；canonical tokens 与来源标题保持原样
 - `rb_status.json` 中保持 `current_gate: readiness_passed` / `next_gate: none`
 - `final/` 目录存在即证明 delivery 完成
+- Persistence 只证明 bytes durable；它不替代 readiness pass、Final entry witness 或本节的 delivery 条件
 
 ## 5. Gate Command
 

@@ -171,6 +171,8 @@ For the synthesis queue item, the Phase Agent:
 
 No delegated ledger row is required for pure synthesis artifacts.
 
+For Phase-owned `artifacts/wave2/*` and `reference/00-cross-*.md` writes, prepare complete retained staging files and commit them with `operate-artifact-persistence.mjs persist`; on crash, quiesce the bundle and run the same command's `sweep`. A persistence verdict never changes the finding, provenance, targeted-evidence, queue, or gate authority described here.
+
 Existing-backed `00-cross` projections use a primary prior accepted backing source URL in `source_url`, cite `W2F-xxx`, and list bundle-relative refs to `finding-index.yaml`, `cross-topic-ledger.md`, plus concrete prior Wave0/Wave1 reference/artifact/cache/work-unit backing. They do not need a new Wave2 work-unit row, but a prior reference is only a locator unless it resolves to accepted submitted prior backing.
 
 Newly fetched evidence follows the other authority path: it is not accepted until a `wave2_targeted_evidence` work unit is submitted with matching result/receipt/cache/source backing. A resulting `reference/00-cross-*.md` may then be a submitted reference output or a Phase-owned projection that binds back to those submitted Wave2 surfaces. `reference/_INDEX.md` and its `source_layer: wave2_cross` row are navigation metadata only; they never prove either authority path.

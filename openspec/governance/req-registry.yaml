@@ -29,6 +29,7 @@ prefixes:
   AGO: agent-output-declaration
   AGQ: agentic-queue
   AGT: agent-testing
+  ARP: artifact-persistence-recovery
   BUI: bundle-data-isolation
   BUM: bundle-map
   BUS: bundle-start-from-here
@@ -160,6 +161,12 @@ AGO-004: agent-output-declaration — Engine consumes declaration ledger rather 
 AGO-005: agent-output-declaration — Ledger declarations preserve non-empty creation context for accepted outputs
 AGO-006: agent-output-declaration — cache_trails MUST be populated by Engine during work-unit submit validation, not Agent claims
 AGO-007: agent-output-declaration — Wave1 submitted ledger canonicalizes required output roles
+
+# artifact-persistence-recovery
+ARP-001: artifact-persistence-recovery — Content-bearing bundle files use one crash-safe persistence workspace with compare-and-swap commit
+ARP-002: artifact-persistence-recovery — Quiescent sweep finalizes or cleans valid prepared workspaces and blocks incomplete or conflicting workspaces
+ARP-003: artifact-persistence-recovery — Persistence results remain structured mechanical facts without granting artifact or lifecycle authority
+
 # bundle-data-isolation
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 BUI-002: bundle-data-isolation — Runtime output paths stay under active bundle root and repo-root leaks are diagnosed

@@ -94,7 +94,7 @@ No automatic discard is encoded. A valid `preparing` sidecar gives the Agent dir
 
 ### 7. Structured output and logging stay projections
 
-Define Zod schemas for persist result, sweep entry, and sweep summary. Results use `committed|finalized|cleaned|blocked`, direct reason codes, workspace/target paths, and `log_written`. The filesystem facts determine the verdict. `_logs/run.log` is best-effort post-mortem detail; no new trace event is necessary because persistence is not lifecycle authority.
+Define Zod schemas for persist result, sweep entry, and sweep summary. Results use `committed|finalized|cleaned|blocked`, direct reason codes, and workspace/target paths. The filesystem facts determine the verdict. The CLI calls existing `logToRun()` after evaluation; `_logs/run.log` remains best-effort post-mortem detail and no logger return contract or trace event is added.
 
 ### 8. Existing transaction owners are explicit exclusions
 

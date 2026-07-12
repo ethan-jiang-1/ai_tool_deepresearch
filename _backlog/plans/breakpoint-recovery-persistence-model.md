@@ -1,7 +1,7 @@
 # Plan: 断点恢复的三条持久化义务（Breakpoint-Recovery Persistence Model）
 
 **性质:** 复盘 + 能力立项前设计计划（pre-OpenSpec）
-**状态:** Partial — v0.21 已吸收 `materialize-before-work` 与 helper-oriented 指导基础；P1/P2/P3 runtime slices 仍待切成 OpenSpec change（2026-07-12）
+**状态:** Partial — v0.23 已完成 P1 的 sanctioned content persistence slice（`reference/`、`artifacts/`、`final/`、producer-owned `_cache/`）；persist invocation 前的 host write、P2 topic×wave state 与 P3 input materialization 仍开放（2026-07-12）
 **触发:** `dpt_rb_ai-era-bpm-process-disruption` 的 post-final addendum 在 Molex 采证半途机器死掉；人工恢复现场（seed 06–11 建立、Molex 补齐、06/07 综合补齐）后复盘"为什么有的恢复得干净、有的只能靠 chat 记忆重建"。
 **范围:** DPT_FRAMEWORK 的崩溃/中断恢复语义——数据落盘、状态落盘、用户输入落盘。**不含** BUG-078 的 reopen 机制本身（另案），本 plan 只解决"中断后还能不能知道从哪续"。
 **设计原则:** [`guidelines/project-charter.md`](../../guidelines/project-charter.md)、[`guidelines/evolution-simple-reliable-control.md`](../../guidelines/evolution-simple-reliable-control.md)、[`guidelines/evolution-helper-oriented-agent.md`](../../guidelines/evolution-helper-oriented-agent.md)
@@ -19,7 +19,7 @@
 
 | # | 义务 | 这次暴露的缺口（冒烟证据） | 要求 | 候选 change |
 |---|------|--------------------------|------|-------------|
-| P1 | **数据过手即存**（crash-safe + 即时） | `reference/addendum-molex-itbrief.md.tmp.50374.…` —— 原子写的 `rename` 没跑完，一张**内容完整**的证据卡看起来像垃圾残留 | 任何过手数据 crash-safe 落盘；崩溃后能 sweep 孤儿 tmp 并 finalize-or-discard | `crash-safe-artifact-writes` |
+| P1 | **数据过手即存**（crash-safe + 即时） | `reference/addendum-molex-itbrief.md.tmp.50374.…` —— 原子写的 `rename` 没跑完，一张**内容完整**的证据卡看起来像垃圾残留 | v0.23 已为受支持 content roots 建立 completed staging → CAS persist → quiescent sweep；任意旧 tmp 与 persist invocation 前 host write 仍不在 accepted recovery contract 内 | `make-artifact-persistence-crash-safe`（Applied，待 archive） |
 | P2 | **状态即意图要存** | `rb_status.json` 冻在终态 `readiness_passed/phase-final`，对整批 addendum 工作**零感知**；4 家无 seed、06/07 不在 registry | topic 意图 + 每 (topic×wave) 进度是一等状态面，handoff 时更新；能区分 never/in-progress/done | `first-class-topic-progress-state` |
 | P3 | **重要用户输入要存** | rerun 请求（加 6 个 topic、各自定义）只在 run.log Decisions 一行 + chat；06/07 的 must_answer 只能从 dossier 逆推 | HITL/post-final 输入在**请求当刻**物化成结构化 artifact（seed/registry），独立于任何下游产出 | `materialize-user-intent-on-input` |
 
@@ -59,6 +59,8 @@
 - 所有过手 artifact（fetched page、证据卡、dossier）走统一的 crash-safe write（临时名 + fsync + 原子 rename），且临时名带**可判定的 sidecar/journal**（目标路径 + 内容 hash + 完成标志）。
 - 提供 `sweep`：启动/恢复时扫孤儿临时文件，凭 sidecar **finalize-or-discard**，并记 run.log。
 - 验收：注入"写完未 rename"崩溃 → sweep 后目标文件到位、无孤儿、run.log 有一条 finalize 记录。
+
+**v0.23 applied slice:** 一个 Engine-owned workspace `_diagnostics/artifact-persistence/<operation-id>/`、一个 helper 和一个仅含 `persist|sweep` 的 CLI 已落地。Canonical `preparing` publication 是 accepted recovery boundary；`prepared` payload 可被 quiescent sweep `finalized`，post-rename stale workspace 可被 `cleaned`，incomplete/hash mismatch/target conflict 只 `blocked` 且不删除。没有自动 discard/quarantine，也不扫描任意旧 `.tmp`；Agent 保留 staging、处理单个 blocker、retry persist、rerun sweep。work-unit submit/cache normalization、control/state/trace/ledger 等 transaction owners 保持 exclude。
 
 ### P2 — 状态即意图要存：一等进度面
 **冒烟证据:** `rb_status.json` = `{current_gate: readiness_passed, current_node: phase-final, state: not_started}`——对 14:22 之后整批 addendum **完全无感知**；`rb_queue.json` health `blocked/empty`。现场"当前在哪"无法从状态文件回答。
@@ -112,7 +114,7 @@
 
 | Change | 覆盖 | 落地风险 | 备注 |
 |--------|------|----------|------|
-| `crash-safe-artifact-writes` (P1) | 统一 crash-safe write + sidecar + `sweep` | 中，触及所有写 artifact 的路径 | 先做，独立可测，收益立竿见影（消灭孤儿 tmp） |
+| `make-artifact-persistence-crash-safe` (P1 sanctioned slice) | completed staging + CAS + operation sidecar + quiescent `sweep` | 已 apply，待 archive | 覆盖四个 content roots；不声称拦截 persist 前 host write 或识别任意旧 tmp |
 | `first-class-topic-progress-state` (P2) | (topic×wave) 进度台账 + `audit-recovery` 只读校验 | 中高，触及 status/queue/registry 语义 | 需与 BUG-078 reopen 语义对齐，别双写状态 |
 | `materialize-user-intent-on-input` (P3) | HITL/rerun 输入当刻物化 seed+registry | 高，触及 HITL1/HITL2/post-final 流 | 依赖 P2 的状态面；建议最后做 |
 

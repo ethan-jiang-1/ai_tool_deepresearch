@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.23
+
+- Added one crash-safe artifact persistence workspace, helper, and two-operation CLI for completed staging files under `reference/`, `artifacts/`, `final/`, and producer-owned `_cache/`.
+- Added absent/SHA-256 compare-and-swap commit plus quiescent sweep verdicts for prepared finalization, stale-workspace cleanup, and non-destructive blockers.
+- Kept persistence mechanical and helper-oriented: staging stays available, the Agent performs single-workspace cleanup/retry, and submit, provenance, gate, trace, control state, and delivery authority remain unchanged.
+
 ## v0.22
 
 - Added read-only canonical topic-footprint findings and `check-reentry` schema `1.1.0` recovery summaries with one root projection and reachable/missing-contract feedback.

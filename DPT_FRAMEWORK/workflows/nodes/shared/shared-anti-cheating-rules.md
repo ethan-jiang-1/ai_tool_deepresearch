@@ -94,6 +94,12 @@ If the Agent wants to "create many reference files quickly," the correct answer 
 
 **正确替代**：Phase Agent claims delegated queue demand via `operate-work-unit claim` → spawns the bounded Sub-agent prompt → Sub-agent writes declared outputs/cache + runtime receipt → Phase Agent runs `operate-work-unit submit --work-id <work_id> --result <result.json>` → Engine validates and appends ledger coverage → Phase Agent writes only backed consumer projections。
 
+### 17. 禁止手工 promote 未知 temp 或 persistence workspace
+
+Arbitrary `.tmp` files and unbound diagnostic bytes are not recovery authority. Do not rename them into `reference/`, `artifacts/`, `final/`, or `_cache/`, and do not use a persistence verdict as provenance, submit, gate, handoff, or delivery evidence.
+
+**正确替代**：保留 completed staging source，使用 `operate-artifact-persistence.mjs persist`；崩溃后先停止该 bundle 的并发 persist，再运行 quiescent `sweep`。若返回 `blocked`，Agent 检查并只移除报告的单个 workspace，随后 retry persist 并 rerun sweep；没有 force、discard、quarantine 或 unknown-temp promotion。
+
 **正确替代**：`setup-ready` gate pass 只确认 structural consistency（文件存在、schema 合法、basename 一致）。它不意味着研究质量过关或可以交付最终报告。`readiness-passed` 是另一个 gate，在 wave0/1/2 + HITL2 之后。
 
 ### 13. 确定性出口原则 — 跨 phase 路由编码标准

@@ -149,6 +149,8 @@ Do not run depth review, supplementary-demand convergence, Phase-owned reference
 
 After each successful Wave1 submit, the Phase Agent materializes `reference/{topic.slug}-<source-slug>.md` for every accepted submitted source suitable for consumer navigation, then updates `reference/_INDEX.md`.
 
+Write each complete projection to a retained staging file, commit it with `operate-artifact-persistence.mjs persist` using compare-and-swap, consume `committed|blocked`, and update `_INDEX.md` only after commit. Persistence is durability only; submitted `source_claims[]`, `accepted_source_urls[]`, cache trails, and work-unit rows remain the authority.
+
 Each Phase-owned reference must:
 
 - follow `shared-reference-template.md`: metadata block, no YAML frontmatter, nine required metadata fields, five standard sections, concrete source URLs, and at least five key facts;

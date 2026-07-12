@@ -29,6 +29,8 @@ Phase-owned materialization is legal only after submitted backing exists. The re
 
 Wave1 topic references use `source_url` from submitted `wave1_topic_deepening` backing. Existing-backed `00-cross` references use a primary prior accepted backing source URL in `source_url`, then list additional prior-wave source/cache/work-unit refs plus `finding-index.yaml` and `cross-topic-ledger.md` refs in the body. If a `00-cross` reference claims a newly fetched public source, it must bind to submitted `wave2_targeted_evidence` coverage.
 
+When the Phase Agent materializes a backed reference projection, write the complete file to a retained staging path first, then commit it with `operate-artifact-persistence.mjs persist` using `--expect-absent` or the observed target SHA-256. Consume the JSON verdict before updating `_INDEX.md`. This durability step does not create backing or delegated authority; the submitted source/cache/work-unit contract above remains decisive.
+
 ## File Format
 
 每个 `reference/*.md` 文件包含两部分：metadata block + 标准 section body。
