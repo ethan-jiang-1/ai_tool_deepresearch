@@ -1,7 +1,8 @@
 # Overall Plan: Recovery、Canonical State 与 Delegated Reliability 五 Change 总控路线
 
 **性质:** 跨 plan / bug 的 OpenSpec change 总路线（pre-OpenSpec）
-**状态:** Active — 已完成五段切片，待按顺序逐个 `/opsx:propose`（2026-07-12）
+**状态:** Active — C1 已 apply/archive（v0.22）；C2 propose/apply 进行中；C3/C4/C5 待按依赖顺序推进（更新于 2026-07-12）
+**当前进度速览:** 见文末 [§12 Change 进度总览](#12-change-进度总览live-tracker)——每推进一个 change 就更新那张表，避免跟踪断线。
 **前置基础:** `align-recovery-with-simple-helper-posture`（v0.21）已建立 helper-oriented、`materialize-before-work`、`canonical-or-blocked` 与依赖带，但未实现本计划的核心 runtime 能力。
 
 ## 0. 来源与目标
@@ -13,6 +14,8 @@
 - [BUG-077](../bugs/BUG-077-subagent-api-402-and-cache-trail-schema-opaque.md)
 - [BUG-078](../bugs/BUG-078-post-final-hitl2-rerun-reentry-blocked.md)
 - [BUG-079](../bugs/BUG-079-out-of-gate-addendum-no-canonical-footprint.md)
+
+> **本 overall plan 的定位：** 它是一把"伞"，专门罩住上面 `plans/` 的 2 个 plan 与 `bugs/` 的 3 个 bug——这 5 个来源不再各自单独推进，统一由本路线的 C1–C5 承接。等整条路线全部执行完（对应 change 都 apply/archive 且 controlled proof 通过），按 §11 关闭条件把该 move 的条目 move 下去：plan → `_backlog/_done/_closed_plans/`，bug → `_backlog/_done/_fixed_bugs/`，并从 `_backlog/plans/README.md` / `_backlog/bugs/README.md` 索引移除。本 overall plan 自身在 5 个来源全部关闭后一并归档到 `_backlog/_done/_closed_plans/`。
 
 目标不是为每个症状单独加一个命令，而是建立一条可恢复、可见、可审计的 canonical 工作路径：
 
@@ -361,20 +364,34 @@ direct observation and contract transparency
 
 若某个 change 只完成 guidance/spec 而没有对应 runtime/controlled proof，只更新来源为 Partial，不得关闭。
 
-## 12. 推荐下一步
+## 12. Change 进度总览（Live Tracker）
 
-第一个 `/opsx:propose` 应为：
+> 每推进一个 change 的阶段（propose → apply → archive），就同步更新本表与对应章节的 `Status` 行；不要只改章节不改这里，否则会跟踪断线。
+> 状态口径：**Not started** → **Proposing**（在 `openspec/changes/` 起草）→ **Applying**（按 task list 落 `DPT_FRAMEWORK/` 与 `tests/`）→ **Applied**（apply 完成、测试通过、待归档）→ **Archived**（已进 `openspec/changes/archive/`）。
 
-```text
-harden-recovery-observability-and-contracts
-```
+| # | Change | 依赖 | 状态 | Version | 归档 slug / 备注 |
+|---|---|---|---|---|---|
+| C1 | `harden-recovery-observability-and-contracts` | — | ✅ Archived | v0.22 | `archive/2026-07-12-harden-recovery-observability-and-contracts` |
+| C2 | `make-artifact-persistence-crash-safe` | C1 | 🔨 In progress（当前）| TBD | active in `openspec/changes/make-artifact-persistence-crash-safe` |
+| C3 | `establish-canonical-topic-state` | C1（吸收 C2 durability 边界）| ⏳ Not started | TBD | 若 propose 阶段无法保持单一 Source of Record，可拆 C3A identity/rename + C3B intent/progress |
+| C4 | `handle-unavailable-delegated-actors` | C1（独立执行 lane，可与 C2 并行）| ⏳ Not started | TBD | 关闭 BUG-077 的 actor availability 尾巴 |
+| C5 | `restore-audited-post-final-recovery` | C1 + C3（消费 C2 crash-safe primitive）| ⏳ Not started | TBD | 最高风险 authority change，必须最后做 |
 
-原因：
+**推进顺序提醒：**
 
-- 只读、风险最低；
-- 可立即把 BUG-079 现场变成确定性诊断；
-- 为 C3/C5 提供安全网；
-- 同时收掉 BUG-077 已经缩小的 contract-opacity 尾巴；
-- 可以优先复用现有 `check-reentry`、`file-observability` 与 inspect helpers，符合 simple reliable control。
+1. C1 ✅ → 已提供只读安全网。
+2. **C2（当前）** 与 C4 可在 C1 之后并行，二者互不依赖。
+3. C3 依赖 C1，设计时必须吸收 C2 的 durability boundary。
+4. C5 最后，依赖 C1 + C3，并复用 C2 crash-safe primitive。
 
-完成 C1 后，C2 与 C4 可以按资源分别 propose；C3/C5 必须保持依赖顺序。
+**来源关闭追踪（与 §11 关闭条件对齐）：**
+
+| 活跃来源 | 由哪些 change 关闭 | 当前状态 |
+|---|---|---|
+| `breakpoint-recovery-persistence-model.md` | C2 + C3 | Open — 等 C2/C3 |
+| `human-override-and-state-mutability.md` | C1 + C3 + C5 | Partial — C1 已落 audit（Human D 的诊断面）；A/B/C 待 C3/C5 |
+| BUG-077 | C1（contract-opacity）+ C4（actor availability）| Partial — C1 已收 contract-opacity 尾巴；actor availability 待 C4 |
+| BUG-078 | C5 | Open — 等 C5 |
+| BUG-079 | C1（检测）+ C3/C5（canonical-or-blocked）| Partial — C1 已能检测旧 incident；根治待 C3/C5 |
+
+> 提示：当某个来源的所有关联 change 都 Archived 且 controlled proof 通过时，才把来源从 Partial 改为 Closed，并把条目 move 下去——plan → `_backlog/_done/_closed_plans/`，bug → `_backlog/_done/_fixed_bugs/`，同时从 `_backlog/plans/README.md` / `_backlog/bugs/README.md` 索引移除；只完成 guidance/spec 不算关闭（见 §11）。5 个来源全部 Closed 后，本 overall plan 自身也 move 到 `_backlog/_done/_closed_plans/`。
