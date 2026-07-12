@@ -49,21 +49,21 @@ C1 已让 `check-reentry` 汇总 canonical recovery roots；C2/C3 已证明本�
 
 No second request ledger is added. The retained caller input exists until commit; after commit the request digest, normalized semantic fields and lineage are durable in trace/profile. Workspace files are recovery state, not a permanent parallel authority.
 
-### 3. Eligibility uses one pure evaluator and short-circuits
+### 3. Eligibility and accepted-lineage replay use one ordered evaluator
 
-`inspect` and `apply` SHALL call the same pure evaluator. It checks in order:
+`inspect` and `apply` SHALL call the same pure evaluator, but fresh Final eligibility is not its first branch. Otherwise a committed C5 operation would become unrecognizable as soon as legal `enter-phase` changed `current_node` away from Final. The evaluator short-circuits in this order:
 
-1. no accepted post-final recovery workspace; if one exists, return only exact `recover`;
-2. no accepted artifact-persistence or topic-state workspace that already owns the nearest recovery; return existing quiescent `sweep` or exact topic-state `recover`;
-3. latest legal delivery is readiness→Final with route-bound Final load, `current_node: phases/phase-final.md`, `current_gate: readiness_passed`, `next_gate: none`, and required Final delivery evidence;
-4. no later legal handoff/reentry event supersedes that Final lineage;
-5. queue/work-unit/control surfaces are quiescent enough to establish a new rerun attempt;
-6. current `rerun_count` plus the phase-rerun increment will still satisfy the active gate-definition `rerun_count_limit` rule;
-7. request expected lineage/status/profile hashes equal inspect facts.
+1. accepted post-final recovery workspace; return only exact `recover` for exactly one workspace and block ambiguous multiple workspaces;
+2. accepted artifact-persistence or topic-state workspace that owns the nearest recovery; return existing quiescent `sweep` or exact topic-state `recover`;
+3. newest accepted C5 lineage replay: recognize a structurally valid event bound to its delivered Final, then project its exact current event/entry/status-sync/count/descendant stage without requiring the bundle to remain terminal;
+4. fresh eligibility only when no active accepted C5 lineage owns the current run: require latest legal readiness→Final delivery, route-bound Final load, `current_node: phases/phase-final.md`, `current_gate: readiness_passed`, `next_gate: none`, required Final evidence, quiescence and remaining rerun capacity;
+5. for `apply`, require request expected identity/lineage/status/profile/rule facts to equal the selected fresh Final or, for replay, require the request digest to equal the already accepted request.
+
+A later normal handoff descended from the C5 rerun does not make the accepted request unknowable; it proves that the recovery lineage has been consumed by the existing lifecycle. A newer legal Final delivery does retire the older C5 lineage from current ownership and may become a new fresh-eligibility candidate. Different request semantics bound to the same delivered Final remain blocked until such a newer Final exists.
 
 Canonical topic drift that C3 can repair after sanctioned rerun is reported as carried repair context, not as a reason to force an out-of-gate repair. Ambiguous control lineage, active persistence/mutation workspace, non-quiescent work or an exhausted next rerun blocks before workspace creation. The limit is read from the existing gate definition rather than duplicated as a C5 constant. Dependent symptoms are masked behind the earliest direct blocker.
 
-The evaluator returns one of `eligible|unchanged|recover_required|blocked` and at most one structured next action for inspect. The CLI uses one Zod-validated result envelope with operation-specific verdicts: inspect `eligible|unchanged|recover_required|blocked`, apply `committed|unchanged|recover_required|blocked`, and recover `committed|cleaned|blocked`. `committed` is only profile/event durability, never rerun completion. `apply` does not duplicate evaluator checks.
+The evaluator returns direct facts plus at most one structured next action. The CLI uses one Zod-validated result envelope with operation-specific verdicts: inspect `eligible|unchanged|recover_required|blocked`, apply `committed|unchanged|recover_required|blocked`, and recover `committed|cleaned|blocked`. Cross-field rules are closed: `eligible` requires request-preparation/apply guidance; `recover_required` requires exactly one operation-bound recover action; `committed|cleaned` require the next legal mechanical stage; inspect `unchanged` means an accepted active C5 lineage was projected without mutation; apply `unchanged` additionally requires the identical accepted request digest. `blocked` may carry one exact existing-owner repair or user decision boundary, but never a fabricated C5 success action. `committed` requires durable profile/event plus workspace removal and is never rerun completion; `cleaned` means recover removed only a cleanup-only workspace. `apply` does not duplicate evaluator checks.
 
 ### 4. Request input carries semantics and optimistic concurrency, not permission
 
@@ -75,6 +75,11 @@ The retained JSON request is Zod-validated and contains only:
   "action": "post_final_rerun",
   "reason": "non-empty human decision summary",
   "requested_scope": "non-empty semantic adjustment summary",
+  "expected_bundle_identity": {
+    "status_bundle": "dpt_rb_example",
+    "plan_basename": "example",
+    "normalized_bundle_basename": "example"
+  },
   "expected_final_lineage": {
     "final_handoff_index": 123,
     "final_load_index": 124,
@@ -92,7 +97,7 @@ The retained JSON request is Zod-validated and contains only:
 }
 ```
 
-The expected lineage fields come from `inspect`; the Agent prepares/retains the file after the user decision. They prevent stale replay and wrong-bundle application. The profile digest also binds the inspected rerun count; apply re-reads the active gate rule before acceptance. They do not authenticate speaker identity or expand host permission. The audit records execution actor surface as `phase_agent`, decision source as `explicit_post_final_request`, and the supplied reason/scope without claiming a verified personal identity.
+The expected identity/lineage fields come from `inspect`; the Agent prepares/retains the file after the user decision. The identity tuple reuses `rb_status.json.bundle`, matching plan/profile `plan_basename` and the accepted normalized directory-basename evaluator, while hashes/indexes prevent stale-state application. C5 adds no UUID or identity registry and does not claim to distinguish a malicious byte-identical clone whose identity and bytes were copied. The profile digest also binds the inspected rerun count; apply re-reads the active gate rule before acceptance. These fields do not authenticate speaker identity or expand host permission. The audit records execution actor surface as `phase_agent`, decision source as `explicit_post_final_request`, and the supplied reason/scope without claiming a verified personal identity.
 
 If host policy requires an approval prompt or another non-delegable action, only that host action belongs to the user. After approval the Agent invokes apply and continues.
 
@@ -100,17 +105,19 @@ If host policy requires an approval prompt or another non-delegable action, only
 
 Workspace root is `_diagnostics/post-final-recovery/<operation-id>/`. Before `prepared` publication it contains staged request, before/after `rb_profile.yaml`, exact trace event bytes and a manifest candidate. Durable `prepared` publication is the accepted boundary.
 
-The manifest records schema/action/operation id, request digest, final lineage, expected-old/staged-new profile hashes, terminal status hash, exact target path, trace prefix/index, event id/digest, commit order and originally proven eligibility facts. It owns only `rb_profile.yaml` and one append-only trace event; it cannot widen its file set during recover.
+An incomplete real directory without the canonical prepared manifest is unaccepted residue. Inspect may report it as a warning, fresh apply uses a new operation id, and recover never guesses or promotes it. Unsafe/symlink entries block the C5 root. This preserves the retained-input posture without adding a sweep mode or treating pre-acceptance bytes as authority.
+
+The manifest records schema/action/UUID operation id, deterministic event id, request digest, logical bundle identity, Final lineage, expected-old/staged-new profile hashes, terminal status hash, final inventory digest, resolved target/window, rerun-rule facts, original trace prefix byte-length/SHA256/line-count, exact staged event-line SHA256, commit order and originally proven eligibility facts. It owns only `rb_profile.yaml` and one append-only trace event; it cannot widen its file set during recover.
 
 Commit order is:
 
 1. replace profile with normalized current HITL2 `status: recorded`, `user_decision: rerun`, and a deterministic existing-field `rationale` serialization of reason+requested scope, while preserving `rerun_count` and unrelated profile fields; keep the operation timestamp in the event rather than inventing a HITL2 `recorded_at` field absent from the current schema;
 2. revalidate that terminal Final status bytes still equal the manifest's expected status hash;
-3. run the shared evaluator in `prepared_pre_entry` stage against committed profile, unchanged terminal status and the prepared manifest;
+3. run the shared evaluator in internal manifest-bound `prepared_pre_entry` stage against committed profile, unchanged terminal status and exactly this accepted workspace;
 4. append the exact `post_final_reentry` event last through a narrow durable/idempotent primitive added to the existing trace writer owner;
 5. fsync and remove the workspace.
 
-The manifest records the expected trace prefix digest/event index. The trace primitive opens the existing trace append surface, rechecks that prefix, writes pre-staged exact event bytes, fsyncs the file and parent, and recognizes an identical existing operation/event as already committed. It does not create a second general trace API.
+The manifest records original trace prefix byte length, SHA256 and parsed line count, not the whole trace or a fixed final event index. The trace primitive opens the existing trace append surface, requires the recorded prefix bytes to hash identically, parses any appended suffix, and reuses the shared evaluator to confirm no relevant Final/control/handoff authority changed. Authority-neutral appended diagnostics are tolerated; malformed, rewritten or authority-changing suffixes block. It then writes pre-staged exact event bytes at the current tail, returns the actual parsed index, fsyncs the file and parent, and recognizes an identical existing operation/event line hash as already committed. It does not create a second general trace API.
 
 The event is appended last because it is the new handoff authority. A partial profile write cannot authorize phase entry without the matching event. Status remains the terminal Final window until the Agent consumes the event through `enter-phase` and then runs existing `advance-status --to hitl2_recorded`. A crash after event append is idempotent cleanup.
 
@@ -122,22 +129,31 @@ The request's reason and requested scope remain separate in the event audit. The
 
 The append-only event contains at least:
 
-- `event: "post_final_reentry"`, schema/action/operation id and timestamp;
+- `event: "post_final_reentry"`, top-level accepted `bundle`, UUID operation id, deterministic `event_id: post_final_reentry:<operation_id>`, schema/action and timestamp; the manifest separately hashes exact staged JSONL bytes so the event has no self-referential digest field or second random identity;
 - request digest plus normalized reason/scope;
 - previous Final gate/load indexes, status/profile hashes, committed after-profile hash and final inventory digest;
 - `decision_checkpoint: "hitl2"`, `decision: "rerun"`;
 - recorded resolved target node/status window, active rerun-limit rule id/definition digest and inspected current/next/limit counts;
 - execution actor surface and no verified-human-identity claim.
 
-The event also records its routing basis: HITL2 decision outcome `rerun`, transition-table digest and resolved target/status window. `handoff-helpers.mjs` gains one pure parser for this event class. Before entry it re-resolves that outcome through the existing transition table/manifest helpers and validates prior Final lineage, event self-contained operation/request digests, exact committed pre-entry status/profile shape, non-supersession and resolved target; if a workspace still exists, its manifest/event digest SHALL also match. Existing gate-attempt parsing remains unchanged. `validateEnterPhaseTarget` consumes the latest legal handoff across the two explicit classes; it never reinterpret arbitrary trace text as routing.
+The event also records its routing basis: HITL2 decision outcome `rerun`, transition-table digest and resolved target/status window. The digest records the acceptance-time routing authority; it is not a perpetual whole-file equality lock. Commit/recover and pre-rerun consumers re-resolve the relevant HITL2 `rerun` branch plus target status-window tuple and require semantic equality with the event. Unrelated transition/manifest edits that preserve that tuple do not strand the operation; a changed target/window or unresolvable route blocks. The rerun-limit rule remains stricter because count legality depends on it: until the bound increment occurs, active rule id/digest/current/next/limit must remain the recorded facts. `handoff-helpers.mjs` gains one pure structural parser for immutable event shape, deterministic identities, Final lineage and route resolution; it computes the exact raw event-line SHA256 as a returned fact. Closed stage predicates for `pre_entry`, `loaded_pending_status`, `synchronized_initial_profile` and `synchronized_count_incremented` compare load/transition hashes to that fact. This avoids the contradiction of applying terminal pre-entry status checks after legal entry or count increment. Any accepted C5 workspace, including event-committed cleanup-only state, blocks external entry until exact recover removes it. Existing gate-attempt parsing remains unchanged. The existing handoff selector is widened to order both structurally valid classes by trace index; there is no second C5 selector. `validateEnterPhaseTarget`, status audit, reentry and topic-state consume the same parsed fact object and never reinterpret arbitrary trace text as routing.
 
-`enter-phase phase-rerun` writes the normal route-bound `load_complete` referencing the exceptional event identity and changes only `current_node` to rerun. The Agent then invokes existing `advance-status --to hitl2_recorded`; that command accepts the exceptional event+load as the semantic HITL2 rerun handoff, derives `next_gate: rerun_ready` from the existing transition/manifest truth, writes the normal `phase_transition`, and preserves the loaded current node. Initial topic-state/reentry authorization begins only after this status sync and validates event+exact after-profile+load+phase_transition+current rerun window. After initial topic preparation, the existing rerun owner may apply only the event-bound current→next count increment; no other profile drift is accepted. Topic-state accepts either this witness or the existing normal HITL2 gate→rerun witness. Other post-final requests remain rejected.
+The four predicates have one closed truth table:
+
+- `pre_entry`: no accepted C5 workspace remains; event and exact after-profile are current; terminal Final node/window remain current. No load is required. A matching load left by a failed `current_node` write does not promote the stage and the one action remains idempotent `enter-phase` retry.
+- `loaded_pending_status`: a route-bound event load exists and `current_node` is rerun; either the terminal gate window remains, or the derived rerun window is already written but the exact bound `phase_transition` is absent. The one action is idempotent `advance-status --to hitl2_recorded`; any conflicting transition blocks instead.
+- `synchronized_initial_profile`: event, exact after-profile, load, current rerun node, derived rerun window and exact bound `phase_transition` all match.
+- `synchronized_count_incremented`: the synchronized initial facts remain attributable to the same event and the only profile delta is the event-bound `current_count → next_count` under the same active rule digest.
+
+After a valid rerun-ready gate/handoff consumes `synchronized_count_incremented`, replay projection follows the existing normal gate/load/transition lineage to the current lifecycle owner. This is not a fifth C5 routing predicate and adds no recovery selector; it is the normal descendant chain proving that the accepted recovery was consumed. Malformed, ambiguous or discontinuous descendants block rather than falling back to fresh Final eligibility.
+
+`enter-phase phase-rerun` writes the normal route-bound `load_complete` with additive event kind/id/index/exact-line-hash/operation binding and changes only `current_node` to rerun. If current-node write fails after the load, diagnostics keep `enter-phase` as the owner and retry it; the load alone does not expose status sync. The Agent then invokes existing `advance-status --to hitl2_recorded`; that command accepts the exceptional event+load as the semantic HITL2 rerun handoff, derives `next_gate: rerun_ready` from the existing transition/manifest truth, writes the normal `phase_transition` with exact event/load binding, and preserves the loaded current node. If status write survives but transition append does not, repeating the same command appends the missing exact transition idempotently. Initial topic-state/reentry authorization begins only after this status sync and validates event+exact after-profile+load+bound phase_transition+current rerun window. After initial topic preparation, the existing rerun owner may apply only the event-bound current→next count increment; no other profile drift is accepted. Topic-state accepts either this witness or the existing normal HITL2 gate→rerun witness. Other post-final requests remain rejected.
 
 ### 7. History and repeat calls are lineage-bound
 
 Apply includes the prior HITL2 profile semantic fields and Final inventory hashes in the event before replacing the current profile projection. Existing gate attempts, load events, final artifacts, evidence, ledger, receipts and paths are not edited by C5.
 
-An identical request for an already committed operation returns verdict `unchanged` with reason code `already_committed` and the next `enter-phase`, `advance-status`, reentry or topic-state action for the current stage. A request bound to an older Final lineage is stale and blocked. A second post-final rerun becomes eligible only after the rerun pipeline legally delivers a newer Final lineage; it creates a new operation id and lineage edge.
+An identical request for an already committed operation returns verdict `unchanged` with reason code `already_committed` and the next `enter-phase`, `advance-status`, reentry/topic-state, rerun-ready gate, or current descendant lifecycle-owner action for the proven stage. `inspect` over that same active lineage also returns `unchanged` without pretending it received or authenticated request input. A request bound to an older Final lineage is stale and blocked. A second post-final rerun becomes eligible only after the rerun pipeline legally delivers a newer Final lineage; it creates a new operation id and lineage edge.
 
 ### 8. Reentry diagnostics stay read-only and owner-directed
 
@@ -147,12 +163,14 @@ An identical request for an already committed operation returns verdict `unchang
 - prepared workspace: exact `recover` only;
 - committed handoff not yet loaded: exact `enter-phase phase-rerun`;
 - route-bound load with unsynchronized terminal gate window: exact `advance-status --to hitl2_recorded`;
-- loaded rerun with canonical topic drift: existing C3 inspect/apply/recover action;
+- synchronized initial rerun profile/window: existing C3 inspect/apply/recover checkpoint, including its unchanged result before phase-rerun continues;
+- event-bound rerun count already incremented: existing rerun-ready gate;
+- proven later normal descendant handoff: current existing lifecycle-owner action;
 - ambiguous/stale/nonterminal shape: `missing_contract` or one direct repair owner, never impossible predecessor-gate advice.
 
 It does not execute recovery, persist intent or create a global repair strategy.
 
-The existing phase-status audit SHALL also consume the workspace/event stages. An accepted prepared workspace short-circuits partial profile symptoms to exact recover; after event commit but before load it classifies terminal status/current Final node as `post_final_reentry_pending_load`; after route-bound load but before status sync it classifies `current_node: rerun` plus terminal gate window as `post_final_reentry_pending_status_sync`; after existing `advance-status` writes the derived rerun window and `phase_transition`, it passes. It SHALL not require a synthetic gate attempt or misclassify accepted recovery stages as manual bypass.
+The existing phase-status audit SHALL also consume the workspace/event stages. Any accepted workspace, including event-committed cleanup-only state, short-circuits to exact recover. After cleanup, event-only or load-written/current-node-still-Final state is `post_final_reentry_pending_load` with exact enter retry. Completed rerun current-node plus terminal gate window is `post_final_reentry_pending_status_sync`; the same outcome applies when the derived status window exists but the exact event/load-bound transition is absent and no conflicting transition exists. Exact bound transition plus current rerun window passes; conflicting bindings remain drift. It SHALL not require a synthetic gate attempt or misclassify accepted recovery stages as manual bypass.
 
 ### 9. Helper responsibility and simplicity admission
 
@@ -177,6 +195,7 @@ Apply SHALL keep this control-surface budget explicit:
 |---|---|
 | Post-final capability | **Add** one narrow `post-final-recovery` spec/module with `inspect|apply|recover` and closed action `post_final_rerun` |
 | Durable recovery state | **Add** one operation-scoped prepared workspace owning profile/one event only |
+| Bundle identity | **Extract/reuse** the setup gate's existing basename normalizer as one pure helper; combine it with status bundle and matching plan/profile basename, with no UUID or identity registry |
 | Routing/handoff | **Reuse** existing HITL2 `rerun` transition lookup and status derivation; **modify** the handoff helper only to consume one explicit exceptional event class |
 | Trace append | **Modify** the existing trace writer owner with one exact durable/idempotent append primitive; no parallel writer |
 | Topic mutation | **Modify** only the existing authorization adapter; retain the same C3 helper/CLI/workspace/actions |
@@ -198,7 +217,7 @@ If apply requires a caller-supplied target node/gate/status patch, a C5-local ac
 - **[Existing rerun limit is already exhausted]** → Read the active gate rule and account for the pending increment before acceptance; block C5 early and escalate only the new-bundle decision instead of opening an unpassable rerun.
 - **[Pending C2 persistence makes Final inventory unstable]** → Return the existing quiescent sweep action before lineage hashing; C5 never adopts or cleans C2 state.
 - **[Entry and status sync are two steps]** → Diagnostics expose exactly one action per stage: enter-phase after event, then existing advance-status after load; topic mutation remains blocked until both are complete.
-- **[Trace event exists but workspace cleanup crashes]** → Event id/digest and target bytes make recover idempotently return committed/cleaned.
+- **[Trace event exists but workspace cleanup crashes]** → Deterministic event id, exact event-line SHA256 and target profile bytes make recover idempotently return cleaned.
 - **[Canonical topic drift exists in the historical incident]** → Carry one C3 repair root into the newly sanctioned rerun; C5 does not adopt or mutate topics itself.
 - **[Exceptional handoff could become a second generic routing system]** → Closed action maps only to existing HITL2 outcome `rerun`; target/window are resolved by existing transition/manifest helpers; no caller-supplied or C5-local node/gate/status mapping.
 - **[C5 could duplicate transition truth]** → Map the closed request to existing HITL2 outcome `rerun`, resolve through `transitions.chain.json`/manifest, and reject any local/hardcoded target or Final outgoing edge.

@@ -11,7 +11,9 @@ The accepted handoff vocabulary SHALL contain exactly two Engine-written classes
 - the existing latest legal passed `gate_attempt` with non-null `next`; and
 - one `post_final_reentry` event produced by the accepted post-final recovery operation, whose closed action is `post_final_rerun`, whose recorded HITL2 decision outcome is `rerun`, and whose target/window are resolved through the existing transition table and manifest helpers.
 
-The exceptional event SHALL bind its request digest, operation id, previous readiness→Final handoff/load lineage, expected profile/terminal-status/final-inventory facts, transition-table resolution and derived target status window. Before phase entry it SHALL be accepted only when those facts remain current, re-resolving HITL2 outcome `rerun` produces the recorded target/window, the event is not superseded, `rb_profile.yaml` matches the committed recovery profile, and `rb_status.json` remains the terminal Final window. After a route-bound rerun `load_complete` exists, `advance-status` SHALL validate the immutable event and that exact load witness before writing the derived `hitl2_recorded → rerun_ready` window. Downstream consumers SHALL then require event+load+phase_transition+current rerun window. Arbitrary trace text, C5-local/caller-supplied target nodes, `human-directed` flags and hand-written gate attempts SHALL NOT become handoff authority.
+Handoff selection SHALL compare structurally valid authorities from both classes in append-only trace order rather than let a C5-specific selector compete with the existing gate selector. A valid post-final event becomes the latest handoff only after its Final lineage and route resolution pass; a later valid normal gate handoff or newer valid post-final lineage supersedes it for future entry. Failed gate attempts, arbitrary events and partial lookalikes SHALL NOT become a newer handoff authority merely because they appear later.
+
+The exceptional event SHALL bind its request digest, operation id, previous readiness→Final handoff/load lineage, expected profile/terminal-status/final-inventory facts, transition-table resolution and derived target status window. One structural parser SHALL produce immutable event facts; closed stage predicates SHALL add the mutable checks needed by entry, status sync and completed rerun preflight. Before phase entry it SHALL be accepted only when those facts remain current, no accepted C5 workspace remains, re-resolving HITL2 outcome `rerun` produces the recorded target/window, the event is not superseded, `rb_profile.yaml` matches the committed recovery profile, and `rb_status.json` remains the terminal Final window. After a route-bound rerun `load_complete` exists, `advance-status` SHALL validate the immutable event and that exact load witness before writing the derived `hitl2_recorded → rerun_ready` window. Downstream consumers SHALL then require event+load+phase_transition+current rerun window without reapplying the terminal pre-entry predicate. Arbitrary trace text, C5-local/caller-supplied target nodes, `human-directed` flags and hand-written gate attempts SHALL NOT become handoff authority.
 
 Successful stdout SHALL remain Agent-readable Markdown with stable file-boundary markers and no mixed JSON status envelope. After the loaded dependency closure, the CLI SHALL append one short generated continuation block derived from the target node frontmatter:
 
@@ -29,7 +31,7 @@ node_ref: phases/phase-wave1.md
 <!-- DPT_CONTINUATION_CUE_END -->
 ```
 
-For a post-final recovery handoff, route-bound `load_complete` SHALL reference the recovery event identity and lineage rather than pretending a HITL2 gate attempt occurred. Existing source-gate handoff behavior SHALL remain unchanged.
+For a post-final recovery handoff, route-bound `load_complete` SHALL reference the recovery event identity and lineage rather than pretending a HITL2 gate attempt occurred. Its additive binding fields SHALL be `handoff_source_kind: post_final_reentry`, `handoff_source_event_id`, `handoff_source_event_index`, `handoff_source_event_sha256`, `handoff_source_operation_id`, and the existing `handoff_target_node`. Existing source-gate handoff behavior SHALL remain unchanged.
 
 #### Scenario: Enter phase accepts degraded source pass
 
@@ -49,6 +51,12 @@ For a post-final recovery handoff, route-bound `load_complete` SHALL reference t
 - **WHEN** a `post_final_reentry` trace object has an unsupported action/target, wrong Final lineage, mismatched current profile/status bytes, missing operation binding or stale supersession
 - **THEN** enter-phase SHALL reject the target without `load_complete` or `current_node` mutation
 - **AND** one direct inspect/advice item SHALL identify the failed binding
+
+#### Scenario: Accepted workspace must be cleaned before entry
+
+- **WHEN** the exact recovery event exists but its accepted C5 workspace still remains after cleanup interruption
+- **THEN** enter-phase SHALL reject without another load or current-node mutation
+- **AND** its only advice SHALL be the exact post-final recovery command for that operation
 
 #### Scenario: Legal entry exposes existing status synchronization
 
@@ -77,12 +85,17 @@ For a post-final recovery handoff, route-bound `load_complete` SHALL reference t
 
 - **WHEN** loading succeeded but updating `current_node` fails
 - **THEN** stdout SHALL be diagnostic JSON rather than successful Markdown
+- **AND** a later audit SHALL treat the existing load with terminal Final `current_node` as incomplete entry and recommend the same `enter-phase` retry, not `advance-status`
 
 ### Requirement: Advance status refuses unwitnessed or unpassed phase handoffs (CPT-004)
 
 Source-gate `advance-status` SHALL treat a trace-durable degraded gate pass as a legal deterministic handoff witness only when all normal source-gate, target-node, and route-bound `load_complete` checks pass.
 
-The accepted post-final exception SHALL allow `advance-status --to hitl2_recorded` without a synthetic HITL2 gate attempt only when a valid `post_final_reentry` event records HITL2 outcome `rerun`, its target/window re-resolve through the existing transition table/manifest, and a later route-bound rerun `load_complete` references that exact event. The CLI SHALL preserve this exceptional source kind in `phase_transition` diagnostics. No other source gate, action or target SHALL use this exception.
+The accepted post-final exception SHALL allow `advance-status --to hitl2_recorded` without a synthetic HITL2 gate attempt only when no accepted C5 workspace remains, a valid `post_final_reentry` event records HITL2 outcome `rerun`, its target/window re-resolve through the existing transition table/manifest, and a later route-bound rerun `load_complete` references that exact event while `current_node` equals the rerun target. The CLI SHALL preserve this exceptional source kind in `phase_transition` diagnostics. No other source gate, action or target SHALL use this exception.
+
+The exceptional `phase_transition` SHALL add `source_handoff_kind: post_final_reentry`, `source_handoff_event_id`, `source_handoff_event_index`, `source_handoff_event_sha256`, `source_handoff_operation_id`, and `source_handoff_load_index`. These exact fields SHALL let audit/reentry distinguish the matching transition from an unrelated or hand-written lookalike without changing the existing normal success fields.
+
+Exceptional status-sync retry SHALL be idempotent only when status is already the exact derived window and no conflicting later transition claims the same synchronization with different event/load/from/to binding. An exact existing bound transition means success without append; no matching transition means append the missing exact transition; a conflicting lookalike means fail closed without another transition.
 
 Successful status synchronization after a degraded or accepted exceptional handoff SHALL establish the normal source-gate status window for the target lifecycle phase. It SHALL preserve degraded/recovery context in diagnostics or trace and SHALL NOT reinterpret either handoff as a gate attempt that did not occur.
 
@@ -185,6 +198,18 @@ For multi-outcome HITL2, normal status synchronization SHALL remain tied to the 
 - **AND** SHALL append one normal `phase_transition` carrying exceptional handoff context
 - **AND** SHALL NOT require or fabricate a post-Final HITL2 gate attempt
 
+#### Scenario: Partial exceptional status sync completes idempotently
+
+- **WHEN** the exact exceptional handoff/load are valid, status already equals the derived rerun window after a prior status write, and the matching bound `phase_transition` is absent
+- **THEN** repeating `advance-status --to hitl2_recorded` SHALL append the missing bound transition without changing the already-correct status window
+- **AND** SHALL NOT append a duplicate transition when the exact bound transition already exists
+
+#### Scenario: Conflicting exceptional transition blocks retry
+
+- **WHEN** status already equals the derived rerun window but a later `phase_transition` claims incompatible event id/hash, load index or from/to values for that synchronization
+- **THEN** `advance-status --to hitl2_recorded` SHALL fail closed without appending another transition or rewriting status
+- **AND** diagnostics SHALL identify the conflicting trace binding as the direct owner boundary
+
 #### Scenario: Status window enables the next lifecycle gate
 
 - **WHEN** wave1 has passed with `check.next: "phases/phase-wave2.md"`
@@ -251,7 +276,7 @@ The exceptional terminology SHALL NOT imply that a post-Final HITL2 gate ran or 
 
 The phase transition tooling SHALL provide an audit that compares `rb_status.json` with deterministic route evidence from `rb_trace.jsonl`, `manifest.json`, and `transitions.chain.json`. Normal lifecycle windows SHALL remain authorized by the latest passed source gate, route-bound `load_complete`, and `phase_transition` evidence.
 
-An accepted prepared post-final workspace SHALL short-circuit partial profile symptoms as `post_final_recovery_pending` with only the exact recover action. After event-last commit, the accepted `post_final_reentry` exception SHALL be evaluated through the same pure event parser used by handoff validation. Before rerun load, event-backed terminal status/current Final node SHALL be classified as `post_final_reentry_pending_load`. After route-bound rerun `load_complete` changes current node but before status sync, event+load with the still-terminal gate window SHALL be classified as `post_final_reentry_pending_status_sync`. After existing `advance-status` writes the derived rerun window and `phase_transition`, the exceptional handoff SHALL pass. Any mismatch, unsupported event, missing binding or caller-edited lookalike SHALL remain drift/manual-bypass evidence.
+An accepted prepared post-final workspace SHALL short-circuit partial profile symptoms as `post_final_recovery_pending` with only the exact recover action, even when the event already exists and only cleanup remains. After event-last commit and workspace cleanup, the accepted `post_final_reentry` exception SHALL be evaluated through the same pure event parser used by handoff validation. Before a completed rerun entry, event-backed terminal status/current Final node SHALL be classified as `post_final_reentry_pending_load`; this includes a bound `load_complete` followed by failed `current_node` update. After route-bound rerun `load_complete` and successful current-node update but before status sync, event+load with the still-terminal gate window SHALL be classified as `post_final_reentry_pending_status_sync`. If status equals the derived rerun window but the exact bound `phase_transition` is missing, the same outcome SHALL expose only idempotent `advance-status --to hitl2_recorded`. After existing `advance-status` writes the derived rerun window and exact bound `phase_transition`, the exceptional handoff SHALL pass. Any mismatch, unsupported event, missing binding or caller-edited lookalike SHALL remain drift/manual-bypass evidence.
 
 The audit SHALL be diagnostic and fail-closed. It SHALL NOT mutate `rb_status.json`, invent a degradation route, or treat manual edits as valid handoff evidence.
 
@@ -290,6 +315,12 @@ The audit SHALL expose a closed diagnostic outcome vocabulary so downstream advi
 - **THEN** the audit SHALL report `post_final_reentry_pending_load`
 - **AND** its only next action SHALL be the exact rerun `enter-phase` command
 
+#### Scenario: Partial rerun entry retries the loader owner
+
+- **WHEN** a valid event has a bound rerun `load_complete` but `current_node` still names terminal Final because entry state update failed
+- **THEN** the audit SHALL report `post_final_reentry_pending_load`
+- **AND** its only next action SHALL remain the exact rerun `enter-phase` retry
+
 #### Scenario: Prepared post-final workspace masks partial profile drift
 
 - **WHEN** an accepted post-final workspace exists after profile commit and before event append
@@ -302,6 +333,12 @@ The audit SHALL expose a closed diagnostic outcome vocabulary so downstream advi
 - **WHEN** a valid post-final recovery event has a route-bound rerun load, current node is rerun, and gate fields still show terminal Final
 - **THEN** the audit SHALL report `post_final_reentry_pending_status_sync`
 - **AND** its only next action SHALL be `advance-status --to hitl2_recorded`
+
+#### Scenario: Correct status without bound transition remains pending sync
+
+- **WHEN** event/load/current-node and the derived rerun status window are correct but the exact event/load-bound `phase_transition` is absent
+- **THEN** the audit SHALL report `post_final_reentry_pending_status_sync`
+- **AND** its only next action SHALL be idempotent `advance-status --to hitl2_recorded`
 
 #### Scenario: Route-bound and synchronized post-final handoff passes audit
 
@@ -323,7 +360,7 @@ Phase transition tooling SHALL NOT allow failed gates, missing handoff witnesses
 The accepted evidence chains for covered lifecycle handoff SHALL be exactly:
 
 - normal: `gate_attempt(passed=true,next=<target>)` -> later route-bound `load_complete(entry=<target>, handoff_source_attempt_index=<same attempt>)` -> `advance-status --to <source_gate_enum>` -> matching `phase_transition`; or
-- post-final: valid non-superseded `post_final_reentry(action=post_final_rerun,target=<resolved HITL2 rerun target>)` -> later route-bound `load_complete(entry=<target>, handoff_source_event_id=<same event>)` -> `advance-status --to hitl2_recorded` -> matching exceptional-context `phase_transition` and the existing `hitl2_recorded -> rerun_ready` window.
+- post-final: valid non-superseded `post_final_reentry(action=post_final_rerun,target=<resolved HITL2 rerun target>)` -> later route-bound `load_complete(entry=<target>, handoff_source_event_id=<same event>, handoff_source_event_sha256=<exact line hash>)` -> `advance-status --to hitl2_recorded` -> exact event/load-bound exceptional-context `phase_transition` and the existing `hitl2_recorded -> rerun_ready` window.
 
 The post-final chain SHALL re-resolve the recorded HITL2 `rerun` outcome through `transitions.chain.json` and manifest/status-window helpers, require the event/load/current-node bindings defined by `POF-003` and `CPT-003/004`, and remain unavailable to every other action, target, source checkpoint or caller-provided route. Event+load without the matching status synchronization SHALL be a pending stage, not downstream lifecycle authority.
 

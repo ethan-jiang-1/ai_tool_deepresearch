@@ -126,17 +126,19 @@ Reentry diagnostics SHALL derive these facts from active bundle files and existi
 
 Immediately after legal post-final `enter-phase` and existing `advance-status --to hitl2_recorded` synchronization, Agent-facing postcondition guidance SHALL invoke `check-reentry --at hitl2_recorded`, because that is the current source-gate checkpoint. Before status sync, the only action SHALL be that exact `advance-status` command. It SHALL NOT recommend `--at phase-rerun` / `rerun_ready` until the rerun-ready gate has actually passed.
 
-For terminal Final, the post-final recovery root SHALL map direct states to one action:
+For a terminal Final or an accepted post-final recovery lineage descended from it, the post-final recovery root SHALL map direct states to one action:
 
-- accepted post-final workspace → exact `recover`;
+- accepted post-final workspace, including event-committed cleanup-only state → exact `recover`;
 - accepted artifact-persistence workspace → existing quiescent `sweep` before Final lineage can be stable;
 - accepted topic-state workspace → exact existing topic-state `recover`;
-- committed recovery handoff not yet loaded → exact `enter-phase phases/phase-rerun.md`;
-- route-bound recovery load not yet status-synchronized → exact `advance-status --to hitl2_recorded`;
-- route-bound rerun with canonical topic drift → existing topic-state inspect/apply/recover action;
+- committed recovery handoff without a completed rerun `current_node` update, including load-written partial entry → exact `enter-phase phases/phase-rerun.md`;
+- completed rerun entry not yet status-synchronized, or derived status present without the exact event/load-bound `phase_transition` and without a conflicting transition → exact idempotent `advance-status --to hitl2_recorded`;
+- synchronized initial rerun profile/window → existing topic-state inspect/apply/recover checkpoint; an unchanged topic result returns execution to the current phase-rerun owner;
+- event-bound rerun count incremented under the same rule digest → existing rerun-ready gate;
+- proven later normal descendant handoff → current existing lifecycle-owner action;
 - eligible terminal Final without an accepted request → exact post-final recovery inspect/apply preparation action;
 - exhausted next rerun under the active gate rule → one user decision boundary for a new bundle, not a C5 command;
-- stale, ambiguous, nonterminal or unsupported action → one direct blocker or `missing_contract`, never impossible predecessor-gate advice.
+- stale, ambiguous, conflicting-transition, nonterminal or unsupported action → one direct blocker or `missing_contract`, never impossible predecessor-gate advice.
 
 #### Scenario: Incident-shaped bundle produces one canonical recovery root
 
@@ -160,7 +162,7 @@ For terminal Final, the post-final recovery root SHALL map direct states to one 
 
 #### Scenario: Prepared post-final operation masks downstream symptoms
 
-- **WHEN** an accepted post-final recovery workspace exists before its handoff event is fully committed
+- **WHEN** an accepted post-final recovery workspace exists before its handoff event is fully committed or after event commit with cleanup incomplete
 - **THEN** the workspace SHALL be the primary lifecycle root with exact recover action
 - **AND** partial profile symptoms and canonical topic symptoms SHALL NOT produce competing lifecycle actions
 
@@ -198,7 +200,7 @@ For terminal Final, the post-final recovery root SHALL map direct states to one 
 
 Reentry diagnostics SHALL consume the side-effect-free topic-state read model and group registry, seed, queue/work-unit and artifact symptoms for one canonical UID into one root finding with at most one reachable nearest action. An accepted topic-state workspace SHALL be a direct blocker whose reachable action is the exact topic-state recover command. Reentry SHALL NOT execute apply/recover, persist progress or create identity.
 
-When no accepted topic-state workspace exists, a post-final legacy or new-scope finding SHALL consult the post-final recovery inspection. Before C5 eligibility or handoff it SHALL expose the exact C5 action or direct C5 blocker rather than presenting topic-state apply as immediately reachable. After a valid route-bound post-final recovery→rerun witness exists, it MAY expose the existing topic-state inspect/apply/recover action under the normal rerun status window. An accepted prepared topic-state workspace remains recoverable after lifecycle drift because recovery finishes previously authorized bytes; this SHALL NOT make fresh apply reachable outside an accepted rerun witness.
+When no accepted topic-state workspace exists, a post-final legacy or new-scope finding SHALL consult the post-final recovery inspection. Before C5 eligibility or complete handoff it SHALL expose the exact C5 action or direct C5 blocker rather than presenting topic-state apply as immediately reachable. Only after a valid event, exact event-bound after-profile, completed route-bound rerun entry, exact event/load-bound `phase_transition` and current rerun status window exist MAY it expose the existing topic-state inspect/apply/recover action. An accepted prepared topic-state workspace remains recoverable after lifecycle drift because recovery finishes previously authorized bytes; this SHALL NOT make fresh apply reachable outside an accepted rerun witness.
 
 #### Scenario: One UID drift becomes one root
 - **WHEN** a topic has registry/seed binding failure plus derivative queue/artifact symptoms
@@ -221,18 +223,18 @@ When no accepted topic-state workspace exists, a post-final legacy or new-scope 
 - **AND** SHALL NOT recommend migrate-legacy apply as reachable
 
 #### Scenario: Post-final accepted workspace exposes exact recovery only
-- **WHEN** terminal lifecycle state contains an accepted prepared post-final recovery or topic-state workspace
+- **WHEN** terminal lifecycle state contains an accepted prepared post-final recovery or topic-state workspace, including a C5 workspace whose event is committed but cleanup is incomplete
 - **THEN** reentry SHALL expose the exact owning recover operation id
 - **AND** SHALL NOT expose fresh apply or new semantic input
 
 #### Scenario: Route-bound post-final rerun exposes existing topic repair
-- **WHEN** a valid post-final recovery event has been consumed by route-bound `enter-phase` and current node/status are the existing rerun window
+- **WHEN** a valid post-final recovery event and exact after-profile have been consumed by completed route-bound `enter-phase`, the exact bound exceptional `phase_transition` exists, and current node/status are the existing rerun window
 - **THEN** reentry MAY expose existing `operate-topic-state` migrate/add/update/layout actions subject to C3 checks
 - **AND** SHALL NOT create a C5-specific topic mutation action
 
 #### Scenario: Legal current-node update preserves recovery lineage
 
-- **WHEN** the recovery event has a route-bound rerun load but existing status sync has not completed
+- **WHEN** the recovery event has a completed route-bound rerun load/current-node update but existing status sync has not completed
 - **THEN** reentry SHALL expose only `advance-status --to hitl2_recorded`
 - **AND** SHALL NOT report the legal current-node update as manual drift or expose topic mutation early
 

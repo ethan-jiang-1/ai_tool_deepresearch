@@ -22,7 +22,7 @@ Post-final rerun apply SHALL be authorized only after the accepted C5 operation 
 
 `migrate_legacy` and `mutate_layout` SHALL be authorized only in a sanctioned normal or post-final rerun context. Other post-final, stale/missing-witness and arbitrary maintenance invocation SHALL reject without workspace or authority mutation.
 
-The prepared manifest SHALL record the originally proven authorization facts, including the normal gate handoff or post-final recovery event/load identity. `recover` MAY finish that exact accepted operation after lifecycle position changes, but SHALL NOT accept new semantics, re-evaluate a new apply request or widen the staged file set.
+The prepared manifest SHALL record the complete originally proven authorization facts. For normal rerun this means the gate handoff and bound load identity. For post-final rerun it means recovery event id/index/exact-line SHA256, event-bound after-profile hash, bound rerun load index, exact exceptional `phase_transition` index/binding, and the incoming current-node/status window. `recover` MAY finish that exact accepted operation after lifecycle position changes, but SHALL NOT accept new semantics, re-evaluate a new apply request or widen the staged file set.
 
 `migrate_legacy`, `update_intent` and `mutate_layout` SHALL reject before workspace creation when a touched existing topic has queued, delegated-in-flight or nonterminal work. The blocker SHALL identify the existing queue/work-unit owner and one nearest Agent action. Submitted historical work MAY remain and SHALL NOT be rewritten. `mutate_layout` removal SHALL additionally reject any UID with queue/work-unit/ledger/artifact/reference history or an inbound dependency.
 
@@ -114,6 +114,12 @@ The prepared manifest SHALL record the originally proven authorization facts, in
 - **WHEN** a prepared manifest records valid original authorization and the bundle later moves to another lifecycle position before commit completes
 - **THEN** exact recover MAY finish only the recorded staged replacements and seed cleanup
 - **AND** it SHALL NOT authorize a fresh topic mutation in the new lifecycle position
+
+#### Scenario: Post-final topic recovery retains complete original witness
+
+- **WHEN** post-final topic-state apply publishes a prepared manifest and later lifecycle/profile position changes
+- **THEN** recover SHALL rely on the recorded event/profile/load/transition/status authorization snapshot rather than current fresh-apply eligibility
+- **AND** a manifest missing any complete exceptional-witness component SHALL block instead of inferring authorization from current prose or files
 
 ### Requirement: Topic-state operations SHALL preserve scope and authority boundaries
 
