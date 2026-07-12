@@ -104,7 +104,7 @@ The manifest records schema/action/operation id, request digest, final lineage, 
 
 Commit order is:
 
-1. replace profile with normalized current HITL2 `status: recorded`, `user_decision: rerun`, operation `recorded_at`, and a deterministic existing-field `rationale` serialization of reason+requested scope, while preserving `rerun_count` and unrelated profile fields;
+1. replace profile with normalized current HITL2 `status: recorded`, `user_decision: rerun`, and a deterministic existing-field `rationale` serialization of reason+requested scope, while preserving `rerun_count` and unrelated profile fields; keep the operation timestamp in the event rather than inventing a HITL2 `recorded_at` field absent from the current schema;
 2. revalidate that terminal Final status bytes still equal the manifest's expected status hash;
 3. run the shared evaluator in `prepared_pre_entry` stage against committed profile, unchanged terminal status and the prepared manifest;
 4. append the exact `post_final_reentry` event last through a narrow durable/idempotent primitive added to the existing trace writer owner;

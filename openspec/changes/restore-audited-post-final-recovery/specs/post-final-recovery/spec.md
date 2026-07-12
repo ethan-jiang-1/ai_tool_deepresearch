@@ -71,7 +71,7 @@ Durable prepared publication SHALL be the acceptance boundary. Before it, failur
 
 Commit SHALL roll forward in this order:
 
-1. replace the HITL2 profile projection with `status: recorded`, `user_decision: rerun`, `recorded_at` equal to the operation timestamp, and `rationale` equal to one deterministic serialization of the accepted reason plus requested scope, while preserving all other profile fields and existing `rerun_count`;
+1. replace the HITL2 profile projection with `status: recorded`, `user_decision: rerun`, and `rationale` equal to one deterministic serialization of the accepted reason plus requested scope, while preserving all other profile fields and existing `rerun_count`; the operation timestamp remains in the recovery event because the current HITL2 profile schema has no `recorded_at` field;
 2. revalidate that status remains the exact terminal Final bytes accepted by the manifest;
 3. validate the prepared pre-entry profile/terminal-state facts from the same shared evaluator;
 4. append the exact event last through one durable idempotent primitive in the existing trace writer owner;

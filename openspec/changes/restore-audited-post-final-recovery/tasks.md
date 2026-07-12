@@ -17,7 +17,7 @@
 ## 3. Prepared Workspace And Exact Recovery
 
 - [ ] 3.1 实现 `POF-002` `_diagnostics/post-final-recovery/<operation-id>/` prepared manifest。Done condition：只列request、before/after profile与one exact event，status仅记录terminal expected hash不纳入mutation file list；记录Final lineage、trace prefix/index、commit order与original eligibility；无generic file inventory。
-- [ ] 3.2 实现 `POF-002` profile staging。Done condition：只写existing HITL2 `status: recorded`、`user_decision: rerun`、operation `recorded_at`与共享确定性reason+scope→`rationale`序列化，保留其它fields与rerun_count；reason/scope在event中分字段审计；不新增profile scope字段或second request ledger。
+- [ ] 3.2 实现 `POF-002` profile staging。Done condition：只写existing HITL2 `status: recorded`、`user_decision: rerun`与共享确定性reason+scope→`rationale`序列化，保留其它fields与rerun_count；operation timestamp及reason/scope在event中审计；不新增HITL2 `recorded_at`、profile scope字段或second request ledger。
 - [ ] 3.3 实现 `POF-002` terminal-status CAS guard。Done condition：event发布前status必须仍为accepted `readiness_passed → none`/Final current-node bytes；C5不写status，drift则blocked并归还现有owner。
 - [ ] 3.4 在existing trace writer owner实现 `POF-002/003` exact durable append primitive。Done condition：recheck prepared trace prefix/index、append pre-staged exact bytes、fsync file/parent、same operation/event idempotent、conflicting digest blocked；不创建second generic trace writer。
 - [ ] 3.5 实现 event-last roll-forward commit。Done condition：profile→terminal-status recheck→shared `prepared_pre_entry` evaluation→existing trace primitive append `post_final_reentry`→cleanup；event前partial profile不授权handoff，event后status仍terminal并等待existing entry/sync owners。
