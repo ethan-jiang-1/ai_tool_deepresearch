@@ -154,6 +154,7 @@ AGQ-021: agentic-queue — Supplementary queue demand IDs may carry iteration la
 AGQ-022: agentic-queue — Wave delegated queue loops prefer bounded batched claims for independent demand
 AGQ-023: agentic-queue — Phase task-card examples preserve queue_item_id as queue demand identity
 AGQ-024: agentic-queue — Actor preflight no-claim preserves queue demand and lifecycle semantics
+AGQ-025: agentic-queue — New topic-scoped queue demand binds canonical topic UID and current slug
 
 # agent-output-declaration
 AGO-001: agent-output-declaration — Work-unit result output_files declaration with role and source_url rules
@@ -216,6 +217,7 @@ DEW-015: delegated-work-units — Audited late-submit recovers eligible timed-ou
 DEW-016: delegated-work-units — Work-unit claim evaluates one explicit role-bound actor observation before allocation
 DEW-017: delegated-work-units — Explicit single Phase Agent fallback remains inside the work-unit submit envelope
 DEW-018: delegated-work-units — Work-unit records preserve truthful execution actor provenance with legacy compatibility
+DEW-019: delegated-work-units — Work-unit provenance inherits UID-bound queue identity without duplicate result or ledger fields
 
 # conditional-nodes
 COS-001: conditional-nodes — Deterministic branch checkpoint transforms
@@ -263,6 +265,7 @@ FIO-003: file-observability — Agent file explanations are diagnostic trace/log
 FIO-004: file-observability — Explained files remain non-authoritative until ledger or receipt authority exists
 FIO-005: file-observability — Root bundle map files follow canonical map policy
 FIO-006: file-observability — File observability detects canonical topic footprint drift without granting authority
+FIO-007: file-observability — File observability resolves current and historical topic layouts through one canonical resolver
 
 # fork-repair-converge
 FOR-001: fork-repair-converge — Multi-fail shared repair checkpoint convergence
@@ -302,6 +305,7 @@ QIV-003: queue-input-validation — Queue projection cache includes generated_at
 QIV-004: queue-input-validation — operate-queue repair --remove-stale removes task cards outside topic_registry
 QIV-005: queue-input-validation — Queue and work-unit runtime CLIs reject help and suspicious bundle arguments before side effects
 QIV-006: queue-input-validation — Topic enqueue requires committed canonical registry and UID-bound seed state
+QIV-007: queue-input-validation — Topic enqueue accepts only UID-bound current layout coordinates
 
 # relay-provenance-gate
 RPG-001: relay-provenance-gate — Replaced by work-unit-provenance-gate submitted ledger row checks [DEPRECATED]
@@ -347,6 +351,7 @@ RRD-006: runtime-reentry-debuggability — Reentry CLI exit-code semantics align
 RRD-007: runtime-reentry-debuggability — Reentry diagnostics use rb_status current_node as the current phase coordinate when present
 RRD-008: runtime-reentry-debuggability — Reentry diagnostics summarize incident-shaped recovery truth
 RRD-009: runtime-reentry-debuggability — Reentry consumes canonical topic-state inspection without mutation authority
+RRD-010: runtime-reentry-debuggability — Reentry short-circuits accepted topic layout workspaces and layout drift
 
 # run-entry
 RUE-001: run-entry — RUN.md entry point announces the framework version banner
@@ -365,6 +370,7 @@ SCO-006: schema-core-hitl — AnswerabilityClass enum
 SCO-007: schema-core-hitl — HITL2UserDecision distinguishes the not_started sentinel from five recorded actions while preserving current lifecycle enum coverage
 SCO-008: schema-core-hitl — ProfileSchema hitl1/hitl2 field update
 SCO-013: schema-core — Canonical and legacy plan schemas distinguish stable topic identity mode
+SCO-014: schema-core — Canonical plan schema validates unique current and previous topic layout coordinates
 SOR-001: schema-core — Source-of-record invariant marker for schema-core specs
 
 # subagent-collect
@@ -583,6 +589,7 @@ STM-004: seed-topic-materialization — Workflow registration of seed-topics pha
 STM-005: seed-topic-materialization — Seed topics boundary enforcement playbook (materialize all→pass, empty dir→fail, slug missing/extra→fail)
 STM-006: seed-topic-materialization — Topic slug SHALL include zero-padded NN_ numeric prefix (NN = 1-based array position); gate triple-consistency byte-for-byte check naturally compatible
 STM-007: seed-topic-materialization — Canonical seed topics are exact UID-bound registry projections
+STM-008: seed-topic-materialization — Seed projections follow the committed current topic layout after atomic mutation
 
 # workflow-foundation — contracts
 WDC-001: workflow-directory-contract — Read-only framework assets boundary (DPT_FRAMEWORK/ = read-only, dpt_rb_*/ = mutable runtime truth)
@@ -709,6 +716,7 @@ RWG-013: research-wave-gate-implementation — Wave2 gate removes reference/00_s
 RWG-016: research-wave-gate-implementation — Wave gates return repair-targeted diagnostics for YAML shape, ledger-only reference counting, cache coverage, and hash drift
 RWG-017: research-wave-gate-implementation — Wave gates implement Phase-owned reference projection and delegated evidence split
 RWG-018: research-wave-gate-implementation — Blocking judgment contracts close across producer instruction, runtime authority, checker diagnostics, and guard
+RWG-019: research-wave-gate-implementation — Wave gates aggregate current and previous layout paths by canonical topic UID
 
 # workflow-directory-contract (delta)
 WDC-009: workflow-directory-contract — Bundle canonical structure includes artifacts/wave0/ and flat reference/
@@ -747,12 +755,16 @@ RES-004: research-styles — Phase MD references style-specific targets from pro
 RES-005: "research-styles — Debug style (user_visible: false) hidden from HITL1, available for dev/testing"
 RES-006: research-styles — Supplementary task cards SHALL NOT produce placeholder references (three-layer defense)
 RES-007: research-styles — Topic-state add reuses the existing research-style owner after commit
+RES-008: research-styles — Safe topic removal reuses the existing research-style owner after commit
 
 # canonical-topic-state
 CTS-001: canonical-topic-state — Topic registry owns stable UID and minimum durable intent
 CTS-002: canonical-topic-state — Topic progress is projected from direct runtime facts without persistence
 CTS-003: canonical-topic-state — Plan and seed intent commit through explicit crash-safe apply and recover
 CTS-004: canonical-topic-state — Topic operations preserve lifecycle and owner boundaries
+CTS-005: canonical-topic-state — Topic registry owns current and previous layout coordinates for stable UID resolution
+CTS-006: canonical-topic-state — Complete layout target commits through the existing explicit workspace and recovery path
+CTS-007: canonical-topic-state — One pure resolver maps current and historical slug bindings to canonical UID without moving provenance paths
 
 # research-return-map
 RRM-001: research-return-map — Research wave returns include Agent-readable evidence-to-claim maps
