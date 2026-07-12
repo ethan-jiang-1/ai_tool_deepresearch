@@ -39,7 +39,10 @@ plan 完成后从 `_backlog/plans/` 通过 `git mv` 移入本目录：
 | CLS-018 | 2026-07-11 | ux-user-facing-chinese-first-outside-waves.md | 收窄后的中文用户可见软提示落地：HITL 动态内容、Final terminal delivery、silent non-authorization guard；不改 gate/schema/routing/locale。 |
 | CLS-019 | 2026-07-12 | delegated-attempt-timeout-and-redo-postmortem.md | Timeout/REDO 现场复盘完成；主要修复由 v0.14 dry-submit、v0.15 progress-aware timeout preflight、v0.16 audited late-submit 落地。 |
 | CLS-020 | 2026-07-12 | delegated-attempt-timeout-and-redo-postmortem-修复计划.md | 两阶段修复切片完成：防误杀与误杀后 audited recovery 已分别由 v0.15/v0.16 落地；pause-aware wall-clock suspension 未纳入该闭环。 |
+| CLS-021 | 2026-07-13 | breakpoint-recovery-persistence-model.md | C2+C3+C5：crash-safe sanctioned content、canonical intent/progress/layout、post-final request materialization 全部有 Engine path 与 controlled proof |
+| CLS-022 | 2026-07-13 | human-override-and-state-mutability.md | C1+C3+C5：single registry、layout mutation、integrity/reentry safety net、狭窄 post-final rerun 全部落地且有 audit proof；generic override/state-seed 不在本路线 scope |
+| CLS-023 | 2026-07-13 | overall-recovery-canonical-state-and-delegation-roadmap.md | 五 change 总控路线完成：C1–C5 全部 archive（v0.22–v0.27），5 个来源全部关闭，controlled proof 全部通过 |
 
 Closure boundary for CLS-007..010: this change did not implement runtime exit-helper unification, code-2 semantic migration, a JS lifecycle walker, chat interceptor, environment-variable control, same-turn chat halt prevention, or fake evidence/trace handling.
 
-**Next available plan ID: CLS-021**
+**Next available plan ID: CLS-024**

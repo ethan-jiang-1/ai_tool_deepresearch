@@ -15,24 +15,19 @@
 
 ## 活跃列表
 
-| Bug | 简述 | 状态 |
-|-----|------|------|
-| [BUG-079](BUG-079-out-of-gate-addendum-no-canonical-footprint.md) | Out-of-gate addendum 新增 topic 无 canonical footprint，gate/audit/recovery 不可见 | Partial — 新post-final scope已走audited canonical rerun且case-317证明无addendum成功路径；历史adoption与generic state-seed仍未覆盖 |
+_当前无活跃 bug。_
 
-**Next available bug ID: BUG-080**
-
-> **2026-07-11 批量修复**：BUG-069 / 071 / 072 / 073 / 074 / 075 已按 [`bugs-069-075-openspec-change-slicing`](../_done/_closed_plans/bugs-069-075-openspec-change-slicing.md) 聚成 3 个 OpenSpec change 修复并移入 `_done/_fixed_bugs/`：
-> - **A** `simplify-and-reuse-wave-contract-checks` (v0.17) → BUG-069 / 073 / 075（同源 side-effect-free inspect 预检 Wave contract）
-> - **B** `fail-fast-on-missing-research-access` (v0.18) → BUG-071（HITL1 `research_access` probe fail-fast）
-> - **C** `put-continuation-cues-at-decision-points` (v0.19) → BUG-072 / 074（决策点 continuation cue；机制落地，行为待真实 run 观察）
->
-> **两个遗留项（未混入本批，另行跟踪）**：
-> - BUG-071 §4.1 bootstrap `current_gate` 语义统一 → deferred，见 plan §6，未来独立小 change `normalize-bootstrap-gate-window`。
-> - BUG-072 / 074 的 LLM 行为闭环需真实 disposable run 观察，静态测试只证明 cue 可达与取值正确。
+**Next available bug ID: BUG-081**
 
 ---
 
-## 最近批量修复 (2026-07-08)
+## 最近批量修复 (2026-07-13)
+
+BUG-079 / BUG-080 随 C1–C5 路线全部 archive 后关闭：
+- **BUG-079**: C1 可检测隐形 topic/drift，C3/C5 使新增 scope 只能 canonical-or-blocked，case-317 证明无 addendum 成功路径。历史 addendum 的 adopt 需通过 C3 `migrate_legacy`，不由 C5 自动处理。
+- **BUG-080**: 合法 rerun 路径（C5→C3→phase-rerun→seed-topics→wave0→wave1→wave2）已恢复，Agent 走正常 pipeline 时逐 topic seed backfill 和 reference 物化自然执行。add_topic seed body 质量属 Agent guidance 持续改进范围，非 Engine 结构性缺口。
+
+### 最近批量修复 (2026-07-08)
 
 ### 第三批 (2026-07-08) — 3 个 OpenSpec change，9 个 bug
 

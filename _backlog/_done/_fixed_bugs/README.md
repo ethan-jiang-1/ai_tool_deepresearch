@@ -88,8 +88,10 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-076 | 2026-07-12 | Native WebFetch host domain verification remains external; framework now accepts a real alternative fetch surface such as `curl` for HITL1 research access and delegated fetch fallback |
 | BUG-077 | 2026-07-12 | Role-bound actor preflight prevents doomed delegated allocation; explicit single Phase Agent fallback remains inside formal submit and actor provenance authority |
 | BUG-078 | 2026-07-13 | Audited Final-lineage-bound rerun recovery reaches the existing canonical rerun pipeline without hand-written authority or addendum namespace |
+| BUG-079 | 2026-07-13 | Out-of-gate addendum topics — C1 detects, C3/C5 canonical-or-blocked, no addendum success path |
+| BUG-080 | 2026-07-13 | Rerun seed backfill quality — legal rerun path restored, normal pipeline backfill/materialization applies |
 
-**Next available bug ID: BUG-080**
+**Next available bug ID: BUG-081**
 
 ---
 

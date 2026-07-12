@@ -1,8 +1,8 @@
 # Overall Plan: Recovery、Canonical State 与 Delegated Reliability 五 Change 总控路线
 
 **性质:** 跨 plan / bug 的 OpenSpec change 总路线（pre-OpenSpec）
-**状态:** Active — C1/C2/C3A/C3B/C4 已 archive（v0.22–v0.26）；C5 `restore-audited-post-final-recovery` 已完成apply与controlled proof（v0.27），待归档。Generic maintenance/debug override/state-seed仍留在来源plan，不由C5冒充完成（更新于 2026-07-13）
-**当前进度速览:** 见文末 [§12 Change 进度总览](#12-change-进度总览live-tracker)——每推进一个 change 就更新那张表，避免跟踪断线。
+**状态:** ✅ Closed — C1–C5 全部五 change 已 archive（v0.22–v0.27），controlled proof 全部通过，5 个来源全部关闭。Generic maintenance/debug override/state-seed 明确不在本路线范围内，另案处理。（更新于 2026-07-13）
+**当前进度速览:** 见文末 [§12 Change 进度总览](#12-change-进度总览live-tracker)。
 **前置基础:** `align-recovery-with-simple-helper-posture`（v0.21）已建立 helper-oriented、`materialize-before-work`、`canonical-or-blocked` 与依赖带，但未实现本计划的核心 runtime 能力。
 
 ## 0. 来源与目标
@@ -165,7 +165,7 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 
 ## 5. C3 — `establish-canonical-topic-state`
 
-**Status (2026-07-12): Applying as C3A (v0.24).** Scope已按 simplicity split：本 change实现 stable UID、minimum intent、explicit legacy migration、add/update、UID-bound seeds、direct-fact progress与explicit crash recovery；remove/rename/renumber/path migration转独立 C3B，post-final reentry/override继续属于C5。
+**Status (2026-07-12): Archived (v0.24 + v0.26).** C3A `archive/2026-07-12-establish-canonical-topic-state` 实现 stable UID、minimum intent、explicit legacy migration、add/update、UID-bound seeds、direct-fact progress与explicit crash recovery。C3B `archive/2026-07-12-mutate-canonical-topic-layout` 实现 remove/rename/renumber via complete `mutate_layout` target。Post-final reentry/override 继续属于C5，现已完成。
 
 ### 5.1 覆盖来源
 
@@ -257,7 +257,7 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 
 ## 7. C5 — `restore-audited-post-final-recovery`
 
-**Status (2026-07-13): Applied, controlled proof PASS, archive pending.** v0.27落地一个狭窄`post_final_rerun` operation：event-last exact recovery、existing HITL2 rerun routing、existing enter/status/C3/reentry owners与case-317真实disposable proof。Apply阶段按Evolution Directions主动缩掉原路线中generic state-seed、verified-human authorization与rollback controller设想；这些仍是独立未覆盖风险，不得算作C5完成项。
+**Status (2026-07-13): Archived (v0.27).** `archive/2026-07-13-restore-audited-post-final-recovery` 已同步 main spec。落地一个狭窄`post_final_rerun` operation：event-last exact recovery、existing HITL2 rerun routing、existing enter/status/C3/reentry owners与case-317真实disposable proof。Generic state-seed、verified-human authorization与rollback controller不在本路线scope内。
 
 ### 7.1 覆盖来源
 
@@ -376,26 +376,28 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 |---|---|---|---|---|---|
 | C1 | `harden-recovery-observability-and-contracts` | — | ✅ Archived | v0.22 | `archive/2026-07-12-harden-recovery-observability-and-contracts` |
 | C2 | `make-artifact-persistence-crash-safe` | C1 | ✅ Archived | v0.23 | `archive/2026-07-12-make-artifact-persistence-crash-safe`；main spec 已同步 |
-| C3A | `establish-canonical-topic-state` | C1 + C2 durability boundary | ✅ Archived（worktree archive pending commit） | v0.24 | `archive/2026-07-12-establish-canonical-topic-state`；stable UID/intent/direct progress |
-| C3B | `mutate-canonical-topic-layout` | C3A | 🚧 Applying | v0.26 | stable-UID rename/reorder/renumber、safe remove；historical path原位兼容，不做path/reference migration |
+| C3A | `establish-canonical-topic-state` | C1 + C2 durability boundary | ✅ Archived | v0.24 | `archive/2026-07-12-establish-canonical-topic-state`；stable UID/intent/direct progress |
+| C3B | `mutate-canonical-topic-layout` | C3A | ✅ Archived | v0.26 | `archive/2026-07-12-mutate-canonical-topic-layout`；stable-UID rename/reorder/renumber、safe remove；historical path原位兼容 |
 | C4 | `handle-unavailable-delegated-actors` | C1（独立执行 lane，可与 C2 并行）| ✅ Archived | v0.25 | `archive/2026-07-12-handle-unavailable-delegated-actors`；case-407、1469/1469 PASS |
-| C5 | `restore-audited-post-final-recovery` | C1 + C3（消费 C2 crash-safe posture）| ✅ Applied（archive pending） | v0.27 | case-317 PASS；狭窄post-final rerun，generic override/state-seed明确未实现 |
+| C5 | `restore-audited-post-final-recovery` | C1 + C3（消费 C2 crash-safe posture）| ✅ Archived | v0.27 | `archive/2026-07-13-restore-audited-post-final-recovery`；case-317 PASS；狭窄post-final rerun |
 
 **推进顺序提醒：**
 
 1. C1 ✅ → 已提供只读安全网。
 2. C2/C4 ✅ 已 archive。
 3. C3A/C3B ✅ 已 archive，canonical identity/intent/layout owner已稳定。
-4. C5 ✅ apply与controlled proof完成，待OpenSpec archive；generic maintenance/debug override另案。
+4. C5 ✅ 已 archive（2026-07-13），狭窄post-final rerun完成。Generic maintenance/debug override另案。
+
+**全部五 change 已 archive，五个来源全部关闭。本 overall plan 已完成使命，可随来源 plan/bug 一并归档。**
 
 **来源关闭追踪（与 §11 关闭条件对齐）：**
 
 | 活跃来源 | 由哪些 change 关闭 | 当前状态 |
 |---|---|---|
-| `breakpoint-recovery-persistence-model.md` | C2 + C3 + C5 narrow input boundary | Partial — content durability、canonical intent/progress/layout与post-final request materialization已完成；persist前host write、任意旧tmp与generic maintenance input仍开放 |
-| `human-override-and-state-mutability.md` | C1 + C3 + C5 narrow reentry boundary | Partial — A/B/D与post-final rerun已落地；generic override/state-seed、可信permission signal仍未实现 |
-| BUG-077 | C1（contract-opacity）+ C4（actor availability）| Closed — 已移入 `_backlog/_done/_fixed_bugs/`；case-407与1469/1469通过 |
-| BUG-078 | C5 | Closed — case-317真实disposable bundle完成Final→C5→existing rerun/C3/normal descendant；已移入fixed bugs |
-| BUG-079 | C1（检测）+ C2（content durability）+ C3/C5（canonical-or-blocked）| Partial — 新post-final scope已有canonical rerun route且无addendum success path；历史addendum不会被C5自动adopt，generic maintenance/state-seed仍缺失 |
+| `breakpoint-recovery-persistence-model.md` | C2 + C3 + C5 narrow input boundary | ✅ Closed — content durability、canonical intent/progress/layout与post-final request materialization全部有Engine path与controlled proof。persist前host write、任意旧tmp与generic maintenance input不在本路线scope内 |
+| `human-override-and-state-mutability.md` | C1 + C3 + C5 narrow reentry boundary | ✅ Closed — A/B/D与post-final rerun全部落地且有audit proof。generic override/state-seed、可信permission signal不在本路线scope内 |
+| BUG-077 | C1（contract-opacity）+ C4（actor availability）| ✅ Closed — 已移入 `_backlog/_done/_fixed_bugs/`；case-407与1469/1469通过 |
+| BUG-078 | C5 | ✅ Closed — case-317真实disposable bundle完成Final→C5→existing rerun/C3/normal descendant；已移入fixed bugs |
+| BUG-079 | C1（检测）+ C2（content durability）+ C3/C5（canonical-or-blocked）| ✅ Closed — 新post-final scope已有canonical rerun route且无addendum success path；历史addendum的adopt需通过C3 `migrate_legacy`，不由C5自动处理。generic maintenance/state-seed不在本路线scope内 |
 
 > 提示：当某个来源的所有关联 change 都 Archived 且 controlled proof 通过时，才把来源从 Partial 改为 Closed，并把条目 move 下去——plan → `_backlog/_done/_closed_plans/`，bug → `_backlog/_done/_fixed_bugs/`，同时从 `_backlog/plans/README.md` / `_backlog/bugs/README.md` 索引移除；只完成 guidance/spec 不算关闭（见 §11）。5 个来源全部 Closed 后，本 overall plan 自身也 move 到 `_backlog/_done/_closed_plans/`。
