@@ -10,46 +10,47 @@ Define the gate definition JSONs and gate CLI implementations for the three cont
 
 ### Requirement: HITL2 recorded gate rule set
 
-`gate-hitl2-recorded.definition.json` SHALL define a complete rule set replacing the placeholder. The gate SHALL verify:
-- Decision brief artifact exists at `artifacts/hitl2/decision-brief.md`
-- `rb_profile.yaml` is parseable and contains `human_decision_checkpoints.hitl2.status` equal to `recorded`
-- `human_decision_checkpoints.hitl2.user_decision` is non-empty
-- `user_decision` value is one of the accepted enum: `proceed_to_readiness`, `request_view_revision`, `repair_and_rerun`, `stop_blocked`
-- `hitl2_recorded` event exists in `rb_trace.jsonl`
-- `rb_status.json` `current_gate` equals `hitl2_recorded` and `next_gate` equals `readiness_passed`
+`gate-hitl2-recorded.definition.json` SHALL define the deterministic rule set for the current HITL2 decision contract. The definition SHALL verify:
 
-Each rule SHALL have a `failure_message` providing concrete repair direction.
+- `artifacts/hitl2/decision-brief.md` exists and is non-empty;
+- `rb_profile.yaml` is parseable;
+- `human_decision_checkpoints.hitl2.status` equals `recorded`;
+- `human_decision_checkpoints.hitl2.user_decision` is non-empty; and
+- `user_decision` is one of `proceed_to_readiness`, `request_view_revision`, `repair`, `rerun`, `stop_blocked`.
+
+Each rule SHALL have a concrete `failure_message` naming the missing or invalid fact and the nearest repair action.
+
+The definition SHALL NOT require a separate `hitl2_recorded` trace event as a blocking rule. The durable profile fields and decision brief own the recorded-decision check, while the gate CLI's `gate_attempt` owns deterministic gate audit. Removing the redundant trace rule SHALL NOT authorize hand-written trace or weaken the CLI's `gate_attempt` requirement.
+
+Lifecycle handoff/status consistency MAY be enforced by the shared gate handoff preflight used by the CLI. It SHALL NOT be duplicated as a second stale set of definition rules with a different status-window interpretation.
 
 #### Scenario: Gate definition parseable and complete
 
 - **WHEN** `gate-hitl2-recorded.definition.json` is loaded
 - **THEN** it SHALL parse as valid JSON with `gate`, `description`, and `rules` fields
-- **AND** `rules` SHALL contain at least 5 rules
+- **AND** the rules SHALL cover decision-brief existence/non-empty, profile parsing, recorded status, non-empty decision, and five-enum validation
 - **AND** no rule SHALL have `check: "placeholder"`
 
 #### Scenario: Decision brief existence check
 
-- **WHEN** the gate executes the `decision_brief_exists` rule
-- **AND** `artifacts/hitl2/decision-brief.md` does not exist
-- **THEN** the rule SHALL return fail with a message indicating the missing file and the required action
+- **WHEN** `artifacts/hitl2/decision-brief.md` does not exist or is empty
+- **THEN** the gate SHALL fail with advice naming the decision brief repair
 
 #### Scenario: HITL2 status recorded check
 
-- **WHEN** the gate executes the `hitl2_status_recorded` rule
-- **AND** `rb_profile.yaml` `human_decision_checkpoints.hitl2.status` is not `recorded`
-- **THEN** the rule SHALL return fail with a message indicating the expected value
+- **WHEN** `rb_profile.yaml` `human_decision_checkpoints.hitl2.status` is not `recorded`
+- **THEN** the gate SHALL fail with a message indicating the expected value
 
 #### Scenario: User decision valid enum check
 
-- **WHEN** the gate executes the `user_decision_valid_enum` rule
-- **AND** `human_decision_checkpoints.hitl2.user_decision` is not one of the accepted enum values
-- **THEN** the rule SHALL return fail with a message listing the accepted values
+- **WHEN** `human_decision_checkpoints.hitl2.user_decision` is not one of the five accepted enum values
+- **THEN** the gate SHALL fail with a message listing `proceed_to_readiness`, `request_view_revision`, `repair`, `rerun`, and `stop_blocked`
 
-#### Scenario: Trace event present check
+#### Scenario: Missing phase-authored trace event is not a duplicate blocker
 
-- **WHEN** the gate executes the `trace_hitl2_recorded` rule
-- **AND** no `hitl2_recorded` event exists in `rb_trace.jsonl`
-- **THEN** the rule SHALL return fail with a message indicating the missing trace event
+- **WHEN** the decision brief and profile decision fields are valid but no separate `hitl2_recorded` event exists
+- **THEN** the gate definition SHALL NOT fail solely for that missing event
+- **AND** the gate CLI SHALL still write its own `gate_attempt` audit event
 
 ### Requirement: Readiness passed gate rule set
 
@@ -85,36 +86,54 @@ The gate SHALL NOT evaluate content quality, writing quality, argument strength,
 
 `check-gate-hitl2-recorded.mjs` SHALL use the standard `gate-helpers.mjs` pipeline and evaluate rules from the loaded definition JSON. It SHALL NOT hardcode `passed: true`.
 
-The CLI SHALL accept `--bundle <path>` and `--current-node <path>` flags. It SHALL load the gate definition, validate node-gate binding, iterate rules, execute deterministic checks, resolve routing via `resolveNodeTransitionDetailed`, and emit the result as JSON to stdout.
+The CLI SHALL accept `--bundle <path>` and `--current-node <path>` flags. It SHALL load the gate definition, validate node-gate binding, run the shared phase-handoff preflight, iterate definition rules, resolve routing via `resolveNodeTransitionDetailed`, and emit structured JSON to stdout.
 
-Exit code SHALL be 0 on pass, 1 on fail, 2 on routing contract error.
+After all definition rules pass, the CLI SHALL map the recorded decision to routing outcome as follows:
 
-The CLI SHALL append a `gate_attempt` trace event to `rb_trace.jsonl` after completing all checks (on both pass and fail), following the same append pattern as the wave0/1/2 gate CLIs. This trace event is required because the readiness gate audits prior gate pass count via `gate_attempt` events — if the HITL2 CLI does not write this event, the readiness gate's prior gates audit can never reach the expected count.
+- `proceed_to_readiness` -> deterministic outcome `passed`;
+- `rerun` -> deterministic outcome `rerun`;
+- `request_view_revision`, `repair`, or `stop_blocked` -> no fixed deterministic handoff; `check.next` SHALL remain null rather than defaulting to readiness.
+
+Exit code SHALL be 0 when the decision facts pass, 1 on gate/preflight failure, and 2 on routing/configuration/caller error according to the shared convention. A passing non-deterministic decision MAY have no `check.next`; pass/fail truth and routing truth SHALL remain distinct.
+
+The CLI SHALL append a `gate_attempt` trace event to `rb_trace.jsonl` after completing the check on both pass and fail. For a deterministic handoff, the event SHALL preserve the selected `next`; for a context-dependent decision, it SHALL preserve `next: null` rather than inventing a route.
 
 #### Scenario: CLI writes gate_attempt trace event
 
-- **WHEN** `check-gate-hitl2-recorded.mjs` completes with any result (pass or fail)
-- **THEN** it SHALL append a `gate_attempt` event to `rb_trace.jsonl` with `gate`, `passed`, `currentNodeRef`, and `next` fields
-- **AND** this event SHALL be readable by the readiness gate's `trace_has_all_gates` check
+- **WHEN** `check-gate-hitl2-recorded.mjs` completes with any result
+- **THEN** it SHALL append a `gate_attempt` event with `gate`, `passed`, `currentNodeRef`, and `next`
+- **AND** this event SHALL remain the gate audit consumed by later readiness/history checks
 
 #### Scenario: CLI evaluates definition rules
 
-- **WHEN** `check-gate-hitl2-recorded.mjs` is invoked with valid bundle and node
+- **WHEN** `check-gate-hitl2-recorded.mjs` is invoked with a valid bundle and node
 - **THEN** it SHALL load `gate-hitl2-recorded.definition.json`
 - **AND** it SHALL iterate all rules and execute checks
 - **AND** it SHALL NOT return hardcoded `passed: true`
 
-#### Scenario: CLI supports yaml_parse check type
+#### Scenario: Proceed decision selects readiness
 
-- **WHEN** a rule has `check: "yaml_parse"` with target pointing to a YAML file
-- **THEN** the CLI SHALL parse the YAML file
-- **AND** if parsing fails, the rule SHALL report fail with the parse error
+- **WHEN** all checks pass and `user_decision` is `proceed_to_readiness`
+- **THEN** the CLI SHALL resolve outcome `passed`
+- **AND** `check.next` SHALL be `phases/phase-readiness.md`
 
-#### Scenario: CLI supports field_non_empty check type
+#### Scenario: Rerun decision selects rerun node
 
-- **WHEN** a rule has `check: "field_non_empty"` with a YAML path target
-- **THEN** the CLI SHALL navigate to the specified field in the parsed YAML
-- **AND** if the field is empty, null, or missing, the rule SHALL report fail
+- **WHEN** all checks pass and `user_decision` is `rerun`
+- **THEN** the CLI SHALL resolve outcome `rerun`
+- **AND** `check.next` SHALL be `phases/phase-rerun.md`
+
+#### Scenario: Context-dependent decision does not default to readiness
+
+- **WHEN** all checks pass and `user_decision` is `request_view_revision`, `repair`, or `stop_blocked`
+- **THEN** `check.next` SHALL be null
+- **AND** the CLI SHALL NOT replace the decision with the `passed` readiness route
+
+#### Scenario: CLI supports yaml_parse and field checks
+
+- **WHEN** definition rules target `rb_profile.yaml` fields
+- **THEN** the CLI SHALL parse YAML and evaluate non-empty/equality/enum checks deterministically
+- **AND** parse or field failure SHALL appear in structured inspect/advice
 
 ### Requirement: Readiness gate CLI evaluates rules from definition
 

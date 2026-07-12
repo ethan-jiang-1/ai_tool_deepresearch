@@ -30,9 +30,9 @@ suggested_context:
 
 产出 decision brief 并询问用户 structured final review decision。将用户 decision 记录到 `rb_profile.yaml` 的 `human_decision_checkpoints.hitl2` 下。
 
-HITL2 是 delivery 前最后一次人类审查——用户在此决定是否 proceed to readiness、revise view、rerun from instantiation、或 stop blocked。
+HITL2 是 delivery 前最后一次人类审查——用户在此决定是否 proceed to readiness、revise view、repair current run、rerun through `phase-rerun`，或 stop blocked。
 
-用户 final 后反馈也通过 HITL2 repair/rerun 承载——反馈写入 `rb_profile.yaml` 的 HITL2/user feedback 字段，再回到受影响 phase 或 repair path。
+当 accepted post-final reentry path 把反馈带回 HITL2 时，Agent 将决定写入现有 HITL2 `user_decision` / `rationale` fields，再走 repair 或 rerun path；本 phase 不自行创造 post-final reentry capability。
 
 ## 2. Required Inputs
 
@@ -133,8 +133,9 @@ Gate pass 后，Agent 读取 `rb_profile.yaml#/human_decision_checkpoints/hitl2/
 | `hitl2.status` ≠ `recorded` | 确保决策已写入 `rb_profile.yaml` 的 hitl2 section |
 | `user_decision` 为空 | 向用户询问并填写 decision |
 | `user_decision` 不在合法枚举中 | 修正为 5 个合法值之一 |
-| `trace_event_present` fail | 确认 hitl2_recorded trace event 已写入 |
 | status drift | Gate 前恢复 source-gate window：`current_gate: wave2_complete` / `next_gate: hitl2_recorded`；gate pass 后再按 §6 同步 `hitl2_recorded` |
+
+Phase Agent 仍写 `hitl2_recorded` diagnostic event，但缺少该独立 event 不是 gate definition blocker；gate verdict/audit 由 profile/brief direct facts 和 CLI-authored `gate_attempt` 决定。
 
 ## 8. Stop Behavior
 
@@ -147,7 +148,7 @@ Gate pass 后，Agent 读取 `rb_profile.yaml#/human_decision_checkpoints/hitl2/
 - **MUST NOT 将不确定 branch 的路由编码进 transition chain**——确定性出口（有固定、上下文无关的 next-node 目标）SHALL 进 chain。当前确定性出口：`passed`、`rerun`。不确定 branch：`request_view_revision`、`repair`、`stop_blocked`（目标依赖 Agent 判断运行时状态）——归 Agent
 - **MUST NOT 在 `user_decision: rerun` 时仍然 advance 到 readiness**——gate CLI MUST emit the `rerun` outcome, and Agent MUST consume `check.next: phases/phase-rerun.md` through `enter-phase`
 - **HITL2 phase 写 `human_decision_checkpoints/hitl2` 时 MUST preserve 已有的 `rerun_count` 值**——MUST NOT 重置或删除。`rerun_count` 由 `phase-rerun.md` 管理递增，HITL2 只能读取不能修改
-- **用户 final 后反馈 MUST 通过 HITL2 repair/rerun 承载**，MUST NOT 通过 final node hidden loop
+- **accepted post-final feedback route MUST 通过 HITL2 repair/rerun 承载**，MUST NOT 通过 final node hidden loop；本 phase 不暗示该 reentry route 已由当前 runtime 实现
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令
 
 ## Log

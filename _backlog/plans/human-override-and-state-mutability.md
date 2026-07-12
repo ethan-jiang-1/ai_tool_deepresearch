@@ -3,7 +3,7 @@
 **性质:** 第一性原则 + 能力立项前设计计划（pre-OpenSpec）
 **状态:** 草案，待切成 OpenSpec change（2026-07-12）
 **触发:** `dpt_rb_ai-era-bpm-process-disruption` 的 post-final rerun → 崩溃恢复 → 重编号 → canonical 归一化全过程。一个熟悉框架的人，想做一次明确的修正，被 anti-cheating 规则逼着跨 N 个面手工同步、还被单向棘轮堵在门外。复盘出的根问题：**框架分不清"静默自主"与"明晃晃的人在交互使唤"两条 lane，用同一套刚性规则把两者一起锁死。**
-**设计原则:** [`guidelines/project-charter.md`](../../guidelines/project-charter.md)、[`guidelines/simple-reliable-control.md`](../../guidelines/simple-reliable-control.md)
+**设计原则:** [`guidelines/project-charter.md`](../../guidelines/project-charter.md)、[`guidelines/evolution-simple-reliable-control.md`](../../guidelines/evolution-simple-reliable-control.md)、[`guidelines/evolution-helper-oriented-agent.md`](../../guidelines/evolution-helper-oriented-agent.md)
 **姊妹 plan:** [`breakpoint-recovery-persistence-model`](breakpoint-recovery-persistence-model.md)（那条管"持久化/可恢复"；本条管"可变更 + 可被人修正 + 可调试"）
 **症状实证:** [BUG-078](../bugs/BUG-078-post-final-hitl2-rerun-reentry-blocked.md)、[BUG-079](../bugs/BUG-079-out-of-gate-addendum-no-canonical-footprint.md)（§根本设计张力 + fix E）
 

@@ -3,446 +3,189 @@ schema: command-experiment/v1
 experiment: wff-validation
 case: case-51-standard-happy-path
 weight: light
-case_goal: "证明 Transition Table（transitions.chain.json）驱动 workflow——Gate CLI 以 --current-node 驱动，调 resolveNodeTransitionDetailed 查表获取 routing/next，Playbook 读 next 加载下一 node"
+case_goal: "Prove canonical late-lifecycle handoffs consume real gate output, route-bound entry, source-gate status sync, Final terminal semantics, rerun alternate routing, and passing no-transition decisions."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-51_wff_val_happy
-trace: dpt_disp_case-51_wff_val_happy/rb_trace.jsonl
+bundle: dpt_disp_case-51_wff_val_*
+trace: dpt_disp_case-51_wff_val_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
 ## Execution Contract
 
-Playbook 是 workflow controller。**Transition Table**（`transitions.chain.json`）是 Node 转移的单一事实来源——Gate CLI 以 `--current-node` 驱动，内部调 `resolveNodeTransitionDetailed()` 查表获取详细路由结果。Playbook 不需要持路由表、不需要传 `--next` flag——只传 `--current-node` 和 `--transitions` 告诉 Gate 表和当前 node，Gate 回答的 `check.next` 和 `routing` 就是下一步信息。
-
-## Reality Distance Ledger
-
-| 维度 | 声明 |
-|------|------|
-| **Runtime context** | disposable bundle，`new-disposable-bundle.mjs` 创建 |
-| **Framework path** | gate CLI (`check-gate-*.mjs`), `advance-status.mjs`, `wff-playbook-utils.mjs` |
-| **Fixture input** | Step 1.5 预写全部 phase artifact（HITL1 payload, plan, seed topics, wave0/1/2, status）— Engine-layer fixture，不是 Agent 产出 |
-| **Agent actor** | 无（fixture-backed） |
-| **External calls** | 无 |
-| **Verdict source** | `rb_trace.jsonl` `check` events |
-| **不证明** | Agent 搜索/写作/判断/修复能力 — 仅证明 Transition Table + Gate + Trace 结构 |
-| **EXO-003 exception** | gate 由 inline JS walker 通过 `spawnSync()` 调用 — bash wrapper 不适用；gate 诊断由 `writeGateAttempt()` trace event 和 `_logs/run.log` 捕获 |`
+本 case 是 AGT-010 canonical standard consumer。它使用三个互相隔离的 disposable bundles 覆盖 HITL2 的互斥 decision branches；被测 gate 必须来自真实 CLI，deterministic target 必须通过 `enter-phase`，status 只通过 source-gate `advance-status` 同步。主 bundle trace 聚合三个 bundle 的 case-specific checks。
 
 # case-51-standard-happy-path
 
-## Expected Runtime Path
-
-1. 创建 bundle + 预填所有 phase artifact [MAIN/SHELL]
-2. 逐 gate 推进: instantiation→hitl1→setup→seed-topics→wave0→wave1→wave2→hitl2→readiness [MAIN/SHELL]
-3. 每个 gate: assessNode → gate CLI --current-node --transitions → Transition Table 回答 next [MAIN/SHELL]
-4. Final node load → lifecycle 终止 [MAIN/SHELL]
-5. 从 trace 裁决 (≥8 check events, 全部 passed:true) + Cleanup
-
-## Step 1: 创建 bundle + 展示 Transition Table
+## Step 1: Proceed path → readiness → terminal Final
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_happy --case case-51 --force)
-echo "Bundle: $B"
-echo ""
-echo "=== Transition Table（Node 转移的单一事实来源）==="
-cat DPT_FRAMEWORK/workflows/transitions.chain.json
-```
-
-→ 8 条 (currentNodeRef, outcome) → next_node 映射。Gate CLI 用 `resolveNodeTransitionDetailed()` 查这张表。
-
----
-
-以下 Step 2–10：每步 Playbook 让 Gate 查表——Gate 回答的 `check.next` 就是完整的 node 文件路径，Playbook 直接 `assessNode(next)` 加载。
-
----
-
-## Step 1.5: 预填 bundle 内容（所有 gate 需要的 artifact + trace + status）
-
-gate 检查的是真实文件。必须先写入 HITL1 payload、topic registry、wave artifacts、trace events、status 等。
-
-```bash
-# --- HITL1 profile ---
-# research_access is a synthetic deterministic fixture, not proof of real Agent capability.
-cat > $B/rb_profile.yaml << 'EOF'
-plan_basename: case-51_wff_val_happy
+REPO_ROOT=$(pwd)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_proceed --case case-51 --force)
+mkdir -p "$B/artifacts/hitl2" "$B/artifacts/wave2" "$B/seed_topics"
+printf '# Topic A\n' > "$B/seed_topics/topic-a.md"
+printf '# Reference Index\n' > "$B/reference/_INDEX.md"
+printf '# Synthesis\nReady.\n' > "$B/artifacts/wave2/synthesis.md"
+printf '# Decision Brief\nProceed.\n' > "$B/artifacts/hitl2/decision-brief.md"
+cat > "$B/rb_profile.yaml" <<'YAML'
+plan_basename: wff_val_proceed
 research_profile: quick_factual
-root_must_answer_set:
-  - "What is the current state of AI safety research?"
+root_must_answer_set: ["Does the canonical handoff path remain witnessed?"]
 research_access:
   status: available
   probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/deterministic-hitl1-fixture"
+  result_url: "https://example.com/case-51-proceed"
   fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
     status: recorded
-    recorded_at: "2026-06-21T00:00:00.000Z"
-    research_profile_selection: quick_factual
+    recorded_at: "2026-07-10T00:01:00.000Z"
   hitl2:
     status: recorded
     answerability_class: ready_substantive
     user_decision: proceed_to_readiness
     final_report_view: profile_default
-    recorded_at: "2026-06-21T01:00:00.000Z"
-EOF
-
-# --- Plan with topic_registry ---
-cat > $B/rb_plan.md << 'EOF'
----
-{"plan_basename":"wff_val_happy","derived_topic_count":1,"topic_registry":[{"id":"topic-a","slug":"topic-a","title":"AI Safety"}]}
----
-# Research Plan
-EOF
-
-# --- Seed topics ---
-mkdir -p $B/seed_topics
-cat > $B/seed_topics/topic-a.md << 'EOF'
----
-slug: topic-a
-title: AI Safety Research
----
-# Topic: AI Safety
-EOF
-
-# --- Wave0: reference ---
-mkdir -p $B/artifacts/wave0/topic-a
-cat > $B/reference/_INDEX.md << 'EOF'
-# Reference Index
-- [AI Safety](topic-a/source.yaml)
-EOF
-# Per-topic reference file (wave1 gate count_floor expects reference/*topic-a-*.md)
-cat > $B/reference/topic-a-foundation.md << 'EOF'
-# Topic A — Foundation Reference
-Source: [AI Safety Overview](https://example.com/ai-safety)
-EOF
-# README + 00-shared (wave0 gate requires both)
-cat > $B/reference/README.md << 'EOF'
-# Reference Directory
-Flat reference directory for the case-51 research run.
-EOF
-cat > $B/reference/00-shared-foundation.md << 'EOF'
-# Shared Foundation Reference
-Baseline reference material for all topics.
-EOF
-cat > $B/artifacts/wave0/topic-a/source.yaml << 'EOF'
-- url: "https://example.com/ai-safety"
-  title: "AI Safety Overview"
-  retrieved_date: "2026-06-15"
-  topic_tag: "topic-a"
-EOF
-
-# --- Wave1: skeleton ---
-mkdir -p $B/artifacts/wave1/topic-a
-cat > $B/artifacts/wave1/topic-a/skeleton.md << 'EOF'
----
-capability: foundation-placeholder
----
-# Skeleton: AI Safety
-
-This is a foundation-placeholder skeleton for topic-a.
-EOF
-
-# --- Wave1: evidence-summary + question-list ---
-cat > $B/artifacts/wave1/topic-a/evidence-summary.md << 'EOF'
-## Key Findings
-1. AI safety research is an active and growing field [AI Safety Overview](https://example.com/ai-safety)
-EOF
-
-cat > $B/artifacts/wave1/topic-a/question-list.md << 'EOF'
-## Topic Investigation Targets
-1. What are the main dimensions of AI safety research?
-## Question Reconciliation
-N/A — foundation phase
-## Emergent Question Protocol
-N/A — deferred to expansion waves
-## Exploration / Exploitation Decision
-Continue to wave2 synthesis with current evidence
-EOF
-
-# --- Wave2: synthesis + ledger + finding-index ---
-mkdir -p $B/artifacts/wave2
-cat > $B/artifacts/wave2/synthesis.md << 'EOF'
-# Cross-Topic Synthesis
-
-Key findings from the research waves. Finding W2F-001: AI safety spans technical, policy, and societal dimensions.
-See [topic-a skeleton](../wave1/topic-a/skeleton.md) and [evidence summary](../wave1/topic-a/evidence-summary.md) for details.
-EOF
-
-cat > $B/artifacts/wave2/cross-topic-ledger.md << 'EOF'
-## Cross-Topic Scan Matrix
-| Topic | Status | Key Finding |
-|-------|--------|-------------|
-| topic-a | foundation-complete | AI safety spans 3 dimensions |
-
-## Wave1 Legacy Questions
-- What are the main dimensions of AI safety research? (from question-list.md)
-
-## Cross-Topic Resolutions
-None — single topic foundation phase
-
-## Emergent Cross-Topic Questions
-None yet — deferred to expansion waves
-
-## Exploration Decisions
-Proceed to HITL2 with foundation-level findings
-
-## HITL2 Handoff
-Foundation evidence complete. Recommend expansion waves for deeper coverage.
-EOF
-
-cat > $B/artifacts/wave2/finding-index.yaml << 'EOF'
-- finding_id: W2F-001
-  category: legacy
-  statement: "AI safety spans technical, policy, and societal dimensions"
-  sources:
-    - "../artifacts/wave0/topic-a/source.yaml"
-  confidence: medium
-  decision: resolve_in_synthesis
-EOF
-
-# --- HITL2: decision brief ---
-mkdir -p $B/artifacts/hitl2
-cat > $B/artifacts/hitl2/decision-brief.md << 'EOF'
-# Final Review Decision Brief
-
-Research is complete. All waves passed.
-Proceed to readiness and final delivery.
-EOF
-
-# --- rb_status: start execution mode ---
-cat > $B/rb_status.json << 'EOF'
-{"current_mode":"execution","state":"in_progress","current_gate":"instantiation_complete","next_gate":"hitl1_recorded"}
-EOF
-
-# --- Phase completion trace events ---
-for phase in instantiation hitl1 setup wave0 wave1 wave2 hitl2; do
-  echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",\"event\":\"${phase}_completion\",\"phase\":\"$phase\"}" >> $B/rb_trace.jsonl
-done
-
-# hitl2-recorded gate checks for this specific event name
-echo "{\"event\":\"hitl2_recorded\",\"phase\":\"hitl2\"}" >> $B/rb_trace.jsonl
-# --- Gate attempt events (readiness gate audits these) ---
-for g in instantiation-complete hitl1-recorded setup-ready seed-topics-ready wave0-complete wave1-complete wave2-complete hitl2-recorded; do
-  echo "{\"event\":\"gate_attempt\",\"gate\":\"$g\",\"passed\":true}" >> $B/rb_trace.jsonl
-done
-echo "=== Pre-seed complete ==="
-```
-
----
-
-
-## Step 2: instantiation
-
-```bash
-cat > $B/step.mjs << 'JS'
-const {createTrace}=await import('../DPT_FRAMEWORK/engine/trace.mjs');
-const {createLogger}=await import('../DPT_FRAMEWORK/engine/logger.mjs');
-const {createWorkflowRuntime,createState,assessNode}=await import('../DPT_FRAMEWORK/engine/workflow-chain.mjs');
-const {spawnSync}=await import('node:child_process');
-const B=process.argv[2],node=process.argv[3],gate=process.argv[4];
-const log=createLogger({file:B+'/_logs/run.log'});
-const trace=createTrace(B+'/rb_trace.jsonl',{consoleEcho:true});
-const r=assessNode(node,createState(),createWorkflowRuntime('engine','DPT_FRAMEWORK/workflows/nodes'),trace,log);
-if(r.status!=='loaded'){console.log('FAIL: node load');process.exit(1);}
-console.log('JS回答: node loaded — '+node);
-log.info('node loaded: '+node);
-const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs','--bundle',B,'--current-node',node,'--transitions','DPT_FRAMEWORK/workflows/transitions.chain.json'],{encoding:'utf-8'});
-const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
-log.info('gate '+gr.check.gate+' → '+(gr.check.passed?'PASS':'FAIL')+' next='+gr.check.next);
-console.log('JS回答: gate — passed='+gr.check.passed+' next='+gr.check.next);
-if(!gr.check.passed){console.log('FAIL: expected PASS');process.exit(1);}
+    rerun_count: 0
+    rationale: "Proceed."
+YAML
+node --input-type=module - "$B" <<'JS'
+import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+const bundle = process.argv[2];
+const fixtures = [
+  ['instantiation-complete','phases/phase-instantiation.md','phases/phase-hitl1.md'],
+  ['hitl1-recorded','phases/phase-hitl1.md','phases/phase-setup.md'],
+  ['setup-ready','phases/phase-setup.md','phases/phase-seed-topics.md'],
+  ['seed-topics-ready','phases/phase-seed-topics.md','phases/phase-wave0.md'],
+  ['wave0-complete','phases/phase-wave0.md','phases/phase-wave1.md'],
+  ['wave1-complete','phases/phase-wave1.md','phases/phase-wave2.md'],
+  ['wave2-complete','phases/phase-wave2.md','phases/phase-hitl2.md'],
+];
+for (const [gate,currentNodeRef,next] of fixtures) writeGateAttempt(bundle,{check:{gate,passed:true,currentNodeRef,next},routing:{kind:'next',next,detail:'declared direct-predecessor fixture'},inspect:[],advice:[]});
 JS
-echo '{"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"seed_topics_ready"}' > $B/rb_status.json
-node $B/step.mjs $B "phases/phase-instantiation.md" "instantiation-complete"
-```
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-51-enter-hitl2.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-51-advance-wave2.json"
 
-→ Gate 调 `resolveNodeTransitionDetailed(..., 'phases/phase-instantiation.md', 'passed')` → Transition Table 回答 `kind: 'next', next: 'phases/phase-hitl1.md'`。Playbook 拿到 `check.next`，继续。
+H2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
+H2_NEXT=$(printf '%s\n' "$H2" | node experiments_env/shared/extract-field.mjs check.next)
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$H2_NEXT" > "$B/case-51-enter-readiness.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-51-advance-hitl2.json"
 
-## Step 3: hitl1
+RD=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md)
+RD_NEXT=$(printf '%s\n' "$RD" | node experiments_env/shared/extract-field.mjs check.next)
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$RD_NEXT" > "$B/case-51-enter-final.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to readiness_passed > "$B/case-51-advance-readiness.json"
 
-```bash
-cat > $B/step.mjs << 'JS'
-const{createTrace}=await import('../DPT_FRAMEWORK/engine/trace.mjs');const{createLogger}=await import('../DPT_FRAMEWORK/engine/logger.mjs');const{createWorkflowRuntime,createState,assessNode}=await import('../DPT_FRAMEWORK/engine/workflow-chain.mjs');const{spawnSync}=await import('node:child_process');
-const B=process.argv[2],node=process.argv[3],gate=process.argv[4];
-const log=createLogger({file:B+'/_logs/run.log'});
-const trace=createTrace(B+'/rb_trace.jsonl',{consoleEcho:true});
-const r=assessNode(node,createState(),createWorkflowRuntime('engine','DPT_FRAMEWORK/workflows/nodes'),trace,log);
-if(r.status!=='loaded')process.exit(1);
-log.info('node loaded: '+node);
-const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs','--bundle',B,'--current-node',node,'--transitions','DPT_FRAMEWORK/workflows/transitions.chain.json'],{encoding:'utf-8'});
-const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
-if(!gr.check.passed||!gr.check.next)process.exit(1);
+node --input-type=module - "$B" <<'JS'
+import { readFileSync } from 'node:fs';
+import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
+const bundle = process.argv[2];
+const events = readFileSync(`${bundle}/rb_trace.jsonl`,'utf8').trim().split(/\r?\n/).filter(Boolean).map(JSON.parse);
+const status = JSON.parse(readFileSync(`${bundle}/rb_status.json`,'utf8'));
+const manifest = JSON.parse(readFileSync('./DPT_FRAMEWORK/workflows/manifest.json','utf8'));
+const chain = JSON.parse(readFileSync('./DPT_FRAMEWORK/workflows/transitions.chain.json','utf8'));
+const witnessed = ['phases/phase-readiness.md','phases/phase-final.md'].every((entry)=>events.some((event)=>event.event==='load_complete'&&event.entry===entry&&Number.isInteger(event.handoff_source_attempt_index)));
+recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'case-51-proceed-witnesses',passed:witnessed&&status.current_node==='phases/phase-final.md'&&status.current_gate==='readiness_passed'&&status.next_gate==='none',detail:'proceed and readiness targets are route-bound and source-synchronized'});
+const final = manifest.phases.find((phase)=>phase.node==='phases/phase-final.md');
+recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'case-51-final-terminal',passed:final?.gate===null&&!chain['phases/phase-final.md'],detail:'Final has no gate and no outgoing transition authority'});
 JS
-echo '{"current_mode":"execution","state":"in_progress","current_gate":"hitl1_recorded","next_gate":"setup_ready"}' > $B/rb_status.json
-node $B/step.mjs $B "phases/phase-hitl1.md" "hitl1-recorded"
 ```
 
-→ `resolveNodeTransitionDetailed(..., 'phases/phase-hitl1.md', 'passed')` → `phases/phase-setup.md`
-
-## Step 4: setup
+## Step 2: Rerun branch uses real alternate handoff
 
 ```bash
-cat > $B/step.mjs << 'JS'
-const{createTrace}=await import('../DPT_FRAMEWORK/engine/trace.mjs');const{createLogger}=await import('../DPT_FRAMEWORK/engine/logger.mjs');const{createWorkflowRuntime,createState,assessNode}=await import('../DPT_FRAMEWORK/engine/workflow-chain.mjs');const{spawnSync}=await import('node:child_process');
-const B=process.argv[2],node=process.argv[3],gate=process.argv[4];
-const log=createLogger({file:B+'/_logs/run.log'});const trace=createTrace(B+'/rb_trace.jsonl',{consoleEcho:true});
-const r=assessNode(node,createState(),createWorkflowRuntime('engine','DPT_FRAMEWORK/workflows/nodes'),trace,log);
-if(r.status!=='loaded')process.exit(1);
-const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs','--bundle',B,'--current-node',node,'--transitions','DPT_FRAMEWORK/workflows/transitions.chain.json'],{encoding:'utf-8'});
-const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
-if(!gr.check.passed||!gr.check.next)process.exit(1);
+R=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_rerun --case case-51 --force)
+mkdir -p "$R/artifacts/hitl2"
+printf '# Decision Brief\nRerun.\n' > "$R/artifacts/hitl2/decision-brief.md"
+cat > "$R/rb_profile.yaml" <<'YAML'
+plan_basename: wff_val_rerun
+research_profile: quick_factual
+root_must_answer_set: ["Does rerun preserve its alternate predecessor?"]
+human_decision_checkpoints:
+  hitl1:
+    status: recorded
+    recorded_at: "2026-07-10T00:01:00.000Z"
+  hitl2:
+    status: recorded
+    answerability_class: ready_substantive
+    user_decision: rerun
+    final_report_view: profile_default
+    rerun_count: 0
+    rationale: "Refine scope."
+YAML
+node --input-type=module - "$R" <<'JS'
+import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+const bundle=process.argv[2];
+writeGateAttempt(bundle,{check:{gate:'wave2-complete',passed:true,currentNodeRef:'phases/phase-wave2.md',next:'phases/phase-hitl2.md'},routing:{kind:'next',next:'phases/phase-hitl2.md'},inspect:[],advice:[]});
 JS
-echo '{"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"seed_topics_ready"}' > $B/rb_status.json
-node $B/step.mjs $B "phases/phase-setup.md" "setup-ready"
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$R" --node phases/phase-hitl2.md > "$R/case-51-enter-hitl2.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$R" --to wave2_complete > "$R/case-51-advance-wave2.json"
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$R" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$R" --current-node phases/phase-hitl2.md)
+N=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$R" --node "$N" > "$R/case-51-enter-rerun.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$R" --to hitl2_recorded > "$R/case-51-advance-hitl2.json"
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$R" --gate rerun-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle "$R" --current-node phases/phase-rerun.md)
+P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
+N2=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)
+OK=false; [ "$N" = "phases/phase-rerun.md" ] && [ "$P" = "true" ] && [ "$N2" = "phases/phase-seed-topics.md" ] && OK=true
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-51-rerun-alternate',passed:$OK,detail:'real HITL2 rerun and rerun-ready outputs preserve alternate path'}))"
 ```
 
-→ `next = phases/phase-wave0.md`
-
-## Step 5: wave0
+## Step 3: Context-dependent repair passes without invented route
 
 ```bash
-cat > $B/step.mjs << 'JS'
-const{createTrace}=await import('../DPT_FRAMEWORK/engine/trace.mjs');const{createLogger}=await import('../DPT_FRAMEWORK/engine/logger.mjs');const{createWorkflowRuntime,createState,assessNode}=await import('../DPT_FRAMEWORK/engine/workflow-chain.mjs');const{spawnSync}=await import('node:child_process');
-const B=process.argv[2],node=process.argv[3],gate=process.argv[4];const log=createLogger({file:B+'/_logs/run.log'});const trace=createTrace(B+'/rb_trace.jsonl',{consoleEcho:true});
-const r=assessNode(node,createState(),createWorkflowRuntime('engine','DPT_FRAMEWORK/workflows/nodes'),trace,log);
-if(r.status!=='loaded')process.exit(1);
-const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs','--bundle',B,'--current-node',node,'--transitions','DPT_FRAMEWORK/workflows/transitions.chain.json'],{encoding:'utf-8'});
-const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
-if(!gr.check.passed||!gr.check.next)process.exit(1);
+C=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_context --case case-51 --force)
+mkdir -p "$C/artifacts/hitl2"
+printf '# Decision Brief\nRepair current run.\n' > "$C/artifacts/hitl2/decision-brief.md"
+cat > "$C/rb_profile.yaml" <<'YAML'
+plan_basename: wff_val_context
+research_profile: quick_factual
+root_must_answer_set: ["Does repair avoid a default handoff?"]
+human_decision_checkpoints:
+  hitl1:
+    status: recorded
+    recorded_at: "2026-07-10T00:01:00.000Z"
+  hitl2:
+    status: recorded
+    answerability_class: blocked_repair_required
+    user_decision: repair
+    final_report_view: profile_default
+    rerun_count: 0
+    rationale: "Repair the current synthesis."
+YAML
+node --input-type=module - "$C" <<'JS'
+import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+const bundle=process.argv[2];
+writeGateAttempt(bundle,{check:{gate:'wave2-complete',passed:true,currentNodeRef:'phases/phase-wave2.md',next:'phases/phase-hitl2.md'},routing:{kind:'next',next:'phases/phase-hitl2.md'},inspect:[],advice:[]});
 JS
-echo '{"current_mode":"execution","state":"in_progress","current_gate":"wave0_complete","next_gate":"wave1_complete"}' > $B/rb_status.json
-node $B/step.mjs $B "phases/phase-wave0.md" "wave0-complete"
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$C" --node phases/phase-hitl2.md > "$C/case-51-enter-hitl2.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$C" --to wave2_complete > "$C/case-51-advance-wave2.json"
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$C" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$C" --current-node phases/phase-hitl2.md)
+P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
+K=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs routing.kind)
+N=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)
+OK=false; [ "$P" = "true" ] && [ "$K" = "no_transition" ] && [ "$N" = "null" ] && OK=true
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-51-context-no-transition',passed:$OK,detail:'passing repair decision keeps check.next null'}))"
 ```
 
-→ `next = phases/phase-wave1.md`
-
-## Step 6: wave1
+## Step 4: Trace verdict and health
 
 ```bash
-cat > $B/step.mjs << 'JS'
-const{createTrace}=await import('../DPT_FRAMEWORK/engine/trace.mjs');const{createLogger}=await import('../DPT_FRAMEWORK/engine/logger.mjs');const{createWorkflowRuntime,createState,assessNode}=await import('../DPT_FRAMEWORK/engine/workflow-chain.mjs');const{spawnSync}=await import('node:child_process');
-const B=process.argv[2],node=process.argv[3],gate=process.argv[4];const log=createLogger({file:B+'/_logs/run.log'});const trace=createTrace(B+'/rb_trace.jsonl',{consoleEcho:true});
-const r=assessNode(node,createState(),createWorkflowRuntime('engine','DPT_FRAMEWORK/workflows/nodes'),trace,log);
-if(r.status!=='loaded')process.exit(1);
-const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs','--bundle',B,'--current-node',node,'--transitions','DPT_FRAMEWORK/workflows/transitions.chain.json'],{encoding:'utf-8'});
-const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
-if(!gr.check.passed||!gr.check.next)process.exit(1);
-JS
-echo '{"current_mode":"execution","state":"in_progress","current_gate":"wave1_complete","next_gate":"wave2_complete"}' > $B/rb_status.json
-node $B/step.mjs $B "phases/phase-wave1.md" "wave1-complete"
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
+node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile standard
+node experiments_env/shared/verify-bundle-health.mjs --bundle "$R" --profile standard
+node experiments_env/shared/verify-bundle-health.mjs --bundle "$C" --profile standard
 ```
 
-→ `next = phases/phase-wave2.md`
+## Step 5: 结果解读
 
-## Step 7: wave2
+> PASS 证明 canonical consumer 不再把所有 gate success 等同于非空 `check.next`：proceed/rerun 使用真实 deterministic targets；repair 是 passing `no_transition`；Final 以 `gate:null` + no outgoing edge 表达 terminal lifecycle。
 
-```bash
-cat > $B/step.mjs << 'JS'
-const{createTrace}=await import('../DPT_FRAMEWORK/engine/trace.mjs');const{createLogger}=await import('../DPT_FRAMEWORK/engine/logger.mjs');const{createWorkflowRuntime,createState,assessNode}=await import('../DPT_FRAMEWORK/engine/workflow-chain.mjs');const{spawnSync}=await import('node:child_process');
-const B=process.argv[2],node=process.argv[3],gate=process.argv[4];const log=createLogger({file:B+'/_logs/run.log'});const trace=createTrace(B+'/rb_trace.jsonl',{consoleEcho:true});
-const r=assessNode(node,createState(),createWorkflowRuntime('engine','DPT_FRAMEWORK/workflows/nodes'),trace,log);
-if(r.status!=='loaded')process.exit(1);
-const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs','--bundle',B,'--current-node',node,'--transitions','DPT_FRAMEWORK/workflows/transitions.chain.json'],{encoding:'utf-8'});
-const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
-if(!gr.check.passed||!gr.check.next)process.exit(1);
-JS
-echo '{"current_mode":"execution","state":"in_progress","current_gate":"wave2_complete","next_gate":"hitl2_recorded"}' > $B/rb_status.json
-node $B/step.mjs $B "phases/phase-wave2.md" "wave2-complete"
-```
+## Cleanup
 
-→ `next = phases/phase-hitl2.md`
-
-## Step 8: hitl2
+> 三个 bundle verdict PASS 且 health CLEAN 才执行。
 
 ```bash
-cat > $B/step.mjs << 'JS'
-const{createTrace}=await import('../DPT_FRAMEWORK/engine/trace.mjs');const{createLogger}=await import('../DPT_FRAMEWORK/engine/logger.mjs');const{createWorkflowRuntime,createState,assessNode}=await import('../DPT_FRAMEWORK/engine/workflow-chain.mjs');const{spawnSync}=await import('node:child_process');
-const B=process.argv[2],node=process.argv[3],gate=process.argv[4];const log=createLogger({file:B+'/_logs/run.log'});const trace=createTrace(B+'/rb_trace.jsonl',{consoleEcho:true});
-const r=assessNode(node,createState(),createWorkflowRuntime('engine','DPT_FRAMEWORK/workflows/nodes'),trace,log);
-if(r.status!=='loaded')process.exit(1);
-const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs','--bundle',B,'--current-node',node,'--transitions','DPT_FRAMEWORK/workflows/transitions.chain.json'],{encoding:'utf-8'});
-const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
-if(!gr.check.passed||!gr.check.next)process.exit(1);
-JS
-echo '{"current_mode":"execution","state":"in_progress","current_gate":"hitl2_recorded","next_gate":"readiness_passed"}' > $B/rb_status.json
-node $B/step.mjs $B "phases/phase-hitl2.md" "hitl2-recorded"
-```
-
-→ `next = phases/phase-readiness.md`
-
-## Step 9: readiness
-
-```bash
-cat > $B/step.mjs << 'JS'
-const{createTrace}=await import('../DPT_FRAMEWORK/engine/trace.mjs');const{createLogger}=await import('../DPT_FRAMEWORK/engine/logger.mjs');const{createWorkflowRuntime,createState,assessNode}=await import('../DPT_FRAMEWORK/engine/workflow-chain.mjs');const{spawnSync}=await import('node:child_process');
-const B=process.argv[2],node=process.argv[3],gate=process.argv[4];const log=createLogger({file:B+'/_logs/run.log'});const trace=createTrace(B+'/rb_trace.jsonl',{consoleEcho:true});
-const r=assessNode(node,createState(),createWorkflowRuntime('engine','DPT_FRAMEWORK/workflows/nodes'),trace,log);
-if(r.status!=='loaded')process.exit(1);
-const{stdout}=spawnSync('node',['DPT_FRAMEWORK/cli/gates/check-gate-'+gate+'.mjs','--bundle',B,'--current-node',node,'--transitions','DPT_FRAMEWORK/workflows/transitions.chain.json'],{encoding:'utf-8'});
-const gr=JSON.parse(stdout);trace.traceEntry('check',{source:'playbook',...gr.check,inspect:gr.inspect,advice:gr.advice});
-if(!gr.check.passed||!gr.check.next)process.exit(1);
-JS
-echo '{"current_mode":"execution","state":"in_progress","current_gate":"readiness_passed","next_gate":"none"}' > $B/rb_status.json
-node $B/step.mjs $B "phases/phase-readiness.md" "readiness-passed"
-```
-
-→ `next = phases/phase-final.md`
-
-## Step 10: final（无 gate，终止）
-
-```bash
-cat > $B/step.mjs << 'JS'
-const{createTrace}=await import('../DPT_FRAMEWORK/engine/trace.mjs');const{createLogger}=await import('../DPT_FRAMEWORK/engine/logger.mjs');const{createWorkflowRuntime,createState,assessNode}=await import('../DPT_FRAMEWORK/engine/workflow-chain.mjs');
-const B=process.argv[2];const log=createLogger({file:B+'/_logs/run.log'});const trace=createTrace(B+'/rb_trace.jsonl',{consoleEcho:true});
-const r=assessNode('phases/phase-final.md',createState(),createWorkflowRuntime('engine','DPT_FRAMEWORK/workflows/nodes'),trace,log);
-if(r.status!=='loaded')process.exit(1);
-log.info('lifecycle complete');
-JS
-node $B/step.mjs $B
-```
-
-→ manifest gate=null → 不出 gate CLI → lifecycle 终止。
-
----
-
-## Step 11: trace 最终裁决
-
-```bash
-cat > $B/verify.mjs << 'JS'
-const{readFileSync}=await import('fs');const B=process.argv[2];
-const e=readFileSync(B+'/rb_trace.jsonl','utf-8').trim().split('\n').filter(Boolean).map(JSON.parse);
-const c=e.filter(x=>x.event==='check'),f=c.filter(x=>!x.passed);
-console.log('checks: '+c.length+' ('+(c.length-f.length)+' PASS, '+f.length+' FAIL)');
-c.forEach(x=>console.log('  '+x.gate+' → '+(x.passed?'PASS':'FAIL')+' next='+(x.next||'null')));
-if(f.length>0||c.length<8)process.exit(1);
-console.log('\nALL CHECKS PASSED');
-JS
-node $B/verify.mjs $B
-```
-
-
-## Step 12: 结果解读
-
-> ≥8 个 check，验证 Transition Table 驱动的 9 phase/8 gate 全部 pass：
->   每个 gate 的 check.passed=true 且 check.next 指向下一 phase。
->   Transition Table 是路由的单一事实来源。
-
-
-## Step HH: Post-Execution Health
-
-Standard profile — gate diagnostics, timeline consistency.
-
-```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
-```
-
-> 健康检查不改变 verdict。health status 由 runner report 记录。
-
-## Step 13: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-rm -rf dpt_disp_case-51_wff_val_happy_*
+rm -rf "$R" "$C"
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-51'}))"
 ```

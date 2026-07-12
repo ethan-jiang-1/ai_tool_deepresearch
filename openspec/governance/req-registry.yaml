@@ -110,9 +110,9 @@ prefixes:
   WTS: wave2-synthesis
 
 # agent-command-surface
-ACS-001: agent-command-surface — Command surfaces declare Agent-facing audience and HITL-only human interaction boundary
+ACS-001: agent-command-surface — Agent-facing command responsibility distinguishes autonomous execution, HITL/out-of-band human direction, legal repair, permission, and Engine authority
 ACS-002: agent-command-surface — Entry docs distinguish one-time human trigger from Agent-run command execution
-ACS-003: agent-command-surface — Static validation prevents implicit operator or mid-pipeline user interaction wording drift
+ACS-003: agent-command-surface — Existing static documentation regression locks stable Agent-owned helper markers and known audience/HITL drift phrases without prose classification
 ACS-004: agent-command-surface — Phase-boundary terminology is discoverable and aligned with guidance terminology canon
 
 # agent-testing
@@ -344,7 +344,7 @@ SCO-003: schema-core — Gate transition table
 SCO-004: schema-core — Direct node import (no compilation)
 SCO-005: schema-core-hitl — HumanCheckpointStatus enum
 SCO-006: schema-core-hitl — AnswerabilityClass enum
-SCO-007: schema-core-hitl — HITL2UserDecision + FinalReportView enums
+SCO-007: schema-core-hitl — HITL2UserDecision distinguishes the not_started sentinel from five recorded actions while preserving current lifecycle enum coverage
 SCO-008: schema-core-hitl — ProfileSchema hitl1/hitl2 field update
 SOR-001: schema-core — Source-of-record invariant marker for schema-core specs
 
@@ -422,8 +422,8 @@ WPG-014: work-unit-provenance-gate — Gates count audited late-accepted work-un
 SEG-001: seg2node — Global rename segments to nodes with explicit node directory configuration [DEPRECATED]
 
 # shared-node-content
-SHC-001: shared-node-content — Shared profile content completeness (plan_basename, research_profile, root_must_answer_set, hitl1.*, hitl2.*, authority boundary)
-SHC-002: "shared-node-content — Shared gate rules content as generated summary (9 gates, purpose+check+direction+repair, authority: generated-summary)"
+SHC-001: shared-node-content — Shared profile projection covers the current ProfileSchema fields, disposable basename relation, authority boundary, and repair versus deterministic rerun semantics
+SHC-002: "shared-node-content — Generated gate summary follows definition/CLI authority, current HITL2 five-action routing, shared handoff preflight, and work-unit coverage wording"
 SHC-003: "shared-node-content — Shared schemas content matches current executable surface (profile/status/queue/plan/trace/gate, ReferenceMetadata schema, wave artifact directory structure, rb_trace vs _trace distinction)"
 SHC-004: shared-node-content — Shared repair guidance content (fail→inspect→repair→rerun, retry limit 3, escalation, check type repair directions)
 SHC-005: shared-node-content — Shared anti-cheating rules content (≥6 prohibitions with correct alternatives)
@@ -639,24 +639,24 @@ TRT-011: transition-table — gate.mjs abstract FSM marked as not-in-use (GATE_M
 TRT-012: transition-table — Phase MD test helper (md-phase-checks.mjs) validates against chain.json via manifest bridge instead of stale gate.mjs FSM
 
 # wff-content-delivery — phase content
-CDP-001: content-delivery-phase-content — phase-hitl2.md 9-section body (decision brief, structured user decision, stop=yes, anti-cheating)
+CDP-001: content-delivery-phase-content — phase-hitl2 records five structured decisions, keeps repair in-place, routes rerun deterministically, and returns authorized mechanical execution to the Agent
 CDP-002: content-delivery-phase-content — phase-readiness.md 9-section body (deterministic precheck, all-prior-gate audit from manifest topology, anti-cheating)
 CDP-003: content-delivery-phase-content — phase-final.md 9-section body (terminal node gate=none, final report from verified bundle state, anti-cheating)
 CDP-004: content-delivery-phase-content — Final delivery is terminal; post-final feedback re-enters through HITL2 repair/rerun, not a Final-owned loop
 CDP-005: content-delivery-phase-content — Final artifacts count as delivery evidence only after legal readiness-to-final handoff and final node entry
 
 # wff-content-delivery — gate implementation
-CDG-001: content-delivery-gate-implementation — gate-hitl2-recorded rule set (decision brief, yaml_parse, field_value enum, trace_event_present, status_value)
+CDG-001: content-delivery-gate-implementation — HITL2 recorded gate checks decision brief and durable profile decision facts without a redundant blocking phase-authored trace event
 CDG-002: "content-delivery-gate-implementation — gate-readiness-passed rule set (dir_non_empty, file_exists x4, trace_has_all_gates, yaml_parse, jsonl_parse, status_value)"
-CDG-003: content-delivery-gate-implementation — check-gate-hitl2-recorded CLI (gate-helpers pipeline, yaml_parse, field_non_empty, field_value, gate_attempt trace)
+CDG-003: content-delivery-gate-implementation — HITL2 gate CLI evaluates definition/preflight, writes gate_attempt, routes proceed and rerun deterministically, and preserves passing no-transition decisions
 CDG-004: "content-delivery-gate-implementation — check-gate-readiness-passed CLI (gate-helpers pipeline, trace_has_all_gates from manifest topology, jsonl_parse, gate_attempt trace)"
 
 # wff-content-delivery — experiments
-CDE-001: content-delivery-experiments — Playbook test-simple-hitl2-decision-recorded (happy pass + missing brief + missing decision + invalid enum)
-CDE-002: content-delivery-experiments — Playbook test-medium-readiness-precheck (happy pass + missing artifact + missing prior gates + bad YAML + corrupt JSONL)
-CDE-003: content-delivery-experiments — Playbook test-simple-delivery-full-chain (hitl2→readiness→final sequential + terminal semantics)
-CDE-004: content-delivery-experiments — Playbook test-simple-hitl2-rerun-branch (rerun gate pass, chain only has passed, Agent-level routing)
-CDE-005: content-delivery-experiments — Playbook test-medium-delivery-repair-loop (HITL2 + readiness PDCA repair cycles)
+CDE-001: content-delivery-experiments — case-132 uses real HITL2 gate output for valid decisions, direct negative facts, sentinel rejection, and non-blocking diagnostic-event absence
+CDE-002: content-delivery-experiments — case-135 uses real readiness gate output for complete input and artifact, prior-gate, YAML, and JSONL boundary failures
+CDE-003: content-delivery-experiments — case-131 proves real HITL2/readiness output, witnessed handoffs, source-gate status sync, and terminal Final semantics
+CDE-004: content-delivery-experiments — case-133 proves real HITL2 rerun output routes to phase-rerun and through rerun-ready to seed-topics
+CDE-005: content-delivery-experiments — case-134 proves same-check HITL2 and readiness repair loops from real failed and passed gate attempts
 
 # reference-flat-format
 REF-001: reference-flat-format — Flat reference directory with three-level naming prefixes (00-shared-/{topic_slug}-<qualifier>/00-cross-)

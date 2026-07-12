@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.21
+
+- Added paired Evolution Directions for simple reliable control and helper-oriented Agent responsibility, keeping accepted specs and executable runtime truth authoritative.
+- Clarified that ordinary authorized commands and reversible mechanical repair remain Agent-owned while human-directed context identifies decision source without creating permission or missing Engine capability.
+- Reconciled HITL2 phase/shared projections and controlled proofs with the current five recorded actions, passing no-transition decisions, deterministic readiness/rerun handoffs, and terminal Final semantics.
+
 ## v0.20
 
 - Added a human pre-trigger setup path for install, Claude Code/Codex permission posture, verification, and DPT_FRAMEWORK entry without turning the autonomous pipeline into a human co-runner flow.

@@ -52,13 +52,10 @@
 | G23 wfn-wave2 | case-235 | `exp_wfn_wave2/case-235-light-happy-and-fail.md` | Light gate-only 版 wave2 pure synthesis + search-required + targeted receipt path |
 | G20 wfn-seedtopic | case-202 | `exp_wfn_seedtopic/case-202-light-setup-to-seedtopics-transition.md` | setup→seed-topics transition 最小路径 |
 | G20 wfn-seedtopic | case-203 | `exp_wfn_seedtopic/case-203-light-nn-prefix-naming.md` | NN_ 前缀命名约定：registry 1-based 位置推导、gate 三重一致、ls 自然排序、reference {slug}-<qualifier>.md 模式 |
-| G14 hitl2-branch | case-140 | `exp_wff_hitl2-branch/case-140-light-hitl2-decision-capture.md` | HITL2 decision capture：Agent 捕获 user_decision + rationale，chain 路由到正确节点。Trace 证明两个节点都经过 |
-| G14 hitl2-branch | case-141 | `exp_wff_hitl2-branch/case-141-light-rerun-full-path.md` | HITL2 rerun 全路径：decision=rerun→chain→phase-rerun→rerun-ready gate pass→seed-topics |
-| G14 hitl2-branch | case-142 | `exp_wff_hitl2-branch/case-142-light-readiness-full-path.md` | HITL2 readiness 全路径：decision=proceed_to_readiness→chain→readiness→readiness gate pass |
-| G24 wfn-rerun | case-301 | `exp_wfn_rerun/case-301-light-chain-dual-exit.md` | HITL2 chain 编码双出口：passed→readiness AND rerun→phase-rerun。indeterminate→invalid_input |
-| G24 wfn-rerun | case-302 | `exp_wfn_rerun/case-302-light-rerun-node-happy-path.md` | 预填充 rerun bundle 通过 rerun-ready gate→chain→seed-topics |
-| G24 wfn-rerun | case-303 | `exp_wfn_rerun/case-303-light-normal-path-unchanged.md` | 回归：证明正常路径 proceed_to_readiness→readiness 在 chain dual-exit 后不变 |
-| G24 wfn-rerun | case-304 | `exp_wfn_rerun/case-304-light-gate-fail-max-count.md` | 边界：rerun_count=3→gate fail+no_transition |
+| G24 wfn-rerun | case-301 | `exp_wfn_rerun/case-301-light-chain-dual-exit.md` | 轻量 chain truth：passed→readiness、rerun→phase-rerun、failed→no_transition；不 overclaim gate proof |
+| G24 wfn-rerun | case-302 | `exp_wfn_rerun/case-302-light-rerun-node-happy-path.md` | real HITL2 rerun output→witnessed phase-rerun→real rerun-ready→witnessed seed-topics |
+| G24 wfn-rerun | case-303 | `exp_wfn_rerun/case-303-light-normal-path-unchanged.md` | real proceed_to_readiness output 与 witnessed readiness status window 保持不变 |
+| G24 wfn-rerun | case-304 | `exp_wfn_rerun/case-304-light-gate-fail-max-count.md` | legal rerun entry 后 `rerun_count=3` 由 real rerun-ready gate fail closed |
 | G24 wfn-rerun | case-305 | `exp_wfn_rerun/case-305-light-indeterminate-no-transition.md` | 边界：indeterminate outcomes→invalid_input |
 | G25 engine-boundary | case-401 | `exp_engine-boundary/case-401-light-full-boundary.md` | Agent/Engine 正向边界：queue demand → work-unit claim → fixture output/receipt/cache → submit → ledger → gate → trace |
 | G25 engine-boundary | case-402 | `exp_engine-boundary/case-402-light-complete-reject.md` | work-unit submit rejection matrix：missing receipt/output/cache、nonce mismatch、wrong work_id，均无 ledger append |
@@ -71,6 +68,16 @@
 | G30 reentry-debuggability | case-307 | `exp_reentry-debuggability/case-307-light-clean-reentry.md` | clean reentry：所有 audit 通过，无 blocker |
 | G30 reentry-debuggability | case-308 | `exp_reentry-debuggability/case-308-light-stale-queue-blocker.md` | stale queue blocker 检测：prior-phase active work 阻塞 reentry |
 | G30 reentry-debuggability | case-309 | `exp_reentry-debuggability/case-309-light-drift-detection.md` | checkpoint drift 检测：control file hash 变化 → blocker |
+
+### G14 Migration Map
+
+G14 `case-140` 至 `case-142` 已从 current runnable surface 删除，不保留 tombstone playbook：
+
+- `case-140` decision capture / branch split → G13 `case-132` + `case-133`。
+- `case-141` rerun full path → G13 `case-133` + G24 rerun mechanism cases。
+- `case-142` readiness full path → G13 `case-131`。
+
+历史 case ID 仍可通过 git history 与 archived OpenSpec references 追溯。
 
 ### Standard（真实 bundle 多步骤，无外部调用）
 
@@ -85,8 +92,8 @@
 | G4 agentic-queue | case-42 | `exp_agentic-queue/case-42-standard-urgent-preemption.md` | queue v2 urgent preemption：ordered active_window、refill_pool、tail restore |
 | G4 agentic-queue | case-43 | `exp_agentic-queue/case-43-standard-failure-repair.md` | queue v2 failure repair、unsafe-current guard、empty queue blocker |
 | G7 system-logging | case-78 | `exp_system-logging/case-78-standard-fatigue-detection.md` | gate fatigue signal emission and parsing boundaries |
-| G5 wff-validation | case-51 | `exp_wff_validation/case-51-standard-happy-path.md` | wff walker 9 phase/8 gate 全部 pass + trace↔log 交叉验证 |
-| G5 wff-validation | case-52 | `exp_wff_validation/case-52-standard-fail-repair.md` | wff walker gate fail → repair → rerun → pass 闭环 |
+| G5 wff-validation | case-51 | `exp_wff_validation/case-51-standard-happy-path.md` | canonical late-lifecycle proof：real proceed/rerun/context outputs、route-bound entry、source-gate status、Final terminal/no-transition boundary |
+| G5 wff-validation | case-52 | `exp_wff_validation/case-52-standard-fail-repair.md` | real fail→repair→same-gate rerun；unwitnessed source-status sync fail closed，补 `enter-phase` 后恢复 |
 | G5 wff-validation | case-53 | `exp_wff_validation/case-53-standard-routing-contract.md` | current-node 绑定 + next / terminal / no_transition / config_error routing contract |
 | G20 wfn-seedtopic | case-201 | `exp_wfn_seedtopic/case-201-standard-seedtopics-queue-loop.md` | seed topics queue-driven 物化：enqueue→claim→Phase Agent 执行→complete→gate pass |
 | G10 pre-research | case-101 | `exp_wff_pre-research/case-101-standard-pre-research-happy.md` | fixed HITL payload → instantiation/hitl1/setup 三个 gate pass |
@@ -102,12 +109,12 @@
 | G15 wave-chain | case-151 | `exp_wff_wave-chain/case-151-standard-waves-full-chain.md` | seed-topics→wave0→wave1 depth-review→wave2 scan/eligibility 全链路 4 gate 顺序 pass |
 | G15 wave-chain | case-152 | `exp_wff_wave-chain/case-152-standard-wave-repair-loop.md` | wave2 gate fail→repair→pass PDCA 回路 |
 | G15 wave-chain | case-153 | `exp_wff_wave-chain/case-153-standard-wave-fault-tolerance.md` | malformed YAML / partial dead links / status drift — gate 容错 |
-| G13 delivery | case-131 | `exp_wff_delivery/case-131-standard-delivery-full-chain.md` | hitl2→readiness→final 完整 delivery 链 + final terminal semantics |
-| G13 delivery | case-132 | `exp_wff_delivery/case-132-standard-hitl2-decision.md` | HITL2 gate：decision brief + user_decision + trace → pass；缺失/空/非法 → fail |
-| G13 delivery | case-133 | `exp_wff_delivery/case-133-standard-hitl2-rerun.md` | HITL2 rerun：gate pass 但 chain 不编码 rerun 分支（Agent 层 routing） |
-| G13 delivery | case-134 | `exp_wff_delivery/case-134-standard-delivery-repair.md` | HITL2 + readiness PDCA repair 回路：fail→inspect→repair→rerun→pass |
-| G13 delivery | case-135 | `exp_wff_delivery/case-135-standard-readiness-precheck.md` | readiness gate：manifest 拓扑推导 prior gate 集合 + artifact/parsability 审计 |
-| G24 wfn-rerun | case-306 | `exp_wfn_rerun/case-306-standard-two-round-delta.md` | Agent-driven：两轮 rerun，验证 rerun_count 递增和 direction section 更新（⚠️ verdict 来自文件系统检查，非 gate） |
+| G13 delivery | case-131 | `exp_wff_delivery/case-131-standard-delivery-full-chain.md` | real HITL2→readiness→Final，两个 witnessed handoff + source-gate status + Final terminal semantics |
+| G13 delivery | case-132 | `exp_wff_delivery/case-132-standard-hitl2-decision.md` | real HITL2 gate：missing/empty/sentinel/invalid fail；无 phase diagnostic event 的 valid decision pass |
+| G13 delivery | case-133 | `exp_wff_delivery/case-133-standard-hitl2-rerun.md` | real `rerun -> phase-rerun` handoff，再经 real rerun-ready 到 seed-topics |
+| G13 delivery | case-134 | `exp_wff_delivery/case-134-standard-delivery-repair.md` | HITL2/readiness 两个 same-check repair loop，保留真实 fail/pass gate attempts |
+| G13 delivery | case-135 | `exp_wff_delivery/case-135-standard-readiness-precheck.md` | readiness direct prerequisites：artifact/prior gate/YAML/JSONL negative probes + complete pass |
+| G24 wfn-rerun | case-306 | `exp_wfn_rerun/case-306-standard-two-round-delta.md` | scripted Agent/filesystem projection only：rerun_count 与 direction sections；不证明 gate、handoff或 real Agent judgment |
 | G25 engine-boundary | case-404 | `exp_engine-boundary/case-404-standard-queue-boundary.md` | Queue 边界合约：non-delegated 不受影响；delegated 强制 provenance；controller:"sub-agent" 被拒 |
 | G27 evidence-extraction | case-162 | `exp_evidence-extraction/case-162-standard-gate-reentry-cache-coverage.md` | gate count_floor（scoped）+ cache_coverage（verified+mapped/missing/empty）+ file observability cache_gap + check-reentry 集成 |
 | G60 autonomous-research-hardening | case-601 | `exp_autonomous-research-hardening/case-601-standard-wave0-fail-stays-in-phase.md` | BUG-033：Wave0 gate fail 后保持 phase-bound repair，premature final 只作为诊断 |
@@ -172,7 +179,7 @@
    - Heavy playbook：`node experiments_env/shared/verify-bundle-health.mjs --bundle <B> --profile heavy`
    - Light playbook：`node experiments_env/shared/verify-bundle-health.mjs --bundle <B> --profile light`
    - 记录 health status（CLEAN / ISSUES）
-6. **Cleanup** — 执行清理 step。**PASS + CLEAN 才清理；FAIL 或 HEALTH ISSUES 必须保留 bundle 现场。**
+6. **Cleanup** — 默认仅 **PASS + CLEAN** 清理。PASS + HEALTH ISSUES 默认保留；只有 playbook 显式声明 safe cleanup exception，且 health audit 证明 issues 仅来自该 case 有意制造的 negative gate artifacts 时，才可在报告记录后清理。FAIL 必须保留。
 7. **下一个** — 回到步骤 1，跑清单里的下一个 playbook
 
 **禁止的做法：**
@@ -190,7 +197,8 @@
 ## Cleanup 政策
 
 - **PASS + CLEAN** → 可以清理 disposable bundle
-- **FAIL 或 HEALTH ISSUES** → 保留 bundle 现场（bundle_preserved: true），供故障分析
+- **PASS + HEALTH ISSUES** → 默认保留；仅在 playbook 明确 safe cleanup exception 且 health 只含预期 negative gate artifacts 时可清理
+- **FAIL** → 保留 bundle 现场（bundle_preserved: true），供故障分析
 - 不得在不确定的情况下清理 bundle；宁可多留一个目录，不能丢掉诊断证据
 
 ## Report 格式

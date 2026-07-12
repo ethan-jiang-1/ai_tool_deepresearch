@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: Command Experiments Guideline
 status: effective
 created: 2026-06-17
-revised: 2026-07-10
+revised: 2026-07-12
 role: guidance for durable command experiment shape and boundaries
 scope: experiments_playbook/*, experiments
 authority: guidance
@@ -13,7 +13,8 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
-  - guidelines/simple-reliable-control.md
+  - guidelines/evolution-simple-reliable-control.md
+  - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/agentic-execution-model.md
   - guidelines/agentic-queue-mechanism.md
@@ -23,7 +24,7 @@ siblings:
 
 # Guideline: command_experiments Current Guidance
 
-> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-10 | 适用于: `experiments_playbook/exp_*`, `experiments_playbook/exph_*`
+> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-12 | 适用于: `experiments_playbook/exp_*`, `experiments_playbook/exph_*`
 
 ---
 
@@ -101,7 +102,7 @@ When extending command experiments, preserve the stable core and let the variabl
 
 ## Minimal Proof Surface
 
-Command experiments follow [`simple-reliable-control.md`](simple-reliable-control.md). The experiment harness is itself a quality-control mechanism, so it must be simpler than the behavior it claims to prove.
+Command experiments follow [`evolution-simple-reliable-control.md`](evolution-simple-reliable-control.md). The experiment harness is itself a quality-control mechanism, so it must be simpler than the behavior it claims to prove.
 
 Default shape:
 
@@ -830,7 +831,7 @@ These criteria are not required for design approval. They apply when deciding wh
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
-- [Simple Reliable Control](simple-reliable-control.md) — minimal proof surfaces, real authority paths, and quality-control complexity limits.
+- [Simple Reliable Control](evolution-simple-reliable-control.md) — minimal proof surfaces, real authority paths, and quality-control complexity limits.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) — mechanism guidance for queue-driven phase execution; current queue integrations remain authoritative, while future stop/context/recovery work must choose the smallest OpenSpec-approved control shape.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — Tier 1 (Chain): phase-to-phase routing.

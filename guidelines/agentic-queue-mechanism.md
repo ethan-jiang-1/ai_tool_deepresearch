@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: Agentic Queue Mechanism
 status: effective
 created: 2026-06-17
-revised: 2026-07-10
+revised: 2026-07-12
 role: mechanism guidance for queue-driven phase execution
 scope: Agentic Queue (AGQ) — queue engine operations and loop-engineering architectural principles
 authority: guidance
@@ -13,7 +13,8 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
-  - guidelines/simple-reliable-control.md
+  - guidelines/evolution-simple-reliable-control.md
+  - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-execution-model.md
@@ -23,7 +24,7 @@ siblings:
 
 # Agentic Queue Mechanism
 
-> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-10 | 适用: 所有 queue-driven phase 执行的设计与实现
+> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-12 | 适用: 所有 queue-driven phase 执行的设计与实现
 
 Agentic Queue (AGQ) 是 Engine-side 的任务队列系统：Phase Agent 从队列领取任务、执行、完成、领下一个——在 phase 内部形成自主静默的执行循环。
 
@@ -81,7 +82,7 @@ This file cannot decide:
 
 ## Simple Queue Control Posture
 
-This Tier 2 mechanism follows [`simple-reliable-control.md`](simple-reliable-control.md). Queue reliability comes from direct queue/work-unit facts and explicit operations, not from hiding failures behind more loop machinery.
+This Tier 2 mechanism follows [`evolution-simple-reliable-control.md`](evolution-simple-reliable-control.md). Queue reliability comes from direct queue/work-unit facts and explicit operations, not from hiding failures behind more loop machinery.
 
 ```text
 queue demand fact -> one claim/complete/submit check -> one repair or terminal action -> rerun the same visible operation
@@ -311,7 +312,7 @@ These are deterministic checkpoint obligations where direct bundle facts exist. 
 - **`project-charter.md`** defines the four-layer split (Agent/Markdown/Engine/JSON). This guideline operates entirely within that split: the queue is an Engine-side tool; Markdown controls whether and how the Phase Agent uses it.
 - **`agentic-workflow-mechanism.md`** defines the outer loop (MD → execute → gate → chain → next). This guideline's inner loop nests inside that outer loop. The two are complementary, not competing.
 - **`agentic-subagent-mechanism.md`** defines work-unit-mediated Sub-agent execution. Queue demand becomes delegated work only when the Engine claims it into a work unit; fan-out happens through `claim --count N`, not through queue window shape.
-- **`simple-reliable-control.md`** governs the complexity posture of filling, stop visibility, recovery, repair, and queue diagnostics. This file defines Queue boundaries; it does not override that complexity brake.
+- **`evolution-simple-reliable-control.md`** governs the complexity posture of filling, stop visibility, recovery, repair, and queue diagnostics. This file defines Queue boundaries; it does not override that complexity brake.
 - **`openspec/specs/agentic-queue/spec.md`** defines accepted engine requirements (AGQ-001~006). This guideline describes architectural principles; the spec defines implementable behavior. When they conflict, the spec wins.
 General rule: when this guideline conflicts with an accepted spec or executable contract, the spec/contract wins. Fix the guideline.
 
@@ -321,7 +322,7 @@ General rule: when this guideline conflicts with an accepted spec or executable 
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
-- [Simple Reliable Control](simple-reliable-control.md) — complexity brake for direct queue facts, explicit recovery, and minimal diagnostics.
+- [Simple Reliable Control](evolution-simple-reliable-control.md) — complexity brake for direct queue facts, explicit recovery, and minimal diagnostics.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; this file's parent document.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — Tier 1 (Chain): the outer loop this inner loop nests inside.
 - [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) — mechanism guidance for work-unit-mediated Sub-agent execution.

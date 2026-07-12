@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: Logging Conventions
 status: effective
 created: 2026-06-26
-revised: 2026-07-10
+revised: 2026-07-12
 role: system-level logging conventions for .mjs and .md diagnostic recording
 scope: DPT_FRAMEWORK/engine/logger.mjs, DPT_FRAMEWORK/engine/trace.mjs, DPT_FRAMEWORK/cli/log-event.mjs, DPT_FRAMEWORK/cli/inspect-bundle.mjs, DPT_FRAMEWORK/workflows/nodes/phases/*.md
 authority: guidance
@@ -13,7 +13,8 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
-  - guidelines/simple-reliable-control.md
+  - guidelines/evolution-simple-reliable-control.md
+  - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/agentic-execution-model.md
   - guidelines/agentic-queue-mechanism.md
@@ -24,7 +25,7 @@ siblings:
 
 # Guideline: logging_conventions — Current Guidance
 
-> 状态: 生效 | 创建: 2026-06-26 | 修订: 2026-07-10 | 适用于: `DPT_FRAMEWORK/engine/`, `DPT_FRAMEWORK/cli/`, `DPT_FRAMEWORK/workflows/nodes/phases/`
+> 状态: 生效 | 创建: 2026-06-26 | 修订: 2026-07-12 | 适用于: `DPT_FRAMEWORK/engine/`, `DPT_FRAMEWORK/cli/`, `DPT_FRAMEWORK/workflows/nodes/phases/`
 
 ## Purpose
 
@@ -43,7 +44,7 @@ Both files are active bundle-root relative. `_logs/run.log` and `rb_trace.jsonl`
 
 ## Simple Observability Posture
 
-Logging follows [`simple-reliable-control.md`](simple-reliable-control.md). Observability must shorten diagnosis, not become another controller or authority layer.
+Logging follows [`evolution-simple-reliable-control.md`](evolution-simple-reliable-control.md). Observability must shorten diagnosis, not become another controller or authority layer.
 
 - One external operation should emit the smallest useful success/failure/rejection/exception facts; internal helper chatter stays out of log by default.
 - Trace records accepted machine-verifiable events; log explains incidents. Do not require log + trace + cache projection to agree before a valid operation can pass.
@@ -129,6 +130,6 @@ Engine 模块的 log 输出遵循事故级诊断原则：**每个对外入口函
 
 - [Guidelines Index](README.md)
 - [Project Charter](project-charter.md)
-- [Simple Reliable Control](simple-reliable-control.md)
+- [Simple Reliable Control](evolution-simple-reliable-control.md)
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — "Trace 是真相，Log 是解释"
 - [Command Experiments](command-experiments.md)

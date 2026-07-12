@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: Agentic Workflow Mechanism
 status: effective
 created: 2026-06-23
-revised: 2026-07-10
+revised: 2026-07-12
 role: normative mechanism description of the Agent-driven dynamic-loading workflow loop
 scope: all Agent-driven workflow execution across DPT_FRAMEWORK/, dpt_rb_*/, and dpt_disp_*/
 authority: guidance
@@ -13,7 +13,8 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
-  - guidelines/simple-reliable-control.md
+  - guidelines/evolution-simple-reliable-control.md
+  - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-execution-model.md
@@ -23,7 +24,7 @@ siblings:
 
 # Agentic Workflow Mechanism
 
-> 状态: 生效 | 创建: 2026-06-23 | 修订: 2026-07-10 | 适用: 所有 Agent 驱动的 workflow 执行
+> 状态: 生效 | 创建: 2026-06-23 | 修订: 2026-07-12 | 适用: 所有 Agent 驱动的 workflow 执行
 
 ---
 
@@ -53,7 +54,7 @@ This file cannot decide:
 
 ## Simple Control Posture
 
-This Tier 1 mechanism follows [`simple-reliable-control.md`](simple-reliable-control.md): Chain reliability comes from a short explicit handoff, not from adding a smarter workflow controller.
+This Tier 1 mechanism follows [`evolution-simple-reliable-control.md`](evolution-simple-reliable-control.md): Chain reliability comes from a short explicit handoff, not from adding a smarter workflow controller.
 
 The preferred path stays one hop at each boundary:
 
@@ -217,7 +218,7 @@ Every `fileRef` in `transitions.chain.json` must resolve to a readable Markdown 
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
-- [Simple Reliable Control](simple-reliable-control.md) — short decision chains, root-cause short-circuiting, and quality-control complexity limits.
+- [Simple Reliable Control](evolution-simple-reliable-control.md) — short decision chains, root-cause short-circuiting, and quality-control complexity limits.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; this file's parent document.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for framework assets versus runtime bundles.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) — Tier 2 (Queue) for within-phase task execution; defines the inner loop that nests inside this file's outer loop.
@@ -227,7 +228,7 @@ Every `fileRef` in `transitions.chain.json` must resolve to a readable Markdown 
 ## Relationship to Other Guidelines
 
 - **project-charter.md** 定义 Agent/Engine/Markdown 的 authority split。本文件描述这个 split 在 workflow 执行中的具体机制。
-- **simple-reliable-control.md** 定义本机制的复杂度上限：一跳路由、直接 gate facts、最小根因反馈，不把 Chain 扩成隐藏 controller。
+- **evolution-simple-reliable-control.md** 定义本机制的复杂度上限：一跳路由、直接 gate facts、最小根因反馈，不把 Chain 扩成隐藏 controller。
 - **framework-runtime-boundary.md** 定义 framework assets vs runtime bundles 的目录边界。本文件假设这个边界已成立，在这个边界之上描述运行时循环。
 - **agentic-queue-mechanism.md** 定义 queue-driven phase execution 的机制边界：两层嵌套 loop、dispatch rule、结构约束和结果义务。queue engine 与 seed-topics/wave0/wave1/wave2 integrations 已进入 accepted runtime；未来 stop/context/recovery work 仍需 OpenSpec，并受 simple-reliable-control 的最小实现纪律约束。
 - **agentic-subagent-mechanism.md** 定义 work-unit-mediated Sub-agent execution 的机制指导：噪声隔离、bounded task、runtime receipt、submit provenance。本文件描述的 Chain 是 Sub-agent 执行的上层 phase 路由容器；Sub-agent work units 在单个 phase 内部被 claimed/submitted，不跨 phase。完整嵌套关系见 agentic-execution-model。

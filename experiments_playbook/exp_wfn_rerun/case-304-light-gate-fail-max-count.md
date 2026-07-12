@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: wfn-rerun
 case: case-304-light-gate-fail-max-count
 weight: light
-case_goal: "Rerun node boundary: rerun_count=3 → gate fail + no_transition."
+case_goal: "Boundary proof that a legally entered rerun node fails closed when rerun_count reaches 3."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -14,74 +14,78 @@ verdict: trace-jsonl
 
 ## Execution Contract
 
-由 coding agent 在真实 disposable experiment bundle 中执行。
+HITL2 rerun handoff is produced by the real HITL2 gate before the tested rerun-ready failure. The case does not hand-edit status into rerun-ready.
 
 # case-304-light-gate-fail-max-count
-
-边界：`rerun_count=3` → gate fail → no_transition。
-
-## Step 1: 创建 bundle
 
 ```bash
 REPO_ROOT=$(pwd)
 B=$(node experiments_env/shared/new-disposable-bundle.mjs maxcount --case case-304 --force)
-cat > $B/rb_profile.yaml << 'EOF'
-# Synthetic deterministic fixture only; not proof of real Agent research capability.
-research_access:
-  status: available
-  probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/case-304-fixture"
-  fetch_outcome: success
+mkdir -p "$B/artifacts/hitl2"
+printf '# Decision Brief\nRerun.\n' > "$B/artifacts/hitl2/decision-brief.md"
+cat > "$B/rb_profile.yaml" <<'YAML'
+plan_basename: maxcount
+research_profile: quick_factual
+root_must_answer_set: ["Does max rerun count fail closed?"]
 human_decision_checkpoints:
   hitl1:
     status: recorded
-    recorded_at: "2026-06-15T10:00:00Z"
-    research_profile: quick_factual
-    root_must_answer_set: ["Test question?"]
+    recorded_at: "2026-07-10T00:01:00.000Z"
   hitl2:
     status: recorded
+    answerability_class: ready_substantive
     user_decision: rerun
-    rationale: "Fourth attempt — should be blocked."
+    final_report_view: profile_default
     rerun_count: 3
-    recorded_at: "2026-06-20T10:00:00Z"
-EOF
-mkdir -p $B/seed_topics $B/reference
-cat > $B/seed_topics/01_test.md << 'EOF'
----
-id: "topic-01"
-slug: "01_test"
-title: "Test Topic"
----
-# Test Topic
-EOF
-cat > $B/rb_status.json << 'EOF'
-{ "current_mode": "execution", "state": "in_progress", "current_gate": "rerun_ready", "next_gate": "seed_topics_ready" }
-EOF
-```
-
-## Step 2: gate fail
-
-```bash
-GO=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate rerun-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle $B --current-node phases/phase-rerun.md)
-PASSED=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "rerun-ready passed=$PASSED (expected: false)"
-OK=false; [ "$PASSED" = "false" ] && OK=true
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'rerun-ready-max-count',passed:$OK,detail:'rerun_count=3 → gate fail'})})" $OK
-
-HAS=$(echo "$GO" | grep -c "rerun_count" || true)
-RK=$(echo "$GO" | node experiments_env/shared/extract-field.mjs routing.kind)
-echo "inspect has rerun_count: $([ $HAS -gt 0 ] && echo yes || echo no) routing: $RK"
-OK=false; [ $HAS -gt 0 ] && [ "$RK" = "no_transition" ] && OK=true
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'rerun-ready-routing',passed:$OK,detail:'inspect+routing verified'})})" $OK
-```
-
-## Step 3: Verdict
-
-```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/rb_trace.jsonl'))"
-rm -rf $B
+    rationale: "Fourth attempt must be blocked."
+YAML
+node --input-type=module - "$B" <<'JS'
+import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+const bundle=process.argv[2];
+writeGateAttempt(bundle,{check:{gate:'wave2-complete',passed:true,currentNodeRef:'phases/phase-wave2.md',next:'phases/phase-hitl2.md'},routing:{kind:'next',next:'phases/phase-hitl2.md'},inspect:[],advice:[]});
+JS
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-304-enter-hitl2.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-304-advance-wave2.json"
+H2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
+N=$(printf '%s\n' "$H2" | node experiments_env/shared/extract-field.mjs check.next)
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$N" > "$B/case-304-enter-rerun.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-304-advance-hitl2.json"
+set +e
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate rerun-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle "$B" --current-node phases/phase-rerun.md 2>/dev/null)
+STATUS=$?
+set -e
+P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
+K=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs routing.kind)
+HAS=$(printf '%s\n' "$OUT" | grep -c 'rerun_count' || true)
+OK=false; [ "$STATUS" -ne 0 ] && [ "$P" = "false" ] && [ "$K" = "no_transition" ] && [ "$HAS" -gt 0 ] && OK=true
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-304-max-count',passed:$OK,detail:'legal rerun entry then rerun_count=3 fail closed'}))"
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
 ```
 
 ## 结果解读
 
-> 验证 rerun 循环硬上限：`rerun_count=3` → gate fail → routing `no_transition`。第 4 次尝试被正确拦截。
+> PASS 证明 max-count failure 来自真实 rerun-ready gate，且前置 rerun entry/status 是 real HITL2 output 的 witness，不是手写 status。
+
+## Post-Execution Health
+
+```bash
+set +e
+node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile light --json > "$B/case-304-health.json"
+HEALTH_EXIT=$?
+set -e
+node --input-type=module - "$B/case-304-health.json" "$HEALTH_EXIT" <<'JS'
+import { readFileSync } from 'node:fs';
+const [path,exitCode]=process.argv.slice(2);
+const report=JSON.parse(readFileSync(path,'utf8'));
+const expectedOnly=report.issues.length>0&&report.issues.every((issue)=>issue.section==='gate_attempts');
+if(!(Number(exitCode)===0||expectedOnly)) process.exit(1);
+JS
+```
+
+## Cleanup
+
+> Safe cleanup exception：verdict PASS 且 health issues 仅来自 intentional max-count gate failure 时可清理。
+
+```bash
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-304'}))"
+```

@@ -3,153 +3,77 @@ schema: command-experiment/v1
 experiment: wfn-rerun
 case: case-302-light-rerun-node-happy-path
 weight: light
-case_goal: "Rerun node mechanism: Prove that a pre-seeded rerun bundle passes the rerun-ready gate and chain routes correctly to seed-topics."
+case_goal: "Mechanism proof that real HITL2 rerun output authorizes phase-rerun and real rerun-ready output authorizes seed-topics."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
-bundle: dpt_disp_case-302_rerun_happy_*
-trace: dpt_disp_case-302_rerun_happy_*/rb_trace.jsonl
+bundle: dpt_disp_case-302_rerun_node_*
+trace: dpt_disp_case-302_rerun_node_*/rb_trace.jsonl
 verdict: trace-jsonl
 ---
 
 ## Execution Contract
 
-由 coding agent 在真实 disposable experiment bundle 中执行。
+Wave2 pass is a declared direct-predecessor fixture. Both tested gates are real; both deterministic targets must be consumed through `enter-phase` and source-gate `advance-status`.
 
 # case-302-light-rerun-node-happy-path
 
-## Expected Runtime Path
-
-1. 创建 bundle + pre-seed rerun 状态（user_decision: rerun, rerun_count: 0, rationale 非空, seed_topics + reference 目录）
-2. Run hitl2-recorded gate → pass
-3. Chain query `rerun` → `phases/phase-rerun.md`
-4. Set status to rerun-ready, run check-gate-rerun-ready.mjs → pass + chain → seed-topics
-5. 从 `rb_trace.jsonl` 裁决
-6. Cleanup
-
-## Case Goal
-
-证明 rerun node 的 happy path：hitl2 gate pass → chain `rerun` → rerun node → rerun-ready gate pass → chain → seed-topics。
-
-## Step 1: 创建 bundle + pre-seed rerun 状态
+## Step 1: Execute rerun mechanism path
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs rerun_happy --case case-302 --force)
-mkdir -p $B/artifacts/hitl2 $B/seed_topics $B/reference
-cat > $B/artifacts/hitl2/decision-brief.md << 'EOF'
-# Final Review Decision Brief
-## Key Findings
-Research produced evidence across 3 topics. Scope adjustment needed.
-## Recommended Actions
-Rerun with adjusted scope — add economic impact analysis.
-EOF
-cat > $B/rb_profile.yaml << 'EOF'
-# Synthetic deterministic fixture only; not proof of real Agent research capability.
-research_access:
-  status: available
-  probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/case-302-fixture"
-  fetch_outcome: success
+B=$(node experiments_env/shared/new-disposable-bundle.mjs rerun_node --case case-302 --force)
+mkdir -p "$B/artifacts/hitl2"
+printf '# Decision Brief\nRerun.\n' > "$B/artifacts/hitl2/decision-brief.md"
+cat > "$B/rb_profile.yaml" <<'YAML'
+plan_basename: rerun_node
+research_profile: quick_factual
+root_must_answer_set: ["Does rerun reach seed-topics through witnessed gates?"]
 human_decision_checkpoints:
   hitl1:
     status: recorded
-    recorded_at: "2026-06-15T10:00:00Z"
-    research_profile: quick_factual
-    root_must_answer_set: ["Test question?"]
+    recorded_at: "2026-07-10T00:01:00.000Z"
   hitl2:
     status: recorded
+    answerability_class: ready_substantive
     user_decision: rerun
-    rationale: "Add economic impact analysis to topic coverage."
+    final_report_view: profile_default
     rerun_count: 0
-    recorded_at: "2026-06-20T10:00:00Z"
-EOF
-cat > $B/seed_topics/01_test-topic.md << 'EOF'
----
-id: "topic-01"
-slug: "01_test-topic"
-title: "Test Topic"
-must_answer: ["What is the regulatory framework?"]
-hypothesis: "The current framework is incomplete."
-search_guardrails: {required_terms: ["AI regulation"]}
----
-# Test Topic
-## 主题定位
-Test topic for rerun verification.
-## must_answer
-1. What is the regulatory framework?
-EOF
-echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",\"event\":\"hitl2_recorded\"}" >> $B/rb_trace.jsonl
-echo "=== Bundle ready ==="
+    rationale: "Add economic impact analysis."
+YAML
+node --input-type=module - "$B" <<'JS'
+import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+const bundle=process.argv[2];
+writeGateAttempt(bundle,{check:{gate:'wave2-complete',passed:true,currentNodeRef:'phases/phase-wave2.md',next:'phases/phase-hitl2.md'},routing:{kind:'next',next:'phases/phase-hitl2.md'},inspect:[],advice:[]});
+JS
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-302-enter-hitl2.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-302-advance-wave2.json"
+H2=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
+H2_NEXT=$(printf '%s\n' "$H2" | node experiments_env/shared/extract-field.mjs check.next)
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$H2_NEXT" > "$B/case-302-enter-rerun.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-302-advance-hitl2.json"
+RR=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate rerun-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle "$B" --current-node phases/phase-rerun.md)
+RR_P=$(printf '%s\n' "$RR" | node experiments_env/shared/extract-field.mjs check.passed)
+RR_NEXT=$(printf '%s\n' "$RR" | node experiments_env/shared/extract-field.mjs check.next)
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$RR_NEXT" > "$B/case-302-enter-seed-topics.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to rerun_ready > "$B/case-302-advance-rerun.json"
+node --input-type=module - "$B" "$H2_NEXT" "$RR_P" "$RR_NEXT" <<'JS'
+import { readFileSync } from 'node:fs';
+import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
+const [bundle,h2Next,rrPassed,rrNext]=process.argv.slice(2);
+const status=JSON.parse(readFileSync(`${bundle}/rb_status.json`,'utf8'));
+recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'case-302-rerun-mechanism',passed:h2Next==='phases/phase-rerun.md'&&rrPassed==='true'&&rrNext==='phases/phase-seed-topics.md'&&status.current_gate==='rerun_ready'&&status.current_node==='phases/phase-seed-topics.md',detail:'real rerun gates and witnessed status path'});
+JS
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
+node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile light
 ```
 
-## Step 2: Run hitl2-recorded gate → pass
+## Step 2: 结果解读
+
+> PASS 证明 rerun mechanism 的两个 real gate 与两次 witnessed handoff；不重复证明 full delivery tail。
+
+## Cleanup
 
 ```bash
-cat > $B/rb_status.json << 'EOF'
-{ "current_mode": "execution", "state": "in_progress", "current_gate": "hitl2_recorded", "next_gate": "readiness_passed" }
-EOF
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
-PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "hitl2-recorded | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'hitl2 gate — rerun decision'})})"
-```
-
-## Step 3: Chain query rerun → phase-rerun.md
-
-```bash
-RR=$(node -e "import('$REPO_ROOT/DPT_FRAMEWORK/engine/ask-next.mjs').then(async m=>{const r=m.resolveNodeTransitionDetailed('$REPO_ROOT/DPT_FRAMEWORK/workflows/transitions.chain.json','phases/phase-hitl2.md','rerun');console.log(JSON.stringify(r));})" 2>/dev/null)
-RK=$(echo "$RR" | node experiments_env/shared/extract-field.mjs kind)
-RN=$(echo "$RR" | node experiments_env/shared/extract-field.mjs next)
-echo "chain rerun → kind=$RK next=$RN"
-OK=false; [ "$RK" = "next" ] && [ "$RN" = "phases/phase-rerun.md" ] && OK=true
-[ "$OK" = "true" ] && echo "OK" || echo "FAIL"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'chain-rerun-to-rerun-node',passed:$OK,detail:'rerun → phase-rerun.md'})})" $OK
-```
-
-## Step 4: Run rerun-ready gate → pass
-
-```bash
-cat > $B/rb_status.json << 'EOF'
-{ "current_mode": "execution", "state": "in_progress", "current_gate": "rerun_ready", "next_gate": "seed_topics_ready" }
-EOF
-GO=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate rerun-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle $B --current-node phases/phase-rerun.md)
-PASSED=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.passed)
-NEXT=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.next)
-echo "rerun-ready | passed=$PASSED next=$NEXT"
-OK=false; [ "$PASSED" = "true" ] && [ "$NEXT" = "phases/phase-seed-topics.md" ] && OK=true
-[ "$OK" = "true" ] && echo "OK: gate pass → seed-topics" || echo "FAIL"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'rerun-ready',passed:$OK,detail:'gate pass → seed-topics'})})" $OK
-```
-
-## Step 5: Verdict from `rb_trace.jsonl`
-
-```bash
-echo "=== Verdict ==="
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/rb_trace.jsonl'))"
-```
-
-## Step 6: 结果解读
-
-> 验证 rerun node 的 happy path 完整链路：
->   hitl2 gate pass → chain `rerun` → phase-rerun.md → rerun-ready gate pass → chain → seed-topics
-
-
-## Step HH: Post-Execution Health
-
-Standard profile — gate diagnostics, timeline consistency.
-
-```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile light
-```
-
-> 健康检查不改变 verdict。health status 由 runner report 记录。
-
-## Step 7: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-rm -rf $B
-echo "Cleaned: $B"
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-302'}))"
 ```

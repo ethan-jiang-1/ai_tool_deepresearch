@@ -30,6 +30,9 @@ const SCAN_SURFACES = [
   'DPT_FRAMEWORK/README.md',
   'DPT_FRAMEWORK/cli/README.md',
   ...listCommandPlaybooks(),
+  'DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl2.md',
+  'DPT_FRAMEWORK/workflows/nodes/shared/shared-profile.md',
+  'DPT_FRAMEWORK/workflows/nodes/shared/shared-gate-rules.md',
   'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md',
 ];
 
@@ -164,6 +167,9 @@ describe('Agent-facing command contract docs', () => {
     assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/cli/README.md'));
     assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/command_playbook/instantiate-run-bundle.md'));
     assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/command_playbook/start-research.md'));
+    assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/workflows/nodes/phases/phase-hitl2.md'));
+    assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/workflows/nodes/shared/shared-profile.md'));
+    assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/workflows/nodes/shared/shared-gate-rules.md'));
     assert.ok(SCAN_SURFACES.includes('DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md'));
   });
 
@@ -177,6 +183,9 @@ describe('Agent-facing command contract docs', () => {
       'Final 是 terminal non-interactive delivery',
       'Post-final feedback',
       'HITL2 repair/rerun',
+      'Ordinary authorized command execution and reversible mechanical repair are Agent-owned',
+      'Human-directed identifies the decision source',
+      'out-of-band maintenance/debug collaboration',
       '`phase transition`',
       '`phase handoff`',
       '`work completion`',

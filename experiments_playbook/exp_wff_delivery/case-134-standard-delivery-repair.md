@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: wff-delivery
 case: case-134-standard-delivery-repair
 weight: light
-case_goal: "Prove the PDCA repair cycle works for delivery phases: gate fail → read inspect/advice → Agent repairs → rerun gate → pass. Two cycles: HITL2 repair and readiness repair."
+case_goal: "Prove HITL2 and readiness repair return to the same real gate, preserving the legal predecessor window until each gate passes."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -14,53 +14,24 @@ verdict: trace-jsonl
 
 ## Execution Contract
 
-由 coding agent 在真实 disposable experiment bundle 中执行。实验结果必须来自实际文件写入、gate CLI 调用和 trace event；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
+每个 repair 只修 direct failing fact，然后重跑同一真实 gate。负例的 case-specific `check` 使用 `expected:false` 记录实际 gate false；最终 verdict 同时要求 fail 与 pass attempt 都来自 CLI-authored trace。
 
 # case-134-standard-delivery-repair
 
-## Expected Runtime Path
-
-1. 创建 disposable bundle + pre-seed 状态（故意缺失部分文件）
-2. **HITL2 repair cycle**: gate fail (missing brief) → read inspect → Agent creates brief → rerun → gate pass
-3. 推进到 readiness 状态（补齐所有 readiness artifacts）
-4. **Readiness repair cycle**: gate fail (missing synthesis) → read inspect → Agent creates synthesis → rerun → gate pass
-5. 从 `rb_trace.jsonl` 裁决（预期 2 个 cycle 各有 1 fail + 1 pass = 4 checks）
-6. Cleanup
-
----
-
-## Case Goal
-
-证明 delivery phase 的 PDCA repair 回路：
-- Gate fail 时 inspect 给出具体缺失信息，advice 给出修复方向
-- Agent 根据 inspect/advice 修复后 rerun gate
-- 第一次 fail + 第二次 pass 的 gate_attempt 都记录在 trace
-
----
-
-## Step 1: 创建 bundle + pre-seed 状态（缺失 decision brief）
+## Step 1: 创建 fixture 并建立合法 HITL2 入口
 
 ```bash
 REPO_ROOT=$(pwd)
 B=$(node experiments_env/shared/new-disposable-bundle.mjs dlv_repair --case case-134 --force)
-echo "Bundle: $B"
+mkdir -p "$B/artifacts/hitl2" "$B/artifacts/wave2" "$B/seed_topics"
+printf '# Topic A\n' > "$B/seed_topics/topic-a.md"
+printf '# Reference Index\n' > "$B/reference/_INDEX.md"
 
-# Set status to hitl2
-cat > $B/rb_status.json << 'EOF'
-{
-  "current_mode": "execution",
-  "state": "in_progress",
-  "current_gate": "hitl2_recorded",
-  "next_gate": "readiness_passed"
-}
-EOF
-
-# Create dir but NOT decision brief (will fail)
-mkdir -p $B/artifacts/hitl2
-
-# Write valid profile
-cat > $B/rb_profile.yaml << 'EOF'
-# Synthetic deterministic fixture only; not proof of real Agent research capability.
+cat > "$B/rb_profile.yaml" <<'YAML'
+plan_basename: dlv_repair
+research_profile: quick_factual
+root_must_answer_set:
+  - "Does repair return to the same delivery checkpoint?"
 research_access:
   status: available
   probed_at: "2026-07-10T00:00:00.000Z"
@@ -69,192 +40,119 @@ research_access:
 human_decision_checkpoints:
   hitl1:
     status: recorded
-    recorded_at: "2026-06-15T10:00:00Z"
-    research_profile: quick_factual
-    root_must_answer_set:
-      - "Test question?"
+    recorded_at: "2026-07-10T00:01:00.000Z"
   hitl2:
     status: recorded
+    answerability_class: ready_substantive
     user_decision: proceed_to_readiness
-    rationale: "Ready after repair."
-    recorded_at: "2026-06-20T10:00:00Z"
-EOF
+    final_report_view: profile_default
+    rerun_count: 0
+    rationale: "Repair the direct delivery defect, then continue."
+YAML
 
-# Write trace with hitl2_recorded
-echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",\"event\":\"hitl2_recorded\"}" >> $B/rb_trace.jsonl
-
-echo "=== Bundle ready (missing decision brief) ==="
-```
-
-## Step 2: HITL2 repair cycle — fail → repair → pass
-
-```bash
-echo "=== HITL2 — First Attempt (fail) ==="
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
-echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "gate: hitl2-recorded | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'attempt 1 — missing brief, expected fail'})})"
-
-# Read inspect output → Agent creates the missing file
-INSPECT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs inspect.0)
-ADVICE=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs advice.0)
-echo "--- Agent reads inspect ---"
-echo "inspect: $INSPECT"
-echo "advice: $ADVICE"
-echo "--- Agent repairs ---"
-
-# Agent creates decision brief based on inspect/advice
-cat > $B/artifacts/hitl2/decision-brief.md << 'EOF'
-# Final Review Decision Brief
-
-## Key Findings
-The research produced evidence across multiple topics. Key patterns include
-convergence of technical and policy approaches to AI safety.
-
-## Open Questions
-1. How to generalize findings?
-2. What metrics exist for measuring impact?
-
-## Recommended Actions
-Proceed to readiness for final delivery.
-EOF
-
-echo "=== HITL2 — Second Attempt (pass) ==="
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
-echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "gate: hitl2-recorded | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'attempt 2 — brief created, expected pass'})})"
-```
-
-预期：第一次 `passed: false`，inspect 指向缺失 brief。第二次 `passed: true`。
-
-## Step 3: 推进到 readiness + pre-seed（缺失 synthesis）
-
-```bash
-# Create readiness artifacts (except synthesis — will fail)
-cat > $B/seed_topics/topic-a.md << 'EOF'
----
-slug: topic-a
-title: Test Topic
----
-# Test Topic
-EOF
-
-mkdir -p $B/artifacts/wave0/topic-a
-cat > $B/reference/_INDEX.md << 'EOF'
-# Reference Index
-- [Topic A](topic-a/source.yaml)
-EOF
-cat > $B/artifacts/wave0/topic-a/source.yaml << 'EOF'
-- url: "https://example.com/test"
-  title: "Test Reference"
-  retrieved_date: "2026-06-15"
-  topic_tag: "topic-a"
-EOF
-
-mkdir -p $B/artifacts/wave2
-# Intentionally leave synthesis.md missing
-
-# Write prior gate_attempt events for trace
-for g in instantiation-complete hitl1-recorded setup-ready seed-topics-ready wave0-complete wave1-complete wave2-complete hitl2-recorded; do
-  echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",\"event\":\"gate_attempt\",\"gate\":\"$g\",\"passed\":true}" >> $B/rb_trace.jsonl
-done
-
-# Advance status to readiness
-cat > $B/rb_status.json << 'EOF'
-{
-  "current_mode": "execution",
-  "state": "in_progress",
-  "current_gate": "readiness_passed",
-  "next_gate": "none"
+node --input-type=module - "$B" <<'JS'
+import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+const bundle = process.argv[2];
+const fixtures = [
+  ['instantiation-complete', 'phases/phase-instantiation.md', 'phases/phase-hitl1.md'],
+  ['hitl1-recorded', 'phases/phase-hitl1.md', 'phases/phase-setup.md'],
+  ['setup-ready', 'phases/phase-setup.md', 'phases/phase-seed-topics.md'],
+  ['seed-topics-ready', 'phases/phase-seed-topics.md', 'phases/phase-wave0.md'],
+  ['wave0-complete', 'phases/phase-wave0.md', 'phases/phase-wave1.md'],
+  ['wave1-complete', 'phases/phase-wave1.md', 'phases/phase-wave2.md'],
+  ['wave2-complete', 'phases/phase-wave2.md', 'phases/phase-hitl2.md'],
+];
+for (const [gate, currentNodeRef, next] of fixtures) {
+  writeGateAttempt(bundle, { check: { gate, passed: true, currentNodeRef, next }, routing: { kind: 'next', next, detail: 'declared direct-predecessor fixture' }, inspect: [], advice: [] });
 }
-EOF
-
-echo "=== Bundle ready for readiness (missing synthesis) ==="
+JS
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-134-enter-hitl2.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-134-advance-wave2.json"
 ```
 
-## Step 4: Readiness repair cycle — fail → repair → pass
+## Step 2: HITL2 fail → repair brief → rerun same gate → pass
 
 ```bash
-echo "=== Readiness — First Attempt (fail) ==="
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
-echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "gate: readiness-passed | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'attempt 1 — missing synthesis, expected fail'})})"
+rm -f "$B/artifacts/hitl2/decision-brief.md"
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md 2>/dev/null || true)
+P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
+I=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs inspect.0)
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-134-hitl2-before-repair',passed:$P,expected:false,detail:'missing decision brief rejected by real HITL2 gate'}))"
 
-# Read inspect → Agent creates synthesis
-INSPECT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs inspect.0)
-echo "--- Agent reads inspect ---"
-echo "inspect: $INSPECT"
-echo "--- Agent repairs ---"
+printf '# Decision Brief\nRepaired current delivery brief.\n' > "$B/artifacts/hitl2/decision-brief.md"
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
+P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
+N=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)
+OK=false; [ "$P" = "true" ] && [ "$N" = "phases/phase-readiness.md" ] && OK=true
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-134-hitl2-after-repair',passed:$OK,detail:'same HITL2 gate passes after brief repair'}))"
 
-# Agent creates synthesis
-cat > $B/artifacts/wave2/synthesis.md << 'EOF'
-# Cross-Topic Synthesis
-
-## Pattern 1: Convergence
-Technical and policy approaches show increasing alignment.
-
-## Gaps and Future Work
-Further research needed on cross-domain metrics.
-EOF
-
-echo "=== Readiness — Second Attempt (pass) ==="
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
-echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "gate: readiness-passed | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'attempt 2 — synthesis created, expected pass'})})"
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$N" > "$B/case-134-enter-readiness.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-134-advance-hitl2.json"
 ```
 
-预期：第一次 `passed: false`，inspect 指向缺失 synthesis。第二次 `passed: true`。
-
-## Step 5: Verdict from `rb_trace.jsonl`
+## Step 3: readiness fail → repair synthesis → rerun same gate → pass
 
 ```bash
-echo "=== Verdict ==="
-cat $B/rb_trace.jsonl | node -e "
-const fs = require('fs');
-const lines = fs.readFileSync(0, 'utf-8').trim().split('\n').filter(l => l);
-const checks = lines.map(l => JSON.parse(l)).filter(e => e.event === 'check');
-const pass = checks.filter(c => c.passed === true).length;
-const fail = checks.filter(c => c.passed === false).length;
-console.log('Pass:', pass, ' | Fail:', fail);
-if (pass >= 2 && fail >= 2) {
-  console.log('\x1b[32mVERDICT: PASS\x1b[0m');
-} else {
-  console.log('\x1b[31mVERDICT: FAIL\x1b[0m (expected ≥2 pass + ≥2 fail, got ' + pass + ' pass + ' + fail + ' fail)');
-}
-"
+rm -f "$B/artifacts/wave2/synthesis.md"
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md 2>/dev/null || true)
+P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
+I=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs inspect.0)
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-134-readiness-before-repair',passed:$P,expected:false,detail:'missing synthesis rejected by real readiness gate'}))"
+
+printf '# Synthesis\nRepaired delivery synthesis.\n' > "$B/artifacts/wave2/synthesis.md"
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md)
+P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
+N=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)
+OK=false; [ "$P" = "true" ] && [ "$N" = "phases/phase-final.md" ] && OK=true
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-134-readiness-after-repair',passed:$OK,detail:'same readiness gate passes after synthesis repair'}))"
+
+node --input-type=module - "$B" <<'JS'
+import { readFileSync } from 'node:fs';
+import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
+const bundle = process.argv[2];
+const events = readFileSync(`${bundle}/rb_trace.jsonl`, 'utf8').trim().split(/\r?\n/).filter(Boolean).map(JSON.parse);
+const attempts = (gate) => events.filter((event) => event.event === 'gate_attempt' && event.gate === gate).map((event) => event.passed);
+recordCheck(`${bundle}/rb_trace.jsonl`, {
+  gate: 'case-134-real-attempt-pairs',
+  passed: attempts('hitl2-recorded').includes(false) && attempts('hitl2-recorded').includes(true) && attempts('readiness-passed').includes(false) && attempts('readiness-passed').includes(true),
+  detail: 'CLI-authored fail/pass attempts exist for both same-check repair loops',
+});
+JS
 ```
 
-预期：≥2 pass + ≥2 fail → VERDICT: PASS（两个 cycle 各有 1 fail + 1 pass）。
+## Step 4: Trace verdict
 
+```bash
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
+```
 
-## Step 6: 结果解读
+## Step 5: 结果解读
 
-> 验证 delivery PDCA 回路：
->   HITL2 + readiness gate fail → inspect/advice → repair → rerun → pass。
-
+> PASS 证明两次修复都回到原 gate：HITL2 只补 decision brief，readiness 只补 synthesis；合法 predecessor window 在 failed attempt 后仍保留，真实 fail/pass `gate_attempt` 成对存在。
 
 ## Step HH: Post-Execution Health
 
-Standard profile — gate diagnostics, timeline consistency.
-
 ```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
+set +e
+node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile standard --json > "$B/case-134-health.json"
+HEALTH_EXIT=$?
+set -e
+node --input-type=module - "$B/case-134-health.json" "$HEALTH_EXIT" <<'JS'
+import { readFileSync } from 'node:fs';
+const [path, exitCode] = process.argv.slice(2);
+const report = JSON.parse(readFileSync(path, 'utf8'));
+const expectedOnly = report.issues.length > 0 && report.issues.every((issue) => issue.section === 'gate_attempts');
+if (!(Number(exitCode) === 0 || expectedOnly)) process.exit(1);
+console.log(expectedOnly ? 'HEALTH ISSUES: expected fail-before-repair artifacts only' : 'HEALTH CLEAN');
+JS
 ```
 
-> 健康检查不改变 verdict。health status 由 runner report 记录。
+> intentional failed attempts 可能产生 expected negative-case health issue；上面的检查只接受 `gate_attempts` section，其他 health issue 仍阻止 cleanup。
 
-## Step 7: Cleanup
+## Cleanup
 
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
+> Safe cleanup exception：当 verdict PASS 且 health issues 仅对应本 case 有意制造的两次 failed gate artifacts 时可清理；其他 issue 保留现场。
 
 ```bash
-rm -rf $B
-echo "Cleaned: $B"
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-134'}))"
 ```

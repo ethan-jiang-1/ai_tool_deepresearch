@@ -11,7 +11,7 @@ Content SHALL cover at least the current `ProfileSchema` fields:
 - `plan_basename`: string for the run's canonical basename; a disposable bundle directory MAY include a `dpt_disp_` prefix and random suffix, while `plan_basename` remains the unsuffixed logical name;
 - `research_profile`: one of `not_selected`, `quick_factual`, `exploratory_map`, `claim_verification`, `debug`;
 - `root_must_answer_set`: string array containing the user's required questions;
-- `research_style_params`: optional/nullable current 13-field style object populated through the accepted profile-style path;
+- `research_style_params`: optional/nullable current style object populated through the accepted profile-style path;
 - `research_access`: optional discriminated status contract for `unprobed`, `available`, or `unavailable`, including the branch-specific probe fields;
 - `human_decision_checkpoints.hitl1.status`;
 - `human_decision_checkpoints.hitl1.recorded_at`;

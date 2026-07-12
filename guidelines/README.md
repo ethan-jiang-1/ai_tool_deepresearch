@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: Guidelines Index
 status: effective
 created: 2026-06-17
-revised: 2026-07-10
+revised: 2026-07-12
 role: index for the guidance suite
 scope: guidelines/
 authority: guidance
@@ -13,7 +13,8 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
-  - guidelines/simple-reliable-control.md
+  - guidelines/evolution-simple-reliable-control.md
+  - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/logging-conventions.md
   - guidelines/command-experiments.md
@@ -25,23 +26,24 @@ siblings:
 
 # Guidelines Index
 
-> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-10
+> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-12
 
 `guidelines/` is the charter layer for this repo. It explains how to think and work here, but it is not the spec authority.
 
-Authority flows only from upstream: `AGENTS.md` and `openspec/config.yaml`. A guideline's `defers_to` names upstream authority only — never a specific downstream spec, module, or path. Its `scope` names the space it governs, and may name concrete directories like `experiments_playbook/*` because that is where this guidance must be followed. Pointing at `openspec/specs/` as a whole ("accepted behavior lives there") is fine; naming a specific downstream spec as a dependency is not.
+Authority flows from `AGENTS.md` and `openspec/config.yaml`. The two `evolution-*` charter companions additionally defer to `guidelines/project-charter.md`, their suite-local upstream charter. Other guidelines do not name sibling guidance or downstream specs/modules as authority under `defers_to`; `siblings` and prose links provide navigation. A file's `scope` names the space it governs and may name concrete directories such as `experiments_playbook/*`.
 
 Read in this order:
 
 1. `project-charter.md` — stable project principles, authority boundaries, and current project surfaces.
-2. `simple-reliable-control.md` — short decision chains, simple quality controls, and Agent-readable root-cause feedback.
-3. `framework-runtime-boundary.md` — directory and authority boundary between read-only framework assets and mutable runtime bundles.
-4. `logging-conventions.md` — runtime continuity and observability: status/queue/trace/log authority after context loss.
-5. `agentic-execution-model.md` — unified execution model and terminology canon: how Chain, Queue, and Work Units compose into the current execution system. Start here to understand the overall architecture.
-6. `agentic-workflow-mechanism.md` — Tier 1 (Chain): phase-to-phase routing and the Three-Authority Architecture.
-7. `agentic-queue-mechanism.md` — Tier 2 (Queue): within-phase task execution, two nested loops, dispatch rule.
-8. `agentic-subagent-mechanism.md` — Work-unit-mediated Sub-agent execution: noise isolation, bounded tasks, submit provenance.
-9. `command-experiments.md` — guidance for durable command experiment shape and boundaries.
+2. `evolution-simple-reliable-control.md` — short decision chains, simple quality controls, and Agent-readable root-cause feedback.
+3. `evolution-helper-oriented-agent.md` — user decision, Agent execution, Engine authority, and minimal escalation.
+4. `framework-runtime-boundary.md` — directory and authority boundary between read-only framework assets and mutable runtime bundles.
+5. `logging-conventions.md` — runtime continuity and observability: status/queue/trace/log authority after context loss.
+6. `agentic-execution-model.md` — unified execution model and terminology canon: how Chain, Queue, and Work Units compose into the current execution system. Start here to understand the overall architecture.
+7. `agentic-workflow-mechanism.md` — Tier 1 (Chain): phase-to-phase routing and the Three-Authority Architecture.
+8. `agentic-queue-mechanism.md` — Tier 2 (Queue): within-phase task execution, two nested loops, dispatch rule.
+9. `agentic-subagent-mechanism.md` — Work-unit-mediated Sub-agent execution: noise isolation, bounded tasks, submit provenance.
+10. `command-experiments.md` — guidance for durable command experiment shape and boundaries.
 
 Detailed requirements live in `openspec/specs/`. Project-level OpenSpec rules live in `openspec/config.yaml`.
 
@@ -49,14 +51,24 @@ When a guideline conflicts with accepted specs or executable schema, fix the gui
 
 ## Guidance Precedence And Compatibility
 
-Within this suite, `project-charter.md` defines authority/layer boundaries and `simple-reliable-control.md` defines the default complexity posture inside those boundaries. Mechanism files explain their domains; they do not pre-approve a complex implementation merely by naming a problem such as recovery, stop authorization, context sustainability, or comprehensive validation.
+Within this suite, `project-charter.md` defines authority/layer boundaries. The two `evolution-*` files are paired charter companions: `evolution-simple-reliable-control.md` reviews system shape and net simplification; `evolution-helper-oriented-agent.md` reviews action responsibility and escalation. Mechanism files explain their domains; they do not pre-approve a complex implementation merely by naming a problem.
 
 Use this interpretation order:
 
 1. Upstream rules, accepted specs, executable contracts, and current runtime truth decide actual behavior.
 2. `project-charter.md` decides which layer may own the behavior.
-3. `simple-reliable-control.md` decides the simplest admissible control shape.
-4. The relevant mechanism guideline supplies domain-specific boundaries and terminology.
+3. `evolution-simple-reliable-control.md` decides the simplest admissible control shape.
+4. `evolution-helper-oriented-agent.md` decides which decisions remain with the user and which legal mechanical work returns to the Agent.
+5. The relevant mechanism guideline supplies domain-specific boundaries and terminology.
+
+## Evolution Directions
+
+Load both `evolution-*` files when reviewing a new OpenSpec design, recovery/mutation proposal, or Agent/user interaction surface. Apply them in order:
+
+1. Simplicity axis: identify the shortest legal loop, direct authority, and net deletion/avoidance of complexity.
+2. Helper axis: identify the smallest human decision and return all authorized mechanical execution to the Agent.
+
+They guide gradual convergence only. They do not create current runtime behavior, and neither can override accepted specs, executable contracts, host permission, or runtime truth.
 
 This is a convergence rule, not a big-bang rewrite order. Existing accepted implementation remains valid until changed through OpenSpec. New work must not add avoidable layers; work that touches an older complex surface should simplify locally where safe by reusing a checker, removing duplicate truth, short-circuiting dependent symptoms, downgrading presentation-only blockers, or moving one next action closer to the decision point.
 
@@ -87,6 +99,7 @@ This directory cannot decide:
 - MUST use `MUST` / `MUST NOT` language when a rule is safety-critical for Agent actor behavior.
 - MUST treat quality-control complexity as safety-critical: the control path should be simpler than the work it validates and should expose direct authority, earliest root cause, and one next action.
 - MUST interpret historical mechanism goals as result obligations, not automatic approval for watchers, controllers, fallback trees, duplicate validators, or derived-state stacks.
+- MUST paired-load both Evolution Directions for new architecture, recovery/mutation, or Agent/user responsibility design.
 
 ### MUST NOT
 
@@ -94,16 +107,18 @@ This directory cannot decide:
 - MUST NOT let Markdown become the Source of Record for deterministic queue, gate, receipt, or trace authority.
 - MUST NOT describe future surfaces as implemented runtime facts.
 - MUST NOT duplicate detailed requirements already owned by `openspec/specs/`.
-- MUST NOT list a downstream spec, framework module, or bundle path under `defers_to`; guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`). `scope` may name concrete directories — that is the space this guidance governs, not a dependency.
+- MUST NOT list a downstream spec, framework module, or bundle path under `defers_to`. The only suite-local exception is that the two `evolution-*` charter companions defer to `guidelines/project-charter.md`; `scope` may name concrete directories because it describes governed space, not a dependency.
 - MUST NOT revive Agent self-governance for deterministic runtime authority under new names.
-- MUST NOT use `simple-reliable-control.md` to bypass accepted behavior or trigger an unscoped full-system rewrite; convergence happens through focused OpenSpec changes.
+- MUST NOT use `evolution-simple-reliable-control.md` to bypass accepted behavior or trigger an unscoped full-system rewrite; convergence happens through focused OpenSpec changes.
 
 ## Decision Routes
 
 | If you are... | Read / update | Do not do |
 |---------------|---------------|-----------|
 | Starting repo work | `project-charter.md`, then relevant specs | Start from a draft mechanism document |
-| A design is accumulating checks, fallbacks, or derived state | `simple-reliable-control.md` | Assume more logic automatically means more reliability |
+| A design is accumulating checks, fallbacks, or derived state | `evolution-simple-reliable-control.md` | Assume more logic automatically means more reliability |
+| A design asks the user to run commands, repair state, or choose among recovery paths | `evolution-helper-oriented-agent.md` | Treat the human as the ordinary pipeline executor |
+| Reviewing architecture, recovery/mutation, or Agent/user responsibility | Both `evolution-*` files, then the relevant mechanism/spec | Apply only one axis and miss either system complexity or action responsibility |
 | Unsure whether something belongs in `DPT_FRAMEWORK/` or a bundle | `framework-runtime-boundary.md` | Decide by file extension or chat habit |
 | Resuming a run after context loss or debugging log/trace confusion | `logging-conventions.md`, then active bundle control files and trace | Infer current state from chat memory, console output, or `_logs/run.log` |
 | Writing or revising a command experiment playbook | `command-experiments.md` and the relevant accepted spec or active OpenSpec change | Invent setup or verdict authority locally |
@@ -119,22 +134,24 @@ This directory cannot decide:
 | Change target | Primary path | Guidance update |
 |---------------|--------------|-----------------|
 | Project principle, layer boundary, or reading route | `guidelines/project-charter.md` or this index | Keep it short; do not add runtime behavior |
+| Evolution direction for system shape or action responsibility | The relevant `guidelines/evolution-*.md`; paired-load both for design review | Do not define concrete runtime behavior there |
 | Framework-vs-runtime directory boundary | `guidelines/framework-runtime-boundary.md` | Do not encode concrete schema fields there |
 | Accepted capability behavior | OpenSpec change under `openspec/changes/`, then `openspec/specs/` | Link or summarize only after acceptance |
 | Schema, state machine, receipt, gate, or trace contract | `DPT_FRAMEWORK/`, `tests/`, and accepted specs via OpenSpec | Do not define it only in prose |
 | Command experiment execution pattern | `command-experiments.md` plus the relevant accepted spec or active change when normative | Avoid local one-off verdict rules |
 | Agentic workflow loop (who drives, routes, validates) | `guidelines/agentic-workflow-mechanism.md` | Read before modifying transition, gate, or node-loading behavior |
-| Agentic Queue loop engineering | `agentic-queue-mechanism.md` | Preserve its boundaries, then use `simple-reliable-control.md` to choose the smallest implementation; route behavior changes through OpenSpec |
+| Agentic Queue loop engineering | `agentic-queue-mechanism.md` | Preserve its boundaries, then use `evolution-simple-reliable-control.md` to choose the smallest implementation; route behavior changes through OpenSpec |
 | Current runtime/run state | The active runtime bundle root, currently a selected `dpt_rb_*` or `dpt_disp_*` directory | Reload files; do not rely on chat memory |
 
 ## Guidance Map
 
-Guidelines defer only to upstream authority (`AGENTS.md`, `openspec/config.yaml`); none depend on a specific downstream spec or implementation, so this index carries no per-file dependency column.
+Guidelines defer to upstream authority and never to a downstream spec or implementation. The two Evolution Directions additionally defer to the Project Charter as their suite-local upstream guidance, so this index carries no downstream dependency column.
 
 | File | Reader | Purpose | Not For |
 |------|--------|---------|---------|
 | `project-charter.md` | Any Agent or maintainer | Repo-wide charter, authority order, hard boundaries | Detailed capability behavior |
-| `simple-reliable-control.md` | Proposal author, reviewer, Engine/CLI designer | Charter-level complexity discipline: short decision chains, direct quality checks, smallest actionable root-cause feedback, gradual convergence | Concrete schema fields, CLI flags, weakening deterministic authority, or unscoped rewrites |
+| `evolution-simple-reliable-control.md` | Proposal author, reviewer, Engine/CLI designer | Charter-level complexity discipline: short decision chains, direct quality checks, smallest actionable root-cause feedback, gradual convergence | Concrete schema fields, CLI flags, weakening deterministic authority, or unscoped rewrites |
+| `evolution-helper-oriented-agent.md` | Proposal author, reviewer, Agent-facing workflow designer | Charter-level action-responsibility direction: user decisions, Agent execution, Engine authority, minimal escalation | Permission grants, mutation/reentry implementation, persona/memory, or helper subsystem |
 | `framework-runtime-boundary.md` | Any Agent or maintainer touching framework/run files | Directory and authority boundary for read-only framework assets vs mutable runtime bundles | Concrete schema fields, CLI flags, or current run truth |
 | `logging-conventions.md` | Any Agent or maintainer resuming/debugging a run | Runtime continuity and observability: status/queue/trace/log authority, diagnostic vs audit boundaries | API contracts, schema fields, or using logs as verdict |
 | `command-experiments.md` | Experiment author/executor | How to prove mechanisms with real runtime contexts and trace-backed verdicts | General project philosophy or concrete capability behavior |
@@ -173,7 +190,8 @@ When a target or proposed surface becomes accepted/current, update this table in
 These files are one guidance suite:
 
 - `project-charter.md` defines the repo-wide charter: what must always be true.
-- `simple-reliable-control.md` is the charter companion for complexity posture: short control loops, direct checks, quality-control logic simpler than the work it validates, and gradual compatibility-safe convergence.
+- `evolution-simple-reliable-control.md` is the charter companion for complexity posture: short control loops, direct checks, quality-control logic simpler than the work it validates, and gradual compatibility-safe convergence.
+- `evolution-helper-oriented-agent.md` is the charter companion for action responsibility: the user decides only new semantics/risk/permission, the Agent executes legal mechanical work, and Engine authority remains deterministic.
 - `framework-runtime-boundary.md` defines the framework/runtime boundary: where read-only definitions and mutable run truth belong.
 - `logging-conventions.md` defines runtime continuity and observability guidance: how status, queue, trace, and log keep a long-running bundle recoverable without chat memory.
 - `command-experiments.md` defines the experiment charter: how mechanisms are proven.

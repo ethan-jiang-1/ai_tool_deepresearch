@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: Agentic Execution Model
 status: effective
 created: 2026-06-24
-revised: 2026-07-10
+revised: 2026-07-12
 role: unified execution model and terminology canon for the agentic execution system
 scope: the complete agentic execution loop, including Chain, Queue, and Work Unit execution
 authority: guidance
@@ -13,7 +13,8 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
-  - guidelines/simple-reliable-control.md
+  - guidelines/evolution-simple-reliable-control.md
+  - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-workflow-mechanism.md
@@ -23,7 +24,7 @@ siblings:
 
 # Agentic Execution Model
 
-> 状态: 生效 | 创建: 2026-06-24 | 修订: 2026-07-10 | 适用: 所有涉及 agentic execution 的设计、实现与阅读
+> 状态: 生效 | 创建: 2026-06-24 | 修订: 2026-07-12 | 适用: 所有涉及 agentic execution 的设计、实现与阅读
 
 本文档是执行模型的术语正典。当前生产 delegated work 的正常路径只有一条:
 
@@ -71,7 +72,7 @@ This file cannot decide:
 
 ## Reliability Posture Across Tiers
 
-The three-tier model follows [`simple-reliable-control.md`](simple-reliable-control.md). Each tier should expose one direct authority and each boundary crossing should be one explicit operation.
+The three-tier model follows [`evolution-simple-reliable-control.md`](evolution-simple-reliable-control.md). Each tier should expose one direct authority and each boundary crossing should be one explicit operation.
 
 ```text
 Chain: gate verdict -> route lookup
@@ -235,7 +236,7 @@ Both axes must agree. A Markdown instruction can tell the Phase Agent to claim w
 
 - [Guidelines Index](README.md) - guidance suite index and reading order.
 - [Project Charter](project-charter.md) - repo-wide charter and authority map.
-- [Simple Reliable Control](simple-reliable-control.md) - complexity posture for short tier boundaries and reliable quality-control feedback.
+- [Simple Reliable Control](evolution-simple-reliable-control.md) - complexity posture for short tier boundaries and reliable quality-control feedback.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) - Chain and phase handoff.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) - queue demand and phase-local drain.
 - [Agentic Subagent Mechanism](agentic-subagent-mechanism.md) - work-unit-mediated Sub-agent execution.

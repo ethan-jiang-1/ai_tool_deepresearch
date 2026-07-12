@@ -19,6 +19,10 @@ function runGate(bundlePath) {
 }
 
 const VALID_PROFILE = `
+plan_basename: hitl2-recorded-test
+research_profile: quick_factual
+root_must_answer_set:
+  - "How to measure alignment?"
 research_access:
   status: available
   probed_at: "2026-07-10T00:00:00.000Z"
@@ -28,15 +32,13 @@ human_decision_checkpoints:
   hitl1:
     status: recorded
     recorded_at: "2026-06-15T10:00:00Z"
-    research_profile: quick_factual
-    root_must_answer_set:
-      - "How to measure alignment?"
-    answerability_class: ready_substantive
   hitl2:
     status: recorded
+    answerability_class: ready_substantive
     user_decision: proceed_to_readiness
+    final_report_view: profile_default
     rationale: "The research is complete and ready for final delivery."
-    recorded_at: "2026-06-20T10:00:00Z"
+    rerun_count: 0
 `;
 
 function profileWithDecision(decision) {
@@ -149,7 +151,10 @@ describe('check-gate-hitl2-recorded', () => {
     const dir = createBundle(unique('badstatus'));
 
     writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
-    const badProfile = VALID_PROFILE.replace('status: recorded\n    user_decision: proceed_to_readiness', 'status: pending_user\n    user_decision: proceed_to_readiness');
+    const badProfile = VALID_PROFILE.replace(
+      '  hitl2:\n    status: recorded\n    answerability_class: ready_substantive',
+      '  hitl2:\n    status: pending_user\n    answerability_class: ready_substantive',
+    );
     writeFileSync(join(dir, 'rb_profile.yaml'), badProfile);
     writeHitl2HandoffTrace(dir, [{ event: 'hitl2_recorded', ts: new Date().toISOString() }]);
 
@@ -188,6 +193,20 @@ describe('check-gate-hitl2-recorded', () => {
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('random_choice') || (m.includes('accepted') && m.includes('in'))),
       `Expected invalid enum fail: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('6b. rejects not_started sentinel as a recorded gate decision', () => {
+    const dir = createBundle(unique('sentinel'));
+    writeFileSync(join(dir, 'artifacts/hitl2/decision-brief.md'), '# Brief\n\nContent.\n');
+    writeFileSync(join(dir, 'rb_profile.yaml'), profileWithDecision('not_started'));
+    writeHitl2HandoffTrace(dir);
+
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(result.status, 1);
+    assert.equal(output.check.passed, false);
+    assert.ok(output.inspect.some(m => m.includes('not_started') || m.includes('accepted')),
+      `Expected sentinel rejection: ${JSON.stringify(output.inspect)}`);
   });
 
   it('7. gate passes without hitl2_recorded trace event (rule removed — redundant with artifact checks)', () => {
@@ -268,11 +287,14 @@ describe('check-gate-hitl2-recorded', () => {
 
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
-    assert.notEqual(output.check.next, 'phases/phase-readiness.md');
+    assert.equal(result.status, 0);
+    assert.equal(output.check.passed, true);
+    assert.equal(output.routing.kind, 'no_transition');
+    assert.equal(output.check.next, null);
 
     const attempts = readTrace(dir).filter(e => e.event === 'gate_attempt' && e.gate === 'hitl2-recorded');
-    if (attempts.length > 0) {
-      assert.notEqual(attempts.at(-1).next, 'phases/phase-readiness.md');
-    }
+    assert.ok(attempts.length > 0);
+    assert.equal(attempts.at(-1).passed, true);
+    assert.equal(attempts.at(-1).next, null);
   });
 });

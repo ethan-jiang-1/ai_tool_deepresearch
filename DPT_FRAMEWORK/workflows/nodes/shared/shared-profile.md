@@ -44,6 +44,16 @@ suggested_context:
 - **含义**：用户明确要求必须回答的核心问题列表
 - **gate 行为**：`hitl1-recorded` gate 检查此字段非空
 
+### `research_access`
+
+- **类型**：optional discriminated object，`status` 为 `unprobed`、`available` 或 `unavailable`
+- **填写时机**：HITL1 bounded capability probe 后写入；旧 bundle 可以缺失
+- **分支字段**：
+  - `unprobed`：仅 `status`
+  - `available`：`probed_at`、HTTP(S) `result_url`、`fetch_outcome: success`，可选 `search_surface` / `fetch_surface`
+  - `unavailable`：`probed_at`、`fetch_outcome: failed|blocked|not_attempted`、非空 `reason`，可选 `result_url` / surface fields
+- **authority**：只记录直接 probe observation，不是研究 evidence，也不证明未来 invocation 永远可用
+
 ### `research_style_params`
 
 - **类型**：`object`（`ResearchStyleParamsSchema`），optional
@@ -104,29 +114,23 @@ suggested_context:
 
 ### `human_decision_checkpoints.hitl2.user_decision`
 
-- **类型**：enum，值为 `proceed_to_readiness`、`request_view_revision`、`repair`、`rerun`、`stop_blocked`
+- **类型**：enum；pre-decision sentinel 为 `not_started`，recorded actions 为 `proceed_to_readiness`、`request_view_revision`、`repair`、`rerun`、`stop_blocked`
 - **填写时机**：HITL2 phase，用户从 5 个 structured decision 中选择后 Agent 写入
-- **默认值**（bundle 创建时）：`""`（空字符串）
+- **默认值**（bundle 创建时）：`not_started`
 - **含义**：
   - `proceed_to_readiness`：用户确认研究完整，进入 readiness 确定性检查
   - `request_view_revision`：用户要求修改某个 wave 的 view（Agent 读取 rationale 决定回到哪个 phase）
   - `repair`：当前 run 有需要修复的问题，Agent 就地修复后 rerun 当前 gate，不重启 lifecycle
-  - `rerun`：用户想调整方向/补充内容/改模式，Agent 从 `seed-topics` 重新跑，profile 已有新反馈
+  - `rerun`：用户想调整方向/补充内容/改模式；HITL2 gate emits `check.next: phases/phase-rerun.md`，Agent 通过 accepted handoff 进入 rerun node
   - `stop_blocked`：用户判定研究阻塞，终止 lifecycle
 - **gate 行为**：`hitl2-recorded` gate 检查此字段非空且在合法枚举中
 
 ### `human_decision_checkpoints.hitl2.rationale`
 
-- **类型**：`string`（自由文本）
+- **类型**：optional `string`（自由文本）
 - **填写时机**：HITL2 phase，与 user_decision 同时写入
 - **含义**：用户 decision 的理由或补充说明
 - **gate 行为**：不强制检查（optional field），但建议填写以帮助 Agent 理解后续修复方向
-
-### `human_decision_checkpoints.hitl2.recorded_at`
-
-- **类型**：`string`（ISO 8601 timestamp）
-- **填写时机**：HITL2 phase，与 `status: recorded` 同时写入
-- **gate 行为**：不强制检查（optional field），但建议填写作为审计记录
 
 ### `human_decision_checkpoints.hitl2.answerability_class`
 
@@ -140,8 +144,9 @@ suggested_context:
 
 ### `human_decision_checkpoints.hitl2.final_report_view`
 
-- **类型**：enum，值为 `profile_default`、`executive_brief`、`evidence_map`、`claim_judgment`、`technical_deep_dive`、`custom`
+- **类型**：enum，值为 `not_started`、`profile_default`、`executive_brief`、`evidence_map`、`claim_judgment`、`technical_deep_dive`、`custom`
 - **填写时机**：HITL2 phase，用户选择期望的 final report 视角
+- **默认值**（bundle 创建时）：`not_started`
 - **含义**：控制 `phase-final.md` 中 Agent 生成 final report 的格式和侧重点
 - **gate 行为**：不强制检查，但 final phase 读此字段决定报告结构
 
@@ -150,6 +155,12 @@ suggested_context:
 - **类型**：`string`，optional
 - **填写时机**：HITL2 phase，仅当 `final_report_view == custom` 时填写
 - **含义**：用户自定义的报告视角标识符
+
+### `human_decision_checkpoints.hitl2.rerun_count`
+
+- **类型**：optional non-negative integer，schema default 为 `0`
+- **owner**：`phase-rerun.md` 负责递增；HITL2 写 decision 时必须 preserve 现有值
+- **含义**：已进入 rerun node 的次数，用于 accepted max-rerun behavior；不是 Agent 可任意重置的展示计数
 
 ## Authority Boundary
 

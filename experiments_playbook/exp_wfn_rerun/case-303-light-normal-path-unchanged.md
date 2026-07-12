@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: wfn-rerun
 case: case-303-light-normal-path-unchanged
 weight: light
-case_goal: "Rerun node regression: prove normal path proceed_to_readiness → passed → readiness is unchanged after chain dual-exit."
+case_goal: "Regression proof that a real proceed_to_readiness HITL2 result still authorizes readiness and source-gate status sync."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -14,73 +14,60 @@ verdict: trace-jsonl
 
 ## Execution Contract
 
-由 coding agent 在真实 disposable experiment bundle 中执行。
+本 case 只证明 dual-exit chain 未改变 normal HITL2 branch；readiness 内容 gate 由 G13 拥有。
 
 # case-303-light-normal-path-unchanged
 
-回归：`proceed_to_readiness` → chain `passed` → readiness 不变。
-
-## Step 1: 创建 bundle
-
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs normal_path --case case-303 --force)
-cat > $B/rb_status.json << 'EOF'
-{ "current_mode": "execution", "state": "in_progress", "current_gate": "hitl2_recorded", "next_gate": "readiness_passed" }
-EOF
-mkdir -p $B/artifacts/hitl2
-cat > $B/artifacts/hitl2/decision-brief.md << 'EOF'
-# Final Review Decision Brief
-## Key Findings Research produced strong evidence.
-## Recommended Actions Proceed to final delivery.
-EOF
-cat > $B/rb_profile.yaml << 'EOF'
-# Synthetic deterministic fixture only; not proof of real Agent research capability.
-research_access:
-  status: available
-  probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/case-303-fixture"
-  fetch_outcome: success
+B=$(node experiments_env/shared/new-disposable-bundle.mjs normal --case case-303 --force)
+mkdir -p "$B/artifacts/hitl2"
+printf '# Decision Brief\nProceed.\n' > "$B/artifacts/hitl2/decision-brief.md"
+cat > "$B/rb_profile.yaml" <<'YAML'
+plan_basename: normal
+research_profile: quick_factual
+root_must_answer_set: ["Does proceed still reach readiness?"]
 human_decision_checkpoints:
   hitl1:
     status: recorded
-    recorded_at: "2026-06-15T10:00:00Z"
-    research_profile: quick_factual
-    root_must_answer_set: ["Test question?"]
+    recorded_at: "2026-07-10T00:01:00.000Z"
   hitl2:
     status: recorded
+    answerability_class: ready_substantive
     user_decision: proceed_to_readiness
-    rationale: "The research is complete."
-    recorded_at: "2026-06-20T10:00:00Z"
-EOF
-echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",\"event\":\"hitl2_recorded\"}" >> $B/rb_trace.jsonl
-```
-
-## Step 2: hitl2 gate + chain query
-
-```bash
-GO=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
-PASSED=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.passed)
-NEXT=$(echo "$GO" | node experiments_env/shared/extract-field.mjs check.next)
-echo "hitl2 passed=$PASSED next=$NEXT"
-OK=false; [ "$PASSED" = "true" ] && [ "$NEXT" = "phases/phase-readiness.md" ] && OK=true
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl2-normal-path',passed:$OK,detail:'normal path → readiness'})})" $OK
-
-PR=$(node -e "import('$REPO_ROOT/DPT_FRAMEWORK/engine/ask-next.mjs').then(async m=>{const r=m.resolveNodeTransitionDetailed('$REPO_ROOT/DPT_FRAMEWORK/workflows/transitions.chain.json','phases/phase-hitl2.md','passed');console.log(JSON.stringify(r));})" 2>/dev/null)
-PK=$(echo "$PR" | node experiments_env/shared/extract-field.mjs kind)
-PN=$(echo "$PR" | node experiments_env/shared/extract-field.mjs next)
-echo "chain passed → kind=$PK next=$PN"
-OK=false; [ "$PK" = "next" ] && [ "$PN" = "phases/phase-readiness.md" ] && OK=true
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'chain-passed-unchanged',passed:$OK,detail:'passed → readiness'})})" $OK
-```
-
-## Step 3: Verdict
-
-```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/rb_trace.jsonl'))"
-rm -rf $B
+    final_report_view: profile_default
+    rerun_count: 0
+    rationale: "Proceed."
+YAML
+node --input-type=module - "$B" <<'JS'
+import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+const bundle=process.argv[2];
+writeGateAttempt(bundle,{check:{gate:'wave2-complete',passed:true,currentNodeRef:'phases/phase-wave2.md',next:'phases/phase-hitl2.md'},routing:{kind:'next',next:'phases/phase-hitl2.md'},inspect:[],advice:[]});
+JS
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-303-enter-hitl2.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-303-advance-wave2.json"
+OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
+P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
+N=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$N" > "$B/case-303-enter-readiness.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-303-advance-hitl2.json"
+node --input-type=module - "$B" "$P" "$N" <<'JS'
+import { readFileSync } from 'node:fs';
+import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
+const [bundle,passed,next]=process.argv.slice(2);
+const status=JSON.parse(readFileSync(`${bundle}/rb_status.json`,'utf8'));
+recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'case-303-normal-path',passed:passed==='true'&&next==='phases/phase-readiness.md'&&status.current_gate==='hitl2_recorded'&&status.next_gate==='readiness_passed'&&status.current_node==='phases/phase-readiness.md',detail:'real proceed output and witnessed readiness status window'});
+JS
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
+node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile light
 ```
 
 ## 结果解读
 
-> 回归验证：正常交付路径 `proceed_to_readiness` → `passed` → readiness 不受 chain dual-exit 变更影响。
+> PASS 只证明 normal branch 没有被 rerun alternate edge 改写。
+
+## Cleanup
+
+```bash
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-303'}))"
+```

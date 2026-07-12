@@ -10,154 +10,102 @@ Define experiment playbooks that verify the three content-delivery lifecycle pha
 
 ### Requirement: HITL2 decision recorded playbook
 
-An experiment playbook SHALL exist at `experiments_playbook/exp_workflow-foundation/test-simple-hitl2-decision-recorded.md` that verifies HITL2 gate behavior:
-- Happy path: bundle with decision brief + valid profile decision + trace event → gate pass
-- Missing decision brief → gate fail
-- Missing user_decision → gate fail
-- Invalid user_decision value → gate fail
+The controlled experiment at `experiments_playbook/exp_wff_delivery/case-132-standard-hitl2-decision.md` SHALL verify the current HITL2 gate contract with the real gate CLI. It SHALL establish the direct predecessor facts needed for legal HITL2 entry and SHALL NOT hand-write the tested HITL2 gate result.
 
-The playbook SHALL use a disposable bundle (`dpt_disp_*`), import real framework gate CLI, and read verdict from `_trace.jsonl`. It SHALL follow the standard playbook structure per `guidelines/command-experiments.md`.
+The case SHALL verify:
 
-#### Scenario: Happy path gate pass
+- a valid decision brief plus one of the five recorded decisions passes;
+- missing or empty decision facts fail with direct repair diagnostics;
+- `not_started` and values outside the five recorded decisions fail; and
+- absence of a separate phase-authored `hitl2_recorded` event does not by itself fail the gate, while the CLI still writes its own `gate_attempt`.
 
-- **WHEN** the playbook pre-seeds a post-wave2 bundle with valid decision brief, profile decision, and trace event
-- **AND** runs `check-gate-hitl2-recorded.mjs`
-- **THEN** the gate SHALL pass (exit code 0)
-- **AND** the playbook SHALL extract check events to `_trace.jsonl`
-- **AND** the verdict SHALL be PASS
+#### Scenario: Valid proceed decision passes
 
-#### Scenario: Missing decision brief fails gate
+- **WHEN** the case creates legal HITL2 entry facts, writes a valid decision brief, and records `user_decision: proceed_to_readiness`
+- **THEN** the real gate CLI SHALL pass
+- **AND** `check.next` SHALL be `phases/phase-readiness.md`
+- **AND** a matching CLI-authored `gate_attempt` SHALL exist
 
-- **WHEN** the playbook removes `artifacts/hitl2/decision-brief.md` from the bundle
-- **AND** runs the gate CLI
-- **THEN** the gate SHALL fail (exit code 1)
-- **AND** the inspect output SHALL reference the missing decision brief
+#### Scenario: Invalid decision facts fail closed
 
-#### Scenario: Missing user decision fails gate
-
-- **WHEN** the playbook removes or empties `user_decision` from `rb_profile.yaml`
-- **AND** runs the gate CLI
-- **THEN** the gate SHALL fail (exit code 1)
-- **AND** the inspect output SHALL reference the missing or empty user_decision field
-
-#### Scenario: Invalid decision value fails gate
-
-- **WHEN** the playbook writes an invalid `user_decision` value (not in accepted enum) to `rb_profile.yaml`
-- **AND** runs the gate CLI
-- **THEN** the gate SHALL fail (exit code 1)
-- **AND** the inspect output SHALL list the accepted enum values
+- **WHEN** the case removes the decision brief or writes an empty, sentinel, or invalid `user_decision`
+- **THEN** the real gate CLI SHALL fail
+- **AND** inspect/advice SHALL identify the direct fact to repair
 
 ### Requirement: Readiness gate precheck playbook
 
-An experiment playbook SHALL exist at `experiments_playbook/exp_workflow-foundation/test-medium-readiness-precheck.md` that verifies readiness gate boundary behavior:
-- Happy path: complete bundle with all artifacts, all prior gate gate_attempt(passed=true) in trace, valid YAML, valid JSONL → gate pass
-- Missing artifact → gate fail
-- Missing prior gate passes in trace → gate fail (CLI reports which specific gates)
-- Unparseable YAML profile → gate fail
-- Corrupt JSONL trace → gate fail
+The controlled experiment at `experiments_playbook/exp_wff_delivery/case-135-standard-readiness-precheck.md` SHALL verify the readiness gate boundary with the real gate CLI. It SHALL establish a legal HITL2-to-readiness entry and SHALL NOT hand-write the tested readiness gate result.
 
-#### Scenario: Happy path all conditions met
+The case SHALL verify that complete required artifacts, manifest-derived prior gate evidence, valid profile YAML, and valid trace JSONL pass; a missing required artifact, missing prior gate pass, unparseable YAML, or corrupt JSONL fails with direct diagnostics.
 
-- **WHEN** the playbook pre-seeds a bundle with all required artifacts, all prior-gate gate_attempt events with passed=true, valid profile YAML, and valid trace JSONL
-- **AND** runs `check-gate-readiness-passed.mjs`
-- **THEN** the gate SHALL pass
-- **AND** the verdict SHALL be PASS
+#### Scenario: Complete readiness input passes
 
-#### Scenario: Missing artifact fails gate
+- **WHEN** all required artifacts, prior gate evidence, parseable profile, valid trace, and legal readiness entry exist
+- **THEN** the readiness gate SHALL pass
+- **AND** its terminal routing result SHALL remain consistent with the current transition contract
 
-- **WHEN** the playbook removes `artifacts/wave2/synthesis.md` from the bundle
-- **AND** runs the gate CLI
-- **THEN** the gate SHALL fail (exit code 1)
-- **AND** the inspect output SHALL reference the missing artifact
+#### Scenario: Readiness input defects fail directly
 
-#### Scenario: Missing prior gate passes fails gate
-
-- **WHEN** the playbook modifies trace to have gate_attempt(passed=true) for only a subset of prior gates (e.g., 5 of the 8 expected)
-- **AND** runs the gate CLI
-- **THEN** the gate SHALL fail (exit code 1)
-- **AND** the inspect output SHALL name which specific prior gate(s) are missing from the trace
-
-#### Scenario: Unparseable YAML fails gate
-
-- **WHEN** the playbook corrupts `rb_profile.yaml` with invalid YAML syntax
-- **AND** runs the gate CLI
-- **THEN** the gate SHALL fail (exit code 1)
-- **AND** the inspect output SHALL indicate the YAML parse error
-
-#### Scenario: Corrupt JSONL fails gate
-
-- **WHEN** the playbook inserts a non-JSON line into `rb_trace.jsonl`
-- **AND** runs the gate CLI
-- **THEN** the gate SHALL fail (exit code 1)
-- **AND** the inspect output SHALL indicate the JSONL parse error
+- **WHEN** one direct readiness prerequisite is missing or invalid
+- **THEN** the gate SHALL fail
+- **AND** inspect/advice SHALL name that direct fact rather than relying on a hand-written verdict
 
 ### Requirement: Full delivery chain playbook
 
-An experiment playbook SHALL exist at `experiments_playbook/exp_workflow-foundation/test-simple-delivery-full-chain.md` that verifies the complete delivery tail:
-- hitl2 gate pass → readiness gate pass → final phase loads (gate=none terminal)
-- The playbook SHALL verify sequential gate passage and final terminal semantics
+The controlled experiment at `experiments_playbook/exp_wff_delivery/case-131-standard-delivery-full-chain.md` SHALL verify the current delivery tail with real gate output and witnessed handoffs:
 
-#### Scenario: Sequential gate passage
+```text
+Wave2 passed handoff
+  -> HITL2 proceed_to_readiness output
+  -> readiness entry and source-gate status synchronization
+  -> readiness gate pass
+  -> final terminal entry
+```
 
-- **WHEN** the playbook pre-seeds a bundle with hitl2 decision recorded and all prior gates passed
-- **AND** runs hitl2-recorded gate then readiness-passed gate sequentially
-- **THEN** both gates SHALL pass
-- **AND** the trace SHALL record both gate_attempt events
+The case SHALL NOT pre-seed a target gate as already passed to bypass the predecessor handoff. It SHALL verify both tested gate attempts and preserve final `gate: none` terminal semantics.
 
-#### Scenario: Final phase terminal semantics
+#### Scenario: Sequential delivery tail uses legal handoffs
 
-- **WHEN** the playbook inspects the manifest for the final phase
-- **THEN** `phase-final.md` SHALL have `gate: none`
-- **AND** `transitions.chain.json` SHALL NOT have a transition from `phases/phase-final.md`
+- **WHEN** the case drives a valid HITL2 proceed decision and readiness precheck
+- **THEN** HITL2 SHALL emit `phases/phase-readiness.md`
+- **AND** the selected target SHALL be entered before source-gate status synchronization
+- **AND** readiness SHALL pass through its normal terminal handoff
+
+#### Scenario: Final remains terminal
+
+- **WHEN** the case reaches `phase-final.md`
+- **THEN** final SHALL have `gate: none`
+- **AND** `transitions.chain.json` SHALL NOT define an outgoing final transition
 
 ### Requirement: HITL2 rerun branch playbook
 
-An experiment playbook SHALL exist at `experiments_playbook/exp_workflow-foundation/test-simple-hitl2-rerun-branch.md` that verifies the unique HITL2 behavior where gate PASSES but the Agent does NOT advance to readiness — because the user chose `repair_and_rerun`.
+The controlled experiment at `experiments_playbook/exp_wff_delivery/case-133-standard-hitl2-rerun.md` SHALL verify the current deterministic HITL2 rerun branch with the real HITL2 gate output.
 
-The playbook SHALL verify:
-- Gate passes (all checks satisfied) with `user_decision: repair_and_rerun`
-- The routing result from `resolveNodeTransitionDetailed` still returns `kind: 'next'` with `next: 'phases/phase-readiness.md'` (chain always returns the normal next)
-- The Agent, reading `user_decision` from profile, SHALL decide to restart from instantiation instead of following the chain to readiness
-- This decision is an Agent-level routing choice, not encoded in the transition table
+The case SHALL establish legal HITL2 entry, record `user_decision: rerun`, and verify:
 
-This is the only phase in the lifecycle where gate pass does not equal advance — the defining behavior of HITL2's authority boundary.
+- the gate passes and emits `check.next: phases/phase-rerun.md` with a matching CLI-authored `gate_attempt`;
+- the chain preserves both `passed -> phases/phase-readiness.md` and `rerun -> phases/phase-rerun.md`;
+- `enter-phase`, source-gate status synchronization, and rerun preflight accept the selected rerun route; and
+- active prose does not claim that the Agent overrides `check.next` or restarts from instantiation.
 
-#### Scenario: Gate passes but Agent restarts lifecycle
+#### Scenario: Real gate output selects and witnesses rerun
 
-- **WHEN** the playbook pre-seeds a post-wave2 bundle with valid decision brief, `user_decision: repair_and_rerun`, and trace event
-- **AND** runs `check-gate-hitl2-recorded.mjs`
-- **THEN** the gate SHALL pass (exit code 0)
-- **AND** `resolveNodeTransitionDetailed` SHALL return `kind: 'next'` with `next: 'phases/phase-readiness.md'`
-- **AND** the playbook SHALL verify that the Agent, having read `user_decision: repair_and_rerun` from profile, restarts from instantiation instead of advancing to readiness
-
-#### Scenario: Chain does not encode the rerun branch
-
-- **WHEN** the playbook inspects `transitions.chain.json`
-- **THEN** there SHALL be only one entry for `phases/phase-hitl2.md`: `{ "passed": "phases/phase-readiness.md" }`
-- **AND** no entry for `repair_and_rerun` or any other user_decision SHALL exist in the chain
+- **WHEN** `user_decision: rerun` is recorded and all direct HITL2 facts pass
+- **THEN** the gate SHALL select `phases/phase-rerun.md`
+- **AND** the case SHALL consume that target through the accepted handoff path
+- **AND** rerun preflight SHALL accept the resulting route/status window
 
 ### Requirement: Delivery repair loop playbook
 
-An experiment playbook SHALL exist at `experiments_playbook/exp_workflow-foundation/test-medium-delivery-repair-loop.md` that verifies the PDCA cycle works for delivery phases: gate fail → read inspect/advice → Agent repairs → rerun gate → pass.
+The controlled experiment at `experiments_playbook/exp_wff_delivery/case-134-standard-delivery-repair.md` SHALL verify same-check repair for the delivery tail with real gate output:
 
-The playbook SHALL verify at minimum:
-- HITL2 gate fails on missing decision brief → Agent creates brief → rerun → pass
-- Readiness gate fails on missing artifact → Agent creates artifact → rerun → pass
+- HITL2 fails on a missing decision brief, the Agent repairs that artifact, reruns the same gate, and passes; and
+- readiness fails on a missing required artifact, the Agent repairs that artifact, reruns the same gate, and passes.
 
-#### Scenario: HITL2 repair loop
+The legal predecessor handoff/status window SHALL remain valid across repair attempts, and the verdict SHALL include the real failed and passed gate attempts.
 
-- **WHEN** the playbook pre-seeds a bundle missing `artifacts/hitl2/decision-brief.md`
-- **AND** runs `check-gate-hitl2-recorded.mjs` — gate fails
-- **AND** Agent reads inspect output and creates the decision brief
-- **AND** reruns the gate
-- **THEN** the gate SHALL pass on the second attempt
-- **AND** the trace SHALL contain both the fail and pass gate_attempt events
+#### Scenario: Delivery repair returns to the same checkpoint
 
-#### Scenario: Readiness repair loop
-
-- **WHEN** the playbook pre-seeds a bundle missing `artifacts/wave2/synthesis.md`
-- **AND** runs `check-gate-readiness-passed.mjs` — gate fails on missing artifact
-- **AND** Agent reads inspect output and creates the missing artifact
-- **AND** reruns the gate
-- **THEN** the gate SHALL pass on the second attempt
-- **AND** the trace SHALL contain both the fail and pass gate_attempt events
+- **WHEN** HITL2 or readiness fails on one repairable direct fact
+- **THEN** the Agent SHALL repair that fact and rerun the same gate
+- **AND** the case SHALL prove both attempts from real trace evidence

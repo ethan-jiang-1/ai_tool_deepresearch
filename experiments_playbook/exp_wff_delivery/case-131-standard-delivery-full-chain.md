@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: wff-delivery
 case: case-131-standard-delivery-full-chain
 weight: light
-case_goal: "Prove that the complete delivery tail works end-to-end: hitl2 gate pass → readiness gate pass → final node terminal semantics."
+case_goal: "Prove the delivery tail with real HITL2/readiness gate output, route-bound entry, source-gate status sync, and terminal Final semantics."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -14,84 +14,30 @@ verdict: trace-jsonl
 
 ## Execution Contract
 
-由 coding agent 在真实 disposable experiment bundle 中执行。实验结果必须来自实际文件写入、gate CLI 调用和 trace event；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
+由 coding agent 在真实 disposable bundle 中逐 step 执行。Wave2 及更早 gate pass 是明确声明的 direct-predecessor fixture，并通过 production gate writer 写入；被测 HITL2/readiness gate 必须来自真实 CLI，后续 handoff 必须经过 `enter-phase` 与 source-gate `advance-status`。
 
 # case-131-standard-delivery-full-chain
 
-## Expected Runtime Path
+## Reality Distance Ledger
 
-1. 创建 disposable bundle + pre-seed post-wave2 状态（所有 prior gates passed + hitl2 ready）
-2. Run hitl2-recorded gate → pass
-3. Run readiness-passed gate → pass（从 manifest 推导 prior gate 集合）
-4. Verify final phase terminal semantics（gate=none, chain 无 final transition）
-5. 从 `rb_trace.jsonl` 裁决（预期 2 pass）
-6. Cleanup
+| 维度 | 声明 |
+|---|---|
+| Runtime context | `new-disposable-bundle.mjs` 创建的真实 bundle |
+| Fixture boundary | readiness 所需的 Wave2 及更早 passed gate facts；不证明这些前序 gate 的内容工作 |
+| Production boundary | real HITL2/readiness gate CLI、`enter-phase`、`advance-status`、trace/log writer |
+| Verdict source | `rb_trace.jsonl` 中 case-specific `check` events |
 
----
-
-## Case Goal
-
-证明 hitl2 → readiness → final 完整 delivery 链：
-- 两个 gate 在同一个 bundle 上依次 pass
-- readiness gate 从 manifest 拓扑正确推导 prior gate 集合
-- final phase frontmatter 正确声明 terminal node
-- chain 不包含 final phase 的 transition
-
----
-
-## Step 1: 创建 bundle + pre-seed post-wave2 完整状态
+## Step 1: 创建 delivery fixture 并建立合法 HITL2 入口
 
 ```bash
 REPO_ROOT=$(pwd)
 B=$(node experiments_env/shared/new-disposable-bundle.mjs dlv_chain --case case-131 --force)
-echo "Bundle: $B"
 
-# Set status to hitl2-ready
-cat > $B/rb_status.json << 'EOF'
-{
-  "current_mode": "execution",
-  "state": "in_progress",
-  "current_gate": "hitl2_recorded",
-  "next_gate": "readiness_passed"
-}
-EOF
-
-# Create all required artifacts for readiness
-cat > $B/seed_topics/topic-a.md << 'EOF'
----
-slug: topic-a
-title: Test Topic
----
-# Test Topic
-EOF
-
-mkdir -p $B/artifacts/wave0/topic-a
-cat > $B/reference/_INDEX.md << 'EOF'
-# Reference Index
-- [Topic A](topic-a/source.yaml)
-EOF
-cat > $B/artifacts/wave0/topic-a/source.yaml << 'EOF'
-- url: "https://example.com/test"
-  title: "Test Reference"
-  retrieved_date: "2026-06-15"
-  topic_tag: "topic-a"
-EOF
-
-mkdir -p $B/artifacts/wave2
-cat > $B/artifacts/wave2/synthesis.md << 'EOF'
-# Cross-Topic Synthesis
-Convergence pattern identified.
-EOF
-
-mkdir -p $B/artifacts/hitl2
-cat > $B/artifacts/hitl2/decision-brief.md << 'EOF'
-# Final Review Decision Brief
-Research complete. Proceed to readiness.
-EOF
-
-# Write profile with hitl2 decision
-cat > $B/rb_profile.yaml << 'EOF'
-# Synthetic deterministic fixture only; not proof of real Agent research capability.
+cat > "$B/rb_profile.yaml" <<'YAML'
+plan_basename: dlv_chain
+research_profile: quick_factual
+root_must_answer_set:
+  - "Does the delivery tail preserve deterministic handoffs?"
 research_access:
   status: available
   probed_at: "2026-07-10T00:00:00.000Z"
@@ -100,126 +46,113 @@ research_access:
 human_decision_checkpoints:
   hitl1:
     status: recorded
-    recorded_at: "2026-06-15T10:00:00Z"
-    research_profile: quick_factual
-    root_must_answer_set:
-      - "Test question?"
+    recorded_at: "2026-07-10T00:01:00.000Z"
   hitl2:
     status: recorded
+    answerability_class: ready_substantive
     user_decision: proceed_to_readiness
-    rationale: "Ready for delivery."
-    recorded_at: "2026-06-20T10:00:00Z"
-EOF
+    final_report_view: profile_default
+    rerun_count: 0
+    rationale: "Proceed through readiness to final delivery."
+YAML
 
-# Write trace with all 8 prior gates passed + hitl2_recorded
-for g in instantiation-complete hitl1-recorded setup-ready seed-topics-ready wave0-complete wave1-complete wave2-complete; do
-  echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",\"event\":\"gate_attempt\",\"gate\":\"$g\",\"passed\":true}" >> $B/rb_trace.jsonl
-done
-echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)\",\"event\":\"hitl2_recorded\"}" >> $B/rb_trace.jsonl
+mkdir -p "$B/artifacts/hitl2" "$B/artifacts/wave2" "$B/seed_topics"
+printf '# Topic A\n' > "$B/seed_topics/topic-a.md"
+printf '# Reference Index\n' > "$B/reference/_INDEX.md"
+printf '# Synthesis\nDelivery evidence is ready.\n' > "$B/artifacts/wave2/synthesis.md"
+printf '# Decision Brief\nProceed to readiness.\n' > "$B/artifacts/hitl2/decision-brief.md"
 
-echo "=== Bundle ready ==="
-ls $B/rb_status.json $B/artifacts/hitl2/decision-brief.md $B/artifacts/wave2/synthesis.md
-```
-
-## Step 2: Run hitl2-recorded gate → pass
-
-```bash
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
-echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
-echo "gate: hitl2-recorded | passed: $PASSED | next: $NEXT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'hitl2 gate pass — advance to readiness'})})"
-```
-
-预期：`check.passed: true`，`check.next: phases/phase-readiness.md`。
-
-## Step 3: Advance status + run readiness-passed gate → pass
-
-```bash
-# Advance status to readiness-ready
-cat > $B/rb_status.json << 'EOF'
-{
-  "current_mode": "execution",
-  "state": "in_progress",
-  "current_gate": "readiness_passed",
-  "next_gate": "none"
+node --input-type=module - "$B" <<'JS'
+import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+const bundle = process.argv[2];
+const fixtures = [
+  ['instantiation-complete', 'phases/phase-instantiation.md', 'phases/phase-hitl1.md'],
+  ['hitl1-recorded', 'phases/phase-hitl1.md', 'phases/phase-setup.md'],
+  ['setup-ready', 'phases/phase-setup.md', 'phases/phase-seed-topics.md'],
+  ['seed-topics-ready', 'phases/phase-seed-topics.md', 'phases/phase-wave0.md'],
+  ['wave0-complete', 'phases/phase-wave0.md', 'phases/phase-wave1.md'],
+  ['wave1-complete', 'phases/phase-wave1.md', 'phases/phase-wave2.md'],
+  ['wave2-complete', 'phases/phase-wave2.md', 'phases/phase-hitl2.md'],
+];
+for (const [gate, currentNodeRef, next] of fixtures) {
+  writeGateAttempt(bundle, {
+    check: { gate, passed: true, currentNodeRef, next },
+    routing: { kind: 'next', next, detail: 'declared direct-predecessor fixture' },
+    inspect: [], advice: [],
+  });
 }
-EOF
+JS
 
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle $B --current-node phases/phase-readiness.md)
-echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
-ROUTING=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs routing.kind)
-echo "gate: readiness-passed | passed: $PASSED | next: $NEXT | routing: $ROUTING"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'readiness-passed',passed:$PASSED,detail:'readiness gate pass — advance to final'})})"
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-131-enter-hitl2.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-131-advance-wave2.json"
+echo "BUNDLE=$B"
 ```
 
-预期：`check.passed: true`，`check.next: null`（final 是 terminal），`routing.kind: terminal`。
-
-## Step 4: Verify final phase terminal semantics
+## Step 2: 运行真实 HITL2 gate 并进入 readiness
 
 ```bash
-echo "=== Final Phase Terminal Semantics ==="
+HITL2_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
+printf '%s\n' "$HITL2_OUTPUT" > "$B/case-131-hitl2.json"
+HITL2_PASSED=$(printf '%s\n' "$HITL2_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
+HITL2_NEXT=$(printf '%s\n' "$HITL2_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
+HITL2_OK=false
+[ "$HITL2_PASSED" = "true" ] && [ "$HITL2_NEXT" = "phases/phase-readiness.md" ] && HITL2_OK=true
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-131-hitl2-route',passed:$HITL2_OK,detail:'real HITL2 output selects readiness'}))"
 
-# Verify phase-final.md has gate: null
-FINAL_FM=$(head -15 DPT_FRAMEWORK/workflows/nodes/phases/phase-final.md)
-echo "$FINAL_FM" | grep 'gate:'
-echo "$FINAL_FM" | grep 'gate:' | grep -q 'null' && echo "OK: gate is null" || echo "FAIL: gate is not null"
-
-# Verify chain does NOT have a transition from final
-grep 'phase-final.md' DPT_FRAMEWORK/workflows/transitions.chain.json && echo "FAIL: chain has final transition" || echo "OK: chain has no final transition (terminal)"
-
-# Verify manifest has final phase with gate=null
-grep 'phase-final.md' DPT_FRAMEWORK/workflows/manifest.json | grep -q 'null' && echo "OK: manifest declares final gate=null" || echo "FAIL: manifest does not declare final gate=null"
-
-echo "=== Terminal semantics verified ==="
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$HITL2_NEXT" > "$B/case-131-enter-readiness.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-131-advance-hitl2.json"
 ```
 
-## Step 5: Verdict from `rb_trace.jsonl`
+## Step 3: 运行真实 readiness gate 并进入 terminal Final
 
 ```bash
-echo "=== Verdict ==="
-cat $B/rb_trace.jsonl | node -e "
-const fs = require('fs');
-const lines = fs.readFileSync(0, 'utf-8').trim().split('\n').filter(l => l);
-const checks = lines.map(l => JSON.parse(l)).filter(e => e.event === 'check');
-const pass = checks.filter(c => c.passed === true).length;
-console.log('Pass:', pass, ' | Total:', checks.length);
-if (pass >= 2) {
-  console.log('\x1b[32mVERDICT: PASS\x1b[0m');
-} else {
-  console.log('\x1b[31mVERDICT: FAIL\x1b[0m (expected ≥2 pass, got ' + pass + ')');
-}
-"
+READY_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md)
+printf '%s\n' "$READY_OUTPUT" > "$B/case-131-readiness.json"
+READY_PASSED=$(printf '%s\n' "$READY_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
+READY_NEXT=$(printf '%s\n' "$READY_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
+READY_OK=false
+[ "$READY_PASSED" = "true" ] && [ "$READY_NEXT" = "phases/phase-final.md" ] && READY_OK=true
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-131-readiness-route',passed:$READY_OK,detail:'real readiness output selects final'}))"
+
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$READY_NEXT" > "$B/case-131-enter-final.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to readiness_passed > "$B/case-131-advance-readiness.json"
+
+node --input-type=module - "$B" <<'JS'
+import { readFileSync } from 'node:fs';
+import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
+const bundle = process.argv[2];
+const manifest = JSON.parse(readFileSync('./DPT_FRAMEWORK/workflows/manifest.json', 'utf8'));
+const chain = JSON.parse(readFileSync('./DPT_FRAMEWORK/workflows/transitions.chain.json', 'utf8'));
+const status = JSON.parse(readFileSync(`${bundle}/rb_status.json`, 'utf8'));
+const final = manifest.phases.find((phase) => phase.node === 'phases/phase-final.md');
+recordCheck(`${bundle}/rb_trace.jsonl`, {
+  gate: 'case-131-final-terminal',
+  passed: final?.gate === null && !chain['phases/phase-final.md'] && status.current_gate === 'readiness_passed' && status.next_gate === 'none' && status.current_node === 'phases/phase-final.md',
+  detail: 'Final has gate:null, no outgoing chain edge, and witnessed terminal status',
+});
+JS
 ```
 
-预期：≥2 pass → VERDICT: PASS。
+## Step 4: Trace verdict
 
+```bash
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
+```
 
-## Step 6: 结果解读
+## Step 5: 结果解读
 
-> 验证 delivery 完整链：
->   hitl2-recorded → readiness-passed → final terminal。
->   全部 gate pass → lifecycle 终止。
-
+> PASS 证明真实 HITL2 与 readiness 输出分别授权 readiness 与 Final；两次 target entry 都由 route-bound `load_complete` 见证，status 由 source-gate `advance-status` 同步。Final 的 `gate:null` 与无 outgoing transition 证明 terminal semantics。
 
 ## Step HH: Post-Execution Health
 
-Standard profile — gate diagnostics, timeline consistency.
-
 ```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
+node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile standard
 ```
 
-> 健康检查不改变 verdict。health status 由 runner report 记录。
+## Cleanup
 
-## Step 7: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
+> PASS 且 health CLEAN 才执行；FAIL/ISSUES 保留 bundle。
 
 ```bash
-rm -rf $B
-echo "Cleaned: $B"
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-131'}))"
 ```

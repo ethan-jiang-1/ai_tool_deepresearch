@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: Agentic Subagent Mechanism
 status: effective
 created: 2026-06-24
-revised: 2026-07-10
+revised: 2026-07-12
 role: mechanism guidance for work-unit-mediated sub-agent execution
 scope: Sub-agent actor behavior through Engine-allocated work units, noise isolation, and submit provenance
 authority: guidance
@@ -13,7 +13,8 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
-  - guidelines/simple-reliable-control.md
+  - guidelines/evolution-simple-reliable-control.md
+  - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-execution-model.md
@@ -23,7 +24,7 @@ siblings:
 
 # Agentic Subagent Mechanism
 
-> 状态: 生效 | 创建: 2026-06-24 | 修订: 2026-07-10 | 适用: 所有涉及 Sub-agent 派发、执行、提交、取证的设计与实现
+> 状态: 生效 | 创建: 2026-06-24 | 修订: 2026-07-12 | 适用: 所有涉及 Sub-agent 派发、执行、提交、取证的设计与实现
 
 Sub-agent 仍然存在。它是一个 bounded Agent actor，用来隔离高噪声 I/O 工作。正常生产机制已经统一为 work units:
 
@@ -79,7 +80,7 @@ This file cannot decide:
 
 ## Simple Work-Unit Posture
 
-This mechanism follows [`simple-reliable-control.md`](simple-reliable-control.md). Delegated reliability comes from one bounded path, not from a tree of retries, fallbacks, watchers, and inferred completion states.
+This mechanism follows [`evolution-simple-reliable-control.md`](evolution-simple-reliable-control.md). Delegated reliability comes from one bounded path, not from a tree of retries, fallbacks, watchers, and inferred completion states.
 
 ```text
 queue demand -> one Engine-allocated attempt -> bounded Sub-agent work -> one submit check -> submitted ledger or explicit terminal closure
@@ -237,7 +238,7 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs late-submit <bundle> --work-id <tim
 - `agentic-workflow-mechanism.md` defines phase handoff and gate routing.
 - `framework-runtime-boundary.md` defines framework assets versus mutable run bundle state.
 - `command-experiments.md` defines how experiments prove the same production boundaries.
-- `simple-reliable-control.md` defines the complexity brake for submit checks, retry paths, and Agent-facing diagnostics.
+- `evolution-simple-reliable-control.md` defines the complexity brake for submit checks, retry paths, and Agent-facing diagnostics.
 
 General rule: accepted specs and executable contracts win over this guideline. If they conflict, fix the guideline through an OpenSpec-aligned change.
 
@@ -247,7 +248,7 @@ General rule: accepted specs and executable contracts win over this guideline. I
 
 - [Guidelines Index](README.md) - guidance suite index and reading order.
 - [Agentic Execution Model](agentic-execution-model.md) - global execution model and terminology canon.
-- [Simple Reliable Control](simple-reliable-control.md) - short delegated paths, direct checks, and smallest actionable root-cause feedback.
+- [Simple Reliable Control](evolution-simple-reliable-control.md) - short delegated paths, direct checks, and smallest actionable root-cause feedback.
 - [Agentic Queue Mechanism](agentic-queue-mechanism.md) - queue demand and phase-local drain.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) - gate, chain, and phase handoff.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) - framework assets versus runtime bundles.

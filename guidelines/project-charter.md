@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: Project Charter
 status: effective
 created: 2026-06-17
-revised: 2026-07-10
+revised: 2026-07-12
 role: repo-wide charter and entrypoint
 scope: all work in this repository
 authority: guidance
@@ -12,7 +12,8 @@ defers_to:
   - AGENTS.md
   - openspec/config.yaml
 siblings:
-  - guidelines/simple-reliable-control.md
+  - guidelines/evolution-simple-reliable-control.md
+  - guidelines/evolution-helper-oriented-agent.md
   - guidelines/framework-runtime-boundary.md
   - guidelines/command-experiments.md
   - guidelines/agentic-execution-model.md
@@ -23,7 +24,7 @@ siblings:
 
 # Project Charter
 
-> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-10 | 用途: 项目入口指导
+> 状态: 生效 | 创建: 2026-06-17 | 修订: 2026-07-12 | 用途: 项目入口指导
 
 ---
 
@@ -75,7 +76,9 @@ This file cannot decide:
 - MUST keep multi-stage agentic flow in Markdown, playbooks, or task cards by default.
 - MUST read JS/CLI feedback back into the conversation context before the next Markdown-driven action.
 - MUST treat check / inspect / advice outputs as structured JS/CLI feedback, not as chat noise.
-- MUST prefer the shortest correct control loop: direct runtime fact -> deterministic check -> smallest actionable root cause -> one clear next action. Use `guidelines/simple-reliable-control.md` as the design-review complexity brake.
+- MUST prefer the shortest correct control loop: direct runtime fact -> deterministic check -> smallest actionable root cause -> one clear next action. Use `guidelines/evolution-simple-reliable-control.md` as the design-review complexity brake.
+- MUST treat the Agent as the executor of ordinary authorized commands and reversible mechanical repair; ask the user only for new semantics, risk/permission decisions, or a genuinely non-delegable action. Use `guidelines/evolution-helper-oriented-agent.md` for the action-responsibility review.
+- MUST distinguish autonomous execution, human-directed decisions inside HITL1/HITL2, and out-of-band maintenance/debug without inventing a new lifecycle state or mutation authority.
 - MUST treat quality-control complexity as safety-critical: a checker, gate, recovery path, or diagnostic chain must be easier to reason about and test than the work it validates.
 - MUST interpret mechanism-level goals such as recovery, stop authorization, context sustainability, or comprehensive validation as required outcomes, not as pre-approval for a particular controller, watcher, retry tree, or derived-state stack.
 - MUST make evidence, receipts, and trace entries come from real execution.
@@ -94,6 +97,7 @@ This file cannot decide:
 - MUST NOT let JS/CLI orchestrate search, judgment, writing, repair, synthesis, or native subagent semantics as a substitute for Agent Flow.
 - MUST NOT make quality control more fragile than the work it validates: avoid long derived-check chains, duplicate validators, cascading symptoms after a prerequisite failure, or blocking presentation-format preferences when direct structured authority exists.
 - MUST NOT use a new guideline to invalidate accepted implementation by prose or justify an unscoped full-system rewrite; behavior converges through focused OpenSpec changes and compatibility-safe local simplification.
+- MUST NOT turn a human-directed decision into a requirement that the human run ordinary pipeline commands, or treat user agreement as permission to fabricate state, trace, receipt, evidence, or a missing Engine capability.
 - MUST NOT fake trace, result files, receipts, subagent output, or runtime validation.
 - MUST NOT treat progress summaries, console output, or chat confidence as evidence.
 - MUST NOT write runtime state, gate results, HITL answers, repair attempts, artifacts, or final output into `DPT_FRAMEWORK/`.
@@ -122,8 +126,9 @@ This file cannot decide:
 
 1. accepted specs、可执行 contract 和 runtime truth 决定当前行为；不能用新 prose 越权修改。
 2. 本 Charter 决定 Agent / Markdown / Engine / runtime state 的 ownership boundary。
-3. `simple-reliable-control.md` 决定控制复杂度上限：直接 authority、短路派生症状、一个最近动作、无隐藏恢复树。
-4. mechanism guideline 只在上述边界内解释领域结构；“问题必须解决”不等于“复杂机制已经定案”。
+3. `evolution-simple-reliable-control.md` 决定控制复杂度上限：直接 authority、短路派生症状、一个最近动作、无隐藏恢复树。
+4. `evolution-helper-oriented-agent.md` 决定行动责任：用户只承担必要决定或不可代理动作，后续合法机械执行回到 Agent；helper posture 不创造权限。
+5. mechanism guideline 只在上述边界内解释领域结构；“问题必须解决”不等于“复杂机制已经定案”。
 
 既有实现与新原则存在差距时，把差距视为渐进 design debt：停止继续叠加，后续触碰该 surface 时局部收敛；不要为了形式一致性一次性重写整个系统。
 
@@ -139,7 +144,8 @@ When deciding where something belongs, route by authority:
 | Current run state, queue contents, profile, evidence files, work-unit attempts, or trace history | The active runtime bundle root, currently a selected `dpt_rb_*` or `dpt_disp_*` bundle |
 | New or changed accepted behavior | OpenSpec change before implementation |
 | Future mechanism direction | `guidelines/` as design guidance only |
-| Control-loop or quality-check complexity | `guidelines/simple-reliable-control.md` plus the relevant accepted specs and executable Source of Record |
+| Control-loop or quality-check complexity | `guidelines/evolution-simple-reliable-control.md` plus the relevant accepted specs and executable Source of Record |
+| Agent/user action responsibility, escalation, or maintenance/debug posture | `guidelines/evolution-helper-oriented-agent.md` plus the relevant accepted specs and host permission boundary |
 
 ---
 
@@ -277,7 +283,7 @@ If you are about to do one of these, stop and switch to the required path:
 | Add behavior only in guidance prose | Create or update an OpenSpec change/spec |
 | Put multi-stage Agent Flow into a JS controller because it is easier to test | Keep the flow in Markdown/playbooks/task cards; use JS only for deterministic checkpoints |
 | Need to decide where a rule belongs | Use the Quick Router and Authority Map before editing |
-| Add more checks, fallbacks, derived state, or repair branches to improve reliability | Read `simple-reliable-control.md`; first delete brittle blockers, reuse direct checks, short-circuit cascades, and move feedback to the decision point |
+| Add more checks, fallbacks, derived state, or repair branches to improve reliability | Read `evolution-simple-reliable-control.md`; first delete brittle blockers, reuse direct checks, short-circuit cascades, and move feedback to the decision point |
 | Copy historical prototype paths or queue rules into current docs | Extract the underlying principle, then check current OpenSpec sources and framework conventions |
 | Read `_original_*` for inspiration | Confirm the user explicitly asked for historical analysis |
 | Let Markdown decide a deterministic transition | Move the rule into schema/CLI/Engine design |
@@ -361,16 +367,17 @@ Explore / design
 新 Agent 或新维护者按这个顺序读：
 
 1. `guidelines/project-charter.md`：稳定原则和权威边界。
-2. `guidelines/simple-reliable-control.md`：短判断链、简单质量控制、最小根因反馈和复杂度刹车。
-3. `guidelines/framework-runtime-boundary.md`：framework 只读资产与 run bundle 可变状态的目录和权威边界。
-4. `openspec/config.yaml`：项目级 spec-driven 纪律。
-5. `guidelines/agentic-execution-model.md`：统一执行模型与术语正典——Chain、Queue、Work Unit 如何组成当前执行系统。
-6. `guidelines/agentic-workflow-mechanism.md`：Tier 1 (Chain) —— phase 间路由与三层权威架构。
-7. `guidelines/agentic-queue-mechanism.md`：Tier 2 (Queue) —— phase 内 task 编排，两层嵌套循环。
-8. `guidelines/agentic-subagent-mechanism.md`：Work-unit-mediated Sub-agent execution —— bounded sub-agent 任务、噪声隔离、submit provenance。
-9. `guidelines/command-experiments.md`：如何写和运行实验 playbook。
-10. 相关 `openspec/specs/<capability>/spec.md`：具体 capability 的需求。
-11. 对应 framework、experiment 或 active bundle root 文件。
+2. `guidelines/evolution-simple-reliable-control.md`：短判断链、简单质量控制、最小根因反馈和复杂度刹车。
+3. `guidelines/evolution-helper-oriented-agent.md`：用户决定、Agent 执行、Engine 裁决的 helper-oriented 责任边界。
+4. `guidelines/framework-runtime-boundary.md`：framework 只读资产与 run bundle 可变状态的目录和权威边界。
+5. `openspec/config.yaml`：项目级 spec-driven 纪律。
+6. `guidelines/agentic-execution-model.md`：统一执行模型与术语正典——Chain、Queue、Work Unit 如何组成当前执行系统。
+7. `guidelines/agentic-workflow-mechanism.md`：Tier 1 (Chain) —— phase 间路由与三层权威架构。
+8. `guidelines/agentic-queue-mechanism.md`：Tier 2 (Queue) —— phase 内 task 编排，两层嵌套循环。
+9. `guidelines/agentic-subagent-mechanism.md`：Work-unit-mediated Sub-agent execution —— bounded sub-agent 任务、噪声隔离、submit provenance。
+10. `guidelines/command-experiments.md`：如何写和运行实验 playbook。
+11. 相关 `openspec/specs/<capability>/spec.md`：具体 capability 的需求。
+12. 对应 framework、experiment 或 active bundle root 文件。
 
 ---
 
@@ -387,7 +394,8 @@ Before changing any file in `guidelines/`, check:
 - Does this keep multi-stage LLM-facing flow visible in Markdown/playbooks/task cards?
 - Does this duplicate a definition that should instead live in `README.md` glossary or this project charter?
 - Does this add enough `MUST` / `MUST NOT` clarity for an Agent to act safely?
-- Does this make quality control simpler than the work it validates, or merely add another layer?
+- Has the change passed the two-question `Simplicity Admission Test` in `evolution-simple-reliable-control.md`?
+- Has it passed the two-question `Helper Direction Review` in `evolution-helper-oriented-agent.md`, so only necessary decisions remain with the user and legal execution returns to the Agent?
 - If it names recovery, stop, context, or validation obligations, does it avoid pre-approving a complex mechanism?
 - Does it preserve current accepted behavior while giving future work a focused convergence path?
 - Should this be an OpenSpec change instead of guidance prose?
@@ -397,7 +405,8 @@ Before changing any file in `guidelines/`, check:
 ## Related Guidance
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
-- [Simple Reliable Control](simple-reliable-control.md) — short decision chains, direct Source-of-Record checks, root-cause short-circuiting, and quality-control complexity limits.
+- [Evolution Direction: Simple Reliable Control](evolution-simple-reliable-control.md) — short decision chains, direct Source-of-Record checks, root-cause short-circuiting, and quality-control complexity limits.
+- [Evolution Direction: Helper-Oriented Agent](evolution-helper-oriented-agent.md) — user decision, Agent execution, Engine authority, and minimal escalation boundaries.
 - [Framework Runtime Boundary](framework-runtime-boundary.md) — directory and authority boundary for read-only framework assets versus mutable runtime bundles.
 - [Command Experiments](command-experiments.md) — target guidance for durable command experiment shape and boundaries.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; defines Chain, Queue, and Work Units.

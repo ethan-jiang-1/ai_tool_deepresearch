@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: Framework Runtime Boundary
 status: effective
 created: 2026-06-19
-revised: 2026-07-10
+revised: 2026-07-12
 role: directory and authority boundary for framework assets versus run bundle runtime state
 scope: DPT_FRAMEWORK/, dpt_rb_*/, dpt_disp_*/
 authority: guidance
@@ -13,7 +13,8 @@ defers_to:
   - openspec/config.yaml
 siblings:
   - guidelines/project-charter.md
-  - guidelines/simple-reliable-control.md
+  - guidelines/evolution-simple-reliable-control.md
+  - guidelines/evolution-helper-oriented-agent.md
   - guidelines/logging-conventions.md
   - guidelines/command-experiments.md
   - guidelines/agentic-execution-model.md
@@ -24,7 +25,7 @@ siblings:
 
 # Framework Runtime Boundary
 
-> 状态: 生效 | 创建: 2026-06-19 | 修订: 2026-07-10 | 用途: 固定 framework 只读资产与 run bundle 可变状态的边界
+> 状态: 生效 | 创建: 2026-06-19 | 修订: 2026-07-12 | 用途: 固定 framework 只读资产与 run bundle 可变状态的边界
 
 ---
 
@@ -72,7 +73,7 @@ This file cannot decide:
 
 ## Authority Path Simplicity
 
-This boundary follows [`simple-reliable-control.md`](simple-reliable-control.md). Directory separation is valuable because it keeps the truth path short:
+This boundary follows [`evolution-simple-reliable-control.md`](evolution-simple-reliable-control.md). Directory separation is valuable because it keeps the truth path short:
 
 ```text
 framework definition -> explicit CLI/check -> active bundle authority -> Agent-facing feedback
@@ -357,7 +358,7 @@ Runtime continuity and logging details live in `guidelines/logging-conventions.m
 
 - [Guidelines Index](README.md) — guidance suite index and reading order.
 - [Project Charter](project-charter.md) — repo-wide charter and authority map.
-- [Simple Reliable Control](simple-reliable-control.md) — direct authority paths and limits on projection/state complexity.
+- [Simple Reliable Control](evolution-simple-reliable-control.md) — direct authority paths and limits on projection/state complexity.
 - [Logging Conventions](logging-conventions.md) — runtime continuity, trace/log authority boundaries, and diagnostic log usage.
 - [Agentic Execution Model](agentic-execution-model.md) — unified execution model and terminology canon; defines the three-tier execution system.
 - [Agentic Workflow Mechanism](agentic-workflow-mechanism.md) — outer loop (Chain) that phase routing depends on.

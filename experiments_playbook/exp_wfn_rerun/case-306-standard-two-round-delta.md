@@ -3,19 +3,19 @@ schema: command-experiment/v1
 experiment: wfn-rerun
 case: case-306-standard-two-round-delta
 weight: light
-case_goal: "Agent-driven: two rounds of rerun — verify rerun_count increment and ## 本轮重跑方向 section update."
+case_goal: "Agent/filesystem projection only: two scripted rerun rounds update rerun_count and ## 本轮重跑方向 sections; this is not gate or real-Agent proof."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
 bundle: dpt_disp_case-306_tworound_*
 trace: dpt_disp_case-306_tworound_*/rb_trace.jsonl
 verdict: filesystem
-agent_dependency: "This case depends on Agent writing ## 本轮重跑方向 sections and incrementing rerun_count. Verdict via filesystem checks (YAML + grep) — not gate-verifiable."
+agent_dependency: "This case scripts the Agent-owned filesystem projection for deterministic inspection. It proves only YAML/Markdown behavior, not real Agent judgment, gate pass, handoff, or lifecycle completion."
 ---
 
 ## Execution Contract
 
-由 coding agent 在真实 disposable experiment bundle 中执行。Agent 写 direction hints + increment rerun_count。Verdict 靠文件系统检查。
+由 coding agent 在真实 disposable experiment bundle 中执行 scripted Agent/filesystem mutations。Verdict 只检查 YAML/Markdown 文件结果；不得把 PASS 描述为 rerun gate、handoff、real Agent judgment 或 lifecycle proof。
 
 # case-306-standard-two-round-delta
 
@@ -152,4 +152,4 @@ rm -rf $B
 
 ## Step 7: 结果解读
 
-> 验证两轮 rerun delta：`rerun_count` 0→1→2 递增，Round 1 写 direction hints（含新增 topic），Round 2 更新 topic-01 为 supplement + depth 升级，未变更 topic 的 section 保留不覆盖。
+> 仅验证 scripted filesystem projection：`rerun_count` 0→1→2，Round 1/2 的 Markdown direction sections 按预期变化。此 case 不调用 gate，也不证明 real Agent 能正确判断 rerun 内容。

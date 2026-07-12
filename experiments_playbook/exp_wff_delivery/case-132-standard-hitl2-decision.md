@@ -3,7 +3,7 @@ schema: command-experiment/v1
 experiment: wff-delivery
 case: case-132-standard-hitl2-decision
 weight: light
-case_goal: "Prove that the HITL2-recorded gate correctly verifies decision brief existence, profile decision fields, and trace evidence: happy pass + 3 boundary fail cases."
+case_goal: "Prove the current HITL2 decision gate accepts five recorded actions only, fails direct defects, and does not require a phase-authored hitl2_recorded event."
 runner: coding-agent
 execution: real-bundle
 evidence: filesystem-and-trace
@@ -14,51 +14,22 @@ verdict: trace-jsonl
 
 ## Execution Contract
 
-由 coding agent 在真实 disposable experiment bundle 中执行。实验结果必须来自实际文件写入、gate CLI 调用和 trace event；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
+被测结果只来自真实 `check-gate-hitl2-recorded.mjs`。Wave2 pass 是声明的 direct-predecessor fixture；合法 entry 由真实 `enter-phase` 与 `advance-status` 建立。负例先执行，最终 happy path 最后执行，避免已经产生的 HITL2 deterministic handoff 反向污染 same-entry 边界测试。
 
 # case-132-standard-hitl2-decision
 
-## Expected Runtime Path
-
-1. 创建 disposable bundle + pre-seed post-wave2 状态
-2. 写入合法 decision brief + profile decision + trace event → gate hitl2-recorded pass
-3. 删除 decision brief → gate fail（inspect 指向缺失文件）
-4. 恢复 brief，删除 user_decision → gate fail（inspect 指向缺失字段）
-5. 填入非法 user_decision → gate fail（inspect 列出合法值）
-6. 从 `rb_trace.jsonl` 裁决（预期 1 pass + 3 fail）
-7. Cleanup
-
----
-
-## Case Goal
-
-证明 HITL2-recorded gate 的 rule set 对 4 个关键边界正确执行：decision brief 存在性、profile YAML 可解析性、user_decision 非空且在合法枚举中、hitl2_recorded trace event 存在。
-
----
-
-## Step 1: 创建 bundle + pre-seed post-wave2 状态
+## Step 1: 创建合法 HITL2 entry fixture
 
 ```bash
 REPO_ROOT=$(pwd)
 B=$(node experiments_env/shared/new-disposable-bundle.mjs h2_dec --case case-132 --force)
-echo "Bundle: $B"
+mkdir -p "$B/artifacts/hitl2"
 
-# Set status to hitl2-ready
-cat > $B/rb_status.json << 'EOF'
-{
-  "current_mode": "execution",
-  "state": "in_progress",
-  "current_gate": "hitl2_recorded",
-  "next_gate": "readiness_passed"
-}
-EOF
-
-# Create hitl2 artifact directory
-mkdir -p $B/artifacts/hitl2
-
-# Write valid profile with HITL2 decision
-cat > $B/rb_profile.yaml << 'EOF'
-# Synthetic deterministic fixture only; not proof of real Agent research capability.
+cat > "$B/rb_profile.yaml" <<'YAML'
+plan_basename: h2_dec
+research_profile: quick_factual
+root_must_answer_set:
+  - "Does HITL2 reject invalid recorded decisions?"
 research_access:
   status: available
   probed_at: "2026-07-10T00:00:00.000Z"
@@ -67,175 +38,131 @@ research_access:
 human_decision_checkpoints:
   hitl1:
     status: recorded
-    recorded_at: "2026-06-15T10:00:00Z"
-    research_profile: quick_factual
-    root_must_answer_set:
-      - "How to measure alignment?"
+    recorded_at: "2026-07-10T00:01:00.000Z"
+  hitl2:
+    status: recorded
     answerability_class: ready_substantive
-  hitl2:
-    status: recorded
     user_decision: proceed_to_readiness
-    rationale: "The research is complete and ready for final delivery."
-    recorded_at: "2026-06-20T10:00:00Z"
-EOF
+    final_report_view: profile_default
+    rerun_count: 0
+    rationale: "Proceed."
+YAML
 
-echo "=== Bundle ready ==="
-ls $B/rb_status.json $B/rb_profile.yaml
+node --input-type=module - "$B" <<'JS'
+import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+const bundle = process.argv[2];
+writeGateAttempt(bundle, {
+  check: { gate: 'wave2-complete', passed: true, currentNodeRef: 'phases/phase-wave2.md', next: 'phases/phase-hitl2.md' },
+  routing: { kind: 'next', next: 'phases/phase-hitl2.md', detail: 'declared direct-predecessor fixture' },
+  inspect: [], advice: [],
+});
+JS
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-132-enter-hitl2.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-132-advance-wave2.json"
 ```
 
-## Step 2: Happy path — valid decision brief + profile + trace → gate pass
+## Step 2: Direct negative cases
 
 ```bash
-# Write valid decision brief
-cat > $B/artifacts/hitl2/decision-brief.md << 'EOF'
-# Final Review Decision Brief
-
-## Key Findings
-The research produced strong evidence across 3 topics: AI safety alignment techniques,
-regulatory frameworks, and societal impact metrics. Each topic has verified source
-references and structured analysis.
-
-## Open Questions
-1. How to generalize alignment findings beyond current benchmarks?
-2. What regulatory coordination mechanisms exist across jurisdictions?
-
-## Recommended Actions
-Proceed to final delivery with an executive brief focused on practical recommendations.
-EOF
-
-# Write trace with hitl2_recorded event
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"hitl2_recorded"}' >> $B/rb_trace.jsonl
-
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
-echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "gate: hitl2-recorded | passed: $PASSED"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'happy path — valid decision brief + profile + trace'})})"
-```
-
-预期：`check.passed: true`，`check.next: phases/phase-readiness.md`。
-
-## Step 3: Missing decision brief → gate fail
-
-```bash
-# Remove decision brief
-rm $B/artifacts/hitl2/decision-brief.md
-
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
-echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-INSPECT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs inspect.0)
-echo "gate: hitl2-recorded | passed: $PASSED"
-echo "inspect: $INSPECT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'missing decision brief — expected fail'})})"
-```
-
-预期：`check.passed: false`，inspect 指向缺失的 `decision-brief.md`。
-
-## Step 4: Restore brief, remove user_decision → gate fail
-
-```bash
-# Restore decision brief
-cat > $B/artifacts/hitl2/decision-brief.md << 'EOF'
-# Final Review Decision Brief
-
-## Key Findings
-Research is complete.
-EOF
-
-# Empty user_decision
-cat > $B/rb_profile.yaml << 'EOF'
-human_decision_checkpoints:
-  hitl1:
-    status: recorded
-    recorded_at: "2026-06-15T10:00:00Z"
-  hitl2:
-    status: recorded
-    user_decision: ""
-    recorded_at: "2026-06-20T10:00:00Z"
-EOF
-
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
-echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-INSPECT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs inspect.0)
-echo "gate: hitl2-recorded | passed: $PASSED"
-echo "inspect: $INSPECT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'empty user_decision — expected fail'})})"
-```
-
-预期：`check.passed: false`，inspect 指向空 user_decision。
-
-## Step 5: Invalid user_decision enum → gate fail
-
-```bash
-# Write invalid user_decision value
-cat > $B/rb_profile.yaml << 'EOF'
-human_decision_checkpoints:
-  hitl1:
-    status: recorded
-    recorded_at: "2026-06-15T10:00:00Z"
-  hitl2:
-    status: recorded
-    user_decision: random_choice
-    recorded_at: "2026-06-20T10:00:00Z"
-EOF
-
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle $B --current-node phases/phase-hitl2.md)
-echo "$GATE_OUTPUT"
-PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-INSPECT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs inspect.0)
-echo "gate: hitl2-recorded | passed: $PASSED"
-echo "inspect: $INSPECT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl2-recorded',passed:$PASSED,detail:'invalid enum — expected fail'})})"
-```
-
-预期：`check.passed: false`，inspect 列出合法枚举值。
-
-## Step 6: Verdict from `rb_trace.jsonl`
-
-```bash
-echo "=== Verdict ==="
-cat $B/rb_trace.jsonl | node -e "
-const fs = require('fs');
-const lines = fs.readFileSync(0, 'utf-8').trim().split('\n').filter(l => l);
-const checks = lines.map(l => JSON.parse(l)).filter(e => e.event === 'check');
-const pass = checks.filter(c => c.passed === true).length;
-const fail = checks.filter(c => c.passed === false).length;
-console.log('Pass:', pass, ' | Fail:', fail);
-if (pass >= 1 && fail >= 3) {
-  console.log('\x1b[32mVERDICT: PASS\x1b[0m');
-} else {
-  console.log('\x1b[31mVERDICT: FAIL\x1b[0m (expected ≥1 pass + ≥3 fail, got ' + pass + ' pass + ' + fail + ' fail)');
+run_hitl2() {
+  node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md 2>/dev/null || true
 }
-"
+set_decision() {
+  node --input-type=module - "$B" "$1" <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs';
+import { parse, stringify } from 'yaml';
+const [bundle, decision] = process.argv.slice(2);
+const profile = parse(readFileSync(`${bundle}/rb_profile.yaml`, 'utf8'));
+profile.human_decision_checkpoints.hitl2.user_decision = decision;
+writeFileSync(`${bundle}/rb_profile.yaml`, stringify(profile));
+JS
+}
+
+rm -f "$B/artifacts/hitl2/decision-brief.md"
+OUT=$(run_hitl2)
+P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
+I=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs inspect.0)
+OK=false; [ "$P" = "false" ] && printf '%s' "$I" | grep -q 'decision-brief' && OK=true
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-132-missing-brief',passed:$OK,detail:'missing brief fails directly'}))"
+
+: > "$B/artifacts/hitl2/decision-brief.md"
+OUT=$(run_hitl2)
+P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
+I=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs inspect.0)
+OK=false; [ "$P" = "false" ] && printf '%s' "$I" | grep -q 'empty' && OK=true
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-132-empty-brief',passed:$OK,detail:'empty brief fails directly'}))"
+
+printf '# Decision Brief\nValid body.\n' > "$B/artifacts/hitl2/decision-brief.md"
+set_decision not_started
+OUT=$(run_hitl2)
+P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
+I=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs inspect.0)
+OK=false; [ "$P" = "false" ] && printf '%s' "$I" | grep -q 'accepted set' && OK=true
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-132-sentinel-rejected',passed:$OK,detail:'not_started is schema sentinel, not a recorded gate action'}))"
+
+set_decision random_choice
+OUT=$(run_hitl2)
+P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
+I=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs inspect.0)
+OK=false; [ "$P" = "false" ] && printf '%s' "$I" | grep -q 'accepted set' && OK=true
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-132-invalid-rejected',passed:$OK,detail:'unsupported decision fails enum rule'}))"
 ```
 
-预期：≥1 pass + ≥3 fail → VERDICT: PASS。
+## Step 3: Happy path without phase-authored diagnostic event
 
+```bash
+set_decision proceed_to_readiness
+OUT=$(run_hitl2)
+printf '%s\n' "$OUT" > "$B/case-132-hitl2-pass.json"
+P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
+N=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)
 
-## Step 7: 结果解读
+node --input-type=module - "$B" "$P" "$N" <<'JS'
+import { readFileSync } from 'node:fs';
+import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
+const [bundle, passed, next] = process.argv.slice(2);
+const events = readFileSync(`${bundle}/rb_trace.jsonl`, 'utf8').trim().split(/\r?\n/).filter(Boolean).map(JSON.parse);
+const phaseDiagnosticAbsent = !events.some((event) => event.event === 'hitl2_recorded');
+const gateAttempt = events.some((event) => event.event === 'gate_attempt' && event.gate === 'hitl2-recorded' && event.passed === true && event.next === 'phases/phase-readiness.md');
+recordCheck(`${bundle}/rb_trace.jsonl`, {
+  gate: 'case-132-valid-proceed',
+  passed: passed === 'true' && next === 'phases/phase-readiness.md' && phaseDiagnosticAbsent && gateAttempt,
+  detail: 'valid proceed passes; phase diagnostic event absent; CLI gate_attempt present',
+});
+JS
+```
 
-> 验证 HITL2 gate：
->   decision brief + user_decision + trace 完整 → gate pass
->   缺失/空/非法 → gate fail。边界 test。
+## Step 4: Trace verdict
 
+```bash
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
+```
+
+## Step 5: 结果解读
+
+> PASS 证明 brief 缺失/空、`not_started`、非法 decision 都直接 fail；有效 `proceed_to_readiness` 返回 readiness handoff。没有 Phase Agent 的 `hitl2_recorded` diagnostic event 不会阻塞 gate，但 CLI 仍写 authoritative `gate_attempt`。
 
 ## Step HH: Post-Execution Health
 
-Standard profile — gate diagnostics, timeline consistency.
-
 ```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
+set +e
+node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile standard --json > "$B/case-132-health.json"
+HEALTH_EXIT=$?
+set -e
+node --input-type=module - "$B/case-132-health.json" "$HEALTH_EXIT" <<'JS'
+import { readFileSync } from 'node:fs';
+const [path, exitCode] = process.argv.slice(2);
+const report = JSON.parse(readFileSync(path, 'utf8'));
+const expectedOnly = report.issues.length > 0 && report.issues.every((issue) => issue.section === 'gate_attempts');
+if (!(Number(exitCode) === 0 || expectedOnly)) process.exit(1);
+console.log(expectedOnly ? 'HEALTH ISSUES: expected HITL2 negative-case artifacts only' : 'HEALTH CLEAN');
+JS
 ```
 
-> 健康检查不改变 verdict。health status 由 runner report 记录。
+## Cleanup
 
-## Step 8: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
+> Safe cleanup exception：当 verdict PASS 且 health issues 仅来自本 case 有意制造的 failed HITL2 wrapper artifacts 时可清理；任何非预期 schema/trace/timeline issue 均保留 bundle。
 
 ```bash
-rm -rf $B
-echo "Cleaned: $B"
+node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-132'}))"
 ```
