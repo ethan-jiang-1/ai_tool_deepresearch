@@ -1108,6 +1108,34 @@ describe('submitWorkUnit', () => {
     }
   });
 
+  it('treats assigned cache leaf files as additions and accepts source_slug mapping', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a', {
+        cache_policy: {
+          required: true,
+          root: '_cache/',
+          leaf_files: ['snapshot.json'],
+          authority: 'verified_during_submit',
+        },
+      })]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      writeFileSync(path.join(dir, cacheTrailPath(record), 'meta.json'), '{"source_slug":"source"}\n');
+
+      const missingAddition = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(missingAddition.ok, false);
+      assert.match(missingAddition.inspect.join('\n'), /snapshot\.json/);
+
+      writeFileSync(path.join(dir, cacheTrailPath(record), 'snapshot.json'), '{}\n');
+      const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(submitted.ok, true, submitted.inspect?.join('\n'));
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('accepts Wave1 structured source claims backed by submitted cache trails', () => {
     const dir = tempBundle();
     try {

@@ -79,6 +79,26 @@ describe('return-map diagnostics', () => {
     assert.equal(result.classification, 'diagnostic-only');
   });
 
+  it('accepts balanced bold field labels without weakening canonical validation', () => {
+    const dir = tempBundle();
+    writeRef(dir);
+    const bold = entry().replace(/(evidence_meaning|relationship|refs|status|next_hop):/g, '**$1**:');
+    const result = validateReturnMapContent(bold, 'seed_topics/topic-a.md', {
+      bundlePath: dir,
+      requireConcreteReferenceNavigation: true,
+    });
+    assert.equal(result.passed, true, result.inspect.join('\n'));
+    assert.deepEqual(Object.keys(result.entries[0].fields), ['evidence_meaning', 'relationship', 'refs', 'status', 'next_hop']);
+
+    const misspelled = validateReturnMapContent(bold.replace('**evidence_meaning**:', '**evidence_meanng**:'), 'seed_topics/topic-a.md');
+    assert.equal(misspelled.passed, false);
+    assert.deepEqual(misspelled.missingFields, ['evidence_meaning']);
+
+    const underscore = validateReturnMapContent(bold.replace('**evidence_meaning**:', '__evidence_meaning__:'), 'seed_topics/topic-a.md');
+    assert.equal(underscore.passed, false);
+    assert.deepEqual(underscore.missingFields, ['evidence_meaning']);
+  });
+
   it('requires evidence-bearing entries to include concrete existing reference files', () => {
     const dir = tempBundle();
 

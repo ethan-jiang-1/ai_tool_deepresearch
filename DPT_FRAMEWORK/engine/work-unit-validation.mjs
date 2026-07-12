@@ -38,6 +38,10 @@ import {
 
 import { queueItemSnapshotHash, queuePath, queueStateFromFile } from './queue-manager-core.mjs';
 import { createQueue, loadQueue } from './queue-manager-lifecycle.mjs';
+import {
+  cacheLeafMapping,
+  resolveCacheLeafContract,
+} from './helpers/cache-leaf-contract.mjs';
 
 export function readAndValidateManifest(bundleDir, index, record) {
   const manifestPath = path.join(bundleDir, record.paths.manifest_ref);
@@ -282,7 +286,7 @@ export function validateCacheTrails(bundleDir, result, cachePolicy, { record = n
     const directFiles = new Set(readdirSync(full).filter((entry) => {
       try { return statSync(path.join(full, entry)).isFile(); } catch { return false; }
     }));
-    const missing = (cachePolicy?.leaf_files || ['websearch.json', 'page.md', 'meta.json'])
+    const missing = resolveCacheLeafContract(cachePolicy)
       .filter((entry) => !(directFiles.has(entry) || (entry === 'page.md' && virtualCachePages.has(trail))));
     if (missing.length > 0) throw new Error(`cache trail ${trail} missing ${missing.join(', ')}`);
     validateCacheTrailContent(full, trail, { pageText: virtualCachePages.get(trail) ?? null });
@@ -312,13 +316,11 @@ export function cacheTrailMapping(bundleDir, trail, { virtualCachePages = new Ma
     ? virtualCachePages.get(trail)
     : readFileSync(path.join(cacheDir, 'page.md'), 'utf-8');
   const meta = readOptionalJson(path.join(cacheDir, 'meta.json'));
-  const urls = [meta?.url, meta?.source_url, meta?.final_url, meta?.fetched_url]
-    .filter(Boolean)
-    .map(normalizeUrlForSourceCache);
+  const mapping = cacheLeafMapping(meta);
   return {
     degraded: hasExplicitDegradedCapture(pageText, meta),
-    urls,
-    source_slug: meta?.source_slug || null,
+    urls: mapping.urls.map(normalizeUrlForSourceCache),
+    source_slug: mapping.source_slug,
   };
 }
 

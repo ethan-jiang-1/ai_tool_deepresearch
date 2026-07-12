@@ -22,7 +22,9 @@ _cache/{wave}/{batch}/{scope}/{source_dir}/
 |------|------|
 | `websearch.json` | WebSearch 返回的原始 JSON |
 | `page.md` | WebFetch / curl / node / python3 获取的页面内容 |
-| `meta.json` | 抓取元信息（11 字段，可扩展）：`url`, `title`, `source_domain`, `source_name`, `fetched_at`, `fetch_method`, `fetch_chain`, `content_type`, `reliability_tier`, `reliability_basis`, `whitelist_status` |
+| `meta.json` | 抓取元信息（可扩展）；至少包含一个 source mapping field：`url`, `source_url`, `final_url`, `fetched_url`, `source_slug` |
+
+这三个文件是 canonical base contract。Work-unit 的 `cache_policy.leaf_files` 可以增加 required sidecar，但不能移除 base files。`page.md` 只有在 `meta.json` 明确记录 degraded/fetch-failure condition 时才可使用 placeholder-like 内容。
 
 ## 与 reference/ 的关联
 
@@ -38,7 +40,7 @@ reference/01_topic-xinhua-box-office.md
 _cache/wave1/primary/01_topic/s01_xinhua-box-office/
   websearch.json    ← 找到此来源的原始搜索查询
   page.md           ← 网页原文（抓取时的真实内容）
-  meta.json         ← {url, fetched_at, method}
+  meta.json         ← {url/source_url/final_url/fetched_url/source_slug, ...}
 ```
 
 互查无需猜测。source-slug 保持一致。

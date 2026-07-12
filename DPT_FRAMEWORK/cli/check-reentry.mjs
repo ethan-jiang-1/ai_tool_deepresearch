@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-reentry.mjs — Validate runtime consistency for reentry at a given target
-// @impl RRD-002, RRD-003, RRD-005, FIO-001
+// @impl RRD-002, RRD-003, RRD-005, RRD-008, FIO-001, FIO-006, CHI-003
 // Usage: node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle <path> --at <target>
 // Exit: 0 = clean, 1 = blockers, 2 = config error
 //
@@ -26,12 +26,13 @@ import {
   parseMdFrontmatter,
 } from '../engine/helpers/gate-helpers.mjs';
 import { auditFileObservability } from '../engine/helpers/file-observability.mjs';
+import { buildRecoverySummary } from '../engine/helpers/recovery-contract.mjs';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Constants
 // ═══════════════════════════════════════════════════════════════════════════
 
-const SCHEMA_VERSION = '1.0.0';
+const SCHEMA_VERSION = '1.1.0';
 
 const PHASE_ORDER = [
   'instantiation', 'hitl1', 'setup', 'seed-topics', 'wave0', 'wave1', 'wave2',
@@ -785,10 +786,12 @@ if (statusPosition.current_node_status === 'null' || statusPosition.current_node
 }
 
 // 7. File observability
+let topics = [];
 let topicSlugs = [];
 try {
   const plan = readBundlePlan(bundlePath);
   if (plan && Array.isArray(plan.topic_registry)) {
+    topics = plan.topic_registry;
     topicSlugs = plan.topic_registry.map(t => t.slug).filter(Boolean);
   }
 } catch { /* ignore */ }
@@ -802,6 +805,7 @@ try {
 const ledgerDeclarations = readOutputDeclarations(bundlePath);
 
 const foResult = auditFileObservability(bundlePath, {
+  topics,
   topicSlugs,
   queue,
   ledgerDeclarations,
@@ -811,6 +815,15 @@ const foResult = auditFileObservability(bundlePath, {
 allFindings.push(...foResult.findings);
 allInspect.push(...foResult.inspect);
 allAdvice.push(...foResult.advice);
+for (const finding of foResult.canonical_findings || []) {
+  if (finding.classification !== 'blocking') continue;
+  allBlockers.push({
+    severity: 'blocker',
+    check: 'canonical_topic_footprint',
+    message: `${finding.rule_id}: ${finding.primary_surface}${finding.topic_identity ? ` topic=${finding.topic_identity}` : ''}`,
+    detail: { finding_id: finding.id, topic_identity: finding.topic_identity, surface: finding.primary_surface },
+  });
+}
 
 // Merge inspect/advice from audits
 for (const b of allBlockers) {
@@ -837,6 +850,16 @@ if (allDrift.some(d => d.severity === 'blocker')) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const exitCode = allBlockers.length > 0 ? 1 : 0;
+const recovery = buildRecoverySummary({
+  canonicalFindings: foResult.canonical_findings || [],
+  blockers: allBlockers,
+  target,
+  statusPosition,
+});
+for (const root of recovery.root_findings) {
+  if (root.sanctioned_path_status === 'reachable' && root.recommended_action?.command) allAdvice.push(root.recommended_action.command);
+  if (root.sanctioned_path_status === 'missing_contract') allAdvice.push(`[missing_contract] ${root.direct_blocker}`);
+}
 
 const result = {
   schema_version: SCHEMA_VERSION,
@@ -871,6 +894,7 @@ const result = {
   warnings: allWarnings,
   drift: allDrift,
   findings: allFindings,
+  recovery,
   inspect: allInspect,
   advice: allAdvice,
 };

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.22
+
+- Added read-only canonical topic-footprint findings and `check-reentry` schema `1.1.0` recovery summaries with one root projection and reachable/missing-contract feedback.
+- Fixed H1-tolerant Wave0 metadata inspection and balanced bold return-map field labels without weakening canonical enum/reference checks.
+- Unified submit, gate/depth, file-observability, and Agent-facing cache leaf contracts under one Engine-owned base-files/source-mapping projection.
+
 ## v0.21
 
 - Added paired Evolution Directions for simple reliable control and helper-oriented Agent responsibility, keeping accepted specs and executable runtime truth authoritative.

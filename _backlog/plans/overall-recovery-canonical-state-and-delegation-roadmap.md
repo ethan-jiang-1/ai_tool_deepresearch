@@ -80,6 +80,8 @@ direct observation and contract transparency
 
 ## 3. C1 — `harden-recovery-observability-and-contracts`
 
+**Status (2026-07-12): Applied.** Canonical incident detection、root-grouped recovery summary、reachable/missing-contract feedback、Wave0/return-map repair 与 shared cache contract 已落地。下一批可独立 propose/apply 的工作是 C2 crash-safe persistence 与 C4 delegated actor availability；C3/C5 仍按依赖顺序等待。
+
 ### 3.1 覆盖来源
 
 - Human Override plan D：`audit-bundle-integrity`

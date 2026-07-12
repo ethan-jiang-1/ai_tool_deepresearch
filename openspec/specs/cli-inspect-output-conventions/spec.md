@@ -5,16 +5,14 @@
 ## Purpose
 
 定义三个独立的 wave-specific 结构 lint CLI：`inspect-wave0-output.mjs`、`inspect-wave1-output.mjs`、`inspect-wave2-output.mjs`。每个 CLI 只检查自己 wave 的输出约定，不读 `current_gate`，不继承其他 wave。Agent 在对应 wave 中途跑，拿到 inspect/advice 反馈。不是 gate（不控制 phase 前进，不写 trace，不输出 routing）。
-
 ## Requirements
-
 ### Requirement: inspect-wave0-output.mjs structural checks
 
 `inspect-wave0-output.mjs` SHALL evaluate Wave0 gate-consumable artifact and provenance contracts through the same pure evaluator result used by `wave0-complete`. It SHALL also continue to inspect the existing Wave0-only structure conventions:
 
 1. `reference/` has no non-hidden subdirectory;
 2. non-index/readme Markdown files use `00-shared-<slug>.md` naming;
-3. each `00-shared-*.md` exposes the required metadata keys before its first semantic section;
+3. each `00-shared-*.md` exposes the required bullet metadata keys after an optional H1 title and before its first H2 semantic section;
 4. each `00-shared-*.md` exposes the five standard semantic sections;
 5. `reference/_INDEX.md` exists and inspect can diagnose the expected eight columns and data-row shape;
 6. `reference/README.md` exists and inspect can diagnose empty content; and
@@ -43,6 +41,12 @@ Inspect SHALL return `{ check, inspect, advice }` JSON without routing. It SHALL
 - **WHEN** `reference/` contains `notes.md` rather than a `00-shared-<slug>.md` name
 - **THEN** inspect SHALL report the unexpected filename and nearest rename/move repair
 - **AND** filename preference alone SHALL be advisory when no formal rule consumes it
+
+#### Scenario: H1 title does not hide metadata
+
+- **WHEN** `reference/00-shared-ai-landscape.md` starts with an H1 title followed by all required bullet metadata before the first H2 semantic section
+- **THEN** inspect SHALL recognize the metadata keys
+- **AND** it SHALL not report them missing merely because the H1 title exists
 
 #### Scenario: Metadata check reports missing key
 

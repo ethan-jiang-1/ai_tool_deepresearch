@@ -10,6 +10,7 @@ import {
   readBundleProfile,
   readSubmittedWorkUnitDeclarations,
 } from './gate-helpers-readers.mjs';
+import { inspectCacheLeaf } from './cache-leaf-contract.mjs';
 
 const DEPTH_DECISIONS = new Set(['accept', 'supplement_required', 'blocked_contract']);
 const ACCEPTED_SOURCE_STATUSES = new Set(['accepted', 'countable', 'accepted_countable']);
@@ -40,18 +41,6 @@ export function normalizeUrlForCacheMapping(url) {
   }
 }
 
-function hasExplicitDegradedCapture(pageText, meta) {
-  const text = String(pageText || '').toLowerCase();
-  const reason = [
-    meta?.capture_status,
-    meta?.fetch_status,
-    meta?.degraded_capture,
-    meta?.failure_reason,
-    meta?.reason,
-  ].filter((value) => value !== undefined && value !== null).join(' ').toLowerCase();
-  return /degraded|fetch[-_ ]?failure|access[-_ ]?failure|blocked|unavailable|failed/.test(`${text} ${reason}`);
-}
-
 function readJsonSafe(filePath) {
   try {
     return JSON.parse(readFileSync(filePath, 'utf-8'));
@@ -65,21 +54,12 @@ function cacheTrailStatus(bundlePath, trail) {
   const dir = join(bundlePath, trail);
   if (!existsSync(dir)) return { ok: false, reason: `cache trail directory missing: ${trail}` };
   if (!statSync(dir).isDirectory()) return { ok: false, reason: `cache trail is not a directory: ${trail}` };
-  const missing = ['websearch.json', 'page.md', 'meta.json'].filter((file) => !existsSync(join(dir, file)));
-  if (missing.length > 0) return { ok: false, reason: `cache trail ${trail} missing ${missing.join(', ')}` };
-
-  const pageText = readFileSync(join(dir, 'page.md'), 'utf-8');
-  const meta = readJsonSafe(join(dir, 'meta.json'));
-  const trimmed = pageText.trim();
-  const degraded = hasExplicitDegradedCapture(pageText, meta);
-  if (!trimmed) return { ok: false, reason: `cache trail ${trail} page.md is empty` };
-  const nonEmptyLines = trimmed.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  const placeholderOnly = nonEmptyLines.length <= 2 && nonEmptyLines.every((line) => /^#*\s*(cache page for|page|placeholder|todo|tbd)\b/i.test(line));
-  if (placeholderOnly && !degraded) return { ok: false, reason: `cache trail ${trail} page.md is placeholder-only` };
-  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return { ok: false, reason: `cache trail ${trail} meta.json is missing or invalid` };
-  const urls = [meta.url, meta.source_url, meta.final_url, meta.fetched_url].filter(Boolean).map(normalizeUrlForCacheMapping);
-  if (urls.length === 0 && !meta.source_slug) return { ok: false, reason: `cache trail ${trail} meta.json lacks url/source mapping` };
-  return { ok: true, degraded, urls, source_slug: meta.source_slug || null };
+  const availableFiles = readdirSync(dir).filter((file) => statSync(join(dir, file)).isFile());
+  const pageText = existsSync(join(dir, 'page.md')) ? readFileSync(join(dir, 'page.md'), 'utf-8') : '';
+  const meta = existsSync(join(dir, 'meta.json')) ? readJsonSafe(join(dir, 'meta.json')) : null;
+  const result = inspectCacheLeaf({ availableFiles, pageText, meta });
+  if (!result.ok) return { ok: false, reason: `cache trail ${trail} ${result.issue}` };
+  return { ok: true, degraded: result.degraded, urls: result.urls, source_slug: result.source_slug };
 }
 
 function isAcceptedSourceClaim(claim) {

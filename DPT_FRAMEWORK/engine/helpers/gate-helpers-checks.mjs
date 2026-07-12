@@ -11,6 +11,12 @@ import {
   readSubmittedWorkUnitDeclarations,
   getDeclaredReferencePaths,
 } from './gate-helpers-readers.mjs';
+import {
+  CACHE_BASE_LEAF_FILES,
+  CACHE_SOURCE_MAPPING_FIELDS,
+  cacheLeafMapping,
+  inspectCacheLeaf,
+} from './cache-leaf-contract.mjs';
 
 function normalizeUrl(url) {
   try {
@@ -487,32 +493,11 @@ export function checkCacheCoverage(bundlePath) {
     }
   }
 
-  function hasExplicitDegradedCapture(pageText, meta) {
-    const text = String(pageText || '').toLowerCase();
-    const reason = [
-      meta?.capture_status,
-      meta?.fetch_status,
-      meta?.degraded_capture,
-      meta?.failure_reason,
-      meta?.reason,
-    ].filter((value) => value !== undefined && value !== null).join(' ').toLowerCase();
-    return /degraded|fetch[-_ ]?failure|access[-_ ]?failure|blocked|unavailable|failed/.test(`${text} ${reason}`);
-  }
-
   function cacheContentIssue(trail) {
     const pagePath = join(bundlePath, trail, 'page.md');
     const pageText = existsSync(pagePath) ? readFileSync(pagePath, 'utf-8') : '';
     const meta = readMeta(trail);
-    const trimmed = pageText.trim();
-    if (!trimmed) return 'page.md is empty';
-    const lines = trimmed.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-    const placeholderOnly = lines.length <= 2 && lines.every((line) => /^#*\s*(cache page for|page|placeholder|todo|tbd)\b/i.test(line));
-    if (placeholderOnly && !hasExplicitDegradedCapture(trimmed, meta)) return 'page.md is placeholder-only';
-    if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return 'meta.json is missing or invalid';
-    if (!(meta.url || meta.source_url || meta.final_url || meta.fetched_url || meta.source_slug)) {
-      return 'meta.json lacks url/source mapping';
-    }
-    return null;
+    return inspectCacheLeaf({ availableFiles: CACHE_BASE_LEAF_FILES, pageText, meta }).issue;
   }
 
   if (declarations.length === 0) {
@@ -556,7 +541,7 @@ export function checkCacheCoverage(bundlePath) {
         continue;
       }
       const missingFiles = [];
-      for (const f of ['websearch.json', 'page.md', 'meta.json']) {
+      for (const f of CACHE_BASE_LEAF_FILES) {
         if (!existsSync(join(trailDir, f))) missingFiles.push(f);
       }
       if (missingFiles.length > 0) {
@@ -588,8 +573,8 @@ export function checkCacheCoverage(bundlePath) {
           const metaPath = join(bundlePath, trail, 'meta.json');
           if (existsSync(metaPath)) {
             const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
-            const metaUrl = meta.url || meta.source_url || meta.final_url || meta.fetched_url;
-            if (metaUrl && ref.source_url && normalizeUrl(metaUrl) === normalizeUrl(ref.source_url)) {
+            const mapping = cacheLeafMapping(meta);
+            if (ref.source_url && mapping.urls.some((url) => normalizeUrl(url) === normalizeUrl(ref.source_url))) {
               mapped = true;
               break;
             }
@@ -619,9 +604,10 @@ export function checkCacheCoverage(bundlePath) {
 
       if (!mapped && validTrails.length > 0) {
         passed = false;
-        const required = 'websearch.json, page.md, meta.json';
-        inspect.push(`[cache_coverage] FAIL: ${declId}: reference ${ref.path} (source_url: ${ref.source_url || 'none'}) not mapped to any valid cache trail. Mapping uses meta.json.url/source_url/final_url/fetched_url or source_slug. Required cache leaf files: ${required}.`);
-        advice.push(`Reference ${ref.path} has no cache trail mapping. Ensure the submitted work-unit result includes a matching _cache/ leaf via meta.json.url/source_url/final_url/fetched_url or source_slug, with websearch.json, page.md, and meta.json.`);
+        const required = CACHE_BASE_LEAF_FILES.join(', ');
+        const mappingFields = `${CACHE_SOURCE_MAPPING_FIELDS.slice(0, -1).join('/')} or ${CACHE_SOURCE_MAPPING_FIELDS.at(-1)}`;
+        inspect.push(`[cache_coverage] FAIL: ${declId}: reference ${ref.path} (source_url: ${ref.source_url || 'none'}) not mapped to any valid cache trail. Mapping uses meta.json.${mappingFields}. Required cache leaf files: ${required}.`);
+        advice.push(`Reference ${ref.path} has no cache trail mapping. Ensure the submitted work-unit result includes a matching _cache/ leaf via meta.json.${mappingFields}, with ${required}.`);
       } else if (!mapped && validTrails.length === 0) {
         // Already reported as missing trail above — don't double-report
       }

@@ -35,7 +35,7 @@ Wave1 topic references use `source_url` from submitted `wave1_topic_deepening` b
 
 ### Part 1: Metadata Block（必填字段以 **粗体** 标注）
 
-Metadata block 位于文件头部——首个 `## ` header 之前。每行格式：`- key: value`（第一个 `: ` 后的部分为 value）。
+Metadata block 位于首个 `## ` semantic section 之前；文件可以先有一个可选 `# ` title。每行格式：`- key: value`（第一个 `: ` 后的部分为 value）。
 
 This metadata block is the accepted parser contract. It is not YAML frontmatter: do not put metadata between `---` fences, do not write `source_url:` as bare YAML keys, and do not use `sources:` wrappers. `parseReferenceMetadata()` reads only bullet metadata lines before the first section.
 

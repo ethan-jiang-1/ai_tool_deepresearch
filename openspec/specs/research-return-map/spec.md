@@ -1,13 +1,11 @@
 # Research Return Map
 
-> req: RRM-001, RRM-002, RRM-003, RRM-004
+> req: RRM-001, RRM-002, RRM-003, RRM-004, RRM-005
 
 ## Purpose
 
 Define the Agent-readable evidence-to-claim return map that wave returns and seed-topic backfill surfaces SHALL include. The return map is a navigation and interpretation layer over existing authority surfaces, helping future Agents understand what evidence says, which must-answer/hypothesis/pending question/finding it affects, where to read supporting material, what status changed, and what next hop is recommended.
-
 ## Requirements
-
 ### Requirement: Research wave returns SHALL include Agent-readable evidence-to-claim maps
 
 Wave0, Wave1, and Wave2 return/backfill surfaces SHALL include an Agent-readable map from evidence to meaning. The map SHALL help a future Agent answer: what this evidence says, which must-answer, hypothesis, pending question, or finding it affects, where to read the supporting material, what status changed, and what next hop is recommended.
@@ -134,3 +132,26 @@ Concrete reference validation for evidence-bearing seed-topic return-map entries
 - **WHEN** a return-map entry uses `relationship: supports`, `relationship: refutes`, `relationship: partial`, `relationship: context`, `status: supported`, `status: refuted`, `status: partial`, or `status: emergent`
 - **THEN** concrete reference validation SHALL treat the entry as evidence-bearing
 - **AND** the validator SHALL NOT require semantic interpretation of the surrounding prose to decide whether the entry needs concrete `reference/*.md` refs
+
+### Requirement: Return-map parsing SHALL tolerate balanced field presentation wrappers
+
+Return-map parsing SHALL map a balanced asterisk bold wrapper around an existing canonical field label, such as `**evidence_meaning**:`, to the same field as `evidence_meaning:`. Presentation normalization SHALL occur before existing entry, required-field, enum, reference, and concrete-navigation validation. Underscore emphasis, inline-code wrappers, or other Markdown presentation SHALL remain outside this requirement.
+
+The accepted canonical fields SHALL remain `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`. Presentation tolerance SHALL NOT accept misspelled fields, missing colons, invalid enum values, fabricated refs, or arbitrary Markdown structures. The implementation SHALL use a narrow line-level normalization and SHALL NOT add a Markdown parser dependency.
+
+#### Scenario: Bold-wrapped canonical fields are accepted
+
+- **WHEN** a return-map entry uses balanced bold wrappers around all five canonical field labels
+- **THEN** the parser SHALL extract the same canonical fields and values as the unwrapped form
+- **AND** downstream enum and reference validation SHALL still run
+
+#### Scenario: Misspelled wrapped field remains invalid
+
+- **WHEN** a return-map entry contains `**evidence_meanng**:`
+- **THEN** presentation normalization SHALL not map it to `evidence_meaning`
+- **AND** required-field validation SHALL report the missing canonical field
+
+#### Scenario: Presentation tolerance does not weaken refs
+
+- **WHEN** a bold-wrapped return-map entry has no concrete reference for an evidence-bearing claim
+- **THEN** existing concrete-reference navigation validation SHALL still fail according to its accepted classification

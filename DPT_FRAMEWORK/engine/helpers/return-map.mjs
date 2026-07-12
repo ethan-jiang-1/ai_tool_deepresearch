@@ -1,18 +1,16 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
+// @impl RRM-005
+
 export const RETURN_MAP_FIELDS = ['evidence_meaning', 'relationship', 'refs', 'status', 'next_hop'];
 export const RETURN_MAP_RELATIONSHIPS = ['supports', 'refutes', 'partial', 'opens', 'defers', 'context'];
 export const RETURN_MAP_STATUS_LABELS = ['supported', 'refuted', 'partial', 'open', 'emergent', 'deferred'];
 
-const FIELD_PATTERNS = {
-  evidence_meaning: /\bevidence_meaning\s*:/i,
-  relationship: /\brelationship\s*:/i,
-  refs: /\brefs\s*:/i,
-  status: /\bstatus\s*:/i,
-  next_hop: /\bnext_hop\s*:/i,
-};
-const FIELD_LINE_RE = /\b(evidence_meaning|relationship|refs|status|next_hop)\s*:\s*(.*)$/i;
+const FIELD_PATTERNS = Object.fromEntries(
+  RETURN_MAP_FIELDS.map((field) => [field, new RegExp(`(?:\\*\\*${field}\\*\\*|${field})\\s*:`, 'i')]),
+);
+const FIELD_LINE_RE = /(?:\*\*(evidence_meaning|relationship|refs|status|next_hop)\*\*|(evidence_meaning|relationship|refs|status|next_hop))\s*:\s*(.*)$/i;
 const BUNDLE_REF_RE = /\b(?:reference|artifacts|_cache|_work_units|seed_topics)\/[^\s,;)\]）(（]+/gi;
 const REF_COUNT_SUFFIX_RE = /(?:\([^)]+\)|（[^）]+）)/;
 const LIMITATION_NEXT_HOP_RE = /\b(?:limitation|defer(?:red)?|hitl2|no materializable evidence|not materializable|record[-_ ]?only|requires[-_ ]?internal[-_ ]?data|blocked|not source[-_ ]?backed)\b/i;
@@ -90,8 +88,8 @@ export function extractReturnMapEntries(content) {
   lines.forEach((line, index) => {
     const match = line.match(FIELD_LINE_RE);
     if (match) {
-      const field = match[1].toLowerCase();
-      const value = match[2].trim();
+      const field = (match[1] || match[2]).toLowerCase();
+      const value = match[3].trim();
       if (field === 'evidence_meaning' && current && Object.hasOwn(current.fields, 'evidence_meaning')) {
         pushCurrent();
       }

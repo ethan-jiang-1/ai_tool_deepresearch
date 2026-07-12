@@ -47,6 +47,14 @@ context: |
     该重构就重构，该清理就清理，让结构适应新要求同时兼顾老的东西。
     定期打扫卫生是好习惯，在设计和上下文里多琢磨。
 
+  Evolution Directions（proposal/design 必须 paired review）:
+    - guidelines/evolution-simple-reliable-control.md：优先 direct Source of Record 和最短合法闭环；
+      新增 state/check/validator/fallback/retry/recovery 必须说明净简化（net simplification），以及删除、合并或避免了什么复杂度，
+      不得仅以“更可靠”为由继续堆叠控制层。
+    - guidelines/evolution-helper-oriented-agent.md：用户负责新的语义、风险与权限决定；
+      Agent 负责已授权的机械执行与可逆修复；Engine 负责确定性 verdict。
+      human-directed 只说明决定来源，不创造 permission、override 或缺失 runtime capability。
+
   命名规范:
     - 枚举 snake_case, 用户界面中文, 内部字段名/路径英文
     - Capability 前缀: cmd-* = Agent 读的 Markdown 命令 playbook; cli-* = JS 脚本
@@ -184,6 +192,8 @@ rules:
     - 用中文写 proposal，明确这个 change 产出什么、不产出什么
     - 引用原始需求时注明来源文件
     - 为新 capability 分配 3 字母缩写并提前登记到 openspec/governance/req-registry.yaml (先查历史，避免冲突，别随意发挥)
+    - 说明 direct Source of Record、最短合法闭环与 net simplification impact，明确删除、合并或避免的 control complexity
+    - 说明 user decision / Agent execution / Engine verdict 的责任边界，不得用 human-directed 创造 permission 或 capability
     - |
       修改 `DPT_FRAMEWORK/` 行为的 change 必须在 proposal 中声明是否需要 version bump；
       需要时声明 target version（如 `v0.2`），作为 implementation 阶段 CHANGELOG 和 RUN.md banner 更新的依据。
@@ -192,6 +202,7 @@ rules:
     - 状态机用显式转换表 (Map/object)，不允许隐藏在 prose 里
     - 跨文件引用必须明确 Source of Record
     - "只用批准的依赖: zod, yaml。其余一律 Node.js 标准库"
+    - architecture、recovery、mutation 或 Agent/user responsibility 变更必须 paired-read 两条 Evolution Directions，并在 apply target manifest 标出新增与删除的 control surface
   tasks:
     - 每个 task 有明确 done condition，可独立验证
     - 按依赖排序，优先搭骨架再填功能

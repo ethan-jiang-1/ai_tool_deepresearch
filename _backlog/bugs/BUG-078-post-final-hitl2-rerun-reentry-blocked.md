@@ -4,7 +4,7 @@
 **Bundle:** `dpt_rb_ai-era-bpm-process-disruption`
 **Phase:** Final (terminal) → attempted post-final HITL2 rerun
 **Severity:** High — the documented "post-final feedback re-enters HITL2 via rerun" contract is not achievable with sanctioned CLIs
-**Current status (2026-07-12):** Active — v0.21 clarified that current HITL2 guidance does not create post-final reentry; a sanctioned runtime reopen/reentry path remains absent.
+**Current status (2026-07-12):** Active — C1 now detects the terminal-position incident and suppresses impossible predecessor/enter-phase advice as `missing_contract`; a sanctioned runtime reopen/reentry path remains absent for C5.
 
 ## Symptom
 

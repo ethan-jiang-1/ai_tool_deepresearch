@@ -182,6 +182,16 @@ describe('check-gate-wave0-complete', () => {
     });
   });
 
+  it('1a. inspect reads bullet metadata after an optional H1 title', () => {
+    const dir = createBundle(unique('h1meta'));
+    setupHappyPath(dir);
+    const referencePath = join(dir, 'reference/00-shared-ai-safety.md');
+    writeFileSync(referencePath, `# AI Safety Landscape\n\n${readFileSync(referencePath, 'utf8')}`);
+    const result = runInspect(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.inspect.some((line) => line.includes('metadata block missing required key')), false, output.inspect.join('\n'));
+  });
+
   it('1b. emits degraded pass for fatigue when only soft count floor fails', () => {
     const dir = createBundle(unique('degraded'));
     setupWave0WithoutSharedReference(dir);

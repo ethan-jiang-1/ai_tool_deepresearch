@@ -3,11 +3,12 @@
 // @impl 8A.6, 8A.7
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert';
-import { existsSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, rmSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { addCanonicalRecoveryIncident } from './recovery-incident-fixture.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-reentry-tmp');
@@ -68,10 +69,14 @@ function setupBundle(name, statusOverrides = {}, queueOverrides = {}, extraFiles
   // Standard dirs and files for wave1
   mkdirSync(join(dir, 'seed_topics'), { recursive: true });
   mkdirSync(join(dir, 'reference'), { recursive: true });
+  mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-a'), { recursive: true });
+  mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-b'), { recursive: true });
   mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-a'), { recursive: true });
   mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-b'), { recursive: true });
   writeFileSync(join(dir, 'seed_topics', 'topic-a.md'), '# Topic A\n');
   writeFileSync(join(dir, 'seed_topics', 'topic-b.md'), '# Topic B\n');
+  writeFileSync(join(dir, 'artifacts', 'wave0', 'topic-a', 'source.yaml'), '[]\n');
+  writeFileSync(join(dir, 'artifacts', 'wave0', 'topic-b', 'source.yaml'), '[]\n');
   writeFileSync(join(dir, 'artifacts', 'wave1', 'topic-a', 'evidence-summary.md'), '# Evidence\n');
   writeFileSync(join(dir, 'artifacts', 'wave1', 'topic-a', 'question-list.md'), '# Questions\n');
   writeFileSync(join(dir, 'artifacts', 'wave1', 'topic-b', 'evidence-summary.md'), '# Evidence\n');
@@ -98,6 +103,17 @@ function runCliJson(bundle, at) {
   } catch {
     return { exitCode: r.status, stdout: null, stderr: r.stderr, rawStdout: r.stdout };
   }
+}
+
+function recursiveSnapshot(root, current = root, output = {}) {
+  for (const entry of readdirSync(current, { withFileTypes: true })) {
+    const absolutePath = join(current, entry.name);
+    const relativePath = absolutePath.slice(root.length + 1);
+    if (entry.isDirectory()) recursiveSnapshot(root, absolutePath, output);
+    else if (entry.isFile()) output[relativePath] = createHash('sha256').update(readFileSync(absolutePath)).digest('hex');
+    else output[relativePath] = statSync(absolutePath).size;
+  }
+  return output;
 }
 
 describe('check-reentry CLI', () => {
@@ -138,6 +154,8 @@ describe('check-reentry CLI', () => {
       const dir = setupBundle('rt-unknown');
       const res = runCliJson(dir, 'nonexistent-gate');
       assert.strictEqual(res.exitCode, 2);
+      assert.strictEqual(res.stdout.schema_version, '1.1.0');
+      assert.strictEqual(Object.hasOwn(res.stdout, 'recovery'), false);
       assert.ok(res.stdout.inspect.some(i => i.includes('Unknown target')));
     });
   });
@@ -148,6 +166,9 @@ describe('check-reentry CLI', () => {
       const res = runCliJson(dir, 'wave1_complete');
       assert.strictEqual(res.exitCode, 0);
       assert.strictEqual(res.stdout.check.exit_code, 0);
+      assert.strictEqual(res.stdout.schema_version, '1.1.0');
+      assert.ok(res.stdout.recovery);
+      assert.deepStrictEqual(res.stdout.recovery.canonical_topic_findings, []);
     });
 
     it('exits 1 when blockers are present (status mismatch)', () => {
@@ -347,6 +368,29 @@ describe('check-reentry CLI', () => {
       const res = runCliJson(dir, 'wave1_complete');
       assert.ok(res.stdout.blockers.some(b => b.check === 'ledger_coverage'),
         'Should block on undeclared reference file');
+    });
+  });
+
+  describe('canonical recovery summary', () => {
+    it('groups an incident into one blocking canonical root and reports missing post-final contract without mutation', () => {
+      const dir = setupBundle('rt-canonical-incident');
+      addCanonicalRecoveryIncident(dir);
+      const before = recursiveSnapshot(dir);
+      const res = runCliJson(dir, 'readiness_passed');
+      const after = recursiveSnapshot(dir);
+
+      assert.strictEqual(res.exitCode, 1, res.stderr || JSON.stringify(res.stdout?.inspect));
+      assert.strictEqual(res.stdout.check.passed, false);
+      const blockingCanonical = res.stdout.recovery.canonical_topic_findings.filter((finding) => finding.classification === 'blocking');
+      assert.strictEqual(blockingCanonical.length, 1);
+      assert.strictEqual(blockingCanonical[0].topic_identity, 'topic-x');
+      const roots = res.stdout.recovery.root_findings.filter((root) => root.source_kind === 'canonical_topic');
+      assert.strictEqual(roots.length, 1);
+      assert.strictEqual(roots[0].sanctioned_path_status, 'missing_contract');
+      assert.strictEqual(roots[0].recommended_action, null);
+      assert.match(roots[0].direct_blocker, /no accepted post-final reentry contract/);
+      assert.ok(res.stdout.advice.some((line) => line.includes('[missing_contract]')));
+      assert.deepStrictEqual(after, before);
     });
   });
 });

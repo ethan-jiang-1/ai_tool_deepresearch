@@ -5,7 +5,7 @@
 **Phase:** Wave0 (source intake)
 **Severity:** High — blocks formal work-unit submission path; requires ~2 hours of manual recovery per wave
 **Reporter:** Claude Code main agent
-**Current status (2026-07-12):** Partial — the original card combines an unresolved host/subagent availability failure with contract-opacity issues that are now mostly fixed.
+**Current status (2026-07-12):** Partial — C1 closed the remaining Wave0/return-map/cache contract-opacity gaps; the host/subagent API 402 availability and sanctioned fallback problem remains open for C4.
 
 ## Current status
 
@@ -17,13 +17,13 @@
 - `shared-reference-template.md` explicitly lists the nine metadata keys and five standard sections.
 - `shared-schemas.md` documents the flat `source.yaml` array shape.
 - Explicit degraded capture can satisfy placeholder-page validation when it records a real fetch failure.
+- Wave0 inspect now reads bullet metadata after an optional H1 and before the first H2 semantic section.
+- Balanced `**field**:` return-map labels normalize to the canonical five fields without weakening enum/ref checks.
+- Submit, depth/gate checks, and file observability reuse one Engine-owned cache leaf contract; assigned leaf files add to, rather than replace, the canonical base files.
 
 ### Still open
 
 - The host/API 402 condition has no framework-sanctioned availability preflight or main-agent execution fallback.
-- `inspect-wave0-output.mjs` still splits metadata on any Markdown heading, so an H1 title can cause false missing-metadata diagnostics.
-- Bold-wrapped return-map keys such as `**evidence_meaning**:` are still not parsed, and the formatting restriction is not explicitly documented at the decision point.
-- Cache validation and its human-readable contract still do not come from one shared source of truth.
 
 ## Environment
 

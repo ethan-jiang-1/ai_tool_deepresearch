@@ -140,7 +140,11 @@ Every delegated result that writes reference/evidence output SHOULD include:
 - `output_files[]`: bundle-relative paths, roles, source URLs for reference outputs, and source slugs.
 - `cache_trails[]`: leaf cache directories containing direct `websearch.json`, `page.md`, and `meta.json` files.
 
-Submit validates that declared outputs and cache trails exist before appending the submitted ledger row. Gates and file observability read submitted work-unit rows; they do not award authority for undeclared files.
+The three cache files are the canonical base contract. Assigned `cache_policy.leaf_files` may add required sidecars but cannot remove a base file. `meta.json` must expose at least one source mapping field: `url`, `source_url`, `final_url`, `fetched_url`, or `source_slug`. Placeholder-only `page.md` is invalid unless the same leaf records an explicit degraded/fetch-failure condition.
+
+Submit validates that declared outputs and cache trails exist before appending the submitted ledger row. Gates and file observability reuse the same Engine-owned cache contract and read submitted work-unit rows; they do not award authority for undeclared files.
+
+Return-map producers should prefer unwrapped canonical labels: `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`. Inspect also accepts a balanced asterisk-bold presentation such as `**evidence_meaning**:`; underscore emphasis, inline code, misspellings, invalid enums, and non-concrete evidence refs remain invalid.
 
 ## 7. Failure And Retry
 

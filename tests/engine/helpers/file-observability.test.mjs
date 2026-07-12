@@ -386,4 +386,58 @@ describe('file observability', () => {
       assert.ok('authority_status' in f, 'authority_status must be present');
     }
   });
+
+  it('groups explicit registry-external durable topic facts into one canonical finding', () => {
+    const dir = setupBundle('fo-canonical-unregistered', {
+      'artifacts/wave1/topic-x/evidence-summary.md': '# Evidence\n',
+      'reference/topic-x-source.md': '- related_topic: topic-x\n\n## Key Facts\n',
+    });
+    const result = auditFileObservability(dir, {
+      topics: [{ id: 'T01', slug: 'topic-a' }],
+      targetPhase: null,
+    });
+    const roots = result.canonical_findings.filter((finding) => finding.topic_identity === 'topic-x');
+    assert.strictEqual(roots.length, 1);
+    assert.strictEqual(roots[0].rule_id, 'unregistered_durable_topic');
+    assert.strictEqual(roots[0].classification, 'blocking');
+    const surfaces = new Set([roots[0].primary_surface, ...roots[0].supporting_details.map((detail) => detail.surface)]);
+    assert.ok(surfaces.has('reference/topic-x-source.md'));
+    assert.ok(surfaces.has('artifacts/wave1/topic-x'));
+  });
+
+  it('uses exact registry ids/slugs and accepts related_topic all or exact lists', () => {
+    const dir = setupBundle('fo-topic-aliases', {
+      'reference/shared.md': '- related_topic: all\n\n## Key Facts\n',
+      'reference/list.md': '- related_topic: T01, topic-a\n\n## Key Facts\n',
+      'reference/dangling.md': '- related_topic: T01, topic-z\n\n## Key Facts\n',
+    });
+    const result = auditFileObservability(dir, { topics: [{ id: 'T01', slug: 'topic-a' }] });
+    assert.equal(result.canonical_findings.some((finding) => finding.topic_identity === 'all'), false);
+    assert.equal(result.canonical_findings.some((finding) => finding.topic_identity === 'T01'), false);
+    assert.equal(result.canonical_findings.some((finding) => finding.topic_identity === 'topic-a'), false);
+    assert.equal(result.canonical_findings.filter((finding) => finding.topic_identity === 'topic-z').length, 1);
+  });
+
+  it('does not require future wave surfaces for an early target', () => {
+    const dir = setupBundle('fo-early-target');
+    mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-a'), { recursive: true });
+    writeFileSync(join(dir, 'artifacts', 'wave0', 'topic-a', 'source.yaml'), '[]\n');
+    const result = auditFileObservability(dir, {
+      topics: [{ id: 'T01', slug: 'topic-a' }],
+      targetPhase: 'wave0',
+    });
+    assert.equal(result.canonical_findings.some((finding) => finding.rule_id === 'registered_topic_surface_gap'), false);
+  });
+
+  it('keeps cache-only unknown subtrees non-authoritative and warns on unknown durable artifact namespaces', () => {
+    const dir = setupBundle('fo-unknown-namespace', {
+      '_cache/wave1/primary/topic-z/source/page.md': '# Page\n',
+      'artifacts/addendum/result.md': '# Parallel result\n',
+    });
+    const result = auditFileObservability(dir, { topics: [{ id: 'T01', slug: 'topic-a' }] });
+    assert.equal(result.canonical_findings.some((finding) => finding.primary_surface.startsWith('_cache/')), false);
+    const unknown = result.canonical_findings.find((finding) => finding.rule_id === 'unknown_durable_namespace');
+    assert.ok(unknown);
+    assert.strictEqual(unknown.classification, 'warning');
+  });
 });

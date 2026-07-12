@@ -186,6 +186,7 @@ CMI-006: cmd-bundle-instantiation — rb_status.json template includes current_n
 # check-inspect-feedback
 CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
 CHI-002: check-inspect-feedback — C&I feedback loop for fork variant (topicReadiness validation)
+CHI-003: check-inspect-feedback — Recovery advice identifies one reachable nearest legal action per independent root
 
 # delegated-work-units
 DEW-001: delegated-work-units — Work-unit pipeline is the sole production delegated-work path
@@ -249,6 +250,7 @@ FIO-002: file-observability — Unplanned files produce inspect/advice and autho
 FIO-003: file-observability — Agent file explanations are diagnostic trace/log entries only
 FIO-004: file-observability — Explained files remain non-authoritative until ledger or receipt authority exists
 FIO-005: file-observability — Root bundle map files follow canonical map policy
+FIO-006: file-observability — File observability detects canonical topic footprint drift without granting authority
 
 # fork-repair-converge
 FOR-001: fork-repair-converge — Multi-fail shared repair checkpoint convergence
@@ -329,6 +331,7 @@ RRD-004: runtime-reentry-debuggability — Failed gates preserve full post-morte
 RRD-005: runtime-reentry-debuggability — Reentry tooling derives facts from bundle truth without chat memory
 RRD-006: runtime-reentry-debuggability — Reentry CLI exit-code semantics align with the documented framework convention
 RRD-007: runtime-reentry-debuggability — Reentry diagnostics use rb_status current_node as the current phase coordinate when present
+RRD-008: runtime-reentry-debuggability — Reentry diagnostics summarize incident-shaped recovery truth
 
 # run-entry
 RUE-001: run-entry — RUN.md entry point announces the framework version banner
@@ -696,7 +699,7 @@ SDC-002: subagent-directory-contract — Delegated artifact containment is enfor
 SDC-003: subagent-directory-contract — Work-unit wave directory convention matches encoded work_id wave and manifest wave
 
 # cli-inspect-output-conventions
-IOC-001: cli-inspect-output-conventions — inspect-wave0-output.mjs (flat dir, naming, metadata, sections, _INDEX.md, README.md, thin YAML)
+IOC-001: cli-inspect-output-conventions — inspect-wave0-output.mjs reuses the Wave0 evaluator and inspects H1-tolerant metadata, sections, index, README, and thin YAML without side effects
 IOC-002: cli-inspect-output-conventions — inspect-wave1-output.mjs ({topic.slug}*.md per topic, metadata/sections, evidence-summary, question-list, _INDEX.md wave1 entries)
 IOC-003: cli-inspect-output-conventions — inspect-wave2-output.mjs (no 00_shared/, 00-cross-* format, artifacts/wave2/ triple, no backfill tokens)
 IOC-004: cli-inspect-output-conventions — Inspect CLIs are documented non-gate structured-output commands with invocation-error code 2
@@ -729,6 +732,7 @@ RRM-001: research-return-map — Research wave returns include Agent-readable ev
 RRM-002: research-return-map — Seed-topic backfill preserves traceable meaning rather than only evidence lists or conclusions
 RRM-003: research-return-map — Shared guidance teaches the same return-map shape across waves
 RRM-004: research-return-map — Evidence-bearing return-map refs include concrete existing reference files
+RRM-005: research-return-map — Return-map parsing tolerates balanced bold field-label presentation
 
 # cache-raw-web-content
 CRC-001: "cache-raw-web-content — Standardized _cache/ directory structure (wave/batch/scope/source four levels)"
@@ -738,3 +742,4 @@ CRC-004: "cache-raw-web-content — Cache is non-authority and deletable after d
 CRC-005: cache-raw-web-content — cache_trails SHALL be Engine-populated during work-unit submit or accepted Engine completion rather than Agent-declared or empty
 CRC-006: cache-raw-web-content — Gate cache_coverage rule cross-validates declaration cache_trails with filesystem
 CRC-007: cache-raw-web-content — Declared cache trails preserve fetched content or explicit degraded-capture records
+CRC-008: cache-raw-web-content — Cache leaf validation uses one Engine-owned contract projection

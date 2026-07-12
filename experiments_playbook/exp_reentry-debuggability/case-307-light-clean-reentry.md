@@ -80,9 +80,11 @@ mkdir -p "$B/_logs"
 touch "$B/_logs/run.log"
 
 # 创建 wave1 所需 artifact
-mkdir -p "$B/seed_topics" "$B/reference" "$B/artifacts/wave1/topic-a" "$B/artifacts/wave1/topic-b"
+mkdir -p "$B/seed_topics" "$B/reference" "$B/artifacts/wave0/topic-a" "$B/artifacts/wave0/topic-b" "$B/artifacts/wave1/topic-a" "$B/artifacts/wave1/topic-b"
 echo "# Topic A" > "$B/seed_topics/topic-a.md"
 echo "# Topic B" > "$B/seed_topics/topic-b.md"
+echo "[]" > "$B/artifacts/wave0/topic-a/source.yaml"
+echo "[]" > "$B/artifacts/wave0/topic-b/source.yaml"
 echo "# Evidence Summary A" > "$B/artifacts/wave1/topic-a/evidence-summary.md"
 echo "# Question List A" > "$B/artifacts/wave1/topic-a/question-list.md"
 echo "# Evidence Summary B" > "$B/artifacts/wave1/topic-b/evidence-summary.md"
@@ -162,9 +164,10 @@ checks.push({
 // Check 5: JSON contract fields present
 checks.push({
   ts: new Date().toISOString(), event: 'check',
-  gate: 'json-contract', passed: result.schema_version === '1.0.0' &&
+  gate: 'json-contract', passed: result.schema_version === '1.1.0' &&
     'check' in result && 'blockers' in result && 'warnings' in result &&
-    'drift' in result && 'findings' in result && 'inspect' in result && 'advice' in result,
+    'drift' in result && 'findings' in result && 'inspect' in result && 'advice' in result &&
+    Array.isArray(result.recovery?.canonical_topic_findings) && Array.isArray(result.recovery?.root_findings),
   expected: true,
   detail: 'All required JSON contract fields present'
 });

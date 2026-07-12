@@ -72,7 +72,7 @@ Sub-agent 返回给 work-unit submit 的 `result.json` MUST 包含 `work_id`、`
 
 ### 14. 禁止遗漏 `cache_trails[]`
 
-每个 `cache_trails[]` 项必须是 leaf source directory（直接含 `websearch.json`/`page.md`/`meta.json` 三文件），不得声明 parent cache dir。`operate-work-unit submit` 会逐 leaf 验证三文件存在。
+每个 `cache_trails[]` 项必须是 leaf source directory（直接含 canonical base `websearch.json`/`page.md`/`meta.json` 三文件），不得声明 parent cache dir。Assigned `cache_policy.leaf_files` 只能增加 sidecar，不能移除 base files。`meta.json` 至少包含 `url`、`source_url`、`final_url`、`fetched_url` 或 `source_slug` 之一；`operate-work-unit submit` 会复用 Engine-owned contract 逐 leaf 验证。
 
 **正确替代**：声明 `_cache/wave0/primary/01_test/s01_source/`（leaf）而不是 `_cache/wave0/primary/01_test/`（parent）。
 

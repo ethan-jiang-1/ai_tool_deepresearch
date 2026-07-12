@@ -1,5 +1,5 @@
 // file-observability.mjs — Bundle directory audit with work-unit-aware file classifications
-// @impl FIO-001, FIO-002, FIO-004, FIO-005, REF-008, WPG-012, RWG-017
+// @impl FIO-001, FIO-002, FIO-004, FIO-005, FIO-006, REF-008, WPG-012, RWG-017
 // Canonical engine location: DPT_FRAMEWORK/engine/helpers/file-observability.mjs
 //
 // ## Role
@@ -24,6 +24,11 @@ import {
   classifyReferenceAuthority,
 } from './gate-helpers-checks.mjs';
 import { checkSourceClaimCacheMapping } from './wave-depth-contracts.mjs';
+import {
+  CACHE_BASE_LEAF_FILES,
+  cacheLeafMapping,
+  normalizeCacheMappingUrl,
+} from './cache-leaf-contract.mjs';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Constants
@@ -444,6 +449,149 @@ function classifyFile(relPath, ctx) {
 // Public API
 // ═══════════════════════════════════════════════════════════════════════════
 
+function explicitTopicMetadata(content) {
+  const identities = [];
+  for (const match of String(content || '').matchAll(/^\s*-\s*(?:related_topic|topic_id|topic_slug)\s*:\s*(.+?)\s*$/gmi)) {
+    const raw = match[1].trim();
+    if (raw.toLowerCase() === 'all') continue;
+    identities.push(...raw.split(',').map((entry) => entry.trim()).filter(Boolean));
+  }
+  return identities;
+}
+
+function canonicalFindingId(kind, identity) {
+  return `${kind}:${String(identity || 'unknown').replace(/[^a-z0-9_-]+/gi, '_')}`;
+}
+
+function targetRequires(targetPhase, surface) {
+  const rank = { 'seed-topics': 1, wave0: 2, wave1: 3, wave2: 4, hitl2: 5, readiness: 6, rerun: 7, final: 8 };
+  const requiredAt = { seed: 1, wave0: 2, wave1: 3 };
+  return Boolean(rank[targetPhase] && rank[targetPhase] >= requiredAt[surface]);
+}
+
+/**
+ * Compare explicit topic identities against the current registry without guessing.
+ * @impl FIO-006
+ */
+export function auditCanonicalTopicFootprint(bundlePath, {
+  topics = [],
+  topicSlugs = [],
+  queue = null,
+  ledgerDeclarations = [],
+  targetPhase = null,
+} = {}) {
+  const registryTopics = topics.length > 0
+    ? topics
+    : topicSlugs.map((slug) => ({ id: slug, slug }));
+  const aliases = new Map();
+  for (const topic of registryTopics) {
+    if (topic?.id) aliases.set(topic.id, topic);
+    if (topic?.slug) aliases.set(topic.slug, topic);
+  }
+
+  const facts = new Map();
+  const addFact = (identity, fact) => {
+    if (!identity || identity === 'all') return;
+    if (!facts.has(identity)) facts.set(identity, []);
+    facts.get(identity).push(fact);
+  };
+
+  const scanMarkdownMetadata = (root) => {
+    const absoluteRoot = join(bundlePath, root);
+    for (const relPath of walkDir(absoluteRoot, bundlePath).filter((entry) => entry.endsWith('.md'))) {
+      let content = '';
+      try { content = readFileSync(join(bundlePath, relPath), 'utf8'); } catch { continue; }
+      for (const identity of explicitTopicMetadata(content)) {
+        addFact(identity, { kind: 'metadata', surface: relPath, durable: ['reference/', 'final/', 'artifacts/'].some((prefix) => relPath.startsWith(prefix)) });
+      }
+    }
+  };
+
+  scanMarkdownMetadata('reference');
+  scanMarkdownMetadata('final');
+  scanMarkdownMetadata('artifacts');
+
+  for (const wave of ['wave0', 'wave1']) {
+    const waveRoot = join(bundlePath, 'artifacts', wave);
+    if (!existsSync(waveRoot)) continue;
+    for (const entry of readdirSync(waveRoot, { withFileTypes: true })) {
+      if (entry.isDirectory()) addFact(entry.name, { kind: `${wave}_path`, surface: `artifacts/${wave}/${entry.name}`, durable: true });
+    }
+  }
+
+  const seedRoot = join(bundlePath, 'seed_topics');
+  if (existsSync(seedRoot)) {
+    for (const entry of readdirSync(seedRoot, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.endsWith('.md')) addFact(entry.name.slice(0, -3), { kind: 'seed_path', surface: `seed_topics/${entry.name}`, durable: false });
+    }
+  }
+
+  for (const item of [...(queue?.active_window || []), ...(queue?.refill_pool || []), ...Object.values(queue?.delegated_in_flight || {})]) {
+    const identity = item?.topic_slug || item?.payload?.topic_slug;
+    if (identity) addFact(identity, { kind: 'queue_declaration', surface: `rb_queue.json:${item.queue_item_id || identity}`, durable: false });
+  }
+  for (const declaration of ledgerDeclarations || []) {
+    const identity = declaration?.topic_slug || declaration?.payload?.topic_slug;
+    if (identity) addFact(identity, { kind: 'work_unit_declaration', surface: declaration.work_id || 'submitted-work-unit', durable: false });
+  }
+
+  const canonicalFindings = [];
+  for (const [identity, identityFacts] of facts) {
+    if (aliases.has(identity)) continue;
+    const durable = identityFacts.find((fact) => fact.durable);
+    const primaryFact = durable || identityFacts[0];
+    canonicalFindings.push({
+      id: canonicalFindingId(durable ? 'unregistered_durable_topic' : 'dangling_topic_identity', identity),
+      rule_id: durable ? 'unregistered_durable_topic' : 'dangling_topic_identity',
+      classification: durable ? 'blocking' : 'warning',
+      topic_identity: identity,
+      primary_surface: primaryFact.surface,
+      supporting_details: identityFacts.filter((fact) => fact !== primaryFact).map((fact) => ({ kind: fact.kind, surface: fact.surface })),
+      repair_kind: durable ? 'reconcile_topic_identity' : 'repair_topic_reference',
+    });
+  }
+
+  if (targetPhase) {
+    for (const topic of registryTopics) {
+      const identity = topic.slug || topic.id;
+      if (!identity) continue;
+      const missing = [];
+      if (targetRequires(targetPhase, 'seed') && !existsSync(join(bundlePath, 'seed_topics', `${identity}.md`))) missing.push(`seed_topics/${identity}.md`);
+      if (targetRequires(targetPhase, 'wave0') && !existsSync(join(bundlePath, 'artifacts', 'wave0', identity))) missing.push(`artifacts/wave0/${identity}`);
+      if (targetRequires(targetPhase, 'wave1') && !existsSync(join(bundlePath, 'artifacts', 'wave1', identity))) missing.push(`artifacts/wave1/${identity}`);
+      if (missing.length === 0) continue;
+      canonicalFindings.push({
+        id: canonicalFindingId('registered_topic_surface_gap', identity),
+        rule_id: 'registered_topic_surface_gap',
+        classification: 'blocking',
+        topic_identity: identity,
+        primary_surface: missing[0],
+        supporting_details: missing.slice(1).map((surface) => ({ kind: 'missing_surface', surface })),
+        repair_kind: 'materialize_canonical_surface',
+      });
+    }
+  }
+
+  const artifactsRoot = join(bundlePath, 'artifacts');
+  if (existsSync(artifactsRoot)) {
+    for (const entry of readdirSync(artifactsRoot, { withFileTypes: true })) {
+      if (entry.isDirectory() && !['wave0', 'wave1', 'wave2'].includes(entry.name)) {
+        canonicalFindings.push({
+          id: canonicalFindingId('unknown_durable_namespace', entry.name),
+          rule_id: 'unknown_durable_namespace',
+          classification: 'warning',
+          topic_identity: null,
+          primary_surface: `artifacts/${entry.name}`,
+          supporting_details: [],
+          repair_kind: 'classify_namespace',
+        });
+      }
+    }
+  }
+
+  return canonicalFindings;
+}
+
 /**
  * Audit bundle directories against expected file patterns.
  *
@@ -462,6 +610,7 @@ function classifyFile(relPath, ctx) {
  * @impl FIO-001, FIO-002, FIO-004
  */
 export function auditFileObservability(bundlePath, {
+  topics = [],
   topicSlugs = [],
   queue = null,
   ledgerDeclarations = [],
@@ -474,6 +623,7 @@ export function auditFileObservability(bundlePath, {
   if (!existsSync(bundlePath)) {
     return {
       findings,
+      canonical_findings: [],
       inspect: [`Bundle directory not found: ${bundlePath}`],
       advice: ['Verify --bundle points to an existing run bundle.'],
     };
@@ -494,6 +644,13 @@ export function auditFileObservability(bundlePath, {
   const nonSubmittedRows = nonSubmittedDeclarations(rawDeclarations || [], submittedDeclarations);
   const hasBundleMap = existsSync(join(bundlePath, 'BUNDLE_MAP.md'));
   const hasLegacyStartHere = existsSync(join(bundlePath, 'START_FROM_HERE.md'));
+  const canonicalFindings = auditCanonicalTopicFootprint(bundlePath, {
+    topics,
+    topicSlugs,
+    queue,
+    ledgerDeclarations: submittedDeclarations,
+    targetPhase,
+  });
 
   if (hasLegacyStartHere && !hasBundleMap) {
     inspect.push('[legacy_bundle_map] START_FROM_HERE.md is deprecated compatibility; new bundles use BUNDLE_MAP.md.');
@@ -608,7 +765,7 @@ export function auditFileObservability(bundlePath, {
         continue;
       }
       const missingFiles = [];
-      for (const f of ['websearch.json', 'page.md', 'meta.json']) {
+      for (const f of CACHE_BASE_LEAF_FILES) {
         if (!existsSync(join(trailDir, f))) missingFiles.push(f);
       }
       if (missingFiles.length > 0) {
@@ -626,13 +783,8 @@ export function auditFileObservability(bundlePath, {
           const metaPath = join(trailDir, 'meta.json');
           if (existsSync(metaPath)) {
             const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
-            if (meta.url && ref.source_url) {
-              try {
-                const a = new URL(meta.url); a.hash = '';
-                const b = new URL(ref.source_url); b.hash = '';
-                if (a.toString() === b.toString()) return true;
-              } catch { /* URL parse error — skip */ }
-            }
+            const mapping = cacheLeafMapping(meta);
+            if (ref.source_url && mapping.urls.some((url) => normalizeCacheMappingUrl(url) === normalizeCacheMappingUrl(ref.source_url))) return true;
           }
         } catch { /* meta.json unreadable */ }
         // Check source_slug or filename qualifier
@@ -694,5 +846,12 @@ export function auditFileObservability(bundlePath, {
     advice.push('Use log-event.mjs --explain-file to record explanations for unplanned files.');
   }
 
-  return { findings, inspect, advice };
+  for (const finding of canonicalFindings) {
+    inspect.push(`[${finding.rule_id}] ${finding.classification.toUpperCase()}: ${finding.primary_surface}${finding.topic_identity ? ` topic=${finding.topic_identity}` : ''}`);
+  }
+  if (canonicalFindings.some((finding) => finding.classification === 'blocking')) {
+    advice.push('Reconcile each explicit topic identity with topic_registry and accepted canonical surfaces; do not grant parallel output authority by explanation alone.');
+  }
+
+  return { findings, canonical_findings: canonicalFindings, inspect, advice };
 }

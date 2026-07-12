@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @impl IOC-001
 // inspect-wave0-output.mjs — side-effect-free Wave0 contract inspect
 // @impl IOC-001, IOC-005, RWG-018
 
@@ -67,7 +68,7 @@ const metadataKeys = ['source_url', 'acceptance_status', 'source_type', 'tier', 
 const sections = ['Key Facts', 'Core Content Capture', 'Relevance To This Research', 'Quotable Terms / Concepts', 'Risks And Limitations'];
 for (const file of sharedFiles) {
   const content = readFileSync(join(referencePath, file), 'utf8');
-  const beforeSection = content.split(/^#{1,6}\s+/m)[0] || '';
+  const beforeSection = content.split(/^##\s+/m)[0] || '';
   const metadata = new Set([...beforeSection.matchAll(/^\s*-\s*([A-Za-z0-9_]+)\s*:/gm)].map((match) => match[1]));
   additionalChecksRun += 2;
   for (const key of metadataKeys.filter((candidate) => !metadata.has(candidate))) {

@@ -19,6 +19,11 @@ import {
   WORK_UNIT_OUTPUT_LEDGER,
   DEFAULT_KIND_CONTRACTS,
 } from './work-unit-constants.mjs';
+import {
+  CACHE_BASE_LEAF_FILES,
+  hasExplicitDegradedCapture as sharedHasExplicitDegradedCapture,
+  inspectCacheLeaf,
+} from './helpers/cache-leaf-contract.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -218,18 +223,8 @@ export function validateCacheTrailContent(cacheDir, trail, { pageText = null } =
   const metaPath = path.join(cacheDir, 'meta.json');
   const resolvedPageText = pageText ?? (existsSync(pagePath) ? readFileSync(pagePath, 'utf-8') : '');
   const meta = existsSync(metaPath) ? readOptionalJson(metaPath) : null;
-  const trimmed = resolvedPageText.trim();
-  if (!trimmed) throw new Error(`cache trail ${trail} has incomplete cache content: page.md is empty`);
-  const nonEmptyLines = trimmed.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  const placeholderOnly = nonEmptyLines.length <= 2 && nonEmptyLines.every((line) => /^#*\s*(cache page for|page|placeholder|todo|tbd)\b/i.test(line));
-  if (placeholderOnly && !hasExplicitDegradedCapture(trimmed, meta)) {
-    throw new Error(`cache trail ${trail} has incomplete cache content: page.md is placeholder-only`);
-  }
-  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) {
-    throw new Error(`cache trail ${trail} has incomplete cache content: meta.json is missing or invalid`);
-  }
-  const urlLike = meta.url || meta.source_url || meta.final_url || meta.fetched_url || meta.source_slug;
-  if (!urlLike) throw new Error(`cache trail ${trail} has incomplete cache content: meta.json lacks url/source mapping`);
+  const result = inspectCacheLeaf({ availableFiles: CACHE_BASE_LEAF_FILES, pageText: resolvedPageText, meta });
+  if (!result.ok) throw new Error(`cache trail ${trail} has incomplete cache content: ${result.issue}`);
 }
 
 export function readOptionalJson(filePath) {
@@ -241,13 +236,5 @@ export function readOptionalJson(filePath) {
 }
 
 export function hasExplicitDegradedCapture(pageText, meta) {
-  const text = String(pageText || '').toLowerCase();
-  const reason = [
-    meta?.capture_status,
-    meta?.fetch_status,
-    meta?.degraded_capture,
-    meta?.failure_reason,
-    meta?.reason,
-  ].filter((value) => value !== undefined && value !== null).join(' ').toLowerCase();
-  return /degraded|fetch[-_ ]?failure|access[-_ ]?failure|blocked|unavailable|failed/.test(`${text} ${reason}`);
+  return sharedHasExplicitDegradedCapture(pageText, meta);
 }

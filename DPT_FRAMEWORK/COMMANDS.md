@@ -44,7 +44,7 @@ Current inventory:
 
 - Gate CLIs use the shared gate result helper and emit structured stdout `{ check, routing, inspect, advice }`; `routing.kind` of `invalid_input` or `config_error` exits `2`, gate failure exits `1`, pass exits `0`.
 - Inspect-wave CLIs are non-gate structured-output commands; stdout `{ check, inspect, advice }` is the Agent decision surface, with `2` reserved for caller invocation errors such as missing bundle input.
-- `check-reentry.mjs` is a non-gate structured-output command: `0` clean, `1` blockers/drift, `2` invalid target/args/config/caller request.
+- `check-reentry.mjs` is a non-gate structured-output command: `0` clean, `1` blockers/drift, `2` invalid target/args/config/caller request. Loaded/normalized results use schema `1.1.0` and add `recovery.canonical_topic_findings[]` plus one `root_findings[]` entry per independent blocker. A root exposes at most one reachable action; `missing_contract` means the Engine knows the suggested route is unavailable and the Agent must not loop that command or hand-write authority.
 - Many current utility validators are binary `0/1` and do not yet share a common exit helper.
 - `log-event.mjs` is an always-`0` diagnostic/logging exception; logging failure must not be treated as proof that a load-bearing trace event was written.
 - Known doc/code drift: `validate-workflow-package.mjs` header documents code `2` for invocation errors, but current code only exits `0` or `1`; record this as future reconciliation, not current behavior.

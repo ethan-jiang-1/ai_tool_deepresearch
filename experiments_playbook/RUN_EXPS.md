@@ -68,6 +68,7 @@
 | G30 reentry-debuggability | case-307 | `exp_reentry-debuggability/case-307-light-clean-reentry.md` | clean reentry：所有 audit 通过，无 blocker |
 | G30 reentry-debuggability | case-308 | `exp_reentry-debuggability/case-308-light-stale-queue-blocker.md` | stale queue blocker 检测：prior-phase active work 阻塞 reentry |
 | G30 reentry-debuggability | case-309 | `exp_reentry-debuggability/case-309-light-drift-detection.md` | checkpoint drift 检测：control file hash 变化 → blocker |
+| G30 reentry-debuggability | case-313 | `exp_reentry-debuggability/case-313-light-canonical-recovery-incident.md` | registry-external durable topic + parallel namespace → one canonical root + missing contract；不证明 post-final reentry |
 
 ### G14 Migration Map
 

@@ -1,17 +1,17 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.21**
+> **DPT_FRAMEWORK v0.22**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.21
+## Current Release: v0.22
 
-- Paired Evolution Directions now review control simplicity and Agent/user action responsibility without replacing accepted specs, executable contracts, or runtime truth.
-- Ordinary authorized command execution and reversible mechanical repair remain Agent-owned; human-directed context identifies the decision source but does not create permission, override, or a missing Engine capability.
-- HITL2 Agent-facing projections and controlled proofs now match the current five recorded actions, passing no-transition decisions, deterministic readiness/rerun handoffs, and terminal Final semantics.
+- Canonical topic-footprint drift now appears in read-only file observability and `check-reentry` schema `1.1.0` recovery summaries with one root projection and reachable/missing-contract feedback.
+- Wave0 metadata inspection tolerates an optional H1, balanced bold return-map labels normalize narrowly, and cache leaf validation uses one Engine-owned projection across submit/gate/depth/docs.
+- These diagnostics do not implement post-final reentry, state mutation, canonical topic materialization, or delegated actor fallback.
 
 ## 0. 禁用内置捷径（最高优先）
 
@@ -40,6 +40,8 @@ Interactive in-run checkpoints 只有 `hitl1`（定方向 / profile / topics）�
 Delegated sub-agent work uses the Engine-mediated work-unit path only: queue demand item -> `operate-work-unit claim` -> sub-agent task under bundle-root `_work_units/` -> verified files/cache/result/receipt under active `bundle_dir` -> `operate-work-unit submit` -> submitted ledger row -> gate. Normal `submit` accepts claimed attempts only and rejects terminal attempts. The only terminal recovery exception is explicit audited `operate-work-unit late-submit` for eligible `timed_out` attempts when no replacement has submitted. Do not use queue completion as delegated success; `operate-queue complete` is for non-delegated queue work. Bare runtime paths such as `_work_units/...`, `rb_queue.json`, `reference/`, `artifacts/`, `_cache/`, and `_logs/` resolve under the active bundle root selected above, not repo root or `DPT_FRAMEWORK/`.
 
 If status or terminal output looks suspicious, run `node DPT_FRAMEWORK/cli/audit-phase-status.mjs --bundle <path>`. The audit is diagnostic-only: it reports drift, missing witnesses, failed-gate downstream status, or premature `final/` output; it does not repair status. In non-terminal `stop: no`, a caught would-have-surfaced moment is recorded with `log-event.mjs --surfacing-intent` and then aborted; the event is diagnostic-only and never permission to surface.
+
+For bundle recovery, run `node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle <path> --at <target>`. Read `recovery.root_findings[]` before acting: a `reachable` root carries at most one sanctioned nearest action; `missing_contract` is a direct stop boundary, not permission to retry a known-rejected predecessor, hand-edit status/trace, or create an addendum namespace; `not_applicable` leaves semantic reconciliation to the Agent without granting mutation authority.
 
 若已有 active bundle：别重建，打开该 bundle 的 `BUNDLE_MAP.md`（旧 bundle 只有 `START_FROM_HERE.md` 时，把它当作 deprecated fallback），读 `rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`。若 `rb_status.json.current_node` 非空，从该 phase Markdown node 续跑；不要只凭 `current_gate` 推断当前 phase。若 `current_node` 为 `null` 或缺失，先运行 reentry/trace 诊断。
 
