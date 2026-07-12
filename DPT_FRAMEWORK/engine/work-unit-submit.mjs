@@ -423,6 +423,18 @@ function buildLateSubmitDurabilityFailure(prepared, error, rollback) {
 }
 
 function buildLedgerRow({ record, result, resultHash, declaredAt, auditFields = {} }) {
+  const actorExecution = record.actor_execution || {
+    execution_actor_class: 'legacy_unrecorded',
+    delegated_role_key: null,
+    observation: {
+      outcome: 'unknown',
+      source: 'legacy_claim',
+      reason_code: 'legacy_actor_unrecorded',
+      recorded_at: null,
+    },
+    policy_decision: 'legacy_compatibility',
+    fallback_from: null,
+  };
   const base = {
     declared_at: declaredAt,
     work_id: record.work_id,
@@ -440,6 +452,8 @@ function buildLedgerRow({ record, result, resultHash, declaredAt, auditFields = 
     accepted_source_urls: result.accepted_source_urls || [],
     cache_trails: result.cache_trails || [],
     result_hash: resultHash,
+    actor_contract_version: 'work-unit.actor.v1',
+    actor_execution: actorExecution,
     ...auditFields,
   };
   return WorkUnitLedgerRecordSchema.parse({

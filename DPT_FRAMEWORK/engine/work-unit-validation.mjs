@@ -51,6 +51,10 @@ export function readAndValidateManifest(bundleDir, index, record) {
   for (const field of ['work_id', 'queue_item_id', 'wave', 'kind', 'kind_code', 'receipt_nonce', 'queue_item_snapshot_hash']) {
     if (manifest[field] !== record[field]) throw new Error(`manifest/index mismatch for ${record.work_id}: ${field}`);
   }
+  if (record.actor_contract_version || manifest.actor_contract_version) {
+    if (record.actor_contract_version !== 'work-unit.actor.v1' || manifest.actor_contract_version !== record.actor_contract_version) throw new Error(`manifest/index mismatch for ${record.work_id}: actor_contract_version`);
+    if (JSON.stringify(manifest.actor_execution) !== JSON.stringify(record.actor_execution)) throw new Error(`manifest/index mismatch for ${record.work_id}: actor_execution`);
+  }
   return manifest;
 }
 
@@ -64,6 +68,10 @@ export function readAndValidateBeacon(bundleDir, record, manifest) {
   }
   if (beacon.result_schema_ref !== manifest.paths.result_schema_ref) throw new Error(`beacon/manifest mismatch for ${record.work_id}: result_schema_ref`);
   if (beacon.runtime_receipt_ref !== manifest.paths.runtime_receipt_ref) throw new Error(`beacon/manifest mismatch for ${record.work_id}: runtime_receipt_ref`);
+  if (record.actor_contract_version || beacon.actor_contract_version) {
+    if (beacon.actor_contract_version !== record.actor_contract_version) throw new Error(`beacon/index mismatch for ${record.work_id}: actor_contract_version`);
+    if (JSON.stringify(beacon.actor_execution) !== JSON.stringify(record.actor_execution)) throw new Error(`beacon/index mismatch for ${record.work_id}: actor_execution`);
+  }
   return beacon;
 }
 
@@ -120,6 +128,12 @@ export function readAndValidateResult(bundleDir, resultPath, record, { normaliza
   const result = WorkUnitResultSchema.parse(normalized);
   for (const field of ['work_id', 'queue_item_id', 'kind', 'receipt_nonce']) {
     if (result[field] !== record[field]) throw new Error(`result/index mismatch for ${record.work_id}: ${field}`);
+  }
+  if (record.actor_contract_version) {
+    if (result.actor_contract_version !== record.actor_contract_version) throw new Error(`result/index mismatch for ${record.work_id}: actor_contract_version`);
+    if (result.execution_actor_class !== record.actor_execution.execution_actor_class) throw new Error(`result/index mismatch for ${record.work_id}: execution_actor_class`);
+  } else if (result.actor_contract_version || result.execution_actor_class) {
+    throw new Error(`legacy result for ${record.work_id} must not invent actor binding`);
   }
   return result;
 }
@@ -210,6 +224,12 @@ export function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations
     const event = WorkUnitRuntimeReceiptEventSchema.parse(eventCandidate);
     for (const field of WORK_UNIT_REQUIRED_RECEIPT_FIELDS) {
       if (event[field] !== record[field]) throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: ${field}`);
+    }
+    if (record.actor_contract_version) {
+      if (event.actor_contract_version !== record.actor_contract_version) throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: actor_contract_version`);
+      if (event.execution_actor_class !== record.actor_execution.execution_actor_class) throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: execution_actor_class`);
+    } else if (event.actor_contract_version || event.execution_actor_class) {
+      throw new Error(`legacy runtime receipt for ${record.work_id} must not invent actor binding`);
     }
     events.push(event);
   });

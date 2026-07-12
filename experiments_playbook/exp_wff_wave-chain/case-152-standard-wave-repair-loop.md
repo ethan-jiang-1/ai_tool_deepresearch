@@ -137,7 +137,7 @@ JS
 
 ```bash
 set +e
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave2 --count 1 > "$B/case-152-wave2-drain-before-gate.json"
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave2 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-topic-scout --actor-reason probe_succeeded --execution-actor delegated_subagent > "$B/case-152-wave2-drain-before-gate.json"
 DRAIN_BEFORE_STATUS=$?
 set -e
 node - "$B/case-152-wave2-drain-before-gate.json" "$DRAIN_BEFORE_STATUS" <<'JS'
@@ -191,7 +191,7 @@ enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
 }), { fileName: 'case152-targeted-repair.json' });
 JS
 
-CLAIM_REPAIR=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave2 --count 1)
+CLAIM_REPAIR=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave2 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-topic-scout --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_REPAIR" > "$B/case-152-repair-claim.json"
 WORK_REPAIR=$(printf '%s\n' "$CLAIM_REPAIR" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.claimed_work_ids[0]);')
 printf '%s\n' "$WORK_REPAIR" | grep -- '-b001-'
@@ -240,7 +240,7 @@ writeFileSync(`${bundle}/artifacts/wave2/finding-index.yaml`, indexRaw.replace('
 JS
 
 set +e
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave2 --count 1 > "$B/case-152-wave2-drain-after-repair.json"
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave2 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-topic-scout --actor-reason probe_succeeded --execution-actor delegated_subagent > "$B/case-152-wave2-drain-after-repair.json"
 DRAIN_AFTER_STATUS=$?
 set -e
 node - "$B/case-152-wave2-drain-after-repair.json" "$DRAIN_AFTER_STATUS" <<'JS'

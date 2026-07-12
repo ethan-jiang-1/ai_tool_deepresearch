@@ -84,7 +84,7 @@ const result = enqueueWorkUnitTask(bundle, task, { fileName: 'case401-topic-a.js
 console.log(JSON.stringify(result, null, 2));
 JS
 
-CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1)
+CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_JSON" > "$B/case-401-claim.json"
 printf '%s\n' "$CLAIM_JSON" | node -e '
 const j = JSON.parse(require("fs").readFileSync(0, "utf8"));

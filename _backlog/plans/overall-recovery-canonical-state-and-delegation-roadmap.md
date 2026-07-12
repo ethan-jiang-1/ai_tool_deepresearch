@@ -1,7 +1,7 @@
 # Overall Plan: Recovery、Canonical State 与 Delegated Reliability 五 Change 总控路线
 
 **性质:** 跨 plan / bug 的 OpenSpec change 总路线（pre-OpenSpec）
-**状态:** Active — C1 已 archive（v0.22）；C2 已 archive（v0.23）；C3A `establish-canonical-topic-state` 正在 apply（v0.24）；C3B layout mutation、C4/C5 待按依赖顺序推进（更新于 2026-07-12）
+**状态:** Active — C1/C2/C3A/C4 已 archive（v0.22–v0.25）；C3B layout mutation 与 C5 post-final recovery 待推进（更新于 2026-07-12）
 **当前进度速览:** 见文末 [§12 Change 进度总览](#12-change-进度总览live-tracker)——每推进一个 change 就更新那张表，避免跟踪断线。
 **前置基础:** `align-recovery-with-simple-helper-posture`（v0.21）已建立 helper-oriented、`materialize-before-work`、`canonical-or-blocked` 与依赖带，但未实现本计划的核心 runtime 能力。
 
@@ -11,7 +11,7 @@
 
 - [`breakpoint-recovery-persistence-model`](breakpoint-recovery-persistence-model.md)
 - [`human-override-and-state-mutability`](human-override-and-state-mutability.md)
-- [BUG-077](../bugs/BUG-077-subagent-api-402-and-cache-trail-schema-opaque.md)
+- [BUG-077](../_done/_fixed_bugs/BUG-077-subagent-api-402-and-cache-trail-schema-opaque.md)（Closed）
 - [BUG-078](../bugs/BUG-078-post-final-hitl2-rerun-reentry-blocked.md)
 - [BUG-079](../bugs/BUG-079-out-of-gate-addendum-no-canonical-footprint.md)
 
@@ -214,6 +214,8 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 
 ## 6. C4 — `handle-unavailable-delegated-actors`
 
+**Status (2026-07-12): Archived.** v0.25 implements one queue-front role-bound actor preflight at the existing claim checkpoint, explicit single Phase Agent fallback inside formal submit authority, truthful normal/fallback/legacy provenance, case-407 controlled PASS, and full regression 1469/1469. No parallel availability control plane was added.
+
 ### 6.1 覆盖来源
 
 - BUG-077 的 host/subagent availability 部分：API 402 导致一批 work unit 在无产出前提下全部失败
@@ -374,16 +376,16 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 |---|---|---|---|---|---|
 | C1 | `harden-recovery-observability-and-contracts` | — | ✅ Archived | v0.22 | `archive/2026-07-12-harden-recovery-observability-and-contracts` |
 | C2 | `make-artifact-persistence-crash-safe` | C1 | ✅ Archived | v0.23 | `archive/2026-07-12-make-artifact-persistence-crash-safe`；main spec 已同步 |
-| C3A | `establish-canonical-topic-state` | C1 + C2 durability boundary | 🚧 Applying（当前） | v0.24 | stable UID/intent/direct progress；已明确不含 layout mutation/post-final override |
+| C3A | `establish-canonical-topic-state` | C1 + C2 durability boundary | ✅ Archived（worktree archive pending commit） | v0.24 | `archive/2026-07-12-establish-canonical-topic-state`；stable UID/intent/direct progress |
 | C3B | `mutate-canonical-topic-layout`（待 propose） | C3A | ⏳ Not started | TBD | remove/rename/renumber/path/reference migration |
-| C4 | `handle-unavailable-delegated-actors` | C1（独立执行 lane，可与 C2 并行）| ⏳ Not started | TBD | 关闭 BUG-077 的 actor availability 尾巴 |
+| C4 | `handle-unavailable-delegated-actors` | C1（独立执行 lane，可与 C2 并行）| ✅ Archived | v0.25 | `archive/2026-07-12-handle-unavailable-delegated-actors`；case-407、1469/1469 PASS |
 | C5 | `restore-audited-post-final-recovery` | C1 + C3（消费 C2 crash-safe primitive）| ⏳ Not started | TBD | 最高风险 authority change，必须最后做 |
 
 **推进顺序提醒：**
 
 1. C1 ✅ → 已提供只读安全网。
-2. C2 ✅ 已 archive；C4 仍可独立推进。
-3. **C3（当前）** 依赖 C1，并消费已归档 C2 的 durability boundary。
+2. C2/C4 ✅ 已 archive。
+3. C3A ✅ 已 archive；C3B layout mutation仍待 propose。
 4. C5 最后，依赖 C1 + C3，并复用 C2 crash-safe primitive。
 
 **来源关闭追踪（与 §11 关闭条件对齐）：**
@@ -392,7 +394,7 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 |---|---|---|
 | `breakpoint-recovery-persistence-model.md` | C2 + C3 | Partial — C2完成durability；C3A完成canonical intent/direct progress，persist前host write与post-final边界仍开放 |
 | `human-override-and-state-mutability.md` | C1 + C3 + C5 | Partial — C1完成D，C3A完成A；B转C3B，C等待C5 |
-| BUG-077 | C1（contract-opacity）+ C4（actor availability）| Partial — C1 已收 contract-opacity 尾巴；actor availability 待 C4 |
+| BUG-077 | C1（contract-opacity）+ C4（actor availability）| Closed — 已移入 `_backlog/_done/_fixed_bugs/`；case-407与1469/1469通过 |
 | BUG-078 | C5 | Open — 等 C5 |
 | BUG-079 | C1（检测）+ C2（content durability）+ C3/C5（canonical-or-blocked）| Partial — legal HITL1/rerun canonical footprint由C3A完成；历史/post-final incident仍等待C5 |
 

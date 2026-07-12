@@ -400,7 +400,13 @@ export function enqueueWorkUnitTask(bundleDir, task, { fileName = `${task.queue_
 }
 
 export function claimWorkUnitsViaCli(bundleDir, { phase = 'wave0', count = 1 } = {}) {
-  return runJsonCli([OPERATE_WORK_UNIT, 'claim', bundleDir, '--phase', phase, '--count', String(count)]);
+  const roles = { wave0: 'dpt-source-intake', wave1: 'dpt-evidence-extractor', wave2: 'dpt-topic-scout' };
+  return runJsonCli([
+    OPERATE_WORK_UNIT, 'claim', bundleDir, '--phase', phase, '--count', String(count),
+    '--actor-outcome', 'available', '--actor-source', 'native_probe',
+    '--actor-role-key', roles[phase], '--actor-reason', 'probe_succeeded',
+    '--execution-actor', 'delegated_subagent',
+  ]);
 }
 
 export function expireClaimedWorkUnit(bundleDir, workId, { ageMs = null } = {}) {
@@ -762,6 +768,8 @@ export function writeFixtureResultForWorkUnit(bundleDir, {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     ts: '2026-07-06T00:00:00.000Z',
   })}\n`);
 
@@ -788,6 +796,8 @@ export function writeFixtureResultForWorkUnit(bundleDir, {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'fixture-backed controlled output',
     output_files: outputFiles,
     cache_trails: trailPaths,

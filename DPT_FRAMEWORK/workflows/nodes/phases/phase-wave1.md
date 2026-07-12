@@ -119,7 +119,9 @@ Claim and submit delegated work units until queue and delegated in-flight work a
 Compute a bounded top-up `claim-count` from independent eligible topics, the accepted/default cap, and remaining free delegated in-flight capacity. The conservative default cap is no higher than 5 when no accepted profile/runtime cap exists. If reconstructed in-flight work already reaches cap, poll/submit/terminalize before claiming more.
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase wave1 --count <claim-count>
+First inspect the queue-front planned role and perform one bounded real `dpt-evidence-extractor` native probe. Do not claim a batch to test availability or reuse this observation for another role.
+
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase wave1 --count <claim-count> --actor-outcome <available|unavailable|unknown> --actor-source <native_probe|not_observed> --actor-role-key dpt-evidence-extractor --actor-reason <normalized-reason> --execution-actor <delegated_subagent|phase_agent_fallback>
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
 ```

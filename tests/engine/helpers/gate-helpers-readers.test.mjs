@@ -15,6 +15,7 @@ import {
   readSubmittedWorkUnitDeclarations,
 } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 import {
+  availableActorDecision,
   claimAndSubmitWorkUnit,
   cleanupWorkUnitBundle,
   tempWorkUnitBundle,
@@ -82,6 +83,8 @@ function writeReaderSubmitFiles(dir, record) {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     ts: '2026-07-10T00:00:00.000Z',
   })}\n`);
 
@@ -93,6 +96,8 @@ function writeReaderSubmitFiles(dir, record) {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'done',
     output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }],
     cache_trails: [cacheTrail],
@@ -293,7 +298,7 @@ describe('readOutputDeclarations', () => {
     const dir = tempWorkUnitBundle('gh-reader-late-');
     try {
       seedReaderQueue(dir);
-      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      claimWorkUnits(dir, { phase: 'wave0', count: 1, ...availableActorDecision('wave0_source_intake') });
       const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
       closeWorkUnitAttempt(dir, {
         work_id: record.work_id,
@@ -350,7 +355,7 @@ describe('readOutputDeclarations', () => {
     const dir = tempWorkUnitBundle('gh-reader-late-conflict-');
     try {
       seedReaderQueue(dir);
-      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      claimWorkUnits(dir, { phase: 'wave0', count: 1, ...availableActorDecision('wave0_source_intake') });
       const first = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
       closeWorkUnitAttempt(dir, {
         work_id: first.work_id,
@@ -358,7 +363,7 @@ describe('readOutputDeclarations', () => {
         reason: 'deadline-expired',
         nowMs: afterDeadline(first),
       });
-      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      claimWorkUnits(dir, { phase: 'wave0', count: 1, ...availableActorDecision('wave0_source_intake') });
       const retry = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0002'];
       const retryResult = writeReaderSubmitFiles(dir, retry);
       const replacement = submitWorkUnit(dir, { work_id: retry.work_id, resultPath: retryResult });

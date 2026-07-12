@@ -87,7 +87,7 @@ Required Agent-visible distinctions:
 Only run this step if the Agent has written a finding that requires targeted evidence.
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave2 --count 1 > "$B/case-232-targeted-claim.json"
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave2 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-topic-scout --actor-reason probe_succeeded --execution-actor delegated_subagent > "$B/case-232-targeted-claim.json"
 printf '%s\n' "Read the claimed task.md, run the real dpt-topic-scout actor, and provide its result JSON to submit."
 ```
 

@@ -105,7 +105,7 @@ cat > "$B/_tmp/declared-task.json" << 'JSON'
 JSON
 
 node DPT_FRAMEWORK/cli/operate-queue.mjs enqueue "$B" --task "$B/_tmp/declared-task.json" >/dev/null
-CLAIM=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave1 --count 1)
+CLAIM=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave1 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-evidence-extractor --actor-reason probe_succeeded --execution-actor delegated_subagent)
 WORK_ID=$(node -e 'const j=JSON.parse(process.argv[1]); console.log(j.claimed_work_ids[0]);' "$CLAIM")
 
 cat > "$B/_tmp/write-submit-result.mjs" << 'JS'

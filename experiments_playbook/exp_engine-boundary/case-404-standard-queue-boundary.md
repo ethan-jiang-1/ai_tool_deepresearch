@@ -136,7 +136,7 @@ DELEGATED_ACTIVE_STATUS=$?
 set -e
 printf '%s\n' "$DELEGATED_ACTIVE_STATUS" > "$B/case-404-delegated-active-complete.status"
 
-CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1)
+CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_JSON" > "$B/case-404-delegated-claim.json"
 set +e
 node DPT_FRAMEWORK/cli/operate-queue.mjs complete "$B" --result "$B/case404-delegated-active-result.json" > "$B/case-404-delegated-inflight-complete.json"

@@ -86,7 +86,7 @@ const task = queueItemForWorkUnit({
 enqueueWorkUnitTask(bundle, task, { fileName: 'case212-topic-a.json' });
 JS
 
-CLAIM_A=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1)
+CLAIM_A=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_A" > "$B/case-212-topic-a-claim.json"
 WORK_A=$(printf '%s\n' "$CLAIM_A" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.claimed_work_ids[0]);')
 RESULT_A=$(node --input-type=module - "$B" "$WORK_A" <<'JS'
@@ -154,7 +154,7 @@ const task = queueItemForWorkUnit({
 enqueueWorkUnitTask(bundle, task, { fileName: 'case212-topic-b-repair.json' });
 JS
 
-CLAIM_B=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1)
+CLAIM_B=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_B" > "$B/case-212-topic-b-claim.json"
 WORK_B=$(printf '%s\n' "$CLAIM_B" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.claimed_work_ids[0]);')
 printf '%s\n' "$WORK_B" | grep -- '-b001-'

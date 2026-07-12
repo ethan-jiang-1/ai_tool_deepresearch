@@ -16,6 +16,7 @@ import {
   submitWorkUnit,
 } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
 import {
+  availableActorDecision,
   claimAndSubmitWorkUnit,
   delegatedQueueItem,
   seedDelegatedQueue,
@@ -167,13 +168,13 @@ function createLifecycleProjectionBundle(name) {
     delegatedQueueItem('timed', { phase: 'wave0' }),
     delegatedQueueItem('abandoned', { phase: 'wave0' }),
   ]);
-  const claim = claimWorkUnits(dir, { phase: 'wave0', count: 4 });
+  const claim = claimWorkUnits(dir, { phase: 'wave0', count: 4, ...availableActorDecision('wave0_source_intake') });
   const [claimedId, failedId, timedId, abandonedId] = claim.claimed_work_ids;
   closeWorkUnitAttempt(dir, { work_id: failedId, status: 'failed', reason: 'test failure' });
   closeWorkUnitAttempt(dir, { work_id: timedId, status: 'timed_out', reason: 'test timeout', force: true });
   closeWorkUnitAttempt(dir, { work_id: abandonedId, status: 'abandoned', reason: 'test abandon' });
   submitWorkUnit(dir, { work_id: timedId, resultPath: join(dir, 'missing-result.json') });
-  const retryClaim = claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+  const retryClaim = claimWorkUnits(dir, { phase: 'wave0', count: 1, ...availableActorDecision('wave0_source_intake') });
   const index = loadWorkUnitIndex(dir);
   index.work_units[claimedId].deadline_at = '2026-01-01T00:00:00.000Z';
   saveWorkUnitIndex(dir, index);

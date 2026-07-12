@@ -113,6 +113,10 @@ export function bundleName(bundleDir) {
 
 export function defaultKindContract(kind) {
   return clone(DEFAULT_KIND_CONTRACTS[kind] || {
+    actor_policy: {
+      delegated_role_key: null,
+      phase_agent_fallback: 'prohibited',
+    },
     task_brief: 'Complete the assigned delegated work and return only through the work-unit result contract.',
     output_contract: {
       required_result_fields: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce', 'output_files', 'cache_trails'],
@@ -138,6 +142,7 @@ export function defaultKindContract(kind) {
 export function kindContractForQueueItem(queueItem, kind) {
   const base = defaultKindContract(kind);
   return {
+    actor_policy: clone(base.actor_policy),
     task_brief: queueItem.task_brief || queueItem.payload?.task_brief || base.task_brief,
     output_contract: clone(queueItem.output_contract || queueItem.payload?.output_contract || base.output_contract),
     cache_policy: clone(queueItem.cache_policy || queueItem.payload?.cache_policy || base.cache_policy),

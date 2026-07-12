@@ -118,7 +118,9 @@ Compute a bounded top-up `claim-count` from:
 If reconstructed in-flight work already reaches the accepted/default cap, poll, submit, repair, or terminalize those attempts before claiming more. Use `--count 1` only for a single remaining item, dependency-blocked front item, accepted cap of 1, or a narrow repair.
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase wave0 --count <claim-count>
+First inspect the queue-front planned role and perform one bounded real `dpt-source-intake` native probe. Do not claim a batch to test availability or reuse this observation for another role.
+
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase wave0 --count <claim-count> --actor-outcome <available|unavailable|unknown> --actor-source <native_probe|not_observed> --actor-role-key dpt-source-intake --actor-reason <normalized-reason> --execution-actor <delegated_subagent|phase_agent_fallback>
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>
 ```
 

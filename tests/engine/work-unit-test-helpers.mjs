@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -20,6 +20,18 @@ export function tempWorkUnitBundle(prefix = 'wu-helper-') {
 
 export function cleanupWorkUnitBundle(dir) {
   rmSync(dir, { recursive: true, force: true });
+}
+
+export function recursiveAuthoritySnapshot(targetPath, { excluded = new Set(['rb_trace.jsonl', '_logs']) } = {}) {
+  if (!existsSync(targetPath)) return { type: 'missing' };
+  const stats = statSync(targetPath);
+  if (!stats.isDirectory()) return { type: 'file', content: readFileSync(targetPath, 'base64') };
+  return {
+    type: 'dir',
+    entries: Object.fromEntries(readdirSync(targetPath).sort()
+      .filter((name) => !excluded.has(name))
+      .map((name) => [name, recursiveAuthoritySnapshot(path.join(targetPath, name), { excluded })])),
+  };
 }
 
 export function referenceContent(overrides = {}) {
@@ -85,6 +97,25 @@ function producerRuleForKind(kind) {
   return 'delegated_work';
 }
 
+export function delegatedRoleForKind(kind) {
+  if (kind === 'wave0_source_intake') return 'dpt-source-intake';
+  if (kind === 'wave1_topic_deepening') return 'dpt-evidence-extractor';
+  if (kind === 'wave2_targeted_evidence') return 'dpt-topic-scout';
+  return 'dpt-source-intake';
+}
+
+export function availableActorDecision(kind = 'wave0_source_intake') {
+  return {
+    actorObservation: {
+      outcome: 'available',
+      source: 'native_probe',
+      role_key: delegatedRoleForKind(kind),
+      reason_code: 'probe_succeeded',
+    },
+    executionActorClass: 'delegated_subagent',
+  };
+}
+
 export function delegatedQueueItem(id = 'queue-a', overrides = {}) {
   const phase = overrides.phase || 'wave0';
   const kind = overrides.kind || kindForPhase(phase);
@@ -92,7 +123,7 @@ export function delegatedQueueItem(id = 'queue-a', overrides = {}) {
   return makeItem({
     queue_item_id: id,
     title: `Delegated ${id}`,
-    targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
+    targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: delegatedRoleForKind(kind), timeout_ms: 600000 } },
     kind,
     producer_rule,
     payload: { topic_slug: id },
@@ -126,6 +157,8 @@ export function claimAndSubmitWorkUnit(dir, {
     url: outputs.find((output) => output.source_url)?.source_url || 'https://example.com/research/article',
   }],
   resultOverrides = {},
+  receiptOverrides = {},
+  actorDecision = availableActorDecision(kind),
 } = {}) {
   seedDelegatedQueue(dir, [delegatedQueueItem(queueItemId, {
     phase,
@@ -133,7 +166,7 @@ export function claimAndSubmitWorkUnit(dir, {
     producer_rule,
     ...queueItemOverrides,
   })]);
-  const claim = claimWorkUnits(dir, { phase, count: 1 });
+  const claim = claimWorkUnits(dir, { phase, count: 1, ...actorDecision });
   const workId = claim.claimed_work_ids?.[0];
   if (!workId) throw new Error(`test helper failed to claim a work unit for ${phase}`);
   const record = loadWorkUnitIndex(dir).work_units[workId];
@@ -162,7 +195,10 @@ export function claimAndSubmitWorkUnit(dir, {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     ts: '2026-07-06T00:00:00.000Z',
+    ...receiptOverrides,
   })}\n`);
 
   const resultPath = path.join(dir, '_tmp', `${record.work_id}.result.json`);
@@ -173,6 +209,8 @@ export function claimAndSubmitWorkUnit(dir, {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'done',
     output_files: outputs.map(({ content: _content, ...entry }) => entry),
     cache_trails: cacheTrails.map((trail) => trail.path),

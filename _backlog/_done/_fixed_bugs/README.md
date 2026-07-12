@@ -86,6 +86,7 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-074 | 2026-07-11 | BUG-072 的 wave0 clean gate pass 复现（`anatomy` bundle）+ `surfacing-intent` 逃生口不可达；随 `put-continuation-cues-at-decision-points` (v0.19) 关闭（机制落地；行为待真实 run 观察） |
 | BUG-075 | 2026-07-10 | Wave1 gate contract 墙（19 规则全为 provenance/format/floor 技术性失败）；随 `simplify-and-reuse-wave-contract-checks` (v0.17) 削减为必要 blocker + 同源 preflight 可达 |
 | BUG-076 | 2026-07-12 | Native WebFetch host domain verification remains external; framework now accepts a real alternative fetch surface such as `curl` for HITL1 research access and delegated fetch fallback |
+| BUG-077 | 2026-07-12 | Role-bound actor preflight prevents doomed delegated allocation; explicit single Phase Agent fallback remains inside formal submit and actor provenance authority |
 
 **Next available bug ID: BUG-080**
 

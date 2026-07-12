@@ -85,6 +85,10 @@ function runtimeReceiptIssues(bundleDir, record) {
         issues.push(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: ${field}`);
       }
     }
+    if (record.actor_contract_version) {
+      if (parsed.actor_contract_version !== record.actor_contract_version) issues.push(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: actor_contract_version`);
+      if (parsed.execution_actor_class !== record.actor_execution.execution_actor_class) issues.push(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: execution_actor_class`);
+    }
   });
   return issues;
 }
@@ -101,6 +105,10 @@ function beaconIssues(bundleDir, record) {
     if (beacon.work_unit_dir !== record.paths.work_unit_dir) issues.push(`beacon/index mismatch for ${record.work_id}: work_unit_dir`);
     if (beacon.result_schema_ref !== record.paths.result_schema_ref) issues.push(`beacon/index mismatch for ${record.work_id}: result_schema_ref`);
     if (beacon.runtime_receipt_ref !== record.paths.runtime_receipt_ref) issues.push(`beacon/index mismatch for ${record.work_id}: runtime_receipt_ref`);
+    if (record.actor_contract_version) {
+      if (beacon.actor_contract_version !== record.actor_contract_version) issues.push(`beacon/index mismatch for ${record.work_id}: actor_contract_version`);
+      if (JSON.stringify(beacon.actor_execution) !== JSON.stringify(record.actor_execution)) issues.push(`beacon/index mismatch for ${record.work_id}: actor_execution`);
+    }
   } catch (error) {
     issues.push(`beacon invalid for ${record.work_id}: ${error.message}`);
   }
@@ -148,6 +156,9 @@ function ledgerIssues(bundleDir, index) {
     if (row.runtime_receipt_ref !== record.paths.runtime_receipt_ref) issues.push(`ledger/index mismatch for ${workId}: runtime_receipt_ref`);
     if (row.result_hash !== record.result_hash) issues.push(`ledger/index mismatch for ${workId}: result_hash`);
     if (row.ledger_record_hash !== record.ledger_record_hash) issues.push(`ledger/index mismatch for ${workId}: ledger_record_hash`);
+    const expectedActorClass = record.actor_execution?.execution_actor_class || 'legacy_unrecorded';
+    const ledgerActorClass = row.actor_execution?.execution_actor_class || 'legacy_unrecorded';
+    if (ledgerActorClass !== expectedActorClass) issues.push(`ledger/index mismatch for ${workId}: execution_actor_class`);
 
     const resultPath = path.join(bundleDir, record.paths.result_ref);
     if (!existsSync(resultPath)) {
@@ -156,6 +167,7 @@ function ledgerIssues(bundleDir, index) {
       try {
         const result = WorkUnitResultSchema.parse(readJson(resultPath));
         if (hashValue(result) !== record.result_hash) issues.push(`submitted result hash mismatch: ${workId}`);
+        if (record.actor_contract_version && result.execution_actor_class !== expectedActorClass) issues.push(`result/index mismatch for ${workId}: execution_actor_class`);
       } catch (error) {
         issues.push(`submitted result invalid for ${workId}: ${error.message}`);
       }
@@ -216,6 +228,18 @@ export function inspectWorkUnits(bundleDir, { nowMs = Date.now(), emitDiagnostic
     nowMs,
     lateSubmitRejections: countTraceEvents(bundleDir, 'work_unit_late_submit_rejected'),
   });
+  const actor_projection = Object.values(index.work_units).map((record) => ({
+    work_id: record.work_id,
+    queue_item_id: record.queue_item_id,
+    intended_delegated_role_key: record.actor_execution?.delegated_role_key || null,
+    execution_actor_class: record.actor_execution?.execution_actor_class || 'legacy_unrecorded',
+    actor_observation: record.actor_execution?.observation || {
+      outcome: 'unknown',
+      source: 'legacy_claim',
+      reason_code: 'legacy_actor_unrecorded',
+      recorded_at: null,
+    },
+  }));
 
   const expectedCounts = computeStatusCounts(index.work_units);
   if (JSON.stringify(expectedCounts) !== JSON.stringify(index.status_counts)) {
@@ -257,6 +281,7 @@ export function inspectWorkUnits(bundleDir, { nowMs = Date.now(), emitDiagnostic
         if (manifest[field] !== record[field]) issues.push(`manifest/index mismatch for ${workId}: ${field}`);
       }
       if (manifest.paths.work_unit_dir !== record.paths.work_unit_dir) issues.push(`manifest/index mismatch for ${workId}: work_unit_dir`);
+      if (record.actor_contract_version && JSON.stringify(manifest.actor_execution) !== JSON.stringify(record.actor_execution)) issues.push(`manifest/index mismatch for ${workId}: actor_execution`);
     } catch (error) {
       issues.push(`manifest invalid for ${workId}: ${error.message}`);
     }
@@ -281,8 +306,8 @@ export function inspectWorkUnits(bundleDir, { nowMs = Date.now(), emitDiagnostic
   }
 
   if (issues.length === 0) {
-    return { passed: true, check: true, inspect: [], projection, advice: 'Work-unit index and envelope surfaces are consistent.' };
+    return { passed: true, check: true, inspect: [], projection, actor_projection, advice: 'Work-unit index and envelope surfaces are consistent.' };
   }
   if (emitDiagnostics) emitWorkUnitInspectDiagnostics(bundleDir, { issues, source: diagnosticSource });
-  return { passed: false, check: false, inspect: issues, projection, advice: 'Resolve work-unit index/envelope drift before running delegated gates.' };
+  return { passed: false, check: false, inspect: issues, projection, actor_projection, advice: 'Resolve work-unit index/envelope drift before running delegated gates.' };
 }

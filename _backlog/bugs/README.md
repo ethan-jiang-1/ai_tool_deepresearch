@@ -17,7 +17,6 @@
 
 | Bug | 简述 | 状态 |
 |-----|------|------|
-| [BUG-077](BUG-077-subagent-api-402-and-cache-trail-schema-opaque.md) | Wave0 delegated subagent 遇到 host API 402；原卡同时记录 cache/reference/source contract 不透明 | Partial — contract docs、`dry-submit`、degraded capture 已落地；402 fallback、inspect H1 split、bold return-map 仍开放 |
 | [BUG-078](BUG-078-post-final-hitl2-rerun-reentry-blocked.md) | Final 交付后无法通过 sanctioned CLI 回到 HITL2 做 rerun | Active — v0.21 已澄清当前边界；runtime reopen/reentry 能力仍缺失 |
 | [BUG-079](BUG-079-out-of-gate-addendum-no-canonical-footprint.md) | Out-of-gate addendum 新增 topic 无 canonical footprint，gate/audit/recovery 不可见 | Active — v0.21 已落 helper/canonical-or-blocked 基础；正式 footprint、integrity audit、可达 rerun 仍缺失 |
 

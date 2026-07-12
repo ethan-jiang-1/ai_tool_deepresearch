@@ -19,7 +19,7 @@ import {
 
 function usage() {
   console.error(`Usage:
-  node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase waveN [--count N]
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase waveN [--count N] --actor-outcome <available|unavailable|unknown> --actor-source <native_probe|not_observed> --actor-role-key <role> --actor-reason <reason> --execution-actor <delegated_subagent|phase_agent_fallback>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit <bundle> --work-id <id> --result <result.json>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-id <id> [--result <result.json>]
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <id> --result <result.json>
@@ -80,6 +80,11 @@ const { values } = parseArgs({
     result: { type: 'string' },
     reason: { type: 'string' },
     force: { type: 'boolean', default: false },
+    'actor-outcome': { type: 'string' },
+    'actor-source': { type: 'string' },
+    'actor-role-key': { type: 'string' },
+    'actor-reason': { type: 'string' },
+    'execution-actor': { type: 'string', default: 'delegated_subagent' },
   },
   allowPositionals: false,
 });
@@ -87,7 +92,19 @@ const { values } = parseArgs({
 try {
   if (command === 'claim') {
     if (!values.phase) throw new Error('--phase is required');
-    const result = claimWorkUnits(bundleDir, { phase: values.phase, count: values.count });
+    const hasObservation = values['actor-outcome'] || values['actor-source'] || values['actor-role-key'] || values['actor-reason'];
+    const actorObservation = hasObservation ? {
+      outcome: values['actor-outcome'],
+      source: values['actor-source'],
+      role_key: values['actor-role-key'],
+      reason_code: values['actor-reason'],
+    } : null;
+    const result = claimWorkUnits(bundleDir, {
+      phase: values.phase,
+      count: values.count,
+      actorObservation,
+      executionActorClass: values['execution-actor'],
+    });
     emit(result);
     process.exit(result.claimed_count > 0 ? 0 : 1);
   }

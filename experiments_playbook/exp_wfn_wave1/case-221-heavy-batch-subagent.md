@@ -81,7 +81,7 @@ for (const topic of [
 }
 JS
 
-CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave1 --count 2)
+CLAIM_JSON=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave1 --count 2 --actor-outcome available --actor-source native_probe --actor-role-key dpt-evidence-extractor --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_JSON" > "$B/case-221-claim.json"
 printf '%s\n' "$CLAIM_JSON" | node -e '
 const j = JSON.parse(require("fs").readFileSync(0, "utf8"));

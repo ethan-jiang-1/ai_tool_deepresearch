@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.25
+
+- Added role-bound actor preflight before work-unit allocation, so unavailable or unobserved delegated actors do not create doomed work IDs or consume queue demand.
+- Added explicit single-work-unit `phase_agent_fallback` inside the existing envelope and submit transaction, with actor-bound result/receipt validation and full ledger provenance.
+- Kept control narrow: no host-authenticated availability claim, probe service, token, TTL, registry, fallback queue, scheduler, daemon, watcher, or global actor mode.
+
 ## v0.24
 
 - Added canonical topic UIDs and minimum durable intent under the single `rb_plan.md#/topic_registry` owner, with explicit legacy migration and UID-bound seed projections.

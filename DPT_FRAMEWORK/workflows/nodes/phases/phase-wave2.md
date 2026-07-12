@@ -182,7 +182,9 @@ Newly fetched evidence follows the other authority path: it is not accepted unti
 For any finding with `decision=exploit_search` or `decision=explore_search`, enqueue and drain targeted evidence work units. Compute a bounded top-up `claim-count` from independent eligible findings, accepted/default cap, and remaining free delegated in-flight capacity; reconstruct in-flight Wave2 work before claiming.
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase wave2 --count <claim-count>
+First inspect the queue-front planned role and perform one bounded real `dpt-topic-scout` native probe. Do not claim a batch to test availability or reuse this observation for another role.
+
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase wave2 --count <claim-count> --actor-outcome <available|unavailable|unknown> --actor-source <native_probe|not_observed> --actor-role-key dpt-topic-scout --actor-reason <normalized-reason> --execution-actor <delegated_subagent|phase_agent_fallback>
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
 ```

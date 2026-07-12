@@ -1,6 +1,6 @@
 // @impl DEW-002, DEW-013, FRE-005
 
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync as execFileSyncProduction, spawnSync as spawnSyncProduction } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -12,6 +12,20 @@ import { createQueue, enqueue, saveQueue } from '../../../DPT_FRAMEWORK/engine/q
 import { WORK_UNIT_OUTPUT_LEDGER, createWorkUnit, loadWorkUnitIndex, transactionDir, workUnitIndexPath } from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
 
 const CLI = path.resolve('DPT_FRAMEWORK/cli/operate-work-unit.mjs');
+const AVAILABLE_ACTOR_ARGS = ['--actor-outcome', 'available', '--actor-source', 'native_probe', '--actor-role-key', 'dpt-source-intake', '--actor-reason', 'probe_succeeded', '--execution-actor', 'delegated_subagent'];
+
+function withExplicitActor(args) {
+  if (args[0] === CLI && args[1] === 'claim' && args[2] && !String(args[2]).startsWith('-') && !args.includes('--actor-outcome')) return [...args, ...AVAILABLE_ACTOR_ARGS];
+  return args;
+}
+
+function execFileSync(file, args, options) {
+  return execFileSyncProduction(file, withExplicitActor(args), options);
+}
+
+function spawnSync(file, args, options) {
+  return spawnSyncProduction(file, withExplicitActor(args), options);
+}
 
 function tempBundle() {
   return mkdtempSync(path.join(os.tmpdir(), 'wu-cli-'));
@@ -62,6 +76,8 @@ function writeValidSubmitFiles(dir, record) {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     ts: '2026-07-06T00:00:00.000Z',
   })}\n`);
 
@@ -73,6 +89,8 @@ function writeValidSubmitFiles(dir, record) {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'done',
     output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }],
     cache_trails: [cacheTrail],
@@ -111,6 +129,8 @@ function writeReceiptProgress(dir, record) {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     ts: new Date().toISOString(),
   })}\n`);
 }
@@ -132,6 +152,8 @@ function writeAssignedRepairableResult(dir, record) {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'repairable draft',
     output_files: [],
     cache_trails: [],

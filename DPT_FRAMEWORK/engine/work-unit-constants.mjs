@@ -26,6 +26,7 @@ export const WORK_UNIT_REQUIRED_RECEIPT_FIELDS = Object.freeze(['work_id', 'queu
 
 export const DEFAULT_KIND_CONTRACTS = Object.freeze({
   wave0_source_intake: Object.freeze({
+    actor_policy: Object.freeze({ delegated_role_key: 'dpt-source-intake', phase_agent_fallback: 'allowed' }),
     task_brief: 'Research the assigned source-intake demand, write declared reference/source outputs, and return only through the work-unit result contract.',
     output_contract: Object.freeze({
       required_result_fields: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce', 'output_files', 'cache_trails'],
@@ -43,6 +44,7 @@ export const DEFAULT_KIND_CONTRACTS = Object.freeze({
     }),
   }),
   wave1_topic_deepening: Object.freeze({
+    actor_policy: Object.freeze({ delegated_role_key: 'dpt-evidence-extractor', phase_agent_fallback: 'allowed' }),
     task_brief: 'Deepen the assigned topic with bounded evidence work, submitted source backing, declared evidence/question outputs, and submit-ready cache trails. Canonical topic reference Markdown is Phase-owned after submit unless this task explicitly assigns a reference output.',
     output_contract: Object.freeze({
       required_result_fields: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce', 'output_files', 'cache_trails'],
@@ -64,6 +66,7 @@ export const DEFAULT_KIND_CONTRACTS = Object.freeze({
     }),
   }),
   wave2_targeted_evidence: Object.freeze({
+    actor_policy: Object.freeze({ delegated_role_key: 'dpt-topic-scout', phase_agent_fallback: 'allowed' }),
     task_brief: 'Perform only the assigned targeted evidence search and return bounded source evidence, source URLs, confidence/fills_gap signals, declared outputs when assigned, and cache trails for submit validation. Final finding status and 00-cross projections are Phase-owned after submit.',
     output_contract: Object.freeze({
       required_result_fields: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce', 'output_files', 'cache_trails'],

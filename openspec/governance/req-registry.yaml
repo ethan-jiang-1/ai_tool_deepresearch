@@ -153,6 +153,7 @@ AGQ-020: agentic-queue — pendingCount exposes active window plus refill pool t
 AGQ-021: agentic-queue — Supplementary queue demand IDs may carry iteration labels when explicit topic identity is valid
 AGQ-022: agentic-queue — Wave delegated queue loops prefer bounded batched claims for independent demand
 AGQ-023: agentic-queue — Phase task-card examples preserve queue_item_id as queue demand identity
+AGQ-024: agentic-queue — Actor preflight no-claim preserves queue demand and lifecycle semantics
 
 # agent-output-declaration
 AGO-001: agent-output-declaration — Work-unit result output_files declaration with role and source_url rules
@@ -212,6 +213,9 @@ DEW-012: delegated-work-units — Work-unit submit performs narrow canonicalizat
 DEW-013: delegated-work-units — Work-unit dry-submit preflights submit validation without side effects
 DEW-014: delegated-work-units — Timeout terminalization is guarded by progress-aware preflight
 DEW-015: delegated-work-units — Audited late-submit recovers eligible timed-out work units without identity rewrite
+DEW-016: delegated-work-units — Work-unit claim evaluates one explicit role-bound actor observation before allocation
+DEW-017: delegated-work-units — Explicit single Phase Agent fallback remains inside the work-unit submit envelope
+DEW-018: delegated-work-units — Work-unit records preserve truthful execution actor provenance with legacy compatibility
 
 # conditional-nodes
 COS-001: conditional-nodes — Deterministic branch checkpoint transforms
@@ -391,6 +395,7 @@ SRL-002: subagent-runtime-logging — Lifecycle events carry the work-unit beaco
 SRL-003: subagent-runtime-logging — Sub-agent reads work-unit _beacon.json for bundle_dir/log_cli/work_id/queue_item_id/kind/nonce as single source of truth
 SRL-004: subagent-runtime-logging — Lifecycle events are work-unit provenance-forensics cross-check signals, not independent gate pass coverage
 SRL-005: subagent-runtime-logging — Explicit audited late-submit diagnostics distinguish normal terminal submit rejection from late-accept recovery [DEPRECATED]
+SRL-006: subagent-runtime-logging — Runtime receipts identify the claimed work-unit execution actor class
 
 # subagent-slots
 SUS-001: subagent-slots — Replaced production slot lifecycle/path contracts removed in favor of work-unit runtime contracts [DEPRECATED]
@@ -533,6 +538,7 @@ RWP-015: research-wave-phase-content — Wave phase bodies teach batch-poll-subm
 RWP-016: research-wave-phase-content — Wave phase bodies teach canonical gate-consumable refs, roles, and return-map navigation
 RWP-017: research-wave-phase-content — Wave0 and Wave1 fetch targets follow profile floors plus conservative margin
 RWP-018: research-wave-phase-content — Wave delegated drain loops route timeout through progress-aware preflight
+RWP-019: research-wave-phase-content — Wave delegated execution uses one visible role-bound actor decision loop
 
 # wff-research-waves / research-wave-gate-implementation
 RWG-001: research-wave-gate-implementation — Wave0 complete gate rule set (file_exists, dir_exists, schema_valid ReferenceMetadata, count_floor, trace_event_present, status_value)

@@ -7,6 +7,7 @@ export const WORK_UNIT_BEACON_SCHEMA_VERSION = 'work-unit.beacon.v1';
 export const WORK_UNIT_STATUS_SCHEMA_VERSION = 'work-unit.status.v1';
 export const WORK_UNIT_AGENT_SCHEMA_VERSION = 'work-unit.agent.v1';
 export const WORK_UNIT_RECEIPT_EVENT_SCHEMA_VERSION = 'work-unit.receipt-event.v1';
+export const WORK_UNIT_ACTOR_CONTRACT_VERSION = 'work-unit.actor.v1';
 
 export const WORK_UNIT_ID_PATTERN = /^wu-w(?<wave>[0-9]+)-b(?<batch>[0-9]{3})-(?<kind_code>[a-z][a-z0-9]{1,7})-i(?<claim>[0-9]{4})$/;
 
@@ -14,6 +15,67 @@ export const WorkUnitStatus = z.enum(['claimed', 'submitted', 'failed', 'timed_o
 export const WorkUnitTerminalStatus = z.enum(['submitted', 'failed', 'timed_out', 'abandoned']);
 
 const JsonObject = z.record(z.string(), z.unknown());
+
+export const ExecutionActorClassSchema = z.enum(['delegated_subagent', 'phase_agent_fallback']);
+export const ActorObservationOutcomeSchema = z.enum(['available', 'unavailable', 'unknown']);
+export const ActorObservationSourceSchema = z.enum(['native_probe', 'not_observed']);
+export const ActorObservationReasonSchema = z.enum([
+  'probe_succeeded',
+  'probe_access_denied',
+  'probe_model_unavailable',
+  'probe_host_policy_blocked',
+  'probe_capacity_unavailable',
+  'observation_required',
+  'probe_inconclusive',
+]);
+const ActorObservationInputObjectSchema = z.object({
+  outcome: ActorObservationOutcomeSchema,
+  source: ActorObservationSourceSchema,
+  role_key: z.string().min(1),
+  reason_code: ActorObservationReasonSchema,
+}).strict();
+export const ActorObservationInputSchema = ActorObservationInputObjectSchema.superRefine((data, ctx) => {
+  const valid = (data.outcome === 'available' && data.source === 'native_probe' && data.reason_code === 'probe_succeeded')
+    || (data.outcome === 'unavailable' && data.source === 'native_probe' && [
+      'probe_access_denied',
+      'probe_model_unavailable',
+      'probe_host_policy_blocked',
+      'probe_capacity_unavailable',
+    ].includes(data.reason_code))
+    || (data.outcome === 'unknown' && data.source === 'not_observed' && data.reason_code === 'observation_required')
+    || (data.outcome === 'unknown' && data.source === 'native_probe' && data.reason_code === 'probe_inconclusive');
+  if (!valid) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'invalid actor observation outcome/source/reason combination' });
+});
+export const ActorObservationSchema = ActorObservationInputObjectSchema.extend({
+  recorded_at: z.string().datetime(),
+}).superRefine((data, ctx) => {
+  const { recorded_at: _recordedAt, ...input } = data;
+  const parsed = ActorObservationInputSchema.safeParse(input);
+  if (!parsed.success) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'invalid stored actor observation combination' });
+});
+export const ActorExecutionSchema = z.object({
+  execution_actor_class: ExecutionActorClassSchema,
+  delegated_role_key: z.string().min(1),
+  observation: ActorObservationSchema,
+  policy_decision: z.enum(['normal_allowed', 'fallback_allowed']),
+  fallback_from: z.literal('delegated_subagent').nullable(),
+}).strict().superRefine((data, ctx) => {
+  if (data.execution_actor_class === 'delegated_subagent' && (data.policy_decision !== 'normal_allowed' || data.fallback_from !== null)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'delegated_subagent actor binding is invalid' });
+  if (data.execution_actor_class === 'phase_agent_fallback' && (data.policy_decision !== 'fallback_allowed' || data.fallback_from !== 'delegated_subagent')) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'phase_agent_fallback actor binding is invalid' });
+});
+export const LegacyActorExecutionSchema = z.object({
+  execution_actor_class: z.literal('legacy_unrecorded'),
+  delegated_role_key: z.string().min(1).nullable(),
+  observation: z.object({
+    outcome: z.literal('unknown'),
+    source: z.literal('legacy_claim'),
+    reason_code: z.literal('legacy_actor_unrecorded'),
+    recorded_at: z.string().datetime().nullable(),
+  }).strict(),
+  policy_decision: z.literal('legacy_compatibility'),
+  fallback_from: z.null(),
+}).strict();
+export const LedgerActorExecutionSchema = z.union([ActorExecutionSchema, LegacyActorExecutionSchema]);
 
 export const RuntimeRefsSchema = z.object({
   platform: z.string().min(1).optional(),
@@ -83,9 +145,13 @@ export const WorkUnitManifestSchema = z.object({
   output_contract: JsonObject,
   cache_policy: JsonObject,
   runtime_refs: RuntimeRefsSchema,
+  actor_contract_version: z.literal(WORK_UNIT_ACTOR_CONTRACT_VERSION).optional(),
+  actor_execution: ActorExecutionSchema.optional(),
   paths: WorkUnitPathRefsSchema,
   queue_item: z.record(z.string(), z.unknown()),
-}).strict();
+}).strict().superRefine((data, ctx) => {
+  if (Boolean(data.actor_contract_version) !== Boolean(data.actor_execution)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'manifest actor contract fields must appear together' });
+});
 
 export const WorkUnitBeaconSchema = z.object({
   schema_version: z.literal(WORK_UNIT_BEACON_SCHEMA_VERSION).default(WORK_UNIT_BEACON_SCHEMA_VERSION),
@@ -108,7 +174,11 @@ export const WorkUnitBeaconSchema = z.object({
   required_receipt_fields: z.array(z.enum(['work_id', 'queue_item_id', 'kind', 'receipt_nonce'])),
   runtime_refs: RuntimeRefsSchema,
   runtime_refs_authority: z.literal('diagnostic_only').default('diagnostic_only'),
-}).strict();
+  actor_contract_version: z.literal(WORK_UNIT_ACTOR_CONTRACT_VERSION).optional(),
+  actor_execution: ActorExecutionSchema.optional(),
+}).strict().superRefine((data, ctx) => {
+  if (Boolean(data.actor_contract_version) !== Boolean(data.actor_execution)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'beacon actor contract fields must appear together' });
+});
 
 export const WorkUnitIndexRecordSchema = z.object({
   work_id: z.string().regex(WORK_UNIT_ID_PATTERN),
@@ -130,13 +200,17 @@ export const WorkUnitIndexRecordSchema = z.object({
   deadline_at: z.string().datetime(),
   last_observed_at: z.string().datetime().optional(),
   runtime_refs: RuntimeRefsSchema,
+  actor_contract_version: z.literal(WORK_UNIT_ACTOR_CONTRACT_VERSION).optional(),
+  actor_execution: ActorExecutionSchema.optional(),
   paths: WorkUnitPathRefsSchema,
   result_hash: z.string().min(1).optional(),
   ledger_record_hash: z.string().min(1).optional(),
   last_submit_rejection: z.record(z.string(), z.unknown()).optional(),
   terminal_reason: z.string().optional(),
   terminal_at: z.string().datetime().optional(),
-}).strict();
+}).strict().superRefine((data, ctx) => {
+  if (Boolean(data.actor_contract_version) !== Boolean(data.actor_execution)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'index actor contract fields must appear together' });
+});
 
 export const WorkUnitWaveCountersSchema = z.object({
   current_batch_index: z.number().int().nonnegative().default(0),
@@ -194,6 +268,8 @@ export const WorkUnitRuntimeReceiptEventSchema = z.object({
   queue_item_id: z.string().min(1),
   kind: z.string().min(1),
   receipt_nonce: z.string().min(16),
+  actor_contract_version: z.literal(WORK_UNIT_ACTOR_CONTRACT_VERSION).optional(),
+  execution_actor_class: ExecutionActorClassSchema.optional(),
   ts: z.string().datetime().optional(),
   detail: JsonObject.optional(),
 }).passthrough();
@@ -213,6 +289,8 @@ export const WorkUnitResultSchema = z.object({
   queue_item_id: z.string().min(1),
   kind: z.string().min(1),
   receipt_nonce: z.string().min(16),
+  actor_contract_version: z.literal(WORK_UNIT_ACTOR_CONTRACT_VERSION).optional(),
+  execution_actor_class: ExecutionActorClassSchema.optional(),
   summary: z.string().default(''),
   output_files: z.array(z.object({
     path: z.string().min(1),
@@ -242,12 +320,17 @@ export const WorkUnitLedgerRecordSchema = z.object({
   accepted_source_urls: WorkUnitResultSchema.shape.accepted_source_urls,
   cache_trails: WorkUnitResultSchema.shape.cache_trails,
   result_hash: z.string().min(1),
+  actor_contract_version: z.literal(WORK_UNIT_ACTOR_CONTRACT_VERSION).optional(),
+  actor_execution: LedgerActorExecutionSchema.optional(),
   late_accept: z.literal(true).optional(),
   late_accept_reason: z.string().trim().min(1).optional(),
   terminal_status_before_accept: z.literal('timed_out').optional(),
   superseded_retry_work_ids: z.array(z.string().regex(WORK_UNIT_ID_PATTERN)).optional(),
   ledger_record_hash: z.string().min(1),
 }).strict().superRefine((data, ctx) => {
+  if (Boolean(data.actor_contract_version) !== Boolean(data.actor_execution)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'ledger actor contract fields must appear together' });
+  }
   if (data.late_accept === true) {
     if (!data.late_accept_reason) {
       ctx.addIssue({

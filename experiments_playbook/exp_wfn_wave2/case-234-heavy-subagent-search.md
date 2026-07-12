@@ -84,7 +84,7 @@ JS
 ## Step 2: [MAIN/SHELL] Claim Work Unit
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave2 --count 1 > "$B/case-234-claim.json"
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave2 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-topic-scout --actor-reason probe_succeeded --execution-actor delegated_subagent > "$B/case-234-claim.json"
 node - "$B" <<'JS'
 const fs = require('fs');
 const bundle = process.argv[2];

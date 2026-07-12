@@ -58,12 +58,22 @@ function saveSeedQueue(dir, items) {
   return queue;
 }
 
+const availableSourceActor = {
+  actorObservation: {
+    outcome: 'available',
+    source: 'native_probe',
+    role_key: 'dpt-source-intake',
+    reason_code: 'probe_succeeded',
+  },
+  executionActorClass: 'delegated_subagent',
+};
+
 describe('claimWorkUnits', () => {
   it('claims a contiguous delegated prefix in one transaction', () => {
     const dir = tempBundle();
     try {
       saveSeedQueue(dir, [delegated('queue-a'), delegated('queue-b'), delegated('queue-c')]);
-      const result = claimWorkUnits(dir, { phase: 'wave0', count: 2 });
+      const result = claimWorkUnits(dir, { phase: 'wave0', count: 2, ...availableSourceActor });
       assert.equal(result.claimed_count, 2);
       assert.deepEqual(result.claimed_work_ids, ['wu-w0-b000-src-i0001', 'wu-w0-b000-src-i0002']);
       assert.deepEqual(result.continuation, {
@@ -94,7 +104,7 @@ describe('claimWorkUnits', () => {
     const dir = tempBundle();
     try {
       saveSeedQueue(dir, [delegated('queue-a'), direct('queue-direct'), delegated('queue-b')]);
-      const result = claimWorkUnits(dir, { phase: 'wave0', count: 3 });
+      const result = claimWorkUnits(dir, { phase: 'wave0', count: 3, ...availableSourceActor });
       assert.equal(result.claimed_count, 1);
       assert.deepEqual(result.continuation, {
         interaction: 'prohibited',

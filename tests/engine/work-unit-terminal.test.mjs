@@ -14,7 +14,7 @@ import {
   saveQueue,
 } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
 import {
-  claimWorkUnits,
+  claimWorkUnits as claimWorkUnitsProduction,
   closeWorkUnitAttempt,
   lateSubmitWorkUnit,
   loadWorkUnitIndex,
@@ -30,6 +30,19 @@ function tempBundle() {
 
 function cleanup(dir) {
   rmSync(dir, { recursive: true, force: true });
+}
+
+function claimWorkUnits(dir, options) {
+  return claimWorkUnitsProduction(dir, {
+    ...options,
+    actorObservation: {
+      outcome: 'available',
+      source: 'native_probe',
+      role_key: 'dpt-source-intake',
+      reason_code: 'probe_succeeded',
+    },
+    executionActorClass: 'delegated_subagent',
+  });
 }
 
 function delegated(id) {
@@ -71,6 +84,8 @@ function writeReceiptProgress(dir, record, { event = 'fetch_batch_done', observe
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     ts: iso(observedMs),
   })}\n`);
   setFileMtime(receiptPath, observedMs);
@@ -86,6 +101,8 @@ function writeMismatchedReceipt(dir, record, { observedMs = Date.parse(record.cl
     queue_item_id: 'wrong-queue-item',
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     ts: iso(observedMs),
   })}\n`);
   setFileMtime(receiptPath, observedMs);
@@ -110,6 +127,8 @@ function writeSubmitReadyCandidate(dir, record, { resultPath = path.join(dir, re
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'ready',
     output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }],
     cache_trails: [cacheTrail],

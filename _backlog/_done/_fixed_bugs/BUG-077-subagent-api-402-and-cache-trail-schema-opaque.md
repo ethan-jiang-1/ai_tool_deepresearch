@@ -5,7 +5,7 @@
 **Phase:** Wave0 (source intake)
 **Severity:** High — blocks formal work-unit submission path; requires ~2 hours of manual recovery per wave
 **Reporter:** Claude Code main agent
-**Current status (2026-07-12):** Partial — C1 closed the remaining Wave0/return-map/cache contract-opacity gaps; the host/subagent API 402 availability and sanctioned fallback problem remains open for C4.
+**Current status (2026-07-12):** Fixed — C1 closed contract opacity; archived C4 adds role-bound preflight, explicit single Phase Agent fallback, actor-bound submit provenance, controlled case-407 PASS, and full regression 1469/1469.
 
 ## Current status
 
@@ -21,9 +21,13 @@
 - Balanced `**field**:` return-map labels normalize to the canonical five fields without weakening enum/ref checks.
 - Submit, depth/gate checks, and file observability reuse one Engine-owned cache leaf contract; assigned leaf files add to, rather than replace, the canonical base files.
 
-### Still open
+### Resolved by C4
 
-- The host/API 402 condition has no framework-sanctioned availability preflight or main-agent execution fallback.
+- Claim now consumes one explicit queue-front role-bound observation before allocation; unavailable/unknown observations create no work IDs or queue/index authority mutation.
+- Classified unavailable actors may use one explicit `phase_agent_fallback` only when the existing kind policy allows it.
+- Fallback remains inside the same task/beacon/result/receipt/formal-submit envelope and is distinguishable in submitted ledger provenance.
+- Zero-progress classified spawn failure uses existing `fail --reason actor_spawn_unavailable:<reason_code>` followed by a fresh probe and new claim; progress-positive attempts keep existing repair/timeout-preflight paths.
+- No probe service, availability registry, TTL, token, scheduler, fallback queue, automatic actor tree, or host-authenticated availability claim was introduced.
 
 ## Environment
 

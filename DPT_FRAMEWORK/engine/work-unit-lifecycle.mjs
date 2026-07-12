@@ -9,6 +9,7 @@ import {
   WorkUnitManifestSchema,
   WorkUnitStatusFileSchema,
 } from '../schema/contracts/work-unit.mjs';
+import { evaluateActorDecision } from './work-unit-actor.mjs';
 import {
   now,
   clone,
@@ -53,6 +54,7 @@ function createWorkUnitInIndex(bundleDir, index, {
   creation_reason = 'claim',
   batchReason = 'initial_phase_drain',
   runtime_refs = {},
+  actor_execution,
 } = {}) {
   if (!queueItem?.queue_item_id) throw new Error('queueItem.queue_item_id is required');
   if (!kind) throw new Error('work-unit kind is required');
@@ -83,6 +85,10 @@ function createWorkUnitInIndex(bundleDir, index, {
     output_contract: kindContract.output_contract,
     cache_policy: kindContract.cache_policy,
     runtime_refs,
+    ...(actor_execution ? {
+      actor_contract_version: 'work-unit.actor.v1',
+      actor_execution,
+    } : {}),
     paths: refs,
     queue_item: clone(queueItem),
   });
@@ -107,6 +113,8 @@ function createWorkUnitInIndex(bundleDir, index, {
     timeout_ms: manifest.timeout_ms,
     deadline_at: manifest.deadline_at,
     runtime_refs: manifest.runtime_refs,
+    actor_contract_version: manifest.actor_contract_version,
+    actor_execution: manifest.actor_execution,
     paths: manifest.paths,
   };
   index.work_units[record.work_id] = record;
@@ -204,14 +212,49 @@ export function openWorkUnitBatch(bundleDir, { phase, reason, lineage = {} } = {
   });
 }
 
-export function claimWorkUnits(bundleDir, { phase, count = 1, batchReason = 'initial_phase_drain' } = {}) {
+function previewClaimCandidates(queue, wave, requestedCount, executionActorClass) {
+  const first = queue.active_window[0];
+  if (!first || !isEligibleDelegatedItem(first, wave)) {
+    return { candidates: [], blocked_by_queue_item_id: first?.queue_item_id || null };
+  }
+  const effectiveCount = executionActorClass === 'phase_agent_fallback' ? 1 : requestedCount;
+  const plannedRoleKey = first.targets?.delegates?.role_key || null;
+  const candidates = [];
+  let blockedBy = null;
+  for (let index = 0; index < effectiveCount; index += 1) {
+    const item = queue.active_window[index];
+    if (!item || !isEligibleDelegatedItem(item, wave)) {
+      blockedBy = item?.queue_item_id || null;
+      break;
+    }
+    const roleKey = item.targets?.delegates?.role_key || null;
+    if (roleKey !== plannedRoleKey) {
+      blockedBy = item.queue_item_id;
+      break;
+    }
+    const kind = item.kind || defaultKindForWave(wave);
+    const actorPolicy = kindContractForQueueItem(item, kind).actor_policy;
+    candidates.push({ item, kind, role_key: roleKey, actor_policy: actorPolicy });
+    if (!kind || !actorPolicy || actorPolicy.delegated_role_key !== roleKey) break;
+  }
+  return { candidates, planned_role_key: plannedRoleKey, blocked_by_queue_item_id: blockedBy };
+}
+
+export function claimWorkUnits(bundleDir, {
+  phase,
+  count = 1,
+  batchReason = 'initial_phase_drain',
+  actorObservation = null,
+  executionActorClass = 'delegated_subagent',
+} = {}) {
   const wave = parsePhase(phase);
   const requestedCount = Number.parseInt(String(count), 10);
   if (!Number.isInteger(requestedCount) || requestedCount < 1) throw new Error('--count must be a positive integer');
 
   const previewQueue = loadQueue(bundleDir);
+  const preview = previewClaimCandidates(previewQueue, wave, requestedCount, executionActorClass);
   const previewFront = previewQueue.active_window[0];
-  if (!previewFront || !isEligibleDelegatedItem(previewFront, wave) || !(previewFront.kind || defaultKindForWave(wave))) {
+  if (preview.candidates.length === 0) {
     const blockedBy = previewFront && !isEligibleDelegatedItem(previewFront, wave) ? previewFront.queue_item_id : null;
     return {
       ok: false,
@@ -227,13 +270,67 @@ export function claimWorkUnits(bundleDir, { phase, count = 1, batchReason = 'ini
     };
   }
 
+  const decision = evaluateActorDecision({
+    observation: actorObservation,
+    executionActorClass,
+    plannedRoleKey: preview.planned_role_key,
+    actorPolicy: preview.candidates[0].actor_policy,
+  });
+  const actorPreflight = {
+    verdict: decision.verdict,
+    reason: decision.reason,
+    planned_role_key: preview.planned_role_key,
+    requested_execution_actor_class: decision.execution_actor_class,
+    observation: decision.observation,
+    recommended_action: decision.recommended_action,
+  };
+  if (decision.verdict !== 'allow_claim') {
+    if (decision.verdict === 'no_claim') {
+      traceWorkUnitEvent(bundleDir, 'work_unit_claim_rejected', {
+        phase,
+        requested_count: requestedCount,
+        claimed_count: 0,
+        actor_preflight: actorPreflight,
+      });
+      logToRun(bundleDir, 'warn', 'work_unit_claim_rejected', {
+        kind: 'queue_claim',
+        phase,
+        requested_count: requestedCount,
+        claimed_count: 0,
+        actor_preflight: actorPreflight,
+      });
+    }
+    return {
+      ok: false,
+      requested_count: requestedCount,
+      claimed_count: 0,
+      claimed_work_ids: [],
+      in_flight_count: phaseInFlight(previewQueue, wave).length,
+      unclaimed_delegated_count: countUnclaimedDelegated(previewQueue, wave),
+      blocked_by_queue_item_id: preview.blocked_by_queue_item_id,
+      phase_drained: false,
+      prompt_refs: [],
+      actor_preflight: actorPreflight,
+      recommended_action: decision.recommended_action,
+      queue: previewQueue,
+    };
+  }
+  const actorExecution = {
+    execution_actor_class: decision.execution_actor_class,
+    delegated_role_key: preview.planned_role_key,
+    observation: { ...decision.observation, recorded_at: now() },
+    policy_decision: decision.policy_decision,
+    fallback_from: decision.fallback_from,
+  };
+  const effectiveCount = decision.execution_actor_class === 'phase_agent_fallback' ? 1 : preview.candidates.length;
+
   return withWorkUnitTransaction(bundleDir, 'claim_work_units', ({ tx_id }) => {
     let queue = previewQueue;
     const index = loadWorkUnitIndex(bundleDir, { createIfMissing: true });
     const claimed = [];
-    let blockedBy = null;
+    let blockedBy = preview.blocked_by_queue_item_id;
 
-    for (let i = 0; i < requestedCount; i += 1) {
+    for (let i = 0; i < effectiveCount; i += 1) {
       const front = queue.active_window[0];
       if (!front) break;
       if (!isEligibleDelegatedItem(front, wave)) {
@@ -256,6 +353,7 @@ export function claimWorkUnits(bundleDir, { phase, count = 1, batchReason = 'ini
         kind,
         creation_reason: 'claim',
         batchReason,
+        actor_execution: actorExecution,
       });
       queue.delegated_in_flight[front.queue_item_id] = {
         queue_item_id: front.queue_item_id,
@@ -279,6 +377,8 @@ export function claimWorkUnits(bundleDir, { phase, count = 1, batchReason = 'ini
         kind: record.kind,
         receipt_nonce: record.receipt_nonce,
         attempt_index: record.attempt_index,
+        actor_contract_version: record.actor_contract_version,
+        actor_execution: record.actor_execution,
       });
       logToRun(bundleDir, 'info', claimEvent, {
         kind: 'queue_claim',
@@ -288,6 +388,7 @@ export function claimWorkUnits(bundleDir, { phase, count = 1, batchReason = 'ini
         wave: record.wave,
         work_unit_kind: record.kind,
         attempt_index: record.attempt_index,
+        execution_actor_class: record.actor_execution.execution_actor_class,
       });
     }
 
@@ -313,7 +414,11 @@ export function claimWorkUnits(bundleDir, { phase, count = 1, batchReason = 'ini
         result_schema_ref: manifest.paths.result_schema_ref,
         runtime_receipt_ref: manifest.paths.runtime_receipt_ref,
         spawn_prompt: spawnPromptForWorkUnit(manifest, bundleDir),
+        actor_contract_version: record.actor_contract_version,
+        actor_execution: record.actor_execution,
       })),
+      actor_preflight: { ...actorPreflight, verdict: 'allow_claim' },
+      recommended_action: decision.recommended_action,
     };
     const continuation = continuationForClaimedWork({ claimedWorkIds: response.claimed_work_ids });
     if (continuation) response.continuation = continuation;
@@ -323,6 +428,7 @@ export function claimWorkUnits(bundleDir, { phase, count = 1, batchReason = 'ini
       claimed_count: claimed.length,
       blocked_by_queue_item_id: blockedBy,
       phase: `wave${wave}`,
+      actor_preflight: response.actor_preflight,
     });
     return { ...response, queue: savedQueue, index: savedIndex };
   });
@@ -408,7 +514,8 @@ export function closeWorkUnitAttempt(bundleDir, { work_id, status, reason, force
       updated_at: closedAt,
     }));
 
-    if (status === 'timed_out') {
+    const actorSpawnUnavailable = status === 'failed' && reason.startsWith('actor_spawn_unavailable:');
+    if (status === 'timed_out' || actorSpawnUnavailable) {
       const retryItem = {
         ...manifest.queue_item,
         status: 'queued',
@@ -420,7 +527,7 @@ export function closeWorkUnitAttempt(bundleDir, { work_id, status, reason, force
           attempt_index: record.attempt_index + 1,
         },
       };
-      queue = preempt(queue, retryItem, { reason: 'work_unit_timeout_retry' });
+      queue = preempt(queue, retryItem, { reason: actorSpawnUnavailable ? 'work_unit_actor_spawn_retry' : 'work_unit_timeout_retry' });
     } else {
       queue.terminal_history.push({
         queue_item_id: record.queue_item_id,
@@ -486,7 +593,7 @@ export function closeWorkUnitAttempt(bundleDir, { work_id, status, reason, force
       queue_item_id: record.queue_item_id,
       status,
       reason,
-      retry_requeued: status === 'timed_out',
+      retry_requeued: status === 'timed_out' || actorSpawnUnavailable,
       ...(timeoutPreflight ? { timeout_preflight: timeoutPreflight } : {}),
       ...forcedTimeoutAudit,
       queue: savedQueue,

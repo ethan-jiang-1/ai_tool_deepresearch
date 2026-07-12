@@ -106,6 +106,10 @@ function resultSchemaDocument(manifest) {
     queue_item_id: { const: manifest.queue_item_id },
     kind: { const: manifest.kind },
     receipt_nonce: { const: manifest.receipt_nonce },
+    ...(manifest.actor_contract_version ? {
+      actor_contract_version: { const: manifest.actor_contract_version },
+      execution_actor_class: { const: manifest.actor_execution.execution_actor_class },
+    } : {}),
     summary: { type: 'string', default: '' },
     output_files: { type: 'array', items: outputFileItemSchema(outputContract), default: [] },
     cache_trails: { type: 'array', items: { type: 'string', minLength: 1 }, default: [] },
@@ -118,7 +122,10 @@ function resultSchemaDocument(manifest) {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
     title: `Work-unit result for ${manifest.kind}`,
     type: 'object',
-    required: requiredResultFields(outputContract),
+    required: [
+      ...requiredResultFields(outputContract),
+      ...(manifest.actor_contract_version ? ['actor_contract_version', 'execution_actor_class'] : []),
+    ],
     properties,
     additionalProperties: false,
   };
@@ -155,6 +162,10 @@ function lifecycleReceiptExample(manifest, event) {
     queue_item_id: manifest.queue_item_id,
     kind: manifest.kind,
     receipt_nonce: manifest.receipt_nonce,
+    ...(manifest.actor_contract_version ? {
+      actor_contract_version: manifest.actor_contract_version,
+      execution_actor_class: manifest.actor_execution.execution_actor_class,
+    } : {}),
     ts: '<ISO8601>',
   };
 }
@@ -189,6 +200,10 @@ function taskMarkdown(manifest, bundleDir) {
     `- queue_item_id: \`${manifest.queue_item_id}\``,
     `- kind: \`${manifest.kind}\``,
     `- receipt_nonce: \`${manifest.receipt_nonce}\``,
+    ...(manifest.actor_contract_version ? [
+      `- execution_actor_class: \`${manifest.actor_execution.execution_actor_class}\``,
+      `- delegated_role_key: \`${manifest.actor_execution.delegated_role_key}\``,
+    ] : []),
     `- bundle_dir: \`${path.resolve(bundleDir)}\``,
     `- deadline_at: \`${manifest.deadline_at}\``,
     `- work_unit_dir: \`${manifest.paths.work_unit_dir}\``,
@@ -198,6 +213,9 @@ function taskMarkdown(manifest, bundleDir) {
     `- runtime_receipt: \`${manifest.paths.runtime_receipt_ref}\``,
     '',
     'Preserve these identity fields exactly in every lifecycle receipt event and in `result.json`.',
+    ...(manifest.actor_execution?.execution_actor_class === 'phase_agent_fallback' ? [
+      'This single work unit is assigned to the Phase Agent fallback actor. Execute it mechanically inside the same envelope, then submit or terminalize it before claiming another fallback.',
+    ] : []),
     'Read `_beacon.json` before writing runtime files. Resolve every runtime write by joining the beacon `bundle_dir` with the bundle-relative path from this task.',
     'Returning research findings in chat without writing the required files is a work-unit failure, not completion.',
     '',
@@ -285,14 +303,17 @@ export function spawnPromptForWorkUnit(manifest, bundleDir = null) {
   const absBeacon = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.beacon_ref) : parsed.paths.beacon_ref;
   const absTask = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.task_ref) : parsed.paths.task_ref;
   const absSchema = resolvedBundleDir ? path.join(resolvedBundleDir, parsed.paths.result_schema_ref) : parsed.paths.result_schema_ref;
+  const actorInstruction = parsed.actor_execution?.execution_actor_class === 'phase_agent_fallback'
+    ? `You are the Phase Agent executing explicit fallback work unit ${parsed.work_id}.`
+    : `You are executing delegated work unit ${parsed.work_id} as role ${parsed.actor_execution?.delegated_role_key || '<legacy-unrecorded>'}.`;
   return [
-    `You are executing delegated work unit ${parsed.work_id}.`,
+    actorInstruction,
     '',
     resolvedBundleDir ? `Active bundle_dir: ${resolvedBundleDir}` : 'Read bundle_dir from the assigned _beacon.json before writing files.',
     `Open task.md first: ${absTask}`,
     `Open _beacon.json first: ${absBeacon}`,
     `Open result schema: ${absSchema}`,
-    `Use exactly these identity fields in lifecycle receipts and result.json: work_id=${parsed.work_id}, queue_item_id=${parsed.queue_item_id}, kind=${parsed.kind}, receipt_nonce=${parsed.receipt_nonce}. Do not generate a new nonce.`,
+    `Use exactly these identity fields in lifecycle receipts and result.json: work_id=${parsed.work_id}, queue_item_id=${parsed.queue_item_id}, kind=${parsed.kind}, receipt_nonce=${parsed.receipt_nonce}${parsed.actor_contract_version ? `, actor_contract_version=${parsed.actor_contract_version}, execution_actor_class=${parsed.actor_execution.execution_actor_class}` : ''}. Do not generate a new nonce.`,
     `Write lifecycle JSONL events to ${absReceipt}.`,
     'Before and after slow bounded search, fetch, cache, output, or result-draft batches, write concise progress events with the exact assigned identity fields. These events are diagnostic only; completion still requires formal submit.',
     `Write the final result JSON to ${absResult}.`,
@@ -333,6 +354,10 @@ export function writeWorkUnitEnvelope(bundleDir, manifest) {
     required_receipt_fields: [...WORK_UNIT_REQUIRED_RECEIPT_FIELDS],
     runtime_refs: parsed.runtime_refs || {},
     runtime_refs_authority: 'diagnostic_only',
+    ...(parsed.actor_contract_version ? {
+      actor_contract_version: parsed.actor_contract_version,
+      actor_execution: parsed.actor_execution,
+    } : {}),
   }));
   writeFileSync(path.join(bundleDir, parsed.paths.runtime_receipt_ref), '');
   writeJson(path.join(bundleDir, parsed.paths.status_ref), WorkUnitStatusFileSchema.parse({

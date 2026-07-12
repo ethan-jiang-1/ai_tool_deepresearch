@@ -29,6 +29,7 @@ import {
   scanDelegatedBypassSuspicion,
 } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs';
 import {
+  availableActorDecision,
   claimAndSubmitWorkUnit,
   cleanupWorkUnitBundle,
   referenceContent,
@@ -79,6 +80,8 @@ function writeLateSubmitFixture(dir, record) {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     ts: '2026-07-10T00:00:00.000Z',
   })}\n`);
   const resultPath = join(dir, '_tmp', `${record.work_id}.result.json`);
@@ -89,6 +92,8 @@ function writeLateSubmitFixture(dir, record) {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'late done',
     output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }],
     cache_trails: [cacheTrail],
@@ -160,7 +165,7 @@ describe('work-unit provenance gate helpers', () => {
   it('counts audited late-accepted rows as submitted coverage after normal provenance checks pass', () => {
     const dir = tempDir('wpg-late-coverage-');
     seedWave0Queue(dir);
-    claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+    claimWorkUnits(dir, { phase: 'wave0', count: 1, ...availableActorDecision('wave0_source_intake') });
     const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
     closeWorkUnitAttempt(dir, {
       work_id: record.work_id,

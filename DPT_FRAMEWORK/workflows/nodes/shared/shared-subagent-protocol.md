@@ -35,7 +35,7 @@ Files under `_work_units/waveN/{work_id}/` are runtime/check surfaces. They are 
 
 ## 2. Work-Unit Envelope
 
-`operate-work-unit claim <bundle> --phase waveN --count <claim-count>` allocates eligible delegated queue-front demand into `_work_units/waveN/{work_id}/`. The CLI remains the allocator of `work_id`; the Phase Agent computes only the bounded top-up count for independent demand.
+`operate-work-unit claim` first evaluates one explicit role-bound actor observation, then allocates eligible delegated queue-front demand into `_work_units/waveN/{work_id}/` only when the actor decision allows it. The CLI remains the sole allocator of `work_id`; no probe service, availability registry, fallback queue, or automatic actor switch exists.
 
 On successful claim, stdout includes a top-level `continuation` cue with `next_action: inspect_and_poll_claimed_work` and `work_ids` exactly matching `claimed_work_ids`. This is an immediate polling reminder, not readiness evidence, not queue/index authority, and not persistent work-unit state. Empty claim output has no successful continuation cue.
 
@@ -46,8 +46,8 @@ Each envelope contains:
 | `manifest.json` | Engine-written binding: `work_id`, `queue_item_id`, `kind`, batch/attempt indexes, snapshot hash, output/cache contract, paths. |
 | `task.md` | Bounded Sub-agent task. This is the primary text to paste into the native sub-agent surface. |
 | `result.schema.json` | Shape the Sub-agent result must satisfy. |
-| `_beacon.json` | Copyable identity and logging refs: bundle path, `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, receipt path. |
-| `runtime-receipt.jsonl` | Sub-agent lifecycle evidence. Events must carry `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`. |
+| `_beacon.json` | Copyable identity and logging refs, including actor contract version and actual execution actor class. |
+| `runtime-receipt.jsonl` | Lifecycle evidence carrying exact work-unit identity plus actor contract version/class. |
 | `result.json` | Written by Engine submit after validation. The Sub-agent may prepare a result file, but submit owns acceptance. |
 | `_status.json` | Attempt status projection. |
 | `_agent.json` | Optional diagnostic runtime refs. These are never authority. |
@@ -57,20 +57,24 @@ Each envelope contains:
 For delegated queue demand:
 
 0. Reconstruct delegated in-flight work from bundle truth before claiming: `operate-work-unit inspect <bundle>`, queue delegated-in-flight state, `_work_units/waveN/*/_status.json`, work-unit manifests, and submitted ledger rows. A scratch list from chat is convenience only.
-1. Compute a bounded top-up `claim-count` for independent eligible demand. Bound it by the independent eligible demand count, the accepted/default cap, and the remaining free delegated in-flight capacity for that wave. Use an explicit profile/runtime cap when accepted; otherwise use the documented conservative default cap for the phase, no higher than 5.
-2. If reconstructed in-flight work already reaches the accepted/default cap, poll/submit/terminalize existing attempts before claiming more. `--count 1` is legal for a single remaining item, dependency-blocked front item, accepted cap of 1, or a narrow repair; it is not the normal drain strategy for independent demand.
-3. Claim a bounded batch:
+1. Read the queue-front delegated `role_key`, then perform one small real native probe for that exact role. The probe does not search, write evidence, allocate a work ID, or authorize a different role. Normalize only direct results as `available/probe_succeeded`, a classified `unavailable` reason, or `unknown/probe_inconclusive`; missing observation is `unknown/not_observed/observation_required`.
+2. Compute a bounded top-up `claim-count` for independent eligible demand. Bound it by the independent eligible demand count, the accepted/default cap, and the remaining free delegated in-flight capacity for that wave. Use an explicit profile/runtime cap when accepted; otherwise use the documented conservative default cap for the phase, no higher than 5.
+3. If reconstructed in-flight work already reaches the accepted/default cap, poll/submit/terminalize existing attempts before claiming more. `--count 1` is legal for a single remaining item, dependency-blocked front item, accepted cap of 1, or a narrow repair; it is not the normal actor drain strategy for independent demand.
+4. Submit the observation and explicit actor choice to the same claim checkpoint. Available actors use `delegated_subagent`; classified unavailable actors may use one `phase_agent_fallback` only when the Engine kind policy allows it:
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase waveN --count <claim-count>
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase waveN --count <claim-count> \
+  --actor-outcome <available|unavailable|unknown> --actor-source <native_probe|not_observed> \
+  --actor-role-key <queue-front-role> --actor-reason <normalized-reason> \
+  --execution-actor <delegated_subagent|phase_agent_fallback>
 ```
 
 Read the returned `continuation` before doing anything else: if work was claimed, inspect and poll those exact `work_ids` without waiting for a user message or task notification.
 
-4. For each returned `prompt_refs[]`, open the `task_ref`, `beacon_ref`, and `result_schema_ref`.
-5. Spawn one native Sub-agent per returned `work_id`. Each prompt includes the work-unit identity and output/cache contract.
-6. Actively poll runtime readiness with `operate-work-unit inspect <bundle>` or direct bundle-file inspection. Check result, receipt, output, cache, status, and deadline signals for every in-flight attempt.
-7. When a claimed work unit is ready, submit promptly:
+5. Follow the single returned action. For normal claims, spawn one matching native Sub-agent per returned work ID. For an accepted fallback, the Phase Agent executes exactly that one task/beacon itself and submits or terminalizes it before another fallback claim. A no-claim blocker allocates nothing; perform only the returned probe/host action and rerun the same checkpoint. `human-directed` context is not availability evidence or fallback permission.
+6. For each returned `prompt_refs[]`, open the `task_ref`, `beacon_ref`, and `result_schema_ref`.
+7. Actively poll runtime readiness with `operate-work-unit inspect <bundle>` or direct bundle-file inspection. Check result, receipt, output, cache, status, and deadline signals for every in-flight attempt.
+8. When a claimed work unit is ready, submit promptly:
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
@@ -78,17 +82,21 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id>
 
 Normal `submit` is intentionally fail-closed for terminal attempts. If a `timed_out` target later produces a valid result, do not retry normal submit and do not rewrite it into a retry identity; use the explicit audited recovery command in §7 only when no replacement has submitted.
 
-8. If submit rejects, repair the same claimed attempt when possible. For expired or stale claimed attempts, run progress-aware timeout preflight before terminal timeout:
+9. If submit rejects, repair the same claimed attempt when possible. For expired or stale claimed attempts, run progress-aware timeout preflight before terminal timeout:
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-id <work_id> [--result <result.json>]
 ```
 
 Parse structured stdout even when `timeout-preflight` exits non-zero. Follow the closed `recommended_action` branch: `submit` means run formal submit, `repair` means repair the same claimed `work_id`, `wait` means continue polling recent progress, `inspect` means inspect/repair Engine binding or candidate authority, `block` means surface a deterministic blocker, and `timeout` means default terminal timeout is allowed. A progress-positive attempt is not drained until it is submitted, repaired, waited on, inspected/blocked, or explicitly terminalized after preflight allows timeout.
-9. Use `fail`, `timeout`, or `abandon` for explicit terminal closure before claiming replacement work. Default `timeout` is valid only after timeout preflight reports `timeout_eligible: true`; `timeout --force --reason <reason>` is exceptional, audited, and not the normal drain path.
-10. After successful submit, perform any Phase-owned projection materialization required by the phase, such as Wave1 topic references or existing-backed Wave2 `00-cross` references. These projections must cite submitted backing; they are not delegated evidence authority by themselves.
+10. If a normal native spawn fails with a classified unavailable reason before any work-started receipt or Engine-observed output/cache progress, run `fail --reason actor_spawn_unavailable:<reason_code>`, perform a fresh role-matching probe, and make a new claim. Do not convert the existing work ID in place and do not offer `abandon` as a competing recovery. Progress-positive attempts remain on inspect/repair/timeout-preflight paths.
+11. After successful submit, perform any Phase-owned projection materialization required by the phase, such as Wave1 topic references or existing-backed Wave2 `00-cross` references. These projections must cite submitted backing; they are not delegated evidence authority by themselves.
    For Phase-owned projection files, retain a completed staging source and use `operate-artifact-persistence.mjs persist` before indexing or consuming the target. Producer-owned output/cache files may use the same persistence command before formal submit, but `operate-work-unit submit` remains the transaction owner that validates and normalizes declared outputs/cache and appends ledger authority.
-11. Continue in this order: fill demand, reconstruct in-flight, claim batch, spawn, poll, submit, repair or timeout-preflight, terminalize only when the selected branch allows it, materialize projections, then gate only after queue demand and delegated in-flight work are both drained.
+12. Continue in this order: fill demand, reconstruct in-flight, probe the queue-front role, claim, execute the selected actor path, poll, submit, repair or timeout-preflight, terminalize only when the selected branch allows it, materialize projections, then gate only after queue demand and delegated in-flight work are both drained.
+
+Compatibility summary: claim batch, spawn the selected actor, poll, submit, repair, terminalize when authorized, materialize Phase-owned projections, then gate.
+
+Default `timeout` is valid only after timeout preflight reports `timeout_eligible: true`; `timeout --force --reason <reason>` remains exceptional and audited.
 
 Queue completion commands are for non-delegated queue maintenance/completion only. Delegated success is normal `operate-work-unit submit` for claimed attempts, or explicit audited `operate-work-unit late-submit` for the narrow eligible `timed_out` recovery path.
 
@@ -97,7 +105,7 @@ Queue completion commands are for non-delegated queue maintenance/completion onl
 The Sub-agent actor MUST:
 
 - Read the assigned work-unit `task.md`, `_beacon.json`, and `result.schema.json`.
-- Use the exact `work_id`, `queue_item_id`, `kind`, and `receipt_nonce` from the beacon in receipt events and result JSON.
+- Use the exact `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, `actor_contract_version`, and `execution_actor_class` from the beacon in receipt events and result JSON.
 - Produce only the output paths and cache trails allowed by the task/result contract.
 - Retain completed staging sources until crash-safe persist reports `committed`; if persistence is used for assigned outputs/cache, formal work-unit submit still owns acceptance and normalization.
 - Use real search/fetch/read actions for evidence. Search snippets alone are not evidence.
@@ -127,6 +135,8 @@ Minimum identity fields:
   "queue_item_id": "topic-a",
   "kind": "wave1_topic_deepening",
   "receipt_nonce": "<nonce>",
+  "actor_contract_version": "work-unit.actor.v1",
+  "execution_actor_class": "delegated_subagent",
   "ts": "2026-07-06T00:00:00.000Z"
 }
 ```

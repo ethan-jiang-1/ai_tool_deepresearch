@@ -15,7 +15,7 @@ import {
 } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
 import {
   WORK_UNIT_OUTPUT_LEDGER,
-  claimWorkUnits,
+  claimWorkUnits as claimWorkUnitsProduction,
   closeWorkUnitAttempt,
   computeWorkUnitLedgerRecordHash,
   drySubmitWorkUnit,
@@ -38,6 +38,20 @@ function tempBundle() {
 
 function cleanup(dir) {
   rmSync(dir, { recursive: true, force: true });
+}
+
+function claimWorkUnits(dir, options) {
+  const roles = { wave0: 'dpt-source-intake', wave1: 'dpt-evidence-extractor', wave2: 'dpt-topic-scout' };
+  return claimWorkUnitsProduction(dir, {
+    ...options,
+    actorObservation: {
+      outcome: 'available',
+      source: 'native_probe',
+      role_key: roles[options.phase],
+      reason_code: 'probe_succeeded',
+    },
+    executionActorClass: 'delegated_subagent',
+  });
 }
 
 function delegated(id, overrides = {}) {
@@ -124,6 +138,8 @@ function writeValidSubmitFiles(dir, record, { summary = 'done' } = {}) {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     ts: '2026-07-06T00:00:00.000Z',
   })}\n`);
 
@@ -135,6 +151,8 @@ function writeValidSubmitFiles(dir, record, { summary = 'done' } = {}) {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     summary,
     output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }],
     cache_trails: [cacheTrail],
@@ -169,6 +187,8 @@ function writeValidWave1SubmitFiles(dir, record, {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     ts: '2026-07-06T00:00:00.000Z',
   })}\n`);
 
@@ -180,6 +200,8 @@ function writeValidWave1SubmitFiles(dir, record, {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'wave1 done',
     output_files: [
       { path: referencePath, role: 'reference', source_url: sourceUrl, source_slug: 'new-source' },
@@ -220,6 +242,8 @@ function writeValidWave2SubmitFiles(dir, record, {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     ts: '2026-07-06T00:00:00.000Z',
   })}\n`);
 
@@ -231,6 +255,8 @@ function writeValidWave2SubmitFiles(dir, record, {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     summary: 'wave2 done',
     output_files: [
       { path: outputPath, role },
@@ -385,6 +411,8 @@ describe('submitWorkUnit', () => {
       writeResult(resultPath, { result: readResult(resultPath) });
       writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
         event: 'work_done',
+        actor_contract_version: record.actor_contract_version,
+        execution_actor_class: record.actor_execution.execution_actor_class,
         ts: '2026-07-06T00:00:00.000Z',
       })}\n`);
       const cacheDir = path.join(dir, cacheTrailPath(record));
@@ -674,6 +702,8 @@ describe('submitWorkUnit', () => {
       const resultPath = writeValidSubmitFiles(acceptedDir, record);
       writeFileSync(path.join(acceptedDir, record.paths.runtime_receipt_ref), `${JSON.stringify({
         event: 'work_done',
+        actor_contract_version: record.actor_contract_version,
+        execution_actor_class: record.actor_execution.execution_actor_class,
         ts: '2026-07-06T00:00:00.000Z',
         detail: { preserved: true },
       })}\n`);
@@ -857,6 +887,8 @@ describe('submitWorkUnit', () => {
         queue_item_id: record.queue_item_id,
         kind: record.kind,
         receipt_nonce: staleNonce,
+        actor_contract_version: record.actor_contract_version,
+        execution_actor_class: record.actor_execution.execution_actor_class,
         ts: '2026-07-06T00:00:00.000Z',
       })}\n`);
 

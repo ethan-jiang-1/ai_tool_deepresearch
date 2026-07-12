@@ -153,7 +153,7 @@ enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
 }), { fileName: 'case151-wave0-topic-a.json' });
 JS
 
-CLAIM_W0=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1)
+CLAIM_W0=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_W0" > "$B/case-151-wave0-claim.json"
 WORK_W0=$(printf '%s\n' "$CLAIM_W0" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.claimed_work_ids[0]);')
 
@@ -192,7 +192,7 @@ JS
 
 ```bash
 set +e
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 > "$B/case-151-wave0-drain.json"
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent > "$B/case-151-wave0-drain.json"
 DRAIN_W0_STATUS=$?
 set -e
 node - "$B/case-151-wave0-drain.json" "$DRAIN_W0_STATUS" <<'JS'
@@ -223,7 +223,7 @@ enqueueWorkUnitTask(bundle, queueItemForWorkUnit({
 }), { fileName: 'case151-wave1-topic-a.json' });
 JS
 
-CLAIM_W1=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave1 --count 1)
+CLAIM_W1=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave1 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-evidence-extractor --actor-reason probe_succeeded --execution-actor delegated_subagent)
 printf '%s\n' "$CLAIM_W1" > "$B/case-151-wave1-claim.json"
 WORK_W1=$(printf '%s\n' "$CLAIM_W1" | node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8")); console.log(j.claimed_work_ids[0]);')
 
@@ -255,7 +255,7 @@ appendTrace(process.argv[2], { event: 'wave1_completion', source: 'case-151-afte
 JS
 
 set +e
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave1 --count 1 > "$B/case-151-wave1-drain.json"
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave1 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-evidence-extractor --actor-reason probe_succeeded --execution-actor delegated_subagent > "$B/case-151-wave1-drain.json"
 DRAIN_W1_STATUS=$?
 set -e
 node - "$B/case-151-wave1-drain.json" "$DRAIN_W1_STATUS" <<'JS'
@@ -331,7 +331,7 @@ appendTrace(bundle, { event: 'wave2_completion', source: 'case-151-pure-synthesi
 JS
 
 set +e
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave2 --count 1 > "$B/case-151-wave2-drain.json"
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave2 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-topic-scout --actor-reason probe_succeeded --execution-actor delegated_subagent > "$B/case-151-wave2-drain.json"
 DRAIN_W2_STATUS=$?
 set -e
 node - "$B/case-151-wave2-drain.json" "$DRAIN_W2_STATUS" <<'JS'
