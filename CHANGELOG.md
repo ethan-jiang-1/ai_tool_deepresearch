@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.26
+
+- Added canonical topic rename, reorder/renumber, and narrowly proven safe remove through one complete rerun layout target while preserving stable topic UIDs.
+- Added one shared UID/layout resolver so current and previous slugs retain historical submitted coverage without moving artifact/reference/output paths or rewriting ledger history.
+- Kept mutation narrow and recoverable: the existing topic-state CLI and plan+seed workspace commit current seeds first, registry last, then hash-bound old-seed cleanup; no retired state, link rewriter, path mover, second registry, or post-final override.
+
 ## v0.25
 
 - Added role-bound actor preflight before work-unit allocation, so unavailable or unobserved delegated actors do not create doomed work IDs or consume queue demand.

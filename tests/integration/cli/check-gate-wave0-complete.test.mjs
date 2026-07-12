@@ -182,7 +182,22 @@ describe('check-gate-wave0-complete', () => {
     });
   });
 
-  it('1a. inspect reads bullet metadata after an optional H1 title', () => {
+  it('1a. aggregates historical Wave0 artifact and submitted coverage as one current UID floor', () => {
+    const dir = createBundle(unique('historical-layout'));
+    setupHappyPath(dir);
+    const planPath = join(dir, 'rb_plan.md');
+    const plan = readFileSync(planPath, 'utf8').replace(
+      '{ "id": "t1", "slug": "topic-a", "title": "Topic A" }',
+      '{ "id": "t1", "slug": "topic-a-new", "title": "Topic A", "previous_layouts": [{ "id": "t1", "slug": "topic-a" }] }',
+    );
+    writeFileSync(planPath, plan);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, true, output.inspect.join('\n'));
+    assert.equal(output.check.failed_rule_ids.some((id) => id.includes('topic-a-new')), false);
+  });
+
+  it('1b. inspect reads bullet metadata after an optional H1 title', () => {
     const dir = createBundle(unique('h1meta'));
     setupHappyPath(dir);
     const referencePath = join(dir, 'reference/00-shared-ai-safety.md');

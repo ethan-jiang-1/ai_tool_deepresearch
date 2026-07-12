@@ -1,17 +1,17 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.25**
+> **DPT_FRAMEWORK v0.26**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.25
+## Current Release: v0.26
 
-- Work-unit claim now consumes one explicit queue-front role-bound actor observation before allocation.
-- Available actors retain bounded native batches; classified unavailable actors may use one explicit Phase Agent fallback inside the same task, receipt, submit, and ledger contract.
-- Actor handling remains helper-oriented and narrow: no probe service, availability cache, token, TTL, scheduler, fallback queue, watcher, daemon, or global mode.
+- Canonical topics can be renamed, reordered/renumbered, or safely removed during sanctioned rerun while keeping stable topic UIDs.
+- Current seeds follow the committed layout; historical artifact/reference/output paths remain in place and continue to resolve through previous slugs.
+- Layout control remains helper-oriented and narrow: one registry, one resolver, one existing topic-state CLI/workspace; no path mover, link rewriter, retired state, second registry, watcher, daemon, or post-final override.
 
 ## 0. 禁用内置捷径（最高优先）
 

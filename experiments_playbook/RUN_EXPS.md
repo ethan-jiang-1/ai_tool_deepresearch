@@ -71,6 +71,7 @@
 | G30 reentry-debuggability | case-313 | `exp_reentry-debuggability/case-313-light-canonical-recovery-incident.md` | registry-external durable topic + parallel namespace → one canonical root + missing contract；不证明 post-final reentry |
 | G30 reentry-debuggability | case-314 | `exp_reentry-debuggability/case-314-light-artifact-persistence-crash-recovery.md` | crash-safe content persistence：prepared finalize、post-rename cleanup、blocked no-mutation、Agent cleanup/retry、repeat idempotence |
 | G30 reentry-debuggability | case-315 | `exp_reentry-debuggability/case-315-light-canonical-topic-state-recovery.md` | canonical topic add：plan-first crash→exact recover、workspace期间enqueue no-write、恢复后UID-bound topic可入队 |
+| G30 reentry-debuggability | case-316 | `exp_reentry-debuggability/case-316-light-canonical-topic-layout-recovery.md` | canonical layout：stable-UID rename/renumber、historical Wave0/Wave1 coverage、mid-seed recover、safe remove、ambiguous no-write |
 
 ### G14 Migration Map
 

@@ -1,7 +1,7 @@
 # Overall Plan: Recovery、Canonical State 与 Delegated Reliability 五 Change 总控路线
 
 **性质:** 跨 plan / bug 的 OpenSpec change 总路线（pre-OpenSpec）
-**状态:** Active — C1/C2/C3A/C4 已 archive（v0.22–v0.25）；C3B layout mutation 与 C5 post-final recovery 待推进（更新于 2026-07-12）
+**状态:** Active — C1/C2/C3A/C4 已 archive（v0.22–v0.25）；C3B `mutate-canonical-topic-layout` 正在 apply（目标 v0.26），C5 post-final recovery仍待推进（更新于 2026-07-12）
 **当前进度速览:** 见文末 [§12 Change 进度总览](#12-change-进度总览live-tracker)——每推进一个 change 就更新那张表，避免跟踪断线。
 **前置基础:** `align-recovery-with-simple-helper-posture`（v0.21）已建立 helper-oriented、`materialize-before-work`、`canonical-or-blocked` 与依赖带，但未实现本计划的核心 runtime 能力。
 
@@ -377,7 +377,7 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 | C1 | `harden-recovery-observability-and-contracts` | — | ✅ Archived | v0.22 | `archive/2026-07-12-harden-recovery-observability-and-contracts` |
 | C2 | `make-artifact-persistence-crash-safe` | C1 | ✅ Archived | v0.23 | `archive/2026-07-12-make-artifact-persistence-crash-safe`；main spec 已同步 |
 | C3A | `establish-canonical-topic-state` | C1 + C2 durability boundary | ✅ Archived（worktree archive pending commit） | v0.24 | `archive/2026-07-12-establish-canonical-topic-state`；stable UID/intent/direct progress |
-| C3B | `mutate-canonical-topic-layout`（待 propose） | C3A | ⏳ Not started | TBD | remove/rename/renumber/path/reference migration |
+| C3B | `mutate-canonical-topic-layout` | C3A | 🚧 Applying | v0.26 | stable-UID rename/reorder/renumber、safe remove；historical path原位兼容，不做path/reference migration |
 | C4 | `handle-unavailable-delegated-actors` | C1（独立执行 lane，可与 C2 并行）| ✅ Archived | v0.25 | `archive/2026-07-12-handle-unavailable-delegated-actors`；case-407、1469/1469 PASS |
 | C5 | `restore-audited-post-final-recovery` | C1 + C3（消费 C2 crash-safe primitive）| ⏳ Not started | TBD | 最高风险 authority change，必须最后做 |
 
@@ -385,7 +385,7 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 
 1. C1 ✅ → 已提供只读安全网。
 2. C2/C4 ✅ 已 archive。
-3. C3A ✅ 已 archive；C3B layout mutation仍待 propose。
+3. C3A ✅ 已 archive；C3B layout mutation正在 apply，完成后归档；C5仍保留post-final mutation/override边界。
 4. C5 最后，依赖 C1 + C3，并复用 C2 crash-safe primitive。
 
 **来源关闭追踪（与 §11 关闭条件对齐）：**

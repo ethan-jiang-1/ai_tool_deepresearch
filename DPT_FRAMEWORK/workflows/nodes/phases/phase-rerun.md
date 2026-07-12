@@ -20,7 +20,7 @@ suggested_context:
 
 - **Objective**: Translate HITL2 rerun intent into incremental topic changes before re-entering seed-topics.
 - **Start here**: Read HITL2 rationale, current `rerun_count`, existing seed topic files, and `topic_registry`.
-- **Path to pass**: Inspect canonical topic state, apply supported add/intent-refinement actions, update direction guidance/style params, increment `rerun_count`, then run the rerun gate.
+- **Path to pass**: Inspect canonical topic state, apply add/intent refinement or one complete layout target, update direction guidance/style params, increment `rerun_count`, then run the rerun gate.
 - **Completion check**: `check-gate-rerun-ready.mjs` passes for `phases/phase-rerun.md`.
 - **Failure posture**: Do not search or rewrite research artifacts here; if rerun is structurally impossible, record the accepted silent degradation/unpassable event and obey gate routing.
 
@@ -97,7 +97,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 
 每个 topic 文件的 `## 本轮重跑方向` section 最多一个——若已存在（上轮 rerun 遗留），用本轮结果**替换**整个 section（不追加）。
 
-1b. **Apply canonical topic change set**：先运行 `operate-topic-state inspect`，再把 HITL2 rationale 转成 retained JSON。Legacy bundle使用完整显式 `migrate_legacy` reconciliation；canonical bundle只使用 `add_topic` / `update_intent`。Engine 验证 rerun current-node、route-bound HITL2 witness 与 incoming status window后提交。Queued/claimed blocker由 Agent通过既有 owner处理后重跑；accepted workspace运行 exact recover。Remove/rename/renumber/path move保持 C3B missing boundary。
+1b. **Apply canonical topic change set**：先运行 `operate-topic-state inspect`，再把 HITL2 rationale 转成 retained JSON。Legacy bundle使用完整显式 `migrate_legacy` reconciliation；add/refine使用`add_topic` / `update_intent`；rename/reorder/renumber/safe-remove使用inspect返回的一个完整`mutate_layout` target。用户决定title/order/remove语义；Agent自行处理queued/claimed blocker、重跑同一input、exact recover、named style follow-up与inspect/audit。历史artifact/reference/output path保持原位。Engine验证rerun current-node、route-bound HITL2 witness与incoming status window后提交；不得用direct multi-file edit或`human-directed`绕过。
 
 1c. **重算 research_style_params**：topic_registry 变更后 topic_count 可能变化，必须重算 `wave0_shared_ref_total`（`base + per_topic × topic_count`）。读取当前 `research_profile`，重新运行 apply CLI：
 
@@ -126,7 +126,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle <path> --curren
 ## 4. Expected Artifacts
 
 - 受影响 seed_topic 文件中的 `## 本轮重跑方向` section 已写入/更新
-- `rb_plan.md` canonical registry 与 touched UID-bound seeds 已由 topic-state apply/recover完整提交；不包含 remove/rename/renumber
+- `rb_plan.md` canonical registry 与 touched UID-bound current seeds 已由 topic-state apply/recover完整提交；历史 artifact/reference/output path 未移动
 - **新增 topic（`action: add`）必须在后续 phase（wave0/wave1/wave2）中遵循完整 `_cache/` 写入约定**：每个 source 写入 `websearch.json` + `page.md` + `meta.json`（11 字段），在 submitted work-unit result 的 `cache_trails[]` 中声明 leaf 路径，确保 gate `cache_coverage` 可溯源。此约定与首次运行的 topic 完全一致。
 - `rb_profile.yaml#/research_style_params` 已更新——`wave0_shared_ref_total` 反映当前 `topic_count`（通过 `apply-research-style.mjs` 重算）
 - `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count` 已递增

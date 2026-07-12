@@ -22,14 +22,15 @@ function waveNumber(value) {
 }
 
 function expectedOutputPaths(bundlePath, selectors = {}) {
-  const expectedPaths = new Set();
+  const expectedGroups = [];
 
   if (selectors.expected_from_topic_registry) {
     const plan = readBundlePlan(bundlePath);
     if (plan && Array.isArray(plan.topic_registry)) {
       for (const topic of plan.topic_registry) {
         for (const template of selectors.expected_from_topic_registry) {
-          expectedPaths.add(template.replace(/\{topic\}/g, topic.slug));
+          expectedGroups.push([topic.slug, ...(topic.previous_layouts || []).map((layout) => layout.slug)]
+            .map((slug) => template.replace(/\{topic\}/g, slug)));
         }
       }
     }
@@ -39,12 +40,12 @@ function expectedOutputPaths(bundlePath, selectors = {}) {
     for (const pattern of (Array.isArray(selectors.glob) ? selectors.glob : [selectors.glob])) {
       const matches = listMatchingBundleFiles(bundlePath, pattern);
       for (const match of matches) {
-        if (match.relPath) expectedPaths.add(match.relPath);
+        if (match.relPath) expectedGroups.push([match.relPath]);
       }
     }
   }
 
-  return expectedPaths;
+  return expectedGroups;
 }
 
 function readScopedSubmittedWorkUnitRows(bundlePath, rule) {
@@ -144,9 +145,9 @@ export function checkWorkUnitLedgerExists(bundlePath, rule) {
 
 export function checkWorkUnitOutputCoverage(bundlePath, rule) {
   const selectors = rule.output_selectors || {};
-  const expectedPaths = expectedOutputPaths(bundlePath, selectors);
+  const expectedGroups = expectedOutputPaths(bundlePath, selectors);
 
-  if (expectedPaths.size === 0) {
+  if (expectedGroups.length === 0) {
     return {
       passed: true,
       inspect: ['No delegated output files matched this work-unit coverage rule.'],
@@ -164,7 +165,7 @@ export function checkWorkUnitOutputCoverage(bundlePath, rule) {
       passed: false,
       inspect: [`Submitted work-unit ledger invalid: ${error.message}`],
       advice: bindingFailureAdvice(),
-      orphans: [...expectedPaths],
+      orphans: expectedGroups.map((group) => group[0]),
       records: [],
     };
   }
@@ -177,15 +178,18 @@ export function checkWorkUnitOutputCoverage(bundlePath, rule) {
   }
 
   const orphans = [];
-  for (const expected of expectedPaths) {
-    if (declaredPaths.has(expected)) continue;
-    if (isReferenceArtifact(expected)) {
+  for (const group of expectedGroups) {
+    if (group.some((expected) => declaredPaths.has(expected))) continue;
+    let phaseOwned = false;
+    const reasons = [];
+    for (const expected of group) {
+      if (!isReferenceArtifact(expected)) continue;
       const classification = classifyReferenceAuthority(bundlePath, expected);
-      if (classification.passed && classification.authority === 'phase_owned_projection') continue;
-      orphans.push(`${expected}: ${classification.reason}`);
-    } else {
-      orphans.push(expected);
+      if (classification.passed && classification.authority === 'phase_owned_projection') phaseOwned = true;
+      else reasons.push(`${expected}: ${classification.reason}`);
     }
+    if (phaseOwned) continue;
+    orphans.push(reasons[0] || group[0]);
   }
 
   if (orphans.length > 0) {
@@ -200,7 +204,7 @@ export function checkWorkUnitOutputCoverage(bundlePath, rule) {
 
   return {
     passed: true,
-    inspect: [`All ${expectedPaths.size} delegated output(s) covered by submitted work-unit ledger rows.`],
+    inspect: [`All ${expectedGroups.length} delegated output UID group(s) covered by submitted work-unit ledger rows.`],
     advice: [],
     orphans: [],
     records: scoped,
@@ -209,8 +213,8 @@ export function checkWorkUnitOutputCoverage(bundlePath, rule) {
 
 export function checkWorkUnitSubmissionPresence(bundlePath, rule) {
   const selectors = rule.output_selectors || {};
-  const expectedPaths = expectedOutputPaths(bundlePath, selectors);
-  if (expectedPaths.size === 0 && selectors.glob) {
+  const expectedGroups = expectedOutputPaths(bundlePath, selectors);
+  if (expectedGroups.length === 0 && selectors.glob) {
     return {
       passed: true,
       inspect: ['No delegated output files matched this work-unit submission-presence rule.'],
@@ -219,11 +223,13 @@ export function checkWorkUnitSubmissionPresence(bundlePath, rule) {
     };
   }
 
-  const projectionBacked = [...expectedPaths].filter((expected) => {
-    const classification = classifyReferenceAuthority(bundlePath, expected);
-    return classification.passed && classification.authority === 'phase_owned_projection';
+  const projectionBacked = expectedGroups.filter((group) => {
+    return group.some((expected) => {
+      const classification = classifyReferenceAuthority(bundlePath, expected);
+      return classification.passed && classification.authority === 'phase_owned_projection';
+    });
   });
-  if (expectedPaths.size > 0 && projectionBacked.length === expectedPaths.size) {
+  if (expectedGroups.length > 0 && projectionBacked.length === expectedGroups.length) {
     return {
       passed: true,
       inspect: [`All ${projectionBacked.length} reference projection(s) are backed by submitted prior evidence; no new targeted work-unit row is required.`],

@@ -818,6 +818,7 @@ allInspect.push(...foResult.inspect);
 allAdvice.push(...foResult.advice);
 for (const finding of foResult.canonical_findings || []) {
   if (finding.classification !== 'blocking') continue;
+  if (finding.rule_id === 'accepted_topic_layout_workspace') continue;
   allBlockers.push({
     severity: 'blocker',
     check: 'canonical_topic_footprint',

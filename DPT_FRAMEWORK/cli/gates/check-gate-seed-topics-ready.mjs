@@ -62,7 +62,7 @@ const advice = [];
 let allPassed = true;
 
 const topicState = inspectCanonicalTopicState({ bundlePath });
-if (topicState.mode === 'canonical' && topicState.passed !== true) {
+if (topicState.mode === 'blocked' || (topicState.mode === 'canonical' && topicState.passed !== true)) {
   allPassed = false;
   const blocker = topicState.blockers?.[0];
   inspect.push(`Canonical topic-state prerequisite failed: ${blocker?.reason_code || 'unknown'}`);

@@ -68,14 +68,40 @@ function advisoryFinding(rule, detail, index = 0) {
   });
 }
 
-function topicSlugs(bundlePath) {
+function topicLayouts(bundlePath) {
   const plan = readBundlePlan(bundlePath);
-  return Array.isArray(plan?.topic_registry) ? plan.topic_registry.map((topic) => topic.slug) : [];
+  return Array.isArray(plan?.topic_registry) ? plan.topic_registry.map((topic) => ({
+    topic: topic.slug,
+    accepted: [topic.slug, ...(topic.previous_layouts || []).map((layout) => layout.slug)],
+  })) : [];
+}
+
+function topicSlugs(bundlePath) {
+  return topicLayouts(bundlePath).map((layout) => layout.topic);
 }
 
 function expandRuleTargets(bundlePath, rule) {
   if (!String(rule.target || '').includes('{topic}')) return [{ topic: null, resolved: rule.target }];
-  return topicSlugs(bundlePath).map((topic) => ({ topic, resolved: rule.target.replace(/\{topic\}/g, topic) }));
+  return topicLayouts(bundlePath).map((layout) => {
+    const currentOnly = String(rule.target).startsWith('seed_topics/');
+    const alternatives = (currentOnly ? [layout.topic] : layout.accepted).map((slug) => rule.target.replace(/\{topic\}/g, slug));
+    return { topic: layout.topic, resolved: alternatives[0], alternatives };
+  });
+}
+
+function firstExistingTarget(bundlePath, target, { directory = false } = {}) {
+  return (target.alternatives || [target.resolved]).find((candidate) => {
+    const absolute = join(bundlePath, candidate);
+    return existsSync(absolute) && (!directory || statSync(absolute).isDirectory());
+  }) || target.resolved;
+}
+
+function matchingAlternativeFiles(bundlePath, target) {
+  const byPath = new Map();
+  for (const candidate of target.alternatives || [target.resolved]) {
+    for (const file of listMatchingBundleFiles(bundlePath, candidate)) byPath.set(file.relPath, file);
+  }
+  return [...byPath.values()];
 }
 
 function globRegex(pattern) {
@@ -123,10 +149,10 @@ function evaluatePattern(bundlePath, rule, resolvedTarget, topic, { stripFrontma
   return { passed: true };
 }
 
-function evaluateCountFloor(bundlePath, rule, resolvedTarget, topic) {
+function evaluateCountFloor(bundlePath, rule, resolvedTarget, topic, alternatives = [resolvedTarget]) {
   const threshold = resolveThreshold(rule, readBundleProfile(bundlePath));
   if (resolvedTarget.includes('*') && resolvedTarget.startsWith('reference/')) {
-    const result = countReferences(bundlePath, { source: 'ledger', targetGlob: resolvedTarget, topic: topic || undefined });
+    const result = countReferences(bundlePath, { source: 'ledger', targetGlobs: alternatives, topic: undefined });
     if (result.count >= threshold) return { passed: true };
     const uncountable = result.uncountable.length > 0
       ? ` [${result.uncountable.length} uncountable: ${result.uncountable.map((item) => item.reason).join('; ')}]`
@@ -279,7 +305,8 @@ export function evaluateWave0Contract(bundlePath, definition) {
       continue;
     }
 
-    for (const target of targets) {
+    for (const expandedTarget of targets) {
+      const target = { ...expandedTarget, resolved: ['file_exists', 'schema_valid', 'count_floor', 'pattern_match'].includes(rule.check) ? firstExistingTarget(bundlePath, expandedTarget) : expandedTarget.resolved };
       const id = scopedRuleId(rule.id, target.topic);
       if (rule.id === 'per_topic_reference_schema_valid' && sourceStates.get(target.topic) === 'missing') {
         maskedRuleIds.push(id);
@@ -323,7 +350,7 @@ export function evaluateWave0Contract(bundlePath, definition) {
           const count = sourceData.get(target.topic).length;
           result = count >= threshold ? { passed: true } : { passed: false, detail: `Count floor not met for ${target.resolved}: ${count} entries (threshold: ${threshold}) (topic: ${target.topic})` };
         } else if (rule.check === 'count_floor') {
-          result = evaluateCountFloor(bundlePath, rule, target.resolved, target.topic);
+          result = evaluateCountFloor(bundlePath, rule, target.resolved, target.topic, target.alternatives);
         } else if (rule.check === 'pattern_match') {
           result = evaluatePattern(bundlePath, rule, target.resolved, target.topic);
         } else if (rule.check === 'status_value') {
@@ -377,7 +404,8 @@ export function evaluateWave1Contract(bundlePath, definition) {
       continue;
     }
 
-    for (const target of targets) {
+    for (const expandedTarget of targets) {
+      const target = { ...expandedTarget, resolved: ['file_exists', 'dir_exists', 'depth_review_contract', 'count_floor', 'pattern_match'].includes(rule.check) ? firstExistingTarget(bundlePath, expandedTarget, { directory: rule.check === 'dir_exists' }) : expandedTarget.resolved };
       const id = scopedRuleId(rule.id, target.topic);
       if (rule.check === 'pattern_match' && missingFiles.has(target.resolved)) {
         maskedRuleIds.push(id);
@@ -408,28 +436,28 @@ export function evaluateWave1Contract(bundlePath, definition) {
             result = evaluatePattern(bundlePath, rule, target.resolved, target.topic);
           }
         } else if (rule.check === 'count_floor') {
-          result = evaluateCountFloor(bundlePath, rule, target.resolved, target.topic);
+          result = evaluateCountFloor(bundlePath, rule, target.resolved, target.topic, target.alternatives);
         } else if (rule.check === 'cache_coverage') {
           const check = checkCacheCoverage(bundlePath);
           result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
           if (check.passed) check.inspect.forEach((line, index) => findings.push(advisoryFinding(rule, line, index)));
         } else if (rule.check === 'reference_format') {
-          const check = checkReferenceFormatFiles(listMatchingBundleFiles(bundlePath, target.resolved));
+          const check = checkReferenceFormatFiles(matchingAlternativeFiles(bundlePath, target));
           result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
         } else if (rule.check === 'reference_source_url_parseable') {
-          const check = checkReferenceSourceUrls(listMatchingBundleFiles(bundlePath, target.resolved));
+          const check = checkReferenceSourceUrls(matchingAlternativeFiles(bundlePath, target));
           result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
         } else if (rule.check === 'reference_key_facts_min_lines') {
-          const check = checkReferenceKeyFactsMinLines(listMatchingBundleFiles(bundlePath, target.resolved), rule.min_lines || 5);
+          const check = checkReferenceKeyFactsMinLines(matchingAlternativeFiles(bundlePath, target), rule.min_lines || 5);
           result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
         } else if (rule.check === 'reference_ledger_coverage') {
-          const check = checkReferenceLedgerCoverage(bundlePath, listMatchingBundleFiles(bundlePath, target.resolved));
+          const check = checkReferenceLedgerCoverage(bundlePath, matchingAlternativeFiles(bundlePath, target));
           result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
         } else if (rule.check === 'reference_index_coverage') {
-          const check = checkReferenceIndexCoverage(bundlePath, listMatchingBundleFiles(bundlePath, target.resolved), { sourceLayer: rule.source_layer || null });
+          const check = checkReferenceIndexCoverage(bundlePath, matchingAlternativeFiles(bundlePath, target), { sourceLayer: rule.source_layer || null });
           result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
         } else if (rule.check === 'depth_review_contract') {
-          const topic = target.topic || rule.topic || topicSlugFromDepthReviewTarget(target.resolved);
+          const topic = topicSlugFromDepthReviewTarget(target.resolved) || target.topic || rule.topic;
           const check = checkWave1DepthReviewContract(bundlePath, { topic });
           maskedRuleIds.push(...(check.masked_rule_ids || []).map((masked) => scopedRuleId(rule.id, `${topic}:${masked}`)));
           result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };

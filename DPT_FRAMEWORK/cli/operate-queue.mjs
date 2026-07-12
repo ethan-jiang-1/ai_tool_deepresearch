@@ -12,6 +12,8 @@ import {
   loadQueue, pendingCount, preempt, render, saveQueue, QUEUE,
 } from '../engine/queue-manager.mjs';
 import { inspectCanonicalTopicState } from '../engine/helpers/canonical-topic-state.mjs';
+import { evaluateTopicLayouts, resolveTopicLayout } from '../engine/helpers/topic-layout.mjs';
+import { CanonicalPlanSchema } from '../schema/contracts/plan.mjs';
 
 function usage() {
   console.error(`Usage:
@@ -100,14 +102,14 @@ function readBundleNameFromStatus(bundleDir) {
   } catch { return null; }
 }
 
-function validateBundleName(queue, bundleDir) {
+function validateBundleName(queue, bundleDir, { persist = true } = {}) {
   const statusBundle = readBundleNameFromStatus(bundleDir);
   if (!statusBundle) return; // No status file to validate against — skip
 
   // Legacy queue: inject bundle_name on first operation
   if (!queue.bundle_name) {
     queue.bundle_name = statusBundle;
-    saveQueue(bundleDir, queue);
+    if (persist) saveQueue(bundleDir, queue);
     return;
   }
 
@@ -180,17 +182,16 @@ function isFindingScoped(taskCard) {
   return !!(taskCard.payload?.finding_id || taskCard.lineage?.finding_id);
 }
 
-function readTopicRegistry(bundleDir) {
+function readCanonicalTopicRegistry(bundleDir) {
   const planPath = path.join(bundleDir, 'rb_plan.md');
-  if (!existsSync(planPath)) return [];
+  if (!existsSync(planPath)) return null;
   try {
     const raw = readFileSync(planPath, 'utf-8');
     const m = raw.match(/^---\n([\s\S]*?)\n---/);
-    if (!m) return [];
-    const fm = parseYaml(m[1]);
-    if (!fm.topic_registry || !Array.isArray(fm.topic_registry)) return [];
-    return fm.topic_registry.map(t => t.slug).filter(Boolean);
-  } catch { return []; }
+    if (!m) return null;
+    const parsed = CanonicalPlanSchema.safeParse(parseYaml(m[1]));
+    return parsed.success ? parsed.data.topic_registry : null;
+  } catch { return null; }
 }
 
 function readFindingIndex(bundleDir) {
@@ -214,6 +215,14 @@ function validateTopicSlug(taskCard, bundleDir) {
       error: `topic_slug conflict: payload='${taskCard.payload.topic_slug}' vs lineage='${taskCard.lineage.topic_slug}'`,
     };
   }
+  if (taskCard.payload?.topic_uid && taskCard.lineage?.topic_uid &&
+      taskCard.payload.topic_uid !== taskCard.lineage.topic_uid) {
+    return {
+      valid: false,
+      error: `topic_uid conflict: payload='${taskCard.payload.topic_uid}' vs lineage='${taskCard.lineage.topic_uid}'`,
+      reason_code: 'topic_uid_conflict',
+    };
+  }
 
   // Finding-scoped tasks with no topic identity skip topic_registry validation
   // and validate finding_id if an index exists.
@@ -234,25 +243,6 @@ function validateTopicSlug(taskCard, bundleDir) {
   // Not topic-scoped: skip validation
   if (!topicScoped) return { valid: true };
 
-  // Topic-scoped: resolve slug and validate against topic_registry
-  const resolved = resolveTopicSlug(taskCard);
-
-  if (!resolved) {
-    return {
-      valid: false,
-      error: `topic-scoped task '${taskCard.queue_item_id || '<missing queue_item_id>'}' has no resolvable topic_slug. Add payload.topic_slug or lineage.topic_slug.`,
-    };
-  }
-
-  // Validate against topic_registry
-  const registry = readTopicRegistry(bundleDir);
-  if (!registry.includes(resolved.slug)) {
-    return {
-      valid: false,
-      error: `topic_slug '${resolved.slug}' (from ${resolved.source}) not found in bundle topic_registry. Valid slugs: ${registry.join(', ') || 'none'}.`,
-    };
-  }
-
   const topicState = inspectCanonicalTopicState({ bundlePath: bundleDir });
   if (topicState.mode === 'blocked') {
     const blocker = topicState.blockers?.[0];
@@ -265,12 +255,44 @@ function validateTopicSlug(taskCard, bundleDir) {
   if (topicState.mode !== 'canonical') {
     return {
       valid: false,
-      error: `topic_slug '${resolved.slug}' cannot enqueue while topic state is ${topicState.mode}; enter sanctioned rerun for migration before topic-scoped work.`,
+      error: `topic-scoped work cannot enqueue while topic state is ${topicState.mode}; enter sanctioned rerun for migration first.`,
       reason_code: 'canonical_topic_state_required',
     };
   }
-  const topic = topicState.topics.find((item) => item.slug === resolved.slug);
-  const blocker = topicState.blockers?.find((item) => item.slug === resolved.slug || item.topic_uid === topic?.topic_uid);
+
+  // Topic-scoped: resolve slug and validate against topic_registry
+  const resolved = resolveTopicSlug(taskCard);
+
+  if (!resolved) {
+    return {
+      valid: false,
+      error: `topic-scoped task '${taskCard.queue_item_id || '<missing queue_item_id>'}' has no resolvable topic_slug. Add payload.topic_slug or lineage.topic_slug.`,
+    };
+  }
+
+  // Validate against topic_registry
+  const registry = readCanonicalTopicRegistry(bundleDir);
+  if (!registry) {
+    return {
+      valid: false,
+      error: 'canonical topic registry is invalid or unreadable',
+      reason_code: 'canonical_topic_state_required',
+    };
+  }
+  const layouts = evaluateTopicLayouts(registry);
+  const requestedUid = taskCard.payload?.topic_uid || taskCard.lineage?.topic_uid;
+  const binding = resolveTopicLayout(layouts, { topic_uid: requestedUid, topic_slug: resolved.slug }, { currentOnly: true });
+  if (!binding.ok) {
+    const currentSuggestion = binding.current_slug ? ` Use current slug '${binding.current_slug}'.` : '';
+    return {
+      valid: false,
+      error: `topic_slug '${resolved.slug}' (from ${resolved.source}) is not an accepted current UID binding.${currentSuggestion}`,
+      reason_code: binding.reason_code,
+      current_slug: binding.current_slug || null,
+    };
+  }
+  const topic = topicState.topics.find((item) => item.topic_uid === binding.topic_uid);
+  const blocker = topicState.blockers?.find((item) => item.slug === binding.current_slug || item.topic_uid === binding.topic_uid);
   if (!topic || blocker) {
     return {
       valid: false,
@@ -279,7 +301,15 @@ function validateTopicSlug(taskCard, bundleDir) {
     };
   }
 
-  return { valid: true, slug: resolved.slug };
+  return {
+    valid: true,
+    slug: binding.current_slug,
+    topic_uid: binding.topic_uid,
+    taskCard: {
+      ...taskCard,
+      payload: { ...(taskCard.payload || {}), topic_uid: binding.topic_uid, topic_slug: binding.current_slug },
+    },
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -387,7 +417,7 @@ function checkProjectionStaleness(bundleDir) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function repairRemoveStale(queue, bundleDir) {
-  const registry = readTopicRegistry(bundleDir);
+  const registry = (readCanonicalTopicRegistry(bundleDir) || []).map((topic) => topic.slug);
   const findingIndex = readFindingIndex(bundleDir);
   const removed = [];
 
@@ -490,7 +520,7 @@ try {
     const { outputPath, generatedAt, sourceHash } = writeProjection(queue, bundleDir);
     emit({ ok: true, projection: outputPath, generated_at: generatedAt, source_queue_sha256: sourceHash });
   } else if (command === 'enqueue') {
-    validateBundleName(queue, bundleDir);
+    validateBundleName(queue, bundleDir, { persist: false });
     if (!values.task) throw new Error('--task is required');
     const taskCard = readJson(values.task);
 
@@ -502,7 +532,7 @@ try {
       process.exit(1);
     }
 
-    queue = enqueue(queue, taskCard);
+    queue = enqueue(queue, validation.taskCard || taskCard);
     saveQueue(bundleDir, queue);
     emit({ ok: true, queue });
   } else if (command === 'claim') {

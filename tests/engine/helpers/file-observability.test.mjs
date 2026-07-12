@@ -418,6 +418,19 @@ describe('file observability', () => {
     assert.equal(result.canonical_findings.filter((finding) => finding.topic_identity === 'topic-z').length, 1);
   });
 
+  it('classifies previous-layout artifact and reference paths as the same UID without expecting aliases', () => {
+    const dir = setupBundle('fo-topic-history', {
+      'artifacts/wave1/old-topic/evidence-summary.md': '# Evidence\n',
+      'reference/old-topic-source.md': '- related_topic: old-topic\n\n## Key Facts\n',
+    });
+    const result = auditFileObservability(dir, {
+      topics: [{ topic_uid: 'tp-a', id: '01', slug: 'current-topic', previous_layouts: [{ id: '02', slug: 'old-topic' }] }],
+      topicSlugs: ['current-topic'],
+    });
+    assert.equal(result.canonical_findings.some((finding) => finding.topic_identity === 'old-topic'), false);
+    assert.equal(result.findings.some((finding) => finding.path.includes('old-topic') && /missing/i.test(finding.reason)), false);
+  });
+
   it('does not require future wave surfaces for an early target', () => {
     const dir = setupBundle('fo-early-target');
     mkdirSync(join(dir, 'artifacts', 'wave0', 'topic-a'), { recursive: true });

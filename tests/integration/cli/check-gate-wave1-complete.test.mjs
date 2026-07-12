@@ -313,6 +313,23 @@ describe('check-gate-wave1-complete', () => {
     assert.deepEqual(output.check.masked_rule_ids, []);
   });
 
+  it('1a. aggregates historical Wave1 artifact/reference coverage while checking only the current seed', () => {
+    const dir = createBundle(unique('historical-layout'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    submitAndReviewWave1WorkUnit(dir);
+    writeWave1Trace(dir);
+    const planPath = join(dir, 'rb_plan.md');
+    writeFileSync(planPath, readFileSync(planPath, 'utf8').replace(
+      '{ "id": "t1", "slug": "topic-a", "title": "Topic A" }',
+      '{ "id": "t1", "slug": "topic-a-new", "title": "Topic A", "previous_layouts": [{ "id": "t1", "slug": "topic-a" }] }',
+    ));
+    writeFileSync(join(dir, 'seed_topics/topic-a-new.md'), VALID_SEED_TOPIC.replaceAll('topic-a', 'topic-a-new'));
+    const output = JSON.parse(runGate(dir).stdout);
+    assert.equal(output.check.passed, true, output.inspect.join('\n'));
+    assert.equal(output.check.failed_rule_ids.some((id) => id.endsWith(':topic-a-new')), false);
+  });
+
   it('1d. tolerates equivalent headings, bare URLs, paragraph findings, and numbered Key Facts', () => {
     const dir = createBundle(unique('tolerant'));
     const referencePath = join(dir, 'reference/01-topic-a-deepening.md');

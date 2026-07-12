@@ -236,6 +236,7 @@ function listReferenceFiles(bundleDir) {
 export function countReferences(bundleDir, {
   source = 'ledger',
   targetGlob = null,
+  targetGlobs = null,
   topic = null,
 } = {}) {
   const uncountable = [];
@@ -281,8 +282,9 @@ export function countReferences(bundleDir, {
   }
 
   // ── Apply target glob + topic scope filter ──
-  if (targetGlob) {
-    candidatePaths = candidatePaths.filter(p => matchesTarget(p, targetGlob, topic));
+  const targetPatterns = Array.isArray(targetGlobs) && targetGlobs.length > 0 ? targetGlobs : (targetGlob ? [targetGlob] : []);
+  if (targetPatterns.length > 0) {
+    candidatePaths = candidatePaths.filter((candidate) => targetPatterns.some((pattern) => matchesTarget(candidate, pattern, topic)));
   }
 
   // ── Check each candidate against isCountable ──
@@ -300,7 +302,7 @@ export function countReferences(bundleDir, {
     const declared = new Set(candidatePaths);
     for (const fsPath of listReferenceFiles(bundleDir)) {
       if (declared.has(fsPath)) continue;
-      if (targetGlob && !matchesTarget(fsPath, targetGlob, topic)) continue;
+      if (targetPatterns.length > 0 && !targetPatterns.some((pattern) => matchesTarget(fsPath, pattern, topic))) continue;
       const classification = classifyReferenceAuthority(bundleDir, fsPath);
       uncountable.push({
         path: fsPath,

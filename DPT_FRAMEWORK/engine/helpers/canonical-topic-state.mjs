@@ -9,7 +9,10 @@ import path from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { z } from 'zod';
 import { CanonicalPlanSchema, LegacyPlanSchema } from '../../schema/contracts/plan.mjs';
+import { WorkUnitManifestSchema } from '../../schema/contracts/work-unit.mjs';
 import { checkPhaseHandoffPreflight } from './handoff-helpers.mjs';
+import { readSubmittedWorkUnitDeclarations } from './gate-helpers-readers.mjs';
+import { acceptedTopicSlugs, buildTopicLayoutTarget, evaluateTopicLayouts, losslessTopicSlugStem, resolveStructuredTopicBinding } from './topic-layout.mjs';
 
 export const TOPIC_STATE_SCHEMA_VERSION = '1.0.0';
 export const TOPIC_STATE_ROOT = '_diagnostics/topic-state';
@@ -33,7 +36,19 @@ const MigrationEntrySchema = z.object({
 }).strict();
 const MigrationPlanSchema = z.object({ context: z.enum(['hitl1', 'rerun']), action: z.literal('migrate_legacy'), entries: z.array(MigrationEntrySchema).min(1) }).strict();
 const MutationPlanSchema = z.object({ context: z.enum(['hitl1', 'rerun']), actions: z.array(z.discriminatedUnion('action', [AddActionSchema, UpdateActionSchema])).min(1) }).strict();
-export const TopicApplyPlanSchema = z.union([MigrationPlanSchema, MutationPlanSchema]);
+const LayoutTargetEntrySchema = z.object({
+  topic_uid: z.string().min(1),
+  title: z.string().min(1),
+  slug_stem: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),
+}).strict();
+const LayoutPlanSchema = z.object({
+  context: z.literal('rerun'),
+  action: z.literal('mutate_layout'),
+  expected_plan_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  topics: z.array(LayoutTargetEntrySchema),
+  remove_topic_uids: z.array(z.string().min(1)).default([]),
+}).strict();
+export const TopicApplyPlanSchema = z.union([MigrationPlanSchema, MutationPlanSchema, LayoutPlanSchema]);
 
 function hashBytes(value) { return createHash('sha256').update(value).digest('hex'); }
 function fsyncPath(filePath) { const fd = openSync(filePath, constants.O_RDONLY); try { fsyncSync(fd); } finally { closeSync(fd); } }
@@ -49,6 +64,27 @@ function splitPlan(raw) {
   return { frontmatter: parseYaml(match[1]), body: raw.slice(match[0].length) };
 }
 function renderPlan(frontmatter, body) { return `---\n${stringifyYaml(frontmatter).trimEnd()}\n---\n${body}`; }
+function refreshTopicRegistryTable(body, oldRegistry, finalRegistry) {
+  const section = body.match(/(^|\n)(## Topic Registry\n\n)([\s\S]*?)(?=\n## |$)/);
+  if (!section) return { body, advisory: 'topic_registry_table_missing' };
+  const lines = section[3].trimEnd().split('\n');
+  if (lines[0] !== '| # | Slug | Title | Status |' || !/^\|[-: ]+\|[-: ]+\|[-: ]+\|[-: ]+\|$/.test(lines[1] || '')) {
+    return { body, advisory: 'topic_registry_table_nonstandard' };
+  }
+  const statusByUid = new Map();
+  const uidByOldSlug = new Map(oldRegistry.map((topic) => [topic.slug, topic.topic_uid]));
+  for (const line of lines.slice(2)) {
+    if (!line.startsWith('|')) continue;
+    const cells = line.slice(1, -1).split('|').map((cell) => cell.trim());
+    if (cells.length !== 4) continue;
+    const topicUid = uidByOldSlug.get(cells[1]);
+    if (topicUid) statusByUid.set(topicUid, cells[3]);
+  }
+  const escapeCell = (value) => String(value).replaceAll('|', '\\|');
+  const rows = finalRegistry.map((topic) => `| ${escapeCell(topic.id)} | ${escapeCell(topic.slug)} | ${escapeCell(topic.title)} | ${escapeCell(statusByUid.get(topic.topic_uid) || 'pending')} |`);
+  const replacement = `${section[1]}${section[2]}| # | Slug | Title | Status |\n|---|------|-------|--------|\n${rows.join('\n')}\n`;
+  return { body: `${body.slice(0, section.index)}${replacement}${body.slice(section.index + section[0].length)}`, advisory: null };
+}
 function renderSeed(topic, existingBody = '') {
   const frontmatter = {
     topic_uid: topic.topic_uid, id: topic.id, slug: topic.slug, title: topic.title,
@@ -95,25 +131,84 @@ function lifecycleAuthorization(bundle, context) {
   return ok ? { ok: true, context, current_node: status.current_node, current_gate: status.current_gate, next_gate: status.next_gate, source_attempt_index: handoff.handoff.index, load_witness_index: handoff.handoff.loadComplete?.index ?? null }
     : { ok: false, reason_code: 'rerun_not_authorized', reason: handoff.inspect?.[0] || 'rerun apply requires route-bound HITL2 witness and hitl2_recorded→rerun_ready window' };
 }
-function activeTopicWork(bundle, slugs) {
+function activeTopicWork(bundle, plan, affectedTopicUids) {
+  const affected = new Set(affectedTopicUids);
+  if (affected.size === 0) return [];
+  const layouts = evaluateTopicLayouts(plan.topic_registry);
   const matches = [];
   const queuePath = path.join(bundle, 'rb_queue.json');
   if (existsSync(queuePath)) {
     const queue = JSON.parse(readFileSync(queuePath, 'utf8'));
     for (const location of ['active_window', 'refill_pool']) for (const item of queue[location] || []) {
-      const slug = item.payload?.topic_slug || item.lineage?.topic_slug;
-      if (slug && slugs.has(slug) && !['completed', 'terminal'].includes(item.status)) matches.push(`rb_queue.json#/${location}/${item.queue_item_id || slug}`);
+      const resolved = resolveStructuredTopicBinding(layouts, item);
+      if (resolved.ok && affected.has(resolved.topic_uid) && ['queued', 'running', 'blocked'].includes(item.status)) matches.push(`rb_queue.json#/${location}/${item.queue_item_id}`);
     }
   }
   const indexPath = path.join(bundle, '_work_units', '_index.json');
   if (existsSync(indexPath)) {
     const index = JSON.parse(readFileSync(indexPath, 'utf8'));
     for (const item of Object.values(index.work_units || {})) {
-      const slug = item.binding_context?.topic_slug || item.topic_slug;
-      if (slug && slugs.has(slug) && ['queued', 'claimed', 'running'].includes(item.status)) matches.push(`_work_units/_index.json#/work_units/${item.work_id}`);
+      if (item.status !== 'claimed') continue;
+      try {
+        const manifest = JSON.parse(readFileSync(path.join(bundle, item.paths.manifest_ref), 'utf8'));
+        const resolved = resolveStructuredTopicBinding(layouts, manifest);
+        if (resolved.ok && affected.has(resolved.topic_uid)) matches.push(`_work_units/_index.json#/work_units/${item.work_id}`);
+      } catch {
+        matches.push(`_work_units/_index.json#/work_units/${item.work_id}`);
+      }
     }
   }
   return matches;
+}
+
+function safeRemoveBlocker(bundle, plan, removedTopicUids) {
+  const removed = new Set(removedTopicUids);
+  if (removed.size === 0) return null;
+  const layouts = evaluateTopicLayouts(plan.topic_registry);
+  const queuePath = path.join(bundle, 'rb_queue.json');
+  if (existsSync(queuePath)) {
+    const queue = JSON.parse(readFileSync(queuePath, 'utf8'));
+    const records = [
+      ...(queue.active_window || []).map((item) => ({ ref: `rb_queue.json#/active_window/${item.queue_item_id}`, item })),
+      ...(queue.refill_pool || []).map((item) => ({ ref: `rb_queue.json#/refill_pool/${item.queue_item_id}`, item })),
+      ...(queue.terminal_history || []).map((record) => ({ ref: `rb_queue.json#/terminal_history/${record.queue_item_id}`, item: record.item })),
+    ];
+    for (const record of records) {
+      const resolved = resolveStructuredTopicBinding(layouts, record.item);
+      if (resolved.ok && removed.has(resolved.topic_uid)) return { reason_code: 'remove_has_history', fact_refs: [record.ref] };
+      if (!resolved.ok && record.item && (record.item.payload?.topic_slug || record.item.lineage?.topic_slug)) return { reason_code: 'remove_history_unresolved', fact_refs: [record.ref] };
+    }
+  }
+
+  const indexPath = path.join(bundle, '_work_units', '_index.json');
+  if (existsSync(indexPath)) {
+    const index = JSON.parse(readFileSync(indexPath, 'utf8'));
+    for (const record of Object.values(index.work_units || {})) {
+      const ref = `_work_units/_index.json#/work_units/${record.work_id}`;
+      try {
+        const manifest = JSON.parse(readFileSync(path.join(bundle, record.paths.manifest_ref), 'utf8'));
+        const resolved = resolveStructuredTopicBinding(layouts, manifest);
+        if (resolved.ok && removed.has(resolved.topic_uid)) return { reason_code: 'remove_has_history', fact_refs: [ref] };
+        if (!resolved.ok) return { reason_code: 'remove_history_unresolved', fact_refs: [ref] };
+      } catch {
+        return { reason_code: 'remove_history_unresolved', fact_refs: [ref] };
+      }
+    }
+  }
+
+  for (const topicUid of removed) {
+    for (const slug of acceptedTopicSlugs(layouts, topicUid)) {
+      for (const relative of [`artifacts/wave0/${slug}`, `artifacts/wave1/${slug}`, `reference/${slug}`]) {
+        if (existsSync(path.join(bundle, relative))) return { reason_code: 'remove_has_history', fact_refs: [relative] };
+      }
+      const referenceRoot = path.join(bundle, 'reference');
+      if (existsSync(referenceRoot)) {
+        const matched = readdirSync(referenceRoot).find((name) => name === `${slug}.md` || name.startsWith(`${slug}-`) || name.startsWith(`${slug}_`));
+        if (matched) return { reason_code: 'remove_has_history', fact_refs: [`reference/${matched}`] };
+      }
+    }
+  }
+  return null;
 }
 function canonicalBinding(bundle, plan) {
   const rows = [];
@@ -128,24 +223,58 @@ function canonicalBinding(bundle, plan) {
   }
   return rows;
 }
+function readSubmittedTopicFacts(bundle, layouts) {
+  let ledgerRows;
+  try {
+    ledgerRows = readSubmittedWorkUnitDeclarations(bundle);
+  } catch (error) {
+    return { byUid: new Map(), blocker: { reason_code: 'submitted_topic_binding_unresolved', reason: error.message, recommended_action: 'Repair submitted work-unit authority through the existing work-unit owner, then rerun inspect.' } };
+  }
+
+  const byUid = new Map();
+  for (const row of ledgerRows) {
+    const workUnitDir = path.resolve(bundle, row.work_unit_ref);
+    if (workUnitDir !== bundle && !workUnitDir.startsWith(`${bundle}${path.sep}`)) {
+      return { byUid: new Map(), blocker: { reason_code: 'submitted_topic_binding_unresolved', work_id: row.work_id, reason: 'work_unit_ref escapes bundle', recommended_action: 'Repair submitted work-unit authority through the existing work-unit owner, then rerun inspect.' } };
+    }
+    const manifestPath = path.join(workUnitDir, 'manifest.json');
+    let manifest;
+    try {
+      manifest = WorkUnitManifestSchema.parse(JSON.parse(readFileSync(manifestPath, 'utf8')));
+    } catch (error) {
+      return { byUid: new Map(), blocker: { reason_code: 'submitted_topic_binding_unresolved', work_id: row.work_id, reason: `manifest snapshot unreadable: ${error.message}`, fact_refs: [row.work_unit_ref], recommended_action: 'Repair submitted work-unit authority through the existing work-unit owner, then rerun inspect.' } };
+    }
+    if (manifest.work_id !== row.work_id || manifest.queue_item_id !== row.queue_item_id) {
+      return { byUid: new Map(), blocker: { reason_code: 'submitted_topic_binding_unresolved', work_id: row.work_id, reason: 'ledger and manifest identity mismatch', fact_refs: [row.work_unit_ref], recommended_action: 'Repair submitted work-unit authority through the existing work-unit owner, then rerun inspect.' } };
+    }
+    const resolved = resolveStructuredTopicBinding(layouts, manifest);
+    if (!resolved.ok) {
+      return { byUid: new Map(), blocker: { reason_code: 'submitted_topic_binding_unresolved', work_id: row.work_id, binding_reason_code: resolved.reason_code, fact_refs: [row.work_unit_ref], recommended_action: 'Repair the immutable queue-item topic binding through the existing work-unit owner, then rerun inspect.' } };
+    }
+    const rows = byUid.get(resolved.topic_uid) || [];
+    rows.push({ row, binding: resolved });
+    byUid.set(resolved.topic_uid, rows);
+  }
+  return { byUid, blocker: null };
+}
+
 function progressRows(bundle, plan, bindings) {
   let queue = {};
   try { queue = JSON.parse(readFileSync(path.join(bundle, 'rb_queue.json'), 'utf8')); } catch {}
-  let ledgerRows = [];
-  try {
-    ledgerRows = readFileSync(path.join(bundle, 'rb_output_declarations.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line));
-  } catch {}
-  return plan.topic_registry.map((topic) => {
+  const layouts = evaluateTopicLayouts(plan.topic_registry);
+  const submitted = readSubmittedTopicFacts(bundle, layouts);
+  const topics = plan.topic_registry.map((topic) => {
     const binding = bindings.find((item) => item.topic_uid === topic.topic_uid);
     if (!binding?.ok) return { topic_uid: topic.topic_uid, slug: topic.slug, state: 'blocked', reason_code: binding?.reason_code || 'binding_missing', fact_refs: binding?.fact_refs || [], recommended_action: 'Repair canonical registry/seed binding, then rerun inspect.' };
-    const active = [...(queue.active_window || []), ...(queue.refill_pool || [])].filter((item) => (item.payload?.topic_slug || item.lineage?.topic_slug) === topic.slug && !['completed', 'terminal'].includes(item.status));
-    const artifactRoots = ['wave0', 'wave1'].filter((wave) => existsSync(path.join(bundle, 'artifacts', wave, topic.slug)));
-    const submitted = ledgerRows.filter((row) => row.status === 'submitted' && (row.binding_context?.topic_slug === topic.slug || JSON.stringify(row).includes(topic.slug)));
-    if (artifactRoots.length > 0 && submitted.length > 0) return { topic_uid: topic.topic_uid, slug: topic.slug, state: 'complete', reason_code: 'submitted_artifact_facts', fact_refs: [...artifactRoots.map((wave) => `artifacts/${wave}/${topic.slug}`), ...submitted.map((row) => `rb_output_declarations.jsonl#${row.work_id || row.queue_item_id || topic.slug}`)], recommended_action: null };
-    if (artifactRoots.length > 0) return { topic_uid: topic.topic_uid, slug: topic.slug, state: 'blocked', reason_code: 'artifact_without_submitted_fact', fact_refs: artifactRoots.map((wave) => `artifacts/${wave}/${topic.slug}`), recommended_action: 'Repair or submit through the existing work-unit owner, then rerun inspect.' };
+    const active = [...(queue.active_window || []), ...(queue.refill_pool || [])].filter((item) => resolveStructuredTopicBinding(layouts, item).topic_uid === topic.topic_uid && ['queued', 'running', 'blocked'].includes(item.status));
+    const artifactRoots = acceptedTopicSlugs(layouts, topic.topic_uid).flatMap((slug) => ['wave0', 'wave1'].filter((wave) => existsSync(path.join(bundle, 'artifacts', wave, slug))).map((wave) => `artifacts/${wave}/${slug}`));
+    const submittedRows = submitted.byUid.get(topic.topic_uid) || [];
+    if (artifactRoots.length > 0 && submittedRows.length > 0) return { topic_uid: topic.topic_uid, slug: topic.slug, state: 'complete', reason_code: 'submitted_artifact_facts', fact_refs: [...artifactRoots, ...submittedRows.map(({ row }) => `rb_output_declarations.jsonl#${row.work_id}`)], recommended_action: null };
+    if (artifactRoots.length > 0) return { topic_uid: topic.topic_uid, slug: topic.slug, state: 'blocked', reason_code: 'artifact_without_submitted_fact', fact_refs: artifactRoots, recommended_action: 'Repair or submit through the existing work-unit owner, then rerun inspect.' };
     if (active.length > 0) return { topic_uid: topic.topic_uid, slug: topic.slug, state: 'in_progress', reason_code: 'active_queue_work', fact_refs: active.map((item) => `rb_queue.json#/${item.queue_item_id}`), recommended_action: 'Continue through the existing queue/work-unit owner.' };
     return { topic_uid: topic.topic_uid, slug: topic.slug, state: 'not_started', reason_code: 'no_work_facts', fact_refs: binding.fact_refs, recommended_action: null };
   });
+  return { topics, blocker: submitted.blocker };
 }
 
 export function inspectCanonicalTopicState({ bundlePath }) {
@@ -168,12 +297,52 @@ export function inspectCanonicalTopicState({ bundlePath }) {
     return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'inspect', passed: legacy.success, mode: legacy.success ? 'legacy' : 'invalid', blockers: legacy.success ? [{ reason_code: 'legacy_migration_required', recommended_action: 'Enter sanctioned rerun and prepare explicit migrate_legacy input.' }] : [{ reason_code: 'plan_invalid', reason: canonical.error.message }], topics: [] };
   }
   const bindings = canonicalBinding(bundle, canonical.data);
-  return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'inspect', passed: bindings.every((item) => item.ok), mode: 'canonical', blockers: bindings.filter((item) => !item.ok), topics: progressRows(bundle, canonical.data, bindings) };
+  const progress = progressRows(bundle, canonical.data, bindings);
+  const blockers = [...bindings.filter((item) => !item.ok), ...(progress.blocker ? [progress.blocker] : [])];
+  const layoutBaseline = canonical.data.topic_registry.map((topic) => {
+    const slugStem = losslessTopicSlugStem(topic.slug);
+    return {
+      topic_uid: topic.topic_uid,
+      title: topic.title,
+      ...(slugStem ? { slug_stem: slugStem } : { slug_stem_required: true }),
+    };
+  });
+  return {
+    schema_version: TOPIC_STATE_SCHEMA_VERSION,
+    operation: 'inspect',
+    passed: blockers.length === 0,
+    mode: 'canonical',
+    plan_sha256: hashBytes(readFileSync(planPath)),
+    layout_baseline: { context: 'rerun', action: 'mutate_layout', expected_plan_sha256: hashBytes(readFileSync(planPath)), topics: layoutBaseline, remove_topic_uids: [] },
+    blockers,
+    topics: progress.topics,
+  };
 }
 
 function buildMutation(bundle, parsedPlan, input) {
   const current = structuredClone(parsedPlan);
   const touched = new Map();
+  if (input.action === 'mutate_layout') {
+    CanonicalPlanSchema.parse(current);
+    const target = buildTopicLayoutTarget(current.topic_registry, input);
+    const oldByUid = new Map(current.topic_registry.map((topic) => [topic.topic_uid, topic]));
+    const finalByUid = new Map(target.topic_registry.map((topic) => [topic.topic_uid, topic]));
+    const cleanupFiles = [];
+    for (const topicUid of target.affected_topic_uids) {
+      const oldTopic = oldByUid.get(topicUid);
+      const finalTopic = finalByUid.get(topicUid);
+      const oldSeed = readSeed(bundle, oldTopic.slug);
+      if (!oldSeed.exists) throw new Error(`current seed missing for ${oldTopic.slug}`);
+      if (finalTopic) touched.set(finalTopic.slug, renderSeed(finalTopic, oldSeed.body));
+      if (!finalTopic || finalTopic.slug !== oldTopic.slug) {
+        cleanupFiles.push({ relative: `seed_topics/${oldTopic.slug}.md`, expected_sha256: hashBytes(oldSeed.raw) });
+      }
+    }
+    current.topic_registry = target.topic_registry;
+    current.derived_topic_count = current.topic_registry.length;
+    CanonicalPlanSchema.parse(current);
+    return { plan: current, touched, cleanup_files: cleanupFiles, affected_topic_uids: target.affected_topic_uids };
+  }
   if ('action' in input) {
     const existingSlugs = new Set(current.topic_registry.map((topic) => topic.slug));
     const inputSlugs = new Set(input.entries.filter((entry) => entry.source === 'registry').map((entry) => entry.slug));
@@ -218,14 +387,23 @@ function buildMutation(bundle, parsedPlan, input) {
   }
   current.derived_topic_count = current.topic_registry.length;
   CanonicalPlanSchema.parse(current);
-  return { plan: current, touched };
+  return { plan: current, touched, cleanup_files: [], affected_topic_uids: [...touched.keys()].map((slug) => current.topic_registry.find((topic) => topic.slug === slug)?.topic_uid).filter(Boolean) };
 }
 
 export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, forceDeviceMismatch = false }) {
   const bundle = safeBundle(bundlePath);
   const requestedActions = Array.isArray(input?.actions) ? input.actions.map((item) => item?.action) : [input?.action];
-  const unsupported = requestedActions.find((action) => ['remove', 'remove_topic', 'retire', 'rename', 'renumber', 'delete', 'move', 'path_move', 'set_progress', 'set_status', 'override'].includes(action));
-  if (unsupported) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'layout_mutation_not_supported', reason: `${unsupported} requires deferred C3B/C5 capability`, recommended_action: 'Keep current canonical state unchanged and propose/use the missing capability; do not direct-edit multiple surfaces.' };
+  const imperativeLayoutAction = requestedActions.find((action) => ['remove', 'remove_topic', 'rename', 'renumber'].includes(action));
+  if (imperativeLayoutAction) return {
+    schema_version: TOPIC_STATE_SCHEMA_VERSION,
+    operation: 'apply',
+    verdict: 'blocked',
+    reason_code: 'layout_mutation_not_supported',
+    reason: `${imperativeLayoutAction} is not an accepted imperative action; use one complete mutate_layout target during sanctioned rerun.`,
+    recommended_action: 'Run inspect to obtain the complete mutate_layout baseline, then submit that target through the sanctioned rerun path; do not direct-edit multiple surfaces.',
+  };
+  const unsupported = requestedActions.find((action) => ['retire', 'delete', 'move', 'path_move', 'set_progress', 'set_status', 'override'].includes(action));
+  if (unsupported) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'layout_mutation_not_supported', reason: `${unsupported} is not supported by canonical topic-state apply`, recommended_action: 'Use the existing owner or propose the missing C5 capability; do not direct-edit multiple surfaces.' };
   const parsedInput = TopicApplyPlanSchema.parse(input);
   const accepted = acceptedWorkspaces(bundle);
   if (accepted.length) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'accepted_workspace', recommended_action: `recover --operation-id ${accepted[0].operation_id}` };
@@ -237,28 +415,64 @@ export function applyCanonicalTopicState({ bundlePath, input, crashAt = null, fo
   if (lstatSync(planPath).isSymbolicLink() || !lstatSync(planPath).isFile()) throw new Error('rb_plan.md must be a non-symlink regular file');
   if (!existsSync(seedRoot) || lstatSync(seedRoot).isSymbolicLink() || !lstatSync(seedRoot).isDirectory()) throw new Error('seed_topics must be a real directory');
   const oldRaw = readFileSync(planPath, 'utf8');
+  if (parsedInput.action === 'mutate_layout' && hashBytes(oldRaw) !== parsedInput.expected_plan_sha256) {
+    return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'plan_hash_mismatch', recommended_action: 'Rerun inspect and resubmit the complete layout baseline.' };
+  }
   const split = splitPlan(oldRaw);
-  const mutation = buildMutation(bundle, split.frontmatter, parsedInput);
-  const touchedExisting = new Set([...mutation.touched.keys()].filter((slug) => existsSync(path.join(bundle, 'seed_topics', `${slug}.md`))));
-  const active = activeTopicWork(bundle, touchedExisting);
+  let mutation;
+  try {
+    mutation = buildMutation(bundle, split.frontmatter, parsedInput);
+  } catch (error) {
+    const reason = error.message || String(error);
+    if (reason.startsWith('remove_has_dependents')) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'remove_has_dependents', reason };
+    if (reason.startsWith('layout_slug_collision')) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'layout_slug_collision', reason };
+    throw error;
+  }
+  const oldCanonical = CanonicalPlanSchema.safeParse(split.frontmatter);
+  if (parsedInput.action === 'mutate_layout') {
+    const removeBlocker = safeRemoveBlocker(bundle, oldCanonical.data, parsedInput.remove_topic_uids);
+    if (removeBlocker) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', ...removeBlocker, recommended_action: 'Preserve the topic and its history; only an unstarted dependency-free topic can be removed.' };
+  }
+  const active = oldCanonical.success ? activeTopicWork(bundle, oldCanonical.data, mutation.affected_topic_uids) : [];
   if (active.length) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'active_topic_work', fact_refs: active, recommended_action: 'Resolve through existing queue/work-unit owner, then rerun apply.' };
+  if (parsedInput.action === 'mutate_layout') {
+    const finalBySlug = new Map(mutation.plan.topic_registry.map((topic) => [topic.slug, topic]));
+    const oldByUid = new Map(oldCanonical.data.topic_registry.map((topic) => [topic.topic_uid, topic]));
+    for (const slug of mutation.touched.keys()) {
+      const target = path.join(seedRoot, `${slug}.md`);
+      const finalTopic = finalBySlug.get(slug);
+      const oldTopic = oldByUid.get(finalTopic.topic_uid);
+      if (existsSync(target) && slug !== oldTopic?.slug) {
+        return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'seed_target_exists', path: `seed_topics/${slug}.md`, recommended_action: 'Remove or repair the unexplained target through its existing owner, then rerun apply.' };
+      }
+      if (existsSync(target) && (lstatSync(target).isSymbolicLink() || !lstatSync(target).isFile())) {
+        return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'blocked', reason_code: 'seed_target_unsafe', path: `seed_topics/${slug}.md` };
+      }
+    }
+  }
+  const presentation = refreshTopicRegistryTable(split.body, split.frontmatter.topic_registry || [], mutation.plan.topic_registry);
+  const newPlanRaw = renderPlan(mutation.plan, presentation.body);
+  const replacementsUnchanged = hashBytes(newPlanRaw) === hashBytes(oldRaw)
+    && [...mutation.touched.entries()].every(([slug, bytes]) => existsSync(path.join(seedRoot, `${slug}.md`)) && hashBytes(readFileSync(path.join(seedRoot, `${slug}.md`))) === hashBytes(bytes));
+  if (replacementsUnchanged && mutation.cleanup_files.length === 0) {
+    return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'apply', verdict: 'unchanged', affected_topic_uids: mutation.affected_topic_uids, follow_up: null, advisory: presentation.advisory };
+  }
   const operationId = randomUUID();
   const root = workspaceRoot(bundle, true);
   const workspace = path.join(root, operationId); mkdirSync(workspace); fsyncPath(root);
   try {
     if (forceDeviceMismatch || statSync(workspace).dev !== statSync(planPath).dev || statSync(workspace).dev !== statSync(seedRoot).dev) throw new Error('topic-state workspace and owned targets must be on the same device');
     const stagedDir = path.join(workspace, 'staged'); mkdirSync(stagedDir); fsyncPath(workspace);
-    const newPlanRaw = renderPlan(mutation.plan, split.body);
     const files = [];
     const stage = (relative, bytes) => {
       const target = path.join(bundle, relative); const stagedName = hashBytes(relative); const staged = path.join(stagedDir, stagedName);
       writeDurable(staged, bytes);
       files.push({ relative, expected_sha256: existsSync(target) ? hashBytes(readFileSync(target)) : null, staged_sha256: hashBytes(bytes), staged_name: stagedName });
     };
-    stage('rb_plan.md', newPlanRaw);
     for (const [slug, bytes] of mutation.touched) stage(`seed_topics/${slug}.md`, bytes);
+    stage('rb_plan.md', newPlanRaw);
     if (crashAt === 'before_prepared') throw Object.assign(new Error('simulated crash before_prepared'), { preserveWorkspace: false });
-    const manifest = { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation_id: operationId, state: 'prepared', authorization, input_sha256: hashBytes(JSON.stringify(parsedInput)), registry_length_changed: split.frontmatter.topic_registry.length !== mutation.plan.topic_registry.length, files };
+    const manifest = { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation_id: operationId, state: 'prepared', authorization, input_sha256: hashBytes(JSON.stringify(parsedInput)), registry_length_changed: split.frontmatter.topic_registry.length !== mutation.plan.topic_registry.length, affected_topic_uids: mutation.affected_topic_uids, presentation_advisory: presentation.advisory, files, cleanup_files: mutation.cleanup_files };
     writeDurable(path.join(workspace, 'prepared.json'), `${JSON.stringify(manifest, null, 2)}\n`); fsyncPath(workspace);
     if (crashAt === 'after_prepared') throw Object.assign(new Error('simulated crash after_prepared'), { preserveWorkspace: true });
     return recoverCanonicalTopicState({ bundlePath, operationId, crashAt });
@@ -273,7 +487,7 @@ export function recoverCanonicalTopicState({ bundlePath, operationId, crashAt = 
   const manifestPath = path.join(workspace, 'prepared.json');
   if (!existsSync(manifestPath)) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'recover', verdict: 'blocked', reason_code: 'prepared_manifest_missing' };
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  let committed = 0;
+  let seedCommitted = 0;
   for (const file of manifest.files) {
     const target = path.join(bundle, file.relative); const staged = path.join(workspace, 'staged', file.staged_name);
     if (!existsSync(staged)) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'recover', verdict: 'blocked', reason_code: 'staged_file_missing', path: file.relative };
@@ -284,11 +498,21 @@ export function recoverCanonicalTopicState({ bundlePath, operationId, crashAt = 
     if (current !== file.expected_sha256) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'recover', verdict: 'blocked', reason_code: 'late_drift', path: file.relative };
     const temp = `${target}.topic-state-${operationId}`;
     if (existsSync(temp)) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'recover', verdict: 'blocked', reason_code: 'temporary_target_exists', path: file.relative };
-    writeFileSync(temp, readFileSync(staged), { flag: 'wx' }); fsyncPath(temp); renameSync(temp, target); fsyncPath(path.dirname(target)); committed += 1;
+    writeFileSync(temp, readFileSync(staged), { flag: 'wx' }); fsyncPath(temp); renameSync(temp, target); fsyncPath(path.dirname(target));
     if (crashAt === 'after_plan' && file.relative === 'rb_plan.md') throw Object.assign(new Error('simulated crash after_plan'), { preserveWorkspace: true });
-    if (crashAt === 'after_first_seed' && committed === 2) throw Object.assign(new Error('simulated crash after_first_seed'), { preserveWorkspace: true });
+    if (file.relative.startsWith('seed_topics/')) seedCommitted += 1;
+    if (crashAt === 'after_first_seed' && seedCommitted === 1) throw Object.assign(new Error('simulated crash after_first_seed'), { preserveWorkspace: true });
   }
   if (crashAt === 'before_cleanup') throw Object.assign(new Error('simulated crash before_cleanup'), { preserveWorkspace: true });
+  let cleanupCommitted = 0;
+  for (const cleanup of manifest.cleanup_files || []) {
+    const target = path.join(bundle, cleanup.relative);
+    if (!existsSync(target)) continue;
+    if (lstatSync(target).isSymbolicLink() || !lstatSync(target).isFile()) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'recover', verdict: 'blocked', reason_code: 'cleanup_target_unsafe', path: cleanup.relative };
+    if (hashBytes(readFileSync(target)) !== cleanup.expected_sha256) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'recover', verdict: 'blocked', reason_code: 'late_drift', path: cleanup.relative };
+    rmSync(target); fsyncPath(path.dirname(target)); cleanupCommitted += 1;
+    if (crashAt === 'after_first_cleanup' && cleanupCommitted === 1) throw Object.assign(new Error('simulated crash after_first_cleanup'), { preserveWorkspace: true });
+  }
   rmSync(workspace, { recursive: true }); fsyncPath(root);
-  return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'recover', verdict: 'committed', operation_id: operationId, follow_up: manifest.registry_length_changed ? 'recompute_research_style' : null };
+  return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'recover', verdict: 'committed', operation_id: operationId, follow_up: manifest.registry_length_changed ? 'recompute_research_style' : null, advisory: manifest.presentation_advisory || null };
 }

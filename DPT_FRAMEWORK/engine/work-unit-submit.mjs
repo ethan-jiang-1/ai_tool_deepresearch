@@ -47,6 +47,7 @@ import {
   validateCacheTrails,
   validateSourceClaims,
   validateQueueBindingForSubmit,
+  validateManifestTopicBinding,
 } from './work-unit-validation.mjs';
 
 import { WorkUnitLedgerRecordSchema, WorkUnitStatusFileSchema } from '../schema/contracts/work-unit.mjs';
@@ -493,6 +494,7 @@ function normalizeWave1RequiredOutputRoles(result, record, normalizations, resul
 }
 
 export function reasonCodeForSubmit(message) {
+  if (/work-unit topic binding|canonical topic plan/i.test(message)) return 'topic_binding_invalid';
   if (/runtime receipt|lifecycle events/i.test(message)) return 'missing_receipt';
   if (/receipt_nonce|nonce|receipt mismatch/i.test(message)) return 'nonce_mismatch';
   if (/result\/index mismatch.*work_id|Unknown work_id|work_id/i.test(message)) return 'wrong_work_id';
@@ -666,6 +668,7 @@ function validateSubmitPlan(bundleDir, {
     ? isPathInsideDir(resultPath, path.join(bundleDir, record.paths.work_unit_dir))
     : false;
   const manifest = readAndValidateManifest(bundleDir, index, record);
+  validateManifestTopicBinding(bundleDir, manifest);
   const result = readAndValidateResult(bundleDir, resultPath, record, {
     normalizations,
     outputContract: manifest.output_contract,
@@ -998,6 +1001,7 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
 
   try {
     manifest = readAndValidateManifest(bundleDir, index, record);
+    validateManifestTopicBinding(bundleDir, manifest);
   } catch (error) {
     violations.push(violationForError(error, { phase: 'manifest' }));
   }

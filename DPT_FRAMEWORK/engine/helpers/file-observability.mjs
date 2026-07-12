@@ -487,6 +487,7 @@ export function auditCanonicalTopicFootprint(bundlePath, {
   for (const topic of registryTopics) {
     if (topic?.id) aliases.set(topic.id, topic);
     if (topic?.slug) aliases.set(topic.slug, topic);
+    for (const layout of topic?.previous_layouts || []) if (layout?.slug) aliases.set(layout.slug, topic);
   }
 
   const facts = new Map();
@@ -626,6 +627,28 @@ export function auditFileObservability(bundlePath, {
       canonical_findings: [],
       inspect: [`Bundle directory not found: ${bundlePath}`],
       advice: ['Verify --bundle points to an existing run bundle.'],
+    };
+  }
+
+  const topicStateRoot = join(bundlePath, '_diagnostics', 'topic-state');
+  const acceptedOperation = existsSync(topicStateRoot)
+    ? readdirSync(topicStateRoot).sort().find((name) => existsSync(join(topicStateRoot, name, 'prepared.json')))
+    : null;
+  if (acceptedOperation) {
+    const workspace = `_diagnostics/topic-state/${acceptedOperation}`;
+    return {
+      findings: [],
+      canonical_findings: [{
+        id: 'accepted_topic_layout_workspace',
+        rule_id: 'accepted_topic_layout_workspace',
+        classification: 'blocking',
+        topic_identity: null,
+        primary_surface: workspace,
+        supporting_details: [],
+        repair_kind: 'exact_topic_state_recover',
+      }],
+      inspect: ['[accepted_topic_layout_workspace] A canonical topic layout operation requires exact recovery before file classification.'],
+      advice: [`node DPT_FRAMEWORK/cli/operate-topic-state.mjs recover --bundle ${bundlePath} --operation-id ${acceptedOperation}`],
     };
   }
 

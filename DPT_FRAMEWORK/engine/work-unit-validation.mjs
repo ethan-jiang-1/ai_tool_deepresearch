@@ -35,6 +35,8 @@ import {
   WorkUnitResultSchema,
   WorkUnitRuntimeReceiptEventSchema,
 } from '../schema/contracts/work-unit.mjs';
+import { CanonicalPlanSchema } from '../schema/contracts/plan.mjs';
+import { parse as parseYaml } from 'yaml';
 
 import { queueItemSnapshotHash, queuePath, queueStateFromFile } from './queue-manager-core.mjs';
 import { createQueue, loadQueue } from './queue-manager-lifecycle.mjs';
@@ -42,6 +44,7 @@ import {
   cacheLeafMapping,
   resolveCacheLeafContract,
 } from './helpers/cache-leaf-contract.mjs';
+import { evaluateTopicLayouts, resolveStructuredTopicBinding } from './helpers/topic-layout.mjs';
 
 export function readAndValidateManifest(bundleDir, index, record) {
   const manifestPath = path.join(bundleDir, record.paths.manifest_ref);
@@ -56,6 +59,26 @@ export function readAndValidateManifest(bundleDir, index, record) {
     if (JSON.stringify(manifest.actor_execution) !== JSON.stringify(record.actor_execution)) throw new Error(`manifest/index mismatch for ${record.work_id}: actor_execution`);
   }
   return manifest;
+}
+
+export function validateManifestTopicBinding(bundleDir, manifest) {
+  const queueItem = manifest.queue_item;
+  const hasTopicBinding = Boolean(queueItem?.payload?.topic_uid || queueItem?.payload?.topic_slug || queueItem?.lineage?.topic_uid || queueItem?.lineage?.topic_slug);
+  if (!hasTopicBinding) return null;
+
+  const planPath = path.join(bundleDir, 'rb_plan.md');
+  if (!existsSync(planPath)) return null;
+  const raw = readFileSync(planPath, 'utf8');
+  const frontmatter = raw.match(/^---\n([\s\S]*?)\n---/);
+  if (!frontmatter) throw new Error('canonical topic plan frontmatter is unreadable during work-unit submit');
+  const planFrontmatter = parseYaml(frontmatter[1]);
+  if (planFrontmatter?.topic_registry_version !== '2') return null;
+  const plan = CanonicalPlanSchema.safeParse(planFrontmatter);
+  if (!plan.success) throw new Error('canonical topic plan is invalid during work-unit submit');
+
+  const resolved = resolveStructuredTopicBinding(evaluateTopicLayouts(plan.data.topic_registry), manifest);
+  if (!resolved.ok) throw new Error(`work-unit topic binding invalid: ${resolved.reason_code}`);
+  return resolved;
 }
 
 export function readAndValidateBeacon(bundleDir, record, manifest) {

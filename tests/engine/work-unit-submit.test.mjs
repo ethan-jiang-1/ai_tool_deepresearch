@@ -36,6 +36,13 @@ function tempBundle() {
   return mkdtempSync(path.join(os.tmpdir(), 'wu-submit-'));
 }
 
+function writeCanonicalPlan(dir, { previous = [] } = {}) {
+  const previousLayouts = previous.length > 0
+    ? `\n${previous.map((slug, index) => `      - id: "0${index}"\n        slug: ${slug}`).join('\n')}`
+    : ' []';
+  writeFileSync(path.join(dir, 'rb_plan.md'), `---\nplan_basename: test\nderived_topic_count: 1\ntopic_registry_version: "2"\ntopic_registry:\n  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000\n    id: "01"\n    slug: topic-a\n    title: Topic A\n    must_answer: ["A?"]\n    scope_role: primary\n    depends_on_topic_uids: []\n    previous_layouts:${previousLayouts}\n---\n# Plan\n`);
+}
+
 function cleanup(dir) {
   rmSync(dir, { recursive: true, force: true });
 }
@@ -332,6 +339,49 @@ function assertSnapshotEqual(actual, expected, message) {
 }
 
 describe('submitWorkUnit', () => {
+  it('preserves current UID binding in the immutable queue snapshot without duplicate ledger fields', () => {
+    const dir = tempBundle();
+    try {
+      writeCanonicalPlan(dir);
+      saveSeedQueue(dir, [delegated('queue-a', { payload: { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', topic_slug: 'topic-a' } })]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const manifest = JSON.parse(readFileSync(path.join(dir, record.paths.manifest_ref), 'utf8'));
+      assert.equal(manifest.queue_item.payload.topic_uid, 'tp_123e4567-e89b-12d3-a456-426614174000');
+      const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath: writeValidSubmitFiles(dir, record) });
+      assert.equal(submitted.ok, true);
+      const row = ledgerRows(dir)[0];
+      assert.equal(Object.hasOwn(row, 'topic_uid'), false);
+      assert.equal(Object.hasOwn(row, 'topic_slug'), false);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('accepts a previous slug snapshot and rejects a mismatched UID snapshot before ledger write', () => {
+    const legacyDir = tempBundle();
+    const mismatchDir = tempBundle();
+    try {
+      writeCanonicalPlan(legacyDir, { previous: ['old-topic-a'] });
+      saveSeedQueue(legacyDir, [delegated('queue-legacy', { payload: { topic_slug: 'old-topic-a' } })]);
+      claimWorkUnits(legacyDir, { phase: 'wave0', count: 1 });
+      let record = loadWorkUnitIndex(legacyDir).work_units['wu-w0-b000-src-i0001'];
+      assert.equal(submitWorkUnit(legacyDir, { work_id: record.work_id, resultPath: writeValidSubmitFiles(legacyDir, record) }).ok, true);
+
+      writeCanonicalPlan(mismatchDir);
+      saveSeedQueue(mismatchDir, [delegated('queue-mismatch', { payload: { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174001', topic_slug: 'topic-a' } })]);
+      claimWorkUnits(mismatchDir, { phase: 'wave0', count: 1 });
+      record = loadWorkUnitIndex(mismatchDir).work_units['wu-w0-b000-src-i0001'];
+      const rejected = submitWorkUnit(mismatchDir, { work_id: record.work_id, resultPath: writeValidSubmitFiles(mismatchDir, record) });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.last_submit_rejection.reason_code, 'topic_binding_invalid');
+      assertNoLedger(mismatchDir);
+    } finally {
+      cleanup(legacyDir);
+      cleanup(mismatchDir);
+    }
+  });
+
   it('dry-submits a valid claimed result without ledger, queue, status, result, receipt, trace, log, or transaction side effects', () => {
     const dir = tempBundle();
     try {

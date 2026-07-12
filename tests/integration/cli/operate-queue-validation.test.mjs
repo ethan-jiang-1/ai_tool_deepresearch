@@ -36,7 +36,7 @@ function createBundle(name) {
   // Write topic_registry into rb_plan.md frontmatter
   const planPath = join(dir, 'rb_plan.md');
   const existing = readFileSync(planPath, 'utf-8');
-  const fm = `---\nplan_basename: test\nderived_topic_count: 2\ntopic_registry_version: "2"\ntopic_registry:\n  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000\n    id: "01"\n    slug: topic-a\n    title: "Topic A"\n    must_answer: ["A?"]\n    scope_role: primary\n    depends_on_topic_uids: []\n  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174001\n    id: "02"\n    slug: topic-b\n    title: "Topic B"\n    must_answer: ["B?"]\n    scope_role: supporting\n    depends_on_topic_uids: []\n---`;
+  const fm = `---\nplan_basename: test\nderived_topic_count: 2\ntopic_registry_version: "2"\ntopic_registry:\n  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000\n    id: "01"\n    slug: topic-a\n    title: "Topic A"\n    must_answer: ["A?"]\n    scope_role: primary\n    depends_on_topic_uids: []\n    previous_layouts:\n      - id: "00"\n        slug: old-topic-a\n  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174001\n    id: "02"\n    slug: topic-b\n    title: "Topic B"\n    must_answer: ["B?"]\n    scope_role: supporting\n    depends_on_topic_uids: []\n---`;
   writeFileSync(planPath, fm + '\n' + existing.replace(/^---\n[\s\S]*?\n---\n?/, ''));
   mkdirSync(join(dir, 'seed_topics'), { recursive: true });
   writeFileSync(join(dir, 'seed_topics/topic-a.md'), '---\ntopic_uid: tp_123e4567-e89b-12d3-a456-426614174000\nid: "01"\nslug: topic-a\ntitle: Topic A\nmust_answer: ["A?"]\nscope_role: primary\ndepends_on_topic_uids: []\n---\n# Topic A\n');
@@ -86,6 +86,8 @@ describe('QIV-001 enqueue topic validation', () => {
     const r = runOq(dir, 'enqueue', '--task', taskFile);
     const out = JSON.parse(r.stdout);
     assert.equal(out.ok, true);
+    assert.equal(out.queue.active_window[0].payload.topic_uid, 'tp_123e4567-e89b-12d3-a456-426614174000');
+    assert.equal(out.queue.active_window[0].payload.topic_slug, 'topic-a');
   });
 
   it('2. rejects unknown topic_slug', () => {
@@ -179,6 +181,43 @@ describe('QIV-001 enqueue topic validation', () => {
     const out = JSON.parse(r.stdout);
     assert.equal(out.ok, false);
     assert.ok(out.error.includes('W2F-999'));
+  });
+
+  it('9. rejects a previous-layout slug with the current suggestion and no write', () => {
+    const dir = createBundle(unique('previous'));
+    const taskFile = join(dir, 'task.json');
+    writeTaskFile(taskFile, { payload: { topic_slug: 'old-topic-a' } });
+    const before = readFileSync(join(dir, 'rb_queue.json'), 'utf8');
+    const r = runOq(dir, 'enqueue', '--task', taskFile);
+    const out = JSON.parse(r.stdout);
+    assert.equal(out.ok, false);
+    assert.equal(out.reason_code, 'previous_layout_not_current');
+    assert.match(out.error, /topic-a/);
+    assert.equal(readFileSync(join(dir, 'rb_queue.json'), 'utf8'), before);
+  });
+
+  it('10. rejects caller UID mismatch without queue mutation', () => {
+    const dir = createBundle(unique('uid-mismatch'));
+    const taskFile = join(dir, 'task.json');
+    writeTaskFile(taskFile, { payload: { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174001', topic_slug: 'topic-a' } });
+    const before = readFileSync(join(dir, 'rb_queue.json'), 'utf8');
+    const r = runOq(dir, 'enqueue', '--task', taskFile);
+    const out = JSON.parse(r.stdout);
+    assert.equal(out.reason_code, 'topic_uid_slug_mismatch');
+    assert.equal(readFileSync(join(dir, 'rb_queue.json'), 'utf8'), before);
+  });
+
+  it('11. prioritizes accepted workspace recovery before layout validation', () => {
+    const dir = createBundle(unique('workspace'));
+    const workspace = join(dir, '_diagnostics/topic-state/op-layout');
+    mkdirSync(workspace, { recursive: true });
+    writeFileSync(join(workspace, 'prepared.json'), '{}\n');
+    const taskFile = join(dir, 'task.json');
+    writeTaskFile(taskFile, { payload: { topic_slug: 'old-topic-a' } });
+    const r = runOq(dir, 'enqueue', '--task', taskFile);
+    const out = JSON.parse(r.stdout);
+    assert.equal(out.reason_code, 'accepted_workspace');
+    assert.match(out.error, /recover/);
   });
 });
 
