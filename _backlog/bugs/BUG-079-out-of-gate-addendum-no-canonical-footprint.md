@@ -4,7 +4,7 @@
 **Bundle:** `dpt_rb_ai-era-bpm-process-disruption`
 **Phase:** Final (terminal) → post-final out-of-gate addendum（BUG-078 workaround 的下游后果）
 **Severity:** High — 新增 topic 的证据真实且保存了，但对 canonical 结构、gate/audit/recovery 工具**完全不可见**；bundle 结构自相矛盾
-**Current status (2026-07-12):** Partial / canonical path implemented — C1 detects the historical incident; C2 protects sanctioned content staging; v0.24 C3A now makes legal HITL1/rerun scope canonical-or-blocked through registry UID/minimum intent, UID-bound seeds, direct-fact progress, enqueue preflight and explicit recovery. Historical/post-final addendum adoption remains unauthorized until C5; remove/rename/renumber remains C3B.
+**Current status (2026-07-13):** Partial / new canonical post-final route implemented — C1 detects the historical incident; C2 protects sanctioned content staging; v0.24/v0.26 make legal topic intent/layout canonical-or-blocked; v0.27 routes a new post-final rerun through an audited event into existing C3 and the normal pipeline. Controlled case 317 proves no `_cache/addendum/` / `final/addendum/` success path. Historical addendum bytes are intentionally not auto-adopted, and generic maintenance/debug state-seed remains unavailable.
 
 ## Symptom
 
@@ -86,7 +86,7 @@
 
 ## Related
 
-- [BUG-078](BUG-078-post-final-hitl2-rerun-reentry-blocked.md)（上游根因：rerun 重入被单向棘轮堵死；本 bug 是其下游结构后果）
+- [BUG-078](../_done/_fixed_bugs/BUG-078-post-final-hitl2-rerun-reentry-blocked.md)（上游根因：rerun 重入被单向棘轮堵死；本 bug 是其下游结构后果）
 - [BUG-076](../_done/_fixed_bugs/BUG-076-webfetch-domain-verification-blocks-research-fetch.md)（addendum 采证走 curl 的原因；框架侧已接受替代 fetch surface）
 - Plan [`breakpoint-recovery-persistence-model`](../plans/breakpoint-recovery-persistence-model.md)（P2 状态落盘 / P3 意图落盘——本 bug 是"数据落在非 canonical 位置"的活样本）
 - `DPT_FRAMEWORK/engine/helpers/handoff-helpers.mjs`、`DPT_FRAMEWORK/cli/audit-phase-status.mjs`、`DPT_FRAMEWORK/rb_templates/`

@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { addCanonicalRecoveryIncident } from './recovery-incident-fixture.mjs';
+import { createTerminalFinalBundle } from './post-final-recovery-fixture.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-reentry-tmp');
@@ -372,8 +373,8 @@ describe('check-reentry CLI', () => {
   });
 
   describe('canonical recovery summary', () => {
-    it('groups an incident into one blocking canonical root and reports missing post-final contract without mutation', () => {
-      const dir = setupBundle('rt-canonical-incident');
+    it('groups a terminal incident into one blocking canonical root and exposes the accepted post-final recovery action without mutation', () => {
+      const dir = createTerminalFinalBundle(TMP, 'rt-canonical-incident');
       addCanonicalRecoveryIncident(dir);
       const before = recursiveSnapshot(dir);
       const res = runCliJson(dir, 'readiness_passed');
@@ -386,10 +387,12 @@ describe('check-reentry CLI', () => {
       assert.strictEqual(blockingCanonical[0].topic_identity, 'topic-x');
       const roots = res.stdout.recovery.root_findings.filter((root) => root.source_kind === 'canonical_topic');
       assert.strictEqual(roots.length, 1);
-      assert.strictEqual(roots[0].sanctioned_path_status, 'missing_contract');
-      assert.strictEqual(roots[0].recommended_action, null);
-      assert.match(roots[0].direct_blocker, /no accepted post-final reentry contract/);
-      assert.ok(res.stdout.advice.some((line) => line.includes('[missing_contract]')));
+      assert.strictEqual(roots[0].sanctioned_path_status, 'reachable');
+      assert.strictEqual(roots[0].direct_blocker, null);
+      assert.strictEqual(roots[0].recommended_action.kind, 'post_final_recovery');
+      assert.strictEqual(roots[0].recommended_action.target_ref, 'retained post-final request JSON, then apply');
+      assert.strictEqual(res.stdout.post_final_recovery.verdict, 'eligible');
+      assert.strictEqual(res.stdout.post_final_recovery.next_action.kind, 'prepare_request');
       assert.deepStrictEqual(after, before);
     });
   });

@@ -64,6 +64,19 @@ const trace = {
   traceFilePath: baseTrace.traceFilePath,
   traceEntry(event, detail = {}) {
     if (event === 'load_complete' && detail.entry === handoff.targetNode) {
+      if (handoff.kind === 'post_final_reentry') {
+        if (handoff.loadComplete) return;
+        baseTrace.traceEntry(event, {
+          ...detail,
+          handoff_source_kind: 'post_final_reentry',
+          handoff_source_event_id: handoff.eventId,
+          handoff_source_event_index: handoff.index,
+          handoff_source_event_sha256: handoff.eventLineSha256,
+          handoff_source_operation_id: handoff.operationId,
+          handoff_target_node: handoff.targetNode,
+        });
+        return;
+      }
       baseTrace.traceEntry(event, {
         ...detail,
         handoff_source_gate: handoff.sourceGate,

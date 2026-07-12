@@ -91,16 +91,16 @@ N/A — final 无 gate。Final 是 terminal delivery node。
 - 把 prefer-Chinese guidance、log event、trace event 或 chat summary 当成 delivery evidence
 - 启动 post-delivery feedback loop
 - 等待用户反馈后再修改报告
-- 回到 HITL2 repair/rerun（用户反馈通过独立路径触发 `phase-hitl2.md`）
+- 从 Final 内回到 HITL2 或重复提问同一决定
 
-Post-delivery 用户反馈入口：用户反馈写入 `rb_profile.yaml` 的 HITL2/user feedback 字段，通过 HITL2 `rerun` 从 `seed-topics` 重新跑。Final node 自身不处理 post-delivery 修改。
+Post-delivery 用户反馈入口：若用户明确决定 rerun scope/risk，Agent使用 `operate-post-final-recovery.mjs inspect|apply|recover` 将决定记录为现有 HITL2 `rerun` profile semantics和一个lineage-bound `post_final_reentry` event；然后执行 `enter-phase --node phases/phase-rerun.md`、`advance-status --to hitl2_recorded`、`check-reentry --at hitl2_recorded` 和现有 C3/rerun pipeline。Final node 自身不处理修改、不重问同一决定，也不把request metadata当作verified identity或permission。
 
 ## 9. Anti-Cheating Rules
 
 - **Final report MUST 从 verified bundle state 生成**——不能重新凭 chat memory 生成、凭 LLM 内部知识编造内容
 - **MUST NOT 暗藏 hidden next、hidden gate 或隐式循环**——final 是 terminal node，无 outgoing transition
 - **MUST NOT 在 `final/` 为空时声称 delivery 完成**——至少 1 份报告文件必须真实存在
-- **用户 final 后反馈 MUST NOT 通过 final node 处理**——走 HITL2 repair/rerun（`phase-hitl2.md` §7）
+- **用户 final 后反馈 MUST NOT 通过 final node 处理**——明确rerun只走audited post-final recovery → existing HITL2 rerun semantics → `phase-rerun.md`
 - **MUST NOT 写 `final_delivery` trace event 或用 log/chat summary 证明 delivery**——final 无 gate CLI，charter 禁止手写 trace event。delivery 由 legal Final entry 后的 `final/` 文件存在证明
 - **MUST NOT 把 premature `final/` 文件当成 delivery**——没有 readiness-to-final handoff 和 Final entry witness 时，`final/` 只是 phase-boundary violation diagnostic
 - 参见 `shared-anti-cheating-rules.md` 的通用禁令

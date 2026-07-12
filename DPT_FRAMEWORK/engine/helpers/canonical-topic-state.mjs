@@ -128,7 +128,30 @@ function lifecycleAuthorization(bundle, context) {
   }
   const handoff = checkPhaseHandoffPreflight(bundle, 'phases/phase-rerun.md');
   const ok = handoff.ok && status.current_node === 'phases/phase-rerun.md' && status.current_gate === 'hitl2_recorded' && status.next_gate === 'rerun_ready';
-  return ok ? { ok: true, context, current_node: status.current_node, current_gate: status.current_gate, next_gate: status.next_gate, source_attempt_index: handoff.handoff.index, load_witness_index: handoff.handoff.loadComplete?.index ?? null }
+  return ok ? {
+    ok: true,
+    context,
+    current_node: status.current_node,
+    current_gate: status.current_gate,
+    next_gate: status.next_gate,
+    source_attempt_index: handoff.handoff.kind === 'post_final_reentry' ? null : handoff.handoff.index,
+    load_witness_index: handoff.handoff.loadComplete?.index ?? null,
+    ...(handoff.handoff.kind === 'post_final_reentry' ? {
+      source_handoff_kind: 'post_final_reentry',
+      source_handoff_event_id: handoff.handoff.eventId,
+      source_handoff_event_index: handoff.handoff.index,
+      source_handoff_event_sha256: handoff.handoff.eventLineSha256,
+      source_handoff_operation_id: handoff.handoff.operationId,
+      source_handoff_after_profile_sha256: handoff.handoff.committedAfterProfileSha256,
+      source_handoff_transition_index: handoff.handoff.transition?.index ?? null,
+      source_handoff_transition_binding: handoff.handoff.transition?.event ?? null,
+      status_snapshot: {
+        current_node: status.current_node,
+        current_gate: status.current_gate,
+        next_gate: status.next_gate,
+      },
+    } : {}),
+  }
     : { ok: false, reason_code: 'rerun_not_authorized', reason: handoff.inspect?.[0] || 'rerun apply requires route-bound HITL2 witness and hitl2_recorded→rerun_ready window' };
 }
 function activeTopicWork(bundle, plan, affectedTopicUids) {

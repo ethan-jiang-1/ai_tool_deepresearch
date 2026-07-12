@@ -1,7 +1,7 @@
 # Overall Plan: Recovery、Canonical State 与 Delegated Reliability 五 Change 总控路线
 
 **性质:** 跨 plan / bug 的 OpenSpec change 总路线（pre-OpenSpec）
-**状态:** Active — C1/C2/C3A/C4 已 archive（v0.22–v0.25）；C3B `mutate-canonical-topic-layout` 正在 apply（目标 v0.26），C5 post-final recovery仍待推进（更新于 2026-07-12）
+**状态:** Active — C1/C2/C3A/C3B/C4 已 archive（v0.22–v0.26）；C5 `restore-audited-post-final-recovery` 已完成apply与controlled proof（v0.27），待归档。Generic maintenance/debug override/state-seed仍留在来源plan，不由C5冒充完成（更新于 2026-07-13）
 **当前进度速览:** 见文末 [§12 Change 进度总览](#12-change-进度总览live-tracker)——每推进一个 change 就更新那张表，避免跟踪断线。
 **前置基础:** `align-recovery-with-simple-helper-posture`（v0.21）已建立 helper-oriented、`materialize-before-work`、`canonical-or-blocked` 与依赖带，但未实现本计划的核心 runtime 能力。
 
@@ -12,7 +12,7 @@
 - [`breakpoint-recovery-persistence-model`](breakpoint-recovery-persistence-model.md)
 - [`human-override-and-state-mutability`](human-override-and-state-mutability.md)
 - [BUG-077](../_done/_fixed_bugs/BUG-077-subagent-api-402-and-cache-trail-schema-opaque.md)（Closed）
-- [BUG-078](../bugs/BUG-078-post-final-hitl2-rerun-reentry-blocked.md)
+- [BUG-078](../_done/_fixed_bugs/BUG-078-post-final-hitl2-rerun-reentry-blocked.md)（Closed）
 - [BUG-079](../bugs/BUG-079-out-of-gate-addendum-no-canonical-footprint.md)
 
 > **本 overall plan 的定位：** 它是一把"伞"，专门罩住上面 `plans/` 的 2 个 plan 与 `bugs/` 的 3 个 bug——这 5 个来源不再各自单独推进，统一由本路线的 C1–C5 承接。等整条路线全部执行完（对应 change 都 apply/archive 且 controlled proof 通过），按 §11 关闭条件把该 move 的条目 move 下去：plan → `_backlog/_done/_closed_plans/`，bug → `_backlog/_done/_fixed_bugs/`，并从 `_backlog/plans/README.md` / `_backlog/bugs/README.md` 索引移除。本 overall plan 自身在 5 个来源全部关闭后一并归档到 `_backlog/_done/_closed_plans/`。
@@ -257,34 +257,34 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 
 ## 7. C5 — `restore-audited-post-final-recovery`
 
+**Status (2026-07-13): Applied, controlled proof PASS, archive pending.** v0.27落地一个狭窄`post_final_rerun` operation：event-last exact recovery、existing HITL2 rerun routing、existing enter/status/C3/reentry owners与case-317真实disposable proof。Apply阶段按Evolution Directions主动缩掉原路线中generic state-seed、verified-human authorization与rollback controller设想；这些仍是独立未覆盖风险，不得算作C5完成项。
+
 ### 7.1 覆盖来源
 
 - BUG-078：terminal Final 后没有 sanctioned HITL2 rerun/reentry path
-- Human Override plan C：human-directed authorized repair、reentry、state-seed
+- Human Override plan C 的狭窄post-final reentry切片；generic authorized repair/state-seed仍未覆盖
 - BUG-079：禁止用 out-of-gate addendum 代替 canonical recovery
 - Human Override plan §2：override 必须有审计，之后必须可校验
 
 ### 7.2 目标
 
-在 C1/C3 已提供 integrity safety net 和 canonical intent/state 后，为明确的人类 post-final rerun 请求提供一条狭窄、可审计的 sanctioned recovery path；再在同一 authority model 下定义受限 maintenance/debug repair。
+在 C1/C3 已提供 integrity safety net 和 canonical intent/state 后，为明确的 post-final rerun semantics提供一条狭窄、可审计的 sanctioned recovery path；不把incident fix扩成maintenance/debug mutation platform。
 
 ### 7.3 核心边界
 
 - `human-directed` 只是 decision source，不是 Agent 可自填的 override flag。
-- authorization signal 必须来自可信 host/session/command boundary，并有 threat model。
-- post-final rerun 是一个具体业务操作；generic state-seed 是更高风险 maintenance operation。二者可以在一个 capability family 内，但必须使用不同 command/action enum 和 mutation allowlist。
+- request metadata只记录semantic decision与optimistic concurrency，不认证caller身份、不扩大host permission；host approval仍是外部边界。
+- post-final rerun是唯一accepted action；generic state-seed属于不同、更高风险的maintenance operation，C5明确不实现。
 - Final 历史交付与原 provenance 不得被悄悄重写；新 rerun 应保留 lineage。
 
 ### 7.4 In Scope
 
-- 接收已由 C3 materialize 的 post-final rerun intent。
-- 提供 Engine-owned reopen/reentry operation，建立合法 handoff/status/trace/queue window，而不是手写 trace。
-- 对 authorization 写入 who/when/why/action/target/previous-state/new-state/lineage。
-- 限制可修改 surface 和 transition；不允许任意文件编辑获得 authority。
+- 接收retained、schema-closed、lineage-bound post-final rerun request，并写入existing HITL2 profile semantics。
+- 提供Engine-owned event-last reopen/reentry operation，通过existing trace writer追加合法exceptional handoff，而不是手写trace。
+- 审计operation/request/final lineage/reason/scope/route binding，不虚构verified who或permission token。
+- 限制mutation为profile projection + one event；status、topic、queue、work-unit继续由existing owners修改。
 - rerun 进入 canonical seed/wave path，复用现有 gate、work-unit、artifact 和 provenance contracts。
-- 定义受限 state-seed/debug operation：只允许白名单 target，建立一致环境或明确拒绝。
-- 每次 mutation 后自动或强制运行 C1 integrity audit；失败时给出 rollback 或一个最近 repair action。
-- 定义重复调用、部分失败、rollback 和已有新 rerun coverage 冲突处理。
+- 定义重复调用、partial failure exact roll-forward recovery、stale lineage与已有新rerun coverage冲突处理。
 
 ### 7.5 Out Of Scope
 
@@ -292,14 +292,14 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 - 不允许修改既有 evidence/receipt/ledger 来伪造过去发生过的事实。
 - 不把人类自然语言请求本身当作 machine-authenticated authorization。
 - 不提供任意 state/file mutation shell。
+- 不提供generic human override、maintenance/debug state-seed、rollback tree或auth subsystem。
 
 ### 7.6 验收
 
-- 同一 post-final mutation 在 autonomous context 被拒绝，在可信 human-directed context 被审计执行。
+- 只有closed `post_final_rerun` request shape与exact terminal Final lineage可被审计执行；unsupported/generic mutation拒绝。
 - 成功后产生合法 canonical rerun handoff，新增 scope 进入 C3 identity/progress surface。
 - 原 Final 交付与新 rerun lineage 均可追溯。
-- mutation 后 C1 audit clean；若不 clean，操作回滚或明确停在可恢复状态。
-- state-seed 只允许批准的 target，并能建立该 target 所需的最小一致环境。
+- crash后只允许exact recover或direct blocker，不提供猜测rollback。
 - 不再需要 `_cache/addendum/`、`final/addendum/` 或手写 trace/status 作为成功路径。
 
 ## 8. 来源覆盖矩阵
@@ -379,23 +379,23 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 | C3A | `establish-canonical-topic-state` | C1 + C2 durability boundary | ✅ Archived（worktree archive pending commit） | v0.24 | `archive/2026-07-12-establish-canonical-topic-state`；stable UID/intent/direct progress |
 | C3B | `mutate-canonical-topic-layout` | C3A | 🚧 Applying | v0.26 | stable-UID rename/reorder/renumber、safe remove；historical path原位兼容，不做path/reference migration |
 | C4 | `handle-unavailable-delegated-actors` | C1（独立执行 lane，可与 C2 并行）| ✅ Archived | v0.25 | `archive/2026-07-12-handle-unavailable-delegated-actors`；case-407、1469/1469 PASS |
-| C5 | `restore-audited-post-final-recovery` | C1 + C3（消费 C2 crash-safe primitive）| ⏳ Not started | TBD | 最高风险 authority change，必须最后做 |
+| C5 | `restore-audited-post-final-recovery` | C1 + C3（消费 C2 crash-safe posture）| ✅ Applied（archive pending） | v0.27 | case-317 PASS；狭窄post-final rerun，generic override/state-seed明确未实现 |
 
 **推进顺序提醒：**
 
 1. C1 ✅ → 已提供只读安全网。
 2. C2/C4 ✅ 已 archive。
-3. C3A ✅ 已 archive；C3B layout mutation正在 apply，完成后归档；C5仍保留post-final mutation/override边界。
-4. C5 最后，依赖 C1 + C3，并复用 C2 crash-safe primitive。
+3. C3A/C3B ✅ 已 archive，canonical identity/intent/layout owner已稳定。
+4. C5 ✅ apply与controlled proof完成，待OpenSpec archive；generic maintenance/debug override另案。
 
 **来源关闭追踪（与 §11 关闭条件对齐）：**
 
 | 活跃来源 | 由哪些 change 关闭 | 当前状态 |
 |---|---|---|
-| `breakpoint-recovery-persistence-model.md` | C2 + C3 | Partial — C2完成durability；C3A完成canonical intent/direct progress，persist前host write与post-final边界仍开放 |
-| `human-override-and-state-mutability.md` | C1 + C3 + C5 | Partial — C1完成D，C3A完成A；B转C3B，C等待C5 |
+| `breakpoint-recovery-persistence-model.md` | C2 + C3 + C5 narrow input boundary | Partial — content durability、canonical intent/progress/layout与post-final request materialization已完成；persist前host write、任意旧tmp与generic maintenance input仍开放 |
+| `human-override-and-state-mutability.md` | C1 + C3 + C5 narrow reentry boundary | Partial — A/B/D与post-final rerun已落地；generic override/state-seed、可信permission signal仍未实现 |
 | BUG-077 | C1（contract-opacity）+ C4（actor availability）| Closed — 已移入 `_backlog/_done/_fixed_bugs/`；case-407与1469/1469通过 |
-| BUG-078 | C5 | Open — 等 C5 |
-| BUG-079 | C1（检测）+ C2（content durability）+ C3/C5（canonical-or-blocked）| Partial — legal HITL1/rerun canonical footprint由C3A完成；历史/post-final incident仍等待C5 |
+| BUG-078 | C5 | Closed — case-317真实disposable bundle完成Final→C5→existing rerun/C3/normal descendant；已移入fixed bugs |
+| BUG-079 | C1（检测）+ C2（content durability）+ C3/C5（canonical-or-blocked）| Partial — 新post-final scope已有canonical rerun route且无addendum success path；历史addendum不会被C5自动adopt，generic maintenance/state-seed仍缺失 |
 
 > 提示：当某个来源的所有关联 change 都 Archived 且 controlled proof 通过时，才把来源从 Partial 改为 Closed，并把条目 move 下去——plan → `_backlog/_done/_closed_plans/`，bug → `_backlog/_done/_fixed_bugs/`，同时从 `_backlog/plans/README.md` / `_backlog/bugs/README.md` 索引移除；只完成 guidance/spec 不算关闭（见 §11）。5 个来源全部 Closed 后，本 overall plan 自身也 move 到 `_backlog/_done/_closed_plans/`。

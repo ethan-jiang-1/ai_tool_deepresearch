@@ -22,6 +22,10 @@ The helper-oriented execution posture SHALL NOT override an Engine verdict, sile
 
 `Human-directed` SHALL describe the source of a decision or authorization, not transfer ordinary command execution back to the human. A human statement SHALL NOT by itself expand host permission, override an Engine verdict, or create a missing capability. For action responsibility, an accepted human-directed decision means the relevant contract-required decision/confirmation has been explicitly provided or recorded, current host permissions allow the action, and an existing legal Engine path supports it.
 
+For the accepted post-final rerun path, the user-owned boundary SHALL be limited to the new rerun semantics/risk decision and any host-policy approval that cannot be delegated. The request file SHALL carry the decided reason/scope and expected Final lineage but SHALL NOT be described as verified identity, permission token or `human-directed` override flag. After that boundary, the Agent SHALL prepare/retain the request, run post-final recovery inspect/apply/recover, consume the legal rerun handoff through `enter-phase`, synchronize it through existing `advance-status --to hitl2_recorded`, run reentry/topic-state checks and continue the existing pipeline.
+
+If the existing rerun-count gate rule makes another rerun impossible, the Agent SHALL NOT invoke C5, reset the counter or enter a silent unpassable rerun. It SHALL escalate only the smallest new decision: whether to start a new bundle for the requested scope. If the user chooses that path, ordinary bundle creation and execution return to the Agent.
+
 When such a decision authorizes a destructive or irreversible action, the Agent SHALL execute the remaining authorized mechanical steps. If host policy requires a non-delegable human action, guidance SHALL request only that action and SHALL resume Agent execution afterward.
 
 The discoverable command index SHALL contain a top-level audience statement before command tables. The statement SHALL say:
@@ -34,7 +38,8 @@ The discoverable command index SHALL contain a top-level audience statement befo
 - human-directed identifies who decided, while ordinary command execution remains assigned to the Agent except for a host-required non-delegable human action;
 - a human request does not by itself expand host permission, override an Engine verdict, or create a missing mutation/reentry capability;
 - terminal non-interactive Final delivery is allowed after final artifacts exist, but Final is not an interactive decision checkpoint, progress report, confirmation loop, or post-delivery repair surface;
-- post-final feedback, when supported by content-delivery specs, re-enters through HITL2 repair/rerun rather than through a Final-owned loop;
+- accepted post-final rerun records HITL2 rerun semantics through the narrow recovery operation, then returns entry/audit/rerun execution to the Agent rather than asking the human to co-run commands;
+- unsupported post-final maintenance/debug remains a missing capability rather than becoming a generic override;
 - non-terminal `stop: no` phases run autonomously and silently; and
 - command docs are operating surfaces for the Agent, not instructions for a human to run pipeline commands mid-stream.
 
@@ -80,11 +85,31 @@ Agent-facing framework docs SHALL NOT use `Agent/operator` or equivalent slash w
 - **AND** guidance SHALL NOT turn the human into the ordinary command runner
 - **AND** if host policy requires one non-delegable human action, guidance SHALL request only that action and resume Agent execution afterward
 
+#### Scenario: Post-final rerun decision returns the complete mechanical chain
+
+- **WHEN** the user has explicitly decided a post-final rerun scope and host permission allows the accepted operation
+- **THEN** the Agent SHALL execute request preparation, inspect/apply/recover, phase entry, existing status sync, reentry/topic-state checks and the normal rerun pipeline
+- **AND** SHALL ask the user only for a genuinely missing semantic/risk decision or host-required approval
+- **AND** SHALL NOT ask the user to run framework commands or repeat the same rerun decision
+
 #### Scenario: Human direction does not create authority by itself
 
 - **WHEN** a human requests a mutation or reentry that has no accepted Engine path or exceeds current host permission
 - **THEN** the Agent SHALL explain the missing permission or capability boundary
 - **AND** it SHALL NOT treat the request alone as authority to hand-write runtime state or bypass the Engine verdict
+
+#### Scenario: Request metadata is not an identity token
+
+- **WHEN** a post-final request contains reason, scope or decision-source metadata
+- **THEN** command guidance SHALL describe those fields as semantic/audit input and optimistic-concurrency binding
+- **AND** SHALL NOT claim they cryptographically prove the human caller or expand host permission
+
+#### Scenario: Exhausted rerun limit escalates one new decision
+
+- **WHEN** C5 inspect proves the next rerun would fail the active rerun-count gate rule
+- **THEN** guidance SHALL ask only whether to start a new bundle for the requested scope
+- **AND** SHALL NOT ask the user to reset state or run commands
+- **AND** after approval the Agent SHALL perform the new-bundle mechanical execution
 
 #### Scenario: Operator wording is not a co-runner audience
 

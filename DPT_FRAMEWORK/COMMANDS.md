@@ -14,7 +14,10 @@ Human-directed identifies the decision source；它不转移 ordinary command-ru
 
 Autonomous execution、HITL1/HITL2 内的 human-directed decision、out-of-band maintenance/debug collaboration，以及 accepted mutation/reentry capability 是四个不同概念。Out-of-band collaboration 不是第三个 lifecycle checkpoint、Final-owned repair loop 或任意 state movement authority。
 
-HITL1 和 HITL2 是唯一的 interactive in-run checkpoints。一次性 pre-pipeline trigger/entry selection 只负责选择 DPT_FRAMEWORK 入口并把控制权交给 Agent；进入 lifecycle 后，非终端 `stop: no` phase 自主静默运行。Final 是 terminal non-interactive delivery：它可以在 `final/` artifacts 已存在后交付最终报告，但不是第三个交互 checkpoint、progress report、confirmation loop 或 Final-owned repair loop。Post-final feedback 若被 content-delivery contract 支持，必须通过 HITL2 repair/rerun 重新进入，而不是在 Final 内隐藏循环。
+HITL1 和 HITL2 是唯一的 interactive in-run checkpoints。一次性 pre-pipeline trigger/entry selection 只负责选择 DPT_FRAMEWORK 入口并把控制权交给 Agent；进入 lifecycle 后，非终端 `stop: no` phase 自主静默运行。Final 是 terminal non-interactive delivery：它可以在 `final/` artifacts 已存在后交付最终报告，但不是第三个交互 checkpoint、progress report、confirmation loop 或 Final-owned repair loop。明确的 post-final rerun 只通过 `post_final_rerun` recovery operation记录既有 HITL2 `rerun` semantics并进入现有 rerun node；request metadata不是verified identity、permission token、`--human-directed`、`--override` 或 `--force`。用户决定scope/risk后，request preparation、apply/recover、entry、status sync、audit与rerun pipeline全部回到Agent执行。
+
+Post-final feedback 不自动创造能力：supported rerun走上述audited operation；unsupported repair/state-seed仍报告missing capability，不在Final内循环或手写authority。
+这条窄路径仍复用既有 HITL2 repair/rerun semantics，但不会重新加载HITL2来重复询问同一决定。
 
 ## Phase Boundary Terms
 
@@ -47,6 +50,7 @@ Current inventory:
 - `check-reentry.mjs` is a non-gate structured-output command: `0` clean, `1` blockers/drift, `2` invalid target/args/config/caller request. Loaded/normalized results use schema `1.1.0` and add `recovery.canonical_topic_findings[]` plus one `root_findings[]` entry per independent blocker. A root exposes at most one reachable action; `missing_contract` means the Engine knows the suggested route is unavailable and the Agent must not loop that command or hand-write authority.
 - `operate-artifact-persistence.mjs` is a two-operation mechanical durability command: `persist` exits `0` when committed, `1` on a compare-and-swap or accepted-operation blocker, and `2` for invalid invocation/configuration; `sweep` exits `0` when every accepted workspace is finalized/cleaned, `1` when any workspace needs Agent action, and `2` for invalid invocation/configuration. Always read the JSON verdict; sweep requires a quiescent bundle with no concurrent persist.
 - `operate-topic-state.mjs` is the single three-operation canonical topic command: `inspect` is read-only and emits a copy-ready layout baseline; sanctioned rerun `apply` accepts one complete `mutate_layout` target for rename/reorder/renumber/safe-remove and commits only plan+listed current seeds; `recover` rolls one accepted workspace forward without new semantics. Historical artifact/reference/output paths remain in place. Context and `human-directed` are not mutation authority, and post-final fresh mutation remains unavailable.
+- `operate-post-final-recovery.mjs` is the narrow `inspect|apply|recover` Final→rerun operation. `inspect` is read-only; `apply` consumes one retained request and commits current HITL2 projection plus one Engine-written event; `recover` finishes only exact prepared bytes. Exit `1` means deterministic blocker or exact recovery required, and exit `2` means invalid invocation/configuration/internal failure. It never writes status/topic/queue/final authority or authenticates the human caller.
 - Many current utility validators are binary `0/1` and do not yet share a common exit helper.
 - `log-event.mjs` is an always-`0` diagnostic/logging exception; logging failure must not be treated as proof that a load-bearing trace event was written.
 - Known doc/code drift: `validate-workflow-package.mjs` header documents code `2` for invocation errors, but current code only exits `0` or `1`; record this as future reconciliation, not current behavior.
@@ -83,6 +87,13 @@ Existing active bundle reload uses `<bundle>/BUNDLE_MAP.md` plus `rb_status.json
 |------|------|------|
 | enter-phase.mjs | cli/enter-phase.mjs | 消费 gate CLI 返回的 `check.next`，调用 workflow loader 渲染下一 node Markdown，写入 route-bound `load_complete` handoff witness 和 `rb_status.json.current_node`，并在成功 Markdown 末端输出 loaded-node continuation block；不证明 target phase work completion |
 | advance-status.mjs | cli/advance-status.mjs | 在 `enter-phase` witness 存在后同步 just-passed source gate；covered handoff 使用真实 `gate_attempt.next` 和 `current_node` 输出 continuation cue；does not enter, load, or execute the next phase |
+
+## Post-Final Rerun Recovery
+
+| 工具 | 文件 | 说明 |
+|------|------|------|
+| operate-post-final-recovery.mjs | cli/operate-post-final-recovery.mjs | `inspect|apply|recover`；只接受closed `post_final_rerun` retained request，event-last提交profile+one exceptional handoff，崩溃后exact roll-forward；不是gate pass、permission token或generic state mutation |
+| post-final-recovery | command_playbook/post-final-recovery.md | Agent copyable完整链：inspect → retained request → apply/exact recover → enter rerun → `advance-status --to hitl2_recorded` → `check-reentry --at hitl2_recorded` → existing C3/rerun pipeline |
 
 ## Artifact Persistence
 

@@ -2,12 +2,16 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   gateKeyToEnum,
+  inspectPostFinalHandoffStage,
   loadHandoffTopology,
   readTraceEventsWithIndex,
 } from './handoff-helpers.mjs';
 
 export const PHASE_STATUS_AUDIT_OUTCOMES = [
   'passed',
+  'post_final_recovery_pending',
+  'post_final_reentry_pending_load',
+  'post_final_reentry_pending_status_sync',
   'status_drift',
   'manual_bypass_suspected',
   'missing_witness',
@@ -204,6 +208,56 @@ export function auditPhaseStatus(bundlePath) {
       outcome: 'status_drift',
       inspect: [`rb_status.json is not valid JSON: ${err.message}`],
       advice: adviceForOutcome('status_drift', bundlePath),
+      diagnostic_only: true,
+    };
+  }
+
+  const postFinal = inspectPostFinalHandoffStage(bundlePath);
+  if (postFinal.reason_code === 'accepted_workspace') {
+    const operationId = postFinal.workspace?.operationId;
+    return {
+      ok: false,
+      outcome: 'post_final_recovery_pending',
+      inspect: [postFinal.reason],
+      advice: operationId ? [`node DPT_FRAMEWORK/cli/operate-post-final-recovery.mjs recover --bundle ${bundlePath} --operation-id ${operationId}`] : [],
+      diagnostic_only: true,
+    };
+  }
+  if (postFinal.ok && postFinal.stage === 'pre_entry') {
+    return {
+      ok: false,
+      outcome: 'post_final_reentry_pending_load',
+      inspect: ['Accepted post-final reentry event is waiting for route-bound rerun entry.'],
+      advice: [`node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node phases/phase-rerun.md`],
+      diagnostic_only: true,
+    };
+  }
+  if (postFinal.ok && postFinal.stage === 'loaded_pending_status') {
+    return {
+      ok: false,
+      outcome: 'post_final_reentry_pending_status_sync',
+      inspect: ['Accepted post-final rerun entry is waiting for existing HITL2 status synchronization.'],
+      advice: [`node DPT_FRAMEWORK/cli/advance-status.mjs --bundle ${bundlePath} --to hitl2_recorded`],
+      diagnostic_only: true,
+    };
+  }
+  if (postFinal.ok && ['synchronized_initial_profile', 'synchronized_count_incremented', 'descendant_pipeline'].includes(postFinal.stage)) {
+    return {
+      ok: true,
+      outcome: 'passed',
+      inspect: [`Accepted exceptional handoff stage: ${postFinal.stage}`],
+      advice: [],
+      status: { current_gate: status.current_gate, next_gate: status.next_gate },
+      latest_legal_window: {
+        currentGate: 'hitl2_recorded',
+        nextGate: 'rerun_ready',
+        sourceGate: 'hitl2-recorded',
+        sourceNode: 'phases/phase-hitl2.md',
+        targetNode: 'phases/phase-rerun.md',
+        attemptIndex: postFinal.handoff.index,
+        loadIndex: postFinal.handoff.loadComplete?.index ?? null,
+        exceptional: true,
+      },
       diagnostic_only: true,
     };
   }

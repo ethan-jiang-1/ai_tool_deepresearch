@@ -26,7 +26,7 @@ suggested_context:
 
 ## 1. Stage Goal
 
-HITL2 `user_decision: rerun` 后，Agent 用 `rerun` outcome 查 chain 进入本 phase。核心工作是将 HITL2 rationale（用户意图）与 seed_topics 现状（已有 topic 和深度）做**对比推断**，产出 topic 调整方案（保留、新增、补充维度、移除），写入 seed_topic 文件，递增 rerun_count，运行 gate。Gate pass 后 chain 路由进 seed-topics，开始增量链。
+HITL2 `user_decision: rerun` 后，Agent 用正常 HITL2 gate handoff或唯一accepted `post_final_reentry` exceptional handoff进入本 phase。后者已经记录同一HITL2 rerun decision，不重复询问用户，也不代表post-Final HITL2 gate曾运行。核心工作仍是将 HITL2 rationale（用户意图）与 seed_topics 现状（已有 topic 和深度）做**对比推断**，产出 topic 调整方案（保留、新增、补充维度、移除），写入 seed_topic 文件，递增 rerun_count，运行同一个 gate。
 
 本 phase 是分析层——不做搜索、不写 reference、不动 artifacts。只做对比分析和方向标记。
 
@@ -182,7 +182,8 @@ Gate fail 时通过 accepted trace/log surface 记录 `silent_degradation` 或 `
 
 - **MUST NOT 删除已有 artifacts**：reference/、artifacts/、seed_topics/ 中的已有文件全部保留
 - **MUST NOT direct-edit registry/seed 模拟 mutation**：只用 sanctioned topic-state apply；context/`human-directed` 不绕过 lifecycle authority
-- **MUST NOT remove/rename/renumber/path-move**：这些是 C3B missing capability，不得创建 parallel addendum namespace
+- **MUST NOT direct path-move historical outputs**：rename/reorder/renumber/safe-remove只使用existing C3B complete `mutate_layout` target；不得创建parallel addendum namespace
+- **MUST NOT 把 `post_final_reentry` 称为gate pass或permission**：它只记录accepted HITL2 rerun semantics并复用本phase现有owners
 - **MUST 读当前 rerun_count 后再递增**：若字段缺失则初始化为 1，若已有值则 +1。MUST NOT 直接覆盖为固定值
 - **MUST 检查 seed_topics/ 非空**：若意外为空，默认全量重跑，通过 accepted trace/log surface 记录 `silent_degradation`
 - **MUST NOT 在无 rationale 或 rationale 为空时写 ## 本轮重跑方向**：方向 hints 必须来自用户明确的意图

@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-07-12 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-07-13 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -17,8 +17,7 @@
 
 | Bug | 简述 | 状态 |
 |-----|------|------|
-| [BUG-078](BUG-078-post-final-hitl2-rerun-reentry-blocked.md) | Final 交付后无法通过 sanctioned CLI 回到 HITL2 做 rerun | Active — v0.21 已澄清当前边界；runtime reopen/reentry 能力仍缺失 |
-| [BUG-079](BUG-079-out-of-gate-addendum-no-canonical-footprint.md) | Out-of-gate addendum 新增 topic 无 canonical footprint，gate/audit/recovery 不可见 | Active — v0.21 已落 helper/canonical-or-blocked 基础；正式 footprint、integrity audit、可达 rerun 仍缺失 |
+| [BUG-079](BUG-079-out-of-gate-addendum-no-canonical-footprint.md) | Out-of-gate addendum 新增 topic 无 canonical footprint，gate/audit/recovery 不可见 | Partial — 新post-final scope已走audited canonical rerun且case-317证明无addendum成功路径；历史adoption与generic state-seed仍未覆盖 |
 
 **Next available bug ID: BUG-080**
 

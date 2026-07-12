@@ -47,16 +47,23 @@ Routing identity SHALL 为 node fileRef `phases/phase-rerun.md`。
 4. Run topic-state apply before queueing new work. Consume structured blockers and rerun the same operation after repair. Active queue/work-unit blockers are ordinary Agent-owned mechanical work.
 5. For each successfully added/refined topic, write or update the UID-bound seed `## 本轮重跑方向` section with the existing Agent-facing content: `action`, new search dimensions, adjusted depth, search guardrails and rationale excerpt. These labels remain guidance content, not a second machine state. Layout-only mutation SHALL preserve existing seed body guidance while updating current seed metadata/path.
 6. Increment `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count` through the existing profile path. If registry length changed through add or safe remove, run the existing `apply-research-style.mjs` owner before the rerun-ready gate.
-7. Preserve the incoming HITL2→rerun status window until `check-gate-rerun-ready.mjs` passes. After pass, consume `check.next` through `enter-phase`, then run source-gate `advance-status --to rerun_ready`.
+7. Preserve the incoming accepted rerun status window until `check-gate-rerun-ready.mjs` passes. After pass, consume `check.next` through `enter-phase`, then run source-gate `advance-status --to rerun_ready`.
 
 Rename/reorder/renumber SHALL use only canonical topic-state apply; it SHALL NOT fall back to direct multi-file edits. Historical artifact/reference/output paths SHALL remain untouched and continue to resolve through previous layout. Remove SHALL proceed only when Engine proves the UID has no dependency or historical work/content facts; otherwise the Agent SHALL report the single provenance-preserving boundary rather than delete history or invent retirement state.
 
 If update-intent or mutate-layout is blocked by queued, delegated-in-flight or nonterminal work, the Agent SHALL use the existing queue/work-unit inspect, submit, repair or terminalization path and rerun topic-state apply. This mechanical blocker SHALL NOT be pushed to the user unless a new semantic conflict remains after the direct owner is resolved.
 
-Topic-state apply in rerun SHALL be authorized only when `rb_status.json#/current_node` is `phases/phase-rerun.md`, the latest non-superseded HITL2 gate handoff has a route-bound load witness for that node, and the incoming `current_gate: hitl2_recorded` / `next_gate: rerun_ready` window remains intact. A caller-declared rerun context or HITL2 rationale alone SHALL NOT authorize mutation. `migrate_legacy` and `mutate_layout` SHALL be unavailable outside this sanctioned rerun context.
+Topic-state apply in rerun SHALL be authorized only when `rb_status.json#/current_node` is `phases/phase-rerun.md`, the incoming `current_gate: hitl2_recorded` / `next_gate: rerun_ready` window remains intact, and one of two route-bound witness classes is valid and non-superseded:
+
+- the existing HITL2 gate→rerun handoff plus load; or
+- an accepted `post_final_reentry` event whose after-profile still matches current HITL2 semantics/hash, plus its route-bound rerun load and existing `advance-status` phase transition under `POF-003`.
+
+The post-final witness SHALL not be added as a fake chain/gate outcome; it is an explicit exceptional entry into the same rerun node. A caller-declared rerun context, HITL2 rationale or human-directed prose alone SHALL NOT authorize mutation. `migrate_legacy` and `mutate_layout` SHALL be unavailable outside this sanctioned rerun context. The phase SHALL preserve existing loop protection and increment `rerun_count`; it SHALL NOT treat post-final origin as permission to reset or skip the count.
+
+The exact event-bound after-profile requirement applies to the initial reentry/topic-state authorization window. After topic-state preparation succeeds, the existing rerun phase remains the sole owner of the sanctioned `rerun_count` increment from the event-bound `current_count` to `next_count`. That one-field exact change SHALL NOT be misclassified as forged C5 profile drift; every other profile field SHALL still match the event-bound after-profile, and the updated count SHALL remain subject to the same active rule digest and normal profile/gate validation.
 
 #### Scenario: Rerun preserves incoming HITL2 status window before gate pass
-- **WHEN** HITL2 has selected rerun and loaded `phase-rerun.md`
+- **WHEN** normal HITL2 or accepted post-final recovery has selected and loaded `phase-rerun.md`
 - **THEN** the Agent SHALL keep `current_gate: hitl2_recorded` and `next_gate: rerun_ready` while preparing/applying topic intent or layout
 - **AND** it SHALL NOT advance status before the rerun-ready gate passes
 
@@ -68,9 +75,14 @@ Topic-state apply in rerun SHALL be authorized only when `rb_status.json#/curren
 - **WHEN** HITL2 emitted the rerun target, `enter-phase` recorded the matching route-bound load witness, and the incoming rerun status window is current
 - **THEN** rerun topic-state apply MAY migrate legacy state, add/refine canonical intent or apply one complete layout target
 
+#### Scenario: Route-bound post-final recovery entry authorizes the same topic apply
+- **WHEN** a valid C5 event is bound to the latest Final lineage, current profile matches its bound after-profile, `enter-phase` recorded the matching rerun load witness, existing `advance-status` wrote the matching phase transition, and the incoming rerun status window is current
+- **THEN** rerun SHALL use the same topic-state actions, count increment and gate as a normal HITL2 rerun
+- **AND** SHALL NOT create a post-final-specific topic or chain path
+
 #### Scenario: Missing or superseded rerun witness blocks apply
-- **WHEN** current-node/context claims rerun but the matching HITL2→rerun witness is missing or superseded by a newer route decision
-- **THEN** apply SHALL reject before workspace creation and point to the existing lifecycle route repair
+- **WHEN** current-node/context claims rerun but neither accepted normal nor post-final route-bound witness is valid and current
+- **THEN** apply SHALL reject before workspace creation and point to the existing lifecycle/recovery owner
 - **AND** the Agent SHALL NOT ask the user to approve a mechanical bypass
 
 #### Scenario: New rerun topic materializes before work
@@ -97,8 +109,14 @@ Topic-state apply in rerun SHALL be authorized only when `rb_status.json#/curren
 - **AND** affected add/refine UID-bound seeds SHALL contain updated rerun direction guidance
 
 #### Scenario: Second rerun preserves existing loop protection
-- **WHEN** rerun_count is 1 and another sanctioned rerun preparation succeeds
+- **WHEN** rerun_count is 1 and another sanctioned normal or post-final rerun preparation succeeds
 - **THEN** the Agent SHALL write rerun_count 2 and update affected add/refine direction guidance
+
+#### Scenario: Existing rerun count mutation does not invalidate entry lineage
+
+- **WHEN** the initial C5 profile/event/load/phase-transition window authorized topic-state preparation and the rerun phase then increments `rerun_count` through its existing owner
+- **THEN** the C5 event SHALL remain the historical entry witness for that rerun attempt
+- **AND** downstream rerun-ready validation SHALL accept only the event-bound `current_count → next_count` one-field profile delta and evaluate it through the existing gate rule rather than require the pre-increment profile hash
 
 #### Scenario: Existing artifacts remain preserved
 - **WHEN** rerun add/refine or layout preparation executes

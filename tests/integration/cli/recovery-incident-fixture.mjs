@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 export function addCanonicalRecoveryIncident(bundlePath, { identity = 'topic-x' } = {}) {
@@ -12,10 +12,10 @@ export function addCanonicalRecoveryIncident(bundlePath, { identity = 'topic-x' 
     mkdirSync(dirname(absolutePath), { recursive: true });
     writeFileSync(absolutePath, content);
   }
-  writeFileSync(join(bundlePath, 'rb_status.json'), JSON.stringify({
-    bundle: bundlePath.split('/').at(-1),
-    current_mode: 'execution',
-    state: 'in_progress',
+  const statusPath = join(bundlePath, 'rb_status.json');
+  const existingStatus = JSON.parse(readFileSync(statusPath, 'utf8'));
+  writeFileSync(statusPath, JSON.stringify({
+    ...existingStatus,
     current_gate: 'readiness_passed',
     next_gate: 'none',
     current_node: 'phases/phase-final.md',

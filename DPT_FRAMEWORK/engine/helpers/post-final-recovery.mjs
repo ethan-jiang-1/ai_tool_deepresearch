@@ -25,13 +25,24 @@ import { appendExactTraceLine } from '../trace.mjs';
 import { normalizedBundleBasenameFromPath } from './bundle-identity.mjs';
 import { findLatestLegalHandoff, loadHandoffTopology, readTraceEventsWithIndex } from './handoff-helpers.mjs';
 import { readBundlePlan, readBundleProfile } from './gate-helpers-readers.mjs';
+import {
+  parsePostFinalRecoveryEvent,
+  POST_FINAL_RECOVERY_SCHEMA_VERSION,
+  PostFinalBundleIdentitySchema as BundleIdentitySchema,
+  PostFinalDigestSchema as DigestSchema,
+  PostFinalExpectedLineageSchema as ExpectedFinalLineageSchema,
+  PostFinalOperationIdSchema as OperationIdSchema,
+  PostFinalRecoveryEventSchema as RecoveryEventSchema,
+  PostFinalRerunGuardSchema as RerunGuardSchema,
+  PostFinalRoutingSchema as RoutingSchema,
+} from './post-final-reentry-contract.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FRAMEWORK_ROOT = path.join(__dirname, '..', '..');
 const WORKFLOWS_ROOT = path.join(FRAMEWORK_ROOT, 'workflows');
 const RERUN_RULE_PATH = path.join(FRAMEWORK_ROOT, 'schema', 'gate_definitions', 'gate-rerun-ready.definition.json');
 
-export const POST_FINAL_RECOVERY_SCHEMA_VERSION = '1.0.0';
+export { POST_FINAL_RECOVERY_SCHEMA_VERSION } from './post-final-reentry-contract.mjs';
 export const POST_FINAL_RECOVERY_ROOT = '_diagnostics/post-final-recovery';
 export const POST_FINAL_RECOVERY_ACTION = 'post_final_rerun';
 export const POST_FINAL_RECOVERY_OPERATIONS = Object.freeze(['inspect', 'apply', 'recover']);
@@ -43,28 +54,6 @@ export const POST_FINAL_RECOVERY_STAGES = Object.freeze([
   'descendant_pipeline',
 ]);
 
-const DigestSchema = z.string().regex(/^[a-f0-9]{64}$/);
-const OperationIdSchema = z.string().uuid();
-const BundleIdentitySchema = z.object({
-  status_bundle: z.string().min(1),
-  plan_basename: z.string().min(1),
-  normalized_bundle_basename: z.string().min(1),
-}).strict();
-const RerunGuardSchema = z.object({
-  rule_id: z.literal('rerun_count_valid'),
-  definition_sha256: DigestSchema,
-  current_count: z.number().int().min(0),
-  next_count: z.number().int().positive(),
-  limit: z.number().int().positive(),
-}).strict();
-const ExpectedFinalLineageSchema = z.object({
-  final_handoff_index: z.number().int().nonnegative(),
-  final_load_index: z.number().int().nonnegative(),
-  status_sha256: DigestSchema,
-  profile_sha256: DigestSchema,
-  final_inventory_sha256: DigestSchema,
-  rerun_guard: RerunGuardSchema,
-}).strict();
 
 function normalizeSemanticText(value) {
   const normalized = String(value).replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
@@ -123,43 +112,6 @@ export const PostFinalRecoveryResultSchema = z.object({
   }
   if (value.verdict === 'eligible' && value.next_action?.kind !== 'prepare_request') {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['next_action'], message: 'eligible requires prepare_request action' });
-  }
-});
-
-const RoutingSchema = z.object({
-  source_node: z.literal('phases/phase-hitl2.md'),
-  outcome: z.literal('rerun'),
-  target_node: z.string().min(1),
-  source_gate_enum: z.literal('hitl2_recorded'),
-  target_gate_enum: z.string().min(1),
-  transition_table_sha256: DigestSchema,
-}).strict();
-
-const RecoveryEventSchema = z.object({
-  ts: z.string().datetime(),
-  bundle: z.string().min(1),
-  event: z.literal('post_final_reentry'),
-  schema_version: z.literal(POST_FINAL_RECOVERY_SCHEMA_VERSION),
-  action: z.literal(POST_FINAL_RECOVERY_ACTION),
-  operation_id: OperationIdSchema,
-  event_id: z.string().min(1),
-  request_sha256: DigestSchema,
-  reason: z.string().min(1),
-  requested_scope: z.string().min(1),
-  decision_checkpoint: z.literal('hitl2'),
-  decision: z.literal('rerun'),
-  decision_source: z.literal('explicit_post_final_request'),
-  execution_actor: z.literal('phase_agent'),
-  logical_bundle_identity: BundleIdentitySchema,
-  previous_final: ExpectedFinalLineageSchema.omit({ rerun_guard: true }),
-  previous_profile_semantics: z.record(z.string(), z.unknown()),
-  committed_after_profile_sha256: DigestSchema,
-  committed_after_profile_semantics: z.record(z.string(), z.unknown()),
-  routing: RoutingSchema,
-  rerun_guard: RerunGuardSchema,
-}).strict().superRefine((value, context) => {
-  if (value.event_id !== `post_final_reentry:${value.operation_id}`) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ['event_id'], message: 'event_id must be derived from operation_id' });
   }
 });
 
@@ -431,6 +383,9 @@ function activeRecoveryStage(bundle, workspaceInspection) {
     && item.event.next === event.routing.target_gate_enum) || null;
   const conflictingTransition = transitions.find((item) => !exactTransition || item.index !== exactTransition.index) || null;
   const afterHashMatches = hashBytes(profileRaw) === event.committed_after_profile_sha256;
+  const descendant = trace.find((item) => item.index > latest.index && item.event?.event === 'gate_attempt'
+    && item.event.gate === 'rerun-ready' && item.event.currentNodeRef === event.routing.target_node && item.event.passed === true && item.event.next);
+  if (descendant) return { stage: 'descendant_pipeline', event_item: latest, load, transition: exactTransition, descendant };
   if (status.current_node === 'phases/phase-final.md'
     && status.current_gate === 'readiness_passed' && status.next_gate === 'none'
     && hashBytes(statusRaw) === event.previous_final.status_sha256 && afterHashMatches) {
@@ -450,9 +405,6 @@ function activeRecoveryStage(bundle, workspaceInspection) {
       }
     }
   }
-  const descendant = trace.find((item) => item.index > latest.index && item.event?.event === 'gate_attempt'
-    && item.event.gate === 'rerun-ready' && item.event.currentNodeRef === event.routing.target_node && item.event.passed === true && item.event.next);
-  if (descendant) return { stage: 'descendant_pipeline', event_item: latest, load, transition: exactTransition };
   if (workspaceInspection.accepted.length > 0) return null;
   return { blocked: 'accepted post-final recovery lineage is discontinuous or drifted', event_item: latest };
 }
@@ -660,7 +612,7 @@ export function recoverPostFinalRecovery({ bundlePath, operationId, hooks = null
   return recoverPrepared({ bundlePath, operationId: OperationIdSchema.parse(operationId), hooks });
 }
 
-export function parsePostFinalRecoveryEvent(value) { return RecoveryEventSchema.parse(value); }
+export { parsePostFinalRecoveryEvent } from './post-final-reentry-contract.mjs';
 export function inspectActivePostFinalRecoveryStage(bundlePath) {
   const bundle = safeBundle(bundlePath);
   const workspaces = inspectWorkspaceRoot(bundle);

@@ -8,7 +8,7 @@ import {
 } from './handoff-helpers.mjs';
 
 export const RecoveryActionSchema = z.object({
-  kind: z.enum(['rerun_gate', 'enter_phase', 'repair_surface']),
+  kind: z.enum(['rerun_gate', 'enter_phase', 'advance_status', 'topic_state', 'post_final_recovery', 'repair_surface', 'current_owner', 'new_bundle_decision']),
   target_ref: z.string().min(1),
   command: z.string().min(1).optional(),
   node_ref: z.string().min(1).optional(),
@@ -31,7 +31,7 @@ export const CanonicalTopicFindingSchema = z.object({
 
 export const RecoveryRootFindingSchema = z.object({
   id: z.string().min(1),
-  source_kind: z.enum(['canonical_topic', 'existing_blocker']),
+  source_kind: z.enum(['canonical_topic', 'existing_blocker', 'post_final_recovery']),
   source_ref: z.string().min(1),
   sanctioned_path_status: z.enum(['reachable', 'missing_contract', 'not_applicable']),
   direct_blocker: z.string().min(1).nullable().default(null),
@@ -81,26 +81,55 @@ export function assessStructuredRecoveryAction(bundlePath, action) {
       ? { sanctioned_path_status: 'reachable', recommended_action: parsed, direct_blocker: null }
       : { sanctioned_path_status: 'missing_contract', recommended_action: null, direct_blocker: result.inspect?.[0] || 'gate preflight rejected the action' };
   }
+  if (['post_final_recovery', 'advance_status', 'topic_state', 'current_owner', 'new_bundle_decision'].includes(parsed.kind) && parsed.sanctioned === true) {
+    return { sanctioned_path_status: 'reachable', recommended_action: parsed, direct_blocker: null };
+  }
   if (parsed.sanctioned === true) {
     return { sanctioned_path_status: 'reachable', recommended_action: parsed, direct_blocker: null };
   }
   return { sanctioned_path_status: 'not_applicable', recommended_action: null, direct_blocker: 'No existing sanctioned deterministic repair contract applies to this surface.' };
 }
 
-export function buildRecoverySummary({ canonicalFindings = [], blockers = [], target = null, statusPosition = null } = {}) {
+function projectPostFinalAction(postFinalInspection) {
+  const action = postFinalInspection?.next_action;
+  if (!action) return null;
+  const kindMap = {
+    prepare_request: 'post_final_recovery',
+    recover: 'post_final_recovery',
+    enter_phase: 'enter_phase',
+    advance_status: 'advance_status',
+    topic_state: 'topic_state',
+    rerun_gate: 'rerun_gate',
+    current_owner: 'current_owner',
+    new_bundle_decision: 'new_bundle_decision',
+    repair_owner: 'repair_surface',
+  };
+  return RecoveryActionSchema.parse({
+    kind: kindMap[action.kind] || 'repair_surface',
+    target_ref: action.target_ref || 'post-final recovery',
+    command: action.command || undefined,
+    node_ref: action.kind === 'enter_phase' ? action.target_ref : undefined,
+    preconditions: [],
+    sanctioned: true,
+  });
+}
+
+export function buildRecoverySummary({ canonicalFindings = [], blockers = [], target = null, statusPosition = null, postFinalInspection = null } = {}) {
   const roots = [];
+  const postFinalAction = projectPostFinalAction(postFinalInspection);
   for (const finding of canonicalFindings.filter((item) => item.classification === 'blocking')) {
     const terminalPositionMismatch = statusPosition?.current_node === 'phases/phase-final.md'
       && target?.phase_key !== 'final';
+    const postFinalReachable = Boolean(postFinalInspection && postFinalAction);
     roots.push({
       id: `recovery:${finding.id}`,
       source_kind: 'canonical_topic',
       source_ref: finding.id,
-      sanctioned_path_status: terminalPositionMismatch ? 'missing_contract' : 'not_applicable',
-      direct_blocker: terminalPositionMismatch
-        ? `Current runtime position is ${statusPosition.current_node}; no accepted post-final reentry contract reaches ${target.node_ref}.`
-        : `Canonical topic identity or surface requires semantic reconciliation at ${finding.primary_surface}.`,
-      recommended_action: null,
+      sanctioned_path_status: postFinalReachable ? 'reachable' : (terminalPositionMismatch ? 'missing_contract' : 'not_applicable'),
+      direct_blocker: postFinalReachable ? null : (terminalPositionMismatch
+        ? (postFinalInspection?.reason || `Current runtime position is ${statusPosition.current_node}; no accepted post-final reentry contract reaches ${target.node_ref}.`)
+        : `Canonical topic identity or surface requires semantic reconciliation at ${finding.primary_surface}.`),
+      recommended_action: postFinalReachable ? postFinalAction : null,
     });
   }
   blockers.forEach((blocker, index) => {
@@ -114,6 +143,17 @@ export function buildRecoverySummary({ canonicalFindings = [], blockers = [], ta
       recommended_action: null,
     });
   });
+  if (postFinalInspection && canonicalFindings.every((item) => item.classification !== 'blocking')) {
+    const reachable = Boolean(postFinalAction);
+    roots.push({
+      id: 'recovery:post-final-recovery',
+      source_kind: 'post_final_recovery',
+      source_ref: 'post-final-recovery',
+      sanctioned_path_status: reachable ? 'reachable' : (postFinalInspection.verdict === 'blocked' ? 'missing_contract' : 'not_applicable'),
+      direct_blocker: reachable ? null : postFinalInspection.reason,
+      recommended_action: reachable ? postFinalAction : null,
+    });
+  }
   return RecoverySummarySchema.parse({
     canonical_topic_findings: canonicalFindings,
     root_findings: roots,

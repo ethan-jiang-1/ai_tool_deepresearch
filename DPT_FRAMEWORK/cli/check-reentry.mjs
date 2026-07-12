@@ -28,6 +28,7 @@ import {
 import { auditFileObservability } from '../engine/helpers/file-observability.mjs';
 import { buildRecoverySummary } from '../engine/helpers/recovery-contract.mjs';
 import { inspectCanonicalTopicState } from '../engine/helpers/canonical-topic-state.mjs';
+import { inspectPostFinalRecovery } from '../engine/helpers/post-final-recovery.mjs';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Constants
@@ -762,8 +763,10 @@ allBlockers.push(...ledgerAudit.blockers);
 allWarnings.push(...ledgerAudit.warnings);
 
 // 5. Checkpoint drift
+const postFinalInspection = inspectPostFinalRecovery({ bundlePath });
 const driftAudit = auditCheckpointDrift(bundlePath, checkpoint);
-allDrift.push(...driftAudit.drift);
+const explainedControlDrift = ['unchanged', 'recover_required'].includes(postFinalInspection.verdict);
+allDrift.push(...driftAudit.drift.filter((item) => !(explainedControlDrift && ['rb_profile.yaml', 'rb_status.json'].includes(item.path))));
 allWarnings.push(...driftAudit.warnings);
 
 // 6. Checkpoint selection warnings
@@ -838,7 +841,7 @@ if (topicStateInspection.mode === 'blocked') {
     allBlockers.push({ severity: 'blocker', check: 'canonical_topic_state', message: `${blocker.reason_code}: ${blocker.slug || blocker.topic_uid || 'topic'}`, detail: blocker });
   }
 } else if (topicStateInspection.mode === 'legacy' && statusPosition.current_node === 'phases/phase-final.md') {
-  allBlockers.push({ severity: 'blocker', check: 'canonical_topic_state', message: 'post-final legacy topic migration requires missing C5 reentry authority', detail: { reason_code: 'post_final_c5_required' } });
+  allBlockers.push({ severity: 'blocker', check: 'canonical_topic_state', message: postFinalInspection.verdict === 'eligible' ? 'post-final legacy topic migration requires accepted C5 rerun entry first' : postFinalInspection.reason, detail: { reason_code: 'post_final_c5_required', post_final_verdict: postFinalInspection.verdict } });
 }
 
 // Merge inspect/advice from audits
@@ -871,6 +874,7 @@ const recovery = buildRecoverySummary({
   blockers: allBlockers,
   target,
   statusPosition,
+  postFinalInspection,
 });
 for (const root of recovery.root_findings) {
   if (root.sanctioned_path_status === 'reachable' && root.recommended_action?.command) allAdvice.push(root.recommended_action.command);
@@ -912,6 +916,7 @@ const result = {
   findings: allFindings,
   recovery,
   canonical_topic_state: topicStateInspection,
+  post_final_recovery: postFinalInspection,
   inspect: allInspect,
   advice: allAdvice,
 };

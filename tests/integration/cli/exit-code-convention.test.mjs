@@ -34,6 +34,10 @@ const CLI_CONVENTION_INVENTORY = {
     class: 'non-gate mechanical persistence utility with code 2 caller/config errors',
     coverage: ['tests/integration/cli/artifact-persistence.test.mjs', 'this file: missing operation exits 2'],
   },
+  'operate-post-final-recovery.mjs': {
+    class: 'non-gate post-final recovery utility with code 2 caller/config/internal errors',
+    coverage: ['tests/integration/cli/post-final-recovery.test.mjs', 'this file: missing operation exits 2'],
+  },
   'operate-topic-state.mjs': {
     class: 'non-gate canonical topic-state utility with code 2 caller/config errors',
     coverage: ['tests/integration/cli/operate-topic-state.test.mjs', 'this file: missing operation exits 2'],
@@ -102,6 +106,7 @@ const SAFE_INVOCATION_SAMPLES = [
   { cli: 'apply-research-style.mjs', args: [], expectedStatus: 1 },
   { cli: 'check-reentry.mjs', args: [], expectedStatus: 2 },
   { cli: 'operate-artifact-persistence.mjs', args: [], expectedStatus: 2 },
+  { cli: 'operate-post-final-recovery.mjs', args: [], expectedStatus: 2 },
   { cli: 'operate-topic-state.mjs', args: [], expectedStatus: 2 },
   { cli: 'enter-phase.mjs', args: [], expectedStatus: 1 },
   { cli: 'inspect-bundle.mjs', args: [], expectedStatus: 1 },

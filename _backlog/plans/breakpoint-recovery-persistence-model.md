@@ -1,11 +1,11 @@
 # Plan: 断点恢复的三条持久化义务（Breakpoint-Recovery Persistence Model）
 
 **性质:** 复盘 + 能力立项前设计计划（pre-OpenSpec）
-**状态:** Partial — v0.23 完成 P1 sanctioned content persistence；v0.24 C3A 已实现 canonical topic identity/minimum intent、HITL1/rerun materialize-before-work 与 direct-fact progress projection。Persist invocation 前 host write、layout mutation 和 C5 post-final reentry仍开放（2026-07-12）
+**状态:** Partial — v0.23 完成 P1 sanctioned content persistence；v0.24/v0.26 完成 canonical topic intent、direct-fact progress与layout mutation；v0.27 已让post-final rerun request在工作前进入HITL2 profile + audited event并复用C3 canonical materialization。Persist invocation前host write、任意旧tmp识别与generic maintenance input/state-seed仍未覆盖（2026-07-13）
 **触发:** `dpt_rb_ai-era-bpm-process-disruption` 的 post-final addendum 在 Molex 采证半途机器死掉；人工恢复现场（seed 06–11 建立、Molex 补齐、06/07 综合补齐）后复盘"为什么有的恢复得干净、有的只能靠 chat 记忆重建"。
 **范围:** DPT_FRAMEWORK 的崩溃/中断恢复语义——数据落盘、状态落盘、用户输入落盘。**不含** BUG-078 的 reopen 机制本身（另案），本 plan 只解决"中断后还能不能知道从哪续"。
 **设计原则:** [`guidelines/project-charter.md`](../../guidelines/project-charter.md)、[`guidelines/evolution-simple-reliable-control.md`](../../guidelines/evolution-simple-reliable-control.md)、[`guidelines/evolution-helper-oriented-agent.md`](../../guidelines/evolution-helper-oriented-agent.md)
-**相关:** [BUG-078](../bugs/BUG-078-post-final-hitl2-rerun-reentry-blocked.md)（rerun 无 CLI 可达）、[BUG-077](../bugs/BUG-077-subagent-api-402-and-cache-trail-schema-opaque.md)（work-unit 路径）、[`delegated-attempt-timeout-and-redo-postmortem`](../_done/_closed_plans/delegated-attempt-timeout-and-redo-postmortem.md)（in-flight attempt 存活；v0.14–v0.16 已落主要修复）
+**相关:** [BUG-078](../_done/_fixed_bugs/BUG-078-post-final-hitl2-rerun-reentry-blocked.md)（v0.27 已关闭）、[BUG-077](../_done/_fixed_bugs/BUG-077-subagent-api-402-and-cache-trail-schema-opaque.md)（work-unit 路径）、[`delegated-attempt-timeout-and-redo-postmortem`](../_done/_closed_plans/delegated-attempt-timeout-and-redo-postmortem.md)（in-flight attempt 存活；v0.14–v0.16 已落主要修复）
 
 ---
 
@@ -21,7 +21,7 @@
 |---|------|--------------------------|------|-------------|
 | P1 | **数据过手即存**（crash-safe + 即时） | `reference/addendum-molex-itbrief.md.tmp.50374.…` —— 原子写的 `rename` 没跑完，一张**内容完整**的证据卡看起来像垃圾残留 | v0.23 已为受支持 content roots 建立 completed staging → CAS persist → quiescent sweep；任意旧 tmp 与 persist invocation 前 host write 仍不在 accepted recovery contract 内 | `make-artifact-persistence-crash-safe`（Applied，待 archive） |
 | P2 | **状态即意图要存** | `rb_status.json` 冻在终态 `readiness_passed/phase-final`，对整批 addendum 工作**零感知**；4 家无 seed、06/07 不在 registry | v0.24 选择不新增 progress ledger：从 canonical registry/seed + queue/work-unit + submitted ledger + accepted artifact direct facts投影 `not_started/in_progress/complete/blocked` | `establish-canonical-topic-state`（C3A applied） |
-| P3 | **重要用户输入要存** | rerun 请求（加 6 个 topic、各自定义）只在 run.log Decisions 一行 + chat；06/07 的 must_answer 只能从 dossier 逆推 | v0.24 在 legal HITL1/sanctioned rerun 通过一个原子 apply change set提交 registry+UID-bound seeds；post-final input仍等C5 | `establish-canonical-topic-state`（C3A applied） |
+| P3 | **重要用户输入要存** | rerun 请求（加 6 个 topic、各自定义）只在 run.log Decisions 一行 + chat；06/07 的 must_answer 只能从 dossier 逆推 | v0.24 在 legal HITL1/rerun原子提交registry+UID-bound seeds；v0.27在post-final边界先持久化规范化request语义到existing HITL2 profile + audited event，再由C3物化canonical topic。Generic maintenance/debug input仍无state-seed contract | `establish-canonical-topic-state` + `restore-audited-post-final-recovery` |
 
 **贯穿三条的根因（§3）:** 框架现在是 **work-first、persist-as-side-effect**；应改为 **materialize-before-work**——先把意图/状态/数据的持久表示写下来，再（或原子地同时）干活。
 

@@ -57,9 +57,13 @@ One apply plan SHALL contain exactly one of: one complete `migrate_legacy` recon
 
 For layout mutation, `affected_topic_uids` SHALL mean only removed UIDs and retained UIDs whose current id, slug or title differs in the final target. Quiescence and seed mutation checks SHALL not block unrelated unchanged topics merely because a complete target lists them. If the rendered plan/current-seed bytes already match and no seed cleanup remains, apply SHALL return `unchanged` without workspace or follow-up.
 
-Before workspace creation, `apply` SHALL authorize mutation from existing lifecycle facts rather than a caller-declared context flag. HITL1 apply SHALL require `rb_status.json#/current_node: phases/phase-hitl1.md` with the existing `current_gate: hitl1_recorded` / `next_gate: setup_ready` pre-gate window. Rerun apply SHALL require `current_node: phases/phase-rerun.md`, the latest valid non-superseded route-bound HITL2→rerun load witness, and the incoming `current_gate: hitl2_recorded` / `next_gate: rerun_ready` window. `migrate_legacy` and `mutate_layout` SHALL be authorized only in that sanctioned rerun context. Post-final, stale/missing-witness and arbitrary maintenance invocation SHALL reject without workspace or authority mutation and identify the missing lifecycle/C5 boundary.
+Before workspace creation, `apply` SHALL authorize mutation from existing lifecycle facts rather than a caller-declared context flag. HITL1 apply SHALL require `rb_status.json#/current_node: phases/phase-hitl1.md` with the existing `current_gate: hitl1_recorded` / `next_gate: setup_ready` pre-gate window. Normal rerun apply SHALL require `current_node: phases/phase-rerun.md`, the latest valid non-superseded route-bound HITL2 gate→rerun load witness, and the incoming `current_gate: hitl2_recorded` / `next_gate: rerun_ready` window.
 
-The prepared manifest SHALL record the originally proven authorization facts. `recover` MAY finish that exact accepted operation after lifecycle position changes, but SHALL NOT accept new semantics, re-evaluate a new apply request or widen the staged file set.
+Post-final rerun apply SHALL be authorized only after the accepted C5 operation has committed a valid non-superseded `post_final_reentry` event, current HITL2 profile semantics/hash still equal the event-bound after-profile, `enter-phase` has written a route-bound rerun `load_complete` referencing that exact recovery event, existing `advance-status --to hitl2_recorded` has written the matching exceptional `phase_transition`, `current_node` is `phases/phase-rerun.md`, and the incoming `hitl2_recorded → rerun_ready` status window remains intact. A caller-declared `human-directed`, rerun or recovery context SHALL NOT substitute for either witness class, the accepted profile, or the existing status-sync step.
+
+`migrate_legacy` and `mutate_layout` SHALL be authorized only in a sanctioned normal or post-final rerun context. Other post-final, stale/missing-witness and arbitrary maintenance invocation SHALL reject without workspace or authority mutation.
+
+The prepared manifest SHALL record the complete originally proven authorization facts. For normal rerun this means the gate handoff and bound load identity. For post-final rerun it means recovery event id/index/exact-line SHA256, event-bound after-profile hash, bound rerun load index, exact exceptional `phase_transition` index/binding, and the incoming current-node/status window. `recover` MAY finish that exact accepted operation after lifecycle position changes, but SHALL NOT accept new semantics, re-evaluate a new apply request or widen the staged file set.
 
 `migrate_legacy`, `update_intent` and `mutate_layout` SHALL reject before workspace creation when a touched existing topic has queued, delegated-in-flight or nonterminal work. The blocker SHALL identify the existing queue/work-unit owner and one nearest Agent action. Submitted historical work MAY remain and SHALL NOT be rewritten. `mutate_layout` removal SHALL additionally reject any UID with queue/work-unit/ledger/artifact/reference history or an inbound dependency.
 
@@ -124,13 +128,18 @@ The prepared manifest SHALL record the originally proven authorization facts. `r
 - **AND** a caller-declared context value SHALL NOT substitute for those lifecycle facts
 
 #### Scenario: Sanctioned rerun authorizes canonical mutation forms
-- **WHEN** current node is `phases/phase-rerun.md`, the latest route-bound HITL2→rerun witness is valid and non-superseded, and the incoming rerun status window is intact
+- **WHEN** current node is `phases/phase-rerun.md`, either the latest normal route-bound HITL2 gate→rerun witness or the latest accepted route-bound post-final recovery→rerun witness is valid and non-superseded, and the incoming rerun status window is intact
 - **THEN** apply MAY accept migrate-legacy, add-topic/update-intent or one complete mutate-layout target subject to their semantic, history and active-work checks
 
 #### Scenario: Sanctioned rerun authorizes migration and refinement
-- **WHEN** current node is `phases/phase-rerun.md`, the latest route-bound HITL2→rerun witness is valid and non-superseded, and the incoming rerun status window is intact
+- **WHEN** current node is `phases/phase-rerun.md`, one accepted rerun witness class is valid and non-superseded, and the incoming rerun status window is intact
 - **THEN** apply MAY accept migrate-legacy, add-topic or update-intent subject to their semantic and active-work checks
 - **AND** the same sanctioned window MAY accept one complete mutate-layout target subject to its layout, history and quiescence checks
+
+#### Scenario: Post-final recovery witness authorizes existing topic operations
+- **WHEN** C5 has committed a valid Final-lineage-bound `post_final_reentry`, current profile still matches its event-bound after-profile, `enter-phase` has route-bound the existing rerun node to that event, existing `advance-status --to hitl2_recorded` has written the matching exceptional `phase_transition`, and the HITL2 rerun window remains current
+- **THEN** topic-state apply SHALL use the same existing action/workspace contracts as a normal rerun
+- **AND** SHALL NOT create a post-final-specific topic mutation path or addendum namespace
 
 #### Scenario: Layout mutation preserves historical content coordinates
 - **WHEN** rename or renumber changes current id/slug for a UID with submitted historical outputs
@@ -138,7 +147,7 @@ The prepared manifest SHALL record the originally proven authorization facts. `r
 - **AND** SHALL leave historical artifact/reference/output paths and immutable provenance bytes unchanged
 
 #### Scenario: Forged or stale rerun context cannot mutate
-- **WHEN** the caller declares rerun context but the route witness is missing, stale or superseded, or the status window does not match
+- **WHEN** the caller declares rerun context but the accepted normal/recovery route witness is missing, stale, superseded or mismatched to the status/profile window
 - **THEN** apply SHALL reject before workspace creation with one lifecycle repair/boundary action
 - **AND** plan, seeds, status, trace and other authority surfaces SHALL remain byte-unchanged
 
@@ -147,14 +156,22 @@ The prepared manifest SHALL record the originally proven authorization facts. `r
 - **THEN** exact recover MAY finish only the recorded staged replacements and seed cleanup
 - **AND** it SHALL NOT authorize a fresh topic mutation in the new lifecycle position
 
+#### Scenario: Post-final topic recovery retains complete original witness
+
+- **WHEN** post-final topic-state apply publishes a prepared manifest and later lifecycle/profile position changes
+- **THEN** recover SHALL rely on the recorded event/profile/load/transition/status authorization snapshot rather than current fresh-apply eligibility
+- **AND** a manifest missing any complete exceptional-witness component SHALL block instead of inferring authorization from current prose or files
+
 ### Requirement: Topic-state operations SHALL preserve scope and authority boundaries
 
 Topic-state operations SHALL NOT mutate queue state/schema, work-unit attempts, submitted ledger, status, trace, gates, handoffs, receipts, artifact/cache/reference/final paths, artifact persistence state, profile fields or delivery authority. New topic work SHALL require committed registry+current-seed materialization. The CLI SHALL provide no force, generic delete, retire, arbitrary patch, set-progress, set-status, reentry, override, artifact/reference path move or historical-content rewrite operation.
 
 The only layout operation SHALL be `apply` action `mutate_layout`: one complete sanctioned-rerun target that may rename/reorder current registry coordinates, update current seed projections and safely remove a never-worked topic. Historical paths SHALL remain in place and previous slugs SHALL be provenance/read compatibility only.
 
+C5 SHALL widen only the accepted rerun witness class consumed by topic-state authorization. The post-final recovery helper SHALL own profile/reentry event mutation; existing `enter-phase`/`advance-status` SHALL retain node/status ownership; topic-state SHALL continue to own only plan/current seeds. Historical addendum adoption, when requested after successful C5 reentry, SHALL use existing explicit `migrate_legacy` semantics and SHALL NOT be performed by C5 or inferred from files.
+
 #### Scenario: Bounded layout mutation uses the existing authority path
-- **WHEN** a sanctioned rerun submits a valid complete mutate-layout target
+- **WHEN** a sanctioned normal or post-final rerun submits a valid complete mutate-layout target
 - **THEN** the existing topic-state apply/recover path SHALL own registry/current-seed mutation
 - **AND** it SHALL NOT create a second CLI, workspace, filesystem migration service or direct multi-file Agent edit path
 
@@ -171,14 +188,26 @@ The only layout operation SHALL be `apply` action `mutate_layout`: one complete 
 - **AND** SHALL NOT invent retired state, delete history or reinterpret user insistence as permission
 
 #### Scenario: Human-directed request does not bypass reentry
-- **WHEN** a user requests new scope or layout mutation from a lifecycle position without sanctioned rerun entry
+- **WHEN** a user requests new scope or layout mutation from a lifecycle position without an accepted normal or post-final rerun entry witness
 - **THEN** topic-state mutation SHALL remain unavailable without changing topic/status/trace state
-- **AND** `human-directed` SHALL NOT create permission or post-final capability
+- **AND** `human-directed` SHALL NOT create permission or handoff authority
+
+#### Scenario: Post-final apply requires committed C5 reentry
+- **WHEN** topic-state apply is invoked after terminal Final without an accepted C5 event plus route-bound rerun load witness
+- **THEN** it SHALL reject before workspace creation and identify the exact post-final recovery boundary
+- **AND** it SHALL NOT treat user insistence, declared context or existing legacy data as permission
 
 #### Scenario: Post-final apply remains unavailable
-- **WHEN** apply is invoked after terminal final entry without an already accepted topic-state workspace
-- **THEN** it SHALL reject before workspace creation and identify the missing C5 reentry authority
+> **@deprecated** — The pre-C5 wording is retained for archive compatibility. Fresh topic apply remains unavailable from terminal Final alone; only a committed C5 event plus route-bound rerun load opens the existing C3 window.
+
+- **WHEN** apply is invoked after terminal Final without an accepted topic-state workspace and without the complete C5 rerun witness
+- **THEN** it SHALL reject before workspace creation and identify the exact C5 reentry boundary
 - **AND** it SHALL NOT treat user insistence, declared context or existing legacy data as permission
+
+#### Scenario: Post-final reentry does not adopt topics by itself
+- **WHEN** C5 establishes the sanctioned rerun window for a bundle with registry-external historical content
+- **THEN** topic identity SHALL remain unchanged until an explicit existing `migrate_legacy` apply succeeds
+- **AND** no addendum file SHALL gain authority from reentry alone
 
 ### Requirement: Topic registry SHALL own current and previous layout coordinates
 

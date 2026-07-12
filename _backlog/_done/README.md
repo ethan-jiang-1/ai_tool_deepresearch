@@ -1,6 +1,6 @@
 # _done — 已完成/已归档记录
 
-> 最后更新: 2026-07-12 | `_backlog/_done/` — 所有已完成内容的归档根目录。
+> 最后更新: 2026-07-13 | `_backlog/_done/` — 所有已完成内容的归档根目录。
 > **`_` 前缀 = coding agent 默认忽略，除非显式点名要读。**
 >
 > 状态总览和查阅指南在本文件。活跃工作的 PENDING 表、依赖链、执行顺序 → 见 [`../todos/README.md`](../todos/README.md)。
@@ -10,7 +10,7 @@
 ```
 _done/
 ├── README.md              # 本文件（状态总览 + 查阅指南）
-├── _fixed_bugs/           # 已修复 Bug（72 个，BUG-001~077，含间隔）
+├── _fixed_bugs/           # 已修复 Bug（73 个，BUG-001~078，含间隔）
 ├── _suspened_bugs/        # 悬挂 Bug（3 个：BUG-026, 028, 030）
 ├── _done_todos/           # 已完成 TODO（14 个，DONE-001~014）
 ├── _closed_plans/         # 已完成 Plan（20 个，CLS-001~020）
@@ -25,7 +25,7 @@ _done/
 
 | 归档目录 | 数量 | Next ID |
 |---------|------|---------|
-| `_fixed_bugs/` | 72 个已修复 bug（BUG-001~077，有间隔） | BUG-080 |
+| `_fixed_bugs/` | 73 个已修复 bug（BUG-001~078，有间隔） | BUG-080 |
 | `_suspened_bugs/` | 3 个悬挂 bug（BUG-026, 028, 030） | — |
 | `_done_todos/` | 15 个已完成 todo（DONE-001~015） | DONE-016 |
 | `_closed_plans/` | 20 个已完成 plan（CLS-001~020） | CLS-021 |

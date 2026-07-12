@@ -1,11 +1,11 @@
 # Plan: 两条 lane 的区分 — audited human-override 与 bundle state 可变更性
 
 **性质:** 第一性原则 + 能力立项前设计计划（pre-OpenSpec）
-**状态:** Partial — v0.21 建立 helper-oriented基础；C1 已落只读 integrity/reentry safety net，v0.24 C3A 已落 A 的 stable UID + single registry owner；C3B 正在实现 B 的 sanctioned-rerun rename/reorder/renumber与无历史safe remove，历史path不迁移。audited override/state-seed与post-final mutation仍等 C5（2026-07-12）
+**状态:** Partial — v0.21/C1 建立helper-oriented与只读integrity/reentry安全网；v0.24/v0.26 已落A/B的single registry、stable UID、sanctioned-rerun rename/reorder/renumber与safe remove；v0.27完成狭窄post-final rerun audit/reentry。Generic human-override、maintenance/debug state-seed、可信身份/permission signal仍明确不可用，不能因C5提前宣称完成（2026-07-13）
 **触发:** `dpt_rb_ai-era-bpm-process-disruption` 的 post-final rerun → 崩溃恢复 → 重编号 → canonical 归一化全过程。一个熟悉框架的人，想做一次明确的修正，被 anti-cheating 规则逼着跨 N 个面手工同步、还被单向棘轮堵在门外。复盘出的根问题：**框架分不清"静默自主"与"明晃晃的人在交互使唤"两条 lane，用同一套刚性规则把两者一起锁死。**
 **设计原则:** [`guidelines/project-charter.md`](../../guidelines/project-charter.md)、[`guidelines/evolution-simple-reliable-control.md`](../../guidelines/evolution-simple-reliable-control.md)、[`guidelines/evolution-helper-oriented-agent.md`](../../guidelines/evolution-helper-oriented-agent.md)
 **姊妹 plan:** [`breakpoint-recovery-persistence-model`](breakpoint-recovery-persistence-model.md)（那条管"持久化/可恢复"；本条管"可变更 + 可被人修正 + 可调试"）
-**症状实证:** [BUG-078](../bugs/BUG-078-post-final-hitl2-rerun-reentry-blocked.md)、[BUG-079](../bugs/BUG-079-out-of-gate-addendum-no-canonical-footprint.md)（§根本设计张力 + fix E）
+**症状实证:** [BUG-078](../_done/_fixed_bugs/BUG-078-post-final-hitl2-rerun-reentry-blocked.md)、[BUG-079](../bugs/BUG-079-out-of-gate-addendum-no-canonical-footprint.md)（§根本设计张力 + fix E）
 
 ---
 

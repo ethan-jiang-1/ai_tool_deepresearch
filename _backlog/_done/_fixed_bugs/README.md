@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-07-12 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-07-13 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -87,6 +87,7 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-075 | 2026-07-10 | Wave1 gate contract 墙（19 规则全为 provenance/format/floor 技术性失败）；随 `simplify-and-reuse-wave-contract-checks` (v0.17) 削减为必要 blocker + 同源 preflight 可达 |
 | BUG-076 | 2026-07-12 | Native WebFetch host domain verification remains external; framework now accepts a real alternative fetch surface such as `curl` for HITL1 research access and delegated fetch fallback |
 | BUG-077 | 2026-07-12 | Role-bound actor preflight prevents doomed delegated allocation; explicit single Phase Agent fallback remains inside formal submit and actor provenance authority |
+| BUG-078 | 2026-07-13 | Audited Final-lineage-bound rerun recovery reaches the existing canonical rerun pipeline without hand-written authority or addendum namespace |
 
 **Next available bug ID: BUG-080**
 

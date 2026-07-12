@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.27
+
+- Added one audited post-Final rerun operation that binds the latest legal Final lineage to the existing HITL2 `rerun` route while preserving Final as terminal delivery history.
+- Added event-last, hash-bound `inspect|apply|recover` with exact roll-forward recovery through the existing trace writer, entry/status owners, and canonical topic-state transaction.
+- Kept recovery narrow and helper-oriented: no generic override/state-seed, identity or authorization subsystem, Final loop, second lifecycle/status/topic/trace owner, or addendum success namespace.
+
 ## v0.26
 
 - Added canonical topic rename, reorder/renumber, and narrowly proven safe remove through one complete rerun layout target while preserving stable topic UIDs.

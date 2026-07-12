@@ -4,7 +4,14 @@
 **Bundle:** `dpt_rb_ai-era-bpm-process-disruption`
 **Phase:** Final (terminal) → attempted post-final HITL2 rerun
 **Severity:** High — the documented "post-final feedback re-enters HITL2 via rerun" contract is not achievable with sanctioned CLIs
-**Current status (2026-07-12):** Active — C1 now detects the terminal-position incident and suppresses impossible predecessor/enter-phase advice as `missing_contract`; a sanctioned runtime reopen/reentry path remains absent for C5.
+**Current status (2026-07-13):** Closed — v0.27 `restore-audited-post-final-recovery` adds one Engine-written, Final-lineage-bound `post_final_rerun` recovery path and reuses existing phase-rerun entry, status sync, C3 canonical topic mutation, gate, and descendant owners. Controlled case 317 passes on a real disposable bundle with no hand-written authority or addendum namespace.
+
+## Resolution
+
+- `operate-post-final-recovery.mjs inspect|apply|recover` accepts only a retained, schema-closed post-final rerun request bound to the latest legal Final lineage.
+- Event-last exact recovery preserves Final history, updates only the existing HITL2 profile projection, and appends one `post_final_reentry` witness through the existing trace writer.
+- Existing `enter-phase`, `advance-status`, `check-reentry`, topic-state, and rerun-ready owners consume the witness; no Final outgoing edge, synthetic gate attempt, generic override, or state-seed was added.
+- `case-317-light-post-final-recovery` proves Final → recovery → phase-rerun → canonical topic add → normal rerun descendant, stable replay, and PASS-only disposable cleanup.
 
 ## Symptom
 

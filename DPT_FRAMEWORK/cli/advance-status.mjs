@@ -152,6 +152,18 @@ const nextGateKey = nodeToGate.get(nextNode);
 // not JavaScript null (which serializes to JSON null ≠ "none").
 const nextGateEnum = nextGateKey ? gateKeyToEnum(nextGateKey) : 'none';
 
+if (handoffCheck.exceptional && handoffCheck.stage === 'synchronized_initial_profile') {
+  const output = {
+    status: 'ok',
+    current_gate: targetGateEnum,
+    next_gate: nextGateEnum,
+    source_handoff_kind: 'post_final_reentry',
+    idempotent: true,
+  };
+  console.log(JSON.stringify(output));
+  process.exit(0);
+}
+
 let continuation = null;
 let continuationDiagnostic = null;
 if (handoffCheck.covered) {
@@ -185,7 +197,7 @@ if (handoffCheck.covered) {
   continuationDiagnostic = `continuation omitted: bootstrap-compatible status sync did not have loaded current_node "${nextNode}"`;
 }
 
-const from = status.current_gate || 'unknown';
+const from = handoffCheck.exceptional ? 'readiness_passed' : (status.current_gate || 'unknown');
 const previousStatusRaw = readFileSync(statusPath, 'utf-8');
 const nextStatus = {
   ...status,
@@ -205,6 +217,14 @@ const traceEvent = JSON.stringify({
   source_handoff_degraded: handoffCheck.covered ? handoffCheck.handoff.degraded === true : false,
   source_handoff_degraded_reason: handoffCheck.covered ? handoffCheck.handoff.degradedReason || null : null,
   source_handoff_degraded_rules: handoffCheck.covered ? handoffCheck.handoff.degradedRules || [] : [],
+  ...(handoffCheck.exceptional ? {
+    source_handoff_kind: 'post_final_reentry',
+    source_handoff_event_id: handoffCheck.handoff.eventId,
+    source_handoff_event_index: handoffCheck.handoff.index,
+    source_handoff_event_sha256: handoffCheck.handoff.eventLineSha256,
+    source_handoff_operation_id: handoffCheck.handoff.operationId,
+    source_handoff_load_index: handoffCheck.handoff.loadComplete.index,
+  } : {}),
 });
 
 try {
@@ -244,6 +264,7 @@ const output = {
   next_gate: nextGateEnum,
   source_handoff_degraded: handoffCheck.covered ? handoffCheck.handoff.degraded === true : false,
 };
+if (handoffCheck.exceptional) output.source_handoff_kind = 'post_final_reentry';
 if (continuation) output.continuation = continuation;
 if (!continuation && continuationDiagnostic) output.continuation_diagnostic = continuationDiagnostic;
 
