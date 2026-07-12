@@ -1,7 +1,7 @@
 # Overall Plan: Recovery、Canonical State 与 Delegated Reliability 五 Change 总控路线
 
 **性质:** 跨 plan / bug 的 OpenSpec change 总路线（pre-OpenSpec）
-**状态:** Active — C1 已 archive（v0.22）；C2 已 archive（v0.23）；C3 `establish-canonical-topic-state` 进入 propose，C4/C5 待按依赖顺序推进（更新于 2026-07-12）
+**状态:** Active — C1 已 archive（v0.22）；C2 已 archive（v0.23）；C3A `establish-canonical-topic-state` 正在 apply（v0.24）；C3B layout mutation、C4/C5 待按依赖顺序推进（更新于 2026-07-12）
 **当前进度速览:** 见文末 [§12 Change 进度总览](#12-change-进度总览live-tracker)——每推进一个 change 就更新那张表，避免跟踪断线。
 **前置基础:** `align-recovery-with-simple-helper-posture`（v0.21）已建立 helper-oriented、`materialize-before-work`、`canonical-or-blocked` 与依赖带，但未实现本计划的核心 runtime 能力。
 
@@ -164,6 +164,8 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 - recursive snapshot 证明 control authority 不变；run.log 只投影直接原因。
 
 ## 5. C3 — `establish-canonical-topic-state`
+
+**Status (2026-07-12): Applying as C3A (v0.24).** Scope已按 simplicity split：本 change实现 stable UID、minimum intent、explicit legacy migration、add/update、UID-bound seeds、direct-fact progress与explicit crash recovery；remove/rename/renumber/path migration转独立 C3B，post-final reentry/override继续属于C5。
 
 ### 5.1 覆盖来源
 
@@ -372,7 +374,8 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 |---|---|---|---|---|---|
 | C1 | `harden-recovery-observability-and-contracts` | — | ✅ Archived | v0.22 | `archive/2026-07-12-harden-recovery-observability-and-contracts` |
 | C2 | `make-artifact-persistence-crash-safe` | C1 | ✅ Archived | v0.23 | `archive/2026-07-12-make-artifact-persistence-crash-safe`；main spec 已同步 |
-| C3 | `establish-canonical-topic-state` | C1 + C2 durability boundary | 📝 Proposing（当前） | TBD | 优先保持单一 Source of Record；只有 propose 证明无法自洽时才拆 C3A/C3B |
+| C3A | `establish-canonical-topic-state` | C1 + C2 durability boundary | 🚧 Applying（当前） | v0.24 | stable UID/intent/direct progress；已明确不含 layout mutation/post-final override |
+| C3B | `mutate-canonical-topic-layout`（待 propose） | C3A | ⏳ Not started | TBD | remove/rename/renumber/path/reference migration |
 | C4 | `handle-unavailable-delegated-actors` | C1（独立执行 lane，可与 C2 并行）| ⏳ Not started | TBD | 关闭 BUG-077 的 actor availability 尾巴 |
 | C5 | `restore-audited-post-final-recovery` | C1 + C3（消费 C2 crash-safe primitive）| ⏳ Not started | TBD | 最高风险 authority change，必须最后做 |
 
@@ -387,10 +390,10 @@ Agent 将完成的 staging content 显式交给统一 crash-safe durable path；
 
 | 活跃来源 | 由哪些 change 关闭 | 当前状态 |
 |---|---|---|
-| `breakpoint-recovery-persistence-model.md` | C2 + C3 | Partial — C2 完成 sanctioned content durability；P2/P3 与 persist 前 host write 待 C3/后续边界 |
-| `human-override-and-state-mutability.md` | C1 + C3 + C5 | Partial — C1 已落 audit（Human D 的诊断面）；A/B/C 待 C3/C5 |
+| `breakpoint-recovery-persistence-model.md` | C2 + C3 | Partial — C2完成durability；C3A完成canonical intent/direct progress，persist前host write与post-final边界仍开放 |
+| `human-override-and-state-mutability.md` | C1 + C3 + C5 | Partial — C1完成D，C3A完成A；B转C3B，C等待C5 |
 | BUG-077 | C1（contract-opacity）+ C4（actor availability）| Partial — C1 已收 contract-opacity 尾巴；actor availability 待 C4 |
 | BUG-078 | C5 | Open — 等 C5 |
-| BUG-079 | C1（检测）+ C2（content durability）+ C3/C5（canonical-or-blocked）| Partial — C1 可检测、C2 可保护 sanctioned staging；canonical footprint/reentry 根治待 C3/C5 |
+| BUG-079 | C1（检测）+ C2（content durability）+ C3/C5（canonical-or-blocked）| Partial — legal HITL1/rerun canonical footprint由C3A完成；历史/post-final incident仍等待C5 |
 
 > 提示：当某个来源的所有关联 change 都 Archived 且 controlled proof 通过时，才把来源从 Partial 改为 Closed，并把条目 move 下去——plan → `_backlog/_done/_closed_plans/`，bug → `_backlog/_done/_fixed_bugs/`，同时从 `_backlog/plans/README.md` / `_backlog/bugs/README.md` 索引移除；只完成 guidance/spec 不算关闭（见 §11）。5 个来源全部 Closed 后，本 overall plan 自身也 move 到 `_backlog/_done/_closed_plans/`。

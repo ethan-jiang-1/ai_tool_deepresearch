@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-gate-seed-topics-ready.mjs — evaluates gate-seed-topics-ready rules
-// @impl GSK-001, GSK-002, GSK-004, STM-003, PRG-007, FRE-003
+// @impl GSK-001, GSK-002, GSK-004, STM-003, STM-007, PRG-007, FRE-003
 // Usage: node check-gate-seed-topics-ready.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import { existsSync, statSync, readFileSync, readdirSync } from 'node:fs';
@@ -18,6 +18,7 @@ import {
   readBundlePlan,
   parseMdFrontmatter,
 } from '../../engine/helpers/gate-helpers.mjs';
+import { inspectCanonicalTopicState } from '../../engine/helpers/canonical-topic-state.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
@@ -59,6 +60,14 @@ const bundlePath = args.bundle;
 const inspect = [];
 const advice = [];
 let allPassed = true;
+
+const topicState = inspectCanonicalTopicState({ bundlePath });
+if (topicState.mode === 'canonical' && topicState.passed !== true) {
+  allPassed = false;
+  const blocker = topicState.blockers?.[0];
+  inspect.push(`Canonical topic-state prerequisite failed: ${blocker?.reason_code || 'unknown'}`);
+  advice.push(blocker?.recommended_action || 'Repair the exact UID-bound registry/seed projection and rerun this gate.');
+}
 
 // ── Cached parsers (lazy) ──
 let _planCache = null;

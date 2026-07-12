@@ -36,8 +36,11 @@ function createBundle(name) {
   // Write topic_registry into rb_plan.md frontmatter
   const planPath = join(dir, 'rb_plan.md');
   const existing = readFileSync(planPath, 'utf-8');
-  const fm = `---\ntopic_registry:\n  - slug: topic-a\n    label: "Topic A"\n  - slug: topic-b\n    label: "Topic B"\n---`;
+  const fm = `---\nplan_basename: test\nderived_topic_count: 2\ntopic_registry_version: "2"\ntopic_registry:\n  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000\n    id: "01"\n    slug: topic-a\n    title: "Topic A"\n    must_answer: ["A?"]\n    scope_role: primary\n    depends_on_topic_uids: []\n  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174001\n    id: "02"\n    slug: topic-b\n    title: "Topic B"\n    must_answer: ["B?"]\n    scope_role: supporting\n    depends_on_topic_uids: []\n---`;
   writeFileSync(planPath, fm + '\n' + existing.replace(/^---\n[\s\S]*?\n---\n?/, ''));
+  mkdirSync(join(dir, 'seed_topics'), { recursive: true });
+  writeFileSync(join(dir, 'seed_topics/topic-a.md'), '---\ntopic_uid: tp_123e4567-e89b-12d3-a456-426614174000\nid: "01"\nslug: topic-a\ntitle: Topic A\nmust_answer: ["A?"]\nscope_role: primary\ndepends_on_topic_uids: []\n---\n# Topic A\n');
+  writeFileSync(join(dir, 'seed_topics/topic-b.md'), '---\ntopic_uid: tp_123e4567-e89b-12d3-a456-426614174001\nid: "02"\nslug: topic-b\ntitle: Topic B\nmust_answer: ["B?"]\nscope_role: supporting\ndepends_on_topic_uids: []\n---\n# Topic B\n');
 
   return dir;
 }

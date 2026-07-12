@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.24
+
+- Added canonical topic UIDs and minimum durable intent under the single `rb_plan.md#/topic_registry` owner, with explicit legacy migration and UID-bound seed projections.
+- Added one `inspect|apply|recover` topic-state CLI with lifecycle authorization, crash-safe plan+seed commit, explicit recovery, and direct-fact progress projection.
+- Kept the change narrow: no progress ledger, queue schema migration, remove/rename/renumber, path migration, post-final reentry, override, watcher, daemon, or generic transaction controller.
+
 ## v0.23
 
 - Added one crash-safe artifact persistence workspace, helper, and two-operation CLI for completed staging files under `reference/`, `artifacts/`, `final/`, and producer-owned `_cache/`.

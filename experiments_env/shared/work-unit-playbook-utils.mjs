@@ -32,12 +32,22 @@ export function writeMinimalPlan(bundleDir, {
   planBasename = path.basename(bundleDir),
   topics = [{ id: 't1', slug: 'topic-a', title: 'Topic A' }],
 } = {}) {
-  const topicLines = topics.map((topic) => `    { "id": "${topic.id}", "slug": "${topic.slug}", "title": "${topic.title}" }`).join(',\n');
+  const canonicalTopics = topics.map((topic, index) => ({
+    topic_uid: topic.topic_uid || `tp_${String(index + 1).padStart(8, '0')}-0000-4000-8000-000000000000`,
+    id: topic.id,
+    slug: topic.slug,
+    title: topic.title,
+    must_answer: topic.must_answer || [`What must be established for ${topic.title}?`],
+    scope_role: topic.scope_role || 'primary',
+    depends_on_topic_uids: topic.depends_on_topic_uids || [],
+  }));
+  const topicLines = canonicalTopics.map((topic) => `    ${JSON.stringify(topic)}`).join(',\n');
   writeFileSync(path.join(bundleDir, 'rb_plan.md'), [
     '---',
     '{',
     `  "plan_basename": "${planBasename}",`,
-    `  "derived_topic_count": ${topics.length},`,
+    '  "topic_registry_version": "2",',
+    `  "derived_topic_count": ${canonicalTopics.length},`,
     '  "topic_registry": [',
     topicLines,
     '  ]',
@@ -46,6 +56,16 @@ export function writeMinimalPlan(bundleDir, {
     `# ${planBasename} Plan`,
     '',
   ].join('\n'));
+  mkdirSync(path.join(bundleDir, 'seed_topics'), { recursive: true });
+  for (const topic of canonicalTopics) {
+    writeFileSync(path.join(bundleDir, 'seed_topics', `${topic.slug}.md`), [
+      '---',
+      JSON.stringify(topic, null, 2),
+      '---',
+      `# ${topic.title}`,
+      '',
+    ].join('\n'));
+  }
 }
 
 export function writeMinimalStatus(bundleDir, {

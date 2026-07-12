@@ -43,6 +43,7 @@ prefixes:
   CPT: cli-phase-transition
   CRC: cache-raw-web-content
   CSE: cmd-subagent-environment
+  CTS: canonical-topic-state
   DEW: delegated-work-units
   DYS: dynamic-node-loading
   EEX: evidence-extraction
@@ -296,6 +297,7 @@ QIV-002: queue-input-validation — Queue schema includes bundle identity and op
 QIV-003: queue-input-validation — Queue projection cache includes generated_at and source_queue_sha256 staleness detection
 QIV-004: queue-input-validation — operate-queue repair --remove-stale removes task cards outside topic_registry
 QIV-005: queue-input-validation — Queue and work-unit runtime CLIs reject help and suspicious bundle arguments before side effects
+QIV-006: queue-input-validation — Topic enqueue requires committed canonical registry and UID-bound seed state
 
 # relay-provenance-gate
 RPG-001: relay-provenance-gate — Replaced by work-unit-provenance-gate submitted ledger row checks [DEPRECATED]
@@ -321,6 +323,7 @@ REI-002: rerun-incremental-node — ProfileSchema rerun_count field (non-negativ
 REI-003: "rerun-incremental-node — Gate-rerun-ready checks rerun state legality (4 rules: rationale, count<3, structure, status)"
 REI-004: rerun-incremental-node — Chain routes HITL2 rerun as deterministic outcome (passed→readiness, rerun→rerun-node)
 REI-005: rerun-incremental-node — Rerun loop protection with max iterations (rerun_count<3, terminal fail on exhaustion)
+REI-006: rerun-incremental-node — Sanctioned rerun add and intent refinement use canonical topic-state apply
 
 # rerun-topic-integration
 RTI-001: rerun-topic-integration — Sub-agent reference format is explicit in rerun topic integration
@@ -339,6 +342,7 @@ RRD-005: runtime-reentry-debuggability — Reentry tooling derives facts from bu
 RRD-006: runtime-reentry-debuggability — Reentry CLI exit-code semantics align with the documented framework convention
 RRD-007: runtime-reentry-debuggability — Reentry diagnostics use rb_status current_node as the current phase coordinate when present
 RRD-008: runtime-reentry-debuggability — Reentry diagnostics summarize incident-shaped recovery truth
+RRD-009: runtime-reentry-debuggability — Reentry consumes canonical topic-state inspection without mutation authority
 
 # run-entry
 RUE-001: run-entry — RUN.md entry point announces the framework version banner
@@ -356,6 +360,7 @@ SCO-005: schema-core-hitl — HumanCheckpointStatus enum
 SCO-006: schema-core-hitl — AnswerabilityClass enum
 SCO-007: schema-core-hitl — HITL2UserDecision distinguishes the not_started sentinel from five recorded actions while preserving current lifecycle enum coverage
 SCO-008: schema-core-hitl — ProfileSchema hitl1/hitl2 field update
+SCO-013: schema-core — Canonical and legacy plan schemas distinguish stable topic identity mode
 SOR-001: schema-core — Source-of-record invariant marker for schema-core specs
 
 # subagent-collect
@@ -507,6 +512,7 @@ PRP-007: pre-research-phase-content — Anti-cheating rules in phase bodies (≥
 PRP-008: pre-research-phase-content — HITL1 writes to bundle not status tree (rb_profile.yaml, not rb_status.json#/phases/hitl1/*)
 PRP-009: pre-research-phase-content — Setup stop semantics enforcement (auto-advance on pass, escalate on persistent failure)
 PRP-010: pre-research-phase-content — Invalid bundle name remains fail-stop (no rename, no patch; re-instantiate with legal name)
+PRP-011: pre-research-phase-content — HITL1 atomically materializes approved canonical topic registry and seeds
 
 # wff-research-waves / research-wave-phase-content
 RWP-001: research-wave-phase-content — Wave0 phase body completeness (9-section, foundation shared reference collection, ReferenceMetadata schema)
@@ -570,6 +576,7 @@ STM-003: seed-topic-materialization — Seed topics gate CLI implementation (def
 STM-004: seed-topic-materialization — Workflow registration of seed-topics phase (manifest, transitions.chain, enums.mjs CurrentGate)
 STM-005: seed-topic-materialization — Seed topics boundary enforcement playbook (materialize all→pass, empty dir→fail, slug missing/extra→fail)
 STM-006: seed-topic-materialization — Topic slug SHALL include zero-padded NN_ numeric prefix (NN = 1-based array position); gate triple-consistency byte-for-byte check naturally compatible
+STM-007: seed-topic-materialization — Canonical seed topics are exact UID-bound registry projections
 
 # workflow-foundation — contracts
 WDC-001: workflow-directory-contract — Read-only framework assets boundary (DPT_FRAMEWORK/ = read-only, dpt_rb_*/ = mutable runtime truth)
@@ -733,6 +740,13 @@ RES-003: research-styles — Gate count_floor reads dynamic threshold from profi
 RES-004: research-styles — Phase MD references style-specific targets from profile
 RES-005: "research-styles — Debug style (user_visible: false) hidden from HITL1, available for dev/testing"
 RES-006: research-styles — Supplementary task cards SHALL NOT produce placeholder references (three-layer defense)
+RES-007: research-styles — Topic-state add reuses the existing research-style owner after commit
+
+# canonical-topic-state
+CTS-001: canonical-topic-state — Topic registry owns stable UID and minimum durable intent
+CTS-002: canonical-topic-state — Topic progress is projected from direct runtime facts without persistence
+CTS-003: canonical-topic-state — Plan and seed intent commit through explicit crash-safe apply and recover
+CTS-004: canonical-topic-state — Topic operations preserve lifecycle and owner boundaries
 
 # research-return-map
 RRM-001: research-return-map — Research wave returns include Agent-readable evidence-to-claim maps

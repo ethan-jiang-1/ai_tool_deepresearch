@@ -1,7 +1,7 @@
 # Plan: 断点恢复的三条持久化义务（Breakpoint-Recovery Persistence Model）
 
 **性质:** 复盘 + 能力立项前设计计划（pre-OpenSpec）
-**状态:** Partial — v0.23 已完成 P1 的 sanctioned content persistence slice（`reference/`、`artifacts/`、`final/`、producer-owned `_cache/`）；persist invocation 前的 host write、P2 topic×wave state 与 P3 input materialization 仍开放（2026-07-12）
+**状态:** Partial — v0.23 完成 P1 sanctioned content persistence；v0.24 C3A 已实现 canonical topic identity/minimum intent、HITL1/rerun materialize-before-work 与 direct-fact progress projection。Persist invocation 前 host write、layout mutation 和 C5 post-final reentry仍开放（2026-07-12）
 **触发:** `dpt_rb_ai-era-bpm-process-disruption` 的 post-final addendum 在 Molex 采证半途机器死掉；人工恢复现场（seed 06–11 建立、Molex 补齐、06/07 综合补齐）后复盘"为什么有的恢复得干净、有的只能靠 chat 记忆重建"。
 **范围:** DPT_FRAMEWORK 的崩溃/中断恢复语义——数据落盘、状态落盘、用户输入落盘。**不含** BUG-078 的 reopen 机制本身（另案），本 plan 只解决"中断后还能不能知道从哪续"。
 **设计原则:** [`guidelines/project-charter.md`](../../guidelines/project-charter.md)、[`guidelines/evolution-simple-reliable-control.md`](../../guidelines/evolution-simple-reliable-control.md)、[`guidelines/evolution-helper-oriented-agent.md`](../../guidelines/evolution-helper-oriented-agent.md)
@@ -20,8 +20,8 @@
 | # | 义务 | 这次暴露的缺口（冒烟证据） | 要求 | 候选 change |
 |---|------|--------------------------|------|-------------|
 | P1 | **数据过手即存**（crash-safe + 即时） | `reference/addendum-molex-itbrief.md.tmp.50374.…` —— 原子写的 `rename` 没跑完，一张**内容完整**的证据卡看起来像垃圾残留 | v0.23 已为受支持 content roots 建立 completed staging → CAS persist → quiescent sweep；任意旧 tmp 与 persist invocation 前 host write 仍不在 accepted recovery contract 内 | `make-artifact-persistence-crash-safe`（Applied，待 archive） |
-| P2 | **状态即意图要存** | `rb_status.json` 冻在终态 `readiness_passed/phase-final`，对整批 addendum 工作**零感知**；4 家无 seed、06/07 不在 registry | topic 意图 + 每 (topic×wave) 进度是一等状态面，handoff 时更新；能区分 never/in-progress/done | `first-class-topic-progress-state` |
-| P3 | **重要用户输入要存** | rerun 请求（加 6 个 topic、各自定义）只在 run.log Decisions 一行 + chat；06/07 的 must_answer 只能从 dossier 逆推 | HITL/post-final 输入在**请求当刻**物化成结构化 artifact（seed/registry），独立于任何下游产出 | `materialize-user-intent-on-input` |
+| P2 | **状态即意图要存** | `rb_status.json` 冻在终态 `readiness_passed/phase-final`，对整批 addendum 工作**零感知**；4 家无 seed、06/07 不在 registry | v0.24 选择不新增 progress ledger：从 canonical registry/seed + queue/work-unit + submitted ledger + accepted artifact direct facts投影 `not_started/in_progress/complete/blocked` | `establish-canonical-topic-state`（C3A applied） |
+| P3 | **重要用户输入要存** | rerun 请求（加 6 个 topic、各自定义）只在 run.log Decisions 一行 + chat；06/07 的 must_answer 只能从 dossier 逆推 | v0.24 在 legal HITL1/sanctioned rerun 通过一个原子 apply change set提交 registry+UID-bound seeds；post-final input仍等C5 | `establish-canonical-topic-state`（C3A applied） |
 
 **贯穿三条的根因（§3）:** 框架现在是 **work-first、persist-as-side-effect**；应改为 **materialize-before-work**——先把意图/状态/数据的持久表示写下来，再（或原子地同时）干活。
 

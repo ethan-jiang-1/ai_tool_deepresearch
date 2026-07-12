@@ -46,6 +46,7 @@ Current inventory:
 - Inspect-wave CLIs are non-gate structured-output commands; stdout `{ check, inspect, advice }` is the Agent decision surface, with `2` reserved for caller invocation errors such as missing bundle input.
 - `check-reentry.mjs` is a non-gate structured-output command: `0` clean, `1` blockers/drift, `2` invalid target/args/config/caller request. Loaded/normalized results use schema `1.1.0` and add `recovery.canonical_topic_findings[]` plus one `root_findings[]` entry per independent blocker. A root exposes at most one reachable action; `missing_contract` means the Engine knows the suggested route is unavailable and the Agent must not loop that command or hand-write authority.
 - `operate-artifact-persistence.mjs` is a two-operation mechanical durability command: `persist` exits `0` when committed, `1` on a compare-and-swap or accepted-operation blocker, and `2` for invalid invocation/configuration; `sweep` exits `0` when every accepted workspace is finalized/cleaned, `1` when any workspace needs Agent action, and `2` for invalid invocation/configuration. Always read the JSON verdict; sweep requires a quiescent bundle with no concurrent persist.
+- `operate-topic-state.mjs` is a three-operation canonical identity command: `inspect` is read-only; `apply` exits `0` after plan+listed seeds commit, `1` for lifecycle/workspace/active-owner blockers, and `2` for invalid invocation/configuration; `recover` finishes one exact accepted operation without new semantic input. Context and `human-directed` are not mutation authority.
 - Many current utility validators are binary `0/1` and do not yet share a common exit helper.
 - `log-event.mjs` is an always-`0` diagnostic/logging exception; logging failure must not be treated as proof that a load-bearing trace event was written.
 - Known doc/code drift: `validate-workflow-package.mjs` header documents code `2` for invocation errors, but current code only exits `0` or `1`; record this as future reconciliation, not current behavior.
@@ -88,3 +89,10 @@ Existing active bundle reload uses `<bundle>/BUNDLE_MAP.md` plus `rb_status.json
 |------|------|------|
 | operate-artifact-persistence.mjs | cli/operate-artifact-persistence.mjs | 对 completed staging file 执行 CAS + atomic persist，或在无并发 persist 的 quiescent boundary sweep `_diagnostics/artifact-persistence/`；只报告机械 durability，不授予 provenance、submit、gate、handoff 或 delivery authority |
 | persist-artifact | command_playbook/persist-artifact.md | Agent copyable 闭环：保留 staging → persist；崩溃后停止并发 persist → sweep；blocked 时检查/移除单个 workspace、retry persist、rerun sweep |
+
+## Canonical Topic State
+
+| 工具 | 文件 | 说明 |
+|------|------|------|
+| operate-topic-state.mjs | cli/operate-topic-state.mjs | `inspect|apply|recover` canonical topic identity/intent；只写 `rb_plan.md` 与 listed UID-bound seeds，不改 queue/profile/status/trace/artifacts |
+| operate-topic-state | command_playbook/operate-topic-state.md | Agent 最短闭环：inspect → exact recover 或 retained apply → existing style follow-up → inspect |

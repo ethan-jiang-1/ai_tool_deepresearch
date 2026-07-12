@@ -19,15 +19,17 @@ suggested_context:
 
 ## 0. Execution Brief
 
-- **Objective**: Materialize `rb_plan.md` `topic_registry` into search-relevant seed topic files.
-- **Start here**: Read `rb_plan.md` `topic_registry`, `rb_profile.yaml`, and the queue CLI state.
-- **Path to pass**: Enqueue one materialization task per topic, drain the queue, repair slug/frontmatter mismatches, then run the seed-topics gate.
+- **Objective**: Verify and enrich committed UID-bound seed projections into search-relevant decision documents.
+- **Start here**: Read canonical `rb_plan.md` `topic_registry`, existing UID-bound `seed_topics/`, `rb_profile.yaml`, and the queue CLI state.
+- **Path to pass**: Verify exact UID/slug/intent binding, enqueue only required enrichment work, drain the queue, repair from the canonical owner, then run the seed-topics gate.
 - **Completion check**: `check-gate-seed-topics-ready.mjs` passes for `phases/phase-seed-topics.md`.
 - **Failure posture**: Treat empty queue or thin queue as work routing, not completion; repair from gate feedback and never invent missing topic semantics.
 
 ## 1. Stage Goal
 
-把 `rb_plan.md` frontmatter 的 `topic_registry` 物化为 `seed_topics/` 目录下的独立文件——每个 topic 一个 `{slug}.md`（文件名 = `topic.slug` + `.md`）。`slug` 为 `NN_` 编号前缀 + 描述性短名的结构化标识符（如 `01_official-stance`、`02_ai-safety`），`NN` 为零填充 1-based 数组序号。`id` 字段 SHOULD 与 NN 一致（如 `"01"`）；gate 不校验 id 格式——这是 convention 层面的统一。slug 同时承担编号、文件系统排序（`ls` 自然按数字序排列）、人读和跨 wave 引用多重职责。每个文件含 YAML frontmatter（id/slug/title + must_answer/hypothesis/search_guardrails/evidence_route 等必需字段）和正文研究骨架。为 Wave0 的 reference collection 提供可追溯的 topic 入口。
+Canonical new runs arrive with `topic_registry` and one UID-bound `seed_topics/{slug}.md` skeleton already committed together by HITL1 topic-state apply. 本 phase 验证并丰富 projection，不再是 approved intent 的首次 durable writer。Legacy resumed bundle 在 sanctioned rerun migration 前保留既有 slug-only compatibility path，但不得从 seed filename/prose 推断 UID、新 topic 或 mutation authority。
+
+每个 topic 一个 `{slug}.md`（文件名 = `topic.slug` + `.md`）。`slug` 为 `NN_` 编号前缀 + 描述性短名。Canonical frontmatter carries topic_uid/id/slug/title/must_answer/scope_role/depends_on_topic_uids plus Agent-facing enrichment fields。
 
 **`seed-topics-ready` 是结构+数量+一致性 gate，不是 topic 语义质量 gate。** 语义质量（topic 是否覆盖关键维度、是否与 research question 对齐）由 HITL1 阶段人类审查（`stop: yes`）负责。
 
@@ -49,8 +51,9 @@ Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task�
 
 如果 queue 为空（`operate-queue check <bundle>` 返回 `queue_health` 为 thin/blocked 或 active_window 为空）：
 
-1. 读取 `rb_plan.md` frontmatter 的 `topic_registry`，确定 topic 集合及其数组顺序
-2. 为每个 topic 生成一个 task card JSON 文件，然后 enqueue：
+1. 先运行 `operate-topic-state inspect`。Canonical mode 验证 registry 与 seed 的 UID/slug/intent exact binding；accepted workspace 先 explicit recover
+2. 读取 `rb_plan.md` frontmatter 的 `topic_registry`，确定需要 enrichment 的 topic 集合
+3. 为需要 enrichment 的 topic 生成一个 task card JSON 文件，然后 enqueue：
 
 > **注意**：文件名直接使用 `{topic.slug}.md`（`slug` 含 `NN_` 编号前缀，如 `01_meal-timing-...`——`NN` 取自 topic_registry 数组 1-based 位置）。不需二次拼接 index。
 

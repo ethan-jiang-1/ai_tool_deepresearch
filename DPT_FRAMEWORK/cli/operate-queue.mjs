@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @impl AGQ-002, AGQ-003, AGQ-004, AGQ-005, AGQ-006, QIV-001, QIV-002, QIV-003, QIV-004
+// @impl AGQ-002, AGQ-003, AGQ-004, AGQ-005, AGQ-006, QIV-001, QIV-002, QIV-003, QIV-004, QIV-006
 // @impl FRE-001: Canonical CLI location DPT_FRAMEWORK/cli/operate-queue.mjs
 
 import { readFileSync, existsSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -11,6 +11,7 @@ import {
   claim, complete, enqueue, fail, inspect,
   loadQueue, pendingCount, preempt, render, saveQueue, QUEUE,
 } from '../engine/queue-manager.mjs';
+import { inspectCanonicalTopicState } from '../engine/helpers/canonical-topic-state.mjs';
 
 function usage() {
   console.error(`Usage:
@@ -252,6 +253,32 @@ function validateTopicSlug(taskCard, bundleDir) {
     };
   }
 
+  const topicState = inspectCanonicalTopicState({ bundlePath: bundleDir });
+  if (topicState.mode === 'blocked') {
+    const blocker = topicState.blockers?.[0];
+    return {
+      valid: false,
+      error: blocker?.recommended_action || 'accepted topic-state workspace must be recovered before enqueue',
+      reason_code: blocker?.reason_code || 'accepted_workspace',
+    };
+  }
+  if (topicState.mode !== 'canonical') {
+    return {
+      valid: false,
+      error: `topic_slug '${resolved.slug}' cannot enqueue while topic state is ${topicState.mode}; enter sanctioned rerun for migration before topic-scoped work.`,
+      reason_code: 'canonical_topic_state_required',
+    };
+  }
+  const topic = topicState.topics.find((item) => item.slug === resolved.slug);
+  const blocker = topicState.blockers?.find((item) => item.slug === resolved.slug || item.topic_uid === topic?.topic_uid);
+  if (!topic || blocker) {
+    return {
+      valid: false,
+      error: blocker?.recommended_action || `topic_slug '${resolved.slug}' lacks a committed UID-bound seed projection.`,
+      reason_code: blocker?.reason_code || topic?.reason_code || 'topic_binding_required',
+    };
+  }
+
   return { valid: true, slug: resolved.slug };
 }
 
@@ -470,7 +497,7 @@ try {
     // QIV-001: Validate topic_slug against topic_registry
     const validation = validateTopicSlug(taskCard, bundleDir);
     if (!validation.valid) {
-      const error = { ok: false, error: validation.error, code: 'topic_validation_failed' };
+      const error = { ok: false, error: validation.error, code: 'topic_validation_failed', reason_code: validation.reason_code || null };
       emit(error);
       process.exit(1);
     }

@@ -20,6 +20,8 @@ const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 
 // Unique name to avoid collisions
 const BUNDLE_NAME = `test-gate-chain-${randomInt(0, 65536).toString(16)}`;
+const TOPIC_ALPHA_UID = 'tp_11111111-1111-4111-8111-111111111111';
+const TOPIC_BETA_UID = 'tp_22222222-2222-4222-8222-222222222222';
 
 function run(cmd) {
   return execSync(cmd, { encoding: 'utf-8', stdio: 'pipe', cwd: REPO_ROOT });
@@ -62,14 +64,26 @@ describe('Gate chain consistency (instantiation→hitl1→setup→seed-topics)',
   it('fills plan and profile for pre-HITL1 gates', () => {
     const plan = `---
 plan_basename: ${BUNDLE_NAME}
+topic_registry_version: "2"
 derived_topic_count: 2
 topic_registry:
-  - id: t1
+  - topic_uid: ${TOPIC_ALPHA_UID}
+    id: t1
     slug: topic-alpha
     title: Topic Alpha
-  - id: t2
+    must_answer:
+      - Does the canonical alpha topic pass the gate chain?
+    scope_role: primary
+    depends_on_topic_uids: []
+  - topic_uid: ${TOPIC_BETA_UID}
+    id: t2
     slug: topic-beta
     title: Topic Beta
+    must_answer:
+      - Does the canonical beta topic pass the gate chain?
+    scope_role: supporting
+    depends_on_topic_uids:
+      - ${TOPIC_ALPHA_UID}
 ---
 
 # Deep Research Plan: ${BUNDLE_NAME}
@@ -126,6 +140,32 @@ Wave 0/1/2 execution. Real subagent spawning.
 (append-only — 关键决策记录，最新在上)
 `;
     writeFileSync(join(bundlePath, 'rb_plan.md'), plan);
+    mkdirSync(join(bundlePath, 'seed_topics'), { recursive: true });
+    writeFileSync(join(bundlePath, 'seed_topics', 'topic-alpha.md'), `---
+topic_uid: ${TOPIC_ALPHA_UID}
+id: t1
+slug: topic-alpha
+title: Topic Alpha
+must_answer:
+  - Does the canonical alpha topic pass the gate chain?
+scope_role: primary
+depends_on_topic_uids: []
+---
+# Topic Alpha
+`);
+    writeFileSync(join(bundlePath, 'seed_topics', 'topic-beta.md'), `---
+topic_uid: ${TOPIC_BETA_UID}
+id: t2
+slug: topic-beta
+title: Topic Beta
+must_answer:
+  - Does the canonical beta topic pass the gate chain?
+scope_role: supporting
+depends_on_topic_uids:
+  - ${TOPIC_ALPHA_UID}
+---
+# Topic Beta
+`);
 
     const profile = `plan_basename: ${BUNDLE_NAME}
 research_profile: quick_factual
@@ -231,12 +271,18 @@ human_decision_checkpoints:
     mkdirSync(join(bundlePath, 'seed_topics'), { recursive: true });
 
     for (const slug of ['topic-alpha', 'topic-beta']) {
+      const alpha = slug === 'topic-alpha';
       const content = `---
-id: ${slug === 'topic-alpha' ? 't1' : 't2'}
+topic_uid: ${alpha ? TOPIC_ALPHA_UID : TOPIC_BETA_UID}
+id: ${alpha ? 't1' : 't2'}
 slug: ${slug}
-title: ${slug === 'topic-alpha' ? 'Topic Alpha' : 'Topic Beta'}
+title: ${alpha ? 'Topic Alpha' : 'Topic Beta'}
+must_answer:
+  - ${alpha ? 'Does the canonical alpha topic pass the gate chain?' : 'Does the canonical beta topic pass the gate chain?'}
+scope_role: ${alpha ? 'primary' : 'supporting'}
+depends_on_topic_uids:${alpha ? ' []' : `\n  - ${TOPIC_ALPHA_UID}`}
 ---
-# ${slug === 'topic-alpha' ? 'Topic Alpha' : 'Topic Beta'}
+# ${alpha ? 'Topic Alpha' : 'Topic Beta'}
 
 ## 关键维度
 - Test dimension for gate chain verification.

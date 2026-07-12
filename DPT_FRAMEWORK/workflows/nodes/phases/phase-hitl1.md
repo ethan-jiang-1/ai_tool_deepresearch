@@ -20,7 +20,7 @@ suggested_context:
 
 - **Objective**: Collect the user's research profile, root must-answer set, and HITL1 constraints, then confirm current research access before silent execution.
 - **Start here**: Read `brief/hitl1.md`, the original question, `rb_plan.md`, and `rb_profile.yaml`.
-- **Path to pass**: Present the HITL1 prompt, wait for the user's answer, write profile decisions, apply style parameters, run one bounded real research-access probe, then run the HITL1 gate.
+- **Path to pass**: Present the HITL1 prompt, wait for the user's answer, atomically apply approved canonical topics and UID-bound seeds, write profile/style decisions, run one bounded real research-access probe, then run the HITL1 gate.
 - **Completion check**: User input and a schema-valid available research-access observation are recorded in `rb_profile.yaml`, and `check-gate-hitl1-recorded.mjs` passes.
 - **Failure posture**: Do not invent user choices or capability success. If access is unavailable, preserve recorded choices, explain the blocker, and rerun the same probe and gate only after the environment is repaired or the user requests another attempt.
 
@@ -47,7 +47,7 @@ suggested_context:
 **Topic rewrite 步骤（一句话场景）：**
 1. 将一句话展开为 structured original topic，覆盖：背景（这个领域为什么重要）、研究范围（边界在哪）、关键维度（从哪些角度切入）、已知前提（已有的共识）、不确定项（需要 research 回答的 open questions）
 2. 将 original topic 写入 `rb_plan.md` 的 `## Goal` section。至少填写 `### Purpose`（一段话概述研究目标）。`### Research Questions` 和 `### Scope` 按 HITL1 用户提供的信息填写——信息不足时标注 `(待 HITL2 确认)`，不编造。
-3. 从 original topic 推导初始 seed topics（3-5 个可独立研究的子话题）→ 写入 `rb_plan.md` frontmatter 的 `topic_registry`；**物化动作（创建 `seed_topics/<slug>.md`）已移至下游 `phase-seed-topics`**——HITL1 只写 registry，不创建 seed topic 文件，避免职责重叠
+3. 从 original topic 推导初始 topic preview（3-5 个可独立研究的子话题），用户确认前不直接写 `topic_registry` 或 seed 文件
 4. 将 original topic + seed topics + 建议的 `research_profile` 一起展示给用户
 
 **Slug 命名约定：** 每个 topic 的 `slug` 格式为 `NN_<descriptive-name>`，`NN` 为该 topic 在 `topic_registry` 数组中的 1-based 位置（两位零填充），**不是** `id` 字段的值。`id` SHOULD 与 NN 一致（如 `"01"`），gate 不校验 id 格式——这是 convention 层面的统一。
@@ -69,7 +69,9 @@ topic_registry:
 
 `NN` 取自数组位置（第 1 个 topic → `01_`，第 2 个 → `02_`，以此类推），与 `id` 字段值无关。如果 `id` 字段写作 `t1`/`t2`，slug 仍用数组位置 `01_`/`02_`。
 
-**Gate 不判断 rewrite 质量。** `hitl1-recorded` gate 只做 structural 校验（`PlanSchema` 可解析、`topic_registry` 非空）。Original topic 是否合理、seed topics 是否覆盖关键维度——这是人类在 HITL1 审查的事。
+用户确认后，Agent 把完整 approved topic set 写入 caller-owned retained JSON，并运行一次 `operate-topic-state.mjs apply`。Engine 在 legal HITL1 current-node/status window 中分配 immutable UID/ordinal/slug，并用一个 prepared manifest 提交最终 registry 与全部 UID-bound seed skeletons。若返回 accepted workspace，Agent 运行 exact recover command 后重试；不得直接编辑 registry/seed。
+
+**Gate 不判断 rewrite 质量。** 人类审查 topic semantics；Engine 验证 canonical identity/intent、UID-bound seed projection、workspace completion 与既有 profile/access contract。
 
 ### 3b. HITL1 问题收集
 
@@ -88,6 +90,7 @@ topic_registry:
    - 将 `search_preference` 写入 `rb_profile.yaml`（如果用户提供；否则记录 `not_specified_use_profile_defaults`，**不追问**）
    - 将 `human_decision_checkpoints.hitl1.status` 设为 `recorded`
    - 将 `human_decision_checkpoints.hitl1.recorded_at` 设为当前 ISO 8601 timestamp
+   - 写 retained topic-state input 并运行 `operate-topic-state apply`；普通 apply/recover 命令由 Agent 执行，不要求用户共同运行
 
 ### 3c. Research Style Parameters（研究风格参数应用）
 
@@ -187,6 +190,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle <path> --cur
 - `research_profile` 仍为 `not_selected` → 确认用户选择后写入
 - `root_must_answer_set` 为空 → 确认用户 must-answer 问题后写入
 - `research_style_params` 缺失或不完整 → 重新运行 `apply-research-style.mjs` CLI
+- canonical topic-state workspace/seed binding fail → 运行返回的 exact recover/repair action，再重跑同一 gate
 - `research_access` 缺失或仍为 `unprobed` → 按 §3d 运行真实 bounded probe
 - `research_access.status` 为 `unavailable` → 读取 `research_access.reason`，保留用户 choices，修复/切换环境后重跑同一 probe 和 gate；不得进入 Setup
 - `research_access.status` 为 `available` 但 schema invalid → 修正 timestamp/HTTP(S) URL/fetch outcome 的直接 observation；不得伪造 success
@@ -206,6 +210,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle <path> --cur
 - **用户回答 MUST 写入 `rb_profile.yaml`**，不能只停留在 chat memory
 - **禁止在用户未回答时填写 placeholder 或假数据**：不能编造 `research_profile`、`root_must_answer_set` 等内容让 gate pass
 - **禁止跳过 HITL1 直接进入 setup**：`stop: yes` 意味着必须等待用户
+- **禁止 direct registry edit 或 seed-only identity**：approved topics 必须走 topic-state apply；context/`human-directed` 不创造 mutation permission
 - **禁止写入不存在的字段路径**：HITL1 结果写入 `rb_profile.yaml` 的 `human_decision_checkpoints.hitl1.*`；不要写入不存在的 `rb_status.json#/phases/hitl1/*`
 - **禁止用 mock/fixed URL/搜索摘要/手写 page content 声称 `research_access.status: available`**：available 只能来自当次实际 search 返回的 URL 和实际 fetch page content
 - **禁止把 probe 当 research evidence**：Probe URL/content/tool output 不得进入 reference、cache、artifact、work-unit、ledger、output declaration 或 Wave coverage

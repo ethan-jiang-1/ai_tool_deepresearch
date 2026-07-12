@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-gate-hitl1-recorded.mjs — evaluates gate-hitl1-recorded rules
-// @impl GSK-001, GSK-002, GSK-004, PRG-005, PRG-007
+// @impl GSK-001, GSK-002, GSK-004, PRG-005, PRG-007, PRP-011
 // Usage: node check-gate-hitl1-recorded.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -17,6 +17,7 @@ import {
   checkPhaseHandoffPreflight,
 } from '../../engine/helpers/gate-helpers.mjs';
 import { ProfileSchema } from '../../schema/index.mjs';
+import { inspectCanonicalTopicState } from '../../engine/helpers/canonical-topic-state.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
@@ -58,6 +59,16 @@ const bundlePath = args.bundle;
 const inspect = [];
 const advice = [];
 let allPassed = true;
+
+const topicState = inspectCanonicalTopicState({ bundlePath });
+if (topicState.mode !== 'canonical' || topicState.passed !== true || topicState.topics.length === 0) {
+  allPassed = false;
+  const blocker = topicState.blockers?.[0];
+  inspect.push(blocker?.reason_code === 'accepted_workspace'
+    ? `Canonical topic materialization is incomplete: ${blocker.recommended_action}`
+    : 'HITL1 requires a non-empty canonical plan with exact UID-bound seed projections.');
+  advice.push(blocker?.recommended_action || 'Run operate-topic-state apply for the approved topic set, then rerun this gate.');
+}
 
 // Helper: read and parse rb_profile.yaml (cached for this gate run)
 let _profileCache = null;

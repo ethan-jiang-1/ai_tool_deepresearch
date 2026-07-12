@@ -175,9 +175,18 @@ function writeBasePlanAndProfile(bundle, planBasename, { hitl2Decision = 'not_st
   writeFileSync(join(bundle, 'rb_plan.md'), `---
 {
   "plan_basename": "${planBasename}",
+  "topic_registry_version": "2",
   "derived_topic_count": 1,
   "topic_registry": [
-    { "id": "t1", "slug": "topic-a", "title": "Topic A" }
+    {
+      "topic_uid": "tp_11111111-1111-4111-8111-111111111111",
+      "id": "t1",
+      "slug": "topic-a",
+      "title": "Topic A",
+      "must_answer": ["How does handoff witnessing prevent status laundering?"],
+      "scope_role": "primary",
+      "depends_on_topic_uids": []
+    }
   ]
 }
 ---
@@ -232,6 +241,8 @@ human_decision_checkpoints:
     rerun_count: 1
     recorded_at: "2026-07-05T00:00:00.000Z"
 `);
+
+  stageSeedTopic(bundle);
 }
 
 function runGate(bundle, gateKey, currentNode, { attempt } = {}) {
@@ -322,9 +333,14 @@ function assertLatestLoad(bundle, sourceGate, sourceNode, targetNode) {
 
 function stageSeedTopic(bundle) {
   writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `---
+topic_uid: tp_11111111-1111-4111-8111-111111111111
 id: t1
 slug: topic-a
 title: Topic A
+must_answer:
+  - How does handoff witnessing prevent status laundering?
+scope_role: primary
+depends_on_topic_uids: []
 ---
 
 # Topic A
@@ -454,9 +470,14 @@ function stageWave1Pass(bundle) {
     '| 00-shared-handoff.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-05 |\n' +
     '| topic-a-deepening.md | secondary | practitioner | Tier 2 | topic-a | wave1_topic | accepted | 2026-07-05 |\n');
   writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `---
+topic_uid: tp_11111111-1111-4111-8111-111111111111
 id: t1
 slug: topic-a
 title: Topic A
+must_answer:
+  - How does handoff witnessing prevent status laundering?
+scope_role: primary
+depends_on_topic_uids: []
 ---
 
 # Topic A
@@ -558,9 +579,14 @@ synthesis_eligibility:
   ineligibility_reasons: []
 `);
   writeFileSync(join(bundle, 'seed_topics/topic-a.md'), `---
+topic_uid: tp_11111111-1111-4111-8111-111111111111
 id: t1
 slug: topic-a
 title: Topic A
+must_answer:
+  - How does handoff witnessing prevent status laundering?
+scope_role: primary
+depends_on_topic_uids: []
 ---
 
 # Topic A

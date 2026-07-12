@@ -1,5 +1,7 @@
 # artifact-persistence-recovery Specification
 
+> req: ARP-001, ARP-002, ARP-003
+
 ## Purpose
 TBD - created by archiving change make-artifact-persistence-crash-safe. Update Purpose after archive.
 ## Requirements
@@ -106,4 +108,3 @@ Persistence results SHALL remain mechanical durability facts, not business compl
 - **WHEN** persist or sweep runs for a selected bundle
 - **THEN** recursive before/after inspection SHALL show no mutation outside that bundle
 - **AND** no status, queue, trace, ledger, checkpoint, profile, plan, receipt, or work-unit transaction file SHALL be changed
-

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-reentry.mjs — Validate runtime consistency for reentry at a given target
-// @impl RRD-002, RRD-003, RRD-005, RRD-008, FIO-001, FIO-006, CHI-003
+// @impl RRD-002, RRD-003, RRD-005, RRD-008, RRD-009, FIO-001, FIO-006, CHI-003
 // Usage: node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle <path> --at <target>
 // Exit: 0 = clean, 1 = blockers, 2 = config error
 //
@@ -27,6 +27,7 @@ import {
 } from '../engine/helpers/gate-helpers.mjs';
 import { auditFileObservability } from '../engine/helpers/file-observability.mjs';
 import { buildRecoverySummary } from '../engine/helpers/recovery-contract.mjs';
+import { inspectCanonicalTopicState } from '../engine/helpers/canonical-topic-state.mjs';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Constants
@@ -825,6 +826,20 @@ for (const finding of foResult.canonical_findings || []) {
   });
 }
 
+// 8. Canonical topic-state inspection (read-only)
+const topicStateInspection = inspectCanonicalTopicState({ bundlePath });
+if (topicStateInspection.mode === 'blocked') {
+  const blocker = topicStateInspection.blockers[0];
+  allBlockers.push({ severity: 'blocker', check: 'canonical_topic_state', message: `accepted topic-state workspace ${blocker.operation_id}`, detail: blocker });
+  allAdvice.push(blocker.recommended_action);
+} else if (topicStateInspection.mode === 'canonical') {
+  for (const blocker of topicStateInspection.blockers || []) {
+    allBlockers.push({ severity: 'blocker', check: 'canonical_topic_state', message: `${blocker.reason_code}: ${blocker.slug || blocker.topic_uid || 'topic'}`, detail: blocker });
+  }
+} else if (topicStateInspection.mode === 'legacy' && statusPosition.current_node === 'phases/phase-final.md') {
+  allBlockers.push({ severity: 'blocker', check: 'canonical_topic_state', message: 'post-final legacy topic migration requires missing C5 reentry authority', detail: { reason_code: 'post_final_c5_required' } });
+}
+
 // Merge inspect/advice from audits
 for (const b of allBlockers) {
   allInspect.push(`[${b.check}] ${b.message}`);
@@ -895,6 +910,7 @@ const result = {
   drift: allDrift,
   findings: allFindings,
   recovery,
+  canonical_topic_state: topicStateInspection,
   inspect: allInspect,
   advice: allAdvice,
 };

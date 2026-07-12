@@ -20,7 +20,7 @@ suggested_context:
 
 - **Objective**: Translate HITL2 rerun intent into incremental topic changes before re-entering seed-topics.
 - **Start here**: Read HITL2 rationale, current `rerun_count`, existing seed topic files, and `topic_registry`.
-- **Path to pass**: Infer add/remove/supplement actions, update seed topic direction markers and registry/style params, increment `rerun_count`, then run the rerun gate.
+- **Path to pass**: Inspect canonical topic state, apply supported add/intent-refinement actions, update direction guidance/style params, increment `rerun_count`, then run the rerun gate.
 - **Completion check**: `check-gate-rerun-ready.mjs` passes for `phases/phase-rerun.md`.
 - **Failure posture**: Do not search or rewrite research artifacts here; if rerun is structurally impossible, record the accepted silent degradation/unpassable event and obey gate routing.
 
@@ -61,9 +61,9 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 | 场景 | action | 含义 |
 |------|--------|------|
 | 用户对 topic 满意，不需改变 | 无需标记 | 保留已有 topic 和其 ## 本轮重跑方向 section |
-| 用户要求在已有 topic 上加新维度/新方向/深挖 | `supplement` | 保留已有 reference，追加新维度搜索 |
-| 用户要求新增一个之前不存在的 topic | `add` | 需创建 seed_topic 文件，写入 ## 本轮重跑方向 section |
-| 用户明确否定或要求移除某 topic | `remove` | 保留已有 reference，标记为 deprecated，不再搜索 |
+| 用户要求在已有 topic 上加新维度/新方向/深挖 | `update_intent` | 保留 UID/id/slug/reference，更新 canonical intent 与方向 guidance |
+| 用户要求新增一个之前不存在的 topic | `add_topic` | 先原子提交 registry+seed，再写 ## 本轮重跑方向 section |
+| 用户要求 remove/rename/renumber/path move | unsupported C3B | 保留现状并报告 missing capability；禁止直接多文件编辑 |
 
 **对比推断示例**：
 
@@ -97,10 +97,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 
 每个 topic 文件的 `## 本轮重跑方向` section 最多一个——若已存在（上轮 rerun 遗留），用本轮结果**替换**整个 section（不追加）。
 
-1b. **同步 topic_registry**：做完 topic delta 后，更新 `rb_plan.md` frontmatter 的 `topic_registry` 以反映变更后的有效 topic 集合。`wave0_shared_ref_total` 依赖 `topic_count` 计算——topic 变了参数必须重算。
-
-   - `action: add` → 在 `topic_registry` 数组中追加新 topic 条目（`id`/`slug`/`title`），同步更新 `derived_topic_count`
-   - `action: remove` → 从 `topic_registry` 数组中移除对应条目，同步更新 `derived_topic_count`。seed_topic 文件保留但重命名为 `{slug}.md.deprecated`（保留历史记录，避免 seed-topics-ready gate 的 slug_consistency 规则检测到多余 slug）
+1b. **Apply canonical topic change set**：先运行 `operate-topic-state inspect`，再把 HITL2 rationale 转成 retained JSON。Legacy bundle使用完整显式 `migrate_legacy` reconciliation；canonical bundle只使用 `add_topic` / `update_intent`。Engine 验证 rerun current-node、route-bound HITL2 witness 与 incoming status window后提交。Queued/claimed blocker由 Agent通过既有 owner处理后重跑；accepted workspace运行 exact recover。Remove/rename/renumber/path move保持 C3B missing boundary。
 
 1c. **重算 research_style_params**：topic_registry 变更后 topic_count 可能变化，必须重算 `wave0_shared_ref_total`（`base + per_topic × topic_count`）。读取当前 `research_profile`，重新运行 apply CLI：
 
@@ -129,7 +126,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle <path> --curren
 ## 4. Expected Artifacts
 
 - 受影响 seed_topic 文件中的 `## 本轮重跑方向` section 已写入/更新
-- `rb_plan.md` frontmatter `topic_registry` 已同步（add → 追加，remove → 移除），`derived_topic_count` 反映当前条目数
+- `rb_plan.md` canonical registry 与 touched UID-bound seeds 已由 topic-state apply/recover完整提交；不包含 remove/rename/renumber
 - **新增 topic（`action: add`）必须在后续 phase（wave0/wave1/wave2）中遵循完整 `_cache/` 写入约定**：每个 source 写入 `websearch.json` + `page.md` + `meta.json`（11 字段），在 submitted work-unit result 的 `cache_trails[]` 中声明 leaf 路径，确保 gate `cache_coverage` 可溯源。此约定与首次运行的 topic 完全一致。
 - `rb_profile.yaml#/research_style_params` 已更新——`wave0_shared_ref_total` 反映当前 `topic_count`（通过 `apply-research-style.mjs` 重算）
 - `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count` 已递增
@@ -184,6 +181,8 @@ Gate fail 时通过 accepted trace/log surface 记录 `silent_degradation` 或 `
 ## 9. Anti-Cheating Rules
 
 - **MUST NOT 删除已有 artifacts**：reference/、artifacts/、seed_topics/ 中的已有文件全部保留
+- **MUST NOT direct-edit registry/seed 模拟 mutation**：只用 sanctioned topic-state apply；context/`human-directed` 不绕过 lifecycle authority
+- **MUST NOT remove/rename/renumber/path-move**：这些是 C3B missing capability，不得创建 parallel addendum namespace
 - **MUST 读当前 rerun_count 后再递增**：若字段缺失则初始化为 1，若已有值则 +1。MUST NOT 直接覆盖为固定值
 - **MUST 检查 seed_topics/ 非空**：若意外为空，默认全量重跑，通过 accepted trace/log surface 记录 `silent_degradation`
 - **MUST NOT 在无 rationale 或 rationale 为空时写 ## 本轮重跑方向**：方向 hints 必须来自用户明确的意图

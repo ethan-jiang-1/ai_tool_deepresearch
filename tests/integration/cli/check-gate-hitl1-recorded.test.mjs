@@ -2,7 +2,7 @@
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const REPO_ROOT = process.cwd();
@@ -24,6 +24,14 @@ function writeProfileYaml(bundleDir, yaml) {
 
 function advanceHitl1(bundleDir) {
   return spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli/advance-status.mjs'), '--bundle', bundleDir, '--to', 'hitl1_recorded'], { encoding: 'utf-8', timeout: 10000 });
+}
+
+function materializeCanonicalTopic(bundleDir) {
+  const planPath = join(bundleDir, 'rb_plan.md');
+  const body = readFileSync(planPath, 'utf8').replace(/^---\n[\s\S]*?\n---\n?/, '');
+  writeFileSync(planPath, `---\nplan_basename: test\nderived_topic_count: 1\ntopic_registry_version: "2"\ntopic_registry:\n  - topic_uid: tp_123e4567-e89b-12d3-a456-426614174000\n    id: "01"\n    slug: 01_topic-a\n    title: Topic A\n    must_answer: ["What is the answer?"]\n    scope_role: primary\n    depends_on_topic_uids: []\n---\n${body}`);
+  mkdirSync(join(bundleDir, 'seed_topics'), { recursive: true });
+  writeFileSync(join(bundleDir, 'seed_topics/01_topic-a.md'), '---\ntopic_uid: tp_123e4567-e89b-12d3-a456-426614174000\nid: "01"\nslug: 01_topic-a\ntitle: Topic A\nmust_answer: ["What is the answer?"]\nscope_role: primary\ndepends_on_topic_uids: []\n---\n# Topic A\n');
 }
 
 const AVAILABLE_ACCESS = `research_access:
@@ -56,6 +64,7 @@ describe('check-gate-hitl1-recorded', () => {
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     writeProfileYaml(bundleDir, VALID_PROFILE);
+    materializeCanonicalTopic(bundleDir);
 
     // Advance status to hitl1_recorded (gate now checks current_gate/next_gate per PRG-009)
     advanceHitl1(bundleDir);

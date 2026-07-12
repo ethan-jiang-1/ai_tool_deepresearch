@@ -70,6 +70,7 @@
 | G30 reentry-debuggability | case-309 | `exp_reentry-debuggability/case-309-light-drift-detection.md` | checkpoint drift 检测：control file hash 变化 → blocker |
 | G30 reentry-debuggability | case-313 | `exp_reentry-debuggability/case-313-light-canonical-recovery-incident.md` | registry-external durable topic + parallel namespace → one canonical root + missing contract；不证明 post-final reentry |
 | G30 reentry-debuggability | case-314 | `exp_reentry-debuggability/case-314-light-artifact-persistence-crash-recovery.md` | crash-safe content persistence：prepared finalize、post-rename cleanup、blocked no-mutation、Agent cleanup/retry、repeat idempotence |
+| G30 reentry-debuggability | case-315 | `exp_reentry-debuggability/case-315-light-canonical-topic-state-recovery.md` | canonical topic add：plan-first crash→exact recover、workspace期间enqueue no-write、恢复后UID-bound topic可入队 |
 
 ### G14 Migration Map
 
