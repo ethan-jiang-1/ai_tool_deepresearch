@@ -17,5 +17,6 @@
 
 | Plan | 简述 |
 |------|------|
+| [OVERALL: recovery-canonical-state-and-delegation](overall-recovery-canonical-state-and-delegation-roadmap.md) | **总控计划。** 五 change 总路线：C1 recovery observability/contract transparency → C2 crash-safe persistence → C3 canonical topic identity/intent/progress/rename；C4 delegated actor availability 独立支线；C5 audited post-final recovery 最后落地。统一承接两个 recovery/override plan 与 BUG-077/078/079。 |
 | [breakpoint-recovery-persistence-model](breakpoint-recovery-persistence-model.md) | Partial — v0.21 已落 `materialize-before-work`/helper-oriented 指导基础；P1 crash-safe write+sweep、P2 topic×wave 进度面、P3 用户意图即时物化仍待独立 change。 |
 | [human-override-and-state-mutability](human-override-and-state-mutability.md) | Partial — v0.21 已澄清 ordinary helper action 与 human-directed context；单一真相源、原子 `rename-topic`、audited override/state-seed、`audit-bundle-integrity` runtime 能力仍未落地。 |
