@@ -20,7 +20,7 @@ The shared blocking evaluator SHALL cover the current formal Wave0 artifact/prov
 
 Wave0 flat-directory, filename, non-formal metadata/section, `_INDEX.md` presentation, and README non-empty conventions SHALL remain visible but SHALL be advisory unless an accepted formal rule directly consumes that shape. Missing formal artifacts remain blocking. Existing evidence-bearing return-map navigation checks SHALL preserve their accepted current-command classification and SHALL NOT be mislabeled as formal gate rules.
 
-Inspect SHALL return `{ check, inspect, advice }` JSON without routing. For blocking roots touched by this change, the structured check result SHALL additionally expose `missing_fact`, `write_to`, and `rerun` on each primary root while preserving existing human-readable arrays for compatibility. It SHALL preserve exit code `0` for pass, `1` for known contract failure, and `2` for invocation/configuration error. It SHALL NOT execute node binding, lifecycle handoff preflight, routing, degraded handoff, gate-attempt counting, trace/log/checkpoint writes, status mutation, or completion-only `trace_event_*` checks.
+Inspect SHALL return `{ check, inspect, advice, hints }` JSON without routing. Every blocking primary root SHALL expose `rule_id`, `missing_fact`, `write_to`, and `rerun` through the same shared finding projection used by the corresponding Wave Gate while preserving existing human-readable arrays for compatibility. On pass, `hints` SHALL be empty. It SHALL preserve exit code `0` for pass, `1` for known contract failure, and `2` for invocation/configuration error. It SHALL NOT execute node binding, lifecycle handoff preflight, routing, degraded handoff, gate-attempt counting, trace/log/checkpoint writes, status mutation, or completion-only `trace_event_*` checks.
 
 #### Scenario: Flat directory check passes
 
@@ -86,9 +86,37 @@ Inspect SHALL return `{ check, inspect, advice }` JSON without routing. For bloc
 #### Scenario: Wave0 inspect preserves command output contract
 
 - **WHEN** `inspect-wave0-output.mjs --bundle <bundle>` completes
-- **THEN** stdout SHALL contain `{ check, inspect, advice }` without routing
+- **THEN** stdout SHALL contain `{ check, inspect, advice, hints }` without routing
 - **AND** any affected blocking primary root SHALL include non-empty `missing_fact`, `write_to`, and `rerun`
 - **AND** the command SHALL use exit code `0`, `1`, or `2` according to the documented non-gate convention
+
+
+### Requirement: inspect-wave1-output.mjs structural checks
+
+`inspect-wave1-output.mjs` SHALL evaluate Wave1 phase-owned artifacts, structured depth-review, references, submitted ledger/cache backing, explicit profile floors and work-unit provenance through the same pure evaluator result used by `wave1-complete`. It SHALL consume the shared canonical topic-binding, reference-format, reference-index, depth-contract and provenance evaluators rather than maintain local blocking variants.
+
+Presentation parsing SHALL remain tolerant without weakening direct contracts:
+
+- `question_list_has_four_sections` SHALL require the four semantic sections but tolerate harmless order, heading case/level, spacing and list presentation;
+- `source_url_present` SHALL accept a parseable bare HTTP(S) URL or Markdown link while submitted source/backing remains independently blocking;
+- `key_findings_non_empty` SHALL accept common non-empty bullet, numbered-list or paragraph content under the semantic Key Findings section; and
+- the retired `key_facts_min_lines` blocking rule SHALL be removed; a Key Facts quantity observation MAY remain advisory and SHALL NOT appear in `check.failed_rule_ids` or `hints[]`.
+
+When a prerequisite parent or field is missing, inspect SHALL return the earliest direct root and mask only dependent novelty, cache-mapping, floor, profile, decision, output and count symptoms. `submitted_declaration_missing` SHALL precede dependent work-unit coverage/cache/count symptoms. An invalid reference-index table SHALL precede per-reference missing-row symptoms.
+
+Inspect SHALL preserve `{ check, inspect, advice, hints }`, exit code `0/1/2`, no routing and full bundle no-write behavior. Shared blocking roots SHALL expose the same `rule_id`, `missing_fact` and `write_to` as the formal Gate, with the exact Wave1 inspect command in `rerun`. Formal-only lifecycle, routing, degraded handoff, gate-attempt durability and trace completion checks SHALL remain outside inspect.
+
+#### Scenario: Retired Key Facts quantity does not create a hint
+
+- **WHEN** a reference has all required semantic sections and direct backing but fewer than five Key Facts bullets
+- **THEN** Wave1 inspect SHALL not fail or emit a blocking hint for quantity
+- **AND** any quantity feedback SHALL be advisory only
+
+#### Scenario: Wave1 inspect returns the shared root without side effects
+
+- **WHEN** Wave1 inspect and formal Gate evaluate the same unchanged shared rule failure
+- **THEN** they SHALL agree on `rule_id`, `missing_fact` and `write_to`
+- **AND** Wave1 inspect SHALL name its own exact command in `rerun` and SHALL not write routing, trace, log, checkpoint or status state
 
 
 ### Requirement: inspect-wave2-output.mjs structural checks
@@ -109,7 +137,7 @@ Legacy `00_shared/` layout and `00-cross` metadata/standard-section presentation
 
 A missing required finding field SHALL be reported before and SHALL short-circuit only implications that consume that field. The primary output SHALL not expand one missing field into repeated enum, handoff, eligibility, backing, and synthesis symptoms. Missing/unparseable finding-index parent or non-array `findings` SHALL mask dependent per-finding and derived-count checks.
 
-Inspect SHALL preserve `{ check, inspect, advice }`, exit code `0/1/2`, no routing, and full bundle no-write behavior. Affected blocking roots SHALL include the same `missing_fact`, `write_to`, and `rerun` coordinates as the shared formal evaluator. Formal gate and inspect SHALL agree on shared rule ids; only formal gate may evaluate lifecycle checks, apply degraded behavior, or write durable evidence.
+Inspect SHALL preserve `{ check, inspect, advice, hints }`, exit code `0/1/2`, no routing, and full bundle no-write behavior. Blocking roots SHALL include the same `missing_fact` and `write_to` coordinates as the shared formal evaluator, with inspect's own exact command in `rerun`. Formal gate and inspect SHALL agree on shared rule ids; only formal gate may evaluate lifecycle checks, apply degraded behavior, or write durable evidence.
 
 #### Scenario: Detects 00_shared/ subdirectory
 
@@ -156,3 +184,24 @@ Inspect SHALL preserve `{ check, inspect, advice }`, exit code `0/1/2`, no routi
 - **WHEN** the same unchanged bundle is evaluated by Wave2 inspect and then by the formal Wave2 gate
 - **THEN** shared artifact/provenance failed rule ids SHALL agree
 - **AND** only formal gate SHALL add lifecycle-only failures or write gate attempt, bypass diagnostic, checkpoint, and routing evidence
+
+
+### Requirement: Inspect CLIs are documented non-gate structured-output commands
+
+Wave inspect CLIs SHALL preserve the non-gate `{ check, inspect, advice, hints }` JSON stdout contract and no-routing behavior for every completed invocation, including caller invocation and configuration failures. Pass SHALL return `hints: []`. A known contract, invocation, or definition/config failure SHALL return a stable structured root with `rule_id`, `missing_fact`, authorized `write_to`, and checkpoint-appropriate `rerun`; it SHALL NOT fall back to stderr-only usage text or hand-built `{check,inspect,advice}` without `hints[]`.
+
+Exit codes SHALL remain `0` for pass, `1` for known inspected-contract failure, and `2` for invocation/configuration failure. A missing `--bundle` value SHALL identify the missing required argument and return a command template containing `<bundle-path>`; because no runtime bundle was resolved, it SHALL NOT fabricate an absolute path. A definition parse/load failure SHALL preserve the same Gate-definition schema coordinate returned by the shared parser and SHALL identify framework maintenance or `missing_contract` ownership rather than suggesting edits inside an arbitrary run bundle.
+
+Shared artifact/provenance failures SHALL be projected from the same `wave-contract-findings.mjs` finding used by the formal Gate. Inspect-only advisory findings MAY use that same shape, but SHALL remain non-blocking and SHALL NOT acquire formal routing or durable side effects.
+
+#### Scenario: Missing bundle still returns structured inspect JSON
+
+- **WHEN** `inspect-wave1-output.mjs` is invoked without a bundle argument
+- **THEN** stdout SHALL contain `{ check, inspect, advice, hints }` with a stable invocation root and exit code `2`
+- **AND** the hint SHALL show the required `--bundle <bundle-path>` command template without claiming an absolute bundle root
+
+#### Scenario: Definition configuration failure cannot omit repair coordinates
+
+- **WHEN** a Wave inspect CLI cannot schema-parse its Gate definition
+- **THEN** it SHALL return exit code `2` with a structured definition/config root in `hints[]`
+- **AND** it SHALL NOT emit an inspect/advice-only object or suggest editing runtime artifacts to repair framework configuration

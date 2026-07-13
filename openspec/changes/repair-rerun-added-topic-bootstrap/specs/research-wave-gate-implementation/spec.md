@@ -70,7 +70,9 @@ Formal gate and side-effect-free Wave1 inspect SHALL consume the same pure refer
 
 The Wave1 CLI SHALL not scan non-work-unit delegated directories as a production coverage source, and SHALL not reintroduce retired content heuristics as blocking checks or diagnostic advice. If a submitted index/status binding exists but the corresponding bundle declaration row is missing, the shared evaluator SHALL return `submitted_declaration_missing` as the parent root and SHALL mask dependent output/cache/count/bypass symptoms until declaration recovery or a new legal attempt is completed.
 
-For the Wave1 rules touched by this change, each primary blocking diagnostic SHALL expose the static contract lineage needed for one repair: `missing_fact`, `write_to`, and `rerun`. These are read-only feedback coordinates, not a new authority or generic repair controller. `missing_fact` SHALL identify the earliest direct failed fact and its owning contract; `write_to` SHALL name the exact authorized bundle surface or legal Engine operation; `rerun` SHALL name the same inspect/gate/dry-submit checkpoint to repeat. Existing `inspect`/`advice` strings MAY remain for compatibility but SHALL NOT be the only repair information.
+All Wave0/Wave1/Wave2 shared evaluator roots SHALL expose the static contract lineage needed for one repair: `missing_fact` and `write_to`; inspect and formal Gate wrappers SHALL add the exact invoked checkpoint as `rerun`. These are read-only feedback coordinates, not a new authority or generic repair controller. `missing_fact` SHALL identify the earliest direct failed fact and its owning contract; `write_to` SHALL name the exact authorized bundle surface or legal Engine operation. Existing `inspect`/`advice` strings MAY remain for compatibility but SHALL NOT be the only repair information.
+
+Wave1 semantic Markdown checks SHALL protect section/content availability while tolerating equivalent presentation. `question_list_has_four_sections` SHALL require the four named semantic sections without fixed order, case, heading level, spacing, or list style. `source_url_present` SHALL accept a parseable bare HTTP(S) URL or Markdown link. `key_findings_non_empty` SHALL accept common bullet, numbered, or non-empty paragraph content under the semantic Key Findings section. These tolerant evaluators, not the historical regex presentation, SHALL own the blocking result.
 
 #### Scenario: Wave1 CLI ignores non-work-unit coverage
 
@@ -108,6 +110,12 @@ For the Wave1 rules touched by this change, each primary blocking diagnostic SHA
 - **THEN** its primary structured diagnostic SHALL include non-empty `missing_fact`, `write_to`, and `rerun`
 - **AND** the Agent SHALL not need to inspect Engine source to locate the authorized repair surface or checkpoint
 
+#### Scenario: Question-list order is not blocking authority
+
+- **WHEN** all four required question-list semantic sections are present and non-empty in an equivalent order or harmless heading presentation
+- **THEN** the shared evaluator SHALL accept the structure
+- **AND** the historical ordered-regex presentation SHALL NOT fail Wave1
+
 
 ### Requirement: Blocking judgment contracts SHALL close across producer, authority, checker, diagnostic, and guard
 
@@ -119,7 +127,7 @@ Each blocking deterministic gate/output contract SHALL have a closed and minimal
 - diagnostic/advice output that exposes the smallest actionable root cause and repair coordinates; and
 - regression or static guard that catches future drift.
 
-For in-scope Wave artifact/provenance rules, formal gate and inspect SHALL reuse the same pure evaluator result and rule id. Their primary root object SHALL also share the same `missing_fact`, `write_to`, and `rerun` values. Formal lifecycle checks such as node binding, handoff preflight, routing, degraded eligibility, gate-attempt durability, checkpoint, and `trace_event_*` SHALL remain formal-only and SHALL NOT be duplicated in inspect.
+For in-scope Wave artifact/provenance rules, formal gate and inspect SHALL reuse the same pure evaluator result and rule id. Their primary root object SHALL also share the same `missing_fact` and `write_to`; each command SHALL project its own exact checkpoint in `rerun`. Formal lifecycle checks such as node binding, handoff preflight, routing, degraded eligibility, gate-attempt durability, checkpoint, and `trace_event_*` SHALL remain formal-only and SHALL NOT be duplicated in inspect.
 
 Blocking rules SHALL protect required structure, deterministic authority, provenance, consumer navigation, or explicit accepted floors. Presentation/maintenance preferences SHALL use tolerant parsing or advisory feedback unless they are necessary to locate or parse a direct authority surface.
 
@@ -157,6 +165,12 @@ If a surface is not Agent-produced, the audit MAY record an explicit non-Agent-p
 - **WHEN** a blocking rule has one actionable direct root
 - **THEN** primary feedback SHALL name that fact in `missing_fact`, its exact mutable or Engine-owned repair surface in `write_to`, and the same checkpoint in `rerun`
 - **AND** it SHALL NOT provide competing repair branches or require the Agent to infer contract lineage from opaque prose
+
+#### Scenario: Wave root projection feeds the standard Gate hint
+
+- **WHEN** a shared Wave blocking root reaches a formal Gate wrapper
+- **THEN** the standard top-level `hints[]` entry SHALL be projected from that root rather than reconstructed from inspect/advice prose
+- **AND** the matching inspect command SHALL expose the same direct fact and authorized repair surface without formal routing side effects
 
 #### Scenario: delegated bypass scan has one side-effect owner
 

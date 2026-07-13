@@ -16,3 +16,4 @@
 ## 活跃列表
 
 - [seed-backfill-round-continuity](seed-backfill-round-continuity.md) — **P0 设计缺陷**：seed topic 回填区是单次消费结构，`__BACKFILL_*__` token 消费后消失，多轮 rerun 没有结构化回填目标。推荐方案：phase-rerun 追溯标记上轮内容+重新注入 fresh token。
+- [agent-hint-quality-test-enforcement](agent-hint-quality-test-enforcement.md) — **P0 测试治理缺口**：gate-skeleton spec 已定义 `hints[]` 契约，但没有机制确保每个 Gate CLI 都有验证 hint 质量的负面测试。推荐方案：三层约束（共享断言 + 覆盖审计 + OpenSpec 流程约束）。

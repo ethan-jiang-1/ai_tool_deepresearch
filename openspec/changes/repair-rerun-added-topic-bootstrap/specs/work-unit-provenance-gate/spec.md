@@ -4,7 +4,7 @@
 
 ### Requirement: Gate SHALL verify submitted work-unit ledger rows
 
-Work-unit provenance gates SHALL continue to read schema-valid, hash-valid Engine-written rows in bundle-root `rb_output_declarations.jsonl` as delegated coverage authority. Work-unit-local submitted-declaration recovery witnesses SHALL NOT count directly as coverage.
+Work-unit provenance gates SHALL continue to read schema-valid, hash-valid Engine-written rows in bundle-root `rb_output_declarations.jsonl` as delegated coverage authority. Reconstructable index/result/status/queue facts and bounded late-accept context SHALL NOT count directly as coverage.
 
 When a ledger row is absent but `_work_units/_index.json` contains a submitted attempt, gate/inspect SHALL distinguish missing declaration authority from nonexistent delegated work. It SHALL classify the work ID as `submitted_declaration_missing` or equivalent, determine whether exact or audited legacy declaration recovery is reachable through the existing work-unit owner, and mask downstream missing-output/cache/count symptoms that depend on that row.
 
@@ -12,7 +12,7 @@ The gate SHALL remain failed until recovery restores a valid bundle ledger row. 
 
 #### Scenario: Hand-written ledger row is rejected
 
-- **WHEN** a ledger row lacks a valid submit/recovery fingerprint or matching submitted index entry
+- **WHEN** a ledger row lacks a valid `ledger_record_hash`, matching submitted index/status hashes, or the required result/receipt/output/cache/queue bindings
 - **THEN** it SHALL not count as coverage
 
 #### Scenario: Missing submitted declaration is one root
@@ -21,9 +21,9 @@ The gate SHALL remain failed until recovery restores a valid bundle ledger row. 
 - **THEN** gate/inspect SHALL report one missing-declaration root for that work ID
 - **AND** dependent output coverage, cache mapping and count symptoms SHALL be masked until recovery is attempted
 
-#### Scenario: Recovery witness is not direct coverage
+#### Scenario: Reconstruction facts are not direct coverage
 
-- **WHEN** an exact work-unit-local declaration witness exists without its bundle ledger row
+- **WHEN** all declaration reconstruction facts exist without the bundle ledger row
 - **THEN** the gate SHALL remain failed
 - **AND** advice SHALL identify the sanctioned `recover-declaration` action
 
@@ -40,22 +40,23 @@ For each counted ledger row, gates SHALL continue to verify submitted index, man
 
 For a missing ledger row, the submission-presence evaluator SHALL inspect only enough independent submitted surfaces to classify declaration recovery eligibility. It SHALL not report a successful submission-presence result as gate coverage before the row is restored. Conflicting index/status/result/receipt/queue/trace evidence SHALL fail recovery eligibility and remain the primary integrity root.
 
-#### Scenario: Exact recovery eligibility is diagnosed
+#### Scenario: Deterministic recovery eligibility is diagnosed
 
-- **WHEN** a submitted attempt has a matching exact declaration witness and all binding surfaces agree
+- **WHEN** a submitted attempt's direct facts deterministically reproduce the recorded declaration hash and all binding surfaces agree
 - **THEN** inspect SHALL report recovery as reachable and provide one command target
 
-#### Scenario: Legacy recovery requires full witness set
+#### Scenario: Legacy recovery requires full original-hash evidence
 
-- **WHEN** a pre-witness submitted attempt lacks its row
-- **THEN** recovery eligibility SHALL require matching index/status/result/receipt/beacon/output/cache, queue terminal history and original submit trace
+- **WHEN** a legacy pre-unified-timestamp/pre-context submitted attempt lacks its row
+- **THEN** recovery eligibility SHALL require matching index/status/result/receipt/beacon/output/cache, queue terminal history and original submit/transaction evidence sufficient to reproduce the recorded hash
 - **AND** any missing fact SHALL be named as the direct blocker
+- **AND** an actually submitted row that cannot be reproduced SHALL return `missing_contract` rather than a speculative replacement-attempt path
 
 #### Scenario: Conflicting submitted surfaces block recovery
 
 - **WHEN** a purported submitted attempt has result hash, queue replacement, actor, receipt or trace conflict
 - **THEN** the checker SHALL not recommend declaration reconstruction
-- **AND** it SHALL return the one nearest legal boundary or new-attempt action
+- **AND** it SHALL return the one nearest existing legal boundary; when no accepted operation can repair an actually submitted row, that boundary SHALL be `missing_contract`
 
 
 ### Requirement: Gate diagnostics SHALL carry work-unit binding context
@@ -69,7 +70,7 @@ For source/output/cache binding failures, diagnostics SHALL name the exact resul
 #### Scenario: Missing declaration diagnostic is self-sufficient
 
 - **WHEN** a submitted work ID lacks its ledger row
-- **THEN** diagnostics SHALL name the work ID, missing ledger row, recovery witness status and exact recover command or missing-contract blocker
+- **THEN** diagnostics SHALL name the work ID, missing ledger row, reconstruction eligibility and exact recover command or missing-contract blocker
 - **AND** `missing_fact` SHALL identify the absent declaration authority, `write_to` SHALL identify the Engine-owned recovery operation, and `rerun` SHALL identify the same gate/inspect checkpoint after recovery
 - **AND** the Agent SHALL not need to read Engine source to choose the next action
 

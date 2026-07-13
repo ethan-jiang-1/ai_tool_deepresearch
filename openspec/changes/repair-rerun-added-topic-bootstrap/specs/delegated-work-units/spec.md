@@ -259,35 +259,35 @@ Normal `submit` and the existing audited `late-submit` SHALL remain the only ope
 
 ### Requirement: Submitted result and ledger hashes SHALL detect post-submit drift before gate pass
 
-Submitted result and ledger hashes SHALL remain fail-closed binding authority. Successful normal and late submit SHALL persist an exact Engine-owned recovery witness for the hash-valid submitted ledger row at `_work_units/waveN/<work_id>/submitted-declaration.json`. The witness SHALL preserve the exact row needed to restore a missing bundle-ledger append, but gates SHALL never count it directly. A recovery evaluator SHALL cross-check the witness against current canonical result hash, index/status, manifest, beacon, runtime receipt, output/source/cache declarations, queue terminal history, and replacement conflicts before any append.
+Submitted result and ledger hashes SHALL remain fail-closed binding authority. Normal and late submit SHALL create one Engine submission timestamp inside the commit transaction, build the final ledger row/hash from it, and use it consistently across ledger `declared_at`, index `terminal_at`, status `updated_at`, and queue `completed_at`. Pre-transaction validation and dry-submit SHALL not bind a final timestamp/hash. Normal rows SHALL require no additional recovery state. Late-submit SHALL preserve only irreducible late-accept context on the existing index record: reason, prior terminal status, and superseded retry IDs. Gates SHALL never count reconstructable index/result/queue facts directly. A recovery evaluator SHALL rebuild from current canonical result hash, index/status, manifest, beacon, runtime receipt, output/source/cache declarations, terminal queue facts and bounded late-accept context before any append.
 
-For legacy pre-witness attempts, audited reconstruction MAY occur only when the complete remaining submitted surfaces plus original submit trace prove one unique prior success. The reconstructed row SHALL carry hash-covered `declaration_recovery` audit and preserve the prior ledger hash. Missing or conflicting facts SHALL fail closed with `missing_fact`, `write_to`, and `rerun`; diagnostics SHALL never instruct hand-written hash or ledger edits.
+For legacy pre-unified-timestamp/pre-context attempts, reconstruction MAY occur only when the complete remaining submitted surfaces plus original submit/transaction evidence reproduce one unique row whose hash equals the already recorded index/status hash. Recovery audit SHALL live in transaction/trace/log evidence outside the restored row. Missing or conflicting facts SHALL fail closed with `missing_fact`, `write_to`, and `rerun`; diagnostics SHALL never instruct hand-written hash/ledger edits or rebind index/status to a newly invented row.
 
-#### Scenario: Exact witness restores the same hash-valid row
+#### Scenario: Reconstructable facts restore the same hash-valid row
 
-- **WHEN** an already-submitted work unit loses only its bundle ledger row and retains a matching exact recovery witness
-- **THEN** Engine recovery SHALL restore that exact row without changing result, receipt, output/cache, actor, queue, or original hashes
+- **WHEN** an already-submitted work unit loses only its bundle ledger row and retains all required direct reconstruction facts
+- **THEN** Engine recovery SHALL restore the hash-identical row without changing result, receipt, output/cache, actor, queue, or original hashes
 - **AND** the next gate SHALL consume it through the normal ledger path
 
-#### Scenario: Recovery witness cannot hide drift
+#### Scenario: Reconstruction cannot hide drift
 
-- **WHEN** current result, receipt, beacon, output/cache, index/status, or queue history conflicts with the witness
+- **WHEN** current result, receipt, beacon, output/cache, index/status, queue history, or late-accept context conflicts
 - **THEN** recovery SHALL fail before ledger mutation
 - **AND** primary feedback SHALL identify the earliest conflicting fact and one legal next checkpoint
 
 
 ### Requirement: Successful work-unit submit SHALL verify durable queue postconditions
 
-Before normal or late submit reports success, its durable postcondition SHALL prove the submitted index/status binding, terminal queue history, bundle ledger row, and exact declaration recovery witness all agree. The witness write SHALL participate in the existing submit transaction and rollback/suspect-state handling; a failed witness write SHALL not produce a successful submit response. This adds no new completion authority: the bundle ledger remains the only delegated coverage source and the witness remains recovery-only.
+Before normal or late submit reports success, its durable postcondition SHALL prove the submitted index/status binding, shared submission timestamp, terminal queue history, bundle ledger row, and any required late-accept context agree. These writes SHALL participate in the existing submit transaction and rollback/suspect-state handling. This adds no new completion authority: the bundle ledger remains the only delegated coverage source.
 
-#### Scenario: Submit success includes durable recovery witness
+#### Scenario: Submit success includes durable reconstruction facts
 
 - **WHEN** a work-unit submit reports success
-- **THEN** the bundle ledger row and work-unit-local recovery witness SHALL both be durable and exact-match the submitted index/status hashes
+- **THEN** the bundle ledger row, shared timestamp, direct owner facts, and any minimal late-accept context SHALL be durable and reproduce the submitted index/status hashes
 - **AND** durable queue postconditions SHALL still bind the same `queue_item_id` and `work_id`
 
-#### Scenario: Witness persistence failure cannot overclaim success
+#### Scenario: Reconstruction-context persistence failure cannot overclaim success
 
-- **WHEN** submit cannot persist or verify the exact declaration witness
+- **WHEN** submit cannot persist or verify the shared timestamp or required late-accept context
 - **THEN** it SHALL fail or roll back through the existing transaction durability contract
 - **AND** it SHALL not report successful delegated completion with an unrecoverable declaration
