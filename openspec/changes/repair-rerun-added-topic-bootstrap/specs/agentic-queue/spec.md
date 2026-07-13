@@ -6,7 +6,7 @@
 
 The Queue Manager SHALL keep deterministic queue operations for non-delegated main-agent work and queue demand maintenance. Delegated sub-agent completion SHALL NOT use `operate-queue complete`; delegated completion SHALL use `operate-work-unit submit`, which validates result/receipt/output/cache, updates work-unit state, completes the bound queue demand, and appends the ledger in one Engine transition.
 
-When non-delegated `operate-queue claim` encounters a delegated item at the active-window front, it SHALL reject without moving or completing that demand. The result SHALL distinguish this blocker from an empty active window by returning a stable root reason, the blocked `queue_item_id`, and one recommended action to perform the current role-bound actor probe and use `operate-work-unit claim`. A genuinely empty active window SHALL return a different root reason. These fields SHALL be read-only feedback projections and SHALL NOT create route, permission or persisted queue state.
+When non-delegated `operate-queue claim` encounters a delegated item at the active-window front, it SHALL reject without moving or completing that demand. The result SHALL distinguish this blocker from an empty active window by returning a stable root reason, the blocked `queue_item_id`, and contract-lineage coordinates: `missing_fact` naming the delegated-owner mismatch, `write_to` naming the role-bound observation/claim input owned by `operate-work-unit`, and `rerun` naming the exact `operate-work-unit claim` checkpoint. A genuinely empty active window SHALL return a different root reason. These fields SHALL be read-only feedback projections and SHALL NOT create route, permission or persisted queue state.
 
 #### Scenario: non-delegated queue completion remains available
 
@@ -25,7 +25,7 @@ When non-delegated `operate-queue claim` encounters a delegated item at the acti
 - **WHEN** the active-window front contains a queued item whose target delegates to a sub-agent
 - **AND** the caller invokes non-delegated `operate-queue claim`
 - **THEN** claim SHALL return `item: null` and `reason_code: delegated_requires_work_unit_claim`
-- **AND** it SHALL name the blocked `queue_item_id` and one recommended `operate-work-unit claim` action
+- **AND** it SHALL name the blocked `queue_item_id`, the delegated ownership fact, the actor-observation input surface, and one exact `operate-work-unit claim` rerun
 - **AND** queue authority bytes SHALL remain unchanged
 
 #### Scenario: Empty active window has a distinct reason
@@ -39,7 +39,7 @@ When non-delegated `operate-queue claim` encounters a delegated item at the acti
 
 The Agentic Queue system SHALL expose delegated queue demand through `operate-work-unit claim`, not through queue completion or any non-work-unit delegated channel. A claim SHALL allocate one Engine-owned work unit for each claimed queue demand item, move the bound `queue_item_id` into `delegated_in_flight`, and write the allocation to `_work_units/_index.json`.
 
-Existing terminal or submitted work-unit history and an earlier batch SHALL NOT make a later eligible queue-front demand unclaimable. After the existing batch owner opens the next batch, a valid current role-bound actor observation SHALL allocate the rerun demand from that batch through the same claim transaction. Missing or unknown actor observation SHALL continue to return no claim and one probe-then-rerun action without changing queue, batch counters or work-unit authority. A `phase_agent_fallback` request SHALL remain invalid unless the same claim carries a matching classified unavailable observation and the kind policy permits fallback; the diagnostic SHALL explain that exact missing precondition rather than presenting the demand as empty.
+Existing terminal or submitted work-unit history and an earlier batch SHALL NOT make a later eligible queue-front demand unclaimable. After the existing batch owner opens the next batch, a valid current role-bound actor observation SHALL allocate the rerun demand from that batch through the same claim transaction. Missing or unknown actor observation SHALL continue to return no claim and one probe-then-rerun action without changing queue, batch counters or work-unit authority. A `phase_agent_fallback` request SHALL remain invalid unless the same claim carries a matching classified unavailable observation and the kind policy permits fallback; the diagnostic SHALL explain that exact missing precondition through `missing_fact`, `write_to`, and `rerun` rather than presenting the demand as empty.
 
 #### Scenario: claim allocates delegated attempt
 
@@ -60,12 +60,12 @@ Existing terminal or submitted work-unit history and an earlier batch SHALL NOT 
 
 - **WHEN** an eligible rerun demand exists after historical work but claim has no current role-bound actor observation
 - **THEN** claim SHALL allocate zero work units and return `observation_required` with one probe-then-rerun action
+- **AND** `write_to` SHALL identify the claim observation fields and `rerun` SHALL identify the same work-unit claim command
 - **AND** active queue demand, batch counters and work-unit index authority SHALL remain unchanged
 
 #### Scenario: Fallback rejection names the missing authorization fact
 
 - **WHEN** the Agent requests `phase_agent_fallback` without a matching classified unavailable observation
 - **THEN** claim SHALL allocate zero work units and preserve the demand
-- **AND** the diagnostic SHALL identify the required role-bound unavailable observation and the exact same-claim retry action
+- **AND** the diagnostic SHALL identify the required role-bound unavailable observation in `missing_fact`, the exact claim arguments in `write_to`, and the same-claim command in `rerun`
 - **AND** it SHALL NOT describe the active queue as empty
-

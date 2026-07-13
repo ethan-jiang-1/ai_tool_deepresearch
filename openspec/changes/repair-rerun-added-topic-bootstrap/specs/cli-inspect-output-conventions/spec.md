@@ -20,7 +20,7 @@ The shared blocking evaluator SHALL cover the current formal Wave0 artifact/prov
 
 Wave0 flat-directory, filename, non-formal metadata/section, `_INDEX.md` presentation, and README non-empty conventions SHALL remain visible but SHALL be advisory unless an accepted formal rule directly consumes that shape. Missing formal artifacts remain blocking. Existing evidence-bearing return-map navigation checks SHALL preserve their accepted current-command classification and SHALL NOT be mislabeled as formal gate rules.
 
-Inspect SHALL return `{ check, inspect, advice }` JSON without routing. It SHALL preserve exit code `0` for pass, `1` for known contract failure, and `2` for invocation/configuration error. It SHALL NOT execute node binding, lifecycle handoff preflight, routing, degraded handoff, gate-attempt counting, trace/log/checkpoint writes, status mutation, or completion-only `trace_event_*` checks.
+Inspect SHALL return `{ check, inspect, advice }` JSON without routing. For blocking roots touched by this change, the structured check result SHALL additionally expose `missing_fact`, `write_to`, and `rerun` on each primary root while preserving existing human-readable arrays for compatibility. It SHALL preserve exit code `0` for pass, `1` for known contract failure, and `2` for invocation/configuration error. It SHALL NOT execute node binding, lifecycle handoff preflight, routing, degraded handoff, gate-attempt counting, trace/log/checkpoint writes, status mutation, or completion-only `trace_event_*` checks.
 
 #### Scenario: Flat directory check passes
 
@@ -87,6 +87,7 @@ Inspect SHALL return `{ check, inspect, advice }` JSON without routing. It SHALL
 
 - **WHEN** `inspect-wave0-output.mjs --bundle <bundle>` completes
 - **THEN** stdout SHALL contain `{ check, inspect, advice }` without routing
+- **AND** any affected blocking primary root SHALL include non-empty `missing_fact`, `write_to`, and `rerun`
 - **AND** the command SHALL use exit code `0`, `1`, or `2` according to the documented non-gate convention
 
 
@@ -108,7 +109,7 @@ Legacy `00_shared/` layout and `00-cross` metadata/standard-section presentation
 
 A missing required finding field SHALL be reported before and SHALL short-circuit only implications that consume that field. The primary output SHALL not expand one missing field into repeated enum, handoff, eligibility, backing, and synthesis symptoms. Missing/unparseable finding-index parent or non-array `findings` SHALL mask dependent per-finding and derived-count checks.
 
-Inspect SHALL preserve `{ check, inspect, advice }`, exit code `0/1/2`, no routing, and full bundle no-write behavior. Formal gate and inspect SHALL agree on shared rule ids; only formal gate may evaluate lifecycle checks, apply degraded behavior, or write durable evidence.
+Inspect SHALL preserve `{ check, inspect, advice }`, exit code `0/1/2`, no routing, and full bundle no-write behavior. Affected blocking roots SHALL include the same `missing_fact`, `write_to`, and `rerun` coordinates as the shared formal evaluator. Formal gate and inspect SHALL agree on shared rule ids; only formal gate may evaluate lifecycle checks, apply degraded behavior, or write durable evidence.
 
 #### Scenario: Detects 00_shared/ subdirectory
 
