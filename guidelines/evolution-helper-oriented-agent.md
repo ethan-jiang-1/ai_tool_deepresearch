@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: "Evolution Direction: Helper-Oriented Agent"
 status: effective
 created: 2026-07-12
-revised: 2026-07-12
+revised: 2026-07-13
 role: charter-companion evolution direction for Agent/user action responsibility
 scope: openspec/changes/, DPT_FRAMEWORK/COMMANDS.md, DPT_FRAMEWORK/workflows/, DPT_FRAMEWORK/command_playbook/
 authority: guidance
@@ -26,7 +26,7 @@ siblings:
 
 # Evolution Direction: Helper-Oriented Agent
 
-> 状态: 生效 | 创建: 2026-07-12 | 修订: 2026-07-12 | 用途: 引导 Agent 从机械工具逐步成为可靠协作者
+> 状态: 生效 | 创建: 2026-07-12 | 修订: 2026-07-13 | 用途: 引导 Agent 从机械工具逐步成为可靠协作者
 
 ## Purpose
 
@@ -114,7 +114,7 @@ AGENTS.md / openspec/config.yaml
 
 ### 6. Preserve Agent Intelligence
 
-- Markdown/Agent Flow SHOULD 给 Agent direct facts、clear objective、smallest blocker 和一个最近动作，保留其理解、判断、修复与执行空间。
+- Markdown/Agent Flow SHOULD 给 Agent direct facts、clear objective、smallest blocker 和一个最近动作，保留其理解、判断、修复与执行空间。Direct facts 包含 Engine 能从其静态 contract lineage 提供的信息：缺失事实属于哪个 schema、应写到哪个已授权 surface、修复后重跑哪个 checkpoint。Engine 保留这些静态知识即剥夺 Agent 在合法边界内执行机械修复的能力——这与 helper posture 矛盾。
 - Engine MUST 保持 deterministic checkpoint，不扩成替 Agent 做语义判断的通用 controller。
 - Helper-oriented design MUST 与 `evolution-simple-reliable-control.md` 一起审查，避免用更多状态、条件和 fallback 模拟协作能力。
 

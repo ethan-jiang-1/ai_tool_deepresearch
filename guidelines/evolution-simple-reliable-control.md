@@ -4,7 +4,7 @@ suite: deep-research-guidelines
 title: "Evolution Direction: Simple Reliable Control"
 status: effective
 created: 2026-07-10
-revised: 2026-07-12
+revised: 2026-07-13
 role: charter-companion evolution direction for control-loop complexity and net simplification
 scope: openspec/changes/, DPT_FRAMEWORK/workflows/, DPT_FRAMEWORK/cli/, DPT_FRAMEWORK/engine/, tests/, experiments_playbook/
 authority: guidance
@@ -26,7 +26,7 @@ siblings:
 
 # Evolution Direction: Simple Reliable Control
 
-> 状态: 生效 | 创建: 2026-07-10 | 修订: 2026-07-12 | 用途: 约束未来演进中的控制复杂度与净简化
+> 状态: 生效 | 创建: 2026-07-10 | 修订: 2026-07-13 | 用途: 约束未来演进中的控制复杂度与净简化
 
 ## Purpose
 
@@ -184,29 +184,43 @@ Primary feedback SHALL 给每个独立 root cause 一个最近动作。它可以
 
 ## Agent-Friendly Feedback
 
-MD controller 不怕简单问题，怕的是长判断链和模糊反馈。Engine/CLI 输出应让 Agent 不读源码也能继续。
+### The Information Asymmetry
 
-推荐反馈形状：
+JS/CLI/Engine 在实现时已经静态建模了完整的 contract lineage：每个 schema 的字段、schema 之间的继承/引用关系、每个 gate 检查哪个 contract、每个 surface 被哪个 gate 授权、每个 checkpoint 依赖哪个上游。这些是 **静态知识**——Engine 不需要做任何动态推理就能沿着自己建好的图追溯。
+
+Agent 只有**动态知识**：它能看到自己产出的 MD 文件，收到 Engine 返回的 opaque rejection text。它看不到 schema 继承链、gate 判定逻辑、surface 授权状态、checkpoint 依赖图。Agent 从 rejection 反推根因的搜索空间巨大，而 Engine 握有地图却选择了不分享。
+
+这不是”让报错更友好”的 UI 问题。这是**信息不对称的架构责任**：拥有信息的一方，有义务把信息传递给需要它的一方。Engine 垄断了 contract lineage，却把修复责任推给 Agent，然后责怪 Agent 猜不准——这是架构层面的责任错配，不是 Agent 单方面失败。
+
+当 Agent 反复猜测字段名、位置、格式，或抱怨”搞不过去”时，这是 **Engine 信息保留的 symptom**，不是 Agent 能力不足。
+
+### Contract-Lineage-Aware Rejection
+
+每个 Inspect/gate rejection MUST 从 Engine 已有的静态 contract lineage 中推导并返回三件事：
+
+1. **缺哪个直接事实**——不是”字段 X 缺失”，而是”gate `wave1_content_dedup` 要求 `source_ref.captured_at` 为非空字符串，当前值为 `null`，该字段属于 schema `source_ref/v1`”
+2. **补到哪个已授权 surface**——“该事实应写入 `output_files[].declarations`，该 surface 已被 gate `wave0_structure` 授权通过，你有写入权限”
+3. **补完重跑哪个 checkpoint**——“补充后重跑 `inspect wave1 --gate=content_dedup`，该 gate 依赖你刚修改的 surface”
+
+这三条都不是动态推理的结果。Engine 在写 schema 和 gate 时已经知道：哪个 gate 检查哪个字段、该字段属于哪个 schema、该 schema 由哪个上游 gate 授权、该 gate 在哪个 checkpoint。Engine 只需沿静态图从失败节点往回走一步，就能给出精确导航。
+
+基本反馈形状保持简单：
 
 ```text
 check: failed
-root_cause: finding-index 缺少 required field `hitl2_handoff`
-next_action: 补字段后重跑同一个 inspect/gate
+gate: wave1_content_dedup
+missing_fact: source_ref.captured_at (schema source_ref/v1) 当前为 null，要求非空字符串
+write_to: output_files[].declarations（surface 已被 wave0_structure 授权通过）
+rerun: inspect wave1 --gate=content_dedup
 ```
 
-不推荐：
+反馈可以附带 durable diagnostic detail，但 primary feedback 必须包含上述三要素。
 
-```text
-55 failures
-  -> missing field
-  -> enum mismatch
-  -> synthesis ineligible
-  -> handoff mismatch
-  -> backing mismatch
-  -> downstream count mismatch
-```
+### Short-Circuit Through Lineage
 
-后者可能都“逻辑正确”，但对 Agent Flow 不可靠。前置根因未修前，下游判断没有行动价值。
+上述 Prerequisites Before Implications 纪律在此直接适用：Engine 沿 contract lineage 追溯到最早失败节点即停止，不把级联派生 symptom 塞给 Agent。一条 `source_ref` 缺失不应展开为 55 条 failure。
+
+MD controller 不怕简单问题，怕的是长判断链和模糊反馈。Engine/CLI 输出应让 Agent 不读源码也能继续：知道缺什么、写在哪里、写完重跑什么。
 
 ## Complexity Budget
 
