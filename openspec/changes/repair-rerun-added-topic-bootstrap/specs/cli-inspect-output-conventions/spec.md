@@ -131,7 +131,7 @@ Inspect SHALL preserve `{ check, inspect, advice, hints }`, exit code `0/1/2`, n
 
 Cross-reference metadata inspection SHALL consume the same canonical reference-binding adapter as Wave1 and file observability. It SHALL accept exact UID-only, valid legacy, or identical dual binding without requiring the raw legacy field, and SHALL report one adapter conflict/ambiguity root rather than per-field missing/dangling advice.
 
-Triple artifacts, finding structured fields, six semantic ledger sections, synthesis/backfill/cross-artifact contracts, reference navigation/backing, explicit floors, and targeted-evidence/submitted provenance SHALL remain blocking where they are formal rules. Heading marker, spacing, and equivalent case differences SHALL be parsed tolerantly while semantic sections remain required.
+Triple artifacts, finding structured fields, six non-empty semantic ledger sections, synthesis/backfill/cross-artifact contracts, reference navigation/backing, explicit floors, and targeted-evidence/submitted provenance SHALL remain blocking where they are formal rules. The historical `ledger_fixed_sections` rule id MAY remain for compatibility, but its evaluator SHALL treat the six required sections as a set and SHALL tolerate section order, heading level, spacing, and equivalent case differences.
 
 Legacy `00_shared/` layout and `00-cross` metadata/standard-section presentation that is not consumed by direct authority SHALL remain visible as advisory. `source_url`, prior/submitted backing refs, index coverage, and provenance needed to classify a cross reference SHALL remain blocking.
 
@@ -172,6 +172,12 @@ Inspect SHALL preserve `{ check, inspect, advice, hints }`, exit code `0/1/2`, n
 - **WHEN** `cross-topic-ledger.md` lacks the HITL2 Handoff semantic section
 - **THEN** inspect SHALL report the missing section
 - **AND** harmless heading whitespace or marker differences SHALL not be the sole cause of failure
+
+#### Scenario: Reordered Wave2 ledger sections remain valid
+
+- **WHEN** `cross-topic-ledger.md` contains all six required non-empty semantic sections in a different order or equivalent heading level/case
+- **THEN** Wave2 inspect and formal Gate SHALL accept the section contract
+- **AND** the historical ordered regex SHALL NOT remain a hidden blocking path
 
 #### Scenario: missing finding field produces one root repair target
 

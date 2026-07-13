@@ -12,7 +12,7 @@
 | BUG-086 | countability 重复做内容/表现启发式 | count 只读 accepted status + parseable URL |
 | BUG-087 | depth review 重抄 ledger/cache truth | Engine 从 reviewed submitted rows 直接派生 |
 | BUG-088 | submitted ledger 丢行后原 row 不可恢复 | future submit 可确定重建 + 狭窄 hash-identical recovery |
-| BUG-089 | supplementary source claim 只能引用当前 output | 接受同 Topic prior compatible submitted output |
+| BUG-089 | supplementary source claim 只能引用当前 output | 接受same Topic/wave/kind且contract-authorized role的prior submitted output |
 
 这些 BUG 还暴露了更上位的 control defect：Engine 在 gate definition、schema、checker、producer 和 checkpoint 中已经知道 contract lineage，但 formal Gate 往往只返回 pass/fail、松散 `inspect[]` 和泛化 `advice[]`。Agent 看不到内部 lineage，只能猜字段、路径和下一条命令。逐事故补错误字符串会继续扩大 Gate 与补丁数量。
 
@@ -35,7 +35,7 @@
 - Reference topic binding：canonical UID/current/previous-layout resolver + one thin metadata adapter
 - Reference consumer navigation：accepted eight-column `reference/_INDEX.md`；不是 topic/provenance authority
 - Wave1 source/cache/novelty：reviewed hash-valid submitted rows + Wave0 source authority + profile
-- Gate contract lineage：`DPT_FRAMEWORK/schema/contracts/gate-definition.mjs` 的 shared Zod contract + ten active definitions + GSK-011 rule/preflight inventory；rule `target` 是 checked authority，不自动是 writable surface
+- Gate contract lineage：`DPT_FRAMEWORK/schema/contracts/gate-definition.mjs` 的 shared Zod contract + ten active definitions + detecting helper contracts + GSK-011 closure/no-bypass audit；rule `target` 是 checked authority，不自动是 writable surface
 - Gate observed truth：各 checker 读取的直接 authority；现有 `wave-contract-findings.mjs` finding 和 `hints[]` 只是同一次 evaluation 的 in-memory feedback projection，不是新 authority
 
 ## Goals / Non-Goals
@@ -91,11 +91,11 @@ repair.owner
 repair.write_to
 ```
 
-合法 blocking basis 限于 direct authority existence/parseability、identity/provenance binding、accepted structure/enum/invariant/floor、required semantic availability 或 recorded human decision。仅保护 heading 顺序、大小写、列表样式、prose 长度或偏好数量的规则删除、宽容解析或降为 advisory。
+`blocking_basis` 必须取以下闭合enum之一：`invocation_contract`、`configuration_integrity`、`authority_integrity`、`identity_binding`、`lifecycle_binding`、`provenance_binding`、`accepted_structure`、`accepted_invariant`、`required_floor`、`semantic_availability`、`recorded_human_decision`。仅保护 heading 顺序、大小写、列表样式、prose 长度或偏好数量的规则没有合法enum可选，必须删除、宽容解析或降为 advisory；不得用宽泛的`accepted_invariant`给表现偏好补合法外观。
 
-`rule.target` 只表示 checker 读取的位置。若 target 是 status、trace、ledger、index、receipt、hash 或其他 Engine-owned authority，`repair.write_to` 必须指向现有合法 Engine operation；没有合法 operation 时返回 `missing_contract`，不得把 direct file edit 伪装成修复路径。
+Rule checked authority descriptor来自existing `target`，或`cross_field/structural`等check-specific `targets/fields/sources`。Common schema不得强迫四条现有target-less rule伪造一个target。无论descriptor形态如何，它只表示checker读取的authority；若authority是status、trace、ledger、index、receipt、hash或其他Engine-owned surface，`repair.write_to`必须指向existing legal Engine operation；没有legal operation时返回`missing_contract`，不得把direct file edit伪装成修复路径。
 
-这些definition字段由 `DPT_FRAMEWORK/schema/contracts/gate-definition.mjs` 中一个新的、非deprecated的 Zod Gate-definition contract解析。所有 production semantic readers 必须导入同一个 parser：`loadGateDefinition()`/safe loader、`consistency-validator.mjs`、`post-final-recovery.mjs` 的 rerun guard、`validate-work-unit-hygiene.mjs` 的 definition audit，以及 GSK-011 active-rule audit。Definition tests也消费同一schema；不得让runtime或维护CLI继续裸`JSON.parse`而audit维护第二套字段断言。`post-final-recovery` 可以继续对原始definition bytes计算SHA-256，但任何 `gate/rules/operator/value` 语义读取必须来自schema-parsed value。Schema只校验静态definition shape和跨字段owner/surface约束，不执行Gate rule，也不成为runtime verdict；check-specific dispatch、producer/test closure仍由GSK-011 audit拥有。
+这些definition字段由 `DPT_FRAMEWORK/schema/contracts/gate-definition.mjs` 中一个新的、非deprecated的 Zod Gate-definition contract解析。所有 production semantic readers 必须导入同一个 parser：`loadGateDefinition()`/safe loader、`consistency-validator.mjs`、`post-final-recovery.mjs` 的 rerun guard、`validate-work-unit-hygiene.mjs` 的 definition audit，以及 GSK-011 active-rule audit。Definition tests也消费同一schema；不得让runtime或维护CLI继续裸`JSON.parse`而audit维护第二套字段断言。`post-final-recovery` 可以继续对原始definition bytes计算SHA-256，但任何 `gate/rules/operator/value` 语义读取必须来自schema-parsed value。Schema拥有common rule shape、checked-authority descriptor alternatives和repair metadata约束，但check-specific fields保持passthrough并由GSK-011 dispatch/closure audit验证；schema不执行Gate rule，也不成为runtime verdict。
 
 防旁路不依赖另一份永久手写reader名单。Static no-bypass check扫描production对`schema/gate_definitions`的直接读取：除shared parser内部的parse和post-final明确的raw-byte hash accessor外，任何semantic read必须导入shared parser。当前consumer names只用于迁移与focused regression，不成为第二份Source of Record。
 
@@ -113,11 +113,15 @@ GSK-011 audit 扩展为 executable contract inventory，验证 active rules 以�
 - production definition semantic read不存在shared parser旁路；raw-byte读取只保留已声明的hash用途。
 - invalid invocation、definition/config、binding、handoff/status、topic-state prerequisite、routing 和 durable handoff trace roots 也有 stable identity、blocking basis、repair owner/write surface 与 focused test。
 
-这是一份静态 closure audit，不是 runtime lineage database。
+Definition外的root metadata不复制到中央`GATE_FAILURE_ROOTS`或preflight catalog。`parseGateCliArgs()`、`tryLoadGateDefinition()`、node/gate binding、handoff/status helper、routing和durable trace owner在检测direct failure时直接返回现有structured finding；wrapper只传给projector。GSK-011通过failure-class matrix和source no-bypass checks证明所有failed exits都来自owner helper/finding，不另外保存一份root truth。这是一份closure audit，不是runtime lineage database或第二catalog。
 
 ### 2. 泛化现有 structured finding，所有 formal Gate failure 从它投影
 
-本Change不新建平行failure object。它泛化现有 `DPT_FRAMEWORK/engine/helpers/wave-contract-findings.mjs` 的 `makeContractFinding()`、`buildContractEvaluation()` 和 `projectInspectContract()`：在已有 `rule_id/classification/surface/expected/repair/detail/masked_rule_ids` 基础上补direct observed fact、repair owner、resolved `write_to`、missing-fact projection所需字段和checkpoint context。Formal Gate与Wave inspect都消费这个shape；compatibility adapters可以把旧checker结果一次性归一化，但不得形成第二种成功/失败解释。
+本Change不新建平行failure object。它泛化现有 `DPT_FRAMEWORK/engine/helpers/wave-contract-findings.mjs` 的 `makeContractFinding()`、`buildContractEvaluation()` 和 `projectInspectContract()`：在已有 `rule_id/classification/surface/expected/repair/detail/masked_rule_ids` 基础上补closed `blocking_basis`、direct observed fact、repair owner、resolved `write_to`、missing-fact projection所需字段和checkpoint context。Formal Gate与Wave inspect都消费这个shape；compatibility adapters可以把旧checker结果一次性归一化，但不得形成第二种成功/失败解释。
+
+Finding `id` 可以保留某次诊断实例标识，`rule_id` 才是formal projection和attempt comparison使用的稳定identity。`buildContractEvaluation()` 必须从blocking finding的`rule_id`投影`failed_rule_ids`，不能继续用可能包含message index或临时instance suffix的`id`。多个同rule independent roots仍通过各自finding/hint的resolved coordinate区分；`failed_rule_ids`只做稳定规则集合。
+
+现有 `findingsFromCheckResult()` 不得继续从`inspect[]`的`[id]`前缀或`advice[]`位置反推blocking root。它可以保留为advisory/diagnostic-only兼容adapter；任何会使当前inspect或formal Gate失败的return-map/check result必须直接返回structured finding，或由拥有该check contract的helper用显式fields转换，不能从prose恢复rule identity/repair lineage。
 
 Checker boundary 产生的统一 in-memory finding 至少保留：rule/root identity、direct observed fact、expected contract、checked authority、repair metadata、classification 和 masking relationship。Shared builder 从它投影：
 
@@ -139,6 +143,8 @@ Checker boundary 产生的统一 in-memory finding 至少保留：rule/root iden
 Pass 必须返回 `hints: []`。每个 independent primary root 返回一个 hint；parent artifact/schema/identity failure 先短路依赖规则，masked/downstream symptoms 只留作 bounded forensic detail。实现使用 local prerequisites 与现有 masking 概念，不建设 general dependency engine。
 
 十个 wrappers 的 invalid invocation、definition parse/load、node/gate binding、handoff/status preflight、topic-state prerequisite、gate-specific prerequisite、rule evaluation、routing/config 和 durable handoff trace failure都走 shared failure/result builder。Wrapper 不再从 error string、`inspect[]`、`advice[]`、`failure_message` 或 target filename 猜 hint，也不能手工返回一个缺 `hints[]` 的 failed result。
+
+现有`writeGateAttempt()`调用位置和strict handoff durability ownership保持不变，本Change不引入finalizer。已有Gate failure diagnostic serializer必须把`hints[]`与`check/routing/inspect/advice`一并持久化，保证stdout反馈在后续context reload/post-mortem中不丢失；pass diagnostic可以保存`hints: []`。这只是扩展existing diagnostic projection，不让diagnostic成为authority。
 
 `buildGateResult()` 的primary root/hint顺序必须来自structured finding的classification、prerequisite masking和stable rule identity。现有 `gateMessagePriority()`/`prioritizeMessages()` 不得继续用error-string regex决定root precedence；可删除，或仅作为不影响`failed_rule_ids/hints[]`的legacy prose展示。Gate attempt trend只比较stable `failed_rule_ids`；旧diagnostic没有这些IDs时不参与比较，当前结果成为第一份可比较sample，不再退回比较`inspect[]` prose。
 
@@ -189,6 +195,8 @@ Shared `reference_format` 独立检查 required non-empty semantic sections、me
 
 Wave1 definition 删除 blocking `key_facts_min_lines`；对应 checker dispatch、rule inventory、degradation list、producer wording 和 blocking tests 同步删除或降级，避免 shadow rule。
 
+同一纪律应用于Wave2 `cross-topic-ledger.md`：六个accepted semantic sections必须存在且non-empty，但历史`ledger_fixed_sections`的ordered regex不得继续决定pass/fail。为兼容diagnostic identity可保留该rule id，checker改为tolerant section-set evaluator，宽容order、case、heading level和spacing；缺一个section只报该semantic root，不把presentation差异升级为blocking。
+
 ### 8. Depth review 从 submitted ledger 派生，不复制 authority
 
 `depth-review.yaml` blocking shape 只保留不可从 direct authority 推导的事实：version/topic、`reviewed_work_unit_refs[]`、depth dimensions、profile judgment、decision、supplementary IDs。
@@ -199,7 +207,7 @@ Missing/unresolved reviewed ref 是 parent root，mask source/cache/novelty/floo
 
 ### 9. Declaration recovery 复用 direct owners，不建立 witness/shadow ledger
 
-Normal 与 late submit 在 existing transaction 内先生成一个 submission timestamp，再用它构造 ledger row 和 `ledger_record_hash`，并一致写入 ledger `declared_at`、index `terminal_at`、status `updated_at` 和 queue `completed_at`。Dry-submit只验证可在提交前确定的候选事实，不固定最终timestamp/hash。Normal ledger row 因此可由现有 manifest/beacon/result/receipt/output/source/cache/index/status/queue owners 确定重建，不增加 recovery file 或 row copy。
+Normal 与 late submit 的pre-transaction prepare/dry-submit只产生side-effect-free candidate validation plan，不生成或携带final ledger row/hash，也不通过`loadQueue()`写trace/log、不落盘result/receipt/cache canonicalization、不创建transaction artifact。最终rejection boundary仍可用existing trace/log记录失败。Existing transaction取得lock并重新读取/验证mutable index、queue和replacement facts后，才应用canonicalization writes、生成唯一submission timestamp、构造ledger row和`ledger_record_hash`，并一致写入ledger `declared_at`、index `terminal_at`、status `updated_at`和queue `completed_at`。Commit不得复用transaction外预计算的ledger hash。Normal ledger row因此可由existing manifest/beacon/result/receipt/output/source/cache/index/status/queue owners确定重建，不增加recovery file或row copy。
 
 Late-submit 只在 existing work-unit index 保存无法从其他 owner 推导的最小 accepted context：late accept reason、prior terminal status `timed_out`、superseded retry IDs。它不复制 result/output/cache/receipt/actor 或完整 ledger row，也不被 Gate 当作 coverage。
 
@@ -228,12 +236,12 @@ Gate/inspect 看到 submitted index 但 missing row 时先返回 `submitted_decl
 
 ### 10. Supplementary source_ref 解析 current 或 prior same-topic submitted output
 
-`validateSourceClaims` 使用一个由 hash-valid bundle ledger + canonical topic resolver 派生的 in-memory submitted-output index。它不是新 persistent authority。
+`validateSourceClaims` 使用一个由 hash-valid bundle ledger row绑定到existing work-unit index/manifest/queue-item topic payload，再经canonical topic resolver派生的 in-memory submitted-output index。它不是新 persistent authority。Topic UID不能从output filename或queue id猜；任一prior row无法通过existing binding解析唯一canonical Topic时不进入候选集。
 
 Accepted `source_ref` 合法形式：
 
 1. 当前 result `output_files[]`；或
-2. 同 canonical Topic、compatible Wave1 evidence-output contract 的 prior hash-valid submitted output。
+2. prior hash-valid submitted row中的exact output path，且该row通过bound index/manifest/queue item解析出的canonical Topic UID、wave和kind与current attempt相同，output role位于current kind contract显式声明的`source_claims.prior_submitted_output_roles[]`。该role list必须unique且为`output_files.allowed_roles[]`子集；`wave1_topic_deepening`默认只允许prior `evidence_summary`，不允许`question_list`、`reference`、`other`或仅filesystem存在的文件冒充source evidence。
 
 Filesystem-only、unsubmitted/invalid row、cross-topic、ambiguous text match 继续拒绝。当前 supplementary work unit 新增的 cache/degraded refs 仍由当前 result 声明。Diagnostic 给出 claim index、candidate、searched current/prior sets、conflicting work/topic，以及 exact JSON pointer + same dry-submit rerun。
 
@@ -254,9 +262,12 @@ Gate hint 不把命令推给用户；它把 Engine 已知的合法路径交给 A
 - Runtime loader、consistency validator、post-final recovery、hygiene validator和GSK-011 audit对同一definition bytes给出同一schema verdict；post-final raw-byte hash保持不变。
 - Dynamic `write_to` template全部解析成exact coordinate；unknown placeholder/config context fail closed且不泄漏模板给Agent。
 - `failure_message`与repair metadata不矛盾，不建议手改Engine authority；structured roots而非string regex决定primary顺序与attempt trend。
+- `failed_rule_ids`来自finding `rule_id`而非diagnostic instance `id`；实例坐标仍保留在finding/hint。
+- blocking return-map/check result直接提供structured finding；`findingsFromCheckResult()`不再从prose制造blocking authority。
 - Engine-owned authority 的 `write_to` 只指 legal operation 或 `missing_contract`，从不建议手改 status/trace/ledger/index/receipt/hash。
 - Parent root mask dependent hints；fatigue/degraded wording不替代 direct hint。
 - Wave inspect/formal Gate 对 shared rules 的 root coordinates 同源，inspect保持 no-write/no-routing。
+- Existing durable Gate diagnostic保留同一次result的`hints[]`；wrapper write ownership、trace authority和verdict不变。
 - GSK-011 audit 验证 blocking basis/repair closure、ten-pair bijection 和 removed-rule no-shadow；registry GSK-002/003/004 stale counts 同步修正。
 
 ### Nine-BUG regression matrix
@@ -266,9 +277,10 @@ Gate hint 不把命令推给用户；它把 Engine 已知的合法路径交给 A
 - BUG-084：absolute root一致、nested-root零写、starter/schema一致、dry-submit independent roots；strict actor/receipt/provenance仍拒绝冲突。
 - BUG-085：UID-only/legacy pass、dual conflict一次、index parent short-circuit、inspect/Gate/file-observability同源。
 - BUG-086：short prose/few facts/harmless presentation不影响 count；missing semantic section只由 format 报；blocking Key Facts quantity 退役。
+- All-Gate simplification：Wave2 ledger六个semantic sections可重排/等价heading展示；missing section仍block一次。
 - BUG-087：minimal depth review不复制 source/cache fields也pass；derived mapping/novelty/floor正确；filesystem-only cache fail；missing reviewed ref短路。
 - BUG-088：normal/late submit direct facts 可重建；reconstruction facts不直接满足 Gate；exact-hash recovery、idempotency、legacy evidence和conflict/no-write覆盖。
-- BUG-089：current output pass；prior same-topic compatible output pass；filesystem-only/cross-topic/unsubmitted fail；diagnostic包含 exact pointer 和 same dry-submit。
+- BUG-089：current output pass；prior same-topic/same-wave/same-kind/allowed-role output pass；wrong-role/kind/wave、filesystem-only/cross-topic/unsubmitted fail；diagnostic包含 exact pointer 和 same dry-submit。
 
 ### Controlled real-Agent canary
 
@@ -287,15 +299,16 @@ Gate hint 不把命令推给用户；它把 Engine 已知的合法路径交给 A
 | Gate-definition Zod contract + all ten definitions | one parser供loader/consistency/post-final/hygiene/audit共用；blocking basis + repair owner/write surface；删除无依据 blocker | 静态 lineage，不增加 runtime state或第二validator |
 | `wave-contract-findings`、`gate-helpers-core`、shared evaluators | 泛化existing finding -> check/inspect/advice/hints；structured root排序 | 删除平行failure shape、wrapper/string-priority inference和inspect-prose trend fallback |
 | all ten `check-gate-*.mjs` wrappers | 所有 failure exit 走 shared builder | 保持 one-gate-per-CLI |
-| GSK-011 rule/preflight inventory/static audit | ten-pair bijection + repair closure + no-shadow guard | 防止未来继续堆 opaque Gate |
+| existing Gate diagnostic serializer | 原样保存result `hints[]` | 不重构write ownership，不新增authority |
+| GSK-011 closure/no-bypass audit | ten-pair bijection + helper-owned root + repair closure + no-shadow guard | 防止未来继续堆 opaque Gate或中央root catalog |
 | Wave inspect CLIs/evaluators | shared root coordinates + inspect-specific rerun | read-only，无 second validator |
 | `canonical-topic-state.mjs` | full shared new-seed renderer/merge | 删除 thin skeleton drift；无新 owner |
 | all ten Gate phase/controllers + producer Markdown | 统一hint consumption、normal rerun classification、template requires、minimal depth review | 无新controller、rerun phase或gate |
 | queue/work-unit claim helpers/CLI | distinct root + repair coordinates | read-only feedback；allocator按测试最小修改 |
 | `work-unit-envelope.mjs` | absolute root、starter、checklist | 复用 manifest/schema；无 scaffold CLI |
 | work-unit existing reads | prerequisite-before-create | 删除 wrong-root mkdir 副作用 |
-| work-unit validation | current/prior submitted source-ref index | 删除 single-WU 假设；无 persistent index |
-| submit/index/status/queue transaction + CLI | unified timestamp、minimal late context、recover-declaration | 一个 explicit recovery；无 shadow ledger |
+| kind output contract + work-unit validation | `prior_submitted_output_roles[]` + exact current/prior submitted source-ref index | 删除 single-WU/implicit compatibility 假设；无 persistent index |
+| submit/index/status/queue transaction + CLI | candidate plan不产final hash；locked unified timestamp、minimal late context、recover-declaration | 一个 explicit recovery；无 precomputed commit hash/shadow ledger |
 | `ref-count.mjs` | narrow countability | 删除 content heuristics |
 | reference/gate helpers | tolerant semantic parser、UID adapter、index parent guard | one resolver/evaluator |
 | `wave-depth-contracts.mjs` | derive facts from reviewed ledger rows | 删除 depth-review duplicate authority |
@@ -303,7 +316,7 @@ Gate hint 不把命令推给用户；它把 Engine 已知的合法路径交给 A
 | root `tests/` + controlled playbook | focused deterministic proof + real evidence | 不新增 production checker |
 | registry/CHANGELOG/RUN | GSK/EEX摘要与v0.28同步 | governance/release only |
 
-泛化：现有 in-memory finding/hint projection。新增：rule repair metadata、minimal late-accept context 和一个 explicit recovery operation。删除/合并：opaque wrapper failures、target-string guessing、string-priority roots、inspect-prose trend fallback、stale Gate inventory counts、count content heuristics、blocking Key Facts quantity、fixed question-list presentation、depth-review copied authority、raw topic-field readers、index/declaration cascades和current-output-only source-ref。新增 0 平行failure shape、0 Gate、0 persistent lineage graph、0 ledger副本、0 lifecycle、0 controller、0 retry tree、0 success authority。
+泛化：现有 in-memory finding/hint projection和detecting helpers。新增：rule repair metadata、kind-contract prior-role字段、minimal late-accept context 和一个 explicit recovery operation。删除/合并：opaque wrapper failures、central root-catalog risk、target-string guessing、string-priority roots、inspect-prose trend fallback、stale Gate inventory counts、count content heuristics、blocking Key Facts quantity、fixed question-list/Wave2 ledger order presentation、depth-review copied authority、raw topic-field readers、index/declaration cascades和current-output-only/implicit-compatible source-ref。新增 0 平行failure shape、0 Gate、0 persistent lineage graph、0 ledger副本、0 lifecycle、0 controller、0 retry tree、0 success authority。
 
 ## Risks / Trade-offs
 
@@ -318,7 +331,7 @@ Gate hint 不把命令推给用户；它把 Engine 已知的合法路径交给 A
 - [Presentation tolerance吞掉missing semantics] -> tolerant 的是 case/level/spacing/order/list style；required semantic availability、metadata、URL、authority仍strict。
 - [Recovery reconstruction 误造原 row] -> recomputed hash必须等于 existing index/status hash；绝不 rebind hash；legacy proof不完整即 block。
 - [Minimal late context 变成 shadow row] -> 只保存不可推导 fields；schema/static tests禁止复制 result/output/cache/receipt/actor/ledger row。
-- [Prior source_ref 跨 Topic 泄漏] -> canonical UID + compatible contract + hash-valid submitted row exact match；不做 string similarity。
+- [Prior source_ref 跨 Topic/contract 泄漏] -> canonical UID + same wave/kind + contract-declared prior role + hash-valid submitted row exact match；不做 string similarity或implicit compatibility。
 - [Starter 被当 result] -> task-only code block，不预写 file，submit/Gate 不读取 starter。
 - [Normal first-run退化] -> shared renderer/parser/evaluator与 all-Gate matrix 都覆盖 normal cases；不加 rerun branch。
 - [Heavy canary依赖 actor/search] -> NOT_RUN不算PASS；deterministic regression与real behavior evidence分开报告。
@@ -326,7 +339,7 @@ Gate hint 不把命令推给用户；它把 Engine 已知的合法路径交给 A
 ## Migration Plan
 
 1. 先锁定 ten Gate inventory、all-failure hint matrix、九个 BUG 与 normal compatibility regressions。
-2. 扩展 definition metadata、GSK-011 rule/preflight-root audit、shared root/failure builder，再迁移十个 wrappers 和 Wave inspect。
+2. 扩展 definition metadata、GSK-011 rule/failed-exit closure/no-bypass audit、helper-owned findings 和 shared result projector，再迁移十个 wrappers 和 Wave inspect。
 3. 删除/降级无 blocking basis 的 presentation/duplicate rules，并清理 active shadow dispatch/inventory。
 4. 更新 seed renderer、phase guidance、claim/envelope/dry-submit helper和source-ref resolution。
 5. 统一 submit timestamps、保存 minimal late context，实现 hash-identical `recover-declaration` 与 missing-row parent diagnostic。

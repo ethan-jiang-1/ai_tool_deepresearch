@@ -6,7 +6,7 @@
 
 Work-unit ledger declarations SHALL preserve creation context through `work_id`, `queue_item_id`, `wave`, `kind`, `producer_rule`, `creation_reason`, `work_unit_ref`, `result_ref`, `runtime_receipt_ref`, `receipt_nonce`, `result_hash`, `ledger_record_hash`, output/source/cache declarations and actor execution binding.
 
-Normal submit SHALL create one Engine submission timestamp inside the existing commit transaction, use it to build the final ledger row and `ledger_record_hash`, and then use that same value for ledger `declared_at`, index `terminal_at`, status `updated_at`, and queue `completed_at`. Candidate validation or dry-submit before the transaction SHALL NOT freeze or advertise a final ledger timestamp/hash. Therefore a normal submitted row SHALL be deterministically reconstructable from existing direct owners without new recovery state.
+Normal submit SHALL create one Engine submission timestamp inside the existing commit transaction, use it to build the final ledger row and `ledger_record_hash`, and then use that same value for ledger `declared_at`, index `terminal_at`, status `updated_at`, and queue `completed_at`. Candidate validation or dry-submit before the transaction SHALL produce only a side-effect-free validation plan and SHALL NOT build, freeze, carry into commit, or advertise a final ledger row/timestamp/hash. It SHALL use read-only queue/cache/result/receipt evaluation and SHALL NOT write queue-load trace/log, canonical cache pages, normalized result/receipt content, transaction artifacts or authority files. The final accepted rejection boundary MAY continue to record its existing diagnostic trace/log. After acquiring the existing transaction lock, submit SHALL reload/revalidate mutable index, queue, replacement and terminal facts, apply accepted canonicalization writes, and only then generate the timestamp and row. Therefore a normal submitted row SHALL be deterministically reconstructable from existing direct owners without new recovery state.
 
 Audited late-submit SHALL persist only its irreducible late-accept context on the existing work-unit index record before the bundle ledger append is reported durable: non-empty accepted reason, prior terminal status `timed_out`, and superseded retry work IDs. It SHALL use the same single submission timestamp rule. This bounded context SHALL NOT copy `output_files`, `source_claims`, cache trails, actor execution, result refs, receipt refs, the complete ledger row, or separately copy facts already owned by terminal queue/index records.
 
@@ -26,6 +26,13 @@ Audited late-accepted rows SHALL continue to preserve their existing hash-covere
 - **AND** those four surfaces SHALL use the same submission timestamp
 - **AND** reconstructing from existing direct owners SHALL reproduce the appended row and index/status hash exactly
 - **AND** gate coverage SHALL still come only from `rb_output_declarations.jsonl`
+
+#### Scenario: Pre-transaction validation cannot precompute declaration authority
+
+- **WHEN** dry-submit or normal submit prepare validates a candidate before the commit transaction
+- **THEN** its plan SHALL contain no final `declared_at` or `ledger_record_hash`
+- **AND** recursive bundle/trace/log snapshots SHALL show no prepare-time mutation before the final rejection or locked commit boundary
+- **AND** the locked commit SHALL revalidate mutable facts, apply accepted canonicalization writes, and create the only final timestamp/hash used by all terminal surfaces
 
 #### Scenario: Late-submit preserves only irreducible context
 

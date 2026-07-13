@@ -65,7 +65,7 @@ Work-unit provenance diagnostics SHALL carry `work_id`, `queue_item_id`, wave, k
 
 When a root failure explains downstream findings, the primary result SHALL mask or group those findings. A missing declaration SHALL not appear simultaneously as an empty Wave ledger, missing every output, missing every cache trail, delegated bypass and zero reference count. Full forensic detail MAY remain in existing diagnostic detail, but the Agent-facing repair list SHALL stay root-first.
 
-For source/output/cache binding failures, diagnostics SHALL name the exact result JSON pointer or submitted authority ref the Agent can change or reuse. They SHALL say whether a value must be added to the current candidate, selected from a compatible submitted row, restored through Engine recovery, or produced by a new legal attempt. They SHALL never advise hand-editing ledger/index/status hashes.
+For source/output/cache binding failures, diagnostics SHALL name the exact result JSON pointer or submitted authority ref the Agent can change or reuse. They SHALL say whether a value must be added to the current candidate, selected from an exact same-topic/wave/kind submitted row whose role is authorized by the current kind contract, restored through Engine recovery, or produced by a new legal attempt. They SHALL never advise hand-editing ledger/index/status hashes.
 
 #### Scenario: Missing declaration diagnostic is self-sufficient
 
@@ -76,8 +76,8 @@ For source/output/cache binding failures, diagnostics SHALL name the exact resul
 
 #### Scenario: Source-ref mismatch identifies lineage repair
 
-- **WHEN** submit rejects a source claim because its source ref is not current or compatible prior submitted output
-- **THEN** diagnostics SHALL name the claim index, candidate path, searched authority sets and compatible repair form
+- **WHEN** submit rejects a source claim because its source ref is not current or contract-authorized prior submitted output
+- **THEN** diagnostics SHALL name the claim index, candidate path, searched authority sets, observed prior wave/kind/role where available and exact accepted repair form
 - **AND** `write_to` SHALL identify the exact source-claim JSON pointer and `rerun` SHALL name the same dry-submit command
 
 #### Scenario: Cache drift preserves submitted context

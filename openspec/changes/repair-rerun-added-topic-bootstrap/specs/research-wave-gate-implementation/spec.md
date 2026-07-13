@@ -62,6 +62,41 @@ These checks SHALL remain deterministic process/structure checks. They SHALL NOT
 - **AND** omission of the retired duplicate fields SHALL NOT fail the review
 
 
+### Requirement: Wave2 complete gate rule set
+
+The Wave2 complete gate definition SHALL distinguish pure main-agent synthesis from delegated targeted evidence search. Delegated Wave2 targeted evidence outputs SHALL require submitted work-unit ledger rows; pure synthesis artifact checks SHALL continue to use synthesis artifact rules.
+
+The Wave2 gate definition SHALL require deterministic evidence that the pure synthesis path was earned: scan matrix coverage, finding-index parseability, confidence/backing field consistency, unresolved search-required count, and targeted search receipt refs when a finding decision required delegated search. It SHALL fail when synthesis prose exists but scan/triage/gap-analysis artifacts are absent or inconsistent.
+
+`cross-topic-ledger.md` SHALL contain the six required non-empty semantic sections: Cross-Topic Scan Matrix, Wave1 Legacy Questions, Cross-Topic Resolutions, Emergent Cross-Topic Questions, Exploration Decisions, and HITL2 Handoff. The historical `ledger_fixed_sections` rule id MAY remain stable for compatibility, but its checker SHALL evaluate section availability as a tolerant set rather than an ordered regex. Section order, heading level, spacing, and equivalent case SHALL NOT independently fail the Gate.
+
+These checks SHALL NOT judge whether the synthesis is profound or whether a finding is semantically valuable. They only verify that the required process evidence, semantic sections and cross-file consistency exist.
+
+#### Scenario: Delegated Wave2 targeted search requires work-unit row
+
+- **WHEN** Wave2 targeted evidence search creates new evidence outputs
+- **THEN** Wave2 complete gate SHALL require submitted work-unit coverage for those outputs
+
+#### Scenario: Wave2 synthesis without scan matrix fails
+
+- **WHEN** `artifacts/wave2/synthesis.md` exists
+- **AND** `cross-topic-ledger.md` lacks the Cross-Topic Scan Matrix section or `finding-index.yaml` lacks scan coverage fields
+- **THEN** Wave2 complete gate SHALL fail structure/preflight checks
+- **AND** the primary finding SHALL name the missing semantic/structured fact rather than a heading-format preference
+
+#### Scenario: Search-required finding without receipt or deferral fails
+
+- **WHEN** `finding-index.yaml` contains a finding with `search_required: true`
+- **AND** the finding has no submitted targeted evidence receipt refs and no explicit `defer_hitl2`, `requires_internal_data`, or `record_only` decision
+- **THEN** Wave2 complete gate SHALL fail convergence checks
+
+#### Scenario: Six ledger sections may be reordered
+
+- **WHEN** all six required non-empty sections exist in a different order or equivalent heading presentation
+- **THEN** the `ledger_fixed_sections` compatibility rule SHALL pass
+- **AND** no ordered-regex shadow checker SHALL fail formal Gate or inspect
+
+
 ### Requirement: Gate CLI evaluates wave1 rules from definition
 
 The Wave1 gate CLI SHALL evaluate work-unit provenance rule types and Wave1 depth-contract rule types from the gate definition. It SHALL use work-unit helper diagnostics for ledger/index/manifest/result/receipt/beacon/hash/cache mismatches and SHALL use deterministic readers for `depth-review.yaml`, Wave0 source URL sets, structured source claims, submitted cache trail mappings, canonical reference topic binding, and the reference-index table.
