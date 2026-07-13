@@ -17,7 +17,19 @@
 
 _当前无活跃 bug。_
 
-**Next available bug ID: BUG-081**
+| Bug | 简述 | 状态 |
+|-----|------|------|
+| [BUG-081](BUG-081-add-topic-generates-minimal-seed-skeleton.md) | `add_topic` 生成 seed 骨架过于简陋 | Open |
+| [BUG-082](BUG-082-rerun-new-topic-wave0-no-work-unit-provenance.md) | Rerun 中 add_topic 的新 topic 在 wave0 gate 缺少 work-unit provenance | Open |
+| [BUG-083](BUG-083-queue-claim-returns-empty-on-active-window.md) | operate-queue claim 拒绝 delegated item（设计如此）→ 需走 operate-work-unit，但 phase_agent_fallback 被拒 | Open |
+| [BUG-084](BUG-084-work-unit-submit-impossible-to-satisfy-manually.md) | operate-work-unit submit 交叉校验字段过多，手工构造 result 不可行 | Open |
+| [BUG-085](BUG-085-wave1-gate-reference-format-rejects-uid.md) | Wave1 gate reference_format 拒绝 related_topic_uid | Open |
+| [BUG-086](BUG-086-isCountable-requires-core-content-capture.md) | isCountable 要求 ## Core Content Capture——模板用 ## Key Facts | Open |
+| [BUG-087](BUG-087-depth-review-source-claims-need-ledger-cache-trails.md) | depth-review source_claim_cache_mapping 要求 cache trail 在 submitted ledger | Open |
+| [BUG-088](BUG-088-output-declarations-not-recoverable.md) | rb_output_declarations.jsonl 无法从 index+result 重建 | Open |
+| [BUG-089](BUG-089-submit-rejects-source-ref-not-in-output-files.md) | submit 拒绝 source_ref 不在本 WU output_files——阻止 supplementary WU | Open |
+
+**Next available bug ID: BUG-090**
 
 ---
 

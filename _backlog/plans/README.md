@@ -15,4 +15,4 @@
 
 ## 活跃列表
 
-_当前无活跃 plan。C1–C5 路线全部五 change 已 archive，三份 plan（overall roadmap、breakpoint-recovery-persistence-model、human-override-and-state-mutability）已随来源关闭移入 `_done/_closed_plans/`。_
+- [seed-backfill-round-continuity](seed-backfill-round-continuity.md) — **P0 设计缺陷**：seed topic 回填区是单次消费结构，`__BACKFILL_*__` token 消费后消失，多轮 rerun 没有结构化回填目标。推荐方案：phase-rerun 追溯标记上轮内容+重新注入 fresh token。
