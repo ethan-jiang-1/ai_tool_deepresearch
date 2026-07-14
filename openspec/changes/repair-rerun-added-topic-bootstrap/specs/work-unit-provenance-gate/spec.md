@@ -61,7 +61,7 @@ For a missing ledger row, the submission-presence evaluator SHALL inspect only e
 
 ### Requirement: Gate diagnostics SHALL carry work-unit binding context
 
-Work-unit provenance diagnostics SHALL carry `work_id`, `queue_item_id`, wave, kind, failing direct surface, expected deterministic fact, observed fact, repair target and at most one structured nearest action. Every primary in-scope root SHALL include `missing_fact`, `write_to`, and `rerun`. Diagnostics SHALL use work-unit identity rather than forcing the Agent to infer lineage from a generic file error.
+Work-unit provenance diagnostics SHALL carry `work_id`, `queue_item_id`, wave, kind, failing direct surface, expected deterministic fact, observed fact, repair target and at most one structured nearest action. Every primary in-scope root SHALL include `repair_kind`, `missing_fact`, `write_to`, and `rerun`. Diagnostics SHALL use work-unit identity rather than forcing the Agent to infer lineage or action responsibility from a generic file error.
 
 When a root failure explains downstream findings, the primary result SHALL mask or group those findings. A missing declaration SHALL not appear simultaneously as an empty Wave ledger, missing every output, missing every cache trail, delegated bypass and zero reference count. Full forensic detail MAY remain in existing diagnostic detail, but the Agent-facing repair list SHALL stay root-first.
 
@@ -71,14 +71,14 @@ For source/output/cache binding failures, diagnostics SHALL name the exact resul
 
 - **WHEN** a submitted work ID lacks its ledger row
 - **THEN** diagnostics SHALL name the work ID, missing ledger row, reconstruction eligibility and exact recover command or missing-contract blocker
-- **AND** `missing_fact` SHALL identify the absent declaration authority, `write_to` SHALL identify the Engine-owned recovery operation, and `rerun` SHALL identify the same gate/inspect checkpoint after recovery
+- **AND** `repair_kind` SHALL be `engine_operation` when recovery is legal or `missing_contract` when it is not, `missing_fact` SHALL identify the absent declaration authority, `write_to` SHALL identify that boundary, and `rerun` SHALL identify the same gate/inspect checkpoint after recovery
 - **AND** the Agent SHALL not need to read Engine source to choose the next action
 
 #### Scenario: Source-ref mismatch identifies lineage repair
 
 - **WHEN** submit rejects a source claim because its source ref is not current or contract-authorized prior submitted output
 - **THEN** diagnostics SHALL name the claim index, candidate path, searched authority sets, observed prior wave/kind/role where available and exact accepted repair form
-- **AND** `write_to` SHALL identify the exact source-claim JSON pointer and `rerun` SHALL name the same dry-submit command
+- **AND** `repair_kind` SHALL be `agent_action`, `write_to` SHALL identify the exact source-claim JSON pointer and `rerun` SHALL name the same dry-submit command
 
 #### Scenario: Cache drift preserves submitted context
 

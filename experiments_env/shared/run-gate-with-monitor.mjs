@@ -234,10 +234,8 @@ async function main() {
       appendDiagnosticTrace(bundle, artifact);
 
       // Preserve the gate's own stdout so the caller can still read it
-      process.stdout.write(stdout);
-
-      // Exit with the wrapped gate's exit code
-      process.exit(exitCode);
+      process.exitCode = exitCode;
+      process.stdout.write(stdout, () => resolve());
     });
   });
 }

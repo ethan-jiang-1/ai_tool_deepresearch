@@ -10,11 +10,11 @@ import {
   checkCacheCoverage,
   checkReferenceFormatFiles,
   checkReferenceIndexCoverage,
-  checkReferenceKeyFactsMinLines,
   checkReferenceLedgerCoverage,
   checkReferenceSourceUrls,
 } from './gate-helpers-checks.mjs';
 import {
+  checkDelegatedBypassSuspected,
   checkWorkUnitLedgerExists,
   checkWorkUnitOutputCoverage,
   checkWorkUnitSubmissionPresence,
@@ -36,6 +36,7 @@ import {
 import {
   buildContractEvaluation,
   makeContractFinding,
+  makeDefinitionRuleFinding,
 } from './wave-contract-findings.mjs';
 
 function safeMessage(error) {
@@ -46,14 +47,107 @@ function scopedRuleId(ruleId, topic) {
   return topic ? `${ruleId}:${topic}` : ruleId;
 }
 
-function failureFinding(rule, { topic = null, surface = null, detail, expected = null, repair = null, id = null } = {}) {
-  const ruleId = scopedRuleId(rule.id, topic);
+function failureFinding(bundlePath, rule, {
+  topic = null,
+  surface = null,
+  detail,
+  expected = null,
+  observed = null,
+  missingFact = null,
+  repair = null,
+  id = null,
+  blockingBasis = null,
+  repairKind = null,
+  writeTo = null,
+} = {}) {
+  if (rule?.finding?.source === 'definition') {
+    return makeDefinitionRuleFinding({
+      rule,
+      bundlePath,
+      topic,
+      surface: surface || rule.target || null,
+      expected,
+      observed,
+      missingFact,
+      detail,
+      repair,
+    });
+  }
   return makeContractFinding({
-    id: id || ruleId,
-    ruleId,
+    id: id || scopedRuleId(rule.id, topic),
+    ruleId: rule.id,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis,
     surface: surface || rule.target || null,
-    expected: expected || rule.failure_message || null,
-    repair: repair || (topic ? rule.failure_message?.replace(/\{topic\}/g, topic) : rule.failure_message) || null,
+    expected,
+    observed,
+    missingFact,
+    repairKind,
+    writeTo,
+    repair,
+    detail,
+  });
+}
+
+function configurationFinding(bundlePath, rule, detail, observed = null) {
+  return failureFinding(bundlePath, rule, {
+    surface: `Gate checker dispatch for ${rule.id}`,
+    expected: `Implemented deterministic checker '${rule.check}'.`,
+    observed: observed ?? rule.check,
+    missingFact: detail,
+    detail: `[${rule.id}] ${detail}`,
+    blockingBasis: 'configuration_integrity',
+    repairKind: 'missing_contract',
+    writeTo: `Gate checker implementation boundary for ${rule.id}`,
+    repair: 'Repair the Gate checker contract before rerunning this checkpoint.',
+  });
+}
+
+function topicRegistryPrerequisiteFinding(bundlePath, wave, detail, observed = null) {
+  const ruleId = `${wave}_topic_registry_prerequisite`;
+  return makeContractFinding({
+    id: ruleId,
+    ruleId,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'authority_integrity',
+    surface: resolvePath(bundlePath, 'rb_plan.md'),
+    expected: 'A readable canonical topic_registry with at least one registered Topic.',
+    observed,
+    missingFact: detail,
+    repairKind: 'engine_operation',
+    writeTo: `node DPT_FRAMEWORK/cli/operate-topic-state.mjs inspect --bundle ${resolvePath(bundlePath)}`,
+    repair: 'Inspect and repair canonical topic state through operate-topic-state, then rerun this checkpoint.',
+    detail: `[${ruleId}] ${detail}`,
+  });
+}
+
+function localCheckerFinding(bundlePath, rule, {
+  topic = null,
+  suffix,
+  blockingBasis,
+  surface,
+  expected,
+  observed,
+  missingFact,
+  repairKind = 'agent_action',
+  writeTo = null,
+  repair,
+  detail,
+}) {
+  const resolvedSurface = surface && !String(surface).startsWith('/') ? resolvePath(bundlePath, surface) : surface;
+  return failureFinding(bundlePath, rule, {
+    topic,
+    id: `${rule.id}${topic ? `:${topic}` : ''}:${suffix}`,
+    surface: resolvedSurface,
+    expected,
+    observed,
+    missingFact,
+    blockingBasis,
+    repairKind,
+    writeTo: writeTo || resolvedSurface,
+    repair,
     detail,
   });
 }
@@ -80,9 +174,9 @@ function topicSlugs(bundlePath) {
   return topicLayouts(bundlePath).map((layout) => layout.topic);
 }
 
-function expandRuleTargets(bundlePath, rule) {
+function expandRuleTargets(bundlePath, rule, layouts = null) {
   if (!String(rule.target || '').includes('{topic}')) return [{ topic: null, resolved: rule.target }];
-  return topicLayouts(bundlePath).map((layout) => {
+  return (layouts || topicLayouts(bundlePath)).map((layout) => {
     const currentOnly = String(rule.target).startsWith('seed_topics/');
     const alternatives = (currentOnly ? [layout.topic] : layout.accepted).map((slug) => rule.target.replace(/\{topic\}/g, slug));
     return { topic: layout.topic, resolved: alternatives[0], alternatives };
@@ -290,20 +384,25 @@ export function evaluateWave0Contract(bundlePath, definition) {
   const maskedRuleIds = [];
   const sourceStates = new Map();
   const sourceData = new Map();
+  let layouts;
+  try {
+    layouts = topicLayouts(bundlePath);
+  } catch (error) {
+    return buildContractEvaluation({
+      findings: [topicRegistryPrerequisiteFinding(bundlePath, 'wave0', `Wave0 cannot read canonical topic_registry: ${safeMessage(error)}`, safeMessage(error))],
+    });
+  }
+  if (layouts.length === 0) {
+    return buildContractEvaluation({
+      findings: [topicRegistryPrerequisiteFinding(bundlePath, 'wave0', 'Wave0 cannot expand per-topic contracts because canonical topic_registry is empty.', { topic_count: 0 })],
+    });
+  }
   const bypassSuspicion = scanDelegatedBypassSuspicion(bundlePath, 'wave0');
   let checksRun = 0;
 
   for (const rule of definition.rules) {
     if (rule.check === 'placeholder' || rule.check === 'trace_event_present') continue;
-    let targets;
-    try { targets = expandRuleTargets(bundlePath, rule); } catch (error) {
-      findings.push(failureFinding(rule, { surface: 'rb_plan.md', detail: `Cannot read topic_registry for rule ${rule.id}: ${safeMessage(error)}` }));
-      continue;
-    }
-    if (targets.length === 0 && rule.target.includes('{topic}')) {
-      findings.push(failureFinding(rule, { surface: 'rb_plan.md', detail: `Empty topic_registry: cannot expand "{topic}" placeholder in rule ${rule.id}. Complete HITL1 to populate topic_registry.` }));
-      continue;
-    }
+    const targets = expandRuleTargets(bundlePath, rule, layouts);
 
     for (const expandedTarget of targets) {
       const target = { ...expandedTarget, resolved: ['file_exists', 'schema_valid', 'count_floor', 'pattern_match'].includes(rule.check) ? firstExistingTarget(bundlePath, expandedTarget) : expandedTarget.resolved };
@@ -331,14 +430,47 @@ export function evaluateWave0Contract(bundlePath, definition) {
           const yaml = readYamlArraySafe(join(bundlePath, target.resolved));
           if (!yaml.ok || !Array.isArray(yaml.data)) {
             const keys = yaml.data && typeof yaml.data === 'object' ? Object.keys(yaml.data) : [];
-            result = { passed: false, detail: yaml.ok
+            const detail = yaml.ok
               ? `source.yaml must be a top-level YAML array at ${target.resolved}.${keys.length > 0 ? ` Found object keys: ${keys.join(', ')}` : ''}`
-              : `[parse_error] ${yaml.error}` };
+              : `[parse_error] ${yaml.error}`;
+            result = {
+              passed: false,
+              detail,
+              findings: [localCheckerFinding(bundlePath, rule, {
+                topic: target.topic,
+                suffix: 'yaml_array',
+                blockingBasis: yaml.ok ? 'required_structure' : 'authority_integrity',
+                surface: target.resolved,
+                expected: 'A top-level YAML array accepted by ReferenceMetadataArraySchema.',
+                observed: yaml.ok ? { type: Array.isArray(yaml.data) ? 'array' : typeof yaml.data, object_keys: keys } : yaml.error,
+                missingFact: yaml.ok
+                  ? `${target.resolved} must be a top-level YAML array, but the observed value is not an array.`
+                  : `${target.resolved} cannot be parsed as YAML: ${yaml.error}`,
+                repair: `Repair ${target.resolved} as a top-level YAML array with the required source fields.`,
+                detail,
+              })],
+            };
             sourceStates.set(target.topic, 'invalid');
           } else {
             const parsed = ReferenceMetadataArraySchema.safeParse(yaml.data);
             if (!parsed.success) {
-              result = { passed: false, detail: `Schema validation failed for ${target.resolved}: ${parsed.error.issues.map((issue) => `[${issue.path.join('.') || '<root>'}] ${issue.message}`).join('; ')}` };
+              const issues = parsed.error.issues.map((issue) => `[${issue.path.join('.') || '<root>'}] ${issue.message}`);
+              const detail = `Schema validation failed for ${target.resolved}: ${issues.join('; ')}`;
+              result = {
+                passed: false,
+                detail,
+                findings: issues.map((issue, index) => localCheckerFinding(bundlePath, rule, {
+                  topic: target.topic,
+                  suffix: `schema:${index + 1}`,
+                  blockingBasis: 'authority_integrity',
+                  surface: target.resolved,
+                  expected: 'ReferenceMetadataArraySchema accepts every source entry.',
+                  observed: issue,
+                  missingFact: `${target.resolved} violates ReferenceMetadataArraySchema: ${issue}`,
+                  repair: `Repair the named source entry field in ${target.resolved}.`,
+                  detail: `Schema validation failed for ${target.resolved}: ${issue}`,
+                })),
+              };
               sourceStates.set(target.topic, 'invalid');
             } else {
               sourceStates.set(target.topic, 'valid');
@@ -356,29 +488,38 @@ export function evaluateWave0Contract(bundlePath, definition) {
         } else if (rule.check === 'status_value') {
           result = evaluateStatusRule(bundlePath, rule);
         } else if (rule.check === 'cache_coverage') {
-          const check = checkCacheCoverage(bundlePath);
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
-          if (check.passed) check.inspect.forEach((line, index) => findings.push(advisoryFinding(rule, line, index)));
+          const check = checkCacheCoverage(bundlePath, { rule });
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'work_unit_ledger_exists') {
           const check = checkWorkUnitLedgerExists(bundlePath, rule);
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'work_unit_output_coverage') {
           const check = checkWorkUnitOutputCoverage(bundlePath, rule);
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'work_unit_submission_presence') {
           const check = checkWorkUnitSubmissionPresence(bundlePath, rule);
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'delegated_bypass_suspected') {
-          result = bypassSuspicion.suspected
-            ? { passed: false, detail: `delegated_bypass_suspected: ${(bypassSuspicion.provenanceMissing || []).join('; ')}`, repair: 'Route delegated artifacts through work-unit claim/submit; direct files and hand-written declarations cannot satisfy gate provenance.' }
-            : { passed: true };
+          const check = checkDelegatedBypassSuspected(bundlePath, rule);
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else {
-          result = { passed: false, detail: `Unknown check type: ${rule.check} — must fail (check type not implemented)` };
+          result = { passed: false, findings: [configurationFinding(bundlePath, rule, `Unknown check type: ${rule.check} — must fail (check type not implemented)`)] };
         }
       } catch (error) {
-        result = { passed: false, detail: `Error evaluating rule ${rule.id} (${target.resolved}): ${safeMessage(error)}` };
+        result = { passed: false, findings: [configurationFinding(bundlePath, rule, `Error evaluating rule ${rule.id} (${target.resolved}): ${safeMessage(error)}`, safeMessage(error))] };
       }
-      if (!result.passed) findings.push(failureFinding(rule, { topic: target.topic, surface: target.resolved, detail: result.detail, repair: result.repair }));
+      if (Array.isArray(result.findings)) findings.push(...result.findings);
+      if (!result.passed && (!Array.isArray(result.findings) || result.findings.length === 0)) {
+        findings.push(failureFinding(bundlePath, rule, {
+          topic: target.topic,
+          surface: target.resolved,
+          detail: result.detail,
+          expected: result.expected,
+          observed: result.observed,
+          missingFact: result.missingFact || result.detail,
+          repair: result.repair,
+        }));
+      }
     }
   }
 
@@ -389,20 +530,25 @@ export function evaluateWave1Contract(bundlePath, definition) {
   const findings = [];
   const maskedRuleIds = [];
   const missingFiles = new Set();
+  let layouts;
+  try {
+    layouts = topicLayouts(bundlePath);
+  } catch (error) {
+    return buildContractEvaluation({
+      findings: [topicRegistryPrerequisiteFinding(bundlePath, 'wave1', `Wave1 cannot read canonical topic_registry: ${safeMessage(error)}`, safeMessage(error))],
+    });
+  }
+  if (layouts.length === 0) {
+    return buildContractEvaluation({
+      findings: [topicRegistryPrerequisiteFinding(bundlePath, 'wave1', 'Wave1 cannot expand per-topic contracts because canonical topic_registry is empty.', { topic_count: 0 })],
+    });
+  }
   const bypassSuspicion = scanDelegatedBypassSuspicion(bundlePath, 'wave1');
   let checksRun = 0;
 
   for (const rule of definition.rules) {
     if (rule.check === 'placeholder' || rule.check === 'trace_event_present') continue;
-    let targets;
-    try { targets = expandRuleTargets(bundlePath, rule); } catch (error) {
-      findings.push(failureFinding(rule, { surface: 'rb_plan.md', detail: `Cannot read topic_registry for rule ${rule.id}: ${safeMessage(error)}` }));
-      continue;
-    }
-    if (targets.length === 0 && rule.target.includes('{topic}')) {
-      findings.push(failureFinding(rule, { surface: 'rb_plan.md', detail: `Empty topic_registry: cannot expand "{topic}" placeholder in rule ${rule.id}.` }));
-      continue;
-    }
+    const targets = expandRuleTargets(bundlePath, rule, layouts);
 
     for (const expandedTarget of targets) {
       const target = { ...expandedTarget, resolved: ['file_exists', 'dir_exists', 'depth_review_contract', 'count_floor', 'pattern_match'].includes(rule.check) ? firstExistingTarget(bundlePath, expandedTarget, { directory: rule.check === 'dir_exists' }) : expandedTarget.resolved };
@@ -432,56 +578,79 @@ export function evaluateWave1Contract(bundlePath, definition) {
             if (rule.id === 'question_list_has_four_sections') result = checkQuestionListSections(content);
             else if (rule.id === 'source_url_present') result = checkSourceUrlMarker(content);
             else result = checkKeyFindingsContent(content);
+            if (!result.passed) {
+              result.findings = [localCheckerFinding(bundlePath, rule, {
+                topic: target.topic,
+                suffix: 'semantic_structure',
+                blockingBasis: 'required_structure',
+                surface: target.resolved,
+                expected: rule.id === 'question_list_has_four_sections'
+                  ? 'All four required question-list semantic sections are present and non-empty.'
+                  : rule.id === 'source_url_present'
+                    ? 'evidence-summary.md contains at least one parseable http(s) source URL.'
+                    : 'The Key Findings semantic section is present and non-empty.',
+                observed: result.detail,
+                missingFact: result.detail,
+                repair: `Repair the named semantic content in ${target.resolved}.`,
+                detail: result.detail,
+              })];
+            }
           } else {
             result = evaluatePattern(bundlePath, rule, target.resolved, target.topic);
           }
         } else if (rule.check === 'count_floor') {
           result = evaluateCountFloor(bundlePath, rule, target.resolved, target.topic, target.alternatives);
         } else if (rule.check === 'cache_coverage') {
-          const check = checkCacheCoverage(bundlePath);
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
-          if (check.passed) check.inspect.forEach((line, index) => findings.push(advisoryFinding(rule, line, index)));
+          const check = checkCacheCoverage(bundlePath, { rule });
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'reference_format') {
-          const check = checkReferenceFormatFiles(matchingAlternativeFiles(bundlePath, target));
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
+          const check = checkReferenceFormatFiles(matchingAlternativeFiles(bundlePath, target), { rule });
+          result = { passed: check.passed, detail: check.inspect.join('; '), findings: check.findings || [] };
         } else if (rule.check === 'reference_source_url_parseable') {
-          const check = checkReferenceSourceUrls(matchingAlternativeFiles(bundlePath, target));
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
-        } else if (rule.check === 'reference_key_facts_min_lines') {
-          const check = checkReferenceKeyFactsMinLines(matchingAlternativeFiles(bundlePath, target), rule.min_lines || 5);
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
+          const check = checkReferenceSourceUrls(matchingAlternativeFiles(bundlePath, target), { rule });
+          result = { passed: check.passed, detail: check.inspect.join('; '), findings: check.findings || [] };
         } else if (rule.check === 'reference_ledger_coverage') {
-          const check = checkReferenceLedgerCoverage(bundlePath, matchingAlternativeFiles(bundlePath, target));
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; ') };
+          const check = checkReferenceLedgerCoverage(bundlePath, matchingAlternativeFiles(bundlePath, target), { rule });
+          result = { passed: check.passed, detail: check.inspect.join('; '), findings: check.findings || [] };
         } else if (rule.check === 'reference_index_coverage') {
-          const check = checkReferenceIndexCoverage(bundlePath, matchingAlternativeFiles(bundlePath, target), { sourceLayer: rule.source_layer || null });
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+          const check = checkReferenceIndexCoverage(bundlePath, matchingAlternativeFiles(bundlePath, target), { sourceLayer: rule.source_layer || null, rule });
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'depth_review_contract') {
           const topic = topicSlugFromDepthReviewTarget(target.resolved) || target.topic || rule.topic;
-          const check = checkWave1DepthReviewContract(bundlePath, { topic });
+          const check = checkWave1DepthReviewContract(bundlePath, { topic, rule });
           maskedRuleIds.push(...(check.masked_rule_ids || []).map((masked) => scopedRuleId(rule.id, `${topic}:${masked}`)));
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
           (check.diagnostics || []).forEach((line, index) => findings.push(advisoryFinding(rule, line, index)));
         } else if (rule.check === 'work_unit_ledger_exists') {
           const check = checkWorkUnitLedgerExists(bundlePath, rule);
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'work_unit_output_coverage') {
           const check = checkWorkUnitOutputCoverage(bundlePath, rule);
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'work_unit_submission_presence') {
           const check = checkWorkUnitSubmissionPresence(bundlePath, rule);
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'delegated_bypass_suspected') {
-          result = bypassSuspicion.suspected
-            ? { passed: false, detail: `delegated_bypass_suspected: ${(bypassSuspicion.provenanceMissing || []).join('; ')}`, repair: 'Route delegated artifacts through work-unit claim/submit or repair valid Phase-owned projection backing.' }
-            : { passed: true };
+          const check = checkDelegatedBypassSuspected(bundlePath, rule);
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else {
-          result = { passed: false, detail: `Unknown check type: ${rule.check} — must fail (check type not implemented)` };
+          result = { passed: false, findings: [configurationFinding(bundlePath, rule, `Unknown check type: ${rule.check} — must fail (check type not implemented)`)] };
         }
       } catch (error) {
-        result = { passed: false, detail: `Error evaluating rule ${rule.id} (${target.resolved}): ${safeMessage(error)}` };
+        result = { passed: false, findings: [configurationFinding(bundlePath, rule, `Error evaluating rule ${rule.id} (${target.resolved}): ${safeMessage(error)}`, safeMessage(error))] };
       }
-      if (!result.passed) findings.push(failureFinding(rule, { topic: target.topic, surface: target.resolved, detail: result.detail, repair: result.repair }));
+      if (Array.isArray(result.findings)) findings.push(...result.findings);
+      if (!result.passed && (!Array.isArray(result.findings) || result.findings.length === 0)) {
+        findings.push(failureFinding(bundlePath, rule, {
+          topic: target.topic,
+          surface: target.resolved,
+          detail: result.detail,
+          expected: result.expected,
+          observed: result.observed,
+          missingFact: result.missingFact || result.detail,
+          repair: result.repair,
+        }));
+      }
     }
   }
 
@@ -493,20 +662,25 @@ export function evaluateWave2Contract(bundlePath, definition) {
   const maskedRuleIds = [];
   const missingFiles = new Set();
   const invalidYaml = new Set();
+  let layouts;
+  try {
+    layouts = topicLayouts(bundlePath);
+  } catch (error) {
+    return buildContractEvaluation({
+      findings: [topicRegistryPrerequisiteFinding(bundlePath, 'wave2', `Wave2 cannot read canonical topic_registry: ${safeMessage(error)}`, safeMessage(error))],
+    });
+  }
+  if (layouts.length === 0) {
+    return buildContractEvaluation({
+      findings: [topicRegistryPrerequisiteFinding(bundlePath, 'wave2', 'Wave2 cannot expand per-topic contracts because canonical topic_registry is empty.', { topic_count: 0 })],
+    });
+  }
   const bypassSuspicion = scanDelegatedBypassSuspicion(bundlePath, 'wave2');
   let checksRun = 0;
 
   for (const rule of definition.rules) {
     if (rule.check === 'placeholder' || rule.check === 'trace_event_present') continue;
-    let targets;
-    try { targets = expandRuleTargets(bundlePath, rule); } catch (error) {
-      findings.push(failureFinding(rule, { surface: 'rb_plan.md', detail: `Cannot read topic_registry for rule ${rule.id}: ${safeMessage(error)}` }));
-      continue;
-    }
-    if (targets.length === 0 && rule.target.includes('{topic}')) {
-      findings.push(failureFinding(rule, { surface: 'rb_plan.md', detail: `Empty topic_registry: cannot expand "{topic}" placeholder in rule ${rule.id}.` }));
-      continue;
-    }
+    const targets = expandRuleTargets(bundlePath, rule, layouts);
 
     for (const target of targets) {
       const id = scopedRuleId(rule.id, target.topic);
@@ -540,17 +714,61 @@ export function evaluateWave2Contract(bundlePath, definition) {
           const content = existsSync(path) ? stripMdFrontmatter(readFileSync(path, 'utf8')) : '';
           result = content.length > 0 ? { passed: true } : { passed: false, detail: `${target.resolved} is empty (no content after frontmatter)` };
         } else if (rule.check === 'pattern_match') {
-          if (rule.id === 'ledger_fixed_sections') result = checkLedgerSections(readFileSync(join(bundlePath, target.resolved), 'utf8'));
-          else result = evaluatePattern(bundlePath, rule, target.resolved, target.topic, { stripFrontmatter: true });
+          if (rule.id === 'ledger_fixed_sections') {
+            result = checkLedgerSections(readFileSync(join(bundlePath, target.resolved), 'utf8'));
+            if (!result.passed) result.findings = [localCheckerFinding(bundlePath, rule, {
+              suffix: 'semantic_sections',
+              blockingBasis: 'required_structure',
+              surface: target.resolved,
+              expected: 'All six required Wave2 cross-topic ledger semantic sections are present.',
+              observed: result.detail,
+              missingFact: result.detail,
+              repair: `Add the missing semantic ledger section(s) to ${target.resolved}.`,
+              detail: result.detail,
+            })];
+          } else {
+            result = evaluatePattern(bundlePath, rule, target.resolved, target.topic, { stripFrontmatter: true });
+            if (!result.passed && rule.finding?.source === 'checker') result.findings = [localCheckerFinding(bundlePath, rule, {
+              topic: target.topic,
+              suffix: 'pattern_contract',
+              blockingBasis: 'binding_integrity',
+              surface: target.resolved,
+              expected: 'Required Wave2 evidence/reference binding marker is present.',
+              observed: result.detail,
+              missingFact: result.detail,
+              repair: `Repair the missing Wave2 binding marker in ${target.resolved}.`,
+              detail: result.detail,
+            })];
+          }
         } else if (rule.check === 'yaml_parse') {
           const path = join(bundlePath, target.resolved);
           try { parseYaml(readFileSync(path, 'utf8')); }
           catch (error) {
             invalidYaml.add(target.resolved);
-            result = { passed: false, detail: `YAML parse error in ${target.resolved}: ${safeMessage(error)}` };
+            const detail = `YAML parse error in ${target.resolved}: ${safeMessage(error)}`;
+            result = { passed: false, detail, findings: [localCheckerFinding(bundlePath, rule, {
+              suffix: 'yaml_parse',
+              blockingBasis: 'authority_integrity',
+              surface: target.resolved,
+              expected: 'Parseable YAML for the Wave2 finding index.',
+              observed: safeMessage(error),
+              missingFact: `${target.resolved} cannot be parsed as YAML: ${safeMessage(error)}`,
+              repair: `Repair ${target.resolved} as parseable YAML.`,
+              detail,
+            })] };
           }
         } else if (rule.check === 'cross_field' && rule.mode === 'markdown_link_resolution') {
           result = checkMarkdownLinkResolution(bundlePath, rule, target.resolved);
+          if (!result.passed) result.findings = [localCheckerFinding(bundlePath, rule, {
+            suffix: 'markdown_link_resolution',
+            blockingBasis: 'binding_integrity',
+            surface: target.resolved,
+            expected: `At least ${rule.min_valid_refs || 1} valid Markdown artifact link(s) resolve relative to ${rule.resolve_relative_to || 'artifacts/wave2'}.`,
+            observed: result.detail,
+            missingFact: result.detail,
+            repair: `Repair the Markdown artifact links in ${target.resolved}.`,
+            detail: result.detail,
+          })];
           if (result.advisory) {
             findings.push(makeContractFinding({
               id: `${rule.id}:dead_links`,
@@ -565,33 +783,53 @@ export function evaluateWave2Contract(bundlePath, definition) {
           result = evaluateStatusRule(bundlePath, rule);
         } else if (rule.check === 'rerun_add_full_synthesis') {
           result = checkRerunAddFullSynthesis(bundlePath);
+          if (!result.passed) result.findings = [localCheckerFinding(bundlePath, rule, {
+            suffix: 'rerun_add_synthesis',
+            blockingBasis: 'required_structure',
+            surface: target.resolved,
+            expected: 'Rerun action:add uses full Wave2 synthesis and covers every canonical topic in scan/index authority.',
+            observed: result.detail,
+            missingFact: result.detail,
+            repair: `Repair Wave2 synthesis, ledger and finding-index coverage for every rerun-added topic.`,
+            detail: result.detail,
+          })];
         } else if (rule.check === 'finding_index_contract') {
-          const check = checkWave2FindingIndexContract(bundlePath);
+          const check = checkWave2FindingIndexContract(bundlePath, { rule });
           maskedRuleIds.push(...(check.masked_rule_ids || []).map((masked) => `${rule.id}:${masked}`));
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'reference_index_coverage') {
-          const check = checkReferenceIndexCoverage(bundlePath, listMatchingBundleFiles(bundlePath, target.resolved), { sourceLayer: rule.source_layer || null });
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+          const check = checkReferenceIndexCoverage(bundlePath, listMatchingBundleFiles(bundlePath, target.resolved), { sourceLayer: rule.source_layer || null, rule });
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'work_unit_ledger_exists') {
           const check = checkWorkUnitLedgerExists(bundlePath, rule);
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'work_unit_output_coverage') {
           const check = checkWorkUnitOutputCoverage(bundlePath, rule);
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'work_unit_submission_presence') {
           const check = checkWorkUnitSubmissionPresence(bundlePath, rule);
-          result = check.passed ? { passed: true } : { passed: false, detail: check.inspect.join('; '), repair: check.advice.join(' ') };
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'delegated_bypass_suspected') {
-          result = bypassSuspicion.suspected
-            ? { passed: false, detail: `delegated_bypass_suspected: ${(bypassSuspicion.provenanceMissing || []).join('; ')}`, repair: 'Submit Wave2 targeted evidence or repair existing-backed projection authority.' }
-            : { passed: true };
+          const check = checkDelegatedBypassSuspected(bundlePath, rule);
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else {
-          result = { passed: false, detail: `Unknown check type: ${rule.check} (mode: ${rule.mode || 'n/a'}) — must fail (check type not implemented)` };
+          result = { passed: false, findings: [configurationFinding(bundlePath, rule, `Unknown check type: ${rule.check} (mode: ${rule.mode || 'n/a'}) — must fail (check type not implemented)`)] };
         }
       } catch (error) {
-        result = { passed: false, detail: `Error evaluating rule ${rule.id}: ${safeMessage(error)}` };
+        result = { passed: false, findings: [configurationFinding(bundlePath, rule, `Error evaluating rule ${rule.id}: ${safeMessage(error)}`, safeMessage(error))] };
       }
-      if (!result.passed) findings.push(failureFinding(rule, { topic: target.topic, surface: target.resolved, detail: result.detail, repair: result.repair }));
+      if (Array.isArray(result.findings)) findings.push(...result.findings);
+      if (!result.passed && (!Array.isArray(result.findings) || result.findings.length === 0)) {
+        findings.push(failureFinding(bundlePath, rule, {
+          topic: target.topic,
+          surface: target.resolved,
+          detail: result.detail,
+          expected: result.expected,
+          observed: result.observed,
+          missingFact: result.missingFact || result.detail,
+          repair: result.repair,
+        }));
+      }
     }
   }
 

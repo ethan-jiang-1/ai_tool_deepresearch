@@ -450,6 +450,11 @@ describe('check-gate-wave2-complete', () => {
     const inspectOutput = JSON.parse(runInspect(dir).stdout);
     const sharedGateIds = output.check.failed_rule_ids.filter((id) => id !== 'trace_event_wave2_completion').sort();
     assert.deepEqual(inspectOutput.check.failed_rule_ids.filter((id) => sharedGateIds.includes(id)).sort(), sharedGateIds);
+    const gateHint = output.hints.find((hint) => hint.rule_id === 'synthesis_exists');
+    const inspectHint = inspectOutput.hints.find((hint) => hint.rule_id === 'synthesis_exists');
+    assert.deepEqual({ ...inspectHint, rerun: null }, { ...gateHint, rerun: null });
+    assert.match(gateHint.rerun, /check-gate-wave2-complete\.mjs/);
+    assert.match(inspectHint.rerun, /inspect-wave2-output\.mjs/);
     assert.equal(output.check.masked_rule_ids.includes('synthesis_non_empty'), true);
   });
 

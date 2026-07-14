@@ -5,6 +5,7 @@ import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
 import { PostFinalRecoveryEventSchema } from './post-final-reentry-contract.mjs';
+import { makeContractFinding, projectFindingCompatibility } from './wave-contract-findings.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -42,6 +43,15 @@ export const COVERED_SOURCE_NODES = new Set([
   'phases/phase-readiness.md',
   'phases/phase-rerun.md',
 ]);
+
+function handoffFailure(input, extras = {}) {
+  const compatibility = projectFindingCompatibility(makeContractFinding({
+    findingSource: 'checker',
+    classification: 'blocking',
+    ...input,
+  }));
+  return { ok: false, ...compatibility, ...extras };
+}
 
 export function gateKeyToEnum(gateKey) {
   return String(gateKey || '').replace(/-/g, '_');
@@ -531,7 +541,19 @@ export function checkPhaseHandoffPreflight(bundlePath, currentNodeRef) {
 
   const ctx = contextFor(bundlePath);
   if (!ctx.ok) {
-    return { ok: false, inspect: [ctx.reason], advice: ['Fix trace/topology inputs before rerunning this gate.'] };
+    return handoffFailure({
+      id: 'handoff_preflight_inputs_invalid',
+      ruleId: 'handoff_preflight_inputs_invalid',
+      blockingBasis: 'configuration_integrity',
+      surface: 'workflow topology and rb_trace.jsonl',
+      expected: 'Parseable workflow topology and trace inputs for deterministic handoff validation.',
+      observed: ctx.reason,
+      missingFact: ctx.reason,
+      repairKind: 'missing_contract',
+      writeTo: 'Gate handoff-preflight input contract boundary',
+      detail: ctx.reason,
+      repair: 'Fix trace/topology inputs before rerunning this gate.',
+    });
   }
 
   const normal = latestLegalPassedHandoff(ctx.events, ctx.topology);
@@ -539,47 +561,102 @@ export function checkPhaseHandoffPreflight(bundlePath, currentNodeRef) {
   if (exceptionalStage?.reason_code === 'accepted_workspace') {
     const operationId = exceptionalStage.workspace?.operationId;
     return {
-      ok: false,
-      inspect: [exceptionalStage.reason],
-      advice: operationId ? [`node DPT_FRAMEWORK/cli/operate-post-final-recovery.mjs recover --bundle ${bundlePath} --operation-id ${operationId}`] : [],
+      ...handoffFailure({
+        id: 'handoff_post_final_recovery_required',
+        ruleId: 'handoff_post_final_recovery_required',
+        blockingBasis: 'authority_integrity',
+        surface: exceptionalStage.workspace?.workspace || '_diagnostics/post-final-recovery',
+        expected: 'The accepted post-final recovery workspace is completed before Gate preflight.',
+        observed: exceptionalStage.reason,
+        missingFact: exceptionalStage.reason,
+        repairKind: operationId ? 'engine_operation' : 'missing_contract',
+        writeTo: operationId
+          ? `node DPT_FRAMEWORK/cli/operate-post-final-recovery.mjs recover --bundle ${bundlePath} --operation-id ${operationId}`
+          : 'Post-final recovery workspace contract boundary',
+        detail: exceptionalStage.reason,
+        repair: operationId ? `node DPT_FRAMEWORK/cli/operate-post-final-recovery.mjs recover --bundle ${bundlePath} --operation-id ${operationId}` : null,
+      }),
     };
   }
   if (exceptionalStage?.ok && exceptionalStage.stage === 'pre_entry') {
-    return {
-      ok: false,
-      inspect: ['Accepted post-final rerun event has not been consumed by route-bound enter-phase.'],
-      advice: [`node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node phases/phase-rerun.md`],
-      handoff: exceptionalStage.handoff,
-    };
+    return handoffFailure({
+      id: 'handoff_post_final_entry_missing',
+      ruleId: 'handoff_post_final_entry_missing',
+      blockingBasis: 'binding_integrity',
+      surface: 'rb_trace.jsonl#route-bound load_complete',
+      expected: 'The accepted post-final rerun event is consumed by enter-phase.',
+      observed: 'route-bound rerun load_complete absent',
+      missingFact: 'Accepted post-final rerun event has not been consumed by route-bound enter-phase.',
+      repairKind: 'engine_operation',
+      writeTo: `node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node phases/phase-rerun.md`,
+      detail: 'Accepted post-final rerun event has not been consumed by route-bound enter-phase.',
+      repair: `node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node phases/phase-rerun.md`,
+    }, { handoff: exceptionalStage.handoff });
   }
   if (exceptionalStage?.ok && exceptionalStage.stage === 'loaded_pending_status') {
-    return {
-      ok: false,
-      inspect: ['Accepted post-final rerun entry is waiting for existing HITL2 status synchronization.'],
-      advice: [`node DPT_FRAMEWORK/cli/advance-status.mjs --bundle ${bundlePath} --to hitl2_recorded`],
-      handoff: exceptionalStage.handoff,
-    };
+    return handoffFailure({
+      id: 'handoff_post_final_status_pending',
+      ruleId: 'handoff_post_final_status_pending',
+      blockingBasis: 'binding_integrity',
+      surface: 'rb_status.json HITL2 rerun window',
+      expected: 'Existing HITL2 source-gate status synchronization after route-bound rerun entry.',
+      observed: 'status synchronization pending',
+      missingFact: 'Accepted post-final rerun entry is waiting for existing HITL2 status synchronization.',
+      repairKind: 'engine_operation',
+      writeTo: `node DPT_FRAMEWORK/cli/advance-status.mjs --bundle ${bundlePath} --to hitl2_recorded`,
+      detail: 'Accepted post-final rerun entry is waiting for existing HITL2 status synchronization.',
+      repair: `node DPT_FRAMEWORK/cli/advance-status.mjs --bundle ${bundlePath} --to hitl2_recorded`,
+    }, { handoff: exceptionalStage.handoff });
   }
   if (exceptionalStage && !exceptionalStage.ok && !['missing_event', 'superseded_event'].includes(exceptionalStage.reason_code)) {
-    return { ok: false, inspect: [exceptionalStage.reason], advice: ['Resolve the named post-final recovery lineage conflict before rerunning this gate.'], handoff: exceptionalStage.handoff || null };
+    return handoffFailure({
+      id: 'handoff_post_final_lineage_conflict',
+      ruleId: 'handoff_post_final_lineage_conflict',
+      blockingBasis: 'binding_integrity',
+      surface: 'post-final recovery lineage',
+      expected: 'One valid non-conflicting post-final rerun lineage.',
+      observed: exceptionalStage.reason,
+      missingFact: exceptionalStage.reason,
+      repairKind: 'missing_contract',
+      writeTo: 'Post-final recovery lineage repair boundary',
+      detail: exceptionalStage.reason,
+      repair: 'Resolve the named post-final recovery lineage conflict before rerunning this gate.',
+    }, { handoff: exceptionalStage.handoff || null });
   }
   const exceptional = exceptionalStage?.ok && ['synchronized_initial_profile', 'synchronized_count_incremented'].includes(exceptionalStage.stage) ? exceptionalStage.handoff : null;
   const latest = exceptional && (!normal || exceptional.index > normal.index) ? exceptional : normal;
   if (!latest) {
-    return {
-      ok: false,
-      inspect: [`Missing witnessed handoff into ${currentNodeRef}. Expected a prior gate_attempt(passed=true,next="${currentNodeRef}") followed by route-bound load_complete.`],
-      advice: [`Run enter-phase with the source gate check.next before this gate: node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node ${currentNodeRef}`],
-    };
+    const detail = `Missing witnessed handoff into ${currentNodeRef}. Expected a prior gate_attempt(passed=true,next="${currentNodeRef}") followed by route-bound load_complete.`;
+    return handoffFailure({
+      id: 'handoff_witness_missing',
+      ruleId: 'handoff_witness_missing',
+      blockingBasis: 'binding_integrity',
+      surface: 'rb_trace.jsonl#gate_attempt+load_complete',
+      expected: `A passed predecessor Gate handoff and route-bound load_complete into ${currentNodeRef}.`,
+      observed: 'no current legal handoff witness',
+      missingFact: detail,
+      repairKind: 'missing_contract',
+      writeTo: `Predecessor Gate handoff boundary for ${currentNodeRef}`,
+      detail,
+      repair: 'Rerun the legal predecessor Gate and consume its check.next through enter-phase.',
+    });
   }
 
   if (latest.targetNode !== currentNodeRef) {
-    return {
-      ok: false,
-      inspect: [`Latest deterministic handoff targets ${latest.targetNode}, not current node ${currentNodeRef}.`],
-      advice: [`Continue from the latest checked handoff target, or rerun the predecessor gate for ${currentNodeRef} and then: node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node ${currentNodeRef}`],
-      handoff: latest,
-    };
+    const detail = `Latest deterministic handoff targets ${latest.targetNode}, not current node ${currentNodeRef}.`;
+    return handoffFailure({
+      id: 'handoff_target_mismatch',
+      ruleId: 'handoff_target_mismatch',
+      blockingBasis: 'binding_integrity',
+      surface: 'latest deterministic Gate handoff',
+      expected: currentNodeRef,
+      observed: latest.targetNode,
+      missingFact: detail,
+      repairKind: 'engine_operation',
+      writeTo: `node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node ${latest.targetNode}`,
+      detail,
+      repair: `Continue from the latest checked handoff target: node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node ${latest.targetNode}`,
+    }, { handoff: latest });
   }
 
   if (latest.kind === 'post_final_reentry') {
@@ -600,26 +677,58 @@ export function checkPhaseHandoffPreflight(bundlePath, currentNodeRef) {
   }, ctx.events, { requireLoad: true });
 
   if (!made.ok) {
-    return {
-      ok: false,
-      inspect: [made.reason],
-      advice: [`Run enter-phase with the source gate check.next before this gate: node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node ${currentNodeRef}`],
-      handoff: latest,
-    };
+    return handoffFailure({
+      id: 'handoff_load_binding_missing',
+      ruleId: 'handoff_load_binding_missing',
+      blockingBasis: 'binding_integrity',
+      surface: 'rb_trace.jsonl#load_complete',
+      expected: `A route-bound load_complete for the witnessed handoff into ${currentNodeRef}.`,
+      observed: made.reason,
+      missingFact: made.reason,
+      repairKind: 'engine_operation',
+      writeTo: `node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node ${currentNodeRef}`,
+      detail: made.reason,
+      repair: `Run enter-phase with the source gate check.next before this gate: node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node ${currentNodeRef}`,
+    }, { handoff: latest });
   }
 
   const handoff = made.handoff;
 
   const statusPath = join(bundlePath, 'rb_status.json');
   if (!existsSync(statusPath)) {
-    return { ok: false, inspect: ['rb_status.json not found'], advice: ['Restore rb_status.json before rerunning this gate.'] };
+    return handoffFailure({
+      id: 'handoff_status_authority_missing',
+      ruleId: 'handoff_status_authority_missing',
+      blockingBasis: 'authority_integrity',
+      surface: 'rb_status.json',
+      expected: 'Engine-owned status authority for the witnessed handoff window.',
+      observed: 'file absent',
+      missingFact: 'rb_status.json not found.',
+      repairKind: 'missing_contract',
+      writeTo: 'Engine-owned status recovery boundary',
+      detail: 'rb_status.json not found',
+      repair: 'Restore rb_status.json through checkpoint/rollback or the valid Engine transition owner before rerunning this Gate.',
+    });
   }
 
   let status;
   try {
     status = JSON.parse(readFileSync(statusPath, 'utf-8'));
   } catch (err) {
-    return { ok: false, inspect: [`rb_status.json is not valid JSON: ${err.message}`], advice: ['rb_status.json is Engine-owned. Restore it from checkpoint/rollback or rerun the valid Engine transition path before rerunning this gate; do not hand-edit status authority.'] };
+    const detail = `rb_status.json is not valid JSON: ${err.message}`;
+    return handoffFailure({
+      id: 'handoff_status_authority_invalid',
+      ruleId: 'handoff_status_authority_invalid',
+      blockingBasis: 'authority_integrity',
+      surface: 'rb_status.json',
+      expected: 'Parseable Engine-owned status authority.',
+      observed: err.message,
+      missingFact: detail,
+      repairKind: 'missing_contract',
+      writeTo: 'Engine-owned status recovery boundary',
+      detail,
+      repair: 'rb_status.json is Engine-owned. Restore it from checkpoint/rollback or rerun the valid Engine transition path before rerunning this gate; do not hand-edit status authority.',
+    });
   }
 
   const expectedCurrent = handoff.sourceGateEnum;
@@ -633,12 +742,19 @@ export function checkPhaseHandoffPreflight(bundlePath, currentNodeRef) {
   }
 
   if (inspect.length > 0) {
-    return {
-      ok: false,
-      inspect,
-      advice: [`After enter-phase, sync the source gate: node DPT_FRAMEWORK/cli/advance-status.mjs --bundle ${bundlePath} --to ${handoff.sourceGateEnum}`],
-      handoff,
-    };
+    return handoffFailure({
+      id: 'handoff_status_window_mismatch',
+      ruleId: 'handoff_status_window_mismatch',
+      blockingBasis: 'binding_integrity',
+      surface: 'rb_status.json current_gate/next_gate',
+      expected: { current_gate: expectedCurrent, next_gate: expectedNext },
+      observed: { current_gate: status.current_gate, next_gate: status.next_gate },
+      missingFact: inspect.join('; '),
+      repairKind: 'engine_operation',
+      writeTo: `node DPT_FRAMEWORK/cli/advance-status.mjs --bundle ${bundlePath} --to ${handoff.sourceGateEnum}`,
+      detail: inspect.join('; '),
+      repair: `After enter-phase, sync the source gate: node DPT_FRAMEWORK/cli/advance-status.mjs --bundle ${bundlePath} --to ${handoff.sourceGateEnum}`,
+    }, { handoff });
   }
 
   return { ok: true, handoff };

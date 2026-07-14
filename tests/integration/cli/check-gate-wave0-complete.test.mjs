@@ -267,6 +267,14 @@ describe('check-gate-wave0-complete', () => {
       inspectOutput.check.failed_rule_ids.filter((id) => output.check.failed_rule_ids.includes(id)).sort(),
       output.check.failed_rule_ids.filter((id) => id !== 'trace_event_wave0_completion').sort(),
     );
+    const gateHint = output.hints.find((hint) => hint.rule_id === 'reference_index_md_exists');
+    const inspectHint = inspectOutput.hints.find((hint) => hint.rule_id === 'reference_index_md_exists');
+    assert.deepEqual(
+      { ...inspectHint, rerun: null },
+      { ...gateHint, rerun: null },
+    );
+    assert.match(gateHint.rerun, /check-gate-wave0-complete\.mjs/);
+    assert.match(inspectHint.rerun, /inspect-wave0-output\.mjs/);
   });
 
   it('3. fails when per-topic source.yaml is missing', () => {
@@ -306,8 +314,8 @@ describe('check-gate-wave0-complete', () => {
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, false);
-    assert.ok(output.check.failed_rule_ids.includes('per_topic_reference_schema_valid:topic-a'));
-    assert.equal(output.check.failed_rule_ids.includes('per_topic_count_floor:topic-a'), false);
+    assert.ok(output.check.failed_rule_ids.includes('per_topic_reference_schema_valid'));
+    assert.equal(output.check.failed_rule_ids.includes('per_topic_count_floor'), false);
     assert.ok(output.check.masked_rule_ids.includes('per_topic_count_floor:topic-a'));
     assert.equal(output.inspect.some((line) => line.includes('Count floor not met for artifacts/wave0/topic-a/source.yaml')), false);
   });

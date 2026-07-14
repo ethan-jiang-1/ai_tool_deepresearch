@@ -5,6 +5,7 @@
 
 import {
   buildGateResult,
+  checkNodeGateBinding,
   checkPhaseHandoffPreflight,
   emitDelegatedBypassDiagnostic,
   emitGateResult,
@@ -13,10 +14,13 @@ import {
   resolveRouting,
   scanTemplateNotExpanded,
   tryLoadGateDefinition,
-  validateNodeGateBinding,
   writeGateAttempt,
 } from '../../engine/helpers/gate-helpers.mjs';
 import { evaluateWave0Contract } from '../../engine/helpers/wave-contract-evaluators.mjs';
+import {
+  buildContractEvaluation,
+  makeContractFinding,
+} from '../../engine/helpers/wave-contract-findings.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) emitGateResult(args.error, { bundlePath: args.bundle });
@@ -24,14 +28,20 @@ if (args.error) emitGateResult(args.error, { bundlePath: args.bundle });
 const { definition, error: definitionError } = tryLoadGateDefinition('wave0-complete', args.currentNode || null);
 if (definitionError) emitGateResult(definitionError, { bundlePath: args.bundle });
 
-const bindingError = validateNodeGateBinding(args.currentNode, definition.gate);
-if (bindingError) {
-  emitGateResult({
-    check: { passed: false, gate: definition.gate, currentNodeRef: args.currentNode, next: null },
-    routing: { kind: 'invalid_input', next: null, detail: bindingError },
-    inspect: [bindingError],
-    advice: ['Verify --current-node matches the phase for this gate.'],
-  }, { bundlePath: args.bundle });
+const binding = checkNodeGateBinding(args.currentNode, definition.gate);
+if (!binding.ok) {
+  const result = buildGateResult({
+    passed: false,
+    gate: definition.gate,
+    currentNodeRef: args.currentNode,
+    routing: { kind: 'invalid_input', next: null, detail: binding.reason },
+    inspect: binding.inspect,
+    advice: binding.advice,
+    findings: binding.findings,
+    bundlePath: args.bundle,
+    attemptNumber: args.attempt ?? 0,
+  });
+  emitGateResult(result, { bundlePath: args.bundle });
 }
 
 const handoffPreflight = checkPhaseHandoffPreflight(args.bundle, args.currentNode);
@@ -44,6 +54,8 @@ if (!handoffPreflight.ok) {
     routing,
     inspect: handoffPreflight.inspect || [handoffPreflight.reason || 'Lifecycle handoff preflight failed'],
     advice: handoffPreflight.advice || ['Follow the handoff remedy and rerun this gate.'],
+    findings: handoffPreflight.findings || [],
+    bundlePath: args.bundle,
     extraCheck: { handoff_preflight: false },
     attemptNumber: args.attempt ?? 0,
   });
@@ -52,25 +64,50 @@ if (!handoffPreflight.ok) {
 }
 
 const bundlePath = args.bundle;
-const evaluation = evaluateWave0Contract(bundlePath, definition);
 const inspect = [];
-const advice = [...evaluation.advice];
-const failedRuleIds = new Set(evaluation.failed_rule_ids);
-const maskedRuleIds = new Set(evaluation.masked_rule_ids);
+const advice = [];
+const formalFindings = [];
+const templateInspect = [];
+const sharedEvaluation = evaluateWave0Contract(bundlePath, definition);
 
 for (const finding of scanTemplateNotExpanded(bundlePath).findings) {
-  inspect.push(`[template_not_expanded] ${finding.file}: ${finding.field} contains unexpanded template variable: ${finding.value}`);
+  templateInspect.push(`[template_not_expanded] ${finding.file}: ${finding.field} contains unexpanded template variable: ${finding.value}`);
 }
-inspect.push(...evaluation.inspect);
+formalFindings.push(...sharedEvaluation.findings);
 
 for (const rule of definition.rules.filter((candidate) => candidate.check === 'trace_event_present')) {
   const events = readTraceEvents(bundlePath, rule.target);
   if (!events || events.length === 0) {
-    failedRuleIds.add(rule.id);
-    inspect.push(`Trace event "${rule.target}" not found in rb_trace.jsonl`);
-    advice.push(rule.failure_message);
+    const detail = `Trace event "${rule.target}" not found in rb_trace.jsonl`;
+    formalFindings.push(makeContractFinding({
+      id: rule.id,
+      ruleId: rule.id,
+      findingSource: 'checker',
+      classification: 'blocking',
+      blockingBasis: 'authority_integrity',
+      surface: `${bundlePath}/rb_trace.jsonl`,
+      expected: `Engine-written trace event '${rule.target}'.`,
+      observed: { matching_events: 0 },
+      missingFact: `Wave0 completion trace event '${rule.target}' is absent.`,
+      repairKind: 'engine_operation',
+      writeTo: `node DPT_FRAMEWORK/cli/log-event.mjs --bundle ${bundlePath} --event ${rule.target}`,
+      repair: `Run the accepted Wave0 completion-event operation after phase work is complete, then rerun this Gate.`,
+      detail: `[${rule.id}] ${detail}`,
+    }));
   }
 }
+
+const ruleEvaluation = buildContractEvaluation({
+  checksRun: sharedEvaluation.checks_run,
+  findings: formalFindings,
+  maskedRuleIds: sharedEvaluation.masked_rule_ids,
+  bypassSuspicion: sharedEvaluation.bypass_suspicion,
+});
+inspect.length = 0;
+inspect.push(...templateInspect, ...ruleEvaluation.inspect);
+advice.length = 0;
+advice.push(...ruleEvaluation.advice);
+const failedRuleIds = new Set(ruleEvaluation.failed_rule_ids);
 
 const DEGRADATION_FATIGUE_THRESHOLD = 3;
 const DEGRADATION_ELIGIBLE_RULE_IDS = new Set(['shared_ref_count_floor', 'per_topic_count_floor']);
@@ -126,15 +163,24 @@ function emitAfterDurableAttempt(result) {
   try {
     writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
   } catch (error) {
-    const message = (error.message || String(error)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    const failedRouting = resolveRouting(args.transitions, args.currentNode, 'failed');
+    const failureEvaluation = buildContractEvaluation({ findings: [...(error.findings || []), ...(failedRouting.findings || [])] });
     const failedResult = buildGateResult({
       passed: false,
       gate: definition.gate,
       currentNodeRef: args.currentNode,
-      routing: resolveRouting(args.transitions, args.currentNode, 'failed'),
-      inspect: [`[trace_durable] FAIL: could not durably append gate_attempt trace event: ${message}`],
-      advice: ['Fix rb_trace.jsonl trace durability and rerun the gate through the Engine path; do not hand-edit status to simulate handoff.'],
-      extraCheck: { trace_durable: false, gate_attempt_write_failed: true, suppressed_pass_degraded: result.check?.degraded === true },
+      routing: failedRouting,
+      inspect: [...(error.inspect || [error.message || String(error)]), ...(failedRouting.inspect || [])],
+      advice: [...(error.advice || []), ...(failedRouting.advice || [])],
+      findings: failureEvaluation.findings,
+      bundlePath,
+      extraCheck: {
+        failed_rule_ids: failureEvaluation.failed_rule_ids,
+        masked_rule_ids: failureEvaluation.masked_rule_ids,
+        trace_durable: false,
+        gate_attempt_write_failed: true,
+        suppressed_pass_degraded: result.check?.degraded === true,
+      },
       attemptNumber: args.attempt ?? 0,
     });
     try { writeGateAttempt(bundlePath, failedResult); } catch { /* secondary diagnostic only */ }
@@ -145,18 +191,27 @@ function emitAfterDurableAttempt(result) {
 const degradedHandoff = maybeDegradedHandoff();
 const passedForHandoff = failedRuleIds.size === 0 || Boolean(degradedHandoff);
 const routing = degradedHandoff?.routing || resolveRouting(args.transitions, args.currentNode, passedForHandoff ? 'passed' : 'failed');
-emitDelegatedBypassDiagnostic(bundlePath, definition.gate, evaluation.bypass_suspicion);
+const routingFailed = ['invalid_input', 'config_error'].includes(routing.kind);
+const finalEvaluation = buildContractEvaluation({
+  checksRun: ruleEvaluation.checks_run,
+  findings: [...ruleEvaluation.findings, ...(routing.findings || [])],
+  maskedRuleIds: ruleEvaluation.masked_rule_ids,
+  bypassSuspicion: ruleEvaluation.bypass_suspicion,
+});
+emitDelegatedBypassDiagnostic(bundlePath, definition.gate, sharedEvaluation.bypass_suspicion);
 
 const result = buildGateResult({
-  passed: passedForHandoff,
+  passed: passedForHandoff && !routingFailed,
   gate: definition.gate,
   currentNodeRef: args.currentNode,
   routing,
-  inspect,
-  advice,
+  inspect: [...inspect, ...(routing.inspect || [])],
+  advice: [...advice, ...(routing.advice || [])],
+  findings: finalEvaluation.findings,
+  bundlePath,
   extraCheck: {
-    failed_rule_ids: [...failedRuleIds],
-    masked_rule_ids: [...maskedRuleIds],
+    failed_rule_ids: finalEvaluation.failed_rule_ids,
+    masked_rule_ids: finalEvaluation.masked_rule_ids,
     ...(degradedHandoff?.extraCheck || {}),
   },
   attemptNumber: args.attempt ?? 0,

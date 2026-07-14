@@ -40,7 +40,7 @@ Wave1 phase body SHALL keep topic deepening in the normal `wave1_topic_deepening
 
 After successful submit, the Phase Agent SHALL write `depth-review.yaml` from facts that are not already owned by submitted authority. The blocking review shape SHALL contain `version`, canonical topic binding, `reviewed_work_unit_refs[]`, depth-dimension judgments, profile-check judgments, `decision`, and `supplementary_queue_item_ids[]`. It SHALL NOT require the Agent to copy submitted `source_claims[]`, accepted URLs, cache refs, Wave0 URL arrays, new-source URL arrays, or derived floors into a second blocking authority. The Engine SHALL derive those facts from the reviewed submitted rows, Wave0 source authority, and profile.
 
-At each affected inspect/gate/submit failure, phase guidance SHALL consume the Engine-provided direct repair coordinates: `missing_fact`, `write_to`, and `rerun`. When `write_to` is an already authorized mutable surface and no new semantic/risk decision is needed, the Agent SHALL perform the mechanical repair and rerun the named checkpoint without asking the user to execute ordinary commands. Missing authority or unavailable legal mutation paths SHALL be surfaced as the smallest blocker; guidance SHALL NOT invite hand-written ledger, receipt, trace, hash, or provenance repair.
+At each affected inspect/gate/submit failure, phase guidance SHALL consume the Engine-provided direct repair coordinates: `repair_kind`, `missing_fact`, `write_to`, and `rerun`. When `repair_kind` is `agent_action|engine_operation`, `write_to` is an already authorized mutable surface or legal operation, and no new semantic/risk decision is needed, the Agent SHALL perform the mechanical repair and rerun the named checkpoint without asking the user to execute ordinary commands. `user_decision|external_action|missing_contract` SHALL surface only the smallest boundary. Guidance SHALL NOT infer repair kind from a path or invite hand-written ledger, receipt, trace, hash, or provenance repair.
 
 #### Scenario: Wave1 loads the shared reference template
 
@@ -56,9 +56,9 @@ At each affected inspect/gate/submit failure, phase guidance SHALL consume the E
 
 #### Scenario: Agent performs authorized same-check repair
 
-- **WHEN** an affected checkpoint returns `missing_fact`, an authorized `write_to` surface, and `rerun`
-- **THEN** the Phase Agent SHALL repair that surface and rerun the named checkpoint
-- **AND** it SHALL escalate only when the missing fact requires new semantics, risk/permission, or a legal Engine capability that does not exist
+- **WHEN** an affected checkpoint returns `repair_kind: agent_action|engine_operation`, `missing_fact`, the corresponding authorized `write_to` coordinate, and `rerun`
+- **THEN** the Phase Agent SHALL perform that action and rerun the named checkpoint
+- **AND** it SHALL escalate only for `user_decision`, `external_action`, or `missing_contract`
 
 
 ### Requirement: Rerun action:add SHALL include full cache trail

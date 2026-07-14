@@ -25,7 +25,7 @@ describe('canonical topic-state scope', () => {
   });
   it('keeps historical paths immutable and workspace recovery primary', () => {
     assert.match(commands, /Historical artifact\/reference\/output paths remain in place/);
-    assert.match(seedGate, /topicState\.mode === 'blocked'/);
+    assert.match(seedGate, /topicState\.mode !== 'canonical' \|\| topicState\.passed !== true/);
     assert.match(helper, /for \(const \[slug, bytes\].*stage\('rb_plan\.md'.*cleanup_files/s);
   });
   it('does not add prohibited control systems or duplicate topic authority', () => {

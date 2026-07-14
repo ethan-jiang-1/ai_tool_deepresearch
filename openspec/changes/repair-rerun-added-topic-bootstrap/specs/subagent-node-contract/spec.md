@@ -19,7 +19,7 @@ The validator SHALL resolve prior submitted outputs through one in-memory submit
 
 Generated task/checklist guidance SHALL expose both legal source-ref forms and the exact current/prior submitted paths available for the claimed topic where bounded. It SHALL not instruct supplementary work to redeclare or overwrite an existing evidence file merely to satisfy a single-attempt assumption.
 
-Submit/dry-submit diagnostics for a source-ref failure SHALL return a stable code, the candidate `source_ref`, whether it was searched in current outputs and prior submitted outputs, any conflicting declaring `work_id`/topic, and contract-lineage repair coordinates: `missing_fact`, `write_to` naming the exact `result.json#/source_claims/<index>/source_ref`, and `rerun` naming the same dry-submit command. When the prior path is valid, submit SHALL accept it without requiring duplicate `output_files[]` declaration.
+Submit/dry-submit diagnostics for a source-ref failure SHALL return a stable code, the candidate `source_ref`, whether it was searched in current outputs and prior submitted outputs, any conflicting declaring `work_id`/topic, and contract-lineage repair coordinates: `repair_kind: agent_action`, `missing_fact`, `write_to` naming the exact `result.json#/source_claims/<index>/source_ref`, and `rerun` naming the same dry-submit command. When the prior path is valid, submit SHALL accept it without requiring duplicate `output_files[]` declaration.
 
 #### Scenario: Current output remains a valid source ref
 
@@ -66,6 +66,7 @@ Submit/dry-submit diagnostics for a source-ref failure SHALL return a stable cod
 
 - **WHEN** a source ref is neither current output nor an exact contract-authorized prior submitted output
 - **THEN** `missing_fact` SHALL state that the claim needs either a genuinely current assigned output or an exact same-topic/wave/kind prior path with an allowed role
+- **AND** `repair_kind` SHALL be `agent_action`
 - **AND** `write_to` SHALL identify the one source-claim JSON pointer to edit
 - **AND** `rerun` SHALL identify the same dry-submit command
 

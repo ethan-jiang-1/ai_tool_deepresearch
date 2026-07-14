@@ -27,18 +27,18 @@ function runGate(bundlePath, currentNode = 'phases/phase-rerun.md') {
   }
 }
 
-/** Extract the multi-line JSON object from mixed logger+JSON output. */
+function assertCompleteHint(hint) {
+  assert.ok(hint?.rule_id);
+  assert.ok(hint?.repair_kind);
+  assert.ok(hint?.missing_fact);
+  assert.ok(hint?.write_to);
+  assert.ok(hint?.rerun);
+}
+
+/** Extract the complete multi-line JSON object from optional leading output. */
 function extractJsonBlock(text) {
   const lines = text.trim().split('\n');
-  // Walk backwards to find the JSON object's opening brace
-  let startIdx = -1;
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const trimmed = lines[i].trim();
-    if (trimmed === '{') {
-      startIdx = i;
-      break;
-    }
-  }
+  const startIdx = lines.findIndex((line) => line.trim() === '{');
   if (startIdx === -1) {
     throw new Error(`No JSON opening found in output: ${text.slice(0, 200)}`);
   }
@@ -179,6 +179,7 @@ describe('gate-rerun-ready — happy path', () => {
     assert.strictEqual(result.check.gate, 'rerun-ready');
     assert.strictEqual(result.routing.kind, 'next');
     assert.strictEqual(result.routing.next, 'phases/phase-seed-topics.md');
+    assert.deepStrictEqual(result.hints, []);
   });
 
   it('passes with rerun_count=2 (under max of 3)', () => {
@@ -200,6 +201,10 @@ describe('gate-rerun-ready — rerun_rationale_present', () => {
     const result = runGate(bundle);
     assert.strictEqual(result.check.passed, false);
     assert.ok(result.inspect.some(m => m.includes('rationale')));
+    const hint = result.hints.find((candidate) => candidate.rule_id === 'rerun_rationale_present');
+    assertCompleteHint(hint);
+    assert.strictEqual(hint.repair_kind, 'user_decision');
+    assert.strictEqual(hint.write_to, 'phases/phase-hitl2.md');
   });
 
   it('fails when rationale is absent', () => {
@@ -222,6 +227,10 @@ describe('gate-rerun-ready — rerun_count_valid', () => {
     const result = runGate(bundle);
     assert.strictEqual(result.check.passed, false);
     assert.ok(result.inspect.some(m => m.includes('rerun_count')));
+    const hint = result.hints.find((candidate) => candidate.rule_id === 'rerun_count_valid');
+    assertCompleteHint(hint);
+    assert.strictEqual(hint.repair_kind, 'user_decision');
+    assert.match(hint.write_to, /Rerun limit decision boundary/);
   });
 
   it('fails when rerun_count > 3', () => {
@@ -242,6 +251,10 @@ describe('gate-rerun-ready — bundle_structure_valid', () => {
     const result = runGate(bundle);
     assert.strictEqual(result.check.passed, false);
     assert.ok(result.inspect.some(m => m.includes('seed_topics')));
+    const hint = result.hints.find((candidate) => candidate.rule_id === 'bundle_structure_valid');
+    assertCompleteHint(hint);
+    assert.strictEqual(hint.repair_kind, 'missing_contract');
+    assert.match(hint.write_to, /Bundle-integrity recovery boundary/);
   });
 
   it('fails when reference/ is missing', () => {
@@ -264,6 +277,10 @@ describe('gate-rerun-ready — handoff/status-window preflight', () => {
     const result = runGate(bundle);
     assert.strictEqual(result.check.passed, false);
     assert.ok(result.inspect.some(m => m.includes('current_gate')));
+    const hint = result.hints.find((candidate) => candidate.rule_id === 'handoff_status_window_mismatch');
+    assertCompleteHint(hint);
+    assert.strictEqual(hint.repair_kind, 'engine_operation');
+    assert.match(hint.write_to, /advance-status\.mjs/);
   });
 
   it('fails when the HITL2 rerun entry witness is missing', () => {
@@ -285,5 +302,20 @@ describe('gate-rerun-ready — default count', () => {
     });
     const result = runGate(bundle);
     assert.strictEqual(result.check.passed, true);
+  });
+
+  it('fails a missing profile once and masks rationale/count symptoms', () => {
+    const bundle = setupBundle('fail-profile-missing');
+    rmSync(join(bundle, 'rb_profile.yaml'));
+
+    const result = runGate(bundle);
+    const hint = result.hints.find((candidate) => candidate.rule_id === 'rerun_profile_prerequisite');
+
+    assert.strictEqual(result.check.passed, false);
+    assertCompleteHint(hint);
+    assert.strictEqual(hint.repair_kind, 'missing_contract');
+    assert.deepStrictEqual(result.hints.map((candidate) => candidate.rule_id), ['rerun_profile_prerequisite']);
+    assert.ok(result.check.masked_rule_ids.includes('rerun_rationale_present'));
+    assert.ok(result.check.masked_rule_ids.includes('rerun_count_valid'));
   });
 });

@@ -15,7 +15,19 @@ function track(dir) { createdDirs.push(dir); return dir; }
 function unique(prefix) { return `rt_int_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
 
 function runGate(bundlePath) {
-  return spawnSync('node', [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-setup.md'], { encoding: 'utf-8', timeout: 10000 });
+  return spawnSync('node', [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-setup.md'], {
+    encoding: 'utf-8',
+    timeout: 10000,
+    maxBuffer: 1024 * 1024,
+  });
+}
+
+function assertCompleteHint(hint) {
+  assert.ok(hint?.rule_id);
+  assert.ok(hint?.repair_kind);
+  assert.ok(hint?.missing_fact);
+  assert.ok(hint?.write_to);
+  assert.ok(hint?.rerun);
 }
 
 const VALID_PROFILE = `plan_basename: test
@@ -67,6 +79,7 @@ describe('check-gate-setup-ready', () => {
     const output = JSON.parse(result.stdout);
 
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
+    assert.deepEqual(output.hints, []);
   });
 
   it('passes with disposable basename normalization', () => {
@@ -99,6 +112,11 @@ describe('check-gate-setup-ready', () => {
 
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('final')), `Expected missing final dir fail: ${JSON.stringify(output.inspect)}`);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'final_exists');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'engine_operation');
+    assert.match(hint.missing_fact, /final/);
+    assert.match(hint.write_to, /instantiate-run-bundle\.mjs/);
   });
 
   it('fails when status has drifted', () => {
@@ -132,6 +150,11 @@ describe('check-gate-setup-ready', () => {
 
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('Basename') || m.includes('basename') || m.includes('plan_basename')), `Expected basename mismatch fail: ${JSON.stringify(output.inspect)}`);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'basename_consistency');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'missing_contract');
+    assert.match(hint.write_to, /bundle-basename binding boundary/);
+    assert.doesNotMatch(hint.write_to, /rb_plan\.md#|rb_profile\.yaml#/);
   });
 
   it('fails on unparseable status', () => {
@@ -145,6 +168,56 @@ describe('check-gate-setup-ready', () => {
     const output = JSON.parse(result.stdout);
 
     assert.equal(output.check.passed, false);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'status_schema_valid');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'missing_contract');
+    assert.match(hint.missing_fact, /rb_status\.json/);
+    assert.equal(output.hints.some((candidate) => candidate.rule_id === 'status_current_gate'), false);
+    assert.equal(output.hints.some((candidate) => candidate.rule_id === 'status_next_gate'), false);
+  });
+
+  it('resolves definition-owned checked target for an Agent-repairable plan body', () => {
+    const name = unique('emptybody');
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    const bundleDir = track(r.stdout.trim());
+    writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', `plan_basename: ${name}`));
+    const planPath = join(bundleDir, 'rb_plan.md');
+    const plan = readFileSync(planPath, 'utf-8');
+    const frontmatter = plan.match(/^---\n[\s\S]*?\n---/)?.[0];
+    assert.ok(frontmatter, 'Expected plan frontmatter fixture');
+    writeFileSync(planPath, `${frontmatter}\n`);
+
+    const result = runGate(bundleDir);
+    const output = JSON.parse(result.stdout);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'plan_body_non_empty');
+
+    assert.equal(output.check.passed, false);
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'agent_action');
+    assert.equal(hint.write_to, 'rb_plan.md');
+    assert.equal(hint.write_to.includes('$checked_target'), false);
+  });
+
+  it('turns strict Gate-attempt trace failure into a helper-owned hint without writing progress', () => {
+    const name = unique('tracefail');
+    const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
+    const bundleDir = track(r.stdout.trim());
+    writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE.replace('plan_basename: test', `plan_basename: ${name}`));
+    fillPlanBody(bundleDir);
+    const planPath = join(bundleDir, 'rb_plan.md');
+    const planBefore = readFileSync(planPath, 'utf-8');
+    rmSync(join(bundleDir, 'rb_trace.jsonl'));
+    mkdirSync(join(bundleDir, 'rb_trace.jsonl'));
+
+    const result = runGate(bundleDir);
+    const output = JSON.parse(result.stdout);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'gate_attempt_trace_not_durable');
+
+    assert.equal(output.check.passed, false);
+    assert.equal(output.check.trace_durable, false);
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'missing_contract');
+    assert.equal(readFileSync(planPath, 'utf-8'), planBefore);
   });
 
   it('appends runtime audit entry to rb_trace.jsonl', () => {

@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 // check-gate-hitl2-recorded.mjs — evaluates gate-hitl2-recorded rules
-// @impl GSK-001, GSK-002, GSK-004, CDG-003
+// @impl GSK-001, GSK-002, GSK-004, GSK-008, CDG-003
 // Usage: node check-gate-hitl2-recorded.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve as resolveFsPath } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import {
   parseGateCliArgs,
   tryLoadGateDefinition,
-  validateNodeGateBinding,
+  checkNodeGateBinding,
   resolveRouting,
   buildGateResult,
   emitGateResult,
@@ -17,23 +17,31 @@ import {
   checkPhaseHandoffPreflight,
   stripMdFrontmatter,
 } from '../../engine/helpers/gate-helpers.mjs';
+import {
+  buildContractEvaluation,
+  makeContractFinding,
+  makeDefinitionRuleFinding,
+} from '../../engine/helpers/wave-contract-findings.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
 
-// Load gate definition
 const { definition, error: defError } = tryLoadGateDefinition('hitl2-recorded', args.currentNode || null);
 if (defError) { emitGateResult(defError, { bundlePath: args.bundle }); }
 
-// Validate node/gate binding
-const bindingError = validateNodeGateBinding(args.currentNode, definition.gate);
-if (bindingError) {
-  const result = {
-    check: { passed: false, gate: definition.gate, currentNodeRef: args.currentNode, next: null },
-    routing: { kind: 'invalid_input', next: null, detail: bindingError },
-    inspect: [bindingError],
-    advice: ['Verify --current-node matches the phase for this gate.'],
-  };
+const binding = checkNodeGateBinding(args.currentNode, definition.gate);
+if (!binding.ok) {
+  const result = buildGateResult({
+    passed: false,
+    gate: definition.gate,
+    currentNodeRef: args.currentNode,
+    routing: { kind: 'invalid_input', next: null, detail: binding.reason },
+    inspect: binding.inspect,
+    advice: binding.advice,
+    findings: binding.findings,
+    bundlePath: args.bundle,
+    attemptNumber: args.attempt ?? 0,
+  });
   emitGateResult(result, { bundlePath: args.bundle });
 }
 
@@ -47,6 +55,8 @@ if (!handoffPreflight.ok) {
     routing,
     inspect: handoffPreflight.inspect || [handoffPreflight.reason || 'Lifecycle handoff preflight failed'],
     advice: handoffPreflight.advice || ['Follow the handoff remedy and rerun this gate.'],
+    findings: handoffPreflight.findings || [],
+    bundlePath: args.bundle,
     extraCheck: { handoff_preflight: false },
     attemptNumber: args.attempt ?? 0,
   });
@@ -55,188 +65,314 @@ if (!handoffPreflight.ok) {
 }
 
 const bundlePath = args.bundle;
-const inspect = [];
-const advice = [];
-let allPassed = true;
+const findings = [];
+const prerequisiteRoots = new Map();
+const maskedRuleIds = new Set();
+let checksRun = 0;
 
-// ── Cached parsers (lazy) ──
-let _statusCache = null;
-function getStatus() {
-  if (_statusCache) return _statusCache;
-  const p = join(bundlePath, 'rb_status.json');
-  if (!existsSync(p)) return null;
-  _statusCache = JSON.parse(readFileSync(p, 'utf-8'));
-  return _statusCache;
+function resolveObjectPath(object, pathText) {
+  return pathText.split('/').reduce((value, key) => value?.[key], object);
 }
 
-let _profileCache = null;
-let _profileParseFailed = false;
-function getProfile() {
-  if (_profileCache !== null) return _profileCache;
+function exactTarget(target) {
+  if (typeof target !== 'string') return target;
+  const [file, jsonPath] = target.split('#/');
+  const absolute = resolveFsPath(bundlePath, file);
+  return jsonPath ? `${absolute}#/${jsonPath}` : absolute;
+}
+
+function configurationFinding(rule, detail, observed = null) {
+  return makeContractFinding({
+    id: rule.id,
+    ruleId: rule.id,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'configuration_integrity',
+    surface: `Gate checker dispatch for ${definition.gate}/${rule.id}`,
+    expected: `Implemented deterministic checker '${rule.check}'.`,
+    observed: observed ?? rule.check,
+    missingFact: detail,
+    repairKind: 'missing_contract',
+    writeTo: `Gate checker implementation boundary for ${definition.gate}/${rule.id}`,
+    repair: 'Repair the Gate checker contract before rerunning this checkpoint.',
+    detail: `[${rule.id}] ${detail}`,
+  });
+}
+
+let profileRead = null;
+function readProfile() {
+  if (profileRead) return profileRead;
   const profilePath = join(bundlePath, 'rb_profile.yaml');
-  if (!existsSync(profilePath)) { _profileParseFailed = true; _profileCache = null; return null; }
-  try {
-    _profileCache = parseYaml(readFileSync(profilePath, 'utf-8'));
-  } catch {
-    _profileParseFailed = true;
-    _profileCache = null;
+  if (!existsSync(profilePath)) {
+    profileRead = { value: null, exists: false, error: 'file absent' };
+    return profileRead;
   }
-  return _profileCache;
+  try {
+    profileRead = { value: parseYaml(readFileSync(profilePath, 'utf-8')), exists: true, error: null };
+  } catch (error) {
+    profileRead = { value: null, exists: true, error: error.message || String(error) };
+  }
+  return profileRead;
 }
 
-// Helper: resolve JSON/YAML path like "human_decision_checkpoints/hitl2/status"
-function resolvePath(obj, pathStr) {
-  return pathStr.split('/').reduce((o, k) => o?.[k], obj);
+function profileParseFinding(rule, failure) {
+  const surface = exactTarget(rule.target);
+  return makeContractFinding({
+    id: rule.id,
+    ruleId: rule.id,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: failure.fileMissing ? 'required_structure' : 'authority_integrity',
+    surface,
+    expected: failure.expected,
+    observed: failure.observed,
+    missingFact: failure.missingFact,
+    repairKind: 'missing_contract',
+    writeTo: `HITL2 profile YAML owner contract boundary for ${surface}`,
+    repair: 'Restore the recorded HITL2 profile through its owning decision path; do not reconstruct decision semantics from Gate prose.',
+    detail: `[${rule.id}] ${failure.detail}`,
+  });
 }
 
-// ── Rule evaluation ──
 for (const rule of definition.rules) {
   if (rule.check === 'placeholder') continue;
+  checksRun += 1;
 
-  let rulePassed = true;
-  let ruleDetail = null;
+  let failure = null;
+  let findingOverride = null;
 
   try {
     if (rule.check === 'file_exists') {
       const targetPath = join(bundlePath, rule.target);
       if (!existsSync(targetPath)) {
-        rulePassed = false;
-        ruleDetail = `Missing file: ${rule.target}`;
+        failure = {
+          surface: rule.target,
+          expected: 'Required HITL2 decision brief exists.',
+          observed: { exists: false },
+          missingFact: `Required HITL2 decision brief '${rule.target}' is absent.`,
+          detail: `Missing file: ${rule.target}`,
+        };
+        prerequisiteRoots.set(rule.target, rule.id);
       }
     } else if (rule.check === 'yaml_parse') {
-      const profile = getProfile();
-      if (_profileParseFailed) {
-        rulePassed = false;
-        // Re-parse to get the error message
-        const profilePath = join(bundlePath, 'rb_profile.yaml');
-        try {
-          parseYaml(readFileSync(profilePath, 'utf-8'));
-        } catch (err) {
-          ruleDetail = `YAML parse error in rb_profile.yaml: ${err.message}`;
+      if (rule.target !== 'rb_profile.yaml') {
+        findingOverride = configurationFinding(rule, `Unsupported yaml_parse target: ${rule.target}`, rule.target);
+      } else {
+        const profile = readProfile();
+        if (!profile.value) {
+          failure = {
+            expected: 'rb_profile.yaml exists and parses as YAML.',
+            observed: { file_exists: profile.exists, parsed: false, error: profile.error },
+            missingFact: `rb_profile.yaml is ${profile.exists ? 'unparseable' : 'absent'}${profile.error ? `: ${profile.error}` : '.'}`,
+            detail: profile.exists ? `YAML parse error in rb_profile.yaml: ${profile.error}` : 'rb_profile.yaml not found',
+            fileMissing: !profile.exists,
+          };
+          prerequisiteRoots.set(rule.target, rule.id);
         }
-      } else if (profile === null) {
-        rulePassed = false;
-        ruleDetail = 'rb_profile.yaml not found';
       }
     } else if (rule.check === 'field_non_empty') {
       const target = rule.target;
       if (target.endsWith('.md') || target.startsWith('artifacts/')) {
-        // File content check (decision brief)
         const filePath = join(bundlePath, target);
         if (!existsSync(filePath)) {
-          rulePassed = false;
-          ruleDetail = `File not found: ${target}`;
+          failure = {
+            surface: target,
+            expected: 'Non-empty Markdown body after frontmatter.',
+            observed: { file_exists: false },
+            missingFact: `Cannot verify '${target}' content because the file is absent.`,
+            detail: `File not found: ${target}`,
+            maskedByRuleId: prerequisiteRoots.get(target) || null,
+          };
         } else {
-          const content = readFileSync(filePath, 'utf-8');
-          const bodyContent = stripMdFrontmatter(content);
-          if (bodyContent.length === 0) {
-            rulePassed = false;
-            ruleDetail = `${target} is empty (no content after frontmatter)`;
+          const body = stripMdFrontmatter(readFileSync(filePath, 'utf-8'));
+          if (body.length === 0) {
+            failure = {
+              surface: target,
+              expected: 'Non-empty Markdown body after frontmatter.',
+              observed: { body_length: 0 },
+              missingFact: `${target} has no decision-brief content after frontmatter.`,
+              detail: `${target} is empty (no content after frontmatter)`,
+            };
           }
         }
       } else {
-        // YAML field path check
-        const [, jsonPath] = target.split('#/');
-        const profile = getProfile();
-        if (_profileParseFailed || profile === null) {
-          rulePassed = false;
-          ruleDetail = `Cannot check ${target}: rb_profile.yaml not found or unparseable`;
+        const [file, jsonPath] = target.split('#/');
+        const profile = readProfile();
+        const parentRoot = prerequisiteRoots.get(file) || null;
+        if (!profile.value) {
+          failure = {
+            surface: target,
+            expected: 'Non-empty recorded HITL2 decision value.',
+            observed: { parsed_profile: false, error: profile.error },
+            missingFact: `Cannot verify ${target} because rb_profile.yaml is missing or unparseable.`,
+            detail: `Cannot check ${target}: rb_profile.yaml not found or unparseable`,
+            maskedByRuleId: parentRoot,
+          };
         } else {
-          const value = resolvePath(profile, jsonPath);
-          if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
-            rulePassed = false;
-            ruleDetail = `${target} is empty or missing`;
+          const value = resolveObjectPath(profile.value, jsonPath);
+          const empty = value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
+          if (empty) {
+            failure = {
+              surface: target,
+              expected: 'Non-empty recorded HITL2 decision value.',
+              observed: value ?? null,
+              missingFact: `${target} is empty or missing.`,
+              detail: `${target} is empty or missing`,
+              maskedByRuleId: parentRoot,
+            };
+            if (rule.id === 'user_decision_non_empty') maskedRuleIds.add('user_decision_valid_enum');
           }
         }
       }
     } else if (rule.check === 'field_value') {
-      const [, jsonPath] = rule.target.split('#/');
-      const profile = getProfile();
-      if (profile === null) {
-        rulePassed = false;
-        ruleDetail = 'rb_profile.yaml not found or unparseable';
-      } else {
-        const value = resolvePath(profile, jsonPath);
-        if (rule.operator === 'equal') {
-          if (value !== rule.value) {
-            rulePassed = false;
-            ruleDetail = `${rule.target}: expected "${rule.value}", got "${JSON.stringify(value)}"`;
-          }
-        } else if (rule.operator === 'not_equal') {
-          if (value === rule.value) {
-            rulePassed = false;
-            ruleDetail = `${rule.target} is still "${rule.value}" (should not be)`;
-          }
-        } else if (rule.operator === 'in') {
-          if (!rule.value.includes(value)) {
-            rulePassed = false;
-            ruleDetail = `${rule.target}: value "${value}" is not in accepted set: [${rule.value.join(', ')}]`;
-          }
-        }
-      }
-    } else if (rule.check === 'status_value') {
       const [file, jsonPath] = rule.target.split('#/');
-      const status = getStatus();
-      if (!status) {
-        rulePassed = false;
-        ruleDetail = 'rb_status.json not found';
+      const profile = readProfile();
+      const parentRoot = prerequisiteRoots.get(file) || null;
+      if (!profile.value) {
+        failure = {
+          surface: rule.target,
+          expected: rule.value,
+          observed: { parsed_profile: false, error: profile.error },
+          missingFact: `Cannot verify ${rule.target} because rb_profile.yaml is missing or unparseable.`,
+          detail: 'rb_profile.yaml not found or unparseable',
+          maskedByRuleId: parentRoot,
+        };
       } else {
-        const value = jsonPath.split('/').reduce((obj, key) => obj?.[key], status);
-        if (value !== rule.expected) {
-          rulePassed = false;
-          ruleDetail = `${rule.target}: expected "${rule.expected}", got "${JSON.stringify(value)}"`;
+        const value = resolveObjectPath(profile.value, jsonPath);
+        if (rule.operator === 'equal' && value !== rule.value) {
+          failure = {
+            surface: rule.target,
+            expected: rule.value,
+            observed: value,
+            missingFact: `${rule.target} must equal '${rule.value}', but the observed value is '${value}'.`,
+            detail: `${rule.target}: expected "${rule.value}", got "${JSON.stringify(value)}"`,
+          };
+        } else if (rule.operator === 'not_equal' && value === rule.value) {
+          failure = {
+            surface: rule.target,
+            expected: `Value differs from '${rule.value}'.`,
+            observed: value,
+            missingFact: `${rule.target} is still '${rule.value}'.`,
+            detail: `${rule.target} is still "${rule.value}" (should not be)`,
+          };
+        } else if (rule.operator === 'in' && !rule.value.includes(value)) {
+          failure = {
+            surface: rule.target,
+            expected: rule.value,
+            observed: value,
+            missingFact: `${rule.target} must be one of [${rule.value.join(', ')}], but the observed value is '${value}'.`,
+            detail: `${rule.target}: value "${value}" is not in accepted set: [${rule.value.join(', ')}]`,
+            maskedByRuleId: maskedRuleIds.has(rule.id) ? 'user_decision_non_empty' : parentRoot,
+          };
+        } else if (!['equal', 'not_equal', 'in'].includes(rule.operator)) {
+          findingOverride = configurationFinding(rule, `Unsupported field_value operator: ${rule.operator}`, rule.operator);
         }
       }
     } else {
-      rulePassed = false;
-      ruleDetail = `Unknown check type: ${rule.check} — must fail (check type not implemented)`;
+      findingOverride = configurationFinding(rule, `Unknown check type: ${rule.check} — must fail (check type not implemented)`);
     }
-  } catch (err) {
-    rulePassed = false;
-    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
-    ruleDetail = `Error evaluating rule ${rule.id}: ${safeMsg}`;
+  } catch (error) {
+    const safeMessage = (error.message || String(error)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    failure = {
+      surface: rule.target || `Gate checker dispatch for ${definition.gate}/${rule.id}`,
+      expected: `Rule '${rule.id}' evaluates its direct authority without parser/runtime error.`,
+      observed: safeMessage,
+      missingFact: `Rule '${rule.id}' could not evaluate its direct authority: ${safeMessage}`,
+      detail: `Error evaluating rule ${rule.id}: ${safeMessage}`,
+      maskedByRuleId: prerequisiteRoots.get(typeof rule.target === 'string' ? rule.target.split('#/')[0] : null) || null,
+    };
   }
 
-  if (!rulePassed) {
-    allPassed = false;
-    inspect.push(ruleDetail);
-    advice.push(rule.failure_message);
-  }
+  if (findingOverride) findings.push(findingOverride);
+  else if (failure) findings.push(rule.id === 'profile_yaml_parseable'
+    ? profileParseFinding(rule, failure)
+    : makeDefinitionRuleFinding({
+        rule,
+        bundlePath,
+        surface: failure.surface,
+        expected: failure.expected,
+        observed: failure.observed,
+        missingFact: failure.missingFact,
+        detail: `[${rule.id}] ${failure.detail}`,
+        maskedByRuleId: failure.maskedByRuleId || null,
+        maskedRuleIds: rule.id === 'decision_brief_exists' ? ['decision_brief_non_empty']
+          : (rule.id === 'user_decision_non_empty' ? ['user_decision_valid_enum'] : []),
+      }));
 }
 
+const ruleEvaluation = buildContractEvaluation({
+  checksRun,
+  findings,
+  maskedRuleIds: [...maskedRuleIds],
+});
+
 let selectedDecision = null;
-if (allPassed) {
-  const profile = getProfile();
-  selectedDecision = resolvePath(profile || {}, 'human_decision_checkpoints/hitl2/user_decision');
+if (ruleEvaluation.passed) {
+  selectedDecision = resolveObjectPath(readProfile().value || {}, 'human_decision_checkpoints/hitl2/user_decision');
 }
 
 let outcome = 'failed';
 let deterministicHandoff = false;
-if (allPassed && selectedDecision === 'proceed_to_readiness') {
+if (ruleEvaluation.passed && selectedDecision === 'proceed_to_readiness') {
   outcome = 'passed';
   deterministicHandoff = true;
-} else if (allPassed && selectedDecision === 'rerun') {
+} else if (ruleEvaluation.passed && selectedDecision === 'rerun') {
   outcome = 'rerun';
   deterministicHandoff = true;
 }
 
 const routing = resolveRouting(args.transitions, args.currentNode, outcome);
+const routingFailed = ['invalid_input', 'config_error'].includes(routing.kind);
+const evaluation = buildContractEvaluation({
+  checksRun,
+  findings: [...ruleEvaluation.findings, ...(routing.findings || [])],
+  maskedRuleIds: ruleEvaluation.masked_rule_ids,
+});
 
 const result = buildGateResult({
-  passed: allPassed,
+  passed: ruleEvaluation.passed && !routingFailed,
   gate: definition.gate,
   currentNodeRef: args.currentNode,
   routing,
-  inspect,
-  advice,
+  inspect: [...ruleEvaluation.inspect, ...(routing.inspect || [])],
+  advice: [...ruleEvaluation.advice, ...(routing.advice || [])],
+  findings: evaluation.findings,
+  bundlePath,
   extraCheck: {
+    failed_rule_ids: evaluation.failed_rule_ids,
+    masked_rule_ids: evaluation.masked_rule_ids,
     hitl2_user_decision: selectedDecision,
     deterministic_handoff: deterministicHandoff,
   },
   attemptNumber: args.attempt ?? 0,
 });
 
-// Write gate attempt audit (logger + trace)
-writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+try {
+  writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+} catch (error) {
+  const failedRouting = resolveRouting(args.transitions, args.currentNode, 'failed');
+  const failureEvaluation = buildContractEvaluation({ findings: [...(error.findings || []), ...(failedRouting.findings || [])] });
+  const failedResult = buildGateResult({
+    passed: false,
+    gate: definition.gate,
+    currentNodeRef: args.currentNode,
+    routing: failedRouting,
+    inspect: [...(error.inspect || [error.message || String(error)]), ...(failedRouting.inspect || [])],
+    advice: [...(error.advice || []), ...(failedRouting.advice || [])],
+    findings: failureEvaluation.findings,
+    bundlePath,
+    extraCheck: {
+      failed_rule_ids: failureEvaluation.failed_rule_ids,
+      masked_rule_ids: failureEvaluation.masked_rule_ids,
+      hitl2_user_decision: selectedDecision,
+      deterministic_handoff: false,
+      trace_durable: false,
+      gate_attempt_write_failed: true,
+    },
+    attemptNumber: args.attempt ?? 0,
+  });
+  try { writeGateAttempt(bundlePath, failedResult); } catch { /* secondary diagnostic only */ }
+  emitGateResult(failedResult);
+}
 
 emitGateResult(result);

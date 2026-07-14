@@ -3,17 +3,16 @@
 // @impl RES-002, RES-003
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ResearchStyleParamsSchema, ProfileSchema } from '../../DPT_FRAMEWORK/schema/index.mjs';
+import { readGateDefinitionSnapshot } from '../../DPT_FRAMEWORK/schema/contracts/gate-definition.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFS_DIR = join(__dirname, '..', '..', 'DPT_FRAMEWORK', 'schema', 'gate_definitions');
 
 function loadDef(filename) {
-  const raw = readFileSync(join(DEFS_DIR, filename), 'utf-8');
-  return JSON.parse(raw);
+  return readGateDefinitionSnapshot(join(DEFS_DIR, filename)).definition;
 }
 
 describe('Gate definitions with threshold_source', () => {

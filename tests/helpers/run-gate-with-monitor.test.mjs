@@ -49,6 +49,11 @@ const FAKE_INVALID_INPUT = [
   `console.log(JSON.stringify({check:{passed:false,gate:"unknown",next:null},routing:{kind:"invalid_input",next:null},inspect:["Missing required argument"],advice:[]}));process.exit(2)`,
 ];
 
+const FAKE_LARGE = [
+  'node', '-e',
+  `const payload={check:{passed:false,gate:"wave1-complete",next:null},routing:{kind:"no_transition",next:null},inspect:["x".repeat(12000)],advice:[],hints:[]};process.stdout.write(JSON.stringify(payload));process.exitCode=1`,
+];
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Fixture Helpers
 // ═══════════════════════════════════════════════════════════════════════════
@@ -266,6 +271,22 @@ describe('run-gate-with-monitor.mjs', () => {
       // Gate's own stdout should be passed through
       const gateOutput = JSON.parse(r.stdout.trim());
       assert.strictEqual(gateOutput.check.passed, true);
+    });
+
+    it('preserves structured gate stdout larger than a small pipe buffer', () => {
+      const dir = createBundle('stdout-large');
+      const r = spawnSync('node', [WRAPPER, '--bundle', dir, '--gate', 'wave1-complete', '--', ...FAKE_LARGE], { encoding: 'utf-8', timeout: 10000 });
+
+      assert.strictEqual(r.status, 1);
+      assert.ok(r.stdout.length > 8192);
+      const gateOutput = JSON.parse(r.stdout);
+      assert.strictEqual(gateOutput.inspect[0].length, 12000);
+
+      const gatesDir = join(dir, '_observability', 'gates');
+      const files = readdirSync(gatesDir).filter(f => f.endsWith('.json'));
+      const artifact = JSON.parse(readFileSync(join(gatesDir, files[0]), 'utf-8'));
+      assert.strictEqual(artifact.stdout, r.stdout);
+      assert.strictEqual(artifact.parsed_json.inspect[0].length, 12000);
     });
   });
 });

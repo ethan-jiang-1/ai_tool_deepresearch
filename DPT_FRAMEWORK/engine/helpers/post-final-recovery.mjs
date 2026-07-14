@@ -20,6 +20,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { z } from 'zod';
+import { readGateDefinitionSnapshot } from '../../schema/contracts/gate-definition.mjs';
 import { ProfileSchema } from '../../schema/contracts/profile.mjs';
 import { appendExactTraceLine } from '../trace.mjs';
 import { normalizedBundleBasenameFromPath } from './bundle-identity.mjs';
@@ -272,13 +273,12 @@ function routingFacts() {
 }
 
 function rerunGuard(profile) {
-  const raw = readFileSync(RERUN_RULE_PATH);
-  const definition = JSON.parse(raw.toString('utf8'));
+  const { rawBytes, definition } = readGateDefinitionSnapshot(RERUN_RULE_PATH);
   const rule = definition.rules?.find((item) => item.id === 'rerun_count_valid' && item.check === 'rerun_count_limit');
   if (!rule || rule.operator !== 'less_than' || !Number.isInteger(rule.value) || rule.value <= 0) throw new Error('active rerun_count_limit rule is unsupported');
   const currentCount = Number(profile?.human_decision_checkpoints?.hitl2?.rerun_count || 0);
   if (!Number.isInteger(currentCount) || currentCount < 0) throw new Error('current rerun_count is invalid');
-  return RerunGuardSchema.parse({ rule_id: 'rerun_count_valid', definition_sha256: hashBytes(raw), current_count: currentCount, next_count: currentCount + 1, limit: rule.value });
+  return RerunGuardSchema.parse({ rule_id: 'rerun_count_valid', definition_sha256: hashBytes(rawBytes), current_count: currentCount, next_count: currentCount + 1, limit: rule.value });
 }
 
 function isQuiescent(bundle) {

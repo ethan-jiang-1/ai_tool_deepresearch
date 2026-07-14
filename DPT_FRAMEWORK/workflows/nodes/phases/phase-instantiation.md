@@ -20,7 +20,7 @@ suggested_context: []
 - **Start here**: Derive a legal bundle name from the original question, then run `instantiate-run-bundle.mjs`.
 - **Path to pass**: Instantiate the bundle through the CLI, reload the created control files and scaffold directories, then run the instantiation gate.
 - **Completion check**: `check-gate-instantiation-complete.mjs` passes for `phases/phase-instantiation.md`.
-- **Failure posture**: Repair missing bundle surface from gate `inspect`/`advice`; for name collision or illegal name, silently suffix/normalize and re-instantiate through the CLI.
+- **Failure posture**: Consume top-level `hints[]` first, execute authorized mechanical repair, and run the exact same-Gate `rerun`; use `inspect[]`/`advice[]` only as compatible detail.
 
 ## 1. Stage Goal
 
@@ -58,9 +58,18 @@ node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle <pat
 
 ## 7. On Gate Fail
 
-读取 CLI 返回的 `inspect` / `advice`，修复缺失或不合法的 instantiation surface（如补建缺失的 control file 或 scaffold dir），rerun same gate。默认 retry limit 3 次。传 Agent-reported `--attempt N` 给 gate CLI（N 从 1 开始，每次 rerun 递增）。
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority，也不得用其 prose 猜 repair kind、路径或命令。按每个 independent primary hint 执行：
+
+1. `repair_kind: agent_action`：确认 `write_to` 是 hint 已声明的 authorized mutable surface，由 Agent 完成最小修复。
+2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal Engine operation；不得直接编辑 status、trace、ledger、index、receipt、hash 或其他 Engine-owned authority。
+3. `repair_kind: user_decision`：只询问 `missing_fact` 指出的新语义/风险决定；决定记录到 accepted owner 后，机械执行立即回到 Agent。
+4. `repair_kind: external_action`：只暴露不可代理的外部前置条件；条件满足后由 Agent 继续。
+5. `repair_kind: missing_contract`：报告 `write_to` 指出的缺失 capability/contract boundary，不发明替代 mutation、手写 authority 或第二条成功路径。
+
+Hint 不创造 permission。完成可执行动作后，Agent MUST 运行该 hint 的 exact `rerun`，回到同一个 `instantiation-complete` checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 补猜 blocking repair；按 `missing_contract` 暴露最小边界。默认 retry limit 3 次；仅把 `--attempt N` 作为 Agent-reported retry hint（N 从 1 开始递增），不得让 fatigue wording 覆盖 direct hint。
 
 **Bundle name 相关 fail — 静默处理（`stop: no`）：**
+- 仅当 structured hint/instantiate CLI 的直接 invocation fact 指向以下 name repair 时使用这些分支；不得用本表覆盖不同的 `repair_kind` 或 `write_to`。
 - **Name collision**（目标 production bundle 已存在）→ 自动生成 hex6 后缀替代名（`<original>_<hex6>`），重新调用 `instantiate-run-bundle.mjs <new_name>`。通过 accepted trace/log surface 记录 `silent_degradation`，不询问用户：
   ```bash
   node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silent_degradation" --detail '{"kind":"silent_degradation","phase":"instantiation","reason":"name_collision","action":"auto_suffix","original_name":"<name>","new_name":"<new_name>"}'

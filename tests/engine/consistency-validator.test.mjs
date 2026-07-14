@@ -231,7 +231,19 @@ function scaffold(opts = {}) {
   // Gate definitions (opts.gateDefs maps gateKey → definition object)
   const gateDefs = opts.gateDefs || {};
   for (const [gateKey, def] of Object.entries(gateDefs)) {
-    writeFileSync(join(gd, `gate-${gateKey}.definition.json`), JSON.stringify(def, null, 2));
+    const rules = Array.isArray(def.rules) && def.rules.length > 0 ? def.rules : [{
+      id: 'fixture_placeholder',
+      check: 'placeholder',
+      target: 'fixture-contract-boundary',
+      failure_message: 'Test-only consistency fixture placeholder.',
+      finding: { source: 'definition', blocking_basis: 'configuration_integrity' },
+      repair: { kind: 'missing_contract', write_to: 'fixture-contract-boundary' },
+    }];
+    writeFileSync(join(gd, `gate-${gateKey}.definition.json`), JSON.stringify({
+      description: 'Test-only consistency Gate definition.',
+      ...def,
+      rules,
+    }, null, 2));
   }
 
   // Transition tables

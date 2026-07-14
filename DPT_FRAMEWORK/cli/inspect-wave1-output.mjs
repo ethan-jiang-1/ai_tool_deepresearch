@@ -3,7 +3,13 @@
 // @impl IOC-002, IOC-005, REF-001, REF-008, WPG-012, RWG-017, RWG-018
 
 import { tryLoadGateDefinition, readBundlePlan } from '../engine/helpers/gate-helpers.mjs';
-import { findingsFromCheckResult, projectInspectContract } from '../engine/helpers/wave-contract-findings.mjs';
+import { resolve as resolvePath } from 'node:path';
+import {
+  buildContractEvaluation,
+  emitInspectResult,
+  makeContractFinding,
+  projectInspectContract,
+} from '../engine/helpers/wave-contract-findings.mjs';
 import { evaluateWave1Contract } from '../engine/helpers/wave-contract-evaluators.mjs';
 import {
   inspectReferenceReturnMaps,
@@ -13,41 +19,62 @@ import {
 
 const bundleFlag = process.argv.indexOf('--bundle');
 const bundlePath = bundleFlag >= 0 ? process.argv[bundleFlag + 1] : process.argv[2];
+const commandFor = (bundle) => `node DPT_FRAMEWORK/cli/inspect-wave1-output.mjs --bundle ${bundle || '<bundle-path>'}`;
 if (!bundlePath) {
-  console.error('Usage: node inspect-wave1-output.mjs --bundle <path>');
-  process.exit(2);
+  const finding = makeContractFinding({
+    id: 'wave1_inspect_bundle_required',
+    ruleId: 'wave1_inspect_bundle_required',
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'invocation_contract',
+    surface: 'Wave1 inspect invocation --bundle',
+    expected: 'A selected active bundle path supplied through --bundle.',
+    observed: 'argument absent',
+    missingFact: 'Required Wave1 inspect invocation argument --bundle is missing.',
+    repairKind: 'engine_operation',
+    writeTo: 'Wave1 inspect invocation argument --bundle',
+    repair: 'Provide --bundle <bundle-path> and rerun Wave1 inspect.',
+    detail: '[wave1_inspect_bundle_required] Missing required argument: --bundle <bundle-path>',
+  });
+  emitInspectResult(projectInspectContract({
+    wave: 'wave1',
+    evaluation: buildContractEvaluation({ findings: [finding] }),
+    checkpointCommand: commandFor(null),
+  }), 2);
 }
+
+const resolvedBundlePath = resolvePath(bundlePath);
+const checkpointCommand = commandFor(resolvedBundlePath);
 
 const { definition, error } = tryLoadGateDefinition('wave1-complete', null);
 if (error) {
-  console.log(JSON.stringify({
-    check: { passed: false, wave: 'wave1', checks_run: 0, checks_failed: 0, return_map_classification: 'diagnostic-only', failed_rule_ids: [], finding_classification: { blocking: [], advisory: [], diagnostic_only: [] } },
-    inspect: error.inspect || ['Wave1 gate definition could not be loaded.'],
-    advice: error.advice || ['Repair the Wave1 gate definition and rerun inspect.'],
-  }, null, 2));
-  process.exit(2);
+  emitInspectResult(projectInspectContract({
+    wave: 'wave1',
+    evaluation: buildContractEvaluation({ findings: error.findings || [] }),
+    checkpointCommand,
+  }), 2);
 }
 
-const evaluation = evaluateWave1Contract(bundlePath, definition);
+const evaluation = evaluateWave1Contract(resolvedBundlePath, definition);
 let topicSlugs = [];
-try { topicSlugs = (readBundlePlan(bundlePath)?.topic_registry || []).map((topic) => topic.slug); } catch { /* evaluator reports plan failure */ }
-const seedMap = inspectSeedTopicReturnMaps(bundlePath, { wave: 'wave1', topicSlugs });
-const artifactMap = inspectWaveArtifactReturnMaps(bundlePath, 'wave1', topicSlugs);
-const referenceMap = { passed: true, inspect: [], advice: [], classification: 'diagnostic-only' };
+try { topicSlugs = (readBundlePlan(resolvedBundlePath)?.topic_registry || []).map((topic) => topic.slug); } catch { /* evaluator reports plan failure */ }
+const seedMap = inspectSeedTopicReturnMaps(resolvedBundlePath, { wave: 'wave1', topicSlugs });
+const artifactMap = inspectWaveArtifactReturnMaps(resolvedBundlePath, 'wave1', topicSlugs);
+const referenceMap = { passed: true, inspect: [], advice: [], findings: [], classification: 'diagnostic-only' };
 for (const topic of topicSlugs) {
-  const result = inspectReferenceReturnMaps(bundlePath, topic);
+  const result = inspectReferenceReturnMaps(resolvedBundlePath, topic);
   referenceMap.inspect.push(...result.inspect);
   referenceMap.advice.push(...result.advice);
+  referenceMap.findings.push(...(result.findings || []));
   if (!result.passed) referenceMap.passed = false;
 }
 referenceMap.classification = referenceMap.passed ? 'diagnostic-only' : 'blocking';
 
 const additionalFindings = [
-  ...findingsFromCheckResult(seedMap, { defaultId: 'wave1_seed_return_map' }),
-  ...findingsFromCheckResult(artifactMap, { defaultId: 'wave1_artifact_return_map' }),
-  ...findingsFromCheckResult(referenceMap, { defaultId: 'wave1_reference_return_map' }),
+  ...(seedMap.findings || []),
+  ...(artifactMap.findings || []),
+  ...(referenceMap.findings || []),
 ];
 const returnMapClassification = seedMap.passed && artifactMap.passed && referenceMap.passed ? 'diagnostic-only' : 'blocking';
-const output = projectInspectContract({ wave: 'wave1', evaluation, additionalFindings, additionalChecksRun: 1, returnMapClassification });
-console.log(JSON.stringify(output, null, 2));
-process.exit(output.check.passed ? 0 : 1);
+const output = projectInspectContract({ wave: 'wave1', evaluation, additionalFindings, additionalChecksRun: 1, returnMapClassification, checkpointCommand });
+emitInspectResult(output, output.check.passed ? 0 : 1);

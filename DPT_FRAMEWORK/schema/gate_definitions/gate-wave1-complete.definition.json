@@ -6,25 +6,32 @@
       "id": "wave1_dir_exists",
       "check": "dir_exists",
       "target": "artifacts/wave1",
-      "failure_message": "Missing directory: artifacts/wave1/. Create the directory and add per-topic evidence-summary.md files."
+      "failure_message": "Missing directory: artifacts/wave1/. Create the directory and add per-topic evidence-summary.md files.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "per_topic_evidence_summary_exists",
       "check": "file_exists",
       "target": "artifacts/wave1/{topic}/evidence-summary.md",
-      "failure_message": "Missing evidence-summary file: artifacts/wave1/{topic}/evidence-summary.md. Run the deepening task for this topic via the queue-driven batch protocol."
+      "failure_message": "Missing evidence-summary file: artifacts/wave1/{topic}/evidence-summary.md. Run the deepening task for this topic via the queue-driven batch protocol.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "per_topic_question_list_exists",
       "check": "file_exists",
       "target": "artifacts/wave1/{topic}/question-list.md",
-      "failure_message": "Missing question-list file: artifacts/wave1/{topic}/question-list.md. Every topic must have a paired question-list.md alongside evidence-summary.md."
+      "failure_message": "Missing question-list file: artifacts/wave1/{topic}/question-list.md. Every topic must have a paired question-list.md alongside evidence-summary.md.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "per_topic_depth_review_contract",
       "check": "depth_review_contract",
       "target": "artifacts/wave1/{topic}/depth-review.yaml",
-      "failure_message": "Depth-review contract failed for {topic}. Review submitted work-unit rows, exact-new source claims, cache mappings, profile checks, and repair through supplementary wave1_topic_deepening work units."
+      "failure_message": "Depth-review contract failed for {topic}. Review submitted work-unit rows, exact-new source claims, cache mappings, profile checks, and repair through supplementary wave1_topic_deepening work units.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "per_topic_ref_md_count_floor",
@@ -32,7 +39,9 @@
       "target": "reference/*{topic}*.md",
       "threshold": 1,
       "threshold_source": "rb_profile.yaml#/research_style_params/wave1_per_topic_ref_floor",
-      "failure_message": "Topic {topic} has fewer than 1 reference/*{topic}*.md rich MD file. Create at least one topic-slug-prefixed reference file per shared-reference-template.md."
+      "failure_message": "Topic {topic} has fewer than 1 reference/*{topic}*.md rich MD file. Create at least one topic-slug-prefixed reference file per shared-reference-template.md.",
+      "finding": { "source": "definition", "blocking_basis": "required_floor" },
+      "repair": { "kind": "agent_action", "write_to": "reference/" }
     },
     {
       "id": "no_example_com_ref_url",
@@ -40,39 +49,38 @@
       "target": "reference/{topic}-*.md",
       "pattern": "source_url:\\s*\"https?://(www\\.)?example\\.com\"",
       "negate": true,
-      "failure_message": "Reference file for {topic} contains placeholder source_url (example.com). Delete the placeholder file and write a real reference or suppl-failure-r{N}.md instead."
+      "failure_message": "Reference file for {topic} contains placeholder source_url (example.com). Delete the placeholder file and write a real reference or suppl-failure-r{N}.md instead.",
+      "finding": { "source": "definition", "blocking_basis": "authority_integrity" },
+      "repair": { "kind": "agent_action", "write_to": "reference/" }
     },
     {
       "id": "reference_format",
       "check": "reference_format",
       "target": "reference/*{topic}*.md",
-      "failure_message": "Reference files for {topic} must use metadata block format with 9 required fields and the 5 standard sections; YAML frontmatter is not allowed."
+      "failure_message": "Reference files for {topic} must use metadata block format with 9 required fields and the 5 standard sections; YAML frontmatter is not allowed.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "reference_source_url_parseable",
       "check": "reference_source_url_parseable",
       "target": "reference/*{topic}*.md",
-      "failure_message": "Reference files for {topic} must declare a non-empty URL-parseable source_url in metadata block format."
+      "failure_message": "Reference files for {topic} must declare a non-empty URL-parseable source_url in metadata block format.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "reference_index_coverage",
       "check": "reference_index_coverage",
       "target": "reference/*{topic}*.md",
       "source_layer": "wave1_topic",
-      "failure_message": "Reference files for {topic} must have matching reference/_INDEX.md rows with source_layer wave1_topic. Missing index rows are reference navigation drift; source_layer is not evidence authority without submitted backing."
-    },
-    {
-      "id": "key_facts_min_lines",
-      "check": "reference_key_facts_min_lines",
-      "target": "reference/*{topic}*.md",
-      "min_lines": 5,
-      "failure_message": "Reference files for {topic} must contain at least 5 concrete bullet facts in ## Key Facts."
+      "failure_message": "Reference files for {topic} must have matching reference/_INDEX.md rows with source_layer wave1_topic. Missing index rows are reference navigation drift; source_layer is not evidence authority without submitted backing.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "ledger_coverage",
       "check": "reference_ledger_coverage",
       "target": "reference/*{topic}*.md",
-      "failure_message": "Reference files for {topic} must either be submitted delegated reference outputs or Phase-owned projections backed by submitted Wave1 source claims, accepted source URL surfaces, verified cache trails, explicit degraded-capture records, and scannable body backing refs."
+      "failure_message": "Reference files for {topic} must either be submitted delegated reference outputs or Phase-owned projections backed by submitted Wave1 source claims, accepted source URL surfaces, verified cache trails, explicit degraded-capture records, and scannable body backing refs.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "question_list_has_four_sections",
@@ -80,7 +88,8 @@
       "target": "artifacts/wave1/{topic}/question-list.md",
       "pattern": "## Topic Investigation Targets[\\s\\S]*## Question Reconciliation[\\s\\S]*## Emergent Question Protocol[\\s\\S]*## Exploration\\s*/\\s*Exploitation Decision",
       "negate": false,
-      "failure_message": "question-list.md for {topic} must contain all four sections in order: Topic Investigation Targets, Question Reconciliation, Emergent Question Protocol, Exploration / Exploitation Decision."
+      "failure_message": "question-list.md for {topic} must contain all four sections in order: Topic Investigation Targets, Question Reconciliation, Emergent Question Protocol, Exploration / Exploitation Decision.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "source_url_present",
@@ -88,7 +97,8 @@
       "target": "artifacts/wave1/{topic}/evidence-summary.md",
       "pattern": "\\[.+\\]\\(https?://[^)]+\\)",
       "negate": false,
-      "failure_message": "evidence-summary.md for {topic} must contain at least 1 source URL in Markdown link format. The work-unit sub-agent must do real WebSearch+WebFetch."
+      "failure_message": "evidence-summary.md for {topic} must contain at least 1 source URL in Markdown link format. The work-unit sub-agent must do real WebSearch+WebFetch.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "key_findings_non_empty",
@@ -96,7 +106,8 @@
       "target": "artifacts/wave1/{topic}/evidence-summary.md",
       "pattern": "## Key Findings\\s*\\n\\s*(\\*\\*|[1-9]\\.)",
       "negate": false,
-      "failure_message": "evidence-summary.md for {topic} must have a non-empty ## Key Findings section with at least 1 numbered finding."
+      "failure_message": "evidence-summary.md for {topic} must have a non-empty ## Key Findings section with at least 1 numbered finding.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "no_stale_mechanisms_token",
@@ -104,7 +115,9 @@
       "target": "seed_topics/{topic}.md",
       "pattern": "__BACKFILL_WAVE1_MECHANISMS__",
       "negate": true,
-      "failure_message": "Stale backfill token __BACKFILL_WAVE1_MECHANISMS__ found in seed_topics/{topic}.md. Replace the token with actual mechanism findings."
+      "failure_message": "Stale backfill token __BACKFILL_WAVE1_MECHANISMS__ found in seed_topics/{topic}.md. Replace the token with actual mechanism findings.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "no_stale_trends_token",
@@ -112,7 +125,9 @@
       "target": "seed_topics/{topic}.md",
       "pattern": "__BACKFILL_WAVE1_TRENDS__",
       "negate": true,
-      "failure_message": "Stale backfill token __BACKFILL_WAVE1_TRENDS__ found in seed_topics/{topic}.md. Replace the token with actual trends."
+      "failure_message": "Stale backfill token __BACKFILL_WAVE1_TRENDS__ found in seed_topics/{topic}.md. Replace the token with actual trends.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "no_stale_pending_questions_token",
@@ -120,26 +135,31 @@
       "target": "seed_topics/{topic}.md",
       "pattern": "__BACKFILL_PENDING_QUESTIONS__",
       "negate": true,
-      "failure_message": "Stale backfill token __BACKFILL_PENDING_QUESTIONS__ found in seed_topics/{topic}.md. Replace with updated question status tags."
+      "failure_message": "Stale backfill token __BACKFILL_PENDING_QUESTIONS__ found in seed_topics/{topic}.md. Replace with updated question status tags.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "trace_event_wave1_completion",
       "check": "trace_event_present",
       "target": "wave1_completion",
-      "failure_message": "No wave1_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event before the gate."
+      "failure_message": "No wave1_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event before the gate.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "cache_coverage",
       "check": "cache_coverage",
       "target": "output_declarations",
-      "failure_message": "Cache trail coverage gap detected: role=reference output files must map to verified _cache/ leaf directories. Missing or unmapped cache trails fail coverage; empty cache_trails on a declaration emits a Phase 1 warning."
+      "failure_message": "Cache trail coverage gap detected: role=reference output files must map to verified _cache/ leaf directories. Missing or unmapped cache trails fail coverage; empty cache_trails on a declaration emits a Phase 1 warning.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "wave1_work_unit_ledger_exists",
       "check": "work_unit_ledger_exists",
       "target": "rb_output_declarations.jsonl",
       "wave": "wave1",
-      "failure_message": "No wave1 submitted work-unit ledger rows found. Claim and submit wave1_topic_deepening work units to populate rb_output_declarations.jsonl."
+      "failure_message": "No wave1 submitted work-unit ledger rows found. Claim and submit wave1_topic_deepening work units to populate rb_output_declarations.jsonl.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "wave1_work_unit_output_coverage",
@@ -157,21 +177,24 @@
           "question_list"
         ]
       },
-      "failure_message": "Wave1 delegated evidence-summary/question-list/source/cache outputs must be covered by submitted work-unit ledger rows. Topic reference files may be Phase-owned projections only when their source URLs and body refs bind back to submitted backing."
+      "failure_message": "Wave1 delegated evidence-summary/question-list/source/cache outputs must be covered by submitted work-unit ledger rows. Topic reference files may be Phase-owned projections only when their source URLs and body refs bind back to submitted backing.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "wave1_work_unit_submission_presence",
       "check": "work_unit_submission_presence",
       "target": "rb_output_declarations.jsonl",
       "wave": "wave1",
-      "failure_message": "Wave1 submitted work-unit rows failed index/manifest/result/receipt/beacon/output/cache/hash cross-checks."
+      "failure_message": "Wave1 submitted work-unit rows failed index/manifest/result/receipt/beacon/output/cache/hash cross-checks.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "wave1_delegated_bypass_suspected",
       "check": "delegated_bypass_suspected",
       "target": "artifacts/wave1",
       "wave": "wave1",
-      "failure_message": "Wave1 delegated artifacts appear without submitted work-unit coverage or valid Phase-owned projection backing. Repair through work-unit submit, supplementary wave1_topic_deepening, or reference backing/index repair."
+      "failure_message": "Wave1 delegated artifacts appear without submitted work-unit coverage or valid Phase-owned projection backing. Repair through work-unit submit, supplementary wave1_topic_deepening, or reference backing/index repair.",
+      "finding": { "source": "checker" }
     }
   ]
 }

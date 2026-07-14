@@ -8,13 +8,18 @@ import { join, basename } from 'node:path';
 import {
   parseGateCliArgs,
   tryLoadGateDefinition,
-  validateNodeGateBinding,
+  checkNodeGateBinding,
   resolveRouting,
   buildGateResult,
   emitGateResult,
   writeGateAttempt,
   checkPhaseHandoffPreflight,
 } from '../../engine/helpers/gate-helpers.mjs';
+import {
+  buildContractEvaluation,
+  makeContractFinding,
+  makeDefinitionRuleFinding,
+} from '../../engine/helpers/wave-contract-findings.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
@@ -24,14 +29,19 @@ const { definition, error: defError } = tryLoadGateDefinition('instantiation-com
 if (defError) { emitGateResult(defError, { bundlePath: args.bundle }); }
 
 // Validate node/gate binding
-const bindingError = validateNodeGateBinding(args.currentNode, definition.gate);
-if (bindingError) {
-  const result = {
-    check: { passed: false, gate: definition.gate, currentNodeRef: args.currentNode, next: null },
-    routing: { kind: 'invalid_input', next: null, detail: bindingError },
-    inspect: [bindingError],
-    advice: ['Verify --current-node matches the phase for this gate. Check manifest.json for correct node ↔ gate bindings.'],
-  };
+const binding = checkNodeGateBinding(args.currentNode, definition.gate);
+if (!binding.ok) {
+  const result = buildGateResult({
+    passed: false,
+    gate: definition.gate,
+    currentNodeRef: args.currentNode,
+    routing: { kind: 'invalid_input', next: null, detail: binding.reason },
+    inspect: binding.inspect,
+    advice: binding.advice,
+    findings: binding.findings,
+    bundlePath: args.bundle,
+    attemptNumber: args.attempt ?? 0,
+  });
   emitGateResult(result, { bundlePath: args.bundle });
 }
 
@@ -45,6 +55,8 @@ if (!handoffPreflight.ok) {
     routing,
     inspect: handoffPreflight.inspect || [handoffPreflight.reason || 'Lifecycle handoff preflight failed'],
     advice: handoffPreflight.advice || ['Follow the handoff remedy and rerun this gate.'],
+    findings: handoffPreflight.findings || [],
+    bundlePath: args.bundle,
     extraCheck: { handoff_preflight: false },
     attemptNumber: args.attempt ?? 0,
   });
@@ -53,82 +65,185 @@ if (!handoffPreflight.ok) {
 }
 
 const bundlePath = args.bundle;
-const inspect = [];
-const advice = [];
-let allPassed = true;
+const findings = [];
+const prerequisiteRoots = new Map();
+let checksRun = 0;
+
+function targetFile(target) {
+  return typeof target === 'string' ? target.split('#/')[0] : null;
+}
+
+function configurationFinding(rule, detail, observed = null) {
+  return makeContractFinding({
+    id: rule.id,
+    ruleId: rule.id,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'configuration_integrity',
+    surface: `Gate checker dispatch for ${definition.gate}/${rule.id}`,
+    expected: `Implemented deterministic checker '${rule.check}'.`,
+    observed: observed ?? rule.check,
+    missingFact: detail,
+    repairKind: 'missing_contract',
+    writeTo: `Gate checker implementation boundary for ${definition.gate}/${rule.id}`,
+    repair: 'Repair the Gate checker contract before rerunning this checkpoint.',
+    detail: `[${rule.id}] ${detail}`,
+  });
+}
 
 for (const rule of definition.rules) {
   if (rule.check === 'placeholder') continue;
+  checksRun += 1;
 
-  let rulePassed = true;
-  let ruleDetail = null;
+  let failure = null;
+  let findingOverride = null;
 
   try {
     if (rule.check === 'file_exists') {
       const targetPath = join(bundlePath, rule.target);
       if (!existsSync(targetPath)) {
-        rulePassed = false;
-        ruleDetail = `Missing file: ${rule.target}`;
+        failure = {
+          surface: rule.target,
+          expected: 'Required file exists.',
+          observed: { exists: false },
+          missingFact: `Required bundle file '${rule.target}' is absent.`,
+          detail: `Missing file: ${rule.target}`,
+        };
+        prerequisiteRoots.set(rule.target, rule.id);
       }
     } else if (rule.check === 'dir_exists') {
       const targetPath = join(bundlePath, rule.target);
-      if (!existsSync(targetPath) || !statSync(targetPath).isDirectory()) {
-        rulePassed = false;
-        ruleDetail = `Missing directory: ${rule.target}`;
+      const exists = existsSync(targetPath);
+      const isDirectory = exists && statSync(targetPath).isDirectory();
+      if (!isDirectory) {
+        failure = {
+          surface: rule.target === '.' ? bundlePath : rule.target,
+          expected: 'Required directory exists and is a directory.',
+          observed: { exists, is_directory: isDirectory },
+          missingFact: `Required bundle directory '${rule.target}' is absent or is not a directory.`,
+          detail: `Missing directory: ${rule.target}`,
+        };
+        prerequisiteRoots.set(rule.target, rule.id);
       }
     } else if (rule.check === 'pattern_match') {
       const bundleName = basename(bundlePath);
       const pattern = new RegExp(rule.pattern);
       if (!pattern.test(bundleName)) {
-        rulePassed = false;
-        ruleDetail = `Bundle name "${bundleName}" does not match pattern ${rule.pattern}`;
+        failure = {
+          surface: bundlePath,
+          expected: `Bundle basename matches ${rule.pattern}.`,
+          observed: bundleName,
+          missingFact: `Bundle basename '${bundleName}' does not match the accepted instantiation pattern ${rule.pattern}.`,
+          detail: `Bundle name "${bundleName}" does not match pattern ${rule.pattern}`,
+        };
       }
     } else if (rule.check === 'status_value') {
       // rule.target is "rb_status.json#/field/path"
       const [file, jsonPath] = rule.target.split('#/');
       const statusPath = join(bundlePath, file);
       if (!existsSync(statusPath)) {
-        rulePassed = false;
-        ruleDetail = `Missing file for status check: ${file}`;
+        failure = {
+          surface: rule.target,
+          expected: rule.expected,
+          observed: { file_exists: false },
+          missingFact: `Cannot verify ${rule.target} because '${file}' is absent.`,
+          detail: `Missing file for status check: ${file}`,
+          maskedByRuleId: prerequisiteRoots.get(file) || null,
+        };
       } else {
         const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
         const value = jsonPath.split('/').reduce((obj, key) => obj?.[key], status);
         if (value !== rule.expected) {
-          rulePassed = false;
-          ruleDetail = `${rule.target}: expected "${rule.expected}", got "${value}"`;
+          failure = {
+            surface: rule.target,
+            expected: rule.expected,
+            observed: value,
+            missingFact: `${rule.target} must equal '${rule.expected}', but the observed value is '${value}'.`,
+            detail: `${rule.target}: expected "${rule.expected}", got "${value}"`,
+          };
         }
       }
     } else {
-      // Unknown check type — skip with warning, don't fail
-      rulePassed = false;
-      ruleDetail = `Unknown check type: ${rule.check} — must fail (check type not implemented)`;
+      const detail = `Unknown check type: ${rule.check} — must fail (check type not implemented)`;
+      findingOverride = configurationFinding(rule, detail);
     }
   } catch (err) {
-    rulePassed = false;
     const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
-    ruleDetail = `Error evaluating rule ${rule.id}: ${safeMsg}`;
+    failure = {
+      surface: rule.target || `Gate checker dispatch for ${definition.gate}/${rule.id}`,
+      expected: `Rule '${rule.id}' evaluates its direct authority without parser/runtime error.`,
+      observed: safeMsg,
+      missingFact: `Rule '${rule.id}' could not evaluate its direct authority: ${safeMsg}`,
+      detail: `Error evaluating rule ${rule.id}: ${safeMsg}`,
+      maskedByRuleId: prerequisiteRoots.get(targetFile(rule.target)) || null,
+    };
   }
 
-  if (!rulePassed) {
-    allPassed = false;
-    inspect.push(ruleDetail);
-    advice.push(rule.failure_message);
-  }
+  if (findingOverride) findings.push(findingOverride);
+  else if (failure) findings.push(makeDefinitionRuleFinding({
+    rule,
+    bundlePath,
+    surface: failure.surface,
+    expected: failure.expected,
+    observed: failure.observed,
+    missingFact: failure.missingFact,
+    detail: `[${rule.id}] ${failure.detail}`,
+    maskedByRuleId: failure.maskedByRuleId || null,
+  }));
 }
 
-const outcome = allPassed ? 'passed' : 'failed';
+const ruleEvaluation = buildContractEvaluation({ checksRun, findings });
+const outcome = ruleEvaluation.passed ? 'passed' : 'failed';
 const routing = resolveRouting(args.transitions, args.currentNode, outcome);
+const routingFailed = ['invalid_input', 'config_error'].includes(routing.kind);
+const evaluation = buildContractEvaluation({
+  checksRun,
+  findings: [...ruleEvaluation.findings, ...(routing.findings || [])],
+  maskedRuleIds: ruleEvaluation.masked_rule_ids,
+});
 
 const result = buildGateResult({
-  passed: allPassed,
+  passed: ruleEvaluation.passed && !routingFailed,
   gate: definition.gate,
   currentNodeRef: args.currentNode,
   routing,
-  inspect,
-  advice,
+  inspect: [...ruleEvaluation.inspect, ...(routing.inspect || [])],
+  advice: [...ruleEvaluation.advice, ...(routing.advice || [])],
+  findings: evaluation.findings,
+  bundlePath,
+  extraCheck: {
+    failed_rule_ids: evaluation.failed_rule_ids,
+    masked_rule_ids: evaluation.masked_rule_ids,
+  },
   attemptNumber: args.attempt ?? 0,
 });
 
-writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+try {
+  writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+} catch (error) {
+  const failedRouting = resolveRouting(args.transitions, args.currentNode, 'failed');
+  const failureEvaluation = buildContractEvaluation({
+    findings: [...(error.findings || []), ...(failedRouting.findings || [])],
+  });
+  const failedResult = buildGateResult({
+    passed: false,
+    gate: definition.gate,
+    currentNodeRef: args.currentNode,
+    routing: failedRouting,
+    inspect: [...(error.inspect || [error.message || String(error)]), ...(failedRouting.inspect || [])],
+    advice: [...(error.advice || []), ...(failedRouting.advice || [])],
+    findings: failureEvaluation.findings,
+    bundlePath,
+    extraCheck: {
+      failed_rule_ids: failureEvaluation.failed_rule_ids,
+      masked_rule_ids: failureEvaluation.masked_rule_ids,
+      trace_durable: false,
+      gate_attempt_write_failed: true,
+    },
+    attemptNumber: args.attempt ?? 0,
+  });
+  try { writeGateAttempt(bundlePath, failedResult); } catch { /* secondary diagnostic only */ }
+  emitGateResult(failedResult);
+}
 
 emitGateResult(result);

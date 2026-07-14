@@ -82,25 +82,23 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to readiness_passed
 
 ## 7. On Gate Fail
 
-读取 CLI `inspect` / `advice`，按需修复后 rerun same gate：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从旧表格、legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段、命令或 earlier-phase route。按每个 independent primary hint 执行：
 
-| Fail | 修复 |
-|------|------|
-| artifact 缺失 | 回到对应 phase 补产 artifact（通过 HITL2 repair/rerun 或直接修复） |
-| prior gate pass 缺失 | CLI inspect 列出具体缺失的 gate——回到对应 gate 修复后 rerun |
-| YAML 不可解析 | 检查 `rb_profile.yaml` 语法，修复 malformed YAML |
-| JSONL 不可解析 | 检查 `rb_trace.jsonl` 中有无非 JSON 行（如手动编辑痕迹），移除或修复 |
-| status drift | Gate 前恢复 `current_gate: hitl2_recorded` / `next_gate: readiness_passed`；gate pass 后再按 §6 同步 terminal status |
+1. `repair_kind: agent_action`：当 `write_to` 是已授权的 artifact/profile mutable surface 时，由 Agent 修复 exact file/field；不得把缺失 prior Gate authority伪装成 artifact repair。
+2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal gate/status/handoff/recovery operation；不得要求用户运行普通命令，也不得直接编辑 `rb_status.json`、`rb_trace.jsonl`、ledger、index、receipt、hash 或 provenance authority。
+3. `repair_kind: user_decision`：只暴露真实缺失的语义/风险决定。Readiness 是 `stop: no`，不得由 hint 创建新 HITL、earlier-phase route、repair controller 或 lifecycle；没有 accepted decision path 时保持当前 checkpoint failed。
+4. `repair_kind: external_action`：只暴露不可代理的权限/环境前置条件；满足后机械执行回到 Agent。
+5. `repair_kind: missing_contract`：报告 exact unavailable capability/contract boundary，不提供手改 trace/status、绕过 Gate 或 speculative fallback。
 
-**Persistent failure：** 若 readiness gate 连续 3 次修复无进展，检查是否有结构性 bug（如 gate CLI 本身异常）。
+Hint 不创造 permission、controller、lifecycle 或 route。完成可执行动作后 Agent MUST 运行 hint 的 exact `rerun`，回到同一个 `readiness-passed` checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 猜 blocking repair；按 `missing_contract` 暴露最小边界。
 
-Readiness fail 可能需要回到 earlier phase 修复缺失 artifact。修复入口是 HITL2 repair/rerun。
+Readiness fail 只有在 structured hint 命名已存在且当前可达的 legal operation 时，才可离开本地 artifact repair surface；hint 本身不得授权回跳 earlier phase。稳定重复的 `missing_contract` root 作为结构性 bug boundary 报告，不建设 retry tree。
 
 ## 8. Stop Behavior
 
 `stop: no` — Agent 自主执行 readiness check，不等待人类，不发送 readiness progress 或 idle/no-work 汇报。本地 precheck 完成后必须运行 `readiness-passed` gate；final handoff 完成条件是 gate pass + `enter-phase --node <check.next>` 写入 final route-bound load witness + `advance-status --to readiness_passed`。
 
-Readiness gate fail 后按 inspect/advice 修复缺失 artifact、trace、profile/status drift 或结构问题并 rerun。若必须回到 earlier phase 修复，仍要遵守 gate boundary：不得把“本地检查完成”当成完成点，不得自行绕过 gate 加载 final。
+Readiness gate fail 后按 structured hint 修复并运行 exact `rerun`。若 legal operation 确实指向 existing earlier-phase/HITL2 repair boundary，仍要遵守该 owner 与 Gate boundary：不得把“本地检查完成”当成完成点，不得自行绕过 gate 加载 final。
 
 ## 9. Anti-Cheating Rules
 

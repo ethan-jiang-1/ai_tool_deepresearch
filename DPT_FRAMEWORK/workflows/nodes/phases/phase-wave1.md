@@ -279,21 +279,22 @@ Continue from the Markdown rendered by `enter-phase`. `advance-status` only reco
 
 ## 7. On Gate Fail
 
-If the gate reports a `per_topic_ref_md_count_floor` gap:
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从 legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段或命令。按每个 independent primary hint 执行：
 
-1. Identify the topic and missing count from gate `inspect`.
-2. If submitted source backing exists, repair the Phase-owned `reference/{topic}-*.md` projection and `_INDEX.md` row with body refs to submitted source/cache/work-unit surfaces.
-3. If submitted source backing is absent, enqueue a supplementary delegated queue item with `kind: "wave1_topic_deepening"` and `priority_class: "P1_state_or_gate_repair"`.
-4. Require the Sub-agent to avoid duplicate source URLs and return real new source backing.
-5. Drain via work-unit claim/submit, materialize projections, and rerun the gate.
+1. `repair_kind: agent_action`：当 `write_to` 是已授权的 Wave1 mutable surface 时，由 Agent 修复 exact reference/depth/artifact field/file；不得复制 ledger/cache truth制造第二 authority。
+2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal queue/work-unit/declaration/lifecycle operation；不得要求用户运行普通命令，也不得直接编辑 status、trace、ledger、index、receipt、hash 或 provenance authority。
+3. `repair_kind: user_decision`：只暴露 `missing_fact` 指出的真实语义/风险决定。Wave1 是 `stop: no`，不得由 hint 创造新 HITL、repair controller 或 lifecycle；没有 accepted decision path 时保持当前 checkpoint failed。
+4. `repair_kind: external_action`：只暴露不可代理的 actor/search/fetch/permission 前置条件；满足后机械执行回到 Agent。
+5. `repair_kind: missing_contract`：报告 exact unavailable capability/contract boundary，不提供手写 authority、隐式 floor 或平行成功路径。
 
-If all count floors pass but another rule fails, repair that rule directly, rerun Wave1 inspect, then rerun the gate.
+Hint 不创造 permission、controller 或 lifecycle。完成可执行动作后 Agent MUST 运行 hint 的 exact `rerun`，回到同一个 Wave1 checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 猜 blocking repair；按 `missing_contract` 暴露最小边界。
 
-If the gate reports a `depth_review_contract`, `source_novelty_floor`, or `source_claim_cache_mapping` gap:
+仅当 structured hint 的 `missing_fact` / `write_to` 明确识别 reference projection/index、`depth_review_contract`、`source_novelty_floor`、`source_claim_cache_mapping` 或缺失 submitted backing 时：
 
-1. Read the topic-specific diagnostic; note observed/required new-source counts and missing source/cache refs.
-2. If the issue is missing profile/runtime data, repair the accepted profile/template surface or leave `blocked_contract`; never invent a local default.
-3. Otherwise enqueue supplementary `wave1_topic_deepening` for that `payload.topic_slug`, require genuinely new source URLs, drain through work-unit claim/submit, update `depth-review.yaml`, rerun Wave1 inspect, and then rerun the gate.
+1. If submitted source backing exists and the hint authorizes the Phase-owned projection, repair the exact `reference/{topic}-*.md`, `_INDEX.md`, or non-derivable `depth-review.yaml` coordinate.
+2. If submitted backing is absent and the hint names the legal supplementary path, enqueue `wave1_topic_deepening`, require genuinely new source backing, and drain through work-unit claim/submit.
+3. If profile/runtime authority is missing, follow only the hint's legal owner operation or `missing_contract`; never invent a local default.
+4. Materialize only from submitted backing, then run the hint's exact `rerun`.
 
 Gate repair/refill handles remaining floor gaps. Do not treat the planning margin as pass authority, do not silently lower floors, and do not create a new numeric threshold outside the accepted profile/runtime surfaces.
 

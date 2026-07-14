@@ -21,6 +21,14 @@ function runGate(bundlePath) {
   return spawnSync('node', [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-readiness.md'], { encoding: 'utf-8', timeout: 10000 });
 }
 
+function assertCompleteHint(hint) {
+  assert.ok(hint?.rule_id);
+  assert.ok(hint?.repair_kind);
+  assert.ok(hint?.missing_fact);
+  assert.ok(hint?.write_to);
+  assert.ok(hint?.rerun);
+}
+
 function runSpecificGate(cli, bundlePath, currentNode) {
   return spawnSync('node', [cli, '--bundle', bundlePath, '--current-node', currentNode], { encoding: 'utf-8', timeout: 10000 });
 }
@@ -122,6 +130,7 @@ describe('check-gate-readiness-passed', () => {
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
     assert.equal(result.status, 0, `Expected exit 0, got ${result.status}`);
+    assert.deepEqual(output.hints, []);
   });
 
   it('2. fails when seed_topics/ is missing', () => {
@@ -132,6 +141,10 @@ describe('check-gate-readiness-passed', () => {
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('seed_topics')),
       `Expected missing seed_topics fail: ${JSON.stringify(output.inspect)}`);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'seed_topics_non_empty');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'agent_action');
+    assert.equal(hint.write_to, 'seed_topics');
   });
 
   it('3. fails when seed_topics/ is empty', () => {
@@ -196,6 +209,10 @@ describe('check-gate-readiness-passed', () => {
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('5') || (m.includes('trace_has_events') || m.includes('gate_attempt'))),
       `Expected insufficient gates fail (should report actual count < 8): ${JSON.stringify(output.inspect)}`);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'all_prior_gates_passed');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'missing_contract');
+    assert.match(hint.write_to, /Prior Gate-attempt lineage boundary/);
   });
 
   it('8. fails when rb_profile.yaml is unparseable', () => {
@@ -208,6 +225,10 @@ describe('check-gate-readiness-passed', () => {
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('YAML') || m.includes('parse')),
       `Expected YAML parse fail: ${JSON.stringify(output.inspect)}`);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'profile_yaml_parseable');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'agent_action');
+    assert.match(hint.write_to, /rb_profile\.yaml$/);
   });
 
   it('9. fails when rb_trace.jsonl has unparseable lines', () => {

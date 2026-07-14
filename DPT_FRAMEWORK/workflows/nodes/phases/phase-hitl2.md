@@ -125,21 +125,21 @@ Gate pass 后，Agent 读取 `rb_profile.yaml#/human_decision_checkpoints/hitl2/
 
 ## 7. On Gate Fail
 
-读取 CLI `inspect` / `advice`，按需修复：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从旧表格、legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段或命令。按每个 independent primary hint 执行：
 
-| Fail | 修复 |
-|------|------|
-| decision brief 缺失或为空 | 基于 Wave0/1/2 artifact 生成 decision brief |
-| `hitl2.status` ≠ `recorded` | 确保决策已写入 `rb_profile.yaml` 的 hitl2 section |
-| `user_decision` 为空 | 向用户询问并填写 decision |
-| `user_decision` 不在合法枚举中 | 修正为 5 个合法值之一 |
-| status drift | Gate 前恢复 source-gate window：`current_gate: wave2_complete` / `next_gate: hitl2_recorded`；gate pass 后再按 §6 同步 `hitl2_recorded` |
+1. `repair_kind: user_decision`：仅当 `missing_fact` 指出尚未取得或无效的真实 HITL2 decision 时，向用户询问该最小决定；不得重复询问已经记录的 choice，也不得要求用户运行普通命令。
+2. `repair_kind: agent_action`：在用户决定已经存在、且 `write_to` 是 authorized mutable surface 时，由 Agent 生成/修正 exact decision brief 或 profile field；不得用机械 repair 发明用户 decision。
+3. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal status/handoff/topic/lifecycle operation；不得直接编辑 `rb_status.json`、trace、ledger、index、receipt、hash 或 provenance authority。
+4. `repair_kind: external_action`：只暴露不可代理的权限/环境前置条件；满足后由 Agent 继续。
+5. `repair_kind: missing_contract`：报告 exact unavailable capability/contract boundary，不创建新 route、override、controller、lifecycle 或平行成功状态。
+
+Hint 不创造 permission、controller 或 lifecycle。用户决定或外部前置条件满足后，后续机械步骤立即回到 Agent；完成可执行动作后 Agent MUST 运行 hint 的 exact `rerun`，回到同一个 `hitl2-recorded` checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 猜 blocking repair；按 `missing_contract` 暴露最小边界。
 
 Phase Agent 仍写 `hitl2_recorded` diagnostic event，但缺少该独立 event 不是 gate definition blocker；gate verdict/audit 由 profile/brief direct facts 和 CLI-authored `gate_attempt` 决定。
 
 ## 8. Stop Behavior
 
-`stop: yes` — Agent 暂停执行，等待用户 review decision brief 并做出 decision。用户回答完毕并写入 bundle 后，Agent 运行 gate CLI。Gate pass 后，Agent 根据 user_decision 决定下一步路由。
+`stop: yes` — 仅当当前 `user_decision` hint 指出尚未取得的真实 HITL2 decision 时，Agent 暂停并等待该最小决定。用户回答写入 accepted owner 后，由 Agent 执行剩余合法机械步骤并运行 exact `rerun`。若 choice 已记录而 Gate 只剩 `agent_action` 或 `engine_operation`，Agent 必须自行执行，不得再次把用户变成 pipeline co-runner。Gate pass 后只消费 CLI 的 `check.next`，不由 prose 自定路由。
 
 ## 9. Anti-Cheating Rules
 

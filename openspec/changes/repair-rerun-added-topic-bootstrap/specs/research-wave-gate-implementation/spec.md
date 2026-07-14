@@ -105,7 +105,7 @@ Formal gate and side-effect-free Wave1 inspect SHALL consume the same pure refer
 
 The Wave1 CLI SHALL not scan non-work-unit delegated directories as a production coverage source, and SHALL not reintroduce retired content heuristics as blocking checks or diagnostic advice. If a submitted index/status binding exists but the corresponding bundle declaration row is missing, the shared evaluator SHALL return `submitted_declaration_missing` as the parent root and SHALL mask dependent output/cache/count/bypass symptoms until declaration recovery or a new legal attempt is completed.
 
-All Wave0/Wave1/Wave2 shared evaluator roots SHALL expose the static contract lineage needed for one repair: `missing_fact` and `write_to`; inspect and formal Gate wrappers SHALL add the exact invoked checkpoint as `rerun`. These are read-only feedback coordinates, not a new authority or generic repair controller. `missing_fact` SHALL identify the earliest direct failed fact and its owning contract; `write_to` SHALL name the exact authorized bundle surface or legal Engine operation. Existing `inspect`/`advice` strings MAY remain for compatibility but SHALL NOT be the only repair information.
+All Wave0/Wave1/Wave2 shared evaluator roots SHALL expose the static contract lineage needed for one repair: `repair_kind`, `missing_fact`, and `write_to`; inspect and formal Gate wrappers SHALL add the exact invoked checkpoint as `rerun`. These are read-only feedback coordinates, not a new authority or generic repair controller. `repair_kind` SHALL identify the legal next-action class, `missing_fact` SHALL identify the earliest direct failed fact and its owning contract, and `write_to` SHALL name the exact next-action coordinate interpreted by that kind. Existing `inspect`/`advice` strings MAY remain for compatibility but SHALL NOT be the only repair information.
 
 Wave1 semantic Markdown checks SHALL protect section/content availability while tolerating equivalent presentation. `question_list_has_four_sections` SHALL require the four named semantic sections without fixed order, case, heading level, spacing, or list style. `source_url_present` SHALL accept a parseable bare HTTP(S) URL or Markdown link. `key_findings_non_empty` SHALL accept common bullet, numbered, or non-empty paragraph content under the semantic Key Findings section. These tolerant evaluators, not the historical regex presentation, SHALL own the blocking result.
 
@@ -142,7 +142,7 @@ Wave1 semantic Markdown checks SHALL protect section/content availability while 
 #### Scenario: Affected root carries contract-lineage repair coordinates
 
 - **WHEN** an in-scope Wave1 rule rejects a deterministic fact
-- **THEN** its primary structured diagnostic SHALL include non-empty `missing_fact`, `write_to`, and `rerun`
+- **THEN** its primary structured diagnostic SHALL include non-empty `repair_kind`, `missing_fact`, `write_to`, and `rerun`
 - **AND** the Agent SHALL not need to inspect Engine source to locate the authorized repair surface or checkpoint
 
 #### Scenario: Question-list order is not blocking authority
@@ -154,28 +154,35 @@ Wave1 semantic Markdown checks SHALL protect section/content availability while 
 
 ### Requirement: Blocking judgment contracts SHALL close across producer, authority, checker, diagnostic, and guard
 
-Each blocking deterministic gate/output contract SHALL have a closed and minimal contract chain:
+Each blocking deterministic Wave gate/output contract SHALL use a closed and minimal executable chain:
 
-- producer instruction that tells the Agent what direct deterministic shape to write;
-- runtime authority surface that stores the truth in the active bundle or submitted ledger;
-- one checker implementation that consumes that exact authority shape;
-- diagnostic/advice output that exposes the smallest actionable root cause and repair coordinates; and
-- regression or static guard that catches future drift.
+- one direct runtime authority surface identified by the rule descriptor or detecting helper;
+- one checker path that consumes that authority and returns a structured finding with root-specific blocking basis and repair;
+- one shared projection that exposes the smallest actionable root cause and repair coordinates; and
+- focused checker-class or changed-contract coverage that catches future drift.
 
-For in-scope Wave artifact/provenance rules, formal gate and inspect SHALL reuse the same pure evaluator result and rule id. Their primary root object SHALL also share the same `missing_fact` and `write_to`; each command SHALL project its own exact checkpoint in `rerun`. Formal lifecycle checks such as node binding, handoff preflight, routing, degraded eligibility, gate-attempt durability, checkpoint, and `trace_event_*` SHALL remain formal-only and SHALL NOT be duplicated in inspect.
+Agent producer guidance SHALL describe changed Agent-owned output contracts at the owning phase/controller surface. It SHALL NOT be copied into a permanent rule-id audit mapping. Engine-operation, user-decision, external-action, and missing-contract roots SHALL use their real operation or boundary without a per-rule non-Agent-produced exemption row.
+
+A Wave rule with one stable declarative root contract MAY use definition-owned blocking-basis/repair metadata. A specialized rule that can fail for multiple direct reasons, including provenance, reference/index, depth, cache, or finding-contract checks, SHALL use checker-owned findings and SHALL return the blocking basis and repair-kind/write coordinate on each concrete root. The definition SHALL NOT flatten those distinct roots into one static basis/repair. If a checker-owned blocking result lacks either part of the root contract, the standard projection SHALL fail as configuration integrity rather than inferring it from rule metadata or prose.
+
+For in-scope Wave artifact/provenance rules, formal gate and inspect SHALL reuse the same pure evaluator result and rule id. Their primary root object SHALL also share the same `repair_kind`, `missing_fact`, and `write_to`; each command SHALL project its own exact checkpoint in `rerun`. Formal lifecycle checks such as node binding, handoff preflight, routing, degraded eligibility, gate-attempt durability, checkpoint, and `trace_event_*` SHALL remain formal-only and SHALL NOT be duplicated in inspect.
 
 Blocking rules SHALL protect required structure, deterministic authority, provenance, consumer navigation, or explicit accepted floors. Presentation/maintenance preferences SHALL use tolerant parsing or advisory feedback unless they are necessary to locate or parse a direct authority surface.
 
 If a prerequisite authority surface is absent or unparseable, the checker SHALL report that prerequisite as the primary root cause and SHALL short-circuit dependent checks whose results would only be downstream symptoms. For reference inventory, an invalid or missing eight-column `_INDEX.md` table SHALL mask per-reference row and source-layer symptoms until the table parses. The implementation SHALL use local guards rather than a generalized dependency engine.
 
-If a surface is not Agent-produced, the audit MAY record an explicit non-Agent-produced exemption for the producer instruction surface. Otherwise, missing or contradictory closure surfaces SHALL be treated as judgment/output contract drift.
-
 #### Scenario: blocking rule has a closed contract chain
 
 - **WHEN** an active gate rule contributes to pass/fail
-- **THEN** apply evidence or maintained audit mapping SHALL identify its producer instruction or explicit non-Agent-produced exemption, runtime authority, checker route, diagnostic surface, and test guard
-- **AND** in-scope Wave artifact/provenance rules SHALL identify the shared evaluator route used by formal and inspect
-- **AND** static or focused regression coverage SHALL fail when the checker route or contract inventory is missing
+- **THEN** its parsed descriptor, declared finding source, and actual checker finding SHALL identify the direct authority, root-specific blocking basis/authorized repair, and diagnostic projection without a second inventory row
+- **AND** in-scope Wave artifact/provenance rules SHALL use the shared evaluator route consumed by formal and inspect
+- **AND** active-definition execution, unknown-check fail-closed coverage, or focused changed-rule regression SHALL fail when the executable path is missing
+
+#### Scenario: Specialized Wave rule does not flatten distinct roots
+
+- **WHEN** one work-unit/depth/reference rule can fail on an Agent-owned file, an Engine-owned binding, or a missing legal capability
+- **THEN** the checker SHALL return a distinct structured finding with blocking basis and repair coordinate for the observed root
+- **AND** no definition-level fallback basis/repair SHALL override or obscure that root
 
 #### Scenario: presentation preference is not promoted to authority
 
@@ -198,7 +205,7 @@ If a surface is not Agent-produced, the audit MAY record an explicit non-Agent-p
 #### Scenario: Root feedback names one authorized repair loop
 
 - **WHEN** a blocking rule has one actionable direct root
-- **THEN** primary feedback SHALL name that fact in `missing_fact`, its exact mutable or Engine-owned repair surface in `write_to`, and the same checkpoint in `rerun`
+- **THEN** primary feedback SHALL name its `repair_kind`, the fact in `missing_fact`, its exact mutable or Engine-owned repair surface in `write_to`, and the same checkpoint in `rerun`
 - **AND** it SHALL NOT provide competing repair branches or require the Agent to infer contract lineage from opaque prose
 
 #### Scenario: Wave root projection feeds the standard Gate hint

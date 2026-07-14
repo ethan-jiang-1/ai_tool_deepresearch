@@ -12,6 +12,7 @@ import {
 import {
   QueueResultSchema,
 } from '../engine/queue-manager-core.mjs';
+import { readGateDefinitionSnapshot } from '../schema/contracts/gate-definition.mjs';
 
 const { values } = parseArgs({
   options: {
@@ -281,9 +282,9 @@ function checkGateDefinitions(issues) {
     if (!rel.endsWith('.json')) continue;
     let parsed;
     try {
-      parsed = JSON.parse(readFileSync(file, 'utf-8'));
+      parsed = readGateDefinitionSnapshot(file).definition;
     } catch (error) {
-      addIssue(issues, { category: 'gate_definition', code: 'gate_definition_unparseable', file: rel, line: 1, detail: error.message });
+      addIssue(issues, { category: 'gate_definition', code: 'gate_definition_unparseable', file: rel, line: 1, detail: jsonErrorDetail(error) });
       continue;
     }
     for (const [idx, rule] of (parsed.rules || []).entries()) {

@@ -672,7 +672,7 @@ function passWave0WithDiagnostics(bundle, label) {
   stageWave0CountFailure(bundle);
   const attempt2 = runGate(bundle, 'wave0-complete', 'phases/phase-wave0.md');
   expectBoundary(bundle, `${label}:wave0-attempt2-fail`, attempt2.json.check.passed, 'real wave0 attempt 2 still fails');
-  expect(bundle, `${label}:wave0-delta-converging`, attempt2.json.check.newly_passing?.includes('per_topic_reference_schema_valid:topic-a') && attempt2.json.check.regressed?.includes('per_topic_count_floor:topic-a') && attempt2.json.check.failed_rule_ids?.includes('per_topic_count_floor:topic-a'), 'delta diagnostics show schema fixed while the previously masked count rule is newly evaluated and fails');
+  expect(bundle, `${label}:wave0-delta-converging`, attempt2.json.check.newly_passing?.includes('per_topic_reference_schema_valid') && attempt2.json.check.regressed?.includes('per_topic_count_floor') && attempt2.json.check.failed_rule_ids?.includes('per_topic_count_floor'), 'delta diagnostics compare stable rule ids while the concrete topic remains in finding/hint coordinates');
 
   stageWave0Pass(bundle);
   const attempt3 = runGate(bundle, 'wave0-complete', 'phases/phase-wave0.md');

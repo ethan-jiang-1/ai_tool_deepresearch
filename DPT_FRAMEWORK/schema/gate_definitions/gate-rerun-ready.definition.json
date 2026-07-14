@@ -6,7 +6,9 @@
       "id": "rerun_rationale_present",
       "check": "field_non_empty",
       "target": "rb_profile.yaml#/human_decision_checkpoints/hitl2/rationale",
-      "failure_message": "HITL2 rationale is empty or missing. The user must provide a rationale explaining what they want to change in the rerun. Return to HITL2 to collect rationale before rerunning."
+      "failure_message": "HITL2 rationale is empty or missing. The user must provide a rationale explaining what they want to change in the rerun. Return to HITL2 to collect rationale before rerunning.",
+      "finding": { "source": "definition", "blocking_basis": "recorded_human_decision" },
+      "repair": { "kind": "user_decision", "write_to": "phases/phase-hitl2.md" }
     },
     {
       "id": "rerun_count_valid",
@@ -14,7 +16,8 @@
       "target": "rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count",
       "operator": "less_than",
       "value": 3,
-      "failure_message": "rerun_count has reached the maximum of 3 rerun cycles. The rerun path is blocked. Suggest the user accept current results or start a new Deep Research."
+      "failure_message": "rerun_count has reached the maximum of 3 rerun cycles. The rerun path is blocked. Suggest the user accept current results or start a new Deep Research.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "bundle_structure_valid",
@@ -23,7 +26,8 @@
         "seed_topics",
         "reference"
       ],
-      "failure_message": "Required bundle directories are missing. seed_topics/ and reference/ must exist. Verify bundle integrity before rerunning."
+      "failure_message": "Required bundle directories are missing. seed_topics/ and reference/ must exist. Verify bundle integrity before rerunning.",
+      "finding": { "source": "checker" }
     }
   ]
 }

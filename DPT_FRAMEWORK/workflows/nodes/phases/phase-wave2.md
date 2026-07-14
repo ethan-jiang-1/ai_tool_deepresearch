@@ -310,14 +310,24 @@ Continue from the Markdown rendered by `enter-phase`. `advance-status` only reco
 
 ## 7. On Gate Fail
 
-If quality self-check or gate output identifies a search/evidence gap:
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从 legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段或命令。按每个 independent primary hint 执行：
+
+1. `repair_kind: agent_action`：当 `write_to` 是已授权的 Wave2 mutable surface 时，由 Agent 修复 exact finding/index/ledger/synthesis field/file；不得把 synthesis prose 或 filesystem-only reference 当作 provenance。
+2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal queue/work-unit/declaration/lifecycle operation；不得要求用户运行普通命令，也不得直接编辑 status、trace、ledger declaration、index、receipt、hash 或 provenance authority。
+3. `repair_kind: user_decision`：只暴露 `missing_fact` 指出的真实语义/风险决定。Wave2 是 `stop: no`，不得由 hint 创造新 HITL、repair controller 或 lifecycle；没有 accepted decision path 时保持当前 checkpoint failed。
+4. `repair_kind: external_action`：只暴露不可代理的 actor/search/fetch/permission 前置条件；满足后机械执行回到 Agent。
+5. `repair_kind: missing_contract`：报告 exact unavailable capability/contract boundary，不提供手写 authority、绕过 Gate 或平行成功路径。
+
+Hint 不创造 permission、controller 或 lifecycle。完成可执行动作后 Agent MUST 运行 hint 的 exact `rerun`，回到同一个 Wave2 checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 猜 blocking repair；按 `missing_contract` 暴露最小边界。
+
+仅当 structured hint 的 `missing_fact` / `write_to` 明确识别一个需要新 evidence 的合法 gap 时：
 
 1. Enqueue targeted delegated queue items with `kind: "wave2_targeted_evidence"`.
 2. Drain through work-unit claim/submit.
-3. Update `finding-index.yaml` and `cross-topic-ledger.md`.
-4. Rerun self-check, Wave2 inspect, and then the gate.
+3. Update only the authorized `finding-index.yaml` / `cross-topic-ledger.md` projections from submitted backing.
+4. Run the hint's exact `rerun`.
 
-If a gap cannot be resolved after bounded attempts, record the limitation and route it to HITL2, internal-data handling, or record-only handling. Do not invent references. Do not declare `pure_synthesis_eligible: true` until `gap_status` and counts are consistent.
+If a semantic gap cannot be resolved after bounded legal attempts, record the limitation only on the accepted finding/decision surface. Any HITL2, internal-data, or record-only decision must come from its existing contract; the hint itself does not create that route. Do not invent references. Do not declare `pure_synthesis_eligible: true` until `gap_status` and counts are consistent.
 
 ## 8. Stop Behavior
 

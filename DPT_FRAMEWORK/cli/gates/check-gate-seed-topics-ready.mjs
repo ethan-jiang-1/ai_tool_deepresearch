@@ -1,15 +1,14 @@
 #!/usr/bin/env node
 // check-gate-seed-topics-ready.mjs — evaluates gate-seed-topics-ready rules
-// @impl GSK-001, GSK-002, GSK-004, STM-003, STM-007, PRG-007, FRE-003
+// @impl GSK-001, GSK-002, GSK-004, GSK-008, STM-003, STM-007, PRG-007, FRE-003
 // Usage: node check-gate-seed-topics-ready.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import { existsSync, statSync, readFileSync, readdirSync } from 'node:fs';
-import { join, basename, extname } from 'node:path';
-import { parse as parseYaml } from 'yaml';
+import { join, basename, extname, resolve as resolveFsPath } from 'node:path';
 import {
   parseGateCliArgs,
   tryLoadGateDefinition,
-  validateNodeGateBinding,
+  checkNodeGateBinding,
   resolveRouting,
   buildGateResult,
   emitGateResult,
@@ -18,24 +17,32 @@ import {
   readBundlePlan,
   parseMdFrontmatter,
 } from '../../engine/helpers/gate-helpers.mjs';
+import {
+  buildContractEvaluation,
+  makeContractFinding,
+  makeDefinitionRuleFinding,
+} from '../../engine/helpers/wave-contract-findings.mjs';
 import { inspectCanonicalTopicState } from '../../engine/helpers/canonical-topic-state.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
 
-// Load gate definition
 const { definition, error: defError } = tryLoadGateDefinition('seed-topics-ready', args.currentNode || null);
 if (defError) { emitGateResult(defError, { bundlePath: args.bundle }); }
 
-// Validate node/gate binding
-const bindingError = validateNodeGateBinding(args.currentNode, definition.gate);
-if (bindingError) {
-  const result = {
-    check: { passed: false, gate: definition.gate, currentNodeRef: args.currentNode, next: null },
-    routing: { kind: 'invalid_input', next: null, detail: bindingError },
-    inspect: [bindingError],
-    advice: ['Verify --current-node matches the phase for this gate.'],
-  };
+const binding = checkNodeGateBinding(args.currentNode, definition.gate);
+if (!binding.ok) {
+  const result = buildGateResult({
+    passed: false,
+    gate: definition.gate,
+    currentNodeRef: args.currentNode,
+    routing: { kind: 'invalid_input', next: null, detail: binding.reason },
+    inspect: binding.inspect,
+    advice: binding.advice,
+    findings: binding.findings,
+    bundlePath: args.bundle,
+    attemptNumber: args.attempt ?? 0,
+  });
   emitGateResult(result, { bundlePath: args.bundle });
 }
 
@@ -49,6 +56,8 @@ if (!handoffPreflight.ok) {
     routing,
     inspect: handoffPreflight.inspect || [handoffPreflight.reason || 'Lifecycle handoff preflight failed'],
     advice: handoffPreflight.advice || ['Follow the handoff remedy and rerun this gate.'],
+    findings: handoffPreflight.findings || [],
+    bundlePath: args.bundle,
     extraCheck: { handoff_preflight: false },
     attemptNumber: args.attempt ?? 0,
   });
@@ -57,184 +66,300 @@ if (!handoffPreflight.ok) {
 }
 
 const bundlePath = args.bundle;
-const inspect = [];
-const advice = [];
-let allPassed = true;
+const findings = [];
+const maskedRuleIds = new Set();
+let checksRun = 1;
 
-const topicState = inspectCanonicalTopicState({ bundlePath });
-if (topicState.mode === 'blocked' || (topicState.mode === 'canonical' && topicState.passed !== true)) {
-  allPassed = false;
-  const blocker = topicState.blockers?.[0];
-  inspect.push(`Canonical topic-state prerequisite failed: ${blocker?.reason_code || 'unknown'}`);
-  advice.push(blocker?.recommended_action || 'Repair the exact UID-bound registry/seed projection and rerun this gate.');
-}
-
-// ── Cached parsers (lazy) ──
-let _planCache = null;
-function getPlan() {
-  if (_planCache) return _planCache;
-  _planCache = readBundlePlan(bundlePath);
-  return _planCache;
-}
-
-let _statusCache = null;
-function getStatus() {
-  if (_statusCache) return _statusCache;
-  const p = join(bundlePath, 'rb_status.json');
-  if (!existsSync(p)) return null;
-  _statusCache = JSON.parse(readFileSync(p, 'utf-8'));
-  return _statusCache;
-}
-
-/**
- * Collect the disk slug set from seed_topics/*.md files.
- * Returns an array of {slug, filenameStem, filePath} objects.
- */
-function getDiskSlugs() {
-  const dir = join(bundlePath, 'seed_topics');
-  if (!existsSync(dir) || !statSync(dir).isDirectory()) return [];
-  const files = readdirSync(dir).filter(f => extname(f) === '.md');
-  return files.map(f => {
-    const filePath = join(dir, f);
-    const raw = readFileSync(filePath, 'utf-8');
-    const stem = basename(f, '.md');
-    let frontmatterSlug = null;
-    let frontmatterTitle = null;
-    try {
-      const fm = parseMdFrontmatter(raw);
-      frontmatterSlug = fm.slug || null;
-      frontmatterTitle = fm.title || null;
-    } catch { /* frontmatter unparseable */ }
-    return { slug: frontmatterSlug, title: frontmatterTitle, filenameStem: stem, filePath: f };
+function configurationFinding(rule, detail, observed = null) {
+  return makeContractFinding({
+    id: rule.id,
+    ruleId: rule.id,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'configuration_integrity',
+    surface: `Gate checker dispatch for ${definition.gate}/${rule.id}`,
+    expected: `Implemented deterministic checker '${rule.check}'.`,
+    observed: observed ?? rule.check,
+    missingFact: detail,
+    repairKind: 'missing_contract',
+    writeTo: `Gate checker implementation boundary for ${definition.gate}/${rule.id}`,
+    repair: 'Repair the Gate checker contract before rerunning this checkpoint.',
+    detail: `[${rule.id}] ${detail}`,
   });
 }
 
-/**
- * Get registry slugs from rb_plan.md topic_registry.
- */
-function getRegistrySlugs() {
-  const plan = getPlan();
-  if (!plan || !Array.isArray(plan.topic_registry)) return [];
-  return plan.topic_registry.map(t => t.slug);
+let planCache = null;
+function getPlan() {
+  if (planCache) return planCache;
+  planCache = readBundlePlan(bundlePath);
+  return planCache;
 }
 
-// ── Rule evaluation ──
+let diskSeedsCache = null;
+function getDiskSeeds() {
+  if (diskSeedsCache) return diskSeedsCache;
+  const directory = join(bundlePath, 'seed_topics');
+  if (!existsSync(directory) || !statSync(directory).isDirectory()) {
+    diskSeedsCache = [];
+    return diskSeedsCache;
+  }
+  diskSeedsCache = readdirSync(directory)
+    .filter((file) => extname(file) === '.md')
+    .map((file) => {
+      const filePath = join(directory, file);
+      const relativePath = join('seed_topics', file);
+      const filenameStem = basename(file, '.md');
+      try {
+        const frontmatter = parseMdFrontmatter(readFileSync(filePath, 'utf-8'));
+        return {
+          filenameStem,
+          relativePath,
+          absolutePath: filePath,
+          slug: frontmatter.slug || null,
+          title: frontmatter.title || null,
+          parseError: null,
+        };
+      } catch (error) {
+        return {
+          filenameStem,
+          relativePath,
+          absolutePath: filePath,
+          slug: null,
+          title: null,
+          parseError: error.message || String(error),
+        };
+      }
+    });
+  return diskSeedsCache;
+}
+
+function registrySlugs() {
+  const plan = getPlan();
+  return Array.isArray(plan?.topic_registry) ? plan.topic_registry.map((topic) => topic.slug) : [];
+}
+
+function slugSetFinding(rule, failure) {
+  return makeContractFinding({
+    id: failure.id || rule.id,
+    ruleId: rule.id,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: failure.userDecision ? 'recorded_human_decision' : 'binding_integrity',
+    surface: failure.surface,
+    expected: failure.expected,
+    observed: failure.observed,
+    missingFact: failure.missingFact,
+    repairKind: failure.userDecision ? 'user_decision' : 'agent_action',
+    writeTo: failure.userDecision ? 'phases/phase-hitl1.md' : failure.writeTo,
+    repair: failure.userDecision
+      ? 'Return to HITL1 for the missing Topic decision, then materialize through the canonical topic-state owner.'
+      : 'Repair the named seed projection so it matches the canonical registry, then rerun this Gate.',
+    detail: `[${rule.id}] ${failure.detail}`,
+    maskedByRuleId: failure.maskedByRuleId || null,
+  });
+}
+
+const topicState = inspectCanonicalTopicState({ bundlePath });
+let canonicalParentRuleId = null;
+if (topicState.mode !== 'canonical' || topicState.passed !== true) {
+  canonicalParentRuleId = 'canonical_topic_state_prerequisite';
+  const blocker = topicState.blockers?.[0];
+  findings.push(blocker?.finding || makeContractFinding({
+    id: canonicalParentRuleId,
+    ruleId: canonicalParentRuleId,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'configuration_integrity',
+    surface: 'Canonical topic-state inspection contract',
+    expected: 'Canonical topic-state inspection returns a concrete blocker finding.',
+    observed: { mode: topicState.mode, passed: topicState.passed },
+    missingFact: 'Canonical topic-state prerequisite failed without a helper-owned blocker finding.',
+    repairKind: 'missing_contract',
+    writeTo: 'Canonical topic-state blocker finding boundary',
+    repair: 'Repair the canonical topic-state helper contract before rerunning this Gate.',
+  }));
+} else if (topicState.topics.length === 0) {
+  canonicalParentRuleId = 'canonical_topic_state_prerequisite';
+  findings.push(makeContractFinding({
+    id: 'canonical_topic_state:empty_registry',
+    ruleId: canonicalParentRuleId,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'recorded_human_decision',
+    surface: `${resolveFsPath(bundlePath, 'rb_plan.md')}#/topic_registry`,
+    expected: 'At least one approved canonical Topic exists before seed materialization.',
+    observed: { topic_count: 0 },
+    missingFact: 'The canonical Topic registry is empty, so there is no semantic Topic intent to materialize.',
+    repairKind: 'user_decision',
+    writeTo: 'phases/phase-hitl1.md',
+    repair: 'Collect the missing Topic decision in HITL1, apply it through topic-state, then rerun this Gate.',
+  }));
+}
+
+if (canonicalParentRuleId) {
+  for (const rule of definition.rules) maskedRuleIds.add(rule.id);
+}
+
+let seedDirectoryRoot = null;
+
 for (const rule of definition.rules) {
-  let rulePassed = true;
-  let ruleDetail = null;
+  if (rule.check === 'placeholder') continue;
+  checksRun += 1;
 
   try {
     if (rule.check === 'dir_non_empty') {
       const targetPath = join(bundlePath, rule.target);
-      if (!existsSync(targetPath) || !statSync(targetPath).isDirectory()) {
-        rulePassed = false;
-        ruleDetail = `Directory ${rule.target} does not exist`;
-      } else {
-        const glob = rule.glob || '*.md';
-        const ext = glob.replace('*', ''); // simple glob: *.md → .md
-        const files = readdirSync(targetPath).filter(f => extname(f) === ext);
-        if (files.length === 0) {
-          rulePassed = false;
-          ruleDetail = `Directory ${rule.target} is empty (no ${glob} files found)`;
-        }
+      const exists = existsSync(targetPath);
+      const isDirectory = exists && statSync(targetPath).isDirectory();
+      const extension = (rule.glob || '*.md').replace('*', '');
+      const files = isDirectory ? readdirSync(targetPath).filter((file) => extname(file) === extension) : [];
+      if (!isDirectory || files.length === 0) {
+        seedDirectoryRoot = rule.id;
+        findings.push(makeDefinitionRuleFinding({
+          rule,
+          bundlePath,
+          surface: rule.target,
+          expected: `Directory contains at least one ${rule.glob || '*.md'} file.`,
+          observed: { exists, is_directory: isDirectory, matching_file_count: files.length },
+          missingFact: `Seed directory '${rule.target}' is ${!isDirectory ? 'absent or not a directory' : 'empty'}.`,
+          detail: `[${rule.id}] ${!isDirectory ? `Directory ${rule.target} does not exist` : `Directory ${rule.target} is empty`}`,
+          maskedByRuleId: canonicalParentRuleId,
+          maskedRuleIds: ['slug_consistency', 'per_file_title_non_empty', 'per_file_slug_stem_consistency'],
+        }));
       }
     } else if (rule.check === 'cross_field' && rule.mode === 'slug_consistency') {
+      const diskSeeds = getDiskSeeds();
       if (rule.scope === 'per_file') {
-        // Per-file: check each seed_topics/<slug>.md frontmatter slug == filename stem
-        const diskInfo = getDiskSlugs();
-        const mismatches = [];
-        for (const info of diskInfo) {
-          if (info.slug !== info.filenameStem) {
-            mismatches.push(`${info.filePath}: frontmatter slug="${info.slug}" != filename stem="${info.filenameStem}"`);
-          }
-        }
-        if (mismatches.length > 0) {
-          rulePassed = false;
-          ruleDetail = `Slug/stem mismatches: ${mismatches.join('; ')}`;
+        for (const seed of diskSeeds) {
+          if (seed.slug === seed.filenameStem) continue;
+          findings.push(slugSetFinding(rule, {
+            id: `${rule.id}:${seed.filenameStem}`,
+            surface: `${seed.relativePath}; ${seed.relativePath}#/slug`,
+            expected: { filename_stem: seed.filenameStem, frontmatter_slug: seed.filenameStem },
+            observed: { filename_stem: seed.filenameStem, frontmatter_slug: seed.slug, parse_error: seed.parseError },
+            missingFact: `${seed.relativePath} frontmatter slug must equal filename stem '${seed.filenameStem}', but observed '${seed.slug}'.`,
+            writeTo: `${seed.relativePath}#/slug`,
+            detail: `${seed.relativePath}: frontmatter slug="${seed.slug}" != filename stem="${seed.filenameStem}"`,
+            maskedByRuleId: canonicalParentRuleId || seedDirectoryRoot,
+          }));
         }
       } else {
-        // Bidirectional set equality: disk slug set == registry slug set
-        const diskInfo = getDiskSlugs();
-        const diskSlugs = new Set(diskInfo.map(d => d.filenameStem));
-        const registrySlugs = new Set(getRegistrySlugs());
-
-        if (registrySlugs.size === 0) {
-          rulePassed = false;
-          ruleDetail = 'topic_registry is empty. Cannot materialize seed topics with no topics defined. Complete HITL1 to populate topic_registry first.';
+        const expectedSlugs = registrySlugs();
+        const diskSlugs = diskSeeds.map((seed) => seed.filenameStem);
+        if (expectedSlugs.length === 0) {
+          findings.push(slugSetFinding(rule, {
+            id: `${rule.id}:empty_registry`,
+            surface: `${resolveFsPath(bundlePath, 'rb_plan.md')}#/topic_registry`,
+            expected: 'At least one approved canonical Topic slug.',
+            observed: { registry_slugs: [] },
+            missingFact: 'The canonical Topic registry is empty, so seed slug materialization requires a HITL1 decision.',
+            detail: 'topic_registry is empty; no Topic intent exists to materialize.',
+            userDecision: true,
+            maskedByRuleId: canonicalParentRuleId,
+          }));
         } else {
-          const missing = [...registrySlugs].filter(s => !diskSlugs.has(s));
-          const extra = [...diskSlugs].filter(s => !registrySlugs.has(s));
-
+          const diskSet = new Set(diskSlugs);
+          const registrySet = new Set(expectedSlugs);
+          const missing = expectedSlugs.filter((slug) => !diskSet.has(slug));
+          const extra = diskSlugs.filter((slug) => !registrySet.has(slug));
           if (missing.length > 0 || extra.length > 0) {
-            rulePassed = false;
-            const parts = [];
-            if (missing.length > 0) parts.push(`missing slugs (in registry but not on disk): ${missing.join(', ')}`);
-            if (extra.length > 0) parts.push(`extra slugs (on disk but not in registry): ${extra.join(', ')}`);
-            ruleDetail = `Slug consistency failed: ${parts.join('; ')}`;
+            findings.push(slugSetFinding(rule, {
+              surface: `${resolveFsPath(bundlePath, 'rb_plan.md')}#/topic_registry; ${resolveFsPath(bundlePath, 'seed_topics')}`,
+              expected: { registry_slugs: expectedSlugs },
+              observed: { disk_slugs: diskSlugs, missing, extra },
+              missingFact: `Seed slug set differs from the canonical registry${missing.length ? `; missing: ${missing.join(', ')}` : ''}${extra.length ? `; extra: ${extra.join(', ')}` : ''}.`,
+              writeTo: resolveFsPath(bundlePath, 'seed_topics'),
+              detail: `Slug consistency failed${missing.length ? `; missing: ${missing.join(', ')}` : ''}${extra.length ? `; extra: ${extra.join(', ')}` : ''}`,
+              maskedByRuleId: canonicalParentRuleId || seedDirectoryRoot,
+            }));
           }
         }
       }
     } else if (rule.check === 'field_non_empty') {
-      // per-file title non-empty: iterate all seed_topics/*.md and check title
-      const diskInfo = getDiskSlugs();
-      const emptyTitles = [];
-      for (const info of diskInfo) {
-        if (!info.title || info.title.trim() === '') {
-          emptyTitles.push(info.filePath);
-        }
+      const diskSeeds = getDiskSeeds();
+      if (diskSeeds.length === 0) {
+        maskedRuleIds.add(rule.id);
+        continue;
       }
-      if (emptyTitles.length > 0) {
-        rulePassed = false;
-        ruleDetail = `Files with empty or missing title: ${emptyTitles.join(', ')}`;
-      } else if (diskInfo.length === 0) {
-        rulePassed = false;
-        ruleDetail = 'No seed topic files found to check title fields';
+      for (const seed of diskSeeds) {
+        if (typeof seed.title === 'string' && seed.title.trim()) continue;
+        findings.push(makeDefinitionRuleFinding({
+          rule,
+          bundlePath,
+          slug: seed.filenameStem,
+          surface: `seed_topics/<slug>.md#/title`,
+          expected: 'Non-empty seed title.',
+          observed: seed.title ?? null,
+          missingFact: `${seed.relativePath} has an empty or missing frontmatter title.`,
+          detail: `[${rule.id}] ${seed.relativePath} has an empty or missing title`,
+          maskedByRuleId: canonicalParentRuleId || seedDirectoryRoot,
+        }));
       }
-    } else if (rule.check === 'status_value') {
-      const [file, jsonPath] = rule.target.split('#/');
-      const status = getStatus();
-      if (!status) {
-        rulePassed = false;
-        ruleDetail = 'rb_status.json not found';
-      } else {
-        const value = jsonPath.split('/').reduce((obj, key) => obj?.[key], status);
-        if (value !== rule.expected) {
-          rulePassed = false;
-          ruleDetail = `${rule.target}: expected "${rule.expected}", got "${value}"`;
-        }
-      }
-    } else if (rule.check === 'placeholder') {
-      continue;
-    } else {
-      rulePassed = false;
-      ruleDetail = `Unknown check type: ${rule.check} (mode: ${rule.mode || 'n/a'}) — must fail (check type not implemented)`;
+    } else if (rule.check !== 'placeholder') {
+      findings.push(configurationFinding(rule, `Unknown check type: ${rule.check} (mode: ${rule.mode || 'n/a'}) — must fail (check type not implemented)`));
     }
-  } catch (err) {
-    rulePassed = false;
-    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
-    ruleDetail = `Error evaluating rule ${rule.id}: ${safeMsg}`;
-  }
-
-  if (!rulePassed) {
-    allPassed = false;
-    inspect.push(ruleDetail);
-    advice.push(rule.failure_message);
+  } catch (error) {
+    const safeMessage = (error.message || String(error)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    findings.push(configurationFinding(rule, `Rule '${rule.id}' could not evaluate its direct authority: ${safeMessage}`, safeMessage));
   }
 }
 
-const outcome = allPassed ? 'passed' : 'failed';
+const ruleEvaluation = buildContractEvaluation({
+  checksRun,
+  findings,
+  maskedRuleIds: [...maskedRuleIds],
+});
+const outcome = ruleEvaluation.passed ? 'passed' : 'failed';
 const routing = resolveRouting(args.transitions, args.currentNode, outcome);
+const routingFailed = ['invalid_input', 'config_error'].includes(routing.kind);
+const evaluation = buildContractEvaluation({
+  checksRun,
+  findings: [...ruleEvaluation.findings, ...(routing.findings || [])],
+  maskedRuleIds: ruleEvaluation.masked_rule_ids,
+});
 
 const result = buildGateResult({
-  passed: allPassed,
+  passed: ruleEvaluation.passed && !routingFailed,
   gate: definition.gate,
   currentNodeRef: args.currentNode,
   routing,
-  inspect,
-  advice,
+  inspect: [...ruleEvaluation.inspect, ...(routing.inspect || [])],
+  advice: [...ruleEvaluation.advice, ...(routing.advice || [])],
+  findings: evaluation.findings,
+  bundlePath,
+  extraCheck: {
+    failed_rule_ids: evaluation.failed_rule_ids,
+    masked_rule_ids: evaluation.masked_rule_ids,
+  },
   attemptNumber: args.attempt ?? 0,
 });
 
-writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+try {
+  writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+} catch (error) {
+  const failedRouting = resolveRouting(args.transitions, args.currentNode, 'failed');
+  const failureEvaluation = buildContractEvaluation({
+    findings: [...(error.findings || []), ...(failedRouting.findings || [])],
+  });
+  const failedResult = buildGateResult({
+    passed: false,
+    gate: definition.gate,
+    currentNodeRef: args.currentNode,
+    routing: failedRouting,
+    inspect: [...(error.inspect || [error.message || String(error)]), ...(failedRouting.inspect || [])],
+    advice: [...(error.advice || []), ...(failedRouting.advice || [])],
+    findings: failureEvaluation.findings,
+    bundlePath,
+    extraCheck: {
+      failed_rule_ids: failureEvaluation.failed_rule_ids,
+      masked_rule_ids: failureEvaluation.masked_rule_ids,
+      trace_durable: false,
+      gate_attempt_write_failed: true,
+    },
+    attemptNumber: args.attempt ?? 0,
+  });
+  try { writeGateAttempt(bundlePath, failedResult); } catch { /* secondary diagnostic only */ }
+  emitGateResult(failedResult);
+}
 
 emitGateResult(result);

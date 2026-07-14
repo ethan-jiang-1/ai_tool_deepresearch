@@ -5,7 +5,7 @@
 // Re-exported by gate-helpers.mjs for backward compatibility.
 
 import { existsSync, readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, join, resolve as resolvePath } from 'node:path';
 import {
   readOutputDeclarations,
   readSubmittedWorkUnitDeclarations,
@@ -17,6 +17,38 @@ import {
   cacheLeafMapping,
   inspectCacheLeaf,
 } from './cache-leaf-contract.mjs';
+import { makeContractFinding } from './wave-contract-findings.mjs';
+
+function checkerFinding(rule, {
+  defaultRuleId,
+  id = null,
+  blockingBasis,
+  surface,
+  expected,
+  observed,
+  missingFact,
+  repairKind,
+  writeTo,
+  repair,
+  detail,
+}) {
+  const ruleId = rule?.id || defaultRuleId;
+  return makeContractFinding({
+    id: id || ruleId,
+    ruleId,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis,
+    surface,
+    expected,
+    observed,
+    missingFact,
+    repairKind,
+    writeTo,
+    repair,
+    detail,
+  });
+}
 
 function normalizeUrl(url) {
   try {
@@ -194,6 +226,29 @@ function urlsBound(urls, map) {
   return urls.every((url) => map.has(normalizeUrl(url)));
 }
 
+function referenceAuthorityFailure({
+  authority,
+  reasonCode,
+  reason,
+  blockingBasis,
+  repairKind,
+  writeTo,
+  missingFact,
+}) {
+  return {
+    authority,
+    passed: false,
+    reason,
+    reason_code: reasonCode,
+    root_contract: {
+      blocking_basis: blockingBasis,
+      repair_kind: repairKind,
+      write_to: writeTo,
+      missing_fact: missingFact,
+    },
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Markdown Text Utilities
 // ═══════════════════════════════════════════════════════════════════════════
@@ -246,66 +301,139 @@ export function parseReferenceMetadata(mdContent) {
 // Reference Validation Checks
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function checkReferenceFormatFiles(files) {
+export function checkReferenceFormatFiles(files, { rule = null } = {}) {
   const inspect = [];
+  const findings = [];
   for (const file of files) {
     const content = readFileSync(file.absPath, 'utf-8');
     if (content.trimStart().startsWith('---')) {
-      inspect.push(`YAML frontmatter is not allowed in ${file.relPath}`);
+      const detail = `YAML frontmatter is not allowed in ${file.relPath}`;
+      inspect.push(detail);
+      findings.push(checkerFinding(rule, {
+        defaultRuleId: 'reference_format',
+        id: `${rule?.id || 'reference_format'}:${file.relPath}:yaml_frontmatter`,
+        blockingBasis: 'required_structure',
+        surface: file.absPath,
+        expected: 'Reference metadata uses the accepted bullet/colon metadata block before semantic sections.',
+        observed: 'YAML frontmatter fence',
+        missingFact: `${file.relPath} uses YAML frontmatter instead of the accepted reference metadata block.`,
+        repairKind: 'agent_action',
+        writeTo: file.absPath,
+        repair: `Rewrite the metadata block in ${file.relPath} using the accepted bullet/colon format.`,
+        detail,
+      }));
       continue;
     }
     const metadata = parseReferenceMetadata(content);
     for (const field of REQUIRED_REFERENCE_METADATA_FIELDS) {
       if (!metadata.has(field) || !metadata.get(field)) {
-        inspect.push(`Missing required metadata "${field}" in ${file.relPath}`);
+        const detail = `Missing required metadata "${field}" in ${file.relPath}`;
+        inspect.push(detail);
+        findings.push(checkerFinding(rule, {
+          defaultRuleId: 'reference_format',
+          id: `${rule?.id || 'reference_format'}:${file.relPath}:metadata:${field}`,
+          blockingBasis: 'required_structure',
+          surface: file.absPath,
+          expected: `Non-empty reference metadata field '${field}'.`,
+          observed: metadata.get(field) || null,
+          missingFact: `${file.relPath} is missing required non-empty metadata field '${field}'.`,
+          repairKind: 'agent_action',
+          writeTo: `${file.absPath}#metadata.${field}`,
+          repair: `Add non-empty metadata field '${field}' to ${file.relPath}.`,
+          detail,
+        }));
       }
     }
     for (const section of REQUIRED_REFERENCE_SECTIONS) {
       if (!extractSection(content, section)) {
-        inspect.push(`Missing or empty section "## ${section}" in ${file.relPath}`);
+        const detail = `Missing or empty section "## ${section}" in ${file.relPath}`;
+        inspect.push(detail);
+        findings.push(checkerFinding(rule, {
+          defaultRuleId: 'reference_format',
+          id: `${rule?.id || 'reference_format'}:${file.relPath}:section:${section}`,
+          blockingBasis: 'required_structure',
+          surface: file.absPath,
+          expected: `Non-empty semantic section '${section}'.`,
+          observed: 'missing or empty',
+          missingFact: `${file.relPath} is missing the non-empty semantic section '${section}'.`,
+          repairKind: 'agent_action',
+          writeTo: `${file.absPath}#section:${section}`,
+          repair: `Add non-empty semantic section '${section}' to ${file.relPath}.`,
+          detail,
+        }));
       }
     }
   }
-  return { passed: inspect.length === 0, inspect };
+  return { passed: inspect.length === 0, inspect, findings };
 }
 
-export function checkReferenceSourceUrls(files) {
+export function checkReferenceSourceUrls(files, { rule = null } = {}) {
   const inspect = [];
+  const findings = [];
   for (const file of files) {
     const content = readFileSync(file.absPath, 'utf-8');
     const metadata = parseReferenceMetadata(content);
     const sourceUrl = metadata.get('source_url') || '';
     if (!sourceUrl) {
-      inspect.push(`Missing metadata source_url in ${file.relPath}`);
+      const detail = `Missing metadata source_url in ${file.relPath}`;
+      inspect.push(detail);
+      findings.push(checkerFinding(rule, {
+        defaultRuleId: 'reference_source_url_parseable',
+        id: `${rule?.id || 'reference_source_url_parseable'}:${file.relPath}:missing`,
+        blockingBasis: 'required_structure',
+        surface: file.absPath,
+        expected: 'At least one parseable http(s) source_url metadata value.',
+        observed: null,
+        missingFact: `${file.relPath} has no source_url metadata value.`,
+        repairKind: 'agent_action',
+        writeTo: `${file.absPath}#metadata.source_url`,
+        repair: `Add the real source URL to source_url in ${file.relPath}.`,
+        detail,
+      }));
       continue;
     }
     const urls = sourceUrl.split(';').map((u) => u.trim()).filter(Boolean);
     if (urls.length === 0) {
-      inspect.push(`Empty metadata source_url in ${file.relPath}`);
+      const detail = `Empty metadata source_url in ${file.relPath}`;
+      inspect.push(detail);
+      findings.push(checkerFinding(rule, {
+        defaultRuleId: 'reference_source_url_parseable',
+        id: `${rule?.id || 'reference_source_url_parseable'}:${file.relPath}:empty`,
+        blockingBasis: 'required_structure',
+        surface: file.absPath,
+        expected: 'At least one parseable http(s) source_url metadata value.',
+        observed: sourceUrl,
+        missingFact: `${file.relPath} has an empty source_url metadata value.`,
+        repairKind: 'agent_action',
+        writeTo: `${file.absPath}#metadata.source_url`,
+        repair: `Add the real source URL to source_url in ${file.relPath}.`,
+        detail,
+      }));
       continue;
     }
     for (const url of urls) {
       try {
         new URL(url);
       } catch {
-        inspect.push(`Invalid metadata source_url in ${file.relPath}: ${url}`);
+        const detail = `Invalid metadata source_url in ${file.relPath}: ${url}`;
+        inspect.push(detail);
+        findings.push(checkerFinding(rule, {
+          defaultRuleId: 'reference_source_url_parseable',
+          id: `${rule?.id || 'reference_source_url_parseable'}:${file.relPath}:invalid:${url}`,
+          blockingBasis: 'authority_integrity',
+          surface: file.absPath,
+          expected: 'A URL-parseable http(s) source_url metadata value.',
+          observed: url,
+          missingFact: `${file.relPath} source_url '${url}' is not URL-parseable.`,
+          repairKind: 'agent_action',
+          writeTo: `${file.absPath}#metadata.source_url`,
+          repair: `Replace the invalid source_url in ${file.relPath} with the real parseable source URL.`,
+          detail,
+        }));
       }
     }
   }
-  return { passed: inspect.length === 0, inspect };
-}
-
-export function checkReferenceKeyFactsMinLines(files, minLines = 5) {
-  const inspect = [];
-  for (const file of files) {
-    const content = readFileSync(file.absPath, 'utf-8');
-    const keyFacts = extractSection(content, 'Key Facts');
-    const factCount = keyFacts.split(/\r?\n/).filter((line) => /^\s*(?:[-+*]|\d+[.)])\s+\S/.test(line)).length;
-    if (factCount < minLines) {
-      inspect.push(`Key Facts in ${file.relPath} has ${factCount} fact item(s), expected at least ${minLines}`);
-    }
-  }
-  return { passed: inspect.length === 0, inspect };
+  return { passed: inspect.length === 0, inspect, findings };
 }
 
 /**
@@ -318,18 +446,30 @@ export function classifyReferenceAuthority(bundlePath, file) {
   const absPath = typeof file === 'string' ? join(bundlePath, file) : file?.absPath;
 
   if (!relPath || !isSafeBundleRef(relPath)) {
-    return { authority: 'unbacked', passed: false, reason: `unsafe_reference_path: ${relPath || '<missing>'}` };
+    return referenceAuthorityFailure({
+      authority: 'unbacked',
+      reasonCode: 'unsafe_reference_path',
+      reason: `unsafe_reference_path: ${relPath || '<missing>'}`,
+      blockingBasis: 'authority_integrity',
+      repairKind: 'missing_contract',
+      writeTo: 'Reference path-safety contract boundary',
+      missingFact: `Reference path '${relPath || '<missing>'}' is absent or unsafe for bundle-relative resolution.`,
+    });
   }
 
   let index;
   try {
     index = submittedBackingIndex(bundlePath);
   } catch (error) {
-    return {
+    return referenceAuthorityFailure({
       authority: 'unbacked',
-      passed: false,
+      reasonCode: 'submitted_backing_ledger_invalid',
       reason: `projection_backing_drift: submitted backing ledger is invalid for ${relPath}: ${error.message}`,
-    };
+      blockingBasis: 'authority_integrity',
+      repairKind: 'missing_contract',
+      writeTo: `Submitted declaration integrity boundary for ${resolvePath(bundlePath, 'rb_output_declarations.jsonl')}`,
+      missingFact: `Submitted backing ledger cannot be validated for ${relPath}: ${error.message}`,
+    });
   }
 
   if (index.referenceOutputs.has(relPath)) {
@@ -341,30 +481,54 @@ export function classifyReferenceAuthority(bundlePath, file) {
     };
   }
   if (!absPath || !existsSync(absPath)) {
-    return { authority: 'unbacked', passed: false, reason: `reference file missing: ${relPath}` };
+    return referenceAuthorityFailure({
+      authority: 'unbacked',
+      reasonCode: 'reference_file_missing',
+      reason: `reference file missing: ${relPath}`,
+      blockingBasis: 'required_structure',
+      repairKind: 'agent_action',
+      writeTo: resolvePath(bundlePath, relPath),
+      missingFact: `Reference projection ${relPath} is missing.`,
+    });
   }
 
   const content = readFileSync(absPath, 'utf-8');
   const metadata = parseReferenceMetadata(content);
   const sourceUrls = sourceUrlsFromMetadata(metadata);
   if (sourceUrls.length === 0) {
-    return { authority: 'unbacked', passed: false, reason: `projection_backing_drift: ${relPath} lacks source_url metadata` };
+    return referenceAuthorityFailure({
+      authority: 'unbacked',
+      reasonCode: 'reference_source_url_missing',
+      reason: `projection_backing_drift: ${relPath} lacks source_url metadata`,
+      blockingBasis: 'required_structure',
+      repairKind: 'agent_action',
+      writeTo: `${resolvePath(bundlePath, relPath)}#metadata.source_url`,
+      missingFact: `${relPath} lacks source_url metadata needed to bind submitted source backing.`,
+    });
   }
 
   if (isWave1TopicReference(relPath)) {
     if (!urlsBound(sourceUrls, index.acceptedUrls)) {
-      return {
+      return referenceAuthorityFailure({
         authority: 'unbacked_projection',
-        passed: false,
+        reasonCode: 'submitted_source_backing_missing',
         reason: `projection_backing_drift: ${relPath} source_url is absent from submitted source claims, accepted source URL surfaces, cache trails, and degraded-capture backing`,
-      };
+        blockingBasis: 'binding_integrity',
+        repairKind: 'engine_operation',
+        writeTo: `operate-work-unit claim/submit path for source backing of ${relPath}`,
+        missingFact: `${relPath} source_url is not present on submitted source/cache/degraded backing authority.`,
+      });
     }
     if (!bodyHasSubmittedBackingRef(content, index)) {
-      return {
+      return referenceAuthorityFailure({
         authority: 'unbacked_projection',
-        passed: false,
+        reasonCode: 'reference_body_backing_ref_missing',
         reason: `projection_backing_drift: ${relPath} lacks scannable body refs to submitted source/cache/work-unit backing`,
-      };
+        blockingBasis: 'required_structure',
+        repairKind: 'agent_action',
+        writeTo: resolvePath(bundlePath, relPath),
+        missingFact: `${relPath} does not cite the submitted source/cache/work-unit backing it projects.`,
+      });
     }
     return {
       authority: 'phase_owned_projection',
@@ -382,25 +546,37 @@ export function classifyReferenceAuthority(bundlePath, file) {
       };
     }
     if (!urlsBound(sourceUrls, index.priorAcceptedUrls)) {
-      return {
+      return referenceAuthorityFailure({
         authority: 'unbacked_projection',
-        passed: false,
+        reasonCode: 'wave2_source_backing_missing',
         reason: `projection_backing_drift: ${relPath} source_url is not a prior accepted backing URL and no submitted targeted evidence backs it`,
-      };
+        blockingBasis: 'binding_integrity',
+        repairKind: 'engine_operation',
+        writeTo: `operate-work-unit claim/submit path for Wave2 source backing of ${relPath}`,
+        missingFact: `${relPath} is not bound to prior accepted backing or submitted Wave2 targeted evidence.`,
+      });
     }
     if (!bodyHasWave2ProcessRefs(content)) {
-      return {
+      return referenceAuthorityFailure({
         authority: 'unbacked_projection',
-        passed: false,
+        reasonCode: 'wave2_process_refs_missing',
         reason: `projection_backing_drift: ${relPath} lacks W2F-xxx plus finding-index/cross-topic-ledger refs`,
-      };
+        blockingBasis: 'required_structure',
+        repairKind: 'agent_action',
+        writeTo: resolvePath(bundlePath, relPath),
+        missingFact: `${relPath} lacks its W2F finding id and finding-index/cross-topic-ledger process refs.`,
+      });
     }
     if (!bodyHasSubmittedBackingRef(content, index)) {
-      return {
+      return referenceAuthorityFailure({
         authority: 'unbacked_projection',
-        passed: false,
+        reasonCode: 'wave2_submitted_locator_missing',
         reason: `projection_backing_drift: ${relPath} locator refs do not resolve to submitted prior-wave backing`,
-      };
+        blockingBasis: 'binding_integrity',
+        repairKind: 'agent_action',
+        writeTo: resolvePath(bundlePath, relPath),
+        missingFact: `${relPath} locator refs do not identify submitted prior-wave backing.`,
+      });
     }
     return {
       authority: 'phase_owned_projection',
@@ -409,49 +585,113 @@ export function classifyReferenceAuthority(bundlePath, file) {
     };
   }
 
-  return {
+  return referenceAuthorityFailure({
     authority: 'delegated_bypass',
-    passed: false,
+    reasonCode: 'delegated_bypass',
     reason: `delegated_bypass: ${relPath} is not a legal Phase-owned projection and is absent from submitted work-unit reference outputs`,
-  };
+    blockingBasis: 'binding_integrity',
+    repairKind: 'engine_operation',
+    writeTo: `operate-work-unit claim/submit path for ${relPath}`,
+    missingFact: `${relPath} is neither a legal Phase-owned projection nor a submitted work-unit reference output.`,
+  });
 }
 
-export function checkReferenceLedgerCoverage(bundlePath, files) {
+export function checkReferenceLedgerCoverage(bundlePath, files, { rule = null } = {}) {
   const declared = getDeclaredReferencePaths(bundlePath);
   const missing = [];
+  const findings = [];
   for (const file of files) {
     if (declared.has(file.relPath)) continue;
     const classification = classifyReferenceAuthority(bundlePath, file);
-    if (!classification.passed) missing.push(`${file.relPath}: ${classification.reason}`);
+    if (!classification.passed) {
+      missing.push(`${file.relPath}: ${classification.reason}`);
+      const root = classification.root_contract || {};
+      findings.push(checkerFinding(rule, {
+        defaultRuleId: 'reference_ledger_coverage',
+        id: `${rule?.id || 'reference_ledger_coverage'}:${file.relPath}:${classification.reason_code || 'unbacked'}`,
+        blockingBasis: root.blocking_basis || 'binding_integrity',
+        surface: file.absPath || resolvePath(bundlePath, file.relPath),
+        expected: 'Reference projection is declared by a submitted work-unit output or has accepted Phase-owned submitted backing.',
+        observed: { authority: classification.authority, reason_code: classification.reason_code || null },
+        missingFact: root.missing_fact || `${file.relPath} lacks accepted submitted backing.`,
+        repairKind: root.repair_kind || 'missing_contract',
+        writeTo: root.write_to || `Reference submitted-backing contract boundary for ${file.relPath}`,
+        repair: `Repair ${file.relPath} through the action named by its submitted-backing root, then rerun the same checkpoint.`,
+        detail: `Reference file lacks submitted backing: ${file.relPath}: ${classification.reason}`,
+      }));
+    }
   }
   return {
     passed: missing.length === 0,
     inspect: missing.map((detail) => `Reference file lacks submitted backing: ${detail}`),
+    findings,
   };
 }
 
-export function checkReferenceIndexCoverage(bundlePath, files, { sourceLayer = null } = {}) {
+export function checkReferenceIndexCoverage(bundlePath, files, { sourceLayer = null, rule = null } = {}) {
   const index = readReferenceIndexRows(bundlePath);
   const inspect = [];
+  const findings = [];
+  const indexPath = resolvePath(bundlePath, 'reference/_INDEX.md');
   if (!index.exists) {
-    for (const file of files) {
-      inspect.push(`[missing_index_row] ${file.relPath}: reference/_INDEX.md is missing`);
-    }
+    if (files.length > 0) inspect.push(`[missing_index_row] reference/_INDEX.md is missing for ${files.length} materialized reference file(s)`);
+    if (files.length > 0) findings.push(checkerFinding(rule, {
+      defaultRuleId: 'reference_index_coverage',
+      id: `${rule?.id || 'reference_index_coverage'}:index_missing`,
+      blockingBasis: 'required_structure',
+      surface: indexPath,
+      expected: 'reference/_INDEX.md exists and contains navigation rows for materialized references.',
+      observed: { exists: false, materialized_reference_count: files.length },
+      missingFact: `reference/_INDEX.md is missing while ${files.length} materialized reference file(s) require navigation rows.`,
+      repairKind: 'agent_action',
+      writeTo: indexPath,
+      repair: 'Create reference/_INDEX.md with the accepted navigation table and rows, then rerun this checkpoint.',
+      detail: inspect[0],
+    }));
     return {
       passed: inspect.length === 0,
       inspect,
       advice: inspect.length > 0 ? ['Create reference/_INDEX.md and add one row per materialized reference projection.'] : [],
+      findings,
     };
   }
 
   for (const file of files) {
     const row = index.rowByFile.get(file.relPath);
     if (!row) {
-      inspect.push(`[missing_index_row] ${file.relPath}: no matching reference/_INDEX.md row`);
+      const detail = `[missing_index_row] ${file.relPath}: no matching reference/_INDEX.md row`;
+      inspect.push(detail);
+      findings.push(checkerFinding(rule, {
+        defaultRuleId: 'reference_index_coverage',
+        id: `${rule?.id || 'reference_index_coverage'}:${file.relPath}:missing_row`,
+        blockingBasis: 'required_structure',
+        surface: indexPath,
+        expected: `One reference/_INDEX.md row for ${file.relPath}.`,
+        observed: null,
+        missingFact: `reference/_INDEX.md has no row for materialized reference ${file.relPath}.`,
+        repairKind: 'agent_action',
+        writeTo: `${indexPath}#row:${file.relPath}`,
+        repair: `Add the missing navigation row for ${file.relPath}.`,
+        detail,
+      }));
       continue;
     }
     if (sourceLayer && row.source_layer !== sourceLayer) {
-      inspect.push(`[missing_index_row] ${file.relPath}: reference/_INDEX.md source_layer is "${row.source_layer || '<missing>'}", expected "${sourceLayer}"`);
+      const detail = `[missing_index_row] ${file.relPath}: reference/_INDEX.md source_layer is "${row.source_layer || '<missing>'}", expected "${sourceLayer}"`;
+      inspect.push(detail);
+      findings.push(checkerFinding(rule, {
+        defaultRuleId: 'reference_index_coverage',
+        id: `${rule?.id || 'reference_index_coverage'}:${file.relPath}:source_layer`,
+        blockingBasis: 'binding_integrity',
+        surface: indexPath,
+        expected: { ref_file: file.relPath, source_layer: sourceLayer },
+        observed: { source_layer: row.source_layer || null },
+        missingFact: `reference/_INDEX.md row for ${file.relPath} has source_layer '${row.source_layer || '<missing>'}', expected '${sourceLayer}'.`,
+        repairKind: 'agent_action',
+        writeTo: `${indexPath}#row:${file.relPath}/source_layer`,
+        repair: `Correct the source_layer cell for ${file.relPath} in reference/_INDEX.md.`,
+        detail,
+      }));
     }
   }
 
@@ -461,6 +701,7 @@ export function checkReferenceIndexCoverage(bundlePath, files, { sourceLayer = n
     advice: inspect.length > 0
       ? ['Repair reference/_INDEX.md rows for consumer navigation. source_layer is a navigation label only; submitted backing still determines authority.']
       : [],
+    findings,
   };
 }
 
@@ -468,19 +709,34 @@ export function checkReferenceIndexCoverage(bundlePath, files, { sourceLayer = n
 // cache_coverage Gate Check
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function checkCacheCoverage(bundlePath) {
+export function checkCacheCoverage(bundlePath, { rule = null } = {}) {
   let declarations;
   try {
     declarations = readSubmittedWorkUnitDeclarations(bundlePath);
   } catch (error) {
+    const detail = `[cache_coverage] FAIL: invalid submitted work-unit ledger: ${error.message}`;
     return {
       passed: false,
-      inspect: [`[cache_coverage] FAIL: invalid submitted work-unit ledger: ${error.message}`],
+      inspect: [detail],
       advice: ['Repair work-unit submit/index/ledger drift before rerunning the gate.'],
+      findings: [checkerFinding(rule, {
+        defaultRuleId: 'cache_coverage',
+        id: `${rule?.id || 'cache_coverage'}:submitted_ledger_invalid`,
+        blockingBasis: 'authority_integrity',
+        surface: resolvePath(bundlePath, 'rb_output_declarations.jsonl'),
+        expected: 'Schema-valid, hash-valid submitted work-unit declaration rows.',
+        observed: error.message,
+        missingFact: `Submitted work-unit ledger is invalid while checking cache coverage: ${error.message}`,
+        repairKind: 'missing_contract',
+        writeTo: `Submitted declaration integrity boundary for ${resolvePath(bundlePath, 'rb_output_declarations.jsonl')}`,
+        repair: 'Restore submitted declaration integrity through its Engine owner before rerunning this checkpoint.',
+        detail,
+      })],
     };
   }
   const inspect = [];
   const advice = [];
+  const findings = [];
   let passed = true;
 
   function readMeta(trail) {
@@ -504,13 +760,27 @@ export function checkCacheCoverage(bundlePath) {
     const rawDeclarations = readOutputDeclarations(bundlePath);
     const rawReferenceRows = rawDeclarations.filter((decl) => (decl.output_files || []).some((f) => f.role === 'reference'));
     if (rawReferenceRows.length > 0) {
+      const detail = '[cache_coverage] FAIL: reference output declarations exist but none are submitted work-unit ledger rows';
       return {
         passed: false,
-        inspect: ['[cache_coverage] FAIL: reference output declarations exist but none are submitted work-unit ledger rows'],
+        inspect: [detail],
         advice: ['Submit delegated reference outputs through operate-work-unit so cache coverage can validate Engine-written cache trails.'],
+        findings: [checkerFinding(rule, {
+          defaultRuleId: 'cache_coverage',
+          id: `${rule?.id || 'cache_coverage'}:submitted_rows_missing`,
+          blockingBasis: 'binding_integrity',
+          surface: resolvePath(bundlePath, 'rb_output_declarations.jsonl'),
+          expected: 'Reference output declarations are Engine-written submitted work-unit rows with cache trails.',
+          observed: { raw_reference_rows: rawReferenceRows.length, submitted_rows: 0 },
+          missingFact: `${rawReferenceRows.length} reference declaration row(s) are not submitted work-unit ledger rows, so cache coverage has no accepted authority.`,
+          repairKind: 'engine_operation',
+          writeTo: 'operate-work-unit claim/submit path for the affected reference outputs',
+          repair: 'Execute the delegated reference work through a legal claimed work unit and formal submit.',
+          detail,
+        })],
       };
     }
-    return { passed: true, inspect, advice }; // Nothing to check
+    return { passed: true, inspect, advice, findings }; // Nothing to check
   }
 
   for (const decl of declarations) {
@@ -525,7 +795,16 @@ export function checkCacheCoverage(bundlePath) {
     // ── Phase 1: empty cache_trails → warning only ──
     if (cacheTrails.length === 0) {
       for (const ref of refOutputs) {
-        inspect.push(`[cache_coverage] WARNING (Phase 1): ${declId} has empty cache_trails for reference ${ref.path} — gap will become fail in Phase 2`);
+        const detail = `[cache_coverage] WARNING (Phase 1): ${declId} has empty cache_trails for reference ${ref.path} — gap will become fail in Phase 2`;
+        inspect.push(detail);
+        findings.push(makeContractFinding({
+          id: `${rule?.id || 'cache_coverage'}:${declId}:${ref.path}:empty_cache_trails`,
+          ruleId: rule?.id || 'cache_coverage',
+          classification: 'advisory',
+          surface: resolvePath(bundlePath, ref.path),
+          detail,
+          repair: `Ensure the next accepted work-unit submit for ${ref.path} declares verified cache trails.`,
+        }));
       }
       advice.push('Empty cache_trails on a submitted work-unit reference output — ensure the work-unit result declares verified _cache/ leaves before submit.');
       continue;
@@ -559,7 +838,21 @@ export function checkCacheCoverage(bundlePath) {
     if (missingTrails.length > 0) {
       passed = false;
       for (const mt of missingTrails) {
-        inspect.push(`[cache_coverage] FAIL: ${declId}: cache trail ${mt.trail} — ${mt.reason}`);
+        const detail = `[cache_coverage] FAIL: ${declId}: cache trail ${mt.trail} — ${mt.reason}`;
+        inspect.push(detail);
+        findings.push(checkerFinding(rule, {
+          defaultRuleId: 'cache_coverage',
+          id: `${rule?.id || 'cache_coverage'}:${declId}:${mt.trail}`,
+          blockingBasis: 'binding_integrity',
+          surface: resolvePath(bundlePath, mt.trail),
+          expected: { required_files: CACHE_BASE_LEAF_FILES, submitted_work_unit: declId },
+          observed: mt.reason,
+          missingFact: `Submitted work unit ${declId} cache trail ${mt.trail} is invalid: ${mt.reason}.`,
+          repairKind: 'engine_operation',
+          writeTo: `operate-work-unit retry/submit boundary for ${declId} and cache trail ${mt.trail}`,
+          repair: `Repair or rerun work unit ${declId} so formal submit records a complete cache leaf at ${mt.trail}.`,
+          detail,
+        }));
       }
       advice.push(`Cache trail(s) missing for ${declId}. Re-run or repair the work unit so submit records complete cache leaves.`);
     }
@@ -606,13 +899,27 @@ export function checkCacheCoverage(bundlePath) {
         passed = false;
         const required = CACHE_BASE_LEAF_FILES.join(', ');
         const mappingFields = `${CACHE_SOURCE_MAPPING_FIELDS.slice(0, -1).join('/')} or ${CACHE_SOURCE_MAPPING_FIELDS.at(-1)}`;
-        inspect.push(`[cache_coverage] FAIL: ${declId}: reference ${ref.path} (source_url: ${ref.source_url || 'none'}) not mapped to any valid cache trail. Mapping uses meta.json.${mappingFields}. Required cache leaf files: ${required}.`);
+        const detail = `[cache_coverage] FAIL: ${declId}: reference ${ref.path} (source_url: ${ref.source_url || 'none'}) not mapped to any valid cache trail. Mapping uses meta.json.${mappingFields}. Required cache leaf files: ${required}.`;
+        inspect.push(detail);
         advice.push(`Reference ${ref.path} has no cache trail mapping. Ensure the submitted work-unit result includes a matching _cache/ leaf via meta.json.${mappingFields}, with ${required}.`);
+        findings.push(checkerFinding(rule, {
+          defaultRuleId: 'cache_coverage',
+          id: `${rule?.id || 'cache_coverage'}:${declId}:${ref.path}:mapping`,
+          blockingBasis: 'binding_integrity',
+          surface: resolvePath(bundlePath, ref.path),
+          expected: `Reference source URL or source slug maps to one submitted valid cache trail via meta.json.${mappingFields}.`,
+          observed: { source_url: ref.source_url || null, valid_cache_trails: validTrails },
+          missingFact: `Submitted reference ${ref.path} from ${declId} is not mapped to any valid submitted cache trail.`,
+          repairKind: 'engine_operation',
+          writeTo: `operate-work-unit retry/submit boundary for ${declId} cache mapping of ${ref.path}`,
+          repair: `Repair or rerun work unit ${declId} with a matching cache leaf and meta.json source mapping.`,
+          detail,
+        }));
       } else if (!mapped && validTrails.length === 0) {
         // Already reported as missing trail above — don't double-report
       }
     }
   }
 
-  return { passed, inspect, advice };
+  return { passed, inspect, advice, findings };
 }

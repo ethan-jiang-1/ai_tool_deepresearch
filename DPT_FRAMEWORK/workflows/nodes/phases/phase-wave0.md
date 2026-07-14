@@ -206,12 +206,21 @@ Continue from the Markdown rendered by `enter-phase`. `advance-status` only reco
 
 ## 7. On Gate Fail
 
-If gate fails because `per_topic_count_floor` or `shared_ref_count_floor` is below profile threshold:
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从 legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段或命令。按每个 independent primary hint 执行：
 
-1. Read gate `inspect` and identify the exact topic/shared gap.
-2. Enqueue supplementary delegated queue items with `kind: "wave0_source_intake"` and `priority_class: "P1_state_or_gate_repair"`.
-3. Drain through the same work-unit claim/submit path.
-4. Rerun Wave0 inspect, then rerun the gate.
+1. `repair_kind: agent_action`：当 `write_to` 是已授权的 Wave0 mutable surface 时，由 Agent 修复 exact field/file；不得把 filesystem-only artifact 追认为 submitted coverage。
+2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal queue/work-unit/topic/lifecycle operation；不得要求用户运行普通命令，也不得直接编辑 status、trace、ledger、index、receipt、hash 或 provenance authority。
+3. `repair_kind: user_decision`：只暴露 `missing_fact` 指出的真实语义/风险决定。Wave0 是 `stop: no`，不得由 hint 创造新 HITL、repair controller 或 lifecycle；没有 accepted decision path 时保持当前 checkpoint failed。
+4. `repair_kind: external_action`：只暴露当前环境不可代理的 actor/search/fetch/permission 前置条件；满足后机械执行回到 Agent。
+5. `repair_kind: missing_contract`：报告 exact unavailable capability/contract boundary，不提供手写 authority、绕过 Gate 或平行成功路径。
+
+Hint 不创造 permission、controller 或 lifecycle。完成可执行动作后 Agent MUST 运行 hint 的 exact `rerun`，回到同一个 Wave0 checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 猜 blocking repair；按 `missing_contract` 暴露最小边界。
+
+仅当 structured hint 的 `missing_fact` / `write_to` 明确识别 `per_topic_count_floor`、`shared_ref_count_floor` 或缺失 submitted backing，并且 normal supplementary demand 是现有合法路径时：
+
+1. Enqueue supplementary delegated queue items with `kind: "wave0_source_intake"` and `priority_class: "P1_state_or_gate_repair"`.
+2. Drain through the same work-unit claim/submit path.
+3. Run the hint's exact `rerun`.
 
 Supplementary tasks must append or add real sources only. They must not overwrite existing `source.yaml`, create placeholder URLs, or fabricate `reference/00-shared-*.md`.
 

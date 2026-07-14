@@ -6,25 +6,33 @@
       "id": "seed_topics_non_empty",
       "check": "dir_non_empty",
       "target": "seed_topics",
-      "failure_message": "seed_topics/ directory is missing or empty. Seed topic materialization must have completed before readiness."
+      "failure_message": "seed_topics/ directory is missing or empty. Seed topic materialization must have completed before readiness.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "reference_index_exists",
       "check": "file_exists",
       "target": "reference/_INDEX.md",
-      "failure_message": "Missing file: reference/_INDEX.md. Wave0 evidence indexing must have completed before readiness."
+      "failure_message": "Missing file: reference/_INDEX.md. Wave0 evidence indexing must have completed before readiness.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "wave2_synthesis_exists",
       "check": "file_exists",
       "target": "artifacts/wave2/synthesis.md",
-      "failure_message": "Missing file: artifacts/wave2/synthesis.md. Wave2 cross-topic synthesis must have completed before readiness."
+      "failure_message": "Missing file: artifacts/wave2/synthesis.md. Wave2 cross-topic synthesis must have completed before readiness.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "hitl2_decision_brief_exists",
       "check": "file_exists",
       "target": "artifacts/hitl2/decision-brief.md",
-      "failure_message": "Missing file: artifacts/hitl2/decision-brief.md. HITL2 final review must have completed before readiness."
+      "failure_message": "Missing file: artifacts/hitl2/decision-brief.md. HITL2 final review must have completed before readiness.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "all_prior_gates_passed",
@@ -33,19 +41,22 @@
       "match": {
         "passed": true
       },
-      "failure_message": "Not all prior gates have a gate_attempt(passed=true) in rb_trace.jsonl. Each non-terminal gate before readiness must have passed at least once. Check inspect output for the specific missing gate(s)."
+      "failure_message": "Not all prior gates have a gate_attempt(passed=true) in rb_trace.jsonl. Each non-terminal gate before readiness must have passed at least once. Check inspect output for the specific missing gate(s).",
+      "finding": { "source": "checker" }
     },
     {
       "id": "profile_yaml_parseable",
       "check": "yaml_parse",
       "target": "rb_profile.yaml",
-      "failure_message": "rb_profile.yaml is missing or contains invalid YAML. Fix YAML syntax errors."
+      "failure_message": "rb_profile.yaml is missing or contains invalid YAML. Fix YAML syntax errors.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "trace_jsonl_parseable",
       "check": "jsonl_parse",
       "target": "rb_trace.jsonl",
-      "failure_message": "rb_trace.jsonl is missing or contains unparseable lines. Every line in rb_trace.jsonl must be valid JSON. Remove or fix any non-JSON lines."
+      "failure_message": "rb_trace.jsonl is missing or contains unparseable lines. Every line in rb_trace.jsonl must be valid JSON. Remove or fix any non-JSON lines.",
+      "finding": { "source": "checker" }
     }
   ]
 }

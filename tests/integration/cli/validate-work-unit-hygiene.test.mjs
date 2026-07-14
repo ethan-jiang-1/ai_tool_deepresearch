@@ -145,7 +145,14 @@ describe('validate-work-unit-hygiene CLI', () => {
     writeFixture(root, 'experiments_env/shared/bad-run-log-helper.mjs', 'const detail = { slotKey: "old" };\nconst event = "relay_commit_missing";\n');
     writeFixture(root, 'DPT_FRAMEWORK/schema/gate_definitions/gate-wave0-complete.definition.json', JSON.stringify({
       gate: 'wave0-complete',
-      rules: [{ id: 'old', check: 'subagent_slot_presence' }],
+      description: 'Schema-valid negative fixture for a removed provenance check.',
+      rules: [{
+        id: 'old',
+        check: 'subagent_slot_presence',
+        target: 'rb_output_declarations.jsonl',
+        failure_message: 'Removed check fixture.',
+        finding: { source: 'checker' },
+      }],
     }));
     writeFixture(root, 'DPT_FRAMEWORK/rb_templates/rb_queue.json.tmpl', JSON.stringify({
       slot_1_current: { work_id: 'old-demand' },

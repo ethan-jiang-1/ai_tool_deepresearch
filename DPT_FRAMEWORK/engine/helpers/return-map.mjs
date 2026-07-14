@@ -1,5 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, join, resolve as resolvePath } from 'node:path';
+
+import { makeContractFinding } from './wave-contract-findings.mjs';
 
 // @impl RRM-005
 
@@ -69,6 +71,37 @@ function escapeRegex(value) {
 function refHasCountSummary(text, ref) {
   const pattern = new RegExp(`${escapeRegex(ref)}\\s*(?:\\([^)]+\\)|（[^）]+）)`, 'i');
   return pattern.test(text);
+}
+
+function returnMapFinding({
+  ruleId,
+  relPath,
+  bundlePath = null,
+  line = null,
+  blockingBasis = 'required_structure',
+  expected,
+  observed,
+  missingFact,
+  detail,
+  repair,
+}) {
+  const coordinate = bundlePath ? resolvePath(bundlePath, relPath) : relPath;
+  const suffix = line ? `:${line}` : '';
+  return makeContractFinding({
+    id: `${ruleId}:${relPath}${suffix}`,
+    ruleId,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis,
+    surface: line ? `${coordinate}#L${line}` : coordinate,
+    expected,
+    observed,
+    missingFact,
+    repairKind: 'agent_action',
+    writeTo: line ? `${coordinate}#L${line}` : coordinate,
+    repair,
+    detail,
+  });
 }
 
 export function extractReturnMapEntries(content) {
@@ -172,6 +205,7 @@ export function extractConcreteReferenceRefs(content, { bundlePath = null } = {}
 function validateConcreteReferenceNavigation(entries, relPath, bundlePath) {
   const inspect = [];
   const advice = [];
+  const findings = [];
 
   for (const entry of entries) {
     if (!isEvidenceBearingReturnMapEntry(entry)) continue;
@@ -186,11 +220,37 @@ function validateConcreteReferenceNavigation(entries, relPath, bundlePath) {
           : rejected.reason === 'unsafe_ref'
             ? 'reference ref is unsafe or escapes the bundle'
             : 'reference ref is not a flat concrete reference/*.md file';
-      inspect.push(`[return_map_concrete_reference] ${relPath}:${entry.startLine}: ${rejected.ref} invalid (${reason}). Classification: blocking. Repair target: replace refs with concrete existing bundle-relative reference/*.md entries or mark the entry as an explicit limitation/no-materializable-evidence state.`);
+      const detail = `[return_map_concrete_reference] ${relPath}:${entry.startLine}: ${rejected.ref} invalid (${reason}). Classification: blocking. Repair target: replace refs with concrete existing bundle-relative reference/*.md entries or mark the entry as an explicit limitation/no-materializable-evidence state.`;
+      inspect.push(detail);
+      findings.push(returnMapFinding({
+        ruleId: 'return_map_concrete_reference',
+        relPath,
+        bundlePath,
+        line: entry.startLine,
+        blockingBasis: 'binding_integrity',
+        expected: 'Every evidence-bearing return-map ref names one safe, concrete, existing flat reference/*.md file.',
+        observed: { ref: rejected.ref, reason: rejected.reason },
+        missingFact: `${relPath}:${entry.startLine} contains invalid return-map reference '${rejected.ref}' (${rejected.reason}).`,
+        detail,
+        repair: `Replace the invalid ref in ${relPath} with a concrete existing reference/*.md path or record an explicit limitation.`,
+      }));
     }
 
     if (concrete.refs.length === 0) {
-      inspect.push(`[return_map_missing_concrete_reference] ${relPath}:${entry.startLine}: evidence-bearing return-map entry must include at least one concrete existing reference/*.md ref; ${internalRefs.length > 0 ? `found only internal provenance refs (${internalRefs.join(', ')})` : 'found no concrete reference refs'}. Classification: blocking. Repair target: add concrete reference/*.md refs, or rewrite this entry as a deterministic limitation/no-materializable-evidence entry.`);
+      const detail = `[return_map_missing_concrete_reference] ${relPath}:${entry.startLine}: evidence-bearing return-map entry must include at least one concrete existing reference/*.md ref; ${internalRefs.length > 0 ? `found only internal provenance refs (${internalRefs.join(', ')})` : 'found no concrete reference refs'}. Classification: blocking. Repair target: add concrete reference/*.md refs, or rewrite this entry as a deterministic limitation/no-materializable-evidence entry.`;
+      inspect.push(detail);
+      findings.push(returnMapFinding({
+        ruleId: 'return_map_missing_concrete_reference',
+        relPath,
+        bundlePath,
+        line: entry.startLine,
+        blockingBasis: 'binding_integrity',
+        expected: 'Every evidence-bearing return-map entry includes at least one concrete existing reference/*.md consumer-navigation ref.',
+        observed: { concrete_reference_refs: [], internal_refs: internalRefs },
+        missingFact: `${relPath}:${entry.startLine} has an evidence-bearing return-map entry without a concrete existing reference/*.md ref.`,
+        detail,
+        repair: `Add a concrete existing reference/*.md ref in ${relPath}, or rewrite the entry as an explicit limitation.`,
+      }));
     }
   }
 
@@ -198,7 +258,7 @@ function validateConcreteReferenceNavigation(entries, relPath, bundlePath) {
     advice.push(`Repair return-map refs in ${relPath}: evidence-bearing entries need concrete existing reference/*.md consumer navigation; artifacts/, _cache/, and _work_units/ may supplement but cannot replace it.`);
   }
 
-  return { inspect, advice };
+  return { inspect, advice, findings };
 }
 
 export function validateReturnMapContent(content, relPath, {
@@ -211,62 +271,158 @@ export function validateReturnMapContent(content, relPath, {
 } = {}) {
   const inspect = [];
   const advice = [];
+  const findings = [];
   const text = String(content || '');
   const missingFields = requireFields.filter((field) => !FIELD_PATTERNS[field].test(text));
   const entries = extractReturnMapEntries(text);
   const evidenceEntries = entries.filter(isEvidenceBearingReturnMapEntry);
 
   if (missingFields.length > 0) {
-    inspect.push(`[return_map_missing_fields] ${relPath}: missing ${missingFields.join(', ')}. Classification: blocking for this inspect command when counted into check.passed=false; return maps still do not establish or revoke delegated gate coverage.`);
+    const detail = `[return_map_missing_fields] ${relPath}: missing ${missingFields.join(', ')}. Classification: blocking for this inspect command when counted into check.passed=false; return maps still do not establish or revoke delegated gate coverage.`;
+    inspect.push(detail);
     advice.push(`Add return-map entries to ${relPath} with evidence_meaning, relationship, refs, status, and next_hop. Keep refs bundle-relative and repair through normal work-unit/gate paths; do not bypass phase status or user-surface.`);
+    findings.push(returnMapFinding({
+      ruleId: 'return_map_missing_fields',
+      relPath,
+      bundlePath,
+      expected: { required_fields: requireFields },
+      observed: { missing_fields: missingFields },
+      missingFact: `${relPath} is missing required return-map field(s): ${missingFields.join(', ')}.`,
+      detail,
+      repair: `Add return-map entries to ${relPath} with evidence_meaning, relationship, refs, status, and next_hop. Keep refs bundle-relative and repair through normal work-unit/gate paths; do not bypass phase status or user-surface.`,
+    }));
   }
 
   for (const entry of entries) {
     if (entry.fields.relationship) {
       const value = fieldValue(entry, 'relationship').replace(/[`"'.,;]+$/g, '');
       if (value && !RETURN_MAP_RELATIONSHIPS.some((allowed) => value.includes(allowed))) {
-        inspect.push(`[return_map_relationship] ${relPath}:${entry.startLine}: relationship should use supports/refutes/partial/opens/defers/context, got "${value}".`);
+        const detail = `[return_map_relationship] ${relPath}:${entry.startLine}: relationship should use supports/refutes/partial/opens/defers/context, got "${value}".`;
+        inspect.push(detail);
+        findings.push(returnMapFinding({
+          ruleId: 'return_map_relationship',
+          relPath,
+          bundlePath,
+          line: entry.startLine,
+          expected: { relationship: RETURN_MAP_RELATIONSHIPS },
+          observed: value,
+          missingFact: `${relPath}:${entry.startLine} uses unsupported return-map relationship '${value}'.`,
+          detail,
+          repair: `Replace the relationship at ${relPath}:${entry.startLine} with an accepted value.`,
+        }));
       }
     }
     if (entry.fields.status) {
       const value = fieldValue(entry, 'status').replace(/[`"'.,;]+$/g, '');
       if (value && !RETURN_MAP_STATUS_LABELS.some((allowed) => value.includes(allowed))) {
-        inspect.push(`[return_map_status] ${relPath}:${entry.startLine}: status should use supported/refuted/partial/open/emergent/deferred, got "${value}".`);
+        const detail = `[return_map_status] ${relPath}:${entry.startLine}: status should use supported/refuted/partial/open/emergent/deferred, got "${value}".`;
+        inspect.push(detail);
+        findings.push(returnMapFinding({
+          ruleId: 'return_map_status',
+          relPath,
+          bundlePath,
+          line: entry.startLine,
+          expected: { status: RETURN_MAP_STATUS_LABELS },
+          observed: value,
+          missingFact: `${relPath}:${entry.startLine} uses unsupported return-map status '${value}'.`,
+          detail,
+          repair: `Replace the status at ${relPath}:${entry.startLine} with an accepted value.`,
+        }));
       }
     }
   }
 
   if (hasNakedEvidenceList(text) && missingFields.length > 0) {
-    inspect.push(`[return_map_naked_evidence_list] ${relPath}: evidence paths/URLs appear without the minimum return-map fields.`);
+    const detail = `[return_map_naked_evidence_list] ${relPath}: evidence paths/URLs appear without the minimum return-map fields.`;
+    inspect.push(detail);
+    findings.push(returnMapFinding({
+      ruleId: 'return_map_naked_evidence_list',
+      relPath,
+      bundlePath,
+      expected: 'Evidence paths and URLs are carried inside complete return-map entries.',
+      observed: 'naked evidence list',
+      missingFact: `${relPath} contains evidence paths or URLs outside the minimum return-map structure.`,
+      detail,
+      repair: `Wrap the evidence list in complete return-map entries in ${relPath}.`,
+    }));
   }
 
   if (hasUnsupportedProse(text)) {
-    inspect.push(`[return_map_unsupported_prose] ${relPath}: prose conclusion lacks bundle-relative refs and return-map fields.`);
+    const detail = `[return_map_unsupported_prose] ${relPath}: prose conclusion lacks bundle-relative refs and return-map fields.`;
+    inspect.push(detail);
+    findings.push(returnMapFinding({
+      ruleId: 'return_map_unsupported_prose',
+      relPath,
+      bundlePath,
+      expected: 'Evidence-bearing conclusions expose bundle-relative refs and complete return-map fields.',
+      observed: 'unsupported prose-only conclusion',
+      missingFact: `${relPath} contains an evidence-bearing prose conclusion without bundle-relative refs or return-map fields.`,
+      detail,
+      repair: `Add direct bundle refs and return-map fields to the conclusion in ${relPath}.`,
+    }));
   }
 
   if (requireFindingId && evidenceEntries.length > 0 && !/\bW2F-\d{3,}\b/.test(text)) {
-    inspect.push(`[return_map_missing_finding_id] ${relPath}: Wave2 backfill should preserve W2F-xxx finding ids. Classification: blocking for this inspect command.`);
+    const detail = `[return_map_missing_finding_id] ${relPath}: Wave2 backfill should preserve W2F-xxx finding ids. Classification: blocking for this inspect command.`;
+    inspect.push(detail);
     advice.push(`Add W2F-xxx ids in ${relPath} and link them to artifacts/wave2/finding-index.yaml and artifacts/wave2/cross-topic-ledger.md.`);
+    findings.push(returnMapFinding({
+      ruleId: 'return_map_missing_finding_id',
+      relPath,
+      bundlePath,
+      blockingBasis: 'binding_integrity',
+      expected: 'Wave2 evidence-bearing return-map entries preserve a W2F-xxx finding id.',
+      observed: 'no W2F-xxx id',
+      missingFact: `${relPath} has Wave2 evidence-bearing return-map content without a W2F-xxx finding id.`,
+      detail,
+      repair: `Add the bound W2F-xxx finding id and Wave2 ledger/index refs to ${relPath}.`,
+    }));
   }
 
   if (requireWave1Refs && evidenceEntries.length > 0 && !/\b(?:artifacts\/wave1\/[^/\s]+\/(?:evidence-summary|question-list)\.md|reference\/[^)\s]+\.md|_cache\/|_work_units\/)/.test(text)) {
-    inspect.push(`[return_map_missing_wave1_refs] ${relPath}: Wave1 backfill should point to evidence-summary.md, question-list.md, concrete reference/*.md, cache, or work-unit surfaces. Classification: blocking for this inspect command.`);
+    const detail = `[return_map_missing_wave1_refs] ${relPath}: Wave1 backfill should point to evidence-summary.md, question-list.md, concrete reference/*.md, cache, or work-unit surfaces. Classification: blocking for this inspect command.`;
+    inspect.push(detail);
+    findings.push(returnMapFinding({
+      ruleId: 'return_map_missing_wave1_refs',
+      relPath,
+      bundlePath,
+      blockingBasis: 'binding_integrity',
+      expected: 'Wave1 return-map content binds to concrete Wave1 artifact/reference/cache/work-unit surfaces.',
+      observed: 'no accepted Wave1 refs',
+      missingFact: `${relPath} has Wave1 return-map content without an accepted Wave1 evidence ref.`,
+      detail,
+      repair: `Add concrete Wave1 artifact/reference/cache/work-unit refs to ${relPath}.`,
+    }));
   }
 
   if (requireWave2Refs && evidenceEntries.length > 0 && !/\b(?:artifacts\/wave2\/(?:cross-topic-ledger\.md|finding-index\.yaml)|finding-index\.yaml|cross-topic-ledger\.md)/.test(text)) {
-    inspect.push(`[return_map_missing_wave2_refs] ${relPath}: Wave2 backfill should link to cross-topic-ledger.md and finding-index.yaml. Classification: blocking for this inspect command.`);
+    const detail = `[return_map_missing_wave2_refs] ${relPath}: Wave2 backfill should link to cross-topic-ledger.md and finding-index.yaml. Classification: blocking for this inspect command.`;
+    inspect.push(detail);
+    findings.push(returnMapFinding({
+      ruleId: 'return_map_missing_wave2_refs',
+      relPath,
+      bundlePath,
+      blockingBasis: 'binding_integrity',
+      expected: 'Wave2 return-map content binds to cross-topic-ledger.md and finding-index.yaml.',
+      observed: 'missing Wave2 ledger/index refs',
+      missingFact: `${relPath} has Wave2 return-map content without cross-topic-ledger.md and finding-index.yaml refs.`,
+      detail,
+      repair: `Add the concrete Wave2 ledger and finding-index refs to ${relPath}.`,
+    }));
   }
 
   if (requireConcreteReferenceNavigation) {
     const navigation = validateConcreteReferenceNavigation(entries, relPath, bundlePath);
     inspect.push(...navigation.inspect);
     advice.push(...navigation.advice);
+    findings.push(...navigation.findings);
   }
 
   return {
     passed: inspect.length === 0,
     inspect,
     advice,
+    findings,
     missingFields,
     entries,
     diagnosticOnly: inspect.length === 0,
@@ -280,9 +436,10 @@ export function inspectSeedTopicReturnMaps(bundlePath, {
 } = {}) {
   const inspect = [];
   const advice = [];
+  const findings = [];
   const seedDir = join(bundlePath, 'seed_topics');
   if (!existsSync(seedDir)) {
-    return { passed: true, inspect, advice, diagnosticOnly: true, classification: 'diagnostic-only' };
+    return { passed: true, inspect, advice, findings, diagnosticOnly: true, classification: 'diagnostic-only' };
   }
 
   const files = topicSlugs.length > 0
@@ -303,14 +460,16 @@ export function inspectSeedTopicReturnMaps(bundlePath, {
     });
     inspect.push(...validation.inspect);
     advice.push(...validation.advice);
+    findings.push(...validation.findings);
   }
 
-  return { passed: inspect.length === 0, inspect, advice, diagnosticOnly: inspect.length === 0, classification: inspect.length === 0 ? 'diagnostic-only' : 'blocking' };
+  return { passed: inspect.length === 0, inspect, advice, findings, diagnosticOnly: inspect.length === 0, classification: inspect.length === 0 ? 'diagnostic-only' : 'blocking' };
 }
 
 export function inspectWaveArtifactReturnMaps(bundlePath, wave, topicSlugs = []) {
   const inspect = [];
   const advice = [];
+  const findings = [];
 
   if (wave === 'wave1') {
     for (const topic of topicSlugs) {
@@ -321,6 +480,7 @@ export function inspectWaveArtifactReturnMaps(bundlePath, wave, topicSlugs = [])
         const validation = validateReturnMapContent(content, relPath, { requireWave1Refs: true, bundlePath });
         inspect.push(...validation.inspect);
         advice.push(...validation.advice);
+        findings.push(...validation.findings);
       }
     }
   }
@@ -337,23 +497,37 @@ export function inspectWaveArtifactReturnMaps(bundlePath, wave, topicSlugs = [])
       });
       inspect.push(...validation.inspect);
       advice.push(...validation.advice);
+      findings.push(...validation.findings);
     }
     const indexRel = 'artifacts/wave2/finding-index.yaml';
     const indexContent = readText(join(bundlePath, indexRel));
     if (indexContent !== null && !/\b(?:id|origin_refs|trigger_refs|synthesis_refs|handoff_refs)\s*:/.test(indexContent)) {
-      inspect.push(`[return_map_missing_finding_lineage] ${indexRel}: finding index lacks id/origin_refs/trigger_refs lineage fields.`);
+      const detail = `[return_map_missing_finding_lineage] ${indexRel}: finding index lacks id/origin_refs/trigger_refs lineage fields.`;
+      inspect.push(detail);
       advice.push(`Add finding ids and lineage refs to ${indexRel}; this is diagnostic guidance and does not replace gate or handoff evidence.`);
+      findings.push(returnMapFinding({
+        ruleId: 'return_map_missing_finding_lineage',
+        relPath: indexRel,
+        bundlePath,
+        blockingBasis: 'binding_integrity',
+        expected: 'finding-index.yaml exposes finding ids and origin/trigger/synthesis/handoff refs.',
+        observed: 'lineage fields absent',
+        missingFact: `${indexRel} lacks finding id and lineage ref fields required by this inspect contract.`,
+        detail,
+        repair: `Add the missing finding lineage fields to ${indexRel}.`,
+      }));
     }
   }
 
-  return { passed: inspect.length === 0, inspect, advice, diagnosticOnly: inspect.length === 0, classification: inspect.length === 0 ? 'diagnostic-only' : 'blocking' };
+  return { passed: inspect.length === 0, inspect, advice, findings, diagnosticOnly: inspect.length === 0, classification: inspect.length === 0 ? 'diagnostic-only' : 'blocking' };
 }
 
 export function inspectReferenceReturnMaps(bundlePath, prefix = '') {
   const inspect = [];
   const advice = [];
+  const findings = [];
   const refDir = join(bundlePath, 'reference');
-  if (!existsSync(refDir)) return { passed: true, inspect, advice, diagnosticOnly: true, classification: 'diagnostic-only' };
+  if (!existsSync(refDir)) return { passed: true, inspect, advice, findings, diagnosticOnly: true, classification: 'diagnostic-only' };
 
   for (const file of readdirSync(refDir).filter((entry) => entry.endsWith('.md'))) {
     if (file === '_INDEX.md' || file === 'README.md') continue;
@@ -364,7 +538,8 @@ export function inspectReferenceReturnMaps(bundlePath, prefix = '') {
     const validation = validateReturnMapContent(content, relPath, { bundlePath });
     inspect.push(...validation.inspect);
     advice.push(...validation.advice);
+    findings.push(...validation.findings);
   }
 
-  return { passed: inspect.length === 0, inspect, advice, diagnosticOnly: inspect.length === 0, classification: inspect.length === 0 ? 'diagnostic-only' : 'blocking' };
+  return { passed: inspect.length === 0, inspect, advice, findings, diagnosticOnly: inspect.length === 0, classification: inspect.length === 0 ? 'diagnostic-only' : 'blocking' };
 }

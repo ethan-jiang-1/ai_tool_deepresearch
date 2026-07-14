@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-07-13 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-07-14 | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -16,4 +16,4 @@
 ## 活跃列表
 
 - [seed-backfill-round-continuity](seed-backfill-round-continuity.md) — **P0 设计缺陷**：seed topic 回填区是单次消费结构，`__BACKFILL_*__` token 消费后消失，多轮 rerun 没有结构化回填目标。推荐方案：phase-rerun 追溯标记上轮内容+重新注入 fresh token。
-- [agent-hint-quality-test-enforcement](agent-hint-quality-test-enforcement.md) — **P0 测试治理缺口**：gate-skeleton spec 已定义 `hints[]` 契约，但没有机制确保每个 Gate CLI 都有验证 hint 质量的负面测试。推荐方案：三层约束（共享断言 + 覆盖审计 + OpenSpec 流程约束）。
+- [agent-output-linter](agent-output-linter.md) — **实现计划**：Agent 手写结构化内容不可靠，MD controller 在离产出最近的地方让 Agent 自检——JS 做两层确定性检查（语法 + 当时需要的 schema），Agent 根据报告修复，通过后才允许退出。含 format contract registry、CLI 设计、task.md 集成、hint-quality 测试覆盖审计。

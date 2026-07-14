@@ -1,40 +1,47 @@
 #!/usr/bin/env node
 // check-gate-readiness-passed.mjs — evaluates gate-readiness-passed rules
-// @impl GSK-001, GSK-002, GSK-004, CDG-004
+// @impl GSK-001, GSK-002, GSK-004, GSK-008, CDG-004
 // Usage: node check-gate-readiness-passed.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve as resolveFsPath } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import {
   parseGateCliArgs,
   tryLoadGateDefinition,
   loadManifest,
-  validateNodeGateBinding,
+  checkNodeGateBinding,
   resolveRouting,
   buildGateResult,
   emitGateResult,
   writeGateAttempt,
   checkPhaseHandoffPreflight,
-  readTraceEvents,
 } from '../../engine/helpers/gate-helpers.mjs';
+import {
+  buildContractEvaluation,
+  makeContractFinding,
+  makeDefinitionRuleFinding,
+} from '../../engine/helpers/wave-contract-findings.mjs';
 
 const args = parseGateCliArgs();
 if (args.error) { emitGateResult(args.error, { bundlePath: args.bundle }); }
 
-// Load gate definition
 const { definition, error: defError } = tryLoadGateDefinition('readiness-passed', args.currentNode || null);
 if (defError) { emitGateResult(defError, { bundlePath: args.bundle }); }
 
-// Validate node/gate binding
-const bindingError = validateNodeGateBinding(args.currentNode, definition.gate);
-if (bindingError) {
-  const result = {
-    check: { passed: false, gate: definition.gate, currentNodeRef: args.currentNode, next: null },
-    routing: { kind: 'invalid_input', next: null, detail: bindingError },
-    inspect: [bindingError],
-    advice: ['Verify --current-node matches the phase for this gate.'],
-  };
+const binding = checkNodeGateBinding(args.currentNode, definition.gate);
+if (!binding.ok) {
+  const result = buildGateResult({
+    passed: false,
+    gate: definition.gate,
+    currentNodeRef: args.currentNode,
+    routing: { kind: 'invalid_input', next: null, detail: binding.reason },
+    inspect: binding.inspect,
+    advice: binding.advice,
+    findings: binding.findings,
+    bundlePath: args.bundle,
+    attemptNumber: args.attempt ?? 0,
+  });
   emitGateResult(result, { bundlePath: args.bundle });
 }
 
@@ -48,6 +55,8 @@ if (!handoffPreflight.ok) {
     routing,
     inspect: handoffPreflight.inspect || [handoffPreflight.reason || 'Lifecycle handoff preflight failed'],
     advice: handoffPreflight.advice || ['Follow the handoff remedy and rerun this gate.'],
+    findings: handoffPreflight.findings || [],
+    bundlePath: args.bundle,
     extraCheck: { handoff_preflight: false },
     attemptNumber: args.attempt ?? 0,
   });
@@ -56,152 +65,295 @@ if (!handoffPreflight.ok) {
 }
 
 const bundlePath = args.bundle;
-const inspect = [];
-const advice = [];
-let allPassed = true;
+const findings = [];
+let checksRun = 0;
 
-// ── Cached parsers (lazy) ──
-let _statusCache = null;
-function getStatus() {
-  if (_statusCache) return _statusCache;
-  const p = join(bundlePath, 'rb_status.json');
-  if (!existsSync(p)) return null;
-  _statusCache = JSON.parse(readFileSync(p, 'utf-8'));
-  return _statusCache;
+function configurationFinding(rule, detail, observed = null) {
+  return makeContractFinding({
+    id: rule.id,
+    ruleId: rule.id,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'configuration_integrity',
+    surface: `Gate checker dispatch for ${definition.gate}/${rule.id}`,
+    expected: `Implemented deterministic checker '${rule.check}'.`,
+    observed: observed ?? rule.check,
+    missingFact: detail,
+    repairKind: 'missing_contract',
+    writeTo: `Gate checker implementation boundary for ${definition.gate}/${rule.id}`,
+    repair: 'Repair the Gate checker contract before rerunning this checkpoint.',
+    detail: `[${rule.id}] ${detail}`,
+  });
 }
 
-// ── Rule evaluation ──
+let traceRead = null;
+function readTraceJsonl() {
+  if (traceRead) return traceRead;
+  const tracePath = join(bundlePath, 'rb_trace.jsonl');
+  if (!existsSync(tracePath)) {
+    traceRead = { exists: false, events: [], badLines: [], error: 'file absent' };
+    return traceRead;
+  }
+  const raw = readFileSync(tracePath, 'utf-8');
+  const events = [];
+  const badLines = [];
+  raw.split('\n').forEach((line, index) => {
+    if (!line.trim()) return;
+    try { events.push(JSON.parse(line)); }
+    catch { badLines.push(index + 1); }
+  });
+  traceRead = { exists: true, events, badLines, error: null };
+  return traceRead;
+}
+
+function profileParseFinding(rule, failure) {
+  const surface = resolveFsPath(bundlePath, rule.target);
+  return makeContractFinding({
+    id: rule.id,
+    ruleId: rule.id,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: failure.fileMissing ? 'required_structure' : 'authority_integrity',
+    surface,
+    expected: failure.expected,
+    observed: failure.observed,
+    missingFact: failure.missingFact,
+    repairKind: failure.fileMissing ? 'missing_contract' : 'agent_action',
+    writeTo: failure.fileMissing ? `Readiness profile owner contract boundary for ${surface}` : surface,
+    repair: failure.fileMissing
+      ? 'Restore the recorded profile through its owning lifecycle path before rerunning readiness.'
+      : 'Repair only the YAML presentation while preserving the recorded profile semantics, then rerun readiness.',
+    detail: `[${rule.id}] ${failure.detail}`,
+  });
+}
+
+function traceParseFinding(rule, failure) {
+  const surface = resolveFsPath(bundlePath, rule.target);
+  return makeContractFinding({
+    id: rule.id,
+    ruleId: rule.id,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: 'authority_integrity',
+    surface,
+    expected: failure.expected,
+    observed: failure.observed,
+    missingFact: failure.missingFact,
+    repairKind: 'missing_contract',
+    writeTo: `Engine trace authority recovery boundary for ${surface}`,
+    repair: 'Restore trace authority through its existing Engine/checkpoint owner; do not remove or rewrite trace lines by hand.',
+    detail: `[${rule.id}] ${failure.detail}`,
+  });
+}
+
+function priorGatesFinding(rule, failure) {
+  return makeContractFinding({
+    id: rule.id,
+    ruleId: rule.id,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis: failure.configuration ? 'configuration_integrity' : 'authority_integrity',
+    surface: failure.surface,
+    expected: failure.expected,
+    observed: failure.observed,
+    missingFact: failure.missingFact,
+    repairKind: 'missing_contract',
+    writeTo: failure.configuration
+      ? `Workflow topology contract boundary for ${args.currentNode}`
+      : `Prior Gate-attempt lineage boundary for ${failure.missing.join(', ')}`,
+    repair: failure.configuration
+      ? 'Repair the workflow topology/manifest contract before rerunning readiness.'
+      : 'The missing prior Gate lineage cannot be fabricated at readiness. Restore it through the owning legal lifecycle/checkpoint path.',
+    detail: `[${rule.id}] ${failure.detail}`,
+    maskedByRuleId: failure.maskedByRuleId || null,
+  });
+}
+
 for (const rule of definition.rules) {
   if (rule.check === 'placeholder') continue;
+  checksRun += 1;
 
-  let rulePassed = true;
-  let ruleDetail = null;
+  let failure = null;
+  let findingOverride = null;
 
   try {
     if (rule.check === 'file_exists') {
       const targetPath = join(bundlePath, rule.target);
       if (!existsSync(targetPath)) {
-        rulePassed = false;
-        ruleDetail = `Missing file: ${rule.target}`;
+        failure = {
+          surface: rule.target,
+          expected: 'Required readiness artifact exists.',
+          observed: { exists: false },
+          missingFact: `Required readiness artifact '${rule.target}' is absent.`,
+          detail: `Missing file: ${rule.target}`,
+        };
       }
     } else if (rule.check === 'dir_non_empty') {
-      const dirPath = join(bundlePath, rule.target);
-      if (!existsSync(dirPath)) {
-        rulePassed = false;
-        ruleDetail = `Missing directory: ${rule.target}`;
-      } else {
-        const entries = readdirSync(dirPath);
-        if (entries.length === 0) {
-          rulePassed = false;
-          ruleDetail = `Directory ${rule.target} is empty`;
-        }
+      const directory = join(bundlePath, rule.target);
+      const exists = existsSync(directory);
+      const entries = exists ? readdirSync(directory) : [];
+      if (!exists || entries.length === 0) {
+        failure = {
+          surface: rule.target,
+          expected: 'Required readiness directory exists and is non-empty.',
+          observed: { exists, entry_count: entries.length },
+          missingFact: `Required readiness directory '${rule.target}' is ${exists ? 'empty' : 'absent'}.`,
+          detail: exists ? `Directory ${rule.target} is empty` : `Missing directory: ${rule.target}`,
+        };
       }
     } else if (rule.check === 'trace_has_all_gates') {
-      // Derive expected prior gate set from manifest topology (no hardcoded threshold).
-      // The manifest is the read-only authority for lifecycle phase ordering.
       const manifest = loadManifest();
-      const currentIdx = manifest.phases.findIndex(p => p.node === args.currentNode);
-      if (currentIdx === -1) {
-        rulePassed = false;
-        ruleDetail = `Current node "${args.currentNode}" not found in manifest phases — cannot derive prior gate set`;
+      const currentIndex = manifest.phases.findIndex((phase) => phase.node === args.currentNode);
+      if (currentIndex === -1) {
+        failure = {
+          surface: 'workflow manifest phase topology',
+          expected: `Manifest contains current node '${args.currentNode}'.`,
+          observed: { current_node_found: false },
+          missingFact: `Current node '${args.currentNode}' is absent from manifest phases, so prior Gate lineage cannot be derived.`,
+          detail: `Current node "${args.currentNode}" not found in manifest phases — cannot derive prior gate set`,
+          configuration: true,
+          missing: [],
+        };
       } else {
-        const priorGates = manifest.phases
-          .slice(0, currentIdx)
-          .filter(p => p.gate !== null)
-          .map(p => p.gate);
-        const events = readTraceEvents(bundlePath);
-        // Collect gate names that have at least one gate_attempt(passed=true)
-        const passedGateNames = new Set();
-        for (const e of events) {
-          if (e.event === rule.target) {
-            const matchOk = !rule.match
-              || Object.entries(rule.match).every(([k, v]) => e[k] === v);
-            if (matchOk) passedGateNames.add(e.gate);
-          }
-        }
-        const missing = priorGates.filter(g => !passedGateNames.has(g));
-        if (missing.length > 0) {
-          rulePassed = false;
-          const found = priorGates.filter(g => passedGateNames.has(g));
-          ruleDetail = `Missing gate_attempt(passed=true) for: ${missing.join(', ')}. Expected ${priorGates.length} prior gate(s): ${priorGates.join(', ')}. Found: ${found.length > 0 ? found.join(', ') : 'none'}.`;
+        const trace = readTraceJsonl();
+        const priorGates = manifest.phases.slice(0, currentIndex).filter((phase) => phase.gate !== null).map((phase) => phase.gate);
+        const passedGates = new Set(trace.events
+          .filter((event) => event.event === rule.target
+            && (!rule.match || Object.entries(rule.match).every(([key, value]) => event[key] === value)))
+          .map((event) => event.gate));
+        const missing = priorGates.filter((gate) => !passedGates.has(gate));
+        if (missing.length > 0 || !trace.exists || trace.badLines.length > 0) {
+          const found = priorGates.filter((gate) => passedGates.has(gate));
+          failure = {
+            surface: resolveFsPath(bundlePath, 'rb_trace.jsonl'),
+            expected: { prior_gates: priorGates, all_passed: true },
+            observed: { passed_prior_gates: found, missing, bad_lines: trace.badLines, trace_exists: trace.exists },
+            missingFact: `Readiness lacks gate_attempt(passed=true) lineage for: ${missing.length ? missing.join(', ') : 'none independently assessable while trace is invalid'}.`,
+            detail: `Missing gate_attempt(passed=true) for: ${missing.join(', ') || 'unknown while trace is invalid'}. Expected ${priorGates.length} prior gate(s): ${priorGates.join(', ')}. Found: ${found.length > 0 ? found.join(', ') : 'none'}.`,
+            missing,
+            maskedByRuleId: !trace.exists || trace.badLines.length > 0 ? 'trace_jsonl_parseable' : null,
+          };
         }
       }
     } else if (rule.check === 'yaml_parse') {
       const yamlPath = join(bundlePath, rule.target);
       if (!existsSync(yamlPath)) {
-        rulePassed = false;
-        ruleDetail = `Missing file: ${rule.target}`;
+        failure = {
+          expected: `${rule.target} exists and parses as YAML.`,
+          observed: { file_exists: false },
+          missingFact: `${rule.target} is absent, so readiness cannot read the recorded profile.`,
+          detail: `Missing file: ${rule.target}`,
+          fileMissing: true,
+        };
       } else {
-        try {
-          parseYaml(readFileSync(yamlPath, 'utf-8'));
-        } catch (err) {
-          rulePassed = false;
-          ruleDetail = `YAML parse error in ${rule.target}: ${err.message}`;
+        try { parseYaml(readFileSync(yamlPath, 'utf-8')); }
+        catch (error) {
+          failure = {
+            expected: `${rule.target} parses as YAML.`,
+            observed: error.message || String(error),
+            missingFact: `${rule.target} contains invalid YAML: ${error.message || String(error)}`,
+            detail: `YAML parse error in ${rule.target}: ${error.message || String(error)}`,
+            fileMissing: false,
+          };
         }
       }
     } else if (rule.check === 'jsonl_parse') {
-      const jsonlPath = join(bundlePath, rule.target);
-      if (!existsSync(jsonlPath)) {
-        rulePassed = false;
-        ruleDetail = `Missing file: ${rule.target}`;
-      } else {
-        // Validate JSONL parseability directly from raw file
-        const raw = readFileSync(jsonlPath, 'utf-8');
-        const lines = raw.split('\n').filter(l => l.trim());
-        const badLines = [];
-        lines.forEach((line, i) => {
-          try { JSON.parse(line); } catch {
-            badLines.push(i + 1);
-          }
-        });
-        if (badLines.length > 0) {
-          rulePassed = false;
-          ruleDetail = `${rule.target} has ${badLines.length} unparseable line(s): ${badLines.slice(0, 5).join(', ')}${badLines.length > 5 ? '...' : ''}`;
-        }
-      }
-    } else if (rule.check === 'status_value') {
-      const [file, jsonPath] = rule.target.split('#/');
-      const status = getStatus();
-      if (!status) {
-        rulePassed = false;
-        ruleDetail = 'rb_status.json not found';
-      } else {
-        const value = jsonPath.split('/').reduce((obj, key) => obj?.[key], status);
-        if (value !== rule.expected) {
-          rulePassed = false;
-          ruleDetail = `${rule.target}: expected "${rule.expected}", got "${JSON.stringify(value)}"`;
-        }
+      const trace = readTraceJsonl();
+      if (!trace.exists || trace.badLines.length > 0) {
+        failure = {
+          expected: `${rule.target} exists and every non-empty line parses as JSON.`,
+          observed: { file_exists: trace.exists, bad_lines: trace.badLines },
+          missingFact: !trace.exists
+            ? `${rule.target} is absent.`
+            : `${rule.target} has unparseable JSONL line(s): ${trace.badLines.slice(0, 5).join(', ')}${trace.badLines.length > 5 ? '...' : ''}`,
+          detail: !trace.exists
+            ? `Missing file: ${rule.target}`
+            : `${rule.target} has ${trace.badLines.length} unparseable line(s): ${trace.badLines.slice(0, 5).join(', ')}${trace.badLines.length > 5 ? '...' : ''}`,
+        };
       }
     } else {
-      rulePassed = false;
-      ruleDetail = `Unknown check type: ${rule.check} — must fail (check type not implemented)`;
+      findingOverride = configurationFinding(rule, `Unknown check type: ${rule.check} — must fail (check type not implemented)`);
     }
-  } catch (err) {
-    rulePassed = false;
-    const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
-    ruleDetail = `Error evaluating rule ${rule.id}: ${safeMsg}`;
+  } catch (error) {
+    const safeMessage = (error.message || String(error)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    failure = {
+      surface: rule.target || `Gate checker dispatch for ${definition.gate}/${rule.id}`,
+      expected: `Rule '${rule.id}' evaluates its direct authority without parser/runtime error.`,
+      observed: safeMessage,
+      missingFact: `Rule '${rule.id}' could not evaluate its direct authority: ${safeMessage}`,
+      detail: `Error evaluating rule ${rule.id}: ${safeMessage}`,
+      configuration: rule.check === 'trace_has_all_gates',
+      missing: [],
+    };
   }
 
-  if (!rulePassed) {
-    allPassed = false;
-    inspect.push(ruleDetail);
-    advice.push(rule.failure_message);
+  if (findingOverride) findings.push(findingOverride);
+  else if (failure) {
+    if (rule.id === 'all_prior_gates_passed') findings.push(priorGatesFinding(rule, failure));
+    else if (rule.id === 'profile_yaml_parseable') findings.push(profileParseFinding(rule, failure));
+    else if (rule.id === 'trace_jsonl_parseable') findings.push(traceParseFinding(rule, failure));
+    else findings.push(makeDefinitionRuleFinding({
+      rule,
+      bundlePath,
+      surface: failure.surface,
+      expected: failure.expected,
+      observed: failure.observed,
+      missingFact: failure.missingFact,
+      detail: `[${rule.id}] ${failure.detail}`,
+    }));
   }
 }
 
-const outcome = allPassed ? 'passed' : 'failed';
+const ruleEvaluation = buildContractEvaluation({ checksRun, findings });
+const outcome = ruleEvaluation.passed ? 'passed' : 'failed';
 const routing = resolveRouting(args.transitions, args.currentNode, outcome);
+const routingFailed = ['invalid_input', 'config_error'].includes(routing.kind);
+const evaluation = buildContractEvaluation({
+  checksRun,
+  findings: [...ruleEvaluation.findings, ...(routing.findings || [])],
+  maskedRuleIds: ruleEvaluation.masked_rule_ids,
+});
 
 const result = buildGateResult({
-  passed: allPassed,
+  passed: ruleEvaluation.passed && !routingFailed,
   gate: definition.gate,
   currentNodeRef: args.currentNode,
   routing,
-  inspect,
-  advice,
+  inspect: [...ruleEvaluation.inspect, ...(routing.inspect || [])],
+  advice: [...ruleEvaluation.advice, ...(routing.advice || [])],
+  findings: evaluation.findings,
+  bundlePath,
+  extraCheck: {
+    failed_rule_ids: evaluation.failed_rule_ids,
+    masked_rule_ids: evaluation.masked_rule_ids,
+  },
   attemptNumber: args.attempt ?? 0,
 });
 
-writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+try {
+  writeGateAttempt(bundlePath, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+} catch (error) {
+  const failedRouting = resolveRouting(args.transitions, args.currentNode, 'failed');
+  const failureEvaluation = buildContractEvaluation({ findings: [...(error.findings || []), ...(failedRouting.findings || [])] });
+  const failedResult = buildGateResult({
+    passed: false,
+    gate: definition.gate,
+    currentNodeRef: args.currentNode,
+    routing: failedRouting,
+    inspect: [...(error.inspect || [error.message || String(error)]), ...(failedRouting.inspect || [])],
+    advice: [...(error.advice || []), ...(failedRouting.advice || [])],
+    findings: failureEvaluation.findings,
+    bundlePath,
+    extraCheck: {
+      failed_rule_ids: failureEvaluation.failed_rule_ids,
+      masked_rule_ids: failureEvaluation.masked_rule_ids,
+      trace_durable: false,
+      gate_attempt_write_failed: true,
+    },
+    attemptNumber: args.attempt ?? 0,
+  });
+  try { writeGateAttempt(bundlePath, failedResult); } catch { /* secondary diagnostic only */ }
+  emitGateResult(failedResult);
+}
 
 emitGateResult(result);

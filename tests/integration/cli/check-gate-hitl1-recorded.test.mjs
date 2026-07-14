@@ -26,6 +26,14 @@ function advanceHitl1(bundleDir) {
   return spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli/advance-status.mjs'), '--bundle', bundleDir, '--to', 'hitl1_recorded'], { encoding: 'utf-8', timeout: 10000 });
 }
 
+function assertCompleteHint(hint) {
+  assert.ok(hint?.rule_id);
+  assert.ok(hint?.repair_kind);
+  assert.ok(hint?.missing_fact);
+  assert.ok(hint?.write_to);
+  assert.ok(hint?.rerun);
+}
+
 function materializeCanonicalTopic(bundleDir) {
   const planPath = join(bundleDir, 'rb_plan.md');
   const body = readFileSync(planPath, 'utf8').replace(/^---\n[\s\S]*?\n---\n?/, '');
@@ -73,6 +81,7 @@ describe('check-gate-hitl1-recorded', () => {
     const output = JSON.parse(result.stdout);
 
     assert.equal(output.check.passed, true, `Expected pass, got: ${JSON.stringify(output.inspect)}`);
+    assert.deepEqual(output.hints, []);
   });
 
   it('fails when rb_profile.yaml is missing', () => {
@@ -80,12 +89,18 @@ describe('check-gate-hitl1-recorded', () => {
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     rmSync(join(bundleDir, 'rb_profile.yaml'));
+    materializeCanonicalTopic(bundleDir);
+    advanceHitl1(bundleDir);
 
     const result = runGate(bundleDir);
     const output = JSON.parse(result.stdout);
 
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('rb_profile.yaml')), `Expected profile missing: ${JSON.stringify(output.inspect)}`);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'profile_exists');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'engine_operation');
+    assert.match(hint.write_to, /instantiate-run-bundle\.mjs/);
   });
 
   it('fails on YAML parse error', () => {
@@ -93,11 +108,18 @@ describe('check-gate-hitl1-recorded', () => {
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     writeProfileYaml(bundleDir, 'not: valid: yaml: [[');
+    materializeCanonicalTopic(bundleDir);
+    advanceHitl1(bundleDir);
 
     const result = runGate(bundleDir);
     const output = JSON.parse(result.stdout);
 
     assert.equal(output.check.passed, false);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'profile_schema_valid');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'missing_contract');
+    assert.match(hint.write_to, /ProfileSchema owner contract boundary/);
+    assert.equal(output.hints.some((candidate) => candidate.rule_id === 'research_profile_not_default'), false);
   });
 
   it('fails when research_profile is still not_selected', () => {
@@ -105,12 +127,18 @@ describe('check-gate-hitl1-recorded', () => {
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     // Keep default profile (not_selected)
+    materializeCanonicalTopic(bundleDir);
+    advanceHitl1(bundleDir);
 
     const result = runGate(bundleDir);
     const output = JSON.parse(result.stdout);
 
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('not_selected')), `Expected not_selected fail: ${JSON.stringify(output.inspect)}`);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'research_profile_not_default');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'user_decision');
+    assert.equal(hint.write_to, 'phases/phase-hitl1.md');
   });
 
   it('fails when root_must_answer_set is empty', () => {
@@ -130,12 +158,17 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     user_decision: not_started
     final_report_view: not_started
 `);
+    materializeCanonicalTopic(bundleDir);
+    advanceHitl1(bundleDir);
 
     const result = runGate(bundleDir);
     const output = JSON.parse(result.stdout);
 
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('root_must_answer_set')), `Expected empty must_answer fail: ${JSON.stringify(output.inspect)}`);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'must_answer_non_empty');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'user_decision');
   });
 
   it('fails when hitl1.status is not recorded', () => {
@@ -155,12 +188,19 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     user_decision: not_started
     final_report_view: not_started
 `);
+    materializeCanonicalTopic(bundleDir);
+    advanceHitl1(bundleDir);
 
     const result = runGate(bundleDir);
     const output = JSON.parse(result.stdout);
 
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('recorded')), `Expected status not recorded fail: ${JSON.stringify(output.inspect)}`);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'hitl1_status_recorded');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'user_decision');
+    assert.equal(output.hints.some((candidate) => candidate.rule_id === 'hitl1_recorded_at_non_empty'), false);
+    assert.ok(output.check.masked_rule_ids.includes('hitl1_recorded_at_non_empty'));
   });
 
   it('fails when recorded_at is missing', () => {
@@ -180,12 +220,18 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     user_decision: not_started
     final_report_view: not_started
 `);
+    materializeCanonicalTopic(bundleDir);
+    advanceHitl1(bundleDir);
 
     const result = runGate(bundleDir);
     const output = JSON.parse(result.stdout);
 
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('recorded_at')), `Expected recorded_at missing fail: ${JSON.stringify(output.inspect)}`);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'hitl1_recorded_at_non_empty');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'agent_action');
+    assert.match(hint.write_to, /rb_profile\.yaml#\/human_decision_checkpoints\/hitl1\/recorded_at$/);
   });
 
   it('fails legacy profile without research_access and points to the real probe', () => {
@@ -193,6 +239,7 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, ''));
+    materializeCanonicalTopic(bundleDir);
     advanceHitl1(bundleDir);
 
     const output = JSON.parse(runGate(bundleDir).stdout);
@@ -202,6 +249,10 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     assert.equal(output.continuation, undefined);
     assert.ok(output.inspect.some((message) => message.includes('research_access/status')));
     assert.ok(output.advice.some((message) => message.includes('real HITL1 search/fetch probe')));
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'research_access_available');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'agent_action');
+    assert.match(hint.write_to, /rb_profile\.yaml#\/research_access$/);
   });
 
   it('fails unprobed research_access without authorizing Setup', () => {
@@ -209,6 +260,7 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     writeProfileYaml(bundleDir, VALID_PROFILE.replace(AVAILABLE_ACCESS, 'research_access:\n  status: unprobed\n'));
+    materializeCanonicalTopic(bundleDir);
     advanceHitl1(bundleDir);
 
     const output = JSON.parse(runGate(bundleDir).stdout);
@@ -216,6 +268,9 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     assert.equal(output.check.passed, false);
     assert.equal(output.check.next, null);
     assert.notEqual(output.routing.kind, 'next');
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'research_access_available');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'agent_action');
   });
 
   it('fails unavailable research_access and points to the recorded reason path', () => {
@@ -228,6 +283,7 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
   fetch_outcome: blocked
   reason: "Fetch surface blocked"
 `));
+    materializeCanonicalTopic(bundleDir);
     advanceHitl1(bundleDir);
 
     const output = JSON.parse(runGate(bundleDir).stdout);
@@ -235,6 +291,10 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     assert.equal(output.check.passed, false);
     assert.equal(output.check.next, null);
     assert.ok(output.advice.some((message) => message.includes('research_access.reason')));
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'research_access_available');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'external_action');
+    assert.match(hint.write_to, /research_access.*reason/);
   });
 
   it('fails fake available research_access through ProfileSchema', () => {
@@ -242,6 +302,7 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     const r = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
     const bundleDir = track(r.stdout.trim());
     writeProfileYaml(bundleDir, VALID_PROFILE.replace('https://example.com/', 'ftp://example.com/file'));
+    materializeCanonicalTopic(bundleDir);
     advanceHitl1(bundleDir);
 
     const output = JSON.parse(runGate(bundleDir).stdout);
@@ -249,5 +310,9 @@ ${AVAILABLE_ACCESS}human_decision_checkpoints:
     assert.equal(output.check.passed, false);
     assert.equal(output.check.next, null);
     assert.ok(output.inspect.some((message) => message.includes('ProfileSchema validation failed')));
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'profile_schema_valid');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'missing_contract');
+    assert.equal(output.hints.some((candidate) => candidate.rule_id === 'research_access_available'), false);
   });
 });

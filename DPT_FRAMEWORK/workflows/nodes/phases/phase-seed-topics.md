@@ -23,7 +23,7 @@ suggested_context:
 - **Start here**: Read canonical `rb_plan.md` `topic_registry`, existing UID-bound `seed_topics/`, `rb_profile.yaml`, and the queue CLI state.
 - **Path to pass**: Verify exact UID/slug/intent binding, enqueue only required enrichment work, drain the queue, repair from the canonical owner, then run the seed-topics gate.
 - **Completion check**: `check-gate-seed-topics-ready.mjs` passes for `phases/phase-seed-topics.md`.
-- **Failure posture**: Treat empty queue or thin queue as work routing, not completion; repair from gate feedback and never invent missing topic semantics.
+- **Failure posture**: Treat empty/thin queue as work routing, then consume top-level Gate `hints[]`; execute legal mechanical repair and never invent missing Topic semantics.
 
 ## 1. Stage Goal
 
@@ -295,18 +295,15 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to seed_topics_ready
 
 ## 7. On Gate Fail
 
-读取 CLI `inspect` / `advice`，修复后 rerun same gate。常见 fail 原因及修复方向：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority，也不得用其 prose、filename 或 rule target 猜 repair kind/permission。按每个 independent primary hint 执行：
 
-| Fail | 修复 |
-|------|------|
-| `seed_topics/` 为空目录 | 按 registry 创建对应 `{slug}.md` 文件 |
-| slug 缺失（registry 有但磁盘无） | 为缺失的 topic 创建文件 |
-| slug 多余（磁盘有但 registry 无） | 删除不在 registry 中的多余文件 |
-| frontmatter `title` 为空 | 补充对应文件的 `title` 字段 |
-| slug 与文件名 stem 不一致 | 统一为 registry 中的 slug |
-| `trace_event_present` fail | 确认已记录 `seed_topics_completion` trace event |
-| status drift | Gate 前恢复合法 predecessor window：首次运行用 `setup_ready`/`seed_topics_ready`，rerun 回流用 `rerun_ready`/`seed_topics_ready` |
-| registry 为空 | 通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: blocks_must_answer`），从 `rb_plan.md` frontmatter 尝试重建 topic_registry，不浮出水面 |
+1. `repair_kind: agent_action`：由 Agent 只修改 `write_to` 指出的 authorized seed projection/field，例如 exact missing seed、title 或 slug binding；不得扩大到 registry、queue、ledger 或未授权 Topic 语义。
+2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal operation，例如 topic-state inspect/recover/apply、completion-event operation 或合法 status/handoff owner；不得直接编辑 status、trace、canonical registry 或 provenance。
+3. `repair_kind: user_decision`：只询问 `missing_fact` 指出的真实 Topic/HITL 语义，例如 canonical registry 为空且没有已记录 Topic intent；不得从 seed filename、旧 prose 或 chat 猜 Topic。决定记录后，topic-state 与 Gate 机械步骤回到 Agent。
+4. `repair_kind: external_action`：只暴露不可代理的权限/环境前置条件；满足后由 Agent 继续。
+5. `repair_kind: missing_contract`：报告 exact unavailable capability/contract boundary，不手写 registry/status/trace/ledger 或创造第二成功路径。
+
+Hint 不创造 permission。完成可执行动作后 Agent MUST 运行该 hint 的 exact `rerun`，回到同一个 `seed-topics-ready` checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 补猜 blocking repair；按 `missing_contract` 暴露最小边界。Topic/file 实例坐标从 `write_to` 读取；stable `rule_id` 本身不是 path，也不得靠 suffix 推断目标。
 
 **Persistent failure：** 若 seed-topics gate 连续 3 次修复无进展，通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: partial`）：
 ```bash
@@ -318,7 +315,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 
 `stop: no` — Agent 自主物化，不发送阶段进度或 idle/no-work 汇报。Queue thin、active window 为空、registry 为空、或 seed topic 本地文件已写完，都不是停顿点；它们分别触发继续灌料、drain、registry repair、运行 gate 或静默降级。
 
-若 registry 为空（topic 集合未建立），通过 accepted trace/log surface 记录 `silent_degradation`，尝试从 `rb_plan.md` frontmatter 重建 topic_registry。Phase handoff 完成条件是 `seed-topics-ready` gate pass + `enter-phase --node <check.next>` 写入 route-bound load witness + `advance-status --to seed_topics_ready`；不得自判完成或自行加载下一 phase。
+若 registry 为空（Topic 语义未建立），这是 `user_decision` 或 `missing_contract` 边界，不得静默重建、猜测或从文件反向制造 intent。除此之外，普通 `agent_action` / `engine_operation` repair 均由 Agent 静默执行。Phase handoff 完成条件是 `seed-topics-ready` gate pass + `enter-phase --node <check.next>` 写入 route-bound load witness + `advance-status --to seed_topics_ready`；不得自判完成或自行加载下一 phase。
 
 ## Rerun-Aware Behavior
 

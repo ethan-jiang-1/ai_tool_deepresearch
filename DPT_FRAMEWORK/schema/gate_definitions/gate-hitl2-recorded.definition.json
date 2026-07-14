@@ -6,19 +6,24 @@
       "id": "decision_brief_exists",
       "check": "file_exists",
       "target": "artifacts/hitl2/decision-brief.md",
-      "failure_message": "Missing file: artifacts/hitl2/decision-brief.md. Create a decision brief with key findings summary, open questions, and recommended actions based on Wave0/1/2 artifacts."
+      "failure_message": "Missing file: artifacts/hitl2/decision-brief.md. Create a decision brief with key findings summary, open questions, and recommended actions based on Wave0/1/2 artifacts.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "decision_brief_non_empty",
       "check": "field_non_empty",
       "target": "artifacts/hitl2/decision-brief.md",
-      "failure_message": "artifacts/hitl2/decision-brief.md is empty. Write a decision brief with findings summary, open questions, and recommended actions."
+      "failure_message": "artifacts/hitl2/decision-brief.md is empty. Write a decision brief with findings summary, open questions, and recommended actions.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "profile_yaml_parseable",
       "check": "yaml_parse",
       "target": "rb_profile.yaml",
-      "failure_message": "rb_profile.yaml is missing or contains invalid YAML. Fix YAML syntax errors."
+      "failure_message": "rb_profile.yaml is missing or contains invalid YAML. Fix YAML syntax errors.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "hitl2_status_recorded",
@@ -26,13 +31,17 @@
       "target": "rb_profile.yaml#/human_decision_checkpoints/hitl2/status",
       "operator": "equal",
       "value": "recorded",
-      "failure_message": "hitl2.status is not 'recorded'. After collecting user final review decision, set status to 'recorded' in rb_profile.yaml."
+      "failure_message": "hitl2.status is not 'recorded'. After collecting user final review decision, set status to 'recorded' in rb_profile.yaml.",
+      "finding": { "source": "definition", "blocking_basis": "recorded_human_decision" },
+      "repair": { "kind": "user_decision", "write_to": "phases/phase-hitl2.md" }
     },
     {
       "id": "user_decision_non_empty",
       "check": "field_non_empty",
       "target": "rb_profile.yaml#/human_decision_checkpoints/hitl2/user_decision",
-      "failure_message": "human_decision_checkpoints.hitl2.user_decision is empty. The user must choose a decision: proceed_to_readiness, request_view_revision, repair, rerun, or stop_blocked."
+      "failure_message": "human_decision_checkpoints.hitl2.user_decision is empty. The user must choose a decision: proceed_to_readiness, request_view_revision, repair, rerun, or stop_blocked.",
+      "finding": { "source": "definition", "blocking_basis": "recorded_human_decision" },
+      "repair": { "kind": "user_decision", "write_to": "phases/phase-hitl2.md" }
     },
     {
       "id": "user_decision_valid_enum",
@@ -46,7 +55,9 @@
         "rerun",
         "stop_blocked"
       ],
-      "failure_message": "user_decision is not one of the accepted values. Must be one of: proceed_to_readiness, request_view_revision, repair, rerun, stop_blocked."
+      "failure_message": "user_decision is not one of the accepted values. Must be one of: proceed_to_readiness, request_view_revision, repair, rerun, stop_blocked.",
+      "finding": { "source": "definition", "blocking_basis": "recorded_human_decision" },
+      "repair": { "kind": "user_decision", "write_to": "phases/phase-hitl2.md" }
     }
   ]
 }

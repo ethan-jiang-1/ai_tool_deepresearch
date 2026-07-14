@@ -2,7 +2,7 @@
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const REPO_ROOT = process.cwd();
@@ -16,6 +16,14 @@ function unique(prefix) { return `rt_h2_${prefix}_${Date.now()}_${Math.random().
 
 function runGate(bundlePath) {
   return spawnSync('node', [GATE_CLI, '--bundle', bundlePath, '--current-node', 'phases/phase-hitl2.md'], { encoding: 'utf-8', timeout: 10000 });
+}
+
+function assertCompleteHint(hint) {
+  assert.ok(hint?.rule_id);
+  assert.ok(hint?.repair_kind);
+  assert.ok(hint?.missing_fact);
+  assert.ok(hint?.write_to);
+  assert.ok(hint?.rerun);
 }
 
 const VALID_PROFILE = `
@@ -118,6 +126,7 @@ describe('check-gate-hitl2-recorded', () => {
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
     assert.equal(result.status, 0, `Expected exit 0, got ${result.status}`);
+    assert.deepEqual(output.hints, []);
   });
 
   it('2. fails when decision brief is missing', () => {
@@ -131,6 +140,12 @@ describe('check-gate-hitl2-recorded', () => {
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('decision-brief.md') || m.includes('Missing file')),
       `Expected missing brief fail: ${JSON.stringify(output.inspect)}`);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'decision_brief_exists');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'agent_action');
+    assert.equal(hint.write_to, 'artifacts/hitl2/decision-brief.md');
+    assert.equal(output.hints.some((candidate) => candidate.rule_id === 'decision_brief_non_empty'), false);
+    assert.ok(output.check.masked_rule_ids.includes('decision_brief_non_empty'));
   });
 
   it('3. fails when decision brief is empty', () => {
@@ -163,6 +178,9 @@ describe('check-gate-hitl2-recorded', () => {
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('recorded') || m.includes('status')),
       `Expected status fail: ${JSON.stringify(output.inspect)}`);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'hitl2_status_recorded');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'user_decision');
   });
 
   it('5. fails when user_decision is empty', () => {
@@ -178,6 +196,11 @@ describe('check-gate-hitl2-recorded', () => {
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('empty') || m.includes('user_decision')),
       `Expected empty decision fail: ${JSON.stringify(output.inspect)}`);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'user_decision_non_empty');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'user_decision');
+    assert.equal(output.hints.some((candidate) => candidate.rule_id === 'user_decision_valid_enum'), false);
+    assert.ok(output.check.masked_rule_ids.includes('user_decision_valid_enum'));
   });
 
   it('6. fails when user_decision is not in accepted enum', () => {
@@ -233,6 +256,10 @@ describe('check-gate-hitl2-recorded', () => {
     assert.equal(output.check.passed, false);
     assert.ok(output.inspect.some(m => m.includes('YAML') || m.includes('parse')),
       `Expected YAML parse fail: ${JSON.stringify(output.inspect)}`);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'profile_yaml_parseable');
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'missing_contract');
+    assert.equal(output.hints.some((candidate) => candidate.rule_id === 'hitl2_status_recorded'), false);
   });
 
   it('9. fails on status drift (wrong next_gate)', () => {
@@ -296,5 +323,23 @@ describe('check-gate-hitl2-recorded', () => {
     assert.ok(attempts.length > 0);
     assert.equal(attempts.at(-1).passed, true);
     assert.equal(attempts.at(-1).next, null);
+  });
+
+  it('13. strict Gate-attempt trace failure becomes a helper-owned failed result', () => {
+    const dir = createBundle(unique('trace-durability'));
+    writePassingHitl2Inputs(dir, 'proceed_to_readiness');
+    const tracePath = join(dir, 'rb_trace.jsonl');
+    chmodSync(tracePath, 0o444);
+
+    const result = runGate(dir);
+    chmodSync(tracePath, 0o644);
+    const output = JSON.parse(result.stdout);
+    const hint = output.hints.find((candidate) => candidate.rule_id === 'gate_attempt_trace_not_durable');
+
+    assert.equal(result.status, 1);
+    assert.equal(output.check.passed, false);
+    assert.equal(output.check.trace_durable, false);
+    assertCompleteHint(hint);
+    assert.equal(hint.repair_kind, 'missing_contract');
   });
 });

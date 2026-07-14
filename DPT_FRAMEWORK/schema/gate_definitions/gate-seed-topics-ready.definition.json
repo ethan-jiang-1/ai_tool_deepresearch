@@ -7,7 +7,9 @@
       "check": "dir_non_empty",
       "target": "seed_topics",
       "glob": "*.md",
-      "failure_message": "seed_topics/ directory is empty. Materialize each topic from topic_registry into seed_topics/<slug>.md files."
+      "failure_message": "seed_topics/ directory is empty. Materialize each topic from topic_registry into seed_topics/<slug>.md files.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "slug_consistency",
@@ -24,13 +26,16 @@
         }
       ],
       "comparison": "bidirectional_set_equality",
-      "failure_message": "Slug consistency check failed. The set of slugs in seed_topics/*.md must be exactly equal to the set of slugs in rb_plan.md topic_registry — no missing, no extra."
+      "failure_message": "Slug consistency check failed. The set of slugs in seed_topics/*.md must be exactly equal to the set of slugs in rb_plan.md topic_registry — no missing, no extra.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "per_file_title_non_empty",
       "check": "field_non_empty",
       "target": "seed_topics/<slug>.md#/title",
-      "failure_message": "A seed topic file has an empty or missing 'title' field in its frontmatter."
+      "failure_message": "A seed topic file has an empty or missing 'title' field in its frontmatter.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "per_file_slug_stem_consistency",
@@ -48,7 +53,8 @@
         }
       ],
       "comparison": "byte_for_byte",
-      "failure_message": "A seed topic file's frontmatter 'slug' does not match its filename stem. They must be byte-for-byte equal."
+      "failure_message": "A seed topic file's frontmatter 'slug' does not match its filename stem. They must be byte-for-byte equal.",
+      "finding": { "source": "checker" }
     }
   ]
 }

@@ -48,3 +48,18 @@ export {
   validateTransitions,
   isValidTransition,
 } from './contracts/gate.mjs';
+export {
+  GATE_BLOCKING_BASES,
+  GATE_COORDINATE_PLACEHOLDERS,
+  GATE_REPAIR_KINDS,
+  GateBlockingBasisSchema,
+  GateDefinitionRepairSchema,
+  GateDefinitionRuleSchema,
+  GateDefinitionSchema,
+  GateFindingSourceSchema,
+  GateRepairKindSchema,
+  parseGateDefinition,
+  parseGateDefinitionBytes,
+  readGateDefinitionSnapshot,
+  safeParseGateDefinition,
+} from './contracts/gate-definition.mjs';

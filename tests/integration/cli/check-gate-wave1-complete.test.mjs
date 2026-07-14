@@ -348,7 +348,7 @@ describe('check-gate-wave1-complete', () => {
     assert.equal(output.check.passed, true, output.inspect.join('\n'));
   });
 
-  it('1e. formal degraded handoff does not change raw inspect failure', () => {
+  it('1e. fewer Key Facts does not revive the retired quantity blocker', () => {
     const dir = createBundle(unique('degraded'));
     const referencePath = join(dir, 'reference/01-topic-a-deepening.md');
     writeFileSync(referencePath, readFileSync(referencePath, 'utf8').replace(/- Finding five: Fifth concluding fact\.\n/, ''));
@@ -362,11 +362,13 @@ describe('check-gate-wave1-complete', () => {
     assert.equal(inspectOutput.check.passed, false);
     assert.equal(Object.hasOwn(inspectOutput, 'routing'), false);
     assert.notEqual(inspectOutput.check.degraded, true);
+    assert.equal(inspectOutput.check.failed_rule_ids.some((id) => id.startsWith('key_facts_min_lines')), false);
 
     const gateOutput = JSON.parse(runGate(dir, { attempt: 3 }).stdout);
     assert.equal(gateOutput.check.passed, true, gateOutput.inspect.join('\n'));
     assert.equal(gateOutput.check.degraded, true);
-    assert.deepEqual(gateOutput.check.degraded_rules.sort(), ['key_facts_min_lines:topic-a', 'per_topic_ref_md_count_floor:topic-a']);
+    assert.deepEqual(gateOutput.check.degraded_rules, ['per_topic_ref_md_count_floor']);
+    assert.equal(gateOutput.check.failed_rule_ids.some((id) => id.startsWith('key_facts_min_lines')), false);
   });
 
   it('1a. passes when Wave1 required outputs were submitted as other and normalized before ledger coverage', () => {
@@ -430,6 +432,11 @@ describe('check-gate-wave1-complete', () => {
     const inspectOutput = JSON.parse(runInspect(dir).stdout);
     const sharedGateIds = output.check.failed_rule_ids.filter((id) => id !== 'trace_event_wave1_completion').sort();
     assert.deepEqual(inspectOutput.check.failed_rule_ids.filter((id) => sharedGateIds.includes(id)).sort(), sharedGateIds);
+    const gateHint = output.hints.find((hint) => hint.rule_id === 'per_topic_evidence_summary_exists');
+    const inspectHint = inspectOutput.hints.find((hint) => hint.rule_id === 'per_topic_evidence_summary_exists');
+    assert.deepEqual({ ...inspectHint, rerun: null }, { ...gateHint, rerun: null });
+    assert.match(gateHint.rerun, /check-gate-wave1-complete\.mjs/);
+    assert.match(inspectHint.rerun, /inspect-wave1-output\.mjs/);
   });
 
   it('2b. emits delegated bypass diagnostics once per formal invocation', () => {

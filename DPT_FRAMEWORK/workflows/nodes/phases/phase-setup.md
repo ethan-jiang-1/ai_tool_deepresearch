@@ -22,7 +22,7 @@ suggested_context:
 - **Start here**: Load the control files, scaffold directories, HITL1 marker, and basename fields.
 - **Path to pass**: Repair missing or malformed setup surface, keep status aligned, then run the setup gate.
 - **Completion check**: `check-gate-setup-ready.mjs` passes for `phases/phase-setup.md`.
-- **Failure posture**: Follow gate `inspect`/`advice`, repair deterministically, rerun with `--attempt N`, and record silent degradation if repeated repair makes no progress.
+- **Failure posture**: Consume top-level `hints[]`, execute authorized mechanical repair, and run the exact same-Gate `rerun`; compatible prose never authorizes direct control-state edits.
 
 ## 1. Stage Goal
 
@@ -74,16 +74,15 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to setup_ready
 
 ## 7. On Gate Fail
 
-读取 CLI `inspect` / `advice`，修复后 rerun same gate。常见 fail 原因及修复方向：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority，也不得用其 prose 猜 repair kind、字段或命令。按每个 independent primary hint 执行：
 
-| Fail | 修复 |
-|------|------|
-| 缺失 control file | 检查文件是否被误删，按 template 重建 |
-| Schema 校验失败 | 读取 inspect 中的 Zod error detail，修正对应字段 |
-| 缺失 scaffold dir | `mkdir` 创建对应目录 |
-| HITL1 marker 未记录 | 通过 accepted trace/log surface 记录 `silent_degradation`，确认 HITL1 是否已完成；若未完成，加载 hitl1 phase 完成用户输入收集后返回 setup |
-| Status drift | 将 `current_gate`/`next_gate` 恢复为 `setup_ready`/`seed_topics_ready` |
-| Basename 不一致 | 以 `plan_basename` in plan + profile 为准；若 bundle dir 命名非法→fail-stop 重新 instantiate |
+1. `repair_kind: agent_action`：由 Agent 对 `write_to` 已授权的 exact mutable surface 做最小修复，例如修正允许 Agent 修改的 YAML/Markdown field 或创建明确授权的 scaffold projection。
+2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal operation；status、trace、ledger、index、receipt、hash 和 Engine-owned scaffold/binding 不得直接编辑或按 template 手搓。
+3. `repair_kind: user_decision`：只询问真正缺失的 HITL1 语义；已有决定不得重复询问，记录后机械执行返回 Agent。
+4. `repair_kind: external_action`：只暴露不可代理的权限/环境前置条件；满足后由 Agent 继续。
+5. `repair_kind: missing_contract`：报告 exact unavailable contract boundary，不猜测 fallback、手工恢复 control authority 或建设第二路径。
+
+Hint 不创造 permission。完成可执行动作后 Agent MUST 运行该 hint 的 exact `rerun`，回到同一个 `setup-ready` checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 补猜 blocking repair；按 `missing_contract` 暴露最小边界。尤其 status drift、basename binding、缺失 control authority 或 HITL marker 必须遵循 hint 所指 owner operation/decision，不得直接改 `rb_status.json`、伪造 HITL marker 或用文件重建绕过 instantiation/HITL1 owner。
 
 **Persistent failure：** 若 setup gate 连续 3 次修复无进展，通过 accepted trace/log surface 记录 `silent_degradation`（`gap_impact: partial`），不写 `state: blocked`：
 ```bash
@@ -95,7 +94,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 
 `stop: no` — Agent 自主验证，不发送 setup progress 或 idle/no-work 汇报。Setup 本地校验完成后必须运行 `setup-ready` gate；phase handoff 完成条件是 gate pass + `enter-phase --node <check.next>` 写入 seed-topics route-bound load witness + `advance-status --to setup_ready`，不是“看起来已验证”。
 
-若遇到权限/工具/结构性 blocker 无法修复，通过 accepted trace/log surface 记录 `silent_degradation` 或 `silent_unpassable`（保持 non-blocked/in-progress），不写 `state: blocked`。Gate fail 后按 inspect/advice 修复并 rerun；所有下一 phase 路由只来自 gate CLI `check.next`。
+若遇到权限/工具/结构性 blocker 无法修复，保留 direct hint；只有 `user_decision`、`external_action` 或 `missing_contract` 才暴露其最小边界，不能把普通命令推给用户。可通过 accepted trace/log surface 记录 `silent_degradation` 或 `silent_unpassable`（保持 non-blocked/in-progress），但 fatigue/degradation wording不得替代 `missing_fact`、`write_to` 和 exact `rerun`。所有下一 phase 路由只来自 gate CLI `check.next`。
 
 ## 9. Anti-Cheating Rules
 

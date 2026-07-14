@@ -26,6 +26,7 @@ import {
   COVERED_PREFLIGHT_TARGET_NODES,
   COVERED_SOURCE_NODES,
 } from '../../../DPT_FRAMEWORK/engine/helpers/handoff-helpers.mjs';
+import { readGateDefinitionSnapshot } from '../../../DPT_FRAMEWORK/schema/contracts/gate-definition.mjs';
 
 const __dirname = join(fileURLToPath(import.meta.url), '..');
 const REPO_ROOT = join(__dirname, '..', '..', '..');
@@ -66,7 +67,7 @@ function loadGateDefs() {
     'hitl2-recorded', 'readiness-passed', 'rerun-ready'];
   for (const key of files) {
     const p = join(GATE_DEFS_DIR, `gate-${key}.definition.json`);
-    if (existsSync(p)) defs[key] = JSON.parse(readFileSync(p, 'utf-8'));
+    if (existsSync(p)) defs[key] = readGateDefinitionSnapshot(p).definition;
   }
   return defs;
 }

@@ -3,7 +3,7 @@
 // Canonical location: DPT_FRAMEWORK/engine/helpers/gate-helpers-provenance.mjs
 
 import { existsSync, readFileSync, readdirSync, statSync, appendFileSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import { join, basename, resolve as resolvePath } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import {
   readOutputDeclarations,
@@ -14,6 +14,45 @@ import {
 import { classifyReferenceAuthority } from './gate-helpers-checks.mjs';
 import { readBundleName, logToRun } from '../logger.mjs';
 import { inspectWorkUnits } from '../work-unit-core.mjs';
+import { makeContractFinding } from './wave-contract-findings.mjs';
+
+function provenanceFinding(rule, {
+  id,
+  blockingBasis,
+  surface,
+  expected,
+  observed,
+  missingFact,
+  repairKind,
+  writeTo,
+  repair,
+  detail,
+}) {
+  return makeContractFinding({
+    id,
+    ruleId: rule.id,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis,
+    surface,
+    expected,
+    observed,
+    missingFact,
+    repairKind,
+    writeTo,
+    repair,
+    detail,
+  });
+}
+
+function ruleScope(rule) {
+  const scope = [];
+  if (rule.wave) scope.push(`wave=${rule.wave}`);
+  if (rule.kind) scope.push(`kind=${rule.kind}`);
+  if (rule.producer_rule) scope.push(`producer_rule=${rule.producer_rule}`);
+  if (rule.role) scope.push(`role=${rule.role}`);
+  return scope.length ? scope.join(', ') : 'any scope';
+}
 
 function waveNumber(value) {
   if (Number.isInteger(value)) return value;
@@ -113,25 +152,47 @@ export function checkWorkUnitLedgerExists(bundlePath, rule) {
   try {
     scoped = readScopedSubmittedWorkUnitRows(bundlePath, rule);
   } catch (error) {
+    const detail = `Submitted work-unit ledger invalid: ${error.message}`;
     return {
       passed: false,
-      inspect: [`Submitted work-unit ledger invalid: ${error.message}`],
+      inspect: [detail],
       advice: bindingFailureAdvice(),
       records: [],
+      findings: [provenanceFinding(rule, {
+        id: `${rule.id}:ledger_invalid`,
+        blockingBasis: 'authority_integrity',
+        surface: resolvePath(bundlePath, 'rb_output_declarations.jsonl'),
+        expected: 'Schema-valid and hash-valid Engine-written submitted work-unit ledger rows.',
+        observed: error.message,
+        missingFact: `Submitted work-unit ledger is invalid for ${ruleScope(rule)}: ${error.message}`,
+        repairKind: 'missing_contract',
+        writeTo: `Submitted declaration integrity boundary for ${resolvePath(bundlePath, 'rb_output_declarations.jsonl')}`,
+        repair: 'Restore submitted declaration integrity through the work-unit Engine owner before rerunning this checkpoint.',
+        detail,
+      })],
     };
   }
 
   if (scoped.length === 0) {
-    const scope = [];
-    if (rule.wave) scope.push(`wave=${rule.wave}`);
-    if (rule.kind) scope.push(`kind=${rule.kind}`);
-    if (rule.producer_rule) scope.push(`producer_rule=${rule.producer_rule}`);
-    if (rule.role) scope.push(`role=${rule.role}`);
+    const scope = ruleScope(rule);
+    const detail = `No submitted work-unit ledger rows found (${scope}).`;
     return {
       passed: false,
-      inspect: [`No submitted work-unit ledger rows found (${scope.length ? scope.join(', ') : 'any scope'}).`],
+      inspect: [detail],
       advice: ['Submit delegated work through operate-work-unit so rb_output_declarations.jsonl contains Engine-written work-unit rows.'],
       records: [],
+      findings: [provenanceFinding(rule, {
+        id: `${rule.id}:submitted_rows_missing`,
+        blockingBasis: 'authority_integrity',
+        surface: resolvePath(bundlePath, 'rb_output_declarations.jsonl'),
+        expected: `At least one submitted work-unit ledger row for ${scope}.`,
+        observed: { submitted_rows: 0 },
+        missingFact: `No Engine-written submitted work-unit ledger row exists for ${scope}.`,
+        repairKind: 'engine_operation',
+        writeTo: `operate-work-unit claim/submit path for ${scope}`,
+        repair: `Execute the delegated demand through a legal work-unit claim and formal submit for ${scope}.`,
+        detail,
+      })],
     };
   }
 
@@ -140,6 +201,7 @@ export function checkWorkUnitLedgerExists(bundlePath, rule) {
     inspect: [`Found ${scoped.length} submitted work-unit ledger row(s).`],
     advice: [],
     records: scoped,
+    findings: [],
   };
 }
 
@@ -154,6 +216,7 @@ export function checkWorkUnitOutputCoverage(bundlePath, rule) {
       advice: [],
       orphans: [],
       records: [],
+      findings: [],
     };
   }
 
@@ -161,12 +224,25 @@ export function checkWorkUnitOutputCoverage(bundlePath, rule) {
   try {
     scoped = readScopedSubmittedWorkUnitRows(bundlePath, rule);
   } catch (error) {
+    const detail = `Submitted work-unit ledger invalid: ${error.message}`;
     return {
       passed: false,
-      inspect: [`Submitted work-unit ledger invalid: ${error.message}`],
+      inspect: [detail],
       advice: bindingFailureAdvice(),
       orphans: expectedGroups.map((group) => group[0]),
       records: [],
+      findings: [provenanceFinding(rule, {
+        id: `${rule.id}:ledger_invalid`,
+        blockingBasis: 'authority_integrity',
+        surface: resolvePath(bundlePath, 'rb_output_declarations.jsonl'),
+        expected: 'Schema-valid and hash-valid submitted work-unit declaration rows.',
+        observed: error.message,
+        missingFact: `Submitted work-unit ledger is invalid while checking output coverage: ${error.message}`,
+        repairKind: 'missing_contract',
+        writeTo: `Submitted declaration integrity boundary for ${resolvePath(bundlePath, 'rb_output_declarations.jsonl')}`,
+        repair: 'Restore submitted declaration integrity through the work-unit Engine owner.',
+        detail,
+      })],
     };
   }
 
@@ -178,27 +254,51 @@ export function checkWorkUnitOutputCoverage(bundlePath, rule) {
   }
 
   const orphans = [];
+  const orphanRoots = [];
   for (const group of expectedGroups) {
     if (group.some((expected) => declaredPaths.has(expected))) continue;
     let phaseOwned = false;
     const reasons = [];
+    const classifications = [];
     for (const expected of group) {
       if (!isReferenceArtifact(expected)) continue;
       const classification = classifyReferenceAuthority(bundlePath, expected);
       if (classification.passed && classification.authority === 'phase_owned_projection') phaseOwned = true;
-      else reasons.push(`${expected}: ${classification.reason}`);
+      else {
+        reasons.push(`${expected}: ${classification.reason}`);
+        classifications.push({ expected, classification });
+      }
     }
     if (phaseOwned) continue;
-    orphans.push(reasons[0] || group[0]);
+    const orphan = reasons[0] || group[0];
+    orphans.push(orphan);
+    orphanRoots.push(classifications[0] || { expected: group[0], classification: null });
   }
 
   if (orphans.length > 0) {
+    const findings = orphanRoots.map(({ expected, classification }, index) => {
+      const root = classification?.root_contract || {};
+      const detail = `Delegated output lacks submitted work-unit coverage or projection backing: ${orphans[index]}`;
+      return provenanceFinding(rule, {
+        id: `${rule.id}:output:${expected}`,
+        blockingBasis: root.blocking_basis || 'binding_integrity',
+        surface: resolvePath(bundlePath, expected),
+        expected: 'Expected delegated output is covered by a submitted work-unit row or accepted Phase-owned submitted backing.',
+        observed: classification ? { authority: classification.authority, reason_code: classification.reason_code || null } : { submitted_coverage: false },
+        missingFact: root.missing_fact || `Delegated output ${expected} lacks submitted work-unit coverage.`,
+        repairKind: root.repair_kind || 'engine_operation',
+        writeTo: root.write_to || `operate-work-unit claim/submit path for ${expected}`,
+        repair: `Repair ${expected} through its legal work-unit or Phase-owned projection path.`,
+        detail,
+      });
+    });
     return {
       passed: false,
       inspect: orphans.map((path) => `Delegated output lacks submitted work-unit coverage or projection backing: ${path}`),
       advice: ['Submit delegated outputs through operate-work-unit or repair Phase-owned reference backing; filesystem presence and hand-written declarations are diagnostic only.'],
       orphans,
       records: scoped,
+      findings,
     };
   }
 
@@ -208,6 +308,7 @@ export function checkWorkUnitOutputCoverage(bundlePath, rule) {
     advice: [],
     orphans: [],
     records: scoped,
+    findings: [],
   };
 }
 
@@ -220,6 +321,7 @@ export function checkWorkUnitSubmissionPresence(bundlePath, rule) {
       inspect: ['No delegated output files matched this work-unit submission-presence rule.'],
       advice: [],
       records: [],
+      findings: [],
     };
   }
 
@@ -235,6 +337,7 @@ export function checkWorkUnitSubmissionPresence(bundlePath, rule) {
       inspect: [`All ${projectionBacked.length} reference projection(s) are backed by submitted prior evidence; no new targeted work-unit row is required.`],
       advice: [],
       records: [],
+      findings: [],
     };
   }
 
@@ -243,11 +346,24 @@ export function checkWorkUnitSubmissionPresence(bundlePath, rule) {
 
   const inspectResult = inspectWorkUnits(bundlePath);
   if (!inspectResult.passed) {
+    const detail = bindingFailureInspect(inspectResult.inspect || []);
     return {
       passed: false,
-      inspect: bindingFailureInspect(inspectResult.inspect || []),
+      inspect: detail,
       advice: bindingFailureAdvice(),
       records: ledgerResult.records || [],
+      findings: [provenanceFinding(rule, {
+        id: `${rule.id}:submission_binding`,
+        blockingBasis: 'binding_integrity',
+        surface: resolvePath(bundlePath, '_work_units/_index.json'),
+        expected: 'Submitted ledger rows bind to valid work-unit index, manifest, result, receipt, beacon, cache and terminal status authority.',
+        observed: inspectResult.inspect || [],
+        missingFact: `Submitted work-unit presence cross-check failed for ${ruleScope(rule)}.`,
+        repairKind: 'missing_contract',
+        writeTo: `Work-unit submitted-binding repair boundary for ${ruleScope(rule)}`,
+        repair: bindingFailureAdvice()[0],
+        detail: detail.join('; '),
+      })],
     };
   }
 
@@ -256,6 +372,7 @@ export function checkWorkUnitSubmissionPresence(bundlePath, rule) {
     inspect: [`Submitted work-unit presence cross-check passed for ${(ledgerResult.records || []).length} row(s).`],
     advice: [],
     records: ledgerResult.records || [],
+    findings: [],
   };
 }
 
@@ -407,12 +524,25 @@ export function checkDelegatedBypassSuspected(bundlePath, rule) {
   const phase = rule.wave || rule.phase || null;
   const result = scanDelegatedBypassSuspicion(bundlePath, phase);
   if (result.suspected) {
+    const detail = `delegated_bypass_suspected: ${(result.provenanceMissing || []).join('; ')}`;
     return {
       passed: false,
-      inspect: [`delegated_bypass_suspected: ${(result.provenanceMissing || []).join('; ')}`],
+      inspect: [detail],
       advice: ['Route delegated artifacts through work-unit claim/submit; direct files and hand-written declarations cannot satisfy gate provenance.'],
       artifactsFound: result.artifactsFound || [],
       provenanceMissing: result.provenanceMissing || [],
+      findings: [provenanceFinding(rule, {
+        id: `${rule.id}:delegated_bypass`,
+        blockingBasis: 'binding_integrity',
+        surface: resolvePath(bundlePath, rule.target || `artifacts/${phase || 'unknown'}`),
+        expected: 'Delegated artifacts and evidence-search outputs are bound to Engine-written submitted work-unit provenance.',
+        observed: { artifacts_found: result.artifactsFound || [], provenance_missing: result.provenanceMissing || [] },
+        missingFact: `Delegated-looking ${phase || 'wave'} outputs exist without accepted submitted work-unit provenance: ${(result.provenanceMissing || []).join('; ')}`,
+        repairKind: 'engine_operation',
+        writeTo: `operate-work-unit claim/submit path for ${phase || 'the affected wave'}`,
+        repair: 'Execute or repair the affected delegated work through the legal work-unit claim/submit path.',
+        detail,
+      })],
     };
   }
   return {
@@ -421,5 +551,6 @@ export function checkDelegatedBypassSuspected(bundlePath, rule) {
     advice: [],
     artifactsFound: result.artifactsFound || [],
     provenanceMissing: [],
+    findings: [],
   };
 }

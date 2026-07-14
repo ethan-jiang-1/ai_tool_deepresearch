@@ -13,6 +13,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readGateDefinitionSnapshot } from '../schema/contracts/gate-definition.mjs';
 import { loadChain } from './transition-chain.mjs';
 import { parseFrontmatter } from './workflow-chain.mjs';
 
@@ -197,7 +198,7 @@ export function validateWorkflowPackage(opts = {}) {
     if (!existsSync(defPath)) continue; // already reported above
 
     try {
-      const def = JSON.parse(readFileSync(defPath, 'utf-8'));
+      const def = readGateDefinitionSnapshot(defPath).definition;
       if (def.gate !== phase.gate) {
         issues.push({
           class: 'gate_definition_name_mismatch',
@@ -208,7 +209,7 @@ export function validateWorkflowPackage(opts = {}) {
     } catch (err) {
       issues.push({
         class: 'gate_definition_unreadable',
-        detail: `Cannot parse gate definition "${phase.gate}": ${err.message}`,
+        detail: `Cannot parse Gate definition "${phase.gate}" through the shared contract: ${err.message}`,
         file: defPath,
       });
     }

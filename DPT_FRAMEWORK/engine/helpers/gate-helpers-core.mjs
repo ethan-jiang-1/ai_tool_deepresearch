@@ -5,17 +5,44 @@
 // Re-exported by gate-helpers.mjs for backward compatibility.
 
 import { parseArgs } from 'node:util';
-import { existsSync, readFileSync, writeFileSync, appendFileSync, readdirSync, statSync, mkdirSync } from 'node:fs';
-import { join, dirname, basename, relative } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, appendFileSync, readdirSync, statSync, mkdirSync, openSync, closeSync } from 'node:fs';
+import { join, dirname, basename, relative, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
+import { readGateDefinitionSnapshot } from '../../schema/contracts/gate-definition.mjs';
 import { resolveNodeTransitionDetailed } from '../ask-next.mjs';
 import { parseMdFrontmatter } from './gate-helpers-readers.mjs';
 import { continuationForGateResult } from './continuation-cue.mjs';
+import {
+  buildContractEvaluation,
+  makeContractFinding,
+  projectFindingCompatibility,
+} from './wave-contract-findings.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKFLOW_NODES_DIR = join(__dirname, '..', '..', 'workflows', 'nodes');
+
+function gateHelperFailure(input) {
+  return projectFindingCompatibility(makeContractFinding({
+    findingSource: 'checker',
+    classification: 'blocking',
+    ...input,
+  }));
+}
+
+function gateFailureResult({ gate, currentNodeRef, routing, failure, bundlePath = null }) {
+  return buildGateResult({
+    passed: false,
+    gate,
+    currentNodeRef,
+    routing,
+    inspect: failure.inspect,
+    advice: failure.advice,
+    findings: failure.findings,
+    bundlePath,
+  });
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Gate CLI Shared Utilities
@@ -100,25 +127,52 @@ export function parseGateCliArgs() {
   const { values } = parseResult;
 
   if (!values.bundle) {
+    const failure = gateHelperFailure({
+      id: 'gate_invocation_bundle_required',
+      ruleId: 'gate_invocation_bundle_required',
+      blockingBasis: 'invocation_contract',
+      surface: 'Gate CLI invocation --bundle',
+      expected: 'A selected active bundle path supplied through --bundle.',
+      observed: 'argument absent',
+      missingFact: 'Required Gate invocation argument --bundle is missing.',
+      repairKind: 'engine_operation',
+      writeTo: 'Gate CLI invocation argument --bundle',
+      detail: 'Missing required argument: --bundle <path>',
+      repair: 'Provide --bundle <path> pointing to an active run or disposable bundle.',
+    });
     return {
-      error: {
-        check: { passed: false, gate: '(unknown)', currentNodeRef: null, next: null },
-        routing: { kind: 'invalid_input', next: null, detail: 'Missing required argument: --bundle <path>' },
-        inspect: ['Missing required argument: --bundle <path>'],
-        advice: ['Provide --bundle <path> pointing to an active run or disposable bundle.'],
-      },
+      error: gateFailureResult({
+        gate: '(unknown)',
+        currentNodeRef: null,
+        routing: { kind: 'invalid_input', next: null, detail: failure.reason },
+        failure,
+      }),
     };
   }
 
   if (!values['current-node']) {
+    const failure = gateHelperFailure({
+      id: 'gate_invocation_current_node_required',
+      ruleId: 'gate_invocation_current_node_required',
+      blockingBasis: 'invocation_contract',
+      surface: 'Gate CLI invocation --current-node',
+      expected: 'A canonical workflow node fileRef supplied through --current-node.',
+      observed: 'argument absent',
+      missingFact: 'Required Gate invocation argument --current-node is missing.',
+      repairKind: 'engine_operation',
+      writeTo: 'Gate CLI invocation argument --current-node',
+      detail: 'Missing required argument: --current-node <fileRef>',
+      repair: 'Provide --current-node <fileRef> (e.g. phases/phase-wave0.md).',
+    });
     return {
       bundle: values.bundle,
-      error: {
-        check: { passed: false, gate: '(unknown)', currentNodeRef: null, next: null },
-        routing: { kind: 'invalid_input', next: null, detail: 'Missing required argument: --current-node <fileRef>' },
-        inspect: ['Missing required argument: --current-node <fileRef>'],
-        advice: ['Provide --current-node <fileRef> (e.g. phases/phase-wave0.md).'],
-      },
+      error: gateFailureResult({
+        gate: '(unknown)',
+        currentNodeRef: null,
+        routing: { kind: 'invalid_input', next: null, detail: failure.reason },
+        failure,
+        bundlePath: values.bundle,
+      }),
     };
   }
 
@@ -164,8 +218,7 @@ export function parseGateCliArgs() {
  */
 export function loadGateDefinition(gateKey) {
   const defPath = join(__dirname, '..', '..', 'schema', 'gate_definitions', `gate-${gateKey}.definition.json`);
-  const raw = readFileSync(defPath, 'utf-8');
-  return JSON.parse(raw);
+  return readGateDefinitionSnapshot(defPath).definition;
 }
 
 /**
@@ -184,14 +237,27 @@ export function tryLoadGateDefinition(gateKey, currentNodeRef = null) {
     return { definition, error: null };
   } catch (err) {
     const safeMsg = (err.message || String(err)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+    const failure = gateHelperFailure({
+      id: 'gate_definition_contract_invalid',
+      ruleId: 'gate_definition_contract_invalid',
+      blockingBasis: 'configuration_integrity',
+      surface: `gate-${gateKey}.definition.json`,
+      expected: 'Definition bytes parse through the shared Gate-definition Zod contract.',
+      observed: safeMsg,
+      missingFact: `Gate definition '${gateKey}' is missing or violates the shared definition contract: ${safeMsg}`,
+      repairKind: 'missing_contract',
+      writeTo: `Gate definition contract boundary for '${gateKey}'`,
+      detail: `Gate definition '${gateKey}' is missing or unparseable: ${safeMsg}`,
+      repair: `Verify gate-${gateKey}.definition.json exists and satisfies the shared Gate-definition contract.`,
+    });
     return {
       definition: null,
-      error: {
-        check: { passed: false, gate: gateKey, currentNodeRef, next: null },
-        routing: { kind: 'config_error', next: null, detail: `Cannot load gate definition: ${safeMsg}` },
-        inspect: [`Gate definition '${gateKey}' is missing or unparseable: ${safeMsg}`],
-        advice: [`Verify gate-${gateKey}.definition.json exists and is valid JSON.`],
-      },
+      error: gateFailureResult({
+        gate: gateKey,
+        currentNodeRef,
+        routing: { kind: 'config_error', next: null, detail: failure.reason },
+        failure,
+      }),
     };
   }
 }
@@ -221,19 +287,57 @@ export function loadManifest() {
  *
  * @impl GSK-004
  */
-export function validateNodeGateBinding(currentNodeRef, gateKey) {
+export function checkNodeGateBinding(currentNodeRef, gateKey) {
   const manifest = loadManifest();
   const phase = manifest.phases.find(p => p.node === currentNodeRef);
+  const expectedPhase = manifest.phases.find((candidate) => candidate.gate === gateKey);
 
   if (!phase) {
-    return `current-node "${currentNodeRef}" not found in manifest phases`;
+    const failure = gateHelperFailure({
+      id: 'gate_node_binding_unknown_node',
+      ruleId: 'gate_node_binding_unknown_node',
+      blockingBasis: 'binding_integrity',
+      surface: 'workflows/manifest.json#/phases',
+      expected: `A manifest phase bound to current-node '${currentNodeRef}'.`,
+      observed: 'no matching phase',
+      missingFact: `current-node '${currentNodeRef}' is not registered in workflow manifest phases.`,
+      repairKind: 'engine_operation',
+      writeTo: `Gate CLI invocation --current-node for gate '${gateKey}'`,
+      detail: `current-node "${currentNodeRef}" not found in manifest phases`,
+      repair: 'Invoke the Gate with the canonical phase node registered for this Gate.',
+      checkpointContext: expectedPhase?.node ? { currentNodeRef: expectedPhase.node } : null,
+    });
+    return { ok: false, expectedNodeRef: expectedPhase?.node || null, ...failure };
   }
 
   if (phase.gate !== gateKey) {
-    return `Gate binding mismatch: current-node "${currentNodeRef}" expects gate "${phase.gate}" but CLI is for gate "${gateKey}"`;
+    const failure = gateHelperFailure({
+      id: 'gate_node_binding_mismatch',
+      ruleId: 'gate_node_binding_mismatch',
+      blockingBasis: 'binding_integrity',
+      surface: `workflows/manifest.json#/phases/${currentNodeRef}`,
+      expected: `Gate '${gateKey}' bound to '${expectedPhase?.node || '<unregistered>'}'.`,
+      observed: `current-node '${currentNodeRef}' is bound to gate '${phase.gate}'.`,
+      missingFact: `Gate/current-node binding mismatch: '${currentNodeRef}' is not the node for gate '${gateKey}'.`,
+      repairKind: expectedPhase?.node ? 'engine_operation' : 'missing_contract',
+      writeTo: expectedPhase?.node
+        ? `Gate CLI invocation --current-node ${expectedPhase.node}`
+        : `Workflow manifest binding for gate '${gateKey}'`,
+      detail: `Gate binding mismatch: current-node "${currentNodeRef}" expects gate "${phase.gate}" but CLI is for gate "${gateKey}"`,
+      repair: expectedPhase?.node
+        ? `Invoke this Gate with --current-node ${expectedPhase.node}.`
+        : `Gate '${gateKey}' has no registered manifest node.`,
+      checkpointContext: expectedPhase?.node ? { currentNodeRef: expectedPhase.node } : null,
+    });
+    return { ok: false, expectedNodeRef: expectedPhase?.node || null, ...failure };
   }
 
-  return null;
+  return { ok: true, phase };
+}
+
+export function validateNodeGateBinding(currentNodeRef, gateKey) {
+  const result = checkNodeGateBinding(currentNodeRef, gateKey);
+  return result.ok ? null : result.reason;
 }
 
 // ─── Routing Integration ───────────────────────────────────────────────────
@@ -248,7 +352,34 @@ export function validateNodeGateBinding(currentNodeRef, gateKey) {
  * @returns {{ kind: string, next: string|null, detail?: string }}
  */
 export function resolveRouting(transitionsPath, currentNodeRef, outcome, context = {}) {
-  return resolveNodeTransitionDetailed(transitionsPath, currentNodeRef, outcome, context);
+  const routing = resolveNodeTransitionDetailed(transitionsPath, currentNodeRef, outcome, context);
+  if (['invalid_input', 'config_error'].includes(routing.kind)) {
+    const configurationFailure = routing.kind === 'config_error';
+    const failure = gateHelperFailure({
+      id: configurationFailure ? 'gate_routing_configuration_invalid' : 'gate_routing_invocation_invalid',
+      ruleId: configurationFailure ? 'gate_routing_configuration_invalid' : 'gate_routing_invocation_invalid',
+      blockingBasis: configurationFailure ? 'configuration_integrity' : 'invocation_contract',
+      surface: transitionsPath || 'Gate routing invocation',
+      expected: 'A valid transition table, current node, and accepted outcome.',
+      observed: routing.detail || routing.kind,
+      missingFact: routing.detail || `Gate routing failed with ${routing.kind}.`,
+      repairKind: configurationFailure ? 'missing_contract' : 'engine_operation',
+      writeTo: configurationFailure
+        ? 'Workflow transition-table contract boundary'
+        : 'Gate routing invocation arguments',
+      detail: routing.detail || `Gate routing failed with ${routing.kind}.`,
+      repair: configurationFailure
+        ? 'Repair the workflow transition-table contract before rerunning this Gate.'
+        : 'Correct the Gate routing invocation and rerun the same checkpoint.',
+    });
+    Object.defineProperties(routing, {
+      finding: { value: failure.finding, enumerable: false },
+      findings: { value: failure.findings, enumerable: false },
+      inspect: { value: failure.inspect, enumerable: false },
+      advice: { value: failure.advice, enumerable: false },
+    });
+  }
+  return routing;
 }
 
 // ─── Result Construction ───────────────────────────────────────────────────
@@ -263,31 +394,16 @@ export function resolveRouting(transitionsPath, currentNodeRef, outcome, context
  * @param {object} opts.routing — detailed router result
  * @param {string[]} [opts.inspect] — diagnostic messages
  * @param {string[]} [opts.advice] — guidance messages
+ * @param {object[]} [opts.findings] — structured root findings from the detecting checker
+ * @param {string} [opts.bundlePath] — resolved or resolvable active bundle path
+ * @param {string} [opts.checkpointCommand] — exact checkpoint command override
  * @param {object} [opts.extraCheck] — extra fields to merge into check
  * @param {number} [opts.attemptNumber] — Agent-reported retry hint (GSK-006), default 0
  * @param {number} [opts.fatigueThreshold] — threshold for fatigue diagnostics (GSK-006), default 3
- * @returns {{ check: object, routing: object, inspect: string[], advice: string[] }}
+ * @returns {{ check: object, routing: object, inspect: string[], advice: string[], hints: object[] }}
  *
  * @impl GSK-002, GSK-006
  */
-function gateMessagePriority(message) {
-  const text = String(message || '').toLowerCase();
-  if (/cache_coverage|cache trail|cache coverage/.test(text)) return 0;
-  if (/ledger_record_hash|hash mismatch|ledger\/index|work-unit binding|submitted result hash|nonce/.test(text)) return 1;
-  if (/submitted work-unit|work-unit ledger|operate-work-unit|declaration ledger|rb_output_declarations/.test(text)) return 2;
-  if (/rb_status|status window|handoff|load_complete|phase_transition|route-bound/.test(text)) return 3;
-  if (/rb_trace|trace|gate_attempt/.test(text)) return 4;
-  if (/schema|yaml|parse_error|metadata|source_url|key facts/.test(text)) return 5;
-  if (/count floor|delegated_bypass|output coverage|filesystem-only|not declared/.test(text)) return 8;
-  return 6;
-}
-
-function prioritizeMessages(messages) {
-  return [...messages].map((message, index) => ({ message, index, priority: gateMessagePriority(message) }))
-    .sort((a, b) => a.priority - b.priority || a.index - b.index)
-    .map((entry) => entry.message);
-}
-
 function uniqueMessages(messages) {
   const seen = new Set();
   const result = [];
@@ -300,7 +416,91 @@ function uniqueMessages(messages) {
   return result;
 }
 
-export function buildGateResult({ passed, gate, currentNodeRef, routing, inspect = [], advice = [], extraCheck = {}, attemptNumber = 0, fatigueThreshold = 3 }) {
+function shellArg(value) {
+  const text = String(value);
+  if (/^[A-Za-z0-9_./:@+-]+$/.test(text)) return text;
+  return `'${text.replace(/'/g, `'"'"'`)}'`;
+}
+
+function checkpointRerunCommand({ gate, currentNodeRef, bundlePath, checkpointCommand }) {
+  if (typeof checkpointCommand === 'string' && checkpointCommand.trim()) return checkpointCommand.trim();
+  const gateKey = typeof gate === 'string' && gate.trim() ? gate.trim() : '<gate-name>';
+  const bundleArg = typeof bundlePath === 'string' && bundlePath.trim()
+    ? shellArg(resolvePath(bundlePath))
+    : '<bundle-path>';
+  const nodeArg = typeof currentNodeRef === 'string' && currentNodeRef.trim()
+    ? shellArg(currentNodeRef.trim())
+    : '<current-node-ref>';
+  return `node DPT_FRAMEWORK/cli/gates/check-gate-${gateKey}.mjs --bundle ${bundleArg} --current-node ${nodeArg}`;
+}
+
+function printableFact(value) {
+  if (typeof value === 'string') return value;
+  try { return JSON.stringify(value); } catch { return String(value); }
+}
+
+function missingFactFromFinding(finding) {
+  if (typeof finding.missing_fact === 'string' && finding.missing_fact.trim()) return finding.missing_fact.trim();
+  const parts = [];
+  if (finding.surface) parts.push(`surface ${finding.surface}`);
+  if (finding.expected !== null && finding.expected !== undefined) parts.push(`expected ${printableFact(finding.expected)}`);
+  if (finding.observed !== null && finding.observed !== undefined) parts.push(`observed ${printableFact(finding.observed)}`);
+  return parts.join('; ');
+}
+
+export function projectGateHints({
+  passed,
+  gate,
+  currentNodeRef,
+  bundlePath = null,
+  checkpointCommand = null,
+  findings = [],
+} = {}) {
+  if (passed || !Array.isArray(findings) || findings.length === 0) return [];
+  const evaluation = buildContractEvaluation({ findings });
+  const seen = new Set();
+  const hints = [];
+
+  for (const finding of evaluation.findings) {
+    if (finding.classification !== 'blocking' || finding.masked_by_rule_id) continue;
+    const missingFact = missingFactFromFinding(finding);
+    if (!finding.repair_kind || !finding.write_to || !missingFact) continue;
+    const findingCheckpoint = finding.checkpoint_context || {};
+    const rerun = checkpointRerunCommand({
+      gate,
+      currentNodeRef: findingCheckpoint.currentNodeRef || currentNodeRef,
+      bundlePath: findingCheckpoint.bundlePath || bundlePath,
+      checkpointCommand: findingCheckpoint.checkpointCommand || checkpointCommand,
+    });
+    const hint = {
+      rule_id: finding.rule_id,
+      repair_kind: finding.repair_kind,
+      missing_fact: missingFact,
+      write_to: finding.write_to,
+      rerun,
+    };
+    const key = JSON.stringify(hint);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    hints.push(hint);
+  }
+  return hints;
+}
+
+export function buildGateResult({
+  passed,
+  gate,
+  currentNodeRef,
+  routing,
+  inspect = [],
+  advice = [],
+  findings = [],
+  bundlePath = null,
+  checkpointCommand = null,
+  extraCheck = {},
+  attemptNumber = 0,
+  fatigueThreshold = 3,
+}) {
   const checkNext = routing.kind === 'next' ? routing.next : null;
 
   let checkFields = {
@@ -311,8 +511,8 @@ export function buildGateResult({ passed, gate, currentNodeRef, routing, inspect
     ...extraCheck,
   };
 
-  const finalInspect = prioritizeMessages(uniqueMessages(inspect));
-  let finalAdvice = prioritizeMessages(uniqueMessages(advice));
+  const finalInspect = uniqueMessages(inspect);
+  let finalAdvice = uniqueMessages(advice);
 
   // GSK-006: Fatigue diagnostics — injected when Agent-reported attemptNumber
   // reaches fatigueThreshold AND the gate did not pass. Pass + high attempt
@@ -335,6 +535,14 @@ export function buildGateResult({ passed, gate, currentNodeRef, routing, inspect
     routing,
     inspect: finalInspect,
     advice: finalAdvice,
+    hints: projectGateHints({
+      passed,
+      gate,
+      currentNodeRef,
+      bundlePath,
+      checkpointCommand,
+      findings,
+    }),
   };
 
   const gateContinuation = projectGateContinuation({
@@ -404,7 +612,19 @@ export function emitGateResult(result, { bundlePath } = {}) {
     }
   }
 
-  console.log(JSON.stringify(result, null, 2));
+  // Gate output can exceed a pipe's small kernel buffer once structured hints
+  // are present. Reopen stdout through /dev/stdout to obtain a blocking file
+  // description, so process.exit() cannot truncate the machine-readable JSON.
+  const payload = `${JSON.stringify(result, null, 2)}\n`;
+  let outputFd = null;
+  try {
+    outputFd = openSync('/dev/stdout', 'w');
+    writeFileSync(outputFd, payload);
+  } catch {
+    process.stdout.write(payload);
+  } finally {
+    if (outputFd !== null) closeSync(outputFd);
+  }
 
   // no_transition is a normal runtime outcome (chain table intentionally sparse),
   // NOT a configuration error. Only invalid_input and config_error signal real
@@ -442,14 +662,12 @@ function comparableFailuresFromDiagnostic(diagnostic) {
   if (!diagnostic) return null;
   if (Array.isArray(diagnostic.check?.failed_rule_ids)) return diagnostic.check.failed_rule_ids;
   if (Array.isArray(diagnostic.failed_rule_ids)) return diagnostic.failed_rule_ids;
-  if (Array.isArray(diagnostic.inspect)) return diagnostic.inspect;
   return null;
 }
 
 function comparableFailuresFromResult(result) {
   if (Array.isArray(result.check?.failed_rule_ids)) return result.check.failed_rule_ids;
-  if (Array.isArray(result.inspect)) return result.inspect;
-  return [];
+  return null;
 }
 
 function gateAttemptWindow(events, currentNodeRef) {
@@ -475,17 +693,20 @@ function applyEngineAttemptDiagnostics(bundlePath, result, fatigueThreshold = 3)
     const previousFailures = comparableFailuresFromDiagnostic(previousDiag);
     const currentFailures = comparableFailuresFromResult(result);
 
-    const previousSet = new Set(previousFailures || []);
-    const currentSet = new Set(currentFailures);
-    const newlyPassing = previousFailures ? [...previousSet].filter(item => !currentSet.has(item)) : [];
-    const stillFailing = previousFailures ? [...currentSet].filter(item => previousSet.has(item)) : currentFailures;
-    const regressed = previousFailures ? [...currentSet].filter(item => !previousSet.has(item)) : [];
+    const comparable = previousFailures !== null && currentFailures !== null;
+    const previousSet = new Set(comparable ? previousFailures : []);
+    const currentSet = new Set(currentFailures || []);
+    const newlyPassing = comparable ? [...previousSet].filter(item => !currentSet.has(item)) : [];
+    const stillFailing = comparable
+      ? [...currentSet].filter(item => previousSet.has(item))
+      : [...currentSet];
+    const regressed = comparable ? [...currentSet].filter(item => !previousSet.has(item)) : [];
     const attemptTrend = classifyAttemptTrend({
       passed: check.passed,
       newlyPassing,
       stillFailing,
       regressed,
-      previousFailures,
+      previousFailures: comparable ? previousFailures : null,
     });
 
     check.attempt_count = attemptCount;
@@ -516,6 +737,27 @@ function applyEngineAttemptDiagnostics(bundlePath, result, fatigueThreshold = 3)
 export function derivePhaseFromGate(gateKey) {
   const match = (gateKey || '').match(/^(wave\d+|instantiation|setup|seed-topics|hitl1|hitl2|readiness|rerun|final)/);
   return match ? match[1] : (gateKey || 'unknown');
+}
+
+function traceDurabilityError(error, bundlePath, result) {
+  if (error?.finding) return error;
+  const message = (error?.message || String(error)).replace(/[\x00-\x1f\x7f]/g, '').slice(0, 200);
+  const gate = result?.check?.gate || '(unknown)';
+  const failure = gateHelperFailure({
+    id: 'gate_attempt_trace_not_durable',
+    ruleId: 'gate_attempt_trace_not_durable',
+    blockingBasis: 'authority_integrity',
+    surface: `${bundlePath}/rb_trace.jsonl`,
+    expected: 'The formal Gate attempt is durably appended through the Engine trace writer.',
+    observed: message,
+    missingFact: `Gate '${gate}' could not durably record its gate_attempt trace event: ${message}`,
+    repairKind: 'missing_contract',
+    writeTo: `Gate attempt trace durability boundary for '${gate}'`,
+    detail: `[trace_durable] FAIL: could not durably append gate_attempt trace event: ${message}`,
+    repair: 'Restore the Engine-owned trace durability boundary, then rerun the same Gate; do not hand-edit trace or status authority.',
+  });
+  Object.assign(error, failure);
+  return error;
 }
 
 /**
@@ -626,14 +868,14 @@ export function writeGateAttempt(bundlePath, result, options = {}) {
       }
       appendFileSync(tracePath, JSON.stringify(traceEntry) + '\n');
     } catch (err) {
-      if (strictTrace) throw err;
+      if (strictTrace) throw traceDurabilityError(err, bundlePath, result);
       // Trace write failure silently ignored
     }
 
     // 4. Checkpoint manifest — durable reentry artifact (RRD-001)
     writeCheckpointManifest(bundlePath, result);
   } catch (err) {
-    if (strictTrace) throw err;
+    if (strictTrace) throw traceDurabilityError(err, bundlePath, result);
     // Audit write failure must not affect gate output
   }
 }
@@ -842,7 +1084,7 @@ export function writeCheckpointManifest(bundlePath, result) {
  */
 export function writeGateFailureDiagnostic(bundlePath, result, precomputedPath = null) {
   try {
-    const { check, routing, inspect, advice } = result;
+    const { check, routing, inspect, advice, hints = [] } = result;
     if (check.passed) return { ok: true }; // Only write on failure
 
     const iso = new Date().toISOString();
@@ -868,6 +1110,7 @@ export function writeGateFailureDiagnostic(bundlePath, result, precomputedPath =
       routing,
       inspect,
       advice,
+      hints,
     };
 
     writeFileSync(join(bundlePath, diagnosticPath), JSON.stringify(diagnostic, null, 2));
@@ -910,7 +1153,7 @@ export function writeGateFailureDiagnostic(bundlePath, result, precomputedPath =
  */
 export function writeGatePassDiagnostic(bundlePath, result, precomputedPath = null) {
   try {
-    const { check, routing, inspect = [], advice = [] } = result;
+    const { check, routing, inspect = [], advice = [], hints = [] } = result;
     if (!check.passed) return { ok: true }; // Only write on pass
 
     const iso = new Date().toISOString();
@@ -935,6 +1178,7 @@ export function writeGatePassDiagnostic(bundlePath, result, precomputedPath = nu
       check,
       inspect,
       advice,
+      hints,
       rules_summary: {
         currentNodeRef: check.currentNodeRef,
         next: check.next,

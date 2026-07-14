@@ -2,7 +2,7 @@
 // @impl WAI-005, WAI-008, RWG-002, RWG-003, RWG-017, WTS-004, WTS-008, WTS-009, WTS-010, CRC-007, WPG-003, WPG-005, WPG-012
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, join, resolve as resolvePath } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 
 import {
@@ -11,6 +11,7 @@ import {
   readSubmittedWorkUnitDeclarations,
 } from './gate-helpers-readers.mjs';
 import { inspectCacheLeaf } from './cache-leaf-contract.mjs';
+import { makeContractFinding } from './wave-contract-findings.mjs';
 
 const DEPTH_DECISIONS = new Set(['accept', 'supplement_required', 'blocked_contract']);
 const ACCEPTED_SOURCE_STATUSES = new Set(['accepted', 'countable', 'accepted_countable']);
@@ -76,8 +77,39 @@ function readYamlObject(filePath) {
   return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
 }
 
-function issueResult(inspect, advice = []) {
-  return { passed: inspect.length === 0, inspect, advice };
+function issueResult(inspect, advice = [], findings = []) {
+  return { passed: inspect.length === 0, inspect, advice, findings };
+}
+
+function depthFinding(rule, {
+  defaultRuleId,
+  id,
+  blockingBasis,
+  surface,
+  expected,
+  observed,
+  missingFact,
+  repairKind,
+  writeTo,
+  repair,
+  detail,
+}) {
+  const ruleId = rule?.id || defaultRuleId;
+  return makeContractFinding({
+    id,
+    ruleId,
+    findingSource: 'checker',
+    classification: 'blocking',
+    blockingBasis,
+    surface,
+    expected,
+    observed,
+    missingFact,
+    repairKind,
+    writeTo,
+    repair,
+    detail,
+  });
 }
 
 function canonicalizeSubmittedWorkUnitRef(ref) {
@@ -246,17 +278,32 @@ function profileCheckSatisfied(value, required) {
   return COVERED_STATUSES.has(status) && Array.isArray(value.refs);
 }
 
-export function checkWave1DepthReviewContract(bundlePath, { topic }) {
+export function checkWave1DepthReviewContract(bundlePath, { topic, rule = null }) {
   const relPath = join('artifacts', 'wave1', topic, 'depth-review.yaml');
   const filePath = join(bundlePath, relPath);
   const inspect = [];
   const advice = [];
+  const findings = [];
   const maskedRuleIds = [];
   if (!existsSync(filePath)) {
+    const detail = `[depth_review_contract] FAIL: missing ${relPath}`;
     return {
       passed: false,
-      inspect: [`[depth_review_contract] FAIL: missing ${relPath}`],
+      inspect: [detail],
       advice: [`Create ${relPath} after successful Wave1 work-unit submit; review must bind to submitted work-unit rows.`],
+      findings: [depthFinding(rule, {
+        defaultRuleId: 'per_topic_depth_review_contract',
+        id: `${rule?.id || 'per_topic_depth_review_contract'}:${topic}:missing`,
+        blockingBasis: 'required_structure',
+        surface: filePath,
+        expected: 'A parseable Wave1 depth-review.yaml bound to reviewed submitted work-unit rows.',
+        observed: { exists: false },
+        missingFact: `Wave1 depth review ${relPath} is missing for topic ${topic}.`,
+        repairKind: 'agent_action',
+        writeTo: filePath,
+        repair: `Create ${relPath} from reviewed submitted work-unit facts and Phase judgments.`,
+        detail,
+      })],
       masked_rule_ids: ['source_claim_cache_mapping', 'source_novelty_floor', 'new_source_floor_comparison', 'depth_dimensions', 'profile_checks', 'decision_implications', 'reviewed_work_unit_refs_binding'],
     };
   }
@@ -266,19 +313,51 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
     review = readYamlObject(filePath);
     if (!review) inspect.push(`[depth_review_contract] FAIL: ${relPath} must be a YAML object`);
   } catch (error) {
+    const detail = `[depth_review_contract] FAIL: YAML parse error in ${relPath}: ${error.message}`;
     return {
       passed: false,
-      inspect: [`[depth_review_contract] FAIL: YAML parse error in ${relPath}: ${error.message}`],
+      inspect: [detail],
       advice: [`Repair ${relPath} as parseable YAML.`],
+      findings: [depthFinding(rule, {
+        defaultRuleId: 'per_topic_depth_review_contract',
+        id: `${rule?.id || 'per_topic_depth_review_contract'}:${topic}:yaml_parse`,
+        blockingBasis: 'authority_integrity',
+        surface: filePath,
+        expected: 'Parseable YAML object for the Wave1 depth-review contract.',
+        observed: error.message,
+        missingFact: `${relPath} cannot be parsed as YAML: ${error.message}`,
+        repairKind: 'agent_action',
+        writeTo: filePath,
+        repair: `Repair ${relPath} as a parseable YAML object.`,
+        detail,
+      })],
       masked_rule_ids: ['source_claim_cache_mapping', 'source_novelty_floor', 'new_source_floor_comparison', 'depth_dimensions', 'profile_checks', 'decision_implications', 'reviewed_work_unit_refs_binding'],
     };
   }
   if (!review) {
+    const detail = inspect[0] || `[depth_review_contract] FAIL: ${relPath} must be a YAML object`;
     return {
-      ...issueResult(inspect, advice),
+      ...issueResult(inspect, advice, [depthFinding(rule, {
+        defaultRuleId: 'per_topic_depth_review_contract',
+        id: `${rule?.id || 'per_topic_depth_review_contract'}:${topic}:object_shape`,
+        blockingBasis: 'required_structure',
+        surface: filePath,
+        expected: 'A YAML object for the Wave1 depth-review contract.',
+        observed: review,
+        missingFact: `${relPath} is not a YAML object.`,
+        repairKind: 'agent_action',
+        writeTo: filePath,
+        repair: `Rewrite ${relPath} as the accepted depth-review YAML object.`,
+        detail,
+      })]),
       masked_rule_ids: ['source_claim_cache_mapping', 'source_novelty_floor', 'new_source_floor_comparison', 'depth_dimensions', 'profile_checks', 'decision_implications', 'reviewed_work_unit_refs_binding'],
     };
   }
+
+  let agentArtifactIssue = false;
+  let profileDecisionIssue = false;
+  let submittedBindingIssue = false;
+  let supplementaryWorkIssue = false;
 
   const requiredKeys = ['version', 'topic_slug', 'reviewed_work_unit_refs', 'wave0_source_urls', 'source_claims', 'new_source_urls', 'new_source_floor', 'depth_dimensions', 'profile_checks', 'decision', 'supplementary_queue_item_ids'];
   const missingKeys = new Set();
@@ -286,6 +365,7 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
     if (!(key in review)) {
       missingKeys.add(key);
       inspect.push(`[depth_review_contract] FAIL: ${relPath} missing required key: ${key}`);
+      agentArtifactIssue = true;
     }
   }
   const invalidArrays = new Set();
@@ -293,21 +373,28 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
     if (key in review && !Array.isArray(review[key])) {
       invalidArrays.add(key);
       inspect.push(`[depth_review_contract] FAIL: ${relPath} ${key} must be an array`);
+      agentArtifactIssue = true;
     }
   }
-  if (!missingKeys.has('topic_slug') && review.topic_slug !== topic) inspect.push(`[depth_review_contract] FAIL: ${relPath} topic_slug mismatch: expected ${topic}, got ${review.topic_slug}`);
+  if (!missingKeys.has('topic_slug') && review.topic_slug !== topic) {
+    inspect.push(`[depth_review_contract] FAIL: ${relPath} topic_slug mismatch: expected ${topic}, got ${review.topic_slug}`);
+    agentArtifactIssue = true;
+  }
   if (missingKeys.has('decision')) {
     maskedRuleIds.push('decision_implications');
   } else if (!DEPTH_DECISIONS.has(review.decision)) {
     inspect.push(`[depth_review_contract] FAIL: ${relPath} decision must be one of ${[...DEPTH_DECISIONS].join(', ')}`);
+    agentArtifactIssue = true;
     maskedRuleIds.push('decision_implications');
   } else {
     if (review.decision !== 'accept') {
       inspect.push(`[depth_review_contract] FAIL: ${relPath} decision is ${review.decision}; Wave1 topic is not complete until decision: accept`);
       advice.push(`Repair ${topic} through supplementary wave1_topic_deepening or record a visible blocker.`);
+      supplementaryWorkIssue = true;
     }
     if (review.decision === 'supplement_required' && !missingKeys.has('supplementary_queue_item_ids') && !invalidArrays.has('supplementary_queue_item_ids') && review.supplementary_queue_item_ids.length === 0) {
       inspect.push(`[depth_review_contract] FAIL: ${relPath} decision=supplement_required must name supplementary_queue_item_ids[] repair work`);
+      agentArtifactIssue = true;
     }
   }
 
@@ -316,12 +403,14 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
   if (!floor.ok) {
     inspect.push(...floor.inspect);
     advice.push('Run the accepted profile/template path or emit missing_profile_parameter; do not use hidden source-floor defaults.');
+    profileDecisionIssue = true;
   } else if (missingKeys.has('new_source_floor') || !review.new_source_floor || typeof review.new_source_floor !== 'object') {
     maskedRuleIds.push('new_source_floor_comparison');
   } else {
     const required = Number(review.new_source_floor?.required);
     if (required !== floor.required) {
       inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_floor.required=${review.new_source_floor?.required} but profile-derived required floor is ${floor.required}`);
+      agentArtifactIssue = true;
     }
   }
 
@@ -332,7 +421,10 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
   } else {
     const claims = review.source_claims;
     const mapping = checkSourceClaimCacheMapping(bundlePath, claims, { topic });
-    if (!mapping.passed) inspect.push(...mapping.inspect);
+    if (!mapping.passed) {
+      inspect.push(...mapping.inspect);
+      supplementaryWorkIssue = true;
+    }
     advice.push(...mapping.advice);
 
     const wave0Urls = readWave0SourceUrls(bundlePath, topic, review);
@@ -342,8 +434,14 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
       const url = sourceClaimUrl(claim);
       if (!url) continue;
       const exactNew = !wave0Urls.has(url);
-      if (claim.is_new_vs_wave0 === true && !exactNew) inspect.push(`[source_novelty_floor] FAIL: ${topic} claim marks Wave0 URL as new: ${url}`);
-      if (claim.is_new_vs_wave0 !== true && exactNew) inspect.push(`[source_novelty_floor] FAIL: ${topic} claim omits is_new_vs_wave0=true for exact-new URL: ${url}`);
+      if (claim.is_new_vs_wave0 === true && !exactNew) {
+        inspect.push(`[source_novelty_floor] FAIL: ${topic} claim marks Wave0 URL as new: ${url}`);
+        agentArtifactIssue = true;
+      }
+      if (claim.is_new_vs_wave0 !== true && exactNew) {
+        inspect.push(`[source_novelty_floor] FAIL: ${topic} claim omits is_new_vs_wave0=true for exact-new URL: ${url}`);
+        agentArtifactIssue = true;
+      }
       if (exactNew && claim.is_new_vs_wave0 === true) seenNew.add(url);
     }
     const observed = seenNew.size;
@@ -352,20 +450,28 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
     } else {
       const reviewedNew = new Set(review.new_source_urls.map(exactUrlKey).filter(Boolean));
       for (const url of seenNew) {
-        if (!reviewedNew.has(url)) inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_urls[] omits accepted exact-new URL: ${url}`);
+        if (!reviewedNew.has(url)) {
+          inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_urls[] omits accepted exact-new URL: ${url}`);
+          agentArtifactIssue = true;
+        }
       }
       for (const url of reviewedNew) {
-        if (!seenNew.has(url)) inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_urls[] contains URL not backed by accepted exact-new source_claims[]: ${url}`);
+        if (!seenNew.has(url)) {
+          inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_urls[] contains URL not backed by accepted exact-new source_claims[]: ${url}`);
+          agentArtifactIssue = true;
+        }
       }
     }
     if (missingKeys.has('new_source_floor') || !review.new_source_floor || typeof review.new_source_floor !== 'object') {
       maskedRuleIds.push('new_source_floor_observed');
     } else if (Number(review.new_source_floor.observed) !== observed) {
       inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_floor.observed=${review.new_source_floor.observed} but accepted exact-new claim count is ${observed}`);
+      agentArtifactIssue = true;
     }
     if (floor.ok && observed < floor.required) {
       inspect.push(`[source_novelty_floor] FAIL: ${topic} observed ${observed} new accepted source URL(s), required ${floor.required}`);
       advice.push(`Enqueue supplementary wave1_topic_deepening for ${topic} with genuinely new source URLs.`);
+      supplementaryWorkIssue = true;
     }
   }
 
@@ -373,7 +479,10 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
     maskedRuleIds.push('depth_dimensions');
   } else {
     for (const key of ['mechanism', 'trend_or_difficulty', 'limitation_or_dispute']) {
-      if (!depthDimensionCovered(review.depth_dimensions[key])) inspect.push(`[depth_review_contract] FAIL: ${relPath} depth_dimensions.${key} must have covered status and refs[]`);
+      if (!depthDimensionCovered(review.depth_dimensions[key])) {
+        inspect.push(`[depth_review_contract] FAIL: ${relPath} depth_dimensions.${key} must have covered status and refs[]`);
+        agentArtifactIssue = true;
+      }
     }
   }
 
@@ -381,14 +490,23 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
   if (missingKeys.has('profile_checks') || !review.profile_checks || typeof review.profile_checks !== 'object') {
     maskedRuleIds.push('profile_checks');
   } else {
-    if (!profileCheckSatisfied(review.profile_checks.counterexample_search, Boolean(params.counterexample_search))) inspect.push(`[depth_review_contract] FAIL: ${relPath} missing satisfied counterexample_search profile check`);
-    if (!profileCheckSatisfied(review.profile_checks.cross_verification, Boolean(params.cross_verification))) inspect.push(`[depth_review_contract] FAIL: ${relPath} missing satisfied cross_verification profile check`);
+    if (!profileCheckSatisfied(review.profile_checks.counterexample_search, Boolean(params.counterexample_search))) {
+      inspect.push(`[depth_review_contract] FAIL: ${relPath} missing satisfied counterexample_search profile check`);
+      agentArtifactIssue = true;
+    }
+    if (!profileCheckSatisfied(review.profile_checks.cross_verification, Boolean(params.cross_verification))) {
+      inspect.push(`[depth_review_contract] FAIL: ${relPath} missing satisfied cross_verification profile check`);
+      agentArtifactIssue = true;
+    }
   }
 
   const refsUsable = !missingKeys.has('reviewed_work_unit_refs') && !invalidArrays.has('reviewed_work_unit_refs');
   const refs = refsUsable ? review.reviewed_work_unit_refs : [];
   if (!refsUsable) maskedRuleIds.push('reviewed_work_unit_refs_binding');
-  else if (refs.length === 0) inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed_work_unit_refs[] must name submitted work-unit rows`);
+  else if (refs.length === 0) {
+    inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed_work_unit_refs[] must name submitted work-unit rows`);
+    agentArtifactIssue = true;
+  }
   let submittedRefs = new Set();
   const diagnostics = [];
   try {
@@ -399,11 +517,13 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
     }
   } catch (error) {
     inspect.push(`[depth_review_contract] FAIL: invalid submitted work-unit ledger while checking reviewed_work_unit_refs: ${error.message}`);
+    submittedBindingIssue = true;
   }
   for (const ref of refs) {
     const canonical = canonicalizeSubmittedWorkUnitRef(ref);
     if (!canonical.safe) {
       inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed work-unit ref is unsafe: ${ref}`);
+      agentArtifactIssue = true;
       continue;
     }
     if (canonical.changed) {
@@ -411,22 +531,76 @@ export function checkWave1DepthReviewContract(bundlePath, { topic }) {
     }
     if (submittedRefs.size > 0 && !submittedRefs.has(canonical.canonical)) {
       inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed work-unit ref is not submitted on accepted work-unit surfaces: ${canonical.original}${canonical.changed ? ` (canonical: ${canonical.canonical})` : ''}`);
+      agentArtifactIssue = true;
     }
   }
 
-  return { ...issueResult(inspect, advice), diagnostics, masked_rule_ids: [...new Set(maskedRuleIds)] };
+  if (agentArtifactIssue) findings.push(depthFinding(rule, {
+    defaultRuleId: 'per_topic_depth_review_contract',
+    id: `${rule?.id || 'per_topic_depth_review_contract'}:${topic}:depth_review_content`,
+    blockingBasis: 'required_structure',
+    surface: filePath,
+    expected: 'The depth review satisfies its required identity, arrays, judgments, decision closure and submitted-ref binding shape.',
+    observed: { contract_violations: true },
+    missingFact: `${relPath} violates one or more direct depth-review structure or binding facts; inspect detail names the exact field(s).`,
+    repairKind: 'agent_action',
+    writeTo: filePath,
+    repair: `Repair the named depth-review fields in ${relPath}.`,
+    detail: inspect.join('; '),
+  }));
+  if (profileDecisionIssue) findings.push(depthFinding(rule, {
+    defaultRuleId: 'per_topic_depth_review_contract',
+    id: `${rule?.id || 'per_topic_depth_review_contract'}:${topic}:profile_floor`,
+    blockingBasis: 'recorded_human_decision',
+    surface: resolvePath(bundlePath, 'rb_profile.yaml'),
+    expected: 'Recorded research-style parameters define the Wave1 new-source floor.',
+    observed: { profile_floor_available: false },
+    missingFact: `Wave1 cannot derive the required new-source floor for ${topic} from the recorded profile parameters.`,
+    repairKind: 'user_decision',
+    writeTo: 'phases/phase-hitl1.md research-style parameter decision surface',
+    repair: 'Ask only for the missing research-style parameter decision, record it through the accepted profile path, then rerun Wave1 inspect.',
+    detail: floor?.inspect?.join('; ') || `[${rule?.id || 'per_topic_depth_review_contract'}] missing profile parameter for Wave1 floor derivation.`,
+  }));
+  if (submittedBindingIssue) findings.push(depthFinding(rule, {
+    defaultRuleId: 'per_topic_depth_review_contract',
+    id: `${rule?.id || 'per_topic_depth_review_contract'}:${topic}:submitted_ledger`,
+    blockingBasis: 'authority_integrity',
+    surface: resolvePath(bundlePath, 'rb_output_declarations.jsonl'),
+    expected: 'Schema-valid and hash-valid submitted work-unit rows for reviewed_work_unit_refs[].',
+    observed: { submitted_ledger_valid: false },
+    missingFact: `Wave1 depth review for ${topic} cannot validate reviewed work-unit refs because submitted declaration authority is invalid.`,
+    repairKind: 'missing_contract',
+    writeTo: 'Submitted declaration integrity boundary for Wave1 depth review',
+    repair: 'Restore submitted declaration integrity through the work-unit Engine owner.',
+    detail: inspect.join('; '),
+  }));
+  if (supplementaryWorkIssue) findings.push(depthFinding(rule, {
+    defaultRuleId: 'per_topic_depth_review_contract',
+    id: `${rule?.id || 'per_topic_depth_review_contract'}:${topic}:supplementary_work`,
+    blockingBasis: 'required_floor',
+    surface: filePath,
+    expected: 'Reviewed submitted Wave1 evidence satisfies cache mapping, decision closure and the profile-derived new-source floor.',
+    observed: { supplementary_work_required: true },
+    missingFact: `Topic ${topic} still requires legal supplementary Wave1 work to satisfy submitted source/cache or new-source-floor facts.`,
+    repairKind: 'engine_operation',
+    writeTo: `operate-queue enqueue plus operate-work-unit claim/submit for supplementary wave1_topic_deepening topic ${topic}`,
+    repair: `Enqueue and execute supplementary wave1_topic_deepening for ${topic}, then update the depth review from submitted facts.`,
+    detail: inspect.join('; '),
+  }));
+
+  return { ...issueResult(inspect, advice, findings), diagnostics, masked_rule_ids: [...new Set(maskedRuleIds)] };
 }
 
 function readFindingIndex(bundlePath) {
   const relPath = 'artifacts/wave2/finding-index.yaml';
   const filePath = join(bundlePath, relPath);
-  if (!existsSync(filePath)) return { ok: false, relPath, inspect: [`[finding_index_contract] FAIL: missing ${relPath}`] };
+  if (!existsSync(filePath)) return { ok: false, kind: 'missing', relPath, inspect: [`[finding_index_contract] FAIL: missing ${relPath}`] };
   try {
     const data = readYamlObject(filePath);
-    if (!data) return { ok: false, relPath, inspect: [`[finding_index_contract] FAIL: ${relPath} must be a YAML object`] };
+    if (!data) return { ok: false, kind: 'object_shape', relPath, inspect: [`[finding_index_contract] FAIL: ${relPath} must be a YAML object`] };
     return { ok: true, relPath, data };
   } catch (error) {
-    return { ok: false, relPath, inspect: [`[finding_index_contract] FAIL: YAML parse error in ${relPath}: ${error.message}`] };
+    return { ok: false, kind: 'yaml_parse', observed: error.message, relPath, inspect: [`[finding_index_contract] FAIL: YAML parse error in ${relPath}: ${error.message}`] };
   }
 }
 
@@ -484,13 +658,39 @@ function consumerFacingBackedFindingNeedsCrossRef(finding, backingRefs) {
   return true;
 }
 
-export function checkWave2FindingIndexContract(bundlePath) {
+export function checkWave2FindingIndexContract(bundlePath, { rule = null } = {}) {
   const loaded = readFindingIndex(bundlePath);
-  if (!loaded.ok) return { passed: false, inspect: loaded.inspect, advice: ['Repair finding-index.yaml before rerunning Wave2 gate.'] };
+  if (!loaded.ok) {
+    const filePath = resolvePath(bundlePath, loaded.relPath);
+    const missing = loaded.kind === 'missing';
+    return {
+      passed: false,
+      inspect: loaded.inspect,
+      advice: ['Repair finding-index.yaml before rerunning Wave2 gate.'],
+      findings: [depthFinding(rule, {
+        defaultRuleId: 'finding_index_contract',
+        id: `${rule?.id || 'finding_index_contract'}:${loaded.kind}`,
+        blockingBasis: missing ? 'required_structure' : 'authority_integrity',
+        surface: filePath,
+        expected: 'A parseable YAML object satisfying the Wave2 finding-index contract.',
+        observed: loaded.observed || { exists: !missing, object_shape: loaded.kind === 'object_shape' },
+        missingFact: missing
+          ? `${loaded.relPath} is missing.`
+          : `${loaded.relPath} does not provide a parseable YAML object${loaded.observed ? `: ${loaded.observed}` : '.'}`,
+        repairKind: 'agent_action',
+        writeTo: filePath,
+        repair: `Repair ${loaded.relPath} as the accepted Wave2 finding-index YAML object.`,
+        detail: loaded.inspect[0],
+      })],
+    };
+  }
   const { data, relPath } = loaded;
   const inspect = [];
   const advice = [];
+  const rootFindings = [];
   const maskedRuleIds = [];
+  let contentIssue = false;
+  let profileDecisionIssue = false;
 
   const missingTopLevel = new Set();
   for (const key of ['version', 'source_layer', 'ledger', 'synthesis', 'scan', 'findings', 'synthesis_eligibility']) {
@@ -499,12 +699,14 @@ export function checkWave2FindingIndexContract(bundlePath) {
       inspect.push(`[finding_index_contract] FAIL: ${relPath} missing top-level key: ${key}`);
     }
   }
+  if (missingTopLevel.size > 0) contentIssue = true;
 
   const eligibilityUsable = !missingTopLevel.has('synthesis_eligibility') && data.synthesis_eligibility && typeof data.synthesis_eligibility === 'object';
   const eligibility = eligibilityUsable ? data.synthesis_eligibility : {};
   const missingEligibility = new Set();
   if (!eligibilityUsable) {
     maskedRuleIds.push('synthesis_eligibility');
+    contentIssue = true;
   } else {
     for (const key of ['pure_synthesis_eligible', 'scan_matrix_present', 'scan_topic_pair_coverage', 'unresolved_search_required_count', 'targeted_search_required_count', 'targeted_search_submitted_count', 'explicit_deferral_count', 'profile_params_read', 'ineligibility_reasons']) {
       if (!(key in eligibility)) {
@@ -512,30 +714,43 @@ export function checkWave2FindingIndexContract(bundlePath) {
         inspect.push(`[synthesis_eligibility] FAIL: ${relPath} synthesis_eligibility missing key: ${key}`);
       }
     }
+    if (missingEligibility.size > 0) contentIssue = true;
   }
 
   if (eligibilityUsable && !missingEligibility.has('scan_matrix_present') && eligibility.scan_matrix_present !== true) {
     inspect.push('[synthesis_eligibility] FAIL: scan_matrix_present must be true before Wave2 pass');
+    contentIssue = true;
   }
 
   if (missingTopLevel.has('scan') || !data.scan || typeof data.scan !== 'object') {
     maskedRuleIds.push('scan_pair_coverage');
+    contentIssue = true;
   } else {
     const expectedPairs = countExpectedPairs(bundlePath, data);
     const checkedPairs = Number(data.scan.pair_count_checked ?? 0);
-    if (expectedPairs > 0 && checkedPairs <= 0) inspect.push(`[synthesis_eligibility] FAIL: scan.pair_count_checked=${data.scan.pair_count_checked ?? '<missing>'}; expected scan matrix coverage for topic pairs`);
+    if (expectedPairs > 0 && checkedPairs <= 0) {
+      inspect.push(`[synthesis_eligibility] FAIL: scan.pair_count_checked=${data.scan.pair_count_checked ?? '<missing>'}; expected scan matrix coverage for topic pairs`);
+      contentIssue = true;
+    }
   }
 
   const findingsUsable = !missingTopLevel.has('findings') && Array.isArray(data.findings);
   const findings = findingsUsable ? data.findings : [];
-  if (!missingTopLevel.has('findings') && !Array.isArray(data.findings)) inspect.push(`[finding_index_contract] FAIL: ${relPath} findings must be an array`);
-  if (!findingsUsable) maskedRuleIds.push('per_finding_contract', 'derived_finding_counts');
+  if (!missingTopLevel.has('findings') && !Array.isArray(data.findings)) {
+    inspect.push(`[finding_index_contract] FAIL: ${relPath} findings must be an array`);
+    contentIssue = true;
+  }
+  if (!findingsUsable) {
+    maskedRuleIds.push('per_finding_contract', 'derived_finding_counts');
+    contentIssue = true;
+  }
 
   const profile = readBundleProfile(bundlePath);
   const independentBackingFloor = Number(profile?.research_style_params?.p0p1_independent_backing);
   const needsBackingFloor = findings.some((finding) => finding?.confidence === 'high' || ['p0', 'p1'].includes(finding?.priority));
   if (needsBackingFloor && (!Number.isFinite(independentBackingFloor) || independentBackingFloor <= 0)) {
     inspect.push('[missing_profile_parameter] Missing required Wave2 profile parameter: research_style_params.p0p1_independent_backing');
+    profileDecisionIssue = true;
   }
 
   const submittedReceipts = submittedWave2ReceiptRefs(bundlePath);
@@ -550,6 +765,7 @@ export function checkWave2FindingIndexContract(bundlePath) {
   let canCountExplicitDeferral = findingsUsable;
 
   for (const finding of findings) {
+    const inspectBeforeFinding = inspect.length;
     const id = finding?.id || '<missing-id>';
     const requiredFields = ['id', 'type', 'priority', 'status', 'decision', 'affected_topics', 'origin_refs', 'trigger_refs', 'search_required', 'subagent_receipt_refs', 'appears_in_synthesis', 'hitl2_handoff', 'confidence', 'independent_backing_refs', 'gap_status'];
     const missingFields = new Set();
@@ -633,33 +849,67 @@ export function checkWave2FindingIndexContract(bundlePath) {
         inspect.push(`[synthesis_eligibility] FAIL: under-backed priority finding ${id} must be submitted, deferred, internal-data routed, or record-only before pure synthesis eligibility`);
       }
     }
+    if (inspect.length > inspectBeforeFinding) contentIssue = true;
   }
 
   if (eligibilityUsable && !missingEligibility.has('pure_synthesis_eligible') && eligibility.pure_synthesis_eligible === true) {
     if (!missingEligibility.has('unresolved_search_required_count') && Number(eligibility.unresolved_search_required_count) !== 0) {
       inspect.push(`[synthesis_eligibility] FAIL: pure_synthesis_eligible=true but unresolved_search_required_count=${eligibility.unresolved_search_required_count}`);
+      contentIssue = true;
     }
     if (canCountNeedsSearch && needsSearchCount > 0) {
       inspect.push(`[synthesis_eligibility] FAIL: pure_synthesis_eligible=true but ${needsSearchCount} finding(s) have gap_status=needs_search`);
+      contentIssue = true;
     }
   }
   if (eligibilityUsable && canCountNeedsSearch && !missingEligibility.has('unresolved_search_required_count') && Number.isFinite(Number(eligibility.unresolved_search_required_count)) && Number(eligibility.unresolved_search_required_count) !== needsSearchCount) {
     inspect.push(`[synthesis_eligibility] FAIL: unresolved_search_required_count=${eligibility.unresolved_search_required_count} but observed needs_search count is ${needsSearchCount}`);
+    contentIssue = true;
   } else if (!canCountNeedsSearch) maskedRuleIds.push('unresolved_search_required_count');
   if (eligibilityUsable && canCountTargetedRequired && !missingEligibility.has('targeted_search_required_count') && Number.isFinite(Number(eligibility.targeted_search_required_count)) && Number(eligibility.targeted_search_required_count) !== targetedRequiredCount) {
     inspect.push(`[synthesis_eligibility] FAIL: targeted_search_required_count=${eligibility.targeted_search_required_count} but observed targeted-search decision count is ${targetedRequiredCount}`);
+    contentIssue = true;
   } else if (!canCountTargetedRequired) maskedRuleIds.push('targeted_search_required_count');
   if (eligibilityUsable && canCountTargetedSubmitted && !missingEligibility.has('targeted_search_submitted_count') && Number.isFinite(Number(eligibility.targeted_search_submitted_count)) && Number(eligibility.targeted_search_submitted_count) !== targetedSubmittedCount) {
     inspect.push(`[synthesis_eligibility] FAIL: targeted_search_submitted_count=${eligibility.targeted_search_submitted_count} but observed search_submitted count is ${targetedSubmittedCount}`);
+    contentIssue = true;
   } else if (!canCountTargetedSubmitted) maskedRuleIds.push('targeted_search_submitted_count');
   if (eligibilityUsable && canCountExplicitDeferral && !missingEligibility.has('explicit_deferral_count') && Number.isFinite(Number(eligibility.explicit_deferral_count)) && Number(eligibility.explicit_deferral_count) !== explicitDeferralCount) {
     inspect.push(`[synthesis_eligibility] FAIL: explicit_deferral_count=${eligibility.explicit_deferral_count} but observed explicit routing count is ${explicitDeferralCount}`);
+    contentIssue = true;
   } else if (!canCountExplicitDeferral) maskedRuleIds.push('explicit_deferral_count');
 
   if (inspect.length > 0) {
     advice.push('Complete Wave2 scan/triage/gap analysis, submit targeted evidence or route gaps explicitly, then update finding-index.yaml synthesis_eligibility.');
   }
-  return { ...issueResult(inspect, advice), masked_rule_ids: [...new Set(maskedRuleIds)] };
+  const filePath = resolvePath(bundlePath, relPath);
+  if (contentIssue) rootFindings.push(depthFinding(rule, {
+    defaultRuleId: 'finding_index_contract',
+    id: `${rule?.id || 'finding_index_contract'}:content`,
+    blockingBasis: 'required_structure',
+    surface: filePath,
+    expected: 'finding-index.yaml satisfies required top-level, per-finding, scan, eligibility, backing and handoff contracts.',
+    observed: { contract_violations: true },
+    missingFact: `${relPath} violates one or more direct Wave2 finding-index facts; inspect detail names the exact field or finding.`,
+    repairKind: 'agent_action',
+    writeTo: filePath,
+    repair: `Repair the named finding-index facts in ${relPath}, including any required submitted receipt or explicit routing binding.`,
+    detail: inspect.join('; '),
+  }));
+  if (profileDecisionIssue) rootFindings.push(depthFinding(rule, {
+    defaultRuleId: 'finding_index_contract',
+    id: `${rule?.id || 'finding_index_contract'}:profile_floor`,
+    blockingBasis: 'recorded_human_decision',
+    surface: resolvePath(bundlePath, 'rb_profile.yaml'),
+    expected: 'Recorded research-style parameters define the Wave2 independent-backing floor.',
+    observed: { p0p1_independent_backing: readBundleProfile(bundlePath)?.research_style_params?.p0p1_independent_backing ?? null },
+    missingFact: 'Wave2 cannot derive the independent-backing floor because research_style_params.p0p1_independent_backing is missing or invalid.',
+    repairKind: 'user_decision',
+    writeTo: 'phases/phase-hitl1.md research-style parameter decision surface',
+    repair: 'Ask only for the missing independent-backing parameter decision and record it through the accepted profile path.',
+    detail: `[${rule?.id || 'finding_index_contract'}] missing Wave2 independent-backing profile parameter.`,
+  }));
+  return { ...issueResult(inspect, advice, rootFindings), masked_rule_ids: [...new Set(maskedRuleIds)] };
 }
 
 export function topicSlugFromDepthReviewTarget(target) {

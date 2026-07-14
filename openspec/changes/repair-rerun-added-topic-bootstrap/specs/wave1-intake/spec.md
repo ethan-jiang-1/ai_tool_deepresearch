@@ -106,5 +106,6 @@ Every Phase-owned topic reference SHALL remain backed by at least one reviewed s
 
 - **WHEN** a reviewed work-unit ref cannot resolve to a submitted ledger row
 - **THEN** the primary diagnostic SHALL identify that missing submitted binding as `missing_fact`
+- **AND** `repair_kind` SHALL identify `agent_action`, `engine_operation`, or `missing_contract` according to whether the reviewed ref, declaration recovery, or unavailable capability is the direct root
 - **AND** `write_to` SHALL name the exact depth-review ref or sanctioned declaration-recovery surface that can be repaired
 - **AND** `rerun` SHALL name the same Wave1 inspect checkpoint

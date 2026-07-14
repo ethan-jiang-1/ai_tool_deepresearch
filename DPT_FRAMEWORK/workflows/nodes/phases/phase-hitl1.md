@@ -22,7 +22,7 @@ suggested_context:
 - **Start here**: Read `brief/hitl1.md`, the original question, `rb_plan.md`, and `rb_profile.yaml`.
 - **Path to pass**: Present the HITL1 prompt, wait for the user's answer, atomically apply approved canonical topics and UID-bound seeds, write profile/style decisions, run one bounded real research-access probe, then run the HITL1 gate.
 - **Completion check**: User input and a schema-valid available research-access observation are recorded in `rb_profile.yaml`, and `check-gate-hitl1-recorded.mjs` passes.
-- **Failure posture**: Do not invent user choices or capability success. If access is unavailable, preserve recorded choices, explain the blocker, and rerun the same probe and gate only after the environment is repaired or the user requests another attempt.
+- **Failure posture**: Consume top-level `hints[]` first. Ask only for a genuine missing HITL decision; execute authorized mechanical repair yourself and rerun the exact same Gate.
 
 ## 1. Stage Goal
 
@@ -149,7 +149,7 @@ Research style CLI 成功后，Agent MUST 使用当前环境的实际 search/fet
 
 `search_surface` / `fetch_surface` MAY 记录当前工具名称作 audit label，但不是 gate-required facts。不要记录 query history、response body、HTTP status matrix、retry list 或 derived gate verdict。
 
-**Unavailable recovery：** 保留已记录的 `research_profile`、`root_must_answer_set`、style params 和 `hitl1.status: recorded`。明确告诉用户当前环境无法启动 evidence-backed waves；修复/切换环境或用户要求再次尝试后，重跑本节同一 bounded probe 和同一 gate，不要求用户重复回答 HITL1 choices。
+**Unavailable recovery：** 保留已记录的 `research_profile`、`root_must_answer_set`、style params 和 `hitl1.status: recorded`。明确告诉用户当前环境无法启动 evidence-backed waves；修复/切换环境或用户要求再次尝试后，重跑本节同一 bounded probe 和同一 gate，不要求用户重复回答 HITL1 choices。在 probe 与 gate 成功前不得进入 Setup。
 
 **Evidence boundary：** Probe URL、page content 和 tool output SHALL NOT 写入或计入 `reference/`、`_cache/`、`artifacts/`、work-unit output/result/receipt、`rb_work_unit_ledger.jsonl`、`rb_output_declarations.jsonl` 或任何 Wave coverage/count floor。
 
@@ -186,24 +186,25 @@ node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle <path> --cur
 
 ## 7. On Gate Fail
 
-读取 CLI 返回的 `inspect` / `advice`，补充缺失字段或修正默认值后 rerun same gate。常见 fail 原因：
-- `research_profile` 仍为 `not_selected` → 确认用户选择后写入
-- `root_must_answer_set` 为空 → 确认用户 must-answer 问题后写入
-- `research_style_params` 缺失或不完整 → 重新运行 `apply-research-style.mjs` CLI
-- canonical topic-state workspace/seed binding fail → 运行返回的 exact recover/repair action，再重跑同一 gate
-- `research_access` 缺失或仍为 `unprobed` → 按 §3d 运行真实 bounded probe
-- `research_access.status` 为 `unavailable` → 读取 `research_access.reason`，保留用户 choices，修复/切换环境后重跑同一 probe 和 gate；不得进入 Setup
-- `research_access.status` 为 `available` 但 schema invalid → 修正 timestamp/HTTP(S) URL/fetch outcome 的直接 observation；不得伪造 success
-- `hitl1.status` 不是 `recorded` → 写入 `recorded`
-- `hitl1.recorded_at` 缺失 → 写入当前时间戳
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority，也不得用其 prose 猜 repair kind、字段或命令。按每个 independent primary hint 执行：
+
+1. `repair_kind: user_decision`：只向用户询问 `missing_fact` 指出的真实 HITL1 语义，例如尚未选择的 `research_profile`、缺失的 must-answer 问题或未确认的 Topic intent。不得要求用户运行普通命令，也不得重复询问已经记录的 choice。
+2. `repair_kind: agent_action`：在用户决定已经存在、且 `write_to` 是 authorized mutable surface 时，由 Agent 写入或修正 exact field/file；不得借机械 repair 发明新的用户语义或伪造 probe success。
+3. `repair_kind: engine_operation`：由 Agent 运行 `write_to` 指向的 existing legal operation，例如 style apply、topic-state inspect/recover/apply 或其他 exact command；不得让用户代跑，也不得直接编辑 Engine-owned authority。
+4. `repair_kind: external_action`：只暴露当前环境无法代理的 search/fetch 前置条件；保留已记录 choices，环境修复或用户要求再次尝试后，由 Agent 重跑同一 bounded probe。
+5. `repair_kind: missing_contract`：报告 exact unavailable capability/contract boundary，不手写 status、trace、receipt、provenance 或平行成功状态。
+
+Hint 不创造 permission。用户决定或外部前置条件满足后，后续机械步骤立即回到 Agent；完成可执行动作后 Agent MUST 运行 hint 的 exact `rerun`，回到同一个 `hitl1-recorded` checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 猜 blocking repair；按 `missing_contract` 暴露最小边界。
+
+常见 root 仍按上述责任分类：`research_style_params` 通过 `apply-research-style.mjs`；canonical topic-state workspace/binding 通过返回的 exact operation；`research_access: unprobed` 运行 §3d 真实 bounded probe；`unavailable` 是外部前置条件；available-path schema repair只能基于当次真实 observation。只有用户决定真实存在且已持久化后，才可记录 `hitl1.status: recorded`；`recorded_at` 缺失属于随后可执行的机械修复。
 
 ## 8. Stop Behavior
 
-`stop: yes` — Agent MUST 暂停执行，等待用户回答结构化问题。用户回答完毕并写入 bundle 后，运行 gate 继续。
+`stop: yes` — 仅当当前 `user_decision` hint 指出尚未取得的结构化 HITL1 回答时，Agent MUST 暂停并等待该最小决定。若用户 choice 已记录而 Gate 只剩 `agent_action` 或 `engine_operation`，Agent 必须自行执行，不得再次把用户变成 pipeline co-runner。用户回答写入 accepted owner 后，由 Agent 运行 exact `rerun` 继续。
 
 `stop: yes` 只意味着等待用户输入，不意味着豁免 deterministic check。用户回答后，仍必须运行 `hitl1-recorded` gate。
 
-若 probe 记录 `unavailable`，Agent 保持 HITL1，向用户暴露 blocker；用户 choices 保留，后续只重跑同一 bounded probe 和 gate。
+若 probe 记录 `unavailable`，Agent 保持 HITL1，只暴露 `external_action` 的最小 blocker；用户 choices 保留，后续由 Agent 重跑同一 bounded probe 和 gate。
 
 ## 9. Anti-Cheating Rules
 

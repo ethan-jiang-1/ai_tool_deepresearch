@@ -6,25 +6,33 @@
       "id": "synthesis_exists",
       "check": "file_exists",
       "target": "artifacts/wave2/synthesis.md",
-      "failure_message": "Missing file: artifacts/wave2/synthesis.md. Write a cross-topic narrative projection referencing Wave0/Wave1 artifacts and W2F-xxx finding ids."
+      "failure_message": "Missing file: artifacts/wave2/synthesis.md. Write a cross-topic narrative projection referencing Wave0/Wave1 artifacts and W2F-xxx finding ids.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "synthesis_non_empty",
       "check": "field_non_empty",
       "target": "artifacts/wave2/synthesis.md",
-      "failure_message": "artifacts/wave2/synthesis.md is empty. Write a cross-topic synthesis that references Wave0 and Wave1 artifacts."
+      "failure_message": "artifacts/wave2/synthesis.md is empty. Write a cross-topic synthesis that references Wave0 and Wave1 artifacts.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "ledger_exists",
       "check": "file_exists",
       "target": "artifacts/wave2/cross-topic-ledger.md",
-      "failure_message": "Missing file: artifacts/wave2/cross-topic-ledger.md. Build the cross-topic ledger with scan matrix, legacy questions, resolutions, emergent questions, exploration decisions, and HITL2 handoff."
+      "failure_message": "Missing file: artifacts/wave2/cross-topic-ledger.md. Build the cross-topic ledger with scan matrix, legacy questions, resolutions, emergent questions, exploration decisions, and HITL2 handoff.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "ledger_non_empty",
       "check": "field_non_empty",
       "target": "artifacts/wave2/cross-topic-ledger.md",
-      "failure_message": "artifacts/wave2/cross-topic-ledger.md is empty. Populate all 6 fixed sections with finding data."
+      "failure_message": "artifacts/wave2/cross-topic-ledger.md is empty. Populate all 6 fixed sections with finding data.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "ledger_fixed_sections",
@@ -32,25 +40,30 @@
       "target": "artifacts/wave2/cross-topic-ledger.md",
       "pattern": "## Cross-Topic Scan Matrix[\\s\\S]*## Wave1 Legacy Questions[\\s\\S]*## Cross-Topic Resolutions[\\s\\S]*## Emergent Cross-Topic Questions[\\s\\S]*## Exploration Decisions[\\s\\S]*## HITL2 Handoff",
       "negate": false,
-      "failure_message": "cross-topic-ledger.md is missing one or more required section headings. Ensure all 6 sections (Cross-Topic Scan Matrix, Wave1 Legacy Questions, Cross-Topic Resolutions, Emergent Cross-Topic Questions, Exploration Decisions, HITL2 Handoff) are present."
+      "failure_message": "cross-topic-ledger.md is missing one or more required section headings. Ensure all 6 sections (Cross-Topic Scan Matrix, Wave1 Legacy Questions, Cross-Topic Resolutions, Emergent Cross-Topic Questions, Exploration Decisions, HITL2 Handoff) are present.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "index_exists",
       "check": "file_exists",
       "target": "artifacts/wave2/finding-index.yaml",
-      "failure_message": "Missing file: artifacts/wave2/finding-index.yaml. Write the JS-readable shadow index with all 15 required fields per finding."
+      "failure_message": "Missing file: artifacts/wave2/finding-index.yaml. Write the JS-readable shadow index with all 15 required fields per finding.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "index_yaml_parse",
       "check": "yaml_parse",
       "target": "artifacts/wave2/finding-index.yaml",
-      "failure_message": "finding-index.yaml is not valid YAML. Fix syntax errors."
+      "failure_message": "finding-index.yaml is not valid YAML. Fix syntax errors.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "finding_index_contract",
       "check": "finding_index_contract",
       "target": "artifacts/wave2/finding-index.yaml",
-      "failure_message": "finding-index.yaml must prove scan matrix coverage, confidence/backing consistency, gap_status convergence, synthesis eligibility, and targeted-evidence receipt or explicit deferral consistency."
+      "failure_message": "finding-index.yaml must prove scan matrix coverage, confidence/backing consistency, gap_status convergence, synthesis eligibility, and targeted-evidence receipt or explicit deferral consistency.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "synthesis_finding_id_ref",
@@ -58,7 +71,9 @@
       "target": "artifacts/wave2/synthesis.md",
       "pattern": "W2F-\\d{3}",
       "negate": false,
-      "failure_message": "synthesis.md contains no W2F-xxx finding id reference. Add finding id references to link narrative claims back to the ledger/index."
+      "failure_message": "synthesis.md contains no W2F-xxx finding id reference. Add finding id references to link narrative claims back to the ledger/index.",
+      "finding": { "source": "definition", "blocking_basis": "binding_integrity" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "cross_artifact_references",
@@ -68,7 +83,8 @@
       "link_pattern": "\\[([^\\]]+)\\]\\(([^)]+\\.md)\\)",
       "resolve_relative_to": "artifacts/wave2",
       "min_valid_refs": 1,
-      "failure_message": "No valid artifact references found in synthesis. Add at least one Markdown link (e.g. [label](../wave1/topic-a/evidence-summary.md)) that points to an existing Wave0 or Wave1 artifact file in the bundle."
+      "failure_message": "No valid artifact references found in synthesis. Add at least one Markdown link (e.g. [label](../wave1/topic-a/evidence-summary.md)) that points to an existing Wave0 or Wave1 artifact file in the bundle.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "wave1_evidence_ref",
@@ -76,13 +92,15 @@
       "target": "artifacts/wave2/synthesis.md",
       "pattern": "\\[.*\\]\\(\\.\\./wave1/.*/(evidence-summary|question-list)\\.md\\)",
       "negate": false,
-      "failure_message": "synthesis.md contains no reference to wave1 evidence-summary.md or question-list.md. Add at least one Markdown link to a wave1 deepening artifact."
+      "failure_message": "synthesis.md contains no reference to wave1 evidence-summary.md or question-list.md. Add at least one Markdown link to a wave1 deepening artifact.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "rerun_add_full_synthesis",
       "check": "rerun_add_full_synthesis",
       "target": "artifacts/wave2",
-      "failure_message": "Rerun action:add requires full Wave2 re-synthesis: no Delta Synthesis as the main path, and ledger/index coverage must include every topic slug."
+      "failure_message": "Rerun action:add requires full Wave2 re-synthesis: no Delta Synthesis as the main path, and ledger/index coverage must include every topic slug.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "backfill_judgment_token_absent",
@@ -90,7 +108,9 @@
       "target": "seed_topics/{topic}.md",
       "pattern": "__BACKFILL_WAVE2_JUDGMENT__",
       "negate": true,
-      "failure_message": "Unreplaced __BACKFILL_WAVE2_JUDGMENT__ token found in seed topic file. Execute backfill task: project cross-topic judgments from ledger/index."
+      "failure_message": "Unreplaced __BACKFILL_WAVE2_JUDGMENT__ token found in seed topic file. Execute backfill task: project cross-topic judgments from ledger/index.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "backfill_questions_token_absent",
@@ -98,20 +118,24 @@
       "target": "seed_topics/{topic}.md",
       "pattern": "__BACKFILL_PENDING_QUESTIONS__",
       "negate": true,
-      "failure_message": "Unreplaced __BACKFILL_PENDING_QUESTIONS__ token found in seed topic file. Execute backfill task: update question status labels from ledger/index."
+      "failure_message": "Unreplaced __BACKFILL_PENDING_QUESTIONS__ token found in seed topic file. Execute backfill task: update question status labels from ledger/index.",
+      "finding": { "source": "definition", "blocking_basis": "required_structure" },
+      "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
     {
       "id": "trace_event_wave2_completion",
       "check": "trace_event_present",
       "target": "wave2_completion",
-      "failure_message": "No wave2_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event before the gate."
+      "failure_message": "No wave2_completion trace event found in rb_trace.jsonl. The phase must write a completion trace event before the gate.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "wave2_cross_reference_index_coverage",
       "check": "reference_index_coverage",
       "target": "reference/00-cross-*.md",
       "source_layer": "wave2_cross",
-      "failure_message": "Wave2 00-cross references must have matching reference/_INDEX.md rows with source_layer wave2_cross. Missing index rows are reference navigation drift; source_layer is not evidence authority without submitted or prior-wave backing."
+      "failure_message": "Wave2 00-cross references must have matching reference/_INDEX.md rows with source_layer wave2_cross. Missing index rows are reference navigation drift; source_layer is not evidence authority without submitted or prior-wave backing.",
+      "finding": { "source": "checker" }
     },
     {
       "_comment": "Wave2 conditional provenance: new fetched evidence requires submitted wave2_targeted_evidence coverage. Existing-backed pure-synthesis reference/00-cross-*.md files may pass as Phase-owned projections when concrete prior Wave0/Wave1 backing and W2F ledger/index refs exist.",
@@ -125,7 +149,8 @@
           "reference"
         ]
       },
-      "failure_message": "Wave2 00-cross references must either bind to submitted wave2_targeted_evidence coverage for new fetched evidence or classify as existing-backed Phase-owned projections with W2F-xxx, finding-index/cross-topic-ledger refs, and concrete prior-wave submitted backing. Synthetic or newly searched source_url values without targeted evidence are invalid."
+      "failure_message": "Wave2 00-cross references must either bind to submitted wave2_targeted_evidence coverage for new fetched evidence or classify as existing-backed Phase-owned projections with W2F-xxx, finding-index/cross-topic-ledger refs, and concrete prior-wave submitted backing. Synthetic or newly searched source_url values without targeted evidence are invalid.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "wave2_work_unit_submission_presence",
@@ -138,14 +163,16 @@
           "reference"
         ]
       },
-      "failure_message": "Wave2 submitted work-unit rows failed index/manifest/result/receipt/beacon/output/cache/hash cross-checks. Existing-backed 00-cross projections do not need a new Wave2 row; new fetched evidence does."
+      "failure_message": "Wave2 submitted work-unit rows failed index/manifest/result/receipt/beacon/output/cache/hash cross-checks. Existing-backed 00-cross projections do not need a new Wave2 row; new fetched evidence does.",
+      "finding": { "source": "checker" }
     },
     {
       "id": "wave2_delegated_bypass_suspected",
       "check": "delegated_bypass_suspected",
       "target": "reference/00-cross-*.md",
       "wave": "wave2",
-      "failure_message": "Wave2 delegated evidence search artifacts appear without submitted targeted-evidence coverage, or a 00-cross reference cannot be classified as an existing-backed Phase-owned projection."
+      "failure_message": "Wave2 delegated evidence search artifacts appear without submitted targeted-evidence coverage, or a 00-cross reference cannot be classified as an existing-backed Phase-owned projection.",
+      "finding": { "source": "checker" }
     }
   ]
 }

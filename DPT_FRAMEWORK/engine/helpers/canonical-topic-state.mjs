@@ -13,6 +13,7 @@ import { WorkUnitManifestSchema } from '../../schema/contracts/work-unit.mjs';
 import { checkPhaseHandoffPreflight } from './handoff-helpers.mjs';
 import { readSubmittedWorkUnitDeclarations } from './gate-helpers-readers.mjs';
 import { acceptedTopicSlugs, buildTopicLayoutTarget, evaluateTopicLayouts, losslessTopicSlugStem, resolveStructuredTopicBinding } from './topic-layout.mjs';
+import { makeContractFinding } from './wave-contract-findings.mjs';
 
 export const TOPIC_STATE_SCHEMA_VERSION = '1.0.0';
 export const TOPIC_STATE_ROOT = '_diagnostics/topic-state';
@@ -300,24 +301,69 @@ function progressRows(bundle, plan, bindings) {
   return { topics, blocker: submitted.blocker };
 }
 
+function topicStateBlockerFinding(bundlePath, blocker) {
+  const reasonCode = blocker.reason_code || 'topic_state_prerequisite_invalid';
+  const recommended = blocker.recommended_action || null;
+  const engineCommand = typeof recommended === 'string' && recommended.startsWith('node ');
+  const userDecision = reasonCode === 'legacy_migration_required';
+  const basis = reasonCode.includes('binding') || reasonCode.includes('mismatch')
+    ? 'binding_integrity'
+    : (reasonCode.includes('submitted') || reasonCode === 'artifact_without_submitted_fact' ? 'authority_integrity' : 'required_structure');
+  const repairKind = engineCommand ? 'engine_operation' : (userDecision ? 'user_decision' : 'missing_contract');
+  const writeTo = engineCommand
+    ? recommended
+    : (userDecision ? 'phases/phase-rerun.md' : `Canonical topic-state prerequisite boundary '${reasonCode}'`);
+  const observed = {
+    reason_code: reasonCode,
+    reason: blocker.reason || null,
+    fact_refs: blocker.fact_refs || [],
+  };
+  return makeContractFinding({
+    id: `canonical_topic_state:${reasonCode}`,
+    ruleId: 'canonical_topic_state_prerequisite',
+    findingSource: 'checker',
+    blockingBasis: basis,
+    surface: blocker.workspace || blocker.path || 'rb_plan.md + UID-bound seed/topic authority',
+    expected: 'Canonical topic registry, seed bindings, submitted-topic authority, and accepted workspace state are internally consistent.',
+    observed,
+    missingFact: `Canonical topic-state prerequisite failed: ${reasonCode}${blocker.reason ? ` — ${blocker.reason}` : ''}`,
+    repairKind,
+    writeTo,
+    detail: `Canonical topic-state prerequisite failed: ${reasonCode}`,
+    repair: recommended || (userDecision
+      ? 'Enter sanctioned rerun and provide explicit migration semantics.'
+      : 'Use the owning topic-state/work-unit boundary; no direct authority edit is currently authorized.'),
+  });
+}
+
+function withTopicStateFindings(result, bundlePath) {
+  return {
+    ...result,
+    blockers: (result.blockers || []).map((blocker) => ({
+      ...blocker,
+      finding: topicStateBlockerFinding(bundlePath, blocker),
+    })),
+  };
+}
+
 export function inspectCanonicalTopicState({ bundlePath }) {
   const bundle = safeBundle(bundlePath);
   const workspaces = acceptedWorkspaces(bundle);
-  if (workspaces.length > 0) return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'inspect', passed: false, mode: 'blocked', blockers: [{ reason_code: 'accepted_workspace', operation_id: workspaces[0].operation_id, workspace: workspaces[0].workspace, recommended_action: `node DPT_FRAMEWORK/cli/operate-topic-state.mjs recover --bundle ${bundlePath} --operation-id ${workspaces[0].operation_id}` }], topics: [] };
+  if (workspaces.length > 0) return withTopicStateFindings({ schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'inspect', passed: false, mode: 'blocked', blockers: [{ reason_code: 'accepted_workspace', operation_id: workspaces[0].operation_id, workspace: workspaces[0].workspace, recommended_action: `node DPT_FRAMEWORK/cli/operate-topic-state.mjs recover --bundle ${bundlePath} --operation-id ${workspaces[0].operation_id}` }], topics: [] }, bundlePath);
   const planPath = path.join(bundle, 'rb_plan.md');
   if (!existsSync(planPath) || lstatSync(planPath).isSymbolicLink() || !lstatSync(planPath).isFile()) {
-    return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'inspect', passed: false, mode: 'invalid', blockers: [{ reason_code: 'plan_missing', recommended_action: 'Restore a regular rb_plan.md through the owning lifecycle path, then rerun inspect.' }], topics: [] };
+    return withTopicStateFindings({ schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'inspect', passed: false, mode: 'invalid', blockers: [{ reason_code: 'plan_missing', recommended_action: 'Restore a regular rb_plan.md through the owning lifecycle path, then rerun inspect.' }], topics: [] }, bundlePath);
   }
   let plan;
   try {
     plan = splitPlan(readFileSync(planPath, 'utf8')).frontmatter;
   } catch (error) {
-    return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'inspect', passed: false, mode: 'invalid', blockers: [{ reason_code: 'plan_invalid', reason: error.message }], topics: [] };
+    return withTopicStateFindings({ schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'inspect', passed: false, mode: 'invalid', blockers: [{ reason_code: 'plan_invalid', reason: error.message }], topics: [] }, bundlePath);
   }
   const canonical = CanonicalPlanSchema.safeParse(plan);
   if (!canonical.success) {
     const legacy = LegacyPlanSchema.safeParse(plan);
-    return { schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'inspect', passed: legacy.success, mode: legacy.success ? 'legacy' : 'invalid', blockers: legacy.success ? [{ reason_code: 'legacy_migration_required', recommended_action: 'Enter sanctioned rerun and prepare explicit migrate_legacy input.' }] : [{ reason_code: 'plan_invalid', reason: canonical.error.message }], topics: [] };
+    return withTopicStateFindings({ schema_version: TOPIC_STATE_SCHEMA_VERSION, operation: 'inspect', passed: legacy.success, mode: legacy.success ? 'legacy' : 'invalid', blockers: legacy.success ? [{ reason_code: 'legacy_migration_required', recommended_action: 'Enter sanctioned rerun and prepare explicit migrate_legacy input.' }] : [{ reason_code: 'plan_invalid', reason: canonical.error.message }], topics: [] }, bundlePath);
   }
   const bindings = canonicalBinding(bundle, canonical.data);
   const progress = progressRows(bundle, canonical.data, bindings);
@@ -330,7 +376,7 @@ export function inspectCanonicalTopicState({ bundlePath }) {
       ...(slugStem ? { slug_stem: slugStem } : { slug_stem_required: true }),
     };
   });
-  return {
+  return withTopicStateFindings({
     schema_version: TOPIC_STATE_SCHEMA_VERSION,
     operation: 'inspect',
     passed: blockers.length === 0,
@@ -339,7 +385,7 @@ export function inspectCanonicalTopicState({ bundlePath }) {
     layout_baseline: { context: 'rerun', action: 'mutate_layout', expected_plan_sha256: hashBytes(readFileSync(planPath)), topics: layoutBaseline, remove_topic_uids: [] },
     blockers,
     topics: progress.topics,
-  };
+  }, bundlePath);
 }
 
 function buildMutation(bundle, parsedPlan, input) {

@@ -169,6 +169,17 @@ describe('Gate CLI integration', () => {
     function fwCopy() { return join(tmpDir, 'DPT_FRAMEWORK'); }
 
     function writeWave0PreflightState() {
+      writeFileSync(join(tmpDir, 'rb_plan.md'), [
+        '---',
+        'plan_basename: check-gate',
+        'derived_topic_count: 1',
+        'topic_registry:',
+        '  - id: "01"',
+        '    slug: topic-a',
+        '    title: Topic A',
+        '---',
+        '# Plan',
+      ].join('\n'));
       writeFileSync(join(tmpDir, 'rb_status.json'), JSON.stringify({
         current_mode: 'execution',
         state: 'in_progress',
@@ -204,7 +215,13 @@ describe('Gate CLI integration', () => {
         gate: 'wave0-complete',
         description: 'Bad def with unknown check type',
         rules: [
-          { id: 'bad_rule', check: 'nonexistent_check_type_xyz', target: 'dummy', failure_message: 'Should never see this if rule fails' },
+          {
+            id: 'bad_rule',
+            check: 'nonexistent_check_type_xyz',
+            target: 'dummy',
+            failure_message: 'Should never see this if rule fails',
+            finding: { source: 'checker' },
+          },
         ],
       }));
       writeWave0PreflightState();
@@ -221,6 +238,30 @@ describe('Gate CLI integration', () => {
       assert.ok(out.inspect.some(m => m.includes('nonexistent_check_type_xyz') || m.includes('Unknown check type')),
         `Inspect must mention the unknown check type. Got: ${JSON.stringify(out.inspect)}`);
       assert.ok(out.advice.length > 0, 'advice must not be empty on fail');
+    });
+
+    it('schema-invalid Gate definition is rejected by the production reader', () => {
+      const badDefPath = join(fwCopy(), 'schema', 'gate_definitions', 'gate-hitl1-recorded.definition.json');
+      writeFileSync(badDefPath, JSON.stringify({
+        gate: 'hitl1-recorded',
+        description: 'Raw negative fixture with a missing finding-source contract.',
+        rules: [{
+          id: 'profile_exists',
+          check: 'file_exists',
+          target: 'rb_profile.yaml',
+          failure_message: 'Compatibility prose.',
+        }],
+      }));
+
+      const script = join(fwCopy(), 'cli', 'gates', 'check-gate-hitl1-recorded.mjs');
+      const r = spawnSync('node', [
+        script, '--bundle', tmpDir, '--current-node', 'phases/phase-hitl1.md',
+      ], { encoding: 'utf-8', timeout: 10000 });
+
+      const out = JSON.parse(r.stdout);
+      assert.strictEqual(r.status, 2);
+      assert.strictEqual(out.routing.kind, 'config_error');
+      assert.ok(out.inspect.some((line) => /finding|Gate definition/i.test(line)), JSON.stringify(out.inspect));
     });
 
     it('corrupt gate definition returns valid JSON error (not crash)', () => {

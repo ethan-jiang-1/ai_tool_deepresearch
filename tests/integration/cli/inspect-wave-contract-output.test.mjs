@@ -86,9 +86,22 @@ describe('wave inspect output and purity', () => {
       assert.equal(typeof output.check.checks_failed, 'number');
       assert.ok(['blocking', 'diagnostic-only'].includes(output.check.return_map_classification));
       assert.ok(Array.isArray(output.check.failed_rule_ids));
+      assert.equal(output.check.failed_rule_ids.some((id) => id.startsWith('configuration_integrity:')), false, JSON.stringify(output));
       assert.ok(Array.isArray(output.check.finding_classification.blocking));
       assert.ok(Array.isArray(output.inspect));
       assert.ok(Array.isArray(output.advice));
+      assert.ok(Array.isArray(output.hints));
+      if (!output.check.passed) {
+        assert.ok(output.hints.length > 0, JSON.stringify(output));
+        for (const hint of output.hints) {
+          assert.equal(typeof hint.rule_id, 'string');
+          assert.equal(typeof hint.repair_kind, 'string');
+          assert.equal(typeof hint.missing_fact, 'string');
+          assert.equal(typeof hint.write_to, 'string');
+          assert.match(hint.rerun, new RegExp(cli.replaceAll('.', '\\.')));
+          assert.match(hint.rerun, new RegExp(bundle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+        }
+      }
       assert.equal(Object.hasOwn(output, 'routing'), false);
       assert.deepEqual(snapshot(bundle), before);
     });
@@ -96,6 +109,12 @@ describe('wave inspect output and purity', () => {
     it(`${cli} uses exit code 2 when --bundle has no value`, () => {
       const result = spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli', cli), '--bundle'], { encoding: 'utf8' });
       assert.equal(result.status, 2);
+      const output = JSON.parse(result.stdout);
+      assert.equal(output.check.passed, false);
+      assert.equal(Object.hasOwn(output, 'routing'), false);
+      assert.equal(output.hints.length, 1);
+      assert.match(output.hints[0].missing_fact, /--bundle/);
+      assert.match(output.hints[0].rerun, /--bundle <bundle-path>$/);
     });
   }
 });
