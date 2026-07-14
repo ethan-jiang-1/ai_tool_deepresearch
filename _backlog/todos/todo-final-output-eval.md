@@ -1,6 +1,6 @@
 # TODO: final-output-eval（最终产物评估 → 自动 rerun）
 
-> 状态: 待设计 | 优先级: 低–中 | 更新: 2026-07-09  
+> 状态: 待设计 | 优先级: 低–中 | 更新: 2026-07-15  
 > 直接依赖: HITL2 + `phase-rerun` ✅；概念依赖: evidence-quality + explore-exploit 信号  
 > 相关: `DONE-rerun-incremental-node`（rerun 怎么执行）；degraded pass（wave 级，≠ 本 todo）
 
@@ -18,15 +18,16 @@
 
 不替代 HITL2；类似 CI auto-retry。
 
-## 地基对齐（2026-07-09）
+## 地基对齐（2026-07-15）
 
 | 假设 | 现状 |
 |------|------|
 | HITL2 五决策仍纯用户 | ✅ |
 | rerun node 可接 auto_rerun | ✅ `phase-rerun.md` |
+| routed rerun pipeline | ✅ **repair-rerun 已落地** — 新增 topic 走正常 Wave0/Wave1 队列 + work-unit + submit + gate |
 | `FinalOutputEval` / `evaluateFinalOutput` | ❌ 无 |
 | wave 级 degraded pass = run 级 eval | ❌ **不同层** — degraded 是 gate handoff escape；本 todo 是交付前自评 |
-| 静默契约已可靠 | ⚠️ BUG-069 — 契约漂移时 auto_rerun 可能空转；需可信 gate 状态作输入 |
+| 静默契约已可靠 | ✅ BUG-069 已修复，gate hints + contract lineage 落地 |
 
 ## 评估什么（方向不变）
 

@@ -1,6 +1,6 @@
 # TODO: context-reground（长上下文 head 重锚 — parked）
 
-> 状态: parked | 优先级: 低 | 更新: 2026-07-09  
+> 状态: parked | 优先级: 低 | 更新: 2026-07-15  
 > 互补: `todo-phase-recover.md`（已晕时兜底）  
 > 相关: 各 phase §6 `check.next` tail anchoring — **增强不取代**
 
@@ -10,7 +10,7 @@
 
 Tail anchoring（§6 → `check.next`）仍然正确且 load-bearing。本 todo 补的是 **head grounding**。
 
-## 地基对齐（2026-07-09）
+## 地基对齐（2026-07-15）
 
 | 旧期望 | 现状 |
 |--------|------|
@@ -18,6 +18,7 @@ Tail anchoring（§6 → `check.next`）仍然正确且 load-bearing。本 todo 
 | 无 periodic reground 机制 | ✅ 仍成立 — 无 dedicated reground MD |
 | `plan-hostfile` sections | ✅ 已有，但未周期性注入上下文 |
 | Engine token 计数触发 | ❌ 仍无（正确 non-goal） |
+| repair-rerun 恢复 infra | ✅ post-final-recovery、consistency-validator、handoff-helpers 已落地 — 本 todo 的「我在哪」可复用这些模块的真相读取路径 |
 
 ## Current Direction（不变，仅换真相源）
 

@@ -1,6 +1,6 @@
 # TODO: evidence-quality（语义层 discard — 结构计数已落地）
 
-> 状态: 待设计（已收窄） | 优先级: 高 | 更新: 2026-07-09  
+> 状态: 待设计（已收窄） | 优先级: 高 | 更新: 2026-07-15  
 > 上游: `todo-evidence-extraction` ✅ DONE（`ref-count.mjs` + ledger + CCC 结构门槛）  
 > 下游: `todo-explore-exploit` → `todo-final-output-eval`
 
@@ -10,7 +10,7 @@ Extraction 已回答「声明了什么、结构上能不能数」。Quality 回�
 
 `isCountable()` 今天只做**结构门槛**（acceptance、CCC≥100、Key Facts≥5、可解析 URL）。一条 reference 可以结构过关，仍然 thin / 软广 / 与 claim 无关。这类材料应从 countable coverage **discard**，不是用 prose「修」成高质量。
 
-## 地基对齐（2026-07-09）
+## 地基对齐（2026-07-15）
 
 | 旧期望 | 现状 |
 |--------|------|
@@ -18,6 +18,9 @@ Extraction 已回答「声明了什么、结构上能不能数」。Quality 回�
 | 用 `fail_c` fork 分支做 discard | ❌ 无此 enum/分支；不可数已由 `isCountable: false` 静默排除；wave 级 escape 是 **degraded pass** |
 | CandidateCard / promote | ❌ 已退役；勿再设计 |
 | 重做 CCC/Key Facts 门槛 | ❌ 已在 `ref-count.mjs` — **本 todo 不碰** |
+| countability 用 content/presentation 启发式 | ✅ **repair-rerun 已收窄**（BUG-086）：仅 `accepted` status + parseable source URL；`key_facts_min_lines` 规则已删除 |
+| depth facts 需 Agent 手抄 ledger/cache 真相 | ✅ **repair-rerun 已修复**（BUG-087）：Engine 从 reviewed submitted rows 派生，Agent 只给 reviewed refs + 不可派生判断 |
+| BUG-069 契约不自洽阻塞 gate 消费面 | ✅ **已修复** — gate hints + contract lineage 落地，不再在漂移契约上叠语义规则 |
 
 ## Current Direction（收窄后）
 
@@ -64,4 +67,4 @@ const EvidenceQuality = z.object({
 ## Next Step
 
 `/opsx:explore evidence-quality` — 只谈语义字段落点 + Engine 最少规则 + 与 `uncountable[]`/degraded 的关系。  
-前置建议：BUG-069 契约自洽有进展后再大改 gate 消费面，避免在漂移契约上叠语义规则。
+countability 结构层已由 repair-rerun 收窄；本 todo 聚焦语义层，不再担心 gate 契约漂移。

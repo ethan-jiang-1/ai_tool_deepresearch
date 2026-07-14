@@ -1,6 +1,6 @@
 # TODO: user-knowledge-hang（小白可挂的「找 / 鉴 / 写」知识包）
 
-> 状态: 待设计 | 优先级: 中 | 更新: 2026-07-09  
+> 状态: 待设计 | 优先级: 中 | 更新: 2026-07-15  
 > 目标: **机制越简单越好**；小白能挂上；高度可定制  
 > 相关但不等同: HITL1 `search_preference`（太薄）、`todo-helper-not-tool` 跨 run 记忆（太重）、`todo-evidence-quality`（Engine 语义规则）
 

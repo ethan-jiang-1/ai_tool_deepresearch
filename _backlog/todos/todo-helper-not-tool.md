@@ -1,22 +1,23 @@
 # TODO: 让系统成为"靠谱的同事"而非"工具"（北星 — 已收窄/延后实施）
 
-> 状态: 北星保留 / 实施延后 | 优先级: 低–中（人格层） | 更新: 2026-07-09  
+> 状态: 北星保留 / 实施延后 | 优先级: 低–中（人格层） | 更新: 2026-07-15  
 > 直接依赖: `DONE-hitl-ux` ✅（环机制已就位）  
-> **硬前置（新增）:** BUG-069 有进展 + `todo-coding-agent-setup-ux` — 静默跑不通时谈「同事感」是化妆
+> **硬前置:** ~~BUG-069 有进展 + `todo-coding-agent-setup-ux`~~ ✅ 两者均已解决 — BUG-069 已修复移入 `_done/_fixed_bugs/`，setup-ux 已关闭移入 `_done/_closed_plans/`。延后理由变为：等 quality/recover 稳定后再抬人格层，避免在流动地基上做皮肤。
 
 ## Why（北星仍成立）
 
 用户感知仍偏「操作机器」而非「研究员同事」。四根支柱：记忆、主动、沟通、同频 — 工程骨架对，面向用户的皮肤偏机器。
 
-## 地基对齐（2026-07-09）
+## 地基对齐（2026-07-15）
 
 | 旧期望 | 现状 |
 |--------|------|
 | 依赖活跃 `todo-hitl-ux` / `establish-hitl-ux` | ✅ **已 DONE/归档** — 用 `brief/hitl1.md`、`brief/hitl2.md`、`shared-agent-ux-guidance.md` |
 | `shared-hitl-prompt-templates.md` | ❌ **已拆** — 现为 `brief/hitl*.md` |
 | 全表面中文硬契约 + 改 wave 提示词 | ❌ **过重** — 见 `_backlog/plans/ux-user-facing-chinese-first-outside-waves.md`：内部 instruction 继续英语；只对漏给用户的输出 **prefer Chinese 软提示** |
-| `shared-agent-persona.md` + `~/.dpt/user-memory` + CLI | ❌ 均未建 — 仍属本北星，但勿在 launch 阻塞项之前开工 |
-| 静默阶段「同事自己干活」 | ⚠️ BUG-069 — 契约不自洽时无人值守不成立 |
+| `shared-agent-persona.md` + `~/.dpt/user-memory` + CLI | ❌ 均未建 — 仍属本北星，但勿在 quality/recover 稳定前开工 |
+| 静默阶段「同事自己干活」 | ✅ BUG-069 已修复，gate hints + contract lineage 落地，无人值守可达 |
+| BUG-069 + setup-ux 硬前置 | ✅ 两者均已解决 |
 
 ## 收窄后的实施顺序（若抬起）
 
@@ -32,7 +33,7 @@
 
 ## Next Step
 
-保持北星文档；**不要**现在 `/opsx:propose` 大人格 change。先 setup-ux + 069。
+保持北星文档；**不要**现在 `/opsx:propose` 大人格 change。硬前置已满足（069 + setup-ux ✅）；等 quality/recover 稳定后再抬，避免在流动地基上做皮肤。
 
 ## 记忆支柱细化：跨 run 双记忆（Preference + Experience）— 北星细化
 
