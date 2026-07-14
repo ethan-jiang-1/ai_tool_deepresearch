@@ -21,6 +21,9 @@ import {
   workUnitsRoot,
 } from './work-unit-index.mjs';
 import {
+  buildSourceRefLineage,
+} from './work-unit-validation.mjs';
+import {
   WORK_UNIT_BEACON_SCHEMA_VERSION,
   WorkUnitBeaconSchema,
   WorkUnitAgentFileSchema,
@@ -98,6 +101,59 @@ function sourceClaimItemSchema() {
   };
 }
 
+function validateEnvelopeContract(manifest, properties) {
+  const outputContract = manifest.output_contract;
+  const cachePolicy = manifest.cache_policy;
+  if (!outputContract || typeof outputContract !== 'object' || Array.isArray(outputContract)) {
+    throw new Error(`work-unit output contract is invalid for ${manifest.kind}: expected an object`);
+  }
+  const configuredRequired = outputContract.required_result_fields;
+  if (!Array.isArray(configuredRequired) || configuredRequired.length === 0) {
+    throw new Error(`work-unit output contract is invalid for ${manifest.kind}: required_result_fields must be a non-empty array`);
+  }
+  const required = uniqueStrings(configuredRequired);
+  if (required.length !== configuredRequired.length) {
+    throw new Error(`work-unit output contract is invalid for ${manifest.kind}: required_result_fields must contain unique non-empty strings`);
+  }
+  for (const identityField of BASE_RESULT_REQUIRED_FIELDS) {
+    if (!required.includes(identityField)) {
+      throw new Error(`work-unit output contract is invalid for ${manifest.kind}: required_result_fields must include ${identityField}`);
+    }
+  }
+  const unknownRequired = required.filter((field) => !Object.hasOwn(properties, field));
+  if (unknownRequired.length > 0) {
+    throw new Error(`work-unit output contract is invalid for ${manifest.kind}: unknown required result field(s) ${unknownRequired.join(', ')}`);
+  }
+
+  const roles = outputContract.output_files?.allowed_roles;
+  if (!Array.isArray(roles) || roles.length === 0 || uniqueStrings(roles).length !== roles.length) {
+    throw new Error(`work-unit output contract is invalid for ${manifest.kind}: output_files.allowed_roles must contain unique non-empty roles`);
+  }
+  const sourceClaims = outputContract.source_claims || {};
+  const priorRoles = sourceClaims.prior_submitted_output_roles;
+  if (priorRoles !== undefined) {
+    if (sourceClaims.allowed !== true) {
+      throw new Error(`work-unit output contract is invalid for ${manifest.kind}: prior_submitted_output_roles requires source_claims.allowed=true`);
+    }
+    if (!Array.isArray(priorRoles) || priorRoles.length === 0 || uniqueStrings(priorRoles).length !== priorRoles.length) {
+      throw new Error(`work-unit output contract is invalid for ${manifest.kind}: prior_submitted_output_roles must contain unique non-empty roles`);
+    }
+    const unknownPriorRoles = priorRoles.filter((role) => !roles.includes(role));
+    if (unknownPriorRoles.length > 0) {
+      throw new Error(`work-unit output contract is invalid for ${manifest.kind}: prior_submitted_output_roles must be a subset of output_files.allowed_roles (${unknownPriorRoles.join(', ')})`);
+    }
+  }
+  if (!cachePolicy || typeof cachePolicy !== 'object' || Array.isArray(cachePolicy)) {
+    throw new Error(`work-unit cache policy is invalid for ${manifest.kind}: expected an object`);
+  }
+  if (cachePolicy.required === true) {
+    const leafFiles = cachePolicy.leaf_files;
+    if (!Array.isArray(leafFiles) || leafFiles.length === 0 || uniqueStrings(leafFiles).length !== leafFiles.length) {
+      throw new Error(`work-unit cache policy is invalid for ${manifest.kind}: required leaf_files must contain unique non-empty paths`);
+    }
+  }
+}
+
 function resultSchemaDocument(manifest) {
   const outputContract = manifest.output_contract || {};
   const properties = {
@@ -118,6 +174,7 @@ function resultSchemaDocument(manifest) {
     properties.source_claims = { type: 'array', items: sourceClaimItemSchema(), default: [] };
     properties.accepted_source_urls = { type: 'array', items: { type: 'string', format: 'uri' }, default: [] };
   }
+  validateEnvelopeContract(manifest, properties);
   return {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
     title: `Work-unit result for ${manifest.kind}`,
@@ -129,6 +186,15 @@ function resultSchemaDocument(manifest) {
     properties,
     additionalProperties: false,
   };
+}
+
+function resultStarterFromSchema(schema) {
+  return Object.fromEntries(Object.entries(schema.properties).map(([field, contract]) => {
+    if (Object.hasOwn(contract, 'const')) return [field, contract.const];
+    if (Object.hasOwn(contract, 'default')) return [field, contract.default];
+    if (contract.type === 'array') return [field, []];
+    return [field, ''];
+  }));
 }
 
 function jsonBlock(value) {
@@ -180,7 +246,7 @@ function logDetailExample(manifest, lifecycleEvent) {
   };
 }
 
-function taskMarkdown(manifest, bundleDir) {
+function taskMarkdown(manifest, bundleDir, resultSchema) {
   const logCli = logCliPath();
   const abs = absolutePathMap(manifest, bundleDir);
   const workStartedReceipt = lifecycleReceiptExample(manifest, 'work_started');
@@ -189,6 +255,19 @@ function taskMarkdown(manifest, bundleDir) {
   const searchLog = logDetailExample(manifest, 'search_started');
   const fileLog = { ...logDetailExample(manifest, 'file_written'), path: '<bundle-relative-output-path>' };
   const errorLog = { ...logDetailExample(manifest, 'error'), reason: '<short-reason>' };
+  const resultStarter = resultStarterFromSchema(resultSchema);
+  let sourceRefLineage = { current_assigned_paths: [], eligible_prior_outputs: [] };
+  if (manifest.output_contract.source_claims?.allowed === true) {
+    try {
+      sourceRefLineage = buildSourceRefLineage(bundleDir, manifest);
+    } catch {
+      // Claim guidance remains available; submit will report the exact authority conflict.
+    }
+  }
+  const requiredResultFields = resultSchema.required.join(', ');
+  const allowedResultFields = Object.keys(resultSchema.properties).join(', ');
+  const allowedOutputRoles = manifest.output_contract.output_files.allowed_roles.join(', ');
+  const requiredCacheLeafFiles = (manifest.cache_policy.leaf_files || []).join(', ');
   return [
     `# Work Unit ${manifest.work_id}`,
     '',
@@ -229,6 +308,19 @@ function taskMarkdown(manifest, bundleDir) {
     '',
     '## Write-Before-Return Checklist',
     '',
+    `- Required result fields: ${requiredResultFields}`,
+    `- Allowed result fields: ${allowedResultFields}`,
+    `- Allowed output roles: ${allowedOutputRoles}`,
+    `- Required cache leaf files: ${requiredCacheLeafFiles || '<none>'}`,
+    ...(manifest.output_contract.output_files.reference_requires_source_url === true
+      ? ['- Every output with role `reference` must declare its parseable `source_url`.']
+      : []),
+    ...(manifest.output_contract.source_claims?.allowed === true
+      ? [
+          '- `source_claims[]` must use the generated item fields and bind accepted URLs to declared cache trails or an explicit degraded capture.',
+          '- `source_claims[].source_ref` may name a genuinely current path declared in this candidate `output_files[]`, or one exact prior submitted output listed below whose role is authorized by this kind contract. Do not redeclare or overwrite a prior file merely to cite it.',
+        ]
+      : []),
     '- Verify `_beacon.json`, `task.md`, and `result.schema.json` were read from the active `bundle_dir`.',
     '- Write every declared output file under `bundle_dir` only.',
     '- Write required cache leaves under `bundle_dir`; cache `page.md` must contain fetched page content or an explicit degraded/fetch-failure record, not an empty or placeholder header.',
@@ -239,12 +331,36 @@ function taskMarkdown(manifest, bundleDir) {
     '- Write `result.json` at the declared result path and verify it preserves the exact identity fields.',
     '- If any required write or verification fails, return a failure summary and do not claim success.',
     '',
+    '## Result JSON Starter',
+    '',
+    'Copy this JSON object to the assigned result path, replace semantic/output/cache values, and keep the binding fields exact. This block is guidance only; the Engine has not created `result.json`.',
+    '',
+    '```json',
+    jsonBlock(resultStarter),
+    '```',
+    '',
     '## Output Contract',
     '',
     '```json',
     jsonBlock(manifest.output_contract),
     '```',
     '',
+    ...(manifest.output_contract.source_claims?.allowed === true
+      ? [
+          '## Authorized Source-Ref Lineage',
+          '',
+          'These are bounded claim-time candidates, not a new authority. Formal submit reloads the current submitted ledger, index, manifest, queue, and canonical Topic binding before acceptance.',
+          '',
+          '```json',
+          jsonBlock({
+            current_assigned_paths: sourceRefLineage.current_assigned_paths,
+            prior_submitted_output_roles: manifest.output_contract.source_claims.prior_submitted_output_roles || [],
+            eligible_prior_outputs: sourceRefLineage.eligible_prior_outputs,
+          }),
+          '```',
+          '',
+        ]
+      : []),
     ...(manifest.kind === 'wave1_topic_deepening'
       ? [
           'For Wave1 topic deepening, include structured `source_claims[]`, `accepted_source_urls[]`, evidence-summary output, question-list output, and cache trails in `result.json`; prose links alone are not accepted source coverage.',
@@ -283,6 +399,15 @@ function taskMarkdown(manifest, bundleDir) {
     `node ${logCli} --bundle "${path.resolve(bundleDir)}" --level info --msg "work_unit_search_started" --detail '${JSON.stringify(searchLog)}'`,
     `node ${logCli} --bundle "${path.resolve(bundleDir)}" --level info --msg "work_unit_file_written" --detail '${JSON.stringify(fileLog)}'`,
     `node ${logCli} --bundle "${path.resolve(bundleDir)}" --level error --msg "work_unit_error" --detail '${JSON.stringify(errorLog)}'`,
+    '```',
+    '',
+    '## Work-Unit CLI Checkpoints',
+    '',
+    'Use the canonical absolute bundle root in every work-unit command, independent of the current working directory.',
+    '',
+    '```bash',
+    `node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit "${path.resolve(bundleDir)}" --work-id "${manifest.work_id}" --result "${abs.result_ref}"`,
+    `node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "${path.resolve(bundleDir)}" --work-id "${manifest.work_id}" --result "${abs.result_ref}"`,
     '```',
     '',
     '## Runtime Refs',
@@ -328,11 +453,12 @@ export function spawnPromptForWorkUnit(manifest, bundleDir = null) {
 
 export function writeWorkUnitEnvelope(bundleDir, manifest) {
   const parsed = WorkUnitManifestSchema.parse(manifest);
+  const resultSchema = resultSchemaDocument(parsed);
   const dir = path.join(bundleDir, parsed.paths.work_unit_dir);
   mkdirSync(dir, { recursive: true });
   writeJson(path.join(bundleDir, parsed.paths.manifest_ref), parsed);
-  writeFileSync(path.join(bundleDir, parsed.paths.task_ref), taskMarkdown(parsed, bundleDir));
-  writeJson(path.join(bundleDir, parsed.paths.result_schema_ref), resultSchemaDocument(parsed));
+  writeFileSync(path.join(bundleDir, parsed.paths.task_ref), taskMarkdown(parsed, bundleDir, resultSchema));
+  writeJson(path.join(bundleDir, parsed.paths.result_schema_ref), resultSchema);
   writeJson(path.join(bundleDir, parsed.paths.beacon_ref), WorkUnitBeaconSchema.parse({
     schema_version: WORK_UNIT_BEACON_SCHEMA_VERSION,
     work_id: parsed.work_id,

@@ -1,7 +1,7 @@
 // @impl DEW-002, DEW-013, FRE-005
 
 import { execFileSync as execFileSyncProduction, spawnSync as spawnSyncProduction } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
@@ -39,6 +39,27 @@ function assertNoFlagRuntimeDirs(parentDir) {
   for (const name of ['--help', '--bundle']) {
     assert.equal(existsSync(path.join(parentDir, name)), false, `${name}/ should not be created`);
   }
+}
+
+function recursiveSnapshot(rootDir) {
+  const entries = {};
+  function visit(currentDir, relativeDir = '') {
+    for (const name of readdirSync(currentDir).sort()) {
+      const relativePath = relativeDir ? path.join(relativeDir, name) : name;
+      const fullPath = path.join(currentDir, name);
+      const stat = lstatSync(fullPath);
+      if (stat.isDirectory()) {
+        entries[`${relativePath}/`] = 'directory';
+        visit(fullPath, relativePath);
+      } else if (stat.isSymbolicLink()) {
+        entries[relativePath] = `symlink:${readFileSync(fullPath, 'utf-8')}`;
+      } else {
+        entries[relativePath] = readFileSync(fullPath).toString('base64');
+      }
+    }
+  }
+  visit(rootDir);
+  return entries;
 }
 
 function queueItem(overrides = {}) {
@@ -163,6 +184,72 @@ function writeAssignedRepairableResult(dir, record) {
 }
 
 describe('operate-work-unit inspect', () => {
+  it('rejects a same-name nested bundle root without directory, transaction, trace, log, rejection, or beacon side effects', () => {
+    for (const command of ['inspect', 'dry-submit', 'submit']) {
+      const dir = tempBundle();
+      try {
+        saveQueueWith(dir, [queueItem()]);
+        const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
+        const workId = JSON.parse(claimStdout).claimed_work_ids[0];
+        const record = loadWorkUnitIndex(dir).work_units[workId];
+        const resultPath = writeValidSubmitFiles(dir, record);
+        const beaconPath = path.join(dir, record.paths.beacon_ref);
+        const beaconBefore = readFileSync(beaconPath);
+        const before = recursiveSnapshot(dir);
+        const nestedName = path.basename(dir);
+        const args = command === 'inspect'
+          ? [CLI, command, nestedName]
+          : [CLI, command, nestedName, '--work-id', workId, '--result', resultPath];
+
+        const result = spawnSync(process.execPath, args, {
+          cwd: dir,
+          encoding: 'utf-8',
+          timeout: 5000,
+        });
+
+        assert.notEqual(result.status, 0, `${command} unexpectedly accepted ${path.join(dir, nestedName)}`);
+        assert.match(`${result.stdout}\n${result.stderr}`, /work-unit index.*does not exist|missing existing work-unit authority/i);
+        assert.equal(existsSync(path.join(dir, nestedName)), false, `${command} created a nested bundle root`);
+        assert.deepEqual(recursiveSnapshot(dir), before, `${command} mutated the valid parent bundle`);
+        assert.deepEqual(readFileSync(beaconPath), beaconBefore, `${command} changed the immutable beacon`);
+      } finally {
+        cleanup(dir);
+      }
+    }
+  });
+
+  it('uses one beacon root binding for inspect, dry-submit, and submit without rewriting the immutable beacon', () => {
+    for (const command of ['inspect', 'dry-submit', 'submit']) {
+      const dir = tempBundle();
+      try {
+        saveQueueWith(dir, [queueItem()]);
+        const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
+        const workId = JSON.parse(claimStdout).claimed_work_ids[0];
+        const record = loadWorkUnitIndex(dir).work_units[workId];
+        const resultPath = writeValidSubmitFiles(dir, record);
+        const beaconPath = path.join(dir, record.paths.beacon_ref);
+        const beacon = JSON.parse(readFileSync(beaconPath, 'utf-8'));
+        beacon.bundle_dir = path.join(dir, path.basename(dir));
+        writeFileSync(beaconPath, `${JSON.stringify(beacon, null, 2)}\n`);
+        const driftedBeacon = readFileSync(beaconPath);
+        const args = command === 'inspect'
+          ? [CLI, command, dir]
+          : [CLI, command, dir, '--work-id', workId, '--result', resultPath];
+
+        const result = spawnSync(process.execPath, args, {
+          encoding: 'utf-8',
+          timeout: 5000,
+        });
+
+        assert.notEqual(result.status, 0, `${command} accepted a drifted beacon root`);
+        assert.match(`${result.stdout}\n${result.stderr}`, /beacon\/bundle root mismatch/i);
+        assert.deepEqual(readFileSync(beaconPath), driftedBeacon, `${command} rewrote the immutable beacon`);
+      } finally {
+        cleanup(dir);
+      }
+    }
+  });
+
   it('handles help and suspicious bundle arguments before runtime side effects', () => {
     const parentDir = tempBundle();
     try {
@@ -220,9 +307,58 @@ describe('operate-work-unit inspect', () => {
         work_ids: out.claimed_work_ids,
       });
       assert.match(JSON.stringify(out.prompt_refs), /_work_units\/wave0\/wu-w0-b000-src-i0001\/task\.md/);
+      assert.equal(out.prompt_refs[0].bundle_dir, path.resolve(dir));
+      assert.equal(out.prompt_refs[0].task_path, path.join(path.resolve(dir), out.prompt_refs[0].task_ref));
       assert.match(out.prompt_refs[0].spawn_prompt, /runtime-receipt\.jsonl/);
       assert.match(out.prompt_refs[0].spawn_prompt, /result\.schema\.json/);
       assert.match(out.prompt_refs[0].spawn_prompt, /runtime_refs diagnostic metadata/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('claim reports missing actor observation with one same-command repair and no allocation', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const queuePath = path.join(dir, 'rb_queue.json');
+      const before = readFileSync(queuePath);
+      const result = spawnSyncProduction(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0', '--count', '1'], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(result.status, 1);
+      const out = JSON.parse(result.stdout);
+      assert.equal(out.reason_code, 'observation_required');
+      assert.equal(out.repair_kind, 'agent_action');
+      assert.match(out.missing_fact, /observation/i);
+      assert.match(out.rerun, /operate-work-unit\.mjs claim/);
+      assert.equal(existsSync(workUnitIndexPath(dir)), false);
+      assert.deepEqual(readFileSync(queuePath), before);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('claim reports unnecessary fallback with the exact delegated-subagent rerun', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const queuePath = path.join(dir, 'rb_queue.json');
+      const before = readFileSync(queuePath);
+      const result = spawnSyncProduction(process.execPath, [
+        CLI, 'claim', dir, '--phase', 'wave0', '--count', '1',
+        '--actor-outcome', 'available', '--actor-source', 'native_probe',
+        '--actor-role-key', 'dpt-source-intake', '--actor-reason', 'probe_succeeded',
+        '--execution-actor', 'phase_agent_fallback',
+      ], { encoding: 'utf-8', timeout: 5000 });
+      assert.equal(result.status, 1);
+      const out = JSON.parse(result.stdout);
+      assert.equal(out.reason_code, 'fallback_unnecessary');
+      assert.equal(out.repair_kind, 'engine_operation');
+      assert.match(out.rerun, /--execution-actor delegated_subagent/);
+      assert.equal(existsSync(workUnitIndexPath(dir)), false);
+      assert.deepEqual(readFileSync(queuePath), before);
     } finally {
       cleanup(dir);
     }
@@ -426,6 +562,48 @@ describe('operate-work-unit inspect', () => {
       assert.equal(rows.length, 1);
       assert.equal(rows[0].late_accept, true);
       assert.equal(rows[0].terminal_status_before_accept, 'timed_out');
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('recovers a missing submitted declaration through the existing CLI without --result', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
+      const workId = JSON.parse(claimStdout).claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      const submitStdout = execFileSync(process.execPath, [CLI, 'submit', dir, '--work-id', workId, '--result', resultPath], { encoding: 'utf-8' });
+      const submitted = JSON.parse(submitStdout);
+      const originalLedger = readFileSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER));
+      rmSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER));
+
+      const recovered = spawnSync(process.execPath, [CLI, 'recover-declaration', dir, '--work-id', workId], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(recovered.status, 0, recovered.stderr || recovered.stdout);
+      const out = JSON.parse(recovered.stdout);
+      assert.equal(out.ok, true);
+      assert.equal(out.recovered, true);
+      assert.equal(out.ledger_record_hash, submitted.ledger_record_hash);
+      assert.deepEqual(readFileSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), originalLedger);
+
+      const repeated = spawnSync(process.execPath, [CLI, 'recover-declaration', dir, '--work-id', workId], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(repeated.status, 0, repeated.stderr || repeated.stdout);
+      assert.equal(JSON.parse(repeated.stdout).changed, false);
+
+      const rejectedResultArg = spawnSync(process.execPath, [CLI, 'recover-declaration', dir, '--work-id', workId, '--result', resultPath], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      assert.equal(rejectedResultArg.status, 1);
+      assert.match(rejectedResultArg.stderr, /does not accept --result/);
     } finally {
       cleanup(dir);
     }

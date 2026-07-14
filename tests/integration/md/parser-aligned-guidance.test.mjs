@@ -60,4 +60,27 @@ describe('REF-007 parser-aligned Agent guidance', () => {
 
     assert.deepEqual(offenders, []);
   });
+
+  it('Wave1 loads the shared tolerant reference template through requires', () => {
+    const phase = readNode('phases/phase-wave1.md');
+    const template = readNode('shared/shared-reference-template.md');
+    const extractor = readNode('phases/subagent-dpt-evidence-extractor.md');
+
+    assert.match(phase, /requires:[\s\S]*- shared\/shared-reference-template/);
+    assert.match(template, /required and non-empty|必须存在且非空/i);
+    assert.match(template, /case|大小写/i);
+    assert.match(template, /heading level|标题层级/i);
+    assert.match(template, /order|顺序/i);
+    assert.doesNotMatch(`${phase}\n${template}\n${extractor}`, /at least five key facts|at least 5 concrete bullet facts|顺序固定|大小写敏感/i);
+  });
+
+  it('reference guidance exposes one UID-or-legacy topic binding contract', () => {
+    const template = readNode('shared/shared-reference-template.md');
+    const extractor = readNode('phases/subagent-dpt-evidence-extractor.md');
+    const combined = `${template}\n${extractor}`;
+
+    assert.match(combined, /related_topic_uid/);
+    assert.match(combined, /related_topic/);
+    assert.match(combined, /both are present, they must resolve identically|两种形式同时出现时必须解析一致/i);
+  });
 });

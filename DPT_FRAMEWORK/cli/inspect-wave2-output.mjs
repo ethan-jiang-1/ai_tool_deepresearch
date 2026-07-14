@@ -2,10 +2,10 @@
 // inspect-wave2-output.mjs — side-effect-free Wave2 contract inspect
 // @impl IOC-003, IOC-005, REF-008, WPG-012, RWG-017, RWG-018
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve as resolvePath } from 'node:path';
 
-import { tryLoadGateDefinition } from '../engine/helpers/gate-helpers.mjs';
+import { checkReferenceFormatFiles, tryLoadGateDefinition } from '../engine/helpers/gate-helpers.mjs';
 import {
   buildContractEvaluation,
   emitInspectResult,
@@ -71,22 +71,17 @@ if (existsSync(join(referencePath, '00_shared'))) {
   }));
 }
 
-const metadataKeys = ['source_url', 'acceptance_status', 'source_type', 'tier', 'evidence_role', 'trust_level', 'why_it_matters', 'accessed_at', 'related_topic'];
-const sections = ['Key Facts', 'Core Content Capture', 'Relevance To This Research', 'Quotable Terms / Concepts', 'Risks And Limitations'];
 const crossFiles = existsSync(referencePath) ? readdirSync(referencePath).filter((file) => file.startsWith('00-cross-') && file.endsWith('.md')) : [];
-for (const file of crossFiles) {
-  const content = readFileSync(join(referencePath, file), 'utf8');
-  const beforeSection = content.split(/^#{1,6}\s+/m)[0] || '';
-  const metadata = new Set([...beforeSection.matchAll(/^\s*-\s*([A-Za-z0-9_]+)\s*:/gm)].map((match) => match[1]));
-  const headings = new Set([...content.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)].map((match) => match[1].trim().toLowerCase()));
-  additionalChecksRun += 2;
-  for (const key of metadataKeys.filter((candidate) => !metadata.has(candidate))) {
-    additionalFindings.push(makeContractFinding({ id: `cross_metadata:${file}:${key}`, ruleId: 'cross_reference_presentation', classification: 'advisory', surface: `reference/${file}`, detail: `reference/${file}: metadata block missing expected key '${key}'`, repair: `Add '- ${key}: <value>' when maintaining the canonical cross-reference presentation.` }));
-  }
-  for (const section of sections.filter((candidate) => !headings.has(candidate.toLowerCase()))) {
-    additionalFindings.push(makeContractFinding({ id: `cross_section:${file}:${section}`, ruleId: 'cross_reference_presentation', classification: 'advisory', surface: `reference/${file}`, detail: `reference/${file}: missing expected semantic section '${section}'`, repair: `Add a '${section}' section when maintaining the canonical cross-reference presentation.` }));
-  }
-}
+const crossReferenceFiles = crossFiles.map((file) => ({
+  relPath: `reference/${file}`,
+  absPath: join(referencePath, file),
+}));
+const crossPresentation = checkReferenceFormatFiles(crossReferenceFiles, { bundlePath: resolvedBundlePath });
+additionalChecksRun += 1;
+additionalFindings.push(...crossPresentation.findings.map((finding) => makeContractFinding({
+  ...finding,
+  classification: 'advisory',
+})));
 
 const seedMap = inspectSeedTopicReturnMaps(resolvedBundlePath, { wave: 'wave2' });
 const artifactMap = inspectWaveArtifactReturnMaps(resolvedBundlePath, 'wave2');

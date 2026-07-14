@@ -4,6 +4,7 @@
 import {
   existsSync,
   readFileSync,
+  readdirSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -36,6 +37,7 @@ import {
   saveWorkUnitIndex,
   requireWorkUnitRecord,
   withWorkUnitTransaction,
+  transactionDir,
   workUnitIndexPath,
 } from './work-unit-index.mjs';
 import {
@@ -69,7 +71,7 @@ function restoreFileSnapshot(filePath, snapshot) {
   }
 }
 
-function captureSubmitSnapshot(bundleDir, record) {
+function captureSubmitSnapshot(bundleDir, record, extraRelativeRefs = []) {
   const files = [
     workUnitIndexPath(bundleDir),
     path.join(bundleDir, 'rb_queue.json'),
@@ -77,6 +79,7 @@ function captureSubmitSnapshot(bundleDir, record) {
     path.join(bundleDir, record.paths.result_ref),
     path.join(bundleDir, record.paths.runtime_receipt_ref),
     path.join(bundleDir, record.paths.status_ref),
+    ...extraRelativeRefs.map((ref) => path.join(bundleDir, ref)),
   ];
   return files.map((filePath) => ({ filePath, snapshot: captureFileSnapshot(filePath) }));
 }
@@ -260,7 +263,10 @@ function applyLateSubmitQueueCleanup(queue, record, cleanupPlan) {
   return q;
 }
 
-function verifyLateSubmitDurablePostcondition(bundleDir, record, { supersededRetryWorkIds = [] } = {}) {
+function verifyLateSubmitDurablePostcondition(bundleDir, record, {
+  supersededRetryWorkIds = [],
+  lateAcceptContext = record.late_accept_context,
+} = {}) {
   const missing = [];
   let queue = null;
   let index = null;
@@ -288,6 +294,9 @@ function verifyLateSubmitDurablePostcondition(bundleDir, record, { supersededRet
     const target = index.work_units?.[record.work_id];
     if (!target || target.status !== 'submitted') {
       missing.push(`_work_units/_index.json does not mark ${record.work_id} submitted`);
+    }
+    if (lateAcceptContext && JSON.stringify(target?.late_accept_context) !== JSON.stringify(lateAcceptContext)) {
+      missing.push(`_work_units/_index.json does not preserve exact late_accept_context for ${record.work_id}`);
     }
     const submittedReplacements = Object.values(index.work_units || {})
       .filter((candidate) => candidate.queue_item_id === record.queue_item_id && candidate.work_id !== record.work_id && candidate.status === 'submitted');
@@ -463,6 +472,266 @@ function buildLedgerRow({ record, result, resultHash, declaredAt, auditFields = 
   });
 }
 
+function declarationRecoveryCommand(bundleDir, workId) {
+  return [
+    'node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration',
+    JSON.stringify(path.resolve(bundleDir)),
+    '--work-id', JSON.stringify(String(workId || '<work-id>')),
+  ].join(' ');
+}
+
+function declarationRecoveryFailure(bundleDir, workId, error) {
+  const missingFact = error?.message || String(error);
+  return {
+    ok: false,
+    recovered: false,
+    changed: false,
+    work_id: workId || null,
+    reason_code: 'declaration_recovery_prerequisite_failed',
+    repair_kind: 'missing_contract',
+    missing_fact: missingFact,
+    write_to: `submitted declaration recovery prerequisites for ${workId || '<work-id>'}; do not edit rb_output_declarations.jsonl, index, status, queue, or hashes manually`,
+    rerun: declarationRecoveryCommand(bundleDir, workId),
+    inspect: [missingFact],
+    advice: 'Repair only through the existing owner of the failed direct fact, then rerun the same recover-declaration checkpoint.',
+  };
+}
+
+function readOriginalSubmitEvidence(bundleDir, record) {
+  const tracePath = path.join(bundleDir, 'rb_trace.jsonl');
+  if (!existsSync(tracePath)) return [];
+  let events;
+  try {
+    events = readFileSync(tracePath, 'utf-8').split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+  } catch {
+    return [];
+  }
+
+  const transactions = new Map();
+  const txRoot = transactionDir(bundleDir);
+  if (existsSync(txRoot)) {
+    for (const name of readdirSync(txRoot)) {
+      if (!name.endsWith('.json')) continue;
+      try {
+        const tx = JSON.parse(readFileSync(path.join(txRoot, name), 'utf-8'));
+        if (tx?.status === 'committed' && ['submit_work_unit', 'late_submit_work_unit'].includes(tx.operation)) {
+          transactions.set(tx.tx_id, tx);
+        }
+      } catch { /* malformed evidence is not eligible */ }
+    }
+  }
+
+  return events
+    .filter((event) => (
+      event.event === 'work_unit_submitted' &&
+      event.work_id === record.work_id &&
+      event.queue_item_id === record.queue_item_id &&
+      event.result_hash === record.result_hash &&
+      event.ledger_record_hash === record.ledger_record_hash &&
+      transactions.has(event.tx_id)
+    ))
+    .map((event) => {
+      const transaction = transactions.get(event.tx_id);
+      const lateEvent = events.find((candidate) => (
+        candidate.event === 'work_unit_late_submitted' &&
+        candidate.tx_id === event.tx_id &&
+        candidate.work_id === record.work_id &&
+        candidate.queue_item_id === record.queue_item_id &&
+        candidate.result_hash === record.result_hash &&
+        candidate.ledger_record_hash === record.ledger_record_hash
+      ));
+      return { event, transaction, lateEvent };
+    });
+}
+
+function recoveryAuditOptions(record, evidence) {
+  if (record.late_accept_context) {
+    return [{
+      source: 'current_late_context',
+      fields: {
+        late_accept: true,
+        late_accept_reason: record.late_accept_context.late_accept_reason,
+        terminal_status_before_accept: record.late_accept_context.terminal_status_before_accept,
+        superseded_retry_work_ids: record.late_accept_context.superseded_retry_work_ids,
+      },
+    }];
+  }
+
+  const options = [{ source: 'normal_submission', fields: {} }];
+  for (const item of evidence) {
+    const late = item.lateEvent;
+    if (
+      item.transaction.operation !== 'late_submit_work_unit' ||
+      typeof late?.late_accept_reason !== 'string' || late.late_accept_reason.trim().length === 0 ||
+      late.terminal_status_before_accept !== 'timed_out' ||
+      !Array.isArray(late.superseded_retry_work_ids)
+    ) continue;
+    options.push({
+      source: 'legacy_late_submit_evidence',
+      fields: {
+        late_accept: true,
+        late_accept_reason: late.late_accept_reason.trim(),
+        terminal_status_before_accept: 'timed_out',
+        superseded_retry_work_ids: late.superseded_retry_work_ids,
+      },
+    });
+  }
+  return options;
+}
+
+function prepareCurrentDeclarationRecovery(bundleDir, workId) {
+  const index = loadWorkUnitIndex(bundleDir, { createIfMissing: false });
+  const record = requireWorkUnitRecord(index, workId);
+  if (record.status !== 'submitted') {
+    throw new Error(`work_id ${record.work_id} is ${record.status}; recover-declaration requires an already-submitted attempt`);
+  }
+  if (!record.result_hash || !record.ledger_record_hash || !record.terminal_at) {
+    throw new Error(`submitted index record ${record.work_id} lacks result_hash, ledger_record_hash, or terminal_at`);
+  }
+
+  const statusPath = path.join(bundleDir, record.paths.status_ref);
+  if (!existsSync(statusPath)) throw new Error(`submitted status file is missing: ${record.paths.status_ref}`);
+  const status = WorkUnitStatusFileSchema.parse(JSON.parse(readFileSync(statusPath, 'utf-8')));
+  if (status.work_id !== record.work_id || status.status !== 'submitted') {
+    throw new Error(`submitted status/index binding mismatch for ${record.work_id}`);
+  }
+  if (status.result_hash !== record.result_hash || status.ledger_record_hash !== record.ledger_record_hash) {
+    throw new Error(`submitted status/index hash mismatch for ${record.work_id}`);
+  }
+
+  const ledgerRows = readWorkUnitLedgerRows(bundleDir);
+  const existingRows = targetLedgerRows(ledgerRows, record);
+  if (existingRows.length > 1) throw new Error(`multiple submitted declaration rows exist for ${record.work_id}`);
+
+  const conflicts = submittedReplacementConflicts(index, ledgerRows, record);
+  if (conflicts.submittedIndexRecords.length > 0 || conflicts.submittedLedgerRows.length > 0) {
+    const conflictIds = [
+      ...conflicts.submittedIndexRecords.map((item) => item.work_id),
+      ...conflicts.submittedLedgerRows.map((item) => item.work_id),
+    ];
+    throw new Error(`submitted replacement conflict for ${record.queue_item_id}: ${[...new Set(conflictIds)].join(', ')}`);
+  }
+
+  const normalizations = [];
+  const manifest = readAndValidateManifest(bundleDir, index, record);
+  validateManifestTopicBinding(bundleDir, manifest);
+  readAndValidateBeacon(bundleDir, record, manifest);
+  const assignedResultPath = path.join(bundleDir, record.paths.result_ref);
+  const parsedResult = readAndValidateResult(bundleDir, assignedResultPath, record, {
+    normalizations,
+    outputContract: manifest.output_contract,
+  });
+  const result = normalizeWave1RequiredOutputRoles(parsedResult, record, normalizations, assignedResultPath);
+  const resultHash = hashValue(result);
+  if (resultHash !== record.result_hash) {
+    throw new Error(`submitted result hash mismatch for ${record.work_id}`);
+  }
+
+  validateSubmitRuntimeReceipt(bundleDir, record, { normalizations, allowNonceNormalization: false });
+  validateOutputFiles(bundleDir, result, manifest.output_contract);
+  const cacheValidation = validateCacheTrails(bundleDir, result, manifest.cache_policy, {
+    record,
+    normalizations,
+    writeCanonicalCache: false,
+  });
+  if (cacheValidation.virtualCachePages.size > 0 || normalizations.length > 0) {
+    throw new Error(`submitted direct owners for ${record.work_id} require normalization and cannot reproduce the accepted row exactly`);
+  }
+  validateSourceClaims(bundleDir, result, manifest.output_contract, {
+    virtualCachePages: cacheValidation.virtualCachePages,
+    manifest,
+  });
+
+  const queue = readQueueSideEffectFree(bundleDir);
+  if (queue.delegated_in_flight?.[record.queue_item_id]) {
+    throw new Error(`submitted queue item ${record.queue_item_id} is still delegated in flight`);
+  }
+  const terminalRows = (queue.terminal_history || []).filter((entry) => entry.queue_item_id === record.queue_item_id);
+  const terminal = terminalRows.find((entry) => (
+    entry.work_id === record.work_id && entry.terminal_status === 'done'
+  ));
+  if (terminalRows.length !== 1 || !terminal) {
+    throw new Error(`queue terminal history does not contain exactly one done row for ${record.queue_item_id}/${record.work_id}`);
+  }
+  if (queueItemSnapshotHash(terminal.item) !== record.queue_item_snapshot_hash) {
+    throw new Error(`queue terminal snapshot mismatch for ${record.work_id}`);
+  }
+
+  const evidence = readOriginalSubmitEvidence(bundleDir, record);
+  const timestampsUnified = status.updated_at === record.terminal_at && terminal.completed_at === record.terminal_at;
+  const timestampCandidates = new Set([record.terminal_at, status.updated_at, terminal.completed_at]);
+  for (const item of evidence) {
+    for (const candidate of [
+      item.event.ts,
+      item.lateEvent?.ts,
+      item.transaction.started_at,
+      item.transaction.committed_at,
+    ]) {
+      if (typeof candidate === 'string' && Number.isFinite(Date.parse(candidate))) timestampCandidates.add(candidate);
+    }
+  }
+  if (existingRows.length === 1) timestampCandidates.add(existingRows[0].declared_at);
+
+  const matches = new Map();
+  for (const declaredAt of timestampCandidates) {
+    for (const audit of existingRows.length === 1
+      ? [{ source: 'existing_hash_valid_row', fields: existingRows[0].late_accept === true ? {
+        late_accept: true,
+        late_accept_reason: existingRows[0].late_accept_reason,
+        terminal_status_before_accept: existingRows[0].terminal_status_before_accept,
+        superseded_retry_work_ids: existingRows[0].superseded_retry_work_ids,
+      } : {} }]
+      : recoveryAuditOptions(record, evidence)) {
+      let candidate;
+      try {
+        candidate = buildLedgerRow({ record, result, resultHash, declaredAt, auditFields: audit.fields });
+      } catch {
+        continue;
+      }
+      if (candidate.ledger_record_hash !== record.ledger_record_hash || candidate.ledger_record_hash !== status.ledger_record_hash) continue;
+      const key = JSON.stringify(candidate);
+      matches.set(key, { row: candidate, source: audit.source });
+    }
+  }
+  if (matches.size === 0) {
+    throw new Error(`missing_contract: current direct owners and original submit/transaction evidence cannot reproduce recorded declaration hash for ${record.work_id}`);
+  }
+  if (matches.size > 1) {
+    throw new Error(`missing_contract: declaration reconstruction is ambiguous for ${record.work_id}`);
+  }
+  const [{ row: ledgerRow, source: reconstructionSource }] = [...matches.values()];
+  if (!timestampsUnified && evidence.length === 0 && existingRows.length === 0) {
+    throw new Error(`missing_contract: legacy submission timestamps for ${record.work_id} require original submit/transaction evidence`);
+  }
+  if (existingRows.length === 1 && JSON.stringify(existingRows[0]) !== JSON.stringify(ledgerRow)) {
+    throw new Error(`existing declaration row conflicts with reconstructed row for ${record.work_id}`);
+  }
+  for (const retryWorkId of ledgerRow.superseded_retry_work_ids || []) {
+    const retry = index.work_units[retryWorkId];
+    if (!retry || retry.status !== 'abandoned' || retry.terminal_reason !== 'superseded_by_late_accept') {
+      throw new Error(`superseded retry binding is invalid for ${retryWorkId}`);
+    }
+    if (ledgerRows.some((row) => row.work_id === retryWorkId)) {
+      throw new Error(`superseded retry ${retryWorkId} already has submitted declaration coverage`);
+    }
+  }
+
+  return {
+    index,
+    record,
+    status,
+    queue,
+    ledgerRows,
+    ledgerRow,
+    existing: existingRows.length === 1,
+    reconstructionSource,
+    legacy: reconstructionSource.startsWith('legacy_') || !timestampsUnified,
+  };
+}
+
 function canonicalWave1RequiredOutputRole(outputPath) {
   if (/^artifacts\/wave1\/[^/]+\/evidence-summary\.md$/.test(outputPath || '')) return 'evidence_summary';
   if (/^artifacts\/wave1\/[^/]+\/question-list\.md$/.test(outputPath || '')) return 'question_list';
@@ -517,7 +786,21 @@ function submitRejectionPayload(record, reason, resultPath) {
   };
 }
 
-function recordSubmitRejection(bundleDir, { work_id, resultPath, reason }) {
+function rejectionGuidance(violations = []) {
+  const primary = violations[0] || null;
+  return {
+    violations,
+    ...(primary ? {
+      repair_kind: primary.repair_kind,
+      missing_fact: primary.missing_fact,
+      write_to: primary.write_to,
+      rerun: primary.rerun,
+    } : {}),
+  };
+}
+
+function recordSubmitRejection(bundleDir, { work_id, resultPath, reason, violations = [] }) {
+  const guidance = rejectionGuidance(violations);
   let index;
   let record;
   try {
@@ -531,7 +814,8 @@ function recordSubmitRejection(bundleDir, { work_id, resultPath, reason }) {
       reason,
       reason_code: reasonCodeForSubmit(reason),
       inspect: [reason],
-      advice: 'Use a known claimed work_id from operate-work-unit claim.',
+      advice: 'Use the reported work-unit owner boundary, then rerun dry-submit for the same candidate.',
+      ...guidance,
     };
   }
 
@@ -559,7 +843,8 @@ function recordSubmitRejection(bundleDir, { work_id, resultPath, reason }) {
       status: record.status,
       last_submit_rejection: rejected,
       inspect: [rejected.reason],
-      advice: 'Terminal work-unit attempts cannot be submitted; allocate a replacement work unit when retry is allowed.',
+      advice: 'Terminal work-unit attempts cannot be submitted; follow the reported owner boundary rather than editing authority files.',
+      ...guidance,
     };
   }
 
@@ -572,7 +857,8 @@ function recordSubmitRejection(bundleDir, { work_id, resultPath, reason }) {
       reason,
       reason_code: reasonCodeForSubmit(reason),
       inspect: [reason],
-      advice: 'Submit is only accepted for claimed attempts, except same-content duplicate submitted attempts.',
+      advice: 'Submit is only accepted for claimed attempts; use the reported owner boundary and re-run dry-submit when the attempt is claim-eligible.',
+      ...guidance,
     };
   }
 
@@ -610,20 +896,98 @@ function recordSubmitRejection(bundleDir, { work_id, resultPath, reason }) {
       status: 'claimed',
       last_submit_rejection: rejection,
       inspect: [reason],
-      advice: 'Correct the result/receipt/output/cache issue and submit the same claimed work_id again, or close the attempt explicitly.',
+      advice: 'Repair the same candidate through the reported coordinates and rerun the exact dry-submit checkpoint before formal submit.',
       index: savedIndex,
+      ...guidance,
     };
   });
 }
 
-function violationForError(error, { phase = 'submit_validation' } = {}) {
-  const message = error?.message || String(error);
+function jsonPointer(pathParts = []) {
+  if (!Array.isArray(pathParts) || pathParts.length === 0) return '/';
+  return `/${pathParts.map((part) => String(part).replace(/~/g, '~0').replace(/\//g, '~1')).join('/')}`;
+}
+
+function drySubmitRerun(bundleDir, workId, resultPath) {
+  return [
+    'node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit',
+    JSON.stringify(path.resolve(bundleDir)),
+    '--work-id', JSON.stringify(String(workId || '<work-id>')),
+    '--result', JSON.stringify(resultPath ? path.resolve(resultPath) : '<result.json>'),
+  ].join(' ');
+}
+
+function repairContractForPhase({ phase, bundleDir, record, resultPath, issuePath = [] }) {
+  const candidatePath = resultPath ? path.resolve(resultPath) : '<result.json>';
+  if (phase === 'result') {
+    const pointer = jsonPointer(issuePath);
+    return { repair_kind: 'agent_action', write_to: `${candidatePath}#${pointer}`, json_pointer: pointer };
+  }
+  if (phase === 'runtime_receipt') {
+    return {
+      repair_kind: 'agent_action',
+      write_to: record ? path.join(path.resolve(bundleDir), record.paths.runtime_receipt_ref) : 'assigned runtime-receipt.jsonl',
+    };
+  }
+  if (phase === 'output_files') {
+    return { repair_kind: 'agent_action', write_to: `${candidatePath}#/output_files` };
+  }
+  if (phase === 'cache_trails') {
+    return { repair_kind: 'agent_action', write_to: `${candidatePath}#/cache_trails and the exact declared cache leaf under ${path.resolve(bundleDir)}` };
+  }
+  if (phase === 'source_claims') {
+    return { repair_kind: 'agent_action', write_to: `${candidatePath}#/source_claims` };
+  }
   return {
-    code: reasonCodeForSubmit(message),
-    message,
-    phase,
-    repair_target: repairTargetForReason(message),
+    repair_kind: 'missing_contract',
+    write_to: `work-unit ${phase} authority boundary for ${record?.work_id || '<work-id>'}; use an existing Engine operation when available`,
   };
+}
+
+function violationForError(error, {
+  phase = 'submit_validation',
+  bundleDir,
+  record = null,
+  workId = record?.work_id,
+  resultPath = null,
+  validationIssue = null,
+} = {}) {
+  const message = error?.message || String(error);
+  const issueMessage = validationIssue?.message || message;
+  const ownerRepair = error?.repair_contract || {};
+  const ownerPointer = ownerRepair.json_pointer || null;
+  const repair = {
+    ...repairContractForPhase({
+      phase,
+      bundleDir,
+      record,
+      resultPath,
+      issuePath: validationIssue?.path || [],
+    }),
+    ...ownerRepair,
+  };
+  if (ownerPointer && !ownerRepair.write_to) {
+    repair.write_to = `${resultPath ? path.resolve(resultPath) : '<result.json>'}#${ownerPointer}`;
+  }
+  return {
+    code: validationIssue?.code || ownerRepair.code || reasonCodeForSubmit(issueMessage),
+    message: issueMessage,
+    phase,
+    repair_target: phase === 'source_claims' ? 'source_claims' : repairTargetForReason(issueMessage),
+    repair_kind: repair.repair_kind,
+    missing_fact: issueMessage,
+    write_to: repair.write_to,
+    rerun: drySubmitRerun(bundleDir, workId, resultPath),
+    ...((repair.json_pointer || ownerPointer) ? { json_pointer: repair.json_pointer || ownerPointer } : {}),
+    ...(repair.details ? { details: repair.details } : {}),
+  };
+}
+
+function violationsForError(error, context) {
+  if (Array.isArray(error?.validation_issues) && error.validation_issues.length > 0) {
+    return error.validation_issues.map((validationIssue) => violationForError(error, { ...context, validationIssue }));
+  }
+  return [violationForError(error, context)];
 }
 
 function repairTargetForReason(message) {
@@ -640,10 +1004,8 @@ function repairTargetForReason(message) {
 function validateSubmitPlan(bundleDir, {
   work_id,
   resultPath,
-  dryRun = false,
   acceptedStatus = 'claimed',
   requireQueueInFlight = true,
-  ledgerAuditFields = {},
 } = {}) {
   const index = loadWorkUnitIndex(bundleDir, { createIfMissing: false });
   const record = requireWorkUnitRecord(index, work_id);
@@ -681,7 +1043,7 @@ function validateSubmitPlan(bundleDir, {
     allowNonceNormalization: resultPathInsideAssignedDir,
   });
   const queue = requireQueueInFlight
-    ? validateQueueBindingForSubmit(bundleDir, record, manifest, { sideEffects: !dryRun })
+    ? validateQueueBindingForSubmit(bundleDir, record, manifest, { sideEffects: false })
     : readQueueSideEffectFree(bundleDir);
   if (!requireQueueInFlight && queueItemSnapshotHash(manifest.queue_item) !== record.queue_item_snapshot_hash) {
     throw new Error(`manifest queue item snapshot hash is stale for ${record.work_id}`);
@@ -690,17 +1052,11 @@ function validateSubmitPlan(bundleDir, {
   const cacheValidation = validateCacheTrails(bundleDir, normalizedResult, manifest.cache_policy, {
     record,
     normalizations,
-    writeCanonicalCache: !dryRun,
+    writeCanonicalCache: false,
   });
   validateSourceClaims(bundleDir, normalizedResult, manifest.output_contract, {
     virtualCachePages: cacheValidation.virtualCachePages,
-  });
-  const ledgerRow = buildLedgerRow({
-    record,
-    result: normalizedResult,
-    resultHash,
-    declaredAt: now(),
-    auditFields: ledgerAuditFields,
+    manifest,
   });
   return {
     duplicate: false,
@@ -713,13 +1069,28 @@ function validateSubmitPlan(bundleDir, {
     runtime_receipt_content: runtimeReceipt.canonical_content,
     normalizations,
     virtual_cache_pages: cacheValidation.virtualCachePages,
-    ledger_row: ledgerRow,
-    ledger_record_hash: ledgerRow.ledger_record_hash,
   };
 }
 
+function applyCandidateCanonicalizations(bundleDir, prepared) {
+  for (const [trail, pageText] of prepared.virtual_cache_pages || new Map()) {
+    writeFileSync(path.join(bundleDir, trail, 'page.md'), pageText);
+  }
+}
+
 function prepareWorkUnitSubmit(bundleDir, { work_id, resultPath }) {
-  return validateSubmitPlan(bundleDir, { work_id, resultPath, dryRun: false });
+  const index = loadWorkUnitIndex(bundleDir, { createIfMissing: false });
+  const record = requireWorkUnitRecord(index, work_id);
+  if (record.status === 'submitted') {
+    return validateSubmitPlan(bundleDir, { work_id, resultPath });
+  }
+  const plan = collectDrySubmitPlan(bundleDir, { work_id, resultPath });
+  if ((plan.violations || []).length > 0) {
+    const error = new Error(plan.violations.map((violation) => violation.message).join('; '));
+    error.candidate_plan = plan;
+    throw error;
+  }
+  return plan;
 }
 
 function reasonCodeForLateSubmit(message) {
@@ -923,15 +1294,8 @@ function prepareLateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
     const prepared = validateSubmitPlan(bundleDir, {
       work_id,
       resultPath,
-      dryRun: true,
       acceptedStatus: 'timed_out',
       requireQueueInFlight: false,
-      ledgerAuditFields: {
-        late_accept: true,
-        late_accept_reason: reasonText,
-        terminal_status_before_accept: 'timed_out',
-        superseded_retry_work_ids: cleanupPlan.supersededRetryWorkIds,
-      },
     });
     return {
       prepared: {
@@ -965,33 +1329,35 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
   const normalizations = [];
   let resultHash = null;
   let cacheValidation = { virtualCachePages: new Map() };
+  let cacheValid = false;
 
   try {
     index = loadWorkUnitIndex(bundleDir, { createIfMissing: false });
   } catch (error) {
-    violations.push(violationForError(error, { phase: 'work_unit_index' }));
+    violations.push(...violationsForError(error, { phase: 'work_unit_index', bundleDir, workId: work_id, resultPath }));
     return { index, record, violations, normalizations };
   }
 
   try {
     record = requireWorkUnitRecord(index, work_id);
   } catch (error) {
-    violations.push(violationForError(error, { phase: 'work_unit_record' }));
+    violations.push(...violationsForError(error, { phase: 'work_unit_record', bundleDir, workId: work_id, resultPath }));
     return { index, record, violations, normalizations };
   }
 
   if (record.status === 'submitted') {
-    violations.push({
-      code: 'duplicate_content_mismatch',
-      message: `work_id ${record.work_id} is already submitted; dry-submit only preflights claimed attempts`,
-      phase: 'work_unit_status',
-      repair_target: 'work_unit_status',
-    });
+    violations.push(violationForError(
+      new Error(`work_id ${record.work_id} is already submitted; dry-submit only preflights claimed attempts`),
+      { phase: 'work_unit_status', bundleDir, record, resultPath },
+    ));
     return { index, record, violations, normalizations };
   }
 
   if (record.status !== 'claimed') {
-    violations.push(violationForError(new Error(`work_id ${record.work_id} is ${record.status}; submit requires claimed`), { phase: 'work_unit_status' }));
+    violations.push(violationForError(
+      new Error(`work_id ${record.work_id} is ${record.status}; submit requires claimed`),
+      { phase: 'work_unit_status', bundleDir, record, resultPath },
+    ));
     return { index, record, violations, normalizations };
   }
 
@@ -1003,7 +1369,7 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
     manifest = readAndValidateManifest(bundleDir, index, record);
     validateManifestTopicBinding(bundleDir, manifest);
   } catch (error) {
-    violations.push(violationForError(error, { phase: 'manifest' }));
+    violations.push(...violationsForError(error, { phase: 'manifest', bundleDir, record, resultPath }));
   }
 
   try {
@@ -1014,20 +1380,20 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
     normalizedResult = normalizeWave1RequiredOutputRoles(result, record, normalizations, resultPath);
     resultHash = hashValue(normalizedResult);
   } catch (error) {
-    violations.push(violationForError(error, { phase: 'result' }));
+    violations.push(...violationsForError(error, { phase: 'result', bundleDir, record, resultPath }));
   }
 
   if (manifest) {
     try {
       readAndValidateBeacon(bundleDir, record, manifest);
     } catch (error) {
-      violations.push(violationForError(error, { phase: 'beacon' }));
+      violations.push(...violationsForError(error, { phase: 'beacon', bundleDir, record, resultPath }));
     }
 
     try {
       queue = validateQueueBindingForSubmit(bundleDir, record, manifest, { sideEffects: false });
     } catch (error) {
-      violations.push(violationForError(error, { phase: 'queue_binding' }));
+      violations.push(...violationsForError(error, { phase: 'queue_binding', bundleDir, record, resultPath }));
     }
   }
 
@@ -1037,14 +1403,14 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
       allowNonceNormalization: resultPathInsideAssignedDir,
     });
   } catch (error) {
-    violations.push(violationForError(error, { phase: 'runtime_receipt' }));
+    violations.push(...violationsForError(error, { phase: 'runtime_receipt', bundleDir, record, resultPath }));
   }
 
   if (manifest && normalizedResult) {
     try {
       validateOutputFiles(bundleDir, normalizedResult, manifest.output_contract);
     } catch (error) {
-      violations.push(violationForError(error, { phase: 'output_files' }));
+      violations.push(...violationsForError(error, { phase: 'output_files', bundleDir, record, resultPath }));
     }
 
     try {
@@ -1053,16 +1419,20 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
         normalizations,
         writeCanonicalCache: false,
       });
+      cacheValid = true;
     } catch (error) {
-      violations.push(violationForError(error, { phase: 'cache_trails' }));
+      violations.push(...violationsForError(error, { phase: 'cache_trails', bundleDir, record, resultPath }));
     }
 
-    try {
-      validateSourceClaims(bundleDir, normalizedResult, manifest.output_contract, {
-        virtualCachePages: cacheValidation.virtualCachePages,
-      });
-    } catch (error) {
-      violations.push(violationForError(error, { phase: 'source_claims' }));
+    if (cacheValid) {
+      try {
+        validateSourceClaims(bundleDir, normalizedResult, manifest.output_contract, {
+          virtualCachePages: cacheValidation.virtualCachePages,
+          manifest,
+        });
+      } catch (error) {
+        violations.push(...violationsForError(error, { phase: 'source_claims', bundleDir, record, resultPath }));
+      }
     }
   }
 
@@ -1145,46 +1515,59 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
       const retryRecords = (currentCleanupPlan.supersededRetryWorkIds || [])
         .map((retryWorkId) => index.work_units[retryWorkId])
         .filter(Boolean);
-      const submittedAt = now();
-      const cachePageRefs = (prepared.result.cache_trails || [])
-        .map((trail) => path.join(trail, 'page.md'));
-      const snapshot = captureLateSubmitSnapshot(bundleDir, [record, ...retryRecords], cachePageRefs);
 
+      let snapshot = null;
       try {
         const activePrepared = {
           ...validateSubmitPlan(bundleDir, {
             work_id: record.work_id,
             resultPath,
-            dryRun: false,
             acceptedStatus: 'timed_out',
             requireQueueInFlight: false,
-            ledgerAuditFields: {
-              late_accept: true,
-              late_accept_reason: prepared.reason,
-              terminal_status_before_accept: 'timed_out',
-              superseded_retry_work_ids: currentCleanupPlan.supersededRetryWorkIds,
-            },
           }),
           reason: prepared.reason,
           cleanupPlan: currentCleanupPlan,
         };
         index = activePrepared.index;
         record = index.work_units[activePrepared.record.work_id];
+        const cachePageRefs = [...(activePrepared.virtual_cache_pages || new Map()).keys()]
+          .map((trail) => path.join(trail, 'page.md'));
+        snapshot = captureLateSubmitSnapshot(bundleDir, [record, ...retryRecords], cachePageRefs);
+        const submittedAt = now();
+        const ledgerRow = buildLedgerRow({
+          record,
+          result: activePrepared.result,
+          resultHash: activePrepared.result_hash,
+          declaredAt: submittedAt,
+          auditFields: {
+            late_accept: true,
+            late_accept_reason: activePrepared.reason,
+            terminal_status_before_accept: 'timed_out',
+            superseded_retry_work_ids: currentCleanupPlan.supersededRetryWorkIds,
+          },
+        });
+        const ledgerRecordHash = ledgerRow.ledger_record_hash;
 
+        applyCandidateCanonicalizations(bundleDir, activePrepared);
         writeJson(path.join(bundleDir, record.paths.result_ref), activePrepared.result);
         writeFileSync(path.join(bundleDir, record.paths.runtime_receipt_ref), activePrepared.runtime_receipt_content);
         writeJson(path.join(bundleDir, record.paths.status_ref), WorkUnitStatusFileSchema.parse({
           work_id: record.work_id,
           status: 'submitted',
           result_hash: activePrepared.result_hash,
-          ledger_record_hash: activePrepared.ledger_record_hash,
+          ledger_record_hash: ledgerRecordHash,
           updated_at: submittedAt,
         }));
 
         record.status = 'submitted';
         record.result_hash = activePrepared.result_hash;
-        record.ledger_record_hash = activePrepared.ledger_record_hash;
+        record.ledger_record_hash = ledgerRecordHash;
         record.terminal_at = submittedAt;
+        record.late_accept_context = {
+          late_accept_reason: activePrepared.reason,
+          terminal_status_before_accept: 'timed_out',
+          superseded_retry_work_ids: [...currentCleanupPlan.supersededRetryWorkIds],
+        };
         index.work_units[record.work_id] = record;
 
         for (const retry of retryRecords) {
@@ -1210,12 +1593,13 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
         });
         nextQueue = refill(nextQueue);
 
-        appendLedgerRow(bundleDir, activePrepared.ledger_row);
+        appendLedgerRow(bundleDir, ledgerRow);
         const savedIndex = saveWorkUnitIndex(bundleDir, index);
         const savedQueue = saveQueue(bundleDir, nextQueue);
 
         const postcondition = verifyLateSubmitDurablePostcondition(bundleDir, record, {
           supersededRetryWorkIds: activePrepared.cleanupPlan.supersededRetryWorkIds,
+          lateAcceptContext: record.late_accept_context,
         });
         if (!postcondition.ok) {
           const err = new Error(`late-submit durable postcondition failed: ${postcondition.missing.join('; ')}`);
@@ -1228,9 +1612,9 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
           work_id: record.work_id,
           queue_item_id: record.queue_item_id,
           ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
-          ledger_record_hash: activePrepared.ledger_record_hash,
-          output_count: (activePrepared.ledger_row.output_files || []).length,
-          cache_trail_count: (activePrepared.ledger_row.cache_trails || []).length,
+          ledger_record_hash: ledgerRecordHash,
+          output_count: (ledgerRow.output_files || []).length,
+          cache_trail_count: (ledgerRow.cache_trails || []).length,
           late_accept: true,
           terminal_status_before_accept: 'timed_out',
           superseded_retry_work_ids: activePrepared.cleanupPlan.supersededRetryWorkIds,
@@ -1243,7 +1627,7 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
           kind: record.kind,
           receipt_nonce: record.receipt_nonce,
           result_hash: activePrepared.result_hash,
-          ledger_record_hash: activePrepared.ledger_record_hash,
+          ledger_record_hash: ledgerRecordHash,
           late_accept_reason: activePrepared.reason,
           terminal_status_before_accept: 'timed_out',
           superseded_retry_work_ids: activePrepared.cleanupPlan.supersededRetryWorkIds,
@@ -1256,7 +1640,7 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
           kind: record.kind,
           receipt_nonce: record.receipt_nonce,
           result_hash: activePrepared.result_hash,
-          ledger_record_hash: activePrepared.ledger_record_hash,
+          ledger_record_hash: ledgerRecordHash,
           late_accept: true,
         });
         logToRun(bundleDir, 'info', 'work_unit_late_submitted', {
@@ -1265,7 +1649,7 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
           work_id: record.work_id,
           queue_item_id: record.queue_item_id,
           result_hash: activePrepared.result_hash,
-          ledger_record_hash: activePrepared.ledger_record_hash,
+          ledger_record_hash: ledgerRecordHash,
           late_accept_reason: activePrepared.reason,
           superseded_retry_work_ids: activePrepared.cleanupPlan.supersededRetryWorkIds,
         });
@@ -1278,7 +1662,7 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
           queue_item_id: record.queue_item_id,
           status: 'submitted',
           result_hash: activePrepared.result_hash,
-          ledger_record_hash: activePrepared.ledger_record_hash,
+          ledger_record_hash: ledgerRecordHash,
           ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
           late_accept_reason: activePrepared.reason,
           terminal_status_before_accept: 'timed_out',
@@ -1288,7 +1672,9 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
           normalizations: activePrepared.normalizations,
         };
       } catch (error) {
-        const rollback = restoreSubmitSnapshot(snapshot);
+        const rollback = snapshot
+          ? restoreSubmitSnapshot(snapshot)
+          : { ok: true, failures: [] };
         error.late_submit_failure_payload = buildLateSubmitDurabilityFailure(prepared, error, rollback);
         throw error;
       }
@@ -1305,12 +1691,134 @@ export function lateSubmitWorkUnit(bundleDir, { work_id, resultPath, reason } = 
   }
 }
 
+export function recoverWorkUnitDeclaration(bundleDir, { work_id } = {}) {
+  let prepared;
+  try {
+    prepared = prepareCurrentDeclarationRecovery(bundleDir, work_id);
+  } catch (error) {
+    return declarationRecoveryFailure(bundleDir, work_id, error);
+  }
+  if (prepared.existing) {
+    return {
+      ok: true,
+      recovered: true,
+      changed: false,
+      idempotent: true,
+      work_id: prepared.record.work_id,
+      queue_item_id: prepared.record.queue_item_id,
+      status: 'submitted',
+      ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
+      ledger_record_hash: prepared.ledgerRow.ledger_record_hash,
+    };
+  }
+
+  try {
+    return withWorkUnitTransaction(bundleDir, 'recover_work_unit_declaration', ({ tx_id }) => {
+      const active = prepareCurrentDeclarationRecovery(bundleDir, work_id);
+      if (active.existing) {
+        return {
+          ok: true,
+          recovered: true,
+          changed: false,
+          idempotent: true,
+          work_id: active.record.work_id,
+          queue_item_id: active.record.queue_item_id,
+          status: 'submitted',
+          ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
+          ledger_record_hash: active.ledgerRow.ledger_record_hash,
+        };
+      }
+
+      const ledgerSnapshot = captureFileSnapshot(ledgerPath(bundleDir));
+      try {
+        appendLedgerRow(bundleDir, active.ledgerRow);
+        const restoredRows = readWorkUnitLedgerRows(bundleDir);
+        const restored = restoredRows.filter((row) => row.work_id === active.record.work_id);
+        if (restored.length !== 1 || restored[0].ledger_record_hash !== active.record.ledger_record_hash) {
+          throw new Error(`recovered declaration durable postcondition failed for ${active.record.work_id}`);
+        }
+        traceWorkUnitEvent(bundleDir, 'work_unit_declaration_recovered', {
+          tx_id,
+          work_id: active.record.work_id,
+          queue_item_id: active.record.queue_item_id,
+          ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
+          ledger_record_hash: active.ledgerRow.ledger_record_hash,
+          reconstruction_source: active.reconstructionSource,
+          legacy_reconstruction: active.legacy,
+        });
+        logToRun(bundleDir, 'info', 'work_unit_declaration_recovered', {
+          kind: 'work_unit_declaration_recovery',
+          tx_id,
+          work_id: active.record.work_id,
+          queue_item_id: active.record.queue_item_id,
+          ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
+          ledger_record_hash: active.ledgerRow.ledger_record_hash,
+          reconstruction_source: active.reconstructionSource,
+          legacy_reconstruction: active.legacy,
+        });
+        return {
+          ok: true,
+          recovered: true,
+          changed: true,
+          idempotent: false,
+          work_id: active.record.work_id,
+          queue_item_id: active.record.queue_item_id,
+          status: 'submitted',
+          ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
+          ledger_record_hash: active.ledgerRow.ledger_record_hash,
+          reconstruction_source: active.reconstructionSource,
+          legacy_reconstruction: active.legacy,
+        };
+      } catch (error) {
+        restoreFileSnapshot(ledgerPath(bundleDir), ledgerSnapshot);
+        throw error;
+      }
+    });
+  } catch (error) {
+    return declarationRecoveryFailure(bundleDir, work_id, error);
+  }
+}
+
+export function inspectWorkUnitDeclarationRecovery(bundleDir, { work_id } = {}) {
+  try {
+    const prepared = prepareCurrentDeclarationRecovery(bundleDir, work_id);
+    return {
+      eligible: true,
+      work_id: prepared.record.work_id,
+      queue_item_id: prepared.record.queue_item_id,
+      status: prepared.record.status,
+      declaration_present: prepared.existing,
+      ledger_record_hash: prepared.ledgerRow.ledger_record_hash,
+      reconstruction_source: prepared.reconstructionSource,
+      legacy_reconstruction: prepared.legacy,
+      operation: declarationRecoveryCommand(bundleDir, prepared.record.work_id),
+    };
+  } catch (error) {
+    const failure = declarationRecoveryFailure(bundleDir, work_id, error);
+    return {
+      eligible: false,
+      work_id: work_id || null,
+      declaration_present: false,
+      repair_kind: failure.repair_kind,
+      missing_fact: failure.missing_fact,
+      boundary: failure.write_to,
+      operation: failure.rerun,
+    };
+  }
+}
+
 export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave = null } = {}) {
   let prepared;
   try {
     prepared = prepareWorkUnitSubmit(bundleDir, { work_id, resultPath });
   } catch (error) {
-    return recordSubmitRejection(bundleDir, { work_id, resultPath, reason: error.message || String(error) });
+    const preflight = error.candidate_plan || collectDrySubmitPlan(bundleDir, { work_id, resultPath });
+    return recordSubmitRejection(bundleDir, {
+      work_id,
+      resultPath,
+      reason: error.message || String(error),
+      violations: preflight.violations || [],
+    });
   }
   if (prepared.duplicate) {
     return {
@@ -1327,26 +1835,49 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
 
   try {
     return withWorkUnitTransaction(bundleDir, 'submit_work_unit', ({ tx_id }) => {
-      const index = prepared.index;
-      let queue = prepared.queue;
-      const record = index.work_units[prepared.record.work_id];
+      const activePrepared = prepareWorkUnitSubmit(bundleDir, { work_id, resultPath });
+      if (activePrepared.duplicate) {
+        return {
+          ok: true,
+          duplicate: true,
+          work_id: activePrepared.record.work_id,
+          queue_item_id: activePrepared.record.queue_item_id,
+          status: 'submitted',
+          result_hash: activePrepared.result_hash,
+          ledger_record_hash: activePrepared.ledger_record_hash,
+          normalizations: activePrepared.normalizations,
+        };
+      }
+      const index = activePrepared.index;
+      let queue = activePrepared.queue;
+      const record = index.work_units[activePrepared.record.work_id];
+      const cachePageRefs = [...(activePrepared.virtual_cache_pages || new Map()).keys()]
+        .map((trail) => path.join(trail, 'page.md'));
+      const snapshot = captureSubmitSnapshot(bundleDir, record, cachePageRefs);
       const submittedAt = now();
-      const snapshot = captureSubmitSnapshot(bundleDir, record);
+      const ledgerRow = buildLedgerRow({
+        record,
+        result: activePrepared.result,
+        resultHash: activePrepared.result_hash,
+        declaredAt: submittedAt,
+      });
+      const ledgerRecordHash = ledgerRow.ledger_record_hash;
 
       try {
-        writeJson(path.join(bundleDir, record.paths.result_ref), prepared.result);
-        writeFileSync(path.join(bundleDir, record.paths.runtime_receipt_ref), prepared.runtime_receipt_content);
+        applyCandidateCanonicalizations(bundleDir, activePrepared);
+        writeJson(path.join(bundleDir, record.paths.result_ref), activePrepared.result);
+        writeFileSync(path.join(bundleDir, record.paths.runtime_receipt_ref), activePrepared.runtime_receipt_content);
         writeJson(path.join(bundleDir, record.paths.status_ref), WorkUnitStatusFileSchema.parse({
           work_id: record.work_id,
           status: 'submitted',
-          result_hash: prepared.result_hash,
-          ledger_record_hash: prepared.ledger_record_hash,
+          result_hash: activePrepared.result_hash,
+          ledger_record_hash: ledgerRecordHash,
           updated_at: submittedAt,
         }));
 
         record.status = 'submitted';
-        record.result_hash = prepared.result_hash;
-        record.ledger_record_hash = prepared.ledger_record_hash;
+        record.result_hash = activePrepared.result_hash;
+        record.ledger_record_hash = ledgerRecordHash;
         record.terminal_at = submittedAt;
         index.work_units[record.work_id] = record;
 
@@ -1356,12 +1887,12 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
           terminal_status: 'done',
           completed_at: submittedAt,
           work_id: record.work_id,
-          reason: prepared.result.summary || undefined,
-          item: prepared.manifest.queue_item,
+          reason: activePrepared.result.summary || undefined,
+          item: activePrepared.manifest.queue_item,
         });
         queue = refill(queue);
 
-        appendLedgerRow(bundleDir, prepared.ledger_row);
+        appendLedgerRow(bundleDir, ledgerRow);
         const savedIndex = saveWorkUnitIndex(bundleDir, index);
         const savedQueue = saveQueue(bundleDir, queue);
         if (typeof afterQueueSave === 'function') {
@@ -1380,9 +1911,9 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
           work_id: record.work_id,
           queue_item_id: record.queue_item_id,
           ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
-          ledger_record_hash: prepared.ledger_record_hash,
-          output_count: (prepared.ledger_row.output_files || []).length,
-          cache_trail_count: (prepared.ledger_row.cache_trails || []).length,
+          ledger_record_hash: ledgerRecordHash,
+          output_count: (ledgerRow.output_files || []).length,
+          cache_trail_count: (ledgerRow.cache_trails || []).length,
         });
         logToRun(bundleDir, 'info', 'work_unit_ledger_appended', {
           kind: 'ledger_append',
@@ -1390,24 +1921,24 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
           work_id: record.work_id,
           queue_item_id: record.queue_item_id,
           ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
-          ledger_record_hash: prepared.ledger_record_hash,
+          ledger_record_hash: ledgerRecordHash,
         });
-        if (prepared.normalizations.length > 0) {
+        if (activePrepared.normalizations.length > 0) {
           traceWorkUnitEvent(bundleDir, 'work_unit_submit_normalized', {
             tx_id,
             work_id: record.work_id,
             queue_item_id: record.queue_item_id,
             kind: record.kind,
-            normalization_count: prepared.normalizations.length,
-            normalizations: prepared.normalizations,
+            normalization_count: activePrepared.normalizations.length,
+            normalizations: activePrepared.normalizations,
           });
           logToRun(bundleDir, 'info', 'work_unit_submit_normalized', {
             kind: 'work_unit_submit',
             tx_id,
             work_id: record.work_id,
             queue_item_id: record.queue_item_id,
-            normalization_count: prepared.normalizations.length,
-            normalizations: prepared.normalizations,
+            normalization_count: activePrepared.normalizations.length,
+            normalizations: activePrepared.normalizations,
           });
         }
         traceWorkUnitEvent(bundleDir, 'work_unit_submitted', {
@@ -1417,16 +1948,16 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
           wave: record.wave,
           kind: record.kind,
           receipt_nonce: record.receipt_nonce,
-          result_hash: prepared.result_hash,
-          ledger_record_hash: prepared.ledger_record_hash,
+          result_hash: activePrepared.result_hash,
+          ledger_record_hash: ledgerRecordHash,
         });
         logToRun(bundleDir, 'info', 'work_unit_submitted', {
           kind: 'work_unit_submit',
           tx_id,
           work_id: record.work_id,
           queue_item_id: record.queue_item_id,
-          result_hash: prepared.result_hash,
-          ledger_record_hash: prepared.ledger_record_hash,
+          result_hash: activePrepared.result_hash,
+          ledger_record_hash: ledgerRecordHash,
         });
 
         return {
@@ -1435,16 +1966,16 @@ export function submitWorkUnit(bundleDir, { work_id, resultPath, afterQueueSave 
           work_id: record.work_id,
           queue_item_id: record.queue_item_id,
           status: 'submitted',
-          result_hash: prepared.result_hash,
-          ledger_record_hash: prepared.ledger_record_hash,
+          result_hash: activePrepared.result_hash,
+          ledger_record_hash: ledgerRecordHash,
           ledger_ref: WORK_UNIT_OUTPUT_LEDGER,
           queue: postcondition.queue,
           index: postcondition.index,
-          normalizations: prepared.normalizations,
+          normalizations: activePrepared.normalizations,
         };
       } catch (error) {
         const rollback = restoreSubmitSnapshot(snapshot);
-        error.submit_failure_payload = buildSubmitDurabilityFailure(prepared, error, rollback);
+        error.submit_failure_payload = buildSubmitDurabilityFailure(activePrepared, error, rollback);
         throw error;
       }
     });

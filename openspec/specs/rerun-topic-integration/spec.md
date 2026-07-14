@@ -10,14 +10,21 @@ TBD — see delta spec in change harden-rerun-topic-integration.
 
 ### Requirement: Sub-agent reference file format specification
 
-`phase-wave1-subagent.md` SHALL contain a reference file format specification aligned with `shared-reference-template.md` metadata block format.
+Rerun-produced reference files SHALL use the same metadata and semantic contract as normal reference materialization. They SHALL expose the eight common required metadata keys, one canonical topic-binding form resolved from exact `related_topic_uid` or compatible legacy `related_topic`, and the five required non-empty semantic sections: Key Facts, Core Content Capture, Relevance To This Research, Quotable Terms / Concepts, and Risks And Limitations.
 
-The format specification SHALL include:
-- File naming: `reference/{topic.slug}-<source-slug>.md`
-- Metadata block: 9 required fields (`source_url`, `acceptance_status`, `source_type`, `tier`, `evidence_role`, `trust_level`, `why_it_matters`, `accessed_at`, `related_topic`), using `- key: value` format, placed before the first `## ` header
-- 5 standard section headers: `## Key Facts`, `## Core Content Capture`, `## Relevance To This Research`, `## Quotable Terms / Concepts`, `## Risks And Limitations`, in fixed order
+The shared parser SHALL tolerate harmless heading case/level, whitespace, section order and list-marker presentation. A fixed heading level, fixed section order, fixed prose length, or fixed Key Facts bullet count SHALL NOT be a rerun-specific blocking rule. Existing historical references that resolve through the canonical adapter SHALL not require metadata-only mass rewrite.
 
-The specification SHALL be consistent with `shared-reference-template.md`. When constructing task cards, the Phase Agent SHALL inline this format specification into the `action` field (already present in `phase-wave1.md` L58 and L285-289).
+#### Scenario: Rerun reference uses the normal tolerant semantic contract
+
+- **WHEN** a rerun-added Topic materializes a reference with all required metadata and five non-empty semantic sections in an equivalent presentation
+- **THEN** the same shared reference-format evaluator used by normal execution SHALL accept it
+- **AND** rerun SHALL NOT impose a second fixed-order or fixed-quantity format path
+
+#### Scenario: Historical UID binding does not require legacy-field rewrite
+
+- **WHEN** an existing rerun-consumed reference has one exact registered `related_topic_uid` and no legacy `related_topic`
+- **THEN** the shared resolver SHALL treat the topic binding as present
+- **AND** the Agent SHALL NOT create a work unit solely to change metadata spelling
 
 #### Scenario: Sub-agent role definition includes reference format
 
@@ -59,19 +66,21 @@ When `action: supplement` (adding dimensions to existing topic), maintain the cu
 
 ### Requirement: Gate content quality rules for reference files
 
-The wave1-complete gate SHALL include deterministic reference-file checks on top of structural checks. These checks SHALL avoid guess-based content and URL heuristics that can feed noisy repair instructions back to the Markdown Controller.
+Rerun Wave1 SHALL use the normal Gate rule set and shared evaluators. Numeric countability SHALL require authority-selected accepted status plus a parseable source URL. Required semantic-section availability SHALL remain a separate `reference_format` responsibility. The historical blocking `key_facts_min_lines` rule SHALL be removed rather than retained as a rerun-specific floor; Key Facts quantity or prose richness MAY appear only as advisory feedback.
 
-The current gate-owned checks are:
+Source URL presence, submitted backing, canonical topic binding, accepted index navigation, cache/provenance integrity and genuinely missing required semantic sections SHALL remain blocking through their direct owners. Presentation tolerance SHALL NOT grant authority to filesystem-only references or weaken ledger/receipt/hash validation.
 
-1. **`source_url_present` / parseable source metadata**: reference files SHALL include a non-empty, URL-parseable `source_url` metadata value. The gate SHALL NOT classify homepage-looking, shallow-path, duplicate-looking, or one-segment URLs as uncountable or invalid based on path-depth heuristics.
+#### Scenario: Fewer than five Key Facts is not a rerun blocker
 
-2. **`key_facts_min_lines`**: reference file `## Key Facts` section SHALL contain at least 5 lines starting with `- ` with substantive entries. Detection scope: ledger-declared reference files for the current target.
+- **WHEN** an authority-backed rerun reference has accepted status, a parseable source URL and all five non-empty semantic sections but fewer than five Key Facts bullets
+- **THEN** Wave1 SHALL NOT fail `key_facts_min_lines` or reduce the numeric count
+- **AND** any quantity observation SHALL remain advisory and absent from `failed_rule_ids` and `hints[]`
 
-3. **`reference_format`**: reference files SHALL use metadata block (`- key: value`) and include 9 required metadata fields and 5 standard sections; YAML frontmatter SHALL fail.
+#### Scenario: Missing semantic section remains blocking once
 
-4. **`ledger_coverage`**: every `reference/*{topic}*.md` file on filesystem SHALL have a `role === 'reference'` declaration in `rb_output_declarations.jsonl`. If a filesystem reference file is not declared in the ledger, the gate SHALL fail. Filesystem is used only for orphan detection, not as provenance authority.
-
-The gate SHALL NOT include `source_url_article_level`, `content_dedup`, duplicate URL, homepage/shallow URL, Jaccard similarity, or self-reference heuristics as blocking checks or diagnostic advice.
+- **WHEN** an authority-backed rerun reference lacks the Core Content Capture semantic section
+- **THEN** the shared reference-format evaluator SHALL return one missing-section root
+- **AND** count-floor SHALL NOT repeat the same absence as a thin-content or zero-count symptom
 
 #### Scenario: Homepage-looking URL is not rejected by path depth
 

@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import * as gateHelpers from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 import {
   extractSection,
+  parseMarkdownSemanticSections,
   listMatchingBundleFiles,
   checkReferenceFormatFiles,
   checkReferenceSourceUrls,
@@ -55,6 +56,26 @@ More content here.`;
   it('returns empty string for missing section', () => {
     assert.strictEqual(extractSection(md, 'NonExistent'), '');
   });
+
+  it('recognizes semantic sections across heading level, case, spacing, and order', () => {
+    const tolerant = [
+      '#### risks and limitations   ',
+      '',
+      'Risk.',
+      '',
+      '### CORE CONTENT CAPTURE',
+      '',
+      'Narrative.',
+      '',
+      '## key facts',
+      '',
+      '1. Fact.',
+    ].join('\n');
+    const sections = parseMarkdownSemanticSections(tolerant);
+    assert.equal(sections.get('risks and limitations'), 'Risk.');
+    assert.equal(sections.get('core content capture'), 'Narrative.');
+    assert.equal(extractSection(tolerant, 'Key Facts'), '1. Fact.');
+  });
 });
 
 describe('retired content heuristics', () => {
@@ -72,6 +93,140 @@ describe('retired content heuristics', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('reference file gate helpers', () => {
+  it('accepts exact UID-only reference topic binding against canonical registry', () => {
+    const dir = join(__dirname, '.test-gh-ref-uid-binding');
+    const topicUid = 'tp_123e4567-e89b-12d3-a456-426614174000';
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    writeFileSync(join(dir, 'rb_plan.md'), [
+      '---',
+      JSON.stringify({
+        plan_basename: 'uid-binding',
+        derived_topic_count: 1,
+        topic_registry_version: '2',
+        topic_registry: [{
+          topic_uid: topicUid,
+          id: '01',
+          slug: '01_topic-a',
+          title: 'Topic A',
+          must_answer: ['Question A'],
+          scope_role: 'primary',
+          depends_on_topic_uids: [],
+          previous_layouts: [{ id: '02', slug: '02_old-topic-a' }],
+        }],
+      }, null, 2),
+      '---',
+    ].join('\n'));
+    writeFileSync(join(dir, 'reference', 'topic-a-uid.md'), [
+      '- source_url: https://example.com/news/a',
+      '- acceptance_status: accepted',
+      '- source_type: primary',
+      '- tier: Tier 2',
+      '- evidence_role: deepening_reference',
+      '- trust_level: practitioner',
+      '- why_it_matters: Relevant.',
+      '- accessed_at: 2026-07-14',
+      `- related_topic_uid: ${topicUid}`,
+      '',
+      '## Key Facts',
+      'Fact.',
+      '## Core Content Capture',
+      'Narrative.',
+      '## Relevance To This Research',
+      'Relevant.',
+      '## Quotable Terms / Concepts',
+      'Term.',
+      '## Risks And Limitations',
+      'Risk.',
+    ].join('\n'));
+    try {
+      const files = listMatchingBundleFiles(dir, 'reference/*.md');
+      const result = checkReferenceFormatFiles(files, { bundlePath: dir });
+      assert.equal(result.passed, true, result.inspect.join('; '));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('reports one topic-binding conflict when UID and legacy metadata disagree', () => {
+    const dir = join(__dirname, '.test-gh-ref-dual-binding');
+    const topicA = 'tp_123e4567-e89b-12d3-a456-426614174000';
+    const topicB = 'tp_123e4567-e89b-12d3-a456-426614174001';
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    writeFileSync(join(dir, 'rb_plan.md'), [
+      '---',
+      JSON.stringify({
+        plan_basename: 'dual-binding',
+        derived_topic_count: 2,
+        topic_registry_version: '2',
+        topic_registry: [
+          { topic_uid: topicA, id: '01', slug: '01_topic-a', title: 'Topic A', must_answer: ['A'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] },
+          { topic_uid: topicB, id: '02', slug: '02_topic-b', title: 'Topic B', must_answer: ['B'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] },
+        ],
+      }, null, 2),
+      '---',
+    ].join('\n'));
+    writeFileSync(join(dir, 'reference', 'topic-a-conflict.md'), [
+      '- source_url: https://example.com/news/a',
+      '- acceptance_status: accepted',
+      '- source_type: primary',
+      '- tier: Tier 2',
+      '- evidence_role: deepening_reference',
+      '- trust_level: practitioner',
+      '- why_it_matters: Relevant.',
+      '- accessed_at: 2026-07-14',
+      `- related_topic_uid: ${topicA}`,
+      '- related_topic: 02_topic-b',
+      '',
+      '## Key Facts', 'Fact.',
+      '## Core Content Capture', 'Narrative.',
+      '## Relevance To This Research', 'Relevant.',
+      '## Quotable Terms / Concepts', 'Term.',
+      '## Risks And Limitations', 'Risk.',
+    ].join('\n'));
+    try {
+      const result = checkReferenceFormatFiles(listMatchingBundleFiles(dir, 'reference/*.md'), { bundlePath: dir });
+      assert.equal(result.passed, false);
+      assert.equal(result.findings.filter((finding) => /topic_binding/.test(finding.id)).length, 1);
+      assert.match(result.findings.find((finding) => /topic_binding/.test(finding.id)).missing_fact, /conflict/i);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts all required non-empty semantic sections in tolerant presentation', () => {
+    const dir = join(__dirname, '.test-gh-ref-tolerant-sections');
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    writeFileSync(join(dir, 'reference', 'topic-a-tolerant.md'), [
+      '- source_url: https://example.com/news/a',
+      '- acceptance_status: accepted',
+      '- source_type: primary',
+      '- tier: Tier 2',
+      '- evidence_role: deepening_reference',
+      '- trust_level: practitioner',
+      '- why_it_matters: Relevant.',
+      '- accessed_at: 2026-07-14',
+      '- related_topic: topic-a',
+      '',
+      '#### risks and limitations',
+      'Risk.',
+      '### Quotable Terms / Concepts',
+      'Term.',
+      '## relevance to this research',
+      'Relevant.',
+      '##### CORE CONTENT CAPTURE',
+      'Narrative.',
+      '### key facts',
+      'A factual paragraph.',
+    ].join('\n'));
+    try {
+      const files = listMatchingBundleFiles(dir, 'reference/*topic-a*.md');
+      const result = checkReferenceFormatFiles(files);
+      assert.equal(result.passed, true, result.inspect.join('; '));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('accepts homepage-looking source URLs when URL-parseable', () => {
     const dir = join(__dirname, '.test-gh-ref-parseable-url');
     mkdirSync(join(dir, 'reference'), { recursive: true });
@@ -225,6 +380,7 @@ describe('reference file gate helpers', () => {
       writeFileSync(join(dir, 'reference', '_INDEX.md'), [
         '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
         '| --- | --- | --- | --- | --- | --- | --- | --- |',
+        '| reference/other-source.md | primary | practitioner | Tier 2 | topic-b | wave1_topic | accepted | 2026-07-14 |',
       ].join('\n'));
       writeFileSync(join(dir, 'reference', 'topic-a-source.md'), referenceContent({
         source_url: 'https://example.com/research/source',
@@ -237,6 +393,39 @@ describe('reference file gate helpers', () => {
       assert.match(result.inspect.join('\n'), /\[missing_index_row\]/);
     } finally {
       cleanupWorkUnitBundle(dir);
+    }
+  });
+
+  it('short-circuits invalid reference index parent before per-file row checks', () => {
+    const dir = join(__dirname, '.test-gh-ref-index-parent');
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    writeFileSync(join(dir, 'reference', '_INDEX.md'), [
+      '| ref_file | source_layer |',
+      '| --- | --- |',
+      '| reference/topic-a.md | wave1_topic |',
+    ].join('\n'));
+    const files = [
+      { relPath: 'reference/topic-a.md', absPath: join(dir, 'reference/topic-a.md') },
+      { relPath: 'reference/topic-b.md', absPath: join(dir, 'reference/topic-b.md') },
+    ];
+    try {
+      const invalid = checkReferenceIndexCoverage(dir, files, { sourceLayer: 'wave1_topic' });
+      assert.equal(invalid.passed, false);
+      assert.equal(invalid.findings.length, 1);
+      assert.match(invalid.findings[0].id, /index_table_invalid/);
+      assert.equal(invalid.findings.some((finding) => /missing_row/.test(finding.id)), false);
+
+      writeFileSync(join(dir, 'reference', '_INDEX.md'), [
+        '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
+        '| --- | --- | --- | --- | --- | --- | --- | --- |',
+        '| reference/topic-a.md | primary | practitioner | Tier 2 | topic-a | wave1_topic | accepted | 2026-07-14 |',
+      ].join('\n'));
+      const validParent = checkReferenceIndexCoverage(dir, files, { sourceLayer: 'wave1_topic' });
+      assert.equal(validParent.passed, false);
+      assert.equal(validParent.findings.length, 1);
+      assert.match(validParent.findings[0].id, /reference\/topic-b\.md:missing_row/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });

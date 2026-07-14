@@ -208,16 +208,30 @@ export function enqueue(queue, item, { mode = 'auto' } = {}) {
   }
 }
 
+function delegatedClaimPhase(item) {
+  const explicit = item?.payload?.phase || item?.lineage?.phase;
+  if (/^wave[0-9]+$/.test(String(explicit || ''))) return explicit;
+  const match = String(item?.kind || '').match(/^wave([0-9]+)_/);
+  return match ? `wave${match[1]}` : '<waveN>';
+}
+
+function delegatedClaimCommand(item, bundleDir) {
+  const bundle = bundleDir ? path.resolve(bundleDir) : '<bundle-path>';
+  const role = item?.targets?.delegates?.role_key || '<role-key>';
+  return `node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim ${bundle} --phase ${delegatedClaimPhase(item)} --actor-outcome <available|unavailable> --actor-source native_probe --actor-role-key ${role} --actor-reason <probe-reason> --execution-actor <delegated_subagent|phase_agent_fallback>`;
+}
+
 /**
  * Claim the current non-delegated queue item. Marks the queue-front item running.
  *
  * @param {object} queue — current QueueState
  * @param {object} [opts]
  * @param {string} [opts.actor='main-agent'] — who is claiming
+ * @param {string|null} [opts.bundleDir=null] — resolved bundle path for repair feedback
  * @returns {{ queue: object, item: object|null }}
  *   - `item` is the claimed QueueItem, or null if the active window is empty
  */
-export function claim(queue, { actor = 'main-agent' } = {}) {
+export function claim(queue, { actor = 'main-agent', bundleDir = null } = {}) {
   logEvent('info', 'queue_claim_attempt', { kind: 'queue_claim', actor });
   try {
     const q = clone(validateQueue(queue));
@@ -227,9 +241,20 @@ export function claim(queue, { actor = 'main-agent' } = {}) {
       q.stop_authorization_state = q.refill_pool.length > 0 ? 'unauthorized_continue_required' : 'empty_queue_after_refill';
       traceEntry('check', { source: 'agq-claim', step: 'claim', passed: false, reason: 'empty' });
       logEvent('warn', 'queue_claim_empty', { kind: 'queue_claim', actor, queue_health: q.queue_health, stop_authorization_state: q.stop_authorization_state });
-      return { queue: validateQueue(touchQueue(q)), item: null, queue_health: q.queue_health, stop_authorization_state: q.stop_authorization_state };
+      return {
+        queue: validateQueue(touchQueue(q)),
+        item: null,
+        reason_code: 'empty_active_window',
+        repair_kind: 'engine_operation',
+        missing_fact: 'Queue claim found no item in the active window after current refill state was evaluated.',
+        write_to: 'Queue demand owner: enqueue/refill through operate-queue before claiming.',
+        rerun: `node DPT_FRAMEWORK/cli/operate-queue.mjs claim ${bundleDir ? path.resolve(bundleDir) : '<bundle-path>'} --actor ${actor}`,
+        queue_health: q.queue_health,
+        stop_authorization_state: q.stop_authorization_state,
+      };
     }
     if (item.targets?.delegates?.to === 'sub-agent') {
+      const rerun = delegatedClaimCommand(item, bundleDir);
       const feedback = {
         passed: false,
         check: false,
@@ -238,7 +263,17 @@ export function claim(queue, { actor = 'main-agent' } = {}) {
       };
       traceEntry('check', { source: 'agq-claim', step: 'claim', passed: false, queue_item_id: item.queue_item_id, reason: 'delegated_requires_work_unit_claim' });
       logEvent('warn', 'queue_claim_reject', { kind: 'queue_claim', queue_item_id: item.queue_item_id, actor, reason: 'delegated_requires_work_unit_claim' });
-      return { queue: validateQueue(touchQueue(q)), item: null, feedback };
+      return {
+        queue: validateQueue(q),
+        item: null,
+        reason_code: 'delegated_requires_work_unit_claim',
+        blocked_by_queue_item_id: item.queue_item_id,
+        repair_kind: 'engine_operation',
+        missing_fact: `Queue item ${item.queue_item_id} is delegated to role '${item.targets.delegates.role_key}' and cannot be claimed by operate-queue.`,
+        write_to: `operate-work-unit claim arguments for role '${item.targets.delegates.role_key}': actor observation and execution actor class`,
+        rerun,
+        feedback,
+      };
     }
     item.status = 'running';
     item.updated_at = now();

@@ -497,7 +497,7 @@ describe('Wave2 finding-source admission', () => {
     }
   });
 
-  it('does not assign static repair metadata to ordered presentation checks', () => {
+  it('does not assign static repair metadata to checker-owned semantic and binding checks', () => {
     const wave2 = parseGateDefinition(loadActiveDefinition('gate-wave2-complete.definition.json'));
     for (const id of ['ledger_fixed_sections', 'wave1_evidence_ref']) {
       const rule = wave2.rules.find((candidate) => candidate.id === id);

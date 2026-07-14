@@ -47,6 +47,10 @@ The Engine SHALL derive per-topic/per-wave `not_started|in_progress|complete|blo
 
 The framework SHALL expose one helper, one `operate-topic-state.mjs` CLI and one `_diagnostics/topic-state/<operation-id>/` workspace for `inspect|apply|recover`. `apply` action `migrate_legacy` SHALL require explicit semantics for every legacy registry entry and SHALL allow an explicit `adopt` entry for a registry-external slug detected by C1; adoption MAY bind one exact existing seed or stage one seed skeleton but SHALL NOT move or authorize historical content files. Apply SHALL prepare complete hash-bound replacements only for `rb_plan.md` and explicitly touched `seed_topics/*.md`, durably publish a prepared manifest, recheck expected hashes/path safety, atomically replace listed files, fsync parent directories and clean the workspace after commit.
 
+When an accepted `add_topic` or `migrate_legacy` entry with `seed_binding: new` creates a seed without an existing projection, that staged seed SHALL contain a complete canonical skeleton before registry publication. Its frontmatter SHALL contain the exact UID-bound registry intent plus explicit gap-valued Agent-facing enrichment fields; its body SHALL contain the seed-topics initialization headings, a research-round append area, and exactly the accepted wave-specific placeholders `__BACKFILL_WAVE0_EVIDENCE__`, `__BACKFILL_WAVE1_MECHANISMS__`, `__BACKFILL_WAVE1_TRENDS__`, `__BACKFILL_WAVE2_JUDGMENT__`, and `__BACKFILL_PENDING_QUESTIONS__`. The Engine SHALL NOT use the closed `scope_role` enum value as topic-positioning prose and SHALL NOT introduce a second generic fill/backfill token family.
+
+When an existing UID-bound seed is re-rendered for intent or current-layout mutation, canonical registry fields SHALL overwrite their matching frontmatter keys while non-canonical enrichment fields and the existing body SHALL be preserved. Topic-state mutation SHALL remain the atomic plan+seed writer; it SHALL NOT enqueue future wave work, allocate work units, or write submitted provenance.
+
 For `mutate_layout`, the same workspace MAY additionally record hash-bound `cleanup_files[]` limited to superseded or safely removed seed files. Layout commit SHALL write new/current seed replacements, replace `rb_plan.md` last, then delete only listed old seed files whose bytes still match the prepared expected hash. Artifact/reference/final paths, queue/work-unit state, submitted outputs and immutable provenance SHALL remain outside the workspace.
 
 Recovery SHALL be explicit: inspect or apply encountering an accepted workspace SHALL return one `recover` action with its operation id. `recover` SHALL use only the prepared manifest to complete exact staged replacements and seed cleanup or return blocked without overwrite/delete; it SHALL NOT accept new semantic input.
@@ -162,6 +166,25 @@ The prepared manifest SHALL record the complete originally proven authorization 
 - **THEN** recover SHALL rely on the recorded event/profile/load/transition/status authorization snapshot rather than current fresh-apply eligibility
 - **AND** a manifest missing any complete exceptional-witness component SHALL block instead of inferring authorization from current prose or files
 
+#### Scenario: Rerun add commits complete seed skeleton before descendant work
+
+- **WHEN** a sanctioned normal or post-final rerun applies `add_topic` for a new canonical topic
+- **THEN** the prepared change set SHALL contain the new registry entry and a matching complete UID-bound seed skeleton
+- **AND** the seed SHALL contain all initialization headings and the accepted Wave0/Wave1/Wave2 placeholder set before seed-topics or Wave0 work begins
+- **AND** queue, work-unit and submitted-ledger authority SHALL remain unchanged by topic-state apply
+
+#### Scenario: New seed uses accepted wave-specific placeholders only
+
+- **WHEN** topic-state renders a seed with no existing projection
+- **THEN** the body SHALL contain each accepted wave-specific placeholder exactly once in its owned section
+- **AND** it SHALL NOT contain `__BACKFILL_EVIDENCE__`, `__BACKFILL_MECHANISM__`, `__BACKFILL_TRENDS__`, `__BACKFILL_JUDGMENT__`, `__BACKFILL_QUESTIONS__`, or a new `__FILL_*__` protocol
+
+#### Scenario: Existing seed enrichment survives canonical mutation
+
+- **WHEN** update-intent or current-layout mutation re-renders an existing UID-bound seed
+- **THEN** registry-owned frontmatter fields SHALL reflect the committed canonical topic
+- **AND** existing Agent-facing enrichment fields and body sections SHALL remain byte-preserved except for the explicit canonical field, title, or path changes required by the operation
+
 ### Requirement: Topic-state operations SHALL preserve scope and authority boundaries
 
 Topic-state operations SHALL NOT mutate queue state/schema, work-unit attempts, submitted ledger, status, trace, gates, handoffs, receipts, artifact/cache/reference/final paths, artifact persistence state, profile fields or delivery authority. New topic work SHALL require committed registry+current-seed materialization. The CLI SHALL provide no force, generic delete, retire, arbitrary patch, set-progress, set-status, reentry, override, artifact/reference path move or historical-content rewrite operation.
@@ -276,16 +299,34 @@ Before prepared publication, a new current seed target path SHALL be absent unle
 
 ### Requirement: Historical bindings SHALL resolve through one pure layout resolver
 
-The Engine SHALL expose one pure canonical resolver from registry UID/current/previous layout facts. Topic-state progress, queue/work-unit readers, submitted provenance, gates, file observability and reentry SHALL reuse it rather than maintain independent slug inference. New topic-bound records SHALL write UID plus current slug; immutable legacy slug-only records MAY resolve through unique previous layout. Historical ledger, receipt, trace and work-unit files SHALL remain byte-unchanged.
+The Engine SHALL expose one pure canonical resolver from registry UID/current/previous layout facts. Topic-state progress, queue/work-unit readers, submitted provenance, gates, file observability and reentry SHALL reuse it rather than maintain independent slug, id, or reference-metadata inference. New structured queue/work-unit topic records SHALL write UID plus current slug; immutable legacy slug-only records MAY resolve through unique previous layout. Historical ledger, receipt, trace and work-unit files SHALL remain byte-unchanged.
 
-Accepted historical topic-bearing paths SHALL resolve to their UID and recorded slug without being translated, copied or moved to the current path. Free-text substring matching, symlink aliases, duplicate content authority and arbitrary string replacement SHALL NOT establish binding.
+Reference Markdown SHALL use one thin adapter over that same resolver rather than a second identity map. The adapter SHALL accept `related_topic_uid` containing one exact registered UID or `all`, and SHALL continue to accept legacy `related_topic` values containing `all` or comma-separated exact current/previous ids or slugs. A legacy unpadded numeric ordinal MAY normalize only to the unique equivalent zero-padded canonical id. If both metadata keys are present, they SHALL resolve to the same UID set or the same `all` sentinel; conflict or ambiguity SHALL fail closed with one binding diagnostic. Neither form SHALL create topic authority, enqueue eligibility, or permission to rewrite historical references.
+
+Accepted historical topic-bearing paths and reference metadata SHALL resolve to their UID and recorded coordinates without being translated, copied, moved, or mass-rewritten to the current format. A rerun-added topic SHALL enter the normal current-topic execution path; existing covered topics SHALL reuse resolved historical facts. Free-text substring matching, symlink aliases, duplicate content authority and arbitrary string replacement SHALL NOT establish binding.
 
 #### Scenario: Submitted old slug resolves after rename
 - **WHEN** an immutable work-unit snapshot records a unique previous slug for a UID whose historical output remains at its recorded path
 - **THEN** provenance inspection SHALL show recorded and current coordinates and continue to bind the same UID
 - **AND** it SHALL NOT rewrite the submitted row
 
+#### Scenario: UID-only reference metadata resolves canonically
+- **WHEN** a historical or rerun-time reference declares `related_topic_uid` with one exact registered UID and omits legacy `related_topic`
+- **THEN** Wave gates, inspect and file observability SHALL bind it through the shared canonical resolver
+- **AND** the reference SHALL NOT be rejected solely because the legacy field is absent
+
+#### Scenario: Legacy reference metadata remains compatible
+- **WHEN** a normal-path reference declares only `related_topic` using `all`, one exact current/previous id or slug, or a comma-separated exact list
+- **THEN** the adapter SHALL resolve the same canonical UID set without requiring a file rewrite
+- **AND** normal first-run reference behavior SHALL remain valid
+
+#### Scenario: Duplicate metadata forms must agree
+- **WHEN** one reference contains both `related_topic_uid` and `related_topic`
+- **AND** the two values resolve to different UID sets or sentinel meanings
+- **THEN** resolver consumers SHALL return one `reference_topic_binding_conflict` or equivalent blocker
+- **AND** SHALL NOT select one field by precedence or guess from the filename
+
 #### Scenario: Ambiguous legacy binding fails closed
-- **WHEN** an old record cannot be uniquely mapped by structured UID/current/previous slug fields
+- **WHEN** an old record or reference value cannot be uniquely mapped by structured UID/current/previous id or slug fields
 - **THEN** resolver consumers SHALL return one ambiguous-binding blocker
 - **AND** SHALL NOT guess from serialized free text

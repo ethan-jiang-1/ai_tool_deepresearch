@@ -419,6 +419,55 @@ describe('check-gate-wave2-complete', () => {
     assert.equal(output.check.passed, true, output.inspect.join('\n'));
   });
 
+  it('1d. accepts all six non-empty ledger sections in arbitrary order and heading levels', () => {
+    const dir = createBundle(unique('ledger-reordered'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    writeFileSync(join(dir, 'artifacts/wave2/cross-topic-ledger.md'), `# Ledger
+
+#### hitl2 handoff
+None.
+
+### EXPLORATION DECISIONS
+None needed.
+
+## emergent cross-topic questions
+None found.
+
+##### Cross-Topic Resolutions
+None found.
+
+### wave1 legacy questions
+None imported.
+
+###### cross-topic scan matrix
+| pair_id | topics | checked_dimensions | finding_ids | notes |
+| P01 | topic-a + topic-a | shared_pattern | none | Minimal |
+`);
+    createMinIndex(dir);
+    createMinBackfill(dir);
+    writeWave2Trace(dir);
+    const output = JSON.parse(runGate(dir).stdout);
+    assert.equal(output.check.passed, true, output.inspect.join('\n'));
+  });
+
+  it('1e. keeps an empty required ledger semantic section blocking once', () => {
+    const dir = createBundle(unique('ledger-empty-section'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    const ledgerPath = join(dir, 'artifacts/wave2/cross-topic-ledger.md');
+    writeFileSync(ledgerPath, readFileSync(ledgerPath, 'utf8').replace(
+      /## Cross-Topic Resolutions\n\nNone found\.\n/,
+      '## Cross-Topic Resolutions\n\n',
+    ));
+    createMinIndex(dir);
+    createMinBackfill(dir);
+    writeWave2Trace(dir);
+    const output = JSON.parse(runGate(dir).stdout);
+    assert.equal(output.check.passed, false);
+    assert.equal(output.hints.filter((hint) => hint.rule_id === 'ledger_fixed_sections').length, 1);
+    assert.match(output.hints.find((hint) => hint.rule_id === 'ledger_fixed_sections').missing_fact, /cross-topic resolutions/i);
+  });
+
   it('1c. Wave2 inspect reports missing hitl2_handoff without derivative handoff failures', () => {
     const dir = createBundle(unique('missing-hitl-field'));
     writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
@@ -647,6 +696,35 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected submitted cross-reference work-unit pass, got inspect: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('15b. masks Wave2 declaration-dependent symptoms behind one recoverable parent', () => {
+    const dir = createBundle(unique('declaration-gap'));
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createMinLedger(dir);
+    createMinIndex(dir);
+    createMinBackfill(dir);
+    const submission = submitWave2CrossReference(dir);
+    writeWave2Trace(dir);
+    rmSync(join(dir, 'rb_output_declarations.jsonl'));
+
+    for (const result of [runInspect(dir), runGate(dir)]) {
+      assert.equal(result.status, 1, result.stderr || result.stdout);
+      const output = JSON.parse(result.stdout);
+      assert.equal(output.check.failed_rule_ids.includes('wave2_work_unit_submission_presence'), true);
+      const hint = output.hints.find((entry) => entry.rule_id === 'wave2_work_unit_submission_presence');
+      assert.ok(hint);
+      assert.equal(hint.repair_kind, 'engine_operation');
+      assert.match(hint.missing_fact, new RegExp(submission.record.work_id));
+      assert.match(hint.write_to, /operate-work-unit\.mjs recover-declaration/);
+      assert.doesNotMatch(hint.write_to, /rb_output_declarations\.jsonl/);
+      for (const dependent of [
+        'wave2_work_unit_cross_ref_coverage',
+        'wave2_delegated_bypass_suspected',
+      ]) {
+        assert.equal(output.check.failed_rule_ids.includes(dependent), false);
+      }
+    }
   });
 
   it('16. fails when synthesis exists but scan/triage projection is missing', () => {

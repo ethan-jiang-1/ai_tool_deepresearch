@@ -14,6 +14,7 @@ requires:
   - shared/shared-schemas
   - shared/shared-silent-execution
   - shared/shared-subagent-protocol
+  - shared/shared-reference-template
   - shared/shared-anti-cheating-rules
 suggested_context:
   - phases/subagent-dpt-evidence-extractor
@@ -134,6 +135,8 @@ Sub-agent execution requirements:
 - `evidence-summary.md` or the submitted result must cover mechanism, trend/difficulty, and limitation/dispute/failure-mode dimensions.
 - `result.json#/output_files[]` must declare `artifacts/wave1/{topic.slug}/evidence-summary.md` with role `evidence_summary` and `artifacts/wave1/{topic.slug}/question-list.md` with role `question_list`. Role `other` is only for extra non-blocking outputs; it does not cover either required artifact.
 - `result.json` must expose `source_claims[]` directly or through a declared machine-readable output, plus `accepted_source_urls[]` when available. Each accepted claim names `url`, `source_ref`, `acceptance_status`, `is_new_vs_wave0`, `cache_trail_refs[]`, and optional `degraded_capture_ref`.
+- For normal supplementary `wave1_topic_deepening`, read `task.md#/Authorized Source-Ref Lineage`. A claim may use a genuinely current path declared in this candidate `output_files[]`, or one exact listed prior submitted `evidence_summary` path for the same canonical Topic, wave, and kind. Do not redeclare or overwrite that historical evidence file merely to satisfy the supplementary candidate.
+- Every new `cache_trail_refs[]` or `degraded_capture_ref` produced by the supplementary attempt must still be declared in this current `result.json#/cache_trails`; prior output eligibility does not authorize prior cache reuse or filesystem-only cache.
 - Receipt events must bind `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
 - Output files and cache trails must appear in the submitted result. Canonical topic reference Markdown is not required as delegated output unless a future accepted task explicitly assigns it.
 
@@ -155,7 +158,7 @@ Write each complete projection to a retained staging file, commit it with `opera
 
 Each Phase-owned reference must:
 
-- follow `shared-reference-template.md`: metadata block, no YAML frontmatter, nine required metadata fields, five standard sections, concrete source URLs, and at least five key facts;
+- follow the loaded `shared-reference-template`: metadata block, no YAML frontmatter, eight common metadata fields plus one resolvable topic binding, five required non-empty semantic sections, and concrete source URLs. Heading case, level, spacing, section order, and list presentation are tolerant;
 - use `source_url` from submitted `source_claims[]`, `accepted_source_urls[]`, verified cache trails, or explicit degraded-capture records;
 - include body refs/links to submitted backing such as `artifacts/wave1/{topic}/evidence-summary.md`, `artifacts/wave1/{topic}/question-list.md`, `_cache/wave1/...`, and `_work_units/wave1/{work_id}/`;
 - never introduce an accepted source URL absent from submitted backing. If a needed source is absent, enqueue supplementary `wave1_topic_deepening` instead of direct-searching or inventing a reference.
@@ -168,7 +171,9 @@ If no submitted source is materializable, record an explicit limitation or repai
 
 After each successful Wave1 submit, the Phase Agent writes or updates `artifacts/wave1/{topic}/depth-review.yaml`. This review is Phase-owned process evidence; it does not create delegated coverage. `reviewed_work_unit_refs[]` uses canonical `_work_units/wave1/<work_id>` refs without a trailing slash and every ref must resolve to a submitted work-unit row.
 
-Novelty is a direct comparison: start from accepted submitted `source_claims[]`, normalize their URLs, and compare them with the Wave0 URL set recorded in `wave0_source_urls[]`. Only accepted claims absent from that Wave0 set belong in `new_source_urls[]` or count toward `new_source_floor.observed`. Every accepted claim must remain bound to submitted authority through its work-unit row plus `cache_trail_refs[]`, or an explicit `degraded_capture_ref`; prose links and the Phase-owned depth review do not create source coverage.
+Do not copy or retype submitted `source_claims[]`, `accepted_source_urls[]`, cache/degraded refs, Wave0 URL lists, or `new_source_floor` counts into the review as blocking truth. The Engine derives those deterministic facts directly from the hash-valid rows named by `reviewed_work_unit_refs[]`, the Wave0 `source.yaml` authority, and explicit profile parameters. Legacy copied fields may remain for explanation, but they cannot override the derived result or create coverage.
+
+Novelty is therefore an Engine-owned exact comparison: accepted claim URLs from the reviewed submitted rows minus current Wave0 source URLs. Cache mapping is valid only when the same reviewed rows declare the claim and cache/degraded trail and the referenced cache leaf remains valid. Filesystem-only cache, prose links, and review-only claims do not create source coverage.
 
 Minimum shape:
 
@@ -177,21 +182,6 @@ version: "0.1"
 topic_slug: "{topic.slug}"
 reviewed_work_unit_refs:
   - "_work_units/wave1/<work_id>"
-wave0_source_urls: []
-source_claims:
-  - url: "https://example.com/source"
-    source_ref: "artifacts/wave1/{topic.slug}/evidence-summary.md"
-    acceptance_status: "accepted"
-    is_new_vs_wave0: true
-    cache_trail_refs:
-      - "_cache/wave1/primary/{topic.slug}/s01_source"
-    degraded_capture_ref: null
-new_source_urls:
-  - "https://example.com/source"
-new_source_floor:
-  required: 1
-  observed: 1
-  source: "ceil(wave1_per_topic_ref_floor * topic_unique_ratio)"
 depth_dimensions:
   mechanism: { status: "covered", refs: [] }
   trend_or_difficulty: { status: "covered", refs: [] }
@@ -203,7 +193,7 @@ decision: "accept"
 supplementary_queue_item_ids: []
 ```
 
-Compute `new_source_floor.required` only from explicit profile/runtime parameters: `ceil(wave1_per_topic_ref_floor * topic_unique_ratio)`, minimum 1 when both parameters exist. If either parameter is missing, record `decision: blocked_contract` with a `missing_profile_parameter` reason and do not invent a hidden default. Decision values are closed:
+The Engine computes `new_source_floor.required` only from explicit profile/runtime parameters: `ceil(wave1_per_topic_ref_floor * topic_unique_ratio)`, minimum 1 when both parameters exist, and computes `observed` from the reviewed rows. If either parameter is missing, record `decision: blocked_contract` with a `missing_profile_parameter` reason and do not invent a hidden default. Decision values are closed:
 
 - `accept`: source novelty, submitted cache mapping, depth dimensions, and profile checks are satisfied.
 - `supplement_required`: output is shallow, missing new sources, missing cache mapping, missing depth dimensions, or unmet profile checks.
@@ -238,6 +228,8 @@ Before gate, the Phase Agent checks:
 These are Agent discipline checks. The gate enforces structural and provenance checks, plus configured count floors; it does not replace semantic judgment.
 
 If the depth review records `decision: supplement_required`, enqueue a supplementary `wave1_topic_deepening` queue item with explicit `payload.topic_slug` and a queue id such as `wave1-deepen-{topic.slug}-v2` or `wave1-deepen-{topic.slug}-suppl-r1`. Topic identity comes from `payload.topic_slug`; queue id parsing is fallback only.
+
+The supplementary item follows the same claim/task/dry-submit/formal-submit loop. Use only exact prior paths listed in the claimed task's `Authorized Source-Ref Lineage`; if none is listed, produce a genuinely current assigned output rather than guessing from a filename. Repair `/source_claims/<index>/source_ref` on the same candidate when dry-submit rejects lineage, and never copy an old evidence file into `output_files[]` or overwrite it solely to make validation pass.
 
 ## 4. Expected Artifacts
 

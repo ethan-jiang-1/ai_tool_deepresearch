@@ -4,7 +4,7 @@
 // Verifies:
 //   - 9-section body completeness
 //   - §4 Expected Artifacts describes three-artifact group
-//   - Ledger 6 fixed sections are documented
+//   - Ledger 6 required non-empty presentation-tolerant sections are documented
 //   - Index 15 required fields are documented
 //   - §9 Anti-Cheating Rules has ≥10 phase-specific prohibitions
 
@@ -46,12 +46,17 @@ describe('§4 Expected Artifacts — three-artifact group', () => {
       'synthesis.md not described with finding id references');
   });
 
-  it('cross-topic-ledger.md described with 6 fixed sections', () => {
+  it('cross-topic-ledger.md describes 6 required non-empty presentation-tolerant sections', () => {
     const sections = ['Cross-Topic Scan Matrix', 'Wave1 Legacy Questions', 'Cross-Topic Resolutions',
       'Emergent Cross-Topic Questions', 'Exploration Decisions', 'HITL2 Handoff'];
     const present = sections.filter(s => body.includes(s));
     assert.ok(present.length >= 4,
       `expected at least 4 ledger section names, found ${present.length}: ${present.join(', ')}`);
+    assert.match(body, /required|必须/i);
+    assert.match(body, /non-empty|非空/i);
+    assert.match(body, /case|大小写/i);
+    assert.match(body, /heading level|标题层级/i);
+    assert.match(body, /order|顺序/i);
   });
 
   it('finding-index.yaml described with required fields (id/type/status/decision/refs)', () => {

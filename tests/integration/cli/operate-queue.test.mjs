@@ -4,7 +4,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import { spawnSync } from 'node:child_process';
-import { existsSync, writeFileSync, cpSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTempDir, cleanupAll } from '../../helpers/temp-dirs.mjs';
 
@@ -182,6 +182,30 @@ describe('operate-queue.mjs integration', () => {
 
     assert.notStrictEqual(r.status, 0, 'Claim on empty queue should fail closed.');
     assert.match(r.stdout, /empty|blocked/i);
+  });
+
+  it('claim - returns one delegated owner root without changing queue authority bytes', () => {
+    const dir = createTempDir('operate-queue-delegated-claim');
+    const queue = makeEmptyQueue({
+      active_window: [makeTask({
+        queue_item_id: 'task-delegated-001',
+        kind: 'wave0_source_intake',
+        targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
+      })],
+    });
+    const queuePath = join(dir, 'rb_queue.json');
+    writeFileSync(queuePath, `${JSON.stringify(queue, null, 2)}\n`);
+    writeFileSync(join(dir, 'BUNDLE_MAP.md'), '# Delegated Claim\n');
+    const before = readFileSync(queuePath);
+
+    const result = spawnSync('node', [CLI, 'claim', dir, '--actor', 'main-agent'], { encoding: 'utf-8', timeout: 5000 });
+    assert.equal(result.status, 1);
+    const out = JSON.parse(result.stdout);
+    assert.equal(out.reason_code, 'delegated_requires_work_unit_claim');
+    assert.equal(out.blocked_by_queue_item_id, 'task-delegated-001');
+    assert.equal(out.repair_kind, 'engine_operation');
+    assert.match(out.rerun, /operate-work-unit\.mjs claim .* --phase wave0/);
+    assert.deepEqual(readFileSync(queuePath), before);
   });
 
   it('invalid command returns non-zero', () => {

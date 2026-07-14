@@ -3,7 +3,7 @@
 // @impl 8A.13, 8A.16
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert';
-import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { auditFileObservability } from '../../../DPT_FRAMEWORK/engine/helpers/file-observability.mjs';
@@ -63,6 +63,23 @@ function setupBundle(name, extraFiles = {}) {
   }
 
   return dir;
+}
+
+function snapshotBundle(root) {
+  const entries = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name))) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        entries.push(`D:${path.slice(root.length + 1)}`);
+        walk(path);
+      } else {
+        entries.push(`F:${path.slice(root.length + 1)}:${readFileSync(path).toString('base64')}`);
+      }
+    }
+  };
+  walk(root);
+  return entries;
 }
 
 describe('file observability', () => {
@@ -416,6 +433,63 @@ describe('file observability', () => {
     assert.equal(result.canonical_findings.some((finding) => finding.topic_identity === 'T01'), false);
     assert.equal(result.canonical_findings.some((finding) => finding.topic_identity === 'topic-a'), false);
     assert.equal(result.canonical_findings.filter((finding) => finding.topic_identity === 'topic-z').length, 1);
+  });
+
+  it('binds UID-only reference metadata through the canonical resolver', () => {
+    const topicUid = 'tp_11111111-1111-4111-8111-111111111111';
+    const dir = setupBundle('fo-topic-uid', {
+      'reference/uid-only.md': `- related_topic_uid: ${topicUid}\n\n## Key Facts\n- Fact\n`,
+    });
+    const result = auditFileObservability(dir, {
+      topics: [{ topic_uid: topicUid, id: 'T01', slug: 'topic-a' }],
+    });
+    assert.equal(result.canonical_findings.some((finding) => finding.topic_identity === topicUid), false);
+    assert.equal(result.canonical_findings.some((finding) => finding.primary_surface === 'reference/uid-only.md'), false);
+  });
+
+  it('reports an unknown UID-only reference as one unregistered durable topic', () => {
+    const unknownUid = 'tp_99999999-9999-4999-8999-999999999999';
+    const dir = setupBundle('fo-topic-uid-unknown', {
+      'reference/uid-only.md': `- related_topic_uid: ${unknownUid}\n\n## Key Facts\n- Fact\n`,
+    });
+    const result = auditFileObservability(dir, {
+      topics: [{ topic_uid: 'tp_11111111-1111-4111-8111-111111111111', id: 'T01', slug: 'topic-a' }],
+    });
+    const roots = result.canonical_findings.filter((finding) => finding.topic_identity === unknownUid);
+    assert.equal(roots.length, 1);
+    assert.equal(roots[0].rule_id, 'unregistered_durable_topic');
+    assert.equal(roots[0].primary_surface, 'reference/uid-only.md');
+  });
+
+  it('reports conflicting UID and legacy reference metadata as one binding root', () => {
+    const topicUid = 'tp_11111111-1111-4111-8111-111111111111';
+    const otherUid = 'tp_22222222-2222-4222-8222-222222222222';
+    const dir = setupBundle('fo-topic-binding-conflict', {
+      'reference/conflict.md': `- related_topic_uid: ${topicUid}\n- related_topic: topic-b\n\n## Key Facts\n- Fact\n`,
+    });
+    const result = auditFileObservability(dir, {
+      topics: [
+        { topic_uid: topicUid, id: 'T01', slug: 'topic-a' },
+        { topic_uid: otherUid, id: 'T02', slug: 'topic-b' },
+      ],
+    });
+    const roots = result.canonical_findings.filter((finding) => finding.primary_surface === 'reference/conflict.md');
+    assert.equal(roots.length, 1);
+    assert.equal(roots[0].rule_id, 'reference_topic_binding_conflict');
+    assert.equal(roots[0].classification, 'blocking');
+  });
+
+  it('keeps canonical footprint binding audit read-only', () => {
+    const topicUid = 'tp_11111111-1111-4111-8111-111111111111';
+    const dir = setupBundle('fo-topic-binding-read-only', {
+      'reference/uid-only.md': `- related_topic_uid: ${topicUid}\n\n## Key Facts\n- Fact\n`,
+    });
+    const before = snapshotBundle(dir);
+    auditFileObservability(dir, {
+      topics: [{ topic_uid: topicUid, id: 'T01', slug: 'topic-a' }],
+      targetPhase: 'wave0',
+    });
+    assert.deepEqual(snapshotBundle(dir), before);
   });
 
   it('classifies previous-layout artifact and reference paths as the same UID without expecting aliases', () => {

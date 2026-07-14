@@ -44,6 +44,11 @@ describe('work-unit actor decision', () => {
       const result = claimWorkUnits(dir, { phase: 'wave0', count: 5, actorObservation: unavailable, executionActorClass: 'delegated_subagent' });
       assert.equal(result.claimed_count, 0);
       assert.equal(result.actor_preflight.verdict, 'no_claim');
+      assert.equal(result.reason_code, 'probe_capacity_unavailable');
+      assert.equal(result.repair_kind, 'engine_operation');
+      assert.match(result.missing_fact, /unavailable|probe_capacity_unavailable/);
+      assert.match(result.write_to, /execution actor|claim arguments/i);
+      assert.match(result.rerun, /--execution-actor phase_agent_fallback/);
       assert.equal(existsSync(workUnitIndexPath(dir)), false);
       assert.deepEqual(readFileSync(queuePath), before);
       assert.deepEqual(recursiveAuthoritySnapshot(dir), authorityBefore);
@@ -107,6 +112,52 @@ describe('work-unit actor decision', () => {
       const withoutCurrentObservation = claimWorkUnits(dir, { phase: 'wave0', count: 1 });
       assert.equal(withoutCurrentObservation.claimed_count, 0);
       assert.notEqual(withoutCurrentObservation.actor_preflight.verdict, 'allow_claim');
+      assert.equal(withoutCurrentObservation.reason_code, 'kind_actor_policy_mismatch');
+      assert.equal(withoutCurrentObservation.repair_kind, 'missing_contract');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('requires one current role-bound observation and returns the exact same claim checkpoint', () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'wu-actor-observation-required-'));
+    try {
+      seedDelegatedQueue(dir, [delegatedQueueItem('queue-a')]);
+      const queuePath = path.join(dir, 'rb_queue.json');
+      const before = readFileSync(queuePath);
+      const result = claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      assert.equal(result.claimed_count, 0);
+      assert.equal(result.reason_code, 'observation_required');
+      assert.equal(result.repair_kind, 'agent_action');
+      assert.match(result.missing_fact, /observation/i);
+      assert.match(result.write_to, /actor.*observation|claim arguments/i);
+      assert.match(result.rerun, /operate-work-unit\.mjs claim/);
+      assert.deepEqual(readFileSync(queuePath), before);
+      assert.equal(existsSync(workUnitIndexPath(dir)), false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects unnecessary fallback with one exact normal-claim repair and no authority mutation', () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'wu-actor-fallback-unnecessary-'));
+    try {
+      seedDelegatedQueue(dir, [delegatedQueueItem('queue-a')]);
+      const queuePath = path.join(dir, 'rb_queue.json');
+      const before = readFileSync(queuePath);
+      const result = claimWorkUnits(dir, {
+        phase: 'wave0',
+        actorObservation: { outcome: 'available', source: 'native_probe', role_key: 'dpt-source-intake', reason_code: 'probe_succeeded' },
+        executionActorClass: 'phase_agent_fallback',
+      });
+      assert.equal(result.claimed_count, 0);
+      assert.equal(result.reason_code, 'fallback_unnecessary');
+      assert.equal(result.repair_kind, 'engine_operation');
+      assert.match(result.missing_fact, /available.*fallback|fallback.*available/i);
+      assert.match(result.write_to, /execution actor|claim arguments/i);
+      assert.match(result.rerun, /--execution-actor delegated_subagent/);
+      assert.deepEqual(readFileSync(queuePath), before);
+      assert.equal(existsSync(workUnitIndexPath(dir)), false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -5,6 +5,7 @@ import path from 'node:path';
 import {
   createQueue,
   enqueue,
+  loadQueue,
   makeItem,
   saveQueue,
 } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
@@ -159,13 +160,16 @@ export function claimAndSubmitWorkUnit(dir, {
   resultOverrides = {},
   receiptOverrides = {},
   actorDecision = availableActorDecision(kind),
+  preserveQueue = false,
 } = {}) {
-  seedDelegatedQueue(dir, [delegatedQueueItem(queueItemId, {
+  const queueItem = delegatedQueueItem(queueItemId, {
     phase,
     kind,
     producer_rule,
     ...queueItemOverrides,
-  })]);
+  });
+  if (preserveQueue) saveQueue(dir, enqueue(loadQueue(dir), queueItem));
+  else seedDelegatedQueue(dir, [queueItem]);
   const claim = claimWorkUnits(dir, { phase, count: 1, ...actorDecision });
   const workId = claim.claimed_work_ids?.[0];
   if (!workId) throw new Error(`test helper failed to claim a work unit for ${phase}`);

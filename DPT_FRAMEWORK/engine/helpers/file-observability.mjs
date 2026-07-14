@@ -22,7 +22,12 @@ import {
 import {
   checkReferenceIndexCoverage,
   classifyReferenceAuthority,
+  parseReferenceMetadata,
 } from './gate-helpers-checks.mjs';
+import {
+  evaluateTopicLayouts,
+  resolveReferenceTopicBinding,
+} from './topic-layout.mjs';
 import { checkSourceClaimCacheMapping } from './wave-depth-contracts.mjs';
 import {
   CACHE_BASE_LEAF_FILES,
@@ -449,16 +454,6 @@ function classifyFile(relPath, ctx) {
 // Public API
 // ═══════════════════════════════════════════════════════════════════════════
 
-function explicitTopicMetadata(content) {
-  const identities = [];
-  for (const match of String(content || '').matchAll(/^\s*-\s*(?:related_topic|topic_id|topic_slug)\s*:\s*(.+?)\s*$/gmi)) {
-    const raw = match[1].trim();
-    if (raw.toLowerCase() === 'all') continue;
-    identities.push(...raw.split(',').map((entry) => entry.trim()).filter(Boolean));
-  }
-  return identities;
-}
-
 function canonicalFindingId(kind, identity) {
   return `${kind}:${String(identity || 'unknown').replace(/[^a-z0-9_-]+/gi, '_')}`;
 }
@@ -483,34 +478,73 @@ export function auditCanonicalTopicFootprint(bundlePath, {
   const registryTopics = topics.length > 0
     ? topics
     : topicSlugs.map((slug) => ({ id: slug, slug }));
-  const aliases = new Map();
-  for (const topic of registryTopics) {
-    if (topic?.id) aliases.set(topic.id, topic);
-    if (topic?.slug) aliases.set(topic.slug, topic);
-    for (const layout of topic?.previous_layouts || []) if (layout?.slug) aliases.set(layout.slug, topic);
+  const layouts = evaluateTopicLayouts(registryTopics);
+  const registeredTopicKeys = new Set();
+  const canonicalKeyByAlias = new Map();
+  for (const layout of layouts.referenceLayouts) {
+    const canonicalKey = layout.topic_uid || `legacy:${layout.current.id}:${layout.current.slug}`;
+    registeredTopicKeys.add(canonicalKey);
+    for (const alias of [
+      layout.topic_uid,
+      layout.current.id,
+      layout.current.slug,
+      ...layout.previous.flatMap((entry) => [entry.id, entry.slug]),
+    ]) {
+      if (alias) canonicalKeyByAlias.set(alias, canonicalKey);
+    }
   }
 
   const facts = new Map();
   const addFact = (identity, fact) => {
     if (!identity || identity === 'all') return;
-    if (!facts.has(identity)) facts.set(identity, []);
-    facts.get(identity).push(fact);
+    const canonicalIdentity = canonicalKeyByAlias.get(identity) || identity;
+    if (!facts.has(canonicalIdentity)) facts.set(canonicalIdentity, []);
+    facts.get(canonicalIdentity).push(fact);
   };
 
-  const scanMarkdownMetadata = (root) => {
-    const absoluteRoot = join(bundlePath, root);
-    for (const relPath of walkDir(absoluteRoot, bundlePath).filter((entry) => entry.endsWith('.md'))) {
-      let content = '';
-      try { content = readFileSync(join(bundlePath, relPath), 'utf8'); } catch { continue; }
-      for (const identity of explicitTopicMetadata(content)) {
-        addFact(identity, { kind: 'metadata', surface: relPath, durable: ['reference/', 'final/', 'artifacts/'].some((prefix) => relPath.startsWith(prefix)) });
+  const bindingFindings = [];
+  const referenceRoot = join(bundlePath, 'reference');
+  for (const relPath of walkDir(referenceRoot, bundlePath).filter(isReferenceMarkdown)) {
+    let content = '';
+    try { content = readFileSync(join(bundlePath, relPath), 'utf8'); } catch { continue; }
+    const metadata = parseReferenceMetadata(content);
+    const binding = resolveReferenceTopicBinding(layouts, metadata);
+    if (binding.ok) {
+      if (!binding.all) {
+        for (const topicKey of binding.topic_keys || []) {
+          addFact(topicKey, { kind: 'reference_topic_binding', surface: relPath, durable: true });
+        }
       }
+      continue;
     }
-  };
 
-  scanMarkdownMetadata('reference');
-  scanMarkdownMetadata('final');
-  scanMarkdownMetadata('artifacts');
+    if (['reference_topic_uid_unknown', 'reference_topic_binding_unknown'].includes(binding.reason_code) && binding.value) {
+      addFact(binding.value, {
+        kind: binding.reason_code,
+        surface: relPath,
+        durable: true,
+      });
+      continue;
+    }
+
+    if (binding.reason_code === 'reference_topic_binding_missing') continue;
+    bindingFindings.push({
+      id: canonicalFindingId(binding.reason_code || 'reference_topic_binding_invalid', relPath),
+      rule_id: binding.reason_code || 'reference_topic_binding_invalid',
+      classification: 'blocking',
+      topic_identity: null,
+      primary_surface: relPath,
+      supporting_details: [
+        metadata.get('related_topic_uid')
+          ? { kind: 'related_topic_uid', surface: `${relPath}#metadata.related_topic_uid` }
+          : null,
+        metadata.get('related_topic')
+          ? { kind: 'related_topic', surface: `${relPath}#metadata.related_topic` }
+          : null,
+      ].filter(Boolean),
+      repair_kind: 'repair_topic_reference',
+    });
+  }
 
   for (const wave of ['wave0', 'wave1']) {
     const waveRoot = join(bundlePath, 'artifacts', wave);
@@ -536,9 +570,9 @@ export function auditCanonicalTopicFootprint(bundlePath, {
     if (identity) addFact(identity, { kind: 'work_unit_declaration', surface: declaration.work_id || 'submitted-work-unit', durable: false });
   }
 
-  const canonicalFindings = [];
+  const canonicalFindings = [...bindingFindings];
   for (const [identity, identityFacts] of facts) {
-    if (aliases.has(identity)) continue;
+    if (registeredTopicKeys.has(identity)) continue;
     const durable = identityFacts.find((fact) => fact.durable);
     const primaryFact = durable || identityFacts[0];
     canonicalFindings.push({

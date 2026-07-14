@@ -25,7 +25,7 @@ suggested_context:
 
 - **Objective**: collect foundation source metadata and shared reference evidence for every topic.
 - **Start here**: load `rb_queue.json`, `rb_plan.md` topic registry, seed topic files, profile thresholds, and `dpt-source-intake` role guidance.
-- **Delegated path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit submit` -> submitted ledger row -> gate.
+- **Delegated path**: queue item -> `operate-work-unit claim` -> native Sub-agent -> `operate-work-unit dry-submit` repair loop -> formal `operate-work-unit submit` -> submitted ledger row -> gate.
 - **Completion check**: side-effect-free `inspect-wave0-output.mjs` passes first, then `check-gate-wave0-complete.mjs` passes for `phases/phase-wave0.md`.
 - **Failure posture**: do not direct-search from the Phase Agent as a substitute for delegated evidence. Use submit rejection, terminal attempt closure, refill, and gate feedback.
 
@@ -49,9 +49,20 @@ For each delegated source-intake task, derive the initial candidate URL/source t
 
 ## 3. Allowed Actions
 
+### 3.0 Classify Direct Facts
+
+Before filling demand, classify each current canonical Topic from direct bundle authority, not from rerun history or filesystem appearance:
+
+- `existing Topic + valid submitted Wave0 coverage -> reuse` that submitted historical coverage.
+- `new Topic + no submitted Wave0 coverage -> normal Topic pipeline` beginning with normal Wave0 demand.
+- `supplement intent -> normal supplementary demand` through the same `wave0_source_intake` producer path.
+- orphan `source.yaml` -> not coverage; a filesystem-only artifact is diagnostic until a real claimed attempt submits it through normal authority.
+
+This classification is the same for first-run and rerun-added Topics. It creates no rerun Gate exception, mode, controller, submit path, or provenance namespace. Work that predates a claim cannot be converted into current claimed-attempt provenance: do not manufacture a receipt/result after the fact or attach post-hoc provenance to an orphan artifact.
+
 ### 3.1 Fill Queue
 
-If `operate-queue check <bundle>` reports an empty or thin queue, enqueue one delegated queue item per topic.
+If `operate-queue check <bundle>` reports an empty or thin queue, enqueue one delegated queue item for each Topic classified as normal new-topic demand or normal supplementary demand. Do not enqueue duplicate work for an existing Topic whose valid submitted Wave0 coverage is being reused.
 
 Task card template:
 
@@ -124,24 +135,30 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase wave0 --coun
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>
 ```
 
-For each claimed work unit:
+For each claimed work unit, use the claim output's canonical absolute `bundle_dir` and absolute `prompt_refs[]` paths. Never derive the bundle root from cwd, append a bundle basename, or switch to a same-named nested directory.
 
-1. Read `prompt_refs[].task_ref`, `beacon_ref`, and `result_schema_ref`.
+1. Read `prompt_refs[].task_ref`, `beacon_ref`, and `result_schema_ref` at their returned absolute paths. Confirm that `_beacon.json` carries the same canonical absolute `bundle_dir`. Treat the beacon as immutable: do not overwrite, edit, or repair `_beacon.json`; an identity/root conflict belongs at the Engine checkpoint.
 2. Spawn the Sub-agent with the generated prompt.
 3. Require real WebSearch plus page fetch. If the preferred fetch tool is unavailable, use the fetch chain in the work-unit task. Do not use search snippets as evidence.
 4. Plan candidate URLs from the explicit `rb_profile.yaml#/research_style_params.wave0_per_topic_source_floor` plus a conservative small margin for fetch failures, duplicates, and non-countable pages. When shared foundation references are assigned, bind the shared-reference target to `wave0_shared_ref_total` or another explicit runtime/profile surface plus the same conservative margin. Do not use a fixed hard-coded fetch aim unless it is written as `profile/runtime floor + named margin`.
-5. Ensure the Sub-agent writes declared output files and leaf cache trails.
+5. Read the generated Result JSON Starter in `task.md`, then have the selected actor prepare the candidate `result.json` at the assigned absolute result path and write the declared output files and leaf cache trails. The starter is guidance generated from the active contract, not a prewritten result or alternate authority.
 6. Ensure `runtime-receipt.jsonl` events carry `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`.
 7. Actively poll result/receipt/output/cache readiness without waiting for user continuation or task notification.
-8. Submit ready attempts:
+8. The Agent executes the authorized mechanical validation and repair steps. Dry-submit the ready candidate before formal submit:
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit "<canonical-absolute-bundle_dir>" --work-id <work_id> --result <absolute-result.json>
+```
+
+Read every structured violation. Repair the same candidate and same claimed attempt only at the exact authorized `write_to` coordinate, then rerun that same dry-submit command. Do not replace the claim identity, edit Engine-owned authority, or ask the user to run ordinary work-unit commands. When dry-submit passes, run formal submit:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "<canonical-absolute-bundle_dir>" --work-id <work_id> --result <absolute-result.json>
 ```
 
 When a producer writes assigned `artifacts/`, `reference/`, or `_cache/` content through a completed staging file, it may use `operate-artifact-persistence.mjs persist` before submit and must retain staging until `committed`. This does not replace `operate-work-unit submit`, its cache normalization, or submitted-ledger authority.
 
-If submit rejects, repair the same claimed attempt when possible. For every expired or stale claimed attempt, run timeout preflight before terminal timeout:
+If formal submit rejects because mutable facts changed after dry-submit, repair the same claimed attempt when possible and return to the same dry-submit checkpoint before another formal submit. For every expired or stale claimed attempt, run timeout preflight before terminal timeout:
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-id <work_id> [--result <result.json>]
@@ -241,5 +258,7 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 - 禁止把 Wave0 backfill 写成 naked URL/evidence list or unsupported prose; include return-map fields and refs.
 - 禁止让 orphan `reference/00-shared-*.md` satisfy gate coverage.
 - 禁止修改 `_work_units/_index.json` to repair submit or inspect failures.
+- 禁止覆盖、编辑或“修复” immutable `_beacon.json`; use the canonical absolute `bundle_dir` and Engine checkpoint named by the failure.
+- 禁止给 claim 前已经存在的 work/output 补写 retrospective receipt/result or post-hoc provenance；旧文件不能成为当前 claimed attempt 的 execution evidence.
 - 禁止把 gate console confidence当作 verdict；read gate JSON and trace/check artifacts.
 - 禁止在 repeated failure 后静默推进；use gate `inspect`/`advice`, terminal attempt commands, or refill.

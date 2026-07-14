@@ -861,133 +861,25 @@ function case162(opts) {
   return { bundleDir, verdict };
 }
 
-function stageCase163Scaffold(bundleDir) {
-  writeWave0Scaffold(bundleDir, {
-    planBasename: 'eex_real_agent_rerun_add',
-    topics: [
-      { id: 't1', slug: 'ai-regulation', title: 'AI Regulation' },
-      { id: 't2', slug: 'ai-safety-research', title: 'AI Safety Research' },
-      { id: 't3', slug: 'economic-impact', title: 'Economic Impact of AI Safety' },
-    ],
-    referenceRows: [
-      '| 00-shared-economic-impact.md | primary | expert | Tier 2 | economic-impact | wave0_foundation | accepted | 2026-07-06 |',
-    ],
-  });
-  writeFileSync(path.join(bundleDir, 'rb_profile.yaml'), [
-    'plan_basename: eex_real_agent_rerun_add',
-    'research_profile: quick_factual',
-    'root_must_answer_set:',
-    '  - What are the economic implications of AI safety measures?',
-    'research_style_params:',
-    '  user_visible: false',
-    '  wave0_per_topic_source_floor: 1',
-    '  wave0_shared_ref_total: 1',
-    '  wave1_per_topic_ref_floor: 1',
-    '  quality_min_tier: tier_4',
-    '  quality_min_substance: none',
-    'human_decision_checkpoints:',
-    '  hitl1:',
-    '    status: recorded',
-    '  hitl2:',
-    '    status: recorded',
-    '    user_decision: rerun',
-    '    rerun_count: 1',
-    '    rationale: Add economic impact analysis to topic coverage.',
-    '',
-  ].join('\n'));
-  mkdirSync(path.join(bundleDir, 'seed_topics'), { recursive: true });
-  writeFileSync(path.join(bundleDir, 'seed_topics/economic-impact.md'), [
-    '---',
-    'id: t3',
-    'slug: economic-impact',
-    'title: Economic Impact of AI Safety',
-    '---',
-    '',
-    '# Economic Impact of AI Safety',
-    '',
-    '## 本轮重跑方向',
-    '- action: add',
-    '- new_search_dimensions: economic impact of AI safety regulation, compliance cost, market effects',
-    '',
-  ].join('\n'));
-  const task = queueItemForWorkUnit({
-    phase: 'wave0',
-    queue_item_id: 'case163-economic-impact',
-    topic_slug: 'economic-impact',
-    title: 'Real Agent rerun action:add source intake for economic-impact',
-  });
-  enqueueWorkUnitTask(bundleDir, task, { fileName: 'economic-impact-real-agent.json' });
-  const claim = claimWorkUnitsViaCli(bundleDir, { phase: 'wave0' });
-  return { task, claim, workId: claim.claimed_work_ids[0] };
-}
-
 function case163(opts) {
   const bundleDir = newBundle('case-163', 'eex_real_agent_rerun_add', opts);
-  const { workId } = stageCase163Scaffold(bundleDir);
-
-  if (!opts.realResult) {
-    const reason = {
-      case: 'case-163',
-      status: 'NOT_RUN',
-      work_id: workId,
-      unavailable_surface: 'No --real-result directory or result JSON was provided. This heavy case requires real Agent/sub-agent output with fetched cache leaves.',
-      rerun_condition: 'Run the real sub-agent from the generated work-unit task, then pass either its result JSON or a directory containing result.json plus output/cache files via --real-result.',
-      quality_metrics_required: ['cache_trail_coverage', 'grounding_spot_check', 'url_precision', 'countable_rate', 'gap_rate'],
-    };
-    writeJson(path.join(bundleDir, 'case-163-not-run.json'), reason);
-    recordCheck(bundleDir, 'case-163', 'real-agent-rerun-cache-trail', false, reason.unavailable_surface, { outcome: 'not_run', work_id: workId });
-    const verdict = writeVerdict(bundleDir, 'case-163', [], { status: 'NOT_RUN', extra: { bundle: bundleDir, reason } });
-    return { bundleDir, verdict, exitCode: 2 };
-  }
-
-  const realResultPath = path.resolve(opts.realResult);
-  let resultPath = realResultPath;
-  if (statSync(realResultPath).isDirectory()) {
-    for (const entry of readdirSync(realResultPath)) {
-      if (entry === 'result.json') continue;
-      copyRecursiveSync(path.join(realResultPath, entry), path.join(bundleDir, entry));
-    }
-    resultPath = path.join(realResultPath, 'result.json');
-  }
-  const submit = submitWorkUnitViaCli(bundleDir, { work_id: workId, resultPath });
-  appendTrace(bundleDir, { event: 'wave0_completion', source: 'case-163-real-agent' });
-  const gate = runWave0Gate(bundleDir, 'gate-real-agent.json');
-  const health = runHealth(bundleDir, 'heavy', 'health-real-agent.json');
-  const refCount = countReferences(bundleDir, { source: 'ledger' });
-  const coverage = checkCacheCoverage(bundleDir);
-  const fo = auditFileObservability(bundleDir, {
-    topicSlugs: ['ai-regulation', 'ai-safety-research', 'economic-impact'],
-    ledgerDeclarations: readOutputDeclarations(bundleDir),
-    targetPhase: 'wave0',
-  });
-  writeJson(path.join(bundleDir, 'file-observability-real-agent.json'), fo);
-  const submittedRows = readSubmittedWorkUnitDeclarations(bundleDir);
-  const refOutputs = submittedRows.flatMap((row) => (row.output_files || []).filter((entry) => entry.role === 'reference'));
-  const cacheTrailCoverage = {
-    references: refOutputs.length,
-    trails: submittedRows.reduce((sum, row) => sum + (row.cache_trails || []).length, 0),
-    mapped: coverage.passed,
+  const reason = {
+    case: 'case-163',
+    status: 'NOT_RUN',
+    unavailable_surface: 'case-163 is a multi-stage real-Agent continuation canary and cannot be reduced to one fixture-backed result import.',
+    rerun_condition: 'Execute experiments_playbook/exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md step by step with real Agent/sub-agent and search/fetch capability.',
+    required_real_stages: [
+      'two-topic rerun topic-state apply',
+      'real Wave0 work and same-Gate hint repair',
+      'real Wave1 initial and supplementary work',
+      'minimal depth/reference materialization',
+      'declaration fault and recover-declaration',
+    ],
+    ignored_real_result_argument: Boolean(opts.realResult),
   };
-  writeJson(path.join(bundleDir, 'case-163-quality-metrics.json'), {
-    cache_trail_coverage: cacheTrailCoverage,
-    countable_rate: refOutputs.length > 0 ? refCount.count / refOutputs.length : 0,
-    gap_rate: fo.inspect.filter((line) => line.includes('[cache_gap]')).length,
-    url_precision: refOutputs.map((entry) => ({ path: entry.path, source_url: entry.source_url })),
-    grounding_spot_check: 'manual-review-required: compare sampled Key Facts with submitted cache page.md files',
-  });
-
-  const checks = [
-    { label: 'real-submit', passed: submit.ok === true, detail: workId },
-    { label: 'wave0-gate', passed: gate.status === 0 && gate.json?.check?.passed === true, detail: JSON.stringify(gate.json?.inspect || []) },
-    { label: 'cache-coverage', passed: coverage.passed === true, detail: JSON.stringify(coverage.inspect || []) },
-    { label: 'heavy-health', passed: health.status === 0 && health.json?.status === 'clean', detail: JSON.stringify(health.json?.cache_trails || health.stderr) },
-    { label: 'countable-rate', passed: refOutputs.length > 0 && refCount.count === refOutputs.length, detail: JSON.stringify(refCount) },
-    { label: 'no-cache-gap', passed: !fo.inspect.some((line) => line.includes('[cache_gap]')), detail: JSON.stringify(fo.inspect) },
-  ];
-  for (const check of checks) recordCheck(bundleDir, 'case-163', 'real-agent-rerun-cache-trail', check.passed, check.detail, { label: check.label });
-  const verdict = writeVerdict(bundleDir, 'case-163', checks, { extra: { bundle: bundleDir } });
-  maybeCleanup(bundleDir, opts, verdict);
-  return { bundleDir, verdict };
+  writeJson(path.join(bundleDir, 'case-163-not-run.json'), reason);
+  const verdict = writeVerdict(bundleDir, 'case-163', [], { status: 'NOT_RUN', extra: { bundle: bundleDir, reason } });
+  return { bundleDir, verdict, exitCode: 2 };
 }
 
 function case401(opts) {

@@ -8,16 +8,43 @@ Define the Engine-side evidence extraction capabilities for assessing reference 
 ## Requirements
 ### Requirement: isCountable reference判定
 
-Engine SHALL 实现 `isCountable(ref)` 函数，返回 `{ countable: boolean, reason?: string }` 对象。当 `countable: true` 时表示该 reference 满足最低计数条件。满足以下全部条件方可计数：
+Engine SHALL 实现 `isCountable(ref)` 函数，返回 `{ countable: boolean, reason?: string }`。`isCountable()` SHALL answer only whether an already authority-selected reference is eligible for a numeric reference count. It SHALL require:
 
-1. `acceptance_status` 为 `accepted`
-2. `source_url` 存在且可解析为 URL
-3. `## Core Content Capture` section 非空且 >= 100 字符
-4. `## Key Facts` section 含 >= 5 条 bullet line（由 `checkReferenceKeyFactsMinLines()` 判定）
+1. `acceptance_status` resolves to the accepted state used by the current reference contract; and
+2. `source_url` exists and contains at least one URL-parseable value.
 
-`isCountable()` SHALL NOT classify references by homepage, shallow path depth, duplicate-looking URL identity, Jaccard similarity, or self-referential prose. Those historical heuristics SHALL NOT affect Engine reference counting or gate feedback.
+`isCountable()` SHALL NOT score prose quality or duplicate checks owned by the reference-format judgment layer. In particular, it SHALL NOT require a minimum character count in `## Core Content Capture`, a minimum bullet count in `## Key Facts`, exact section order/case/spacing, homepage/path depth, duplicate-looking URL identity, Jaccard similarity, or self-referential prose. Required semantic section availability remains owned by the shared reference-format evaluator; optional fact-count or prose-richness feedback MAY remain advisory.
 
-当文件不可解析（malformed MD、无 metadata block、无法提取 section）时，`isCountable()` SHALL return `{ countable: false, reason: "unparseable" }`——不在异常中静默跳过。
+When the file cannot be read or its metadata cannot be parsed sufficiently to evaluate accepted status and source URL, `isCountable()` SHALL return `{ countable: false, reason: "unparseable" }` or a narrower accepted-status/source-URL reason and SHALL NOT throw.
+
+#### Scenario: Accepted reference with parseable source is countable
+
+- **WHEN** an authority-selected reference declares accepted status and at least one parseable `source_url`
+- **THEN** `isCountable(ref)` SHALL return `{ countable: true }`
+- **AND** it SHALL NOT inspect prose length or Key Facts item count
+
+#### Scenario: Missing semantic section is not a count-floor symptom
+
+- **WHEN** a reference has accepted status and a parseable source URL but lacks `Core Content Capture`
+- **THEN** `isCountable(ref)` SHALL remain countable
+- **AND** the shared reference-format check MAY report the one missing semantic section as its own root cause
+- **AND** count-floor diagnostics SHALL NOT also describe the file as too thin
+
+#### Scenario: Homepage-looking URL is not a countability blocker
+
+- **WHEN** reference metadata contains a URL-parseable source that looks shallow, root-like, or homepage-like
+- **THEN** `isCountable(ref)` SHALL NOT return a homepage/path-depth heuristic failure
+
+#### Scenario: Missing or invalid source URL is not countable
+
+- **WHEN** a reference lacks `source_url` or contains no URL-parseable value
+- **THEN** `isCountable(ref)` SHALL return `{ countable: false }`
+- **AND** the reason SHALL identify missing or invalid `source_url`
+
+#### Scenario: Unparseable reference file returns not countable
+
+- **WHEN** the reference file cannot be read or its metadata cannot be evaluated
+- **THEN** `isCountable(ref)` SHALL return a non-countable result without throwing
 
 #### Scenario: Accepted reference with substantive content is countable
 
@@ -27,43 +54,41 @@ Engine SHALL 实现 `isCountable(ref)` 函数，返回 `{ countable: boolean, re
 - **AND** `## Key Facts` 含 >= 5 条 bullet
 - **THEN** `isCountable(ref)` SHALL return `{ countable: true }`
 
-#### Scenario: Homepage-looking URL is not a countability blocker
-
-- **WHEN** reference 文件的 `source_url` 是 URL-parseable but looks shallow, root-like, or homepage-like
-- **AND** the reference satisfies accepted status, Core Content Capture, and Key Facts requirements
-- **THEN** `isCountable(ref)` SHALL return `{ countable: true }`
-- **AND** it SHALL NOT return `source_url_is_homepage`
-
-#### Scenario: Missing or invalid source URL is not countable
-
-- **WHEN** reference 文件 lacks `source_url` or the value is not URL-parseable
-- **THEN** `isCountable(ref)` SHALL return `{ countable: false }`
-- **AND** the reason SHALL identify missing or invalid `source_url`
-
 #### Scenario: Reference with thin Core Content Capture is not countable
 - **WHEN** reference 文件 `## Core Content Capture` section 内容 < 100 字符
 - **THEN** `isCountable(ref)` SHALL return `{ countable: false, reason: "core_content_capture_too_thin" }`
 
-#### Scenario: Unparseable reference file returns not countable
-- **WHEN** reference 文件无法解析（malformed MD、无 `##` section header、文件不可读）
-- **THEN** `isCountable(ref)` SHALL return `{ countable: false, reason: "unparseable" }`
-- **AND** Engine SHALL NOT throw exception
-
 ### Requirement: countReferences Engine计算
 
-Engine SHALL 实现 `countReferences(baseDir, options?)` 函数，用于 Engine 计算 reference floor 和 fork-router `ref_count`。默认模式 SHALL 从 `rb_output_declarations.jsonl` 读取 role=`reference` 的 declared output paths，只对这些 Engine-ledgered reference 文件调用 `isCountable()`，返回 `{ count: number, uncountable: Array<{path: string, reason: string}> }` 对象供 audit 透明。
+Engine SHALL implement `countReferences(baseDir, options?)` for gate reference floors and fork-router `ref_count`. Default authority mode SHALL collect submitted role=`reference` outputs and accepted Phase-owned reference projections through the existing backing classifier, scope them to the requested target/topic, and apply the narrow `isCountable()` accepted-status/source-URL predicate. It SHALL return `{ count, uncountable }` for audit transparency.
 
-`count` SHALL 由 Engine 独立计算，MUST NOT 依赖 Agent 声明的 `evidenceCount` 字段。`uncountable` 数组 SHALL 列出每个不可计数文件的路径和原因。
+`count` SHALL be Engine-computed and SHALL NOT depend on Agent-provided numeric claims. `countReferences()` SHALL NOT grant authority to filesystem-only references, and diagnostic filesystem scans SHALL NOT satisfy gate or routing floors.
 
-`countReferences()` SHALL support scope filtering so gate rules can preserve target semantics:
+Reference format, semantic-section availability, index navigation, Key Facts presentation, submitted backing and cache/provenance checks SHALL remain separate direct checks. `countReferences()` SHALL NOT repeat those validators or turn one missing Markdown section into both a count-floor failure and a format failure. When candidate authority itself is missing or invalid, count diagnostics SHALL report that direct parent rather than a wall of per-file quality heuristics.
 
-- `options.targetGlob` MAY restrict candidates to a gate target such as `reference/00-shared-*.md` or `reference/*{topic}*.md`
-- `options.topic` MAY further restrict candidates when a gate expansion carries topic context
-- `options.source` defaults to `"ledger"` for pass/fail decisions; `"filesystem"` MAY be used only by diagnostics and SHALL NOT be used to satisfy a gate pass condition
+#### Scenario: Engine counts authority-backed accepted references
 
-`countReferences()` SHALL be a quality/count helper for `count_floor` and fork-router `ref_count`; it SHALL NOT grant ledger authority to files it finds. Orphan reference files found by directory scan SHALL remain non-authoritative until they are declared through `rb_output_declarations.jsonl` or otherwise handled by file observability / ledger coverage diagnostics. Gate `count_floor` and fork-router branch decisions SHALL NOT count orphan reference files.
+- **WHEN** five target-scoped references have accepted submitted/Phase-owned backing and parseable source URLs
+- **THEN** `countReferences()` SHALL return count `5`
+- **AND** prose length, section order and fact bullet count SHALL not change the numeric count
 
-`countReferences()` SHALL NOT run duplicate URL, homepage/shallow URL, Jaccard, or self-reference heuristics. Reference count failures SHALL be grounded in deterministic accepted surfaces: declaration ledger authority, readable files, required metadata presence, accepted status, Core Content Capture, and Key Facts structure.
+#### Scenario: Format failure remains separately actionable
+
+- **WHEN** an authority-backed accepted reference is count-eligible but misses one required semantic section
+- **THEN** the count floor SHALL evaluate the reference numerically
+- **AND** reference-format SHALL return the missing section as the one nearest repair surface
+
+#### Scenario: Countable orphan remains non-authoritative
+
+- **WHEN** a filesystem-only reference has accepted status and a parseable URL but no submitted or accepted Phase-owned backing
+- **THEN** default `countReferences()` SHALL NOT include it
+- **AND** observability/provenance SHALL retain the authority blocker
+
+#### Scenario: Per-topic scope remains exact
+
+- **WHEN** topic B has many count-eligible references but topic A has none
+- **THEN** topic A's scoped count SHALL remain zero
+- **AND** no global count SHALL satisfy its floor
 
 #### Scenario: Engine counts only countable references
 - **WHEN** `rb_output_declarations.jsonl` declares 10 role=`reference` files
@@ -89,13 +114,25 @@ Engine SHALL 实现 `countReferences(baseDir, options?)` 函数，用于 Engine 
 
 ### Requirement: ref_count 改为 Engine 计算
 
-Work-unit result processing SHALL use Engine-verifiable declared references to compute `ref_count` and MUST NOT accumulate an Agent-provided `evidenceCount` field. Production `ref_count` SHALL be derived from submitted work-unit result declarations after schema validation and/or the Engine-written ledger, not from untrusted Agent numeric claims.
+Work-unit result processing and fork routing SHALL derive `ref_count` from Engine-selected submitted/backed reference authority and the narrow count-eligibility predicate. Agent-provided `evidenceCount` SHALL remain ignored.
 
-Gate `count_floor` rules SHALL use `countReferences()` to obtain actual reference counts and MUST NOT rely only on filesystem globbing.
+Gate `count_floor` SHALL use `countReferences()` for numeric cardinality only. Required format, section availability, source/backing, index and provenance contracts SHALL remain owned by their existing shared evaluators. Engine-computed `ref_count` SHALL NOT depend on prose length, Key Facts bullet count, duplicate URL, homepage/path depth, Jaccard, self-reference, or retired content heuristics.
 
-Gate checks that need authoritative Agent-produced content inputs SHALL consume `rb_output_declarations.jsonl` rather than switching to directory scans. `count_floor` using Engine count does not change ledger as the Source of Record for declared outputs; it only changes how declared references are filtered for countability.
+#### Scenario: Work-unit processing uses Engine count
 
-Engine-computed `ref_count` SHALL NOT depend on duplicate URL, homepage/shallow URL, Jaccard, self-reference, or retired `content_dedup` heuristics.
+- **WHEN** submitted/backed target references include three accepted parseable source projections
+- **THEN** Engine-derived `ref_count` SHALL be `3`
+
+#### Scenario: Agent numeric count is ignored
+
+- **WHEN** an Agent reports `evidenceCount: 99` but Engine authority contains three eligible references
+- **THEN** `ref_count` SHALL remain `3`
+
+#### Scenario: Content presentation does not alter routing count
+
+- **WHEN** two eligible references differ only in prose length, list style, heading case or section order
+- **THEN** those presentation differences SHALL NOT change Engine-derived `ref_count`
+- **AND** independently missing required semantic sections MAY still be reported by the shared format evaluator
 
 #### Scenario: work-unit submit path uses Engine-computed ref_count
 

@@ -121,6 +121,66 @@ function createWorkUnitInIndex(bundleDir, index, {
   return { record, manifest };
 }
 
+function claimCommandArg(value) {
+  const text = String(value);
+  return /^[A-Za-z0-9_./:-]+$/.test(text) ? text : JSON.stringify(text);
+}
+
+function actorClaimRepair({ bundleDir, phase, requestedCount, decision, actorPolicy }) {
+  const reasonCode = decision.reason || 'actor_preflight_rejected';
+  const observation = decision.observation || {};
+  let repairKind = 'agent_action';
+  let executionActorClass = decision.execution_actor_class;
+  let missingFact = `Actor preflight rejected claim: ${reasonCode}.`;
+
+  if (reasonCode === 'fallback_unnecessary') {
+    repairKind = 'engine_operation';
+    executionActorClass = 'delegated_subagent';
+    missingFact = `Role '${observation.role_key}' was observed available, so phase_agent_fallback is unnecessary.`;
+  } else if (decision.verdict === 'no_claim' && observation.outcome === 'unavailable' && actorPolicy?.phase_agent_fallback === 'allowed') {
+    repairKind = 'engine_operation';
+    executionActorClass = 'phase_agent_fallback';
+    missingFact = `Role '${observation.role_key}' is unavailable (${reasonCode}); this kind permits one explicit Phase Agent fallback claim.`;
+  } else if (reasonCode === 'kind_actor_policy_mismatch') {
+    repairKind = 'missing_contract';
+    missingFact = `Queue kind actor policy does not bind the planned delegated role '${observation.role_key}'.`;
+  } else if (reasonCode === 'phase_agent_fallback_prohibited') {
+    repairKind = 'external_action';
+    executionActorClass = 'delegated_subagent';
+    missingFact = `Role '${observation.role_key}' is unavailable and the active kind prohibits Phase Agent fallback.`;
+  } else if (observation.outcome === 'unknown') {
+    repairKind = 'agent_action';
+    missingFact = `A current role-bound actor observation is required for '${observation.role_key}' before claim; observed ${reasonCode}.`;
+  }
+
+  const rerunObservation = observation.outcome === 'unknown'
+    ? {
+      outcome: '<available|unavailable>',
+      source: 'native_probe',
+      role_key: observation.role_key,
+      reason_code: '<probe-reason>',
+    }
+    : observation;
+  const rerun = [
+    'node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim',
+    claimCommandArg(path.resolve(bundleDir)),
+    '--phase', claimCommandArg(phase),
+    '--count', claimCommandArg(requestedCount),
+    '--actor-outcome', claimCommandArg(rerunObservation.outcome),
+    '--actor-source', claimCommandArg(rerunObservation.source),
+    '--actor-role-key', claimCommandArg(rerunObservation.role_key),
+    '--actor-reason', claimCommandArg(rerunObservation.reason_code),
+    '--execution-actor', claimCommandArg(executionActorClass),
+  ].join(' ');
+  return {
+    reason_code: reasonCode,
+    repair_kind: repairKind,
+    missing_fact: missingFact,
+    write_to: `operate-work-unit claim arguments for role '${observation.role_key}': actor observation and execution actor class`,
+    rerun,
+  };
+}
+
 export function createWorkUnit(bundleDir, options = {}) {
   return withWorkUnitTransaction(bundleDir, 'create_work_unit', () => {
     const index = loadWorkUnitIndex(bundleDir, { createIfMissing: true });
@@ -300,6 +360,13 @@ export function claimWorkUnits(bundleDir, {
         actor_preflight: actorPreflight,
       });
     }
+    const repair = actorClaimRepair({
+      bundleDir,
+      phase,
+      requestedCount,
+      decision,
+      actorPolicy: preview.candidates[0].actor_policy,
+    });
     return {
       ok: false,
       requested_count: requestedCount,
@@ -312,6 +379,7 @@ export function claimWorkUnits(bundleDir, {
       prompt_refs: [],
       actor_preflight: actorPreflight,
       recommended_action: decision.recommended_action,
+      ...repair,
       queue: previewQueue,
     };
   }
@@ -409,10 +477,16 @@ export function claimWorkUnits(bundleDir, {
       prompt_refs: claimed.map(({ record, manifest }) => ({
         work_id: record.work_id,
         queue_item_id: record.queue_item_id,
+        bundle_dir: path.resolve(bundleDir),
         task_ref: manifest.paths.task_ref,
+        task_path: path.join(path.resolve(bundleDir), manifest.paths.task_ref),
         beacon_ref: manifest.paths.beacon_ref,
+        beacon_path: path.join(path.resolve(bundleDir), manifest.paths.beacon_ref),
         result_schema_ref: manifest.paths.result_schema_ref,
+        result_schema_path: path.join(path.resolve(bundleDir), manifest.paths.result_schema_ref),
         runtime_receipt_ref: manifest.paths.runtime_receipt_ref,
+        runtime_receipt_path: path.join(path.resolve(bundleDir), manifest.paths.runtime_receipt_ref),
+        result_path: path.join(path.resolve(bundleDir), manifest.paths.result_ref),
         spawn_prompt: spawnPromptForWorkUnit(manifest, bundleDir),
         actor_contract_version: record.actor_contract_version,
         actor_execution: record.actor_execution,

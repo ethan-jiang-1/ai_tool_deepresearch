@@ -10,11 +10,34 @@ Define the work-unit provenance gate contract. Gates verify delegated output cov
 ## Requirements
 ### Requirement: Gate SHALL verify submitted work-unit ledger rows
 
-Work-unit provenance gates SHALL read Engine-written rows in bundle-root `rb_output_declarations.jsonl` as the delegated coverage authority. The check name SHALL be `work_unit_ledger_exists`. A row SHALL count only when its work-unit fields are schema-valid, its `ledger_record_hash` verifies, and it binds to a submitted work-unit attempt.
+Work-unit provenance gates SHALL continue to read schema-valid, hash-valid Engine-written rows in bundle-root `rb_output_declarations.jsonl` as delegated coverage authority. Reconstructable index/result/status/queue facts and bounded late-accept context SHALL NOT count directly as coverage.
 
-Audited late-accepted rows SHALL count as submitted work-unit ledger rows only when the row is schema-valid, hash-valid, marked with valid late-accept audit fields, bound to the submitted targeted work-unit index record, and not in conflict with any submitted replacement for the same `queue_item_id`. Valid audit fields require `late_accept: true`, a non-empty reason, `terminal_status_before_accept: "timed_out"`, and unique non-self `superseded_retry_work_ids`.
+When a ledger row is absent but `_work_units/_index.json` contains a submitted attempt, gate/inspect SHALL distinguish missing declaration authority from nonexistent delegated work. It SHALL classify the work ID as `submitted_declaration_missing` or equivalent, determine whether exact or audited legacy declaration recovery is reachable through the existing work-unit owner, and mask downstream missing-output/cache/count symptoms that depend on that row.
 
-Current main spec Purpose and guidance SHALL describe this capability as the work-unit provenance gate contract. It SHALL NOT describe the capability as an artifact of archiving the retired relay/slot replacement change.
+The gate SHALL remain failed until recovery restores a valid bundle ledger row. This diagnostic simplification SHALL NOT let index/result/filesystem facts bypass the ledger.
+
+#### Scenario: Hand-written ledger row is rejected
+
+- **WHEN** a ledger row lacks a valid `ledger_record_hash`, matching submitted index/status hashes, or the required result/receipt/output/cache/queue bindings
+- **THEN** it SHALL not count as coverage
+
+#### Scenario: Missing submitted declaration is one root
+
+- **WHEN** a submitted index/status/result binding exists but its bundle ledger row is absent
+- **THEN** gate/inspect SHALL report one missing-declaration root for that work ID
+- **AND** dependent output coverage, cache mapping and count symptoms SHALL be masked until recovery is attempted
+
+#### Scenario: Reconstruction facts are not direct coverage
+
+- **WHEN** all declaration reconstruction facts exist without the bundle ledger row
+- **THEN** the gate SHALL remain failed
+- **AND** advice SHALL identify the sanctioned `recover-declaration` action
+
+#### Scenario: Recovered row counts normally
+
+- **WHEN** Engine recovery restores a schema-valid/hash-valid row bound to the submitted attempt
+- **THEN** subsequent gates SHALL evaluate it through the normal ledger path
+- **AND** no recovery-specific gate success branch SHALL exist
 
 #### Scenario: hand-written ledger row is rejected
 
@@ -43,7 +66,27 @@ Current main spec Purpose and guidance SHALL describe this capability as the wor
 
 ### Requirement: Gate SHALL verify work-unit submission presence
 
-Work-unit provenance gates SHALL verify that each counted delegated ledger row binds to a `submitted` work unit whose `_work_units/_index.json` entry, manifest, result, runtime receipt, beacon, receipt nonce, output files, cache trails, and hashes agree.
+For each counted ledger row, gates SHALL continue to verify submitted index, manifest, canonical result, runtime receipt, beacon, nonce, outputs, cache/source claims and hashes.
+
+For a missing ledger row, the submission-presence evaluator SHALL inspect only enough independent submitted surfaces to classify declaration recovery eligibility. It SHALL not report a successful submission-presence result as gate coverage before the row is restored. Conflicting index/status/result/receipt/queue/trace evidence SHALL fail recovery eligibility and remain the primary integrity root.
+
+#### Scenario: Deterministic recovery eligibility is diagnosed
+
+- **WHEN** a submitted attempt's direct facts deterministically reproduce the recorded declaration hash and all binding surfaces agree
+- **THEN** inspect SHALL report recovery as reachable and provide one command target
+
+#### Scenario: Legacy recovery requires full original-hash evidence
+
+- **WHEN** a legacy pre-unified-timestamp/pre-context submitted attempt lacks its row
+- **THEN** recovery eligibility SHALL require matching index/status/result/receipt/beacon/output/cache, queue terminal history and original submit/transaction evidence sufficient to reproduce the recorded hash
+- **AND** any missing fact SHALL be named as the direct blocker
+- **AND** an actually submitted row that cannot be reproduced SHALL return `missing_contract` rather than a speculative replacement-attempt path
+
+#### Scenario: Conflicting submitted surfaces block recovery
+
+- **WHEN** a purported submitted attempt has result hash, queue replacement, actor, receipt or trace conflict
+- **THEN** the checker SHALL not recommend declaration reconstruction
+- **AND** it SHALL return the one nearest existing legal boundary; when no accepted operation can repair an actually submitted row, that boundary SHALL be `missing_contract`
 
 #### Scenario: stale manifest binding fails
 
@@ -157,13 +200,30 @@ Work-unit provenance gates SHALL detect suspected delegated bypass by phase usin
 
 ### Requirement: Gate diagnostics SHALL carry work-unit binding context
 
-Work-unit provenance diagnostics SHALL carry `work_id` when available, `queue_item_id` when available, `wave`, `kind`, check name, and mismatched surface refs. Diagnostics SHALL use work-unit binding context rather than non-work-unit channel keys.
+Work-unit provenance diagnostics SHALL carry `work_id`, `queue_item_id`, wave, kind, failing direct surface, expected deterministic fact, observed fact, repair target and at most one structured nearest action. Every primary in-scope root SHALL include `repair_kind`, `missing_fact`, `write_to`, and `rerun`. Diagnostics SHALL use work-unit identity rather than forcing the Agent to infer lineage or action responsibility from a generic file error.
 
-Current diagnostics SHALL NOT use retired channel keys, non-work-unit paths, or old result-reference fields as the primary identity for delegated provenance. If a retired token is named, it SHALL be framed only as rejected, non-authoritative, or removed.
+When a root failure explains downstream findings, the primary result SHALL mask or group those findings. A missing declaration SHALL not appear simultaneously as an empty Wave ledger, missing every output, missing every cache trail, delegated bypass and zero reference count. Full forensic detail MAY remain in existing diagnostic detail, but the Agent-facing repair list SHALL stay root-first.
 
-Current provenance identity SHALL prefer `work_id`, `queue_item_id`, `kind`, work-unit receipt nonce, submitted ledger row, and work-unit binding surfaces.
+For source/output/cache binding failures, diagnostics SHALL name the exact result JSON pointer or submitted authority ref the Agent can change or reuse. They SHALL say whether a value must be added to the current candidate, selected from an exact same-topic/wave/kind submitted row whose role is authorized by the current kind contract, restored through Engine recovery, or produced by a new legal attempt. They SHALL never advise hand-editing ledger/index/status hashes.
 
-When provenance drift is detected, the gate SHALL preserve valid submitted-row context where it can do so independently. A cache coverage failure SHALL NOT by itself make every otherwise hash-valid submitted ledger row unreadable. If a ledger row hash mismatch or manual row edit is detected, diagnostics SHALL distinguish that root cause from downstream missing-coverage symptoms.
+#### Scenario: Missing declaration diagnostic is self-sufficient
+
+- **WHEN** a submitted work ID lacks its ledger row
+- **THEN** diagnostics SHALL name the work ID, missing ledger row, reconstruction eligibility and exact recover command or missing-contract blocker
+- **AND** `repair_kind` SHALL be `engine_operation` when recovery is legal or `missing_contract` when it is not, `missing_fact` SHALL identify the absent declaration authority, `write_to` SHALL identify that boundary, and `rerun` SHALL identify the same gate/inspect checkpoint after recovery
+- **AND** the Agent SHALL not need to read Engine source to choose the next action
+
+#### Scenario: Source-ref mismatch identifies lineage repair
+
+- **WHEN** submit rejects a source claim because its source ref is not current or contract-authorized prior submitted output
+- **THEN** diagnostics SHALL name the claim index, candidate path, searched authority sets, observed prior wave/kind/role where available and exact accepted repair form
+- **AND** `repair_kind` SHALL be `agent_action`, `write_to` SHALL identify the exact source-claim JSON pointer and `rerun` SHALL name the same dry-submit command
+
+#### Scenario: Cache drift preserves submitted context
+
+- **WHEN** a valid row has a missing/drifted cache leaf
+- **THEN** diagnostics SHALL preserve its work-unit context and target that cache/source binding
+- **AND** it SHALL not claim all submitted rows are absent
 
 #### Scenario: mismatch diagnostic identifies work unit
 

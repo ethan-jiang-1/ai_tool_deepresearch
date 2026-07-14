@@ -38,6 +38,29 @@ describe('Enqueue and claim (AGQ-002)', () => {
     assert.equal(result.queue.active_window[0].status, 'running');
     assert.equal(result.queue.active_window[1].status, 'queued');
   });
+
+  it('distinguishes delegated queue-front rejection from an empty active window without mutation', () => {
+    let queue = createQueue('delegated-claim-test');
+    queue = enqueue(queue, item(1, {
+      kind: 'wave0_source_intake',
+      targets: { controller: 'main-agent', delegates: { to: 'sub-agent', role_key: 'dpt-source-intake', timeout_ms: 600000 } },
+    }));
+    const before = structuredClone(queue);
+    const delegated = claim(queue, { actor: 'main-agent', bundleDir: '/tmp/dpt_rb_claim-test' });
+    assert.equal(delegated.item, null);
+    assert.equal(delegated.reason_code, 'delegated_requires_work_unit_claim');
+    assert.equal(delegated.blocked_by_queue_item_id, 'queue-1');
+    assert.equal(delegated.repair_kind, 'engine_operation');
+    assert.match(delegated.missing_fact, /delegated/i);
+    assert.match(delegated.write_to, /actor.*observation|claim arguments/i);
+    assert.match(delegated.rerun, /operate-work-unit\.mjs claim \/tmp\/dpt_rb_claim-test --phase wave0/);
+    assert.deepEqual(delegated.queue, before);
+
+    const empty = claim(createQueue('empty-claim-test'), { actor: 'main-agent', bundleDir: '/tmp/dpt_rb_claim-test' });
+    assert.equal(empty.item, null);
+    assert.equal(empty.reason_code, 'empty_active_window');
+    assert.notEqual(empty.reason_code, delegated.reason_code);
+  });
 });
 
 describe('Queue pending count (AGQ-020)', () => {

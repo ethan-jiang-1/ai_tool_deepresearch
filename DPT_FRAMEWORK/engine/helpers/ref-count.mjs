@@ -1,11 +1,13 @@
-// ref-count.mjs — Engine reference counting with quality filtering
-// @impl EEX-001, EEX-002, REF-008, WPG-012
+// ref-count.mjs — Engine reference counting with narrow numeric eligibility
+// @impl EEX-001, EEX-002, EEX-003, REF-008, WPG-012
 // Canonical engine location: DPT_FRAMEWORK/engine/helpers/ref-count.mjs
 //
 // ## Role
-// Engine-owned quality filter for reference counting. Determines whether a
-// submitted or deterministically backed projection reference meets minimum
-// quality thresholds (countable), then computes the countable reference count.
+// Engine-owned numeric eligibility for reference counting. Determines whether
+// a submitted or deterministically backed projection reference is accepted and
+// carries a parseable source URL, then computes the countable reference count.
+// Semantic-section availability and presentation remain owned by the separate
+// reference-format evaluator.
 //
 // Gate pass/fail decisions use ledger-mode counting only. Filesystem scan is
 // diagnostic-only and SHALL NOT influence gate pass / fork branch decisions.
@@ -13,12 +15,11 @@
 // ## Exports
 //   isCountable(refPath, bundleDir) → { countable: boolean, reason?: string }
 //   countReferences(bundleDir, options?) → { count: number, uncountable: Array<{path: string, reason: string}> }
-//   QUALITY_THRESHOLDS — frozen object documenting the 4 conditions
+//   QUALITY_THRESHOLDS — compatibility export for the accepted-status contract
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import {
-  extractSection,
   classifyReferenceAuthority,
   parseReferenceMetadata,
 } from './gate-helpers-checks.mjs';
@@ -31,23 +32,23 @@ import {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const QUALITY_THRESHOLDS = Object.freeze({
-  core_content_capture_min_chars: 100,
-  key_facts_min_bullets: 5,
   acceptance_status_required: 'accepted',
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// isCountable — single reference file quality check
+// isCountable — single reference numeric-eligibility check
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Determine whether a reference file meets the minimum quality threshold
- * to be counted toward Engine ref_count. All 4 conditions must pass:
+ * Determine whether an already authority-selected reference file is eligible
+ * to be counted toward Engine ref_count. Both conditions must pass:
  *
  *   1. acceptance_status is "accepted"
- *   2. ## Core Content Capture section ≥ 100 characters
- *   3. source_url is present and URL-parseable
- *   4. ## Key Facts section has ≥ 5 bullet lines
+ *   2. source_url is present and at least one value is URL-parseable
+ *
+ * This function intentionally does not evaluate semantic sections, prose
+ * length, Key Facts quantity, presentation, backing, index, or provenance.
+ * Those facts remain owned by their existing direct evaluators.
  *
  * Unparseable files return { countable: false, reason: "unparseable" }
  * and do NOT throw.
@@ -95,21 +96,7 @@ export function isCountable(refPath, bundleDir) {
     };
   }
 
-  // ── Condition 2: Core Content Capture ≥ 100 chars ──
-  let coreContent;
-  try {
-    coreContent = extractSection(content, 'Core Content Capture');
-  } catch {
-    return { countable: false, reason: 'unparseable' };
-  }
-  if (!coreContent || coreContent.length < QUALITY_THRESHOLDS.core_content_capture_min_chars) {
-    return {
-      countable: false,
-      reason: `core_content_capture_too_thin: ${coreContent ? coreContent.length : 0} chars`,
-    };
-  }
-
-  // ── Condition 3: present, URL-parseable source_url ──
+  // ── Condition 2: present, URL-parseable source_url ──
   const sourceUrl = metadata.get('source_url') || '';
   if (!sourceUrl.trim()) {
     return { countable: false, reason: 'source_url_missing' };
@@ -129,26 +116,6 @@ export function isCountable(refPath, bundleDir) {
   });
   if (!hasParseableUrl) {
     return { countable: false, reason: 'source_url_invalid' };
-  }
-
-  // ── Condition 4: Key Facts ≥ 5 common list items ──
-  let keyFacts;
-  try {
-    keyFacts = extractSection(content, 'Key Facts');
-  } catch {
-    return { countable: false, reason: 'unparseable' };
-  }
-  if (!keyFacts || keyFacts.trim().length === 0) {
-    return { countable: false, reason: 'key_facts_section_missing' };
-  }
-  const factCount = keyFacts
-    .split(/\r?\n/)
-    .filter(line => /^\s*(?:[-+*]|\d+[.)])\s+\S/.test(line)).length;
-  if (factCount < QUALITY_THRESHOLDS.key_facts_min_bullets) {
-    return {
-      countable: false,
-      reason: `key_facts_insufficient: ${factCount} fact items, need ${QUALITY_THRESHOLDS.key_facts_min_bullets}`,
-    };
   }
 
   return { countable: true };
@@ -207,7 +174,8 @@ function listReferenceFiles(bundleDir) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Count submitted or backed-projection reference files that meet quality thresholds.
+ * Count submitted or backed-projection reference files that meet the narrow
+ * accepted-status/source-URL numeric eligibility contract.
  *
  * Default mode (source: "ledger"): reads role=reference output paths from
  * submitted rb_output_declarations.jsonl rows, adds legal Phase-owned

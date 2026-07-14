@@ -105,26 +105,16 @@ function submitWave1Source(dir, {
 function writeDepthReview(dir, {
   topic = 'topic-a',
   record,
-  claim,
-  sourceUrl = claim?.url,
-  wave0Urls = ['https://example.com/topic-a/wave0-foundation'],
   decision = 'accept',
   supplementary = [],
   reviewedRefs = null,
   omitKey = null,
+  legacyProjection = null,
 } = {}) {
   const review = {
     version: 'depth-review.v1',
     topic_slug: topic,
     reviewed_work_unit_refs: reviewedRefs || [record.paths.work_unit_dir],
-    wave0_source_urls: wave0Urls,
-    source_claims: claim ? [claim] : [],
-    new_source_urls: sourceUrl ? [sourceUrl] : [],
-    new_source_floor: {
-      required: 1,
-      observed: sourceUrl && claim ? 1 : 0,
-      source: 'ceil(wave1_per_topic_ref_floor * topic_unique_ratio)',
-    },
     depth_dimensions: {
       mechanism: { status: 'covered', refs: [record.paths.result_ref] },
       trend_or_difficulty: { status: 'covered', refs: [record.paths.result_ref] },
@@ -136,10 +126,22 @@ function writeDepthReview(dir, {
     },
     decision,
     supplementary_queue_item_ids: supplementary,
+    ...(legacyProjection || {}),
   };
   if (omitKey) delete review[omitKey];
   writeJson(path.join(dir, 'artifacts', 'wave1', topic, 'depth-review.yaml'), review);
   return review;
+}
+
+function writeWave0Sources(dir, topic, urls) {
+  const filePath = path.join(dir, 'artifacts', 'wave0', topic, 'source.yaml');
+  mkdirSync(path.dirname(filePath), { recursive: true });
+  writeFileSync(filePath, urls.map((url) => ({
+    url,
+    title: 'Wave0 source',
+    retrieved_date: '2026-07-14',
+    topic_tag: topic,
+  })).map((entry) => `- url: ${entry.url}\n  title: ${entry.title}\n  retrieved_date: ${entry.retrieved_date}\n  topic_tag: ${entry.topic_tag}`).join('\n'));
 }
 
 function writeWave2Index(dir, data) {
@@ -226,14 +228,11 @@ describe('wave depth contract helpers', () => {
     assert.match(missing.inspect.join('\n'), /topic_unique_ratio/);
   });
 
-  it('passes a valid Wave1 depth review with exact-URL novelty and submitted cache mapping', () => {
+  it('passes a minimal Wave1 depth review by deriving source/cache/novelty/floor from reviewed rows', () => {
     const dir = setupBundle();
     const submitted = submitWave1Source(dir, { sourceUrl: 'https://example.com/topic-a/deep/path' });
     writeDepthReview(dir, {
       record: submitted.record,
-      claim: submitted.claim,
-      sourceUrl: submitted.sourceUrl,
-      wave0Urls: ['https://example.com/topic-a/wave0-foundation'],
     });
 
     const result = checkWave1DepthReviewContract(dir, { topic: 'topic-a' });
@@ -245,8 +244,6 @@ describe('wave depth contract helpers', () => {
     const submitted = submitWave1Source(dir, { sourceUrl: 'https://example.com/topic-a/trailing-slash' });
     writeDepthReview(dir, {
       record: submitted.record,
-      claim: submitted.claim,
-      sourceUrl: submitted.sourceUrl,
       reviewedRefs: [`${submitted.record.paths.work_unit_dir}/`],
     });
 
@@ -261,8 +258,6 @@ describe('wave depth contract helpers', () => {
     const unsafeSubmitted = submitWave1Source(unsafeDir, { sourceUrl: 'https://example.com/topic-a/unsafe' });
     writeDepthReview(unsafeDir, {
       record: unsafeSubmitted.record,
-      claim: unsafeSubmitted.claim,
-      sourceUrl: unsafeSubmitted.sourceUrl,
       reviewedRefs: ['/tmp/not-a-bundle-ref'],
     });
     const unsafe = checkWave1DepthReviewContract(unsafeDir, { topic: 'topic-a' });
@@ -273,14 +268,14 @@ describe('wave depth contract helpers', () => {
     const missingSubmitted = submitWave1Source(missingDir, { sourceUrl: 'https://example.com/topic-a/missing' });
     writeDepthReview(missingDir, {
       record: missingSubmitted.record,
-      claim: missingSubmitted.claim,
-      sourceUrl: missingSubmitted.sourceUrl,
       reviewedRefs: ['_work_units/wave1/not-submitted/'],
     });
     const missing = checkWave1DepthReviewContract(missingDir, { topic: 'topic-a' });
     assert.equal(missing.passed, false);
     assert.match(missing.inspect.join('\n'), /not submitted.*canonical: _work_units\/wave1\/not-submitted/);
     assert.match((missing.diagnostics || []).join('\n'), /canonicalized/);
+    assert.doesNotMatch(missing.inspect.join('\n'), /source_claim_cache_mapping|source_novelty_floor|observed .*required/);
+    assert.equal(missing.findings.filter((finding) => /reviewed_work_unit_refs/.test(finding.id)).length, 1);
   });
 
   it('fails missing required keys, non-closed decisions, and missing profile parameters', () => {
@@ -288,65 +283,86 @@ describe('wave depth contract helpers', () => {
     const submitted = submitWave1Source(dir);
     writeDepthReview(dir, {
       record: submitted.record,
-      claim: submitted.claim,
       decision: 'maybe',
-      omitKey: 'new_source_floor',
+      omitKey: 'depth_dimensions',
     });
 
     const result = checkWave1DepthReviewContract(dir, { topic: 'topic-a' });
     assert.equal(result.passed, false);
-    assert.match(result.inspect.join('\n'), /missing required key: new_source_floor/);
+    assert.match(result.inspect.join('\n'), /missing required key: depth_dimensions/);
     assert.match(result.inspect.join('\n'), /decision must be one of/);
     assert.match(result.inspect.join('\n'), /missing_profile_parameter/);
   });
 
-  it('masks Wave1 cache and novelty implications when source_claims is missing', () => {
+  it('ignores drift in legacy copied source/cache/floor projections', () => {
     const dir = setupBundle();
     const submitted = submitWave1Source(dir);
     writeDepthReview(dir, {
       record: submitted.record,
-      claim: submitted.claim,
-      omitKey: 'source_claims',
+      legacyProjection: {
+        wave0_source_urls: [submitted.sourceUrl],
+        source_claims: [],
+        new_source_urls: ['https://wrong.example/drift'],
+        new_source_floor: { required: 99, observed: 99, source: 'manual' },
+      },
     });
 
     const result = checkWave1DepthReviewContract(dir, { topic: 'topic-a' });
-    assert.equal(result.passed, false);
-    assert.match(result.inspect.join('\n'), /missing required key: source_claims/);
-    assert.doesNotMatch(result.inspect.join('\n'), /source_claim_cache_mapping|accepted exact-new claim count/);
-    assert.ok(result.masked_rule_ids.includes('source_claim_cache_mapping'));
-    assert.ok(result.masked_rule_ids.includes('source_novelty_floor'));
+    assert.equal(result.passed, true, result.inspect.join('\n'));
+    assert.match((result.diagnostics || []).join('\n'), /projection drift|ignored/i);
   });
 
-  it('uses exact URL equality for novelty and does not revive retired heuristics', () => {
+  it('derives exact URL novelty from Wave0 authority and ignores copied novelty flags', () => {
     const dir = setupBundle();
     const submitted = submitWave1Source(dir, { sourceUrl: 'https://example.com/topic-a/same' });
+    writeWave0Sources(dir, 'topic-a', [submitted.sourceUrl]);
     writeDepthReview(dir, {
       record: submitted.record,
-      claim: submitted.claim,
-      sourceUrl: submitted.sourceUrl,
-      wave0Urls: ['https://example.com/topic-a/same'],
     });
 
     const result = checkWave1DepthReviewContract(dir, { topic: 'topic-a' });
     assert.equal(result.passed, false);
-    assert.match(result.inspect.join('\n'), /marks Wave0 URL as new/);
+    assert.match(result.inspect.join('\n'), /observed 0 new accepted source URL\(s\), required 1/);
+    assert.doesNotMatch(result.inspect.join('\n'), /marks Wave0 URL as new/);
 
     const helperSource = readFileSync('DPT_FRAMEWORK/engine/helpers/wave-depth-contracts.mjs', 'utf-8');
     assert.doesNotMatch(helperSource, /jaccard|homepage|path[-_ ]depth|self[-_ ]reference|content_dedup/i);
   });
 
-  it('rejects prose-only or review-only source URLs as Wave1 coverage authority', () => {
+  it('does not let review-only claims or filesystem-only cache expand submitted coverage', () => {
     const dir = setupBundle();
-    const submitted = submitWave1Source(dir);
+    const submitted = submitWave1Source(dir, { sourceUrl: 'https://example.com/topic-a/submitted' });
+    const manualTrail = '_cache/wave1/primary/topic-a/manual-only';
+    mkdirSync(path.join(dir, manualTrail), { recursive: true });
+    writeFileSync(path.join(dir, manualTrail, 'websearch.json'), '[]\n');
+    writeFileSync(path.join(dir, manualTrail, 'page.md'), '# Manual cache\n\nFilesystem-only content.\n');
+    writeJson(path.join(dir, manualTrail, 'meta.json'), { url: 'https://example.com/topic-a/manual-only' });
+    writeFileSync(path.join(dir, 'rb_profile.yaml'), `research_style_params:
+  wave1_per_topic_ref_floor: 4
+  topic_unique_ratio: 0.5
+  counterexample_search: false
+  cross_verification: false
+  p0p1_independent_backing: 2
+`);
     writeDepthReview(dir, {
       record: submitted.record,
-      claim: null,
-      sourceUrl: submitted.sourceUrl,
+      legacyProjection: {
+        source_claims: [{
+          url: 'https://example.com/topic-a/manual-only',
+          source_ref: 'artifacts/wave1/topic-a/evidence-summary.md',
+          acceptance_status: 'accepted',
+          is_new_vs_wave0: true,
+          cache_trail_refs: [manualTrail],
+        }],
+        new_source_urls: [submitted.sourceUrl, 'https://example.com/topic-a/manual-only'],
+        new_source_floor: { required: 2, observed: 2, source: 'manual' },
+      },
     });
 
     const result = checkWave1DepthReviewContract(dir, { topic: 'topic-a' });
     assert.equal(result.passed, false);
-    assert.match(result.inspect.join('\n'), /not backed by accepted exact-new source_claims/);
+    assert.match(result.inspect.join('\n'), /observed 1 new accepted source URL\(s\), required 2/);
+    assert.doesNotMatch(result.inspect.join('\n'), /manual-only.*accepted|manual-only.*mapped/);
   });
 
   it('checks accepted source-claim cache mapping and reports incomplete cache leaves', () => {

@@ -13,7 +13,12 @@ import {
 } from './gate-helpers-readers.mjs';
 import { classifyReferenceAuthority } from './gate-helpers-checks.mjs';
 import { readBundleName, logToRun } from '../logger.mjs';
-import { inspectWorkUnits } from '../work-unit-core.mjs';
+import {
+  inspectWorkUnitDeclarationRecovery,
+  inspectWorkUnits,
+  loadWorkUnitIndex,
+  readWorkUnitLedgerRows,
+} from '../work-unit-core.mjs';
 import { makeContractFinding } from './wave-contract-findings.mjs';
 
 function provenanceFinding(rule, {
@@ -101,6 +106,74 @@ function readScopedSubmittedWorkUnitRows(bundlePath, rule) {
     }
     return true;
   });
+}
+
+function indexRecordMatchesRule(record, rule) {
+  const wave = waveNumber(rule.wave);
+  if (wave !== null && record.wave !== wave) return false;
+  if (rule.kind && record.kind !== rule.kind) return false;
+  if (rule.producer_rule && record.producer_rule !== rule.producer_rule) return false;
+  if (rule.work_id_pattern && !(new RegExp(rule.work_id_pattern)).test(record.work_id || '')) return false;
+  return true;
+}
+
+export function checkSubmittedDeclarationRecovery(bundlePath, rule) {
+  let index;
+  let ledgerRows;
+  try {
+    index = loadWorkUnitIndex(bundlePath, { createIfMissing: false });
+    ledgerRows = readWorkUnitLedgerRows(bundlePath);
+  } catch {
+    return { passed: true, gaps: [], findings: [], inspect: [], advice: [] };
+  }
+  const declaredWorkIds = new Set(ledgerRows.map((row) => row.work_id));
+  const gaps = Object.values(index.work_units || {})
+    .filter((record) => record.status === 'submitted')
+    .filter((record) => indexRecordMatchesRule(record, rule))
+    .filter((record) => !declaredWorkIds.has(record.work_id))
+    .map((record) => ({
+      record,
+      recovery: inspectWorkUnitDeclarationRecovery(bundlePath, { work_id: record.work_id }),
+    }));
+  if (gaps.length === 0) return { passed: true, gaps: [], findings: [], inspect: [], advice: [] };
+
+  const findings = gaps.map(({ record, recovery }) => {
+    const command = `node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration ${JSON.stringify(resolvePath(bundlePath))} --work-id ${JSON.stringify(record.work_id)}`;
+    const eligible = recovery.eligible === true && recovery.declaration_present === false;
+    const detail = eligible
+      ? `Submitted work-unit ${record.work_id} is bound in index/status but its Engine declaration row is missing; exact recovery is eligible.`
+      : `Submitted work-unit ${record.work_id} is missing its Engine declaration row and exact recovery is unavailable: ${recovery.missing_fact}`;
+    return provenanceFinding(rule, {
+      id: `submitted_declaration_missing:${record.work_id}`,
+      blockingBasis: 'authority_integrity',
+      surface: resolvePath(bundlePath, '_work_units/_index.json'),
+      expected: 'Every submitted work-unit index/status binding has one hash-valid Engine declaration row.',
+      observed: {
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        status: record.status,
+        declaration_present: false,
+        recovery_eligible: eligible,
+        ledger_record_hash: record.ledger_record_hash || null,
+      },
+      missingFact: eligible
+        ? `Submitted declaration row is missing for ${record.work_id}; index/status retain the recorded hash and direct owners reproduce it exactly.`
+        : `Submitted declaration row is missing for ${record.work_id}; ${recovery.missing_fact}`,
+      repairKind: eligible ? 'engine_operation' : 'missing_contract',
+      writeTo: eligible ? command : recovery.boundary,
+      repair: eligible
+        ? `Run ${command}, then rerun the same checkpoint.`
+        : 'The recorded declaration cannot be reconstructed exactly; preserve the missing-contract boundary and do not hand-write ledger authority.',
+      detail,
+    });
+  });
+  return {
+    passed: false,
+    gaps,
+    findings,
+    inspect: findings.map((finding) => finding.detail),
+    advice: findings.map((finding) => finding.repair),
+  };
 }
 
 function bindingFailureInspect(lines) {

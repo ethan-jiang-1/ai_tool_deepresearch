@@ -33,12 +33,11 @@ import {
   loadWorkUnitIndex,
 } from './work-unit-index.mjs';
 import {
-  WORK_UNIT_BEACON_SCHEMA_VERSION,
-  WorkUnitBeaconSchema,
   WorkUnitManifestSchema,
   WorkUnitResultSchema,
   WorkUnitRuntimeReceiptEventSchema,
 } from '../schema/contracts/work-unit.mjs';
+import { readAndValidateBeacon } from './work-unit-validation.mjs';
 
 function listWorkUnitDirs(bundleDir) {
   const root = workUnitsRoot(bundleDir);
@@ -90,28 +89,6 @@ function runtimeReceiptIssues(bundleDir, record) {
       if (parsed.execution_actor_class !== record.actor_execution.execution_actor_class) issues.push(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: execution_actor_class`);
     }
   });
-  return issues;
-}
-
-function beaconIssues(bundleDir, record) {
-  const beaconPath = path.join(bundleDir, record.paths.beacon_ref);
-  if (!existsSync(beaconPath)) return [`missing beacon: ${record.paths.beacon_ref}`];
-  const issues = [];
-  try {
-    const beacon = WorkUnitBeaconSchema.parse(readJson(beaconPath));
-    for (const field of ['work_id', 'queue_item_id', 'kind', 'receipt_nonce']) {
-      if (beacon[field] !== record[field]) issues.push(`beacon/index mismatch for ${record.work_id}: ${field}`);
-    }
-    if (beacon.work_unit_dir !== record.paths.work_unit_dir) issues.push(`beacon/index mismatch for ${record.work_id}: work_unit_dir`);
-    if (beacon.result_schema_ref !== record.paths.result_schema_ref) issues.push(`beacon/index mismatch for ${record.work_id}: result_schema_ref`);
-    if (beacon.runtime_receipt_ref !== record.paths.runtime_receipt_ref) issues.push(`beacon/index mismatch for ${record.work_id}: runtime_receipt_ref`);
-    if (record.actor_contract_version) {
-      if (beacon.actor_contract_version !== record.actor_contract_version) issues.push(`beacon/index mismatch for ${record.work_id}: actor_contract_version`);
-      if (JSON.stringify(beacon.actor_execution) !== JSON.stringify(record.actor_execution)) issues.push(`beacon/index mismatch for ${record.work_id}: actor_execution`);
-    }
-  } catch (error) {
-    issues.push(`beacon invalid for ${record.work_id}: ${error.message}`);
-  }
   return issues;
 }
 
@@ -195,7 +172,12 @@ function ledgerIssues(bundleDir, index) {
   return issues;
 }
 
-export function inspectWorkUnits(bundleDir, { nowMs = Date.now(), emitDiagnostics = false, diagnosticSource = 'work-unit-inspect' } = {}) {
+export function inspectWorkUnits(bundleDir, {
+  nowMs = Date.now(),
+  emitDiagnostics = false,
+  diagnosticSource = 'work-unit-inspect',
+  requireExistingAuthority = false,
+} = {}) {
   const issues = [];
   const indexPath = workUnitIndexPath(bundleDir);
   const root = workUnitsRoot(bundleDir);
@@ -204,6 +186,15 @@ export function inspectWorkUnits(bundleDir, { nowMs = Date.now(), emitDiagnostic
     lateSubmitRejections: countTraceEvents(bundleDir, 'work_unit_late_submit_rejected'),
   });
   if (!existsSync(indexPath) && !existsSync(root)) {
+    if (requireExistingAuthority) {
+      return {
+        passed: false,
+        check: false,
+        inspect: [`Work-unit index does not exist at ${indexPath}; missing existing work-unit authority.`],
+        projection: emptyProjection,
+        advice: 'Rerun with the canonical absolute bundle_dir from the assigned task or beacon; do not create a nested bundle root.',
+      };
+    }
     return { passed: true, check: true, inspect: [], projection: emptyProjection, advice: 'No work units have been allocated.' };
   }
 
@@ -282,10 +273,14 @@ export function inspectWorkUnits(bundleDir, { nowMs = Date.now(), emitDiagnostic
       }
       if (manifest.paths.work_unit_dir !== record.paths.work_unit_dir) issues.push(`manifest/index mismatch for ${workId}: work_unit_dir`);
       if (record.actor_contract_version && JSON.stringify(manifest.actor_execution) !== JSON.stringify(record.actor_execution)) issues.push(`manifest/index mismatch for ${workId}: actor_execution`);
+      try {
+        readAndValidateBeacon(bundleDir, record, manifest);
+      } catch (error) {
+        issues.push(`beacon invalid for ${record.work_id}: ${error.message}`);
+      }
     } catch (error) {
       issues.push(`manifest invalid for ${workId}: ${error.message}`);
     }
-    issues.push(...beaconIssues(bundleDir, record));
     issues.push(...runtimeReceiptIssues(bundleDir, record));
   }
 

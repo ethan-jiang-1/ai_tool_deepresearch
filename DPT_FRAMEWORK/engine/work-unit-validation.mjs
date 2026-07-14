@@ -24,8 +24,10 @@ import {
   readJson,
   hasExplicitDegradedCapture,
   validateCacheTrailContent,
+  readWorkUnitLedgerRows,
 } from './work-unit-utils.mjs';
 import {
+  loadWorkUnitIndex,
   validateWorkIdBinding,
 } from './work-unit-index.mjs';
 import {
@@ -45,6 +47,12 @@ import {
   resolveCacheLeafContract,
 } from './helpers/cache-leaf-contract.mjs';
 import { evaluateTopicLayouts, resolveStructuredTopicBinding } from './helpers/topic-layout.mjs';
+
+function validationRepairError(message, repair = {}) {
+  const error = new Error(message);
+  error.repair_contract = repair;
+  return error;
+}
 
 export function readAndValidateManifest(bundleDir, index, record) {
   const manifestPath = path.join(bundleDir, record.paths.manifest_ref);
@@ -85,6 +93,10 @@ export function readAndValidateBeacon(bundleDir, record, manifest) {
   const beaconPath = path.join(bundleDir, record.paths.beacon_ref);
   if (!existsSync(beaconPath)) throw new Error(`Missing beacon: ${record.paths.beacon_ref}`);
   const beacon = WorkUnitBeaconSchema.parse(readJson(beaconPath));
+  const canonicalBundleDir = path.resolve(bundleDir);
+  if (beacon.bundle_dir !== canonicalBundleDir) {
+    throw new Error(`beacon/bundle root mismatch for ${record.work_id}: expected ${canonicalBundleDir} got ${beacon.bundle_dir}`);
+  }
   for (const field of ['work_id', 'queue_item_id', 'kind', 'receipt_nonce']) {
     if (beacon[field] !== record[field]) throw new Error(`beacon/index mismatch for ${record.work_id}: ${field}`);
     if (beacon[field] !== manifest[field]) throw new Error(`beacon/manifest mismatch for ${record.work_id}: ${field}`);
@@ -119,12 +131,34 @@ export function readAndValidateResult(bundleDir, resultPath, record, { normaliza
     });
   }
   if (!isPlainObject(candidate)) throw new Error(`result must be a JSON object for ${record.work_id}`);
-  validateRequiredResultFields(candidate, outputContract);
-
   const normalized = { ...candidate };
+  const validationIssues = [];
+  const required = Array.isArray(outputContract?.required_result_fields)
+    ? outputContract.required_result_fields.filter((field) => typeof field === 'string' && field.length > 0)
+    : [];
+  for (const field of required) {
+    if (!Object.hasOwn(candidate, field)) {
+      validationIssues.push({
+        code: 'required_result_field_missing',
+        path: [field],
+        message: `result missing required field from work-unit output contract: ${field}`,
+      });
+    }
+  }
+  if (!Object.hasOwn(candidate, 'schema_version')) {
+    validationIssues.push({
+      code: 'required_result_field_missing',
+      path: ['schema_version'],
+      message: 'result missing required schema_version work-unit.result.v1',
+    });
+  }
   for (const field of ['work_id', 'queue_item_id', 'kind']) {
     if (normalized[field] !== undefined && normalized[field] !== record[field]) {
-      throw new Error(`result/index mismatch for ${record.work_id}: ${field}`);
+      validationIssues.push({
+        code: 'result_binding_mismatch',
+        path: [field],
+        message: `result/index mismatch for ${record.work_id}: ${field}; expected ${record[field]} got ${normalized[field]}`,
+      });
     }
   }
   if (normalized.receipt_nonce !== undefined && normalized.receipt_nonce !== record.receipt_nonce) {
@@ -133,42 +167,81 @@ export function readAndValidateResult(bundleDir, resultPath, record, { normaliza
       && normalized.kind === record.kind;
     const insideAssignedDir = isPathInsideDir(resultPath, path.join(bundleDir, record.paths.work_unit_dir));
     if (!hasCompleteBinding || !insideAssignedDir) {
-      throw new Error(`result/index mismatch for ${record.work_id}: receipt_nonce`);
+      validationIssues.push({
+        code: 'result_binding_mismatch',
+        path: ['receipt_nonce'],
+        message: `result/index mismatch for ${record.work_id}: receipt_nonce; expected ${record.receipt_nonce} got ${normalized.receipt_nonce}`,
+      });
+    } else {
+      recordSubmitNormalization(normalizations, {
+        kind: 'nonce_normalized_from_record',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        surface_ref: record.paths.result_ref,
+        candidate_result_path: path.resolve(resultPath),
+        field: 'receipt_nonce',
+        from: String(normalized.receipt_nonce),
+        to: record.receipt_nonce,
+      });
+      normalized.receipt_nonce = record.receipt_nonce;
     }
-    recordSubmitNormalization(normalizations, {
-      kind: 'nonce_normalized_from_record',
-      work_id: record.work_id,
-      queue_item_id: record.queue_item_id,
-      surface_ref: record.paths.result_ref,
-      candidate_result_path: path.resolve(resultPath),
-      field: 'receipt_nonce',
-      from: String(normalized.receipt_nonce),
-      to: record.receipt_nonce,
-    });
-    normalized.receipt_nonce = record.receipt_nonce;
   }
 
-  const result = WorkUnitResultSchema.parse(normalized);
-  for (const field of ['work_id', 'queue_item_id', 'kind', 'receipt_nonce']) {
-    if (result[field] !== record[field]) throw new Error(`result/index mismatch for ${record.work_id}: ${field}`);
+  const parsed = WorkUnitResultSchema.safeParse(normalized);
+  if (!parsed.success) {
+    for (const issue of parsed.error.issues) {
+      if (issue.code === 'unrecognized_keys') {
+        for (const key of issue.keys || []) {
+          validationIssues.push({
+            code: 'unrecognized_result_field',
+            path: [...issue.path, key],
+            message: `result field is not allowed by work-unit.result.v1: ${key}`,
+          });
+        }
+      } else {
+        validationIssues.push({
+          code: `result_schema_${issue.code}`,
+          path: issue.path,
+          message: `result schema violation at /${issue.path.join('/')}: ${issue.message}`,
+        });
+      }
+    }
   }
+
   if (record.actor_contract_version) {
-    if (result.actor_contract_version !== record.actor_contract_version) throw new Error(`result/index mismatch for ${record.work_id}: actor_contract_version`);
-    if (result.execution_actor_class !== record.actor_execution.execution_actor_class) throw new Error(`result/index mismatch for ${record.work_id}: execution_actor_class`);
-  } else if (result.actor_contract_version || result.execution_actor_class) {
-    throw new Error(`legacy result for ${record.work_id} must not invent actor binding`);
+    if (normalized.actor_contract_version !== record.actor_contract_version) {
+      validationIssues.push({
+        code: 'result_binding_mismatch',
+        path: ['actor_contract_version'],
+        message: `result/index mismatch for ${record.work_id}: actor_contract_version; expected ${record.actor_contract_version} got ${normalized.actor_contract_version ?? '<missing>'}`,
+      });
+    }
+    if (normalized.execution_actor_class !== record.actor_execution.execution_actor_class) {
+      validationIssues.push({
+        code: 'result_binding_mismatch',
+        path: ['execution_actor_class'],
+        message: `result/index mismatch for ${record.work_id}: execution_actor_class; expected ${record.actor_execution.execution_actor_class} got ${normalized.execution_actor_class ?? '<missing>'}`,
+      });
+    }
+  } else if (normalized.actor_contract_version || normalized.execution_actor_class) {
+    for (const field of ['actor_contract_version', 'execution_actor_class']) {
+      if (normalized[field] !== undefined) {
+        validationIssues.push({
+          code: 'legacy_result_actor_binding_forbidden',
+          path: [field],
+          message: `legacy result for ${record.work_id} must not invent ${field}`,
+        });
+      }
+    }
   }
-  return result;
-}
 
-export function validateRequiredResultFields(rawResult, outputContract) {
-  const required = Array.isArray(outputContract?.required_result_fields)
-    ? outputContract.required_result_fields.filter((field) => typeof field === 'string' && field.length > 0)
-    : [];
-  const missing = required.filter((field) => !Object.hasOwn(rawResult, field));
-  if (missing.length > 0) {
-    throw new Error(`result missing required field(s) from work-unit output contract: ${missing.join(', ')}`);
+  if (validationIssues.length > 0) {
+    const deduplicated = [...new Map(validationIssues.map((issue) => [`${issue.code}:${issue.path.join('/')}`, issue])).values()];
+    const error = new Error(deduplicated.map((issue) => issue.message).join('; '));
+    error.validation_issues = deduplicated;
+    throw error;
   }
+  return parsed.data;
 }
 
 export function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations = [], allowNonceNormalization = false } = {}) {
@@ -273,14 +346,27 @@ export function validateOutputFiles(bundleDir, result, outputContract) {
   if (outputFiles.length > 0 && (!allowedRoles || allowedRoles.size === 0)) {
     throw new Error('output_files[].role cannot be accepted because this work-unit output contract has no allowed_roles');
   }
-  for (const entry of outputFiles) {
+  for (const [index, entry] of outputFiles.entries()) {
     if (allowedRoles && !allowedRoles.has(entry.role)) {
-      throw new Error(`output_files role '${entry.role}' is not allowed by this work-unit output contract; allowed roles: ${[...allowedRoles].join(', ')}`);
+      throw validationRepairError(`output_files role '${entry.role}' is not allowed by this work-unit output contract; allowed roles: ${[...allowedRoles].join(', ')}`, {
+        repair_kind: 'agent_action',
+        json_pointer: `/output_files/${index}/role`,
+      });
     }
-    if (!isSafeBundleRelative(entry.path)) throw new Error(`output_files path escapes bundle: ${entry.path}`);
-    if (!existsSync(path.join(bundleDir, entry.path))) throw new Error(`declared output file missing: ${entry.path}`);
+    if (!isSafeBundleRelative(entry.path)) throw validationRepairError(`output_files path escapes bundle: ${entry.path}`, {
+      repair_kind: 'agent_action',
+      json_pointer: `/output_files/${index}/path`,
+    });
+    if (!existsSync(path.join(bundleDir, entry.path))) throw validationRepairError(`declared output file missing: ${entry.path}`, {
+      repair_kind: 'agent_action',
+      write_to: path.join(path.resolve(bundleDir), entry.path),
+      json_pointer: `/output_files/${index}/path`,
+    });
     if (entry.role === 'reference' && outputContract?.output_files?.reference_requires_source_url && !entry.source_url) {
-      throw new Error(`reference output missing source_url: ${entry.path}`);
+      throw validationRepairError(`reference output missing source_url: ${entry.path}`, {
+        repair_kind: 'agent_action',
+        json_pointer: `/output_files/${index}/source_url`,
+      });
     }
   }
 }
@@ -316,12 +402,26 @@ export function validateCacheTrails(bundleDir, result, cachePolicy, { record = n
   const trails = result.cache_trails || [];
   if (cachePolicy?.required && trails.length === 0) throw new Error('cache_trails[] is required by the work-unit cache policy');
   const virtualCachePages = new Map();
-  for (const trail of trails) {
-    if (!isSafeBundleRelative(trail)) throw new Error(`cache_trails path escapes bundle: ${trail}`);
-    if (!trail.startsWith(`${cachePolicy?.root || '_cache/'}`)) throw new Error(`cache_trails path not under ${cachePolicy?.root || '_cache/'}: ${trail}`);
+  for (const [index, trail] of trails.entries()) {
+    if (!isSafeBundleRelative(trail)) throw validationRepairError(`cache_trails path escapes bundle: ${trail}`, {
+      repair_kind: 'agent_action',
+      json_pointer: `/cache_trails/${index}`,
+    });
+    if (!trail.startsWith(`${cachePolicy?.root || '_cache/'}`)) throw validationRepairError(`cache_trails path not under ${cachePolicy?.root || '_cache/'}: ${trail}`, {
+      repair_kind: 'agent_action',
+      json_pointer: `/cache_trails/${index}`,
+    });
     const full = path.join(bundleDir, trail);
-    if (!existsSync(full)) throw new Error(`cache trail directory missing: ${trail}`);
-    if (!statSync(full).isDirectory()) throw new Error(`cache_trails path is not a directory: ${trail}`);
+    if (!existsSync(full)) throw validationRepairError(`cache trail directory missing: ${trail}`, {
+      repair_kind: 'agent_action',
+      write_to: path.resolve(full),
+      json_pointer: `/cache_trails/${index}`,
+    });
+    if (!statSync(full).isDirectory()) throw validationRepairError(`cache_trails path is not a directory: ${trail}`, {
+      repair_kind: 'agent_action',
+      write_to: path.resolve(full),
+      json_pointer: `/cache_trails/${index}`,
+    });
     const virtualPage = record
       ? canonicalizeCacheLeafPage(full, trail, record, normalizations, { writeCanonicalCache })
       : null;
@@ -331,7 +431,11 @@ export function validateCacheTrails(bundleDir, result, cachePolicy, { record = n
     }));
     const missing = resolveCacheLeafContract(cachePolicy)
       .filter((entry) => !(directFiles.has(entry) || (entry === 'page.md' && virtualCachePages.has(trail))));
-    if (missing.length > 0) throw new Error(`cache trail ${trail} missing ${missing.join(', ')}`);
+    if (missing.length > 0) throw validationRepairError(`cache trail ${trail} missing ${missing.join(', ')}`, {
+      repair_kind: 'agent_action',
+      write_to: path.join(path.resolve(full), missing[0]),
+      json_pointer: `/cache_trails/${index}`,
+    });
     validateCacheTrailContent(full, trail, { pageText: virtualCachePages.get(trail) ?? null });
   }
   return { virtualCachePages };
@@ -353,6 +457,90 @@ export function normalizeUrlForSourceCache(url) {
   }
 }
 
+function priorOutputObservation(row, entry, reasonCode, extra = {}) {
+  return {
+    path: entry.path,
+    role: entry.role,
+    work_id: row.work_id,
+    wave: row.wave,
+    kind: row.kind,
+    eligible: reasonCode === null,
+    reason_code: reasonCode,
+    ...extra,
+  };
+}
+
+export function buildSourceRefLineage(bundleDir, currentManifest) {
+  const contract = currentManifest?.output_contract?.source_claims || {};
+  const allowedPriorRoles = Array.isArray(contract.prior_submitted_output_roles)
+    ? contract.prior_submitted_output_roles
+    : [];
+  const currentAssignedPaths = [...new Set(currentManifest?.queue_item?.writes_to || [])].filter(isSafeBundleRelative);
+  const result = {
+    current_assigned_paths: currentAssignedPaths,
+    prior_submitted_output_roles: [...allowedPriorRoles],
+    eligible_prior_outputs: [],
+    observed_prior_outputs: [],
+    authority_error: null,
+  };
+  if (contract.allowed !== true || allowedPriorRoles.length === 0) return result;
+
+  const currentBinding = validateManifestTopicBinding(bundleDir, currentManifest);
+  const currentTopicUid = currentBinding?.topic_uid || null;
+  let rows;
+  let index;
+  let queue;
+  try {
+    rows = readWorkUnitLedgerRows(bundleDir);
+    index = loadWorkUnitIndex(bundleDir, { createIfMissing: false });
+    queue = readQueueForSubmit(bundleDir, { sideEffects: false });
+  } catch (error) {
+    result.authority_error = error.message || String(error);
+    return result;
+  }
+
+  for (const row of rows) {
+    if (row.work_id === currentManifest.work_id) continue;
+    const record = index.work_units[row.work_id];
+    let priorManifest = null;
+    let priorBinding = null;
+    let authorityReason = null;
+    if (!record || record.status !== 'submitted'
+      || record.ledger_record_hash !== row.ledger_record_hash
+      || record.result_hash !== row.result_hash) {
+      authorityReason = 'prior_submitted_binding_invalid';
+    } else {
+      try {
+        priorManifest = readAndValidateManifest(bundleDir, index, record);
+        priorBinding = validateManifestTopicBinding(bundleDir, priorManifest);
+      } catch {
+        authorityReason = 'prior_submitted_binding_invalid';
+      }
+    }
+
+    const terminal = queue.terminal_history.find((entry) => entry.work_id === row.work_id && entry.terminal_status === 'done');
+    if (!authorityReason && (!terminal?.item || queueItemSnapshotHash(terminal.item) !== record.queue_item_snapshot_hash)) {
+      authorityReason = 'prior_queue_binding_invalid';
+    }
+
+    for (const entry of row.output_files || []) {
+      let reasonCode = authorityReason;
+      if (!reasonCode && !priorBinding?.topic_uid) reasonCode = 'prior_topic_binding_missing';
+      if (!reasonCode && !currentTopicUid) reasonCode = 'current_topic_binding_missing';
+      if (!reasonCode && priorBinding.topic_uid !== currentTopicUid) reasonCode = 'prior_topic_mismatch';
+      if (!reasonCode && row.wave !== currentManifest.wave) reasonCode = 'prior_wave_mismatch';
+      if (!reasonCode && row.kind !== currentManifest.kind) reasonCode = 'prior_kind_mismatch';
+      if (!reasonCode && !allowedPriorRoles.includes(entry.role)) reasonCode = 'prior_role_not_authorized';
+      const observation = priorOutputObservation(row, entry, reasonCode, {
+        topic_uid: priorBinding?.topic_uid || null,
+      });
+      result.observed_prior_outputs.push(observation);
+      if (!reasonCode) result.eligible_prior_outputs.push(observation);
+    }
+  }
+  return result;
+}
+
 export function cacheTrailMapping(bundleDir, trail, { virtualCachePages = new Map() } = {}) {
   const cacheDir = path.join(bundleDir, trail);
   const pageText = virtualCachePages.has(trail)
@@ -367,7 +555,10 @@ export function cacheTrailMapping(bundleDir, trail, { virtualCachePages = new Ma
   };
 }
 
-export function validateSourceClaims(bundleDir, result, outputContract, { virtualCachePages = new Map() } = {}) {
+export function validateSourceClaims(bundleDir, result, outputContract, {
+  virtualCachePages = new Map(),
+  manifest = null,
+} = {}) {
   const claims = result.source_claims || [];
   const acceptedUrls = result.accepted_source_urls || [];
   if (claims.length === 0 && acceptedUrls.length === 0) return;
@@ -378,45 +569,97 @@ export function validateSourceClaims(bundleDir, result, outputContract, { virtua
   }
 
   const outputPaths = new Set((result.output_files || []).map((entry) => entry.path));
+  const sourceRefLineage = manifest
+    ? buildSourceRefLineage(bundleDir, manifest)
+    : { eligible_prior_outputs: [], observed_prior_outputs: [], prior_submitted_output_roles: [] };
   const cacheTrails = new Set(result.cache_trails || []);
   const acceptedClaimUrls = new Set();
 
-  for (const claim of claims) {
+  for (const [claimIndex, claim] of claims.entries()) {
     if (!acceptedClaimStatus(claim.acceptance_status)) continue;
     acceptedClaimUrls.add(claim.url);
 
     if (!isSafeBundleRelative(claim.source_ref)) {
-      throw new Error(`accepted source claim has unsafe source_ref: ${claim.source_ref}`);
+      throw validationRepairError(`accepted source claim has unsafe source_ref: ${claim.source_ref}`, {
+        repair_kind: 'agent_action',
+        json_pointer: `/source_claims/${claimIndex}/source_ref`,
+      });
     }
-    if (!outputPaths.has(claim.source_ref)) {
-      throw new Error(`accepted source claim source_ref is not declared in output_files[]: ${claim.source_ref}`);
+    const eligiblePrior = sourceRefLineage.eligible_prior_outputs.filter((entry) => entry.path === claim.source_ref);
+    if (!outputPaths.has(claim.source_ref) && sourceRefLineage.authority_error) {
+      throw validationRepairError(`prior submitted source-ref authority is unavailable while resolving '${claim.source_ref}': ${sourceRefLineage.authority_error}`, {
+        code: 'source_ref_prior_authority_invalid',
+        repair_kind: 'missing_contract',
+        write_to: 'work-unit submitted-output lineage boundary: ledger/index/manifest/queue authority',
+        details: {
+          candidate_source_ref: claim.source_ref,
+          searched_current_outputs: true,
+          searched_prior_submitted_outputs: false,
+          authority_error: sourceRefLineage.authority_error,
+        },
+      });
+    }
+    if (!outputPaths.has(claim.source_ref) && eligiblePrior.length !== 1) {
+      const observedPrior = sourceRefLineage.observed_prior_outputs.filter((entry) => entry.path === claim.source_ref);
+      const allowedRoles = sourceRefLineage.prior_submitted_output_roles || [];
+      const priorDetail = observedPrior.length === 0
+        ? 'none'
+        : observedPrior.map((entry) => `work_id=${entry.work_id}, topic_uid=${entry.topic_uid || '<unbound>'}, wave=${entry.wave}, kind=${entry.kind}, role=${entry.role}, reason=${entry.reason_code || (eligiblePrior.length > 1 ? 'ambiguous_exact_path' : 'eligible')}`).join('; ');
+      const message = `accepted source claim source_ref '${claim.source_ref}' was searched in current outputs (not found) and prior submitted outputs (${observedPrior.length} exact match(es)); expected a current assigned output or one exact same-topic wave=${manifest?.wave ?? '<wave>'} kind=${manifest?.kind || '<kind>'} prior output with authorized role [${allowedRoles.join(', ')}]. Prior candidates: ${priorDetail}`;
+      throw validationRepairError(message, {
+        code: eligiblePrior.length > 1 ? 'source_ref_prior_ambiguous' : 'source_ref_not_authorized',
+        repair_kind: 'agent_action',
+        json_pointer: `/source_claims/${claimIndex}/source_ref`,
+        details: {
+          candidate_source_ref: claim.source_ref,
+          searched_current_outputs: true,
+          searched_prior_submitted_outputs: true,
+          prior_candidates: observedPrior,
+          allowed_prior_roles: allowedRoles,
+        },
+      });
     }
 
     const refs = Array.isArray(claim.cache_trail_refs) ? claim.cache_trail_refs.filter(Boolean) : [];
     const degradedRef = claim.degraded_capture_ref || null;
     if (contract.accepted_requires_cache_or_degraded === true && refs.length === 0 && !degradedRef) {
-      throw new Error(`accepted source claim requires cache_trail_refs[] or degraded_capture_ref: ${claim.url}`);
+      throw validationRepairError(`accepted source claim requires cache_trail_refs[] or degraded_capture_ref: ${claim.url}`, {
+        repair_kind: 'agent_action',
+        json_pointer: `/source_claims/${claimIndex}/cache_trail_refs`,
+      });
     }
 
     const allRefs = [...refs, ...(degradedRef ? [degradedRef] : [])];
     for (const trail of allRefs) {
       if (!cacheTrails.has(trail)) {
-        throw new Error(`accepted source claim cache/degraded ref is not declared in cache_trails[]: ${trail}`);
+        throw validationRepairError(`accepted source claim cache/degraded ref is not declared in cache_trails[]: ${trail}`, {
+          repair_kind: 'agent_action',
+          json_pointer: `/source_claims/${claimIndex}/cache_trail_refs`,
+        });
       }
       const mapping = cacheTrailMapping(bundleDir, trail, { virtualCachePages });
       if (trail === degradedRef && !mapping.degraded) {
-        throw new Error(`degraded_capture_ref lacks explicit degraded/fetch-failure record: ${trail}`);
+        throw validationRepairError(`degraded_capture_ref lacks explicit degraded/fetch-failure record: ${trail}`, {
+          repair_kind: 'agent_action',
+          json_pointer: `/source_claims/${claimIndex}/degraded_capture_ref`,
+        });
       }
       const normalizedClaimUrl = normalizeUrlForSourceCache(claim.url);
       if (mapping.urls.length > 0 && !mapping.urls.includes(normalizedClaimUrl)) {
-        throw new Error(`accepted source claim cache trail maps to a different URL for ${claim.url}: ${trail}`);
+        throw validationRepairError(`accepted source claim cache trail maps to a different URL for ${claim.url}: ${trail}`, {
+          repair_kind: 'agent_action',
+          json_pointer: `/source_claims/${claimIndex}/url`,
+        });
       }
     }
   }
 
-  for (const url of acceptedUrls) {
+  for (const [urlIndex, url] of acceptedUrls.entries()) {
     if (!acceptedClaimUrls.has(url)) {
-      throw new Error(`accepted_source_urls[] entry has no matching accepted source_claims[] entry: ${url}`);
+      throw validationRepairError(`accepted_source_urls[] entry has no matching accepted source_claims[] entry: ${url}`, {
+        repair_kind: 'agent_action',
+        json_pointer: `/accepted_source_urls/${urlIndex}`,
+      });
     }
   }
 }

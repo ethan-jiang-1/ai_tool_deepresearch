@@ -56,6 +56,7 @@ export const DEFAULT_KIND_CONTRACTS = Object.freeze({
       source_claims: Object.freeze({
         allowed: true,
         accepted_requires_cache_or_degraded: true,
+        prior_submitted_output_roles: Object.freeze(['evidence_summary']),
       }),
     }),
     cache_policy: Object.freeze({

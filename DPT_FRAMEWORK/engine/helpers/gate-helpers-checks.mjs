@@ -8,9 +8,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { basename, join, resolve as resolvePath } from 'node:path';
 import {
   readOutputDeclarations,
+  readBundlePlan,
   readSubmittedWorkUnitDeclarations,
   getDeclaredReferencePaths,
 } from './gate-helpers-readers.mjs';
+import { validateIndexMD } from '../../schema/contracts/reference.mjs';
+import { evaluateTopicLayouts, resolveReferenceTopicBinding } from './topic-layout.mjs';
 import {
   CACHE_BASE_LEAF_FILES,
   CACHE_SOURCE_MAPPING_FIELDS,
@@ -101,7 +104,12 @@ function readReferenceIndexRows(bundlePath) {
     return { exists: false, rows: [], rowByFile: new Map() };
   }
 
-  const lines = readFileSync(indexPath, 'utf-8').split(/\r?\n/);
+  const content = readFileSync(indexPath, 'utf-8');
+  const validation = validateIndexMD(content);
+  if (!validation.valid) {
+    return { exists: true, valid: false, errors: validation.errors, rows: [], rowByFile: new Map() };
+  }
+  const lines = content.split(/\r?\n/);
   const rows = [];
   const rowByFile = new Map();
   let headers = null;
@@ -122,7 +130,7 @@ function readReferenceIndexRows(bundlePath) {
       rowByFile.set(ref, row);
     }
   }
-  return { exists: true, rows, rowByFile };
+  return { exists: true, valid: true, errors: [], rows, rowByFile };
 }
 
 function hasExplicitDegradedCapture(pageText, meta) {
@@ -253,12 +261,41 @@ function referenceAuthorityFailure({
 // Markdown Text Utilities
 // ═══════════════════════════════════════════════════════════════════════════
 
+function normalizeMarkdownSemanticHeading(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s*\/\s*/g, ' / ')
+    .replace(/\s+/g, ' ');
+}
+
+function markdownSemanticSectionEntries(mdContent) {
+  const content = String(mdContent || '');
+  const matches = [...content.matchAll(/^[ \t]{0,3}#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*$/gm)];
+  return matches.map((match, index) => ({
+    name: normalizeMarkdownSemanticHeading(match[1]),
+    headingStart: match.index,
+    body: content.slice(
+      match.index + match[0].length,
+      matches[index + 1]?.index ?? content.length,
+    ).trim(),
+  }));
+}
+
+/** Parse Markdown sections by semantic heading, independent of level, case, spacing, or order. */
+export function parseMarkdownSemanticSections(mdContent) {
+  const sections = new Map();
+  for (const entry of markdownSemanticSectionEntries(mdContent)) {
+    if (!sections.has(entry.name) || !sections.get(entry.name)) {
+      sections.set(entry.name, entry.body);
+    }
+  }
+  return sections;
+}
+
 /** Extract a named Markdown section body. */
 export function extractSection(mdContent, sectionName) {
-  const escaped = sectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(`##{1,3}\\s+${escaped}\\s*\\n([\\s\\S]*?)(?=\\n##{1,3}\\s|$)`, 'i');
-  const match = mdContent.match(re);
-  return match ? match[1].trim() : '';
+  return parseMarkdownSemanticSections(mdContent).get(normalizeMarkdownSemanticHeading(sectionName)) || '';
 }
 
 
@@ -275,8 +312,9 @@ export const REQUIRED_REFERENCE_METADATA_FIELDS = [
   'trust_level',
   'why_it_matters',
   'accessed_at',
-  'related_topic',
 ];
+
+export const REFERENCE_TOPIC_BINDING_FIELDS = ['related_topic_uid', 'related_topic'];
 
 export const REQUIRED_REFERENCE_SECTIONS = [
   'Key Facts',
@@ -287,7 +325,12 @@ export const REQUIRED_REFERENCE_SECTIONS = [
 ];
 
 export function parseReferenceMetadata(mdContent) {
-  const beforeFirstSection = mdContent.split(/\n##\s+/)[0] || '';
+  const semanticNames = new Set(REQUIRED_REFERENCE_SECTIONS.map(normalizeMarkdownSemanticHeading));
+  const firstSemanticSection = markdownSemanticSectionEntries(mdContent)
+    .find((entry) => semanticNames.has(entry.name));
+  const beforeFirstSection = firstSemanticSection
+    ? String(mdContent || '').slice(0, firstSemanticSection.headingStart)
+    : String(mdContent || '');
   const metadata = new Map();
   for (const line of beforeFirstSection.split(/\r?\n/)) {
     const match = line.match(/^\s*-\s*([A-Za-z0-9_]+):\s*(.*)$/);
@@ -301,9 +344,14 @@ export function parseReferenceMetadata(mdContent) {
 // Reference Validation Checks
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function checkReferenceFormatFiles(files, { rule = null } = {}) {
+export function checkReferenceFormatFiles(files, { rule = null, bundlePath = null } = {}) {
   const inspect = [];
   const findings = [];
+  let layouts = null;
+  if (bundlePath) {
+    const plan = readBundlePlan(bundlePath);
+    if (Array.isArray(plan?.topic_registry)) layouts = evaluateTopicLayouts(plan.topic_registry);
+  }
   for (const file of files) {
     const content = readFileSync(file.absPath, 'utf-8');
     if (content.trimStart().startsWith('---')) {
@@ -343,6 +391,40 @@ export function checkReferenceFormatFiles(files, { rule = null } = {}) {
           detail,
         }));
       }
+    }
+    const binding = layouts
+      ? resolveReferenceTopicBinding(layouts, metadata)
+      : REFERENCE_TOPIC_BINDING_FIELDS.some((field) => Boolean(metadata.get(field)))
+        ? { ok: true }
+        : { ok: false, reason_code: 'reference_topic_binding_missing' };
+    if (!binding.ok) {
+      const reason = binding.reason_code || 'reference_topic_binding_invalid';
+      const detail = `Invalid reference topic binding in ${file.relPath}: ${reason}`;
+      const writeField = reason === 'reference_topic_binding_conflict'
+        ? 'related_topic_uid,related_topic'
+        : metadata.get('related_topic_uid')
+          ? 'related_topic_uid'
+          : 'related_topic';
+      inspect.push(detail);
+      findings.push(checkerFinding(rule, {
+        defaultRuleId: 'reference_format',
+        id: `${rule?.id || 'reference_format'}:${file.relPath}:topic_binding:${reason}`,
+        blockingBasis: 'binding_integrity',
+        surface: file.absPath,
+        expected: 'One resolvable reference topic binding: exact registered related_topic_uid or compatible exact related_topic id/slug list; dual forms must agree.',
+        observed: {
+          related_topic_uid: metadata.get('related_topic_uid') || null,
+          related_topic: metadata.get('related_topic') || null,
+          reason_code: reason,
+        },
+        missingFact: reason === 'reference_topic_binding_conflict'
+          ? `${file.relPath} has conflicting related_topic_uid and related_topic bindings.`
+          : `${file.relPath} topic binding is not resolvable: ${reason}.`,
+        repairKind: 'agent_action',
+        writeTo: `${file.absPath}#metadata.${writeField}`,
+        repair: `Repair the reference topic binding in ${file.relPath} to one exact registered UID or compatible current/previous id or slug, then rerun this checkpoint.`,
+        detail,
+      }));
     }
     for (const section of REQUIRED_REFERENCE_SECTIONS) {
       if (!extractSection(content, section)) {
@@ -652,6 +734,34 @@ export function checkReferenceIndexCoverage(bundlePath, files, { sourceLayer = n
       passed: inspect.length === 0,
       inspect,
       advice: inspect.length > 0 ? ['Create reference/_INDEX.md and add one row per materialized reference projection.'] : [],
+      findings,
+    };
+  }
+
+  if (files.length === 0) {
+    return { passed: true, inspect: [], advice: [], findings: [] };
+  }
+
+  if (!index.valid) {
+    const detail = `[reference_index_table_invalid] reference/_INDEX.md does not satisfy the accepted eight-column table contract: ${index.errors.join('; ')}`;
+    inspect.push(detail);
+    findings.push(checkerFinding(rule, {
+      defaultRuleId: 'reference_index_coverage',
+      id: `${rule?.id || 'reference_index_coverage'}:index_table_invalid`,
+      blockingBasis: 'required_structure',
+      surface: indexPath,
+      expected: 'A parseable reference/_INDEX.md table with all eight accepted columns and at least one data row.',
+      observed: { errors: index.errors },
+      missingFact: `reference/_INDEX.md parent table is invalid: ${index.errors.join('; ')}.`,
+      repairKind: 'agent_action',
+      writeTo: indexPath,
+      repair: 'Repair the accepted eight-column reference index table, then rerun this checkpoint before evaluating per-file rows.',
+      detail,
+    }));
+    return {
+      passed: false,
+      inspect,
+      advice: ['Repair the reference/_INDEX.md table parent before per-file navigation rows are evaluated.'],
       findings,
     };
   }

@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
 import {
   claimAndSubmitWorkUnit,
+  referenceContent,
 } from '../../engine/work-unit-test-helpers.mjs';
 
 const REPO_ROOT = process.cwd();
@@ -15,6 +16,15 @@ const INSPECT_CLI = join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave1-output.mjs'
 const NEW_BUNDLE = join(REPO_ROOT, 'experiments_env/shared/new-disposable-bundle.mjs');
 const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
 const createdDirs = [];
+
+const PARITY_HISTORICAL_TOPIC = Object.freeze({
+  topic_uid: 'tp_123e4567-e89b-42d3-a456-426614174010', id: '01', slug: 'historical-topic', title: 'Historical Topic',
+  must_answer: ['What historical evidence is already covered?'], scope_role: 'supporting', depends_on_topic_uids: [], previous_layouts: [],
+});
+const PARITY_TARGET_TOPIC = Object.freeze({
+  topic_uid: 'tp_123e4567-e89b-42d3-a456-426614174011', id: '02', slug: 'added-topic', title: 'Added Topic',
+  must_answer: ['What new evidence does the added Topic require?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [],
+});
 
 function track(dir) { createdDirs.push(dir); return dir; }
 function unique(prefix) { return `rt_w1_${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
@@ -190,6 +200,28 @@ function createBundle(name) {
   return dir;
 }
 
+function writeCanonicalTopicPlan(dir, topicUid) {
+  const planPath = join(dir, 'rb_plan.md');
+  const existing = readFileSync(planPath, 'utf-8');
+  const body = existing.replace(/^---\n[\s\S]*?\n---\n?/, '');
+  const frontmatter = {
+    plan_basename: 'canonical-wave1-test',
+    derived_topic_count: 1,
+    topic_registry_version: '2',
+    topic_registry: [{
+      topic_uid: topicUid,
+      id: '01',
+      slug: 'topic-a',
+      title: 'Topic A',
+      must_answer: ['How to measure alignment?'],
+      scope_role: 'primary',
+      depends_on_topic_uids: [],
+      previous_layouts: [{ id: '02', slug: '02_old-topic-a' }],
+    }],
+  };
+  writeFileSync(planPath, `---\n${JSON.stringify(frontmatter, null, 2)}\n---\n${body}`);
+}
+
 function submitWave1WorkUnit(dir, {
   queueItemId = 'topic-a',
   sourceUrl = 'https://example.com/news/deepening-topic-a',
@@ -244,33 +276,23 @@ function submitWave1WorkUnit(dir, {
 
 function writeDepthReview(dir, {
   submission,
-  sourceUrl = 'https://example.com/news/deepening-topic-a',
-  isNewVsWave0 = true,
   wave0Urls = ['https://example.com/news/wave0-foundation'],
   decision = 'accept',
   supplementary = [],
-  cacheTrail = '_cache/wave1/primary/topic-a/deepening-topic-a',
   reviewedRefs = null,
 } = {}) {
-  const observed = isNewVsWave0 && !wave0Urls.includes(sourceUrl) ? 1 : 0;
+  const wave0Dir = join(dir, 'artifacts/wave0/topic-a');
+  mkdirSync(wave0Dir, { recursive: true });
+  writeFileSync(join(wave0Dir, 'source.yaml'), wave0Urls.map((url) => [
+    `- url: ${url}`,
+    '  title: Wave0 source',
+    '  retrieved_date: 2026-07-14',
+    '  topic_tag: topic-a',
+  ].join('\n')).join('\n'));
   writeFileSync(join(dir, 'artifacts/wave1/topic-a/depth-review.yaml'), `${JSON.stringify({
     version: 'depth-review.v1',
     topic_slug: 'topic-a',
     reviewed_work_unit_refs: reviewedRefs || [submission.record.paths.work_unit_dir],
-    wave0_source_urls: wave0Urls,
-    source_claims: [{
-      url: sourceUrl,
-      source_ref: 'reference/01-topic-a-deepening.md',
-      acceptance_status: 'accepted',
-      is_new_vs_wave0: isNewVsWave0,
-      cache_trail_refs: [cacheTrail],
-    }],
-    new_source_urls: observed > 0 ? [sourceUrl] : [],
-    new_source_floor: {
-      required: 1,
-      observed,
-      source: 'ceil(wave1_per_topic_ref_floor * topic_unique_ratio)',
-    },
     depth_dimensions: {
       mechanism: { status: 'covered', refs: [submission.record.paths.result_ref] },
       trend_or_difficulty: { status: 'covered', refs: [submission.record.paths.result_ref] },
@@ -296,6 +318,195 @@ function submitAndReviewWave1WorkUnit(dir, options = {}) {
   return submission;
 }
 
+function writeParityPlan(dir, name, topics) {
+  writeFileSync(join(dir, 'rb_plan.md'), `---\n${JSON.stringify({
+    plan_basename: name,
+    derived_topic_count: topics.length,
+    topic_registry_version: '2',
+    topic_registry: topics,
+  }, null, 2)}\n---\n# Wave1 parity plan\n`);
+}
+
+function writeParityReferenceIndex(dir, topics) {
+  writeFileSync(join(dir, 'reference/_INDEX.md'), [
+    '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- |',
+    ...topics.map((topic) => `| reference/${topic.slug}-deepening.md | primary | expert | Tier 2 | ${topic.slug} | wave1_topic | accepted | 2026-07-14 |`),
+    '',
+  ].join('\n'));
+}
+
+function createParityBundle(name, topics, { rerunCount = 0 } = {}) {
+  const result = spawnSync('node', [NEW_BUNDLE, name, '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf8', timeout: 10000 });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const dir = track(result.stdout.trim());
+  setStatusWindow(dir, 'wave0_complete', 'wave1_complete');
+  writeParityPlan(dir, name, topics);
+  writeFileSync(join(dir, 'rb_profile.yaml'), `research_style_params:
+  wave1_per_topic_ref_floor: 1
+  topic_unique_ratio: 1
+  counterexample_search: false
+  cross_verification: false
+human_decision_checkpoints:
+  hitl2:
+    rerun_count: ${rerunCount}
+`);
+  writeParityReferenceIndex(dir, topics);
+  return dir;
+}
+
+function parityEvidenceSummary(topic, sourceUrl) {
+  return `# Evidence Summary: ${topic.title}
+
+## Source URLs
+- [Primary Source](${sourceUrl}) - retrieved 2026-07-14
+
+## Key Findings
+1. **Mechanism**: Submitted evidence establishes a concrete mechanism for ${topic.title}.
+
+## Open Questions
+1. [Open] What remains to be verified?
+`;
+}
+
+function parityQuestionList(topic, sourceUrl) {
+  return `# Question List: ${topic.title}
+
+## Topic Investigation Targets
+Target the canonical must-answer question with ${sourceUrl}.
+
+## Question Reconciliation
+The submitted evidence provides partial progress.
+
+## Emergent Question Protocol
+Checked; no unsupported new question.
+
+## Exploration / Exploitation Decision
+Continue to Wave2 synthesis.
+`;
+}
+
+function paritySeed(topic) {
+  return `---
+topic_uid: ${topic.topic_uid}
+id: "${topic.id}"
+slug: ${topic.slug}
+title: ${topic.title}
+---
+# ${topic.title}
+
+## 本轮新增机制理解
+- evidence_meaning: Submitted mechanism evidence
+  relationship: supports
+  refs: reference/${topic.slug}-deepening.md
+  status: accepted
+  next_hop: wave2
+
+## 本轮新增趋势与难点
+- evidence_meaning: Submitted trend evidence
+  relationship: supports
+  refs: reference/${topic.slug}-deepening.md
+  status: accepted
+  next_hop: wave2
+
+## 待验证问题
+- [部分解答] ${topic.must_answer[0]}
+`;
+}
+
+function submitParityTopic(dir, topic, { preserveQueue = false } = {}) {
+  const sourceUrl = `https://docs.example.org/${topic.slug}/wave1-source`;
+  const referencePath = `reference/${topic.slug}-deepening.md`;
+  const evidencePath = `artifacts/wave1/${topic.slug}/evidence-summary.md`;
+  const questionPath = `artifacts/wave1/${topic.slug}/question-list.md`;
+  const cacheTrail = `_cache/wave1/primary/${topic.slug}/deepening`;
+  mkdirSync(join(dir, 'artifacts/wave1', topic.slug), { recursive: true });
+  mkdirSync(join(dir, 'artifacts/wave0', topic.slug), { recursive: true });
+  mkdirSync(join(dir, 'seed_topics'), { recursive: true });
+  writeFileSync(join(dir, referencePath), `${referenceContent({
+    source_url: sourceUrl,
+    related_topic_uid: topic.topic_uid,
+    related_topic: undefined,
+    evidence_role: 'deepening_reference',
+    accessed_at: '2026-07-14',
+  }).replace(/^- related_topic: undefined\n/m, `- related_topic_uid: ${topic.topic_uid}\n`)}\n`);
+  writeFileSync(join(dir, evidencePath), parityEvidenceSummary(topic, sourceUrl));
+  writeFileSync(join(dir, questionPath), parityQuestionList(topic, sourceUrl));
+  writeFileSync(join(dir, 'seed_topics', `${topic.slug}.md`), paritySeed(topic));
+  writeFileSync(join(dir, 'artifacts/wave0', topic.slug, 'source.yaml'), `- url: https://docs.example.org/${topic.slug}/wave0-source
+  title: Wave0 foundation
+  retrieved_date: 2026-07-14
+  topic_tag: ${topic.slug}
+`);
+
+  const submission = claimAndSubmitWorkUnit(dir, {
+    phase: 'wave1',
+    queueItemId: `wave1-${topic.slug}`,
+    preserveQueue,
+    queueItemOverrides: {
+      payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug, wave: 1 },
+      lineage: { topic_uid: topic.topic_uid, topic_slug: topic.slug, phase: 'wave1' },
+    },
+    outputs: [
+      { path: referencePath, role: 'reference', source_url: sourceUrl, source_slug: `${topic.slug}-deepening` },
+      { path: evidencePath, role: 'evidence_summary' },
+      { path: questionPath, role: 'question_list' },
+    ],
+    cacheTrails: [{ path: cacheTrail, url: sourceUrl }],
+    resultOverrides: {
+      source_claims: [{
+        url: sourceUrl,
+        source_ref: referencePath,
+        acceptance_status: 'accepted',
+        is_new_vs_wave0: true,
+        cache_trail_refs: [cacheTrail],
+      }],
+      accepted_source_urls: [sourceUrl],
+    },
+  });
+  assert.equal(submission.submitted.ok, true, JSON.stringify(submission.submitted));
+  const depth = {
+    version: 'depth-review.v1',
+    topic_slug: topic.slug,
+    reviewed_work_unit_refs: [submission.record.paths.work_unit_dir],
+    depth_dimensions: {
+      mechanism: { status: 'covered', refs: [submission.record.paths.result_ref] },
+      trend_or_difficulty: { status: 'covered', refs: [submission.record.paths.result_ref] },
+      limitation_or_dispute: { status: 'covered', refs: [submission.record.paths.result_ref] },
+    },
+    profile_checks: {
+      counterexample_search: { status: 'not_required', refs: [] },
+      cross_verification: { status: 'not_required', refs: [] },
+    },
+    decision: 'accept',
+    supplementary_queue_item_ids: [],
+  };
+  writeFileSync(join(dir, 'artifacts/wave1', topic.slug, 'depth-review.yaml'), `${JSON.stringify(depth, null, 2)}\n`);
+  return { submission, depth };
+}
+
+function wave1ParityProjection(entry) {
+  const manifest = JSON.parse(readFileSync(join(entry.dir, entry.target.submission.record.paths.manifest_ref), 'utf8'));
+  return {
+    kind: manifest.kind,
+    actor_contract_version: manifest.actor_contract_version,
+    actor_class: manifest.actor_execution.execution_actor_class,
+    delegated_role: manifest.actor_execution.delegated_role_key,
+    prior_roles: manifest.output_contract.source_claims.prior_submitted_output_roles,
+    output_roles: manifest.output_contract.output_files.allowed_roles,
+    cache_policy: manifest.cache_policy,
+    depth_fields: Object.keys(entry.target.depth).sort(),
+    depth_dimension_fields: Object.keys(entry.target.depth.depth_dimensions).sort(),
+    has_copied_ledger_truth: ['source_claims', 'accepted_source_urls', 'cache_trail_refs', 'new_source_urls', 'new_source_floor'].some((field) => Object.hasOwn(entry.target.depth, field)),
+    shared_template_required: readFileSync(join(REPO_ROOT, 'DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md'), 'utf8').includes('shared/shared-reference-template'),
+    gate: {
+      passed: entry.gate.check.passed,
+      failed_rule_ids: entry.gate.check.failed_rule_ids,
+      masked_rule_ids: entry.gate.check.masked_rule_ids,
+    },
+  };
+}
+
 describe('check-gate-wave1-complete', () => {
   after(() => { for (const d of createdDirs) rmSync(d, { recursive: true, force: true }); });
 
@@ -311,6 +522,58 @@ describe('check-gate-wave1-complete', () => {
     assert.equal(output.check.passed, true, `Expected pass, got inspect: ${JSON.stringify(output.inspect)}`);
     assert.deepEqual(output.check.failed_rule_ids, []);
     assert.deepEqual(output.check.masked_rule_ids, []);
+  });
+
+  it('1i. masks Wave1 declaration-dependent symptoms behind one recoverable parent', () => {
+    const dir = createBundle(unique('declaration-gap'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    const submission = submitAndReviewWave1WorkUnit(dir);
+    writeWave1Trace(dir);
+    rmSync(join(dir, 'rb_output_declarations.jsonl'));
+
+    for (const result of [runInspect(dir), runGate(dir)]) {
+      assert.equal(result.status, 1, result.stderr || result.stdout);
+      const output = JSON.parse(result.stdout);
+      assert.equal(output.check.failed_rule_ids.includes('wave1_work_unit_submission_presence'), true);
+      const hint = output.hints.find((entry) => entry.rule_id === 'wave1_work_unit_submission_presence');
+      assert.ok(hint);
+      assert.equal(hint.repair_kind, 'engine_operation');
+      assert.match(hint.missing_fact, new RegExp(submission.record.work_id));
+      assert.match(hint.write_to, /operate-work-unit\.mjs recover-declaration/);
+      assert.doesNotMatch(hint.write_to, /rb_output_declarations\.jsonl/);
+      for (const dependent of [
+        'cache_coverage',
+        'wave1_work_unit_ledger_exists',
+        'wave1_work_unit_output_coverage',
+        'wave1_delegated_bypass_suspected',
+      ]) {
+        assert.equal(output.check.failed_rule_ids.includes(dependent), false);
+      }
+    }
+  });
+
+  it('1h. keeps bounded fresh/rerun-added Wave1 contract and Gate parity', () => {
+    const freshDir = createParityBundle(unique('parity-fresh'), [PARITY_TARGET_TOPIC]);
+    const freshTarget = submitParityTopic(freshDir, PARITY_TARGET_TOPIC);
+    writeWave1Trace(freshDir);
+    const freshGate = JSON.parse(runGate(freshDir).stdout);
+    assert.equal(freshGate.check.passed, true, freshGate.inspect.join('\n'));
+
+    const rerunDir = createParityBundle(unique('parity-rerun'), [PARITY_HISTORICAL_TOPIC], { rerunCount: 1 });
+    submitParityTopic(rerunDir, PARITY_HISTORICAL_TOPIC);
+    writeParityPlan(rerunDir, 'parity-rerun', [PARITY_HISTORICAL_TOPIC, PARITY_TARGET_TOPIC]);
+    writeParityReferenceIndex(rerunDir, [PARITY_HISTORICAL_TOPIC, PARITY_TARGET_TOPIC]);
+    const rerunTarget = submitParityTopic(rerunDir, PARITY_TARGET_TOPIC, { preserveQueue: true });
+    writeWave1Trace(rerunDir);
+    const rerunGate = JSON.parse(runGate(rerunDir).stdout);
+    assert.equal(rerunGate.check.passed, true, rerunGate.inspect.join('\n'));
+
+    assert.deepEqual(
+      wave1ParityProjection({ dir: rerunDir, target: rerunTarget, gate: rerunGate }),
+      wave1ParityProjection({ dir: freshDir, target: freshTarget, gate: freshGate }),
+    );
   });
 
   it('1a. aggregates historical Wave1 artifact/reference coverage while checking only the current seed', () => {
@@ -340,7 +603,7 @@ describe('check-gate-wave1-complete', () => {
       .replace(/- Finding four:/, '+ Finding four:')
       .replace(/- Finding five:/, '5. Finding five:'));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), `# Evidence Summary\n\n## Source URLs\nhttps://example.com/news/deepening-topic-a\n\n### key findings\nA substantive finding expressed as a paragraph.\n`);
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), `# Questions\n\n### topic investigation targets\nTargets.\n\n## QUESTION RECONCILIATION\nReconciled.\n\n#### Emergent Question Protocol\nChecked.\n\n## Exploration/Exploitation Decision\ncontinue\n`);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), `# Questions\n\n## Exploration/Exploitation Decision\ncontinue\n\n#### Emergent Question Protocol\nChecked.\n\n### topic investigation targets\nTargets.\n\n## QUESTION RECONCILIATION\nReconciled.\n`);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
     submitAndReviewWave1WorkUnit(dir);
     writeWave1Trace(dir);
@@ -348,7 +611,30 @@ describe('check-gate-wave1-complete', () => {
     assert.equal(output.check.passed, true, output.inspect.join('\n'));
   });
 
-  it('1e. fewer Key Facts does not revive the retired quantity blocker', () => {
+  it('1g. accepts UID-only reference metadata through the canonical topic resolver', () => {
+    const dir = createBundle(unique('uid-reference'));
+    const topicUid = 'tp_123e4567-e89b-12d3-a456-426614174000';
+    writeCanonicalTopicPlan(dir, topicUid);
+    const referencePath = join(dir, 'reference/01-topic-a-deepening.md');
+    writeFileSync(referencePath, readFileSync(referencePath, 'utf8').replace(
+      '- related_topic: topic-a',
+      `- related_topic_uid: ${topicUid}`,
+    ));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(dir);
+    writeWave1Trace(dir);
+
+    const gateOutput = JSON.parse(runGate(dir).stdout);
+    assert.equal(gateOutput.check.passed, true, gateOutput.inspect.join('\n'));
+    assert.equal(gateOutput.check.failed_rule_ids.some((id) => id.startsWith('reference_format')), false);
+
+    const inspectOutput = JSON.parse(runInspect(dir).stdout);
+    assert.equal(inspectOutput.check.failed_rule_ids.some((id) => id.startsWith('reference_format')), false);
+  });
+
+  it('1e. fewer Key Facts does not affect numeric count or revive the retired quantity blocker', () => {
     const dir = createBundle(unique('degraded'));
     const referencePath = join(dir, 'reference/01-topic-a-deepening.md');
     writeFileSync(referencePath, readFileSync(referencePath, 'utf8').replace(/- Finding five: Fifth concluding fact\.\n/, ''));
@@ -366,9 +652,28 @@ describe('check-gate-wave1-complete', () => {
 
     const gateOutput = JSON.parse(runGate(dir, { attempt: 3 }).stdout);
     assert.equal(gateOutput.check.passed, true, gateOutput.inspect.join('\n'));
-    assert.equal(gateOutput.check.degraded, true);
-    assert.deepEqual(gateOutput.check.degraded_rules, ['per_topic_ref_md_count_floor']);
+    assert.notEqual(gateOutput.check.degraded, true);
+    assert.deepEqual(gateOutput.check.degraded_rules ?? [], []);
+    assert.equal(gateOutput.check.failed_rule_ids.some((id) => id.startsWith('per_topic_ref_md_count_floor')), false);
     assert.equal(gateOutput.check.failed_rule_ids.some((id) => id.startsWith('key_facts_min_lines')), false);
+  });
+
+  it('1f. an empty required question-list semantic section remains blocking once', () => {
+    const dir = createBundle(unique('missing-question-section'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST.replace(
+      /## Question Reconciliation\n\n[\s\S]*?(?=\n## Emergent Question Protocol)/,
+      '## Question Reconciliation\n\n',
+    ));
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(dir);
+    writeWave1Trace(dir);
+
+    const output = JSON.parse(runGate(dir).stdout);
+    assert.equal(output.check.passed, false);
+    assert.equal(output.check.failed_rule_ids.some((id) => id.startsWith('question_list_has_four_sections')), true);
+    assert.equal(output.hints.filter((hint) => hint.rule_id === 'question_list_has_four_sections').length, 1);
+    assert.match(output.hints.find((hint) => hint.rule_id === 'question_list_has_four_sections').missing_fact, /question reconciliation/i);
   });
 
   it('1a. passes when Wave1 required outputs were submitted as other and normalized before ledger coverage', () => {

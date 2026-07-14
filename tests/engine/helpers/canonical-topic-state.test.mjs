@@ -34,6 +34,45 @@ function authorizeRerun(dir) {
   ].map(JSON.stringify).join('\n') + '\n');
 }
 const input = { context: 'hitl1', actions: [{ action: 'add_topic', title: 'Topic A', slug_stem: 'topic-a', must_answer: ['What?'], scope_role: 'primary', depends_on_topic_uids: [] }] };
+const SEED_HEADINGS = [
+  '## 主题定位',
+  '## must_answer',
+  '## 初始假设、缺口或张力',
+  '## why now',
+  '## 研究边界与不深挖范围',
+  '## 证据锚点与优先来源',
+  '## 为什么对最终交付物重要',
+  '## 下游位置（可选）',
+  '## ═══ 研究轮次追加区 ═══',
+  '## 历史摘要',
+  '## 本轮新增证据',
+  '## 本轮新增机制理解',
+  '## 本轮新增趋势与难点',
+  '## 当前判断',
+  '## 待验证问题',
+];
+const SEED_BACKFILL_TOKENS = [
+  '__BACKFILL_WAVE0_EVIDENCE__',
+  '__BACKFILL_WAVE1_MECHANISMS__',
+  '__BACKFILL_WAVE1_TRENDS__',
+  '__BACKFILL_WAVE2_JUDGMENT__',
+  '__BACKFILL_PENDING_QUESTIONS__',
+];
+
+function seedBody(raw) {
+  return raw.replace(/^---\n[\s\S]*?\n---\n/, '');
+}
+
+function assertCompleteSeedSkeleton(raw) {
+  const body = seedBody(raw);
+  for (const heading of SEED_HEADINGS) assert.ok(body.includes(heading), `missing ${heading}`);
+  for (const token of SEED_BACKFILL_TOKENS) {
+    assert.equal(body.split(token).length - 1, 1, `${token} must appear exactly once`);
+  }
+  assert.doesNotMatch(body, /__BACKFILL_(?:EVIDENCE|MECHANISM|TRENDS|JUDGMENT|QUESTIONS|PREVIOUS_SUMMARY)__/);
+  assert.doesNotMatch(body, /__FILL_[A-Z0-9_]+__/);
+  assert.doesNotMatch(body, /## 主题定位\s+primary\s/);
+}
 
 describe('canonical topic state', () => {
   it('atomically adds registry and UID-bound seed', () => {
@@ -42,6 +81,47 @@ describe('canonical topic state', () => {
     assert.equal(inspected.mode, 'canonical'); assert.equal(inspected.topics[0].state, 'not_started'); assert.equal(inspected.passed, true);
     assert.match(inspected.plan_sha256, /^[0-9a-f]{64}$/);
     assert.deepEqual(inspected.layout_baseline.topics[0], { topic_uid: inspected.topics[0].topic_uid, title: 'Topic A', slug_stem: 'topic-a' });
+  });
+  it('renders the complete shared seed skeleton for HITL1 and rerun add_topic', () => {
+    const hitl1 = bundle('topic-seed-hitl1');
+    applyCanonicalTopicState({ bundlePath: hitl1, input });
+    const hitl1Seed = readFileSync(join(hitl1, 'seed_topics/01_topic-a.md'), 'utf8');
+    assertCompleteSeedSkeleton(hitl1Seed);
+
+    const rerun = rerunBundle('topic-seed-rerun');
+    applyCanonicalTopicState({ bundlePath: rerun, input: { ...input, context: 'rerun' } });
+    const rerunSeed = readFileSync(join(rerun, 'seed_topics/01_topic-a.md'), 'utf8');
+    assertCompleteSeedSkeleton(rerunSeed);
+    assert.equal(seedBody(rerunSeed), seedBody(hitl1Seed));
+  });
+  it('renders the same complete skeleton for migrate_legacy seed_binding:new', () => {
+    const dir = rerunBundle('topic-seed-migration', true);
+    const migration = { context: 'rerun', action: 'migrate_legacy', entries: [{
+      source: 'registry', id: '01', slug: '01_old', title: 'Old', must_answer: ['Old?'],
+      scope_role: 'primary', depends_on_slugs: [], seed_binding: 'new',
+    }] };
+    assert.equal(applyCanonicalTopicState({ bundlePath: dir, input: migration }).verdict, 'committed');
+    assertCompleteSeedSkeleton(readFileSync(join(dir, 'seed_topics/01_old.md'), 'utf8'));
+  });
+  it('preserves existing enrichment frontmatter and body while canonical intent changes', () => {
+    const dir = bundle('topic-seed-preserve');
+    applyCanonicalTopicState({ bundlePath: dir, input });
+    const topic = inspectCanonicalTopicState({ bundlePath: dir }).topics[0];
+    const seedPath = join(dir, `seed_topics/${topic.slug}.md`);
+    const enriched = readFileSync(seedPath, 'utf8')
+      .replace('depends_on_topic_uids: []', 'depends_on_topic_uids: []\ncustom_enrichment: keep-me')
+      .replace('pending — seed-topics Agent must enrich this section.', 'Preserved positioning narrative.');
+    writeFileSync(seedPath, enriched);
+    const update = { context: 'hitl1', actions: [{
+      action: 'update_intent', topic_uid: topic.topic_uid, title: 'Topic A revised',
+      must_answer: ['Why now?'], scope_role: 'comparison', depends_on_topic_uids: [],
+    }] };
+    assert.equal(applyCanonicalTopicState({ bundlePath: dir, input: update }).verdict, 'committed');
+    const updated = readFileSync(seedPath, 'utf8');
+    assert.match(updated, /custom_enrichment: keep-me/);
+    assert.match(updated, /Preserved positioning narrative\./);
+    assert.match(updated, /title: Topic A revised/);
+    assert.match(updated, /scope_role: comparison/);
   });
   it('rejects forged lifecycle context without writes', () => {
     const dir = bundle(); const before = readFileSync(join(dir, 'rb_plan.md'), 'utf8');

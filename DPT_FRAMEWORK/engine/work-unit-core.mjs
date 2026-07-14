@@ -41,10 +41,12 @@ export {
   claimWorkUnits,
 } from './work-unit-lifecycle.mjs';
 
-// Submit (4)
+// Submit (6)
 export {
   drySubmitWorkUnit,
+  inspectWorkUnitDeclarationRecovery,
   lateSubmitWorkUnit,
+  recoverWorkUnitDeclaration,
   submitWorkUnit,
 } from './work-unit-submit.mjs';
 

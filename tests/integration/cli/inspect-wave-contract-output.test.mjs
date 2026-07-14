@@ -10,6 +10,7 @@ import { cleanupAll, createTempDir } from '../../helpers/temp-dirs.mjs';
 
 const REPO_ROOT = process.cwd();
 const CLIS = ['inspect-wave0-output.mjs', 'inspect-wave1-output.mjs', 'inspect-wave2-output.mjs'];
+const TOPIC_UID = 'tp_11111111-1111-4111-8111-111111111111';
 
 after(cleanupAll);
 
@@ -32,7 +33,8 @@ function writeBundle() {
     'plan_basename: inspect-contract',
     'derived_topic_count: 1',
     'topic_registry:',
-    '  - id: t1',
+    `  - topic_uid: ${TOPIC_UID}`,
+    '    id: t1',
     '    slug: topic-a',
     '    title: Topic A',
     '---',
@@ -51,6 +53,31 @@ function writeBundle() {
   writeFileSync(join(bundle, 'artifacts/wave0/topic-a/source.yaml'), 'not: an-array\n');
   writeFileSync(join(bundle, 'seed_topics/topic-a.md'), '# Topic A\n');
   return bundle;
+}
+
+function completeReference(bindingLine) {
+  return [
+    '- source_url: https://example.com/reference',
+    '- acceptance_status: accepted',
+    '- source_type: secondary',
+    '- tier: Tier 2',
+    '- evidence_role: foundation',
+    '- trust_level: practitioner',
+    '- why_it_matters: Shared contract coverage.',
+    '- accessed_at: 2026-07-14',
+    bindingLine,
+    '',
+    '## Key Facts',
+    '- Fact',
+    '## Core Content Capture',
+    'Capture',
+    '## Relevance To This Research',
+    'Relevant',
+    '## Quotable Terms / Concepts',
+    'Concept',
+    '## Risks And Limitations',
+    'Risk',
+  ].join('\n');
 }
 
 function snapshot(root) {
@@ -117,4 +144,22 @@ describe('wave inspect output and purity', () => {
       assert.match(output.hints[0].rerun, /--bundle <bundle-path>$/);
     });
   }
+
+  it('Wave0 inspect accepts UID-only shared-reference binding without legacy-field advice', () => {
+    const bundle = writeBundle();
+    writeFileSync(join(bundle, 'reference/00-shared-topic-a.md'), completeReference(`- related_topic_uid: ${TOPIC_UID}`));
+    const result = spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave0-output.mjs'), '--bundle', bundle], { encoding: 'utf8', timeout: 10000 });
+    assert.ok([0, 1].includes(result.status), result.stderr || result.stdout);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.inspect.some((line) => line.includes("missing required key 'related_topic'")), false, JSON.stringify(output));
+  });
+
+  it('Wave2 inspect accepts UID-only cross-reference binding without legacy-field advice', () => {
+    const bundle = writeBundle();
+    writeFileSync(join(bundle, 'reference/00-cross-topic-a.md'), completeReference(`- related_topic_uid: ${TOPIC_UID}`));
+    const result = spawnSync('node', [join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-wave2-output.mjs'), '--bundle', bundle], { encoding: 'utf8', timeout: 10000 });
+    assert.ok([0, 1].includes(result.status), result.stderr || result.stdout);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.inspect.some((line) => line.includes("missing expected key 'related_topic'")), false, JSON.stringify(output));
+  });
 });

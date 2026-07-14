@@ -5,11 +5,11 @@ import assert from 'node:assert/strict';
 
 const REPO_ROOT = join(import.meta.dirname, '../../..');
 
+// Project-level guidelines must be able to name retired anti-patterns while rejecting them.
 const SCAN_ROOTS = [
   'DPT_FRAMEWORK',
   'experiments_playbook',
   'experiments_env/shared',
-  'guidelines',
   '_backlog/plans',
   'CHANGELOG.md',
   'README.md',
@@ -56,7 +56,7 @@ function walk(relPath, out = []) {
 }
 
 describe('retired content heuristic hygiene', () => {
-  it('keeps retired content heuristics out of current implementation and guidance surfaces', () => {
+  it('keeps retired content heuristics out of current implementation and runtime guidance surfaces', () => {
     const files = SCAN_ROOTS.flatMap((root) => walk(root));
     const violations = [];
 

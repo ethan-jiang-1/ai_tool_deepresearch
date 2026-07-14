@@ -12,17 +12,19 @@
 
 1. `reference/` has no non-hidden subdirectory;
 2. non-index/readme Markdown files use `00-shared-<slug>.md` naming;
-3. each `00-shared-*.md` exposes the required bullet metadata keys after an optional H1 title and before its first H2 semantic section;
+3. each `00-shared-*.md` exposes the eight common required bullet metadata keys plus one resolvable topic binding after an optional H1 title and before its first H2 semantic section;
 4. each `00-shared-*.md` exposes the five standard semantic sections;
 5. `reference/_INDEX.md` exists and inspect can diagnose the expected eight columns and data-row shape;
 6. `reference/README.md` exists and inspect can diagnose empty content; and
 7. `artifacts/wave0/<topic>/source.yaml` exists for every `topic_registry` topic and satisfies the accepted ReferenceMetadata array contract.
 
+Reference metadata inspection SHALL consume the shared canonical topic-binding adapter used by Wave gates and file observability. Exact `related_topic_uid`, existing legacy `related_topic`, and identical dual declarations SHALL satisfy the one topic-binding slot; the inspect-only convention SHALL NOT hard-code the legacy raw field as independently required or maintain its own topic parser. Unknown, ambiguous, or conflicting binding SHALL be reported with the adapter reason code and one reference repair target.
+
 The shared blocking evaluator SHALL cover the current formal Wave0 artifact/provenance rules: `reference/`、`_INDEX.md`、`README.md` existence, shared-reference count floor, placeholder `source_url`, per-topic source YAML existence/schema/count, cache coverage, submitted ledger/output/submission presence, and delegated-bypass provenance. A formal condition SHALL use the same rule id and direct checker result in inspect and gate modes.
 
 Wave0 flat-directory, filename, non-formal metadata/section, `_INDEX.md` presentation, and README non-empty conventions SHALL remain visible but SHALL be advisory unless an accepted formal rule directly consumes that shape. Missing formal artifacts remain blocking. Existing evidence-bearing return-map navigation checks SHALL preserve their accepted current-command classification and SHALL NOT be mislabeled as formal gate rules.
 
-Inspect SHALL return `{ check, inspect, advice }` JSON without routing. It SHALL preserve exit code `0` for pass, `1` for known contract failure, and `2` for invocation/configuration error. It SHALL NOT execute node binding, lifecycle handoff preflight, routing, degraded handoff, gate-attempt counting, trace/log/checkpoint writes, status mutation, or completion-only `trace_event_*` checks.
+Inspect SHALL return `{ check, inspect, advice, hints }` JSON without routing. Every blocking primary root SHALL expose `rule_id`, `repair_kind`, `missing_fact`, `write_to`, and `rerun` through the same shared finding projection used by the corresponding Wave Gate while preserving existing human-readable arrays for compatibility. On pass, `hints` SHALL be empty. It SHALL preserve exit code `0` for pass, `1` for known contract failure, and `2` for invocation/configuration error. It SHALL NOT execute node binding, lifecycle handoff preflight, routing, degraded handoff, gate-attempt counting, trace/log/checkpoint writes, status mutation, or completion-only `trace_event_*` checks.
 
 #### Scenario: Flat directory check passes
 
@@ -54,6 +56,12 @@ Inspect SHALL return `{ check, inspect, advice }` JSON without routing. It SHALL
 - **THEN** inspect SHALL name the file and missing key
 - **AND** the finding SHALL be advisory when that key is not part of a formal Wave0 pass/fail rule
 
+#### Scenario: UID-only shared reference satisfies inspect binding
+
+- **WHEN** a Wave0 shared reference contains all common required metadata and exact registered `related_topic_uid` but no legacy `related_topic`
+- **THEN** Wave0 inspect SHALL accept the topic-binding slot without a missing-key advisory
+- **AND** it SHALL return the same canonical UID binding as file observability
+
 #### Scenario: Section check reports missing header
 
 - **WHEN** `reference/00-shared-ai-landscape.md` lacks the `Risks And Limitations` semantic section
@@ -82,32 +90,36 @@ Inspect SHALL return `{ check, inspect, advice }` JSON without routing. It SHALL
 #### Scenario: Wave0 inspect preserves command output contract
 
 - **WHEN** `inspect-wave0-output.mjs --bundle <bundle>` completes
-- **THEN** stdout SHALL contain `{ check, inspect, advice }` without routing
+- **THEN** stdout SHALL contain `{ check, inspect, advice, hints }` without routing
+- **AND** any affected blocking primary root SHALL include non-empty `repair_kind`, `missing_fact`, `write_to`, and `rerun`
 - **AND** the command SHALL use exit code `0`, `1`, or `2` according to the documented non-gate convention
 
 ### Requirement: inspect-wave1-output.mjs structural checks
 
-`inspect-wave1-output.mjs` SHALL evaluate Wave1 phase-owned artifacts, structured depth-review, references, ledger/cache backing, submitted provenance, and explicit floors through the same pure evaluator result used by `wave1-complete`. It SHALL continue to check only Wave1-owned output conventions, including:
+`inspect-wave1-output.mjs` SHALL evaluate Wave1 phase-owned artifacts, structured depth-review, references, submitted ledger/cache backing, explicit profile floors and work-unit provenance through the same pure evaluator result used by `wave1-complete`. It SHALL consume the shared canonical topic-binding, reference-format, reference-index, depth-contract and provenance evaluators rather than maintain local blocking variants.
 
-1. at least one per-topic `reference/<topic-prefix>-*.md` file derived from `topic_registry`;
-2. required metadata on each Wave1 topic reference;
-3. the five required semantic reference sections;
-4. `artifacts/wave1/<topic>/evidence-summary.md`;
-5. `artifacts/wave1/<topic>/question-list.md`; and
-6. matching `reference/_INDEX.md` rows with `source_layer: wave1_topic`.
+Presentation parsing SHALL remain tolerant without weakening direct contracts:
 
-The shared blocking evaluator SHALL retain per-topic artifact/reference presence, parseable source URL, required semantic structure, reference index/backing, depth-review authority, cache/submitted provenance, explicit profile floors, backfill-token absence, work-unit submission integrity, and delegated-bypass provenance. Existing evidence-bearing return-map navigation checks SHALL preserve their accepted current-command classification.
+- `question_list_has_four_sections` SHALL require the four semantic sections but tolerate harmless order, heading case/level, spacing and list presentation;
+- `source_url_present` SHALL accept a parseable bare HTTP(S) URL or Markdown link while submitted source/backing remains independently blocking;
+- `key_findings_non_empty` SHALL accept common non-empty bullet, numbered-list or paragraph content under the semantic Key Findings section; and
+- the retired `key_facts_min_lines` blocking rule SHALL be removed; a Key Facts quantity observation MAY remain advisory and SHALL NOT appear in `check.failed_rule_ids` or `hints[]`.
 
-Presentation parsing SHALL be tolerant without weakening direct contracts:
+When a prerequisite parent or field is missing, inspect SHALL return the earliest direct root and mask only dependent novelty, cache-mapping, floor, profile, decision, output and count symptoms. `submitted_declaration_missing` SHALL precede dependent work-unit coverage/cache/count symptoms. An invalid reference-index table SHALL precede per-reference missing-row symptoms.
 
-- `question_list_has_four_sections` SHALL require the four semantic sections but SHALL tolerate harmless heading whitespace/case/list-marker differences and SHALL NOT fail solely on presentation order/style;
-- `source_url_present` SHALL accept a parseable bare `http(s)` URL or Markdown link while submitted source/backing rules remain blocking;
-- `key_findings_non_empty` SHALL accept common bullet, numbered, or non-empty paragraph content under the semantic Key Findings section; and
-- `key_facts_min_lines` SHALL remain an explicit blocking floor while accepting equivalent common list markers and spacing.
+Inspect SHALL preserve `{ check, inspect, advice, hints }`, exit code `0/1/2`, no routing and full bundle no-write behavior. Shared blocking roots SHALL expose the same `rule_id`, `repair_kind`, `missing_fact` and `write_to` as the formal Gate, with the exact Wave1 inspect command in `rerun`. Formal-only lifecycle, routing, degraded handoff, gate-attempt durability and trace completion checks SHALL remain outside inspect.
 
-When a prerequisite parent or field is missing, inspect SHALL short-circuit only checks that depend on it. Missing or unparseable `depth-review.yaml` SHALL not generate novelty, cache-mapping, floor, profile, or decision symptoms. Missing `source_claims`, `new_source_floor`, or `decision` SHALL mask only the checks that consume that field; independent root causes SHALL remain visible.
+#### Scenario: Retired Key Facts quantity does not create a hint
 
-Inspect SHALL preserve `{ check, inspect, advice }`, exit code `0/1/2`, and the no-routing non-gate contract. It SHALL not execute formal lifecycle or durability behavior.
+- **WHEN** a reference has all required semantic sections and direct backing but fewer than five Key Facts bullets
+- **THEN** Wave1 inspect SHALL not fail or emit a blocking hint for quantity
+- **AND** any quantity feedback SHALL be advisory only
+
+#### Scenario: Wave1 inspect returns the shared root without side effects
+
+- **WHEN** Wave1 inspect and formal Gate evaluate the same unchanged shared rule failure
+- **THEN** they SHALL agree on `rule_id`, `repair_kind`, `missing_fact` and `write_to`
+- **AND** Wave1 inspect SHALL name its own exact command in `rerun` and SHALL not write routing, trace, log, checkpoint or status state
 
 #### Scenario: Detects missing topic reference files
 
@@ -155,18 +167,20 @@ Inspect SHALL preserve `{ check, inspect, advice }`, exit code `0/1/2`, and the 
 `inspect-wave2-output.mjs` SHALL evaluate Wave2 triple artifacts, finding-index contract, semantic ledger sections, synthesis references, backfill, reference index/backing, cross-reference authority, and submitted targeted-evidence provenance through the same pure evaluator result used by `wave2-complete`. It SHALL continue to inspect the existing Wave2-only conventions:
 
 1. absence of legacy `reference/00_shared/` layout;
-2. metadata and semantic-section shape of optional `reference/00-cross-*.md` files;
+2. common metadata, one resolvable topic binding, and semantic-section shape of optional `reference/00-cross-*.md` files;
 3. matching `reference/_INDEX.md` rows for materialized `00-cross` files;
 4. non-empty `synthesis.md`, six-section `cross-topic-ledger.md`, and parseable/contract-valid `finding-index.yaml`; and
 5. absence of Wave2 backfill tokens in `seed_topics/*.md`.
 
-Triple artifacts, finding structured fields, six semantic ledger sections, synthesis/backfill/cross-artifact contracts, reference navigation/backing, explicit floors, and targeted-evidence/submitted provenance SHALL remain blocking where they are formal rules. Heading marker, spacing, and equivalent case differences SHALL be parsed tolerantly while semantic sections remain required.
+Cross-reference metadata inspection SHALL consume the same canonical reference-binding adapter as Wave1 and file observability. It SHALL accept exact UID-only, valid legacy, or identical dual binding without requiring the raw legacy field, and SHALL report one adapter conflict/ambiguity root rather than per-field missing/dangling advice.
+
+Triple artifacts, finding structured fields, six non-empty semantic ledger sections, synthesis/backfill/cross-artifact contracts, reference navigation/backing, explicit floors, and targeted-evidence/submitted provenance SHALL remain blocking where they are formal rules. The historical `ledger_fixed_sections` rule id MAY remain for compatibility, but its evaluator SHALL treat the six required sections as a set and SHALL tolerate section order, heading level, spacing, and equivalent case differences.
 
 Legacy `00_shared/` layout and `00-cross` metadata/standard-section presentation that is not consumed by direct authority SHALL remain visible as advisory. `source_url`, prior/submitted backing refs, index coverage, and provenance needed to classify a cross reference SHALL remain blocking.
 
 A missing required finding field SHALL be reported before and SHALL short-circuit only implications that consume that field. The primary output SHALL not expand one missing field into repeated enum, handoff, eligibility, backing, and synthesis symptoms. Missing/unparseable finding-index parent or non-array `findings` SHALL mask dependent per-finding and derived-count checks.
 
-Inspect SHALL preserve `{ check, inspect, advice }`, exit code `0/1/2`, no routing, and full bundle no-write behavior. Formal gate and inspect SHALL agree on shared rule ids; only formal gate may evaluate lifecycle checks, apply degraded behavior, or write durable evidence.
+Inspect SHALL preserve `{ check, inspect, advice, hints }`, exit code `0/1/2`, no routing, and full bundle no-write behavior. Blocking roots SHALL include the same `repair_kind`, `missing_fact` and `write_to` coordinates as the shared formal evaluator, with inspect's own exact command in `rerun`. Formal gate and inspect SHALL agree on shared rule ids; only formal gate may evaluate lifecycle checks, apply degraded behavior, or write durable evidence.
 
 #### Scenario: Detects 00_shared/ subdirectory
 
@@ -179,6 +193,12 @@ Inspect SHALL preserve `{ check, inspect, advice }`, exit code `0/1/2`, no routi
 - **WHEN** `reference/` contains no `00-cross-*.md` files
 - **THEN** optional cross-file format/index checks SHALL pass
 - **AND** other Wave2 artifact and provenance rules SHALL still run
+
+#### Scenario: UID-only cross reference satisfies inspect binding
+
+- **WHEN** an optional `00-cross` reference has all common required metadata and one exact registered `related_topic_uid`
+- **THEN** Wave2 inspect SHALL not advise adding legacy `related_topic`
+- **AND** its canonical binding result SHALL agree with Wave1/file observability consumers
 
 #### Scenario: Detects missing wave2 artifacts
 
@@ -196,6 +216,12 @@ Inspect SHALL preserve `{ check, inspect, advice }`, exit code `0/1/2`, no routi
 - **THEN** inspect SHALL report the missing section
 - **AND** harmless heading whitespace or marker differences SHALL not be the sole cause of failure
 
+#### Scenario: Reordered Wave2 ledger sections remain valid
+
+- **WHEN** `cross-topic-ledger.md` contains all six required non-empty semantic sections in a different order or equivalent heading level/case
+- **THEN** Wave2 inspect and formal Gate SHALL accept the section contract
+- **AND** the historical ordered regex SHALL NOT remain a hidden blocking path
+
 #### Scenario: missing finding field produces one root repair target
 
 - **WHEN** `finding-index.yaml` contains a finding missing `hitl2_handoff`
@@ -210,15 +236,23 @@ Inspect SHALL preserve `{ check, inspect, advice }`, exit code `0/1/2`, no routi
 
 ### Requirement: Inspect CLIs are documented non-gate structured-output commands
 
-Wave inspect CLIs SHALL be documented as non-gate structured-output commands under the framework CLI exit-code convention.
+Wave inspect CLIs SHALL preserve the non-gate `{ check, inspect, advice, hints }` JSON stdout contract and no-routing behavior for every completed invocation, including caller invocation and configuration failures. Pass SHALL return `hints: []`. A known contract, invocation, or definition/config failure SHALL return a stable structured root with `rule_id`, `repair_kind`, `missing_fact`, exact next-action coordinate `write_to`, and checkpoint-appropriate `rerun`; it SHALL NOT fall back to stderr-only usage text or hand-built `{check,inspect,advice}` without `hints[]`.
 
-Inspect CLI stdout SHALL remain the actionable Agent decision surface and SHALL include the command's documented structured output, currently `{ check, inspect, advice }` without routing. Numeric exit code SHALL remain coarse:
+Exit codes SHALL remain `0` for pass, `1` for known inspected-contract failure, and `2` for invocation/configuration failure. A missing `--bundle` value SHALL identify the missing required argument and return a command template containing `<bundle-path>`; because no runtime bundle was resolved, it SHALL NOT fabricate an absolute path. A definition parse/load failure SHALL preserve the same Gate-definition schema coordinate returned by the shared parser and SHALL use `repair_kind: missing_contract` with the exact framework contract boundary rather than suggesting edits inside an arbitrary run bundle.
 
-- `0` when the inspected structure passes;
-- `1` when the inspect check fails with actionable diagnostics; and
-- `2` for caller invocation errors such as missing required flags.
+Shared artifact/provenance failures SHALL be projected from the same `wave-contract-findings.mjs` finding used by the formal Gate. Inspect-only advisory findings MAY use that same shape, but SHALL remain non-blocking and SHALL NOT acquire formal routing or durable side effects.
 
-Inspect CLIs SHALL NOT be documented as phase-routing gates, SHALL NOT emit or require `routing`, and SHALL NOT encode morale or continuation encouragement in exit code.
+#### Scenario: Missing bundle still returns structured inspect JSON
+
+- **WHEN** `inspect-wave1-output.mjs` is invoked without a bundle argument
+- **THEN** stdout SHALL contain `{ check, inspect, advice, hints }` with a stable invocation root and exit code `2`
+- **AND** the hint SHALL show the required `--bundle <bundle-path>` command template without claiming an absolute bundle root
+
+#### Scenario: Definition configuration failure cannot omit repair coordinates
+
+- **WHEN** a Wave inspect CLI cannot schema-parse its Gate definition
+- **THEN** it SHALL return exit code `2` with a structured definition/config root in `hints[]`
+- **AND** it SHALL NOT emit an inspect/advice-only object or suggest editing runtime artifacts to repair framework configuration
 
 #### Scenario: Inspect failure is repairable output failure
 

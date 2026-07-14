@@ -53,6 +53,9 @@ describe('Wave depth contract Markdown guidance', () => {
     assert.match(text, /source_claims\[\]/);
     assert.match(text, /accepted_source_urls\[\]/);
     assert.match(text, /new_source_floor/);
+    assert.match(text, /reviewed_work_unit_refs\[\]/);
+    assert.match(text, /derive|派生/i);
+    assert.match(text, /not copy|不.*复制|不.*重抄/i);
     assert.match(text, /accept[\s\S]*supplement_required[\s\S]*blocked_contract/);
     assert.match(text, /supplementary[\s\S]*wave1_topic_deepening/);
     assert.match(text, /payload\.topic_slug/);

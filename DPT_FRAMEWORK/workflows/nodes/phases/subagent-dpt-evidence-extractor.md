@@ -200,10 +200,10 @@ If and only if the task explicitly assigns rich reference Markdown as a delegate
 Rules:
 
 - Metadata lines use `- key: value`; `---` frontmatter is forbidden.
-- The 9 metadata fields are required exactly as shown.
-- The 5 section headers are required exactly as shown.
+- Provide the eight common metadata fields plus one resolvable Topic binding: exact registered `related_topic_uid` (or `all`), or compatible `related_topic` using exact current/previous id or slug values. If both are present, they must resolve identically.
+- All five semantic sections are required and non-empty. Use the canonical headings when convenient; heading case, level, spacing, order, and list presentation may vary without changing the contract.
 - `source_url` must be present, URL-parseable, and recoverable through submitted cache/source trails.
-- `## Key Facts` must contain at least 5 concrete bullet facts from the fetched page.
+- `Key Facts` must contain concrete facts from the fetched page, while `Core Content Capture` must separately preserve a non-empty narrative capture; no fixed fact count is required.
 
 **Output serialization:** All structured output files MUST be written via standard library serialization, never hand-concatenated:
 
@@ -228,6 +228,8 @@ Execution steps:
 7. Write cache leaf directories for each source, including `websearch.json`, `page.md`, and `meta.json`.
 8. Write `agent_result_ready` immediately before returning.
 9. Return JSON matching `result.schema.json`, including `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, `output_files[]`, `source_claims[]`, `accepted_source_urls[]`, and `cache_trails[]`.
+
+For a supplementary assignment, read the task's `Authorized Source-Ref Lineage` section before choosing `source_ref`. You may cite one exact listed prior submitted `evidence_summary` path; the list contains only contract-authorized outputs for the same canonical Topic, wave, and kind. Cite it without redeclaring or overwriting that file. Otherwise `source_ref` must be a genuinely current path declared in this candidate's `output_files[]`. New cache trails or degraded-capture refs created by this attempt remain current-attempt facts: declare every one in this result's `cache_trails[]` and in the matching claim; do not infer eligibility from filesystem presence.
 
 For every accepted source, include a structured claim:
 

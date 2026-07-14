@@ -180,6 +180,24 @@ export const WorkUnitBeaconSchema = z.object({
   if (Boolean(data.actor_contract_version) !== Boolean(data.actor_execution)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'beacon actor contract fields must appear together' });
 });
 
+export const WorkUnitLateAcceptContextSchema = z.object({
+  late_accept_reason: z.string().trim().min(1),
+  terminal_status_before_accept: z.literal('timed_out'),
+  superseded_retry_work_ids: z.array(z.string().regex(WORK_UNIT_ID_PATTERN)),
+}).strict().superRefine((data, ctx) => {
+  const seen = new Set();
+  data.superseded_retry_work_ids.forEach((retryWorkId, index) => {
+    if (seen.has(retryWorkId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['superseded_retry_work_ids', index],
+        message: 'superseded_retry_work_ids must be unique',
+      });
+    }
+    seen.add(retryWorkId);
+  });
+});
+
 export const WorkUnitIndexRecordSchema = z.object({
   work_id: z.string().regex(WORK_UNIT_ID_PATTERN),
   queue_item_id: z.string().min(1),
@@ -205,11 +223,28 @@ export const WorkUnitIndexRecordSchema = z.object({
   paths: WorkUnitPathRefsSchema,
   result_hash: z.string().min(1).optional(),
   ledger_record_hash: z.string().min(1).optional(),
+  late_accept_context: WorkUnitLateAcceptContextSchema.optional(),
   last_submit_rejection: z.record(z.string(), z.unknown()).optional(),
   terminal_reason: z.string().optional(),
   terminal_at: z.string().datetime().optional(),
 }).strict().superRefine((data, ctx) => {
   if (Boolean(data.actor_contract_version) !== Boolean(data.actor_execution)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'index actor contract fields must appear together' });
+  if (data.late_accept_context && data.status !== 'submitted') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['late_accept_context'],
+      message: 'late_accept_context is only allowed on a submitted work unit',
+    });
+  }
+  data.late_accept_context?.superseded_retry_work_ids.forEach((retryWorkId, index) => {
+    if (retryWorkId === data.work_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['late_accept_context', 'superseded_retry_work_ids', index],
+        message: 'superseded_retry_work_ids must not include the accepted work_id',
+      });
+    }
+  });
 });
 
 export const WorkUnitWaveCountersSchema = z.object({

@@ -177,11 +177,14 @@ export function createEmptyWorkUnitIndex({ kindRegistry = DEFAULT_KIND_REGISTRY 
 }
 
 export function loadWorkUnitIndex(bundleDir, { createIfMissing = false } = {}) {
-  ensureWorkUnitDirs(bundleDir);
   const filePath = workUnitIndexPath(bundleDir);
   if (!existsSync(filePath)) {
+    if (!createIfMissing) {
+      throw new Error(`Work-unit index does not exist at ${filePath}; missing existing work-unit authority. Rerun with the canonical absolute bundle_dir from the assigned task or beacon.`);
+    }
+    ensureWorkUnitDirs(bundleDir);
     const index = createEmptyWorkUnitIndex();
-    if (createIfMissing) writeJson(filePath, index);
+    writeJson(filePath, index);
     return index;
   }
   return WorkUnitIndexSchema.parse(readJson(filePath));

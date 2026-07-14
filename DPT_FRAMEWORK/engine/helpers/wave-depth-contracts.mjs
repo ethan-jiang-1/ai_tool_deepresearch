@@ -123,11 +123,8 @@ function canonicalizeSubmittedWorkUnitRef(ref) {
   };
 }
 
-export function readWave0SourceUrls(bundlePath, topicSlug, review = null) {
+export function readWave0SourceUrls(bundlePath, topicSlug) {
   const urls = new Set();
-  for (const url of Array.isArray(review?.wave0_source_urls) ? review.wave0_source_urls : []) {
-    if (exactUrlKey(url)) urls.add(exactUrlKey(url));
-  }
   const sourcePath = join(bundlePath, 'artifacts', 'wave0', topicSlug, 'source.yaml');
   if (existsSync(sourcePath)) {
     try {
@@ -178,8 +175,8 @@ export function deriveWave1NewSourceFloor(profile) {
   };
 }
 
-function submittedMaps(bundlePath) {
-  const rows = readSubmittedWorkUnitDeclarations(bundlePath);
+function submittedMaps(bundlePath, selectedRows = null) {
+  const rows = selectedRows || readSubmittedWorkUnitDeclarations(bundlePath);
   const cacheTrails = new Set();
   const outputPaths = new Map();
   const cacheTrailRows = new Map();
@@ -199,12 +196,12 @@ function workUnitLabel(row) {
   return row?.work_id ? ` (work_id: ${row.work_id})` : '';
 }
 
-export function checkSourceClaimCacheMapping(bundlePath, claims, { topic = null } = {}) {
+export function checkSourceClaimCacheMapping(bundlePath, claims, { topic = null, rows = null } = {}) {
   const inspect = [];
   const advice = [];
   let maps;
   try {
-    maps = submittedMaps(bundlePath);
+    maps = submittedMaps(bundlePath, rows);
   } catch (error) {
     return {
       passed: false,
@@ -285,6 +282,7 @@ export function checkWave1DepthReviewContract(bundlePath, { topic, rule = null }
   const advice = [];
   const findings = [];
   const maskedRuleIds = [];
+  const diagnostics = [];
   if (!existsSync(filePath)) {
     const detail = `[depth_review_contract] FAIL: missing ${relPath}`;
     return {
@@ -357,23 +355,24 @@ export function checkWave1DepthReviewContract(bundlePath, { topic, rule = null }
   let agentArtifactIssue = false;
   let profileDecisionIssue = false;
   let submittedBindingIssue = false;
+  let reviewedBindingIssue = false;
   let supplementaryWorkIssue = false;
 
-  const requiredKeys = ['version', 'topic_slug', 'reviewed_work_unit_refs', 'wave0_source_urls', 'source_claims', 'new_source_urls', 'new_source_floor', 'depth_dimensions', 'profile_checks', 'decision', 'supplementary_queue_item_ids'];
+  const requiredKeys = ['version', 'topic_slug', 'reviewed_work_unit_refs', 'depth_dimensions', 'profile_checks', 'decision', 'supplementary_queue_item_ids'];
   const missingKeys = new Set();
   for (const key of requiredKeys) {
     if (!(key in review)) {
       missingKeys.add(key);
       inspect.push(`[depth_review_contract] FAIL: ${relPath} missing required key: ${key}`);
-      agentArtifactIssue = true;
+      if (key !== 'reviewed_work_unit_refs') agentArtifactIssue = true;
     }
   }
   const invalidArrays = new Set();
-  for (const key of ['reviewed_work_unit_refs', 'wave0_source_urls', 'source_claims', 'new_source_urls', 'supplementary_queue_item_ids']) {
+  for (const key of ['reviewed_work_unit_refs', 'supplementary_queue_item_ids']) {
     if (key in review && !Array.isArray(review[key])) {
       invalidArrays.add(key);
       inspect.push(`[depth_review_contract] FAIL: ${relPath} ${key} must be an array`);
-      agentArtifactIssue = true;
+      if (key !== 'reviewed_work_unit_refs') agentArtifactIssue = true;
     }
   }
   if (!missingKeys.has('topic_slug') && review.topic_slug !== topic) {
@@ -404,75 +403,6 @@ export function checkWave1DepthReviewContract(bundlePath, { topic, rule = null }
     inspect.push(...floor.inspect);
     advice.push('Run the accepted profile/template path or emit missing_profile_parameter; do not use hidden source-floor defaults.');
     profileDecisionIssue = true;
-  } else if (missingKeys.has('new_source_floor') || !review.new_source_floor || typeof review.new_source_floor !== 'object') {
-    maskedRuleIds.push('new_source_floor_comparison');
-  } else {
-    const required = Number(review.new_source_floor?.required);
-    if (required !== floor.required) {
-      inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_floor.required=${review.new_source_floor?.required} but profile-derived required floor is ${floor.required}`);
-      agentArtifactIssue = true;
-    }
-  }
-
-  const claimsUsable = !missingKeys.has('source_claims') && !invalidArrays.has('source_claims');
-  const newUrlsUsable = !missingKeys.has('new_source_urls') && !invalidArrays.has('new_source_urls');
-  if (!claimsUsable) {
-    maskedRuleIds.push('source_claim_cache_mapping', 'source_novelty_floor');
-  } else {
-    const claims = review.source_claims;
-    const mapping = checkSourceClaimCacheMapping(bundlePath, claims, { topic });
-    if (!mapping.passed) {
-      inspect.push(...mapping.inspect);
-      supplementaryWorkIssue = true;
-    }
-    advice.push(...mapping.advice);
-
-    const wave0Urls = readWave0SourceUrls(bundlePath, topic, review);
-    const acceptedClaims = claims.filter(isAcceptedSourceClaim);
-    const seenNew = new Set();
-    for (const claim of acceptedClaims) {
-      const url = sourceClaimUrl(claim);
-      if (!url) continue;
-      const exactNew = !wave0Urls.has(url);
-      if (claim.is_new_vs_wave0 === true && !exactNew) {
-        inspect.push(`[source_novelty_floor] FAIL: ${topic} claim marks Wave0 URL as new: ${url}`);
-        agentArtifactIssue = true;
-      }
-      if (claim.is_new_vs_wave0 !== true && exactNew) {
-        inspect.push(`[source_novelty_floor] FAIL: ${topic} claim omits is_new_vs_wave0=true for exact-new URL: ${url}`);
-        agentArtifactIssue = true;
-      }
-      if (exactNew && claim.is_new_vs_wave0 === true) seenNew.add(url);
-    }
-    const observed = seenNew.size;
-    if (!newUrlsUsable) {
-      maskedRuleIds.push('new_source_urls_comparison');
-    } else {
-      const reviewedNew = new Set(review.new_source_urls.map(exactUrlKey).filter(Boolean));
-      for (const url of seenNew) {
-        if (!reviewedNew.has(url)) {
-          inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_urls[] omits accepted exact-new URL: ${url}`);
-          agentArtifactIssue = true;
-        }
-      }
-      for (const url of reviewedNew) {
-        if (!seenNew.has(url)) {
-          inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_urls[] contains URL not backed by accepted exact-new source_claims[]: ${url}`);
-          agentArtifactIssue = true;
-        }
-      }
-    }
-    if (missingKeys.has('new_source_floor') || !review.new_source_floor || typeof review.new_source_floor !== 'object') {
-      maskedRuleIds.push('new_source_floor_observed');
-    } else if (Number(review.new_source_floor.observed) !== observed) {
-      inspect.push(`[source_novelty_floor] FAIL: ${relPath} new_source_floor.observed=${review.new_source_floor.observed} but accepted exact-new claim count is ${observed}`);
-      agentArtifactIssue = true;
-    }
-    if (floor.ok && observed < floor.required) {
-      inspect.push(`[source_novelty_floor] FAIL: ${topic} observed ${observed} new accepted source URL(s), required ${floor.required}`);
-      advice.push(`Enqueue supplementary wave1_topic_deepening for ${topic} with genuinely new source URLs.`);
-      supplementaryWorkIssue = true;
-    }
   }
 
   if (missingKeys.has('depth_dimensions') || !review.depth_dimensions || typeof review.depth_dimensions !== 'object') {
@@ -502,36 +432,85 @@ export function checkWave1DepthReviewContract(bundlePath, { topic, rule = null }
 
   const refsUsable = !missingKeys.has('reviewed_work_unit_refs') && !invalidArrays.has('reviewed_work_unit_refs');
   const refs = refsUsable ? review.reviewed_work_unit_refs : [];
-  if (!refsUsable) maskedRuleIds.push('reviewed_work_unit_refs_binding');
+  if (!refsUsable) {
+    reviewedBindingIssue = true;
+    maskedRuleIds.push('reviewed_work_unit_refs_binding', 'source_claim_cache_mapping', 'source_novelty_floor', 'new_source_floor_comparison');
+  }
   else if (refs.length === 0) {
     inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed_work_unit_refs[] must name submitted work-unit rows`);
-    agentArtifactIssue = true;
+    reviewedBindingIssue = true;
+    maskedRuleIds.push('source_claim_cache_mapping', 'source_novelty_floor', 'new_source_floor_comparison');
   }
-  let submittedRefs = new Set();
-  const diagnostics = [];
+  let submittedRows = [];
   try {
-    for (const row of readSubmittedWorkUnitDeclarations(bundlePath)) {
-      submittedRefs.add(row.work_id);
-      submittedRefs.add(row.work_unit_ref);
-      submittedRefs.add(row.result_ref);
-    }
+    submittedRows = readSubmittedWorkUnitDeclarations(bundlePath);
   } catch (error) {
     inspect.push(`[depth_review_contract] FAIL: invalid submitted work-unit ledger while checking reviewed_work_unit_refs: ${error.message}`);
     submittedBindingIssue = true;
+    maskedRuleIds.push('source_claim_cache_mapping', 'source_novelty_floor', 'new_source_floor_comparison');
   }
-  for (const ref of refs) {
-    const canonical = canonicalizeSubmittedWorkUnitRef(ref);
-    if (!canonical.safe) {
-      inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed work-unit ref is unsafe: ${ref}`);
-      agentArtifactIssue = true;
-      continue;
+
+  const rowByRef = new Map();
+  for (const row of submittedRows) {
+    for (const ref of [row.work_id, row.work_unit_ref, row.result_ref]) {
+      if (ref) rowByRef.set(ref, row);
     }
-    if (canonical.changed) {
-      diagnostics.push(`[depth_review_contract] canonicalized ${relPath} reviewed_work_unit_refs[] from "${canonical.original}" to "${canonical.canonical}" before submitted-row comparison.`);
+  }
+  const reviewedRows = [];
+  if (!submittedBindingIssue && refsUsable) {
+    for (const ref of refs) {
+      const canonical = canonicalizeSubmittedWorkUnitRef(ref);
+      if (!canonical.safe) {
+        inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed work-unit ref is unsafe: ${ref}`);
+        reviewedBindingIssue = true;
+        continue;
+      }
+      if (canonical.changed) {
+        diagnostics.push(`[depth_review_contract] canonicalized ${relPath} reviewed_work_unit_refs[] from "${canonical.original}" to "${canonical.canonical}" before submitted-row comparison.`);
+      }
+      const row = rowByRef.get(canonical.canonical);
+      if (!row) {
+        inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed work-unit ref is not submitted on accepted work-unit surfaces: ${canonical.original}${canonical.changed ? ` (canonical: ${canonical.canonical})` : ''}`);
+        reviewedBindingIssue = true;
+        continue;
+      }
+      if (!reviewedRows.some((candidate) => candidate.work_id === row.work_id)) reviewedRows.push(row);
     }
-    if (submittedRefs.size > 0 && !submittedRefs.has(canonical.canonical)) {
-      inspect.push(`[depth_review_contract] FAIL: ${relPath} reviewed work-unit ref is not submitted on accepted work-unit surfaces: ${canonical.original}${canonical.changed ? ` (canonical: ${canonical.canonical})` : ''}`);
-      agentArtifactIssue = true;
+  }
+
+  if (reviewedBindingIssue) {
+    maskedRuleIds.push('source_claim_cache_mapping', 'source_novelty_floor', 'new_source_floor_comparison');
+  } else if (!submittedBindingIssue && reviewedRows.length > 0) {
+    const claims = reviewedRows.flatMap((row) => row.source_claims || []);
+    const mapping = checkSourceClaimCacheMapping(bundlePath, claims, { topic, rows: reviewedRows });
+    if (!mapping.passed) {
+      inspect.push(...mapping.inspect);
+      supplementaryWorkIssue = true;
+    }
+    advice.push(...mapping.advice);
+
+    const wave0Urls = readWave0SourceUrls(bundlePath, topic);
+    const seenNew = new Set();
+    for (const claim of claims.filter(isAcceptedSourceClaim)) {
+      const url = sourceClaimUrl(claim);
+      if (!url) continue;
+      const exactNew = !wave0Urls.has(url);
+      if ((claim.is_new_vs_wave0 === true) !== exactNew) {
+        diagnostics.push(`[depth_review_projection_drift] ignored submitted is_new_vs_wave0=${claim.is_new_vs_wave0} for ${url}; Engine-derived exact-new=${exactNew}.`);
+      }
+      if (exactNew) seenNew.add(url);
+    }
+    const observed = seenNew.size;
+    if (floor.ok && observed < floor.required) {
+      inspect.push(`[source_novelty_floor] FAIL: ${topic} observed ${observed} new accepted source URL(s), required ${floor.required}`);
+      advice.push(`Enqueue supplementary wave1_topic_deepening for ${topic} with genuinely new source URLs.`);
+      supplementaryWorkIssue = true;
+    }
+
+    const legacyProjectionKeys = ['wave0_source_urls', 'source_claims', 'new_source_urls', 'new_source_floor']
+      .filter((key) => Object.hasOwn(review, key));
+    if (legacyProjectionKeys.length > 0) {
+      diagnostics.push(`[depth_review_projection_drift] ignored non-authoritative legacy projection field(s) for verdict: ${legacyProjectionKeys.join(', ')}; reviewed submitted rows, Wave0 source authority, and profile parameters were derived directly.`);
     }
   }
 
@@ -547,6 +526,19 @@ export function checkWave1DepthReviewContract(bundlePath, { topic, rule = null }
     writeTo: filePath,
     repair: `Repair the named depth-review fields in ${relPath}.`,
     detail: inspect.join('; '),
+  }));
+  if (reviewedBindingIssue) findings.push(depthFinding(rule, {
+    defaultRuleId: 'per_topic_depth_review_contract',
+    id: `${rule?.id || 'per_topic_depth_review_contract'}:${topic}:reviewed_work_unit_refs_binding`,
+    blockingBasis: 'binding_integrity',
+    surface: filePath,
+    expected: 'reviewed_work_unit_refs[] resolves to hash-valid submitted Wave1 declaration rows.',
+    observed: { reviewed_work_unit_refs: refs },
+    missingFact: `${relPath} has an unsafe, empty, or unresolved reviewed_work_unit_refs[] binding; derived source/cache/novelty checks were not run.`,
+    repairKind: 'agent_action',
+    writeTo: `${filePath}#reviewed_work_unit_refs`,
+    repair: `Replace reviewed_work_unit_refs[] with exact submitted work-unit refs for ${topic}, then rerun Wave1 inspect.`,
+    detail: inspect.filter((line) => /reviewed work-unit ref|reviewed_work_unit_refs/.test(line)).join('; '),
   }));
   if (profileDecisionIssue) findings.push(depthFinding(rule, {
     defaultRuleId: 'per_topic_depth_review_contract',

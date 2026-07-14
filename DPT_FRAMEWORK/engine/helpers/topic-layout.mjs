@@ -10,27 +10,157 @@ function bindingResult(layout, recordedSlug = layout.current.slug) {
   };
 }
 
+function addLayoutCandidate(map, key, layout) {
+  if (typeof key !== 'string' || !key) return;
+  if (!map.has(key)) map.set(key, []);
+  map.get(key).push(layout);
+}
+
+function uniqueReferenceLayouts(layouts) {
+  const seen = new Set();
+  const result = [];
+  for (const layout of layouts) {
+    const key = layout.topic_uid || `legacy:${layout.current.id}:${layout.current.slug}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(layout);
+  }
+  return result;
+}
+
 export function evaluateTopicLayouts(topicRegistry) {
   const currentByUid = new Map();
   const uidByCurrentSlug = new Map();
   const uidByAnySlug = new Map();
   const acceptedSlugsByUid = new Map();
+  const referenceByAnyId = new Map();
+  const referenceByAnySlug = new Map();
+  const referenceLayouts = [];
 
   for (const topic of topicRegistry) {
     const previous = (topic.previous_layouts || []).map((layout) => ({ id: layout.id, slug: layout.slug }));
     const layout = {
-      topic_uid: topic.topic_uid,
+      topic_uid: topic.topic_uid || null,
       current: { id: topic.id, slug: topic.slug },
       previous,
       accepted_slugs: [topic.slug, ...previous.map((item) => item.slug)],
     };
-    currentByUid.set(topic.topic_uid, layout);
-    uidByCurrentSlug.set(topic.slug, topic.topic_uid);
-    acceptedSlugsByUid.set(topic.topic_uid, layout.accepted_slugs);
-    for (const slug of layout.accepted_slugs) uidByAnySlug.set(slug, topic.topic_uid);
+    referenceLayouts.push(layout);
+    addLayoutCandidate(referenceByAnyId, topic.id, layout);
+    addLayoutCandidate(referenceByAnySlug, topic.slug, layout);
+    for (const item of previous) {
+      addLayoutCandidate(referenceByAnyId, item.id, layout);
+      addLayoutCandidate(referenceByAnySlug, item.slug, layout);
+    }
+    if (topic.topic_uid) {
+      currentByUid.set(topic.topic_uid, layout);
+      uidByCurrentSlug.set(topic.slug, topic.topic_uid);
+      acceptedSlugsByUid.set(topic.topic_uid, layout.accepted_slugs);
+      for (const slug of layout.accepted_slugs) uidByAnySlug.set(slug, topic.topic_uid);
+    }
   }
 
-  return { currentByUid, uidByCurrentSlug, uidByAnySlug, acceptedSlugsByUid };
+  return {
+    currentByUid,
+    uidByCurrentSlug,
+    uidByAnySlug,
+    acceptedSlugsByUid,
+    referenceByAnyId,
+    referenceByAnySlug,
+    referenceLayouts,
+  };
+}
+
+function referenceMetadataValue(metadata, key) {
+  const value = metadata instanceof Map ? metadata.get(key) : metadata?.[key];
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function referenceBindingResult(layouts) {
+  const unique = uniqueReferenceLayouts(layouts);
+  return {
+    ok: true,
+    all: false,
+    topic_uids: unique.map((layout) => layout.topic_uid).filter(Boolean).sort(),
+    topic_keys: unique.map((layout) => layout.topic_uid || `legacy:${layout.current.id}:${layout.current.slug}`).sort(),
+  };
+}
+
+function resolveReferenceUidForm(layouts, rawValue) {
+  if (!rawValue) return null;
+  if (rawValue === 'all') return { ok: true, all: true, topic_uids: [], topic_keys: [] };
+  if (rawValue.includes(',')) {
+    return { ok: false, reason_code: 'reference_topic_uid_invalid', value: rawValue };
+  }
+  const resolved = resolveTopicLayout(layouts, { topic_uid: rawValue });
+  if (!resolved.ok) {
+    return { ok: false, reason_code: 'reference_topic_uid_unknown', value: rawValue };
+  }
+  return referenceBindingResult([layouts.currentByUid.get(resolved.topic_uid)]);
+}
+
+function referenceIdCandidates(layouts, token) {
+  const exact = layouts.referenceByAnyId.get(token) || [];
+  if (exact.length > 0 || !/^\d+$/.test(token)) return exact;
+  const ordinal = Number(token);
+  const candidates = [];
+  for (const [id, owners] of layouts.referenceByAnyId) {
+    if (/^\d+$/.test(id) && Number(id) === ordinal) candidates.push(...owners);
+  }
+  return candidates;
+}
+
+function resolveReferenceLegacyForm(layouts, rawValue) {
+  if (!rawValue) return null;
+  const tokens = rawValue.split(',').map((value) => value.trim()).filter(Boolean);
+  if (tokens.length === 0) return { ok: false, reason_code: 'reference_topic_binding_missing' };
+  if (tokens.includes('all')) {
+    return tokens.length === 1
+      ? { ok: true, all: true, topic_uids: [], topic_keys: [] }
+      : { ok: false, reason_code: 'reference_topic_binding_ambiguous', value: rawValue };
+  }
+
+  const resolvedLayouts = [];
+  for (const token of tokens) {
+    const candidates = uniqueReferenceLayouts([
+      ...(layouts.referenceByAnySlug.get(token) || []),
+      ...referenceIdCandidates(layouts, token),
+    ]);
+    if (candidates.length === 0) {
+      return { ok: false, reason_code: 'reference_topic_binding_unknown', value: token };
+    }
+    if (candidates.length > 1) {
+      return { ok: false, reason_code: 'reference_topic_binding_ambiguous', value: token };
+    }
+    resolvedLayouts.push(candidates[0]);
+  }
+  return referenceBindingResult(resolvedLayouts);
+}
+
+/** Resolve reference Markdown's UID and legacy topic-binding compatibility fields through the shared layout facts. */
+export function resolveReferenceTopicBinding(layouts, metadata) {
+  const uidValue = referenceMetadataValue(metadata, 'related_topic_uid');
+  const legacyValue = referenceMetadataValue(metadata, 'related_topic');
+  if (!uidValue && !legacyValue) return { ok: false, reason_code: 'reference_topic_binding_missing' };
+
+  const uidResult = resolveReferenceUidForm(layouts, uidValue);
+  const legacyResult = resolveReferenceLegacyForm(layouts, legacyValue);
+  const invalid = [uidResult, legacyResult].find((result) => result && !result.ok);
+  if (invalid) return invalid;
+
+  if (uidResult && legacyResult) {
+    const uidSignature = uidResult.all ? 'all' : uidResult.topic_keys.join(',');
+    const legacySignature = legacyResult.all ? 'all' : legacyResult.topic_keys.join(',');
+    if (uidSignature !== legacySignature) {
+      return {
+        ok: false,
+        reason_code: 'reference_topic_binding_conflict',
+        related_topic_uid: uidValue,
+        related_topic: legacyValue,
+      };
+    }
+  }
+  return uidResult || legacyResult;
 }
 
 export function resolveTopicLayout(layouts, { topic_uid: topicUid, topic_slug: topicSlug } = {}, { currentOnly = false } = {}) {

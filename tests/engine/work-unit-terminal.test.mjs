@@ -664,7 +664,7 @@ describe('work-unit terminal attempts', () => {
         nowMs: afterDeadline(inspectRecord),
       });
       assert.equal(inspectAdvice.timeout_eligible, false);
-      assert.equal(inspectAdvice.recommended_action, 'inspect');
+      assert.equal(inspectAdvice.recommended_action, 'repair');
       const inspectBeforeTimeout = authoritySnapshot(inspectDir);
       const inspectRefused = closeWorkUnitAttempt(inspectDir, {
         work_id: inspectRecord.work_id,
@@ -673,7 +673,7 @@ describe('work-unit terminal attempts', () => {
         nowMs: afterDeadline(inspectRecord),
       });
       assert.equal(inspectRefused.ok, false);
-      assert.equal(inspectRefused.recommended_action, 'inspect');
+      assert.equal(inspectRefused.recommended_action, 'repair');
       assert.equal(authoritySnapshot(inspectDir), inspectBeforeTimeout);
 
       saveSeedQueue(externalDir, [delegated('queue-a')]);

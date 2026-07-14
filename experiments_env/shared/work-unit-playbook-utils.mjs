@@ -367,6 +367,8 @@ export function queueItemForWorkUnit({
   role_key = roleForKind(kind),
   timeout_ms = 600000,
   priority_class = 'P5_new_reference_intake',
+  action = `Fixture-backed controlled work-unit task for ${queue_item_id}.`,
+  writes_to = ['reference/work-unit-fixture.md'],
 } = {}) {
   return {
     queue_item_id,
@@ -378,8 +380,8 @@ export function queueItemForWorkUnit({
     kind,
     producer_rule,
     priority_class,
-    action: `Fixture-backed controlled work-unit task for ${queue_item_id}.`,
-    writes_to: ['reference/work-unit-fixture.md'],
+    action,
+    writes_to,
     status_sync: [],
     completion_receipt: 'none',
     failure_route: 'queue repair work',

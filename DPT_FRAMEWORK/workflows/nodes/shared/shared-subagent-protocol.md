@@ -15,7 +15,7 @@ queue demand item -> operate-work-unit claim -> bundle-root _work_units/waveN/{w
   -> operate-work-unit submit -> rb_output_declarations.jsonl -> gate
 ```
 
-All bare runtime paths in this node are active bundle-root relative. `_work_units/waveN/{work_id}/`, `rb_output_declarations.jsonl`, `_cache/...`, and `_logs/...` refer to the selected `dpt_rb_*` or `dpt_disp_*` bundle, not repo root or `DPT_FRAMEWORK/`.
+All bare runtime paths in this node are active bundle-root relative. `_work_units/waveN/{work_id}/`, `rb_output_declarations.jsonl`, `_cache/...`, and `_logs/...` refer to the selected `dpt_rb_*` or `dpt_disp_*` bundle, not repo root or `DPT_FRAMEWORK/`. Every claimed attempt also exposes one canonical absolute `bundle_dir`; use it with the absolute paths returned in `prompt_refs[]` rather than reconstructing a root from cwd or a bundle basename.
 
 The surviving concept is the **Sub-agent actor**: a bounded Agent instance that performs search, fetch, extraction, or verification work. The retired concept is the old delegated channel mechanism. Production guidance MUST NOT route delegated work through non-work-unit runtime paths.
 
@@ -29,6 +29,7 @@ The surviving concept is the **Sub-agent actor**: a bounded Agent instance that 
 | Sub-agent actor | Performs the bounded task and writes only the files named by the work-unit task/result contract. |
 | `operate-work-unit submit` | Deterministic submit boundary: validates result, receipt, output files, cache trails, queue binding, hashes, and ledger append. |
 | `operate-work-unit late-submit` | Explicit audited recovery boundary for eligible `timed_out` attempts only; it validates the original work-unit identity and refuses submitted replacements. |
+| `operate-work-unit recover-declaration` | Existing-owner restoration for one already-submitted attempt whose exact Engine declaration row is missing; it accepts only `--work-id`, rebuilds from direct owners, and requires the recorded index/status hash. |
 | `rb_output_declarations.jsonl` | Production delegated submission ledger. Gates use submitted work-unit rows, not filesystem presence. |
 
 Files under `_work_units/waveN/{work_id}/` are runtime/check surfaces. They are necessary for inspection, but they do not satisfy gate coverage by themselves. Gate coverage comes from the submitted ledger row written by Engine submit.
@@ -44,11 +45,11 @@ Each envelope contains:
 | File | Role |
 | --- | --- |
 | `manifest.json` | Engine-written binding: `work_id`, `queue_item_id`, `kind`, batch/attempt indexes, snapshot hash, output/cache contract, paths. |
-| `task.md` | Bounded Sub-agent task. This is the primary text to paste into the native sub-agent surface. |
+| `task.md` | Bounded Sub-agent task and contract-derived Result JSON Starter. This is the primary text to paste into the native sub-agent surface. |
 | `result.schema.json` | Shape the Sub-agent result must satisfy. |
-| `_beacon.json` | Copyable identity and logging refs, including actor contract version and actual execution actor class. |
+| `_beacon.json` | Immutable Engine-written identity, canonical absolute `bundle_dir`, and logging refs, including actor contract version and actual execution actor class. |
 | `runtime-receipt.jsonl` | Lifecycle evidence carrying exact work-unit identity plus actor contract version/class. |
-| `result.json` | Written by Engine submit after validation. The Sub-agent may prepare a result file, but submit owns acceptance. |
+| `result.json` | Candidate prepared by the selected actor at the assigned path from the task's Result JSON Starter. Engine dry-submit validates it; formal submit owns canonicalization and acceptance. |
 | `_status.json` | Attempt status projection. |
 | `_agent.json` | Optional diagnostic runtime refs. These are never authority. |
 
@@ -72,33 +73,48 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim <bundle> --phase waveN --coun
 Read the returned `continuation` before doing anything else: if work was claimed, inspect and poll those exact `work_ids` without waiting for a user message or task notification.
 
 5. Follow the single returned action. For normal claims, spawn one matching native Sub-agent per returned work ID. For an accepted fallback, the Phase Agent executes exactly that one task/beacon itself and submits or terminalizes it before another fallback claim. A no-claim blocker allocates nothing; perform only the returned probe/host action and rerun the same checkpoint. `human-directed` context is not availability evidence or fallback permission.
-6. For each returned `prompt_refs[]`, open the `task_ref`, `beacon_ref`, and `result_schema_ref`.
-7. Actively poll runtime readiness with `operate-work-unit inspect <bundle>` or direct bundle-file inspection. Check result, receipt, output, cache, status, and deadline signals for every in-flight attempt.
-8. When a claimed work unit is ready, submit promptly:
+6. For each returned `prompt_refs[]`, use its canonical absolute `bundle_dir` and open the absolute `task_ref`, `beacon_ref`, `result_schema_ref`, `result_ref`, and receipt/output/cache paths. Confirm that the beacon binds the same root and identity. Do not overwrite, edit, or repair `_beacon.json`; return an immutable binding conflict to the Engine checkpoint.
+7. Read the generated Result JSON Starter embedded in `task.md`, then have the selected actor prepare the candidate at the assigned absolute `result_ref`. The starter projects the current schema and checklist; it is not a prewritten result or success authority.
+8. Actively poll runtime readiness with `operate-work-unit inspect <canonical-absolute-bundle_dir>` or direct bundle-file inspection. Check result, receipt, output, cache, status, and deadline signals for every in-flight attempt.
+9. When a claimed work unit is ready, the Agent runs dry-submit itself before formal submit:
 
 ```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit "<canonical-absolute-bundle_dir>" --work-id <work_id> --result <absolute-result.json>
+```
+
+Read every structured violation, repair the same candidate and same claimed attempt at the exact authorized `write_to`, and have the Agent rerun that same dry-submit checkpoint. Do not ask the user to operate the pipeline, guess an internal lineage field, edit Engine-owned authority, or switch to a new candidate identity. After dry-submit passes, run formal submit:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "<canonical-absolute-bundle_dir>" --work-id <work_id> --result <absolute-result.json>
 ```
 
 Normal `submit` is intentionally fail-closed for terminal attempts. If a `timed_out` target later produces a valid result, do not retry normal submit and do not rewrite it into a retry identity; use the explicit audited recovery command in §7 only when no replacement has submitted.
 
-9. If submit rejects, repair the same claimed attempt when possible. For expired or stale claimed attempts, run progress-aware timeout preflight before terminal timeout:
+10. If formal submit rejects because mutable facts changed after dry-submit, repair the same claimed attempt when possible and return to dry-submit. For expired or stale claimed attempts, run progress-aware timeout preflight before terminal timeout:
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-id <work_id> [--result <result.json>]
 ```
 
 Parse structured stdout even when `timeout-preflight` exits non-zero. Follow the closed `recommended_action` branch: `submit` means run formal submit, `repair` means repair the same claimed `work_id`, `wait` means continue polling recent progress, `inspect` means inspect/repair Engine binding or candidate authority, `block` means surface a deterministic blocker, and `timeout` means default terminal timeout is allowed. A progress-positive attempt is not drained until it is submitted, repaired, waited on, inspected/blocked, or explicitly terminalized after preflight allows timeout.
-10. If a normal native spawn fails with a classified unavailable reason before any work-started receipt or Engine-observed output/cache progress, run `fail --reason actor_spawn_unavailable:<reason_code>`, perform a fresh role-matching probe, and make a new claim. Do not convert the existing work ID in place and do not offer `abandon` as a competing recovery. Progress-positive attempts remain on inspect/repair/timeout-preflight paths.
-11. After successful submit, perform any Phase-owned projection materialization required by the phase, such as Wave1 topic references or existing-backed Wave2 `00-cross` references. These projections must cite submitted backing; they are not delegated evidence authority by themselves.
+11. If a normal native spawn fails with a classified unavailable reason before any work-started receipt or Engine-observed output/cache progress, run `fail --reason actor_spawn_unavailable:<reason_code>`, perform a fresh role-matching probe, and make a new claim. Do not convert the existing work ID in place and do not offer `abandon` as a competing recovery. Progress-positive attempts remain on inspect/repair/timeout-preflight paths.
+12. After successful submit, perform any Phase-owned projection materialization required by the phase, such as Wave1 topic references or existing-backed Wave2 `00-cross` references. These projections must cite submitted backing; they are not delegated evidence authority by themselves.
    For Phase-owned projection files, retain a completed staging source and use `operate-artifact-persistence.mjs persist` before indexing or consuming the target. Producer-owned output/cache files may use the same persistence command before formal submit, but `operate-work-unit submit` remains the transaction owner that validates and normalizes declared outputs/cache and appends ledger authority.
-12. Continue in this order: fill demand, reconstruct in-flight, probe the queue-front role, claim, execute the selected actor path, poll, submit, repair or timeout-preflight, terminalize only when the selected branch allows it, materialize projections, then gate only after queue demand and delegated in-flight work are both drained.
+13. Continue in this order: fill demand, reconstruct in-flight, probe the queue-front role, claim, execute the selected actor path, poll, dry-submit and repair the same candidate, formal submit, timeout-preflight or terminalize only when the selected branch allows it, materialize projections, then gate only after queue demand and delegated in-flight work are both drained.
 
-Compatibility summary: claim batch, spawn the selected actor, poll, submit, repair, terminalize when authorized, materialize Phase-owned projections, then gate.
+Compatibility summary: claim batch, spawn the selected actor, poll, dry-submit and repair the same candidate, formal submit, terminalize when authorized, materialize Phase-owned projections, then gate.
 
 Default `timeout` is valid only after timeout preflight reports `timeout_eligible: true`; `timeout --force --reason <reason>` remains exceptional and audited.
 
 Queue completion commands are for non-delegated queue maintenance/completion only. Delegated success is normal `operate-work-unit submit` for claimed attempts, or explicit audited `operate-work-unit late-submit` for the narrow eligible `timed_out` recovery path.
+
+If Gate/inspect reports an already-submitted work ID with a missing declaration and returns `recover-declaration` as the legal Engine operation, the Agent runs that exact resolved command and reruns the named checkpoint:
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration "<canonical-absolute-bundle_dir>" --work-id <submitted_work_id>
+```
+
+This operation does not accept `--result`, submit new research, complete queue demand, change index/status hashes, or make reconstructable index/result files count directly. Never hand-write `rb_output_declarations.jsonl`; if direct owners cannot reproduce the recorded hash, preserve the failed boundary instead of inventing a row.
 
 ## 4. Sub-Agent Rules
 
@@ -120,6 +136,8 @@ The Sub-agent actor MUST NOT:
 - Treat filesystem presence, index state, cache presence, or runtime refs as gate authority.
 - Write outside the assigned bundle-relative output/cache paths.
 - Continue after `deadline_at` without the Phase Agent explicitly closing or retrying the attempt.
+- Overwrite or edit immutable `_beacon.json`.
+- Claim retrospective provenance: work that predates the claim cannot become execution evidence for the claimed attempt, and no post-hoc receipt/result may assert otherwise.
 
 ## 5. Receipt And Logging Contract
 
@@ -168,6 +186,7 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs fail <bundle> --work-id <id> --reas
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason "<reason>"
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason "<reason>" --force
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs late-submit <bundle> --work-id <timed_out_id> --result <result.json> --reason "<reason>"
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration <bundle> --work-id <submitted_id>
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs abandon <bundle> --work-id <id> --reason "<reason>"
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch <bundle> --phase waveN --reason "<reason>"
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>

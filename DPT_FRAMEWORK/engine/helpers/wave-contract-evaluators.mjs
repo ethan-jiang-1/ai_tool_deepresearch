@@ -12,9 +12,11 @@ import {
   checkReferenceIndexCoverage,
   checkReferenceLedgerCoverage,
   checkReferenceSourceUrls,
+  parseMarkdownSemanticSections,
 } from './gate-helpers-checks.mjs';
 import {
   checkDelegatedBypassSuspected,
+  checkSubmittedDeclarationRecovery,
   checkWorkUnitLedgerExists,
   checkWorkUnitOutputCoverage,
   checkWorkUnitSubmissionPresence,
@@ -265,52 +267,45 @@ function evaluateCountFloor(bundlePath, rule, resolvedTarget, topic, alternative
   return { passed: false, detail: `Count floor not met for ${resolvedTarget}: ${count} entries (threshold: ${threshold})${topic ? ` (topic: ${topic})` : ''}`, yaml };
 }
 
-function normalizedHeading(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s*\/\s*/g, ' / ')
-    .replace(/\s+/g, ' ');
-}
-
-function markdownSections(content) {
-  const result = new Map();
-  const matches = [...String(content || '').matchAll(/^#{1,6}\s+(.+?)\s*$/gm)];
-  for (let index = 0; index < matches.length; index++) {
-    const start = matches[index].index + matches[index][0].length;
-    const end = matches[index + 1]?.index ?? content.length;
-    result.set(normalizedHeading(matches[index][1]), content.slice(start, end).trim());
-  }
-  return result;
-}
-
 function checkQuestionListSections(content) {
-  const sections = markdownSections(content);
+  const sections = parseMarkdownSemanticSections(content);
   const required = [
     'topic investigation targets',
     'question reconciliation',
     'emergent question protocol',
     'exploration / exploitation decision',
   ];
-  const missing = required.filter((section) => !sections.has(section));
-  return missing.length === 0 ? { passed: true } : { passed: false, detail: `Missing semantic question-list section(s): ${missing.join(', ')}` };
+  const missing = required.filter((section) => !(sections.get(section) || '').trim());
+  return missing.length === 0
+    ? { passed: true }
+    : { passed: false, detail: `Missing or empty semantic question-list section(s): ${missing.join(', ')}` };
 }
 
 function checkSourceUrlMarker(content) {
-  return /https?:\/\/[^\s)>]+/i.test(content)
+  const candidates = String(content || '').match(/https?:\/\/[^\s<>\]"']+/gi) || [];
+  const hasParseableUrl = candidates.some((candidate) => {
+    const value = candidate.replace(/[),.;:!?]+$/, '');
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  });
+  return hasParseableUrl
     ? { passed: true }
     : { passed: false, detail: 'No parseable http(s) source URL found in evidence-summary.md' };
 }
 
 function checkKeyFindingsContent(content) {
-  const section = markdownSections(content).get('key findings') || '';
+  const section = parseMarkdownSemanticSections(content).get('key findings') || '';
   return section.split(/\r?\n/).some((line) => line.trim() && !/^<!--/.test(line.trim()))
     ? { passed: true }
     : { passed: false, detail: 'Key Findings section is missing or empty' };
 }
 
 function checkLedgerSections(content) {
-  const sections = markdownSections(content);
+  const sections = parseMarkdownSemanticSections(content);
   const required = [
     'cross-topic scan matrix',
     'wave1 legacy questions',
@@ -319,8 +314,10 @@ function checkLedgerSections(content) {
     'exploration decisions',
     'hitl2 handoff',
   ];
-  const missing = required.filter((section) => !sections.has(section));
-  return missing.length === 0 ? { passed: true } : { passed: false, detail: `cross-topic-ledger.md missing semantic section(s): ${missing.join(', ')}` };
+  const missing = required.filter((section) => !(sections.get(section) || '').trim());
+  return missing.length === 0
+    ? { passed: true }
+    : { passed: false, detail: `cross-topic-ledger.md missing or empty semantic section(s): ${missing.join(', ')}` };
 }
 
 function checkRerunAddFullSynthesis(bundlePath) {
@@ -350,6 +347,25 @@ function checkRerunAddFullSynthesis(bundlePath) {
   const missing = topics.filter((topic) => !covered.has(topic));
   if (missing.length > 0) inspect.push(`Rerun action:add scan/index coverage missing topic slug(s): ${missing.join(', ')}`);
   return { passed: inspect.length === 0, detail: inspect.join('; ') };
+}
+
+function declarationGapContext(bundlePath, definition) {
+  const parentRule = definition.rules.find((rule) => rule.check === 'work_unit_submission_presence');
+  if (!parentRule) return null;
+  const check = checkSubmittedDeclarationRecovery(bundlePath, parentRule);
+  return check.passed ? null : { parentRule, check };
+}
+
+function ruleDependsOnSubmittedDeclaration(rule, parentRule) {
+  if (rule.id === parentRule.id) return true;
+  if (['cache_coverage', 'work_unit_ledger_exists', 'work_unit_output_coverage', 'delegated_bypass_suspected', 'depth_review_contract', 'reference_ledger_coverage'].includes(rule.check)) return true;
+  return rule.check === 'count_floor' && String(rule.target || '').startsWith('reference/');
+}
+
+function maskDeclarationDependentRules(definition, parentRule) {
+  return definition.rules
+    .filter((rule) => rule.id !== parentRule.id && ruleDependsOnSubmittedDeclaration(rule, parentRule))
+    .map((rule) => rule.id);
 }
 
 function checkMarkdownLinkResolution(bundlePath, rule, resolvedTarget) {
@@ -397,11 +413,19 @@ export function evaluateWave0Contract(bundlePath, definition) {
       findings: [topicRegistryPrerequisiteFinding(bundlePath, 'wave0', 'Wave0 cannot expand per-topic contracts because canonical topic_registry is empty.', { topic_count: 0 })],
     });
   }
-  const bypassSuspicion = scanDelegatedBypassSuspicion(bundlePath, 'wave0');
+  const declarationGap = declarationGapContext(bundlePath, definition);
+  if (declarationGap) {
+    findings.push(...declarationGap.check.findings);
+    maskedRuleIds.push(...maskDeclarationDependentRules(definition, declarationGap.parentRule));
+  }
+  const bypassSuspicion = declarationGap
+    ? { suspected: false, phase: 'wave0', artifactsFound: [], provenanceMissing: [] }
+    : scanDelegatedBypassSuspicion(bundlePath, 'wave0');
   let checksRun = 0;
 
   for (const rule of definition.rules) {
     if (rule.check === 'placeholder' || rule.check === 'trace_event_present') continue;
+    if (declarationGap && ruleDependsOnSubmittedDeclaration(rule, declarationGap.parentRule)) continue;
     const targets = expandRuleTargets(bundlePath, rule, layouts);
 
     for (const expandedTarget of targets) {
@@ -543,11 +567,19 @@ export function evaluateWave1Contract(bundlePath, definition) {
       findings: [topicRegistryPrerequisiteFinding(bundlePath, 'wave1', 'Wave1 cannot expand per-topic contracts because canonical topic_registry is empty.', { topic_count: 0 })],
     });
   }
-  const bypassSuspicion = scanDelegatedBypassSuspicion(bundlePath, 'wave1');
+  const declarationGap = declarationGapContext(bundlePath, definition);
+  if (declarationGap) {
+    findings.push(...declarationGap.check.findings);
+    maskedRuleIds.push(...maskDeclarationDependentRules(definition, declarationGap.parentRule));
+  }
+  const bypassSuspicion = declarationGap
+    ? { suspected: false, phase: 'wave1', artifactsFound: [], provenanceMissing: [] }
+    : scanDelegatedBypassSuspicion(bundlePath, 'wave1');
   let checksRun = 0;
 
   for (const rule of definition.rules) {
     if (rule.check === 'placeholder' || rule.check === 'trace_event_present') continue;
+    if (declarationGap && ruleDependsOnSubmittedDeclaration(rule, declarationGap.parentRule)) continue;
     const targets = expandRuleTargets(bundlePath, rule, layouts);
 
     for (const expandedTarget of targets) {
@@ -604,7 +636,7 @@ export function evaluateWave1Contract(bundlePath, definition) {
           const check = checkCacheCoverage(bundlePath, { rule });
           result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'reference_format') {
-          const check = checkReferenceFormatFiles(matchingAlternativeFiles(bundlePath, target), { rule });
+          const check = checkReferenceFormatFiles(matchingAlternativeFiles(bundlePath, target), { rule, bundlePath });
           result = { passed: check.passed, detail: check.inspect.join('; '), findings: check.findings || [] };
         } else if (rule.check === 'reference_source_url_parseable') {
           const check = checkReferenceSourceUrls(matchingAlternativeFiles(bundlePath, target), { rule });
@@ -675,11 +707,19 @@ export function evaluateWave2Contract(bundlePath, definition) {
       findings: [topicRegistryPrerequisiteFinding(bundlePath, 'wave2', 'Wave2 cannot expand per-topic contracts because canonical topic_registry is empty.', { topic_count: 0 })],
     });
   }
-  const bypassSuspicion = scanDelegatedBypassSuspicion(bundlePath, 'wave2');
+  const declarationGap = declarationGapContext(bundlePath, definition);
+  if (declarationGap) {
+    findings.push(...declarationGap.check.findings);
+    maskedRuleIds.push(...maskDeclarationDependentRules(definition, declarationGap.parentRule));
+  }
+  const bypassSuspicion = declarationGap
+    ? { suspected: false, phase: 'wave2', artifactsFound: [], provenanceMissing: [] }
+    : scanDelegatedBypassSuspicion(bundlePath, 'wave2');
   let checksRun = 0;
 
   for (const rule of definition.rules) {
     if (rule.check === 'placeholder' || rule.check === 'trace_event_present') continue;
+    if (declarationGap && ruleDependsOnSubmittedDeclaration(rule, declarationGap.parentRule)) continue;
     const targets = expandRuleTargets(bundlePath, rule, layouts);
 
     for (const target of targets) {
@@ -720,7 +760,7 @@ export function evaluateWave2Contract(bundlePath, definition) {
               suffix: 'semantic_sections',
               blockingBasis: 'required_structure',
               surface: target.resolved,
-              expected: 'All six required Wave2 cross-topic ledger semantic sections are present.',
+              expected: 'All six required Wave2 cross-topic ledger semantic sections are present and non-empty.',
               observed: result.detail,
               missingFact: result.detail,
               repair: `Add the missing semantic ledger section(s) to ${target.resolved}.`,

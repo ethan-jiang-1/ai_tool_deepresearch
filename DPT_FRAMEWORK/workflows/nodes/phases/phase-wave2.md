@@ -225,7 +225,7 @@ Each Wave2 backfill replacement must preserve finding lineage as return-map entr
 
 ### 3.3 Closeout + Gate Readiness
 
-Before gate, ensure `cross-topic-ledger.md` contains the fixed synthesis control sections:
+Before gate, ensure `cross-topic-ledger.md` contains these six required, non-empty synthesis control sections:
 
 - Cross-Topic Scan Matrix
 - Wave1 Legacy Questions
@@ -233,6 +233,8 @@ Before gate, ensure `cross-topic-ledger.md` contains the fixed synthesis control
 - Emergent Cross-Topic Questions
 - Exploration Decisions
 - HITL2 Handoff
+
+The canonical names above are recommended presentation. The semantic parser tolerates heading case, heading level, spacing, and section order; those presentation differences are not blocking. Missing or empty semantic sections remain blocking.
 
 Use the single canonical finding contract in `shared/shared-schemas.md` under `finding-index.yaml — JS-Readable Shadow Index`. It defines all 15 required per-finding fields and their types. Canonical enums are: `type` = `wave1_legacy_question` / `cross_topic_resolution` / `cross_topic_emergent_question`; `priority` = `p0` / `p1` / `p2`; `status` = `resolved` / `partial` / `open` / `deferred`; `decision` = `use_existing_evidence` / `exploit_search` / `explore_search` / `defer_hitl2` / `requires_internal_data` / `record_only`; `confidence` = `high` / `medium` / `low` / `uncertain`; `gap_status` = `no_gap` / `needs_search` / `search_submitted` / `deferred_hitl2` / `requires_internal_data` / `record_only`. Do not maintain a shortened local field count or infer missing values from Engine source; run Wave2 inspect for exact deterministic feedback.
 

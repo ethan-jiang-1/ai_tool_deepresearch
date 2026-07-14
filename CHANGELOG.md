@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.28
+
+- Routed rerun-added Topics back through the normal Wave0/Wave1 queue, work-unit, submit, reference, depth-review, and Gate pipeline while preserving valid historical submitted coverage.
+- Added root-first `hints[]` across all formal Gates and Wave inspect commands so each independent blocker names the direct missing fact, legal action surface or Engine operation, and exact same-check rerun.
+- Simplified blocking control by tolerating equivalent Markdown presentation, narrowing reference countability to accepted status plus parseable source URL, deriving depth facts from reviewed submitted rows, and short-circuiting dependent symptoms.
+- Allowed Wave1 supplementary attempts to cite exact same-Topic/same-wave/same-kind prior submitted `evidence_summary` outputs without redeclaring them, while keeping current cache/source claims strict.
+- Added one explicit existing-owner `recover-declaration` operation that restores only a hash-identical missing row for an already-submitted attempt; no hand-written provenance, shadow ledger, rerun-specific Gate path, controller, or lifecycle was added.
+
 ## v0.27
 
 - Added one audited post-Final rerun operation that binds the latest legal Final lineage to the existing HITL2 `rerun` route while preserving Final as terminal delivery history.

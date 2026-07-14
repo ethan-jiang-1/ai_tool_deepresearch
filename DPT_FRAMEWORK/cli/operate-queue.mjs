@@ -537,8 +537,8 @@ try {
     emit({ ok: true, queue });
   } else if (command === 'claim') {
     validateBundleName(queue, bundleDir);
-    const result = claim(queue, { actor: values.actor });
-    saveQueue(bundleDir, result.queue);
+    const result = claim(queue, { actor: values.actor, bundleDir });
+    if (result.reason_code !== 'delegated_requires_work_unit_claim') saveQueue(bundleDir, result.queue);
     emit(result);
     process.exit(result.item ? 0 : 1);
   } else if (command === 'complete') {

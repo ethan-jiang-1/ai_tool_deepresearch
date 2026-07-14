@@ -246,7 +246,7 @@ CSE-001: cmd-subagent-environment — Command playbook for project-level real su
 DYS-001: dynamic-node-loading — Explicit fileRef Markdown closure loading with cached parsed node data
 
 # evidence-extraction
-EEX-001: evidence-extraction — isCountable reference判定（acceptance_status + CCC length + article URL + Key Facts lines）
+EEX-001: evidence-extraction — isCountable reference判定（authority-selected reference 的 accepted status + parseable source URL；不重复内容/表现启发式）
 EEX-002: evidence-extraction — countReferences Engine计算（默认只数Engine-ledgered declared references，支持target/topic scope）
 EEX-003: evidence-extraction — ref_count改为Engine计算（mergeResults用declared/countable references替代evidenceCount累加）
 EEX-004: evidence-extraction — cache_trails文件系统验证（validateDelegatedCompletion验证3文件+写入ledger，cache_coverage验证reference映射）
@@ -624,8 +624,8 @@ SNC-006: subagent-node-contract — Generated work-unit result schema matches su
 SNC-007: subagent-node-contract — Sub-agent fetch guidance distinguishes per-URL fallback, multi-URL batching, and JS/Node-first fetch tiers
 SNC-008: subagent-node-contract — Sub-agent slow work emits observable progress before timeout risk
 GSK-001: gate-skeleton — Gate definition JSON skeleton structure (gate, description, rules[] with id/check/target/threshold/failure_message)
-GSK-002: "gate-skeleton — Gate CLI skeleton shape (parseArgs, --bundle/--current-node required, check/inspect/advice JSON output, exit codes)"
-GSK-003: gate-skeleton — One gate per CLI (8 independent CLI wrappers, no generic runner with subcommand)
+GSK-002: "gate-skeleton — Gate CLI skeleton shape（shared parse/preflight/result builder；check/routing/inspect/advice/hints JSON；root-first repair_kind/missing_fact/write_to/rerun；documented exit codes）"
+GSK-003: gate-skeleton — One gate per CLI（active definition/CLI bijection currently yields 10 independent wrappers, including rerun-ready；无 generic Gate subcommand runner）
 
 # wff-skeleton-validation
 LOG-001: logger — Logger default zero-config usage (createLogger() → console only, 4 levels, ISO 8601 timestamps)
@@ -653,7 +653,7 @@ LFW-001: lifecycle-walker — Walker reads manifest and walks lifecycle (--bundl
 LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass (max 3 retries, escalation on exceeded limit) [DEPRECATED]
 LFW-003: "lifecycle-walker — Walker logs progress via logger (createLogger({ file: '<bundle>/_logs/run.log' })) [DEPRECATED]"
 LFW-004: lifecycle-walker — Walker requires --bundle flag (exit(2) on missing) [DEPRECATED]
-GSK-004: "gate-skeleton — Gate CLI evaluates rules from definition and emits detailed routing diagnostics (load definition JSON, iterate all rule types, check/inspect/advice feedback; 9 gate CLIs: 3 pre-research + 1 seed-topics + 3 wave + 2 delivery; new check types: count_floor, dir_non_empty, cross_field slug_consistency, cross_field markdown_link_resolution, yaml_parse, jsonl_parse, trace_has_all_gates)"
+GSK-004: "gate-skeleton — Gate CLI 从 shared schema-parsed definitions 与 checker-owned structured findings 执行 rules；definition/checker root contract 投影 failed_rule_ids、hints、inspect/advice，parent masking 与同-checkpoint rerun；active Gate inventory由 definition/CLI 自动派生"
 GSK-005: gate-skeleton — Shared gate attempt audit helper writeGateAttempt(bundlePath, result) writes to logger + trace with bundle; ALL gate CLIs MUST use it, inline appendFileSync to rb_trace.jsonl forbidden
 GSK-006: gate-skeleton — Gate CLI accepts --attempt N; buildGateResult injects fatigue_warning + step_back diagnostic signals when consecutive failures exceed threshold
 GSK-007: gate-skeleton — Lifecycle gate handoff preflight verifies prior gate pass and current load_complete witness

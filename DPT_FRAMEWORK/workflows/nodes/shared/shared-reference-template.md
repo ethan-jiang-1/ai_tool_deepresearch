@@ -37,11 +37,11 @@ When the Phase Agent materializes a backed reference projection, write the compl
 
 ### Part 1: Metadata Block（必填字段以 **粗体** 标注）
 
-Metadata block 位于首个 `## ` semantic section 之前；文件可以先有一个可选 `# ` title。每行格式：`- key: value`（第一个 `: ` 后的部分为 value）。
+Metadata block 位于首个 recognized semantic section 之前；文件可以先有一个可选 title。每行格式：`- key: value`（第一个 `: ` 后的部分为 value）。
 
 This metadata block is the accepted parser contract. It is not YAML frontmatter: do not put metadata between `---` fences, do not write `source_url:` as bare YAML keys, and do not use `sources:` wrappers. `parseReferenceMetadata()` reads only bullet metadata lines before the first section.
 
-**必填字段**（inspect CLI 会检查这些 key 是否存在）：
+**必填 contract facts**（inspect CLI 会检查这些 key 是否存在且非空）：八个 common metadata fields，加一个可解析的 Topic binding。Topic binding 可以使用 exact registered `related_topic_uid`（或 `all`），也可以兼容使用 `related_topic` 的 exact current/previous id、slug、逗号列表（或 `all`）。两种形式同时出现时必须解析一致。
 
 | Key | 类型 | 说明 |
 |-----|------|------|
@@ -53,13 +53,14 @@ This metadata block is the accepted parser contract. It is not YAML frontmatter:
 | **trust_level** | `academic` / `practitioner` / `official` / `caution` / `analyst` / `community` | 信任级别 |
 | **why_it_matters** | 一句话 | 为什么跟本次研究相关 |
 | **accessed_at** | YYYY-MM-DD | 访问日期 |
-| **related_topic** | topic 编号 | 关联的 topic（`all` 或逗号分隔列表） |
+| **related_topic_uid** | UID / `all` | Canonical binding：一个 exact registered Topic UID 或 `all` |
+| **related_topic** | id / slug 列表 / `all` | Compatibility binding：exact current/previous id 或 slug，多个用逗号分隔 |
 
 可选字段（建议填写）：`source_file`、`source_family`、`topic_unique_status`、`source_date_scope`、`related_entities`、`captured_excerpt`、`supports_claims`、`risks_or_limitations`、`excluded_reason`。
 
-### Part 2: Standard Sections（五个 section，顺序固定）
+### Part 2: Required Semantic Sections
 
-每个文件必须包含以下五个 `## ` section header：
+Each file must contain all five semantic sections; every section is required and non-empty：
 
 1. `## Key Facts` — 定量 + 定性事实的 bullet list
 2. `## Core Content Capture` — narrative synthesis paragraph（一段话概括）
@@ -67,7 +68,7 @@ This metadata block is the accepted parser contract. It is not YAML frontmatter:
 4. `## Quotable Terms / Concepts` — 可用于最终报告的引述或概念
 5. `## Risks And Limitations` — 诚实声明：此 source 不能支持什么
 
-Section header 名称必须精确匹配（大小写敏感），不能改为 `## Key facts` 或 `## Key Facts `（尾部空格）。
+上面的 spelling 是推荐的 canonical presentation。Parser 对 heading case、heading level（`#` 到 `######`）、空格、slash 两侧空格和 section order 宽容；bullet、numbered list 或 paragraph 等等价 list presentation 也不作为 blocking 条件。语义 section 本身仍必须可识别且非空，`Key Facts` 与 `Core Content Capture` 不能互相替代，也没有固定 Key Facts 数量要求。
 
 ## Example
 

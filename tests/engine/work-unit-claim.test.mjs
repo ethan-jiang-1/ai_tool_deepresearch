@@ -16,7 +16,9 @@ import {
 } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
 import {
   claimWorkUnits,
+  closeWorkUnitAttempt,
   loadWorkUnitIndex,
+  openWorkUnitBatch,
   transactionDir,
   workUnitIndexPath,
 } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
@@ -133,6 +135,27 @@ describe('claimWorkUnits', () => {
       const queue = loadQueue(dir);
       assert.equal(queue.active_window[0].queue_item_id, 'queue-direct');
       assert.equal(queue.active_window[1].queue_item_id, 'queue-a');
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('claims a new rerun demand in b001 after terminal b000 history', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-old')]);
+      const first = claimWorkUnits(dir, { phase: 'wave0', ...availableSourceActor });
+      assert.deepEqual(first.claimed_work_ids, ['wu-w0-b000-src-i0001']);
+      assert.equal(closeWorkUnitAttempt(dir, { work_id: first.claimed_work_ids[0], status: 'abandoned', reason: 'historical-complete-for-rerun-test' }).ok, true);
+      assert.equal(openWorkUnitBatch(dir, { phase: 'wave0', reason: 'rerun_new_topic' }).batch_id, 'b001');
+
+      let queue = loadQueue(dir);
+      queue = enqueue(queue, delegated('queue-new-topic'));
+      saveQueue(dir, queue);
+      const rerun = claimWorkUnits(dir, { phase: 'wave0', ...availableSourceActor });
+      assert.equal(rerun.claimed_count, 1);
+      assert.deepEqual(rerun.claimed_work_ids, ['wu-w0-b001-src-i0001']);
+      assert.equal(loadWorkUnitIndex(dir).work_units['wu-w0-b001-src-i0001'].queue_item_id, 'queue-new-topic');
     } finally {
       cleanup(dir);
     }

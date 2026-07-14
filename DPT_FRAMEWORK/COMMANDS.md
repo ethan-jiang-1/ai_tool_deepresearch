@@ -70,9 +70,17 @@ Existing active bundle reload uses `<bundle>/BUNDLE_MAP.md` plus `rb_status.json
 | 命令 | 文件 | 说明 |
 |------|------|------|
 | setup-real-subagents | command_playbook/setup-real-subagents.md | 设置 Codex/Claude Code 项目级 real subagent 定义 |
-| operate-work-unit.mjs | cli/operate-work-unit.mjs | delegated work-unit 生命周期（`claim`/`submit`/`late-submit`/`fail`/`timeout`/`abandon`/`open-batch`/`inspect`），生产 delegated completion 的唯一 CLI；成功 `claim` 输出 poll/inspect continuation cue，普通 `submit` 只接受 claimed，`late-submit` 是 timed_out 的显式审计恢复入口 |
+| operate-work-unit.mjs | cli/operate-work-unit.mjs | delegated work-unit 生命周期（`claim`/`submit`/`late-submit`/`recover-declaration`/`fail`/`timeout`/`abandon`/`open-batch`/`inspect`），生产 delegated completion 与 declaration recovery 的唯一 existing-owner CLI；成功 `claim` 输出 poll/inspect continuation cue，普通 `submit` 只接受 claimed，`late-submit` 是 timed_out 的显式审计入口，`recover-declaration <bundle> --work-id <submitted_id>` 只恢复 hash-identical missing ledger row且不接收`--result` |
 | work-unit-actor-decision | command_playbook/work-unit-actor-decision.md | queue-front role inspect → 一次真实 native probe → 同一 claim checkpoint；normal batch、单项 Phase Agent fallback 或 no-claim |
 | provenance-forensics-guide | command_playbook/provenance-forensics-guide.md | 事后判定 delegated 证据 provenance 真伪；submitted work-unit ledger 是 gate authority |
+
+Already-submitted declaration fault 的唯一 existing-owner operation：
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration <bundle> --work-id <submitted_id>
+```
+
+该 operation 不接收`--result`，不重跑 research、不完成 queue、不改 index/status hash，也不允许手写 `rb_output_declarations.jsonl`。
 
 ## 质量检查
 | 工具 | 文件 | 说明 |

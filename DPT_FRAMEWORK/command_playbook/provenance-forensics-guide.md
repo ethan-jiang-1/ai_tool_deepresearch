@@ -53,7 +53,7 @@ Advisory diagnostics such as nonce mismatch, lifecycle evidence missing, transac
 | --- | --- | --- | --- |
 | 1 | W0-W5 all agree | Delegated provenance is real for that work unit | Accept coverage; repair only content/schema issues that the gate reports. |
 | 2 | Ledger row exists but cross-checks fail | Submitted coverage is structurally inconsistent | Treat as gate failure or corruption; repair by re-running submit only when the attempt is still valid, otherwise close/retry with a new `work_id`. |
-| 3 | Envelope/output/cache exist but no submitted ledger row | Bypassed or incomplete delegated work | Do not count coverage. Submit a valid result for a claimed attempt, or create repair/refill demand and claim a new work unit. |
+| 3 | Envelope/output/cache exist but no submitted ledger row | Bypassed, incomplete, or a declaration fault that still requires direct submitted-state proof | Do not count filesystem presence. If index and status both say `submitted` with the same recorded hash, run the existing-owner `recover-declaration` operation; otherwise use the normal claimed submit or terminal/refill path. |
 | 4 | Claimed attempt is expired or terminal without ledger row | Attempt did not produce accepted coverage | Use `timeout`, `fail`, or `abandon` as appropriate; retry allocates a different `work_id`. |
 | 5 | Ledger-looking row lacks Engine submit consistency | Hand-shaped or stale declaration suspected | Reject as coverage; inspect transaction/index/result surfaces and rerun the phase repair path. |
 | 6 | Direct/orphan delegated outputs coexist with submitted work-unit outputs | Mixed provenance | Gate should report bypass diagnostics. Keep only submitted coverage authoritative and clean or repair the stray artifacts. |
@@ -67,7 +67,13 @@ One-line summary: a delegated output counts only when the Engine accepted it thr
 3. For each expected delegated output, identify its `work_id` from the submitted ledger row.
 4. Read W0-W5 from §2 for that `work_id`.
 5. Classify it with §3.
-6. Repair through the work-unit lifecycle only: corrected submit for still-claimed attempts, terminal closure plus retry for failed/expired attempts, or gate-failure refill for missing demand.
+6. Repair through the work-unit lifecycle only: corrected submit for still-claimed attempts, terminal closure plus retry for failed/expired attempts, gate-failure refill for missing demand, or the exact declaration operation below for an already-submitted missing row.
+
+```bash
+node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration <bundle> --work-id <submitted_id>
+```
+
+`recover-declaration` accepts no `--result`. It does not rerun work, complete the queue, rebind index/status hashes, or turn reconstruction facts into coverage; it appends only when existing direct owners reproduce the already-recorded declaration hash.
 
 Never repair provenance by hand-editing `rb_output_declarations.jsonl`, work-unit index state, queue completion, or gate status.
 

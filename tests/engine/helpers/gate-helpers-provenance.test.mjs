@@ -1,6 +1,6 @@
 import { describe, it, afterEach } from 'node:test';
 import assert from 'node:assert';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
@@ -21,6 +21,7 @@ import {
 } from '../../../DPT_FRAMEWORK/engine/helpers/gate-helpers-checks.mjs';
 import {
   checkDelegatedBypassSuspected,
+  checkSubmittedDeclarationRecovery,
   checkWorkUnitLedgerExists,
   checkWorkUnitOutputCoverage,
   checkWorkUnitSubmissionPresence,
@@ -191,6 +192,31 @@ describe('work-unit provenance gate helpers', () => {
     assert.equal(result.records.length, 1);
     assert.equal(result.records[0].late_accept, true);
     assert.equal(result.records[0].terminal_status_before_accept, 'timed_out');
+  });
+
+  it('projects a submitted missing declaration as one exact Engine recovery root without granting coverage', () => {
+    const dir = tempDir('wpg-declaration-gap-');
+    const submitted = claimAndSubmitWorkUnit(dir, { phase: 'wave0', queueItemId: 'queue-a' });
+    rmSync(join(dir, 'rb_output_declarations.jsonl'));
+
+    const result = checkSubmittedDeclarationRecovery(dir, {
+      id: 'wave0_work_unit_submission_presence',
+      wave: 'wave0',
+    });
+    const coverage = checkWorkUnitLedgerExists(dir, { id: 'wave0_work_unit_ledger_exists', wave: 'wave0' });
+
+    assert.equal(result.passed, false);
+    assert.equal(result.gaps.length, 1);
+    assert.equal(result.gaps[0].record.work_id, submitted.record.work_id);
+    assert.equal(result.gaps[0].recovery.eligible, true);
+    assert.equal(result.findings.length, 1);
+    assert.equal(result.findings[0].id, `submitted_declaration_missing:${submitted.record.work_id}`);
+    assert.equal(result.findings[0].repair_kind, 'engine_operation');
+    assert.match(result.findings[0].write_to, /operate-work-unit\.mjs recover-declaration/);
+    assert.match(result.findings[0].write_to, new RegExp(submitted.record.work_id));
+    assert.doesNotMatch(result.findings[0].write_to, /rb_output_declarations\.jsonl/);
+    assert.equal(coverage.passed, false);
+    assert.equal(coverage.records.length, 0);
   });
 
   it('rejects work-unit-looking hand-written rows without submit/index fingerprints', () => {

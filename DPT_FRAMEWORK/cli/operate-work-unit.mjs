@@ -13,6 +13,7 @@ import {
   inspectWorkUnits,
   lateSubmitWorkUnit,
   openWorkUnitBatch,
+  recoverWorkUnitDeclaration,
   submitWorkUnit,
   timeoutPreflightWorkUnit,
 } from '../engine/work-unit-core.mjs';
@@ -24,6 +25,7 @@ function usage() {
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-id <id> [--result <result.json>]
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <id> --result <result.json>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs late-submit <bundle> --work-id <timed_out_id> --result <result.json> --reason <reason>
+  node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration <bundle> --work-id <submitted_id>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs fail <bundle> --work-id <id> --reason <reason>
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout <bundle> --work-id <id> --reason <reason> [--force]
   node DPT_FRAMEWORK/cli/operate-work-unit.mjs abandon <bundle> --work-id <id> --reason <reason>
@@ -112,6 +114,7 @@ try {
     const result = inspectWorkUnits(bundleDir, {
       emitDiagnostics: true,
       diagnosticSource: 'operate-work-unit',
+      requireExistingAuthority: true,
     });
     emit(result);
     process.exit(result.passed ? 0 : 1);
@@ -144,6 +147,13 @@ try {
       resultPath: path.resolve(values.result),
       reason: values.reason,
     });
+    emit(result);
+    process.exit(result.ok ? 0 : 1);
+  }
+  if (command === 'recover-declaration') {
+    if (!values['work-id']) throw new Error('--work-id is required');
+    if (values.result) throw new Error('recover-declaration does not accept --result');
+    const result = recoverWorkUnitDeclaration(bundleDir, { work_id: values['work-id'] });
     emit(result);
     process.exit(result.ok ? 0 : 1);
   }

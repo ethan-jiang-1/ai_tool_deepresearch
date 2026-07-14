@@ -86,13 +86,100 @@ function refreshTopicRegistryTable(body, oldRegistry, finalRegistry) {
   const replacement = `${section[1]}${section[2]}| # | Slug | Title | Status |\n|---|------|-------|--------|\n${rows.join('\n')}\n`;
   return { body: `${body.slice(0, section.index)}${replacement}${body.slice(section.index + section[0].length)}`, advisory: null };
 }
-function renderSeed(topic, existingBody = '') {
-  const frontmatter = {
+function newSeedEnrichment() {
+  return {
+    hypothesis: 'pending — seed-topics Agent must derive the initial hypothesis, gap, or tension',
+    in_scope: 'pending — seed-topics Agent must define the research boundary',
+    out_of_scope: 'pending — seed-topics Agent must define what will not be deepened',
+    search_guardrails: {
+      required_terms: ['pending — seed-topics Agent must identify required search terms'],
+      forbidden_broadening: ['pending — seed-topics Agent must identify forbidden broadening'],
+    },
+    evidence_route: {
+      preferred_sources: ['pending — seed-topics Agent must identify preferred source types'],
+      noise_to_avoid: ['pending — seed-topics Agent must identify likely source noise'],
+    },
+  };
+}
+
+function renderNewSeedBody(topic) {
+  return `# ${topic.title}
+
+## 主题定位
+
+pending — seed-topics Agent must enrich this section.
+
+## must_answer
+
+${topic.must_answer.map((item, index) => `${index + 1}. ${item}`).join('\n')}
+
+## 初始假设、缺口或张力
+
+**已知**：pending — derive only from recorded Topic/profile facts.
+**缺口**：pending — identify what Wave0 evidence intake must establish.
+**张力**：pending — identify claims, conflicts, or narrative bias requiring independent verification.
+
+## why now
+
+- pending — identify the current trigger, time window, or milestone.
+
+## 研究边界与不深挖范围
+
+**在范围内**：
+- pending — define the concrete research boundary.
+
+**不深挖**：
+- pending — define excluded directions.
+
+## 证据锚点与优先来源
+
+- pending — identify preferred primary/secondary sources and known noise.
+
+## 为什么对最终交付物重要
+
+pending — state the concrete contribution this Topic should make to the final deliverable.
+
+## 下游位置（可选）
+
+- pending — identify downstream report sections or leave explicitly unassigned.
+
+---
+
+## ═══ 研究轮次追加区 ═══
+
+> 后续 Wave 必须用提交/接受的直接证据替换各自唯一占位 token；不要追加第二套回填区。
+
+## 历史摘要
+
+*(seed-topics: 本 topic 为新建，无历史轮次)*
+
+## 本轮新增证据
+__BACKFILL_WAVE0_EVIDENCE__
+
+## 本轮新增机制理解
+__BACKFILL_WAVE1_MECHANISMS__
+
+## 本轮新增趋势与难点
+__BACKFILL_WAVE1_TRENDS__
+
+## 当前判断
+__BACKFILL_WAVE2_JUDGMENT__
+
+## 待验证问题
+__BACKFILL_PENDING_QUESTIONS__
+`;
+}
+
+function renderSeed(topic, existingSeed = null) {
+  const canonicalFrontmatter = {
     topic_uid: topic.topic_uid, id: topic.id, slug: topic.slug, title: topic.title,
     must_answer: topic.must_answer, scope_role: topic.scope_role,
     depends_on_topic_uids: topic.depends_on_topic_uids,
   };
-  const body = existingBody || `# ${topic.title}\n\n## 主题定位\n\n${topic.scope_role}\n\n## must_answer\n\n${topic.must_answer.map((item, index) => `${index + 1}. ${item}`).join('\n')}\n`;
+  const frontmatter = existingSeed?.exists
+    ? { ...(existingSeed.frontmatter || {}), ...canonicalFrontmatter }
+    : { ...canonicalFrontmatter, ...newSeedEnrichment() };
+  const body = existingSeed?.exists ? existingSeed.body : renderNewSeedBody(topic);
   return `---\n${stringifyYaml(frontmatter).trimEnd()}\n---\n${body.startsWith('\n') ? body.slice(1) : body}`;
 }
 function readSeed(bundle, slug) {
@@ -402,7 +489,7 @@ function buildMutation(bundle, parsedPlan, input) {
       const finalTopic = finalByUid.get(topicUid);
       const oldSeed = readSeed(bundle, oldTopic.slug);
       if (!oldSeed.exists) throw new Error(`current seed missing for ${oldTopic.slug}`);
-      if (finalTopic) touched.set(finalTopic.slug, renderSeed(finalTopic, oldSeed.body));
+      if (finalTopic) touched.set(finalTopic.slug, renderSeed(finalTopic, oldSeed));
       if (!finalTopic || finalTopic.slug !== oldTopic.slug) {
         cleanupFiles.push({ relative: `seed_topics/${oldTopic.slug}.md`, expected_sha256: hashBytes(oldSeed.raw) });
       }
@@ -429,7 +516,7 @@ function buildMutation(bundle, parsedPlan, input) {
       const seed = readSeed(bundle, topic.slug);
       if (entry.source === 'adopt' && existingSlugs.has(topic.slug)) throw new Error(`adopt slug already exists in registry: ${topic.slug}`);
       if (entry.seed_binding === 'existing' && !seed.exists) throw new Error(`existing seed binding missing: ${topic.slug}`);
-      touched.set(topic.slug, renderSeed(topic, seed.body));
+      touched.set(topic.slug, renderSeed(topic, seed));
     }
     current.topic_registry_version = '2';
   } else {
@@ -449,7 +536,7 @@ function buildMutation(bundle, parsedPlan, input) {
       } else {
         const topic = byUid.get(action.topic_uid); if (!topic) throw new Error(`unknown topic_uid: ${action.topic_uid}`);
         Object.assign(topic, { title: action.title, must_answer: action.must_answer, scope_role: action.scope_role, depends_on_topic_uids: action.depends_on_topic_uids });
-        const seed = readSeed(bundle, topic.slug); touched.set(topic.slug, renderSeed(topic, seed.body));
+        const seed = readSeed(bundle, topic.slug); touched.set(topic.slug, renderSeed(topic, seed));
       }
     }
     current.topic_registry = canonical.topic_registry;

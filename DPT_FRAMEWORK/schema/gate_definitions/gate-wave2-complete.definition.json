@@ -1,6 +1,6 @@
 {
   "gate": "wave2-complete",
-  "description": "Verify Wave2 produced the three-artifact group: synthesis.md (narrative projection with W2F-xxx references), cross-topic-ledger.md (6 fixed sections), finding-index.yaml (parseable YAML with required fields). Also verify Markdown link cross-references exist and resolve, backfill tokens are replaced, and trace evidence is present. Source-gate status-window and handoff witness are enforced by shared gate preflight.",
+  "description": "Verify Wave2 produced the three-artifact group: synthesis.md (narrative projection with W2F-xxx references), cross-topic-ledger.md (6 required non-empty semantic sections with tolerant Markdown presentation), finding-index.yaml (parseable YAML with required fields). Also verify Markdown link cross-references exist and resolve, backfill tokens are replaced, and trace evidence is present. Source-gate status-window and handoff witness are enforced by shared gate preflight.",
   "rules": [
     {
       "id": "synthesis_exists",
@@ -30,7 +30,7 @@
       "id": "ledger_non_empty",
       "check": "field_non_empty",
       "target": "artifacts/wave2/cross-topic-ledger.md",
-      "failure_message": "artifacts/wave2/cross-topic-ledger.md is empty. Populate all 6 fixed sections with finding data.",
+      "failure_message": "artifacts/wave2/cross-topic-ledger.md is empty. Populate all 6 required semantic sections with finding data.",
       "finding": { "source": "definition", "blocking_basis": "required_structure" },
       "repair": { "kind": "agent_action", "write_to": "$checked_target" }
     },
@@ -38,9 +38,7 @@
       "id": "ledger_fixed_sections",
       "check": "pattern_match",
       "target": "artifacts/wave2/cross-topic-ledger.md",
-      "pattern": "## Cross-Topic Scan Matrix[\\s\\S]*## Wave1 Legacy Questions[\\s\\S]*## Cross-Topic Resolutions[\\s\\S]*## Emergent Cross-Topic Questions[\\s\\S]*## Exploration Decisions[\\s\\S]*## HITL2 Handoff",
-      "negate": false,
-      "failure_message": "cross-topic-ledger.md is missing one or more required section headings. Ensure all 6 sections (Cross-Topic Scan Matrix, Wave1 Legacy Questions, Cross-Topic Resolutions, Emergent Cross-Topic Questions, Exploration Decisions, HITL2 Handoff) are present.",
+      "failure_message": "cross-topic-ledger.md is missing one or more required non-empty semantic sections. Ensure all 6 sections (Cross-Topic Scan Matrix, Wave1 Legacy Questions, Cross-Topic Resolutions, Emergent Cross-Topic Questions, Exploration Decisions, HITL2 Handoff) are present with content; heading case, level, spacing, and order are presentation-tolerant.",
       "finding": { "source": "checker" }
     },
     {

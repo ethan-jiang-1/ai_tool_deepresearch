@@ -254,6 +254,41 @@ describe('check-gate-wave0-complete', () => {
     assert.equal(runLog.split('\n').filter((line) => /\] WARN delegated_bypass_suspected\b/.test(line)).length, 1);
   });
 
+  it('1d. returns one submitted-declaration parent root and masks dependent provenance symptoms', () => {
+    const dir = createBundle(unique('declaration-gap'));
+    setupHappyPath(dir);
+    const index = JSON.parse(readFileSync(join(dir, '_work_units/_index.json'), 'utf8'));
+    const workId = Object.values(index.work_units).find((record) => record.status === 'submitted').work_id;
+    rmSync(join(dir, 'rb_output_declarations.jsonl'));
+
+    for (const [checkpoint, result] of [['inspect', runInspect(dir)], ['gate', runGate(dir)]]) {
+      assert.equal(result.status, 1, result.stderr || result.stdout);
+      const output = JSON.parse(result.stdout);
+      assert.equal(output.check.failed_rule_ids.includes('wave0_work_unit_submission_presence'), true);
+      const hint = output.hints.find((entry) => entry.rule_id === 'wave0_work_unit_submission_presence');
+      assert.ok(hint);
+      assert.equal(hint.repair_kind, 'engine_operation');
+      assert.match(hint.missing_fact, new RegExp(workId));
+      assert.match(hint.write_to, /operate-work-unit\.mjs recover-declaration/);
+      assert.match(hint.write_to, new RegExp(workId));
+      assert.doesNotMatch(hint.write_to, /rb_output_declarations\.jsonl/);
+      for (const dependent of [
+        'cache_coverage',
+        'wave0_work_unit_ledger_exists',
+        'wave0_work_unit_output_coverage',
+        'wave0_delegated_bypass_suspected',
+      ]) {
+        assert.equal(output.check.failed_rule_ids.includes(dependent), false);
+        if (checkpoint === 'gate') {
+          assert.equal(output.check.masked_rule_ids.includes(dependent), true, JSON.stringify(output.check));
+        }
+      }
+    }
+
+    const traceEvents = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
+    assert.equal(traceEvents.filter((event) => event.event === 'delegated_bypass_suspected').length, 0);
+  });
+
   it('2. fails when reference/_INDEX.md is missing', () => {
     const dir = createBundle(unique('noindex'));
     setupHappyPath(dir);

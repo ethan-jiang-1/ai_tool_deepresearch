@@ -1,12 +1,13 @@
 // @impl DEW-002, DEW-004, FRE-005
 
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { makeItem } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { WorkUnitResultSchema } from '../../DPT_FRAMEWORK/schema/contracts/work-unit.mjs';
 import {
   createWorkUnit,
   loadWorkUnitIndex,
@@ -35,6 +36,12 @@ function queueItem(overrides = {}) {
 
 function readJson(file) {
   return JSON.parse(readFileSync(file, 'utf-8'));
+}
+
+function resultStarterFromTask(task) {
+  const match = task.match(/## Result JSON Starter[\s\S]*?```json\s+([\s\S]*?)\s+```/);
+  assert.ok(match, 'task must contain one Result JSON Starter block');
+  return JSON.parse(match[1]);
 }
 
 function queueItemForKind(kind, overrides = {}) {
@@ -74,6 +81,7 @@ describe('work-unit index and envelope', () => {
     const dir = tempBundle();
     try {
       const { record, manifest } = createWorkUnit(dir, { queueItem: queueItem(), wave: 0 });
+      const canonicalBundleDir = path.resolve(dir);
       assert.match(record.work_id, /^wu-w0-b000-src-i0001$/);
       assert.equal(record.queue_item_id, 'queue-source-topic-a');
       assert.equal(record.status, 'claimed');
@@ -105,6 +113,9 @@ describe('work-unit index and envelope', () => {
       assert.match(task, /declare `cache_trails` as bundle-relative cache leaf directory paths only/);
       assert.match(task, /do not list `websearch\.json`, `page\.md`, or `meta\.json` file paths/);
       assert.match(task, /work_unit_search_started/);
+      assert.ok(task.includes(`bundle_dir: \`${canonicalBundleDir}\``));
+      assert.ok(task.includes(`operate-work-unit.mjs dry-submit "${canonicalBundleDir}"`));
+      assert.ok(task.includes(`operate-work-unit.mjs submit "${canonicalBundleDir}"`));
       assert.match(task, new RegExp(record.work_id));
       assert.match(task, new RegExp(record.queue_item_id));
       assert.doesNotMatch(task, retiredAuthorityPattern);
@@ -114,6 +125,7 @@ describe('work-unit index and envelope', () => {
       assert.equal(beacon.queue_item_id, record.queue_item_id);
       assert.equal(beacon.kind, record.kind);
       assert.equal(beacon.receipt_nonce, record.receipt_nonce);
+      assert.equal(beacon.bundle_dir, canonicalBundleDir);
       assert.equal(beacon.runtime_refs_authority, 'diagnostic_only');
       assert.deepEqual(beacon.required_receipt_fields, ['work_id', 'queue_item_id', 'kind', 'receipt_nonce']);
       assert.ok(beacon.output_contract.output_files.required);
@@ -127,6 +139,7 @@ describe('work-unit index and envelope', () => {
     const dir = tempBundle();
     try {
       const { record, manifest, spawn_prompt } = createWorkUnit(dir, { queueItem: queueItem(), wave: 0 });
+      assert.ok(spawn_prompt.includes(`Active bundle_dir: ${path.resolve(dir)}`));
       assert.match(spawn_prompt, new RegExp(record.work_id));
       assert.match(spawn_prompt, new RegExp(dir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
       assert.match(spawn_prompt, new RegExp(manifest.paths.task_ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
@@ -221,6 +234,126 @@ describe('work-unit index and envelope', () => {
       } finally {
         cleanup(dir);
       }
+    }
+  });
+
+  it('derives one copy-ready Result JSON Starter and checklist from the active schema and kind contract', () => {
+    const cases = [
+      { wave: 0, kind: 'wave0_source_intake', roleKey: 'dpt-source-intake' },
+      { wave: 1, kind: 'wave1_topic_deepening', roleKey: 'dpt-evidence-extractor' },
+      { wave: 2, kind: 'wave2_targeted_evidence', roleKey: 'dpt-topic-scout' },
+    ];
+
+    for (const testCase of cases) {
+      const dir = tempBundle();
+      try {
+        const { record, manifest } = createWorkUnit(dir, {
+          queueItem: queueItemForKind(testCase.kind),
+          wave: testCase.wave,
+          actor_execution: {
+            execution_actor_class: 'delegated_subagent',
+            delegated_role_key: testCase.roleKey,
+            observation: {
+              outcome: 'available',
+              source: 'native_probe',
+              role_key: testCase.roleKey,
+              reason_code: 'probe_succeeded',
+              recorded_at: '2026-07-14T00:00:00.000Z',
+            },
+            policy_decision: 'normal_allowed',
+            fallback_from: null,
+          },
+        });
+        const task = readFileSync(path.join(dir, manifest.paths.task_ref), 'utf-8');
+        const schema = readJson(path.join(dir, manifest.paths.result_schema_ref));
+        const starter = resultStarterFromTask(task);
+
+        assert.deepEqual(Object.keys(starter).sort(), Object.keys(schema.properties).sort(), testCase.kind);
+        assert.equal(starter.schema_version, schema.properties.schema_version.const, testCase.kind);
+        assert.equal(starter.work_id, record.work_id, testCase.kind);
+        assert.equal(starter.queue_item_id, record.queue_item_id, testCase.kind);
+        assert.equal(starter.kind, record.kind, testCase.kind);
+        assert.equal(starter.receipt_nonce, record.receipt_nonce, testCase.kind);
+        assert.equal(starter.actor_contract_version, record.actor_contract_version, testCase.kind);
+        assert.equal(starter.execution_actor_class, record.actor_execution.execution_actor_class, testCase.kind);
+        assert.equal(Object.hasOwn(starter, 'actor_execution'), false, testCase.kind);
+        assert.doesNotThrow(() => WorkUnitResultSchema.parse(starter), testCase.kind);
+        assert.equal(existsSync(path.join(dir, manifest.paths.result_ref)), false, testCase.kind);
+
+        assert.ok(task.includes(`Required result fields: ${schema.required.join(', ')}`), testCase.kind);
+        assert.ok(task.includes(`Allowed output roles: ${manifest.output_contract.output_files.allowed_roles.join(', ')}`), testCase.kind);
+        assert.ok(task.includes(`Required cache leaf files: ${manifest.cache_policy.leaf_files.join(', ')}`), testCase.kind);
+      } finally {
+        cleanup(dir);
+      }
+    }
+  });
+
+  it('fails envelope generation before assigned files when the current output contract cannot generate the enforced result schema', () => {
+    const dir = tempBundle();
+    try {
+      assert.throws(() => createWorkUnit(dir, {
+        queueItem: queueItem({
+          payload: {
+            topic_slug: 'topic-a',
+            output_contract: {
+              required_result_fields: ['work_id', 'unknown_result_field'],
+              output_files: { required: true, allowed_roles: [] },
+            },
+          },
+        }),
+        wave: 0,
+      }), /output contract|unknown_result_field|allowed_roles/i);
+      assert.equal(existsSync(path.join(dir, '_work_units', 'wave0')), false);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('validates prior submitted source roles as a unique allowed subset on source-claim contracts', () => {
+    const validDir = tempBundle();
+    try {
+      const valid = createWorkUnit(validDir, {
+        queueItem: queueItemForKind('wave1_topic_deepening'),
+        wave: 1,
+      });
+      assert.deepEqual(valid.manifest.output_contract.source_claims.prior_submitted_output_roles, ['evidence_summary']);
+
+      for (const [label, roles, sourceClaimsAllowed = true] of [
+        ['duplicate', ['evidence_summary', 'evidence_summary'], true],
+        ['not-allowed-output-role', ['source_yaml'], true],
+        ['source-claims-disabled', ['evidence_summary'], false],
+      ]) {
+        const dir = tempBundle();
+        try {
+          assert.throws(() => createWorkUnit(dir, {
+            queueItem: queueItemForKind('wave1_topic_deepening', {
+              payload: {
+                topic_slug: 'topic-a',
+                output_contract: {
+                  required_result_fields: ['work_id', 'queue_item_id', 'kind', 'receipt_nonce', 'output_files', 'cache_trails'],
+                  output_files: {
+                    required: true,
+                    allowed_roles: ['reference', 'evidence_summary', 'question_list', 'other'],
+                    reference_requires_source_url: true,
+                  },
+                  source_claims: {
+                    allowed: sourceClaimsAllowed,
+                    accepted_requires_cache_or_degraded: true,
+                    prior_submitted_output_roles: roles,
+                  },
+                },
+              },
+            }),
+            wave: 1,
+          }), new RegExp(`prior_submitted_output_roles|${label}`, 'i'));
+          assert.equal(existsSync(path.join(dir, '_work_units', 'wave1')), false, label);
+        } finally {
+          cleanup(dir);
+        }
+      }
+    } finally {
+      cleanup(validDir);
     }
   });
 

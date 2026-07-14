@@ -51,7 +51,9 @@ export {
 // Checks
 export {
   extractSection,
+  parseMarkdownSemanticSections,
   REQUIRED_REFERENCE_METADATA_FIELDS,
+  REFERENCE_TOPIC_BINDING_FIELDS,
   REQUIRED_REFERENCE_SECTIONS,
   parseReferenceMetadata,
   classifyReferenceAuthority,

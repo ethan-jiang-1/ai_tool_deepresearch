@@ -6,7 +6,11 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve as resolvePath } from 'node:path';
 
-import { tryLoadGateDefinition, readBundlePlan } from '../engine/helpers/gate-helpers.mjs';
+import {
+  checkReferenceFormatFiles,
+  tryLoadGateDefinition,
+  readBundlePlan,
+} from '../engine/helpers/gate-helpers.mjs';
 import {
   buildContractEvaluation,
   emitInspectResult,
@@ -15,6 +19,7 @@ import {
 } from '../engine/helpers/wave-contract-findings.mjs';
 import { evaluateWave0Contract } from '../engine/helpers/wave-contract-evaluators.mjs';
 import { inspectReferenceReturnMaps, inspectSeedTopicReturnMaps } from '../engine/helpers/return-map.mjs';
+import { validateIndexMD } from '../schema/contracts/reference.mjs';
 
 const bundleFlag = process.argv.indexOf('--bundle');
 const bundlePath = bundleFlag >= 0 ? process.argv[bundleFlag + 1] : process.argv[2];
@@ -86,45 +91,30 @@ for (const file of referenceFiles.filter((name) => !['_INDEX.md', 'README.md'].i
   }));
 }
 
-const metadataKeys = ['source_url', 'acceptance_status', 'source_type', 'tier', 'evidence_role', 'trust_level', 'why_it_matters', 'accessed_at', 'related_topic'];
-const sections = ['Key Facts', 'Core Content Capture', 'Relevance To This Research', 'Quotable Terms / Concepts', 'Risks And Limitations'];
-for (const file of sharedFiles) {
-  const content = readFileSync(join(referencePath, file), 'utf8');
-  const beforeSection = content.split(/^##\s+/m)[0] || '';
-  const metadata = new Set([...beforeSection.matchAll(/^\s*-\s*([A-Za-z0-9_]+)\s*:/gm)].map((match) => match[1]));
-  additionalChecksRun += 2;
-  for (const key of metadataKeys.filter((candidate) => !metadata.has(candidate))) {
-    additionalFindings.push(makeContractFinding({
-      id: `reference_metadata:${file}:${key}`,
-      ruleId: 'reference_metadata',
-      classification: 'advisory',
-      surface: `reference/${file}`,
-      detail: `reference/${file}: metadata block missing required key '${key}'`,
-      repair: `Add '- ${key}: <value>' before the first Markdown section.`,
-    }));
-  }
-  const headings = new Set([...content.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)].map((match) => match[1].trim().toLowerCase()));
-  for (const section of sections.filter((candidate) => !headings.has(candidate.toLowerCase()))) {
-    additionalFindings.push(makeContractFinding({
-      id: `reference_section:${file}:${section}`,
-      ruleId: 'reference_section',
-      classification: 'advisory',
-      surface: `reference/${file}`,
-      detail: `reference/${file}: missing semantic section '${section}'`,
-      repair: `Add a '${section}' section with the relevant content.`,
-    }));
-  }
-}
+const sharedReferenceFiles = sharedFiles.map((file) => ({
+  relPath: `reference/${file}`,
+  absPath: join(referencePath, file),
+}));
+const referencePresentation = checkReferenceFormatFiles(sharedReferenceFiles, { bundlePath: resolvedBundlePath });
+additionalChecksRun += 1;
+additionalFindings.push(...referencePresentation.findings.map((finding) => makeContractFinding({
+  ...finding,
+  classification: 'advisory',
+})));
 
-additionalChecksRun += 2;
+additionalChecksRun += 1;
 const indexPath = join(referencePath, '_INDEX.md');
 if (existsSync(indexPath)) {
-  const content = readFileSync(indexPath, 'utf8');
-  const header = content.split(/\r?\n/).find((line) => line.includes('ref_file')) || '';
-  for (const column of ['ref_file', 'source_type', 'trust_level', 'tier', 'related_topic', 'source_layer', 'acceptance_status', 'date_landed']) {
-    if (!header.includes(column)) {
-      additionalFindings.push(makeContractFinding({ id: `reference_index_column:${column}`, ruleId: 'reference_index_columns', classification: 'advisory', surface: 'reference/_INDEX.md', detail: `_INDEX.md: table header missing expected column '${column}'`, repair: `Add '${column}' to the reference index table.` }));
-    }
+  const validation = validateIndexMD(readFileSync(indexPath, 'utf8'));
+  for (const [index, detail] of validation.errors.entries()) {
+    additionalFindings.push(makeContractFinding({
+      id: `reference_index_presentation:${index}`,
+      ruleId: 'reference_index_presentation',
+      classification: 'advisory',
+      surface: 'reference/_INDEX.md',
+      detail,
+      repair: 'Repair the accepted eight-column reference index table.',
+    }));
   }
 }
 const readmePath = join(referencePath, 'README.md');

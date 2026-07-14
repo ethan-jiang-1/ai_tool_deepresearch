@@ -1,6 +1,6 @@
 // @impl DEW-002, SDC-001
 
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
@@ -12,6 +12,8 @@ import {
   loadWorkUnitIndex,
   parseWorkId,
   validateWorkIdBinding,
+  workUnitIndexPath,
+  workUnitsRoot,
 } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
 
 function tempBundle() {
@@ -35,6 +37,20 @@ function queueItem(overrides = {}) {
 }
 
 describe('work_id parsing and binding', () => {
+  it('requires an existing index before a read-only load and creates no work-unit directories', () => {
+    const dir = tempBundle();
+    try {
+      assert.throws(
+        () => loadWorkUnitIndex(dir, { createIfMissing: false }),
+        /work-unit index.*does not exist|missing existing work-unit authority/i,
+      );
+      assert.equal(existsSync(workUnitsRoot(dir)), false);
+      assert.equal(existsSync(workUnitIndexPath(dir)), false);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('parses canonical work IDs', () => {
     assert.deepEqual(parseWorkId('wu-w1-b002-deep-i0007'), {
       work_id: 'wu-w1-b002-deep-i0007',

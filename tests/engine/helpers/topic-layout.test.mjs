@@ -4,6 +4,7 @@ import {
   acceptedTopicSlugs,
   evaluateTopicLayouts,
   losslessTopicSlugStem,
+  resolveReferenceTopicBinding,
   resolveStructuredTopicBinding,
   resolveTopicLayout,
 } from '../../../DPT_FRAMEWORK/engine/helpers/topic-layout.mjs';
@@ -65,5 +66,43 @@ describe('topic layout resolver', () => {
     assert.equal(losslessTopicSlugStem('03_current-a'), 'current-a');
     assert.equal(losslessTopicSlugStem('current-a'), 'current-a');
     assert.equal(losslessTopicSlugStem('03_Current A'), null);
+  });
+
+  it('resolves UID-only, legacy, unpadded ordinal, and agreeing dual reference bindings', () => {
+    assert.deepEqual(resolveReferenceTopicBinding(layouts, new Map([
+      ['related_topic_uid', topics[0].topic_uid],
+    ])).topic_uids, [topics[0].topic_uid]);
+
+    for (const legacyValue of ['03_current-a', '01_old-a', '03', '3']) {
+      assert.deepEqual(resolveReferenceTopicBinding(layouts, new Map([
+        ['related_topic', legacyValue],
+      ])).topic_uids, [topics[0].topic_uid]);
+    }
+
+    const dual = resolveReferenceTopicBinding(layouts, new Map([
+      ['related_topic_uid', topics[0].topic_uid],
+      ['related_topic', '01_old-a'],
+    ]));
+    assert.equal(dual.ok, true);
+    assert.deepEqual(dual.topic_uids, [topics[0].topic_uid]);
+  });
+
+  it('fails one reference-binding root for conflicting or ambiguous legacy forms', () => {
+    const conflict = resolveReferenceTopicBinding(layouts, new Map([
+      ['related_topic_uid', topics[0].topic_uid],
+      ['related_topic', '01_current-b'],
+    ]));
+    assert.equal(conflict.ok, false);
+    assert.equal(conflict.reason_code, 'reference_topic_binding_conflict');
+
+    const ambiguousLayouts = evaluateTopicLayouts([
+      topics[0],
+      { ...topics[1], previous_layouts: [{ id: '03', slug: '03_old-b' }] },
+    ]);
+    const ambiguous = resolveReferenceTopicBinding(ambiguousLayouts, new Map([
+      ['related_topic', '03'],
+    ]));
+    assert.equal(ambiguous.ok, false);
+    assert.equal(ambiguous.reason_code, 'reference_topic_binding_ambiguous');
   });
 });

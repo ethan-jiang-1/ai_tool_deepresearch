@@ -1,6 +1,6 @@
 // ref-count.test.mjs
-// Tests for isCountable() and countReferences() — quality-gated reference counting
-// @impl EEX-001, EEX-002
+// Tests for isCountable() and countReferences() — authority-scoped numeric eligibility
+// @impl EEX-001, EEX-002, EEX-003
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert';
 import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
@@ -83,7 +83,7 @@ function setupBundle(name, refs = {}) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// isCountable tests — 4 conditions
+// isCountable tests — accepted status + parseable source URL only
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('isCountable', () => {
@@ -95,13 +95,12 @@ describe('isCountable', () => {
     assert.strictEqual(result.countable, true, `Expected countable but got: ${JSON.stringify(result)}`);
   });
 
-  it('returns countable=false when Core Content Capture < 100 chars', () => {
+  it('returns countable=true when Core Content Capture is short', () => {
     const dir = setupBundle('rc-thin-core', {
       'reference/thin.md': refContent({ coreContent: 'Too short.' }),
     });
     const result = isCountable('reference/thin.md', dir);
-    assert.strictEqual(result.countable, false);
-    assert.ok(result.reason.includes('core_content_capture_too_thin'), `Reason: ${result.reason}`);
+    assert.strictEqual(result.countable, true, `Expected countable but got: ${JSON.stringify(result)}`);
   });
 
   it('returns countable=true when source_url looks like a homepage', () => {
@@ -129,15 +128,14 @@ describe('isCountable', () => {
     assert.ok(result.reason.includes('source_url_invalid'), `Reason: ${result.reason}`);
   });
 
-  it('returns countable=false when Key Facts < 5 bullets', () => {
+  it('returns countable=true when Key Facts has fewer than five bullets', () => {
     const dir = setupBundle('rc-thin-facts', {
       'reference/thin-facts.md': refContent({
         keyFacts: ['Fact 1.', 'Fact 2.', 'Fact 3.'],
       }),
     });
     const result = isCountable('reference/thin-facts.md', dir);
-    assert.strictEqual(result.countable, false);
-    assert.ok(result.reason.includes('key_facts_insufficient'), `Reason: ${result.reason}`);
+    assert.strictEqual(result.countable, true, `Expected countable but got: ${JSON.stringify(result)}`);
   });
 
   it('returns countable=false when acceptance_status is not "accepted"', () => {
@@ -188,7 +186,7 @@ describe('isCountable', () => {
     assert.ok(result.reason.includes('source_url_missing'), `Reason: ${result.reason}`);
   });
 
-  it('returns countable=false when Key Facts section is missing', () => {
+  it('returns countable=true when semantic sections are missing', () => {
     const dir = setupBundle('rc-no-facts', {
       'reference/no-facts.md': [
         '- source_url: https://example.com/research/article',
@@ -209,8 +207,7 @@ describe('isCountable', () => {
       ].join('\n'),
     });
     const result = isCountable('reference/no-facts.md', dir);
-    assert.strictEqual(result.countable, false);
-    assert.ok(result.reason.includes('key_facts_section_missing'), `Reason: ${result.reason}`);
+    assert.strictEqual(result.countable, true, `Expected countable but got: ${JSON.stringify(result)}`);
   });
 
   it('returns countable=true with semicolon-delimited URLs where one is article-level', () => {
@@ -436,7 +433,7 @@ describe('countReferences', () => {
     }
   });
 
-  it('returns full audit transparency in uncountable array', () => {
+  it('reports only numeric-eligibility failures in uncountable audit', () => {
     const dir = tempWorkUnitBundle('cr-audit-');
     try {
       claimAndSubmitWorkUnit(dir, {
@@ -482,11 +479,11 @@ describe('countReferences', () => {
         ],
       });
       const result = countReferences(dir);
-      assert.strictEqual(result.count, 1, `Expected 1 countable, got ${result.count}`);
-      assert.strictEqual(result.uncountable.length, 2, `Expected 2 uncountable, got ${result.uncountable.length}`);
+      assert.strictEqual(result.count, 2, `Expected 2 countable, got ${result.count}`);
+      assert.strictEqual(result.uncountable.length, 1, `Expected 1 uncountable, got ${result.uncountable.length}`);
       const reasons = result.uncountable.map(u => u.reason);
       assert.ok(reasons.some(r => r.includes('source_url_invalid')), 'Should report invalid URL reason');
-      assert.ok(reasons.some(r => r.includes('core_content_capture_too_thin')), 'Should report thin content reason');
+      assert.ok(reasons.every(r => !r.includes('core_content_capture') && !r.includes('key_facts')), 'Content-format reasons must not enter numeric count audit');
       for (const u of result.uncountable) {
         assert.ok(u.path, 'Each uncountable entry must have path');
         assert.ok(u.reason, 'Each uncountable entry must have reason');
@@ -496,9 +493,8 @@ describe('countReferences', () => {
     }
   });
 
-  it('QUALITY_THRESHOLDS documents the 4 conditions', () => {
-    assert.strictEqual(QUALITY_THRESHOLDS.core_content_capture_min_chars, 100);
-    assert.strictEqual(QUALITY_THRESHOLDS.key_facts_min_bullets, 5);
+  it('QUALITY_THRESHOLDS retains only the accepted-status numeric contract', () => {
+    assert.deepStrictEqual(Object.keys(QUALITY_THRESHOLDS), ['acceptance_status_required']);
     assert.strictEqual(QUALITY_THRESHOLDS.acceptance_status_required, 'accepted');
   });
 });
