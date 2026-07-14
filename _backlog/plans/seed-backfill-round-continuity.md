@@ -7,291 +7,278 @@
 | **Identifier** | `seed-backfill-round-continuity` |
 | **Category** | Structural Design Flaw（非单点 bug） |
 | **Severity** | **P0** — blocks sanctioned multi-round rerun |
-| **Status** | Analysis / Awaiting Implementation |
-| **Date** | 2026-07-13 |
-| **Related Bugs** | BUG-081 (seed skeleton minimal), BUG-082 (work-unit provenance), BUG-080 (rerun backfill quality) |
-| **Related Change** | `repair-rerun-added-topic-bootstrap` (addresses BUG-081-084, does NOT address this flaw) |
+| **Status** | Analysis Updated — post repair-rerun commit (`80d0c9e83`) |
+| **Date** | 2026-07-13 (original), updated 2026-07-15 |
+| **Related Bugs** | BUG-081 (seed skeleton minimal) — **resolved**; BUG-082 (work-unit provenance) — **resolved**; BUG-080 (rerun backfill quality) |
+| **Related Change** | `repair-rerun-added-topic-bootstrap` (committed `80d0c9e83`) — addressed BUG-081/082, partially mitigated wave0, did NOT address this flaw |
 
 ---
 
 ## 1. What This Is
 
-### The Core Flaw
+### The Core Flaw (unchanged)
 
-Seed topic 文件的「研究轮次追加区」是 **单次消费结构**。`__BACKFILL_*__` token 被设计为 grep 定位 → 替换 → gate 验证已消费。第一次 research round 完美工作。但框架明确支持多轮 rerun（HITL2 → rerun → seed-topics → wave0/1/2 → HITL2 循环），token 在 round 1 消费后永久消失，round 2 没有结构化的回填目标。
-
-### 具体症状
-
-1. **One-shot token**：`__BACKFILL_WAVE0_EVIDENCE__` 等在 round 1 被替换后消失。phase-wave0.md:165 说 "Locate `__BACKFILL_WAVE0_EVIDENCE__`"——但 round 2 时 token 不存在。
-
-2. **"本轮"命名是相对的、误导的**：section header 如「本轮新增证据」「本轮新增机制理解」描述"当前轮次"，但第一轮填充后变成"上一轮"。第二轮读这些 header 时，不知道内容是 round 1 的还是自己的目标位置。
-
-3. **`## 本轮重跑方向` 无法连接回填目标**：phase-rerun 写入 `action: supplement`、`new_search_dimensions` 告诉下一轮搜什么，但不创建搜完后往哪写的结构性目标（fresh token）。
-
-4. **Phase doc 假设首次运行**：三个 wave phase 的回填指令全部是 "grep token → replace"，没有任何 "token 已消费时的替代路径"。
-
-5. **Gate 产生虚假通过**：gate-wave1-complete 检查 `__BACKFILL_WAVE1_MECHANISMS__` 不存在（negate: true）。Round 1 消费后 token 消失 → gate 通过。Round 2 什么都没做 → gate 也通过（因为 token 是 round 1 消费的，gate 无法区分「本轮消费」和「上轮消费」）。
-
-6. **问题逐轮恶化**：Round 1 正常 → Round 2 Agent 即兴发挥 → Round 3 回填区变成无结构的多轮混合内容，无法追溯哪条证据来自哪一轮。
+Seed topic 文件的「研究轮次追加区」是 **单次消费结构**。`__BACKFILL_*__` token 被设计为 grep 定位 → 替换 → gate 验证已消费（`negate: true` pattern_match）。第一次 research round 完美工作。但框架明确支持多轮 rerun（HITL2 → rerun → seed-topics → wave0/1/2 → HITL2 循环），token 在 round 1 消费后永久消失，round 2 没有结构化的回填目标。
 
 ### 这不是 BUG-081
 
 | 关注点 | BUG-081 | 本缺陷 |
 |---|---|---|
-| 新 topic (add_topic) 获得 backfill token | ✅ `renderSeed()` 产出完整骨架 | ❌ 不影响 `renderSeed()` |
-| 已有 topic 在 round 2+ 获得 backfill token | ❌ `renderSeed()` 只影响新建 | ✅ phase-rerun 重新注入 token |
+| 新 topic (add_topic) 获得 backfill token | ✅ `renderNewSeedBody()` 产出完整骨架 | ❌ 不影响 `renderNewSeedBody()` |
+| 已有 topic 在 round 2+ 获得 backfill token | ❌ `renderNewSeedBody()` 只影响新建 | ✅ phase-rerun 重新注入 token |
 | 本质 | 初始骨架太薄 | **回填区结构缺乏跨轮连续性** |
 
-**即使 BUG-081 完全修好**（每个新 topic 都有完整骨架+5 个 token），round 1 消费后 token 仍然消失，round 2 仍然没有回填目标。
+**即使 BUG-081 已修好**（每个新 topic 都有完整骨架+5 个 token），round 1 消费后 token 仍然消失，round 2 仍然没有回填目标。
 
 ---
 
-## 2. Full Impact Trace
+## 2. What the repair-rerun Commit (`80d0c9e83`) Actually Changed
 
-### Primary Failure Scenario
+The commit built a fundamentally different approach to rerun evidence continuity — work-unit-evidence-first rather than token-reinjection. This section documents what was addressed and what wasn't, verified against the actual code.
 
-**Given**: 研究跑完一轮完整 cycle（HITL1 → seed-topics → wave0 → wave1 → wave2 → HITL2）。所有 seed topic 文件的 `__BACKFILL_*__` token 已消费。
+### 2.1 Resolved: New Topics Get Fresh Tokens (BUG-081)
 
-**When**: HITL2 用户决定 rerun，提供新 rationale（如 "补充成本分析维度"）。框架路由：phase-rerun → seed-topics → wave0 → wave1 → wave2 → HITL2。
+**File**: `DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs`
 
-**Then**: wave0/1/2 的 Phase Agent 尝试回填时发现所有 5 个 token 都不存在。Agent 没有结构性目标——可能追加在旧内容后、覆盖上轮内容、或（最可能）静默跳过回填。
+`renderNewSeedBody()` (lines 105-170) now generates a full skeleton with enrichment fields and all five `__BACKFILL_*__` tokens. `renderSeed(topic)` (called without existing seed for `add_topic` in `buildMutation()` line 535) produces a brand-new seed with fresh tokens. **New topics in reruns are properly initialized.**
 
-### Phase-by-Phase Breakdown
+### 2.2 Partially Mitigated: Wave0 on Existing Topics
 
-| Phase | What Breaks |
+**File**: `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md` §3.0
+
+The new "Classify Direct Facts" section tells the Agent:
+
+- `existing Topic + valid submitted Wave0 coverage -> reuse` that submitted historical coverage
+- `new Topic + no submitted Wave0 coverage -> normal Topic pipeline`
+- `supplement intent -> normal supplementary demand`
+
+§3.1 then says: "Do not enqueue duplicate work for an existing Topic whose valid submitted Wave0 coverage is being reused." §3.3 backfill only fires after successful submit — so reuse topics never reach backfill.
+
+**Gate impact**: `gate-wave0-complete.definition.json` does NOT check `__BACKFILL_WAVE0_EVIDENCE__` at all (14 rules, none involve seed topic backfill tokens). Round 1 submitted ledger rows persist. The gate passes for reuse topics because all its checks (source.yaml existence, shared ref count, cache coverage, work-unit ledger) are satisfied by round 1 evidence.
+
+**Limitation**: This is an Agent instruction, not an Engine-enforced skip. If the Agent misclassifies a topic, it could still enqueue work and then fail to find the backfill token.
+
+### 2.3 Resolved: Supplementary Work Units Can Cite Prior Outputs
+
+**File**: `DPT_FRAMEWORK/engine/work-unit-validation.mjs` — `buildSourceRefLineage()` (line 473)
+
+This function enables a Wave1 supplementary work unit to cite a prior submitted `evidence_summary` output without redeclaring it. Eligibility requires:
+- Same `topic_uid`, same `wave`, same `kind`
+- Role is in `prior_submitted_output_roles` (Wave1 deepening contract authorizes `['evidence_summary']`)
+- Index/result/ledger hash integrity, manifest binding, queue terminal binding all pass
+
+This is a **new infrastructure capability** that didn't exist when the original plan was written. It changes how supplementary deepening works: the new unit can reference the old evidence file rather than reproduce it.
+
+### 2.4 Resolved: Depth Review Facts Derived from Submitted Rows
+
+**File**: `DPT_FRAMEWORK/engine/helpers/wave-depth-contracts.mjs` (lines 483-514)
+
+The depth-review contract no longer trusts `source_claims`, `wave0_source_urls`, `new_source_urls`, or `new_source_floor` fields in `depth-review.yaml`. Those fields, if present, are ignored for the verdict and produce only a diagnostic (`[depth_review_projection_drift]`). Facts are derived directly from the submitted rows named by `reviewed_work_unit_refs[]`.
+
+### 2.5 Resolved: Declaration Recovery
+
+**File**: `DPT_FRAMEWORK/engine/work-unit-submit.mjs` — `recoverWorkUnitDeclaration()`
+
+Missing ledger rows (from prior rounds) can be reconstructed from index/status/result/receipt/cache/trace/transaction evidence via `operate-work-unit recover-declaration`. This prevents round 2 gates from failing due to lost round 1 ledger rows.
+
+### 2.6 Unchanged: Wave1 and Wave2 Have No Classify Direct Facts
+
+**Verified**: `phase-wave1.md` and `phase-wave2.md` have NO §3.0 classification section. They still say "enqueue one... per topic" without any reuse skip logic. There is no symmetry with wave0's classification.
+
+### 2.7 Unchanged: Phase-Rerun Does Not Re-inject Tokens
+
+**Verified**: `phase-rerun.md` was not modified by the commit. `canonical-topic-state.mjs` `renderSeed()` (line 182) preserves existing seed bodies byte-for-byte. There is NO code path anywhere that re-injects `__BACKFILL_*__` tokens into existing seeds. After a round-2 rerun with `action: supplement`, seed files contain consumed return-map entries from round 1 — no tokens.
+
+### 2.8 Unchanged: Seed Template Uses Round-Relative Headers
+
+**Verified**: Both `phase-seed-topics.md` template (lines 182-195) and `canonical-topic-state.mjs` `renderNewSeedBody()` (lines 156-169) still use:
+- `## 本轮新增证据` (not `## Wave0 证据`)
+- `## 本轮新增机制理解` (not `## Wave1 机制`)
+- `## 本轮新增趋势与难点` (not `## Wave1 趋势与缺口`)
+- `## 当前判断` (not `## Wave2 发现`)
+- `## 待验证问题` (not `## 待解决问题`)
+
+**Impact of changing these headers**: Gate checks match on `__BACKFILL_*__` token strings (raw content grep), not section headers. `parseMarkdownSemanticSections` operates on English-named sections only. The only hardcoded Chinese header reference in Engine code is `## 本轮重跑方向` in `wave-contract-evaluators.mjs` line 329 — a separate concern. **Renaming backfill section headers would NOT break any Engine code**, but `renderNewSeedBody()` and the phase-seed-topics template must be updated together for consistency.
+
+### 2.9 New Finding: Wave0 Gate Has No Backfill Token Check
+
+**Verified**: `gate-wave0-complete.definition.json` contains 14 rules. None of them check `seed_topics/*.md` for `__BACKFILL_WAVE0_EVIDENCE__`. The only `pattern_match` rule in the wave0 gate checks for `example.com` URLs. This means wave0 backfill is purely Agent-disciplined (anti-cheating rule §9); the Engine does not verify it.
+
+Wave1 and Wave2 gates DO check their respective tokens with `negate: true` — but on rerun, those tokens are already gone from round 1, producing **false gate passes** (gate can't distinguish "consumed this round" from "consumed last round").
+
+---
+
+## 3. Refined Impact Trace
+
+### Primary Failure Scenario (still valid, refined)
+
+**Given**: 研究跑完一轮完整 cycle。所有 seed topic 文件的 `__BACKFILL_*__` token 已消费。
+
+**When**: HITL2 用户决定 rerun，提供新 rationale（如 "补充成本分析维度"）。Phase-rerun 正确写入 `## 本轮重跑方向` section（含 `action: supplement`, `new_search_dimensions`）。但 `renderSeed()` 保留 body byte-for-byte — token 不回来。
+
+**Then**:
+
+| Wave | What Happens |
+|------|-------------|
+| **wave0** | §3.0 classifies as "existing + valid submitted coverage → reuse." No queue item enqueued. No backfill attempted. **OK — but only if Agent follows §3.0 correctly.** |
+| **wave1** | No classification logic. Agent may enqueue supplementary deepening. If deepening produces new mechanism/trend evidence: §3.3 says "Locate `__BACKFILL_WAVE1_MECHANISMS__`" — token not found. Agent must improvise. Gate passes trivially (tokens already gone from round 1). **New evidence not backfilled.** |
+| **wave2** | Same pattern. No classification logic. Token not found. Gate passes trivially. **New cross-topic findings not backfilled.** |
+
+### Phase-by-Phase Breakdown (updated)
+
+| Phase | Status | Detail |
+|-------|--------|--------|
+| **phase-rerun** | ❌ Still broken | Writes `## 本轮重跑方向` (what to search) but doesn't create structural backfill targets (where to write). `renderSeed()` preserves body byte-for-byte — no token re-injection. |
+| **phase-seed-topics** | ❌ Still broken | Rerun-aware behavior (lines 320-338) preserves existing files but doesn't refresh tokens. Only wave0 reads `new_search_dimensions`; wave1/wave2 have no rerun-awareness. |
+| **phase-wave0 §3.3** | ✅ Mitigated | §3.0 Classify Direct Facts → reuse topics skip queue → never reach §3.3. Gate has no backfill token check anyway. |
+| **phase-wave1 §3.3** | ❌ Still broken | No classification logic. No missing-token fallback. Three tokens in play (`MECHANISMS`, `TRENDS`, `PENDING_QUESTIONS`). Gate checks all three with `negate: true` — passes trivially on rerun (false positive). |
+| **phase-wave2 §3.2.3** | ❌ Still broken | Same pattern. Two tokens (`JUDGMENT`, `PENDING_QUESTIONS`). Gate passes trivially. |
+| **gate-wave1-complete** | ⚠️ False pass | `negate: true` on `__BACKFILL_WAVE1_*__` — tokens absent from round 1 consumption → passes without round 2 backfill |
+| **gate-wave2-complete** | ⚠️ False pass | Same false-pass pattern for `__BACKFILL_WAVE2_JUDGMENT__` and `__BACKFILL_PENDING_QUESTIONS__` |
+
+---
+
+## 4. Refined Design
+
+The original plan proposed three design changes: wave-fixed sections with `### Round N` accumulation, backfill instructions in seed topic headers, and phase-rerun token re-injection. Given what the repair-rerun commit built, the design should be simplified.
+
+### 4.1 Design Principle
+
+**Submitted work units are authoritative; seed topic backfill is a downstream projection.** The repair-rerun commit already established this principle for wave0 (§3.0) and depth review (facts derived from submitted rows). Extend it consistently to wave1 and wave2.
+
+### 4.2 Three Changes
+
+**Change A: Add "Classify Direct Facts" to phase-wave1.md and phase-wave2.md**
+
+Mirror wave0 §3.0. Before queue fill, classify each Topic from direct bundle authority:
+
+- `existing Topic + valid submitted Wave1 deepening -> reuse` that submitted historical deepening coverage
+- `new Topic + no submitted Wave1 deepening -> normal deepening pipeline`
+- `supplement intent -> normal supplementary deepening` through the same producer path
+- orphan `evidence-summary.md` or `depth-review.yaml` without submitted backing -> not coverage
+
+Same for wave2 with cross-topic/targeted-evidence coverage. This prevents the "Agent enqueues work, completes it, then can't find backfill token" scenario — because existing topics with valid coverage won't get new work unless there's a genuine supplement need tied to `new_search_dimensions`.
+
+**Why this works**: The `buildSourceRefLineage` infrastructure already lets supplementary work units cite prior outputs. Combined with classification, the Agent can distinguish "this topic already has valid deepening, skip" from "this topic needs new deepening for the supplement dimension, enqueue." The supplement path is legitimate — it just needs a structural backfill target (Change B).
+
+**Change B: Add Token Re-injection to phase-rerun.md**
+
+After stage 1c (recompute research_style_params) and before stage 2 (increment rerun_count), add:
+
+```
+Stage 1d: Refresh Backfill Targets
+
+For each affected existing topic (not add_topic):
+
+1. Read the seed file
+2. For each wave section, check if its __BACKFILL_*__ token exists:
+   - ## Wave0 证据 → __BACKFILL_WAVE0_EVIDENCE__
+   - ## Wave1 机制 → __BACKFILL_WAVE1_MECHANISMS__
+   - ## Wave1 趋势与缺口 → __BACKFILL_WAVE1_TRENDS__
+   - ## Wave2 发现 → __BACKFILL_WAVE2_JUDGMENT__
+   - ## 待解决问题 → __BACKFILL_PENDING_QUESTIONS__
+3. If token exists → skip (prior round incomplete, token still valid)
+4. If token absent → insert fresh token at section bottom (after last content line, before next ## header)
+5. Skip add_topic (fresh skeletons already have tokens from renderNewSeedBody())
+6. Idempotent: re-running this stage does not create duplicate tokens
+```
+
+This is dramatically simpler than the original plan's design:
+- No `### Round N` accumulation (submitted work-unit rows carry temporal order; seed topics are flat per-wave projections)
+- No old-template migration (phase-rerun rewrites seed files to current format on first encounter; one-time, automatic)
+- No header renaming in this stage (the header change is Change C, applied separately)
+
+**Why this works**: The token names (`__BACKFILL_WAVE0_EVIDENCE__` etc.) are already wave-named — they don't need to change. The detection logic is a simple grep per section. The existing gate `negate: true` pattern_match checks continue to work exactly as before — they check for token presence regardless of round number.
+
+**Change C: Rename Seed Template Headers to Wave-Fixed Names**
+
+Remove "本轮" (this round) from header names. The structure says which wave the content belongs to, not which round wrote it:
+
+| Old | New |
 |---|---|
-| **phase-rerun** | 写入 `## 本轮重跑方向`（搜什么）但不创建结构性回填目标（往哪写）。职责不完整。 |
-| **phase-seed-topics** | rerun-aware 行为（lines 323-341）保留了已有文件但不刷新 token。盲点。 |
-| **phase-wave0 §3.3** | "Locate `__BACKFILL_WAVE0_EVIDENCE__`" — token 不存在，无替代指令。阻塞。 |
-| **phase-wave1 §3.3** | 同上，三个 token 全部不存在。阻塞。 |
-| **phase-wave2 §3.2.3** | 同上，两个 token 不存在。阻塞。 |
-| **gate-wave1-complete** | token 在 round 1 消费后不存在 → 虚假通过（没有消费 round 2 的 token，因为根本没有） |
-| **gate-wave2-complete** | 同上，虚假通过 |
+| `## 本轮新增证据` | `## Wave0 证据` |
+| `## 本轮新增机制理解` | `## Wave1 机制` |
+| `## 本轮新增趋势与难点` | `## Wave1 趋势与缺口` |
+| `## 当前判断` | `## Wave2 发现` |
+| `## 待验证问题` | `## 待解决问题` |
+
+Update in two places:
+- `DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs` `renderNewSeedBody()` (lines 156-169)
+- `DPT_FRAMEWORK/workflows/nodes/phases/phase-seed-topics.md` template (lines 166-195)
+
+**Why this is safe**: Gate checks match on `__BACKFILL_*__` token strings (raw content grep), not section headers. `parseMarkdownSemanticSections` operates on English sections only. The only hardcoded Chinese header in Engine code is `## 本轮重跑方向` in `wave-contract-evaluators.mjs` line 329 — a separate section, unchanged.
+
+### 4.3 No Longer In Scope
+
+- **`### Round N` accumulation**: Submitted work-unit rows carry temporal order; seed topics are flat per-wave projections. Adding round sub-headers creates complexity without benefit in the new architecture.
+- **Old-template migration logic**: phase-rerun naturally rewrites seed files to current format when it re-injects tokens. First encounter with an old-format file → write new-format with re-injected tokens. No special migration code needed.
+- **`shared-schemas.md` documentation**: Not needed — the multi-round concept lives in work-unit lineage (submitted rows), not in seed file structure.
+- **Missing-token fallback in wave phases**: With Change A (classification skips reuse topics) and Change B (phase-rerun re-injects tokens for supplement topics), the fallback becomes a rare edge case. The wave phase instructions should still mention it ("if token not found, check: was this topic classified as reuse? If so, skip. Otherwise, the token should have been re-injected by phase-rerun — record diagnostic and append after last section content."), but it's no longer the primary path.
 
 ---
 
-## 3. Design: Phase-Rerun 重新注入 Token
+## 5. Interactions
 
-**核心思路**：wave 是组织原则，不是 round。每个 wave section（Wave0 Evidence、Wave1 Mechanisms、Wave1 Trends & Gaps、Wave2 Findings、Open Questions）是固定的，内容按 `### Round N` 在 section 内累积。token 永远在对应 wave section 底部，phase-rerun 只干一件事——检测 token 是否被消费，被消费了就在 section 底部重新注入。
+### With Existing Infrastructure
 
-**三个设计修正：**
-
-1. **Wave 固定 section，Round 在内部累积**：`## Wave0 Evidence` 下 `### Round 1` → `### Round 2` → … → token。Round 10 也不影响可读性——你要看 Wave0 的所有证据就只看一个 section。
-2. **回填要求在 seed topic 里简单说**：每个 wave section header 下面一句简洁的回填要求（对齐 phase-waveN.md 的现有要求），Agent grep 到 token 时就能看到它该填什么。
-3. **Phase-rerun 只重新注入 token**：不改 header、不追溯标记。读完每个 wave section，如果底部没有 `__BACKFILL_*__` 就补一个。
-
-**After（round 1 完成 → phase-rerun 注入 token 后）：**
-
-```markdown
-## ═══ 研究轮次追加区 ═══
-
-## Wave0 Evidence
-> return-map entry: evidence_meaning + relationship + refs (≥1 concrete reference/00-shared-*.md) + status + next_hop。禁止 bare URL。连接 must_answer 或初始假设。
-
-### Round 1
-- evidence_meaning: 官方立场文件确认...
-  relationship: supports
-  refs:
-    - reference/00-shared-official-positions.md
-  status: supported
-  next_hop: Wave1 deepen mechanism behind official stance
-
-__BACKFILL_WAVE0_EVIDENCE__
-
-## Wave1 Mechanisms
-> return-map entry: evidence_meaning + relationship + refs (优先 reference/{topic.slug}-<source-slug>.md，artifacts/_cache 仅二级) + status + next_hop。从 evidence-summary.md 提取，说明机制如何连接证据到结论。
-
-### Round 1
-- evidence_meaning: 法规驱动机制为...
-  ...
-
-__BACKFILL_WAVE1_MECHANISMS__
-
-## Wave1 Trends & Gaps
-> return-map entry: evidence_meaning + relationship + refs + status + next_hop。从 evidence-summary.md 提取趋势/局限/矛盾。relationship: refutes 需说明反驳了什么及替代解释。
-
-### Round 1
-...
-
-__BACKFILL_WAVE1_TRENDS__
-
-## Wave2 Findings
-> return-map entry: evidence_meaning + relationship + refs (保留 W2F-xxx ID，优先 reference/00-cross-*.md，ledger/index 仅二级 provenance) + status + next_hop。从 cross-topic-ledger.md + finding-index.yaml 提取。禁止从 synthesis 叙事直接摘抄。
-
-### Round 1
-...
-
-__BACKFILL_WAVE2_JUDGMENT__
-
-## Open Questions
-> 每行 [开放]|[部分解答]|[涌现] + return-map entry。Wave1 首填，Wave2 终更。不得留空。
-
-### Round 1
-- [部分解答] 实施时间线尚不明确...
-
-__BACKFILL_PENDING_QUESTIONS__
-
-## 重跑方向
-- action: supplement
-- new_search_dimensions: "成本分析"
-```
-
-**为什么是这个方案：**
-
-- **可读**：Round 100 也不怕——你要看 Wave0 的所有证据就看 `## Wave0 Evidence` 一个 section，Round 子标题在里面像日志一样累积
-- **简洁**：phase-rerun 只干一件事（补 token），不改 header、不追溯标记
-- **Agent 友好**：回填要求就在 seed topic 里，grep 到 token 就能看到要求。同时 phase doc 里有完整要求，两处对齐
-- **Gate 兼容**：token 每轮结束时消费、phase-rerun 重新注入，gate 检查模式不变
-- **最小变更**：phase-rerun.md（补 token）、phase-seed-topics.md（模板）、canonical-topic-state.mjs（renderSeed 用新模板）
-
-**特别修正：Wave2 回填补齐**
-
-原设计 phase-wave2.md §3.2.3 有 backfill 指令但 Wave2 回填在实际上从未可靠执行——模板有 token，phase doc 有指令，但 token 消费问题同样存在，加上 Wave2 关注点在 cross-topic-ledger 和 finding-index，seed topic 回填容易被跳过。本方案将 Wave2 回填与 Wave0/Wave1 统一：同一个 token 注入/消费机制，同一个 seed topic 内的 wave section 结构，同一套 gate 验证。
-
-**风险和缓解：**
-
-- seed topic 文件随轮次增长 → `rerun_count < 3` cap
-- phase-rerun 崩溃 → staged write + 幂等（检测 token 已存在则跳过）
-
----
-
-## 4. Implementation Specification
-
-### 4.1 核心变更：phase-rerun.md（新增 Stage 3b：重新注入 Token）
-
-在写入 `## 重跑方向` 之后、递增 `rerun_count` 和运行 gate 之前：
-
-```
-### Stage 3b: Re-inject Backfill Tokens
-
-对每个受影响的已有 topic（action: supplement 或无结构变更）：
-
-1. 定位回填区（delimited by ## ═══ 研究轮次追加区 ═══）
-
-2. 检测模板版本：
-   - 若存在 `## Wave0 Evidence` → 新模板，跳到步骤 3
-   - 若存在 `## 本轮新增证据` → 旧模板，先做一次性迁移：
-     a. 将旧 header 替换为新 header（`## 本轮新增证据` → `## Wave0 Evidence`，类推）
-     b. 在每个新 header 下加回填要求（`> return-map entry: ...`）
-     c. 将已有回填内容包一层 `### Round 1`
-     d. 然后继续步骤 3
-
-3. 对每个 wave section（Wave0 Evidence、Wave1 Mechanisms、Wave1 Trends & Gaps、
-   Wave2 Findings、Open Questions），检查 section 底部是否有对应的 __BACKFILL_*__ token：
-   - 有 → 上轮未完成回填，跳过（token 仍有效）
-   - 无 → 上轮已消费，在 section 底部（最后一个 ### Round N 之后）重新注入 token
-
-4. 新 topic（本轮 add_topic）跳过——已有 fresh skeleton with tokens
-
-5. staged write（tmp → verify → atomic rename）
-```
-
-**检测逻辑（极简）：**
-```
-for each wave section:
-  grep __BACKFILL_*__ within the section
-  if found → skip
-  if not found → insert token at bottom of section (after last ### Round N, before next ## header)
-```
-
-不再追溯标记 header、不再改名（旧模板一次性迁移除外）。phase-rerun 的核心逻辑：检测模板版本 → 旧模板迁移一次 → 补 token。
-
-### 4.2 模板与 seed 骨架变更
-
-| File | Change |
-|---|---|
-| `phase-seed-topics.md` (lines 161-196) | **模板重写**。当前模板用 `## 本轮新增证据` 等 header + 无回填要求 + token。改为 wave 固定 section（`## Wave0 Evidence`）+ 简洁回填要求（`> return-map entry: ...`）+ token。不再提及"本轮"。 |
-| `canonical-topic-state.mjs` `renderSeed()` | **配合 BUG-081**：初始骨架的回填区使用与 phase-seed-topics.md 一致的新模板（wave section + 回填要求 + token），Round 1 初始状态无 `### Round` 子标题，token 在 section 底部等待首次消费。 |
-| `phase-wave0.md` §3.3 | 添加 missing token 的 fallback 指令（边缘情况） |
-| `phase-wave1.md` §3.3 | 同上 |
-| `phase-wave2.md` §3.2.3 | 同上 |
-| `shared-schemas.md` | 记录 multi-round 结构和 wave section 内 Round 累积约定 |
-| Gate definition JSON | **无变更**（主要流程）；可选 P2 diagnostic 增强 |
-
-### 4.3 文件变更汇总
-
-| File | Change Type | Description |
+| Mechanism | File | How It Interacts |
 |---|---|---|
-| `DPT_FRAMEWORK/workflows/nodes/phases/phase-rerun.md` | **Major** | 新增 Stage 3b：检测每个 wave section 底部是否有 token，没有则重新注入 |
-| `DPT_FRAMEWORK/workflows/nodes/phases/phase-seed-topics.md` | **Major** | 模板重写：wave 固定 section + 简洁回填要求 + token，去掉"本轮" |
-| `DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs` | **Major** (via BUG-081) | `renderSeed()` 用新模板 |
-| `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave0.md` | Minor | 添加 missing token fallback |
-| `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md` | Minor | 同上 |
-| `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md` | Minor | 同上 |
-| `DPT_FRAMEWORK/workflows/nodes/shared/shared-schemas.md` | Minor | 记录 multi-round 结构 |
-| Gate definitions | **None** (primary) / Minor (optional) | 现有 pattern 继续工作 |
+| `buildSourceRefLineage` | work-unit-validation.mjs | Supplementary work units cite prior outputs; classification (Change A) decides whether to enqueue; token re-injection (Change B) provides target for new backfill |
+| `recover-declaration` | work-unit-submit.mjs | Prior-round ledger rows stay intact; round 2 work doesn't need to reconstruct them |
+| `renderNewSeedBody()` | canonical-topic-state.mjs | New topics get fresh tokens (BUG-081 fixed); Change C updates header names |
+| Gate `negate: true` checks | gate-wave1/2-complete.definition.json | Continue to work — they verify token consumption regardless of round |
+| `parseMarkdownSemanticSections` | gate-helpers-checks.mjs | Unaffected by header renaming (operates on English sections only) |
 
----
-
-## 5. Migration
-
-### 自动迁移
-
-| 当前状态 | 检测方式 | 动作 |
-|---|---|---|
-| 首次运行，token 存在 | `__BACKFILL_*__` found in each wave section | 无需变换 |
-| Round 1 完成后（新模板），token 不存在 | `__BACKFILL_*__` NOT found in wave section（header 匹配 `## Wave0 Evidence` 等） | 在 section 底部重新注入 token |
-| Round 1 完成后（**旧模板**），header 不匹配 | `## Wave0 Evidence` not found，存在 `## 本轮新增证据` 等旧 header | 先迁移模板：将旧 header 替换为新 header + 加回填要求，然后将已有回填内容包一层 `### Round 1`，最后注入 token |
-| 新 topic（add_topic，BUG-081 fix 已应用） | Fresh skeleton with tokens | 无需变换 |
-| 新 topic（add_topic，BUG-081 fix 未应用） | 薄骨架，无回填区 | 无法变换——需先修 BUG-081 |
-
-### 已有 Bundle 迁移路径
-
-- **处于 HITL2 和 rerun 之间**：phase-rerun 自动检测消费的 token 并变换。无需人工干预。
-- **处于 mid-round**（如 rerun 的 wave1 中）：wave phase fallback 指令处理 missing token。下个 rerun 时 phase-rerun 自动迁移。
-- **已完成（phase-final 后）**：下次 rerun 时自动迁移。
-
----
-
-## 6. Interactions
-
-### 与 BUG-081/082 的组合效果
-
-| Fix | 解决的问题 |
-|---|---|
-| BUG-081 | 新 topic 在 rerun 中起始就有完整骨架+backfill token |
-| BUG-082 | 新 topic 有 work-unit provenance，通过 gate |
-| **本 fix** | 已有 topic 每轮 rerun 获得 fresh backfill token，种子文件累积轮次记录 |
-
-### 依赖关系
+### Dependency Order
 
 ```
-BUG-081 (完整骨架) ──→ 本 fix (phase-rerun 刷新 token)
-     ↓                        ↓
-  新 topic 有 token      已有 topic 每轮重新获得 token
-                         
-BUG-082 (provenance) ── 正交，互不阻塞
+Change C (rename headers) ── independent, can be done first
+Change A (classify for wave1/2) ── independent, can be done in parallel with C
+Change B (token re-injection) ── depends on C (must know new header names to locate sections)
 ```
-
-1. **先修 BUG-081**：确保新 topic 有回填区结构锚点
-2. **再修 BUG-082**：确保新 topic 通过 provenance gate
-3. **再修本 fix**：已有 topic 获得跨轮回填连续性（依赖 BUG-081，不依赖 BUG-082）
 
 ---
 
-## 7. Verification
+## 6. Verification
 
 ### Unit-Level
 
-- **Test 1**：Round 1 完成后运行 phase-rerun → 每个 wave section 底部重新出现 token、原内容在 `### Round 1` 下保留、`## 重跑方向` 存在
-- **Test 2**：已有 `### Round 1` + `### Round 2` 的 topic 再次 phase-rerun → 每个 section 底部补上 token（Round 3 回填目标）
-- **Test 3**：有未消费 token 的 topic → phase-rerun 检测到 token 已存在，跳过，不重复注入
-- **Test 4**：本轮新建 topic（add_topic）→ phase-rerun 跳过（已有 fresh skeleton with tokens）
+- **Test 1**: Round 1 complete seed file (all 5 tokens consumed) → token re-injection → all 5 `__BACKFILL_*__` tokens appear at correct section bottoms, original content preserved
+- **Test 2**: Seed file with existing (unconsumed) tokens → token re-injection → no duplicate tokens (idempotent)
+- **Test 3**: New topic seed (add_topic) → token re-injection → skipped (fresh tokens preserved)
+- **Test 4**: `renderNewSeedBody()` output → all 5 headers use wave-fixed names, tokens present
+- **Test 5**: Old-format seed file (old headers) with consumed tokens → token re-injection → tokens injected after old section content (detected by token absence, not header name)
 
 ### Integration-Level
 
-- **Test 5**：完整 rerun cycle（round 1 done → rerun → seed-topics → wave0 → wave1 → wave2）→ 各 wave 后对应 token 被消费（替换为 `### Round 2` 内容）、所有 gate 通过（无虚假通过）
-- **Test 6**：含 add_topic 的完整 rerun cycle → 新 topic 有完整骨架、已有 topic 有刷新 token、所有 topic 回填完成、所有 gate 通过
+- **Test 6**: Round 1 complete bundle → phase-rerun with supplement action → verify seed files have re-injected tokens + `## 本轮重跑方向` section → wave0 classifies as reuse (skip) → wave1 classifies as supplement (enqueue) → wave1 backfill finds token → gate passes (token consumed this round)
+- **Test 7**: Same scenario with add_topic → new topic gets fresh skeleton + goes through normal pipeline → all gates pass
+
+### Gate-Level
+
+- **Test 8**: Seed file with unconsumed `__BACKFILL_WAVE1_MECHANISMS__` → wave1 gate fails (negate: true, token present) — existing behavior preserved
+- **Test 9**: Seed file with consumed tokens + no new round 2 backfill → wave1 gate passes — same as current behavior (acceptable: classification skips unless supplement produces new evidence)
 
 ### Edge Cases
 
-- **Test 7**：Phase-rerun 崩溃恢复 → 幂等（token 已存在则跳过）
-- **Test 8**：Wave phase 遇到 missing token（phase-rerun 未执行）→ Agent 执行 fallback 指令
-- **Test 9**：rerun_count = 3（最大轮次）→ 每个 section 下 `### Round 1`、`### Round 2`、`### Round 3` 累积，token 正确注入和消费
+- **Test 10**: Phase-rerun crash after token re-injection → rerun is idempotent (duplicate tokens not created)
+- **Test 11**: Phase-rerun crash before token re-injection → wave phases use fallback path (token not found → check classification → skip or diagnostic)
+- **Test 12**: `rerun_count = 3` (max) → third re-injection works identically to second
+- **Test 13**: Mixed bundle (some topics reuse, some supplement, one add_topic) → each follows correct path
 
-### Controlled Real-Agent Evidence
+---
 
-从干净 normal-run fixture（3 topics, 1 completed round）开始，用真实 Agent 执行完整的 phase-rerun → seed-topics → wave0 → wave1 → wave2 路径，验证以上所有断言。再重复第二个 rerun（round 3）验证 Round 累积。
+## 7. Files to Modify
+
+| File | Change | Description |
+|---|---|---|
+| `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave1.md` | **Major** | Add §3.0 Classify Direct Facts + update §3.1 to exclude reuse topics |
+| `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md` | **Major** | Add §3.0 Classify Direct Facts + update §3.1 to exclude reuse topics |
+| `DPT_FRAMEWORK/workflows/nodes/phases/phase-rerun.md` | **Major** | Add Stage 1d: token re-injection after research_style_params recompute |
+| `DPT_FRAMEWORK/engine/helpers/canonical-topic-state.mjs` | Minor | `renderNewSeedBody()`: rename backfill section headers to wave-fixed names |
+| `DPT_FRAMEWORK/workflows/nodes/phases/phase-seed-topics.md` | Minor | Template: rename backfill section headers to wave-fixed names, update guidance table |
+
+**Engine code impact**: Zero Engine code changes needed. Gate definitions unchanged. `operate-topic-state` unchanged. All changes are Agent-facing phase instructions + one template string change in `renderNewSeedBody()`.
 
 ---
 
@@ -299,8 +286,8 @@ BUG-082 (provenance) ── 正交，互不阻塞
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Phase-rerun 崩溃留下 hybrid 文件 | Low-Medium | High | Staged write (tmp → verify → atomic rename)；幂等设计 |
-| Agent 在 wave phase 找不到 token | Low | Medium | Wave phase fallback 指令 + trace event |
-| Token 插入位置错误 | Low | Low-Medium | 精确指令：插入在 section 底部、最后一个 `### Round N` 之后、下一个 `##` header 之前 |
-| Seed topic 文件过大 | Low | Low | rerun_count < 3 cap；return-map 简洁 |
-| Phase-rerun 旧模板迁移出错 | Low-Medium | Medium | 一次性迁移逻辑简单（rename header + wrap `### Round 1` + 加回填要求 + 注入 token）；幂等（检测到新 header 则跳过迁移） |
+| Phase-rerun writes malformed token position | Low | Medium | Simple logic: find section boundary, insert one line. Staged write + verify before rename. |
+| Agent misclassifies topic in wave1/wave2 | Low-Medium | Medium | Classification uses same pattern as wave0 §3.0 (already in production). Gate hints provide structured feedback. |
+| Gate false-pass for unconsumed round-N tokens | Low | Low | Token consumption is still verified by `negate: true` checks. The only gap is round-N token not consumed because Agent skipped backfill — but classification prevents unnecessary enqueue, and token re-injection ensures fresh targets exist. |
+| Seed topic file growth over rounds | Low | Low | `rerun_count < 3` cap. Return-map entries are concise. Token re-injection adds only 5 lines per rerun. |
+| Changing template headers creates inconsistency with existing bundles | Low | Low | Old bundles keep old headers until next rerun. Phase-rerun naturally rewrites headers when re-injecting tokens (first rerun after this change). No migration needed — the token re-injection logic detects tokens by name, not by header. |

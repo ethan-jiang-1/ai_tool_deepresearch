@@ -307,3 +307,52 @@ tests/
 1. `repair-rerun-added-topic-bootstrap` 进入 apply 阶段或已 archive
 2. 出现至少一个真实、重复发生的 Agent 结构化输出格式问题（不只是"可能会发生"）
 3. 不是因为"本文已经存在"就顺势实施
+
+---
+
+## Scope Exploration Addendum — 2026-07-15
+
+### Summary
+
+本次扫描确认：问题确实集中在 Agent 手写 structured data，主要 surface 是 runtime bundle 里的 `seed_topics/`、`reference/`、`artifacts/wave*/`、`_work_units/*/result.json`、`runtime-receipt.jsonl`、`_cache/*/meta.json` / `websearch.json`。不应扩大成全 repo Markdown linter，也不应新建统一调度层。
+
+真实 bundle 规模显示 scope 不小：当前 top-level `dpt_rb_*` 中可见 `seed_topic` 44 个、`wave0 source.yaml` 44 个、`wave1 evidence-summary/question-list` 各 39 个、`depth-review.yaml` 31 个、`reference/*.md` 403 个、`_work_units/*/task.md` 112 个、`result.json` 107 个、`runtime-receipt.jsonl` 112 个、cache JSON/MD 数百个。另发现一个嵌套 bundle 路径 `dpt_rb_martin-fowler-ai-sdlc-retreats/dpt_rb_martin-fowler-ai-sdlc-retreats`，这是 runtime root 定位类问题，不应由 output linter 修。
+
+### Easy Scope
+
+- Syntax-only Tier 1：JSON、JSONL、YAML、MD frontmatter、fenced `json/yaml/jsonl` block。现有 `yaml`、`parseMdFrontmatter()`、`readYamlArraySafe()`、`JSON.parse()` 足够。
+- Existing schema reuse：`ReferenceMetadataArraySchema` for `artifacts/wave0/*/source.yaml`、`WorkUnitResultSchema` for result、`WorkUnitRuntimeReceiptEventSchema` for receipt JSONL、`CacheLeafMetaSchema` for `_cache/*/meta.json`。
+- Reference Markdown format precheck：已有 `parseReferenceMetadata()` / `checkReferenceFormatFiles()` 可复用，覆盖 YAML frontmatter forbidden、metadata block required fields、semantic sections。
+- Work-unit task integration：只需在 generated `task.md` 的 checklist 增加“写完 result/output/cache 后跑 lint”的 Agent-facing 指令；`task.md` 本身是 Engine 生成模板，不是 lint target。
+
+### Medium Scope
+
+- `seed_topics/{slug}.md`：frontmatter 语法容易，schema 层需决定是否只检查 gate 当前字段 `id/slug/title/topic_uid/...`，还是检查计划里更丰富的 enrichment fields。建议先只检查 accepted/gate-owned fields，enrichment 缺口作为 advice。
+- `evidence-summary.md` / `question-list.md`：现有 wave evaluator 已有宽容 section 检查和 URL 检查，可复用为 schema-tier；不要重新写一套 stricter Markdown style rule。
+- `depth-review.yaml` 与 `finding-index.yaml`：已有 `wave-depth-contracts.mjs` 做深层 contract 检查，但它绑定 submitted ledger/profile/runtime。linter 可做 parse + direct field shape；完整 provenance 仍交给 inspect/gate。
+- `reference/_INDEX.md`：已有 `validateIndexMD()`，可作为 advisory 或 syntax/schema check；不要让 index presentation 替代 reference backing authority。
+- Cache leaf：`websearch.json` / `meta.json` 可做 parse/schema；`page.md` 多数是 fetched content，不应按 metadata block 误判，只检查存在性/非空应留给 submit/cache checker。
+
+### Hard / Risky Scope
+
+- “从 gate definition 的 `blocking_basis` 自动投影 schema”目前不是直接可做：大量规则在 imperative evaluator/helper 中，不是 declarative schema registry。若强行做，会复制 gate 逻辑并违反 simple reliable control。
+- `cross-topic-ledger.md` 是动态 Markdown ledger，只有 section-level deterministic checks 适合 linter；finding/gap/provenance 的完整一致性必须留给 Wave2 inspect/gate。
+- Return-map/backfill 内容是 Agent-readable navigation layer，不是 authority。可以检查 placeholder 是否残留、refs 是否明显是 glob/count summary，但不要把它做成新的 provenance validator。
+- 自动发现所有 controller 并统一调度属于明确不建议方向。正确做法是：提供幂等 lint tool，各 phase/work-unit 在自己出口前调用。
+
+### Out Of Scope / Do Not Lint
+
+- `rb_plan.md`、`rb_profile.yaml`、`rb_queue.json`、`rb_status.json`、`rb_output_declarations.jsonl`：这是 Engine/runtime authority，已有 validate/gate/submit owner。
+- `DPT_FRAMEWORK/workflows/**/*.md` frontmatter：这是 framework template hygiene，走 `validate-phase-templates.mjs` / workflow package validation。
+- OpenSpec specs、archived changes、backlog bug docs、experiment playbook prose examples：不是 runtime Agent output。
+- `_cache/agentic-queue/current-task.md`、generated `_work_units/*/task.md`：projection/generated guidance，不是 Agent-authored final output。
+- Raw fetched `page.md` content：不是 structured data；不要按 reference metadata block 误判。
+
+### Recommended Implementation Shape
+
+- Build `lint-agent-output` as a thin adapter over existing parsers/evaluators, not a new rule universe.
+- Default behavior: Tier 1 syntax only. `--schema` opt-in enables known format contracts.
+- Path inference may exist as convenience, but explicit `--schema` wins.
+- Failures return helper-oriented hints: `missing_fact`, `write_to`, `rerun`, plus file/line/type where available.
+- First implementation should cover: `source.yaml`, `reference/*.md`, work-unit `result.json`, `runtime-receipt.jsonl`, cache `meta.json/websearch.json`, `seed_topics/*.md`, Wave1 pair artifacts, `depth-review.yaml`, Wave2 `finding-index.yaml`.
+- Keep `cross-topic-ledger.md`, `synthesis.md`, return-map/backfill checks narrow and advisory unless existing inspect/gate already treats the same direct fact as blocking.
