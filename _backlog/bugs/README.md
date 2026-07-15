@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-07-15 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-07-16 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -17,9 +17,10 @@
 
 | Bug | 简述 | 状态 |
 |-----|------|------|
-| [BUG-090](BUG-090-rerun-wave0-wave1-no-reference-materialization.md) | Rerun 新增 topic 的 wave0/wave1 未物化 `reference/*.md` | Open |
 
-**Next available bug ID: BUG-091**
+_（无活跃 bug。BUG-090/091 已于 2026-07-16 归档为 cross-version skew——见 [`_done/_fixed_bugs/`](../_done/_fixed_bugs/)）_
+
+**Next available bug ID: BUG-092**
 
 ---
 

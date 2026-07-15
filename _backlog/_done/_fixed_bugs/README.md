@@ -99,8 +99,10 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-087 | 2026-07-15 | depth-review 要求重抄 ledger cache trails — Engine 从 reviewed submitted rows 派生 |
 | BUG-088 | 2026-07-15 | rb_output_declarations.jsonl 不可恢复 — recover-declaration hash-identical 恢复 |
 | BUG-089 | 2026-07-15 | submit 拒 prior submitted source_ref — same topic/wave/kind authorized prior role |
+| BUG-090 | 2026-07-16 | Rerun 新增 topic 未物化 reference/*.md — **结案: cross-version skew，当前版本不复现，不修**（症状层→`bundle-version-skew-advisory` CMI-007/RRD-011；根因 audit→CLS-026） |
+| BUG-091 | 2026-07-16 | Legacy rerun artifact 旧格式过当前 gate — **结案: cross-version skew，不修**（`source_novelty_floor` 规则已删；不建迁移机器） |
 
-**Next available bug ID: BUG-091**
+**Next available bug ID: BUG-092**
 
 ---
 

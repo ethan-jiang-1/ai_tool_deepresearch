@@ -1,5 +1,7 @@
 # BUG-090: Rerun 新增 topic 的 wave0/wave1 sub-agent 未生成 reference/*.md 文件
 
+> **结案 (2026-07-16) — 定性为 cross-version skew，当前版本不复现，不作为 bug 修。** 该 bundle 是 2026-07-10 旧框架产物；2026-07-15 新框架 rerun 时 gate 卡在 `handoff_target_mismatch` / `No transition ... in chain table`（attempt 31，未跑到内容规则）。同版本干净跑下 `per_topic_ref_md_count_floor` 会按 `topic_registry` 对新 topic 展开、缺 reference 必挡。唯一同版本残留是 Wave0 `shared_ref_count_floor` 全局计数（低危，Wave1 per-topic 兜底）。症状层（偏移不可见）由 change `bundle-version-skew-advisory`（CMI-007 戳 + RRD-011 advisory）处理；根因（gate 权威被 bypass）由 plan `gate-bypass-authority-audit` 只读调查。详见 memory `bug-090-091-version-skew-closure`。
+
 ## 发现
 2026-07-15, `aiewf-2026-community-pulse` rerun round 2。通过 `operate-topic-state apply add_topic` 新增 topic 08（资本与投资视角）和 09（Fair 的技术影响力），然后走完整 rerun pipeline（wave0 → wave1 → wave2）。两个 topic 的 source intake 和 deepening sub-agent 均成功完成并 submit，产出：
 

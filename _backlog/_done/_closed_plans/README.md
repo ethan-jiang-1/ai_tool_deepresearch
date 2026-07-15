@@ -44,7 +44,8 @@ plan 完成后从 `_backlog/plans/` 通过 `git mv` 移入本目录：
 | CLS-023 | 2026-07-13 | overall-recovery-canonical-state-and-delegation-roadmap.md | 五 change 总控路线完成：C1–C5 全部 archive（v0.22–v0.27），5 个来源全部关闭，controlled proof 全部通过 |
 | CLS-024 | 2026-07-15 | tests-e2e-layer.md | Superseded by `formalize-verification-routing`：canonical `unit`/`integration`/`deterministic_e2e`/`agent_flow_e2e` 替代 ordinal layers 与 repo-top-level `tests_e2e/`；`tests/e2e/` + verification-plan/governance 已落地 |
 | CLS-025 | 2026-07-15 | seed-backfill-round-continuity.md | 多轮 seed projection authority 落地（v0.29 / `2d8625f01`）：direction resolver、Engine-owned `index.rerun_count`、eligible-rows inspect、wave0/1/2 authority rebuild；原文 token re-injection 方案被 authority-driven append 取代 |
+| CLS-026 | 2026-07-16 | gate-bypass-authority-audit.md | 只读 audit：5 个 gate-bypass 口子盘点；真 erosive 根因 = `countReferences` 按 projection 存在计数（非 submit-provenance，BUG-090 脚本能过 floor 的机制）；synthetic degraded pass 实为 bounded 可审计；不提修法 |
 
 Closure boundary for CLS-007..010: this change did not implement runtime exit-helper unification, code-2 semantic migration, a JS lifecycle walker, chat interceptor, environment-variable control, same-turn chat halt prevention, or fake evidence/trace handling.
 
-**Next available plan ID: CLS-026**
+**Next available plan ID: CLS-027**
