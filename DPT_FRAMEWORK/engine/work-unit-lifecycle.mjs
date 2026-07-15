@@ -2,7 +2,9 @@
 // Work-unit lifecycle: create, parse phase, eligibility, claim, close, batch open.
 
 import path from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
+import { parse as parseYaml } from 'yaml';
 
 import {
   WORK_UNIT_MANIFEST_SCHEMA_VERSION,
@@ -45,6 +47,16 @@ import { queueItemSnapshotHash } from './queue-manager-core.mjs';
 import { loadQueue, saveQueue } from './queue-manager-lifecycle.mjs';
 import { preempt, refill } from './queue-manager-window.mjs';
 import { logToRun } from './logger.mjs';
+
+function readProfileRerunCount(bundleDir) {
+  try {
+    const profilePath = path.join(bundleDir, 'rb_profile.yaml');
+    if (!existsSync(profilePath)) return 0;
+    const raw = readFileSync(profilePath, 'utf8');
+    const profile = parseYaml(raw);
+    return profile?.human_decision_checkpoints?.hitl2?.rerun_count ?? 0;
+  } catch { return 0; }
+}
 
 function createWorkUnitInIndex(bundleDir, index, {
   queueItem,
@@ -102,6 +114,7 @@ function createWorkUnitInIndex(bundleDir, index, {
     batch_index: manifest.batch_index,
     claim_index: manifest.claim_index,
     attempt_index: manifest.attempt_index,
+    rerun_count: readProfileRerunCount(bundleDir),
     kind: manifest.kind,
     kind_code: manifest.kind_code,
     status: 'claimed',

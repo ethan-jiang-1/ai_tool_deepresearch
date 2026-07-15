@@ -53,6 +53,18 @@ Accepted consumer-facing `W2F-xxx` findings with concrete existing Wave0/Wave1 s
 
 ## 3. Allowed Actions
 
+### 3.0 Classify Direct Facts（Targeted Evidence Only）
+
+Before filling targeted-evidence queue demand, classify each finding from direct bundle authority. This classification covers the targeted-evidence path only. Pure synthesis and cross-topic backfill are NOT subject to per-topic reuse classification.
+
+Use the direction resolver: read `## 本轮重跑方向` section, compare `rerun_count` with current `rb_profile.yaml` value:
+
+- `emergent finding` with `gap_status: needs_search` and no valid submitted `wave2_targeted_evidence` → **normal targeted evidence demand**.
+- `finding` with valid submitted `wave2_targeted_evidence` and no new gap → **reuse** that submitted coverage.
+- `new Topic` needing cross-topic integration → **normal finding triage pipeline**.
+
+This differs from existing §3.2 triage by adding round-awareness: a finding from a previous round with `rerun_count < profile.rerun_count` in the direction → stale, treated as reuse (no new targeted evidence unless a genuinely new gap is identified).
+
 ### 3.1 Filling
 
 If queue is empty, enqueue:
@@ -167,7 +179,8 @@ For the synthesis queue item, the Phase Agent:
 5. Sets `priority`, `confidence`, `independent_backing_refs`, `gap_status`, and top-level `synthesis_eligibility`.
 6. Writes `synthesis.md` as a narrative projection grounded in existing references, citing `W2F-xxx` finding ids.
 7. For each accepted consumer-facing backed `W2F-xxx` finding, materializes an existing-backed `reference/00-cross-*.md` projection or records an explicit non-consumer/deferred/limitation reason.
-8. Completes the non-delegated queue item through the normal queue path only after scan/triage/gap analysis is represented in ledger/index.
+8. **Finding round marker**：When creating new findings in `finding-index.yaml`, SHALL write `created_in_rerun_count` field from `rb_profile.yaml` current value. Legacy findings without this field remain valid — they are included in projection scope and produce advisory (non-blocking) inspect feedback if missing from seed projection.
+9. Completes the non-delegated queue item through the normal queue path only after scan/triage/gap analysis is represented in ledger/index.
 
 No delegated ledger row is required for pure synthesis artifacts.
 
@@ -212,7 +225,13 @@ Wave2 gate fails if targeted evidence/reference outputs exist without submitted 
 
 #### 3.2.3 Backfill
 
-Backfill seed topics from `cross-topic-ledger.md` and `finding-index.yaml`. Do not backfill from synthesis prose alone.
+Update seed topic Wave2 sections from current-round cross-topic authority:
+
+**First materialization**（`__BACKFILL_*__` token 存在）：Replace token with return-map entries.
+
+**Rerun**（token 不存在）：Read `cross-topic-ledger.md` and `finding-index.yaml`. Identify current-round findings (`created_in_rerun_count == profile.rerun_count`) plus legacy findings (no `created_in_rerun_count` field → always included). For each finding's `affected_topics`, extract W2F-xxx entries. Append entries whose W2F-xxx id is not already in the section refs.
+
+**Legacy bundle migration**：On first v0.29 rerun, legacy findings without `created_in_rerun_count` SHALL be included in projection scope. Agent SHALL read all legacy findings from `finding-index.yaml` and either append their W2F-xxx entries to the seed projection or record an explicit no-projection disposition. Legacy findings missing from projection produce advisory (non-blocking) inspect feedback.
 
 Each Wave2 backfill replacement must preserve finding lineage as return-map entries:
 

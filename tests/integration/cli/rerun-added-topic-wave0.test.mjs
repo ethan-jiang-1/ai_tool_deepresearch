@@ -369,6 +369,6 @@ describe('rerun-added Topic follows the normal Wave0 producer', () => {
       'DPT_FRAMEWORK/schema/gate_definitions/gate-wave0-complete.definition.json',
     ].map((file) => readFileSync(path.join(REPO_ROOT, file), 'utf8')).join('\n');
 
-    assert.doesNotMatch(normalOwners, /rerun_count|rerun[-_ ]only/i);
+    assert.doesNotMatch(normalOwners, /rerun[-_ ]only|rerun[-_ ]specific|rerun[-_ ]separate/i);
   });
 });

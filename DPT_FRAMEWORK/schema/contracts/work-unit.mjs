@@ -206,6 +206,7 @@ export const WorkUnitIndexRecordSchema = z.object({
   batch_index: z.number().int().nonnegative(),
   claim_index: z.number().int().nonnegative(),
   attempt_index: z.number().int().positive(),
+  rerun_count: z.number().int().nonnegative().optional(),
   kind: z.string().min(1),
   kind_code: z.string().regex(/^[a-z][a-z0-9]{1,7}$/),
   status: WorkUnitStatus,

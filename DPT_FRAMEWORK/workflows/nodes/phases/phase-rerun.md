@@ -43,11 +43,12 @@ HITL2 `user_decision: rerun` 后，Agent 用正常 HITL2 gate handoff或唯一ac
 ### Stage 1: 读输入
 
 1. 读取 HITL2 rationale——理解用户想要什么改变（"加经济影响分析"、"去掉不可靠的来源维度"等）
-2. 读取 `rerun_count`——若字段缺失则初始化为 1，若已有值则后续 +1
-3. 扫描 `seed_topics/` 目录——列出所有已有 topic 文件，读取其 frontmatter 和 body 了解：
+2. 读取 `rerun_count`——若字段缺失则初始化为 1，若已有值则后续 +1。计算 `target_rerun_count = current_rerun_count + 1`。
+3. **崩溃恢复检查**：对每个已有 topic，检查其 `## 本轮重跑方向` section 是否已存在且 `rerun_count == target_rerun_count`。若全部已有 topic 的方向均已匹配 target → 本轮方向已写入（崩溃恢复），跳到 Stage 3 step 2（递增+gate）。若任一 topic 方向不存在或 `rerun_count != target` → 进入 Stage 2。
+4. 扫描 `seed_topics/` 目录——列出所有已有 topic 文件，读取其 frontmatter 和 body 了解：
    - 每个 topic 的标题、slug、must_answer、hypothesis、search_guardrails
    - 当前深度（quick_factual / exploratory_map / claim_verification）
-   - 已有的 ## 本轮重跑方向 section（上一轮 rerun 的方向 hints，如有）
+   - 已有的 ## 本轮重跑方向 section（上一轮 rerun 的方向 hints，如有）。方向中 `rerun_count` 不等于 target 的视为陈旧，忽略其 action。
 
 **MUST** 检查 `seed_topics/` 非空。若意外为空（topic_registry 有但 seed_topics/ 为空），默认全量重跑——保留现有 reference 和 artifacts，按 topic_registry 重建 seed_topics/，然后走全量重跑路径。通过 accepted trace/log surface 记录 `silent_degradation`，不询问用户确认：
 ```bash
@@ -56,7 +57,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 
 ### Stage 2: 对比推断 — 产出 topic 调整方案
 
-将 HITL2 rationale（用户意图）与 seed_topics 现状对比，推演出具体行动：
+将 HITL2 rationale（用户意图）与 seed_topics 现状对比，推演出具体行动。已有 topic 的 `## 本轮重跑方向` section 中 `rerun_count` 不等于 `target_rerun_count` 的视为陈旧——忽略其 action，仅作为历史参考：
 
 | 场景 | action | 含义 |
 |------|--------|------|
@@ -84,10 +85,11 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
 
 ### Stage 3: 写入 & Gate
 
-1. **写入 ## 本轮重跑方向 section**：对每个受影响的 topic，在 `seed_topics/{slug}.md` 文件中追加（或更新已有的）`## 本轮重跑方向` section：
+1. **写入 ## 本轮重跑方向 section**：对每个受影响的 topic，在 `seed_topics/{slug}.md` 文件中追加（或更新已有的）`## 本轮重跑方向` section。Section MUST 包含 `rerun_count: <target_rerun_count>`（即 `profile.rerun_count + 1`），绑定方向到即将进入的新轮次：
 
 ```markdown
 ## 本轮重跑方向
+- **rerun_count**: <target_rerun_count>
 - **action**: supplement
 - **new_search_dimensions**: "成本分析"、"就业影响"
 - **adjusted_depth**: quick_factual → exploratory_map
@@ -109,9 +111,9 @@ node DPT_FRAMEWORK/cli/log-event.mjs --bundle <bundle> --level warn --msg "silen
    验证 stdout JSON：`applied` 匹配 `research_profile`，`topic_count` 匹配更新后的 `topic_registry.length`，`wave0_shared_ref_total` 为 `base + per_topic × topic_count`。所有参数写入 `rb_profile.yaml#/research_style_params`（覆盖旧值）。
 
 2. **递增 rerun_count**：
-   - 若 `rerun_count` 缺失 → 设为 `1`
-   - 若已有值 → `+1`
-   - 写入 `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count`
+   - 当前值为 N，递增到 target_rerun_count（即 N+1）。
+   - 写入 `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count`。
+   - **不变量**：完成时 direction.rerun_count == profile.rerun_count == target_rerun_count。崩溃窗口中 direction.rerun_count > profile.rerun_count（方向已写为 target，profile 尚未递增）。
 
 3. **确认 incoming status window**：Gate 前应保持 HITL2→rerun 的 source-gate window：`current_gate: hitl2_recorded` / `next_gate: rerun_ready`。不得在 rerun gate 通过前运行 `advance-status --to rerun_ready`。
 

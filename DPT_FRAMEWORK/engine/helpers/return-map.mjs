@@ -23,8 +23,19 @@ function readText(absPath) {
   return readFileSync(absPath, 'utf-8');
 }
 
-function hasBackfillToken(content) {
-  return /__BACKFILL_[A-Z0-9_]+__/.test(content || '');
+// @impl RRM-006
+const WAVE_TOKEN_MAP = {
+  wave0: ['__BACKFILL_WAVE0_EVIDENCE__'],
+  wave1: ['__BACKFILL_WAVE1_MECHANISMS__', '__BACKFILL_WAVE1_TRENDS__', '__BACKFILL_PENDING_QUESTIONS__'],
+  wave2: ['__BACKFILL_WAVE2_JUDGMENT__'],
+};
+
+function hasBackfillToken(content, wave = null) {
+  if (!content) return false;
+  if (wave && WAVE_TOKEN_MAP[wave]) {
+    return WAVE_TOKEN_MAP[wave].some((token) => content.includes(token));
+  }
+  return /__BACKFILL_[A-Z0-9_]+__/.test(content);
 }
 
 function hasNakedEvidenceList(content) {
@@ -449,7 +460,7 @@ export function inspectSeedTopicReturnMaps(bundlePath, {
   for (const file of files) {
     const relPath = `seed_topics/${file}`;
     const content = readText(join(seedDir, file));
-    if (content === null || hasBackfillToken(content)) continue;
+    if (content === null || hasBackfillToken(content, wave)) continue;
 
     const validation = validateReturnMapContent(content, relPath, {
       requireFindingId: wave === 'wave2',

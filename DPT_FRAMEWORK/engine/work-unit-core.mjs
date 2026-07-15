@@ -64,4 +64,5 @@ export {
 // Inspect (1)
 export {
   inspectWorkUnits,
+  collectEligibleRows,
 } from './work-unit-inspect.mjs';

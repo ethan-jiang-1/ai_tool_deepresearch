@@ -56,9 +56,19 @@ For each delegated topic-deepening task, derive the initial candidate URL/source
 
 ## 3. Allowed Actions
 
+### 3.0 Classify Direct Facts
+
+Before filling demand, classify each current canonical Topic from direct bundle authority, not from rerun history or filesystem appearance. Use the direction resolver: read `## 本轮重跑方向` section, compare `rerun_count` with current `rb_profile.yaml` value. Only `rerun_count` matching profile current value SHALL activate supplement intent:
+
+- `matching`/`future` direction + `action: supplement` → **supplement**: normal supplementary deepening through `wave1_topic_deepening` producer path, informed by `new_search_dimensions`.
+- Valid submitted Wave1 deepening, no supplement intent (or `stale`/`legacy_unbound`/`invalid` direction) → **reuse** that submitted historical deepening coverage.
+- No submitted Wave1 deepening → **new**: normal deepening pipeline.
+
+This classification is the same for first-run and rerun-added Topics. It creates no rerun Gate exception, mode, controller, submit path, or provenance namespace. Orphan `evidence-summary.md` or `depth-review.yaml` without submitted backing → not coverage.
+
 ### 3.1 Fill Queue
 
-If queue is empty or thin, enqueue one delegated deepening queue item per topic.
+If queue is empty or thin, enqueue one delegated deepening queue item for each Topic classified as new or supplement. Do not enqueue duplicate work for a reuse-classified Topic.
 
 Task card template:
 
@@ -199,13 +209,19 @@ The Engine computes `new_source_floor.required` only from explicit profile/runti
 - `supplement_required`: output is shallow, missing new sources, missing cache mapping, missing depth dimensions, or unmet profile checks.
 - `blocked_contract`: bounded supplementary attempts are exhausted, required profile/runtime parameters are missing, or deterministic coverage cannot be established.
 
-### 3.3 Inline Backfill
+### 3.3 Seed Projection Update
 
-After each successful submit, before claiming another work unit, update the corresponding seed topic:
+After each successful submit, update the seed topic's Wave1 sections from current-round submitted authority:
 
-1. Replace `__BACKFILL_WAVE1_MECHANISMS__` with mechanism return-map entries from the submitted `evidence-summary.md`.
-2. Replace `__BACKFILL_WAVE1_TRENDS__` with trend/limitation return-map entries.
-3. Replace `__BACKFILL_PENDING_QUESTIONS__` with canonical status labels only: `[开放]`, `[部分解答]`, `[涌现]`, plus return-map entries that name the question, status, evidence meaning, refs, and next hop.
+**First materialization**（token 存在）：Grep `__BACKFILL_*__` → replace token line with return-map entries extracted from submitted outputs.
+
+**Rerun**（token 不存在）：Run `operate-work-unit inspect <bundle> --eligible-rows --phase wave1 [--topic <slug>]` to get current-round submitted rows. Read submitted outputs at returned `result_path` locations. Derive return-map entries (evidence_meaning, relationship, refs, status, next_hop) from outputs. Assign each entry an `entry_id` in format `<work_id>/<n>`. Append entries whose `entry_id` is not already present in the section.
+
+**No-projection disposition**: For entries that should not appear in projection, write an explicit entry with `relationship: defers`, `status: deferred`, and `next_hop` containing a limitation reason (e.g., `"limitation: process-only output"`). This satisfies the authority reference check without polluting the projection.
+
+1. `## 本轮新增机制理解` section: mechanism return-map entries from submitted `evidence-summary.md`.
+2. `## 本轮新增趋势与难点` section: trend/limitation return-map entries.
+3. `## 待验证问题` section: canonical status labels `[开放]`/`[部分解答]`/`[涌现]` plus return-map entries. When token present → replace. When token absent → append new entries with work_id dedup (Wave2 will append W2F-xxx entries after).
 4. Each Wave1 return-map entry includes `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`. Evidence-bearing entries must list concrete existing `reference/{topic.slug}-<source-slug>.md` files as primary consumer navigation; `artifacts/wave1/{topic}/evidence-summary.md`, `artifacts/wave1/{topic}/question-list.md`, submitted source claims, `accepted_source_urls[]`, `_cache/`, and `_work_units/` surfaces are secondary provenance.
 5. Do not use `reference/{topic.slug}-*.md` globs or count summaries. If no consumer reference can be materialized, write an explicit limitation entry with `relationship: defers`, `status: deferred`, `refs: none`, and a `next_hop` limitation reason.
 

@@ -9,6 +9,7 @@ import { parseArgs } from 'node:util';
 import {
   claimWorkUnits,
   closeWorkUnitAttempt,
+  collectEligibleRows,
   drySubmitWorkUnit,
   inspectWorkUnits,
   lateSubmitWorkUnit,
@@ -87,6 +88,8 @@ const { values } = parseArgs({
     'actor-role-key': { type: 'string' },
     'actor-reason': { type: 'string' },
     'execution-actor': { type: 'string', default: 'delegated_subagent' },
+    'eligible-rows': { type: 'boolean', default: false },
+    topic: { type: 'string' },
   },
   allowPositionals: false,
 });
@@ -116,6 +119,19 @@ try {
       diagnosticSource: 'operate-work-unit',
       requireExistingAuthority: true,
     });
+    if (values['eligible-rows']) {
+      if (!values.phase) throw new Error('--phase is required with --eligible-rows');
+      const eligible = collectEligibleRows(bundleDir, values.phase, values.topic || null);
+      result.eligible_rows = eligible.rows;
+      if (eligible.warnings?.length) {
+        result.warnings = [...(result.warnings || []), ...eligible.warnings];
+      }
+      // Authority must be consistent first; if not, eligible_rows can't be trusted
+      if (!result.passed) {
+        result.eligible_rows = [];
+        result.warnings = [...(result.warnings || []), 'eligible_rows: work-unit authority is inconsistent; rows may be incomplete'];
+      }
+    }
     emit(result);
     process.exit(result.passed ? 0 : 1);
   }

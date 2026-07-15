@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.29
+
+- Phase-rerun binds `## 本轮重跑方向` to target_rerun_count with crash-safe recovery; shared direction resolver (matching/stale/future/legacy_unbound/invalid) used by Wave classification and checkRerunAddFullSynthesis.
+- Work unit index record carries Engine-owned `rerun_count` stamped at claim time; `operate-work-unit inspect --eligible-rows` returns current-round submitted rows for Agent consumption.
+- Wave phases rebuild seed projection sections from current-round submitted authority instead of grep-replace tokens; per-row authority reference verification with explicit no-projection disposition detection.
+- Wave1 and Wave2 implement existing RWP-014 classification (Classify Direct Facts mirroring Wave0 §3.0).
+- Wave2 finding-index per-finding carries `created_in_rerun_count` for round identification; legacy findings produce advisory feedback not blocking.
+
 ## v0.28
 
 - Routed rerun-added Topics back through the normal Wave0/Wave1 queue, work-unit, submit, reference, depth-review, and Gate pipeline while preserving valid historical submitted coverage.

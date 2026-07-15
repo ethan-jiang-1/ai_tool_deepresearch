@@ -174,16 +174,13 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs abandon <bundle> --work-id <work_id
 
 `timeout --force --reason <reason>` is an exceptional audited operator choice after inspection, not the normal response to progress, repairable candidates, or invalid binding. Do not use queue completion commands for delegated success, and do not run the Wave0 gate while preflight recommends `submit`, `repair`, `wait`, `inspect`, or `block` for any in-flight attempt.
 
-### 3.3 Immediate Seed Backfill
+### 3.3 Seed Projection Update
 
-After each successful submit, before claiming the next item:
+After each successful submit, update the seed topic's `## 本轮新增证据` section from current-round submitted authority:
 
-1. Open `seed_topics/{topic.slug}.md`.
-2. Locate `__BACKFILL_WAVE0_EVIDENCE__`.
-3. Replace the token line with concise return-map entries, not only URLs or prose. Each important source/reference entry includes `evidence_meaning`, `relationship`, `refs`, `status`, and `next_hop`.
-4. For evidence-bearing entries, make `refs` point first to concrete existing `reference/00-shared-*.md` files. Add `artifacts/wave0/{topic}/source.yaml`, `_cache/`, and `_work_units/` refs only as secondary provenance.
-5. Explain what the source says, which must-answer or initial hypothesis it supports/refutes/opens/defers, and where to read submitted source/reference/cache/work-unit evidence.
-6. Do not leave the token in place.
+**First materialization**（`__BACKFILL_WAVE0_EVIDENCE__` token 存在）：Replace token line with return-map entries extracted from submitted outputs. Each entry includes `evidence_meaning`, `relationship`, `refs`, `status`, `next_hop`. For evidence-bearing entries, `refs` point first to concrete existing `reference/00-shared-*.md` files; `artifacts/wave0/{topic}/source.yaml`, `_cache/`, and `_work_units/` refs are secondary provenance.
+
+**Rerun**（token 不存在）：Run `operate-work-unit inspect <bundle> --eligible-rows --phase wave0 [--topic <slug>]` to get current-round submitted rows. Read submitted outputs at returned `result_path` locations. Derive return-map entries from outputs. Assign each entry an `entry_id` in format `<work_id>/<n>`. Append entries whose `entry_id` is not already present in the section. For entries that should not appear in projection, write an explicit no-projection disposition with `relationship: defers`, `status: deferred`, and `next_hop` containing a limitation reason.
 
 ## 4. Expected Artifacts
 

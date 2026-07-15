@@ -341,6 +341,7 @@ RTI-003: rerun-topic-integration — Gate detects rerun topic reference quality 
 RTI-004: rerun-topic-integration — content_dedup SHALL NOT vacuously pass when ledger contains no reference declarations [DEPRECATED]
 RTI-005: rerun-topic-integration — Rerun-produced files remain traceable to rerun intent or declared provenance
 RTI-006: rerun-topic-integration — Rerun-produced reference files SHALL have traceable cache trails（cache_coverage gate对rerun路径与首次运行一视同仁）
+RTI-007: rerun-topic-integration — Phase-rerun binds rerun direction to target_rerun_count with crash-safe recovery; shared direction resolver outputs 5 states
 
 # runtime-reentry-debuggability
 RRD-001: runtime-reentry-debuggability — Gate attempts record lightweight reentry checkpoint manifests
@@ -443,6 +444,7 @@ WPG-011: work-unit-provenance-gate — Framework ships a work-unit provenance-fo
 WPG-012: work-unit-provenance-gate — Provenance gates distinguish Phase-owned reference projections from delegated fetched evidence
 WPG-013: work-unit-provenance-gate — Wave1 required output coverage and Wave2 cross-reference provenance preserve authority contracts
 WPG-014: work-unit-provenance-gate — Gates count audited late-accepted work-unit ledger rows
+WPG-015: work-unit-provenance-gate — Work unit index record carries Engine-owned rerun_count stamped at claim time for round identification
 
 
 # seg2node
@@ -549,6 +551,7 @@ RWP-016: research-wave-phase-content — Wave phase bodies teach canonical gate-
 RWP-017: research-wave-phase-content — Wave0 and Wave1 fetch targets follow profile floors plus conservative margin
 RWP-018: research-wave-phase-content — Wave delegated drain loops route timeout through progress-aware preflight
 RWP-019: research-wave-phase-content — Wave delegated execution uses one visible role-bound actor decision loop
+RWP-020: research-wave-phase-content — Wave2 targeted-evidence classification with round-awareness; finding-index per-finding carries created_in_rerun_count
 
 # wff-research-waves / research-wave-gate-implementation
 RWG-001: research-wave-gate-implementation — Wave0 complete gate rule set (file_exists, dir_exists, schema_valid ReferenceMetadata, count_floor, trace_event_present, status_value)
@@ -776,6 +779,8 @@ RRM-002: research-return-map — Seed-topic backfill preserves traceable meaning
 RRM-003: research-return-map — Shared guidance teaches the same return-map shape across waves
 RRM-004: research-return-map — Evidence-bearing return-map refs include concrete existing reference files
 RRM-005: research-return-map — Return-map parsing tolerates balanced bold field-label presentation
+RRM-006: research-return-map — Return-map inspection filters backfill tokens by target wave using explicit token-wave mapping
+RRM-007: research-return-map — Return-map inspection verifies per-row current-round authority references in seed projection with explicit no-projection disposition detection
 
 # cache-raw-web-content
 CRC-001: "cache-raw-web-content — Standardized _cache/ directory structure (wave/batch/scope/source four levels)"
