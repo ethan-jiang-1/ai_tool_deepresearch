@@ -1,6 +1,6 @@
 # Experiments Environment Tests
 
-This directory tests reusable helpers under `experiments_env/` without running real-environment E2E.
+This directory is reserved for focused in-process `unit` coverage of reusable helpers under `experiments_env/`.
 
 Run with:
 
@@ -8,4 +8,4 @@ Run with:
 node --test tests/experiments_env
 ```
 
-Controlled E2E playbooks remain under `experiments_playbook/`; this tree is only regression coverage for reusable utilities.
+Subprocess/runtime-bundle helper coverage lives under `tests/integration/experiments_env/`; Markdown `agent_flow_e2e` playbooks live under `experiments_playbook/`. See the accepted `verification-routing` spec for classification.

@@ -1,6 +1,6 @@
 // run-gate-with-monitor.test.mjs — Tests for gate monitor wrapper
 // @impl EXO-003, EXO-004
-// Location: tests/helpers/run-gate-with-monitor.test.mjs
+// Location: tests/integration/experiments_env/run-gate-with-monitor.test.mjs
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,8 +9,9 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const __dirname = new URL('.', import.meta.url).pathname;
-const WRAPPER = join(__dirname, '..', '..', 'experiments_env', 'shared', 'run-gate-with-monitor.mjs');
-const FIXTURE_BASE = join(__dirname, '..', 'fixtures', 'gate-wrapper');
+const ROOT = process.cwd();
+const WRAPPER = join(ROOT, 'experiments_env', 'shared', 'run-gate-with-monitor.mjs');
+const FIXTURE_BASE = join(ROOT, 'tests', '.test-tmp', 'gate-wrapper');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Fake Gate Commands

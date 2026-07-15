@@ -1,6 +1,6 @@
 # Tests
 
-This directory is the root regression suite for the project.
+This directory owns all JS-led project tests: `unit`, `integration`, and `deterministic_e2e`.
 
 ## How to Run
 
@@ -16,6 +16,7 @@ For this command-surface hardening work, `tests/engine/command-contract-docs.tes
 
 - `engine/`: engine helpers, queue/work-unit flow, trace/logging, and static framework-doc contract checks.
 - `integration/`: executable CLI and Markdown workflow checks against framework surfaces.
+- `e2e/`: workflow-scale deterministic state chains driven by JS through production checkpoints.
 - `schema/`: schema and contract validation for project data shapes.
 - `governance/`: project requirement/spec governance checks.
 - `experiments_env/`: regression coverage for reusable experiment-environment utilities.
@@ -25,5 +26,5 @@ For this command-surface hardening work, `tests/engine/command-contract-docs.tes
 
 ## Placement
 
-- Regression tests live under `tests/` and use `node:test` plus `node:assert`.
+- JS-led tests live under `tests/` and use `node:test` plus `node:assert`; routing semantics are defined by the accepted `verification-routing` spec.
 - Do not put tests, fixtures, or experiment playbooks under `DPT_FRAMEWORK/`; it is the distributable framework surface.

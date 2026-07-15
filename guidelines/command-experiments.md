@@ -262,6 +262,8 @@ Naming:
 
 These names are current conventions, not the mechanism taxonomy. Future mechanisms may add case names, fixture types, helper inputs, or optional prototype-free organization when an OpenSpec change or playbook explains why; they must not change the ownership split above.
 
+Deterministic workflow-scale chains that simulate labeled Agent-owned inputs belong in `tests/e2e/` and prove only deterministic contracts. A claim about real Agent/sub-agent search, judgment, writing, repair, synthesis, or routing remains an `agent_flow_e2e` Markdown playbook obligation. The accepted `verification-routing` spec owns the full classification contract.
+
 ## Import Boundary
 
 Use canonical framework paths for production code. Do not import engine, trace, schema, or CLI logic from `experiments_env/prototype-*`.

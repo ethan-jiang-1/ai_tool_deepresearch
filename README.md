@@ -29,10 +29,10 @@ Before triggering `DPT_FRAMEWORK/RUN.md`, complete the human preflight in [`SETU
 |-----------|------------|
 | `DPT_FRAMEWORK/` | 可发行框架：engine、schema、CLI、trace writer、command playbook。不放测试 |
 | `DPT_FRAMEWORK/engine/` | 生产级确定性 engine（queue-manager, gate-loop, gate-fork, ...） |
-| `experiments_playbook/exp_*/` | Agent 驱动的受控端到端 playbook |
+| `experiments_playbook/exp_*/` | coding Agent 执行 Markdown 的 `agent_flow_e2e` playbook |
 | `experiments_env/shared/` | 实验共享工具（如 `new-disposable-bundle.mjs`），不进生产 |
 | `experiments_env/prototype-*/` | 已冻结原型：仅 fixture + 笔记，不含 engine/trace/CLI 代码 |
-| `tests/` | 回归测试：单元测试 + 集成测试，`node:test` + `node:assert` |
+| `tests/` | JS-led `unit`、`integration`、`deterministic_e2e`，`node:test` + `node:assert` |
 | `openspec/` | Spec-driven development：specs、changes、governance、config |
 | `guidelines/` | 项目原则、层级边界、实验规范、机制草案 |
 
@@ -42,9 +42,12 @@ Use `npm test` for the full regression suite. It is intentionally scoped to `tes
 
 | 层 | 位置 | 性质 |
 |---|------|------|
-| 回归测试 | `tests/` | 单元测试（零 I/O）+ 集成测试（真实文件 I/O），跑在 `node:test` 下 |
-| 受控端到端 | `experiments_playbook/exp_*/` | Agent 驱动 playbook，真实 disposable bundle，trace 裁决 |
-| 真实环境端到端 | — | 生产 `dpt_rb_*` 上真实 Agent/subagent 执行，暂时搁置 |
+| `unit` | focused `tests/` paths | focused in-process contract |
+| `integration` | `tests/integration/` | production CLI/subprocess or owned-surface boundary |
+| `deterministic_e2e` | `tests/e2e/` | JS-led workflow-scale deterministic chain |
+| `agent_flow_e2e` | `experiments_playbook/exp_*/` | coding-Agent/Markdown-led playbook over a real disposable bundle |
+
+Classification and proof permissions are defined by the accepted `verification-routing` spec.
 
 ## Rules In One Screen
 

@@ -7,7 +7,7 @@
 //   node -e "import('.../_driver-lib.mjs').then(m => m.verdict('...'))"
 //   node -e "import('.../_driver-lib.mjs').then(m => m.cleanup('...'))"
 
-import { appendFileSync, existsSync, readFileSync, rmSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -135,6 +135,7 @@ export function recordVerdict(tracePath, opts = {}) {
     verdict: checks.every(c => c.passed === c.expected) ? 'PASS' : 'FAIL',
     checks,
   };
+  mkdirSync(path.dirname(outPath), { recursive: true });
   appendFileSync(outPath, JSON.stringify(entry) + '\n');
   console.log(`Verdict recorded: ${entry.verdict} (${checks.length} checks) → ${outPath}`);
   return entry;

@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 
 const ROOT = process.cwd();
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const TMP = join(__dirname, '..', '.test-tmp');
+const TMP = join(ROOT, 'tests', '.test-tmp');
 const CHECK_REQS = join(ROOT, 'openspec/governance/check-project-reqs.mjs');
 const CHECK_SPECS = join(ROOT, 'openspec/governance/check-project-specs.mjs');
 

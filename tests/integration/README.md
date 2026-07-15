@@ -1,6 +1,6 @@
 # Integration Tests
 
-Integration tests exercise framework entry points and Markdown workflow surfaces from the outside.
+`integration` tests exercise production CLI/subprocess, filesystem, runtime-bundle, and separately owned Markdown/JS boundaries from the outside. Workflow-scale deterministic chains belong in `tests/e2e/`.
 
 Run the whole integration layer with:
 
@@ -8,4 +8,4 @@ Run the whole integration layer with:
 node --test tests/integration
 ```
 
-Use `cli/` for executable CLI behavior and `md/` for Markdown workflow/content contracts.
+Use `cli/` for executable CLI behavior, `md/` for Markdown workflow/content contracts, `governance/` for project governance processes, and `experiments_env/` for experiment-helper processes. See the accepted `verification-routing` spec for classification.

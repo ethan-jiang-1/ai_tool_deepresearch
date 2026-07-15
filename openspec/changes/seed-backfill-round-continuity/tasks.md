@@ -61,6 +61,7 @@
 - [x] 10.5 integration suite: pre-existing failures confirmed (unrelated to this change)
 - [x] 10.6 integration test: tests/integration/cli/rerun-round-continuity.test.mjs (4/4 pass)
 - [x] 10.7 E2E playbook: experiments_playbook/exp_rerun-round-continuity/README.md created
+  - Reconciled 2026-07-15: the named asset never existed, so this historical checkbox did not carry runnable evidence. `formalize-verification-routing` supersedes it with `tests/e2e/rerun-round-continuity.test.mjs` for deterministic round-state/failure/recovery proof and executed `experiments_playbook/exp_wfn_rerun/case-318-heavy-rerun-direction-recovery.md` for real subject-Agent direction/crash-window recovery. Do not cite the missing README as execution evidence.
   - (a) Playbook MUST create a real disposable bundle via `new-disposable-bundle.mjs` — no reuse of fixture state.
   - (b) MUST cover two paths: round-2 supplement (add new dimension to existing topic) AND round-3 stale direction (direction.rerun_count=2 ignored when profile=3).
   - (c) Verdict MUST validate three evidence classes: trace events (`rb_trace.jsonl` — direction resolver states, claim rerun_count stamp), gate output (`check-gate-wave1-complete`/`wave2-complete` JSON — passed), and inspect output (`--eligible-rows` returns correct round-filtered rows, per-row authority check passes after rebuild).

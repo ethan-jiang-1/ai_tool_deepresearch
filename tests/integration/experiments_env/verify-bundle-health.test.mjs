@@ -1,35 +1,36 @@
 // verify-bundle-health.test.mjs — Tests for post-run bundle health verifier
 // @impl EXO-001, EXO-002, EXO-004, EXO-005
-// Location: tests/schema/verify-bundle-health.test.mjs
+// Location: tests/integration/experiments_env/verify-bundle-health.test.mjs
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { createQueue } from '../../DPT_FRAMEWORK/engine/queue-manager.mjs';
+import { createQueue } from '../../../DPT_FRAMEWORK/engine/queue-manager.mjs';
 import {
   claimWorkUnits,
   closeWorkUnitAttempt,
   loadWorkUnitIndex,
   saveWorkUnitIndex,
   submitWorkUnit,
-} from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+} from '../../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
 import {
   availableActorDecision,
   claimAndSubmitWorkUnit,
   delegatedQueueItem,
   seedDelegatedQueue,
-} from '../engine/work-unit-test-helpers.mjs';
+} from '../../engine/work-unit-test-helpers.mjs';
 
 const __dirname = new URL('.', import.meta.url).pathname;
-const VERIFIER = join(__dirname, '..', '..', 'experiments_env', 'shared', 'verify-bundle-health.mjs');
+const ROOT = process.cwd();
+const VERIFIER = join(ROOT, 'experiments_env', 'shared', 'verify-bundle-health.mjs');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Synthetic Bundle Fixture Helpers
 // ═══════════════════════════════════════════════════════════════════════════
 
-const FIXTURE_BASE = join(__dirname, '..', 'fixtures', 'health-verifier');
+const FIXTURE_BASE = join(ROOT, 'tests', '.test-tmp', 'health-verifier');
 
 function cleanFixtures() {
   if (existsSync(FIXTURE_BASE)) rmSync(FIXTURE_BASE, { recursive: true, force: true });

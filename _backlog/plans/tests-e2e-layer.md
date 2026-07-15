@@ -1,5 +1,7 @@
 # 测试策略：Agentic Workflow 的四层验证体系
 
+> **Superseded 2026-07-15:** Historical design input only. `formalize-verification-routing` replaces this plan's ordinal layers and repo-top-level `tests_e2e/` proposal with the canonical `unit`, `integration`, `deterministic_e2e`, and `agent_flow_e2e` taxonomy. The deterministic intent now lives under `tests/e2e/`; see the `verification-routing` spec. The body below is preserved unchanged as historical context.
+
 ## Metadata
 
 | Field | Value |
@@ -7,7 +9,7 @@
 | **Identifier** | `tests-e2e-layer` |
 | **Category** | 项目基础设施 + 测试策略 |
 | **Severity** | P1 |
-| **Status** | Plan |
+| **Status** | Superseded by `formalize-verification-routing` |
 | **Date** | 2026-07-15 |
 
 ## 1. 传统程序 vs Agentic Workflow 的测试差异

@@ -27,18 +27,18 @@ If the user expresses research, deep-research, investigation, or report intent a
 - Requirement registry and checks: `openspec/governance/`
 - Framework code/playbooks: `DPT_FRAMEWORK/` (`validate-bundle.mjs`, `inspect-bundle.mjs`)
 - Prototypes: `experiments_env/`
-- Regression tests (unit + integration): `tests/`
-- Controlled E2E tests: `experiments_playbook/exp_*/` (Agent-driven playbooks on real disposable bundles)
-- Real-environment E2E: deferred
+- JS-led tests: `unit` under focused `tests/` paths, `integration` under `tests/integration/`, and `deterministic_e2e` under `tests/e2e/`
+- Coding-Agent/Markdown-led `agent_flow_e2e`: `experiments_playbook/exp_*/` over real disposable bundles
+- Routing semantics: accepted `verification-routing` spec
 
 ## Hard Rules
 
 - Do not read `_old_topics` archives unless explicitly asked.
 - Use Node.js >=20, pure JavaScript ESM (`.mjs`). No TypeScript. **Absolutely no Python.** Not for scripts, not for one-liners, not for prototyping — use Node.js for everything.
 - Do not add dependencies. Approved npm deps only: `zod`, `yaml`; otherwise use Node built-ins.
-- Use `node:test` + `node:assert` for regression tests.
+- Use `node:test` + `node:assert` for JS-led tests.
 - **Tests always under `tests/` at repo root, never inside `DPT_FRAMEWORK/`.** `DPT_FRAMEWORK/` is the distributable framework — framework code only, no test files, no experiment fixtures. Test dirs mirror framework dirs: `tests/engine/`, `tests/engine/`, `tests/schema/`, etc.
-- Test layering: `tests/` = regression (unit + integration). `experiments_playbook/exp_*/` = controlled E2E (Agent-driven playbooks). Real-environment E2E is deferred.
+- Test placement: `unit`, `integration`, and `deterministic_e2e` live under `tests/`; `agent_flow_e2e` lives under `experiments_playbook/`. Use the accepted `verification-routing` spec for classification.
 - **OpenSpec phase gate: `DPT_FRAMEWORK/` is read-only until `/opsx:apply`.** During propose/explore, work in `openspec/changes/` only. You may read anything for context; you may write only change artifacts (specs, design, tasks). Target code (`DPT_FRAMEWORK/`, `tests/`, `experiments_playbook/`) is modified only during apply, per the approved task list. Deliberation fatigue does not grant an exception.
 
 ## OpenSpec Workflow

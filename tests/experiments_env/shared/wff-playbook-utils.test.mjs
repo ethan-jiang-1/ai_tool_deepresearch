@@ -70,6 +70,17 @@ describe('recordVerdict — append-only verdict audit', () => {
     assert.equal(persisted[1].case, 'run-2');
   });
 
+  it('creates a missing verdict parent directory before append', () => {
+    const tracePath = path.join(workDir, 'rb_trace.jsonl');
+    const outPath = path.join(workDir, 'missing', 'nested', 'exp_verdicts.jsonl');
+    recordCheck(tracePath, { gate: 'g1', passed: true });
+
+    const entry = recordVerdict(tracePath, { caseId: 'case-parent', outPath });
+
+    assert.equal(entry.verdict, 'PASS');
+    assert.equal(readEntries(outPath)[0].case, 'case-parent');
+  });
+
   it('returns null and writes nothing when trace is missing or has no checks', () => {
     const outPath = path.join(workDir, 'exp_verdicts.jsonl');
 

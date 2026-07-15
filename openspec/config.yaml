@@ -86,31 +86,18 @@ context: |
     - Delta 段（如 `# schema-core (delta)`）不允许——新增 ID SHALL 直接归入对应 capability 组，不另开 delta 组头
     - 废弃 ID SHALL 保留在原 capability 组内数字序的正常位置，值末尾标注 `[DEPRECATED]`；整个 capability 废弃时组头标 `— all entries deprecated; no spec directory`，放在文件末尾
 
-  测试分层:
-    项目有三层测试，按环境和目的区分:
-
-    第一层 — tests/（回归测试）:
-      root `tests/` 是项目级回归测试，跑在 `node:test` 下，每次改动后验证无退化。
-      `DPT_FRAMEWORK/` 是可发行框架，内部不放测试文件（保持干净可打包）。
-      测试目录映射框架目录: tests/engine/ ↔ DPT_FRAMEWORK/engine/。
-
-      包含两类:
-        - 单元测试（unit test）: 纯代码，零 I/O。tests/schema/, tests/engine/*.test.mjs, tests/engine/*.test.mjs
-        - 集成测试（integration test）: JS+MD 交互，真实文件 I/O，临时目录隔离。tests/integration/
-
-      工具: node:test + node:assert。跑: `node --test tests/engine/ tests/engine/`
-
-    第二层 — experiments_playbook/（受控环境端到端测试）:
-      experiments_playbook/exp_{name}/ 下的 Markdown playbook 是 Agent 驱动的受控端到端。
-      Agent 逐 step 执行：创建 disposable bundle → import 真实 framework engine →
-      执行操作 → 从 trace JSONL 裁决。不 mock——import 真实 engine，在真实 bundle 上
-      端到端执行。这是项目当前最接近"生产环境"的测试。
-
-      工具: coding agent + disposable bundle + trace verdict。验证: playbook PASS/FAIL。
-
-    第三层 — 真实环境端到端:
-      在生产 run bundle（dpt_rb_*）上由真实 Agent/subagent 执行的端到端测试。
-      因环境复杂度和成本暂时搁置，未纳入当前测试策略。待前两层稳定后再规划。
+  Verification routing:
+    项目使用 exactly four canonical `test_class` identifiers。完整分类与 proof permission 由 accepted
+    `verification-routing` spec 定义；本文件只拥有 change lifecycle 与 asset placement 规则。
+    - `unit`: focused JS-led `node:test` under `tests/`, outside `tests/integration/` and `tests/e2e/`
+    - `integration`: JS-led boundary tests under `tests/integration/`
+    - `deterministic_e2e`: JS-led workflow-scale deterministic chains under `tests/e2e/`
+    - `agent_flow_e2e`: coding-Agent-executed Markdown playbooks under `experiments_playbook/` over real disposable bundles
+    `regression`, cost, actor, judge, fixture distance, and runtime bundle type are not peer test classes.
+    New changes SHALL create change-root `verification-plan.yaml`; apply tasks SHALL run
+    `check-verification-routing.mjs --mode plan` before target edits and `--mode assets` before archive.
+    This is repo lifecycle discipline, not an OpenSpec-native artifact gate: `openspec status/validate`
+    does not parse or validate the custom plan.
 
     tests/fixtures/: 最小测试框架（symlink 到 DPT_FRAMEWORK/），为 tests/ 提供 fixture。
 

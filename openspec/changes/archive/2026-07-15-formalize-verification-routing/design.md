@@ -230,11 +230,11 @@ The initial `tests/e2e/rerun-round-continuity.test.mjs` first creates a producti
 
 The suite uses a two-level shape to keep cost controlled:
 
-- one baseline builder produces an immutable legal pre-rerun bundle through real CLI boundaries once per test run;
+- one baseline builder produces an immutable legal pre-rerun bundle through real CLI boundaries once per test run, then stores a byte snapshot outside the active bundle path;
 - the happy case continues through the complete rerun chain;
-- each fault scenario clones that runtime-generated baseline into a new temporary bundle, injects one independent non-Engine variation, and runs the affected real suffix without sharing mutable state.
+- before each serialized scenario, the harness restores that snapshot to the same original active bundle path, injects one independent non-Engine variation, and runs the affected real suffix without sharing prior scenario mutations.
 
-The baseline is not a committed fixture or cross-run cache. Its trace, status, work-unit, ledger, and gate facts are generated afresh by the production paths in the same test process. Cloning only amortizes repeated predecessor work after that proof has run.
+The baseline is not a committed fixture or cross-run cache. Its trace, status, work-unit, ledger, gate, beacon, and absolute bundle-root binding facts are generated afresh by the production paths in the same test process. Restore SHALL reuse the original active bundle path: copying the snapshot to another bundle path would invalidate absolute work-unit beacon bindings and is therefore forbidden. Same-path restore only amortizes repeated predecessor work after that proof has run; it does not rebind or manufacture Engine authority.
 
 The scenario matrix is:
 
@@ -248,7 +248,7 @@ The scenario matrix is:
 | partial phase artifact or failed gate | downstream transitions do not run; repair followed by the same gate can continue |
 | malformed structured authority | CLI fails explicitly and does not replace or normalize Engine-owned truth through test code |
 
-The suite SHALL keep the baseline and every scenario clone under `os.tmpdir()`, use `spawnSync` argument arrays rather than shell command interpolation, record pre/post authority snapshots around expected failures, and clean up in `after()` while preserving enough assertion context in the test output. A helper under `tests/e2e/helpers/` may wrap repeated CLI invocation, candidate fixture creation, byte-for-byte baseline cloning, authority snapshots, and legal baseline construction; it cannot calculate a gate/transition outcome, append a verdict trace, or become an alternate Engine implementation.
+The suite SHALL keep the baseline, immutable byte snapshot, and same-path restored scenario state under `os.tmpdir()`, use `spawnSync` argument arrays rather than shell command interpolation, serialize scenarios that share the restored path, record pre/post authority snapshots around expected failures, and clean up in `after()` while preserving enough assertion context in the test output. A helper under `tests/e2e/helpers/` may wrap repeated CLI invocation, candidate fixture creation, byte snapshots, same-path restore, authority snapshots, and legal baseline construction; it cannot rewrite absolute bindings, calculate a gate/transition outcome, append a verdict trace, or become an alternate Engine implementation.
 
 ### Decision 7: Route the rerun proof set without inventing an Engine contract
 
@@ -349,7 +349,7 @@ No `DPT_FRAMEWORK/` or runtime bundle surface is modified.
 - **Custom artifact looks natively enforced** -> design/spec explicitly distinguish repo discipline from OpenSpec schema enforcement.
 - **Scope expands into missing per-row behavior** -> scenario is explicitly deferred rather than implemented in a test or hidden helper.
 - **E2E driver becomes a fake Engine** -> it may mutate only Agent-owned inputs; every deterministic consequence and authority mutation must come from real production boundaries, with no second transition/gate/receipt implementation.
-- **Long-chain suite becomes slow and brittle** -> keep external calls and real Agent work out of `tests/e2e/`, reuse focused tests for local contracts, assert only independent chain/failure facts, and keep the focused file within a 60-second local timeout budget.
+- **Long-chain suite becomes slow and brittle** -> keep external calls and real Agent work out of `tests/e2e/`, reuse focused tests for local contracts, restore one runtime-generated baseline only at its original path, assert only independent chain/failure facts, and keep the focused file within a 60-second local timeout budget.
 - **Long-chain proof exposes an existing framework bug** -> do not weaken the assertion or patch framework behavior outside the approved manifest; record the failing native boundary and return to explore/update the active change before expanding implementation scope or version impact.
 
 ## Migration Plan

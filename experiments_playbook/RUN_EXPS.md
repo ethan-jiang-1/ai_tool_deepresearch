@@ -28,7 +28,7 @@
 
 - **Light**：纯 JS/CLI/gate/filesystem E2E，跑得快，改完代码就该跑。
 - **Standard**：真实 bundle 多步骤执行（repair loop、artifact 检查等），无外部调用。
-- **Heavy**：内容含 WebSearch/WebFetch 或 subagent spawn——因为跑得慢单列。
+- **Heavy**：包含 real Agent/sub-agent、WebSearch/WebFetch、长链或其他昂贵/慢执行——因此单列。
 
 **Human（`exph_`）**：需要人类交互，自动跑会卡住；runner 跳过，由人类手动跑。
 
@@ -125,7 +125,7 @@ G14 `case-140` 至 `case-142` 已从 current runnable surface 删除，不保留
 | G60 autonomous-research-hardening | case-602 | `exp_autonomous-research-hardening/case-602-standard-status-drift-return-to-legal-phase.md` | BUG-042：status drift audit 检测手改/跳 phase，并指回 latest legal target |
 | G60 autonomous-research-hardening | case-603 | `exp_autonomous-research-hardening/case-603-standard-surfacing-intent-abort.md` | BUG-043：stop:no would-have-surfaced 记录 `surfacing_intent` 并保持 diagnostic-only |
 
-### Heavy（真实外部调用：WebSearch/WebFetch/subagent spawn，自动化可跑）
+### Heavy（真实 Agent/sub-agent、外部调用、长链或其他慢执行，自动化可跑）
 
 | Group | Case ID | Playbook | 验证什么 |
 |-------|---------|----------|---------|
@@ -144,6 +144,7 @@ G14 `case-140` 至 `case-142` 已从 current runnable surface 删除，不保留
 | G25 engine-boundary | case-406 | `exp_engine-boundary/case-406-heavy-real-subagent-boundary.md` | 真实 Sub-agent/WebSearch/WebFetch canary：work-unit task/beacon/receipt/result → submit → ledger/provenance/cache gate authority；无 real result 时 NOT RUN |
 | G25 engine-boundary | case-407 | `exp_engine-boundary/case-407-light-actor-preflight-fallback.md` | role-bound unavailable no-claim 零 authority mutation；显式单项 Phase Agent fallback submit/ledger provenance；later normal batch |
 | G27 evidence-extraction | case-163 | `exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md` | 真实 Agent/Sub-agent continuation canary：historical normal prerequisite → real rerun add 2 Topics → normal Wave0/Wave1 + supplement → hint-only same-Gate repair → declaration fault/hash-identical recovery；无 Agent/search/fetch 时 NOT RUN |
+| G24 wfn-rerun | case-318 | `exp_wfn_rerun/case-318-heavy-rerun-direction-recovery.md` | real subject Agent 写 current direction，恢复 direction/profile crash window，并通过 real rerun gate/handoff；setup-only、无 external calls，不证明 downstream research |
 | G60 autonomous-research-hardening | case-604 | `exp_autonomous-research-hardening/case-604-heavy-real-subagent-write-before-return.md` | BUG-039/040：真实 Sub-agent 写 result/receipt/output/cache 后才返回，nonce/identity 保持，submit 成功；无 native Sub-agent 时 NOT RUN |
 | G60 autonomous-research-hardening | case-605 | `exp_autonomous-research-hardening/case-605-heavy-bundle-containment-real-subagent.md` | BUG-037：真实 Sub-agent 写入全部留在 active bundle root，repo-root leak inspection clean；无 native Sub-agent 时 NOT RUN |
 

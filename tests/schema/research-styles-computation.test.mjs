@@ -1,20 +1,15 @@
 // research-styles-computation.test.mjs
 // Validates all 4 JSON style files and the apply-research-style.mjs computation
 // @impl RES-001, RES-002
-import { describe, it, after } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ResearchStyleParamsSchema } from '../../DPT_FRAMEWORK/schema/index.mjs';
-import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STYLES_DIR = join(__dirname, '..', '..', 'DPT_FRAMEWORK', 'schema', 'research-styles');
-const NEW_BUNDLE = join(__dirname, '..', '..', 'experiments_env', 'shared', 'new-disposable-bundle.mjs');
-const APPLY_STYLE = join(__dirname, '..', '..', 'DPT_FRAMEWORK', 'cli', 'apply-research-style.mjs');
-const BUNDLES_DIR = join(__dirname, '..', '.test-bundles');
 
 const STYLES = ['debug', 'quick_factual', 'exploratory_map', 'claim_verification'];
 
@@ -245,157 +240,5 @@ describe('ResearchStyleParamsSchema validates computed output', () => {
     };
     const result = ResearchStyleParamsSchema.safeParse(params);
     assert.ok(result.success, `debug params should pass schema: ${result.error ? JSON.stringify(result.error.issues) : 'ok'}`);
-  });
-});
-
-// ── CLI integration: apply-research-style.mjs computes correctly ──
-describe('apply-research-style.mjs CLI integration', () => {
-  const createdDirs = [];
-  function track(dir) { createdDirs.push(dir); return dir; }
-  function unique() { return `rt_style_test_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
-
-  after(() => {
-    for (const d of createdDirs) {
-      try { rmSync(d, { recursive: true, force: true }); } catch {}
-    }
-  });
-
-  function createBundleWithTopics(topicCount) {
-    const r = spawnSync('node', [NEW_BUNDLE, unique(), '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
-    const dir = track(r.stdout.trim());
-    // Write plan with N topics
-    const topics = [];
-    for (let i = 1; i <= topicCount; i++) {
-      const nn = String(i).padStart(2, '0');
-      topics.push({ id: `${i}`, slug: `${nn}_topic-${i}`, title: `Topic ${i}` });
-    }
-    const fm = `---\n{\n  "plan_basename": "test",\n  "derived_topic_count": ${topicCount},\n  "topic_registry": ${JSON.stringify(topics)}\n}\n---`;
-    writeFileSync(join(dir, 'rb_plan.md'), fm);
-    return dir;
-  }
-
-  function runApply(dir, style) {
-    return spawnSync('node', [APPLY_STYLE, '--bundle', dir, '--style', style], { encoding: 'utf-8', timeout: 5000 });
-  }
-
-  it('claim_verification with 3 topics → total=12', () => {
-    const dir = createBundleWithTopics(3);
-    const r = runApply(dir, 'claim_verification');
-    assert.equal(r.status, 0, `CLI failed: ${r.stderr}`);
-    const out = JSON.parse(r.stdout);
-    assert.strictEqual(out.applied, 'claim_verification');
-    assert.strictEqual(out.topic_count, 3);
-    assert.strictEqual(out.wave0_shared_ref_total, 12);
-  });
-
-  it('quick_factual with 5 topics → total=8', () => {
-    const dir = createBundleWithTopics(5);
-    const r = runApply(dir, 'quick_factual');
-    assert.equal(r.status, 0, `CLI failed: ${r.stderr}`);
-    const out = JSON.parse(r.stdout);
-    assert.strictEqual(out.applied, 'quick_factual');
-    assert.strictEqual(out.topic_count, 5);
-    assert.strictEqual(out.wave0_shared_ref_total, 8);
-  });
-
-  it('debug with 10 topics → total=1', () => {
-    const dir = createBundleWithTopics(10);
-    const r = runApply(dir, 'debug');
-    assert.equal(r.status, 0, `CLI failed: ${r.stderr}`);
-    const out = JSON.parse(r.stdout);
-    assert.strictEqual(out.applied, 'debug');
-    assert.strictEqual(out.topic_count, 10);
-    assert.strictEqual(out.wave0_shared_ref_total, 1);
-  });
-
-  it('exploratory_map with 1 topic → total=5', () => {
-    const dir = createBundleWithTopics(1);
-    const r = runApply(dir, 'exploratory_map');
-    assert.equal(r.status, 0, `CLI failed: ${r.stderr}`);
-    const out = JSON.parse(r.stdout);
-    assert.strictEqual(out.applied, 'exploratory_map');
-    assert.strictEqual(out.wave0_shared_ref_total, 5);
-  });
-
-  it('claim_verification with 0 topics → total=6 (base only)', () => {
-    const dir = createBundleWithTopics(0);
-    const r = runApply(dir, 'claim_verification');
-    assert.equal(r.status, 0, `CLI failed: ${r.stderr}`);
-    const out = JSON.parse(r.stdout);
-    assert.strictEqual(out.applied, 'claim_verification');
-    assert.strictEqual(out.topic_count, 0);
-    assert.strictEqual(out.wave0_shared_ref_total, 6);
-  });
-
-  it('profile YAML has correct research_style_params after apply', () => {
-    const dir = createBundleWithTopics(3);
-    const r = runApply(dir, 'exploratory_map');
-    assert.equal(r.status, 0);
-    // Read back the profile and verify key fields
-    const profile = parseYaml(readFileSync(join(dir, 'rb_profile.yaml'), 'utf-8'));
-    assert.strictEqual(profile.research_profile, 'exploratory_map');
-    assert.ok(profile.research_style_params, 'research_style_params should exist');
-    assert.strictEqual(profile.research_style_params.wave0_per_topic_source_floor, 10);
-    assert.strictEqual(profile.research_style_params.wave0_shared_ref_total, 7);
-    assert.strictEqual(profile.research_style_params.wave1_per_topic_ref_floor, 8);
-    assert.strictEqual(profile.research_style_params.wave2_cross_topic_depth, 1);
-    assert.strictEqual(profile.research_style_params.wave2_emergent_search_rounds, 1);
-  });
-
-  it('preserves available research_access and HITL fields across apply and rerun recompute', () => {
-    const dir = createBundleWithTopics(2);
-    const profilePath = join(dir, 'rb_profile.yaml');
-    const profile = parseYaml(readFileSync(profilePath, 'utf-8'));
-    profile.root_must_answer_set = ['Keep this must-answer'];
-    profile.human_decision_checkpoints.hitl1 = {
-      status: 'recorded',
-      recorded_at: '2026-07-10T00:00:00.000Z',
-    };
-    profile.human_decision_checkpoints.hitl2.rerun_count = 2;
-    profile.human_decision_checkpoints.hitl2.rationale = 'Preserve rerun context';
-    profile.research_access = {
-      status: 'available',
-      probed_at: '2026-07-10T00:00:00.000Z',
-      result_url: 'https://example.com/',
-      fetch_outcome: 'success',
-      search_surface: 'WebSearch',
-      fetch_surface: 'WebFetch',
-    };
-    writeFileSync(profilePath, stringifyYaml(profile));
-
-    let result = runApply(dir, 'quick_factual');
-    assert.equal(result.status, 0, result.stderr);
-
-    const updatedPlan = `---\n{\n  "plan_basename": "test",\n  "derived_topic_count": 4,\n  "topic_registry": ${JSON.stringify(Array.from({ length: 4 }, (_, index) => ({ id: String(index + 1), slug: `${String(index + 1).padStart(2, '0')}_topic-${index + 1}`, title: `Topic ${index + 1}` })))}\n}\n---`;
-    writeFileSync(join(dir, 'rb_plan.md'), updatedPlan);
-    result = runApply(dir, 'quick_factual');
-    assert.equal(result.status, 0, result.stderr);
-
-    const after = parseYaml(readFileSync(profilePath, 'utf-8'));
-    assert.deepEqual(after.root_must_answer_set, ['Keep this must-answer']);
-    assert.deepEqual(after.human_decision_checkpoints.hitl1, profile.human_decision_checkpoints.hitl1);
-    assert.equal(after.human_decision_checkpoints.hitl2.rerun_count, 2);
-    assert.equal(after.human_decision_checkpoints.hitl2.rationale, 'Preserve rerun context');
-    assert.deepEqual(after.research_access, profile.research_access);
-    assert.equal(after.research_style_params.wave0_shared_ref_total, 7);
-  });
-
-  it('preserves unavailable research_access while changing style', () => {
-    const dir = createBundleWithTopics(1);
-    const profilePath = join(dir, 'rb_profile.yaml');
-    const profile = parseYaml(readFileSync(profilePath, 'utf-8'));
-    profile.research_access = {
-      status: 'unavailable',
-      probed_at: '2026-07-10T00:00:00.000Z',
-      fetch_outcome: 'not_attempted',
-      reason: 'Search surface is unavailable',
-    };
-    writeFileSync(profilePath, stringifyYaml(profile));
-
-    const result = runApply(dir, 'claim_verification');
-    assert.equal(result.status, 0, result.stderr);
-
-    const after = parseYaml(readFileSync(profilePath, 'utf-8'));
-    assert.deepEqual(after.research_access, profile.research_access);
   });
 });

@@ -24,7 +24,7 @@ const CLI_CONVENTION_INVENTORY = {
   },
   'apply-research-style.mjs': {
     class: 'non-gate binary utility',
-    coverage: ['tests/schema/research-styles-computation.test.mjs', 'this file: missing args exits 1'],
+    coverage: ['tests/integration/cli/apply-research-style.test.mjs', 'this file: missing args exits 1'],
   },
   'check-reentry.mjs': {
     class: 'non-gate structured utility with code 2 caller/config errors',

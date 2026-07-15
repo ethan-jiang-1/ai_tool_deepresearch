@@ -301,7 +301,8 @@ The project charter should not become a directory manifest. Treat these paths as
 | Framework implementation | `DPT_FRAMEWORK/` | reusable framework assets: workflow nodes, schemas, gate definitions, CLIs, deterministic engines, trace utilities, templates, command playbooks — no tests and no runtime state |
 | Agent-facing guidance | `guidelines/` | principles, reading routes, mechanism guidance, quality bars |
 | Experiments and fixtures | `experiments_env/` and `experiments_playbook/` | prototype fixtures, shared experiment setup, command experiment playbooks |
-| Regression checks | `tests/` | executable tests for accepted behavior |
+| JS-led verification | `tests/` | `unit`, `integration`, and `deterministic_e2e` executable tests for accepted deterministic behavior |
+| Agent Flow verification | `experiments_playbook/` | coding-Agent-executed Markdown `agent_flow_e2e` over real disposable bundles |
 | Runtime bundle roots | currently `dpt_rb_*` and `dpt_disp_*` | active run/experiment state, evidence, receipts, trace, artifacts, work-unit attempts |
 
 The stable rule is ownership, not a specific tree snapshot:
@@ -357,7 +358,7 @@ Explore / design
 5. 修改 framework implementation 必须由 OpenSpec change、accepted spec 或明确任务覆盖。
 6. 裁决只从真实文件、schema 校验、receipt、trace JSONL 或 accepted verdict source 来。
 7. 不读 `_original_*` 归档，除非用户明确要求分析历史版本。
-8. `DPT_FRAMEWORK/` 是纯框架目录，可发行，运行时视为 read-only framework assets。不放测试文件、实验 fixture、实验 playbook，也不放 per-run runtime state。测试统一在 root `tests/`。
+8. `DPT_FRAMEWORK/` 是纯框架目录，可发行，运行时视为 read-only framework assets。不放测试文件、实验 fixture、实验 playbook，也不放 per-run runtime state。JS-led `unit`、`integration`、`deterministic_e2e` 在 root `tests/`；Markdown-led `agent_flow_e2e` 在 `experiments_playbook/`。分类语义见 accepted `verification-routing` spec。
 9. `dpt_rb_*` 和 `dpt_disp_*` 是 mutable runtime bundle root；HITL、gate attempt、trace、repair、artifact、delegated work-unit attempt、final output 等运行时事实必须写在 active bundle root。裸 runtime path 一律按 active bundle-root relative 解析。
 
 ---

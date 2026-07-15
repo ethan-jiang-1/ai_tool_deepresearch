@@ -1,8 +1,12 @@
-# Verification Routing (delta)
+# Verification Routing
 
 > req: VER-001, VER-002, VER-003, VER-004, VER-005
 
-## ADDED Requirements
+## Purpose
+
+Define the canonical verification taxonomy, claim routing contract, execution-profile semantics, asset checks, and native verdict boundaries for repository changes.
+
+## Requirements
 
 ### Requirement: Verification claims SHALL route through one of four test classes
 
@@ -167,7 +171,7 @@ The initial application of this capability SHALL replace the proposed repo-top-l
 
 - deterministic direction resolution remains covered by a focused `unit` test;
 - current-round `--eligible-rows` filtering and legacy exclusion warnings SHALL be exercised through the actual work-unit inspect CLI under `tests/integration/cli/`, using isolated temporary bundles and no test-local reimplementation of Engine filtering;
-- `tests/e2e/rerun-round-continuity.test.mjs` SHALL produce one immutable, test-run-local legal baseline HITL2 source window from production bundle instantiation and real predecessor gates. The happy case SHALL continue from that baseline through HITL2 -> phase-rerun -> seed-topics -> wave0 -> wave1 -> wave2 -> HITL2; independent fault cases MAY clone the runtime-generated baseline into separate temporary bundles before injecting one variation and running the affected real suffix. The suite SHALL NOT commit/cache the baseline across test runs or hand-write a predecessor gate attempt to start at HITL2. A JS driver SHALL simulate Markdown/Agent-owned writes and explicitly labeled actor candidate files, while real production CLIs own their acceptance, submitted status, declaration ledger effects, gate attempts, transitions, status synchronization, trace, and fail-closed behavior;
+- `tests/e2e/rerun-round-continuity.test.mjs` SHALL produce one immutable, test-run-local legal baseline HITL2 source window from production bundle instantiation and real predecessor gates. The happy case SHALL continue from that baseline through HITL2 -> phase-rerun -> seed-topics -> wave0 -> wave1 -> wave2 -> HITL2; before each serialized independent fault case, the harness MAY restore a byte snapshot to the same original active bundle path before injecting one variation and running the affected real suffix. It SHALL NOT copy the baseline to another runtime path or rewrite absolute work-unit/beacon bindings. The suite SHALL NOT commit/cache the baseline across test runs or hand-write a predecessor gate attempt to start at HITL2. A JS driver SHALL simulate Markdown/Agent-owned writes and explicitly labeled actor candidate files, while real production CLIs own their acceptance, submitted status, declaration ledger effects, gate attempts, transitions, status synchronization, trace, and fail-closed behavior;
 - writing a current rerun direction and recovering the controlled direction/profile interruption SHALL be covered by the selected heavy real-Agent rerun playbook under `experiments_playbook/exp_wfn_rerun/`, using a fresh disposable bundle, real Agent execution, and a trace-backed verdict;
 - the real disposable bundle used by the `agent_flow_e2e` case SHALL remain its runtime context, with clean PASS cleanup and failure/health-issue preservation; it SHALL NOT be represented as another test class.
 
@@ -185,7 +189,7 @@ The backlog's per-row projection-authority scenario SHALL remain outside this ch
 
 - **WHEN** the `tests/e2e/` rerun chain advances through phase boundaries or injects a malformed, missing, stale, future/crash-window, or partial Agent-owned artifact
 - **THEN** its initial immutable baseline SHALL be produced during that test run through real predecessor gate, handoff, and status paths rather than a test-authored gate attempt or committed fixture
-- **AND** each scenario SHALL continue from the baseline or an isolated clone without sharing mutable runtime state
+- **AND** each serialized scenario SHALL continue after byte restoration to the original baseline path without sharing prior scenario mutations or rewriting absolute runtime bindings
 - **AND** the JS driver MAY write that explicitly labeled Agent/human-owned Markdown/YAML/artifact fixture input
 - **AND** candidate actor result/receipt/output fixtures SHALL gain no authority until accepted by real production work-unit submit paths
 - **AND** every gate attempt, transition, status change, submitted work-unit state, declaration ledger effect, trace event, rejection, and recovery verdict SHALL come from the real production CLI/Engine path
@@ -228,3 +232,4 @@ A narrow static `integration` contract SHALL guard the high-frequency knowledge 
 - **WHEN** a high-frequency verification entry surface or experiment cost summary drifts after this change
 - **THEN** the selected static `integration` contract SHALL fail on the competing identifier, missing canonical pointer, or contradictory cost definition
 - **AND** the contract SHALL direct repair to that owned document rather than becoming a second routing authority
+

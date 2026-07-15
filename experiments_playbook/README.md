@@ -1,6 +1,6 @@
 # experiments_playbook
 
-受控的端到端实验流程。由 Agent 按 playbook 逐步执行，每一步都是真实操作——真实 bundle、真实 gate、真实 trace——**不是 mock**。
+`agent_flow_e2e` 实验流程。由 coding Agent 按 Markdown playbook 逐步执行，每一步都是真实操作——真实 bundle、真实 gate、真实 trace——**不是 mock**。完整路由语义见 accepted `verification-routing` spec。
 
 ## 规则
 
@@ -54,15 +54,15 @@ experiments_playbook/
 |------|------|-----------|
 | Light | 纯 JS/CLI/gate/filesystem，无外部调用 | 改完代码就该跑 |
 | Standard | 真实 bundle 多步骤，无外部调用 | 功能验证 |
-| Heavy | WebSearch/WebFetch/subagent 真实外部调用 | 完整验证 |
+| Heavy | real Agent/sub-agent、WebSearch/WebFetch、长链或其他昂贵/慢执行 | 完整验证 |
 
 `RUN_EXPS.md` 只列当前可运行 proof surfaces。旧 relay/slot、旧 queue slot shape、旧手写 delegated ledger 不能作为当前 production path 证明；有价值的 case 应迁移到 current work-unit / queue v2 路径，否则移出当前 playbook surface。
 
 ## 跟其他目录的关系
 
 ```
-experiments_playbook/ ← E2E 流程：Agent 忠实执行 playbook，产出 trace 裁决
+experiments_playbook/ ← agent_flow_e2e：coding Agent 忠实执行 Markdown playbook，产出 trace 裁决
 experiments_env/      ← 支撑工具：new-disposable-bundle、wff-utils 等
 DPT_FRAMEWORK/        ← 被测试对象：engine、gate、schema、cli
-tests/                ← 回归测试：更细粒度的 unit + integration
+tests/                ← JS-led unit + integration + deterministic_e2e
 ```
