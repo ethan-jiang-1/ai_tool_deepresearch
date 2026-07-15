@@ -1,69 +1,114 @@
 schema_version: verification-routing/v1
 change: formalize-verification-routing
-methods:
-  regression:
+test_classes:
+  unit:
     status: selected
-    rationale: Deterministic direction and current-round authority contracts need fast regression coverage at their direct helper and CLI boundaries.
-  controlled_e2e:
+    rationale: Focused parser and direction-resolver contracts need fast isolated node:test coverage.
+  integration:
     status: selected
-    rationale: The claim that an Agent follows phase-rerun guidance and recovers an interruption cannot be proven by fixture state or a Node test.
-  real_environment_e2e:
-    status: deferred
-    rationale: This proposal does not select or mutate a production run bundle.
-    observation_trigger: A user selects a production dpt_rb bundle for a claim that depends on live host, Agent, or external conditions.
+    rationale: The route checker and current-round authority claims cross real CLI, filesystem, or temporary-bundle boundaries.
+  deterministic_e2e:
+    status: selected
+    rationale: A JS-led full chain must exercise state combinations, fail-closed behavior, and recovery through production Engine paths without claiming Agent intelligence.
+  agent_flow_e2e:
+    status: selected
+    rationale: A real Agent must execute the Markdown phase-rerun flow over a real disposable run bundle to prove direction production and recovery behavior.
 claims:
-  - id: routing-checker-plan-and-assets-contract
-    class: deterministic_contract
-    method: regression
+  - id: routing-contract-schema
+    statement: The shared strict parser rejects invalid route documents and incompatible cross-field combinations without accessing repository assets or mutating state.
+    test_class: unit
+    proof_subject: deterministic_contract
     asset:
-      kind: regression_test
-      path: tests/governance/check-verification-routing.test.mjs
-    production_distance:
-      fixture: fixture_backed
-      agent_actor: none
+      kind: node_test
+      path: tests/governance/verification-routing-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
       external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: routing-checker-plan-and-assets-contract
+    statement: The read-only checker CLI rejects unsafe, missing, or unregistered assets through its real process and filesystem boundaries without executing evidence paths or mutating repository state.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/check-verification-routing.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: rerun-direction-engine-contract
-    class: deterministic_contract
-    method: regression
+    statement: The direction resolver returns the accepted matching, stale, future, legacy-unbound, and invalid states for rerun-count combinations.
+    test_class: unit
+    proof_subject: deterministic_contract
     asset:
-      kind: regression_test
+      kind: node_test
       path: tests/engine/helpers/wave-contract-evaluators-direction.test.mjs
-    production_distance:
+    execution_profile:
       fixture: none
-      agent_actor: none
+      subject_execution: none
+      runtime: none
       external_calls: none
+      verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: rerun-current-round-cli-contract
-    class: deterministic_contract
-    method: regression
+    statement: The real work-unit inspect CLI returns only current-round eligible submitted rows, reports legacy exclusions, and fails closed on inconsistent authority.
+    test_class: integration
+    proof_subject: deterministic_contract
     asset:
-      kind: regression_test
+      kind: node_test
       path: tests/integration/cli/rerun-round-continuity.test.mjs
-    production_distance:
+    execution_profile:
       fixture: fixture_backed
-      agent_actor: none
+      subject_execution: none
+      runtime: temporary_bundle
       external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: verification-knowledge-surface-contract
+    statement: High-frequency repository guidance surfaces expose the four canonical test-class identifiers and owned directory pointers without restoring ordinal, regression-only, controlled-E2E, or runtime-distance peer taxonomies.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/verification-routing-knowledge-surfaces.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rerun-deterministic-full-chain
+    statement: A runtime-generated legal baseline can traverse the deterministic rerun chain, while injected state and artifact faults fail or recover through their real production consumers without fabricated Engine authority.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/rerun-round-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: rerun-direction-agent-recovery
-    class: agent_flow
-    method: controlled_e2e
+    statement: A real Agent follows phase-rerun guidance to write the current direction and recover the controlled direction-profile interruption after the setup-only fixture boundary.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
     asset:
-      kind: controlled_playbook
-      path: experiments_playbook/exp_rerun-round-continuity/case-318-heavy-rerun-direction-recovery.md
-    production_distance:
-      fixture: none
-      agent_actor: real_agent
+      kind: markdown_playbook
+      path: experiments_playbook/exp_wfn_rerun/case-318-heavy-rerun-direction-recovery.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
       external_calls: none
+      verdict_judge: deterministic
     verdict_authority: trace_jsonl
-  - id: rerun-production-observation
-    class: production_behavior
-    method: real_environment_e2e
-    asset:
-      kind: production_runtime
-      runtime_selector: A user-approved dpt_rb bundle selected at observation time.
-    production_distance:
-      fixture: not_applicable
-      agent_actor: real_agent
-      external_calls: real
-    verdict_authority: runtime_bundle_facts

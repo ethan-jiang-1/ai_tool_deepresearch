@@ -1,49 +1,54 @@
 ## Why
 
-> **触发来源**：`_backlog/plans/tests-e2e-layer.md`。该计划正确指出了确定性 Engine 与非确定性 Agent 行为不能混测，但把它表达成顶层 `tests_e2e/` 第四层，和项目当前已接受的三种验证手段及“所有回归测试位于 `tests/`”的边界发生冲突。
+> **触发来源**：`_backlog/plans/tests-e2e-layer.md`。该计划正确指出确定性 Engine 与非确定性 Agent 行为不能混测，但把差异表达成新的 repo-top-level `tests_e2e/` surface，和项目当前“所有 JS-led tests 位于 `tests/`”的边界冲突。
 
-目前缺少的不是又一个测试 runner，而是一条从 change 的证明主张到测试资产、执行环境和 verdict authority 的明确路由。结果是：确定性跨 phase 场景可能被昂贵 playbook 覆盖，Agent 行为可能被 fixture 假装覆盖，真实环境 E2E 又没有被诚实地记录为 deferred。`seed-backfill-round-continuity` 还暴露了这个问题：其 task 10.7 已标记为完成，但引用的 `experiments_playbook/exp_rerun-round-continuity/` 事实上不存在；现有 round-continuity integration test 主要手写状态并自行过滤，未形成真实 CLI consumer 的证明。
+目前缺少的不是又一个 runner，而是一条从 change 的证明主张到 `test_class`、`proof_subject`、资产边界、execution profile 和 native verdict authority 的明确路由。结果是：确定性跨 phase 场景被迫依赖代价高、低频执行的 Markdown playbook，日常 JS suite 看不到长链状态组合与异常恢复；subject-Agent 行为又可能被 fixture 假装覆盖。`seed-backfill-round-continuity` 还暴露了一个已发生故障：task 10.7 被勾选，但引用的 `agent_flow_e2e` 资产不存在；现有 round-continuity `integration` test 主要手写状态并自行过滤，也没有消费真实 CLI output。
 
 ## What Changes
 
-- 新增 `verification-routing` capability，定义三条互斥的验证方法：`regression`、`controlled_e2e`、`real_environment_e2e`。Unit、integration 和跨 phase CLI scenario 是 regression 内部粒度，不是第四条方法。
-- 为每个后续 change 引入 change-owned 的 `verification-plan.yaml`：按证明主张声明所选方法、允许的资产、production distance、verdict authority，以及未选或 deferred 方法的理由。
-- 新增一个窄的 OpenSpec governance validator，只校验 plan 的方法/资产/claim 映射和引用路径；它不运行 Agent、不重写 playbook、不记录 PASS，也不成为测试结果 authority。
-- 将验证选择接入 proposal、apply 前检查和 archive 前检查：作者先显式选择证明路径，Agent 再执行已选择的机械测试，最终结果仍分别来自 `node:test` exit、disposable bundle 的 trace JSONL 或真实 production bundle 的 runtime facts。
-- 以 rerun round continuity 作为首个路由实例：确定性 direction/eligible-row/per-row-authority 断言进入 `tests/integration/cli/` 的真实 CLI scenario；Agent 写方向和崩溃恢复进入一个真实 Agent 驱动的 controlled E2E playbook；真实环境验证保留为显式 deferred 观察，不由 fixture 或 playbook 冒充。
-- 纠正 backlog 的落点：不创建顶层 `tests_e2e/`，不添加把 Node tests 与 Agent playbooks 混跑的 `test:all`，也不把 `README.md` 当作 runnable playbook。已标记但不存在的 rerun playbook 必须在新 route 的实际资产落地后以真实证据重新核对。
-- 统一知识面与术语（VER-005）：三方法 taxonomy 的 canonical 定义唯一存在于 `verification-routing` main spec。`openspec/config.yaml` 测试分层节、`AGENTS.md`/`CLAUDE.md` 的 Test layering 规则、`guidelines/project-charter.md` 的目录职责行，在 apply 时改写为「资产归属事实 + 指向 verification-routing 的引用」，删除各自的完整三层复述；「第一/二/三层」序数命名退役，不再作为方法标识符。这是净简化：四处平行复述收敛为一处 authority + 三处 pointer。
+- 新增 `verification-routing` capability，只定义一套 normative taxonomy：`unit`、`integration`、`deterministic_e2e`、`agent_flow_e2e` 四类 tests。前三类位于 `tests/` 并由 JS 驱动；后一类位于 `experiments_playbook/`，由 coding Agent 执行 Markdown playbook。`regression`、`controlled E2E`、cost、actor 和 bundle 类型都不再成为平行分类字段。
+- 为本 change 及其后新建的 change 引入 change-owned `verification-plan.yaml`，按证明主张声明 canonical `test_class`、资产、execution profile 和 native verdict authority；四类测试均须声明为 `selected` 或 `not_applicable`。执行机制由 test class 唯一推导，不在 plan 中重复存储。
+- 新增一个窄的 repo-governance checker。它使用 strict Zod contract 校验 plan shape、跨字段 route mapping、路径边界和 selected asset registration；它不运行测试或 playbook，不记录 PASS/FAIL，也不成为 execution evidence authority。
+- 通过 `openspec/config.yaml` 规则和每个 change 的 apply/archive tasks 接入该 checker。该接入是 repo lifecycle discipline，不伪装成 OpenSpec CLI 原生 artifact gate；标准 `openspec status/validate` 仍只认识 schema-declared artifacts。
+- 以 rerun round continuity 作为首个 route：focused helper 与 CLI checks 分别进入 `unit` 和 `integration`；新增 `tests/e2e/` 作为 `deterministic_e2e` boundary，由 JS driver 模拟 Markdown/Agent-owned 文件动作并串联真实 CLI/gate/transition/trace；subject Agent 写 direction 并恢复受控 interruption 则进入 `agent_flow_e2e`，在真实 `dpt_disp_*` disposable run bundle 上执行，PASS 后清理、FAIL 或 health issue 时保留现场。
+- 明确不在本 change 内实现 backlog 场景 6 的 per-row projection-authority checker。当前没有可复用的 accepted Engine/CLI contract，而本 change 不修改 `DPT_FRAMEWORK/`；该场景需要单独的 behavior change，不能在 test 中重写一份假 checker。
+- 不创建 repo 顶层 `tests_e2e/`；JS-led 长链 proof 放在现有 `tests/` authority 下的 `tests/e2e/`。不添加混跑 `node_test` 与 `markdown_playbook` 的 `test:all`，不把 README 或勾选的 task 当成 runnable proof asset。
+- 统一知识面术语（VER-005）：canonical taxonomy 最终只存在于 accepted `verification-routing` main spec；其他知识面只保留各自拥有的资产边界事实和 pointer，不复制 route matrix、plan schema 或 validator behavior。
 
 ## Capabilities
 
 ### New Capabilities
 
-- `verification-routing`: change proof claims route to one of the three accepted verification methods, with explicit asset provenance, execution boundary, verdict authority, and deferred-state semantics.
+- `verification-routing`: change proof claims route through one of four canonical test classes with explicit proof subject, asset provenance, execution profile, verdict authority, and selected/not-applicable semantics.
 
 ### Modified Capabilities
 
-- None.
+- `workflow-directory-contract`: update WDC-005 from its incomplete two-class JS boundary to the four canonical test classes and owned directories.
 
 ## Impact
 
-- Affected governance surfaces: `openspec/config.yaml`, `openspec/governance/`, active-change artifacts, and the requirement registry during apply.
-- Affected knowledge surfaces (VER-005, apply-time rewording, no behavior change): `AGENTS.md` 与 `CLAUDE.md` 的 Test layering hard rule、`openspec/config.yaml` 测试分层节、`guidelines/project-charter.md` 目录职责表中的 tests/experiments 行——统一改为 canonical method identifiers + 指向 `verification-routing` 的引用。若不更新这些面，路由机制只存在于 governance 而未来 Agent 读到的仍是旧三层 prose，机制即失效——知识面传播是本 change 的一等目标，不是附带清理。
-- Affected proof assets: `tests/integration/cli/rerun-round-continuity.test.mjs`, a new case playbook under `experiments_playbook/`, and the active runner manifest/readme that exposes that case.
-- `DPT_FRAMEWORK/` runtime behavior, schemas, CLI contracts, bundle state, and package dependencies do not change; no framework version bump is required.
-- Direct Source of Record for route selection is the change's `verification-plan.yaml`. It is planning authority only: regression exit status, trace JSONL verdicts, and selected production bundle facts remain the direct evidence authorities.
-- Shortest legal loop: claim -> explicit route -> one validator for plan shape -> chosen real test path -> its native verdict. This removes the proposed fourth top-level suite and avoids a new universal runner, derived result registry, or fixture-to-Agent equivalence layer.
-- Responsibility boundary: the user only selects a real production environment or accepts its risk when that method is needed; the Agent executes legal regression and controlled-playbook steps; governance checks route shape; Engine/CLI and trace retain deterministic verdict authority. A human-directed choice never converts fixture output into Agent or production evidence.
+- New governance assets: `openspec/governance/verification-routing-contract.mjs`, `openspec/governance/check-verification-routing.mjs`, a focused parser unit test under `tests/governance/`, and checker CLI/asset integration coverage under `tests/integration/governance/` during apply.
+- Existing test convergence: move the governance-check, gate-monitor, and bundle-health subprocess suites under `tests/integration/`; split production-CLI scenarios out of the mixed queue-manager and research-style unit files; and add a narrow knowledge-surface contract so current repository assets and future guidance obey the same behavior-first classification.
+- Change-planning assets: change-owned `verification-plan.yaml`, apply evidence, canonical VER summaries in `openspec/governance/req-registry.yaml`, and lifecycle rules in `openspec/config.yaml`.
+- Rerun proof assets: focused `tests/integration/cli/rerun-round-continuity.test.mjs`, deterministic long-chain `tests/e2e/rerun-round-continuity.test.mjs`, `tests/e2e/README.md`, and real-Agent `experiments_playbook/exp_wfn_rerun/case-318-heavy-rerun-direction-recovery.md` with exact active `RUN_EXPS.md` registration.
+- Knowledge surfaces: `AGENTS.md`, `CLAUDE.md`, root/test/experiment README files, the runner's cost summary, `guidelines/project-charter.md`, and the nearest command-experiment navigation guidance. These retain only owned boundary facts plus a pointer; experiment entry surfaces also converge on the existing cost definition so a real-Agent case can be `heavy` without external calls.
+- Accepted-spec convergence: the WDC-005 delta aligns the structurally incomplete test-boundary requirement found by the `openspec/specs/` terminology audit. AGT-010 remains unchanged: its optional heavy canary rule is capability-specific, while this change independently selects case-318 as an acceptance-critical `agent_behavior` claim. Ordinary end-to-end prose and controlled-E2E descriptions remain compatible aliases rather than rewritten identifiers.
+- Historical/source reconciliation: annotate `_backlog/plans/tests-e2e-layer.md` only after replacement proof executes; reconcile `seed-backfill-round-continuity` task 10.7 only from the new case's native trace evidence.
+- `DPT_FRAMEWORK/` behavior, schema, CLI, bundle state, dependencies, and version do not change. No framework version bump is required.
+- Direct Source of Record for route selection is the change's `verification-plan.yaml`; native evidence remains `node_test_exit` for JS-led classes and `trace_jsonl` for `agent_flow_e2e`.
+- Shortest legal loop: claim -> plan route -> one read-only route checker -> selected real execution path -> native verdict. No universal runner, result registry, parallel taxonomy, or fixture-to-subject-Agent equivalence layer is added.
+- Responsibility boundary: the coding Agent writes the plan and executes the selected assets; repo governance checks route shape; Engine/CLI/`node_test_exit`/`trace_jsonl` retain deterministic verdict authority; `subject_execution` and `verdict_judge` preserve actor/judge provenance. A future live-production observation is separately scoped execution distance, not another test class.
 
 ## Simplicity Admission Test（evolution-simple-reliable-control）
 
 1. **最短合法闭环和直接 Source of Record 是什么？**
-   闭环：claim → `verification-plan.yaml` 显式路由 → 一个只读 shape validator → 所选方法的真实测试路径 → 该路径的 native verdict。路由选择的 Source of Record 是 change-owned `verification-plan.yaml`（唯一新增 authority，owner 是 change 作者，reader 是 validator 与 apply/archive checks，随 change 归档失效）；证据 authority 不变——`node:test` exit、bundle trace JSONL、production bundle runtime facts。
+   claim -> `verification-plan.yaml` -> static route check -> selected test/playbook path -> native verdict。Plan 只拥有 route intent；它不保存 execution result。
 2. **删除、合并或避免了哪份复杂度？**
-   避免：顶层 `tests_e2e/` 第四层套件、混跑 Node tests 与 Agent playbooks 的 `test:all`、新 test runner、PASS/FAIL 聚合层、fixture 冒充 Agent 证据的等价层。删除/合并：四处平行的三层 prose 复述收敛为一处 canonical 定义 + 三处 pointer（VER-005）；「已勾选 task ≠ 资产存在」这条隐性记忆规则由 `--mode assets` 的确定性检查替代。净额：新增一个 plan 文件格式 + 一个只读 validator，换来一个第四层套件的永久避免和四处 drift 面的收敛。
+   避免 repo 顶层 `tests_e2e/`、平行 taxonomy、混合 runner、PASS 聚合层和 fixture-as-subject-Agent 等价层；将 `deterministic_e2e` 收入现有 `tests/` authority；将散落的 taxonomy prose 收敛为一处 authority + 短 pointer；将“记得核对资产是否存在/注册”替换为一个只读 checker。不新增 runtime state 或 Agent Flow controller。
 
 ## Helper Direction Review（evolution-helper-oriented-agent）
 
 1. **哪个决定确实需要用户？**
-   仅两类：为 `real_environment_e2e` 选定某个生产 bundle（`dpt_rb_*`）并接受在其上观察的风险；以及批准 proposal 中的路由选择本身（propose→apply 的既有 HITL 边界）。方法 taxonomy 判断、plan 文件编写、资产落点都是 Agent 在 accepted contract 内的机械/半机械工作，不推给用户。
+   当前 acceptance 没有额外用户决定；Route 编写、静态检查、JS-led classes 和 disposable-bundle `agent_flow_e2e` 执行由 coding Agent 完成。未来若另行要求 live-production observation，再单独确认对象、成本与风险。
 2. **用户决定后哪些步骤立即回到 Agent？**
-   写 plan、跑 `check-verification-routing.mjs` 两个 mode、编写 regression tests 与 playbook、登记 runner manifest、修复 validator 报出的路由错误并重跑同一 validator（same-check repair）。Validator 失败输出遵循 contract-lineage-aware 反馈形状：缺哪个 claim 字段/资产、写到哪个文件、重跑哪个命令——一个根因一个最近动作，不输出竞争性恢复路线。Validator 是只读 verdict，不是 permission：它不执行 playbook、不改 bundle、不把用户的路由批准转化为任何 mutation capability。
+   coding Agent 仅在新 scope 明确授权后读取相应 runtime 事实；该授权不改变本 change 的四类 `test_class` taxonomy，也不允许 fixture 或 disposable bundle 被扩大解释为 live-production evidence。

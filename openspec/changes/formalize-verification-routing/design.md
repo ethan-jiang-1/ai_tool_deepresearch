@@ -1,181 +1,369 @@
 ## Context
 
-The project already has three environment-level verification methods in `openspec/config.yaml` and the root README:
+The repository already has four useful test shapes but lacks one canonical vocabulary for them: focused JS tests, JS integration tests, JS full-chain state tests, and coding-Agent-executed Markdown playbooks.
 
-1. `tests/` regression for deterministic code and CLI behavior.
-2. `experiments_playbook/` controlled E2E over a real disposable bundle and trace verdict.
-3. Real-environment E2E over an explicitly selected production bundle, currently deferred.
+`_backlog/plans/tests-e2e-layer.md` correctly separates deterministic Engine proof from Agent proof, but models deterministic cross-phase scenarios as a new top-level `tests_e2e/` layer. The stable model uses one four-way class choice, then records proof subject and execution facts separately:
 
-`_backlog/plans/tests-e2e-layer.md` discovers a useful missing proof shape, but expresses it as a fourth top-level `tests_e2e/` layer. That mixes two axes: a test's claim subject (Engine versus Agent) and its execution method. It also conflicts with the repository rule that all regression tests live under `tests/`.
+```text
+test_class              control surface / owned boundary
+--------------------    ------------------------------------------
+unit                    JS-led / tests/
+integration             JS-led / tests/integration/
+deterministic_e2e       JS-led full chain / tests/e2e/
+agent_flow_e2e          coding Agent + Markdown / experiments_playbook/
+```
 
-The design must make future changes choose evidence deliberately without turning OpenSpec governance into a test runner or allowing a planning document to manufacture a PASS. It also needs to establish the missing rerun controlled-E2E asset without treating the checked-but-absent task in `seed-backfill-round-continuity` as evidence.
+A selected live `dpt_rb_*` observation may be useful in a future change, but it is not a fifth test class. Treating the runtime object, cost, or proof subject as a peer class caused the original category error.
+
+The initial rerun case also exposes two concrete proof failures: a checked task names a missing playbook, and the current integration test reimplements current-round filtering instead of consuming the real CLI. This change routes those claims without creating another runner or changing framework runtime behavior.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Establish three stable verification methods and make their asset, claim, and verdict boundaries executable as governance rules.
-- Make every new change declare why each method is selected, deferred, or not applicable before apply.
-- Give deterministic cross-phase CLI behavior a home inside `tests/`, while giving real Agent-flow claims a trace-backed controlled-E2E path.
-- Make the initial rerun continuity route concrete enough to expose missing proof assets and prevent fixture-backed overclaims.
-- Preserve the native authority of Node assertions, trace JSONL, and selected runtime bundle facts.
+- Define one canonical four-test-class taxonomy and an explicit claim-to-class route contract.
+- Make new changes declare selected and not-applicable verification decisions before target edits.
+- Keep route selection separate from native execution verdicts.
+- Route focused deterministic rerun behavior to `unit`/`integration`, simulated Markdown-action long chains to `deterministic_e2e`, and the real-Agent direction/recovery playbook to `agent_flow_e2e`.
+- Make rerun state combinations and failure/recovery paths cheap enough to run through canonical `npm test`, instead of depending on infrequently executed playbooks.
+- Detect missing, misplaced, unsafe, duplicate-id, or unregistered declared assets without executing them.
+- Converge duplicated verification prose to owned boundary facts plus pointers.
 
 **Non-Goals:**
 
-- Do not create `tests_e2e/`, a fourth project-level test method, a universal test runner, or a `test:all` command that pretends Agent playbooks are Node tests.
-- Do not change `DPT_FRAMEWORK/` runtime behavior, schemas, CLI contracts, bundle data, test dependencies, or framework version.
-- Do not retroactively force every archived or already-active change to gain a plan; the new requirement applies to changes created after this change is accepted.
-- Do not execute a production bundle, invent a real-environment result, or use a user request as a production mutation permission.
+- Do not create repo-top-level `tests_e2e/`, a fifth test class, a universal runner, or `test:all`. `deterministic_e2e` remains under the existing `tests/` authority.
+- Do not change `DPT_FRAMEWORK/`, framework schemas, runtime CLIs, bundle state, dependencies, or version.
+- Do not implement the backlog's per-row projection-authority checker; no accepted Engine contract currently owns it.
+- Do not make standard `openspec status/validate` pretend to understand a custom change artifact.
+- Do not retroactively require archived changes or active changes created before this capability is accepted to gain a plan.
+- Do not execute or mutate a production bundle.
 
 ## Decisions
 
-### Decision 1: Model proof subject and verification method separately
+### Decision 1: Make test class the only routing taxonomy
 
-Every plan records a proof claim and one verification method. The allowed mapping is intentionally small:
+The route matrix is:
 
-| Claim class | Primary method | Permitted exception | Forbidden overclaim |
-| --- | --- | --- | --- |
-| `deterministic_contract` | `regression` | `controlled_e2e` only when a real disposable-bundle boundary itself is under test; mark fixture distance | Agent or live-production behavior |
-| `agent_flow` | `controlled_e2e` | none | fixture/scripted filesystem state as Agent proof |
-| `production_behavior` | `real_environment_e2e` | none | disposable-bundle or static proof as production evidence |
+| Test class | Control surface | Allowed proof subject | Required boundary/profile | Forbidden overclaim |
+| --- | --- | --- | --- | --- |
+| `unit` | JS-led focused test | `deterministic_contract` | focused `tests/` path | broader chain or Agent behavior |
+| `integration` | JS-led boundary test | `deterministic_contract` | `tests/integration/`; temporary bundle when needed | broader chain or Agent behavior |
+| `deterministic_e2e` | JS-led full-chain test | `deterministic_contract` | `tests/e2e/`; temporary bundle | simulated actions as real Agent behavior |
+| `agent_flow_e2e` | coding-Agent-executed Markdown | `deterministic_contract | agent_behavior` | `experiments_playbook/`; real disposable bundle | fixture facts as Agent behavior |
 
-This preserves the useful distinction in the backlog while avoiding the false implication that Engine E2E requires a new project-wide layer. A cross-phase CLI scenario remains a regression integration test because its subject is deterministic and its native evidence is a Node test result.
+A deterministic assertion inside an `agent_flow_e2e` remains a deterministic proof subject. It does not become Agent-behavior proof merely because a coding Agent ran the playbook. Conversely, a real disposable bundle does not create another class; it is execution context.
 
-### Decision 2: Add a small change-owned `verification-plan.yaml`
+Classification uses precedence rather than directory-first guessing:
 
-Each new change will own a plan at `openspec/changes/<name>/verification-plan.yaml`. Its intended schema is:
+```text
+coding Agent executes Markdown playbook?       -> agent_flow_e2e
+else workflow-scale multi-checkpoint JS chain? -> deterministic_e2e
+else production CLI/subprocess or owned surfaces? -> integration
+else focused in-process contract?               -> unit
+```
+
+This order resolves three common collisions. A fixture-backed Markdown playbook remains `agent_flow_e2e`, not integration. A JS full-chain test remains `deterministic_e2e` even though it also uses CLIs and filesystem I/O. A focused in-process helper/schema test may use test-owned temporary fixture files without becoming integration. When a parser can be tested in-process but its CLI wrapper also needs filesystem/asset checks, those are separate unit and integration claims rather than one ambiguously classified file.
+
+### Decision 2: Use a closed test-class state model
+
+Each plan declares exactly all four canonical test classes, but claims belong only to selected classes:
+
+```text
+selected       -> one or more claims required
+not_applicable -> zero claims, rationale required
+```
+
+This deliberately avoids a claim-level status field and a `deferred` escape hatch. A claim is an in-scope proof obligation and therefore must route to a selected test class. Future live-production observation belongs in the scope of a future change rather than as an empty pseudo-method carried through every plan.
+
+For this change:
+
+- `unit`: selected;
+- `integration`: selected;
+- `deterministic_e2e`: selected;
+- `agent_flow_e2e`: selected.
+
+### Decision 3: Define `verification-routing/v1` as a strict Zod contract
+
+Add `openspec/governance/verification-routing-contract.mjs`. It owns parsing and semantic validation; the CLI imports it rather than implementing a second interpretation.
+
+Base objects use `.strict()`. Cross-field rules use `.superRefine()`:
 
 ```yaml
 schema_version: verification-routing/v1
 change: <kebab-case-change-name>
-methods:
-  regression:
-    status: selected | deferred | not_applicable
-    rationale: <non-empty text>
-  controlled_e2e:
-    status: selected | deferred | not_applicable
-    rationale: <non-empty text>
-  real_environment_e2e:
-    status: selected | deferred | not_applicable
-    rationale: <non-empty text>
-    observation_trigger: <required for deferred or selected production claims>
+test_classes:
+  unit:
+    status: selected | not_applicable
+    rationale: <trimmed non-empty text>
+  integration:
+    status: selected | not_applicable
+    rationale: <trimmed non-empty text>
+  deterministic_e2e:
+    status: selected | not_applicable
+    rationale: <trimmed non-empty text>
+  agent_flow_e2e:
+    status: selected | not_applicable
+    rationale: <trimmed non-empty text>
 claims:
-  - id: <stable-kebab-case-id>
-    class: deterministic_contract | agent_flow | production_behavior
-    method: regression | controlled_e2e | real_environment_e2e
+  - id: <unique kebab-case id>
+    statement: <trimmed non-empty proof obligation>
+    test_class: unit | integration | deterministic_e2e | agent_flow_e2e
+    proof_subject: deterministic_contract | agent_behavior
     asset:
-      kind: regression_test | controlled_playbook | production_runtime
-      path: <repository-relative test/playbook path when applicable>
-      runtime_selector: <non-secret description for real environment when applicable>
-    production_distance:
-      fixture: none | fixture_backed
-      agent_actor: none | real_agent | real_subagent
-      external_calls: none | real | not_applicable
-    verdict_authority: node_test_exit | trace_jsonl | runtime_bundle_facts
+      kind: node_test | markdown_playbook
+      path: <repo-relative path>
+    execution_profile:
+      fixture: none | setup_only | fixture_backed
+      subject_execution: none | simulated_agent_actions | real_agent | real_subagent
+      runtime: none | temporary_bundle | real_disposable_bundle
+      external_calls: none | real
+      verdict_judge: deterministic | real_human | ai_judge
+    verdict_authority: node_test_exit | trace_jsonl
 ```
 
-The plan describes planned evidence, not outcomes. It contains no `passed`, `result`, receipt, trace event, or mutable runtime field. During apply, an `implementation-evidence.md` records actual commands and observed outcomes only after they run; it remains a report, while native evidence stays authoritative.
+Exact class tuples:
 
-### Decision 3: Use one read-only routing checker, split into plan and asset modes
+| Test class | Control surface | Allowed proof subject | Asset kind | Verdict |
+| --- | --- | --- | --- | --- |
+| `unit` | JS-led | `deterministic_contract` | `node_test` | `node_test_exit` |
+| `integration` | JS-led | `deterministic_contract` | `node_test` | `node_test_exit` |
+| `deterministic_e2e` | JS-led full chain | `deterministic_contract` | `node_test` | `node_test_exit` |
+| `agent_flow_e2e` | coding-Agent-executed Markdown | `deterministic_contract | agent_behavior` | `markdown_playbook` | `trace_jsonl` |
 
-`openspec/governance/check-verification-routing.mjs` will be a narrow Node ESM checker using only approved `yaml` and Node built-ins.
+Additional invariants:
 
-- `--mode plan` parses the plan, checks its three method decisions, claim uniqueness, claim/method compatibility, non-empty rationales, and native verdict declarations. It runs before apply.
-- `--mode assets` performs the same checks after implementation and additionally validates declared repository paths: regression files are under `tests/` and end in `.test.mjs`; controlled cases are under `experiments_playbook/`, use the `case-*.md` form, and pass the existing `validate-playbook.mjs` contract; deferred production claims do not name a repository fixture as live evidence.
+- `change` equals the `--change` argument and selected directory basename.
+- Selected test classes have at least one claim; `not_applicable` classes have none.
+- Claim ids are unique. Multiple claims may share one asset only when their complete route identity (`test_class`, `proof_subject`, `asset.kind`, `execution_profile`, and verdict authority) is identical; one file cannot be declared under conflicting classes or reality profiles.
+- Asset kind is physical, not taxonomic: JS classes use `node_test`; `agent_flow_e2e` uses `markdown_playbook`. The schema does not reintroduce `regression` or `controlled` as asset kinds.
+- `subject_execution` records how subject-Agent semantic work contributes to the verdict; it never records the coding-Agent playbook runner.
+- `agent_flow_e2e` always requires `runtime: real_disposable_bundle`. A deterministic-contract claim MAY record `subject_execution: none | real_agent | real_subagent`, but its PASS remains limited to the deterministic contract. `proof_subject: agent_behavior` requires `subject_execution: real_agent | real_subagent` and `fixture: none | setup_only`. With `setup_only`, fixtures may establish preconditions but cannot produce any subject-Agent-attributed pass fact.
+- `subject_execution: simulated_agent_actions` is allowed only in `deterministic_e2e`, where the JS driver asserts Engine consequences rather than Agent intelligence.
+- `execution_profile.runtime` records active run-bundle context, not arbitrary filesystem use. A temporary fixture repository used by the governance checker therefore has `runtime: none`; the rerun integration/full-chain claims use `temporary_bundle`; playbooks use `real_disposable_bundle`.
+- `verdict_judge` records semantic-judge provenance independently from the coding-Agent runner and subject execution. Current `exph_*` 901-949 cases map to `real_human`; 950-999 duals map to `ai_judge`; neither creates a fifth test class.
+- A selected `verdict_judge: real_human` claim is acceptance-critical manual work and remains incomplete until a real human records the verdict through the case's accepted evidence surface. Plan/asset validation, `NOT RUN`, an AI-judge dual, or a coding-Agent summary cannot complete it.
+- `unit` paths stay outside `tests/integration/` and `tests/e2e/`; `integration` paths are under `tests/integration/`; `deterministic_e2e` paths are under `tests/e2e/`. Behavior selects the class first; the path then conforms to it.
+- A live-production observation is outside this v1 contract. `dpt_rb_*`, runtime selectors, and runtime-fact verdicts are not accepted stand-ins for a test class.
+- Unknown/result-bearing keys fail because all plan objects are strict. The checker does not maintain a second blacklist as semantic truth.
 
-The checker does not run tests or playbooks. It delegates playbook frontmatter validation to the existing canonical playbook validator rather than reimplementing that schema. It never writes a trace, bundle, receipt, result, or verdict. This keeps one direct route selector separate from the three actual verdict paths.
+The schema can express current proof shapes without adding another class:
 
-`openspec/config.yaml` will require the plan and both checker modes at the appropriate lifecycle points. Change tasks will name the same commands explicitly. The checker accepts `--change <name>` rather than scanning all history, so accepted archival records and pre-existing active changes are not retroactively reclassified.
+| Proof shape | `test_class` | `proof_subject` | `subject_execution` | Runtime | Judge |
+| --- | --- | --- | --- | --- | --- |
+| focused in-process contract | `unit` | `deterministic_contract` | `none` | `none` | `deterministic` |
+| CLI over fixture repository | `integration` | `deterministic_contract` | `none` | `none` | `deterministic` |
+| CLI over temporary run bundle | `integration` | `deterministic_contract` | `none` | `temporary_bundle` | `deterministic` |
+| JS full chain simulating Agent actions | `deterministic_e2e` | `deterministic_contract` | `simulated_agent_actions` | `temporary_bundle` | `deterministic` |
+| fixture-backed standard Markdown playbook | `agent_flow_e2e` | `deterministic_contract` | `none` | `real_disposable_bundle` | `deterministic` |
+| real subject-Agent playbook with trace checks | `agent_flow_e2e` | `agent_behavior` | `real_agent` | `real_disposable_bundle` | `deterministic` |
+| real subject-Agent plus real-human review | `agent_flow_e2e` | `agent_behavior` | `real_agent` | `real_disposable_bundle` | `real_human` |
+| real subject-Agent plus AI-judge dual | `agent_flow_e2e` | `agent_behavior` | `real_agent` | `real_disposable_bundle` | `ai_judge` |
 
-### Decision 4: Route the rerun continuity proof by claim
+The last two rows differ only in judge provenance, which is intentional: test control surface and proof subject are the same, while evidence interpretation is not interchangeable.
 
-The first plan uses three claims:
+### Decision 4: One read-only checker with plan and assets modes
 
-| Claim | Route | Asset | Evidence boundary |
-| --- | --- | --- | --- |
-| direction resolver and current-round CLI behavior | `regression` | focused helper test plus `tests/integration/cli/rerun-round-continuity.test.mjs` | actual CLI JSON/exit over an isolated temporary bundle |
-| Phase Agent writes current direction and resumes the direction/profile interruption | `controlled_e2e` | `experiments_playbook/exp_wfn_rerun/case-305-heavy-rerun-direction-recovery.md` | real Agent execution over a fresh `dpt_disp_*`, verdict from `rb_trace.jsonl` |
-| behavior under a selected production run and host conditions | `real_environment_e2e` | no committed fixture; explicit future runtime selector | direct production bundle facts, currently deferred |
+`openspec/governance/check-verification-routing.mjs` uses `yaml`, the Zod contract, and Node built-ins.
 
-The regression test will retain focused unit coverage where the helper itself is the contract. Its integration part will use `spawnSync` against the work-unit inspect CLI and relevant inspect/gate CLI, asserting their structured output rather than reproducing `eligible_rows` filtering in test code. It will create and clean temporary bundles beneath `os.tmpdir()`.
+`--mode plan` checks:
 
-The controlled case will use the established command-experiment form: valid frontmatter, `new-disposable-bundle.mjs`, an explicit real-Agent dependency, actual phase instructions, trace checks, a trace verdict, and runner-manifest registration. It may construct a controlled interruption state only through real legal steps; an inline driver cannot write the Agent's direction and claim that Agent behavior was proven.
+- invocation and safe kebab-case change identity;
+- plan existence and parseability;
+- exact schema and closed four-test-class state model;
+- claim uniqueness and exact class/profile tuples;
+- lexical repository-relative path shape and ownership boundary;
+- one nearest correction for each independent root cause.
 
-### Decision 5: Keep deferred real-environment E2E as a decision, not a blocker
+Lexical path validation rejects absolute paths, backslashes, empty segments, `.`/`..`, and normalized escape. It does not require planned assets to exist.
 
-For this change, `real_environment_e2e` is `deferred`. The plan names the trigger: a user-approved production bundle and a claim that depends on live host/Agent/external conditions. The user chooses that scope because it can consume real resources and touch a production run; once chosen, the Agent performs the legal observation and reports runtime facts. No new HITL mode, permission flag, runtime mutation route, or background watcher is introduced.
+`--mode assets` repeats plan mode and then checks:
 
-### Decision 6: One canonical taxonomy definition; knowledge surfaces become pointers (VER-005)
+- repository assets exist as regular files;
+- `realpath` remains inside the repository and required ownership root;
+- unit/integration/deterministic-E2E assets are `tests/**/*.test.mjs` at their declared class boundary;
+- `agent_flow_e2e` assets are `experiments_playbook/**/case-*.md`;
+- `agent_flow_e2e` assets pass `DPT_FRAMEWORK/cli/validate-playbook.mjs`;
+- filename stem matches frontmatter `case`;
+- the case id/stem is globally unique across runnable playbooks;
+- the exact path has one active entry in `experiments_playbook/RUN_EXPS.md`.
 
-三方法 taxonomy 的 canonical 定义唯一存在于 `verification-routing` main spec。现有四处平行复述在 apply 时按下表收敛——每个面只保留它**拥有**的事实（目录归属、硬规则），routing/plan/validator 语义不复述：
+The checker does not inspect prose to decide whether an Agent truly acted. Plan declarations, frontmatter, file existence, and manifest registration are route facts; actual step execution and trace are native evidence.
 
-| 现有表述 | 位置 | apply 后 |
+Primary failure output follows one shape:
+
+```text
+claim: <id or plan>
+missing_fact: <direct violated invariant>
+write_to: <plan field or declared asset/manifest>
+rerun: node openspec/governance/check-verification-routing.mjs --change <name> --mode <same-mode>
+```
+
+### Decision 5: Treat lifecycle integration honestly
+
+`verification-plan.yaml` is a repo-specific planning artifact, not an artifact declared by the current `spec-driven` OpenSpec schema. Therefore:
+
+- `openspec status` may still report planning complete without understanding it;
+- `openspec validate` validates proposal/design/spec/tasks, not this custom plan;
+- `openspec/config.yaml` proposal/task rules tell future Agents to create and check it;
+- every future change's apply task list places plan-mode checking before target edits;
+- every archive closure places asset-mode checking beside the existing governance checks.
+
+This bootstrap change necessarily implements the parser/checker before it can dogfood plan mode. That exception is narrow: parser, checker, and their focused `unit`/`integration` assets land first; plan mode then passes before the stale VER registry descriptions, rerun proof, `tests/e2e/`, playbook, config, or knowledge-surface targets change. This is sufficient demand-side wiring for the repo's Agent-driven OpenSpec process, but it is not described as a native OpenSpec CLI hook.
+
+### Decision 6: Add `tests/e2e/` as the deterministic-E2E boundary
+
+`tests/e2e/` exists for long deterministic chains where running isolated helpers is too narrow and running an `agent_flow_e2e` playbook is too expensive or infrequent. It remains ordinary `node:test` execution and is included by canonical `npm test` discovery.
+
+The driver models Markdown/Agent behavior only as controlled input mutations:
+
+```text
+JS driver writes an Agent-owned MD/YAML/artifact input
+  -> real CLI/schema/gate reads it
+  -> real transition/status/work-unit/receipt/trace path runs
+  -> node:test asserts structured output, authority bytes and trace
+  -> on failure, repair the Agent-owned input and rerun the same checkpoint
+```
+
+Allowed simulated actions include writing or repairing seed-topic direction sections, phase artifacts, fixture-labeled human answers/profile inputs, and other non-Engine surfaces assigned by the real Markdown flow. A fixture may also construct actor-produced candidate output, `result.json`, cache leaves, and runtime-receipt events when a work-unit path is under test; those files are labeled fixture inputs and remain non-authoritative until the real submit CLI accepts their exact bindings. Forbidden shortcuts include hand-writing `rb_status.json` transitions, accepted/submitted index or status, declaration ledger rows, gate attempts, transition witnesses, trace verdicts, or any other Engine-owned success authority. The suite does not claim real user or Agent participation.
+
+The initial `tests/e2e/rerun-round-continuity.test.mjs` first creates a production-shaped bundle through `instantiate-run-bundle.mjs`, then runs the real predecessor gates/handoffs/status synchronization needed to establish a legal baseline HITL2 window. Only then does it cover HITL2 -> phase-rerun -> seed-topics -> wave0 -> wave1 -> wave2 -> HITL2. Direct `writeGateAttempt()` setup is forbidden because it would hide upstream chain drift.
+
+The suite uses a two-level shape to keep cost controlled:
+
+- one baseline builder produces an immutable legal pre-rerun bundle through real CLI boundaries once per test run;
+- the happy case continues through the complete rerun chain;
+- each fault scenario clones that runtime-generated baseline into a new temporary bundle, injects one independent non-Engine variation, and runs the affected real suffix without sharing mutable state.
+
+The baseline is not a committed fixture or cross-run cache. Its trace, status, work-unit, ledger, and gate facts are generated afresh by the production paths in the same test process. Cloning only amortizes repeated predecessor work after that proof has run.
+
+The scenario matrix is:
+
+| Scenario class | Required observation |
+| --- | --- |
+| baseline + happy rerun chain | real predecessor and rerun gates/transitions/status synchronization reach the expected next HITL2 window |
+| missing/malformed profile or required phase artifact | owning checkpoint fails closed, latest legal state is unchanged, root cause names the repair boundary |
+| stale/invalid direction at Wave2 consumer | real resolver consumer does not activate stale/invalid `action:add` semantics |
+| future/crash-window direction at Wave2 consumer | real resolver consumer preserves accepted future-direction behavior; fixture then simulates Markdown recovery by bringing profile count into match without rewriting direction |
+| current/legacy work-unit rows | candidate actor files pass through real submit; real `--eligible-rows` returns only accepted current rows and reports legacy exclusion warnings |
+| partial phase artifact or failed gate | downstream transitions do not run; repair followed by the same gate can continue |
+| malformed structured authority | CLI fails explicitly and does not replace or normalize Engine-owned truth through test code |
+
+The suite SHALL keep the baseline and every scenario clone under `os.tmpdir()`, use `spawnSync` argument arrays rather than shell command interpolation, record pre/post authority snapshots around expected failures, and clean up in `after()` while preserving enough assertion context in the test output. A helper under `tests/e2e/helpers/` may wrap repeated CLI invocation, candidate fixture creation, byte-for-byte baseline cloning, authority snapshots, and legal baseline construction; it cannot calculate a gate/transition outcome, append a verdict trace, or become an alternate Engine implementation.
+
+### Decision 7: Route the rerun proof set without inventing an Engine contract
+
+This change owns seven selected claims:
+
+| Claim | Test class | Proof subject | Asset | Proof boundary |
+| --- | --- | --- | --- | --- |
+| routing contract schema | `unit` | `deterministic_contract` | `tests/governance/verification-routing-contract.test.mjs` | direct strict parser behavior; no subprocess or repository asset lookup |
+| routing checker CLI/assets | `integration` | `deterministic_contract` | `tests/integration/governance/check-verification-routing.test.mjs` | real checker process, filesystem/path and asset-registration behavior |
+| direction resolver | `unit` | `deterministic_contract` | existing focused resolver test | deterministic helper only |
+| current-round CLI filtering | `integration` | `deterministic_contract` | `tests/integration/cli/rerun-round-continuity.test.mjs` | actual `operate-work-unit inspect --eligible-rows` JSON/exit |
+| knowledge-surface convergence | `integration` | `deterministic_contract` | `tests/integration/md/verification-routing-knowledge-surfaces.test.mjs` | static cross-document contract for canonical identifiers, owned pointers, and retired competing taxonomy at high-frequency entry surfaces |
+| rerun deterministic full chain | `deterministic_e2e` | `deterministic_contract` | `tests/e2e/rerun-round-continuity.test.mjs` | JS-simulated Agent-owned inputs through real CLI/gate/transition/status/trace paths |
+| Agent direction/recovery | `agent_flow_e2e` | `agent_behavior` | `experiments_playbook/exp_wfn_rerun/case-318-heavy-rerun-direction-recovery.md` | real Agent action over fresh disposable bundle; trace verdict |
+
+`case-318` is the first currently unoccupied global case identity after existing current files. It remains in the existing `exp_wfn_rerun` family. It is `heavy` because the proof depends on real Agent semantic action, consistent with `guidelines/command-experiments.md`; external WebSearch/WebFetch calls are not required and the Reality Distance Ledger records `external_calls: none`. Apply also repairs the narrower stale cost descriptions in `experiments_playbook/README.md` and `experiments_playbook/RUN_EXPS.md`, which currently describe `heavy` as external-call/subagent work only.
+
+The `agent_flow_e2e` case declares `fixture: setup_only`, `subject_execution: real_agent`, `runtime: real_disposable_bundle`, and `verdict_judge: deterministic`. It may create a legal pre-interruption fixture through accepted setup/CLI paths. The fixture boundary ends before the subject Agent produces the direction and recovery action; those pass facts cannot be written by inline JS or shell. If a real subject-Agent execution surface is unavailable, the case is NOT RUN and the `proof_subject: agent_behavior` claim remains incomplete. A clean PASS deletes the bundle; FAIL or health issues preserve it for diagnosis.
+
+### Decision 8: Defer backlog per-row projection authority
+
+The backlog scenario asks for a deterministic check that every current-round eligible work id appears in a projection entry or explicit no-projection disposition. Repository inspection found no accepted Engine/CLI that owns this comparison. Existing return-map checks validate structure and reference quality, not eligible-row-to-projection completeness.
+
+Adding this behavior would change `DPT_FRAMEWORK/`, require a new accepted contract/caller/gate decision, and trigger version review. Reimplementing it inside a test would violate One Truth Path. Therefore this change records the scenario as deferred behavior work and proves only the existing `--eligible-rows` contract.
+
+### Decision 9: One canonical taxonomy, short knowledge pointers
+
+After archive, the accepted `openspec/specs/verification-routing/spec.md` is the only taxonomy/route authority. Other surfaces retain only owned facts:
+
+| Surface | Owned fact after apply |
+| --- | --- |
+| `openspec/config.yaml` | artifact-generation/task discipline and asset ownership pointers |
+| `openspec/governance/req-registry.yaml` | concise requirement registry summaries using canonical identifiers |
+| `AGENTS.md`, `CLAUDE.md` | concise hard rule for repository asset placement |
+| `guidelines/project-charter.md` | directory/authority responsibility rows |
+| root/test/experiment README files | local execution and navigation facts |
+| `guidelines/command-experiments.md` | `agent_flow_e2e` playbook design/navigation pointer |
+
+Ordinal "layer" identifiers are retired. Local documents may still use ordinary prose such as "test scope" where it is not a competing method name.
+
+### Decision 10: Converge accepted specs with the smallest semantic delta
+
+A terminology audit scanned all 74 current main specs under `openspec/specs/` for E2E, controlled/Agent-driven experiments, regression, unit/integration, disposable-bundle, and production-bundle language. Hits were classified by whether they teach test routing, describe an individual playbook, or merely use "end-to-end" for a business chain.
+
+Only one accepted requirement needs semantic delta:
+
+| Requirement | Conflict | Delta |
 | --- | --- | --- |
-| 「第一层/第二层/第三层」全文复述 | `openspec/config.yaml` 测试分层节 | 三个 canonical method identifier + 各自资产归属边界 + 一句指向 `openspec/specs/verification-routing/` 的引用；删除层内 what/how 完整复述 |
-| "Test layering: tests/ = regression …" | `AGENTS.md`、`CLAUDE.md` Hard Rules | 保留一行资产归属硬规则（它们拥有的边界事实），方法名改 canonical identifier，追加 pointer |
-| 目录职责表 tests/experiments 行 | `guidelines/project-charter.md` | 行内容不变（只陈述目录归属），方法称谓统一为 canonical identifier |
-| "Layer 1-4" | `_backlog/plans/tests-e2e-layer.md` | 不改写正文——归档时在文件头加一行 status 标注指向本 change（backlog 是历史输入，不是 current surface） |
+| WDC-005 `Test and experiment boundary` | teaches regression as only `unit + integration`, omitting `deterministic_e2e` | replace with all four canonical classes and owned directories |
 
-序数命名（第一/二/三层、Layer N）退役，不再作为方法标识符。这是 projection discipline 的应用：一处 authority，多处短引用，消除四处 prose 各自漂移成 competing truth 的可能。若不更新这些知识面，路由机制只活在 governance 而未来 Agent 读到的仍是旧 prose——知识面传播是本 change 的一等目标。
+AGT-010 does not need a delta. Its optional-heavy rule belongs to handoff witnessing and remains intact. This change is allowed to make a different real-Agent case acceptance-critical because its own verification plan explicitly selects an `agent_behavior` claim; that local decision neither reclassifies standard/heavy playbooks nor changes AGT-010 archive semantics. Other accepted phrases such as "controlled E2E", "Agent-driven E2E", "standard E2E", and queue/wave behavior "end-to-end" remain valid descriptive language. They do not ask an Agent to choose a competing route and are mapped by the canonical verification-routing spec. Rewriting them mechanically would create churn without reducing ambiguity. Specific case names remain implementation mappings in the plan/design/tasks and experiment navigation; capability specs use proof roles so renumbering does not require a semantic spec change.
 
-### Decision 7: Backlog asset absorption — per-scenario routing and explicit rejections
+The same audit scanned the high-frequency project entry and governance surfaces. `openspec/config.yaml`, `AGENTS.md`, and `CLAUDE.md` currently teach the obsolete unit+integration / controlled / real-environment layer model; `openspec/governance/req-registry.yaml` still summarizes VER as three methods and a proposed fourth layer; `experiments_playbook/README.md` repeats `tests/` as only unit+integration and narrows `heavy` to external-call work; `experiments_playbook/RUN_EXPS.md` repeats the same narrow cost rule; and `tests/README.md` does not expose `tests/e2e/`. These are apply targets because they directly guide future LMs. Ordinary "end-to-end" phrases in capability specs remain untouched where they describe behavior rather than classify a test.
 
-`_backlog/plans/tests-e2e-layer.md` 的场景与约定有真实价值，逐条落点如下（全部 `deterministic_contract` class 除注明外）：
+## Apply Target Manifest
 
-| Backlog 场景 | 落点 | 现状 |
+| Action | Surface | Control impact |
 | --- | --- | --- |
-| 场景 2/5（round-2 supplement、eligible-rows 过滤 + legacy exclusion） | `tests/integration/cli/rerun-round-continuity.test.mjs` 重构为真实 CLI consumer：断言 `operate-work-unit inspect --eligible-rows` 结构化输出与 warnings，删除测试内自行实现的过滤 | 已有文件但手写状态+自行过滤，不合格 |
-| 场景 3/4（stale direction、crash recovery 的 resolver 判定） | 已由 direction resolver focused unit tests 覆盖（8/8）；plan 中登记为既有 asset，不重写 | 合格 |
-| 场景 6（per-row authority check：blocking finding + 修复后同检通过） | 扩充同一 integration test：负例（work_id 缺失 → blocking）+ 补 disposition 后 rerun same inspect 通过 | 缺负例 |
-| 场景 1（正常 run 三 gate 连续通过） | **不收编**——`check-gate-wave{0,1,2}-complete.test.mjs` 已各自覆盖 pass/fail；串联版是重复覆盖，违反 One Truth Path | — |
-| §4.4 强制约定（tmpdir、after 清理、spawnSync、不 import 内部函数、自包含） | 核对 `tests/integration/README.md` 既有约定，缺则补——属 regression method 的资产纪律，不进 verification-routing spec | 部分已有 |
-| §5 playbook 重定位（playbook 只测 Agent 行为） | 由 claim-class 矩阵自然成立（`agent_flow` → `controlled_e2e`），无需独立条款 | — |
+| Add | `openspec/governance/verification-routing-contract.mjs` | one direct route schema/parser |
+| Add | `openspec/governance/check-verification-routing.mjs` | one read-only route checker |
+| Add | `tests/governance/verification-routing-contract.test.mjs` | focused direct-parser unit coverage |
+| Add | `tests/integration/governance/check-verification-routing.test.mjs` | real checker CLI/filesystem integration coverage |
+| Add | `tests/integration/md/verification-routing-knowledge-surfaces.test.mjs` | narrow static guard against competing taxonomy at high-frequency guidance surfaces |
+| Add | `tests/e2e/README.md` | deterministic-E2E class, simulation boundary and execution contract |
+| Add | `tests/e2e/rerun-round-continuity.test.mjs` | deterministic rerun full-chain and fault matrix |
+| Add | `experiments_playbook/exp_wfn_rerun/case-318-heavy-rerun-direction-recovery.md` | one `agent_flow_e2e` real subject-Agent proof |
+| Add | change-local `implementation-evidence.md` | apply report only, not verdict authority |
+| Modify | `tests/integration/cli/rerun-round-continuity.test.mjs` | replace test-local filtering with real CLI consumption |
+| Modify | `experiments_playbook/RUN_EXPS.md` | exact case-318 registration |
+| Modify | `openspec/config.yaml` | future plan/task discipline and short taxonomy pointer |
+| Modify | `openspec/governance/req-registry.yaml` | replace stale three-method/fourth-layer VER summaries with canonical `test_class` wording |
+| Move | `tests/governance/check-project.test.mjs` to `tests/integration/governance/check-project.test.mjs` | align existing governance CLI coverage with the integration class |
+| Move | `tests/helpers/run-gate-with-monitor.test.mjs` and `tests/schema/verify-bundle-health.test.mjs` to `tests/integration/experiments_env/` | align public experiment-helper subprocess/runtime-bundle coverage with the integration class |
+| Split | CLI scenario from `tests/engine/queue-manager-receipts-cli-render.test.mjs` into `tests/integration/cli/operate-queue-receipts-render.test.mjs` | keep focused queue-manager imports unit-class while routing the production CLI path to integration |
+| Split | production-CLI scenarios from `tests/schema/research-styles-computation.test.mjs` into `tests/integration/cli/apply-research-style.test.mjs` | retain in-process schema/style computations as unit-class and route bundle/CLI behavior to integration |
+| Modify through delta sync | `openspec/specs/workflow-directory-contract/spec.md` | align WDC-005 with the canonical four-class model |
+| Modify | `AGENTS.md`, `CLAUDE.md`, README/guideline surfaces named in tasks | remove duplicate taxonomy prose; retain owned facts/pointers |
+| Modify after native proof | `_backlog/plans/tests-e2e-layer.md`, `openspec/changes/seed-backfill-round-continuity/tasks.md` | historical/source reconciliation only |
+| Delete/avoid | repo-top-level `tests_e2e/`, mixed runner scripts, duplicate taxonomy prose, test-local Engine filtering, direct submitted-state/ledger writes, or Engine-owned authority fabrication | net control simplification |
 
-**明确拒绝**（记录以防回潮）：顶层 `tests_e2e/` 目录；`package.json` 的 `test:e2e`/`test:all` scripts；`tests_e2e/helpers/bundle-fixture.mjs` 独立共享 helper 层（`tests/integration/` 已有 fixture 惯例，新开一套违反 One Rule Source）。
+No `DPT_FRAMEWORK/` or runtime bundle surface is modified.
 
-## Complexity Burden Of Proof（六问短答）
+## Complexity Burden Of Proof
 
-对两个新增物——plan 文件与 routing checker：
-
-1. **捕获哪个现有 check 无法捕获的真实故障？** 已发生实例：task 10.7 勾选但引用的 playbook 不存在（幽灵资产）；round-continuity test 手写状态自行过滤冒充 CLI 证明（fixture 冒充）。现有两个 governance check 只看 requirement ID 与 spec 结构，不看证明资产。
-2. **读取/拥有哪个 Source of Record？** 拥有 `verification-plan.yaml`（路由决定——作者意图，无法从代码反推；change-owned，随归档失效）。只读 plan、`tests/` 与 `experiments_playbook/` 存在性、runner manifest 行。不触碰任何 runtime authority。
-3. **为什么不能复用现有 checkpoint？** `check-project-reqs.mjs` 的 authority 是 ID 三态，`check-project-specs.mjs` 是 main spec 结构；路由是第三种 authority（claim→method→asset）。塞进现有脚本会让一个脚本持有两种不相关 truth。三脚本并列、同一调用形状、同一 archive gate——复用既有模式而非新模式。
-4. **删除、合并或降级了哪份旧逻辑？** 删除：四处 taxonomy 复述→一处 canonical + pointers（Decision 6）；测试内自行实现的 eligible-rows 过滤；「记得核对 task 引用的资产存在」这条隐性记忆规则。避免：第四层套件、第二 runner、混跑 scripts。
-5. **失败时给 Agent 的唯一最近动作？** 每条 FAIL 按 contract-lineage 三要素输出：claim id + missing_fact（违反哪条矩阵规则）+ write_to（plan 的哪个字段/哪个资产路径）+ rerun（同一 checker 同一 mode）。一根因一动作，same-check repair。
-6. **哪个 focused test 证明控制本身不误阻塞？** `tests/governance/check-verification-routing.test.mjs`：合法 plan PASS（不误阻塞）；矩阵外组合 FAIL 且报对 claim id；deferred 缺 trigger FAIL；assets mode 对存在/缺失资产双向断言；运行前后无写入副作用（read-only 验证）。
-
-## Simple Reliable Control Review
-
-- **Direct Source of Record / shortest loop:** `verification-plan.yaml` is direct route-selection authority; the selected native test mechanism supplies the only outcome authority. The loop is plan -> static route check -> one selected execution path -> native verdict.
-- **Net simplification:** this rejects the proposed top-level `tests_e2e/`, eliminates the need for `test:e2e`/`test:all` parallel semantics, prevents the same claim from being described as both fixture proof and Agent proof, and collapses four parallel taxonomy restatements into one canonical definition plus pointers (Decision 6). It adds one static checker only because no existing checker owns a cross-method route contract.
-- **Failure action:** a failed routing check names the claim and the nearest legal method/asset boundary. A failed test remains handled by its existing CLI, test, or trace feedback path.
-
-## Helper-Oriented Responsibility Review
-
-- **User decision:** only the selection of a production `dpt_rb_*` observation and acceptance of its external cost/risk.
-- **Agent execution:** create the plan, run route checks, execute regression commands and controlled playbooks, repair ordinary asset mistakes, and return to the same checkpoint.
-- **Engine verdict:** preserve existing CLI/test/trace results. The governance checker judges plan structure only and creates no runtime authority.
+1. **Which failure is newly caught?** Missing/misrouted/unregistered proof assets and fixture-as-Agent route declarations, including the observed checked-but-absent rerun case.
+2. **Which Source of Record is read?** `verification-plan.yaml` for route intent; repository paths and `RUN_EXPS.md` for selected asset registration. Native verdict sources remain separate.
+3. **Why not reuse current governance checks?** Existing checks own requirement IDs and spec structure, not claim-to-test-class routing. Combining them would create unrelated authorities in one checker.
+4. **What is removed or avoided?** A parallel taxonomy, mixed runner, duplicate taxonomy definitions, manual asset-memory rule, test-local eligible-row filtering, and reliance on expensive playbooks for deterministic long-chain feedback.
+5. **What is the one next action?** Repair the named plan field/asset/manifest entry and rerun the same checker mode.
+6. **What proves the control does not misblock?** Focused valid/invalid/path/read-only tests for the shared Zod parser and CLI.
 
 ## Risks / Trade-offs
 
-- **A plan validator becomes a second runner** -> Limit it to static shape and asset-boundary checks; it does not execute or aggregate evidence.
-- **The three-method table forces costly E2E for every small change** -> `not_applicable` and `deferred` require rationale but do not force execution.
-- **Fixture evidence is accidentally promoted to Agent proof** -> Require claim class, production-distance fields, and a real Agent actor for `agent_flow`.
-- **A production result is implied by a deferred row** -> Ban PASS/FAIL fields in the plan and require an explicit observation trigger.
-- **Existing task checkmarks continue to look like proof** -> The rerun controlled case is accepted only when the runnable asset, runner entry, trace execution, and implementation evidence all exist; the old checkbox is not a verdict source.
-- **Current runner documentation has drift (`RUN.md` versus `RUN_EXPS.md`)** -> Update the active runner surface identified by the accepted runner contract without expanding this change into a runner redesign.
+- **Plan becomes outcome authority** -> strict schema contains no result fields; checker reports route validity only.
+- **Checker becomes a runner** -> it may invoke only the canonical frontmatter validator for static asset validation, never a playbook/test/Agent execution.
+- **Not-applicable hides unfinished evidence** -> selected test classes require claims, not-applicable classes forbid them, and v1 has no deferred status.
+- **Plan lies about Agent execution** -> asset mode cannot prove semantic action; native trace execution remains mandatory and task closure stays incomplete on NOT RUN.
+- **Custom artifact looks natively enforced** -> design/spec explicitly distinguish repo discipline from OpenSpec schema enforcement.
+- **Scope expands into missing per-row behavior** -> scenario is explicitly deferred rather than implemented in a test or hidden helper.
+- **E2E driver becomes a fake Engine** -> it may mutate only Agent-owned inputs; every deterministic consequence and authority mutation must come from real production boundaries, with no second transition/gate/receipt implementation.
+- **Long-chain suite becomes slow and brittle** -> keep external calls and real Agent work out of `tests/e2e/`, reuse focused tests for local contracts, assert only independent chain/failure facts, and keep the focused file within a 60-second local timeout budget.
+- **Long-chain proof exposes an existing framework bug** -> do not weaken the assertion or patch framework behavior outside the approved manifest; record the failing native boundary and return to explore/update the active change before expanding implementation scope or version impact.
 
 ## Migration Plan
 
-1. Add `verification-routing` requirements, reserve `VER-*` IDs during apply, and create this change's own verification plan.
-2. Implement the read-only governance checker and focused tests; update OpenSpec rules so future changes invoke it before apply and before archive.
-3. Converge knowledge surfaces per Decision 6: `openspec/config.yaml` 测试分层节, `AGENTS.md`/`CLAUDE.md` test-layering rules, `guidelines/project-charter.md` directory rows — canonical identifiers plus pointers, no restatement.
-4. Upgrade the rerun regression scenario to consume production CLIs (Decision 7 absorption table) and add the real-Agent controlled-E2E case plus active runner registration.
-5. Record real command and trace evidence in `implementation-evidence.md`; preserve the real-environment row as deferred unless a user selects a production run.
-6. Run routing, regression, controlled-E2E, and existing governance checks before archive; annotate the backlog plan header only after its replacement assets are genuinely proven.
+1. At apply entry, create `implementation-evidence.md`, audit but do not yet edit the stale VER registry summaries, implement the shared Zod contract/checker, and run plan mode before non-bootstrap target edits.
+2. Replace rerun test-local filtering with actual CLI consumption; retain focused resolver coverage.
+3. Add `tests/e2e/README.md` and the deterministic rerun full-chain/fault matrix, then run it through canonical `npm test` discovery.
+4. Add and execute case-318 with exact runner registration and native trace verdict.
+5. Converge knowledge surfaces to canonical identifiers, owned facts, and pointers.
+6. Only after native proof, annotate the backlog source and reconcile the previously checked missing-playbook task.
+7. Run asset mode, focused/full `node_test` execution, playbook validation/execution, OpenSpec strict validation, and both existing governance checks.
 
-Rollback is local and configuration-only: removing the new governance route check and its plan files does not change framework code or any run bundle. No runtime state migration is required.
+Rollback before archive is a repository-local revert of governance, proof, and documentation changes. There is no runtime state migration, framework version rollback, or production-bundle recovery.
 
 ## Open Questions
 
-None. The production method is intentionally deferred rather than left ambiguous; an actual bundle selection is a later user decision, not missing design work.
+None. Per-row projection authority is a consciously deferred behavior change, not unresolved scope inside this change.
