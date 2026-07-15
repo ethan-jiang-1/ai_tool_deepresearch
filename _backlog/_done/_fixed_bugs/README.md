@@ -1,6 +1,6 @@
 # Fixed Bugs Index — 已修复 bug 归档
 
-> 最后更新: 2026-07-13 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
+> 最后更新: 2026-07-15 | `_backlog/_done/_fixed_bugs/` — 已修复 bug 的归档目录。
 > 接收来自 [`../../bugs/`](../../bugs/) 的 bug。`_` 前缀 = coding agent 默认忽略。
 >
 > **本目录是 bug 编号的唯一权威来源——新 bug 的编号 = 本目录最大编号 + 1。**
@@ -90,8 +90,17 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-078 | 2026-07-13 | Audited Final-lineage-bound rerun recovery reaches the existing canonical rerun pipeline without hand-written authority or addendum namespace |
 | BUG-079 | 2026-07-13 | Out-of-gate addendum topics — C1 detects, C3/C5 canonical-or-blocked, no addendum success path |
 | BUG-080 | 2026-07-13 | Rerun seed backfill quality — legal rerun path restored, normal pipeline backfill/materialization applies |
+| BUG-081 | 2026-07-15 | add_topic 生成 seed 骨架过薄 — complete canonical seed renderer + wave tokens（repair-rerun-added-topic-bootstrap v0.28） |
+| BUG-082 | 2026-07-15 | Rerun 新 topic Wave0 缺 work-unit provenance — normal queue/claim/submit/gate path |
+| BUG-083 | 2026-07-15 | queue claim 混淆 delegated / empty window / fallback — root-first claim diagnostic |
+| BUG-084 | 2026-07-15 | work-unit submit 交叉校验难手工满足 — Result Starter + dry-submit roots + repair surface |
+| BUG-085 | 2026-07-15 | Wave1 reference_format 拒 related_topic_uid — 统一 UID/legacy binding adapter |
+| BUG-086 | 2026-07-15 | isCountable 要求 Core Content Capture 与模板 Key Facts 不一致 — count 只读 accepted + parseable URL |
+| BUG-087 | 2026-07-15 | depth-review 要求重抄 ledger cache trails — Engine 从 reviewed submitted rows 派生 |
+| BUG-088 | 2026-07-15 | rb_output_declarations.jsonl 不可恢复 — recover-declaration hash-identical 恢复 |
+| BUG-089 | 2026-07-15 | submit 拒 prior submitted source_ref — same topic/wave/kind authorized prior role |
 
-**Next available bug ID: BUG-081**
+**Next available bug ID: BUG-091**
 
 ---
 

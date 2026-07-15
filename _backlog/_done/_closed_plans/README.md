@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-07-12 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-07-15 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -24,7 +24,7 @@ plan 完成后从 `_backlog/plans/` 通过 `git mv` 移入本目录：
 | CLS-003 | 2026-06-28 | ref-integrity-experiment-family.md | Reference 完整性实验家族设计（Engine 防御全落地） |
 | CLS-004 | 2026-07-03 | self-documenting-phase-role-nodes-plan.md | Self-Documenting Phase + Relay Role Nodes — phase Execution Brief + role Role Brief/Handoff；落地 via 2026-07-03-harden-relay-pipeline（§7/§8） |
 | CLS-005 | 2026-07-03 | simplify-relay-pipeline.md | 化簡 Relay Pipeline — 思考草稿；原激进简化被 review 否决，§9 保守版落地 via harden-relay-pipeline（superseded，非按原文实施） |
-| CLS-006 | 2026-07-04 | subagent-logging-come-alive-plan.md | Sub-agent logging 活过来 + provenance 取证 — beacon 模式 + lifecycle 事件 + forge-resistance；落地 via 2026-07-04-subagent-execution-logging |
+| CLS-006 | 2026-07-04 | subagent-logging-come-alive-plan.md | Sub-agent logging 活过来 + Dockerfile 取证 — beacon 模式 + lifecycle 事件 + forge-resistance；落地 via 2026-07-04-subagent-execution-logging |
 | CLS-007 | 2026-07-05 | agent-persistence-and-exit-codes.md | Absorbed by autonomous-command-contract-hardening: exit code stays honest coarse control-flow; encouragement/repair/continuation guidance goes through `advice[]`, structured diagnostics, or Agent-readable Markdown |
 | CLS-008 | 2026-07-05 | autonomous-silent-execution-terminology.md | Absorbed by autonomous-command-contract-hardening: phase boundary terms now distinguish transition, handoff, work completion, and witnessing across guidance, command docs, and validators |
 | CLS-009 | 2026-07-05 | cli-exit-code-contract.md | Absorbed by autonomous-command-contract-hardening: top-level and CLI docs now expose canonical `0/1/2`, gate/non-gate classes, `log-event.mjs` always-0 exception, and known doc/code drift |
@@ -42,7 +42,9 @@ plan 完成后从 `_backlog/plans/` 通过 `git mv` 移入本目录：
 | CLS-021 | 2026-07-13 | breakpoint-recovery-persistence-model.md | C2+C3+C5：crash-safe sanctioned content、canonical intent/progress/layout、post-final request materialization 全部有 Engine path 与 controlled proof |
 | CLS-022 | 2026-07-13 | human-override-and-state-mutability.md | C1+C3+C5：single registry、layout mutation、integrity/reentry safety net、狭窄 post-final rerun 全部落地且有 audit proof；generic override/state-seed 不在本路线 scope |
 | CLS-023 | 2026-07-13 | overall-recovery-canonical-state-and-delegation-roadmap.md | 五 change 总控路线完成：C1–C5 全部 archive（v0.22–v0.27），5 个来源全部关闭，controlled proof 全部通过 |
+| CLS-024 | 2026-07-15 | tests-e2e-layer.md | Superseded by `formalize-verification-routing`：canonical `unit`/`integration`/`deterministic_e2e`/`agent_flow_e2e` 替代 ordinal layers 与 repo-top-level `tests_e2e/`；`tests/e2e/` + verification-plan/governance 已落地 |
+| CLS-025 | 2026-07-15 | seed-backfill-round-continuity.md | 多轮 seed projection authority 落地（v0.29 / `2d8625f01`）：direction resolver、Engine-owned `index.rerun_count`、eligible-rows inspect、wave0/1/2 authority rebuild；原文 token re-injection 方案被 authority-driven append 取代 |
 
 Closure boundary for CLS-007..010: this change did not implement runtime exit-helper unification, code-2 semantic migration, a JS lifecycle walker, chat interceptor, environment-variable control, same-turn chat halt prevention, or fake evidence/trace handling.
 
-**Next available plan ID: CLS-024**
+**Next available plan ID: CLS-026**

@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-07-13 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-07-15 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -15,25 +15,33 @@
 
 ## 活跃列表
 
-_当前无活跃 bug。_
-
 | Bug | 简述 | 状态 |
 |-----|------|------|
-| [BUG-081](BUG-081-add-topic-generates-minimal-seed-skeleton.md) | `add_topic` 生成 seed 骨架过于简陋 | Open |
-| [BUG-082](BUG-082-rerun-new-topic-wave0-no-work-unit-provenance.md) | Rerun 中 add_topic 的新 topic 在 wave0 gate 缺少 work-unit provenance | Open |
-| [BUG-083](BUG-083-queue-claim-returns-empty-on-active-window.md) | operate-queue claim 拒绝 delegated item（设计如此）→ 需走 operate-work-unit，但 phase_agent_fallback 被拒 | Open |
-| [BUG-084](BUG-084-work-unit-submit-impossible-to-satisfy-manually.md) | operate-work-unit submit 交叉校验字段过多，手工构造 result 不可行 | Open |
-| [BUG-085](BUG-085-wave1-gate-reference-format-rejects-uid.md) | Wave1 gate reference_format 拒绝 related_topic_uid | Open |
-| [BUG-086](BUG-086-isCountable-requires-core-content-capture.md) | isCountable 要求 ## Core Content Capture——模板用 ## Key Facts | Open |
-| [BUG-087](BUG-087-depth-review-source-claims-need-ledger-cache-trails.md) | depth-review source_claim_cache_mapping 要求 cache trail 在 submitted ledger | Open |
-| [BUG-088](BUG-088-output-declarations-not-recoverable.md) | rb_output_declarations.jsonl 无法从 index+result 重建 | Open |
-| [BUG-089](BUG-089-submit-rejects-source-ref-not-in-output-files.md) | submit 拒绝 source_ref 不在本 WU output_files——阻止 supplementary WU | Open |
+| [BUG-090](BUG-090-rerun-wave0-wave1-no-reference-materialization.md) | Rerun 新增 topic 的 wave0/wave1 未物化 `reference/*.md` | Open |
 
-**Next available bug ID: BUG-090**
+**Next available bug ID: BUG-091**
 
 ---
 
-## 最近批量修复 (2026-07-13)
+## 最近批量修复 (2026-07-15)
+
+BUG-081 … BUG-089 随 `repair-rerun-added-topic-bootstrap` archive（`80d0c9e83`，v0.28）关闭：
+
+| Bug | 简述 | 收口 |
+|-----|------|------|
+| BUG-081 | `add_topic` seed 骨架过薄 | 完整 canonical seed renderer + wave tokens |
+| BUG-082 | rerun 新 topic 缺 Wave0 work-unit provenance | 走 normal queue → claim → submit → gate |
+| BUG-083 | claim 混淆 delegated / empty / fallback | root-first claim diagnostic |
+| BUG-084 | submit 交叉校验难手工满足 | Result Starter + dry-submit roots + repair surface |
+| BUG-085 | reference_format 拒 `related_topic_uid` | 统一 UID/legacy binding adapter |
+| BUG-086 | isCountable 与模板 section 不一致 | count 只读 accepted + parseable URL |
+| BUG-087 | depth-review 重抄 ledger cache trails | Engine 从 reviewed submitted rows 派生 |
+| BUG-088 | output declarations 不可恢复 | `recover-declaration` hash-identical 恢复 |
+| BUG-089 | submit 拒 prior submitted source_ref | same topic/wave/kind authorized prior role |
+
+后续 `seed-backfill-round-continuity` 处理多轮 projection authority（非上述编号关闭范围）。`formalize-verification-routing` 只定测试路由，不关业务 bug。
+
+### 最近批量修复 (2026-07-13)
 
 BUG-079 / BUG-080 随 C1–C5 路线全部 archive 后关闭：
 - **BUG-079**: C1 可检测隐形 topic/drift，C3/C5 使新增 scope 只能 canonical-or-blocked，case-317 证明无 addendum 成功路径。历史 addendum 的 adopt 需通过 C3 `migrate_legacy`，不由 C5 自动处理。
