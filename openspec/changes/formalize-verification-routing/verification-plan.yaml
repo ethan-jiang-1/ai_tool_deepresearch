@@ -12,6 +12,17 @@ methods:
     rationale: This proposal does not select or mutate a production run bundle.
     observation_trigger: A user selects a production dpt_rb bundle for a claim that depends on live host, Agent, or external conditions.
 claims:
+  - id: routing-checker-plan-and-assets-contract
+    class: deterministic_contract
+    method: regression
+    asset:
+      kind: regression_test
+      path: tests/governance/check-verification-routing.test.mjs
+    production_distance:
+      fixture: fixture_backed
+      agent_actor: none
+      external_calls: none
+    verdict_authority: node_test_exit
   - id: rerun-direction-engine-contract
     class: deterministic_contract
     method: regression

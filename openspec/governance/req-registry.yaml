@@ -101,6 +101,7 @@ prefixes:
   TRT: transition-table
   TRW: trace-writer
   VEM: version-management
+  VER: verification-routing
   WAD: wave0-artifacts-directory
   WAI: wave1-intake
   WDC: workflow-directory-contract
@@ -704,6 +705,13 @@ REF-005: reference-flat-format — Phase nodes enforce reference file naming con
 REF-006: reference-flat-format — Wave1 sub-agent reference file format specification
 REF-007: reference-flat-format — Agent-facing source.yaml and reference metadata formats are complete and parser-aligned
 REF-008: reference-flat-format — Phase-owned reference materializations preserve submitted source backing
+
+# verification-routing
+VER-001: verification-routing — Verification claims route through exactly three methods (regression / controlled_e2e / real_environment_e2e) with asset boundary and native verdict authority
+VER-002: verification-routing — Each change declares a verification-plan.yaml covering all three methods with claim-to-method routing and rationale
+VER-003: verification-routing — check-verification-routing.mjs validates plan shape and asset existence without running tests or manufacturing verdicts
+VER-004: verification-routing — Rerun round continuity establishes the first routed proof set replacing the proposed tests_e2e fourth layer
+VER-005: verification-routing — Verification method taxonomy has a single canonical definition; governance and guidance surfaces reference it without competing restatement
 
 # version-management
 VEM-001: version-management — CHANGELOG is concise and human-readable at project root

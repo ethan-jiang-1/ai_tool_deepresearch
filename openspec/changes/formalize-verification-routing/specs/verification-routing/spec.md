@@ -1,7 +1,6 @@
 # Verification Routing (delta)
 
-> req: VER-001, VER-002, VER-003, VER-004
-> invariants: VER-I1, VER-I2, VER-I3
+> req: VER-001, VER-002, VER-003, VER-004, VER-005
 
 ## ADDED Requirements
 
@@ -103,3 +102,21 @@ The missing `experiments_playbook/exp_rerun-round-continuity/` asset referenced 
 - **WHEN** the initial rerun routing plan is archived without a selected production bundle
 - **THEN** its real-environment route SHALL remain `deferred`
 - **AND** archive evidence SHALL state that no real production behavior claim was proven
+
+### Requirement: The method taxonomy SHALL have one canonical definition that other surfaces reference
+
+The three-method taxonomy (`regression`, `controlled_e2e`, `real_environment_e2e`) SHALL be canonically defined in exactly one place: this capability's main spec. Its canonical names are these three method identifiers; ordinal prose names (such as "第一层/第二层/第三层" or "Layer 1-4") SHALL NOT be introduced as competing identifiers in governance or guidance surfaces.
+
+Knowledge surfaces that teach future Agents about verification — `openspec/config.yaml` 测试分层节, `AGENTS.md`/`CLAUDE.md` test-layering rules, and `guidelines/project-charter.md` directory-responsibility rows — SHALL state only (a) the asset-ownership boundary facts they already own (`tests/` for regression, `experiments_playbook/` for controlled E2E, real-environment deferred) and (b) a pointer to this capability for routing semantics. They SHALL NOT restate claim-permission tables, plan schemas, or validator behavior; those live only here. This is a projection discipline: one authority definition, short references elsewhere, no second surface that can drift into a competing truth.
+
+#### Scenario: A knowledge surface stays a pointer, not a copy
+
+- **WHEN** `openspec/config.yaml` or `AGENTS.md` describes the project's verification methods after this change applies
+- **THEN** it SHALL name the three canonical method identifiers and their asset ownership boundaries
+- **AND** it SHALL reference `verification-routing` for routing and plan semantics instead of restating them
+
+#### Scenario: Ordinal layer language does not survive as an identifier
+
+- **WHEN** an updated governance or guidance surface refers to a verification method
+- **THEN** it SHALL use the canonical method identifier
+- **AND** ordinal or ad-hoc labels SHALL NOT be introduced as new method names
