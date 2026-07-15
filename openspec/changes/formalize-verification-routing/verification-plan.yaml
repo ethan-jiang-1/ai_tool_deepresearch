@@ -1,0 +1,58 @@
+schema_version: verification-routing/v1
+change: formalize-verification-routing
+methods:
+  regression:
+    status: selected
+    rationale: Deterministic direction and current-round authority contracts need fast regression coverage at their direct helper and CLI boundaries.
+  controlled_e2e:
+    status: selected
+    rationale: The claim that an Agent follows phase-rerun guidance and recovers an interruption cannot be proven by fixture state or a Node test.
+  real_environment_e2e:
+    status: deferred
+    rationale: This proposal does not select or mutate a production run bundle.
+    observation_trigger: A user selects a production dpt_rb bundle for a claim that depends on live host, Agent, or external conditions.
+claims:
+  - id: rerun-direction-engine-contract
+    class: deterministic_contract
+    method: regression
+    asset:
+      kind: regression_test
+      path: tests/engine/helpers/wave-contract-evaluators-direction.test.mjs
+    production_distance:
+      fixture: none
+      agent_actor: none
+      external_calls: none
+    verdict_authority: node_test_exit
+  - id: rerun-current-round-cli-contract
+    class: deterministic_contract
+    method: regression
+    asset:
+      kind: regression_test
+      path: tests/integration/cli/rerun-round-continuity.test.mjs
+    production_distance:
+      fixture: fixture_backed
+      agent_actor: none
+      external_calls: none
+    verdict_authority: node_test_exit
+  - id: rerun-direction-agent-recovery
+    class: agent_flow
+    method: controlled_e2e
+    asset:
+      kind: controlled_playbook
+      path: experiments_playbook/exp_rerun-round-continuity/case-318-heavy-rerun-direction-recovery.md
+    production_distance:
+      fixture: none
+      agent_actor: real_agent
+      external_calls: none
+    verdict_authority: trace_jsonl
+  - id: rerun-production-observation
+    class: production_behavior
+    method: real_environment_e2e
+    asset:
+      kind: production_runtime
+      runtime_selector: A user-approved dpt_rb bundle selected at observation time.
+    production_distance:
+      fixture: not_applicable
+      agent_actor: real_agent
+      external_calls: real
+    verdict_authority: runtime_bundle_facts
