@@ -164,6 +164,8 @@ Wave2 产出三件套 artifact group，不是单个 synthesis.md。以下为 Wav
 - **格式**：YAML
 - **Top-level keys**：`version`（"0.1"）/ `source_layer`（"wave2_cross_topic"）/ `ledger` / `synthesis` / `scan` / `findings` / `synthesis_eligibility`
 - **`scan` object**：`topic_count` / `pair_count_expected` / `pair_count_checked`
+- **Pair projection grammar**：`synthesis_eligibility.scan_topic_pair_coverage` accepts a direct array of `{ pair: [topicA, topicB], refs?: [...] }` entries or exactly `{ pairs: [<same entries>] }`. Pair endpoints use canonical UID, current slug, or accepted previous slug. Object maps, key-encoded/free-text pairs, malformed/self/unknown/duplicate pairs are invalid.
+- **Pair count policy**：`topic_count` equals canonical registry size, `pair_count_expected = C(topic_count,2)`, and `pair_count_checked` equals observed unique structured pairs. Multi-topic ordinary runs require a non-empty observed set but may use profile-authorized reduced coverage; only activated rerun `action:add` requires the exact complete canonical pair universe. `wave2_cross_topic_depth: 0` does not make an empty multi-topic scan sufficient.
 - **Per-finding required fields（15 个）**：
 
 | Field | Type | Description |

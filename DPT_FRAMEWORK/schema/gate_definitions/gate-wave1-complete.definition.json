@@ -3,6 +3,13 @@
   "description": "Verify Wave1 produced deepening artifacts per topic: evidence-summary.md, question-list.md, reference/{topic_slug}*.md rich MD reference files per topic, backfill token replacement, and trace evidence. Source-gate status-window and handoff witness are enforced by shared gate preflight.",
   "rules": [
     {
+      "id": "phase_queue_drained",
+      "check": "phase_queue_drained",
+      "target": "rb_queue.json",
+      "failure_message": "Wave1 completion requires a schema-valid globally quiescent queue with no active, refill, or delegated in-flight demand.",
+      "finding": { "source": "checker" }
+    },
+    {
       "id": "wave1_dir_exists",
       "check": "dir_exists",
       "target": "artifacts/wave1",

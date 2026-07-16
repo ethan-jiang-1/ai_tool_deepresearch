@@ -104,7 +104,9 @@ Each work-unit envelope SHALL include the manifest, task, result schema, beacon,
 
 The generated `task.md` SHALL also include one copy-ready Result JSON Starter and one concise pre-submit checklist derived from the same manifest, output contract and cache policy that generate `result.schema.json`. The starter SHALL project the exact result schema version, work-unit identity, receipt nonce, actor contract version and execution actor class when present, plus the allowed result fields for that kind. For a source-claim-capable kind, the same output contract SHALL expose any `source_claims.prior_submitted_output_roles[]`; Wave1 default guidance SHALL identify prior `evidence_summary` as allowed and SHALL NOT imply that prior `question_list`, `reference`, or `other` outputs are compatible. The starter SHALL NOT include `actor_execution` or other fields that the result schema rejects.
 
-The checklist SHALL identify the assigned immutable envelope files, required actor-bound receipt fields, allowed output roles and required path-role pairs, cache leaf directory shape, and any required URL binding between declared outputs/source claims and `meta.json`. It SHALL direct the actor to write the assigned result and run dry-submit before formal submit when the Phase Agent is the actor or repairs a rejected candidate. The starter and checklist SHALL be read-only guidance projections; they SHALL NOT pre-create `result.json`, count as actor output, satisfy a receipt, append provenance, or weaken submit validation.
+The checklist SHALL identify the assigned immutable envelope files, required actor-bound receipt fields, allowed output roles and required path-role pairs, cache leaf directory shape, and any required URL binding between declared outputs/source claims and `meta.json`. It SHALL direct the actor to write the assigned result and direct the Phase Agent to run dry-submit before formal submit or after repairing a rejected candidate. The starter and checklist SHALL be read-only guidance projections; they SHALL NOT pre-create `result.json`, count as actor output, satisfy a receipt, append provenance, or weaken submit validation.
+
+Generated task, spawn prompt, shared protocol and role guidance SHALL distinguish two surfaces explicitly: lifecycle evidence is appended as JSONL to the assigned `runtime-receipt.jsonl`; `log-event.mjs` emits optional diagnostic log/trace events and SHALL NOT satisfy or replace runtime receipt evidence. Guidance SHALL NOT require the user to run dry-submit, submit, receipt repair, or other ordinary pipeline commands.
 
 #### Scenario: nonce mismatch blocks submit
 
@@ -129,6 +131,19 @@ The checklist SHALL identify the assigned immutable envelope files, required act
 - **WHEN** the Engine generates a copy-ready result starter in task guidance
 - **THEN** no assigned result, runtime receipt, output file, cache trail, ledger row or queue completion SHALL be created by that projection
 - **AND** formal submit SHALL still require real actor-produced surfaces
+
+#### Scenario: Receipt and diagnostic log are not interchangeable
+
+- **WHEN** a work-unit actor records lifecycle progress
+- **THEN** Agent-facing guidance SHALL require JSONL receipt events at the assigned runtime receipt path
+- **AND** any `log-event.mjs` call SHALL be described as optional diagnostic mirroring only
+- **AND** diagnostic logs without runtime receipt evidence SHALL NOT pass dry-submit or formal submit
+
+#### Scenario: Phase Agent owns ordinary submit repair execution
+
+- **WHEN** dry-submit returns an authorized candidate or receipt repair coordinate
+- **THEN** the Phase Agent SHALL perform or direct the same-candidate mechanical repair and rerun dry-submit
+- **AND** it SHALL NOT ask the user to operate the pipeline unless a separate semantic, permission, or external-action boundary exists
 
 ### Requirement: Submit SHALL be the only successful delegated completion transition
 
@@ -405,6 +420,8 @@ Allowed canonicalization is limited to:
 - materializing `page-content.md` as canonical `page.md` inside the same declared cache leaf when the canonical page file is missing, or accepting an identical non-authority sidecar when both files exist;
 - replacing a stale result/receipt `receipt_nonce` with the Engine record nonce only when `work_id`, `queue_item_id`, and `kind` all match the claimed record and the submitted result path resolves inside that work unit's assigned directory.
 
+Runtime receipt `detail` is optional diagnostic presentation, not identity or completion authority. The receipt schema SHALL accept either a keyed JSON object or a human-readable string at `detail` without creating a normalization event or rewriting one form into the other. Array, number, boolean, null, malformed JSONL, conflicting identity, and conflicting schema values SHALL remain invalid. Timeout-preflight, submit, inspect and Gate consumers SHALL NOT derive progress/coverage authority from the contents or shape of `detail`.
+
 Accepted submit transactions SHALL persist canonical authority surfaces before reporting success: assigned `result.json` SHALL contain the canonical flat result, assigned `runtime-receipt.jsonl` SHALL contain canonical receipt events, declared cache leaves SHALL contain canonical `page.md`, and ledger rows SHALL be built from canonical data. Any normalization SHALL be visible through structured diagnostics in submit output, trace, log, or an equivalent Engine diagnostic surface. Invalid submit SHALL remain non-terminal and SHALL NOT append a ledger row or complete queue demand.
 
 This requirement SHALL NOT remove the existing ability to submit a candidate `resultPath` from a temporary or caller-provided location when all identity fields already match. The stricter assigned-directory containment check applies only to nonce correction. In every successful case, the Engine SHALL still persist the accepted canonical result to the assigned work-unit `result_ref`.
@@ -431,6 +448,19 @@ This requirement SHALL NOT remove the existing ability to submit a candidate `re
 - **THEN** submit SHALL validate the canonical receipt events with the filled schema version and binding identity fields
 - **AND** the assigned `runtime-receipt.jsonl` SHALL be persisted in canonical JSONL form before submit reports success
 - **AND** diagnostics SHALL identify the receipt line numbers and autofilled schema or identity fields
+
+#### Scenario: diagnostic receipt detail accepts object or string
+
+- **WHEN** a receipt event has valid required identity/schema/event fields
+- **AND** optional `detail` is either a JSON object or string
+- **THEN** dry-submit and formal submit SHALL accept the diagnostic shape without rewriting it
+- **AND** object/string choice SHALL NOT change progress, coverage, or Gate authority
+
+#### Scenario: non-message receipt detail shapes remain invalid
+
+- **WHEN** optional receipt `detail` is an array, number, boolean, or null
+- **THEN** dry-submit SHALL reject the exact receipt line through the existing receipt repair boundary
+- **AND** the Agent SHALL repair the same receipt and rerun dry-submit without a user decision
 
 #### Scenario: conflicting receipt schema version is rejected
 
@@ -520,7 +550,7 @@ For the changed submit contract, independent-root coverage SHALL include candida
 
 Prerequisite short-circuiting SHALL be local. An unreadable candidate SHALL mask actor/output/cache/source implications that require parsed candidate data; an invalid manifest/index envelope SHALL mask contract checks that require that envelope; and an invalid cache leaf SHALL mask URL/source-claim implications that require that leaf. Independently readable surfaces, such as a runtime-receipt root and a separately resolvable output/cache root, MAY still be returned together. Prior-submitted-output eligibility for supplementary source claims SHALL remain the source-lineage contract and SHALL NOT be guessed by this core preflight slice.
 
-Agent-facing fallback and submit-repair guidance SHALL place dry-submit immediately before formal submit for Phase Agent-authored candidates. It SHALL instruct the Agent to use the generated result starter, read all returned `violations[]` and `repair_target` values, repair the same assigned result/receipt/output/cache surfaces, and rerun the same dry-submit checkpoint. A repairable formal-submit rejection SHALL recommend dry-submit for the same candidate rather than inviting repeated formal-submit guessing.
+Agent-facing fallback and submit-repair guidance SHALL place dry-submit immediately before formal submit for Phase Agent-authored candidates. It SHALL instruct the Agent to use the generated result starter, read all returned `violations[]` and `repair_target` values, repair the same assigned result/receipt/output/cache surfaces, and rerun the same dry-submit checkpoint. A repairable formal-submit rejection SHALL recommend dry-submit for the same candidate rather than inviting repeated formal-submit guessing. These ordinary authorized repairs SHALL remain Agent execution; guidance SHALL escalate to the user only for a new semantic/risk/permission decision, an external non-delegable action, or a missing accepted contract.
 
 Dry-submit SHALL keep provenance strict. It SHALL NOT authorize a result or receipt written after the fact to claim work that was performed outside the claimed envelope, and it SHALL NOT treat a filesystem-only artifact as actor-produced merely because a later candidate names it.
 
@@ -593,6 +623,7 @@ Dry-submit SHALL keep provenance strict. It SHALL NOT authorize a result or rece
 - **THEN** dry-submit SHALL return all violations that can be evaluated without the failed prerequisite
 - **AND** guidance SHALL direct repair of the same assigned surfaces followed by the same dry-submit command
 - **AND** formal submit SHALL run only after dry-submit predicts pass
+- **AND** the Agent SHALL execute the repair without asking the user to run ordinary pipeline commands
 
 #### Scenario: Formal rejection points back to dry-submit
 

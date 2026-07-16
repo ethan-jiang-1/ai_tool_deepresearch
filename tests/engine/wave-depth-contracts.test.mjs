@@ -9,6 +9,7 @@ import {
   checkWave1DepthReviewContract,
   checkWave2FindingIndexContract,
   deriveWave1NewSourceFloor,
+  evaluateWave2PairFacts,
 } from '../../DPT_FRAMEWORK/engine/helpers/wave-depth-contracts.mjs';
 import {
   claimAndSubmitWorkUnit,
@@ -212,6 +213,22 @@ function validWave2Index(overrides = {}) {
   };
 }
 
+function pairFactPlan({ legacy = false } = {}) {
+  const topics = [
+    { topic_uid: legacy ? undefined : 'tp_123e4567-e89b-12d3-a456-426614174000', id: '01', slug: 'topic-a', previous_layouts: [{ id: '01', slug: 'old-topic-a' }] },
+    { topic_uid: legacy ? undefined : 'tp_123e4567-e89b-12d3-a456-426614174001', id: '02', slug: 'topic-b', previous_layouts: [{ id: '02', slug: 'old-topic-b' }] },
+    { topic_uid: legacy ? undefined : 'tp_123e4567-e89b-12d3-a456-426614174002', id: '03', slug: 'topic-c', previous_layouts: [] },
+  ];
+  return { topic_registry: topics };
+}
+
+function pairFactIndex(coverage, scan = {}) {
+  return {
+    scan: { topic_count: 3, pair_count_expected: 3, pair_count_checked: 1, ...scan },
+    synthesis_eligibility: { scan_topic_pair_coverage: coverage },
+  };
+}
+
 describe('wave depth contract helpers', () => {
   after(() => {
     for (const dir of createdDirs) rmSync(dir, { recursive: true, force: true });
@@ -226,6 +243,74 @@ describe('wave depth contract helpers', () => {
     assert.equal(missing.ok, false);
     assert.equal(missing.code, 'missing_profile_parameter');
     assert.match(missing.inspect.join('\n'), /topic_unique_ratio/);
+  });
+
+  it('normalizes direct-array and pairs-wrapper coverage through UID/current/previous slugs', () => {
+    const plan = pairFactPlan();
+    const uidA = plan.topic_registry[0].topic_uid;
+    const uidB = plan.topic_registry[1].topic_uid;
+    const direct = evaluateWave2PairFacts(plan, pairFactIndex([
+      { pair: [uidA, 'old-topic-b'], refs: [] },
+    ]));
+    const wrapped = evaluateWave2PairFacts(plan, pairFactIndex({
+      pairs: [{ pair: ['topic-b', 'old-topic-a'], refs: [] }],
+    }));
+    assert.equal(direct.usable, true, JSON.stringify(direct));
+    assert.equal(wrapped.usable, true, JSON.stringify(wrapped));
+    assert.deepEqual(direct.observed_pair_keys, wrapped.observed_pair_keys);
+    assert.deepEqual(direct.observed_pairs, [['topic-a', 'topic-b']]);
+  });
+
+  it('normalizes supported legacy current/previous slugs without persistent UID state', () => {
+    const result = evaluateWave2PairFacts(pairFactPlan({ legacy: true }), pairFactIndex([
+      { pair: ['old-topic-a', 'topic-b'] },
+    ]));
+    assert.equal(result.usable, true, JSON.stringify(result));
+    assert.deepEqual(result.observed_pairs, [['topic-a', 'topic-b']]);
+    assert.match(result.observed_pair_keys[0], /legacy:01:topic-a/);
+  });
+
+  it('rejects unsupported pair containers and malformed identity entries before count implications', () => {
+    const plan = pairFactPlan();
+    const cases = [
+      { label: 'object map', coverage: { 'topic-a--topic-b': { refs: [] } }, code: 'pair_container_invalid' },
+      { label: 'single entry object', coverage: { pair: ['topic-a', 'topic-b'] }, code: 'pair_container_invalid' },
+      { label: 'malformed pair', coverage: [{ pair: ['topic-a'] }], code: 'pair_entry_invalid' },
+      { label: 'self pair', coverage: [{ pair: ['topic-a', 'old-topic-a'] }], code: 'pair_self_invalid' },
+      { label: 'unknown topic', coverage: [{ pair: ['topic-a', 'missing-topic'] }], code: 'pair_topic_unknown' },
+      { label: 'duplicate unordered pair', coverage: [{ pair: ['topic-a', 'topic-b'] }, { pair: ['old-topic-b', 'old-topic-a'] }], code: 'pair_duplicate_invalid' },
+    ];
+    for (const testCase of cases) {
+      const result = evaluateWave2PairFacts(plan, pairFactIndex(testCase.coverage, { pair_count_checked: 99 }));
+      assert.equal(result.usable, false, testCase.label);
+      assert.ok(result.issues.some((issue) => issue.code === testCase.code), `${testCase.label}: ${JSON.stringify(result)}`);
+      assert.equal(result.issues.some((issue) => issue.code === 'pair_count_checked_mismatch'), false, testCase.label);
+    }
+  });
+
+  it('keeps scan presence distinct from full-pair policy while enforcing canonical counts', () => {
+    const plan = pairFactPlan();
+    const partial = evaluateWave2PairFacts(plan, pairFactIndex([
+      { pair: ['topic-a', 'topic-b'] },
+    ]));
+    assert.equal(partial.usable, true, JSON.stringify(partial));
+    assert.equal(partial.complete, false);
+    assert.equal(partial.observed_count, 1);
+    assert.equal(partial.expected_count, 3);
+
+    const empty = evaluateWave2PairFacts(plan, pairFactIndex([], { pair_count_checked: 0 }));
+    assert.equal(empty.usable, false);
+    assert.ok(empty.issues.some((issue) => issue.code === 'pair_scan_empty'));
+
+    for (const scan of [
+      { topic_count: 2 },
+      { pair_count_expected: 2 },
+      { pair_count_checked: 2 },
+      { pair_count_checked: -1 },
+    ]) {
+      const drift = evaluateWave2PairFacts(plan, pairFactIndex([{ pair: ['topic-a', 'topic-b'] }], scan));
+      assert.equal(drift.usable, false, JSON.stringify(scan));
+    }
   });
 
   it('passes a minimal Wave1 depth review by deriving source/cache/novelty/floor from reviewed rows', () => {

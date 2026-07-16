@@ -1,17 +1,17 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.30**
+> **DPT_FRAMEWORK v0.31**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.30
+## Current Release: v0.31
 
-- Rerun-added Topics use the same normal Wave0/Wave1 producer, submitted-ledger, reference/depth, and Gate contracts as first-run Topics; valid historical submitted coverage remains reusable.
-- Formal Gates and Wave inspect commands return root-first `hints[]` with the direct missing fact, legal next-action coordinate, and exact same-check rerun, so the Agent can perform authorized mechanical repair without guessing internal lineage.
-- Quality control is simpler but authority remains strict: equivalent Markdown presentation is tolerated, count/depth checks derive from direct submitted facts, supplementary Wave1 lineage is explicit, and missing declarations recover only through hash-identical existing-owner restoration.
+- Wave2 reads one normalized structured pair projection through canonical Topic identity. Ordinary non-empty reduced coverage remains valid; only activated rerun `action:add` requires the exact full canonical pair universe.
+- Wave0/Wave1/Wave2 completion requires global queue quiescence: `active_window`, `refill_pool`, and `delegated_in_flight` must all be empty, with the Agent following the returned existing-owner action and same-check rerun.
+- Work-unit lifecycle identity remains strict while optional receipt `detail` accepts keyed objects or human-readable strings. Assigned `runtime-receipt.jsonl` is lifecycle evidence; `log-event.mjs` is optional diagnostics only.
 
 ## 0. 禁用内置捷径（最高优先）
 

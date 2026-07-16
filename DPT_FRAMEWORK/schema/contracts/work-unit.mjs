@@ -307,7 +307,7 @@ export const WorkUnitRuntimeReceiptEventSchema = z.object({
   actor_contract_version: z.literal(WORK_UNIT_ACTOR_CONTRACT_VERSION).optional(),
   execution_actor_class: ExecutionActorClassSchema.optional(),
   ts: z.string().datetime().optional(),
-  detail: JsonObject.optional(),
+  detail: z.union([JsonObject, z.string()]).optional(),
 }).passthrough();
 
 export const WorkUnitSourceClaimSchema = z.object({

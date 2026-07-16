@@ -35,6 +35,7 @@ import {
   checkWave2FindingIndexContract,
   topicSlugFromDepthReviewTarget,
 } from './wave-depth-contracts.mjs';
+import { checkPhaseQueueDrained } from './phase-queue-drain.mjs';
 import {
   buildContractEvaluation,
   makeContractFinding,
@@ -357,7 +358,7 @@ export function resolveRerunDirection(content, profileRerunCount) {
   return { state: 'future', rerun_count: rerunCount, content: section };
 }
 
-function checkRerunAddFullSynthesis(bundlePath) {
+function checkRerunAddFullSynthesis(bundlePath, pairFacts) {
   const topics = topicSlugs(bundlePath);
   const profileRerunCount = readProfileRerunCount(bundlePath);
   const addTopics = topics.filter((topic) => {
@@ -369,24 +370,25 @@ function checkRerunAddFullSynthesis(bundlePath) {
     // matching, future, legacy_unbound → apply action (legacy = pre-v0.29 behavior)
     return /action\s*:\s*add\b/i.test(direction.content || content);
   });
-  if (addTopics.length === 0) return { passed: true };
+  if (addTopics.length === 0) return { passed: true, active: false };
 
   const synthesisPath = join(bundlePath, 'artifacts/wave2/synthesis.md');
-  const ledgerPath = join(bundlePath, 'artifacts/wave2/cross-topic-ledger.md');
-  const indexPath = join(bundlePath, 'artifacts/wave2/finding-index.yaml');
-  const inspect = [];
   const synthesis = existsSync(synthesisPath) ? readFileSync(synthesisPath, 'utf8') : '';
-  if (/^##\s+Delta Synthesis\b/m.test(synthesis)) inspect.push(`Rerun action:add topic(s) ${addTopics.join(', ')} cannot use Delta Synthesis mode`);
-
-  const ledger = existsSync(ledgerPath) ? readFileSync(ledgerPath, 'utf8') : '';
-  const indexText = existsSync(indexPath) ? readFileSync(indexPath, 'utf8') : '';
-  let indexData = null;
-  try { indexData = indexText ? parseYaml(indexText) : null; } catch { indexData = null; }
-  const covered = new Set(topics.filter((topic) => ledger.includes(topic) || indexText.includes(topic)));
-  for (const topic of indexData?.scan?.topics || []) covered.add(topic);
-  const missing = topics.filter((topic) => !covered.has(topic));
-  if (missing.length > 0) inspect.push(`Rerun action:add scan/index coverage missing topic slug(s): ${missing.join(', ')}`);
-  return { passed: inspect.length === 0, detail: inspect.join('; ') };
+  const deltaIssue = /^##\s+Delta Synthesis\b/m.test(synthesis)
+    ? `Rerun action:add topic(s) ${addTopics.join(', ')} cannot use Delta Synthesis mode`
+    : null;
+  const pairMasked = !pairFacts?.usable;
+  const pairIssue = !pairMasked && !pairFacts.complete
+    ? `Rerun action:add structured pair coverage is incomplete; missing pair(s): ${pairFacts.missing_pairs.map((pair) => pair.join(' / ')).join(', ')}`
+    : null;
+  return {
+    passed: !deltaIssue && !pairIssue,
+    active: true,
+    pair_masked: pairMasked,
+    delta_issue: deltaIssue,
+    pair_issue: pairIssue,
+    detail: [deltaIssue, pairIssue].filter(Boolean).join('; '),
+  };
 }
 
 function declarationGapContext(bundlePath, definition) {
@@ -551,6 +553,9 @@ export function evaluateWave0Contract(bundlePath, definition) {
           result = evaluatePattern(bundlePath, rule, target.resolved, target.topic);
         } else if (rule.check === 'status_value') {
           result = evaluateStatusRule(bundlePath, rule);
+        } else if (rule.check === 'phase_queue_drained') {
+          const check = checkPhaseQueueDrained(bundlePath, { phase: 'wave0' });
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings };
         } else if (rule.check === 'cache_coverage') {
           const check = checkCacheCoverage(bundlePath, { rule });
           result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
@@ -672,6 +677,9 @@ export function evaluateWave1Contract(bundlePath, definition) {
           }
         } else if (rule.check === 'count_floor') {
           result = evaluateCountFloor(bundlePath, rule, target.resolved, target.topic, target.alternatives);
+        } else if (rule.check === 'phase_queue_drained') {
+          const check = checkPhaseQueueDrained(bundlePath, { phase: 'wave1' });
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings };
         } else if (rule.check === 'cache_coverage') {
           const check = checkCacheCoverage(bundlePath, { rule });
           result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
@@ -756,6 +764,11 @@ export function evaluateWave2Contract(bundlePath, definition) {
     ? { suspected: false, phase: 'wave2', artifactsFound: [], provenanceMissing: [] }
     : scanDelegatedBypassSuspicion(bundlePath, 'wave2');
   let checksRun = 0;
+  let findingIndexCheck = null;
+  const getFindingIndexCheck = (rule) => {
+    if (!findingIndexCheck) findingIndexCheck = checkWave2FindingIndexContract(bundlePath, { rule });
+    return findingIndexCheck;
+  };
 
   for (const rule of definition.rules) {
     if (rule.check === 'placeholder' || rule.check === 'trace_event_present') continue;
@@ -861,20 +874,37 @@ export function evaluateWave2Contract(bundlePath, definition) {
           }
         } else if (rule.check === 'status_value') {
           result = evaluateStatusRule(bundlePath, rule);
+        } else if (rule.check === 'phase_queue_drained') {
+          const check = checkPhaseQueueDrained(bundlePath, { phase: 'wave2' });
+          result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings };
         } else if (rule.check === 'rerun_add_full_synthesis') {
-          result = checkRerunAddFullSynthesis(bundlePath);
-          if (!result.passed) result.findings = [localCheckerFinding(bundlePath, rule, {
-            suffix: 'rerun_add_synthesis',
-            blockingBasis: 'required_structure',
-            surface: target.resolved,
-            expected: 'Rerun action:add uses full Wave2 synthesis and covers every canonical topic in scan/index authority.',
-            observed: result.detail,
-            missingFact: result.detail,
-            repair: `Repair Wave2 synthesis, ledger and finding-index coverage for every rerun-added topic.`,
-            detail: result.detail,
-          })];
+          const pairCheck = getFindingIndexCheck(definition.rules.find((candidate) => candidate.check === 'finding_index_contract') || rule);
+          result = checkRerunAddFullSynthesis(bundlePath, pairCheck.pair_facts);
+          if (result.pair_masked && !result.delta_issue) maskedRuleIds.push(rule.id);
+          result.findings = [
+            ...(result.delta_issue ? [localCheckerFinding(bundlePath, rule, {
+              suffix: 'delta_synthesis',
+              blockingBasis: 'required_structure',
+              surface: 'artifacts/wave2/synthesis.md',
+              expected: 'Rerun action:add uses full Wave2 synthesis rather than Delta Synthesis.',
+              observed: result.delta_issue,
+              missingFact: result.delta_issue,
+              repair: 'Rewrite artifacts/wave2/synthesis.md through the full action:add synthesis path, then rerun the same checkpoint.',
+              detail: result.delta_issue,
+            })] : []),
+            ...(result.pair_issue ? [localCheckerFinding(bundlePath, rule, {
+              suffix: 'pair_universe',
+              blockingBasis: 'required_structure',
+              surface: 'artifacts/wave2/finding-index.yaml',
+              expected: 'Rerun action:add structured pair coverage equals the exact canonical pair universe.',
+              observed: result.pair_issue,
+              missingFact: result.pair_issue,
+              repair: 'Add the exact missing structured pair entries and coherent counts to finding-index.yaml, then rerun the same checkpoint.',
+              detail: result.pair_issue,
+            })] : []),
+          ];
         } else if (rule.check === 'finding_index_contract') {
-          const check = checkWave2FindingIndexContract(bundlePath, { rule });
+          const check = getFindingIndexCheck(rule);
           maskedRuleIds.push(...(check.masked_rule_ids || []).map((masked) => `${rule.id}:${masked}`));
           result = { passed: check.passed, detail: check.inspect.join('; '), repair: check.advice.join(' '), findings: check.findings || [] };
         } else if (rule.check === 'reference_index_coverage') {

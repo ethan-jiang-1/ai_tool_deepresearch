@@ -38,7 +38,7 @@ suggested_context: []
 This mandate is loaded from the role spec itself. It applies to every native sub-agent spawn that receives a work-unit task, including prompts copied from `operate-work-unit claim` output.
 
 1. **Read your beacon first.** Open `_beacon.json` in your work-unit directory. It is the single source of truth for `bundle_dir`, `log_cli`, `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, and `runtime_receipt_ref`. Do NOT use environment variables or inherited cwd for the bundle path.
-2. **Emit lifecycle events via `log-event.mjs`.** Using `log_cli` and `bundle_dir` from the beacon, emit this event set, each carrying `work_id`, `queue_item_id`, `kind`, and `receipt_nonce` in its `--detail` JSON:
+2. **Append lifecycle evidence to the assigned receipt.** Write this event set as JSONL lines to `runtime_receipt_ref`, each carrying `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`. `log-event.mjs` is optional diagnostic mirroring only and never satisfies or replaces the assigned receipt:
    - `search_start` / `search_done` — around each bounded search (`search_done` includes `result_count`)
    - `fetch_done` — when a page fetch completes (include `url`)
    - `file_written` — when you write an artifact file (include bundle-relative `path`)
@@ -48,7 +48,7 @@ This mandate is loaded from the role spec itself. It applies to every native sub
 4. **Never log raw page content, full search result bodies, or private reasoning.** The logging CLI always exits 0; diagnostics must not block your work.
 
 Example:
-  node <log_cli> --bundle <bundle_dir> --level info --msg "work_done" --detail '{"event":"work_done","work_id":"<work_id>","queue_item_id":"<queue_item_id>","kind":"<kind>","receipt_nonce":"<receipt_nonce>","summary":"<summary>"}'
+  {"schema_version":"work-unit.receipt-event.v1","event":"work_done","work_id":"<work_id>","queue_item_id":"<queue_item_id>","kind":"<kind>","receipt_nonce":"<receipt_nonce>","detail":{"summary":"<summary>"}}
 
 ## 1. Purpose
 

@@ -193,7 +193,7 @@ After each successful submit, update the seed topic's `## 本轮新增证据` se
 
 ## 5. Gate Command
 
-After queue demand is drained, reconstructed delegated in-flight work is zero, and Wave0 artifacts/backfill are materialized, run the Wave0 inspect before recording completion evidence or invoking the formal gate:
+After `rb_queue.json#/active_window`, `#/refill_pool`, and `#/delegated_in_flight` are all empty and Wave0 artifacts/backfill are materialized, run the Wave0 inspect before recording completion evidence or invoking the formal gate. Do not infer away future-looking residual demand. If `phase_queue_drained` fails, the Agent follows its returned queue/work-unit owner and reruns this same checkpoint; a refill-only `missing_contract` does not authorize queue hand edits.
 
 ```bash
 node DPT_FRAMEWORK/cli/inspect-wave0-output.mjs --bundle <path>

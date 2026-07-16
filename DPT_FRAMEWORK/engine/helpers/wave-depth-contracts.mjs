@@ -11,6 +11,7 @@ import {
   readSubmittedWorkUnitDeclarations,
 } from './gate-helpers-readers.mjs';
 import { inspectCacheLeaf } from './cache-leaf-contract.mjs';
+import { evaluateTopicLayouts } from './topic-layout.mjs';
 import { makeContractFinding } from './wave-contract-findings.mjs';
 
 const DEPTH_DECISIONS = new Set(['accept', 'supplement_required', 'blocked_contract']);
@@ -596,10 +597,126 @@ function readFindingIndex(bundlePath) {
   }
 }
 
-function countExpectedPairs(bundlePath, indexData) {
-  const plan = readBundlePlan(bundlePath);
-  const topicCount = Array.isArray(plan?.topic_registry) ? plan.topic_registry.length : Number(indexData.scan?.topic_count || 0);
-  return topicCount > 1 ? (topicCount * (topicCount - 1)) / 2 : 0;
+function pairKey(left, right) {
+  return [left, right].sort().join('\u0000');
+}
+
+export function evaluateWave2PairFacts(plan, indexData) {
+  const registry = Array.isArray(plan?.topic_registry) ? plan.topic_registry : [];
+  const layouts = evaluateTopicLayouts(registry).referenceLayouts;
+  const canonical = layouts.map((layout) => ({
+    key: layout.topic_uid || `legacy:${layout.current.id}:${layout.current.slug}`,
+    slug: layout.current.slug,
+    tokens: [layout.topic_uid, layout.current.slug, ...layout.previous.map((item) => item.slug)].filter(Boolean),
+  }));
+  const keyToSlug = new Map(canonical.map((topic) => [topic.key, topic.slug]));
+  const tokenOwners = new Map();
+  for (const topic of canonical) {
+    for (const token of topic.tokens) {
+      if (!tokenOwners.has(token)) tokenOwners.set(token, new Set());
+      tokenOwners.get(token).add(topic.key);
+    }
+  }
+  const expectedPairKeys = [];
+  for (let left = 0; left < canonical.length; left += 1) {
+    for (let right = left + 1; right < canonical.length; right += 1) {
+      expectedPairKeys.push(pairKey(canonical[left].key, canonical[right].key));
+    }
+  }
+
+  const issues = [];
+  const scan = indexData?.scan;
+  const eligibility = indexData?.synthesis_eligibility;
+  if (!scan || typeof scan !== 'object' || Array.isArray(scan)) {
+    issues.push({ code: 'pair_scan_parent_invalid', detail: 'scan must be an object' });
+  }
+  if (!eligibility || typeof eligibility !== 'object' || Array.isArray(eligibility)
+      || !Object.prototype.hasOwnProperty.call(eligibility, 'scan_topic_pair_coverage')) {
+    issues.push({ code: 'pair_coverage_parent_invalid', detail: 'synthesis_eligibility.scan_topic_pair_coverage is required' });
+  }
+  if (issues.length > 0) {
+    return { usable: false, complete: false, issues, expected_count: expectedPairKeys.length, expected_pair_keys: expectedPairKeys };
+  }
+
+  const rawContainer = eligibility.scan_topic_pair_coverage;
+  let entries;
+  if (Array.isArray(rawContainer)) entries = rawContainer;
+  else if (rawContainer && typeof rawContainer === 'object' && !Array.isArray(rawContainer)
+      && Object.keys(rawContainer).length === 1 && Array.isArray(rawContainer.pairs)) entries = rawContainer.pairs;
+  else {
+    return {
+      usable: false,
+      complete: false,
+      issues: [{ code: 'pair_container_invalid', detail: 'scan_topic_pair_coverage must be an array or { pairs: [...] }' }],
+      expected_count: expectedPairKeys.length,
+      expected_pair_keys: expectedPairKeys,
+    };
+  }
+
+  const observed = new Map();
+  entries.forEach((entry, index) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)
+        || Object.keys(entry).some((key) => !['pair', 'refs'].includes(key))
+        || !Array.isArray(entry.pair) || entry.pair.length !== 2
+        || entry.pair.some((token) => typeof token !== 'string' || !token.trim())
+        || (Object.prototype.hasOwnProperty.call(entry, 'refs') && !Array.isArray(entry.refs))) {
+      issues.push({ code: 'pair_entry_invalid', index, detail: `pair entry ${index} must use { pair: [topicA, topicB], refs?: [...] }` });
+      return;
+    }
+    const resolved = entry.pair.map((token) => {
+      const owners = tokenOwners.get(token);
+      return owners?.size === 1 ? [...owners][0] : null;
+    });
+    if (resolved.some((key) => key === null)) {
+      issues.push({ code: 'pair_topic_unknown', index, detail: `pair entry ${index} contains an unknown or ambiguous topic token` });
+      return;
+    }
+    if (resolved[0] === resolved[1]) {
+      issues.push({ code: 'pair_self_invalid', index, detail: `pair entry ${index} resolves both endpoints to ${keyToSlug.get(resolved[0])}` });
+      return;
+    }
+    const key = pairKey(resolved[0], resolved[1]);
+    if (observed.has(key)) {
+      issues.push({ code: 'pair_duplicate_invalid', index, detail: `pair entry ${index} duplicates ${observed.get(key).join(' / ')}` });
+      return;
+    }
+    observed.set(key, resolved.map((keyValue) => keyToSlug.get(keyValue)).sort());
+  });
+  if (issues.length > 0) {
+    return { usable: false, complete: false, issues, expected_count: expectedPairKeys.length, expected_pair_keys: expectedPairKeys };
+  }
+
+  const topicCount = canonical.length;
+  const checkedCount = scan.pair_count_checked;
+  if (!Number.isInteger(scan.topic_count) || scan.topic_count !== topicCount) {
+    issues.push({ code: 'pair_topic_count_mismatch', detail: `scan.topic_count=${scan.topic_count}; canonical topic count=${topicCount}` });
+  }
+  if (!Number.isInteger(scan.pair_count_expected) || scan.pair_count_expected !== expectedPairKeys.length) {
+    issues.push({ code: 'pair_count_expected_mismatch', detail: `scan.pair_count_expected=${scan.pair_count_expected}; canonical expected=${expectedPairKeys.length}` });
+  }
+  if (!Number.isInteger(checkedCount) || checkedCount < 0 || checkedCount > expectedPairKeys.length) {
+    issues.push({ code: 'pair_count_checked_bounds', detail: `scan.pair_count_checked=${checkedCount}; expected integer in 0..${expectedPairKeys.length}` });
+  } else if (checkedCount !== observed.size) {
+    issues.push({ code: 'pair_count_checked_mismatch', detail: `scan.pair_count_checked=${checkedCount}; observed unique pairs=${observed.size}` });
+  }
+  if (topicCount > 1 && observed.size === 0) {
+    issues.push({ code: 'pair_scan_empty', detail: 'multi-topic Wave2 requires at least one structured checked pair' });
+  }
+  const observedPairKeys = [...observed.keys()].sort();
+  const expectedSet = new Set(expectedPairKeys);
+  const missingPairKeys = expectedPairKeys.filter((key) => !observed.has(key));
+  return {
+    usable: issues.length === 0,
+    complete: issues.length === 0 && observed.size === expectedSet.size && missingPairKeys.length === 0,
+    issues,
+    topic_count: topicCount,
+    expected_count: expectedPairKeys.length,
+    observed_count: observed.size,
+    expected_pair_keys: [...expectedPairKeys].sort(),
+    observed_pair_keys: observedPairKeys,
+    observed_pairs: observedPairKeys.map((key) => observed.get(key)),
+    missing_pairs: missingPairKeys.map((key) => key.split('\u0000').map((keyValue) => keyToSlug.get(keyValue)).sort()),
+  };
 }
 
 function submittedWave2ReceiptRefs(bundlePath) {
@@ -683,6 +800,7 @@ export function checkWave2FindingIndexContract(bundlePath, { rule = null } = {})
   const maskedRuleIds = [];
   let contentIssue = false;
   let profileDecisionIssue = false;
+  let pairFacts = null;
 
   const missingTopLevel = new Set();
   for (const key of ['version', 'source_layer', 'ledger', 'synthesis', 'scan', 'findings', 'synthesis_eligibility']) {
@@ -718,10 +836,9 @@ export function checkWave2FindingIndexContract(bundlePath, { rule = null } = {})
     maskedRuleIds.push('scan_pair_coverage');
     contentIssue = true;
   } else {
-    const expectedPairs = countExpectedPairs(bundlePath, data);
-    const checkedPairs = Number(data.scan.pair_count_checked ?? 0);
-    if (expectedPairs > 0 && checkedPairs <= 0) {
-      inspect.push(`[synthesis_eligibility] FAIL: scan.pair_count_checked=${data.scan.pair_count_checked ?? '<missing>'}; expected scan matrix coverage for topic pairs`);
+    pairFacts = evaluateWave2PairFacts(readBundlePlan(bundlePath), data);
+    if (!pairFacts.usable) {
+      for (const issue of pairFacts.issues) inspect.push(`[scan_pair_coverage] FAIL: ${issue.code}: ${issue.detail}`);
       contentIssue = true;
     }
   }
@@ -901,7 +1018,7 @@ export function checkWave2FindingIndexContract(bundlePath, { rule = null } = {})
     repair: 'Ask only for the missing independent-backing parameter decision and record it through the accepted profile path.',
     detail: `[${rule?.id || 'finding_index_contract'}] missing Wave2 independent-backing profile parameter.`,
   }));
-  return { ...issueResult(inspect, advice, rootFindings), masked_rule_ids: [...new Set(maskedRuleIds)] };
+  return { ...issueResult(inspect, advice, rootFindings), pair_facts: pairFacts, masked_rule_ids: [...new Set(maskedRuleIds)] };
 }
 
 export function topicSlugFromDepthReviewTarget(target) {

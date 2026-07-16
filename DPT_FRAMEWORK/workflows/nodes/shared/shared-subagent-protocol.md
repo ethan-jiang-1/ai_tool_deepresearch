@@ -159,7 +159,7 @@ Minimum identity fields:
 }
 ```
 
-Diagnostic logs go through `DPT_FRAMEWORK/cli/log-event.mjs` when useful. They are useful for forensics, but submit/gate authority still comes from Engine validation and the submitted ledger row.
+Append lifecycle evidence directly as JSONL to the assigned `runtime-receipt.jsonl`. `DPT_FRAMEWORK/cli/log-event.mjs` is optional diagnostic mirroring only: it may help forensics, but never satisfies or replaces the runtime receipt. Submit/gate authority still comes from Engine validation and the submitted ledger row.
 
 For slow work, write progress before and after each bounded batch. Every progress line must carry `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`. Progress receipts help timeout preflight distinguish no progress from slow progress; they do not append ledger rows, satisfy source claims, count gate coverage, or replace formal `operate-work-unit submit`.
 

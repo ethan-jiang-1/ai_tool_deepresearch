@@ -322,9 +322,9 @@ describe('HITL2/readiness/rerun finding-source admission', () => {
 });
 
 describe('Wave0 finding-source admission', () => {
-  it('schema-parses all 14 Wave0 rules', () => {
+  it('schema-parses all 15 Wave0 rules', () => {
     const wave0 = parseGateDefinition(loadActiveDefinition('gate-wave0-complete.definition.json'));
-    assert.equal(wave0.rules.length, 14);
+    assert.equal(wave0.rules.length, 15);
   });
 
   it('keeps single-root artifact and floor rules definition-owned', () => {
@@ -376,9 +376,9 @@ describe('Wave0 finding-source admission', () => {
 });
 
 describe('Wave1 finding-source admission', () => {
-  it('schema-parses all 22 remaining rules after retiring Key Facts quantity', () => {
+  it('schema-parses all 23 remaining rules after retiring Key Facts quantity', () => {
     const wave1 = parseGateDefinition(loadActiveDefinition('gate-wave1-complete.definition.json'));
-    assert.equal(wave1.rules.length, 22);
+    assert.equal(wave1.rules.length, 23);
     assert.equal(wave1.rules.some((rule) => rule.id === 'key_facts_min_lines'), false);
     assert.equal(wave1.rules.some((rule) => rule.check === 'reference_key_facts_min_lines'), false);
   });
@@ -449,9 +449,9 @@ describe('Wave1 finding-source admission', () => {
 });
 
 describe('Wave2 finding-source admission', () => {
-  it('schema-parses all 19 Wave2 rules', () => {
+  it('schema-parses all 20 Wave2 rules', () => {
     const wave2 = parseGateDefinition(loadActiveDefinition('gate-wave2-complete.definition.json'));
-    assert.equal(wave2.rules.length, 19);
+    assert.equal(wave2.rules.length, 20);
   });
 
   it('keeps single-root artifact, binding, and backfill rules definition-owned', () => {

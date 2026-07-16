@@ -357,6 +357,7 @@ export function projectInspectContract({
       checks_failed: combined.checks_failed,
       return_map_classification: returnMapClassification,
       failed_rule_ids: combined.failed_rule_ids,
+      masked_rule_ids: combined.masked_rule_ids,
       finding_classification: byClassification,
     },
     inspect: combined.inspect,

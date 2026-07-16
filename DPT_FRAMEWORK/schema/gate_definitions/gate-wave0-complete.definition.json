@@ -3,6 +3,13 @@
   "description": "Verify Wave0 produced shared foundation evidence: _INDEX.md and README.md exist, 00-shared-*.md reference files exist (count_floor >=1), per-topic thin YAML exists in artifacts/wave0/ and passes ReferenceMetadata schema validation, and trace evidence is present. Source-gate status-window and handoff witness are enforced by shared gate preflight.",
   "rules": [
     {
+      "id": "phase_queue_drained",
+      "check": "phase_queue_drained",
+      "target": "rb_queue.json",
+      "failure_message": "Wave0 completion requires a schema-valid globally quiescent queue with no active, refill, or delegated in-flight demand.",
+      "finding": { "source": "checker" }
+    },
+    {
       "id": "reference_index_md_exists",
       "check": "file_exists",
       "target": "reference/_INDEX.md",

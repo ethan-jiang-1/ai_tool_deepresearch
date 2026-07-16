@@ -5,6 +5,7 @@ import {
   WorkUnitIndexRecordSchema,
   WorkUnitLateAcceptContextSchema,
   WorkUnitLedgerRecordSchema,
+  WorkUnitRuntimeReceiptEventSchema,
 } from '../../../DPT_FRAMEWORK/schema/contracts/work-unit.mjs';
 import {
   computeWorkUnitLedgerRecordHash,
@@ -73,6 +74,38 @@ function baseIndexRecord(overrides = {}) {
     ...overrides,
   };
 }
+
+function baseReceipt(overrides = {}) {
+  return {
+    schema_version: 'work-unit.receipt-event.v1',
+    event: 'work_done',
+    work_id: 'wu-w0-b000-src-i0001',
+    queue_item_id: 'queue-a',
+    kind: 'wave0_source_intake',
+    receipt_nonce: '1234567890123456',
+    actor_contract_version: 'work-unit.actor.v1',
+    execution_actor_class: 'delegated_subagent',
+    ts: '2026-07-10T00:01:00.000Z',
+    ...overrides,
+  };
+}
+
+describe('WorkUnitRuntimeReceiptEventSchema', () => {
+  it('accepts object/string diagnostic detail without rewriting it', () => {
+    for (const detail of [{ stage: 'fetch', attempt: 2 }, 'fetch batch completed']) {
+      const parsed = WorkUnitRuntimeReceiptEventSchema.parse(baseReceipt({ detail }));
+      assert.deepEqual(parsed.detail, detail);
+    }
+  });
+
+  it('rejects non-message detail shapes while retaining identity strictness', () => {
+    for (const detail of [[], 3, true, null]) {
+      assert.throws(() => WorkUnitRuntimeReceiptEventSchema.parse(baseReceipt({ detail })));
+    }
+    assert.throws(() => WorkUnitRuntimeReceiptEventSchema.parse(baseReceipt({ receipt_nonce: 'wrong' })), /too small|at least 16/i);
+    assert.throws(() => WorkUnitRuntimeReceiptEventSchema.parse(baseReceipt({ schema_version: 'work-unit.receipt-event.v999' })), /Invalid input|literal/i);
+  });
+});
 
 describe('WorkUnitLateAcceptContextSchema', () => {
   it('owns only the irreducible late-submit facts', () => {

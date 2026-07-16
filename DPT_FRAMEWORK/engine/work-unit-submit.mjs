@@ -917,16 +917,17 @@ function drySubmitRerun(bundleDir, workId, resultPath) {
   ].join(' ');
 }
 
-function repairContractForPhase({ phase, bundleDir, record, resultPath, issuePath = [] }) {
+function repairContractForPhase({ phase, bundleDir, record, resultPath, issuePath = [], receiptLine = null }) {
   const candidatePath = resultPath ? path.resolve(resultPath) : '<result.json>';
   if (phase === 'result') {
     const pointer = jsonPointer(issuePath);
     return { repair_kind: 'agent_action', write_to: `${candidatePath}#${pointer}`, json_pointer: pointer };
   }
   if (phase === 'runtime_receipt') {
+    const receiptPath = record ? path.join(path.resolve(bundleDir), record.paths.runtime_receipt_ref) : 'assigned runtime-receipt.jsonl';
     return {
       repair_kind: 'agent_action',
-      write_to: record ? path.join(path.resolve(bundleDir), record.paths.runtime_receipt_ref) : 'assigned runtime-receipt.jsonl',
+      write_to: receiptLine ? `${receiptPath}#line=${receiptLine}` : receiptPath,
     };
   }
   if (phase === 'output_files') {
@@ -963,6 +964,7 @@ function violationForError(error, {
       record,
       resultPath,
       issuePath: validationIssue?.path || [],
+      receiptLine: error?.receipt_line || null,
     }),
     ...ownerRepair,
   };

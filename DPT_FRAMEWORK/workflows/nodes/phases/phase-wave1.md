@@ -260,7 +260,7 @@ The supplementary item follows the same claim/task/dry-submit/formal-submit loop
 
 ## 5. Gate Command
 
-After queue demand is drained, reconstructed delegated in-flight work is zero, and Phase-owned references/depth reviews/backfill have been materialized from submitted backing, run the Wave1 inspect before recording completion evidence or invoking the formal gate:
+After `rb_queue.json#/active_window`, `#/refill_pool`, and `#/delegated_in_flight` are all empty and Phase-owned references/depth reviews/backfill have been materialized from submitted backing, run the Wave1 inspect before recording completion evidence or invoking the formal gate. Do not infer away future-looking residual demand. If `phase_queue_drained` fails, the Agent follows its returned queue/work-unit owner and reruns this same checkpoint; a refill-only `missing_contract` does not authorize queue hand edits.
 
 ```bash
 node DPT_FRAMEWORK/cli/inspect-wave1-output.mjs --bundle <path>

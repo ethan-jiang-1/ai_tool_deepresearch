@@ -317,7 +317,13 @@ export function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations
       });
     }
 
-    const event = WorkUnitRuntimeReceiptEventSchema.parse(eventCandidate);
+    const eventResult = WorkUnitRuntimeReceiptEventSchema.safeParse(eventCandidate);
+    if (!eventResult.success) {
+      const error = new Error(`Runtime receipt line ${index + 1} fails receipt schema: ${eventResult.error.issues.map((issue) => `${issue.path.join('/') || '/'}: ${issue.message}`).join('; ')}`);
+      error.receipt_line = index + 1;
+      throw error;
+    }
+    const event = eventResult.data;
     for (const field of WORK_UNIT_REQUIRED_RECEIPT_FIELDS) {
       if (event[field] !== record[field]) throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: ${field}`);
     }

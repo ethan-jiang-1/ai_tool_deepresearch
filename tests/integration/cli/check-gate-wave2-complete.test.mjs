@@ -215,6 +215,22 @@ Cross-topic judgment from wave2 ledger/index projection.
 `);
 }
 
+function configureThreeTopicActionAddRerun(dir) {
+  configureActionAddRerun(dir);
+  const planPath = join(dir, 'rb_plan.md');
+  writeFileSync(planPath, readFileSync(planPath, 'utf8').replace(
+    'derived_topic_count: 2',
+    'derived_topic_count: 3',
+  ).replace(
+    '  - slug: topic-b\n    label: Topic B',
+    '  - slug: topic-b\n    label: Topic B\n  - slug: topic-c\n    label: Topic C',
+  ));
+  mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-c'), { recursive: true });
+  writeFileSync(join(dir, 'artifacts/wave1/topic-c/evidence-summary.md'), '# Topic C Evidence Summary\n\n## Source URLs\n\n- [Source C](https://example.com/news/c)\n\n## Key Findings\n\n1. Finding C\n');
+  writeFileSync(join(dir, 'artifacts/wave1/topic-c/question-list.md'), '# Topic C Question List\n');
+  writeFileSync(join(dir, 'seed_topics/topic-c.md'), '# Topic C\n\n## Wave2 Judgment\nReviewed in full rerun.\n\n## Pending Questions\nNone.\n');
+}
+
 function createFullCoverageLedger(dir) {
   writeFileSync(join(dir, 'artifacts/wave2/cross-topic-ledger.md'), `# Cross-Topic Ledger
 
@@ -292,6 +308,33 @@ synthesis_eligibility:
     - p0p1_independent_backing
   ineligibility_reasons: []
 `);
+}
+
+function createThreeTopicCoverageIndex(dir, pairs) {
+  const index = {
+    version: '0.1',
+    source_layer: 'wave2_cross_topic',
+    ledger: 'artifacts/wave2/cross-topic-ledger.md',
+    synthesis: 'artifacts/wave2/synthesis.md',
+    scan: { topic_count: 3, pair_count_expected: 3, pair_count_checked: pairs.length },
+    findings: [{
+      id: 'W2F-001', type: 'cross_topic_resolution', priority: 'p1', status: 'resolved',
+      decision: 'use_existing_evidence', affected_topics: ['topic-a', 'topic-b', 'topic-c'],
+      origin_refs: ['artifacts/wave1/topic-a/question-list.md'],
+      trigger_refs: ['artifacts/wave1/topic-b/evidence-summary.md'], search_required: false,
+      subagent_receipt_refs: [], appears_in_synthesis: true, hitl2_handoff: false, confidence: 'high',
+      independent_backing_refs: ['artifacts/wave1/topic-a/evidence-summary.md', 'artifacts/wave1/topic-b/evidence-summary.md'],
+      consumer_reference_omission_reason: 'limitation: fixture uses prior-wave backing only', gap_status: 'no_gap',
+    }],
+    synthesis_eligibility: {
+      pure_synthesis_eligible: true, scan_matrix_present: true,
+      scan_topic_pair_coverage: pairs.map((pair) => ({ pair, refs: ['artifacts/wave2/cross-topic-ledger.md'] })),
+      unresolved_search_required_count: 0, targeted_search_required_count: 0,
+      targeted_search_submitted_count: 0, explicit_deferral_count: 0,
+      profile_params_read: ['p0p1_independent_backing'], ineligibility_reasons: [],
+    },
+  };
+  writeIndexObject(dir, index);
 }
 
 function submitWave2CrossReference(dir) {
@@ -647,6 +690,72 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
     assert.equal(output.check.passed, true, `Expected full rerun pass, got inspect: ${JSON.stringify(output.inspect)}`);
+  });
+
+  it('12b. action:add rejects a missing three-topic pair even when every slug appears in prose', () => {
+    const dir = createBundle(unique('rerun-missing-pair'));
+    configureThreeTopicActionAddRerun(dir);
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), `${SYNTHESIS_WITH_VALID_LINKS}\nAll slugs mentioned: topic-a topic-b topic-c.\n`);
+    createFullCoverageLedger(dir);
+    writeFileSync(join(dir, 'artifacts/wave2/cross-topic-ledger.md'), `${readFileSync(join(dir, 'artifacts/wave2/cross-topic-ledger.md'), 'utf8')}\nSlug-only note: topic-a topic-b topic-c.\n`);
+    createThreeTopicCoverageIndex(dir, [['topic-a', 'topic-b'], ['topic-a', 'topic-c']]);
+    createMinBackfill(dir);
+    writeFileSync(join(dir, 'seed_topics/topic-b.md'), readFileSync(join(dir, 'seed_topics/topic-b.md'), 'utf8'));
+    writeWave2Trace(dir);
+
+    for (const runner of [runInspect, runGate]) {
+      const output = JSON.parse(runner(dir).stdout);
+      assert.equal(output.check.passed, false);
+      const hint = output.hints.find((entry) => entry.rule_id === 'rerun_add_full_synthesis');
+      assert.ok(hint, JSON.stringify(output));
+      assert.match(hint.missing_fact, /topic-b\s*\/\s*topic-c/);
+      assert.match(hint.write_to, /artifacts\/wave2\/finding-index\.yaml$/);
+    }
+  });
+
+  it('12e. malformed pair facts mask only pair policy while Delta Synthesis remains independently actionable', () => {
+    const dir = createBundle(unique('rerun-pair-mask-delta'));
+    configureThreeTopicActionAddRerun(dir);
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), `# Synthesis\n\n## Delta Synthesis (Rerun 1)\n\nW2F-001 [Topic A](../wave1/topic-a/evidence-summary.md).\n`);
+    createFullCoverageLedger(dir);
+    createThreeTopicCoverageIndex(dir, [['topic-a', 'missing-topic']]);
+    createMinBackfill(dir);
+    writeWave2Trace(dir);
+    const output = JSON.parse(runInspect(dir).stdout);
+    const hint = output.hints.find((entry) => entry.rule_id === 'rerun_add_full_synthesis');
+    assert.ok(hint, JSON.stringify(output));
+    assert.match(hint.missing_fact, /Delta Synthesis/);
+    assert.match(hint.write_to, /artifacts\/wave2\/synthesis\.md$/);
+    assert.equal(output.check.masked_rule_ids.includes('rerun_add_full_synthesis'), false);
+  });
+
+  it('12c. action:add accepts the exact three-topic structured pair universe', () => {
+    const dir = createBundle(unique('rerun-exact-pairs'));
+    configureThreeTopicActionAddRerun(dir);
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createFullCoverageLedger(dir);
+    createThreeTopicCoverageIndex(dir, [
+      ['topic-a', 'topic-b'], ['topic-a', 'topic-c'], ['topic-b', 'topic-c'],
+    ]);
+    createMinBackfill(dir);
+    writeWave2Trace(dir);
+    const output = JSON.parse(runGate(dir).stdout);
+    assert.equal(output.check.passed, true, output.inspect.join('\n'));
+  });
+
+  it('12d. malformed pair facts mask the rerun full-pair implication', () => {
+    const dir = createBundle(unique('rerun-pair-mask'));
+    configureThreeTopicActionAddRerun(dir);
+    writeFileSync(join(dir, 'artifacts/wave2/synthesis.md'), SYNTHESIS_WITH_VALID_LINKS);
+    createFullCoverageLedger(dir);
+    createThreeTopicCoverageIndex(dir, [['topic-a', 'missing-topic']]);
+    createMinBackfill(dir);
+    writeWave2Trace(dir);
+    const output = JSON.parse(runInspect(dir).stdout);
+    assert.equal(output.check.passed, false);
+    assert.equal(output.check.failed_rule_ids.includes('finding_index_contract'), true);
+    assert.equal(output.check.failed_rule_ids.includes('rerun_add_full_synthesis'), false);
+    assert.equal((output.check.masked_rule_ids || output.masked_rule_ids || []).includes('rerun_add_full_synthesis'), true);
   });
 
   it('13. fails when trace event (wave2_completion) is missing from rb_trace.jsonl', () => {

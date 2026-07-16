@@ -265,7 +265,9 @@ Also include top-level `synthesis_eligibility`:
 synthesis_eligibility:
   pure_synthesis_eligible: true
   scan_matrix_present: true
-  scan_topic_pair_coverage: []
+  scan_topic_pair_coverage:
+    - pair: [topic-a, topic-b]
+      refs: [artifacts/wave2/cross-topic-ledger.md]
   unresolved_search_required_count: 0
   targeted_search_required_count: 0
   targeted_search_submitted_count: 0
@@ -273,6 +275,10 @@ synthesis_eligibility:
   profile_params_read: []
   ineligibility_reasons: []
 ```
+
+`scan_topic_pair_coverage` accepts either the direct array above or exactly `{ pairs: [<same entries>] }`. Each entry uses `{ pair: [topicA, topicB], refs?: [...] }`; object maps, key-encoded pairs, self/unknown/duplicate pairs, and free text are not pair facts. Use canonical Topic UID, current slug, or an accepted previous slug. `scan.topic_count` is the canonical registry count, `pair_count_expected` is canonical `C(n,2)`, and `pair_count_checked` equals the observed unique structured entries.
+
+For an ordinary first run or `action:supplement`, non-empty reduced coverage may remain below `pair_count_expected`; a multi-topic run must still record at least one real checked pair, including when `wave2_cross_topic_depth: 0`. Only an activated rerun `action:add` requires the exact complete canonical pair universe and both counts equal to `C(n,2)`. If inspect names a pair root, repair this projection at its exact `write_to` and rerun the same checkpoint; do not add slug prose or edit counts to imitate coverage.
 
 `gap_status` values are closed: `no_gap`, `needs_search`, `search_submitted`, `deferred_hitl2`, `requires_internal_data`, `record_only`.
 
@@ -304,7 +310,7 @@ These checks are Agent discipline. The gate verifies structural artifacts, refer
 
 ## 5. Gate Command
 
-After queue demand is drained, reconstructed delegated in-flight work is zero, non-delegated queue work is done, and accepted consumer-facing backed findings have either `00-cross` projections or explicit omission reasons, run the Wave2 inspect before recording completion evidence or invoking the formal gate:
+After `rb_queue.json#/active_window`, `#/refill_pool`, and `#/delegated_in_flight` are all empty, and accepted consumer-facing backed findings have either `00-cross` projections or explicit omission reasons, run the Wave2 inspect before recording completion evidence or invoking the formal gate. This is global quiescence: do not infer a future-looking residual away from its id, kind, producer, path, or prose. If `phase_queue_drained` fails, the Agent follows its one existing owner coordinate and reruns this same checkpoint; refill-only `missing_contract` is not permission to hand-edit queue authority.
 
 ```bash
 node DPT_FRAMEWORK/cli/inspect-wave2-output.mjs --bundle <path>

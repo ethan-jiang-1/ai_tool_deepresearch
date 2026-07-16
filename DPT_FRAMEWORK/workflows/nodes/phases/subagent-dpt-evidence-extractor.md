@@ -38,7 +38,7 @@ suggested_context: []
 This mandate is loaded from the role spec itself. It applies to every native sub-agent spawn that receives a work-unit task, including prompts copied from `operate-work-unit claim` output.
 
 1. **Read your beacon first.** Open `_beacon.json` in your work-unit directory. It is the single source of truth for `bundle_dir`, `log_cli`, `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, and `runtime_receipt_ref`. Do NOT use environment variables or inherited cwd for the bundle path.
-2. **Emit lifecycle events via `log-event.mjs`.** Using `log_cli` and `bundle_dir` from the beacon, emit this event set, each carrying `work_id`, `queue_item_id`, `kind`, and `receipt_nonce` in its `--detail` JSON:
+2. **Append lifecycle evidence to the assigned receipt.** Write this event set as JSONL lines to `runtime_receipt_ref`, each carrying `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`. `log-event.mjs` is optional diagnostic mirroring only and never satisfies or replaces the assigned receipt:
    - `search_batch_started` / `search_batch_done` — before and after each bounded search batch (`search_batch_done` includes `result_count`)
    - `fetch_batch_started` / `fetch_batch_done` — before and after each bounded fetch batch (include URL/count context)
    - `cache_write_started` / `cache_written` — before and after a bounded cache write batch (include bundle-relative cache path)

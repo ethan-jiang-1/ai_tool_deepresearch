@@ -423,6 +423,67 @@ function assertSnapshotEqual(actual, expected, message) {
 }
 
 describe('submitWorkUnit', () => {
+  it('accepts object/string receipt detail equally and preserves each representation', () => {
+    for (const detail of [{ stage: 'complete', count: 2 }, 'work completed']) {
+      const dir = tempBundle();
+      try {
+        saveSeedQueue(dir, [delegated('queue-a')]);
+        claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+        const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+        const resultPath = writeValidSubmitFiles(dir, record);
+        const receiptPath = path.join(dir, record.paths.runtime_receipt_ref);
+        const event = receiptEvents(dir, record)[0];
+        writeFileSync(receiptPath, `${JSON.stringify({ ...event, detail })}\n`);
+        const before = authoritySnapshot(dir, record);
+
+        const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
+        assert.equal(dry.ok, true, JSON.stringify(dry));
+        assert.equal(dry.normalizations.some((item) => /detail/i.test(item.kind)), false);
+        assertSnapshotEqual(authoritySnapshot(dir, record), before, 'detail-tolerant dry-submit must remain read-only');
+
+        const submitted = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+        assert.equal(submitted.ok, true, JSON.stringify(submitted));
+        assert.deepEqual(receiptEvents(dir, record)[0].detail, detail);
+      } finally {
+        cleanup(dir);
+      }
+    }
+  });
+
+  it('rejects non-message receipt detail at the exact line while keeping identity faults strict', () => {
+    const cases = [
+      { label: 'array detail', mutate: (event) => ({ ...event, detail: [] }), pattern: /detail/ },
+      { label: 'number detail', mutate: (event) => ({ ...event, detail: 3 }), pattern: /detail/ },
+      { label: 'boolean detail', mutate: (event) => ({ ...event, detail: true }), pattern: /detail/ },
+      { label: 'null detail', mutate: (event) => ({ ...event, detail: null }), pattern: /detail/ },
+      { label: 'identity conflict', mutate: (event) => ({ ...event, queue_item_id: 'wrong-queue' }), pattern: /queue_item_id|mismatch/ },
+    ];
+    for (const testCase of cases) {
+      const dir = tempBundle();
+      try {
+        saveSeedQueue(dir, [delegated('queue-a')]);
+        claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+        const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+        const resultPath = writeValidSubmitFiles(dir, record);
+        const event = receiptEvents(dir, record)[0];
+        writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify(testCase.mutate(event))}\n`);
+        const before = authoritySnapshot(dir, record);
+
+        const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
+        assert.equal(dry.ok, false, testCase.label);
+        const violation = dry.violations.find((item) => item.phase === 'runtime_receipt');
+        assert.ok(violation, `${testCase.label}: ${JSON.stringify(dry)}`);
+        assert.match(violation.missing_fact, testCase.pattern);
+        if (testCase.label !== 'identity conflict') assert.match(violation.write_to, /runtime-receipt\.jsonl#line=1$/);
+        assert.match(violation.rerun, /operate-work-unit\.mjs dry-submit/);
+        assertSnapshotEqual(authoritySnapshot(dir, record), before, `${testCase.label} dry-submit must remain read-only`);
+        assertNoLedger(dir);
+      } finally {
+        cleanup(dir);
+      }
+    }
+  });
+
   it('preserves current UID binding in the immutable queue snapshot without duplicate ledger fields', () => {
     const dir = tempBundle();
     try {

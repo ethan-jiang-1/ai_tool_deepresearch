@@ -108,3 +108,5 @@ export {
   readWave0SourceUrls,
   topicSlugFromDepthReviewTarget,
 } from './wave-depth-contracts.mjs';
+
+export { checkPhaseQueueDrained } from './phase-queue-drain.mjs';

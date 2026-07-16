@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.31
+
+- Wave2 now derives normalized structured pair facts from canonical Topic identity, keeps ordinary reduced coverage compatible, and requires the exact full canonical pair universe only for activated rerun `action:add`.
+- Wave0/Wave1/Wave2 inspect and formal Gates now share a degradation-ineligible global queue-quiescence rule over `active_window`, `refill_pool`, and `delegated_in_flight`, with root-first existing-owner feedback and no new queue state or controller.
+- Work-unit receipts retain strict lifecycle identity while optional diagnostic `detail` accepts keyed objects or human-readable strings; generated tasks, spawn prompts, shared protocol, and active roles now distinguish assigned receipt JSONL from optional `log-event.mjs` diagnostics.
+
 ## v0.30
 
 - Bundle instantiation stamps `framework_version` into `rb_plan.md` frontmatter at creation (sourced from the CHANGELOG version authority, VEM-001), recording the irreplaceable framework version a bundle was created under.
