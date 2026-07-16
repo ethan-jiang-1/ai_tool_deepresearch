@@ -1,0 +1,128 @@
+schema_version: verification-routing/v1
+change: harden-repairable-checkpoints
+test_classes:
+  unit:
+    status: selected
+    rationale: Pair normalization/policy separation, queue quiescence, receipt schema tolerance, prerequisite masking, and dry-submit purity are deterministic focused contracts.
+  integration:
+    status: selected
+    rationale: Real Wave inspect/Gate CLIs, generated work-unit envelopes, formal submit, and active Markdown surfaces cross filesystem and temporary-bundle boundaries.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The change adds no workflow transition or multi-phase state chain; focused Gate/submit integration tests cover the affected production boundaries with less harness complexity.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: No new Agent intelligence, search quality, or long-running continuation claim is made; Markdown assertions only verify ownership of existing legal mechanical actions.
+claims:
+  - id: wave2-pair-fact-normalization
+    statement: The pure Wave2 evaluator normalizes direct-array and {pairs:[...]} entries through UID or legacy canonical topic identity, rejects object-map/key encodings, malformed/self/unknown/duplicate entries and count drift, and masks dependent comparisons after parent failure.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/wave-depth-contracts.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave2-reduced-coverage-compatibility
+    statement: Ordinary first-run and action:supplement can report non-empty checked pairs below the canonical expected universe when counts match observed entries; profile depth zero does not force full pairs or permit a wholly skipped multi-topic scan.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/wave-depth-contracts.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave2-action-add-exact-pair-parity
+    statement: Real Wave2 inspect and formal Gate reuse the normalized pair result, reject action:add missing-pair and slug-only coverage with matching repair coordinates, mask rerun pair implications after normalization failure, and accept exact full pairs while ordinary supplement remains delta-compatible.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave2-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: phase-queue-quiescence-pure-contract
+    statement: The queue evaluator reads the file and QueueSchema directly, never defaults a missing file to drained, passes only when all live containers are empty, prioritizes in-flight work, routes active-front demand from direct targets, reports refill-only missing-contract, rejects future-looking residuals without inference, and has no side effects.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/phase-queue-drain.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave-gates-block-undrained-queue
+    statement: Wave0, Wave1, and Wave2 inspect/formal Gate paths reuse the same authority-integrity queue finding, reject each residual container without mutation, and never degrade the blocker at fatigue thresholds.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave-queue-drain.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: receipt-diagnostic-detail-tolerance
+    statement: Runtime receipt identity remains strict while optional keyed-object/string detail passes and array/number/boolean/null detail fails at the shared schema boundary.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/schema/contracts/work-unit.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: dry-submit-detail-parity-and-purity
+    statement: Dry-submit and formal submit accept valid string/object diagnostic detail, reject real receipt binding faults with exact coordinates, and dry-submit preserves all authority surfaces.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-submit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: receipt-log-guidance-boundary
+    statement: Generated task, spawn prompt, shared protocol, and all active work-unit role specs require assigned runtime receipt JSONL, describe log-event only as optional diagnostics, and keep ordinary repair execution Agent-owned.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/work-unit-receipt-guidance.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
