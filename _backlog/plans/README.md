@@ -17,7 +17,7 @@
 
 - [codex-playbook-runner](codex-playbook-runner.md) — **P0 实验基础设施**：用 codex/claude code 独立进程实现 coding-Agent runner 与 subject Agent 的真正分离。Runner 进程只做 setup 和 observation，subject Agent 步骤通过 `codex exec` spawn 独立进程，transcript 存档证明独立性。case-318 的首个完整自动化路径。
 - [agent-output-linter](agent-output-linter.md) — **实现计划**：Agent 手写结构化内容不可靠，MD controller 在离产出最近的地方让 Agent 自检——JS 做两层确定性检查（语法 + 当时需要的 schema），Agent 根据报告修复，通过后才允许退出。含 format contract registry、CLI 设计、task.md 集成、hint-quality 测试覆盖审计。
-- [deep-research-iterative-refinement-positioning](deep-research-iterative-refinement-positioning.md) — **定位文档**：把 HITL2→rerun 明确定位为区别于 one-shot research 的迭代研究能力；runtime 机制已存在，但 README/RUN/HITL2 的对外定位仍未完整落地。
+- [deep-research-iterative-refinement-positioning](deep-research-iterative-refinement-positioning.md) — **方向已明确，待 propose**：一个 change 对齐完整协作节奏——HITL1 定方向、中间默认静默自主、HITL2 审阅/深化；用户主动说话时正常回应，但不成为第三个 HITL 或 permission，不新增 state/CLI/controller/guideline。
 
 ---
 
