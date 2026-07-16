@@ -1,0 +1,114 @@
+schema_version: verification-routing/v1
+change: simplify-iterative-research-interaction
+test_classes:
+  unit:
+    status: selected
+    rationale: The continuation cue enum and next-action mapping are a small pure deterministic projection over node frontmatter and direct command outcomes.
+  integration:
+    status: selected
+    rationale: Real Gate, enter-phase, advance-status and work-unit claim outputs plus Agent-facing Markdown and active Gate-definition boundaries cross production module/filesystem surfaces.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The change does not alter lifecycle transitions or a workflow-scale deterministic state chain; repeating the existing JS-led chain would not prove natural-language or user-initiated-turn Agent behavior.
+  agent_flow_e2e:
+    status: selected
+    rationale: Real subject Agents must demonstrate recommendation acceptance, natural-language HITL2 rerun translation and a user-initiated non-HITL reply without a third checkpoint or fabricated authority.
+claims:
+  - id: continuation-cue-initiation-contract
+    statement: The pure continuation projection maps every non-terminal stop:no loaded-node, Gate pass/fail and successful claim decision point to interaction:do_not_initiate while preserving required, terminal_delivery, next_action and locator semantics without chat or persistent state.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/continuation-cue.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: continuation-cli-projection-contract
+    statement: Real Gate, enter-phase, covered advance-status and successful work-unit claim outputs expose do_not_initiate with their existing immediate next actions, while HITL and Final projections remain required and terminal_delivery and no command gains interaction authority.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/continuation-initiation-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: interaction-markdown-contract
+    statement: HITL briefs/phases are recommendation-first and natural-language capable, silent guidance/header prohibit framework-initiated surfacing but not a user-initiated reply, Final stays delivery-only, and active docs contain no blanket confirmation or absolute user-unavailable rule.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/iterative-interaction-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rerun-limit-active-definition-contract
+    statement: The rerun-ready boundary test reads the production-parsed active Gate rule, accepts the value immediately below its exclusive limit, rejects values at and above it, and detects copied legacy numeric claims without changing the active definition.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-rerun-ready.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-natural-language-agent-flow
+    statement: A real subject Agent reads the recommendation-first HITL1 surface, treats an unambiguous natural-language acceptance as confirmation, writes only existing profile/topic owners, runs the real Gate and continues toward the silent phase without a second confirmation or human command co-runner.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_iterative_interaction/case-711-heavy-hitl1-natural-acceptance.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: real
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
+  - id: hitl2-natural-language-rerun-agent-flow
+    statement: A real subject Agent receives a natural-language request to continue one stated research direction at the accepted HITL2 boundary, records the existing rerun decision/rationale, runs the real Gate and consumes the existing rerun handoff without exposing internal enums or asking for redundant confirmation.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_iterative_interaction/case-712-heavy-hitl2-natural-rerun.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
+  - id: user-initiated-turn-boundary-agent-flow
+    statement: A real subject Agent answers a normal user-initiated turn while a non-HITL stop:no node is active, uses direct bundle facts, creates no HITL/profile/state/permission or pause/interrupt authority, and keeps the existing run under silent autonomous execution.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_iterative_interaction/case-713-heavy-user-initiated-turn.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_agent
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
