@@ -3,13 +3,13 @@ change: simplify-iterative-research-interaction
 test_classes:
   unit:
     status: selected
-    rationale: Continuation projection and shared rerun availability are small side-effect-free deterministic functions over direct inputs.
+    rationale: Continuation projection, rerun availability and research-style parameter computation are small side-effect-free deterministic functions over direct inputs.
   integration:
     status: selected
-    rationale: Real Gate, enter-phase, advance-status, queue/topic-state and work-unit/generated-task outputs, stop:no action-bearing finding producers, Agent-facing Markdown/headers and shared rerun-availability consumers cross production module/filesystem boundaries.
+    rationale: Real Gate, enter-phase, advance-status, queue/topic-state and work-unit/generated-task outputs, stop:no action-bearing finding producers, Agent-facing Markdown/headers, rerun-availability consumers and shared C5/handoff/reentry stage consumption cross focused production module/filesystem boundaries.
   deterministic_e2e:
-    status: not_applicable
-    rationale: The change does not alter lifecycle transitions or a workflow-scale deterministic state chain; repeating the existing JS-led chain would not prove natural-language or user-initiated-turn Agent behavior.
+    status: selected
+    rationale: The legal post-final lineage claim spans C5 entry, status synchronization, canonical topic mutation, style recomputation, count increment, the formal rerun-ready Gate and its normal consumed descendant; only a JS-led full production chain can prove those existing checkpoints remain continuous without fabricated Engine authority.
   agent_flow_e2e:
     status: selected
     rationale: Real subject Agents must generate recommendations from production guidance, demonstrate natural-language acceptance/rerun translation and answer user-initiated turns under both autonomous and terminal headers without a third checkpoint or fabricated authority.
@@ -43,7 +43,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: interaction-markdown-contract
-    statement: Enumerated owner surfaces declare recommendation-first HITL1/HITL2 prompts, permit natural-language acceptance/correction at those boundaries, use semantic progress rather than fixed-round nudges, require answers to user-initiated turns while prohibiting only framework-initiated stop:no surfacing, treat repair_kind and timeout block as Agent-facing responsibility rather than interaction timing across every non-terminal stop:no consumer, make missing_contract a stated unavailable boundary rather than a requested acknowledgement, keep Final terminal delivery without silencing an already-current verified-fact turn or changing terminal_delivery/deliver_final_artifacts, distinguish retained history from revisable current judgment, and contain no blanket confirmation, automatic boundary-hint/blocker escalation, absolute user-unavailable rule, retired search_preference/sentinel, gap_queue_backed text trigger or nonexistent prompt owner. HITL2 owns one read-only invocation of the existing loader/profile reader/shared evaluator with includeNextIncrement:true, consumes only closed availability facts without rule/count logic or state writes, and suppresses rerun when the required next increment is unavailable; the brief does not duplicate that invocation.
+    statement: Enumerated owner surfaces declare recommendation-first HITL1/HITL2 prompts, permit natural-language acceptance/correction at those boundaries, use semantic progress rather than fixed-round nudges, require answers to user-initiated turns while prohibiting only framework-initiated stop:no surfacing, treat repair_kind and timeout block as Agent-facing responsibility rather than interaction timing across every non-terminal stop:no consumer, make missing_contract a stated unavailable boundary rather than a requested acknowledgement, keep Final terminal delivery without silencing an already-current verified-fact turn or changing terminal_delivery/deliver_final_artifacts, distinguish retained history from revisable current judgment, and contain no blanket confirmation, automatic boundary-hint/blocker escalation, absolute user-unavailable rule, retired search_preference/sentinel, gap_queue_backed text trigger or nonexistent prompt owner. HITL2 owns one read-only invocation of the existing loader/profile reader/shared evaluator with includeNextIncrement:true, consumes only closed availability facts without rule/count logic or state writes, recommends a new bundle only for supported exhaustion, reports unsupported inputs as their contract boundary, and the brief does not duplicate that invocation.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -58,7 +58,7 @@ claims:
     verdict_authority: node_test_exit
   - id: rerun-limit-active-definition-contract
     statement: >-
-      One side-effect-free evaluator interprets the production-parsed active Gate rule from the full parsed profile, fails closed on unsupported identity/shape, missing profile or HITL2 parent and invalid count, defaults only an absent nested rerun_count to zero, computes evaluatedCount = currentCount + (includeNextIncrement ? 1 : 0) and available = evaluatedCount < exclusiveLimit, accepts an already-incremented value immediately below its exclusive limit, and marks a required next increment reaching the limit unavailable without I/O, findings, routing or copied numeric truth.
+      One side-effect-free evaluator interprets the production-parsed active Gate rule from the full parsed profile, fails closed on unsupported identity/shape, non-object profile/checkpoint/HITL2 parents, any present null/string/negative/fractional/non-finite count, and an omitted or non-boolean includeNextIncrement mode; defaults only an absent nested rerun_count to zero; computes evaluatedCount = currentCount + (includeNextIncrement ? 1 : 0) and available = evaluatedCount < exclusiveLimit; accepts an already-incremented value immediately below its exclusive limit; and marks a required next increment reaching the limit unavailable without I/O, findings, routing or copied numeric truth.
     test_class: unit
     proof_subject: deterministic_contract
     asset:
@@ -71,9 +71,24 @@ claims:
       external_calls: none
       verdict_judge: deterministic
     verdict_authority: node_test_exit
+  - id: research-style-computation-contract
+    statement: >-
+      One side-effect-free computation accepts a parsed style definition and non-negative canonical topic count, returns the complete ResearchStyleParamsSchema-valid object including the topic-count-dependent total, leaves inputs unchanged, and rejects malformed definitions/counts without I/O, partial output, profile mutation, finding, routing, state or trace. The existing CLI calls this computation and remains the sole Agent-facing writer.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/research-style-params.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
   - id: rerun-availability-consumer-contract
     statement: >-
-      The formal rerun-ready Gate calls the shared evaluator with includeNextIncrement:false over its already-incremented profile, while HITL2 read-only advice plus C5 fresh/pre-commit eligibility call true for the next required increment. A supported unavailable result alone exposes the new-bundle decision; unsupported rule/profile facts expose their contract boundary. Missing/unparseable profile or HITL2 parent emits one parent Gate hint with dependent count/rationale masked. After the event-bound C5 count increment, replay verifies the recorded one-field delta and definition binding without testing a next-next increment, then returns formal Gate ownership. Gate verdict/trace/routing, C5 external envelope/event/lineage/digest and HITL2 no-write behavior remain unchanged, with no competing operator/value/count comparison.
+      The formal rerun-ready Gate calls the REI-003 evaluator with includeNextIncrement:false over its already-incremented profile, while HITL2 read-only advice plus C5 fresh/pre-commit eligibility call true for the next required increment. A supported unavailable result alone exposes the new-bundle decision; unsupported rule/profile facts expose their contract boundary. Missing/unparseable profile or HITL2 parent emits one parent Gate hint with dependent count/rationale masked. Incremented replay does not test a next-next increment. Gate verdict/trace/routing, C5 external envelope/event/digest and HITL2 no-write behavior remain unchanged, with no competing operator/value/count comparison.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -82,6 +97,36 @@ claims:
     execution_profile:
       fixture: fixture_backed
       subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: post-final-stage-consumer-contract
+    statement: >-
+      Post-final inspect, exceptional handoff/status and reentry consume one C5 ownership/stage interpretation after existing workspace precedence. Initial authorization requires the exact event-bound profile. After topic preparation, current count plus the complete exact projection selected by event-bound research_profile over current committed canonical registry remains in existing synchronized_initial_profile and projects the existing phase-rerun count owner; recorded next count accepts either unchanged event-bound style params or that exact projection and projects the formal Gate. A style value matching neither allowed shape, changed research_profile and every other profile delta fail closed. Descendant projection requires the exact normal stage reached: non-superseded pass plus source window projects enter, matching bound load plus target node projects status sync, and matching transition/resulting status projects current owner; wrong-source pass or any conflicting observed fact blocks. Read-only consumers write no profile/trace/state, add no stage/action kind, and the C5 event/manifest/envelope/digests remain unchanged.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/post-final-lineage-consumers.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: post-final-rerun-lineage-chain
+    statement: >-
+      In one node:test run, a JS driver production-instantiates a temporary bundle and reaches terminal Final through real predecessor Gates, route-bound enter-phase loads and advance-status synchronization before invoking real C5 apply, canonical topic add and safe-remove operations, existing apply-research-style, real rerun-ready Gate, normal enter-phase/status synchronization and one later normal Gate/load/status handoff. It may snapshot only that same-run production-derived terminal baseline for branch isolation and SHALL NOT import or recreate the hand-written readiness pass/load/status integration fixture as full-chain authority. Simulated Agent actions are limited to labeled profile/plan/artifact/final content, request/topic inputs, the existing profile count write and downstream phase-owned content needed by real Gates; production instantiation and all predecessor/post-final Gate attempts, loads, transitions, status effects, accepted workspaces, events and verdicts come from production Engine/CLI paths. Both registry-length branches stop after the real style CLI but before count write to prove the legal crash window returns the existing count owner, then reach synchronized_count_incremented; the unchanged-style count-only compatibility path reaches the same Gate. All branches continue through pending-enter, pending-status, continuously proven current owner and later owner; a style value matching neither event-bound nor exact current projection, other profile drift, wrong-source or superseded pass, conflicting bound load/transition/status and manual Final drift remain blocked without fabricated Engine authority.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/post-final-rerun-lineage-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
       runtime: temporary_bundle
       external_calls: none
       verdict_judge: deterministic

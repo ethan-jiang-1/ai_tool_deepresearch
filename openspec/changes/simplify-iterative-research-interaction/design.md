@@ -13,6 +13,8 @@
 - accepted `check-inspect-feedback`、Wave phase 和 dry-submit contracts 仍把 `user_decision|external_action|missing_contract` classification 写成立即 surface/escalate 用户。若只改 silent prose，这些旧 owner 会在 `stop:no` 中继续制造 HITL1/HITL2 之外的框架主动等待。
 - stop:no Gate/Inspect producer 也会把相同 classification 写成 action-bearing “ask user”“return to HITL”或“surface blocker” advice；仅改 Markdown consumer 仍会在最近决策点注入相反指令。
 - HITL2 当前会先接受 `rerun`，而 `phase-rerun.md` 在 increment 后才由 rerun-ready Gate 发现 active limit 已 exhausted；这会把用户送进一个已知 silent-unpassable 的 stop:no dead end。
+- post-final rerun 的 accepted C3 路径允许 topic add/safe-remove 后运行现有 style CLI，但 C5 和 handoff 各有一份 count-only profile comparator，会把合法 style projection 判成 lineage drift。
+- C5/handoff 又在看到任意后续 passed rerun-ready attempt 时提前返回 descendant ownership，没有证明该 attempt 已被 route-bound load、normal transition/status 与 current coordinate 连续消费；孤立 pass 或手工漂回 Final 可能被误当 unchanged。
 
 本 design paired-read `guidelines/evolution-simple-reliable-control.md` 和 `guidelines/evolution-helper-oriented-agent.md`。它不增加 interaction controller，而是删除重复控制，并把 Agent/user/Engine 责任放回现有 owner。
 
@@ -26,6 +28,8 @@
 - 保留 `stop:no` 禁止 unsolicited surfacing 和自主 repair/continue 的约束，同时要求 Agent 对用户主动发来的当前 conversation turn 做正常回应。
 - 让 failure hint 只分配行动责任和诚实边界，交互时机唯一服从当前 lifecycle `stop` contract。
 - 在 HITL2 decision point 复用一个由 formal Gate 与 post-final recovery 共同消费的纯 rerun-availability evaluator，排除已知不可执行的 rerun，而不复制 verdict logic。
+- 让 existing style CLI 与 C5 lineage validation 复用一个纯 style computation，并让 C5/reentry 复用一个 stage result，既接受合法机械投影又不放宽其他 profile drift。
+- 让 descendant ownership 只来自既有 normal Gate/load/transition/status 连续性，删除 orphan-pass success short circuit。
 - 使 accepted spec、shared Markdown、Engine header 和 continuation cue 对同一行为使用同一含义。
 - 删除固定轮数轻推和文本暗号式不确定状态，让 Agent 根据语义进展引导对话，并先提出可接受/可修改的具体 must-answer。
 - 只清理 rerun-limit drift，不改变当前 limit 或 guard。
@@ -36,6 +40,7 @@
 - 不新增 mid-run message queue、pause/resume state、interrupt transport、scope-mutation controller、watcher、planner、memory 或 retry/recovery tree。
 - 不承诺用户中途消息会持久化、更改当前 run 或立即获得 mutation/reentry path。
 - 不改变 HITL enum、profile schema、Gate rule set、transition table、receipt、trace authority 或 Final terminal semantics。
+- 不改变 C5 external envelope/request/workspace/manifest/event schema/digest，也不新增 topic-style receipt、projection state 或 descendant stage enum。
 - 不在此 change 系统解决 `request_view_revision`、`repair`、`stop_blocked` 三个 context-dependent branch 的全部可达性；强 end-to-end route 承诺仍仅针对 `proceed_to_readiness` 和 `rerun`。
 - 不新增 evolution guideline，不用 guidance prose 代替 accepted behavior。
 - 不改变 active rerun limit，不删除 loop protection。
@@ -140,13 +145,46 @@ Rerun-ready integration test 与 active `case-304` experiment 在运行时读 ac
 
 HITL2 必须在向用户推荐或接受 rerun 时避免一条已知必败路径，但不能在 Markdown 中复制 formal Gate 判断。Apply 将抽取一个 side-effect-free rerun-availability evaluator，输入仅为已由现有 loader 解析的 definition、完整 parsed profile 和 `includeNextIncrement`；输出为 closed facts（`supported`、`available`、`currentCount`、`evaluatedCount`、`exclusiveLimit` 或一个 fail-closed reason），不读文件、不写 state/trace、不构造 finding、不做 routing。
 
-Evaluator 是 active rerun-count rule 的唯一语义解释：它确认 `definition.gate === 'rerun-ready'`，找到唯一满足 `id === 'rerun_count_valid'`、`check === 'rerun_count_limit'`、canonical target、`operator === 'less_than'`、positive-integer value 的 rule，并确认 parsed profile 含有 `human_decision_checkpoints.hitl2` parent，再按 `evaluatedCount = currentCount + (includeNextIncrement ? 1 : 0)`、`available = evaluatedCount < exclusiveLimit` 返回事实。只有这个 parent 存在且 nested `rerun_count` 字段缺失时才解释为 `0`；profile reader 返回 `null`、YAML 不可解析、parent 缺失或显式 invalid count 必须 fail closed。Formal rerun-ready Gate 用 `includeNextIncrement: false` 检查已经 increment 的 current count 并继续独占 verdict/trace/routing；HITL2 decision advice 用 `includeNextIncrement: true` 检查下一次必需 increment，确保 current count `exclusiveLimit - 1` 在持久化前已知不可用。C5 的 fresh eligibility 和 pre-commit validation 同样使用 `true`；event-bound count increment 后的 accepted-lineage replay 只验证 recorded `currentCount -> evaluatedCount` delta 与 definition binding，并把 formal check 交给 `includeNextIncrement: false` 的 rerun-ready Gate，不能用 next-next availability 重判。现有 post-final guard 中的独立 rule/count comparison 和 Gate 内的 `count >= rule.value` 分支都被这个 evaluator 替换，而不是保留新旧两套逻辑；C5 外部 envelope、lineage 与 definition digest contract 不变。
+Evaluator 是 active rerun-count rule 的唯一语义解释：它确认 `definition.gate === 'rerun-ready'`，找到唯一满足 `id === 'rerun_count_valid'`、`check === 'rerun_count_limit'`、canonical target、`operator === 'less_than'`、positive-integer value 的 rule，并确认 parsed profile 的 checkpoint/HITL2 parents 为 object，再按 `evaluatedCount = currentCount + (includeNextIncrement ? 1 : 0)`、`available = evaluatedCount < exclusiveLimit` 返回事实。只有这些 parents 存在且 nested `rerun_count` 字段缺失时才解释为 `0`；profile reader 返回 `null`、YAML 不可解析、parent 缺失/畸形、显式 invalid count，或 `includeNextIncrement` 缺失/非 boolean 时必须 fail closed，不能靠 JavaScript truthiness 静默选择 current/next 模式。Formal rerun-ready Gate 用 `includeNextIncrement: false` 检查已经 increment 的 current count 并继续独占 verdict/trace/routing；HITL2 decision advice 用 `includeNextIncrement: true` 检查下一次必需 increment，确保 current count `exclusiveLimit - 1` 在持久化前已知不可用。C5 的 fresh eligibility 和 pre-commit validation 同样使用 `true`；event-bound count increment 后的 accepted-lineage replay 只验证 recorded `currentCount -> evaluatedCount` delta 与 definition binding，并把 formal check 交给 `includeNextIncrement: false` 的 rerun-ready Gate，不能用 next-next availability 重判。现有 post-final guard 中的独立 rule/count comparison 和 Gate 内的 `count >= rule.value` 分支都被这个 evaluator 替换，而不是保留新旧两套逻辑；C5 外部 envelope、lineage 与 definition digest contract 不变。
 
 `phase-hitl2.md` 只拥有一个 repo-root、read-only inline Node ESM invocation，从现有 barrel import loader、profile reader 和 shared evaluator，再打印 closed availability facts；它不包含 operator/value/count 比较，不写文件/trace/state，`brief/hitl2.md` 不复制调用。`supported: true, available: false` 才询问是否为该 scope 新建 bundle；loader/profile/config/evaluator unsupported 只陈述具体 contract boundary，不猜测 new bundle 能解决。C5 `inspect` 仍可只读证明 eligibility；exhausted/unsupported 时禁止的是 apply、workspace 创建和 rerun persistence。Rerun-ready Gate 仍是 formal legality checkpoint。
 
 替代方案 A：在 Markdown、Gate 和 post-final helper 中各保留一个近似判断。不采用，因为这会创造第二/第三 evaluator。替代方案 B：新增 eligibility Gate/CLI。不采用，因为一个共享纯 evaluator 足以复用 direct authority；新增 CLI 会增加 command/control surface。
 
-### 10. 删除没有 owner 的 HITL 微控制
+### 10. Style projection 与 C5 lineage 各自保持窄职责
+
+现有 `apply-research-style.mjs` 已经是唯一合法 style writer，但公式内嵌在 CLI。Apply 抽取 `computeResearchStyleParams({ styleDefinition, topicCount })`：输入 parsed style definition 与非负 canonical topic count，返回经现有 `ResearchStyleParamsSchema` 校验的完整对象；无 I/O、profile mutation、finding、routing、state 或 trace。CLI 负责加载 definition/current registry 并写入；C5 只能用 event-bound `research_profile` 加 current committed registry 调用同一计算，不能信任 current profile 选择另一 style，也不能写入。
+
+C5 ownership/stage evaluation 在 initial topic-state authorization 前仍要求 exact event-bound profile。之后只接受三个机械形状：
+
+```text
+event-bound profile + current_count
+or
+event-bound profile + current_count + complete exact style projection
+or
+event-bound profile + recorded current_count -> next_count
+  + unchanged event-bound style params or complete exact style projection
+```
+
+第二种形状闭合既有 phase 顺序中的真实崩溃窗口：topic commit 与 style CLI 已完成，但 count increment 尚未写入。它继续使用现有 `synchronized_initial_profile` stage，不增加第六个 stage；C5 的既有 `current_owner` action kind 只把最近动作指回 phase-rerun 的 count increment。第一种形状仍把最近动作交给 existing topic-state inspect/owner，第三种才交给 formal rerun-ready Gate。
+
+`research_profile` 与所有其他 fields 必须保持 event-bound；style params 只有“完全 unchanged event-bound”或“complete exact current projection”两种可解释值，wrong/partial projection 或其他 drift fail closed。保留 event-bound style params 的 count-only path 继续合法，因此这里不是强制 freshness Gate。也不新增“topic mutation happened”持久 receipt：current canonical registry 是 style computation 的 direct input，current exact projection 是可重建事实。
+
+三个函数边界必须在实现和命名中清楚：
+
+| Function responsibility | Answers | Does not own |
+|---|---|---|
+| REI-003 rerun-availability evaluator | current/next count 是否满足 active rule | style、lineage、routing |
+| RES-001 style computation | 一个 definition + topic count 的完整 params | file read/write、profile lineage |
+| C5 ownership/stage evaluator | accepted workspace/event 当前属于哪个合法 stage/owner | 新 state、通用 repair、style/rerun rule interpretation |
+
+现有 `post-final-recovery.mjs` 与 `handoff-helpers.mjs` 的 count-only comparator 必须合并为 `handoff-helpers.mjs` 已导出的 `inspectPostFinalHandoffStage` result，而不是分别扩白名单。该 result 同时投影最近 existing owner，因而可在同一 `synchronized_initial_profile` stage 内区分 topic-state owner 与 style-before-count 后的 phase-rerun count owner，而无需新增 stage/action kind。`post-final-recovery.mjs` 已依赖 handoff helper，因此它只消费该 result 来做 external verdict/next-action projection；handoff helper 不得反向 import recovery facade。Reentry 同样消费该 result，不能维护第三份 profile comparison 或制造模块循环依赖。
+
+同样，`descendant_pipeline` 不能由“event 后存在一个 passed rerun-ready attempt”单点推出。C5 必须复用 normal handoff authority，并按已经发生的事实逐段证明连续性：exact non-superseded pass + unchanged source window 且尚无 load 时，最近动作是 existing `enter-phase`；matching route-bound load + target current node 且尚无 status sync 时，最近动作是 existing `advance-status`；matching normal transition/status 后才投影 current lifecycle owner。任一已经出现的 load/transition/status/current-coordinate 不匹配、supersession 或手工漂回 Final 都 block。后续 normal handoff 继续用相同 authority 推进，newer legal Final 仍按既有 rule retire 旧 lineage。这里删除过早 short circuit，不新增第五个 C5 route 或 stage。
+
+替代方案 A：给 C3 增加永久 topic-count-change receipt。不采用，因为 deterministic projection 可从 current canonical registry 重建，新状态重复事实。替代方案 B：C5 直接调用 style CLI 自动修正。不采用，因为 inspect/lineage validation 必须无副作用，机械写入仍由 Agent 调现有 owner。替代方案 C：在两份 comparator 各加 style whitelist。不采用，因为会继续保留 competing lineage truth。
+
+### 11. 删除没有 owner 的 HITL 微控制
 
 HITL 对话不再追踪探索轮数或在固定第 3/5 轮触发不同 prompt。Agent 根据对话是否仍有信息增益判断：有进展就继续回答；重复停滞时总结共识/缺口，给一个推荐并邀请接受或修正。这保留模型判断，不新增计数器或状态。
 
@@ -156,17 +194,18 @@ HITL 对话不再追踪探索轮数或在固定第 3/5 轮触发不同 prompt。
 
 这次局部清理不扩张到其他机制中的 retry/fatigue 数值控制；那些阈值有独立 owner 和用途。这里只删除 HITL conversation 中没有 deterministic authority 需求的消息计数与文本暗号。
 
-### 11. 验证分为确定性 contract 与真实 Agent 观察
+### 12. 验证分为确定性 contract 与真实 Agent 观察
 
-- `unit`：continuation pure projection 覆盖 `do_not_initiate|required|terminal_delivery`、原 `next_action` 不变和未知 frontmatter fail-closed。
+- `unit`：continuation pure projection 覆盖 `do_not_initiate|required|terminal_delivery`、原 `next_action` 不变和未知 frontmatter fail-closed；rerun availability 与 style computation 分别覆盖 closed facts/invalid inputs/input immutability。
 - `integration`：真实 Gate/`enter-phase`/`advance-status`/claim stdout 与 Markdown/header/HITL docs 同步；同一 Markdown contract 扫描全部非终端 stop:no hint consumers，证明 classification 不再自动发起用户交互；rerun boundary test 从 active definition 读取边界。
+- `integration`：focused temporary-bundle consumer tests 证明 post-final inspect、handoff/status 与 reentry 使用同一 C5 stage/owner result；style-before-count crash 投影 existing phase-rerun count owner，wrong style、other profile drift、orphan/wrong-source pass、mismatched load/transition/status/current coordinate 必须拒绝且 read-only consumer 不写 authority。合法 pass-pending-load 与 load-pending-status 分别投影 existing enter/status owner。
 - 现有 continuation CLI integration claim 还覆盖 rerun、seed-topics、queue、canonical topic-state、generated work-unit task 与 Wave1/Wave2 的代表性 non-mechanical failure producer：`hints[]`/verdict/route 保持，action-bearing advice 变为 placement-neutral，已有 mechanical owner 的 Wave style failure 改回 `engine_operation`。Claim cue 另证只保留 polling action，不复制 interaction placement。
-- `deterministic_e2e`：不选择。本 change 不改变 transition 或多 phase deterministic state chain，现有 rerun chain 已有验证；重复一条 JS-led chain 不能证明自然语言 Agent 行为。
+- `deterministic_e2e`：在同一个 `node:test` run 中用 production instantiation 创建 temporary bundle，并沿现有 predecessor lifecycle 运行真实 Gate、`enter-phase`、`advance-status` 直到 terminal Final，再覆盖 `C5 -> enter/status -> topic add/safe-remove -> style recompute -> count increment -> C5 stage -> rerun-ready Gate -> normal enter/status descendant`。可复用 `rerun-round-continuity` / deterministic-chain harness 的模式，并从这条真实生成的 terminal baseline 为 add、safe-remove、count-only 分支创建 test-local snapshot；不得导入手写 readiness pass/load/status 的 post-final integration fixture 作为完整链起点。JS driver 只模拟且明确标注 Agent-owned profile/plan/artifact/final content 与 request/topic/count input；production instantiation、全部 predecessor 和 post-final Gate attempts、loads、transitions、status effects、C5 workspaces/events/verdicts 必须来自真实 Engine/CLI。它只证明 deterministic lineage，不声称自然语言 Agent 行为；focused integration 仍可用手写 terminal fixture 隔离单个 consumer，但不得据此声称完整 lifecycle continuity。
 - `agent_flow_e2e`：使用真实 subject Agent 从 production phase/dependency surface 自己生成 HITL1 recommendation/HITL2 brief，再接收固定自然语言用户回合，观察持久化/Gate/continue。每个 playbook 声明 real-Agent dependency 和 no-substitute contract；runner 只能准备已披露的 setup、传递固定 utterance、原样保存并 hash role/event-labeled JSONL transcript、执行只读 deterministic observation，不能代写 subject-owned profile/topic/rationale/probe 或代跑 case 711/712 的 Gate/handoff。Case 711 transcript 必须有序绑定同一 subject conversation 中的 recommendation、精确用户接受、真实 bounded probe 和 subject-owned writes，并把 transcript digest 立即写入 root trace：available 分支还要求一次 real search、对首个 usable URL 的一次 successful fetch、Gate pass 和 stop:no entry；honest unavailable 分支要求 direct unavailable observation、Gate fail 和无 Setup entry。Missing independent subject execution 才是 `NOT RUN`；真实外部能力不可用是 production-valid PASS branch，不得用 fixture 改写。用户主动回合用例使用同一 setup-only bundle 的两个独立 subject turns 和四个 authority snapshot：readiness turn 的 A/B 必须相等；runner 仅通过 real readiness Gate/Final entry/status path 形成 B/C 的明确 allowlist diff；final artifact 前 Final turn 的 C/D 必须相等且 `final/` 始终为空。它不声称 async interrupt transport 或 post-answer execution，也不新增第四个 case。
 
 Deterministic assertions 只能证明 prompt/cue/owner 可达，不能声称真实 Agent 一定不主动浮出。Agent behavior verdict 必须来自 role/event-labeled structured transcript + bundle/trace、Gate output 等 direct evidence，不用 mock、人工语义裁决或手写结果；断言只检查明确的 user/assistant/tool block、固定 utterance、tool evidence、hash/authority diff 和受限的 canonical-token/overclaim patterns。
 
-### 12. Apply target manifest
+### 13. Apply target manifest
 
 Apply 开始时用一份受任务追踪的 target manifest 核对控制面，但不新建 runtime manifest。目标形状为：
 
@@ -178,6 +217,8 @@ Apply 开始时用一份受任务追踪的 target manifest 核对控制面，但
 | Failure hint consumption | Agent-facing smallest boundary under current `stop` | classification-driven user escalation/wait and silent override table | hint enum/schema, Engine verdict, exact repair coordinates |
 | Gate/Inspect boundary advice | direct fact + owner boundary + same-check rerun | stop:no `ask user` / `return to HITL` / `surface blocker` commands | verdict, route, hints, definition bytes/digest |
 | HITL2 rerun availability | one shared pure evaluator consumed by Gate/HITL2/post-final | Gate/Markdown/post-final duplicate comparisons; known-impossible recommendation | active rule as sole numeric truth; rerun-ready Gate formal verdict |
+| Rerun style projection | one pure computation; CLI writes, C5 validates and returns existing count owner for the pre-count crash window | CLI math copy and two count-only lineage comparators | style definitions, profile schema, canonical registry, phase order |
+| C5 descendant ownership | existing normal Gate/load/transition/status continuity | orphan passed-attempt early success | normal handoff/status authority, C5 external schema |
 | Continuation projection | lifecycle `do_not_initiate`; claim polling action only | `prohibited` token and claim interaction duplicate | stateless helper, all `next_action`, locators |
 | Iterative positioning | short Charter/RUN/README posture | one-shot or enum-console framing | guidance/spec authority order |
 | Rerun limit references | active-definition lookup/reference | duplicated numeric constants | active Gate rule and loop protection |
@@ -194,6 +235,9 @@ Apply 中一旦需要新建 state、CLI、Gate、transition、message transport 
 - [Risk] 去掉统一二次确认导致 Agent 过度猜测 -> 只在语义清楚时直接记录；实质歧义或新风险/成本/权限仍必须问最小确认。
 - [Risk] 每次 rerun 都被重新解释成成本扩张并触发确认 -> HITL2 先披露当前可见 material impact；用户接受已披露影响就是确认，只问新增边界。
 - [Risk] HITL2 availability advice 漂移成第二个 rerun verdict -> Gate、HITL2 和 post-final recovery 调用同一个 side-effect-free evaluator；HITL2 只消费 closed facts，formal Gate 独占 verdict/trace。Focused unit tests 锁 evaluator shape/boundary，integration tests 锁 Gate 和 post-final consumers 同源。
+- [Risk] style projection allowance 变成 profile drift 白名单 -> C5 从 event-bound style + current canonical registry 计算完整 exact object，仅允许 count 与该对象；negative tests 锁 wrong style、partial params、changed `research_profile` 和 other field。
+- [Risk] style CLI 写入后、count increment 前崩溃被误判 drift -> 同一 C5 result 在 existing `synchronized_initial_profile` stage 内接受 current-count + exact projection，并用既有 `current_owner` action 指回 phase-rerun count step；不新增 stage/state/CLI。
+- [Risk] descendant stage 只凭 trace 中一个 pass 过度接受 -> focused integration 锁 exact pass + source window 的 pending-enter action、bound load + target node 的 pending-status action，并让 wrong-source/orphan pass、mismatched load/transition/status/current coordinate fail closed；不会把“尚未发生”误作 drift，也不会把“不匹配”误作 success。
 - [Risk] HITL 推荐被误当成 Agent 代替用户决定 -> recommendation 仅是 conversation projection，用户接受/修正后才进入 durable owner。
 - [Risk] cue token 变更破坏仓库内 assertion -> 在同一 apply 中原子更新 helper、specs、docs、tests 和 controlled playbook；version bump 到 v0.32。
 - [Risk] 验证为了模拟“随时插话”而建 async harness -> agent_flow case 只使用正常 conversation turn 边界，明确不证明中断传输、暂停或持久化。
@@ -206,8 +250,9 @@ Apply 中一旦需要新建 state、CLI、Gate、transition、message transport 
 2. 先更新 accepted-owner 对应的 Markdown/Agent Flow 和 focused tests：HITL UX、HITL1/HITL2 phase/brief、Final phase/terminal header、silent shared/header，并扫描全部非终端 stop:no phase、shared Sub-agent protocol、actor-decision playbook、generated work-unit task 和 action-bearing Gate/Inspect/topic-state/queue producer；同时删除 round-count 和 `gap_queue_backed` consumer。
 3. 在一个原子实现步骤中将 lifecycle continuation helper 的 stop:no token 改为 `do_not_initiate`、从 claim cue 删除无 authority 的 interaction field，并同步 Gate/entry/status/claim tests 和 Agent-facing consumers。
 4. 抽取一个 shared pure rerun-availability evaluator，替换 Gate 与 post-final guard 的重复判断，让 HITL2 只消费同一 closed result；清理数值副本并运行 focused regression 证明 active limit 和独立 fatigue threshold 均未改变。
-5. 更新 Charter/RUN/README/COMMANDS 等高频表面、`CHANGELOG.md` 和 v0.32 banner。
-6. 执行 focused unit/integration 与真实 agent-flow playbooks，再运行 verification assets check、OpenSpec/governance 检查。
+5. 从现有 style CLI 抽取纯 computation，让 CLI/C5 共享；合并两份 count-only stage comparator，并让 descendant stage 复用 normal handoff/status continuity，运行组合与 negative regression。
+6. 更新 Charter/RUN/README/COMMANDS 等高频表面、`CHANGELOG.md` 和 v0.32 banner。
+7. 执行 focused unit/integration 与真实 agent-flow playbooks，再运行 verification assets check、OpenSpec/governance 检查。
 
 回滚时可原子恢复 cue token 与对应 docs/tests；本 change 无 bundle state 或 schema migration，不需要转换已有 runtime bundle。但若 rollback 恢复 `prohibited`，必须同时恢复对应 accepted semantics，不得留下 token 与 prose 含义冲突。
 
