@@ -10,10 +10,10 @@ For non-terminal lifecycle `stop: no` phases, the injected header SHALL express 
 
 - the Agent/framework SHALL NOT initiate user-facing questions, confirmations, progress reports, partial delivery, acknowledgements, idle reports, or continuation requests;
 - the Agent SHALL continue node work, repair, strategy change, legal handoff consumption, or silent holding from direct runtime facts;
-- a user-initiated message already received through the normal conversation boundary MAY be answered, but the answer SHALL NOT create a third HITL, permission, mutation/reentry authority, pause/interrupt lifecycle, or durable mid-run intent;
+- a user-initiated message already received through the normal conversation boundary SHALL be answered, but the answer SHALL NOT create a third HITL, permission, mutation/reentry authority, pause/interrupt lifecycle, or durable mid-run intent;
 - the header SHALL NOT state that the user is unavailable, prohibit every possible reply, or make Engine header injection responsible for reading/classifying chat state.
 
-Terminal Final SHALL continue to receive its separate terminal-delivery header rather than the non-terminal autonomous header. Header injection SHALL remain an Agent-facing guidance projection, not lifecycle, interaction, routing, or permission authority.
+Terminal Final SHALL continue to receive its separate terminal-delivery header rather than the non-terminal autonomous header. The terminal header SHALL preserve `terminal_delivery` / `deliver_final_artifacts`, prohibit framework-initiated question/wait/progress/confirmation/repair loops, and align with CDP-004 by not treating a factual answer to an already-current user-initiated turn as a new Final loop or authority. Header injection SHALL remain an Agent-facing guidance projection, not lifecycle, interaction, routing, or permission authority.
 
 #### Scenario: work-unit sub-agent guidance does not receive lifecycle header
 
@@ -32,3 +32,4 @@ Terminal Final SHALL continue to receive its separate terminal-delivery header r
 - **WHEN** `assessNode()` loads terminal Final with `stop: "no"` and `gate: null`
 - **THEN** it SHALL inject the terminal-delivery header rather than the non-terminal autonomous header
 - **AND** Final SHALL remain delivery, not a third decision interaction point
+- **AND** the header SHALL NOT forbid a verified-fact answer to an already-current user turn or change the terminal continuation cue

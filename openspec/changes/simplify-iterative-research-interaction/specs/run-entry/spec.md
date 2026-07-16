@@ -1,12 +1,25 @@
-> req: RUE-005
+> req: RUE-001, RUE-005
 
 ## MODIFIED Requirements
+
+### Requirement: Entry point announces version
+
+The RUN.md entry point SHALL display the framework version as a banner immediately after the title, before any behavioral instructions.
+
+The version banner format SHALL be `> **DPT_FRAMEWORK v<major>.<minor>**`. The concrete version in this banner SHALL match the latest repo-root `CHANGELOG.md` entry as required by `version-management` VEM-003. Historical change-specific target versions SHALL remain in archived proposals/changelog entries, not as a permanent current-version assertion in the accepted requirement.
+
+#### Scenario: Agent reads RUN.md and sees current version
+
+- **WHEN** an Agent reads `DPT_FRAMEWORK/RUN.md`
+- **THEN** the first content after the title SHALL be a blockquote banner in the format `DPT_FRAMEWORK v<major>.<minor>`
+- **AND** the banner version SHALL equal the latest repo-root `CHANGELOG.md` entry
+- **AND** the banner SHALL appear before the trigger-context blockquote and Section 0
 
 ### Requirement: Entry trigger hands control to Agent-run framework execution
 
 The `RUN.md` entry surface SHALL frame dragging, pasting, or otherwise providing `DPT_FRAMEWORK/RUN.md` as a one-time pre-pipeline trigger that selects the DPT_FRAMEWORK entry path and transfers control to the Agent.
 
-After that entry path has been selected, `RUN.md` SHALL direct the Agent to proceed with framework execution rather than asking whether to use DPT_FRAMEWORK or a built-in research shortcut. Any routing clarification outside HITL1/HITL2 SHALL be explicitly labeled as a pre-pipeline exception before autonomous lifecycle execution begins, and SHALL NOT appear inside `stop: no` lifecycle phase instructions.
+After that user-initiated entry trigger has selected the path, `RUN.md` SHALL direct the Agent to proceed with framework execution rather than asking whether to use DPT_FRAMEWORK, a built-in research shortcut, or another route. The entry trigger SHALL NOT create another framework-initiated clarification/wait point. Research-goal, scope and effort clarification belongs to HITL1; host setup/permission failure remains a narrow external prerequisite boundary rather than a conversational lifecycle checkpoint.
 
 The entry surface and synchronized framework entry docs SHALL present the default collaboration rhythm as:
 
@@ -17,7 +30,7 @@ HITL1: align research goal, scope and effort
   -> Final: terminal delivery only when proceed is selected
 ```
 
-HITL1 and HITL2 SHALL be the only framework-initiated in-run checkpoints where the framework invites and waits for a semantic decision. During the autonomous middle, the framework SHALL NOT initiate progress, ordinary-error, idle, acknowledgement, or continuation messages. A user-initiated normal conversation turn MAY be answered, but the answer SHALL NOT create a third HITL, permission, mutation/reentry authority, pause/interrupt lifecycle, or promise that arbitrary mid-run intent is persisted or applied. Final SHALL remain terminal delivery rather than a third decision interaction point.
+HITL1 and HITL2 SHALL be the only framework-initiated points where the framework invites and waits for a semantic decision. During the autonomous middle, the framework SHALL NOT initiate progress, ordinary-error, idle, acknowledgement, or continuation messages. A user-initiated normal conversation turn SHALL be answered, but the answer SHALL NOT create a third HITL, permission, mutation/reentry authority, pause/interrupt lifecycle, or promise that arbitrary mid-run intent is persisted or applied. Final SHALL remain terminal delivery rather than a third decision interaction point.
 
 Entry positioning SHALL describe DPT_FRAMEWORK as iterative research that preserves history/provenance while allowing current judgments to be revised, downgraded, or superseded. It SHALL NOT promise unlimited reruns, guarantee every rerun is purely incremental, or claim that all historical conclusions remain currently valid.
 
@@ -30,9 +43,12 @@ Entry positioning SHALL describe DPT_FRAMEWORK as iterative research that preser
 
 #### Scenario: Pre-pipeline exception is explicit
 
-- **WHEN** entry docs include a clarification question before a bundle exists
-- **THEN** the question SHALL be labeled as pre-pipeline routing outside autonomous lifecycle execution
-- **AND** it SHALL NOT weaken the HITL1/HITL2-only framework-initiated decision boundary
+> **@deprecated name** — Retained as the historical scenario anchor. The target behavior removes the former route-clarification exception.
+
+- **WHEN** the user provides or opens `RUN.md` and thereby selects DPT_FRAMEWORK
+- **THEN** entry docs SHALL direct the Agent into framework execution without another route-selection question
+- **AND** research semantics that still need clarification SHALL be handled at HITL1
+- **AND** host setup or permission failure SHALL be reported only as the smallest external prerequisite, not a third lifecycle interaction point
 
 #### Scenario: Entry docs expose the two-HITL rhythm
 
@@ -44,7 +60,7 @@ Entry positioning SHALL describe DPT_FRAMEWORK as iterative research that preser
 #### Scenario: User-initiated message does not add an entry path
 
 - **WHEN** a user voluntarily sends a normal conversation message while a non-HITL phase is active
-- **THEN** entry docs MAY permit the Agent to answer that turn
+- **THEN** entry docs SHALL require the Agent to answer that turn
 - **AND** they SHALL NOT describe the message as another HITL, entry trigger, mutation permission, pause state, or durable intervention path
 
 #### Scenario: Iterative positioning separates history from current judgment

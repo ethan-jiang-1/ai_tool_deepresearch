@@ -1,4 +1,12 @@
-> req: HIU-001, HIU-002, HIU-003
+> req: HIU-001, HIU-002, HIU-003, HIU-005, HIU-006
+
+## RENAMED Requirements
+
+- FROM: `### Requirement: HITL1 entry prompt with letter menu`
+- TO: `### Requirement: HITL1 recommendation-first alignment prompt`
+
+- FROM: `### Requirement: HITL2 entry prompt with context narrative`
+- TO: `### Requirement: HITL2 research-review recommendation prompt`
 
 ## MODIFIED Requirements
 
@@ -6,12 +14,12 @@
 
 HITL1 和 HITL2 的用户交互 SHALL 遵循**环（loop）**模型——用户进入 HITL 后可以探索、提问、获得帮助后再做出决定，Agent 在出口条件满足后写入 accepted owner 并推进。HITL 不是线性问卷，也不是要求用户学习内部 enum 的控制台；Agent SHALL NOT 将用户逐问驱赶。
 
-环 SHALL 包含四个阶段：
+环 SHALL 包含三个阶段和两个贯穿规则：
 - **入口**：Agent 一次性展示准备好的语境、一个明确推荐及其理由/影响、可选快捷选项，并明确告知用户可以直接接受、用自然语言修正或继续提问。**入口的具体 prompt 格式由 HIU-002（HITL1）和 HIU-003（HITL2）分别定义**——本 requirement 定义的是环的结构性阶段，不重复入口 prompt 的具体字段
-- **环内**：Agent 根据用户行为响应——清楚接受或修正（快出口）、对比询问（解释差异后继续等）、BTW 问题（回答后轻推回主路径）、改变主意（重新讨论推荐/选项）、无关输入（礼貌回应后轻推回主路径）
+- **环内**：Agent 根据用户当前意图响应——清楚接受或修正（快出口）、对比询问（解释差异后继续等）、BTW 问题（回答后自然回到主路径）、改变主意（重新讨论推荐/选项）、无关输入（简短回应后自然回到主路径）
 - **出口**：用户清楚表达接受、修正或其他决定后，该表达本身 SHALL 视为确认。Agent SHALL 在当前 accepted HITL boundary 内把自然语言映射到现有 profile/decision contract，写入 accepted owner，运行 Gate 并继续现有合法链；SHALL NOT 对每个清楚决定统一追加无信息增益的二次确认
 - **最小确认边界**：只有当用户表达存在实质歧义、下一步会扩张真实成本或权限、或存在不可逆风险时，Agent SHALL 只确认该最小边界；确认不得扩张为让用户逐步批准普通机械命令
-- **防无限环**：Agent SHALL 采用两级轻推策略——第 3 轮左右开始温和引导（如“目前为止我们讨论了 X 和 Y，我建议先按 Z 开始，因为……”），避免突然打断用户的探索节奏；5+ 轮仍未决定时升级为总结已讨论内容 + 给一个明确建议 + 重申可直接接受或修正。Agent SHALL NOT 设硬性最大轮数
+- **停滞引导**：Agent SHALL 根据讨论是否仍产生新的语义信息来判断是否需要引导。讨论仍有实质进展时继续回答；出现重复困惑或不再产生新信息时，Agent 总结已明确/未明确内容，给一个有理由的推荐，并重申可直接接受或修正。Agent SHALL NOT 追踪固定轮数、设置硬性最大轮数或用计数器驱动对话
 
 用户决定进入 accepted owner 后，普通 profile 写入、topic operation、Gate、handoff、status sync、repair 和 checkpoint rerun SHALL 立即回到 Agent 执行。`Human-directed` 只说明决定来源；它 SHALL NOT 创造 permission、mutation authority、缺失 route 或 Engine override。
 
@@ -31,13 +39,14 @@ HITL1 和 HITL2 的用户交互 SHALL 遵循**环（loop）**模型——用户�
 #### Scenario: User asks BTW question
 - **WHEN** 用户问“BTW，adversarial verification 是什么意思？”
 - **THEN** Agent SHALL 回答 BTW 问题
-- **AND** Agent SHALL 回答后轻推：“还有其他问题吗？也可以直接按我的建议开始，或告诉我哪里要改。”
+- **AND** Agent SHALL 在有助于对话时自然回到尚未完成的研究决定，并允许用户直接接受、修正或继续提问
 - **AND** HITL 环继续等待用户决定
 
 #### Scenario: User is stuck after many rounds
-- **WHEN** 用户已问 5+ 轮仍未做出决定
+- **WHEN** HITL 讨论开始重复且不再产生新的研究语义，但用户仍未做出决定
 - **THEN** Agent SHALL 总结已讨论内容，给一个明确建议及理由，并重申用户可以直接接受或自然语言修正
 - **AND** Agent SHALL NOT 替用户决定或静默写入 decision owner
+- **AND** Agent SHALL NOT 依据固定轮数强制结束或升级对话
 
 #### Scenario: User sends irrelevant or off-topic message
 - **WHEN** 用户发送与当前 HITL 决策无关的消息（如闲聊、不相关请求或粘贴不相关内容）
@@ -50,7 +59,7 @@ HITL1 和 HITL2 的用户交互 SHALL 遵循**环（loop）**模型——用户�
 - **AND** 用户澄清或授权后，Agent SHALL 自己执行剩余合法机械步骤
 - **AND** Agent SHALL NOT 把该例外扩张为所有选择的统一二次确认
 
-### Requirement: HITL1 entry prompt with letter menu
+### Requirement: HITL1 recommendation-first alignment prompt
 
 Agent 在 HITL1 入口 SHALL 使用 recommendation-first 的预设 prompt 文本。prompt 文本 SHALL 存放在独立的 `brief/hitl1.md` 中，`phase-hitl1.md` 通过 `suggested_context` 引用。
 
@@ -70,8 +79,8 @@ Agent 在 HITL1 入口 SHALL 使用 recommendation-first 的预设 prompt 文本
 
 must-answer 收集 SHALL 满足：
 - Agent SHALL 基于原始问题先提出拟定 must-answer；用户可以直接接受或用自然语言修正；
-- 如果用户不确定，可以写“我不确定，先帮我拆问题”；
-- 不确定不是错误——Agent SHALL 将条目标记为 `gap_queue_backed` 状态。此状态通过条目文本模式编码（如包含“不确定”/“先帮我拆”/“不知道具体该问什么”等语义标记），不依赖结构化元数据字段。下游 phase（seed-topics）SHALL 通过文本模式识别 `gap_queue_backed` 条目，将其排入 question decomposition task card。
+- 如果用户不确定或说“先帮我拆问题”，Agent SHALL 基于原始问题和当前对话提出一组具体、可接受或可修改的 must-answer 问题；
+- 只有用户接受或修正后的具体问题进入现有 `root_must_answer_set`。Agent SHALL NOT 把“不确定”等原话当作机器暗号、通过文本模式伪造 `gap_queue_backed` 状态，或新增 intake/status 字段。
 
 #### Scenario: User accepts the HITL1 recommendation in natural language
 - **WHEN** Agent 已展示目标、must-answer、topic preview、recommended profile 及其影响，用户回复“按这个开始”
@@ -94,9 +103,15 @@ must-answer 收集 SHALL 满足：
 
 #### Scenario: User is unsure about must-answer
 - **WHEN** 用户对于“最终报告必须回答什么”回复“我不确定，先帮我拆问题”
-- **THEN** Agent SHALL 在 `root_must_answer_set` 中写入用户原话（如“我不确定，先帮我拆问题”），此条目即被标记为 `gap_queue_backed`（通过文本模式识别）
-- **AND** HITL1 gate SHALL pass（`root_must_answer_set` 非空即满足）
-- **AND** Agent SHALL NOT 阻塞流程或要求用户必须给出具体问题
+- **THEN** Agent SHALL 根据原始研究问题和已知语境提出一组具体 must-answer 建议
+- **AND** 用户 SHALL 能直接接受或自然语言修正该建议，而不必自己从空白开始拆题
+- **AND** Agent SHALL 只把接受后的具体问题写入 `root_must_answer_set`
+- **AND** Agent SHALL NOT 写入文本暗号、sentinel 或新增结构化状态来表示不确定
+
+#### Scenario: User skips search preference
+- **WHEN** 用户未提供旧 prompt 曾询问的搜索偏好
+- **THEN** Agent SHALL 继续基于推荐、用户接受的 must-answer 和现有 research profile 执行
+- **AND** Agent SHALL NOT 追问该已退役输入、写入 `search_preference` 或记录 `not_specified_use_profile_defaults`
 
 #### Scenario: HITL1 asks only for a genuinely ambiguous field
 - **WHEN** 用户的回复同时可能表示缩小范围或只改变报告视角，且两种解释会写入不同 accepted semantics
@@ -113,7 +128,7 @@ must-answer 收集 SHALL 满足：
   - 下一个框架主动邀请并等待用户决定的位置是 HITL2。
 - **AND** Agent SHALL NOT 给出虚假的精确时间估计
 
-### Requirement: HITL2 entry prompt with context narrative
+### Requirement: HITL2 research-review recommendation prompt
 
 Agent 在 HITL2 入口 SHALL 先写 research review，再给出一个明确推荐及其理由/预期影响，并提供自然语言决策入口。HITL2 SHALL 遵循 HIU-001 定义的环模型——用户进入 HITL2 后可以探索、提问、获得帮助后再做出决定。本 requirement 定义 HITL2 独有的入口 prompt、recommendation 和 accepted decision mapping；环内行为规则由 HIU-001 统一覆盖。
 
@@ -122,6 +137,14 @@ research review SHALL 包含四个部分：
 - 仍然不足或需要谨慎的地方是：{缺口、限制、争议}；
 - Agent 推荐的一个下一步：{交付、换视角、继续研究、修复或停止中的一个用户可理解动作}；
 - 推荐理由和预期影响：{为什么现在最值得这样做，以及它大致会改变什么}。
+
+当推荐或用户可选动作涉及 rerun 或其他明显增加研究投入的工作时，Agent SHALL 用当前 direct facts 简短披露可预见的 material effort/cost impact；不需要新 estimator、字段或 checker。用户在看见该影响后清楚接受，即已确认该已披露成本。只有实际动作超出已披露影响或当前权限时，Agent 才 SHALL 再询问那个新增边界。
+
+在把 rerun 描述为可执行推荐或记录用户的 rerun 决定之前，Agent SHALL 就近读取 current profile `rerun_count`。`phase-hitl2.md` SHALL 拥有一条 repo-root、只读的 inline Node ESM invocation，从现有 `engine/helpers/gate-helpers.mjs` barrel import `loadGateDefinition('rerun-ready')`；该 invocation 只返回已由共同 Gate schema 解析的 definition，不写文件、trace 或 state，`brief/hitl2.md` SHALL NOT 复制该调用。Agent SHALL NOT raw-parse Gate JSON, read `failure_message` as semantics, or invent a wrapper/CLI/helper.
+
+Phase SHALL fail closed 地确认 `definition.gate === 'rerun-ready'`，并找到唯一满足以下 shape 的 rule：`id === 'rerun_count_valid'`、`check === 'rerun_count_limit'`、`target === 'rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count'`、`operator === 'less_than'`、`value` 为正整数。Current count 缺失 SHALL 按初始语义视为 `0`，否则 SHALL 为非负整数。Agent SHALL 计算 `next_count = current_count + 1`，且只有 `next_count < rule.value` 时才能把 rerun 作为当前 bundle 的可执行建议或记录该决定。Loader exception、gate/rule identity mismatch、missing/duplicate/unsupported rule 或 invalid count SHALL 产生最小 unavailable boundary，不得猜测。
+
+该判断只用于避免向用户推荐已知无法通过的路径，不是第二个 Gate 或 eligibility authority；不复制具体数值，不改变正式 rerun-ready Gate verdict。特别地，current count 为 `rule.value - 1` 时，下一次 increment 已到 exclusive limit，Agent SHALL 只推荐/询问是否为该 scope 新建 bundle。
 
 HITL2 MAY 保留五个快捷选项（A/B/C/D/E），但 SHALL 以用户可理解的动作描述为主，canonical enum 只作内部 contract：
 - A: 继续生成最终报告（`proceed_to_readiness`）；
@@ -152,23 +175,40 @@ Agent SHALL 在向用户展示 prompt 之前，先完成 durable state 写入：
 
 #### Scenario: User chooses rerun to adjust direction
 - **WHEN** 用户清楚回复“资本约束这部分还不够，再补一下”或快捷选项“C”并给出方向
+- **AND** current profile count 加上 rerun phase 必需的 increment 仍满足 loader-returned exact supported active rerun-count rule
 - **THEN** Agent SHALL 写入 `user_decision: rerun`，并在 `rationale` 中记录用户的补充方向
 - **AND** 当 rerun 未跨越新的真实成本/权限边界时，Agent SHALL NOT 追加 blanket second confirmation
 - **AND** 若需要新的真实成本或权限，Agent SHALL 只确认该边界；确认后由 Agent 继续机械执行
 - **AND** Gate pass 后 Agent SHALL 用 `rerun` outcome 进入 `phase-rerun.md`
+- **AND** 如果 prompt 已披露当前 rerun 的 material effort/cost impact，用户的清楚选择 SHALL 同时视为对该已披露影响的确认
+
+#### Scenario: Unavailable rerun is not offered as executable
+- **WHEN** HITL2 direct facts show that current count is one below the exclusive active limit, so the required next rerun increment would equal that limit and fail the exact supported active rerun-count rule
+- **THEN** Agent SHALL NOT recommend or record rerun as an executable current-bundle action
+- **AND** Agent SHALL ask only whether to start a new bundle for the requested scope
+- **AND** if the active rule or current count cannot be read reliably, Agent SHALL state that unavailable boundary rather than copy a number or guess
+- **AND** this decision-point check SHALL use the phase-owned read-only ESM import of `loadGateDefinition('rerun-ready')`, validate the exact gate/rule/check/target/operator/value/count contract, SHALL NOT raw-parse definition JSON, and SHALL NOT add a wrapper, CLI, Gate, helper, state field or competing verdict
 
 #### Scenario: User chooses repair to fix issues
 - **WHEN** 用户清楚回复“这里的证据似乎有错，先修正”或快捷选项“D”并描述问题
 - **THEN** Agent SHALL 写入 `user_decision: repair`，在 `rationale` 中记录用户要求修复的具体问题
-- **AND** Agent SHALL 根据 rationale 通过现有合法路径就地修复
+- **AND** 如果现有 accepted path 支持该修复，Agent SHALL 根据 rationale 就地修复
 - **AND** 修复完成后 Agent SHALL rerun HITL2 gate，重新向用户展示反映修复结果的 decision brief
+- **AND** 如果当前没有合法修复 path，Agent SHALL 说明最小缺失边界，不得声称已修复或发明 route
 - **AND** Agent SHALL NOT 要求用户执行普通 repair 命令
 
 #### Scenario: User chooses stop blocked
 - **WHEN** 用户清楚回复“先停在这里”或快捷选项“E”
 - **THEN** Agent SHALL 写入 `user_decision: stop_blocked`，在 `rationale` 中记录停止原因
 - **AND** Agent SHALL NOT 因统一规则重复询问同一停止决定
-- **AND** Agent SHALL 通过现有 accepted stop behavior 终止 lifecycle 并保留原因，不得手工创造状态 authority
+- **AND** 如果现有 accepted stop behavior 在当前位置可用，Agent SHALL 用它终止 lifecycle 并保留原因
+- **AND** 如果当前没有该合法 path，Agent SHALL 保持诚实边界，不得手工创造 blocked 状态或 route
+
+#### Scenario: Context-dependent action without a legal path remains honest
+- **WHEN** 用户在 HITL2 清楚选择 `request_view_revision`、`repair` 或 `stop_blocked`，但 direct facts 表明当前位置没有支持该具体动作的 accepted path
+- **THEN** Agent SHALL 记录或保留用户已表达的语义，并说明最小缺失 capability/path 边界
+- **AND** Agent SHALL NOT 把该动作描述为已经执行、默认路由到 readiness 或手工创建 transition/status authority
+- **AND** Agent SHALL NOT 推荐一个已知当前不可执行的 context-dependent 动作作为可立即完成的下一步
 
 #### Scenario: Ambiguous HITL2 intent gets one minimum question
 - **WHEN** 用户说“这部分再处理一下”，而当前语境无法区分是只修复错误还是继续扩展研究
@@ -194,3 +234,28 @@ Agent SHALL 在向用户展示 prompt 之前，先完成 durable state 写入：
   - 即将生成最终报告；
   - 框架期间不会主动浮出；
   - 完成后 Final 只交付结果，不再发起第三次决定交互。
+
+### Requirement: Graceful degradation for uncertain users
+
+当用户对 must-answer 问题不确定时，Agent SHALL 通过模型判断和现有研究语境把空白选择转化为一组具体建议，而不是阻塞、替用户静默决定，或创建靠文本暗号识别的伪状态。用户仍拥有研究语义：Agent 提出问题，用户接受或修正，只有接受后的具体 must-answer 进入现有 profile owner。
+
+这一降级 SHALL 使用现有 HITL1 conversation、`root_must_answer_set` 和 Gate，不新增 `gap_queue_backed`、`intake_status`、sentinel、文本模式 parser、queue marker 或 schema 字段。Seed Topics 后续只消费已接受的具体 must-answer，不负责从“不确定”暗号反推用户意图。
+
+#### Scenario: Uncertain must-answer creates gap not block
+- **WHEN** 用户表示不知道最终报告应该回答什么，并请 Agent 帮助拆解
+- **THEN** Agent SHALL 基于原始问题和当前对话提出具体 must-answer 建议
+- **AND** 用户 SHALL 能接受或修正该建议
+- **AND** 接受后的问题 SHALL 写入现有 `root_must_answer_set`
+- **AND** raw uncertainty wording SHALL NOT become a hidden state or downstream text-pattern trigger
+
+### Requirement: Anti-infinite-loop nudge strategy
+
+Agent SHALL 用语义进展而不是消息计数判断 HITL 对话是否需要引导。只要用户仍在提出有信息增益的问题、澄清约束或比较方案，Agent SHALL 继续正常协作，不因固定轮次打断。若讨论重复、停滞或用户明显难以形成决定，Agent SHALL 总结已知事实和剩余边界，给出一个明确推荐及理由，并邀请用户接受、修正或继续问一个有信息增益的问题。
+
+该策略 SHALL NOT 维护探索轮数、子环计数、固定第 3/5 轮阈值或硬性最大轮数，也 SHALL NOT 让 Agent 在没有用户决定时静默写入 accepted owner。
+
+#### Scenario: Agent nudges after extended exploration
+- **WHEN** HITL 对话出现重复困惑且连续回复没有增加新的研究语义
+- **THEN** Agent SHALL 总结当前共识与未决点，给出一个有理由的推荐，并重申自然语言出口
+- **AND** 如果用户随后继续提供有信息增益的内容，Agent SHALL 继续协作
+- **AND** Agent SHALL NOT 因消息数量达到某个阈值而强制结束对话或替用户决定

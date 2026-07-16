@@ -1,4 +1,4 @@
-> req: SWE-001, SWE-004, SWE-006
+> req: SWE-001, SWE-004, SWE-005, SWE-006
 
 ## MODIFIED Requirements
 
@@ -52,7 +52,7 @@ Silent autonomous execution SHALL NOT treat the user, unrelated background workf
 The silent contract SHALL distinguish two directions:
 
 - **framework-initiated**: while no user-initiated message is being answered, the Agent SHALL NOT initiate a status reply, progress report, partial delivery, question, approval request, acknowledgement, idle report, or continuation request from a non-terminal `stop: no` phase; it SHALL continue, repair, degrade, consume a legal handoff, or hold silently;
-- **user-initiated**: when a user message is already the current normal conversation turn, the Agent MAY answer that message. The answer SHALL NOT turn the current node into HITL, create a checkpoint, permission, mutation/reentry authority, pause/interrupt lifecycle, or durable mid-run intent. If the user has not separately changed the task through an existing accepted path, the current run SHALL continue under the same silent autonomous contract.
+- **user-initiated**: when a user message is already the current normal conversation turn, the Agent SHALL answer that message rather than ignore it. The answer SHALL NOT turn the current node into HITL, create a checkpoint, permission, mutation/reentry authority, pause/interrupt lifecycle, or durable mid-run intent. If the requested action has no legal path at the current position, the answer SHALL state that smallest boundary. If the user has not separately changed the task through an existing accepted path, the pre-existing autonomous continuation obligation and current projected `next_action` SHALL remain unchanged. This contract does not claim asynchronous scheduling or prove that post-answer execution already occurred.
 
 Any Chinese-first or prefer-Chinese guidance SHALL apply only to an already-authorized user-facing response. Language preference SHALL NOT independently authorize the Agent/framework to initiate status, progress, partial-delivery, question, approval, or acknowledgement output. An outer harness/task notification SHALL NOT be treated as a user-initiated conversation turn and SHALL NOT become a continuation dependency.
 
@@ -65,19 +65,26 @@ A user request SHALL NOT by itself expand host permission, override an Engine ve
 - **THEN** the Agent SHALL NOT wait for it as a phase continuation condition
 - **AND** it SHALL continue, repair, degrade, or hold silently according to DPT runtime truth
 
-#### Scenario: Language preference does not initiate a silent-phase reply
+#### Scenario: Language preference does not authorize a silent-phase reply
 
 - **WHEN** the Agent is inside a non-terminal `stop: no` phase
 - **AND** prefer-Chinese guidance exists without a user-initiated conversation turn
 - **THEN** the Agent SHALL NOT infer permission to initiate a user-facing status, progress, question, approval request, or acknowledgement
 - **AND** it SHALL follow the existing silent continuation, repair, degradation, or hold contract
 
-#### Scenario: User-initiated turn may be answered without becoming HITL
+#### Scenario: Stale single-turn status allowance is rejected
+
+- **WHEN** static validation scans `shared-silent-execution.md`
+- **THEN** it SHALL reject both a blanket permission for Agent-initiated single-turn status/acknowledgement output and an absolute rule that every user-initiated turn must be ignored
+- **AND** it SHALL require the direction-aware contract: no framework-initiated surfacing, but a normal received user turn is answered without new authority
+
+#### Scenario: User-initiated turn is answered without becoming HITL
 
 - **WHEN** the user voluntarily sends a message and that message is the current normal conversation turn while a non-terminal `stop: no` phase is active
-- **THEN** the Agent MAY answer the message
+- **THEN** the Agent SHALL answer the message from current direct facts or state the smallest missing-path boundary
 - **AND** the answer SHALL NOT create a third HITL, change `stop`, authorize profile/topic/state mutation, select a route, or create permission
-- **AND** absent a separately accepted task change, the run SHALL continue silently and autonomously after the answer
+- **AND** absent a separately accepted task change, the existing autonomous continuation obligation and projected `next_action` SHALL remain unchanged
+- **AND** this scenario SHALL NOT be used as evidence of asynchronous interruption transport or observed post-answer execution
 
 #### Scenario: User-initiated supplemental scope does not imply durable intervention
 
@@ -92,6 +99,24 @@ A user request SHALL NOT by itself expand host permission, override an Engine ve
 - **THEN** it SHALL find an explicit prohibition on framework-initiated surfacing
 - **AND** it SHALL NOT find an absolute rule that the user is unavailable or that a user-initiated normal conversation turn must be ignored
 - **AND** it SHALL NOT add a mid-run message queue, pause state, or interrupt controller
+
+### Requirement: Stop:no surfacing intent SHALL be recorded before any prohibited user-facing pause when the Agent can identify the intent
+
+If the Agent can identify that it is about to initiate a user-facing pause, question, progress report, partial delivery, acknowledgement, idle report, continuation request, or other prohibited surfacing during a non-terminal `stop: no` phase, it SHALL abort that framework-initiated path, record `surfacing_intent` when the accepted diagnostic surface is available, and follow the silent execution contract instead.
+
+`surfacing_intent` remains diagnostic only and SHALL NOT authorize user-facing output, phase handoff, HITL interaction, final delivery, or status transition. A normal answer to a user-initiated conversation turn already received SHALL NOT be classified or recorded as prohibited surfacing solely because `stop: no` is active. The Engine SHALL NOT inspect conversation state to make this distinction; Agent-facing guidance applies the direction-aware contract.
+
+#### Scenario: Surfacing intent does not authorize surfacing
+- **WHEN** the Agent is in a non-terminal `stop: no` phase and intends on its own to ask whether to continue, present partial findings, acknowledge progress, or wait for user input
+- **THEN** it SHALL abort that user-facing path
+- **AND** it SHALL record `surfacing_intent` when the accepted diagnostic command is available
+- **AND** it SHALL follow repair, strategy change, legal degraded handoff, continuation, or silent hold
+
+#### Scenario: User-initiated reply is not prohibited surfacing intent
+- **WHEN** a normal user message is already the current conversation turn during a non-terminal `stop: no` phase
+- **THEN** the Agent SHALL answer under SWE-004
+- **AND** it SHALL NOT record `surfacing_intent` solely because it answered that user-initiated turn
+- **AND** the answer SHALL NOT create lifecycle, permission, mutation, pause, or routing authority
 
 ### Requirement: Stop:no delegated phases SHALL actively poll work-unit readiness after background spawn
 
@@ -124,7 +149,7 @@ The polling loop SHALL inspect result, receipt, output, cache, status, and deadl
 - **WHEN** active polling finds a result and submit rejects it
 - **THEN** the Phase Agent SHALL repair the same attempt when possible or explicitly close it before replacement
 
-#### Scenario: polling does not initiate surfacing
+#### Scenario: polling does not authorize surfacing
 
 - **WHEN** no result is ready and deadlines have not expired
 - **THEN** the Phase Agent SHALL continue polling or other eligible work
