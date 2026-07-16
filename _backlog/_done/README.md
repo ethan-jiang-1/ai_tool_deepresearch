@@ -13,7 +13,7 @@ _done/
 ├── _fixed_bugs/           # 已修复 Bug（84 个，BUG-001~089，含间隔）
 ├── _suspened_bugs/        # 悬挂 Bug（3 个：BUG-026, 028, 030）
 ├── _done_todos/           # 已完成 TODO（14 个，DONE-001~014）
-├── _closed_plans/         # 已完成 Plan（25 个，CLS-001~025）
+├── _closed_plans/         # 已完成 Plan（28 个，CLS-001~028）
 └── _old_topics/           # 历史归档（⚠️ 勿读，除非显式要求）
 ```
 
@@ -28,7 +28,7 @@ _done/
 | `_fixed_bugs/` | 86 个已修复/结案 bug（BUG-001~091，有间隔） | BUG-092 |
 | `_suspened_bugs/` | 3 个悬挂 bug（BUG-026, 028, 030） | — |
 | `_done_todos/` | 15 个已完成 todo（DONE-001~015） | DONE-016 |
-| `_closed_plans/` | 26 个已完成 plan（CLS-001~026） | CLS-027 |
+| `_closed_plans/` | 28 个已完成 plan（CLS-001~028） | CLS-029 |
 | `_old_topics/` | 历史归档：`_v12-migration/`（6 个 OpenSpec change 全 DONE）、`_workflow/`（8 个 OpenSpec change 全 ARCHIVED）、`_original_dpt_requirement/`、`_original_dpt_v12/`、`_guideline/`、`_trainsistion/` | — |
 
 关键完成项（按完成日期）：
