@@ -6,7 +6,7 @@
 
 - `hitl-ux` 和 shared UX 强制字母菜单、英文内部分类与统一二次确认，使 Agent 不能把已清楚的自然语言决定直接映射到现有 contract。
 - `silent-wave-execution`、`shared-silent-execution.md` 和 Engine 注入 header 把“不主动打扰”表达成“不允许任何回应”，并明确要求忽略用户主动消息。
-- 无状态 continuation projection 的 `interaction: prohibited` 在 Gate、`enter-phase`、`advance-status` 和 work-unit claim 边界重复这个过度语义。
+- 无状态 continuation projection 的 `interaction: prohibited` 在 Gate、`enter-phase`、`advance-status` 和 work-unit claim 边界重复这个过度语义；其中 claim 路径并不读取 lifecycle node/frontmatter，却额外声明 interaction placement。
 - `phase-rerun.md`、shared silent prose、requirement registry 和 rerun-ready integration tests 仍保留旧 `<3` 常量，而 active Gate definition 的 `less_than: 11` 才是当前 executable Source of Record。
 - HITL UX 还通过固定第 3/5 轮阈值驱动轻推，并把用户的“不确定”原话当作 `gap_queue_backed` 文本暗号交给 Seed Topics；两者都没有结构化 owner，却增加了 Agent 必须记住的隐式控制。
 - active rerun experiment/runner index 仍把 `rerun_count=3` 当失败边界，accepted version requirements 还永久固定历史 v0.6/v0.7；这些都是当前 direct authority 已经存在时留下的副本。
@@ -25,7 +25,7 @@
 - 只在实质歧义、新风险/成本/权限或不可逆边界请求最小确认；清楚决定后所有合法机械执行立即回到 Agent。
 - 保留 `stop:no` 禁止 unsolicited surfacing 和自主 repair/continue 的约束，同时要求 Agent 对用户主动发来的当前 conversation turn 做正常回应。
 - 让 failure hint 只分配行动责任和诚实边界，交互时机唯一服从当前 lifecycle `stop` contract。
-- 在 HITL2 decision point 用 current count + loader-returned exact supported active rule 排除已知不可执行的 rerun，但不复制 formal Gate verdict。
+- 在 HITL2 decision point 复用一个由 formal Gate 与 post-final recovery 共同消费的纯 rerun-availability evaluator，排除已知不可执行的 rerun，而不复制 verdict logic。
 - 使 accepted spec、shared Markdown、Engine header 和 continuation cue 对同一行为使用同一含义。
 - 删除固定轮数轻推和文本暗号式不确定状态，让 Agent 根据语义进展引导对话，并先提出可接受/可修改的具体 must-answer。
 - 只清理 rerun-limit drift，不改变当前 limit 或 guard。
@@ -105,24 +105,26 @@ Rerun Gate definition 的 `failure_message` 保持原 bytes。Accepted Gate cont
 
 替代方案：允许 `stop:no` 对“严重 blocker”主动做一次 terminal surfacing。不采用，因为 severity/classification 会变成与 `stop` 并列的第二个交互 owner，并实质建立第三个框架主动打断点。
 
-### 7. Continuation projection 保留，`prohibited` 改为 `do_not_initiate`
+### 7. Lifecycle continuation 收窄，claim 只投影 polling action
 
 无状态 continuation cue 仍然有价值：它在 Gate、phase entry/status sync 和 work-unit claim 的立即决策点提供一个 `next_action`，抑制 Agent 因上下文疲劳而主动浮出。但 `interaction: prohibited` 同时声称“任何 interaction 都禁止”，与新不变式冲突。
 
-因此 stop:no 投影统一为：
+因此有直接 lifecycle node/frontmatter `stop:no` authority 的投影统一为：
 
 ```json
 {
   "interaction": "do_not_initiate",
-  "next_action": "execute_loaded_node|consume_check_next|repair_and_rerun_gate|inspect_and_poll_claimed_work"
+  "next_action": "execute_loaded_node|consume_check_next|repair_and_rerun_gate"
 }
 ```
 
-`do_not_initiate` 是 Agent-facing enum projection，只说“不要主动联系用户”。`required` 继续表示已加载 HITL node 的最近动作是等待用户，`terminal_delivery` 继续表示 Final 交付；全部 `next_action`、locator、Gate/status/work-unit authority 不变。
+`do_not_initiate` 是 Agent-facing enum projection，只说“不要主动联系用户”。`required` 继续表示已加载 HITL node 的最近动作是等待用户，`terminal_delivery` 继续表示 Final 交付；全部 lifecycle `next_action`、locator、Gate/status authority 不变。
+
+Successful work-unit claim 是不同情况：现有 helper 只接收 `claimed_work_ids`，claim command 只验证 queue phase/kind/actor contract，并不读取或证明当前 lifecycle `stop`。它不得再无条件复制 interaction truth。Claim continuation 保留 `next_action: inspect_and_poll_claimed_work` 和 `work_ids`，删除 `interaction` 字段；是否主动发起用户交互继续由已加载的 phase/header/lifecycle cue 决定。Empty/failed claim 仍不输出 successful continuation。
 
 这是 breaking output-token migration，但不是状态/schema migration。仓库内没有生产 machine consumer 依赖 `interaction` 分支；现有 consumers 是 Agent-facing docs、tests 和 experiment assertions，将在同一 apply 中原子更新。
 
-替代方案 A：保留 `prohibited` 并加一段解释。不采用，因为 token 本身仍持续制造歧义。替代方案 B：删除 `interaction` 字段。不采用，因为它会删除已通过真实 Agent 问题引入的决策点防疲劳提醒，而精确 rename 已能解决问题。
+替代方案 A：所有 surface 都保留 `prohibited` 并加解释。不采用，因为 token 本身仍持续制造歧义。替代方案 B：所有 cue 都删除 `interaction`。不采用，因为直接 lifecycle decision points 仍需要紧邻动作的防疲劳提醒；只从没有 `stop` authority 的 claim cue 删除重复字段，保留其 polling action。
 
 ### 8. Engine 不获得新的 interaction 判断职责
 
@@ -136,13 +138,13 @@ Engine 仍只从已拥有的 node frontmatter 和 command outcome 投影 cue。�
 
 Rerun-ready integration test 与 active `case-304` experiment 在运行时读 active definition，提取 `less_than` 边界，并验证 `limit - 1` 通过、`limit` 和 `limit + n` 失败。`RUN_EXPS.md` 不再把某个具体 count 写成当前边界。不新建 max-rerun helper 或第二个 config field；shared guidance 中独立的 fatigue threshold 保持不变。
 
-HITL2 必须在向用户推荐或接受 rerun 时避免一条已知必败路径。`phase-hitl2.md` 拥有一条 repo-root、只读的 inline Node ESM invocation，直接从现有 barrel import `loadGateDefinition('rerun-ready')`；它只返回 loader 已解析的 definition，不写文件、trace 或 state，`brief/hitl2.md` 只消费 phase 得出的可用性结论。Agent 不得 raw-parse definition、从 `failure_message` 推断语义，或临场发明 wrapper/CLI/helper。
+HITL2 必须在向用户推荐或接受 rerun 时避免一条已知必败路径，但不能在 Markdown 中复制 formal Gate 判断。Apply 将抽取一个 side-effect-free rerun-availability evaluator，输入仅为已由现有 loader 解析的 definition、完整 parsed profile 和 `includeNextIncrement`；输出为 closed facts（`supported`、`available`、`currentCount`、`evaluatedCount`、`exclusiveLimit` 或一个 fail-closed reason），不读文件、不写 state/trace、不构造 finding、不做 routing。
 
-Common Gate schema 只保证共同结构，不保证 rerun rule 的 operator/value semantics。因此 phase 必须 fail closed 地确认 `definition.gate === 'rerun-ready'`，并找到唯一满足 `id === 'rerun_count_valid'`、`check === 'rerun_count_limit'`、`target === 'rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count'`、`operator === 'less_than'` 且 `value` 为正整数的 rule。Current count 缺失按现有初始语义视为 `0`，否则必须是非负整数；phase 计算 `next_count = current_count + 1`，仅当 `next_count < rule.value` 时才把 rerun 作为当前 bundle 的可执行建议。任何 loader exception、identity mismatch、missing/duplicate/unsupported rule 或 invalid count 都只产生 unavailable boundary。
+Evaluator 是 active rerun-count rule 的唯一语义解释：它确认 `definition.gate === 'rerun-ready'`，找到唯一满足 `id === 'rerun_count_valid'`、`check === 'rerun_count_limit'`、canonical target、`operator === 'less_than'`、positive-integer value 的 rule，并确认 parsed profile 含有 `human_decision_checkpoints.hitl2` parent，再按 `evaluatedCount = currentCount + (includeNextIncrement ? 1 : 0)`、`available = evaluatedCount < exclusiveLimit` 返回事实。只有这个 parent 存在且 nested `rerun_count` 字段缺失时才解释为 `0`；profile reader 返回 `null`、YAML 不可解析、parent 缺失或显式 invalid count 必须 fail closed。Formal rerun-ready Gate 用 `includeNextIncrement: false` 检查已经 increment 的 current count 并继续独占 verdict/trace/routing；HITL2 decision advice 用 `includeNextIncrement: true` 检查下一次必需 increment，确保 current count `exclusiveLimit - 1` 在持久化前已知不可用。C5 的 fresh eligibility 和 pre-commit validation 同样使用 `true`；event-bound count increment 后的 accepted-lineage replay 只验证 recorded `currentCount -> evaluatedCount` delta 与 definition binding，并把 formal check 交给 `includeNextIncrement: false` 的 rerun-ready Gate，不能用 next-next availability 重判。现有 post-final guard 中的独立 rule/count comparison 和 Gate 内的 `count >= rule.value` 分支都被这个 evaluator 替换，而不是保留新旧两套逻辑；C5 外部 envelope、lineage 与 definition digest contract 不变。
 
-这个判断是从同一 direct authority 得出的 conversation advice，不持久化、不生成另一个 pass/fail artifact，也不替代 rerun-ready Gate。已知不可能时，HITL2 只问是否为该 scope 新建 bundle。Boundary proof 必须区分 pre-increment advice 与 post-increment Gate：当 current count 为 `limit - 1` 时，HITL2 得出 next count 等于 limit 并禁止推荐/记录 rerun；正式 Gate 则在 increment 后接受 `limit - 1`、拒绝 limit 及以上。
+`phase-hitl2.md` 只拥有一个 repo-root、read-only inline Node ESM invocation，从现有 barrel import loader、profile reader 和 shared evaluator，再打印 closed availability facts；它不包含 operator/value/count 比较，不写文件/trace/state，`brief/hitl2.md` 不复制调用。`supported: true, available: false` 才询问是否为该 scope 新建 bundle；loader/profile/config/evaluator unsupported 只陈述具体 contract boundary，不猜测 new bundle 能解决。C5 `inspect` 仍可只读证明 eligibility；exhausted/unsupported 时禁止的是 apply、workspace 创建和 rerun persistence。Rerun-ready Gate 仍是 formal legality checkpoint。
 
-替代方案 A：在文档/测试 helper 中各保留一个常量。不采用，因为这正是本次 drift 的原因。替代方案 B：新增 HITL2 eligibility Gate/helper。不采用，因为 current count、现有 increment 和 active rule 已足以在 decision point 排除已知必败建议，正式 legality 仍有现成 Gate。
+替代方案 A：在 Markdown、Gate 和 post-final helper 中各保留一个近似判断。不采用，因为这会创造第二/第三 evaluator。替代方案 B：新增 eligibility Gate/CLI。不采用，因为一个共享纯 evaluator 足以复用 direct authority；新增 CLI 会增加 command/control surface。
 
 ### 10. 删除没有 owner 的 HITL 微控制
 
@@ -158,11 +160,11 @@ HITL 对话不再追踪探索轮数或在固定第 3/5 轮触发不同 prompt。
 
 - `unit`：continuation pure projection 覆盖 `do_not_initiate|required|terminal_delivery`、原 `next_action` 不变和未知 frontmatter fail-closed。
 - `integration`：真实 Gate/`enter-phase`/`advance-status`/claim stdout 与 Markdown/header/HITL docs 同步；同一 Markdown contract 扫描全部非终端 stop:no hint consumers，证明 classification 不再自动发起用户交互；rerun boundary test 从 active definition 读取边界。
-- 现有 continuation CLI integration claim 还覆盖 rerun、seed-topics、queue、canonical topic-state、generated work-unit task 与 Wave1/Wave2 的代表性 non-mechanical failure producer：`hints[]`/verdict/route 保持，action-bearing advice 变为 placement-neutral，已有 mechanical owner 的 Wave style failure 改回 `engine_operation`。不新增第四个 Agent behavior case，因为 case 711 已证明无 unsolicited surfacing，case 713 已证明 non-terminal user-initiated reply。
+- 现有 continuation CLI integration claim 还覆盖 rerun、seed-topics、queue、canonical topic-state、generated work-unit task 与 Wave1/Wave2 的代表性 non-mechanical failure producer：`hints[]`/verdict/route 保持，action-bearing advice 变为 placement-neutral，已有 mechanical owner 的 Wave style failure 改回 `engine_operation`。Claim cue 另证只保留 polling action，不复制 interaction placement。
 - `deterministic_e2e`：不选择。本 change 不改变 transition 或多 phase deterministic state chain，现有 rerun chain 已有验证；重复一条 JS-led chain 不能证明自然语言 Agent 行为。
-- `agent_flow_e2e`：使用真实 subject Agent 从 production phase/dependency surface 自己生成 HITL1 recommendation/HITL2 brief，再接收固定自然语言用户回合，观察持久化/Gate/continue。Runner prompt 不复述 enum、无二次确认规则、command chain、no-mutation 边界或 expected next action。用户主动回合用例只裁决真实回应、authority hashes/current node/status/next action 不变，不声称存在 async interrupt transport 或持续执行证明；Final-specific reply contract 由 CDP-004 Markdown/header integration assertions 覆盖，不让 case 713 overclaim。
+- `agent_flow_e2e`：使用真实 subject Agent 从 production phase/dependency surface 自己生成 HITL1 recommendation/HITL2 brief，再接收固定自然语言用户回合，观察持久化/Gate/continue。每个 playbook 声明 real-Agent dependency 和 no-substitute contract；runner 只能准备已披露的 setup、传递固定 utterance、原样保存并 hash role/event-labeled JSONL transcript、执行只读 deterministic observation，不能代写 subject-owned profile/topic/rationale/probe 或代跑 case 711/712 的 Gate/handoff。Case 711 transcript 必须有序绑定同一 subject conversation 中的 recommendation、精确用户接受、真实 bounded probe 和 subject-owned writes，并把 transcript digest 立即写入 root trace：available 分支还要求一次 real search、对首个 usable URL 的一次 successful fetch、Gate pass 和 stop:no entry；honest unavailable 分支要求 direct unavailable observation、Gate fail 和无 Setup entry。Missing independent subject execution 才是 `NOT RUN`；真实外部能力不可用是 production-valid PASS branch，不得用 fixture 改写。用户主动回合用例使用同一 setup-only bundle 的两个独立 subject turns 和四个 authority snapshot：readiness turn 的 A/B 必须相等；runner 仅通过 real readiness Gate/Final entry/status path 形成 B/C 的明确 allowlist diff；final artifact 前 Final turn 的 C/D 必须相等且 `final/` 始终为空。它不声称 async interrupt transport 或 post-answer execution，也不新增第四个 case。
 
-Deterministic assertions 只能证明 prompt/cue/owner 可达，不能声称真实 Agent 一定不主动浮出。Agent behavior verdict 必须来自真实 transcript + bundle/trace、Gate output 等 direct evidence，不用 mock 或手写结果。
+Deterministic assertions 只能证明 prompt/cue/owner 可达，不能声称真实 Agent 一定不主动浮出。Agent behavior verdict 必须来自 role/event-labeled structured transcript + bundle/trace、Gate output 等 direct evidence，不用 mock、人工语义裁决或手写结果；断言只检查明确的 user/assistant/tool block、固定 utterance、tool evidence、hash/authority diff 和受限的 canonical-token/overclaim patterns。
 
 ### 12. Apply target manifest
 
@@ -175,8 +177,8 @@ Apply 开始时用一份受任务追踪的 target manifest 核对控制面，但
 | Silent shared/header guidance | explicit user-initiated-turn exception | absolute no-reply / user-unavailable wording | stop:no autonomy, repair/continue/hold |
 | Failure hint consumption | Agent-facing smallest boundary under current `stop` | classification-driven user escalation/wait and silent override table | hint enum/schema, Engine verdict, exact repair coordinates |
 | Gate/Inspect boundary advice | direct fact + owner boundary + same-check rerun | stop:no `ask user` / `return to HITL` / `surface blocker` commands | verdict, route, hints, definition bytes/digest |
-| HITL2 rerun availability | current count + loader-returned exact supported rule at decision point | known-impossible rerun recommendation/recording | active rule as sole numeric truth; rerun-ready Gate formal verdict |
-| Continuation projection | `do_not_initiate` token | `prohibited` token | stateless helper, `next_action`, locators |
+| HITL2 rerun availability | one shared pure evaluator consumed by Gate/HITL2/post-final | Gate/Markdown/post-final duplicate comparisons; known-impossible recommendation | active rule as sole numeric truth; rerun-ready Gate formal verdict |
+| Continuation projection | lifecycle `do_not_initiate`; claim polling action only | `prohibited` token and claim interaction duplicate | stateless helper, all `next_action`, locators |
 | Iterative positioning | short Charter/RUN/README posture | one-shot or enum-console framing | guidance/spec authority order |
 | Rerun limit references | active-definition lookup/reference | duplicated numeric constants | active Gate rule and loop protection |
 | Version requirement wording | generic proposal-declared-version rule + changelog/banner equality | accepted historical v0.6/v0.7 current pins | concrete v0.32 in this proposal/tasks, CHANGELOG version authority |
@@ -191,7 +193,7 @@ Apply 中一旦需要新建 state、CLI、Gate、transition、message transport 
 - [Risk] 只改 consumer 而 producer 继续注入交互命令 -> focused CLI integration 直接断言代表性 stop:no failure 的 hints/verdict/route 不变且 action-bearing advice placement-neutral；定义文件保持 byte-stable，避免 post-final digest churn。
 - [Risk] 去掉统一二次确认导致 Agent 过度猜测 -> 只在语义清楚时直接记录；实质歧义或新风险/成本/权限仍必须问最小确认。
 - [Risk] 每次 rerun 都被重新解释成成本扩张并触发确认 -> HITL2 先披露当前可见 material impact；用户接受已披露影响就是确认，只问新增边界。
-- [Risk] HITL2 availability advice 漂移成第二个 rerun verdict -> 用 phase-owned read-only ESM invocation 复用现有 loader，验证 exact supported rule identity/shape，再把 current count 计入既有 increment；不 raw-parse、不持久化、不复制数值、不代替 rerun-ready Gate，并分别用 Markdown contract 与 Gate boundary test 锁定调用面和 formal verdict。
+- [Risk] HITL2 availability advice 漂移成第二个 rerun verdict -> Gate、HITL2 和 post-final recovery 调用同一个 side-effect-free evaluator；HITL2 只消费 closed facts，formal Gate 独占 verdict/trace。Focused unit tests 锁 evaluator shape/boundary，integration tests 锁 Gate 和 post-final consumers 同源。
 - [Risk] HITL 推荐被误当成 Agent 代替用户决定 -> recommendation 仅是 conversation projection，用户接受/修正后才进入 durable owner。
 - [Risk] cue token 变更破坏仓库内 assertion -> 在同一 apply 中原子更新 helper、specs、docs、tests 和 controlled playbook；version bump 到 v0.32。
 - [Risk] 验证为了模拟“随时插话”而建 async harness -> agent_flow case 只使用正常 conversation turn 边界，明确不证明中断传输、暂停或持久化。
@@ -202,8 +204,8 @@ Apply 中一旦需要新建 state、CLI、Gate、transition、message transport 
 
 1. 在 apply 开始前运行 verification routing plan check，并用 target manifest 复核没有新 runtime control surface。
 2. 先更新 accepted-owner 对应的 Markdown/Agent Flow 和 focused tests：HITL UX、HITL1/HITL2 phase/brief、Final phase/terminal header、silent shared/header，并扫描全部非终端 stop:no phase、shared Sub-agent protocol、actor-decision playbook、generated work-unit task 和 action-bearing Gate/Inspect/topic-state/queue producer；同时删除 round-count 和 `gap_queue_backed` consumer。
-3. 在一个原子实现步骤中将 continuation helper 的 stop:no token 改为 `do_not_initiate`，并同步所有 Gate/entry/status/claim tests 和 Agent-facing consumers。
-4. 清理 rerun-limit 副本，使 boundary test 与 active experiment 读 active definition；运行 focused regression 证明 active limit 和独立 fatigue threshold 均未改变。
+3. 在一个原子实现步骤中将 lifecycle continuation helper 的 stop:no token 改为 `do_not_initiate`、从 claim cue 删除无 authority 的 interaction field，并同步 Gate/entry/status/claim tests 和 Agent-facing consumers。
+4. 抽取一个 shared pure rerun-availability evaluator，替换 Gate 与 post-final guard 的重复判断，让 HITL2 只消费同一 closed result；清理数值副本并运行 focused regression 证明 active limit 和独立 fatigue threshold 均未改变。
 5. 更新 Charter/RUN/README/COMMANDS 等高频表面、`CHANGELOG.md` 和 v0.32 banner。
 6. 执行 focused unit/integration 与真实 agent-flow playbooks，再运行 verification assets check、OpenSpec/governance 检查。
 

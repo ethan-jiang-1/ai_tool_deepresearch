@@ -26,6 +26,8 @@ Definition-time coordinate templates SHALL be fully resolved before output. For 
 
 All failure exits SHALL use the shared result/finding builder, including invalid invocation, missing/unparseable definition, node/gate binding, lifecycle handoff/status preflight, canonical topic-state prerequisite, gate-specific prerequisite, routing, durability, and rule evaluation. For failures outside definition evaluation, the existing helper that directly detects the failed fact SHALL construct and return the structured finding with its stable root id, blocking basis, observed/expected facts, and repair kind/write coordinate. A wrapper SHALL only project that finding for its checkpoint and SHALL NOT hand-build a failed result, reconstruct metadata from prose, or look up a duplicate central preflight-root catalog.
 
+For the active rerun-count rule needed both before and at its formal Gate decision point, the Gate, HITL2 and accepted post-final consumer SHALL reuse the side-effect-free evaluator owned by REI-003 rather than duplicate the comparison in CLI and Markdown. The evaluator SHALL consume the loader-parsed definition plus full parsed profile and return closed availability facts only; consumer modes and post-final stages SHALL follow the owning REI-003/POF-001 contracts. The rerun-ready Gate SHALL keep formal verdict/trace/routing ownership, and existing local comparisons in the Gate and post-final guard SHALL be removed.
+
 #### Scenario: Gate rule failure returns one actionable hint
 
 - **WHEN** a Gate rule fails on an Agent-repairable artifact
@@ -56,9 +58,23 @@ All failure exits SHALL use the shared result/finding builder, including invalid
 - **THEN** that helper SHALL return the structured lifecycle finding consumed by the formal Gate projector
 - **AND** the wrapper SHALL NOT translate helper prose through a separate `GATE_FAILURE_ROOTS` or equivalent root catalog
 
+#### Scenario: Shared advisory and Gate fact use one evaluator
+
+- **WHEN** HITL2 advice, accepted post-final recovery and rerun-ready Gate need the active rerun-count availability fact
+- **THEN** all three SHALL call the same REI-003 pure evaluator over the loader-parsed definition and full parsed profile
+- **AND** Markdown SHALL consume its closed result rather than implement operator/value/count logic
+- **AND** only the Gate SHALL emit the formal verdict, routing and Gate trace
+
+#### Scenario: Profile prerequisite masks count implications
+
+- **WHEN** the full profile is missing/unparseable or its HITL2 parent is absent
+- **THEN** the Gate SHALL emit only the existing profile prerequisite as the primary hint
+- **AND** rationale/count implications SHALL remain masked rather than becoming a competing rerun-count hint
+- **AND** the shared evaluator SHALL return unsupported facts without constructing another finding
+
 #### Scenario: Non-mechanical Gate advice stays placement-neutral
 
-- **WHEN** a Gate or its shared evaluator emits a primary `user_decision`, `external_action`, or `missing_contract` finding
+- **WHEN** a Gate/Inspect producer consuming the evaluator emits a primary `user_decision`, `external_action`, or `missing_contract` finding
 - **THEN** `hints[]` SHALL retain the exact `repair_kind`, `missing_fact`, `write_to`, and same-checkpoint `rerun`
 - **AND** producer-supplied repair/advice SHALL identify the boundary without instructing immediate user contact, HITL reentry, approval, surfacing, or acknowledgement wait
 - **AND** Gate verdict and route SHALL remain unchanged, and finding classification SHALL remain unchanged unless direct facts plus an accepted existing owner prove it was misclassified as a user decision

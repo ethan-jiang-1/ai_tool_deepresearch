@@ -8,9 +8,9 @@
 
 The phase SHALL produce a decision brief that reviews what the research can answer, open questions, limitations or disputes, and one Agent-recommended next action with its reason and expected effect. When that action would rerun research or otherwise materially increase effort/cost, the brief SHALL disclose the foreseeable material impact from current direct facts without adding an estimator or state field. User acceptance after that disclosure SHALL count as confirmation of the disclosed impact; only an actual expansion beyond the disclosure/current permission requires another minimum question. The recommendation SHALL be advice for the user's semantic decision; it SHALL NOT become a decision authority or be recorded as the user's choice without real user input.
 
-Before the brief presents rerun as an executable recommendation or the Agent records a clear rerun request, `phase-hitl2.md` SHALL own one repo-root read-only inline Node ESM invocation importing existing `loadGateDefinition('rerun-ready')` from `engine/helpers/gate-helpers.mjs`; it SHALL return the common-schema-parsed definition without writing files, trace or state, and `brief/hitl2.md` SHALL consume only the phase-derived availability rather than duplicate the invocation. The Agent SHALL NOT raw-parse the definition, interpret `failure_message`, or invent a wrapper/CLI/helper.
+Before the brief presents rerun as an executable recommendation or the Agent records a clear rerun request, `phase-hitl2.md` SHALL own one repo-root read-only inline Node ESM invocation importing existing `loadGateDefinition('rerun-ready')`, the profile reader and one shared pure rerun-availability evaluator from the Engine helper barrel. It SHALL output only the evaluator's closed availability facts without writing files, trace or state; `brief/hitl2.md` SHALL consume the phase-derived result rather than duplicate the invocation. The Agent SHALL NOT raw-parse the definition, interpret `failure_message`, reimplement rule/count comparison in Markdown, or invent a wrapper/CLI.
 
-The phase SHALL require `definition.gate === 'rerun-ready'` and exactly one active rule with `id: rerun_count_valid`, `check: rerun_count_limit`, target `rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count`, operator `less_than`, and a positive-integer value. Current profile `rerun_count` SHALL be absent=>`0` or a nonnegative integer. The Agent SHALL compute the next increment owned by `phase-rerun.md` and present/record rerun as executable only when `current_count + 1 < rule.value`. Loader failure, identity/shape drift, duplicate/missing rule or invalid count SHALL expose one unavailable boundary. This is an advisory decision-point availability check over existing direct authorities, not a new Gate, helper, persisted field or formal verdict. If current count is `rule.value - 1`, the next increment reaches the exclusive limit, so rerun SHALL NOT be recommended or recorded; HITL2 SHALL offer only the smallest new-bundle decision for that requested scope. The rerun-ready Gate remains the sole formal rerun legality checkpoint and no concrete numeric limit SHALL be copied into HITL prose.
+The phase SHALL pass the loader-parsed definition and full parsed profile to the REI-003 evaluator with `includeNextIncrement: true` and consume only its closed result. It SHALL NOT optional-chain a count before evaluation or duplicate rule/profile/count interpretation. HITL2 SHALL present/record rerun as executable only for `supported: true, available: true`; a supported unavailable result exposes only the new-bundle decision, while unsupported loader/profile/config facts expose only their concrete contract boundary. Formal Gate authority remains unchanged, and no concrete numeric limit or persisted eligibility SHALL be added. Post-final consumer stages remain owned by POF-001/POF-003.
 
 The phase SHALL let the user accept or reject that recommendation, ask questions, use an optional shortcut, or express a different desired outcome in natural language. Only while HITL2 is the accepted current `stop: yes` decision boundary SHALL the Agent map a clear user intent to the existing structured decision contract in `rb_profile.yaml#/human_decision_checkpoints/hitl2`. This mapping SHALL NOT authorize an ordinary voluntary message from a non-HITL `stop: no` phase to be persisted as a HITL2 decision, mutate run state, select a route, or create permission.
 
@@ -84,7 +84,7 @@ For any context-dependent action without a legal path at the current position, t
 #### Scenario: HITL2 rerun follows deterministic rerun handoff
 
 - **WHEN** the user clearly asks to continue researching a stated direction, the Agent maps it to `rerun`, the decision is recorded, and the HITL2 gate passes
-- **AND** the decision-point check established that the required next increment still satisfies the loader-returned exact supported active rerun-count rule
+- **AND** the shared `includeNextIncrement: true` rerun-availability result is supported and available
 - **THEN** the gate result SHALL use the `rerun` outcome
 - **AND** `check.next` SHALL be `phases/phase-rerun.md`
 - **AND** the Agent SHALL consume that target through the accepted handoff path
@@ -93,11 +93,12 @@ For any context-dependent action without a legal path at the current position, t
 
 #### Scenario: HITL2 does not accept a known-impossible rerun
 
-- **WHEN** current profile count is one below the exclusive active limit, so the rerun phase's required increment would equal that limit and fail the exact supported active rerun-count rule
+- **WHEN** the shared `includeNextIncrement: true` rerun-availability result shows current profile count is one below the exclusive active limit and the required next increment is unavailable
 - **THEN** the decision brief SHALL NOT recommend rerun as executable and the Agent SHALL NOT first record `user_decision: rerun`
 - **AND** HITL2 SHALL ask only whether to start a new bundle for the requested scope
 - **AND** inability to read the direct rule/count SHALL be stated as the smallest unavailable boundary rather than guessed
-- **AND** the check SHALL use the phase-owned read-only ESM import of `loadGateDefinition('rerun-ready')` and validate the exact gate/rule/check/target/operator/value/count contract; no raw definition parse, wrapper, CLI, new Gate, helper, state field or copied numeric limit SHALL be introduced
+- **AND** the check SHALL use the phase-owned read-only ESM import of loader/profile reader/shared evaluator; no raw definition parse, duplicated comparison, wrapper, CLI, new Gate, state field or copied numeric limit SHALL be introduced
+- **AND** unsupported rule/profile/HITL2-parent input SHALL expose its contract boundary rather than a new-bundle recommendation
 
 #### Scenario: HITL2 proceed_to_readiness follows chain
 

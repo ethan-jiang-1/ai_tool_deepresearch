@@ -3,19 +3,19 @@ change: simplify-iterative-research-interaction
 test_classes:
   unit:
     status: selected
-    rationale: The continuation cue enum and next-action mapping are a small pure deterministic projection over node frontmatter and direct command outcomes.
+    rationale: Continuation projection and shared rerun availability are small side-effect-free deterministic functions over direct inputs.
   integration:
     status: selected
-    rationale: Real Gate, enter-phase, advance-status, queue/topic-state and work-unit/generated-task outputs, stop:no action-bearing finding producers, Agent-facing Markdown/headers, active Gate-definition boundaries and active experiment surfaces cross production module/filesystem boundaries.
+    rationale: Real Gate, enter-phase, advance-status, queue/topic-state and work-unit/generated-task outputs, stop:no action-bearing finding producers, Agent-facing Markdown/headers and shared rerun-availability consumers cross production module/filesystem boundaries.
   deterministic_e2e:
     status: not_applicable
     rationale: The change does not alter lifecycle transitions or a workflow-scale deterministic state chain; repeating the existing JS-led chain would not prove natural-language or user-initiated-turn Agent behavior.
   agent_flow_e2e:
     status: selected
-    rationale: Real subject Agents must generate recommendations from production guidance, demonstrate natural-language acceptance/rerun translation and answer a user-initiated non-HITL turn without a third checkpoint or fabricated authority.
+    rationale: Real subject Agents must generate recommendations from production guidance, demonstrate natural-language acceptance/rerun translation and answer user-initiated turns under both autonomous and terminal headers without a third checkpoint or fabricated authority.
 claims:
   - id: continuation-cue-initiation-contract
-    statement: The pure continuation projection maps every non-terminal stop:no loaded-node, Gate pass/fail and successful claim decision point to interaction:do_not_initiate while preserving required, terminal_delivery, next_action and locator semantics without chat or persistent state.
+    statement: The pure continuation projection maps every non-terminal stop:no loaded-node and Gate pass/fail decision point to interaction:do_not_initiate while preserving required, terminal_delivery, next_action and locator semantics; successful claim keeps inspect_and_poll_claimed_work and work_ids but omits interaction because claim has no lifecycle stop authority. No cue adds chat or persistent state.
     test_class: unit
     proof_subject: deterministic_contract
     asset:
@@ -29,7 +29,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: continuation-cli-projection-contract
-    statement: Real Gate, enter-phase, covered advance-status and successful work-unit claim outputs expose do_not_initiate with their existing immediate next actions, while HITL and Final projections remain required and terminal_delivery; representative rerun, seed-topics, queue, canonical topic-state, generated work-unit task, Wave1 and Wave2 stop:no failures preserve verdict, route and true structured boundary owners while action-bearing advice does not command immediate user contact, HITL/rerun entry, blocker surfacing or user involvement; a recorded-profile missing-style failure names the existing apply-research-style Engine operation; command state/trace diffs remain within existing authority and output adds no chat, pause, permission or interaction-state field.
+    statement: Real Gate, enter-phase and covered advance-status outputs expose do_not_initiate with their existing immediate next actions, while HITL and Final projections remain required and terminal_delivery; successful work-unit claim preserves inspect_and_poll_claimed_work/work_ids while omitting interaction. Representative rerun, seed-topics, queue, canonical topic-state, generated work-unit task, Wave1 and Wave2 stop:no failures preserve verdict, route and true structured boundary owners while action-bearing advice does not command immediate user contact, HITL/rerun entry, blocker surfacing or user involvement; a recorded-profile missing-style failure names the existing apply-research-style Engine operation; command state/trace diffs remain within existing authority and output adds no chat, pause, permission or interaction-state field.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -43,7 +43,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: interaction-markdown-contract
-    statement: Enumerated owner surfaces declare recommendation-first HITL1/HITL2 prompts, permit natural-language acceptance/correction at those boundaries, use semantic progress rather than fixed-round nudges, require answers to user-initiated turns while prohibiting only framework-initiated stop:no surfacing, treat repair_kind and timeout block as Agent-facing responsibility rather than interaction timing across every non-terminal stop:no consumer, make missing_contract a stated unavailable boundary rather than a requested acknowledgement, keep Final terminal delivery without silencing an already-current verified-fact turn or changing terminal_delivery/deliver_final_artifacts, distinguish retained history from revisable current judgment, and contain no blanket confirmation, automatic boundary-hint/blocker escalation, absolute user-unavailable rule, retired search_preference/sentinel, gap_queue_backed text trigger or nonexistent prompt owner. The HITL2 phase owns one read-only inline Node ESM import of the existing loader, validates exact supported rerun rule identity/shape and nonnegative current count, fails closed without state/trace writes, and suppresses rerun when current_count = limit - 1 would increment to the exclusive limit; the brief does not duplicate that invocation.
+    statement: Enumerated owner surfaces declare recommendation-first HITL1/HITL2 prompts, permit natural-language acceptance/correction at those boundaries, use semantic progress rather than fixed-round nudges, require answers to user-initiated turns while prohibiting only framework-initiated stop:no surfacing, treat repair_kind and timeout block as Agent-facing responsibility rather than interaction timing across every non-terminal stop:no consumer, make missing_contract a stated unavailable boundary rather than a requested acknowledgement, keep Final terminal delivery without silencing an already-current verified-fact turn or changing terminal_delivery/deliver_final_artifacts, distinguish retained history from revisable current judgment, and contain no blanket confirmation, automatic boundary-hint/blocker escalation, absolute user-unavailable rule, retired search_preference/sentinel, gap_queue_backed text trigger or nonexistent prompt owner. HITL2 owns one read-only invocation of the existing loader/profile reader/shared evaluator with includeNextIncrement:true, consumes only closed availability facts without rule/count logic or state writes, and suppresses rerun when the required next increment is unavailable; the brief does not duplicate that invocation.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
@@ -57,12 +57,28 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: rerun-limit-active-definition-contract
-    statement: The rerun-ready Gate boundary test and active case-304 experiment read the production-parsed active Gate rule, accept the post-increment value immediately below its exclusive limit, reject values at and above it, and remove copied legacy numeric claims from active docs, registry, tests and experiment index without changing the definition or unrelated fatigue threshold.
+    statement: >-
+      One side-effect-free evaluator interprets the production-parsed active Gate rule from the full parsed profile, fails closed on unsupported identity/shape, missing profile or HITL2 parent and invalid count, defaults only an absent nested rerun_count to zero, computes evaluatedCount = currentCount + (includeNextIncrement ? 1 : 0) and available = evaluatedCount < exclusiveLimit, accepts an already-incremented value immediately below its exclusive limit, and marks a required next increment reaching the limit unavailable without I/O, findings, routing or copied numeric truth.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/rerun-availability.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rerun-availability-consumer-contract
+    statement: >-
+      The formal rerun-ready Gate calls the shared evaluator with includeNextIncrement:false over its already-incremented profile, while HITL2 read-only advice plus C5 fresh/pre-commit eligibility call true for the next required increment. A supported unavailable result alone exposes the new-bundle decision; unsupported rule/profile facts expose their contract boundary. Missing/unparseable profile or HITL2 parent emits one parent Gate hint with dependent count/rationale masked. After the event-bound C5 count increment, replay verifies the recorded one-field delta and definition binding without testing a next-next increment, then returns formal Gate ownership. Gate verdict/trace/routing, C5 external envelope/event/lineage/digest and HITL2 no-write behavior remain unchanged, with no competing operator/value/count comparison.
     test_class: integration
     proof_subject: deterministic_contract
     asset:
       kind: node_test
-      path: tests/integration/cli/check-gate-rerun-ready.test.mjs
+      path: tests/integration/cli/rerun-availability-consumers.test.mjs
     execution_profile:
       fixture: fixture_backed
       subject_execution: none
@@ -71,7 +87,8 @@ claims:
       verdict_judge: deterministic
     verdict_authority: node_test_exit
   - id: hitl1-natural-language-agent-flow
-    statement: From a legal HITL1 setup with research_access unprobed and no subject facts, a real subject Agent reads production guidance, generates the recommendation, treats one unambiguous natural-language acceptance as confirmation, performs the bounded real probe, writes only existing profile/topic owners, runs the real Gate and enters a bounded stop:no segment without a second confirmation, framework-initiated surfacing or human command co-runner.
+    statement: >-
+      From a legal HITL1 setup with research_access unprobed and no recommendation, accepted HITL1 decision, subject-owned profile/topic choice or hitl1-recorded attempt/pass, one real subject conversation reads production guidance, generates the recommendation, receives the exact unambiguous acceptance, writes only existing owners and performs the production bounded probe plus real Gate without a second confirmation, framework-initiated surfacing or human command co-runner. The available branch performs one real search and one successful fetch of the first usable URL, passes Gate and enters bounded stop:no; the honest unavailable branch records the direct failure, fails Gate and does not enter Setup. Ordered role/event-labeled raw JSONL and its root-trace SHA256 bind the same subject's tool events and writes; only missing independent subject execution is NOT RUN, and existing case-115 remains the focused probe canary.
     test_class: agent_flow_e2e
     proof_subject: agent_behavior
     asset:
@@ -85,7 +102,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: trace_jsonl
   - id: hitl2-natural-language-rerun-agent-flow
-    statement: From direct facts where the active rerun rule permits the required next increment, a real subject Agent generates the HITL2 research review and one available recommendation from production guidance, then receives one natural-language request to continue a stated direction, records the existing rerun decision/rationale, runs the real Gate and consumes the existing handoff without a second user response or canonical enum in user-facing assistant blocks.
+    statement: From direct facts where the active rerun rule permits the required next increment, a real subject Agent generates the HITL2 research review and one available recommendation from production guidance, then receives one natural-language request to continue a stated direction, records the existing rerun decision/rationale, runs the real Gate and consumes the existing handoff without a second user response or canonical enum in user-facing assistant blocks. Role/event-labeled raw JSONL plus root-trace SHA256 and profile/Gate/handoff facts make these deterministic predicates observable; the runner cannot substitute any verdict-affecting write or command.
     test_class: agent_flow_e2e
     proof_subject: agent_behavior
     asset:
@@ -99,7 +116,7 @@ claims:
       verdict_judge: deterministic
     verdict_authority: trace_jsonl
   - id: user-initiated-turn-boundary-agent-flow
-    statement: A real subject Agent answers a normal user-initiated turn about two seeded direct bundle facts while a non-HITL stop:no node is active; transcript/hash and before/after authority facts prove the current node/status and projected autonomous next_action remain unchanged with no HITL/profile/permission or pause/interrupt state created.
+    statement: In one setup-only bundle, real subject Agents answer fixed normal user turns about seeded direct facts first under a non-terminal stop:no production header and then, after runner-owned real readiness Gate/Final entry/status synchronization, under the production terminal-delivery header before final artifacts exist. Role/event-labeled raw JSONL and root-trace hashes plus four authority snapshots prove A equals B across the readiness reply, B-to-C contains only the declared real transition witnesses/status/cue changes, and C equals D across the Final reply; final remains empty at C/D and bounded assistant-block predicates prove no delivery/progress overclaim, HITL/profile/permission/pause state or Final loop.
     test_class: agent_flow_e2e
     proof_subject: agent_behavior
     asset:

@@ -12,7 +12,9 @@ For fixable rerun preparation failures, such as missing derived seed topic mater
 
 Hard non-repairable legality failures, such as an exhausted active max-rerun rule or missing HITL2 rerun rationale, remain gate failures. Because no failed chain edge exists, the Agent SHALL NOT route to another phase. The Agent SHALL record `silent_unpassable` through an accepted trace/log surface, keep the run in the current non-blocked/in-progress holding state, and SHALL NOT initiate a user question from mid-rerun.
 
-The active `rerun_count` comparison in `DPT_FRAMEWORK/schema/gate_definitions/gate-rerun-ready.definition.json`, as parsed by the production Gate-definition contract, SHALL be the sole numeric Source of Record for the current max-rerun boundary. Phase/shared Markdown, registry descriptions, tests and Agent-facing docs SHALL NOT maintain another concrete numeric limit. Tests that exercise the boundary SHALL derive the operator/value from the active definition and verify the values immediately below, at, and above that boundary without changing it.
+The active `rerun_count` rule in `DPT_FRAMEWORK/schema/gate_definitions/gate-rerun-ready.definition.json`, as parsed by the production Gate-definition contract, SHALL be the sole numeric Source of Record for the current max-rerun boundary. One side-effect-free `evaluateRerunAvailability({ definition, profile, includeNextIncrement })` SHALL be the sole semantic interpretation used by the formal rerun-ready Gate, HITL2 advice and accepted post-final recovery. It SHALL validate the exact active gate/rule/check/target/operator/value shape, require a parsed profile object with `human_decision_checkpoints.hitl2`, normalize only an absent nested `rerun_count` to `0`, require any present count to be a nonnegative integer, and return only closed facts or one unsupported reason. It SHALL compute `evaluatedCount = currentCount + (includeNextIncrement ? 1 : 0)` and `available = evaluatedCount < exclusiveLimit` without I/O, finding construction, routing or persistence. Existing Gate-local and post-final-local comparisons SHALL be replaced rather than retained. Phase/shared Markdown, registry descriptions, tests and Agent-facing docs SHALL NOT maintain another concrete numeric limit or comparison.
+
+HITL2 and fresh/pre-commit post-final eligibility SHALL call `includeNextIncrement: true` for the rerun phase's required next increment. The formal rerun-ready Gate SHALL call `false` over its already-incremented profile and retain verdict/trace/routing ownership. Accepted post-final lineage after its event-bound increment SHALL verify the recorded one-field `currentCount -> evaluatedCount` delta and definition binding, then defer formal availability to that same `false` Gate call; it SHALL NOT evaluate a second future increment. Consumer-specific C5 stage semantics remain owned by `post-final-recovery`.
 
 #### Scenario: Empty seed topics defaults to full rerun silently
 
@@ -42,6 +44,18 @@ The active `rerun_count` comparison in `DPT_FRAMEWORK/schema/gate_definitions/ga
 - **THEN** it SHALL read the production-parsed operator/value from the active Gate definition
 - **AND** it SHALL prove the value immediately below the exclusive limit passes while the limit and a value above it fail
 - **AND** it SHALL NOT copy the current numeric limit into a separate test constant
+
+#### Scenario: One evaluator owns rerun availability semantics
+
+- **WHEN** formal rerun-ready Gate, HITL2 advice or accepted post-final recovery interprets the active rerun-count rule
+- **THEN** each consumer SHALL call the same side-effect-free evaluator
+- **AND** the evaluator SHALL receive the full parsed profile and reject a missing/unparseable profile or missing HITL2 parent
+- **AND** formal Gate SHALL use `includeNextIncrement: false` for the already-incremented count while HITL2 and fresh/pre-commit post-final eligibility SHALL use `true` for the required next increment
+- **AND** the evaluator SHALL compute `evaluatedCount = currentCount + (includeNextIncrement ? 1 : 0)` and `available = evaluatedCount < exclusiveLimit`
+- **AND** only a parsed profile with the HITL2 parent present and nested count absent SHALL default to `0`
+- **AND** accepted post-final replay after the bound increment SHALL verify the recorded delta and defer to the formal Gate rather than check a next-next count
+- **AND** formal Gate SHALL retain verdict/trace/routing while advisory consumers persist no eligibility
+- **AND** no consumer SHALL retain a separate operator/value/count comparison
 
 ### Requirement: Rerun loop protection with max iterations
 

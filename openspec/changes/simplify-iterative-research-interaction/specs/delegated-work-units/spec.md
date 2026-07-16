@@ -6,7 +6,7 @@
 
 Claim SHALL bind one `queue_item_id` to one non-terminal work-unit attempt, move queue demand into `delegated_in_flight`, write effective lease fields, and store the queue item snapshot hash. Claim MAY allocate a contiguous queue-front batch with `--count N`, but Sub-agents SHALL NOT allocate IDs or mutate queue/index authority.
 
-Successful claim stdout SHALL include a static Agent-facing top-level `continuation` object for the immediate post-claim decision point: `interaction: do_not_initiate` and `next_action: inspect_and_poll_claimed_work`. `do_not_initiate` SHALL tell the Phase Agent not to initiate a user-facing pause, progress report, acknowledgement, or continuation request while work can be polled from runtime truth. It SHALL NOT require the Engine to inspect chat state or prohibit answering a user-initiated normal conversation turn.
+Successful claim stdout SHALL include a static Agent-facing top-level `continuation` object for the immediate post-claim decision point with `next_action: inspect_and_poll_claimed_work`. Because claim validates queue/work-unit phase demand but does not read or establish the current lifecycle node's `stop` authority, its continuation SHALL omit `interaction` rather than hardcode a second interaction-placement truth. The already-loaded lifecycle phase/header/cue continues to control whether the framework may initiate user-facing output.
 
 The cue SHALL include `work_ids` equal to the already returned `claimed_work_ids`, SHALL NOT be nested inside queue/index authority objects, SHALL NOT infer readiness, SHALL NOT complete work, and SHALL NOT add persistent work-unit, interaction, message, or pause state. Empty or failed claims SHALL NOT emit a successful continuation cue.
 
@@ -20,9 +20,8 @@ The cue SHALL include `work_ids` equal to the already returned `claimed_work_ids
 
 - **WHEN** claim succeeds for one or more work units
 - **THEN** stdout SHALL identify the claimed work ids
-- **AND** continuation SHALL state `interaction: do_not_initiate`
 - **AND** continuation SHALL direct the Phase Agent to inspect/poll the claimed work without waiting for user input, acknowledgement, or task notification
-- **AND** continuation SHALL NOT create chat-interception or interaction authority
+- **AND** continuation SHALL omit `interaction` and SHALL NOT create chat-interception or interaction authority
 
 #### Scenario: empty claim does not emit successful continuation
 

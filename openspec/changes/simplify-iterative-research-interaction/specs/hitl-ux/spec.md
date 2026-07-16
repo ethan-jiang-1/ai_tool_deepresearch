@@ -140,11 +140,11 @@ research review SHALL 包含四个部分：
 
 当推荐或用户可选动作涉及 rerun 或其他明显增加研究投入的工作时，Agent SHALL 用当前 direct facts 简短披露可预见的 material effort/cost impact；不需要新 estimator、字段或 checker。用户在看见该影响后清楚接受，即已确认该已披露成本。只有实际动作超出已披露影响或当前权限时，Agent 才 SHALL 再询问那个新增边界。
 
-在把 rerun 描述为可执行推荐或记录用户的 rerun 决定之前，Agent SHALL 就近读取 current profile `rerun_count`。`phase-hitl2.md` SHALL 拥有一条 repo-root、只读的 inline Node ESM invocation，从现有 `engine/helpers/gate-helpers.mjs` barrel import `loadGateDefinition('rerun-ready')`；该 invocation 只返回已由共同 Gate schema 解析的 definition，不写文件、trace 或 state，`brief/hitl2.md` SHALL NOT 复制该调用。Agent SHALL NOT raw-parse Gate JSON, read `failure_message` as semantics, or invent a wrapper/CLI/helper.
+在把 rerun 描述为可执行推荐或记录用户的 rerun 决定之前，Agent SHALL 就近读取 current profile `rerun_count`。`phase-hitl2.md` SHALL 拥有一条 repo-root、只读的 inline Node ESM invocation，从现有 `engine/helpers/gate-helpers.mjs` barrel import `loadGateDefinition('rerun-ready')`、profile reader 和 shared pure rerun-availability evaluator。该 invocation SHALL 只把 loader/profile facts 交给 evaluator 并输出其 closed availability result；它不写文件、trace 或 state，`brief/hitl2.md` SHALL NOT 复制该调用。Agent SHALL NOT raw-parse Gate JSON, read `failure_message` as semantics, reimplement operator/value/count comparison in Markdown, or invent a wrapper/CLI.
 
-Phase SHALL fail closed 地确认 `definition.gate === 'rerun-ready'`，并找到唯一满足以下 shape 的 rule：`id === 'rerun_count_valid'`、`check === 'rerun_count_limit'`、`target === 'rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count'`、`operator === 'less_than'`、`value` 为正整数。Current count 缺失 SHALL 按初始语义视为 `0`，否则 SHALL 为非负整数。Agent SHALL 计算 `next_count = current_count + 1`，且只有 `next_count < rule.value` 时才能把 rerun 作为当前 bundle 的可执行建议或记录该决定。Loader exception、gate/rule identity mismatch、missing/duplicate/unsupported rule 或 invalid count SHALL 产生最小 unavailable boundary，不得猜测。
+The phase SHALL pass the loader-parsed definition and full parsed profile to the REI-003 shared evaluator with `includeNextIncrement: true`; it SHALL NOT extract an optional-chained count before evaluation. The evaluator's rule/profile/count interpretation remains owned by REI-003. A missing/unparseable profile, absent HITL2 parent or unsupported rule SHALL return an unsupported boundary; only a supported result whose next required increment is unavailable proves exhaustion.
 
-该判断只用于避免向用户推荐已知无法通过的路径，不是第二个 Gate 或 eligibility authority；不复制具体数值，不改变正式 rerun-ready Gate verdict。特别地，current count 为 `rule.value - 1` 时，下一次 increment 已到 exclusive limit，Agent SHALL 只推荐/询问是否为该 scope 新建 bundle。
+HITL2 SHALL present/record rerun as executable only when the shared result is supported and available. When `supported: true` and `available: false`, Agent SHALL only recommend/ask whether to start a new bundle for that scope. Loader/profile/config/evaluator unsupported facts SHALL instead state the concrete contract boundary without guessing that a new bundle resolves it. The result is conversation advice over one shared deterministic evaluation, not a second Gate, persisted eligibility field or copied numeric truth.
 
 HITL2 MAY 保留五个快捷选项（A/B/C/D/E），但 SHALL 以用户可理解的动作描述为主，canonical enum 只作内部 contract：
 - A: 继续生成最终报告（`proceed_to_readiness`）；
@@ -175,7 +175,7 @@ Agent SHALL 在向用户展示 prompt 之前，先完成 durable state 写入：
 
 #### Scenario: User chooses rerun to adjust direction
 - **WHEN** 用户清楚回复“资本约束这部分还不够，再补一下”或快捷选项“C”并给出方向
-- **AND** current profile count 加上 rerun phase 必需的 increment 仍满足 loader-returned exact supported active rerun-count rule
+- **AND** the shared rerun-availability result for current profile count plus the required increment is supported and available
 - **THEN** Agent SHALL 写入 `user_decision: rerun`，并在 `rationale` 中记录用户的补充方向
 - **AND** 当 rerun 未跨越新的真实成本/权限边界时，Agent SHALL NOT 追加 blanket second confirmation
 - **AND** 若需要新的真实成本或权限，Agent SHALL 只确认该边界；确认后由 Agent 继续机械执行
@@ -183,11 +183,11 @@ Agent SHALL 在向用户展示 prompt 之前，先完成 durable state 写入：
 - **AND** 如果 prompt 已披露当前 rerun 的 material effort/cost impact，用户的清楚选择 SHALL 同时视为对该已披露影响的确认
 
 #### Scenario: Unavailable rerun is not offered as executable
-- **WHEN** HITL2 direct facts show that current count is one below the exclusive active limit, so the required next rerun increment would equal that limit and fail the exact supported active rerun-count rule
+- **WHEN** the shared result is supported but unavailable because the required next increment reaches the exclusive active limit
 - **THEN** Agent SHALL NOT recommend or record rerun as an executable current-bundle action
 - **AND** Agent SHALL ask only whether to start a new bundle for the requested scope
-- **AND** if the active rule or current count cannot be read reliably, Agent SHALL state that unavailable boundary rather than copy a number or guess
-- **AND** this decision-point check SHALL use the phase-owned read-only ESM import of `loadGateDefinition('rerun-ready')`, validate the exact gate/rule/check/target/operator/value/count contract, SHALL NOT raw-parse definition JSON, and SHALL NOT add a wrapper, CLI, Gate, helper, state field or competing verdict
+- **AND** if the active rule/profile/HITL2 parent cannot be read reliably, Agent SHALL state that unsupported contract boundary and SHALL NOT assume a new bundle fixes it
+- **AND** this decision-point check SHALL use the phase-owned read-only ESM import of loader/profile reader/shared evaluator, SHALL NOT raw-parse or duplicate evaluator logic, and SHALL NOT add a wrapper, CLI, Gate, state field or competing verdict
 
 #### Scenario: User chooses repair to fix issues
 - **WHEN** 用户清楚回复“这里的证据似乎有错，先修正”或快捷选项“D”并描述问题

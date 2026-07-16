@@ -122,7 +122,7 @@ If the Agent can identify that it is about to initiate a user-facing pause, ques
 
 During non-terminal `stop: no` phases with delegated work units in flight, the Phase Agent SHALL actively poll runtime work-unit surfaces after spawning background Sub-agents. It SHALL NOT wait for user continuation, background task notification, unrelated workflow state, chat context changes, or a user acknowledgement when bundle-root work-unit files can be inspected.
 
-Successful work-unit claim output SHALL include a short static continuation cue with `interaction: do_not_initiate` and `next_action: inspect_and_poll_claimed_work`. The cue SHALL not infer readiness or complete work; it only puts the existing polling obligation at the immediate post-claim decision point. `do_not_initiate` SHALL prohibit an Agent/framework-initiated user-facing pause while polling; it SHALL NOT classify or intercept a user-initiated conversation turn.
+Successful work-unit claim output SHALL include a short static continuation cue with `next_action: inspect_and_poll_claimed_work`. The cue SHALL not infer readiness or complete work; it only puts the existing polling obligation at the immediate post-claim decision point. Because claim does not read the lifecycle node/frontmatter `stop`, it SHALL omit `interaction`; the loaded stop:no phase/header remains the direct authority that prohibits framework-initiated surfacing while polling.
 
 The polling loop SHALL inspect result, receipt, output, cache, status, and deadline signals; submit ready attempts; repair or explicitly terminalize rejected attempts; and reconstruct in-flight work from bundle truth after context loss.
 
@@ -134,8 +134,8 @@ The polling loop SHALL inspect result, receipt, output, cache, status, and deadl
 #### Scenario: claim output points directly to polling
 
 - **WHEN** one or more work units are successfully claimed in a stop:no phase
-- **THEN** claim output SHALL state `interaction: do_not_initiate`
-- **AND** `next_action` SHALL direct immediate inspect/poll of the claimed work units
+- **THEN** `next_action` SHALL direct immediate inspect/poll of the claimed work units
+- **AND** claim output SHALL omit `interaction` rather than duplicate the loaded lifecycle phase's placement truth
 - **AND** the cue SHALL NOT create an interaction authority or chat-state field
 
 #### Scenario: task notification is not a continuation condition
