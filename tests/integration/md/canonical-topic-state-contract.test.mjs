@@ -38,4 +38,14 @@ describe('canonical topic-state scope', () => {
       assert.doesNotMatch(schema, /\btopic_slug\s*:/);
     }
   });
+
+  it('preserves arbitrary rb_plan frontmatter keys so framework_version survives add_topic (CMI-007)', () => {
+    // Preservation is automatic via three properties — this is a regression guard.
+    // If any change (e.g. tightening CanonicalPlanSchema to .strict(), or rebuilding
+    // frontmatter from a fixed key set), this test fails before the stamp is silently dropped.
+    const planSchema = read('DPT_FRAMEWORK/schema/contracts/plan.mjs');
+    assert.match(planSchema, /export const CanonicalPlanSchema[\s\S]*?\.passthrough\(\)/);
+    assert.match(helper, /function renderPlan\(frontmatter, body\)[\s\S]{0,120}stringifyYaml\(frontmatter\)/);
+    assert.match(helper, /const current = structuredClone\(parsedPlan\);/);
+  });
 });

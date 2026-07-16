@@ -102,6 +102,20 @@ describe('instantiate-run-bundle.mjs integration', () => {
     assert.equal(readFileSync(marker, 'utf-8'), 'keep me');
     assert.equal(existsSync(join(dir, 'rb_status.json')), false);
   });
+
+  it('stamps framework_version in rb_plan.md frontmatter (CMI-007)', () => {
+    const name = uniqueName('fwver');
+    const dir = trackBundle(name);
+    const result = runInstantiate(name);
+    assert.equal(result.status, 0, result.stderr);
+    const fm = parseFrontmatter(readFileSync(join(dir, 'rb_plan.md'), 'utf-8'));
+    assert.equal(typeof fm.framework_version, 'string');
+    assert.ok(fm.framework_version.length > 0, 'framework_version must be non-empty');
+    const changelog = readFileSync(join(REPO_ROOT, 'CHANGELOG.md'), 'utf-8');
+    const match = changelog.match(/^##\s+(v?\d+\.\d+(?:\.\d+)?)\s*$/m);
+    assert.ok(match, 'CHANGELOG must have a version heading');
+    assert.equal(fm.framework_version, match[1]);
+  });
 });
 
 function runInstantiate(...args) {
@@ -121,4 +135,9 @@ function trackBundle(name) {
   createdBundleDirs.add(dir);
   rmSync(dir, { recursive: true, force: true }); // clean any leftover from previous aborted run
   return dir;
+}
+
+function parseFrontmatter(md) {
+  const match = md.match(/^---\n([\s\S]*?)\n---/);
+  return parseYaml(match[1]);
 }

@@ -194,6 +194,7 @@ CMI-003: cmd-bundle-instantiation — JS helper inspect-bundle.mjs (structure ch
 CMI-004: cmd-bundle-instantiation — Template files (rb_templates/)
 CMI-005: cmd-bundle-instantiation — Bundle naming is Agent-derived or already-supplied, not a mid-pipeline user dependency
 CMI-006: cmd-bundle-instantiation — rb_status.json template includes current_node reentry coordinate
+CMI-007: cmd-bundle-instantiation — rb_plan.md template stamps framework_version at creation (CHANGELOG/VEM-001 authority)
 
 # check-inspect-feedback
 CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop

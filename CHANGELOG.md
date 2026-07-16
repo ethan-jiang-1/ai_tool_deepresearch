@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.30
+
+- Bundle instantiation stamps `framework_version` into `rb_plan.md` frontmatter at creation (sourced from the CHANGELOG version authority, VEM-001), recording the irreplaceable framework version a bundle was created under.
+
 ## v0.29
 
 - Phase-rerun binds `## 本轮重跑方向` to target_rerun_count with crash-safe recovery; shared direction resolver (matching/stale/future/legacy_unbound/invalid) used by Wave classification and checkRerunAddFullSynthesis.

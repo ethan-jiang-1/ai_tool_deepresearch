@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @impl CMI-004, FRE-003: instantiate-run-bundle.mjs — Create a production DPT run bundle at repo root
+// @impl CMI-004, CMI-007, FRE-003: instantiate-run-bundle.mjs — Create a production DPT run bundle at repo root
 // Usage: node instantiate-run-bundle.mjs <name>
 // Creates dpt_rb_<name>/ from DPT_FRAMEWORK/rb_templates/.
 // Prints absolute bundle path to stdout for shell consumption.
@@ -16,6 +16,7 @@ import {
   PlanSchema,
 } from '../schema/index.mjs';
 import { parseMdFrontmatter } from '../engine/helpers/gate-helpers.mjs';
+import { readFrameworkVersion } from '../engine/helpers/framework-version.mjs';
 import { createTrace } from '../engine/trace.mjs';
 import { logToRun } from '../engine/logger.mjs';
 
@@ -51,6 +52,9 @@ try {
   console.error(`${R}Error: must be run within a git repository${B}`);
   process.exit(1);
 }
+
+// CMI-007: framework version this bundle is created under (CHANGELOG authority, VEM-001).
+const frameworkVersion = readFrameworkVersion({ repoRoot });
 
 const baseDir = targetDir ?? repoRoot;
 mkdirSync(baseDir, { recursive: true });
@@ -95,6 +99,7 @@ for (const t of templates) {
 
   let content = readFileSync(tmplPath, 'utf-8');
   content = content.replace(/\{\{name\}\}/g, bundleName);
+  content = content.replace(/\{\{framework_version\}\}/g, frameworkVersion);
 
   const destPath = join(bundleDir, t.dest);
   writeFileSync(destPath, content);
