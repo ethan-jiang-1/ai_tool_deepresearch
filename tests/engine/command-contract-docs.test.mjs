@@ -63,21 +63,9 @@ const ALLOWLIST = [
   },
   {
     file: 'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md',
-    phraseClass: 'continue-question-example',
-    allowedContext: /发送类似 "继续吗？".*的消息/,
-    reason: 'Shared silent execution lists forbidden user-facing examples.',
-  },
-  {
-    file: 'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md',
     phraseClass: 'progress-report-framing',
-    allowedContext: /No messages, no questions, no confirmations, no progress reports/i,
-    reason: 'Shared silent execution forbids progress reports.',
-  },
-  {
-    file: 'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md',
-    phraseClass: 'progress-report-framing',
-    allowedContext: /不报告进度/,
-    reason: 'Shared silent execution forbids progress reports in stop:no phases.',
+    allowedContext: /SHALL NOT initiate.*progress report/i,
+    reason: 'Shared silent execution prohibits framework-initiated progress reports.',
   },
   {
     file: 'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md',
@@ -88,7 +76,7 @@ const ALLOWLIST = [
   {
     file: 'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md',
     phraseClass: 'advance-status-overclaims-entry',
-    allowedContext: /Do NOT load any other phase, and do NOT use `advance-status` as a substitute for `enter-phase`/i,
+    allowedContext: /Do NOT use `advance-status` as a substitute for `enter-phase`/i,
     reason: 'Shared silent execution forbids using advance-status as entry/loading.',
   },
 ];
@@ -180,7 +168,9 @@ describe('Agent-facing command contract docs', () => {
       'Agent-facing operating surfaces',
       'HITL1 和 HITL2 是唯一的 interactive in-run checkpoints',
       'pre-pipeline trigger/entry selection',
-      'Final 是 terminal non-interactive delivery',
+      'Final 是 terminal delivery',
+      '不是第三个交互 checkpoint',
+      '明确的 post-final rerun 只通过 `post_final_rerun` recovery operation',
       'Post-final feedback',
       'HITL2 repair/rerun',
       'Ordinary authorized command execution and reversible mechanical repair are Agent-owned',
@@ -304,6 +294,6 @@ describe('Phase-boundary terminology docs', () => {
     assert.ok(text.includes('phase handoff'));
     assert.ok(text.includes('synchronize the just-passed source gate'));
     assert.ok(text.includes('status synchronization authority'));
-    assert.ok(text.includes('target work completion'));
+    assert.match(text, /target-?phase work completion|target work completion/);
   });
 });

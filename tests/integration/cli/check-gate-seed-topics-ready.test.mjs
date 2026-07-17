@@ -136,6 +136,9 @@ describe('check-gate-seed-topics-ready', () => {
     assertCompleteHint(hint);
     assert.equal(hint.repair_kind, 'user_decision');
     assert.equal(hint.write_to, 'phases/phase-hitl1.md');
+    assert.match(output.advice.join('\n'), /existing HITL1 owner/);
+    assert.match(output.advice.join('\n'), /rerun this same Gate/);
+    assert.doesNotMatch(output.advice.join('\n'), /return to HITL|ask|surface/i);
     assert.deepEqual(output.hints.map((candidate) => candidate.rule_id), ['canonical_topic_state_prerequisite']);
     assert.ok(output.check.masked_rule_ids.includes('seed_topics_dir_non_empty'));
     assert.ok(output.check.masked_rule_ids.includes('slug_consistency'));

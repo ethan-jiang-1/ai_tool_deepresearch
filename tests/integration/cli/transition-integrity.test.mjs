@@ -379,10 +379,11 @@ describe('Layer 3b — Agent-facing handoff wording', () => {
       join(REPO_ROOT, 'DPT_FRAMEWORK', 'workflows', 'nodes', 'shared', 'shared-silent-execution.md'),
       'utf-8',
     );
-    assert.ok(body.includes('## 7. Autonomous Continuation / Why Continue'));
-    assert.ok(body.includes('`stop: no` is the compatibility frontmatter field'));
-    assert.ok(body.includes('Final report delivery is guaranteed at `phase-final`'));
-    assert.ok(body.includes('consume `check.next` through `enter-phase`'));
+    assert.ok(body.includes('## Autonomous Work Loop'));
+    assert.match(body, /do not initiate user-facing interaction/i);
+    assert.match(body, /current loaded node has `stop: no`/);
+    assert.match(body, /Final is governed by its terminal-delivery contract/);
+    assert.match(body, /consume it through:[\s\S]*enter-phase\.mjs --bundle <path> --node <check\.next>/);
     assert.ok(!body.includes('ask the user whether'));
   });
 });

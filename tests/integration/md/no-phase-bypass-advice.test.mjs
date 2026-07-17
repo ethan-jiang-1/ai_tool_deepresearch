@@ -76,10 +76,10 @@ describe('SWE silent execution degraded handoff guidance', () => {
     const text = readFileSync(join(REPO_ROOT, 'DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md'), 'utf-8');
     assert.match(text, /check\.degraded: true/);
     assert.match(text, /check\.next/);
-    assert.match(text, /enter-phase --node <check\.next>/);
+    assert.match(text, /enter-phase\.mjs --bundle <path> --node <check\.next>/);
     assert.match(text, /advance-status --to <source_gate_enum>/);
     assert.match(text, /Silent hold/i);
     assert.match(text, /not a clean quality pass/i);
-    assert.match(text, /cannot.*final|不能提前写 `final\//i);
+    assert.match(text, /do not.*write `final\/` early|cannot.*final|不能提前写 `final\//i);
   });
 });

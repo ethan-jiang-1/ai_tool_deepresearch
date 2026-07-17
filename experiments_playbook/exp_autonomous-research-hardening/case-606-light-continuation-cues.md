@@ -158,7 +158,7 @@ const claim = readJson('case-606-claim.json');
 recordCheck(tracePath, {
   gate: 'continuation-cue-gate-pass-output',
   passed: instantiationGate.check?.passed === true
-    && instantiationGate.continuation?.interaction === 'prohibited'
+    && instantiationGate.continuation?.interaction === 'do_not_initiate'
     && instantiationGate.continuation?.next_action === 'consume_check_next'
     && instantiationGate.continuation?.node_ref === 'phases/phase-instantiation.md',
   detail: 'cue correctly output by real gate CLI; this is not an Agent-behavior guarantee'
@@ -167,7 +167,7 @@ recordCheck(tracePath, {
 recordCheck(tracePath, {
   gate: 'continuation-cue-stop-no-gate-pass-output',
   passed: setupGate.check?.passed === true
-    && setupGate.continuation?.interaction === 'prohibited'
+    && setupGate.continuation?.interaction === 'do_not_initiate'
     && setupGate.continuation?.next_action === 'consume_check_next'
     && setupGate.continuation?.node_ref === 'phases/phase-setup.md',
   detail: 'cue correctly output by a real stop:no gate pass; this is not routing authority beyond check.next'
@@ -176,7 +176,7 @@ recordCheck(tracePath, {
 recordCheck(tracePath, {
   gate: 'continuation-cue-stop-no-enter-phase-output',
   passed: enterSeedTopics.trimEnd().endsWith('<!-- DPT_CONTINUATION_CUE_END -->')
-    && enterSeedTopics.includes('interaction: prohibited')
+    && enterSeedTopics.includes('interaction: do_not_initiate')
     && enterSeedTopics.includes('next_action: execute_loaded_node')
     && enterSeedTopics.includes('node_ref: phases/phase-seed-topics.md'),
   detail: 'cue correctly output by real stop:no enter-phase stdout; load_complete remains the entry witness'
@@ -185,7 +185,7 @@ recordCheck(tracePath, {
 recordCheck(tracePath, {
   gate: 'continuation-cue-stop-no-advance-status-output',
   passed: advanceSetup.status === 'ok'
-    && advanceSetup.continuation?.interaction === 'prohibited'
+    && advanceSetup.continuation?.interaction === 'do_not_initiate'
     && advanceSetup.continuation?.next_action === 'execute_loaded_node'
     && advanceSetup.continuation?.node_ref === 'phases/phase-seed-topics.md',
   detail: 'cue correctly output by real covered stop:no advance-status stdout; status/trace remain the authority'
@@ -194,7 +194,7 @@ recordCheck(tracePath, {
 recordCheck(tracePath, {
   gate: 'continuation-cue-claim-output',
   passed: claim.claimed_count === 1
-    && claim.continuation?.interaction === 'prohibited'
+    && !Object.hasOwn(claim.continuation || {}, 'interaction')
     && claim.continuation?.next_action === 'inspect_and_poll_claimed_work'
     && JSON.stringify(claim.continuation?.work_ids) === JSON.stringify(claim.claimed_work_ids),
   detail: 'cue correctly output by real claim stdout; it does not prove readiness or completion'

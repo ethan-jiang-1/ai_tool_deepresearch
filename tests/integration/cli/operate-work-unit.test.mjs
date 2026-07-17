@@ -302,7 +302,6 @@ describe('operate-work-unit inspect', () => {
       assert.equal(out.claimed_count, 1);
       assert.deepEqual(out.claimed_work_ids, ['wu-w0-b000-src-i0001']);
       assert.deepEqual(out.continuation, {
-        interaction: 'prohibited',
         next_action: 'inspect_and_poll_claimed_work',
         work_ids: out.claimed_work_ids,
       });

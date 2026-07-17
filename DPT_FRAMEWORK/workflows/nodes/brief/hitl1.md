@@ -5,64 +5,39 @@ phase: hitl1
 authority: exact-text
 ---
 
-# HITL1 Brief — 入口 Prompt + 出口语
+# HITL1 Brief - 研究对齐
 
-Agent 在 HITL1 阶段 SHALL 使用本文件中的精确文本。模板文字（Agent 不改）与动态填入部分（Agent 填入）清晰区分。
-
-`{DYNAMIC: variable_name}` 占位符表示 Agent 需要从当前 run state 中填入的内容。
-
----
+`{DYNAMIC: variable_name}` 由 Agent 从原始问题与当前 run state 填入。
 
 ## 入口 Prompt
 
-@impl HIU-002
+@impl HIU-002, HIU-005, HIU-006
 
 <!-- TEMPLATE START -->
 
-你好！我已经完成了研究准备。下面是你的研究方向选择。
+我建议按下面的方向开始：
 
-**研究主题**：{DYNAMIC: topic_rewrite_result}
+**目标与范围**：{DYNAMIC: grounded_goal_and_scope}
 
-**预计话题预览**：{DYNAMIC: seed_topics_preview}
+**报告必须回答的问题**：
+{DYNAMIC: proposed_must_answer_questions}
 
----
+**初始话题预览**：
+{DYNAMIC: seed_topics_preview}
 
-### 请选择研究深度/广度（直接打字 A/B/C 或中文均可）
+**建议的研究深度/广度**：{DYNAMIC: recommended_profile_description}
 
-**A: 快速事实核查（quick_factual）**
-轻量，单一维度——适合需要快速查证具体事实的场景。
+**理由与投入影响**：{DYNAMIC: recommendation_reason_and_effort}
 
-**B: 探索性全景 mapping（exploratory_map）**
-覆盖面广但深度可控——适合需要了解某个领域整体面貌的场景。
+你可以直接说“按这个开始”，也可以用自然语言修正目标、必须回答的问题、话题或研究深度。A/B/C 只是可选快捷方式：
 
-**C: 核心主张 adversarial verification（claim_verification）**
-对核心主张做对抗性验证——适合需要严格检验某个论点的场景。
+- A：快速事实核查
+- B：探索性全景研究
+- C：核心主张对抗性验证
 
----
-
-### 必须回答的问题（一句话）
-
-你希望这份报告**最终必须回答什么**？用一句话写下。
-
-> 如果不确定，可以写 "我不确定，先帮我拆问题"——系统会在后续帮你逐步澄清。
-
-### 搜索偏好（可选）
-
-有没有搜索方面的偏好？例如：
-- "优先找中文资料"
-- "关注 2024 年之后的研究"
-- "优先使用学术论文，避免博客"
-- "对 XX 来源保持警惕"
-
-不写也没关系，系统会用默认策略。
-
----
-
-**可以直接选字母，也可以问我问题。** 比如 "A 和 C 有什么区别？我的场景是跨境支付合规"——我会帮你分析后再选。
+如果你还不确定报告必须回答什么，可以让我先基于原始问题提出更具体的问题；只有你接受或修正后的具体问题才会进入研究计划。
 
 <!-- TEMPLATE END -->
-
----
 
 ## 出口语
 
@@ -70,16 +45,8 @@ Agent 在 HITL1 阶段 SHALL 使用本文件中的精确文本。模板文字（
 
 <!-- TEMPLATE START -->
 
-已确认。接下来系统将进入**静默自主执行阶段**：
+已记录。接下来进入静默自主执行：Setup -> Seed Topics -> Wave 0 -> Wave 1 -> Wave 2。
 
-Setup → Seed Topics → Wave 0 → Wave 1 → Wave 2
-
-- 时长取决于研究范围，可能**几十分钟到一两天**
-- 期间**不会浮出水面**——遇错自动处理，不需要你在旁边守着
-- **可以关闭终端**——系统从保存的状态恢复，不会丢失进度
-
-下次见面是 **HITL2**（最终审查决策），届时我会汇总研究发现，由你来判断是否满意、是否要调整方向。
-
-现在开始执行。
+时长取决于研究范围，可能从几十分钟到更久。框架不会主动发送普通进度、错误或确认请求；Agent 会沿现有合法路径处理机械工作。你可以关闭终端，durable state 可用于恢复。下一个框架主动邀请并等待决定的位置是 HITL2。
 
 <!-- TEMPLATE END -->

@@ -5,25 +5,15 @@ phase: hitl2
 authority: exact-text
 ---
 
-# HITL2 Brief — 入口 Prompt + 出口语
+# HITL2 Brief - 研究审阅
 
-Agent 在 HITL2 阶段 SHALL 使用本文件中的精确文本。模板文字（Agent 不改）与动态填入部分（Agent 填入）清晰区分。
-
-`{DYNAMIC: variable_name}` 占位符表示 Agent 需要从当前 run state 中填入的内容。
-
----
+`{DYNAMIC: variable_name}` 由 Agent 从 verified artifacts、current profile 和 phase-derived availability facts 填入。
 
 ## 入口 Prompt
 
-@impl HIU-003
+@impl HIU-003, CDP-001
 
 <!-- TEMPLATE START -->
-
-研究执行完毕。以下是我从 Wave 0/1/2 中提取的研究现状。
-
----
-
-### 当前研究状态
 
 **目前证据足够回答的是**：
 {DYNAMIC: what_evidence_can_answer}
@@ -31,76 +21,20 @@ Agent 在 HITL2 阶段 SHALL 使用本文件中的精确文本。模板文字（
 **仍然不足或需要谨慎的地方是**：
 {DYNAMIC: gaps_and_limitations}
 
-**如果继续补证据/重跑，会优先补**：
-{DYNAMIC: priority_for_further_evidence}
+**当前推荐**：{DYNAMIC: one_available_recommendation}
 
----
+**推荐理由与影响**：{DYNAMIC: recommendation_reason_and_effect}
 
-### 请选择下一步（直接打字 A/B/C/D/E 或中文均可）
+你可以直接按这个建议继续，也可以自然语言修正，例如“资本约束这部分还不够，再补一下”“换成管理层视角”“这里的证据有错，先修正”或“先停在这里”。A/B/C/D/E 仅作为可选快捷方式：交付、换视角、继续研究、修复、停止。
 
-**A: 继续生成最终报告（proceed to final report）**
-当前研究产出已足够，直接生成最终报告。
-
-**B: 换一种报告视角（change final report view）**
-不重跑研究，但调整最终报告的侧重点和格式。
-
-**C: 继续补证据/重跑（rerun）**
-从 seed-topics 重新展开，当前结果保留。
-
-**D: 修复问题后重试（repair）**
-就地修复具体问题（补充缺失证据、修正错误），修复后重新审查。
-
-**E: 停止并保留（stop blocked）**
-暂停研究，状态已保存，可随时恢复。
-
----
-
-**可以直接选字母，也可以问我问题。** 比如 "B 换视角有哪些可选？" 或 "C 和 D 有什么区别？"——我会帮你分析后再选。
+只有当前 accepted path 支持的动作才会被推荐为可立即执行；缺失 capability 会明确说明，不会假装已有 route。
 
 <!-- TEMPLATE END -->
-
----
 
 ## 出口语
 
-@impl SWE-001
+@impl SWE-001, CDP-001
 
-### A 路径：proceed_to_readiness
-
-<!-- TEMPLATE START -->
-
-已确认。系统将进入最终报告生成阶段。期间不会浮出水面，完成后向你交付最终报告。
-
-<!-- TEMPLATE END -->
-
-### B 路径：view_revision
-
-<!-- TEMPLATE START -->
-
-已记录。接下来我会帮你选择新的报告视角——选定后重新展示 decision brief，你可以再次决定下一步。
-
-<!-- TEMPLATE END -->
-
-### C 路径：rerun
-
-<!-- TEMPLATE START -->
-
-已确认。系统将从 seed-topics 重新展开研究。当前的 wave 研究结果将被保留，新 run 基于调整后的方向重新展开。
-
-<!-- TEMPLATE END -->
-
-### D 路径：repair
-
-<!-- TEMPLATE START -->
-
-已记录。接下来我会针对性修复你提到的问题。修复完成后重新展示 decision brief，你可以再次审查。
-
-<!-- TEMPLATE END -->
-
-### E 路径：stop_blocked
-
-<!-- TEMPLATE START -->
-
-已确认。研究已暂停，所有状态已保存。你随时可以恢复——系统会从当前进度继续。
-
-<!-- TEMPLATE END -->
+- 交付：决定写入后由 Agent 运行 HITL2 Gate，沿 `check.next` 进入 readiness/Final。
+- 换视角、修复或停止：只有存在对应 legal path 时执行；否则只说明最小缺失边界。
+- 继续研究：记录具体方向和已披露的投入影响，由 Agent 进入现有 rerun pipeline。

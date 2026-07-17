@@ -379,6 +379,19 @@ describe('wave depth contract helpers', () => {
     assert.match(result.inspect.join('\n'), /missing_profile_parameter/);
   });
 
+  it('routes missing style params for a recorded profile to the existing style CLI', () => {
+    const dir = setupBundle();
+    writeFileSync(path.join(dir, 'rb_profile.yaml'), 'research_profile: quick_factual\n');
+    const submitted = submitWave1Source(dir);
+    writeDepthReview(dir, { record: submitted.record });
+
+    const result = checkWave1DepthReviewContract(dir, { topic: 'topic-a' });
+    const finding = result.findings.find((item) => item.id.endsWith(':profile_floor'));
+    assert.equal(finding.repair_kind, 'engine_operation');
+    assert.match(finding.write_to, /apply-research-style\.mjs.*--style quick_factual/);
+    assert.doesNotMatch(finding.repair, /ask|return to HITL|surface/i);
+  });
+
   it('ignores drift in legacy copied source/cache/floor projections', () => {
     const dir = setupBundle();
     const submitted = submitWave1Source(dir);

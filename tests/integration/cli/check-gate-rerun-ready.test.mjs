@@ -3,13 +3,18 @@
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-gate-rerun-ready-tmp');
+const DEFINITION = JSON.parse(readFileSync(join(__dirname, '..', '..', '..', 'DPT_FRAMEWORK', 'schema', 'gate_definitions', 'gate-rerun-ready.definition.json'), 'utf8'));
+const COUNT_RULE = DEFINITION.rules.find((rule) => rule.id === 'rerun_count_valid' && rule.check === 'rerun_count_limit');
+assert.equal(COUNT_RULE?.operator, 'less_than');
+assert.ok(Number.isInteger(COUNT_RULE?.value) && COUNT_RULE.value > 0);
+const EXCLUSIVE_LIMIT = COUNT_RULE.value;
 
 function runGate(bundlePath, currentNode = 'phases/phase-rerun.md') {
   try {
@@ -182,9 +187,9 @@ describe('gate-rerun-ready — happy path', () => {
     assert.deepStrictEqual(result.hints, []);
   });
 
-  it('passes with rerun_count=2 (under max of 3)', () => {
-    const bundle = setupBundle('happy-rerun-count-2', {
-      profile_hitl2: { rerun_count: 2, rationale: 'Third pass adjustment' },
+  it('passes immediately below the active exclusive limit', () => {
+    const bundle = setupBundle('happy-rerun-count-below-limit', {
+      profile_hitl2: { rerun_count: EXCLUSIVE_LIMIT - 1, rationale: 'Last supported current count' },
     });
     const result = runGate(bundle);
     assert.strictEqual(result.check.passed, true);
@@ -220,9 +225,9 @@ describe('gate-rerun-ready — rerun_rationale_present', () => {
 // ─── Count limit rule ──────────────────────────────────────────────────────
 
 describe('gate-rerun-ready — rerun_count_valid', () => {
-  it('fails when rerun_count = 3 (equals max)', () => {
-    const bundle = setupBundle('fail-count-3', {
-      profile_hitl2: { rerun_count: 3, rationale: 'Fourth attempt — should be blocked' },
+  it('fails when rerun_count equals the active exclusive limit', () => {
+    const bundle = setupBundle('fail-count-at-limit', {
+      profile_hitl2: { rerun_count: EXCLUSIVE_LIMIT, rationale: 'Exclusive limit should be blocked' },
     });
     const result = runGate(bundle);
     assert.strictEqual(result.check.passed, false);
@@ -231,11 +236,14 @@ describe('gate-rerun-ready — rerun_count_valid', () => {
     assertCompleteHint(hint);
     assert.strictEqual(hint.repair_kind, 'user_decision');
     assert.match(hint.write_to, /Rerun limit decision boundary/);
+    assert.match(result.advice.join('\n'), /existing HITL2\/new-run decision owner/);
+    assert.match(result.advice.join('\n'), /same Gate/);
+    assert.doesNotMatch(result.advice.join('\n'), /ask|return to HITL|surface/i);
   });
 
-  it('fails when rerun_count > 3', () => {
-    const bundle = setupBundle('fail-count-5', {
-      profile_hitl2: { rerun_count: 5, rationale: 'Way over limit' },
+  it('fails when rerun_count exceeds the active exclusive limit', () => {
+    const bundle = setupBundle('fail-count-over-limit', {
+      profile_hitl2: { rerun_count: EXCLUSIVE_LIMIT + 2, rationale: 'Above active limit' },
     });
     const result = runGate(bundle);
     assert.strictEqual(result.check.passed, false);

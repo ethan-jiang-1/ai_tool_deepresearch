@@ -313,23 +313,22 @@ describe('Layer 9 regression: gate-pass / no-idle contract polish', () => {
     });
   }
 
-  it('AUTONOMOUS MODE injected header includes no-idle and gate-pass guardrails', () => {
+  it('AUTONOMOUS MODE injected header is direction-aware and preserves Gate handoff', () => {
     const source = readFileSync(WORKFLOW_CHAIN_PATH, 'utf-8');
     const match = source.match(/const AUTONOMOUS_MODE_HEADER = `((?:\\`|[^`])*)`;/);
     assert.ok(match, 'AUTONOMOUS_MODE_HEADER must exist');
     const header = match[1].replaceAll('\\`', '`');
 
-    assert.ok(header.includes('idle/no-work state'));
-    assert.ok(header.includes('"nothing left"'));
-    assert.ok(header.includes('"done so far"'));
-    assert.ok(header.includes('Complete this node by draining/repairing/degrading'));
-    assert.ok(header.includes('Next phase comes ONLY from gate CLI `check.next`'));
-    assert.ok(header.includes('consume it through `enter-phase --bundle <path> --node <check.next>`'));
-    assert.ok(header.includes('principle guardrail'));
-    assert.ok(header.includes('node-specific Stop Behavior'));
+    assert.match(header, /SHALL NOT initiate.*question.*progress report.*idle report/i);
+    assert.match(header, /user-initiated message.*direct factual answer/i);
+    assert.match(header, /creates no checkpoint, state, permission, route, mutation\/reentry authority/i);
+    assert.match(header, /repair and rerun the same Gate, change strategy, consume a legal handoff, or hold silently/i);
+    assert.match(header, /Next phase comes ONLY from Gate CLI `check.next`/i);
+    assert.ok(header.includes('`enter-phase --bundle <path> --node <check.next>`'));
+    assert.match(header, /Agent-facing guidance only/i);
 
     const violations = collectLeakageViolations(header);
-    assert.deepStrictEqual(violations, [], 'AUTONOMOUS_MODE_HEADER has residual leakage patterns');
+    assert.deepStrictEqual(violations, [], 'AUTONOMOUS_MODE_HEADER has unauthorized initiation patterns');
   });
 });
 

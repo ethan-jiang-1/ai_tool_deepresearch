@@ -43,7 +43,7 @@ Canonical new runs arrive with `topic_registry` and one UID-bound `seed_topics/{
 
 ## 3. Allowed Actions — Queue-Driven 三阶段
 
-> **`gap_queue_backed` 处理**：Agent SHALL 在 seed-topics 阶段读取 `rb_profile.yaml` 的 `root_must_answer_set`，通过文本模式识别标记为 `gap_queue_backed` 的条目（包含 "不确定"/"先帮我拆"/"不知道具体该问什么" 等不确定性语义标记）。对每个 `gap_queue_backed` 条目，Agent SHALL 生成对应的 **question decomposition task card**——将用户的不确定问题拆解为具体的澄清/探索子问题，排入 queue。Agent SHALL NOT 阻塞流程或要求用户澄清——`gap_queue_backed` 是正常的输入状态，不是错误。
+`root_must_answer_set` 只包含 HITL1 已接受的具体问题。Seed Topics 直接把这些问题分解为 topic intent 与现有 queue/task work；不得通过“不确定”等文本模式推断隐藏状态。
 
 Seed-topics 使用 Agentic Queue 驱动 topic 物化。每个 topic 一个 task，由 Phase Agent 直接执行（当前 wire value 为 `main-agent`；无外部 search，从 topic_registry 的结构化定义写为文件）。seed topic 文件 **不是笼统的标签**——它必须是能驱动后续 search 的决策级文件。
 
@@ -295,13 +295,13 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to seed_topics_ready
 
 ## 7. On Gate Fail
 
-先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority，也不得用其 prose、filename 或 rule target 猜 repair kind/permission。按每个 independent primary hint 执行：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority，也不得用其 prose、filename 或 rule target 猜 repair kind/permission。`repair_kind` 只分配责任，当前 loaded node 的 `stop` 才决定 interaction placement；本 phase 为 `stop: no`，任何分类都不得主动发起提问、状态/进度、approval、acknowledgement 或等待。用户主动的 current turn 可从 direct facts 得到直接回答，但回答不创建 checkpoint、state、permission、route、mutation 或 reentry authority。按每个 independent primary hint 执行：
 
 1. `repair_kind: agent_action`：由 Agent 只修改 `write_to` 指出的 authorized seed projection/field，例如 exact missing seed、title 或 slug binding；不得扩大到 registry、queue、ledger 或未授权 Topic 语义。
 2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal operation，例如 topic-state inspect/recover/apply、completion-event operation 或合法 status/handoff owner；不得直接编辑 status、trace、canonical registry 或 provenance。
-3. `repair_kind: user_decision`：只询问 `missing_fact` 指出的真实 Topic/HITL 语义，例如 canonical registry 为空且没有已记录 Topic intent；不得从 seed filename、旧 prose 或 chat 猜 Topic。决定记录后，topic-state 与 Gate 机械步骤回到 Agent。
-4. `repair_kind: external_action`：只暴露不可代理的权限/环境前置条件；满足后由 Agent 继续。
-5. `repair_kind: missing_contract`：报告 exact unavailable capability/contract boundary，不手写 registry/status/trace/ledger 或创造第二成功路径。
+3. `repair_kind: user_decision`：识别 `missing_fact` 指出的真实 Topic/HITL 语义，例如 canonical registry 为空且没有已记录 Topic intent；不得从 seed filename、旧 prose 或 chat 猜 Topic。只有 existing HITL owner 可发起并记录，本 phase 暂无 legal path 时保持 failed checkpoint。
+4. `repair_kind: external_action`：识别不可代理的权限/环境前置条件；不主动请求 acknowledgement，满足后由 Agent 继续。
+5. `repair_kind: missing_contract`：保留 exact unavailable capability/contract boundary，不手写 registry/status/trace/ledger、不等待用户或创造第二成功路径。
 
 Hint 不创造 permission。完成可执行动作后 Agent MUST 运行该 hint 的 exact `rerun`，回到同一个 `seed-topics-ready` checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 补猜 blocking repair；按 `missing_contract` 暴露最小边界。Topic/file 实例坐标从 `write_to` 读取；stable `rule_id` 本身不是 path，也不得靠 suffix 推断目标。
 

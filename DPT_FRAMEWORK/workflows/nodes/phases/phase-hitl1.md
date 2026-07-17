@@ -75,19 +75,21 @@ topic_registry:
 
 ### 3b. HITL1 问题收集
 
-**Prompt 文本来源**：Agent SHALL 从 `brief/hitl1.md` 读取 HITL1 入口 prompt 精确文本，不动模板文字。
+**Prompt 文本来源**：Agent SHALL 从 `brief/hitl1.md` 读取 recommendation-first 入口文本。
 
 **操作步骤**：
 1. 读取 `brief/hitl1.md` 的「入口 Prompt」节
 2. 填入动态部分：
-   - `{DYNAMIC: topic_rewrite_result}` → 从 §3a topic rewrite 结果提取
+   - `{DYNAMIC: grounded_goal_and_scope}` → 从原始问题与 §3a topic rewrite 提取目标和边界
+   - `{DYNAMIC: proposed_must_answer_questions}` → 基于原始问题提出具体问题
    - `{DYNAMIC: seed_topics_preview}` → 从 `rb_plan.md` topic_registry 生成简短预览
+   - `{DYNAMIC: recommended_profile_description}` → 一个用户可理解的深度/广度推荐
+   - `{DYNAMIC: recommendation_reason_and_effort}` → 推荐理由与大致投入影响
 3. 向用户展示完整的入口 prompt
-4. 遵循 `shared-agent-ux-guidance.md` 的环内行为规则——用户可以直接选字母，也可以问问题、对比选项、表达不确定
-5. 用户显式确认后：
+4. 遵循 `shared-agent-ux-guidance.md`：用户可直接接受、自然语言修正、选可选字母或继续提问
+5. 用户清楚接受或修正后，该表达本身就是决定；只有实质歧义、真实成本/权限或不可逆风险才问最小确认。随后：
    - 将 `research_profile` 写入 `rb_profile.yaml`（字母→canonical enum 翻译）
-   - 将 `root_must_answer_set` 写入 `rb_profile.yaml`
-   - 将 `search_preference` 写入 `rb_profile.yaml`（如果用户提供；否则记录 `not_specified_use_profile_defaults`，**不追问**）
+   - 将用户接受或修正后的具体问题写入 `root_must_answer_set`
    - 将 `human_decision_checkpoints.hitl1.status` 设为 `recorded`
    - 将 `human_decision_checkpoints.hitl1.recorded_at` 设为当前 ISO 8601 timestamp
    - 写 retained topic-state input 并运行 `operate-topic-state apply`；普通 apply/recover 命令由 Agent 执行，不要求用户共同运行

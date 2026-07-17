@@ -41,7 +41,7 @@ For each delegated source-intake task, derive the initial candidate URL/source t
 
 - Active bundle that passed `seed-topics-ready`.
 - `rb_plan.md` frontmatter `topic_registry`.
-- `rb_profile.yaml` research style params and `search_preference`.
+- `rb_profile.yaml` research style params.
 - `shared-reference-template.md` through shared schema/context.
 - `DPT_FRAMEWORK/cli/operate-queue.mjs` for enqueue/check/non-delegated maintenance.
 - `DPT_FRAMEWORK/cli/operate-work-unit.mjs` for delegated claim/submit/fail/timeout/abandon/inspect.
@@ -164,7 +164,7 @@ If formal submit rejects because mutable facts changed after dry-submit, repair 
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs timeout-preflight <bundle> --work-id <work_id> [--result <result.json>]
 ```
 
-Parse structured stdout even when timeout preflight exits non-zero. Follow `recommended_action` exactly: `submit` runs formal submit; `repair` repairs the same `work_id`; `wait` continues active polling; `inspect` inspects and repairs candidate or Engine binding; `block` surfaces a deterministic blocker without treating the phase as drained; `timeout` permits normal terminal timeout. Only after that decision may the Phase Agent use an explicit close command:
+Parse structured stdout even when timeout preflight exits non-zero. Follow `recommended_action` exactly: `submit` runs formal submit; `repair` repairs the same `work_id`; `wait` continues active polling; `inspect` inspects and repairs candidate or Engine binding; `block` assigns the deterministic blocker to its named owner and leaves the phase undrained without initiating a user wait; `timeout` permits normal terminal timeout. Only after that decision may the Phase Agent use an explicit close command:
 
 ```bash
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs fail <bundle> --work-id <work_id> --reason "<reason>"
@@ -220,13 +220,13 @@ Continue from the Markdown rendered by `enter-phase`. `advance-status` only reco
 
 ## 7. On Gate Fail
 
-先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从 legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段或命令。按每个 independent primary hint 执行：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从 legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段或命令。`repair_kind` 只分配责任，当前 loaded node 的 `stop` 才决定 interaction placement；本 phase 为 `stop: no`，任何分类都不得主动发起提问、状态/进度、approval、acknowledgement 或等待。用户主动的 current turn 可从 direct facts 得到直接回答，但回答不创建 checkpoint、state、permission、route、mutation 或 reentry authority。按每个 independent primary hint 执行：
 
 1. `repair_kind: agent_action`：当 `write_to` 是已授权的 Wave0 mutable surface 时，由 Agent 修复 exact field/file；不得把 filesystem-only artifact 追认为 submitted coverage。
 2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal queue/work-unit/topic/lifecycle operation；不得要求用户运行普通命令，也不得直接编辑 status、trace、ledger、index、receipt、hash 或 provenance authority。
-3. `repair_kind: user_decision`：只暴露 `missing_fact` 指出的真实语义/风险决定。Wave0 是 `stop: no`，不得由 hint 创造新 HITL、repair controller 或 lifecycle；没有 accepted decision path 时保持当前 checkpoint failed。
-4. `repair_kind: external_action`：只暴露当前环境不可代理的 actor/search/fetch/permission 前置条件；满足后机械执行回到 Agent。
-5. `repair_kind: missing_contract`：报告 exact unavailable capability/contract boundary，不提供手写 authority、绕过 Gate 或平行成功路径。
+3. `repair_kind: user_decision`：识别 `missing_fact` 指出的真实语义/风险决定。Wave0 是 `stop: no`，不得由 hint 创造新 HITL、repair controller 或 lifecycle；没有 accepted decision path 时保持当前 checkpoint failed。
+4. `repair_kind: external_action`：识别当前环境不可代理的 actor/search/fetch/permission 前置条件；不主动请求 acknowledgement，满足后机械执行回到 Agent。
+5. `repair_kind: missing_contract`：保留 exact unavailable capability/contract boundary，不提供手写 authority、用户等待、绕过 Gate 或平行成功路径。
 
 Hint 不创造 permission、controller 或 lifecycle。完成可执行动作后 Agent MUST 运行 hint 的 exact `rerun`，回到同一个 Wave0 checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 猜 blocking repair；按 `missing_contract` 暴露最小边界。
 

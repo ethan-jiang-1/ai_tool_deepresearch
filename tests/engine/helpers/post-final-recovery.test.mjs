@@ -12,6 +12,11 @@ import {
 } from '../../../DPT_FRAMEWORK/engine/helpers/post-final-recovery.mjs';
 import { createTerminalFinalBundle, requestFromInspection } from '../../integration/cli/post-final-recovery-fixture.mjs';
 
+const rerunDefinition = JSON.parse(readFileSync('DPT_FRAMEWORK/schema/gate_definitions/gate-rerun-ready.definition.json', 'utf8'));
+const rerunCountRule = rerunDefinition.rules.find((rule) => rule.id === 'rerun_count_valid' && rule.check === 'rerun_count_limit');
+assert.equal(rerunCountRule?.operator, 'less_than');
+assert.ok(Number.isInteger(rerunCountRule?.value) && rerunCountRule.value > 0);
+
 describe('post-final recovery helper', { concurrency: false }, () => {
   let root;
   beforeEach(() => { root = mkdtempSync(join(tmpdir(), 'dpt-post-final-helper-')); });
@@ -42,7 +47,7 @@ describe('post-final recovery helper', { concurrency: false }, () => {
   });
 
   it('blocks the next rerun before workspace creation when the active rule would fail', () => {
-    const bundle = createTerminalFinalBundle(root, 'limit', { rerunCount: 2 });
+    const bundle = createTerminalFinalBundle(root, 'limit', { rerunCount: rerunCountRule.value - 1 });
     const inspection = inspectPostFinalRecovery({ bundlePath: bundle });
     assert.equal(inspection.verdict, 'blocked');
     assert.equal(inspection.reason_code, 'rerun_limit_exhausted');

@@ -165,7 +165,7 @@ describe('advance-status CLI', { concurrency: false }, () => {
     assert.equal(result.current_gate, 'wave0_complete');
     assert.equal(result.next_gate, 'wave1_complete');
     assert.deepEqual(result.continuation, {
-      interaction: 'prohibited',
+      interaction: 'do_not_initiate',
       next_action: 'execute_loaded_node',
       node_ref: 'phases/phase-wave1.md',
     });
@@ -266,7 +266,7 @@ describe('advance-status CLI', { concurrency: false }, () => {
     assert.equal(result.status, 'ok');
     assert.equal(result.next_gate, 'rerun_ready');
     assert.deepEqual(result.continuation, {
-      interaction: 'prohibited',
+      interaction: 'do_not_initiate',
       next_action: 'execute_loaded_node',
       node_ref: 'phases/phase-rerun.md',
     });

@@ -79,7 +79,6 @@ describe('claimWorkUnits', () => {
       assert.equal(result.claimed_count, 2);
       assert.deepEqual(result.claimed_work_ids, ['wu-w0-b000-src-i0001', 'wu-w0-b000-src-i0002']);
       assert.deepEqual(result.continuation, {
-        interaction: 'prohibited',
         next_action: 'inspect_and_poll_claimed_work',
         work_ids: result.claimed_work_ids,
       });
@@ -109,7 +108,6 @@ describe('claimWorkUnits', () => {
       const result = claimWorkUnits(dir, { phase: 'wave0', count: 3, ...availableSourceActor });
       assert.equal(result.claimed_count, 1);
       assert.deepEqual(result.continuation, {
-        interaction: 'prohibited',
         next_action: 'inspect_and_poll_claimed_work',
         work_ids: result.claimed_work_ids,
       });

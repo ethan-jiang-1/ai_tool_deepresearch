@@ -283,6 +283,7 @@ describe('work-unit index and envelope', () => {
         assert.ok(task.includes(`Required result fields: ${schema.required.join(', ')}`), testCase.kind);
         assert.ok(task.includes(`Allowed output roles: ${manifest.output_contract.output_files.allowed_roles.join(', ')}`), testCase.kind);
         assert.ok(task.includes(`Required cache leaf files: ${manifest.cache_policy.leaf_files.join(', ')}`), testCase.kind);
+        assert.match(task, /loaded lifecycle node remains the interaction-placement owner/, testCase.kind);
       } finally {
         cleanup(dir);
       }

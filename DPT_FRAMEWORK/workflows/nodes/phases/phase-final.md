@@ -83,15 +83,19 @@ N/A — final 无 gate。Final 是 terminal delivery node。
 - 从 verified bundle state 写入 `final/` artifact（至少 1 份报告文件）
 - 保持 readiness 已同步的 terminal status：`current_gate: readiness_passed` / `next_gate: none`
 - 在 `final/` artifact 写入后交付 terminal delivery summary；用户未指定其他输出语言时，该 summary 优先中文
+- 若一个用户主动的 current factual turn 已经到达，基于当前 verified facts 直接回答；该回答不创建 checkpoint、state、permission、mutation 或 reentry authority
+- `final/` artifact 尚为空时，factual reply 必须明确尚未交付报告，不得把回答、进度或 chat summary 冒充 terminal delivery
 
-**绝对禁止的行为：**
-- 向用户提问或请求确认
-- 提供 A/B 选项或进度汇报
+**Final 不得主动发起提问、等待、反馈循环或 repair loop：**
+- 提问、请求确认或等待用户
+- A/B 选项、进度汇报或 repair loop
 - 在 `final/` artifact 写入前发送 idle/no-work 或 delivery summary
 - 把 prefer-Chinese guidance、log event、trace event 或 chat summary 当成 delivery evidence
 - 启动 post-delivery feedback loop
 - 等待用户反馈后再修改报告
 - 从 Final 内回到 HITL2 或重复提问同一决定
+
+回答一个已经收到的 factual turn 不是 Final 发起交互，也不是第三个框架 checkpoint。只有明确 post-delivery rerun 决定才使用 accepted post-final recovery；普通事实问答不强制进入 recovery。
 
 Post-delivery 用户反馈入口：若用户明确决定 rerun scope/risk，Agent使用 `operate-post-final-recovery.mjs inspect|apply|recover` 将决定记录为现有 HITL2 `rerun` profile semantics和一个lineage-bound `post_final_reentry` event；然后执行 `enter-phase --node phases/phase-rerun.md`、`advance-status --to hitl2_recorded`、`check-reentry --at hitl2_recorded` 和现有 C3/rerun pipeline。Final node 自身不处理修改、不重问同一决定，也不把request metadata当作verified identity或permission。
 

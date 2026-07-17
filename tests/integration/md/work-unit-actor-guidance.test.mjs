@@ -14,6 +14,9 @@ describe('work-unit actor guidance', () => {
     assert.match(shared, /human-directed.*not availability evidence or fallback permission/i);
     assert.match(shared, /fail --reason actor_spawn_unavailable:<reason_code>/);
     assert.match(shared, /no probe service, availability registry, fallback queue, or automatic actor switch exists/i);
+    assert.match(shared, /repair_kind.*assigns the responsible owner but does not place interaction/i);
+    assert.match(shared, /stop: no[\s\S]*external_action.*missing_contract.*do not initiate/i);
+    assert.match(shared, /generated `task\.md`[\s\S]*None creates a user-facing checkpoint, interaction authority/i);
   });
 
   it('keeps every active wave claim explicit and role matching', () => {

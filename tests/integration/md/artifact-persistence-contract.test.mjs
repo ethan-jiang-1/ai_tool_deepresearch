@@ -35,6 +35,8 @@ describe('artifact persistence contract stays small and Agent-facing', () => {
 
   it('keeps persistence mechanical and submit authority unchanged', () => {
     assert.match(playbook, /does not create evidence provenance/);
+    assert.match(playbook, /Persistence verdicts assign the next mechanical owner but do not create interaction authority/);
+    assert.match(playbook, /do not message the user, wait for acknowledgement, or create a checkpoint/);
     assert.match(subagent, /operate-work-unit submit` remains the transaction owner/);
     assert.doesNotMatch(helper, /COMMANDS\.md|command_playbook|workflows\/nodes/);
     assert.doesNotMatch(cli, /rb_trace\.jsonl|log-event\.mjs|appendTrace/);

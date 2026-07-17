@@ -418,7 +418,7 @@ function topicStateBlockerFinding(bundlePath, blocker) {
     writeTo,
     detail: `Canonical topic-state prerequisite failed: ${reasonCode}`,
     repair: recommended || (userDecision
-      ? 'Enter sanctioned rerun and provide explicit migration semantics.'
+      ? 'The existing rerun owner must record explicit migration semantics before canonical topic-state apply can continue.'
       : 'Use the owning topic-state/work-unit boundary; no direct authority edit is currently authorized.'),
   });
 }

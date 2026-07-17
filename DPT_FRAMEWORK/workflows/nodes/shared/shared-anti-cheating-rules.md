@@ -26,9 +26,9 @@ suggested_context: []
 
 **正确替代**：gate fail → 读取 inspect/advice → repair → rerun gate。绝对不要直接改 `rb_status.json` 的 `current_gate` 来跳过某个 gate，也不要手写 `rb_trace.jsonl` 的 pass entry。
 
-### 3. 禁止跳过 retry limit 或 escalation
+### 3. 禁止用 retry fatigue 伪造通过或互动权
 
-**正确替代**：遵守 3 次 retry limit；no-progress 或超限后 escalation→block。不能无限循环 repair，也不能在 escalation 条件触发后继续假装一切正常。
+**正确替代**：达到 3 次 fatigue threshold 或 no-progress 时，保留真实 verdict、读取 active-rule inspect/advice、换策略并 rerun same Gate；无 legal handoff 时留在当前 phase silent hold。责任分类不决定交互位置，只有当前 loaded node 的 `stop` contract 决定。不能无限重复同一 repair，也不能把疲劳变成手写 pass、status edit、phase bypass 或用户提问。用户主动的当前问题可以得到事实回答，但该回答不创建 checkpoint、permission、mutation、route 或 reentry authority。
 
 ### 4. 禁止把 chat memory 当 runtime state
 

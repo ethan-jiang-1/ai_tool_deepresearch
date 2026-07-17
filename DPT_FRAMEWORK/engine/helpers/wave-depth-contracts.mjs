@@ -549,9 +549,13 @@ export function checkWave1DepthReviewContract(bundlePath, { topic, rule = null }
     expected: 'Recorded research-style parameters define the Wave1 new-source floor.',
     observed: { profile_floor_available: false },
     missingFact: `Wave1 cannot derive the required new-source floor for ${topic} from the recorded profile parameters.`,
-    repairKind: 'user_decision',
-    writeTo: 'phases/phase-hitl1.md research-style parameter decision surface',
-    repair: 'Ask only for the missing research-style parameter decision, record it through the accepted profile path, then rerun Wave1 inspect.',
+    repairKind: profile?.research_profile && profile.research_profile !== 'not_selected' ? 'engine_operation' : 'user_decision',
+    writeTo: profile?.research_profile && profile.research_profile !== 'not_selected'
+      ? `node DPT_FRAMEWORK/cli/apply-research-style.mjs --bundle ${resolvePath(bundlePath)} --style ${profile.research_profile}`
+      : 'phases/phase-hitl1.md research-style parameter decision owner',
+    repair: profile?.research_profile && profile.research_profile !== 'not_selected'
+      ? 'Recompute the complete recorded research style through apply-research-style.mjs, then rerun Wave1 inspect.'
+      : 'The existing HITL1 owner must record a research-profile decision before style computation and Wave1 inspect can rerun.',
     detail: floor?.inspect?.join('; ') || `[${rule?.id || 'per_topic_depth_review_contract'}] missing profile parameter for Wave1 floor derivation.`,
   }));
   if (submittedBindingIssue) findings.push(depthFinding(rule, {
@@ -1005,7 +1009,9 @@ export function checkWave2FindingIndexContract(bundlePath, { rule = null } = {})
     repair: `Repair the named finding-index facts in ${relPath}, including any required submitted receipt or explicit routing binding.`,
     detail: inspect.join('; '),
   }));
-  if (profileDecisionIssue) rootFindings.push(depthFinding(rule, {
+  if (profileDecisionIssue) {
+    const recordedProfile = readBundleProfile(bundlePath)?.research_profile;
+    rootFindings.push(depthFinding(rule, {
     defaultRuleId: 'finding_index_contract',
     id: `${rule?.id || 'finding_index_contract'}:profile_floor`,
     blockingBasis: 'recorded_human_decision',
@@ -1013,11 +1019,16 @@ export function checkWave2FindingIndexContract(bundlePath, { rule = null } = {})
     expected: 'Recorded research-style parameters define the Wave2 independent-backing floor.',
     observed: { p0p1_independent_backing: readBundleProfile(bundlePath)?.research_style_params?.p0p1_independent_backing ?? null },
     missingFact: 'Wave2 cannot derive the independent-backing floor because research_style_params.p0p1_independent_backing is missing or invalid.',
-    repairKind: 'user_decision',
-    writeTo: 'phases/phase-hitl1.md research-style parameter decision surface',
-    repair: 'Ask only for the missing independent-backing parameter decision and record it through the accepted profile path.',
+    repairKind: recordedProfile && recordedProfile !== 'not_selected' ? 'engine_operation' : 'user_decision',
+    writeTo: recordedProfile && recordedProfile !== 'not_selected'
+      ? `node DPT_FRAMEWORK/cli/apply-research-style.mjs --bundle ${resolvePath(bundlePath)} --style ${recordedProfile}`
+      : 'phases/phase-hitl1.md research-style parameter decision owner',
+    repair: recordedProfile && recordedProfile !== 'not_selected'
+      ? 'Recompute the complete recorded research style through apply-research-style.mjs, then rerun Wave2 inspect.'
+      : 'The existing HITL1 owner must record a research-profile decision before style computation and Wave2 inspect can rerun.',
     detail: `[${rule?.id || 'finding_index_contract'}] missing Wave2 independent-backing profile parameter.`,
-  }));
+    }));
+  }
   return { ...issueResult(inspect, advice, rootFindings), pair_facts: pairFacts, masked_rule_ids: [...new Set(maskedRuleIds)] };
 }
 

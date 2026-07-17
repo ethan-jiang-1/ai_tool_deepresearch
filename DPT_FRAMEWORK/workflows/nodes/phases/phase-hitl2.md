@@ -44,13 +44,27 @@ HITL2 是 delivery 前最后一次人类审查——用户在此决定是否 pro
 
 ## 3. Allowed Actions
 
-- 从 Wave0/Wave1/Wave2 artifact 中提取**语境叙事**的三个动态填入内容：
+### 3a. Read-Only Rerun Availability
+
+在展示推荐或记录 rerun 决定前，从 repo root 运行一次只读 evaluator；它只打印 closed facts，不写文件、trace 或 state：
+
+```bash
+node --input-type=module -e "import { loadGateDefinition, readBundleProfile, evaluateRerunAvailability } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs'; const definition = loadGateDefinition('rerun-ready'); const profile = readBundleProfile(process.argv[1]); console.log(JSON.stringify(evaluateRerunAvailability({ definition, profile, includeNextIncrement: true })));" <bundle-path>
+```
+
+- `supported: true, available: true`：rerun 可以作为当前 bundle 的候选推荐。
+- `supported: true, available: false`：不要推荐当前 bundle rerun；只询问是否为该 scope 新建 bundle。
+- `supported: false`：陈述 `reason` 指向的 rule/profile/HITL2 parent contract boundary；不要猜测新 bundle 能解决。
+
+本 phase 不解释 operator/value/count，不读取 definition `failure_message`，不复制比较，也不把结果持久化。formal legality 仍由 rerun-ready Gate 拥有。
+
+- 从 Wave0/Wave1/Wave2 artifact 中提取 research review 与一个当前可用推荐：
   - 目前证据足够回答的是：概括各 topic evidence-summary 中已确认的关键发现
   - 仍然不足或需要谨慎的地方是：汇总 question-list 中的 open/gap 问题 + 静默期降级汇总（`shared-silent-execution.md` §2 的 HITL2 汇总）
-  - 如果继续补证据/重跑会优先补：从 gap 和 emergent question 中提取优先级最高的补充方向
+  - 当前推荐、理由与影响：从 direct facts、legal path 和 shared availability 中选择一个用户可理解的动作
 - **展示 prompt 之前先写 durable state**：产出 decision brief artifact（`artifacts/hitl2/decision-brief.md`）+ 将 `hitl2.status` 设为 `pending_user`。此步骤不可跳过——session 断掉后 Agent 恢复时 SHALL 能通过 `hitl2.status = pending_user` 得知用户尚未回复
-- 从 `brief/hitl2.md` 的「入口 Prompt」节读取 HITL2 入口 prompt 精确文本，填入三个动态部分，向用户展示
-- 遵循 `shared-agent-ux-guidance.md` 的环内行为规则——用户可以直接选字母 A/B/C/D/E，也可以问问题、对比选项
+- 从 `brief/hitl2.md` 的「入口 Prompt」读取 recommendation-first 文本，填入 review、一个推荐、理由与影响后展示
+- 遵循 `shared-agent-ux-guidance.md`：用户可以直接接受推荐、自然语言修正、使用 A/B/C/D/E 快捷方式或继续提问；清楚决定本身就是确认
 - 将用户 decision 写入 `rb_profile.yaml#/human_decision_checkpoints/hitl2`：
   - `status: recorded`
   - `user_decision`: 见下方枚举
@@ -69,6 +83,8 @@ HITL2 是 delivery 前最后一次人类审查——用户在此决定是否 pro
 | `stop_blocked` | Agent | lifecycle 终止，记录原因到 profile。 |
 
 `proceed_to_readiness` 与 `rerun` 是 HITL2 当前两个 deterministic chain exit。`request_view_revision`、`repair`、`stop_blocked` 不编码进 transition chain——其目标依赖 Agent 判断运行时状态，归 Agent decision authority。
+
+对 `request_view_revision`、`repair`、`stop_blocked`，先用 current direct facts 确认现有 accepted path。只有 path 存在时，才把动作推荐为可立即执行并由 Agent 完成；若缺失，只陈述一次最小 capability/permission/route 边界，保留用户表达的语义，不手工创建 blocked state、transition、status 或默认 readiness。用户不需要运行普通命令。
 
 ### 字母→Canonical Enum 映射表
 
@@ -111,15 +127,15 @@ Gate pass 后，Agent 读取 `rb_profile.yaml#/human_decision_checkpoints/hitl2/
   node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
   ```
   然后从 `enter-phase` 渲染出的 readiness Markdown 继续执行。不要让 `advance-status` 替代 target selection。
-- `request_view_revision` → Agent 读取 rationale，决定回到哪个 phase 修改 view（不 restart）
-- `repair` → Agent 就地修复当前问题后 rerun HITL2 gate，不重启 lifecycle
+- `request_view_revision` → 仅在已有 legal view path 时由 Agent 执行；否则说明最小缺失边界
+- `repair` → 仅在已有 legal repair path 时由 Agent 就地修复并 rerun HITL2 gate；否则说明最小缺失边界
 - `rerun` → gate CLI 使用 deterministic `rerun` outcome，`check.next` 应为 `phases/phase-rerun.md`。先消费 selected handoff，再同步 source gate status：
   ```bash
   node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle <path> --node <check.next>
   node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to hitl2_recorded
   ```
   然后从 `enter-phase` 渲染出的 rerun Markdown 继续执行。不得把 rerun 默认洗成 readiness。
-- `stop_blocked` → lifecycle 终止，记录原因
+- `stop_blocked` → 仅在已有 accepted stop behavior 时执行并保留原因；否则说明最小缺失边界
 
 **Chain routing 对 HITL2 有两条 entry**：`phase-hitl2.md` → `passed` → `phase-readiness.md`（正常交付）和 `phase-hitl2.md` → `rerun` → `phase-rerun.md`（增量重跑）。`proceed_to_readiness` 和 `rerun` 均为确定性出口——有固定、上下文无关的 next-node 目标。`request_view_revision`/`repair`/`stop_blocked` 不进入 chain——其目标依赖 Agent 判断运行时状态。
 

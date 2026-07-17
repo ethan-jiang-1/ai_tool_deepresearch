@@ -123,7 +123,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle <path> --curren
 ```
 
 5. **Gate pass** → 进入 §6：通过 `enter-phase --node <check.next>` 消费 `phases/phase-seed-topics.md`，再运行 `advance-status --to rerun_ready`
-6. **Gate fail** → `no_transition`。Agent MUST 读取 inspect/advice，修复可修复的 bundle/profile 问题后 rerun gate；若 `rerun_count >= 3` 或 rationale 缺失等不可修复条件成立，记录 `silent_unpassable` / `repair_degraded`，保持当前 non-blocked/in-progress holding，不从 stop:no rerun phase 中途向用户提问或汇报。
+6. **Gate fail** → `no_transition`。Agent MUST 读取 direct hints 与 compatible inspect/advice，修复可修复的 bundle/profile 问题后 rerun gate；若 active rule reports exhaustion，或 rationale 缺失等条件在现有 legal path 下仍不可修复，记录 `silent_unpassable` / `repair_degraded`，保持当前 non-blocked/in-progress holding，不从 stop:no rerun phase 中途向用户提问或汇报。
 
 ## 4. Expected Artifacts
 
@@ -159,13 +159,13 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to rerun_ready
 
 ## 7. On Gate Fail
 
-先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从旧表格、legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段、命令或路由。按每个 independent primary hint 执行：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从旧表格、legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段、命令或路由。`repair_kind` 只分配责任，当前 loaded node 的 `stop` 才决定 interaction placement；本 phase 为 `stop: no`，任何分类都不得主动发起提问、状态/进度、approval、acknowledgement 或等待。用户主动的 current turn 可从 direct facts 得到直接回答，但回答不创建 checkpoint、state、permission、route、mutation 或 reentry authority。按每个 independent primary hint 执行：
 
 1. `repair_kind: agent_action`：当 `write_to` 是已授权的 rerun rationale/profile/bundle mutable surface 时，由 Agent 修复 exact field/file；不得发明 HITL2 rationale、重置 count 或伪造 completed-run structure。
 2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal topic-state/status/handoff/recovery operation；不得要求用户运行普通命令，也不得直接编辑 `rb_status.json`、trace、ledger、index、receipt、hash 或 provenance authority。
-3. `repair_kind: user_decision`：只暴露 `missing_fact` 指出的真实 HITL2 rationale、rerun-limit或风险决定。Rerun 是 `stop: no`，本 phase 不自行创建新 HITL、repair controller、lifecycle 或回跳路由；没有 accepted decision path 时保持当前 checkpoint failed，不把该 root 静默改写成 final pass。
-4. `repair_kind: external_action`：只暴露不可代理的权限/环境前置条件；满足后机械执行回到 Agent。
-5. `repair_kind: missing_contract`：报告 exact unavailable capability/contract boundary，不提供 hand-written status/trace、backup path、final shortcut 或平行成功状态。
+3. `repair_kind: user_decision`：识别 `missing_fact` 指出的真实 HITL2 rationale、active-rule exhaustion 或风险决定。Rerun 是 `stop: no`，本 phase 不自行创建新 HITL、repair controller、lifecycle 或回跳路由；没有 accepted decision path 时保持当前 checkpoint failed，不把该 root 静默改写成 final pass。
+4. `repair_kind: external_action`：识别不可代理的权限/环境前置条件；不主动请求 acknowledgement，满足后机械执行回到 Agent。
+5. `repair_kind: missing_contract`：保留 exact unavailable capability/contract boundary，不提供 hand-written status/trace、用户等待、backup path、final shortcut 或平行成功状态。
 
 Hint 不创造 permission、controller、lifecycle 或 route。完成可执行动作后 Agent MUST 运行 hint 的 exact `rerun`，回到同一个 `rerun-ready` checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 猜 blocking repair；按 `missing_contract` 暴露最小边界。Diagnostic log MAY记录当前 structured root，但不得替代 repair、Gate verdict 或 legal routing。
 

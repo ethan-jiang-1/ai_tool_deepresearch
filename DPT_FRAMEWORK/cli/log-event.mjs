@@ -12,7 +12,7 @@
 // Usage (explain-file mode — write file explanation diagnostic):
 //   node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --explain-file <path> --status <authority_status> --reason "<text>" [--phase <phase_key>] [--work-id <id>] [--topic-slug <slug>] [--rerun-action <action>]
 //
-// Usage (surfacing intent mode — write would-have-surfaced diagnostic):
+// Usage (surfacing intent mode — write framework-initiated would-have-surfaced diagnostic):
 //   node DPT_FRAMEWORK/cli/log-event.mjs --bundle <path> --surfacing-intent --node <node_ref> --intent-type <ask_user|progress_report|partial_delivery|user_choice|wait_for_input|other> --reason "<text>"
 //
 // Always exits 0 — diagnostics must not block agent flow.
@@ -43,7 +43,11 @@ const { values } = parseArgs({
   },
 });
 
-// ── Surfacing-intent mode: diagnostic-only would-have-surfaced trace event ──
+// ── Surfacing-intent mode: diagnostic-only framework-initiated would-have-surfaced event ──
+// The Agent invokes this only after aborting its own prohibited surfacing path.
+// This CLI does not inspect conversation state. A direct answer to an already-current
+// user-initiated turn is outside this diagnostic and must not be recorded here solely
+// because the loaded lifecycle node has stop:no.
 if (values['surfacing-intent']) {
   if (!values.bundle || !values.node || !values['intent-type'] || !values.reason) {
     process.exit(0);

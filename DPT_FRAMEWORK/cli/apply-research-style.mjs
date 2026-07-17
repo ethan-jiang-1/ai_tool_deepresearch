@@ -13,6 +13,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { parseMdFrontmatter } from '../engine/helpers/gate-helpers.mjs';
+import { computeResearchStyleParams } from '../engine/helpers/research-style-params.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -59,35 +60,16 @@ try {
   process.exit(1);
 }
 
-// ── 3. Compute topic-count-dependent values ──
-const sharedRef = style.wave0_shared_ref;
-if (!sharedRef || typeof sharedRef.base !== 'number' || typeof sharedRef.per_topic !== 'number') {
-  console.error('Error: style JSON missing wave0_shared_ref.base or wave0_shared_ref.per_topic');
+// ── 3. Compute complete style parameters ──
+let params;
+try {
+  params = computeResearchStyleParams({ styleDefinition: style, topicCount });
+} catch (error) {
+  console.error(`Error: invalid research style definition: ${error.message}`);
   process.exit(1);
 }
-const wave0SharedRefTotal = sharedRef.base + sharedRef.per_topic * topicCount;
 
-// ── 4. Build research_style_params ──
-const params = {
-  user_visible: style.user_visible,
-  // Wave0
-  wave0_per_topic_source_floor: style.wave0_per_topic_source_floor,
-  wave0_shared_ref_total: wave0SharedRefTotal,
-  // Wave1
-  wave1_per_topic_ref_floor: style.wave1_per_topic_ref_floor,
-  topic_unique_ratio: style.topic_unique_ratio,
-  counterexample_search: style.counterexample_search,
-  cross_verification: style.cross_verification,
-  // Wave2 — quality
-  p0p1_independent_backing: style.p0p1_independent_backing,
-  quality_min_tier: style.quality_min_tier,
-  quality_min_substance: style.quality_min_substance,
-  // Wave2 — behavior
-  wave2_cross_topic_depth: style.wave2_cross_topic_depth,
-  wave2_emergent_search_rounds: style.wave2_emergent_search_rounds,
-};
-
-// ── 5. Write to rb_profile.yaml ──
+// ── 4. Write to rb_profile.yaml ──
 const profilePath = join(bundlePath, 'rb_profile.yaml');
 if (!existsSync(profilePath)) {
   console.error(`Error: rb_profile.yaml not found in ${bundlePath}`);
@@ -99,9 +81,9 @@ profile.research_profile = styleName;
 profile.research_style_params = params;
 writeFileSync(profilePath, stringifyYaml(profile));
 
-// ── 6. Output result ──
+// ── 5. Output result ──
 console.log(JSON.stringify({
   applied: styleName,
   topic_count: topicCount,
-  wave0_shared_ref_total: wave0SharedRefTotal,
+  wave0_shared_ref_total: params.wave0_shared_ref_total,
 }));

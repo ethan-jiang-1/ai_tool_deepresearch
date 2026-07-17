@@ -24,8 +24,9 @@ import { readGateDefinitionSnapshot } from '../../schema/contracts/gate-definiti
 import { ProfileSchema } from '../../schema/contracts/profile.mjs';
 import { appendExactTraceLine } from '../trace.mjs';
 import { normalizedBundleBasenameFromPath } from './bundle-identity.mjs';
-import { findLatestLegalHandoff, loadHandoffTopology, readTraceEventsWithIndex } from './handoff-helpers.mjs';
+import { findLatestLegalHandoff, inspectPostFinalHandoffStage, loadHandoffTopology, readTraceEventsWithIndex } from './handoff-helpers.mjs';
 import { readBundlePlan, readBundleProfile } from './gate-helpers-readers.mjs';
+import { evaluateRerunAvailability } from './rerun-availability.mjs';
 import {
   parsePostFinalRecoveryEvent,
   POST_FINAL_RECOVERY_SCHEMA_VERSION,
@@ -272,13 +273,20 @@ function routingFacts() {
   };
 }
 
-function rerunGuard(profile) {
+function rerunGuard(profile, { includeNextIncrement }) {
   const { rawBytes, definition } = readGateDefinitionSnapshot(RERUN_RULE_PATH);
-  const rule = definition.rules?.find((item) => item.id === 'rerun_count_valid' && item.check === 'rerun_count_limit');
-  if (!rule || rule.operator !== 'less_than' || !Number.isInteger(rule.value) || rule.value <= 0) throw new Error('active rerun_count_limit rule is unsupported');
-  const currentCount = Number(profile?.human_decision_checkpoints?.hitl2?.rerun_count || 0);
-  if (!Number.isInteger(currentCount) || currentCount < 0) throw new Error('current rerun_count is invalid');
-  return RerunGuardSchema.parse({ rule_id: 'rerun_count_valid', definition_sha256: hashBytes(rawBytes), current_count: currentCount, next_count: currentCount + 1, limit: rule.value });
+  const availability = evaluateRerunAvailability({ definition, profile, includeNextIncrement });
+  if (!availability.supported) throw new Error(availability.reason);
+  return {
+    guard: RerunGuardSchema.parse({
+      rule_id: 'rerun_count_valid',
+      definition_sha256: hashBytes(rawBytes),
+      current_count: availability.currentCount,
+      next_count: availability.evaluatedCount,
+      limit: availability.exclusiveLimit,
+    }),
+    availability,
+  };
 }
 
 function isQuiescent(bundle) {
@@ -313,9 +321,9 @@ function finalFacts(bundle) {
   if (!handoff.ok) throw new Error(handoff.reason);
   if (status.current_node !== 'phases/phase-final.md' || status.current_gate !== 'readiness_passed' || status.next_gate !== 'none') throw new Error('runtime is not in the terminal Final status window');
   const inventory = finalInventory(bundle);
-  const guard = rerunGuard(profile);
+  const { guard, availability } = rerunGuard(profile, { includeNextIncrement: true });
   return {
-    status, statusRaw, profile, profileRaw, identity, inventory, guard,
+    status, statusRaw, profile, profileRaw, identity, inventory, guard, availability,
     routing: routingFacts(),
     lineage: ExpectedFinalLineageSchema.parse({
       final_handoff_index: handoff.handoff.index,
@@ -328,90 +336,10 @@ function finalFacts(bundle) {
   };
 }
 
-function parseRecoveryEvents(bundle) {
-  const trace = readTraceEventsWithIndex(bundle);
-  if (!trace.ok) throw new Error(trace.reason);
-  return trace.events.flatMap((item) => {
-    if (item.event?.event !== 'post_final_reentry') return [];
-    const parsed = RecoveryEventSchema.safeParse(item.event);
-    return parsed.success ? [{ ...item, parsed: parsed.data }] : [];
-  });
-}
-
-function sameProfileExceptCount(current, accepted, guard) {
-  const copy = structuredClone(current);
-  if (!copy?.human_decision_checkpoints?.hitl2) return false;
-  if (copy.human_decision_checkpoints.hitl2.rerun_count !== guard.next_count) return false;
-  copy.human_decision_checkpoints.hitl2.rerun_count = guard.current_count;
-  return JSON.stringify(copy) === JSON.stringify(accepted);
-}
-
-function activeRecoveryStage(bundle, workspaceInspection) {
-  const events = parseRecoveryEvents(bundle);
-  if (events.length === 0) return null;
-  const latest = events.at(-1);
-  const newerFinal = findLatestLegalHandoff(bundle, { targetNode: 'phases/phase-final.md', sourceNode: 'phases/phase-readiness.md', requireLoad: true });
-  if (newerFinal.ok && newerFinal.handoff.index > latest.index) return null;
-  const event = latest.parsed;
-  const route = routingFacts();
-  if (event.routing.target_node !== route.target_node || event.routing.target_gate_enum !== route.target_gate_enum) {
-    return { blocked: 'accepted post-final event routing no longer resolves to the recorded target/window', event_item: latest };
-  }
-  const guard = rerunGuard(readBundleProfile(bundle));
-  if (guard.definition_sha256 !== event.rerun_guard.definition_sha256 && guard.current_count < event.rerun_guard.next_count) {
-    return { blocked: 'active rerun-limit rule drifted before the bound count increment', event_item: latest };
-  }
-  const statusRaw = readFileSync(path.join(bundle, 'rb_status.json'));
-  const status = JSON.parse(statusRaw.toString('utf8'));
-  const profileRaw = readFileSync(path.join(bundle, 'rb_profile.yaml'));
-  const profile = ProfileSchema.parse(parseYaml(profileRaw.toString('utf8')));
-  const trace = readTraceEventsWithIndex(bundle).events;
-  const load = trace.filter((item) => item.index > latest.index && item.event?.event === 'load_complete'
-    && item.event.entry === event.routing.target_node
-    && item.event.handoff_source_kind === 'post_final_reentry'
-    && item.event.handoff_source_event_id === event.event_id
-    && item.event.handoff_source_event_index === latest.index
-    && item.event.handoff_source_event_sha256 === latest.lineSha256
-    && item.event.handoff_source_operation_id === event.operation_id).at(-1) || null;
-  const transitions = trace.filter((item) => load && item.index > load.index && item.event?.event === 'phase_transition' && item.event.source_handoff_kind === 'post_final_reentry');
-  const exactTransition = transitions.find((item) => item.event.source_handoff_event_id === event.event_id
-    && item.event.source_handoff_event_index === latest.index
-    && item.event.source_handoff_event_sha256 === latest.lineSha256
-    && item.event.source_handoff_operation_id === event.operation_id
-    && item.event.source_handoff_load_index === load.index
-    && item.event.to === 'hitl2_recorded'
-    && item.event.next === event.routing.target_gate_enum) || null;
-  const conflictingTransition = transitions.find((item) => !exactTransition || item.index !== exactTransition.index) || null;
-  const afterHashMatches = hashBytes(profileRaw) === event.committed_after_profile_sha256;
-  const descendant = trace.find((item) => item.index > latest.index && item.event?.event === 'gate_attempt'
-    && item.event.gate === 'rerun-ready' && item.event.currentNodeRef === event.routing.target_node && item.event.passed === true && item.event.next);
-  if (descendant) return { stage: 'descendant_pipeline', event_item: latest, load, transition: exactTransition, descendant };
-  if (status.current_node === 'phases/phase-final.md'
-    && status.current_gate === 'readiness_passed' && status.next_gate === 'none'
-    && hashBytes(statusRaw) === event.previous_final.status_sha256 && afterHashMatches) {
-    return { stage: 'pre_entry', event_item: latest, load, transition: null };
-  }
-  if (status.current_node === event.routing.target_node && load) {
-    const terminalWindow = status.current_gate === 'readiness_passed' && status.next_gate === 'none';
-    const rerunWindow = status.current_gate === 'hitl2_recorded' && status.next_gate === event.routing.target_gate_enum;
-    if ((terminalWindow || (rerunWindow && !exactTransition)) && afterHashMatches) {
-      if (conflictingTransition) return { blocked: 'conflicting exceptional phase_transition binding', event_item: latest, load };
-      return { stage: 'loaded_pending_status', event_item: latest, load, transition: null };
-    }
-    if (rerunWindow && exactTransition) {
-      if (afterHashMatches) return { stage: 'synchronized_initial_profile', event_item: latest, load, transition: exactTransition };
-      if (sameProfileExceptCount(profile, event.committed_after_profile_semantics, event.rerun_guard)) {
-        return { stage: 'synchronized_count_incremented', event_item: latest, load, transition: exactTransition };
-      }
-    }
-  }
-  if (workspaceInspection.accepted.length > 0) return null;
-  return { blocked: 'accepted post-final recovery lineage is discontinuous or drifted', event_item: latest };
-}
-
-function nextActionForStage(bundlePath, stage, operationId = null) {
+function nextActionForStage(bundlePath, stage, operationId = null, owner = null) {
   if (stage === 'pre_entry') return { kind: 'enter_phase', command: `node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node phases/phase-rerun.md`, target_ref: 'phases/phase-rerun.md', operation_id: operationId };
   if (stage === 'loaded_pending_status') return { kind: 'advance_status', command: `node DPT_FRAMEWORK/cli/advance-status.mjs --bundle ${bundlePath} --to hitl2_recorded`, target_ref: 'hitl2_recorded', operation_id: operationId };
+  if (owner?.kind === 'current_owner') return { kind: owner.kind, command: null, target_ref: owner.target_ref, operation_id: operationId };
   if (stage === 'synchronized_initial_profile') return { kind: 'topic_state', command: `node DPT_FRAMEWORK/cli/operate-topic-state.mjs inspect --bundle ${bundlePath}`, target_ref: 'canonical-topic-state', operation_id: operationId };
   if (stage === 'synchronized_count_incremented') return { kind: 'rerun_gate', command: `node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle ${bundlePath} --current-node phases/phase-rerun.md`, target_ref: 'rerun_ready', operation_id: operationId };
   return { kind: 'current_owner', command: null, target_ref: 'current lifecycle owner', operation_id: operationId };
@@ -432,11 +360,12 @@ function inspectInternal({ bundlePath }) {
   const topicOwner = acceptedOwnerWorkspace(bundle, '_diagnostics/topic-state', 'prepared.json', (id) => `node DPT_FRAMEWORK/cli/operate-topic-state.mjs recover --bundle ${bundlePath} --operation-id ${id}`);
   if (topicOwner?.blocked) return result({ operation: 'inspect', verdict: 'blocked', reason_code: 'topic_workspace_unsafe', reason: topicOwner.blocked, warnings: workspaces.warnings });
   if (topicOwner) return result({ operation: 'inspect', verdict: 'blocked', reason_code: 'topic_state_owner', reason: 'Canonical topic-state recovery owns the nearest action.', warnings: workspaces.warnings, next_action: { kind: 'repair_owner', command: topicOwner.command, target_ref: topicOwner.workspace, operation_id: null } });
-  const active = activeRecoveryStage(bundle, workspaces);
-  if (active?.blocked) return result({ operation: 'inspect', verdict: 'blocked', reason_code: 'accepted_lineage_drift', reason: active.blocked, warnings: workspaces.warnings });
-  if (active?.stage) {
-    const event = active.event_item.parsed;
-    return result({ operation: 'inspect', verdict: 'unchanged', reason_code: 'already_committed', reason: 'An accepted post-final recovery lineage is already active.', operation_id: event.operation_id, stage: active.stage, warnings: workspaces.warnings, facts: { request_sha256: event.request_sha256, event_id: event.event_id, event_index: active.event_item.index, event_line_sha256: active.event_item.lineSha256 }, next_action: nextActionForStage(bundlePath, active.stage, event.operation_id) });
+  const active = inspectPostFinalHandoffStage(bundle);
+  if (!active.ok && !['missing_event', 'superseded_event'].includes(active.reason_code)) return result({ operation: 'inspect', verdict: 'blocked', reason_code: 'accepted_lineage_drift', reason: active.reason, warnings: workspaces.warnings });
+  if (active.ok) {
+    const lineage = active.lineage || { event: active.handoff.event, index: active.handoff.index, eventLineSha256: active.handoff.eventLineSha256 };
+    const event = lineage.event;
+    return result({ operation: 'inspect', verdict: 'unchanged', reason_code: 'already_committed', reason: 'An accepted post-final recovery lineage is already active.', operation_id: event.operation_id, stage: active.stage, warnings: workspaces.warnings, facts: { request_sha256: event.request_sha256, event_id: event.event_id, event_index: lineage.index, event_line_sha256: lineage.eventLineSha256 }, next_action: nextActionForStage(bundlePath, active.stage, event.operation_id, active.owner) });
   }
   let facts;
   try { facts = finalFacts(bundle); } catch (error) {
@@ -444,7 +373,7 @@ function inspectInternal({ bundlePath }) {
   }
   const activeWork = isQuiescent(bundle);
   if (activeWork.length > 0) return result({ operation: 'inspect', verdict: 'blocked', reason_code: 'bundle_not_quiescent', reason: `Active queue/work-unit facts block post-final recovery: ${activeWork[0]}`, warnings: workspaces.warnings, next_action: { kind: 'repair_owner', command: null, target_ref: activeWork[0], operation_id: null } });
-  if (facts.guard.next_count >= facts.guard.limit) return result({ operation: 'inspect', verdict: 'blocked', reason_code: 'rerun_limit_exhausted', reason: `Next rerun count ${facts.guard.next_count} would fail limit < ${facts.guard.limit}.`, warnings: workspaces.warnings, facts: { rerun_guard: facts.guard }, next_action: { kind: 'new_bundle_decision', command: null, target_ref: 'start a new bundle for the requested scope', operation_id: null } });
+  if (!facts.availability.available) return result({ operation: 'inspect', verdict: 'blocked', reason_code: 'rerun_limit_exhausted', reason: `Next rerun count ${facts.guard.next_count} would fail limit < ${facts.guard.limit}.`, warnings: workspaces.warnings, facts: { rerun_guard: facts.guard }, next_action: { kind: 'new_bundle_decision', command: null, target_ref: 'start a new bundle for the requested scope', operation_id: null } });
   return result({
     operation: 'inspect', verdict: 'eligible', reason_code: 'eligible', reason: 'Latest legal Final lineage is eligible for one audited post-final rerun request.', warnings: workspaces.warnings,
     facts: { request_bindings: { expected_bundle_identity: facts.identity, expected_final_lineage: facts.lineage }, resolved_target: facts.routing.target_node },
@@ -492,7 +421,8 @@ function validatePreparedCurrentFacts(bundle, manifest) {
   if (status.current_node !== 'phases/phase-final.md' || status.current_gate !== 'readiness_passed' || status.next_gate !== 'none') return { ok: false, reason_code: 'terminal_status_drift', reason: 'Terminal Final coordinate/window changed after acceptance.' };
   const route = routingFacts();
   if (route.target_node !== manifest.routing.target_node || route.target_gate_enum !== manifest.routing.target_gate_enum) return { ok: false, reason_code: 'routing_drift', reason: 'HITL2 rerun target/window changed after acceptance.' };
-  const currentGuard = rerunGuard(readBundleProfile(bundle));
+  const { guard: currentGuard, availability } = rerunGuard(readBundleProfile(bundle), { includeNextIncrement: true });
+  if (!availability.available) return { ok: false, reason_code: 'rerun_limit_exhausted', reason: 'The required next rerun increment is no longer available.' };
   if (currentGuard.definition_sha256 !== manifest.rerun_guard.definition_sha256 || currentGuard.current_count !== manifest.rerun_guard.current_count || currentGuard.next_count !== manifest.rerun_guard.next_count || currentGuard.limit !== manifest.rerun_guard.limit) return { ok: false, reason_code: 'rerun_rule_drift', reason: 'Active rerun-limit facts changed after acceptance.' };
   if (finalInventory(bundle).sha256 !== manifest.final_inventory_sha256) return { ok: false, reason_code: 'final_inventory_drift', reason: 'Final artifact inventory changed after acceptance.' };
   return { ok: true };
@@ -550,8 +480,8 @@ export function applyPostFinalRecovery({ bundlePath, input, operationId = random
   const initialInspection = inspectInternal({ bundlePath });
   if (initialInspection.verdict === 'recover_required') return { ...initialInspection, operation: 'apply' };
   if (initialInspection.verdict === 'unchanged') {
-    const active = activeRecoveryStage(bundle, inspectWorkspaceRoot(bundle));
-    const digest = active?.event_item?.parsed?.request_sha256;
+    const active = inspectPostFinalHandoffStage(bundle);
+    const digest = active.ok ? (active.lineage?.event || active.handoff.event).request_sha256 : null;
     if (digest === requestDigest(request)) return result({ ...initialInspection, operation: 'apply' });
     return result({ operation: 'apply', verdict: 'blocked', reason_code: 'different_request_same_final', reason: 'A different accepted post-final request already owns this Final lineage.' });
   }
@@ -617,6 +547,5 @@ export function inspectActivePostFinalRecoveryStage(bundlePath) {
   const bundle = safeBundle(bundlePath);
   const workspaces = inspectWorkspaceRoot(bundle);
   if (workspaces.accepted.length > 0) return { ok: false, reason_code: 'accepted_workspace', workspaces };
-  const stage = activeRecoveryStage(bundle, workspaces);
-  return stage ? { ok: !stage.blocked, ...stage } : { ok: false, reason_code: 'missing_event' };
+  return inspectPostFinalHandoffStage(bundle);
 }

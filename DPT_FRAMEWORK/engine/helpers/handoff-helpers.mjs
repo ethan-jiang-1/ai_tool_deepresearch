@@ -5,12 +5,28 @@ import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
 import { PostFinalRecoveryEventSchema } from './post-final-reentry-contract.mjs';
+import { computeResearchStyleParams } from './research-style-params.mjs';
 import { makeContractFinding, projectFindingCompatibility } from './wave-contract-findings.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const FRAMEWORK_DIR = join(__dirname, '..', '..');
 const WORKFLOWS_DIR = join(__dirname, '..', '..', 'workflows');
+const RESEARCH_STYLES_DIR = join(FRAMEWORK_DIR, 'schema', 'research-styles');
+const RERUN_DEFINITION_PATH = join(FRAMEWORK_DIR, 'schema', 'gate_definitions', 'gate-rerun-ready.definition.json');
+
+const POST_FINAL_OWNERS = Object.freeze({
+  pre_entry: { kind: 'enter_phase', target_ref: 'phases/phase-rerun.md' },
+  loaded_pending_status: { kind: 'advance_status', target_ref: 'hitl2_recorded' },
+  synchronized_initial_profile: { kind: 'topic_state', target_ref: 'canonical-topic-state' },
+  synchronized_count_incremented: { kind: 'rerun_gate', target_ref: 'rerun_ready' },
+  descendant_pipeline: { kind: 'current_owner', target_ref: 'current lifecycle owner' },
+});
+
+function withOwner(value, owner = POST_FINAL_OWNERS[value.stage]) {
+  return owner ? { ...value, owner: { ...owner } } : value;
+}
 
 export const BOOTSTRAP_TARGET_NODES = new Set([
   'phases/phase-instantiation.md',
@@ -275,6 +291,100 @@ function findBoundPostFinalTransition(events, item, edge, load) {
   return { exact, conflict };
 }
 
+function canonicalTopicCount(bundlePath) {
+  const raw = readFileSync(join(bundlePath, 'rb_plan.md'), 'utf8');
+  const match = raw.match(/^---\n([\s\S]*?)\n---/);
+  if (!match) throw new Error('rb_plan.md frontmatter is missing');
+  const plan = parseYaml(match[1]);
+  if (!Array.isArray(plan?.topic_registry)) throw new Error('canonical topic_registry is missing');
+  return plan.topic_registry.length;
+}
+
+function classifyPostFinalProfile(bundlePath, current, accepted, guard) {
+  if (!current || !accepted || !guard) return { ok: false, reason: 'profile lineage inputs are incomplete' };
+  const acceptedCount = accepted?.human_decision_checkpoints?.hitl2?.rerun_count ?? 0;
+  const currentCount = current?.human_decision_checkpoints?.hitl2?.rerun_count;
+  if (acceptedCount !== guard.current_count || ![guard.current_count, guard.next_count].includes(currentCount)) {
+    return { ok: false, reason: 'rerun_count is outside the event-bound current/next delta' };
+  }
+  if (current.research_profile !== accepted.research_profile) return { ok: false, reason: 'research_profile drifted from the event-bound value' };
+
+  let projection;
+  try {
+    const definition = readJson(join(RESEARCH_STYLES_DIR, `${accepted.research_profile}.json`));
+    projection = computeResearchStyleParams({ styleDefinition: definition, topicCount: canonicalTopicCount(bundlePath) });
+  } catch (error) {
+    return { ok: false, reason: `cannot compute event-bound research style projection: ${error.message}` };
+  }
+  const acceptedStyle = accepted.research_style_params;
+  const currentStyle = current.research_style_params;
+  const unchangedStyle = JSON.stringify(currentStyle) === JSON.stringify(acceptedStyle);
+  const projectedStyle = JSON.stringify(currentStyle) === JSON.stringify(projection);
+  if (!unchangedStyle && !projectedStyle) return { ok: false, reason: 'research_style_params match neither event-bound values nor the exact current projection' };
+
+  const comparable = structuredClone(current);
+  comparable.human_decision_checkpoints.hitl2.rerun_count = acceptedCount;
+  comparable.research_style_params = acceptedStyle;
+  if (JSON.stringify(comparable) !== JSON.stringify(accepted)) return { ok: false, reason: 'profile contains unrelated event-lineage drift' };
+
+  return {
+    ok: true,
+    count: currentCount === guard.current_count ? 'current' : 'next',
+    style: unchangedStyle ? 'event_bound' : 'projected',
+    projectionDiffers: JSON.stringify(projection) !== JSON.stringify(acceptedStyle),
+  };
+}
+
+function inspectNormalDescendant(events, latest, item, status) {
+  if (!latest || latest.index <= item.index) return null;
+  const handoff = makeHandoff({ index: latest.index, event: latest.event }, latest, events);
+  if (!handoff.ok) return { ok: false, reason_code: 'descendant_handoff_invalid', reason: handoff.reason };
+  const current = handoff.handoff;
+  const sourceWindow = status.next_gate === current.sourceGateEnum;
+  if (!current.loadComplete) {
+    if (status.current_node !== current.sourceNode || !sourceWindow) return { ok: false, reason_code: 'descendant_source_drift', reason: 'passed descendant Gate is not aligned with the current source node/status window' };
+    return withOwner({ ok: true, stage: 'descendant_pipeline', handoff: current, lineage: { event: item.event, index: item.index, eventLineSha256: item.lineSha256 } }, { kind: 'enter_phase', target_ref: current.targetNode });
+  }
+  if (status.current_node !== current.targetNode) return { ok: false, reason_code: 'descendant_load_drift', reason: 'route-bound descendant load does not match the current target node' };
+  const transitions = events.filter((candidate) => candidate.index > current.loadComplete.index && candidate.event?.event === 'phase_transition');
+  const exact = transitions.find((candidate) => candidate.event.to === current.sourceGateEnum && candidate.event.next === current.targetGateEnum) || null;
+  const conflict = transitions.find((candidate) => !exact || candidate.index !== exact.index) || null;
+  if (conflict) return { ok: false, reason_code: 'descendant_transition_conflict', reason: `conflicting descendant phase_transition at trace index ${conflict.index}` };
+  if (!exact) {
+    if (!sourceWindow) return { ok: false, reason_code: 'descendant_status_drift', reason: 'loaded descendant target no longer has the source Gate status window' };
+    return withOwner({ ok: true, stage: 'descendant_pipeline', handoff: { ...current, transition: null }, lineage: { event: item.event, index: item.index, eventLineSha256: item.lineSha256 } }, { kind: 'advance_status', target_ref: current.sourceGateEnum });
+  }
+  if (status.current_gate !== current.sourceGateEnum || status.next_gate !== current.targetGateEnum) {
+    return { ok: false, reason_code: 'descendant_status_drift', reason: 'descendant phase_transition does not match the resulting status window' };
+  }
+  return withOwner({ ok: true, stage: 'descendant_pipeline', handoff: { ...current, transition: exact }, lineage: { event: item.event, index: item.index, eventLineSha256: item.lineSha256 } });
+}
+
+function continuousNormalDescendant(events, topology, item) {
+  const handoffs = [];
+  for (const candidate of events) {
+    if (candidate.index <= item.index) continue;
+    const edge = edgeForAttempt(candidate, topology);
+    if (!edge) continue;
+    const made = makeHandoff(candidate, edge, events);
+    if (!made.ok) continue;
+    handoffs.push(made.handoff);
+  }
+  if (handoffs.length === 0) return { ok: true, latest: null };
+  if (handoffs.some((handoff) => handoff.sourceNode === 'phases/phase-readiness.md' && handoff.targetNode === 'phases/phase-final.md')) {
+    return { ok: false, retired: true, reason: 'post-final lineage is retired by a newer legal Final delivery' };
+  }
+  if (handoffs[0].sourceNode !== 'phases/phase-rerun.md') {
+    return { ok: false, reason: 'normal descendant lineage does not begin at the accepted rerun node' };
+  }
+  for (let index = 1; index < handoffs.length; index += 1) {
+    if (handoffs[index].sourceNode !== handoffs[index - 1].targetNode) {
+      return { ok: false, reason: `normal descendant lineage is discontinuous at trace index ${handoffs[index].index}` };
+    }
+  }
+  return { ok: true, latest: handoffs.at(-1) };
+}
+
 export function inspectPostFinalHandoffStage(bundlePath) {
   const workspace = acceptedPostFinalWorkspace(bundlePath);
   if (workspace) return { ok: false, reason_code: 'accepted_workspace', reason: workspace.reason || `accepted post-final recovery workspace ${workspace.operationId}`, workspace };
@@ -292,10 +402,10 @@ export function inspectPostFinalHandoffStage(bundlePath) {
   }
   if (!selected) return { ok: false, reason_code: 'missing_event', reason: 'no structurally valid post_final_reentry event was found' };
   const { item, edge } = selected;
-  const latestNormal = latestLegalPassedHandoff(trace.events, topology);
-  if (latestNormal && latestNormal.index > item.index && latestNormal.sourceNode !== 'phases/phase-rerun.md') {
-    return { ok: false, reason_code: 'superseded_event', reason: `post-final event is superseded by normal handoff at trace index ${latestNormal.index}` };
-  }
+  const descendantChain = continuousNormalDescendant(trace.events, topology, item);
+  if (descendantChain.retired) return { ok: false, reason_code: 'superseded_event', reason: descendantChain.reason };
+  if (!descendantChain.ok) return { ok: false, reason_code: 'descendant_lineage_drift', reason: descendantChain.reason };
+  const latestNormal = descendantChain.latest;
   const statusPath = join(bundlePath, 'rb_status.json');
   const profilePath = join(bundlePath, 'rb_profile.yaml');
   if (!existsSync(statusPath) || !existsSync(profilePath)) return { ok: false, reason_code: 'control_missing', reason: 'status/profile files are required' };
@@ -306,28 +416,38 @@ export function inspectPostFinalHandoffStage(bundlePath) {
   const profileSha256 = createHash('sha256').update(profileRaw).digest('hex');
   const load = findBoundPostFinalLoad(trace.events, item, edge);
   const transition = findBoundPostFinalTransition(trace.events, item, edge, load);
-  const descendant = trace.events.find((candidate) => candidate.index > item.index && candidate.event?.event === 'gate_attempt'
-    && candidate.event.gate === 'rerun-ready' && candidate.event.currentNodeRef === edge.targetNode && candidate.event.passed === true && candidate.event.next);
-  if (descendant) return { ok: true, stage: 'descendant_pipeline', handoff: { ...edge, index: item.index, event: item.event, sourceAttemptTs: item.event.ts || null, loadComplete: load, transition: transition.exact, descendant } };
+  const acceptedProfile = item.event.committed_after_profile_semantics;
+  const guard = item.event.rerun_guard;
+  const profileClass = classifyPostFinalProfile(bundlePath, profile, acceptedProfile, guard);
+  const definitionDigest = createHash('sha256').update(readFileSync(RERUN_DEFINITION_PATH)).digest('hex');
+  if (currentCountBeforeIncrement(profile, guard) && definitionDigest !== guard.definition_sha256) {
+    return { ok: false, reason_code: 'rerun_rule_drift', reason: 'active rerun-limit definition drifted before the bound count increment' };
+  }
+  const descendant = inspectNormalDescendant(trace.events, latestNormal, item, status);
+  if (descendant) return descendant;
   const terminal = status.current_node === 'phases/phase-final.md' && status.current_gate === 'readiness_passed' && status.next_gate === 'none';
   const rerun = status.current_node === edge.targetNode && status.current_gate === 'hitl2_recorded' && status.next_gate === edge.targetGateEnum;
   const profileMatches = profileSha256 === edge.committedAfterProfileSha256;
-  if (terminal && profileMatches) return { ok: true, stage: 'pre_entry', handoff: { ...edge, index: item.index, event: item.event, sourceAttemptTs: item.event.ts || null, loadComplete: load, transition: null } };
+  if (terminal && profileMatches) return withOwner({ ok: true, stage: 'pre_entry', handoff: { ...edge, index: item.index, event: item.event, sourceAttemptTs: item.event.ts || null, loadComplete: load, transition: null } });
   if (status.current_node === edge.targetNode && load) {
     if (transition.conflict) return { ok: false, reason_code: 'conflicting_transition', reason: `conflicting exceptional phase_transition at trace index ${transition.conflict.index}`, handoff: { ...edge, index: item.index, event: item.event, loadComplete: load } };
-    if (!transition.exact && profileMatches) return { ok: true, stage: 'loaded_pending_status', handoff: { ...edge, index: item.index, event: item.event, sourceAttemptTs: item.event.ts || null, loadComplete: load, transition: null } };
-    if (rerun && transition.exact && profileMatches) return { ok: true, stage: 'synchronized_initial_profile', handoff: { ...edge, index: item.index, event: item.event, sourceAttemptTs: item.event.ts || null, loadComplete: load, transition: transition.exact } };
-    const acceptedProfile = item.event.committed_after_profile_semantics;
-    const guard = item.event.rerun_guard;
-    if (acceptedProfile && guard && rerun && profile?.human_decision_checkpoints?.hitl2?.rerun_count === guard.next_count) {
-      const comparable = structuredClone(profile);
-      comparable.human_decision_checkpoints.hitl2.rerun_count = guard.current_count;
-      if (JSON.stringify(comparable) === JSON.stringify(acceptedProfile)) {
-        return { ok: true, stage: 'synchronized_count_incremented', handoff: { ...edge, index: item.index, event: item.event, sourceAttemptTs: item.event.ts || null, loadComplete: load, transition: transition.exact } };
+    if (!transition.exact && profileMatches) return withOwner({ ok: true, stage: 'loaded_pending_status', handoff: { ...edge, index: item.index, event: item.event, sourceAttemptTs: item.event.ts || null, loadComplete: load, transition: null } });
+    if (rerun && transition.exact && profileClass.ok) {
+      const handoff = { ...edge, index: item.index, event: item.event, sourceAttemptTs: item.event.ts || null, loadComplete: load, transition: transition.exact };
+      if (profileClass.count === 'current') {
+        const owner = profileClass.style === 'projected' && profileClass.projectionDiffers
+          ? { kind: 'current_owner', target_ref: 'rb_profile.yaml#/human_decision_checkpoints/hitl2/rerun_count' }
+          : POST_FINAL_OWNERS.synchronized_initial_profile;
+        return withOwner({ ok: true, stage: 'synchronized_initial_profile', handoff, profile_class: profileClass }, owner);
       }
+      return withOwner({ ok: true, stage: 'synchronized_count_incremented', handoff, profile_class: profileClass });
     }
   }
   return { ok: false, reason_code: 'event_stage_drift', reason: 'post-final event/load/status/profile facts do not form an accepted stage', handoff: { ...edge, index: item.index, event: item.event, loadComplete: load, transition: transition.exact } };
+}
+
+function currentCountBeforeIncrement(profile, guard) {
+  return profile?.human_decision_checkpoints?.hitl2?.rerun_count !== guard?.next_count;
 }
 
 function makeHandoff(traceEvent, edge, events, { requireLoad = false } = {}) {

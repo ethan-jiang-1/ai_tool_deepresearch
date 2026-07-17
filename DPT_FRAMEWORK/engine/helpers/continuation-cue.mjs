@@ -5,7 +5,7 @@ export const CONTINUATION_CUE_START = '<!-- DPT_CONTINUATION_CUE_START -->';
 export const CONTINUATION_CUE_END = '<!-- DPT_CONTINUATION_CUE_END -->';
 
 const INTERACTION = {
-  PROHIBITED: 'prohibited',
+  DO_NOT_INITIATE: 'do_not_initiate',
   REQUIRED: 'required',
   TERMINAL_DELIVERY: 'terminal_delivery',
 };
@@ -54,7 +54,7 @@ export function continuationForLoadedNode({ frontmatter, nodeRef, gate } = {}) {
   const stop = frontmatterStop(frontmatter);
   if (stop === 'no') {
     return withOptionalLocators({
-      interaction: INTERACTION.PROHIBITED,
+      interaction: INTERACTION.DO_NOT_INITIATE,
       next_action: NEXT_ACTION.EXECUTE_LOADED_NODE,
     }, { nodeRef: ref, gate });
   }
@@ -76,14 +76,14 @@ export function continuationForGateResult({ frontmatter, passed, next, nodeRef, 
 
   if (passed === true && typeof next === 'string' && next.length > 0) {
     return withOptionalLocators({
-      interaction: INTERACTION.PROHIBITED,
+      interaction: INTERACTION.DO_NOT_INITIATE,
       next_action: NEXT_ACTION.CONSUME_CHECK_NEXT,
     }, { nodeRef: ref, gate });
   }
 
   if (passed === false) {
     return withOptionalLocators({
-      interaction: INTERACTION.PROHIBITED,
+      interaction: INTERACTION.DO_NOT_INITIATE,
       next_action: NEXT_ACTION.REPAIR_AND_RERUN_GATE,
     }, { nodeRef: ref, gate });
   }
@@ -94,7 +94,6 @@ export function continuationForGateResult({ frontmatter, passed, next, nodeRef, 
 export function continuationForClaimedWork({ claimedWorkIds } = {}) {
   if (!Array.isArray(claimedWorkIds) || claimedWorkIds.length === 0) return null;
   return withOptionalLocators({
-    interaction: INTERACTION.PROHIBITED,
     next_action: NEXT_ACTION.INSPECT_AND_POLL_CLAIMED_WORK,
   }, { workIds: claimedWorkIds });
 }

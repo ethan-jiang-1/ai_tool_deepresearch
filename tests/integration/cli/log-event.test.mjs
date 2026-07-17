@@ -108,4 +108,12 @@ describe('log-event.mjs CLI (LOC-009)', () => {
     assert.match(log, /surfacing_intent/);
     assert.match(log, /diagnostic_only/);
   });
+
+  it('documents surfacing_intent as framework-initiated without chat classification', () => {
+    const source = readFileSync(LOG_EVENT_CLI, 'utf-8');
+    assert.match(source, /framework-initiated would-have-surfaced/);
+    assert.match(source, /direct answer to an already-current[\s\S]*user-initiated turn is outside this diagnostic/);
+    assert.match(source, /does not inspect conversation state/);
+    assert.doesNotMatch(source, /chat_classifier|message_queue|user_turn_state|conversation_state/);
+  });
 });

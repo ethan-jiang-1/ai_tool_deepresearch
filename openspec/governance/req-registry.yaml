@@ -292,11 +292,11 @@ GAS-001: gate-state-machine — Gate checkpoint feedback and transition lookup
 
 # hitl-ux
 HIU-001: hitl-ux — HITL conversational loop model (entry → in-loop → exit → anti-infinite-loop)
-HIU-002: hitl-ux — HITL1 entry prompt with A/B/C letter menu and must-answer collection
-HIU-003: hitl-ux — HITL2 entry prompt with context narrative and A/B/C/D/E decision menu
+HIU-002: hitl-ux — HITL1 recommendation-first alignment with concrete must-answer collection and natural-language acceptance or correction
+HIU-003: hitl-ux — HITL2 research review with one executable recommendation and natural-language decision mapping
 HIU-004: hitl-ux — Chinese-first interaction convention for all user-visible HITL prompts
-HIU-005: hitl-ux — Graceful degradation for uncertain users (gap_queue_backed, intake_status)
-HIU-006: hitl-ux — Anti-infinite-loop two-level nudge strategy (round 3 gentle, round 5+ strong)
+HIU-005: hitl-ux — Uncertain users receive concrete must-answer proposals without hidden sentinel or parser state
+HIU-006: hitl-ux — Semantic-progress guidance for stalled HITL discussion without fixed-round counters
 
 # integration-tests
 INT-001: integration-tests — validate-bundle.mjs + inspect-bundle.mjs integration tests
@@ -331,9 +331,9 @@ REL-001: repair-loop — Repair checkpoint loopback and deterministic terminatio
 # rerun-incremental-node
 REI-001: rerun-incremental-node — Phase-rerun node frontmatter and identity (node_type:phase, phase:rerun, gate:rerun-ready, stop:no)
 REI-002: rerun-incremental-node — ProfileSchema rerun_count field (non-negative integer, default 0, optional)
-REI-003: "rerun-incremental-node — Gate-rerun-ready checks rerun state legality (4 rules: rationale, count<3, structure, status)"
+REI-003: rerun-incremental-node — Shared evaluator interprets active rerun-ready rule and profile facts for Gate and advisory consumers
 REI-004: rerun-incremental-node — Chain routes HITL2 rerun as deterministic outcome (passed→readiness, rerun→rerun-node)
-REI-005: rerun-incremental-node — Rerun loop protection with max iterations (rerun_count<3, terminal fail on exhaustion)
+REI-005: rerun-incremental-node — Active rerun-ready definition owns max-iteration protection and exhaustion failure
 REI-006: rerun-incremental-node — Sanctioned rerun add and intent refinement use canonical topic-state apply
 
 # rerun-topic-integration
@@ -718,7 +718,7 @@ VER-005: verification-routing — The four-test-class taxonomy has one canonical
 VEM-001: version-management — CHANGELOG is concise and human-readable at project root
 VEM-002: version-management — Every DPT_FRAMEWORK behavior change updates CHANGELOG
 VEM-003: version-management — RUN.md version banner matches latest CHANGELOG entry
-VEM-004: version-management — Version number decided at proposal time, not ad-hoc
+VEM-004: version-management — Proposal declares the target version and apply uses it without pinning a historical current version
 
 # wave0-artifacts-directory
 WAD-001: wave0-artifacts-directory — Bundle structure includes artifacts/wave0/ directory

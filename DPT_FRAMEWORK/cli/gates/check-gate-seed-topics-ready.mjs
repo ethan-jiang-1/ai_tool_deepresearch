@@ -152,7 +152,7 @@ function slugSetFinding(rule, failure) {
     repairKind: failure.userDecision ? 'user_decision' : 'agent_action',
     writeTo: failure.userDecision ? 'phases/phase-hitl1.md' : failure.writeTo,
     repair: failure.userDecision
-      ? 'Return to HITL1 for the missing Topic decision, then materialize through the canonical topic-state owner.'
+      ? 'The existing HITL1 owner must record the missing Topic decision; after canonical topic-state materialization, rerun this same Gate.'
       : 'Repair the named seed projection so it matches the canonical registry, then rerun this Gate.',
     detail: `[${rule.id}] ${failure.detail}`,
     maskedByRuleId: failure.maskedByRuleId || null,
@@ -192,7 +192,7 @@ if (topicState.mode !== 'canonical' || topicState.passed !== true) {
     missingFact: 'The canonical Topic registry is empty, so there is no semantic Topic intent to materialize.',
     repairKind: 'user_decision',
     writeTo: 'phases/phase-hitl1.md',
-    repair: 'Collect the missing Topic decision in HITL1, apply it through topic-state, then rerun this Gate.',
+    repair: 'The existing HITL1 owner must record the missing Topic decision; apply it through topic-state, then rerun this same Gate.',
   }));
 }
 

@@ -2,7 +2,7 @@
 
 Use this playbook when an Agent has finished a content-bearing staging file for `reference/`, `artifacts/`, `final/`, or producer-owned `_cache/` and needs a crash-safe commit into the selected bundle.
 
-This is an Agent-run ordinary command path. Do not ask the user to run these commands unless host policy makes that single action non-delegable.
+This is an Agent-run ordinary command path. Persistence verdicts assign the next mechanical owner but do not create interaction authority. Under a loaded `stop: no` phase, do not initiate a question, acknowledgement, approval, status, or wait; continue Agent-owned inspect/retry/sweep work, and preserve a genuinely non-delegable host boundary for the current lifecycle owner.
 
 ## Persist
 
@@ -49,3 +49,5 @@ Never rename an arbitrary `.tmp` file into a canonical target. Only `operation.j
 ## Authority Boundary
 
 Persistence proves exact file bytes were committed durably. It does not create evidence provenance, a submitted work-unit row, queue completion, gate pass, phase handoff, lifecycle progress, topic identity, or Final delivery authority. Delegated outputs and cache trails still pass through `operate-work-unit submit`; Phase-owned projections still require submitted backing; Final still requires legal Final entry.
+
+The persistence command and playbook return to the calling Phase Agent. They do not message the user, wait for acknowledgement, or create a checkpoint, permission, route, mutation/reentry authority, or lifecycle placement.

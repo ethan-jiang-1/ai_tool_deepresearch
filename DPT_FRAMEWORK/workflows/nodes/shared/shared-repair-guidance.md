@@ -30,15 +30,11 @@ gate fail → 读取 CLI 返回的 inspect / advice → 针对性 repair → rer
 - 同一 gate 连续 3 次 repair 后仍 fail → **diagnostic escalation**：写入 trace/log 诊断，换策略、缩小修复面、关闭/重试 work unit，或在当前 legal phase 静默 hold。
 - No-progress（连续 repair 但 inspect 输出不变）→ diagnostic escalation，不等满 3 次。
 
-## Escalation
+## Responsibility and Placement
 
-以下情况触发 escalation/block：
-- 连续 repair 达到 retry limit 且无进展
-- 修复需要用户 decision 或权限（如 `plan_basename` 不一致需要用户确认是否重新 instantiate）
-- 无法不造假继续（如 gate 要求 `research_profile != not_selected` 但用户未回答 HITL1）
-- 结构性 blocker（如 `DPT_FRAMEWORK/` 文件缺失或破坏）
+Retry exhaustion, a missing decision/permission, a non-fabricable prerequisite, or a structural blocker assigns the next repair responsibility; it does not decide where interaction occurs. The current loaded node's `stop` contract alone places interaction.
 
-Escalation is diagnostic. In non-terminal `stop: no` phases it does not authorize surfacing, phase bypass, `final/` writes, or manual status edits. Record what happened through accepted trace/log diagnostics and remain in the latest legal phase target until deterministic gate/handoff evidence exists.
+In non-terminal `stop: no` phases, record accepted diagnostics, change strategy, use a legal handoff, or hold at the latest legal phase. Do not initiate a question, status, acknowledgement, phase bypass, `final/` write, or manual status edit. A direct factual answer to a user-initiated current turn adds no checkpoint, permission, mutation, route, or reentry authority. At HITL1/HITL2, ask only for the semantic decision that the active checkpoint legally owns.
 
 ## Repair Direction by Check Type
 

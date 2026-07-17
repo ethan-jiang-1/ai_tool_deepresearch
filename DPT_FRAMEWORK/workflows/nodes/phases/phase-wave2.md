@@ -202,7 +202,7 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect <bundle>
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit <bundle> --work-id <work_id> --result <result.json>
 ```
 
-Actively poll targeted-evidence result/receipt/output/cache readiness without waiting for user continuation or task notification. For every expired or stale claimed attempt, run `operate-work-unit timeout-preflight <bundle> --work-id <work_id> [--result <result.json>]` and parse structured stdout even when the command exits non-zero. Follow the closed advice branches: formal `submit`, same-`work_id` `repair`, active-poll `wait`, authority `inspect`, deterministic `block`, or normal terminal `timeout`. A `submit`, `repair`, `wait`, `inspect`, or `block` recommendation means delegated in-flight work is not drained.
+Actively poll targeted-evidence result/receipt/output/cache readiness without waiting for user continuation or task notification. For every expired or stale claimed attempt, run `operate-work-unit timeout-preflight <bundle> --work-id <work_id> [--result <result.json>]` and parse structured stdout even when the command exits non-zero. Follow the closed advice branches: formal `submit`, same-`work_id` `repair`, active-poll `wait`, authority `inspect`, owner-assigned deterministic `block`, or normal terminal `timeout`. A `block` assigns responsibility and leaves the phase undrained; it does not initiate a user wait. Any `submit`, `repair`, `wait`, `inspect`, or `block` recommendation means delegated in-flight work is not drained.
 
 `timeout --force --reason <reason>` is exceptional and audited, not the normal response to recent progress, repairable candidates, or invalid binding. This preflight loop does not change the Wave2 authority split: pure synthesis continues from existing accepted backing, while newly fetched targeted evidence counts only after successful `wave2_targeted_evidence` submit. Phase-owned finding-index, cross-topic ledger, synthesis, backfill, and `00-cross` materialization remain downstream of accepted evidence.
 
@@ -337,13 +337,13 @@ Continue from the Markdown rendered by `enter-phase`. `advance-status` only reco
 
 ## 7. On Gate Fail
 
-先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从 legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段或命令。按每个 independent primary hint 执行：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority。不得从 legacy prose、rule target、path shape 或源码补猜 repair kind、permission、字段或命令。`repair_kind` 只分配责任，当前 loaded node 的 `stop` 才决定 interaction placement；本 phase 为 `stop: no`，任何分类都不得主动发起提问、状态/进度、approval、acknowledgement 或等待。用户主动的 current turn 可从 direct facts 得到直接回答，但回答不创建 checkpoint、state、permission、route、mutation 或 reentry authority。按每个 independent primary hint 执行：
 
 1. `repair_kind: agent_action`：当 `write_to` 是已授权的 Wave2 mutable surface 时，由 Agent 修复 exact finding/index/ledger/synthesis field/file；不得把 synthesis prose 或 filesystem-only reference 当作 provenance。
 2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal queue/work-unit/declaration/lifecycle operation；不得要求用户运行普通命令，也不得直接编辑 status、trace、ledger declaration、index、receipt、hash 或 provenance authority。
-3. `repair_kind: user_decision`：只暴露 `missing_fact` 指出的真实语义/风险决定。Wave2 是 `stop: no`，不得由 hint 创造新 HITL、repair controller 或 lifecycle；没有 accepted decision path 时保持当前 checkpoint failed。
-4. `repair_kind: external_action`：只暴露不可代理的 actor/search/fetch/permission 前置条件；满足后机械执行回到 Agent。
-5. `repair_kind: missing_contract`：报告 exact unavailable capability/contract boundary，不提供手写 authority、绕过 Gate 或平行成功路径。
+3. `repair_kind: user_decision`：识别 `missing_fact` 指出的真实语义/风险决定。Wave2 是 `stop: no`，不得由 hint 创造新 HITL、repair controller 或 lifecycle；没有 accepted decision path 时保持当前 checkpoint failed。
+4. `repair_kind: external_action`：识别不可代理的 actor/search/fetch/permission 前置条件；不主动请求 acknowledgement，满足后机械执行回到 Agent。
+5. `repair_kind: missing_contract`：保留 exact unavailable capability/contract boundary，不提供手写 authority、用户等待、绕过 Gate 或平行成功路径。
 
 Hint 不创造 permission、controller 或 lifecycle。完成可执行动作后 Agent MUST 运行 hint 的 exact `rerun`，回到同一个 Wave2 checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 猜 blocking repair；按 `missing_contract` 暴露最小边界。
 

@@ -557,15 +557,14 @@ describe('assessNode contract header injection (WNC-008)', () => {
     assert.equal(result.status, 'loaded');
     const entry = runtime.contentCache.get('phases/phase-wave0.md');
     assert.ok(entry.md.includes('AUTONOMOUS MODE'));
-    assert.ok(entry.md.includes('YOU SHALL NOT SURFACE TO THE USER'));
+    assert.ok(entry.md.includes('DO NOT INITIATE USER INTERACTION'));
+    assert.match(entry.md, /user-initiated message.*direct factual answer/i);
+    assert.match(entry.md, /creates no checkpoint, state, permission, route, mutation\/reentry authority/i);
     assert.ok(entry.md.includes('non-terminal `stop: no` phase'));
-    assert.ok(entry.md.includes('idle/no-work state'));
-    assert.ok(entry.md.includes('"nothing left"'));
-    assert.ok(entry.md.includes('"done so far"'));
-    assert.ok(entry.md.includes('Complete this node by draining/repairing/degrading'));
-    assert.ok(entry.md.includes('Next phase comes ONLY from gate CLI `check.next`'));
-    assert.ok(entry.md.includes('principle guardrail'));
-    assert.ok(entry.md.includes('node-specific Stop Behavior'));
+    assert.match(entry.md, /idle report/);
+    assert.match(entry.md, /repair and rerun the same Gate, change strategy, consume a legal handoff, or hold silently/);
+    assert.ok(entry.md.includes('Next phase comes ONLY from Gate CLI `check.next`'));
+    assert.match(entry.md, /Agent-facing guidance only/);
   });
 
   it('injects TERMINAL DELIVERY MODE header for final phase (phase:final + stop:no + gate:null)', () => {

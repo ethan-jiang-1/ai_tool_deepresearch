@@ -58,13 +58,13 @@ node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle <pat
 
 ## 7. On Gate Fail
 
-先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority，也不得用其 prose 猜 repair kind、路径或命令。按每个 independent primary hint 执行：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority，也不得用其 prose 猜 repair kind、路径或命令。`repair_kind` 只分配责任，当前 loaded node 的 `stop` 才决定 interaction placement；本 phase 为 `stop: no`，任何分类都不得主动发起提问、状态/进度、approval、acknowledgement 或等待。用户主动的 current turn 可从 direct facts 得到直接回答，但回答不创建 checkpoint、state、permission、route、mutation 或 reentry authority。按每个 independent primary hint 执行：
 
 1. `repair_kind: agent_action`：确认 `write_to` 是 hint 已声明的 authorized mutable surface，由 Agent 完成最小修复。
 2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal Engine operation；不得直接编辑 status、trace、ledger、index、receipt、hash 或其他 Engine-owned authority。
-3. `repair_kind: user_decision`：只询问 `missing_fact` 指出的新语义/风险决定；决定记录到 accepted owner 后，机械执行立即回到 Agent。
-4. `repair_kind: external_action`：只暴露不可代理的外部前置条件；条件满足后由 Agent 继续。
-5. `repair_kind: missing_contract`：报告 `write_to` 指出的缺失 capability/contract boundary，不发明替代 mutation、手写 authority 或第二条成功路径。
+3. `repair_kind: user_decision`：识别 `missing_fact` 指出的新语义/风险决定；只有已存在的 HITL owner 可发起并记录该决定，本 phase 不创建交互，暂无 legal path 时保持 failed checkpoint。
+4. `repair_kind: external_action`：识别不可代理的外部前置条件；不主动请求 acknowledgement，条件经现有边界满足后由 Agent 继续。
+5. `repair_kind: missing_contract`：保留 `write_to` 指出的缺失 capability/contract boundary，不发明替代 mutation、手写 authority、用户等待或第二条成功路径。
 
 Hint 不创造 permission。完成可执行动作后，Agent MUST 运行该 hint 的 exact `rerun`，回到同一个 `instantiation-complete` checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 补猜 blocking repair；按 `missing_contract` 暴露最小边界。默认 retry limit 3 次；仅把 `--attempt N` 作为 Agent-reported retry hint（N 从 1 开始递增），不得让 fatigue wording 覆盖 direct hint。
 

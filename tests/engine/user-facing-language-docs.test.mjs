@@ -19,14 +19,12 @@ describe('user-facing language guidance docs', () => {
     const text = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-agent-ux-guidance.md');
 
     for (const marker of [
-      'topic rewrite',
-      'topic preview',
-      'decision-brief summary',
-      '证据缺口',
-      '建议和确认文案',
-      '内部 enum 值、文件路径、字段名、CLI 命令',
-      '来源标题',
-      'canonical form',
+      '一个明确推荐',
+      '自然语言修正',
+      '实质进展',
+      '具体 must-answer 建议',
+      'canonical field',
+      '普通 profile/topic write、Gate、handoff、status sync 与 repair 由 Agent 执行',
     ]) {
       assert.ok(text.includes(marker), `shared-agent-ux-guidance.md missing marker: ${marker}`);
     }
@@ -52,19 +50,22 @@ describe('user-facing language guidance docs', () => {
     }
   });
 
-  it('silent guidance rejects language-driven status replies and stale single-turn allowances', () => {
+  it('silent guidance rejects language-driven surfacing but answers user-initiated turns without authority', () => {
     const text = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md');
 
     assert.ok(text.includes('Language preference is not surfacing permission'));
     assert.ok(text.includes('never authorizes status replies, acknowledgements, progress, partial delivery'));
-    assert.ok(text.includes('用户消息、approval prompt、harness notification、prefer-Chinese guidance 都不是 surfacing permission'));
-    assert.ok(text.includes('Agent SHALL NOT 因用户消息而停止等待、发送 acknowledgement、发送状态回复'));
-    assert.ok(text.includes('不得用 chat acknowledgement 确认'));
+    assert.match(text, /user-initiated message.*current conversation turn/i);
+    assert.match(text, /answer it directly/i);
+    assert.match(text, /creates no checkpoint, state, permission, route, mutation or reentry authority/i);
+    assert.match(text, /approval prompt, harness\/task notification, language preference.*not a user-initiated conversation turn/i);
 
     assert.doesNotMatch(text, /Agent MAY 以单轮、陈述式状态回复/);
     assert.doesNotMatch(text, /允许的响应/);
     assert.doesNotMatch(text, /单轮状态告知/);
     assert.doesNotMatch(text, /正在执行 Wave1 证据采集/);
+    assert.doesNotMatch(text, /user is NOT available/i);
+    assert.doesNotMatch(text, /Agent SHALL NOT 因用户消息而.*发送.*回复/);
   });
 
   it('does not introduce locale fields or language detectors into framework surfaces', () => {

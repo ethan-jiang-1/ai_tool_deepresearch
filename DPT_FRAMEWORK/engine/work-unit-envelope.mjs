@@ -295,6 +295,7 @@ function taskMarkdown(manifest, bundleDir, resultSchema) {
     ...(manifest.actor_execution?.execution_actor_class === 'phase_agent_fallback' ? [
       'This single work unit is assigned to the Phase Agent fallback actor. Execute it mechanically inside the same envelope, then submit or terminalize it before claiming another fallback.',
     ] : []),
+    'This generated task returns files, receipts, result facts, and any failure boundary to the calling Phase Agent. It does not contact the user, wait for acknowledgement, or create interaction, checkpoint, permission, route, or lifecycle authority.',
     'Read `_beacon.json` before writing runtime files. Resolve every runtime write by joining the beacon `bundle_dir` with the bundle-relative path from this task.',
     'Returning research findings in chat without writing the required files is a work-unit failure, not completion.',
     '',
@@ -411,7 +412,7 @@ function taskMarkdown(manifest, bundleDir, resultSchema) {
     `node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "${path.resolve(bundleDir)}" --work-id "${manifest.work_id}" --result "${abs.result_ref}"`,
     '```',
     '',
-    'The Phase Agent reads every dry-submit violation, repairs the same candidate or assigned receipt at the exact `write_to` coordinate, and reruns the same dry-submit checkpoint before formal submit. Ordinary candidate/receipt repair stays with the Agent; involve the user only for a separate semantic, risk, permission, external-action, or missing-contract boundary.',
+    'The Phase Agent reads every dry-submit violation, repairs the same candidate or assigned receipt at the exact `write_to` coordinate, and reruns the same dry-submit checkpoint before formal submit. Ordinary candidate/receipt repair stays with the Agent; a separate semantic, risk, permission, external-action, or missing-contract boundary returns to the Phase Agent, while the loaded lifecycle node remains the interaction-placement owner.',
     '',
     '## Runtime Refs',
     '',

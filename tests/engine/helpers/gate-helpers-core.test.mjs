@@ -348,7 +348,8 @@ describe('Engine-derived attempt diagnostics (GSK-008)', () => {
     assert.equal(pass.check.attempt_trend, 'converging');
     assert.equal(pass.check.fatigue_warning, true);
     assert.ok(pass.advice.some(a => a.includes('enter-phase')));
-    assert.ok(pass.advice.some(a => a.includes('phase-final')));
+    assert.ok(pass.advice.some(a => /Preserve this Gate verdict.*active rule.*legal handoff/.test(a)));
+    assert.ok(pass.advice.some(a => /does not authorize framework-initiated questions, progress, or premature delivery/.test(a)));
   });
 
   it('treats a failure after a prior pass diagnostic as a regression', () => {
@@ -793,7 +794,7 @@ describe('buildGateResult continuation projection (SWE-001)', () => {
     });
 
     assert.deepEqual(result.continuation, {
-      interaction: 'prohibited',
+      interaction: 'do_not_initiate',
       next_action: 'consume_check_next',
       node_ref: 'phases/phase-wave0.md',
       gate: 'wave0-complete',
@@ -817,7 +818,7 @@ describe('buildGateResult continuation projection (SWE-001)', () => {
     });
 
     assert.deepEqual(result.continuation, {
-      interaction: 'prohibited',
+      interaction: 'do_not_initiate',
       next_action: 'repair_and_rerun_gate',
       node_ref: 'phases/phase-wave0.md',
       gate: 'wave0-complete',

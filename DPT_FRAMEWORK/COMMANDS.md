@@ -14,7 +14,7 @@ Human-directed identifies the decision source；它不转移 ordinary command-ru
 
 Autonomous execution、HITL1/HITL2 内的 human-directed decision、out-of-band maintenance/debug collaboration，以及 accepted mutation/reentry capability 是四个不同概念。Out-of-band collaboration 不是第三个 lifecycle checkpoint、Final-owned repair loop 或任意 state movement authority。
 
-HITL1 和 HITL2 是唯一的 interactive in-run checkpoints。一次性 pre-pipeline trigger/entry selection 只负责选择 DPT_FRAMEWORK 入口并把控制权交给 Agent；进入 lifecycle 后，非终端 `stop: no` phase 自主静默运行。Final 是 terminal non-interactive delivery：它可以在 `final/` artifacts 已存在后交付最终报告，但不是第三个交互 checkpoint、progress report、confirmation loop 或 Final-owned repair loop。明确的 post-final rerun 只通过 `post_final_rerun` recovery operation记录既有 HITL2 `rerun` semantics并进入现有 rerun node；request metadata不是verified identity、permission token、`--human-directed`、`--override` 或 `--force`。用户决定scope/risk后，request preparation、apply/recover、entry、status sync、audit与rerun pipeline全部回到Agent执行。
+HITL1 和 HITL2 是唯一的 interactive in-run checkpoints：两者都由 Agent 基于当前事实先给一个可修正的推荐，分别完成研究对齐与研究审阅。一次性 pre-pipeline trigger/entry selection 只负责选择 DPT_FRAMEWORK 入口并把控制权交给 Agent；进入 lifecycle 后，非终端 `stop: no` phase 自主静默运行，框架不主动提问、确认、汇报或等待 acknowledgement。用户主动消息若已是当前 conversation turn，Agent 正常回答事实或最小边界，但回答不创建 checkpoint、permission、route、mutation/reentry authority 或 durable intent，也不改变原有 next action。Final 是 terminal delivery：它可以在 `final/` artifacts 已存在后交付最终报告，但不是第三个交互 checkpoint、progress report、confirmation loop 或 Final-owned repair loop。明确的 post-final rerun 只通过 `post_final_rerun` recovery operation记录既有 HITL2 `rerun` semantics并进入现有 rerun node；request metadata不是verified identity、permission token、`--human-directed`、`--override` 或 `--force`。用户决定scope/risk后，request preparation、apply/recover、entry、status sync、audit与rerun pipeline全部回到Agent执行。
 
 Post-final feedback 不自动创造能力：supported rerun走上述audited operation；unsupported repair/state-seed仍报告missing capability，不在Final内循环或手写authority。
 这条窄路径仍复用既有 HITL2 repair/rerun semantics，但不会重新加载HITL2来重复询问同一决定。
@@ -31,7 +31,7 @@ Short operating note only; deeper terminology canon lives in `guidelines/agentic
 
 `enter-phase` / `load_complete` prove target-node entry/loading, not target-phase work completion. `advance-status` synchronizes the just-passed source gate; it does not enter, load, or execute the next phase. `current_node` is a resume coordinate, not gate pass evidence.
 
-`continuation` cues are Agent-facing decision-point projections. Gate and work-unit JSON emit them as top-level objects; `enter-phase` emits a final `DPT_CONTINUATION_CUE` Markdown block. A cue tells the Agent the one immediate next action already implied by direct Engine facts. It is not permission, not a new status field, not routing authority, not completion proof, and not an entry/status/submit witness.
+`continuation` cues are Agent-facing decision-point projections. Gate and lifecycle outputs use `interaction: do_not_initiate|required|terminal_delivery`; successful claim output is action-only because claim does not own lifecycle placement. `enter-phase` emits a final `DPT_CONTINUATION_CUE` Markdown block. A cue tells the Agent the one immediate next action already implied by direct Engine facts. It is not permission, not a new status field, not routing authority, not completion proof, and not an entry/status/submit witness.
 
 ## CLI Exit-Code Convention
 

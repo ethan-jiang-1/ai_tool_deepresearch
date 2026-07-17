@@ -34,7 +34,7 @@ describe('continuation cue projection', () => {
         gate: 'wave1-complete',
       }),
       {
-        interaction: 'prohibited',
+        interaction: 'do_not_initiate',
         next_action: 'consume_check_next',
         node_ref: 'phases/phase-wave1.md',
         gate: 'wave1-complete',
@@ -53,7 +53,7 @@ describe('continuation cue projection', () => {
         failed_rule_ids: ['not-a-helper-input'],
       }),
       {
-        interaction: 'prohibited',
+        interaction: 'do_not_initiate',
         next_action: 'repair_and_rerun_gate',
         node_ref: 'phases/phase-wave1.md',
         gate: 'wave1-complete',
@@ -94,7 +94,7 @@ describe('continuation cue projection', () => {
         nodeRef: 'phases/phase-wave1.md',
       }),
       {
-        interaction: 'prohibited',
+        interaction: 'do_not_initiate',
         next_action: 'execute_loaded_node',
         node_ref: 'phases/phase-wave1.md',
       },
@@ -130,7 +130,6 @@ describe('continuation cue projection', () => {
     assertMinimalCue(
       continuationForClaimedWork({ claimedWorkIds: workIds }),
       {
-        interaction: 'prohibited',
         next_action: 'inspect_and_poll_claimed_work',
         work_ids: workIds,
       },
@@ -141,14 +140,14 @@ describe('continuation cue projection', () => {
 
   it('renders stable final Markdown marker block', () => {
     const block = renderContinuationBlock({
-      interaction: 'prohibited',
+      interaction: 'do_not_initiate',
       next_action: 'execute_loaded_node',
       node_ref: 'phases/phase-wave1.md',
     });
 
     assert.equal(block, [
       CONTINUATION_CUE_START,
-      'interaction: prohibited',
+      'interaction: do_not_initiate',
       'next_action: execute_loaded_node',
       'node_ref: phases/phase-wave1.md',
       CONTINUATION_CUE_END,

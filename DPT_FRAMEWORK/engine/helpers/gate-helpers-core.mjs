@@ -719,7 +719,7 @@ function applyEngineAttemptDiagnostics(bundlePath, result, fatigueThreshold = 3)
       check.fatigue_warning = true;
       advice.push(
         `[autonomous_continuation] Gate passed after ${attemptCount} Engine-visible attempt(s). Consume check.next through enter-phase: node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle ${bundlePath} --node ${check.next}`,
-        '[autonomous_continuation] Final report delivery happens at phase-final after final artifacts are written; high gate friction does not authorize premature chat synthesis.',
+        '[autonomous_continuation] Preserve this Gate verdict and follow the active rule and legal handoff. High Gate friction does not authorize framework-initiated questions, progress, or premature delivery.',
       );
     }
   } catch {

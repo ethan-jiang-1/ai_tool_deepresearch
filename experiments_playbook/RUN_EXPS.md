@@ -55,7 +55,7 @@
 | G24 wfn-rerun | case-301 | `exp_wfn_rerun/case-301-light-chain-dual-exit.md` | 轻量 chain truth：passed→readiness、rerun→phase-rerun、failed→no_transition；不 overclaim gate proof |
 | G24 wfn-rerun | case-302 | `exp_wfn_rerun/case-302-light-rerun-node-happy-path.md` | real HITL2 rerun output→witnessed phase-rerun→real rerun-ready→witnessed seed-topics |
 | G24 wfn-rerun | case-303 | `exp_wfn_rerun/case-303-light-normal-path-unchanged.md` | real proceed_to_readiness output 与 witnessed readiness status window 保持不变 |
-| G24 wfn-rerun | case-304 | `exp_wfn_rerun/case-304-light-gate-fail-max-count.md` | legal rerun entry 后 `rerun_count=3` 由 real rerun-ready gate fail closed |
+| G24 wfn-rerun | case-304 | `exp_wfn_rerun/case-304-light-gate-fail-max-count.md` | legal rerun entry 后 production-parsed active exclusive limit 由 real rerun-ready gate fail closed |
 | G24 wfn-rerun | case-305 | `exp_wfn_rerun/case-305-light-indeterminate-no-transition.md` | 边界：indeterminate outcomes→invalid_input |
 | G25 engine-boundary | case-401 | `exp_engine-boundary/case-401-light-full-boundary.md` | Agent/Engine 正向边界：queue demand → work-unit claim → fixture output/receipt/cache → submit → ledger → gate → trace |
 | G25 engine-boundary | case-402 | `exp_engine-boundary/case-402-light-complete-reject.md` | work-unit submit rejection matrix：missing receipt/output/cache、nonce mismatch、wrong work_id，均无 ledger append |
@@ -145,6 +145,9 @@ G14 `case-140` 至 `case-142` 已从 current runnable surface 删除，不保留
 | G25 engine-boundary | case-407 | `exp_engine-boundary/case-407-light-actor-preflight-fallback.md` | role-bound unavailable no-claim 零 authority mutation；显式单项 Phase Agent fallback submit/ledger provenance；later normal batch |
 | G27 evidence-extraction | case-163 | `exp_evidence-extraction/case-163-heavy-rerun-add-real-cache-trail.md` | 真实 Agent/Sub-agent continuation canary：historical normal prerequisite → real rerun add 2 Topics → normal Wave0/Wave1 + supplement → hint-only same-Gate repair → declaration fault/hash-identical recovery；无 Agent/search/fetch 时 NOT RUN |
 | G24 wfn-rerun | case-318 | `exp_wfn_rerun/case-318-heavy-rerun-direction-recovery.md` | real subject Agent 写 current direction，恢复 direction/profile crash window，并通过 real rerun gate/handoff；setup-only、无 external calls，不证明 downstream research |
+| G71 iterative-interaction | case-711 | `exp_iterative_interaction/case-711-heavy-hitl1-natural-acceptance.md` | real subject HITL1 recommendation + exact “按这个开始” + subject-owned profile/topic/probe/Gate；available 与 honest unavailable 双分支，无 independent subject 时 NOT RUN |
+| G71 iterative-interaction | case-712 | `exp_iterative_interaction/case-712-heavy-hitl2-natural-rerun.md` | real subject HITL2 review/one recommendation + exact资本约束自然语言 rerun + real Gate/handoff；无第二用户回复，无 independent subject 时 NOT RUN |
+| G71 iterative-interaction | case-713 | `exp_iterative_interaction/case-713-heavy-user-initiated-turn.md` | readiness 与 pre-artifact Final 两个 independent subject reply；A=B、精确 B→C allowlist、C=D、Final empty、root-traced transcripts；缺任一 subject 时 NOT RUN |
 | G60 autonomous-research-hardening | case-604 | `exp_autonomous-research-hardening/case-604-heavy-real-subagent-write-before-return.md` | BUG-039/040：真实 Sub-agent 写 result/receipt/output/cache 后才返回，nonce/identity 保持，submit 成功；无 native Sub-agent 时 NOT RUN |
 | G60 autonomous-research-hardening | case-605 | `exp_autonomous-research-hardening/case-605-heavy-bundle-containment-real-subagent.md` | BUG-037：真实 Sub-agent 写入全部留在 active bundle root，repo-root leak inspection clean；无 native Sub-agent 时 NOT RUN |
 

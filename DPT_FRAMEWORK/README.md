@@ -2,6 +2,8 @@
 
 Deep Research Framework (`DPT_FRAMEWORK/`) 的运行时入口说明。
 
+框架采用 recommendation-first 的两点交互节奏：HITL1 对齐，静默自主研究，HITL2 审阅，Final 交付；用户主动问答不会自动变成新的 checkpoint 或运行权力。
+
 > **最快触发**：把本目录下的 `RUN.md` 拖进对话——文件内容会直接进上下文，触发本框架，绕开"要不要进目录"的判断。
 
 ## 触发规则（最高优先）

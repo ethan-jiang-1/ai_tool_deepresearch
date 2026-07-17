@@ -85,7 +85,7 @@ describe('enter-phase CLI', { concurrency: false }, () => {
 
     assert.doesNotMatch(out.trimStart(), /^\{/);
     assertFinalCue(out, {
-      interaction: 'prohibited',
+      interaction: 'do_not_initiate',
       next_action: 'execute_loaded_node',
       node_ref: 'phases/phase-wave1.md',
     });

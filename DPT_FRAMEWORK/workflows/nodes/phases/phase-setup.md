@@ -74,13 +74,13 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle <path> --to setup_ready
 
 ## 7. On Gate Fail
 
-先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority，也不得用其 prose 猜 repair kind、字段或命令。按每个 independent primary hint 执行：
+先读取 CLI top-level `hints[]`；`inspect[]` / `advice[]` 只提供 compatible forensic detail，不是 action authority，也不得用其 prose 猜 repair kind、字段或命令。`repair_kind` 只分配责任，当前 loaded node 的 `stop` 才决定 interaction placement；本 phase 为 `stop: no`，任何分类都不得主动发起提问、状态/进度、approval、acknowledgement 或等待。用户主动的 current turn 可从 direct facts 得到直接回答，但回答不创建 checkpoint、state、permission、route、mutation 或 reentry authority。按每个 independent primary hint 执行：
 
 1. `repair_kind: agent_action`：由 Agent 对 `write_to` 已授权的 exact mutable surface 做最小修复，例如修正允许 Agent 修改的 YAML/Markdown field 或创建明确授权的 scaffold projection。
 2. `repair_kind: engine_operation`：由 Agent 执行 `write_to` 指向的 existing legal operation；status、trace、ledger、index、receipt、hash 和 Engine-owned scaffold/binding 不得直接编辑或按 template 手搓。
-3. `repair_kind: user_decision`：只询问真正缺失的 HITL1 语义；已有决定不得重复询问，记录后机械执行返回 Agent。
-4. `repair_kind: external_action`：只暴露不可代理的权限/环境前置条件；满足后由 Agent 继续。
-5. `repair_kind: missing_contract`：报告 exact unavailable contract boundary，不猜测 fallback、手工恢复 control authority 或建设第二路径。
+3. `repair_kind: user_decision`：识别真正缺失的 HITL1 语义；只有 existing HITL1 owner 可发起并记录，已有决定不得重复询问，本 phase 暂无 legal path 时保持 failed checkpoint。
+4. `repair_kind: external_action`：识别不可代理的权限/环境前置条件；不主动请求 acknowledgement，满足后由 Agent 继续。
+5. `repair_kind: missing_contract`：保留 exact unavailable contract boundary，不猜测 fallback、手工恢复 control authority、用户等待或建设第二路径。
 
 Hint 不创造 permission。完成可执行动作后 Agent MUST 运行该 hint 的 exact `rerun`，回到同一个 `setup-ready` checkpoint。Failed result 若没有可用 structured hint，不得从 `inspect[]`/`advice[]` 补猜 blocking repair；按 `missing_contract` 暴露最小边界。尤其 status drift、basename binding、缺失 control authority 或 HITL marker 必须遵循 hint 所指 owner operation/decision，不得直接改 `rb_status.json`、伪造 HITL marker 或用文件重建绕过 instantiation/HITL1 owner。
 

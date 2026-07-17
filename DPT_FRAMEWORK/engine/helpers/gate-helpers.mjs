@@ -110,3 +110,5 @@ export {
 } from './wave-depth-contracts.mjs';
 
 export { checkPhaseQueueDrained } from './phase-queue-drain.mjs';
+
+export { evaluateRerunAvailability } from './rerun-availability.mjs';

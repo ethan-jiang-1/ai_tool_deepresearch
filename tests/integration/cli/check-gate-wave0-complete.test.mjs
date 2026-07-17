@@ -175,7 +175,7 @@ describe('check-gate-wave0-complete', () => {
     assert.deepEqual(output.check.failed_rule_ids, []);
     assert.deepEqual(output.check.masked_rule_ids, []);
     assert.deepEqual(output.continuation, {
-      interaction: 'prohibited',
+      interaction: 'do_not_initiate',
       next_action: 'consume_check_next',
       node_ref: 'phases/phase-wave0.md',
       gate: 'wave0-complete',
@@ -241,7 +241,7 @@ describe('check-gate-wave0-complete', () => {
     assert.equal(output.check.passed, false);
     assert.notEqual(output.check.degraded, true);
     assert.deepEqual(output.continuation, {
-      interaction: 'prohibited',
+      interaction: 'do_not_initiate',
       next_action: 'repair_and_rerun_gate',
       node_ref: 'phases/phase-wave0.md',
       gate: 'wave0-complete',

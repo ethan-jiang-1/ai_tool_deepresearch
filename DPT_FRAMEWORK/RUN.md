@@ -1,17 +1,17 @@
 # RUN.md — DPT_FRAMEWORK 入口
 
-> **DPT_FRAMEWORK v0.31**
+> **DPT_FRAMEWORK v0.32**
 
 >**这个文件在对话中即触发**
 > 你读到这段，说明 DPT_FRAMEWORK 已经被选为本次研究的 entry path。
 > 这个文件就是"前门"：它的内容会直接进当前 agent 的上下文（Claude Code / Codex / Cursor / Windsurf 等任意 coding agent 通用），把后续命令执行交给 Agent。
 > 启动前置：人类应在 trigger 前完成 repo root `SETUP.md` 中的安装与 Coding Agent 权限 preflight。若后续发现宿主权限未准备好，把它当作 pre-trigger setup 漂移；不要把非 HITL `stop: no` phase 变成权限配置对话。
 
-## Current Release: v0.31
+## Current Release: v0.32
 
-- Wave2 reads one normalized structured pair projection through canonical Topic identity. Ordinary non-empty reduced coverage remains valid; only activated rerun `action:add` requires the exact full canonical pair universe.
-- Wave0/Wave1/Wave2 completion requires global queue quiescence: `active_window`, `refill_pool`, and `delegated_in_flight` must all be empty, with the Agent following the returned existing-owner action and same-check rerun.
-- Work-unit lifecycle identity remains strict while optional receipt `detail` accepts keyed objects or human-readable strings. Assigned `runtime-receipt.jsonl` is lifecycle evidence; `log-event.mjs` is optional diagnostics only.
+- HITL1 and HITL2 now begin with one grounded Agent recommendation and accept clear natural-language decisions without blanket reconfirmation; the phases between them remain silently autonomous.
+- A current user-initiated turn receives a factual reply without creating lifecycle, permission, route, mutation, pause, or durable-intent authority. Final remains terminal delivery.
+- Lifecycle cues now say `do_not_initiate` for non-terminal autonomous work, successful claims keep an action-only polling cue, and rerun availability/style projection share deterministic owners across normal and post-Final paths.
 
 ## 0. 禁用内置捷径（最高优先）
 
@@ -35,7 +35,7 @@
 
 At decision points, read any emitted `continuation` cue immediately: gate pass/fail, successful `enter-phase`, covered `advance-status`, and successful `operate-work-unit claim` now restate one next action. A cue is feedback projection only; it never replaces `check.next`, `load_complete`, `rb_status.current_node`, work-unit submit, gate pass, or Final delivery evidence.
 
-Interactive in-run checkpoints 只有 `hitl1`（定方向 / profile / topics）和 `hitl2`（审 synthesis）。Final 是 terminal non-interactive delivery，不是第三个交互 checkpoint；post-final feedback 通过 HITL2 repair/rerun 重新进入。其余 phase 均 `stop: no`，Agent 自行推进。
+Interactive in-run checkpoints 只有 `hitl1`（Agent 基于已知事实给一个推荐，用户定方向 / profile / topics）和 `hitl2`（Agent 总结当前研究并给一个推荐，用户决定交付或合法 rerun/repair）。两点之间及之后的非终端 `stop: no` phase 静默自主推进：框架不主动提问、确认、汇报进度或等待 acknowledgement；若用户主动发来的消息已经是当前 conversation turn，Agent 直接回答当前事实或最小能力边界，但该回答不创建 checkpoint、permission、route、mutation/reentry authority 或持久 mid-run intent，原有 autonomous next action 不变。Final 是 terminal delivery，不是第三个交互 checkpoint；它在 artifacts 存在后交付，明确 post-final rerun 才通过 accepted recovery 重新进入。
 
 Delegated sub-agent work uses the Engine-mediated work-unit path only: queue demand item -> `operate-work-unit claim` -> sub-agent task under bundle-root `_work_units/` -> verified files/cache/result/receipt under active `bundle_dir` -> `operate-work-unit submit` -> submitted ledger row -> gate. Normal `submit` accepts claimed attempts only and rejects terminal attempts. The only terminal recovery exception is explicit audited `operate-work-unit late-submit` for eligible `timed_out` attempts when no replacement has submitted. Do not use queue completion as delegated success; `operate-queue complete` is for non-delegated queue work. Bare runtime paths such as `_work_units/...`, `rb_queue.json`, `reference/`, `artifacts/`, `_cache/`, and `_logs/` resolve under the active bundle root selected above, not repo root or `DPT_FRAMEWORK/`.
 

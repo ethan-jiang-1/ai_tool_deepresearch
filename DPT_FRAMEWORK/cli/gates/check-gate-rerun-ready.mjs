@@ -15,6 +15,7 @@ import {
   emitGateResult,
   writeGateAttempt,
   checkPhaseHandoffPreflight,
+  evaluateRerunAvailability,
 } from '../../engine/helpers/gate-helpers.mjs';
 import {
   buildContractEvaluation,
@@ -107,8 +108,11 @@ function readProfile() {
 }
 
 const profile = readProfile();
+const rerunAvailability = profile.value
+  ? evaluateRerunAvailability({ definition, profile: profile.value, includeNextIncrement: false })
+  : null;
 let profileParentRuleId = null;
-if (!profile.value) {
+if (!profile.value || (rerunAvailability?.supported === false && /profile|HITL2 parent/.test(rerunAvailability.reason))) {
   profileParentRuleId = 'rerun_profile_prerequisite';
   findings.push(makeContractFinding({
     id: profileParentRuleId,
@@ -117,9 +121,11 @@ if (!profile.value) {
     classification: 'blocking',
     blockingBasis: profile.exists ? 'authority_integrity' : 'required_structure',
     surface: resolveFsPath(bundlePath, 'rb_profile.yaml'),
-    expected: 'The accepted HITL2 rerun decision profile exists and parses as YAML.',
-    observed: { file_exists: profile.exists, parsed: false, error: profile.error },
-    missingFact: `Rerun cannot read its accepted HITL2 decision profile because rb_profile.yaml is ${profile.exists ? 'unparseable' : 'absent'}${profile.error ? `: ${profile.error}` : '.'}`,
+    expected: 'The accepted HITL2 rerun decision profile exists, parses as YAML, and has object-shaped checkpoint/HITL2 parents.',
+    observed: { file_exists: profile.exists, parsed: Boolean(profile.value), error: profile.error, evaluator_reason: rerunAvailability?.reason || null },
+    missingFact: !profile.value
+      ? `Rerun cannot read its accepted HITL2 decision profile because rb_profile.yaml is ${profile.exists ? 'unparseable' : 'absent'}${profile.error ? `: ${profile.error}` : '.'}`
+      : `Rerun cannot interpret its accepted HITL2 decision profile: ${rerunAvailability.reason}.`,
     repairKind: 'missing_contract',
     writeTo: 'Accepted HITL2 profile recovery boundary for rerun',
     repair: 'Restore the accepted HITL2 decision profile through its owning lifecycle path; do not reconstruct rationale or rerun count by hand.',
@@ -145,7 +151,7 @@ function rerunCountFinding(rule, failure) {
       ? 'Rerun limit decision boundary: accept current results or start a new Deep Research run'
       : 'HITL2 rerun-count authority contract boundary',
     repair: limitReached
-      ? 'The accepted rerun limit has been reached; ask only whether to accept current results or start a new run.'
+      ? 'The accepted rerun limit has been reached. The existing HITL2/new-run decision owner must resolve accept-current-results versus start-new-run semantics before this same Gate can be rerun.'
       : 'Restore a valid recorded rerun count through the owning HITL2/profile contract.',
     detail: `[${rule.id}] ${failure.detail}`,
     maskedByRuleId: failure.maskedByRuleId || null,
@@ -180,7 +186,7 @@ for (const rule of definition.rules) {
   try {
     if (rule.check === 'field_non_empty') {
       const [, jsonPath] = rule.target.split('#/');
-      if (!profile.value) {
+      if (profileParentRuleId) {
         continue;
       }
       const value = resolveObjectPath(profile.value, jsonPath);
@@ -196,16 +202,15 @@ for (const rule of definition.rules) {
         };
       }
     } else if (rule.check === 'rerun_count_limit') {
-      if (!profile.value) continue;
-      const [, jsonPath] = rule.target.split('#/');
-      const value = resolveObjectPath(profile.value, jsonPath);
-      const count = value ?? 0;
-      if (typeof count === 'number' && count >= rule.value) {
+      if (profileParentRuleId) continue;
+      if (!rerunAvailability.supported) {
+        findingOverride = configurationFinding(rule, rerunAvailability.reason);
+      } else if (!rerunAvailability.available) {
         failure = {
-          expected: { operator: 'less_than', value: rule.value },
-          observed: count,
-          missingFact: `${rule.target} is ${count}, but the accepted rerun limit requires a value below ${rule.value}.`,
-          detail: `${rule.target}: rerun_count is ${count}, must be < ${rule.value}`,
+          expected: { operator: 'less_than', value: rerunAvailability.exclusiveLimit },
+          observed: rerunAvailability.evaluatedCount,
+          missingFact: `${rule.target} is ${rerunAvailability.evaluatedCount}, but the accepted rerun limit requires a value below ${rerunAvailability.exclusiveLimit}.`,
+          detail: `${rule.target}: rerun_count is ${rerunAvailability.evaluatedCount}, must be < ${rerunAvailability.exclusiveLimit}`,
           kind: 'limit_reached',
         };
       }

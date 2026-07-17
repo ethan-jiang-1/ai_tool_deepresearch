@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.32
+
+- Iterative research now uses recommendation-first HITL1 and HITL2 decisions around silent autonomous execution, answers current user-initiated turns without adding authority, keeps Final terminal, and makes lifecycle cues initiation-aware while successful claims stay action-only.
+- Rerun availability and research-style projection now have one deterministic interpretation each, and accepted post-Final reruns preserve continuous Gate, handoff, status, and recovery ownership without new control state.
+
 ## v0.31
 
 - Wave2 now derives normalized structured pair facts from canonical Topic identity, keeps ordinary reduced coverage compatible, and requires the exact full canonical pair universe only for activated rerun `action:add`.

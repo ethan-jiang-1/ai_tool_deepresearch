@@ -74,23 +74,16 @@ const DEFAULT_NODES_DIR = join(__dirname, 'nodes-workflow-chain');
 // WNC-008: Autonomous contract header injection
 // ═══════════════════════════════════════════════════════════════════════════
 
-const AUTONOMOUS_MODE_HEADER = `## AUTONOMOUS MODE -- YOU SHALL NOT SURFACE TO THE USER
+const AUTONOMOUS_MODE_HEADER = `## AUTONOMOUS MODE -- DO NOT INITIATE USER INTERACTION
 
-This is a non-terminal \`stop: no\` phase. You are executing autonomously without user interaction.
-
-**Absolute prohibitions:**
-- You SHALL NOT ask the user any question
-- You SHALL NOT request confirmation or present A/B choices
-- You SHALL NOT report execution progress
-- You SHALL NOT report idle/no-work state, "nothing left", or "done so far"
-- Gate failure is NOT an emergency — read inspect/advice, fix, and rerun
+This is a non-terminal \`stop: no\` phase. The framework and Agent SHALL NOT initiate a question, confirmation, acknowledgement, progress report, partial delivery, idle report, approval request, or continuation request.
 
 **Required behavior:**
-- Complete this node by draining/repairing/degrading as needed, then run the gate
-- Gate failure → read inspect/advice → repair → rerun gate with \`--attempt N\`
-- Persistent failure → record \`silent_degradation\` via \`log-event.mjs\` → switch strategy
-- Next phase comes ONLY from gate CLI \`check.next\`; after gate pass, consume it through \`enter-phase --bundle <path> --node <check.next>\` before source-gate status sync
-- This header is a principle guardrail; the phase body's node-specific Stop Behavior still governs queue, quality, and repair details
+- Continue node work from direct runtime facts: repair and rerun the same Gate, change strategy, consume a legal handoff, or hold silently
+- A user-initiated message already received as the current normal conversation turn may receive a direct factual answer; the reply creates no checkpoint, state, permission, route, mutation/reentry authority, pause, or durable intent
+- Gate failure is a checkpoint result, not interaction authority; use \`--attempt N\` and active-rule advice without copying a rule boundary
+- Next phase comes ONLY from Gate CLI \`check.next\`; consume it through \`enter-phase --bundle <path> --node <check.next>\` before source-gate status sync
+- This header is Agent-facing guidance only; it does not inspect chat state or create message transport, lifecycle, or routing authority
 
 **Reference:** \`shared/shared-silent-execution.md\` — the full silent execution behavioral contract (loaded via \`requires\`).
 
@@ -105,11 +98,10 @@ This is the terminal \`stop: no\` + \`gate: null\` phase. You are delivering the
 **Allowed:**
 - Write \`final/\` artifact(s) from verified bundle state
 - Keep terminal status from readiness: \`current_gate: readiness_passed\` / \`next_gate: none\`; Final has no gate and does not advance status
+- Answer an already-current user-initiated factual turn from verified facts without claiming an empty \`final/\` has been delivered; the reply adds no lifecycle authority
 
-**Absolute prohibitions:**
-- You SHALL NOT ask the user any question or request confirmation
-- You SHALL NOT present A/B choices or report progress
-- You SHALL NOT enter a post-delivery feedback loop
+**Do not initiate:**
+- Any question, confirmation request, wait, A/B choice, progress report, repair loop, or post-delivery feedback loop
 - User feedback goes through HITL2 rerun, not through this phase
 
 ---

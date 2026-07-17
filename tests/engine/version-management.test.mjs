@@ -41,6 +41,22 @@ describe('framework version management', () => {
     assert.doesNotMatch(run, /v0\.5 work-unit path/);
   });
 
+  it('keeps accepted version semantics generic while retaining historical scenario names', () => {
+    const runEntryDelta = read('openspec/changes/simplify-iterative-research-interaction/specs/run-entry/spec.md');
+    const versionDelta = read('openspec/changes/simplify-iterative-research-interaction/specs/version-management/spec.md');
+    const normativeVersionDelta = versionDelta
+      .split('\n')
+      .filter((line) => !line.startsWith('#### Scenario:') && !line.includes('@deprecated name'))
+      .join('\n');
+
+    assert.match(versionDelta, /#### Scenario: This change uses v0\.7/);
+    assert.match(versionDelta, /@deprecated name/);
+    assert.match(versionDelta, /proposal-declared target version/);
+    assert.match(runEntryDelta, /latest repo-root `CHANGELOG\.md` entry/);
+    assert.doesNotMatch(runEntryDelta, /SHALL state `DPT_FRAMEWORK v0\.[67]`/);
+    assert.doesNotMatch(normativeVersionDelta, /SHALL (?:be|receive|display).*v0\.[67]/);
+  });
+
   it('does not retain a framework-local changelog authority', () => {
     assert.equal(existsSync(join(REPO_ROOT, 'DPT_FRAMEWORK/CHANGELOG.md')), false);
   });

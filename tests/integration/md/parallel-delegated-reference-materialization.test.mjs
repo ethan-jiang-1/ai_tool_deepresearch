@@ -33,7 +33,7 @@ describe('parallel delegated phase execution guidance', () => {
     const text = read('DPT_FRAMEWORK/workflows/nodes/shared/shared-silent-execution.md');
     assert.match(text, /active poll-submit-repair-terminalize loop/i);
     assert.match(text, /notifications? are hints only/i);
-    assert.match(text, /operate-work-unit inspect/i);
+    assert.match(text, /operate-work-unit(?:\.mjs)? inspect/i);
     assert.match(text, /result[\s\S]*receipt[\s\S]*output[\s\S]*cache/i);
     assert.match(text, /reconstruct[\s\S]*in-flight[\s\S]*bundle truth/i);
     assert.match(text, /without waiting for.*user/i);
