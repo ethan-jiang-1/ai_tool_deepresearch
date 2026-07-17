@@ -655,6 +655,17 @@ LOC-009: logging-conventions — Agent log CLI (log-event.mjs --bundle --level -
 LOC-010: logging-conventions — Long-running phases emit stable diagnostics for post-mortem debugging
 LOC-011: logging-conventions — log-event.mjs always-zero behavior is a documented CLI exit-code exception
 
+# local-deepseek-claude-launcher
+LDC-001: local-deepseek-claude-launcher — Repo-owned pre-trigger Node launcher reads supported local DeepSeek configuration only from ignored repo-root .env
+LDC-002: local-deepseek-claude-launcher — Launcher parses configuration as data and constructs an isolated provider environment without shell evaluation or inherited routing contamination
+LDC-003: local-deepseek-claude-launcher — Anthropic-compatible model endpoint is explicit, credential-free in the URL, and restricted to loopback hosts
+LDC-004: local-deepseek-claude-launcher — Redacted preflight reports all deterministic readiness failures without launching Claude Code
+LDC-005: local-deepseek-claude-launcher — Normal launch preserves caller arguments, inherited stdio, and Claude Code exit or signal outcome
+LDC-006: local-deepseek-claude-launcher — Detectable setup and launch failures stop without remote, credential, settings, or provider fallback
+LDC-007: local-deepseek-claude-launcher — Tracked repo-root .env.example documents the safe contract while real .env and credentials remain ignored
+LDC-008: local-deepseek-claude-launcher — Launcher neither mutates Claude settings nor injects permission-bypass flags
+LDC-009: local-deepseek-claude-launcher — Host-tool documentation preserves the pre-trigger user, Agent, launcher, and research Engine authority boundary
+
 LFW-001: lifecycle-walker — Walker reads manifest and walks lifecycle (--bundle required, --manifest optional, 9 phases) [DEPRECATED]
 LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass (max 3 retries, escalation on exceeded limit) [DEPRECATED]
 LFW-003: "lifecycle-walker — Walker logs progress via logger (createLogger({ file: '<bundle>/_logs/run.log' })) [DEPRECATED]"

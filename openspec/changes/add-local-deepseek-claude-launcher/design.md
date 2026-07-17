@@ -2,98 +2,70 @@
 
 > Target version: v0.33
 
-## Core Principle: Self-Contained, Zero External Dependencies
+## Core Principle: One Repo-Owned Entry And One Explicit Config Source
 
-`DPT_FRAMEWORK/host_tools/` is a **fully self-contained** launcher directory. It depends on exactly two things:
+The launcher is a pre-trigger host tool with exactly three prerequisites:
 
 1. **The global `claude` command** on PATH (the official Claude Code CLI)
-2. **Its own `.env` file** in the same directory (`DPT_FRAMEWORK/host_tools/.env`)
+2. **Node.js >=20**, matching the repository runtime rule
+3. **The ignored repo-root `.env`**, as requested by the user
 
-That's it. No repo root. No settings JSON. No global Claude config mutation. No other files, directories, or environment assumptions. The launcher figures everything else out from its own location.
+There is no settings JSON, global Claude config mutation, runtime-bundle config, or second credential store. The launcher resolves the repository root from its own checked-in location and reads only the supported `DEEPSEEK_*` keys from the root `.env`.
 
-The launcher's CLI surface is **identical to `claude`** — same arguments, same exit codes. A coding agent invoking `./deepseek-claude-launcher.sh -p "hello"` experiences exactly what it expects from `claude -p "hello"`. No new concepts, no new flag vocabulary, no new interaction patterns.
+Except for the launcher-owned first argument `--check`, the launcher's CLI surface mirrors `claude`: caller arguments and inherited stdio pass through unchanged, and the child exit or signal outcome is propagated. A coding Agent invokes `node DPT_FRAMEWORK/host_tools/claude-deepseek.mjs -p "hello"` with the same Claude arguments it already knows.
 
 ## Direct Source of Record
 
 ```
-DPT_FRAMEWORK/host_tools/                  ←  self-contained directory
-  .env                                     ←  sole config source (git-ignored, never committed)
-  .env.example                             ←  committable variable contract & defaults
-  README.md                                ←  human/Agent: what this is, setup, usage
-  deepseek-claude-launcher.sh              ←  sole execution path (CLI surface ≡ claude)
+.env                                       ←  sole secret/config value source (git-ignored)
+.env.example                               ←  committable variable contract and safe examples
+DPT_FRAMEWORK/host_tools/
+  README.md                                ←  human/Agent setup and usage
+  claude-deepseek.mjs                      ←  sole execution path
 ```
 
-The only thing outside this directory that the launcher touches is the `claude` binary on PATH. Full stop.
+The README is explanatory only. The launcher code owns parsing, validation, environment projection, and child launch; the root `.env` owns configured values.
 
 ## Shortest Legal Loop
 
 ```
-user copies .env.example → .env, fills in credentials + local endpoint (one-time)
-  → user or Agent runs ./DPT_FRAMEWORK/host_tools/deepseek-claude-launcher.sh [--check]
-  → launcher checks: claude on PATH, .env exists and is readable
-  → three-phase env isolation: clean inherited → source .env → clean again → export Anthropic vars
-  → launcher validates: DEEPSEEK_API_KEY set, endpoint URL is valid (non-empty, http/https scheme, host present)
+user copies repo-root .env.example → .env, fills in credential + loopback endpoint + local model (one-time)
+  → user or Agent runs node DPT_FRAMEWORK/host_tools/claude-deepseek.mjs [--check]
+  → launcher checks: claude on PATH, root .env exists and is readable
+  → launcher parses only supported DEEPSEEK_* assignments as data, never as shell
+  → launcher builds a clean child env and validates required values plus loopback-only URL
   → --check: report all results with credential values redacted, exit 0/1/2
-  → normal mode: exec claude "$@" — transparent argument/exit-code passthrough
+  → normal mode: spawn claude with inherited stdio and exact caller arguments, then propagate its outcome
 ```
 
-No intermediate process, no state file, no daemon, no retry loop, no dependency on anything outside `host_tools/` except the `claude` binary.
+No state file, daemon, retry loop, settings mutation, provider fallback, or runtime-bundle dependency is introduced.
 
-## Bash vs Node.js Rationale
+## Node.js ESM And Path Resolution
 
-The launcher is a process wrapper that needs to:
+`AGENTS.md` requires Node.js >=20 and pure JavaScript ESM for repository code. The launcher therefore uses one `.mjs` file and Node built-ins (`node:fs`, `node:path`, `node:url`, `node:child_process`) rather than creating a Bash exception inside a change artifact.
 
-1. Manipulate environment variables for the current process
-2. Clean inherited state before applying new values
-3. `exec` into another binary (claude), replacing itself in the process tree
+The module resolves the repository root as two parents above its checked-in location:
 
-Bash is the correct tool for this specific concern. `exec claude "$@"` in bash is a true process replacement — the shell process _becomes_ claude. In Node.js, `child_process.spawn` keeps Node as a parent process, adding a layer of indirection with no benefit for a pass-through launcher.
-
-The project's "use Node.js for everything" rule applies to **application logic**: CLI tools, schema validation, gate evaluation, state management. The launcher has zero application logic — it is OS-level process management. This is the same category as a shebang line or a package.json `"scripts"` entry.
-
-## Self-Contained Path Resolution
-
-The launcher derives ALL paths from its own filesystem location:
-
-```bash
-# Resolve script directory robustly. Handles:
-#   ./deepseek-claude-launcher.sh        (relative, with dir)
-#   ../host_tools/deepseek-claude-launcher.sh (relative)
-#   /absolute/path/to/deepseek-claude-launcher.sh (absolute)
-# Does NOT handle bare-name PATH lookup (deepseek-claude-launcher.sh
-# found via PATH with no directory component) — in that case SCRIPT_DIR
-# would be CWD. Invoke with a path, or cd to the directory first.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-ENV_FILE="$SCRIPT_DIR/.env"
+```text
+DPT_FRAMEWORK/host_tools/claude-deepseek.mjs
+                 ../..  -> repo root -> .env
 ```
 
-No `$REPO_ROOT`, no `../..`, no traversal outside the directory. `pwd -P` resolves directory symlinks in the path but the script itself is NOT symlink-resolved — `BASH_SOURCE[0]` is the invocation path. This is deliberate: it allows tests to symlink the launcher into a temp directory with a test `.env` next to the symlink.
+Invocation CWD does not select configuration. Copying or symlinking the launcher outside this layout is unsupported because it would change the direct Source of Record. Tests copy the production module into a temporary repository-shaped directory and place the fixture `.env` at that temporary root.
 
-**Supported invocation patterns:**
-- `./deepseek-claude-launcher.sh` from within `host_tools/` ✓
-- `./DPT_FRAMEWORK/host_tools/deepseek-claude-launcher.sh` from repo root ✓
-- `/absolute/path/to/host_tools/deepseek-claude-launcher.sh` ✓
-- `bash DPT_FRAMEWORK/host_tools/deepseek-claude-launcher.sh` ✓
-
-**Not supported:** bare-name PATH lookup (`deepseek-claude-launcher.sh` with no directory component), or symlinks placed in a different directory without a companion `.env`.
+The Node parent remains present while Claude Code runs. It uses inherited stdio and forwards normal termination signals; it then preserves the numeric exit code or re-emits the child signal. Exact PID identity is not part of the contract.
 
 ## Environment Isolation Design (LDC-002)
 
-The isolation uses a three-phase approach:
+The root `.env` is parsed as data; it is never sourced and cannot execute command substitution or shell syntax. The parser supports the assignment form documented in `.env.example`, consumes only the supported `DEEPSEEK_*` keys, ignores unrelated root `.env` keys, and rejects malformed or duplicate supported assignments.
 
-**Phase 1 — Clean inherited**: Iterate over all currently-set environment variables via `env`. Unset every variable whose name matches `ANTHROPIC_*` or the specific `CLAUDE_CODE_*` keys (`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`, `CLAUDE_CODE_SUBAGENT_MODEL`), plus `ENABLE_TOOL_SEARCH` and `API_TIMEOUT_MS`. This prevents inherited provider state — from a previous Claude session, another project's `.env`, or shell profile — from contaminating the local endpoint.
-
-**Phase 2 — Load**: Source `.env` with `set -a` (auto-export). Before sourcing, verify the file is a readable regular file (`[[ -f "$ENV_FILE" && -r "$ENV_FILE" ]]`). `.env` MUST use the `DEEPSEEK_` prefix for all launcher variables; direct `ANTHROPIC_*` or `CLAUDE_CODE_*` assignments in `.env` are unsupported and will be caught by Phase 3.
-
-**Phase 3 — Clean again, then export**: After sourcing, unset any `ANTHROPIC_*` or `CLAUDE_CODE_*` variables that `.env` may have inadvertently set (defense in depth). Then export each `ANTHROPIC_*` / `CLAUDE_CODE_*` variable exclusively from its `DEEPSEEK_*` counterpart, with hardcoded defaults for optional vars.
-
-The `DEEPSEEK_` namespace plus the post-source clean guarantees that only the intended mapping takes effect, regardless of what the inherited environment or `.env` file contains.
+The child environment begins as a copy of the inherited process environment so normal `PATH`, terminal, locale, and Claude behavior remain available. Before launch it removes every inherited `ANTHROPIC_*` and `DEEPSEEK_*` key plus the explicitly owned routing keys `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`, `CLAUDE_CODE_SUBAGENT_MODEL`, `ENABLE_TOOL_SEARCH`, and `API_TIMEOUT_MS`. It then maps only parsed root `.env` values into the Claude-facing variables. Root `.env` keys are not bulk-exported to the child.
 
 ## Endpoint Validation (LDC-003)
 
-The launcher validates `DEEPSEEK_ANTHROPIC_BASE_URL` is non-empty and has a valid URL scheme (`http://` or `https://`) with a non-empty host. This prevents typos and empty configs from reaching claude. Any well-formed HTTP/HTTPS URL is accepted — the user chooses their endpoint.
+The launcher parses `DEEPSEEK_ANTHROPIC_BASE_URL` with the platform URL parser and accepts only `http:` or `https:` URLs whose hostname is loopback: `localhost`, a `.localhost` name, an address in `127.0.0.0/8`, or IPv6 `::1`. Embedded URL username/password, non-loopback hosts such as `api.deepseek.com`, wildcard bind addresses such as `0.0.0.0`, malformed URLs, and empty values fail with exit 2.
 
-If `DEEPSEEK_ANTHROPIC_BASE_URL` is unset, empty, or missing a valid scheme+host, exit 2.
+There is no remote override or fallback flag. Supporting a remote provider would be a separate change rather than a hidden escape hatch in a local-only launcher.
 
 ## `--check` Preflight Mode (LDC-004)
 
@@ -108,9 +80,10 @@ When the first argument is `--check`, the launcher runs **all** validations (not
 Example output (all passing):
 ```
 [OK] claude: /usr/local/bin/claude
-[OK] .env: /path/to/DPT_FRAMEWORK/host_tools/.env
+[OK] .env: /path/to/repo/.env
 [OK] DEEPSEEK_API_KEY: set (value redacted)
-[OK] DEEPSEEK_ANTHROPIC_BASE_URL: https://api.deepseek.com/anthropic (valid)
+[OK] DEEPSEEK_ANTHROPIC_BASE_URL: http://127.0.0.1:8080/anthropic (local)
+[OK] DEEPSEEK_MODEL: local-deepseek (set)
 [OK] Ready — all preflight checks passed.
 ```
 
@@ -118,7 +91,7 @@ No token, no key material — nothing that would leak credentials into terminal 
 
 ## Argument and Exit Code Passthrough (LDC-005, LDC-008)
 
-The launcher uses `exec claude "$@"` to replace itself with claude. All arguments after the script name are forwarded verbatim. Claude Code's exit code becomes the launcher's exit code.
+The launcher spawns `claude` without a shell, forwards all normal-mode arguments verbatim, inherits stdin/stdout/stderr, and propagates Claude Code's exit or signal outcome.
 
 The launcher does NOT inject:
 - `--settings <path>` — no separate settings file
@@ -133,17 +106,17 @@ The user may pass any Claude-supported flag explicitly (including `--allow-dange
 
 The launcher follows the project's exit code convention: 0 = success, 1 = external dependency missing, 2 = configuration error.
 
-**Pre-launch exit codes** (before `exec claude`; used by both `--check` and normal mode validation):
+**Pre-launch exit codes** (before spawning `claude`; used by both `--check` and normal mode validation):
 
 | Code | Condition |
 |---|---|
-| `0` | All validations passed (`--check` reports ready, or normal mode proceeds to exec) |
+| `0` | All validations passed (`--check` reports ready, or normal mode proceeds to child launch) |
 | `1` | `claude` command not found on PATH |
-| `2` | Configuration error: `.env` missing/not a regular file/not readable, `DEEPSEEK_API_KEY` unset/empty, `DEEPSEEK_ANTHROPIC_BASE_URL` unset/empty or invalid |
+| `2` | Configuration error: root `.env` missing/unreadable, supported assignment invalid, required key/model missing, or endpoint malformed/non-loopback |
 
 In `--check` mode: all checks run to completion. Exit code is the worst severity found (2 if any config error present; 1 if only non-config failures; 0 if all pass).
 
-**Post-exec exit codes** (normal mode only): once `exec claude "$@"` succeeds, the launcher process _is_ the claude process. Claude's exit code becomes the launcher's exit code — whatever claude returns (0, 1, 2, 42, etc.). The launcher itself no longer controls the exit code at this point.
+**Post-launch outcomes** (normal mode only): Claude's numeric exit code becomes the launcher's exit code; signal termination is propagated as the same signal. A child-spawn failure is a repairable external dependency failure and exits 1.
 
 ## Env Var Mapping Table
 
@@ -153,41 +126,42 @@ All variables use the `DEEPSEEK_` prefix in `.env` to avoid collision with `ANTH
 |---|---|---|---|
 | `DEEPSEEK_API_KEY` | `ANTHROPIC_AUTH_TOKEN` | **Yes** | — |
 | `DEEPSEEK_ANTHROPIC_BASE_URL` | `ANTHROPIC_BASE_URL` | **Yes** | — |
-| `DEEPSEEK_ANTHROPIC_MODEL` | `ANTHROPIC_MODEL` | No | `opus` |
-| `DEEPSEEK_ANTHROPIC_DEFAULT_OPUS_MODEL` | `ANTHROPIC_DEFAULT_OPUS_MODEL` | No | `deepseek-v4-pro` |
-| `DEEPSEEK_ANTHROPIC_DEFAULT_SONNET_MODEL` | `ANTHROPIC_DEFAULT_SONNET_MODEL` | No | `deepseek-v4-pro` |
-| `DEEPSEEK_ANTHROPIC_DEFAULT_HAIKU_MODEL` | `ANTHROPIC_DEFAULT_HAIKU_MODEL` | No | `deepseek-v4-flash` |
-| `DEEPSEEK_CLAUDE_CODE_SUBAGENT_MODEL` | `CLAUDE_CODE_SUBAGENT_MODEL` | No | `deepseek-v4-pro` |
-| `DEEPSEEK_CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | No | `1` |
-| `DEEPSEEK_ENABLE_TOOL_SEARCH` | `ENABLE_TOOL_SEARCH` | No | `false` |
+| `DEEPSEEK_MODEL` | `ANTHROPIC_MODEL` and alias fallback | **Yes** | — |
+| `DEEPSEEK_OPUS_MODEL` | `ANTHROPIC_DEFAULT_OPUS_MODEL` | No | `DEEPSEEK_MODEL` |
+| `DEEPSEEK_SONNET_MODEL` | `ANTHROPIC_DEFAULT_SONNET_MODEL` | No | `DEEPSEEK_MODEL` |
+| `DEEPSEEK_HAIKU_MODEL` | `ANTHROPIC_DEFAULT_HAIKU_MODEL` | No | `DEEPSEEK_MODEL` |
+| `DEEPSEEK_SUBAGENT_MODEL` | `CLAUDE_CODE_SUBAGENT_MODEL` | No | `DEEPSEEK_MODEL` |
 | `DEEPSEEK_API_TIMEOUT_MS` | `API_TIMEOUT_MS` | No | `3000000` |
+
+`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` and `ENABLE_TOOL_SEARCH=false` are launcher-owned fixed values, not additional user decisions.
 
 ## Test Strategy
 
-Integration tests use `node:test` + `node:assert/strict` + `spawnSync`. A fake `claude` executable (small bash script) records its invocation environment and arguments to a JSON file, then exits with a configurable code.
+Integration tests use `node:test` + `node:assert/strict` + `spawnSync`. A test-owned executable Node fixture named `claude` records its invocation environment and arguments to JSON, mirrors test input/output, and exits with a configurable code. It proves only the launcher boundary, not Claude Code or model behavior.
 
-Each test case creates a temp directory under `tests/.test-tmp/` with the launcher's self-contained structure:
+Each test case creates a temporary repository-shaped directory under `tests/.test-tmp/`:
 ```
 tests/.test-tmp/deepseek-launcher-XXXXX/
+  .env                                      # non-secret test config at temp repo root
   DPT_FRAMEWORK/host_tools/
-    .env                                    # test .env
-    deepseek-claude-launcher.sh             # symlink → real launcher
+    claude-deepseek.mjs                     # copy of production launcher
   fake_bin/
     claude                                   # fake executable
 ```
 
-The temp dir is the CWD for `spawnSync`, and `fake_bin/` is prepended to `PATH`. The launcher resolves `.env` from `$SCRIPT_DIR/.env` (its own directory), so no repo-root mirroring is needed.
+The temp tree is repository-shaped, and `fake_bin/` is prepended to `PATH`. No real credential, network call, Claude binary, or model is used.
 
-**12 test cases** covering:
+Focused cases cover:
 - --check passes with valid config → exit 0
-- --check fails on: missing .env → exit 2, empty key → exit 2, invalid endpoint URL → exit 2
+- --check fails on missing root `.env`, empty key/model, malformed URL, remote host, wildcard host, or URL-embedded credentials → exit 2
 - --check with multiple failures (claude missing + config error) → exit 2, both reported
-- Valid endpoint URL accepted → launches fake claude
-- Argument passthrough verification
-- Exit code preservation (fake claude exit 42 → launcher exit 42)
-- Three-phase ANTHROPIC_* env isolation from inherited values
+- Loopback endpoints (`localhost`, `127/8`, `::1`) are accepted
+- Argument and inherited stdio passthrough
+- Exit code and signal outcome preservation
+- Inherited `ANTHROPIC_*`/`DEEPSEEK_*` routing contamination is removed and root `.env` wins
+- Root `.env` is not shell-evaluated and unrelated keys are not bulk-exported
 - No --allow-dangerously-skip-permissions injection
-- --check does not exec claude
+- --check does not launch claude
 - Fails when claude missing from PATH → exit 1
 
 Tests never use real credentials or call real Claude/DeepSeek.
@@ -199,35 +173,33 @@ Tests never use real credentials or call real Claude/DeepSeek.
 - `--settings` flag loading a separate JSON file
 - `--allow-dangerously-skip-permissions` as default behavior
 - Banner echoing endpoint/model info to stdout (could leak to logs)
-- Credential-bearing file outside the repo
 - Global Claude settings mutation
-- Dependency on repo root path structure (`../..` traversal)
 
 **Added** (net-new, justified):
-- Endpoint URL validation (catches typos and empty configs)
+- Loopback-only endpoint validation (blocks accidental remote model routing)
 - `--check` preflight with credential redaction
 - `.env.example` as committable contract
-- `host_tools/README.md` as self-contained documentation
-- Integration test coverage (14 cases)
+- `host_tools/README.md` as the focused usage and boundary document
+- Focused integration coverage of the launcher boundary
 
 **Avoided** (explicitly NOT produced):
 - Research workflow node, Engine API, bundle state, command playbook
 - Background service, daemon, provider fallback, auto-retry tree
 - New npm dependency
 - Second CLI controller, configuration generator, or permission bypass
-- Any dependency on files or directories outside `host_tools/` except the global `claude` binary
+- Any runtime-bundle, workflow, Engine, global settings, or remote provider dependency
 
 ## Simplicity Admission Test
 
 **1. 最短合法闭环和直接 Source of Record 是什么？**
 
-`.env` (in host_tools/) → launcher → env isolation → endpoint validate → exec claude. Source of Record: `host_tools/.env` (config), `host_tools/.env.example` (contract), `host_tools/deepseek-claude-launcher.sh` (execution). One directory, one script, zero external file dependencies except the global `claude` binary.
+repo-root `.env` → launcher → isolated child env → loopback endpoint validation → Claude Code child. Source of Record: root `.env` (values), root `.env.example` (contract), and `host_tools/claude-deepseek.mjs` (execution). No settings JSON or second credential store.
 
 **2. 这个 change 删除、合并或避免了哪份复杂度？**
 
-Deletes: personal script outside repo, hardcoded credentials, settings JSON file, default permission bypass flag, repo-root path dependency. Avoids: new controller, daemon, workflow node, Engine API, bundle state, provider abstraction, retry tree.
+Deletes: reliance on a personal script, hardcoded credentials, settings JSON file, and default permission bypass flag. Avoids: new controller, daemon, workflow node, Engine API, bundle state, provider abstraction, retry tree, or remote fallback.
 
-The only added complexity is the endpoint URL check — a non-empty + scheme + host validation that catches typos and empty configs before they reach claude.
+The added control is bounded to one data-only config parser, one loopback URL check, and one child-process boundary. Together they replace shell evaluation, credential/settings duplication, and inherited provider ambiguity rather than layering on another runtime controller.
 
 ## Helper Direction Review
 
@@ -237,7 +209,7 @@ The only added complexity is the endpoint URL check — a non-empty + scheme + h
 
 **2. 用户决定后，哪些步骤应立即回到 Agent 执行？**
 
-配置好 `host_tools/.env` 后，Agent 机械执行 `./deepseek-claude-launcher.sh --check`（验证）和 `./deepseek-claude-launcher.sh <args...>`（启动）。launcher 不创造新决策点，不询问用户，不改变权限模型。Agent 在现有权限内执行，Engine 不参与。
+配置好 repo-root `.env` 后，Agent 机械执行 `node DPT_FRAMEWORK/host_tools/claude-deepseek.mjs --check`（验证）和同一 launcher 加 Claude 参数（启动）。launcher 不创造新决策点，不询问用户，不改变权限模型。Agent 在现有权限内执行，Engine 不参与。
 
 ## Boundary
 
@@ -248,6 +220,13 @@ The launcher is a **pre-trigger host tool**. It runs before Claude Code's initia
 - Create runtime artifacts, receipts, or trace events
 - Influence research phase routing or HITL checkpoints
 - Establish a new lifecycle, permission model, or controller surface
-- Depend on any file or directory outside `DPT_FRAMEWORK/host_tools/` except the `claude` binary
+- Read any repo-root value source other than the ignored `.env`
 
-The launcher owns only: finding `claude`, loading its own `.env`, cleaning env, validating local endpoint, and exec'ing `claude`. Claude Code and DPT_FRAMEWORK operate exactly as they do today after the exec.
+The launcher owns only: finding `claude`, parsing supported root `.env` keys as data, constructing the child environment, validating the loopback endpoint, and launching Claude Code. Claude Code and DPT_FRAMEWORK otherwise operate as they do today.
+
+## Risks / Trade-offs
+
+- **Node remains the parent process** → inherit stdio, forward normal signals, and test exit/signal propagation; exact PID replacement is explicitly out of scope.
+- **A root `.env` may contain unrelated or richer syntax** → consume only documented `DEEPSEEK_*` assignments and never evaluate the file as shell; malformed supported assignments fail with one direct correction path.
+- **Claude Code is an external binary** → the launcher can enforce the configured model endpoint and disable nonessential traffic, but does not claim to prove every unrelated network behavior of future Claude versions.
+- **Local gateways use varied model names** → require one explicit `DEEPSEEK_MODEL` and let optional aliases fall back to it instead of hardcoding speculative DeepSeek version names.

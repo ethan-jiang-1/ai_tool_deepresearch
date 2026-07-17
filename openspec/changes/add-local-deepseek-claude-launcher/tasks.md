@@ -2,40 +2,31 @@
 
 > Target version: v0.33
 
+## 0. Apply gate
+
+- [ ] 0.1 @impl VER-001, VER-003: Before editing target code, run `node openspec/governance/check-verification-routing.mjs --change add-local-deepseek-claude-launcher --mode plan`. Stop and repair the change-root plan if it does not pass.
+
 ## 1. Scaffold
 
-- [ ] 1.1 @impl LDC-001, LDC-009: Create `DPT_FRAMEWORK/host_tools/` directory. Done when the directory exists and is ready to receive the launcher script, `.env.example`, and README.
+- [ ] 1.1 @impl LDC-001, LDC-009: Create `DPT_FRAMEWORK/host_tools/`. Done when the directory is ready to receive the Node launcher and README; it SHALL NOT contain `.env` or another credential store.
 
-- [ ] 1.2 @impl LDC-007: Create `DPT_FRAMEWORK/host_tools/.env.example`. Document every `DEEPSEEK_*` variable the launcher reads, with placeholder values for required vars (`DEEPSEEK_API_KEY=sk-your-key-here`, `DEEPSEEK_ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic`) and commented-out defaults for optional vars. Include a header comment explaining: copy to `.env`, fill in values, run `--check`. Done when the file contains no real credentials, documents the endpoint URL configuration, and is self-explanatory when read alongside `README.md`.
+- [ ] 1.2 @impl LDC-007: Create repo-root `.env.example`. Document required `DEEPSEEK_API_KEY`, loopback-only `DEEPSEEK_ANTHROPIC_BASE_URL` (for example `http://127.0.0.1:8080/anthropic`), and `DEEPSEEK_MODEL`, plus optional model-alias and timeout keys. Include only placeholders and safe local examples. Done when `git check-ignore .env` succeeds and `.env.example` contains no real credential or remote endpoint example.
 
-- [ ] 1.3 @impl LDC-001 through LDC-009: Add nine requirement ID entries to `openspec/governance/req-registry.yaml` under a new `# local-deepseek-claude-launcher` group header. Insert between the LFW group (line 661) and GSK-004 (line 662). Reference the delta spec for exact descriptions. Done when all nine IDs are registered in alphabetical order within the group, no duplicates exist, and the `prefixes:` block already has `LDC: local-deepseek-claude-launcher`.
+- [ ] 1.3 @impl LDC-001 through LDC-009: Confirm the proposal-time `LDC` prefix and `LDC-001` through `LDC-009` entries remain registered under `# local-deepseek-claude-launcher`; do not allocate replacements or duplicate IDs.
 
 - [ ] 1.4 Run `node openspec/governance/check-project-reqs.mjs` to establish baseline. Since the delta spec already exists, expected result: LDC-001 through LDC-009 show as `pending` (found in the active change delta). Record the baseline; any unexpected duplicates or orphans must be resolved before proceeding.
 
 ## 2. Launcher script and README
 
-- [ ] 2.1 @impl LDC-009: Create `DPT_FRAMEWORK/host_tools/README.md`. The README SHALL document:
-  - What this directory is: a self-contained local DeepSeek Claude Code launcher
-  - Zero external dependencies: only needs the global `claude` command on PATH
-  - Setup: `cp .env.example .env` → edit `.env` (two required vars: `DEEPSEEK_API_KEY` + `DEEPSEEK_ANTHROPIC_BASE_URL`)
-  - Verify: `./deepseek-claude-launcher.sh --check`
-  - Launch: `./deepseek-claude-launcher.sh [any claude args...]`
-  - Key fact: CLI surface is identical to `claude` — same arguments, same exit codes
-  - Everything (script, config, docs) lives in this directory; nothing else to install
-  - Done when a first-time user can configure and launch from the README alone, without reading any other file.
+- [ ] 2.1 @impl LDC-009: Create `DPT_FRAMEWORK/host_tools/README.md`. Document Node.js >=20 and `claude` prerequisites; root `.env.example` → root `.env` setup; three required values; loopback-only endpoint policy; `node DPT_FRAMEWORK/host_tools/claude-deepseek.mjs --check`; normal launch with Claude arguments; user/Agent/launcher/Engine responsibilities; and the absence of settings mutation, remote fallback, or default permission bypass.
 
-- [ ] 2.2 @impl LDC-001, LDC-002, LDC-003, LDC-004, LDC-005, LDC-006, LDC-008: Implement `DPT_FRAMEWORK/host_tools/deepseek-claude-launcher.sh`. The script SHALL:
-  - Resolve `.env` from `$SCRIPT_DIR/.env` using `BASH_SOURCE[0]` + `dirname` + `cd` + `pwd -P` — no repo-root dependency; document that bare-name PATH lookup is unsupported (LDC-001)
-  - Check `claude` on PATH, exit 1 if missing (LDC-006)
-  - Check `.env` exists as a readable regular file (`[[ -f "$ENV_FILE" && -r "$ENV_FILE" ]]`), exit 2 if missing, not a file, or unreadable (LDC-006)
-  - **Phase 1**: Enumerate and unset all `ANTHROPIC_*`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`, `CLAUDE_CODE_SUBAGENT_MODEL`, `ENABLE_TOOL_SEARCH`, `API_TIMEOUT_MS` from inherited env (LDC-002)
-  - **Phase 2**: Source `.env` with `set -a` for auto-export (LDC-001)
-  - **Phase 3**: Unset any `ANTHROPIC_*`/`CLAUDE_CODE_*` again (defense against wrong prefix in .env), then export all Anthropic vars exclusively from `DEEPSEEK_*` counterparts with documented defaults (LDC-002)
-  - Validate `DEEPSEEK_API_KEY` is non-empty, exit 2 if missing (LDC-006)
-  - Validate `DEEPSEEK_ANTHROPIC_BASE_URL` is non-empty with `http://` or `https://` scheme and non-empty host, exit 2 if unset, empty, or invalid (LDC-003)
-  - In `--check` mode: run ALL checks (not fail-fast), report each with `[OK]`/`[FAIL]`, redact API key value, exit code = worst severity (0=all pass, 1=only claude-missing, 2=any config error), do NOT launch claude (LDC-004)
-  - In normal mode: after all validations pass, `exec claude "$@"` — transparent argument and exit-code passthrough, no injected flags (LDC-005, LDC-008)
-  - Done when the script is executable, passes shellcheck (if available), and manual `--check` with a test `.env` in the same directory produces correct output.
+- [ ] 2.2 @impl LDC-001, LDC-002, LDC-003, LDC-004, LDC-005, LDC-006, LDC-008: Implement executable `DPT_FRAMEWORK/host_tools/claude-deepseek.mjs` with Node built-ins only. It SHALL:
+  - Derive repo-root `.env` from `import.meta.url`, independent of CWD; reject missing/unreadable config with exit 2.
+  - Parse only documented `DEEPSEEK_*` assignments as data; never source/evaluate shell; reject malformed/duplicate supported keys and require non-empty API key, local endpoint, and model.
+  - Build the child env from inherited process state after deleting all inherited `ANTHROPIC_*`/`DEEPSEEK_*` values and owned routing keys; map only parsed config, with optional aliases falling back to `DEEPSEEK_MODEL`.
+  - Accept only HTTP/HTTPS loopback hosts (`localhost`, `.localhost`, `127/8`, `::1`) without URL credentials; reject remote/wildcard/malformed endpoints with no override.
+  - Implement redacted all-checks `--check` with exit 0/1/2 and no child launch.
+  - Spawn `claude` without a shell in normal mode, preserve exact caller arguments and inherited stdio, propagate numeric exit or signal outcome, and inject no Claude flags/settings.
 
 ## 3. Delta spec
 
@@ -43,34 +34,26 @@
 
 ## 4. Integration tests
 
-- [ ] 4.1 @impl LDC-001 through LDC-009: Create `tests/integration/host_tools/deepseek-claude-launcher.test.mjs`. The test file SHALL:
+- [ ] 4.1 @impl LDC-001 through LDC-009: Create `tests/integration/host-tools/claude-deepseek.test.mjs`. The test file SHALL:
   - Use `node:test` + `node:assert/strict` + `spawnSync` (following existing integration test patterns)
-  - Create a per-test temp directory under `tests/.test-tmp/` with the launcher's self-contained structure: `.env` and `deepseek-claude-launcher.sh` symlink both inside a `DPT_FRAMEWORK/host_tools/` subdirectory, plus `fake_bin/claude`
-  - Include a fake `claude` bash script that records its invocation (args + relevant env vars) to a JSON file and exits with `$CLAUDE_FAKE_EXIT_CODE` (default 0)
+  - Create a per-test temporary repository shape with root `.env`, a copied production launcher under `DPT_FRAMEWORK/host_tools/`, and a test-owned executable Node fixture named `claude` on `PATH`
+  - Record fixture args/relevant env and configurable exit behavior without a real Claude binary, credential, model, or network call
   - Clean up temp directories in `after()` hook
-  - Cover 12 cases:
-    1. --check passes with valid config → exit 0, all [OK]
-    2. --check fails when .env is missing → exit 2
-    3. --check fails when DEEPSEEK_API_KEY is empty → exit 2
-    4. --check with both claude-missing and config-error → exit 2, both failures reported
-    5. Rejects invalid endpoint URL (missing scheme) → exit 2
-    6. Accepts valid endpoint `https://api.deepseek.com/anthropic` and launches fake claude
-    7. Arguments are passed through to fake claude
-    8. Exit code is preserved from fake claude (e.g., exit 42)
-    9. Inherited ANTHROPIC_BASE_URL is cleaned (three-phase isolation verified)
-    10. No --allow-dangerously-skip-permissions in default invocation
-    11. --check mode does not exec claude
-    12. Fails when claude is not on PATH → exit 1
-  - Done when `node --test tests/integration/host_tools/deepseek-claude-launcher.test.mjs` reports all 12 tests pass.
+  - Cover successful redacted `--check`; accumulated failures; missing key/model/config/claude; accepted `localhost`/`127/8`/`::1`; rejected remote/wildcard/credential-bearing/malformed URLs; no shell evaluation or root-env bulk export; inherited routing cleanup; exact arguments; inherited stdio; child exit/signal outcome; and absence/preservation of permission flags according to caller input
+  - Done when `node --test tests/integration/host-tools/claude-deepseek.test.mjs` passes and the credential sentinel is absent from stdout/stderr.
 
 ## 5. Documentation and version
 
-- [ ] 5.1 Add a one-line pointer to `SETUP.md` §6 (Trigger The Framework) or a new §7: mention that `DPT_FRAMEWORK/host_tools/` contains a self-contained local DeepSeek launcher, see its `README.md` for setup. Keep it minimal — `host_tools/README.md` is the authoritative documentation. Done when the pointer is present and consistent with the README.
+- [ ] 5.1 Add a concise pointer to `SETUP.md` §6 or a new §7: mention the optional local-only DeepSeek Claude launcher, root `.env.example`, and `DPT_FRAMEWORK/host_tools/README.md`. Keep the README authoritative and do not place credentials or permission grants in setup prose.
 
-- [ ] 5.2 @impl VEM-001, VEM-002, VEM-003: Update `CHANGELOG.md` — prepend a `## v0.33` entry before `## v0.32` with a one-sentence summary of the self-contained launcher addition. Update `DPT_FRAMEWORK/RUN.md` — change the version banner on line 2 from `v0.32` to `v0.33`, change `## Current Release: v0.32` to `## Current Release: v0.33` on line 10, and add a short release note. Done when both files are consistent and the RUN.md banner matches the CHANGELOG top entry.
+- [ ] 5.2 @impl VEM-001, VEM-002, VEM-003: Update `CHANGELOG.md` — prepend a `## v0.33` entry before `## v0.32` with a one-sentence summary of the local-only host launcher addition. Update `DPT_FRAMEWORK/RUN.md` — change the version banner on line 2 from `v0.32` to `v0.33`, change `## Current Release: v0.32` to `## Current Release: v0.33` on line 10, and add a short release note. Done when both files are consistent and the RUN.md banner matches the CHANGELOG top entry.
 
 ## 6. Governance checks
 
 - [ ] 6.1 Run `node openspec/governance/check-project-reqs.mjs`. Expected: PASS with 0 duplicates, 0 unregistered, 0 orphans, 0 reusedRetired. LDC-001 through LDC-009 should be `pending` (found in the active delta spec). If any issues are found, fix the registry or spec before marking done.
 
 - [ ] 6.2 Run `node openspec/governance/check-project-specs.mjs`. Expected: PASS with 0 deltaHeaderInMain, 0 missingPurpose, 0 missingRequirements, 0 missingReqHeader. If any issues are found, fix the spec before marking done.
+
+- [ ] 6.3 Run `openspec validate add-local-deepseek-claude-launcher --strict`, the focused integration test, and `git diff --check`; repair any failure before completion.
+
+- [ ] 6.4 @impl VER-001, VER-003: Run `node openspec/governance/check-verification-routing.mjs --change add-local-deepseek-claude-launcher --mode assets` after the declared test asset exists and before archive.
