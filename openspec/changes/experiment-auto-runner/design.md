@@ -17,23 +17,27 @@
 
 **Non-Goals:**
 - 不替换 `run-fixture-backed-case.mjs`
-- 不修改现有 TUI 交互模式（仅重命名 `RUN_EXPS.md` → `RUN_TUI_EXPS.md`）
+- 不修改现有 TUI 交互协议的行为语义（`RUN_EXPS.md` 拆分为 MANIFEST + `RUN_TUI_EXPS.md`，Agent 的"读 instruction → 执行 → 裁决 → 清理"流程不变）
 - 不引入新 npm 依赖
 - 不修改 Engine、CLI、schema、phase node
 
 ## Decisions
 
-### Decision 1: 两份 Runner Instruction，Playbook 不动
+### Decision 1: 共享 Case 清单 + 两份 Runner Instruction，Playbook 不动
 
-**选择**：`RUN_EXPS.md` 重命名为 `RUN_TUI_EXPS.md`（内容不变），新增 `RUN_CLI_EXPS.md`。Playbook 的 `case-*.md` 文件不修改。
+**选择**：原 `RUN_EXPS.md`（case 清单 + TUI 执行规则混在一起）重构为三个文件：
 
-**为什么**：playbook 定义"验证什么"（gate 语义、trace 契约、断言逻辑），这是不变的。runner instruction 定义"在不同的执行模式下怎么跑"——TUI 模式下 Agent 自己裁决，CLI 模式下 Runner 裁决。分开后各自独立演进，不互相污染。
+1. **`PLAYBOOK_MANIFEST.md`**（新增，~130 行）：所有 case 的权威清单。内容来自原 RUN_EXPS.md：
+   - 四档表格：Light（~35 条）、Standard（~27 条）、Heavy（~17 条）、Human（~1 条）
+   - 选择规则："快点 / 跑轻的"→Light、"跑标准的"→Standard、"跑重的"→Heavy、"跑没过的 / 重跑失败的"→只重跑 FAIL
+   - 迁移记录（G14 Migration Map 等）
+   - 两份 runner instruction 均引用此文件，消除重复维护
 
-`RUN_CLI_EXPS.md` 包含 CLI 模式特有的指令：
-- Step 1 加 `--target-dir .exp-bundles`
-- Skip verdict step（Runner 会从 trace 自行裁决）
-- Skip cleanup step（Runner 处理清理）
-- 执行完打印 `BUNDLE=<absolute-path>`
+2. **`RUN_TUI_EXPS.md`**（重构）：TUI 交互模式的执行规则——Agent 读 MANIFEST 知道 case 列表，按 TUI 协议逐 case 执行（含 verdict step、cleanup step），可反问用户。精简为纯执行协议（~100 行）。
+
+3. **`RUN_CLI_EXPS.md`**（新增）：CLI 自动化模式的执行规范——明确 Runner（JS）和 Agent 的分工。Agent 读到这个文件就知道自己是 headless 执行者，按 CLI 协议跑（`--target-dir .exp-bundles`、skip verdict、skip cleanup、打印进展标记和 `BUNDLE=<path>`）。Runner 负责发现 playbook、spawn Agent、读 trace 裁决、health check、cleanup。
+
+**为什么**：case 清单是"数据"（什么），执行规则是"协议"（怎么跑）。混在一起导致两份 instruction 各自维护一份 case 列表的拷贝，必然漂移。提取为共享 MANIFEST 后，单一数据源，两份协议各自演进。
 
 ### Decision 2: Runner 是编排+裁决层，Agent 是执行层
 

@@ -6,11 +6,13 @@
 
 ## What Changes
 
-### 架构：两份 Runner Instruction，Playbook 不动
+### 架构：Case 清单共享，两份 Runner Instruction，Playbook 不动
 
-- `experiments_playbook/RUN_EXPS.md` → 重命名为 `RUN_TUI_EXPS.md`：保持不变，coding agent 交互模式下 Agent 自己对 verdict 和 cleanup 负责
-- 新增 `experiments_playbook/RUN_CLI_EXPS.md`：CLI 自动化模式的执行规范——Agent 读 playbook 后 skip verdict/cleanup steps，加 `--target-dir .exp-bundles`，执行完打印 `BUNDLE=<path>`。Runner 负责 verdict、health check、cleanup
-- 所有 `case-*.md` playbook 文件不变：它们定义"验证什么"，两份 instruction 定义"怎么跑"
+- `experiments_playbook/RUN_EXPS.md` → 重构为三个文件：
+  - **`PLAYBOOK_MANIFEST.md`**（新增）：所有 case 的清单（Light/Standard/Heavy/Human 四档表格、选择规则、迁移记录）——这是两份 runner instruction 的共享数据源
+  - **`RUN_TUI_EXPS.md`**（重构）：TUI 交互模式的执行规则——Agent 读 MANIFEST 知道跑哪些，按 TUI 协议执行（含 verdict、cleanup），可反问用户
+  - **`RUN_CLI_EXPS.md`**（新增）：CLI 自动化模式的执行规范——明确 Runner（JS）和 Agent 的分工：Runner 发现 playbook、spawn Agent、读 trace 裁决、cleanup；Agent 只负责执行 bash blocks（加 `--target-dir .exp-bundles`、skip verdict、skip cleanup、打印进展标记和 `BUNDLE=<path>`）
+- 所有 `case-*.md` playbook 文件不变：它们定义"验证什么"，MANIFEST 定义"有哪些"，两份 instruction 定义"怎么跑"
 
 ### 新增 host_tool
 
@@ -44,11 +46,11 @@
 - `experiment-auto-runner`: host_tool 自动化实验执行——两份 runner instruction（TUI + CLI），Runner 做编排和裁决，Agent 做执行
 
 ### Modified Capabilities
-- `playbook-runner`: `RUN_EXPS.md` 重命名为 `RUN_TUI_EXPS.md`，内容不变，行为不变。新增 `RUN_CLI_EXPS.md` 作为 CLI 模式执行规范
+- `playbook-runner`: `RUN_EXPS.md` 拆分为 `PLAYBOOK_MANIFEST.md`（case 清单）+ `RUN_TUI_EXPS.md`（TUI 执行规则）。Agent 行为不变（读 instruction → 执行 → 裁决 → 清理）。新增 `RUN_CLI_EXPS.md` 作为 CLI 模式执行规范
 
 ## Impact
 
-- 新增文件：`DPT_FRAMEWORK/host_tools/lib/env-deepseek.mjs`、`DPT_FRAMEWORK/host_tools/run-experiment.mjs`、`experiments_playbook/RUN_CLI_EXPS.md`
-- 重命名：`experiments_playbook/RUN_EXPS.md` → `RUN_TUI_EXPS.md`
-- 修改文件：`DPT_FRAMEWORK/host_tools/claude-deepseek.mjs`（import 共享模块）、`DPT_FRAMEWORK/host_tools/README.md`、`.gitignore`
+- 新增文件：`DPT_FRAMEWORK/host_tools/lib/env-deepseek.mjs`、`DPT_FRAMEWORK/host_tools/run-experiment.mjs`、`experiments_playbook/PLAYBOOK_MANIFEST.md`、`experiments_playbook/RUN_CLI_EXPS.md`
+- 重构：`experiments_playbook/RUN_EXPS.md` → 拆分为 `PLAYBOOK_MANIFEST.md` + `RUN_TUI_EXPS.md`（case 清单提取到 MANIFEST，TUI 指令精简为执行规则）
+- 修改文件：`DPT_FRAMEWORK/host_tools/claude-deepseek.mjs`（import 共享模块）、`DPT_FRAMEWORK/host_tools/README.md`、`experiments_playbook/README.md`（更新文件引用）、`DPT_FRAMEWORK/cli/validate-playbook.mjs`（排除新文件名）、`.gitignore`
 - Human case 处理：`exph_workflow-foundation/case-901-*` 因项目方向全面自动化，Human case 不再维护，本次 change 中移除

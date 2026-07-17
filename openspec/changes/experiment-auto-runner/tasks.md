@@ -4,11 +4,14 @@
 - [ ] 1.2 `claude-deepseek.mjs` 改为 import 共享模块，确认 `--check` 行为不变
 - [ ] 1.3 claude spawn 调用加 `--setting-sources project,local`（排除 user settings env block 干扰）
 
-## 2. Runner instruction 分家
+## 2. Runner instruction 重构：共享 manifest + 两份指令
 
-- [ ] 2.1 `experiments_playbook/RUN_EXPS.md` → 重命名为 `RUN_TUI_EXPS.md`，内容不变
-- [ ] 2.2 创建 `experiments_playbook/RUN_CLI_EXPS.md`：CLI 模式执行规范（`--target-dir .exp-bundles`、skip verdict、skip cleanup、打印 BUNDLE=<path>）（`@impl EXA-002`）
-- [ ] 2.3 确认所有 playbook `case-*.md` 文件不需要修改
+- [ ] 2.1 从 `RUN_EXPS.md` 提取 case 清单到 `PLAYBOOK_MANIFEST.md`：Light/Standard/Heavy/Human 四档表格、选择规则、迁移记录（`@impl EXA-002, PLR-001`）
+- [ ] 2.2 重构 `RUN_TUI_EXPS.md`：引用 `PLAYBOOK_MANIFEST.md`，精简为纯 TUI 执行协议（~100 行）（`@impl EXA-002, PLR-001`）
+- [ ] 2.3 创建 `RUN_CLI_EXPS.md`：CLI 模式执行规范，明确 Runner-Agent 分工——Runner 负责编排+裁决+清理，Agent 负责执行（加 `--target-dir .exp-bundles`、skip verdict、skip cleanup、打印进展标记和 `BUNDLE=<path>`）（`@impl EXA-002, EXA-003`）
+- [ ] 2.4 更新 `experiments_playbook/README.md`：文件引用更新（`RUN_EXPS.md` → 三个新文件）
+- [ ] 2.5 更新 `DPT_FRAMEWORK/cli/validate-playbook.mjs`：排除名单加 `PLAYBOOK_MANIFEST.md`、`RUN_TUI_EXPS.md`、`RUN_CLI_EXPS.md`
+- [ ] 2.6 确认所有 playbook `case-*.md` 文件不需要修改
 
 ## 3. Runner 核心：发现与过滤
 
@@ -52,7 +55,7 @@
 ## 9. 集成验证
 
 - [ ] 9.1 `--dry-run --group agentic-queue` → 正确发现 3 个 case
-- [ ] 9.2 `--case case-41` 真实执行 → PASS, 9 checks, bundle 在 `.exp-bundles/`
+- [ ] 9.2 `--case case-41-light-minimal-path` 真实执行 → PASS, 9 checks, bundle 在 `.exp-bundles/`
 - [ ] 9.3 `--case case-901` → HUMAN skip
 - [ ] 9.4 `--cleanup-pass` → PASS bundle 被清理
 - [ ] 9.5 `.exp-bundles/DPT_FRAMEWORK` symlink 自动创建验证

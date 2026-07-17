@@ -12,7 +12,7 @@
 
 Runner SHALL 是 `DPT_FRAMEWORK/host_tools/run-experiment.mjs` 中的单个可执行 Node.js ESM 文件。SHALL 支持：
 
-- `--case <id>`：运行单个 case
+- `--case <id>`：运行单个 case，`<id>` 与 playbook frontmatter `case` 字段精确匹配（如 `--case case-41-light-minimal-path-light-minimal-path`）
 - `--group <name>`：运行整个实验组
 - `--tier <light|standard|heavy>`：运行整档
 - `--cleanup-pass`：PASS+CLEAN 时清理 bundle
@@ -23,33 +23,32 @@ Runner SHALL 是 `DPT_FRAMEWORK/host_tools/run-experiment.mjs` 中的单个可�
 无参数时默认运行所有 Light case。Exit code: 0 = 全部 PASS；1 = 有 FAIL；2 = runner 自身错误。
 
 #### Scenario: Run single case
-- **WHEN** `node run-experiment.mjs --case case-41`
+- **WHEN** `node run-experiment.mjs --case case-41-light-minimal-path`
 - **THEN** runner 发现并执行 case-41，输出结构化结果，exit code 反映 PASS/FAIL
 
 #### Scenario: Dry run
 - **WHEN** `node run-experiment.mjs --tier light --dry-run`
 - **THEN** 打印将要执行的 case 列表但不启动 Claude Code
 
-### Requirement: Two runner instructions, playbook unchanged (EXA-002)
+### Requirement: Shared manifest + two runner instructions, playbook unchanged (EXA-002)
 
-`experiments_playbook/RUN_EXPS.md` SHALL 重命名为 `RUN_TUI_EXPS.md`，内容不变——Agent 在 TUI 交互模式下读取此文件，对 verdict 和 cleanup 负责。
+原 `experiments_playbook/RUN_EXPS.md`（case 清单 + TUI 执行规则混在一起）SHALL 重构为三个文件：
 
-新增 `experiments_playbook/RUN_CLI_EXPS.md` SHALL 包含 CLI 自动化模式的执行规范：
-- 要求 Agent 读 playbook 后执行 bash blocks
-- Step 1 加 `--target-dir .exp-bundles`
-- Skip verdict step（Runner 从 trace 自行裁决）
-- Skip cleanup step（Runner 处理清理）
-- 执行完打印 `BUNDLE=<bundle-absolute-path>`
+- **`PLAYBOOK_MANIFEST.md`**（新增）：所有 case 的权威清单——Light/Standard/Heavy/Human 四档表格、选择规则、迁移记录。两份 runner instruction 均引用此文件作为"跑哪些"的数据源。
+- **`RUN_TUI_EXPS.md`**（重构）：TUI 交互模式执行规则——Agent 读 MANIFEST 获取 case 列表，按 TUI 协议执行（含 verdict step、cleanup step），可反问用户。
+- **`RUN_CLI_EXPS.md`**（新增）：CLI 自动化模式执行规范——明确 Runner-Agent 分工。Runner 负责发现 playbook、spawn Agent、读 trace 裁决、health check、cleanup；Agent 负责读 playbook、执行 bash blocks（加 `--target-dir .exp-bundles`、skip verdict、skip cleanup、打印进展标记和 `BUNDLE=<path>`）。
 
-所有 `case-*.md` playbook 文件 SHALL NOT 修改。两份 instruction 定义"怎么跑"，playbook 定义"验证什么"。
+所有 `case-*.md` playbook 文件 SHALL NOT 修改。MANIFEST 定义"有哪些 case"，playbook 定义"验证什么"，instruction 定义"怎么跑"。
 
-#### Scenario: TUI mode unchanged
+#### Scenario: TUI mode references shared manifest
 - **WHEN** coding agent 读取 `RUN_TUI_EXPS.md`
-- **THEN** 行为与之前读 `RUN_EXPS.md` 完全一致
+- **THEN** 指令引用 `PLAYBOOK_MANIFEST.md` 获取 case 清单
+- **AND** Agent 按 TUI 协议执行（verdict + cleanup 由 Agent 负责）
 
 #### Scenario: CLI mode follows CLI instruction
 - **WHEN** Agent 收到包含 `RUN_CLI_EXPS.md` 内容的 prompt
-- **THEN** Agent 按 CLI 规范执行：加 --target-dir、skip verdict/cleanup、打印 BUNDLE=<path>
+- **THEN** Agent 理解自己是 headless 执行者，Runner 是裁决者
+- **AND** Agent 按 CLI 规范执行：加 --target-dir、skip verdict/cleanup、打印进展标记和 BUNDLE=<path>
 
 ### Requirement: Runner reads instruction and orchestrates Agent (EXA-003)
 
@@ -71,9 +70,12 @@ Runner SHALL 写入 `<bundle>/exp_result.json` 作为 bundle 内结果摘要。
 
 Runner SHALL 扫描 `experiments_playbook/` 下所有 `case-*.md` 文件，解析 YAML frontmatter 的 `weight`、`case`、`experiment` 字段。支持 `--case`/`--group`/`--tier` 过滤。无参数默认 `weight: light`。
 
+所有 tier（light/standard/heavy）均可被 Runner 自动化执行。Runner 不区分 tier 做特殊处理——tier 仅影响默认过滤和 health check profile。Human case（901-949）除外。
+
 #### Scenario: Filter by tier
-- **WHEN** `--tier standard`
-- **THEN** 仅返回 weight=standard 的 playbook
+- **WHEN** `--tier heavy`
+- **THEN** 返回所有 weight=heavy 的 playbook 并正常执行（已验证 case-211 PASS）
+- **AND** health check 使用 `--profile heavy`
 
 ### Requirement: Cleanup policy compliance (EXA-005)
 
