@@ -262,7 +262,7 @@ function prepare711() {
   assert.equal(profile.research_access.status, 'unprobed');
   assert.equal(profile.research_profile, 'not_selected');
   assert.equal(profile.human_decision_checkpoints.hitl1.status, 'not_started');
-  writeFileSync(join(bundle, 'case-711-research-request.txt'), 'Research how capital constraints affect a small company investment decision.\n');
+  writeFileSync(join(bundle, 'case-711-research-request.txt'), 'Research whether a cash-constrained small company should buy one piece of equipment now or defer; keep the scope compact and decision-focused.\n');
   writeFileSync(join(bundle, 'case-711-setup.json'), `${JSON.stringify({
     fixture: 'setup_only',
     legal_boundary: { current_node: status.current_node, current_gate: status.current_gate, next_gate: status.next_gate },
@@ -299,7 +299,7 @@ function prepare713() {
   profile.human_decision_checkpoints.hitl2 = {
     ...profile.human_decision_checkpoints.hitl2,
     status: 'recorded',
-    answerability_class: 'ready_with_material_gaps',
+    answerability_class: 'ready_insufficient_judgment',
     user_decision: 'proceed_to_readiness',
     final_report_view: 'profile_default',
     rationale: 'Produce a qualified report from the current evidence.',

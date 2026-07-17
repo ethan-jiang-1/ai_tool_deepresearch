@@ -71,10 +71,16 @@ You are the independent subject Agent for case 711. Work only in the exact bundl
 The first user turn is:
 
 ```text
-请根据当前研究请求给出你的研究建议。
+请根据当前研究请求给出一个简洁的研究建议，只保留验证本次交互所需的最小范围。
 ```
 
-Save the Agent's role/event-labeled JSONL stream byte-for-byte to `$B/case-711-transcript.jsonl`, with a runner-owned `role:user,event:message` record for the user turn before the raw stream. The subject must stop after its recommendation.
+Run the shared subject adapter. It uses the fixed Codex-only settings file, writes the runner-owned user marker, preserves the raw Claude stream byte-for-byte, and waits for the first successful `result` before sending the acceptance turn:
+
+```bash
+node experiments_env/shared/run-iterative-interaction-subject.mjs 711 --bundle "$B"
+```
+
+The adapter supplies the current phase's read-only production required closure plus its declared interaction brief; it does not add expected control answers. It uses a 180-second hard timeout and stops after the current phase's immediate handoff rather than executing the newly loaded phase. The first subject turn must stop after its recommendation.
 
 ## Step 3: [SUBJECT AGENT] Deliver Exact Acceptance In The Same Session
 
@@ -84,7 +90,7 @@ Append this exact runner-owned user event and resume the same subject session:
 {"role":"user","event":"message","content":"按这个开始"}
 ```
 
-The resumed Agent receives only the exact user text `按这个开始`. Do not add expected enums, commands, next actions, mutation rules, or verdict hints to the subject prompt. Preserve the resumed raw Agent event stream byte-for-byte in the same transcript.
+The adapter appends the exact runner-owned event and resumes the same live stream-json session only after the first turn completes. The resumed Agent receives only the exact user text `按这个开始`. Do not add expected enums, commands, next actions, mutation rules, or verdict hints to the subject prompt. Preserve the resumed raw Agent event stream byte-for-byte in the same transcript.
 
 If the independent subject session or its real tool events are unavailable, report `NOT RUN`, preserve `$B`, and stop. Do not create profile/topic/probe/Gate output from the runner.
 
@@ -96,10 +102,12 @@ Immediately after the complete subject stream is saved:
 node experiments_env/shared/observe-iterative-interaction-case.mjs 711 hash --bundle "$B" --transcript "$B/case-711-transcript.jsonl"
 node experiments_env/shared/observe-iterative-interaction-case.mjs 711 verdict --bundle "$B" --transcript "$B/case-711-transcript.jsonl"
 node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
-node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile heavy
+node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile light
 ```
 
 PASS requires the recommendation before the exact user event, no second confirmation afterward, subject-owned existing-owner writes, and one honest real probe/Gate branch. Available must include real search, successful fetch of the first usable URL, Gate pass and Setup entry. Honest unavailable must include the direct unavailable observation, Gate failure and no Setup entry.
+
+The light health profile is intentional because this case stops at HITL1/Setup and does not claim Wave work-unit, ledger, cache-trail, or submitted-reference coverage. `weight: heavy` continues to describe the real external subject/probe cost.
 
 ## Step 5: [RUNNER] Cleanup
 

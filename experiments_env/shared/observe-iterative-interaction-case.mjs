@@ -210,7 +210,9 @@ function record712(events) {
   const hitl2 = profile.human_decision_checkpoints?.hitl2 || {};
   const gatePass = trace.some((event) => event.event === 'gate_attempt' && event.gate === 'hitl2-recorded' && event.passed === true);
   const rerunLoad = trace.some((event) => event.event === 'load_complete' && event.entry === 'phases/phase-rerun.md' && event.handoff_source_gate === 'hitl2-recorded');
-  recordCheck(tracePath, { gate: 'case-712-review-and-one-recommendation', passed: marker.length === 1 && /证据|研究/.test(beforeText) && /不足|缺口|谨慎/.test(beforeText) && /推荐|建议/.test(beforeText), detail: `user_markers=${marker.length}` });
+  const hasOpenBoundary = /不足|缺口|谨慎|空缺|未知|gap/i.test(beforeText);
+  const hasOneNextStep = /推荐|建议|下一步/i.test(beforeText);
+  recordCheck(tracePath, { gate: 'case-712-review-and-one-recommendation', passed: marker.length === 1 && /证据|研究/.test(beforeText) && hasOpenBoundary && hasOneNextStep, detail: `user_markers=${marker.length}` });
   recordCheck(tracePath, { gate: 'case-712-natural-language-mapping', passed: hitl2.status === 'recorded' && hitl2.user_decision === 'rerun' && /资本约束/.test(hitl2.rationale || '') && gatePass && rerunLoad && /rb_profile\.yaml|hitl2-recorded|enter-phase/.test(tools.serialized), detail: JSON.stringify({ status: hitl2.status, decision: hitl2.user_decision, rationale: hitl2.rationale, gatePass, rerunLoad }) });
   recordCheck(tracePath, { gate: 'case-712-user-facing-contract', passed: !/(proceed_to_readiness|request_view_revision|stop_blocked|quick_factual|exploratory_map|claim_verification)/.test(allAssistant) && !/(是否确认|确定吗|再确认|请确认)/.test(assistantText(events.slice(split + 1))), detail: allAssistant.slice(0, 400) });
 }

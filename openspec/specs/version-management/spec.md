@@ -3,9 +3,7 @@
 ## Purpose
 
 定义 DPT_FRAMEWORK 项目的版本管理规范：CHANGELOG 格式与位置、版本号决定时机、每次行为变更的 CHANGELOG 强制更新、以及 RUN.md 版本横幅与 CHANGELOG 的一致性约束。
-
 ## Requirements
-
 ### Requirement: CHANGELOG is concise and human-readable
 
 The project SHALL maintain a `CHANGELOG.md` file at the repository root as the framework version-history source of truth for DPT_FRAMEWORK behavior and Agent-facing framework contracts.
@@ -64,21 +62,25 @@ The version banner in `DPT_FRAMEWORK/RUN.md` SHALL match the latest version entr
 
 ### Requirement: Version number decided at proposal time
 
-The version number for a change SHALL be decided during the proposal phase, not applied ad-hoc at implementation time. The proposal SHALL state the target version number.
+The version number for a change SHALL be decided during the proposal phase, not applied ad-hoc at implementation time. A proposal that modifies `DPT_FRAMEWORK/` behavior SHALL state whether a version bump is required and, when required, declare one target version. Apply tasks SHALL use that declared value for repo-root `CHANGELOG.md` and the `DPT_FRAMEWORK/RUN.md` banner.
+
+Accepted requirements SHALL describe this stable rule without pinning a historical change's concrete version as the permanent current version. The concrete target remains in that change's proposal/tasks and, after archive, its historical artifacts and changelog entry.
 
 The project OpenSpec guidance in `openspec/config.yaml` SHALL surface this rule in its proposal guidance.
 
-For this change, the proposal-declared target version SHALL be `v0.7`; apply tasks SHALL use that value for repo-root `CHANGELOG.md` and the `DPT_FRAMEWORK/RUN.md` banner.
-
 #### Scenario: Proposal declares version
+
 - **WHEN** a change proposes modifications to `DPT_FRAMEWORK/` behavior
-- **THEN** the proposal SHALL state whether a version bump is required
-- **AND** if required, SHALL declare the target version number
-- **AND** `openspec/config.yaml` SHALL remind authors to make that decision during proposal
+- **THEN** its proposal SHALL state whether a version bump is required
+- **AND** if required, the proposal SHALL declare the target version before apply
+- **AND** implementation SHALL use the same target for `CHANGELOG.md` and the RUN banner
+- **AND** `openspec/config.yaml` SHALL remind proposal authors to make that decision before apply
 
 #### Scenario: This change uses v0.7
 
-- **WHEN** this change is applied
-- **THEN** repo-root `CHANGELOG.md` SHALL receive a `v0.7` entry
-- **AND** `DPT_FRAMEWORK/RUN.md` SHALL display `DPT_FRAMEWORK v0.7`
-- **AND** implementation SHALL NOT choose a different version number ad-hoc
+> **@deprecated name** — Retained as the historical scenario anchor; the stable requirement no longer pins any past version as current.
+
+- **WHEN** a behavior change with a proposal-declared target version is applied
+- **THEN** repo-root `CHANGELOG.md` SHALL receive that declared target
+- **AND** `DPT_FRAMEWORK/RUN.md` SHALL display the same target
+- **AND** implementation SHALL NOT select a different version ad hoc

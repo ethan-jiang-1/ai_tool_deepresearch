@@ -12,13 +12,15 @@ Agent-facing CLI tools for phase transition: `advance-status` (advance `current_
 
 For covered trace-backed handoffs, before mutating `rb_status.json` or appending `phase_transition`, the CLI SHALL verify that the route-bound handoff target matches the already loaded `rb_status.json#/current_node` and that the loaded node frontmatter is readable. On success, in addition to `status`, `current_gate`, and `next_gate`, the CLI SHALL return a small `continuation` object derived directly from that loaded current-node frontmatter:
 
-- non-terminal `stop: no`: `interaction: prohibited`, `next_action: execute_loaded_node`;
+- non-terminal `stop: no`: `interaction: do_not_initiate`, `next_action: execute_loaded_node`;
 - `stop: yes`: `interaction: required`, `next_action: wait_for_user_in_loaded_node`;
 - terminal Final: `interaction: terminal_delivery`, `next_action: deliver_final_artifacts`.
 
-The JSON `continuation` object SHALL be top-level, contain required `interaction` and `next_action` fields and a direct `node_ref` locator. It MAY include the synchronized source gate as `gate`, but SHALL NOT be nested inside status fields and SHALL NOT include confidence, policy decisions, retry trees, context estimates, or alternate route choices.
+For this projection, `do_not_initiate` SHALL mean that the Agent/framework does not initiate user-facing surfacing while executing the loaded autonomous node. It SHALL NOT mean that an already received user-initiated normal conversation turn must be ignored, and it SHALL NOT make the CLI responsible for reading or classifying chat state.
 
-The cue SHALL NOT choose a node, execute Markdown, mutate additional state, or prove target-phase completion. If a covered handoff's `current_node` is missing, mismatched with the witnessed target, or has unreadable frontmatter, the CLI SHALL fail closed before mutation rather than guess.
+The JSON `continuation` object SHALL be top-level, contain required `interaction` and `next_action` fields and a direct `node_ref` locator. It MAY include the synchronized source gate as `gate`, but SHALL NOT be nested inside status fields and SHALL NOT include confidence, policy decisions, retry trees, context estimates, alternate route choices, chat state, or pause state.
+
+The cue SHALL NOT choose a node, execute Markdown, mutate additional state, prove target-phase completion, create interaction permission, or create a lifecycle checkpoint. If a covered handoff's `current_node` is missing, mismatched with the witnessed target, or has unreadable frontmatter, the CLI SHALL fail closed before mutation rather than guess.
 
 For explicit bootstrap compatibility source sync where existing rules do not require a route-bound handoff, the CLI SHALL preserve current status synchronization behavior. It SHALL emit a loaded-node continuation cue only if `rb_status.json#/current_node` is non-null, matches the computed target node, and has readable frontmatter; otherwise it SHALL omit `continuation`, MAY include an explicit `continuation_diagnostic`, and SHALL NOT infer loaded-node execution from manifest/chain lookup alone.
 
@@ -26,7 +28,8 @@ For explicit bootstrap compatibility source sync where existing rules do not req
 
 - **WHEN** Wave0 handoff to `phases/phase-wave1.md` is witnessed and `advance-status --to wave0_complete` succeeds
 - **THEN** status SHALL synchronize normally
-- **AND** stdout SHALL state that interaction is prohibited and Wave1 is the loaded node to execute
+- **AND** stdout SHALL state `interaction: do_not_initiate` and Wave1 as the loaded node to execute
+- **AND** stdout SHALL NOT create a user-interaction or pause authority
 
 #### Scenario: Covered handoff with mismatched current_node fails before mutation
 
@@ -93,19 +96,19 @@ The accepted handoff vocabulary SHALL contain exactly two Engine-written classes
 
 Handoff selection SHALL compare structurally valid authorities from both classes in append-only trace order rather than let a C5-specific selector compete with the existing gate selector. A valid post-final event becomes the latest handoff only after its Final lineage and route resolution pass; a later valid normal gate handoff or newer valid post-final lineage supersedes it for future entry. Failed gate attempts, arbitrary events and partial lookalikes SHALL NOT become a newer handoff authority merely because they appear later.
 
-The exceptional event SHALL bind its request digest, operation id, previous readiness→Final handoff/load lineage, expected profile/terminal-status/final-inventory facts, transition-table resolution and derived target status window. One structural parser SHALL produce immutable event facts; closed stage predicates SHALL add the mutable checks needed by entry, status sync and completed rerun preflight. Before phase entry it SHALL be accepted only when those facts remain current, no accepted C5 workspace remains, re-resolving HITL2 outcome `rerun` produces the recorded target/window, the event is not superseded, `rb_profile.yaml` matches the committed recovery profile, and `rb_status.json` remains the terminal Final window. After a route-bound rerun `load_complete` exists, `advance-status` SHALL validate the immutable event and that exact load witness before writing the derived `hitl2_recorded → rerun_ready` window. Downstream consumers SHALL then require event+load+phase_transition+current rerun window without reapplying the terminal pre-entry predicate. Arbitrary trace text, C5-local/caller-supplied target nodes, `human-directed` flags and hand-written gate attempts SHALL NOT become handoff authority.
+The exceptional event SHALL bind its request digest, operation id, previous readiness->Final handoff/load lineage, expected profile/terminal-status/final-inventory facts, transition-table resolution and derived target status window. One structural parser SHALL produce immutable event facts; closed stage predicates SHALL add the mutable checks needed by entry, status sync and completed rerun preflight. Before phase entry it SHALL be accepted only when those facts remain current, no accepted C5 workspace remains, re-resolving HITL2 outcome `rerun` produces the recorded target/window, the event is not superseded, `rb_profile.yaml` matches the committed recovery profile, and `rb_status.json` remains the terminal Final window. After a route-bound rerun `load_complete` exists, `advance-status` SHALL validate the immutable event and that exact load witness before writing the derived `hitl2_recorded -> rerun_ready` window. Downstream consumers SHALL then require event+load+phase_transition+current rerun window without reapplying the terminal pre-entry predicate. Arbitrary trace text, C5-local/caller-supplied target nodes, `human-directed` flags and hand-written gate attempts SHALL NOT become handoff authority.
 
 Successful stdout SHALL remain Agent-readable Markdown with stable file-boundary markers and no mixed JSON status envelope. After the loaded dependency closure, the CLI SHALL append one short generated continuation block derived from the target node frontmatter:
 
-- non-terminal stop:no: user interaction prohibited; execute the loaded node now;
-- stop:yes: user interaction required; follow the loaded HITL prompt;
-- Final: terminal delivery only.
+- non-terminal stop:no: `interaction: do_not_initiate`; execute the loaded node now without initiating a user-facing pause;
+- stop:yes: `interaction: required`; follow the loaded HITL prompt;
+- Final: `interaction: terminal_delivery`; deliver final artifacts only.
 
-The generated block SHALL be a feedback projection, not a new authority surface, and SHALL not duplicate the full silent-execution contract. It SHALL be the final stdout content and use stable markers with short key/value lines:
+The generated block SHALL be a feedback projection, not a new authority surface, and SHALL not duplicate the full silent-execution contract. `do_not_initiate` SHALL not prohibit answering an already received user-initiated normal conversation turn, and the Engine SHALL not read chat state to produce the token. The block SHALL be the final stdout content and use stable markers with short key/value lines:
 
 ```markdown
 <!-- DPT_CONTINUATION_CUE_START -->
-interaction: prohibited
+interaction: do_not_initiate
 next_action: execute_loaded_node
 node_ref: phases/phase-wave1.md
 <!-- DPT_CONTINUATION_CUE_END -->
@@ -148,7 +151,8 @@ For a post-final recovery handoff, route-bound `load_complete` SHALL reference t
 
 - **WHEN** enter-phase loads `phases/phase-wave1.md`
 - **THEN** stdout SHALL include the normal loaded Markdown and autonomous header
-- **AND** the final generated block SHALL prohibit user interaction and direct execution of Wave1
+- **AND** the final generated block SHALL state `interaction: do_not_initiate` and direct execution of Wave1
+- **AND** the block SHALL NOT create a chat-interception or permission contract
 
 #### Scenario: stop:yes rendered output ends with interaction cue
 

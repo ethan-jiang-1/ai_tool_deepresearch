@@ -8,6 +8,7 @@ const ROOT = process.cwd();
 const read = (path) => readFileSync(`${ROOT}/${path}`, 'utf8');
 const setup = read('experiments_env/shared/prepare-iterative-interaction-case.mjs');
 const observer = read('experiments_env/shared/observe-iterative-interaction-case.mjs');
+const subjectRunner = read('experiments_env/shared/run-iterative-interaction-subject.mjs');
 const registry = read('experiments_playbook/RUN_EXPS.md');
 const cases = {
   711: read('experiments_playbook/exp_iterative_interaction/case-711-heavy-hitl1-natural-acceptance.md'),
@@ -26,6 +27,7 @@ describe('iterative interaction real-Agent playbooks', () => {
     assert.match(setup, /current_node, 'phases\/phase-readiness\.md'/);
     assert.match(setup, /decision_brief_absent: true/);
     assert.match(setup, /final_directory_expected_empty: true/);
+    assert.doesNotMatch(setup, /ready_with_material_gaps/);
     assert.doesNotMatch(setup, /recordCheck|wff-playbook-utils|case-71[123].*passed:\s*true/i);
   });
 
@@ -57,8 +59,43 @@ describe('iterative interaction real-Agent playbooks', () => {
     assert.match(cases[713], /two fresh independent real Agent turns/i);
   });
 
+  it('uses one Codex-only settings identity and preserves subject-session boundaries', () => {
+    assert.match(subjectRunner, /codex-only-dpt-iterative-subject-deepseek-v1\.settings\.json/);
+    assert.match(subjectRunner, /if \(existsSync\(SETTINGS_PATH\)\)/);
+    assert.match(subjectRunner, /flag: 'wx'/);
+    assert.match(subjectRunner, /--setting-sources', ''/);
+    assert.match(subjectRunner, /SUBJECT_TIMEOUT_MS = 3 \* 60 \* 1000/);
+    assert.match(subjectRunner, /tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write'/);
+    assert.match(subjectRunner, /tools: 'Bash,Edit,Glob,Grep,Read,Write'/);
+    assert.match(subjectRunner, /tools: 'Glob,Grep,Read'/);
+    assert.match(subjectRunner, /boundary: 'Answer only the current user turn from direct bundle facts, then stop\.'/);
+    assert.match(subjectRunner, /--bare'/);
+    assert.match(subjectRunner, /--tools', subject\.tools/);
+    assert.match(subjectRunner, /--effort', 'low'/);
+    assert.match(subjectRunner, /assessNode\(nodeRef, createState\(\), runtime\)/);
+    assert.match(subjectRunner, /frontmatter\?\.suggested_context/);
+    assert.match(subjectRunner, /filter\(\(fileRef\) => fileRef\.startsWith\('brief\/'\)\)/);
+    assert.match(subjectRunner, /DPT_SUBJECT_PRODUCTION_SURFACE_START/);
+    assert.match(subjectRunner, /createWorkflowRuntime\('iterative-interaction-subject', NODES_DIR\)/);
+    assert.match(subjectRunner, /detached: true/);
+    assert.match(subjectRunner, /forcedAfterResult/);
+    assert.doesNotMatch(subjectRunner, /createTrace|traceEntry/);
+    assert.match(subjectRunner, /event\.type !== 'result'/);
+    assert.match(subjectRunner, /if \(turnIndex < subject\.messages\.length\) \{\s*sendTurn\(turnIndex\)/);
+    assert.match(cases[711], /run-iterative-interaction-subject\.mjs 711 --bundle/);
+    assert.match(cases[712], /run-iterative-interaction-subject\.mjs 712 --bundle/);
+    assert.match(cases[713], /run-iterative-interaction-subject\.mjs 713-readiness --bundle/);
+    assert.match(cases[713], /run-iterative-interaction-subject\.mjs 713-final --bundle/);
+    assert.match(cases[711], /verify-bundle-health\.mjs --bundle "\$B" --profile light/);
+    assert.match(cases[711], /180-second hard timeout/i);
+    assert.match(cases[712], /180-second hard timeout/i);
+    assert.match(cases[713], /180-second hard timeout/i);
+  });
+
   it('binds transcripts, authority snapshots, transition allowlist, and deterministic observers', () => {
     assert.match(observer, /agent_transcript_digest/);
+    assert.match(observer, /hasOpenBoundary = \/不足\|缺口\|谨慎\|空缺\|未知\|gap\/i/);
+    assert.match(observer, /hasOneNextStep = \/推荐\|建议\|下一步\/i/);
     assert.match(observer, /case-713-authority-\$\{label\}\.json/);
     assert.match(observer, /_checkpoints\\\/\[\^\/\]\+-readiness-passed/);
     assert.match(cases[713], /capture B before appending the observer digest/i);

@@ -62,7 +62,9 @@ The Engine SHALL allocate every `work_id` and record it in bundle-root `_work_un
 
 Claim SHALL bind one `queue_item_id` to one non-terminal work-unit attempt, move queue demand into `delegated_in_flight`, write effective lease fields, and store the queue item snapshot hash. Claim MAY allocate a contiguous queue-front batch with `--count N`, but Sub-agents SHALL NOT allocate IDs or mutate queue/index authority.
 
-Successful claim stdout SHALL include a static Agent-facing top-level `continuation` object for the immediate post-claim decision point: `interaction: prohibited` and `next_action: inspect_and_poll_claimed_work`. The cue SHALL include `work_ids` equal to the already returned `claimed_work_ids`, SHALL NOT be nested inside queue/index authority objects, SHALL NOT infer readiness, SHALL NOT complete work, and SHALL NOT add persistent work-unit state. Empty or failed claims SHALL NOT emit a successful continuation cue.
+Successful claim stdout SHALL include a static Agent-facing top-level `continuation` object for the immediate post-claim decision point with `next_action: inspect_and_poll_claimed_work`. Because claim validates queue/work-unit phase demand but does not read or establish the current lifecycle node's `stop` authority, its continuation SHALL omit `interaction` rather than hardcode a second interaction-placement truth. The already-loaded lifecycle phase/header/cue continues to control whether the framework may initiate user-facing output.
+
+The cue SHALL include `work_ids` equal to the already returned `claimed_work_ids`, SHALL NOT be nested inside queue/index authority objects, SHALL NOT infer readiness, SHALL NOT complete work, and SHALL NOT add persistent work-unit, interaction, message, or pause state. Empty or failed claims SHALL NOT emit a successful continuation cue.
 
 #### Scenario: claim creates in-flight attempt
 
@@ -74,7 +76,8 @@ Successful claim stdout SHALL include a static Agent-facing top-level `continuat
 
 - **WHEN** claim succeeds for one or more work units
 - **THEN** stdout SHALL identify the claimed work ids
-- **AND** continuation SHALL direct the Phase Agent to inspect/poll them without waiting for user input or task notification
+- **AND** continuation SHALL direct the Phase Agent to inspect/poll the claimed work without waiting for user input, acknowledgement, or task notification
+- **AND** continuation SHALL omit `interaction` and SHALL NOT create chat-interception or interaction authority
 
 #### Scenario: empty claim does not emit successful continuation
 
@@ -550,7 +553,9 @@ For the changed submit contract, independent-root coverage SHALL include candida
 
 Prerequisite short-circuiting SHALL be local. An unreadable candidate SHALL mask actor/output/cache/source implications that require parsed candidate data; an invalid manifest/index envelope SHALL mask contract checks that require that envelope; and an invalid cache leaf SHALL mask URL/source-claim implications that require that leaf. Independently readable surfaces, such as a runtime-receipt root and a separately resolvable output/cache root, MAY still be returned together. Prior-submitted-output eligibility for supplementary source claims SHALL remain the source-lineage contract and SHALL NOT be guessed by this core preflight slice.
 
-Agent-facing fallback and submit-repair guidance SHALL place dry-submit immediately before formal submit for Phase Agent-authored candidates. It SHALL instruct the Agent to use the generated result starter, read all returned `violations[]` and `repair_target` values, repair the same assigned result/receipt/output/cache surfaces, and rerun the same dry-submit checkpoint. A repairable formal-submit rejection SHALL recommend dry-submit for the same candidate rather than inviting repeated formal-submit guessing. These ordinary authorized repairs SHALL remain Agent execution; guidance SHALL escalate to the user only for a new semantic/risk/permission decision, an external non-delegable action, or a missing accepted contract.
+Agent-facing fallback and submit-repair guidance SHALL place dry-submit immediately before formal submit for Phase Agent-authored candidates. It SHALL instruct the Agent to use the generated result starter, read all returned `violations[]` and `repair_target` values, repair the same assigned result/receipt/output/cache surfaces, and rerun the same dry-submit checkpoint. A repairable formal-submit rejection SHALL recommend dry-submit for the same candidate rather than inviting repeated formal-submit guessing. These ordinary authorized repairs SHALL remain Agent execution. New semantic/risk/permission decisions, external non-delegable actions, and missing accepted contracts SHALL be identified only as the smallest Agent-facing boundary; user-facing initiation SHALL obey the current lifecycle interaction contract and SHALL NOT be inferred from the dry-submit classification itself.
+
+Generated `task.md` guidance SHALL use the same placement-neutral boundary wording. It SHALL NOT tell the Phase Agent or work-unit actor to "involve the user" merely because a dry-submit finding is `user_decision`, `external_action`, or `missing_contract`; the current lifecycle owner decides whether a request may be initiated, and `missing_contract` is stated rather than requested. This wording change SHALL NOT give a Sub-agent lifecycle or user-interaction authority.
 
 Dry-submit SHALL keep provenance strict. It SHALL NOT authorize a result or receipt written after the fact to claim work that was performed outside the claimed envelope, and it SHALL NOT treat a filesystem-only artifact as actor-produced merely because a later candidate names it.
 
@@ -624,6 +629,18 @@ Dry-submit SHALL keep provenance strict. It SHALL NOT authorize a result or rece
 - **AND** guidance SHALL direct repair of the same assigned surfaces followed by the same dry-submit command
 - **AND** formal submit SHALL run only after dry-submit predicts pass
 - **AND** the Agent SHALL execute the repair without asking the user to run ordinary pipeline commands
+
+#### Scenario: Dry-submit boundary obeys lifecycle interaction contract
+
+- **WHEN** dry-submit returns `repair_kind: user_decision`, `external_action`, or `missing_contract` during a non-terminal `stop: no` phase
+- **THEN** guidance SHALL retain the smallest Agent-facing boundary without initiating a user question, status output, approval request, or acknowledgement wait from that classification alone
+- **AND** the same candidate identity and current lifecycle checkpoint SHALL remain unchanged
+
+#### Scenario: Generated task does not create a user-escalation rule
+
+- **WHEN** the Engine generates `task.md` dry-submit guidance for a normal delegated or Phase Agent fallback work unit
+- **THEN** the guidance SHALL assign ordinary repair to the Agent and describe non-mechanical findings as placement-neutral boundaries
+- **AND** it SHALL NOT instruct the actor or Controller to involve the user from classification alone
 
 #### Scenario: Formal rejection points back to dry-submit
 

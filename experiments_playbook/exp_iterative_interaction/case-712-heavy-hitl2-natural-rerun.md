@@ -67,10 +67,16 @@ You are the independent subject Agent for case 712. Work only in the exact bundl
 The first user turn is:
 
 ```text
-请审阅当前研究并告诉我下一步最值得做什么。
+请简要审阅当前研究，只告诉我一个最值得做的下一步。
 ```
 
-Save the role/event-labeled Agent stream byte-for-byte to `$B/case-712-transcript.jsonl`, preceded by a runner-owned user event. Stop after the review and one recommendation.
+Run the shared subject adapter. It uses the fixed Codex-only settings file, writes runner-owned user markers, preserves the raw Claude stream byte-for-byte, and waits for the first successful `result` before sending the decision turn:
+
+```bash
+node experiments_env/shared/run-iterative-interaction-subject.mjs 712 --bundle "$B"
+```
+
+The adapter supplies the current phase's read-only production required closure plus its declared interaction brief; it does not add expected control answers. It uses a 180-second hard timeout and stops after the current phase's immediate handoff rather than executing the newly loaded phase. The first subject turn must stop after the review and one recommendation.
 
 ## Step 3: [SUBJECT AGENT] Deliver The Only Decision Turn
 
@@ -80,7 +86,7 @@ Append this exact runner-owned event and resume the same subject session:
 {"role":"user","event":"message","content":"资本约束这部分还不够，再补一下"}
 ```
 
-The resumed Agent receives only that exact text. Do not add expected enums, commands, no-confirmation rules, next actions, or verdict hints. No second user response is allowed. Preserve raw Agent events byte-for-byte.
+The adapter appends that exact runner-owned event and resumes the same live stream-json session only after the first turn completes. The resumed Agent receives only that exact text. Do not add expected enums, commands, no-confirmation rules, next actions, or verdict hints. No second user response is allowed. Preserve raw Agent events byte-for-byte.
 
 If the independent session is unavailable, report `NOT RUN`, preserve `$B`, and do not let the runner write decision/rationale/Gate/handoff facts.
 

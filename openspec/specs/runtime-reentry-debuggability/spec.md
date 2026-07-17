@@ -89,7 +89,11 @@ The CLI SHALL return check/inspect/advice JSON and SHALL validate:
 - latest checkpoint manifest is present when available and reports drift against current files
 - unresolved blocking unplanned files are reported
 
-When a valid newer `post_final_reentry` event, its exact current after-profile, route-bound rerun load and exceptional `phase_transition` explain the immediate legal profile/current-node/status-window evolution after an older HITL2 checkpoint, the checker SHALL use the event's bound before/after profile facts plus the event/load/phase-transition/current rerun window as the current baseline for those control changes. It SHALL preserve the older checkpoint as historical context but SHALL NOT report its superseded profile/status hashes as unexplained blocker drift. Before initial topic-state authorization, a current profile that no longer matches the event-bound after-profile SHALL remain blocker drift. A later profile SHALL be accepted as the same rerun lineage only when every field still matches the event-bound after-profile except `rerun_count`, which equals the event-bound `next_count` under the same active rule digest; unrelated profile drift remains blocking.
+When a valid newer `post_final_reentry` event, its exact current after-profile, route-bound rerun load and exceptional `phase_transition` explain the immediate legal profile/current-node/status-window evolution after an older HITL2 checkpoint, the checker SHALL use the event's bound before/after profile facts plus the event/load/phase-transition/current rerun window as the current baseline for those control changes. It SHALL preserve the older checkpoint as historical context but SHALL NOT report its superseded profile/status hashes as unexplained blocker drift. Before initial topic-state authorization, a current profile that no longer matches the event-bound after-profile SHALL remain blocker drift.
+
+After sanctioned topic-state preparation, the checker SHALL consume the same C5 ownership/stage evaluation used by post-final inspection rather than maintain a count-only profile comparator. A later profile MAY remain in the same rerun lineage when `research_profile` and every unrelated field remain event-bound and either: the event-bound current count is paired with unchanged event-bound style params or the exact `computeResearchStyleParams` projection for event-bound style plus current committed canonical registry; or the event-bound next count is paired with either of those two style shapes under the same active rule digest. Current count plus an exact projection that differs from event-bound params SHALL retain `synchronized_initial_profile` and expose the existing phase-rerun count owner; an equal projection retains the idempotent topic-state/phase owner because values alone do not prove execution; next count SHALL expose the formal Gate. A style value matching neither allowed shape, changed profile name, partial parameter object or unrelated profile delta SHALL remain blocking.
+
+After rerun-ready passes, the checker SHALL suppress superseded C5 control hashes only when the C5 ownership/stage evaluator proves the exact normal descendant stage currently present: non-superseded attempt plus unchanged source window before load, matching route-bound load plus target node before status synchronization, or matching transition/resulting status/current node afterward. A later passed `gate_attempt` from the wrong source/target SHALL NOT prove descendant ownership, and an observed load/transition/status mismatch SHALL remain blocker drift rather than falling through to fresh Final eligibility or an unspecified current owner.
 
 Immediately after legal C5 entry, `check-reentry --at hitl2_recorded` SHALL validate the incoming source-gate checkpoint. `--at phase-rerun` / `rerun_ready` SHALL continue to mean the rerun phase has passed; C5 SHALL NOT change target normalization to hide this distinction.
 
@@ -149,6 +153,25 @@ Drift severity SHALL be deterministic:
 - **AND** a valid newer C5 event plus route-bound rerun load and exceptional phase transition explains the exact profile/current-node/status evolution
 - **THEN** `check-reentry --at hitl2_recorded` SHALL use the accepted event/load/current window as the control baseline
 - **AND** SHALL NOT report the older profile/status hashes as unexplained blockers
+
+#### Scenario: Exact rerun style projection remains in lineage
+
+- **WHEN** sanctioned topic add or safe removal changes the committed canonical registry length and the existing style CLI writes the exact shared projection before or with rerun count advancing to the event-bound next count
+- **THEN** C5 and reentry SHALL recognize that profile as the same accepted rerun lineage
+- **AND** at the event-bound current count a projection differing from event-bound params SHALL expose the existing phase-rerun count owner, while an equal projection SHALL conservatively retain the idempotent topic-state/phase owner
+- **AND** reentry SHALL NOT restore the older checkpoint hash or require a new user decision
+
+#### Scenario: Wrong projection or unrelated profile change remains drift
+
+- **WHEN** current style parameters equal neither unchanged event-bound params nor the event-bound style projected over the current canonical registry, `research_profile` changes, or any unrelated profile field changes
+- **THEN** reentry SHALL report blocker drift
+- **AND** SHALL NOT normalize, rewrite or silently accept the profile
+
+#### Scenario: Descendant pass suppresses only explained control evolution
+
+- **WHEN** the exact rerun-ready attempt passes and the source window, optional matching load, optional matching transition/status and current node agree with the normal stage reached so far
+- **THEN** reentry MAY suppress only the C5 control hashes explained by that stage and expose its existing next owner
+- **AND** a wrong-source attempt or any observed conflicting load/transition/status/current node SHALL keep the C5 lineage discontinuity as a blocker
 
 #### Scenario: Post-final entry does not redefine phase target semantics
 
@@ -279,19 +302,22 @@ Reentry diagnostics SHALL derive these facts from active bundle files and existi
 
 Immediately after legal post-final `enter-phase` and existing `advance-status --to hitl2_recorded` synchronization, Agent-facing postcondition guidance SHALL invoke `check-reentry --at hitl2_recorded`, because that is the current source-gate checkpoint. Before status sync, the only action SHALL be that exact `advance-status` command. It SHALL NOT recommend `--at phase-rerun` / `rerun_ready` until the rerun-ready gate has actually passed.
 
-For a terminal Final or an accepted post-final recovery lineage descended from it, the post-final recovery root SHALL map direct states to one action:
+For a terminal Final or an accepted post-final recovery lineage descended from it, the post-final recovery root SHALL consume the same C5 stage/owner result used by post-final inspect, handoff/status and reentry, and SHALL map direct states to one action:
 
-- accepted post-final workspace, including event-committed cleanup-only state → exact `recover`;
-- accepted artifact-persistence workspace → existing quiescent `sweep` before Final lineage can be stable;
-- accepted topic-state workspace → exact existing topic-state `recover`;
-- committed recovery handoff without a completed rerun `current_node` update, including load-written partial entry → exact `enter-phase phases/phase-rerun.md`;
-- completed rerun entry not yet status-synchronized, or derived status present without the exact event/load-bound `phase_transition` and without a conflicting transition → exact idempotent `advance-status --to hitl2_recorded`;
-- synchronized initial rerun profile/window → existing topic-state inspect/apply/recover checkpoint; an unchanged topic result returns execution to the current phase-rerun owner;
-- event-bound rerun count incremented under the same rule digest → existing rerun-ready gate;
-- proven later normal descendant handoff → current existing lifecycle-owner action;
-- eligible terminal Final without an accepted request → exact post-final recovery inspect/apply preparation action;
-- exhausted next rerun under the active gate rule → one user decision boundary for a new bundle, not a C5 command;
-- stale, ambiguous, conflicting-transition, nonterminal or unsupported action → one direct blocker or `missing_contract`, never impossible predecessor-gate advice.
+- accepted post-final workspace, including event-committed cleanup-only state -> exact `recover`;
+- accepted artifact-persistence workspace -> existing quiescent `sweep` before Final lineage can be stable;
+- accepted topic-state workspace -> exact existing topic-state `recover`;
+- committed recovery handoff without a completed rerun `current_node` update, including load-written partial entry -> exact `enter-phase phases/phase-rerun.md`;
+- completed rerun entry not yet status-synchronized, or derived status present without the exact event/load-bound `phase_transition` and without a conflicting transition -> exact idempotent `advance-status --to hitl2_recorded`;
+- synchronized initial rerun profile/window whose stage owner is topic-state/phase -> existing topic-state inspect/apply/recover checkpoint; an unchanged topic result returns execution to the current phase-rerun owner;
+- synchronized initial rerun profile/window whose distinct exact style projection proves the style-before-count crash window -> the existing `current_owner` action targeted at the phase-rerun count increment;
+- event-bound rerun count incremented under the same rule digest -> existing rerun-ready gate;
+- proven later normal descendant handoff -> current existing lifecycle-owner action;
+- eligible terminal Final without an accepted request -> exact post-final recovery inspect/apply preparation action;
+- exhausted next rerun under the active gate rule -> one user decision boundary for a new bundle, not a C5 command;
+- stale, ambiguous, conflicting-transition, nonterminal or unsupported action -> one direct blocker or `missing_contract`, never impossible predecessor-gate advice.
+
+The recovery summary SHALL project that shared stage owner directly. It SHALL NOT derive every `synchronized_initial_profile` action from the stage label alone, maintain a second profile comparator or add a recovery action kind.
 
 #### Scenario: Incident-shaped bundle produces one canonical recovery root
 
@@ -324,6 +350,18 @@ For a terminal Final or an accepted post-final recovery lineage descended from i
 - **WHEN** terminal Final contains an accepted artifact-persistence workspace
 - **THEN** recovery summary SHALL expose only the existing quiescent sweep action
 - **AND** SHALL NOT present C5 apply while final inventory remains unstable
+
+#### Scenario: Style-before-count summary uses the shared current owner
+
+- **WHEN** the shared C5 stage/owner result retains `synchronized_initial_profile` because current params equal a distinct exact style projection at the event-bound count
+- **THEN** recovery summary SHALL emit one reachable `current_owner` action targeted at the existing phase-rerun count increment
+- **AND** SHALL NOT emit topic-state, create another action kind or require a user decision
+
+#### Scenario: Equal projection keeps the idempotent phase owner
+
+- **WHEN** current params equal both event-bound params and the exact current projection so values cannot prove style execution
+- **THEN** recovery summary SHALL preserve the shared topic-state/phase owner
+- **AND** SHALL NOT infer the count-increment owner from projection equality alone
 
 #### Scenario: Exhausted rerun limit does not expose an impossible path
 

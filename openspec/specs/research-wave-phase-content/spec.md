@@ -43,7 +43,9 @@ Wave1 phase body SHALL keep topic deepening in the normal `wave1_topic_deepening
 
 After successful submit, the Phase Agent SHALL write `depth-review.yaml` from facts that are not already owned by submitted authority. The blocking review shape SHALL contain `version`, canonical topic binding, `reviewed_work_unit_refs[]`, depth-dimension judgments, profile-check judgments, `decision`, and `supplementary_queue_item_ids[]`. It SHALL NOT require the Agent to copy submitted `source_claims[]`, accepted URLs, cache refs, Wave0 URL arrays, new-source URL arrays, or derived floors into a second blocking authority. The Engine SHALL derive those facts from the reviewed submitted rows, Wave0 source authority, and profile.
 
-At each affected inspect/gate/submit failure, phase guidance SHALL consume the Engine-provided direct repair coordinates: `repair_kind`, `missing_fact`, `write_to`, and `rerun`. When `repair_kind` is `agent_action|engine_operation`, `write_to` is an already authorized mutable surface or legal operation, and no new semantic/risk decision is needed, the Agent SHALL perform the mechanical repair and rerun the named checkpoint without asking the user to execute ordinary commands. `user_decision|external_action|missing_contract` SHALL surface only the smallest boundary. Guidance SHALL NOT infer repair kind from a path or invite hand-written ledger, receipt, trace, hash, or provenance repair.
+At each affected inspect/gate/submit failure, phase guidance SHALL consume the Engine-provided direct repair coordinates: `repair_kind`, `missing_fact`, `write_to`, and `rerun`. When `repair_kind` is `agent_action|engine_operation`, `write_to` is an already authorized mutable surface or legal operation, and no new semantic/risk decision is needed, the Agent SHALL perform the mechanical repair and rerun the named checkpoint without asking the user to execute ordinary commands. `user_decision|external_action|missing_contract` SHALL identify only the smallest Agent-facing boundary. Because Wave1 is `stop: no`, those classifications SHALL NOT by themselves authorize the Phase Agent to initiate user-facing interaction or wait for acknowledgement. If a relevant user-initiated normal conversation turn is already current, the Agent SHALL answer from direct facts and, if the requested action reaches an unavailable path, state only the smallest boundary without persisting a decision or changing lifecycle authority. Guidance SHALL NOT infer repair kind from a path or invite hand-written ledger, receipt, trace, hash, or provenance repair.
+
+When a valid `research_profile` decision is already recorded but `research_style_params` or one of its derived Wave floors is missing, the existing `apply-research-style.mjs` operation SHALL be the mechanical owner. Wave1/Wave2 findings SHALL use `repair_kind: engine_operation`, name the exact existing operation, and return to the same inspect/Gate checkpoint. Only absence or invalidity of the underlying recorded profile semantics MAY remain a `user_decision` boundary. This correction SHALL NOT add a style resolver, copy style values into Wave code, or change Wave verdict/routing.
 
 #### Scenario: Wave1 loads the shared reference template
 
@@ -61,7 +63,14 @@ At each affected inspect/gate/submit failure, phase guidance SHALL consume the E
 
 - **WHEN** an affected checkpoint returns `repair_kind: agent_action|engine_operation`, `missing_fact`, the corresponding authorized `write_to` coordinate, and `rerun`
 - **THEN** the Phase Agent SHALL perform that action and rerun the named checkpoint
-- **AND** it SHALL escalate only for `user_decision`, `external_action`, or `missing_contract`
+- **AND** it SHALL treat `user_decision`, `external_action`, or `missing_contract` only as the smallest Agent-facing boundary and obey the current node interaction contract rather than automatically escalating
+
+#### Scenario: Recorded profile makes missing style parameters mechanical
+
+- **WHEN** Wave1 or Wave2 cannot derive a required floor because `research_style_params` is missing but a valid `research_profile` is already recorded
+- **THEN** the finding SHALL identify the existing `apply-research-style.mjs` operation with `repair_kind: engine_operation`
+- **AND** the Agent SHALL execute it and rerun the same Wave inspect/Gate checkpoint without contacting the user
+- **AND** a true missing profile decision SHALL remain a distinct `user_decision` boundary
 
 #### Scenario: Wave1 deepening uses work-unit kind
 
@@ -480,7 +489,7 @@ Wave0, Wave1, and Wave2 phase Markdown SHALL instruct the Phase Agent to run pro
 
 The delegated drain loop SHALL reconstruct in-flight work from bundle truth, actively poll or inspect work-unit readiness, submit ready attempts, repair rejected or repairable attempts, and use `timeout-preflight` for expired or stale attempts before terminal timeout. The Phase Agent SHALL follow preflight advice: submit submit-ready results, repair repairable same-`work_id` candidates, wait or continue polling recent-progress attempts, inspect/block invalid bindings, and call timeout only when preflight reports timeout-eligible or an explicit audited force timeout is chosen. Because false timeout eligibility exits non-zero by design, phase guidance SHALL tell the Agent to parse structured `timeout-preflight` stdout before deciding the next action.
 
-Force timeout SHALL be documented as exceptional. Phase guidance SHALL NOT present `timeout --force` as the normal response to progress-positive work. If preflight recommends `block` or reports invalid binding, the phase guidance SHALL direct the Phase Agent to inspect/repair through Engine tooling or surface a blocker rather than forcing timeout to make the phase drain.
+Force timeout SHALL be documented as exceptional. Phase guidance SHALL NOT present `timeout --force` as the normal response to progress-positive work. If preflight recommends `block` or reports invalid binding, phase guidance SHALL direct the Phase Agent to inspect/repair through Engine tooling or preserve the smallest deterministic blocker in Agent-facing feedback rather than forcing timeout to make the phase drain. Because every Wave is `stop: no`, `block` and blocker feedback SHALL NOT by themselves authorize a user-facing question, status output, partial delivery, approval request, or acknowledgement wait; the Phase Agent SHALL continue other eligible work or hold silently with the attempt undrained.
 
 This timeout-preflight path SHALL preserve the existing phase boundaries: bounded top-up claim remains an Agent strategy, Sub-agents remain bounded high-I/O actors, formal submit remains the only delegated success boundary, and gates run only after queue demand and delegated in-flight attempts are drained. The guidance SHALL NOT add Engine-owned waiting, daemon polling, user-notification dependency, direct Phase-Agent search for delegated evidence, or an alternate delegated completion path.
 
@@ -512,7 +521,7 @@ This timeout-preflight path SHALL preserve the existing phase boundaries: bounde
 
 - **WHEN** timeout-preflight reports a progress-positive or invalid-binding attempt as not timeout-eligible
 - **THEN** phase guidance SHALL NOT present `timeout --force` as the default drain action
-- **AND** it SHALL instruct the Phase Agent to prefer submit, repair, wait, inspect, or blocker surfacing according to preflight advice
+- **AND** it SHALL instruct the Phase Agent to prefer submit, repair, wait, inspect, or Agent-facing blocker retention according to preflight advice without initiating user interaction from a `stop: no` Wave
 
 #### Scenario: no-progress timeout still returns to REDO
 
@@ -522,9 +531,9 @@ This timeout-preflight path SHALL preserve the existing phase boundaries: bounde
 
 ### Requirement: Wave delegated execution SHALL use one visible actor decision loop
 
-Wave0, Wave1, and Wave2 phase guidance and the shared work-unit protocol SHALL instruct the Phase Agent to use this order at each delegated claim decision: inspect the queue-front planned delegated role, make one small real host/native observation for that exact role, invoke the existing claim checkpoint with the normalized observation and chosen execution actor class, then either spawn a normal delegated batch, execute one explicitly allowed `phase_agent_fallback`, or stop on the returned no-claim blocker. Guidance SHALL NOT tell the Agent to claim a batch first and discover availability by spawning every attempt, and SHALL NOT reuse one role observation for different delegated roles.
+Wave0, Wave1, and Wave2 phase guidance and the shared work-unit protocol SHALL instruct the Phase Agent to use this order at each delegated claim decision: inspect the queue-front planned delegated role, make one small real host/native observation for that exact role, invoke the existing claim checkpoint with the normalized observation and chosen execution actor class, then either spawn a normal delegated batch, execute one explicitly allowed `phase_agent_fallback`, or stop that claim attempt on the returned no-claim blocker. Guidance SHALL NOT tell the Agent to claim a batch first and discover availability by spawning every attempt, and SHALL NOT reuse one role observation for different delegated roles.
 
-When fallback is accepted by claim, the Phase Agent SHALL execute the single claimed work unit itself without asking the user to run work-unit commands, then submit or terminalize it before claiming another fallback. When the kind policy prohibits fallback or the blocker is an external account, host policy, or permission that the Agent cannot change, guidance SHALL escalate only that smallest external action to the user and resume the same claim checkpoint afterward. `human-directed` SHALL NOT be presented as availability evidence, actor-policy override, or fallback permission.
+When fallback is accepted by claim, the Phase Agent SHALL execute the single claimed work unit itself without asking the user to run work-unit commands, then submit or terminalize it before claiming another fallback. When the kind policy prohibits fallback or the blocker is an external account, host policy, or permission that the Agent cannot change, guidance SHALL identify only the smallest external-action boundary in Agent-facing feedback and preserve the same claim checkpoint. Because Wave0, Wave1, and Wave2 are `stop: no`, that blocker SHALL NOT by itself authorize a framework-initiated question, status output, or acknowledgement wait; the Agent SHALL continue other eligible work or hold silently. A relevant user-initiated normal conversation turn SHALL receive an answer from direct facts and, if it reaches that blocker, only the smallest external-action boundary without changing authority. After the external prerequisite is satisfied through an accepted surface, the Agent SHALL rerun the same claim checkpoint. `human-directed` SHALL NOT be presented as availability evidence, actor-policy override, or fallback permission.
 
 #### Scenario: Wave0 probes before bounded source-intake claim
 
@@ -548,8 +557,9 @@ When fallback is accepted by claim, the Phase Agent SHALL execute the single cla
 #### Scenario: External host blocker escalates minimally
 
 - **WHEN** the delegated actor is unavailable, fallback is not selected, and resolution requires a non-delegable host/account action
-- **THEN** guidance SHALL ask the user only for that external action or decision
-- **AND** after resolution the Agent SHALL rerun the same claim checkpoint itself
+- **THEN** guidance SHALL identify only that external action or decision as the Agent-facing escalation boundary
+- **AND** in a `stop: no` Wave the classification alone SHALL NOT authorize a user question, status output, or acknowledgement wait
+- **AND** after the prerequisite is satisfied through an accepted surface, the Agent SHALL rerun the same claim checkpoint itself
 
 ### Requirement: Work unit index record SHALL carry Engine-owned rerun_count
 

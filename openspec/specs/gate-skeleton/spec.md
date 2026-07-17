@@ -127,7 +127,9 @@ Each hint SHALL contain:
 - `write_to`: the exact next-action coordinate from the resolved definition-owned or checker-owned root contract; and
 - `rerun`: the exact same Gate CLI checkpoint, using the Engine-resolved absolute bundle root and current node when available.
 
-`repair_kind` is action-responsibility feedback, not permission. `agent_action` and `engine_operation` tell the Controller which legal mechanical path to execute; `user_decision`, `external_action`, and `missing_contract` identify the smallest escalation boundary. The Controller SHALL NOT infer this kind from the shape of `write_to` or from prose.
+`repair_kind` is action-responsibility feedback, not permission or interaction timing. `agent_action` and `engine_operation` tell the Controller which legal mechanical path to execute; `user_decision`, `external_action`, and `missing_contract` identify the smallest honest boundary. The Controller SHALL NOT infer this kind from the shape of `write_to` or from prose.
+
+Producer-supplied `repair` and action-bearing `advice[]` for `user_decision`, `external_action`, or `missing_contract` SHALL remain interaction-placement-neutral so the same direct diagnostic is valid at HITL1/HITL2 and at a non-terminal `stop: no` phase. That prose SHALL identify the missing boundary and its existing owner or unavailable contract. The structured `hints[].rerun` SHALL remain the one exact checkpoint coordinate; compatibility prose SHALL NOT copy a competing command or contradict it. Producer prose SHALL NOT direct the Controller to ask/contact the user now, return/jump to HITL, surface a blocker, request approval, or wait for acknowledgement. This wording constraint SHALL NOT suppress a finding or change `repair_kind` merely to alter interaction timing, and SHALL NOT alter Gate pass/fail or routing or require the Engine to inspect conversation state. When direct facts and an accepted owner prove that a current producer mislabeled an existing mechanical operation as `user_decision`, the producer SHALL correct `repair_kind` and `write_to` to that existing owner; this is owner repair, not interaction-policy relabeling. Legacy `failure_message` remains the non-authoritative compatibility detail defined by the Gate-definition contract; this requirement SHALL NOT make it an action source or require rewriting it.
 
 `write_to` is retained as the compatible coordinate field name, but its meaning SHALL be interpreted by `repair_kind`: `agent_action` names an authorized mutable bundle path or JSON pointer; `engine_operation` names an accepted Engine operation with the exact known arguments; `user_decision` names the exact HITL/decision surface; `external_action` names the non-delegable prerequisite; and `missing_contract` names the exact unavailable capability or checker/definition contract boundary. A non-`agent_action` coordinate SHALL NOT be presented as permission to edit that coordinate directly.
 
@@ -136,6 +138,8 @@ Definition-time coordinate templates SHALL be fully resolved before output. For 
 `hints[]` is a read-only feedback projection. It SHALL NOT become gate authority, permission, a generic repair controller, or an automatic mutation path. `inspect[]` MAY retain bounded forensic detail and `advice[]` MAY remain for compatibility, but neither SHALL be the only way for the Markdown Controller to discover the legal repair path.
 
 All failure exits SHALL use the shared result/finding builder, including invalid invocation, missing/unparseable definition, node/gate binding, lifecycle handoff/status preflight, canonical topic-state prerequisite, gate-specific prerequisite, routing, durability, and rule evaluation. For failures outside definition evaluation, the existing helper that directly detects the failed fact SHALL construct and return the structured finding with its stable root id, blocking basis, observed/expected facts, and repair kind/write coordinate. A wrapper SHALL only project that finding for its checkpoint and SHALL NOT hand-build a failed result, reconstruct metadata from prose, or look up a duplicate central preflight-root catalog.
+
+For the active rerun-count rule needed both before and at its formal Gate decision point, the Gate, HITL2 and accepted post-final consumer SHALL reuse the side-effect-free evaluator owned by REI-003 rather than duplicate the comparison in CLI and Markdown. The evaluator SHALL consume the loader-parsed definition plus full parsed profile and return closed availability facts only; consumer modes and post-final stages SHALL follow the owning REI-003/POF-001 contracts. The rerun-ready Gate SHALL keep formal verdict/trace/routing ownership, and existing local comparisons in the Gate and post-final guard SHALL be removed.
 
 #### Scenario: Gate rule failure returns one actionable hint
 
@@ -166,6 +170,34 @@ All failure exits SHALL use the shared result/finding builder, including invalid
 - **WHEN** the shared handoff/status helper detects a missing route-bound load or invalid status window
 - **THEN** that helper SHALL return the structured lifecycle finding consumed by the formal Gate projector
 - **AND** the wrapper SHALL NOT translate helper prose through a separate `GATE_FAILURE_ROOTS` or equivalent root catalog
+
+#### Scenario: Shared advisory and Gate fact use one evaluator
+
+- **WHEN** HITL2 advice, accepted post-final recovery and rerun-ready Gate need the active rerun-count availability fact
+- **THEN** all three SHALL call the same REI-003 pure evaluator over the loader-parsed definition and full parsed profile
+- **AND** Markdown SHALL consume its closed result rather than implement operator/value/count logic
+- **AND** only the Gate SHALL emit the formal verdict, routing and Gate trace
+
+#### Scenario: Profile prerequisite masks count implications
+
+- **WHEN** the full profile is missing/unparseable or its HITL2 parent is absent
+- **THEN** the Gate SHALL emit only the existing profile prerequisite as the primary hint
+- **AND** rationale/count implications SHALL remain masked rather than becoming a competing rerun-count hint
+- **AND** the shared evaluator SHALL return unsupported facts without constructing another finding
+
+#### Scenario: Non-mechanical Gate advice stays placement-neutral
+
+- **WHEN** a Gate/Inspect producer consuming the evaluator emits a primary `user_decision`, `external_action`, or `missing_contract` finding
+- **THEN** `hints[]` SHALL retain the exact `repair_kind`, `missing_fact`, `write_to`, and same-checkpoint `rerun`
+- **AND** producer-supplied repair/advice SHALL identify the boundary without instructing immediate user contact, HITL reentry, approval, surfacing, or acknowledgement wait
+- **AND** Gate verdict and route SHALL remain unchanged, and finding classification SHALL remain unchanged unless direct facts plus an accepted existing owner prove it was misclassified as a user decision
+
+#### Scenario: Existing mechanical owner corrects a false user-decision finding
+
+- **WHEN** a recorded research profile exists and a Wave finding lacks only derived `research_style_params` that the accepted `apply-research-style.mjs` operation owns
+- **THEN** the finding SHALL use `repair_kind: engine_operation` and name that existing operation rather than HITL1
+- **AND** only a genuinely missing research-profile decision MAY retain `repair_kind: user_decision`
+- **AND** Gate verdict, routing and the formal same-check rerun SHALL remain unchanged
 
 #### Scenario: CLI called without --bundle
 
@@ -342,12 +374,21 @@ For reachable roots, the Agent SHALL follow the returned owner checkpoint, execu
 
 Lifecycle gate CLIs MAY use an Agent-reported or Engine-derived attempt count as one input to degraded-pass eligibility, but the attempt count alone SHALL NOT change gate truth or authorize handoff. A degraded pass MAY be considered only after the configured fatigue threshold has been reached and the gate can still prove the runtime-truth preconditions required by the lifecycle handoff contract.
 
+Fatigue advice for a non-terminal `stop: no` phase SHALL reinforce the direction-aware silent contract: gate failure is not permission for the framework/Agent to initiate questions, progress, idle summaries, partial delivery or A/B choices. It SHALL direct strategy change, accepted degradation, same-check repair or silent hold without stating an absolute prohibition on answering a user-initiated normal conversation turn already received. The advice SHALL NOT inspect or classify chat state, and this change SHALL NOT alter the fatigue threshold, Gate verdict or degraded-pass eligibility.
+
 #### Scenario: Attempt hint does not bypass runtime truth
 
 - **WHEN** a wave gate is invoked with an attempt count at or above fatigue threshold
 - **AND** the gate has a missing submitted work-unit ledger row, stale `delegated_in_flight`, invalid status window, failed handoff preflight, hash drift, nonce mismatch, or non-durable trace write
-- **THEN** the gate SHALL NOT emit a degraded pass
+- **THEN** the Gate SHALL NOT emit a degraded pass
 - **AND** inspect/advice SHALL name the runtime-truth blocker
+
+#### Scenario: Fatigue advice prohibits initiation rather than every reply
+
+- **WHEN** a failed non-terminal `stop: no` Gate reaches the existing fatigue threshold
+- **THEN** fatigue advice SHALL state that the Agent/framework must not initiate user-facing questions, progress, idle summaries, partial delivery or choices
+- **AND** it SHALL NOT state that all user-facing interaction or an answer to an already received user turn is absolutely prohibited
+- **AND** the configured threshold, Gate verdict and degradation eligibility SHALL remain unchanged
 
 ### Requirement: Shared gate attempt audit helper
 

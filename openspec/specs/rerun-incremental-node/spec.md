@@ -55,12 +55,14 @@ If update-intent or mutate-layout is blocked by queued, delegated-in-flight or n
 
 Topic-state apply in rerun SHALL be authorized only when `rb_status.json#/current_node` is `phases/phase-rerun.md`, the incoming `current_gate: hitl2_recorded` / `next_gate: rerun_ready` window remains intact, and one of two route-bound witness classes is valid and non-superseded:
 
-- the existing HITL2 gate→rerun handoff plus load; or
+- the existing HITL2 gate->rerun handoff plus load; or
 - an accepted `post_final_reentry` event whose after-profile still matches current HITL2 semantics/hash, plus its route-bound rerun load and existing `advance-status` phase transition under `POF-003`.
 
 The post-final witness SHALL not be added as a fake chain/gate outcome; it is an explicit exceptional entry into the same rerun node. A caller-declared rerun context, HITL2 rationale or human-directed prose alone SHALL NOT authorize mutation. `migrate_legacy` and `mutate_layout` SHALL be unavailable outside this sanctioned rerun context. The phase SHALL preserve existing loop protection and increment `rerun_count`; it SHALL NOT treat post-final origin as permission to reset or skip the count.
 
-The exact event-bound after-profile requirement applies to the initial reentry/topic-state authorization window. After topic-state preparation succeeds, the existing rerun phase remains the sole owner of the sanctioned `rerun_count` increment from the event-bound `current_count` to `next_count`. That one-field exact change SHALL NOT be misclassified as forged C5 profile drift; every other profile field SHALL still match the event-bound after-profile, and the updated count SHALL remain subject to the same active rule digest and normal profile/gate validation.
+The exact event-bound after-profile requirement applies to the initial reentry/topic-state authorization window. After topic-state preparation succeeds, the existing rerun phase remains the sole owner of the sanctioned `rerun_count` increment from the event-bound `current_count` to `next_count`. When committed add or safe-remove changes canonical registry length, the already-required `apply-research-style.mjs` step SHALL remain the sole profile-style writer and SHALL call the RES-001 pure computation using the event-bound `research_profile` definition and current committed registry length before the count increment and rerun-ready Gate. If execution stops after an exact style write that changes params but before count increment, the shared C5 result SHALL keep the existing `synchronized_initial_profile` stage and return phase-rerun's existing count step as the nearest owner; it SHALL NOT repeat topic mutation or add a crash-recovery stage. If the exact computation equals event-bound params, direct values cannot prove the style call ran, so existing idempotent topic-state/phase execution remains the conservative owner.
+
+The shared C5 ownership/stage evaluator SHALL recognize at event-bound current count either the exact event-bound style parameters or that complete exact deterministic style projection, and at event-bound next count either of the same style shapes alongside the recorded count delta. It SHALL require current `research_profile` and every other profile field to match the event-bound after-profile. A style value matching neither allowed shape, different style name, or unrelated profile change SHALL remain unexplained drift. The updated count SHALL remain subject to the same active rule digest and normal profile/gate validation. Rerun/reentry consumers SHALL reuse this stage/owner result rather than keep separate count-only comparators.
 
 #### Scenario: Rerun preserves incoming HITL2 status window before gate pass
 - **WHEN** normal HITL2 or accepted post-final recovery has selected and loaded `phase-rerun.md`
@@ -114,16 +116,28 @@ The exact event-bound after-profile requirement applies to the initial reentry/t
 
 #### Scenario: Existing rerun count mutation does not invalidate entry lineage
 
-- **WHEN** the initial C5 profile/event/load/phase-transition window authorized topic-state preparation and the rerun phase then increments `rerun_count` through its existing owner
+- **WHEN** the initial C5 profile/event/load/phase-transition window authorized topic-state preparation, canonical topic count optionally changed through accepted topic-state, the existing style owner recomputed its exact projection when required, and the rerun phase increments `rerun_count` through its existing owner
 - **THEN** the C5 event SHALL remain the historical entry witness for that rerun attempt
-- **AND** downstream rerun-ready validation SHALL accept only the event-bound `current_count → next_count` one-field profile delta and evaluate it through the existing gate rule rather than require the pre-increment profile hash
+- **AND** downstream rerun-ready validation SHALL accept the event-bound `current_count -> next_count` delta with either unchanged event-bound style params or the complete RES-001 projection from event-bound style and current canonical registry, then evaluate the count through the existing gate rule rather than require the pre-increment profile hash
+
+#### Scenario: Style projection crash before count increment resumes existing owner
+
+- **WHEN** sanctioned topic preparation and exact style recomputation have committed a projection different from event-bound params but profile count remains the event-bound current count
+- **THEN** C5, handoff and reentry SHALL retain `synchronized_initial_profile` and expose the existing phase-rerun count increment owner
+- **AND** they SHALL NOT repeat topic mutation, add a stage or write the count themselves
+
+#### Scenario: Style projection cannot hide profile drift
+
+- **WHEN** rerun-time profile contains a different `research_profile`, a `research_style_params` object matching neither the unchanged event-bound params nor exact current projection, or another changed profile field
+- **THEN** C5, handoff and reentry consumers SHALL reject the profile as unexplained lineage drift
+- **AND** they SHALL NOT recompute-and-write, choose another style or ask the user to approve a mechanical bypass
 
 #### Scenario: Existing artifacts remain preserved
 - **WHEN** rerun add/refine or layout preparation executes
 - **THEN** existing `reference/`, `artifacts/`, submitted ledger and work-unit history SHALL NOT be deleted, renamed or rewritten by topic-state operations
 
 #### Scenario: Remove or layout mutation remains blocked
-> **@deprecated** — Direct multi-file or imperative layout mutation remains blocked; C3B now provides one complete sanctioned `mutate_layout` target.
+> **@deprecated** - Direct multi-file or imperative layout mutation remains blocked; C3B now provides one complete sanctioned `mutate_layout` target.
 
 - **WHEN** the rationale requests remove, rename or renumber
 - **THEN** the Agent SHALL use the complete topic-state layout target rather than direct edits or a parallel namespace
@@ -133,11 +147,15 @@ The exact event-bound after-profile requirement applies to the initial reentry/t
 
 `phase-rerun.md` remains `stop: "no"` and the `rerun-ready` gate remains the deterministic checkpoint for legal rerun state. Gate failure SHALL NOT create a failed chain transition or allow the Agent to load another phase without `check.next`.
 
-Rerun preparation is not a reporting checkpoint. If rerun analysis or materialization appears locally complete, the Agent SHALL run the `rerun-ready` gate, repair from inspect/advice, or record a legal silent holding event. It SHALL NOT report "rerun prep is done so far," wait for confirmation, or route forward without `check.next`.
+Rerun preparation is not a reporting checkpoint. If rerun analysis or materialization appears locally complete, the Agent SHALL run the `rerun-ready` gate, repair from inspect/advice, or record a legal silent holding event. It SHALL NOT initiate a "rerun prep is done so far" report, wait for confirmation, or route forward without `check.next`.
 
-For fixable rerun preparation failures, such as missing derived seed topic materialization when the HITL2 rerun decision is otherwise valid, the phase body SHALL instruct the Agent to repair or take a silent degradation path without asking the user. In the specific case where `seed_topics/` is empty, the default silent degradation path SHALL be a full rerun seed regeneration, with the decision recorded through an accepted trace/log surface.
+For fixable rerun preparation failures, such as missing derived seed topic materialization when the HITL2 rerun decision is otherwise valid, the phase body SHALL instruct the Agent to repair or take a silent degradation path without initiating a user request. In the specific case where `seed_topics/` is empty, the default silent degradation path SHALL be a full rerun seed regeneration, with the decision recorded through an accepted trace/log surface.
 
-Hard non-repairable legality failures, such as exhausted `rerun_count >= max_reruns` or missing HITL2 rerun rationale, remain gate failures. Because no failed chain edge exists, the Agent SHALL NOT route to another phase. The Agent SHALL record `silent_unpassable` through an accepted trace/log surface, keep the run in the current non-blocked/in-progress holding state, and SHALL NOT ask the user mid-rerun.
+Hard non-repairable legality failures, such as an exhausted active max-rerun rule or missing HITL2 rerun rationale, remain gate failures. Because no failed chain edge exists, the Agent SHALL NOT route to another phase. The Agent SHALL record `silent_unpassable` through an accepted trace/log surface, keep the run in the current non-blocked/in-progress holding state, and SHALL NOT initiate a user question from mid-rerun.
+
+The active `rerun_count` rule in `DPT_FRAMEWORK/schema/gate_definitions/gate-rerun-ready.definition.json`, as parsed by the production Gate-definition contract, SHALL be the sole numeric Source of Record for the current max-rerun boundary. One side-effect-free `evaluateRerunAvailability({ definition, profile, includeNextIncrement })` SHALL be the sole semantic interpretation used by the formal rerun-ready Gate, HITL2 advice and accepted post-final recovery. It SHALL validate the exact active gate/rule/check/target/operator/value shape; require `profile`, `human_decision_checkpoints` and `hitl2` to be non-array objects; normalize only an absent nested `rerun_count` to `0`; require any present count to be a nonnegative integer; and require `includeNextIncrement` to be an explicitly supplied boolean. Missing or non-boolean mode, `null`, string, negative, fractional or non-finite count, or a missing/malformed parent SHALL return one unsupported reason rather than select a mode through JavaScript truthiness. It SHALL compute `evaluatedCount = currentCount + (includeNextIncrement ? 1 : 0)` and `available = evaluatedCount < exclusiveLimit` without I/O, finding construction, routing or persistence. Existing Gate-local and post-final-local comparisons SHALL be replaced rather than retained. Phase/shared Markdown, registry descriptions, tests and Agent-facing docs SHALL NOT maintain another concrete numeric limit or comparison.
+
+HITL2 and fresh/pre-commit post-final eligibility SHALL call `includeNextIncrement: true` for the rerun phase's required next increment. The formal rerun-ready Gate SHALL call `false` over its already-incremented profile and retain verdict/trace/routing ownership. Accepted post-final lineage after its event-bound increment SHALL verify the recorded one-field `currentCount -> evaluatedCount` delta and definition binding, then defer formal availability to that same `false` Gate call; it SHALL NOT evaluate a second future increment. Consumer-specific C5 stage semantics remain owned by `post-final-recovery`.
 
 #### Scenario: Empty seed topics defaults to full rerun silently
 
@@ -148,18 +166,38 @@ Hard non-repairable legality failures, such as exhausted `rerun_count >= max_rer
 
 #### Scenario: Non-repairable rerun legality failure does not route forward
 
-- **WHEN** the `rerun-ready` gate fails because `rerun_count >= max_reruns` or HITL2 rerun rationale is absent
+- **WHEN** the `rerun-ready` gate fails because the active max-rerun rule is exhausted or HITL2 rerun rationale is absent
 - **THEN** `resolveNodeTransitionDetailed` SHALL return `kind: "no_transition"`
 - **AND** the Agent SHALL NOT load another phase without `check.next`
-- **AND** the Agent SHALL NOT ask the user from inside the `stop: "no"` rerun phase
+- **AND** the Agent SHALL NOT initiate a user question from inside the `stop: "no"` rerun phase
 - **AND** the Agent SHALL record `silent_unpassable` with the gate failure reason through an accepted trace/log surface
 
 #### Scenario: Rerun local completion does not become progress reporting
 
 - **WHEN** rerun preparation has no obvious local work remaining
 - **THEN** the Agent SHALL run the `rerun-ready` gate or follow gate fail repair guidance
-- **AND** the Agent SHALL NOT surface a progress summary or idle report
-- **AND** the Agent SHALL NOT load `seed-topics` without gate CLI `check.next`
+- **AND** it SHALL NOT initiate a progress summary or idle report
+- **AND** it SHALL NOT load `seed-topics` without gate CLI `check.next`
+
+#### Scenario: Boundary verification reads the active definition
+
+- **WHEN** the rerun-ready boundary integration test determines the current max-rerun rule
+- **THEN** it SHALL read the production-parsed operator/value from the active Gate definition
+- **AND** it SHALL prove the value immediately below the exclusive limit passes while the limit and a value above it fail
+- **AND** it SHALL NOT copy the current numeric limit into a separate test constant
+
+#### Scenario: One evaluator owns rerun availability semantics
+
+- **WHEN** formal rerun-ready Gate, HITL2 advice or accepted post-final recovery interprets the active rerun-count rule
+- **THEN** each consumer SHALL call the same side-effect-free evaluator
+- **AND** the evaluator SHALL receive the full parsed profile and reject a missing/unparseable profile or missing HITL2 parent
+- **AND** `includeNextIncrement` SHALL be an explicit boolean, and omission or any non-boolean value SHALL fail closed rather than silently select current-count mode
+- **AND** formal Gate SHALL use `includeNextIncrement: false` for the already-incremented count while HITL2 and fresh/pre-commit post-final eligibility SHALL use `true` for the required next increment
+- **AND** the evaluator SHALL compute `evaluatedCount = currentCount + (includeNextIncrement ? 1 : 0)` and `available = evaluatedCount < exclusiveLimit`
+- **AND** only a parsed profile with object-shaped checkpoint/HITL2 parents present and nested count absent SHALL default to `0`; null, string, negative, fractional or non-finite counts SHALL be unsupported
+- **AND** accepted post-final replay after the bound increment SHALL verify the recorded delta and defer to the formal Gate rather than check a next-next count
+- **AND** formal Gate SHALL retain verdict/trace/routing while advisory consumers persist no eligibility
+- **AND** no consumer SHALL retain a separate operator/value/count comparison
 
 ### Requirement: Chain routes HITL2 rerun as a deterministic outcome
 
@@ -172,11 +210,19 @@ The chain routing rules for the `rerun` outcome SHALL remain defined in the `tra
 
 ### Requirement: Rerun loop protection with max iterations
 
-Rerun loop protection remains mandatory. The change from user-facing stop to silent degradation SHALL NOT weaken `rerun_count < max_reruns`. When the max rerun count is exhausted, the Agent SHALL treat the current rerun path as unpassable rather than bypassing the gate, resetting the counter, or inventing a new route.
+Rerun loop protection remains mandatory. The distinction between framework-initiated surfacing and a user-initiated reply SHALL NOT weaken the active rerun-count Gate rule. When the active max-rerun boundary is exhausted, the Agent SHALL treat the current rerun path as unpassable rather than bypassing the Gate, resetting the counter, inventing a new route, or treating a user message as override authority.
+
+The concrete boundary SHALL be owned only by the active `gate-rerun-ready.definition.json` rule. Specs and governance descriptions SHALL state stable max-iteration semantics without hardcoding a number or duplicating a rule count. Changing the active boundary value is outside this change and SHALL require a separate accepted behavior change.
 
 #### Scenario: Max reruns exhausted remains unpassable
 
-- **WHEN** `rerun_count >= max_reruns`
+- **WHEN** `rerun_count` no longer satisfies the active max-rerun Gate rule
 - **THEN** the rerun-ready gate SHALL fail
 - **AND** the Agent SHALL NOT reset `rerun_count`
-- **AND** the Agent SHALL NOT bypass the gate through Markdown prose
+- **AND** the Agent SHALL NOT bypass the gate through Markdown prose or a user message
+
+#### Scenario: This change preserves the active boundary
+
+- **WHEN** this change is applied
+- **THEN** the operator and numeric value in the active rerun-ready Gate definition SHALL remain unchanged
+- **AND** only stale prose, registry descriptions and copied test expectations SHALL be aligned to that active rule
