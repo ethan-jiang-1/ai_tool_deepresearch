@@ -658,7 +658,7 @@ LOC-011: logging-conventions — log-event.mjs always-zero behavior is a documen
 # local-deepseek-claude-launcher
 LDC-001: local-deepseek-claude-launcher — Repo-owned pre-trigger Node launcher reads supported local DeepSeek configuration only from ignored repo-root .env
 LDC-002: local-deepseek-claude-launcher — Launcher parses configuration as data and constructs an isolated provider environment without shell evaluation or inherited routing contamination
-LDC-003: local-deepseek-claude-launcher — Anthropic-compatible model endpoint is explicit, credential-free in the URL, and restricted to loopback hosts
+LDC-003: local-deepseek-claude-launcher — Anthropic-compatible model endpoint is explicit, validated as a well-formed URL, and free of embedded credentials
 LDC-004: local-deepseek-claude-launcher — Redacted preflight reports all deterministic readiness failures without launching Claude Code
 LDC-005: local-deepseek-claude-launcher — Normal launch preserves caller arguments, inherited stdio, and Claude Code exit or signal outcome
 LDC-006: local-deepseek-claude-launcher — Detectable setup and launch failures stop without remote, credential, settings, or provider fallback

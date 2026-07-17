@@ -1,0 +1,58 @@
+schema_version: verification-routing/v1
+change: add-local-deepseek-claude-launcher
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: The launcher contract is exercised through its production subprocess boundary; no separately owned in-process helper is introduced.
+  integration:
+    status: selected
+    rationale: The proof invokes the production host launcher across filesystem configuration, process environment, stdio, arguments, and child-process boundaries.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: This pre-trigger host tool does not execute a research workflow chain or mutate a Runtime Bundle.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: The change claims deterministic launcher behavior only, not Agent judgment, research quality, or real-model behavior.
+claims:
+  - id: local-config-and-preflight-boundary
+    statement: The production launcher reads only supported repo-root configuration, does not shell-evaluate or leak credentials, removes inherited provider-routing contamination, accepts only credential-free loopback endpoints, and reports all preflight failures without launching Claude Code.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/host-tools/claude-deepseek.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: claude-process-passthrough-boundary
+    statement: With valid local configuration, the production launcher starts a test-owned Claude executable fixture without a shell, preserves caller arguments and stdio, propagates exit or signal outcome, and injects no settings or permission-bypass flag.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/host-tools/claude-deepseek.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: fail-closed-no-remote-fallback
+    statement: Missing dependencies or invalid configuration stop before child launch with the documented coarse exit class and never fall back to inherited credentials, global Claude settings, a remote provider, or a real external call.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/host-tools/claude-deepseek.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
