@@ -47,7 +47,7 @@
 - `rerun-incremental-node`：rerun legality 和 loop protection 不再在 prose/registry/test 复制具体 limit，boundary test 从 active Gate definition 读取当前规则，不改变实际上限。
 - `post-final-recovery`：fresh eligibility 与 pre-commit revalidation 复用同一 next-increment evaluator；event-bound increment 后按 recorded delta 识别 accepted lineage，再交给 formal rerun-ready Gate，不把 replay 误判成下一次 rerun。
 - `research-styles`：把现有 style 参数数学抽成 CLI/C5 共用的纯计算；CLI 保持唯一写入 owner，C5 只读验证精确投影。
-- `runtime-reentry-debuggability`：reentry 消费同一个 C5 stage 结果，接受合法 style projection，并要求 descendant Gate/load/transition/status 连续性而不是信任孤立 pass。
+- `runtime-reentry-debuggability`：reentry 与 recovery summary 消费同一个 C5 stage/owner 结果，接受合法 style projection，把最近动作投影到既有 owner，并要求 descendant Gate/load/transition/status 连续性而不是信任孤立 pass。
 - `version-management`：删除 accepted VEM-004 中历史 `v0.7` 的永久当前值，保持“proposal 决定版本、apply 使用同一版本”的稳定规则；本 change 的 v0.32 target 只保留在 proposal/tasks/CHANGELOG 历史面。
 
 ## Impact
