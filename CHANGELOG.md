@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.33
+
+- Added pre-trigger DeepSeek Claude Code launcher at `DPT_FRAMEWORK/host_tools/claude-deepseek.mjs` that reads three required values from repo-root `.env`, isolates inherited provider environment, validates endpoint URL format, and launches `claude` with transparent argument/stdio/exit-code passthrough.
+
 ## v0.32
 
 - Iterative research now uses recommendation-first HITL1 and HITL2 decisions around silent autonomous execution, answers current user-initiated turns without adding authority, keeps Final terminal, and makes lifecycle cues initiation-aware while successful claims stay action-only.

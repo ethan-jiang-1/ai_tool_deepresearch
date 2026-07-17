@@ -94,3 +94,7 @@ DPT_FRAMEWORK/RUN.md
 ```
 
 At that point, `RUN.md` is the entry path and command execution belongs to the Agent. HITL1 and HITL2 are the only interactive in-run checkpoints; non-terminal `stop: no` phases should not become permission-setup conversations.
+
+## 7. Host Tools: DeepSeek Claude Code Launcher
+
+An optional pre-trigger launcher lives at `DPT_FRAMEWORK/host_tools/`. It launches Claude Code connected to a DeepSeek Anthropic-compatible endpoint. See `DPT_FRAMEWORK/host_tools/README.md` for setup and usage.
