@@ -20,7 +20,7 @@ Agent 跑 playbook 时只许忠实执行每个 bash block 和 inline JS，不许
 
 ```
 experiments_playbook/
-  RUN_EXPS.md              # 跑 playbook 的行动指令（Agent 读这个）
+  RUN_TUI_EXPS.md              # 跑 playbook 的行动指令（Agent 读这个）
   exp_*/                   # 各实验组的 playbook
     case-<NN>-<cost>-<what>.md   # 单个 playbook
   exph_*/                  # 需人类交互的 playbook（Agent 不能自动跑）
@@ -56,7 +56,7 @@ experiments_playbook/
 | Standard | 真实 bundle 多步骤，无外部调用 | 功能验证 |
 | Heavy | real Agent/sub-agent、WebSearch/WebFetch、长链或其他昂贵/慢执行 | 完整验证 |
 
-`RUN_EXPS.md` 只列当前可运行 proof surfaces。旧 relay/slot、旧 queue slot shape、旧手写 delegated ledger 不能作为当前 production path 证明；有价值的 case 应迁移到 current work-unit / queue v2 路径，否则移出当前 playbook surface。
+`RUN_TUI_EXPS.md` 只列当前可运行 proof surfaces。旧 relay/slot、旧 queue slot shape、旧手写 delegated ledger 不能作为当前 production path 证明；有价值的 case 应迁移到 current work-unit / queue v2 路径，否则移出当前 playbook surface。
 
 ## 跟其他目录的关系
 

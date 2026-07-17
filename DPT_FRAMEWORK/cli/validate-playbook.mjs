@@ -24,7 +24,7 @@ function collectPlaybooks(dir) {
     const full = join(dir, e.name);
     if (e.isDirectory() && !e.name.startsWith('.') && !e.name.startsWith('_')) {
       files.push(...collectPlaybooks(full));
-    } else if (e.isFile() && e.name.endsWith('.md') && e.name !== 'README.md' && e.name !== 'RUN_EXPS.md') {
+    } else if (e.isFile() && e.name.endsWith('.md') && e.name !== 'README.md' && e.name !== 'RUN_TUI_EXPS.md' && e.name !== 'RUN_CLI_EXPS.md') {
       files.push(full);
     }
   }

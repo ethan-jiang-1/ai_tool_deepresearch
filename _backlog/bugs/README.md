@@ -18,9 +18,10 @@
 | Bug | 简述 | 状态 |
 |-----|------|------|
 
-_（无活跃 bug。BUG-090/091 已于 2026-07-16 归档为 cross-version skew——见 [`_done/_fixed_bugs/`](../_done/_fixed_bugs/)）_
+| BUG-092 | `add_topic` seed 结构与 canonical 模板不一致——新 topic 用记叙段落替代结构化 evidence entry，缺 concrete refs | open |
+| BUG-093 | seed topic 研究轮次追加区 section 命名模糊——"本轮"不指明对应 wave，`__BACKFILL_*__` token 机制未被遵守 | open |
 
-**Next available bug ID: BUG-092**
+**Next available bug ID: BUG-094**
 
 ---
 

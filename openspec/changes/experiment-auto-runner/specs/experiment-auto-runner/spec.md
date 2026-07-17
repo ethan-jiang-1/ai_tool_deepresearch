@@ -4,187 +4,124 @@
 
 ## Purpose
 
-通过 `DPT_FRAMEWORK/host_tools/run-experiment.mjs` 提供实验的自动化执行路径（Mode 2），与现有 coding-agent 交互模式（Mode 1，`RUN_EXPS.md`）并行。Runner 负责 playbook 发现、Claude Code headless 调用、结果收集和审计日志；Agent（Claude Code）负责实际的实验执行。核心可观测性通过 Agent 写入结构化 JSON 结果文件实现——用户无需观看终端输出即可获知 PASS/FAIL。
+通过 `DPT_FRAMEWORK/host_tools/run-experiment.mjs`（auto runner）提供实验的自动化执行路径（Mode 2），与现有 coding-agent 交互模式（Mode 1）并行。核心架构：**两份 runner instruction（`RUN_TUI_EXPS.md` + `RUN_CLI_EXPS.md`），playbook 不动**。TUI 模式下 Agent 执行+裁决+清理；CLI 模式下 Runner 编排+裁决+清理，Agent 仅执行 playbook。
 
 ## Requirements
 
-### Requirement: Runner script location and CLI interface
+### Requirement: Runner script location and CLI interface (EXA-001)
 
-Runner SHALL 是 `DPT_FRAMEWORK/host_tools/run-experiment.mjs` 中的单个可执行 Node.js ESM 文件（`#!/usr/bin/env node`）。它 SHALL 支持以下 CLI flag：
+Runner SHALL 是 `DPT_FRAMEWORK/host_tools/run-experiment.mjs` 中的单个可执行 Node.js ESM 文件。SHALL 支持：
 
-- `--case <id>`：运行单个 case（如 `--case case-41`）
-- `--group <name>`：运行整个实验组（如 `--group agentic-queue`）
-- `--tier <light|standard|heavy>`：运行整档实验
-- `--cleanup-pass`：PASS+CLEAN 时清理 disposable bundle
+- `--case <id>`：运行单个 case
+- `--group <name>`：运行整个实验组
+- `--tier <light|standard|heavy>`：运行整档
+- `--cleanup-pass`：PASS+CLEAN 时清理 bundle
 - `--timeout <ms>`：per-case 超时（默认 600000ms）
-- `--json`：仅输出 JSON 到 stdout（机器消费模式）
-- `--dry-run`：发现但不执行，打印将要运行的 case 列表
+- `--json`：仅输出 JSON 到 stdout
+- `--dry-run`：仅发现不执行
 
-无参数时 SHALL 默认运行所有 Light case。
-
-Exit code: 0 = 所有执行 case PASS；1 = 至少一个 FAIL；2 = runner 自身错误（参数错误、playbook 不存在）。
+无参数时默认运行所有 Light case。Exit code: 0 = 全部 PASS；1 = 有 FAIL；2 = runner 自身错误。
 
 #### Scenario: Run single case
-- **WHEN** 用户执行 `node DPT_FRAMEWORK/host_tools/run-experiment.mjs --case case-41`
-- **THEN** runner 发现并执行 case-41，输出结构化结果
-- **AND** exit code 反映 PASS/FAIL
-
-#### Scenario: Run entire tier
-- **WHEN** 用户执行 `node DPT_FRAMEWORK/host_tools/run-experiment.mjs --tier light`
-- **THEN** runner 发现所有 weight=light 的 playbook，串行执行每个，输出汇总 report
+- **WHEN** `node run-experiment.mjs --case case-41`
+- **THEN** runner 发现并执行 case-41，输出结构化结果，exit code 反映 PASS/FAIL
 
 #### Scenario: Dry run
-- **WHEN** 用户执行 `node DPT_FRAMEWORK/host_tools/run-experiment.mjs --tier light --dry-run`
-- **THEN** runner 打印将要执行的 case 列表但不启动 Claude Code
+- **WHEN** `node run-experiment.mjs --tier light --dry-run`
+- **THEN** 打印将要执行的 case 列表但不启动 Claude Code
 
-### Requirement: Headless Claude Code invocation
+### Requirement: Two runner instructions, playbook unchanged (EXA-002)
 
-Runner SHALL 复用 `claude-deepseek.mjs` 的环境映射逻辑（`.env` 解析、`ANTHROPIC_*` 变量映射、contamination 清除）来构造子进程环境。Runner SHALL 以 `stdio: 'pipe'` 模式 spawn `claude -p`（headless print mode），通过 prompt 指令 Agent 执行指定 playbook。
+`experiments_playbook/RUN_EXPS.md` SHALL 重命名为 `RUN_TUI_EXPS.md`，内容不变——Agent 在 TUI 交互模式下读取此文件，对 verdict 和 cleanup 负责。
 
-Prompt SHALL 包含：
-- 要执行的 playbook 文件路径
-- 要求 Agent 严格按 playbook step 执行（不跳过、不改写 bash blocks）
-- 要求 Agent 在 Step 1 的 `new-disposable-bundle.mjs` 命令中添加 `--target-dir .exp-bundles`
-- 要求 Agent 将结果写入 bundle 内的 `<bundle-path>/exp_result.json` 的明确指令和 JSON schema
-- PASS+CLEAN 清理、FAIL 保留的策略
+新增 `experiments_playbook/RUN_CLI_EXPS.md` SHALL 包含 CLI 自动化模式的执行规范：
+- 要求 Agent 读 playbook 后执行 bash blocks
+- Step 1 加 `--target-dir .exp-bundles`
+- Skip verdict step（Runner 从 trace 自行裁决）
+- Skip cleanup step（Runner 处理清理）
+- 执行完打印 `BUNDLE=<bundle-absolute-path>`
 
-Per-case 超时 SHALL 通过 `spawnSync` 的 `timeout` 选项实现；超时后进程被 SIGTERM 终止，标记为 TIMEOUT。
+所有 `case-*.md` playbook 文件 SHALL NOT 修改。两份 instruction 定义"怎么跑"，playbook 定义"验证什么"。
 
-#### Scenario: Successful invocation
-- **WHEN** runner spawns `claude -p` 并设置正确的 `ANTHROPIC_*` 环境变量
-- **THEN** Claude Code 以 headless 模式执行 playbook
-- **AND** Agent 将 verdict 结果写入 `<bundle>/exp_result.json`
+#### Scenario: TUI mode unchanged
+- **WHEN** coding agent 读取 `RUN_TUI_EXPS.md`
+- **THEN** 行为与之前读 `RUN_EXPS.md` 完全一致
 
-#### Scenario: API unavailable
-- **WHEN** `claude -p` 无法连接 API
-- **THEN** runner 检测到非零 exit code 和缺失的结果文件
-- **AND** 标记该 case 为 ERROR，附带连接失败原因
+#### Scenario: CLI mode follows CLI instruction
+- **WHEN** Agent 收到包含 `RUN_CLI_EXPS.md` 内容的 prompt
+- **THEN** Agent 按 CLI 规范执行：加 --target-dir、skip verdict/cleanup、打印 BUNDLE=<path>
 
-### Requirement: Structured result file contract
+### Requirement: Runner reads instruction and orchestrates Agent (EXA-003)
 
-Agent 执行完成后 SHALL 将结果写入 bundle 内部的 `<bundle-path>/exp_result.json`。每个 bundle 有唯一名称（含随机 hex 后缀），因此不同 case 或同一 case 的多次运行不会互相覆盖。格式为：
+Runner SHALL 读 `RUN_CLI_EXPS.md`，将其内容作为 prompt 前缀，追加 playbook 路径信息，发送给 headless Claude Code。Agent SHALL 按 CLI instruction 执行 playbook。Runner 在 Agent 退出后自行从 bundle 的 `rb_trace.jsonl` 提取 verdict。
 
-```json
-{
-  "case": "<case-id>",
-  "verdict": "PASS|FAIL|NOT_RUN",
-  "health": "CLEAN|ISSUES|null",
-  "checks_total": <number>,
-  "checks_passed": <number>,
-  "bundle": "<bundle-path>",
-  "bundle_preserved": <boolean>,
-  "error": "<error-message-or-null>"
-}
-```
+Runner SHALL 写入 `<bundle>/exp_result.json` 作为 bundle 内结果摘要。
 
-Runner SHALL 在 Agent 进程退出后读取 `<bundle-path>/exp_result.json` 确定 verdict。若文件缺失或 malformed，SHALL 标记为 ERROR。
+#### Scenario: Agent executes, Runner judges
+- **WHEN** Agent 完成 playbook 执行并退出
+- **THEN** Runner 在 `.exp-bundles/` 下找到 bundle
+- **AND** Runner 读取 `rb_trace.jsonl` 的 `check` events 裁决 PASS/FAIL
+- **AND** Runner 写入 `exp_result.json`
 
-#### Scenario: Result file present and valid
-- **WHEN** Agent 写入合法 JSON 到 bundle 内的 `exp_result.json`
-- **THEN** runner 解析文件并提取 verdict、health、checks 信息
-- **AND** 将结果纳入汇总 report
+#### Scenario: Agent fails to produce bundle
+- **WHEN** Agent 退出但 bundle 未找到
+- **THEN** Runner 标记 case 为 ERROR
 
-#### Scenario: Result file missing after agent completes
-- **WHEN** Agent 进程退出但 `<bundle>/exp_result.json` 不存在
-- **THEN** runner 标记 case 为 ERROR，reason 为 "result_file_missing"
+### Requirement: Playbook discovery and filtering (EXA-004)
 
-#### Scenario: Concurrent runs do not conflict
-- **WHEN** 两个 runner 进程同时执行不同 case
-- **THEN** 各自创建不同名称的 bundle
-- **AND** 各自的 `exp_result.json` 在不同 bundle 内，不会互相覆盖
+Runner SHALL 扫描 `experiments_playbook/` 下所有 `case-*.md` 文件，解析 YAML frontmatter 的 `weight`、`case`、`experiment` 字段。支持 `--case`/`--group`/`--tier` 过滤。无参数默认 `weight: light`。
 
-### Requirement: Playbook discovery and filtering
+#### Scenario: Filter by tier
+- **WHEN** `--tier standard`
+- **THEN** 仅返回 weight=standard 的 playbook
 
-Runner SHALL 扫描 `experiments_playbook/` 下所有 `case-*.md` 文件，解析 YAML frontmatter 中的 `weight`、`case`、`experiment` 字段来建立 playbook 清单。Runner SHALL 按以下规则过滤：
+### Requirement: Cleanup policy compliance (EXA-005)
 
-- `--case <id>`：仅返回 frontmatter `case` 字段匹配的 playbook
-- `--group <name>`：仅返回 frontmatter `experiment` 字段匹配的 playbook
-- `--tier <tier>`：仅返回 frontmatter `weight` 字段匹配的 playbook
-- 无过滤参数：返回所有 `weight: light` 的 playbook
-
-Runner SHALL NOT 硬编码 per-case dispatch table——发现逻辑完全由文件系统和 frontmatter 驱动。
-
-#### Scenario: Discover all light cases
-- **WHEN** runner 无参数执行
-- **THEN** 返回所有 frontmatter weight=light 的 playbook，按 case ID 排序
-
-#### Scenario: Missing frontmatter
-- **WHEN** playbook 文件缺少 YAML frontmatter 或缺少 `weight` 字段
-- **THEN** runner 跳过该文件并记录 warning
-
-### Requirement: Cleanup policy compliance
-
-Runner SHALL 遵循与 `RUN_EXPS.md` 相同的 cleanup 策略：
-
-- PASS + health CLEAN → 清理 bundle（仅在 `--cleanup-pass` 时）
-- PASS + health ISSUES → 保留 bundle
-- FAIL → 保留 bundle
-- NOT_RUN → 无 bundle 需清理
-- TIMEOUT/ERROR → 保留 bundle（如有）
-
-清理前 SHALL 将 verdict 追加到 `_temp/exp_verdicts.jsonl`（使用 `wff-playbook-utils.mjs` 的 `recordVerdict` 兼容格式）。
+PASS+CLEAN（仅 `--cleanup-pass` 时）→ 删 bundle。FAIL → 保留。NOT_RUN/HUMAN → 无 bundle。清理前追加 `_temp/exp_verdicts.jsonl`。
 
 #### Scenario: PASS+CLEAN with cleanup flag
-- **WHEN** case PASS、health CLEAN 且传了 `--cleanup-pass`
-- **THEN** runner 删除 disposable bundle 目录并追加 verdict 到审计日志
+- **WHEN** case PASS、health CLEAN、传了 `--cleanup-pass`
+- **THEN** 删除 `.exp-bundles/` 下的 bundle，追加 verdict 到审计日志
 
 #### Scenario: FAIL preserves bundle
 - **WHEN** case FAIL
-- **THEN** runner 不删除 bundle，report 中标记 `bundle_preserved: true`
+- **THEN** bundle 保留在 `.exp-bundles/`，report 标记 `bundlePreserved: true`
+- **AND** verdict 追加到审计日志
 
-### Requirement: Human case skip
+#### Scenario: No cleanup flag preserves all
+- **WHEN** 未传 `--cleanup-pass`
+- **THEN** 无论 PASS 还是 FAIL，bundle 均保留
 
-Runner SHALL 按以下规则处理 Human case：
+### Requirement: Human case skip (EXA-006)
 
-- case ID 在 901–949 范围 → 自动跳过，verdict 为 HUMAN，reason 为 "requires human judgment"
-- case ID 在 950–999 范围（AI-judge dual）→ 正常执行（如同 weight 决定自动化可行性）
-- `exph_` 目录前缀不作为唯一判断依据——以 case ID 范围为准
+case ID 901–949 → HUMAN（跳过）。950–999（AI-judge dual）→ 正常执行。
 
 #### Scenario: Human case 901
 - **WHEN** 发现 case-901
-- **THEN** runner 跳过，report 中 verdict=HUMAN
+- **THEN** skip，verdict=HUMAN
 
-#### Scenario: AI-judge case 951
-- **WHEN** 发现 case-951
-- **THEN** runner 正常执行（如同其 weight 为 heavy，可能需要 `--real-result`）
+### Requirement: Audit log and JSON report (EXA-007)
 
-### Requirement: Bundle isolation in `.exp-bundles/`
+Runner SHALL 输出 JSON report（summary + results 数组），追加每个 case 的 verdict 到 `_temp/exp_verdicts.jsonl`。
 
-Runner SHALL 将所有 Mode 2 产生的 disposable bundle 隔离到 repo-root `.exp-bundles/` 目录。Runner 在初始化时 SHALL：
+#### Scenario: Batch run produces summary
+- **WHEN** 3 cases（2 PASS, 1 FAIL）
+- **THEN** report.summary = {total:3, pass:2, fail:1}
+- **AND** audit log 追加 3 行
 
-- 创建 `.exp-bundles/` 目录（如不存在）
-- 创建 symlink `.exp-bundles/DPT_FRAMEWORK → ../DPT_FRAMEWORK`（如不存在），确保 playbook inline `.mjs` 脚本中的 `../DPT_FRAMEWORK/` import 路径正确解析
-- 在 prompt 中指示 Agent 传递 `--target-dir .exp-bundles` 给 `new-disposable-bundle.mjs`
+### Requirement: Bundle isolation in `.exp-bundles/` (EXA-008)
 
-Runner 写入 `.exp-bundles/_last_run.json` 缓存最近一次运行的摘要，格式为包含 `run_id`、`filter`、`summary`、`results` 的 JSON 对象。JS 脚本可直接读取此文件而无需扫描 `.exp-bundles/` 下所有 bundle 目录。
-
-`.exp-bundles/` SHALL 添加到 `.gitignore`。
+Runner 初始化时创建 `.exp-bundles/` 目录和 symlink `.exp-bundles/DPT_FRAMEWORK → ../DPT_FRAMEWORK`（幂等）。Agent 在 prompt 指令下使用 `--target-dir .exp-bundles`。`.exp-bundles/` 加入 `.gitignore`。
 
 #### Scenario: First run creates directory and symlink
-- **WHEN** Runner 首次执行且 `.exp-bundles/` 不存在
-- **THEN** Runner 创建目录和 symlink
-- **AND** 后续 playbook 执行正常
-
-#### Scenario: Symlink already exists
-- **WHEN** `.exp-bundles/DPT_FRAMEWORK` symlink 已存在
-- **THEN** Runner 跳过创建，不报错
+- **WHEN** 首次执行且 `.exp-bundles/` 不存在
+- **THEN** 创建目录和 symlink
 
 #### Scenario: Bundle created in isolation directory
 - **WHEN** Agent 执行 playbook Step 1 使用 `--target-dir .exp-bundles`
-- **THEN** disposable bundle 创建在 `.exp-bundles/dpt_disp_<case>_<name>_<hex>/`
+- **THEN** disposable bundle 创建在 `.exp-bundles/dpt_disp_<case-id>_<name>_<hex>/`
 - **AND** repo root 不受 `dpt_disp_*` 目录污染
 
-#### Scenario: Inline script imports resolve correctly
-- **WHEN** playbook inline `.mjs` 脚本从 `.exp-bundles/dpt_disp_xxx/` 内部执行 `import '../DPT_FRAMEWORK/engine/trace.mjs'`
-- **THEN** Node.js 通过 symlink `.exp-bundles/DPT_FRAMEWORK/` 解析到正确的 framework 文件
-
-### Requirement: Audit log integration
-
-Runner SHALL 在 case 执行完成后（包括 PASS、FAIL、NOT_RUN、HUMAN）将 summary 追加到 `_temp/exp_verdicts.jsonl`。每行 SHALL 是有效 JSON，包含 `ts`、`case`、`bundle`、`verdict`、`checks` 字段，格式与 `wff-playbook-utils.mjs` 的 `recordVerdict` 输出兼容。
-
-Runner SHALL 在 stdout 输出的 JSON report 中同时包含 `summary` 对象（`total`/`pass`/`fail`/`not_run`/`error` 计数）和 `results` 数组（per-case 详情）。
-
-#### Scenario: Multiple cases produce aggregate summary
-- **WHEN** runner 执行 3 个 case（2 PASS, 1 FAIL）
-- **THEN** report.summary 包含 `{total: 3, pass: 2, fail: 1, not_run: 0, error: 0}`
-- **AND** `_temp/exp_verdicts.jsonl` 追加 3 行
+#### Scenario: Inline script imports resolve via symlink
+- **WHEN** playbook inline `.mjs` 从 `.exp-bundles/dpt_disp_xxx/` import `../DPT_FRAMEWORK/...`
+- **THEN** Node.js 通过 symlink 正确解析到 framework 文件

@@ -103,21 +103,43 @@ function initExpBundles() {
 }
 
 // ── prompt ────────────────────────────────────────────────────────
-// Agent reads the playbook and executes it. The prompt only tells it
-// WHAT to do and WHERE to put the bundle — the Agent does the work.
+// Reads RUN_CLI_EXPS.md as the authoritative CLI-mode instruction,
+// then appends the specific playbook to run. The Agent follows the
+// CLI instruction faithfully; the Runner handles verdict and cleanup.
+const CLI_INSTRUCTION_PATH = join(REPO_ROOT, 'experiments_playbook', 'RUN_CLI_EXPS.md');
+let CLI_INSTRUCTION = null;
+
+function loadCliInstruction() {
+  if (CLI_INSTRUCTION) return CLI_INSTRUCTION;
+  try { CLI_INSTRUCTION = readFileSync(CLI_INSTRUCTION_PATH, 'utf-8'); }
+  catch { CLI_INSTRUCTION = ''; }
+  return CLI_INSTRUCTION;
+}
+
 function buildPrompt(playbook) {
-  // Strip extension for the suffix that new-disposable-bundle expects
-  return `Read experiments_playbook/RUN_EXPS.md section "怎么执行" first to understand the execution protocol.
+  const instruction = loadCliInstruction();
+  return `${instruction}
 
-Then run this single experiment: ${playbook.playbook}
+---
 
-Critical rules:
-- Read the playbook file, then execute every step's bash block faithfully.
-  Do NOT rewrite, skip, or batch steps. Execute them one at a time.
-- In Step 1, modify the new-disposable-bundle.mjs command: add "--target-dir .exp-bundles"
-  so the bundle is created under .exp-bundles/ instead of repo root.
-- After executing all steps, do NOT clean up the bundle. Leave it intact.
-- When done, print the bundle path on a line by itself: BUNDLE=<path>`;
+Runner 指定你跑这一个实验: ${playbook.playbook}`;
+}
+
+// ── diagnostic log ────────────────────────────────────────────────
+function writeDiagLog(bundlePath, stdout, stderr, elapsed) {
+  const logPath = join(bundlePath || EXP_BUNDLES, `_diag_${Date.now()}.log`);
+  try {
+    const content = [
+      `=== Agent stdout (${elapsed}ms) ===`,
+      stdout || '(empty)',
+      `=== Agent stderr ===`,
+      stderr || '(empty)',
+    ].join('\n');
+    writeFileSync(logPath, content);
+    return logPath;
+  } catch {
+    return null;
+  }
 }
 
 // ── trace reading ─────────────────────────────────────────────────
@@ -153,12 +175,16 @@ function extractVerdict(bundlePath) {
 
 // ── bundle finding ────────────────────────────────────────────────
 function findBundle(caseId, afterTime) {
-  // scan .exp-bundles/ first, then repo root
+  // The playbook Step 1 uses --case <short-id> which produces
+  // dpt_disp_<short-id>_<name>_<hex>. Extract short ID from full case ID
+  // e.g. case-41-light-minimal-path → case-41
+  const shortId = caseId.match(/^(case-\d+)/)?.[1] || caseId;
+
   for (const dir of [EXP_BUNDLES, REPO_ROOT]) {
     let entries;
     try { entries = readdirSync(dir); } catch { continue; }
     for (const e of entries) {
-      if (!e.startsWith(`dpt_disp_${caseId}_`)) continue;
+      if (!e.startsWith(`dpt_disp_${shortId}_`)) continue;
       const full = join(dir, e);
       let st;
       try { st = statSync(full); } catch { continue; }
@@ -282,7 +308,7 @@ function main() {
     const prompt = buildPrompt(pb);
     const startTime = Date.now();
 
-    const cr = spawnSync('claude', ['--setting-sources', 'project,local', '-p', prompt], {
+    const cr = spawnSync('claude', ['--setting-sources', 'project,local', '--allow-dangerously-skip-permissions', '-p', prompt], {
       env: childEnv,
       encoding: 'utf-8',
       timeout,
@@ -291,8 +317,18 @@ function main() {
 
     const elapsed = Date.now() - startTime;
 
-    // find the bundle Agent created
-    const bundlePath = findBundle(pb.caseId, startTime);
+    // find the bundle Agent created — filesystem scan first, then stdout parse
+    let bundlePath = findBundle(pb.caseId, startTime);
+    if (!bundlePath) {
+      const m = cr.stdout.match(/BUNDLE=(.+)/);
+      if (m) {
+        const p = m[1].trim();
+        bundlePath = resolve(p) === p ? p : join(REPO_ROOT, p);
+      }
+    }
+
+    // write diagnostic log — always, for debuggability
+    writeDiagLog(bundlePath, cr.stdout, cr.stderr, elapsed);
 
     if (bundlePath) {
       // Runner extracts verdict from trace
