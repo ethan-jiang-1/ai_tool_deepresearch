@@ -60,6 +60,7 @@ prefixes:
   HIU: hitl-ux
   INT: integration-tests
   IOC: cli-inspect-output-conventions
+  LDC: local-deepseek-claude-launcher
   LFW: lifecycle-walker            # all entries deprecated; no spec directory
   LOC: logging-conventions
   LOG: logger
