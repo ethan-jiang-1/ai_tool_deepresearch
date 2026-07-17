@@ -1,6 +1,6 @@
 # _done — 已完成/已归档记录
 
-> 最后更新: 2026-07-16 | `_backlog/_done/` — 所有已完成内容的归档根目录。
+> 最后更新: 2026-07-17 | `_backlog/_done/` — 所有已完成内容的归档根目录。
 > **`_` 前缀 = coding agent 默认忽略，除非显式点名要读。**
 >
 > 状态总览和查阅指南在本文件。活跃工作的 PENDING 表、依赖链、执行顺序 → 见 [`../todos/README.md`](../todos/README.md)。
@@ -28,7 +28,7 @@ _done/
 | `_fixed_bugs/` | 86 个已修复/结案 bug（BUG-001~091，有间隔） | BUG-092 |
 | `_suspened_bugs/` | 3 个悬挂 bug（BUG-026, 028, 030） | — |
 | `_done_todos/` | 15 个已完成 todo（DONE-001~015） | DONE-016 |
-| `_closed_plans/` | 28 个已完成 plan（CLS-001~028） | CLS-029 |
+| `_closed_plans/` | 30 个已完成 plan（CLS-001~030） | CLS-031 |
 | `_old_topics/` | 历史归档：`_v12-migration/`（6 个 OpenSpec change 全 DONE）、`_workflow/`（8 个 OpenSpec change 全 ARCHIVED）、`_original_dpt_requirement/`、`_original_dpt_v12/`、`_guideline/`、`_trainsistion/` | — |
 
 关键完成项（按完成日期）：

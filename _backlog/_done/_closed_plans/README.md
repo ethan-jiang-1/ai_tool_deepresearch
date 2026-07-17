@@ -1,6 +1,6 @@
 # Closed Plans Index — 已完成 plan 归档
 
-> 最后更新: 2026-07-16 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
+> 最后更新: 2026-07-17 | `_backlog/_done/_closed_plans/` — 已完成 plan 的归档目录。
 > 接收来自 [`../../plans/`](../../plans/) 的 plan。`_` 前缀 = coding agent 默认忽略。
 >
 > **plan 完成后文件名不变，位置即状态。** 移入时分配 `CLS-NNN` 序号（Closed），按完成时间递增。
@@ -50,4 +50,7 @@ plan 完成后从 `_backlog/plans/` 通过 `git mv` 移入本目录：
 
 Closure boundary for CLS-007..010: this change did not implement runtime exit-helper unification, code-2 semantic migration, a JS lifecycle walker, chat interceptor, environment-variable control, same-turn chat halt prevention, or fake evidence/trace handling.
 
-**Next available plan ID: CLS-029**
+| CLS-029 | 2026-07-17 | deep-research-iterative-refinement-positioning.md | HITL1/silent/HITL2 协作节奏落地：`simplify-iterative-research-interaction` change 完成 propose→apply→archive 全周期（commit `a081e4bc6`）；silent contract 从"忽略用户消息"收敛为"不主动打扰"；HITL 两端接受自然语言由 Agent 映射到现有 enum |
+| CLS-030 | 2026-07-17 | codex-playbook-runner.md | coding-Agent runner 与 subject Agent 进程分离：`codex`/`claude` CLI 已原生支持独立 `codex exec` 式 spawn，plan 的核心机制诉求已由平台满足 |
+
+**Next available plan ID: CLS-031**
