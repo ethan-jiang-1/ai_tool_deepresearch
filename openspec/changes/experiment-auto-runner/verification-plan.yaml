@@ -1,0 +1,72 @@
+schema_version: verification-routing/v1
+change: experiment-auto-runner
+test_classes:
+  unit:
+    status: selected
+    rationale: Manifest selection, native completion validation, outcome mapping and containment are small deterministic functions over direct inputs.
+  integration:
+    status: selected
+    rationale: The production Autorun Supervisor crosses manifest, filesystem, Agent CLI subprocess, argv/env, timeout, completion, health, audit and cleanup boundaries; deterministic fixture coverage must prove these mechanics without claiming Agent behavior.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: This change supervises one Markdown agent_flow_e2e case at a time and does not add a JS-led research workflow chain; a deterministic full-chain test would duplicate the wrong execution layer.
+  agent_flow_e2e:
+    status: selected
+    rationale: A real Claude Code CLI must launch a real Headless Playbook Agent that reads and completes Markdown, and one no-network native Sub-agent case must prove independent Subject behavior plus durable evidence export; deterministic subprocess fixtures cannot prove either behavior.
+claims:
+  - id: autorun-direct-contracts
+    statement: The production pure helpers select exactly the manifest-authorized case/cost set, allow and shell-quote only the three declared runtime tokens, bind source/rendered/context/completion digests, ground registry/completion writes in the explicit context file's fixed real parent rather than mutable fields, retain/revalidate case-root identity, require the V2 case-owned check IDs, exact stable bundle/verdict/health role policy and durable Subject-evidence roles, validate one PASS/FAIL/NOT_RUN completion against raw-byte trace-prefix and evidence-file digests, required parse/event facts and native verdict mode, permit only V2-declared non-health malformed auxiliaries, reject partial/generic checks or caller-selected verdict/health authority, contain every declared bundle/evidence/cleanup path inside one Supervisor-owned case run root, and keep repo-root framework/source coordinates distinct from run-owned paths.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/host_tools/agent-experiment-autorun.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: autorun-supervisor-subprocess-boundary
+    statement: The production Autorun Supervisor consumes the validated manifest, requires and enforces explicit total/per-case USD limits with trustworthy final-cost accounting, invokes a test-owned Claude executable from the validated repo command cwd without a shell using the real non-interactive permission mode and isolated provider environment, renders only allowed explicit run paths with source/rendered digest binding, creates no framework/experiments/tests copy or link under `.exp-bundles` and no repo-root bundle, classifies timeout/signal/nonzero/approval/missing-or-invalid-completion/cost as ERROR, keeps native outcome separate from health and cost, durably closes/hashes exact prompt plus structured Agent stdout/stderr, exports every declared exact verdict-boundary trace prefix plus required exact Subject-evidence bytes before eligible cleanup, appends the full case result, and never removes paths outside its case run root. This fixture proves only deterministic Supervisor mechanics.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/host-tools/agent-experiment-autorun.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: headless-playbook-agent-autorun
+    statement: The production Autorun Supervisor launches a real Claude Code CLI Headless Playbook Agent from validated repo command cwd for the selected fixture-backed Light deterministic case; that Coding/Playbook Agent reads the complete rendered Markdown playbook with source/rendered binding, executes every verdict-affecting step through the original repo-root framework with no run-root framework copy/link or repo-root bundle leak, produces the playbook-owned trace-bound native completion in a fresh disposable case run root, receives CLEAN health, and yields durable exact-prompt/Agent-transcript/full-result records that survive optional cleanup without any outer raw-trace verdict reinterpretation. The claim proves the end-to-end Autorun contract, not Subject Agent search, judgment, writing, repair, or synthesis.
+    test_class: agent_flow_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_agentic-queue/case-41-light-minimal-path.md
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
+  - id: headless-real-subagent-autorun
+    statement: The production Autorun Supervisor launches a real Headless Playbook Agent for migrated case-406; that Playbook Agent dispatches an independent real native Sub-agent with no external-call dependency, the Subject actor produces the declared task/result/receipt/output evidence, the native completion and health contracts pass, and optional cleanup leaves exact role-bound Subject evidence bytes readable outside the deleted case root. NOT_RUN, a parent-written substitute, the outer Playbook-Agent transcript alone, or a deterministic fixture cannot satisfy this claim.
+    test_class: agent_flow_e2e
+    proof_subject: agent_behavior
+    asset:
+      kind: markdown_playbook
+      path: experiments_playbook/exp_engine-boundary/case-406-heavy-real-subagent-boundary.md
+    execution_profile:
+      fixture: setup_only
+      subject_execution: real_subagent
+      runtime: real_disposable_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: trace_jsonl
