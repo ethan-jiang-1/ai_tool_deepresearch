@@ -18,10 +18,11 @@
 | Bug | 简述 | 状态 |
 |-----|------|------|
 
-| BUG-092 | `add_topic` seed 结构与 canonical 模板不一致——新 topic 用记叙段落替代结构化 evidence entry，缺 concrete refs | open |
-| BUG-093 | seed topic 研究轮次追加区 section 命名模糊——"本轮"不指明对应 wave，`__BACKFILL_*__` token 机制未被遵守 | open |
+| BUG-092 | `add_topic` seed 结构与 canonical 模板不一致 | open |
+| BUG-093 | seed topic 研究轮次追加区定义分散在 8+ 位置、section 名不携带 wave 标识 | open |
+| BUG-094 | `## 本轮重跑方向` section 格式无模板，supplement 方向写入不规范 | open |
 
-**Next available bug ID: BUG-094**
+**Next available bug ID: BUG-095**
 
 ---
 

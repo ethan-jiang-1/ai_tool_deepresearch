@@ -16,7 +16,7 @@ verdict: trace-jsonl
 
 由 coding agent 在真实 disposable experiment bundle 中执行。
 
-**⚠️ 模拟声明：** 本 playbook 中 original topic 和 seed topics 的内容由 bash 脚本写入（模拟 Agent 读取 `phase-hitl1.md` §3a 后的输出）。它验证的是：Agent 按 MD 指令产出的格式能被 gate CLI 正确处理。它**不验证** Agent 对详细 brief 的判别能力——那需要真实 Agent 执行（见 `exph_workflow-foundation/case-901-heavy-topic-rewrite-agent.md`，及其 AI 扮演真人对偶 `case-951`）。
+**⚠️ 模拟声明：** 本 playbook 中 original topic 和 seed topics 的内容由 bash 脚本写入（模拟 Agent 读取 `phase-hitl1.md` §3a 后的输出）。它验证的是：Agent 按 MD 指令产出的格式能被 gate CLI 正确处理。它**不验证** Agent 对详细 brief 的判别能力——那需要真实 Agent 执行（见 `exp_workflow-foundation/case-901-heavy-topic-rewrite-agent.md`，及其 AI 扮演真人对偶 `case-951`）。
 
 # case-182-light-hitl1-topic-rewrite-detailed
 

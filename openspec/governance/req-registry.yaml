@@ -50,6 +50,7 @@ prefixes:
   EXO: experiment-observability
   EXS: experiment-shared-infra
   EXR: experiment-ref-integrity
+  EXA: experiment-auto-runner
   FOR: fork-repair-converge
   FRE: framework-engine
   FIO: file-observability
@@ -263,6 +264,16 @@ EXO-005: experiment-observability — Ledger-driven Heavy provenance inspection
 EXO-006: experiment-observability — Runner health report protocol
 
 # file-observability
+# experiment-auto-runner
+EXA-001: experiment-auto-runner — Runner script as single executable ESM at host_tools/run-experiment.mjs with CLI flags
+EXA-002: experiment-auto-runner — Shared PLAYBOOK_MANIFEST.md + two runner instructions (RUN_TUI_EXPS.md + RUN_CLI_EXPS.md)
+EXA-003: experiment-auto-runner — Runner reads RUN_CLI_EXPS.md, spawns headless Agent, extracts verdict from rb_trace.jsonl, writes exp_result.json
+EXA-004: experiment-auto-runner — Playbook discovery via filesystem scan + YAML frontmatter filtering by case/group/tier
+EXA-005: "experiment-auto-runner — Cleanup policy: PASS+CLEAN (only --cleanup-pass) deletes bundle; FAIL preserves"
+EXA-006: "experiment-auto-runner — Human case skip: 901-949 → HUMAN; 950-999 (AI-judge) → normal execution"
+EXA-007: experiment-auto-runner — JSON report (summary + results) + append-only audit log to _temp/exp_verdicts.jsonl
+EXA-008: experiment-auto-runner — Bundle isolation in .exp-bundles/ with DPT_FRAMEWORK symlink for import path resolution
+
 FIO-001: file-observability — Engine audits phase-owned directories with stable file finding classifications
 FIO-002: file-observability — Unplanned files produce inspect/advice and authority blockers when relevant
 FIO-003: file-observability — Agent file explanations are diagnostic trace/log entries only

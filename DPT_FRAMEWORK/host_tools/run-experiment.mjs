@@ -19,6 +19,7 @@ const ENV_FILE = resolve(REPO_ROOT, '.env');
 const PLAYBOOK_DIR = join(REPO_ROOT, 'experiments_playbook');
 const EXP_BUNDLES = join(REPO_ROOT, '.exp-bundles');
 const VERDICTS_LOG = join(REPO_ROOT, '_temp', 'exp_verdicts.jsonl');
+const RUN_LOG = join(EXP_BUNDLES, '_run_log.jsonl');
 const VERIFY_HEALTH = join(REPO_ROOT, 'experiments_env', 'shared', 'verify-bundle-health.mjs');
 
 // ── CLI ───────────────────────────────────────────────────────────
@@ -140,6 +141,22 @@ function writeDiagLog(bundlePath, stdout, stderr, elapsed) {
   } catch {
     return null;
   }
+}
+
+// ── run log ──────────────────────────────────────────────────────
+function logRunEvent(event, data) {
+  const entry = JSON.stringify({ ts: new Date().toISOString(), event, ...data });
+  try { mkdirSync(EXP_BUNDLES, { recursive: true }); appendFileSync(RUN_LOG, entry + '\n'); } catch {}
+}
+
+function saveRunReport(report) {
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  const reportPath = join(REPO_ROOT, '_temp', `exp_run_${ts}.json`);
+  try {
+    mkdirSync(join(REPO_ROOT, '_temp'), { recursive: true });
+    writeFileSync(reportPath, JSON.stringify(report, null, 2) + '\n');
+  } catch {}
+  return reportPath;
 }
 
 // ── trace reading ─────────────────────────────────────────────────
@@ -305,6 +322,8 @@ function main() {
 
     if (!opts.json) process.stdout.write(`  ${pb.caseId} [${pb.weight}] ... `);
 
+    logRunEvent('case_start', { case: pb.caseId, playbook: pb.playbook, weight: pb.weight, group: pb.group });
+
     const prompt = buildPrompt(pb);
     const startTime = Date.now();
 
@@ -372,6 +391,7 @@ function main() {
       });
 
       appendVerdictLog(pb.caseId, basename(bundlePath), v.verdict, v.checks);
+      logRunEvent('case_done', { case: pb.caseId, verdict: v.verdict, checks_total: v.checksTotal, checks_passed: v.checksPassed, checks_failed: (v.checksTotal||0) - (v.checksPassed||0), health: healthClean ? 'CLEAN' : (healthResult ? 'ISSUES' : null), duration_ms: elapsed, bundle: relative(REPO_ROOT, bundlePath), bundle_preserved: bundlePreserved, error: v.error });
 
       if (!opts.json) {
         const tag = v.verdict === 'PASS' ? G + 'PASS' + B : R + 'FAIL' + B;
@@ -390,6 +410,7 @@ function main() {
         durationMs: elapsed,
       });
       appendVerdictLog(pb.caseId, null, 'ERROR', []);
+      logRunEvent('case_done', { case: pb.caseId, verdict: 'ERROR', checks_total: 0, checks_passed: 0, checks_failed: 0, health: null, duration_ms: elapsed, bundle: null, bundle_preserved: false, error: 'no bundle found — agent may have failed' });
       if (!opts.json) console.log(`${R}ERROR${B} ${(elapsed / 1000).toFixed(1)}s — no bundle found`);
     }
   }
@@ -403,12 +424,15 @@ function main() {
     results,
   };
 
+  // Save run report to persistent file
+  const reportPath = saveRunReport(report);
+
   if (opts.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
     printConsoleReport(report);
-    console.log('');
-    console.log(JSON.stringify(report, null, 2));
+    console.log(`\n${C}Report saved: ${reportPath}${B}`);
+    console.log(`Run log: ${RUN_LOG}`);
   }
 
   if (nError > 0) process.exit(2);

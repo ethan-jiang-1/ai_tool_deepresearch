@@ -20,11 +20,21 @@ Agent 跑 playbook 时只许忠实执行每个 bash block 和 inline JS，不许
 
 ```
 experiments_playbook/
-  RUN_TUI_EXPS.md              # 跑 playbook 的行动指令（Agent 读这个）
-  exp_*/                   # 各实验组的 playbook
-    case-<NN>-<cost>-<what>.md   # 单个 playbook
-  exph_*/                  # 需人类交互的 playbook（Agent 不能自动跑）
+  PLAYBOOK_MANIFEST.md          # 所有 case 的权威清单（Light/Standard/Heavy 三档表格）
+  RUN_TUI_EXPS.md               # TUI 交互模式执行规则（Agent 读这个）
+  RUN_CLI_EXPS.md               # CLI 自动化模式执行规范（host_tools/run-experiment.mjs 读这个）
+  exp_*/                        # 各实验组的 playbook
+    case-<NN>-<cost>-<what>.md  # 单个 playbook
 ```
+
+## 两种执行模式
+
+| 模式 | Instruction | 入口 | 谁裁决 | bundle 位置 |
+|------|------------|------|--------|-------------|
+| TUI（交互） | `RUN_TUI_EXPS.md` | coding Agent 直接读取 | Agent | repo root |
+| CLI（自动化） | `RUN_CLI_EXPS.md` | `DPT_FRAMEWORK/host_tools/run-experiment.mjs` | Runner（JS） | `.exp-bundles/` |
+
+Case 清单统一在 `PLAYBOOK_MANIFEST.md`，两份 instruction 均引用此文件。
 
 ## 编号约定：9NN 对偶（人类判断 case）
 
@@ -32,13 +42,12 @@ experiments_playbook/
 
 | 编号段 | 谁在环里 | 目录 | runner 行为 |
 |--------|---------|------|------------|
-| **901–949** | 真人 | `exph_*/` | **跳过**（自动跑会卡住，必须人工手动跑） |
-| **950–999** | AI 扮演真人 | `exph_*/`（与 90X 对偶**同目录**） | **自动可跑**（按编号段，不因 `exph_` 跳过） |
+| **901–949** | 真人 | （已移除） | 项目方向全面自动化，Human case 不再维护 |
+| **950–999** | AI 扮演真人 | `exp_workflow-foundation/` | **自动可跑** |
 
-**对偶规则（+50 配对）：** 同一个 case 的真人版与 AI 版用 **+50** 偏移配对——机制相同，只换"谁来扮演人类"。
+**对偶规则（+50 配对）：** 同一个 case 的真人版与 AI 版用 **+50** 偏移配对——机制相同，只换"谁来扮演人类"。真人版（901–949）已因项目方向全面自动化而移除，AI-judge 版（950–999）保留自动执行。
 
-- `case-901`（真人审查 Agent rewrite 质量）↔ `case-951`（AI 扮演审查者，对同一份 rewrite 给 verdict）
-- `case-902` ↔ `case-952`，依此类推
+- （已移除）真人审查 Agent rewrite 质量 ↔ `case-951`（AI 扮演审查者，对同一份 rewrite 给 verdict）
 
 **为什么要对偶：**
 
@@ -56,7 +65,7 @@ experiments_playbook/
 | Standard | 真实 bundle 多步骤，无外部调用 | 功能验证 |
 | Heavy | real Agent/sub-agent、WebSearch/WebFetch、长链或其他昂贵/慢执行 | 完整验证 |
 
-`RUN_TUI_EXPS.md` 只列当前可运行 proof surfaces。旧 relay/slot、旧 queue slot shape、旧手写 delegated ledger 不能作为当前 production path 证明；有价值的 case 应迁移到 current work-unit / queue v2 路径，否则移出当前 playbook surface。
+`PLAYBOOK_MANIFEST.md` 是当前可运行 proof surfaces 的权威清单。`RUN_TUI_EXPS.md` 和 `RUN_CLI_EXPS.md` 分别定义 TUI/CLI 两种执行协议。旧 relay/slot、旧 queue slot shape、旧手写 delegated ledger 不能作为当前 production path 证明；有价值的 case 应迁移到 current work-unit / queue v2 路径，否则移出当前 playbook surface。
 
 ## 跟其他目录的关系
 
