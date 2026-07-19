@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: autonomous-research-hardening
 case: case-606-light-continuation-cues
-weight: light
 case_goal: "Verify decision-point continuation cues are visible in real CLI output without claiming they force Agent behavior."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-606_arh_continuation_cues
-trace: dpt_disp_case-606_arh_continuation_cues/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [continuation-cue-claim-output, continuation-cue-gate-pass-output, continuation-cue-stop-no-advance-status-output, continuation-cue-stop-no-enter-phase-output, continuation-cue-stop-no-gate-pass-output, continuation-verdict-scope-no-overclaim]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: SWE-001, SWE-006, CPT-001, CPT-003, DEW-003
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -33,7 +41,8 @@ Light controlled playbook. The runner uses a real disposable bundle and real fra
 ## Step 1: Create Bundle And Capture Gate / Phase Cues
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs arh_continuation_cues --case case-606 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs arh_continuation_cues --case case-606 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs \
   --bundle "$B" \
@@ -118,6 +127,7 @@ echo "BUNDLE=$B"
 ## Step 2: Claim Work And Capture Claim Cue
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import {
   enqueueWorkUnitTask,
@@ -141,6 +151,7 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 
 ## Step 3: Verdict Checks
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -207,11 +218,7 @@ recordCheck(tracePath, {
 });
 JS
 
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/rb_trace.jsonl'))"
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-## Cleanup
-
-```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m => m.cleanup('$B', {caseId:'case-606'}))"
-```
+Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

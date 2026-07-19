@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: workflow-chain
 case: case-31-light-lazy-load
-weight: light
 case_goal: "验证 MD controller mode 显式驱动 single-entry loader：Markdown control surface 创建 runtime → Phase Agent 调 assessNode → Engine 返回结果 → Phase Agent 从 trace 交叉验证。runtime init 不预读任何 MD。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-31_wc_simple
-trace: dpt_disp_case-31_wc_simple/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [init:cache_empty, init:keys, init:no_file_read, load:entry_loaded, load:plan, load:status]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -27,12 +35,12 @@ Markdown control surface 承载步骤指令。每一步是 Phase Agent 读取 MD
 2. MD 创建 runtime → 验证 contentCache 为空, 无预读 [MAIN/SHELL]
 3. MD 调 assessNode → Engine 加载 wave.entry.md [MAIN/SHELL]
 4. MD 交叉验证 trace: file_loaded event 存在 [MAIN/SHELL]
-5. 从 trace 裁决 + Cleanup
-
+5. Native completion, then Supervisor-owned health and cleanup policy
 ## Step 1: 创建 bundle
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wc_simple --case case-31 --nodes=experiments_env/prototype-workflow-chain/nodes-workflow-chain --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wc_simple --case case-31 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
 node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 ```
@@ -52,9 +60,10 @@ MD 指令：「创建 workflow runtime，只加载 nodesDir，不读任何 MD �
 Engine 回答：runtime 就绪，contentCache 为空，无 file_read receipt。
 
 ```bash
-cat > $B/step_init.mjs << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createWorkflowRuntime } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
@@ -64,26 +73,24 @@ trace.traceInit('wl-simple: MD controller mode → Engine', { source: SRC });
 const runtime = createWorkflowRuntime('test', NODES_DIR);
 
 // Engine 回答 MD：runtime 状态
-trace.traceEntry('check', { source: SRC, step: 'init:cache_empty',
+trace.traceEntry('check', { source: 'playbook', gate: 'init:cache_empty', expected: true,
   passed: runtime.contentCache.size === 0,
   detail: `contentCache.size = ${runtime.contentCache.size}` });
 
-trace.traceEntry('check', { source: SRC, step: 'init:no_file_read',
+trace.traceEntry('check', { source: 'playbook', gate: 'init:no_file_read', expected: true,
   passed: runtime.receipts.filter(r => r.type === 'file_read').length === 0,
   detail: 'no file_read receipt before explicit load' });
 
-trace.traceEntry('check', { source: SRC, step: 'init:keys',
+trace.traceEntry('check', { source: 'playbook', gate: 'init:keys', expected: true,
   passed: runtime.receipts.length === 0,
   detail: `receipts.length = ${runtime.receipts.length}` });
 JS
 
-node $B/step_init.mjs $B $B/exp/nodes
-
 # MD 读 trace 裁决
 node -e "
 const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
-const c=e.filter(x=>x.event==='check'&&x.step.startsWith('init:'));
-c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
+const c=e.filter(x=>x.event==='check'&&x.gate.startsWith('init:'));
+c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.gate+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
 if(!ok)process.exit(1);
 console.log('MD裁决: Step 2.1 — runtime init 不预读 ✅');
@@ -101,9 +108,10 @@ MD 指令：「加载 wave.entry.md。」
 Engine 执行：读文件、解析依赖（自包含，无依赖）、加载、写 trace。
 
 ```bash
-cat > $B/step_load.mjs << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createWorkflowRuntime, createState, assessNode } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
@@ -113,26 +121,24 @@ const runtime = createWorkflowRuntime('test', NODES_DIR);
 const result = assessNode('wave.entry.md', createState(), runtime, trace);
 
 // Engine 回答 MD：load 结果
-trace.traceEntry('check', { source: SRC, step: 'load:status',
+trace.traceEntry('check', { source: 'playbook', gate: 'load:status', expected: true,
   passed: result.status === 'loaded',
   detail: `status = ${result.status}` });
 
-trace.traceEntry('check', { source: SRC, step: 'load:plan',
+trace.traceEntry('check', { source: 'playbook', gate: 'load:plan', expected: true,
   passed: JSON.stringify(result.plan) === JSON.stringify(['wave.entry.md']),
   detail: `plan = ${JSON.stringify(result.plan)}` });
 
-trace.traceEntry('check', { source: SRC, step: 'load:entry_loaded',
+trace.traceEntry('check', { source: 'playbook', gate: 'load:entry_loaded', expected: true,
   passed: result.state.executionOrder.includes('wave.entry.md') && result.state.counters['wave.entry.md'] === 1,
   detail: `order=${JSON.stringify(result.state.executionOrder)}, count=${result.state.counters['wave.entry.md']}` });
 JS
 
-node $B/step_load.mjs $B $B/exp/nodes
-
 # MD 读 trace 裁决
 node -e "
 const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
-const c=e.filter(x=>x.event==='check'&&x.step.startsWith('load:'));
-c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
+const c=e.filter(x=>x.event==='check'&&x.gate.startsWith('load:'));
+c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.gate+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
 if(!ok)process.exit(1);
 console.log('MD裁决: Step 2.2 — Engine 成功加载 wave.entry.md ✅');
@@ -148,6 +154,7 @@ console.log('MD裁决: Step 2.2 — Engine 成功加载 wave.entry.md ✅');
 MD 不信任 receipts，读原始 trace 文件交叉验证 Engine 确实写了 file_loaded。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node -e "
 const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
 const fileLoaded=e.filter(x=>x.event==='file_loaded');
@@ -169,36 +176,12 @@ console.log('MD裁决: Step 2.3 — trace 文件交叉验证通过 ✅');
 
 ---
 
-## Step 2.4: MD 最终裁决——汇总全部 check event
-
-MD 统计整个实验中所有 check event，判定 PASS/FAIL。
+## Native Completion
 
 ```bash
-cat > $B/verify.mjs << 'JS2'
-import { readFileSync } from 'node:fs';
-const B=process.argv[2];
-const lines = readFileSync(B+'/rb_trace.jsonl','utf-8').trim().split('\n');
-const events = lines.map(JSON.parse);
-const checks = events.filter(e => e.event === 'check');
-const passed = checks.filter(e => e.passed);
-const failed = checks.filter(e => !e.passed);
-
-console.log(`Result: ${checks.length} checks, ${passed.length} passed, ${failed.length} failed (${events.length} total events)`);
-if (failed.length > 0) {
-  for (const c of failed) console.log(`\x1b[31m  FAIL ${c.step}: ${c.detail}\x1b[0m`);
-  process.exit(1);
-}
-for (const c of passed) console.log(`\x1b[32m  PASS ${c.step}\x1b[0m`);
-console.log('\n\x1b[32mALL CHECKS PASSED\x1b[0m');
-JS2
-
-node $B/verify.mjs $B
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
-
-→ 预期：`6 checks, 6 passed, 0 failed`。
-
----
-
 
 ## Step 3: 结果解读
 
@@ -211,10 +194,4 @@ node $B/verify.mjs $B
 >   [load:entry_loaded] executionOrder 含 entry 且 counters=1
 >   全部 expected:true → 6/6 PASS 即通过。
 
-## Step 4: 清理
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-rm -rf $B
-```
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

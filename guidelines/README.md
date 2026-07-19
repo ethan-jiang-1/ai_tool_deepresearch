@@ -166,12 +166,12 @@ Guidelines defer to upstream authority and never to a downstream spec or impleme
 |---------|--------|-----------|-----------|
 | `dpt_rb_*` runtime bundle roots | Current convention | Yes | Production run state |
 | `dpt_disp_*` disposable experiment bundle roots | Current convention | Yes | Disposable experiment state |
-| `experiments_playbook/exp_*` playbooks | Current | Yes — see `experiments_playbook/RUN.md` for current inventory | Agent-readable experiment playbooks |
+| `experiments_playbook/exp_*` playbooks | Current | Yes — see `experiments_playbook/PLAYBOOK_MANIFEST.md` for current inventory | Agent-readable experiment playbooks |
 | `DPT_FRAMEWORK/engine/` | Current | Yes — queue, work-unit, gate, trace, workflow-chain, and supporting helpers | Production engine code |
 | `DPT_FRAMEWORK/engine/trace.mjs` | Current | Yes — unified trace writer, `createTrace` factory | Trace writer for all engines and playbooks |
 | `DPT_FRAMEWORK/` as read-only framework assets | Current convention | Yes | Framework code, definitions, templates, and Agent-facing instructions; not run state |
 | `experiments_env/shared/new-disposable-bundle.mjs` | Current | Yes | Shared experiment disposable-bundle setup |
-| `check` trace verdict events | Current | Used by command experiment playbooks; see `experiments_playbook/RUN.md` for inventory | Trace-backed verdict convention |
+| `check` trace verdict events | Current | Used by command experiment playbooks; see `experiments_playbook/PLAYBOOK_MANIFEST.md` for inventory | Trace-backed verdict convention |
 | `DPT_FRAMEWORK/workflows/manifest.json` + `workflows/nodes/` | Current | Yes | Single canonical workflow package for workflow-foundation; not a multi-workflow namespace |
 | `DPT_FRAMEWORK/schema/gate_definitions/` | Current | Yes | Read-only gate definition JSON; skeleton/content completeness is owned by accepted specs |
 | `DPT_FRAMEWORK/cli/gates/` | Current | Yes | Accepted one-gate-per-CLI skeleton wrappers |

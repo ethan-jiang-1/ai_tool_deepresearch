@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-topic-rewrite
 case: case-182-light-hitl1-topic-rewrite-detailed
-weight: light
 case_goal: "Verify that phase-hitl1.md §3a correctly instructs the Agent to recognize a detailed brief and do only light organization — not heavy rewrite — preserving the user's original scope, terminology, and dimensions."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-182_wff_rwd_*
-trace: dpt_disp_case-182_wff_rwd_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [original-topic-preserved, seed-topics-derived, detailed-brief-not-over-rewritten, hitl1-recorded]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -26,7 +34,7 @@ verdict: trace-jsonl
 2. 读 `phase-hitl1.md` §3a — 判断输入 → 详细 brief → 轻量整理
 3. 按 MD 的 "可直接使用，仍建议做轻量整理" 路径执行
 4. 读 `phase-hitl1.md` §3b — 写入 HITL1 profile
-5. Gate + verdict + cleanup
+5. Gate + native completion；随后停止
 
 ---
 
@@ -47,9 +55,9 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_rwd --case case-182 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_rwd --case case-182 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "Bundle: $B"
-echo "$B" > /tmp/pb_bundle
 ```
 
 ## Step 2: Agent 读 `phase-hitl1.md` §3a — 判断输入
@@ -77,7 +85,7 @@ Agent 的轻量整理：
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 
 cat > $B/rb_plan.md << 'PLANEOF'
 ---
@@ -117,7 +125,7 @@ grep -c 'Agent 未添加' $B/rb_plan.md
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 
 # Synthetic research_access below keeps this deterministic topic-rewrite case
 # focused on gate mechanics; it does not prove real Agent capability.
@@ -151,19 +159,26 @@ echo "HITL1 profile written per §3b"
 >   详细 brief 输入 → Agent 应识别不需要 deep rewrite，仅做轻量整理。
 >   依赖模拟 Agent 输出，验证 gate 的边界识别。
 > 
-> **PASS 才执行 Cleanup。FAIL 时跳过清理，保留 bundle 现场供排查。**
+> Playbook 不执行 health 或 cleanup；native completion 后由 Autorun Supervisor 根据 outcome/health policy 决定保留或清理。
 
-## Step 6: Gate + Verdict + Cleanup
+## Step 6: Gate + Native Completion
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle $B --to hitl1_recorded
 GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
 echo "$GATE" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed)})"
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'detailed brief: light organize per phase-hitl1.md 3a'})})"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
+node --input-type=module - "$B" <<'JS'
+import { appendFileSync, readFileSync } from 'node:fs'; import { join } from 'node:path';
+const [bundle]=process.argv.slice(2); const plan=readFileSync(join(bundle,'rb_plan.md'),'utf8'); const fm=JSON.parse(plan.match(/^---\n([\s\S]*?)\n---/)[1]);
+const terms=['合规成本','豁免条款','竞争影响']; const checks=[['original-topic-preserved',terms.every((v)=>plan.includes(v))],['seed-topics-derived',fm.derived_topic_count===3&&fm.topic_registry?.length===3],['detailed-brief-not-over-rewritten',plan.includes('Agent 未添加的维度')&&terms.every((v)=>plan.includes(v))]];
+for(const[id,passed]of checks)appendFileSync(join(bundle,'rb_trace.jsonl'),`${JSON.stringify({ts:new Date().toISOString(),event:'check',source:'playbook',gate:id,passed,expected:true})}\n`);if(checks.some(([,p])=>!p))process.exit(1);
+JS
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
+
+Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

@@ -1,19 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: reentry-debuggability
 case: case-314-light-artifact-persistence-crash-recovery
-weight: light
 case_goal: "验证 production persistence helper/CLI 对 prepared-before-rename、committed-before-cleanup、incomplete workspace 与 target conflict 给出 finalized/cleaned/blocked，且 Agent cleanup/retry 后 sweep 幂等、control authority 零 mutation。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-314_artifact_persistence
-trace: dpt_disp_case-314_artifact_persistence/rb_trace.jsonl
-verdict: trace-jsonl
-production_distance: >
-  使用 new-disposable-bundle、production helper test hooks 与 production operate-artifact-persistence CLI。
-  只证明 sanctioned content persistence workspace 的 crash recovery；不覆盖 persist invocation 前的 host write、control files、topic state 或 post-final reentry。
+verdict_mode: all
+required_checks: [prepared-finalized, post-rename-cleaned, preparing-blocked, agent-cleanup-retry, conflict-no-mutation, incomplete-no-deletion, repeat-idempotent, zero-control-mutation]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -24,7 +29,8 @@ production_distance: >
 ## Step 1: 创建 bundle 并运行真实 crash/recovery path
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs artifact_persistence --case case-314 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs artifact_persistence --case case-314 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -107,30 +113,16 @@ const checks = [
   ['repeat-idempotent', repeatBlocked.status === 1 && JSON.stringify(repeatBlocked.json.entries) === JSON.stringify(incompleteBlocked.json.entries)],
   ['zero-control-mutation', JSON.stringify(beforeControls) === JSON.stringify(controlSnapshot())],
 ];
-for (const [gate, passed] of checks) writeFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({ ts: new Date().toISOString(), event: 'check', gate, passed })}\n`, { flag: 'a' });
+for (const [gate, passed] of checks) writeFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({ ts: new Date().toISOString(), event: 'check', source: 'playbook', gate, passed, expected: true })}\n`, { flag: 'a' });
 if (checks.some(([, passed]) => !passed)) process.exit(1);
 JS
 ```
 
-## Step 2: 从 trace 裁决
+## Native Completion
 
 ```bash
-B= # populated from Step 1
-node --input-type=module - "$B" <<'JS'
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-const events = readFileSync(join(process.argv[2], 'rb_trace.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map(JSON.parse);
-const checks = events.filter((event) => event.event === 'check');
-for (const check of checks) console.log(`${check.passed ? 'PASS' : 'FAIL'} ${check.gate}`);
-if (checks.length !== 8 || checks.some((check) => !check.passed)) process.exit(1);
-console.log('PASS — crash-safe content persistence finalizes, cleans, blocks safely, and preserves control authority.');
-JS
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-## Cleanup
-
-PASS 后执行：
-
-```bash
-rm -rf "$B"
-```
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: autonomous-research-hardening
 case: case-602-standard-status-drift-return-to-legal-phase
-weight: standard
 case_goal: "BUG-042: status drift audit detects skipped wave windows and points back to latest legal phase without mutating status."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-602_arh_status_drift
-trace: dpt_disp_case-602_arh_status_drift/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [audit-did-not-mutate-status, latest-legal-target-named, manual-bypass-suspected]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: CPT-006
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -22,7 +30,8 @@ Standard controlled phase-drift playbook. This intentionally writes an impossibl
 ## Step 1: Create Legal Wave0 Handoff Then Drift Status
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs arh_status_drift --case case-602 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs arh_status_drift --case case-602 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -43,6 +52,7 @@ echo "BUNDLE=$B"
 ## Step 2: Audit Drift
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 BEFORE=$(cat "$B/rb_status.json")
 set +e
 node DPT_FRAMEWORK/cli/audit-phase-status.mjs --bundle "$B" > "$B/case-602-audit.json"
@@ -77,11 +87,8 @@ JS
 ## Step 3: Verdict
 
 ```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/rb_trace.jsonl'))"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-## Cleanup
-
-```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m => m.cleanup('$B', {caseId:'case-602'}))"
-```
+Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

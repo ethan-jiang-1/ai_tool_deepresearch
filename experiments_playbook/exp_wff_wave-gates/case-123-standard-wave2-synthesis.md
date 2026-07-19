@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-wave-gates
 case: case-123-standard-wave2-synthesis
-weight: light
 case_goal: "Prove that wave2-complete gate resolves Markdown links to artifact targets, fails when no links or all targets dead, and passes when at least one valid reference exists."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-123_w2_synth_*
-trace: dpt_disp_case-123_w2_synth_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [wave2-complete, wave2-complete-driver]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -25,8 +33,8 @@ verdict: trace-jsonl
 3. 写 synthesis 无 Markdown link → gate fail
 4. 写 synthesis 有 links 但所有 target 不存在 → gate fail
 5. Thin driver 独立验证 cross-artifact references（RWE-009 横切约束）
-6. 从 `rb_trace.jsonl` 裁决（预期 3 条 check：1 pass + 2 fail）
-7. Cleanup
+6. 从 `rb_trace.jsonl` 产出 native completion（3 条 gate 场景 check + 1 条 thin-driver check）
+7. 写出 native completion 后停止
 
 ---
 
@@ -42,7 +50,8 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_synth --case case-123 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_synth --case case-123 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "Bundle: $B"
 
 # Validate
@@ -166,6 +175,8 @@ find $B/artifacts -type f 2>/dev/null
 两条 link 都指向真实存在的文件。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+REPO_ROOT=$(pwd)
 cat > $B/artifacts/wave2/synthesis.md << 'ENDOFSYN'
 # Cross-Topic Synthesis
 
@@ -197,6 +208,8 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ## Step 3: 写无 Markdown link 的 synthesis → gate fail
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+REPO_ROOT=$(pwd)
 cat > $B/artifacts/wave2/synthesis.md << 'ENDOFSYN'
 # Cross-Topic Synthesis
 
@@ -220,6 +233,8 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ## Step 4: 写有 links 但 target 都不存在 → gate fail
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+REPO_ROOT=$(pwd)
 cat > $B/artifacts/wave2/synthesis.md << 'ENDOFSYN'
 # Cross-Topic Synthesis
 
@@ -243,6 +258,8 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 gate CLI 的 `cross_field` rule 判定引用链；thin driver 做独立验证。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+REPO_ROOT=$(pwd)
 node --input-type=module -e "
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -278,45 +295,31 @@ import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
   m.recordCheck('$B/rb_trace.jsonl', {
     gate: 'wave2-complete-driver',
     passed: driverPassed,
-    expected: driverPassed,
+    expected: false,
     detail: 'thin driver cross-reference check: ' + valid.length + ' valid, ' + dead.length + ' dead'
   });
 });
 "
 ```
 
-预期：driver 独立验证结果与 gate CLI 的 `cross_field` rule 一致。
+预期：当前 synthesis 只含 dead links，因此 driver 固定预期为拒绝；它必须得到 `driverPassed=false`，与 Step 4 gate CLI 的拒绝一致。
 
 ## Step 6: 从 trace 裁决
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 
 ## Step 7: 结果解读
 
-> 3 个 check（1 pass + 2 fail），验证 wave2 gate 边界：
+> 4 个 check（3 个 gate 场景 + 1 个 thin-driver 场景），验证 wave2 gate 边界：
 >   [PASS] 有 valid markdown link → gate pass
 >   [FAIL ✅] 无 markdown link → gate fail
 >   [FAIL ✅] link 指向 dead target → gate fail
->   2 个 FAIL 都是正确的边界拒绝。
+>   [FAIL ✅] thin driver 对当前 dead-link synthesis 也拒绝
+>   3 个预期拒绝（两个 gate + 一个 driver）都与当前负向场景一致。
 
 
-## Step HH: Post-Execution Health
-
-Standard profile — gate diagnostics, timeline consistency.
-
-```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
-```
-
-> 健康检查不改变 verdict。health status 由 runner report 记录。
-
-## Step 8: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
-```
+Stop after native completion. The Autorun Supervisor owns Standard health, audit, preservation, and optional clean-PASS cleanup.

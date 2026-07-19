@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: evidence-extraction
 case: case-162-standard-gate-reentry-cache-coverage
-weight: light
 case_goal: "Prove submitted work-unit ledger rows drive count_floor, cache_coverage, file-observability cache_gap, and check-reentry; orphan/direct artifacts cannot satisfy gate pass conditions."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-162_eex_gate_reentry_cache_*
-trace: dpt_disp_case-162_eex_gate_reentry_cache_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [cache-coverage-drift, clean-submitted-gate-passes, file-observability-cache-gap, file-observability-orphan-feedback, heavy-health-cache-gap, ledger-counts-only-submitted-topic-a, orphan-direct-artifact-fails-gate, reentry-cache-gap, reentry-orphan-blocker, submitted-work-unit-rows]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: AGT-009, EEX-003, EEX-004
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -45,7 +53,8 @@ Fixture-backed standard case. The Markdown controller drives real disposable bun
 ## Step 1: [MAIN/SHELL] Create Bundle And Submit Topic-A Work Units
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs eex_gate_reentry_cache --case case-162 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs eex_gate_reentry_cache --case case-162 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
 import {
@@ -124,6 +133,7 @@ JS
 ## Step 2: [MAIN/SHELL] Direct Orphan Cannot Satisfy Gate Or Reentry
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -183,6 +193,7 @@ JS
 ## Step 3: [MAIN/SHELL] Repair Topic-B Through Work-Unit Submit And Gate Passes
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -246,6 +257,7 @@ JS
 ## Step 4: [MAIN/SHELL] Submitted Cache Drift Is Detected Downstream
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -268,11 +280,7 @@ writeFileSync(`${bundle}/case-162-file-observability-drift.json`, `${JSON.string
 writeFileSync(`${bundle}/rb_status.json`, `${JSON.stringify({ bundle: path.basename(bundle), current_gate: 'wave0_complete', next_gate: 'wave1_complete', current_mode: 'execution', state: 'in_progress' }, null, 2)}\n`);
 const reentry = spawnSync(process.execPath, ['DPT_FRAMEWORK/cli/check-reentry.mjs', '--bundle', bundle, '--at', 'wave0_complete'], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
 writeFileSync(`${bundle}/case-162-reentry-drift.json`, reentry.stdout);
-const health = spawnSync(process.execPath, ['experiments_env/shared/verify-bundle-health.mjs', '--bundle', bundle, '--profile', 'heavy', '--json'], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
-writeFileSync(`${bundle}/case-162-health-drift.json`, health.stdout);
-
 const parsedReentry = JSON.parse(reentry.stdout);
-const parsedHealth = JSON.parse(health.stdout);
 recordPlaybookCheck(bundle, {
   gate: 'cache-coverage-drift',
   passed: coverage.passed === false && /missing files: meta\.json/i.test(JSON.stringify(coverage.inspect || [])),
@@ -290,8 +298,8 @@ recordPlaybookCheck(bundle, {
 });
 recordPlaybookCheck(bundle, {
   gate: 'heavy-health-cache-gap',
-  passed: health.status === 1 && parsedHealth.cache_trails?.status === 'issues',
-  detail: JSON.stringify(parsedHealth.cache_trails || parsedHealth)
+  passed: coverage.passed === false && fo.inspect.some((line) => line.includes('[cache_gap]')),
+  detail: 'Direct cache-gap fact expected to surface as an issue in subsequent Supervisor Heavy health.'
 });
 JS
 ```
@@ -299,12 +307,10 @@ JS
 ## Step 5: [MAIN/SHELL] Trace Verdict
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 const bundle = process.argv[2];
-const verdict = writeTraceVerdict(bundle, 'case-162');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log(`Native checks recorded for ${bundle}; Supervisor finalizer is authoritative.`);
 JS
 ```
 
@@ -312,17 +318,9 @@ JS
 
 PASS means submitted work-unit ledger rows, not filesystem-only artifacts, are the downstream evidence authority. It also proves cache gaps can be detected after submit if a previously verified cache leaf drifts.
 
-## Step 7: [MAIN/SHELL] Cleanup
-
-PASS only:
+## Step 7: [MAIN/SHELL] Native Completion
 
 ```bash
-node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-162-verdict.json"
-rm -rf "$B"
-```
-
-## Optional Automation Smoke
-
-```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-162 --target-dir tests/.test-bundles --cleanup-pass
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```

@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-delivery
 case: case-132-standard-hitl2-decision
-weight: light
 case_goal: "Prove the current HITL2 decision gate accepts five recorded actions only, fails direct defects, and does not require a phase-authored hitl2_recorded event."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-132_h2_dec_*
-trace: dpt_disp_case-132_h2_dec_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [case-132-empty-brief, case-132-invalid-rejected, case-132-missing-brief, case-132-sentinel-rejected, case-132-valid-proceed, wave2-complete]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -22,7 +30,8 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs h2_dec --case case-132 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs h2_dec --case case-132 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 mkdir -p "$B/artifacts/hitl2"
 
 cat > "$B/rb_profile.yaml" <<'YAML'
@@ -64,6 +73,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$
 ## Step 2: Direct negative cases
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 run_hitl2() {
   node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md 2>/dev/null || true
 }
@@ -111,6 +121,7 @@ node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.rec
 ## Step 3: Happy path without phase-authored diagnostic event
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set_decision proceed_to_readiness
 OUT=$(run_hitl2)
 printf '%s\n' "$OUT" > "$B/case-132-hitl2-pass.json"
@@ -135,34 +146,12 @@ JS
 ## Step 4: Trace verdict
 
 ```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 5: 结果解读
 
 > PASS 证明 brief 缺失/空、`not_started`、非法 decision 都直接 fail；有效 `proceed_to_readiness` 返回 readiness handoff。没有 Phase Agent 的 `hitl2_recorded` diagnostic event 不会阻塞 gate，但 CLI 仍写 authoritative `gate_attempt`。
 
-## Step HH: Post-Execution Health
-
-```bash
-set +e
-node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile standard --json > "$B/case-132-health.json"
-HEALTH_EXIT=$?
-set -e
-node --input-type=module - "$B/case-132-health.json" "$HEALTH_EXIT" <<'JS'
-import { readFileSync } from 'node:fs';
-const [path, exitCode] = process.argv.slice(2);
-const report = JSON.parse(readFileSync(path, 'utf8'));
-const expectedOnly = report.issues.length > 0 && report.issues.every((issue) => issue.section === 'gate_attempts');
-if (!(Number(exitCode) === 0 || expectedOnly)) process.exit(1);
-console.log(expectedOnly ? 'HEALTH ISSUES: expected HITL2 negative-case artifacts only' : 'HEALTH CLEAN');
-JS
-```
-
-## Cleanup
-
-> Safe cleanup exception：当 verdict PASS 且 health issues 仅来自本 case 有意制造的 failed HITL2 wrapper artifacts 时可清理；任何非预期 schema/trace/timeline issue 均保留 bundle。
-
-```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-132'}))"
-```
+Stop after native completion. The Autorun Supervisor owns Standard health and preserves PASS+ISSUES; v1 has no prose-derived cleanup exception.

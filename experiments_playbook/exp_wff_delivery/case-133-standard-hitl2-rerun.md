@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-delivery
 case: case-133-standard-hitl2-rerun
-weight: light
 case_goal: "Prove real HITL2 rerun output selects phase-rerun and the accepted handoff/status path reaches rerun-ready then seed-topics."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-133_h2_rerun_*
-trace: dpt_disp_case-133_h2_rerun_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [case-133-hitl2-rerun-route, case-133-rerun-ready-route, case-133-witnessed-rerun-chain, wave2-complete]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -22,7 +30,8 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs h2_rerun --case case-133 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs h2_rerun --case case-133 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 mkdir -p "$B/artifacts/hitl2"
 printf '# Decision Brief\nRerun with refined scope.\n' > "$B/artifacts/hitl2/decision-brief.md"
 
@@ -65,6 +74,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$
 ## Step 2: 真实 HITL2 rerun gate 与 rerun entry
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
 printf '%s\n' "$OUT" > "$B/case-133-hitl2.json"
 P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -81,6 +91,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$
 ## Step 3: 真实 rerun-ready gate 与 seed-topics handoff
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate rerun-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle "$B" --current-node phases/phase-rerun.md)
 printf '%s\n' "$OUT" > "$B/case-133-rerun-ready.json"
 P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -111,23 +122,12 @@ JS
 ## Step 4: Trace verdict
 
 ```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 5: 结果解读
 
 > PASS 证明 `rerun` 由真实 HITL2 gate 直接路由到 `phase-rerun`，不是 Agent override 或 instantiation restart；rerun-ready 随后真实路由到 seed-topics，两条 entry/status witness 均存在。
 
-## Step HH: Post-Execution Health
-
-```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile standard
-```
-
-## Cleanup
-
-> PASS 且 health CLEAN 才执行；FAIL/ISSUES 保留 bundle。
-
-```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-133'}))"
-```
+Stop after native completion. The Autorun Supervisor owns Standard health, audit, preservation, and optional clean-PASS cleanup.

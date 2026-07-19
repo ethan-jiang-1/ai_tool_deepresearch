@@ -50,7 +50,7 @@ prefixes:
   EXO: experiment-observability
   EXS: experiment-shared-infra
   EXR: experiment-ref-integrity
-  EXA: experiment-auto-runner
+  EXA: experiment-agent-autorun
   FOR: fork-repair-converge
   FRE: framework-engine
   FIO: file-observability
@@ -126,9 +126,9 @@ AGT-001: agent-testing — Agent-assisted test playbook for gate-loop
 AGT-002: "agent-testing — Agent-assisted test playbook for gate-fork (3 levels: simple/medium/complex)"
 AGT-003: "agent-testing — Agent-assisted test playbook for subagent (3 levels: simple/medium/complex)"
 AGT-004: "agent-testing — Agent-assisted test playbook for workflow-chain (3 levels: simple/medium/complex) [DEPRECATED]"
-AGT-005: agent-testing — Playbook frontmatter weight field (light|heavy) for execution cost distinction
-AGT-006: agent-testing — Disposable bundle names include random hex suffix to prevent same-case collision
-AGT-007: "agent-testing — Unified trace file naming to _trace.jsonl across all playbooks"
+AGT-005: agent-testing — Playbook frontmatter weight field pending retirement after active removal delta archives
+AGT-006: agent-testing — Disposable experiment bundles use collision-resistant Supervisor-owned case roots and host cleanup
+AGT-007: agent-testing — Command experiment bundles use one bundle-root rb_trace.jsonl runtime trace
 AGT-008: agent-testing — Verdict console.log uses ANSI color (green PASS, red FAIL)
 AGT-009: agent-testing — Evidence extraction experiment suite uses empty 16 case segment starting at case-161 with light/standard/heavy proof roles and real-agent quality metrics
 AGT-010: agent-testing — Handoff witnessing experiment coverage for phase-entry truncation prevention
@@ -139,11 +139,11 @@ AGQ-002: agentic-queue — Queue Manager enqueue, claim, complete, fail, promote
 AGQ-003: agentic-queue — Conservative urgent preemption without hidden in-progress execution
 AGQ-004: agentic-queue — Fail-closed deterministic receipts and structured check/inspect/advice feedback
 AGQ-005: agentic-queue — Markdown projection generated from JSON queue state without mutation authority
-AGQ-006: agentic-queue — Command experiment playbooks for simple, medium, and complex agentic queue cases
+AGQ-006: agentic-queue — Current manifest-registered command experiment cases prove queue mechanics through V2 native completion and host cleanup
 AGQ-007: agentic-queue — Producer rule source_intake_fan_in for wave0 source intake task cards
-AGQ-008: agentic-queue — Wave0 queue-loop simple playbook (real search + gate fail + repair scenarios)
+AGQ-008: agentic-queue — Current Wave0 queue-loop case uses real work-unit boundaries and native trace completion
 AGQ-009: agentic-queue — Producer rule seed_topic_materialize for seed-topics materialization task cards
-AGQ-010: agentic-queue — Seed-topics queue-loop simple playbook (3-topic happy path, required field verification)
+AGQ-010: agentic-queue — Current seed-topics queue-loop case covers three-topic queue drain and required field verification
 AGQ-011: agentic-queue — QueueItemSchema targets field (TargetSpec) replaces single enum target
 AGQ-012: agentic-queue — TargetSpec schema (controller enum, optional delegates with to/role_key/timeout_ms)
 AGQ-013: agentic-queue — Producer rule topic_deepening for wave1 deepening task cards
@@ -257,22 +257,22 @@ EEX-004: evidence-extraction — cache_trails文件系统验证（validateDelega
 
 # experiment-observability
 EXO-001: experiment-observability — Stable post-run bundle health report contract
-EXO-002: experiment-observability — Profile-driven Light Standard Heavy health checks
+EXO-002: experiment-observability — Explicit V2 case health policy drives Light Standard Heavy bundle checks independently of cost
 EXO-003: experiment-observability — Gate monitor wrapper preserves gate exit status and diagnostics
 EXO-004: experiment-observability — Non-verdict diagnostic trace events for observability
 EXO-005: experiment-observability — Ledger-driven Heavy provenance inspection
-EXO-006: experiment-observability — Runner health report protocol
+EXO-006: experiment-observability — Autorun Supervisor reports native outcome, health, durable trace and Subject evidence separately
 
 # file-observability
 # experiment-auto-runner
-EXA-001: experiment-auto-runner — Runner script as single executable ESM at host_tools/run-experiment.mjs with CLI flags
-EXA-002: experiment-auto-runner — Shared PLAYBOOK_MANIFEST.md + two runner instructions (RUN_TUI_EXPS.md + RUN_CLI_EXPS.md)
-EXA-003: experiment-auto-runner — Runner reads RUN_CLI_EXPS.md, spawns headless Agent, extracts verdict from rb_trace.jsonl, writes exp_result.json
-EXA-004: experiment-auto-runner — Playbook discovery via filesystem scan + YAML frontmatter filtering by case/group/tier
-EXA-005: "experiment-auto-runner — Cleanup policy: PASS+CLEAN (only --cleanup-pass) deletes bundle; FAIL preserves"
-EXA-006: "experiment-auto-runner — Human case skip: 901-949 → HUMAN; 950-999 (AI-judge) → normal execution"
-EXA-007: experiment-auto-runner — JSON report (summary + results) + append-only audit log to _temp/exp_verdicts.jsonl
-EXA-008: experiment-auto-runner — Bundle isolation in .exp-bundles/ with DPT_FRAMEWORK symlink for import path resolution
+EXA-001: experiment-agent-autorun — Canonical Agent Experiment Autorun vocabulary separates Supervisor, Launcher, Playbook Agent and Subject Agent
+EXA-002: experiment-agent-autorun — Manifest plus Agent Autorun and bounded Interactive instruction surfaces have unambiguous names
+EXA-003: experiment-agent-autorun — Autorun Supervisor launches a real Headless Playbook Agent and owns deterministic lifecycle only
+EXA-004: experiment-agent-autorun — Manifest order, filename cost and strict V2 frontmatter form one fail-closed selection contract
+EXA-005: experiment-agent-autorun — Trace-bound native completion is the only completed-case outcome authority
+EXA-006: experiment-agent-autorun — Supervisor-owned case roots bind explicit runtime paths without framework copies or bundle guessing
+EXA-007: experiment-agent-autorun — Native outcome, health, durable audit evidence and explicit containment-safe cleanup remain orthogonal
+EXA-008: experiment-agent-autorun — Human and AI judge bands, Agent runtime budget and ordinary-CI proof boundaries remain explicit
 
 FIO-001: file-observability — Engine audits phase-owned directories with stable file finding classifications
 FIO-002: file-observability — Unplanned files produce inspect/advice and authority blockers when relevant
@@ -502,7 +502,7 @@ TRW-001: trace-writer — Unified append-only JSONL trace writer with createTrac
 TRW-002: trace-writer — Trace output validates against TraceEntrySchema contract
 TRW-003: trace-writer — Trace entries include bundle field for cross-sink correlation
 TRW-004: trace-writer — Run start trace marker (run_start at bundle creation; run_end terminal marker deferred to Phase 2)
-TRW-005: trace-writer — Single rb_trace.jsonl trace sink for queue, work-unit, gate, and playbook verdict events
+TRW-005: trace-writer — Agent Autorun surfaces use one rb_trace.jsonl sink with trace-bound native completion
 EXS-001: experiment-shared-infra — experiments_env/shared/ directory for experiment-scoped shared infrastructure
 EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DPT_FRAMEWORK/command_experiments_env/scripts/ to experiments_env/shared/"
 EXR-001: experiment-ref-integrity — case-401 verifies positive Agent-Engine boundary path
@@ -512,26 +512,27 @@ EXR-004: experiment-ref-integrity — case-404 verifies queue boundary contract
 EXR-005: experiment-ref-integrity — case-405 verifies rb_trace.jsonl is the only trace sink
 EXR-006: experiment-ref-integrity — case-406 verifies real Sub-agent boundary path
 SCO-009: schema-core — Queue v2 contract separates queue_item_id demand identity from work_id attempt identity
-PLR-001: playbook-runner — RUN.md as unified runner entry with playbook manifest and execution instructions
-PLR-003: playbook-runner — Runner execution contract and summary report
+PLR-001: playbook-runner — PLAYBOOK_MANIFEST plus Agent Autorun instruction is the normal Playbook Agent entry
+PLR-003: playbook-runner — Playbook Agent native completion hands deterministic health report and cleanup to the Supervisor
 POF-001: post-final-recovery — Terminal Final eligibility, retained post-final rerun request, owner precedence, and accepted-lineage replay
 POF-002: post-final-recovery — Prepared profile/event transaction uses event-last exact roll-forward recovery
 POF-003: post-final-recovery — Engine-written Final-lineage-bound exceptional handoff reuses existing HITL2 rerun owners
-PRE-001: pre-research-experiments — Workflow-foundation happy-path pre-research playbook (simple, light, fixed HITL payload, 3 gates pass)
-PRE-002: pre-research-experiments — Workflow-foundation repair-loop playbook (medium, light, gate fail→inspect/advice→repair→rerun→pass)
-PRE-003: pre-research-experiments — Workflow-foundation review-surface playbook (complex, light, fixed AI interpretation sample + review checklist)
-PRE-004: pre-research-experiments — Complex review-surface stays light by using fixed interpretation sample (no live AI generation required)
-PRE-005: pre-research-experiments — Workflow-foundation manual HITL review playbook (heavy, human-interactive, payload checklist)
-PRE-006: pre-research-experiments — Heavy means human-interactive/manual for HITL review (not subagent-dependent)
-PRE-007: pre-research-experiments — Experiment review surface remains Markdown-first (case goal, payload, review points, inspect/advice guidance in MD)
+PRE-001: pre-research-experiments — Current happy-path pre-research case uses real gates and native completion
+PRE-002: pre-research-experiments — Current repair-loop case preserves fail feedback repair rerun and last-per-gate completion semantics
+PRE-003: pre-research-experiments — Current review-surface case exposes deterministic interpretation and review directly in Markdown
+PRE-004: pre-research-experiments — Fixed interpretation review remains deterministic and repeatable without invented Subject behavior
+PRE-005: pre-research-experiments — Current HITL review case supports explicit Headless auto and bounded Interactive execution
+PRE-006: pre-research-experiments — Heavy HITL review cost does not imply Subject Sub-agent execution
+PRE-007: pre-research-experiments — Experiment review surfaces remain Markdown-first while Engine owns deterministic checkpoints
+PRE-008: pre-research-experiments — Topic rewrite cases separate structural gates, independent Subject Agent evidence and human or AI judgment
 PRG-001: "pre-research-gate-implementation — Instantiation complete gate rule set (~11 rules: dir_exists, file_exists, pattern_match, status_value)"
 PRG-002: "pre-research-gate-implementation — HITL1 recorded gate rule set (~6 rules: file_exists, schema_valid, field_non_empty, field_value)"
 PRG-003: "pre-research-gate-implementation — Setup ready gate rule set (~7 rules: file_exists, schema_valid, dir_exists, field_value, status_value, cross_field)"
 PRG-004: pre-research-gate-implementation — Gate CLI evaluates instantiation rules from definition (dir_exists, pattern_match, status_value support)
 PRG-005: pre-research-gate-implementation — Gate CLI evaluates HITL1 rules from definition (from hardcoded pass to definition-driven)
 PRG-006: pre-research-gate-implementation — Gate CLI evaluates setup rules from definition (from hardcoded pass to definition-driven; cross_field for basename)
-PRG-007: pre-research-gate-implementation — Gate CLIs append runtime audit entry to active bundle rb_trace.jsonl
-PRG-008: pre-research-gate-implementation — Runtime audit trace (rb_trace.jsonl) and experiment verdict trace (_trace.jsonl) remain distinct
+PRG-007: pre-research-gate-implementation — Gate JSON feedback and playbook verdict checks retain distinct owners in the root trace
+PRG-008: pre-research-gate-implementation — Gate audit and experiment verdict events share rb_trace.jsonl without sharing authority
 PRG-009: pre-research-gate-implementation — HITL1 recorded gate status rules (status_current_gate and status_next_gate added to gate-hitl1-recorded.definition.json)
 PRP-001: pre-research-phase-content — Phase instantiation body completeness (9-section body, real CLI shape, scope boundary)
 PRP-002: "pre-research-phase-content — Phase HITL1 body completeness and stop semantics (stop: yes, payload checklist, writes to profile)"
@@ -574,7 +575,7 @@ RWG-003: "research-wave-gate-implementation — Wave2 complete gate rule set (fi
 RWG-004: research-wave-gate-implementation — Wave0 gate CLI evaluates rules from definition (file_exists, dir_exists, schema_valid, count_floor, trace_event_present, status_value)
 RWG-005: research-wave-gate-implementation — Wave1 gate CLI evaluates rules from definition (file_exists, dir_exists, pattern_match with negate, trace_event_present, status_value)
 RWG-006: "research-wave-gate-implementation — Wave2 gate CLI evaluates rules from definition (file_exists, field_non_empty, cross_field markdown_link_resolution, trace_event_present, status_value)"
-RWG-007: research-wave-gate-implementation — Wave gate CLIs follow established double trace convention (rb_trace.jsonl runtime audit + _trace.jsonl experiment verdict)
+RWG-007: research-wave-gate-implementation — Wave gate audit and playbook verdict checks use one root trace with distinct ownership
 RWG-008: research-wave-gate-implementation — Wave2 gate cross_field verifies Markdown link artifact references
 RWG-009: research-wave-gate-implementation — Wave2 gate CLI supports pattern_match check type with negate and topic expansion
 RWG-010: research-wave-gate-implementation — Wave2 phase-internal feedback checks are distinct from phase boundary gate
@@ -595,11 +596,11 @@ RWE-003: research-wave-experiments — Wave2 synthesis playbook (Markdown link r
 RWE-004: research-wave-experiments — Full-chain waves sequential playbook (seed-topics→wave0→wave1→wave2, 4 trace events all pass)
 RWE-005: research-wave-experiments — Wave repair-loop playbook (Wave2 gate fail→inspect/advice→repair→rerun→pass, before/after diff)
 RWE-006: "research-wave-experiments — Wave fault-tolerance playbook (malformed YAML, missing reference targets, status drift, no silent pass)"
-RWE-007: "research-wave-experiments — Wave review-surface playbook (Wave0 reference metadata table, synthesis full text, reference chain table, human review checklist)"
-RWE-008: "research-wave-experiments — Wave1 placeholder not mistaken for full subagent research — cross-cutting constraint, no standalone playbook"
-RWE-009: "research-wave-experiments — Cross-artifact reference verification in wave2 synthesis — cross-cutting constraint, no standalone playbook"
-RWE-010: "research-wave-experiments — Wave experiment playbook SHALL write wave{N}_completion trace event before its wave-complete gate (phase-wave{0,1,2}.md completion obligation)"
-RWE-011: research-wave-experiments — Wave timeout-preflight and progress-lease coverage
+RWE-007: research-wave-experiments — Current Wave review surface exposes synthesis references and checklist directly in Markdown
+RWE-008: research-wave-experiments — Wave1 placeholder wording cannot substitute for independent Subject Agent evidence
+RWE-009: research-wave-experiments — Wave2 cross-artifact references become strict root-trace checks and native completion evidence
+RWE-010: research-wave-experiments — Playbook Agent writes wave completion events before gates without gate self-satisfaction
+RWE-011: research-wave-experiments — Timeout preflight and progress lease cases use production facts and Supervisor cleanup
 RWE-012: research-wave-experiments — Wave audited late-accept coverage for timed-out work units
 
 # wff-research-waves / seed-topic-materialization
@@ -607,7 +608,7 @@ STM-001: seed-topic-materialization — Seed topic materialization phase node (9
 STM-002: "seed-topic-materialization — Seed topics ready gate rule set (dir_non_empty, cross_field slug_consistency, field_non_empty title, trace_event_present, status_value)"
 STM-003: seed-topic-materialization — Seed topics gate CLI implementation (definition-driven, dir_non_empty evaluator, cross_field slug_consistency evaluator, double trace)
 STM-004: seed-topic-materialization — Workflow registration of seed-topics phase (manifest, transitions.chain, enums.mjs CurrentGate)
-STM-005: seed-topic-materialization — Seed topics boundary enforcement playbook (materialize all→pass, empty dir→fail, slug missing/extra→fail)
+STM-005: seed-topic-materialization — Current case-124 proves seed topic pass empty missing-slug and extra-file boundaries through native completion
 STM-006: seed-topic-materialization — Topic slug SHALL include zero-padded NN_ numeric prefix (NN = 1-based array position); gate triple-consistency byte-for-byte check naturally compatible
 STM-007: seed-topic-materialization — Canonical seed topics are exact UID-bound registry projections
 STM-008: seed-topic-materialization — Seed projections follow the committed current topic layout after atomic mutation
@@ -667,15 +668,15 @@ LOC-010: logging-conventions — Long-running phases emit stable diagnostics for
 LOC-011: logging-conventions — log-event.mjs always-zero behavior is a documented CLI exit-code exception
 
 # local-deepseek-claude-launcher
-LDC-001: local-deepseek-claude-launcher — Repo-owned pre-trigger Node launcher reads supported local DeepSeek configuration only from ignored repo-root .env
-LDC-002: local-deepseek-claude-launcher — Launcher parses configuration as data and constructs an isolated provider environment without shell evaluation or inherited routing contamination
+LDC-001: local-deepseek-claude-launcher — Repo-owned launcher and shared pure invocation plan retain one root configuration authority
+LDC-002: local-deepseek-claude-launcher — Direct and supervised launch construct isolated provider environments without caller routing override
 LDC-003: local-deepseek-claude-launcher — Anthropic-compatible model endpoint is explicit, validated as a well-formed URL, and free of embedded credentials
 LDC-004: local-deepseek-claude-launcher — Redacted preflight reports all deterministic readiness failures without launching Claude Code
-LDC-005: local-deepseek-claude-launcher — Normal launch preserves caller arguments, inherited stdio, and Claude Code exit or signal outcome
+LDC-005: local-deepseek-claude-launcher — Generic launch stays transparent while Supervisor owns one direct Claude child lifecycle
 LDC-006: local-deepseek-claude-launcher — Detectable setup and launch failures stop without remote, credential, settings, or provider fallback
 LDC-007: local-deepseek-claude-launcher — Tracked repo-root .env.example documents the safe contract while real .env and credentials remain ignored
-LDC-008: local-deepseek-claude-launcher — Launcher neither mutates Claude settings nor injects permission-bypass flags
-LDC-009: local-deepseek-claude-launcher — Host-tool documentation preserves the pre-trigger user, Agent, launcher, and research Engine authority boundary
+LDC-008: local-deepseek-claude-launcher — Generic launch has no bypass while explicit Autorun enables an effective Headless permission mode
+LDC-009: local-deepseek-claude-launcher — Host-tool docs distinguish provider config from explicit experiment runtime state and actor authority
 
 LFW-001: lifecycle-walker — Walker reads manifest and walks lifecycle (--bundle required, --manifest optional, 9 phases) [DEPRECATED]
 LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass (max 3 retries, escalation on exceeded limit) [DEPRECATED]
@@ -736,6 +737,7 @@ VER-002: verification-routing — Each change declares a verification-plan.yaml 
 VER-003: verification-routing — check-verification-routing.mjs validates plan shape and asset existence without running tests or manufacturing verdicts
 VER-004: verification-routing — Rerun round continuity establishes focused unit/integration, deterministic_e2e, and real-Agent agent_flow_e2e proof without fabricated authority
 VER-005: verification-routing — The four-test-class taxonomy has one canonical authority; governance and guidance surfaces retain owned boundaries and pointers without competing restatement
+VER-006: verification-routing — Agent-flow routing distinguishes Supervisor and Launcher hosts from Playbook and Subject Agent actors
 
 # version-management
 VEM-001: version-management — CHANGELOG is concise and human-readable at project root

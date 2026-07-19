@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: evidence-extraction
 case: case-161-light-complete-cache-trails
-weight: light
 case_goal: "Prove work-unit submit cache trail validation: valid cache leaves are ledger-written; incomplete, unsafe, and parent cache paths reject without ledger append."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-161_eex_submit_cache_trails_*
-trace: dpt_disp_case-161_eex_submit_cache_trails_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [cache-coverage-valid-row, invalid-cache-no-extra-ledger, valid-cache-submit-ledger]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: AGT-009, EEX-003, EEX-004
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -44,13 +52,15 @@ Fixture-backed Engine path. No Agent actor and no external calls. Fixture files 
 ## Step 1: [MAIN/SHELL] Create Bundle
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs eex_submit_cache_trails --case case-161 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs eex_submit_cache_trails --case case-161 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "$B"
 ```
 
 ## Step 2: [MAIN/SHELL] Valid Work-Unit Submit Writes Cache Trail To Ledger
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import {
@@ -101,6 +111,7 @@ JS
 ## Step 3: [MAIN/SHELL] Invalid Cache Trails Reject Without Ledger Append
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -160,12 +171,10 @@ JS
 ## Step 4: [MAIN/SHELL] Trace Verdict
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
-import { writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 const bundle = process.argv[2];
-const verdict = writeTraceVerdict(bundle, 'case-161');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log(`Native checks recorded for ${bundle}; Supervisor finalizer is authoritative.`);
 JS
 ```
 
@@ -173,17 +182,9 @@ JS
 
 PASS means work-unit submit is the cache-trail authority: complete cache leaves are ledger-written, while incomplete/unsafe/non-leaf cache paths reject before ledger append. It proves Engine validation only.
 
-## Step 6: [MAIN/SHELL] Cleanup
-
-PASS only:
+## Step 6: [MAIN/SHELL] Native Completion
 
 ```bash
-node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-161-verdict.json"
-rm -rf "$B"
-```
-
-## Optional Automation Smoke
-
-```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-161 --target-dir tests/.test-bundles --cleanup-pass
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```

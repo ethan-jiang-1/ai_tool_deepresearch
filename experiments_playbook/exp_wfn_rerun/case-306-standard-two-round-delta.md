@@ -1,17 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-rerun
 case: case-306-standard-two-round-delta
-weight: light
 case_goal: "Agent/filesystem projection only: two scripted rerun rounds update rerun_count and ## 本轮重跑方向 sections; this is not gate or real-Agent proof."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-306_tworound_*
-trace: dpt_disp_case-306_tworound_*/rb_trace.jsonl
-verdict: filesystem
-agent_dependency: "This case scripts the Agent-owned filesystem projection for deterministic inspection. It proves only YAML/Markdown behavior, not real Agent judgment, gate pass, handoff, or lifecycle completion."
+verdict_mode: all
+required_checks: [round1-delta, round2-delta]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -23,7 +30,8 @@ agent_dependency: "This case scripts the Agent-owned filesystem projection for d
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs tworound --case case-306 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs tworound --case case-306 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 cat > $B/rb_profile.yaml << 'EOF'
 plan_basename: tworound
 research_profile: quick_factual
@@ -78,6 +86,8 @@ EOF
 ## Step 2: Round 1 — Agent writes direction hints
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+REPO_ROOT=$(pwd)
 echo "" >> $B/seed_topics/01_regulation.md
 echo "## 本轮重跑方向" >> $B/seed_topics/01_regulation.md
 echo "- **action**: keep" >> $B/seed_topics/01_regulation.md
@@ -114,6 +124,8 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ## Step 3: Round 2 — Agent updates rationale + direction
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+REPO_ROOT=$(pwd)
 node -e "const fs=require('fs');const y=require('yaml');const p=y.parse(fs.readFileSync('$B/rb_profile.yaml','utf-8'));p.human_decision_checkpoints.hitl2.rerun_count=2;fs.writeFileSync('$B/rb_profile.yaml',y.stringify(p));"
 cat > $B/seed_topics/01_regulation.md << 'ENDOFFILE'
 ---
@@ -146,10 +158,12 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ## Step 4: Verdict
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/rb_trace.jsonl'))"
-rm -rf $B
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 7: 结果解读
 
 > 仅验证 scripted filesystem projection：`rerun_count` 0→1→2，Round 1/2 的 Markdown direction sections 按预期变化。此 case 不调用 gate，也不证明 real Agent 能正确判断 rerun 内容。
+
+Stop after native completion. The Autorun Supervisor owns Standard health, audit, preservation, and optional clean-PASS cleanup.

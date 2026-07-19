@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: engine-boundary
 case: case-401-light-full-boundary
-weight: light
 case_goal: "验证 hardened Agent↔Engine 边界正向全链路：work-unit claim/submit → ledger → validate-bundle → wave0 gate → trace verdict。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-401_eb_full_work_unit
-trace: dpt_disp_case-401_eb_full_work_unit/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [ledger-row, wave0-gate, work-unit-inspect, work-unit-submit]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -55,7 +63,8 @@ Verdict sources are the runner verdict JSON, `rb_trace.jsonl`, `rb_output_declar
 Create a disposable bundle, then add only the minimal Wave0 scaffold required for the gate. This setup is deterministic experiment scaffolding; it does not complete delegated work.
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_full_work_unit --case case-401 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_full_work_unit --case case-401 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 writeWave0Scaffold(process.argv[2], { planBasename: 'eb_full_work_unit' });
@@ -175,7 +184,7 @@ Convert the runtime facts the controller just read into trace `check` events, th
 ```bash
 node --input-type=module - "$B" "$WORK_ID" <<'JS'
 import { readFileSync } from 'node:fs';
-import { readWorkUnitLedgerRows, recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { readWorkUnitLedgerRows, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const [bundle, workId] = process.argv.slice(2);
 const submit = JSON.parse(readFileSync(`${bundle}/case-401-submit.json`, 'utf8'));
@@ -188,9 +197,7 @@ recordPlaybookCheck(bundle, { gate: 'ledger-row', passed: ledgerRows.length === 
 recordPlaybookCheck(bundle, { gate: 'wave0-gate', passed: gate.check?.passed === true, detail: JSON.stringify(gate.inspect || []) });
 recordPlaybookCheck(bundle, { gate: 'work-unit-inspect', passed: inspect.passed === true, detail: JSON.stringify(inspect.inspect || []) });
 
-const verdict = writeTraceVerdict(bundle, 'case-401');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log('Recorded native playbook checks; Supervisor finalizer is authoritative.');
 JS
 ```
 
@@ -207,21 +214,11 @@ Expected runtime facts:
 
 PASS means the fixture entered the production delegated path at the earliest executable boundary and downstream authority came from submitted work-unit coverage. FAIL means the Agent must treat the CLI/gate/trace feedback as actionable diagnostic context and repair the failing boundary before rerunning.
 
-## Step 7: [MAIN/SHELL] Cleanup
-
-PASS only:
+## Native completion
 
 ```bash
-node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-401-verdict.json"
-rm -rf "$B"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-FAIL preserves the disposable bundle for diagnosis.
-
-## Optional Automation Smoke
-
-The case-local runner may be used after the visible MD-controller path above has been validated. It is a smoke/aggregation convenience, not the normative playbook execution surface:
-
-```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-401 --cleanup-pass
-```
+Stop after native completion. The Autorun Supervisor owns Heavy health, audit, preservation, and optional clean-PASS cleanup.

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
+// @impl EXA-003, EXA-005, EXA-006, EXA-008, VER-006
 
 import { spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   chmodSync,
   closeSync,
@@ -16,6 +17,7 @@ import {
 import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parse as parseYaml } from 'yaml';
 
 import {
   assessNode,
@@ -35,6 +37,34 @@ const SETTINGS_PATH = join(
 );
 
 const SUBJECTS = {
+  '115': {
+    bundlePrefix: 'dpt_disp_case-115_',
+    transcript: 'case-115-subject-transcript.jsonl',
+    system: 'You are the independent Subject Agent for case 115. Work only in the exact bundle path provided by the runner. Load the current production HITL1 surface and direct bundle facts, then execute only that current phase boundary.',
+    messages: ['请执行当前 HITL1 的最小真实 research-access probe，并按当前 production surface 记录直接观察、运行同一 Gate；完成 immediate handoff 或诚实的 unavailable 分支后停止。'],
+    tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
+    boundary: 'Perform one bounded dynamic search and at most one fetch of the first usable result. Do not turn probe bytes into research evidence. Stop after the HITL1 Gate and its immediate legal handoff or honest unavailable failure.',
+  },
+  '232': {
+    bundlePrefix: 'dpt_disp_case-232_',
+    transcript: 'case-232-subject-transcript.jsonl',
+    system: 'You are the independent Wave2 Subject Agent for case 232, distinct from the Playbook Agent. Work only in the exact bundle path provided by the runner. Read the injected production Wave2 surface and direct post-Wave1 bundle facts, then perform the bounded triage task.',
+    messages: ['执行当前 Wave2 finding triage：读取两个 topic 的 Wave1 evidence-summary 和 question-list；至少做一次真实 WebSearch，并在可用时 WebFetch 一个结果；把 finding 明确分成 use_existing_evidence、record_only 和 explore_search 或 exploit_search。任何 search-required finding 必须走真实 queue/work-unit claim、Subject产出、submit 和 receipt 绑定，不能留下 orphan reference。完成 cross-topic-ledger.md、finding-index.yaml、synthesis.md、两个 seed topic 的 Wave2 backfill，并按当前 production surface 写入 wave2_completion 后停止。'],
+    tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
+    boundary: 'Use at most two bounded searches and one fetch. Do not write playbook verdict checks, native completion, health output, or cleanup. If external access or a required nested actor is unavailable, fail honestly instead of fabricating evidence.',
+  },
+  '318': {
+    bundlePrefix: 'dpt_disp_case-318_',
+    transcript: 'case-318-subject-transcript.jsonl',
+    system: 'You are the independent Subject Agent for case 318, distinct from the Playbook Agent. Work only in the exact bundle path provided by the runner. Execute the injected current production rerun surface against direct bundle facts.',
+    messages: [
+      'Execute the rerun phase only through direction production: read the accepted HITL2 rationale and current rerun_count, compute target_rerun_count, and write or replace the existing topic\'s single current rerun-direction section. Bind it to target 1 with action supplement and the requested cost and failure-mode dimensions. Then stop before changing rb_profile.yaml, running rerun-ready, entering another phase, advancing status, or editing Engine-owned authority.',
+      'Resume from the current bundle facts. Recognize the existing direction/profile mismatch as the documented crash window, preserve the current direction bytes, increment the profile to that existing target, and complete the sanctioned rerun-ready Gate plus immediate enter-phase and source-gate status synchronization. Consume structured feedback if the same Gate fails. Stop after the immediate seed-topics handoff.',
+    ],
+    tools: 'Bash,Edit,Glob,Grep,Read,Write',
+    boundary: 'Do not search or call external services. Do not hand-edit status, trace, gate attempts, work-unit authority, or declarations. The adapter records a deterministic read-only crash-window snapshot between the two turns.',
+    afterTurn: observeCase318CrashWindow,
+  },
   '711': {
     bundlePrefix: 'dpt_disp_case-711_',
     transcript: 'case-711-transcript.jsonl',
@@ -67,11 +97,63 @@ const SUBJECTS = {
     tools: 'Glob,Grep,Read',
     boundary: 'Answer only the current user turn from direct bundle facts, then stop.',
   },
+  '901': {
+    bundlePrefix: 'dpt_disp_case-901_',
+    transcript: 'case-901-subject-transcript.jsonl',
+    system: 'You are the independent Subject Agent for case 901, distinct from the Interactive Playbook Agent and the human judge. Work only in the exact bundle path provided by the runner and execute the injected current HITL1 production surface.',
+    messages: ['用户原始输入是“帮我研究一下 AI 安全”。按当前 phase-hitl1 Topic Rewrite contract 独立完成 purpose、research questions、scope 和 3-5 个 seed topics，写入 rb_plan.md；选择匹配的 research profile 和 root must-answer set；做一次真实、bounded 的 search/fetch capability probe并诚实记录；应用 research style，运行真实 hitl1-recorded Gate并完成其 immediate legal handoff，然后停止。'],
+    tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
+    boundary: 'Do not write playbook verdict checks, human judgment, native completion, health output, or cleanup. Use one bounded search and at most one fetch; capability-probe bytes are not research evidence.',
+  },
+  '951': {
+    bundlePrefix: 'dpt_disp_case-951_',
+    transcript: 'case-951-subject-transcript.jsonl',
+    system: 'You are the independent Subject Agent for case 951, distinct from the Playbook Agent and the later AI judge. Work only in the exact bundle path provided by the runner and execute the injected current HITL1 production surface.',
+    messages: ['用户原始输入是“帮我研究一下 AI 安全”。按当前 phase-hitl1 Topic Rewrite contract 独立完成 purpose、research questions、scope 和 3-5 个 seed topics，写入 rb_plan.md；选择匹配的 research profile 和 root must-answer set；做一次真实、bounded 的 search/fetch capability probe并诚实记录；应用 research style，运行真实 hitl1-recorded Gate并完成其 immediate legal handoff，然后停止。'],
+    tools: 'Bash,Edit,Glob,Grep,Read,WebFetch,WebSearch,Write',
+    boundary: 'Do not write playbook verdict checks, AI judgment, native completion, health output, or cleanup. Use one bounded search and at most one fetch; capability-probe bytes are not research evidence.',
+  },
+  '951-judge': {
+    bundlePrefix: 'dpt_disp_case-951_',
+    transcript: 'case-951-judge-transcript.jsonl',
+    system: 'You are the independent AI reviewer for case 951. You did not produce the topic rewrite. Review only the retained original request, Subject prompt/transcript/result, rb_plan.md, rb_profile.yaml, and structural Gate facts in the exact bundle path.',
+    messages: ['审查独立 Subject Agent 对“帮我研究一下 AI 安全”的 rewrite：忠实性、问题覆盖、不确定性、3-5个 seed topic 的相关性/独立可研究性/非重复性、profile 匹配、真实 bounded capability probe 与 evidence 隔离、结构 Gate。把真实判断写入 bundle 根的 case-951-judge-record.json，严格 JSON 字段为 schema_version="agent-experiment-judge/v1"、source="ai-judge"、case="case-951-heavy-topic-rewrite-ai-judge"、paired_case="case-901-heavy-topic-rewrite-agent"、verdict="pass"或"fail"、criteria（非空对象）、rationale（非空字符串）。不要修改 Subject 输出。'],
+    tools: 'Glob,Grep,Read,Write',
+    boundary: 'Write only case-951-judge-record.json. Do not alter runtime state, trace, Subject evidence, native completion, health output, or cleanup. This AI judgment remains distinct from real-human evidence.',
+  },
 };
 
 function usage() {
-  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <711|712|713-readiness|713-final> --bundle <path>');
+  console.error('Usage: node experiments_env/shared/run-iterative-interaction-subject.mjs <115|232|318|711|712|713-readiness|713-final|901|951|951-judge> --bundle <path>');
   process.exit(2);
+}
+
+function observeCase318CrashWindow({ bundle, completedTurns }) {
+  if (completedTurns !== 1) return;
+  const seed = readFileSync(join(bundle, 'seed_topics/topic-a.md'), 'utf8');
+  const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml'), 'utf8'));
+  const status = JSON.parse(readFileSync(join(bundle, 'rb_status.json'), 'utf8'));
+  const section = seed.match(/##\s*本轮重跑方向[\s\S]*?(?=\n##\s+|$)/)?.[0] || '';
+  const directionCount = Number(section.match(/rerun_count\*{0,2}\s*:\s*(\d+)/i)?.[1]);
+  const observation = {
+    direction_sha256: createHash('sha256').update(section).digest('hex'),
+    direction_count: directionCount,
+    profile_count: profile.human_decision_checkpoints?.hitl2?.rerun_count,
+    action_is_supplement: /action\*{0,2}\s*:\s*supplement\b/i.test(section),
+    requested_dimensions_present: /cost/i.test(section) && /failure[- ]?mode/i.test(section),
+    current_node: status.current_node,
+    current_gate: status.current_gate,
+    next_gate: status.next_gate,
+  };
+  const valid = observation.direction_count === 1
+    && observation.profile_count === 0
+    && observation.action_is_supplement
+    && observation.requested_dimensions_present
+    && observation.current_node === 'phases/phase-rerun.md'
+    && observation.current_gate === 'hitl2_recorded'
+    && observation.next_gate === 'rerun_ready';
+  if (!valid) throw new Error(`case-318 first Subject turn did not establish the required crash window: ${JSON.stringify(observation)}`);
+  writeFileSync(join(bundle, 'case-318-crash-window.json'), `${JSON.stringify(observation, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
 }
 
 function parseEnv(path) {
@@ -203,7 +285,6 @@ if (!existsSync(LAUNCHER)) throw new Error(`launcher is missing: ${LAUNCHER}`);
 const settingsStatus = ensureUniqueSettings();
 const transcriptPath = join(bundle, subject.transcript);
 const productionSurface = loadProductionSurface(bundle);
-const transcriptFd = openSync(transcriptPath, 'wx', 0o600);
 const systemPrompt = [
   subject.system,
   `The exact bundle path provided by the runner is: ${bundle}`,
@@ -211,6 +292,17 @@ const systemPrompt = [
   `This is a bounded smoke proof. ${subject.boundary} Do not inspect framework source or unrelated repository guidance outside the injected surface.`,
   productionSurface.text,
 ].join('\n\n');
+const evidenceStem = `case-${subjectId}`;
+const promptPath = join(bundle, `${evidenceStem}-subject-prompt.json`);
+const resultPath = join(bundle, `${evidenceStem}-subject-result.json`);
+writeFileSync(promptPath, `${JSON.stringify({
+  subject: subjectId,
+  system_prompt: systemPrompt,
+  messages: subject.messages,
+  tools: subject.tools,
+  loaded_node: productionSurface.nodeRef,
+}, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+const transcriptFd = openSync(transcriptPath, 'wx', 0o600);
 const sessionId = randomUUID();
 const claudeArgs = [
   LAUNCHER,
@@ -248,6 +340,7 @@ let timedOut = false;
 let closed = false;
 let forcedAfterResult = false;
 let finalResultTimer = null;
+const resultEvents = [];
 
 function signalChild(signal) {
   if (!child.pid) return;
@@ -272,11 +365,22 @@ function handleLine(line) {
     return;
   }
   if (event.type !== 'result') return;
+  resultEvents.push(event);
   completedTurns += 1;
   if (event.is_error || event.subtype !== 'success') {
     failedResult = event;
     child.stdin.end();
     return;
+  }
+  if (subject.afterTurn) {
+    try {
+      subject.afterTurn({ bundle, completedTurns });
+    } catch (error) {
+      failedResult = { type: 'adapter_observer_error', message: error.message };
+      stderr += `${error.message}\n`;
+      child.stdin.end();
+      return;
+    }
   }
   turnIndex += 1;
   if (turnIndex < subject.messages.length) {
@@ -336,11 +440,13 @@ child.once('close', (code, signal) => {
   closeSync(transcriptFd);
   const ok = !timedOut && !failedResult && completedTurns === subject.messages.length
     && (code === 0 || forcedAfterResult);
-  console.log(JSON.stringify({
+  const result = {
     status: ok ? 'completed' : 'failed',
     subject: subjectId,
     bundle,
+    prompt: promptPath,
     transcript: transcriptPath,
+    result: resultPath,
     settings: SETTINGS_PATH,
     settings_status: settingsStatus,
     loaded_node: productionSurface.nodeRef,
@@ -350,7 +456,10 @@ child.once('close', (code, signal) => {
     signal,
     timed_out: timedOut,
     stderr_tail: ok ? undefined : stderr.slice(-1000),
-  }));
+    result_events: resultEvents,
+  };
+  writeFileSync(resultPath, `${JSON.stringify(result, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+  console.log(JSON.stringify(result));
   process.exit(ok ? 0 : 1);
 });
 

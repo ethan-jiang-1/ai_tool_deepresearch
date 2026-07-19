@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-delivery
 case: case-134-standard-delivery-repair
-weight: light
 case_goal: "Prove HITL2 and readiness repair return to the same real gate, preserving the legal predecessor window until each gate passes."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-134_dlv_repair_*
-trace: dpt_disp_case-134_dlv_repair_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [case-134-hitl2-after-repair, case-134-hitl2-before-repair, case-134-readiness-after-repair, case-134-readiness-before-repair, case-134-real-attempt-pairs]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -22,7 +30,8 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs dlv_repair --case case-134 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs dlv_repair --case case-134 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 mkdir -p "$B/artifacts/hitl2" "$B/artifacts/wave2" "$B/seed_topics"
 printf '# Topic A\n' > "$B/seed_topics/topic-a.md"
 printf '# Reference Index\n' > "$B/reference/_INDEX.md"
@@ -73,6 +82,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$
 ## Step 2: HITL2 fail → repair brief → rerun same gate → pass
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 rm -f "$B/artifacts/hitl2/decision-brief.md"
 OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md 2>/dev/null || true)
 P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -93,6 +103,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$
 ## Step 3: readiness fail → repair synthesis → rerun same gate → pass
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 rm -f "$B/artifacts/wave2/synthesis.md"
 OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md 2>/dev/null || true)
 P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -123,36 +134,12 @@ JS
 ## Step 4: Trace verdict
 
 ```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 5: 结果解读
 
 > PASS 证明两次修复都回到原 gate：HITL2 只补 decision brief，readiness 只补 synthesis；合法 predecessor window 在 failed attempt 后仍保留，真实 fail/pass `gate_attempt` 成对存在。
 
-## Step HH: Post-Execution Health
-
-```bash
-set +e
-node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile standard --json > "$B/case-134-health.json"
-HEALTH_EXIT=$?
-set -e
-node --input-type=module - "$B/case-134-health.json" "$HEALTH_EXIT" <<'JS'
-import { readFileSync } from 'node:fs';
-const [path, exitCode] = process.argv.slice(2);
-const report = JSON.parse(readFileSync(path, 'utf8'));
-const expectedOnly = report.issues.length > 0 && report.issues.every((issue) => issue.section === 'gate_attempts');
-if (!(Number(exitCode) === 0 || expectedOnly)) process.exit(1);
-console.log(expectedOnly ? 'HEALTH ISSUES: expected fail-before-repair artifacts only' : 'HEALTH CLEAN');
-JS
-```
-
-> intentional failed attempts 可能产生 expected negative-case health issue；上面的检查只接受 `gate_attempts` section，其他 health issue 仍阻止 cleanup。
-
-## Cleanup
-
-> Safe cleanup exception：当 verdict PASS 且 health issues 仅对应本 case 有意制造的两次 failed gate artifacts 时可清理；其他 issue 保留现场。
-
-```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-134'}))"
-```
+Stop after native completion. The Autorun Supervisor owns Standard health and preserves PASS+ISSUES; v1 has no prose-derived cleanup exception.

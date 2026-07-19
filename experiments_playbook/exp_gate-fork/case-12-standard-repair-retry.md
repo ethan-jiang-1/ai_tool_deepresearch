@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: gate-fork
 case: case-12-standard-repair-retry
-weight: light
 case_goal: "验证 forkGate + MD PDCA：branch → MD 执行，no-branch → MD repair → retry forkGate → branch/pass。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-12_gf_medium
-trace: dpt_disp_case-12_gf_medium/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [case1_branch, case2_no_branch, case2_repaired, case3_recovered, case3_schema_fail, case4_blocked]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -28,14 +36,14 @@ verdict: trace-jsonl
 4. No-branch → MD repair → retry → pass
 5. Schema fail → MD fix → retry → branch match
 6. 读 trace 裁决
-7. 清理
-
+5. Native completion, then Supervisor-owned health and cleanup policy
 ---
 
 ## Step 1: 创建 Run Bundle
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs gf_medium --case case-12 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs gf_medium --case case-12 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
 node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 ```
@@ -48,14 +56,14 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 
 ```bash
 
-cat > "$B/t.mjs" << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
-const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/rb_trace.jsonl');
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+const bundle = process.argv[2];
+const trace = createTrace(`${bundle}/rb_trace.jsonl`);
+const recordCheck = ({ step, source: _source, ...rest }) => trace.traceEntry('check', { source: 'playbook', gate: step, expected: true, ...rest });
 trace.traceInit('gf-playbook/medium', { source: 'gf-playbook/medium' });
 JS
-node "$B/t.mjs" > /dev/null 2>&1
 ```
 
 ---
@@ -64,14 +72,15 @@ node "$B/t.mjs" > /dev/null 2>&1
 
 ```bash
 
-cat > "$B/t.mjs" << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
 import { z } from 'zod';
-import { forkGate } from '../DPT_FRAMEWORK/engine/gate-fork.mjs';
+import { forkGate } from './DPT_FRAMEWORK/engine/gate-fork.mjs';
 
-const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/rb_trace.jsonl');
+const bundle = process.argv[2];
+const trace = createTrace(`${bundle}/rb_trace.jsonl`);
+const recordCheck = ({ step, source: _source, ...rest }) => trace.traceEntry('check', { source: 'playbook', gate: step, expected: true, ...rest });
 
 const SRC = 'gf-playbook/medium';
 
@@ -98,14 +107,14 @@ const BRANCHES_NO_LOW = { 'blocked': { say: '上报给用户' } };
 // --- Case 1: branch match → MD executes ---
 let state = { ref_count: 2, ref_floor: 5, topicReadiness: 'ready' };
 let r = forkGate(state, RULES, BRANCHES);
-trace.traceEntry('check', {
+recordCheck({
   source: SRC, step: 'case1_branch',
   passed: r.branch === 'low_refs' && r.say === '补充参考'
 });
 
 // --- Case 2: no-branch → MD repair → retry → pass ---
 r = forkGate(state, RULES, BRANCHES_NO_LOW);
-trace.traceEntry('check', {
+recordCheck({
   source: SRC, step: 'case2_no_branch',
   passed: r.branch === undefined && r.rule === 'low_refs'
 });
@@ -113,7 +122,7 @@ trace.traceEntry('check', {
 // MD reads say: "ref_count 不足" → repairs
 state = { ...state, ref_count: state.ref_count + 4 };
 r = forkGate(state, RULES, BRANCHES_NO_LOW);
-trace.traceEntry('check', {
+recordCheck({
   source: SRC, step: 'case2_repaired',
   passed: r.rule === undefined && r.branch === undefined  // pass — no rule matches
 });
@@ -121,7 +130,7 @@ trace.traceEntry('check', {
 // --- Case 3: schema fail → MD fix → retry → branch ---
 let bad = { ref_count: 'bad', ref_floor: 5, topicReadiness: 'ready' };
 r = forkGate(bad, RULES, BRANCHES);
-trace.traceEntry('check', {
+recordCheck({
   source: SRC, step: 'case3_schema_fail',
   passed: r.rule === 'bad_state' && r.errors[0].field === 'ref_count'
 });
@@ -129,7 +138,7 @@ trace.traceEntry('check', {
 // MD reads errors → fixes field type
 bad = { ...bad, ref_count: 2 };
 r = forkGate(bad, RULES, BRANCHES);
-trace.traceEntry('check', {
+recordCheck({
   source: SRC, step: 'case3_recovered',
   passed: r.branch === 'low_refs' && r.say === '补充参考'
 });
@@ -139,46 +148,23 @@ r = forkGate(
   { ref_count: 2, ref_floor: 5, topicReadiness: 'blocked' },
   RULES, BRANCHES
 );
-trace.traceEntry('check', {
+recordCheck({
   source: SRC, step: 'case4_blocked',
   passed: r.branch === 'blocked' && r.say === '上报给用户'
 });
 JS
-node "$B/t.mjs" > /dev/null 2>&1
 ```
 
 → 预期：6 check 全 passed。
 
 ---
 
-## Step 4: 从 Trace 裁决
+## Step 4: Native Completion
 
 ```bash
-
-cat > "$B/t.mjs" << 'JS'
-import { readFileSync } from 'node:fs';
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
-const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/rb_trace.jsonl');
-const raw = readFileSync(trace.traceFilePath(), 'utf-8').trim();
-const events = JSON.parse('[' + raw.split('\n').join(',') + ']');
-const checks = events.filter(x => x.event === 'check');
-const passed = checks.filter(x => x.passed === true).length;
-const failed = checks.filter(x => x.passed !== true).length;
-console.log('checks:' + checks.length + ' passed:' + passed + ' failed:' + failed);
-const ok = checks.length >= 6 && failed === 0;
-console.log(ok ? '\x1b[32mMEDIUM PASS\x1b[0m' : '\x1b[31mMEDIUM FAIL\x1b[0m');
-if (!ok) process.exit(1);
-trace.traceCleanup();
-JS
-node "$B/t.mjs"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
-
-→ 预期：`checks >= 6, failed = 0`，MEDIUM PASS。
-
----
-
 
 ## Step 5: 结果解读
 
@@ -191,11 +177,4 @@ node "$B/t.mjs"
 >   [case4_blocked] blocked 优先级最高 → 先于 low_refs 触发
 >   全部 expected:true → 6/6 PASS 即通过。
 
-## Step 6: 清理
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-rm -rf dpt_disp_case-12_gf_*
-echo "✓ Cleaned up."
-```
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

@@ -1,98 +1,114 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: engine-boundary
 case: case-406-heavy-real-subagent-boundary
-weight: heavy
-case_goal: "验证真实 dpt-source-intake Sub-agent/WebSearch/WebFetch 路径通过 work-unit submit 产生 ledger/cache/gate proof；无真实 Agent result 时只记录 NOT RUN。"
-runner: coding-agent
-agent_mode: native-subagent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-406_eb_real_work_unit
-trace: dpt_disp_case-406_eb_real_work_unit/rb_trace.jsonl
-verdict: trace-jsonl
+case_goal: "验证独立 dpt-source-intake Sub-agent 按真实 work-unit envelope 写 result/receipt/output 后，经 submit 产生 ledger、trace 和 Wave0 gate proof；native Sub-agent 不可用时诚实 NOT_RUN。"
+verdict_mode: all
+required_checks: [real-subagent-task-bound, real-subagent-result-written, real-subagent-receipt-nonce-preserved, real-subagent-output-written, real-subagent-submit-succeeded, wave0-gate-pass, work-unit-submit-traced]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: [subject_task, subject_result, subject_receipt, subject_output]
+proof_subject: agent_behavior
+subject_execution: real_subagent
+fixture: setup_only
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
+not_run_if: "The native dpt-source-intake Sub-agent tool or required local tool capability is unavailable."
 ---
+
+<!-- @impl EXA-003, EXA-005, EXA-006, EXA-007, EXA-008, PLR-003, VER-006 -->
+
+# Case 406 - Real Sub-agent Work-Unit Boundary
 
 ## Execution Contract
 
-Heavy case. PASS requires a real `dpt-source-intake` actor and real WebSearch/WebFetch or an approved fetch degradation chain. Fixture output, hand-written ledger rows, and hand-written fake search cache cannot produce PASS.
+PASS requires an independent native `dpt-source-intake` Sub-agent. The Playbook Agent may prepare the work-unit envelope, invoke the Subject Sub-agent, read its returned feedback, submit its exact durable result, and record deterministic checks. It must not perform the bounded Subject task itself, write or repair Subject result/receipt/output/cache bytes on the Subject's behalf, or turn fixture/parent output into Agent-behavior evidence.
 
-Without a real actor result, the runner must record `NOT_RUN` and exit `2`. `NOT_RUN` is explicit evidence of deferred real-Agent execution; it is not PASS.
+This is a no-network native-actor canary: `external_calls: none` is deliberate. Setup is fixture-backed, but the actor boundary is real. If the native Sub-agent surface or its required local capabilities are unavailable, finalize NOT_RUN with the prepared bundle and stop. Do not manufacture the seven required checks.
 
-## Reality Distance Ledger
-
-| Dimension | Statement |
-| --- | --- |
-| Agent actor | Required for PASS |
-| External calls | Required for PASS |
-| Ledger generation | Real `operate-work-unit submit` |
-| Gate input | Submitted work-unit ledger rows |
-| No-real-agent rule | Record NOT RUN, preserve bundle, do not mark PASS |
-
-# case-406-heavy-real-subagent-boundary
-
-## Expected Runtime Path
-
-1. Create a disposable bundle through shared setup.
-2. Enqueue and claim a real Wave0 source-intake work unit.
-3. If no real Agent result is provided, write an explicit NOT_RUN report and preserve the bundle.
-4. If a real Agent result is provided, submit it through `operate-work-unit submit`.
-5. Run the Wave0 gate and read gate JSON as structured feedback.
-6. Record real-submit, gate, and work-unit trace checks in root `rb_trace.jsonl`.
-7. Print PASS/FAIL/NOT_RUN and clean up only on PASS.
-
-## Step 1: [MAIN/SHELL] Prove No Fixture PASS
-
-Run without a real result to verify the heavy case cannot pass on fixture or missing actor evidence.
+## Step 1 - Prepare and register one claimed work unit
 
 ```bash
-set +e
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-406
-sts=$?
-set -e
-test "$sts" -eq 2
+STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
+node experiments_env/shared/run-fixture-backed-case.mjs \
+  --case case-406 \
+  --prepare-only \
+  --target-dir {{CASE_RUN_ROOT_SH}} \
+  --context {{RUN_CONTEXT_SH}} \
+  --bundle-role verdict > "$STATE/case406-prepared.json"
 ```
 
-Expected: command prints `verdict: "NOT_RUN"`, writes `case-406-not-run.json`, and exits `2`.
+Read `$STATE/case406-prepared.json`. Its `prepared` object contains the exact absolute `task_path`, `beacon_path`, `result_schema_path`, `runtime_receipt_path`, `result_path`, and `spawn_prompt` for one claimed work ID.
 
-## Step 2: [MAIN->AGENT] Produce Real Actor Result
+## Step 2 - Run the independent native Subject Sub-agent
 
-A real project Agent must execute the generated work-unit task using the task, manifest, beacon, result schema, and receipt nonce from the claimed work-unit envelope. The Agent may use WebSearch/WebFetch or an approved fetch degradation chain. Do not hand-write a fake result, fake receipt, fake cache, or fake ledger row.
+Use the native Task/Sub-agent tool to start exactly one `dpt-source-intake` Subject Sub-agent. Give it the exact `spawn_prompt` and absolute paths from the prepared object. Require it to read the generated task, immutable beacon, and result schema; perform only that bounded work; and write the assigned result, runtime receipt, declared output, and cache bytes before returning. Preserve the returned Task result as diagnostic evidence, but do not substitute parent-authored bytes for any missing assigned file.
 
-Expected runtime fact: the real actor produces a result JSON whose `work_id`, `queue_item_id`, `kind`, `receipt_nonce`, output files, cache trails, and runtime receipt match the claimed work unit.
-
-## Step 3: [MAIN/SHELL] Submit Real Result
-
-After a real project Agent has completed the generated work-unit task and produced a valid result JSON:
+After the Task returns, verify that `result_path`, `runtime_receipt_path`, and at least one result-declared output file exist. If the native Task tool cannot launch the named Sub-agent, or it returns without those assigned files and cannot repair its own work, record the unavailable boundary:
 
 ```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-406 --real-result <result.json> --cleanup-pass
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+printf '%s\n' 'native dpt-source-intake Sub-agent or required local actor capability unavailable' > "$B/case-406-subject-unavailable.txt"
 ```
 
-Expected for a real successful run: command exits `0` and prints `verdict: "PASS"`. A diagnostic run without `--cleanup-pass` also writes `case-406-verdict.json`.
+NOT_RUN is deferred evidence, not PASS or fixture failure. Do not continue to Step 3 after finalizing it.
 
-## Step 4: [MAIN] Read Machine Feedback
+## Step 3 - Submit the Subject-owned result and run the gate
 
-Read the runner JSON and, on FAIL or NOT_RUN, inspect the preserved bundle. Gate JSON and trace checks are the authority; the real Agent's narrative summary is not a verdict source by itself.
+Only after Step 2 has produced the assigned durable files. Skip Steps 3 and 4 when the unavailable marker exists:
 
-Expected real-path coverage:
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
+RESULT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.prepared.result_path)' "$STATE/case406-prepared.json")
+node experiments_env/shared/run-fixture-backed-case.mjs \
+  --case case-406 \
+  --bundle "$B" \
+  --real-result "$RESULT" > "$STATE/case406-submitted.json"
+```
 
-- Work-unit claim creates a real task, manifest, beacon, result schema, and runtime receipt path.
-- Real Agent output can pass only through `operate-work-unit submit`.
-- Gate pass, when achieved, comes from submitted work-unit ledger coverage and cross-checks.
+## Step 4 - Record exact case-owned checks
 
-## Step 5: [MAIN/SHELL] Verdict Checks
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { appendFileSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+const [bundle] = process.argv.slice(2);
+const verdict = JSON.parse(readFileSync(join(bundle, 'case-406-verdict.json')));
+const required = [
+  'real-subagent-task-bound', 'real-subagent-result-written',
+  'real-subagent-receipt-nonce-preserved', 'real-subagent-output-written',
+  'real-subagent-submit-succeeded', 'wave0-gate-pass', 'work-unit-submit-traced',
+];
+const byLabel = new Map(verdict.checks.map((row) => [row.label, row]));
+for (const gate of required) appendFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({
+  ts: new Date().toISOString(), event: 'check', source: 'playbook', gate,
+  passed: byLabel.get(gate)?.passed === true, expected: true,
+})}\n`);
+if (required.some((gate) => byLabel.get(gate)?.passed !== true)) process.exit(1);
+JS
+```
 
-For PASS, the runner must record trace `check` rows for `real-submit`, `wave0-gate`, and `work-unit-trace`. Without a real result, the case records `NOT_RUN` and exits `2`; this is a preserved deferred-evidence state, not a failure of the fixture-backed boundary cases.
+## Step 5 - Native completion with exact Subject evidence
 
-## Step 6: [MAIN] Result Interpretation
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
+EXTRA_ARGS=()
+if [ -f "$B/case-406-subject-unavailable.txt" ]; then
+  EXTRA_ARGS+=(--not-run-reason "native dpt-source-intake Sub-agent or required local actor capability unavailable")
+else
+  TASK=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.evidence.task)' "$STATE/case406-submitted.json")
+  RESULT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.evidence.result)' "$STATE/case406-submitted.json")
+  RECEIPT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.evidence.receipt)' "$STATE/case406-submitted.json")
+  OUTPUT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.evidence.output)' "$STATE/case406-submitted.json")
+  EXTRA_ARGS+=(--evidence "subject_task=$TASK" --evidence "subject_result=$RESULT" --evidence "subject_receipt=$RECEIPT" --evidence "subject_output=$OUTPUT")
+fi
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+```
 
-PASS means a real sub-agent actor completed the same work-unit submit and gate path used by fixture-backed Engine cases. NOT_RUN means the real Agent behavior remains unproven and must not be counted as production behavior coverage. FAIL means the preserved bundle contains the gate, submit, or trace feedback needed for repair.
-
-## Step 7: [MAIN/SHELL] Cleanup
-
-Normal real-result execution uses `--cleanup-pass`: PASS removes the disposable bundle, while FAIL and NOT_RUN preserve it for diagnosis or later real-Agent continuation.
-
-## Optional Automation Smoke
-
-The no-result and real-result commands above are already step-sized controller checkpoints: Step 1 proves no fixture PASS, Step 2 requires real Agent work, Step 3 submits that real result. A suite runner may aggregate their reports, but it must not convert NOT_RUN into PASS or replace Step 2 with fixture output.
+Stop after native completion. The Autorun Supervisor owns Heavy health, durable Subject-evidence export, audit, preservation, and optional clean-PASS cleanup of the complete case run root.

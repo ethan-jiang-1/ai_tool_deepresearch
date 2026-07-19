@@ -1,14 +1,21 @@
 #!/usr/bin/env node
+// @impl EXA-006
 
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { spawnSync } from 'node:child_process';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 const { values } = parseArgs({
-  options: { case: { type: 'string' }, 'target-dir': { type: 'string' }, 'cleanup-pass': { type: 'boolean', default: false } },
+  options: {
+    case: { type: 'string' },
+    'target-dir': { type: 'string' },
+    context: { type: 'string' },
+    role: { type: 'string', default: 'verdict' },
+    'cleanup-pass': { type: 'boolean', default: false },
+  },
   strict: true,
 });
 if (values.case !== 'case-317') throw new Error('only --case case-317 is supported');
@@ -17,6 +24,7 @@ mkdirSync(targetDir, { recursive: true });
 const hex = randomBytes(4).toString('hex');
 const bundle = join(targetDir, `dpt_disp_case-317_post-final-recovery_${hex}`);
 const logicalName = 'post-final-recovery';
+const stateCli = resolve('DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs');
 
 function run(args, expected = 0) {
   const result = spawnSync('node', args, { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
@@ -28,6 +36,7 @@ function runJson(args, expected = 0) { return JSON.parse(run(args, expected)); }
 let passed = false;
 try {
   mkdirSync(bundle);
+  if (values.context) run([stateCli, 'register-bundle', '--context', resolve(values.context), '--role', values.role, '--path', bundle]);
   for (const directory of ['final', 'seed_topics', 'reference', 'artifacts', '_logs']) mkdirSync(join(bundle, directory));
   writeFileSync(join(bundle, 'rb_status.json'), `${JSON.stringify({ bundle: logicalName, current_mode: 'execution', state: 'in_progress', current_gate: 'readiness_passed', next_gate: 'none', current_node: 'phases/phase-final.md' }, null, 2)}\n`);
   writeFileSync(join(bundle, 'rb_profile.yaml'), [
@@ -89,7 +98,7 @@ try {
     terminal_history_preserved: readFileSync(join(bundle, 'final', 'report.md'), 'utf8') === '# Prior Final\n',
   };
   passed = Object.values(checks).every(Boolean);
-  const output = { case_id: values.case, verdict: passed ? 'PASS' : 'FAIL', bundle: basename(bundle), applied_operation_id: applied.operation_id, recovery_event_index: trace.findIndex((event) => event.event === 'post_final_reentry'), canonical_topic_slug: '01_controlled-comparison', repeat_verdict: repeat.verdict, checks };
+  const output = { case_id: values.case, verdict: passed ? 'PASS' : 'FAIL', bundle_path: bundle, applied_operation_id: applied.operation_id, recovery_event_index: trace.findIndex((event) => event.event === 'post_final_reentry'), canonical_topic_slug: '01_controlled-comparison', repeat_verdict: repeat.verdict, checks };
   writeFileSync(1, `${JSON.stringify(output, null, 2)}\n`);
   if (!passed) process.exitCode = 1;
 } finally {

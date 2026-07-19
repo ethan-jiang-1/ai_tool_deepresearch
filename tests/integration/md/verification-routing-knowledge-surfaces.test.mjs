@@ -44,7 +44,7 @@ describe('verification routing knowledge surfaces', () => {
   });
 
   it('experiment entry surfaces use the same broad heavy-cost definition', () => {
-    for (const path of ['experiments_playbook/README.md', 'experiments_playbook/RUN_EXPS.md']) {
+    for (const path of ['experiments_playbook/README.md', 'experiments_playbook/PLAYBOOK_MANIFEST.md']) {
       const content = read(path);
       assert.match(content, /Heavy[^\n]*(real Agent|real Agent\/sub-agent)/i, `${path} must include real Agent cost`);
       assert.match(content, /Heavy[^\n]*(long chain|长链)/i, `${path} must include long-chain cost`);

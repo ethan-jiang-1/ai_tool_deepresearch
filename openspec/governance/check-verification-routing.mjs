@@ -1,9 +1,11 @@
 #!/usr/bin/env node
+// @impl VER-002, VER-003, VER-006
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parse as parseYaml } from 'yaml';
 import { parseMdFrontmatter } from '../../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { parsePlaybookManifest } from '../../DPT_FRAMEWORK/host_tools/lib/agent-experiment-contract.mjs';
 import { parseVerificationRoutingPlan } from './verification-routing-contract.mjs';
 
 function usage() {
@@ -69,8 +71,13 @@ if (mode === 'assets') {
       if (id) caseOwners.set(id, [...(caseOwners.get(id) ?? []), file]);
     } catch {}
   }
-  const manifestPath = join(root, 'experiments_playbook', 'RUN_EXPS.md');
-  const manifest = existsSync(manifestPath) ? readFileSync(manifestPath, 'utf8') : '';
+  const manifestPath = join(root, 'experiments_playbook', 'PLAYBOOK_MANIFEST.md');
+  let manifestPaths = [];
+  if (!existsSync(manifestPath)) fail('manifest', 'PLAYBOOK_MANIFEST.md is missing', 'experiments_playbook/PLAYBOOK_MANIFEST.md');
+  else {
+    try { manifestPaths = parsePlaybookManifest(readFileSync(manifestPath, 'utf8')); }
+    catch (error) { fail('manifest', error.message, 'experiments_playbook/PLAYBOOK_MANIFEST.md'); }
+  }
   for (const item of plan.claims) {
     const declared = resolve(root, item.asset.path);
     if (!existsSync(declared)) {
@@ -99,8 +106,8 @@ if (mode === 'assets') {
     if (frontmatter.case !== stem) fail(item.id, 'filename stem does not match frontmatter case', item.asset.path);
     if ((caseOwners.get(frontmatter.case) ?? []).length !== 1) fail(item.id, 'case identity is not globally unique', item.asset.path);
     const manifestRef = item.asset.path.replace(/^experiments_playbook\//, '');
-    const count = manifest.split(manifestRef).length - 1;
-    if (count !== 1) fail(item.id, `active runner manifest must contain the exact path once (found ${count})`, 'experiments_playbook/RUN_EXPS.md');
+    const count = manifestPaths.filter((pathValue) => pathValue === manifestRef).length;
+    if (count !== 1) fail(item.id, `active manifest must contain the exact path once (found ${count})`, 'experiments_playbook/PLAYBOOK_MANIFEST.md');
   }
 }
 

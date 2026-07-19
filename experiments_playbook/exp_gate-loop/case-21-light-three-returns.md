@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: gate-loop
 case: case-21-light-three-returns
-weight: light
 case_goal: "验证 checkGate 单次 checkpoint：pass、check fail、schema fail 三种返回。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-21_gl_simple
-trace: dpt_disp_case-21_gl_simple/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [check_fail, pass, pass_no_next, priority, schema_fail]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -40,14 +48,14 @@ verdict: trace-jsonl
 2. 初始化 trace
 3. checkGate checkpoint：pass / check fail / schema fail
 4. 读 trace 裁决
-5. 清理
-
+5. Native completion, then Supervisor-owned health and cleanup policy
 ---
 
 ## Step 1: 创建 Run Bundle
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs gl_simple --case case-21 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs gl_simple --case case-21 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
 node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 ```
@@ -60,14 +68,14 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 
 ```bash
 
-cat > "$B/t.mjs" << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
-const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/rb_trace.jsonl');
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+const bundle = process.argv[2];
+const trace = createTrace(`${bundle}/rb_trace.jsonl`);
+const recordCheck = ({ step, source: _source, ...rest }) => trace.traceEntry('check', { source: 'playbook', gate: step, expected: true, ...rest });
 trace.traceInit('gl-playbook/simple', { source: 'gl-playbook/simple' });
 JS
-node "$B/t.mjs" > /dev/null 2>&1
 ```
 
 ---
@@ -78,14 +86,15 @@ MD 定义 rules（领域知识），Engine 只做确定性 checkpoint。
 
 ```bash
 
-cat > "$B/t.mjs" << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
 import { z } from 'zod';
-import { checkGate } from '../DPT_FRAMEWORK/engine/gate-loop.mjs';
+import { checkGate } from './DPT_FRAMEWORK/engine/gate-loop.mjs';
 
-const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/rb_trace.jsonl');
+const bundle = process.argv[2];
+const trace = createTrace(`${bundle}/rb_trace.jsonl`);
+const recordCheck = ({ step, source: _source, ...rest }) => trace.traceEntry('check', { source: 'playbook', gate: step, expected: true, ...rest });
 
 const SRC = 'gl-playbook/simple';
 
@@ -106,7 +115,7 @@ const p1 = checkGate(
   { ref_count: 5, ref_floor: 5, topicReadiness: 'ready' },
   RULES, 'wave0_search'
 );
-trace.traceEntry('check', {
+recordCheck({
   source: SRC, step: 'pass',
   passed: p1.passed === true && p1.next === 'wave0_search'
 });
@@ -116,7 +125,7 @@ const p2 = checkGate(
   { ref_count: 2, ref_floor: 5, topicReadiness: 'ready' },
   RULES
 );
-trace.traceEntry('check', {
+recordCheck({
   source: SRC, step: 'check_fail',
   passed: p2.passed === false && p2.say.includes('ref_count')
 });
@@ -126,7 +135,7 @@ const p3 = checkGate(
   { ref_count: 'bad', ref_floor: 5, topicReadiness: 'ready' },
   RULES
 );
-trace.traceEntry('check', {
+recordCheck({
   source: SRC, step: 'schema_fail',
   passed: p3.passed === false && p3.say === 'state 结构不合法' && p3.errors[0].field === 'ref_count'
 });
@@ -136,7 +145,7 @@ const p4 = checkGate(
   { ref_count: 2, ref_floor: 5, topicReadiness: 'blocked' },
   RULES
 );
-trace.traceEntry('check', {
+recordCheck({
   source: SRC, step: 'priority',
   passed: p4.passed === false && p4.say.includes('阻塞')
 });
@@ -146,50 +155,23 @@ const p5 = checkGate(
   { ref_count: 5, ref_floor: 5, topicReadiness: 'ready' },
   RULES
 );
-trace.traceEntry('check', {
+recordCheck({
   source: SRC, step: 'pass_no_next',
   passed: p5.passed === true && p5.next === undefined
 });
 JS
-node "$B/t.mjs" > /dev/null 2>&1
 ```
 
 → 预期：5 check 全 passed。
 
 ---
 
-## Step 4: 从 Trace 裁决
+## Step 4: Native Completion
 
 ```bash
-
-cat > "$B/t.mjs" << 'JS'
-import { readFileSync } from 'node:fs';
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-
-import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
-const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/rb_trace.jsonl');
-const raw = readFileSync(trace.traceFilePath(), 'utf-8').trim();
-const events = JSON.parse('[' + raw.split('\n').join(',') + ']');
-const checks = events.filter(x => x.event === 'check');
-const passed = checks.filter(x => x.passed === true).length;
-const failed = checks.filter(x => x.passed !== true).length;
-
-console.log('checks:' + checks.length + ' passed:' + passed + ' failed:' + failed);
-
-const ok = checks.length >= 5 && failed === 0;
-console.log(ok ? '\x1b[32mSIMPLE PASS\x1b[0m' : '\x1b[31mSIMPLE FAIL\x1b[0m');
-if (!ok) process.exit(1);
-
-trace.traceCleanup();
-JS
-node "$B/t.mjs"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
-
-→ 预期：`checks >= 5, failed = 0`，SIMPLE PASS。
-
----
-
 
 ## Step 5: 结果解读
 
@@ -201,11 +183,4 @@ node "$B/t.mjs"
 >   [pass_no_next] pass 但无 next → next=undefined
 >   全部 expected:true → 5/5 PASS 即通过。
 
-## Step 6: 清理
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-rm -rf dpt_disp_case-21_gl_*
-echo "✓ Cleaned up."
-```
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

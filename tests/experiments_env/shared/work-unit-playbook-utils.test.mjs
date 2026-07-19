@@ -1,6 +1,6 @@
 // @impl EXR-001, RWE-001, AGT-009
 
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
@@ -10,6 +10,7 @@ import {
   claimAndSubmitFixtureWorkUnit,
   inspectWorkUnitsViaCli,
   readWorkUnitLedgerRows,
+  recordPlaybookCheck,
   sourceYamlContent,
   writeMinimalPlan,
   writeMinimalStatus,
@@ -50,5 +51,17 @@ describe('work-unit playbook utils', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it('writes strict playbook-owned checks for native finalization', () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'wu-playbook-check-'));
+    try {
+      recordPlaybookCheck(dir, { gate: 'sample-check', passed: false, expected: false, detail: 'negative boundary' });
+      const row = JSON.parse(readFileSync(path.join(dir, 'rb_trace.jsonl'), 'utf8'));
+      assert.equal(row.event, 'check');
+      assert.equal(row.source, 'playbook');
+      assert.equal(row.passed, false);
+      assert.equal(row.expected, false);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 });

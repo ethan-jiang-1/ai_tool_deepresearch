@@ -1,30 +1,32 @@
 #!/usr/bin/env node
-// validate-playbook.mjs — validates playbook frontmatter against command-experiment/v1 schema
-// Usage: node validate-playbook.mjs <playbookFileOrDir>
-// Exit: 0 = all PASS, 1 = at least one FAIL
+// @impl EXA-004, PLR-001, VER-006
+// Validate command-experiment/v2 playbooks or the canonical manifest corpus.
 
-const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
-
-import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, basename } from 'node:path';
+import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseMdFrontmatter } from '../engine/helpers/gate-helpers.mjs';
 import { PlaybookFrontmatterSchema } from '../schema/index.mjs';
+import { readAndValidateManifest } from '../host_tools/lib/agent-experiment-contract.mjs';
 
-const target = process.argv[2];
-if (!target) {
+const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(__dirname, '..', '..');
+const canonicalPlaybookRoot = join(repoRoot, 'experiments_playbook');
+const targetArg = process.argv[2];
+
+if (!targetArg) {
   console.error('Usage: node validate-playbook.mjs <playbookFileOrDir>');
   process.exit(2);
 }
 
-// ---- helpers ----
 function collectPlaybooks(dir) {
   const files = [];
-  const entries = readdirSync(dir, { withFileTypes: true });
-  for (const e of entries) {
-    const full = join(dir, e.name);
-    if (e.isDirectory() && !e.name.startsWith('.') && !e.name.startsWith('_')) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory() && !entry.name.startsWith('.') && !entry.name.startsWith('_')) {
       files.push(...collectPlaybooks(full));
-    } else if (e.isFile() && e.name.endsWith('.md') && e.name !== 'README.md' && e.name !== 'RUN_TUI_EXPS.md' && e.name !== 'RUN_CLI_EXPS.md') {
+    } else if (entry.isFile() && /^case-\d+-(?:light|standard|heavy)-[a-z0-9-]+\.md$/.test(entry.name)) {
       files.push(full);
     }
   }
@@ -32,36 +34,47 @@ function collectPlaybooks(dir) {
 }
 
 function formatIssues(issues) {
-  return issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
+  return issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ');
 }
 
-// ---- main ----
-const root = process.cwd();
-let playbookFiles;
-if (statSync(target).isDirectory()) {
-  playbookFiles = collectPlaybooks(target);
-} else {
-  playbookFiles = [target];
+const target = resolve(targetArg);
+if (!existsSync(target)) {
+  console.error(`Target not found: ${targetArg}`);
+  process.exit(2);
 }
 
+if (target === canonicalPlaybookRoot && lstatSync(target).isDirectory()) {
+  try {
+    const manifest = readAndValidateManifest({ repoRoot, requireExactCorpus: true });
+    for (const entry of manifest.entries) console.log(`  ${G}✓${B} ${relative(repoRoot, entry.fullPath)}`);
+    console.log(`\nValidate: ${manifest.entries.length} passed, 0 failed (canonical manifest)`);
+    process.exit(0);
+  } catch (error) {
+    console.log(`  ${R}✗${B} canonical manifest: ${error.message}`);
+    console.log('\nValidate: 0 passed, 1 failed');
+    process.exit(1);
+  }
+}
+
+const stat = lstatSync(target);
+const playbookFiles = stat.isDirectory() ? collectPlaybooks(target) : [target];
 if (playbookFiles.length === 0) {
-  console.log('No playbook files found.');
+  console.log('No runnable case-*.md playbook files found.');
   process.exit(0);
 }
 
-let passed = 0, failed = 0;
+let passed = 0;
+let failed = 0;
 for (const filePath of playbookFiles) {
-  const relPath = relative(root, filePath);
-  const raw = readFileSync(filePath, 'utf-8');
-  const frontmatter = parseMdFrontmatter(raw);
-  const result = PlaybookFrontmatterSchema.safeParse(frontmatter);
-
-  if (result.success) {
-    console.log(`  ${G}✓${B} ${relPath}`);
-    passed++;
-  } else {
-    console.log(`  ${R}✗${B} ${relPath}: ${formatIssues(result.error.issues)}`);
-    failed++;
+  try {
+    const parsed = parseMdFrontmatter(readFileSync(filePath, 'utf8'));
+    const result = PlaybookFrontmatterSchema.safeParse(parsed);
+    if (!result.success) throw new Error(formatIssues(result.error.issues));
+    console.log(`  ${G}✓${B} ${relative(repoRoot, filePath)}`);
+    passed += 1;
+  } catch (error) {
+    console.log(`  ${R}✗${B} ${relative(repoRoot, filePath)}: ${error.message}`);
+    failed += 1;
   }
 }
 

@@ -1,18 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: reentry-debuggability
 case: case-309-light-drift-detection
-weight: light
 case_goal: "验证 checkpoint drift 检测: 先写 checkpoint，再修改 rb_status.json，check-reentry 检测到 control file drift 并分类为 blocker。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-309_drift
-trace: dpt_disp_case-309_drift/rb_trace.jsonl
-verdict: trace-jsonl
-production_distance: >
-  本实验通过 writeCheckpointManifest 写入 checkpoint 后手动修改 control file 来模拟 drift。文件由脚本生成，不涉及 Agent。实验证明 Engine 的 drift audit 能对比 checkpoint hash 并正确分类 severity。
+verdict_mode: all
+required_checks: [drift-status-blocker, drift-status-found, drift-trace-info, has-blockers, wave1-complete]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -36,7 +42,8 @@ production_distance: >
 ## Step 1: 构建带 checkpoint 的 bundle
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs drift --case case-309 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs drift --case case-309 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 # 写 wave1 完成状态
 cat > "$B/rb_status.json" << 'JSON'
@@ -75,8 +82,10 @@ echo "# Evidence A" > "$B/artifacts/wave1/topic-a/evidence-summary.md"
 echo "# Questions A" > "$B/artifacts/wave1/topic-a/question-list.md"
 
 # 直接用 writeCheckpointManifest 写一个 checkpoint
-cat > "$B/_write_ckpt.mjs" << 'JS'
-import { writeCheckpointManifest, buildGateResult } from '../DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+node --input-type=module - "$B" <<'JS'
+import { appendFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { writeCheckpointManifest, buildGateResult } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
 
 const result = buildGateResult({
   passed: true,
@@ -88,9 +97,12 @@ const result = buildGateResult({
 });
 
 writeCheckpointManifest(process.argv[2], result);
+appendFileSync(join(process.argv[2], 'rb_trace.jsonl'), `${JSON.stringify({
+  ts: new Date().toISOString(), event: 'check', source: 'playbook', gate: 'wave1-complete',
+  passed: result.check?.passed === true, expected: true,
+})}\n`);
 console.log('Checkpoint written');
 JS
-node "$B/_write_ckpt.mjs" "$B"
 
 echo "B=$B"
 ls "$B/_checkpoints/"
@@ -103,8 +115,7 @@ ls "$B/_checkpoints/"
 ## Step 2: 修改 control file 并检测 drift
 
 ```bash
-B= # populated from Step 1
-
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # 修改 rb_status.json — change current_gate
 cat > "$B/rb_status.json" << 'JSON'
 {"bundle":"drift","current_mode":"execution","state":"blocked","current_gate":"wave2_complete","next_gate":"hitl2_recorded"}
@@ -119,7 +130,7 @@ EXIT=$?
 echo "Exit: $EXIT"
 echo "$RESULT" | grep -E '"drift"|"severity"|"path"' | head -10
 
-cat > "$B/_verdict.mjs" << 'JS'
+node --input-type=module - "$B" "$RESULT" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const __dirname = process.argv[2];
@@ -134,12 +145,14 @@ console.log('Drift entries:', drift.length);
 const statusDrift = drift.find(d => d.path === 'rb_status.json');
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'drift-status-found', passed: !!statusDrift, expected: true,
   detail: `rb_status.json drift found: ${!!statusDrift}`
 });
 checks.push({
   ts: new Date().toISOString(), event: 'check',
-  gate: 'drift-status-blocker', passed: statusDrift?.severity === 'blocker', expected: 'blocker',
+  source: 'playbook',
+  gate: 'drift-status-blocker', passed: statusDrift?.severity === 'blocker', expected: true,
   detail: `rb_status.json drift severity: ${statusDrift?.severity}`
 });
 
@@ -148,7 +161,8 @@ const traceDrift = drift.find(d => d.path === 'trace_lines');
 if (traceDrift) {
   checks.push({
     ts: new Date().toISOString(), event: 'check',
-    gate: 'drift-trace-info', passed: traceDrift.severity === 'info', expected: 'info',
+    source: 'playbook',
+    gate: 'drift-trace-info', passed: traceDrift.severity === 'info', expected: true,
     detail: `trace_lines drift severity: ${traceDrift.severity}`
   });
 }
@@ -156,57 +170,26 @@ if (traceDrift) {
 // Check: blockers exist due to drift + status mismatch
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'has-blockers', passed: (result.blockers || []).length > 0, expected: true,
   detail: `blockers: ${(result.blockers || []).length}`
 });
 
-const tracePath = join(__dirname, '_logs', '_trace.jsonl');
+const tracePath = join(__dirname, 'rb_trace.jsonl');
 for (const c of checks) writeFileSync(tracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 console.log(JSON.stringify(checks.map(c => ({ gate: c.gate, passed: c.passed }))));
 JS
-node "$B/_verdict.mjs" "$B" "$RESULT"
 ```
 
 → 预期：drift 条目 `rb_status.json` severity=blocker，`trace_lines` severity=info。
 
 ---
 
-## Step 3: 从 trace 裁决
+## Native Completion
 
 ```bash
-B= # populated from Step 1
-
-cat > "$B/_final_verdict.mjs" << 'JS'
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-const __dirname = process.argv[2];
-const tracePath = join(__dirname, '_logs', '_trace.jsonl');
-const raw = readFileSync(tracePath, 'utf-8').trim();
-if (!raw) { console.log('FAIL: No trace events'); process.exit(1); }
-const lines = raw.split('\n').filter(l => l.trim());
-const events = lines.map(l => JSON.parse(l));
-const checks = events.filter(e => e.event === 'check');
-const failed = checks.filter(c => !c.passed);
-const passed = checks.filter(c => c.passed);
-
-console.log('══════ Verdict ══════');
-for (const c of checks) console.log(`  ${c.passed ? 'PASS' : 'FAIL'}  ${c.gate}: ${c.detail}`);
-console.log('══════════════════════');
-console.log(`PASS: ${passed.length}  FAIL: ${failed.length}`);
-
-if (failed.length > 0) { console.log('\nFAIL'); process.exit(1); }
-console.log('\nPASS — checkpoint drift detection correctly classifies control file changes as blocker.');
-JS
-node "$B/_final_verdict.mjs" "$B"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-→ 预期：PASS。
-
----
-
-## Cleanup
-
-```bash
-B= # populated from Step 1
-rm -rf "$B" && echo "Cleaned up $B"
-```
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

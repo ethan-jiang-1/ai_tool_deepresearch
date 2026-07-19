@@ -1,103 +1,60 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-pre-research-repair
 case: case-111-standard-repair-loop
-weight: light
-case_goal: "Prove that when the HITL1 gate fails (research_profile still not_selected), the Agent can read inspect/advice, repair the profile, rerun the gate, and pass — with the full PDCA loop visible in trace."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-111_wff_repair_*
-trace: dpt_disp_case-111_wff_repair_*/rb_trace.jsonl
-verdict: trace-jsonl
+case_goal: Prove the visible HITL1 gate fail, feedback-driven profile repair, and same-gate pass loop.
+verdict_mode: last
+required_checks: [hitl1-recorded, real-attempt-pair]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
 
-## Execution Contract
-
-由 coding agent 在真实 disposable experiment bundle 中执行。实验结果必须来自实际文件写入、gate CLI 调用和 trace event；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
+<!-- @impl EXA-005, EXA-006, PLR-003 -->
 
 # case-111-standard-repair-loop
 
-## Expected Runtime Path
+This case keeps the PDCA loop visible in Markdown: run the real gate against the default incomplete profile, read its inspect/advice, make the smallest fixture-backed repair, rerun the same gate, and finalize with native `last` semantics.
 
-1. 创建 disposable bundle
-2. 故意让 profile 处于默认状态（`research_profile: not_selected`）
-3. 运行 hitl1-recorded gate → **预期 fail**
-4. 展示 gate JSON output，解释 inspect/advice
-5. 修复 profile（填写 user choices，并加入 synthetic valid research-access observation），展示 diff
-6. Rerun same gate → **预期 pass**
-7. 从 trace 裁决（trace 中同时有 failed 和 passed 的 check event）
-8. Cleanup
-
----
-
-## Case Goal
-
-证明 PDCA 修复回路：gate fail → Agent 读 inspect/advice → 精准修复 → rerun → pass。trace 必须是完整证据链。
-
----
-
-## Step 1: 创建 disposable bundle
+## Step 1: Create and register the verdict bundle
 
 ```bash
-REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_repair --case case-111 --force)
-echo "Bundle: $B"
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_repair --case case-111 --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 ```
 
-## Step 2: 故意让 profile 处于默认状态
-
-`new-disposable-bundle.mjs` 创建的 `rb_profile.yaml` 默认 `research_profile: not_selected`、`root_must_answer_set: []`、`research_access.status: unprobed`、`hitl1.status: not_started`。**我们不做任何修改**，模拟"用户尚未回答 HITL1 且尚未 probe"的状态。
+## Step 2: Run HITL1 gate against the default profile and consume feedback
 
 ```bash
-echo "=== Current profile (default — simulating unanswered HITL1) ==="
-grep -E 'research_profile|root_must_answer|status' $B/rb_profile.yaml
-```
-
-展示：`research_profile: not_selected`、`root_must_answer_set: []`、`research_access.status: unprobed`、`hitl1.status: not_started`。
-
-## Step 3: 运行 hitl1-recorded gate — 预期 FAIL
-
-这个 gate 检查 profile 是否已填写。当前 profile 全为默认值，应该 fail。
-
-```bash
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md || true)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle "$B" --current-node phases/phase-hitl1.md || true)
 echo "$GATE_OUTPUT"
-```
-
-**Agent 现在要读这个 JSON output：**
-
-- `check.passed` — 预期 `false`
-- `inspect` 数组 — 应包含：
-  - 一条指向 `research_profile` 仍为 `not_selected` 的诊断
-  - 一条指向 `root_must_answer_set` 为空的诊断
-  - 一条指向 `hitl1.status` 不是 `recorded` 的诊断
-- `advice` 数组 — 应包含每条 fail 的修复建议
-
-trace 记录这个 fail：
-
-```bash
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "
-import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/rb_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, expected: false, detail: 'default profile — simulating unanswered HITL1' });
-});
-"
+node --input-type=module - "$B" "$PASSED" <<'JS'
+import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
+recordCheck(`${process.argv[2]}/rb_trace.jsonl`, { gate: 'hitl1-recorded', passed: process.argv[3] === 'true', expected: false, detail: 'default profile must fail before repair' });
+JS
 ```
 
-## Step 4: 修复 profile
+Read the returned `inspect` and `advice`. Confirm that the direct blockers are the unselected profile, empty must-answer set, unrecorded HITL1 decision, and unprobed research access.
 
-Agent 读到了 inspect/advice。现在执行修复：把 `research_profile` 改成 `quick_factual`，填写 `root_must_answer_set`，写入 HITL1 marker，并加入 synthetic valid `research_access`。该 observation 只证明 gate repair mechanics，不证明真实外部能力。
+## Step 3: Apply the smallest declared fixture repair
 
 ```bash
-echo "=== Before repair ==="
-grep 'research_profile' $B/rb_profile.yaml
-
-cat > $B/rb_profile.yaml << 'EOF'
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+cat > "$B/rb_profile.yaml" <<'YAML'
 plan_basename: wff_repair
 research_profile: quick_factual
 root_must_answer_set:
-  - "What are the key risks in AI development?"
+  - What are the key risks in AI development?
 research_access:
   status: available
   probed_at: "2026-07-10T00:00:00.000Z"
@@ -112,70 +69,34 @@ human_decision_checkpoints:
     answerability_class: not_assessed
     user_decision: not_started
     final_report_view: not_started
-EOF
-
-echo "=== After repair ==="
-grep 'research_profile' $B/rb_profile.yaml
+YAML
 ```
 
-**展示 repair diff：** `research_profile` 从 `not_selected` → `quick_factual`。这正是 Agent 读了 inspect 后所做的精准修复。
+This setup-only observation proves gate repair mechanics; it does not claim real external research access.
 
-## Step 5: Rerun same gate — 预期 PASS
+## Step 4: Rerun the same gate and record the real attempt pair
 
 ```bash
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md || true)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle "$B" --current-node phases/phase-hitl1.md || true)
 echo "$GATE_OUTPUT"
-```
-
-`check.passed` — 预期 `true`。Agent 的修复生效了。
-
-```bash
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "
-import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/rb_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, detail: 'repaired profile — HITL1 recorded' });
-});
-"
+node --input-type=module - "$B" "$PASSED" <<'JS'
+import { readFileSync } from 'node:fs';
+import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
+const bundle = process.argv[2];
+recordCheck(`${bundle}/rb_trace.jsonl`, { gate: 'hitl1-recorded', passed: process.argv[3] === 'true', expected: true, detail: 'same gate after the declared repair' });
+const events = readFileSync(`${bundle}/rb_trace.jsonl`, 'utf8').trim().split(/\r?\n/).map(JSON.parse);
+const attempts = events.filter((event) => event.event === 'gate_attempt' && event.gate === 'hitl1-recorded');
+recordCheck(`${bundle}/rb_trace.jsonl`, { gate: 'real-attempt-pair', passed: attempts.some((event) => event.passed === false) && attempts.some((event) => event.passed === true), expected: true, detail: `${attempts.length} real gate attempts` });
+JS
 ```
 
-## Step 6: 从 trace 裁决
-
-Trace 中应有 2 个 `check` event：第一个 `passed: false`，第二个 `passed: true`。
+## Step 5: Publish native completion
 
 ```bash
-node -e "
-import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.verdict('$B/rb_trace.jsonl', 'last');
-});
-"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-
-## Step 7: 结果解读
-
-> 验证 pre-research PDCA 回路：
->   gate fail → Agent 读 inspect/advice → 修复 rb_profile.yaml → rerun → gate pass。
->   trace 含 fail+pass 两条 check。
-
-
-## Step HH: Post-Execution Health
-
-Standard profile — gate diagnostics, timeline consistency.
-
-```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
-```
-
-> 健康检查不改变 verdict。health status 由 runner report 记录。
-
-## Step 8: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-node -e "
-import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.cleanup('$B');
-});
-"
-```
+The finalizer applies `last` per gate: the repaired `hitl1-recorded` row is considered, while `real-attempt-pair` proves that the fail/pass history was genuine. Stop before health or cleanup.

@@ -1,5 +1,5 @@
 // Shared DeepSeek env helpers.
-// Used by both claude-deepseek.mjs and run-experiment.mjs.
+// Used by both claude-deepseek.mjs and Agent Experiment Autorun.
 //
 // parseEnvFile(path): reads repo-root .env, returns { vars } or { error }
 // validateEndpoint(url): checks URL format
@@ -71,6 +71,16 @@ export function buildChildEnv(vars, extraEnv = {}) {
     delete childEnv[k];
   }
 
+  const protectedKeys = new Set([
+    'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_API_KEY', 'ANTHROPIC_BASE_URL', 'ANTHROPIC_MODEL',
+    'ANTHROPIC_DEFAULT_OPUS_MODEL', 'ANTHROPIC_DEFAULT_SONNET_MODEL', 'ANTHROPIC_DEFAULT_HAIKU_MODEL',
+    'DEEPSEEK_API_KEY', 'DEEPSEEK_BASE_URL', 'DEEPSEEK_ANTHROPIC_BASE_URL', 'DEEPSEEK_MODEL',
+    'CLAUDE_CODE_SUBAGENT_MODEL', 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC', 'ENABLE_TOOL_SEARCH', 'API_TIMEOUT_MS',
+  ]);
+  const forbidden = Object.keys(extraEnv).filter((key) => protectedKeys.has(key) || key.startsWith('ANTHROPIC_') || key.startsWith('DEEPSEEK_'));
+  if (forbidden.length) throw new Error(`extra env cannot override provider routing: ${forbidden.join(', ')}`);
+  Object.assign(childEnv, extraEnv);
+
   const model = vars.DEEPSEEK_MODEL;
   childEnv.ANTHROPIC_AUTH_TOKEN = vars.DEEPSEEK_API_KEY;
   childEnv.ANTHROPIC_BASE_URL = vars.DEEPSEEK_ANTHROPIC_BASE_URL;
@@ -83,9 +93,6 @@ export function buildChildEnv(vars, extraEnv = {}) {
   childEnv.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1';
   childEnv.ENABLE_TOOL_SEARCH = 'false';
   childEnv.API_TIMEOUT_MS = '3000000';
-
-  // caller overrides
-  Object.assign(childEnv, extraEnv);
 
   return childEnv;
 }

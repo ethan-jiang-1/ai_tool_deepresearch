@@ -1,82 +1,92 @@
+<!-- @impl EXA-001, EXA-002, EXA-003, EXA-008, LDC-001, LDC-002, LDC-005, LDC-008, LDC-009 -->
+
 # Host Tools
 
-自包含的 pre-trigger 工具。只依赖外部 `claude` 二进制，所有环境由工具自身提供。
+Host-side Agent runtime launch and Agent Experiment Autorun surfaces. These tools are not the Deep Research Engine and do not replace the intelligent Playbook Agent or a case-owned Subject Agent.
 
-## claude-deepseek.mjs
+Deterministic `node:test`, CI, or test-owned Claude executable fixtures prove only Autorun Supervisor mechanics such as selection, argv/env isolation, timeout, completion validation, audit, and cleanup. Real `agent_flow_e2e` proof additionally requires the actual Agent CLI runtime, model credentials, required tools, and native runtime evidence from the executed Markdown case. Every batch report carries this same non-verdict `proof_boundary`; a fixture-generated report must not be relabeled as real Playbook-Agent or Subject-Agent evidence.
 
-DeepSeek Claude Code Launcher。Pre-trigger host tool。启动连接 DeepSeek Anthropic-compatible endpoint 的 Claude Code。
+## Agent CLI Launcher: `claude-deepseek.mjs`
 
-### Usage
+The generic launcher loads provider routing from the ignored repo-root `.env`, builds an isolated Claude child environment, and transparently forwards caller arguments, stdio, exit status, and signal. It does not add permission bypass or a spending policy.
 
 ```bash
-# Preflight check
 node DPT_FRAMEWORK/host_tools/claude-deepseek.mjs --check
-
-# Launch — 所有参数透传给 claude
 node DPT_FRAMEWORK/host_tools/claude-deepseek.mjs -p "hello"
 node DPT_FRAMEWORK/host_tools/claude-deepseek.mjs --verbose
 ```
 
-### Setup
+Required `.env` values:
 
-```bash
-cp .env.example .env   # from repo root
-```
-
-编辑 `.env`，三个必填值：
-
-```
-DEEPSEEK_API_KEY=sk-...
+```dotenv
+DEEPSEEK_API_KEY=...
 DEEPSEEK_ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
 DEEPSEEK_MODEL=deepseek-v4-pro
 ```
 
-## run-experiment.mjs
+`.env` is provider configuration for the child Agent runtime. It is not experiment state. Agent Experiment paths and cross-tool-call bundle roles use explicit context files/arguments; caller/inherited env cannot override selected provider routing.
 
-Experiment auto-runner。以 headless 模式启动 Claude Code 执行 `experiments_playbook/` 中的 playbook。Runner 负责编排和裁决（读 trace JSONL），Agent 负责执行 playbook。
+## Autorun Supervisor: `run-agent-experiment.mjs`
 
-### Usage
+This is the normal Agent Experiment Autorun entry. The Supervisor selects exact manifest paths, creates isolated case run roots, launches one real Headless Playbook Agent per case through the shared Agent CLI contract, validates native completion, runs declared health, writes durable audit/evidence/report records, and optionally removes clean PASS roots. It never executes Markdown steps or derives native PASS/FAIL from arbitrary trace checks.
+
+Headless execution requires an explicit total USD limit:
 
 ```bash
-# 单个 case
-node DPT_FRAMEWORK/host_tools/run-experiment.mjs --case case-41-light-minimal-path
+# Exact case
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
+  --case case-41-light-minimal-path \
+  --max-total-budget-usd 1
 
-# 整个实验组
-node DPT_FRAMEWORK/host_tools/run-experiment.mjs --group agentic-queue
+# Exact group and optional cost tier
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
+  --group agentic-queue --tier light \
+  --max-total-budget-usd 5 --max-case-budget-usd 1
 
-# 整档（light/standard/heavy）
-node DPT_FRAMEWORK/host_tools/run-experiment.mjs --tier light
+# All autorun-compatible cases; real-human cases remain manual
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
+  --all --max-total-budget-usd 20
 
-# Dry-run（仅发现不执行）
-node DPT_FRAMEWORK/host_tools/run-experiment.mjs --tier light --dry-run
-
-# PASS+CLEAN 时清理 bundle
-node DPT_FRAMEWORK/host_tools/run-experiment.mjs --tier light --cleanup-pass
-
-# JSON-only 输出（机器消费）
-node DPT_FRAMEWORK/host_tools/run-experiment.mjs --case case-41-light-minimal-path --json
-
-# 自定义超时（默认 600s）
-node DPT_FRAMEWORK/host_tools/run-experiment.mjs --tier light --timeout 1200000
+# Cleanup only effective PASS + required health CLEAN after durable audit/export
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
+  --tier light --max-total-budget-usd 5 --cleanup-pass
 ```
 
-无参数默认运行所有 Light case。
+No filter defaults to autorun-compatible Light cases in manifest order. `--case` is exact and exclusive. `--group` may combine with one `--tier`; `--all` is exclusive. The optional case cap cannot exceed the total. The Supervisor passes the current cap to Claude, accumulates one valid final `total_cost_usd` per started Headless case, and stops further launch on missing/malformed cost or exhausted budget. Cost does not affect native verdict.
 
-### 输出
+Dry-run validates exact manifest/V2 selection without loading credentials, creating `.exp-bundles/`, or launching an Agent:
 
-- **stdout**：ANSI 彩色 summary report + JSON report
-- **`_temp/exp_verdicts.jsonl`**：append-only 审计日志
-- **`.exp-bundles/dpt_disp_*/`**：disposable bundle（FAIL 时保留，`--cleanup-pass` 时 PASS bundle 被清理）
-- **`.exp-bundles/dpt_disp_*/exp_result.json`**：per-bundle 结果摘要
-- **`.exp-bundles/dpt_disp_*/_diag_*.log`**：Agent 完整 stdout/stderr 诊断日志
+```bash
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --tier light --dry-run
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --group agentic-queue --tier standard --dry-run --json
+```
 
-### 与 TUI 模式的关系
+Interactive diagnosis/replay is exactly one case, uses normal user-present TTY permission handling, and always preserves its run root:
 
-两份 runner instruction，playbook 不动：
+```bash
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs \
+  --interactive --case case-901-heavy-topic-rewrite-agent
+```
 
-| 模式 | Instruction | 谁裁决 | bundle 位置 |
-|------|------------|--------|-------------|
-| TUI（交互） | `RUN_TUI_EXPS.md` | Agent | repo root |
-| CLI（自动化） | `RUN_CLI_EXPS.md` | Runner（JS） | `.exp-bundles/` |
+Interactive omits Headless `-p`, stream output, no-session, bypass, budget, and cleanup flags. The complete bounded initial payload is passed as Claude's documented positional prompt argument. It uses the same host-created context, native completion validation, health, and audit contract.
 
-Case 清单在 `PLAYBOOK_MANIFEST.md`，两份 instruction 共享。
+## Runtime and evidence layout
+
+```text
+.exp-bundles/
+  runs/<batch-id>/<ordinal>-<case>-<uuid>/
+    agent-experiment-run.json
+    rendered-playbook.md
+    agent-experiment-completion.json
+    _playbook_state/bundles.json
+    _diagnostics/
+    dpt_disp_* and optional declared dpt_rb_* bundle roots
+  _logs/<batch-id>/...
+  _evidence/<batch-id>/...
+  _audit/agent-experiment-runs.jsonl
+  _reports/<batch-id>.json
+```
+
+`.exp-bundles/` never contains a copied, symlinked, or hardlinked `DPT_FRAMEWORK/`, `experiments_env/`, or `tests/` tree. The Playbook Agent cwd remains the validated repository command root so repo-relative source commands use the one original framework; only mutable run data enters the case run root. This containment is mutation/cleanup authority, not an OS sandbox for hostile playbooks.
+
+Before any clean PASS deletion, the Supervisor retains exact prompt, sanitized structured Agent output/stderr, full completion/health/audit, trace-prefix bytes, and required Subject evidence outside the case root. PASS+ISSUES, FAIL, NOT_RUN, ERROR, CANCELLED, HUMAN, and Interactive roots are preserved.

@@ -1,124 +1,92 @@
-// Regression tests for experiments_env/shared/wff-playbook-utils.mjs
-// Focus: recordVerdict() audit persistence + cleanup() wiring (E2E verdict 留档机制).
+// @impl EXA-005, EXA-006, PLR-003
 
-import { describe, it, beforeEach, afterEach } from 'node:test';
-import assert from 'node:assert';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 
-import { recordCheck, recordVerdict, cleanup } from '../../../experiments_env/shared/wff-playbook-utils.mjs';
+import {
+  cleanup,
+  recordCheck,
+  recordVerdict,
+  verdict,
+} from '../../../experiments_env/shared/wff-playbook-utils.mjs';
+import {
+  AgentExperimentCompletionSchema,
+  caseRootIdentity,
+  sha256Bytes,
+} from '../../../DPT_FRAMEWORK/host_tools/lib/agent-experiment-contract.mjs';
 
-let workDir;
+const REPO_ROOT = path.resolve(new URL('../../..', import.meta.url).pathname);
 
-beforeEach(() => {
-  workDir = mkdtempSync(path.join(tmpdir(), 'wff-utils-'));
+describe('wff playbook native-finalizer adapter', () => {
+  it('keeps check production strict and delegates last-mode completion to the finalizer', () => {
+    const run = makeRun({ verdict_mode: 'last' });
+    try {
+      const tracePath = path.join(run.bundle, 'rb_trace.jsonl');
+      recordCheck(tracePath, { gate: 'sample', passed: false, expected: true, detail: 'before repair' });
+      recordCheck(tracePath, { gate: 'sample', passed: true, expected: true, detail: 'after repair' });
+      const rows = readFileSync(tracePath, 'utf8').trim().split('\n').map(JSON.parse);
+      assert.deepEqual(rows.map((row) => row.source), ['playbook', 'playbook']);
+      assert.ok(rows.every((row) => typeof row.expected === 'boolean'));
+
+      const completion = verdict(tracePath, 'last', { contextPath: run.contextPath });
+      assert.equal(completion.outcome, 'PASS');
+      assert.equal(completion.checks_total, 2);
+      assert.equal(completion.checks_considered, 1);
+      AgentExperimentCompletionSchema.parse(JSON.parse(readFileSync(path.join(run.root, 'agent-experiment-completion.json'), 'utf8')));
+      assert.throws(() => verdict(tracePath, 'last', { contextPath: run.contextPath }), /already exists/);
+    } finally { rmSync(run.root, { recursive: true, force: true }); }
+  });
+
+  it('rejects helper/context mode drift before native publication', () => {
+    const run = makeRun({ verdict_mode: 'last' });
+    try {
+      recordCheck(path.join(run.bundle, 'rb_trace.jsonl'), { gate: 'sample', passed: true });
+      assert.throws(() => verdict(path.join(run.bundle, 'rb_trace.jsonl'), 'all', { contextPath: run.contextPath }), /verdict mode mismatch/);
+    } finally { rmSync(run.root, { recursive: true, force: true }); }
+  });
+
+  it('retires playbook-local thin audit and cleanup without deleting the bundle', () => {
+    const run = makeRun();
+    try {
+      assert.throws(() => recordVerdict(), /retired/);
+      assert.throws(() => cleanup(run.bundle), /retired/);
+      assert.equal(realpathSync(run.bundle), run.bundle);
+    } finally { rmSync(run.root, { recursive: true, force: true }); }
+  });
 });
 
-afterEach(() => {
-  rmSync(workDir, { recursive: true, force: true });
-});
-
-function readEntries(outPath) {
-  return readFileSync(outPath, 'utf-8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+function makeRun(policyOverrides = {}) {
+  const root = realpathSync(mkdtempSync(path.join(tmpdir(), 'wff-native-finalizer-')));
+  const bundle = path.join(root, 'dpt_disp_case-1_verdict');
+  mkdirSync(path.join(root, '_playbook_state'));
+  mkdirSync(bundle);
+  writeFileSync(path.join(bundle, 'rb_trace.jsonl'), '');
+  const runId = randomUUID();
+  const digest = sha256Bytes(Buffer.from('fixture'));
+  const contextPath = path.join(root, 'agent-experiment-run.json');
+  const context = {
+    schema_version: 'agent-experiment-run/v1', run_id: runId, mode: 'headless_agent', created_at: new Date().toISOString(),
+    manifest_path: path.join(REPO_ROOT, 'experiments_playbook/PLAYBOOK_MANIFEST.md'), manifest_sha256: digest,
+    instruction_path: path.join(REPO_ROOT, 'experiments_playbook/RUN_AGENT_AUTORUN_EXPS.md'), instruction_sha256: digest,
+    source_playbook_path: path.join(REPO_ROOT, 'experiments_playbook/exp_agentic-queue/case-41-light-minimal-path.md'), source_playbook_sha256: digest,
+    rendered_playbook_path: path.join(root, 'rendered-playbook.md'), rendered_playbook_sha256: digest,
+    case: 'case-1-light-sample', experiment: 'sample', cost: 'light',
+    policy: {
+      verdict_mode: 'all', required_checks: ['sample'], bundle_roles: ['verdict'], verdict_role: 'verdict', health_roles: ['verdict'],
+      health_profile: 'light', durable_evidence_roles: [], proof_subject: 'deterministic_contract', subject_execution: 'none', fixture: 'fixture_backed',
+      runtime: 'real_disposable_bundle', external_calls: 'none', verdict_judge: 'deterministic',
+      ...policyOverrides,
+    },
+    repo_command_root: REPO_ROOT, framework_root: path.join(REPO_ROOT, 'DPT_FRAMEWORK'), case_run_root: root,
+    case_root_identity: caseRootIdentity(root), completion_path: path.join(root, 'agent-experiment-completion.json'),
+  };
+  writeFileSync(contextPath, `${JSON.stringify(context, null, 2)}\n`);
+  writeFileSync(path.join(root, '_playbook_state/bundles.json'), `${JSON.stringify({
+    schema_version: 'agent-experiment-bundles/v1', run_id: runId, bundles: [{ role: 'verdict', path: bundle }],
+  }, null, 2)}\n`);
+  return { root, bundle, contextPath };
 }
-
-describe('recordVerdict — append-only verdict audit', () => {
-  it('appends a PASS entry with case id, bundle name, and all checks', () => {
-    const tracePath = path.join(workDir, 'rb_trace.jsonl');
-    const outPath = path.join(workDir, 'exp_verdicts.jsonl');
-    recordCheck(tracePath, { gate: 'g1', passed: true, detail: 'ok' });
-    recordCheck(tracePath, { gate: 'g2', passed: false, expected: false, detail: 'boundary' });
-
-    const entry = recordVerdict(tracePath, { caseId: 'case-65', bundleName: 'dpt_disp_x', outPath });
-
-    assert.ok(entry);
-    assert.equal(entry.case, 'case-65');
-    assert.equal(entry.bundle, 'dpt_disp_x');
-    assert.equal(entry.verdict, 'PASS');
-    assert.equal(entry.checks.length, 2);
-    assert.deepEqual(entry.checks[0], { gate: 'g1', passed: true, expected: true });
-    assert.deepEqual(entry.checks[1], { gate: 'g2', passed: false, expected: false });
-
-    const persisted = readEntries(outPath);
-    assert.equal(persisted.length, 1);
-    assert.equal(persisted[0].verdict, 'PASS');
-    assert.ok(persisted[0].ts);
-  });
-
-  it('records FAIL when any check has passed !== expected', () => {
-    const tracePath = path.join(workDir, 'rb_trace.jsonl');
-    const outPath = path.join(workDir, 'exp_verdicts.jsonl');
-    recordCheck(tracePath, { gate: 'g1', passed: true });
-    recordCheck(tracePath, { gate: 'g2', passed: false });
-
-    const entry = recordVerdict(tracePath, { caseId: 'case-66', outPath });
-    assert.equal(entry.verdict, 'FAIL');
-  });
-
-  it('is append-only across multiple runs', () => {
-    const tracePath = path.join(workDir, 'rb_trace.jsonl');
-    const outPath = path.join(workDir, 'exp_verdicts.jsonl');
-    recordCheck(tracePath, { gate: 'g1', passed: true });
-
-    recordVerdict(tracePath, { caseId: 'run-1', outPath });
-    recordVerdict(tracePath, { caseId: 'run-2', outPath });
-
-    const persisted = readEntries(outPath);
-    assert.equal(persisted.length, 2);
-    assert.equal(persisted[0].case, 'run-1');
-    assert.equal(persisted[1].case, 'run-2');
-  });
-
-  it('creates a missing verdict parent directory before append', () => {
-    const tracePath = path.join(workDir, 'rb_trace.jsonl');
-    const outPath = path.join(workDir, 'missing', 'nested', 'exp_verdicts.jsonl');
-    recordCheck(tracePath, { gate: 'g1', passed: true });
-
-    const entry = recordVerdict(tracePath, { caseId: 'case-parent', outPath });
-
-    assert.equal(entry.verdict, 'PASS');
-    assert.equal(readEntries(outPath)[0].case, 'case-parent');
-  });
-
-  it('returns null and writes nothing when trace is missing or has no checks', () => {
-    const outPath = path.join(workDir, 'exp_verdicts.jsonl');
-
-    assert.equal(recordVerdict(path.join(workDir, 'nope.jsonl'), { outPath }), null);
-
-    const tracePath = path.join(workDir, 'rb_trace.jsonl');
-    writeFileSync(tracePath, JSON.stringify({ event: 'gate_attempt', gate: 'g1' }) + '\n');
-    assert.equal(recordVerdict(tracePath, { outPath }), null);
-
-    assert.ok(!existsSync(outPath));
-  });
-});
-
-describe('cleanup — verdict recorded before bundle destruction', () => {
-  it('persists verdict summary then removes the bundle', () => {
-    const bundle = path.join(workDir, 'dpt_disp_case-65_x');
-    mkdirSync(bundle, { recursive: true });
-    const outPath = path.join(workDir, 'exp_verdicts.jsonl');
-    recordCheck(path.join(bundle, 'rb_trace.jsonl'), { gate: 'g1', passed: true });
-
-    cleanup(bundle, { caseId: 'case-65', verdictsPath: outPath });
-
-    assert.ok(!existsSync(bundle), 'bundle should be removed');
-    const persisted = readEntries(outPath);
-    assert.equal(persisted.length, 1);
-    assert.equal(persisted[0].case, 'case-65');
-    assert.equal(persisted[0].bundle, 'dpt_disp_case-65_x');
-    assert.equal(persisted[0].verdict, 'PASS');
-  });
-
-  it('still removes a bundle without rb_trace.jsonl and records nothing', () => {
-    const bundle = path.join(workDir, 'dpt_disp_no_trace');
-    mkdirSync(bundle, { recursive: true });
-    const outPath = path.join(workDir, 'exp_verdicts.jsonl');
-
-    cleanup(bundle, { verdictsPath: outPath });
-
-    assert.ok(!existsSync(bundle));
-    assert.ok(!existsSync(outPath));
-  });
-});

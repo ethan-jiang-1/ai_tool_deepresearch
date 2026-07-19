@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-wave-chain
 case: case-152-standard-wave-repair-loop
-weight: light
 case_goal: "Prove a Wave2 gate failure opens a repair/refill batch with batch_reason, then the repaired targeted evidence passes only after work-unit submit and phase drain."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-152_wave_repair_loop_*
-trace: dpt_disp_case-152_wave_repair_loop_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [drained-after-repair-before-gate, drained-before-initial-gate, gate-attempts-fail-then-pass, initial-gate-fails, repair-batch-opened, repair-claim-uses-refill-batch, repair-submit, repaired-gate-passes]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: RWE-001, RWE-006, AGQ-014
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -45,7 +53,8 @@ Fixture-backed Engine repair case. The initial failure is deliberate: Wave2 writ
 ## Step 1: [MAIN/SHELL] Create Wave2-Ready Bundle With Direct Targeted Evidence
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wave_repair_loop --case case-152 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wave_repair_loop --case case-152 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "BUNDLE=$B"
 
 node --input-type=module - "$B" <<'JS'
@@ -136,6 +145,7 @@ JS
 ## Step 2: [MAIN/SHELL] Probe Drain, Then Run Initial Gate
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave2 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-topic-scout --actor-reason probe_succeeded --execution-actor delegated_subagent > "$B/case-152-wave2-drain-before-gate.json"
 DRAIN_BEFORE_STATUS=$?
@@ -166,6 +176,7 @@ Expected: the phase is drained, but the gate fails because the direct cross-refe
 ## Step 3: [MAIN/SHELL] Open Repair Batch With Explicit Batch Reason
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch "$B" --phase wave2 --reason gate_failure_refill > "$B/case-152-open-batch.json"
 node - "$B/case-152-open-batch.json" <<'JS'
 const fs = require('fs');
@@ -178,6 +189,7 @@ JS
 ## Step 4: [MAIN/SHELL] Claim And Submit Repair Targeted Evidence
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { enqueueWorkUnitTask, queueItemForWorkUnit } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -228,6 +240,7 @@ node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_REPAIR
 ## Step 5: [MAIN/SHELL] Update Wave2 Receipt Context, Drain Again, Then Rerun Gate
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" "$WORK_REPAIR" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
@@ -257,10 +270,11 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --curre
 ## Step 6: [MAIN/SHELL] Record Verdict
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" "$WORK_REPAIR" <<'JS'
 import { readFileSync } from 'node:fs';
 import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
-import { readTrace, recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { readTrace, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const [bundle, workId] = process.argv.slice(2);
 const beforeDrain = JSON.parse(readFileSync(`${bundle}/case-152-wave2-drain-before-gate.json`, 'utf8'));
@@ -280,9 +294,7 @@ recordPlaybookCheck(bundle, { gate: 'repair-submit', passed: submit.ok === true,
 recordPlaybookCheck(bundle, { gate: 'drained-after-repair-before-gate', passed: afterDrain.phase_drained === true, detail: JSON.stringify(afterDrain) });
 recordPlaybookCheck(bundle, { gate: 'repaired-gate-passes', passed: afterGate.check?.passed === true, detail: JSON.stringify(afterGate.inspect || []) });
 recordPlaybookCheck(bundle, { gate: 'gate-attempts-fail-then-pass', passed: attempts.some((event) => event.passed === false) && attempts.some((event) => event.passed === true), detail: `${attempts.length} gate_attempt event(s)` });
-const verdict = writeTraceVerdict(bundle, 'case-152');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log('Recorded native playbook checks; Supervisor finalizer is authoritative.');
 JS
 ```
 
@@ -290,17 +302,9 @@ JS
 
 PASS means the repair loop used gate feedback as the reason to open a new batch, the batch recorded `batch_reason: gate_failure_refill`, the repair attempt used `b001`, and the repaired Wave2 gate passed only after submitted work-unit coverage and a second drain proof.
 
-## Step 8: [MAIN/SHELL] Cleanup
-
-PASS only:
+## Step 8: [MAIN/SHELL] Native Completion
 
 ```bash
-node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-152-verdict.json"
-rm -rf "$B"
-```
-
-## Optional Automation Smoke
-
-```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-152 --target-dir tests/.test-bundles --cleanup-pass
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```

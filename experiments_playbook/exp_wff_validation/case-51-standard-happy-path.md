@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-validation
 case: case-51-standard-happy-path
-weight: light
 case_goal: "Prove canonical late-lifecycle handoffs consume real gate output, route-bound entry, source-gate status sync, Final terminal semantics, rerun alternate routing, and passing no-transition decisions."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-51_wff_val_*
-trace: dpt_disp_case-51_wff_val_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [case-51-context-no-transition, case-51-final-terminal, case-51-proceed-witnesses, case-51-rerun-alternate, wave2-complete]
+bundle_roles: [proceed-verdict, rerun, context]
+verdict_role: proceed-verdict
+health_roles: [proceed-verdict, rerun, context]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, PLR-003 -->
 
 ## Execution Contract
 
@@ -22,7 +30,8 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_proceed --case case-51 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_proceed --case case-51 --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role proceed-verdict --path "$B"
 mkdir -p "$B/artifacts/hitl2" "$B/artifacts/wave2" "$B/seed_topics"
 printf '# Topic A\n' > "$B/seed_topics/topic-a.md"
 printf '# Reference Index\n' > "$B/reference/_INDEX.md"
@@ -88,13 +97,15 @@ const witnessed = ['phases/phase-readiness.md','phases/phase-final.md'].every((e
 recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'case-51-proceed-witnesses',passed:witnessed&&status.current_node==='phases/phase-final.md'&&status.current_gate==='readiness_passed'&&status.next_gate==='none',detail:'proceed and readiness targets are route-bound and source-synchronized'});
 const final = manifest.phases.find((phase)=>phase.node==='phases/phase-final.md');
 recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'case-51-final-terminal',passed:final?.gate===null&&!chain['phases/phase-final.md'],detail:'Final has no gate and no outgoing transition authority'});
+recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'wave2-complete',passed:events.some((event)=>event.event==='gate_attempt'&&event.gate==='wave2-complete'&&event.passed===true),detail:'real predecessor evidence reaches HITL2'});
 JS
 ```
 
 ## Step 2: Rerun branch uses real alternate handoff
 
 ```bash
-R=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_rerun --case case-51 --force)
+R=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_rerun --case case-51 --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role rerun --path "$R"
 mkdir -p "$R/artifacts/hitl2"
 printf '# Decision Brief\nRerun.\n' > "$R/artifacts/hitl2/decision-brief.md"
 cat > "$R/rb_profile.yaml" <<'YAML'
@@ -128,13 +139,15 @@ OUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$R" --gate
 P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.passed)
 N2=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)
 OK=false; [ "$N" = "phases/phase-rerun.md" ] && [ "$P" = "true" ] && [ "$N2" = "phases/phase-seed-topics.md" ] && OK=true
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role proceed-verdict)
 node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-51-rerun-alternate',passed:$OK,detail:'real HITL2 rerun and rerun-ready outputs preserve alternate path'}))"
 ```
 
 ## Step 3: Context-dependent repair passes without invented route
 
 ```bash
-C=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_context --case case-51 --force)
+C=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_context --case case-51 --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role context --path "$C"
 mkdir -p "$C/artifacts/hitl2"
 printf '# Decision Brief\nRepair current run.\n' > "$C/artifacts/hitl2/decision-brief.md"
 cat > "$C/rb_profile.yaml" <<'YAML'
@@ -165,27 +178,19 @@ P=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.p
 K=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs routing.kind)
 N=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs check.next)
 OK=false; [ "$P" = "true" ] && [ "$K" = "no_transition" ] && [ "$N" = "null" ] && OK=true
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role proceed-verdict)
 node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-51-context-no-transition',passed:$OK,detail:'passing repair decision keeps check.next null'}))"
 ```
 
-## Step 4: Trace verdict and health
+## Step 4: Native completion
 
 ```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
-node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile standard
-node experiments_env/shared/verify-bundle-health.mjs --bundle "$R" --profile standard
-node experiments_env/shared/verify-bundle-health.mjs --bundle "$C" --profile standard
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role proceed-verdict)
+R=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role rerun)
+C=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role context)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "proceed-verdict=$B" --bundle "rerun=$R" --bundle "context=$C"
 ```
 
 ## Step 5: 结果解读
 
-> PASS 证明 canonical consumer 不再把所有 gate success 等同于非空 `check.next`：proceed/rerun 使用真实 deterministic targets；repair 是 passing `no_transition`；Final 以 `gate:null` + no outgoing edge 表达 terminal lifecycle。
-
-## Cleanup
-
-> 三个 bundle verdict PASS 且 health CLEAN 才执行。
-
-```bash
-rm -rf "$R" "$C"
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-51'}))"
-```
+> PASS 证明 canonical consumer 不再把所有 gate success 等同于非空 `check.next`：proceed/rerun 使用真实 deterministic targets；repair 是 passing `no_transition`；Final 以 `gate:null` + no outgoing edge 表达 terminal lifecycle。The Supervisor health-checks all three declared bundles and owns cleanup.

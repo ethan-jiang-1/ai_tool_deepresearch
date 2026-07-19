@@ -11,7 +11,7 @@ const CASE_FILE = join(SUITE_DIR, 'case-163-heavy-rerun-add-real-cache-trail.md'
 describe('case-163 rerun continuation canary contract', () => {
   const playbook = readFileSync(CASE_FILE, 'utf8');
   const readme = readFileSync(join(SUITE_DIR, 'README.md'), 'utf8');
-  const registry = readFileSync(join(REPO_ROOT, 'experiments_playbook/RUN_EXPS.md'), 'utf8');
+  const registry = readFileSync(join(REPO_ROOT, 'experiments_playbook/PLAYBOOK_MANIFEST.md'), 'utf8');
   const fixtureRunner = readFileSync(join(REPO_ROOT, 'experiments_env/shared/run-fixture-backed-case.mjs'), 'utf8');
 
   it('keeps one existing rerun-add canary rather than adding a second case', () => {

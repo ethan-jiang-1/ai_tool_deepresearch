@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: engine-boundary
 case: case-404-standard-queue-boundary
-weight: light
 case_goal: "验证 Queue 边界合约：non-delegated complete 保持可用；delegated queue demand 必须通过 work-unit submit；controller:'sub-agent' 被 schema 拒绝。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-404_eb_queue_work_unit
-trace: dpt_disp_case-404_eb_queue_work_unit/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [controller-sub-agent-rejected, delegated-active-complete-rejects, delegated-inflight-claim, delegated-inflight-complete-rejects, non-delegated-claim, non-delegated-complete]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -50,7 +58,8 @@ The filename cost is `standard`, but frontmatter `weight` is `light` because the
 Create a disposable bundle with the default queue state. No delegated work is completed in setup.
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_queue_work_unit --case case-404 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_queue_work_unit --case case-404 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeMinimalPlan, writeMinimalStatus } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 writeMinimalStatus(process.argv[2]);
@@ -182,7 +191,6 @@ node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
 import {
   recordPlaybookCheck,
-  writeTraceVerdict
 } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const bundle = process.argv[2];
@@ -226,9 +234,7 @@ recordPlaybookCheck(bundle, {
   detail: JSON.stringify(targetSchema)
 });
 
-const verdict = writeTraceVerdict(bundle, 'case-404');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log('Recorded native playbook checks; Supervisor finalizer is authoritative.');
 JS
 ```
 
@@ -243,14 +249,11 @@ Expected boundary coverage:
 
 PASS means the surviving queue path is still available for non-delegated work while delegated success is fenced to work-unit submit. FAIL means the Agent must not use queue completion as delegated authority until the CLI/schema boundary is repaired.
 
-## Step 5: [MAIN/SHELL] Cleanup
-
-PASS removes the disposable bundle. FAIL preserves it for diagnosis.
-
-## Optional Automation Smoke
-
-This smoke command runs the same checkpoints for automation, but it is not the normative MD-controller execution surface:
+## Native completion
 
 ```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-404 --cleanup-pass
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
+
+Stop after native completion. The Autorun Supervisor owns Heavy health, audit, preservation, and optional clean-PASS cleanup.

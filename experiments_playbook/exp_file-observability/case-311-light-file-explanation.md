@@ -1,18 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: file-observability
 case: case-311-light-file-explanation
-weight: light
 case_goal: "验证 file explanation: Agent 通过 log-event.mjs --explain-file 记录解释后，文件分类为 explained_non_authoritative 而非 orphan，但仍不参与 gate pass。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-311_explain
-trace: dpt_disp_case-311_explain/rb_trace.jsonl
-verdict: trace-jsonl
-production_distance: >
-  本实验 fixture 写入未声明文件后通过 log-event.mjs 记录 Agent 解释。文件由脚本生成，log-event.mjs 是 Engine CLI。实验证明 file explanation diagnostic 正确写入 trace/log，auditFileObservability 优先使用解释分类，且 explained 文件不获得 gate authority。
+verdict_mode: all
+required_checks: [after-explain-explained, before-explain-orphan, explained-non-authoritative, explanation-phase, explanation-status, reject-declared-authoritative, trace-has-explanation]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -37,7 +43,8 @@ production_distance: >
 ## Step 1: 创建 bundle
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs explain --case case-311 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs explain --case case-311 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 cat > "$B/rb_status.json" << 'JSON'
 {"bundle":"explain","current_mode":"execution","state":"in_progress","current_gate":"wave1_complete","next_gate":"wave2_complete"}
@@ -81,10 +88,9 @@ echo "B=$B"
 ## Step 2: 验证未解释 → orphan
 
 ```bash
-B= # populated from Step 1
-
-cat > "$B/_check_before.mjs" << 'JS'
-import { auditFileObservability } from '../DPT_FRAMEWORK/engine/helpers/file-observability.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { auditFileObservability } from './DPT_FRAMEWORK/engine/helpers/file-observability.mjs';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const __dirname = process.argv[2];
@@ -99,6 +105,7 @@ const f = result.findings.find(x => x.path === 'reference/topic-a-extra.md');
 const checks = [];
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'before-explain-orphan',
   passed: f?.classification === 'orphan_authority_blocking',
   expected: true,
@@ -109,7 +116,6 @@ const tracePath = join(__dirname, 'rb_trace.jsonl');
 for (const c of checks) writeFileSync(tracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 console.log(JSON.stringify({ classification: f?.classification, severity: f?.severity }));
 JS
-node "$B/_check_before.mjs" "$B"
 ```
 
 → 预期：分类为 `orphan_authority_blocking`。
@@ -119,8 +125,7 @@ node "$B/_check_before.mjs" "$B"
 ## Step 3: 记录解释并验证分类变化
 
 ```bash
-B= # populated from Step 1
-
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # Agent 通过 log-event.mjs 记录解释
 node DPT_FRAMEWORK/cli/log-event.mjs \
   --bundle "$B" \
@@ -133,8 +138,8 @@ node DPT_FRAMEWORK/cli/log-event.mjs \
 echo "Explanation recorded"
 
 # 验证 trace 含 file_explanation
-cat > "$B/_check_after.mjs" << 'JS'
-import { auditFileObservability } from '../DPT_FRAMEWORK/engine/helpers/file-observability.mjs';
+node --input-type=module - "$B" <<'JS'
+import { auditFileObservability } from './DPT_FRAMEWORK/engine/helpers/file-observability.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const __dirname = process.argv[2];
@@ -149,6 +154,7 @@ const explanations = trace.filter(l => {
 });
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'trace-has-explanation', passed: explanations.length >= 1, expected: true,
   detail: `file_explanation events in trace: ${explanations.length}`
 });
@@ -157,12 +163,14 @@ checks.push({
 const last = JSON.parse(explanations[explanations.length - 1]);
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'explanation-status', passed: last.authority_status === 'explained_non_authoritative',
   expected: true,
   detail: `authority_status: ${last.authority_status}`
 });
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'explanation-phase', passed: last.phase === 'wave1',
   expected: true,
   detail: `phase: ${last.phase}`
@@ -177,12 +185,14 @@ const result = auditFileObservability(__dirname, {
 const f = result.findings.find(x => x.path === 'reference/topic-a-extra.md');
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'after-explain-explained', passed: f?.classification === 'explained_non_authoritative',
   expected: true,
   detail: `After explanation: ${f?.classification}`
 });
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'explained-non-authoritative', passed: f?.authority_status === 'explained_non_authoritative',
   expected: true,
   detail: `authority_status stays non-authoritative: ${f?.authority_status}`
@@ -192,7 +202,6 @@ const expTracePath = join(__dirname, 'rb_trace.jsonl');
 for (const c of checks) writeFileSync(expTracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 console.log(JSON.stringify(checks.map(c => ({ gate: c.gate, passed: c.passed }))));
 JS
-node "$B/_check_after.mjs" "$B"
 ```
 
 → 预期：trace 含 `file_explanation`，分类变为 `explained_non_authoritative`，authority 保持 non-authoritative。
@@ -202,8 +211,7 @@ node "$B/_check_after.mjs" "$B"
 ## Step 4: 验证拒绝无效 status
 
 ```bash
-B= # populated from Step 1
-
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # declared_authoritative 不允许 Agent 写入（应静默拒绝）
 node DPT_FRAMEWORK/cli/log-event.mjs \
   --bundle "$B" \
@@ -211,7 +219,7 @@ node DPT_FRAMEWORK/cli/log-event.mjs \
   --status "declared_authoritative" \
   --reason "Should be rejected"
 
-cat > "$B/_check_reject.mjs" << 'JS'
+node --input-type=module - "$B" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const __dirname = process.argv[2];
@@ -225,6 +233,7 @@ const hasBadExplanation = trace.some(l => {
 
 const checks = [{
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'reject-declared-authoritative', passed: !hasBadExplanation, expected: true,
   detail: `declared_authoritative rejected: ${!hasBadExplanation}`
 }];
@@ -233,51 +242,17 @@ const expTracePath = join(__dirname, 'rb_trace.jsonl');
 for (const c of checks) writeFileSync(expTracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 console.log(JSON.stringify({ rejected: !hasBadExplanation }));
 JS
-node "$B/_check_reject.mjs" "$B"
 ```
 
 → 预期：`declared_authoritative` 被静默拒绝，trace 中无此事件。
 
 ---
 
-## Step 5: 从 trace 裁决
+## Native Completion
 
 ```bash
-B= # populated from Step 1
-
-cat > "$B/_final_verdict.mjs" << 'JS'
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-const __dirname = process.argv[2];
-const tracePath = join(__dirname, 'rb_trace.jsonl');
-const raw = readFileSync(tracePath, 'utf-8').trim();
-if (!raw) { console.log('FAIL: No trace events'); process.exit(1); }
-const lines = raw.split('\n').filter(l => l.trim());
-const events = lines.map(l => JSON.parse(l));
-const checks = events.filter(e => e.event === 'check');
-const failed = checks.filter(c => !c.passed);
-const passed = checks.filter(c => c.passed);
-
-console.log('══════ Verdict ══════');
-for (const c of checks) console.log(`  ${c.passed ? 'PASS' : 'FAIL'}  ${c.gate}: ${c.detail}`);
-console.log('══════════════════════');
-console.log(`PASS: ${passed.length}  FAIL: ${failed.length}`);
-
-if (failed.length > 0) { console.log('\nFAIL'); process.exit(1); }
-console.log('\nPASS — file explanation recorded correctly, file stays non-authoritative.');
-JS
-node "$B/_final_verdict.mjs" "$B"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-→ 预期：PASS。
-
----
-
-## Cleanup
-
-PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-B= # populated from Step 1
-rm -rf "$B" && echo "Cleaned up $B"
-```
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

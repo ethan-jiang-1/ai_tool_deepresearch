@@ -1,163 +1,118 @@
-// wff-playbook-utils.mjs — workflow-foundation shared experiment utilities: recordCheck, verdict, recordVerdict, cleanup
-// Pure functions only: no gate CLI calls, no bundle creation, no phase sequencing.
-// Trace writing delegates to the canonical DPT_FRAMEWORK/engine/trace.mjs.
-//
-// Usage from playbook inline node -e:
-//   node -e "import('.../_driver-lib.mjs').then(m => m.recordCheck('...', {...}))"
-//   node -e "import('.../_driver-lib.mjs').then(m => m.verdict('...'))"
-//   node -e "import('.../_driver-lib.mjs').then(m => m.cleanup('...'))"
+// @impl EXA-005, EXA-006, PLR-003
+// Shared command-experiment fact writers and native-finalizer adapter.
+// These helpers do not own Agent Flow, health, audit, or cleanup.
 
-import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { appendFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// experiments_env/shared/ → repo root is two levels up.
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const DEFAULT_VERDICTS_PATH = path.join(REPO_ROOT, '_temp', 'exp_verdicts.jsonl');
+import {
+  AgentExperimentCompletionSchema,
+  loadRunContext,
+} from '../../DPT_FRAMEWORK/host_tools/lib/agent-experiment-contract.mjs';
 
-const G = '\x1b[32m';
-const R = '\x1b[31m';
-const B = '\x1b[0m';
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const FINALIZER = path.join(REPO_ROOT, 'DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs');
 
 /**
- * Append a check event to rb_trace.jsonl using the canonical trace event format.
- * Does NOT use createTrace() because traceInit would clear the file — playbooks
- * append incrementally across multiple steps. Format is kept consistent with
- * DPT_FRAMEWORK/engine/trace.mjs traceEntry() output.
- *
- * @param {string} tracePath - path to rb_trace.jsonl
- * @param {{ gate: string, passed: boolean, expected?: boolean, detail?: string }} checkEvent
- *   expected defaults to true. Set expected: false for boundary tests where the gate
- *   is supposed to reject bad input (passed: false is the correct behavior).
+ * Append one strict playbook-owned verdict fact to bundle-root rb_trace.jsonl.
+ * The native finalizer, not this helper, applies V2 required-check and
+ * all/last-per-gate policy.
  */
 export function recordCheck(tracePath, checkEvent) {
-  const expected = checkEvent.expected !== undefined ? checkEvent.expected : true;
-  const entry = JSON.stringify({
+  if (!checkEvent || typeof checkEvent.gate !== 'string' || typeof checkEvent.passed !== 'boolean') {
+    throw new Error('recordCheck requires gate and boolean passed');
+  }
+  const expected = checkEvent.expected === undefined ? true : checkEvent.expected;
+  if (typeof expected !== 'boolean') throw new Error('recordCheck expected must be boolean');
+  const entry = {
     ts: new Date().toISOString(),
     event: 'check',
     source: 'playbook',
     gate: checkEvent.gate,
     passed: checkEvent.passed,
     expected,
-    detail: checkEvent.detail || '',
-  });
-  appendFileSync(tracePath, entry + '\n');
-}
-
-/**
- * Parse rb_trace.jsonl, count check events, exit(1) if any unexpected failure found.
- * Console output uses ANSI color: green PASS, red FAIL.
- *
- * A check is a "failure" when passed !== expected (expected defaults to true).
- * Boundary tests set expected: false on checks where the gate is supposed to reject
- * bad input — those don't count as failures.
- *
- * @param {string} tracePath - path to rb_trace.jsonl
- * @param {'all'|'last'} [mode='all'] — 'all': any unexpected fail = FAIL; 'last': only last check per gate matters
- */
-export function verdict(tracePath, mode = 'all') {
-  if (!existsSync(tracePath)) {
-    console.log(`${R}FAIL${B}: trace file not found: ${tracePath}`);
-    process.exit(1);
-  }
-
-  const lines = readFileSync(tracePath, 'utf-8').trim().split('\n').filter(Boolean);
-  const allChecks = lines
-    .map(l => { try { return JSON.parse(l); } catch { return null; } })
-    .filter(e => e && e.event === 'check');
-
-  if (allChecks.length === 0) {
-    console.log(`${R}FAIL${B}: no check events in trace`);
-    process.exit(1);
-  }
-
-  // expected defaults to true for backward compat
-  for (const c of allChecks) {
-    if (c.expected === undefined) c.expected = true;
-  }
-
-  let failChecks;
-  if (mode === 'last') {
-    // Only the last check per gate matters (for repair-loop playbooks)
-    const lastPerGate = new Map();
-    for (const c of allChecks) lastPerGate.set(c.gate || '', c);
-    failChecks = [...lastPerGate.values()].filter(c => c.passed !== c.expected);
-  } else {
-    failChecks = allChecks.filter(c => c.passed !== c.expected);
-  }
-
-  const passed = allChecks.filter(c => c.passed === c.expected).length;
-  const failed = allChecks.filter(c => c.passed !== c.expected).length;
-
-  console.log(`Checks: ${passed} passed, ${failed} failed (${allChecks.length} total, verdict mode: ${mode})`);
-
-  if (failChecks.length > 0) {
-    console.log(`${R}FAIL${B}`);
-    for (const c of failChecks) {
-      const expectTag = c.expected === false ? ' [expected:false]' : '';
-      console.log(`  [FAIL] gate=${c.gate} detail=${c.detail || ''}${expectTag}`);
-    }
-    process.exit(1);
-  }
-
-  console.log(`${G}PASS${B}`);
-}
-
-/**
- * Persist a verdict summary to an append-only audit file BEFORE the bundle is
- * destroyed, so a PASS remains auditable after cleanup ("PASS 即销毁" fix).
- * Reads check events from rb_trace.jsonl and appends one JSONL entry:
- *   { ts, case, bundle, verdict, checks: [{gate, passed, expected}] }
- *
- * @param {string} tracePath - path to rb_trace.jsonl
- * @param {{ caseId?: string|null, bundleName?: string|null, outPath?: string }} [opts]
- * @returns {object|null} the appended entry, or null when there is nothing to record
- */
-export function recordVerdict(tracePath, opts = {}) {
-  const { caseId = null, bundleName = null, outPath = DEFAULT_VERDICTS_PATH } = opts;
-  if (!existsSync(tracePath)) return null;
-
-  const lines = readFileSync(tracePath, 'utf-8').trim().split('\n').filter(Boolean);
-  const allChecks = lines
-    .map(l => { try { return JSON.parse(l); } catch { return null; } })
-    .filter(e => e && e.event === 'check');
-  if (allChecks.length === 0) return null;
-
-  const checks = allChecks.map(c => ({
-    gate: c.gate || '',
-    passed: c.passed,
-    expected: c.expected !== undefined ? c.expected : true,
-  }));
-  const entry = {
-    ts: new Date().toISOString(),
-    case: caseId,
-    bundle: bundleName,
-    verdict: checks.every(c => c.passed === c.expected) ? 'PASS' : 'FAIL',
-    checks,
   };
-  mkdirSync(path.dirname(outPath), { recursive: true });
-  appendFileSync(outPath, JSON.stringify(entry) + '\n');
-  console.log(`Verdict recorded: ${entry.verdict} (${checks.length} checks) → ${outPath}`);
-  return entry;
+  if (checkEvent.verdict_judge !== undefined) entry.verdict_judge = checkEvent.verdict_judge;
+  if (checkEvent.detail !== undefined) entry.detail = String(checkEvent.detail);
+  appendFileSync(tracePath, `${JSON.stringify(entry)}\n`);
+}
+
+function normalizeBindings(values, label) {
+  if (!Array.isArray(values)) throw new Error(`${label} must be an array`);
+  return values.map((entry) => {
+    if (!entry || typeof entry.role !== 'string' || typeof entry.path !== 'string' || !entry.role || !entry.path) {
+      throw new Error(`${label} entries require non-empty role and path`);
+    }
+    return { role: entry.role, path: entry.path };
+  });
 }
 
 /**
- * Remove a disposable bundle directory. When the bundle contains an
- * rb_trace.jsonl, its verdict summary is recorded to the append-only audit
- * file first (see recordVerdict) so evidence survives the deletion.
- *
- * @param {string} bundlePath
- * @param {{ caseId?: string, verdictsPath?: string }} [opts]
+ * Invoke the one deterministic native finalizer. This adapter intentionally
+ * does not read/re-evaluate trace checks; it only constructs the exact CLI.
  */
-export function cleanup(bundlePath, opts = {}) {
-  if (existsSync(bundlePath)) {
-    const tracePath = path.join(bundlePath, 'rb_trace.jsonl');
-    recordVerdict(tracePath, {
-      caseId: opts.caseId || null,
-      bundleName: path.basename(bundlePath),
-      outPath: opts.verdictsPath,
-    });
-    rmSync(bundlePath, { recursive: true, force: true });
-    console.log(`Cleaned up: ${bundlePath}`);
+export function finalizeAgentExperiment({
+  contextPath,
+  bundles,
+  evidence = [],
+  notRunReason = null,
+  expectedMode = null,
+} = {}) {
+  if (!contextPath) throw new Error('finalizeAgentExperiment requires contextPath');
+  const contextInfo = loadRunContext(contextPath);
+  if (expectedMode !== null && contextInfo.context.policy.verdict_mode !== expectedMode) {
+    throw new Error(`verdict mode mismatch: context=${contextInfo.context.policy.verdict_mode} helper=${expectedMode}`);
   }
+  const bundleBindings = normalizeBindings(bundles ?? [], 'bundles');
+  const evidenceBindings = normalizeBindings(evidence, 'evidence');
+  const args = [FINALIZER, '--context', contextInfo.contextPath];
+  for (const entry of bundleBindings) args.push('--bundle', `${entry.role}=${entry.path}`);
+  for (const entry of evidenceBindings) args.push('--evidence', `${entry.role}=${entry.path}`);
+  if (notRunReason !== null) {
+    if (typeof notRunReason !== 'string' || !notRunReason.trim()) throw new Error('notRunReason must be non-empty');
+    args.push('--not-run-reason', notRunReason.trim());
+  }
+
+  const result = spawnSync(process.execPath, args, { cwd: REPO_ROOT, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+  if (result.status !== 0) {
+    throw new Error(`native finalizer failed: ${result.stderr.trim() || result.stdout.trim() || `status ${result.status}`}`);
+  }
+  const completion = AgentExperimentCompletionSchema.parse(JSON.parse(readFileSync(contextInfo.completionPath, 'utf8')));
+  console.log(JSON.stringify({ native_outcome: completion.outcome, completion: contextInfo.completionPath }));
+  return completion;
+}
+
+/**
+ * Compatibility-shaped adapter for wff cases while they migrate. `tracePath`
+ * identifies the default verdict bundle only; all policy comes from context.
+ */
+export function verdict(tracePath, mode = 'all', opts = {}) {
+  if (typeof mode === 'object' && mode !== null) {
+    opts = mode;
+    mode = null;
+  }
+  if (!opts.contextPath) throw new Error('verdict now requires opts.contextPath from the rendered run context');
+  const bundlePath = path.dirname(path.resolve(tracePath));
+  const bundles = opts.bundles ?? [{ role: opts.bundleRole ?? 'verdict', path: bundlePath }];
+  return finalizeAgentExperiment({
+    contextPath: opts.contextPath,
+    bundles,
+    evidence: opts.evidence ?? [],
+    notRunReason: opts.notRunReason ?? null,
+    expectedMode: mode,
+  });
+}
+
+/**
+ * Playbook-local verdict logs and deletion are retired. The Autorun Supervisor
+ * persists full audit/evidence and owns the only cleanup policy.
+ */
+export function recordVerdict() {
+  throw new Error('recordVerdict is retired; native completion and Supervisor audit are authoritative');
+}
+
+export function cleanup() {
+  throw new Error('playbook cleanup is retired; stop after native finalization');
 }

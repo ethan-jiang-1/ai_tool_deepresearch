@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-topic-rewrite
 case: case-181-light-hitl1-topic-rewrite-vague
-weight: light
 case_goal: "Verify that phase-hitl1.md §3a topic rewrite instructions are actionable: a vague one-line input triggers the full rewrite path (background, scope, dimensions, seed topics) and produces artifacts that pass the hitl1-recorded gate. Agent writes to ## Goal section per updated phase-hitl1.md instructions."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-181_wff_rw_*
-trace: dpt_disp_case-181_wff_rw_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [original-topic-preserved, seed-topics-derived, vague-rewrite-structured, hitl1-recorded]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -28,7 +36,7 @@ verdict: trace-jsonl
 4. 将 seed topics 写入 frontmatter `topic_registry` 和 body `## Topic Registry` table
 5. 读 `phase-hitl1.md` §3b — 写入 HITL1 profile
 5. 运行 `hitl1-recorded` gate — structural 校验
-6. Trace verdict + cleanup
+6. Native completion；随后停止
 
 ---
 
@@ -50,9 +58,9 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_rw --case case-181 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_rw --case case-181 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "Bundle: $B"
-echo "$B" > /tmp/pb_bundle
 ```
 
 ## Step 2: Agent 读 `phase-hitl1.md` §3a — 判断输入
@@ -75,7 +83,7 @@ echo "$B" > /tmp/pb_bundle
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 
 # Write rb_plan.md with new 5-section structure.
 # Content from topic rewrite maps to:
@@ -193,7 +201,7 @@ grep -c '\*\*待定：\*\*' $B/rb_plan.md && echo "OK: 待定 substructure"
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 
 # Synthetic research_access below keeps this deterministic topic-rewrite case
 # focused on gate mechanics; it does not prove real Agent capability.
@@ -229,13 +237,19 @@ grep -E 'research_profile|root_must_answer|status:' $B/rb_profile.yaml | head -5
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle $B --to hitl1_recorded
 GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
 echo "$GATE" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('passed:',j.check.passed);console.log('next:',j.check.next)})"
 PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
 node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'topic rewrite: vague -> structured per phase-hitl1.md 3a'})})"
+node --input-type=module - "$B" <<'JS'
+import { appendFileSync, readFileSync } from 'node:fs'; import { join } from 'node:path'; import { parse as parseYaml } from 'yaml';
+const [bundle]=process.argv.slice(2); const plan=readFileSync(join(bundle,'rb_plan.md'),'utf8'); const fm=parseYaml(plan.match(/^---\n([\s\S]*?)\n---/)[1]);
+const checks=[['original-topic-preserved',plan.includes('AI 安全')],['seed-topics-derived',fm.derived_topic_count===4&&fm.topic_registry?.length===4],['vague-rewrite-structured',['### Purpose','### Research Questions','### Scope'].every((v)=>plan.includes(v))]];
+for(const[id,passed]of checks)appendFileSync(join(bundle,'rb_trace.jsonl'),`${JSON.stringify({ts:new Date().toISOString(),event:'check',source:'playbook',gate:id,passed,expected:true})}\n`);if(checks.some(([,p])=>!p))process.exit(1);
+JS
 ```
 
 ## Step 6: 结果解读
@@ -244,13 +258,13 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 >   模糊输入 → Agent 做 topic rewrite → 产出 `## Goal`（Purpose + Research Questions + Scope with In/Out/待定）+ `## Topic Registry` table + `## Constraints` 5-category。
 >   依赖模拟 Agent 输出，验证 gate 对合法 rewrite 产物的接受。
 > 
-> **PASS 才执行 Cleanup。FAIL 时跳过清理，保留 bundle 现场供排查。**
+> Playbook 不执行 health 或 cleanup；native completion 后由 Autorun Supervisor 根据 outcome/health policy 决定保留或清理。
 
-## Step 7: Verdict + Cleanup
+## Step 7: Native completion
 
 ```bash
-REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
+
+Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

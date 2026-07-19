@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-delivery
 case: case-135-standard-readiness-precheck
-weight: light
 case_goal: "Prove readiness passes complete legal input and directly rejects missing artifacts, missing prior gate evidence, invalid YAML, and corrupt JSONL."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-135_ready_*
-trace: dpt_disp_case-135_ready_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [case-135-complete-input, case-135-corrupt-jsonl, case-135-invalid-yaml, case-135-missing-artifact, case-135-missing-prior-gate]
+bundle_roles: [readiness-verdict, missing-prior-gate, corrupt-trace]
+verdict_role: readiness-verdict
+health_roles: [readiness-verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, PLR-003 -->
 
 ## Execution Contract
 
@@ -22,7 +30,8 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs ready --case case-135 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs ready --case case-135 --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role readiness-verdict --path "$B"
 mkdir -p "$B/artifacts/hitl2" "$B/artifacts/wave2" "$B/seed_topics"
 printf '# Topic A\n' > "$B/seed_topics/topic-a.md"
 printf '# Reference Index\n' > "$B/reference/_INDEX.md"
@@ -79,6 +88,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$
 ## Step 2: 主 bundle direct negative cases 与最终 pass
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role readiness-verdict)
 run_ready() {
   node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md 2>/dev/null || true
 }
@@ -91,7 +101,8 @@ OK=false; [ "$P" = "false" ] && printf '%s' "$I" | grep -q 'synthesis' && OK=tru
 node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-135-missing-artifact',passed:$OK,detail:'missing synthesis fails directly'}))"
 printf '# Synthesis\nRepaired.\n' > "$B/artifacts/wave2/synthesis.md"
 
-Q=$(node experiments_env/shared/new-disposable-bundle.mjs ready_missing_prior --case case-135 --force)
+Q=$(node experiments_env/shared/new-disposable-bundle.mjs ready_missing_prior --case case-135 --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role missing-prior-gate --path "$Q"
 cp -R "$B/." "$Q/"
 node --input-type=module - "$Q" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -131,7 +142,9 @@ node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.rec
 ## Step 3: Auxiliary corrupt JSONL probe
 
 ```bash
-P=$(node experiments_env/shared/new-disposable-bundle.mjs ready_corrupt --case case-135 --force)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role readiness-verdict)
+P=$(node experiments_env/shared/new-disposable-bundle.mjs ready_corrupt --case case-135 --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role corrupt-trace --path "$P"
 cp "$B/rb_profile.yaml" "$P/rb_profile.yaml"
 mkdir -p "$P/artifacts/hitl2" "$P/artifacts/wave2" "$P/seed_topics"
 printf '# Topic A\n' > "$P/seed_topics/topic-a.md"
@@ -148,40 +161,15 @@ OK=false; [ "$STATUS" -ne 0 ] && [ "$HAS" -gt 0 ] && OK=true
 node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-135-corrupt-jsonl',passed:$OK,detail:'auxiliary real readiness CLI rejects corrupt trace JSONL'}))"
 ```
 
-## Step 4: Trace verdict
+## Step 4: Native completion
 
 ```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role readiness-verdict)
+Q=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role missing-prior-gate)
+P=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role corrupt-trace)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "readiness-verdict=$B" --bundle "missing-prior-gate=$Q" --bundle "corrupt-trace=$P"
 ```
 
 ## Step 5: 结果解读
 
-> PASS 证明 readiness 使用 manifest-derived prior gate evidence，并对 missing artifact、missing prior pass、invalid YAML、corrupt JSONL 给出直接失败；完整 legal entry 返回 `phases/phase-final.md`。
-
-## Step HH: Post-Execution Health
-
-```bash
-set +e
-node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile standard --json > "$B/case-135-health.json"
-HEALTH_EXIT=$?
-set -e
-node --input-type=module - "$B/case-135-health.json" "$HEALTH_EXIT" <<'JS'
-import { readFileSync } from 'node:fs';
-const [path, exitCode] = process.argv.slice(2);
-const report = JSON.parse(readFileSync(path, 'utf8'));
-const expectedOnly = report.issues.length > 0 && report.issues.every((issue) => issue.section === 'gate_attempts');
-if (!(Number(exitCode) === 0 || expectedOnly)) process.exit(1);
-console.log(expectedOnly ? 'HEALTH ISSUES: expected readiness negative-case artifacts only' : 'HEALTH CLEAN');
-JS
-```
-
-> Auxiliary `$P` 故意损坏 JSONL，不参与 health-clean 声明；它只证明 fail-closed diagnostic。主 bundle health 决定 cleanup。
-
-## Cleanup
-
-> Safe cleanup exception：主 verdict PASS 且 health issues 仅来自本 case 有意制造的 failed readiness artifacts 时，可清理主 bundle 与故意损坏的 auxiliary probe；其他 issue 保留现场。
-
-```bash
-rm -rf "$P" "$Q"
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-135'}))"
-```
+> PASS 证明 readiness 使用 manifest-derived prior gate evidence，并对 missing artifact、missing prior pass、invalid YAML、corrupt JSONL 给出直接失败；完整 legal entry 返回 `phases/phase-final.md`。The Supervisor health-checks only `readiness-verdict`; the malformed `corrupt-trace` auxiliary remains raw-byte bound and is never silently discarded.

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @impl EXA-005, EXA-006, PLR-003
 // Controlled work-unit playbook runner.
 //
 // Fixture-backed cases may write controlled output/receipt/cache files, but
@@ -59,11 +60,13 @@ const CHECK_REENTRY = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/check-reentry.mjs'
 const VERIFY_BUNDLE_HEALTH = path.join(REPO_ROOT, 'experiments_env/shared/verify-bundle-health.mjs');
 const ENTER_PHASE = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/enter-phase.mjs');
 const ADVANCE_STATUS = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/advance-status.mjs');
+const AGENT_EXPERIMENT_STATE = path.join(REPO_ROOT, 'DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs');
 const GATE_SETUP = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs');
 const GATE_SEED = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs');
 const GATE_WAVE0 = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs');
 const GATE_WAVE1 = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs');
 const GATE_WAVE2 = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs');
+const INSPECT_BUNDLE = path.join(REPO_ROOT, 'DPT_FRAMEWORK/cli/inspect-bundle.mjs');
 
 function parseArgs(argv) {
   const opts = { cleanupPass: false, force: true };
@@ -75,6 +78,13 @@ function parseArgs(argv) {
     else if (arg.startsWith('--target-dir=')) opts.targetDir = arg.slice('--target-dir='.length);
     else if (arg === '--real-result') opts.realResult = argv[++i];
     else if (arg.startsWith('--real-result=')) opts.realResult = arg.slice('--real-result='.length);
+    else if (arg === '--context') opts.context = argv[++i];
+    else if (arg.startsWith('--context=')) opts.context = arg.slice('--context='.length);
+    else if (arg === '--bundle-role') opts.bundleRole = argv[++i];
+    else if (arg.startsWith('--bundle-role=')) opts.bundleRole = arg.slice('--bundle-role='.length);
+    else if (arg === '--bundle') opts.bundle = argv[++i];
+    else if (arg.startsWith('--bundle=')) opts.bundle = arg.slice('--bundle='.length);
+    else if (arg === '--prepare-only') opts.prepareOnly = true;
     else if (arg === '--cleanup-pass') opts.cleanupPass = true;
     else if (arg === '--no-force') opts.force = false;
     else if (!opts.caseId) opts.caseId = arg;
@@ -115,7 +125,14 @@ function newBundle(caseId, suffix, opts) {
   if (opts.force) args.push('--force');
   if (opts.targetDir) args.push('--target-dir', opts.targetDir);
   const stdout = runNode(args, { parseJson: false });
-  return stdout.trim().split(/\r?\n/).filter(Boolean).at(-1);
+  const bundleDir = stdout.trim().split(/\r?\n/).filter(Boolean).at(-1);
+  if (opts.context) {
+    runNode([
+      AGENT_EXPERIMENT_STATE, 'register-bundle', '--context', path.resolve(opts.context),
+      '--role', opts.bundleRole || 'verdict', '--path', bundleDir,
+    ], { parseJson: false });
+  }
+  return bundleDir;
 }
 
 function writeJson(filePath, value) {
@@ -938,6 +955,8 @@ function writeProgressReceipt(bundleDir, record, {
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     ts,
   })}\n`);
   return receiptPath;
@@ -966,6 +985,8 @@ function writeExternalCandidate(bundleDir, record, { label = 'candidate', overri
     queue_item_id: record.queue_item_id,
     kind: record.kind,
     receipt_nonce: record.receipt_nonce,
+    actor_contract_version: record.actor_contract_version,
+    execution_actor_class: record.actor_execution.execution_actor_class,
     summary: `${label} fixture`,
     output_files: [],
     cache_trails: [],
@@ -1246,51 +1267,118 @@ function case405(opts) {
   return { bundleDir, verdict };
 }
 
-function case406(opts) {
-  const bundleDir = newBundle('case-406', 'eb_real_work_unit', opts);
-  writeWave0Scaffold(bundleDir, {
-    planBasename: 'eb_real_work_unit',
-    topics: [{ id: 't1', slug: 'agentic-coding-tools', title: 'Agentic coding tools' }],
-    referenceRows: ['| 00-shared-agentic-coding-tools.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |'],
-  });
+function realSubagentCase(opts, spec) {
+  const bundleDir = opts.bundle ? path.resolve(opts.bundle) : newBundle(spec.caseId, spec.suffix, opts);
+  let claim;
+  let workId;
+  if (!opts.bundle) {
+    writeWave0Scaffold(bundleDir, {
+      planBasename: spec.suffix,
+      topics: [{ id: 't1', slug: spec.topicSlug, title: spec.topicTitle }],
+      referenceRows: [`| 00-shared-${spec.topicSlug}.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-06 |`],
+    });
 
-  const task = queueItemForWorkUnit({
-    queue_item_id: 'wave0-source-agentic-coding-tools',
-    topic_slug: 'agentic-coding-tools',
-    title: 'Real sub-agent source intake',
-  });
-  enqueueWorkUnitTask(bundleDir, task, { fileName: 'case406-real-task.json' });
-  const claim = claimWorkUnitsViaCli(bundleDir, { phase: 'wave0' });
-  const workId = claim.claimed_work_ids[0];
-  writeJson(path.join(bundleDir, 'case-406-claim.json'), claim);
+    const task = queueItemForWorkUnit({
+      queue_item_id: `wave0-source-${spec.topicSlug}`,
+      topic_slug: spec.topicSlug,
+      title: spec.taskTitle,
+      action: spec.action,
+      writes_to: [`reference/00-shared-${spec.topicSlug}.md`],
+    });
+    enqueueWorkUnitTask(bundleDir, task, { fileName: `${spec.caseId}-real-task.json` });
+    claim = claimWorkUnitsViaCli(bundleDir, { phase: 'wave0' });
+    workId = claim.claimed_work_ids[0];
+    writeJson(path.join(bundleDir, `${spec.caseId}-claim.json`), claim);
+  } else {
+    claim = readJson(path.join(bundleDir, `${spec.caseId}-claim.json`));
+    workId = claim.claimed_work_ids[0];
+  }
+
+  const prompt = claim.prompt_refs?.find((entry) => entry.work_id === workId) ?? claim.prompt_refs?.[0];
+  if (!prompt) throw new Error('case-406 claim did not expose prompt refs');
+  if (opts.prepareOnly) {
+    return { bundleDir, prepared: { work_id: workId, ...prompt } };
+  }
 
   if (!opts.realResult) {
     const reason = {
-      case: 'case-406',
+      case: spec.caseId,
       status: 'NOT_RUN',
       work_id: workId,
-      unavailable_surface: 'No --real-result was provided. This heavy case requires a real dpt-source-intake actor result produced with real WebSearch/WebFetch or an approved fetch chain.',
+      unavailable_surface: spec.notRunReason,
       rerun_condition: 'Run the real sub-agent from the generated work-unit task, then pass its result JSON with --real-result.',
     };
-    writeJson(path.join(bundleDir, 'case-406-not-run.json'), reason);
-    recordCheck(bundleDir, 'case-406', 'real-subagent-boundary', false, reason.unavailable_surface, { outcome: 'not_run', work_id: workId });
-    const verdict = writeVerdict(bundleDir, 'case-406', [], { status: 'NOT_RUN', extra: { bundle: bundleDir, reason } });
+    writeJson(path.join(bundleDir, `${spec.caseId}-not-run.json`), reason);
+    recordCheck(bundleDir, spec.caseId, 'real-subagent-boundary', false, reason.unavailable_surface, { outcome: 'not_run', work_id: workId });
+    const verdict = writeVerdict(bundleDir, spec.caseId, [], { status: 'NOT_RUN', extra: { bundle: bundleDir, reason } });
     return { bundleDir, verdict, exitCode: 2 };
   }
 
-  const submit = submitWorkUnitViaCli(bundleDir, { work_id: workId, resultPath: path.resolve(opts.realResult) });
+  const resultPath = path.resolve(opts.realResult);
+  const candidate = readJson(resultPath);
+  const receiptPath = path.resolve(prompt.runtime_receipt_path);
+  const outputPath = path.resolve(bundleDir, candidate.output_files?.[0]?.path || '');
+  const beacon = readJson(path.resolve(prompt.beacon_path));
+  const receiptRows = existsSync(receiptPath)
+    ? readFileSync(receiptPath, 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse)
+    : [];
+  const submit = submitWorkUnitViaCli(bundleDir, { work_id: workId, resultPath });
   const gate = runWave0Gate(bundleDir);
   const events = readTrace(bundleDir);
-  const checks = [
-    { label: 'real-submit', passed: submit.ok === true, detail: workId },
-    { label: 'wave0-gate', passed: gate.status === 0 && gate.json?.check?.passed === true, detail: JSON.stringify(gate.json?.inspect || []) },
-    { label: 'work-unit-trace', passed: events.some((e) => e.event === 'work_unit_submitted' && e.work_id === workId), detail: workId },
+  const baseChecks = {
+    task: beacon.work_id === workId && existsSync(path.resolve(prompt.task_path)),
+    result: candidate.work_id === workId,
+    receipt: receiptRows.some((row) => row.work_id === workId && row.receipt_nonce === beacon.receipt_nonce),
+    output: Boolean(candidate.output_files?.length) && existsSync(outputPath),
+    submit: submit.ok === true,
+    gate: gate.status === 0 && gate.json?.check?.passed === true,
+    traced: events.some((e) => e.event === 'work_unit_submitted' && e.work_id === workId),
+  };
+  const inspect = spec.caseId === 'case-605' ? runNodeLoose([INSPECT_BUNDLE, bundleDir]) : null;
+  const allChecks = [
+    { label: 'real-subagent-task-bound', passed: baseChecks.task, detail: workId },
+    { label: 'real-subagent-result-written', passed: baseChecks.result, detail: resultPath },
+    { label: 'real-subagent-receipt-nonce-preserved', passed: baseChecks.receipt, detail: receiptPath },
+    { label: 'real-subagent-output-written', passed: baseChecks.output, detail: outputPath },
+    { label: 'real-subagent-submit-succeeded', passed: baseChecks.submit, detail: workId },
+    { label: 'wave0-gate-pass', passed: baseChecks.gate, detail: JSON.stringify(gate.json?.inspect || []) },
+    { label: 'work-unit-submit-traced', passed: baseChecks.traced, detail: workId },
+    { label: 'no-chat-only-return', passed: baseChecks.result && baseChecks.receipt && baseChecks.output, detail: 'durable result, receipt, and output exist' },
+    { label: 'inspect-bundle-no-active-leak', passed: inspect?.status === 0 && !inspect.stdout.includes('active_bundle_blocker'), detail: inspect?.stdout || '' },
+    { label: 'repo-root-no-runtime-leak', passed: inspect?.status === 0 && !inspect.stdout.includes('Repo-root runtime leak'), detail: inspect?.stdout || '' },
   ];
-  for (const check of checks) recordCheck(bundleDir, 'case-406', 'real-subagent-boundary', check.passed, check.detail, { label: check.label });
-  const verdict = writeVerdict(bundleDir, 'case-406', checks, { extra: { bundle: bundleDir } });
+  const checks = spec.requiredChecks.map((label) => allChecks.find((row) => row.label === label));
+  if (checks.some((row) => !row)) throw new Error(`unknown ${spec.caseId} required check`);
+  for (const check of checks) recordCheck(bundleDir, spec.caseId, 'real-subagent-boundary', check.passed, check.detail, { label: check.label });
+  const verdict = writeVerdict(bundleDir, spec.caseId, checks, { extra: { bundle: bundleDir } });
   maybeCleanup(bundleDir, opts, verdict);
-  return { bundleDir, verdict };
+  return { bundleDir, verdict, evidence: { task: path.resolve(prompt.task_path), result: resultPath, receipt: receiptPath, output: outputPath } };
 }
+
+const REAL_SUBAGENT_CASES = {
+  'case-406': {
+    caseId: 'case-406', suffix: 'eb_real_work_unit', topicSlug: 'agentic-coding-tools', topicTitle: 'Agentic coding tools',
+    taskTitle: 'Real Sub-agent source intake', action: 'Use only the assigned local task context to produce the declared source-intake output and cache contract without external calls.',
+    notRunReason: 'Native dpt-source-intake Sub-agent or required local actor capability is unavailable.',
+    requiredChecks: ['real-subagent-task-bound', 'real-subagent-result-written', 'real-subagent-receipt-nonce-preserved', 'real-subagent-output-written', 'real-subagent-submit-succeeded', 'wave0-gate-pass', 'work-unit-submit-traced'],
+  },
+  'case-604': {
+    caseId: 'case-604', suffix: 'arh_real_subagent', topicSlug: 'agent-runtime-sources', topicTitle: 'Agent runtime sources',
+    taskTitle: 'Real Sub-agent write-before-return source intake', action: 'Use real search and fetch to produce the assigned source-intake output and cache contract before returning.',
+    notRunReason: 'Native dpt-source-intake Sub-agent or required search/fetch capability is unavailable.',
+    requiredChecks: ['real-subagent-result-written', 'real-subagent-receipt-nonce-preserved', 'real-subagent-submit-succeeded', 'no-chat-only-return'],
+  },
+  'case-605': {
+    caseId: 'case-605', suffix: 'arh_bundle_containment', topicSlug: 'bundle-containment-sources', topicTitle: 'Bundle containment sources',
+    taskTitle: 'Real Sub-agent bundle-containment source intake', action: 'Use real search and fetch and write every assigned output, receipt, result, and cache byte under the active bundle only.',
+    notRunReason: 'Native dpt-source-intake Sub-agent or required search/fetch capability is unavailable.',
+    requiredChecks: ['real-subagent-submit-succeeded', 'inspect-bundle-no-active-leak', 'repo-root-no-runtime-leak'],
+  },
+};
+
+function case406(opts) { return realSubagentCase(opts, REAL_SUBAGENT_CASES['case-406']); }
+function case604(opts) { return realSubagentCase(opts, REAL_SUBAGENT_CASES['case-604']); }
+function case605(opts) { return realSubagentCase(opts, REAL_SUBAGENT_CASES['case-605']); }
 
 function case211(opts) {
   const bundleDir = newBundle('case-211', 'w0_real_agent_work_unit', opts);
@@ -1603,11 +1691,17 @@ function case214(opts) {
     label: 'wrong-identity',
     overrides: { work_id: 'wu-w0-b000-src-i9999' },
   });
+  const invalidQueuePath = path.join(bundleDir, 'rb_queue.json');
+  const invalidQueueBytes = readFileSync(invalidQueuePath, 'utf8');
+  const invalidQueue = JSON.parse(invalidQueueBytes);
+  delete invalidQueue.delegated_in_flight[invalid.record.queue_item_id];
+  writeJson(invalidQueuePath, invalidQueue);
   const invalidAdvice = timeoutPreflightViaCli(bundleDir, {
     work_id: invalid.workId,
     resultPath: invalidPath,
     expectStatus: 1,
   });
+  writeFileSync(invalidQueuePath, invalidQueueBytes);
 
   const forced = claimTimeoutProbe(bundleDir, 'forced-timeout');
   const expiredForced = expireClaimedWorkUnit(bundleDir, forced.workId);
@@ -3014,6 +3108,8 @@ const runners = {
   'case-404': case404,
   'case-405': case405,
   'case-406': case406,
+  'case-604': case604,
+  'case-605': case605,
 };
 
 try {
@@ -3021,11 +3117,16 @@ try {
   const runner = runners[opts.caseId];
   if (!runner) throw new Error(`Unsupported case for this runner: ${opts.caseId}`);
   const result = runner(opts);
+  if (result.prepared) {
+    console.log(JSON.stringify({ case: opts.caseId, bundle: result.bundleDir, prepared: result.prepared }, null, 2));
+    process.exit(0);
+  }
   console.log(JSON.stringify({
     case: opts.caseId,
     bundle: result.bundleDir,
     verdict: result.verdict.status,
     verdict_file: path.join(result.bundleDir, `${opts.caseId}-verdict.json`),
+    evidence: result.evidence,
   }, null, 2));
   process.exit(result.exitCode || (result.verdict.ok ? 0 : 1));
 } catch (error) {

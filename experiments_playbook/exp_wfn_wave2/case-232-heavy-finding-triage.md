@@ -1,50 +1,40 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-wave2
 case: case-232-heavy-finding-triage
-weight: heavy
-case_goal: "Verify real Wave2 Phase Agent finding triage distinguishes existing-evidence synthesis from delegated targeted evidence demand."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-232_w2_real_finding_triage
-trace: dpt_disp_case-232_w2_real_finding_triage/rb_trace.jsonl
-verdict: trace-jsonl
+case_goal: "Verify an independent real Wave2 Subject Agent distinguishes existing-evidence synthesis, record-only observations, and delegated targeted evidence demand."
+verdict_mode: all
+required_checks: [wave2-existing-evidence-finding, wave2-gate-pass, wave2-no-orphan-search-finding, wave2-record-only-finding]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: [subject_prompt, subject_transcript, subject_result]
+proof_subject: agent_behavior
+subject_execution: real_agent
+fixture: setup_only
+runtime: real_disposable_bundle
+external_calls: real
+verdict_judge: deterministic
 req: RWE-001, RWE-004, WTS-003, WTS-005
+not_run_if: "The independent authenticated Subject Agent runtime or required real search capability is unavailable."
 ---
+
+<!-- @impl EXA-003, EXA-005, EXA-006, EXA-007, EXA-008, PLR-003, VER-006 -->
 
 ## Execution Contract
 
-This is a real-Agent canary. The finding classification is semantic work and must be done by the Wave2 Phase Agent reading the bundle, not by a fixture script. Deterministic checkpoints may create the bundle, inspect artifacts, claim/submit any delegated targeted evidence selected by the Agent, run the Wave2 gate, and record trace checks.
+This is a real-Agent canary. An independent authenticated Wave2 Subject Agent, not the Playbook Agent, owns semantic finding triage and artifact production. Fixture setup may seed the post-Wave1 bundle. The adapter loads the real production Wave2 surface and preserves exact Subject prompt, transcript, and result, but does not write verdict checks, native completion, health, or cleanup.
 
-## Reality Distance Ledger
-
-| Dimension | Statement |
-| --- | --- |
-| Runtime context | Real disposable Wave2 bundle |
-| Framework path | Real queue, optional `operate-work-unit claim/submit`, and Wave2 gate CLI |
-| Fixture input | Setup may seed post-Wave1 artifacts; triage artifacts are Agent output |
-| Agent actor | Required; no fixture PASS is allowed |
-| External calls | Only needed if the Agent chooses targeted evidence search |
-| Verdict source | Artifact inspection, submitted work-unit rows when search is used, gate JSON, trace checks |
-| Does not prove | Nothing without a real Agent run; optional automation reports `NOT_RUN` |
+PASS requires the Subject execution evidence, at least one real WebSearch tool use, the three required triage classes, no orphan search finding, and the production Wave2 Gate. If the Subject runtime or external capability is unavailable, finalize `NOT_RUN`; Playbook-Agent-authored triage cannot substitute.
 
 # case-232-heavy-finding-triage
 
-## Expected Runtime Path
-
-1. Create a Wave2-ready bundle with at least two post-Wave1 topics.
-2. Phase Agent reads Wave1 evidence summaries and question lists.
-3. Phase Agent writes findings that separate `use_existing_evidence`, `record_only`, and `explore_search` or `exploit_search`.
-4. If targeted evidence is selected, enqueue a `wave2_targeted_evidence` queue item and submit the result by `work_id`.
-5. Phase Agent writes synthesis/backfill artifacts and `wave2_completion`.
-6. Deterministic checks verify no orphan search finding exists and no targeted evidence output bypasses work-unit submit.
-7. Wave2 gate passes.
-
-## Step 1: [MAIN/SHELL] Create Runtime Context
+## Step 1: [MAIN/SHELL] Create The Setup-Only Boundary
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_real_finding_triage --case case-232 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_real_finding_triage --case case-232 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave2Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -58,101 +48,80 @@ writeWave2Scaffold(process.argv[2], {
 });
 JS
 node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
-echo "BUNDLE=$B"
-```
-
-## Step 2: [MAIN] Real Phase Agent Triage
-
-The Phase Agent must read:
-
-- `artifacts/wave1/*/evidence-summary.md`
-- `artifacts/wave1/*/question-list.md`
-- `DPT_FRAMEWORK/workflows/nodes/phases/phase-wave2.md`
-
-The Agent writes:
-
-- `artifacts/wave2/cross-topic-ledger.md`
-- `artifacts/wave2/finding-index.yaml`
-- `artifacts/wave2/synthesis.md`
-- `seed_topics/*.md` backfill
-
-Required Agent-visible distinctions:
-
-- Findings resolved from existing Wave1 evidence use `decision: use_existing_evidence` and require no work-unit row.
-- Low-value observations use `decision: record_only` and require no work-unit row.
-- New targeted evidence demand uses `decision: explore_search` or `decision: exploit_search`, then must produce a submitted `wave2_targeted_evidence` row before any `reference/00-cross-*.md` output is gate-authoritative.
-
-## Step 3: [MAIN/SHELL] Submit Any Agent-Requested Targeted Evidence
-
-Only run this step if the Agent has written a finding that requires targeted evidence.
-
-```bash
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave2 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-topic-scout --actor-reason probe_succeeded --execution-actor delegated_subagent > "$B/case-232-targeted-claim.json"
-printf '%s\n' "Read the claimed task.md, run the real dpt-topic-scout actor, and provide its result JSON to submit."
-```
-
-After the real sub-agent returns:
-
-```bash
-RESULT_JSON=/absolute/path/to/real-wave2-targeted-result.json
-WORK_ID=$(node -e 'const fs=require("fs"); const j=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); console.log(j.claimed_work_ids[0])' "$B/case-232-targeted-claim.json")
-node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id "$WORK_ID" --result "$RESULT_JSON"
-```
-
-## Step 4: [MAIN/SHELL] Deterministic Triage Checks
-
-```bash
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
+const status = JSON.parse(readFileSync(`${process.argv[2]}/rb_status.json`, 'utf8'));
+if (status.current_node !== 'phases/phase-wave2.md') throw new Error('setup did not stop at Wave2');
+JS
+```
+
+## Step 2: [MAIN->SUBJECT] Run Independent Wave2 Triage
+
+The adapter gives the independent Subject Agent the current production Wave2 surface and direct bundle path. The Subject must inspect both Wave1 topic surfaces, make bounded real external calls, write the Wave2 artifact triplet and seed backfill, and route any targeted evidence through work-unit claim/submit authority.
+
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+set +e
+node experiments_env/shared/run-iterative-interaction-subject.mjs 232 --bundle "$B"
+SUBJECT_STATUS=$?
+set -e
+if [ "$SUBJECT_STATUS" -ne 0 ]; then
+  printf '%s\n' 'independent Subject Agent runtime or real external search unavailable' > "$B/case-232-subject-unavailable.txt"
+fi
+```
+
+## Step 3: [MAIN/SHELL] Record Subject-Bound Triage Facts
+
+Skip this step when `case-232-subject-unavailable.txt` exists.
+
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-232-gate.json"
+node --input-type=module - "$B" <<'JS'
+import { readFileSync, statSync } from 'node:fs';
 import { parse as parseYaml } from 'yaml';
 import { recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const bundle = process.argv[2];
 const idx = parseYaml(readFileSync(`${bundle}/artifacts/wave2/finding-index.yaml`, 'utf8'));
 const findings = idx.findings || [];
-const hasExisting = findings.some((f) => f.decision === 'use_existing_evidence' && f.search_required === false);
-const hasRecordOnly = findings.some((f) => f.decision === 'record_only' && f.search_required === false);
-const searchFindings = findings.filter((f) => f.decision === 'explore_search' || f.decision === 'exploit_search' || f.search_required === true);
-const orphanSearch = searchFindings.filter((f) => !(f.subagent_receipt_refs || []).length && f.appears_in_synthesis !== false && f.hitl2_handoff !== true);
-recordPlaybookCheck(bundle, { gate: 'wave2-existing-evidence-finding', passed: hasExisting, detail: `findings=${findings.length}` });
-recordPlaybookCheck(bundle, { gate: 'wave2-record-only-finding', passed: hasRecordOnly, detail: `findings=${findings.length}` });
-recordPlaybookCheck(bundle, { gate: 'wave2-no-orphan-search-finding', passed: orphanSearch.length === 0, detail: JSON.stringify(orphanSearch.map((f) => f.id)) });
-JS
-```
-
-## Step 5: [MAIN/SHELL] Gate And Verdict
-
-```bash
-node --input-type=module - "$B" <<'JS'
-import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-appendTrace(process.argv[2], { event: 'wave2_completion', source: 'case-232-real-agent' });
-JS
-node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-232-gate.json"
-node --input-type=module - "$B" <<'JS'
-import { readFileSync } from 'node:fs';
-import { recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-const bundle = process.argv[2];
 const gate = JSON.parse(readFileSync(`${bundle}/case-232-gate.json`, 'utf8'));
+const prompt = JSON.parse(readFileSync(`${bundle}/case-232-subject-prompt.json`, 'utf8'));
+const result = JSON.parse(readFileSync(`${bundle}/case-232-subject-result.json`, 'utf8'));
+const transcriptPath = `${bundle}/case-232-subject-transcript.jsonl`;
+const transcript = readFileSync(transcriptPath, 'utf8');
+const subjectExecuted = prompt.subject === '232'
+  && result.status === 'completed'
+  && result.subject === '232'
+  && result.completed_turns === 1
+  && statSync(transcriptPath).size > 0
+  && /WebSearch/.test(transcript);
+const hasExisting = findings.some((finding) => finding.decision === 'use_existing_evidence' && finding.search_required === false);
+const hasRecordOnly = findings.some((finding) => finding.decision === 'record_only' && finding.search_required === false);
+const searchFindings = findings.filter((finding) => ['explore_search', 'exploit_search'].includes(finding.decision) || finding.search_required === true);
+const orphanSearch = searchFindings.filter((finding) => !(finding.subagent_receipt_refs || []).length && finding.appears_in_synthesis !== false && finding.hitl2_handoff !== true);
+recordPlaybookCheck(bundle, { gate: 'wave2-existing-evidence-finding', passed: subjectExecuted && hasExisting, detail: `subject=${subjectExecuted};findings=${findings.length}` });
+recordPlaybookCheck(bundle, { gate: 'wave2-record-only-finding', passed: hasRecordOnly, detail: `findings=${findings.length}` });
+recordPlaybookCheck(bundle, { gate: 'wave2-no-orphan-search-finding', passed: searchFindings.length > 0 && orphanSearch.length === 0, detail: JSON.stringify(orphanSearch.map((finding) => finding.id)) });
 recordPlaybookCheck(bundle, { gate: 'wave2-gate-pass', passed: gate.check?.passed === true, detail: JSON.stringify(gate.inspect || []) });
-const verdict = writeTraceVerdict(bundle, 'case-232');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
 JS
 ```
 
-## Optional Automation Smoke
+## Step 4: [MAIN/SHELL] Native Completion
 
 ```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-232 --target-dir tests/.test-bundles
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+EXTRA_ARGS=()
+if [ -f "$B/case-232-subject-unavailable.txt" ]; then
+  EXTRA_ARGS+=(--not-run-reason "independent Subject Agent runtime or real external search unavailable")
+else
+  EXTRA_ARGS+=(
+    --evidence "subject_prompt=$B/case-232-subject-prompt.json"
+    --evidence "subject_transcript=$B/case-232-subject-transcript.jsonl"
+    --evidence "subject_result=$B/case-232-subject-result.json"
+  )
+fi
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
-Expected without a real Agent artifact set: exit `2`, verdict `NOT_RUN`.
-
-## Cleanup
-
-PASS only:
-
-```bash
-node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-232-verdict.json"
-rm -rf "$B"
-```
+Stop after native completion. The Autorun Supervisor owns Heavy health, durable Subject-evidence export, audit, preservation, and optional clean-PASS cleanup.

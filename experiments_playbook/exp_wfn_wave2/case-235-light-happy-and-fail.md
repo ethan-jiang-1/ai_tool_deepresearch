@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-wave2
 case: case-235-light-happy-and-fail
-weight: light
 case_goal: "Verify Wave2 depth contracts: legal pure synthesis passes without delegated rows, search-required findings without receipts fail, and submitted targeted evidence passes."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-235_w2_happy_and_fail
-trace: dpt_disp_case-235_w2_happy_and_fail/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [wave2-direct-cross-ref-fails, wave2-pure-pass-no-ledger, wave2-submitted-cross-ref-passes]
+bundle_roles: [pure-synthesis-verdict, direct-cross-ref, submitted-cross-ref]
+verdict_role: pure-synthesis-verdict
+health_roles: [pure-synthesis-verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: RWE-001, RWE-003, WTS-003, WTS-004, WTS-008
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -36,12 +44,13 @@ Fixture-backed Engine case. It proves Wave2 gate and work-unit provenance bounda
 1. Bundle A: pure synthesis artifacts, no `reference/00-cross-*.md`, no Wave2 work-unit rows, gate passes.
 2. Bundle B: direct `reference/00-cross-*.md` with search-required finding, no work-unit submit, gate fails.
 3. Bundle C: same targeted evidence submitted through `wave2_targeted_evidence` work unit, gate passes.
-4. Record the three outcomes into Bundle A trace and clean all bundles only on PASS.
+4. Record the three outcomes into Bundle A trace and publish one native completion.
 
 ## Step 1: [MAIN/SHELL] Pure Synthesis Pass
 
 ```bash
-B_PURE=$(node experiments_env/shared/new-disposable-bundle.mjs w2_pure_gate_pass --case case-235 --force)
+B_PURE=$(node experiments_env/shared/new-disposable-bundle.mjs w2_pure_gate_pass --case case-235 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role pure-synthesis-verdict --path "$B_PURE"
 node --input-type=module - "$B_PURE" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { appendTrace, writeWave2Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
@@ -59,7 +68,8 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B_PURE" --
 ## Step 2: [MAIN/SHELL] Direct Targeted Evidence Must Fail
 
 ```bash
-B_DIRECT=$(node experiments_env/shared/new-disposable-bundle.mjs w2_direct_cross_ref --case case-235 --force)
+B_DIRECT=$(node experiments_env/shared/new-disposable-bundle.mjs w2_direct_cross_ref --case case-235 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role direct-cross-ref --path "$B_DIRECT"
 node --input-type=module - "$B_DIRECT" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { appendTrace, referenceContent, writeWave2Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
@@ -82,7 +92,8 @@ test "$DIRECT_STATUS" = "1"
 ## Step 3: [MAIN/SHELL] Submitted Targeted Evidence Passes
 
 ```bash
-B_SUBMITTED=$(node experiments_env/shared/new-disposable-bundle.mjs w2_submitted_cross_ref --case case-235 --force)
+B_SUBMITTED=$(node experiments_env/shared/new-disposable-bundle.mjs w2_submitted_cross_ref --case case-235 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role submitted-cross-ref --path "$B_SUBMITTED"
 node --input-type=module - "$B_SUBMITTED" <<'JS'
 import {
   enqueueWorkUnitTask,
@@ -127,9 +138,12 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B_SUBMITTE
 ## Step 4: [MAIN/SHELL] Record Verdict
 
 ```bash
+B_PURE=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role pure-synthesis-verdict)
+B_DIRECT=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role direct-cross-ref)
+B_SUBMITTED=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role submitted-cross-ref)
 node --input-type=module - "$B_PURE" "$B_DIRECT" "$B_SUBMITTED" <<'JS'
 import { readFileSync } from 'node:fs';
-import { readWorkUnitLedgerRows, recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { readWorkUnitLedgerRows, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 const [pure, direct, submitted] = process.argv.slice(2);
 const pureGate = JSON.parse(readFileSync(`${pure}/case-235-gate-pure.json`, 'utf8'));
 const directGate = JSON.parse(readFileSync(`${direct}/case-235-gate-direct.json`, 'utf8'));
@@ -139,23 +153,18 @@ const submittedRows = readWorkUnitLedgerRows(submitted).filter((row) => row.wave
 recordPlaybookCheck(pure, { gate: 'wave2-pure-pass-no-ledger', passed: pureGate.check?.passed === true && pureRows.length === 0, detail: `${pureRows.length} Wave2 row(s)` });
 recordPlaybookCheck(pure, { gate: 'wave2-direct-cross-ref-fails', passed: directGate.check?.passed === false && /work-unit|coverage|bypass/i.test(JSON.stringify(directGate.inspect || [])), detail: JSON.stringify(directGate.inspect || []) });
 recordPlaybookCheck(pure, { gate: 'wave2-submitted-cross-ref-passes', passed: submittedGate.check?.passed === true && submittedRows.length === 1, detail: JSON.stringify(submittedRows.map((row) => row.work_id)) });
-const verdict = writeTraceVerdict(pure, 'case-235');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log('Recorded native facts; finalizer owns completion.');
 JS
 ```
 
-## Optional Automation Smoke
+## Step 5: [MAIN/SHELL] Native Completion
 
 ```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-235 --target-dir tests/.test-bundles --cleanup-pass
+B_PURE=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role pure-synthesis-verdict)
+B_DIRECT=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role direct-cross-ref)
+B_SUBMITTED=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role submitted-cross-ref)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} \
+  --bundle "pure-synthesis-verdict=$B_PURE" --bundle "direct-cross-ref=$B_DIRECT" --bundle "submitted-cross-ref=$B_SUBMITTED"
 ```
 
-## Cleanup
-
-PASS only:
-
-```bash
-node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B_PURE/case-235-verdict.json"
-rm -rf "$B_PURE" "$B_DIRECT" "$B_SUBMITTED"
-```
+Stop after native completion. Only `pure-synthesis-verdict` is a Heavy health target. The Autorun Supervisor owns health, audit, preservation, and optional clean-PASS cleanup.

@@ -318,7 +318,7 @@ Interactive 不是让一个既有 TUI session 在 repo cwd 临场模拟 run cont
 | Surface | Decision |
 |---|---|
 | `playbook-runner` | **MODIFY via delta**：统一 manifest、Agent Autorun instruction、Interactive debug/replay、native completion/report |
-| `agent-testing` AGT-005/006/007 | **REMOVE + MODIFY via delta**：废弃 `weight`; V2 删除 `runner`/static bundle/trace/verdict；bundle collision/isolation/cleanup 改由 run context + Supervisor；root trace runtime path由 completion绑定 |
+| `agent-testing` AGT-005/006/007 | **REMOVE + MODIFY via delta**：废弃 `weight`; V2 删除 `runner`/static bundle/trace/verdict；bundle collision/isolation/cleanup 改由 run context + Supervisor；root trace runtime path由 completion绑定。AGT-005在active removal delta期间保持registered retirement-pending，archive移出active delta后才标`[DEPRECATED]`，避免governance把合法移除误判为retired ID复用 |
 | `experiment-observability` EXO-002/006 | **MODIFY via delta**：health profile 使用独立 frontmatter policy，不从 execution cost 推导；Autorun Supervisor report 不改 native outcome |
 | `pre-research-experiments` PRE-001–008 | **RENAME/MODIFY via delta**：清除 stale test/RUN/weight/trace/cleanup authority，按 proof role 描述 Headless/Interactive、native policy 与 topic-review judge边界；为既有未登记 Topic rewrite requirement补 PRE-008 |
 | `trace-writer` TRW-005 | **MODIFY via delta**：active trace knowledge surfaces 使用 manifest/Agent Autorun/Interactive names |

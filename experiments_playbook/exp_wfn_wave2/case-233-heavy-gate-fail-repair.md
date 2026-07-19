@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-wave2
 case: case-233-heavy-gate-fail-repair
-weight: heavy
 case_goal: "Verify Wave2 gate failure for uncovered targeted evidence opens a repair/refill batch and passes only after work-unit submit."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-233_w2_gate_refill_repair
-trace: dpt_disp_case-233_w2_gate_refill_repair/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [wave2-gate-fail-then-pass, wave2-initial-gate-fails, wave2-repair-batch, wave2-repaired-gate-passes]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: RWE-001, RWE-004, RWE-006, WTS-005
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -44,7 +52,8 @@ Fixture-backed Engine repair case. Controlled targeted evidence content may be w
 ## Step 1: [MAIN/SHELL] Create Bundle And Failing Direct Cross Reference
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_gate_refill_repair --case case-233 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_gate_refill_repair --case case-233 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -126,6 +135,7 @@ JS
 ## Step 2: [MAIN/SHELL] First Gate Must Fail
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
 node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-233-gate-before-repair.json"
 GATE_STATUS=$?
@@ -144,6 +154,7 @@ Expected: gate rejects the direct cross-reference as non-authoritative.
 ## Step 3: [MAIN/SHELL] Open Repair Batch And Submit Targeted Evidence
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch "$B" --phase wave2 --reason gate_failure_refill > "$B/case-233-open-batch.json"
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
@@ -190,11 +201,12 @@ JS
 ## Step 4: [MAIN/SHELL] Rerun Gate And Verdict
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-233-gate-after-repair.json"
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
 import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
-import { readTrace, recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { readTrace, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const bundle = process.argv[2];
 const before = JSON.parse(readFileSync(`${bundle}/case-233-gate-before-repair.json`, 'utf8'));
@@ -207,23 +219,15 @@ recordPlaybookCheck(bundle, { gate: 'wave2-initial-gate-fails', passed: before.c
 recordPlaybookCheck(bundle, { gate: 'wave2-repair-batch', passed: opened.batch_id === 'b001' && repairRows.length >= 1, detail: JSON.stringify(repairRows.map((row) => row.work_id)) });
 recordPlaybookCheck(bundle, { gate: 'wave2-repaired-gate-passes', passed: after.check?.passed === true, detail: JSON.stringify(after.inspect || []) });
 recordPlaybookCheck(bundle, { gate: 'wave2-gate-fail-then-pass', passed: attempts.some((event) => event.passed === false) && attempts.some((event) => event.passed === true), detail: `${attempts.length} gate_attempt event(s)` });
-const verdict = writeTraceVerdict(bundle, 'case-233');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log('Recorded native facts; finalizer owns completion.');
 JS
 ```
 
-## Optional Automation Smoke
+## Step 5: [MAIN/SHELL] Native Completion
 
 ```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-233 --target-dir tests/.test-bundles --cleanup-pass
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-## Cleanup
-
-PASS only:
-
-```bash
-node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-233-verdict.json"
-rm -rf "$B"
-```
+Stop after native completion. The Autorun Supervisor owns Heavy health, audit, preservation, and optional clean-PASS cleanup.

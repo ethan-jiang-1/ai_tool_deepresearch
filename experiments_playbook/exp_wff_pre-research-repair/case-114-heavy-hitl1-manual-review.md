@@ -1,316 +1,115 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-pre-research-repair
 case: case-114-heavy-hitl1-manual-review
-weight: heavy
-case_goal: "Enumerate all 3 research_profile values + edge cases, prove the HITL1 gate correctly passes valid profiles and correctly fails invalid/partial ones. In auto mode the AI answers on behalf of the human; in manual mode the human writes payload."
-runner: coding-agent
-agent_mode: auto
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-114_wff_manual_*
-trace: dpt_disp_case-114_wff_manual_*/rb_trace.jsonl
-verdict: trace-jsonl
+case_goal: "枚举三种 research_profile 与三个负面边界，证明 Headless auto branch 不等待人类且 HITL1 gate 对完整/非法 payload 作出正确裁决。"
+verdict_mode: all
+required_checks: [six-auto-vectors, auto-branch-no-human-wait, hitl1-recorded]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
+
+# Case 114 - HITL1 Auto-Branch Review Matrix
 
 ## Execution Contract
 
-`agent_mode: auto`（默认）：AI 自动为每个 test vector 生成 payload，不等待人工输入。
-`agent_mode: manual`：AI 在 HITL1 步骤停下，等待人类写入 `rb_profile.yaml` 后继续。
+The Headless Playbook Agent executes the explicit auto branch and does not wait for a human. This deterministic case proves the gate matrix only; synthetic `research_access` values do not prove live search/fetch, Subject Agent behavior, or real-human judgment. Interactive replay may expose the same payload boundary to a human, but that is not this case's proof claim.
 
----
+| Vector | Profile/payload boundary | Expected gate result |
+| --- | --- | --- |
+| A | complete `quick_factual` | pass |
+| B | complete `exploratory_map` | pass |
+| C | complete `claim_verification` | pass |
+| D | `research_profile: not_selected` | fail |
+| E | empty `root_must_answer_set` | fail |
+| F | `hitl1.status: not_started` | fail |
 
-# case-114-heavy-hitl1-manual-review
-
-## Expected Runtime Path
-
-1. 创建 disposable bundle
-2. 按 test vector 表逐条写入 `rb_profile.yaml`，每条跑一次 `hitl1-recorded` gate
-3. 每个 vector 记录一个 `check` event 到 trace
-4. 从 trace 裁决：所有 `expect: pass` 的 vector 必须 `passed: true`，所有 `expect: fail` 的必须 `passed: false`
-5. Cleanup
-
----
-
-## Case Goal
-
-证明 `hitl1-recorded` gate 能正确区分合法与非法 HITL1 payload：
-- 3 种 `research_profile` 在 payload 完整时都能 pass
-- `not_selected`、空 `must_answer`、缺失 marker 时 fail
-- 正面 + 负面全覆盖
-
----
-
-## Step 1: 创建 disposable bundle
+## Step 1 - Create and register the contained bundle
 
 ```bash
-REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_manual --case case-114 --force)
-echo "Bundle: $B"
-echo "$B" > /tmp/pb_bundle
-node DPT_FRAMEWORK/cli/validate-bundle.mjs $B 2>&1 | tail -1
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_manual --case case-114 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 ```
 
----
-
-## Step 2: 枚举 test vectors
-
-每个 vector 是一个 HITL1 payload 变体。写入 → 跑 gate → 记录 check。
-
-所有 vector 的 `research_access` 都是 synthetic gate fixture，用于隔离各 profile rule；它们不证明真实 Agent search/fetch capability。
-
-### Vector A: `quick_factual`（expect: pass）
+## Step 2 - Execute all six visible auto vectors
 
 ```bash
-REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
-cat > $B/rb_profile.yaml << 'EOF'
-plan_basename: wff_manual
-research_profile: quick_factual
-root_must_answer_set:
-  - "What are the key differences in AI regulation between the EU, US, and China?"
-  - "Which regulatory approach has the strongest enforcement mechanism?"
-research_access:
-  status: available
-  probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/deterministic-hitl1-fixture"
-  fetch_outcome: success
-human_decision_checkpoints:
-  hitl1:
-    status: recorded
-    recorded_at: "2026-06-21T15:00:00.000Z"
-  hitl2:
-    status: not_started
-    answerability_class: not_assessed
-    user_decision: not_started
-    final_report_view: not_started
-EOF
-GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
-PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "quick_factual: passed=$PASSED (expect: true)"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'vectorA: quick_factual (expect: pass)'})})"
-```
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
+node --input-type=module - "$B" "$STATE" <<'JS'
+import { appendFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { stringify as stringifyYaml } from 'yaml';
 
-### Vector B: `exploratory_map`（expect: pass）
+const [bundle, state] = process.argv.slice(2);
+const gateCli = 'DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs';
+const vectors = [
+  { id: 'A', profile: 'quick_factual', questions: ['What are the key differences in AI regulation?', 'Which approach has the strongest enforcement?'], hitl1: 'recorded', expected: true },
+  { id: 'B', profile: 'exploratory_map', questions: ['What is the global AI governance landscape?', 'Which jurisdictions plan legislation?', 'How do philosophies affect innovation?'], hitl1: 'recorded', expected: true },
+  { id: 'C', profile: 'claim_verification', questions: ['Is the EU AI Act innovation claim supported?'], hitl1: 'recorded', expected: true },
+  { id: 'D', profile: 'not_selected', questions: ['Some question'], hitl1: 'recorded', expected: false },
+  { id: 'E', profile: 'quick_factual', questions: [], hitl1: 'recorded', expected: false },
+  { id: 'F', profile: 'quick_factual', questions: ['Some question'], hitl1: 'not_started', expected: false },
+];
 
-```bash
-REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
-cat > $B/rb_profile.yaml << 'EOF'
-plan_basename: wff_manual
-research_profile: exploratory_map
-root_must_answer_set:
-  - "What is the full landscape of AI governance frameworks worldwide?"
-  - "Which jurisdictions are planning new AI legislation in 2026?"
-  - "How do different regulatory philosophies affect innovation timelines?"
-research_access:
-  status: available
-  probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/deterministic-hitl1-fixture"
-  fetch_outcome: success
-human_decision_checkpoints:
-  hitl1:
-    status: recorded
-    recorded_at: "2026-06-21T15:00:00.000Z"
-  hitl2:
-    status: not_started
-    answerability_class: not_assessed
-    user_decision: not_started
-    final_report_view: not_started
-EOF
-GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
-PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "exploratory_map: passed=$PASSED (expect: true)"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'vectorB: exploratory_map (expect: pass)'})})"
-```
-
-### Vector C: `claim_verification`（expect: pass）
-
-```bash
-REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
-cat > $B/rb_profile.yaml << 'EOF'
-plan_basename: wff_manual
-research_profile: claim_verification
-root_must_answer_set:
-  - "Is the claim that 'the EU AI Act will stifle innovation' supported by evidence?"
-research_access:
-  status: available
-  probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/deterministic-hitl1-fixture"
-  fetch_outcome: success
-human_decision_checkpoints:
-  hitl1:
-    status: recorded
-    recorded_at: "2026-06-21T15:00:00.000Z"
-  hitl2:
-    status: not_started
-    answerability_class: not_assessed
-    user_decision: not_started
-    final_report_view: not_started
-EOF
-GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
-PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "claim_verification: passed=$PASSED (expect: true)"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,detail:'vectorC: claim_verification (expect: pass)'})})"
-```
-
-### Vector D: `not_selected`（expect: fail — 默认值未改）
-
-```bash
-REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
-cat > $B/rb_profile.yaml << 'EOF'
-plan_basename: wff_manual
-research_profile: not_selected
-root_must_answer_set:
-  - "Some question"
-research_access:
-  status: available
-  probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/deterministic-hitl1-fixture"
-  fetch_outcome: success
-human_decision_checkpoints:
-  hitl1:
-    status: recorded
-    recorded_at: "2026-06-21T15:00:00.000Z"
-  hitl2:
-    status: not_started
-    answerability_class: not_assessed
-    user_decision: not_started
-    final_report_view: not_started
-EOF
-GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
-PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "not_selected: passed=$PASSED (expect: false)"
-INSPECT=$(echo "$GATE" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log(j.inspect.filter(x=>x.includes('not_selected')).length>0)})")
-echo "inspect mentions not_selected: $INSPECT"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,expected:false,detail:'vectorD: not_selected (expect: fail)'})})"
-```
-
-### Vector E: empty `root_must_answer_set`（expect: fail）
-
-```bash
-REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
-cat > $B/rb_profile.yaml << 'EOF'
-plan_basename: wff_manual
-research_profile: quick_factual
-root_must_answer_set: []
-research_access:
-  status: available
-  probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/deterministic-hitl1-fixture"
-  fetch_outcome: success
-human_decision_checkpoints:
-  hitl1:
-    status: recorded
-    recorded_at: "2026-06-21T15:00:00.000Z"
-  hitl2:
-    status: not_started
-    answerability_class: not_assessed
-    user_decision: not_started
-    final_report_view: not_started
-EOF
-GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
-PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "empty must_answer: passed=$PASSED (expect: false)"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,expected:false,detail:'vectorE: empty must_answer (expect: fail)'})})"
-```
-
-### Vector F: missing `hitl1.status`（expect: fail）
-
-```bash
-REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
-cat > $B/rb_profile.yaml << 'EOF'
-plan_basename: wff_manual
-research_profile: quick_factual
-root_must_answer_set:
-  - "Some question"
-research_access:
-  status: available
-  probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/deterministic-hitl1-fixture"
-  fetch_outcome: success
-human_decision_checkpoints:
-  hitl1:
-    status: not_started
-  hitl2:
-    status: not_started
-    answerability_class: not_assessed
-    user_decision: not_started
-    final_report_view: not_started
-EOF
-GATE=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md) || true
-PASSED=$(echo "$GATE" | node experiments_env/shared/extract-field.mjs check.passed)
-echo "hitl1 not recorded: passed=$PASSED (expect: false)"
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'hitl1-recorded',passed:$PASSED,expected:false,detail:'vectorF: hitl1 not recorded (expect: fail)'})})"
-```
-
----
-
-## Step 3: 从 trace 裁决
-
-```bash
-REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
-
-echo "=== Trace evidence ==="
-cat $B/rb_trace.jsonl | while read line; do
-  echo "$line" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);const icon=j.passed?'\x1b[32m✓\x1b[0m':'\x1b[31m✗\x1b[0m';console.log(icon,j.gate,'|',j.detail)})"
-done
-
-echo ""
-echo "=== Expected vs Actual ==="
-cat $B/rb_trace.jsonl | node -e "
-process.stdin.on('data', d => {
-  const lines = d.trim().split('\n').filter(Boolean);
-  const checks = lines.map(l => JSON.parse(l)).filter(e => e.event === 'check');
-  let allCorrect = true;
-  for (const c of checks) {
-    const expectPass = c.detail.includes('expect: pass');
-    const correct = c.passed === expectPass;
-    const mark = correct ? '\x1b[32m✓\x1b[0m' : '\x1b[31mWRONG\x1b[0m';
-    console.log(mark, c.detail.split('(')[1]?.replace(')',''), '| got passed='+c.passed);
-    if (!correct) allCorrect = false;
-  }
-  console.log('');
-  console.log(allCorrect ? '\x1b[32mAll vectors correct\x1b[0m' : '\x1b[31mSome vectors wrong\x1b[0m');
-  if (!allCorrect) process.exit(1);
+const profileFor = (row) => ({
+  plan_basename: 'wff_manual',
+  research_profile: row.profile,
+  root_must_answer_set: row.questions,
+  research_access: {
+    status: 'available', probed_at: '2026-07-10T00:00:00.000Z',
+    result_url: 'https://example.com/deterministic-hitl1-fixture', fetch_outcome: 'success',
+  },
+  human_decision_checkpoints: {
+    hitl1: { status: row.hitl1, ...(row.hitl1 === 'recorded' ? { recorded_at: '2026-06-21T15:00:00.000Z' } : {}) },
+    hitl2: { status: 'not_started', answerability_class: 'not_assessed', user_decision: 'not_started', final_report_view: 'not_started' },
+  },
 });
-"
+
+const results = [];
+for (const row of vectors) {
+  writeFileSync(join(bundle, 'rb_profile.yaml'), stringifyYaml(profileFor(row)));
+  const run = spawnSync(process.execPath, [gateCli, '--bundle', bundle, '--current-node', 'phases/phase-hitl1.md'], { encoding: 'utf8' });
+  const json = JSON.parse(run.stdout);
+  const passed = json.check?.passed === true;
+  results.push({ id: row.id, expected: row.expected, passed, exit_code: run.status });
+  writeFileSync(join(state, `case114-vector-${row.id}.json`), `${JSON.stringify(json, null, 2)}\n`);
+}
+
+// Leave the bundle on a valid deterministic profile for post-completion health.
+writeFileSync(join(bundle, 'rb_profile.yaml'), stringifyYaml(profileFor(vectors[0])));
+writeFileSync(join(state, 'case114-matrix.json'), `${JSON.stringify(results, null, 2)}\n`);
+const matrixCorrect = results.every((row) => row.passed === row.expected && row.exit_code === (row.expected ? 0 : 1));
+const validRecorded = results.slice(0, 3).every((row) => row.passed === true);
+const checks = [
+  ['six-auto-vectors', results.length === 6 && matrixCorrect],
+  ['auto-branch-no-human-wait', results.map((row) => row.id).join('') === 'ABCDEF'],
+  ['hitl1-recorded', validRecorded],
+];
+for (const [gate, passed] of checks) appendFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({
+  ts: new Date().toISOString(), event: 'check', source: 'playbook', gate, passed, expected: true,
+})}\n`);
+if (checks.some(([, passed]) => !passed)) process.exit(1);
+JS
 ```
 
-
-## Step 4: 结果解读
-
-> 6 个 vector（A-F）验证 HITL1 gate 全枚举：
->   Vector A-C (quick_factual/exploratory_map/claim_verification): expected pass → gate pass
->   Vector D-F (not_selected/empty must_answer/missing status): expected fail → gate fail
->   6/6 全部按预期，通过。
-
-
-## Step HH: Post-Execution Health
-
-Heavy profile — gate diagnostics, timeline consistency, ledger, receipts, cache trails, dedup evidence.
+## Step 3 - Native completion
 
 ```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile heavy
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-> 健康检查不改变 verdict。health status 由 runner report 记录。
-
-## Step 5: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-REPO_ROOT=$(pwd)
-B=$(cat /tmp/pb_bundle)
-node -e "
-import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.cleanup('$B');
-});
-"
-```
+Stop after native completion. The Autorun Supervisor owns Heavy health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

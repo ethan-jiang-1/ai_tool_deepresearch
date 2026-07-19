@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: engine-boundary
 case: case-407-light-actor-preflight-fallback
-weight: light
 case_goal: "验证 role-bound actor preflight 在 allocation 前 no-claim，并让显式单项 Phase Agent fallback 通过同一 submit/ledger authority。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-407_actor_preflight
-trace: dpt_disp_case-407_actor_preflight/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [later-normal-batch, single-fallback-submit, unavailable-no-claim]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: DEW-016, DEW-017, DEW-018, AGQ-024, RWP-019, SRL-006
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 # case-407-light-actor-preflight-fallback
 
@@ -22,7 +30,8 @@ Fixture-backed controlled Engine proof. The normalized observations are syntheti
 ## Step 1: [MAIN/SHELL] Run Controlled Proof
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs actor_preflight --case case-407 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs actor_preflight --case case-407 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -35,7 +44,6 @@ import {
   writeFixtureResultForWorkUnit,
   writeMinimalPlan,
   writeMinimalStatus,
-  writeTraceVerdict,
 } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const bundle = process.argv[2];
@@ -61,16 +69,17 @@ recordPlaybookCheck(bundle, { gate: 'single-fallback-submit', passed: fallback.c
 const available = runJsonCli([cli, 'claim', bundle, '--phase', 'wave0', '--count', '5', '--actor-outcome', 'available', '--actor-source', 'native_probe', '--actor-role-key', 'dpt-source-intake', '--actor-reason', 'probe_succeeded', '--execution-actor', 'delegated_subagent']);
 recordPlaybookCheck(bundle, { gate: 'later-normal-batch', passed: available.claimed_count > 0 && available.prompt_refs.every((entry) => entry.actor_execution.execution_actor_class === 'delegated_subagent'), detail: JSON.stringify(available.claimed_work_ids) });
 
-const result = writeTraceVerdict(bundle);
-console.log(JSON.stringify(result, null, 2));
-process.exit(result.failed === 0 ? 0 : 1);
+console.log('Recorded native playbook checks; Supervisor finalizer is authoritative.');
 JS
 ```
 
 Expected: three checks pass. The first two no-claim calls preserve queue bytes and allocate no index; fallback claims/submits exactly one actor-distinguishable work unit; a later available observation claims a normal delegated batch.
 
-## Step 2: [MAIN/SHELL] Cleanup On PASS
+## Native completion
 
 ```bash
-node experiments_env/shared/cleanup-successful-bundle.mjs "$B"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
+
+Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

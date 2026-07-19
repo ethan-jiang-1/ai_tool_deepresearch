@@ -1,77 +1,91 @@
+<!-- @impl EXA-001, EXA-002, EXA-003, EXA-004, EXA-005, EXA-006, EXA-007, EXA-008, PLR-001, PLR-003, VER-001, VER-006 -->
+
 # experiments_playbook
 
-`agent_flow_e2e` 实验流程。由 coding Agent 按 Markdown playbook 逐步执行，每一步都是真实操作——真实 bundle、真实 gate、真实 trace——**不是 mock**。完整路由语义见 accepted `verification-routing` spec。
+`agent_flow_e2e` experiment surface. A real Headless or Interactive Playbook Agent executes each Markdown case against real disposable runtime state. Deterministic Supervisor or `node:test` fixtures can prove host mechanics, but cannot substitute for Playbook-Agent execution or Subject Agent behavior. Canonical routing semantics live in the accepted `verification-routing` spec.
 
-## 规则
+## Canonical launch model
 
-### 一切来自 Trace
+```text
+Agent Autorun (normal)
+operator/host -> Autorun Supervisor -> Agent CLI Launcher
+-> Headless Playbook Agent -> rendered Markdown -> Engine checkpoints
+-> native completion -> Supervisor health/audit/report/optional cleanup
 
-Playbook 的 PASS/FAIL 裁决必须来自 `rb_trace.jsonl` 里的 event，不是 console.log，不是肉眼判断，不是"看起来对了"。每个 check event 的 `passed` 字段是唯一裁决依据。
-
-### 忠实执行，不改写
-
-Agent 跑 playbook 时只许忠实执行每个 bash block 和 inline JS，不许读懂后自己写等价代码。自己改写的一定会引入偏差，产生假 FAIL。
-
-### 不 Mock，不复用 Bundle
-
-每个 playbook 创建独立的 `dpt_disp_*` disposable bundle，跑完即删（FAIL 时保留现场）。不复用上一个 case 的 bundle，不跨 case 共享状态。
-
-## 目录约定
-
+Interactive (single-case diagnosis or real-human judgment)
+operator -> Autorun Supervisor -> Agent CLI Launcher
+-> Interactive Playbook Agent -> same rendered Markdown/Engine/native completion
+-> Supervisor health/audit; run root preserved
 ```
+
+- The Autorun Supervisor owns deterministic selection, run-root creation, Agent process lifecycle, completion validation, health, durable evidence/audit, reporting, and containment-safe cleanup.
+- The Headless/Interactive Playbook Agent owns complete Markdown Agent Flow execution and feedback-driven repair.
+- A Subject Agent/Sub-agent is an additional case-owned intelligent actor. Playbook-Agent participation alone is not Subject evidence.
+- Engine/CLI owns schema, trace, receipts, checks, and native completion facts.
+- The Agent CLI is the runtime launch transport. Agent Experiment Autorun is not an ordinary CLI test runner, and ordinary CI is only a possible host when it provides a real Agent CLI, model credentials, and required tools.
+
+## Active surfaces
+
+```text
 experiments_playbook/
-  PLAYBOOK_MANIFEST.md          # 所有 case 的权威清单（Light/Standard/Heavy 三档表格）
-  RUN_TUI_EXPS.md               # TUI 交互模式执行规则（Agent 读这个）
-  RUN_CLI_EXPS.md               # CLI 自动化模式执行规范（host_tools/run-experiment.mjs 读这个）
-  exp_*/                        # 各实验组的 playbook
-    case-<NN>-<cost>-<what>.md  # 单个 playbook
+  PLAYBOOK_MANIFEST.md          # exact active path registration and execution order
+  RUN_AGENT_AUTORUN_EXPS.md     # injected one-case Headless Playbook Agent contract
+  RUN_INTERACTIVE_EXPS.md       # injected one-case manual debug/judgment contract
+  exp_*/ and exph_*/            # case-<id>-<light|standard|heavy>-<role>.md
 ```
 
-## 两种执行模式
+The manifest owns only registered paths and order. Selected V2 frontmatter owns case/group, native verdict/check policy, stable bundle/verdict/health roles, health profile, and proof profile. Filename grammar owns execution cost. Native completion owns this run's actual role-to-path binding and outcome.
 
-| 模式 | Instruction | 入口 | 谁裁决 | bundle 位置 |
-|------|------------|------|--------|-------------|
-| TUI（交互） | `RUN_TUI_EXPS.md` | coding Agent 直接读取 | Agent | repo root |
-| CLI（自动化） | `RUN_CLI_EXPS.md` | `DPT_FRAMEWORK/host_tools/run-experiment.mjs` | Runner（JS） | `.exp-bundles/` |
+## Normal commands
 
-Case 清单统一在 `PLAYBOOK_MANIFEST.md`，两份 instruction 均引用此文件。
+Headless non-dry-run requires an explicit total USD budget:
 
-## 编号约定：9NN 对偶（人类判断 case）
-
-部分 case 的被测机制**含人类判断**——例如"Agent 的 rewrite 质量好不好"无法由 gate 的结构校验判定，必须人来看（"Gate pass ≠ Human pass"）。这类 case 用 **9NN** 编号段，并按"谁来扮演人类"分成对偶两半：
-
-| 编号段 | 谁在环里 | 目录 | runner 行为 |
-|--------|---------|------|------------|
-| **901–949** | 真人 | （已移除） | 项目方向全面自动化，Human case 不再维护 |
-| **950–999** | AI 扮演真人 | `exp_workflow-foundation/` | **自动可跑** |
-
-**对偶规则（+50 配对）：** 同一个 case 的真人版与 AI 版用 **+50** 偏移配对——机制相同，只换"谁来扮演人类"。真人版（901–949）已因项目方向全面自动化而移除，AI-judge 版（950–999）保留自动执行。
-
-- （已移除）真人审查 Agent rewrite 质量 ↔ `case-951`（AI 扮演审查者，对同一份 rewrite 给 verdict）
-
-**为什么要对偶：**
-
-1. **不阻塞自动化管线。** 901–949 需要真人，runner 跳过；950–999 是 AI 顶替真人，能自动跑，让 pipeline 不被人类判断 case 卡住。
-2. **验证 AI 能不能顶替人。** 同一份 Agent 产出，真人 verdict（如 901）vs AI verdict（如 951）一对比，就能判断"AI 扮演这个人类角色是否合格"。
-3. **诚实标注。** 950–999 的 verdict 在 trace 里必须显式标 `source: ai-judge`（或等价标记）——**它不是真人判断**。gate 结构 pass 不代表 AI verdict 等于真人 verdict。
-
-> 编号约定的权威定义在 `guidelines/command-experiments.md` § Naming。常规 case 使用两位 (`MN`) 或三位 (`MMN`) 阿拉伯数字，其中前导数字标识 case group，末位是 group 内顺序。9NN 是"机制含人类判断"的例外段；+50 对偶是这一段的内部规则。
-
-## 成本分级
-
-| 级别 | 含义 | 什么时候跑 |
-|------|------|-----------|
-| Light | 纯 JS/CLI/gate/filesystem，无外部调用 | 改完代码就该跑 |
-| Standard | 真实 bundle 多步骤，无外部调用 | 功能验证 |
-| Heavy | real Agent/sub-agent、WebSearch/WebFetch、长链或其他昂贵/慢执行 | 完整验证 |
-
-`PLAYBOOK_MANIFEST.md` 是当前可运行 proof surfaces 的权威清单。`RUN_TUI_EXPS.md` 和 `RUN_CLI_EXPS.md` 分别定义 TUI/CLI 两种执行协议。旧 relay/slot、旧 queue slot shape、旧手写 delegated ledger 不能作为当前 production path 证明；有价值的 case 应迁移到 current work-unit / queue v2 路径，否则移出当前 playbook surface。
-
-## 跟其他目录的关系
-
+```bash
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --case case-41-light-minimal-path --max-total-budget-usd 1
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --group agentic-queue --tier light --max-total-budget-usd 5 --max-case-budget-usd 1
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --all --max-total-budget-usd 20 --cleanup-pass
 ```
-experiments_playbook/ ← agent_flow_e2e：coding Agent 忠实执行 Markdown playbook，产出 trace 裁决
-experiments_env/      ← 支撑工具：new-disposable-bundle、wff-utils 等
-DPT_FRAMEWORK/        ← 被测试对象：engine、gate、schema、cli
-tests/                ← JS-led unit + integration + deterministic_e2e
+
+Inspect selection without credentials, Agent launch, run roots, or mutation:
+
+```bash
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --tier light --dry-run
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --group agentic-queue --tier standard --dry-run --json
 ```
+
+Interactive replay is exactly one case, user-present, and always preserved:
+
+```bash
+node DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs --interactive --case case-901-heavy-topic-rewrite-agent
+```
+
+The optional per-case cap cannot exceed the total budget. The Supervisor passes the current cap to the Agent CLI, accumulates only a valid final cost, and stops further launch if cost becomes unknown or the batch budget is exhausted. Cost never changes native PASS/FAIL/NOT_RUN.
+
+## Execution rules
+
+- Execute the rendered playbook faithfully and serially; do not rewrite several cases into one script or skip non-bash Agent steps.
+- Every verdict-affecting fact must be a strict playbook-owned `event: "check"` in bundle-root `rb_trace.jsonl`, with stable `gate` plus explicit boolean `passed` and `expected`.
+- The playbook invokes the deterministic finalizer exactly once. The finalizer enforces V2 required checks and `all|last` semantics and publishes one native completion. The Supervisor never derives PASS from arbitrary partial checks or console prose.
+- Every case gets one Supervisor-owned case run root under `.exp-bundles/runs/`; its direct-child `dpt_disp_*|dpt_rb_*` directories are bundle roots. Dynamic paths cross tool calls only through the explicit context-bound bundle registry.
+- `.exp-bundles/` contains run-owned state, logs, evidence, audit, and reports. It never contains a copied, symlinked, or hardlinked `DPT_FRAMEWORK/`, `experiments_env/`, or `tests/` tree. Framework/source remains at repo root.
+- The Playbook Agent stops after native finalization. Health and cleanup are Supervisor work.
+
+## Outcome, health, and cleanup
+
+Native `PASS|FAIL|NOT_RUN`, lifecycle `HUMAN|ERROR|CANCELLED`, Agent process status, and health `CLEAN|ISSUES|ERROR|null` remain separate.
+
+Only Headless effective PASS + every required health target CLEAN + explicit `--cleanup-pass` + successful outside-root evidence/audit may remove the complete case run root. PASS+ISSUES, FAIL, NOT_RUN, ERROR, CANCELLED, HUMAN, and all Interactive runs remain preserved. V1 has no prose-derived safe-cleanup exception.
+
+Before deletion, durable prompt, sanitized structured Agent transcript/stderr, full completion/health/audit, exact trace-prefix bytes, and required Subject evidence bytes are retained outside the case root. Legacy thin result surfaces are not fallback authority.
+
+## Human/AI judge pairs
+
+Cases 901–949 are real-human Interactive evidence and Headless Autorun reports them as HUMAN rather than fabricating judgment. Their co-located +50 cases 950–999 use structured AI-judge provenance. An AI-judge result does not replace or delete its human pair, and the same actor cannot both produce and judge the semantic output.
+
+## Cost classes
+
+- Light: bounded fast execution, usually deterministic JS/CLI/gate/filesystem work.
+- Standard: multi-step real-bundle work without the Heavy cost boundary.
+- Heavy: real Agent/sub-agent work, external calls, long chain, or other expensive/slow execution.
+
+Cost is not proof class and is not health profile. Test class remains one of `unit`, `integration`, `deterministic_e2e`, or `agent_flow_e2e` under accepted `verification-routing`.

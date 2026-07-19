@@ -1,18 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: reentry-debuggability
 case: case-308-light-stale-queue-blocker
-weight: light
 case_goal: "验证 queue conflict 检测: hitl2_recorded 状态下存在 stale prior-phase queue v2 active_window demand 时，check-reentry 返回 blocker + exit 1。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-308_queue_blocker
-trace: dpt_disp_case-308_queue_blocker/rb_trace.jsonl
-verdict: trace-jsonl
-production_distance: >
-  本实验 fixture 写入预制的 queue.v2 rb_queue.json（含 stale wave0 queued active_window 项）。文件由脚本生成，不涉及 Agent 搜索/判断。实验证明 Engine 的 queue conflict audit 能正确识别 prior-phase active demand 并分类为 blocker。
+verdict_mode: all
+required_checks: [blocker-severity, correct-queue-item-id, done-no-blocker, done-warning, exit-code-1, queue-blocker-present]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -35,7 +41,8 @@ production_distance: >
 ## Step 1: 创建 stale-queue 场景
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs queue_blocker --case case-308 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs queue_blocker --case case-308 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 # 状态已到 hitl2_recorded
 cat > "$B/rb_status.json" << 'JSON'
@@ -104,15 +111,14 @@ echo "B=$B"
 ## Step 2: 验证 blocker 检测
 
 ```bash
-B= # populated from Step 1
-
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 RESULT=$(node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "$B" --at hitl2_recorded 2>&1)
 EXIT=$?
 
 echo "Exit: $EXIT"
 echo "$RESULT" | grep -E '"blockers"|"queue_conflict"|"wave0' | head -10
 
-cat > "$B/_verdict.mjs" << 'JS'
+node --input-type=module - "$B" "$RESULT" "$EXIT" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const __dirname = process.argv[2];
@@ -123,7 +129,8 @@ const checks = [];
 
 checks.push({
   ts: new Date().toISOString(), event: 'check',
-  gate: 'exit-code-1', passed: exitCode === 1, expected: 1,
+  source: 'playbook',
+  gate: 'exit-code-1', passed: exitCode === 1, expected: true,
   detail: `Exit code: ${exitCode}`
 });
 
@@ -132,6 +139,7 @@ const hasQueueBlocker = (result.blockers || []).some(b =>
 );
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'queue-blocker-present', passed: hasQueueBlocker, expected: true,
   detail: `Queue conflict blocker found: ${hasQueueBlocker}`
 });
@@ -141,22 +149,23 @@ const blockerForWave0 = (result.blockers || []).some(b =>
 );
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'correct-queue-item-id', passed: blockerForWave0, expected: true,
   detail: `Blocker names queue_item_id wave0-source-topic-a: ${blockerForWave0}`
 });
 
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'blocker-severity', passed: (result.blockers || []).every(b => b.severity === 'blocker'),
   expected: true,
   detail: 'All blockers have severity=blocker'
 });
 
-const tracePath = join(__dirname, '_logs', '_trace.jsonl');
+const tracePath = join(__dirname, 'rb_trace.jsonl');
 for (const c of checks) writeFileSync(tracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 console.log(JSON.stringify(checks.map(c => ({ gate: c.gate, passed: c.passed }))));
 JS
-node "$B/_verdict.mjs" "$B" "$RESULT" "$EXIT"
 ```
 
 → 预期：exit 1，blocker 含 `wave0-source-topic-a`，`check: queue_conflict`。
@@ -166,8 +175,7 @@ node "$B/_verdict.mjs" "$B" "$RESULT" "$EXIT"
 ## Step 3: 对比 — done 状态不产生 blocker
 
 ```bash
-B= # populated from Step 1
-
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # 把 stale active_window 项改为 done
 cat > "$B/rb_queue.json" << 'JSON'
 {
@@ -207,7 +215,7 @@ JSON
 RESULT2=$(node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "$B" --at hitl2_recorded 2>&1)
 EXIT2=$?
 
-cat > "$B/_verdict_done.mjs" << 'JS'
+node --input-type=module - "$B" "$RESULT2" "$EXIT2" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const __dirname = process.argv[2];
@@ -220,61 +228,32 @@ const hasQueueWarning = (result.warnings || []).some(w => w.check === 'queue_con
 
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'done-no-blocker', passed: !hasQueueBlocker, expected: true,
   detail: `No queue conflict blocker for done item: ${!hasQueueBlocker}`
 });
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'done-warning', passed: hasQueueWarning, expected: true,
   detail: `Warning for prior-phase done item: ${hasQueueWarning}`
 });
 
-const tracePath = join(__dirname, '_logs', '_trace.jsonl');
+const tracePath = join(__dirname, 'rb_trace.jsonl');
 for (const c of checks) writeFileSync(tracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 console.log(JSON.stringify(checks.map(c => ({ gate: c.gate, passed: c.passed }))));
 JS
-node "$B/_verdict_done.mjs" "$B" "$RESULT2" "$EXIT2"
 ```
 
 → 预期：done 状态不产生 blocker，仅产生 warning。
 
 ---
 
-## Step 4: 从 trace 裁决
+## Native Completion
 
 ```bash
-B= # populated from Step 1
-
-cat > "$B/_final_verdict.mjs" << 'JS'
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-const __dirname = process.argv[2];
-const tracePath = join(__dirname, '_logs', '_trace.jsonl');
-const raw = readFileSync(tracePath, 'utf-8').trim();
-const lines = raw.split('\n').filter(l => l.trim());
-const events = lines.map(l => JSON.parse(l));
-const checks = events.filter(e => e.event === 'check');
-const failed = checks.filter(c => !c.passed);
-const passed = checks.filter(c => c.passed);
-
-console.log('══════ Verdict ══════');
-for (const c of checks) console.log(`  ${c.passed ? 'PASS' : 'FAIL'}  ${c.gate}: ${c.detail}`);
-console.log('══════════════════════');
-console.log(`PASS: ${passed.length}  FAIL: ${failed.length}`);
-
-if (failed.length > 0) { console.log('\nFAIL'); process.exit(1); }
-console.log('\nPASS — stale queue detection correctly classifies active vs done prior-phase work.');
-JS
-node "$B/_final_verdict.mjs" "$B"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-→ 预期：PASS。
-
----
-
-## Cleanup
-
-```bash
-B= # populated from Step 1
-rm -rf "$B" && echo "Cleaned up $B"
-```
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

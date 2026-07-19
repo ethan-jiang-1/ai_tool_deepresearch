@@ -1,9 +1,10 @@
 #!/usr/bin/env node
+// @impl EXA-006
 
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
@@ -11,8 +12,14 @@ import { claimAndSubmitFixtureWorkUnit } from './work-unit-playbook-utils.mjs';
 
 const REPO_ROOT = process.cwd();
 const CASE_ID = process.argv[2];
+const targetIndex = process.argv.indexOf('--target-dir');
+const TARGET_DIR = targetIndex >= 0 && process.argv[targetIndex + 1] ? resolve(process.argv[targetIndex + 1]) : REPO_ROOT;
 if (!['711', '712', '713'].includes(CASE_ID)) {
-  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <711|712|713>');
+  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <711|712|713> [--target-dir <dir>]');
+  process.exit(2);
+}
+if (process.argv.length !== (targetIndex >= 0 ? 5 : 3)) {
+  console.error('Usage: node experiments_env/shared/prepare-iterative-interaction-case.mjs <711|712|713> [--target-dir <dir>]');
   process.exit(2);
 }
 
@@ -88,9 +95,9 @@ function instantiateDisposable(caseId) {
   const created = runNode([
     join(REPO_ROOT, 'DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs'),
     stem,
-    '--target-dir', REPO_ROOT,
+    '--target-dir', TARGET_DIR,
   ]).stdout.trim();
-  const bundle = join(REPO_ROOT, `dpt_disp_case-${caseId}_${stem}_${randomUUID().slice(0, 6)}`);
+  const bundle = join(TARGET_DIR, `dpt_disp_case-${caseId}_${stem}_${randomUUID().slice(0, 6)}`);
   renameSync(created, bundle);
   return { bundle, stem };
 }

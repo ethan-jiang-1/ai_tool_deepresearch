@@ -1,112 +1,99 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: iterative-interaction
 case: case-712-heavy-hitl2-natural-rerun
-weight: heavy
-case_goal: "A real subject Agent generates the production HITL2 review and one recommendation, maps one natural-language follow-up into the existing rerun path, and consumes the real Gate handoff."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-712_iterative-interaction-712-*_*
-trace: dpt_disp_case-712_iterative-interaction-712-*_*/rb_trace.jsonl
-verdict: trace-jsonl
+case_goal: "A real Subject Agent generates the production HITL2 review and one recommendation, maps one natural-language follow-up into the existing rerun path, and consumes the real Gate handoff."
+verdict_mode: all
+required_checks: [case-712-review-and-one-recommendation, case-712-natural-language-mapping, case-712-user-facing-contract]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: [subject_prompt, subject_transcript, subject_result]
+proof_subject: agent_behavior
+subject_execution: real_agent
+fixture: setup_only
+runtime: real_disposable_bundle
+external_calls: real
+verdict_judge: deterministic
 req: VER-001, VER-003, HIU-003, CDP-001
-agent_dependency: "Requires one independent real subject Agent conversation. Missing independent execution is NOT RUN; fixture or runner substitution is invalid."
+not_run_if: "The independent authenticated Subject Agent runtime is unavailable."
 ---
+
+<!-- @impl EXA-003, EXA-005, EXA-006, EXA-007, EXA-008, PLR-003 -->
+
+# Case 712 - Natural-Language HITL2 Rerun
 
 ## Execution Contract
 
-The setup-only predecessor uses real production Gates, route-bound loads, status synchronization, work-unit submit, and a fixture-disclosed research baseline. It ends at legal HITL2 before `decision-brief.md`, recommendation, decision, `hitl2-recorded` attempt, or handoff exists.
+The setup-only predecessor uses production Gates, route-bound loads, status synchronization, work-unit submit, and a disclosed fixture research baseline. It stops at legal HITL2 before `decision-brief.md`, recommendation, decision, `hitl2-recorded` attempt, or handoff exists.
 
-Only the subject may generate the review/recommendation, receive the fixed natural-language request, write the existing HITL2 decision/rationale owner, run the real Gate, and consume its handoff. The runner saves/hashes the transcript and derives checks only from transcript/profile/trace facts.
+Only the independent Subject Agent may generate the review/recommendation, receive the fixed natural-language request, write the existing HITL2 decision/rationale owner, run the real Gate, and consume its handoff. The Playbook Agent may prepare the boundary, run the shared Subject adapter, retain exact prompt/transcript/result bytes, and invoke deterministic observation/finalization. It must not produce the Subject-owned decision or substitute fixture output.
 
-## Reality Distance Ledger
-
-| Dimension | Declaration |
-| --- | --- |
-| `test_class` | `agent_flow_e2e` |
-| Fixture distance | `setup_only`; production predecessor chain stops before HITL2 brief/recommendation/decision |
-| Subject execution | one independent real Agent conversation |
-| Runtime | fresh real disposable bundle |
-| External calls | none |
-| Verdict judge | deterministic transcript/profile/Gate/handoff predicates |
-| Native verdict | bundle-root `rb_trace.jsonl` checks |
-| No substitute | missing independent execution is `NOT RUN`, never fixture PASS |
-
-# case-712-heavy-hitl2-natural-rerun
-
-## Step 1: [RUNNER] Prepare Legal HITL2 Boundary
+## Step 1 - Prepare and register the legal HITL2 boundary
 
 ```bash
-B=$(node experiments_env/shared/prepare-iterative-interaction-case.mjs 712)
-printf '%s\n' "$B" > /tmp/case-712-bundle-path
+B=$(node experiments_env/shared/prepare-iterative-interaction-case.mjs 712 --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-const bundle=process.argv[2];
-const setup=JSON.parse(readFileSync(join(bundle,'case-712-setup.json'),'utf8'));
-const profile=parseYaml(readFileSync(join(bundle,'rb_profile.yaml'),'utf8'));
-const trace=readFileSync(join(bundle,'rb_trace.jsonl'),'utf8');
-const ok=setup.legal_boundary.current_node==='phases/phase-hitl2.md'
-  && profile.human_decision_checkpoints.hitl2.status==='not_started'
-  && !existsSync(join(bundle,'artifacts/hitl2/decision-brief.md'))
+const bundle = process.argv[2];
+const setup = JSON.parse(readFileSync(join(bundle, 'case-712-setup.json')));
+const profile = parseYaml(readFileSync(join(bundle, 'rb_profile.yaml')));
+const trace = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8');
+const ok = setup.fixture === 'setup_only'
+  && setup.legal_boundary.current_node === 'phases/phase-hitl2.md'
+  && profile.human_decision_checkpoints.hitl2.status === 'not_started'
+  && !existsSync(join(bundle, 'artifacts/hitl2/decision-brief.md'))
   && !trace.includes('"gate":"hitl2-recorded"');
-if(!ok) process.exit(1);
+if (!ok) process.exit(1);
 JS
 ```
 
-## Step 2: [SUBJECT AGENT] Generate Review And Recommendation
+## Step 2 - Run the independent Subject Agent conversation
 
-Use one independently authenticated subject session with this limited system instruction:
-
-```text
-You are the independent subject Agent for case 712. Work only in the exact bundle path provided by the runner. Load the bundle's current production lifecycle surface and direct facts. Respond to the user's current turn, then follow that production surface for subsequent turns in this same session.
-```
-
-The first user turn is:
+The Subject system instruction is limited to working in the exact bundle, loading the current production lifecycle surface/direct facts, responding to the current user turn, and following that production surface in the same session. Its two exact user turns are:
 
 ```text
 请简要审阅当前研究，只告诉我一个最值得做的下一步。
 ```
 
-Run the shared subject adapter. It uses the fixed Codex-only settings file, writes runner-owned user markers, preserves the raw Claude stream byte-for-byte, and waits for the first successful `result` before sending the decision turn:
+```text
+资本约束这部分还不够，再补一下
+```
+
+The shared adapter sends the second event only after the first successful Subject result. It preserves the raw stream byte-for-byte and retains the exact injected prompt plus actual result events. It does not add expected enums, commands, no-confirmation rules, next actions, or verdict hints.
+
+If the adapter cannot start or complete the independent authenticated session, record the unavailable state and continue only to the one finalizer boundary:
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+set +e
 node experiments_env/shared/run-iterative-interaction-subject.mjs 712 --bundle "$B"
+SUBJECT_STATUS=$?
+set -e
+if [ "$SUBJECT_STATUS" -ne 0 ]; then
+  printf '%s\n' 'independent authenticated Subject Agent runtime unavailable' > "$B/case-712-subject-unavailable.txt"
+fi
 ```
 
-The adapter supplies the current phase's read-only production required closure plus its declared interaction brief; it does not add expected control answers. It uses a 180-second hard timeout and stops after the current phase's immediate handoff rather than executing the newly loaded phase. The first subject turn must stop after the review and one recommendation.
-
-## Step 3: [SUBJECT AGENT] Deliver The Only Decision Turn
-
-Append this exact runner-owned event and resume the same subject session:
-
-```json
-{"role":"user","event":"message","content":"资本约束这部分还不够，再补一下"}
-```
-
-The adapter appends that exact runner-owned event and resumes the same live stream-json session only after the first turn completes. The resumed Agent receives only that exact text. Do not add expected enums, commands, no-confirmation rules, next actions, or verdict hints. No second user response is allowed. Preserve raw Agent events byte-for-byte.
-
-If the independent session is unavailable, report `NOT RUN`, preserve `$B`, and do not let the runner write decision/rationale/Gate/handoff facts.
-
-## Step 4: [OBSERVER] Hash And Derive Native Verdict
+## Step 3 - Observe direct facts and finalize native outcome
 
 ```bash
-node experiments_env/shared/observe-iterative-interaction-case.mjs 712 hash --bundle "$B" --transcript "$B/case-712-transcript.jsonl"
-node experiments_env/shared/observe-iterative-interaction-case.mjs 712 verdict --bundle "$B" --transcript "$B/case-712-transcript.jsonl"
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
-node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile heavy
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+EXTRA_ARGS=()
+if [ -f "$B/case-712-subject-unavailable.txt" ]; then
+  EXTRA_ARGS+=(--not-run-reason "independent authenticated Subject Agent runtime unavailable")
+else
+  node experiments_env/shared/observe-iterative-interaction-case.mjs 712 hash --bundle "$B" --transcript "$B/case-712-transcript.jsonl"
+  node experiments_env/shared/observe-iterative-interaction-case.mjs 712 verdict --bundle "$B" --transcript "$B/case-712-transcript.jsonl"
+  EXTRA_ARGS+=(--evidence "subject_prompt=$B/case-712-subject-prompt.json" --evidence "subject_transcript=$B/case-712-transcript.jsonl" --evidence "subject_result=$B/case-712-subject-result.json")
+fi
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
-PASS requires one review plus one available recommendation before the fixed user event, the existing rerun decision/rationale written by the subject, a real `hitl2-recorded` pass and route-bound rerun load, no second user response, no blanket confirmation, and no canonical enum in user-facing assistant blocks.
+PASS requires exactly one review and one available recommendation before the fixed user event, natural-language mapping to the existing rerun decision/rationale, a real `hitl2-recorded` pass and route-bound rerun load, no second user response, and no canonical enum in user-facing assistant blocks.
 
-## Step 5: [RUNNER] Cleanup
-
-On clean PASS only:
-
-```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-712'}))"
-```
-
-Preserve FAIL or NOT RUN evidence.
+Stop after native completion. The Autorun Supervisor owns Heavy health, durable Subject evidence export, audit, preservation, and optional clean-PASS cleanup.

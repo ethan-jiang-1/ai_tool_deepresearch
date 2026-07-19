@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-rerun
 case: case-304-light-gate-fail-max-count
-weight: light
 case_goal: "Boundary proof that a legally entered rerun node fails closed when rerun_count reaches the production-parsed active exclusive limit."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-304_maxcount_*
-trace: dpt_disp_case-304_maxcount_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [case-304-max-count, wave2-complete]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -38,7 +46,8 @@ if (
 process.stdout.write(String(rule.value));
 JS
 )
-B=$(node experiments_env/shared/new-disposable-bundle.mjs maxcount --case case-304 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs maxcount --case case-304 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 mkdir -p "$B/artifacts/hitl2"
 printf '# Decision Brief\nRerun.\n' > "$B/artifacts/hitl2/decision-brief.md"
 cat > "$B/rb_profile.yaml" <<YAML
@@ -59,8 +68,10 @@ human_decision_checkpoints:
 YAML
 node --input-type=module - "$B" <<'JS'
 import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
 const bundle=process.argv[2];
 writeGateAttempt(bundle,{check:{gate:'wave2-complete',passed:true,currentNodeRef:'phases/phase-wave2.md',next:'phases/phase-hitl2.md'},routing:{kind:'next',next:'phases/phase-hitl2.md'},inspect:[],advice:[]});
+recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'wave2-complete',passed:true,expected:true,detail:'declared direct-predecessor fixture'});
 JS
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-304-enter-hitl2.md"
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-304-advance-wave2.json"
@@ -77,33 +88,11 @@ K=$(printf '%s\n' "$OUT" | node experiments_env/shared/extract-field.mjs routing
 HAS=$(printf '%s\n' "$OUT" | grep -c 'rerun_count' || true)
 OK=false; [ "$STATUS" -ne 0 ] && [ "$P" = "false" ] && [ "$K" = "no_transition" ] && [ "$HAS" -gt 0 ] && OK=true
 node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'case-304-max-count',passed:$OK,detail:'legal rerun entry then production-parsed active exclusive limit $ACTIVE_LIMIT fails closed'}))"
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## 结果解读
 
 > PASS 证明 max-count failure 来自真实 rerun-ready gate，边界值来自 production-parsed active definition，且前置 rerun entry/status 是 real HITL2 output 的 witness，不是手写 status。
 
-## Post-Execution Health
-
-```bash
-set +e
-node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile light --json > "$B/case-304-health.json"
-HEALTH_EXIT=$?
-set -e
-node --input-type=module - "$B/case-304-health.json" "$HEALTH_EXIT" <<'JS'
-import { readFileSync } from 'node:fs';
-const [path,exitCode]=process.argv.slice(2);
-const report=JSON.parse(readFileSync(path,'utf8'));
-const expectedOnly=report.issues.length>0&&report.issues.every((issue)=>issue.section==='gate_attempts');
-if(!(Number(exitCode)===0||expectedOnly)) process.exit(1);
-JS
-```
-
-## Cleanup
-
-> Safe cleanup exception：verdict PASS 且 health issues 仅来自 intentional max-count gate failure 时可清理。
-
-```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-304'}))"
-```
+Stop after native completion. The Autorun Supervisor owns Light health and preserves PASS+ISSUES; v1 has no prose-derived cleanup exception.

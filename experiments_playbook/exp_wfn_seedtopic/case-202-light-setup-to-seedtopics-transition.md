@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-seedtopic
 case: case-202-light-setup-to-seedtopics-transition
-weight: light
 case_goal: "验证 setup-ready gate → seed-topics phase → seed-topics-ready gate 过渡机制：status 推进、slug 三重一致、gate.next 指向 wave0。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-202_s2s_
-trace: dpt_disp_case-202_s2s_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [setup-ready, witnessed-seed-topics-entry, seed-topics-ready]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -43,7 +51,8 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs s2s --case case-202 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs s2s --case case-202 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "Bundle: $B"
 
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
@@ -96,13 +105,21 @@ echo "=== Status ===" && cat $B/rb_status.json
 ## Step 2: Setup-ready gate → next = phase-seed-topics
 
 ```bash
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'","event":"gate_attempt","gate":"setup-ready","passed":true}' >> $B/rb_trace.jsonl
-
-GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md || true)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+REPO_ROOT=$(pwd)
+GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs --bundle $B --current-node phases/phase-setup.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "setup-ready: passed=$PASSED next=$NEXT"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.recordCheck('$B/rb_trace.jsonl',{gate:'setup-ready',passed:$PASSED,expected:true,detail:'real setup-ready Gate'}))"
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-202-enter-seed-topics.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to setup_ready > "$B/case-202-advance-setup.json"
+node --input-type=module - "$B" <<'JS'
+import { appendFileSync, readFileSync } from 'node:fs'; import { join } from 'node:path';
+const [bundle]=process.argv.slice(2); const status=JSON.parse(readFileSync(join(bundle,'rb_status.json'))); const passed=status.current_node==='phases/phase-seed-topics.md'&&status.current_gate==='setup_ready'&&status.next_gate==='seed_topics_ready';
+appendFileSync(join(bundle,'rb_trace.jsonl'),`${JSON.stringify({ts:new Date().toISOString(),event:'check',source:'playbook',gate:'witnessed-seed-topics-entry',passed,expected:true})}\n`);
+JS
 ```
 
 预期：`passed: true`，`next: phases/phase-seed-topics.md`。
@@ -112,6 +129,7 @@ echo "setup-ready: passed=$PASSED next=$NEXT"
 按 registry 创建 seed_topics/<slug>.md。status 保持 `setup_ready → seed_topics_ready`，seed-topics-ready gate 检查时需要 current_gate == setup_ready（handoff 来源 gate）。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # 物化：文件名 = slug.md，frontmatter slug == 文件名 stem == registry slug
 mkdir -p $B/seed_topics
 cat > $B/seed_topics/01_topic-a.md << 'EOF'
@@ -136,19 +154,17 @@ echo "=== seed_topics/ ===" && ls -la $B/seed_topics/
 ## Step 4: Seed-topics-ready gate → pass，然后推进 status
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+REPO_ROOT=$(pwd)
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
 NEXT=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.next)
 echo "seed-topics-ready: passed=$PASSED next=$NEXT"
 
-# gate pass 后才推进 status
-if [ "$PASSED" = "true" ]; then
-  cat > $B/rb_status.json << 'EOF'
-{"current_mode":"execution","state":"in_progress","current_gate":"seed_topics_ready","next_gate":"wave0_complete"}
-EOF
-fi
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'setup→seed-topics transition, next=wave0'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,expected:true,detail:'setup→seed-topics transition, next=wave0'})})"
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node "$NEXT" > "$B/case-202-enter-wave0.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to seed_topics_ready > "$B/case-202-advance-seed-topics.json"
 ```
 
 预期：`passed: true`，`next: phases/phase-wave0.md`。
@@ -156,7 +172,8 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ## Step 5: 裁决
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 6: 结果解读
@@ -168,18 +185,4 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 >   gate.next = phases/phase-wave0.md，闭环指向 wave0。
 
 
-## Step HH: Post-Execution Health
-
-Standard profile — gate diagnostics, timeline consistency.
-
-```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile light
-```
-
-> 健康检查不改变 verdict。health status 由 runner report 记录。
-
-## Step 7: Cleanup
-
-```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
-```
+Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

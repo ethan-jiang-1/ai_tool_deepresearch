@@ -1,18 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: file-observability
 case: case-312-light-wave2-action-add
-weight: light
 case_goal: "验证 Wave2 action:add gate 规则: delta-only synthesis 失败，完整 pair-scan coverage 清除 rerun_add failure。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-312_wave2_add
-trace: dpt_disp_case-312_wave2_add/rb_trace.jsonl
-verdict: trace-jsonl
-production_distance: >
-  本实验 fixture 写入 Wave2 artifact（synthesis.md/cross-topic-ledger.md/finding-index.yaml）和 seed topic（含 action:add 标记）。文件由脚本生成，不涉及 Agent 的 cross-topic synthesis 判断。实验证明 Engine 的 rerun_add_full_synthesis gate rule 拒绝 delta-only，并接受当前 finding-index contract 下的完整 pair-scan coverage。
+verdict_mode: all
+required_checks: [delta-message, delta-synthesis-fails, full-coverage-less-issues]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -35,7 +41,8 @@ production_distance: >
 ## Step 1: 创建 action:add 场景
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wave2_add --case case-312 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wave2_add --case case-312 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 cat > "$B/rb_status.json" << 'JSON'
 {"bundle":"wave2_add","current_mode":"execution","state":"in_progress","current_gate":"wave1_complete","next_gate":"wave2_complete","current_node":"phases/phase-wave2.md"}
@@ -104,8 +111,7 @@ echo "B=$B"
 ## Step 2: Delta Synthesis → FAIL
 
 ```bash
-B= # populated from Step 1
-
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # 写 Delta Synthesis（action:add 场景不允许）
 cat > "$B/artifacts/wave2/synthesis.md" << 'MD'
 # Cross-Topic Synthesis
@@ -146,7 +152,7 @@ EXIT1=$?
 echo "Delta Synthesis result (exit=$EXIT1):"
 echo "$RESULT1" | grep -E '"passed"|"rerun_add"|"Delta"' | head -5
 
-cat > "$B/_verdict.mjs" << 'JS'
+node --input-type=module - "$B" <<'JS'
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -169,6 +175,7 @@ function runWave2Gate() {
 const r1 = runWave2Gate();
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'delta-synthesis-fails', passed: r1.check?.passed === false, expected: true,
   detail: `Delta synthesis gate: ${r1.check?.passed}`
 });
@@ -176,6 +183,7 @@ checks.push({
 const hasDeltaFail = (r1.inspect || []).some(i => /Delta/.test(i));
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'delta-message', passed: hasDeltaFail, expected: true,
   detail: `Delta Synthesis rejection message: ${hasDeltaFail}`
 });
@@ -204,6 +212,7 @@ const r2 = runWave2Gate();
 const rerunRelated = (r2.inspect || []).filter(i => /rerun|action:add|Delta Synthesis/i.test(i));
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'full-coverage-less-issues', passed: rerunRelated.length === 0, expected: true,
   detail: `Rerun-related issues after full coverage fix: ${rerunRelated.length}`
 });
@@ -212,54 +221,17 @@ const tracePath = join(__dirname, 'rb_trace.jsonl');
 for (const c of checks) writeFileSync(tracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 console.log(JSON.stringify(checks.map(c => ({ gate: c.gate, passed: c.passed }))));
 JS
-node "$B/_verdict.mjs" "$B"
 ```
 
 → 预期：Delta Synthesis → FAIL；修复 Delta header + 补全 scan/index coverage → rerun_add 规则不再报错。
 
 ---
 
-## Step 3: 从 trace 裁决
+## Native Completion
 
 ```bash
-B= # populated from Step 1
-
-cat > "$B/_final_verdict.mjs" << 'JS'
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-const __dirname = process.argv[2];
-const tracePath = join(__dirname, 'rb_trace.jsonl');
-const raw = readFileSync(tracePath, 'utf-8').trim();
-if (!raw) { console.log('FAIL: No trace events'); process.exit(1); }
-const lines = raw.split('\n').filter(l => l.trim());
-const events = lines.map(l => JSON.parse(l));
-const checks = events.filter(e => e.event === 'check');
-const failed = checks.filter(c => c.passed !== (c.expected ?? true));
-const passed = checks.filter(c => c.passed === (c.expected ?? true));
-
-console.log('══════ Verdict ══════');
-for (const c of checks) {
-  const ok = c.passed === (c.expected ?? true);
-  console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${c.gate}: ${c.detail}`);
-}
-console.log('══════════════════════');
-console.log(`PASS: ${passed.length}  FAIL: ${failed.length}`);
-
-if (failed.length > 0) { console.log('\nFAIL'); process.exit(1); }
-console.log('\nPASS — Wave2 action:add gate correctly enforces no-delta + full coverage.');
-JS
-node "$B/_final_verdict.mjs" "$B"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-→ 预期：PASS。
-
----
-
-## Cleanup
-
-PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-B= # populated from Step 1
-rm -rf "$B" && echo "Cleaned up $B"
-```
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

@@ -1,18 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: reentry-debuggability
 case: case-307-light-clean-reentry
-weight: light
 case_goal: "验证 clean reentry: check-reentry --at wave1_complete 在有效 disposable bundle 上返回 exit 0、stable JSON contract、normalized_target 正确。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-307_reentry_clean
-trace: dpt_disp_case-307_reentry_clean/rb_trace.jsonl
-verdict: trace-jsonl
-production_distance: >
-  本实验使用 disposable bundle + 人工写入的最低限度 control/artifact 文件。文件由脚本生成，不涉及 Agent 搜索/判断/写作。实验仅证明 Engine 的 check-reentry CLI 在给定文件状态下返回正确的 JSON 合约和退出码；不证明 Agent 能正确使用 reentry 检查或修复漂移。
+verdict_mode: all
+required_checks: [check-passed, exit-code, json-contract, no-blockers, normalized-gate-key, normalized-phase-key, normalized-target-kind, target-node-ref, target-phase-key, target-phase-name, target-underscore, target-unknown-exit]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -36,7 +42,8 @@ production_distance: >
 ## Step 1: 创建 disposable runtime context
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs reentry_clean --case case-307 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs reentry_clean --case case-307 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 # 写 rb_status.json — wave1 完成状态
 cat > "$B/rb_status.json" << 'JSON'
@@ -103,8 +110,7 @@ echo "B=$B"
 ## Step 2: 跑 check-reentry CLI
 
 ```bash
-B= # populated from Step 1
-
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 RESULT=$(node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "$B" --at wave1_complete)
 EXIT=$?
 
@@ -112,7 +118,7 @@ echo "Exit code: $EXIT"
 echo "$RESULT" | head -30
 
 # 写入 trace 供裁决
-cat > "$B/_verdict.mjs" << 'JS'
+node --input-type=module - "$B" "$RESULT" "$EXIT" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -125,13 +131,15 @@ const checks = [];
 // Check 1: exit code 0
 checks.push({
   ts: new Date().toISOString(), event: 'check',
-  gate: 'exit-code', passed: exitCode === 0, expected: 0,
+  source: 'playbook',
+  gate: 'exit-code', passed: exitCode === 0, expected: true,
   detail: `Exit code: ${exitCode} (expected 0)`
 });
 
 // Check 2: check.passed === true
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'check-passed', passed: result.check?.passed === true, expected: true,
   detail: `check.passed: ${result.check?.passed}`
 });
@@ -140,23 +148,27 @@ checks.push({
 const target = result.normalized_target;
 checks.push({
   ts: new Date().toISOString(), event: 'check',
-  gate: 'normalized-target-kind', passed: target?.kind === 'gate', expected: 'gate',
+  source: 'playbook',
+  gate: 'normalized-target-kind', passed: target?.kind === 'gate', expected: true,
   detail: `target.kind: ${target?.kind}`
 });
 checks.push({
   ts: new Date().toISOString(), event: 'check',
-  gate: 'normalized-gate-key', passed: target?.gate_key === 'wave1-complete', expected: 'wave1-complete',
+  source: 'playbook',
+  gate: 'normalized-gate-key', passed: target?.gate_key === 'wave1-complete', expected: true,
   detail: `gate_key: ${target?.gate_key}`
 });
 checks.push({
   ts: new Date().toISOString(), event: 'check',
-  gate: 'normalized-phase-key', passed: target?.phase_key === 'wave1', expected: 'wave1',
+  source: 'playbook',
+  gate: 'normalized-phase-key', passed: target?.phase_key === 'wave1', expected: true,
   detail: `phase_key: ${target?.phase_key}`
 });
 
 // Check 4: no blockers
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'no-blockers', passed: (result.blockers || []).length === 0, expected: true,
   detail: `blockers: ${(result.blockers || []).length}`
 });
@@ -164,6 +176,7 @@ checks.push({
 // Check 5: JSON contract fields present
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'json-contract', passed: result.schema_version === '1.1.0' &&
     'check' in result && 'blockers' in result && 'warnings' in result &&
     'drift' in result && 'findings' in result && 'inspect' in result && 'advice' in result &&
@@ -172,13 +185,12 @@ checks.push({
   detail: 'All required JSON contract fields present'
 });
 
-const tracePath = join(__dirname, '_logs', '_trace.jsonl');
+const tracePath = join(__dirname, 'rb_trace.jsonl');
 for (const c of checks) {
   writeFileSync(tracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 }
 console.log(JSON.stringify(checks.map(c => ({ gate: c.gate, passed: c.passed }))));
 JS
-node "$B/_verdict.mjs" "$B" "$RESULT" "$EXIT"
 ```
 
 → 预期：exit 0，`check.passed: true`，`normalized_target.kind: "gate"`，`gate_key: "wave1-complete"`，0 blockers。
@@ -188,8 +200,7 @@ node "$B/_verdict.mjs" "$B" "$RESULT" "$EXIT"
 ## Step 3: 验证 target normalization 多种形式
 
 ```bash
-B= # populated from Step 1
-
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # 测试三种 target 写法
 for TARGET in "wave1_complete" "phase-wave1" "wave1"; do
   RESULT=$(node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "$B" --at "$TARGET")
@@ -203,7 +214,7 @@ RESULT=$(node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "$B" --at "nonexisten
 EXIT=$?
 echo "--- nonexistent (exit=$EXIT) ---"
 
-cat > "$B/_verdict2.mjs" << 'JS'
+node --input-type=module - "$B" <<'JS'
 import { execSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -215,6 +226,7 @@ const checks = [];
 const r1 = JSON.parse(execSync(`node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "${__dirname}" --at wave1_complete`, { encoding: 'utf-8' }));
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'target-underscore', passed: r1.normalized_target?.status_gate === 'wave1_complete',
   expected: true, detail: 'wave1_complete → normalized correctly'
 });
@@ -223,6 +235,7 @@ checks.push({
 const r2 = JSON.parse(execSync(`node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "${__dirname}" --at phase-wave1`, { encoding: 'utf-8' }));
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'target-phase-name', passed: r2.normalized_target?.phase_key === 'wave1',
   expected: true, detail: 'phase-wave1 → normalized correctly'
 });
@@ -231,6 +244,7 @@ checks.push({
 const r3 = JSON.parse(execSync(`node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "${__dirname}" --at wave1`, { encoding: 'utf-8' }));
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'target-phase-key', passed: r3.normalized_target?.phase_key === 'wave1',
   expected: true, detail: 'wave1 → normalized correctly'
 });
@@ -239,6 +253,7 @@ checks.push({
 const r4 = JSON.parse(execSync(`node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "${__dirname}" --at phases/phase-wave1.md`, { encoding: 'utf-8' }));
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'target-node-ref', passed: r4.normalized_target?.node_ref === 'phases/phase-wave1.md',
   expected: true, detail: 'phases/phase-wave1.md → normalized correctly'
 });
@@ -246,61 +261,26 @@ checks.push({
 // Test unknown target → exit 2
 try {
   execSync(`node DPT_FRAMEWORK/cli/check-reentry.mjs --bundle "${__dirname}" --at nonexistent-gate`, { encoding: 'utf-8' });
-  checks.push({ ts: new Date().toISOString(), event: 'check', gate: 'target-unknown-exit', passed: false, expected: true, detail: 'Should exit 2' });
+  checks.push({ ts: new Date().toISOString(), event: 'check', source: 'playbook', gate: 'target-unknown-exit', passed: false, expected: true, detail: 'Should exit 2' });
 } catch (e) {
-  checks.push({ ts: new Date().toISOString(), event: 'check', gate: 'target-unknown-exit', passed: e.status === 2, expected: true, detail: `Exit ${e.status} for unknown target` });
+  checks.push({ ts: new Date().toISOString(), event: 'check', source: 'playbook', gate: 'target-unknown-exit', passed: e.status === 2, expected: true, detail: `Exit ${e.status} for unknown target` });
 }
 
-const tracePath = join(__dirname, '_logs', '_trace.jsonl');
+const tracePath = join(__dirname, 'rb_trace.jsonl');
 for (const c of checks) writeFileSync(tracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 console.log(JSON.stringify(checks.map(c => ({ gate: c.gate, passed: c.passed }))));
 JS
-node "$B/_verdict2.mjs" "$B"
 ```
 
 → 预期：所有 target 形式正确归一化，unknown target → exit 2 + config_error。
 
 ---
 
-## Step 4: 从 trace 裁决
+## Native Completion
 
 ```bash
-B= # populated from Step 1
-
-cat > "$B/_final_verdict.mjs" << 'JS'
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-const __dirname = process.argv[2];
-
-const tracePath = join(__dirname, '_logs', '_trace.jsonl');
-const raw = readFileSync(tracePath, 'utf-8').trim();
-const lines = raw.split('\n').filter(l => l.trim());
-const events = lines.map(l => JSON.parse(l));
-const checks = events.filter(e => e.event === 'check');
-
-const failed = checks.filter(c => !c.passed);
-const passed = checks.filter(c => c.passed);
-
-console.log('══════ Verdict ══════');
-for (const c of checks) console.log(`  ${c.passed ? 'PASS' : 'FAIL'}  ${c.gate}: ${c.detail}`);
-console.log('══════════════════════');
-console.log(`PASS: ${passed.length}  FAIL: ${failed.length}`);
-
-if (failed.length > 0) { console.log('\nFAIL'); process.exit(1); }
-console.log('\nPASS — clean reentry check returns correct JSON contract and exit code.');
-JS
-node "$B/_final_verdict.mjs" "$B"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-→ 预期：PASS，所有 check 通过。
-
----
-
-## Cleanup
-
-**PASS 才执行。FAIL 时保留 bundle 现场供排查。**
-
-```bash
-B= # populated from Step 1
-rm -rf "$B" && echo "Cleaned up $B"
-```
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

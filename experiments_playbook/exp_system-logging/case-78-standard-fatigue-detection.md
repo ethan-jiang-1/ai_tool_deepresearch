@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: system-logging
 case: case-78-standard-fatigue-detection
-weight: light
 case_goal: "验证 gate CLI 在 fail + --attempt >= threshold 时 emit fatigue_warning + step_back + [fatigue] advice；fail + low attempt 时不 emit；pass 时 suppress；advice 使用 Agent-reported 术语、不声称 Engine verified；--attempt 解析边界不崩溃。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-78_fatigue_*
-trace: dpt_disp_case-78_fatigue_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [attempt-parse, bundle-init, fatigue-fail-high, fatigue-fail-low, fatigue-pass-high, fatigue-wording]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -28,7 +36,7 @@ verdict: trace-jsonl
 | Fixture input — pass case | 手填 topic_registry、reference file（含 4 quality threshold 字段）、source.yaml、rb_status.json、rb_output_declarations.jsonl、cache trail 文件。这些 fixture 只证明 gate 的 pass-suppress 分支，不证明 Agent 能产出这些文件 |
 | Agent actor | **无**。`--attempt` 值由 shell 传入，非 Agent 上报。case_goal 中 "Agent-reported" 指 advice 文案措辞，非 Agent 实际参与 |
 | External calls | 无 WebSearch/WebFetch。cache trail 文件为手建最小骨架 |
-| Verdict source | trace `check` event（从 gate CLI stdout JSON 提取 `check.passed` 后写入 `_logs/_trace.jsonl`） |
+| Verdict source | strict playbook-owned `check` events in bundle-root `rb_trace.jsonl` |
 
 **Headline claim**: gate CLI fatigue signal emission logic（`buildGateResult` + `parseGateCliArgs`）通过生产 CLI 路径验证。
 
@@ -58,36 +66,36 @@ verdict: trace-jsonl
 ## Step 1: 创建 disposable scaffold bundle
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs fatigue --case case-78 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs fatigue --case case-78 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "B=$B"
 
 # Write initial trace check: bundle created
-cat > "$B/_init_check.mjs" << 'JS'
+node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 const B = process.argv[2];
 const check = JSON.stringify({
   ts: new Date().toISOString(),
   event: 'check',
+  source: 'playbook',
   gate: 'bundle-init',
   passed: true,
   expected: true,
   detail: `disposable bundle created at ${B}`,
 });
-writeFileSync(join(B, '_logs', '_trace.jsonl'), check + '\n');
+writeFileSync(join(B, 'rb_trace.jsonl'), check + '\n', { flag: 'a' });
 JS
-node "$B/_init_check.mjs" "$B"
 ```
 
-→ 预期：bundle 就绪，`_logs/_trace.jsonl` 含首条 check。
+→ 预期：bundle 就绪，`rb_trace.jsonl` 含首条 case-owned check。
 
 ---
 
 ## Step 2: Fail + high attempt → fatigue_warning + step_back
 
 ```bash
-B= # populated from Step 1
-
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # Run gate with --attempt 3 on scaffold bundle (guaranteed fail — no wave0 output)
 STDOUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs \
   --bundle "$B" \
@@ -109,49 +117,49 @@ process.stdin.on('end', () => {
   const checks = [
     {
       ts: new Date().toISOString(),
-      event: 'check', gate: 'fatigue-fail-high',
+      event: 'check', source: 'playbook', gate: 'fatigue-fail-high',
       passed: c.fatigue_warning === true,
       expected: true,
       detail: 'fatigue_warning=true on fail + --attempt 3',
     },
     {
       ts: new Date().toISOString(),
-      event: 'check', gate: 'fatigue-fail-high',
+      event: 'check', source: 'playbook', gate: 'fatigue-fail-high',
       passed: c.step_back === true,
       expected: true,
       detail: 'step_back=true on fail + --attempt 3',
     },
     {
       ts: new Date().toISOString(),
-      event: 'check', gate: 'fatigue-fail-high',
+      event: 'check', source: 'playbook', gate: 'fatigue-fail-high',
       passed: fatigueMsgs.length >= 3,
       expected: true,
       detail: fatigueMsgs.length + ' [fatigue] advice messages (need >=3)',
     },
     {
       ts: new Date().toISOString(),
-      event: 'check', gate: 'fatigue-wording',
+      event: 'check', source: 'playbook', gate: 'fatigue-wording',
       passed: fatigueMsgs.some(a => a.includes('Agent-reported retry hint')),
       expected: true,
       detail: 'fatigue advice uses Agent-reported terminology',
     },
     {
       ts: new Date().toISOString(),
-      event: 'check', gate: 'fatigue-wording',
+      event: 'check', source: 'playbook', gate: 'fatigue-wording',
       passed: !fatigueMsgs.some(a => a.includes('verified consecutive') || a.includes('Engine verified')),
       expected: true,
       detail: 'fatigue advice does NOT claim Engine verified consecutive failures',
     },
     {
       ts: new Date().toISOString(),
-      event: 'check', gate: 'fatigue-wording',
+      event: 'check', source: 'playbook', gate: 'fatigue-wording',
       passed: fatigueMsgs.some(a => a.includes('If this invocation is for a stop:no phase')),
       expected: true,
       detail: 'fatigue advice uses conditional stop:no language',
     },
   ];
 
-  const tracePath = join(B, '_logs', '_trace.jsonl');
+  const tracePath = join(B, 'rb_trace.jsonl');
   for (const ch of checks) writeFileSync(tracePath, JSON.stringify(ch) + '\n', { flag: 'a' });
   console.log(JSON.stringify({ checks: checks.length, fatigue: c.fatigue_warning, step_back: c.step_back, fatigueMsgs: fatigueMsgs.length }));
 });
@@ -165,8 +173,7 @@ process.stdin.on('end', () => {
 ## Step 3: Fail + low attempt → no fatigue
 
 ```bash
-B= # populated from Step 1
-
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 STDOUT=$(node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs \
   --bundle "$B" \
   --current-node phases/phase-wave0.md \
@@ -187,28 +194,28 @@ process.stdin.on('end', () => {
   const checks = [
     {
       ts: new Date().toISOString(),
-      event: 'check', gate: 'fatigue-fail-low',
+      event: 'check', source: 'playbook', gate: 'fatigue-fail-low',
       passed: c.fatigue_warning === undefined,
       expected: true,
       detail: 'fatigue_warning absent on fail + --attempt 1',
     },
     {
       ts: new Date().toISOString(),
-      event: 'check', gate: 'fatigue-fail-low',
+      event: 'check', source: 'playbook', gate: 'fatigue-fail-low',
       passed: c.step_back === undefined,
       expected: true,
       detail: 'step_back absent on fail + --attempt 1',
     },
     {
       ts: new Date().toISOString(),
-      event: 'check', gate: 'fatigue-fail-low',
+      event: 'check', source: 'playbook', gate: 'fatigue-fail-low',
       passed: fatigueMsgs.length === 0,
       expected: true,
       detail: 'no [fatigue] advice on fail + --attempt 1',
     },
   ];
 
-  const tracePath = join(B, '_logs', '_trace.jsonl');
+  const tracePath = join(B, 'rb_trace.jsonl');
   for (const ch of checks) writeFileSync(tracePath, JSON.stringify(ch) + '\n', { flag: 'a' });
   console.log(JSON.stringify({ checks: checks.length, fatigue: c.fatigue_warning, fatigueMsgs: fatigueMsgs.length }));
 });
@@ -224,8 +231,7 @@ process.stdin.on('end', () => {
 先用 fixture 填充 bundle 使 gate pass，再以 `--attempt 5` 运行，验证 fatigue 被 pass 抑制。
 
 ```bash
-B= # populated from Step 1
-
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # ── Populate bundle for gate pass ──
 # reference file meeting all 4 isCountable quality thresholds
 # (metadata before first ## section, acceptance_status=accepted,
@@ -337,35 +343,35 @@ process.stdin.on('end', () => {
   const checks = [
     {
       ts: new Date().toISOString(),
-      event: 'check', gate: 'fatigue-pass-high',
+      event: 'check', source: 'playbook', gate: 'fatigue-pass-high',
       passed: c.passed === true,
       expected: true,
       detail: 'gate passes with populated fixture bundle',
     },
     {
       ts: new Date().toISOString(),
-      event: 'check', gate: 'fatigue-pass-high',
+      event: 'check', source: 'playbook', gate: 'fatigue-pass-high',
       passed: c.fatigue_warning === undefined,
       expected: true,
       detail: 'fatigue_warning absent when gate passes (--attempt 5)',
     },
     {
       ts: new Date().toISOString(),
-      event: 'check', gate: 'fatigue-pass-high',
+      event: 'check', source: 'playbook', gate: 'fatigue-pass-high',
       passed: c.step_back === undefined,
       expected: true,
       detail: 'step_back absent when gate passes (--attempt 5)',
     },
     {
       ts: new Date().toISOString(),
-      event: 'check', gate: 'fatigue-pass-high',
+      event: 'check', source: 'playbook', gate: 'fatigue-pass-high',
       passed: fatigueMsgs.length === 0,
       expected: true,
       detail: 'no [fatigue] advice when gate passes',
     },
   ];
 
-  const tracePath = join(B, '_logs', '_trace.jsonl');
+  const tracePath = join(B, 'rb_trace.jsonl');
   for (const ch of checks) writeFileSync(tracePath, JSON.stringify(ch) + '\n', { flag: 'a' });
   console.log(JSON.stringify({ checks: checks.length, passed: c.passed, fatigue: c.fatigue_warning }));
 });
@@ -381,9 +387,8 @@ process.stdin.on('end', () => {
 测试 `--attempt` 的各种边界值不会导致 gate CLI 崩溃，始终产出合法 JSON。
 
 ```bash
-B= # populated from Step 1
-
-cat > "$B/_parse_edges.mjs" << 'JS'
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
 import { execSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -425,12 +430,12 @@ for (const tc of cases) {
   }
   checks.push({
     ts: new Date().toISOString(),
-    event: 'check', gate: 'attempt-parse',
+    event: 'check', source: 'playbook', gate: 'attempt-parse',
     passed, expected: true, detail,
   });
 }
 
-const tracePath = join(B, '_logs', '_trace.jsonl');
+const tracePath = join(B, 'rb_trace.jsonl');
 for (const c of checks) writeFileSync(tracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 
 const failed = checks.filter(c => !c.passed);
@@ -439,57 +444,9 @@ if (failed.length) {
   for (const f of failed) console.log('FAIL: ' + f.detail);
 }
 JS
-node "$B/_parse_edges.mjs" "$B"
 ```
 
 → 预期：所有 `--attempt` 变体不导致 CLI 崩溃，stdout 始终为合法 JSON。
-
----
-
-## Step 6: 从 trace 裁决
-
-```bash
-B= # populated from Step 1
-
-cat > "$B/_verdict.mjs" << 'JS'
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-const B = process.argv[2];
-
-const tracePath = join(B, '_logs', '_trace.jsonl');
-const raw = readFileSync(tracePath, 'utf-8').trim();
-const lines = raw.split('\n').filter(l => l.trim());
-const events = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
-const checks = events.filter(e => e.event === 'check');
-
-if (checks.length === 0) {
-  console.log('FAIL: No check events in trace');
-  process.exit(1);
-}
-
-const failed = checks.filter(c => c.passed !== (c.expected !== undefined ? c.expected : true));
-const passed = checks.filter(c => c.passed === (c.expected !== undefined ? c.expected : true));
-
-console.log('');
-console.log('══════ Verdict: case-78 ══════');
-for (const c of checks) {
-  const icon = c.passed === (c.expected !== undefined ? c.expected : true) ? 'PASS' : 'FAIL';
-  console.log(`  ${icon}  ${c.gate}: ${c.detail}`);
-}
-console.log('══════════════════════════════');
-console.log(`PASS: ${passed.length}  FAIL: ${failed.length}`);
-
-if (failed.length > 0) {
-  console.log(`\nFAIL — ${failed.length} check(s) failed`);
-  process.exit(1);
-}
-console.log(`\nPASS — all ${checks.length} checks passed`);
-console.log('Proof: gate CLI fatigue signal emission (buildGateResult + parseGateCliArgs) correct via production CLI path.');
-JS
-node "$B/_verdict.mjs" "$B"
-```
-
-→ 预期：PASS，所有 check 通过。
 
 ---
 
@@ -517,11 +474,11 @@ node "$B/_verdict.mjs" "$B"
 
 ---
 
-## Cleanup
-
-**PASS 才执行。FAIL 时保留 bundle 现场供排查。**
+## Native Completion
 
 ```bash
-B= # populated from Step 1
-rm -rf "$B" && echo "Cleaned up $B"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
+
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

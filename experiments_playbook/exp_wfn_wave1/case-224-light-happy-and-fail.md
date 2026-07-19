@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-wave1
 case: case-224-light-happy-and-fail
-weight: light
 case_goal: "Verify Wave1 depth contracts through work-unit claim/submit: out-of-order submit, depth-review pass, shallow/cache-thin failures, invalid-submit rejection, and non-work-unit artifact gate rejection."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-224_w1_happy_and_fail
-trace: dpt_disp_case-224_w1_happy_and_fail/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [wave1-gate-pass, wave1-invalid-submit-rejects, wave1-ledger-rows, wave1-multi-claim, wave1-orphan-output-rejects, wave1-out-of-order-submit]
+bundle_roles: [happy-verdict, orphan-output, shallow-depth-review, cache-thin]
+verdict_role: happy-verdict
+health_roles: [happy-verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: RWE-001, RWE-002, WAI-006
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -40,12 +48,14 @@ Fixture-backed Engine case, no Agent actor, no external calls. Fixture content m
 5. Run Wave1 gate and confirm pass from submitted ledger coverage plus seed backfill.
 6. Claim a fresh work unit and prove missing receipt rejects without ledger append.
 7. In a separate bundle, write Wave1-looking artifacts without submit and confirm Wave1 gate rejects them.
-8. Record trace checks and clean up only on PASS.
+8. Run separate shallow-depth-review and cache-thin negative bundles.
+9. Aggregate stable facts into the happy verdict trace and publish native completion once.
 
 ## Step 1: [MAIN/SHELL] Create Runtime Context
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs w1_happy_and_fail --case case-224 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w1_happy_and_fail --case case-224 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave1Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -66,6 +76,7 @@ Expected: validate passes and `rb_trace.jsonl` contains a witnessed handoff into
 ## Step 2: [MAIN/SHELL] Enqueue And Claim Two Work Units
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
 node --input-type=module - "$B" <<'JS'
 import { enqueueWorkUnitTask, queueItemForWorkUnit } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -98,6 +109,7 @@ Expected: `claimed_count=2` and the work IDs are Wave1 `wave1_topic_deepening` a
 ## Step 3: [MAIN/SHELL] Submit In Reverse Order And Backfill
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import {
@@ -163,6 +175,7 @@ Expected: both submits succeed, and the first submitted work ID is the second cl
 ## Step 4: [MAIN/SHELL] Gate Pass From Submitted Coverage
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
 node --input-type=module - "$B" <<'JS'
 import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 appendTrace(process.argv[2], { event: 'wave1_completion', source: 'case-224-visible-path' });
@@ -178,9 +191,10 @@ JS
 
 Expected: Wave1 gate passes from submitted work-unit rows covering both topics.
 
-## Step 5: [MAIN/SHELL] Invalid Submit And Orphan Artifact Rejection
+## Step 5: [MAIN/SHELL] Invalid Submit And Three Negative Bundles
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
 node --input-type=module - "$B" <<'JS'
 import { rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -219,7 +233,8 @@ console.log(JSON.stringify(outcome, null, 2));
 process.exit(outcome.status === 1 && outcome.submit?.last_submit_rejection?.reason_code === 'missing_receipt' && outcome.rejectedRows === 0 ? 0 : 1);
 JS
 
-BO=$(node experiments_env/shared/new-disposable-bundle.mjs w1_orphan_output --case case-224 --force)
+BO=$(node experiments_env/shared/new-disposable-bundle.mjs w1_orphan_output --case case-224 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output --path "$BO"
 node --input-type=module - "$BO" <<'JS'
 import { appendTrace, writeWave1Scaffold, writeWave1TopicArtifacts } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 const bundle = process.argv[2];
@@ -246,23 +261,109 @@ const gate = JSON.parse(fs.readFileSync(`${bundle}/case-224-gate-orphan.json`, '
 console.log(JSON.stringify({ status: Number(status), passed: gate.check?.passed, inspect: gate.inspect || [] }, null, 2));
 process.exit(Number(status) === 1 && gate.check?.passed === false && JSON.stringify(gate.inspect || []).includes('submitted work-unit coverage') ? 0 : 1);
 JS
+
+BS=$(node experiments_env/shared/new-disposable-bundle.mjs w1_shallow_depth_review --case case-224 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role shallow-depth-review --path "$BS"
+node --input-type=module - "$BS" <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs';
+import {
+  claimWorkUnitsViaCli,
+  enqueueWorkUnitTask,
+  queueItemForWorkUnit,
+  submitWorkUnitViaCli,
+  writeFixtureResultForWorkUnit,
+  writeWave1Scaffold,
+  writeWave1TopicArtifacts
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const bundle = process.argv[2];
+writeWave1Scaffold(bundle, { planBasename: 'w1_shallow_depth_review', topics: [{ id: 'ts', slug: 'topic-shallow', title: 'Topic Shallow' }] });
+enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ phase: 'wave1', queue_item_id: 'wave1-deepen-topic-shallow', topic_slug: 'topic-shallow', title: 'Shallow Wave1 fixture' }), { fileName: 'case224-shallow.json' });
+const claim = claimWorkUnitsViaCli(bundle, { phase: 'wave1' });
+const workId = claim.claimed_work_ids[0];
+writeWave1TopicArtifacts(bundle, { id: 'ts', topic_slug: 'topic-shallow', title: 'Topic Shallow', source_url: 'https://research-source.test/topic-shallow/reused-wave0' });
+const fixture = writeFixtureResultForWorkUnit(bundle, { work_id: workId, output_path: 'reference/01-topic-shallow.md', source_url: 'https://research-source.test/topic-shallow/reused-wave0', source_slug: 'topic-shallow', extra_output_files: [{ path: 'artifacts/wave1/topic-shallow/evidence-summary.md', role: 'evidence_summary' }, { path: 'artifacts/wave1/topic-shallow/question-list.md', role: 'question_list' }], cache_trails: ['_cache/wave1/primary/topic-shallow/reused-wave0'] });
+const submit = submitWorkUnitViaCli(bundle, { work_id: workId, resultPath: fixture.resultPath });
+const reviewPath = `${bundle}/artifacts/wave1/topic-shallow/depth-review.yaml`;
+const review = JSON.parse(readFileSync(reviewPath, 'utf8'));
+review.wave0_source_urls = ['https://research-source.test/topic-shallow/reused-wave0'];
+review.source_claims[0].is_new_vs_wave0 = false;
+review.new_source_urls = [];
+review.new_source_floor.observed = 0;
+review.decision = 'supplement_required';
+review.supplementary_queue_item_ids = ['wave1-deepen-topic-shallow-v2'];
+writeFileSync(reviewPath, `${JSON.stringify(review, null, 2)}\n`);
+writeFileSync(`${bundle}/case-224-shallow-submit.json`, `${JSON.stringify(submit, null, 2)}\n`);
+JS
+node --input-type=module - "$BS" <<'JS'
+import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+appendTrace(process.argv[2], { event: 'wave1_completion', source: 'case-224-shallow' });
+JS
+set +e
+node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$BS" --current-node phases/phase-wave1.md > "$BS/case-224-gate-shallow.json"
+SHALLOW_STATUS=$?
+set -e
+
+BC=$(node experiments_env/shared/new-disposable-bundle.mjs w1_cache_thin --case case-224 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role cache-thin --path "$BC"
+node --input-type=module - "$BC" <<'JS'
+import { writeFileSync } from 'node:fs';
+import {
+  claimWorkUnitsViaCli,
+  enqueueWorkUnitTask,
+  queueItemForWorkUnit,
+  submitWorkUnitViaCli,
+  writeFixtureResultForWorkUnit,
+  writeWave1Scaffold,
+  writeWave1TopicArtifacts
+} from './experiments_env/shared/work-unit-playbook-utils.mjs';
+
+const bundle = process.argv[2];
+writeWave1Scaffold(bundle, { planBasename: 'w1_cache_thin', topics: [{ id: 'tc', slug: 'topic-cache', title: 'Topic Cache' }] });
+enqueueWorkUnitTask(bundle, queueItemForWorkUnit({ phase: 'wave1', queue_item_id: 'wave1-deepen-topic-cache', topic_slug: 'topic-cache', title: 'Cache-thin Wave1 fixture' }), { fileName: 'case224-cache-thin.json' });
+const claim = claimWorkUnitsViaCli(bundle, { phase: 'wave1' });
+const workId = claim.claimed_work_ids[0];
+writeWave1TopicArtifacts(bundle, { id: 'tc', topic_slug: 'topic-cache', title: 'Topic Cache', source_url: 'https://research-source.test/topic-cache/article' });
+const fixture = writeFixtureResultForWorkUnit(bundle, { work_id: workId, output_path: 'reference/01-topic-cache.md', source_url: 'https://research-source.test/topic-cache/article', source_slug: 'topic-cache', extra_output_files: [{ path: 'artifacts/wave1/topic-cache/evidence-summary.md', role: 'evidence_summary' }, { path: 'artifacts/wave1/topic-cache/question-list.md', role: 'question_list' }], cache_trails: ['_cache/wave1/primary/topic-cache/article'] });
+const submit = submitWorkUnitViaCli(bundle, { work_id: workId, resultPath: fixture.resultPath });
+writeFileSync(`${bundle}/${fixture.cache_trails[0]}/page.md`, '# Page\n');
+writeFileSync(`${bundle}/case-224-cache-submit.json`, `${JSON.stringify(submit, null, 2)}\n`);
+JS
+node --input-type=module - "$BC" <<'JS'
+import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+appendTrace(process.argv[2], { event: 'wave1_completion', source: 'case-224-cache-thin' });
+JS
+set +e
+node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$BC" --current-node phases/phase-wave1.md > "$BC/case-224-gate-cache-thin.json"
+CACHE_STATUS=$?
+set -e
+printf '%s\n' "$SHALLOW_STATUS" > "$BS/case-224-gate-status.txt"
+printf '%s\n' "$CACHE_STATUS" > "$BC/case-224-gate-status.txt"
 ```
 
-Expected: invalid submit is non-terminal and appends no ledger row; orphan Wave1 artifacts fail gate provenance.
+Expected: invalid submit is non-terminal and appends no ledger row; orphan, shallow-depth-review, and cache-thin bundles each fail for their intended boundary.
 
 ## Step 6: [MAIN/SHELL] Record Trace Checks
 
 ```bash
-node --input-type=module - "$B" "$BO" <<'JS'
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
+BO=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output)
+BS=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role shallow-depth-review)
+BC=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role cache-thin)
+node --input-type=module - "$B" "$BO" "$BS" "$BC" <<'JS'
 import { readFileSync } from 'node:fs';
-import { readWorkUnitLedgerRows, recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { readWorkUnitLedgerRows, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
-const [bundle, orphanBundle] = process.argv.slice(2);
+const [bundle, orphanBundle, shallowBundle, cacheBundle] = process.argv.slice(2);
 const claim = JSON.parse(readFileSync(`${bundle}/case-224-claim.json`, 'utf8'));
 const submits = JSON.parse(readFileSync(`${bundle}/case-224-submit.json`, 'utf8'));
 const gate = JSON.parse(readFileSync(`${bundle}/case-224-gate-happy.json`, 'utf8'));
 const invalid = JSON.parse(readFileSync(`${bundle}/case-224-invalid-submit.json`, 'utf8'));
 const orphanGate = JSON.parse(readFileSync(`${orphanBundle}/case-224-gate-orphan.json`, 'utf8'));
+const shallowGate = JSON.parse(readFileSync(`${shallowBundle}/case-224-gate-shallow.json`, 'utf8'));
+const cacheGate = JSON.parse(readFileSync(`${cacheBundle}/case-224-gate-cache-thin.json`, 'utf8'));
+const shallowStatus = Number(readFileSync(`${shallowBundle}/case-224-gate-status.txt`, 'utf8'));
+const cacheStatus = Number(readFileSync(`${cacheBundle}/case-224-gate-status.txt`, 'utf8'));
 const ledgerRows = readWorkUnitLedgerRows(bundle);
 
 recordPlaybookCheck(bundle, { gate: 'wave1-multi-claim', passed: claim.claimed_count === 2, detail: JSON.stringify(claim.claimed_work_ids) });
@@ -271,28 +372,22 @@ recordPlaybookCheck(bundle, { gate: 'wave1-ledger-rows', passed: ledgerRows.leng
 recordPlaybookCheck(bundle, { gate: 'wave1-gate-pass', passed: gate.check?.passed === true, detail: JSON.stringify(gate.inspect || []) });
 recordPlaybookCheck(bundle, { gate: 'wave1-invalid-submit-rejects', passed: invalid.status === 1 && invalid.submit?.last_submit_rejection?.reason_code === 'missing_receipt' && invalid.rejectedRows === 0, detail: JSON.stringify(invalid.submit?.last_submit_rejection || {}) });
 recordPlaybookCheck(bundle, { gate: 'wave1-orphan-output-rejects', passed: orphanGate.check?.passed === false && JSON.stringify(orphanGate.inspect || []).includes('submitted work-unit coverage'), detail: JSON.stringify(orphanGate.inspect || []) });
-
-const verdict = writeTraceVerdict(bundle, 'case-224');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+recordPlaybookCheck(bundle, { gate: 'wave1-shallow-depth-review-rejects', passed: shallowStatus === 1 && shallowGate.check?.passed === false && /source_novelty_floor|supplement_required/i.test(JSON.stringify(shallowGate.inspect || [])), detail: JSON.stringify(shallowGate.inspect || []) });
+recordPlaybookCheck(bundle, { gate: 'wave1-cache-thin-rejects', passed: cacheStatus === 1 && cacheGate.check?.passed === false && /source_claim_cache_mapping|placeholder-only|cache_coverage/i.test(JSON.stringify(cacheGate.inspect || [])), detail: JSON.stringify(cacheGate.inspect || []) });
+console.log('Recorded native facts; finalizer owns completion.');
 JS
 ```
 
-Expected: `case-224-verdict.json` says `PASS`.
-
-## Optional Automation Smoke
+## Step 7: [MAIN/SHELL] Native Completion
 
 ```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-224 --target-dir tests/.test-bundles --cleanup-pass
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role happy-verdict)
+BO=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output)
+BS=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role shallow-depth-review)
+BC=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role cache-thin)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} \
+  --bundle "happy-verdict=$B" --bundle "orphan-output=$BO" \
+  --bundle "shallow-depth-review=$BS" --bundle "cache-thin=$BC"
 ```
 
-The optional runner must only mirror the visible checkpoint sequence above; it is not the normative playbook surface.
-
-## Cleanup
-
-PASS only:
-
-```bash
-node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-224-verdict.json"
-rm -rf "$B" "$BO"
-```
+Stop after native completion. Only `happy-verdict` is a Heavy health target; the three negative bundles remain declared non-health auxiliaries. The Autorun Supervisor owns health, audit, preservation, and optional clean-PASS cleanup.

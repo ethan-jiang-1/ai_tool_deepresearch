@@ -1,43 +1,97 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: autonomous-research-hardening
 case: case-605-heavy-bundle-containment-real-subagent
-weight: heavy
-case_goal: "BUG-037: real Sub-agent work-unit execution writes only under active bundle_dir and repo-root leak inspection stays clean."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-605_arh_bundle_containment
-trace: dpt_disp_case-605_arh_bundle_containment/rb_trace.jsonl
-verdict: trace-jsonl
+case_goal: "BUG-037: 独立 real Sub-agent 的 work-unit 写入只落在 active bundle_dir，submit 后 inspect-bundle 与 repo-root active-leak 检查保持 clean。"
+verdict_mode: all
+required_checks: [real-subagent-submit-succeeded, inspect-bundle-no-active-leak, repo-root-no-runtime-leak]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: [subject_task, subject_result, subject_receipt, subject_output]
+proof_subject: agent_behavior
+subject_execution: real_subagent
+fixture: setup_only
+runtime: real_disposable_bundle
+external_calls: real
+verdict_judge: deterministic
 req: BUI-002
-agent_mode: native-subagent-required
-agent_dependency: real Sub-agent/WebSearch/WebFetch environment; NOT RUN when native Sub-agent execution is unavailable
+not_run_if: "The native dpt-source-intake Sub-agent or real search/fetch capability is unavailable."
 ---
+
+<!-- @impl EXA-003, EXA-005, EXA-006, EXA-007, EXA-008, PLR-003, VER-006 -->
+
+# Case 605 - Real Sub-agent Bundle Containment
 
 ## Execution Contract
 
-Heavy actor-boundary containment canary. A real Sub-agent must execute the claimed work unit. The proof target is producer containment, not just Engine rejection. Inline JS may set up the bundle and record verdict checks; it may not write delegated outputs in place of the Sub-agent.
+PASS requires an independent native `dpt-source-intake` Subject Sub-agent. It must write every assigned result, receipt, output, and cache byte under the exact active bundle root. The Playbook Agent may prepare, invoke, submit, and inspect, but it must not write Subject evidence or move leaked bytes into place after the fact. Deterministic leak-classifier tests cannot replace this producer execution.
 
-## Required Actor Assertions
+## Step 1 - Prepare the claimed work unit
 
-- All Sub-agent-created runtime files are under the active `dpt_disp_*` bundle root.
-- Repo root has no active-bundle-associated `_work_units/`, `artifacts/`, `_cache/`, `reference/`, or `final/` leak.
-- `inspect-bundle` exits 0 after submit and reports no `active_bundle_blocker`.
-- Any cleanup debris classification is recorded separately and does not hide active leaks.
+```bash
+STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
+node experiments_env/shared/run-fixture-backed-case.mjs \
+  --case case-605 --prepare-only \
+  --target-dir {{CASE_RUN_ROOT_SH}} \
+  --context {{RUN_CONTEXT_SH}} --bundle-role verdict > "$STATE/case605-prepared.json"
+```
 
-## Steps
+## Step 2 - Run the native Subject Sub-agent
 
-1. Create a disposable bundle and claim a write-producing work unit.
-2. Hand `task.md`, `_beacon.json`, and spawn prompt to a real native Sub-agent.
-3. Sub-agent writes declared outputs/cache/result/receipt under `bundle_dir`.
-   - `result.cache_trails` must declare bundle-relative cache leaf directory paths only, not `websearch.json`, `page.md`, or `meta.json` file paths.
-4. Submit through `operate-work-unit submit`.
-5. Run `inspect-bundle <bundle>` from repo root.
-6. Record trace checks:
-   - `real-subagent-submit-succeeded`
-   - `inspect-bundle-no-active-leak`
-   - `repo-root-no-runtime-leak`
-7. Verdict from `rb_trace.jsonl`.
+Read the prepared JSON and invoke exactly one native Task/Sub-agent with role `dpt-source-intake` using its exact `spawn_prompt` and absolute task/beacon/schema paths. Require real search/fetch and Subject-owned writes to the assigned bundle-contained result/receipt/output/cache paths before return. Do not convert parent or chat-only output into durable Subject files.
 
-Do not treat deterministic repo-root leak unit tests as closure for this heavy actor case; they only prove the classifier.
+If the native actor or search/fetch capability is unavailable, record it and skip Steps 3 and 4:
+
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+printf '%s\n' 'native dpt-source-intake Sub-agent or real search/fetch capability unavailable' > "$B/case-605-subject-unavailable.txt"
+```
+
+## Step 3 - Submit and inspect without repairing containment
+
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
+RESULT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.prepared.result_path)' "$STATE/case605-prepared.json")
+node experiments_env/shared/run-fixture-backed-case.mjs --case case-605 --bundle "$B" --real-result "$RESULT" > "$STATE/case605-submitted.json"
+```
+
+The helper runs production submit, Wave0 gate, and `inspect-bundle` from repo command cwd. It records containment facts but does not relocate or delete any leak.
+
+## Step 4 - Record the exact containment checks
+
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { appendFileSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+const [bundle] = process.argv.slice(2);
+const verdict = JSON.parse(readFileSync(join(bundle, 'case-605-verdict.json')));
+const required = ['real-subagent-submit-succeeded', 'inspect-bundle-no-active-leak', 'repo-root-no-runtime-leak'];
+const byLabel = new Map(verdict.checks.map((row) => [row.label, row]));
+for (const gate of required) appendFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({ ts: new Date().toISOString(), event: 'check', source: 'playbook', gate, passed: byLabel.get(gate)?.passed === true, expected: true })}\n`);
+if (required.some((gate) => byLabel.get(gate)?.passed !== true)) process.exit(1);
+JS
+```
+
+## Step 5 - Native completion with exact Subject bytes
+
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
+EXTRA_ARGS=()
+if [ -f "$B/case-605-subject-unavailable.txt" ]; then
+  EXTRA_ARGS+=(--not-run-reason "native dpt-source-intake Sub-agent or real search/fetch capability unavailable")
+else
+  TASK=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.evidence.task)' "$STATE/case605-submitted.json")
+  RESULT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.evidence.result)' "$STATE/case605-submitted.json")
+  RECEIPT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.evidence.receipt)' "$STATE/case605-submitted.json")
+  OUTPUT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.evidence.output)' "$STATE/case605-submitted.json")
+  EXTRA_ARGS+=(--evidence "subject_task=$TASK" --evidence "subject_result=$RESULT" --evidence "subject_receipt=$RECEIPT" --evidence "subject_output=$OUTPUT")
+fi
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
+```
+
+Stop after native completion. The Autorun Supervisor owns Heavy health, durable evidence export, audit, preservation, and optional clean-PASS cleanup.

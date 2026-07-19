@@ -1,18 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: file-observability
 case: case-310-light-orphan-reference
-weight: light
 case_goal: "验证 orphan reference 检测: 文件在 reference/ 下但未在 ledger 声明 → auditFileObservability 分类为 orphan_authority_blocking，check-reentry 报告 blocker。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-310_orphan
-trace: dpt_disp_case-310_orphan/rb_trace.jsonl
-verdict: trace-jsonl
-production_distance: >
-  本实验 fixture 写入 reference 内容，但 declared reference 必须经过真实 queue enqueue、operate-work-unit claim、fixture result、operate-work-unit submit 生成 submitted work-unit ledger。文件由脚本生成，不涉及 Agent 搜索。实验证明 Engine 的 file observability 能正确区分 submitted work-unit declared reference 和 orphan filesystem-only reference 并给出正确的 severity。
+verdict_mode: all
+required_checks: [declared-authoritative, orphan-blocking, orphan-severity-blocker, reentry-ledger-blocker]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -35,7 +41,8 @@ production_distance: >
 ## Step 1: 创建带 orphan 的 bundle
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs orphan --case case-310 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs orphan --case case-310 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 cat > "$B/rb_status.json" << 'JSON'
 {"bundle":"orphan","current_mode":"execution","state":"in_progress","current_gate":"wave1_complete","next_gate":"wave2_complete"}
@@ -221,10 +228,9 @@ echo "B=$B"
 ## Step 2: 验证 orphan 检测
 
 ```bash
-B= # populated from Step 1
-
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # 直接调用 auditFileObservability
-cat > "$B/_run_fo.mjs" << 'JS'
+node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -252,6 +258,7 @@ const checks = [];
 
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'declared-authoritative',
   passed: declared?.classification === 'declared_authoritative',
   expected: true,
@@ -260,6 +267,7 @@ checks.push({
 
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'orphan-blocking',
   passed: orphan?.classification === 'orphan_authority_blocking',
   expected: true,
@@ -268,6 +276,7 @@ checks.push({
 
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'orphan-severity-blocker',
   passed: orphan?.severity === 'blocker',
   expected: true,
@@ -292,6 +301,7 @@ const hasOrphanBlocker = (reentryResult.blockers || []).some(b =>
 );
 checks.push({
   ts: new Date().toISOString(), event: 'check',
+  source: 'playbook',
   gate: 'reentry-ledger-blocker',
   passed: hasOrphanBlocker, expected: true,
   detail: `Reentry ledger coverage blocker: ${hasOrphanBlocker}`
@@ -299,51 +309,17 @@ checks.push({
 
 for (const c of checks.slice(-1)) writeFileSync(tracePath, JSON.stringify(c) + '\n', { flag: 'a' });
 JS
-node "$B/_run_fo.mjs" "$B"
 ```
 
 → 预期：declared → `declared_authoritative`；orphan → `orphan_authority_blocking` + severity=blocker。
 
 ---
 
-## Step 3: 从 trace 裁决
+## Native Completion
 
 ```bash
-B= # populated from Step 1
-
-cat > "$B/_final_verdict.mjs" << 'JS'
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-const __dirname = process.argv[2];
-const tracePath = join(__dirname, 'rb_trace.jsonl');
-const raw = readFileSync(tracePath, 'utf-8').trim();
-if (!raw) { console.log('FAIL: No trace events'); process.exit(1); }
-const lines = raw.split('\n').filter(l => l.trim());
-const events = lines.map(l => JSON.parse(l));
-const checks = events.filter(e => e.event === 'check');
-const failed = checks.filter(c => !c.passed);
-const passed = checks.filter(c => c.passed);
-
-console.log('══════ Verdict ══════');
-for (const c of checks) console.log(`  ${c.passed ? 'PASS' : 'FAIL'}  ${c.gate}: ${c.detail}`);
-console.log('══════════════════════');
-console.log(`PASS: ${passed.length}  FAIL: ${failed.length}`);
-
-if (failed.length > 0) { console.log('\nFAIL'); process.exit(1); }
-console.log('\nPASS — orphan reference detection correctly distinguishes submitted work-unit declared files from undeclared files.');
-JS
-node "$B/_final_verdict.mjs" "$B"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-→ 预期：PASS。
-
----
-
-## Cleanup
-
-PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-B= # populated from Step 1
-rm -rf "$B" && echo "Cleaned up $B"
-```
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

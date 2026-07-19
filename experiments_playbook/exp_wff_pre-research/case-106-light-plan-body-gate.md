@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-pre-research
 case: case-106-light-plan-body-gate
-weight: light
 case_goal: "Prove that setup-ready gate validates rb_plan.md body: fails on required-fill markers, passes after markers replaced, intentionally-allowed markers never block, and Progress checkbox flips on pass."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-106_plan_gate_*
-trace: dpt_disp_case-106_plan_gate_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [artifact-content, setup-ready]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -27,7 +35,7 @@ verdict: trace-jsonl
 3. 替换 required-fill markers → gate PASS + Progress checkbox 翻转
 4. 验证 intentionally-allowed markers 不会导致 FAIL
 5. 从 `rb_trace.jsonl` 裁决
-6. Cleanup
+6. 写出 native completion 后停止；health、audit、preservation 和 optional clean-PASS cleanup 由 Autorun Supervisor 负责
 
 ---
 
@@ -47,7 +55,8 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs plan_gate --case case-106 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs plan_gate --case case-106 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "Bundle: $B"
 
 # Validate
@@ -83,8 +92,8 @@ grep -c "(由 Engine" $B/rb_plan.md && echo "OK: Engine marker found" || echo "M
 setup-ready gate 除了 body 检查外还需：hitl1 recorded、status.current_gate=`setup_ready`、status.next_gate=`seed_topics_ready`、basename 一致性。先修好这些前置，故意留下 placeholder。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_case-106_plan_gate_* | tail -1)
 echo "Bundle: $B"
 
 # Fix HITL1 status and add a synthetic research-access observation.
@@ -137,8 +146,8 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 保留 intentionally-allowed markers（`(待 HITL1 填充 — …)` 和 `(由 Engine — …)`），只替换 required-fill markers。**保留 In/Out/待定 结构和 Constraints 5 类结构**——这是 spec 要求的 section 形态，不能简化为一整段 paragraph。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_case-106_plan_gate_* | tail -1)
 echo "Bundle: $B"
 
 # Replace only required-fill markers — keep intentionally-allowed ones intact
@@ -243,8 +252,8 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 Gate pass 后 `## Progress` 中 `setup-ready` 行应从 `- [ ]` 翻转为 `- [x]` 且带 ISO8601 时间戳。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_case-106_plan_gate_* | tail -1)
 
 echo "=== Progress section after gate pass ==="
 grep -A1 "^## Progress" $B/rb_plan.md
@@ -274,10 +283,8 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 预期 3 条 `check` event：1 fail（required-fill marker 残留 → 正确拒绝）+ 2 pass（替换后 gate pass，In/Out/待定 + Constraints 5 类结构保留且 intentionally-allowed markers 不误拦 + Progress 翻转）。
 
 ```bash
-REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_case-106_plan_gate_* | tail -1)
-
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 6: 结果解读
@@ -291,23 +298,4 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 > 且 Progress 写行为幂等可靠。
 
 
-## Step HH: Post-Execution Health
-
-Standard profile — gate diagnostics, timeline consistency.
-
-```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile light
-```
-
-> 健康检查不改变 verdict。health status 由 runner report 记录。
-
-## Step 7: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-REPO_ROOT=$(pwd)
-B=$(ls -d dpt_disp_case-106_plan_gate_* | tail -1)
-
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
-```
+Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

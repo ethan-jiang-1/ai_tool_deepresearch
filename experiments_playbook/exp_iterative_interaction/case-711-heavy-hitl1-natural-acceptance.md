@@ -1,24 +1,32 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: iterative-interaction
 case: case-711-heavy-hitl1-natural-acceptance
-weight: heavy
 case_goal: "A real subject Agent generates the production HITL1 recommendation, consumes exact natural-language acceptance, owns the existing writes and bounded probe, and reaches the honest Gate branch."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-711_iterative-interaction-711-*_*
-trace: dpt_disp_case-711_iterative-interaction-711-*_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [case-711-transcript-contract, case-711-no-second-confirmation, case-711-subject-owned-existing-writes, case-711-real-probe-and-gate-branch]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: [subject_prompt, subject_transcript, subject_result]
+proof_subject: agent_behavior
+subject_execution: real_agent
+fixture: setup_only
+runtime: real_disposable_bundle
+external_calls: real
+verdict_judge: deterministic
 req: VER-001, VER-003, HIU-001, HIU-002, PRP-002
-agent_dependency: "Requires one independent real subject Agent conversation with real search/fetch tools. Missing independent execution is NOT RUN; fixture or runner substitution is invalid."
+not_run_if: "The independent real Subject Agent, its authenticated Agent runtime, or required real search/fetch tools are unavailable."
 ---
+
+<!-- @impl EXA-003, EXA-005, EXA-006, EXA-007, EXA-008, PLR-003 -->
 
 ## Execution Contract
 
 The setup helper ends after the real instantiation Gate/load at legal HITL1. `research_access.status` is `unprobed`; no recommendation, accepted HITL1 decision, profile/topic selection, `hitl1-recorded` attempt, or `hitl1-recorded` pass exists.
 
-The runner may create the setup, deliver the fixed utterance, preserve the Agent event stream byte-for-byte, hash it, and observe direct facts. Only the independent subject may generate the recommendation, write existing HITL1 owners, run the bounded probe, run the HITL1 Gate, and consume a passing handoff.
+The Playbook Agent may create the setup, deliver the fixed utterance, preserve the Subject Agent event stream byte-for-byte, hash it, and observe direct facts. Only the independent Subject Agent may generate the recommendation, write existing HITL1 owners, run the bounded probe, run the HITL1 Gate, and consume a passing handoff. The adapter also retains the exact injected Subject prompt and actual Claude result events inside the bundle for durable evidence export.
 
 ## Reality Distance Ledger
 
@@ -36,11 +44,11 @@ The runner may create the setup, deliver the fixed utterance, preserve the Agent
 
 # case-711-heavy-hitl1-natural-acceptance
 
-## Step 1: [RUNNER] Prepare Legal HITL1 Boundary
+## Step 1: [PLAYBOOK AGENT] Prepare Legal HITL1 Boundary
 
 ```bash
-B=$(node experiments_env/shared/prepare-iterative-interaction-case.mjs 711)
-printf '%s\n' "$B" > /tmp/case-711-bundle-path
+B=$(node experiments_env/shared/prepare-iterative-interaction-case.mjs 711 --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -74,47 +82,56 @@ The first user turn is:
 请根据当前研究请求给出一个简洁的研究建议，只保留验证本次交互所需的最小范围。
 ```
 
-Run the shared subject adapter. It uses the fixed Codex-only settings file, writes the runner-owned user marker, preserves the raw Claude stream byte-for-byte, and waits for the first successful `result` before sending the acceptance turn:
+Run the shared subject adapter. It uses the fixed Codex-only settings file, writes the Playbook-Agent-owned user marker, preserves the raw Claude stream byte-for-byte, retains the exact injected Subject prompt and actual result events, and waits for the first successful `result` before sending the acceptance turn.
+
+If the adapter cannot start or complete the independent authenticated Subject Agent session, this block records the unavailable state. The Playbook Agent skips the observer work and reaches the one finalizer boundary.
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+set +e
 node experiments_env/shared/run-iterative-interaction-subject.mjs 711 --bundle "$B"
+SUBJECT_STATUS=$?
+set -e
+if [ "$SUBJECT_STATUS" -ne 0 ]; then
+  printf '%s\n' 'independent Subject Agent or required real tools unavailable' > "$B/case-711-subject-unavailable.txt"
+fi
 ```
 
 The adapter supplies the current phase's read-only production required closure plus its declared interaction brief; it does not add expected control answers. It uses a 180-second hard timeout and stops after the current phase's immediate handoff rather than executing the newly loaded phase. The first subject turn must stop after its recommendation.
 
 ## Step 3: [SUBJECT AGENT] Deliver Exact Acceptance In The Same Session
 
-Append this exact runner-owned user event and resume the same subject session:
+The adapter appends this exact Playbook-Agent-owned user event and resumes the same Subject session:
 
 ```json
 {"role":"user","event":"message","content":"按这个开始"}
 ```
 
-The adapter appends the exact runner-owned event and resumes the same live stream-json session only after the first turn completes. The resumed Agent receives only the exact user text `按这个开始`. Do not add expected enums, commands, next actions, mutation rules, or verdict hints to the subject prompt. Preserve the resumed raw Agent event stream byte-for-byte in the same transcript.
+The adapter appends the exact event and resumes the same live stream-json session only after the first turn completes. The resumed Agent receives only the exact user text `按这个开始`. Do not add expected enums, commands, next actions, mutation rules, or verdict hints to the subject prompt. Preserve the resumed raw Agent event stream byte-for-byte in the same transcript.
 
-If the independent subject session or its real tool events are unavailable, report `NOT RUN`, preserve `$B`, and stop. Do not create profile/topic/probe/Gate output from the runner.
+If the independent Subject session or its real tool events were unavailable, Step 2 already produced native NOT_RUN and the case has stopped. Do not create profile/topic/probe/Gate output from the Playbook Agent.
 
 ## Step 4: [OBSERVER] Hash And Derive Native Verdict
 
 Immediately after the complete subject stream is saved:
 
 ```bash
-node experiments_env/shared/observe-iterative-interaction-case.mjs 711 hash --bundle "$B" --transcript "$B/case-711-transcript.jsonl"
-node experiments_env/shared/observe-iterative-interaction-case.mjs 711 verdict --bundle "$B" --transcript "$B/case-711-transcript.jsonl"
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
-node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile light
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+EXTRA_ARGS=()
+if [ -f "$B/case-711-subject-unavailable.txt" ]; then
+  EXTRA_ARGS+=(--not-run-reason "independent Subject Agent or required real tools unavailable")
+else
+  node experiments_env/shared/observe-iterative-interaction-case.mjs 711 hash --bundle "$B" --transcript "$B/case-711-transcript.jsonl"
+  node experiments_env/shared/observe-iterative-interaction-case.mjs 711 verdict --bundle "$B" --transcript "$B/case-711-transcript.jsonl"
+  EXTRA_ARGS+=(--evidence "subject_prompt=$B/case-711-subject-prompt.json" --evidence "subject_transcript=$B/case-711-transcript.jsonl" --evidence "subject_result=$B/case-711-subject-result.json")
+fi
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
 PASS requires the recommendation before the exact user event, no second confirmation afterward, subject-owned existing-owner writes, and one honest real probe/Gate branch. Available must include real search, successful fetch of the first usable URL, Gate pass and Setup entry. Honest unavailable must include the direct unavailable observation, Gate failure and no Setup entry.
 
-The light health profile is intentional because this case stops at HITL1/Setup and does not claim Wave work-unit, ledger, cache-trail, or submitted-reference coverage. `weight: heavy` continues to describe the real external subject/probe cost.
+The light health profile is intentional because this case stops at HITL1/Setup and does not claim Wave work-unit, ledger, cache-trail, or submitted-reference coverage. The filename's `heavy` cost continues to describe the real external Subject/probe expense without changing health scope.
 
-## Step 5: [RUNNER] Cleanup
+## Step 5: [PLAYBOOK AGENT] Stop
 
-On clean PASS only:
-
-```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-711'}))"
-```
-
-Preserve FAIL or NOT RUN evidence.
+Stop after native completion. The Autorun Supervisor validates the completion, runs Light health, exports the three exact Subject evidence roles before any requested clean-PASS deletion, and preserves FAIL or NOT_RUN roots.

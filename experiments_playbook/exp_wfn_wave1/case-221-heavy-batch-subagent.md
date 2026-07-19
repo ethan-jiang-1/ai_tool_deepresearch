@@ -1,17 +1,26 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-wave1
 case: case-221-heavy-batch-subagent
-weight: heavy
 case_goal: "Verify real Wave1 batch topic-deepening through work-unit claim, real dpt-evidence-extractor actors, submit-by-work-id, ledger coverage, backfill, and Wave1 gate pass."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-221_w1_real_batch_work_unit
-trace: dpt_disp_case-221_w1_real_batch_work_unit/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [real-wave1-batch-submit, wave1-gate, work-unit-inspect]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: [subject_task, subject_result, subject_receipt, subject_output]
+proof_subject: agent_behavior
+subject_execution: real_subagent
+fixture: setup_only
+runtime: real_disposable_bundle
+external_calls: real
+verdict_judge: deterministic
 req: RWE-001, RWE-003, WAI-006
+not_run_if: "Either native dpt-evidence-extractor Sub-agent or required real search/fetch capability is unavailable."
 ---
+
+<!-- @impl EXA-003, EXA-005, EXA-006, EXA-007, EXA-008, PLR-003, VER-006 -->
 
 ## Execution Contract
 
@@ -45,7 +54,8 @@ Heavy real-Agent canary. This case cannot PASS from fixture data. The Main Agent
 ## Step 1: [MAIN/SHELL] Create Runtime Context
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs w1_real_batch_work_unit --case case-221 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w1_real_batch_work_unit --case case-221 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave1Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -64,6 +74,7 @@ echo "BUNDLE=$B"
 ## Step 2: [MAIN/SHELL] Enqueue And Claim Batch
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { enqueueWorkUnitTask, queueItemForWorkUnit } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -96,13 +107,7 @@ Expected: two work-unit prompts are generated under `_work_units/wave1/{work_id}
 
 For each `work_id` in `case-221-claim.json`, hand the generated task prompt to a real `dpt-evidence-extractor` actor. The actor must read its beacon, preserve `work_id`, `queue_item_id`, `kind`, and `receipt_nonce`, perform bounded topic deepening, and produce the declared result JSON plus runtime receipt.
 
-If this surface is unavailable, stop and record `NOT_RUN`:
-
-```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-221 --target-dir tests/.test-bundles
-```
-
-Expected without real results: exit `2`, verdict `NOT_RUN`.
+After both actors return, write `case-221-subagent-evidence.json` as a path-only index with an exact absolute `result_dir` plus representative first-actor `task`, `result`, `receipt`, and Subject-written declared `output` paths. If either actor is unavailable or omits assigned files, write `case-221-subject-unavailable.txt` and skip directly to native completion. Missing actors are `NOT_RUN`; fixture or parent output cannot substitute.
 
 ## Step 4: [MAIN/SHELL] Submit Real Results
 
@@ -115,7 +120,8 @@ After real actors return, place their result JSON files in a directory named by 
 Then submit them:
 
 ```bash
-REAL_RESULT_DIR=/path/to/real-wave1-results
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+REAL_RESULT_DIR=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.result_dir)' "$B/case-221-subagent-evidence.json")
 node --input-type=module - "$B" "$REAL_RESULT_DIR" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -137,6 +143,7 @@ JS
 ## Step 5: [MAIN/SHELL] Gate And Trace Verdict
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 appendTrace(process.argv[2], { event: 'wave1_completion', source: 'case-221-real-agent' });
@@ -144,26 +151,44 @@ JS
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs inspect "$B" > "$B/case-221-inspect.json"
 node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-221-gate.json"
 node --input-type=module - "$B" <<'JS'
-import { readFileSync } from 'node:fs';
-import { recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const bundle = process.argv[2];
 const submit = JSON.parse(readFileSync(`${bundle}/case-221-submit.json`, 'utf8'));
 const inspect = JSON.parse(readFileSync(`${bundle}/case-221-inspect.json`, 'utf8'));
 const gate = JSON.parse(readFileSync(`${bundle}/case-221-gate.json`, 'utf8'));
-recordPlaybookCheck(bundle, { gate: 'real-wave1-batch-submit', passed: submit.every((entry) => entry.submit.ok === true), detail: JSON.stringify(submit.map((entry) => entry.work_id)) });
+const evidence = JSON.parse(readFileSync(`${bundle}/case-221-subagent-evidence.json`, 'utf8'));
+const result = JSON.parse(readFileSync(evidence.result, 'utf8'));
+const receipts = readFileSync(evidence.receipt, 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse);
+const claimed = new Set(submit.map((entry) => entry.work_id));
+const subjectBound = existsSync(evidence.task) && existsSync(evidence.output)
+  && claimed.has(result.work_id)
+  && receipts.some((row) => row.work_id === result.work_id)
+  && (result.output_files || []).some((row) => resolve(bundle, row.path) === resolve(evidence.output));
+recordPlaybookCheck(bundle, { gate: 'real-wave1-batch-submit', passed: submit.every((entry) => entry.submit.ok === true) && subjectBound, detail: JSON.stringify(submit.map((entry) => entry.work_id)) });
 recordPlaybookCheck(bundle, { gate: 'work-unit-inspect', passed: inspect.passed === true, detail: JSON.stringify(inspect.inspect || []) });
 recordPlaybookCheck(bundle, { gate: 'wave1-gate', passed: gate.check?.passed === true, detail: JSON.stringify(gate.inspect || []) });
-const verdict = writeTraceVerdict(bundle, 'case-221');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log('Recorded native checks; Supervisor finalizer is authoritative.');
 JS
 ```
 
-## Optional Automation Smoke
+## Step 6: [MAIN/SHELL] Native completion
 
 ```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-221 --target-dir tests/.test-bundles
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+EXTRA_ARGS=()
+if [ -f "$B/case-221-subject-unavailable.txt" ]; then
+  EXTRA_ARGS+=(--not-run-reason "native dpt-evidence-extractor Sub-agent or required real search/fetch capability unavailable")
+else
+  TASK=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.task)' "$B/case-221-subagent-evidence.json")
+  RESULT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.result)' "$B/case-221-subagent-evidence.json")
+  RECEIPT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.receipt)' "$B/case-221-subagent-evidence.json")
+  OUTPUT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.output)' "$B/case-221-subagent-evidence.json")
+  EXTRA_ARGS+=(--evidence "subject_task=$TASK" --evidence "subject_result=$RESULT" --evidence "subject_receipt=$RECEIPT" --evidence "subject_output=$OUTPUT")
+fi
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
-Without `--real-result`, expected exit is `2` with verdict `NOT_RUN`.
+Stop after native completion. The Autorun Supervisor owns Heavy health, durable Subject-evidence export, audit, preservation, and optional clean-PASS cleanup.

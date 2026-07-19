@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: workflow-chain
 case: case-32-standard-dep-cache
-weight: light
 case_goal: "验证 MD controller mode 驱动 dependency-first 加载与跨 load 调用的 cache 行为：Markdown control surface 加载 chain.entry → Engine 先加载依赖；同一 runtime 内依次加载 repeat-1 和 repeat-2 → Engine 首次 file_read shared-lib，第二次 cache_hit + 重新 load。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-32_wc_medium
-trace: dpt_disp_case-32_wc_medium/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [chain:order_dep_first, chain:plan_dep_first, chain:status, s2:repeat1_loaded, s2:shared_lib_read, s3:cache_hit, s3:loaded_twice, s3:no_extra_read, s3:repeat2_loaded]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -27,12 +35,12 @@ Markdown control surface 承载步骤指令。每一步由 Phase Agent 读取 MD
 2. MD 加载 chain.entry.md → 验证 dependency-first 顺序 [MAIN/SHELL]
 3. Session save: 加载 repeat-1, 保存 _session.json [MAIN/SHELL]
 4. Session resume: 加载 repeat-2, 验证 cache_hit (无新 file_read) [MAIN/SHELL]
-5. 从 trace 裁决 + Cleanup
-
+5. Native completion, then Supervisor-owned health and cleanup policy
 ## Step 1: 创建 bundle
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wc_medium --case case-32 --nodes=experiments_env/prototype-workflow-chain/nodes-workflow-chain --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wc_medium --case case-32 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
 node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 ```
@@ -48,9 +56,10 @@ MD 指令：「加载 chain.entry.md。」
 chain.entry.md 依赖 chain-policy.dep.md 和 chain-context.dep.md。Engine 必须先解析并加载依赖，再加载 entry。
 
 ```bash
-cat > $B/step_chain.mjs << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createWorkflowRuntime, createState, assessNode } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
@@ -62,26 +71,24 @@ const result = assessNode('chain.entry.md', createState(), runtime, trace);
 
 const expectedPlan = ['chain-policy.dep.md', 'chain-context.dep.md', 'chain.entry.md'];
 
-trace.traceEntry('check', { source: SRC, step: 'chain:status',
+trace.traceEntry('check', { source: 'playbook', gate: 'chain:status', expected: true,
   passed: result.status === 'loaded',
   detail: `status = ${result.status}` });
 
-trace.traceEntry('check', { source: SRC, step: 'chain:plan_dep_first',
+trace.traceEntry('check', { source: 'playbook', gate: 'chain:plan_dep_first', expected: true,
   passed: JSON.stringify(result.plan) === JSON.stringify(expectedPlan),
   detail: `plan = ${JSON.stringify(result.plan)}` });
 
-trace.traceEntry('check', { source: SRC, step: 'chain:order_dep_first',
+trace.traceEntry('check', { source: 'playbook', gate: 'chain:order_dep_first', expected: true,
   passed: JSON.stringify(result.state.executionOrder) === JSON.stringify(expectedPlan),
   detail: `order = ${JSON.stringify(result.state.executionOrder)}` });
 JS
 
-node $B/step_chain.mjs $B $B/exp/nodes
-
 # MD 读 trace 裁决
 node -e "
 const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
-const c=e.filter(x=>x.event==='check'&&x.step.startsWith('chain:'));
-c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
+const c=e.filter(x=>x.event==='check'&&x.gate.startsWith('chain:'));
+c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.gate+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
 if(!ok)process.exit(1);
 console.log('MD裁决: Step 2.1 — dependency-first 加载 ✅');
@@ -101,9 +108,10 @@ repeat-1 依赖 shared-lib.dep.md。Engine 首次碰到 shared-lib → file_read
 **关键**：Phase Agent 通过 Markdown control surface 把 session 状态（contentCache keys、state）序列化成 JSON 写入 `_session.json`——这是 MD controller mode 的核心能力：跨 step 持久化 runtime 状态。
 
 ```bash
-cat > $B/s2_session_start.mjs << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createWorkflowRuntime, createState, assessNode } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
 import { writeFileSync } from 'node:fs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
@@ -115,12 +123,12 @@ const runtime = createWorkflowRuntime('test', NODES_DIR);
 const r1 = assessNode('repeat-1.entry.md', createState(), runtime, trace);
 
 // MD 检查 repeat-1 结果
-trace.traceEntry('check', { source: SRC, step: 's2:repeat1_loaded',
+trace.traceEntry('check', { source: 'playbook', gate: 's2:repeat1_loaded', expected: true,
   passed: r1.status === 'loaded',
   detail: `status = ${r1.status}` });
 
 const reads1 = runtime.receipts.filter(r => r.type === 'file_read' && r.fileRef === 'shared-lib.dep.md');
-trace.traceEntry('check', { source: SRC, step: 's2:shared_lib_read',
+trace.traceEntry('check', { source: 'playbook', gate: 's2:shared_lib_read', expected: true,
   passed: reads1.length === 1,
   detail: `shared-lib file_read = ${reads1.length} (首次读到)` });
 
@@ -140,13 +148,11 @@ console.log('MD: session saved → _session.json');
 console.log('MD: cache keys =', JSON.stringify([...runtime.contentCache.keys()]));
 JS
 
-node $B/s2_session_start.mjs $B $B/exp/nodes
-
 # MD 读 trace + 检查 session 文件
 node -e "
 const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
-const c=e.filter(x=>x.event==='check'&&x.step.startsWith('s2:'));
-c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
+const c=e.filter(x=>x.event==='check'&&x.gate.startsWith('s2:'));
+c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.gate+' — '+x.detail));
 const ok=c.length===2&&c.every(x=>x.passed);
 const s=JSON.parse(require('fs').readFileSync('$B/_session.json','utf-8'));
 console.log('MD reads session: cache keys =', JSON.stringify(Object.keys(s.cacheSnapshot)));
@@ -167,11 +173,12 @@ MD 指令：「从上一步的 session 恢复 runtime。加载 repeat-2.entry.md
 MD 读 `_session.json` → 用 `readMarkdownFile(key, runtime, trace=null)` 把缓存文件预加载进 contentCache（trace=null 不产生 trace event——这是恢复，不是新读）。然后调 `assessNode('repeat-2.entry.md', ...)` → Engine 在 contentCache 中找到 shared-lib → cache_hit！
 
 ```bash
-cat > $B/s3_session_resume.mjs << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
 import {
   createWorkflowRuntime, createState, assessNode, readMarkdownFile
-} from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
+} from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
 import { readFileSync } from 'node:fs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
@@ -199,36 +206,34 @@ state.executionOrder = [...session.state.executionOrder];
 // MD: 加载 repeat-2 — Engine 应命中 shared-lib 缓存
 const r2 = assessNode('repeat-2.entry.md', state, runtime, trace);
 
-trace.traceEntry('check', { source: SRC, step: 's3:repeat2_loaded',
+trace.traceEntry('check', { source: 'playbook', gate: 's3:repeat2_loaded', expected: true,
   passed: r2.status === 'loaded',
   detail: `status = ${r2.status}` });
 
 // shared-lib 命中了缓存 → 不应有新 file_read
 const newReads = runtime.receipts.filter(r => r.type === 'file_read' && r.fileRef === 'shared-lib.dep.md');
-trace.traceEntry('check', { source: SRC, step: 's3:no_extra_read',
+trace.traceEntry('check', { source: 'playbook', gate: 's3:no_extra_read', expected: true,
   passed: newReads.length === 0,
   detail: `shared-lib new file_read = ${newReads.length} (缓存命中，不再读盘)` });
 
 // 应有 cache_hit event
 const hits = runtime.receipts.filter(r => r.type === 'cache_hit' && r.fileRef === 'shared-lib.dep.md');
-trace.traceEntry('check', { source: SRC, step: 's3:cache_hit',
+trace.traceEntry('check', { source: 'playbook', gate: 's3:cache_hit', expected: true,
   passed: hits.length >= 1,
   detail: `shared-lib cache_hit = ${hits.length}` });
 
 // shared-lib 被 file_loaded 两次（repeat-1 + repeat-2 各一次）
 const loads = runtime.receipts.filter(r => r.type === 'file_loaded' && r.fileRef === 'shared-lib.dep.md');
-trace.traceEntry('check', { source: SRC, step: 's3:loaded_twice',
+trace.traceEntry('check', { source: 'playbook', gate: 's3:loaded_twice', expected: true,
   passed: loads.length === 1 && r2.state.counters['shared-lib.dep.md'] === 2,
   detail: `new loads=${loads.length}, total counter=${r2.state.counters['shared-lib.dep.md']}` });
 JS
 
-node $B/s3_session_resume.mjs $B $B/exp/nodes
-
 # MD 读 trace 裁决
 node -e "
 const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
-const c=e.filter(x=>x.event==='check'&&x.step.startsWith('s3:'));
-c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
+const c=e.filter(x=>x.event==='check'&&x.gate.startsWith('s3:'));
+c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.gate+' — '+x.detail));
 // 验证 cache_hit event 确实写入了 trace
 const hits=e.filter(x=>x.event==='cache_hit'&&x.fileRef==='shared-lib.dep.md');
 console.log('trace cache_hit events for shared-lib: '+hits.length);
@@ -242,34 +247,12 @@ console.log('MD裁决: Step 2.3 — session 恢复 + cache_hit 验证 ✅');
 
 ---
 
-## Step 2.4: MD 最终裁决——汇总全部 check event
+## Native Completion
 
 ```bash
-cat > $B/verify.mjs << 'JS2'
-import { readFileSync } from 'node:fs';
-const B=process.argv[2];
-const lines = readFileSync(B+'/rb_trace.jsonl','utf-8').trim().split('\n');
-const events = lines.map(JSON.parse);
-const checks = events.filter(e => e.event === 'check');
-const passed = checks.filter(e => e.passed);
-const failed = checks.filter(e => !e.passed);
-
-console.log(`Result: ${checks.length} checks, ${passed.length} passed, ${failed.length} failed (${events.length} total events)`);
-if (failed.length > 0) {
-  for (const c of failed) console.log(`\x1b[31m  FAIL ${c.step}: ${c.detail}\x1b[0m`);
-  process.exit(1);
-}
-for (const c of passed) console.log(`\x1b[32m  PASS ${c.step}\x1b[0m`);
-console.log('\n\x1b[32mALL CHECKS PASSED\x1b[0m');
-JS2
-
-node $B/verify.mjs $B
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
-
-→ 预期：`9 checks, 9 passed, 0 failed`。
-
----
-
 
 ## Step 3: 结果解读
 
@@ -283,10 +266,4 @@ node $B/verify.mjs $B
 >   [s3:loaded_twice] shared-lib counter=2（加载两次，读盘一次）
 >   全部 expected:true → 9/9 PASS 即通过。
 
-## Step 4: 清理
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-rm -rf $B
-```
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

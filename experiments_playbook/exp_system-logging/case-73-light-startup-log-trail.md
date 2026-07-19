@@ -1,20 +1,28 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: system-logging
 case: case-73-light-startup-log-trail
-weight: light
 case_goal: "验证 production instantiate-run-bundle → gate chain（instantiation-complete, setup-ready, seed-topics-ready）→ Agent phase log 的完整启动链路日志。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_rb_log_startup
-trace: dpt_rb_log_startup/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [agent-phase-log, bundle-consistent, envelope-format, gate-count, gate-log-coverage, gate-trace-bundle, run-start-log, run-start-trace, timeline-clean, timeline-stitch]
+bundle_roles: [verdict, production-subject]
+verdict_role: verdict
+health_roles: [verdict, production-subject]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
-由 coding agent 在真实 production `dpt_rb_*` bundle 中执行；不启动 subagent。实验结果必须来自实际文件写入、CLI 调用和 trace event；禁止 mock 返回、手写假 result、伪造 trace，或用 console output 代替 trace 裁决。
+The Playbook Agent creates one disposable verdict bundle and invokes the real production instantiator for one contained production-shaped subject bundle. Required case checks live only in the disposable verdict trace. Both bundles are case-owned experiment state under one run root; this proves the instantiator/logging contract, not a separately selected live production run.
 
 # case-73-light-startup-log-trail
 
@@ -22,7 +30,7 @@ verdict: trace-jsonl
 
 ## Expected Runtime Path
 
-1. `instantiate-run-bundle` 创建 production bundle `[MAIN/SHELL]`
+1. 创建 disposable verdict bundle，并用 `instantiate-run-bundle` 创建 contained production-shaped subject bundle `[MAIN/SHELL]`
 2. 写 minimal `rb_plan.md` `[MAIN/SHELL]`
 3. 跑 instantiation-complete gate `[MAIN/SHELL]`
 4. 跑 setup-ready gate `[MAIN/SHELL]`
@@ -33,10 +41,13 @@ verdict: trace-jsonl
 
 ---
 
-## Step 1: 创建 production bundle
+## Step 1: 创建 verdict 与 production-shaped subject bundles
 
 ```bash
-B=$(node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs log_startup 2>&1 | tail -1)
+V=$(node experiments_env/shared/new-disposable-bundle.mjs log_startup_verdict --case case-73 --target-dir {{CASE_RUN_ROOT_SH}} --force)
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$V"
+B=$(node DPT_FRAMEWORK/cli/instantiate-run-bundle.mjs log_startup --target-dir {{CASE_RUN_ROOT_SH}} 2>&1 | tail -1)
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role production-subject --path "$B"
 echo "B=$B"
 
 # 写 minimal plan
@@ -72,7 +83,7 @@ cat "$B/_logs/run.log"
 ## Step 2: 跑 instantiation-complete gate
 
 ```bash
-B= # populated from Step 1
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
 
 node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate instantiation-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs \
   --bundle "$B" --current-node "phases/phase-instantiation.md" 2>&1 || true
@@ -87,7 +98,7 @@ echo "gate instantiation-complete: done"
 ## Step 3: 跑 setup-ready gate
 
 ```bash
-B= # populated from Step 1
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
 
 node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate setup-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-setup-ready.mjs \
   --bundle "$B" --current-node "phases/phase-setup.md" 2>&1 || true
@@ -102,7 +113,7 @@ echo "gate setup-ready: done"
 ## Step 4: 跑 seed-topics-ready gate
 
 ```bash
-B= # populated from Step 1
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
 
 node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs \
   --bundle "$B" --current-node "phases/phase-seed-topics.md" 2>&1 || true
@@ -117,7 +128,7 @@ echo "gate seed-topics-ready: done"
 ## Step 5: Agent 写 phase 日志
 
 ```bash
-B= # populated from Step 1
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
 
 # 模拟 Phase Agent 按照 phase node ## Log 段写日志
 node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --level info --msg "phase:instantiation START"
@@ -137,7 +148,7 @@ echo "Agent phase logs: done"
 ## Step 6: 验证 log + timeline
 
 ```bash
-B= # populated from Step 1
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
 
 echo "=== _logs/run.log ==="
 cat "$B/_logs/run.log"
@@ -155,12 +166,12 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B" --summary 2>&1
 
 ---
 
-## Step 7: 验证 + 裁决
+## Step 7: 验证并记录 verdict checks
 
 ```bash
-B= # populated from Step 1
-
-cat > "$B/_verdict.mjs" << 'JS'
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
+V=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" "$V" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -211,9 +222,9 @@ const checks = [
 ];
 
 // Write checks
-const tpath = join(process.argv[2], '_logs', '_trace.jsonl');
+const tpath = join(process.argv[3], 'rb_trace.jsonl');
 for (const c of checks) {
-  writeFileSync(tpath, JSON.stringify({ ts: new Date().toISOString(), ...c }) + '\n', { flag: 'a' });
+  writeFileSync(tpath, JSON.stringify({ ts: new Date().toISOString(), source: 'playbook', ...c }) + '\n', { flag: 'a' });
 }
 
 // Verdict
@@ -227,7 +238,6 @@ console.log(`PASS: ${passed.length}  FAIL: ${failed.length}`);
 if (failed.length > 0) { console.log('\nFAIL'); process.exit(1); }
 console.log('\nPASS — startup log trail complete: run_start → 3 gates → Agent phase log');
 JS
-node "$B/_verdict.mjs" "$B"
 ```
 
 → 预期：PASS，所有 check 通过。
@@ -249,13 +259,10 @@ node "$B/_verdict.mjs" "$B"
 
 **PASS 含义**：从 `instantiate-run-bundle` 到 HITL1 前的完整启动链路，log + trace 双通道完整、格式统一、可缝合。
 
----
-
-## Cleanup
-
-**PASS 才执行。FAIL 时保留 bundle 现场供排查。**
-
 ```bash
-B= # populated from Step 1
-rm -rf "$B" && echo "Cleaned up $B"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role production-subject)
+V=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$V" --bundle "production-subject=$B"
 ```
+
+Stop after native completion. The Supervisor runs Standard health on both declared bundles and owns durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

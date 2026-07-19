@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: workflow-chain
 case: case-33-standard-error-paths
-weight: light
 case_goal: "验证 MD controller mode 处理三种错误路径（缺失依赖、循环依赖、malformed frontmatter）并恢复：每种错误由 Markdown control surface 独立发起 load → Engine 返回 error 且不加载文件 → Phase Agent 确认后继续下一个 → 最终加载合法 entry 成功。证明错误不污染 Engine。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-33_wc_complex
-trace: dpt_disp_case-33_wc_complex/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [cycle:error_refs, cycle:no_load, cycle:status, malformed:error_refs, malformed:no_load, malformed:status, missing:error_refs, missing:no_load, missing:status, recovery:entry_loaded, recovery:status]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -28,12 +36,12 @@ Markdown control surface 承载 load 指令。每一步 Phase Agent 读取 MD �
 3. Cycle dep → error, 零文件加载 [MAIN/SHELL]
 4. Malformed frontmatter → error [MAIN/SHELL]
 5. Recovery: wave.entry.md → loaded (Engine 未被污染) [MAIN/SHELL]
-6. 从 trace 裁决 + Cleanup
-
+5. Native completion, then Supervisor-owned health and cleanup policy
 ## Step 1: 创建 bundle
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wc_complex --case case-33 --nodes=experiments_env/prototype-workflow-chain/nodes-workflow-chain --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wc_complex --case case-33 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
 node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 ```
@@ -49,9 +57,10 @@ MD 指令：「加载 missing.entry.md。」
 missing.entry.md 声明依赖 `nonexistent-file.md`，该文件不存在。Engine 必须返回 error 且不加载任何文件。
 
 ```bash
-cat > $B/step_missing.mjs << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createWorkflowRuntime, createState, assessNode } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
@@ -63,26 +72,24 @@ const before = runtime.receipts.length;
 const result = assessNode('missing.entry.md', createState(), runtime, trace);
 const newLoads = runtime.receipts.slice(before).filter(r => r.type === 'file_loaded');
 
-trace.traceEntry('check', { source: SRC, step: 'missing:status',
+trace.traceEntry('check', { source: 'playbook', gate: 'missing:status', expected: true,
   passed: result.status === 'error',
   detail: `status = ${result.status}` });
 
-trace.traceEntry('check', { source: SRC, step: 'missing:error_refs',
+trace.traceEntry('check', { source: 'playbook', gate: 'missing:error_refs', expected: true,
   passed: Boolean(result.error && result.error.includes('nonexistent-file.md') && result.error.includes('missing.entry.md')),
   detail: `error = ${result.error}` });
 
-trace.traceEntry('check', { source: SRC, step: 'missing:no_load',
+trace.traceEntry('check', { source: 'playbook', gate: 'missing:no_load', expected: true,
   passed: newLoads.length === 0,
   detail: `file_loaded during error = ${newLoads.length}` });
 JS
 
-node $B/step_missing.mjs $B $B/exp/nodes
-
 # MD 读 trace 裁决
 node -e "
 const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
-const c=e.filter(x=>x.event==='check'&&x.step.startsWith('missing:'));
-c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
+const c=e.filter(x=>x.event==='check'&&x.gate.startsWith('missing:'));
+c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.gate+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
 if(!ok)process.exit(1);
 console.log('MD裁决: Step 2.1 — missing dep → error, 零文件加载 ✅');
@@ -100,9 +107,10 @@ MD 指令：「加载 cycle-a.entry.md。」
 cycle-a.entry.md 依赖 cycle-b.dep.md，cycle-b.dep.md 又依赖 cycle-a.entry.md——形成环路。Engine 必须检测并返回 error。
 
 ```bash
-cat > $B/step_cycle.mjs << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createWorkflowRuntime, createState, assessNode } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
@@ -113,26 +121,24 @@ const before = runtime.receipts.length;
 const result = assessNode('cycle-a.entry.md', createState(), runtime, trace);
 const newLoads = runtime.receipts.slice(before).filter(r => r.type === 'file_loaded');
 
-trace.traceEntry('check', { source: SRC, step: 'cycle:status',
+trace.traceEntry('check', { source: 'playbook', gate: 'cycle:status', expected: true,
   passed: result.status === 'error',
   detail: `status = ${result.status}` });
 
-trace.traceEntry('check', { source: SRC, step: 'cycle:error_refs',
+trace.traceEntry('check', { source: 'playbook', gate: 'cycle:error_refs', expected: true,
   passed: Boolean(result.error && result.error.includes('cycle-a.entry.md') && result.error.includes('cycle-b.dep.md')),
   detail: `error = ${result.error}` });
 
-trace.traceEntry('check', { source: SRC, step: 'cycle:no_load',
+trace.traceEntry('check', { source: 'playbook', gate: 'cycle:no_load', expected: true,
   passed: newLoads.length === 0,
   detail: `file_loaded during error = ${newLoads.length}` });
 JS
 
-node $B/step_cycle.mjs $B $B/exp/nodes
-
 # MD 读 trace 裁决
 node -e "
 const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
-const c=e.filter(x=>x.event==='check'&&x.step.startsWith('cycle:'));
-c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
+const c=e.filter(x=>x.event==='check'&&x.gate.startsWith('cycle:'));
+c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.gate+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
 if(!ok)process.exit(1);
 console.log('MD裁决: Step 2.2 — cycle dep → error, 零文件加载 ✅');
@@ -150,9 +156,10 @@ MD 指令：「加载 malformed.entry.md。」
 malformed.entry.md 的 frontmatter JSON schema 不合法（requires 应为数组但是字符串）。Engine 必须返回 error 且不加载文件。
 
 ```bash
-cat > $B/step_malformed.mjs << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createWorkflowRuntime, createState, assessNode } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
@@ -163,26 +170,24 @@ const before = runtime.receipts.length;
 const result = assessNode('malformed.entry.md', createState(), runtime, trace);
 const newLoads = runtime.receipts.slice(before).filter(r => r.type === 'file_loaded');
 
-trace.traceEntry('check', { source: SRC, step: 'malformed:status',
+trace.traceEntry('check', { source: 'playbook', gate: 'malformed:status', expected: true,
   passed: result.status === 'error',
   detail: `status = ${result.status}` });
 
-trace.traceEntry('check', { source: SRC, step: 'malformed:error_refs',
+trace.traceEntry('check', { source: 'playbook', gate: 'malformed:error_refs', expected: true,
   passed: Boolean(result.error && result.error.includes('Invalid frontmatter schema') && result.error.includes('malformed.entry.md')),
   detail: `error = ${result.error}` });
 
-trace.traceEntry('check', { source: SRC, step: 'malformed:no_load',
+trace.traceEntry('check', { source: 'playbook', gate: 'malformed:no_load', expected: true,
   passed: newLoads.length === 0,
   detail: `file_loaded during error = ${newLoads.length}` });
 JS
 
-node $B/step_malformed.mjs $B $B/exp/nodes
-
 # MD 读 trace 裁决
 node -e "
 const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
-const c=e.filter(x=>x.event==='check'&&x.step.startsWith('malformed:'));
-c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
+const c=e.filter(x=>x.event==='check'&&x.gate.startsWith('malformed:'));
+c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.gate+' — '+x.detail));
 const ok=c.length===3&&c.every(x=>x.passed);
 if(!ok)process.exit(1);
 console.log('MD裁决: Step 2.3 — malformed frontmatter → error, 零文件加载 ✅');
@@ -198,9 +203,10 @@ console.log('MD裁决: Step 2.3 — malformed frontmatter → error, 零文件�
 三次错误后，MD 验证 Engine 未被污染——加载合法 entry wave.entry.md 仍正常。
 
 ```bash
-cat > $B/step_recovery.mjs << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { createWorkflowRuntime, createState, assessNode } from '../DPT_FRAMEWORK/engine/workflow-chain.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" experiments_env/prototype-workflow-chain/nodes-workflow-chain <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createWorkflowRuntime, createState, assessNode } from './DPT_FRAMEWORK/engine/workflow-chain.mjs';
 
 const B=process.argv[2], NODES_DIR=process.argv[3];
 const trace = createTrace(B+'/rb_trace.jsonl', { consoleEcho: true });
@@ -209,22 +215,20 @@ const SRC = 'wl-complex';
 const runtime = createWorkflowRuntime('test', NODES_DIR);
 const result = assessNode('wave.entry.md', createState(), runtime, trace);
 
-trace.traceEntry('check', { source: SRC, step: 'recovery:status',
+trace.traceEntry('check', { source: 'playbook', gate: 'recovery:status', expected: true,
   passed: result.status === 'loaded',
   detail: `status = ${result.status}` });
 
-trace.traceEntry('check', { source: SRC, step: 'recovery:entry_loaded',
+trace.traceEntry('check', { source: 'playbook', gate: 'recovery:entry_loaded', expected: true,
   passed: result.state.executionOrder.includes('wave.entry.md') && result.state.counters['wave.entry.md'] === 1,
   detail: `order=${JSON.stringify(result.state.executionOrder)}, count=${result.state.counters['wave.entry.md']}` });
 JS
 
-node $B/step_recovery.mjs $B $B/exp/nodes
-
 # MD 读 trace 裁决
 node -e "
 const e=require('fs').readFileSync('$B/rb_trace.jsonl','utf-8').trim().split('\n').map(JSON.parse);
-const c=e.filter(x=>x.event==='check'&&x.step.startsWith('recovery:'));
-c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.step+' — '+x.detail));
+const c=e.filter(x=>x.event==='check'&&x.gate.startsWith('recovery:'));
+c.forEach(x=>console.log((x.passed?'PASS':'FAIL')+' '+x.gate+' — '+x.detail));
 const ok=c.length===2&&c.every(x=>x.passed);
 if(!ok)process.exit(1);
 console.log('MD裁决: Step 2.4 — 错误后恢复，正常加载 wave.entry.md ✅');
@@ -235,36 +239,12 @@ console.log('MD裁决: Step 2.4 — 错误后恢复，正常加载 wave.entry.md
 
 ---
 
-## Step 2.5: MD 最终裁决——汇总全部 check event
-
-MD 统计全部 5 个 step（4 个 load + 3×3 错误 checks + 2 recovery = 11 checks）。
+## Native Completion
 
 ```bash
-cat > $B/verify.mjs << 'JS2'
-import { readFileSync } from 'node:fs';
-const B=process.argv[2];
-const lines = readFileSync(B+'/rb_trace.jsonl','utf-8').trim().split('\n');
-const events = lines.map(JSON.parse);
-const checks = events.filter(e => e.event === 'check');
-const passed = checks.filter(e => e.passed);
-const failed = checks.filter(e => !e.passed);
-
-console.log(`Result: ${checks.length} checks, ${passed.length} passed, ${failed.length} failed (${events.length} total events)`);
-if (failed.length > 0) {
-  for (const c of failed) console.log(`\x1b[31m  FAIL ${c.step}: ${c.detail}\x1b[0m`);
-  process.exit(1);
-}
-for (const c of passed) console.log(`\x1b[32m  PASS ${c.step}\x1b[0m`);
-console.log('\n\x1b[32mALL CHECKS PASSED\x1b[0m');
-JS2
-
-node $B/verify.mjs $B
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
-
-→ 预期：`11 checks, 11 passed, 0 failed`。
-
----
-
 
 ## Step 3: 结果解读
 
@@ -275,10 +255,4 @@ node $B/verify.mjs $B
 >   [recovery:*] 错误后加载合法 entry → loaded（Engine 未被污染）
 >   全部 expected:true → 11/11 PASS 即通过。
 
-## Step 4: 清理
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-rm -rf $B
-```
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

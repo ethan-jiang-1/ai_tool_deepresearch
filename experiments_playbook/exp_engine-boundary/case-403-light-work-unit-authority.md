@@ -1,56 +1,71 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: engine-boundary
 case: case-403-light-work-unit-authority
-weight: light
 case_goal: "验证 Wave0 gate 的 delegated reference authority 来自 submitted work-unit ledger、cache trail coverage、provenance/hash checks，而不是内容启发式。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-403_eb_authority_work_unit
-trace: dpt_disp_case-403_eb_authority_work_unit/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [missing-ledger-fails, clean-pass, root-url-passes, cache-drift-fails]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
 
-# case-403-light-work-unit-authority
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
+
+# Case 403 - Work-Unit Authority
 
 ## Execution Contract
 
-Fixture-backed, no Agent actor, no external calls. Positive coverage must be accepted through real `operate-work-unit submit`. Boundary cases must fail through deterministic authority surfaces only: submitted ledger absence, cache trail drift, provenance/hash mismatch, or route-bound gate feedback.
+This deterministic fixture case uses real queue/work-unit submit and Wave0 gate CLIs over one fresh contained bundle. Controlled reference/source/cache files isolate four authority boundaries. It does not claim Agent source selection or semantic content quality. The helper creates and immediately registers the bundle, produces runtime facts, and stops without health or cleanup.
 
-## Reality Distance Ledger
-
-| Dimension | Statement |
-| --- | --- |
-| Runtime context | Real disposable bundle from `experiments_env/shared/new-disposable-bundle.mjs` |
-| Framework path | Real `operate-work-unit submit` and Wave0 gate CLI |
-| Fixture input | Controlled reference/source/cache files for authority-boundary scenarios |
-| Agent actor | None; fixture-backed only |
-| External calls | None |
-| Gate input | Submitted work-unit rows, cache trail leaves, provenance/hash checks |
-| Orphan handling | Files without submitted work-unit coverage are diagnostics only |
-| Verdict source | Gate JSON, trace JSONL `check` events, and runner report |
-| Does not prove | Agent source selection or semantic content-quality judgment |
-
-## Expected Runtime Path
-
-1. Create a disposable bundle and Wave0 scaffold.
-2. Reset per-scenario runtime state before each gate scenario.
-3. Submit fixture outputs through `operate-work-unit submit` for positive coverage.
-4. Intentionally omit submit for missing-ledger boundary.
-5. Intentionally mutate a submitted cache trail for cache-drift boundary.
-6. Run Wave0 gate and record trace `check` rows.
-7. PASS only when clean/root-URL submitted coverage passes and deterministic missing-ledger/cache-drift cases fail.
-
-## Optional Runner
+## Step 1 - Exercise the four authority boundaries
 
 ```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-403 --target-dir tests/.test-bundles --cleanup-pass
+STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
+node experiments_env/shared/run-fixture-backed-case.mjs \
+  --case case-403 \
+  --target-dir {{CASE_RUN_ROOT_SH}} \
+  --context {{RUN_CONTEXT_SH}} \
+  --bundle-role verdict > "$STATE/case403-run.json"
 ```
 
-Expected checks:
+The four visible checkpoints are: missing submitted ledger fails; clean submitted coverage passes; a parseable root URL passes when provenance is valid; and post-submit cache drift fails through `cache_coverage` diagnostics.
 
-- `missing-ledger-fails`: Wave0 gate fails because no submitted work-unit ledger rows exist.
-- `clean-pass`: submitted reference/source/cache coverage passes.
-- `root-url-passes`: a parseable root-looking URL does not fail by URL shape when ledger/cache/provenance pass.
-- `cache-drift-fails`: submitted cache trail drift fails through `cache_coverage` diagnostics.
+## Step 2 - Project helper facts into strict playbook checks
+
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { appendFileSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+const [bundle] = process.argv.slice(2);
+const verdict = JSON.parse(readFileSync(join(bundle, 'case-403-verdict.json')));
+const expected = ['missing-ledger-fails', 'clean-pass', 'root-url-passes', 'cache-drift-fails'];
+const byLabel = new Map(verdict.checks.map((row) => [row.label, row]));
+for (const gate of expected) {
+  const row = byLabel.get(gate);
+  appendFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({
+    ts: new Date().toISOString(), event: 'check', source: 'playbook', gate,
+    passed: row?.passed === true, expected: true,
+  })}\n`);
+}
+if (expected.some((gate) => byLabel.get(gate)?.passed !== true)) process.exit(1);
+JS
+```
+
+## Step 3 - Native completion
+
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+```
+
+Stop after native completion. The Autorun Supervisor owns Heavy health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

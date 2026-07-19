@@ -1,58 +1,81 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-wave0
 case: case-214-light-timeout-progress-lease
-weight: light
-case_goal: "验证 timeout-preflight / progress-aware lease 防止 delegated work-unit 被 wall-clock timeout 误杀，并保留 no-progress REDO 与 forced-timeout audit。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-214_w0_timeout_progress_lease
-trace: dpt_disp_case-214_w0_timeout_progress_lease/rb_trace.jsonl
-verdict: trace-jsonl
+case_goal: "验证 timeout-preflight/progress-aware lease 防止 delegated work-unit 被 wall-clock timeout 误杀，并保留 no-progress REDO、candidate routing 与 forced-timeout audit。"
+verdict_mode: all
+required_checks: [no-progress-preflight-timeout-eligible, no-progress-timeout-requeues-retry, progress-preflight-refuses-timeout, progress-default-timeout-no-side-effect, submit-ready-candidate-routes-submit, repairable-external-candidate-routes-repair, external-candidate-mtime-does-not-extend-lease, wrong-identity-candidate-routes-inspect, force-timeout-records-audit, late-submit-after-timeout-remains-rejected]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: RWE-011
 ---
 
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
+
+# Case 214 - Timeout Progress Lease
+
 ## Execution Contract
 
-Fixture-backed Engine case, no Agent actor, no external calls. Fixture result, receipt, output, and cache files may be staged only after `operate-work-unit claim`; every timeout, preflight, submit, and retry fact must pass through production `operate-work-unit` CLI/API boundaries. Fixture facts prove Engine timeout policy only; they do not prove real Sub-agent search/fetch quality.
+This fixture-backed Engine case uses production queue/work-unit claim, timeout-preflight, timeout, submit, index, ledger, and trace boundaries over one fresh contained bundle. Controlled candidate result, receipt, output, and cache files are staged only after claim. It proves timeout policy mechanics, not real Sub-agent search, repair judgment, or semantic quality.
 
-## Reality Distance Ledger
+## Visible checkpoint matrix
 
-| Dimension | Statement |
-| --- | --- |
-| Runtime context | Real disposable bundle from `experiments_env/shared/new-disposable-bundle.mjs` |
-| Framework path | Production `operate-queue enqueue`, `operate-work-unit claim/timeout-preflight/timeout/submit`, work-unit index, queue, ledger, and trace |
-| Fixture input | Controlled candidate result, progress receipt, output, and cache surfaces after claim |
-| Agent actor | None; fixture-backed Engine evidence only |
-| External calls | None |
-| Verdict source | Trace JSONL `check` events plus CLI JSON and bundle authority files |
-| Does not prove | Agent search, source selection, repair judgment, or semantic research quality |
+1. Expired no-progress claim routes to timeout and requeues a distinct retry.
+2. Progress receipt extends the idle lease; preflight and default timeout refuse mutation.
+3. A dry-submit-ready candidate routes to submit.
+4. A repairable external candidate routes to same-work repair, and its mtime cannot extend authority.
+5. Wrong identity routes to inspect/block.
+6. Forced timeout records progress diagnostics; ordinary submit after terminal timeout remains rejected.
 
-# case-214-light-timeout-progress-lease
-
-## Expected Runtime Path
-
-1. Create a disposable Wave0 bundle through shared setup.
-2. Enqueue and claim separate work units for each timeout-preflight condition.
-3. For a no-progress expired claim, prove timeout-preflight permits timeout and normal timeout requeues retry.
-4. For a recent-progress claim, prove timeout-preflight and default timeout refuse terminalization without authority side effects.
-5. For candidate result cases, prove dry-submit pass routes to `submit`, repairable failure routes to same-`work_id` repair, wrong identity routes to inspect/block, and external candidate mtime does not extend the idle lease.
-6. Force timeout a progress-positive claim and prove durable forced-timeout diagnostics plus normal `submit` after timeout still rejects.
-7. Record all runtime facts as trace `check` events; clean up only on PASS.
-
-## Step 1: [MAIN/SHELL] Run Controlled Checkpoints
+## Step 1 - Execute the deterministic checkpoint chain
 
 ```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-214 --cleanup-pass
+STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
+node experiments_env/shared/run-fixture-backed-case.mjs \
+  --case case-214 \
+  --target-dir {{CASE_RUN_ROOT_SH}} \
+  --context {{RUN_CONTEXT_SH}} --bundle-role verdict > "$STATE/case214-run.json"
 ```
 
-Expected: command exits `0`, prints `verdict: "PASS"`, and removes the disposable bundle. The runner writes trace `check` rows for no-progress timeout eligibility, retry requeue, progress refusal no-side-effect, submit/repair/inspect advice, external-candidate mtime non-extension, force audit, and normal submit-after-timeout fail-closed behavior.
+## Step 2 - Project exact helper facts into strict playbook checks
 
-## Step 2: [MAIN] Result Interpretation
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { appendFileSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+const [bundle] = process.argv.slice(2);
+const verdict = JSON.parse(readFileSync(join(bundle, 'case-214-verdict.json')));
+const required = [
+  'no-progress-preflight-timeout-eligible', 'no-progress-timeout-requeues-retry',
+  'progress-preflight-refuses-timeout', 'progress-default-timeout-no-side-effect',
+  'submit-ready-candidate-routes-submit', 'repairable-external-candidate-routes-repair',
+  'external-candidate-mtime-does-not-extend-lease', 'wrong-identity-candidate-routes-inspect',
+  'force-timeout-records-audit', 'late-submit-after-timeout-remains-rejected',
+];
+const byLabel = new Map(verdict.checks.map((row) => [row.label, row]));
+for (const gate of required) appendFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({
+  ts: new Date().toISOString(), event: 'check', source: 'playbook', gate,
+  passed: byLabel.get(gate)?.passed === true, expected: true,
+})}\n`);
+if (required.some((gate) => byLabel.get(gate)?.passed !== true)) process.exit(1);
+JS
+```
 
-PASS means progress-aware timeout preflight protects progress-positive delegated attempts, keeps no-progress REDO valid, routes candidate results through submit/repair/inspect advice, records explicit forced-timeout audit fields, and preserves normal submit fail-closed behavior after timeout. FAIL means the preserved bundle contains the exact CLI JSON, work-unit index, queue state, trace rows, and candidate files needed for repair.
+## Step 3 - Native completion
 
-## Step 3: [MAIN/SHELL] Cleanup
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+```
 
-PASS cleanup is performed by `--cleanup-pass`. If the command fails, preserve the disposable bundle for diagnosis and do not manually patch trace, receipt, ledger, or result files to force a PASS.
+Stop after native completion. The Autorun Supervisor owns Heavy health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-pre-research
 case: case-101-standard-pre-research-happy
-weight: light
 case_goal: "Prove that a disposable bundle with a fixed valid HITL1 payload passes all three pre-research gates (instantiation-complete, hitl1-recorded, setup-ready) and produces trace-backed verdict."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-101_wff_happy_*
-trace: dpt_disp_case-101_wff_happy_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [hitl1-recorded, instantiation-complete, setup-ready]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -41,7 +49,8 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_happy --case case-101 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_happy --case case-101 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "Bundle: $B"
 ```
 
@@ -52,6 +61,7 @@ echo "Bundle: $B"
 实例化后先跑 validate + inspect，确认 bundle 模板正确。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
 node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 ```
@@ -63,6 +73,7 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs $B
 模拟用户在 HITL1 阶段的完整回答。写入 `rb_profile.yaml`。下方 `research_access` 是 deterministic gate fixture，只证明 schema/gate mechanics，不证明真实 Agent 外部能力。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 cat > $B/rb_profile.yaml << 'EOF'
 plan_basename: wff_happy
 research_profile: quick_factual
@@ -94,6 +105,7 @@ grep -E 'research_profile|root_must_answer|status:|recorded_at' $B/rb_profile.ya
 验证 bundle 创建完整：所有 control files 和 scaffold dirs 存在，bundle name 合法，status 值正确。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate instantiation-complete -- node DPT_FRAMEWORK/cli/gates/check-gate-instantiation-complete.mjs --bundle $B --current-node phases/phase-instantiation.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -114,6 +126,7 @@ gate 返回的 JSON 关键字段：
 验证 HITL1 回答已记录到 profile：schema 合法、research_profile 不是 not_selected、must-answer 非空、HITL1 marker 已写入。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle $B --to hitl1_recorded
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md || true)
 echo "$GATE_OUTPUT"
@@ -134,6 +147,7 @@ gate 返回的 JSON 关键字段：
 验证 bundle 在进入 wave0 前的 structural consistency：control files 可解析、scaffold 存在、HITL1 已记录、basename 一致。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # setup-ready gate expects current_gate=setup_ready, next_gate=seed_topics_ready
 cat > $B/rb_status.json << 'EOF'
 {"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"seed_topics_ready"}
@@ -222,11 +236,8 @@ gate 返回的 JSON 关键字段：
 所有 gate 已运行，trace 中应有 3 个 `check` event，全部 `passed: true`。
 
 ```bash
-node -e "
-import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.verdict('$B/rb_trace.jsonl');
-});
-"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 
@@ -236,24 +247,4 @@ import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
 >   instantiation-complete → hitl1-recorded → setup-ready。全部 gate pass。
 
 
-## Step HH: Post-Execution Health
-
-Standard profile — gate diagnostics, timeline consistency.
-
-```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
-```
-
-> 健康检查不改变 verdict。health status 由 runner report 记录。
-
-## Step 9: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-node -e "
-import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.cleanup('$B');
-});
-"
-```
+Stop after native completion. The Autorun Supervisor owns Standard health, audit, preservation, and optional clean-PASS cleanup.

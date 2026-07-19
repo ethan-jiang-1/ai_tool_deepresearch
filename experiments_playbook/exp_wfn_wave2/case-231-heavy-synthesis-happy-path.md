@@ -1,21 +1,29 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-wave2
 case: case-231-heavy-synthesis-happy-path
-weight: heavy
 case_goal: "Verify Wave2 pure synthesis can pass the Wave2 gate without any delegated Wave2 work-unit row."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-231_w2_pure_synthesis
-trace: dpt_disp_case-231_w2_pure_synthesis/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [wave2-artifact-triplet, wave2-backfill-complete, wave2-no-delegated-row-required, wave2-pure-gate-pass]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: RWE-001, RWE-004, WTS-001, WTS-005
 ---
 
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
+
 ## Execution Contract
 
-Pure Wave2 synthesis is main-Agent work. The production proof is not a delegated submit; it is a real Wave2-ready bundle, non-delegated queue completion for synthesis/backfill, Wave2 artifacts, a `wave2_completion` trace event, and the Wave2 gate JSON. The optional smoke may use controlled fixture artifacts only to prove the Engine boundary: pure synthesis artifacts do not require a Wave2 work-unit ledger row.
+Fixture-backed Engine contract. It proves that a real Wave2-ready bundle accepts the non-delegated synthesis/backfill queue path, artifact triplet, `wave2_completion`, and Wave2 gate without a delegated Wave2 ledger row. It does not prove semantic synthesis quality or Subject Agent behavior.
 
 ## Reality Distance Ledger
 
@@ -23,11 +31,11 @@ Pure Wave2 synthesis is main-Agent work. The production proof is not a delegated
 | --- | --- |
 | Runtime context | Real disposable Wave2 bundle with witnessed Wave1-to-Wave2 handoff |
 | Framework path | Real `operate-queue` for non-delegated synthesis/backfill and real Wave2 gate CLI |
-| Fixture input | Optional smoke writes controlled Wave2 artifacts after queue claim |
-| Agent actor | Required for full heavy interpretation; optional smoke does not prove synthesis judgment |
+| Fixture input | Controlled Wave2 artifacts written after the real queue claim |
+| Agent actor | None; fixture-backed Engine evidence only |
 | External calls | None |
 | Verdict source | Gate JSON, queue completion output, work-unit ledger absence, trace `check` events |
-| Does not prove | Agent synthesis quality unless a real Phase Agent performs Step 3 |
+| Does not prove | Agent synthesis quality |
 
 # case-231-heavy-synthesis-happy-path
 
@@ -35,16 +43,17 @@ Pure Wave2 synthesis is main-Agent work. The production proof is not a delegated
 
 1. Create a Wave2-ready disposable bundle with two post-Wave1 topics.
 2. Enqueue one non-delegated synthesis item and one non-delegated backfill item per topic.
-3. Main Agent reads Wave1 artifacts, writes `synthesis.md`, `cross-topic-ledger.md`, and `finding-index.yaml`.
+3. The controlled fixture writer writes `synthesis.md`, `cross-topic-ledger.md`, and `finding-index.yaml` after the real queue claim.
 4. Complete synthesis/backfill through the non-delegated queue completion CLI.
 5. Append `wave2_completion`.
 6. Run Wave2 gate and verify it passes with zero submitted Wave2 work-unit rows.
-7. Record trace checks and clean up only on PASS.
+7. Record the four required checks and publish native completion once.
 
 ## Step 1: [MAIN/SHELL] Create Wave2 Runtime Context
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_pure_synthesis --case case-231 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w2_pure_synthesis --case case-231 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave2Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -66,6 +75,7 @@ Expected: validation passes and trace contains a route-bound handoff into `phase
 ## Step 2: [MAIN/SHELL] Enqueue Non-Delegated Wave2 Work
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { enqueueWorkUnitTask } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -113,11 +123,12 @@ JS
 
 Expected: queue has three non-delegated items and no Wave2 delegated in-flight attempt.
 
-## Step 3: [MAIN] Write Pure Synthesis Artifacts
+## Step 3: [MAIN/SHELL] Write Controlled Pure Synthesis Artifacts
 
-The Phase Agent reads the Wave1 artifacts and writes the three Wave2 artifacts. In fixture smoke only, use this controlled artifact writer after the synthesis queue item is claimed:
+Use the controlled artifact writer only after the real synthesis queue item is claimed:
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/operate-queue.mjs claim "$B" --actor main-agent > "$B/case-231-synthesis-claim.json"
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
@@ -202,6 +213,7 @@ Expected: synthesis completion succeeds without `operate-work-unit`.
 ## Step 4: [MAIN/SHELL] Complete Backfill Queue Items
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 for slug in topic-a topic-b; do
   node DPT_FRAMEWORK/cli/operate-queue.mjs claim "$B" --actor main-agent > "$B/case-231-backfill-$slug-claim.json"
   printf '{"queue_item_id":"wave2-backfill-%s","receipt":"file:seed_topics/%s.md","summary":"backfill complete"}\n' "$slug" "$slug" > "$B/case-231-backfill-$slug-result.json"
@@ -214,41 +226,39 @@ Expected: every backfill item completes through non-delegated queue completion.
 ## Step 5: [MAIN/SHELL] Gate And Trace Verdict
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 appendTrace(process.argv[2], { event: 'wave2_completion', source: 'case-231-visible-path' });
 JS
 node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --current-node phases/phase-wave2.md > "$B/case-231-gate.json"
 node --input-type=module - "$B" <<'JS'
-import { readFileSync } from 'node:fs';
-import { readWorkUnitLedgerRows, recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { existsSync, readFileSync } from 'node:fs';
+import { readWorkUnitLedgerRows, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const bundle = process.argv[2];
 const gate = JSON.parse(readFileSync(`${bundle}/case-231-gate.json`, 'utf8'));
 const wave2Rows = readWorkUnitLedgerRows(bundle).filter((row) => row.wave === 2);
+const artifactTriplet = ['synthesis.md', 'cross-topic-ledger.md', 'finding-index.yaml'].every((name) => existsSync(`${bundle}/artifacts/wave2/${name}`));
+const backfillComplete = ['topic-a', 'topic-b'].every((slug) => {
+  const content = readFileSync(`${bundle}/seed_topics/${slug}.md`, 'utf8');
+  return content.includes('## Wave2 Judgment') && !content.includes('__BACKFILL_');
+});
+recordPlaybookCheck(bundle, { gate: 'wave2-artifact-triplet', passed: artifactTriplet, detail: 'synthesis, ledger, finding index' });
+recordPlaybookCheck(bundle, { gate: 'wave2-backfill-complete', passed: backfillComplete, detail: 'topic-a, topic-b' });
 recordPlaybookCheck(bundle, { gate: 'wave2-pure-gate-pass', passed: gate.check?.passed === true, detail: JSON.stringify(gate.inspect || []) });
 recordPlaybookCheck(bundle, { gate: 'wave2-no-delegated-row-required', passed: wave2Rows.length === 0, detail: `${wave2Rows.length} Wave2 row(s)` });
-const verdict = writeTraceVerdict(bundle, 'case-231');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log('Recorded native facts; finalizer owns completion.');
 JS
 ```
 
 Expected: gate passes and the submitted Wave2 work-unit row count is `0`.
 
-## Optional Automation Smoke
+## Step 6: [MAIN/SHELL] Native Completion
 
 ```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-231 --target-dir tests/.test-bundles --cleanup-pass
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-The optional runner mirrors the Engine checkpoint path above. It does not prove Agent synthesis quality.
-
-## Cleanup
-
-PASS only:
-
-```bash
-node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-231-verdict.json"
-rm -rf "$B"
-```
+Stop after native completion. The Autorun Supervisor owns Heavy health, audit, preservation, and optional clean-PASS cleanup.

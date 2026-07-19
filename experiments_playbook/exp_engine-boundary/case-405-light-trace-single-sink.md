@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: engine-boundary
 case: case-405-light-trace-single-sink
-weight: light
 case_goal: "验证 framework/playbook trace 写入路径只写 bundle 根 rb_trace.jsonl，并覆盖 trace API、queue CLI、work-unit claim/submit。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-405_eb_trace_work_unit
-trace: dpt_disp_case-405_eb_trace_work_unit/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [queue-trace, single-sink, trace-api, work-unit-claim-trace, work-unit-submit-trace]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -47,7 +55,8 @@ Fixture-backed, no Agent actor, no external calls. The case must trigger current
 Create a disposable bundle. This case then triggers trace writes from three separate production boundaries.
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_trace_work_unit --case case-405 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_trace_work_unit --case case-405 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeMinimalPlan, writeMinimalStatus } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 writeMinimalStatus(process.argv[2]);
@@ -202,7 +211,6 @@ import path from 'node:path';
 import {
   readTrace,
   recordPlaybookCheck,
-  writeTraceVerdict
 } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const [bundle, workId] = process.argv.slice(2);
@@ -249,9 +257,7 @@ recordPlaybookCheck(bundle, {
   detail: JSON.stringify(badTraceFiles)
 });
 
-const verdict = writeTraceVerdict(bundle, 'case-405');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log('Recorded native playbook checks; Supervisor finalizer is authoritative.');
 JS
 ```
 
@@ -266,14 +272,11 @@ Expected trace coverage:
 
 PASS means framework and controlled playbook trace writers converge on root `rb_trace.jsonl` for this boundary. FAIL means trace authority has split and the Agent must repair the writer path before relying on experiment verdicts.
 
-## Step 7: [MAIN/SHELL] Cleanup
-
-PASS removes the disposable bundle. FAIL preserves it for diagnosis.
-
-## Optional Automation Smoke
-
-This smoke command runs the same checkpoints for automation, but it is not the normative MD-controller execution surface:
+## Native completion
 
 ```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-405 --cleanup-pass
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
+
+Stop after native completion. The Autorun Supervisor owns Heavy health, audit, preservation, and optional clean-PASS cleanup.

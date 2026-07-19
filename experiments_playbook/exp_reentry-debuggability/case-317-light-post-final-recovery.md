@@ -1,75 +1,74 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: reentry-debuggability
 case: case-317-light-post-final-recovery
-weight: light
-case_goal: "验证 legal Final 经 audited C5 event-last recovery、existing entry/status/C3/rerun owners进入正常 descendant pipeline，且无addendum或generic override。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: tests/.test-bundles/dpt_disp_case-317_post-final-recovery_*
-trace: tests/.test-bundles/dpt_disp_case-317_post-final-recovery_*/rb_trace.jsonl
-verdict: filesystem
-production_distance: >
-  Prior readiness→Final lineage uses a controlled valid fixture; every C5/C3/rerun operation after that boundary uses production CLIs and real disposable bundle bytes.
+case_goal: "验证 legal Final 经 audited C5 event-last recovery、existing entry/status/C3/rerun owners 进入正常 descendant pipeline，且无 addendum 或 generic override。"
+verdict_mode: all
+required_checks: [prior-final-lineage, one-recovery-event, exact-exceptional-binding, canonical-topic, normal-descendant, repeat-stable, no-parallel-addendum, terminal-history-preserved]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
 
-# Case 317: Audited Post-Final Recovery To Canonical Rerun
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
+
+# Case 317 - Audited Post-Final Recovery To Canonical Rerun
 
 ## Execution Contract
 
-Use one real disposable `dpt_disp_*` bundle and production CLIs. The fixture begins at a byte-valid legal terminal Final lineage. From that boundary onward, no trace/status/topic success authority is hand-written.
+The controlled fixture begins at a byte-valid legal terminal Final lineage. The production helper then performs post-final inspect/apply/replay, phase entry and status transition, canonical topic materialization, rerun-ready gate/load/transition, and repeat recovery. It creates and immediately registers one contained disposable verdict bundle. This deterministic case does not claim human identity, live research quality, or Subject Agent behavior.
 
-## Reality Distance Ledger
-
-- Real: post-final inspect/apply/replay, prepared/event transaction, `enter-phase`, `advance-status`, topic-state apply, rerun-ready gate, normal seed-topics handoff, reentry, trace and filesystem assertions.
-- Controlled fixture: prior readiness→Final gate/load and minimal report bytes.
-- Not claimed: cryptographic human identity, hostile same-principal defense, live research quality, generic maintenance/state-seed.
-
-## Expected Runtime Path
-
-```text
-legal Final fixture
-→ operate-post-final-recovery inspect
-→ retained post_final_rerun request
-→ apply / exact event-last commit
-→ enter-phase phase-rerun
-→ advance-status --to hitl2_recorded
-→ check-reentry --at hitl2_recorded
-→ operate-topic-state apply add_topic
-→ Agent-owned exact rerun_count increment
-→ check-gate-rerun-ready
-→ enter-phase <check.next>
-→ advance-status --to rerun_ready
-→ repeat C5 apply = unchanged/current owner
-```
-
-## Step 1 — Create Disposable Legal-Final Fixture
-
-Create a unique `dpt_disp_case-317_post-final-recovery_<hex>` bundle containing matching logical identity, empty canonical topic registry, quiescent queue, one final report, and a legal readiness→Final gate/load trace.
-
-## Step 2 — Inspect And Retain Request
-
-Run production `operate-post-final-recovery.mjs inspect`, copy exact request bindings, add explicit reason/scope, and retain the JSON input.
-
-## Step 3 — Commit And Consume Exceptional Handoff
-
-Run production apply, then `enter-phase phase-rerun`, `advance-status --to hitl2_recorded`, and `check-reentry --at hitl2_recorded`. Verify no synthetic HITL2 gate attempt exists.
-
-## Step 4 — Reuse Canonical Topic Owner
-
-Run production `operate-topic-state.mjs apply` with one `add_topic` action. Verify registry+seed canonical footprint and no addendum namespace.
-
-## Step 5 — Continue Normal Rerun Chain
-
-Increment only the existing rerun count, pass production rerun-ready gate, consume `check.next` with `enter-phase`, and synchronize `advance-status --to rerun_ready`.
-
-## Step 6 — Trace-Derived Verdict And Cleanup
-
-PASS requires prior Final lineage, one recovery event, exact exceptional load/transition bindings, canonical topic materialization, normal rerun-ready gate/load/transition, repeat apply stability, no hand-written/addendum authority, and PASS-only cleanup.
-
-Optional automation smoke:
+## Step 1 - Run the deterministic recovery chain
 
 ```bash
-node experiments_env/shared/run-post-final-recovery-case.mjs --case case-317 --target-dir tests/.test-bundles --cleanup-pass
+STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
+node experiments_env/shared/run-post-final-recovery-case.mjs \
+  --case case-317 \
+  --target-dir {{CASE_RUN_ROOT_SH}} \
+  --context {{RUN_CONTEXT_SH}} \
+  --role verdict > "$STATE/case317-result.json"
 ```
+
+## Step 2 - Record the exact case-owned checks
+
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+STATE=$(printf '%s' {{PLAYBOOK_STATE_DIR_SH}})
+node --input-type=module - "$B" "$STATE/case317-result.json" <<'JS'
+import { appendFileSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+const [bundle, resultPath] = process.argv.slice(2);
+const result = JSON.parse(readFileSync(resultPath));
+const gates = {
+  'prior-final-lineage': result.checks.prior_final_lineage,
+  'one-recovery-event': result.checks.one_recovery_event,
+  'exact-exceptional-binding': result.checks.exact_exceptional_binding,
+  'canonical-topic': result.checks.canonical_topic,
+  'normal-descendant': result.checks.normal_descendant,
+  'repeat-stable': result.checks.repeat_stable,
+  'no-parallel-addendum': result.checks.no_parallel_addendum,
+  'terminal-history-preserved': result.checks.terminal_history_preserved,
+};
+for (const [gate, passed] of Object.entries(gates)) appendFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({
+  ts: new Date().toISOString(), event: 'check', source: 'playbook', gate, passed: passed === true, expected: true,
+})}\n`);
+if (Object.values(gates).some((passed) => passed !== true)) process.exit(1);
+JS
+```
+
+## Step 3 - Native completion
+
+```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
+```
+
+Stop after native completion. The Autorun Supervisor owns Light health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

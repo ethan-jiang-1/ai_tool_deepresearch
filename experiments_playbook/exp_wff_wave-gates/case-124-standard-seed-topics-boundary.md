@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-wave-gates
 case: case-124-standard-seed-topics-boundary
-weight: light
 case_goal: "Prove that seed-topics-ready gate correctly detects empty directory, missing slugs, and extra slugs; bidirectional slug consistency check is trace-backed."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-124_stm_boundary_*
-trace: dpt_disp_case-124_stm_boundary_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [empty-directory-rejected, missing-slug-rejected, extra-slug-rejected, slug-consistency-two-way, seed-topics-ready-happy]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -25,8 +33,8 @@ verdict: trace-jsonl
 3. 清空 seed_topics → gate fail（dir_non_empty）
 4. 物化部分 topic（slug 缺失）→ gate fail（slug_consistency 报缺失）
 5. 写入多余文件 → gate fail（slug_consistency 报多余）
-6. 从 `rb_trace.jsonl` 裁决（预期 4 条 check：1 pass + 3 fail）
-7. Cleanup
+6. 从 `rb_trace.jsonl` 产出 native completion（4 个场景 check + 1 个双向一致性聚合 check）
+7. 写出 native completion 后停止
 
 ---
 
@@ -40,7 +48,8 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs stm_boundary --case case-124 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs stm_boundary --case case-124 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "Bundle: $B"
 
 # Validate initial structure
@@ -88,6 +97,8 @@ cat $B/rb_status.json
 为 registry 中的 3 个 topic 创建对应的 `seed_topics/<slug>.md` 文件，记录 trace event。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+REPO_ROOT=$(pwd)
 mkdir -p $B/seed_topics
 
 cat > $B/seed_topics/01_topic-a.md << 'EOF'
@@ -157,7 +168,7 @@ ls -la $B/seed_topics/
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'all 3 topics materialized, slugs consistent'})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'seed-topics-ready-happy',passed:$PASSED,expected:true,detail:'all 3 topics materialized, slugs consistent'})})"
 ```
 
 预期：`check.passed: true`，`check.next: phases/phase-wave0.md`。
@@ -165,6 +176,8 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 ## Step 3: 清空 seed_topics → gate fail（dir_non_empty）
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+REPO_ROOT=$(pwd)
 rm $B/seed_topics/*.md
 
 echo "=== seed_topics/ after removing all files ==="
@@ -173,7 +186,7 @@ ls -la $B/seed_topics/
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'empty dir should fail dir_non_empty',expected:false})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'empty-directory-rejected',passed:$PASSED,detail:'empty dir should fail dir_non_empty',expected:false})})"
 ```
 
 预期：`check.passed: false`，`inspect` 指向空目录。
@@ -183,6 +196,8 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 只恢复 topic-a 和 topic-c，缺 topic-b。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+REPO_ROOT=$(pwd)
 cat > $B/seed_topics/01_topic-a.md << 'EOF'
 ---
 id: "01"
@@ -209,7 +224,7 @@ ls -la $B/seed_topics/
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'slug missing: topic-b should be detected',expected:false})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'missing-slug-rejected',passed:$PASSED,detail:'slug missing: topic-b should be detected',expected:false})})"
 ```
 
 预期：`check.passed: false`，`inspect` 报告缺少 `topic-b`。
@@ -219,6 +234,8 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 恢复 topic-b，再额外写入一个不在 registry 中的 `extra-topic.md`。
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+REPO_ROOT=$(pwd)
 cat > $B/seed_topics/02_topic-b.md << 'EOF'
 ---
 id: "02"
@@ -245,44 +262,40 @@ ls -la $B/seed_topics/
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md || true)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'seed-topics-ready',passed:$PASSED,detail:'extra slug: extra-topic should be detected',expected:false})})"
+node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.recordCheck('$B/rb_trace.jsonl',{gate:'extra-slug-rejected',passed:$PASSED,detail:'extra slug: extra-topic should be detected',expected:false})})"
 ```
 
 预期：`check.passed: false`，`inspect` 报告多余 `extra-topic`。
 
 ## Step 6: 从 trace 裁决
 
-预期 4 条 `check` event：1 pass（Step 2）+ 3 fail（Step 3, 4, 5）。
+预期四个场景 check 加一条稳定的双向一致性聚合 check。
 
 ```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { appendFileSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+const [bundle] = process.argv.slice(2);
+const checks = readFileSync(join(bundle, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(JSON.parse).filter((event) => event.event === 'check' && event.source === 'playbook');
+const rejected = (gate) => checks.some((event) => event.gate === gate && event.passed === false && event.expected === false);
+const passed = rejected('missing-slug-rejected') && rejected('extra-slug-rejected');
+appendFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({ ts:new Date().toISOString(), event:'check', source:'playbook', gate:'slug-consistency-two-way', passed, expected:true })}\n`);
+if (!passed) process.exit(1);
+JS
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 
 ## Step 7: 结果解读
 
-> 4 个 check（1 pass + 3 fail），验证 seed-topics-ready gate 边界：
+> 5 个 check（1 pass + 3 个预期拒绝 + 1 个双向一致性聚合），验证 seed-topics-ready gate 边界：
 >   [PASS] seed_topics 物化完整 → gate pass
 >   [FAIL ✅] 空目录 → gate fail
 >   [FAIL ✅] slug 缺失 → gate fail
 >   [FAIL ✅] 多余文件 → gate fail
+>   [PASS] missing + extra 两个方向均被拒绝 → 双向 slug consistency 成立
 >   3 个 FAIL 都是正确的边界拒绝。
 
 
-## Step HH: Post-Execution Health
-
-Standard profile — gate diagnostics, timeline consistency.
-
-```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
-```
-
-> 健康检查不改变 verdict。health status 由 runner report 记录。
-
-## Step 8: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
-```
+Stop after native completion. The Autorun Supervisor owns Standard health, audit, preservation, and optional clean-PASS cleanup.

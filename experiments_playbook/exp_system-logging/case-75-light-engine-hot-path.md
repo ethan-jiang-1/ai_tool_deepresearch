@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: system-logging
 case: case-75-light-engine-hot-path
-weight: light
 case_goal: "验证 queue-manager 的 enqueue/claim/complete/fail 写 attempt/done/reject/empty 事件到 _logs/run.log，且 fine-grained event name 与 broad detail.kind 映射正确。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-75_queue_log
-trace: dpt_disp_case-75_queue_log/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [event-queue_load_attempt, event-queue_load_done, event-queue_enqueue_attempt, event-queue_enqueue_done, event-queue_claim_attempt, event-queue_claim_done, event-queue_complete_attempt, event-queue_complete_done, event-queue_fail_attempt, event-queue_fail_done, event-queue_save_attempt, event-queue_save_done, map-queue_enqueue_done, map-queue_claim_done, map-queue_complete_done, map-queue_fail_done]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -33,7 +41,8 @@ verdict: trace-jsonl
 ## Step 1: 创建 bundle 并运行 queue 操作
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs queue-log --case case-75 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs queue-log --case case-75 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "B=$B"
 ```
 
@@ -42,15 +51,14 @@ echo "B=$B"
 ## Step 2: 运行 queue 操作链
 
 ```bash
-B= # populated from Step 1
-
-cat > "$B/_run_queue.mjs" << 'JS'
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
 import { writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const {
   loadQueue, saveQueue, enqueue, claim, complete, fail, makeItem,
-} = await import('../DPT_FRAMEWORK/engine/queue-manager.mjs');
+} = await import('./DPT_FRAMEWORK/engine/queue-manager.mjs');
 
 const dir = process.argv[2]; // $B (bundle root), process.argv[1] is the script path
 
@@ -92,7 +100,7 @@ const checks = [];
 for (const evt of required) {
   const found = content.includes(evt);
   checks.push({
-    event: 'check', gate: `event-${evt}`,
+    event: 'check', source: 'playbook', gate: `event-${evt}`,
     passed: found, expected: true,
     detail: found ? `${evt} found` : `${evt} MISSING`,
   });
@@ -112,15 +120,15 @@ for (const m of mappings) {
   const fineLine = lines.find(l => l.includes(m.fine));
   const hasBroad = fineLine && fineLine.includes(m.broad);
   checks.push({
-    event: 'check', gate: `map-${m.fine}`,
+    event: 'check', source: 'playbook', gate: `map-${m.fine}`,
     passed: hasBroad, expected: true,
     detail: hasBroad ? `${m.fine} → ${m.broad}` : `mapping FAILED for ${m.fine}`,
   });
 }
 
-const tracePath = join(dir, '_logs', '_trace.jsonl');
+const tracePath = join(dir, 'rb_trace.jsonl');
 for (const c of checks) {
-  writeFileSync(tracePath, JSON.stringify({ ts: new Date().toISOString(), ...c }) + '\n', { flag: 'a' });
+  writeFileSync(tracePath, JSON.stringify({ ts: new Date().toISOString(), source: 'playbook', ...c }) + '\n', { flag: 'a' });
 }
 
 const failed = checks.filter(c => !c.passed);
@@ -130,18 +138,17 @@ if (failed.length > 0) {
   process.exit(1);
 }
 JS
-node "$B/_run_queue.mjs" "$B"
 ```
 
 → 预期：12 个事件全部存在，4 个 fine→broad 映射正确。
 
 ---
 
-## Cleanup
-
-**PASS 才执行。FAIL 时保留 bundle 现场供排查。**
+## Native Completion
 
 ```bash
-B= # populated from Step 1
-rm -rf "$B" && echo "Cleaned up $B"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
+
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

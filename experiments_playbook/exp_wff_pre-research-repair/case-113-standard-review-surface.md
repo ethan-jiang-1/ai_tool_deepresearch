@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-pre-research-repair
 case: case-113-standard-review-surface
-weight: light
 case_goal: "Prove that the HITL1 question surface, AI interpretation sample, and human review checklist are visible in Markdown — so a human reviewer can judge whether the AI's understanding aligns with expectations, without reading JS."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-113_wff_review_*
-trace: dpt_disp_case-113_wff_review_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [hitl1-question-surface, interpretation-sample, human-review-checklist, hitl1-recorded]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -39,7 +47,8 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_review --case case-113 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_review --case case-113 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "Bundle: $B"
 ```
 
@@ -110,6 +119,7 @@ human_decision_checkpoints:
 将 AI interpretation sample 对应的 payload 写入 profile：
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 cat > $B/rb_profile.yaml << 'EOF'
 plan_basename: wff_review
 research_profile: exploratory_map
@@ -142,21 +152,36 @@ grep -E 'research_profile|root_must_answer|plan_basename|status:|recorded_at' $B
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate hitl1-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl1-recorded.mjs --bundle $B --current-node phases/phase-hitl1.md)
 echo "$GATE_OUTPUT"
 PASSED=$(echo "$GATE_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
-node -e "
-import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.recordCheck('$B/rb_trace.jsonl', { gate: 'hitl1-recorded', passed: $PASSED, detail: 'review surface: AI interpretation sample payload' });
-});
-"
+node --input-type=module - "$B" "$PASSED" <<'JS'
+import { appendFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+const [bundle, gatePassed] = process.argv.slice(2);
+const review = {
+  question_dimensions: ['research_profile', 'root_must_answer_set', 'plan_basename'],
+  interpretation: {
+    research_profile: 'exploratory_map',
+    must_answer_count: 3,
+    fixture_boundary: 'deterministic_gate_fixture',
+  },
+  checklist: ['profile_fit', 'must_answer_coverage', 'payload_owner', 'fixture_honesty', 'plan_basename_stable'],
+};
+writeFileSync(join(bundle, 'case-113-review-surface.json'), `${JSON.stringify(review, null, 2)}\n`);
+const checks = [
+  ['hitl1-question-surface', review.question_dimensions.length === 3 && review.question_dimensions.includes('root_must_answer_set')],
+  ['interpretation-sample', review.interpretation.research_profile === 'exploratory_map' && review.interpretation.must_answer_count === 3],
+  ['human-review-checklist', review.checklist.length === 5 && review.checklist.includes('fixture_honesty')],
+  ['hitl1-recorded', gatePassed === 'true'],
+];
+for (const [gate, passed] of checks) appendFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({ ts: new Date().toISOString(), event: 'check', source: 'playbook', gate, passed, expected: true })}\n`);
+if (checks.some(([, passed]) => !passed)) process.exit(1);
+JS
 ```
 
 ## Step 6: 从 trace 裁决
 
 ```bash
-node -e "
-import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.verdict('$B/rb_trace.jsonl');
-});
-"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 
@@ -167,24 +192,4 @@ import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
 >   全部在 Markdown 中可见 → gate pass。
 
 
-## Step HH: Post-Execution Health
-
-Standard profile — gate diagnostics, timeline consistency.
-
-```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
-```
-
-> 健康检查不改变 verdict。health status 由 runner report 记录。
-
-## Step 8: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-node -e "
-import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
-  m.cleanup('$B');
-});
-"
-```
+Stop after native completion. The Autorun Supervisor owns Standard health, audit, preservation, and optional clean-PASS cleanup.

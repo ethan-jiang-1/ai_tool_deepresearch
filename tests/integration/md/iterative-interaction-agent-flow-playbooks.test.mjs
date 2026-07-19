@@ -9,7 +9,7 @@ const read = (path) => readFileSync(`${ROOT}/${path}`, 'utf8');
 const setup = read('experiments_env/shared/prepare-iterative-interaction-case.mjs');
 const observer = read('experiments_env/shared/observe-iterative-interaction-case.mjs');
 const subjectRunner = read('experiments_env/shared/run-iterative-interaction-subject.mjs');
-const registry = read('experiments_playbook/RUN_EXPS.md');
+const registry = read('experiments_playbook/PLAYBOOK_MANIFEST.md');
 const cases = {
   711: read('experiments_playbook/exp_iterative_interaction/case-711-heavy-hitl1-natural-acceptance.md'),
   712: read('experiments_playbook/exp_iterative_interaction/case-712-heavy-hitl2-natural-rerun.md'),

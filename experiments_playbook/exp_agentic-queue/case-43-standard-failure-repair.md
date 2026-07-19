@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: agentic-queue
 case: case-43-standard-failure-repair
-weight: light
 case_goal: "验证 queue v2 invalid task、missing receipt、unsafe-current guard、failure repair 和 empty queue blocker。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-43_agq_repair_*
-trace: dpt_disp_case-43_agq_repair_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [empty_queue_blocker, failure_creates_repair, invalid_task_rejected, missing_receipt_blocks, unsafe_current_explicit, unsafe_current_guard]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: AGQ-006, AGQ-019
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -48,7 +56,8 @@ req: AGQ-006, AGQ-019
 ## Step 1: 创建 disposable runtime context
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs agq_repair --case case-43 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs agq_repair --case case-43 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
 node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 ```
@@ -60,12 +69,12 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 验证 queue demand item 不能使用 `work_id` 作为身份；`queue_item_id` 才是 current queue demand identity。
 
 ```bash
-cat > "$B/invalid.mjs" << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { QueueItemSchema, makeItem } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { QueueItemSchema, makeItem } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const __dirname = esmDirname(import.meta.url);
+const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 trace.traceInit('agq-playbook/repair', { source: 'agq-playbook/repair' });
 
@@ -79,13 +88,12 @@ const valid = makeItem({ queue_item_id: 'queue-valid' });
 const parsed = QueueItemSchema.safeParse({ ...valid, work_id: 'legacy-demand-id' });
 
 trace.traceEntry('check', {
-  source: 'agq-playbook/repair',
-  step: 'invalid_task_rejected',
+  source: 'playbook',
+  gate: 'invalid_task_rejected',
+  expected: true,
   passed: makeItemRejected && parsed.success === false,
 });
 JS
-
-node "$B/invalid.mjs"
 ```
 
 -> 预期：old demand identity 被拒绝。
@@ -95,12 +103,12 @@ node "$B/invalid.mjs"
 入队 `queue-repair-1` 和 `queue-repair-2`。尝试 complete 缺失 file receipt，应阻止 promotion。
 
 ```bash
-cat > "$B/missing_receipt.mjs" << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { createQueue, enqueue, complete, saveQueue, makeItem } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createQueue, enqueue, complete, saveQueue, makeItem } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const __dirname = esmDirname(import.meta.url);
+const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 
 let queue = createQueue('agq-repair');
@@ -114,14 +122,13 @@ saveQueue(__dirname, queue);
 
 const blocked = complete(queue, { queue_item_id: 'queue-repair-1' }, __dirname);
 trace.traceEntry('check', {
-  source: 'agq-playbook/repair',
-  step: 'missing_receipt_blocks',
+  source: 'playbook',
+  gate: 'missing_receipt_blocks',
+  expected: true,
   passed: blocked.feedback.passed === false
     && blocked.queue.active_window[0].queue_item_id === 'queue-repair-1',
 });
 JS
-
-node "$B/missing_receipt.mjs"
 ```
 
 -> 预期：receipt 失败，`active_window[0]` 不变。
@@ -131,12 +138,12 @@ node "$B/missing_receipt.mjs"
 加载 queue，尝试替换 current 但不带 `unsafeCurrent=true`，应抛出异常。
 
 ```bash
-cat > "$B/guard.mjs" << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { loadQueue, preempt, makeItem } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { loadQueue, preempt, makeItem } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const __dirname = esmDirname(import.meta.url);
+const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 
 let queue = loadQueue(__dirname);
@@ -147,13 +154,12 @@ try {
   guardWorked = true;
 }
 trace.traceEntry('check', {
-  source: 'agq-playbook/repair',
-  step: 'unsafe_current_guard',
+  source: 'playbook',
+  gate: 'unsafe_current_guard',
+  expected: true,
   passed: guardWorked,
 });
 JS
-
-node "$B/guard.mjs"
 ```
 
 -> 预期：guard 拦截未授权 front replacement。
@@ -163,12 +169,12 @@ node "$B/guard.mjs"
 显式 `unsafeCurrent=true` + `replaceCurrent=true`，允许 urgent 替换 front；旧 front 进入 pool。
 
 ```bash
-cat > "$B/unsafe.mjs" << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { loadQueue, preempt, saveQueue, makeItem } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { loadQueue, preempt, saveQueue, makeItem } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const __dirname = esmDirname(import.meta.url);
+const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 
 let queue = loadQueue(__dirname);
@@ -180,15 +186,14 @@ const unsafe = preempt(queue, makeItem({ queue_item_id: 'queue-repair-urgent' })
 saveQueue(__dirname, unsafe);
 
 trace.traceEntry('check', {
-  source: 'agq-playbook/repair',
-  step: 'unsafe_current_explicit',
+  source: 'playbook',
+  gate: 'unsafe_current_explicit',
+  expected: true,
   passed: unsafe.active_window[0].queue_item_id === 'queue-repair-urgent'
     && unsafe.refill_pool.some((item) => item.queue_item_id === 'queue-repair-1'
       && item.lineage?.preempted_from === 'active_window_front'),
 });
 JS
-
-node "$B/unsafe.mjs"
 ```
 
 -> 预期：urgent 在 ordered window front，旧 front 在 pool。
@@ -198,12 +203,12 @@ node "$B/unsafe.mjs"
 创建新 queue，fail front item 后 repair work 应进入 active window front，原 next item 后移。
 
 ```bash
-cat > "$B/failure.mjs" << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { createQueue, enqueue, fail, saveQueue, makeItem } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createQueue, enqueue, fail, saveQueue, makeItem } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const __dirname = esmDirname(import.meta.url);
+const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 
 let repairQueue = createQueue('agq-repair-failure');
@@ -213,14 +218,13 @@ repairQueue = fail(repairQueue, { queue_item_id: 'queue-repair-fail', reason: 'd
 saveQueue(__dirname, repairQueue);
 
 trace.traceEntry('check', {
-  source: 'agq-playbook/repair',
-  step: 'failure_creates_repair',
+  source: 'playbook',
+  gate: 'failure_creates_repair',
+  expected: true,
   passed: repairQueue.active_window[0].queue_item_id.startsWith('repair-queue-repair-fail-')
     && repairQueue.active_window[1].queue_item_id === 'queue-repair-after-fail',
 });
 JS
-
-node "$B/failure.mjs"
 ```
 
 -> 预期：repair work 插到 front，原 next item 后移。
@@ -230,60 +234,37 @@ node "$B/failure.mjs"
 对空 queue 调用 claim，应返回 blocker 状态。
 
 ```bash
-cat > "$B/empty.mjs" << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { createQueue, claim } from '../DPT_FRAMEWORK/engine/queue-manager.mjs';
-import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
+import { createQueue, claim } from './DPT_FRAMEWORK/engine/queue-manager.mjs';
 
-const __dirname = esmDirname(import.meta.url);
+const __dirname = process.argv[2];
 const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
 
 const emptyClaim = claim(createQueue('agq-repair-empty'), { actor: 'main-agent' });
 trace.traceEntry('check', {
-  source: 'agq-playbook/repair',
-  step: 'empty_queue_blocker',
+  source: 'playbook',
+  gate: 'empty_queue_blocker',
+  expected: true,
   passed: emptyClaim.item === null
     && emptyClaim.queue.queue_health === 'blocked'
     && emptyClaim.queue.stop_authorization_state === 'empty_queue_after_refill',
 });
 JS
-
-node "$B/empty.mjs"
 ```
 
 -> 预期：empty queue authorizes the empty-queue blocker state only.
 
-## Step 3: 从 trace 裁决
+## Native Completion
 
 ```bash
-cat > "$B/verdict.mjs" << 'JS'
-import { readFileSync } from 'node:fs';
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-import { esmDirname } from '../DPT_FRAMEWORK/engine/esm-dirname.mjs';
-
-const __dirname = esmDirname(import.meta.url);
-const trace = createTrace(__dirname + '/rb_trace.jsonl', { consoleEcho: false });
-const events = readFileSync(trace.traceFilePath(), 'utf-8').trim().split('\n').map(JSON.parse);
-const checks = events.filter((event) => event.event === 'check' && event.source === 'agq-playbook/repair');
-const pass = checks.length >= 6 && checks.every((event) => event.passed === true);
-console.log('checks:' + checks.length + ' total:' + events.length);
-console.log(pass ? '\x1b[32mCASE-43 PASS\x1b[0m' : '\x1b[31mCASE-43 FAIL\x1b[0m');
-if (!pass) process.exit(1);
-trace.traceCleanup();
-JS
-
-node "$B/verdict.mjs"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
-
--> 预期：6 个 playbook check 全部通过。
 
 ## Step 4: 结果解读
 
 PASS 证明 queue v2 错误路径都由 Engine fail closed，并且所有 current proof 都使用 `queue_item_id` 与 ordered arrays。
 
-## Cleanup
-
-```bash
-rm -rf "$B"
-echo "Cleaned up $B"
-```
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

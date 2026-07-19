@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-wave-chain
 case: case-151-standard-waves-full-chain
-weight: light
 case_goal: "Prove seed-topics -> Wave0 -> Wave1 depth review -> Wave2 scan/eligibility gates pass sequentially only after delegated phases are drained through work-unit claim/submit."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-151_waves_full_chain_*
-trace: dpt_disp_case-151_waves_full_chain_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [ordered-gate-attempts, seed-gate-pass, setup-gate-pass, wave0-drained-before-gate, wave0-gate-pass, wave1-drained-before-gate, wave1-gate-pass, wave2-drained-before-gate, wave2-gate-pass, wave2-pure-no-ledger-required]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: RWE-001, RWE-004, RWE-005, AGQ-014
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -43,7 +51,8 @@ Fixture-backed Engine case. Markdown is the controller: the Agent reads each CLI
 ## Step 1: [MAIN/SHELL] Create Runtime Context And Pass Setup Gate
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs waves_full_chain --case case-151 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs waves_full_chain --case case-151 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "BUNDLE=$B"
 
 node --input-type=module - "$B" <<'JS'
@@ -104,6 +113,7 @@ JS
 ## Step 2: [MAIN/SHELL] Enter Seed Phase, Materialize Seed Topic, And Pass Seed Gate
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-seed-topics.md > "$B/case-151-enter-seed.md"
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to setup_ready > "$B/case-151-advance-setup.json"
 
@@ -138,6 +148,7 @@ JS
 ## Step 3: [MAIN/SHELL] Enter Wave0 And Submit Work Unit
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-wave0.md > "$B/case-151-enter-wave0.md"
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to seed_topics_ready > "$B/case-151-advance-seed.json"
 
@@ -191,6 +202,7 @@ JS
 ## Step 4: [MAIN/SHELL] Verify Wave0 Drain, Then Run Wave0 Gate
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs claim "$B" --phase wave0 --count 1 --actor-outcome available --actor-source native_probe --actor-role-key dpt-source-intake --actor-reason probe_succeeded --execution-actor delegated_subagent > "$B/case-151-wave0-drain.json"
 DRAIN_W0_STATUS=$?
@@ -209,6 +221,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --curre
 ## Step 5: [MAIN/SHELL] Enter Wave1, Submit Work Unit, Drain, And Gate
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-wave1.md > "$B/case-151-enter-wave1.md"
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave0_complete > "$B/case-151-advance-wave0.json"
 
@@ -272,6 +285,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --curre
 ## Step 6: [MAIN/SHELL] Enter Wave2, Complete Pure Synthesis, Drain, And Gate
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-wave2.md > "$B/case-151-enter-wave2.md"
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave1_complete > "$B/case-151-advance-wave1.json"
 
@@ -348,9 +362,10 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave2-complete.mjs --bundle "$B" --curre
 ## Step 7: [MAIN/SHELL] Record Verdict From Runtime Evidence
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
-import { readTrace, readWorkUnitLedgerRows, recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { readTrace, readWorkUnitLedgerRows, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const bundle = process.argv[2];
 const setup = JSON.parse(readFileSync(`${bundle}/case-151-gate-setup.json`, 'utf8'));
@@ -378,9 +393,7 @@ recordPlaybookCheck(bundle, {
   passed: ['setup-ready', 'seed-topics-ready', 'wave0-complete', 'wave1-complete', 'wave2-complete'].every((gate) => attempts.some((event) => event.gate === gate && event.passed === true)),
   detail: attempts.map((event) => `${event.gate}:${event.passed}`).join(', ')
 });
-const verdict = writeTraceVerdict(bundle, 'case-151');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log('Recorded native playbook checks; Supervisor finalizer is authoritative.');
 JS
 ```
 
@@ -388,17 +401,9 @@ JS
 
 PASS means the chain advanced through real lifecycle handoffs and every wave gate was run only after the relevant phase drain proof. Wave0/Wave1 delegated evidence was accepted through submitted work-unit ledger coverage. Wave2 pure synthesis had no Wave2 delegated row and still passed because no targeted evidence output was present.
 
-## Step 9: [MAIN/SHELL] Cleanup
-
-PASS only:
+## Step 9: [MAIN/SHELL] Native Completion
 
 ```bash
-node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-151-verdict.json"
-rm -rf "$B"
-```
-
-## Optional Automation Smoke
-
-```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-151 --target-dir tests/.test-bundles --cleanup-pass
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```

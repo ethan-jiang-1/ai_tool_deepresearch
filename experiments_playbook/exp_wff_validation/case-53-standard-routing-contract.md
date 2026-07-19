@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-validation
 case: case-53-standard-routing-contract
-weight: light
 case_goal: "验证 current-node 绑定、next / terminal / no_transition / config_error 四类 routing 结果，并确认 check.next 只在 next 时出现。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-53_wff_val_contract
-trace: dpt_disp_case-53_wff_val_contract/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [next:status, next:routing, binding:status, binding:routing, binding:diagnostics, no_transition:status, no_transition:routing, terminal:status, terminal:routing, recovery:status, recovery:routing]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -44,7 +52,8 @@ verdict: trace-jsonl
 ## Step 1: 创建 bundle
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_contract --case case-53 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs wff_val_contract --case case-53 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node DPT_FRAMEWORK/cli/validate-bundle.mjs "$B"
 node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 ```
@@ -56,14 +65,15 @@ node DPT_FRAMEWORK/cli/inspect-bundle.mjs "$B"
 ## Step 2: 跑 routing contract
 
 ```bash
-cat > "$B/routing-contract.mjs" << 'JS'
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node --input-type=module - "$B" <<'JS'
+import { createTrace } from './DPT_FRAMEWORK/engine/trace.mjs';
 import { readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const B = process.argv[2];
-const trace = createTrace(join(B, '_logs', '_trace.jsonl'), { consoleEcho: false });
+const trace = createTrace(join(B, 'rb_trace.jsonl'), { consoleEcho: false });
 const SRC = 'wff-validation/complex-routing-contract';
 trace.traceInit('wff-validation: complex routing contract', { source: SRC });
 
@@ -95,7 +105,7 @@ function decode(result) {
 }
 
 function emit(step, passed, detail, extra = {}) {
-  trace.traceEntry('check', { source: SRC, step, passed, detail, ...extra });
+  trace.traceEntry('check', { source: 'playbook', gate: step, passed, expected: true, detail, ...extra });
 }
 
 let res = decode(runGate(realTransitions, instantiationNode));
@@ -137,38 +147,18 @@ emit('recovery:status', res.status === 0 && res.data.check?.passed === true,
 emit('recovery:routing', res.data.routing?.kind === 'next' && res.data.check?.next === 'phases/phase-hitl1.md',
   `routing=${res.data.routing?.kind}, next=${res.data.check?.next}`, { routing: res.data.routing?.kind, next: res.data.check?.next });
 JS
-node "$B/routing-contract.mjs" "$B"
 ```
 
 → 预期：11 个 check 全部 passed。
 
 ---
 
-## Step 3: 从 trace 裁决
+## Native Completion
 
 ```bash
-cat > "$B/verify.mjs" << 'JS'
-import { readFileSync } from 'node:fs';
-import { createTrace } from '../DPT_FRAMEWORK/engine/trace.mjs';
-
-const bundle = process.argv[2];
-const trace = createTrace(bundle + '/rb_trace.jsonl', { consoleEcho: false });
-const raw = readFileSync(trace.traceFilePath(), 'utf-8').trim();
-const events = raw ? raw.split('\n').map(JSON.parse) : [];
-const checks = events.filter(e => e.event === 'check');
-const passed = checks.filter(e => e.passed === true);
-const failed = checks.filter(e => e.passed !== true);
-
-console.log('checks: ' + checks.length + ' (' + passed.length + ' PASS, ' + failed.length + ' FAIL)');
-for (const c of checks) console.log('  ' + c.step + ' → ' + (c.passed ? 'PASS' : 'FAIL'));
-if (failed.length > 0 || checks.length !== 11) process.exit(1);
-console.log('\nALL CHECKS PASSED');
-
-trace.traceCleanup();
-JS
-node "$B/verify.mjs" "$B"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
-
 
 ## Step 4: 结果解读
 
@@ -180,21 +170,4 @@ node "$B/verify.mjs" "$B"
 >   [recovery] 恢复正常 transitions → routing.kind="next"
 >   全部 expected:true → 5/5 PASS 即通过。
 
-
-## Step HH: Post-Execution Health
-
-Standard profile — gate diagnostics, timeline consistency.
-
-```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile standard
-```
-
-> 健康检查不改变 verdict。health status 由 runner report 记录。
-
-## Step 5: Cleanup
-
-> PASS 才执行。FAIL 时保留 bundle 现场供排查。
-
-```bash
-rm -rf "$B"
-```
+Stop after native completion. The Autorun Supervisor owns health, durable audit, preservation, and optional clean-PASS cleanup of the complete case run root.

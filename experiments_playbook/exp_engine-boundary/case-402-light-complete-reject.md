@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: engine-boundary
 case: case-402-light-complete-reject
-weight: light
 case_goal: "验证 invalid work-unit submit fail-closed：缺 receipt、缺 output、缺 cache、nonce mismatch、wrong work_id 均不写 ledger。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-402_eb_reject_work_unit
-trace: dpt_disp_case-402_eb_reject_work_unit/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [missing-receipt-rejected, missing-output-rejected, missing-cache-rejected, nonce-mismatch-rejected, wrong-work-id-rejected, no-ledger-on-reject]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -47,7 +55,8 @@ Fixture-backed, no Agent actor, no external calls. Each negative scenario must a
 Create a disposable bundle and Wave0 scaffold exactly as in `case-401`, then keep the bundle open while each negative scenario runs independently.
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_reject_work_unit --case case-402 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs eb_reject_work_unit --case case-402 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 writeWave0Scaffold(process.argv[2], { planBasename: 'eb_reject_work_unit' });
@@ -158,24 +167,23 @@ import { readFileSync } from 'node:fs';
 import {
   readWorkUnitLedgerRows,
   recordPlaybookCheck,
-  writeTraceVerdict
 } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const bundle = process.argv[2];
 const expected = new Map([
-  ['missing-receipt', 'missing_receipt'],
-  ['missing-output', 'missing_output'],
-  ['missing-cache', 'missing_cache'],
-  ['nonce-mismatch', 'nonce_mismatch'],
-  ['wrong-work-id', 'wrong_work_id'],
+  ['missing-receipt', ['missing-receipt-rejected', 'missing_receipt']],
+  ['missing-output', ['missing-output-rejected', 'missing_output']],
+  ['missing-cache', ['missing-cache-rejected', 'missing_cache']],
+  ['nonce-mismatch', ['nonce-mismatch-rejected', 'nonce_mismatch']],
+  ['wrong-work-id', ['wrong-work-id-rejected', 'wrong_work_id']],
 ]);
 
-for (const [label, expectedCode] of expected) {
+for (const [label, [gate, expectedCode]] of expected) {
   const status = Number(readFileSync(`${bundle}/case-402-${label}-submit.status`, 'utf8'));
   const submit = JSON.parse(readFileSync(`${bundle}/case-402-${label}-submit.json`, 'utf8'));
   const reason = submit.last_submit_rejection?.reason_code;
   recordPlaybookCheck(bundle, {
-    gate: `reject-${label}`,
+    gate,
     passed: status === 1 && reason === expectedCode,
     detail: `status=${status}, reason=${reason}, expected=${expectedCode}`
   });
@@ -188,9 +196,7 @@ recordPlaybookCheck(bundle, {
   detail: `${rows.length} submitted row(s)`
 });
 
-const verdict = writeTraceVerdict(bundle, 'case-402');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log('Recorded native playbook checks; Supervisor finalizer is authoritative.');
 JS
 ```
 
@@ -207,14 +213,11 @@ Expected rejection coverage:
 
 PASS means invalid work-unit submits fail closed at the production submit boundary and cannot launder delegated success through a ledger row. FAIL means the Agent must treat the preserved bundle as a contract failure and repair the submit validation or ledger mutation boundary.
 
-## Step 5: [MAIN/SHELL] Cleanup
-
-PASS removes the disposable bundle. FAIL preserves it for diagnosis.
-
-## Optional Automation Smoke
-
-This smoke command runs the same checkpoints for automation, but it is not the normative MD-controller execution surface:
+## Native completion
 
 ```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-402 --cleanup-pass
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
+
+Stop after native completion. The Autorun Supervisor owns Heavy health, audit, preservation, and optional clean-PASS cleanup.

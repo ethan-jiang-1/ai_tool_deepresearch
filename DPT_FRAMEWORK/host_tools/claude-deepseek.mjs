@@ -6,7 +6,8 @@
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { parseEnvFile, validateEndpoint, buildChildEnv, redact } from './lib/env-deepseek.mjs';
+import { parseEnvFile, validateEndpoint, redact } from './lib/env-deepseek.mjs';
+import { loadAgentCliBase } from './lib/agent-cli-launcher.mjs';
 
 const R = '\x1b[31m', G = '\x1b[32m', B = '\x1b[0m';
 
@@ -99,12 +100,13 @@ if (!v.DEEPSEEK_ANTHROPIC_BASE_URL) launcherFail(2, 'DEEPSEEK_ANTHROPIC_BASE_URL
 if (!validateEndpoint(v.DEEPSEEK_ANTHROPIC_BASE_URL)) launcherFail(2, `invalid endpoint URL: ${v.DEEPSEEK_ANTHROPIC_BASE_URL}`);
 if (!v.DEEPSEEK_MODEL) launcherFail(2, 'DEEPSEEK_MODEL is required');
 
-// build child environment via shared module
-const childEnv = buildChildEnv(v);
+// Build the same executable/provider-isolated environment used by the
+// Supervisor while preserving this generic entry's transparent argv policy.
+const launch = loadAgentCliBase({ repoRoot: REPO_ROOT });
 
 // spawn claude without a shell, passthrough args + stdio
-const result = spawnSync('claude', ['--setting-sources', 'project,local', ...args], {
-  env: childEnv,
+const result = spawnSync(launch.executable, ['--setting-sources', 'project,local', ...args], {
+  env: launch.env,
   stdio: 'inherit',
   shell: false,
 });

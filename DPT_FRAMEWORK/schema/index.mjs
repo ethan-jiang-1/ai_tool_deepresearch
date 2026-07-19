@@ -40,7 +40,14 @@ export {
   WorkUnitStatus,
   WorkUnitStatusFileSchema,
 } from './contracts/work-unit.mjs';
-export { PlaybookFrontmatterSchema } from './contracts/playbook.mjs';
+export {
+  PLAYBOOK_BUNDLE_ROLE_RE,
+  PLAYBOOK_CASE_RE,
+  PLAYBOOK_CHECK_ID_RE,
+  PLAYBOOK_EVIDENCE_ROLE_RE,
+  PlaybookFrontmatterSchema,
+  PlaybookPolicySchema,
+} from './contracts/playbook.mjs';
 export {
   GATE_MACHINE_STATES,
   GATE_EVENT_TYPES,

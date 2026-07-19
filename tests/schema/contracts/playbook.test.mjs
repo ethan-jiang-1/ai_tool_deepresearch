@@ -1,115 +1,78 @@
-// tests/schema/contracts/playbook.test.mjs — 1:1 for DPT_FRAMEWORK/schema/contracts/playbook.mjs
 import { describe, it } from 'node:test';
+// @impl AGT-005, AGT-006, AGT-007, EXA-004, PLR-001, VER-006
 import assert from 'node:assert/strict';
 import { PlaybookFrontmatterSchema } from '../../../DPT_FRAMEWORK/schema/contracts/playbook.mjs';
 
 const VALID = {
-  schema: 'command-experiment/v1',
+  schema: 'command-experiment/v2',
   experiment: 'gate-fork',
   case: 'case-11-light-four-returns',
-  weight: 'light',
   case_goal: 'Verify forkGate four returns.',
-  runner: 'coding-agent',
-  execution: 'real-bundle',
-  evidence: 'filesystem-and-trace',
-  bundle: 'dpt_disp_case-11_gf_simple',
-  trace: 'dpt_disp_case-11_gf_simple/rb_trace.jsonl',
-  verdict: 'trace-jsonl',
+  verdict_mode: 'all',
+  required_checks: ['branch', 'schema_fail'],
+  bundle_roles: ['verdict'],
+  verdict_role: 'verdict',
+  health_roles: ['verdict'],
+  health_profile: 'light',
+  durable_evidence_roles: [],
+  proof_subject: 'deterministic_contract',
+  subject_execution: 'none',
+  fixture: 'fixture_backed',
+  runtime: 'real_disposable_bundle',
+  external_calls: 'none',
+  verdict_judge: 'deterministic',
 };
 
-describe('PlaybookFrontmatterSchema', () => {
-  it('accepts minimal valid frontmatter', () => {
+describe('PlaybookFrontmatterSchema command-experiment/v2', () => {
+  it('accepts the closed deterministic contract', () => {
     assert.ok(PlaybookFrontmatterSchema.safeParse(VALID).success);
   });
 
-  it('accepts frontmatter with optional req field', () => {
-    const r = PlaybookFrontmatterSchema.safeParse({ ...VALID, req: 'AGQ-006' });
-    assert.ok(r.success);
-    assert.equal(r.data.req, 'AGQ-006');
+  it('accepts optional requirement refs and not-run explanation', () => {
+    const parsed = PlaybookFrontmatterSchema.parse({ ...VALID, req: 'AGQ-006, EXA-005', not_run_if: 'required actor unavailable' });
+    assert.equal(parsed.not_run_if, 'required actor unavailable');
   });
 
-  it('accepts frontmatter with optional agent_mode', () => {
-    const r = PlaybookFrontmatterSchema.safeParse({ ...VALID, agent_mode: 'auto' });
-    assert.ok(r.success);
+  it('accepts an Agent-behavior profile with durable evidence', () => {
+    assert.ok(PlaybookFrontmatterSchema.safeParse({
+      ...VALID,
+      case: 'case-406-heavy-real-subagent-boundary',
+      health_profile: 'heavy',
+      durable_evidence_roles: ['subject_task', 'subject_result'],
+      proof_subject: 'agent_behavior',
+      subject_execution: 'real_subagent',
+      fixture: 'setup_only',
+    }).success);
   });
 
-  it('accepts frontmatter with optional agent_dependency', () => {
-    const r = PlaybookFrontmatterSchema.safeParse({ ...VALID, agent_dependency: 'needs real Agent' });
-    assert.ok(r.success);
-  });
-
-  it('accepts passthrough extra fields', () => {
-    const r = PlaybookFrontmatterSchema.safeParse({ ...VALID, custom_field: 'anything' });
-    assert.ok(r.success);
-    assert.equal(r.data.custom_field, 'anything');
-  });
-
-  it('accepts all three weight values', () => {
-    for (const w of ['light', 'standard', 'heavy']) {
-      assert.ok(PlaybookFrontmatterSchema.safeParse({ ...VALID, weight: w }).success, `weight=${w} should pass`);
+  it('rejects V1 and every retired field', () => {
+    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, schema: 'command-experiment/v1' }).success);
+    for (const [field, value] of Object.entries({
+      weight: 'light', runner: 'coding-agent', execution: 'real-bundle', evidence: 'filesystem-and-trace',
+      bundle: 'dpt_disp_*', trace: 'dpt_disp_*/rb_trace.jsonl', verdict: 'trace-jsonl',
+      agent_mode: 'auto', agent_dependency: 'real Agent', custom_field: true,
+    })) {
+      assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, [field]: value }).success, field);
     }
   });
 
-  it('accepts both verdict values', () => {
-    for (const v of ['trace-jsonl', 'filesystem']) {
-      assert.ok(PlaybookFrontmatterSchema.safeParse({ ...VALID, verdict: v }).success, `verdict=${v} should pass`);
-    }
+  it('rejects duplicate or malformed policy identifiers', () => {
+    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, required_checks: ['branch', 'branch'] }).success);
+    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, required_checks: ['UPPER'] }).success);
+    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, bundle_roles: ['bad_role'] }).success);
+    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, durable_evidence_roles: ['bad-role'] }).success);
   });
 
-  // ---- rejections ----
-
-  it('rejects missing schema', () => {
-    const { schema, ...rest } = VALID;
-    assert.ok(!PlaybookFrontmatterSchema.safeParse(rest).success);
+  it('rejects verdict and health roles outside bundle policy', () => {
+    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, verdict_role: 'other' }).success);
+    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, health_roles: ['other'] }).success);
+    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, health_roles: [] }).success);
   });
 
-  it('rejects wrong schema value', () => {
-    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, schema: 'other/v1' }).success);
-  });
-
-  it('rejects missing experiment', () => {
-    const { experiment, ...rest } = VALID;
-    assert.ok(!PlaybookFrontmatterSchema.safeParse(rest).success);
-  });
-
-  it('rejects empty experiment', () => {
-    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, experiment: '' }).success);
-  });
-
-  it('rejects missing case', () => {
-    const { case: c, ...rest } = VALID;
-    assert.ok(!PlaybookFrontmatterSchema.safeParse(rest).success);
-  });
-
-  it('rejects invalid weight', () => {
-    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, weight: 'extreme' }).success);
-  });
-
-  it('rejects invalid execution', () => {
-    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, execution: 'mock' }).success);
-  });
-
-  it('rejects invalid evidence', () => {
-    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, evidence: 'console-output' }).success);
-  });
-
-  it('rejects invalid verdict', () => {
-    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, verdict: 'guess' }).success);
-  });
-
-  it('rejects empty bundle', () => {
-    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, bundle: '' }).success);
-  });
-
-  it('rejects empty trace', () => {
-    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, trace: '' }).success);
-  });
-
-  it('rejects empty case_goal', () => {
-    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, case_goal: '' }).success);
-  });
-
-  it('rejects empty runner', () => {
-    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, runner: '' }).success);
+  it('enforces deterministic versus Agent-behavior cross fields', () => {
+    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, subject_execution: 'real_agent' }).success);
+    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, external_calls: 'real' }).success);
+    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, verdict_judge: 'ai_judge' }).success);
+    assert.ok(!PlaybookFrontmatterSchema.safeParse({ ...VALID, proof_subject: 'agent_behavior' }).success);
   });
 });

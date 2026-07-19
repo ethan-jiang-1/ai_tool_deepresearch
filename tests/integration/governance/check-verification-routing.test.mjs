@@ -45,22 +45,31 @@ function routePlan({ playbookPath = 'experiments_playbook/exp_example/case-11-li
 }
 
 const PLAYBOOK = `---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: example
 case: case-11-light-example
-weight: light
 case_goal: "Verify example behavior."
-runner: coding-agent
-agent_mode: real-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_example_case11
-trace: dpt_disp_example_case11/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [example]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: [subject_prompt, subject_transcript, subject_result]
+proof_subject: agent_behavior
+subject_execution: real_agent
+fixture: setup_only
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
 
 # case-11-light-example
 `;
+
+function manifest(paths) {
+  return `# Playbook Manifest\n\n<!-- agent-experiment-manifest:v1 -->\n| Path |\n|---|\n${paths.map((pathValue) => `| \`${pathValue}\` |`).join('\n')}\n<!-- /agent-experiment-manifest -->\n`;
+}
 
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'verification-routing-'));
@@ -68,7 +77,7 @@ function fixture() {
   write(root, 'openspec/changes/example-change/verification-plan.yaml', stringifyYaml(routePlan()));
   write(root, 'tests/governance/parser.test.mjs', '// fixture asset\n');
   write(root, 'experiments_playbook/exp_example/case-11-light-example.md', PLAYBOOK);
-  write(root, 'experiments_playbook/RUN_EXPS.md', '| case-11 | `exp_example/case-11-light-example.md` | proof |\n');
+  write(root, 'experiments_playbook/PLAYBOOK_MANIFEST.md', manifest(['exp_example/case-11-light-example.md']));
   symlinkSync(join(REPO, 'DPT_FRAMEWORK'), join(root, 'DPT_FRAMEWORK'), 'dir');
   return root;
 }
@@ -146,15 +155,15 @@ describe('check-verification-routing.mjs', () => {
   });
 
   it('rejects missing and duplicate active runner registration', () => {
-    write(root, 'experiments_playbook/RUN_EXPS.md', '# none\n');
+    write(root, 'experiments_playbook/PLAYBOOK_MANIFEST.md', manifest(['exp_example/case-12-light-other.md']));
     const missing = run(root, 'assets');
     assert.equal(missing.status, 1);
     assert.match(missing.stderr, /found 0/);
     const ref = 'exp_example/case-11-light-example.md';
-    write(root, 'experiments_playbook/RUN_EXPS.md', `${ref}\n${ref}\n`);
+    write(root, 'experiments_playbook/PLAYBOOK_MANIFEST.md', `# Playbook Manifest\n\n<!-- agent-experiment-manifest:v1 -->\n| Path |\n|---|\n| \`${ref}\` |\n| \`${ref}\` |\n<!-- /agent-experiment-manifest -->\n`);
     const duplicate = run(root, 'assets');
     assert.equal(duplicate.status, 1);
-    assert.match(duplicate.stderr, /found 2/);
+    assert.match(duplicate.stderr, /duplicate paths/);
   });
 
   it('rejects malformed invocation with configuration exit 2', () => {

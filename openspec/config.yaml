@@ -16,8 +16,9 @@ context: |
     - JS/CLI 的输出 (check/inspect/advice) 必须回到 conversation context，让 MD 读后继续行动
     - JS/CLI 不编排多阶段流程、不做语义判断、不替 Agent 选修复策略
     - Gate 不持有路由——Transition table 负责 Node 间转移，Gate 只问不猜
-    - 绝对禁止用环境变量传递配置——Coding Agent 每个 tool call 是独立 shell，
-      process.env 不跨 call。所有配置必须显式：CLI flag、函数参数、runtime 属性
+    - 禁止用环境变量传递跨 tool-call 的实验/runtime state——Coding Agent 每个 tool call 是独立 shell。
+      这不禁止 Agent CLI Launcher 在自己拥有的 child env 中携带 host provider 凭据与路由；
+      case context、bundle role 和 verdict authority 仍必须通过显式文件、CLI flag 或函数参数传递
 
   技术栈:
     Node.js ≥20, 纯 JavaScript (ESM, .mjs)。不使用 TypeScript。
@@ -58,7 +59,7 @@ context: |
   命名规范:
     - 枚举 snake_case, 用户界面中文, 内部字段名/路径英文
     - Capability 前缀: cmd-* = Agent 读的 Markdown 命令 playbook; cli-* = JS 脚本
-    - Disposable Bundle: dpt_disp_{prefix}_{name}/ — 实验用临时 bundle, .gitignore 忽略, 测试结束清理
+    - Disposable Bundle: dpt_disp_{prefix}_{name}/ — case run root 内的实验 bundle；是否清理由 Supervisor outcome/health/audit policy 决定
 
   需求追踪 (Requirement Traceability):
     所有 capability 可追踪，强制性纪律，不可跳过。
@@ -92,8 +93,11 @@ context: |
     - `unit`: focused JS-led `node:test` under `tests/`, outside `tests/integration/` and `tests/e2e/`
     - `integration`: JS-led boundary tests under `tests/integration/`
     - `deterministic_e2e`: JS-led workflow-scale deterministic chains under `tests/e2e/`
-    - `agent_flow_e2e`: coding-Agent-executed Markdown playbooks under `experiments_playbook/` over real disposable bundles
+    - `agent_flow_e2e`: Headless/Interactive Playbook Agent 执行 `experiments_playbook/` Markdown，使用真实 disposable runtime
     `regression`, cost, actor, judge, fixture distance, and runtime bundle type are not peer test classes.
+    Autorun Supervisor 与 Agent CLI Launcher 是 host/lifecycle surface，不是新的 test class 或 proof subject。
+    普通 CI/`node:test` fixture 只能证明 deterministic Supervisor mechanics；只有 CI 显式提供真实 Agent CLI、
+    model credentials 和所需 tools 时，才可作为 host 发起 `agent_flow_e2e`，native runtime evidence 仍是 authority。
     New changes SHALL create change-root `verification-plan.yaml`; apply tasks SHALL run
     `check-verification-routing.mjs --mode plan` before target edits and `--mode assets` before archive.
     This is repo lifecycle discipline, not an OpenSpec-native artifact gate: `openspec status/validate`
@@ -102,40 +106,23 @@ context: |
     tests/fixtures/: 最小测试框架（symlink 到 DPT_FRAMEWORK/），为 tests/ 提供 fixture。
 
   实验体系 (Experiments):
-    实验分两层，但关系不是对等——playbook 是驱动层，prototype 是支持环境:
-
-      驱动层 — experiments_playbook/exp_{name}/
-        Agent 可读的 Markdown playbook，定义实验要做什么。
-        Agent 逐 step 执行：创建 disposable bundle → import 原型 Engine → 执行操作 → 从 trace 裁决。
-        这是实验的"入口"——Agent 从这里开始，trace 在这里结束。
-
-      支持环境 — experiments_env/prototype-{name}/
-        原型 JS engine + trace 系统 + node MD，为 playbook 提供可 import 的 staging 运行时。
-        playbook 不 mock——它 import 真实 engine，在真实 disposable bundle 上端到端执行。
-        原型完成后冻结，不随生产代码变化。
-
-      两者通过 AGT-xxx requirement 关联，命名对齐（gate-loop ↔ prototype-gate-loop）。
-
-    驱动层详细约定 — experiments_playbook/:
-      目录结构:
-        experiments_playbook/
-          exp_{component}/                     # 每个实验一个子目录
-      命名与格式详见 `guidelines/command-experiments.md`（playbook 形状、case 命名、
-      cost label、frontmatter、Execution Contract、Principles 1-7、Design Criteria Checklist）。
-      核心约定:
-        - 每个 playbook 创建独立 disposable bundle（dpt_disp_*），互不污染
-        - playbook 是 Agent 可读的 Markdown，包含 bash + JS 代码块
-        - Step 1 统一用 new-disposable-bundle.mjs 创建 bundle，绝不手动 mkdir/sed
-        - 裁决只从 trace JSONL 来，不靠 console output
-
-    支持环境详细约定 — experiments_env/:
-      目录命名: prototype-{component-name}/（如 prototype-gate-loop）
-      标准结构:
-        - EXPERIMENT.md              # 实验目的、假设、结论
-        - nodes-{component}/         # node MD（*.entry.md = 入口, *.dep.md = 依赖）
-      核心约定:
-        - 原型仅保留 fixture + 笔记；engine、trace、CLI 代码已搬至 DPT_FRAMEWORK/
-        - 完成后冻结，不随生产代码变化
+    正典术语与责任边界见 `guidelines/command-experiments.md`；当前操作入口见
+    `experiments_playbook/README.md` 与 `DPT_FRAMEWORK/host_tools/README.md`。本文件只保留高频路由:
+    - Agent Experiment Autorun 是正常 unattended launch model，不是传统 CLI test runner。
+    - Autorun Supervisor 选择、启动、监督、验证 native completion、运行 health、审计和清理；不执行 Markdown 或重判 verdict。
+    - Agent CLI Launcher 只启动 Coding Agent runtime。
+    - Headless/Interactive Playbook Agent 执行完整 Markdown；Interactive 仅用于单 case 诊断、replay 或真人 judgment。
+    - Subject Agent/Sub-agent 是 case-owned 独立智能 actor；Playbook Agent 参与不能冒充 Subject evidence。
+    - Headless chain: host → Autorun Supervisor → Agent CLI Launcher → Headless Playbook Agent → Markdown/Engine → native completion → Supervisor health/audit/report/cleanup。
+      Interactive chain 使用同一 contract，但以 Interactive Playbook Agent 执行单 case 并保留 run root。
+    - Engine/CLI 拥有 deterministic checkpoint、receipt、trace 与 native completion contract。
+    - `PLAYBOOK_MANIFEST.md` 只拥有 active path/order；V2 frontmatter 拥有 case policy；filename 拥有 cost；native completion 是唯一 case outcome authority。
+    - Current surfaces: `experiments_playbook/PLAYBOOK_MANIFEST.md`、`RUN_AGENT_AUTORUN_EXPS.md`、`RUN_INTERACTIVE_EXPS.md` 与
+      `DPT_FRAMEWORK/host_tools/run-agent-experiment.mjs`; detailed behavior remains in accepted specs and executable contracts.
+    - 每个 case 使用显式 Supervisor-owned run root；`.exp-bundles/` 只含 run-owned state/log/evidence/audit/report，
+      不复制或链接 repo-root `DPT_FRAMEWORK/`、`experiments_env/`、`tests/`。
+    - native outcome、host lifecycle、Agent process、health 与 cleanup 分离；playbook finalization 后停止，health/cleanup 由 Supervisor 负责。
+    - `experiments_env/shared/` 只提供薄 setup/fact helper；不得成为隐藏 Playbook Agent、第二 verdict 或 cleanup owner。
 
   根目录约定 (Framework ↔ Bundle 同级, 不拷贝):
     docs/                       — 架构文档 (architect/)

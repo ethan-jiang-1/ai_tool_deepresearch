@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-seedtopic
 case: case-203-light-nn-prefix-naming
-weight: light
 case_goal: "验证 NN_ 前缀命名约定：seed topic slug 的 NN 等于 registry 1-based 位置（两位零填充），gate 三重一致校验通过，ls 自然排序匹配数组顺序，下游 reference 文件遵循 {slug}-<qualifier>.md 模式。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-203_nn_name_
-trace: dpt_disp_case-203_nn_name_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [delimiter-convention, nn-prefix-ordering, ref-per-topic-naming, ref-shared-naming, seed-topics-ready-boundary-misnamed, seed-topics-ready-happy]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: STM-006
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -60,13 +68,14 @@ req: STM-006
 6. 边界测试：故意写错文件名，gate 正确 reject [MAIN/SHELL]
 7. 从 trace 裁决 [MAIN/SHELL]
 8. 结果解读 [MAIN/SHELL]
-9. Cleanup（PASS 则删 bundle） [MAIN/SHELL]
+9. Native completion 后停止 [MAIN/SHELL]
 
 ## Step 1: 创建 disposable bundle + 写入 topic_registry（4 topic，NN_ 前缀 slug）
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs nn_name --case case-203 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs nn_name --case case-203 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 echo "Bundle: $B"
 
 node DPT_FRAMEWORK/cli/validate-bundle.mjs $B
@@ -124,12 +133,14 @@ cat > $B/rb_status.json << 'EOF'
 {"current_mode":"execution","state":"in_progress","current_gate":"setup_ready","next_gate":"seed_topics_ready"}
 EOF
 
-# 写入 gate_attempt + load_complete（setup-ready → seed-topics 的 handoff 证据）
-# gate 的 handoff_source_attempt_index 指向 gate_attempt 在 trace 中的 0-based index
-cat > $B/rb_trace.jsonl << 'TRACEOF'
-{"ts":"2026-07-07T10:00:00.000Z","event":"gate_attempt","gate":"setup-ready","passed":true,"currentNodeRef":"phases/phase-setup.md","next":"phases/phase-seed-topics.md"}
-{"ts":"2026-07-07T10:00:01.000Z","event":"load_complete","entry":"phases/phase-seed-topics.md","handoff_source_gate":"setup-ready","handoff_source_node":"phases/phase-setup.md","handoff_target_node":"phases/phase-seed-topics.md","handoff_source_attempt_index":0,"handoff_source_attempt_ts":"2026-07-07T10:00:00.000Z"}
-TRACEOF
+# Deterministic direct-predecessor fixture through production trace/load/status writers.
+node --input-type=module - "$B" <<'JS'
+import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+const [bundle]=process.argv.slice(2);
+writeGateAttempt(bundle,{check:{gate:'setup-ready',passed:true,currentNodeRef:'phases/phase-setup.md',next:'phases/phase-seed-topics.md'},routing:{kind:'next',next:'phases/phase-seed-topics.md'},inspect:[],advice:[]});
+JS
+node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-seed-topics.md > "$B/case-203-enter-seed-topics.md"
+node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to setup_ready > "$B/case-203-advance-setup.json"
 
 echo "=== Plan frontmatter ==="
 head -16 $B/rb_plan.md
@@ -143,7 +154,7 @@ cat $B/rb_status.json
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(echo dpt_disp_case-203_nn_name_*)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 
 # Topic 1: 01_meal-timing-and-metabolism
 cat > $B/seed_topics/01_meal-timing-and-metabolism.md << 'EOF'
@@ -293,7 +304,7 @@ ls -1 $B/seed_topics/
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(echo dpt_disp_case-203_nn_name_*)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 
 GATE_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle $B --gate seed-topics-ready -- node DPT_FRAMEWORK/cli/gates/check-gate-seed-topics-ready.mjs --bundle $B --current-node phases/phase-seed-topics.md)
 echo "$GATE_OUTPUT"
@@ -311,7 +322,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(echo dpt_disp_case-203_nn_name_*)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 
 echo "=== N1: ls natural ordering matches registry array order ==="
 ls -1 $B/seed_topics/
@@ -360,7 +371,7 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(echo dpt_disp_case-203_nn_name_*)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 
 echo "=== Creating Wave1-style per-topic reference files ==="
 # 按 shared-schemas.md 约定：reference/{topic_slug}-<qualifier>.md
@@ -534,7 +545,7 @@ import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m => {
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(echo dpt_disp_case-203_nn_name_*)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 
 echo "=== Boundary test: create a file whose stem does not match frontmatter slug ==="
 # 复制 04 文件，但用错误文件名——stem 与 frontmatter slug 不一致
@@ -570,7 +581,7 @@ rm "$B/seed_topics/04_wrong-name.md"
 REPO_ROOT=$(pwd)
 B=$(echo dpt_disp_case-203_nn_name_*)
 
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.verdict('$B/rb_trace.jsonl')})"
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 → 预期 **PASS**。trace 含 6 个 check event：
@@ -610,21 +621,4 @@ node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then
 > - 证明 gate 的 `per_file_slug_stem_consistency` rule 是真实 enforcement，不是被动接受
 
 
-## Step HH: Post-Execution Health
-
-Standard profile — gate diagnostics, timeline consistency.
-
-```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle $B --profile light
-```
-
-> 健康检查不改变 verdict。health status 由 runner report 记录。
-
-## Step 9: Cleanup
-
-```bash
-REPO_ROOT=$(pwd)
-B=$(echo dpt_disp_case-203_nn_name_*)
-
-node -e "import('$REPO_ROOT/experiments_env/shared/wff-playbook-utils.mjs').then(m=>{m.cleanup('$B')})"
-```
+Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

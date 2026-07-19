@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: autonomous-research-hardening
 case: case-601-standard-wave0-fail-stays-in-phase
-weight: standard
 case_goal: "BUG-033: after Wave0 gate failure feedback, remain in Wave0 repair loop, flag premature final/ as non-authoritative, and do not surface."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-601_arh_wave0_fail
-trace: dpt_disp_case-601_arh_wave0_fail/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [no-surfacing-intent-required-for-engine-feedback, premature-final-diagnostic-only, wave0-fail-did-not-authorize-final]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: CPT-006
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -33,7 +41,8 @@ Standard controlled MD-controller playbook. Inline JS may create fixture gaps an
 ## Step 1: Create Bundle With Wave0 Gap
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs arh_wave0_fail --case case-601 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs arh_wave0_fail --case case-601 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -55,6 +64,7 @@ echo "BUNDLE=$B"
 ## Step 2: Run Gate And Audit Feedback
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
 node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-601-wave0-gate.json"
 GATE_STATUS=$?
@@ -90,11 +100,8 @@ JS
 ## Step 3: Verdict
 
 ```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/rb_trace.jsonl'))"
+ B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-## Cleanup
-
-```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m => m.cleanup('$B', {caseId:'case-601'}))"
-```
+Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

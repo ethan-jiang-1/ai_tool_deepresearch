@@ -1,3 +1,4 @@
+// @impl EXA-005, EXA-006, PLR-003
 // Helpers for controlled work-unit playbooks.
 //
 // These utilities create fixture-backed work-unit inputs, but every delegated
@@ -13,6 +14,7 @@ import {
   loadWorkUnitIndex,
   workUnitIndexPath,
 } from '../../DPT_FRAMEWORK/engine/work-unit-core.mjs';
+import { finalizeAgentExperiment } from './wff-playbook-utils.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(HERE, '..', '..');
@@ -850,7 +852,7 @@ export function recordPlaybookCheck(bundleDir, { gate, passed, detail, expected 
   writeFileSync(tracePath, `${JSON.stringify({
     ts: new Date().toISOString(),
     event: 'check',
-    source: 'work-unit-playbook',
+    source: 'playbook',
     gate,
     passed,
     expected,
@@ -859,36 +861,41 @@ export function recordPlaybookCheck(bundleDir, { gate, passed, detail, expected 
   })}\n`, { flag: 'a' });
 }
 
-export function writeTraceVerdict(bundleDir, caseId, { mode = 'all' } = {}) {
-  const checks = readTrace(bundleDir).filter((event) => event.event === 'check');
-  let considered = checks;
-  if (mode === 'last') {
-    const byGate = new Map();
-    for (const check of checks) byGate.set(check.gate || check.label || check.detail, check);
-    considered = [...byGate.values()];
-  }
-  const failures = considered.filter((check) => check.passed !== (check.expected ?? true));
-  const verdict = {
-    case: caseId,
-    status: checks.length > 0 && failures.length === 0 ? 'PASS' : 'FAIL',
-    ok: checks.length > 0 && failures.length === 0,
-    mode,
-    check_count: checks.length,
-    considered_count: considered.length,
-    failures,
+export function writeTraceVerdict(bundleDir, caseId = null, {
+  mode = 'all',
+  contextPath,
+  bundleRole = 'verdict',
+  bundles = null,
+  evidence = [],
+  notRunReason = null,
+} = {}) {
+  if (!contextPath) throw new Error('writeTraceVerdict now requires contextPath from the rendered run context');
+  const completion = finalizeAgentExperiment({
+    contextPath,
+    bundles: bundles ?? [{ role: bundleRole, path: bundleDir }],
+    evidence,
+    notRunReason,
+    expectedMode: mode,
+  });
+  return {
+    case: completion.case,
+    legacy_case_label: caseId,
+    status: completion.outcome,
+    native_outcome: completion.outcome,
+    ok: true,
+    failed: 0,
+    mode: completion.verdict_mode,
+    check_count: completion.checks_total,
+    considered_count: completion.checks_considered,
+    completion,
   };
-  writeFileSync(path.join(bundleDir, `${caseId}-verdict.json`), `${JSON.stringify(verdict, null, 2)}\n`);
-  return verdict;
 }
 
 export function recordNotRun(bundleDir, { gate, reason }) {
-  recordPlaybookCheck(bundleDir, {
-    gate,
-    passed: false,
-    expected: true,
-    detail: `NOT RUN: ${reason}`,
-    extra: { outcome: 'not_run' },
-  });
+  void bundleDir;
+  void gate;
+  if (!reason || !String(reason).trim()) throw new Error('recordNotRun requires a reason');
+  throw new Error('recordNotRun trace synthesis is retired; pass notRunReason to the native finalizer');
 }
 
 export function validateBundleViaCli(bundleDir) {

@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-wave0
 case: case-212-heavy-gate-fail-repair
-weight: heavy
 case_goal: "验证 Wave0 gate fail 后由 Engine 打开 repair/refill batch，新的 work unit 用 b001 提交后 gate pass。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-212_w0_gate_refill_repair
-trace: dpt_disp_case-212_w0_gate_refill_repair/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [gate-attempts-fail-then-pass, initial-gate-fails, repair-batch-opened, repair-claim-uses-refill-batch, repair-submit, repaired-gate-passes]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: RWE-001
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -47,7 +55,8 @@ Fixture-backed Engine case, no Agent actor, no external calls. The fixtures stan
 ## Step 1: [MAIN/SHELL] Create Runtime Context
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs w0_gate_refill_repair --case case-212 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w0_gate_refill_repair --case case-212 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -68,6 +77,7 @@ Expected: the bundle contains two Wave0 topics but no submitted work-unit covera
 ## Step 2: [MAIN/SHELL] Submit Topic A Only
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import {
   enqueueWorkUnitTask,
@@ -118,6 +128,7 @@ Expected: topic-a submit returns `ok: true`, but topic-b remains uncovered.
 ## Step 3: [MAIN/SHELL] Run Gate And Read Failure
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
 node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-212-gate-before-repair.json"
 GATE_BEFORE_STATUS=$?
@@ -139,6 +150,7 @@ Expected: gate rejects and `inspect[]` points at missing/uncounted `topic-b` cov
 ## Step 4: [MAIN/SHELL] Open Repair Batch And Claim Topic B
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 OPENED=$(node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch "$B" --phase wave0 --reason gate_failure_refill)
 printf '%s\n' "$OPENED" > "$B/case-212-open-batch.json"
 
@@ -165,6 +177,7 @@ Expected: `open-batch` reports `batch_id: "b001"` and the repair claim work ID c
 ## Step 5: [MAIN/SHELL] Submit Repair Result
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 RESULT_B=$(node --input-type=module - "$B" "$WORK_B" <<'JS'
 import {
   referenceContent,
@@ -194,12 +207,13 @@ Expected: repair submit returns `ok: true`.
 ## Step 6: [MAIN/SHELL] Rerun Gate And Record Verdict
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-212-gate-after-repair.json"
 
 node --input-type=module - "$B" "$WORK_B" <<'JS'
 import { readFileSync } from 'node:fs';
 import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
-import { readTrace, recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { readTrace, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const [bundle, repairWorkId] = process.argv.slice(2);
 const failGate = JSON.parse(readFileSync(`${bundle}/case-212-gate-before-repair.json`, 'utf8'));
@@ -217,9 +231,7 @@ recordPlaybookCheck(bundle, { gate: 'repair-submit', passed: repairSubmit.ok ===
 recordPlaybookCheck(bundle, { gate: 'repaired-gate-passes', passed: passGate.check?.passed === true, detail: JSON.stringify(passGate.inspect || []) });
 recordPlaybookCheck(bundle, { gate: 'gate-attempts-fail-then-pass', passed: gateAttempts.some((event) => event.passed === false) && gateAttempts.some((event) => event.passed === true), detail: `${gateAttempts.length} gate_attempt event(s)` });
 
-const verdict = writeTraceVerdict(bundle, 'case-212');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log('Recorded native checks; Supervisor finalizer is authoritative.');
 JS
 ```
 
@@ -229,17 +241,9 @@ Expected: final verdict PASS.
 
 PASS means Wave0 gate feedback can drive a repair/refill batch: the first gate rejects missing coverage, the Engine opens `b001`, the repair work unit submits ledger coverage, and the second gate passes. FAIL means the preserved bundle contains the gate/open-batch/submit trace needed for repair.
 
-## Step 8: [MAIN/SHELL] Cleanup
-
-PASS only:
+## Step 8: [MAIN/SHELL] Native Completion
 
 ```bash
-node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-212-verdict.json"
-rm -rf "$B"
-```
-
-## Optional Automation Smoke
-
-```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-212 --cleanup-pass
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```

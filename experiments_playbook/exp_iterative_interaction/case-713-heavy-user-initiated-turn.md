@@ -1,130 +1,130 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: iterative-interaction
 case: case-713-heavy-user-initiated-turn
-weight: heavy
-case_goal: "Two independent real subject turns answer user-initiated factual questions under readiness autonomy and pre-artifact Final without changing authority or creating a third loop."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-713_iterative-interaction-713-*_*
-trace: dpt_disp_case-713_iterative-interaction-713-*_*/rb_trace.jsonl
-verdict: trace-jsonl
+case_goal: "Two independent real Subject turns answer user-initiated factual questions under readiness autonomy and pre-artifact Final without changing authority or creating a third loop."
+verdict_mode: all
+required_checks: [case-713-readiness-reply-no-authority, case-713-runner-transition-allowlist, case-713-final-reply-no-authority, case-713-final-remains-empty, case-713-transcript-digests]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: [subject_prompt, subject_transcript, subject_result]
+proof_subject: agent_behavior
+subject_execution: real_agent
+fixture: setup_only
+runtime: real_disposable_bundle
+external_calls: real
+verdict_judge: deterministic
 req: VER-001, VER-003, SWE-004, ACS-001, CDP-004
-agent_dependency: "Requires two independent real subject turns with role/event-labeled transcripts. Missing either execution is NOT RUN; fixture or runner replies are invalid."
+not_run_if: "Either independent authenticated Subject Agent turn is unavailable."
 ---
+
+<!-- @impl EXA-003, EXA-005, EXA-006, EXA-007, EXA-008, PLR-003 -->
+
+# Case 713 - User-Initiated Turns Without Authority Mutation
 
 ## Execution Contract
 
-The setup helper ends at legal readiness `stop:no` after the real HITL2 Gate/load/status window, with a direct fact stating the readiness Gate has not run and `final/` empty. The first subject answers one fixed user turn under the loaded production readiness surface. The runner then performs the only allowed verdict-affecting mechanics: real readiness Gate, Final entry, and status sync. A fresh independent subject answers the second fixed turn under the production Final header before artifacts exist.
+The setup helper stops at legal readiness `stop:no` after the real HITL2 Gate/load/status window, with the readiness Gate not yet run and `final/` empty. Subject A answers one fixed readiness question. The Playbook Agent then performs the only allowed verdict-affecting mechanics: real readiness Gate, Final entry, and status sync. A fresh independent Subject D answers the Final question before artifacts exist.
 
-Authority snapshots include the bundle authority surfaces and exclude only transcript/observer files. The observer captures A before and B after the readiness reply, C after the declared transition, and D after the Final reply. Transcript hashes are appended after B and D respectively, so observer-owned trace events cannot hide subject mutation in A=B or C=D.
+Authority snapshots exclude only transcript/observer evidence. A→B and C→D must be unchanged; B→C has one exact transition allowlist. The two adapter sessions retain exact prompt, raw stream, and actual result events. Missing either Subject execution is native NOT_RUN, never a Playbook-Agent substitute.
 
-## Reality Distance Ledger
-
-| Dimension | Declaration |
-| --- | --- |
-| `test_class` | `agent_flow_e2e` |
-| Fixture distance | `setup_only`; legal readiness boundary with seeded direct facts |
-| Subject execution | two fresh independent real Agent turns |
-| Runtime | one fresh real disposable bundle |
-| External calls | none |
-| Verdict judge | authority snapshots, exact transition allowlist, transcripts, final directory, trace digests |
-| Native verdict | bundle-root `rb_trace.jsonl` checks |
-| No substitute | missing either independent turn is `NOT RUN`, never scripted PASS |
-
-# case-713-heavy-user-initiated-turn
-
-## Step 1: [RUNNER] Prepare Readiness And Snapshot A
+## Step 1 - Prepare readiness and snapshot A
 
 ```bash
-B=$(node experiments_env/shared/prepare-iterative-interaction-case.mjs 713)
-printf '%s\n' "$B" > /tmp/case-713-bundle-path
+B=$(node experiments_env/shared/prepare-iterative-interaction-case.mjs 713 --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node experiments_env/shared/observe-iterative-interaction-case.mjs 713 snapshot --bundle "$B" --label A
 ```
 
-## Step 2: [SUBJECT AGENT A] Answer The Fixed Readiness Turn
+## Step 2 - Run independent Subject A
 
-Start a fresh independently authenticated Agent with this limited system instruction:
-
-```text
-You are the independent subject Agent for case 713 readiness. Work only in the exact bundle path provided by the runner. Load the bundle's current production lifecycle surface and direct facts, then answer the user's current turn.
-```
-
-The actual user message is exactly:
+The exact user turn is:
 
 ```text
 现在是不是已经全部完成，可以直接拿最终报告了？
 ```
 
-Run a fresh subject through the shared adapter:
+Run a fresh authenticated Subject through the shared adapter. The prompt must not include expected no-mutation rules, enum values, commands, next actions, or verdict wording. If it is unavailable, record that state and skip to the one finalizer boundary:
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+set +e
 node experiments_env/shared/run-iterative-interaction-subject.mjs 713-readiness --bundle "$B"
+SUBJECT_A_STATUS=$?
+set -e
+if [ "$SUBJECT_A_STATUS" -ne 0 ]; then
+  printf '%s\n' 'independent readiness Subject Agent unavailable' > "$B/case-713-subject-unavailable.txt"
+else
+  node experiments_env/shared/observe-iterative-interaction-case.mjs 713 snapshot --bundle "$B" --label B
+  node experiments_env/shared/observe-iterative-interaction-case.mjs 713 hash --bundle "$B" --transcript "$B/case-713-readiness-transcript.jsonl"
+fi
 ```
 
-The adapter uses the fixed Codex-only settings file, supplies the current phase's read-only production required closure, enforces a 180-second hard timeout, and saves the runner-owned user event plus raw role/event-labeled Agent stream byte-for-byte to `$B/case-713-readiness-transcript.jsonl`. The subject prompt must not include expected no-mutation rules, enum values, commands, next actions, or verdict wording.
-
-Immediately after the subject exits, capture B before appending the observer digest:
+## Step 3 - Perform the declared readiness-to-Final transition
 
 ```bash
-node experiments_env/shared/observe-iterative-interaction-case.mjs 713 snapshot --bundle "$B" --label B
-node experiments_env/shared/observe-iterative-interaction-case.mjs 713 hash --bundle "$B" --transcript "$B/case-713-readiness-transcript.jsonl"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+if [ ! -f "$B/case-713-subject-unavailable.txt" ]; then
+  node experiments_env/shared/observe-iterative-interaction-case.mjs 713 transition-final --bundle "$B"
+fi
 ```
 
-## Step 3: [RUNNER] Perform The Declared Readiness To Final Transition
+Only `rb_status.json`, `rb_trace.jsonl`, `_logs/run.log`, and the production readiness checkpoint/diagnostic/observability files may change from B→C. `final/` remains empty.
 
-```bash
-node experiments_env/shared/observe-iterative-interaction-case.mjs 713 transition-final --bundle "$B"
-```
+## Step 4 - Run fresh independent Subject D
 
-The exact B→C changed-path allowlist is limited to `rb_status.json`, `rb_trace.jsonl`, `_logs/run.log`, and the production readiness-pass checkpoint, diagnostic, and observability files. `final/` must remain empty.
-
-## Step 4: [SUBJECT AGENT D] Answer The Fixed Pre-Artifact Final Turn
-
-Start a new independent Agent session with this limited system instruction:
-
-```text
-You are the independent subject Agent for case 713 Final. Work only in the exact bundle path provided by the runner. Load the bundle's current production lifecycle surface and direct facts, then answer the user's current turn.
-```
-
-The actual user message is exactly:
+The exact user turn is:
 
 ```text
 最终报告文件现在已经生成了吗？
 ```
 
-Run a new independent subject process through the same adapter:
+Run a new independent Subject process only if the first Subject succeeded. If it is unavailable, record the same unavailable state without a substitute reply:
 
 ```bash
-node experiments_env/shared/run-iterative-interaction-subject.mjs 713-final --bundle "$B"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+if [ ! -f "$B/case-713-subject-unavailable.txt" ]; then
+  set +e
+  node experiments_env/shared/run-iterative-interaction-subject.mjs 713-final --bundle "$B"
+  SUBJECT_D_STATUS=$?
+  set -e
+  if [ "$SUBJECT_D_STATUS" -ne 0 ]; then
+    printf '%s\n' 'independent Final Subject Agent unavailable' > "$B/case-713-subject-unavailable.txt"
+  else
+    node experiments_env/shared/observe-iterative-interaction-case.mjs 713 snapshot --bundle "$B" --label D
+    node experiments_env/shared/observe-iterative-interaction-case.mjs 713 hash --bundle "$B" --transcript "$B/case-713-final-transcript.jsonl"
+  fi
+fi
 ```
 
-The adapter saves the runner-owned user event plus raw Agent stream to `$B/case-713-final-transcript.jsonl`. Immediately capture D before hashing:
+## Step 5 - Derive verdict and package both exact Subject sessions
 
 ```bash
-node experiments_env/shared/observe-iterative-interaction-case.mjs 713 snapshot --bundle "$B" --label D
-node experiments_env/shared/observe-iterative-interaction-case.mjs 713 hash --bundle "$B" --transcript "$B/case-713-final-transcript.jsonl"
-```
-
-If either real subject turn is unavailable, report `NOT RUN`, preserve `$B`, and do not create a substitute reply.
-
-## Step 5: [OBSERVER] Derive Native Verdict
-
-```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+EXTRA_ARGS=()
+if [ -f "$B/case-713-subject-unavailable.txt" ]; then
+  EXTRA_ARGS+=(--not-run-reason "one or more independent Subject Agent sessions unavailable")
+else
 node experiments_env/shared/observe-iterative-interaction-case.mjs 713 verdict --bundle "$B"
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
-node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile heavy
+node --input-type=module - "$B" <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+const [bundle] = process.argv.slice(2);
+const readJson = (name) => JSON.parse(readFileSync(join(bundle, name)));
+writeFileSync(join(bundle, 'case-713-subject-prompt.json'), `${JSON.stringify({ sessions: [readJson('case-713-readiness-subject-prompt.json'), readJson('case-713-final-subject-prompt.json')] }, null, 2)}\n`);
+writeFileSync(join(bundle, 'case-713-subject-result.json'), `${JSON.stringify({ sessions: [readJson('case-713-readiness-subject-result.json'), readJson('case-713-final-subject-result.json')] }, null, 2)}\n`);
+writeFileSync(join(bundle, 'case-713-subject-transcript.jsonl'), Buffer.concat([
+  readFileSync(join(bundle, 'case-713-readiness-transcript.jsonl')),
+  readFileSync(join(bundle, 'case-713-final-transcript.jsonl')),
+]));
+JS
+  EXTRA_ARGS+=(--evidence "subject_prompt=$B/case-713-subject-prompt.json" --evidence "subject_transcript=$B/case-713-subject-transcript.jsonl" --evidence "subject_result=$B/case-713-subject-result.json")
+fi
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
-PASS requires A=B, the exact B→C transition allowlist, C=D, both transcript digests in root trace, `final/` empty at C/D, and bounded assistant predicates showing no delivery/progress overclaim, permission/checkpoint claim, or Final question/repair loop.
+PASS requires A=B, the exact B→C transition allowlist, C=D, both transcript digests in root trace, `final/` empty at C/D, and bounded assistant predicates with no delivery/progress overclaim or new permission/checkpoint loop.
 
-## Step 6: [RUNNER] Cleanup
-
-On clean PASS only:
-
-```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-713'}))"
-```
-
-Preserve FAIL or NOT RUN evidence.
+Stop after native completion. The Autorun Supervisor owns Heavy health, durable Subject evidence export, audit, preservation, and optional clean-PASS cleanup.

@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-wave0
 case: case-213-light-happy-and-fail
-weight: light
 case_goal: "验证 Wave0 多 work-unit source intake、invalid/missing receipt、timeout retry、orphan output rejection，以及 gate pass 均由 submitted ledger coverage 决定。"
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-213_w0_multi_work_unit
-trace: dpt_disp_case-213_w0_multi_work_unit/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [invalid-result-rejected, missing-receipt-rejected, multi-claim-count, multi-gate-pass, multi-ledger-rows, multi-submit, orphan-output-gate-rejects, rejected-work-units-no-ledger, timeout-retry-new-work-id]
+bundle_roles: [multi-work-unit-verdict, orphan-output]
+verdict_role: multi-work-unit-verdict
+health_roles: [multi-work-unit-verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: RWE-001
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -48,7 +56,8 @@ Fixture-backed Engine case, no Agent actor, no external calls. Fixture outputs m
 ## Step 1: [MAIN/SHELL] Create Runtime Context
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs w0_multi_work_unit --case case-213 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w0_multi_work_unit --case case-213 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { writeWave0Scaffold } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -71,6 +80,7 @@ Expected: bundle has topic registry for `topic-a`, `topic-b`, and `topic-c`.
 ## Step 2: [MAIN/SHELL] Enqueue And Claim Three Work Units
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
 node --input-type=module - "$B" <<'JS'
 import { enqueueWorkUnitTask, queueItemForWorkUnit } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
@@ -104,6 +114,7 @@ Expected: one Engine transaction claims three contiguous delegated queue-front i
 ## Step 3: [MAIN/SHELL] Submit Three Fixture Results
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
 import {
@@ -142,6 +153,7 @@ Expected: all three submits return `ok: true` and append exactly three submitted
 ## Step 4: [MAIN/SHELL] Gate Pass From Ledger Coverage
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
 node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-213-gate-multi-happy.json"
 node - "$B" <<'JS'
 const fs = require('fs');
@@ -159,6 +171,7 @@ Expected: gate passes from submitted work-unit ledger coverage, not filesystem-o
 Run two fresh claimed work units and prove submit rejects without ledger rows.
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -226,6 +239,7 @@ Expected: missing receipt returns `reason_code: "missing_receipt"`, invalid resu
 ## Step 6: [MAIN/SHELL] No-Progress Timeout Retry Checkpoint
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
 node --input-type=module - "$B" <<'JS'
 import { writeFileSync } from 'node:fs';
 import {
@@ -265,7 +279,9 @@ Expected: after explicitly aging the no-progress claim past its idle lease, time
 Use a separate bundle so the earlier successful Wave0 gate handoff does not mask the orphan-output provenance check.
 
 ```bash
-OB=$(node experiments_env/shared/new-disposable-bundle.mjs w0_orphan_output --case case-213 --force)
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
+OB=$(node experiments_env/shared/new-disposable-bundle.mjs w0_orphan_output --case case-213 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output --path "$OB"
 node --input-type=module - "$OB" <<'JS'
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -296,10 +312,11 @@ Expected: orphan bundle gate rejects because direct source output lacks submitte
 ## Step 8: [MAIN/SHELL] Record Verdict Checks
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
 import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
-import { readWorkUnitLedgerRows, recordPlaybookCheck, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { readWorkUnitLedgerRows, recordPlaybookCheck } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 
 const bundle = process.argv[2];
 const claim = JSON.parse(readFileSync(`${bundle}/case-213-multi-claim.json`, 'utf8'));
@@ -324,9 +341,7 @@ recordPlaybookCheck(bundle, { gate: 'rejected-work-units-no-ledger', passed: rej
 recordPlaybookCheck(bundle, { gate: 'timeout-retry-new-work-id', passed: retry.timedOut.ok === true && retry.retryWorkId !== retry.firstWorkId && index.work_units[retry.retryWorkId]?.attempt_index === 2 && index.work_units[retry.retryWorkId]?.batch_id === 'b000', detail: `${retry.firstWorkId} -> ${retry.retryWorkId}` });
 recordPlaybookCheck(bundle, { gate: 'orphan-output-gate-rejects', passed: orphanStatus === 1 && orphanGate.check?.passed === false && /coverage|bypass|topic-orphan/i.test(JSON.stringify(orphanGate.inspect || [])), detail: JSON.stringify(orphanGate.inspect || []) });
 
-const verdict = writeTraceVerdict(bundle, 'case-213');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log('Recorded native checks; Supervisor finalizer is authoritative.');
 JS
 ```
 
@@ -336,17 +351,10 @@ Expected: final verdict PASS.
 
 PASS means Wave0 work-unit coverage supports multi-claim/multi-submit gate pass, invalid submit fail-closed behavior, timeout retry with a new work ID, and orphan output rejection. FAIL means the Agent must inspect the preserved bundle(s) and repair the exact submit/gate/queue boundary reported by JSON feedback.
 
-## Step 10: [MAIN/SHELL] Cleanup
-
-PASS only:
+## Step 10: [MAIN/SHELL] Native Completion
 
 ```bash
-node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-213-verdict.json"
-rm -rf "$B" "$OB"
-```
-
-## Optional Automation Smoke
-
-```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-213 --cleanup-pass
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role multi-work-unit-verdict)
+OB=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role orphan-output)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "multi-work-unit-verdict=$B" --bundle "orphan-output=$OB"
 ```

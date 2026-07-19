@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: autonomous-research-hardening
 case: case-603-standard-surfacing-intent-abort
-weight: standard
 case_goal: "BUG-043: non-terminal stop:no would-have-surfaced moment records surfacing_intent and aborts user-facing surfacing."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-603_arh_surfacing
-trace: dpt_disp_case-603_arh_surfacing/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [surfacing-intent-diagnostic-only, surfacing-intent-event-shape, surfacing-intent-log-visible]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: SWE-005
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -22,7 +30,8 @@ Standard silent-execution observability playbook. This does not claim determinis
 ## Step 1: Create Bundle And Log Intent
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs arh_surfacing --case case-603 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs arh_surfacing --case case-603 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --surfacing-intent --node phases/phase-wave1.md --intent-type progress_report --reason "would report repeated gate failures to the user"
 echo "BUNDLE=$B"
 ```
@@ -30,6 +39,7 @@ echo "BUNDLE=$B"
 ## Step 2: Validate Trace Shape
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -59,11 +69,8 @@ JS
 ## Step 3: Verdict
 
 ```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m => m.verdict('$B/rb_trace.jsonl'))"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
-## Cleanup
-
-```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m => m.cleanup('$B', {caseId:'case-603'}))"
-```
+Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

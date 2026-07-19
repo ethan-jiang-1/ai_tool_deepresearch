@@ -1,17 +1,25 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-wave1
 case: case-222-heavy-gate-fail-repair
-weight: heavy
 case_goal: "Verify Wave1 gate failure creates repair/refill work-unit demand: first gate fails for missing topic coverage, repair opens b001, submit repairs the topic, and the next gate passes."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-222_w1_gate_refill_repair
-trace: dpt_disp_case-222_w1_gate_refill_repair/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [wave1-gate-fail-then-pass, wave1-initial-gate-fails, wave1-repair-batch, wave1-repaired-gate-passes]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 req: RWE-001, RWE-003, RWE-006, WAI-006
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -44,7 +52,8 @@ Fixture-backed Engine repair case. The repair content is controlled fixture data
 ## Step 1: [MAIN/SHELL] Create Bundle And Submit Partial Coverage
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs w1_gate_refill_repair --case case-222 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs w1_gate_refill_repair --case case-222 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import {
   enqueueWorkUnitTask,
@@ -95,6 +104,7 @@ echo "BUNDLE=$B"
 ## Step 2: [MAIN/SHELL] First Gate Must Fail
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 set +e
 node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-222-gate-before-repair.json"
 GATE_STATUS=$?
@@ -113,6 +123,7 @@ Expected: gate fails with missing `topic-b` coverage.
 ## Step 3: [MAIN/SHELL] Open Repair Batch And Submit Repair
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs open-batch "$B" --phase wave1 --reason gate_failure_refill > "$B/case-222-open-batch.json"
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
@@ -166,6 +177,7 @@ JS
 ## Step 4: [MAIN/SHELL] Rerun Gate And Record Verdict
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node --input-type=module - "$B" <<'JS'
 import { appendTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 appendTrace(process.argv[2], { event: 'wave1_completion', source: 'case-222-repair' });
@@ -173,7 +185,7 @@ JS
 node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-222-gate-after-repair.json"
 node --input-type=module - "$B" <<'JS'
 import { readFileSync } from 'node:fs';
-import { recordPlaybookCheck, readTrace, writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
+import { recordPlaybookCheck, readTrace } from './experiments_env/shared/work-unit-playbook-utils.mjs';
 import { loadWorkUnitIndex } from './DPT_FRAMEWORK/engine/work-unit-core.mjs';
 
 const bundle = process.argv[2];
@@ -187,16 +199,7 @@ recordPlaybookCheck(bundle, { gate: 'wave1-initial-gate-fails', passed: before.c
 recordPlaybookCheck(bundle, { gate: 'wave1-repair-batch', passed: opened.batch_id === 'b001' && repairRows.length >= 1, detail: JSON.stringify({ opened, repairRows: repairRows.map((row) => row.work_id) }) });
 recordPlaybookCheck(bundle, { gate: 'wave1-repaired-gate-passes', passed: after.check?.passed === true, detail: JSON.stringify(after.inspect || []) });
 recordPlaybookCheck(bundle, { gate: 'wave1-gate-fail-then-pass', passed: gateAttempts.some((event) => event.passed === false) && gateAttempts.some((event) => event.passed === true), detail: `${gateAttempts.length} gate_attempt event(s)` });
-const verdict = writeTraceVerdict(bundle, 'case-222');
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+console.log('Recorded native checks; Supervisor finalizer is authoritative.');
 JS
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
-
-## Optional Automation Smoke
-
-```bash
-node experiments_env/shared/run-fixture-backed-case.mjs --case case-222 --target-dir tests/.test-bundles --cleanup-pass
-```
-
-The optional runner mirrors the visible checkpoint sequence.

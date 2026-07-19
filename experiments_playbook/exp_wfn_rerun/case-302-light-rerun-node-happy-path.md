@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wfn-rerun
 case: case-302-light-rerun-node-happy-path
-weight: light
 case_goal: "Mechanism proof that real HITL2 rerun output authorizes phase-rerun and real rerun-ready output authorizes seed-topics."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-302_rerun_node_*
-trace: dpt_disp_case-302_rerun_node_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [case-302-rerun-mechanism, wave2-complete]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: light
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -22,7 +30,8 @@ Wave2 pass is a declared direct-predecessor fixture. Both tested gates are real;
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs rerun_node --case case-302 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs rerun_node --case case-302 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 mkdir -p "$B/artifacts/hitl2"
 printf '# Decision Brief\nRerun.\n' > "$B/artifacts/hitl2/decision-brief.md"
 cat > "$B/rb_profile.yaml" <<'YAML'
@@ -43,8 +52,10 @@ human_decision_checkpoints:
 YAML
 node --input-type=module - "$B" <<'JS'
 import { writeGateAttempt } from './DPT_FRAMEWORK/engine/helpers/gate-helpers.mjs';
+import { recordCheck } from './experiments_env/shared/wff-playbook-utils.mjs';
 const bundle=process.argv[2];
 writeGateAttempt(bundle,{check:{gate:'wave2-complete',passed:true,currentNodeRef:'phases/phase-wave2.md',next:'phases/phase-hitl2.md'},routing:{kind:'next',next:'phases/phase-hitl2.md'},inspect:[],advice:[]});
+recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'wave2-complete',passed:true,expected:true,detail:'declared direct-predecessor fixture'});
 JS
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-hitl2.md > "$B/case-302-enter-hitl2.md"
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to wave2_complete > "$B/case-302-advance-wave2.json"
@@ -64,16 +75,11 @@ const [bundle,h2Next,rrPassed,rrNext]=process.argv.slice(2);
 const status=JSON.parse(readFileSync(`${bundle}/rb_status.json`,'utf8'));
 recordCheck(`${bundle}/rb_trace.jsonl`,{gate:'case-302-rerun-mechanism',passed:h2Next==='phases/phase-rerun.md'&&rrPassed==='true'&&rrNext==='phases/phase-seed-topics.md'&&status.current_gate==='rerun_ready'&&status.current_node==='phases/phase-seed-topics.md',detail:'real rerun gates and witnessed status path'});
 JS
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
-node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile light
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 2: 结果解读
 
 > PASS 证明 rerun mechanism 的两个 real gate 与两次 witnessed handoff；不重复证明 full delivery tail。
 
-## Cleanup
-
-```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-302'}))"
-```
+Stop after native completion. The Autorun Supervisor owns Light health, audit, preservation, and optional clean-PASS cleanup.

@@ -1,18 +1,26 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: evidence-extraction
 case: case-163-heavy-rerun-add-real-cache-trail
-weight: heavy
 case_goal: "Real Agent canary: prove two rerun-added Topics use the normal Wave0/Wave1 pipeline, actionable Gate hints, supplementary submitted-output lineage, and hash-identical declaration recovery."
-runner: coding-agent
-agent_mode: real-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-163_eex_real_agent_rerun_add_*
-trace: dpt_disp_case-163_eex_real_agent_rerun_add_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [real-subagent-continuation, rerun-two-topics-added, cache-trail-preserved, same-gate-repair-recovered, wave2-complete]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: heavy
+durable_evidence_roles: [subject_task, subject_result, subject_receipt, subject_output]
+proof_subject: agent_behavior
+subject_execution: real_subagent
+fixture: setup_only
+runtime: real_disposable_bundle
+external_calls: real
+verdict_judge: deterministic
 req: AGT-009, EEX-003, EEX-004, RWP-014, WPG-001, WAI-005, CHI-001
+not_run_if: "A required native Sub-agent or real search/fetch capability is unavailable."
 ---
+
+<!-- @impl EXA-003, EXA-005, EXA-006, EXA-007, EXA-008, PLR-003, VER-006 -->
 
 ## Execution Contract
 
@@ -64,7 +72,8 @@ The setup must finish with:
 - no new-Topic result/receipt/cache/evidence/reference/source/depth path.
 
 ```bash
-B=$(node experiments_env/shared/new-disposable-bundle.mjs eex_real_agent_rerun_add --case case-163 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs eex_real_agent_rerun_add --case case-163 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 node --input-type=module - "$B" <<'JS'
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -300,6 +309,7 @@ Expected: validation/inspection succeeds, both production Wave inspectors pass t
 Run the formal HITL2 Gate and consume its real handoff. Do not hand-write the `hitl2-recorded` Gate attempt or rerun `load_complete` witness.
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md > "$B/case-163-hitl2-gate.json"
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-rerun.md > "$B/case-163-enter-rerun.md"
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$B/case-163-hitl2-status.json"
@@ -332,6 +342,7 @@ Create `case-163-topic-change.json` as the recorded rerun semantic input:
 ```
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/operate-topic-state.mjs apply --bundle "$B" --input "$B/case-163-topic-change.json" > "$B/case-163-topic-apply.json"
 node DPT_FRAMEWORK/cli/operate-topic-state.mjs inspect --bundle "$B" > "$B/case-163-topic-inspect.json"
 node DPT_FRAMEWORK/cli/apply-research-style.mjs --bundle "$B" --style debug > "$B/case-163-style.json"
@@ -346,6 +357,7 @@ Expected: topic-state commits one atomic plan+seed change. Each new UID-bound se
 ## Step 3: [MAIN/SHELL] Pass Rerun And Seed-Topics Gates, Then Claim Normal Wave0 Work
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/gates/check-gate-rerun-ready.mjs --bundle "$B" --current-node phases/phase-rerun.md > "$B/case-163-rerun-gate.json"
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-seed-topics.md > "$B/case-163-enter-seed-topics.md"
 node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to rerun_ready > "$B/case-163-rerun-status.json"
@@ -376,11 +388,14 @@ Dispatch a real Agent/sub-agent for each generated Wave0 task. Each actor must:
 
 The main controller must not prewrite, repair after the fact, or copy these semantic/provenance surfaces. If either actor/result is unavailable, record `NOT_RUN`, preserve the bundle, and exit `2`.
 
+After the first successful new-Topic native Sub-agent returns, write `case-163-subagent-evidence.json` as a path-only index with exact absolute `task`, `result`, `receipt`, and one Subject-written declared `output` path. These paths must come from that work unit's generated prompt refs and returned result, not from a fixture or parent-authored substitute. If a required native actor/search/fetch capability is unavailable, instead write `case-163-subject-unavailable.txt` with a non-empty reason and skip directly to native completion.
+
 ## Step 5: [MAIN/SHELL] Dry-Submit Then Submit Wave0 Results
 
 For each returned pair `<work-id> <real-result-path>`:
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs dry-submit "$B" --work-id <work-id> --result <real-result-path>
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs submit "$B" --work-id <work-id> --result <real-result-path>
 ```
@@ -394,6 +409,7 @@ Expected: both new Topics have real Engine-written submitted Wave0 rows, complet
 Inject one reversible presentation-independent artifact fault only after the valid Wave0 submits: move `reference/README.md` to `case-163-fault-reference-README.md`. Run the formal Wave0 Gate while preserving its JSON even on nonzero exit.
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 mv "$B/reference/README.md" "$B/case-163-fault-reference-README.md"
 node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-163-wave0-failed.json" || true
 ```
@@ -401,6 +417,7 @@ node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --curre
 The Agent reads `case-163-wave0-failed.json` and must use the primary `hints[]` only: confirm a complete `rule_id/repair_kind/missing_fact/write_to/rerun`, execute the authorized repair, and invoke the exact same checkpoint named by `rerun`. It must not inspect Engine source, infer repair kind from a path, or ask the user to restore the file.
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 # After the Agent has performed the hinted repair:
 node DPT_FRAMEWORK/cli/gates/check-gate-wave0-complete.mjs --bundle "$B" --current-node phases/phase-wave0.md > "$B/case-163-wave0-passed.json"
 node DPT_FRAMEWORK/cli/enter-phase.mjs --bundle "$B" --node phases/phase-wave1.md > "$B/case-163-enter-wave1.md"
@@ -431,6 +448,7 @@ From the reviewed hash-valid submitted rows, the Phase Agent:
 Harmless heading case/level/order/list differences are allowed; all required semantic sections remain non-empty. Run the read-only inspect first. Only after it passes, record the accepted completion evidence through the normal Engine operation. Do not invoke the formal Wave1 Gate yet, because the declaration fault must be injected before that Gate creates a Wave2 handoff:
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/inspect-wave1-output.mjs --bundle "$B" > "$B/case-163-wave1-inspect.json"
 node DPT_FRAMEWORK/cli/log-event.mjs --bundle "$B" --event wave1_completion > "$B/case-163-wave1-completion.json"
 ```
@@ -444,6 +462,7 @@ Choose the real submitted supplementary Wave1 work ID. Before mutation, store it
 Run the first formal Wave1 Gate attempt and preserve the expected failure JSON:
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-163-wave1-missing-declaration.json" || true
 ```
 
@@ -452,56 +471,65 @@ Expected: one `submitted_declaration_missing:<work-id>` parent root, `repair_kin
 The Agent executes the exact existing-owner operation from the hint:
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 node DPT_FRAMEWORK/cli/operate-work-unit.mjs recover-declaration "$B" --work-id <supplementary-work-id> > "$B/case-163-recovery.json"
 node DPT_FRAMEWORK/cli/gates/check-gate-wave1-complete.mjs --bundle "$B" --current-node phases/phase-wave1.md > "$B/case-163-wave1-restored.json"
 ```
 
 Expected: the restored row is byte-semantically/hash identical to the recorded pre-fault row, index/status/queue hashes remain unchanged, recovery audit stays outside the row, and the same normal Wave1 Gate reaches its first PASS and creates the Wave2 handoff. No manual row/hash, replacement attempt, or recovery-specific Gate success branch exists.
 
-## Step 10: [MAIN/SHELL] Record Trace-Backed Verdict Facts
+## Step 10: [PLAYBOOK AGENT] Complete the current Wave2
 
-Use production readers plus thin case assertions to record only these independent checks through `recordPlaybookCheck()`:
+Consume the successful restored Wave1 Gate's `check.next`, enter `phases/phase-wave2.md`, and synchronize `wave1_complete`. Execute the loaded production Wave2 phase over the four current Topics, including its normal queue/drain mechanics and required synthesis/ledger/finding-index surfaces. Run the real `wave2-complete` Gate only after the phase is drained and retain its JSON as `case-163-wave2-complete.json`. Historical pre-rerun Wave2 bytes or Gate attempts cannot satisfy this step.
 
-- real HITL2→rerun handoff and two-topic atomic topic-state commit;
-- complete new seeds and no topic-state queue/ledger mutation;
-- real submitted Wave0 coverage for both new Topic UIDs with verified cache leaves;
-- repairable Wave0 Gate failed once with a complete hint and passed after the exact same-check repair;
-- real Wave1 initial coverage for both Topics plus one supplementary prior-`evidence_summary` lineage;
-- minimal depth reviews and complete tolerant references/index backing;
-- missing declaration remained blocking and dependent symptoms were masked;
-- restored row/hash equals the recorded pre-fault row/hash and Wave1 passes through normal ledger authority;
-- every new work-unit beacon still matches its initial hash and no same-name nested bundle exists; and
-- historical reference hashes are unchanged (no mass rewrite).
-
-Do not record a check for every dependent symptom. Do not hardcode `passed: true`; compute each boolean from current CLI JSON/runtime authority. Historical fixture rows are excluded from real-Agent checks by their two known historical Topic UIDs.
-
-## Step 11: [VERDICT] Trace Verdict
+## Step 11: [MAIN/SHELL] Record five native checks and finalize once
 
 ```bash
-node --input-type=module - "$B" <<'JS'
-import { writeTraceVerdict } from './experiments_env/shared/work-unit-playbook-utils.mjs';
-const bundle = process.argv[2];
-const verdict = writeTraceVerdict(bundle, 'case-163', { mode: 'all' });
-console.log(JSON.stringify(verdict, null, 2));
-process.exit(verdict.ok ? 0 : 1);
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+EXTRA_ARGS=()
+if [ -f "$B/case-163-subject-unavailable.txt" ]; then
+  EXTRA_ARGS+=(--not-run-reason "required native Sub-agent or real search/fetch capability unavailable")
+else
+  node --input-type=module - "$B" <<'JS'
+import { existsSync, appendFileSync, readFileSync, statSync } from 'node:fs';
+import { isAbsolute, join, resolve } from 'node:path';
+import { parse as parseYaml } from 'yaml';
+const [bundle] = process.argv.slice(2);
+const evidence = JSON.parse(readFileSync(join(bundle, 'case-163-subagent-evidence.json')));
+for (const key of ['task','result','receipt','output']) if (!isAbsolute(evidence[key]) || !existsSync(evidence[key]) || statSync(evidence[key]).size === 0) throw new Error(`invalid Subject evidence path: ${key}`);
+const task = JSON.parse(readFileSync(evidence.task));
+const result = JSON.parse(readFileSync(evidence.result));
+const receipts = readFileSync(evidence.receipt, 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse);
+const rows = readFileSync(join(bundle, 'rb_output_declarations.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse);
+const planRaw = readFileSync(join(bundle, 'rb_plan.md'), 'utf8');
+const plan = parseYaml(planRaw.match(/^---\n([\s\S]*?)\n---/)[1]);
+const slugs = new Set((plan.topic_registry || []).map((topic) => topic.slug));
+const workId = result.work_id;
+const row = rows.find((entry) => entry.work_id === workId);
+const receipt = receipts.find((entry) => entry.work_id === workId);
+const outputBound = (result.output_files || []).some((entry) => resolve(bundle, entry.path) === resolve(evidence.output));
+const cachePaths = (result.cache_trails || []).flatMap((entry) => typeof entry === 'string' ? [entry] : Object.values(entry || {}).filter((value) => typeof value === 'string'));
+const wave0Failed = JSON.parse(readFileSync(join(bundle, 'case-163-wave0-failed.json')));
+const wave0Passed = JSON.parse(readFileSync(join(bundle, 'case-163-wave0-passed.json')));
+const wave1Failed = JSON.parse(readFileSync(join(bundle, 'case-163-wave1-missing-declaration.json')));
+const wave1Passed = JSON.parse(readFileSync(join(bundle, 'case-163-wave1-restored.json')));
+const wave2 = JSON.parse(readFileSync(join(bundle, 'case-163-wave2-complete.json')));
+const checks = [
+  ['real-subagent-continuation', task.work_id === workId && receipt?.work_id === workId && outputBound && row?.actor_execution?.execution_actor_class === 'delegated_subagent'],
+  ['rerun-two-topics-added', [...slugs].some((slug) => slug.endsWith('economic-impact')) && [...slugs].some((slug) => slug.endsWith('workforce-transition'))],
+  ['cache-trail-preserved', Boolean(row) && cachePaths.length > 0 && cachePaths.every((path) => existsSync(resolve(bundle, path)))],
+  ['same-gate-repair-recovered', wave0Failed.check?.passed === false && wave0Passed.check?.passed === true && wave1Failed.check?.passed === false && wave1Passed.check?.passed === true],
+  ['wave2-complete', wave2.check?.passed === true && wave2.check?.next === 'phases/phase-hitl2.md'],
+];
+for (const [gate, passed] of checks) appendFileSync(join(bundle, 'rb_trace.jsonl'), `${JSON.stringify({ ts:new Date().toISOString(), event:'check', source:'playbook', gate, passed, expected:true })}\n`);
 JS
+  TASK=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.task)' "$B/case-163-subagent-evidence.json")
+  RESULT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.result)' "$B/case-163-subagent-evidence.json")
+  RECEIPT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.receipt)' "$B/case-163-subagent-evidence.json")
+  OUTPUT=$(node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.output)' "$B/case-163-subagent-evidence.json")
+  EXTRA_ARGS+=(--evidence "subject_task=$TASK" --evidence "subject_result=$RESULT" --evidence "subject_receipt=$RECEIPT" --evidence "subject_output=$OUTPUT")
+fi
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B" "${EXTRA_ARGS[@]}"
 ```
 
-Expected: PASS only when all computed trace checks match. A fixture-only or missing-actor run is `NOT_RUN`, never PASS.
-
-## Step 12: [MAIN] Result Interpretation
-
-PASS proves the rerun-added Topics traversed the same production Topic/queue/work-unit/submit/reference/depth/Gate contracts as normal Topics, that an Agent could act on Engine lineage hints without source inspection or user command delegation, and that a deleted submitted declaration was restored hash-identically through the existing work-unit owner.
-
-FAIL preserves one bundle containing exact CLI feedback and runtime authority for diagnosis. NOT_RUN preserves the same continuation point and means real actor/search/fetch evidence is still absent.
-
-## Step 13: [CLEANUP] Cleanup
-
-PASS only:
-
-```bash
-node -e 'const fs=require("fs"); const v=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(v.ok ? 0 : 1)' "$B/case-163-verdict.json"
-rm -rf "$B"
-```
-
-FAIL and NOT_RUN preserve the bundle. There is intentionally no fixture-backed automation command that can turn this heavy canary green.
+PASS requires all five current-run checks. A fixture-only or missing-actor run is `NOT_RUN`, never PASS. Stop after native completion. The Autorun Supervisor owns Heavy health, durable Subject-evidence export, audit, preservation, and optional clean-PASS cleanup.

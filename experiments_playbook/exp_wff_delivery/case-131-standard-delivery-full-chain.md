@@ -1,16 +1,24 @@
 ---
-schema: command-experiment/v1
+schema: command-experiment/v2
 experiment: wff-delivery
 case: case-131-standard-delivery-full-chain
-weight: light
 case_goal: "Prove the delivery tail with real HITL2/readiness gate output, route-bound entry, source-gate status sync, and terminal Final semantics."
-runner: coding-agent
-execution: real-bundle
-evidence: filesystem-and-trace
-bundle: dpt_disp_case-131_dlv_chain_*
-trace: dpt_disp_case-131_dlv_chain_*/rb_trace.jsonl
-verdict: trace-jsonl
+verdict_mode: all
+required_checks: [case-131-final-terminal, case-131-hitl2-route, case-131-readiness-route]
+bundle_roles: [verdict]
+verdict_role: verdict
+health_roles: [verdict]
+health_profile: standard
+durable_evidence_roles: []
+proof_subject: deterministic_contract
+subject_execution: none
+fixture: fixture_backed
+runtime: real_disposable_bundle
+external_calls: none
+verdict_judge: deterministic
 ---
+
+<!-- @impl EXA-005, EXA-006, EXA-007, PLR-003 -->
 
 ## Execution Contract
 
@@ -31,7 +39,8 @@ verdict: trace-jsonl
 
 ```bash
 REPO_ROOT=$(pwd)
-B=$(node experiments_env/shared/new-disposable-bundle.mjs dlv_chain --case case-131 --force)
+B=$(node experiments_env/shared/new-disposable-bundle.mjs dlv_chain --case case-131 --force --target-dir {{CASE_RUN_ROOT_SH}})
+node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs register-bundle --context {{RUN_CONTEXT_SH}} --role verdict --path "$B"
 
 cat > "$B/rb_profile.yaml" <<'YAML'
 plan_basename: dlv_chain
@@ -91,6 +100,7 @@ echo "BUNDLE=$B"
 ## Step 2: 运行真实 HITL2 gate 并进入 readiness
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 HITL2_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate hitl2-recorded -- node DPT_FRAMEWORK/cli/gates/check-gate-hitl2-recorded.mjs --bundle "$B" --current-node phases/phase-hitl2.md)
 printf '%s\n' "$HITL2_OUTPUT" > "$B/case-131-hitl2.json"
 HITL2_PASSED=$(printf '%s\n' "$HITL2_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -106,6 +116,7 @@ node DPT_FRAMEWORK/cli/advance-status.mjs --bundle "$B" --to hitl2_recorded > "$
 ## Step 3: 运行真实 readiness gate 并进入 terminal Final
 
 ```bash
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
 READY_OUTPUT=$(node experiments_env/shared/run-gate-with-monitor.mjs --bundle "$B" --gate readiness-passed -- node DPT_FRAMEWORK/cli/gates/check-gate-readiness-passed.mjs --bundle "$B" --current-node phases/phase-readiness.md)
 printf '%s\n' "$READY_OUTPUT" > "$B/case-131-readiness.json"
 READY_PASSED=$(printf '%s\n' "$READY_OUTPUT" | node experiments_env/shared/extract-field.mjs check.passed)
@@ -136,23 +147,12 @@ JS
 ## Step 4: Trace verdict
 
 ```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.verdict('$B/rb_trace.jsonl'))"
+B=$(node DPT_FRAMEWORK/host_tools/agent-experiment-state.mjs get-bundle --context {{RUN_CONTEXT_SH}} --role verdict)
+node DPT_FRAMEWORK/host_tools/finalize-agent-experiment.mjs --context {{RUN_CONTEXT_SH}} --bundle "verdict=$B"
 ```
 
 ## Step 5: 结果解读
 
 > PASS 证明真实 HITL2 与 readiness 输出分别授权 readiness 与 Final；两次 target entry 都由 route-bound `load_complete` 见证，status 由 source-gate `advance-status` 同步。Final 的 `gate:null` 与无 outgoing transition 证明 terminal semantics。
 
-## Step HH: Post-Execution Health
-
-```bash
-node experiments_env/shared/verify-bundle-health.mjs --bundle "$B" --profile standard
-```
-
-## Cleanup
-
-> PASS 且 health CLEAN 才执行；FAIL/ISSUES 保留 bundle。
-
-```bash
-node -e "import('./experiments_env/shared/wff-playbook-utils.mjs').then(m=>m.cleanup('$B',{caseId:'case-131'}))"
-```
+Stop after native completion. The Autorun Supervisor owns Standard health, audit, preservation, and optional clean-PASS cleanup.

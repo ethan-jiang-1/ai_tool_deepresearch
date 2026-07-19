@@ -1,15 +1,22 @@
 #!/usr/bin/env node
+// @impl EXA-006
 
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 import { claimAndSubmitFixtureWorkUnit } from './work-unit-playbook-utils.mjs';
 
 const REPO_ROOT = process.cwd();
+const targetIndex = process.argv.indexOf('--target-dir');
+if (process.argv.length !== (targetIndex >= 0 ? 4 : 2) || (targetIndex >= 0 && !process.argv[targetIndex + 1])) {
+  console.error('Usage: node experiments_env/shared/prepare-rerun-direction-canary.mjs [--target-dir <dir>]');
+  process.exit(2);
+}
+const TARGET_DIR = targetIndex >= 0 ? resolve(process.argv[targetIndex + 1]) : REPO_ROOT;
 const TOPIC = {
   topic_uid: 'tp_31831831-8318-4318-8318-318318318318',
   id: 't1',
@@ -242,9 +249,9 @@ const stem = `rerun-direction-recovery-${randomUUID().slice(0, 8)}`;
 const created = runNode([
   join(REPO_ROOT, 'DPT_FRAMEWORK', 'cli', 'instantiate-run-bundle.mjs'),
   stem,
-  '--target-dir', REPO_ROOT,
+  '--target-dir', TARGET_DIR,
 ]).stdout.trim();
-const bundle = join(REPO_ROOT, `dpt_disp_case-318_${stem}_${randomUUID().slice(0, 1)}`);
+const bundle = join(TARGET_DIR, `dpt_disp_case-318_${stem}_${randomUUID().slice(0, 1)}`);
 renameSync(created, bundle);
 
 writePlanProfileAndSeed(bundle, stem);
